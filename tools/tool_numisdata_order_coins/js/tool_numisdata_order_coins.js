@@ -4,6 +4,39 @@
 
 
 
+/**
+* TOOL_NUMISDATA_ORDER_COINS (module)
+* Client-side controller for the numismatic coin ordering/grouping tool.
+*
+* This tool provides a two-panel UI for managing numismatic coin records:
+*   - Left panel  — a mosaic view (`coins` portal, role "coins") showing all coins in a
+*                   collection, sortable by weight (numisdata133) or diameter (numisdata135).
+*                   Each coin tile exposes original/copy radio buttons and a drag handle.
+*   - Right panel — a relation portal (`ordered_coins`, role "ordered_coins") where users
+*                   drop coin locators to define the authoritative ordering for a lot.
+*
+* Drag-and-drop contract:
+*   Coin tiles in the left mosaic carry a JSON-encoded locator in their `dataTransfer`
+*   payload (text/plain). Dropping onto an `ordered_coins` cell calls `assign_element`,
+*   which issues an 'insert' change_value to the target component.  After every drop the
+*   right panel is rebuilt (`get_ordered_coins`) and existing drop-zone listeners are
+*   re-attached via `render_tool_numisdata_order_coins.prototype.drop`.
+*
+* Original / copy workflow:
+*   Each coin tile also shows radio buttons (Original / Copy) rendered by
+*   `render_column_original_copy` in `view_coins_mosaic_portal.js`. When the user
+*   selects one or more originals and copies and clicks "Set Original / Copy", the tool
+*   calls `set_original_copy`, which:
+*     1. Writes the discard code (section_id '1' = original, '2' = copy) to the
+*        numisdata157 component of each selected coin section.
+*     2. Writes the set of copy locators into the numisdata55 (equivalents) relation
+*        component on each original section.
+*
+* Exports:
+*   tool_numisdata_order_coins — constructor / ES-module default export; prototype
+*       methods are assigned below and by tool_common / common / render_tool_*.
+*/
+
 // import
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
@@ -14,7 +47,14 @@
 
 /**
 * TOOL_NUMISDATA_ORDER_COINS
-* Tool to translate contents from one language to other in any text component
+* Constructor for the coin-ordering tool instance.
+* All shared tool lifecycle methods (init, build, render, destroy, refresh) are wired
+* via prototype assignment from tool_common, common, and render_tool_numisdata_order_coins.
+*
+* Instance properties seeded here are overwritten during `init` / `build`; they exist
+* as null sentinels so that introspection before init returns predictable values.
+*
+* @returns {boolean} Always true (Dédalo constructor sentinel).
 */
 export const tool_numisdata_order_coins = function () {
 
@@ -41,7 +81,13 @@ export const tool_numisdata_order_coins = function () {
 
 /**
 * COMMON FUNCTIONS
-* extend component functions from component common
+* Prototype assignments that wire the shared tool/component lifecycle into this
+* constructor.  These overwrite the null defaults set in the constructor above.
+*
+* render  — from tool_common: delegates to the concrete edit/read view depending on mode.
+* destroy — from common: tears down event subscriptions, child instances, and DOM.
+* refresh — from common: re-runs build + render without creating a new instance.
+* edit    — from render_tool_numisdata_order_coins: the concrete two-panel edit view.
 */
 // prototypes assign
 	tool_numisdata_order_coins.prototype.render		= tool_common.prototype.render
@@ -53,6 +99,20 @@ export const tool_numisdata_order_coins = function () {
 
 /**
 * INIT
+* Initialises the tool instance by calling the generic tool_common init and then
+* resolving the tool-specific properties that tool_common does not know about.
+*
+* Specific properties set here:
+*   - `langs`       — full list of project languages from `page_globals` (used by the
+*                     render layer when populating language-sensitive UI elements).
+*   - `source_lang` — inherited from the calling component's `lang`, or null when the
+*                     tool is opened independently (e.g. from a window URL).
+*   - `target_lang` — not used by this tool; left null for API parity with translation
+*                     tools that share the same init signature.
+*
+* @param {Object} options - Standard tool init options forwarded verbatim to tool_common.
+* @returns {Promise<*>} Resolves to the return value of `tool_common.prototype.init`
+*     (typically the initialised instance or a sentinel value).
 */
 tool_numisdata_order_coins.prototype.init = async function(options) {
 
@@ -83,6 +143,31 @@ tool_numisdata_order_coins.prototype.init = async function(options) {
 
 /**
 * BUILD
+* Runs after `init`. Delegates first to `tool_common.prototype.build` to load the
+* tool CSS and resolve all `ddo_map` entries into live instances stored in
+* `self.ar_instances`.  Then resolves the two named roles:
+*
+*   "coins"         — the source portal (component_portal / mosaic view) listing all
+*                     coins in the current collection.  Stored as `self.coins`.
+*   "ordered_coins" — the destination portal where users drop locators to define the
+*                     sorted order.  Stored as `self.ordered_coins`.
+*
+* For `ordered_coins` two event subscriptions are added to its own `events_tokens` so
+* that drop-zone listeners are re-wired whenever the portal refreshes internally
+* (window_bur_ = blur/scroll refresh) or gains a new row (add_row_):
+*
+*   'window_bur_<ordered_coins.id>'  → re-calls `render_tool_numisdata_order_coins.prototype.drop`
+*   'add_row_<ordered_coins.id>'     → same as above
+*
+* Roles missing from the Ontology's ddo_map are skipped with a console warning
+* rather than throwing, allowing partial configurations to render gracefully.
+*
+* (!) `event_manager` is used inside this method but is not imported here — it is
+*     expected to be present as a global or injected by tool_common at build time.
+*
+* @param {boolean} [autoload=false] - When true, tool_common will auto-fetch remote data
+*     for each ddo_map component.  Pass false to defer loading.
+* @returns {Promise<*>} Resolves to the return value of `tool_common.prototype.build`.
 */
 tool_numisdata_order_coins.prototype.build = async function(autoload=false) {
 
@@ -144,10 +229,21 @@ tool_numisdata_order_coins.prototype.build = async function(autoload=false) {
 
 /**
 * ASSIGN_ELEMENT
-* Set the original and copy properties to discard component
-* @param locator object
-* @param ar_copies array of nodes
-* @return change object api_response
+* Inserts a coin locator into the target `ordered_coins` relation component.
+* Called by the drop handler in `render_tool_numisdata_order_coins.prototype.drop`
+* each time the user drops a coin tile onto a cell in the ordered-coins portal.
+*
+* A single 'insert' change_value action is issued against `caller` (the component
+* instance that owns the drop-zone cell, i.e. the numisdata9 component of the
+* target ordered_coins row).  The `refresh` flag is set to false because the caller
+* (`get_ordered_coins`) manually rebuilds the right panel after this promise resolves.
+*
+* @param {Object} options
+* @param {Object} options.locator - Locator object describing the coin to insert
+*     (typically `{section_tipo, section_id}` matching the dragged tile).
+* @param {Object} options.caller  - The component instance of the drop-zone cell.
+*     Must expose a `change_value` method compatible with the Dédalo component API.
+* @returns {Promise<Object>} Resolves to the API response returned by `change_value`.
 */
 tool_numisdata_order_coins.prototype.assign_element = function(options){
 
@@ -171,10 +267,39 @@ tool_numisdata_order_coins.prototype.assign_element = function(options){
 
 /**
 * SET_ORIGINAL_COPY
-* Set the original and copy properties to discard component
-* @param ar_original array of nodes
-* @param ar_copies array of nodes
-* @return object instance
+* Persists the "original" or "copy" status for each user-selected coin and writes
+* the equivalence (copy) relations on the originals.
+*
+* This method is triggered by the "Set Original / Copy" header button.  It receives
+* two arrays of checked radio-button DOM nodes from the left-panel mosaic and writes
+* the correct discard-status values to the numisdata157 component of each affected
+* coin section.  It also wires up the numisdata55 (equivalents) relation on every
+* original so that the system knows which copies correspond to which originals.
+*
+* Data written per ORIGINAL coin (section_id supplied by the radio input node):
+*   - numisdata157 (discard/status component): 'update' action; value =
+*       {section_id: '1', section_tipo: 'numisdata341'}
+*       (section_id '1' in numisdata341 = "original" code value)
+*   - numisdata55 (component_relation_related, equivalents): 'set_data' action; value =
+*       array of {section_id, section_tipo} locators for every copy in `ar_copies`.
+*
+* Data written per COPY coin:
+*   - numisdata157: 'update' action; value =
+*       {section_id: '2', section_tipo: 'numisdata341'}
+*       (section_id '2' in numisdata341 = "copy" code value)
+*
+* After writing, the radio node is unchecked and its sibling label gains the
+* appropriate CSS class ('label_original' or 'label_copy') for visual feedback.
+*
+* (!) `discard_context` is read once from `self.coins.datum.context` and reused for
+*     all iterations; only `section_id` is mutated on `discard_options` per loop.
+*
+* @param {Object} options
+* @param {Array}  options.ar_original - Checked input[type=radio].input_original nodes
+*     from the left-panel mosaic; each must carry a `.section_id` property.
+* @param {Array}  options.ar_copies   - Checked input[type=radio].input_copy nodes
+*     from the left-panel mosaic; each must carry a `.section_id` property.
+* @returns {Promise<boolean>} Always resolves to true when all writes complete.
 */
 tool_numisdata_order_coins.prototype.set_original_copy = async function(options) {
 
@@ -182,6 +307,7 @@ tool_numisdata_order_coins.prototype.set_original_copy = async function(options)
 
 	const ar_original	= options.ar_original
 	const ar_copies		= options.ar_copies
+	// resolve the discard component context once; section_id is overwritten per iteration
 	const discard_context	= self.coins.datum.context.find(item => item.tipo === 'numisdata157')
 
 	const discard_options	= {
@@ -234,6 +360,7 @@ tool_numisdata_order_coins.prototype.set_original_copy = async function(options)
 			})
 			await equivalents_instance.build(true)
 			// force to save current input if changed
+			// build copy locators from the copy-node array using the coins section_tipo
 			const copy_values = ar_copies.map((el) =>
 				({section_id:el.section_id, section_tipo: discard_context.section_tipo})
 			)
@@ -274,7 +401,7 @@ tool_numisdata_order_coins.prototype.set_original_copy = async function(options)
 		// reset node
 			copy_node.checked = false
 			copy_node.label.classList.add('label_copy')
-	}//end for (let i = ar_original_len - 1; i >= 0; i--)
+	}//end for (let i = ar_copies_len - 1; i >= 0; i--)
 
 	return true
 }//end set_original_copy

@@ -4,6 +4,75 @@
 
 
 
+/**
+* VIEW_COINS_MOSAIC_PORTAL
+*
+* Custom `component_portal` view module for the `tool_numisdata_order_coins` tool.
+* Renders the left-hand source panel — the "coins mosaic" — where a numismatic portal
+* is displayed as a draggable tile grid that the user can drag from to populate the
+* ordered coins list on the right.
+*
+* Architecture overview
+* ---------------------
+* This module is dynamically imported and registered as a custom view by
+* `render_tool_numisdata_order_coins.get_content_data_edit`, which pushes an entry
+* into `self.coins.render_views`:
+*
+*   { view: 'coins_mosaic', mode: 'edit', render: 'view_coins_mosaic_portal',
+*     path: '../../../tools/tool_numisdata_order_coins/js/view_coins_mosaic_portal.js' }
+*
+* The portal render dispatcher (`render_edit_component_portal.prototype.edit`) then
+* calls `view_coins_mosaic_portal.render(self, options)` when `self.context.view`
+* equals `'coins_mosaic'`.
+*
+* Two parallel sets of section records are built:
+*
+*   1. MOSAIC records (in_mosaic === true columns) — the visible draggable tiles.
+*      Each tile renders its coin image plus an "Info" column produced by
+*      `render_column_original_copy`, which exposes:
+*        - Original / Copy radio buttons (wired to tipo numisdata157, the discard
+*          component).  Value '1' = original, '2' = copy (stored in numisdata341).
+*        - Snap checkbox: adds/removes the CSS class `snap` on the tile's row
+*          container, locking the tile's aspect ratio for visual alignment.
+*        - A drag handle div (`div.drag`) that becomes `div.drag.used` once the
+*          coin has been assigned to an ordered position.
+*
+*   2. HOVER records (hover === true columns) — a lightweight detail panel that
+*      is teleported into (prepended to) the hovered tile via event_manager
+*      pub/sub.  Event names follow the pattern:
+*        `mosaic_hover_{id_base}_{section_tipo}_{section_id}`   — on mouseenter
+*        `mosaic_mouseleave_{id_base}_{section_tipo}_{section_id}` — on mouseleave
+*
+* Drag-and-drop integration
+* -------------------------
+* Each mosaic tile is made draggable via the local `drag_and_drop` helper, which
+* calls `on_dragstart_mosaic` from `core/component_portal/js/drag_and_drop.js`.
+* The dragover/dragleave/drop handlers are intentionally commented out here
+* because the drop target lives in the right-hand ordered-coins portal, not
+* in this mosaic; those events are wired by `render_tool_numisdata_order_coins.drop`.
+*
+* Columns map contract
+* --------------------
+* `self.columns_map` is an Array of column descriptor objects.  Each descriptor
+* may carry the boolean flags:
+*   - `in_mosaic : true`  — include this column in the main mosaic tiles.
+*   - `hover     : true`  — include this column in the hover detail panel.
+*
+* `rebuild_columns_map` prepends a `section_id` column (for hover view only) and
+* appends the custom `original` info column (for mosaic view only).
+*
+* Exported symbols
+*   view_coins_mosaic_portal          — constructor (no-op, used as namespace)
+*   view_coins_mosaic_portal.render   — async render entry point
+*
+* @module view_coins_mosaic_portal
+* @see render_tool_numisdata_order_coins.js  for the parent tool render layer.
+* @see tool_numisdata_order_coins.js         for the tool constructor and set_original_copy.
+* @see core/component_portal/js/drag_and_drop.js  for on_dragstart_mosaic.
+*/
+
+
+
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {get_section_records} from '../../../core/section/js/section.js'
@@ -25,7 +94,9 @@
 
 /**
 * VIEW_COINS_MOSAIC_PORTAL
-* Manage the components logic and appearance in client side
+* Constructor / namespace object for the coins-mosaic portal view.
+* All functionality lives on the static `.render` method; the constructor
+* itself is a no-op placeholder that returns `true`.
 */
 export const view_coins_mosaic_portal = function() {
 
@@ -37,6 +108,38 @@ export const view_coins_mosaic_portal = function() {
 /**
 * RENDER
 * Manages the component's logic and appearance in client side
+*
+* Entry point called by the `component_portal` render dispatcher when
+* `self.context.view === 'coins_mosaic'`.  Builds two independent sets of
+* section records — one for the hoverable detail panel and one for the
+* draggable mosaic tiles — then assembles and returns the full wrapper node.
+*
+* When `options.render_level === 'content'` (e.g. during a refresh cycle)
+* only the inner `content_data` HTMLElement is returned, skipping the wrapper
+* scaffold so the caller can splice it into an existing DOM tree.
+*
+* Side effects:
+*   - Pushes all created section-record instances onto `self.ar_instances` so
+*     they are destroyed when the portal is rebuilt or destroyed.
+*   - Attaches a click listener on the wrapper that lazily activates the
+*     autocomplete service (via `activate_autocomplete`) when `self.active`.
+*
+* @param {Object} self    - The `component_portal` instance acting as caller.
+*                           Key properties consumed:
+*                           `self.columns_map` {Array}   — column descriptors (see module header).
+*                           `self.ar_instances` {Array}  — accumulator for created instances.
+*                           `self.permissions` {number}  — 1=read-only, 2=edit.
+*                           `self.mode` {string}         — current mode string (e.g. 'edit').
+*                           `self.view` {string}         — resolved view name.
+*                           `self.context.view` {string} — context view (echoed onto wrapper class).
+*                           `self.context.css` {Object}  — optional CSS overrides for content_data.
+*                           `self.total` {number}        — total records (used by drag_and_drop).
+*                           `self.active` {boolean}      — whether the component is focused.
+* @param {Object} options - Render options.
+*   @param {string} [options.render_level='full'] - 'full' builds the complete wrapper;
+*          'content' returns only the inner content_data node.
+* @returns {Promise<HTMLElement>} The assembled wrapper node (render_level='full') or
+*          the content_data div (render_level='content').
 */
 view_coins_mosaic_portal.render = async function(self, options) {
 	// options
@@ -143,7 +246,21 @@ view_coins_mosaic_portal.render = async function(self, options) {
 /**
 * GET_CONTENT_DATA
 * Render all received section records and place it into a new div 'content_data'
-* @return HTMLElement content_data
+*
+* Iterates over `ar_section_record`, renders each one, then:
+*   1. Wires drag-and-drop via `drag_and_drop()` so tiles can be dragged onto
+*      the ordered-coins right panel.
+*   2. Publishes event_manager events on mouseenter / mouseleave so that the
+*      hover detail panel can be teleported into the hovered tile.
+*      Event IDs follow the pattern:
+*        `mosaic_hover_{id_base}_{section_tipo}_{section_id}`
+*        `mosaic_mouseleave_{id_base}_{section_tipo}_{section_id}`
+*   3. Applies height CSS from `self.context.css['.content_data'].style.height`
+*      if present (legacy per-instance CSS override from the ontology).
+*
+* @param {Object} self              - The component_portal instance.
+* @param {Array}  ar_section_record - Array of section_record instances to render.
+* @returns {Promise<HTMLElement>} The assembled content_data div containing all tile nodes.
 */
 const get_content_data = async function(self, ar_section_record) {
 
@@ -215,8 +332,24 @@ const get_content_data = async function(self, ar_section_record) {
 /**
 * DRAG_AND_DROP
 * Set section_record_node ready to drag and drop
-* @param object options
-* @return bool
+*
+* Marks the given tile node as an HTML5 drag source by setting `draggable=true`
+* and attaching `dragstart` via `on_dragstart_mosaic`.  This serialises the
+* record's locator and paginated position into `dataTransfer` so the drop
+* target (the ordered-coins portal) can read it.
+*
+* Note: The dragover / dragleave / drop listeners are intentionally left
+* commented out — the drop targets live in the right-hand ordered-coins portal
+* and are wired by `render_tool_numisdata_order_coins.prototype.drop`.
+*
+* @param {Object}      options
+* @param {HTMLElement} options.section_record_node - The tile DOM node to make draggable.
+* @param {number}      options.paginated_key       - Zero-based index of this record in the
+*                                                    current page (passed to on_dragstart_mosaic).
+* @param {number}      options.total_records       - Total matched records for the portal.
+* @param {Object}      options.locator             - Locator object for the dragged record.
+* @param {Object}      options.caller              - The component_portal instance.
+* @returns {boolean} Always true.
 */
 const drag_and_drop = function(options) {
 
@@ -238,11 +371,11 @@ const drag_and_drop = function(options) {
 /**
 * RENDER_ALTERNATIVE_TABLE_VIEW
 * Render all received section records and place it into a DocumentFragment
-* @param instance self
-* @param array ar_section_record
-* @param DOM node alt_list_body
+* @param {Object}      self
+* @param {Array}       ar_section_record
+* @param {HTMLElement} alt_list_body
 *
-* @return DocumentFragment
+* @returns {DocumentFragment}
 */
 	// const render_alternative_table_view = async function(self, ar_section_record, alt_list_body) {
 
@@ -334,11 +467,27 @@ const drag_and_drop = function(options) {
 /**
 * RENDER_HOVER_VIEW
 * Render all received section records and place it into a DocumentFragment
-* @param instance self
-* @param array ar_section_record
-* @param DOM node alt_list_body
 *
-* @return DocumentFragment
+* For each section record in `ar_section_record`:
+*   1. Renders the record node and adds the CSS class `sr_mosaic_hover`.
+*   2. Subscribes to two event_manager events keyed on the record's identity:
+*      - `mosaic_hover_{id_base}_{section_tipo}_{section_id}`:
+*        Hides all sibling nodes inside `hover_body`, then prepends (teleports)
+*        this record's node into the caller tile so it appears as an overlay.
+*      - `mosaic_mouseleave_{id_base}_{section_tipo}_{section_id}`:
+*        Returns the record node back to `hover_body` and hides all children,
+*        effectively resetting the hover state.
+*
+* Subscriptions are guarded with `event_manager.event_name_exists` to prevent
+* duplicate subscriptions across re-renders.  Tokens are stored in
+* `self.events_tokens` for cleanup on destroy.
+*
+* @param {Object}      self              - The component_portal instance.
+* @param {Array}       ar_section_record - Array of section_record instances (hover columns set).
+* @param {HTMLElement} hover_body        - The container node that holds hover-view nodes
+*                                          when not displayed; used as the "park" node
+*                                          between hover events.
+* @returns {Promise<DocumentFragment>} Fragment containing all rendered hover section record nodes.
 */
 const render_hover_view = async function(self, ar_section_record, hover_body) {
 
@@ -410,7 +559,24 @@ const render_hover_view = async function(self, ar_section_record, hover_body) {
 /**
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
-* @return obj full_columns_map
+*
+* Wraps a filtered `base_columns_map` with tool-specific control columns:
+*
+*   For HOVER view (view_mosaic === false):
+*     Prepends a `section_id` column (renders as an "open record" link button
+*     via `render_column_id` from `render_edit_component_portal`).
+*
+*   For MOSAIC view (view_mosaic === true):
+*     Appends an `original` column rendered by `render_column_original_copy`,
+*     which provides the Original/Copy radio buttons, the Snap checkbox, and
+*     the drag-used indicator.
+*
+* @param {Array}   base_columns_map - Pre-filtered column descriptors
+*                                     (either `in_mosaic:true` or `hover:true` set).
+* @param {Object}  self             - The component_portal instance (passed through for context).
+* @param {boolean} view_mosaic      - `true` to build the mosaic columns set;
+*                                     `false` to build the hover columns set.
+* @returns {Promise<Array>} The full columns_map array including the injected control columns.
 */
 const rebuild_columns_map = async function(base_columns_map, self, view_mosaic) {
 
@@ -444,6 +610,48 @@ const rebuild_columns_map = async function(base_columns_map, self, view_mosaic) 
 
 
 
+/**
+* RENDER_COLUMN_ORIGINAL_COPY
+* Renders the "Info" control column appended to each mosaic tile.
+*
+* Produces a DocumentFragment with two main areas:
+*
+*   LEFT — `.options_left_contaniner`
+*     Radio buttons (Original / Copy) bound to tipo `numisdata157` (the discard
+*     component).  The current value is read from `options.caller.datum.data`
+*     via the record's `locator.section_id`:
+*       - `discard_value === '1'`  → pre-styles the Original label as active.
+*       - `discard_value === '2'`  → pre-styles the Copy label as active.
+*     Labels for both radio buttons are retrieved from the tool via
+*     `tool_caller.get_tool_label('original')` / `get_tool_label('copy')`.
+*     Each radio button's mouseup handler toggles its checked state; holding
+*     Alt deselects (unchecks) it, allowing both to be cleared.
+*
+*     Snap checkbox (`.checkbox_snap`) — adds/removes the CSS class `snap`
+*     on the ancestor row container (3 levels up: snap_item → options_left_contaniner
+*     → section_record_node → row_container) to freeze the tile's layout.
+*     Label text comes from `tool_caller.get_tool_label('snap')`.
+*
+*   RIGHT — `.drag`
+*     A drag-indicator div.  Receives the additional class `used` when the coin
+*     has already been assigned to an ordered position (detected by looking up
+*     `options.locator` in `tool_caller.ordered_coins.datum.data`).
+*
+* DOM path used to reach the tool instance:
+*   options.caller (section_record instance) → .caller (component_portal) → .caller (tool)
+*   i.e. `options.caller.caller` is the `tool_numisdata_order_coins` instance.
+*
+* Ontology constants referenced:
+*   `numisdata157` — the discard/classification component (Original vs Copy flag).
+*   `numisdata341` — the section holding classification enum values (section_id '1'=original,
+*                    '2'=copy).
+*
+* @param {Object} options
+* @param {Object} options.caller  - The section_record instance for this tile.
+* @param {Object} options.locator - Locator for the current record
+*                                   `{ section_tipo, section_id, ... }`.
+* @returns {DocumentFragment} Fragment containing the assembled control column nodes.
+*/
 const render_column_original_copy = function(options){
 
 	// DocumentFragment
@@ -453,6 +661,9 @@ const render_column_original_copy = function(options){
 
 	const locator = options.locator
 
+	// Read the current discard/classification value for this coin from the portal's datum.
+	// numisdata157 is the discard component; its value[0].section_id indicates:
+	//   '1' → Original, '2' → Copy (enum stored in numisdata341).
 	const discard_data		= options.caller.datum.data.find(item => item.section_id === locator.section_id && item.tipo === 'numisdata157')
 	const discard_context	= options.caller.datum.context.find(item => item.tipo === 'numisdata157')
 
@@ -460,6 +671,8 @@ const render_column_original_copy = function(options){
 		? discard_data.value[0].section_id
 		: null
 
+	// Check whether this coin already appears in the ordered_coins portal data,
+	// so the drag indicator can show a 'used' state.
 	const orderer_data		= options.caller.caller.ordered_coins.datum.data
 	const used_coin 		= orderer_data.find(el => el.section_tipo===locator.section_tipo && el.section_id === locator.section_id)
 
@@ -486,6 +699,9 @@ const render_column_original_copy = function(options){
 				parent			: radio_button_contaniner
 			})
 			input_original.section_id = locator.section_id
+			// Alt+click deselects; plain click selects. Both radio inputs in the group share
+			// the same `name`, so this toggle-off behaviour requires explicit handling since
+			// HTML radio buttons normally cannot be unchecked by the user.
 			input_original.addEventListener('mouseup',(event)=>{
 				input_original.checked = (event.altKey===true)
 					? false
@@ -501,6 +717,7 @@ const render_column_original_copy = function(options){
 					text_content	: tool_caller.get_tool_label('original') || 'Original',
 					parent			: radio_button_contaniner
 				})
+				// Clicking the label also toggles the checked state to allow deselection.
 				original_label.addEventListener('mouseup',()=>{
 					input_original.checked = input_original.checked
 						? false
@@ -560,6 +777,9 @@ const render_column_original_copy = function(options){
 					parent			: snap_item
 				})
 				checkbox_snap_label.setAttribute('for','checkbox_snap_' + locator.section_id)
+				// Toggling snap walks up to the row_container (3 levels: snap_item →
+				// options_left_contaniner → section_record_node → row_container) and
+				// adds/removes the 'snap' CSS class, which locks the tile's aspect ratio.
 				checkbox_snap.addEventListener("change", function(){
 
 					const row_container = snap_item.parentNode.parentNode.parentNode
@@ -572,6 +792,8 @@ const render_column_original_copy = function(options){
 				},false)
 
 	// columns drag indication
+		// If this coin already appears in ordered_coins, mark the drag handle as 'used'
+		// so the user can see at a glance which coins have already been assigned.
 		const used_coin_class = used_coin
 			? ' used'
 			: ''
