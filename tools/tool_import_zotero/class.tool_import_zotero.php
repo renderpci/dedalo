@@ -954,8 +954,7 @@ class tool_import_zotero extends tool_common {
 	* When $return_type is 'array' (or any other value), the raw array is returned —
 	* this is what import_files() uses so each name becomes a separate component item.
 	*
-	* Note: the local variable $apellido_madre (Spanish: "mother's surname") is a
-	* legacy identifier that holds the family name. It is flagged for translation.
+	* Note: the local variable $family_name holds the author's family name.
 	*
 	* @param array $zotero_name - Array of Zotero name objects (decoded from JSON).
 	* @param string $return_type = 'string' - 'string' for comma-joined scalar,
@@ -980,14 +979,12 @@ class tool_import_zotero extends tool_common {
 					$name .= $obj_value->given;
 				}
 
-				// (!) $apellido_madre is a Spanish identifier meaning "family name".
-				// Flag: should be renamed to $family_name for English consistency.
-				$apellido_madre = '';
+				$family_name = '';
 				if (property_exists($obj_value, 'family')) {
-					$apellido_madre .= $obj_value->family;
+					$family_name .= $obj_value->family;
 				}
 
-				$ar_name[] = $name.' '.$apellido_madre;
+				$ar_name[] = $name.' '.$family_name;
 			}
 		}
 

@@ -90,7 +90,7 @@ export const tool_import_zotero = function () {
 	// services
 	this.service_dropzone		= null
 	this.service_tmp_section	= null
-}//end page
+}//end tool_import_zotero
 
 
 
