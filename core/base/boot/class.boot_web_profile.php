@@ -48,11 +48,19 @@ final class boot_web_profile {
 		}
 		// P6.5 SECRET/STATE live emission
 		$phases[] = boot_secret_state_phases::emit_phase($catalog, $state_file, $definer);
+		// P6.6 per-install passthrough defines (verbatim: DEDALO_CONFIG/CORE/... + SESSION_SAVE_PATH);
+		// after compat_shim so const-refs (e.g. DEDALO_SESSIONS_PATH) are already defined.
+		$passthrough = $repo . '/config/local/passthrough.php';
+		if (is_file($passthrough)) {
+			$phases[] = boot_subsystem_phases::include_phase('passthrough', $passthrough);
+		}
 		// P7–P10 subsystem includes
 		$phases[] = boot_subsystem_phases::include_phase('core_functions', $repo . '/shared/core_functions.php');
+		// autoloader BEFORE logger/dd_tipos so their on-demand classes (e.g. logger_backend) resolve via spl_autoload
+		$phases[] = boot_subsystem_phases::include_phase('autoloader', $repo . '/core/base/class.loader.php');
 		$phases[] = boot_web_phases::logger_phase($repo . '/core/logger/class.logger.php');
 		$phases[] = boot_subsystem_phases::include_phase('dd_tipos', $repo . '/core/base/dd_tipos.php');
-		$phases[] = boot_subsystem_phases::include_phase('autoloader', $repo . '/core/base/class.loader.php');
+		$phases[] = boot_subsystem_phases::include_phase('version', $repo . '/core/base/version.inc');
 		// P11/P12 encoding + locale + timezone
 		$phases[] = boot_runtime_phases::apply_locale_phase();
 		// P13/P14 WEB-only

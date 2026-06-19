@@ -64,20 +64,28 @@ class dd_error {
 	 */
 	public static function initialize() : void {
 
-		// Configure error reporting based on debug mode
-		if (SHOW_DEBUG === true) {
-			ini_set('display_errors', '0'); // Don't display errors to browser
-			error_reporting(E_ALL); // Report all errors
-		} else {
-			ini_set('display_errors', '0');
-			error_reporting(0); // Turn off all error reporting
-		}
+		self::apply_reporting();
 
 		// Register error handlers
 		set_error_handler([self::class, 'captureError']);
 		set_exception_handler([self::class, 'captureException']);
 		register_shutdown_function([self::class, 'captureShutdown']);
 	}//end initialize
+
+	/**
+	* (Re)apply error_reporting from the SHOW_DEBUG flag. Safe to call BEFORE SHOW_DEBUG is
+	* defined — the P0 error-handler init runs before the request-state phase (P14) that defines
+	* it — so an undefined flag is treated as false (production-safe: reporting off). The
+	* request-state phase calls this again once SHOW_DEBUG is known, honouring developer reporting.
+	* display_errors stays '0' always: raw PHP errors are never exposed to the browser.
+	*
+	* @return void
+	*/
+	public static function apply_reporting() : void {
+		ini_set('display_errors', '0');
+		$debug = defined('SHOW_DEBUG') && SHOW_DEBUG === true;
+		error_reporting($debug ? E_ALL : 0);
+	}//end apply_reporting
 
 
 

@@ -48,7 +48,7 @@
 */
 // Base
 // Core infrastructure that every other subsystem depends on; must be first.
-include DEDALO_CORE_PATH . '/base/class.Error.php';
+include_once DEDALO_CORE_PATH . '/base/class.Error.php'; // include_once: the P0 boot phase already loaded it
 include DEDALO_CORE_PATH . '/base/class.dd_cache.php';
 include DEDALO_CORE_PATH . '/base/class.processes.php';
 include DEDALO_CORE_PATH . '/base/class.system.php';

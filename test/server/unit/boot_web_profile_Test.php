@@ -32,11 +32,29 @@ final class boot_web_profile_Test extends TestCase {
 			'/srv/dedalo', ['HTTP_HOST' => 'x', 'REQUEST_URI' => '/d/x'], 'fpm-fcgi'
 		);
 		$names = array_map(static fn(boot_phase $p) : string => $p->name, $phases);
+		// fake repo has no config/local/passthrough.php → passthrough phase omitted; version.inc is unconditional
 		$this->assertSame([
 			'error_handlers', 'env_load', 'config_build', 'compat_shim', 'secret_state_emit',
-			'core_functions', 'logger', 'dd_tipos', 'autoloader', 'apply_locale',
+			'core_functions', 'autoloader', 'logger', 'dd_tipos', 'version', 'apply_locale',
 			'session_start', 'request_state',
 		], $names);
+	}
+
+	public function test_passthrough_phase_included_when_file_present() : void {
+		$repo = sys_get_temp_dir() . '/wp_pt_' . getmypid();
+		@mkdir($repo . '/config/local', 0755, true);
+		file_put_contents($repo . '/config/local/passthrough.php', "<?php\n");
+		try {
+			$phases = boot_web_profile::phases(
+				$this->catalog(), [], null, [], null,
+				$repo, ['HTTP_HOST' => 'x', 'REQUEST_URI' => '/d/x'], 'fpm-fcgi'
+			);
+			$names = array_map(static fn(boot_phase $p) : string => $p->name, $phases);
+			$this->assertContains('passthrough', $names);
+		} finally {
+			@unlink($repo . '/config/local/passthrough.php');
+			@rmdir($repo . '/config/local'); @rmdir($repo . '/config'); @rmdir($repo);
+		}
 	}
 
 	public function test_web_only_phases_carry_skip_in() : void {

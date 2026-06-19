@@ -69,6 +69,10 @@ final class boot_web_phases {
 			if (!defined('DEDALO_DATA_LANG')) {
 				define('DEDALO_DATA_LANG', fix_cascade_config_var('dedalo_data_lang', DEDALO_DATA_LANG_DEFAULT));
 			}
+				// SHOW_DEBUG is now defined — re-apply error reporting (P0 used a production-safe default)
+				if (class_exists('dd_error')) {
+					dd_error::apply_reporting();
+				}
 		}, ['cli', 'cron', 'worker_init', 'test']);
 	}//end request_state_phase
 }
