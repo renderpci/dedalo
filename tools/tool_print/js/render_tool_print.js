@@ -83,6 +83,15 @@
 
 
 
+// Hard cap on records printed in one browser pass. Above this, do_print refuses
+// and asks the user to narrow the filter (server-side batch PDF is Phase 2).
+// Sized for the confirmed use case ("dozens of records"); the browser print path
+// degrades past a few hundred (frozen tab / memory). Imported by tool_print.js
+// get_record_ids to bound the id fetch.
+export const PRINT_MAX = 100
+
+
+
 // helpers -------------------------------------------------------------------
 
 	/**
@@ -1566,20 +1575,50 @@ const do_print = async function(self) {
 	}
 	if (!ids.length) { window.print(); return } // nothing to fill; print as-is
 
+	// bound the batch: above the cap, refuse and ask the user to narrow the filter
+	// (the browser path can't safely render hundreds; server-side batch is Phase 2)
+		if (ids.length > PRINT_MAX) {
+			const total = self._last_record_total || ids.length
+			window.alert(
+				(get_label.tool_print_too_many || 'This filter matches {n} records. Printing is limited to {max} at a time — narrow the filter and try again.')
+					.replace('{n}', total).replace('{max}', PRINT_MAX)
+			)
+			return
+		}
+	// confirm a multi-record run so a click can't silently launch a long render
+		if (ids.length > 1) {
+			const ok = window.confirm(
+				(get_label.tool_print_confirm_n || 'Print {n} records as a single PDF?').replace('{n}', ids.length)
+			)
+			if (!ok) return
+		}
+
+	// progress overlay + cancellation
+		const ac = new AbortController()
+		const progress = show_print_progress(self, () => ac.abort())
+
 	let doc
 	try {
-		doc = await render_print_document(self, ids)
+		doc = await render_print_document(self, ids, { signal: ac.signal, on_progress: (k, n) => progress.update(k, n) })
+	} catch (error) {
+		progress.remove()
+		if (self.print_root) self.print_root.style.display = ''
+		if (error && error.name === 'AbortError') return            // user cancelled — silent
+		console.error('tool_print do_print render error:', error)
+		return
+	}
+	progress.remove()
 
+	try {
 		// @page size from the first page
 			set_page_style(self)
-
 		// attach the document (already paginated by the flow engine, in mm) + hide editor
 			if (self.print_root) self.print_root.style.display = 'none'
 			self.canvas_container.appendChild(doc)
-
 		window.print()
 	} catch (error) {
 		console.error('tool_print do_print error:', error)
+		if (doc && doc.parentNode) doc.remove()
 		if (self.print_root) self.print_root.style.display = ''
 		return
 	}
@@ -1593,6 +1632,30 @@ const do_print = async function(self) {
 		window.addEventListener('afterprint', on_after)
 		setTimeout(() => { window.removeEventListener('afterprint', on_after); cleanup() }, 2500)
 }//end do_print
+
+
+
+/**
+* SHOW_PRINT_PROGRESS
+* Lightweight overlay shown while the multi-record document renders off-screen
+* (before the print dialog). Reports "Rendering k / N" and offers Cancel, which
+* fires on_cancel() (wired to an AbortController in do_print).
+* @param {Object} self - tool_print instance
+* @param {Function} on_cancel - called when the user clicks Cancel
+* @returns {{update:Function, remove:Function}}
+*/
+const show_print_progress = function(self, on_cancel) {
+	const overlay = ui.create_dom_element({ element_type:'div', class_name:'print_progress no_print', parent: (self.node || document.body) })
+	const label   = ui.create_dom_element({ element_type:'div', class_name:'print_progress_label',
+		inner_html:(get_label.loading || 'Preparing…'), parent: overlay })
+	const cancel  = ui.create_dom_element({ element_type:'button', class_name:'print_progress_cancel',
+		inner_html:(get_label.cancel || 'Cancel'), parent: overlay })
+	cancel.addEventListener('click', () => { cancel.disabled = true; label.textContent = (get_label.processing || 'Cancelling…'); on_cancel() })
+	return {
+		update : (k, n) => { label.textContent = (get_label.tool_print_rendering || 'Rendering {k} / {n}…').replace('{k}', k).replace('{n}', n) },
+		remove : () => { if (overlay.parentNode) overlay.remove() }
+	}
+}//end show_print_progress
 
 
 
@@ -1659,7 +1722,10 @@ const set_page_style = function(self) {
 * @param {Array} record_ids - array of section_id values to render
 * @returns {Promise<HTMLElement>} the detached .print_root element, ready to attach
 */
-export const render_print_document = async function(self, record_ids) {
+export const render_print_document = async function(self, record_ids, options={}) {
+
+    const signal      = options.signal || null
+    const on_progress = options.on_progress || null
 
     const root = ui.create_dom_element({
         element_type    : 'div',
@@ -1690,12 +1756,31 @@ export const render_print_document = async function(self, record_ids) {
     const saved_fill    = self.fill_mode
     self.fill_mode = true
 
+    // Wait for web fonts before the first measure: a font that loads AFTER layout
+    // changes every text row's height and silently shifts every page break.
+        try { if (document.fonts && document.fonts.ready) await document.fonts.ready } catch (e) { /* noop */ }
+
     try {
         for (let r = 0; r < record_ids.length; r++) {
+            if (signal && signal.aborted) { const e = new Error('print cancelled'); e.name = 'AbortError'; throw e }
             self.preview_section_id = record_ids[r]
             const ctx = make_print_ctx(self, root)
             await layout_flow(self, ctx)
+            // decode any freshly-rendered images so their real height is settled
+            const imgs = [...root.querySelectorAll('img')].filter(i => !i.complete && i.decode)
+            if (imgs.length) await Promise.all(imgs.map(i => i.decode().catch(() => {})))
+            if (on_progress) on_progress(r + 1, record_ids.length)
+            // yield to the event loop so the tab stays responsive, the progress
+            // overlay paints, and a Cancel click is processed between records
+            await new Promise(res => requestAnimationFrame(res))
         }
+        // drop blank pages: a record that produced no rows (e.g. all components
+        // empty for that record) leaves a .print_page with an empty .flow_column,
+        // which would print as a blank sheet
+        root.querySelectorAll('.print_page').forEach(pg => {
+            const col = pg.querySelector('.flow_column')
+            if (col && col.childElementCount === 0) pg.remove()
+        })
     } finally {
         self.preview_section_id    = saved_preview
         self.fill_mode            = saved_fill
