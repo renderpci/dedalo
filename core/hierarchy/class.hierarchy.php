@@ -389,15 +389,96 @@ class hierarchy extends ontology {
 			$name_data = $component->get_data();
 
 		// -------- VIRTUAL SECTION --------
+		// Provision both virtual sections (descriptor <tld>1 and model <tld>2), their
+		// dd_ontology nodes, user permissions and the hierarchy1 target components inside
+		// a single DB transaction. provision_virtual_sections() throws on any fatal write
+		// failure, so DBi::transaction() rolls the whole sequence back and a partial,
+		// half-built hierarchy is never committed.
+		// (!) section::create_record() acquires a per-tipo advisory lock held only for the
+		// life of the surrounding transaction, so this wrapper is also required for its
+		// concurrency guarantees, not only for atomicity.
+			try {
+				DBi::transaction(function() use ($tld2, $typology_id, $real_section_tipo, $name_data, $section_id, $section_tipo, $response) {
+					self::provision_virtual_sections(
+						$tld2,
+						$typology_id,
+						$real_section_tipo,
+						$name_data,
+						$section_id,
+						$section_tipo,
+						$response
+					);
+				});
+			} catch (\Throwable $e) {
+				debug_log(__METHOD__
+					. " Hierarchy provisioning failed; transaction rolled back " . PHP_EOL
+					. ' tld: ' . to_string($tld2) . PHP_EOL
+					. ' error: ' . $e->getMessage()
+					, logger::ERROR
+				);
+				$response->result	= false;
+				$response->msg		= 'Error. Hierarchy provisioning failed and was rolled back';
+				$response->errors[]	= $e->getMessage();
+				return $response;
+			}
+
+		// response OK
+			$response->result = true;
+			$response->msg = count($response->errors)===0
+				? 'Request done successfully'
+				: 'Request done with errors';
+
+
+		return $response;
+	}//end generate_virtual_section
+
+
+
+	/**
+	* PROVISION_VIRTUAL_SECTIONS
+	* Write phase of generate_virtual_section(), extracted so the whole sequence can run
+	* inside a single DBi::transaction(). Creates the descriptor (<tld>1) and model
+	* (<tld>2) virtual sections, their dd_ontology nodes, grants the current user access,
+	* and writes the target-section components back to the hierarchy1 record.
+	*
+	* (!) Every checkable write throws RuntimeException on failure so the enclosing
+	* transaction rolls back, guaranteeing no half-built hierarchy is committed.
+	* Permission-grant failure is treated as non-fatal (logged and appended to
+	* $response->errors) to preserve the historical behaviour of generate_virtual_section().
+	*
+	* @param string $tld2 - Lowercase hierarchy TLD, e.g. 'es'.
+	* @param int $typology_id - Hierarchy typology id (Thematic, Toponymy, …).
+	* @param string $real_section_tipo - Source real section the virtual sections inherit from.
+	* @param array $name_data - 'Name' component data applied to the new sections.
+	* @param string|int $section_id - hierarchy1 record id (target components are written here).
+	* @param string $section_tipo - Expected 'hierarchy1'.
+	* @param object $response - Shared response object; non-fatal errors are appended to ->errors.
+	* @return void
+	* @throws \RuntimeException on any fatal write failure (triggers transaction rollback).
+	*/
+	private static function provision_virtual_sections(
+		string $tld2,
+		int $typology_id,
+		string $real_section_tipo,
+		array $name_data,
+		string|int $section_id,
+		string $section_tipo,
+		object $response
+	) : void {
 
 		// ontology main. Create a new ontology main section if not already exists
 			$file_item = new stdClass();
 				$file_item->tld			= $tld2;
 				$file_item->typology_id	= $typology_id;
 				$file_item->name_data	= $name_data;
-			ontology::add_main_section( $file_item );
+			$main_section_id = ontology::add_main_section( $file_item );
+			if ($main_section_id===null) {
+				throw new \RuntimeException('add_main_section failed for tld: '.$tld2);
+			}
 		// create dd_ontology node for the main section
-			ontology::create_dd_ontology_ontology_section_node( $file_item );
+			if (ontology::create_dd_ontology_ontology_section_node( $file_item )===false) {
+				throw new \RuntimeException('create_dd_ontology_ontology_section_node failed for tld: '.$tld2);
+			}
 
 		// ontology nodes
 		// Create two different nodes:
@@ -410,9 +491,11 @@ class hierarchy extends ontology {
 
 			// create the new section record in database
 			$section = section::get_instance( $tld2.'0' );
-			$section->create_record( (object)[
+			if ($section->create_record( (object)[
 				'section_id' => 1
-			]);
+			] )===false) {
+				throw new \RuntimeException('create_record (descriptor section_id 1) failed for: '.$tld2.'0');
+			}
 
 			// get the new section record
 			$section_record = section_record::get_instance(
@@ -530,13 +613,18 @@ class hierarchy extends ontology {
 				$section_record->set_component_data($tipo, $column, $name_data);
 
 			// save
-				$section_record->save();
+				if ($section_record->save()===false) {
+					throw new \RuntimeException('section_record->save() failed for descriptor: '.$tld2.'0/1');
+				}
 
 			// parent grouper
 			// Place the descriptor section node under the 'hierarchytype' grouper
 			// (hierarchy56) that corresponds to this hierarchy's typology id.
 			// create_parent_grouper() creates the grouper node if absent and returns its tipo.
 				$parent_grouper_tipo = ontology::create_parent_grouper('hierarchy56', 'hierarchytype', $typology_id);
+				if ($parent_grouper_tipo===false) {
+					throw new \RuntimeException('create_parent_grouper (descriptor) failed for typology_id: '.$typology_id);
+				}
 
 				$parent_tld			= get_tld_from_tipo( $parent_grouper_tipo );
 				$parent_section_id	= get_section_id_from_tipo( $parent_grouper_tipo );
@@ -558,10 +646,14 @@ class hierarchy extends ontology {
 					$parent_locator->set_section_id( $parent_section_id );
 
 				$component_parent->set_data( [$parent_locator] );
-				$component_parent->save();
+				if ($component_parent->save()===false) {
+					throw new \RuntimeException('parent component save failed for descriptor: '.$tld2.'0');
+				}
 
 			// insert the node in dd_ontology
-				ontology::insert_dd_ontology_record($tld2.'0', 1);
+				if (ontology::insert_dd_ontology_record($tld2.'0', 1)===null) {
+					throw new \RuntimeException('insert_dd_ontology_record failed for descriptor: '.$tld2.'0/1');
+				}
 
 			// Virtual model section
 			// section_id 2 in <tld>0 → the <tld>2 model/typology virtual section.
@@ -570,9 +662,11 @@ class hierarchy extends ontology {
 			// except for that single flag.
 				// create the new section record in database
 				$section = section::get_instance( $tld2.'0' );
-				$section->create_record( (object)[
+				if ($section->create_record( (object)[
 					'section_id' => 2
-				]);
+				] )===false) {
+					throw new \RuntimeException('create_record (model section_id 2) failed for: '.$tld2.'0');
+				}
 
 				// get the new section record
 				$model_section_record = section_record::get_instance(
@@ -601,7 +695,9 @@ class hierarchy extends ontology {
 				$model_section_record->set_component_data($tipo, $column, [$component_data]);
 
 				// save
-				$model_section_record->save();
+				if ($model_section_record->save()===false) {
+					throw new \RuntimeException('model_section_record->save() failed for model: '.$tld2.'0/2');
+				}
 
 				// parent
 				// Place the model section node under the 'hierarchymtype' grouper
@@ -611,6 +707,9 @@ class hierarchy extends ontology {
 				// for the model-section parent link; do not change without verifying the
 				// ontology tree integrity.
 					$parent_model_grouper_tipo = ontology::create_parent_grouper('hierarchy57', 'hierarchymtype', $typology_id);
+					if ($parent_model_grouper_tipo===false) {
+						throw new \RuntimeException('create_parent_grouper (model) failed for typology_id: '.$typology_id);
+					}
 
 					$parent_model_tld	= get_tld_from_tipo( $parent_model_grouper_tipo );
 					$parent_section_id	= get_section_id_from_tipo( $parent_model_grouper_tipo );
@@ -632,13 +731,19 @@ class hierarchy extends ontology {
 						$parent_model_locator->set_section_id( $parent_section_id );
 
 					$component_model_parent->set_data( [$parent_model_locator] );
-					$component_model_parent->save();
+					if ($component_model_parent->save()===false) {
+						throw new \RuntimeException('parent component save failed for model: '.$tld2.'0');
+					}
 
 				// insert the model node in dd_ontology
-					ontology::insert_dd_ontology_record($tld2.'0', 2);
+					if (ontology::insert_dd_ontology_record($tld2.'0', 2)===null) {
+						throw new \RuntimeException('insert_dd_ontology_record failed for model: '.$tld2.'0/2');
+					}
 
 			// set permissions. Allow current user access to created default sections
 			// as es1, es2
+			// (!) Non-fatal: a failed grant does not roll back the provisioning; the
+			// sections are valid and an admin can re-grant. The error is surfaced instead.
 				$ar_section_tipo	= [$tld2.'1', $tld2.'2'];
 				$user_id			= logged_user_id();
 
@@ -672,9 +777,11 @@ class hierarchy extends ontology {
 					$target_section_data->lang = DEDALO_DATA_NOLAN;
 					$target_section_data->value = $tld2.'1';
 				$component_target_section->set_data( [$target_section_data] );
-				$component_target_section->save();
+				if ($component_target_section->save()===false) {
+					throw new \RuntimeException('target section component save failed (hierarchy53) for: '.$tld2.'1');
+				}
 
-				$target_model_tipo				= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;	//'hierarchy53';
+				$target_model_tipo				= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;	//'hierarchy58';
 				$model_name						= ontology_node::get_model_by_tipo($target_model_tipo, true);
 				$component_target_model_section	= component_common::get_instance(
 					$model_name,
@@ -688,17 +795,10 @@ class hierarchy extends ontology {
 					$target_model_section_data->lang = DEDALO_DATA_NOLAN;
 					$target_model_section_data->value = $tld2.'2';
 				$component_target_model_section->set_data( [$target_model_section_data] );
-				$component_target_model_section->save();
-
-		// response OK
-			$response->result = true;
-			$response->msg = count($response->errors)===0
-				? 'Request done successfully'
-				: 'Request done with errors';
-
-
-		return $response;
-	}//end generate_virtual_section
+				if ($component_target_model_section->save()===false) {
+					throw new \RuntimeException('target model section component save failed (hierarchy58) for: '.$tld2.'2');
+				}
+	}//end provision_virtual_sections
 
 
 
