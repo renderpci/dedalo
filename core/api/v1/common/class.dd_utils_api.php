@@ -47,6 +47,8 @@ final class dd_utils_api {
 		'change_lang',
 		'login',
 		'quit',
+		'request_password_reset',
+		'confirm_password_reset',
 		'install',
 		'upload',
 		'join_chunked_files_uploaded',
@@ -531,6 +533,76 @@ final class dd_utils_api {
 
 		return $response;
 	}//end login
+
+
+
+	/**
+	* REQUEST_PASSWORD_RESET
+	* Step 1 of the self-service password recovery flow. Thin adapter that forwards
+	* an identifier (username or email) to password_reset::request(), which emails a
+	* one-time code and returns an opaque reset_id.
+	*
+	* Intentionally unauthenticated and CSRF-exempt (whitelisted in dd_manager,
+	* same as 'login'): the login screen has no session or CSRF token yet. The
+	* endpoint is rate-limited inside password_reset and is anti-enumeration safe —
+	* it always returns the same generic response whether or not an account matches.
+	*
+	* @param object $rqo
+	* {
+	*	action	: 'request_password_reset',
+	*	dd_api	: 'dd_utils_api',
+	*	options	: {
+	*		identifier : string  username OR email address
+	*	}
+	* }
+	* @return object $response  Forwarded from password_reset::request
+	* - result   : true        always
+	* - msg      : string       generic confirmation
+	* - reset_id : string       opaque token passed back to confirm_password_reset
+	*/
+	public static function request_password_reset(object $rqo) : object {
+
+		$options	= $rqo->options ?? new stdClass();
+		$identifier	= (string)($options->identifier ?? '');
+
+		return password_reset::request($identifier);
+	}//end request_password_reset
+
+
+
+	/**
+	* CONFIRM_PASSWORD_RESET
+	* Step 2 of the password recovery flow. Thin adapter that forwards the reset_id,
+	* the emailed code and the new password to password_reset::confirm(), which
+	* verifies the code and writes the new password (Argon2id) on success.
+	*
+	* Unauthenticated and CSRF-exempt (whitelisted in dd_manager). A successful
+	* reset does NOT establish a session — the user logs in normally afterwards.
+	*
+	* @param object $rqo
+	* {
+	*	action	: 'confirm_password_reset',
+	*	dd_api	: 'dd_utils_api',
+	*	options	: {
+	*		reset_id     : string  opaque token from request_password_reset
+	*		code         : string  6-digit code received by email
+	*		new_password : string  the new plain-text password
+	*	}
+	* }
+	* @return object $response  Forwarded from password_reset::confirm
+	* - result : bool
+	* - msg    : string
+	* - errors : array  e.g. ['invalid_or_expired'|'too_many_attempts'|'weak_password']
+	*/
+	public static function confirm_password_reset(object $rqo) : object {
+
+		$options		= $rqo->options ?? new stdClass();
+		$reset_id		= (string)($options->reset_id ?? '');
+		$code			= (string)($options->code ?? '');
+		$new_password	= (string)($options->new_password ?? '');
+
+		return password_reset::confirm($reset_id, $code, $new_password);
+	}//end confirm_password_reset
 
 
 

@@ -62,7 +62,12 @@ final class dd_manager {
 		'get_code_update_info',
 		'get_diffusion_info',
 		'get_dedalo_files',
-		'read_raw'
+		'read_raw',
+		// Password recovery: invoked from the login screen before any session or
+		// CSRF token exists. Safe because they act only on an emailed one-time
+		// secret and are rate-limited inside password_reset.
+		'request_password_reset',
+		'confirm_password_reset'
 	];
 
 
@@ -348,7 +353,10 @@ final class dd_manager {
 				'get_environment',
 				'get_ontology_update_info',
 				'get_code_update_info',
-				'get_server_ready_status'
+				'get_server_ready_status',
+				// Self-service password recovery (pre-auth, from the login screen)
+				'request_password_reset',
+				'confirm_password_reset'
 			];
 			$action = $rqo->action ?? null;
 			// SEC-018: require $action to be a string and use strict comparison so that

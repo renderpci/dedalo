@@ -534,6 +534,230 @@ const get_content_data = function(self) {
 		}
 		button_enter.addEventListener('mousedown', click_handler)
 
+	// password recovery (forgot password)
+	// Self-service flow rendered alongside the login form. Three views toggled via
+	// the 'hide' class (same idiom as saml_container): login → request code →
+	// enter code + new password. State A/B call login.js request/confirm methods.
+
+		// "Forgot your password?" link, shown under the login form.
+		const forgot_link = ui.create_dom_element({
+			element_type	: 'a',
+			class_name		: 'forgot_password_link',
+			inner_html		: (get_label.recover_password || 'Forgot your password?'),
+			parent			: fragment
+		})
+		forgot_link.href = '#'
+
+		// State A — request a recovery code by username or email.
+		const reset_request_form = ui.create_dom_element({
+			element_type	: 'form',
+			class_name		: 'reset_request_form hide',
+			parent			: fragment
+		})
+		const reset_identifier = ui.create_dom_element({
+			id				: 'reset_identifier',
+			element_type	: 'input',
+			type			: 'text',
+			placeholder		: (get_label.username_or_email || 'Username or email'),
+			parent			: reset_request_form
+		})
+		reset_identifier.autocomplete = 'username'
+		const reset_request_button = ui.create_dom_element({
+			element_type	: 'button',
+			type			: 'submit',
+			class_name		: 'button_enter warning',
+			inner_html		: (get_label.send_code || 'Send recovery code'),
+			parent			: reset_request_form
+		})
+		const reset_request_back = ui.create_dom_element({
+			element_type	: 'a',
+			class_name		: 'reset_back_link',
+			inner_html		: (get_label.back_to_login || 'Back to login'),
+			parent			: reset_request_form
+		})
+		reset_request_back.href = '#'
+
+		// State B — enter the emailed code and the new password.
+		const reset_confirm_form = ui.create_dom_element({
+			element_type	: 'form',
+			class_name		: 'reset_confirm_form hide',
+			parent			: fragment
+		})
+		const reset_code = ui.create_dom_element({
+			id				: 'reset_code',
+			element_type	: 'input',
+			type			: 'text',
+			placeholder		: (get_label.recovery_code || 'Recovery code (6 digits)'),
+			parent			: reset_confirm_form
+		})
+		reset_code.setAttribute('inputmode', 'numeric')
+		reset_code.setAttribute('maxlength', '6')
+		reset_code.autocomplete = 'one-time-code'
+		const reset_new_password = ui.create_dom_element({
+			id				: 'reset_new_password',
+			element_type	: 'input',
+			type			: 'password',
+			placeholder		: (get_label.new_password || 'New password'),
+			parent			: reset_confirm_form
+		})
+		reset_new_password.autocomplete = 'new-password'
+		const reset_new_password_confirm = ui.create_dom_element({
+			id				: 'reset_new_password_confirm',
+			element_type	: 'input',
+			type			: 'password',
+			placeholder		: (get_label.repeat_password || 'Repeat new password'),
+			parent			: reset_confirm_form
+		})
+		reset_new_password_confirm.autocomplete = 'new-password'
+		const reset_confirm_button = ui.create_dom_element({
+			element_type	: 'button',
+			type			: 'submit',
+			class_name		: 'button_enter warning',
+			inner_html		: (get_label.reset_password || 'Reset password'),
+			parent			: reset_confirm_form
+		})
+		const reset_confirm_back = ui.create_dom_element({
+			element_type	: 'a',
+			class_name		: 'reset_back_link',
+			inner_html		: (get_label.back_to_login || 'Back to login'),
+			parent			: reset_confirm_form
+		})
+		reset_confirm_back.href = '#'
+
+		// view toggles. saml_container / messages_container are declared later in
+		// this function; these closures only run post-render so the references are safe.
+		const show_login_view = () => {
+			form.classList.remove('hide')
+			forgot_link.classList.remove('hide')
+			if (self.saml) { saml_container.classList.remove('hide') }
+			reset_request_form.classList.add('hide')
+			reset_confirm_form.classList.add('hide')
+		}
+		const show_request_view = () => {
+			form.classList.add('hide')
+			forgot_link.classList.add('hide')
+			saml_container.classList.add('hide')
+			reset_confirm_form.classList.add('hide')
+			reset_request_form.classList.remove('hide')
+			reset_identifier.focus()
+		}
+		const show_confirm_view = () => {
+			reset_request_form.classList.add('hide')
+			reset_confirm_form.classList.remove('hide')
+			reset_code.focus()
+		}
+
+		// open / back links
+		forgot_link.addEventListener('click', (e) => {
+			e.preventDefault()
+			show_request_view()
+		})
+		reset_request_back.addEventListener('click', (e) => {
+			e.preventDefault()
+			show_login_view()
+		})
+		reset_confirm_back.addEventListener('click', (e) => {
+			e.preventDefault()
+			show_login_view()
+		})
+
+		// State A submit — request the code
+		const reset_request_handler = async (e) => {
+			e.preventDefault()
+			e.stopPropagation()
+
+			const identifier = reset_identifier.value.trim()
+			if (identifier.length<2) {
+				ui.show_message(messages_container, 'Please enter your username or email', 'error', 'component_message', true)
+				return false
+			}
+			if (self.status==='reset') {
+				return
+			}
+			self.status = 'reset'
+			reset_request_button.classList.add('white')
+
+			const api_response = await self.request_password_reset({ identifier })
+
+			self.status = 'rendered'
+			reset_request_button.classList.remove('white')
+
+			// store the opaque reset_id for State B (response is always generic)
+			self.reset_id = (api_response && api_response.reset_id) ? api_response.reset_id : null
+			ui.show_message(
+				messages_container,
+				(api_response && api_response.msg) || 'If an account matches, a recovery code has been sent.',
+				'ok',
+				'component_message',
+				true
+			)
+			show_confirm_view()
+		}
+		reset_request_form.addEventListener('submit', reset_request_handler)
+
+		// State B submit — confirm the code + set new password
+		const reset_confirm_handler = async (e) => {
+			e.preventDefault()
+			e.stopPropagation()
+
+			const code					= reset_code.value.trim()
+			const new_password			= reset_new_password.value
+			const new_password_confirm	= reset_new_password_confirm.value
+
+			if (!/^\d{6}$/.test(code)) {
+				ui.show_message(messages_container, 'Enter the 6-digit recovery code', 'error', 'component_message', true)
+				return false
+			}
+			if (new_password.length<8) {
+				ui.show_message(messages_container, 'Password too short. Use at least 8 characters', 'error', 'component_message', true)
+				return false
+			}
+			if (new_password!==new_password_confirm) {
+				ui.show_message(messages_container, 'Passwords do not match', 'error', 'component_message', true)
+				return false
+			}
+			if (!self.reset_id) {
+				ui.show_message(messages_container, 'Please request a recovery code first', 'error', 'component_message', true)
+				show_request_view()
+				return false
+			}
+			if (self.status==='reset') {
+				return
+			}
+			self.status = 'reset'
+			reset_confirm_button.classList.add('white')
+
+			const api_response = await self.confirm_password_reset({
+				reset_id		: self.reset_id,
+				code			: code,
+				new_password	: new_password
+			})
+
+			self.status = 'rendered'
+			reset_confirm_button.classList.remove('white')
+
+			if (api_response && api_response.result===true) {
+				ui.show_message(messages_container, api_response.msg || 'Your password has been updated. You can now log in.', 'ok', 'component_message', true)
+				// clear sensitive fields and return to login
+				reset_code.value					= ''
+				reset_new_password.value			= ''
+				reset_new_password_confirm.value	= ''
+				self.reset_id						= null
+				show_login_view()
+			} else {
+				const message = (api_response && api_response.errors && api_response.errors.length>0)
+					? api_response.errors
+					: (api_response && api_response.msg) || 'Invalid or expired code'
+				ui.show_message(messages_container, message, 'error', 'component_message', true)
+				// on lockout, force a fresh request
+				if (api_response && api_response.errors && api_response.errors.indexOf('too_many_attempts')!==-1) {
+					self.reset_id = null
+					show_request_view()
+				}
+			}
+		}
+		reset_confirm_form.addEventListener('submit', reset_confirm_handler)
+
 	// info
 		// Append the detected browser name + version to the server-supplied info_data
 		// array so it is displayed alongside the Dédalo and DB version entries.
