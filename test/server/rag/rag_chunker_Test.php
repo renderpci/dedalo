@@ -159,8 +159,8 @@ final class rag_chunker_test extends BaseTestCase {
 		$this->assertStringContainsString('My Thesis', $c['embed_text']);
 		$this->assertStringContainsString('Chapter One', $c['embed_text']);
 		$this->assertStringNotContainsString('My Thesis', $c['text'], 'raw citation text must not include the header');
-		// source_hash is over the enriched embed_text
-		$this->assertSame(hash('sha256', $c['embed_text']), $c['source_hash']);
+		// source_hash is over the enriched embed_text, versioned (DATA-04)
+		$this->assertSame(hash('sha256', rag_chunker::VERSION . '|' . $c['embed_text']), $c['source_hash']);
 	}
 
 
