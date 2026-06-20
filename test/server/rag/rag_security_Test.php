@@ -56,9 +56,16 @@ final class rag_security_test extends BaseTestCase {
 
 
 
-	/** default egress class is public when no forbidden list / restriction applies */
-	public function test_default_egress_class_public() : void {
-		$this->assertSame('public', rag_security::get_record_egress_class('oh1', 10));
+	/**
+	* Egress classification is per-record and FAIL-CLOSED: a record that cannot be
+	* confirmed publishable (here a non-existent test locator with no fixture) is
+	* 'restricted', so it never leaves the host to an external provider. This
+	* replaces the former unconditional 'public' default, which leaked embargoed /
+	* project-restricted records whenever an operator enabled external egress
+	* (audit 2026-06-20, RAG egress HIGH). Mirrors rag_media_extractor image egress.
+	*/
+	public function test_default_egress_class_fail_closed() : void {
+		$this->assertSame('restricted', rag_security::get_record_egress_class('oh1', 10));
 	}
 
 
