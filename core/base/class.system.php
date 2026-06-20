@@ -17,7 +17,7 @@
 * - PHP environment checks (version gate, memory limit, GD extension, cURL,
 *   current-user identity, error-log path).
 * - Filesystem gate helpers used during installation: sessions directory,
-*   backup directory, arbitrary directory creation, PostgreSQL .pgpass permissions.
+*   backup directory, arbitrary directory creation.
 * - Media housekeeping: deleting expired session/cache files and stale AV upload
 *   chunk (.blob) files.
 *
@@ -993,50 +993,6 @@ class system {
 
 		return false;
 	}//end check_directory
-
-
-
-	/**
-	* CHECK_PGPASS_FILE
-	* Check if PostgreSQL file '.pgpass' already exists
-	* and have the correct permissions: '0600'
-	* If file exists but permissions are not the expected,
-	* it will try to fix the file to correct value
-	*
-	* PostgreSQL's libpq silently ignores a .pgpass file whose permissions are
-	* too permissive — this means password-less connections will fail in
-	* surprising ways.  The method auto-remediates by calling chmod(0600) when
-	* needed and logs a WARNING so operators are informed the file was altered.
-	* Returns false if the file does not exist or if chmod() cannot fix the
-	* permissions.
-	* @see https://www.postgresql.org/docs/current/libpq-pgpass.html
-	* @return bool
-	*/
-	public static function check_pgpass_file() : bool {
-
-		$php_user_home	= getenv('HOME');
-		$path			= $php_user_home . '/.pgpass';
-
-		if (!file_exists($path)) {
-			return false;
-		}
-
-		$file_permissions = substr(sprintf('%o', fileperms($path)), -4);
-		if ($file_permissions!=='0600') {
-			// Try to change it
-			if(true===chmod($path, 0600)){
-				debug_log(__METHOD__
-					." Changed permissions of file .pgpass to 0600 "
-					, logger::WARNING
-				);
-				return true;
-			}
-
-			return false;
-		}
-
-		return true;
-	}//end check_pgpass_file
 
 
 
