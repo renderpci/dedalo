@@ -62,13 +62,13 @@ final class password_reset_test extends BaseTestCase {
 
 	/**
 	* TEST_GENERATE_CODE_FORMAT
-	* The code is always a zero-padded 6-digit numeric string.
+	* The code is always a zero-padded 8-digit numeric string.
 	*/
 	public function test_generate_code_format(): void {
 
 		for ($i = 0; $i < 300; $i++) {
 			$code = self::call_private('generate_code');
-			$this->assertMatchesRegularExpression('/^\d{6}$/', $code, 'Code must be exactly 6 digits, zero-padded');
+			$this->assertMatchesRegularExpression('/^\d{8}$/', $code, 'Code must be exactly 8 digits, zero-padded');
 		}
 	}
 

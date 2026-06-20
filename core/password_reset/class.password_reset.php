@@ -3,14 +3,14 @@
 * CLASS PASSWORD_RESET
 * Self-service "forgot password" recovery flow for Dédalo.
 *
-* A user who has lost their password requests a one-time 6-digit code from the
+* A user who has lost their password requests a one-time 8-digit code from the
 * login screen. The code is emailed (via dd_mailer over SMTP) to the address
 * stored on the user record (component_email, dd134). The user types the code
 * back into the form together with a new password; on a correct, unexpired code
 * the password component (dd133) is updated with a fresh Argon2id hash.
 *
 * Security model (mirrors login::Login() SEC-019):
-* - The 6-digit code is NEVER stored in plain text and NEVER written to the user
+* - The 8-digit code is NEVER stored in plain text and NEVER written to the user
 *   record / matrix / Time Machine history. Only its password_hash() digest is
 *   persisted, in a short-lived JSON file under
 *   DEDALO_CACHE…/dd_password_reset/<sha1(reset_id)>.json (parallel to the login
@@ -22,7 +22,7 @@
 *   regardless of whether the identifier matches an account, the account is
 *   active, has an email, matches multiple users, or the mail send fails. The
 *   same 2-second delay used by login::Login() is applied on the no-op path.
-* - Brute-force resistance against the 1e6 code space: short TTL
+* - Brute-force resistance against the 1e8 code space: short TTL
 *   (DEDALO_PWRESET_CODE_TTL, default 600s), a low per-code attempt cap
 *   (DEDALO_PWRESET_MAX_ATTEMPTS, default 5; the entry is deleted once reached),
 *   and a per-(identifier|ip) request throttle plus a per-(reset_id|ip) verify
@@ -148,6 +148,12 @@ final class password_reset {
 		// Never log the code or the email address value.
 		debug_log(__METHOD__." Recovery code issued for user_id=".$user_id, logger::WARNING);
 
+		// audit trail (server-side activity log)
+		self::audit('PASSWORD RESET', 'Password recovery code requested', [
+			'result'	=> 'request',
+			'user_id'	=> $user_id
+		]);
+
 		return $response;
 	}//end request
 
@@ -164,7 +170,7 @@ final class password_reset {
 	* and does NOT consume a verify attempt.
 	*
 	* @param string $reset_id     - opaque token returned by request()
-	* @param string $code         - 6-digit code the user received by email
+	* @param string $code         - 8-digit code the user received by email
 	* @param string $new_password - the new plaintext password to set
 	* @return object { result:bool, msg:string, errors:array }
 	*/
@@ -231,7 +237,18 @@ final class password_reset {
 			return $response;
 		}
 
-		debug_log(__METHOD__." Password reset completed for user_id=".(int)$entry->user_id, logger::WARNING);
+		$reset_user_id = (int)$entry->user_id;
+		debug_log(__METHOD__." Password reset completed for user_id=".$reset_user_id, logger::WARNING);
+
+		// audit trail (server-side activity log)
+		self::audit('PASSWORD RESET', 'Password reset completed via recovery', [
+			'result'	=> 'success',
+			'user_id'	=> $reset_user_id
+		]);
+
+		// notify the account owner that their password changed, so an unauthorized
+		// reset is noticed. Best-effort: failures are logged but do not affect the result.
+		self::send_password_changed_notice($reset_user_id);
 
 		$response->result	= true;
 		$response->msg		= 'Your password has been updated. You can now log in.';
@@ -239,6 +256,60 @@ final class password_reset {
 
 		return $response;
 	}//end confirm
+
+
+
+	/**
+	* SEND_PASSWORD_CHANGED_NOTICE
+	* Email the account owner a "your password was changed" confirmation after a
+	* successful recovery. Best-effort: any failure is logged and swallowed.
+	*
+	* @param int $user_id
+	* @return void
+	*/
+	private static function send_password_changed_notice(int $user_id) : void {
+
+		$email = self::get_user_email($user_id);
+		if ($email===null || !component_email::is_valid_email($email)) {
+			return;
+		}
+
+		$mail_options				= new stdClass();
+			$mail_options->to		= $email;
+			$mail_options->subject	= 'Your Dédalo password was changed';
+			$mail_options->body_text	= self::build_password_changed_body();
+
+		$mail_response = dd_mailer::send($mail_options);
+		if ($mail_response->result!==true) {
+			debug_log(__METHOD__." Notice email failed: ".implode(', ', $mail_response->errors ?? []), logger::ERROR);
+		}
+	}//end send_password_changed_notice
+
+
+
+	/**
+	* AUDIT
+	* Record a recovery event in the activity log (server-side audit trail).
+	* Wrapped defensively so audit failures never break the recovery flow.
+	*
+	* @param string $label   - activity action label (e.g. 'PASSWORD RESET')
+	* @param string $message - human-readable summary
+	* @param array $data     - structured activity data (user_id, result, …)
+	* @return void
+	*/
+	private static function audit(string $label, string $message, array $data=[]) : void {
+
+		try {
+			if (function_exists('get_client_ip_trusted')) {
+				$data['ip'] = get_client_ip_trusted();
+			}
+			if (method_exists('login', 'login_activity_report')) {
+				login::login_activity_report($message, $label, $data);
+			}
+		} catch (Throwable $e) {
+			debug_log(__METHOD__." Audit log failed: ".$e->getMessage(), logger::WARNING);
+		}
+	}//end audit
 
 
 
@@ -379,6 +450,26 @@ final class password_reset {
 	*/
 	private static function reset_user_password(int $user_id, string $plaintext) : bool {
 
+		// component_common::Save() records the modifying user (dd197 modified_by_user)
+		// via logged_user_id(), which reads $_SESSION. This recovery flow is
+		// unauthenticated, so logged_user_id() is null and section_record::
+		// build_modification_data() throws a TypeError. Temporarily attribute the
+		// modification to the user themselves (they are resetting their own password)
+		// for the duration of the Save, then restore the prior session state.
+		$had_dedalo	= isset($_SESSION['dedalo']) && is_array($_SESSION['dedalo']);
+		$had_auth	= $had_dedalo && isset($_SESSION['dedalo']['auth']) && is_array($_SESSION['dedalo']['auth']);
+		$had_user	= $had_auth && array_key_exists('user_id', $_SESSION['dedalo']['auth']);
+		$prev_user	= $had_user ? $_SESSION['dedalo']['auth']['user_id'] : null;
+
+		if (!$had_dedalo) {
+			$_SESSION['dedalo'] = [];
+		}
+		if (!isset($_SESSION['dedalo']['auth']) || !is_array($_SESSION['dedalo']['auth'])) {
+			$_SESSION['dedalo']['auth'] = [];
+		}
+		$_SESSION['dedalo']['auth']['user_id'] = $user_id;
+
+		$ok = false;
 		try {
 			$component = component_common::get_instance(
 				'component_password',
@@ -389,17 +480,28 @@ final class password_reset {
 				DEDALO_SECTION_USERS_TIPO,
 				false
 			);
-			if (!($component instanceof component_password)) {
-				return false;
+			if ($component instanceof component_password) {
+				$component->set_data([(object)['value' => $plaintext]]);
+				$component->Save();
+				$ok = true;
 			}
-			$component->set_data([(object)['value' => $plaintext]]);
-			$component->Save();
 		} catch (Throwable $e) {
 			debug_log(__METHOD__." Failed to save new password for user_id=".$user_id.": ".$e->getMessage(), logger::ERROR);
-			return false;
+			$ok = false;
+		} finally {
+			// restore the prior session state exactly as it was
+			if (!$had_dedalo) {
+				unset($_SESSION['dedalo']);
+			} elseif (!$had_auth) {
+				unset($_SESSION['dedalo']['auth']);
+			} elseif (!$had_user) {
+				unset($_SESSION['dedalo']['auth']['user_id']);
+			} else {
+				$_SESSION['dedalo']['auth']['user_id'] = $prev_user;
+			}
 		}
 
-		return true;
+		return $ok;
 	}//end reset_user_password
 
 
@@ -420,13 +522,13 @@ final class password_reset {
 
 	/**
 	* GENERATE_CODE
-	* Cryptographically secure 6-digit numeric code, zero-padded.
+	* Cryptographically secure 8-digit numeric code, zero-padded.
 	*
-	* @return string e.g. '004271'
+	* @return string e.g. '00428715'
 	*/
 	private static function generate_code() : string {
 
-		return str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+		return str_pad((string)random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
 	}//end generate_code
 
 
@@ -472,6 +574,22 @@ final class password_reset {
 			. "This code expires in ".$ttl_minutes." minutes and can only be used once.\n\n"
 			. "If you did not request this, you can safely ignore this email; your password will not change.";
 	}//end build_email_body
+
+
+
+	/**
+	* BUILD_PASSWORD_CHANGED_BODY
+	* Plain-text "your password was changed" notice sent after a successful reset.
+	* Free of any account identifier so a misdirected email leaks nothing.
+	*
+	* @return string
+	*/
+	private static function build_password_changed_body() : string {
+
+		return "The password for your Dédalo account was just changed using the password recovery process.\n\n"
+			. "If this was you, no further action is needed.\n\n"
+			. "If you did NOT change your password, contact your Dédalo administrator immediately — someone may have access to your email account.";
+	}//end build_password_changed_body
 
 
 

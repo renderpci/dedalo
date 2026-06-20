@@ -554,6 +554,29 @@ const get_content_data = function(self) {
 			class_name		: 'reset_request_form hide',
 			parent			: fragment
 		})
+		// header: icon + title + short instruction
+		const reset_request_header = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'reset_header',
+			parent			: reset_request_form
+		})
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'reset_icon lock',
+			parent			: reset_request_header
+		})
+		ui.create_dom_element({
+			element_type	: 'h3',
+			class_name		: 'reset_title',
+			inner_html		: (get_label.recover_password_title || 'Recover your password'),
+			parent			: reset_request_header
+		})
+		ui.create_dom_element({
+			element_type	: 'p',
+			class_name		: 'reset_description',
+			inner_html		: (get_label.recover_password_help || 'Enter your username or email address and we will send you an 8-digit recovery code.'),
+			parent			: reset_request_header
+		})
 		const reset_identifier = ui.create_dom_element({
 			id				: 'reset_identifier',
 			element_type	: 'input',
@@ -583,15 +606,39 @@ const get_content_data = function(self) {
 			class_name		: 'reset_confirm_form hide',
 			parent			: fragment
 		})
+		// header: icon + title + short instruction
+		const reset_confirm_header = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'reset_header',
+			parent			: reset_confirm_form
+		})
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'reset_icon email',
+			parent			: reset_confirm_header
+		})
+		ui.create_dom_element({
+			element_type	: 'h3',
+			class_name		: 'reset_title',
+			inner_html		: (get_label.recovery_code_title || 'Check your email'),
+			parent			: reset_confirm_header
+		})
+		ui.create_dom_element({
+			element_type	: 'p',
+			class_name		: 'reset_description',
+			inner_html		: (get_label.recovery_code_help || 'We sent an 8-digit code to your email. Enter it below with your new password.'),
+			parent			: reset_confirm_header
+		})
 		const reset_code = ui.create_dom_element({
 			id				: 'reset_code',
 			element_type	: 'input',
 			type			: 'text',
-			placeholder		: (get_label.recovery_code || 'Recovery code (6 digits)'),
+			class_name		: 'reset_code_input',
+			placeholder		: (get_label.recovery_code || '••••••••'),
 			parent			: reset_confirm_form
 		})
 		reset_code.setAttribute('inputmode', 'numeric')
-		reset_code.setAttribute('maxlength', '6')
+		reset_code.setAttribute('maxlength', '8')
 		reset_code.autocomplete = 'one-time-code'
 		const reset_new_password = ui.create_dom_element({
 			id				: 'reset_new_password',
@@ -704,8 +751,8 @@ const get_content_data = function(self) {
 			const new_password			= reset_new_password.value
 			const new_password_confirm	= reset_new_password_confirm.value
 
-			if (!/^\d{6}$/.test(code)) {
-				ui.show_message(messages_container, 'Enter the 6-digit recovery code', 'error', 'component_message', true)
+			if (!/^\d{8}$/.test(code)) {
+				ui.show_message(messages_container, 'Enter the 8-digit recovery code', 'error', 'component_message', true)
 				return false
 			}
 			if (new_password.length<8) {

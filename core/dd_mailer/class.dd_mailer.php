@@ -69,10 +69,20 @@ final class dd_mailer {
 			}
 
 		// library guard
+			// PHPMailer is a composer dependency under the repo-root vendor/. The
+			// composer autoloader is NOT registered on every request path (it is only
+			// pulled in lazily by system::get_info()), so load it defensively here
+			// when the class is not yet available. Mirrors tool_import_rdf (CONF-01).
+			if (!class_exists(PHPMailer::class)) {
+				$dedalo_vendor_autoload = (defined('DEDALO_ROOT_PATH') ? DEDALO_ROOT_PATH : dirname(__FILE__, 3)) . '/vendor/autoload.php';
+				if (is_file($dedalo_vendor_autoload)) {
+					require_once $dedalo_vendor_autoload;
+				}
+			}
 			if (!class_exists(PHPMailer::class)) {
 				$response->msg		= 'Error. PHPMailer library is not available (run composer install)';
 				$response->errors[]	= 'mailer_unavailable';
-				debug_log(__METHOD__." PHPMailer class not found. Run 'composer require phpmailer/phpmailer'", logger::ERROR);
+				debug_log(__METHOD__." PHPMailer class not found. Run 'composer install'", logger::ERROR);
 				return $response;
 			}
 
