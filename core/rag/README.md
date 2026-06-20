@@ -24,6 +24,19 @@ opt-in and fully dormant unless `DEDALO_RAG_ENABLED = true`.
 | Generation | `rag_llm_provider` (Anthropic Citations / local; temperature, locator-titled citations), `dd_rag_api::ask` (context-token budgeting, live egress recompute, raw-JSON answer, configurable system prompt) |
 | API | `dd_rag_api` (`semantic_search`, `similar_to`, `retrieve`, `ask`, `get_agent_context`) |
 | Ops | `rag_queue::drain` (advisory single-flight, exponential backoff + `last_error`), `rag_queue::stats` (metrics), `core/rag/cli/rag_drain.php` (cron entry), `rag_indexer::reconcile_section`, `rag_vector_store::drop_model_partition` |
+| **Images (Phase 5b)** | `embedding_provider_multimodal` (joint image+text encoder; local default), `rag_media_extractor` (downsized non-master JPEG + `is_publishable` egress gate), image branch in `rag_indexer`, `retrieval::find_similar_objects` / `search_by_text_image`, `rag_characterizer` (typology/period proposals from neighbours), API `similar_objects` / `characterize_object` / `search_by_text_image` |
+
+### Images: object similarity & characterization (Phase 5b)
+Drives "objects close to this one", "the same in the collection" (near-duplicate), text→image search, and **proposing an object's typology/period from its visually-similar neighbours** (no LLM — aggregated + cited). Opt a section in via `properties.rag.context`:
+```json
+{ "rag": { "enabled": true,
+  "context": {
+    "images":   [ {"tipo":"numd5","view":"obverse"}, {"tipo":"numd6","view":"reverse"} ],
+    "metadata": { "typology":"numd10", "period":"numd20", "material":"numd30" },
+    "compare_scope": "same_section"
+} } }
+```
+Multi-image objects (coin obverse+reverse) fuse per-view result lists (RRF) so both-face matches win; hybrid blends visual similarity with a lexical match over the stored context summary. Needs a local multimodal sidecar at `DEDALO_RAG_MULTIMODAL_ENDPOINT` exposing `POST /image {model,images:[base64]}` and `POST /text {model,input:[text]}` → `{embeddings:[…]}` (and `DEDALO_RAG_MEDIA_ENABLED=true`). External multimodal APIs are used only for **publishable** objects (`diffusion_utils::is_publishable`); `original`/`modified` masters are never read.
 
 ### The chunker (the advanced piece)
 `rag_chunker` does **structure-aware semantic chunking**, not fixed-size splits:
@@ -87,9 +100,9 @@ These are intentionally out of the foundation:
 - **Phase 5 tool** (`tools/tool_rag_index/`) — backfill/build/eval UI + CLI. The
   underlying methods (`rag_indexer::index_record`, `rag_vector_store::build_ann_index`,
   `rag_queue::drain`) exist and are callable.
-- **Phase 5b multimodal media** — image visual embeddings (`embedding_provider_multimodal`,
-  `rag_media_extractor`). PDF/AV already flow through the text path once their
-  `component_text_area` is flagged.
+- **Phase 5b-B/C** — painting-segment (region) search + linking, and an optional
+  vision-LLM "describe object" (5b-A image similarity + characterization is built; see above).
+  PDF/AV already flow through the text path once their `component_text_area` is flagged.
 - **Phase 8 public service** — separate Bun service over a published-only
   collection (co-located with diffusion).
 - **MCP tool** — `dedalo_get_relevant_context` → `get_agent_context`.

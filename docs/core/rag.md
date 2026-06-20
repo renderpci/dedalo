@@ -29,7 +29,7 @@ Classic keyword search, and even Dédalo's powerful structured search (the [SQO]
 
 **Semantic search** finds records by **conceptual similarity**. Instead of comparing letters, it compares *meanings*. Ask for "displacement caused by a dam" and it surfaces the testimony that says "when the water came and we had to leave" — because those phrases *mean* almost the same thing, even though they share no words.
 
-How is meaning compared by a machine? Through **embeddings** (also called **vectors**). An embedding model reads a piece of text (or, in the future, an image) and turns it into a long list of numbers — a point in a high-dimensional "**meaning space**". The crucial property: **things that mean similar things land near each other** in that space, and things that mean different things land far apart. "Dam" and "reservoir" sit close; "dam" and "wedding" sit far. Searching becomes **geometry**: embed the question, then find the nearest records.
+How is meaning compared by a machine? Through **embeddings** (also called **vectors**). An embedding model reads a piece of text — **or an image** — and turns it into a long list of numbers — a point in a high-dimensional "**meaning space**". The crucial property: **things that mean similar things land near each other** in that space, and things that mean different things land far apart. "Dam" and "reservoir" sit close; "dam" and "wedding" sit far; two photographs of the *same kind of coin* sit close even when nothing textual links them. Searching becomes **geometry**: embed the question (or the object's image), then find the nearest records.
 
 > **A useful mental image.** Think of a vast library where books are not shelved alphabetically but **by subject affinity** — every book physically placed so that books about similar ideas are neighbours, across every language and phrasing. To research a topic you walk to its region and everything relevant is within arm's reach, regardless of the exact words on the spine. Embeddings build that library automatically; semantic search is walking to the right shelf.
 
@@ -73,7 +73,8 @@ These terms recur throughout. They are written for the non-specialist; developer
 | Term | Definition |
 | --- | --- |
 | **Embedding / vector** | A list of numbers representing the *meaning* of a piece of text (or media). Produced by an "embedding model". Similar meanings → nearby vectors. |
-| **Embedding model** | The neural model that converts text into an embedding. Dédalo's default is **multilingual** so non-English heritage text is handled well. |
+| **Embedding model** | The neural model that converts text into an embedding. Dédalo's default text model is **multilingual** so non-English heritage text is handled well. A separate **multimodal** model (a joint image+text encoder) embeds object images into a space shared with text, enabling text→image search. |
+| **Multimodal / joint encoder** | An image+text model (CLIP/SigLIP-style) whose image and text "towers" share one space, so an image can be compared to another image *and* to a textual description. Used for object similarity and text→image search. |
 | **Semantic / vector space** | The high-dimensional space the vectors live in. "Distance" in this space approximates *difference in meaning*. |
 | **Distance (cosine)** | How meaning-similarity is measured. Small distance = similar meaning. Dédalo uses **cosine** distance. |
 | **Chunk** | A coherent passage a long text is split into before embedding. Each chunk is one retrievable unit (e.g. a paragraph, a timecoded segment of a transcription). |
@@ -95,12 +96,13 @@ These terms recur throughout. They are written for the non-specialist; developer
 
 ## What it is, concretely
 
-Dédalo's RAG subsystem maintains a **vector version of selected data** — only the components an archive explicitly opts in — in a **separate, dedicated PostgreSQL + pgvector database**. On top of it sit four capabilities, all exposed through one API (`dd_rag_api`):
+Dédalo's RAG subsystem maintains a **vector version of selected data** — only the components an archive explicitly opts in — in a **separate, dedicated PostgreSQL + pgvector database**. It vectorizes both **text** (with a multilingual text model) and **object images** (with a joint image+text model). On top of it sit five capabilities, all exposed through one API (`dd_rag_api`):
 
 1. **Semantic search** — find records by meaning.
 2. **Q&A / chat** — grounded answers over the collection, with citations.
-3. **Agent / MCP context** — retrieval-backed passages an external AI agent can ground its reasoning on.
-4. **External public semantic API** — semantic access over *published* data for third parties (a separate, later phase).
+3. **Object image similarity & characterization** — find visually similar objects (coins, ceramics, …) and **propose attributes** (typology, period, material) aggregated from their cataloged neighbours.
+4. **Agent / MCP context** — retrieval-backed passages an external AI agent can ground its reasoning on.
+5. **External public semantic API** — semantic access over *published* data for third parties (a separate, later phase).
 
 ## Why it fits Dédalo so naturally
 
@@ -191,11 +193,25 @@ A research tool or an AI agent (via [MCP](system/index.md)) needs trustworthy co
 
 Because meaning is now a queryable dimension, new *shapes* of question become routine: *"which testimonies resemble this one?"*, *"what themes recur across these 300 interviews?"*, *"show me objects conceptually between these two."* Vectorization makes the archive **explorable by resemblance**, which is how humanistic inquiry often actually proceeds.
 
+### 7. Cataloguing a coin from its images (typology proposal)
+
+A numismatist registers a newly-found coin and uploads its **obverse** and **reverse** photographs. The moment it is saved, the images are vectorized. The system finds the cataloged coins whose obverse *and* reverse are visually closest — an object that matches on **both faces** ranks above one that matches on only one — and then **proposes a typology** by a similarity-weighted vote of those neighbours, showing the exact coins it relied on (with thumbnails) and a confidence. The numismatist confirms or overrides. The machine did the finding; the scholar keeps the judgment. *(This is "describe the object by its relatives" — a proposal grounded in real cataloged objects, never a generative guess.)*
+
+### 8. Dating an object from its image
+
+An excavation yields an object with no clear context. The researcher asks the collection to **estimate its period from its image**: the system retrieves the visually-(and metadata-)nearest objects and aggregates *their* recorded dates into a proposed **time-frame** — an earliest…latest range with a most-likely central estimate — again citing the objects that support it. It is a hypothesis to test, with its evidence attached, not an oracle's verdict.
+
+### 9. "The same in the collection" / finding relatives
+
+"Show me objects close to this one" returns the visually nearest pieces across the collection; raising the similarity threshold turns it into **near-duplicate detection** — the same object photographed twice, the same coin die, a re-used image — invaluable for deduplication, for spotting parallels, and for assembling a typological series. Because object similarity blends the image with the catalog **context** (material, typology, period), it does not confuse a bronze coin with a bronze button: the meaning of the object, not only its pixels, drives the match.
+
+> **Why the context matters (and is ontology-defined).** What counts as an object's "context" is not universal — a coin's typology and a ceramic's fabric are different fields. So each section declares, **in the ontology**, which images carry the visual signal (and which face they show) and which components are the typology / period / material. Archaeology, numismatics and oral history each describe their material on their own terms, and the system respects that.
+
 ---
 
 # Part V — For developers
 
-The subsystem is implemented under [`core/rag/`](../../core/rag/README.md) (17 classes), exposed via `core/api/v1/common/class.dd_rag_api.php`, and is **strictly opt-in**: it is fully dormant unless `DEDALO_RAG_ENABLED = true`.
+The subsystem is implemented under [`core/rag/`](../../core/rag/README.md) (20 classes, text + image), exposed via `core/api/v1/common/class.dd_rag_api.php`, and is **strictly opt-in**: it is fully dormant unless `DEDALO_RAG_ENABLED = true` (image vectorization additionally requires `DEDALO_RAG_MEDIA_ENABLED = true`).
 
 ## Architecture at a glance
 
@@ -228,6 +244,7 @@ Two databases, bridged by a **locator/passage list**, never a join. **ACL is enf
    - On each **text component** to vectorize: `properties.rag = { "embed": true }` (optionally `strategy`, `chunk`, `system_prompt`).
 4. **Switch it on:** `DEDALO_RAG_ENABLED = true`.
 5. **Backfill and build the index** (see *Operations*), then wire the drain cron.
+6. **(Optional) object images** — to enable image similarity & characterization, declare `properties.rag.context` on the section (images + views, and the typology/period/material components), stand up the multimodal sidecar (`DEDALO_RAG_MULTIMODAL_*`), and set `DEDALO_RAG_MEDIA_ENABLED = true`. See *Image similarity & object characterization* below.
 
 Example ontology `properties` for an oral-history transcription component:
 
@@ -244,7 +261,7 @@ Example ontology `properties` for an oral-history transcription component:
 
 Dispatched by `dd_manager` (login + CSRF inherited) and gated by SEC-024 via the `API_ACTIONS` allowlist. Every action takes one `$rqo` and returns the standard `{ result, msg, errors }` envelope. A scope (`section_tipo` or `section_tipos`) is required and is permission-filtered (`common::get_permissions >= 1`) before retrieval.
 
-**Actions:** `semantic_search`, `similar_to`, `retrieve`, `ask`, `get_agent_context`.
+**Actions:** `semantic_search`, `similar_to`, `retrieve`, `ask`, `get_agent_context`, and (images) `similar_objects`, `characterize_object`, `search_by_text_image`.
 
 **Semantic search** — text → ranked records:
 
@@ -320,6 +337,29 @@ If no permitted, relevant context is found, `ask` returns `grounded: false` and 
 
 `rag_llm_provider` is pluggable (`DEDALO_RAG_LLM_PROVIDER`): **Anthropic** (default, `claude-opus-4-8`, native **Citations** via `document` blocks titled by record locator, low temperature for factual answers) or a **local / OpenAI-compatible** endpoint (the only adapter permitted for restricted content). `ask()` enforces a context-token budget, recomputes egress from live config, and grounds-or-refuses.
 
+## Image similarity & object characterization (Phase 5b)
+
+For object collections (coins, amphorae, ceramics, …) the subsystem can vectorize **images** with a joint image+text encoder and answer object-centric questions. A section opts in through `properties.rag.context`, which declares — **in the ontology, per section** (archaeology ≠ oral history) — which image components carry the visual signal (and their `view`: obverse/reverse), and which components are the *typology / period / material*:
+
+```json
+{ "rag": { "enabled": true,
+  "context": {
+    "images":   [ { "tipo": "numd5", "view": "obverse" }, { "tipo": "numd6", "view": "reverse" } ],
+    "metadata": { "typology": "numd10", "period": "numd20", "material": "numd30" },
+    "compare_scope": "same_section"
+  } } }
+```
+
+Capabilities (all ACL-filtered, results carry a `thumb_url`):
+
+- **`similar_objects`** — "objects close to this one". Reads the object's stored image vectors and finds the visually nearest others. A multi-image object (a coin's obverse + reverse) **fuses the per-view result lists** (RRF) so an object close on *both* faces ranks above one close on a single face. A high `min_similarity` (or `near_duplicate`) gives "the same in the collection". **Hybrid** (default) blends visual similarity with the object's catalog context (typology/material/period) — essential for heritage, where pure visual similarity confuses a bronze coin with a bronze button.
+- **`search_by_text_image`** — a textual description → matching object images, encoded by the multimodal model's **text tower** (the one correctness-critical wiring detail: never the plain text embedder).
+- **`characterize_object`** — the "describe the object by its relatives" capability: retrieve the visually-(and metadata-)nearest objects and **aggregate their catalog metadata into a proposal** — a **similarity-weighted vote** for typology/material, and an *earliest…latest* range with a weighted-central estimate for period (`dd_date::convert_date_to_seconds`). Each proposal carries a **confidence and cited evidence** (the supporting objects, with thumbnails). No generative guess: a coin's typology is *proposed from real cataloged coins*, verifiably.
+
+Ingestion reads a **downsized, non-master** image (`'1.5MB'` quality, never `original`/`modified`), optionally downscaled to `DEDALO_RAG_IMAGE_MAX_PX` via ImageMagick, and embeds it locally by default. **External** image embedding is gated by `diffusion_utils::is_publishable()` — non-publishable objects are embedded only by a local model or skipped. The encoder is a local sidecar exposing `POST /image` and `POST /text` (`{embeddings:[…]}`); set `DEDALO_RAG_MEDIA_ENABLED=true` and `DEDALO_RAG_MULTIMODAL_*`. At a typical 500k-image / 200k-object scale this is one HNSW index over the image partition.
+
+*Worked example — cataloging a new coin:* save the coin with its obverse/reverse photographs → on the next drain it is embedded → `similar_objects` surfaces the closest cataloged coins (both faces considered) → `characterize_object` proposes its **typology** (weighted vote of those coins) and a **date range** (aggregated from their periods), each citing the coins it relied on. The numismatist confirms or overrides — the system did the finding, the scholar keeps the judgment.
+
 ## Operations
 
 - **Drain (required).** Wire the queue drain to OS cron — without it, markers never index:
@@ -346,7 +386,7 @@ All constants are documented in `config/sample.config_db.php` (vector DB, provid
 php vendor/bin/phpunit -c test/server/phpunit.xml --testsuite rag
 ```
 
-Pure-logic tests (chunker semantic boundaries, fusion, security/egress, hardening) always run; the store-integration test runs end-to-end against a live pgvector instance and skips cleanly when `DEDALO_RAG_DB_*` is unset.
+Pure-logic tests (chunker semantic boundaries, fusion, security/egress, hardening, and the image proposal-aggregation / context resolution) always run; the store-integration test runs end-to-end against a live pgvector instance and skips cleanly when `DEDALO_RAG_DB_*` is unset.
 
 ---
 
@@ -369,7 +409,8 @@ Vectorizing heritage and memory carries responsibilities beyond the technical:
 
 ## Roadmap
 
-- **Multimodal** — visual embeddings for images (text→image search), beyond the current text path (PDFs and AV already flow in through their transcriptions).
+- **Image region search & linking (Phase 5b-B)** — query by a *region* of an image (a segment of a painting) and **link** the matching objects to that segment, building on the implemented object image similarity (Part V).
+- **Vision-LLM object description (Phase 5b-C, optional)** — a generated description grounded in the visually-similar neighbours, for the cases where the neighbour-aggregated proposal isn't enough.
 - **Reranking by default** — a local cross-encoder for higher precision.
 - **Public semantic API** — a separate service over *published-only* data, for third parties, co-located with the diffusion engine.
 - **Retrieval-quality evaluation** — a golden-set harness (recall@k, citation-grounding) so model and parameter choices are measurable and regression-safe.
