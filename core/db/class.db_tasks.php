@@ -292,10 +292,11 @@ class db_tasks {
 
 		// command_base
 		// Build the base psql invocation once; individual table commands append the -c clause.
-		// DB_BIN_PATH provides the path to the psql binary (e.g. /usr/bin/),
+		// system::get_pg_bin_path() resolves the psql binary on any host layout,
 		// DEDALO_DATABASE_CONN is the database name, and get_connection_string() supplies
-		// the host/port/user/password flags.
-		$command_base = DB_BIN_PATH . 'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
+		// the host/port/user flags. The password is provided via the PGPASSWORD env var
+		// (DBi::pg_shell_exec, below), so the DB may be LOCAL or REMOTE without a ~/.pgpass file.
+		$command_base = system::get_pg_bin_path() . 'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
 
 		// REINDEX each table individually
 		foreach ($valid_tables as $table) {
@@ -303,7 +304,7 @@ class db_tasks {
 			$escaped_table = pg_escape_identifier(DBi::_getConnection(), $table);
 			$command = $command_base . ' -c ' . escapeshellarg("REINDEX TABLE CONCURRENTLY $escaped_table;");
 
-			$res = shell_exec($command . ' 2>&1');
+			$res = DBi::pg_shell_exec($command . ' 2>&1');
 			$response->reindex[$table] = $res;
 
 			// Check if command failed (basic error detection)
@@ -341,7 +342,7 @@ class db_tasks {
 			$escaped_table = pg_escape_identifier(DBi::_getConnection(), $table);
 			$command = $command_base . ' -c ' . escapeshellarg("VACUUM ANALYZE $escaped_table;");
 
-			$res = shell_exec($command . ' 2>&1');
+			$res = DBi::pg_shell_exec($command . ' 2>&1');
 			$response->vacuum[$table] = $res;
 
 			// Check if command failed (basic error detection)
