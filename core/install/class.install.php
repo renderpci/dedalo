@@ -643,7 +643,7 @@ class install extends common {
 	* BUILD_MATRIX_HIERARCHY_MAIN_SQL
 	* Regenerates the install/import/matrix_hierarchy_main.sql seed file from the current
 	* database, keeping only the hierarchies whose TLD is in the to_install allow-list
-	* (core/install/to_install.json) and shipping them all INACTIVE.
+	* (core/install/hierarchies_to_install.json) and shipping them all INACTIVE.
 	*
 	* On-demand maintenance task: run it when the canonical hierarchy set or the
 	* matrix_hierarchy_main schema changes, then commit the regenerated file. It is NOT part

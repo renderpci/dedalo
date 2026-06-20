@@ -397,7 +397,7 @@ const render_build_matrix_hierarchy_main_sql = function (self, value) {
 	const fragment = new DocumentFragment()
 
 	// info
-		const text = `Re-creates the file 'install/import/matrix_hierarchy_main.sql' from the current database, filtered by the 'to_install' TLD list (core/install/to_install.json). All hierarchies are written inactive.`
+		const text = `Re-creates the file 'install/import/matrix_hierarchy_main.sql' from the current database, filtered by the 'to_install' TLD list (core/install/hierarchies_to_install.json). All hierarchies are written inactive.`
 		ui.create_dom_element({
 			element_type	: 'div',
 			inner_html		: text,
