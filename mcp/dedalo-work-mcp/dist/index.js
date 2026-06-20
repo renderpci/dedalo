@@ -16627,6 +16627,7 @@ data:
 
 // src/index.ts
 var import_pino = __toESM(require_pino(), 1);
+import { timingSafeEqual } from "node:crypto";
 
 // ../common/dist/index.js
 var __defProp2 = Object.defineProperty;
@@ -53544,7 +53545,9 @@ function registerRecordsReadTools(server, client, ctx) {
       })();
       const primarySection = Array.isArray(section_tipo) ? section_tipo[0] : section_tipo;
       const res = await client.call(rqo({ action: "read", source: { model: "section", section_tipo: primarySection, lang }, sqo: built }));
-      return { ok: true, data: res, pagination: buildPagination(res, offset, limit) };
+      const effOffset = typeof built?.offset === "number" ? built.offset : offset;
+      const effLimit = typeof built?.limit === "number" ? built.limit : limit;
+      return { ok: true, data: res, pagination: buildPagination(res, effOffset, effLimit) };
     }
   }, ctx);
   registerTool(server, {
@@ -54236,7 +54239,10 @@ async function main() {
         const requiredToken = process.env.DEDALO_MCP_HTTP_TOKEN;
         if (requiredToken) {
           const provided = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
-          if (provided !== requiredToken) {
+          const enc = new TextEncoder;
+          const a = enc.encode(provided);
+          const b = enc.encode(requiredToken);
+          if (a.length !== b.length || !timingSafeEqual(a, b)) {
             return new Response("Unauthorized", { status: 401, headers: corsHeaders });
           }
         }
