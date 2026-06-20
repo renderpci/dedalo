@@ -80,14 +80,29 @@ final class install_setup_manager {
 			}
 			$env_values['DEDALO_DIFFUSION_INTERNAL_TOKEN'] = $token;
 
-			$env_bun = install_config_persistor::render_bun([
+			$bun_values = [
 				'MYSQL_DEDALO_HOSTNAME_CONN'      => $env_values['MYSQL_DEDALO_HOSTNAME_CONN'],
 				'MYSQL_DEDALO_DB_PORT_CONN'       => $env_values['MYSQL_DEDALO_DB_PORT_CONN'],
 				'MYSQL_DEDALO_USERNAME_CONN'      => $env_values['MYSQL_DEDALO_USERNAME_CONN'],
 				'MYSQL_DEDALO_PASSWORD_CONN'      => $env_values['MYSQL_DEDALO_PASSWORD_CONN'],
 				'MYSQL_DEDALO_DATABASE_CONN'      => $env_values['MYSQL_DEDALO_DATABASE_CONN'],
 				'DEDALO_DIFFUSION_INTERNAL_TOKEN' => $token,
-			]);
+			];
+			// MariaDB transport for the Bun engine:
+			//  - socket provided → DB_SOCKET (env_sync::MAP); db_config.ts treats any non-empty
+			//    DB_SOCKET as the transport, so we omit the key entirely when there is no socket.
+			//  - no socket → DB_FORCE_TCP=1 so Bun uses DB_HOST/DB_PORT instead of silently falling
+			//    back to its default /tmp/mysql.sock and ignoring the host/port we wrote.
+			// NOTE: this is the DB connection socket — distinct from DEDALO_DIFFUSION_SOCKET_PATH
+			// (the Bun HTTP listen socket), which maps separately to SOCKET_PATH.
+			$bun_extra = [];
+			if (!empty($env_values['MYSQL_DEDALO_SOCKET_CONN'])) {
+				$bun_values['MYSQL_DEDALO_SOCKET_CONN'] = $env_values['MYSQL_DEDALO_SOCKET_CONN'];
+			} else {
+				$bun_extra['DB_FORCE_TCP'] = '1';
+			}
+
+			$env_bun = install_config_persistor::render_bun($bun_values, $bun_extra);
 		}
 
 		// --- ../private/state.php : install fingerprints (STATE scope, by dot-path) ---
@@ -202,7 +217,7 @@ final class install_setup_manager {
 	* connection test where "could not connect" is an expected, reportable outcome.
 	* @return \PgSql\Connection|false
 	*/
-	private static function safe_pg_connect(?string $host, string $user, string $pw, string $db, $port, ?string $socket) {
+	private static function safe_pg_connect(?string $host, string $user, string $pw, string $db, int|string|null $port, ?string $socket) : \PgSql\Connection|false {
 		try {
 			set_error_handler(static function() : bool { return true; }); // swallow connection warnings
 			$conn = DBi::_getNewConnection($host, $user, $pw, $db, $port, $socket);
@@ -367,7 +382,17 @@ final class install_setup_manager {
 		$env_path	= $private . '/.env';
 		$state_path	= $private . '/state.php';
 		$existing_env	= is_file($env_path) ? env_loader::parse((string)file_get_contents($env_path)) : [];
-		$existing_state	= is_file($state_path) ? (array)(require $state_path) : [];
+		// state.php is a required PHP file; a partial/corrupt one (manual edit, disk-full mid-write)
+		// would otherwise fatal here. Treat any load failure as "no prior state" — migration_committer
+		// backs up the existing file before overwrite, so nothing is silently lost.
+		$existing_state	= [];
+		if (is_file($state_path)) {
+			try {
+				$existing_state = (array)(require $state_path);
+			} catch (\Throwable $e) {
+				$existing_state = [];
+			}
+		}
 
 		$diffusion	= (bool)($o->diffusion ?? false);
 		$artifacts	= self::build_artifacts($o, $existing_env, $existing_state, $diffusion);
@@ -417,6 +442,11 @@ final class install_setup_manager {
 		$checks = [
 			'DEDALO_DATABASE_CONN' => $o->db_database ?? null,
 			'DEDALO_USERNAME_CONN' => $o->db_username ?? null,
+			// password is the value most likely to still be stale after a worker reload, so verify it.
+			// hostname/port are intentionally NOT checked here: their submitted vs catalog-normalized
+			// forms ('' vs 'localhost', "5432" vs 5432) would yield false "not active" results under
+			// the strict !== compare below.
+			'DEDALO_PASSWORD_CONN' => $o->db_password ?? null,
 			'DEDALO_ENTITY'        => $o->entity ?? null,
 		];
 

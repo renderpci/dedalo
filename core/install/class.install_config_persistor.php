@@ -44,13 +44,18 @@ final class install_config_persistor {
 	* @param array<string,mixed> $values collected values keyed by PHP/.env constant name
 	* @return string Bun diffusion .env content (keys mapped via env_sync::MAP)
 	*/
-	public static function render_bun(array $values) : string {
+	public static function render_bun(array $values, array $extra = []) : string {
 		$lines = ['# Dédalo diffusion (Bun) .env — written by the installer; keys mapped via env_sync::MAP.'];
 		foreach (env_sync::MAP as $php_key => $bun_key) {
 			if (!array_key_exists($php_key, $values)) {
 				continue;
 			}
 			$lines[] = $bun_key . '=' . env_value::quote((string) self::stringify($values[$php_key]));
+		}
+		// Bun-only transport controls with no PHP-side equivalent (e.g. DB_FORCE_TCP); passed
+		// through verbatim by the installer. NOT part of env_sync::MAP / the drift contract.
+		foreach ($extra as $bun_key => $val) {
+			$lines[] = $bun_key . '=' . env_value::quote((string) self::stringify($val));
 		}
 		return implode("\n", $lines) . "\n";
 	}//end render_bun

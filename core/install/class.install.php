@@ -250,13 +250,13 @@ class install extends common {
 			}
 
 		// DB (from config)
-			$properties->dedalo_entity	= DEDALO_ENTITY;
+			$properties->dedalo_entity	= defined('DEDALO_ENTITY') ? DEDALO_ENTITY : null;
 			$properties->db_config		= new stdClass();
-				$properties->db_config->db_name		= DEDALO_DATABASE_CONN;
-				$properties->db_config->user_name	= DEDALO_USERNAME_CONN;
-				$properties->db_config->hostname	= DEDALO_HOSTNAME_CONN;
-				$properties->db_config->port		= DEDALO_DB_PORT_CONN;
-				$properties->db_config->socket		= DEDALO_SOCKET_CONN;
+				$properties->db_config->db_name		= defined('DEDALO_DATABASE_CONN') ? DEDALO_DATABASE_CONN : null;
+				$properties->db_config->user_name	= defined('DEDALO_USERNAME_CONN') ? DEDALO_USERNAME_CONN : null;
+				$properties->db_config->hostname	= defined('DEDALO_HOSTNAME_CONN') ? DEDALO_HOSTNAME_CONN : null;
+				$properties->db_config->port		= defined('DEDALO_DB_PORT_CONN') ? DEDALO_DB_PORT_CONN : null;
+				$properties->db_config->socket		= defined('DEDALO_SOCKET_CONN') ? DEDALO_SOCKET_CONN : null;
 
 		// get_db_data_version. Version of DDBB data ( 5.8.2 expected ). array|null
 		// Only meaningful when the database is reachable AND already populated. On a fresh/empty DB
@@ -679,172 +679,6 @@ class install extends common {
 	}//end install_db_from_default_file
 
 	/**
-	* CLONE_DATABASE
-	* Clones the current production database to the ephemeral install database
-	* using PostgreSQL CREATE DATABASE … WITH TEMPLATE.  Requires an exclusive
-	* lock on the source database; any active client connection will block the
-	* operation.  See install_database_manager::clone_database_dump() for the
-	* lock-free pg_dump alternative.
-	*
-	* (!) This method is private; the build_install_version() pipeline invokes
-	* install_database_manager::clone_database() directly.
-	*
-	* @param bool $skip_if_exists - If true, skip the clone when the target DB already exists.
-	* @return object $response
-	*/
-	private static function clone_database(bool $skip_if_exists) : object {
-		return install_database_manager::clone_database($skip_if_exists);
-	}//end clone_database
-
-	/**
-	* CLONE_DATABASE_DUMP
-	* Lock-free alternative to clone_database().  Uses a pg_dump | psql
-	* pipeline with an MVCC snapshot on the source database, so no active
-	* sessions need to be terminated first.  Currently unused by
-	* build_install_version() (the commented-out line in that method), but
-	* kept available as a private utility.
-	*
-	* @param bool $skip_if_exists - If true, skip the clone when the target DB already exists.
-	* @return object $response
-	*/
-	private static function clone_database_dump(bool $skip_if_exists) : object {
-		return install_database_manager::clone_database_dump($skip_if_exists);
-	}//end clone_database_dump
-
-	/**
-	* CLEAN_ONTOLOGY
-	* Removes custom ontology rows from the install database, retaining only
-	* the core TLD namespaces defined in install_config_manager::$to_preserve_tld.
-	* Also re-indexes affected tables and invalidates the diffusion section-map
-	* cache when the diffusion subsystem is available.
-	*
-	* (!) Private — called from build_install_version() via install_ontology_manager.
-	*
-	* @return object $response
-	*/
-	private static function clean_ontology() : object {
-		return install_ontology_manager::clean_ontology();
-	}//end clean_ontology
-
-	/**
-	* CLEAN_COUNTERS
-	* Truncates matrix_counter and matrix_counter_dd (resetting their sequences
-	* to 1) and removes custom rows from main_dd, preserving only the core TLD
-	* entries.  Counters are re-created on demand as records are inserted.
-	*
-	* (!) Private — called from build_install_version() via install_database_manager.
-	*
-	* @return object $response
-	*/
-	private static function clean_counters() : object {
-		return install_database_manager::clean_counters();
-	}//end clean_counters
-
-	/**
-	* CLEAN_TABLES
-	* Drops tables not in the install_config_manager valid_tables allowlist,
-	* deletes all rows from the configurable to_clean_tables list (with special
-	* handling for matrix_ontology and matrix_ontology_main), resets sequences,
-	* and runs VACUUM ANALYZE on every remaining table.
-	*
-	* (!) Private — called from build_install_version() via install_database_manager.
-	*
-	* @return object $response
-	*/
-	private static function clean_tables() : object {
-		return install_database_manager::clean_tables();
-	}//end clean_tables
-
-	/**
-	* CREATE_EXTENSIONS
-	* Installs the required PostgreSQL extensions (unaccent, pg_trgm) and
-	* defines the f_unaccent() immutable helper function in the install database.
-	* These extensions power accent-insensitive full-text search across Dédalo.
-	*
-	* (!) Private — called from build_install_version() via install_database_manager.
-	*
-	* @return object $response
-	*/
-	private static function create_extensions() : object {
-		return install_database_manager::create_extensions();
-	}//end create_extensions
-
-	/**
-	* CREATE_ROOT_USER
-	* Seeds the root user record (section_id = -1) into matrix_users with
-	* username 'root' and a null password.  Password must be set separately via
-	* set_root_pw().  The negative section_id is intentional; normal data-save
-	* paths refuse to write records with section_id < 1 as a safety guard.
-	*
-	* (!) Private — called from build_install_version() via install_data_seeder.
-	*
-	* @return object $response
-	*/
-	private static function create_root_user() : object {
-		return install_data_seeder::create_root_user();
-	}//end create_root_user
-
-	/**
-	* CREATE_MAIN_PROJECT
-	* Seeds the default 'General project' record (section_id = 1) into
-	* matrix_projects.  Every Dédalo installation requires at least one project
-	* for user/profile associations to be valid.
-	*
-	* (!) Private — called from build_install_version() via install_data_seeder.
-	*
-	* @return object $response
-	*/
-	private static function create_main_project() : object {
-		return install_data_seeder::create_main_project();
-	}//end create_main_project
-
-	/**
-	* CREATE_MAIN_PROFILES
-	* Seeds two default permission profiles into matrix_profiles:
-	*   - section_id 1: Admin
-	*   - section_id 2: User
-	* These profiles are referenced by the root user record and are required
-	* before any user login can succeed.
-	*
-	* (!) Private — called from build_install_version() via install_data_seeder.
-	*
-	* @return object $response
-	*/
-	private static function create_main_profiles() : object {
-		return install_data_seeder::create_main_profiles();
-	}//end create_main_profiles
-
-	/**
-	* CREATE_TEST_RECORD
-	* Seeds the minimal record required for Dédalo's unit-test suite into
-	* matrix_test (section_id = 1, section_tipo = 'test3').  Without this
-	* record the test harness cannot execute component read/write round-trips.
-	*
-	* (!) Private — called from build_install_version() via install_data_seeder.
-	*
-	* @return object $response
-	*/
-	private static function create_test_record() : object {
-		return install_data_seeder::create_test_record();
-	}//end create_test_record
-
-	/**
-	* IMPORT_HIERARCHY_MAIN_RECORDS
-	* Loads the bundled matrix_hierarchy_main.sql seed file into the install
-	* database, populating the root-level hierarchy records for countries and
-	* the main thematic/special/semantic/language hierarchies.  All imported
-	* hierarchies are inactive by default; call activate_hierarchy() to load
-	* their term/model data and make them visible.
-	*
-	* (!) Private — called from build_install_version() via install_hierarchy_manager.
-	*
-	* @return object $response
-	*/
-	private static function import_hierarchy_main_records() : object {
-		return install_hierarchy_manager::import_hierarchy_main_records();
-	}//end import_hierarchy_main_records
-
-	/**
 	* BUILD_INSTALL_DB_FILE
 	* pg_dumps the ephemeral install database to the distributable gzip-compressed
 	* .pgsql file at install/db/dedalo7_install.pgsql.gz.  Any existing file is
@@ -942,7 +776,8 @@ class install extends common {
 	* a successful update.
 	*
 	* (!) To change the root password after installation, the admin must manually
-	* clear the string column and remove the installed status from config_core.php.
+	* clear the string column and remove the `state.install_status` entry from
+	* ../private/state.php (v7 location; not config_core.php).
 	*
 	* @param object $options - Must contain: password (string, plain-text).
 	* @return object $response
@@ -1003,13 +838,13 @@ class install extends common {
 
 	/**
 	* SET_INSTALL_STATUS
-	* Writes or updates a DEDALO_INSTALL_STATUS define() call in config_core.php,
-	* sealing the current installation state.  After a successful write the
-	* session data is cleared so the next request re-evaluates the constant.
+	* Persists DEDALO_INSTALL_STATUS to ../private/state.php (key state.install_status),
+	* sealing the current installation state.  After a successful write the session data
+	* is cleared so the next request re-evaluates the constant.
 	*
 	* Supported $status values: 'installed'.
 	* No-ops (returns success) when the constant is already set to $status.
-	* Creates config_core.php if it does not yet exist.
+	* Refuses to seal 'installed' on an incomplete system (DB imported + root pw set).
 	*
 	* @param string $status - Target install status; currently only 'installed' is used.
 	* @return object $response

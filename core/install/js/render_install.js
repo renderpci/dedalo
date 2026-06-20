@@ -1016,10 +1016,18 @@ const render_init_test_block = function(self) {
 			})
 		}
 
-	// auto-reveal config block when diagnostics are in viewport
+	// auto-reveal config block when diagnostics are in viewport.
+	// Gate on diagnostics passing: a hard failure (result===false) or a missing init_test
+	// (PHP fatal before context build) means the server prerequisites are not met. The summary
+	// banner above instructs the user to "fix errors above to continue", so we must NOT expose
+	// the config form here — otherwise that instruction is never actually enforced and the user
+	// proceeds to enter DB credentials on a server that cannot run Dédalo.
 		when_in_viewport(
 			summary_node,
 			() => {
+				if (!init_test || init_test.result===false) {
+					return // diagnostics failed → keep config steps hidden, stay on diagnostics
+				}
 				const first = self.node.content_data._first_config || 'config_block'
 				const first_section = self.node.content_data[first]
 				if (first_section) {
@@ -1786,7 +1794,9 @@ const render_install_db_block = function(self) {
 					set_status_result(install_db_status, api_response)
 					// show set_root_password_block
 					self.node.content_data.set_root_password_block.classList.remove('hide')
-					update_step_indicator(self.node.content_data.step_indicator, 4)
+					// step indicator: "Set root password" is step 8 in the needs_config (11-step) flow
+					// and step 4 in the legacy (7-step) flow. Branch like the password/login blocks do.
+					update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 8 : 4)
 					install_db_button.remove();
 				}else{
 					console.error(api_response.msg);

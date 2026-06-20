@@ -48,7 +48,14 @@
 // $php_user: resolved at runtime for inclusion in diagnostic messages; helps ops trace which
 // system account lacks the required directory permissions.
 	$create_dir_permissions = 0750;
-	$php_user = exec('whoami');
+	// Prefer the real process user via whoami, but exec() may be disabled (disable_functions).
+	// Fall back to pure-PHP sources so diagnostics never show an empty user.
+	$php_user = function_exists('exec') ? (string) @exec('whoami') : '';
+	if ($php_user === '') {
+		$php_user = (function_exists('posix_geteuid') && function_exists('posix_getpwuid'))
+			? (posix_getpwuid(posix_geteuid())['name'] ?? get_current_user())
+			: get_current_user();
+	}
 
 
 

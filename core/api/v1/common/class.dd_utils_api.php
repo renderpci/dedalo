@@ -638,6 +638,30 @@ final class dd_utils_api {
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed';
 
+		// SEC: optional install-window IP allowlist. When DEDALO_INSTALL_ALLOWED_IPS is set (comma-
+		// separated REMOTE_ADDR list; the token 'loopback' matches 127.0.0.1/::1) ONLY those clients
+		// may drive the pre-auth installer. Default unset = no restriction, so remote installs are not
+		// broken — it is the operator's lever to close the pre-auth window on a network-exposed box.
+		// Applies only during the install window (install_hierarchies post-install is login-gated).
+			$already_installed = defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed';
+			if ($already_installed===false) {
+				$allow_raw = defined('DEDALO_INSTALL_ALLOWED_IPS')
+					? (string)DEDALO_INSTALL_ALLOWED_IPS
+					: (string)getenv('DEDALO_INSTALL_ALLOWED_IPS');
+				if (trim($allow_raw)!=='') {
+					$client_ip	= (string)($_SERVER['REMOTE_ADDR'] ?? '');
+					$allow_list	= array_filter(array_map('trim', explode(',', $allow_raw)));
+					$is_loopback	= in_array($client_ip, ['127.0.0.1', '::1'], true);
+					$ip_allowed	= in_array($client_ip, $allow_list, true)
+						|| (in_array('loopback', $allow_list, true) && $is_loopback);
+					if ($ip_allowed===false) {
+						$response->msg = 'Error. Installer access is restricted (DEDALO_INSTALL_ALLOWED_IPS).';
+						debug_log(__METHOD__.' install access denied for REMOTE_ADDR '.to_string($client_ip), logger::ERROR);
+						return $response;
+					}
+				}
+			}
+
 		// check the dedalo install status (config_auto.php)
 		// When install is finished, it will be set automatically to 'installed'
 		if(

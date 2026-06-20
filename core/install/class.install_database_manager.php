@@ -158,7 +158,7 @@ final class install_database_manager {
 			// SEC-041: shell-quote all interpolated values. Constants come from
 			// `config/config.php` (deployer-controlled, not HTTP-reachable);
 			// `$config->host_line`/`port_line` are pre-quoted in `get_config()`.
-			$command = system::get_pg_bin_path().'psql -d '.escapeshellarg(DEDALO_DATABASE_CONN).' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' '.$config->host_line.' '.$config->port_line.' --echo-errors --file '.escapeshellarg($uncompressed_file);
+			$command = system::get_pg_bin_path().'psql -d '.escapeshellarg(DEDALO_DATABASE_CONN).' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' '.$config->host_line.' '.$config->port_line.' -v ON_ERROR_STOP=1 --echo-errors --file '.escapeshellarg($uncompressed_file);
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 			if ($exec) {
 
@@ -176,6 +176,20 @@ final class install_database_manager {
 					, logger::WARNING
 				);
 
+				// ON_ERROR_STOP=1 → psql exits non-zero if ANY statement fails mid-restore. A
+				// non-zero code means the DB is partially populated; never report success on it
+				// (the old code only checked for empty output and silently shipped a broken DB).
+				if ($result_code !== 0) {
+					$response->msg = 'Error. Database import failed (the SQL restore stopped on an '
+						.'error). Verify the PostgreSQL credentials and check the server error log.';
+					debug_log(__METHOD__
+						." DB import failed: psql exit code ".to_string($result_code).PHP_EOL
+						.' output: '.to_string($output)
+						, logger::ERROR
+					);
+					return $response;
+				}
+
 				// empty output from psql usually means it could not authenticate
 				// (libpq found no usable credentials), rather than a SQL error.
 				// Authentication uses PGPASSWORD from DEDALO_PASSWORD_CONN; the most
@@ -188,11 +202,10 @@ final class install_database_manager {
 					$user_home_dir			= trim(shell_exec('echo $HOME'));
 					$password_is_set		= (string)DEDALO_PASSWORD_CONN !== '';
 
-					$response->msg = 'Error. Database import failed! Verify DEDALO_PASSWORD_CONN (PostgreSQL credentials) and look for errors in php error file. '
-						.' - PHP get_current_user: '		. $php_get_current_user
-						.' - PHP whoami: '					. $php_whoami
-						.' - PHP home: '					. $user_home_dir
-						.' - DEDALO_PASSWORD_CONN set: '	. json_encode($password_is_set);
+					// Keep the OS user / home / credential-state details in the server log only
+					// (below); returning them to the pre-auth install client leaks server internals.
+					$response->msg = 'Error. Database import failed. Verify DEDALO_PASSWORD_CONN '
+						.'(PostgreSQL credentials) and look for details in the server error log.';
 					trigger_error($response->msg);
 
 					debug_log(__METHOD__

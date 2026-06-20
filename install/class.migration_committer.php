@@ -43,6 +43,13 @@ final class migration_committer {
 					@unlink($tmp);
 					throw new \RuntimeException("migration_committer: cannot stage {$path}");
 				}
+				// Lock secret (.env) perms to 0600 on the TEMP, BEFORE it is renamed into place, so the
+				// live secrets file is never momentarily world-readable (rename preserves the mode). A
+				// chmod failure aborts the whole commit — atomic guarantee: nothing has been renamed yet.
+				if (in_array($key, $env_keys, true) && !chmod($tmp, 0600)) {
+					@unlink($tmp);
+					throw new \RuntimeException("migration_committer: cannot secure perms on {$path}");
+				}
 				$staged[$key] = ['tmp' => $tmp, 'path' => $path];
 			}
 		} catch (\Throwable $e) {
@@ -70,9 +77,7 @@ final class migration_committer {
 				@unlink($s['tmp']);
 				throw new \RuntimeException("migration_committer: atomic write failed for {$s['path']}");
 			}
-			if (in_array($key, $env_keys, true)) {
-				@chmod($s['path'], 0600);
-			}
+			// (.env perms already locked to 0600 on the temp in phase 1, before this rename)
 			$report[$key] = $backed_up ? 'written+backed-up' : 'written';
 		}
 		return $report;

@@ -480,8 +480,8 @@ final class install_config_manager {
 	*
 	* Called at the end of the installation wizard to transition the system
 	* from install mode to normal running mode. Internally it is a thin wrapper
-	* around `set_install_status('installed')`, which writes
-	* `define('DEDALO_INSTALL_STATUS', 'installed')` into `config_core.php`.
+	* around `set_install_status('installed')`, which persists the status to
+	* ../private/state.php (key `state.install_status`).
 	*
 	* @return object - stdClass response from set_install_status with:
 	*                  `result` (bool) and `msg` (string).
@@ -536,7 +536,7 @@ final class install_config_manager {
 				';
 				$result	= pg_query(DBi::_getConnection(), $sql);
 				$row	= pg_fetch_object($result);
-				$total	= (int)$row->total ?? 0;
+				$total	= ($row !== false) ? (int)($row->total ?? 0) : 0;
 
 		} catch (Exception $e) {
 			$total = 0;
@@ -584,7 +584,8 @@ final class install_config_manager {
 	* (!) If you need to change the root password AFTER a completed install:
 	*   1. Set the string column of section_id = -1 in matrix_users to
 	*      `{"dd133": []}` (empty array for the password component).
-	*   2. Remove the DEDALO_INSTALL_STATUS line from config/config_core.php.
+	*   2. Remove the `state.install_status` entry from ../private/state.php (v7 stores the
+	*      install status there, not in config/config_core.php).
 	*   Then re-run the install wizard and call this endpoint again.
 	*
 	* @param object $options - must contain `password` (string): the plaintext
@@ -594,7 +595,11 @@ final class install_config_manager {
 	public static function set_root_pw(object $options) : object {
 
 		// options
-			$password = safe_xss($options->password);
+			// NOTE: do NOT run safe_xss() on the password. It is never rendered in HTML —
+			// it goes straight into dedalo_encrypt_openssl() and the DB. XSS-escaping it would
+			// silently mangle legitimate characters (< > & " ') so the stored hash would not
+			// match what the user typed, leaving them unable to log in.
+			$password = $options->password ?? null;
 
 		// response
 			$response = new stdClass();
@@ -663,23 +668,18 @@ final class install_config_manager {
 
 	/**
 	* SET_INSTALL_STATUS
-	* Write or update the `DEDALO_INSTALL_STATUS` constant in config_core.php.
+	* Persist `DEDALO_INSTALL_STATUS` to the out-of-web-root state file ../private/state.php
+	* (STATE scope, dot-path `state.install_status`). The boot re-emits it as the live
+	* DEDALO_INSTALL_STATUS constant on every request; that constant gates the install wizard
+	* routes and the `set_root_pw()` action. (v7: this replaced the v6 scheme of writing a
+	* `define()` line into the web-served config/config_core.php.)
 	*
-	* `config/config_core.php` is loaded on every request via
-	* `config/config.php`. Writing `DEDALO_INSTALL_STATUS` there is the
-	* canonical way to signal that the system has finished installing. The
-	* constant gates the install wizard routes and the `set_root_pw()` action.
-	*
-	* Three code paths:
+	* Two code paths:
 	* 1. Constant already equals `$status` — no-op, returns success immediately.
-	* 2. Constant is absent from the file — appends a new `define()` line using
-	*    FILE_APPEND | LOCK_EX to avoid write races.
-	* 3. Constant exists but with a different value — replaces the existing line
-	*    via `preg_replace()`, then rewrites the whole file with LOCK_EX.
-	*
-	* If `config_core.php` does not exist yet it is created as an empty file
-	* before the append in path 2. A failure to create or write the file is
-	* logged as an ERROR and surfaced in the response message.
+	* 2. Otherwise — merge `state.install_status => $status` over the existing state.php (so
+	*    info_key/information/maintenance written earlier survive) and write the file atomically
+	*    via migration_committer::commit() (stage → back up → rename). A write failure is logged
+	*    as an ERROR and surfaced in the response message.
 	*
 	* The entire `$_SESSION['dedalo']` key is cleared after a successful write
 	* so that any cached session data derived from the old status is dropped.
@@ -706,13 +706,36 @@ final class install_config_manager {
 				return $response;
 			}
 
+			// guard: never SEAL 'installed' on an incomplete system (defense-in-depth vs a forged/early
+			// install_finish that would brick the box into a password-less 'installed' state: set_root_pw
+			// then refuses forever and get_structure_context returns empty). Requires the DB imported
+			// (matrix_users present) AND the root password set. Legit upgrades (to_update) satisfy both.
+				if ($status==='installed') {
+					$db_ready	= DBi::check_table_exists('matrix_users');
+					$root_ready	= $db_ready && (login::check_root_has_default_password()===false);
+					if (!$db_ready || !$root_ready) {
+						$response->msg = 'Error. Cannot mark the system installed: the database is not imported yet or the root password has not been set.';
+						debug_log(__METHOD__.' '.$response->msg, logger::ERROR);
+						return $response;
+					}
+				}
+
 		// v7 install state lives OUTSIDE the web root, in ../private/state.php (STATE scope),
 		// NOT in a web-served config file. Merge state.install_status over the existing state so
 		// info_key/information/maintenance written earlier survive. The boot emits the raw value,
 		// so the string 'installed' becomes DEDALO_INSTALL_STATUS === 'installed' (the gate value).
 			$private	= dirname(DEDALO_ROOT_PATH) . '/private';
 			$state_path	= $private . '/state.php';
-			$existing	= is_file($state_path) ? (array)(require $state_path) : [];
+			$existing	= [];
+			if (is_file($state_path)) {
+				try {
+					$existing = (array)(require $state_path);
+				} catch (\Throwable $e) {
+					// corrupt/partial state.php → start from empty; the existing file is backed up by
+					// migration_committer before overwrite, so nothing is silently lost.
+					$existing = [];
+				}
+			}
 
 			$content = install_config_persistor::render_state($existing, ['state.install_status' => $status]);
 
