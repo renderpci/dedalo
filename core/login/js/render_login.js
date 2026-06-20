@@ -404,7 +404,7 @@ const get_content_data = function(self) {
 			e.preventDefault()
 			const username = user_input.value
 			if (username.length<2) {
-				ui.show_message(messages_container, `Invalid username ${username}!`, 'error', 'component_message', true)
+				ui.show_message(messages_container, (get_label.invalid_username || 'Invalid username'), 'error', 'component_message', true)
 				return false
 			}
 			go_to_password_step()
@@ -504,7 +504,7 @@ const get_content_data = function(self) {
 			// Minimum 2 characters — same guard as username
 				const auth = auth_input.value
 				if (auth.length<2) {
-					const message = `Invalid auth code!`
+					const message = (get_label.invalid_auth_code || 'Invalid auth code!')
 					ui.show_message(messages_container, message, 'error', 'component_message', true)
 					return false
 				}
@@ -711,7 +711,7 @@ const get_content_data = function(self) {
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'reset_code_input',
-			placeholder		: (get_label.recovery_code || '••••••••'),
+			placeholder		: '••••••••',
 			parent			: reset_confirm_form
 		})
 		reset_code.setAttribute('inputmode', 'numeric')
@@ -793,7 +793,7 @@ const get_content_data = function(self) {
 
 			const identifier = reset_identifier.value.trim()
 			if (identifier.length<2) {
-				ui.show_message(messages_container, 'Please enter your username or email', 'error', 'component_message', true)
+				ui.show_message(messages_container, (get_label.enter_username_or_email || 'Please enter your username or email'), 'error', 'component_message', true)
 				return false
 			}
 			if (self.status==='reset') {
@@ -811,7 +811,7 @@ const get_content_data = function(self) {
 			self.reset_id = (api_response && api_response.reset_id) ? api_response.reset_id : null
 			ui.show_message(
 				messages_container,
-				(api_response && api_response.msg) || 'If an account matches, a recovery code has been sent.',
+				(get_label.recovery_code_sent || (api_response && api_response.msg) || 'If an account matches, a recovery code has been sent.'),
 				'ok',
 				'component_message',
 				true
@@ -830,19 +830,19 @@ const get_content_data = function(self) {
 			const new_password_confirm	= reset_new_password_confirm.value
 
 			if (!/^\d{8}$/.test(code)) {
-				ui.show_message(messages_container, 'Enter the 8-digit recovery code', 'error', 'component_message', true)
+				ui.show_message(messages_container, (get_label.enter_recovery_code || 'Enter the 8-digit recovery code'), 'error', 'component_message', true)
 				return false
 			}
 			if (new_password.length<8) {
-				ui.show_message(messages_container, 'Password too short. Use at least 8 characters', 'error', 'component_message', true)
+				ui.show_message(messages_container, (get_label.password_too_short || 'Password too short. Use at least 8 characters'), 'error', 'component_message', true)
 				return false
 			}
 			if (new_password!==new_password_confirm) {
-				ui.show_message(messages_container, 'Passwords do not match', 'error', 'component_message', true)
+				ui.show_message(messages_container, (get_label.passwords_do_not_match || 'Passwords do not match'), 'error', 'component_message', true)
 				return false
 			}
 			if (!self.reset_id) {
-				ui.show_message(messages_container, 'Please request a recovery code first', 'error', 'component_message', true)
+				ui.show_message(messages_container, (get_label.request_code_first || 'Please request a recovery code first'), 'error', 'component_message', true)
 				show_request_view()
 				return false
 			}
@@ -862,7 +862,7 @@ const get_content_data = function(self) {
 			reset_confirm_button.classList.remove('white')
 
 			if (api_response && api_response.result===true) {
-				ui.show_message(messages_container, api_response.msg || 'Your password has been updated. You can now log in.', 'ok', 'component_message', true)
+				ui.show_message(messages_container, (get_label.password_updated || 'Your password has been updated. You can now log in.'), 'ok', 'component_message', true)
 				// clear sensitive fields and return to login
 				reset_code.value					= ''
 				reset_new_password.value			= ''
@@ -870,12 +870,20 @@ const get_content_data = function(self) {
 				self.reset_id						= null
 				show_login_view()
 			} else {
-				const message = (api_response && api_response.errors && api_response.errors.length>0)
-					? api_response.errors
-					: (api_response && api_response.msg) || 'Invalid or expired code'
+				// map server error codes to translatable, user-friendly messages
+				const reset_error_labels = {
+					invalid_or_expired	: (get_label.recovery_invalid_or_expired || 'Invalid or expired code'),
+					too_many_attempts	: (get_label.recovery_too_many_attempts || 'Too many attempts. Please request a new code.'),
+					weak_password		: (get_label.password_too_short || 'Password too short. Use at least 8 characters'),
+					reset_failed		: (get_label.recovery_reset_failed || 'Could not update the password. Please try again later.')
+				}
+				const error_code	= (api_response && api_response.errors && api_response.errors.length>0) ? api_response.errors[0] : null
+				const message		= (error_code && reset_error_labels[error_code])
+					|| (api_response && api_response.msg)
+					|| reset_error_labels.invalid_or_expired
 				ui.show_message(messages_container, message, 'error', 'component_message', true)
 				// on lockout, force a fresh request
-				if (api_response && api_response.errors && api_response.errors.indexOf('too_many_attempts')!==-1) {
+				if (error_code==='too_many_attempts') {
 					self.reset_id = null
 					show_request_view()
 				}
