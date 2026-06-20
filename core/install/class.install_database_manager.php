@@ -104,10 +104,11 @@ final class install_database_manager {
 	* The function raises PHP's execution time limit to 10 minutes (600 s) because
 	* a full database restore can take much longer than the default `max_execution_time`.
 	*
+	* Authentication uses the PGPASSWORD env var (from DEDALO_PASSWORD_CONN), exported only
+	* around the psql exec, so the install DB may be LOCAL or REMOTE without a ~/.pgpass file.
 	* If psql produces no output (`$command_res` is empty after exec), the function
-	* diagnoses the probable cause — missing or misconfigured `~/.pgpass` file — and
-	* returns an error with diagnostic detail about the PHP process owner and home
-	* directory, so the operator can locate and fix the file.
+	* diagnoses the probable cause — an empty/incorrect DEDALO_PASSWORD_CONN — and returns an
+	* error with diagnostic detail about the PHP process owner, home directory and DB host.
 	*
 	* Paths are resolved from `install_config_manager::get_config()`:
 	* - `$config->target_file_path_compress` — the .gz source file
@@ -161,9 +162,12 @@ final class install_database_manager {
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 			if ($exec) {
 
-				$output = null;
-				$result_code = null;
-				exec($command, $output, $result_code);
+				// DBi::pg_exec authenticates via the PGPASSWORD env var (from DEDALO_PASSWORD_CONN),
+				// exported only around this exec, so the install DB may be LOCAL or REMOTE without
+				// a ~/.pgpass file.
+				$output = [];
+				$result_code = 0;
+				DBi::pg_exec($command, $output, $result_code);
 				$command_res = $output;
 				debug_log(__METHOD__
 					." Exec response 2 (exec) " . PHP_EOL
@@ -173,26 +177,22 @@ final class install_database_manager {
 				);
 
 				// empty output from psql usually means it could not authenticate
-				// (password prompt aborted silently), rather than a SQL error.
-				// The most common cause is a missing or mis-permissioned ~/.pgpass.
+				// (libpq found no usable credentials), rather than a SQL error.
+				// Authentication uses PGPASSWORD from DEDALO_PASSWORD_CONN; the most
+				// common cause is an empty/incorrect DEDALO_PASSWORD_CONN (or, when it
+				// is intentionally empty, a missing pg_hba.conf trust/peer rule).
 				if (empty($command_res)) {
 
-					$php_whoami					= trim(shell_exec('whoami'));
-					$php_get_current_user		= get_current_user();
-					$user_home_dir				= trim(shell_exec('echo $HOME'));
-					$pgpass_file_path			= $user_home_dir.'/.pgpass';
-					$pgpass_file_exists			= file_exists($pgpass_file_path);
-					// fileperms() returns a full 16-bit mode; the last 4 octal digits
-					// give the familiar Unix permission mask (e.g. '0600').
-					$pgpass_file_permissions	= $pgpass_file_exists
-						? substr(sprintf('%o', fileperms($pgpass_file_path)), -4)
-						: 'file not found!';
+					$php_whoami				= trim(shell_exec('whoami'));
+					$php_get_current_user	= get_current_user();
+					$user_home_dir			= trim(shell_exec('echo $HOME'));
+					$password_is_set		= (string)DEDALO_PASSWORD_CONN !== '';
 
-					$response->msg = 'Error. Database import failed! Verify your .pgpass file and look for errors in php error file. '
+					$response->msg = 'Error. Database import failed! Verify DEDALO_PASSWORD_CONN (PostgreSQL credentials) and look for errors in php error file. '
 						.' - PHP get_current_user: '		. $php_get_current_user
 						.' - PHP whoami: '					. $php_whoami
 						.' - PHP home: '					. $user_home_dir
-						.' - .pgpass file permissions: '	. $pgpass_file_permissions;
+						.' - DEDALO_PASSWORD_CONN set: '	. json_encode($password_is_set);
 					trigger_error($response->msg);
 
 					debug_log(__METHOD__
@@ -203,9 +203,8 @@ final class install_database_manager {
 						.' PHP user get_current_user: ' . $php_get_current_user . PHP_EOL
 						.' PHP user whoami: '			. $php_whoami . PHP_EOL
 						.' PHP $HOME dir: '				. $user_home_dir . PHP_EOL
-						.' .pgpass file path: '			. $pgpass_file_path . PHP_EOL
-						.' .pgpass file exists: '		. json_encode($pgpass_file_exists) . PHP_EOL
-						.' .pgpass file permissions: '	. $pgpass_file_permissions . PHP_EOL
+						.' DEDALO_PASSWORD_CONN set: '	. json_encode($password_is_set) . PHP_EOL
+						.' DB host: '					. DEDALO_HOSTNAME_CONN . PHP_EOL
 						, logger::ERROR
 					);
 
@@ -523,9 +522,22 @@ final class install_database_manager {
 	*
 	* @param bool $skip_if_exists - when true, return success immediately if the
 	*                               target database already exists
+	* @param array $exclude_data_tables - table names whose DATA is skipped during the clone
+	*                               (pg_dump --exclude-table-data). Their schema/sequences are
+	*                               still cloned; only their rows are omitted. Used to avoid
+	*                               copying production-scale data that clean_tables() would
+	*                               delete anyway. Each name is validated and shell-quoted.
+	*                               Defaults to [] (full data clone) for general-purpose callers.
+	* @param array $exclude_tables - table names skipped ENTIRELY (pg_dump --exclude-table):
+	*                               neither schema nor data is cloned. Used to drop legacy/dev
+	*                               tables (jer_dd, *_test, *_bk, temp) that are not part of the
+	*                               install image, so they are never copied. Safe because the
+	*                               Dédalo schema declares no foreign keys (relations are JSONB
+	*                               locators). Each name is validated and shell-quoted. Defaults
+	*                               to [] for general-purpose callers.
 	* @return object $response - result:true on success, result:false with msg on failure
 	*/
-	public static function clone_database_dump(bool $skip_if_exists) : object {
+	public static function clone_database_dump(bool $skip_if_exists, array $exclude_data_tables = [], array $exclude_tables = []) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -669,12 +681,40 @@ final class install_database_manager {
 		// terminate other sessions on the source database.  The output is piped
 		// directly into psql connected to the newly-created target database.
 		// SEC-041 defence-in-depth: shell-quote every interpolated value.
+			// Build --exclude-table-data flags: fully-emptied tables ship as schema only,
+			// so their production-scale row data is never copied into the install DB (it
+			// would only be deleted again by clean_tables). This turns clone cost from
+			// O(production size) into ~O(install size). Each identifier is validated against
+			// the safe-identifier regex and shell-quoted (SEC-041 defence-in-depth) — the
+			// list comes from install_config_manager (deployer-controlled), not HTTP input.
+				$exclude_data_flags = '';
+				foreach ($exclude_data_tables as $t) {
+					if (!is_string($t) || !preg_match('/^[a-z_][a-z0-9_$]*$/', $t)) {
+						debug_log(__METHOD__.' Skipping invalid exclude-data table identifier: '.to_string($t), logger::ERROR);
+						continue;
+					}
+					$exclude_data_flags .= ' --exclude-table-data=' . escapeshellarg('public.'.$t);
+				}
+
+			// Build --exclude-table flags: legacy/dev tables are not part of the install image,
+			// so neither their schema nor data is copied. Same identifier validation + quoting.
+				$exclude_table_flags = '';
+				foreach ($exclude_tables as $t) {
+					if (!is_string($t) || !preg_match('/^[a-z_][a-z0-9_$]*$/', $t)) {
+						debug_log(__METHOD__.' Skipping invalid exclude-table identifier: '.to_string($t), logger::ERROR);
+						continue;
+					}
+					$exclude_table_flags .= ' --exclude-table=' . escapeshellarg('public.'.$t);
+				}
+
 			$pg_dump_cmd = system::get_pg_bin_path()
 				. 'pg_dump '
 				. $config->host_line . ' ' . $config->port_line
 				. ' -U ' . escapeshellarg(DEDALO_USERNAME_CONN)
 				. ' --no-owner --no-privileges'
 				. ' --role=' . escapeshellarg(DEDALO_USERNAME_CONN)
+				. $exclude_data_flags
+				. $exclude_table_flags
 				. ' ' . escapeshellarg(DEDALO_DATABASE_CONN);
 
 			$psql_cmd = system::get_pg_bin_path()
@@ -693,9 +733,15 @@ final class install_database_manager {
 				, logger::WARNING
 			);
 			if ($exec) {
-				$output			= null;
-				$result_code	= null;
-				exec($command, $output, $result_code);
+				$output			= [];
+				$result_code	= 0;
+
+				// Authenticate via PGPASSWORD (read by libpq for both pg_dump and psql) instead
+				// of a ~/.pgpass file, so the source/target DB may be REMOTE. DBi::pg_exec sets
+				// the secret only around this exec and clears it immediately after; it is never
+				// interpolated into $command, so it reaches neither the debug log nor the process
+				// argument list.
+				DBi::pg_exec($command, $output, $result_code);
 
 				debug_log(__METHOD__
 					." Exec response (clone pipeline)" . PHP_EOL
@@ -723,6 +769,107 @@ final class install_database_manager {
 
 		return $response;
 	}//end clone_database_dump
+
+	/**
+	* LOAD_FILTERED_MATRIX_ONTOLOGY
+	* Loads ONLY the preserved TLD-root rows of matrix_ontology from the source database into
+	* the (selectively-cloned, schema-only) install database. matrix_ontology holds one root
+	* record per ontology node; the install image needs just the roots of the preserved TLDs
+	* (section_tipo = '<tld>0', e.g. 'dd0','rsc0') — about 8 of ~18 000 rows. Loading only those
+	* rows directly, instead of cloning the full ~130 MB table and pruning it in clean_tables(),
+	* avoids copying production-scale data the build would immediately discard.
+	*
+	* Mechanism: a cross-database filtered COPY over a psql pipe
+	*   psql <source>  -c "\copy (SELECT * FROM matrix_ontology WHERE section_tipo IN (...)) TO STDOUT"
+	*     | psql <install> -c "\copy matrix_ontology FROM STDIN"
+	* authenticated with PGPASSWORD (DBi::pg_exec) so source and install may be REMOTE. The
+	* preserved section_tipo roots derive from install_config_manager::get_config()->to_preserve_tld
+	* — the same single source of truth clean_tables() uses for its matrix_ontology pruning.
+	*
+	* Reliability: a shell pipe reports only the LAST stage's exit code, so a source-side failure
+	* (empty stream) would not surface as non-zero. The loaded row count is therefore verified
+	* against the source's filtered count; a mismatch returns an error.
+	*
+	* @return object $response - result:true on success, result:false with msg on failure
+	*/
+	public static function load_filtered_matrix_ontology() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed '.__METHOD__;
+
+		$config	= install_config_manager::get_config();
+		$exec	= true;
+
+		// preserved section_tipo roots ('<tld>0'). SEC: config-derived; validate each against
+		// the safe-identifier regex and single-quote (escaping any quote) for the IN-list.
+			$roots = [];
+			foreach ($config->to_preserve_tld as $tld) {
+				$st = $tld.'0';
+				if (!is_string($tld) || !preg_match('/^[a-z_][a-z0-9_$]*$/', $st)) {
+					debug_log(__METHOD__.' Skipping invalid section_tipo root: '.to_string($st), logger::ERROR);
+					continue;
+				}
+				$roots[] = "'".str_replace("'", "''", $st)."'";
+			}
+			if (empty($roots)) {
+				$response->msg = 'Error: no valid preserved section_tipo roots';
+				debug_log(__METHOD__.' '.$response->msg, logger::ERROR);
+				return $response;
+			}
+			$in_list = implode(',', $roots);
+
+		// expected row count from source (post-load verification)
+			$expected = null;
+			$src_conn = DBi::_getConnection();
+			$rc = pg_query($src_conn, 'SELECT count(*) AS n FROM "matrix_ontology" WHERE section_tipo IN ('.$in_list.');');
+			if ($rc!==false) {
+				$expected = (int)(pg_fetch_assoc($rc)['n'] ?? 0);
+			}
+
+		// cross-database filtered COPY: source → install (psql pipe, PGPASSWORD auth)
+			$pg = system::get_pg_bin_path();
+			$src_cmd = $pg.'psql '.$config->host_line.' '.$config->port_line
+				.' -U '.escapeshellarg(DEDALO_USERNAME_CONN)
+				.' -d '.escapeshellarg(DEDALO_DATABASE_CONN)
+				.' -v ON_ERROR_STOP=1 -c '.escapeshellarg('\copy (SELECT * FROM "matrix_ontology" WHERE section_tipo IN ('.$in_list.')) TO STDOUT');
+			$dst_cmd = $pg.'psql '.$config->host_line.' '.$config->port_line
+				.' -U '.escapeshellarg(DEDALO_USERNAME_CONN)
+				.' -d '.escapeshellarg($config->db_install_name)
+				.' -v ON_ERROR_STOP=1 -c '.escapeshellarg('\copy "matrix_ontology" FROM STDIN');
+			$command = $src_cmd.' | '.$dst_cmd;
+
+			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL.to_string($command), logger::WARNING);
+			if ($exec) {
+				$output			= [];
+				$result_code	= 0;
+				DBi::pg_exec($command, $output, $result_code);
+				if ($result_code !== 0) {
+					$msg = ' Error: matrix_ontology filtered COPY failed with exit code '.$result_code;
+					debug_log(__METHOD__.$msg.PHP_EOL.to_string($output), logger::ERROR);
+					$response->msg = $msg;
+					return $response;
+				}
+
+				// verify loaded count == source filtered count (pipe reports only last stage)
+				$install_conn = install_config_manager::get_db_install_conn();
+				if ($install_conn!==false && $expected!==null) {
+					$vr		= pg_query($install_conn, 'SELECT count(*) AS n FROM "matrix_ontology";');
+					$actual	= ($vr!==false) ? (int)(pg_fetch_assoc($vr)['n'] ?? -1) : -1;
+					if ($actual !== $expected) {
+						$msg = " Error: matrix_ontology load mismatch (expected $expected, got $actual)";
+						debug_log(__METHOD__.$msg, logger::ERROR);
+						$response->msg = $msg;
+						return $response;
+					}
+				}
+			}
+
+		$response->result	= true;
+		$response->msg		= 'OK. Request done '.__METHOD__;
+
+		return $response;
+	}//end load_filtered_matrix_ontology
 
 	/**
 	* CLEAN_COUNTERS
@@ -885,16 +1032,21 @@ final class install_database_manager {
 					$sentences[] = "DROP TABLE IF EXISTS \"$current_table\" CASCADE;";
 				}
 			}
-			$sql = implode(PHP_EOL, $sentences);
-			debug_log(__METHOD__." Executing DB query: ". PHP_EOL .to_string($sql), logger::WARNING);
-			if ($exec) {
-				$result = pg_query($db_install_conn, $sql);
-				if (!$result) {
-					$msg = " Error on db execution (clean tables - remove): ".pg_last_error($db_install_conn);
-					debug_log(__METHOD__.$msg, logger::ERROR);
-					$response->msg = $msg;
-					$response->error[] = 'query execution failed from drop non valid tables';
-					return $response;
+			// Guard: with selective cloning (--exclude-table) the non-valid tables are never
+			// copied, so there may be nothing to drop. An empty string passed to pg_query()
+			// is itself a "query failed" error, so only run when at least one DROP was built.
+			if (!empty($sentences)) {
+				$sql = implode(PHP_EOL, $sentences);
+				debug_log(__METHOD__." Executing DB query: ". PHP_EOL .to_string($sql), logger::WARNING);
+				if ($exec) {
+					$result = pg_query($db_install_conn, $sql);
+					if (!$result) {
+						$msg = " Error on db execution (clean tables - remove): ".pg_last_error($db_install_conn);
+						debug_log(__METHOD__.$msg, logger::ERROR);
+						$response->msg = $msg;
+						$response->error[] = 'query execution failed from drop non valid tables';
+						return $response;
+					}
 				}
 			}
 
@@ -945,10 +1097,10 @@ final class install_database_manager {
 						// For all other listed tables: delete every row and reset the primary
 						// sequence to 1 so fresh installs always start IDs from a known baseline.
 						$sql = 'DELETE FROM "' . $table . '"; ALTER SEQUENCE IF EXISTS ' . $table . '_id_seq RESTART WITH 1;';
-						if ($table==='matrix_activity') {
-							// matrix_activity has a second sequence (section_id) independent of
-							// the primary id sequence; both must be reset to avoid gaps.
-							$sql .= 'ALTER SEQUENCE IF EXISTS matrix_activity_section_id_seq RESTART WITH 1;';
+						if (in_array($table, ['matrix_activity', 'matrix_activity_diffusion'], true)) {
+							// These tables have a second sequence (section_id) independent of the
+							// primary id sequence; both must be reset to avoid gaps.
+							$sql .= 'ALTER SEQUENCE IF EXISTS ' . $table . '_section_id_seq RESTART WITH 1;';
 						}
 						break;
 				}

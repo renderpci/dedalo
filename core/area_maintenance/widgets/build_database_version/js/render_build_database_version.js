@@ -105,6 +105,16 @@ const get_content_data = async function(self) {
 			render_restore_dd_ontology_recovery_from_file(self, value)
 		)
 
+	// build_matrix_hierarchy_main_sql
+		const build_matrix_hierarchy_main_sql_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'group_container build_matrix_hierarchy_main_sql_container',
+			parent			: content_data
+		})
+		build_matrix_hierarchy_main_sql_container.appendChild(
+			render_build_matrix_hierarchy_main_sql(self, value)
+		)
+
 
 	return content_data
 }//end get_content_data
@@ -372,6 +382,83 @@ const render_restore_dd_ontology_recovery_from_file = function (self, value) {
 
 	return fragment
 }//end render_restore_dd_ontology_recovery_from_file
+
+
+
+/**
+* RENDER_BUILD_MATRIX_HIERARCHY_MAIN_SQL
+* Creates the DOM nodes for the 're-create matrix_hierarchy_main.sql' action
+* @param object self
+* @param object value
+* @return DocumentFragment
+*/
+const render_build_matrix_hierarchy_main_sql = function (self, value) {
+
+	const fragment = new DocumentFragment()
+
+	// info
+		const text = `Re-creates the file 'install/import/matrix_hierarchy_main.sql' from the current database, filtered by the 'to_install' TLD list (core/install/to_install.json). All hierarchies are written inactive.`
+		ui.create_dom_element({
+			element_type	: 'div',
+			inner_html		: text,
+			class_name		: 'info_text',
+			parent			: fragment
+		})
+
+	// button_process build_matrix_hierarchy_main_sql
+		const button_process = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'light button_process',
+			inner_html		: 'Re-create \'matrix_hierarchy_main.sql\' file',
+			parent			: fragment
+		})
+		// event click
+		const click_handler = async (e) => {
+			e.stopPropagation()
+
+			if (!confirm(get_label.sure || 'Sure?')) {
+				return
+			}
+
+			// blur button
+			document.activeElement.blur()
+
+			// locks the button submit
+			button_process.classList.add('loading')
+
+			// build_matrix_hierarchy_main_sql
+			const api_response = await self.build_matrix_hierarchy_main_sql()
+
+			if(SHOW_DEBUG===true) {
+				console.log('**** render_build_matrix_hierarchy_main_sql api_response:', api_response);
+			}
+
+			// unlocks the button submit
+			button_process.classList.remove('loading')
+
+			// process_response print
+			while (process_response.firstChild) {
+				process_response.removeChild(process_response.firstChild);
+			}
+			ui.create_dom_element({
+				element_type	: 'pre',
+				class_name		: 'response',
+				inner_html		: JSON.stringify(api_response, null, 2),
+				parent			: process_response
+			})
+		}
+		button_process.addEventListener('click', click_handler)
+
+	// process_response
+		const process_response = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'process_response',
+			parent			: fragment
+		})
+
+
+	return fragment
+}//end render_build_matrix_hierarchy_main_sql
 
 
 

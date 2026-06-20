@@ -174,4 +174,36 @@ build_database_version.prototype.restore_dd_ontology_recovery_from_file = async 
 
 
 
+/**
+* BUILD_MATRIX_HIERARCHY_MAIN_SQL
+* Re-creates the seed file 'install/import/matrix_hierarchy_main.sql' in server, filtered by
+* the to_install TLD allow-list and with every hierarchy inactive.
+* @return object api_response
+*/
+build_database_version.prototype.build_matrix_hierarchy_main_sql = async function () {
+
+	const api_response = await data_manager.request({
+		body: {
+			dd_api: 'dd_area_maintenance_api',
+			action: 'widget_request',
+			prevent_lock: true,
+			source: {
+				type: 'widget',
+				model: 'build_database_version',
+				action: 'build_matrix_hierarchy_main_sql'
+			},
+			options: {
+				background_running: false
+			}
+		},
+		retries: 1, // one try only
+		timeout: 3600 * 1000 // 1 hour waiting response
+	})
+
+
+	return api_response
+}//end build_matrix_hierarchy_main_sql
+
+
+
 // @license-end

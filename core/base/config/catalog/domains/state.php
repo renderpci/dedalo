@@ -8,9 +8,9 @@ return [
 	new config_key(
 		path:  'state.install_status',
 		const: 'DEDALO_INSTALL_STATUS',
-		type:  'bool',
+		type:  'string',
 		scope: config_scope::STATE,
-		doc:   'Install status flag. Machine-written at install time.',
+		doc:   "Install status. Machine-written at install completion: the string 'installed' once the installation is sealed; absent/empty before. ~15 consumers gate on DEDALO_INSTALL_STATUS === 'installed' (install flow, v1 API, dd_ontology_db_manager, dd_init_test), so this is a string, not a bool.",
 	),
 	new config_key(
 		path:  'state.maintenance_mode',

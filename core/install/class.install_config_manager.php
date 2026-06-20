@@ -129,10 +129,11 @@ final class install_config_manager {
 
 		// to_clean_tables. The records of this list will be removed from the install DB except for some exceptions like 'matrix_ontology'
 		$to_clean_tables	= [
-			'matrix',				// main table
-			'matrix_activities',	// activities (exhibitions, visits, etc)
-			'matrix_activity',		// Dédalo activity log data
-			'matrix_hierarchy',		// thesaurus data
+			'matrix',					// main table
+			'matrix_activities',		// activities (exhibitions, visits, etc)
+			'matrix_activity',			// Dédalo activity log data
+			'matrix_activity_diffusion',// activity/diffusion tracking data (project-specific)
+			'matrix_hierarchy',			// thesaurus data
 			'matrix_hierarchy_main',// hierarchy data
 			'matrix_ontology',		// ontology data
 			'matrix_ontology_main',// ontology data
@@ -204,12 +205,26 @@ final class install_config_manager {
 		$config_core_file_path		= DEDALO_CONFIG_PATH.'/config_core.php';
 		$hierarchy_typologies 		= install_hierarchy_manager::get_hierarchy_typlologies();
 
+		// exclude_data_tables. Tables whose row DATA is fully removed during the clean
+		// phase, so the install image ships their structure (and sequences) but no rows.
+		// These are excluded from the clone dump (pg_dump --exclude-table-data) so that
+		// production-scale data — matrix_time_machine, matrix_activity, matrix_hierarchy,
+		// matrix_ontology, etc. — is never copied only to be deleted again. matrix_ontology
+		// is cloned schema-only here and its handful of preserved TLD-root rows are reloaded
+		// directly from source by install_database_manager::load_filtered_matrix_ontology()
+		// (18k rows → ~8). matrix_ontology_main stays OFF this list: its rows are row-FILTERED
+		// in place by clean_tables() (a JSONB predicate) and it is tiny, so copy-then-filter is
+		// fine. Derived from to_clean_tables so the whitelist stays the single source of truth.
+		$row_filtered_tables	= ['matrix_ontology_main'];
+		$exclude_data_tables	= array_values(array_diff($to_clean_tables, $row_filtered_tables));
+
 		return (object)[
 			'db_install_name'			=> $db_install_name,
 			'host_line'					=> $host_line,
 			'port_line'					=> $port_line,
 			'to_preserve_tld'			=> $to_preserve_tld,
 			'to_clean_tables'			=> $to_clean_tables,
+			'exclude_data_tables'		=> $exclude_data_tables,
 			'valid_tables' 				=> $valid_tables,
 			'target_file_path'			=> $target_file_path,
 			'target_file_path_compress'	=> $target_file_path_compress,
@@ -253,6 +268,31 @@ final class install_config_manager {
 
 		return $db_install_conn;
 	}//end get_db_install_conn
+
+	/**
+	* PG_SHELL_EXEC
+	* Run a PostgreSQL client shell command (pg_dump / psql / gunzip|psql pipelines) with libpq
+	* authentication via the PGPASSWORD environment variable, taken from DEDALO_PASSWORD_CONN — so
+	* the source/target database may be LOCAL or REMOTE without relying on a ~/.pgpass file.
+	* PGPASSWORD is exported only for the duration of the child process and cleared immediately
+	* after, and is never interpolated into $command, so the secret reaches neither the process
+	* argument list nor any debug log of the command string. Mirrors the inline handling in
+	* install_database_manager::clone_database_dump().
+	*
+	* Binary-path resolution is the caller's responsibility — build commands with
+	* system::get_pg_bin_path() (never the raw DB_BIN_PATH constant), so binaries are found on
+	* any host layout while connecting over the network to a remote server.
+	*
+	* @param string $command full shell command (binaries, -h/-p, -U, plus any redirects/pipes)
+	* @return string|null     shell_exec() return value (stdout, or null when there is none)
+	*/
+	public static function pg_shell_exec(string $command) : ?string {
+
+		// Delegate to the canonical helper on the DB layer (DBi::pg_shell_exec),
+		// which owns PGPASSWORD lifecycle handling. Kept as a thin alias so existing
+		// install callers do not change.
+		return DBi::pg_shell_exec($command);
+	}//end pg_shell_exec
 
 	/**
 	* GET_DB_STATUS

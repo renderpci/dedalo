@@ -259,10 +259,10 @@ class install extends common {
 				$properties->db_config->socket		= DEDALO_SOCKET_CONN;
 
 		// get_db_data_version. Version of DDBB data ( 5.8.2 expected ). array|null
-		// Only meaningful when the database is actually reachable. On a FRESH install there is no
-		// DB yet, and the data-version reader would pass a false connection to pg_* and fatal — so
-		// skip it unless the live connection check passed.
-			$properties->db_data_version = ($db_status->db_connection_check===true)
+		// Only meaningful when the database is reachable AND already populated. On a fresh/empty DB
+		// (connectable but not yet imported) the matrix_updates table does not exist, and querying
+		// it logs a noisy (non-fatal) pg error — so gate on the table existing too.
+			$properties->db_data_version = ($db_status->db_connection_check===true && DBi::check_table_exists('matrix_updates'))
 				? install_config_manager::get_db_data_version()
 				: null;
 
@@ -370,8 +370,9 @@ class install extends common {
 	*
 	* Steps (each step returns on failure, accumulating non-fatal errors):
 	*  1. Clone current production DB to the ephemeral install database via
-	*     install_database_manager::clone_database() (requires exclusive lock;
-	*     see clone_database_dump() for the lock-free alternative).
+	*     install_database_manager::clone_database_dump() (lock-free pg_dump|psql,
+	*     MVCC snapshot — does not terminate production sessions). The TEMPLATE-based
+	*     clone_database() remains available for maintenance-window use.
 	*  2. Strip custom ontology rows, leaving only core TLD namespaces
 	*     (dd, rsc, hierarchy, ontology, ontologytype, localontology, lg, oh).
 	*  3. Truncate all counter tables and reset their sequences.
@@ -425,8 +426,38 @@ class install extends common {
 				]);
 			}
 			$skip_if_exists = false;
-			// $call_response = install_database_manager::clone_database_dump($skip_if_exists);
-			$call_response = install_database_manager::clone_database($skip_if_exists);
+			// Lock-free clone (pg_dump | psql, MVCC snapshot): does NOT terminate active
+			// sessions on the source/production DB nor require an exclusive lock. This is the
+			// safe default. Use clone_database() (CREATE DATABASE ... WITH TEMPLATE) only in a
+			// dedicated maintenance window where killing all production sessions is acceptable.
+			// Selective dump: the fully-emptied tables ($config->exclude_data_tables) are cloned
+			// as schema only — their production-scale data is never copied just to be deleted by
+			// clean_tables(), so the clone moves ~O(install size) instead of O(production size).
+			// Legacy/dev tables (anything in the source but not in valid_tables — e.g. jer_dd,
+			// *_test, *_bk, temp) are excluded ENTIRELY so they are never copied into the image.
+				$source_tables	= DBi::get_tables(); // source DB (DEDALO_DATABASE_CONN)
+				$exclude_tables	= is_array($source_tables)
+					? array_values(array_diff($source_tables, $config->valid_tables))
+					: [];
+			$call_response = install_database_manager::clone_database_dump($skip_if_exists, $config->exclude_data_tables, $exclude_tables);
+			// $call_response = install_database_manager::clone_database($skip_if_exists);
+			if ($call_response->result===false) {
+				return $call_response;
+			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
+			}
+
+		// load filtered matrix_ontology rows
+			// matrix_ontology was cloned schema-only (its ~18k rows are 99.96% discarded);
+			// reload just the preserved TLD-root rows directly from source instead of copying
+			// the full ~130 MB table and pruning it in clean_tables().
+			if ( running_in_cli()===true ) {
+				print_cli((object)[
+					'msg' => 'Loading filtered matrix_ontology'
+				]);
+			}
+			$call_response = install_database_manager::load_filtered_matrix_ontology();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
@@ -609,6 +640,22 @@ class install extends common {
 	}//end build_install_version
 
 	/**
+	* BUILD_MATRIX_HIERARCHY_MAIN_SQL
+	* Regenerates the install/import/matrix_hierarchy_main.sql seed file from the current
+	* database, keeping only the hierarchies whose TLD is in the to_install allow-list
+	* (core/install/to_install.json) and shipping them all INACTIVE.
+	*
+	* On-demand maintenance task: run it when the canonical hierarchy set or the
+	* matrix_hierarchy_main schema changes, then commit the regenerated file. It is NOT part
+	* of build_install_version() (which imports whatever file is committed).
+	*
+	* @return object - response from install_hierarchy_manager::build_matrix_hierarchy_main_sql()
+	*/
+	public static function build_matrix_hierarchy_main_sql() : object {
+		return install_hierarchy_manager::build_matrix_hierarchy_main_sql();
+	}//end build_matrix_hierarchy_main_sql
+
+	/**
 	* OPTIMIZE_DATABASE
 	* Runs PostgreSQL VACUUM ANALYZE on the current production database to
 	* reclaim storage and update query-planner statistics.
@@ -623,8 +670,8 @@ class install extends common {
 	* Decompresses and imports the bundled .pgsql.gz install seed file into
 	* the current (empty) database.  This is the standard fresh-install path:
 	* gunzip the file, run psql to load it, then delete the uncompressed copy.
-	* Requires a .pgpass entry for the PostgreSQL user so psql can authenticate
-	* without a password prompt.
+	* psql authenticates via the PGPASSWORD env var (from DEDALO_PASSWORD_CONN), so the
+	* database may be local or remote; no ~/.pgpass entry is required.
 	* @return object $response
 	*/
 	public static function install_db_from_default_file() : object {
