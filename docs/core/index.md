@@ -272,6 +272,10 @@ The `request_config` system defines how sections and components retrieve and dis
 - **[Request Query Object (RQO)](./rqo.md)** — the API request structure.
 - **[Search Query Object (SQO)](./sqo.md)** — the database query abstraction.
 
+### Semantic search & RAG
+
+- **[RAG & semantic search](./rag.md)** — the meaning layer over the structured archive: why vectorizing cultural heritage and memory matters, how semantic search and Retrieval-Augmented Generation change humanities research, and how the subsystem (a separate pgvector store, structure-aware semantic chunking, hybrid retrieval, per-record ACL, grounded Q&A with citations) plugs into the Dédalo data model. Written for both researchers and developers.
+
 ### Data objects
 
 - **[Data model](./data_model/index.md)** — how a value lives in Dédalo: the JSONB foundation, the typed `matrix` columns and the consolidated v7 value item, plus the per-type pages.
