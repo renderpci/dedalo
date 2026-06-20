@@ -19,10 +19,11 @@ opt-in and fully dormant unless `DEDALO_RAG_ENABLED = true`.
 | Config | `rag_config` (`properties.rag` resolution, no bespoke table) |
 | Ingestion | `rag_text_extractor` (get_value/export-atoms), `rag_chunker` (structure-aware **semantic** chunking), `rag_indexer` |
 | Freshness | `rag_queue` (matrix-DB marker, advisory single-flight drain, delete-by-observed-ts), hooks in `section_record::save()/delete()` |
-| Retrieval | `retrieval` (hybrid dense+lexical → RRF → rerank seam → **explicit ACL** → records/passages), `rag_fusion`, `rag_lexical` |
+| Retrieval | `retrieval` (hybrid dense+lexical → RRF → **reranker** → **explicit ACL** → diversify → records/passages), `rag_fusion`, `rag_lexical` (accent-folded via `f_unaccent`), `rag_reranker` (cross-encoder; pass-through if unconfigured) |
 | Security | `rag_security` (per-record egress gate, ACL chokepoint) |
-| Generation | `rag_llm_provider` (Anthropic Citations / local), `dd_rag_api::ask` |
+| Generation | `rag_llm_provider` (Anthropic Citations / local; temperature, locator-titled citations), `dd_rag_api::ask` (context-token budgeting, live egress recompute, raw-JSON answer, configurable system prompt) |
 | API | `dd_rag_api` (`semantic_search`, `similar_to`, `retrieve`, `ask`, `get_agent_context`) |
+| Ops | `rag_queue::drain` (advisory single-flight, exponential backoff + `last_error`), `rag_queue::stats` (metrics), `core/rag/cli/rag_drain.php` (cron entry), `rag_indexer::reconcile_section`, `rag_vector_store::drop_model_partition` |
 
 ### The chunker (the advanced piece)
 `rag_chunker` does **structure-aware semantic chunking**, not fixed-size splits:
@@ -54,8 +55,15 @@ opt-in and fully dormant unless `DEDALO_RAG_ENABLED = true`.
 ## Operations
 
 - **Re-index on edit** is automatic: `save()`/`delete()` enqueue a marker; an
-  out-of-band drain (`rag_queue::drain()`, wire to OS cron) does the heavy work
-  off the editor path. A down vector store never blocks a save.
+  out-of-band drain does the heavy work off the editor path. A down vector store
+  never blocks a save. **Wire the drain to cron** (the missing-without-it piece):
+  `* * * * * cd /path/to/dedalo && php core/rag/cli/rag_drain.php >> rag_drain.log 2>&1`
+  (safe to overlap — `drain()` single-flights via an advisory lock). Failures
+  back off exponentially and record `last_error`; `rag_queue::stats()` reports depth.
+- **Reconcile** after direct-SQL changes/migrations: `rag_indexer::reconcile_section($tipo)`
+  enqueues add/delete drift between the matrix and the vector store.
+- **Model migration**: build the new model's index, re-backfill, then
+  `rag_vector_store::drop_model_partition($old_model)` to reclaim space.
 - **Backfill / index build**: drive `rag_indexer::index_record()` over a section,
   then `rag_vector_store::build_ann_index($model, $dimension)` once (HNSW is built
   after load, on an autocommit connection — never on the hot upsert path).
@@ -82,8 +90,6 @@ These are intentionally out of the foundation:
 - **Phase 5b multimodal media** — image visual embeddings (`embedding_provider_multimodal`,
   `rag_media_extractor`). PDF/AV already flow through the text path once their
   `component_text_area` is flagged.
-- **Reranker** — `retrieval::rerank()` is a pass-through seam; wire a
-  `rerank_provider` to activate.
 - **Phase 8 public service** — separate Bun service over a published-only
   collection (co-located with diffusion).
 - **MCP tool** — `dedalo_get_relevant_context` → `get_agent_context`.
@@ -92,6 +98,9 @@ These are intentionally out of the foundation:
 ## Tests
 
 `test/server/rag/` (suite `rag`): `php vendor/bin/phpunit -c test/server/phpunit.xml --testsuite rag`
-- `rag_chunker_Test` / `rag_fusion_Test` / `rag_security_Test` — pure logic, always run.
+- `rag_chunker_Test` / `rag_fusion_Test` / `rag_security_Test` / `rag_hardening_Test`
+  (token budgeting, diversify, reranker pass-through, private-range) — pure logic, always run.
 - `rag_store_integration_Test` — end-to-end against a real pgvector instance;
   skips cleanly when `DEDALO_RAG_DB_*` is not configured.
+
+Current: 31 tests / 88 assertions green (4 store-integration skip without a live vector DB).
