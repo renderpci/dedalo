@@ -413,6 +413,7 @@ const get_content_data = function(self) {
 
 	// shared form-values object accumulated across the collect steps and submitted at persist time
 	self._cfg = self._cfg || {}
+	self._needs_config = needs_config // used by the password/login reveal step numbers
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -629,6 +630,9 @@ const get_content_data = function(self) {
 		set_pw.content_div.appendChild(render_set_root_password_block(self))
 
 	// ── LOGIN BLOCK ──
+	// The root user logs in HERE, inside the installer, without navigating away (the login
+	// component's custom_action_dispatch intercepts success). This authenticates the session so
+	// the MANDATORY hierarchy import below can run with real credentials (no superuser shortcut).
 		const login = create_section_block({
 			label			: get_label.login_label || 'Login',
 			class_name		: 'login_block',
@@ -642,6 +646,9 @@ const get_content_data = function(self) {
 	})
 
 	// ── HIERARCHIES IMPORT BLOCK ──
+	// Importing hierarchies/ontologies is a MANDATORY install step (only WHICH hierarchies is
+	// optional). It runs AFTER login so section::create_record has an authenticated user, and a
+	// successful import reveals the Finish step.
 		const hierarchies = create_section_block({
 			label			: get_label.import_hierarchies_label || 'Install hierarchies',
 			class_name		: 'hierarchies_import_block',
@@ -649,30 +656,19 @@ const get_content_data = function(self) {
 			parent			: content_data,
 			content_data	: content_data
 		})
-		// Reveal the Finish step. Hierarchies are OPTIONAL, so this is reached either after a
-		// successful import (the callback) OR via the explicit "Skip" button below — the legacy
-		// flow only exposed Finish after an import, leaving no way to finish without one.
-		const reveal_finish = function() {
-			self.node.content_data.install_finish_block.classList.remove('hide')
-			update_step_indicator(self.node.content_data.step_indicator, needs_config ? 11 : 7)
-		}
 		const hierarchies_import_options = {
 			hierarchies				: properties.hierarchies,
 			default_checked			: properties.install_checked_default,
 			hierarchy_typologies	: properties.hierarchy_typologies,
-			callback		: reveal_finish
+			// On a successful import, reveal the final Finish step.
+			callback		: function() {
+				self.node.content_data.install_finish_block.classList.remove('hide')
+				update_step_indicator(self.node.content_data.step_indicator, needs_config ? 11 : 7)
+			}
 		}
 		hierarchies.content_div.appendChild(
 			render_hierarchies_import_block(hierarchies_import_options)
 		)
-		// Skip → go straight to Finish (you can import hierarchies later from the app).
-		const skip_hierarchies_button = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'skip_hierarchies_button',
-			inner_html		: get_label.skip_hierarchies || 'Skip — finish without importing',
-			parent			: hierarchies.content_div
-		})
-		skip_hierarchies_button.addEventListener('mouseup', reveal_finish)
 
 	// ── INSTALL FINISH BLOCK ──
 		const finish = create_section_block({
@@ -1447,6 +1443,15 @@ const render_entity_block = function(self) {
 			status.textContent = (get_label.required_fields || 'Please fill the required fields') + ': ' + missing.join(', ')
 			return
 		}
+		// Entity is a MACHINE identifier (drives paths, the session name, media folder). Reject
+		// spaces/special chars — they break the session name and produce ugly paths. Suggest a slug.
+		const entity_val = String(cfg.entity).trim()
+		if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(entity_val)) {
+			const suggestion = entity_val.replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'my_entity'
+			status.classList.remove('ok'); status.classList.add('error')
+			status.textContent = (get_label.entity_invalid || 'Entity name must start with a letter and contain only letters, numbers and underscores (no spaces). Try: ') + suggestion
+			return
+		}
 		status.classList.remove('error'); status.classList.add('ok')
 		status.textContent = 'OK'
 		self.node.content_data.diffusion_block.classList.remove('hide')
@@ -2036,9 +2041,9 @@ const render_set_root_password_block = function(self) {
 					console.log('api_response:', api_response.msg)
 					set_status_result(set_pw_status, api_response)
 					change_root_pw_button.remove();
-					// show next block
+					// show next block: login (root logs in inside the installer)
 					self.node.content_data.login_block.classList.remove('hide')
-					update_step_indicator(self.node.content_data.step_indicator, 5)
+					update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 9 : 5)
 				}else{
 					console.error(api_response.msg);
 					set_status_result(set_pw_status, api_response)
@@ -2094,6 +2099,10 @@ const render_login_block = async function(self) {
 					mode	: 'edit'
 				})
 
+			// rendered login panel node, assigned after render() below; declared here so the
+			// dispatch closure can remove the floating panel on a successful login.
+				let login_node = null
+
 			// custom_action_dispatch. Set before render to catch the on-login action
 			// This function is called by the login component's submit handler in place of
 			// the default session-redirect logic, so we can intercept the result inside
@@ -2108,9 +2117,15 @@ const render_login_block = async function(self) {
 							login_container.classList.add('hide')
 							to_login_button.remove()
 
-						// show next block hierarchies_import_block
+						// remove the floating login panel — it is appended to self.node (not to
+						// login_container), so hiding the container leaves it stuck on screen.
+							if (login_node) {
+								login_node.remove()
+							}
+
+						// login done → reveal the MANDATORY hierarchies import (now authenticated)
 							self.node.content_data.hierarchies_import_block.classList.remove('hide')
-							update_step_indicator(self.node.content_data.step_indicator, 6)
+							update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 10 : 6)
 
 					}else{
 
@@ -2127,8 +2142,8 @@ const render_login_block = async function(self) {
 			// build with autoload to get login context from API
 				await login.build(true)
 
-			// render and assign node
-				const login_node = await login.render()
+			// render and assign node (login_node is declared above so the dispatch can remove it)
+				login_node = await login.render()
 				// login_container.appendChild(login_node)
 				self.node.appendChild(login_node)
 
@@ -2372,31 +2387,26 @@ export const render_hierarchies_import_block = function(options) {
 					action			: 'install_hierarchies',
 					body_options	: { hierarchies: hierarchies_to_install },
 					status_node		: import_hierarchies_status,
-					button_node		: import_hierarchies_button
+					button_node		: import_hierarchies_button,
+					timeout			: 600 * 1000 // hierarchy imports can take minutes
 				})
 				console.log('install_hierarchies response: ', api_response);
 
 			// manage result
-				if (api_response.result===false) {
-					console.error(api_response.msg);
-					import_hierarchies_status.classList.add('error')
+				// Backend contract: { result:bool (overall ok), msg, errors:[], responses:[] }.
+				// Success only when result===true AND no per-item errors were recorded.
+				const ar_errors = Array.isArray(api_response.errors) ? api_response.errors : []
+				if (api_response.result===true && ar_errors.length===0) {
+					import_hierarchies_status.classList.add('ok')
 					import_hierarchies_status.textContent = api_response.msg
-				}else{
-
-					// Partial failure: the API may return an array of per-hierarchy results.
-					// Show the first failing item's message; the operator can adjust and retry.
-					const false_check = api_response.result.find(el => el.result === false)
-					if(false_check) {
-						import_hierarchies_status.classList.add('error')
-						import_hierarchies_status.textContent = false_check.msg
-					}else{
-						import_hierarchies_status.classList.add('ok')
-						import_hierarchies_status.textContent = api_response.msg
-						import_hierarchies_button.remove()
-						if (typeof callback==='function') {
-							callback(api_response)
-						}
+					import_hierarchies_button.remove()
+					if (typeof callback==='function') {
+						callback(api_response)
 					}
+				}else{
+					console.error('install_hierarchies errors:', ar_errors, api_response);
+					import_hierarchies_status.classList.add('error')
+					import_hierarchies_status.textContent = ar_errors.length>0 ? ar_errors[0] : (api_response.msg || 'Hierarchy import failed')
 				}
 
 			// unlock container
