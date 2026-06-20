@@ -12,9 +12,15 @@
 * earlier literal const (e.g. INFO_KEY = ENTITY). First ACTIVE definition of a name wins.
 *
 * Commented-out defines are intentionally NOT captured (the migration keeps a timestamped
-* backup of the original file). Standalone from legacy_surface — different semantics.
+* backup of the original file). Value-classification semantics differ from legacy_surface
+* (symbol-table cross-refs, concatenation folding, guarded array-literal eval), but the
+* tokenizer primitives are shared with it via the define_scanner trait.
 */
+require_once __DIR__ . '/trait.define_scanner.php';
+
 final class migration_extractor {
+
+	use define_scanner;
 
 	/**
 	* @param string[] $files absolute paths, processed in order (symbol table persists across them)
@@ -38,24 +44,24 @@ final class migration_extractor {
 		$n = count($tokens);
 		for ($i = 0; $i < $n; $i++) {
 			$t = $tokens[$i];
-			if (!is_array($t) || !self::is_define($t)) {
+			if (!is_array($t) || !self::is_define_call($t)) {
 				continue;
 			}
 			$prev = self::prev_meaningful($tokens, $i);
 			if (is_array($prev) && in_array($prev[0], [T_OBJECT_OPERATOR, T_DOUBLE_COLON, T_NULLSAFE_OBJECT_OPERATOR, T_FUNCTION], true)) {
 				continue;
 			}
-			$open = self::next_meaningful($tokens, $i);
+			$open = self::next_meaningful_index($tokens, $i);
 			if ($open === null || $tokens[$open] !== '(') {
 				continue;
 			}
-			$name_idx = self::next_meaningful($tokens, $open);
+			$name_idx = self::next_meaningful_index($tokens, $open);
 			if ($name_idx === null || !is_array($tokens[$name_idx]) || $tokens[$name_idx][0] !== T_CONSTANT_ENCAPSED_STRING) {
 				continue;
 			}
 			$name = self::unquote($tokens[$name_idx][1]);
 			$line = $tokens[$name_idx][2];
-			$comma = self::next_meaningful($tokens, $name_idx);
+			$comma = self::next_meaningful_index($tokens, $name_idx);
 			if ($comma === null || $tokens[$comma] !== ',') {
 				continue;
 			}
@@ -183,69 +189,4 @@ final class migration_extractor {
 			return null;
 		}
 	}//end eval_literal
-
-	private static function is_define(array $token) : bool {
-		if ($token[0] === T_STRING) {
-			return strtolower($token[1]) === 'define';
-		}
-		if ($token[0] === T_NAME_FULLY_QUALIFIED) {
-			return strtolower($token[1]) === '\\define';
-		}
-		return false;
-	}//end is_define
-
-	/** @return array{0:array<int,array|string>,1:int} [value tokens, index of define()'s closing paren] */
-	private static function collect_value(array $tokens, int $start) : array {
-		$depth = 1;
-		$collected = [];
-		$n = count($tokens);
-		for ($i = $start; $i < $n; $i++) {
-			$t = $tokens[$i];
-			if (!is_array($t)) {
-				if ($t === '(' || $t === '[') {
-					$depth++;
-				} elseif ($t === ')' || $t === ']') {
-					$depth--;
-					if ($depth === 0) {
-						return [$collected, $i];
-					}
-				}
-			}
-			$collected[] = $t;
-		}
-		return [$collected, $n - 1];
-	}//end collect_value
-
-	private static function unquote(string $raw) : string {
-		$quote = $raw[0];
-		$inner = substr($raw, 1, -1);
-		if ($quote === "'") {
-			return str_replace(['\\\\', "\\'"], ['\\', "'"], $inner);
-		}
-		return stripcslashes($inner);
-	}//end unquote
-
-	private static function next_meaningful(array $tokens, int $from) : ?int {
-		$n = count($tokens);
-		for ($i = $from + 1; $i < $n; $i++) {
-			$t = $tokens[$i];
-			if (is_array($t) && in_array($t[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)) {
-				continue;
-			}
-			return $i;
-		}
-		return null;
-	}//end next_meaningful
-
-	/** @return array|string|null */
-	private static function prev_meaningful(array $tokens, int $from) {
-		for ($i = $from - 1; $i >= 0; $i--) {
-			$t = $tokens[$i];
-			if (is_array($t) && in_array($t[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)) {
-				continue;
-			}
-			return $t;
-		}
-		return null;
-	}//end prev_meaningful
 }

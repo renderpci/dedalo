@@ -4,7 +4,8 @@
 * MIGRATION_COMMITTER
 * The migration's only filesystem mutation. WHOLE-MIGRATION ATOMIC (G1): every non-empty
 * artifact is first STAGED to a temp file in its target dir; only once ALL stage successfully
-* are the existing targets backed up (per-{host}.{entity}/{stamp}) and the temps renamed into
+* are the existing targets backed up (each backup timestamped, so a later commit never overwrites
+* an earlier commit's backup of the same file) and the temps renamed into
 * place. A failure during staging discards every temp and touches no target — so a crash / disk-
 * full / permission error never leaves ../private half-written (which would boot as a broken-but-
 * alive box). .env targets get chmod 0600. Artifacts with no real content (empty / header-only)
@@ -50,13 +51,17 @@ final class migration_committer {
 		}
 
 		// --- phase 2: all staged OK → back up existing targets, then rename temps into place ---
+		// Timestamp shared by every backup in THIS commit but distinct across commits, so a later
+		// commit (e.g. set_install_status re-writing state.php after persist_config) never clobbers
+		// an earlier backup. hrtime() suffix guarantees uniqueness even within the same second.
+		$backup_stamp = date('Ymd_His') . '_' . substr((string) hrtime(true), -6);
 		foreach ($staged as $key => $s) {
 			$backed_up = false;
 			if (is_file($s['path'])) {
 				if (!is_dir($backup_dir) && !mkdir($backup_dir, 0700, true) && !is_dir($backup_dir)) {
 					throw new \RuntimeException("migration_committer: cannot create backup dir {$backup_dir}");
 				}
-				if (!copy($s['path'], $backup_dir . '/' . basename($s['path']) . '.bak')) {
+				if (!copy($s['path'], $backup_dir . '/' . basename($s['path']) . '.' . $backup_stamp . '.bak')) {
 					throw new \RuntimeException("migration_committer: backup failed for {$s['path']}");
 				}
 				$backed_up = true;
@@ -82,7 +87,7 @@ final class migration_committer {
 				}
 				if ($t[0] === T_RETURN) {
 					// Empty ONLY when the returned array has no entries. Handle BOTH var_export
-					// long-array `array ( )` (what config_writer/state_writer emit) and short `[ ]`.
+					// long-array `array ( )` (what state_writer emits) and short `[ ]`.
 					// Anything with entries (either syntax) is non-empty and must be written.
 					return (bool) preg_match('/return\s*(?:array\s*\(\s*\)|\[\s*\])\s*;/', $content);
 				}

@@ -18,7 +18,9 @@
 * runs the one-time config migration BEFORE loading env, so `git pull` alone moves the install to
 * the .env layout (see config_auto_migrate). DEDALO_INSTALL_STATUS carries over verbatim from the
 * legacy config_core.php, so an already-installed box stays installed (no wizard).
-* Precedence (low→high): catalog defaults → config.local.php → .env → .env.<host> → process env.
+* Precedence (low→high): catalog defaults → boot-resolved paths.* (install/request) →
+* config.local.php → .env → .env.<host> → process env. config.local.php and .env can also
+* override the boot-resolved paths.* keys. See config/sample.config.local.php for the format.
 */
 
 $repo = dirname(__DIR__);

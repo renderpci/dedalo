@@ -21,6 +21,9 @@ config/*
 # config.php can never be served/executed; secret-free, safe to track.
 !config/.htaccess
 !config/sample.config.php
+# Admin-override TEMPLATE (returns []; secret-free) — documents the dot-path format for the
+# optional ../private/config.local.php. Referenced by bootstrap.php; safe to track.
+!config/sample.config.local.php
 !config/sample.config_db.php
 !config/sample.config_areas.php
 !config/sample.config_core.php

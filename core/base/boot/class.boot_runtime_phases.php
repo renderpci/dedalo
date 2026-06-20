@@ -41,6 +41,11 @@ final class boot_runtime_phases {
 
 	/**
 	* FOR
+	* @internal Test/composition seam — documents the canonical hermetic runtime order and is
+	* exercised by boot_runtime_phases_Test. Production WEB boots assemble the fuller pipeline in
+	* boot_web_profile::phases() (which composes the same factories directly); this helper is not
+	* on the production path.
+	*
 	* The ordered hermetic runtime pipeline:
 	* [env_load? -> config_build -> compat_shim -> apply_locale].
 	* $base_overrides (e.g. boot_paths::resolve()) is the compiler layer override

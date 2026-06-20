@@ -4,7 +4,6 @@ require_once __DIR__ . '/class.migration_extractor.php';
 require_once __DIR__ . '/class.migration_classifier.php';
 require_once __DIR__ . '/class.migration_destination.php';
 require_once __DIR__ . '/class.env_writer.php';
-require_once __DIR__ . '/class.config_writer.php';
 require_once __DIR__ . '/class.state_writer.php';
 require_once __DIR__ . '/class.passthrough_writer.php';
 
@@ -29,7 +28,7 @@ final class migration_runner {
 
 		// .env is the single config place: secrets + general config (overrides) go into ../private/.env.
 		// config.local.php is NOT written by the migration — it stays an optional admin-only file the
-		// shim still loads if present (config_writer is kept for that opt-in, just not used by default).
+		// shim still loads if present.
 		$artifacts = [
 			'env_php'     => env_writer::render_php($cls) . env_writer::render_config($cls, $catalog),
 			'env_bun'     => env_writer::render_bun($cls),

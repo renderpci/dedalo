@@ -28,6 +28,40 @@ final class env_value {
 		if (strpbrk($value, "'\n\r") === false) {
 			return "'" . $value . "'";
 		}
-		return '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $value) . '"';
+		// double-quoted: escape what env_loader::parse decodes back, so newline/CR/tab survive the
+		// line-based reader (a literal newline would otherwise split the value across two .env lines).
+		return '"' . strtr($value, [
+			'\\' => '\\\\',
+			'"'  => '\\"',
+			"\n" => '\\n',
+			"\r" => '\\r',
+			"\t" => '\\t',
+		]) . '"';
 	}//end quote
+
+	/**
+	* STRINGIFY
+	* A typed PHP value → its raw .env string form (caller wraps with quote()):
+	*  - null  → the literal `null` marker (a real null can't live in .env — e.g. a socket
+	*            DB port with no TCP port — and config_caster reads the marker back as null);
+	*  - bool  → `true`/`false` (human-readable; round-trips via config_caster/env_loader);
+	*  - array → JSON (list/map decoded back by the catalog type at boot);
+	*  - scalar → verbatim.
+	* The single serializer shared by the migration writer (env_writer) and the runtime
+	* install writer (install_config_persistor) so the encoding never drifts.
+	* @param mixed $value
+	* @return string
+	*/
+	public static function stringify(mixed $value) : string {
+		if ($value === null) {
+			return 'null';
+		}
+		if (is_bool($value)) {
+			return $value ? 'true' : 'false';
+		}
+		if (is_array($value)) {
+			return (string) json_encode($value);
+		}
+		return (string) $value;
+	}//end stringify
 }

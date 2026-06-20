@@ -124,4 +124,30 @@ final class config_auto_migrate_Test extends TestCase {
 		// second run short-circuits on the sentinel: returns empty, throws nothing
 		$this->assertSame([], $this->migrate());
 	}
+
+	public function test_quarantine_throws_and_leaves_source_when_a_legacy_file_cannot_be_moved() : void {
+		if (function_exists('posix_getuid') && posix_getuid() === 0) {
+			$this->markTestSkipped('rename-into-readonly-dir does not fail for root');
+		}
+		$src = $this->sandbox . '/config/config_db.php';
+		file_put_contents($src, "<?php\ndefine('DEDALO_PASSWORD_CONN', 'pgpass123');\n");
+		$backup = $this->sandbox . '/ro_backup';
+		mkdir($backup, 0500, true); // pre-existing, read-only → rename INTO it must fail
+
+		// rename() emits a "Permission denied" E_WARNING (a useful production diagnostic) before
+		// returning false; swallow just that expected warning so the assertion path stays clean.
+		set_error_handler(static fn() : bool => true, E_WARNING);
+		try {
+			config_auto_migrate::quarantine([$src], $backup);
+			$this->fail('expected config_migrate_blocked when a legacy file cannot be quarantined');
+		} catch (config_migrate_blocked $e) {
+			$this->assertStringContainsString('config_db.php', $e->getMessage());
+		} finally {
+			restore_error_handler();
+			@chmod($backup, 0700); // let tearDown clean up
+		}
+		// the secret-bearing source is NOT silently left half-migrated invisibly: it stays in place
+		// so the absent sentinel makes the next boot retry rather than seal a broken state
+		$this->assertFileExists($src);
+	}
 }

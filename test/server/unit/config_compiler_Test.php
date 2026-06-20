@@ -6,6 +6,7 @@ require_once dirname(__DIR__, 3) . '/core/base/config/class.config_scope.php';
 require_once dirname(__DIR__, 3) . '/core/base/config/class.config_merge.php';
 require_once dirname(__DIR__, 3) . '/core/base/config/class.config_key.php';
 require_once dirname(__DIR__, 3) . '/core/base/config/class.config_compiler.php';
+require_once dirname(__DIR__, 3) . '/core/base/boot/class.env_loader.php';
 
 final class config_compiler_Test extends TestCase {
 
@@ -80,75 +81,19 @@ final class config_compiler_Test extends TestCase {
 		$this->assertArrayNotHasKey('db.password', $with);
 	}
 
-	public function test_signature_is_deterministic_and_sensitive() : void {
-		$a = config_compiler::signature(['v' => '7.0', 'env' => 'pro', 'hash' => 'abc']);
-		$b = config_compiler::signature(['v' => '7.0', 'env' => 'pro', 'hash' => 'abc']);
-		$c = config_compiler::signature(['v' => '7.0', 'env' => 'pro', 'hash' => 'XYZ']);
-		$this->assertSame($a, $b);
-		$this->assertNotSame($a, $c);
-		$this->assertMatchesRegularExpression('/^[0-9a-f]{40}$/', $a);
-	}
+	public function test_entity_label_defaults_to_entity_name_and_env_overrides_it() : void {
+		putenv('DEDALO_ENTITY_LABEL'); // ensure unset
+		env_loader::reset();
+		$r = config_compiler::resolve($this->catalog(), [['identity.entity' => 'museo_x']]);
+		$this->assertSame('museo_x', $r['identity.entity_label']); // defaults to the entity name
 
-	public function test_cache_path_keyed_by_host_and_entity() : void {
-		$this->assertSame(
-			'/cache/config/config.example.org.museo_x.php',
-			config_compiler::cache_path('/cache/config', 'example.org', 'museo_x')
-		);
-	}
-
-	public function test_write_compiled_is_loadable_and_roundtrips() : void {
-		$dir = sys_get_temp_dir() . '/dedalo_cc_' . getmypid() . '_' . uniqid();
-		mkdir($dir, 0750, true);
-		$path = $dir . '/config.host.entity.php';
-		$flat = ['media.image.thumb_width' => 222, 'media.magick_config' => ['remove_layer_0' => false, 'is_opaque' => null], 'paths.core_url' => '/dedalo/core'];
-
-		config_compiler::write_compiled($path, $flat);
-
-		$this->assertFileExists($path);
-		$loaded = require $path;          // opcache-friendly PHP array literal
-		$this->assertSame($flat, $loaded);
-		// no leftover temp files in the dir
-		$this->assertSame([], glob($dir . '/*.tmp.*'));
-
-		array_map('unlink', glob($dir . '/*'));
-		rmdir($dir);
-	}
-
-	public function test_resolve_then_compile_end_to_end() : void {
-		$dir = sys_get_temp_dir() . '/dedalo_cc_' . getmypid() . '_' . uniqid();
-		mkdir($dir, 0750, true);
-		$flat = config_compiler::resolve($this->catalog(), [['media.image.thumb_width' => 333]]);
-		$path = config_compiler::cache_path($dir, 'h', 'e');
-		config_compiler::write_compiled($path, $flat);
-		$loaded = require $path;
-		$this->assertSame(333, $loaded['media.image.thumb_width']);
-		$this->assertSame('/dedalo/core/media_engine/img.php', $loaded['media.image.file_url']);
-
-		array_map('unlink', glob($dir . '/*'));
-		rmdir($dir);
-	}
-
-	public function test_cache_path_rejects_traversal_in_host() : void {
-		$this->expectException(\InvalidArgumentException::class);
-		config_compiler::cache_path('/cache/config', '../../evil', 'e');
-	}
-
-	public function test_cache_path_rejects_slash_in_entity() : void {
-		$this->expectException(\InvalidArgumentException::class);
-		config_compiler::cache_path('/cache/config', 'host', 'a/b');
-	}
-
-	public function test_cache_path_allows_host_with_port() : void {
-		$this->assertSame(
-			'/c/config.localhost:8080.museo_x.php',
-			config_compiler::cache_path('/c', 'localhost:8080', 'museo_x')
-		);
-	}
-
-	public function test_signature_is_order_independent() : void {
-		$this->assertSame(
-			config_compiler::signature(['a' => 1, 'b' => 2]),
-			config_compiler::signature(['b' => 2, 'a' => 1])
-		);
+		putenv('DEDALO_ENTITY_LABEL=Museo X'); // live env override (process env wins in env_loader)
+		try {
+			$r2 = config_compiler::resolve($this->catalog(), [['identity.entity' => 'museo_x']]);
+			$this->assertSame('Museo X', $r2['identity.entity_label']);
+		} finally {
+			putenv('DEDALO_ENTITY_LABEL');
+			env_loader::reset();
+		}
 	}
 }

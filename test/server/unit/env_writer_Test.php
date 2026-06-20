@@ -80,6 +80,21 @@ final class env_writer_Test extends TestCase {
 		$this->assertSame([['db_name' => '', 'code' => '', 'api_ui' => null]], json_decode($parsed['API_WEB_USER_CODE_MULTIPLE'], true));
 	}
 
+	public function test_bool_secret_serializes_as_true_false_not_one_empty() : void {
+		// secrets use the same readable bool encoding as install_config_persistor — never 1/''
+		$classification = [
+			'DD_FLAG_ON'  => $this->entry(migration_destination::ENV, true),
+			'DD_FLAG_OFF' => $this->entry(migration_destination::ENV, false),
+		];
+		$content = env_writer::render_php($classification);
+		$this->assertStringContainsString('DD_FLAG_ON=true', $content);
+		$this->assertStringContainsString('DD_FLAG_OFF=false', $content);
+		// round-trips back to the same booleans through the boot cast set
+		$parsed = env_loader::parse($content);
+		$this->assertTrue(in_array(strtolower($parsed['DD_FLAG_ON']), ['1', 'true', 'yes', 'on'], true));
+		$this->assertFalse(in_array(strtolower($parsed['DD_FLAG_OFF']), ['1', 'true', 'yes', 'on'], true));
+	}
+
 	public function test_render_config_emits_non_default_overrides_typed() : void {
 		$catalog = [
 			new config_key('db.host', 'DD_C_HOST', 'string', 'localhost', config_scope::STATIC),

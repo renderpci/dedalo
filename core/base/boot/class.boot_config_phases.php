@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/class.boot_phase.php';
 require_once __DIR__ . '/class.env_loader.php';
+require_once __DIR__ . '/class.config_caster.php';
 require_once __DIR__ . '/../config/class.config_scope.php';
 require_once __DIR__ . '/../config/class.config_compiler.php';
 require_once __DIR__ . '/../config/class.config.php';
@@ -60,21 +61,8 @@ final class boot_config_phases {
 			if ($v === null) {
 				continue;
 			}
-			$out[$key->path] = self::cast_to($v, $key->type);
+			$out[$key->path] = config_caster::cast($v, $key->type);
 		}
 		return $out;
 	}//end env_overrides
-
-	/** Cast a .env STRING to the catalog key's declared type (.env is text-only). */
-	private static function cast_to(string $value, string $type) : mixed {
-		if (strtolower(trim($value)) === 'null') {
-			return null; // explicit null marker — .env can't carry a real null (e.g. a socket DB port)
-		}
-		return match ($type) {
-			'int'         => (int) $value,
-			'bool'        => in_array(strtolower(trim($value)), ['1', 'true', 'yes', 'on'], true),
-			'list', 'map' => is_array($decoded = json_decode($value, true)) ? $decoded : [],
-			default       => $value, // string
-		};
-	}//end cast_to
 }

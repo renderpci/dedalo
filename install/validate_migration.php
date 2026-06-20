@@ -32,6 +32,17 @@ foreach (['config.php', 'config_db.php', 'config_areas.php', 'config_core.php'] 
 }
 if ($sources === []) { fwrite(STDERR, "validate_migration: no legacy config in {$config_dir}\n"); exit(2); }
 
+// Refuse on an ALREADY-FLIPPED box: post-migration config/config.php is the generated shim
+// (`require __DIR__.'/bootstrap.php'`), so booting it as the "old surface" would re-enter the v7
+// pipeline and the diff would compare the new surface against itself → a meaningless faithful=YES.
+// This validator must run ONCE, BEFORE committing the migration.
+$config_php = $config_dir . '/config.php';
+if (is_file($config_php) && strpos((string) file_get_contents($config_php), 'bootstrap.php') !== false) {
+	fwrite(STDERR, "validate_migration: {$config_php} is the post-flip shim — this box is already migrated.\n"
+		. "Validation must run BEFORE the flip, against the legacy config.\n");
+	exit(2);
+}
+
 // OLD surface — boot the real config in a subprocess (never read as source)
 $old_cmd = escapeshellarg(PHP_BINARY) . ' -d error_reporting=0 -d display_errors=0 -r '
 	. escapeshellarg('include ' . var_export($config_dir . '/config.php', true) . '; echo json_encode(get_defined_constants(true)["user"], JSON_INVALID_UTF8_SUBSTITUTE);') . ' 2>/dev/null';
@@ -44,7 +55,6 @@ $plan = migration_runner::plan($sources, $catalog);
 $staging = sys_get_temp_dir() . '/dedalo_migrate_staging_' . getmypid();
 $targets = [
 	'env_php'     => $staging . '/private/.env',
-	'config'      => $staging . '/config/local/config.php',
 	'state'       => $staging . '/config/state.php',
 	'passthrough' => $staging . '/config/local/passthrough.php',
 ];

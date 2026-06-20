@@ -41,6 +41,32 @@ final class env_loader_Test extends TestCase {
 		$this->assertSame('localhost', $out['HOST']);
 	}
 
+	public function test_parse_strips_inline_comment_after_double_quoted_value() : void {
+		// the FIRST closing quote ends the value; the trailing "# comment" is ignored
+		$out = env_loader::parse('HOST="db.internal" # the db host');
+		$this->assertSame('db.internal', $out['HOST']);
+	}
+
+	public function test_parse_strips_inline_comment_after_single_quoted_value() : void {
+		$out = env_loader::parse("HOST='db.internal' # the db host");
+		$this->assertSame('db.internal', $out['HOST']);
+	}
+
+	public function test_parse_escaped_quote_is_not_the_closer() : void {
+		// \" is an escaped quote inside a double-quoted value, not the structural closer
+		$out = env_loader::parse('MSG="a\"b" # tail');
+		$this->assertSame('a"b', $out['MSG']);
+	}
+
+	public function test_parse_unterminated_quote_drops_dangling_quote_not_baked_in() : void {
+		// a missing closing quote must NOT bake the leading quote into the value
+		$out = env_loader::parse('PW="abc');
+		$this->assertSame('abc', $out['PW']);
+		// and a comment-looking tail on a malformed quoted line is treated as unquoted
+		$out2 = env_loader::parse('PW="abc # def');
+		$this->assertSame('abc', $out2['PW']);
+	}
+
 	public function test_parse_rejects_invalid_keys() : void {
 		$out = env_loader::parse("bad-key=1\nlower=2\n9NUM=3\nGOOD_KEY=4");
 		$this->assertSame(['GOOD_KEY' => '4'], $out);

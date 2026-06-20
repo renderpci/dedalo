@@ -38,7 +38,8 @@ final class boot_web_profile {
 		$phases = [];
 		// P0/P1 error + shutdown handlers (class.Error.php auto-initializes on include)
 		$phases[] = boot_subsystem_phases::include_phase('error_handlers', $repo . '/core/base/class.Error.php');
-		// P3 secrets
+		// P3 secrets. Production passes $env_path = null: bootstrap.php loads .env + .env.<host>
+		// (host-layered) BEFORE boot::run, so this single-file env_load is a TEST seam only.
 		if ($env_path !== null) {
 			$phases[] = boot_runtime_phases::env_load_phase($env_path);
 		}

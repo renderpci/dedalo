@@ -10,7 +10,12 @@
 *  USER            - per-logged-user value (debug flags); accessor-only, NEVER emitted
 *  SECRET          - from env/.env; emitted from live env, NOT compiled into the artifact
 *  STATE           - machine-written runtime state; emitted from live state, NOT compiled
-*  PASSTHROUGH     - migrated unknown custom define; emitted unvalidated, compiled
+*  PASSTHROUGH     - migrated unknown custom define; emitted via passthrough.php include, NOT compiled
+*
+* RESERVED: no catalog key currently declares DERIVED_REQUEST or PASSTHROUGH as its scope.
+* DERIVED_REQUEST is reserved for future request-derived keys (paths.* are resolved by
+* boot_paths today); PASSTHROUGH lives as a migration_destination, not a catalog scope. Both
+* cases are referenced defensively by the migration classifier/validator — keep them.
 */
 enum config_scope : string {
 	case STATIC          = 'static';

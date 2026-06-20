@@ -24,7 +24,7 @@ final class env_writer {
 			if (($info['record']['kind'] ?? null) !== 'literal') {
 				continue; // a secret must have a resolved literal value
 			}
-			$lines[] = $name . '=' . self::quote((string) self::stringify($info['record']['value']));
+			$lines[] = $name . '=' . self::quote(env_value::stringify($info['record']['value']));
 		}
 		return implode("\n", $lines) . "\n";
 	}//end render_php
@@ -40,7 +40,7 @@ final class env_writer {
 			if (($record['kind'] ?? null) !== 'literal') {
 				continue; // runtime/derived (e.g. DEDALO_API_URL) is computed at boot, not migration
 			}
-			$lines[] = $bun_key . '=' . self::quote((string) self::stringify($record['value']));
+			$lines[] = $bun_key . '=' . self::quote(env_value::stringify($record['value']));
 		}
 		return implode("\n", $lines) . "\n";
 	}//end render_bun
@@ -75,7 +75,7 @@ final class env_writer {
 			if ($value === $default_of[$name]) {
 				continue; // matches the shipped default — no override needed
 			}
-			$lines[] = $name . '=' . self::format_value($value);
+			$lines[] = $name . '=' . self::quote(env_value::stringify($value));
 		}
 		sort($lines);
 		if ($lines === []) {
@@ -84,34 +84,6 @@ final class env_writer {
 		return "\n# --- general config (per-install overrides; or edit ../private/config.local.php) ---\n"
 			. implode("\n", $lines) . "\n";
 	}//end render_config
-
-	/** A typed config value → a readable .env value (bool/null as literals; arrays as JSON; scalars quoted). */
-	private static function format_value(mixed $value) : string {
-		if ($value === null) {
-			return 'null';
-		}
-		if (is_bool($value)) {
-			return $value ? 'true' : 'false';
-		}
-		if (is_int($value) || is_float($value)) {
-			return (string) $value;
-		}
-		if (is_array($value)) {
-			return self::quote((string) json_encode($value));
-		}
-		return self::quote((string) $value);
-	}//end format_value
-
-	/** value → string for an env line: bools as 1/'' ; list/map as JSON; scalars as-is. */
-	private static function stringify(mixed $value) : string {
-		if (is_bool($value)) {
-			return $value ? '1' : '';
-		}
-		if (is_array($value)) {
-			return (string) json_encode($value); // list/map secrets — decoded back at boot by catalog type
-		}
-		return (string) $value;
-	}//end stringify
 
 	/**
 	* Quote an env value so env_loader::parse reads it back identically:

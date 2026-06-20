@@ -10,7 +10,6 @@ require_once dirname(__DIR__, 3) . '/install/class.migration_destination.php';
 require_once dirname(__DIR__, 3) . '/install/class.constant_map.php';
 require_once dirname(__DIR__, 3) . '/install/class.migration_classifier.php';
 require_once dirname(__DIR__, 3) . '/install/class.env_writer.php';
-require_once dirname(__DIR__, 3) . '/install/class.config_writer.php';
 require_once dirname(__DIR__, 3) . '/install/class.state_writer.php';
 require_once dirname(__DIR__, 3) . '/install/class.passthrough_writer.php';
 require_once dirname(__DIR__, 3) . '/install/class.migration_runner.php';

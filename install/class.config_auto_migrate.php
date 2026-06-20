@@ -130,7 +130,14 @@ final class config_auto_migrate {
 		}
 		foreach ($sources as $p) {
 			if (is_file($p)) {
-				@rename($p, $backup_dir . '/' . basename($p) . '.legacy'); // best-effort; box already boots from ../private
+				// Checked, NOT best-effort: a secret-bearing legacy file left in the web root is a
+				// real exposure. Throw BEFORE the sentinel is written so the next boot retries the
+				// migration rather than sealing a half-quarantined box behind a "done" sentinel.
+				if (!rename($p, $backup_dir . '/' . basename($p) . '.legacy')) {
+					throw new config_migrate_blocked(
+						"cannot quarantine legacy config {$p} out of the web root — move it by hand, then retry"
+					);
+				}
 			}
 		}
 	}

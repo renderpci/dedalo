@@ -62,14 +62,29 @@ final class env_loader {
 
 		$q = $val[0];
 		if ($q === '"' || $q === "'") {
-			// Single-line values only. The LAST occurrence of the opening quote
-			// char is treated as the structural closing quote. An escaped closing
-			// quote mid-value (e.g. "a\"") is out of scope for this minimal .env
-			// subset — use single quotes for values that contain literal double
-			// quotes.
-			$last = strrpos($val, $q);
-			if ($last !== false && $last > 0) {
-				$inner = substr($val, 1, $last - 1);
+			// Single-line values only. The structural closing quote is the FIRST
+			// unescaped occurrence of the opening quote char (forward scan); any
+			// remainder after it (trailing whitespace or a `# comment`) is ignored.
+			// In double-quoted values a `\"` is an escaped quote, not the closer.
+			$len    = strlen($val);
+			$inner  = '';
+			$closed = false;
+			$i      = 1;
+			while ($i < $len) {
+				$c = $val[$i];
+				if ($q === '"' && $c === '\\' && $i + 1 < $len) {
+					$inner .= $c . $val[$i + 1]; // keep escape pair for strtr below
+					$i += 2;
+					continue;
+				}
+				if ($c === $q) {
+					$closed = true;
+					break;
+				}
+				$inner .= $c;
+				$i++;
+			}
+			if ($closed) {
 				if ($q === "'") {
 					return $inner; // literal, no escapes
 				}
@@ -82,6 +97,11 @@ final class env_loader {
 					'\\"'  => '"',
 				]);
 			}
+			// unterminated quote → malformed line. Surface it (silent corruption of a secret is
+			// the worst failure mode) and drop the dangling opening quote so the remainder is
+			// handled as an unquoted value instead of baking the leading quote into the constant.
+			@error_log('env_loader: unterminated quote in a .env value; treating it as unquoted');
+			$val = ltrim($val, $q);
 		}
 
 		// unquoted: a whitespace-prefixed # starts an inline comment

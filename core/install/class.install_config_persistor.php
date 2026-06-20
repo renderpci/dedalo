@@ -69,24 +69,9 @@ final class install_config_persistor {
 			. "return " . var_export($merged, true) . ";\n";
 	}//end render_state
 
-	/**
-	* STRINGIFY
-	* A typed value → its .env string form: null → the literal `null` marker (so a socket
-	* connection with no TCP port reads back as null); bool → true/false; list/map → JSON;
-	* scalars verbatim.
-	* @param mixed $value
-	* @return string
-	*/
+	/** A typed value → its .env string form. Delegates to the shared serializer so the
+	* installer and the migration writer encode identically (env_value::stringify). */
 	private static function stringify(mixed $value) : string {
-		if ($value === null) {
-			return 'null';
-		}
-		if (is_bool($value)) {
-			return $value ? 'true' : 'false';
-		}
-		if (is_array($value)) {
-			return (string) json_encode($value);
-		}
-		return (string) $value;
+		return env_value::stringify($value);
 	}//end stringify
 }

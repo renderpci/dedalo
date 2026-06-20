@@ -73,7 +73,7 @@ final class migration_committer_Test extends TestCase {
 	}
 
 	public function test_writes_populated_var_export_long_array_and_skips_empty_one() : void {
-		// config_writer/state_writer emit var_export() LONG-array syntax — must be written, not skipped
+		// state_writer emits var_export() LONG-array syntax — must be written, not skipped
 		$populated = "<?php declare(strict_types=1);\n\nreturn array (\n  'db.host' => 'pg.acme.org',\n  'identity.entity' => 'acme',\n);\n";
 		$empty     = "<?php declare(strict_types=1);\n\nreturn array (\n);\n";
 

@@ -7,9 +7,15 @@ require_once __DIR__ . '/class.config_key.php';
 /**
 * CONFIG_COMPILER
 * Resolves the catalog + layered overrides into a flat, request-independent map
-* (STATIC + DERIVED only), and persists it as an opcache-friendly PHP artifact.
-* SECRET/STATE/REQUEST/USER/DERIVED_REQUEST scopes are deliberately excluded
-* from the compiled artifact (read live at boot in later phases).
+* (STATIC + DERIVED only). SECRET/STATE/REQUEST/USER/DERIVED_REQUEST scopes are
+* deliberately excluded (read live at boot in later phases).
+*
+* No compiled-artifact cache: resolve() runs per request and is pure in-memory work
+* (array merge + ~50 DERIVED closures, no I/O) measured at ~16µs against the full
+* catalog — cheaper than loading a var_export()'d artifact would be (~64µs: require +
+* array materialization, even opcache-warm). A persistence cache was prototyped and
+* dropped because it would ADD latency and cache-invalidation/staleness complexity for
+* no gain. If a future multi-entity install ever shows cost, re-measure first.
 */
 final class config_compiler {
 
@@ -60,59 +66,6 @@ final class config_compiler {
 
 		return $resolved;
 	}//end resolve
-
-	/**
-	* SIGNATURE
-	* Deterministic content signature for cache invalidation. Pass the inputs
-	* that should invalidate the compiled artifact (catalog mtimes, env/local
-	* content hashes, DEDALO_VERSION, active env name) — NOT secrets.
-	* @param array<string,mixed> $parts
-	* @return string 40-char sha1
-	*/
-	public static function signature(array $parts) : string {
-		ksort($parts);
-		return sha1(json_encode($parts, JSON_THROW_ON_ERROR));
-	}//end signature
-
-	/**
-	* CACHE_PATH
-	* Artifact path keyed by host AND entity (one physical checkout may serve
-	* multiple entities; sharing a compiled file across entities would leak
-	* per-entity values).
-	* Callers MUST pass filesystem-safe host/entity (e.g. a normalized DEDALO_HOST/DEDALO_ENTITY);
-	* a raw request Host header must be validated/normalized first.
-	*/
-	public static function cache_path(string $base_dir, string $host, string $entity) : string {
-		foreach (['host' => $host, 'entity' => $entity] as $label => $part) {
-			if (preg_match('/^[A-Za-z0-9_.:-]+$/', $part) !== 1 || str_contains($part, '..')) {
-				throw new \InvalidArgumentException(
-					"config_compiler::cache_path: unsafe {$label} (path-traversal/charset): {$part}"
-				);
-			}
-		}
-		return rtrim($base_dir, '/') . '/config.' . $host . '.' . $entity . '.php';
-	}//end cache_path
-
-	/**
-	* WRITE_COMPILED
-	* Atomically writes the resolved flat map as a PHP array literal: write to a
-	* unique temp file on the SAME directory, then rename() over the target
-	* (atomic on local POSIX fs) so concurrent FPM workers never read a torn file.
-	* @param string $path
-	* @param array<string,mixed> $flat
-	* @return void
-	*/
-	public static function write_compiled(string $path, array $flat) : void {
-		$code = "<?php declare(strict_types=1);\nreturn " . var_export($flat, true) . ";\n";
-		$tmp  = $path . '.tmp.' . getmypid() . '.' . bin2hex(random_bytes(4));
-		if (file_put_contents($tmp, $code, LOCK_EX) === false) {
-			throw new \RuntimeException('config_compiler: failed writing temp artifact: ' . $tmp);
-		}
-		if (rename($tmp, $path) === false) {
-			@unlink($tmp);
-			throw new \RuntimeException('config_compiler: failed renaming artifact into place: ' . $path);
-		}
-	}//end write_compiled
 
 	/**
 	* DEEP_MERGE
