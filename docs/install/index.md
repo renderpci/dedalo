@@ -237,16 +237,20 @@ Then, install Dédalo manually, commands are for Ubuntu 24.04 (only as reference
           exit
           ```
 
-    5. Create '.pgpass' file, it will be used to create backups or update ontology.
+    5. PostgreSQL command-line authentication (backups, ontology update, etc.)
 
-        !!! note "about `.pgpass` file"
-            Dédalo use default `.pgpass` access to postgreSQL command tools.
+        !!! note "no `.pgpass` required"
+            Dédalo authenticates the PostgreSQL command-line tools (`psql`, `pg_dump`,
+            `pg_restore`) using the `PGPASSWORD` environment variable, taken from the
+            `DEDALO_PASSWORD_CONN` value you set during configuration (next step). This
+            works the same whether your database is **local or on a remote server**, so a
+            `~/.pgpass` file is **not required**.
 
-            Note that `.pgpass` file has your postgreSQL credentials to access your database.
-            Please read the [PostgreSQL documentation about this file.](https://www.postgresql.org/docs/current/libpq-pgpass.html)
+            If you prefer, a `~/.pgpass` file is still honored by libpq as a fallback when
+            `DEDALO_PASSWORD_CONN` is empty (e.g. peer / trust authentication). To use it:
 
         ```shell
-        nano .pgpass
+        nano ~/.pgpass
         chmod 0600 ~/.pgpass
         ```
 

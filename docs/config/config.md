@@ -785,7 +785,7 @@ DEDALO_BACKUP_ON_LOGIN  `bool`
 
 This parameter defines if Dédalo will do a backup when the users login. It prevents that issues doing to the data could repair quickly.
 
-If this constant is set to `true` Dédalo will check if the last backup is a copy done after the time defined by DEDALO_BACKUP_TIME_RANGE and will create new one if the time exceed this parameter. Dédalo will use the `.pgpass` file to connect to PostgreSQL and will create a `.backup` file in the backup directory.
+If this constant is set to `true` Dédalo will check if the last backup is a copy done after the time defined by DEDALO_BACKUP_TIME_RANGE and will create new one if the time exceed this parameter. Dédalo connects to PostgreSQL for the backup using the `DEDALO_PASSWORD_CONN` credentials (exported transiently as `PGPASSWORD`), so the database may be local or remote, and creates a `.backup` file in the backup directory. A `~/.pgpass` file is not required (it is still honored by libpq as a fallback when `DEDALO_PASSWORD_CONN` is empty).
 
 ```php
 define('DEDALO_BACKUP_ON_LOGIN'  , true);
