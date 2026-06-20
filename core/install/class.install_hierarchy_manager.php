@@ -99,11 +99,31 @@ final class install_hierarchy_manager {
 			$dir_path	= $config->hierarchy_files_dir_path;
 
 		// labels
-			$hierarchies_json	= file_get_contents(__DIR__.'/hierarchies.json');
-			$hierarchies		= json_decode($hierarchies_json);
+			// Guard the read: an unguarded file_get_contents() on a missing/unreadable
+			// file emits an E_WARNING that Error::captureError() promotes into
+			// $_ENV['DEDALO_LAST_ERROR'], which the API layer reports to the client as a
+			// (phantom) server error — failing the whole install. Mirror the defensive
+			// file_exists() check already used by get_hierarchy_typlologies().
+			$hierarchies_json_path	= __DIR__.'/hierarchies.json';
+			$hierarchies			= [];
+			if (is_file($hierarchies_json_path) && is_readable($hierarchies_json_path)) {
+				$hierarchies_json	= file_get_contents($hierarchies_json_path);
+				$decoded			= json_decode($hierarchies_json);
+				$hierarchies		= is_array($decoded) ? $decoded : [];
+			} else {
+				debug_log(__METHOD__
+					. " Error: hierarchies.json missing or unreadable: " . $hierarchies_json_path
+					, logger::ERROR
+				);
+			}
 
 		// read the dir
-			$hierarchy_files = (array)glob($dir_path . '/*.copy.gz');
+		// PER-FILE VERIFICATION: keep only entries that are real, readable files on disk, so the
+		// available list can never offer a hierarchy whose data file is missing/unreadable.
+			$hierarchy_files = array_values(array_filter(
+				(array)glob($dir_path . '/*.copy.gz'),
+				static function($f) { return is_string($f) && is_file($f) && is_readable($f); }
+			));
 
 		// hierarchy_files conform items
 			// Transform each raw filesystem path into a rich descriptor object by
@@ -204,6 +224,155 @@ final class install_hierarchy_manager {
 	}//end get_hierarchy_typlologies
 
 	/**
+	* BUILD_MATRIX_HIERARCHY_MAIN_SQL
+	* Regenerates the bootstrap export file install/import/matrix_hierarchy_main.sql that
+	* import_hierarchy_main_records() later replays into a fresh install. This is the on-demand
+	* generator — run by a maintainer when the canonical hierarchy set or the table schema
+	* changes. build_install_version() imports whatever file is committed; it does NOT call this.
+	*
+	* Source of truth: the current database (DEDALO_DATABASE_CONN). Each matrix_hierarchy_main
+	* row is:
+	*  1. FILTERED by its TLD (string->'hierarchy6') against the to_install allow-list
+	*     (core/install/to_install.json, matched case-insensitively) — only the shipped
+	*     hierarchies are kept; project/dev/test ones (TLDTEST, UNITTEST, …) are dropped.
+	*  2. DEACTIVATED — the active flags hierarchy4 (active) and hierarchy125 (active-in-thesaurus)
+	*     are set to NUMERICAL_MATRIX_VALUE_NO so every shipped hierarchy is inactive by default
+	*     (the install wizard activates the selected ones).
+	*  3. Rendered as an INSERT statement (current v7 column set), value-escaped via
+	*     pg_escape_literal so JSONB payloads round-trip safely.
+	*
+	* The file is pure INSERTs (no DELETE / sequence reset — import_hierarchy_main_records()
+	* does that around the replay).
+	*
+	* @return object $response
+	*   - result: true on success, false on failure
+	*   - msg:    human-readable status (includes the row count written)
+	*   - errors: non-fatal warnings (e.g. to_install entries with no matching record)
+	*/
+	public static function build_matrix_hierarchy_main_sql() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed '.__METHOD__;
+			$response->errors	= [];
+
+		// load to_install TLD allow-list (matched case-insensitively)
+			$to_install_file = __DIR__.'/to_install.json';
+			if (!file_exists($to_install_file)) {
+				$response->msg = 'Error. Missing to_install list: '.$to_install_file;
+				debug_log(__METHOD__.' '.$response->msg, logger::ERROR);
+				return $response;
+			}
+			$to_install = json_decode((string)file_get_contents($to_install_file));
+			if (!is_array($to_install) || empty($to_install)) {
+				$response->msg = 'Error. to_install list is empty or invalid JSON';
+				debug_log(__METHOD__.' '.$response->msg, logger::ERROR);
+				return $response;
+			}
+			$allow = [];
+			foreach ($to_install as $t) {
+				$allow[strtoupper((string)$t)] = true;
+			}
+
+		// source connection
+			$conn = DBi::_getConnection();
+
+		// Deactivate active flags (hierarchy4, hierarchy125 → NO) and expose the TLD for filtering.
+		// jsonb_set rewrites each array element's section_id; rows lacking the key are untouched.
+		// Component tipos and the NO value come from constants (no magic strings).
+			$no		= '"'.NUMERICAL_MATRIX_VALUE_NO.'"';				// JSON string, e.g. "2"
+			$h_act	= DEDALO_HIERARCHY_ACTIVE_TIPO;					// hierarchy4
+			$h_ait	= DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO;		// hierarchy125
+			$h_tld	= DEDALO_HIERARCHY_TLD2_TIPO;					// hierarchy6
+			$sql = "
+				WITH d1 AS (
+					SELECT m.*,
+						CASE WHEN relation ? '$h_act'
+							THEN jsonb_set(relation,'{".$h_act."}',(SELECT jsonb_agg(jsonb_set(e,'{section_id}','$no')) FROM jsonb_array_elements(relation->'$h_act') e))
+							ELSE relation END AS rel1
+					FROM matrix_hierarchy_main m
+				),
+				d2 AS (
+					SELECT d1.*,
+						CASE WHEN rel1 ? '$h_ait'
+							THEN jsonb_set(rel1,'{".$h_ait."}',(SELECT jsonb_agg(jsonb_set(e,'{section_id}','$no')) FROM jsonb_array_elements(rel1->'$h_ait') e))
+							ELSE rel1 END AS rel2
+					FROM d1
+				)
+				SELECT
+					id, section_id, section_tipo,
+					upper(string->'$h_tld'->0->>'value') AS tld,
+					data::text AS data, rel2::text AS relation, string::text AS string, date::text AS date,
+					iri::text AS iri, geo::text AS geo, number::text AS number, media::text AS media,
+					misc::text AS misc, relation_search::text AS relation_search, meta::text AS meta
+				FROM d2 ORDER BY id;
+			";
+			$result = pg_query($conn, $sql);
+			if ($result===false) {
+				$response->msg = 'Error on db execution: '.pg_last_error($conn);
+				debug_log(__METHOD__.' '.$response->msg, logger::ERROR);
+				return $response;
+			}
+
+		// Build INSERTs for rows whose TLD is allow-listed.
+			$cols		= ['id','section_id','section_tipo','data','relation','string','date','iri','geo','number','media','misc','relation_search','meta'];
+			$int_cols	= ['id','section_id'];
+			$lines		= [];
+			$seen_tld	= [];
+			while ($row = pg_fetch_assoc($result)) {
+				$tld = strtoupper((string)($row['tld'] ?? ''));
+				if ($tld==='' || !isset($allow[$tld])) {
+					continue; // not shipped: project/dev/test hierarchy
+				}
+				$seen_tld[$tld] = true;
+				$vals = [];
+				foreach ($cols as $c) {
+					$v = $row[$c];
+					if ($v===null) {
+						$vals[] = 'NULL';
+					} elseif (in_array($c, $int_cols, true)) {
+						$vals[] = (string)(int)$v;					// integer columns: unquoted
+					} else {
+						$vals[] = pg_escape_literal($conn, $v);		// text/jsonb: safely quoted
+					}
+				}
+				$lines[] = 'INSERT INTO "matrix_hierarchy_main" ("'.implode('","', $cols).'") VALUES ('.implode(',', $vals).');';
+			}
+
+			if (empty($lines)) {
+				$response->msg = 'Error. No matrix_hierarchy_main rows matched the to_install list';
+				debug_log(__METHOD__.' '.$response->msg, logger::ERROR);
+				return $response;
+			}
+
+		// Informational: allow-list entries that matched no record.
+			foreach ($allow as $tld => $unused) {
+				if (!isset($seen_tld[$tld])) {
+					$response->errors[] = 'to_install TLD with no record: '.$tld;
+				}
+			}
+
+		// Write the file (header + pure INSERTs).
+			$file_path	= DEDALO_ROOT_PATH.'/install/import/matrix_hierarchy_main.sql';
+			$header		= '-- matrix_hierarchy_main install seed (v7 schema).'.PHP_EOL
+				. '-- Auto-generated by '.__METHOD__.' from '.DEDALO_DATABASE_CONN.'.'.PHP_EOL
+				. '-- Filtered by core/install/to_install.json; all hierarchies shipped INACTIVE'.PHP_EOL
+				. '-- (hierarchy4 / hierarchy125 = NUMERICAL_MATRIX_VALUE_NO). Do not hand-edit.'.PHP_EOL;
+			$content	= $header.implode(PHP_EOL, $lines).PHP_EOL;
+			if (file_put_contents($file_path, $content)===false) {
+				$response->msg = 'Error. Could not write '.$file_path;
+				debug_log(__METHOD__.' '.$response->msg, logger::ERROR);
+				return $response;
+			}
+
+		$response->result	= true;
+		$response->msg		= 'OK. Wrote '.count($lines).' rows to '.$file_path;
+		debug_log(__METHOD__.' '.$response->msg, logger::WARNING);
+
+		return $response;
+	}//end build_matrix_hierarchy_main_sql
+
+	/**
 	* IMPORT_HIERARCHY_MAIN_RECORDS
 	* Bulk-load the bootstrap set of matrix_hierarchy_main rows (countries,
 	* thematic hierarchies, languages, etc.) from the pre-generated SQL export
@@ -261,30 +430,41 @@ final class install_hierarchy_manager {
 			// `$matrix_table` originates from a server-iterated list (not user
 			// input); quoted defence-in-depth. The `\"<table>\"` SQL identifier
 			// quoting inside the -c argument is preserved.
-			$command = DB_BIN_PATH.'psql -d '.escapeshellarg($config->db_install_name).' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' '.$config->host_line.' '.$config->port_line.' --echo-errors -c "DELETE FROM \"'.$matrix_table.'\"; ALTER SEQUENCE IF EXISTS '.$matrix_table.'_id_seq RESTART WITH 1 ;";';
+			$command = system::get_pg_bin_path().'psql -d '.escapeshellarg($config->db_install_name).' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' '.$config->host_line.' '.$config->port_line.' --echo-errors -c "DELETE FROM \"'.$matrix_table.'\"; ALTER SEQUENCE IF EXISTS '.$matrix_table.'_id_seq RESTART WITH 1 ;";';
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 			if ($exec) {
-				$command_res = shell_exec($command);
+				$command_res = install_config_manager::pg_shell_exec($command);
 				debug_log(__METHOD__." Exec response 1 (shell_exec): ".json_encode($command_res), logger::DEBUG);
 			}
 
 		// terminal command psql execute sql query from .sql file
-			// SEC-041 defence-in-depth.
-			$command = DB_BIN_PATH.'psql -d '.escapeshellarg($config->db_install_name).' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' '.$config->host_line.' '.$config->port_line.' --echo-errors --file '.escapeshellarg($sql_file_path);
+			// SEC-041 defence-in-depth. ON_ERROR_STOP=1 makes psql exit non-zero on the first
+			// SQL error, and DBi::pg_exec surfaces that exit code (PGPASSWORD auth, remote-safe).
+			// Previously this used a shell_exec whose result was never inspected, so a failed
+			// import (e.g. a stale .sql with obsolete columns) silently shipped an EMPTY table.
+			$command = system::get_pg_bin_path().'psql -d '.escapeshellarg($config->db_install_name).' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' '.$config->host_line.' '.$config->port_line.' -v ON_ERROR_STOP=1 --echo-errors --file '.escapeshellarg($sql_file_path);
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 			if ($exec) {
-				$command_res = shell_exec($command);
-				debug_log(__METHOD__." Exec response 2 (shell_exec): ".json_encode($command_res), logger::DEBUG);
+				$output			= [];
+				$result_code	= 0;
+				DBi::pg_exec($command, $output, $result_code);
+				debug_log(__METHOD__." Exec response 2 (exec) code: ".$result_code.PHP_EOL.json_encode($output), logger::DEBUG);
+				if ($result_code !== 0) {
+					$msg = ' Error importing '.$sql_file_path.' (psql exit code '.$result_code.')';
+					debug_log(__METHOD__.$msg.PHP_EOL.to_string($output), logger::ERROR);
+					$response->msg = $msg;
+					return $response;
+				}
 			}
 
 		// update sequence value
 			$query = 'SELECT setval(\'matrix_hierarchy_main_id_seq\', (SELECT MAX(id) FROM "matrix_hierarchy_main")+1)';
 			// SEC-041 defence-in-depth: $query is a hard-coded SQL string.
-			$command = DB_BIN_PATH.'psql -d '.escapeshellarg($config->db_install_name).' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' '.$config->host_line.' '.$config->port_line.' --echo-errors '
+			$command = system::get_pg_bin_path().'psql -d '.escapeshellarg($config->db_install_name).' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' '.$config->host_line.' '.$config->port_line.' --echo-errors '
 				.'-c "'.$query.';";';
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 			if ($exec) {
-				$command_res = shell_exec($command);
+				$command_res = install_config_manager::pg_shell_exec($command);
 				debug_log(__METHOD__." Exec response 3 (shell_exec): ".json_encode($command_res), logger::DEBUG);
 			}
 
@@ -365,9 +545,14 @@ final class install_hierarchy_manager {
 			// Check whether matrix_hierarchy_main already contains a record for
 			// this tld.  get_hierarchy_by_tld() queries the DEDALO_HIERARCHY_TLD2_TIPO
 			// ('hierarchy6') JSON field using a case-insensitive jsonpath match.
+			// get_hierarchy_by_tld() returns null when no matrix_hierarchy_main row
+			// exists for this tld yet — the normal fresh-install case. Read section_id
+			// defensively: an unguarded $hierarchy_row->section_id on null raises an
+			// E_WARNING that Error::captureError() promotes into $_ENV['DEDALO_LAST_ERROR'],
+			// which the API layer reports to the client as a (phantom) server error.
 			$hierarchy_row	= hierarchy::get_hierarchy_by_tld( $tld );
 			$section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
-			$section_id		= $hierarchy_row->section_id;
+			$section_id		= $hierarchy_row->section_id ?? null;
 			$section_exists	= !empty($section_id);
 
 		// hierarchy not already exists case. Create a new one
@@ -379,10 +564,10 @@ final class install_hierarchy_manager {
 				$matrix_table = 'matrix_hierarchy_main';
 				$query = 'SELECT setval(\''.$matrix_table.'_id_seq\', (SELECT MAX(id) FROM "'.$matrix_table.'")+1)';
 				// SEC-041 defence-in-depth.
-				$command = DB_BIN_PATH.'psql -d '.escapeshellarg(DEDALO_DATABASE_CONN).' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' '.$config->host_line.' '.$config->port_line.' --echo-errors '
+				$command = system::get_pg_bin_path().'psql -d '.escapeshellarg(DEDALO_DATABASE_CONN).' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' '.$config->host_line.' '.$config->port_line.' --echo-errors '
 					.'-c "'.$query.';";';
 				debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
-				$command_res = shell_exec($command);
+				$command_res = install_config_manager::pg_shell_exec($command);
 				debug_log(__METHOD__." Exec response (shell_exec): ".json_encode($command_res), logger::DEBUG);
 
 				// create a new section
@@ -415,66 +600,38 @@ final class install_hierarchy_manager {
 
 				// tld
 					$tld_tipo	= DEDALO_HIERARCHY_TLD2_TIPO; // hierarchy6
-					$model_name	= ontology_node::get_model_by_tipo($tld_tipo, true);
-					$component	= component_common::get_instance(
-						$model_name,
-						$tld_tipo,
-						$section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$section_tipo
-					);
-					$dato = [$tld];
-					$component->set_dato($dato);
-					$component->Save();
+					$component	= self::get_hierarchy_component($tld_tipo, $section_id, 'list', $section_tipo, $response->errors);
+					if ($component!==null) {
+						$component->set_dato([$tld]);
+						$component->Save();
+					}
 
 				// typology
 					$hierarchy_type_tipo	= DEDALO_HIERARCHY_TYPOLOGY_TIPO; // hierarchy9
-					$model_name				= ontology_node::get_model_by_tipo($hierarchy_type_tipo, true);
-					$component				= component_common::get_instance(
-						$model_name,
-						$hierarchy_type_tipo,
-						$section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$section_tipo
-					);
-					$dato = [$typology];
-					$component->set_dato($dato);
-					$component->Save();
+					$component				= self::get_hierarchy_component($hierarchy_type_tipo, $section_id, 'list', $section_tipo, $response->errors);
+					if ($component!==null) {
+						$component->set_dato([$typology]);
+						$component->Save();
+					}
 
 				// label
 					$label_tipo	= DEDALO_HIERARCHY_LABEL_TIPO; // hierarchy7
-					$model_name	= ontology_node::get_model_by_tipo($label_tipo, true);
-					$component	= component_common::get_instance(
-						$model_name,
-						$label_tipo,
-						$section_id,
-						'edit',
-						DEDALO_DATA_NOLAN,
-						$section_tipo
-					);
-					$dato = [$label];
-					$component->set_dato($dato);
-					$component->Save();
+					$component	= self::get_hierarchy_component($label_tipo, $section_id, 'edit', $section_tipo, $response->errors);
+					if ($component!==null) {
+						$component->set_dato([$label]);
+						$component->Save();
+					}
 
 				// name
 					// Store a language locator so the hierarchy knows which data
 					// language its terms are authored in (maps to DEDALO_DATA_LANG_DEFAULT).
 					$name_tipo	= DEDALO_HIERARCHY_LANG_TIPO;	// hierarchy8
-					$model_name	= ontology_node::get_model_by_tipo($name_tipo, true);
-					$component	= component_common::get_instance(
-						$model_name,
-						$name_tipo,
-						$section_id,
-						'edit',
-						DEDALO_DATA_NOLAN,
-						$section_tipo
-					);
-					$lang_locator = lang::get_lang_locator_from_code(DEDALO_DATA_LANG_DEFAULT);
-					$dato = [$lang_locator];
-					$component->set_dato($dato);
-					$component->Save();
+					$component	= self::get_hierarchy_component($name_tipo, $section_id, 'edit', $section_tipo, $response->errors);
+					if ($component!==null) {
+						$lang_locator = lang::get_lang_locator_from_code(DEDALO_DATA_LANG_DEFAULT);
+						$component->set_dato([$lang_locator]);
+						$component->Save();
+					}
 			}
 
 		// active hierarchy
@@ -486,25 +643,19 @@ final class install_hierarchy_manager {
 			// instantiation for the active field (contrast with active-in-thesaurus
 			// below which uses the locator class).
 			$active_tipo	= DEDALO_HIERARCHY_ACTIVE_TIPO;	// hierarchy4
-			$model_name		= ontology_node::get_model_by_tipo($active_tipo, true);
-			$component		= component_common::get_instance(
-				$model_name,
-				$active_tipo,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-			$dato = json_decode('[
-			  {
-				"type": "'.DEDALO_RELATION_TYPE_LINK.'",
-				"section_id": "'.NUMERICAL_MATRIX_VALUE_YES.'",
-				"section_tipo": "'.DEDALO_SECTION_SI_NO_TIPO.'",
-				"from_component_tipo": "'.DEDALO_HIERARCHY_ACTIVE_TIPO.'"
-			  }
-			]');
-			$component->set_dato($dato);
-			$component->Save();
+			$component		= self::get_hierarchy_component($active_tipo, $section_id, 'list', $section_tipo, $response->errors);
+			if ($component!==null) {
+				$dato = json_decode('[
+				  {
+					"type": "'.DEDALO_RELATION_TYPE_LINK.'",
+					"section_id": "'.NUMERICAL_MATRIX_VALUE_YES.'",
+					"section_tipo": "'.DEDALO_SECTION_SI_NO_TIPO.'",
+					"from_component_tipo": "'.DEDALO_HIERARCHY_ACTIVE_TIPO.'"
+				  }
+				]');
+				$component->set_dato($dato);
+				$component->Save();
+			}
 
 		// active in thesaurus
 			// Whether the hierarchy should be visible in the thesaurus area tree.
@@ -512,26 +663,20 @@ final class install_hierarchy_manager {
 			// section_id is computed at runtime from $active_in_thesaurus.
 			// DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO = 'hierarchy125'.
 			$active_view_ts_tipo	= DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO;	// hierarchy4
-			$model_name				= ontology_node::get_model_by_tipo($active_view_ts_tipo, true);
-			$component				= component_common::get_instance(
-				$model_name,
-				$active_view_ts_tipo,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-			// Map the boolean to yes (1) or no (2) section_id in the dd64 section.
-			$target_active_ts_section_id = ($active_in_thesaurus===true) ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO;
+			$component				= self::get_hierarchy_component($active_view_ts_tipo, $section_id, 'list', $section_tipo, $response->errors);
+			if ($component!==null) {
+				// Map the boolean to yes (1) or no (2) section_id in the dd64 section.
+				$target_active_ts_section_id = ($active_in_thesaurus===true) ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO;
 
-			$active_data = new locator();
-				$active_data->set_type(DEDALO_RELATION_TYPE_LINK);
-				$active_data->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
-				$active_data->set_section_id($target_active_ts_section_id);
-				$active_data->set_from_component_tipo(DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO);
+				$active_data = new locator();
+					$active_data->set_type(DEDALO_RELATION_TYPE_LINK);
+					$active_data->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
+					$active_data->set_section_id($target_active_ts_section_id);
+					$active_data->set_from_component_tipo(DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO);
 
-			$component->set_dato($active_data);
-			$component->Save();
+				$component->set_dato($active_data);
+				$component->Save();
+			}
 
 		// set real section tipo (!) needed to create virtual section
 			// hierarchy::generate_virtual_section() reads this field to know which
@@ -540,28 +685,24 @@ final class install_hierarchy_manager {
 			// DEDALO_THESAURUS_SECTION_TIPO ('hierarchy20') before generate_virtual_section()
 			// is called, or the virtual section generation will fail.
 			// source_real_section_tipo
-			$model_name	= ontology_node::get_model_by_tipo(DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO, true);
-			$component	= component_common::get_instance(
-				$model_name,
-				DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO,
-				$section_id,
-				'edit',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-			$component->set_dato([DEDALO_THESAURUS_SECTION_TIPO]);
-			$component->Save();
+			$component	= self::get_hierarchy_component(DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO, $section_id, 'edit', $section_tipo, $response->errors);
+			if ($component!==null) {
+				$component->set_dato([DEDALO_THESAURUS_SECTION_TIPO]);
+				$component->Save();
+			}
 
 		// create ontology tld (generate_virtual_section)
 			// Provision two virtual sections in the ontology: <tld>1 (terms) and
 			// <tld>2 (models), derived from DEDALO_THESAURUS_SECTION_TIPO.
 			// Errors are logged and appended to $response->errors but do not cause
 			// an early return; the remaining field writes continue regardless.
-			$options = (object)[
+			// Use a dedicated var (not $options) so the incoming descriptor is not
+			// clobbered for any code that runs after this point.
+			$virtual_section_options = (object)[
 				'section_id'	=> $section_id,
 				'section_tipo'	=> $section_tipo
 			];
-			$call_response = hierarchy::generate_virtual_section($options);
+			$call_response = hierarchy::generate_virtual_section($virtual_section_options);
 			if ($call_response->result===false) {
 				$msg = " ERROR " . PHP_EOL . to_string($call_response->msg);
 				debug_log(__METHOD__
@@ -575,35 +716,21 @@ final class install_hierarchy_manager {
 			// Store the tipo identifiers for the two virtual sections just created.
 			// target thesaurus
 				$component_tipo	= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;	// 'hierarchy53';
-				$model_name		= ontology_node::get_model_by_tipo($component_tipo, true);
-				$component		= component_common::get_instance(
-					$model_name,
-					$component_tipo,
-					$section_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					$section_tipo
-				);
-				// Term virtual section tipo is always '<tld>1' (e.g. 'fauna1').
-				$dato = [$tld.'1'];
-				$component->set_dato($dato);
-				$component->Save();
+				$component		= self::get_hierarchy_component($component_tipo, $section_id, 'list', $section_tipo, $response->errors);
+				if ($component!==null) {
+					// Term virtual section tipo is always '<tld>1' (e.g. 'fauna1').
+					$component->set_dato([$tld.'1']);
+					$component->Save();
+				}
 
 			// target model
 				$component_tipo	= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;	// 'hierarchy58';
-				$model_name		= ontology_node::get_model_by_tipo($component_tipo, true);
-				$component		= component_common::get_instance(
-					$model_name,
-					$component_tipo,
-					$section_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					$section_tipo
-				);
-				// Model virtual section tipo is always '<tld>2' (e.g. 'fauna2').
-				$dato = [$tld.'2'];
-				$component->set_dato($dato);
-				$component->Save();
+				$component		= self::get_hierarchy_component($component_tipo, $section_id, 'list', $section_tipo, $response->errors);
+				if ($component!==null) {
+					// Model virtual section tipo is always '<tld>2' (e.g. 'fauna2').
+					$component->set_dato([$tld.'2']);
+					$component->Save();
+				}
 
 		// set children data
 			// Toponymy hierarchies (typology 2, e.g. country TLDs like 'es', 'fr')
@@ -614,27 +741,21 @@ final class install_hierarchy_manager {
 			if ($typology==2) {
 				// general term
 					$component_tipo	= DEDALO_HIERARCHY_CHILDREN_TIPO;	// 'hierarchy45';
-					$model_name		= ontology_node::get_model_by_tipo($component_tipo, true);
-					$component		= component_common::get_instance(
-						$model_name,
-						$component_tipo,
-						$section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$section_tipo
-					);
-					// 'dd48' = DEDALO_RELATION_TYPE_CHILDREN_TIPO; hardcoded literal used
-					// here rather than the constant — value is confirmed in dd_tipos.php.
-					$dato = json_decode('[
-						{
-							"type": "dd48",
-							"section_id": "1",
-							"section_tipo": "'.$tld.'1",
-							"from_component_tipo": "'.DEDALO_HIERARCHY_CHILDREN_TIPO.'"
-						}
-					]');
-					$component->set_dato($dato);
-					$component->Save();
+					$component		= self::get_hierarchy_component($component_tipo, $section_id, 'list', $section_tipo, $response->errors);
+					if ($component!==null) {
+						// 'dd48' = DEDALO_RELATION_TYPE_CHILDREN_TIPO; hardcoded literal used
+						// here rather than the constant — value is confirmed in dd_tipos.php.
+						$dato = json_decode('[
+							{
+								"type": "dd48",
+								"section_id": "1",
+								"section_tipo": "'.$tld.'1",
+								"from_component_tipo": "'.DEDALO_HIERARCHY_CHILDREN_TIPO.'"
+							}
+						]');
+						$component->set_dato($dato);
+						$component->Save();
+					}
 
 				// general model
 					// Only register the model child locator when the model .copy.gz
@@ -645,25 +766,19 @@ final class install_hierarchy_manager {
 					if (file_exists($models_file)) {
 
 						$component_tipo	= DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO;	// 'hierarchy59';
-						$model_name		= ontology_node::get_model_by_tipo($component_tipo, true);
-						$component		= component_common::get_instance(
-							$model_name,
-							$component_tipo,
-							$section_id,
-							'list',
-							DEDALO_DATA_NOLAN,
-							$section_tipo
-						);
-						$dato = json_decode('[
-							{
-								"type": "dd48",
-								"section_id": "2",
-								"section_tipo": "'. $tld.'2",
-								"from_component_tipo": "'.DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO.'"
-							}
-						]');
-						$component->set_dato($dato);
-						$component->Save();
+						$component		= self::get_hierarchy_component($component_tipo, $section_id, 'list', $section_tipo, $response->errors);
+						if ($component!==null) {
+							$dato = json_decode('[
+								{
+									"type": "dd48",
+									"section_id": "2",
+									"section_tipo": "'. $tld.'2",
+									"from_component_tipo": "'.DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO.'"
+								}
+							]');
+							$component->set_dato($dato);
+							$component->Save();
+						}
 
 					}else{
 						debug_log(__METHOD__
@@ -679,6 +794,52 @@ final class install_hierarchy_manager {
 
 		return $response;
 	}//end activate_hierarchy
+
+
+
+	/**
+	* GET_HIERARCHY_COMPONENT
+	* Resolve a component_common instance for a hierarchy field, guarding both the
+	* ontology model lookup and the instantiation. ontology_node::get_model_by_tipo()
+	* is declared ': ?string' and component_common::get_instance() ': ?object', so a
+	* broken/partial ontology can yield null at either step. Returning null here (and
+	* recording a non-fatal error) lets callers skip the set_dato()/Save() instead of
+	* fataling with "Call to a member function set_dato() on null".
+	*
+	* @param string $tipo          component tipo (e.g. DEDALO_HIERARCHY_LABEL_TIPO)
+	* @param mixed  $section_id     target section id
+	* @param string $mode           component mode ('list' | 'edit')
+	* @param string $section_tipo   owning section tipo (DEDALO_HIERARCHY_SECTION_TIPO)
+	* @param array  $errors         accumulator (by ref) for non-fatal error messages
+	* @return object|null component_common instance, or null on failure
+	*/
+	private static function get_hierarchy_component(string $tipo, mixed $section_id, string $mode, string $section_tipo, array &$errors) : ?object {
+
+		$model_name = ontology_node::get_model_by_tipo($tipo, true);
+		if (empty($model_name)) {
+			$msg = " ERROR: cannot resolve ontology model for tipo '$tipo'";
+			debug_log(__METHOD__.$msg, logger::ERROR);
+			$errors[] = $msg;
+			return null;
+		}
+
+		$component = component_common::get_instance(
+			$model_name,
+			$tipo,
+			$section_id,
+			$mode,
+			DEDALO_DATA_NOLAN,
+			$section_tipo
+		);
+		if (!is_object($component)) {
+			$msg = " ERROR: cannot instantiate component '$tipo' (model '$model_name')";
+			debug_log(__METHOD__.$msg, logger::ERROR);
+			$errors[] = $msg;
+			return null;
+		}
+
+		return $component;
+	}//end get_hierarchy_component
 
 	/**
 	* INSTALL_HIERARCHIES
@@ -719,47 +880,118 @@ final class install_hierarchy_manager {
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 			$response->errors	= [];
 
-		// selected_hierarchies
-			$selected_hierarchies = $options->selected_hierarchies ?? [];
+		// selected hierarchies
+			// Accept BOTH shapes: the install wizard sends `hierarchies` (an array of tld strings);
+			// internal/legacy callers may send `selected_hierarchies` (descriptor objects). Normalize
+			// to a list of tld strings — the authoritative metadata (typology/label/file) is taken
+			// from the verified available-files list below, not from client input.
+			$raw_selected = $options->selected_hierarchies ?? $options->hierarchies ?? [];
+			if (!is_array($raw_selected)) {
+				$raw_selected = [];
+			}
+			$selected_tlds = [];
+			foreach ($raw_selected as $sel) {
+				$tld = is_string($sel) ? $sel : ($sel->tld ?? null);
+				if (!empty($tld)) {
+					$selected_tlds[] = $tld;
+				}
+			}
 
-		// get available hierarchy files
-			$hierarchies = self::get_available_hierarchy_files();
+		// get available hierarchy files (already per-file verified to exist + be readable)
+			$hierarchies	= self::get_available_hierarchy_files();
+			$available		= is_array($hierarchies->result) ? $hierarchies->result : [];
 
 		// process each selected hierarchy
-			$ar_responses = [];
-			foreach ($selected_hierarchies as $item) {
+			$ar_responses	= [];
+			$ok				= true;
+			foreach ($selected_tlds as $tld) {
 
-				// find the hierarchy item in available files
-				// Match by tld (strict equality) against the filesystem-discovered list.
-				$found = array_find($hierarchies->result, function($el) use($item){
-					return $el->tld === $item->tld;
-				});
-
-				if ($found===false) {
-					$msg = " Error: hierarchy item not found: " . to_string($item);
-					debug_log(__METHOD__.$msg, logger::ERROR);
+				// find the hierarchy in the available files (match by tld)
+				$found = null;
+				foreach ($available as $el) {
+					if ($el->tld === $tld) { $found = $el; break; }
+				}
+				if (empty($found)) {
+					$msg = "Error: no available hierarchy file for tld '".$tld."'";
+					debug_log(__METHOD__.' '.$msg, logger::ERROR);
 					$response->errors[] = $msg;
+					$ok = false;
 					continue;
 				}
 
-				// import hierarchy file using backup::import_from_copy_file
-				// Streams the pre-exported .copy.gz COPY-format payload into
-				// the correct matrix table (determined by $found->section_tipo).
-				$import_options = (object)[
-					'file'		=> $found->file,
-					'section_tipo'	=> $found->section_tipo
-				];
-				$ar_responses[] = backup::import_from_copy_file( $import_options );
+				// PER-FILE VERIFICATION: the .copy.gz must still exist and be readable right now
+				// (prevents trying to import a non-existing/removed hierarchy file).
+				if (empty($found->file) || !is_file($found->file) || !is_readable($found->file)) {
+					$msg = "Error: hierarchy data file missing or unreadable for tld '".$tld."': ".to_string($found->file ?? null);
+					debug_log(__METHOD__.' '.$msg, logger::ERROR);
+					$response->errors[] = $msg;
+					$ok = false;
+					continue;
+				}
 
-				// creates/activate the new hierarchy and ontology
-				// Note: $item (the client-supplied descriptor) is passed rather than
-				// $found (the filesystem-derived item) so that the caller can override
-				// fields such as active_in_thesaurus at the selection step.
-				$ar_responses[] = self::activate_hierarchy($item);
+				// the typology must be a real number to activate the hierarchy (an unregistered
+				// tld in hierarchies.json yields a placeholder string — reject it explicitly).
+				if (!is_numeric($found->typology)) {
+					$msg = "Error: hierarchy '".$tld."' is not registered (no valid typology); skipped";
+					debug_log(__METHOD__.' '.$msg, logger::ERROR);
+					$response->errors[] = $msg;
+					$ok = false;
+					continue;
+				}
+
+				// resolve the target matrix table for the import.
+				// A brand-new hierarchy's virtual section (e.g. 'ts1') is NOT registered in the
+				// ontology until activate_hierarchy() runs (below), so get_matrix_table_from_tipo()
+				// returns '' for it. Core sections shipped in the seed (e.g. 'lg1' → matrix_langs)
+				// resolve directly. For everything else, fall back to the source thesaurus template
+				// table (DEDALO_THESAURUS_SECTION_TIPO → matrix_hierarchy) — what the virtual section
+				// inherits once activated.
+				$matrix_table = common::get_matrix_table_from_tipo($found->section_tipo);
+				if (empty($matrix_table)) {
+					$matrix_table = common::get_matrix_table_from_tipo(DEDALO_THESAURUS_SECTION_TIPO);
+				}
+				if (empty($matrix_table)) {
+					$msg = "Error: could not resolve the target matrix table for hierarchy '".$tld."'";
+					debug_log(__METHOD__.' '.$msg, logger::ERROR);
+					$response->errors[] = $msg;
+					$ok = false;
+					continue;
+				}
+
+				// import the .copy.gz payload into its matrix table
+				$import_options = (object)[
+					'section_tipo'	=> $found->section_tipo,
+					'file_path'		=> $found->file,
+					'matrix_table'	=> $matrix_table
+				];
+				$import_response = backup::import_from_copy_file( $import_options );
+				$ar_responses[] = $import_response;
+				if (($import_response->result ?? false) !== true) {
+					$response->errors[] = "Error importing hierarchy '".$tld."': ".to_string($import_response->msg ?? '');
+					$ok = false;
+					continue;
+				}
+
+				// create/activate the hierarchy + ontology virtual sections, using the VERIFIED
+				// metadata from the available file (tld/typology/label/active_in_thesaurus).
+				$activate_options = (object)[
+					'tld'					=> $found->tld,
+					'typology'				=> (int)$found->typology,
+					'label'					=> $found->label,
+					'active_in_thesaurus'	=> is_bool($found->active_in_thesaurus) ? $found->active_in_thesaurus : true
+				];
+				$activate_response = self::activate_hierarchy($activate_options);
+				$ar_responses[] = $activate_response;
+				if (($activate_response->result ?? false) !== true) {
+					$response->errors[] = "Error activating hierarchy '".$tld."': ".to_string($activate_response->msg ?? '');
+					$ok = false;
+				}
 			}
 
-		$response->result	= true;
-		$response->msg		= 'OK. Request done '.__METHOD__;
+		$response->result		= ($ok===true && empty($response->errors));
+		$response->msg			= $response->result
+			? 'OK. Request done '.__METHOD__
+			: 'Completed with errors. Some hierarchies were not installed.';
 		$response->responses	= $ar_responses;
 
 		return $response;
