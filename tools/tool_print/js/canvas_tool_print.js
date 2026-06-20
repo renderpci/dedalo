@@ -95,7 +95,7 @@ export const new_layout = function(self, opts={}) {
 			width_mm	: PAGE_FORMATS.A4.width_mm,
 			height_mm	: PAGE_FORMATS.A4.height_mm,
 			orientation	: 'portrait',
-			margins_mm	: { top: 15, right: 15, bottom: 15, left: 15 }
+			margins_mm	: { top: 20, right: 20, bottom: 20, left: 20 }	// 2 cm all sides
 		},
 		grid				: { enabled: false, size_mm: 5, snap: true },
 		style_defaults		: {

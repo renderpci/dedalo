@@ -897,6 +897,59 @@ const render_inspector = function(self, container) {
 			render_canvas(self, self.canvas_container)
 			self.mark_dirty()
 		})
+		// margins (per side, mm) — kept clear of content; the flow engine positions
+		// the column inside them and subtracts them from the usable page height, so
+		// pagination respects them. Default 20 mm (2 cm). A "Link" toggle (default on)
+		// keeps all four sides equal; turn it off to set each side independently.
+		const mg_head = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'inspector_row margins_head',
+			parent			: page_settings
+		})
+		ui.create_dom_element({ element_type:'span', inner_html:(get_label.margins || 'Margins (mm)'), parent:mg_head })
+		if (typeof self._margins_linked==='undefined') {
+			const m0 = self.layout.page_defaults.margins_mm || {}
+			self._margins_linked = (m0.top===m0.right && m0.right===m0.bottom && m0.bottom===m0.left)
+		}
+		const link_lbl = ui.create_dom_element({ element_type:'label', class_name:'margins_link', title:'Link all sides', parent:mg_head })
+		const link_chk = ui.create_dom_element({ element_type:'input', parent:link_lbl })
+		link_chk.type = 'checkbox'; link_chk.checked = self._margins_linked
+		ui.create_dom_element({ element_type:'span', inner_html:(get_label.link || 'Link'), parent:link_lbl })
+
+		const mg_grid = ui.create_dom_element({ element_type:'div', class_name:'margins_grid', parent:page_settings })
+		const cur_m   = Object.assign({ top:20, right:20, bottom:20, left:20 }, self.layout.page_defaults.margins_mm || {})
+		const sides   = [['top','T'],['right','R'],['bottom','B'],['left','L']]
+		const inputs  = {}
+		const clampv  = (x) => { let v = parseFloat(x); if (!isFinite(v)||v<0) v=0; if (v>60) v=60; return v }
+		sides.forEach(([side, lbl]) => {
+			const f = ui.create_dom_element({ element_type:'label', class_name:'margin_field', inner_html:'<span>'+lbl+'</span>', parent:mg_grid })
+			const inp = ui.create_dom_element({ element_type:'input', parent:f })
+			inp.type='number'; inp.min='0'; inp.max='60'; inp.step='1'; inp.value = cur_m[side]
+			inputs[side] = inp
+			inp.addEventListener('change', () => {
+				const v = clampv(inp.value)
+				inp.value = v
+				if (!self.layout.page_defaults.margins_mm) self.layout.page_defaults.margins_mm = {}
+				if (self._margins_linked) {
+					self.layout.page_defaults.margins_mm = { top:v, right:v, bottom:v, left:v }
+					sides.forEach(([s]) => { inputs[s].value = v })
+				} else {
+					self.layout.page_defaults.margins_mm[side] = v
+				}
+				render_canvas(self, self.canvas_container)
+				self.mark_dirty()
+			})
+		})
+		link_chk.addEventListener('change', () => {
+			self._margins_linked = link_chk.checked
+			if (self._margins_linked) {   // re-link: level all sides to Top
+				const v = clampv(inputs.top.value)
+				self.layout.page_defaults.margins_mm = { top:v, right:v, bottom:v, left:v }
+				sides.forEach(([s]) => { inputs[s].value = v })
+				render_canvas(self, self.canvas_container)
+				self.mark_dirty()
+			}
+		})
 }//end render_inspector
 
 

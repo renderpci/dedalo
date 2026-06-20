@@ -201,6 +201,14 @@ export const layout_flow = async function(self, ctx) {
 				ctx.current_page.column.appendChild(row_node)
 				h = ctx.measure(row_node)
 			}
+			// still taller than a whole page: a single text block (e.g. a long
+			// component_text_area paragraph) with no internal block units to split at.
+			// Break it across pages at LINE boundaries.
+			if (h > usable_px) {
+				const content	= row_node.querySelector('.cell_content')
+				const target	= content ? find_line_split_target(content) : null
+				if (target) { used = split_text_by_lines(ctx, row_node, target, usable_px); continue }
+			}
 			used += h + gap
 		}
 	}
@@ -238,6 +246,15 @@ const make_page_node = function(ctx) {
 	pg.dataset.wmm	= ctx.page_w_mm
 	pg.dataset.hmm	= ctx.page_h_mm
 	pg.dataset.pageIndex = ctx.pages.length
+
+	// editor-only dashed guide showing the clear margin box (the usable area);
+	// hidden in @media print so it never appears on the printed sheet.
+	const guide = ui.create_dom_element({ element_type:'div', class_name:'margin_guide', parent: pg })
+	guide.style.position	= 'absolute'
+	guide.style.left		= ctx.to_css(ctx.margins.left)
+	guide.style.top			= ctx.to_css(ctx.margins.top)
+	guide.style.width		= ctx.to_css(ctx.page_w_mm - ctx.margins.left - ctx.margins.right)
+	guide.style.height		= ctx.to_css(ctx.page_h_mm - ctx.margins.top - ctx.margins.bottom)
 
 	const col = ui.create_dom_element({ element_type:'div', class_name:'flow_column', parent: pg })
 	col.style.position	= 'absolute'
