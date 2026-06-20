@@ -217,7 +217,7 @@ class tool_import_marc21 extends tool_common {
 			$context->tool_config			= $options->tool_config ?? null;
 			$context->files_data			= $options->files_data ?? null;
 			$context->components_temp_data	= $options->components_temp_data ?? [];
-			$context->key_dir				= $options->key_dir ?? null;
+			$context->key_dir				= sanitize_key_dir($options->key_dir ?? '');
 
 		// Extract configuration elements
 			$context->main					= $config->config->main ?? [];
@@ -285,8 +285,20 @@ class tool_import_marc21 extends tool_common {
 	 */
 	private static function process_marc21_file(object $marc21_file_data, object $context) : ?array {
 
-		// Validate file exists
-			$file_full_path = $context->tmp_dir . '/' . $marc21_file_data->name;
+		// Validate file exists. TOOLS-05: confine the client-supplied name under
+		// tmp_dir. safe_upload_target() reduces the name to its basename and rejects
+		// '..'/separator payloads, preventing traversal into another user's upload dir
+		// (the file is read by File_MARC and then unlink'd, so an unconfined name is an
+		// arbitrary file read + delete).
+			try {
+				$file_full_path = safe_upload_target($context->tmp_dir, $marc21_file_data->name, false);
+			} catch (Exception $e) {
+				debug_log(__METHOD__
+					. " File ignored (invalid name): {$marc21_file_data->name}"
+					, logger::ERROR
+				);
+				return null;
+			}
 			if (!file_exists($file_full_path)) {
 				debug_log(__METHOD__
 					. " File ignored (not found): {$marc21_file_data->name}" . PHP_EOL
