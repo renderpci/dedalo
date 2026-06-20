@@ -29,6 +29,16 @@
 
 CREATE EXTENSION IF NOT EXISTS vector;
 
+-- Accent-folding for the lexical (hybrid) leg. unaccent() is not IMMUTABLE, so a
+-- functional GIN index needs an IMMUTABLE wrapper (f_unaccent) — the same wrapper
+-- the matrix DB provisions. Both the index and rag_lexical's query use it so
+-- "excavacion" matches "excavación" across the multilingual corpus.
+CREATE EXTENSION IF NOT EXISTS unaccent;
+CREATE OR REPLACE FUNCTION f_unaccent(text)
+RETURNS text
+LANGUAGE sql IMMUTABLE PARALLEL SAFE STRICT
+AS $$ SELECT public.unaccent('public.unaccent', $1) $$;
+
 -- -----------------------------------------------------------------------------
 -- Parent table. PARTITIONED BY LIST (model). The parent's `embedding` column is
 -- declared as the unsized `vector` type ONLY to satisfy the partition-parent
@@ -74,9 +84,10 @@ CREATE INDEX IF NOT EXISTS rag_embeddings_component_idx
 	ON rag_embeddings (section_tipo, component_tipo, lang);
 -- Lexical (BM25-ish) hybrid retrieval over source_text, accent-folded. Uses the
 -- 'simple' config (language-agnostic) so multilingual heritage text is treated
--- uniformly; unaccent is applied in the query builder (rag_lexical).
+-- uniformly. The f_unaccent() wrapper makes the expression IMMUTABLE/indexable;
+-- rag_lexical::query() uses the IDENTICAL expression so the planner picks this index.
 CREATE INDEX IF NOT EXISTS rag_embeddings_lexical_idx
-	ON rag_embeddings USING gin (to_tsvector('simple', coalesce(source_text, '')));
+	ON rag_embeddings USING gin (to_tsvector('simple', f_unaccent(coalesce(source_text, ''))));
 
 -- -----------------------------------------------------------------------------
 -- rag_create_model_partition(model, dimension)

@@ -20,10 +20,16 @@ CREATE TABLE IF NOT EXISTS rag_index_queue (
 	section_id		integer			NOT NULL,
 	op				varchar(8)		NOT NULL DEFAULT 'index',	-- index | delete
 	attempts		integer			NOT NULL DEFAULT 0,
+	last_error		text,										-- OPS-02: last failure reason
+	next_attempt_at	timestamptz		NOT NULL DEFAULT now(),		-- OPS-02: backoff gate
 	enqueued_at		timestamptz		NOT NULL DEFAULT now(),
 	PRIMARY KEY (section_tipo, section_id)
 );
 
--- Oldest-first claim order.
-CREATE INDEX IF NOT EXISTS rag_index_queue_enqueued_idx
-	ON rag_index_queue (enqueued_at);
+-- Backfill columns on an existing install (idempotent).
+ALTER TABLE rag_index_queue ADD COLUMN IF NOT EXISTS last_error text;
+ALTER TABLE rag_index_queue ADD COLUMN IF NOT EXISTS next_attempt_at timestamptz NOT NULL DEFAULT now();
+
+-- Oldest-first claim order (only rows whose backoff has elapsed are eligible).
+CREATE INDEX IF NOT EXISTS rag_index_queue_ready_idx
+	ON rag_index_queue (next_attempt_at, enqueued_at);
