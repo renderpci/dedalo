@@ -28,6 +28,7 @@ import {data_manager} from '../../../core/common/js/data_manager.js'
 import {common} from '../../../core/common/js/common.js'
 import {tool_common, wire_tool} from '../../tool_common/js/tool_common.js'
 import {render_tool_print, PRINT_MAX} from './render_tool_print.js'
+import {ensure_portal_meta, is_relation_model} from './render_box_tool_print.js'
 import {on_dragstart} from '../../tool_export/js/drag_tool_export.js'
 
 
@@ -436,16 +437,39 @@ const build_print_ddo_map = function(self, target) {
 			})
 			// the portal's column children as SIBLING ddos (parent = portal tipo) —
 			// how the server resolves a portal's columns (get_children_recursive).
+			// A DEEP column (col.path: a chain through nested portals) emits one ddo
+			// per chain segment, each parented to the previous (the same parent-link
+			// resolution); intermediate portals carry limit:0 so all their rows resolve.
 			const cols = (Array.isArray(b.table_columns) && b.table_columns.length ? b.table_columns : b.available_columns) || []
-			cols.forEach((col, i) => {
-				if (col && col.type==='component' && col.tipo && col.section_tipo) {
+			let ci = 0
+			const RELC = /portal|relation|autocomplete/
+			cols.forEach((col) => {
+				if (!col || col.type!=='component') return
+				if (Array.isArray(col.path) && col.path.length) {
+					let parent = ref.tipo
+					for (const seg of col.path) {
+						if (!seg || !seg.tipo || !seg.section_tipo) break
+						const e = {
+							section_tipo	: Array.isArray(seg.section_tipo) ? seg.section_tipo[0] : seg.section_tipo,
+							tipo			: seg.tipo,
+							parent			: parent,
+							model			: seg.model,
+							mode			: 'list',
+							column_id		: 'col_' + (ci++),
+							fixed_mode		: true
+						}
+						if (RELC.test(seg.model || '')) e.limit = 0   // intermediate portal: all rows
+						push(e)
+						parent = seg.tipo
+					}
+				} else if (col.tipo && col.section_tipo) {
 					push({
 						section_tipo	: Array.isArray(col.section_tipo) ? col.section_tipo[0] : col.section_tipo,
 						tipo			: col.tipo,
 						parent			: ref.tipo,
 						model			: col.model,
 						mode			: 'list',
-						column_id		: String.fromCharCode(97 + i),
+						column_id		: 'col_' + (ci++),
 						fixed_mode		: true
 					})
 				}
@@ -488,6 +512,20 @@ tool_print.prototype.fetch_print_datum = async function(record_ids) {
 	const target = Array.isArray(self.target_section_tipo) ? self.target_section_tipo[0] : self.target_section_tipo
 	const base   = self.caller && self.caller.rqo
 	if (!target || !base) return null
+
+	// a portal with no user-configured columns needs its DEFAULT column set resolved
+	// before the ddo_map is built, so the single read includes those columns (else
+	// they'd fall back to slow per-cell builds, or render empty). Cached on the box,
+	// so configured portals and repeat fetches skip this.
+	const blocks = (self.layout?.flow?.rows || [])
+		.flatMap(r => Array.isArray(r.cells) ? r.cells : [])
+		.map(c => c && c.block)
+		.filter(b => b && b.type==='component' && b.component_ref && is_relation_model(b.component_ref.model))
+	for (const b of blocks) {
+		if (!(Array.isArray(b.table_columns) && b.table_columns.length)) {
+			await ensure_portal_meta(self, b, record_ids[0])
+		}
+	}
 
 	const ddo_map = build_print_ddo_map(self, target)
 	if (!ddo_map.length) return null
