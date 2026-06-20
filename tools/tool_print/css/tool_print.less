@@ -394,6 +394,45 @@
 			}
 			.inspector_hint { font-size: .8rem; color: var(--fg_muted); }
 
+			// per-side page margins + link toggle
+			.margins_head {
+				margin-bottom: .25rem;
+				.margins_link {
+					display: inline-flex;
+					align-items: center;
+					gap: .25rem;
+					font-size: .75rem;
+					color: var(--fg_muted);
+					cursor: pointer;
+					input[type="checkbox"] { width: auto; margin: 0; cursor: pointer; }
+				}
+			}
+			.margins_grid {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: .3rem .6rem;
+				margin-bottom: .4rem;
+				.margin_field {
+					display: flex;
+					align-items: center;
+					justify-content: space-between;
+					gap: .3rem;
+					font-size: .75rem;
+					color: var(--fg_muted);
+					> span { width: 1.1rem; text-align: center; }
+					input {
+						width: 3.2rem;
+						padding: .15rem .3rem;
+						background: var(--bg_input);
+						color: var(--fg_default);
+						border: 1px solid var(--border_default);
+						border-radius: 3px;
+						transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+						&:focus { border-color: var(--focus-ring); box-shadow: 0 0 0 2px var(--focus-ring_weak); outline: none; }
+					}
+				}
+			}
+
 			// table-column manager
 			.inspector_columns {
 				margin-top: .25rem;
@@ -527,6 +566,14 @@
 				font-size: .7rem;
 				color: #555;
 				.remove_page_btn { cursor: pointer; }
+			}
+
+			// editor-only guide marking the clear margin box (2 cm default)
+			.margin_guide {
+				box-sizing: border-box;
+				border: 1px dashed rgba(0,0,0,.18);
+				pointer-events: none;
+				z-index: 0;
 			}
 
 			// v2 document-flow: content column + rows of cells
@@ -725,7 +772,8 @@
 	@media print {
 		.tool_header,
 		.no_print,
-		.no_print * { display: none !important; }
+		.no_print *,
+		.margin_guide { display: none !important; }
 
 		> .content_data.print_layout_editor {
 			display: block;
@@ -749,7 +797,7 @@
 			page-break-after: always;
 			// clip the page box to its own mm size so a sub-pixel overflow can't
 			// spill onto an extra blank sheet. Content is laid out inside the page
-			// margins (default 15mm), so nothing real is clipped. NOTE: requires the
+			// margins (default 20mm / 2cm), so nothing real is clipped. NOTE: requires the
 			// print dialog at Scale 100% / no "fit to page" for the mm math to hold.
 			overflow: hidden;
 			break-inside: avoid;

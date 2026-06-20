@@ -632,6 +632,54 @@
   font-size: 0.8rem;
   color: var(--fg_muted);
 }
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .margins_head {
+  margin-bottom: 0.25rem;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .margins_head .margins_link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--fg_muted);
+  cursor: pointer;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .margins_head .margins_link input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  cursor: pointer;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .margins_grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.3rem 0.6rem;
+  margin-bottom: 0.4rem;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .margins_grid .margin_field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--fg_muted);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .margins_grid .margin_field > span {
+  width: 1.1rem;
+  text-align: center;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .margins_grid .margin_field input {
+  width: 3.2rem;
+  padding: 0.15rem 0.3rem;
+  background: var(--bg_input);
+  color: var(--fg_default);
+  border: 1px solid var(--border_default);
+  border-radius: 3px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .margins_grid .margin_field input:focus {
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 2px var(--focus-ring_weak);
+  outline: none;
+}
 .wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns {
   margin-top: 0.25rem;
 }
@@ -807,6 +855,12 @@
 }
 .wrapper_tool.tool_print .print_root .print_page .print_page_header .remove_page_btn {
   cursor: pointer;
+}
+.wrapper_tool.tool_print .print_root .print_page .margin_guide {
+  box-sizing: border-box;
+  border: 1px dashed rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  z-index: 0;
 }
 .wrapper_tool.tool_print .print_root .print_page .flow_column {
   display: block;
@@ -1052,7 +1106,8 @@
 @media print {
   .wrapper_tool.tool_print .tool_header,
   .wrapper_tool.tool_print .no_print,
-  .wrapper_tool.tool_print .no_print * {
+  .wrapper_tool.tool_print .no_print *,
+  .wrapper_tool.tool_print .margin_guide {
     display: none !important;
   }
   .wrapper_tool.tool_print > .content_data.print_layout_editor {
@@ -1502,3 +1557,4 @@ body.tp_col_resizing * {
   opacity: 0.5;
   cursor: default;
 }
+/*# sourceMappingURL=tool_print.css.map */
