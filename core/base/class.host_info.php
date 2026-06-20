@@ -250,4 +250,49 @@ class host_info {
 			return null;
 		}
 	}
+
+	/**
+	* PARSE_OS_RELEASE
+	* PRETTY_NAME value from /etc/os-release content (surrounding quotes stripped).
+	* @param string $raw
+	* @return string|null
+	*/
+	public static function parse_os_release(string $raw) : ?string {
+		if (preg_match('/^PRETTY_NAME=(.+)$/mi', $raw, $m) === 1) {
+			return trim($m[1], " \t\n\r\0\x0B\"'");
+		}
+		return null;
+	}
+
+	/**
+	* GET_DISTRO
+	* Distribution / OS version label. Linux: /etc/os-release PRETTY_NAME.
+	* Darwin: sw_vers ProductName + ProductVersion.
+	* @return string|null
+	*/
+	public static function get_distro() : ?string {
+		try {
+			switch (self::os_family()) {
+				case 'linux':
+					if (is_readable('/etc/os-release')) {
+						$raw = @file_get_contents('/etc/os-release');
+						if (is_string($raw) && $raw !== '') {
+							return self::parse_os_release($raw);
+						}
+					}
+					return null;
+
+				case 'darwin':
+					$name = @shell_exec('/usr/bin/sw_vers -productName 2>/dev/null');
+					$ver  = @shell_exec('/usr/bin/sw_vers -productVersion 2>/dev/null');
+					$out  = trim((is_string($name) ? trim($name) : '') . ' ' . (is_string($ver) ? trim($ver) : ''));
+					return $out !== '' ? $out : null;
+
+				default:
+					return null;
+			}
+		} catch (\Throwable $e) {
+			return null;
+		}
+	}
 }//end class host_info

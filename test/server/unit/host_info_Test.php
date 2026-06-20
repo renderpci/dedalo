@@ -101,4 +101,17 @@ final class host_info_Test extends TestCase {
 		$model = host_info::get_model();
 		$this->assertTrue($model === null || is_string($model));
 	}
+
+	public function test_parse_os_release_returns_pretty_name_unquoted() : void {
+		$this->assertSame('Ubuntu 22.04.4 LTS', host_info::parse_os_release($this->fixture('os_release.txt')));
+	}
+
+	public function test_parse_os_release_returns_null_when_absent() : void {
+		$this->assertNull(host_info::parse_os_release("ID=foo\nNAME=\"Foo\"\n"));
+	}
+
+	public function test_get_distro_is_string_or_null() : void {
+		$distro = host_info::get_distro();
+		$this->assertTrue($distro === null || is_string($distro));
+	}
 }
