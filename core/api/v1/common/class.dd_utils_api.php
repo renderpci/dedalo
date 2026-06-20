@@ -674,7 +674,9 @@ final class dd_utils_api {
 
 			case 'install_hierarchies':
 
-				// check login for security
+				// Security: hierarchy import requires an authenticated session. During install the
+				// root user logs in IN the installer (without navigating away) right before this
+				// mandatory step, so a real session exists here — no anonymous/superuser shortcut.
 					if (login::is_logged()!==true) {
 						$response->msg = 'Error. You are not logged in';
 						return $response;
