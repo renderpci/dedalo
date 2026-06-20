@@ -388,6 +388,8 @@ php vendor/bin/phpunit -c test/server/phpunit.xml --testsuite rag
 
 Pure-logic tests (chunker semantic boundaries, fusion, security/egress, hardening, and the image proposal-aggregation / context resolution) always run; the store-integration test runs end-to-end against a live pgvector instance and skips cleanly when `DEDALO_RAG_DB_*` is unset.
 
+**Testing it end-to-end (as a user).** A reference local embedding+image sidecar lives in `core/rag/services/` (no paid API; `uvicorn embed_server:app`), `php core/rag/cli/rag_selftest.php` is a one-command wiring check, and `php core/rag/cli/rag_backfill.php <section_tipo> --build-index` loads a section's existing records. All capabilities are exposed to the local AI agent as **MCP tools** (`mcp/dedalo-work-mcp/`, agent tier): `dedalo_semantic_search`, `dedalo_ask`, `dedalo_get_relevant_context`, `dedalo_similar_objects`, `dedalo_characterize_object`, `dedalo_search_by_text_image` — so you can test by prompting the agent (e.g. *"propose the typology and period of object X"*). Full walkthrough in [`core/rag/README.md`](../../core/rag/README.md).
+
 ---
 
 # Part VI — Limits, ethics, and the road ahead

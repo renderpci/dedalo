@@ -105,15 +105,25 @@ These are intentionally out of the foundation:
   PDF/AV already flow through the text path once their `component_text_area` is flagged.
 - **Phase 8 public service** — separate Bun service over a published-only
   collection (co-located with diffusion).
-- **MCP tool** — `dedalo_get_relevant_context` → `get_agent_context`.
 - **Retrieval-quality eval harness** — golden set + recall@k/nDCG.
+
+## Testing it end-to-end (as a user, with the MCP agent)
+
+1. **Provision** a separate Postgres+pgvector; run `install/db/rag_embeddings.sql` (RAG instance) and `install/db/matrix_rag_index_queue.sql` (matrix instance).
+2. **Start the embedding sidecar** — `core/rag/services/` (`pip install -r requirements.txt; uvicorn embed_server:app --port 8090`). It serves text + image embeddings locally (no paid API). See `core/rag/services/README.md`.
+3. **Configure** `private/config_db.inc` (`DEDALO_RAG_ENABLED`, `DEDALO_RAG_DB_*`, `DEDALO_RAG_ENDPOINT`/`_MODEL`; for images `DEDALO_RAG_MEDIA_ENABLED`, `DEDALO_RAG_MULTIMODAL_ENDPOINT`/`_MODEL`). Then verify wiring: **`php core/rag/cli/rag_selftest.php`** → all PASS.
+4. **Flag the ontology**: a text section (`properties.rag={enabled:true}` + a text component `{embed:true}`), and/or an object section with `properties.rag.context` (obverse/reverse image tipos + `metadata.{typology,period,material}`).
+5. **Create records as a user** in the Dédalo UI (add a coin, upload its images, save → auto-enqueued). For pre-existing data: **`php core/rag/cli/rag_backfill.php <section_tipo> --build-index`**.
+6. **Index**: `php core/rag/cli/rag_drain.php` (or wire to cron); `rag_queue::stats()` drains to 0.
+7. **Wire the agent**: set the MCP env (`DEDALO_WORK_API_URL`, service `USERNAME/PASSWORD` with read perms), `cd mcp/dedalo-work-mcp && npm run build`, start the agent. The RAG tools (`dedalo_semantic_search`, `dedalo_ask`, `dedalo_get_relevant_context`, `dedalo_similar_objects`, `dedalo_characterize_object`, `dedalo_search_by_text_image`) are now advertised.
+8. **Run prompts**, e.g. *"find objects similar to coin <tipo>/<id>"* → `dedalo_similar_objects`; *"propose the typology and period of object <tipo>/<id>"* → `dedalo_characterize_object`; *"what do informants say about X?"* → `dedalo_ask`. As a low-privilege MCP user, restricted records are absent from results (ACL); with an external multimodal provider, non-publishable images are never sent out.
 
 ## Tests
 
 `test/server/rag/` (suite `rag`): `php vendor/bin/phpunit -c test/server/phpunit.xml --testsuite rag`
-- `rag_chunker_Test` / `rag_fusion_Test` / `rag_security_Test` / `rag_hardening_Test`
-  (token budgeting, diversify, reranker pass-through, private-range) — pure logic, always run.
+- `rag_chunker_Test` / `rag_fusion_Test` / `rag_security_Test` / `rag_hardening_Test` / `rag_image_Test`
+  (semantic boundaries, fusion, ACL/egress, token budgeting/diversify/reranker, image proposal-aggregation + context) — pure logic, always run.
 - `rag_store_integration_Test` — end-to-end against a real pgvector instance;
   skips cleanly when `DEDALO_RAG_DB_*` is not configured.
 
-Current: 31 tests / 88 assertions green (4 store-integration skip without a live vector DB).
+Current: 37 tests / 113 assertions green (4 store-integration skip without a live vector DB).

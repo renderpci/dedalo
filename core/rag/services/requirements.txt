@@ -1,0 +1,6 @@
+# Dédalo RAG reference embedding sidecar (dev/test only).
+# CPU is fine for testing. `sentence-transformers` pulls in torch.
+fastapi>=0.110
+uvicorn>=0.29
+sentence-transformers>=2.7
+pillow>=10.0
