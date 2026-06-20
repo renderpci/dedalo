@@ -55,6 +55,14 @@ abstract class dd_ontology_db_manager {
 	public static string $table = 'dd_ontology';
 
 	/**
+	* Per-request cache of whether the ontology table exists. Used to skip reads QUIETLY on a
+	* connectable-but-not-yet-imported database (a fresh install), so the installer's context build
+	* does not spew "relation dd_ontology does not exist" pg errors. null = not yet checked.
+	* @var bool|null
+	*/
+	private static ?bool $table_exists_cache = null;
+
+	/**
 	* Allowlist of every column that this class is permitted to read or write.
 	* Keys are column names; values are always `true` (used as a lookup set).
 	* Any column name not present here is rejected as invalid in update() and search(),
@@ -373,6 +381,19 @@ abstract class dd_ontology_db_manager {
 		if ($conn === false) {
 			return false;
 		}
+
+		// During install the schema may not exist yet. On a connectable-but-empty DB, skip QUIETLY
+		// when the ontology table is absent (checked once per request) so the installer's context
+		// build doesn't log noisy "relation does not exist" pg errors. Installed systems skip this.
+		if (!(defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS === 'installed')) {
+			if (self::$table_exists_cache === null) {
+				self::$table_exists_cache = DBi::check_table_exists(self::$table);
+			}
+			if (self::$table_exists_cache === false) {
+				return false;
+			}
+		}
+
 		$table = self::$table;
 
 		// With prepared statement
