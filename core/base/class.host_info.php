@@ -177,4 +177,77 @@ class host_info {
 			return null;
 		}
 	}
+
+	/**
+	* PARSE_CPUINFO_MODEL
+	* First "model name" value in /proc/cpuinfo.
+	* @param string $raw
+	* @return string|null
+	*/
+	public static function parse_cpuinfo_model(string $raw) : ?string {
+		if (preg_match('/^model name\s*:\s*(.+)$/mi', $raw, $m) === 1) {
+			return trim($m[1]);
+		}
+		return null;
+	}
+
+	/**
+	* GET_CPU
+	* CPU model string. Linux: /proc/cpuinfo. Darwin: sysctl machdep.cpu.brand_string.
+	* @return string|null
+	*/
+	public static function get_cpu() : ?string {
+		try {
+			switch (self::os_family()) {
+				case 'linux':
+					if (is_readable('/proc/cpuinfo')) {
+						$raw = @file_get_contents('/proc/cpuinfo');
+						if (is_string($raw) && $raw !== '') {
+							return self::parse_cpuinfo_model($raw);
+						}
+					}
+					return null;
+
+				case 'darwin':
+					$raw = @shell_exec('/usr/sbin/sysctl -n machdep.cpu.brand_string 2>/dev/null');
+					$raw = is_string($raw) ? trim($raw) : '';
+					return $raw !== '' ? $raw : null;
+
+				default:
+					return null;
+			}
+		} catch (\Throwable $e) {
+			return null;
+		}
+	}
+
+	/**
+	* GET_MODEL
+	* Machine/board model. Linux: DMI product_name. Darwin: sysctl hw.model.
+	* @return string|null
+	*/
+	public static function get_model() : ?string {
+		try {
+			switch (self::os_family()) {
+				case 'linux':
+					$path = '/sys/devices/virtual/dmi/id/product_name';
+					if (is_readable($path)) {
+						$raw = @file_get_contents($path);
+						$raw = is_string($raw) ? trim($raw) : '';
+						return $raw !== '' ? $raw : null;
+					}
+					return null;
+
+				case 'darwin':
+					$raw = @shell_exec('/usr/sbin/sysctl -n hw.model 2>/dev/null');
+					$raw = is_string($raw) ? trim($raw) : '';
+					return $raw !== '' ? $raw : null;
+
+				default:
+					return null;
+			}
+		} catch (\Throwable $e) {
+			return null;
+		}
+	}
 }//end class host_info

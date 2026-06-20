@@ -80,4 +80,25 @@ final class host_info_Test extends TestCase {
 		// Apple Silicon returns null cleanly; Intel/Linux return a positive int.
 		$this->assertTrue($mhz === null || $mhz > 0);
 	}
+
+	public function test_parse_cpuinfo_model_returns_first_model_name() : void {
+		$this->assertSame(
+			'Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz',
+			host_info::parse_cpuinfo_model($this->fixture('cpuinfo.txt'))
+		);
+	}
+
+	public function test_parse_cpuinfo_model_returns_null_when_absent() : void {
+		$this->assertNull(host_info::parse_cpuinfo_model("processor\t: 0\ncpu MHz\t: 1\n"));
+	}
+
+	public function test_get_cpu_is_string_or_null() : void {
+		$cpu = host_info::get_cpu();
+		$this->assertTrue($cpu === null || is_string($cpu));
+	}
+
+	public function test_get_model_is_string_or_null() : void {
+		$model = host_info::get_model();
+		$this->assertTrue($model === null || is_string($model));
+	}
 }
