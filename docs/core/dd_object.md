@@ -47,7 +47,7 @@ A ddo is also used to request information from the work API. By changing ddo pro
 | buttons | public | Defines if the ontology node has buttons associated | array \[string]  |  |  | \['button_add'] |
 | css | public | Defines css to apply at ontology node when will be rendered. ddo use a JSON to define CSS. The main object key if the CSS selector, his value is an object with key as CSS property and value as CSS value  | object  |  |  | {".wrapper_component": {"grid-column": "span 2"}} |
 | target_sections | public | Defines the sections pointed by the ontology node. A component_portal call to at least one section, in some cases it could point to multiple section. If the ontology node use a common section, as toponymy (es1, fr1, etc) this property will set all possible sections for the ontology node | array\[object] |  |  |  \[{'tipo': 'dd125','label': 'Projects'}] |
-| request_config | public | Defines the configuration of the ontology node. Used by component_portal to config his show, search and choose options, see request_config | array |  |  |  \[{"show": {"ddo_map": [...]}}] |
+| request_config | public | Defines the configuration of the ontology node. Used by component_portal to config his show, search and choose options — see [request_config](request_config.md). (!) For a component **nested inside a ddo_map** the server rebuilds this from the ontology (`build_request_config`); a client cannot inject an alternative one — its columns come from sibling ddos instead. See [How a ddo_map resolves](#how-a-ddo_map-resolves-the-chain). | array |  |  |  \[{"show": {"ddo_map": [...]}}] |
 | columns_map | public | Defines the columns for list in sections and components. Columns map is used to know the order and the format of every columns in a list, the map will used to arrange the components with the same column_id in ddo_map. By default the columns_map will be the all ddo inside the ddo_map, 1 ddo = 1 column. | array\[object] |  |  |  \[{"id": "a", "label": "rsc368", "width": "65%"}] |
 | view | public | Defines the render view that will use. Views are the final html and css of the components, sections, areas, tools, etc. If view is not set, the rendered will use "default" view. | string | string \| null | default |  table |
 | children_view | public | Defines the render view that will use at every child of the ontology node. Used by sections and portals to spread specific view to his children. Views are the final html and css of the components, sections, areas, tools, etc. If view is not set, the rendered will use the parent node view. | string | string \| null |  |  text |
@@ -62,6 +62,11 @@ A ddo is also used to request information from the work API. By changing ddo pro
 | sortable | public | Used by components to define whether the component could rearrange its data. | bool |  true \| false  | |  false |
 | fields_separator | public | Used by component_portal to define the separator character/s between fields when the data of the component will be join as text. Ex: Doe, John (surname - field separator - name) | string |  | ", " |  ", " |
 | records_separator | public | Used by component_portal to define the separator character/s between records(rows) when the data of the component will be join as text. Ex: Doe, John \| Onielfa, Paco (surname - field separator - name - records_separator - surname - field separator - name ) | string |  | " \| " |  " \| " |
+| limit | public | Output pagination slice for this ddo's component. A relation/portal always loads **all** its references (for correct sorting) and then slices the returned rows to this number; `limit` sets `pagination->limit` server-side (`class.common::get_subdatum`). `0` = all rows (the read-equivalent of the portal "show all"). See [How a ddo_map resolves](#how-a-ddo_map-resolves-the-chain). | int |  | portal mode default (list 1 / edit 10) | 0 |
+| offset | public | Output pagination offset for this ddo's component, paired with `limit`. | int |  | 0 | 0 |
+| column_id | public | The grid column this ddo fills (ties a ddo to its `columns_map` entry). A portal's columns are declared as **sibling ddos** that share the portal's `parent` and each carry a `column_id` (`a`, `b`, `c`…). | string |  |  | a |
+| with_value | public | Per-ddo mode/view override applied only when the component has data (e.g. render a relation as a compact line when populated). | object |  |  | {"mode":"list","view":"line"} |
+| fixed_mode | public | When true, the ddo/ontology `mode` wins over the active section_record mode — the column renders in its declared mode regardless of the surrounding context. | bool | true \| false | false | true |
 | autoload | public | Used by tools | boolean |  |  | false |
 | role | public | Used by tools | string |  |  | 'main_component' |
 | section_map | public | Used to point specific components into common definitions | object |  |  | {"thesaurus": {"term": "hierarchy25", "model": "hierarchy27", "order": "hierarchy48", "parent": "hierarchy36", "is_indexable": "hierarchy24", "is_descriptor": "hierarchy23"}} |
@@ -82,3 +87,29 @@ Because `dd_object extends stdClass`, the following properties are attached dyna
 | search_options_title | string | Title for the search options, derived from `search_operators_info`. | |
 | target_section_tipo | string | Resolved target section tipo for the ddo. | `rsc197` |
 | debug | object | Debug payload, attached under debug conditions. | |
+
+## How a ddo_map resolves (the chain)
+
+> Resolver: `./core/common/class.common.php` → `get_subdatum()`
+
+A `show.ddo_map` is **not** a flat list of independent columns — it is a set of resolution *chains* linked by `parent`. When the server hydrates a record's data, `get_subdatum()` walks the map like this:
+
+1. **Top-level ddos** (whose `parent` is the section itself) resolve directly to that section's components. For a literal component, its value is read and returned in the response `data`.
+2. **A relation/portal ddo** resolves specially:
+   - The portal **regenerates its own `request_config`** server-side (`$current_element->build_request_config()`). A `request_config` / `sqo` / `show` you attach **to the portal ddo itself is not read** — the portal owns that config (it comes from the ontology / its own resolution).
+   - Its **columns are the *sibling* ddos** whose `parent` equals the portal's `tipo` (collected by `get_children_recursive`) and grafted into the rebuilt config's `show.ddo_map`. So a portal's columns are declared as **flat siblings carrying `parent: <portal_tipo>` + `column_id`**, *not* nested inside the portal ddo.
+3. From each ddo the resolver reads a **fixed, small set of fields**: `tipo`, `section_tipo`, `parent`, `model`, `mode`, `view`, `lang`, and **`limit`** (the only one that maps to `pagination->limit`). Other keys placed on a ddo — a nested `request_config`, `sqo`, `sqo_config`, `pagination` — are **not consulted** at this stage.
+
+**Pagination here is an output *slice*, not a fetch limit.** A relation/portal always loads **all** of its references (`references_limit = 0`, so they can be sorted — `component_portal_json.php`) and then **slices the returned rows** to `pagination->limit`. The per-ddo `limit` sets that slice; the portal mode default is **1 (list) / 10 (edit)**, and **`limit: 0` returns every row** — the read equivalent of the portal's "show all" button. Because the rows are already loaded, a `limit: 0` on a nested portal ddo simply returns all of them in the **same single read** (used by `tool_print` to render a record's full portal grids without per-portal calls).
+
+> **Practical consequence:** to control a nested portal in one read you can change its `mode`, its columns (sibling ddos), and its `limit` — but you cannot inject a whole alternative `request_config`/`sqo` for it; that is server-derived.
+
+## Client-sent ddos: the security whitelist
+
+> Scrub: `./core/common/class.request_config_object.php` → `sanitize_client_ddo_map()` (called from `dd_manager`)
+
+ddos that originate in the **ontology** (server-side, trusted) may use the full property set above. ddos sent **by the client** — in `rqo->show.ddo_map` / `rqo->search.ddo_map` (time machine, graph view, search presets, `tool_print`, …) — are **untrusted** and reduced to a whitelist *before* they reach the request_config build. Any field not on the list is stripped:
+
+`typo`, `tipo`, `section_tipo`, `section_id`, `parent`, `mode`, `lang`, `view`, `label`, `fields_separator`, `records_separator`, `value_with_parents`, `column_id`, `width`, `in_mosaic`, `hover`, **`limit`**, **`offset`**.
+
+`limit` / `offset` are accepted **only as non-negative integers** (any other shape is dropped). They control only the *output slice* of an already permission-resolved, fully-loaded component — they are **not** a permission boundary — so a client may legitimately request all rows of a portal it can already read (`limit: 0`), exactly as the UI "show all" does. `model`, `permissions` and other server-authoritative fields are deliberately **absent** from the whitelist (recomputed / enforced server-side, then re-validated by `validate_requested_ddo()`). Note the scrub covers `show.ddo_map` and `search.ddo_map` but **not** `choose.ddo_map`.
