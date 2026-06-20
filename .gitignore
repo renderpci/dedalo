@@ -182,3 +182,6 @@ mcp/.env
 .opencode
 analysis
 .claude
+
+# special agent dir to save plans and specs
+docs/superpowers
