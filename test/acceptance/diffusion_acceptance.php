@@ -11,7 +11,7 @@
 * Prerequisites:
 * 	- Bun engine running on DEDALO_DIFFUSION_SOCKET_PATH
 * 	- Internal token pair configured (DEDALO_DIFFUSION_INTERNAL_TOKEN in
-* 	  config/config.php = DIFFUSION_INTERNAL_TOKEN in diffusion/api/v1/.env)
+* 	  config/bootstrap.php = DIFFUSION_INTERNAL_TOKEN in diffusion/api/v1/.env)
 * 	- Diffusion ontology seeded (sql element; rdf element with service_name
 * 	  for the RDF checks)
 *
@@ -23,7 +23,7 @@ if (php_sapi_name()!=='cli') {
 	die('This script must be run from CLI'.PHP_EOL);
 }
 
-require_once __DIR__ . '/../../config/config.php';
+require_once __DIR__ . '/../../config/bootstrap.php';
 
 // CLI superuser context (development servers only): validate() is admin-gated
 // and diffuse() checks section permissions — both need a logged user.

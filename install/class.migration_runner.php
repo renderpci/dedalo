@@ -21,7 +21,7 @@ final class migration_runner {
 	/**
 	* @param string[] $source_files legacy config files to migrate, in include order
 	* @param config_key[] $catalog
-	* @return array{artifacts:array<string,string>,summary:array<string,array<int,string>>,entity:?string}
+	* @return array{artifacts:array<string,string>,summary:array<string,array<int,string>>,entity:?string,dropped_secrets:array<int,string>}
 	*/
 	public static function plan(array $source_files, array $catalog) : array {
 		$records = migration_extractor::extract($source_files);
@@ -49,7 +49,22 @@ final class migration_runner {
 			? (string) $records['DEDALO_ENTITY']['value']
 			: null;
 
-		return ['artifacts' => $artifacts, 'summary' => $summary, 'entity' => $entity];
+		// G2 — silent-secret detection. A constant routed to ENV (a secret: catalog SECRET scope or
+		// constant_map-flagged) whose value did NOT fold to a literal (computed from $_SERVER /
+		// dirname() / a function call) is SILENTLY skipped by env_writer::render_php → it would land
+		// in ../private/.env as nothing, the boot would define it empty, and e.g. DB auth would fail
+		// with no error. Surface the NAMES (never values) so the caller refuses rather than ship a
+		// broken-but-alive box. The operator migrates those by hand.
+		$dropped_secrets = [];
+		foreach ($cls as $name => $info) {
+			if ($info['destination'] === migration_destination::ENV
+				&& ($info['record']['kind'] ?? null) !== 'literal') {
+				$dropped_secrets[] = $name;
+			}
+		}
+		sort($dropped_secrets);
+
+		return ['artifacts' => $artifacts, 'summary' => $summary, 'entity' => $entity, 'dropped_secrets' => $dropped_secrets];
 	}//end plan
 
 	/** Redacted human report: destination => count + sorted NAMES (never values). */
@@ -61,6 +76,12 @@ final class migration_runner {
 		$lines[] = '';
 		foreach ($plan['summary'] as $destination => $names) {
 			$lines[] = strtoupper($destination) . ' (' . count($names) . '): ' . implode(', ', $names);
+		}
+		if (!empty($plan['dropped_secrets'])) {
+			$lines[] = '';
+			$lines[] = '!! DROPPED SECRETS (' . count($plan['dropped_secrets']) . ') — dynamic value, NOT migratable automatically:';
+			$lines[] = '   ' . implode(', ', $plan['dropped_secrets']);
+			$lines[] = '   Set these by hand in ../private/.env after migrating, or the install will boot with empty secrets.';
 		}
 		$lines[] = '';
 		$lines[] = 'Targets: ENV (secrets) + CONFIG (general overrides) → ../private/.env; STATE → state.php;';

@@ -68,7 +68,7 @@ $fail = function(string $msg) : void {
 // boot Dédalo BEFORE any output when registration is requested: the session
 // bootstrap in config emits header warnings once anything has been printed
 	if (isset($options['register'])) {
-		require_once $root_path . '/config/config.php';
+		require_once $root_path . '/config/bootstrap.php';
 
 		// CLI superuser context: registering writes registry records (dd1324),
 		// which requires an authenticated session. Shell access to the server

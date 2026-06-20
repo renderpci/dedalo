@@ -22,6 +22,7 @@ require_once $repo . '/core/base/config/class.config_merge.php';
 require_once $repo . '/core/base/config/class.config_key.php';
 require_once $repo . '/install/class.migration_runner.php';
 require_once $repo . '/install/class.migration_committer.php';
+require_once $repo . '/install/class.config_auto_migrate.php';
 
 // --- args ---
 $opts = ['dry-run' => false, 'yes' => false];
@@ -80,29 +81,33 @@ $entity = $plan['entity'] ?? 'entity';
 $stamp = date('Ymd_His');
 $backup_dir = $paths['backup-base'] . '/' . $host . '.' . $entity . '/' . $stamp;
 
-// Config goes into .env (secrets + general config). config.local.php is NOT written — it's an
-// optional admin-only file the shim still loads if present.
-$targets = [
-	'env_php'     => $paths['private-dir'] . '/.env',
-	'env_bun'     => $paths['bun-env'],
-	'state'       => $paths['private-dir'] . '/state.php',
-	'passthrough' => $paths['private-dir'] . '/passthrough.php',
-];
-
-$report = migration_committer::commit($plan['artifacts'], $targets, $backup_dir);
-
-// marker for schema version + key
-$marker = $paths['private-dir'] . '/.migration.json';
-@mkdir(dirname($marker), 0755, true);
-@file_put_contents($marker, json_encode([
-	'schema_version' => migration_runner::SCHEMA_VERSION,
-	'key'            => $host . '.' . $entity,
-	'stamp'          => $stamp,
-], JSON_PRETTY_PRINT) . "\n");
+// Shared finalize path (same as the boot auto-migration): G2 refusal on dropped secrets →
+// whole-migration atomic commit → quarantine the legacy files out of the web root → write the
+// config/config.php shim → write the completion sentinel LAST. Config goes into .env (secrets +
+// general overrides); config.local.php is NOT written (optional admin-only file the shim still loads).
+try {
+	config_auto_migrate::finalize(
+		$plan,
+		$sources,
+		$paths['target-config-dir'],
+		$paths['private-dir'],
+		$paths['bun-env'],
+		$backup_dir,
+		$host,
+		$entity,
+		$stamp,
+		'cli'
+	);
+} catch (config_migrate_blocked $e) {
+	fwrite(STDERR, "migrate_config_v7: refused — " . $e->getMessage() . "\n");
+	flock($lock, LOCK_UN);
+	exit(2);
+}
 
 fwrite(STDOUT, "migration committed (schema_version " . migration_runner::SCHEMA_VERSION . ", backups in {$backup_dir}):\n");
-foreach ($report as $key => $status) {
+foreach (($plan['report'] ?? []) as $key => $status) {
 	fwrite(STDOUT, "  - {$key}: {$status}\n");
 }
+fwrite(STDOUT, "  - legacy config quarantined; config/config.php is now a shim → bootstrap.php\n");
 flock($lock, LOCK_UN);
 exit(0);

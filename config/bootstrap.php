@@ -1,12 +1,23 @@
 <?php declare(strict_types=1);
 
 /**
-* CONFIG.PHP — the v7 application config ENTRY POINT (spec §5.1).
-* The ONLY config file in this web-served directory. It is the thin loader: it boots the
+* BOOTSTRAP.PHP — the v7 application config ENTRY POINT (spec §5.1).
+* The ONLY git-TRACKED file in this web-served directory and the thin loader: it boots the
 * catalog-driven pipeline (boot_web_profile), reading every per-install value + secret from
 * OUTSIDE the web root, in ../private/: .env (+ host override .env.<host>), config.local.php,
-* state.php, passthrough.php. No editable values or secrets live here. Existing
-* `include config/config.php` sites boot the v7 pipeline unchanged.
+* state.php, passthrough.php. No editable values or secrets live here.
+*
+* Renamed from config.php so that pulling the config flip onto a pre-flip box never collides
+* with that box's untracked, secret-bearing config/config.php (git would refuse to overwrite it).
+* All in-repo entry points include config/bootstrap.php; out-of-repo callers keep working via a
+* generated, UNtracked config/config.php shim (`require __DIR__.'/bootstrap.php';`) written by the
+* migration/installer. The legacy-config readers (install/migrate_config_v7.php,
+* install/boot_diff_run.php) still read the file literally named config.php — do not repoint them.
+*
+* On a pre-flip box (legacy config present, ../private not yet populated) the loader transparently
+* runs the one-time config migration BEFORE loading env, so `git pull` alone moves the install to
+* the .env layout (see config_auto_migrate). DEDALO_INSTALL_STATUS carries over verbatim from the
+* legacy config_core.php, so an already-installed box stays installed (no wizard).
 * Precedence (low→high): catalog defaults → config.local.php → .env → .env.<host> → process env.
 */
 
@@ -33,6 +44,38 @@ $private          = $repo . '/../private';
 $local_cfg        = $private . '/config.local.php';
 $state_file       = $private . '/state.php';
 $passthrough_file = $private . '/passthrough.php';
+
+// ONE-TIME TRANSPARENT CONFIG MIGRATION (pre-flip box).
+// Hot path is two is_file() checks: once migrated (sentinel present) this is skipped entirely.
+// Only when the legacy config is still present AND ../private has not been populated do we load
+// the migrator and run it — BEFORE env loading below, so the .env we are about to read exists.
+// Opt out with DEDALO_AUTO_MIGRATE=0 in the process env (e.g. to migrate manually via the CLI).
+if (!is_file($private . '/.migration.json')
+	&& (is_file($repo . '/config/config_core.php') || is_file($repo . '/config/config_db.php'))
+	&& getenv('DEDALO_AUTO_MIGRATE') !== '0'
+) {
+	require_once $repo . '/install/class.config_auto_migrate.php';
+	try {
+		config_auto_migrate::run(
+			$repo,
+			$repo . '/config',
+			$private,
+			$repo . '/diffusion/api/v1/.env',
+			$repo . '/../backups/config_migration'
+		);
+	} catch (config_migrate_blocked $e) {
+		// FAIL SAFE: never boot a half-configured box. Tell the operator exactly what to do.
+		if (php_sapi_name() === 'cli') {
+			fwrite(STDERR, "Dédalo config migration could not complete:\n  " . $e->getMessage() . "\n");
+		} else {
+			http_response_code(503);
+			header('Content-Type: text/plain; charset=utf-8');
+			echo "Dédalo is upgrading its configuration and needs attention:\n\n  " . $e->getMessage()
+				. "\n\nFix the above, then reload. Or migrate manually: php install/migrate_config_v7.php\n";
+		}
+		exit(1);
+	}
+}
 
 // Host-layered env: load ../private/.env (shared base) then ../private/.env.<host> (overrides).
 // host = the web Host header, else the DEDALO_ENV var / machine hostname on CLI. Sanitized for

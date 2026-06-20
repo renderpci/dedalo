@@ -27,7 +27,7 @@ if (php_sapi_name()!=='cli') {
 }
 
 // USE V7 CODEBASE
-require_once __DIR__ . '/../../../config/config.php';
+require_once __DIR__ . '/../../../config/bootstrap.php';
 
 $targets = dd_diffusion_api::resolve_media_index_targets();
 echo 'Publication targets resolved from the ontology: ' . count($targets) . PHP_EOL;

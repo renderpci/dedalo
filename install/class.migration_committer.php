@@ -2,11 +2,15 @@
 
 /**
 * MIGRATION_COMMITTER
-* The migration's only filesystem mutation. For each artifact mapped to a target path:
-* back up an existing target into the (per-{host}.{entity}/{stamp}) backup dir, then write
-* atomically (temp file in the target's dir + rename). .env targets get chmod 0600.
-* Artifacts with no real content (empty / header-only) are skipped, so an install with no
-* passthrough/overrides does not get stray files. Returns a per-target status report.
+* The migration's only filesystem mutation. WHOLE-MIGRATION ATOMIC (G1): every non-empty
+* artifact is first STAGED to a temp file in its target dir; only once ALL stage successfully
+* are the existing targets backed up (per-{host}.{entity}/{stamp}) and the temps renamed into
+* place. A failure during staging discards every temp and touches no target — so a crash / disk-
+* full / permission error never leaves ../private half-written (which would boot as a broken-but-
+* alive box). .env targets get chmod 0600. Artifacts with no real content (empty / header-only)
+* are skipped, so an install with no passthrough/overrides does not get stray files. The caller
+* writes the completion sentinel AFTER this returns, so "sentinel absent" always means "re-run me".
+* Returns a per-target status report.
 */
 final class migration_committer {
 
@@ -19,35 +23,50 @@ final class migration_committer {
 	*/
 	public static function commit(array $artifacts, array $targets, string $backup_dir, array $env_keys = ['env_php', 'env_bun']) : array {
 		$report = [];
-		foreach ($targets as $key => $path) {
-			$content = $artifacts[$key] ?? '';
-			if (self::is_empty_artifact($content)) {
-				$report[$key] = 'skipped-empty';
-				continue;
-			}
+		$staged = []; // key => ['tmp'=>..., 'path'=>...]  (everything renamed only after all stage)
 
+		// --- phase 1: stage every non-empty artifact to a temp file; rename NOTHING yet ---
+		try {
+			foreach ($targets as $key => $path) {
+				$content = $artifacts[$key] ?? '';
+				if (self::is_empty_artifact($content)) {
+					$report[$key] = 'skipped-empty';
+					continue;
+				}
+				$dir = dirname($path);
+				if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
+					throw new \RuntimeException("migration_committer: cannot create target dir {$dir}");
+				}
+				$tmp = $dir . '/.' . basename($path) . '.tmp.' . getmypid();
+				if (file_put_contents($tmp, $content) === false) {
+					@unlink($tmp);
+					throw new \RuntimeException("migration_committer: cannot stage {$path}");
+				}
+				$staged[$key] = ['tmp' => $tmp, 'path' => $path];
+			}
+		} catch (\Throwable $e) {
+			foreach ($staged as $s) { @unlink($s['tmp']); } // nothing renamed → targets untouched
+			throw $e;
+		}
+
+		// --- phase 2: all staged OK → back up existing targets, then rename temps into place ---
+		foreach ($staged as $key => $s) {
 			$backed_up = false;
-			if (is_file($path)) {
+			if (is_file($s['path'])) {
 				if (!is_dir($backup_dir) && !mkdir($backup_dir, 0700, true) && !is_dir($backup_dir)) {
 					throw new \RuntimeException("migration_committer: cannot create backup dir {$backup_dir}");
 				}
-				if (!copy($path, $backup_dir . '/' . basename($path) . '.bak')) {
-					throw new \RuntimeException("migration_committer: backup failed for {$path}");
+				if (!copy($s['path'], $backup_dir . '/' . basename($s['path']) . '.bak')) {
+					throw new \RuntimeException("migration_committer: backup failed for {$s['path']}");
 				}
 				$backed_up = true;
 			}
-
-			$dir = dirname($path);
-			if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
-				throw new \RuntimeException("migration_committer: cannot create target dir {$dir}");
-			}
-			$tmp = $dir . '/.' . basename($path) . '.tmp.' . getmypid();
-			if (file_put_contents($tmp, $content) === false || !rename($tmp, $path)) {
-				@unlink($tmp);
-				throw new \RuntimeException("migration_committer: atomic write failed for {$path}");
+			if (!rename($s['tmp'], $s['path'])) {
+				@unlink($s['tmp']);
+				throw new \RuntimeException("migration_committer: atomic write failed for {$s['path']}");
 			}
 			if (in_array($key, $env_keys, true)) {
-				@chmod($path, 0600);
+				@chmod($s['path'], 0600);
 			}
 			$report[$key] = $backed_up ? 'written+backed-up' : 'written';
 		}

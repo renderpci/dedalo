@@ -13,6 +13,13 @@ json_config.php
 
 # config ignore all except sample files
 config/*
+# config/bootstrap.php is the ONLY tracked loader (secret-free). config/config.php stays
+# ignored on purpose: it is the per-install untracked shim (require bootstrap.php) and, on a
+# pre-flip box, the legacy secrets file — tracking it would re-create the git-pull collision.
+!config/bootstrap.php
+# Ship the web-server hardening for config/ (deny + neutralize PHP) so a leftover legacy
+# config.php can never be served/executed; secret-free, safe to track.
+!config/.htaccess
 !config/sample.config.php
 !config/sample.config_db.php
 !config/sample.config_areas.php

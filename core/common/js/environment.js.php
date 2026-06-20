@@ -64,7 +64,7 @@ $global_start_time = hrtime(true);
 	// incomplete JS and crash unpredictably.  The fallback block below
 	// emits safe stub constants so the client can at least display an alert
 	// instead of a silent JS syntax error.
-	$config_path = dirname(__DIR__, 3) . '/config/config.php'; // Go up 3 directories from this file to the root
+	$config_path = dirname(__DIR__, 3) . '/config/bootstrap.php'; // Go up 3 directories from this file to the root
 	if( !include_once $config_path ) {
 
 		echo '

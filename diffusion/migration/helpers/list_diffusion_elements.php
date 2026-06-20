@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../../config/config.php';
+require_once __DIR__ . '/../../../config/bootstrap.php';
 $conn = DBi::_getConnection();
 $sql = "SELECT tipo, term FROM dd_ontology WHERE model = 'diffusion_element'";
 $res = pg_query($conn, $sql);

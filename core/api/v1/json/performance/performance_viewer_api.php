@@ -41,7 +41,7 @@ declare(strict_types=1);
 if (!defined('DEDALO_ROOT_PATH')) {
     // /core/api/v1/json/performance/performance_viewer_api.php → /
     // dirname(__DIR__, 5) walks up five levels from this file to the repo root.
-    if (!@include dirname(__DIR__, 5) . '/config/config.php') {
+    if (!@include dirname(__DIR__, 5) . '/config/bootstrap.php') {
         http_response_code(500);
         echo json_encode(['result' => false, 'msg' => 'Configuration not available']);
         exit(0);

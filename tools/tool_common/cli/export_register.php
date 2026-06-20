@@ -61,7 +61,7 @@ if ($to_stdout && empty($tool_filter)) {
 
 // boot Dédalo. config bootstrap may emit header warnings once output starts, so
 // do this before printing anything.
-	require_once $root_path . '/config/config.php';
+	require_once $root_path . '/config/bootstrap.php';
 
 	// CLI superuser context: read_raw enforces section read permissions. Shell
 	// access to the server already implies full trust (same model as create_tool).
