@@ -114,4 +114,24 @@ final class host_info_Test extends TestCase {
 		$distro = host_info::get_distro();
 		$this->assertTrue($distro === null || is_string($distro));
 	}
+
+	public function test_parse_proc_uptime_reads_whole_seconds() : void {
+		// 350005.12 -> 350005
+		$this->assertSame(350005, host_info::parse_proc_uptime('350005.12 1234567.00'));
+	}
+
+	public function test_parse_proc_uptime_returns_null_when_unparseable() : void {
+		$this->assertNull(host_info::parse_proc_uptime('not-a-number'));
+	}
+
+	public function test_format_uptime_renders_days_hours_minutes() : void {
+		// 3 days, 4 hours, 5 minutes = 3*86400 + 4*3600 + 5*60 = 274260 + ... compute:
+		$seconds = (3 * 86400) + (4 * 3600) + (5 * 60); // 274500
+		$this->assertSame('3 days, 4 hours, 5 minutes', host_info::format_uptime($seconds));
+	}
+
+	public function test_get_uptime_is_string_or_null() : void {
+		$uptime = host_info::get_uptime();
+		$this->assertTrue($uptime === null || is_string($uptime));
+	}
 }

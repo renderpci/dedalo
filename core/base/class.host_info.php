@@ -295,4 +295,78 @@ class host_info {
 			return null;
 		}
 	}
+
+	/**
+	* PARSE_PROC_UPTIME
+	* Whole seconds from the first field of /proc/uptime ("SECONDS IDLE").
+	* @param string $raw
+	* @return int|null
+	*/
+	public static function parse_proc_uptime(string $raw) : ?int {
+		$trimmed = trim($raw);
+		if ($trimmed === '' || !preg_match('/^([0-9]+(?:\.[0-9]+)?)/', $trimmed, $m)) {
+			return null;
+		}
+		return (int)floor((float)$m[1]);
+	}
+
+	/**
+	* FORMAT_UPTIME
+	* Render seconds as "D days, H hours, M minutes" (omitting zero leading units).
+	* @param int $seconds
+	* @return string
+	*/
+	public static function format_uptime(int $seconds) : string {
+		if ($seconds < 60) {
+			return $seconds . ' seconds';
+		}
+		$days	= intdiv($seconds, 86400);
+		$hours	= intdiv($seconds % 86400, 3600);
+		$minutes = intdiv($seconds % 3600, 60);
+
+		$parts = [];
+		if ($days > 0) {
+			$parts[] = $days . ' day' . ($days === 1 ? '' : 's');
+		}
+		if ($hours > 0) {
+			$parts[] = $hours . ' hour' . ($hours === 1 ? '' : 's');
+		}
+		if ($minutes > 0) {
+			$parts[] = $minutes . ' minute' . ($minutes === 1 ? '' : 's');
+		}
+
+		return implode(', ', $parts);
+	}
+
+	/**
+	* GET_UPTIME
+	* Formatted system uptime. Linux: /proc/uptime. Darwin: raw kern.boottime
+	* sysctl string (computing exact uptime there is noisy; the raw value is shown).
+	* @return string|null
+	*/
+	public static function get_uptime() : ?string {
+		try {
+			switch (self::os_family()) {
+				case 'linux':
+					if (is_readable('/proc/uptime')) {
+						$raw = @file_get_contents('/proc/uptime');
+						if (is_string($raw) && $raw !== '') {
+							$seconds = self::parse_proc_uptime($raw);
+							return $seconds !== null ? self::format_uptime($seconds) : null;
+						}
+					}
+					return null;
+
+				case 'darwin':
+					$raw = @shell_exec('/usr/sbin/sysctl -n kern.boottime 2>/dev/null');
+					$raw = is_string($raw) ? trim($raw) : '';
+					return $raw !== '' ? $raw : null;
+
+				default:
+					return null;
+			}
+		} catch (\Throwable $e) {
+			return null;
+		}
+	}
 }//end class host_info
