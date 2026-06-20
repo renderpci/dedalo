@@ -174,9 +174,23 @@ Opt-in per section via **`properties.rag.context`** (NOT a component embed flag)
 - **Gotcha**: image components are declared in `context.images` (section-level, with `view`), NOT via the
   text `rag.embed` flag; `DEDALO_RAG_EMBEDDABLE_MODELS` is text-only on purpose.
 
+## Testing / enablement (BUILT)
+
+- **MCP tools** `mcp/dedalo-work-mcp/src/tools/agent/rag.ts` (wired in `agent/index.ts`): `dedalo_semantic_search`,
+  `dedalo_ask`, `dedalo_get_relevant_context`, `dedalo_similar_objects`, `dedalo_characterize_object`,
+  `dedalo_search_by_text_image` — each `client.call(rqo({action, dd_api:'dd_rag_api', source}))`. Use **`TipoSchema`**
+  (dd_rag_api does NOT resolve section names). `similar_objects` sends **`similarity_mode`** (not `mode`, the reserved
+  render mode — dd_rag_api reads `source->similarity_mode`). Verify: `cd mcp/dedalo-work-mcp && npm run typecheck && npm run build`.
+  MCP auth = session service user → RAG ACL applies to that user.
+- **Reference embedding sidecar** `core/rag/services/embed_server.py` (FastAPI + sentence-transformers): `POST /embed`
+  (text, `DEDALO_RAG_ENDPOINT`), `POST /text` + `POST /image` (CLIP joint space, `DEDALO_RAG_MULTIMODAL_ENDPOINT`),
+  all → `{embeddings:[[…]]}`. Local = no egress. Run on the user's host; not in CI (needs torch).
+- **CLIs**: `core/rag/cli/rag_selftest.php` (one-command wiring check: DB → text embed → store round-trip → image embed),
+  `core/rag/cli/rag_backfill.php <section_tipo> [--build-index]` (index existing records), `cli/rag_drain.php` (cron drain).
+
 ## Deferred (documented, not built)
 
-tool_rag_index UI / bulk-index; Phase-5b-B painting-region search + linking
+tool_rag_index UI; Phase-5b-B painting-region search + linking
 (`component_relation_common::add_locator_to_data`; no structured bbox model exists yet) and 5b-C
-vision-LLM `describe_object`; Phase-8 Bun public service; MCP `dedalo_get_relevant_context`;
-retrieval-quality eval harness; per-user `ask` rate-limit (planned, login-throttle-style).
+vision-LLM `describe_object`; Phase-8 Bun public service; retrieval-quality eval harness;
+per-user `ask` rate-limit (planned, login-throttle-style).

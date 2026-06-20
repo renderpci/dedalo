@@ -371,8 +371,9 @@ final class dd_rag_api {
 		$min_sim  = $source->min_similarity
 			?? ($near_dup && defined('DEDALO_RAG_NEAR_DUPLICATE_SIMILARITY') ? (float)DEDALO_RAG_NEAR_DUPLICATE_SIMILARITY : null);
 
+		// `similarity_mode` (the MCP/client name) — `mode` is the reserved Dédalo render mode
 		$objects = retrieval::find_similar_objects($section_tipo, $section_id, [
-			'mode'			=> ($source->mode ?? null) === 'visual' ? 'visual' : 'hybrid',
+			'mode'			=> (($source->similarity_mode ?? $source->mode ?? null) === 'visual') ? 'visual' : 'hybrid',
 			'view'			=> $source->view ?? null,
 			'section_tipos'	=> (!empty($source->section_tipos) && is_array($source->section_tipos)) ? $source->section_tipos : null,
 			'top_k'			=> self::clamp_top_k($source->top_k ?? null),
