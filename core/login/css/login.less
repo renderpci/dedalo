@@ -159,6 +159,91 @@
 
 				}
 			}
+
+			// two-step (identifier-first) login: step panels (username / password)
+			>.login_step {
+				flex: 1 1 100%;
+				display: flex;
+				flex-wrap: wrap;
+
+				>input, >button {
+					flex: 1 1 100%;
+					font-size: 1em;
+				}
+
+				>input {
+					margin: 0px;
+					margin-bottom: 1em;
+				}
+
+				// step buttons share the look of the form submit button
+				>.button_enter {
+					display: flex;
+					height: 3em;
+					margin: 0px;
+					text-align: center;
+					justify-content: center;
+					align-items: center;
+					transition: all 0.17s ease, padding 0s;
+					background-color: var(--color_orange_dedalo);
+
+					&.white {
+						background-color: transparent;
+						outline: none;
+						cursor: default;
+						pointer-events: none;
+					}
+
+					>.button_enter_loading {
+						position: relative;
+						height: 2rem;
+						width: 2rem;
+						margin: 0px;
+						top: unset;
+						left: unset;
+
+						&.spinner {
+							border-width: 3px;
+						}
+					}
+				}
+			}
+
+			// step 2: username confirmation chip with a "change user" link
+			>.login_step_password >.login_user_chip {
+				flex: 1 1 100%;
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 0.5em;
+				margin-bottom: 1em;
+				padding: 0.5em 0.85em;
+				border-radius: 3px;
+				background-color: @color_grey_16;
+				border: 1px solid @color_grey_13;
+
+				>.login_user_chip_name {
+					font-weight: 600;
+					color: @color_grey_5;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					white-space: nowrap;
+				}
+
+				>.login_change_user {
+					flex: 0 0 auto;
+					font-size: 0.8em;
+					cursor: pointer;
+					color: @color_grey_9;
+					text-decoration: none;
+					transition: color 0.15s ease;
+
+					&:hover {
+						color: var(--color_orange_dedalo);
+						text-decoration: underline;
+					}
+				}
+			}
 		}//end form
 
 		// password recovery (forgot password)

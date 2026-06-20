@@ -256,17 +256,17 @@ const get_content_data = function(self) {
 			class_name		: 'login_form',
 			parent			: fragment
 		})
-		// Intercept the native <form> submit (Enter key press) and delegate
-		// to the button_enter mousedown handler so a single code path handles
-		// all submission triggers.
-		// (!) button_enter is declared later in this function; the submit_handler
-		// closure captures it via the shared lexical scope — it is not a TDZ
-		// problem here because submit_handler is only ever called after button_enter
-		// is assigned.
+		// Intercept the native <form> submit (Enter key press) and route it to the
+		// CURRENTLY VISIBLE step's primary button: the username step advances ('Next'),
+		// the password step logs in. button_next / button_enter / current_step are
+		// declared later; this closure runs only after render, so the refs are safe.
 		const submit_handler = (e) => {
 			e.preventDefault()
-			// fire button enter mousedown event
-			button_enter.dispatchEvent(new Event('mousedown'));
+			if (current_step === 'password') {
+				button_enter.dispatchEvent(new Event('mousedown'));
+			} else {
+				button_next.dispatchEvent(new Event('click'));
+			}
 		}
 		form.addEventListener('submit', submit_handler)
 
@@ -302,7 +302,27 @@ const get_content_data = function(self) {
 			})
 		}
 
-	// User name input
+	// Two-step (identifier-first) login. Step 1 collects the username, step 2 the
+	// password. Both inputs stay in the DOM at all times (only panel visibility is
+	// toggled) so password managers can autofill and save credentials. Step 1 does
+	// NOT call the server — it just advances, so a wrong username still fails
+	// generically at login (no username enumeration).
+		let current_step = 'username'
+
+		// step 1 panel (username)
+		const step_username = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'login_step login_step_username',
+			parent			: form
+		})
+		// step 2 panel (password) — hidden until the user advances
+		const step_password = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'login_step login_step_password hide',
+			parent			: form
+		})
+
+	// User name input (step 1)
 		// dd255 — ontology tipo for the username field label
 		const login_item_username = login_items.find(el => el.tipo==='dd255')
 		const user_input = ui.create_dom_element({
@@ -310,12 +330,41 @@ const get_content_data = function(self) {
 			element_type	: 'input',
 			type			: 'text',
 			placeholder		: strip_tags(login_item_username.label),
-			parent			: form
+			parent			: step_username
 		})
 		// Hint to password managers / browser autofill to fill the username slot
 		user_input.autocomplete	= 'username'
 
-	// Authorization input
+		// "Next" button advances to the password step (type=button: must NOT submit
+		// the form, otherwise the native submit would cascade into the login button)
+		const button_next = ui.create_dom_element({
+			element_type	: 'button',
+			type			: 'button',
+			class_name		: 'button_enter warning',
+			inner_html		: (get_label.next || 'Next'),
+			parent			: step_username
+		})
+
+	// Username confirmation chip + password input (step 2)
+		const user_chip = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'login_user_chip',
+			parent			: step_password
+		})
+		const chip_label = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'login_user_chip_name',
+			parent			: user_chip
+		})
+		const change_user_link = ui.create_dom_element({
+			element_type	: 'a',
+			class_name		: 'login_change_user',
+			inner_html		: (get_label.change_user || 'Change'),
+			parent			: user_chip
+		})
+		change_user_link.href = '#'
+
+	// Authorization input (step 2)
 		// dd256 — ontology tipo for the password field label
 		const login_item_password = login_items.find(el => el.tipo==='dd256')
 		const auth_input = ui.create_dom_element({
@@ -323,10 +372,44 @@ const get_content_data = function(self) {
 			element_type	: 'input',
 			type			: 'password',
 			placeholder		: strip_tags(login_item_password.label),
-			parent			: form
+			parent			: step_password
 		})
 		// Hint to password managers / browser autofill to fill the password slot
 		auth_input.autocomplete= 'current-password'
+
+	// step navigation. saml_container / messages_container are declared later in this
+	// function; these closures run only after render, so the forward refs are safe.
+		const go_to_password_step = () => {
+			chip_label.textContent = user_input.value.trim()
+			step_username.classList.add('hide')
+			if (self.saml) { saml_container.classList.add('hide') }
+			step_password.classList.remove('hide')
+			current_step = 'password'
+			auth_input.focus()
+		}
+		const go_to_username_step = () => {
+			step_password.classList.add('hide')
+			step_username.classList.remove('hide')
+			if (self.saml) { saml_container.classList.remove('hide') }
+			current_step = 'username'
+			user_input.focus()
+		}
+		// "Change" link on the password step returns to the username step
+		change_user_link.addEventListener('click', (e) => {
+			e.preventDefault()
+			go_to_username_step()
+		})
+		// Next: validate the username is present, then reveal the password step
+		const next_handler = (e) => {
+			e.preventDefault()
+			const username = user_input.value
+			if (username.length<2) {
+				ui.show_message(messages_container, `Invalid username ${username}!`, 'error', 'component_message', true)
+				return false
+			}
+			go_to_password_step()
+		}
+		button_next.addEventListener('click', next_handler)
 
 	// development server. Value is set in environment as global var (set in server config file)
 		// (!) Only rendered when DEVELOPMENT_SERVER===true (injected via PHP config).
@@ -389,7 +472,7 @@ const get_content_data = function(self) {
 			element_type	: 'button',
 			type			: 'submit',
 			class_name		: 'button_enter warning',
-			parent			: form
+			parent			: step_password
 		})
 		// button_enter_loading
 		// Spinner visible only while the API call is in flight (class 'hide' toggled)
@@ -414,14 +497,8 @@ const get_content_data = function(self) {
 			e.stopPropagation()
 			e.preventDefault()
 
-			// username check
-			// Minimum 2 characters — prevents accidental empty-string submissions
+			// username (already validated in step 1; read from the still-present input)
 				const username = user_input.value
-				if (username.length<2) {
-					const message = `Invalid username ${username}!`
-					ui.show_message(messages_container, message, 'error', 'component_message', true)
-					return false
-				}
 
 			// auth check
 			// Minimum 2 characters — same guard as username
@@ -676,9 +753,10 @@ const get_content_data = function(self) {
 		const show_login_view = () => {
 			form.classList.remove('hide')
 			forgot_link.classList.remove('hide')
-			if (self.saml) { saml_container.classList.remove('hide') }
 			reset_request_form.classList.add('hide')
 			reset_confirm_form.classList.add('hide')
+			// reset the two-step login to the username step (also restores SAML)
+			go_to_username_step()
 		}
 		const show_request_view = () => {
 			form.classList.add('hide')
