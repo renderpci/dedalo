@@ -134,4 +134,16 @@ final class host_info_Test extends TestCase {
 		$uptime = host_info::get_uptime();
 		$this->assertTrue($uptime === null || is_string($uptime));
 	}
+
+	public function test_get_load_is_array_or_null() : void {
+		$load = host_info::get_load();
+		$this->assertTrue($load === null || is_array($load));
+	}
+
+	public function test_string_or_null_display_readers_never_throw() : void {
+		// Each must return a string or null without throwing on any platform.
+		$this->assertTrue(host_info::get_hd() === null || is_string(host_info::get_hd()));
+		$this->assertTrue(host_info::get_mounts() === null || is_string(host_info::get_mounts()));
+		$this->assertTrue(host_info::get_net() === null || is_string(host_info::get_net()));
+	}
 }

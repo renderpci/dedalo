@@ -369,4 +369,72 @@ class host_info {
 			return null;
 		}
 	}
+
+	/**
+	* RUN
+	* Execute a fixed command and return its trimmed output, or null on
+	* empty/failed execution. Internal helper for the raw-passthrough readers.
+	* @param string $cmd Fixed command literal (no interpolated input)
+	* @return string|null
+	*/
+	private static function run(string $cmd) : ?string {
+		try {
+			$out = @shell_exec($cmd);
+			if (!is_string($out)) {
+				return null;
+			}
+			$out = trim($out);
+			return $out !== '' ? $out : null;
+		} catch (\Throwable $e) {
+			return null;
+		}
+	}
+
+	/**
+	* GET_LOAD
+	* System load averages [1, 5, 15] minutes. Works on Linux and macOS.
+	* @return array|null
+	*/
+	public static function get_load() : ?array {
+		if (!function_exists('sys_getloadavg')) {
+			return null;
+		}
+		$load = @sys_getloadavg();
+		return is_array($load) ? $load : null;
+	}
+
+	/**
+	* GET_HD
+	* Block-device / physical-disk overview.
+	* @return string|null
+	*/
+	public static function get_hd() : ?string {
+		return match (self::os_family()) {
+			'linux'  => self::run('lsblk -io NAME,TYPE,SIZE,MOUNTPOINT,FSTYPE,MODEL 2>/dev/null'),
+			'darwin' => self::run('/usr/sbin/diskutil list 2>/dev/null'),
+			default  => null,
+		};
+	}
+
+	/**
+	* GET_MOUNTS
+	* Mounted filesystems (human-readable sizes).
+	* @return string|null
+	*/
+	public static function get_mounts() : ?string {
+		return self::run('df -h 2>/dev/null');
+	}
+
+	/**
+	* GET_NET
+	* Network interfaces and addresses.
+	* @return string|null
+	*/
+	public static function get_net() : ?string {
+		return match (self::os_family()) {
+			'linux'  => self::run('ip -o addr 2>/dev/null'),
+			'darwin' => self::run('/sbin/ifconfig 2>/dev/null'),
+			default  => null,
+		};
+	}
 }//end class host_info
