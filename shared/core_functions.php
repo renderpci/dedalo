@@ -2510,6 +2510,14 @@ function get_current_data_version() : array {
 
 	try {
 
+		// No matrix_updates table yet (e.g. a fresh install before the DB is imported): return
+		// quietly. Otherwise exec_search would log noisy "relation does not exist" pg errors (twice,
+		// for the v7 and v6 SQL) and raise the "server errors" banner during the installer.
+			if (class_exists('DBi') && DBi::check_table_exists('matrix_updates') === false) {
+				$calculated_current_version = $current_version; // [] — unknown
+				return $current_version;
+			}
+
 		// Query all updates records v7 sql
 			$sql = 'SELECT data FROM "matrix_updates" ORDER BY data->>\'dedalo_version\' DESC LIMIT 1;';
 			$db_result = matrix_db_manager::exec_search($sql, []);
