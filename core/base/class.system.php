@@ -10,7 +10,7 @@
 *
 * Responsibilities:
 * - Hardware / OS probing (RAM, CPU MHz, disk space, disk block-device layout)
-*   via the Linfo composer library (lazily loaded through a singleton accessor).
+*   via the host_info class (delegates to platform-native probes).
 * - Daemon version detection (Apache, PostgreSQL, MariaDB/MySQL) by shelling out
 *   to their CLI utilities, trying both a configured binary base path and the
 *   plain command name in $PATH as fallback.
@@ -26,8 +26,8 @@
 *   to locate daemon binaries on the host.
 * - Depends on `create_directory()` (shared/core_functions.php) for safe mkdir.
 * - Depends on `debug_log()` and the `logger` constants for structured logging.
-* - Uses the Linfo library (vendor/), loaded via Composer autoload, for hardware
-*   introspection; methods degrade gracefully to null/0 when Linfo is absent.
+* - Delegates hardware introspection to the host_info class; methods degrade
+*   gracefully to null/0 when probe data is unavailable.
 * - `dd_init_test.php` (same directory) drives many of these checks during the
 *   installation self-test flow.
 *
@@ -39,68 +39,23 @@ class system {
 
 
 	/**
-	* Singleton holder for the Linfo instance.
-	* Populated on first call to get_info(); re-used on subsequent calls.
-	* @var object|null $info_instance
-	*/
-	static $info_instance;
-
-
-
-	/**
-	* GET_INFO
-	* Loads composer lib 'Linfo' and gets the main data for the system
-	* @see https://github.com/jrgp/linfo
-	* @return object|null $info Returns Linfo instance or null if not available
-	*/
-	public static function get_info() : ?object {
-
-		if (isset(self::$info_instance)) {
-			return self::$info_instance;
-		}
-
-		try {
-			include_once DEDALO_ROOT_PATH . '/vendor/autoload.php';
-
-			// Check if class exists before instantiating (composer dependency)
-			if (!class_exists('\Linfo\Linfo')) {
-				debug_log(__METHOD__ . " Linfo class not found. Run composer install.", logger::WARNING);
-				return null;
-			}
-
-			self::$info_instance = new \Linfo\Linfo;
-		} catch (Exception $e) {
-			debug_log(__METHOD__ . " Failed to instantiate Linfo: " . $e->getMessage(), logger::ERROR);
-			return null;
-		}
-
-		return self::$info_instance;
-	}//end get_info
-
-
-
-	/**
 	* GET_RAM
 	* Get the system physical memory installed in the system
 	* in Gigabytes
 	*
-	* Reads the 'total' key from Linfo's getRam() result and converts bytes
-	* to whole gigabytes via rounding.  Returns 0 when Linfo is unavailable
-	* or when getRam() returns an unexpected shape.
+	* Delegates to host_info::get_ram_bytes() and converts bytes to whole
+	* gigabytes via rounding.  Returns 0 when the probe is unavailable.
+	* @see host_info::get_ram_bytes()
 	* @return int $total_gb Returns 0 if info unavailable
 	*/
 	public static function get_ram() : int {
 
-		$info = system::get_info();
-		if ($info === null) {
+		$bytes = host_info::get_ram_bytes();
+		if ($bytes === null) {
 			return 0;
 		}
 
-		$ram_info	= $info->getRam();
-		$total_gb	= intval( round((int)$ram_info['total'] / (1024 * 1024 * 1024), 0) );
-
-
-		return $total_gb;
+		return intval( round($bytes / (1024 * 1024 * 1024), 0) );
 	}//end get_ram
 
 
@@ -110,61 +65,12 @@ class system {
 	* Get the system processor clock frequency if is available
 	* in Mega Hertz. If is not resolved, null is returned.
 	* like: 3600
-	*
-	* Linfo's getCPU() output format varies across library versions and OS
-	* drivers — it may be an array of arrays, an array of objects, or a raw
-	* scalar/string.  The method handles all three shapes:
-	*   1. array of arrays  — reads $entry['MHz']
-	*   2. array of objects — reads $entry->MHz
-	*   3. anything else    — JSON-encodes and extracts via regex
-	* When multiple cores report different values, the highest MHz is returned
-	* so callers get the peak clock speed of the installed processor.
+	* @see host_info::get_cpu_mhz()
 	* @return int|null $total_mhz
 	*/
 	public static function get_mhz() : ?int {
 
-		$info = system::get_info();
-		if ($info === null) {
-			return null;
-		}
-
-		$cpu_info = $info->getCPU();
-
-		$mhz_values = [];
-
-		// If Linfo returns an array/object, try to read the MHz field directly
-		if (is_array($cpu_info)) {
-			foreach ($cpu_info as $entry) {
-				if (is_array($entry) && isset($entry['MHz'])) {
-					$mhz_values[] = intval(round(floatval($entry['MHz'])));
-				} elseif (is_object($entry) && property_exists($entry, 'MHz')) {
-					$mhz_values[] = intval(round(floatval($entry->MHz)));
-				}
-			}
-		} elseif (is_object($cpu_info)) {
-			foreach (get_object_vars($cpu_info) as $entry) {
-				if (is_array($entry) && isset($entry['MHz'])) {
-					$mhz_values[] = intval(round(floatval($entry['MHz'])));
-				} elseif (is_object($entry) && property_exists($entry, 'MHz')) {
-					$mhz_values[] = intval(round(floatval($entry->MHz)));
-				}
-			}
-		} else {
-			// Fallback: stringify / json-encode and extract with regex
-			$json = is_string($cpu_info) ? $cpu_info : @json_encode($cpu_info);
-			if (!empty($json)) {
-				preg_match_all('/"MHz"\s*:\s*"([0-9]+(?:\.[0-9]+)?)"/i', $json, $matches);
-				foreach ($matches[1] ?? [] as $m) {
-					$mhz_values[] = intval(round(floatval($m)));
-				}
-			}
-		}
-
-		if (!empty($mhz_values)) {
-			return intval(max($mhz_values));
-		}
-
-		return null;
+		return host_info::get_cpu_mhz();
 	}//end get_mhz
 
 
