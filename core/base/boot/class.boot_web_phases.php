@@ -45,7 +45,9 @@ final class boot_web_phases {
 				'timeout_seconds'      => 8 * 3600,
 				'save_path'            => $save_path,
 				'prevent_session_lock' => defined('PREVENT_SESSION_LOCK') ? PREVENT_SESSION_LOCK : false,
-				'session_name'         => 'dedalo_' . DEDALO_ENTITY,
+				// PHP session names must be alphanumeric (no spaces/dots/etc.), so sanitize the entity
+				// — otherwise an entity like "My entity" yields an invalid name and session_start fails.
+				'session_name'         => 'dedalo_' . preg_replace('/[^A-Za-z0-9]/', '_', (string) DEDALO_ENTITY),
 				'cookie_secure'        => (DEDALO_PROTOCOL === 'https://'),
 				'cookie_samesite'      => (defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER === true) ? 'Lax' : 'Strict',
 			]);
