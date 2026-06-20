@@ -576,23 +576,45 @@ const apply_columns = function(self, box, cols) {
 * relation box. Silently ignores drops on non-relation boxes, on the wrong
 * related section, and on already-present columns (idempotent for duplicates,
 * returns true to signal "handled" without re-adding).
+* Supports DEEP columns: dropping a component reached by drilling through nested
+* portals (e.g. Bibliografía → Publicación portal → Título) adds a column that
+* resolves down the chain. The dragged `path` (calculate_component_path: an array
+* of `{section_tipo, component_tipo, model, name}` from the section down) IS the
+* resolution chain — its first segment is this portal; the rest is the deep path.
 * @param {Object} self - tool_print instance
 * @param {Object} box - cell block descriptor (must be type:'component' with a relation model)
-* @param {Object} ddo - dragged component descriptor: { tipo, section_tipo, model, label }
+* @param {Object} ddo - dragged leaf component descriptor: { tipo, section_tipo, model, label }
+* @param {Array} [path] - the full drill path (section → … → leaf); enables deep columns
 * @returns {boolean} true if the column was added or was already present; false if ignored
 */
-export const add_table_column = function(self, box, ddo) {
+export const add_table_column = function(self, box, ddo, path) {
 
 	if (!box.component_ref || !is_relation_model(box.component_ref.model)) return false
-	if (box.related_section_tipo && ddo.section_tipo && ddo.section_tipo!==box.related_section_tipo) return false
 
-	const col = {
-		type			: 'component',
-		label			: ddo.label || ddo.tipo,
-		tipo			: ddo.tipo,
-		section_tipo	: ddo.section_tipo,
-		model			: ddo.model
+	let col = null
+
+	// PATH form: the drag carried its drill chain. When it starts at THIS portal,
+	// the segments after it are the column's resolution chain (1 = direct, >1 = deep).
+	if (Array.isArray(path) && path.length>=2 && path[0] && path[0].component_tipo===box.component_ref.tipo) {
+		const chain = path.slice(1).map(seg => ({
+			tipo			: seg.component_tipo,
+			section_tipo	: Array.isArray(seg.section_tipo) ? seg.section_tipo[0] : seg.section_tipo,
+			model			: seg.model,
+			label			: (seg.name || seg.component_tipo)
+		}))
+		const leaf = chain[chain.length-1]
+		col = (chain.length===1)
+			? { type:'component', label: leaf.label, tipo: leaf.tipo, section_tipo: leaf.section_tipo, model: leaf.model }
+			: { type:'component', label: chain.map(c => c.label).filter(Boolean).join(' › '),
+				tipo: leaf.tipo, section_tipo: leaf.section_tipo, model: leaf.model, path: chain }
 	}
+	// legacy/direct form (no path): only a field of the portal's own related section
+	else if (!box.related_section_tipo || ddo.section_tipo===box.related_section_tipo) {
+		col = { type:'component', label: ddo.label || ddo.tipo, tipo: ddo.tipo, section_tipo: ddo.section_tipo, model: ddo.model }
+	}
+
+	if (!col) return false   // not a column of this portal → caller replaces the cell instead
+
 	const current = current_columns(box)
 	if (current.some(c => column_key(c)===column_key(col))) return true // already present
 
@@ -1208,7 +1230,7 @@ export const decorate_editor = function(self) {
 			const cell	= find_cell(self, row_id, cell_id)
 			const b		= cell && cell.block
 			const is_table = !!(b && b.type==='component' && b.component_ref && is_relation_model(b.component_ref.model))
-			if (is_table && add_table_column(self, b, parsed.ddo)) return
+			if (is_table && add_table_column(self, b, parsed.ddo, parsed.path)) return
 			set_cell_block(self, row_id, cell_id, component_block(parsed))
 		})
 		if (!cell_node.querySelector('.cell_remove')) {
