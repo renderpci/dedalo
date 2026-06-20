@@ -11,7 +11,6 @@
 * - File-system write access for sessions, backups, media derivation trees, upload scratch space,
 *   and the import pipeline
 * - External binary availability: psql, ImageMagick, ffmpeg, ffprobe, qt-faststart
-* - PostgreSQL .pgpass credential file (when DEDALO_DB_MANAGEMENT is true)
 * - CURL extension and OpenSSL extension
 * - Active-lock garbage collection (when DEDALO_LOCK_COMPONENTS is enabled)
 * - PostgreSQL table existence checks for matrix_test and matrix_tools, with
@@ -602,31 +601,13 @@
 
 
 
-// PGPASS FILE CHECK
-// The .pgpass file in the PHP user's home directory stores PostgreSQL credentials so that
-// psql and pg_dump can authenticate without interactive password prompts.
-// This check only applies when DEDALO_DB_MANAGEMENT===true (local DB management).
-// A missing or malformed .pgpass is logged and added to errors but does NOT stop execution —
-// some environments use peer authentication or pg_hba.conf trust rules instead.
-// getenv('HOME') is preferred over $_SERVER['HOME'] to avoid contamination from
-// the web-server environment block in persistent-worker setups.
-	if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===true) {
-		if (!system::check_pgpass_file()) {
-
-			$php_user_home	= getenv('HOME'); //$_SERVER['HOME'];
-			$path			= $php_user_home . '/.pgpass';
-
-			$init_response->msg[] = 'Warning: Invalid .pgpass file' . PHP_EOL . ' Check your .pgpass file into php user home dir';
-			$init_response->errors[] = 'Invalid .pgpass file';
-			debug_log(
-				implode(PHP_EOL, $init_response->msg) . PHP_EOL
-				.' php_user_home: ' . to_string($php_user_home) . PHP_EOL
-				.' path: ' . to_string($path) . PHP_EOL
-				, logger::ERROR
-			);
-			// Do not stop here. Only inform the user.
-		}
-	}
+// PostgreSQL CLI authentication note
+// Dédalo no longer requires a ~/.pgpass file. The command-line tools (psql, pg_dump,
+// pg_restore) authenticate via the PGPASSWORD env var, exported transiently from
+// DEDALO_PASSWORD_CONN around each child process (see DBi::pg_shell_exec / DBi::pg_exec).
+// This lets the database live on a LOCAL or REMOTE server indistinguishably. A ~/.pgpass
+// file is still honored by libpq as a fallback when DEDALO_PASSWORD_CONN is empty
+// (e.g. peer / trust auth), so no startup check is needed here.
 
 
 
@@ -1008,7 +989,7 @@
 
 // FINAL RESULT AGGREGATION
 // Reaching this point means all mandatory checks passed. Set result=true.
-// $init_response->errors may still be non-empty (e.g. the .pgpass warning that does not
+// $init_response->errors may still be non-empty (e.g. a non-fatal warning that does not
 // stop execution), so the final message distinguishes a clean pass from a pass-with-warnings.
 // array_unshift ensures the summary line is the first human-readable message seen in any UI.
 	$init_response->result = true;

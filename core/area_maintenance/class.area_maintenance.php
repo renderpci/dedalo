@@ -1367,16 +1367,10 @@ class area_maintenance extends area_common {
 		// ar_msg
 		$ar_msg = [];
 
-		// db_system_config_verify. Test pgpass file existence and permissions
-		$pgpass_check = system::check_pgpass_file();
-		if ($pgpass_check === false) {
-			// error
-			$response->result = false;
-			$response->msg = 'Invalid .pgpass file, check your configuration';
-			$response->errors[] = 'Bad .pgpass file';
-
-			return $response;
-		}
+		// Note: no ~/.pgpass precondition. The psql/pg_dump commands run by the import below
+		// authenticate via the PGPASSWORD env var (DBi::pg_shell_exec / DBi::pg_exec) taken
+		// from DEDALO_PASSWORD_CONN, so the database may be LOCAL or REMOTE. Real authentication
+		// failures are surfaced by the underlying psql exec, not pre-gated here.
 
 		// download files
 		$files_to_import = [];

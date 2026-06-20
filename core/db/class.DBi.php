@@ -518,6 +518,89 @@ abstract class DBi {
 
 
 	/**
+	* PG_ENV_SET
+	* Export the PostgreSQL password into the process environment so libpq-based
+	* command-line tools (psql, pg_dump, pg_restore) can authenticate against a
+	* LOCAL or REMOTE server without relying on a ~/.pgpass file.
+	*
+	* The secret is taken from DEDALO_PASSWORD_CONN and is NEVER interpolated into
+	* a command string, so it reaches neither the process argument list (visible to
+	* `ps`) nor any debug log of the command. Always pair with pg_env_clear() right
+	* after the child process has been spawned. When the password is empty (peer /
+	* trust auth, or an existing ~/.pgpass), nothing is exported and libpq falls back
+	* to its own resolution.
+	* @return void
+	*/
+	public static function pg_env_set() : void {
+
+		$pg_password = (string)DEDALO_PASSWORD_CONN;
+		if ($pg_password!=='') {
+			putenv('PGPASSWORD='.$pg_password);
+		}
+	}//end pg_env_set
+
+
+
+	/**
+	* PG_ENV_CLEAR
+	* Remove PGPASSWORD from the process environment. Call immediately after the
+	* PostgreSQL child process has been spawned (the child already inherited the
+	* value at fork time), so the secret does not linger for the rest of the request.
+	* @return void
+	*/
+	public static function pg_env_clear() : void {
+
+		putenv('PGPASSWORD');
+	}//end pg_env_clear
+
+
+
+	/**
+	* PG_SHELL_EXEC
+	* Run a PostgreSQL client shell command (psql / pg_dump / pipelines) with libpq
+	* authentication via the PGPASSWORD environment variable (see pg_env_set), so the
+	* target database may be LOCAL or REMOTE without a ~/.pgpass file. PGPASSWORD is
+	* exported only for the duration of the child process and cleared immediately after.
+	*
+	* Binary-path resolution is the caller's responsibility — build commands with
+	* system::get_pg_bin_path() so binaries are found on any host layout.
+	*
+	* @param string $command full shell command (binaries, -h/-p, -U, plus redirects/pipes)
+	* @return string|null     shell_exec() return value (stdout, or null when there is none)
+	*/
+	public static function pg_shell_exec(string $command) : ?string {
+
+		self::pg_env_set();
+		$result = shell_exec($command);
+		self::pg_env_clear();
+
+		return $result;
+	}//end pg_shell_exec
+
+
+
+	/**
+	* PG_EXEC
+	* Like pg_shell_exec but uses exec() so the caller can capture the output lines
+	* and the shell return code. PGPASSWORD is exported only around the call.
+	*
+	* @param string $command full shell command
+	* @param array $output captured stdout lines (by reference)
+	* @param int $result_code shell exit code (by reference)
+	* @return string|false last line of output, or false on failure (exec() contract)
+	*/
+	public static function pg_exec(string $command, array &$output, int &$result_code) : string|false {
+
+		self::pg_env_set();
+		$last_line = exec($command, $output, $result_code);
+		self::pg_env_clear();
+
+		return $last_line;
+	}//end pg_exec
+
+
+
+	/**
 	* _GETNEWCONNECTION
 	* Opens a fresh PostgreSQL connection, bypassing the internal connection cache.
 	*

@@ -151,9 +151,12 @@ COMMENT ON DATABASE dedalo_production IS 'Dédalo: Cultural Heritage Management 
 \q
 EOF
 
-# Create .pgpass file
-echo "*:*:*:dedalo_user:YourSecurePassword" > ~/.pgpass
-chmod 600 ~/.pgpass
+# No .pgpass file is required: Dédalo authenticates the PostgreSQL command-line
+# tools via the PGPASSWORD env var taken from DEDALO_PASSWORD_CONN (set in the
+# config step below), which works for a local or remote database alike.
+# A ~/.pgpass file is still honored by libpq as a fallback if you prefer it:
+#   echo "*:*:*:dedalo_user:YourSecurePassword" > ~/.pgpass
+#   chmod 600 ~/.pgpass
 ```
 
 ### 6. Configuration Files

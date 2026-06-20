@@ -429,10 +429,12 @@ class ontology_data_io {
 			$columns = matrix_db_manager::get_columns_name();
 
 		// command
-		// DB_BIN_PATH is the filesystem path to the psql binary directory.
+		// system::get_pg_bin_path() resolves the psql binary on any host layout.
 		// DEDALO_DATABASE_CONN contains the -d / --dbname flag value.
-		// DBi::get_connection_string() provides host/port/user credentials.
-			$command_base = DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
+		// DBi::get_connection_string() provides host/port/user flags (no password); the
+		// password is supplied via the PGPASSWORD env var by DBi::pg_shell_exec() below,
+		// so the DB may be LOCAL or REMOTE without a ~/.pgpass file.
+			$command_base = system::get_pg_bin_path().'psql ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
 			$command = $command_base
 				. " -c \"\copy (SELECT ".implode(', ', $columns)." FROM \"matrix_ontology\" WHERE section_tipo = '{$section_tipo}') TO PROGRAM 'gzip -c > {$file_path} && sync';\" ";
 			// Notes about the previous command:
@@ -452,7 +454,7 @@ class ontology_data_io {
 		// exec command in terminal
 		// shell_exec returns null when there is no output or on failure; COPY
 		// commands produce no stdout so null here is normal on success.
-			$command_result = shell_exec($command);
+			$command_result = DBi::pg_shell_exec($command);
 
 		// check created file
 		// (!) Throws on failure rather than returning a soft error response —
@@ -528,7 +530,7 @@ class ontology_data_io {
 			$columns = matrix_db_manager::get_columns_name();
 
 		// command
-			$command_base = DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
+			$command_base = system::get_pg_bin_path().'psql ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
 			$command = $command_base
 				. " -c \"\copy (SELECT ".implode(', ', $columns)." FROM \"matrix_dd\") TO PROGRAM 'gzip -c > {$file_path} && sync';\" ";
 			// Notes about the previous command:
@@ -537,7 +539,7 @@ class ontology_data_io {
 			// 2. The && sync is essentially a "make sure everything is really written to disk" safety measure.
 
 		// exec command in terminal
-			$command_result = shell_exec($command);
+			$command_result = DBi::pg_shell_exec($command);
 
 		// check created file
 		// (!) Throws on failure — same pattern as export_to_file(); callers must

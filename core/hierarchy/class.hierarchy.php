@@ -1287,7 +1287,7 @@ class hierarchy extends ontology {
 			$columns = implode(',', matrix_db_manager::get_columns_name());
 
 		// command base (binary + dbname + host/port/user). Built once and reused.
-			$command_base = DB_BIN_PATH.'psql '.DEDALO_DATABASE_CONN.' '.DBi::get_connection_string();
+			$command_base = system::get_pg_bin_path().'psql '.DEDALO_DATABASE_CONN.' '.DBi::get_connection_string();
 
 		$files			= [];				// structured records of files actually written in this run
 		$matrix_table	= 'matrix_hierarchy';	// default for the import hint (overwritten per section)
@@ -1341,7 +1341,7 @@ class hierarchy extends ontology {
 				);
 			}
 
-			$command_res = shell_exec($command);
+			$command_res = DBi::pg_shell_exec($command);
 
 			// Verify the file was actually produced; shell_exec gives no usable status.
 			if (is_file($file_path)) {

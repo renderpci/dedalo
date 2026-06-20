@@ -239,9 +239,10 @@ abstract class backup {
 			// -b    : include large objects (BLOBs) in the dump
 			// -v    : verbose output written to the process file for progress tracking
 			// DBi::get_connection_string() returns "-h <host> [-p <port>] -U <user>"
-			// so no password is exposed in the process list (pg_password must be set
-			// in .pgpass or PGPASSWORD environment variable on the server).
-			$cmd = DB_BIN_PATH.'pg_dump '.DBi::get_connection_string().' -F c -b -v '.DEDALO_DATABASE_CONN.' > "'.$file_path .'"';
+			// so no password is exposed in the process list; authentication is provided
+			// via the PGPASSWORD env var (DBi::pg_env_set, below) so the DB may be REMOTE
+			// without a ~/.pgpass file.
+			$cmd = system::get_pg_bin_path().'pg_dump '.DBi::get_connection_string().' -F c -b -v '.DEDALO_DATABASE_CONN.' > "'.$file_path .'"';
 
 			// process
 			// nohup + '& echo $!' lets PHP capture the PID and return immediately
@@ -258,8 +259,13 @@ abstract class backup {
 						, logger::DEBUG
 					);
 
+				// Export PGPASSWORD around the spawn so the backgrounded pg_dump inherits it
+				// at fork time (the '& echo $!' returns only after the child has forked) and
+				// then clear it. The secret never lands in $command or the debug log above.
+				DBi::pg_env_set();
 				$process	= new process($command);
 				$pid		= $process->getPid();
+				DBi::pg_env_clear();
 
 				// register the process so dd_utils_api::get_process_status can verify ownership
 				processes::add(
@@ -399,25 +405,24 @@ abstract class backup {
 		$command_history = array();
 
 		// psql connection string
-		// The two commented-out lines show the legacy manual construction; the
-		// current form delegates host/port/user assembly to DBi::get_connection_string()
-		// so that future credential changes only need updating in one place.
-		// $port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
-		// $command_base = DB_BIN_PATH.'psql '.DEDALO_DATABASE_CONN.' -U '.DEDALO_USERNAME_CONN .' -h '.DEDALO_HOSTNAME_CONN . $port_command;
-		$command_base = DB_BIN_PATH . 'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
+		// host/port/user assembly is delegated to DBi::get_connection_string() (no password
+		// in the process list); authentication is provided via the PGPASSWORD env var by
+		// DBi::pg_shell_exec() below, so the DB may be LOCAL or REMOTE without a ~/.pgpass file.
+		// Binary resolution uses system::get_pg_bin_path() so psql is found on any host layout.
+		$command_base = system::get_pg_bin_path() . 'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
 
 		switch ($table) {
 
 			case 'dd_ontology':
 				// Duplicate table for safety
 				$command = $command_base . " -c \"CREATE TABLE \"dd_ontology_copy\" AS SELECT * FROM \"dd_ontology\"\" ";
-				$ar_res[] = shell_exec($command);
+				$ar_res[] = DBi::pg_shell_exec($command);
 				$command_history[] = $command;
 
 				# DELETE . Remove previous records
 				$tld_escaped = escapeshellarg($tld);
 				$command = $command_base . " -c \"DELETE FROM \"dd_ontology\" WHERE tld = {$tld_escaped} \" ";
-				$ar_res[] = shell_exec($command);
+				$ar_res[] = DBi::pg_shell_exec($command);
 				$command_history[] = $command;
 
 				# COPY . Load data from file
@@ -426,25 +431,25 @@ abstract class backup {
 				// comma-separated list for embedding inside a double-quoted shell string.
 				$path_file_escaped = escapeshellarg($path_file);
 				$command = $command_base . " -c \"\copy dd_ontology(".addslashes(implode(',', backup::$dd_ontology_columns)).") from {$path_file_escaped}\" ";
-				$ar_res[] = shell_exec($command);
+				$ar_res[] = DBi::pg_shell_exec($command);
 				$command_history[] = $command;
 				break;
 
 			case 'matrix_dd':
 				// Duplicate table for safety
 				$command = $command_base . " -c \"CREATE TABLE \"matrix_dd_copy\" AS SELECT * FROM \"matrix_dd\"\" ";
-				$ar_res[] = shell_exec($command);
+				$ar_res[] = DBi::pg_shell_exec($command);
 				$command_history[] = $command;
 
 				# DELETE . Remove previous records
 				$command = $command_base . " -c \"DELETE FROM \"matrix_dd\"\" ";
-				$ar_res[] = shell_exec($command);
+				$ar_res[] = DBi::pg_shell_exec($command);
 				$command_history[] = $command;
 
 				# COPY . Load data from file
 				$path_file_escaped = escapeshellarg($path_file);
 				$command = $command_base . " -c \"\copy matrix_dd from {$path_file_escaped}\" ";
-				$ar_res[] = shell_exec($command);
+				$ar_res[] = DBi::pg_shell_exec($command);
 				$command_history[] = $command;
 				break;
 		}
@@ -957,8 +962,10 @@ abstract class backup {
 				return $response;
 			}
 
-		// command base. A PostgreSQL connection. used by all DDBB connections
-			$command_base = DB_BIN_PATH.'psql -d ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
+		// command base. A PostgreSQL connection. used by all DDBB connections.
+		// Resolve psql robustly (configured DB_BIN_PATH → platform base → PATH) so the COPY import
+		// works on non-standard layouts (e.g. a Homebrew Mac) without hand-editing config.
+			$command_base = system::get_pg_bin_path().'psql -d ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
 
 		// delete previous records with proper escaping
 			$delete_query = 'DELETE FROM "' . $matrix_table . '"';
@@ -973,7 +980,7 @@ abstract class backup {
 
 			$command_output = [];
 			$command_return_code = 0;
-			exec($command, $command_output, $command_return_code);
+			DBi::pg_exec($command, $command_output, $command_return_code);
 
 			if ($command_return_code !== 0) {
 				$response->msg = 'Error. Failed to delete previous records';
@@ -1002,7 +1009,7 @@ abstract class backup {
 
 			$command_output = [];
 			$command_return_code = 0;
-			exec($command, $command_output, $command_return_code);
+			DBi::pg_exec($command, $command_output, $command_return_code);
 
 			if ($command_return_code !== 0) {
 				$response->msg = 'Error. Failed to copy data from file';
@@ -1028,7 +1035,7 @@ abstract class backup {
 
 			$command_output = [];
 			$command_return_code = 0;
-			exec($command, $command_output, $command_return_code);
+			DBi::pg_exec($command, $command_output, $command_return_code);
 
 			if ($command_return_code !== 0) {
 				$response->msg = 'Error. Failed to update sequence value';
