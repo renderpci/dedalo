@@ -392,6 +392,148 @@ tool_print.prototype.get_record_ids = async function(options={}) {
 
 
 /**
+* PRINT_DDO_MAP
+* Builds a `show.ddo_map` from the current template's component blocks — the set
+* of components whose values the bulk read must hydrate. Each entry mirrors the
+* shape a section's request_config uses ({section_tipo, tipo, parent, mode, model,
+* view}); 'self' marks a component of the target section. The matching `mode` is
+* what the datum lookup keys on later (see render_box_tool_print.get_datum_entry).
+* @param {Object} self
+* @param {string} target - target_section_tipo
+* @returns {Array<Object>} ddo_map entries (de-duplicated by section_tipo|tipo|mode)
+*/
+const build_print_ddo_map = function(self, target) {
+	const blocks = (self.layout?.flow?.rows || [])
+		.flatMap(r => Array.isArray(r.cells) ? r.cells : [])
+		.map(c => c && c.block)
+		.filter(b => b && b.type==='component' && b.component_ref && b.component_ref.tipo)
+	const seen = new Set()
+	const ddo_map = []
+	const RELATION = /portal|relation|autocomplete/
+	const push = (e) => {
+		const key = e.section_tipo + '|' + e.tipo + '|' + e.mode + '|' + (e.parent||'')
+		if (seen.has(key)) return
+		seen.add(key)
+		ddo_map.push(e)
+	}
+	for (const b of blocks) {
+		const ref = b.component_ref
+
+		if (RELATION.test(ref.model)) {
+			// PORTAL/RELATION: request it in edit mode with limit:0 so the read
+			// returns ALL its relation rows (not the 10-row edit page) + its column
+			// subdatum, in this single read. limit:0 is honored because the ddo
+			// scrub now whitelists it (request_config_object::sanitize_client_ddo_map).
+			push({
+				section_tipo	: (ref.section_tipo===target) ? 'self' : ref.section_tipo,
+				tipo			: ref.tipo,
+				parent			: target,
+				model			: ref.model,
+				mode			: 'list',
+				view			: ref.view || 'default',
+				column_id		: ref.tipo,
+				limit			: 0
+			})
+			// the portal's column children as SIBLING ddos (parent = portal tipo) —
+			// how the server resolves a portal's columns (get_children_recursive).
+			const cols = (Array.isArray(b.table_columns) && b.table_columns.length ? b.table_columns : b.available_columns) || []
+			cols.forEach((col, i) => {
+				if (col && col.type==='component' && col.tipo && col.section_tipo) {
+					push({
+						section_tipo	: Array.isArray(col.section_tipo) ? col.section_tipo[0] : col.section_tipo,
+						tipo			: col.tipo,
+						parent			: ref.tipo,
+						model			: col.model,
+						mode			: 'list',
+						column_id		: String.fromCharCode(97 + i),
+						fixed_mode		: true
+					})
+				}
+			})
+			continue
+		}
+
+		// LITERAL: mode matches render_box_content's full_value_mode lookup
+		// (edit for text_area to avoid truncation, list otherwise).
+		push({
+			section_tipo	: (ref.section_tipo===target) ? 'self' : ref.section_tipo,
+			tipo			: ref.tipo,
+			parent			: target,
+			model			: ref.model,
+			mode			: (ref.model==='component_text_area') ? 'edit' : 'list',
+			view			: 'print'
+		})
+	}
+	return ddo_map
+}//end build_print_ddo_map
+
+
+
+/**
+* FETCH_PRINT_DATUM
+* ONE bulk read that hydrates every template component for the given records — the
+* way a section list loads its rows. Returns/stashes {context, data} on
+* self._print_datum so render_box_content can build each cell with build(false)
+* (no per-cell API call). Reuses the caller's working read source (action 'read',
+* source.model 'section'); never mutates the caller's search (clone + session_save:false).
+* @param {Object} record_ids - section_ids to hydrate
+* @returns {Promise<Object|null>} { context, data } or null on failure
+*/
+tool_print.prototype.fetch_print_datum = async function(record_ids) {
+
+	const self = this
+	self._print_datum = null
+	if (!Array.isArray(record_ids) || !record_ids.length) return null
+
+	const target = Array.isArray(self.target_section_tipo) ? self.target_section_tipo[0] : self.target_section_tipo
+	const base   = self.caller && self.caller.rqo
+	if (!target || !base) return null
+
+	const ddo_map = build_print_ddo_map(self, target)
+	if (!ddo_map.length) return null
+
+	// LIST mode: returns ALL the requested records in one read (edit mode is
+	// single-record). Portals are requested with limit:0 in build_print_ddo_map so
+	// they still expand to all their relation rows + column subdatum per record.
+	const source = structuredClone(base.source || {})
+	source.mode			= 'list'
+	source.section_id	= null
+	source.session_save	= false
+
+	const rqo = {
+		api_engine		: 'dedalo',
+		type			: 'main',
+		action			: base.action || 'read',
+		prevent_lock	: true,
+		source			: source,
+		sqo				: {
+			section_tipo		: [target],
+			limit				: record_ids.length,
+			offset				: 0,
+			filter_by_locators	: record_ids.map(id => ({ section_tipo: target, section_id: id }))
+		},
+		show			: {
+			ddo_map		: ddo_map,
+			sqo_config	: { full_count: false, limit: record_ids.length, offset: 0, mode: 'list', operator: '$or' }
+		}
+	}
+
+	try {
+		const api_response = await data_manager.request({ body: rqo })
+		const result = api_response?.result
+		if (result && Array.isArray(result.data)) {
+			self._print_datum = { context: result.context || [], data: result.data }
+			return self._print_datum
+		}
+	} catch (e) {
+		console.error('tool_print fetch_print_datum error:', e)
+	}
+	return null
+}//end fetch_print_datum
+
+
+
+/**
 * EXTRACT_SECTION_IDS
 * Pulls the matched record ids out of a section read response / loaded datum.
 * The read returns a `sections` container element whose `entries` are the record

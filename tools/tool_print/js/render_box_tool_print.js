@@ -36,6 +36,7 @@
 import {get_instance} from '../../../core/common/js/instances.js'
 import {ui} from '../../../core/common/js/ui.js'
 import {clone} from '../../../core/common/js/utils/index.js'
+import {data_manager} from '../../../core/common/js/data_manager.js'
 
 
 
@@ -66,6 +67,43 @@ import {clone} from '../../../core/common/js/utils/index.js'
 	const FULL_VALUE_MODELS = new Set(['component_text_area'])
 	// FULL_VALUE_MODE: returns 'edit' for truncation-prone models, 'list' for all others.
 	export const full_value_mode = (model) => FULL_VALUE_MODELS.has(model) ? 'edit' : 'list'
+
+
+
+	/**
+	* GET_DATUM_ENTRY
+	* Finds a component's pre-fetched data entry in a bulk read datum, keyed by the
+	* same tuple section_record.get_component_data uses: (tipo, section_id,
+	* section_tipo, mode). Lets a component build with build(false) — no API call.
+	* @param {Object} datum - { context, data }
+	* @param {Object} q - { tipo, section_tipo, section_id, mode }
+	* @returns {Object|null} the matching datum.data entry, or null
+	*/
+	export const get_datum_entry = function(datum, q) {
+		if (!datum || !Array.isArray(datum.data)) return null
+		return datum.data.find(el =>
+			el && el.tipo===q.tipo
+			&& el.section_tipo===q.section_tipo
+			&& parseInt(el.section_id)===parseInt(q.section_id)
+			&& el.mode===q.mode
+		) || null
+	}//end get_datum_entry
+
+	/**
+	* GET_DATUM_CONTEXT
+	* Finds a component's ontology context descriptor in the bulk read datum.context
+	* (matched by tipo, preferring the matching section_tipo). Required so build(false)
+	* has a context without re-fetching it.
+	* @param {Object} datum - { context, data }
+	* @param {Object} q - { tipo, section_tipo }
+	* @returns {Object|null} the matching context descriptor, or null
+	*/
+	export const get_datum_context = function(datum, q) {
+		if (!datum || !Array.isArray(datum.context)) return null
+		return datum.context.find(c => c && c.tipo===q.tipo && c.section_tipo===q.section_tipo)
+			|| datum.context.find(c => c && c.tipo===q.tipo)
+			|| null
+	}//end get_datum_context
 
 
 
@@ -339,37 +377,72 @@ const render_relation_table = async function(self, box, ref, lang, preview_id) {
 
 	const cache_key = preview_id + '|' + ref.tipo + '|' + lang
 
-	// build the portal once per record: rows (entries) + available columns
+	// resolve the portal's rows (related locators) + columns once per record
 	if (!box._table_render || box._table_render.key !== cache_key) {
 
-		let component = await get_instance({
-			model			: ref.model,
-			tipo			: ref.tipo,
-			section_tipo	: ref.section_tipo,
-			section_id		: preview_id,
-			lang			: lang,
-			mode			: 'edit',
-			permissions		: 1,
-			view			: ref.view || 'default',
-			id_variant		: 'tool_print_' + box.id,
-			caller			: self
-		})
-		await component.build(true)
-		component = await load_all_entries(self, component, {
-			model: ref.model, tipo: ref.tipo, section_tipo: ref.section_tipo,
-			section_id: preview_id, lang, view: ref.view, box_id: box.id
-		})
+		let entries			= null
+		let portal_datum	= undefined
+		const related_st	= box.related_section_tipo
+		const have_cols		= (Array.isArray(box.table_columns) && box.table_columns.length)
+			|| (Array.isArray(box.available_columns) && box.available_columns.length)
 
-		box.available_columns		= get_default_columns(component)
-		box.related_section_tipo	= get_related_section_tipo(component)
+		// FAST PATH: the single read (self._print_datum) already carries this
+		// portal's FULL relation grid (list mode + limit:0) + its column subdatum —
+		// use it directly, NO extra reads. Only when the datum also has the COLUMNS
+		// (i.e. build_print_ddo_map knew them); otherwise fall through so columns get
+		// resolved (read_raw + a batched related read, or a build that discovers them).
+		const pdatum = self._print_datum
+		const pentry = pdatum ? get_datum_entry(pdatum, { tipo: ref.tipo, section_tipo: ref.section_tipo, section_id: preview_id, mode: 'list' }) : null
+		if (pentry && Array.isArray(pentry.entries) && pentry.entries.length) {
+			const known_cols = (Array.isArray(box.table_columns) && box.table_columns.length) ? box.table_columns : box.available_columns
+			const first_col = Array.isArray(known_cols) ? known_cols.find(c => c && c.type==='component' && c.tipo) : null
+			const sample = pentry.entries[0]
+			const col_st = first_col ? (Array.isArray(first_col.section_tipo) ? first_col.section_tipo[0] : first_col.section_tipo) : null
+			const have_col_subdatum = !first_col || !!get_datum_entry(pdatum, { tipo: first_col.tipo, section_tipo: col_st || sample.section_tipo, section_id: sample.section_id, mode: 'list' })
+			if (have_col_subdatum) {
+				entries = pentry.entries.map(e => ({ section_id: e.section_id, section_tipo: e.section_tipo }))
+				portal_datum = pdatum   // cells render from the same datum (build(false))
+			}
+		}
 
-		const entries = (component.data && Array.isArray(component.data.entries))
-			? component.data.entries.map(e => ({ section_id: e.section_id, section_tipo: e.section_tipo }))
-			: []
+		// when the related section + columns are already known but no print datum,
+		// read the relation LOCATORS directly via read_raw (~40ms).
+		if (entries === null && related_st && have_cols) {
+			entries = await fetch_relation_locators(self, ref.section_tipo, ref.tipo, preview_id, related_st)
+		}
 
-		try { component.destroy(true, true, true) } catch (e) { /* noop */ }
+		// FALLBACK / FIRST TIME: build the portal (also resolves available columns +
+		// the related section_tipo that the fast path needs on subsequent records).
+		if (entries === null) {
+			let component = await get_instance({
+				model			: ref.model,
+				tipo			: ref.tipo,
+				section_tipo	: ref.section_tipo,
+				section_id		: preview_id,
+				lang			: lang,
+				mode			: 'edit',
+				permissions		: 1,
+				view			: ref.view || 'default',
+				id_variant		: 'tool_print_' + box.id,
+				caller			: self
+			})
+			await component.build(true)
+			component = await load_all_entries(self, component, {
+				model: ref.model, tipo: ref.tipo, section_tipo: ref.section_tipo,
+				section_id: preview_id, lang, view: ref.view, box_id: box.id
+			})
 
-		box._table_render = { key: cache_key, entries, matrix: {} }
+			box.available_columns		= get_default_columns(component)
+			box.related_section_tipo	= get_related_section_tipo(component)
+
+			entries = (component.data && Array.isArray(component.data.entries))
+				? component.data.entries.map(e => ({ section_id: e.section_id, section_tipo: e.section_tipo }))
+				: []
+
+			try { component.destroy(true, true, true) } catch (e) { /* noop */ }
+		}
+
+		box._table_render = { key: cache_key, entries, matrix: {}, portal_datum }
 	}
 
 	const entries	= box._table_render.entries
@@ -380,6 +453,15 @@ const render_relation_table = async function(self, box, ref, lang, preview_id) {
 		? box.table_columns
 		: box.available_columns
 
+	// PERFORMANCE: ONE bulk read of the related section for ALL related records ×
+	// columns, so each cell builds with build(false) (no per-cell API). Replaces
+	// up to entries×cols individual reads — the dominant cost on large portals
+	// (e.g. a 22-row bibliography). Cached for the box's render lifetime.
+	if (box._table_render.portal_datum === undefined) {
+		box._table_render.portal_datum = await fetch_related_datum(self, box.related_section_tipo, entries, cols, lang)
+	}
+	const portal_datum = box._table_render.portal_datum
+
 	// fetch ONLY the columns whose cells are not cached yet (e.g. a just-added one)
 	for (let c = 0; c < cols.length; c++) {
 		const col = cols[c]
@@ -388,13 +470,98 @@ const render_relation_table = async function(self, box, ref, lang, preview_id) {
 		if (!matrix[ck]) {
 			matrix[ck] = []
 			for (let r = 0; r < entries.length; r++) {
-				matrix[ck].push(await render_cell_value(self, col, entries[r].section_id, entries[r].section_tipo, lang))
+				matrix[ck].push(await render_cell_value(self, col, entries[r].section_id, entries[r].section_tipo, lang, portal_datum))
 			}
 		}
 	}
 
 	return assemble_table_dom(cols, entries, matrix, { show_header: box.show_table_header !== false })
 }//end render_relation_table
+
+
+
+/**
+* FETCH_RELATION_LOCATORS
+* Reads a record's relation locators through one portal component directly from
+* the matrix `relation` column (action 'read_raw', type 'target_section') — no
+* portal instantiation. ~40ms vs ~1020ms for build(true)+load_all_entries. The
+* read returns every relation to `related_st`; filter by from_component_tipo to
+* isolate this portal.
+* @returns {Promise<Array<{section_id,section_tipo}>|null>} locators, or null on error (caller falls back to build)
+*/
+const fetch_relation_locators = async function(self, source_st, portal_tipo, main_id, related_st) {
+	try {
+		const resp = await data_manager.request({ body: {
+			action	: 'read_raw',
+			options	: { section_tipo: source_st, tipo: related_st, type: 'target_section' },
+			sqo		: { section_tipo: [source_st], limit: 'ALL', filter_by_locators: [{ section_tipo: source_st, section_id: main_id }] }
+		} })
+		const raw = Array.isArray(resp?.result) ? resp.result : []
+		return raw
+			.filter(l => l && l.from_component_tipo===portal_tipo)
+			.map(l => ({ section_id: l.section_id, section_tipo: l.section_tipo }))
+	} catch (e) {
+		console.warn('tool_print fetch_relation_locators error:', e)
+		return null
+	}
+}//end fetch_relation_locators
+
+
+
+/**
+* FETCH_RELATED_DATUM
+* One bulk read of a portal's RELATED section for all its related records ×
+* columns, returning {context, data} that render_cell_value uses to build each
+* cell with build(false) (no per-cell API). Reuses the caller's read source
+* (re-pointed at the related section); never persists (session_save:false).
+* @returns {Promise<Object|null>} { context, data } or null
+*/
+const fetch_related_datum = async function(self, related_st, entries, cols, lang) {
+
+	if (!related_st || !Array.isArray(entries) || !entries.length) return null
+	const base = self.caller && self.caller.rqo
+	if (!base) return null
+
+	const seen = new Set()
+	const ddo_map = []
+	for (const col of (cols || [])) {
+		if (!col || col.type!=='component' || !col.tipo) continue
+		const st = col.section_tipo || related_st
+		const key = st + '|' + col.tipo
+		if (seen.has(key)) continue
+		seen.add(key)
+		ddo_map.push({ section_tipo: (st===related_st) ? 'self' : st, tipo: col.tipo, parent: related_st, model: col.model, mode: 'list', view: 'print' })
+	}
+	if (!ddo_map.length) return null
+
+	const source = structuredClone(base.source || {})
+	source.section_tipo	= related_st
+	source.tipo			= related_st
+	source.section_id	= null
+	source.session_save	= false
+
+	const rqo = {
+		action			: 'read',
+		prevent_lock	: true,
+		source			: source,
+		sqo				: {
+			section_tipo		: [related_st],
+			limit				: entries.length,
+			offset				: 0,
+			filter_by_locators	: entries.map(e => ({ section_tipo: e.section_tipo || related_st, section_id: e.section_id }))
+		},
+		show			: { ddo_map }
+	}
+	try {
+		const resp = await data_manager.request({ body: rqo })
+		if (resp?.result && Array.isArray(resp.result.data)) {
+			return { context: resp.result.context || [], data: resp.result.data }
+		}
+	} catch (e) {
+		console.warn('tool_print fetch_related_datum error:', e)
+	}
+	return null
+}//end fetch_related_datum
 
 
 
@@ -417,26 +584,41 @@ const render_relation_table = async function(self, box, ref, lang, preview_id) {
 * @param {string} lang - BCP-47 language code
 * @returns {Promise<HTMLElement|null>} cloned, inert DOM node for the cell, or null on error
 */
-const render_cell_value = async function(self, col, section_id, section_tipo, lang) {
+const render_cell_value = async function(self, col, section_id, section_tipo, lang, datum_override) {
 
 	try {
-		const component = await get_instance({
+		const st = col.section_tipo || section_tipo
+		// PERFORMANCE: build the related cell from the bulk datum (build(false), no
+		// API call). Prefer the portal's own related-section datum (fetch_related_datum,
+		// covers ALL related records); else the print-pass datum; else build(true).
+		const datum		= datum_override || self._print_datum
+		const entry		= datum ? get_datum_entry(datum, { tipo: col.tipo, section_tipo: st, section_id, mode: 'list' }) : null
+		const ctx_desc	= datum ? get_datum_context(datum, { tipo: col.tipo, section_tipo: st }) : null
+		const use_datum	= !!(entry && ctx_desc)
+
+		const opts = {
 			model			: col.model,
 			tipo			: col.tipo,
-			section_tipo	: col.section_tipo || section_tipo,
+			section_tipo	: st,
 			section_id		: section_id,
 			lang			: lang || page_globals.dedalo_data_lang,
 			mode			: 'list',
 			permissions		: 1,
 			id_variant		: 'tpcell_' + col.tipo + '_' + section_id, // unique per cell
 			caller			: self
-		})
-		await component.build(true)
+		}
+		if (use_datum) {
+			opts.context	= clone(ctx_desc)
+			opts.data		= entry
+			opts.datum		= datum
+		}
+		const component = await get_instance(opts)
+		await component.build(use_datum ? false : true)
 		const node	= await component.render()
 		flatten_print_node(node)
-		const clone	= node ? node.cloneNode(true) : null
+		const node_clone = node ? node.cloneNode(true) : null
 		try { component.destroy(true, true, true) } catch (e) { /* noop */ }
-		return clone
+		return node_clone
 	} catch (error) {
 		console.warn('tool_print: cell render failed', col, section_id, error)
 		return null
@@ -717,23 +899,37 @@ export const render_box_content = async function(self, box) {
 
 			} else {
 
-				// LITERAL → flat value, built fresh, cloned inert. Text areas are
-				// TRUNCATED (~220 chars) server-side in list mode, so render them in
-				// edit mode (full untruncated value); flatten_print_node then pulls
-				// the complete textarea/contenteditable text. Other literals: list.
-				const component = await get_instance({
+				// LITERAL → flat value, cloned inert. PERFORMANCE: when the print pass
+				// pre-fetched a bulk datum (self._print_datum, one read for all records
+				// and components), build from the injected data with build(false) — NO
+				// per-cell API call (mirrors how a section list renders its rows). Fall
+				// back to a fresh build(true) when the datum lacks this component.
+				// Text areas use edit mode (list mode truncates ~220 chars server-side).
+				const mode		= full_value_mode(ref.model)
+				const datum		= self._print_datum
+				const entry		= datum ? get_datum_entry(datum, { tipo: ref.tipo, section_tipo: ref.section_tipo, section_id: preview_id, mode }) : null
+				const ctx_desc	= datum ? get_datum_context(datum, { tipo: ref.tipo, section_tipo: ref.section_tipo }) : null
+				const use_datum	= !!(entry && ctx_desc)
+
+				const opts = {
 					model			: ref.model,
 					tipo			: ref.tipo,
 					section_tipo	: ref.section_tipo,
 					section_id		: preview_id,
 					lang			: lang,
-					mode			: full_value_mode(ref.model),
+					mode			: mode,
 					permissions		: 1,
-					view			: ref.view || 'default',
+					view			: 'print',
 					id_variant		: 'tool_print_' + box.id,
 					caller			: self
-				})
-				await component.build(true)
+				}
+				if (use_datum) {
+					opts.context	= clone(ctx_desc)
+					opts.data		= entry
+					opts.datum		= datum
+				}
+				const component = await get_instance(opts)
+				await component.build(use_datum ? false : true)
 				const node = await render_component_value(component, ref.model, { columns: box.table_columns, self, lang })
 				value_node = node ? node.cloneNode(true) : null
 				try { component.destroy(true, true, true) } catch (e) { /* noop */ }

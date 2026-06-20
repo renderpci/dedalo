@@ -368,13 +368,71 @@ export const render_canvas = function(self, container) {
 	const ctx = make_editor_ctx(self, print_root)
 	self._flow_ctx = ctx
 	const gen = (self._render_gen = (self._render_gen || 0) + 1)
-	layout_flow(self, ctx)
-		.then(() => { if (gen === self._render_gen) decorate_editor(self) })
-		.catch(e => console.error('tool_print render_canvas flow error', e))
+	// editor preview: fetch the single preview record's datum ONCE (cached by key)
+	// so literals + portals render from the subdatum (build(false)) instead of one
+	// fetch per component/portal — same single-read path as print, one record.
+	;(async () => {
+		await ensure_editor_datum(self)
+		if (gen !== self._render_gen) return
+		await layout_flow(self, ctx)
+		if (gen === self._render_gen) decorate_editor(self)
+	})().catch(e => console.error('tool_print render_canvas flow error', e))
 
 
 	return print_root
 }//end render_canvas
+
+
+
+/**
+* ENSURE_EDITOR_DATUM
+* Lazily populates self._print_datum for the editor's single preview record, so
+* render_box_content / render_relation_table render from subdatum (no per-component
+* or per-portal fetch). Cached by a key over (preview record + each component's
+* tipo + resolved columns); refetched only when that changes. Cleared when not in
+* fill mode. (Print uses its own multi-record fetch in render_print_document.)
+* @param {Object} self
+*/
+const ensure_editor_datum = async function(self) {
+	if (!self.fill_mode || !self.preview_section_id || typeof self.fetch_print_datum!=='function') {
+		self._print_datum = null
+		self._editor_datum_key = null
+		return
+	}
+	const key = editor_datum_key(self)
+	if (self._print_datum && self._editor_datum_key === key) return   // reuse cache
+	try {
+		await self.fetch_print_datum([ self.preview_section_id ])
+		self._editor_datum_key = key
+	} catch (e) {
+		console.warn('tool_print: editor datum fetch failed, per-component fallback', e)
+		self._print_datum = null
+		self._editor_datum_key = null
+	}
+}//end ensure_editor_datum
+
+/**
+* EDITOR_DATUM_KEY
+* Signature of what the editor datum must cover: the preview record plus every
+* component block's tipo and its resolved columns (so adding/removing a component
+* or a portal column — or switching the preview record — triggers a refetch).
+* @param {Object} self
+* @returns {string}
+*/
+const editor_datum_key = function(self) {
+	const parts = [ '' + self.preview_section_id ]
+	for (const row of (self.layout?.flow?.rows || [])) {
+		for (const cell of (row.cells || [])) {
+			const b = cell && cell.block
+			if (b && b.type==='component' && b.component_ref) {
+				parts.push(b.component_ref.tipo)
+				const cols = (Array.isArray(b.table_columns) && b.table_columns.length) ? b.table_columns : b.available_columns
+				if (Array.isArray(cols)) parts.push(cols.map(c => c.tipo || c.type).join(','))
+			}
+		}
+	}
+	return parts.join('|')
+}//end editor_datum_key
 
 
 

@@ -1760,6 +1760,11 @@ export const render_print_document = async function(self, record_ids, options={}
     // changes every text row's height and silently shifts every page break.
         try { if (document.fonts && document.fonts.ready) await document.fonts.ready } catch (e) { /* noop */ }
 
+    // PERFORMANCE: one bulk read hydrates every template component for all records
+    // (self._print_datum), so each cell builds with build(false) — no per-cell API
+    // call. Best-effort: if it fails, cells fall back to per-cell build(true).
+        try { if (typeof self.fetch_print_datum==='function') await self.fetch_print_datum(record_ids) } catch (e) { console.warn('tool_print: bulk datum fetch failed, falling back to per-cell', e) }
+
     try {
         for (let r = 0; r < record_ids.length; r++) {
             if (signal && signal.aborted) { const e = new Error('print cancelled'); e.name = 'AbortError'; throw e }
@@ -1784,6 +1789,7 @@ export const render_print_document = async function(self, record_ids, options={}
     } finally {
         self.preview_section_id    = saved_preview
         self.fill_mode            = saved_fill
+        self._print_datum        = null   // clear the bulk datum (editor preview rebuilds per-record)
         // detach the off-screen root so do_print can reattach it in the canvas
             root.remove()
             root.style.position        = ''
