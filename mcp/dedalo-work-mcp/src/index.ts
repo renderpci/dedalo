@@ -1,5 +1,6 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
+import { timingSafeEqual } from 'node:crypto';
 import pino from 'pino';
 import { WorkClient, TokenBucketRateLimiter } from '@dedalo/mcp-common';
 import { loadConfig } from './config.js';
@@ -107,7 +108,12 @@ async function main(): Promise<void> {
 				const requiredToken = process.env.DEDALO_MCP_HTTP_TOKEN;
 				if (requiredToken) {
 					const provided = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
-					if (provided !== requiredToken) {
+					// Constant-time comparison: a plain !== leaks the secret byte-by-byte
+					// via response timing. The length pre-check only leaks token length.
+					const enc = new TextEncoder();
+					const a = enc.encode(provided);
+					const b = enc.encode(requiredToken);
+					if (a.length !== b.length || !timingSafeEqual(a, b)) {
 						return new Response('Unauthorized', { status: 401, headers: corsHeaders });
 					}
 				}
