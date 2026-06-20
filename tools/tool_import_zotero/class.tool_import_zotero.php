@@ -130,7 +130,7 @@ class tool_import_zotero extends tool_common {
 			// components_temp_data. array of objects like: '[{"section_id":"tmp","section_tipo":"rsc170","tipo":"rsc23","lang":"lg-eng","from_component_tipo":"rsc23","value":[],"parent_tipo":"rsc23","parent_section_id":"tmp","fallback_value":[null],"debug":{"exec_time":"0.740 ms"},"debug_model":"component_input_text","debug_label":"Title","debug_mode":"edit"}]'
 			$components_temp_data		= $options->components_temp_data ?? [];
 			// key_dir. string like: 'oh17_oh1' (contraction section_tipo + component tipo)
-			$key_dir					= $options->key_dir ?? null;
+			$key_dir					= sanitize_key_dir($options->key_dir ?? '');
 
 		// SEC-024 (§9.2): WRITE gate. Zotero import creates / overwrites
 		// records in the target section_tipo.
@@ -175,8 +175,19 @@ class tool_import_zotero extends tool_common {
 
 				foreach ($ar_zotero_files_data as $zotero_file_data) {
 
-					// Check file exists
-					$file_full_path = $tmp_dir .'/'. $zotero_file_data->name;
+					// Check file exists. TOOLS-05: confine the client-supplied name under
+					// tmp_dir. safe_upload_target() reduces to basename and rejects
+					// '..'/separator payloads, preventing traversal into another user's
+					// upload dir (the file is read by json_decode and later unlink'd, so
+					// an unconfined name is an arbitrary file read + delete).
+					try {
+						$file_full_path = safe_upload_target($tmp_dir, $zotero_file_data->name, false);
+					} catch (Exception $e) {
+						$msg = "File ignored (invalid name) $zotero_file_data->name";
+						$ar_msg[] = $msg;
+						debug_log(__METHOD__." $msg", logger::ERROR);
+						continue; // Skip file
+					}
 
 					if (!file_exists($file_full_path)) {
 						$msg = "File ignored (not found) $zotero_file_data->name";
@@ -469,7 +480,18 @@ class tool_import_zotero extends tool_common {
 										// 'archive' holds the filename of an uploaded PDF.
 										// If the file was uploaded alongside the JSON, trigger the full
 										// PDF import and cover-image extraction pipeline.
-										$pdf_file = $tmp_dir. '/'. $zotero_obj->$name;
+										// TOOLS-05: the 'archive' value comes from the imported JSON
+										// content; confine it under tmp_dir (import_pdf_file reads it)
+										// so a crafted filename cannot traverse out of the upload dir.
+										try {
+											$pdf_file = safe_upload_target($tmp_dir, (string)$zotero_obj->$name, false);
+										} catch (Exception $e) {
+											debug_log(__METHOD__
+												.' Ignored archive '.$name.' (invalid filename) from Zotero import process'
+												, logger::WARNING
+											);
+											break;
+										}
 										if(!file_exists($pdf_file)){
 											debug_log(__METHOD__
 												.' Ignored archive '.$name.' from Zotero import process. The PDF file is not uploaded'
