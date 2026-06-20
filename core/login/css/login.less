@@ -161,6 +161,73 @@
 			}
 		}//end form
 
+		// password recovery (forgot password)
+		// "Forgot your password?" link under the login form
+		>.forgot_password_link {
+			display: block;
+			font-size: 0.85em;
+			margin-bottom: 1em;
+			cursor: pointer;
+			color: @color_grey_10;
+			text-decoration: none;
+
+			&:hover {
+				text-decoration: underline;
+			}
+		}
+
+		// recovery sub-forms: same layout as .login_form
+		>.reset_request_form,
+		>.reset_confirm_form {
+			display: flex;
+			flex-wrap: wrap;
+			margin: 0px;
+			margin-bottom: 1em;
+
+			>input, >button {
+				flex: 1 1 100%;
+				font-size: 1em;
+			}
+
+			>input {
+				margin: 0px;
+				margin-bottom: 1em;
+			}
+
+			>.button_enter {
+				display: flex;
+				height: 3em;
+				margin: 0px;
+				text-align: center;
+				justify-content: center;
+				align-items: center;
+				transition: all 0.17s ease, padding 0s;
+				background-color: var(--color_orange_dedalo);
+
+				&.white {
+					background-color: transparent;
+					outline: none;
+					cursor: default;
+					pointer-events: none;
+				}
+			}
+
+			// "Back to login" link
+			>.reset_back_link {
+				flex: 1 1 100%;
+				margin-top: 0.75em;
+				font-size: 0.85em;
+				text-align: center;
+				cursor: pointer;
+				color: @color_grey_10;
+				text-decoration: none;
+
+				&:hover {
+					text-decoration: underline;
+				}
+			}
+		}
+
 		// info_container where is placed server info like data version..
 		>.info_container {
 			display: grid;
