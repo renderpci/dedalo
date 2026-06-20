@@ -273,10 +273,11 @@ class dd_error {
 
 		$handler_name = self::get_handler_name($error_type);
 
-		// Output to CLI if in debug mode and running in CLI environment
-		// Skipped for web requests — print_cli() is a no-op outside CLI anyway,
-		// but the guard here avoids the function call overhead in web context.
-		if (SHOW_DEBUG === true && running_in_cli() === true) {
+		// Output to CLI if in debug mode and running in CLI environment.
+		// SHOW_DEBUG is defined late (request-state phase), but errors can be captured BEFORE that
+		// (e.g. a session_start warning during the session phase). Guard with defined() so the
+		// error handler never throws "Undefined constant SHOW_DEBUG" while handling another error.
+		if (defined('SHOW_DEBUG') && SHOW_DEBUG === true && running_in_cli() === true) {
 			self::output_cli_error($message, $handler_name);
 		}
 
