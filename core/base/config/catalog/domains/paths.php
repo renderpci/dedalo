@@ -179,8 +179,8 @@ return [
 		const:   'DEDALO_MEDIA_PATH',
 		type:    'string',
 		scope:   config_scope::DERIVED,
-		derived: static fn(array $r): string => $r['paths.root'] . '/media/media_' . $r['identity.entity'],
-		doc:     'media/ directory (per-entity subfolder: media/media_<entity>).',
+		derived: static fn(array $r): string => $r['paths.root'] . '/media',
+		doc:     'media/ directory (DEDALO_ROOT_PATH . \'/media\').',
 	),
 
 	new config_key(
@@ -188,8 +188,8 @@ return [
 		const:   'DEDALO_MEDIA_URL',
 		type:    'string',
 		scope:   config_scope::DERIVED,
-		derived: static fn(array $r): string => $r['paths.root_web'] . '/media/media_' . $r['identity.entity'],
-		doc:     'media/ web URL (per-entity subfolder: media/media_<entity>).',
+		derived: static fn(array $r): string => $r['paths.root_web'] . '/media',
+		doc:     'media/ web URL (DEDALO_ROOT_WEB . \'/media\').',
 	),
 
 	new config_key(
