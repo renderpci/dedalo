@@ -33,6 +33,7 @@ This document does **not** re-explain the architecture or the wire format — se
 15. [Time-machine read](#15-time-machine-read)
 16. [Paginated next page and multi-filter search](#16-paginated-next-page-multi-filter-search)
 17. [Lazy context and graph term labels](#17-lazy-context-graph-term-labels)
+18. [Portal full grid in one read (show-all, columns as siblings)](#18-portal-full-grid-in-one-read)
 
 ---
 
@@ -1103,6 +1104,56 @@ Response (`result` is the new `section_id` as a string, or `false` on failure):
 - `get_section_terms` is the graph-view label resolver; it caps at 1000 locators per call and is safe to run with `prevent_lock: true`.
 
 *See:* [rqo.md → dd_core_api actions](rqo.md#action-string-mandatory), [section_map resolution](request_config.md#get_ddo_map-dynamic-ddo_map).
+
+---
+
+## 18. Portal full grid in one read
+
+**Scenario**: Read one record and get a portal's **entire** related grid — all rows and the chosen columns — in a *single* call, instead of the default page. This is the **reverse path**: the client sends `show.ddo_map` and the server rebuilds the element's request_config from the RQO (`build_request_config_from_rqo`). It is how `tool_print` renders a record's bibliography portal without per-portal/per-row calls.
+
+```json
+{
+  "action" : "read",
+  "dd_api" : "dd_core_api",
+  "source" : {
+    "typo": "source", "type": "section", "action": "search", "model": "section",
+    "tipo": "numisdata6", "section_tipo": "numisdata6", "mode": "list", "lang": "lg-spa"
+  },
+  "sqo" : {
+    "section_tipo"       : ["numisdata6"],
+    "limit"              : 1,
+    "offset"             : 0,
+    "filter_by_locators" : [{ "section_tipo": "numisdata6", "section_id": 2 }]
+  },
+  "show" : {
+    "ddo_map" : [
+      { "tipo": "numisdata1007", "section_tipo": "self", "parent": "numisdata6", "mode": "list" },
+
+      { "tipo": "numisdata163", "section_tipo": "self", "parent": "numisdata6",
+        "model": "component_portal", "mode": "list", "view": "default",
+        "column_id": "numisdata163", "limit": 0 },
+
+      { "tipo": "rsc368", "section_tipo": "rsc332", "parent": "numisdata163", "column_id": "a",
+        "model": "component_portal", "mode": "list",
+        "with_value": { "mode": "list", "view": "line" }, "children_view": "text", "fixed_mode": true },
+      { "tipo": "rsc336", "section_tipo": "rsc332", "parent": "numisdata163", "column_id": "b",
+        "model": "component_input_text", "mode": "list", "fixed_mode": true },
+      { "tipo": "rsc369", "section_tipo": "rsc332", "parent": "numisdata163", "column_id": "c",
+        "model": "component_input_text", "mode": "list", "fixed_mode": true }
+    ],
+    "sqo_config" : { "full_count": false, "limit": 1, "offset": 0, "mode": "list", "operator": "$or" }
+  }
+}
+```
+
+**Explanation**:
+- `sqo.filter_by_locators` + `limit: 1` pin exactly the record to read; `show.ddo_map` is **client-sent**, so the server rebuilds this element's request_config from the RQO (the same `build_request_config_from_rqo` path used by time machine / graph view / `tool_print`).
+- `numisdata163` (Bibliografía) is a `component_portal`. Its **columns are the *sibling* ddos** `rsc368` / `rsc336` / `rsc369`, each carrying `parent: "numisdata163"` + a `column_id` (`a`/`b`/`c`) — **not** nested inside the portal ddo. The server collects them by `parent` (`get_children_recursive`) and grafts them into the portal's own (rebuilt) config. A `request_config`/`sqo` placed *on* the portal ddo would be ignored.
+- **`"limit": 0` on the portal ddo is the key**: it returns **all** related rows in this one read instead of the portal's mode default (1 in list, 10 in edit) — the read equivalent of the portal's "show all". The rows are loaded regardless (a portal always loads its references for sorting); `limit` only sets the *output slice*. See [dd_object.md → How a ddo_map resolves](dd_object.md#how-a-ddo_map-resolves-the-chain).
+- `with_value` (per-data mode/view), `children_view` and `fixed_mode` tune how each column renders.
+- The client-sent ddos pass the gate: `sanitize_client_ddo_map()` keeps only whitelisted fields (now including `limit`/`offset`, as non-negative ints) and `validate_requested_ddo()` re-checks tipo/TLD/permissions — so this cannot widen access, only the page size of data the user can already read.
+
+*See properties:* [per-ddo `limit` / `column_id` / `with_value` / `fixed_mode`](dd_object.md#properties), [the ddo chain + client whitelist](dd_object.md#how-a-ddo_map-resolves-the-chain), [`show.ddo_map`](rqo.md#show-object-optional), [config rebuilt from the client RQO (Stage 1)](request_config.md).
 
 ---
 
