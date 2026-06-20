@@ -242,7 +242,7 @@ abstract class backup {
 			// so no password is exposed in the process list; authentication is provided
 			// via the PGPASSWORD env var (DBi::pg_env_set, below) so the DB may be REMOTE
 			// without a ~/.pgpass file.
-			$cmd = system::get_pg_bin_path().'pg_dump '.DBi::get_connection_string().' -F c -b -v '.DEDALO_DATABASE_CONN.' > "'.$file_path .'"';
+			$cmd = system::get_pg_bin_path().'pg_dump '.DBi::get_connection_string().' -F c -b -v '.escapeshellarg(DEDALO_DATABASE_CONN).' > "'.$file_path .'"';
 
 			// process
 			// nohup + '& echo $!' lets PHP capture the PID and return immediately
@@ -262,10 +262,15 @@ abstract class backup {
 				// Export PGPASSWORD around the spawn so the backgrounded pg_dump inherits it
 				// at fork time (the '& echo $!' returns only after the child has forked) and
 				// then clear it. The secret never lands in $command or the debug log above.
+				// GAP-1: guarantee PGPASSWORD is cleared even if process spawn throws,
+				// so the secret never lingers in the request's environment.
 				DBi::pg_env_set();
-				$process	= new process($command);
-				$pid		= $process->getPid();
-				DBi::pg_env_clear();
+				try {
+					$process	= new process($command);
+					$pid		= $process->getPid();
+				} finally {
+					DBi::pg_env_clear();
+				}
 
 				// register the process so dd_utils_api::get_process_status can verify ownership
 				processes::add(
@@ -409,7 +414,7 @@ abstract class backup {
 		// in the process list); authentication is provided via the PGPASSWORD env var by
 		// DBi::pg_shell_exec() below, so the DB may be LOCAL or REMOTE without a ~/.pgpass file.
 		// Binary resolution uses system::get_pg_bin_path() so psql is found on any host layout.
-		$command_base = system::get_pg_bin_path() . 'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
+		$command_base = system::get_pg_bin_path() . 'psql ' . escapeshellarg(DEDALO_DATABASE_CONN) . ' ' . DBi::get_connection_string();
 
 		switch ($table) {
 
@@ -965,7 +970,7 @@ abstract class backup {
 		// command base. A PostgreSQL connection. used by all DDBB connections.
 		// Resolve psql robustly (configured DB_BIN_PATH → platform base → PATH) so the COPY import
 		// works on non-standard layouts (e.g. a Homebrew Mac) without hand-editing config.
-			$command_base = system::get_pg_bin_path().'psql -d ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
+			$command_base = system::get_pg_bin_path().'psql -d ' . escapeshellarg(DEDALO_DATABASE_CONN) .' '. DBi::get_connection_string();
 
 		// delete previous records with proper escaping
 			$delete_query = 'DELETE FROM "' . $matrix_table . '"';

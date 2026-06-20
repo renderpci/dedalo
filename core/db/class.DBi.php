@@ -480,39 +480,73 @@ abstract class DBi {
 
 
 	/**
-	* GET_CONNECTION_STRING
-	* Builds a libpq / psql-compatible connection string fragment from the Dédalo constants.
+	* BUILD_CONN_FLAGS
+	* Pure builder for the -h/-p/-U flag fragment used by every server-side psql /
+	* pg_dump invocation. Kept free of Dédalo constants so it is unit-testable and
+	* so the install path and the runtime path share one escaping rule (they used to
+	* diverge — only the install path escaped its values).
 	*
-	* The returned string contains -h (host) and optionally -p (port) and -U (user) flags
-	* suitable for shell invocation of psql, pg_dump, etc. It does NOT include a password
-	* or the database name (the commented-out line for the database name is intentionally
-	* left out — callers append the database as a positional argument). Only used by
-	* server-side tools that shell out to PostgreSQL utilities.
-	* @return string - Space-separated connection flags, e.g. "-h localhost -p 5432 -U dedalo"
+	* Rules:
+	* - Every value is passed through escapeshellarg() — defence-in-depth against a
+	*   deployer-supplied host/user that carries whitespace or shell metacharacters.
+	* - When $host is empty but $socket is set, the socket directory is emitted as the
+	*   -h argument (libpq / psql accept a directory path there). This makes socket-only
+	*   installs work for the CLI tools, matching the PHP pg_connect() socket path.
+	* - Empty values emit NO flag, so a fresh / unconfigured install never produces a
+	*   broken "-h " fragment; libpq then falls back to its own default resolution.
+	*
+	* @param string|null $host   DEDALO_HOSTNAME_CONN value (TCP host) or null/empty.
+	* @param int|string|null $port DEDALO_DB_PORT_CONN value or null/empty.
+	* @param string|null $user   DEDALO_USERNAME_CONN value or null/empty.
+	* @param string|null $socket DEDALO_SOCKET_CONN value (socket dir) or null/empty.
+	* @return string - Space-separated, shell-escaped connection flags.
 	*/
-	public static function get_connection_string() : string {
+	public static function build_conn_flags( ?string $host, int|string|null $port, ?string $user, ?string $socket=null ) : string {
 
 		$ar_sentence = [];
 
-		// database name
-		// $ar_sentence[] = DEDALO_DATABASE_CONN;
-
-		// host
-		$ar_sentence[] = '-h ' . DEDALO_HOSTNAME_CONN;
+		// host (real TCP host) takes precedence; otherwise fall back to the socket
+		// directory so socket-only installs are not broken for CLI tools.
+		if (!empty($host)) {
+			$ar_sentence[] = '-h ' . escapeshellarg($host);
+		} elseif (!empty($socket)) {
+			$ar_sentence[] = '-h ' . escapeshellarg($socket);
+		}
 
 		// port
-		if (!empty(DEDALO_DB_PORT_CONN)) {
-			$ar_sentence[] = '-p ' . DEDALO_DB_PORT_CONN;
+		if (!empty($port)) {
+			$ar_sentence[] = '-p ' . escapeshellarg((string)$port);
 		}
 
 		// user
-		$ar_sentence[] = '-U ' . DEDALO_USERNAME_CONN;
+		if (!empty($user)) {
+			$ar_sentence[] = '-U ' . escapeshellarg($user);
+		}
 
-		// connection_string
-		$connection_string = implode(' ', $ar_sentence);
+		return implode(' ', $ar_sentence);
+	}//end build_conn_flags
 
 
-		return $connection_string;
+
+	/**
+	* GET_CONNECTION_STRING
+	* Builds a libpq / psql-compatible connection string fragment from the Dédalo constants.
+	*
+	* The returned string contains -h (host, or the socket directory when no TCP host is
+	* configured) and optionally -p (port) and -U (user) flags suitable for shell invocation
+	* of psql, pg_dump, etc. It does NOT include a password or the database name (callers
+	* append the database as an escaped positional / -d argument). All values are shell-escaped
+	* (see build_conn_flags). Only used by server-side tools that shell out to PostgreSQL utilities.
+	* @return string - Space-separated connection flags, e.g. "-h 'localhost' -p '5432' -U 'dedalo'"
+	*/
+	public static function get_connection_string() : string {
+
+		return self::build_conn_flags(
+			defined('DEDALO_HOSTNAME_CONN') ? DEDALO_HOSTNAME_CONN : null,
+			defined('DEDALO_DB_PORT_CONN') ? DEDALO_DB_PORT_CONN : null,
+			defined('DEDALO_USERNAME_CONN') ? DEDALO_USERNAME_CONN : null,
+			defined('DEDALO_SOCKET_CONN') ? DEDALO_SOCKET_CONN : null
+		);
 	}//end get_connection_string
 
 

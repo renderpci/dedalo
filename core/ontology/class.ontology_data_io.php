@@ -8,7 +8,10 @@
 *
 *   1. PostgreSQL COPY export — dumps one ontology TLD's rows from 'matrix_ontology'
 *      (or the 'matrix_dd' private-lists table) into a gzip-compressed COPY file via
-*      the `psql ... TO PROGRAM 'gzip ...'` mechanism (shell_exec + psql daemon).
+*      psql's CLIENT-side `\copy ... TO PROGRAM 'gzip ...'` meta-command (run with
+*      shell_exec). Note: `\copy` (backslash) is NOT the SQL `COPY` command — psql
+*      streams the rows to the local machine and runs gzip on the PHP/web host, so the
+*      file is written on the web server's filesystem even when the DB is REMOTE.
 *
 *   2. Remote download — fetches a compressed COPY file from a master server via
 *      cURL and writes it to the local versioned IO directory, ready for import.
@@ -349,14 +352,16 @@ class ontology_data_io {
 	/**
 	* EXPORT_TO_FILE
 	* Dumps all 'matrix_ontology' rows for a given TLD into a gzip-compressed
-	* PostgreSQL COPY file using the psql daemon.
+	* COPY file using psql's client-side `\copy` meta-command.
 	*
 	* The output file is written to:
 	*   ONTOLOGY_DATA_IO_DIR/<major>.<minor>/<tld>.copy.gz
 	*   e.g. /var/www/dedalo/install/import/ontology/7.0/dd.copy.gz
 	*
-	* The psql COPY … TO PROGRAM command streams rows through gzip immediately,
-	* avoiding a temporary uncompressed intermediate file.  The `&& sync` suffix
+	* The psql `\copy … TO PROGRAM` meta-command (backslash form, NOT the SQL `COPY`
+	* command) streams rows through gzip on the CLIENT — the PHP/web host running psql —
+	* so the file lands on the web server's filesystem even for a REMOTE DB, written
+	* immediately without a temporary uncompressed intermediate file.  The `&& sync` suffix
 	* forces the kernel to flush write buffers to disk before the command exits,
 	* which prevents a situation where the file exists but is incompletely written
 	* when the PHP process checks file_exists() immediately after.
@@ -434,7 +439,7 @@ class ontology_data_io {
 		// DBi::get_connection_string() provides host/port/user flags (no password); the
 		// password is supplied via the PGPASSWORD env var by DBi::pg_shell_exec() below,
 		// so the DB may be LOCAL or REMOTE without a ~/.pgpass file.
-			$command_base = system::get_pg_bin_path().'psql ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
+			$command_base = system::get_pg_bin_path().'psql ' . escapeshellarg(DEDALO_DATABASE_CONN) .' '. DBi::get_connection_string();
 			$command = $command_base
 				. " -c \"\copy (SELECT ".implode(', ', $columns)." FROM \"matrix_ontology\" WHERE section_tipo = '{$section_tipo}') TO PROGRAM 'gzip -c > {$file_path} && sync';\" ";
 			// Notes about the previous command:
@@ -530,7 +535,7 @@ class ontology_data_io {
 			$columns = matrix_db_manager::get_columns_name();
 
 		// command
-			$command_base = system::get_pg_bin_path().'psql ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
+			$command_base = system::get_pg_bin_path().'psql ' . escapeshellarg(DEDALO_DATABASE_CONN) .' '. DBi::get_connection_string();
 			$command = $command_base
 				. " -c \"\copy (SELECT ".implode(', ', $columns)." FROM \"matrix_dd\") TO PROGRAM 'gzip -c > {$file_path} && sync';\" ";
 			// Notes about the previous command:

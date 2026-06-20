@@ -1208,7 +1208,10 @@ class hierarchy extends ontology {
 	* Each export runs as a single atomic psql command:
 	*   psql … -c "\copy (SELECT … FROM <table> WHERE …) TO PROGRAM 'gzip -c > <file> && sync'"
 	* so the compressed file is written in one pass (no intermediate uncompressed
-	* .copy file, no reliance on the shell `cd`). After each command the resulting
+	* .copy file, no reliance on the shell `cd`). `\copy` (backslash) is psql's
+	* CLIENT-side meta-command — NOT the SQL `COPY` command — so gzip runs on the
+	* PHP/web host and the file lands on the local filesystem even for a REMOTE DB.
+	* After each command the resulting
 	* file is verified to exist; only files actually produced in this run are listed
 	* as download links and counted towards success.
 	*
@@ -1287,7 +1290,7 @@ class hierarchy extends ontology {
 			$columns = implode(',', matrix_db_manager::get_columns_name());
 
 		// command base (binary + dbname + host/port/user). Built once and reused.
-			$command_base = system::get_pg_bin_path().'psql '.DEDALO_DATABASE_CONN.' '.DBi::get_connection_string();
+			$command_base = system::get_pg_bin_path().'psql '.escapeshellarg(DEDALO_DATABASE_CONN).' '.DBi::get_connection_string();
 
 		$files			= [];				// structured records of files actually written in this run
 		$matrix_table	= 'matrix_hierarchy';	// default for the import hint (overwritten per section)

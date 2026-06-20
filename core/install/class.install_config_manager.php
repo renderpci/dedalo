@@ -72,9 +72,10 @@ final class install_config_manager {
 	* Key properties of the returned object:
 	* - `db_install_name`           — name of the PostgreSQL install database.
 	* - `host_line`                  — shell-safe `-h <host>` fragment for psql
-	*                                 commands; falls back to the bare string
-	*                                 `'localhost'` when DEDALO_HOSTNAME_CONN is
-	*                                 empty (no `-h` flag in that case).
+	*                                 commands. When DEDALO_HOSTNAME_CONN is empty it
+	*                                 falls back to `-h <socket dir>` (DEDALO_SOCKET_CONN)
+	*                                 and otherwise to an empty string — never a bare
+	*                                 `'localhost'` (which psql would read as a dbname).
 	* - `port_line`                  — shell-safe `-p <port>` fragment; empty
 	*                                 string when DEDALO_DB_PORT_CONN is not set.
 	* - `to_preserve_tld`           — TLD prefixes whose records must NOT be
@@ -112,7 +113,13 @@ final class install_config_manager {
 		// `config/config.php` constants (deployer-controlled, filesystem-only)
 		// so this is defence-in-depth, not an HTTP-reachable taint fix. Quoting
 		// the *value* portion only — the `-h`/`-p` flag stays unquoted.
-		$host_line			= (!empty(DEDALO_HOSTNAME_CONN)) ? ('-h '.escapeshellarg(DEDALO_HOSTNAME_CONN)) : 'localhost';
+		// BUG-6: when DEDALO_HOSTNAME_CONN is empty, fall back to the socket directory
+		// (socket-only installs) and otherwise emit NO host flag — never the bare word
+		// 'localhost', which psql would parse as a positional database name. Shares the
+		// host/socket precedence rule with DBi::build_conn_flags().
+		$host_line			= (!empty(DEDALO_HOSTNAME_CONN))
+									? ('-h '.escapeshellarg(DEDALO_HOSTNAME_CONN))
+									: ((defined('DEDALO_SOCKET_CONN') && !empty(DEDALO_SOCKET_CONN)) ? ('-h '.escapeshellarg(DEDALO_SOCKET_CONN)) : '');
 		$port_line			= (!empty(DEDALO_DB_PORT_CONN)) ? ('-p '.escapeshellarg((string)DEDALO_DB_PORT_CONN)) : '';
 
 		// to_preserve_tld. Records of this list will be preserved on clean data
@@ -350,8 +357,13 @@ final class install_config_manager {
 				$config_check		= false;
 				$user_name_check	= false;
 			}
+			// GAP-3: an EMPTY password is a legitimate configuration under peer / trust
+			// auth (or an existing ~/.pgpass) — the PGPASSWORD policy exports nothing and
+			// libpq resolves auth itself. So only the literal sample placeholder must fail
+			// config_check; whether an empty password actually authenticates is decided
+			// below by $db_connection_check (a real pg_connect attempt).
 			$pw_check = true;
-			if(empty($pw) || $pw==='mypassword'){
+			if($pw==='mypassword'){
 				$config_check	= false;
 				$pw_check		= false;
 			}

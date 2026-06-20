@@ -296,7 +296,7 @@ class db_tasks {
 		// DEDALO_DATABASE_CONN is the database name, and get_connection_string() supplies
 		// the host/port/user flags. The password is provided via the PGPASSWORD env var
 		// (DBi::pg_shell_exec, below), so the DB may be LOCAL or REMOTE without a ~/.pgpass file.
-		$command_base = system::get_pg_bin_path() . 'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
+		$command_base = system::get_pg_bin_path() . 'psql ' . escapeshellarg(DEDALO_DATABASE_CONN) . ' ' . DBi::get_connection_string();
 
 		// REINDEX each table individually
 		foreach ($valid_tables as $table) {
