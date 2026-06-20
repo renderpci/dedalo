@@ -200,6 +200,7 @@ include DEDALO_CORE_PATH . '/api/v1/common/class.dd_area_maintenance_api.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_ontology_api.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_mcp_api.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_agent_api.php';
+include DEDALO_CORE_PATH . '/api/v1/common/class.dd_rag_api.php';
 // tools
 // tool_common provides the abstract base class for all tools.
 include DEDALO_TOOLS_PATH . '/tool_common/class.tool_common.php';
@@ -403,6 +404,20 @@ class class_loader {
 			// below would resolve it to a non-existent path.
 			case ($class_name==='section_map'):
 				$file_path	= DEDALO_CORE_PATH . '/section/class.section_map.php';
+				break;
+
+			// RAG subsystem co-located classes. The whole RAG module lives flat
+			// inside core/rag/ (class.<name>.php) rather than one-class-per-dir,
+			// so the default rule would resolve them to a non-existent path.
+			// dd_rag_api is eager-included above (like the other dd_*_api classes).
+			case (in_array($class_name, [
+					'DBi_vector', 'rag_vector_store', 'rag_config', 'rag_text_extractor',
+					'rag_chunker', 'rag_fusion', 'rag_lexical', 'rag_indexer', 'rag_queue',
+					'retrieval', 'rag_security', 'rag_llm_provider',
+					'embedding_provider', 'embedding_provider_factory',
+					'embedding_provider_local_http', 'embedding_provider_openai'
+				], true)):
+				$file_path	= DEDALO_CORE_PATH . '/rag/class.' . $class_name . '.php';
 				break;
 
 			// components, areas, etc. (first level directory inside DEDALO_CORE_PATH)

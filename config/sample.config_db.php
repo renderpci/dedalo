@@ -51,3 +51,91 @@ define('MYSQL_DEDALO_DB_PORT_CONN',		3306);
 define('MYSQL_DEDALO_SOCKET_CONN',		null);
 // MYSQL_DB_BIN_PATH: string '' . Ex. /usr/bin/' . Optional
 define('MYSQL_DB_BIN_PATH',				'/usr/bin/');
+
+
+// =============================================================================
+// RAG / VECTOR DATA PROCESSING (optional subsystem; see core/rag/)
+// All constants are optional — the RAG code guards every one with defined().
+// Leave DEDALO_RAG_ENABLED=false (or unset) to keep RAG fully dormant.
+// =============================================================================
+
+// --- Global switches -------------------------------------------------------
+// DEDALO_RAG_ENABLED: bool. Master kill switch for ingestion + retrieval.
+define('DEDALO_RAG_ENABLED',				false);
+// DEDALO_RAG_CHAT_ENABLED: bool. Enables the grounded Q&A (ask) action.
+define('DEDALO_RAG_CHAT_ENABLED',			false);
+
+// --- Vector store (SEPARATE, dedicated Postgres + pgvector instance) --------
+// Never the matrix DB. Run install/db/rag_embeddings.sql against this instance,
+// and install/db/matrix_rag_index_queue.sql against the MATRIX DB.
+// DEDALO_RAG_DB_HOSTNAME_CONN: string|null
+define('DEDALO_RAG_DB_HOSTNAME_CONN',		'localhost');
+// DEDALO_RAG_DB_PORT_CONN: int|null
+define('DEDALO_RAG_DB_PORT_CONN',			5433);
+// DEDALO_RAG_DB_DATABASE_CONN: string
+define('DEDALO_RAG_DB_DATABASE_CONN',		'dedalo_rag');
+// DEDALO_RAG_DB_USERNAME_CONN: string
+define('DEDALO_RAG_DB_USERNAME_CONN',		'dedalo_rag');
+// DEDALO_RAG_DB_PASSWORD_CONN: string
+define('DEDALO_RAG_DB_PASSWORD_CONN',		'mypassword');
+// DEDALO_RAG_DB_SOCKET_CONN: string|null. Used when hostname is null.
+define('DEDALO_RAG_DB_SOCKET_CONN',			null);
+
+// --- Embedding provider (pluggable; MULTILINGUAL default) -------------------
+// DEDALO_RAG_PROVIDER: 'local_http' | 'openai' | 'voyage' | 'cohere' | 'jina'
+define('DEDALO_RAG_PROVIDER',				'local_http');
+// DEDALO_RAG_MODEL: string. Default multilingual (bge-m3 / multilingual-e5).
+define('DEDALO_RAG_MODEL',					'bge-m3');
+// DEDALO_RAG_ENDPOINT: string. e.g. Ollama http://localhost:11434/api/embed
+define('DEDALO_RAG_ENDPOINT',				'http://localhost:11434/api/embed');
+// DEDALO_RAG_API_KEY: string|null. Required for external providers.
+define('DEDALO_RAG_API_KEY',				null);
+// DEDALO_RAG_UNIX_SOCKET: string|null.
+define('DEDALO_RAG_UNIX_SOCKET',			null);
+// DEDALO_RAG_BATCH_SIZE: int.
+define('DEDALO_RAG_BATCH_SIZE',				32);
+// DEDALO_RAG_PROVIDER_TIMEOUT: int seconds.
+define('DEDALO_RAG_PROVIDER_TIMEOUT',		30);
+// DEDALO_RAG_EMBEDDABLE_MODELS: array. Candidate component models scanned for rag.embed.
+define('DEDALO_RAG_EMBEDDABLE_MODELS',		['component_text_area','component_input_text','component_text']);
+
+// --- Chunking (token-budgeted, structure-aware semantic) --------------------
+define('DEDALO_RAG_CHUNK_STRATEGY',			'structural_semantic'); // 'structural' | 'structural_semantic'
+define('DEDALO_RAG_CHUNK_TOKENS',			450);
+define('DEDALO_RAG_CHUNK_MIN_TOKENS',		120);
+define('DEDALO_RAG_CHUNK_OVERLAP_TOKENS',	60);
+define('DEDALO_RAG_SEMANTIC_BREAKPOINT_THRESHOLD', 0.92); // percentile 0..1
+define('DEDALO_RAG_CONTEXTUAL_RETRIEVAL',	false); // LLM situating blurb (extra cost)
+
+// --- HNSW tuning (recall/latency knobs) -------------------------------------
+define('DEDALO_RAG_HNSW_M',					16);
+define('DEDALO_RAG_HNSW_EF_CONSTRUCTION',	64);
+define('DEDALO_RAG_HNSW_EF_SEARCH',			100);
+
+// --- Hybrid retrieval -------------------------------------------------------
+define('DEDALO_RAG_HYBRID_ENABLED',			true);
+define('DEDALO_RAG_RRF_K',					60);
+define('DEDALO_RAG_RERANK_CANDIDATES',		40);
+// Optional reranker (pass-through if unset): DEDALO_RAG_RERANK_PROVIDER / _MODEL / _ENDPOINT / _API_KEY
+
+// --- Retrieval / generation budgets -----------------------------------------
+define('DEDALO_RAG_TOP_K',					8);
+define('DEDALO_RAG_CONTEXT_TOKEN_BUDGET',	12000);
+define('DEDALO_RAG_PARENT_EXPANSION',		true); // small-to-big at generation
+
+// --- Generation LLM (pluggable; may be Claude) ------------------------------
+define('DEDALO_RAG_LLM_PROVIDER',			'anthropic'); // 'anthropic' | 'local' | 'openai_compatible'
+define('DEDALO_RAG_LLM_ENDPOINT',			'https://api.anthropic.com/v1/messages');
+define('DEDALO_RAG_LLM_LOCAL_ENDPOINT',		null); // OpenAI-compatible local endpoint for restricted content
+define('DEDALO_RAG_LLM_API_KEY',			null);
+define('DEDALO_RAG_LLM_MODEL',				'claude-opus-4-8');
+define('DEDALO_RAG_LLM_MAX_OUTPUT_TOKENS',	1024);
+define('DEDALO_RAG_LLM_TIMEOUT',			60);
+
+// --- Privacy / egress policy (per-RECORD; governs index-time AND generation) -
+// DEDALO_RAG_ALLOW_EXTERNAL_PROVIDER_DEFAULT: bool. Default-deny external egress.
+define('DEDALO_RAG_ALLOW_EXTERNAL_PROVIDER_DEFAULT', false);
+// DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS: array of section_tipo.
+define('DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS', []);
+// DEDALO_RAG_AUDIT_LOG: bool. Log questions/answers to a dedicated sink.
+define('DEDALO_RAG_AUDIT_LOG',				false);
