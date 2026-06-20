@@ -37,6 +37,15 @@ abstract class rag_chunker {
 
 
 	/**
+	* Chunker algorithm version, mixed into source_hash. Bump this when the
+	* segmentation/enrichment logic changes so a re-index deliberately re-embeds
+	* every chunk (DATA-04: makes algorithm changes trackable, not silent).
+	*/
+	public const VERSION = 'v1';
+
+
+
+	/**
 	* CHUNK
 	* @param string $text  cleaned text (markup already stripped by the extractor)
 	* @param array $opts {
@@ -106,7 +115,7 @@ abstract class rag_chunker {
 					'chunk_index'	=> $index,
 					'text'			=> $raw,
 					'embed_text'	=> $embed_text,
-					'source_hash'	=> hash('sha256', $embed_text),
+					'source_hash'	=> hash('sha256', self::VERSION . '|' . $embed_text),
 					'token_count'	=> self::estimate_tokens($raw),
 					'source_kind'	=> $unit['source_kind'],
 					'parent_key'	=> $unit['parent_key'],

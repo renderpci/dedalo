@@ -413,7 +413,7 @@ class class_loader {
 			case (in_array($class_name, [
 					'DBi_vector', 'rag_vector_store', 'rag_config', 'rag_text_extractor',
 					'rag_chunker', 'rag_fusion', 'rag_lexical', 'rag_indexer', 'rag_queue',
-					'retrieval', 'rag_security', 'rag_llm_provider',
+					'retrieval', 'rag_security', 'rag_llm_provider', 'rag_reranker',
 					'embedding_provider', 'embedding_provider_factory',
 					'embedding_provider_local_http', 'embedding_provider_openai'
 				], true)):

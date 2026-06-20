@@ -45,7 +45,7 @@ abstract class retrieval {
 		$modality		= $opts['modality'] ?? 'text';
 		$top_k			= (int)($opts['top_k'] ?? (defined('DEDALO_RAG_TOP_K') ? DEDALO_RAG_TOP_K : 8));
 		$candidates		= (int)($opts['candidates'] ?? (defined('DEDALO_RAG_RERANK_CANDIDATES') ? DEDALO_RAG_RERANK_CANDIDATES : 40));
-		$max_distance	= $opts['max_distance'] ?? null;
+		$max_distance	= $opts['max_distance'] ?? (defined('DEDALO_RAG_MAX_DISTANCE') ? (float)DEDALO_RAG_MAX_DISTANCE : null);
 		$user_id		= $opts['user_id'] ?? null;
 		$hybrid			= $opts['hybrid'] ?? (defined('DEDALO_RAG_HYBRID_ENABLED') ? DEDALO_RAG_HYBRID_ENABLED : true);
 
@@ -87,9 +87,38 @@ abstract class retrieval {
 		// 3. EXPLICIT ACL — before truncation/return; no existence oracle
 		$accessible = rag_security::filter_accessible($reranked, $user_id);
 
+		// 3b. RET-03 diversify: cap passages per record so one long document can't
+		// crowd out others (opt-in via DEDALO_RAG_MAX_PASSAGES_PER_RECORD).
+		$max_per_record = (int)($opts['max_per_record'] ?? (defined('DEDALO_RAG_MAX_PASSAGES_PER_RECORD') ? DEDALO_RAG_MAX_PASSAGES_PER_RECORD : 0));
+		if ($max_per_record > 0) {
+			$accessible = self::diversify($accessible, $max_per_record);
+		}
+
 		// 4. top-k
 		return array_slice($accessible, 0, $top_k);
 	}//end retrieve_passages
+
+
+
+	/**
+	* DIVERSIFY  keep at most $max passages per (section_tipo, section_id), order preserved
+	* @param array<int,array<string,mixed>> $passages
+	* @param int $max
+	* @return array<int,array<string,mixed>>
+	*/
+	private static function diversify( array $passages, int $max ) : array {
+
+		$counts = [];
+		$out = [];
+		foreach ($passages as $p) {
+			$key = ($p['section_tipo'] ?? '') . '|' . ($p['section_id'] ?? '');
+			$counts[$key] = ($counts[$key] ?? 0) + 1;
+			if ($counts[$key] <= $max) {
+				$out[] = $p;
+			}
+		}
+		return $out;
+	}//end diversify
 
 
 
@@ -104,7 +133,8 @@ abstract class retrieval {
 
 		// over-fetch passages so the post-ACL, post-collapse set still fills top_k
 		$top_k			= (int)($opts['top_k'] ?? (defined('DEDALO_RAG_TOP_K') ? DEDALO_RAG_TOP_K : 8));
-		$opts['top_k']	= max($top_k * 3, $top_k);
+		$factor			= defined('DEDALO_RAG_OVERFETCH_FACTOR') ? max(1, (int)DEDALO_RAG_OVERFETCH_FACTOR) : 3;
+		$opts['top_k']	= max($top_k * $factor, $top_k);
 
 		$passages = self::retrieve_passages($query, $opts);
 		$records  = rag_fusion::collapse_to_records($passages, isset($passages[0]['rrf_score']) ? 'rrf_score' : 'score');
@@ -129,6 +159,11 @@ abstract class retrieval {
 			return [];
 		}
 
+		// SEC-RAG-01: the sibling query below is scoped to the SAME record
+		// (section_tipo + section_id + component_tipo + lang), and Dédalo ACL is
+		// per-record — so siblings are already covered by the ACL check the caller
+		// ran on this passage. If component-level ACL is ever introduced, each
+		// sibling chunk must be re-checked here before inclusion.
 		$out = [];
 		$seen_parents = [];
 		foreach ($passages as $p) {
@@ -184,10 +219,13 @@ abstract class retrieval {
 	*/
 	private static function rerank( string $query, array $candidates ) : array {
 
-		// Extension point: when DEDALO_RAG_RERANK_PROVIDER is configured, call a
-		// rerank_provider here and reorder by its score. Pass-through keeps the
-		// fused order otherwise.
-		return $candidates;
+		// Pass-through unless a reranker endpoint is configured.
+		if (empty($candidates)
+			|| !defined('DEDALO_RAG_RERANK_ENDPOINT')
+			|| empty(DEDALO_RAG_RERANK_ENDPOINT)) {
+			return $candidates;
+		}
+		return rag_reranker::rerank($query, $candidates);
 	}//end rerank
 
 

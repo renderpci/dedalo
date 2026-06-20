@@ -195,6 +195,30 @@ abstract class rag_vector_store {
 
 
 	/**
+	* DROP_MODEL_PARTITION
+	* DATA-03: remove a model's child partition (and its HNSW index) after a model
+	* migration, to reclaim space from orphaned vectors. Detaches then drops the
+	* child. Idempotent. The sanitized child name is derived from the model, never
+	* raw input. Use only when the model is fully retired.
+	* @param string $model
+	* @return bool
+	*/
+	public static function drop_model_partition( string $model ) : bool {
+
+		$child = 'rag_embeddings_' . preg_replace('/[^a-z0-9_]+/', '_', strtolower($model));
+		unset(self::$ensured_partitions[$model . '|']); // best-effort cache clear (any dim)
+		foreach (array_keys(self::$ensured_partitions) as $k) {
+			if (str_starts_with($k, $model . '|')) {
+				unset(self::$ensured_partitions[$k]);
+			}
+		}
+		// DROP TABLE on a partition removes it from the parent and drops its index.
+		return DBi_vector::exec_autocommit('DROP TABLE IF EXISTS ' . $child);
+	}//end drop_model_partition
+
+
+
+	/**
 	* QUERY
 	* Cosine ANN over one model's partition. Returns candidate chunk rows ordered
 	* by ascending distance (closest first). section_tipos and modality narrow

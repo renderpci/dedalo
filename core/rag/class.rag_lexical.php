@@ -46,14 +46,16 @@ abstract class rag_lexical {
 		$limit_param = $next;
 		$params[] = max(1, $k);
 
-		// ts_rank over a 'simple' tsvector; plainto_tsquery tolerates arbitrary
-		// user input safely (no tsquery syntax injection). $1 is the query text.
+		// ts_rank over a 'simple' tsvector with accent-folding (f_unaccent), so
+		// "excavacion" matches "excavación". The @@ expression matches the GIN
+		// index expression in rag_embeddings.sql exactly, so the index is used.
+		// plainto_tsquery tolerates arbitrary input safely (no tsquery injection).
 		$sql = "SELECT section_tipo, section_id, component_tipo, lang, chunk_index,
 					source_text, source_kind, modality, egress_class, parent_key, chunk_meta,
-					ts_rank(to_tsvector('simple', source_text), plainto_tsquery('simple', $1)) AS lex_rank
+					ts_rank(to_tsvector('simple', f_unaccent(coalesce(source_text,''))), plainto_tsquery('simple', f_unaccent($1))) AS lex_rank
 				FROM rag_embeddings
 				WHERE " . $where . "
-				  AND to_tsvector('simple', source_text) @@ plainto_tsquery('simple', $1)
+				  AND to_tsvector('simple', f_unaccent(coalesce(source_text,''))) @@ plainto_tsquery('simple', f_unaccent($1))
 				ORDER BY lex_rank DESC
 				LIMIT $" . $limit_param;
 

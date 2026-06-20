@@ -64,10 +64,10 @@ abstract class rag_queue {
 
 		try {
 			matrix_db_manager::exec_search(
-				'INSERT INTO rag_index_queue (section_tipo, section_id, op, attempts, enqueued_at)
-					VALUES ($1, $2, $3, 0, now())
+				'INSERT INTO rag_index_queue (section_tipo, section_id, op, attempts, last_error, next_attempt_at, enqueued_at)
+					VALUES ($1, $2, $3, 0, NULL, now(), now())
 					ON CONFLICT (section_tipo, section_id)
-					DO UPDATE SET op = EXCLUDED.op, attempts = 0, enqueued_at = now()',
+					DO UPDATE SET op = EXCLUDED.op, attempts = 0, last_error = NULL, next_attempt_at = now(), enqueued_at = now()',
 				[$section_tipo, $section_id, $op]
 			);
 		} catch (\Throwable $e) {
@@ -104,8 +104,9 @@ abstract class rag_queue {
 		$processed = 0;
 		try {
 			$result = matrix_db_manager::exec_search(
-				'SELECT section_tipo, section_id, op, enqueued_at
+				'SELECT section_tipo, section_id, op, attempts, enqueued_at
 					FROM rag_index_queue
+					WHERE next_attempt_at <= now()
 					ORDER BY enqueued_at ASC
 					LIMIT $1',
 				[max(1, $batch)]
@@ -125,11 +126,16 @@ abstract class rag_queue {
 				$section_tipo	= (string)$r['section_tipo'];
 				$section_id		= (int)$r['section_id'];
 				$op				= (string)$r['op'];
+				$attempts		= (int)$r['attempts'];
 				$observed_ts	= (string)$r['enqueued_at'];
 
+				$t0 = function_exists('start_time') ? start_time() : 0;
 				$ok = ($op === 'delete')
 					? rag_indexer::delete_record($section_tipo, $section_id)
 					: rag_indexer::index_record($section_tipo, $section_id);
+				if (class_exists('metrics') && $t0) {
+					metrics::add_time_ms('rag_index_record_time', exec_time_unit($t0, 'ms'));
+				}
 
 				if ($ok) {
 					// delete only if not re-enqueued meanwhile (newer enqueued_at survives)
@@ -139,18 +145,30 @@ abstract class rag_queue {
 						[$section_tipo, $section_id, $observed_ts]
 					);
 					$processed++;
+					if (class_exists('metrics')) { metrics::inc('rag_index_processed'); }
 				} else {
-					// bounded retry: bump attempts; give up after 5
-					matrix_db_manager::exec_search(
-						'UPDATE rag_index_queue SET attempts = attempts + 1
-							WHERE section_tipo=$1 AND section_id=$2 AND attempts < 5',
-						[$section_tipo, $section_id]
-					);
-					matrix_db_manager::exec_search(
-						'DELETE FROM rag_index_queue
-							WHERE section_tipo=$1 AND section_id=$2 AND attempts >= 5 AND enqueued_at=$3',
-						[$section_tipo, $section_id, $observed_ts]
-					);
+					// OPS-02: bounded retry with exponential backoff + last_error.
+					// Give up after 5 attempts (drop the row so it can't loop forever).
+					if ($attempts + 1 >= 5) {
+						matrix_db_manager::exec_search(
+							'DELETE FROM rag_index_queue
+								WHERE section_tipo=$1 AND section_id=$2 AND enqueued_at=$3',
+							[$section_tipo, $section_id, $observed_ts]
+						);
+						debug_log(__METHOD__ . " Giving up on $section_tipo/$section_id after 5 attempts", logger::ERROR);
+					} else {
+						// backoff: 2^attempts minutes, capped at ~30 min
+						$backoff_min = min(30, 2 ** ($attempts + 1));
+						matrix_db_manager::exec_search(
+							"UPDATE rag_index_queue
+								SET attempts = attempts + 1,
+									last_error = $4,
+									next_attempt_at = now() + ($5 || ' minutes')::interval
+								WHERE section_tipo=$1 AND section_id=$2 AND enqueued_at=$3",
+							[$section_tipo, $section_id, $observed_ts, 'index_record returned false (op=' . $op . ')', (string)$backoff_min]
+						);
+					}
+					if (class_exists('metrics')) { metrics::inc('rag_index_failed'); }
 				}
 
 				// memory discipline (tool_export style)
@@ -180,6 +198,51 @@ abstract class rag_queue {
 		$row = pg_fetch_assoc($result);
 		return (int)($row['n'] ?? 0);
 	}//end pending_count
+
+
+
+	/**
+	* STATS
+	* OPS-04: operational snapshot for monitoring — queue depth, ready/blocked
+	* counts, failed (attempts>0), oldest pending age, plus the in-process metrics
+	* summary (rag_index_processed/failed/time). Cheap; safe to expose via an API.
+	* @return object
+	*/
+	public static function stats() : object {
+
+		$out = new stdClass();
+			$out->configured	= DBi_vector::is_configured();
+			$out->pending		= 0;
+			$out->ready			= 0;
+			$out->blocked		= 0;
+			$out->failed		= 0;
+			$out->oldest_age_sec= null;
+			$out->metrics		= [];
+
+		$result = matrix_db_manager::exec_search(
+			"SELECT
+				count(*) AS pending,
+				count(*) FILTER (WHERE next_attempt_at <= now()) AS ready,
+				count(*) FILTER (WHERE next_attempt_at > now()) AS blocked,
+				count(*) FILTER (WHERE attempts > 0) AS failed,
+				EXTRACT(EPOCH FROM (now() - min(enqueued_at)))::int AS oldest_age_sec
+				FROM rag_index_queue",
+			[]
+		);
+		if ($result !== false && ($row = pg_fetch_assoc($result))) {
+			$out->pending		= (int)$row['pending'];
+			$out->ready			= (int)$row['ready'];
+			$out->blocked		= (int)$row['blocked'];
+			$out->failed		= (int)$row['failed'];
+			$out->oldest_age_sec= $row['oldest_age_sec'] !== null ? (int)$row['oldest_age_sec'] : null;
+		}
+
+		if (class_exists('metrics') && method_exists('metrics', 'get_summary')) {
+			try { $out->metrics = metrics::get_summary(); } catch (\Throwable $e) {}
+		}
+
+		return $out;
+	}//end stats
 
 
 

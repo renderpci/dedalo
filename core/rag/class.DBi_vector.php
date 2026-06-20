@@ -226,6 +226,82 @@ abstract class DBi_vector {
 
 
 	/**
+	* @var int $tx_depth  managed transaction nesting depth on the vector connection
+	*/
+	private static int $tx_depth = 0;
+
+
+
+	/**
+	* BEGIN
+	* Start (or nest, via SAVEPOINT) a transaction on the vector connection. This
+	* is independent of the matrix DBi transaction state — a vector write failure
+	* never affects a matrix transaction. Returns false if no connection.
+	* @return bool
+	*/
+	public static function begin() : bool {
+
+		$conn = self::get_connection();
+		if ($conn === false) {
+			return false;
+		}
+		$sql = (self::$tx_depth === 0) ? 'BEGIN' : ('SAVEPOINT dv_' . self::$tx_depth);
+		if (@pg_query($conn, $sql) === false) {
+			debug_log(__METHOD__ . ' Error: ' . pg_last_error($conn), logger::ERROR);
+			return false;
+		}
+		self::$tx_depth++;
+		return true;
+	}//end begin
+
+
+
+	/**
+	* COMMIT
+	* @return bool
+	*/
+	public static function commit() : bool {
+
+		if (self::$tx_depth < 1) {
+			return false;
+		}
+		$conn = self::get_connection();
+		if ($conn === false) {
+			return false;
+		}
+		$sql = (self::$tx_depth === 1) ? 'COMMIT' : ('RELEASE SAVEPOINT dv_' . (self::$tx_depth - 1));
+		$ok = @pg_query($conn, $sql) !== false;
+		self::$tx_depth--;
+		return $ok;
+	}//end commit
+
+
+
+	/**
+	* ROLLBACK
+	* @return bool
+	*/
+	public static function rollback() : bool {
+
+		if (self::$tx_depth < 1) {
+			return false;
+		}
+		$conn = self::get_connection();
+		if ($conn === false) {
+			self::$tx_depth = 0;
+			return false;
+		}
+		$sql = (self::$tx_depth === 1)
+			? 'ROLLBACK'
+			: ('ROLLBACK TO SAVEPOINT dv_' . (self::$tx_depth - 1) . '; RELEASE SAVEPOINT dv_' . (self::$tx_depth - 1));
+		@pg_query($conn, $sql);
+		self::$tx_depth--;
+		return true;
+	}//end rollback
+
+
+
+	/**
 	* SET_SESSION_EF_SEARCH
 	* Applies the HNSW ef_search recall/latency knob for subsequent queries on
 	* the cached connection. Best-effort; failure is non-fatal.
@@ -254,6 +330,7 @@ abstract class DBi_vector {
 		self::$conn_cache		= null;
 		self::$conn_valid_until	= 0;
 		self::$prepared_statements = [];
+		self::$tx_depth			= 0;
 	}//end reset
 
 

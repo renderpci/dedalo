@@ -72,7 +72,13 @@ abstract class rag_indexer {
 		};
 
 		$document_title = self::get_record_title($section_tipo, $section_id);
-		$any_failure = false;
+
+		// Phase 1: embed (slow HTTP) OUTSIDE any transaction. Accumulate the rows
+		// to upsert and the per-(component,lang) valid counts to prune.
+		$pending_upserts	= []; // full upsert rows
+		$pending_stale		= []; // [component_tipo, lang, valid_count]
+		$dimension			= null;
+		$embed_failure		= false;
 
 		foreach ($extracted as $entry) {
 
@@ -87,13 +93,13 @@ abstract class rag_indexer {
 
 			$chunks = rag_chunker::chunk($text, $opts);
 			if (empty($chunks)) {
-				// value became empty → drop all chunks for this component/lang
-				rag_vector_store::delete_stale($section_tipo, $section_id, $component_tipo, $lang, $model, 0);
+				// value became empty → prune all chunks for this component/lang
+				$pending_stale[] = [$component_tipo, $lang, 0];
 				continue;
 			}
 
 			// determine which chunks changed (hash differs from stored)
-			$to_embed		= []; // index in $chunks => embed_text
+			$to_embed = []; // index in $chunks => embed_text
 			foreach ($chunks as $i => $chunk) {
 				$key = $component_tipo . '|' . $lang . '|' . $chunk['chunk_index'];
 				if (($existing_hashes[$key] ?? null) === $chunk['source_hash']) {
@@ -107,16 +113,15 @@ abstract class rag_indexer {
 				$vectors = $embed_result->vectors ?? [];
 				if (count($vectors) !== count($to_embed)) {
 					debug_log(__METHOD__ . " Embedding failed for $component_tipo/$lang ($section_tipo/$section_id)", logger::ERROR);
-					$any_failure = true;
+					$embed_failure = true;
 					continue; // do not write garbage; queue will retry
 				}
-
-				rag_vector_store::ensure_model_partition($model, $embed_result->dimension);
+				$dimension = $embed_result->dimension;
 
 				$v = 0;
 				foreach ($to_embed as $i => $embed_text) {
 					$chunk = $chunks[$i];
-					$ok = rag_vector_store::upsert([
+					$pending_upserts[] = [
 						'section_tipo'	=> $section_tipo,
 						'section_id'	=> $section_id,
 						'component_tipo'=> $component_tipo,
@@ -134,20 +139,106 @@ abstract class rag_indexer {
 						'egress_class'	=> $egress_class,
 						'parent_key'	=> $chunk['parent_key'],
 						'chunk_meta'	=> $chunk['chunk_meta']
-					]);
-					if (!$ok) {
-						$any_failure = true;
-					}
+					];
 					$v++;
 				}
 			}
 
-			// delete stale chunks beyond the new count for this component/lang
-			rag_vector_store::delete_stale($section_tipo, $section_id, $component_tipo, $lang, $model, count($chunks));
+			$pending_stale[] = [$component_tipo, $lang, count($chunks)];
 		}
 
-		return !$any_failure;
+		if (empty($pending_upserts) && empty($pending_stale)) {
+			return !$embed_failure;
+		}
+
+		// Phase 2: DATA-01 — flush all writes for this record ATOMICALLY. The
+		// transaction is short (embedding already done above, outside it). The
+		// partition DDL is idempotent and run before BEGIN.
+		if ($dimension !== null) {
+			rag_vector_store::ensure_model_partition($model, $dimension);
+		}
+		if (DBi_vector::begin() === false) {
+			return false; // retryable
+		}
+		$write_ok = true;
+		foreach ($pending_upserts as $row) {
+			if (!rag_vector_store::upsert($row)) { $write_ok = false; break; }
+		}
+		if ($write_ok) {
+			foreach ($pending_stale as [$ct, $lg, $cnt]) {
+				if (!rag_vector_store::delete_stale($section_tipo, $section_id, $ct, $lg, $model, $cnt)) { $write_ok = false; break; }
+			}
+		}
+		if ($write_ok) {
+			DBi_vector::commit();
+		} else {
+			DBi_vector::rollback();
+		}
+
+		return $write_ok && !$embed_failure;
 	}//end index_record
+
+
+
+	/**
+	* RECONCILE_SECTION
+	* DATA-05: detect drift between the matrix and the vector store for a section
+	* (e.g. records added/deleted via direct SQL that bypassed the save() hook) and
+	* enqueue corrections. Compares record-id PRESENCE: matrix-only ids → enqueue
+	* index; vector-only ids → enqueue delete. (Content drift on an edited-via-SQL
+	* record is corrected on its next normal save, or by a forced re-index.)
+	* @param string $section_tipo
+	* @return object  {missing:int, orphan:int}
+	*/
+	public static function reconcile_section( string $section_tipo ) : object {
+
+		$out = new stdClass();
+			$out->missing	= 0;
+			$out->orphan	= 0;
+
+		if (!DBi_vector::is_configured() || !rag_config::section_is_rag_enabled($section_tipo)) {
+			return $out;
+		}
+
+		// matrix ids
+		$matrix_ids = [];
+		try {
+			$res = section::get_resource_all_section_records_unfiltered($section_tipo, 'section_id');
+			if ($res !== false) {
+				while ($row = pg_fetch_assoc($res)) {
+					$matrix_ids[(int)$row['section_id']] = true;
+				}
+			}
+		} catch (\Throwable $e) {
+			debug_log(__METHOD__ . ' Error reading matrix ids: ' . $e->getMessage(), logger::ERROR);
+			return $out;
+		}
+
+		// vector ids
+		$vector_ids = [];
+		$vres = DBi_vector::exec('SELECT DISTINCT section_id FROM rag_embeddings WHERE section_tipo=$1', [$section_tipo]);
+		if ($vres !== false) {
+			while ($row = pg_fetch_assoc($vres)) {
+				$vector_ids[(int)$row['section_id']] = true;
+			}
+		}
+
+		// matrix-only → index; vector-only → delete
+		foreach ($matrix_ids as $id => $_) {
+			if (!isset($vector_ids[$id])) {
+				rag_queue::enqueue_index($section_tipo, $id);
+				$out->missing++;
+			}
+		}
+		foreach ($vector_ids as $id => $_) {
+			if (!isset($matrix_ids[$id])) {
+				rag_queue::enqueue_delete($section_tipo, $id);
+				$out->orphan++;
+			}
+		}
+
+		return $out;
+	}//end reconcile_section
 
 
 
@@ -168,17 +259,29 @@ abstract class rag_indexer {
 
 
 	/**
-	* GET_RECORD_TITLE  best-effort record label for the contextual header.
-	* Kept minimal in the foundation: the contextual header already carries the
-	* heading path; a record-level title is an optional enrichment. Returns ''.
-	* (Extension point: resolve the section's display label component value.)
+	* GET_RECORD_TITLE
+	* Best-effort record display label for the chunker's contextual header.
+	* Resolves via ts_object::get_term_by_locator() (the same label resolver the
+	* tree/relations use). Best-effort: returns '' on any failure so indexing
+	* never depends on it.
 	* @param string $section_tipo
 	* @param int $section_id
 	* @return string
 	*/
 	private static function get_record_title( string $section_tipo, int $section_id ) : string {
 
-		return '';
+		try {
+			if (!class_exists('ts_object') || !method_exists('ts_object', 'get_term_by_locator')) {
+				return '';
+			}
+			$locator = new stdClass();
+				$locator->section_tipo	= $section_tipo;
+				$locator->section_id	= $section_id;
+			$label = ts_object::get_term_by_locator($locator, DEDALO_DATA_LANG, true);
+			return is_string($label) ? trim($label) : '';
+		} catch (\Throwable $e) {
+			return '';
+		}
 	}//end get_record_title
 
 

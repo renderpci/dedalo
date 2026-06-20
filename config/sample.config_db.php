@@ -139,3 +139,19 @@ define('DEDALO_RAG_ALLOW_EXTERNAL_PROVIDER_DEFAULT', false);
 define('DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS', []);
 // DEDALO_RAG_AUDIT_LOG: bool. Log questions/answers to a dedicated sink.
 define('DEDALO_RAG_AUDIT_LOG',				false);
+
+// --- RAG round-2 hardening knobs --------------------------------------------
+// Retrieval relevance + diversity
+define('DEDALO_RAG_MAX_DISTANCE',			0.35);  // cosine-distance relevance floor (null = off)
+define('DEDALO_RAG_OVERFETCH_FACTOR',		3);     // ACL/collapse over-fetch multiplier for semantic_search
+define('DEDALO_RAG_MAX_PASSAGES_PER_RECORD',0);     // >0 caps passages per record (retrieve/ask); 0 = off
+// Reranker (cross-encoder; pass-through when endpoint unset)
+define('DEDALO_RAG_RERANK_ENDPOINT',		null);  // e.g. http://localhost:8081/rerank
+define('DEDALO_RAG_RERANK_MODEL',			'bge-reranker-v2-m3');
+define('DEDALO_RAG_RERANK_API_KEY',			null);
+define('DEDALO_RAG_RERANK_TIMEOUT',			30);
+// Generation tuning
+define('DEDALO_RAG_LLM_TEMPERATURE',		0.0);   // factual default for grounded heritage Q&A
+define('DEDALO_RAG_LLM_SYSTEM_PROMPT',		'');    // '' = built-in default; per-section override via properties.rag.system_prompt
+// ask() throttle (planned; simple per-user/min counter)
+define('DEDALO_RAG_ASK_RATE_PER_MIN',		20);

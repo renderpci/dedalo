@@ -89,9 +89,12 @@ abstract class rag_llm_provider {
 		$model		= defined('DEDALO_RAG_LLM_MODEL') ? DEDALO_RAG_LLM_MODEL : 'claude-opus-4-8';
 		$max_tokens	= (int)($req['max_tokens'] ?? (defined('DEDALO_RAG_LLM_MAX_OUTPUT_TOKENS') ? DEDALO_RAG_LLM_MAX_OUTPUT_TOKENS : 1024));
 
-		// passages as untrusted document blocks with citations enabled
+		// passages as untrusted document blocks with citations enabled. The title
+		// is the record locator so citations are self-describing in the UI
+		// (instead of opaque source_N).
 		$documents = [];
 		foreach (($req['passages'] ?? []) as $i => $p) {
+			$locator = trim((string)($p['section_tipo'] ?? '') . '-' . (string)($p['section_id'] ?? ''), '-');
 			$documents[] = [
 				'type'	=> 'document',
 				'source'=> [
@@ -99,7 +102,7 @@ abstract class rag_llm_provider {
 					'media_type'=> 'text/plain',
 					'data'		=> (string)($p['source_text'] ?? '')
 				],
-				'title'			=> 'source_' . $i,
+				'title'			=> $locator !== '' ? $locator : ('source_' . $i),
 				'citations'		=> ['enabled' => true]
 			];
 		}
@@ -108,9 +111,10 @@ abstract class rag_llm_provider {
 		$content[] = ['type' => 'text', 'text' => (string)($req['query'] ?? '')];
 
 		$payload = [
-			'model'		=> $model,
-			'max_tokens'=> $max_tokens,
-			'system'	=> [[
+			'model'			=> $model,
+			'max_tokens'	=> $max_tokens,
+			'temperature'	=> defined('DEDALO_RAG_LLM_TEMPERATURE') ? (float)DEDALO_RAG_LLM_TEMPERATURE : 0.0,
+			'system'		=> [[
 				'type'			=> 'text',
 				'text'			=> (string)($req['system'] ?? ''),
 				'cache_control'	=> ['type' => 'ephemeral']
@@ -191,8 +195,9 @@ abstract class rag_llm_provider {
 		}
 
 		$payload = [
-			'model'		=> defined('DEDALO_RAG_LLM_MODEL') ? DEDALO_RAG_LLM_MODEL : 'local-model',
-			'max_tokens'=> (int)($req['max_tokens'] ?? 1024),
+			'model'			=> defined('DEDALO_RAG_LLM_MODEL') ? DEDALO_RAG_LLM_MODEL : 'local-model',
+			'max_tokens'	=> (int)($req['max_tokens'] ?? 1024),
+			'temperature'	=> defined('DEDALO_RAG_LLM_TEMPERATURE') ? (float)DEDALO_RAG_LLM_TEMPERATURE : 0.0,
 			'messages'	=> [
 				['role' => 'system', 'content' => (string)($req['system'] ?? '')],
 				['role' => 'user', 'content' => "Context:\n{$context}\n\nQuestion: " . (string)($req['query'] ?? '')]
@@ -243,10 +248,17 @@ abstract class rag_llm_provider {
 			return false;
 		}
 		$host = parse_url($endpoint, PHP_URL_HOST) ?: '';
-		return in_array($host, ['localhost','127.0.0.1','::1'], true)
+		if (in_array($host, ['localhost','127.0.0.1','::1'], true)
 			|| str_starts_with($host, '192.168.')
 			|| str_starts_with($host, '10.')
-			|| str_ends_with($host, '.local');
+			|| str_ends_with($host, '.local')) {
+			return true;
+		}
+		// 172.16.0.0/12 → 172.16.* .. 172.31.*
+		if (preg_match('/^172\.(1[6-9]|2[0-9]|3[01])\./', $host) === 1) {
+			return true;
+		}
+		return false;
 	}//end endpoint_is_local
 
 
