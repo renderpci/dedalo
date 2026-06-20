@@ -61,6 +61,7 @@
 		reorder_table_column,
 		set_column_width,
 		set_column_header,
+		set_column_style,
 		add_row,
 		add_spacer,
 		add_cell,
@@ -1167,6 +1168,33 @@ const render_table_columns_ui = function(self, box) {
 			const from_key = raw.slice(4)
 			reorder_table_column(self, box, from_key, key)
 		})
+
+		// second line: per-column style — text align, text colour, background colour
+		const style_row = ui.create_dom_element({ element_type:'div', class_name:'inspector_row column_style_row', parent:container })
+		style_row.dataset.key = key
+		// align (blank = inherit)
+		const al = ui.create_dom_element({ element_type:'select', class_name:'column_align', parent:style_row })
+		al.title = 'Text align'
+		;[['','—'],['left','L'],['center','C'],['right','R']].forEach(([v,t]) => ui.create_dom_element({ element_type:'option', value:v, inner_html:t, parent:al }))
+		al.value = current[i].align || ''
+		al.addEventListener('change', () => set_column_style(self, box, key, { align: al.value }))
+		// text colour
+		const tc_lbl = ui.create_dom_element({ element_type:'label', class_name:'column_color', inner_html:'<span>A</span>', parent:style_row })
+		tc_lbl.title = 'Text colour'
+		const tc = ui.create_dom_element({ element_type:'input', parent:tc_lbl })
+		tc.type = 'color'
+		tc.value = current[i].text_color || (box.style && box.style.text_color) || '#111111'
+		tc.addEventListener('change', () => set_column_style(self, box, key, { text_color: tc.value }))
+		// background colour
+		const bg_lbl = ui.create_dom_element({ element_type:'label', class_name:'column_color', inner_html:'<span class="bg_swatch">▦</span>', parent:style_row })
+		bg_lbl.title = 'Background colour'
+		const bg = ui.create_dom_element({ element_type:'input', parent:bg_lbl })
+		bg.type = 'color'
+		bg.value = current[i].bg_color || '#ffffff'
+		bg.addEventListener('change', () => set_column_style(self, box, key, { bg_color: bg.value }))
+		// clear column style
+		ui.create_dom_element({ element_type:'span', class_name:'column_style_clear', inner_html:'✕', title:'Clear column style', parent:style_row })
+			.addEventListener('click', () => set_column_style(self, box, key, { align:undefined, text_color:undefined, bg_color:undefined }))
 	}
 
 	// default columns not currently shown (re-addable)

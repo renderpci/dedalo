@@ -780,6 +780,63 @@
   outline: 2px solid var(--tool_print);
   outline-offset: -1px;
 }
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns .column_row:has(+ .column_style_row) {
+  margin-bottom: 0;
+  border-bottom: none;
+  border-radius: 3px 3px 0 0;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns .column_style_row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 0.3rem;
+  padding: 0.2rem 0.35rem;
+  background: var(--bg_surface_alt);
+  border: 1px solid var(--border_default);
+  border-top: none;
+  border-radius: 0 0 3px 3px;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns .column_style_row .column_align {
+  width: 3.2rem;
+  font-size: 0.7rem;
+  padding: 0.05rem 0.15rem;
+  background: var(--bg_input);
+  color: var(--fg_default);
+  border: 1px solid var(--border_default);
+  border-radius: 3px;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns .column_style_row .column_color {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  color: var(--fg_muted);
+  cursor: pointer;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns .column_style_row .column_color .bg_swatch {
+  font-size: 0.82rem;
+  line-height: 1;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns .column_style_row .column_color input[type="color"] {
+  width: 1.5rem;
+  height: 1.1rem;
+  padding: 0;
+  cursor: pointer;
+  border: 1px solid var(--border_default);
+  border-radius: 3px;
+  background: none;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns .column_style_row .column_style_clear {
+  margin-left: auto;
+  cursor: pointer;
+  font-size: 0.8rem;
+  line-height: 1;
+  color: var(--fg_muted);
+  padding: 0 0.15rem;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns .column_style_row .column_style_clear:hover {
+  color: var(--color_danger);
+}
 .wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns .column_addable {
   background: none;
 }

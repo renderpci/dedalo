@@ -490,6 +490,44 @@
 						&.dragging { opacity: .4; }
 						&.drop_target { outline: 2px solid @tool_color; outline-offset: -1px; }
 				}
+				// active column header line connects to its style line below
+				.column_row:has(+ .column_style_row) {
+					margin-bottom: 0;
+					border-bottom: none;
+					border-radius: 3px 3px 0 0;
+				}
+				// per-column style line: align + text colour + background colour + clear
+				.column_style_row {
+					display: flex;
+					align-items: center;
+					gap: .35rem;
+					margin: 0 0 .3rem;
+					padding: .2rem .35rem;
+					background: var(--bg_surface_alt);
+					border: 1px solid var(--border_default);
+					border-top: none;
+					border-radius: 0 0 3px 3px;
+
+					.column_align {
+						width: 3.2rem; font-size: .7rem; padding: .05rem .15rem;
+						background: var(--bg_input); color: var(--fg_default);
+						border: 1px solid var(--border_default); border-radius: 3px;
+					}
+					.column_color {
+						display: inline-flex; align-items: center; gap: .2rem;
+						font-size: .72rem; color: var(--fg_muted); cursor: pointer;
+						.bg_swatch { font-size: .82rem; line-height: 1; }
+						input[type="color"] {
+							width: 1.5rem; height: 1.1rem; padding: 0; cursor: pointer;
+							border: 1px solid var(--border_default); border-radius: 3px; background: none;
+						}
+					}
+					.column_style_clear {
+						margin-left: auto; cursor: pointer; font-size: .8rem; line-height: 1;
+						color: var(--fg_muted); padding: 0 .15rem;
+						&:hover { color: var(--color_danger); }
+					}
+				}
 				.column_addable {
 					background: none;
 					.column_name { color: var(--fg_muted); }

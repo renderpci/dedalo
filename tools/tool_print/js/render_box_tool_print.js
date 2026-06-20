@@ -301,6 +301,16 @@ const assemble_table_dom = function(cols, entries, matrix, opts) {
 
 	const show_header = !opts || opts.show_header !== false
 
+	// per-column display style set in the inspector column manager. Use !important:
+	// the print table CSS forces `td/th { background:none !important }` and
+	// `.cell_content * { color:inherit !important }` (+ zebra striping), so a plain
+	// inline value would be overridden — an inline !important wins over a rule !important.
+	const style_col = (el, col) => {
+		if (col.align)		el.style.setProperty('text-align', col.align, 'important')
+		if (col.text_color)	el.style.setProperty('color', col.text_color, 'important')
+		if (col.bg_color)	el.style.setProperty('background-color', col.bg_color, 'important')
+	}
+
 	const table = document.createElement('table')
 	table.className = 'portal_table'
 
@@ -325,6 +335,7 @@ const assemble_table_dom = function(cols, entries, matrix, opts) {
 			th.textContent = (cols[c].header !== undefined && cols[c].header !== null)
 				? cols[c].header
 				: (cols[c].label || '')
+			style_col(th, cols[c])
 			htr.appendChild(th)
 		}
 		thead.appendChild(htr)
@@ -343,6 +354,7 @@ const assemble_table_dom = function(cols, entries, matrix, opts) {
 				const node = matrix[column_key(col)] && matrix[column_key(col)][r]
 				if (node) td.appendChild(node.cloneNode(true))
 			}
+			style_col(td, col)
 			tr.appendChild(td)
 		}
 		tbody.appendChild(tr)

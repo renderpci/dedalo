@@ -682,6 +682,37 @@ export const set_column_header = function(self, box, key, header) {
 
 
 /**
+* SET_COLUMN_STYLE
+* Merges per-column display style (text align, text colour, background colour) into
+* a column descriptor. A blank/null value deletes that key (reverts to inherited).
+* Unlike apply_columns this does NOT change the column set/ddo_map, so it rebuilds
+* the portal table from the existing single-read datum (no refetch) — just clears
+* box._table_render and re-renders.
+* @param {Object} self
+* @param {Object} box - relation cell block descriptor
+* @param {string} key - column_key of the column to style
+* @param {Object} patch - e.g. { align:'center' } | { text_color:'#aa0000' } | { bg_color:undefined }
+* @returns {void}
+*/
+export const set_column_style = function(self, box, key, patch) {
+	box.table_columns = current_columns(box).map(c => {
+		if (column_key(c)!==key) return c
+		const next = { ...c }
+		for (const k in patch) {
+			const v = patch[k]
+			if (v===undefined || v===null || v==='') delete next[k]; else next[k] = v
+		}
+		return next
+	})
+	box._table_render = null   // rebuild the table with the new column styling (datum unchanged)
+	self.mark_dirty?.()
+	render_canvas(self, self.canvas_container)
+	if (self.sel) requestAnimationFrame(() => select_cell(self, self.sel.row_id, self.sel.cell_id))
+}//end set_column_style
+
+
+
+/**
 * MOVE_TABLE_COLUMN
 * Reorders a table column one step left (dir -1) or right (dir +1). A no-op
 * if the key is not found or the move would go out of bounds.
