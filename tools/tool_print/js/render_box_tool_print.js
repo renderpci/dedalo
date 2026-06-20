@@ -226,7 +226,11 @@ export const get_default_columns = function(component) {
 * @returns {string} stable column key
 */
 export const column_key = function(col) {
-	return col.type==='id' ? 'id' : ('c:' + col.tipo)
+	if (col.type==='id') return 'id'
+	// deep columns key by their full chain so two leaves with the same tipo reached
+	// via different portals don't collide
+	if (Array.isArray(col.path) && col.path.length) return 'c:' + col.path.map(s => s.tipo).join('.')
+	return 'c:' + col.tipo
 }//end column_key
 
 
@@ -449,9 +453,15 @@ const render_relation_table = async function(self, box, ref, lang, preview_id) {
 	const matrix	= box._table_render.matrix
 	if (!entries.length) return build_relation_node({ data:{ entries:[] }, datum:null })
 
+	// a portal with no user-configured columns falls back to its default column set
+	// (available_columns). The datum fast path skips the build that resolves it, so
+	// resolve it here on demand; the trailing `|| []` keeps cols always iterable.
+	if (!(Array.isArray(box.table_columns) && box.table_columns.length) && !Array.isArray(box.available_columns)) {
+		await ensure_portal_meta(self, box)
+	}
 	const cols = (Array.isArray(box.table_columns) && box.table_columns.length)
 		? box.table_columns
-		: box.available_columns
+		: (box.available_columns || [])
 
 	// PERFORMANCE: ONE bulk read of the related section for ALL related records ×
 	// columns, so each cell builds with build(false) (no per-cell API). Replaces
@@ -462,15 +472,20 @@ const render_relation_table = async function(self, box, ref, lang, preview_id) {
 	}
 	const portal_datum = box._table_render.portal_datum
 
-	// fetch ONLY the columns whose cells are not cached yet (e.g. a just-added one)
+	// fetch ONLY the columns whose cells are not cached yet (e.g. a just-added one).
+	// DEEP columns (col.path) traverse the chain through the print datum; they need
+	// the full single-read datum (self._print_datum), which carries the chain.
 	for (let c = 0; c < cols.length; c++) {
 		const col = cols[c]
 		if (col.type==='id') continue
 		const ck = column_key(col)
 		if (!matrix[ck]) {
 			matrix[ck] = []
+			const is_deep = Array.isArray(col.path) && col.path.length > 1
 			for (let r = 0; r < entries.length; r++) {
-				matrix[ck].push(await render_cell_value(self, col, entries[r].section_id, entries[r].section_tipo, lang, portal_datum))
+				matrix[ck].push(is_deep
+					? await render_deep_cell_value(self, col, entries[r].section_id, entries[r].section_tipo, lang, self._print_datum)
+					: await render_cell_value(self, col, entries[r].section_id, entries[r].section_tipo, lang, portal_datum))
 			}
 		}
 	}
@@ -490,14 +505,16 @@ const render_relation_table = async function(self, box, ref, lang, preview_id) {
 * selected), via one light build — NOT during every render (keeps print fast).
 * @param {Object} self
 * @param {Object} box - the selected cell block
+* @param {string|number} [section_id_override] - record to build against (print
+*        passes a record id; the editor defaults to self.preview_section_id)
 * @returns {Promise<boolean>} true if metadata is now available
 */
-export const ensure_portal_meta = async function(self, box) {
+export const ensure_portal_meta = async function(self, box, section_id_override) {
 	if (!box || box.type!=='component' || !box.component_ref) return false
 	if (!is_relation_model(box.component_ref.model)) return false
 	if (Array.isArray(box.available_columns) && box.related_section_tipo) return true   // cached
 	const ref			= box.component_ref
-	const section_id	= self.preview_section_id
+	const section_id	= section_id_override || self.preview_section_id
 	if (!section_id) return false
 	try {
 		const meta = await get_instance({
@@ -662,6 +679,53 @@ const render_cell_value = async function(self, col, section_id, section_tipo, la
 		return null
 	}
 }//end render_cell_value
+
+
+
+/**
+* RENDER_DEEP_CELL_VALUE
+* Renders a DEEP portal column (col.path = a chain through nested portals, e.g.
+* Bibliografía → Publicación → Título). Walks the chain in the single-read datum:
+* each intermediate portal segment fans out to its related locators; the leaf
+* segment renders one value per terminal locator and they are joined with " | ".
+* Requires self._print_datum (which carries the whole chain). Returns null when
+* there is nothing to show.
+* @returns {Promise<HTMLElement|null>}
+*/
+const render_deep_cell_value = async function(self, col, root_section_id, root_section_tipo, lang, datum) {
+
+	if (!datum || !Array.isArray(col.path) || col.path.length<2) return null
+
+	// fan out through the intermediate portal segments to the terminal locators
+	let current = [{ section_id: root_section_id, section_tipo: root_section_tipo }]
+	for (let i = 0; i < col.path.length - 1; i++) {
+		const seg	= col.path[i]
+		const next	= []
+		for (const loc of current) {
+			const entry = get_datum_entry(datum, { tipo: seg.tipo, section_tipo: seg.section_tipo, section_id: loc.section_id, mode: 'list' })
+			if (entry && Array.isArray(entry.entries)) {
+				for (const e of entry.entries) next.push({ section_id: e.section_id, section_tipo: e.section_tipo })
+			}
+		}
+		current = next
+		if (!current.length) break
+	}
+	if (!current.length) return null
+
+	// render the leaf value for each terminal locator, joined with " | "
+	const leaf	= col.path[col.path.length - 1]
+	const wrap	= ui.create_dom_element({ element_type: 'span', class_name: 'print_deep_value' })
+	for (const loc of current) {
+		// use the terminal locator's actual section (a portal may target several);
+		// don't pin leaf.section_tipo so render_cell_value keys by the real record
+		const node = await render_cell_value(self, { tipo: leaf.tipo, model: leaf.model }, loc.section_id, loc.section_tipo, lang, datum)
+		if (node && node.textContent.trim()) {
+			if (wrap.childNodes.length) wrap.appendChild(document.createTextNode(' | '))
+			wrap.appendChild(node)
+		}
+	}
+	return wrap.childNodes.length ? wrap : null
+}//end render_deep_cell_value
 
 
 
