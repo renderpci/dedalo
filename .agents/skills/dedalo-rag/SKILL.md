@@ -1,16 +1,18 @@
 ---
 name: dedalo-rag
-description: The Dédalo v7 RAG / semantic-search subsystem (core/rag/) — a vector version of opted-in component data in a SEPARATE pgvector database, with structure-aware semantic chunking, hybrid (dense+lexical RRF) retrieval, explicit per-record ACL, a deferred matrix-DB queue, and grounded Q&A with citations. Use when modifying anything under core/rag/ (DBi_vector, rag_vector_store, embedding_provider*, rag_config, rag_text_extractor, rag_chunker, rag_fusion, rag_lexical, rag_reranker, rag_indexer, rag_queue, retrieval, rag_security, rag_llm_provider, cli/rag_drain.php), core/api/v1/common/class.dd_rag_api.php, install/db/rag_embeddings.sql, install/db/matrix_rag_index_queue.sql, the RAG hooks in core/section_record/class.section_record.php (save/delete), the dd_rag_api entry in dd_manager $allowed_api_classes / the core/rag loader case in class.loader.php, the DEDALO_RAG_* constants in config/sample.config_db.php, test/server/rag/, docs/core/rag.md, or core/rag/README.md.
+description: The Dédalo v7 RAG / semantic-search subsystem (core/rag/) — a vector version of opted-in component data in a SEPARATE pgvector database, with structure-aware semantic chunking, hybrid (dense+lexical RRF) retrieval, explicit per-record ACL, a deferred matrix-DB queue, grounded Q&A with citations, AND multimodal OBJECT IMAGE similarity + neighbour-aggregated typology/period characterization (coins, ceramics, etc.). Use when modifying anything under core/rag/ (DBi_vector, rag_vector_store, embedding_provider*, embedding_provider_multimodal, rag_media_extractor, rag_characterizer, rag_config, rag_text_extractor, rag_chunker, rag_fusion, rag_lexical, rag_reranker, rag_indexer, rag_queue, retrieval, rag_security, rag_llm_provider, cli/rag_drain.php), core/api/v1/common/class.dd_rag_api.php (incl. similar_objects/characterize_object/search_by_text_image), install/db/rag_embeddings.sql, install/db/matrix_rag_index_queue.sql, the RAG hooks in core/section_record/class.section_record.php (save/delete), the dd_rag_api entry in dd_manager $allowed_api_classes / the core/rag loader case in class.loader.php, the DEDALO_RAG_* constants in config/sample.config_db.php, properties.rag / properties.rag.context ontology config, test/server/rag/, docs/core/rag.md, or core/rag/README.md.
 ---
 
 # Dédalo v7 RAG / semantic search
 
-Opt-in **vector version of selected component data** in a **separate** PostgreSQL +
-pgvector DB (never the matrix). Adds semantic search, similar-record, passage
-retrieval, agent context and grounded Q&A. Strictly dormant unless
-`DEDALO_RAG_ENABLED === true`. User+dev doc: `docs/core/rag.md`; dev quick-ref:
-`core/rag/README.md`. Reuses Dédalo seams (export-atoms text, `properties`
-config, `save()/delete()` lifecycle, per-project ACL) — no parallel schema.
+Opt-in **vector version of selected component data** (text + object images) in a
+**separate** PostgreSQL + pgvector DB (never the matrix). Adds semantic search,
+similar-record, passage retrieval, agent context, grounded Q&A, and **object image
+similarity + characterization** (Phase 5b — see below). Strictly dormant unless
+`DEDALO_RAG_ENABLED === true` (images also need `DEDALO_RAG_MEDIA_ENABLED === true`).
+20 classes. User+dev doc: `docs/core/rag.md`; dev quick-ref: `core/rag/README.md`.
+Reuses Dédalo seams (export-atoms text, `properties` config, `save()/delete()`
+lifecycle, per-project ACL, component_image/media_common, diffusion_utils) — no parallel schema.
 
 ## Pipeline
 
@@ -145,8 +147,36 @@ guards every entry so absence ⇒ clean skip; `set_session_ef_search`.
   when `DEDALO_RAG_DB_*` is unset. Inject a deterministic fake embedder for chunker
   semantic tests (no model needed).
 
+## Images — object similarity & characterization (Phase 5b-A, BUILT)
+
+Opt-in per section via **`properties.rag.context`** (NOT a component embed flag):
+`{ images:[{tipo,view}], metadata:{typology,period,material}, compare_scope }` — read by
+`rag_config::get_context/get_context_images/get_context_metadata/get_compare_scope`.
+- `embedding_provider_multimodal` — joint encoder, **local default**; `embed_image(base64[])`
+  + `embed_text_for_image_search(text[])` (text→image MUST use this tower, not the text embedder).
+  Sidecar contract `POST /image {model,images:[base64]}` / `POST /text {model,input:[text]}` → `{embeddings:[…]}`.
+- `rag_media_extractor` — downsized **non-master** JPEG (`get_default_quality()` '1.5MB', blocklist
+  `original`/`modified`), `ImageMagick::convert` downscale to `DEDALO_RAG_IMAGE_MAX_PX`; external egress
+  gated by **`diffusion_utils::is_publishable($locator)`** (publishable-only; else local/skip).
+- `rag_indexer::index_record_images` — one `modality='image'` vector per image (chunk_index 0 per
+  component, `chunk_meta.view`), `source_text`=context summary (typology/material/period labels); own
+  atomic flush; model-scoped diff/stale; `delete_record_modality` keeps text/image separate.
+- `retrieval::find_similar_objects` (reads stored vectors via `get_record_vectors`; per-view RRF fuse so
+  coin obverse+reverse both-face matches win; hybrid = visual + lexical-over-context; explicit ACL;
+  near-dup via `min_similarity`) and `search_by_text_image`.
+- `rag_characterizer` — neighbour-aggregated proposals (NO LLM): `aggregate_categorical` (weighted vote)
+  + `summarize_dates` (`dd_date::convert_date_to_seconds` earliest/latest/central); per-neighbour role
+  resolved through the NEIGHBOUR's section context.
+- API (in `API_ACTIONS`): `similar_objects`, `characterize_object`, `search_by_text_image`; results carry `thumb_url`.
+- Config: `DEDALO_RAG_MEDIA_ENABLED`, `DEDALO_RAG_MULTIMODAL_{PROVIDER,MODEL,ENDPOINT,API_KEY}`,
+  `DEDALO_RAG_IMAGE_{MAX_PX,HYBRID}`, `DEDALO_RAG_NEAR_DUPLICATE_SIMILARITY`, `DEDALO_RAG_CHARACTERIZE_TOP_K`.
+- Tests `test/server/rag/rag_image_Test.php` (aggregation/parse/context — pure logic).
+- **Gotcha**: image components are declared in `context.images` (section-level, with `view`), NOT via the
+  text `rag.embed` flag; `DEDALO_RAG_EMBEDDABLE_MODELS` is text-only on purpose.
+
 ## Deferred (documented, not built)
 
-tool_rag_index UI / bulk-index; multimodal image (visual) embeddings; Phase-8 Bun
-public service over published-only; MCP `dedalo_get_relevant_context`; retrieval-quality
-eval harness; per-user `ask` rate-limit (planned, login-throttle-style).
+tool_rag_index UI / bulk-index; Phase-5b-B painting-region search + linking
+(`component_relation_common::add_locator_to_data`; no structured bbox model exists yet) and 5b-C
+vision-LLM `describe_object`; Phase-8 Bun public service; MCP `dedalo_get_relevant_context`;
+retrieval-quality eval harness; per-user `ask` rate-limit (planned, login-throttle-style).
