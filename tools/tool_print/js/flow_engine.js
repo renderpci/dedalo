@@ -411,21 +411,50 @@ const is_splittable_row = (row, row_node) => !!splittable_container(row, row_nod
 * @returns {HTMLElement|null} The element whose direct children are the split units, or null
 */
 const find_text_container = function(content) {
-	let c = content.querySelector('.ck-content, .value_container, .editor_container')
+	// Score an element as a BLOCK-STACK split container: it must have ≥2 children
+	// whose heights STACK VERTICALLY (each starts at/after the previous bottom) AND
+	// ACCOUNT FOR most of the element's own height. The height check is what rejects
+	// a single paragraph whose "children" are inline <i>/<a>/<br> sharing lines — their
+	// heights (one line each) sum to far less than the wrapped paragraph's height, so
+	// splitting at those boundaries would be wrong (that needs line-level splitting,
+	// not yet supported; such a block instead moves whole to the next page). Returns
+	// the stacked-unit count as a score, or 0 when the element is not a real stack.
+	const score = function(el) {
+		const kids = el.children
+		if (kids.length < 2) return 0
+		const eh = el.getBoundingClientRect().height
+		if (eh <= 0) return 0
+		let sum = 0, stacked = 0, prev_bottom = -Infinity
+		for (let k = 0; k < kids.length; k++) {
+			const r = kids[k].getBoundingClientRect()
+			if (r.height <= 0) continue
+			sum += r.height
+			if (r.top >= prev_bottom - 2) { stacked++; prev_bottom = r.bottom }
+		}
+		return (stacked >= 2 && sum >= eh * 0.7) ? stacked : 0
+	}
+
+	// pass 1 — named CKEditor / Dédalo value containers. Descend through ANY chain
+	// of single-child wrappers (e.g. .content_data > .content_value > .ck-content)
+	// until reaching the element that actually holds the block children, then validate.
+	let c = content.querySelector('.ck-content, .value_container, .editor_container, .content_data')
 	if (c) {
 		let guard = 0
-		// descend past single-child wrapper elements (e.g. the CKEditor scrollable
-		// viewport div) until we reach an element whose children ARE the paragraphs
-		// (children.length > 1). The guard prevents infinite descent on malformed HTML.
-		while (c && c.children.length===1 && c.firstElementChild && c.firstElementChild.children.length>1 && guard++<8) {
+		while (c && c.children.length===1 && c.firstElementChild && guard++<12) {
 			c = c.firstElementChild
 		}
-		if (c && c.children.length>1) return c
+		if (c && score(c) > 0) return c
 	}
-	// fallback: the deepest element with the most block children
-	// bestN starts at 1 so that single-child wrappers are never returned as a container
-	let best = null, bestN = 1
-	content.querySelectorAll('*').forEach(el => { if (el.children.length>bestN) { bestN = el.children.length; best = el } })
+	// pass 2 — generic: the element that is the strongest vertical block stack. Makes
+	// ANY component rendering stacked blocks splittable (multi-paragraph text_area,
+	// multi-value lists for iri/input_text, dataframes…) without falsely splitting an
+	// inline-only paragraph.
+	let best = null, best_n = 0
+	const candidates = content.querySelectorAll('*')
+	for (let i = 0; i < candidates.length; i++) {
+		const s = score(candidates[i])
+		if (s > best_n) { best_n = s; best = candidates[i] }
+	}
 	return best
 }//end find_text_container
 
@@ -488,6 +517,16 @@ const split_long_row = function(self, ctx, row_node, used, usable_px, info) {
 	const thead_h	= thead ? ctx.measure(thead) : 0
 	// pre-measure all unit heights while they are still in the DOM
 	const unit_h	= units.map(u => ctx.measure(u))
+
+	// if the current page is too full for even the first unit (+ any table header),
+	// relocate the whole row to a fresh page before splitting. Otherwise the k>0
+	// guard below would cram an overflowing first unit into the tail of a nearly-full
+	// page, spilling into the bottom margin.
+	if (used > 0 && head_h + thead_h + (unit_h[0] || 0) > usable_px - used) {
+		make_page_node(ctx)
+		ctx.current_page.column.appendChild(row_node)
+		used = 0
+	}
 
 	// greedy-pack pass: find k = the first unit that does NOT fit on the current page
 	// k > 0 guard: always place at least one unit even if it overflows (avoids loops)
@@ -573,6 +612,140 @@ const build_continuation_text_node = function(master_content, master_container, 
 	for (let i = 0; i < seg_nodes.length; i++) holder.appendChild(seg_nodes[i])   // move
 	return row_node
 }//end build_continuation_text_node
+
+
+
+/**
+* DOM_POSITION_AT_Y
+* Finds the DOM position {node, offset} of the first character in `root` whose line
+* box extends BELOW the absolute viewport y `target_y` — i.e. the first character that
+* does not fit above the page break. Binary-searches character offsets inside each
+* text node (measuring with a Range), so it is O(text_nodes · log chars). Returns null
+* when all of root's text fits above target_y.
+* @returns {{node:Text, offset:number}|null}
+*/
+const dom_position_at_y = function(root, target_y) {
+	const range	= document.createRange()
+	const walker	= document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null)
+	let tn
+	while ((tn = walker.nextNode())) {
+		const len = tn.textContent.length
+		if (!len) continue
+		range.selectNodeContents(tn)
+		const rr = range.getBoundingClientRect()
+		if (rr.bottom <= target_y) continue          // this whole text node fits above the break
+		// binary-search the first offset whose character bottom exceeds target_y
+		let lo = 0, hi = len
+		while (lo < hi) {
+			const mid = (lo + hi) >> 1
+			range.setStart(tn, mid)
+			range.setEnd(tn, mid + 1)
+			const cr = range.getBoundingClientRect()
+			if (cr.bottom > target_y) hi = mid; else lo = mid + 1
+		}
+		return { node: tn, offset: lo }
+	}
+	return null
+}//end dom_position_at_y
+
+
+
+/**
+* BUILD_CONTINUATION_TEXTBLOCK_NODE
+* Builds a .flow_row.flow_continued for a slice of a SINGLE text block (e.g. a long
+* <p>) split at line boundaries. Rebuilds the wrapper chain between the master cell
+* content and the text block (cloned shallow) so font/value styling is preserved,
+* then mounts `cont_block` (the tail clone holding the overflow content).
+* @returns {HTMLElement}
+*/
+const build_continuation_textblock_node = function(master_content, master_block, cont_block) {
+	const row_node	= ui.create_dom_element({ element_type:'div', class_name:'flow_row flow_continued' })
+	const cell_node	= ui.create_dom_element({ element_type:'div', class_name:'flow_cell', parent: row_node })
+	cell_node.style.flex = '0 0 100%'
+	const content	= ui.create_dom_element({ element_type:'div', class_name:'box_content cell_content', parent: cell_node })
+	content.style.cssText = master_content.style.cssText
+	// clone the ancestor chain (cell_content → … → text block) shallow, preserving classes
+	const chain = []
+	let a = master_block.parentElement
+	while (a && a !== master_content && chain.length < 8) { chain.unshift(a); a = a.parentElement }
+	let mount = content
+	for (let i = 0; i < chain.length; i++) { const cl = chain[i].cloneNode(false); mount.appendChild(cl); mount = cl }
+	mount.appendChild(cont_block)
+	return row_node
+}//end build_continuation_textblock_node
+
+
+
+/**
+* FIND_LINE_SPLIT_TARGET
+* Locates the single text block to split by LINES inside a cell whose content is one
+* block taller than a page (a long component_text_area paragraph). Descends named
+* value containers through single-child wrappers to the deepest element that holds
+* the wrapped text. Returns null when there is no text to split.
+* @returns {HTMLElement|null}
+*/
+const find_line_split_target = function(content) {
+	let c = content.querySelector('.ck-content, .value_container, .editor_container, .content_data') || content
+	let guard = 0
+	while (c && c.children.length===1 && c.firstElementChild && guard++<12) c = c.firstElementChild
+	return (c && (c.textContent||'').trim().length) ? c : null
+}//end find_line_split_target
+
+
+
+/**
+* SPLIT_TEXT_BY_LINES
+* Splits a single text block (too tall for one page) across pages at LINE boundaries.
+* The block's content above each page break stays; the overflow tail is extracted and
+* rebuilt as a continuation block on a fresh page; repeats until the remainder fits.
+* This is the fallback for a long paragraph that has no internal block units to split
+* at (component_text_area transcription longer than a page).
+* @param {Object} ctx
+* @param {HTMLElement} row_node - the row on the current page (already placed)
+* @param {HTMLElement} target   - the text block element to split
+* @param {number} usable_px     - usable column height per page
+* @returns {number} px used on the final continuation page
+*/
+const split_text_by_lines = function(ctx, row_node, target, usable_px) {
+	const master_content = row_node.querySelector('.cell_content') || row_node
+	let guard = 0
+	while (guard++ < 400) {
+		const col		= ctx.current_page.column
+		const col_top	= col.getBoundingClientRect().top
+		const tr		= target.getBoundingClientRect()
+		const head		= tr.top - col_top
+		if (tr.height <= usable_px - head + 1) return head + tr.height   // fits — done
+
+		const break_y	= col_top + usable_px
+		const pos		= dom_position_at_y(target, break_y)
+		if (!pos) return head + tr.height
+		// back up to a word boundary so we never cut mid-word
+		let node = pos.node, offset = pos.offset
+		while (offset > 0 && !/\s/.test(node.textContent[offset-1])) offset--
+		// loop guard: if nothing would stay on this page (first line taller than the page
+		// height, or head leaves no room), place the block whole and stop
+		const first_tn = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, null).nextNode()
+		if (offset <= 0 && node === first_tn) return head + tr.height
+
+		const range = document.createRange()
+		range.setStart(node, offset)
+		range.setEndAfter(target.lastChild)
+		const tail = range.extractContents()
+		if (!tail || !(tail.textContent||'').trim().length) return head + target.getBoundingClientRect().height
+
+		make_page_node(ctx)
+		const cont_target	= target.cloneNode(false)
+		cont_target.appendChild(tail)
+		const cont_row		= build_continuation_textblock_node(master_content, target, cont_target)
+		const mcell			= row_node.querySelector('.flow_cell')
+		cont_row.dataset.masterRowId	= row_node.dataset.masterRowId || row_node.dataset.rowId || ''
+		cont_row.dataset.masterCellId	= row_node.dataset.masterCellId || (mcell ? mcell.dataset.cellId : '') || ''
+		ctx.current_page.column.appendChild(cont_row)
+		target		= cont_target
+		row_node	= cont_row
+	}
+	return usable_px
+}//end split_text_by_lines
 
 
 
