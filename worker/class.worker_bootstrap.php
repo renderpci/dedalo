@@ -83,7 +83,7 @@ final class worker_bootstrap {
 		}
 
 		// Dédalo config — APP_ROOT is defined in worker/index.php before init()
-		$config_path = APP_ROOT . '/config/config.php';
+		$config_path = APP_ROOT . '/config/bootstrap.php';
 		if (!file_exists($config_path)) {
 			throw new \RuntimeException("Config not found at $config_path");
 		}

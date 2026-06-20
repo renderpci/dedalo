@@ -87,12 +87,6 @@ class system_info {
 
 		try {
 
-			// get overall system info
-			// Linfo singleton — used for system_list entries later in this try block.
-			// May return null when the composer dependency is absent; calls on $info
-			// would then throw, which the outer catch will record.
-			$info = system::get_info();
-
 			// RAM
 			// system::get_ram() returns whole gigabytes; minimum is 16 GB for production.
 			$total_gb	= system::get_ram();
@@ -310,72 +304,52 @@ class system_info {
 
 			$system_list[] = (object)[
 				'name'	=> 'os',
-				'value'	=> $info->getOS()
+				'value'	=> host_info::get_os()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'model',
-				'value'	=> $info->getModel()
+				'value'	=> host_info::get_model()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'CPU architecture',
-				'value'	=> $info->getCPUArchitecture()
+				'value'	=> host_info::get_cpu_architecture()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'cpu',
-				'value'	=> $info->getCPU()
+				'value'	=> host_info::get_cpu()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'kernel',
-				'value'	=> $info->getKernel()
+				'value'	=> host_info::get_kernel()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'distribution',
-				'value'	=> $info->getDistro()
+				'value'	=> host_info::get_distro()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'hostname',
-				'value'	=> $info->getHostname()
-			];
-
-			$system_list[] = (object)[
-				'name'	=> 'virtualization',
-				'value'	=> $info->getVirtualization()
-			];
-
-			$system_list[] = (object)[
-				'name'	=> 'devices',
-				'value'	=> $info->getDevs()
-			];
-
-			$system_list[] = (object)[
-				'name'	=> 'raid',
-				'value'	=> $info->getRAID()
-			];
-
-			$system_list[] = (object)[
-				'name'	=> 'services',
-				'value'	=> $info->getServices()
+				'value'	=> host_info::get_hostname()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'load',
-				'value'	=> $info->getLoad()
+				'value'	=> host_info::get_load()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'ram',
-				'value'	=> $info->getRam()
+				'value'	=> host_info::get_ram()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'hd',
-				'value'	=> $info->getHD()
+				'value'	=> host_info::get_hd()
 			];
 
 			$system_list[] = (object)[
@@ -392,22 +366,17 @@ class system_info {
 
 			$system_list[] = (object)[
 				'name'	=> 'mounts',
-				'value'	=> $info->getMounts()
+				'value'	=> host_info::get_mounts()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'net',
-				'value'	=> $info->getNet()
+				'value'	=> host_info::get_net()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'uptime',
-				'value'	=> $info->getUpTime()
-			];
-
-			$system_list[] = (object)[
-				'name'	=> 'process_status',
-				'value'	=> $info->getProcessStats()
+				'value'	=> host_info::get_uptime()
 			];
 
 		// opcache info

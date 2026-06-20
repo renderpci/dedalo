@@ -1,6 +1,10 @@
 # Configuration
 
-> See also: [Installation](../install/index.md) · [Management and maintenance](../management/index.md)
+> **⚠️ Dédalo v7 changed the configuration model.** Configuration and secrets now live **outside the web root** in `../private/` (`.env`, plus an optional per-host `.env.<host>`), and `config/config.php` is only a loader — there are no `config_*.php` files to rename or edit in place.
+>
+> **▶ Start here: [Configuration Administrator Guide](administration.md)** — the complete v7 flow, `.env` syntax, fallback chain, per-host configs, secrets, and migrating a v6 install.
+>
+> _The page below describes the legacy v6 file-based setup, kept for reference (and for sites still on v6)._
 
 Dédalo keeps its installation settings in four config files under `./dedalo/config/`. This hub explains what each file is for and links to the page that documents its parameters.
 
@@ -22,7 +26,11 @@ These are static files that you maintain by hand: they hold your database creden
 - **[Media protection](media_protection.md)** — web-server-enforced access control for media files (optional).
 - **[Search configuration and access control](search.md)** — search constants and the client-SQO trust boundary (optional).
 
-## Rename the configuration files
+> Note: You will need review the "sample" files of the new versions to add or remove the changes specify in the new version. Dédalo will not change your specific configuration files when it's updated automatically.
+
+## Rename Dédalo configuration files
+
+In the installation process you will has rename the sample files to active files, removing the "sample_" text of the filename. If you not did this step complete it before config your installation.
 
 When Dédalo is downloaded from GitHub, every config file ships with a `sample.` prefix. Before you configure your installation, rename each one to its active name by removing the prefix.
 

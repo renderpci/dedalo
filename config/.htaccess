@@ -1,0 +1,37 @@
+# config/ holds only bootstrap.php (the secret-free loader) + this file. Nothing here may be
+# served or executed over HTTP — in particular a leftover/legacy config.php that still carries
+# secrets on a box mid-migration. The previous version disabled PHP only under <IfModule mod_php5.c>,
+# which is a NO-OP on PHP 7/8 (mod_php7/mod_php) and on PHP-FPM — so secrets were effectively
+# unprotected. This version denies all access AND strips the PHP handler across every SAPI.
+#
+# NGINX has no .htaccess: add the equivalent to the server block →  location ^~ /config/ { deny all; }
+
+# --- deny all HTTP access ---
+<IfModule mod_authz_core.c>
+  # Apache 2.4+
+  Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+  # Apache 2.2
+  Order allow,deny
+  Deny from all
+</IfModule>
+
+Options None
+Options +FollowSymLinks
+
+# --- belt-and-braces: never EXECUTE php here, whichever PHP SAPI is in use ---
+<IfModule mod_php5.c>
+  php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+  php_flag engine off
+</IfModule>
+<IfModule mod_php.c>
+  php_flag engine off
+</IfModule>
+# PHP-FPM / proxied SAPIs ignore php_flag — strip any PHP handler so .php is never handed to PHP.
+<FilesMatch "\.(php|php3|php4|php5|php7|phtml|phps|inc)$">
+  SetHandler none
+  RemoveHandler .php .php3 .php4 .php5 .php7 .phtml .phps .inc
+</FilesMatch>

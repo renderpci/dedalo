@@ -140,7 +140,7 @@ $fail = function(string $msg) : void {
 // (!) config.php must be loaded before any echo/fwrite because the PHP session
 // started therein may try to send HTTP headers.
 	if (isset($options['register'])) {
-		require_once $root_path . '/config/config.php';
+		require_once $root_path . '/config/bootstrap.php';
 
 		// CLI superuser context: registering writes registry records (dd1324),
 		// which requires an authenticated session. Shell access to the server

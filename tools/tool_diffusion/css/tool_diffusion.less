@@ -431,3 +431,21 @@
 .tool_header.tool_diffusion {
 	background-color: @tool_color;
 }
+
+// engine advisory banner
+.diffusion_engine_advisory {
+	margin: 1em;
+	padding: 1em 1.2em;
+	border-radius: 6px;
+	border-left: 4px solid #c98a00;
+	background: #fff8e6;
+	color: #4a3b00;
+
+	&.unreachable { border-left-color: #b3261e; background: #fdeceb; color: #5f1512; }
+	.advisory_title { margin: 0 0 .4em; font-size: 1.05em; }
+	.advisory_cause { margin: 0 0 .6em; }
+	.advisory_steps { margin: 0 0 .8em 1.1em; }
+	.advisory_actions { display: flex; gap: .5em; }
+	.advisory_log { margin-top: .8em; max-height: 14em; overflow: auto; background: #1e1e1e; color: #ddd; padding: .6em; font-size: .8em; }
+	.advisory_log.hide { display: none; }
+}

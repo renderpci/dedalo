@@ -1,11 +1,11 @@
 {
-  "id": "3952",
+  "id": "3987",
   "section_id": "32",
   "section_tipo": "dd1340",
   "data": {
     "label": "Tools development",
     "section_id": 32,
-    "created_date": "2026-06-17 13:27:59",
+    "created_date": "2026-06-18 11:43:42",
     "section_tipo": "dd1340",
     "diffusion_info": null,
     "created_by_user_id": -1
@@ -247,13 +247,13 @@
         "id": 1,
         "lang": "lg-nolan",
         "start": {
-          "day": 17,
-          "hour": 13,
-          "time": 65132083679,
+          "day": 18,
+          "hour": 11,
+          "time": 65132163822,
           "year": 2026,
           "month": 6,
-          "minute": 27,
-          "second": 59
+          "minute": 43,
+          "second": 42
         }
       }
     ]
@@ -266,94 +266,86 @@
     "dd1350": [
       {
         "id": 1,
-        "value": {
-          "lg-nolan": [
-            [
-              "dd5"
-            ]
-          ]
-        }
+        "value": [
+          "dd5"
+        ]
       }
     ],
     "dd1372": [
       {
         "id": 1,
-        "value": {
-          "lg-nolan": [
-            [
-              {
-                "lang": "lg-eng",
-                "name": "regenerate",
-                "value": "Regenerate"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "regenerate",
-                "value": "Regenerar"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "regenerate",
-                "value": "Regenerar"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "regenerate",
-                "value": "Αναγεννηθείς"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "regenerate",
-                "value": "Rigenerare"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "regenerate",
-                "value": "Regenerieren"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "regenerate",
-                "value": "Régénérer"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "export",
-                "value": "Export"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "export",
-                "value": "Exportar"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "export",
-                "value": "Exporta"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "export",
-                "value": "Exporter"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "export",
-                "value": "Esportare"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "export",
-                "value": "Εξαγωγή"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "export",
-                "value": "Export"
-              }
-            ]
-          ]
-        }
+        "value": [
+          {
+            "lang": "lg-eng",
+            "name": "regenerate",
+            "value": "Regenerate"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "regenerate",
+            "value": "Regenerar"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "regenerate",
+            "value": "Regenerar"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "regenerate",
+            "value": "Αναγεννηθείς"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "regenerate",
+            "value": "Rigenerare"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "regenerate",
+            "value": "Regenerieren"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "regenerate",
+            "value": "Régénérer"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "export",
+            "value": "Export"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "export",
+            "value": "Exportar"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "export",
+            "value": "Exporta"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "export",
+            "value": "Exporter"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "export",
+            "value": "Esportare"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "export",
+            "value": "Εξαγωγή"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "export",
+            "value": "Export"
+          }
+        ]
       }
     ]
   },

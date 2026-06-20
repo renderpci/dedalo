@@ -108,7 +108,7 @@ import {get_instance, get_all_instances} from '../../../core/common/js/instances
 			'move_locator',
 			'move_tld',
 			'php_info',
-			'php_user',
+			'php_runtime',
 			'publication_api',
 			'register_tools',
 			'sequences_status',

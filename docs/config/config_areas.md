@@ -1,5 +1,7 @@
 # Changing parameters of Dédalo areas config file
 
+> **⚠️ Dédalo v7 — this file moved out of the web root to `../private/config_areas.php`.** Its format is unchanged; only the location moved (the area code loads it from `../private/`). Edit it there. See the **[Configuration Administrator Guide](administration.md)** for the full config model. The instructions below still describe the file's contents.
+
 ./dedalo/config/config_areas.php
 
 1. Locate the file into the directory: ../httpdocs/dedalo/config/

@@ -21,7 +21,7 @@ if (php_sapi_name()!=='cli') {
 }
 
 // USE V7 CODEBASE
-require_once __DIR__ . '/../../../config/config.php';
+require_once __DIR__ . '/../../../config/bootstrap.php';
 
 $limit = (int)($argv[1] ?? 100);
 

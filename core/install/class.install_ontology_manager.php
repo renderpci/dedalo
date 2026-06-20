@@ -248,7 +248,7 @@ final class install_ontology_manager {
 			// Dump only the temp table (-t dd_ontology_recovery) and pipe directly
 			// through gzip; the destination path is derived from DEDALO_ROOT_PATH
 			// (server-controlled) but quoted for safety.
-			$command	= DB_BIN_PATH . 'pg_dump -d '.escapeshellarg(DEDALO_DATABASE_CONN).' '.$config->host_line.' '.$config->port_line
+			$command	= system::get_pg_bin_path() . 'pg_dump -d '.escapeshellarg(DEDALO_DATABASE_CONN).' '.$config->host_line.' '.$config->port_line
 						  .' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' -t dd_ontology_recovery | gzip > '.escapeshellarg($sql_file);
 
 			debug_log(__METHOD__
@@ -257,7 +257,8 @@ final class install_ontology_manager {
 				, logger::WARNING
 			);
 
-			$command_res = shell_exec($command);
+			// pg_shell_exec authenticates via PGPASSWORD (no ~/.pgpass), so the DB may be remote.
+			$command_res = install_config_manager::pg_shell_exec($command);
 			debug_log(__METHOD__." Exec response (shell_exec) ".to_string($command_res), logger::DEBUG);
 
 		// delete temp table
@@ -338,7 +339,7 @@ final class install_ontology_manager {
 			// and feed directly into psql.  The database and user values are
 			// shell-quoted even though they originate from server-controlled constants.
 			$command = 'gunzip -c ' . escapeshellarg($sql_file) . ' | '
-					  . DB_BIN_PATH . 'psql -d '.escapeshellarg(DEDALO_DATABASE_CONN).' '.$config->host_line.' '.$config->port_line. ' -U '.escapeshellarg(DEDALO_USERNAME_CONN);
+					  . system::get_pg_bin_path() . 'psql -d '.escapeshellarg(DEDALO_DATABASE_CONN).' '.$config->host_line.' '.$config->port_line. ' -U '.escapeshellarg(DEDALO_USERNAME_CONN);
 
 			debug_log(__METHOD__
 				." Executing terminal DB command " . PHP_EOL
@@ -346,8 +347,8 @@ final class install_ontology_manager {
 				, logger::WARNING
 			);
 
-			// exec command
-			$command_res = shell_exec($command);
+			// exec command (PGPASSWORD auth via pg_shell_exec; DB may be remote)
+			$command_res = install_config_manager::pg_shell_exec($command);
 
 			debug_log(__METHOD__
 				." Exec response (shell_exec) " . PHP_EOL
@@ -417,12 +418,13 @@ final class install_ontology_manager {
 
 		// terminal command pg_dump
 			// SEC-041 defence-in-depth: shell-quote user, role, db name, output path.
-			$command  = DB_BIN_PATH . 'pg_dump '.$config->host_line.' '.$config->port_line.' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' -F p -b -v --no-owner --no-privileges --role='.escapeshellarg(DEDALO_USERNAME_CONN).' '.escapeshellarg($db_install_name);
+			$command  = system::get_pg_bin_path() . 'pg_dump '.$config->host_line.' '.$config->port_line.' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' -F p -b -v --no-owner --no-privileges --role='.escapeshellarg(DEDALO_USERNAME_CONN).' '.escapeshellarg($db_install_name);
 			$command .=' | gzip > '.escapeshellarg($target_file_path_compress);
 
 			debug_log(__METHOD__." Executing terminal DB command ".to_string($command), logger::WARNING);
 			if ($exec) {
-				$command_res = shell_exec($command);
+				// pg_shell_exec authenticates via PGPASSWORD (no ~/.pgpass), so the DB may be remote.
+				$command_res = install_config_manager::pg_shell_exec($command);
 				debug_log(__METHOD__." Exec response (shell_exec) ".to_string($command_res), logger::DEBUG);
 			}
 

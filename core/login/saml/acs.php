@@ -44,7 +44,7 @@
 */
 
 // config include file
-	include dirname(dirname(dirname(dirname(__FILE__)))) . '/config/config_saml.php';
+	include dirname(__FILE__, 5) . '/private/config_saml.php';
 
 /**
  * SAML assertion response.

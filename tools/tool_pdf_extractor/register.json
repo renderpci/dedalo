@@ -1,11 +1,11 @@
 {
-  "id": "3947",
+  "id": "3982",
   "section_id": "27",
   "section_tipo": "dd1340",
   "data": {
     "label": "Tools development",
     "section_id": 27,
-    "created_date": "2026-06-17 13:27:58",
+    "created_date": "2026-06-18 11:43:41",
     "section_tipo": "dd1340",
     "diffusion_info": null,
     "created_by_user_id": -1
@@ -215,13 +215,13 @@
         "id": 1,
         "lang": "lg-nolan",
         "start": {
-          "day": 17,
-          "hour": 13,
-          "time": 65132083678,
+          "day": 18,
+          "hour": 11,
+          "time": 65132163821,
           "year": 2026,
           "month": 6,
-          "minute": 27,
-          "second": 58
+          "minute": 43,
+          "second": 41
         }
       }
     ]
@@ -234,335 +234,327 @@
     "dd1372": [
       {
         "id": 1,
-        "value": {
-          "lg-nolan": [
-            [
-              {
-                "lang": "lg-spa",
-                "name": "page_in",
-                "value": "Página inicial"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "page_out",
-                "value": "Página final"
-              },
-              {
-                "lang": "lg-vlca",
-                "name": "page_out",
-                "value": "sdfsdfs"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "page_out",
-                "value": "Page out"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "page_in",
-                "value": "Page in"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "total_pages",
-                "value": "Páginas totales"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "total_pages",
-                "value": "Total pages"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "page_in",
-                "value": "Pàgina inicial"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "page_out",
-                "value": "Pàgina final"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "total_pages",
-                "value": "Pàgines totals"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "proces_method",
-                "value": "Método de procesado"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "proces_method",
-                "value": "Mètode de processament"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "proces_method",
-                "value": "Processing method"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "do_process",
-                "value": "Procesar"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "do_process",
-                "value": "Processar"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "do_process",
-                "value": "Process"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "page_in",
-                "value": "पृष्ठ मा"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "page_out",
-                "value": "पृष्ठ बाहिर"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "page_in",
-                "value": "Σελίδα μέσα"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "page_out",
-                "value": "Σελίδα έξω"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "total_pages",
-                "value": "कुल पृष्ठहरू"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "total_pages",
-                "value": "Σύνολο σελίδων"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "proces_method",
-                "value": "Μέθοδος επεξεργασίας"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "proces_method",
-                "value": "प्रशोधन विधि"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "proces_method",
-                "value": "Verarbeitungsmethode"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "do_process",
-                "value": "प्रक्रिया"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "do_process",
-                "value": "διαδικασία"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "do_process",
-                "value": "Verfahren"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "total_pages",
-                "value": "Alle Seiten"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "page_in",
-                "value": "Seite ein"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "page_out",
-                "value": "Seite raus"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "select_text",
-                "value": "Select text"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "select_text",
-                "value": "Seleccionar texto"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "select_text",
-                "value": "Seleccioneu el text"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "select_text",
-                "value": "Hautatu testua"
-              },
-              {
-                "lang": "lg-por",
-                "name": "select_text",
-                "value": "Selecionar texto"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "select_text",
-                "value": "Sélectionner le texte"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "select_text",
-                "value": "Seleziona il testo"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "select_text",
-                "value": "Επιλέξτε κείμενο"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "select_text",
-                "value": "Text auswählen"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "select_text",
-                "value": "पाठ चयन गर्नुहोस्"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "page_in",
-                "value": "Hasierako orrialdea"
-              },
-              {
-                "lang": "lg-por",
-                "name": "page_in",
-                "value": "Página inicial"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "page_in",
-                "value": "Page d'accueil"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "page_in",
-                "value": "Pagina iniziale"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "total_pages",
-                "value": "Orriak guztira"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "page_out",
-                "value": "Pagina finale"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "total_pages",
-                "value": "Pagine totali"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "total_pages",
-                "value": "Nombre total de pages"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "page_out",
-                "value": "Page finale"
-              },
-              {
-                "lang": "lg-por",
-                "name": "page_out",
-                "value": "Página final"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "page_out",
-                "value": "Azken orrialdea"
-              },
-              {
-                "lang": "lg-por",
-                "name": "total_pages",
-                "value": "Total de páginas"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "proces_method",
-                "value": "Modalità di elaborazione"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "proces_method",
-                "value": "Méthode de traitement"
-              },
-              {
-                "lang": "lg-por",
-                "name": "proces_method",
-                "value": "Método de processamento"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "proces_method",
-                "value": "Prozesatzeko metodoa"
-              },
-              {
-                "lang": "lg-por",
-                "name": "do_process",
-                "value": "Processo"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "do_process",
-                "value": "Prozesua"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "do_process",
-                "value": "Processus"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "do_process",
-                "value": "Processo"
-              }
-            ]
-          ]
-        }
+        "value": [
+          {
+            "lang": "lg-spa",
+            "name": "page_in",
+            "value": "Página inicial"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "page_out",
+            "value": "Página final"
+          },
+          {
+            "lang": "lg-vlca",
+            "name": "page_out",
+            "value": "sdfsdfs"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "page_out",
+            "value": "Page out"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "page_in",
+            "value": "Page in"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "total_pages",
+            "value": "Páginas totales"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "total_pages",
+            "value": "Total pages"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "page_in",
+            "value": "Pàgina inicial"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "page_out",
+            "value": "Pàgina final"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "total_pages",
+            "value": "Pàgines totals"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "proces_method",
+            "value": "Método de procesado"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "proces_method",
+            "value": "Mètode de processament"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "proces_method",
+            "value": "Processing method"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "do_process",
+            "value": "Procesar"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "do_process",
+            "value": "Processar"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "do_process",
+            "value": "Process"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "page_in",
+            "value": "पृष्ठ मा"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "page_out",
+            "value": "पृष्ठ बाहिर"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "page_in",
+            "value": "Σελίδα μέσα"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "page_out",
+            "value": "Σελίδα έξω"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "total_pages",
+            "value": "कुल पृष्ठहरू"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "total_pages",
+            "value": "Σύνολο σελίδων"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "proces_method",
+            "value": "Μέθοδος επεξεργασίας"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "proces_method",
+            "value": "प्रशोधन विधि"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "proces_method",
+            "value": "Verarbeitungsmethode"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "do_process",
+            "value": "प्रक्रिया"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "do_process",
+            "value": "διαδικασία"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "do_process",
+            "value": "Verfahren"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "total_pages",
+            "value": "Alle Seiten"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "page_in",
+            "value": "Seite ein"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "page_out",
+            "value": "Seite raus"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "select_text",
+            "value": "Select text"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "select_text",
+            "value": "Seleccionar texto"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "select_text",
+            "value": "Seleccioneu el text"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "select_text",
+            "value": "Hautatu testua"
+          },
+          {
+            "lang": "lg-por",
+            "name": "select_text",
+            "value": "Selecionar texto"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "select_text",
+            "value": "Sélectionner le texte"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "select_text",
+            "value": "Seleziona il testo"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "select_text",
+            "value": "Επιλέξτε κείμενο"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "select_text",
+            "value": "Text auswählen"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "select_text",
+            "value": "पाठ चयन गर्नुहोस्"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "page_in",
+            "value": "Hasierako orrialdea"
+          },
+          {
+            "lang": "lg-por",
+            "name": "page_in",
+            "value": "Página inicial"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "page_in",
+            "value": "Page d'accueil"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "page_in",
+            "value": "Pagina iniziale"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "total_pages",
+            "value": "Orriak guztira"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "page_out",
+            "value": "Pagina finale"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "total_pages",
+            "value": "Pagine totali"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "total_pages",
+            "value": "Nombre total de pages"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "page_out",
+            "value": "Page finale"
+          },
+          {
+            "lang": "lg-por",
+            "name": "page_out",
+            "value": "Página final"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "page_out",
+            "value": "Azken orrialdea"
+          },
+          {
+            "lang": "lg-por",
+            "name": "total_pages",
+            "value": "Total de páginas"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "proces_method",
+            "value": "Modalità di elaborazione"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "proces_method",
+            "value": "Méthode de traitement"
+          },
+          {
+            "lang": "lg-por",
+            "name": "proces_method",
+            "value": "Método de processamento"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "proces_method",
+            "value": "Prozesatzeko metodoa"
+          },
+          {
+            "lang": "lg-por",
+            "name": "do_process",
+            "value": "Processo"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "do_process",
+            "value": "Prozesua"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "do_process",
+            "value": "Processus"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "do_process",
+            "value": "Processo"
+          }
+        ]
       }
     ],
     "dd1633": [
       {
         "id": 1,
         "value": {
-          "lg-nolan": [
-            {
-              "html_engine": {
-                "type": "string",
-                "default": "/usr/local/bin/pdftohtml"
-              },
-              "text_engine": {
-                "type": "string",
-                "default": "/usr/local/bin/pdftotext"
-              }
-            }
-          ]
+          "html_engine": {
+            "type": "string",
+            "default": "/usr/local/bin/pdftohtml"
+          },
+          "text_engine": {
+            "type": "string",
+            "default": "/usr/local/bin/pdftotext"
+          }
         }
       }
     ]

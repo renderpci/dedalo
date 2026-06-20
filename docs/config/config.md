@@ -1,5 +1,9 @@
 # Changing parameters of global Dédalo config file
 
+> **⚠️ Dédalo v7 — the *way* you set these changed.** This page is still an accurate reference for *what each setting does and its default*, but you **no longer edit `config/config.php`** — it is now only a thin loader. In v7 you set values in **`../private/.env`** (outside the web root) using the same `DEDALO_*` constant name. See the **[Configuration Administrator Guide](administration.md)** for the complete flow, the `.env` syntax, per-host configs, secrets, fallbacks and migration. The `define('NAME', …)` snippets below show each setting's meaning and default; to change one, write `NAME=value` in `.env` (e.g. `DEDALO_TIMEZONE='Europe/Madrid'`).
+>
+> _The instructions below describe the legacy v6 file-editing workflow, kept for reference._
+
 ./dedalo/config/config.php
 
 1. Locate the file into the directory: ../httpdocs/dedalo/config/
@@ -781,7 +785,7 @@ DEDALO_BACKUP_ON_LOGIN  `bool`
 
 This parameter defines if Dédalo will do a backup when the users login. It prevents that issues doing to the data could repair quickly.
 
-If this constant is set to `true` Dédalo will check if the last backup is a copy done after the time defined by DEDALO_BACKUP_TIME_RANGE and will create new one if the time exceed this parameter. Dédalo will use the `.pgpass` file to connect to PostgreSQL and will create a `.backup` file in the backup directory.
+If this constant is set to `true` Dédalo will check if the last backup is a copy done after the time defined by DEDALO_BACKUP_TIME_RANGE and will create new one if the time exceed this parameter. Dédalo connects to PostgreSQL for the backup using the `DEDALO_PASSWORD_CONN` credentials (exported transiently as `PGPASSWORD`), so the database may be local or remote, and creates a `.backup` file in the backup directory. A `~/.pgpass` file is not required (it is still honored by libpq as a fallback when `DEDALO_PASSWORD_CONN` is empty).
 
 ```php
 define('DEDALO_BACKUP_ON_LOGIN'  , true);

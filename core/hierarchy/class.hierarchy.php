@@ -389,15 +389,96 @@ class hierarchy extends ontology {
 			$name_data = $component->get_data();
 
 		// -------- VIRTUAL SECTION --------
+		// Provision both virtual sections (descriptor <tld>1 and model <tld>2), their
+		// dd_ontology nodes, user permissions and the hierarchy1 target components inside
+		// a single DB transaction. provision_virtual_sections() throws on any fatal write
+		// failure, so DBi::transaction() rolls the whole sequence back and a partial,
+		// half-built hierarchy is never committed.
+		// (!) section::create_record() acquires a per-tipo advisory lock held only for the
+		// life of the surrounding transaction, so this wrapper is also required for its
+		// concurrency guarantees, not only for atomicity.
+			try {
+				DBi::transaction(function() use ($tld2, $typology_id, $real_section_tipo, $name_data, $section_id, $section_tipo, $response) {
+					self::provision_virtual_sections(
+						$tld2,
+						$typology_id,
+						$real_section_tipo,
+						$name_data,
+						$section_id,
+						$section_tipo,
+						$response
+					);
+				});
+			} catch (\Throwable $e) {
+				debug_log(__METHOD__
+					. " Hierarchy provisioning failed; transaction rolled back " . PHP_EOL
+					. ' tld: ' . to_string($tld2) . PHP_EOL
+					. ' error: ' . $e->getMessage()
+					, logger::ERROR
+				);
+				$response->result	= false;
+				$response->msg		= 'Error. Hierarchy provisioning failed and was rolled back';
+				$response->errors[]	= $e->getMessage();
+				return $response;
+			}
+
+		// response OK
+			$response->result = true;
+			$response->msg = count($response->errors)===0
+				? 'Request done successfully'
+				: 'Request done with errors';
+
+
+		return $response;
+	}//end generate_virtual_section
+
+
+
+	/**
+	* PROVISION_VIRTUAL_SECTIONS
+	* Write phase of generate_virtual_section(), extracted so the whole sequence can run
+	* inside a single DBi::transaction(). Creates the descriptor (<tld>1) and model
+	* (<tld>2) virtual sections, their dd_ontology nodes, grants the current user access,
+	* and writes the target-section components back to the hierarchy1 record.
+	*
+	* (!) Every checkable write throws RuntimeException on failure so the enclosing
+	* transaction rolls back, guaranteeing no half-built hierarchy is committed.
+	* Permission-grant failure is treated as non-fatal (logged and appended to
+	* $response->errors) to preserve the historical behaviour of generate_virtual_section().
+	*
+	* @param string $tld2 - Lowercase hierarchy TLD, e.g. 'es'.
+	* @param int $typology_id - Hierarchy typology id (Thematic, Toponymy, …).
+	* @param string $real_section_tipo - Source real section the virtual sections inherit from.
+	* @param array $name_data - 'Name' component data applied to the new sections.
+	* @param string|int $section_id - hierarchy1 record id (target components are written here).
+	* @param string $section_tipo - Expected 'hierarchy1'.
+	* @param object $response - Shared response object; non-fatal errors are appended to ->errors.
+	* @return void
+	* @throws \RuntimeException on any fatal write failure (triggers transaction rollback).
+	*/
+	private static function provision_virtual_sections(
+		string $tld2,
+		int $typology_id,
+		string $real_section_tipo,
+		array $name_data,
+		string|int $section_id,
+		string $section_tipo,
+		object $response
+	) : void {
 
 		// ontology main. Create a new ontology main section if not already exists
 			$file_item = new stdClass();
 				$file_item->tld			= $tld2;
 				$file_item->typology_id	= $typology_id;
 				$file_item->name_data	= $name_data;
-			ontology::add_main_section( $file_item );
+			$main_section_id = ontology::add_main_section( $file_item );
+			if ($main_section_id===null) {
+				throw new \RuntimeException('add_main_section failed for tld: '.$tld2);
+			}
 		// create dd_ontology node for the main section
-			ontology::create_dd_ontology_ontology_section_node( $file_item );
+			if (ontology::create_dd_ontology_ontology_section_node( $file_item )===false) {
+				throw new \RuntimeException('create_dd_ontology_ontology_section_node failed for tld: '.$tld2);
+			}
 
 		// ontology nodes
 		// Create two different nodes:
@@ -410,9 +491,11 @@ class hierarchy extends ontology {
 
 			// create the new section record in database
 			$section = section::get_instance( $tld2.'0' );
-			$section->create_record( (object)[
+			if ($section->create_record( (object)[
 				'section_id' => 1
-			]);
+			] )===false) {
+				throw new \RuntimeException('create_record (descriptor section_id 1) failed for: '.$tld2.'0');
+			}
 
 			// get the new section record
 			$section_record = section_record::get_instance(
@@ -530,13 +613,18 @@ class hierarchy extends ontology {
 				$section_record->set_component_data($tipo, $column, $name_data);
 
 			// save
-				$section_record->save();
+				if ($section_record->save()===false) {
+					throw new \RuntimeException('section_record->save() failed for descriptor: '.$tld2.'0/1');
+				}
 
 			// parent grouper
 			// Place the descriptor section node under the 'hierarchytype' grouper
 			// (hierarchy56) that corresponds to this hierarchy's typology id.
 			// create_parent_grouper() creates the grouper node if absent and returns its tipo.
 				$parent_grouper_tipo = ontology::create_parent_grouper('hierarchy56', 'hierarchytype', $typology_id);
+				if ($parent_grouper_tipo===false) {
+					throw new \RuntimeException('create_parent_grouper (descriptor) failed for typology_id: '.$typology_id);
+				}
 
 				$parent_tld			= get_tld_from_tipo( $parent_grouper_tipo );
 				$parent_section_id	= get_section_id_from_tipo( $parent_grouper_tipo );
@@ -558,10 +646,14 @@ class hierarchy extends ontology {
 					$parent_locator->set_section_id( $parent_section_id );
 
 				$component_parent->set_data( [$parent_locator] );
-				$component_parent->save();
+				if ($component_parent->save()===false) {
+					throw new \RuntimeException('parent component save failed for descriptor: '.$tld2.'0');
+				}
 
 			// insert the node in dd_ontology
-				ontology::insert_dd_ontology_record($tld2.'0', 1);
+				if (ontology::insert_dd_ontology_record($tld2.'0', 1)===null) {
+					throw new \RuntimeException('insert_dd_ontology_record failed for descriptor: '.$tld2.'0/1');
+				}
 
 			// Virtual model section
 			// section_id 2 in <tld>0 → the <tld>2 model/typology virtual section.
@@ -570,9 +662,11 @@ class hierarchy extends ontology {
 			// except for that single flag.
 				// create the new section record in database
 				$section = section::get_instance( $tld2.'0' );
-				$section->create_record( (object)[
+				if ($section->create_record( (object)[
 					'section_id' => 2
-				]);
+				] )===false) {
+					throw new \RuntimeException('create_record (model section_id 2) failed for: '.$tld2.'0');
+				}
 
 				// get the new section record
 				$model_section_record = section_record::get_instance(
@@ -601,7 +695,9 @@ class hierarchy extends ontology {
 				$model_section_record->set_component_data($tipo, $column, [$component_data]);
 
 				// save
-				$model_section_record->save();
+				if ($model_section_record->save()===false) {
+					throw new \RuntimeException('model_section_record->save() failed for model: '.$tld2.'0/2');
+				}
 
 				// parent
 				// Place the model section node under the 'hierarchymtype' grouper
@@ -611,6 +707,9 @@ class hierarchy extends ontology {
 				// for the model-section parent link; do not change without verifying the
 				// ontology tree integrity.
 					$parent_model_grouper_tipo = ontology::create_parent_grouper('hierarchy57', 'hierarchymtype', $typology_id);
+					if ($parent_model_grouper_tipo===false) {
+						throw new \RuntimeException('create_parent_grouper (model) failed for typology_id: '.$typology_id);
+					}
 
 					$parent_model_tld	= get_tld_from_tipo( $parent_model_grouper_tipo );
 					$parent_section_id	= get_section_id_from_tipo( $parent_model_grouper_tipo );
@@ -632,13 +731,19 @@ class hierarchy extends ontology {
 						$parent_model_locator->set_section_id( $parent_section_id );
 
 					$component_model_parent->set_data( [$parent_model_locator] );
-					$component_model_parent->save();
+					if ($component_model_parent->save()===false) {
+						throw new \RuntimeException('parent component save failed for model: '.$tld2.'0');
+					}
 
 				// insert the model node in dd_ontology
-					ontology::insert_dd_ontology_record($tld2.'0', 2);
+					if (ontology::insert_dd_ontology_record($tld2.'0', 2)===null) {
+						throw new \RuntimeException('insert_dd_ontology_record failed for model: '.$tld2.'0/2');
+					}
 
 			// set permissions. Allow current user access to created default sections
 			// as es1, es2
+			// (!) Non-fatal: a failed grant does not roll back the provisioning; the
+			// sections are valid and an admin can re-grant. The error is surfaced instead.
 				$ar_section_tipo	= [$tld2.'1', $tld2.'2'];
 				$user_id			= logged_user_id();
 
@@ -672,9 +777,11 @@ class hierarchy extends ontology {
 					$target_section_data->lang = DEDALO_DATA_NOLAN;
 					$target_section_data->value = $tld2.'1';
 				$component_target_section->set_data( [$target_section_data] );
-				$component_target_section->save();
+				if ($component_target_section->save()===false) {
+					throw new \RuntimeException('target section component save failed (hierarchy53) for: '.$tld2.'1');
+				}
 
-				$target_model_tipo				= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;	//'hierarchy53';
+				$target_model_tipo				= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;	//'hierarchy58';
 				$model_name						= ontology_node::get_model_by_tipo($target_model_tipo, true);
 				$component_target_model_section	= component_common::get_instance(
 					$model_name,
@@ -688,17 +795,10 @@ class hierarchy extends ontology {
 					$target_model_section_data->lang = DEDALO_DATA_NOLAN;
 					$target_model_section_data->value = $tld2.'2';
 				$component_target_model_section->set_data( [$target_model_section_data] );
-				$component_target_model_section->save();
-
-		// response OK
-			$response->result = true;
-			$response->msg = count($response->errors)===0
-				? 'Request done successfully'
-				: 'Request done with errors';
-
-
-		return $response;
-	}//end generate_virtual_section
+				if ($component_target_model_section->save()===false) {
+					throw new \RuntimeException('target model section component save failed (hierarchy58) for: '.$tld2.'2');
+				}
+	}//end provision_virtual_sections
 
 
 
@@ -1105,9 +1205,15 @@ class hierarchy extends ontology {
 	* Dumps one or more thesaurus matrix tables to gzip-compressed psql COPY files
 	* on the filesystem at EXPORT_HIERARCHY_PATH.
 	*
-	* The export is performed via a shell call to `psql … \copy … TO <file> ; gzip`.
-	* After all files are written the method scans EXPORT_HIERARCHY_PATH for .gz files
-	* and includes download links in the response message.
+	* Each export runs as a single atomic psql command:
+	*   psql … -c "\copy (SELECT … FROM <table> WHERE …) TO PROGRAM 'gzip -c > <file> && sync'"
+	* so the compressed file is written in one pass (no intermediate uncompressed
+	* .copy file, no reliance on the shell `cd`). `\copy` (backslash) is psql's
+	* CLIENT-side meta-command — NOT the SQL `COPY` command — so gzip runs on the
+	* PHP/web host and the file lands on the local filesystem even for a REMOTE DB.
+	* After each command the resulting
+	* file is verified to exist; only files actually produced in this run are listed
+	* as download links and counted towards success.
 	*
 	* $section_tipo accepts three forms:
 	*   '*'         — export all currently active hierarchies (one file per section_tipo)
@@ -1120,19 +1226,25 @@ class hierarchy extends ontology {
 	*   anything else → 'matrix_hierarchy'
 	*
 	* Requires:
-	*   - EXPORT_HIERARCHY_PATH constant defined (absolute filesystem path).
+	*   - EXPORT_HIERARCHY_PATH constant defined and pointing to a writable directory.
 	*   - DB_BIN_PATH and DEDALO_DATABASE_CONN constants for the psql invocation.
-	*   - The web server user must have write access to EXPORT_HIERARCHY_PATH.
 	*
-	* (!) This method calls shell_exec() directly. EXPORT_HIERARCHY_PATH must
-	* point to a directory the web server process can write to. All section tipo
-	* values are passed through safe_tipo() before shell interpolation.
+	* (!) This method calls shell_exec() directly. All section tipo values are passed
+	* through safe_tipo() (regex ^[a-z]{2,}[0-9]+$) before shell interpolation, and the
+	* output path is built from the trusted EXPORT_HIERARCHY_PATH constant, so no
+	* user-controlled value reaches the shell unvalidated.
+	*
+	* The response is data-oriented (no HTML); the client is responsible for
+	* presentation and for escaping any field it renders into the DOM.
 	*
 	* @param string $section_tipo - Export scope: '*', 'all', or comma-separated tipo list.
 	* @return object $response
-	*   - result  bool    true when export commands complete without PHP-level errors.
-	*   - msg     string  Human-readable summary including download links for .gz files.
-	*   - errors  array   Per-section error strings for skipped or invalid tipos.
+	*   - result      bool    true when at least one export file was produced.
+	*   - msg         string  Plain-text one-line summary (e.g. 'OK. 3 hierarchy file(s) exported').
+	*   - errors      array   Per-section error strings for skipped, invalid or failed tipos.
+	*   - files       array   One stdClass per produced file, each with:
+	*                           { section_tipo, table, file_name, bytes, url }.
+	*   - import_hint string  Plain-text psql command template to re-import a .copy.gz file.
 	*/
 	public static function export_hierarchy( string $section_tipo ) : object {
 
@@ -1141,9 +1253,14 @@ class hierarchy extends ontology {
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 			$response->errors	= [];
 
-		// EXPORT_HIERARCHY_PATH check
+		// EXPORT_HIERARCHY_PATH check. Must be defined and writable before shelling out.
 			if (!defined('EXPORT_HIERARCHY_PATH')) {
 				$response->errors[] = 'var EXPORT_HIERARCHY_PATH is not defined';
+				return $response;
+			}
+			$export_path = rtrim(EXPORT_HIERARCHY_PATH, '/');
+			if (!is_dir($export_path) || !is_writable($export_path)) {
+				$response->errors[] = 'EXPORT_HIERARCHY_PATH is not a writable directory: '.$export_path;
 				return $response;
 			}
 
@@ -1162,96 +1279,107 @@ class hierarchy extends ontology {
 
 			}else{
 
-				$ar_section_tipo = explode(',', $section_tipo);
-				foreach ($ar_section_tipo as $key => $current_section_tipo) {
-					$ar_section_tipo[$key] = trim($current_section_tipo);
-				}
+				$ar_section_tipo = array_map('trim', explode(',', $section_tipo));
 			}
 
-		$msg = [];
-		foreach ($ar_section_tipo as $key => $current_section_tipo) {
+		// columns. Like 'section_id,section_tipo,data,relation,...'
+		// (!) matrix_db_manager::$columns is an associative allowlist map
+		// ('section_id' => true, ...); implode() on it would yield '1,1,1,...'.
+		// Use get_columns_name() to obtain the real column names (array_keys).
+		// Computed once: it is identical for every section in this run.
+			$columns = implode(',', matrix_db_manager::get_columns_name());
 
-			// safe tipo. Must be as 'es1', not only the tld
-			$safe_tipo = safe_tipo($current_section_tipo);
-			if ($safe_tipo===false) {
-				debug_log(__METHOD__
-					. " Ignored invalid section tipo " . PHP_EOL
-					. ' section_tipo: ' . to_string($current_section_tipo)
-					, logger::ERROR
-				);
-				$response->errors[]	= 'Ignored invalid section tipo: ' . $current_section_tipo. ' . Use format like "es1"';
-				continue;
-			}
+		// command base (binary + dbname + host/port/user). Built once and reused.
+			$command_base = system::get_pg_bin_path().'psql '.escapeshellarg(DEDALO_DATABASE_CONN).' '.DBi::get_connection_string();
 
-			$matrix_table = $safe_tipo==='lg1' || $safe_tipo==='lg2'
-				? 'matrix_langs'
-				: 'matrix_hierarchy';
+		$files			= [];				// structured records of files actually written in this run
+		$matrix_table	= 'matrix_hierarchy';	// default for the import hint (overwritten per section)
+		foreach ($ar_section_tipo as $current_section_tipo) {
 
-			$columns = implode(',', matrix_db_manager::$columns);
-
-			$command  = '';
-			$command .= 'cd "'.EXPORT_HIERARCHY_PATH.'" ; ';
-			$command  .= DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
-			$command .= ' -c "\copy (SELECT '. $columns .'  FROM '.$matrix_table.' WHERE ';
+			// Resolve target table, WHERE/ORDER clause and output file name per scope.
 			if ($current_section_tipo==='all') {
 
-				$command .= 'section_tipo IS NOT NULL ORDER BY section_tipo, section_id ASC) ';
-				$date 	  = date('Y-m-d_His');
-				$command .= 'TO '.$current_section_tipo.'_'.$date.'.copy " ; ';
-				$command .= 'gzip -f '.$current_section_tipo.'_'.$date.'.copy';
+				// export every row regardless of section_tipo into one timestamped file
+				$matrix_table	= 'matrix_hierarchy';
+				$where			= 'section_tipo IS NOT NULL';
+				$order			= 'section_tipo, section_id ASC';
+				$file_name		= 'all_'.date('Y-m-d_His').'.copy.gz';
 
 			}else{
-				$command .= 'section_tipo = \''.$safe_tipo.'\' ORDER BY section_id ASC) ';
-				$command .= 'TO '.$safe_tipo.'.copy " ; ';
-				$command .= 'gzip -f '.$safe_tipo.'.copy';
-			}
-			debug_log(__METHOD__
-				.' Exec command (export_hierarchy) '.PHP_EOL
-				.to_string($command)
-				, logger::WARNING
-			);
 
-			$command_res = shell_exec($command);
-			debug_log(__METHOD__
-				.' Exec response (shell_exec) ' . PHP_EOL
-				.to_string($command_res)
-				, logger::DEBUG
-			);
-
-			$msg[] = trim('section_tipo: '.$current_section_tipo.' = '.to_string($command_res));
-		}//end foreach ($ar_section_tipo as $key => $current_section_tipo)
-
-		// response OK
-		// (!) $command_res holds the last value set inside the foreach loop. If the loop
-		// ran zero iterations (empty $ar_section_tipo), $command_res is undefined here.
-		// The undefined-variable warning is a pre-existing condition; do not change code.
-			$response->result	= true;
-			$response->msg	= 'OK. All data is exported successfully'; // Override first message
-			$response->msg	.= "<br>".implode('<br>', $msg);
-			$response->msg	.= '<br>' . 'command_res: ' .$command_res;
-			$response->msg	.= '<br>' . 'To import, use a command like this: ';
-			$response->msg	.= '<br>' . 'SECTION_TIPO=\'us1\' ; gunzip ${SECTION_TIPO}.copy.gz | psql dedalo_myentity -U mydbuser -h localhost -c "\copy matrix_hierarchy('. $columns .') from ${SECTION_TIPO}.copy"';
-
-		// files links
-			$dir_path	= EXPORT_HIERARCHY_PATH; // like '../httpdocs/dedalo/install/import/hierarchy'
-			$files		= glob( $dir_path . '/*' ); // get all file names
-			$ar_link	= [];
-			foreach($files as $file){ // iterate files
-				if(is_file($file)) {
-					$extension = pathinfo($file,PATHINFO_EXTENSION);
-					if ($extension==='gz') {
-						$file_name = pathinfo($file,PATHINFO_BASENAME);
-						$url	= DEDALO_ROOT_WEB . '/install/import/hierarchy/' . $file_name;
-						// SEC-033: rel=noopener and htmlspecialchars on URL/label.
-						$safe_url = htmlspecialchars($url, ENT_QUOTES, 'UTF-8');
-						$a		= '<a href="'.$safe_url.'" target="_blank" rel="noopener noreferrer">'.$safe_url.'</a>';
-						$ar_link[] = $a;
-					}
+				// safe tipo. Must be as 'es1', not only the tld
+				$safe_tipo = safe_tipo($current_section_tipo);
+				if ($safe_tipo===false) {
+					debug_log(__METHOD__
+						. " Ignored invalid section tipo " . PHP_EOL
+						. ' section_tipo: ' . to_string($current_section_tipo)
+						, logger::ERROR
+					);
+					$response->errors[]	= 'Ignored invalid section tipo: ' . $current_section_tipo. ' . Use format like "es1"';
+					continue;
 				}
+
+				$matrix_table	= ($safe_tipo==='lg1' || $safe_tipo==='lg2')
+					? 'matrix_langs'
+					: 'matrix_hierarchy';
+				$where			= "section_tipo = '".$safe_tipo."'";
+				$order			= 'section_id ASC';
+				$file_name		= $safe_tipo.'.copy.gz';
 			}
-			if (!empty($ar_link)) {
-				$response->msg	.= '<br>Available files for download: ' . '<br>' . implode('<br>', $ar_link);
+
+			$file_path = $export_path.'/'.$file_name;
+
+			// Atomic export: stream the COPY result straight through gzip to the final
+			// .copy.gz file. && sync flushes it to disk before psql returns.
+			$command = $command_base
+				.' -c "\copy (SELECT '.$columns.' FROM '.$matrix_table
+				.' WHERE '.$where.' ORDER BY '.$order.')'
+				." TO PROGRAM 'gzip -c > ".$file_path." && sync';\"";
+
+			if (SHOW_DEBUG===true) {
+				debug_log(__METHOD__
+					.' Exec command (export_hierarchy) '.PHP_EOL
+					.to_string($command)
+					, logger::WARNING
+				);
 			}
+
+			$command_res = DBi::pg_shell_exec($command);
+
+			// Verify the file was actually produced; shell_exec gives no usable status.
+			if (is_file($file_path)) {
+				// structured success record (consumed as data by the client; no HTML).
+				$file = new stdClass();
+					$file->section_tipo	= $current_section_tipo;
+					$file->table		= $matrix_table;
+					$file->file_name	= $file_name;
+					$file->bytes		= filesize($file_path) ?: null;
+					$file->url			= DEDALO_ROOT_WEB . '/install/import/hierarchy/' . $file_name;
+				$files[] = $file;
+			}else{
+				debug_log(__METHOD__
+					.' Export failed (file not created) '.PHP_EOL
+					.' file: '.to_string($file_path).PHP_EOL
+					.' command_res: '.to_string($command_res)
+					, logger::ERROR
+				);
+				$response->errors[]	= 'Export failed for section_tipo: '.$current_section_tipo
+					.($command_res ? ' ('.trim($command_res).')' : '');
+			}
+		}//end foreach ($ar_section_tipo as $current_section_tipo)
+
+		// response (data-oriented; the client renders these fields, no HTML in msg).
+		// result: true when at least one file was produced. Skipped/failed sections
+		// are reported through $response->errors; produced files through $response->files.
+			$response->result	= !empty($files);
+			$response->msg		= $response->result
+				? 'OK. '.count($files).' hierarchy file(s) exported'
+				: 'Error. No hierarchy files were exported';
+			$response->files	= $files;
+			// import_hint: plain-text command template the operator can copy-paste.
+			$response->import_hint = 'SECTION_TIPO=\'us1\' ; gunzip -c ${SECTION_TIPO}.copy.gz'
+				.' | psql dedalo_myentity -U mydbuser -h localhost'
+				.' -c "\copy '.$matrix_table.'('.$columns.') from STDIN"';
 
 
 		return $response;
@@ -1581,11 +1709,12 @@ class hierarchy extends ontology {
 	*/
 	public static function get_typology_locator_from_tld( string $tld ) : ?object {
 
+		// get_hierarchy_by_tld() returns ?object; guard against null before deref.
 		$hierarchy_row	= hierarchy::get_hierarchy_by_tld( $tld );
-		$section_id		= $hierarchy_row->section_id;
-		if( empty($section_id) ){
+		if( empty($hierarchy_row) || empty($hierarchy_row->section_id) ){
 			return null;
 		}
+		$section_id		= $hierarchy_row->section_id;
 
 		$model = ontology_node::get_model_by_tipo( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
 		$typology_component = component_common::get_instance(
@@ -1637,7 +1766,8 @@ class hierarchy extends ontology {
 			$search	= search::get_instance($sqo);
 			$db_result = $search->search();
 
-		$ar_records = $db_result->fetch_all();
+		// search() returns db_result|false; avoid a fatal method call on false.
+		$ar_records = $db_result ? $db_result->fetch_all() : [];
 
 		if (empty($ar_records)) {
 			debug_log(__METHOD__
@@ -1724,9 +1854,12 @@ class hierarchy extends ontology {
 		$db_result = $search->search();
 
 		// active_elements
+		// search() returns db_result|false; skip iteration on a failed search.
 		$active_elements = [];
-		foreach ($db_result as $row) {
-			$active_elements[] = ontology::row_to_element($row);
+		if ($db_result!==false) {
+			foreach ($db_result as $row) {
+				$active_elements[] = ontology::row_to_element($row);
+			}
 		}
 
 		// cache

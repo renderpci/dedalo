@@ -103,7 +103,7 @@
 // Bootstrap the Dédalo environment: autoloader, DB connection, constants, and
 // all core classes including login. Must run AFTER session_id() so that the
 // session opened by config.php uses the ID injected above.
-	include dirname(__FILE__, 3).'/config/config.php';
+	include dirname(__FILE__, 3).'/config/bootstrap.php';
 
 // unlock session. Only use for read
 // Close the session file for writing immediately after config bootstraps it.

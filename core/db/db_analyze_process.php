@@ -104,7 +104,7 @@
 // This single include bootstraps the entire Dédalo stack: autoloader, constants,
 // database connection pool, logger, and all core classes including db_tasks and
 // dd_cache which are used below.
-	include dirname(__FILE__, 3) . '/config/config.php';
+	include dirname(__FILE__, 3) . '/config/bootstrap.php';
 
 // execute ANALYZE
 	try {

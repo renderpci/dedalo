@@ -306,20 +306,27 @@ class area extends area_common {
 	*/
 	public static function get_config_areas() : object {
 
-		// non existing config_areas.php file case
-			if( !include DEDALO_CONFIG_PATH . '/config_areas.php' ) {
+		// Defaults: no allow/deny restrictions. Initialized up front so the
+		// returned object is always well-formed even when config_areas.php is
+		// absent or only defines one of the two variables.
+			$areas_deny		= [];
+			$areas_allow	= [];
 
+		// config_areas.php now lives outside the web-served tree, in ../private/.
+		// On a fresh install this file may legitimately not exist yet, so its
+		// absence is an expected state, NOT an error. Check existence before
+		// include: an include() on a missing file emits an E_WARNING that
+		// Error::captureError() promotes into $_ENV['DEDALO_LAST_ERROR'] (a
+		// phantom server error that can break the installer). The included file
+		// defines $areas_deny and/or $areas_allow.
+			$config_areas_path = dirname(DEDALO_CONFIG_PATH, 2) . '/private/config_areas.php';
+			if( is_file($config_areas_path) && is_readable($config_areas_path) ) {
+				include $config_areas_path;
+			} else {
 				debug_log(__METHOD__
-					." ERROR ON LOAD FILE config_areas . Using empty values as default "
-					, logger::ERROR
+					." config_areas.php not found at '$config_areas_path' - using empty allow/deny defaults"
+					, logger::WARNING
 				);
-
-				if(SHOW_DEBUG===true) {
-					throw new Exception("Error Processing Request. config_areas file not found", 1);
-				}
-
-				$areas_deny		= [];
-				$areas_allow	= [];
 			}
 
 		// config_areas object

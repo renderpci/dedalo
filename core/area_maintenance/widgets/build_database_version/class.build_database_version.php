@@ -41,7 +41,8 @@ class build_database_version {
 	 * therefore not listed here.
 	 */
 	public const API_ACTIONS = [
-		'build_install_version'
+		'build_install_version',
+		'build_matrix_hierarchy_main_sql'
 	];
 
 	/**
@@ -125,6 +126,24 @@ class build_database_version {
 
 		return $response;
 	}//end build_install_version
+
+
+
+	/**
+	 * BUILD_MATRIX_HIERARCHY_MAIN_SQL
+	 * Alias of install::build_matrix_hierarchy_main_sql. Regenerates the seed file
+	 * 'install/import/matrix_hierarchy_main.sql' from the current database, filtered by the
+	 * to_install TLD allow-list (core/install/hierarchies_to_install.json) and with every hierarchy inactive.
+	 * @return object $response
+	 */
+	public static function build_matrix_hierarchy_main_sql(): object {
+
+		// build
+		$response = install::build_matrix_hierarchy_main_sql();
+
+
+		return $response;
+	}//end build_matrix_hierarchy_main_sql
 
 
 

@@ -1,11 +1,11 @@
 {
-  "id": "3923",
+  "id": "3958",
   "section_id": "3",
   "section_tipo": "dd1340",
   "data": {
     "label": "Tools development",
     "section_id": 3,
-    "created_date": "2026-06-17 13:27:56",
+    "created_date": "2026-06-18 11:43:39",
     "section_tipo": "dd1340",
     "diffusion_info": null,
     "created_by_user_id": -1
@@ -264,13 +264,13 @@
         "id": 1,
         "lang": "lg-nolan",
         "start": {
-          "day": 17,
-          "hour": 13,
-          "time": 65132083676,
+          "day": 18,
+          "hour": 11,
+          "time": 65132163819,
           "year": 2026,
           "month": 6,
-          "minute": 27,
-          "second": 56
+          "minute": 43,
+          "second": 39
         }
       }
     ]
@@ -284,28 +284,20 @@
       {
         "id": 1,
         "value": {
-          "lg-nolan": [
-            {
-              "open_as": "window",
-              "windowFeatures": {
-                "top": 0,
-                "left": "return screen.width -760",
-                "width": 760,
-                "height": 708
-              }
-            }
-          ]
+          "open_as": "window",
+          "windowFeatures": {
+            "top": 0,
+            "left": "return screen.width -760",
+            "width": 760,
+            "height": 708
+          }
         }
       }
     ],
     "dd1372": [
       {
         "id": 1,
-        "value": {
-          "lg-nolan": [
-            {}
-          ]
-        }
+        "value": {}
       }
     ]
   },

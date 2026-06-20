@@ -103,6 +103,76 @@ const create_status_msg = function(parent) {
 
 
 /**
+* CREATE_FIELD
+* Creates a labelled form field (label + input + optional help text) inside a wrapper, and
+* keeps the shared config object (`cfg`) in sync with the input value on every keystroke.
+* Used by the modernized "collect configuration" wizard steps so the administrator never edits
+* a config file by hand.
+* @param object options { parent, cfg, name, label, type, value, placeholder, help, nullable, on_change }
+* @return HTMLElement input
+*/
+const create_field = function(options) {
+
+	const parent		= options.parent
+	const cfg			= options.cfg
+	const name			= options.name
+	const label			= options.label || name
+	const type			= options.type || 'text'
+	const value			= options.value ?? ''
+	const placeholder	= options.placeholder || ''
+	const help			= options.help || ''
+	const nullable		= options.nullable === true
+	const on_change		= options.on_change
+
+	const field = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'install_field',
+		parent			: parent
+	})
+
+	ui.create_dom_element({
+		element_type	: 'label',
+		class_name		: 'install_field_label',
+		inner_html		: label,
+		parent			: field
+	})
+
+	const input = ui.create_dom_element({
+		element_type	: 'input',
+		type			: type,
+		class_name		: 'install_field_input',
+		value			: value,
+		placeholder		: placeholder,
+		parent			: field
+	})
+	if (type === 'password') {
+		input.autocomplete = 'new-password'
+	}
+
+	// seed the shared config with the initial value (so defaults are submitted even untouched)
+	cfg[name] = (nullable && value === '') ? null : value
+
+	input.addEventListener('input', function() {
+		cfg[name] = (nullable && input.value === '') ? null : input.value
+		if (typeof on_change === 'function') {
+			on_change()
+		}
+	})
+
+	if (help !== '') {
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'install_field_help',
+			inner_html		: help,
+			parent			: field
+		})
+	}
+
+	return input
+}//end create_field
+
+
+/**
 * ADD_SPINNER
 * Appends a spinner element to the given parent.
 * @param HTMLElement parent
@@ -336,6 +406,15 @@ const get_content_data = function(self) {
 
 	const properties = self.context?.properties || {}
 
+	// needs_config: true on a FRESH install (placeholder/unreachable config) → render the
+	// modernized collect+validate+persist wizard; false on an already-configured-but-not-installed
+	// system → keep the legacy config-check + install/update/reset options.
+	const needs_config = properties.needs_config === true
+
+	// shared form-values object accumulated across the collect steps and submitted at persist time
+	self._cfg = self._cfg || {}
+	self._needs_config = needs_config // used by the password/login reveal step numbers
+
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type	: 'div',
@@ -385,15 +464,29 @@ const get_content_data = function(self) {
 			parent			: content_data
 		})
 		content_data.step_indicator = step_indicator
-		const step_labels = [
-			get_label.init_text || 'Diagnostics',
-			get_label.installation_config_test || 'Configuration',
-			get_label.install_db_label || 'Install Dédalo DDBB',
-			get_label.set_root_pw_label || 'Set root password',
-			get_label.login_label || 'Login',
-			get_label.import_hierarchies_label || 'Install hierarchies',
-			get_label.install_done || 'Done!'
-		]
+		const step_labels = needs_config
+			? [
+				get_label.init_text || 'Diagnostics',
+				get_label.db_name || 'Database',
+				get_label.entity_name || 'Entity',
+				get_label.enable_diffusion || 'Diffusion',
+				get_label.save_configuration || 'Save config',
+				get_label.check_directories || 'Directories',
+				get_label.install_db_label || 'Install Dédalo DDBB',
+				get_label.set_root_pw_label || 'Set root password',
+				get_label.login_label || 'Login',
+				get_label.import_hierarchies_label || 'Install hierarchies',
+				get_label.install_done || 'Done!'
+			]
+			: [
+				get_label.init_text || 'Diagnostics',
+				get_label.installation_config_test || 'Configuration',
+				get_label.install_db_label || 'Install Dédalo DDBB',
+				get_label.set_root_pw_label || 'Set root password',
+				get_label.login_label || 'Login',
+				get_label.import_hierarchies_label || 'Install hierarchies',
+				get_label.install_done || 'Done!'
+			]
 		for (let i = 0; i < step_labels.length; i++) {
 			if (i > 0) {
 				ui.create_dom_element({
@@ -435,24 +528,86 @@ const get_content_data = function(self) {
 			render_init_test_block(self)
 		)
 
-	// ── CONFIG BLOCK ──
-		const config = create_section_block({
-			label			: get_label.installation_config_test || 'Configuration',
-			class_name		: 'config_block',
-			hidden			: true,
-			parent			: content_data,
-			content_data	: content_data
-		})
-		config.content_div.appendChild(render_config_block(self))
-		content_data.config_block.config_block_status = config.content_div
+	// ── CONFIG AREA ──
+	if (needs_config) {
 
-		const config_block_options = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content',
-			parent			: content_data.config_block
-		})
-		config_block_options.appendChild(render_config_options(self))
-		content_data.config_block.config_block_options = config_block_options
+		// modernized flow: collect → validate → persist (no manual config-file editing)
+		// DB CONFIG
+			const db_config = create_section_block({
+				label			: get_label.installation_db_config || 'Database (PostgreSQL)',
+				class_name		: 'db_config_block',
+				hidden			: true,
+				parent			: content_data,
+				content_data	: content_data
+			})
+			db_config.content_div.appendChild(render_db_config_block(self))
+
+		// ENTITY
+			const entity = create_section_block({
+				label			: get_label.installation_entity || 'Entity & install info',
+				class_name		: 'entity_block',
+				hidden			: true,
+				parent			: content_data,
+				content_data	: content_data
+			})
+			entity.content_div.appendChild(render_entity_block(self))
+
+		// DIFFUSION (optional)
+			const diffusion = create_section_block({
+				label			: get_label.installation_diffusion || 'Diffusion database (optional)',
+				class_name		: 'diffusion_block',
+				hidden			: true,
+				parent			: content_data,
+				content_data	: content_data
+			})
+			diffusion.content_div.appendChild(render_diffusion_block(self))
+
+		// PERSIST + VERIFY
+			const persist = create_section_block({
+				label			: get_label.installation_persist || 'Save configuration',
+				class_name		: 'persist_block',
+				hidden			: true,
+				parent			: content_data,
+				content_data	: content_data
+			})
+			persist.content_div.appendChild(render_persist_block(self))
+
+		// DIRECTORIES
+			const directories = create_section_block({
+				label			: get_label.installation_directories || 'Directories & permissions',
+				class_name		: 'directories_block',
+				hidden			: true,
+				parent			: content_data,
+				content_data	: content_data
+			})
+			directories.content_div.appendChild(render_directories_block(self))
+
+		// the init-test viewport hook reveals this first
+			content_data._first_config = 'db_config_block'
+
+	} else {
+
+		// legacy flow: validate the already-present config + offer install/update/reset
+			const config = create_section_block({
+				label			: get_label.installation_config_test || 'Configuration',
+				class_name		: 'config_block',
+				hidden			: true,
+				parent			: content_data,
+				content_data	: content_data
+			})
+			config.content_div.appendChild(render_config_block(self))
+			content_data.config_block.config_block_status = config.content_div
+
+			const config_block_options = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'content',
+				parent			: content_data.config_block
+			})
+			config_block_options.appendChild(render_config_options(self))
+			content_data.config_block.config_block_options = config_block_options
+
+			content_data._first_config = 'config_block'
+	}
 
 	// ── INSTALL DB BLOCK ──
 		const install_db = create_section_block({
@@ -475,6 +630,9 @@ const get_content_data = function(self) {
 		set_pw.content_div.appendChild(render_set_root_password_block(self))
 
 	// ── LOGIN BLOCK ──
+	// The root user logs in HERE, inside the installer, without navigating away (the login
+	// component's custom_action_dispatch intercepts success). This authenticates the session so
+	// the MANDATORY hierarchy import below can run with real credentials (no superuser shortcut).
 		const login = create_section_block({
 			label			: get_label.login_label || 'Login',
 			class_name		: 'login_block',
@@ -488,6 +646,9 @@ const get_content_data = function(self) {
 	})
 
 	// ── HIERARCHIES IMPORT BLOCK ──
+	// Importing hierarchies/ontologies is a MANDATORY install step (only WHICH hierarchies is
+	// optional). It runs AFTER login so section::create_record has an authenticated user, and a
+	// successful import reveals the Finish step.
 		const hierarchies = create_section_block({
 			label			: get_label.import_hierarchies_label || 'Install hierarchies',
 			class_name		: 'hierarchies_import_block',
@@ -499,9 +660,10 @@ const get_content_data = function(self) {
 			hierarchies				: properties.hierarchies,
 			default_checked			: properties.install_checked_default,
 			hierarchy_typologies	: properties.hierarchy_typologies,
+			// On a successful import, reveal the final Finish step.
 			callback		: function() {
 				self.node.content_data.install_finish_block.classList.remove('hide')
-				update_step_indicator(self.node.content_data.step_indicator, 7)
+				update_step_indicator(self.node.content_data.step_indicator, needs_config ? 11 : 7)
 			}
 		}
 		hierarchies.content_div.appendChild(
@@ -854,11 +1016,23 @@ const render_init_test_block = function(self) {
 			})
 		}
 
-	// auto-reveal config block when diagnostics are in viewport
+	// auto-reveal config block when diagnostics are in viewport.
+	// Gate on diagnostics passing: a hard failure (result===false) or a missing init_test
+	// (PHP fatal before context build) means the server prerequisites are not met. The summary
+	// banner above instructs the user to "fix errors above to continue", so we must NOT expose
+	// the config form here — otherwise that instruction is never actually enforced and the user
+	// proceeds to enter DB credentials on a server that cannot run Dédalo.
 		when_in_viewport(
 			summary_node,
 			() => {
-				self.node.content_data.config_block.classList.remove('hide')
+				if (!init_test || init_test.result===false) {
+					return // diagnostics failed → keep config steps hidden, stay on diagnostics
+				}
+				const first = self.node.content_data._first_config || 'config_block'
+				const first_section = self.node.content_data[first]
+				if (first_section) {
+					first_section.classList.remove('hide')
+				}
 				update_step_indicator(self.node.content_data.step_indicator, 2)
 			}
 		)
@@ -1166,6 +1340,363 @@ const render_config_options = function(self) {
 
 
 /**
+* RENDER_DB_CONFIG_BLOCK
+* Modernized PostgreSQL configuration step. Collects the connection values, lets the
+* administrator TEST the connection interactively (green/red), and on success reveals the
+* entity step. Nothing is written to disk here — values accumulate in self._cfg and are
+* persisted later by the "Save configuration" step. No manual config-file editing.
+* @param {Object} self
+* @returns {DocumentFragment}
+*/
+const render_db_config_block = function(self) {
+
+	const fragment	= new DocumentFragment()
+	const cfg		= self._cfg
+	const db		= (self.context.properties && self.context.properties.db_config) || {}
+
+	// placeholders from the catalog defaults must NOT prefill (force a real value)
+	const is_placeholder = function(v, ph) { return (!v || v===ph) ? '' : v }
+
+	// prerequisite note
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'description',
+			inner_html		: get_label.installation_db_prereq || 'Prerequisite: an accessible PostgreSQL database whose role can create tables, indexes and functions. Enter the connection details and test them.',
+			parent			: fragment
+		})
+
+	// fields
+		create_field({ parent:fragment, cfg, name:'db_hostname', label:get_label.hostname || 'Host', value: db.hostname || 'localhost', placeholder:'localhost', help:'Hostname or IP of the PostgreSQL server.' })
+		create_field({ parent:fragment, cfg, name:'db_port', label:get_label.port || 'Port', value: (db.port || '5432'), placeholder:'5432', help:'TCP port. Leave the default unless your server uses another.' })
+		create_field({ parent:fragment, cfg, name:'db_socket', label:get_label.socket || 'Unix socket (optional)', value:'', placeholder:'/var/run/postgresql', nullable:true, help:'Only for socket connections; leave empty for TCP.' })
+		create_field({ parent:fragment, cfg, name:'db_database', label:get_label.db_name || 'Database name', value: is_placeholder(db.db_name, 'dedalo_mydatabase'), placeholder:'dedalo', help:'The database Dédalo will use. The role below must own it (or have full privileges on it).' })
+		create_field({ parent:fragment, cfg, name:'db_username', label:get_label.username || 'Username', value: is_placeholder(db.user_name, 'myusername'), placeholder:'dedalo' })
+		create_field({ parent:fragment, cfg, name:'db_password', label:get_label.password || 'Password', type:'password', value:'' })
+
+	// status + test button
+		const status = create_status_msg(fragment)
+		const test_button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'primary db_test_button',
+			inner_html		: get_label.test_connection || 'Test connection',
+			parent			: fragment
+		})
+		test_button.addEventListener('mouseup', async function() {
+			const api_response = await api_call_with_spinner({
+				action		: 'test_db_connection',
+				body_options: {
+					db_hostname	: cfg.db_hostname,
+					db_port		: cfg.db_port,
+					db_socket	: cfg.db_socket,
+					db_database	: cfg.db_database,
+					db_username	: cfg.db_username,
+					db_password	: cfg.db_password
+				},
+				status_node	: status,
+				button_node	: test_button
+			})
+			set_status_result(status, api_response)
+			if (api_response.result===true) {
+				self.node.content_data.entity_block.classList.remove('hide')
+				update_step_indicator(self.node.content_data.step_indicator, 3)
+			}
+		})
+
+	return fragment
+}//end render_db_config_block
+
+
+
+/**
+* RENDER_ENTITY_BLOCK
+* Collects the entity identity (name + label) and the install fingerprints
+* (information + info key), plus timezone/locale. info/info_key are STATE values written to
+* ../private/state.php and MUST NOT change after install — the copy warns about that.
+* @param {Object} self
+* @returns {DocumentFragment}
+*/
+const render_entity_block = function(self) {
+
+	const fragment	= new DocumentFragment()
+	const cfg		= self._cfg
+	const entity	= (self.context.properties && self.context.properties.dedalo_entity) || ''
+	const entity_val = (!entity || entity==='my_entity_name') ? '' : entity
+
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'description',
+		inner_html		: get_label.installation_entity_help || 'Identify this installation. The information and info key are set once and must not be changed afterwards (they are part of how stored credentials are encrypted).',
+		parent			: fragment
+	})
+
+	create_field({ parent:fragment, cfg, name:'entity', label:get_label.entity_name || 'Entity name', value:entity_val, placeholder:'my_institution', help:'Short machine name for this installation.' })
+	create_field({ parent:fragment, cfg, name:'entity_label', label:get_label.entity_label || 'Entity label', value:'', placeholder:'My Institution', help:'Human-readable name (defaults to the entity name).' })
+	create_field({ parent:fragment, cfg, name:'information', label:get_label.information || 'Install information', value:'', placeholder:'My Institution archive', help:'Fixed install fingerprint. Do not change after install.' })
+	create_field({ parent:fragment, cfg, name:'info_key', label:get_label.info_key || 'Install info key', value:'', placeholder:'my_institution_key', help:'Fixed install fingerprint. Do not change after install.' })
+	create_field({ parent:fragment, cfg, name:'timezone', label:get_label.timezone || 'Timezone', value:'Europe/Madrid', placeholder:'Europe/Madrid' })
+	create_field({ parent:fragment, cfg, name:'locale', label:get_label.locale || 'Locale', value:'es-ES', placeholder:'es-ES' })
+
+	const status = create_status_msg(fragment)
+	const next_button = ui.create_dom_element({
+		element_type	: 'button',
+		class_name		: 'primary entity_next_button',
+		inner_html		: get_label.continue_label || 'Continue',
+		parent			: fragment
+	})
+	next_button.addEventListener('mouseup', function() {
+		// minimal required-field validation (no server round-trip needed)
+		const missing = ['entity','information','info_key'].filter(k => !cfg[k] || String(cfg[k]).trim()==='')
+		if (missing.length>0) {
+			status.classList.remove('ok'); status.classList.add('error')
+			status.textContent = (get_label.required_fields || 'Please fill the required fields') + ': ' + missing.join(', ')
+			return
+		}
+		// Entity is a MACHINE identifier (drives paths, the session name, media folder). Reject
+		// spaces/special chars — they break the session name and produce ugly paths. Suggest a slug.
+		const entity_val = String(cfg.entity).trim()
+		if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(entity_val)) {
+			const suggestion = entity_val.replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'my_entity'
+			status.classList.remove('ok'); status.classList.add('error')
+			status.textContent = (get_label.entity_invalid || 'Entity name must start with a letter and contain only letters, numbers and underscores (no spaces). Try: ') + suggestion
+			return
+		}
+		status.classList.remove('error'); status.classList.add('ok')
+		status.textContent = 'OK'
+		self.node.content_data.diffusion_block.classList.remove('hide')
+		update_step_indicator(self.node.content_data.step_indicator, 4)
+	})
+
+	return fragment
+}//end render_entity_block
+
+
+
+/**
+* RENDER_DIFFUSION_BLOCK
+* Optional MariaDB/MySQL (Bun diffusion engine) configuration. A checkbox enables the fields;
+* when enabled the connection must be tested green before continuing. On continue the values
+* are kept in self._cfg (cfg.diffusion flag) for the dual-write at persist time.
+* @param {Object} self
+* @returns {DocumentFragment}
+*/
+const render_diffusion_block = function(self) {
+
+	const fragment	= new DocumentFragment()
+	const cfg		= self._cfg
+	cfg.diffusion	= false
+	let tested_ok	= false
+
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'description',
+		inner_html		: get_label.installation_diffusion_help || 'Optional: the diffusion (publication) engine uses a MariaDB/MySQL database. Enable it only if you will publish content. You can configure it later.',
+		parent			: fragment
+	})
+
+	// enable toggle
+		const toggle_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'install_toggle_label',
+			inner_html		: get_label.enable_diffusion || 'Enable diffusion database',
+			parent			: fragment
+		})
+		const toggle = ui.create_dom_element({ element_type:'input', type:'checkbox', class_name:'install_toggle' })
+		toggle_label.prepend(toggle)
+
+	// fieldset (hidden until enabled)
+		const fields = ui.create_dom_element({ element_type:'div', class_name:'diffusion_fields hide', parent:fragment })
+		create_field({ parent:fields, cfg, name:'mysql_hostname', label:get_label.hostname || 'Host', value:'localhost', placeholder:'localhost' })
+		create_field({ parent:fields, cfg, name:'mysql_port', label:get_label.port || 'Port', value:'3306', placeholder:'3306' })
+		create_field({ parent:fields, cfg, name:'mysql_socket', label:get_label.socket || 'Unix socket (optional)', value:'', nullable:true, placeholder:'/run/mysqld/mysqld.sock' })
+		create_field({ parent:fields, cfg, name:'mysql_database', label:get_label.db_name || 'Database name', value:'web_dedalo', placeholder:'web_dedalo' })
+		create_field({ parent:fields, cfg, name:'mysql_username', label:get_label.username || 'Username', value:'', placeholder:'web' })
+		create_field({ parent:fields, cfg, name:'mysql_password', label:get_label.password || 'Password', type:'password', value:'' })
+
+	const status = create_status_msg(fragment)
+
+	const test_button = ui.create_dom_element({ element_type:'button', class_name:'primary diffusion_test_button hide', inner_html:get_label.test_connection || 'Test connection', parent:fragment })
+	const continue_button = ui.create_dom_element({ element_type:'button', class_name:'primary diffusion_continue_button', inner_html:get_label.continue_label || 'Continue', parent:fragment })
+
+	toggle.addEventListener('change', function() {
+		cfg.diffusion = toggle.checked
+		tested_ok = false
+		fields.classList.toggle('hide', !toggle.checked)
+		test_button.classList.toggle('hide', !toggle.checked)
+		continue_button.textContent = toggle.checked ? (get_label.continue_label || 'Continue') : (get_label.skip || 'Skip diffusion')
+	})
+	continue_button.textContent = get_label.skip || 'Skip diffusion'
+
+	test_button.addEventListener('mouseup', async function() {
+		const api_response = await api_call_with_spinner({
+			action		: 'test_diffusion_connection',
+			body_options: {
+				mysql_hostname	: cfg.mysql_hostname,
+				mysql_port		: cfg.mysql_port,
+				mysql_socket	: cfg.mysql_socket,
+				mysql_database	: cfg.mysql_database,
+				mysql_username	: cfg.mysql_username,
+				mysql_password	: cfg.mysql_password
+			},
+			status_node	: status,
+			button_node	: test_button
+		})
+		set_status_result(status, api_response)
+		tested_ok = (api_response.result===true)
+	})
+
+	continue_button.addEventListener('mouseup', function() {
+		if (cfg.diffusion===true && tested_ok!==true) {
+			status.classList.remove('ok'); status.classList.add('error')
+			status.textContent = get_label.test_diffusion_first || 'Test the diffusion connection successfully before continuing (or disable it).'
+			return
+		}
+		self.node.content_data.persist_block.classList.remove('hide')
+		update_step_indicator(self.node.content_data.step_indicator, 5)
+	})
+
+	return fragment
+}//end render_diffusion_block
+
+
+
+/**
+* RENDER_PERSIST_BLOCK
+* The "Save configuration" step: writes ../private/.env (+ Bun .env) and state.php, shows the
+* auto-generated secrets ONCE, then exposes the activation gate (verify the saved config is
+* live; if not, guide a php-fpm reload). On green it reveals the directories step.
+* @param {Object} self
+* @returns {DocumentFragment}
+*/
+const render_persist_block = function(self) {
+
+	const fragment	= new DocumentFragment()
+	const cfg		= self._cfg
+
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'description',
+		inner_html		: get_label.installation_persist_help || 'Save the configuration to ../private/.env (outside the web root, chmod 600). Strong secrets will be generated and shown once — store them safely.',
+		parent			: fragment
+	})
+
+	const status		= create_status_msg(fragment)
+	const secrets_box	= ui.create_dom_element({ element_type:'div', class_name:'generated_secrets hide', parent:fragment })
+	const verify_status	= create_status_msg(fragment)
+
+	const save_button = ui.create_dom_element({ element_type:'button', class_name:'primary persist_button', inner_html:get_label.save_configuration || 'Save configuration', parent:fragment })
+	const verify_button = ui.create_dom_element({ element_type:'button', class_name:'primary verify_button hide', inner_html:get_label.verify_active || 'Verify active configuration', parent:fragment })
+
+	save_button.addEventListener('mouseup', async function() {
+		const api_response = await api_call_with_spinner({
+			action		: 'persist_config',
+			body_options: { ...cfg, diffusion: cfg.diffusion===true },
+			status_node	: status,
+			button_node	: save_button,
+			timeout		: 20*1000
+		})
+		set_status_result(status, api_response)
+		if (api_response.result!==true) {
+			return
+		}
+		// show generated secrets ONCE
+		const generated = api_response.generated || {}
+		const keys = Object.keys(generated)
+		if (keys.length>0) {
+			secrets_box.classList.remove('hide')
+			ui.create_dom_element({ element_type:'div', class_name:'generated_secrets_title', inner_html:(get_label.generated_secrets_warning || '⚠ Save these secrets now — they are shown only once and must never be changed later:'), parent:secrets_box })
+			for (const k of keys) {
+				const row = ui.create_dom_element({ element_type:'div', class_name:'generated_secret_row', parent:secrets_box })
+				ui.create_dom_element({ element_type:'span', class_name:'generated_secret_key', inner_html:k, parent:row })
+				const val = ui.create_dom_element({ element_type:'input', class_name:'generated_secret_val', value:generated[k], parent:row })
+				val.readOnly = true
+			}
+		}
+		save_button.remove()
+		verify_button.classList.remove('hide')
+	})
+
+	verify_button.addEventListener('mouseup', async function() {
+		const api_response = await api_call_with_spinner({
+			action		: 'verify_active_config',
+			body_options: { db_database: cfg.db_database, db_username: cfg.db_username, entity: cfg.entity },
+			status_node	: verify_status,
+			button_node	: verify_button
+		})
+		set_status_result(verify_status, api_response)
+		if (api_response.result===true) {
+			verify_button.remove()
+			self.node.content_data.directories_block.classList.remove('hide')
+			update_step_indicator(self.node.content_data.step_indicator, 6)
+		}
+		// if not active: status shows the reload guidance; the button stays for a re-check
+	})
+
+	return fragment
+}//end render_persist_block
+
+
+
+/**
+* RENDER_DIRECTORIES_BLOCK
+* Verifies (and can create) the main writable directories. Because the media path derives from
+* the entity, this runs AFTER the config is active. All-green reveals the database install step.
+* @param {Object} self
+* @returns {DocumentFragment}
+*/
+const render_directories_block = function(self) {
+
+	const fragment	= new DocumentFragment()
+
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'description',
+		inner_html		: get_label.installation_directories_help || 'Dédalo needs write permission on its working directories (private, sessions, cache, media, backup). Check them and create any that are missing.',
+		parent			: fragment
+	})
+
+	const list		= ui.create_dom_element({ element_type:'div', class_name:'directories_list', parent:fragment })
+	const status	= create_status_msg(fragment)
+	const check_button	= ui.create_dom_element({ element_type:'button', class_name:'primary dirs_check_button', inner_html:get_label.check_directories || 'Check directories', parent:fragment })
+	const create_button	= ui.create_dom_element({ element_type:'button', class_name:'primary dirs_create_button hide', inner_html:get_label.create_directories || 'Create missing directories', parent:fragment })
+
+	const render_dirs = function(dirs) {
+		list.textContent = ''
+		for (const d of (dirs||[])) {
+			const ok = d.exists && d.writable
+			const row = ui.create_dom_element({ element_type:'div', class_name:'directory_row ' + (ok?'ok':'error'), parent:list })
+			ui.create_dom_element({ element_type:'span', class_name:'directory_icon', inner_html: ok ? '&#10003;' : '&#10007;', parent:row })
+			ui.create_dom_element({ element_type:'span', class_name:'directory_label', inner_html:d.label, parent:row })
+			ui.create_dom_element({ element_type:'span', class_name:'directory_path', inner_html:d.path, parent:row })
+		}
+	}
+
+	const run_check = async function(create, button) {
+		const api_response = await api_call_with_spinner({
+			action		: 'check_directories',
+			body_options: { create: create===true },
+			status_node	: status,
+			button_node	: button
+		})
+		render_dirs(api_response.dirs)
+		set_status_result(status, api_response)
+		if (api_response.result===true) {
+			create_button.classList.add('hide')
+			self.node.content_data.install_db_block.classList.remove('hide')
+			update_step_indicator(self.node.content_data.step_indicator, 7)
+		} else {
+			create_button.classList.remove('hide')
+		}
+	}
+
+	check_button.addEventListener('mouseup', function(){ run_check(false, check_button) })
+	create_button.addEventListener('mouseup', function(){ run_check(true, create_button) })
+
+	return fragment
+}//end render_directories_block
+
+
+
+/**
 * RENDER_INSTALL_DB_BLOCK
 * Creates the database installation section.
 *
@@ -1218,7 +1749,12 @@ const render_install_db_block = function(self) {
 			class_name		: 'db_config_container',
 			parent			: fragment
 		})
-		for(const config_item in properties.db_config){
+		// In the modernized flow the values were just collected/persisted, so show those rather
+		// than the (now stale) placeholder constants captured at context-build time.
+		const db_config_display = (self._cfg && self._cfg.db_database)
+			? { db_name: self._cfg.db_database, hostname: self._cfg.db_hostname, port: self._cfg.db_port, user_name: self._cfg.db_username }
+			: (properties.db_config || {})
+		for(const config_item in db_config_display){
 			ui.create_dom_element({
 				element_type 	: 'div',
 				class_name		: 'db_config key',
@@ -1228,7 +1764,7 @@ const render_install_db_block = function(self) {
 			ui.create_dom_element({
 				element_type 	: 'div',
 				class_name		: 'db_config value',
-				inner_html		: properties.db_config[config_item],
+				inner_html		: db_config_display[config_item],
 				parent			: db_config_container
 			})
 		}
@@ -1258,7 +1794,9 @@ const render_install_db_block = function(self) {
 					set_status_result(install_db_status, api_response)
 					// show set_root_password_block
 					self.node.content_data.set_root_password_block.classList.remove('hide')
-					update_step_indicator(self.node.content_data.step_indicator, 4)
+					// step indicator: "Set root password" is step 8 in the needs_config (11-step) flow
+					// and step 4 in the legacy (7-step) flow. Branch like the password/login blocks do.
+					update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 8 : 4)
 					install_db_button.remove();
 				}else{
 					console.error(api_response.msg);
@@ -1513,9 +2051,9 @@ const render_set_root_password_block = function(self) {
 					console.log('api_response:', api_response.msg)
 					set_status_result(set_pw_status, api_response)
 					change_root_pw_button.remove();
-					// show next block
+					// show next block: login (root logs in inside the installer)
 					self.node.content_data.login_block.classList.remove('hide')
-					update_step_indicator(self.node.content_data.step_indicator, 5)
+					update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 9 : 5)
 				}else{
 					console.error(api_response.msg);
 					set_status_result(set_pw_status, api_response)
@@ -1571,6 +2109,10 @@ const render_login_block = async function(self) {
 					mode	: 'edit'
 				})
 
+			// rendered login panel node, assigned after render() below; declared here so the
+			// dispatch closure can remove the floating panel on a successful login.
+				let login_node = null
+
 			// custom_action_dispatch. Set before render to catch the on-login action
 			// This function is called by the login component's submit handler in place of
 			// the default session-redirect logic, so we can intercept the result inside
@@ -1585,9 +2127,15 @@ const render_login_block = async function(self) {
 							login_container.classList.add('hide')
 							to_login_button.remove()
 
-						// show next block hierarchies_import_block
+						// remove the floating login panel — it is appended to self.node (not to
+						// login_container), so hiding the container leaves it stuck on screen.
+							if (login_node) {
+								login_node.remove()
+							}
+
+						// login done → reveal the MANDATORY hierarchies import (now authenticated)
 							self.node.content_data.hierarchies_import_block.classList.remove('hide')
-							update_step_indicator(self.node.content_data.step_indicator, 6)
+							update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 10 : 6)
 
 					}else{
 
@@ -1604,8 +2152,8 @@ const render_login_block = async function(self) {
 			// build with autoload to get login context from API
 				await login.build(true)
 
-			// render and assign node
-				const login_node = await login.render()
+			// render and assign node (login_node is declared above so the dispatch can remove it)
+				login_node = await login.render()
 				// login_container.appendChild(login_node)
 				self.node.appendChild(login_node)
 
@@ -1849,31 +2397,26 @@ export const render_hierarchies_import_block = function(options) {
 					action			: 'install_hierarchies',
 					body_options	: { hierarchies: hierarchies_to_install },
 					status_node		: import_hierarchies_status,
-					button_node		: import_hierarchies_button
+					button_node		: import_hierarchies_button,
+					timeout			: 600 * 1000 // hierarchy imports can take minutes
 				})
 				console.log('install_hierarchies response: ', api_response);
 
 			// manage result
-				if (api_response.result===false) {
-					console.error(api_response.msg);
-					import_hierarchies_status.classList.add('error')
+				// Backend contract: { result:bool (overall ok), msg, errors:[], responses:[] }.
+				// Success only when result===true AND no per-item errors were recorded.
+				const ar_errors = Array.isArray(api_response.errors) ? api_response.errors : []
+				if (api_response.result===true && ar_errors.length===0) {
+					import_hierarchies_status.classList.add('ok')
 					import_hierarchies_status.textContent = api_response.msg
-				}else{
-
-					// Partial failure: the API may return an array of per-hierarchy results.
-					// Show the first failing item's message; the operator can adjust and retry.
-					const false_check = api_response.result.find(el => el.result === false)
-					if(false_check) {
-						import_hierarchies_status.classList.add('error')
-						import_hierarchies_status.textContent = false_check.msg
-					}else{
-						import_hierarchies_status.classList.add('ok')
-						import_hierarchies_status.textContent = api_response.msg
-						import_hierarchies_button.remove()
-						if (typeof callback==='function') {
-							callback(api_response)
-						}
+					import_hierarchies_button.remove()
+					if (typeof callback==='function') {
+						callback(api_response)
 					}
+				}else{
+					console.error('install_hierarchies errors:', ar_errors, api_response);
+					import_hierarchies_status.classList.add('error')
+					import_hierarchies_status.textContent = ar_errors.length>0 ? ar_errors[0] : (api_response.msg || 'Hierarchy import failed')
 				}
 
 			// unlock container

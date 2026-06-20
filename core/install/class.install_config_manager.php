@@ -72,9 +72,10 @@ final class install_config_manager {
 	* Key properties of the returned object:
 	* - `db_install_name`           — name of the PostgreSQL install database.
 	* - `host_line`                  — shell-safe `-h <host>` fragment for psql
-	*                                 commands; falls back to the bare string
-	*                                 `'localhost'` when DEDALO_HOSTNAME_CONN is
-	*                                 empty (no `-h` flag in that case).
+	*                                 commands. When DEDALO_HOSTNAME_CONN is empty it
+	*                                 falls back to `-h <socket dir>` (DEDALO_SOCKET_CONN)
+	*                                 and otherwise to an empty string — never a bare
+	*                                 `'localhost'` (which psql would read as a dbname).
 	* - `port_line`                  — shell-safe `-p <port>` fragment; empty
 	*                                 string when DEDALO_DB_PORT_CONN is not set.
 	* - `to_preserve_tld`           — TLD prefixes whose records must NOT be
@@ -112,7 +113,13 @@ final class install_config_manager {
 		// `config/config.php` constants (deployer-controlled, filesystem-only)
 		// so this is defence-in-depth, not an HTTP-reachable taint fix. Quoting
 		// the *value* portion only — the `-h`/`-p` flag stays unquoted.
-		$host_line			= (!empty(DEDALO_HOSTNAME_CONN)) ? ('-h '.escapeshellarg(DEDALO_HOSTNAME_CONN)) : 'localhost';
+		// BUG-6: when DEDALO_HOSTNAME_CONN is empty, fall back to the socket directory
+		// (socket-only installs) and otherwise emit NO host flag — never the bare word
+		// 'localhost', which psql would parse as a positional database name. Shares the
+		// host/socket precedence rule with DBi::build_conn_flags().
+		$host_line			= (!empty(DEDALO_HOSTNAME_CONN))
+									? ('-h '.escapeshellarg(DEDALO_HOSTNAME_CONN))
+									: ((defined('DEDALO_SOCKET_CONN') && !empty(DEDALO_SOCKET_CONN)) ? ('-h '.escapeshellarg(DEDALO_SOCKET_CONN)) : '');
 		$port_line			= (!empty(DEDALO_DB_PORT_CONN)) ? ('-p '.escapeshellarg((string)DEDALO_DB_PORT_CONN)) : '';
 
 		// to_preserve_tld. Records of this list will be preserved on clean data
@@ -129,10 +136,11 @@ final class install_config_manager {
 
 		// to_clean_tables. The records of this list will be removed from the install DB except for some exceptions like 'matrix_ontology'
 		$to_clean_tables	= [
-			'matrix',				// main table
-			'matrix_activities',	// activities (exhibitions, visits, etc)
-			'matrix_activity',		// Dédalo activity log data
-			'matrix_hierarchy',		// thesaurus data
+			'matrix',					// main table
+			'matrix_activities',		// activities (exhibitions, visits, etc)
+			'matrix_activity',			// Dédalo activity log data
+			'matrix_activity_diffusion',// activity/diffusion tracking data (project-specific)
+			'matrix_hierarchy',			// thesaurus data
 			'matrix_hierarchy_main',// hierarchy data
 			'matrix_ontology',		// ontology data
 			'matrix_ontology_main',// ontology data
@@ -204,12 +212,26 @@ final class install_config_manager {
 		$config_core_file_path		= DEDALO_CONFIG_PATH.'/config_core.php';
 		$hierarchy_typologies 		= install_hierarchy_manager::get_hierarchy_typlologies();
 
+		// exclude_data_tables. Tables whose row DATA is fully removed during the clean
+		// phase, so the install image ships their structure (and sequences) but no rows.
+		// These are excluded from the clone dump (pg_dump --exclude-table-data) so that
+		// production-scale data — matrix_time_machine, matrix_activity, matrix_hierarchy,
+		// matrix_ontology, etc. — is never copied only to be deleted again. matrix_ontology
+		// is cloned schema-only here and its handful of preserved TLD-root rows are reloaded
+		// directly from source by install_database_manager::load_filtered_matrix_ontology()
+		// (18k rows → ~8). matrix_ontology_main stays OFF this list: its rows are row-FILTERED
+		// in place by clean_tables() (a JSONB predicate) and it is tiny, so copy-then-filter is
+		// fine. Derived from to_clean_tables so the whitelist stays the single source of truth.
+		$row_filtered_tables	= ['matrix_ontology_main'];
+		$exclude_data_tables	= array_values(array_diff($to_clean_tables, $row_filtered_tables));
+
 		return (object)[
 			'db_install_name'			=> $db_install_name,
 			'host_line'					=> $host_line,
 			'port_line'					=> $port_line,
 			'to_preserve_tld'			=> $to_preserve_tld,
 			'to_clean_tables'			=> $to_clean_tables,
+			'exclude_data_tables'		=> $exclude_data_tables,
 			'valid_tables' 				=> $valid_tables,
 			'target_file_path'			=> $target_file_path,
 			'target_file_path_compress'	=> $target_file_path_compress,
@@ -255,6 +277,31 @@ final class install_config_manager {
 	}//end get_db_install_conn
 
 	/**
+	* PG_SHELL_EXEC
+	* Run a PostgreSQL client shell command (pg_dump / psql / gunzip|psql pipelines) with libpq
+	* authentication via the PGPASSWORD environment variable, taken from DEDALO_PASSWORD_CONN — so
+	* the source/target database may be LOCAL or REMOTE without relying on a ~/.pgpass file.
+	* PGPASSWORD is exported only for the duration of the child process and cleared immediately
+	* after, and is never interpolated into $command, so the secret reaches neither the process
+	* argument list nor any debug log of the command string. Mirrors the inline handling in
+	* install_database_manager::clone_database_dump().
+	*
+	* Binary-path resolution is the caller's responsibility — build commands with
+	* system::get_pg_bin_path() (never the raw DB_BIN_PATH constant), so binaries are found on
+	* any host layout while connecting over the network to a remote server.
+	*
+	* @param string $command full shell command (binaries, -h/-p, -U, plus any redirects/pipes)
+	* @return string|null     shell_exec() return value (stdout, or null when there is none)
+	*/
+	public static function pg_shell_exec(string $command) : ?string {
+
+		// Delegate to the canonical helper on the DB layer (DBi::pg_shell_exec),
+		// which owns PGPASSWORD lifecycle handling. Kept as a thin alias so existing
+		// install callers do not change.
+		return DBi::pg_shell_exec($command);
+	}//end pg_shell_exec
+
+	/**
 	* GET_DB_STATUS
 	* Validate the database configuration and test the live connection.
 	*
@@ -287,12 +334,16 @@ final class install_config_manager {
 	*/
 	public static function get_db_status() : object {
 
-		// check config db vars
-			$db_name		= DEDALO_DATABASE_CONN;
-			$user_name		= DEDALO_USERNAME_CONN;
-			$pw				= DEDALO_PASSWORD_CONN;
-			$information	= DEDALO_INFORMATION;
-			$info_key		= DEDALO_INFO_KEY;
+		// check config db vars.
+		// On a FRESH v7 install (no ../private/.env, no state.php) the SECRET constant
+		// DEDALO_PASSWORD_CONN and the STATE constants DEDALO_INFORMATION / DEDALO_INFO_KEY are
+		// NOT defined (they are emitted only from .env/state.php). Read them defensively so this
+		// status check returns "not configured" instead of fataling before the installer renders.
+			$db_name		= defined('DEDALO_DATABASE_CONN') ? DEDALO_DATABASE_CONN : '';
+			$user_name		= defined('DEDALO_USERNAME_CONN') ? DEDALO_USERNAME_CONN : '';
+			$pw				= defined('DEDALO_PASSWORD_CONN') ? DEDALO_PASSWORD_CONN : '';
+			$information	= defined('DEDALO_INFORMATION') ? DEDALO_INFORMATION : '';
+			$info_key		= defined('DEDALO_INFO_KEY') ? DEDALO_INFO_KEY : '';
 
 			$config_check = true;
 
@@ -306,8 +357,13 @@ final class install_config_manager {
 				$config_check		= false;
 				$user_name_check	= false;
 			}
+			// GAP-3: an EMPTY password is a legitimate configuration under peer / trust
+			// auth (or an existing ~/.pgpass) — the PGPASSWORD policy exports nothing and
+			// libpq resolves auth itself. So only the literal sample placeholder must fail
+			// config_check; whether an empty password actually authenticates is decided
+			// below by $db_connection_check (a real pg_connect attempt).
 			$pw_check = true;
-			if(empty($pw) || $pw==='mypassword'){
+			if($pw==='mypassword'){
 				$config_check	= false;
 				$pw_check		= false;
 			}
@@ -322,15 +378,26 @@ final class install_config_manager {
 				$info_key_check = false;
 			}
 
-		// check db connection
-			$db_connection = DBi::_getNewConnection(
-				DEDALO_HOSTNAME_CONN,
-				DEDALO_USERNAME_CONN,
-				DEDALO_PASSWORD_CONN,
-				DEDALO_DATABASE_CONN,
-				DEDALO_DB_PORT_CONN,
-				DEDALO_SOCKET_CONN
-			);
+		// check db connection.
+		// Wrapped so a failed/placeholder connection on a fresh install can never escape as a
+		// fatal (pg_connect emits a warning that Dédalo's error handler may promote to an
+		// exception); here a failure simply means db_connection_check = false.
+			$db_connection = false;
+			try {
+				set_error_handler(static function() : bool { return true; });
+				$db_connection = DBi::_getNewConnection(
+					defined('DEDALO_HOSTNAME_CONN') ? DEDALO_HOSTNAME_CONN : 'localhost',
+					$user_name,
+					$pw,
+					$db_name,
+					defined('DEDALO_DB_PORT_CONN') ? DEDALO_DB_PORT_CONN : null,
+					defined('DEDALO_SOCKET_CONN') ? DEDALO_SOCKET_CONN : null
+				);
+				restore_error_handler();
+			} catch (\Throwable $e) {
+				restore_error_handler();
+				$db_connection = false;
+			}
 
 			$db_connection_check = $db_connection !== false
 				? true
@@ -425,8 +492,8 @@ final class install_config_manager {
 	*
 	* Called at the end of the installation wizard to transition the system
 	* from install mode to normal running mode. Internally it is a thin wrapper
-	* around `set_install_status('installed')`, which writes
-	* `define('DEDALO_INSTALL_STATUS', 'installed')` into `config_core.php`.
+	* around `set_install_status('installed')`, which persists the status to
+	* ../private/state.php (key `state.install_status`).
 	*
 	* @return object - stdClass response from set_install_status with:
 	*                  `result` (bool) and `msg` (string).
@@ -481,7 +548,7 @@ final class install_config_manager {
 				';
 				$result	= pg_query(DBi::_getConnection(), $sql);
 				$row	= pg_fetch_object($result);
-				$total	= (int)$row->total ?? 0;
+				$total	= ($row !== false) ? (int)($row->total ?? 0) : 0;
 
 		} catch (Exception $e) {
 			$total = 0;
@@ -529,7 +596,8 @@ final class install_config_manager {
 	* (!) If you need to change the root password AFTER a completed install:
 	*   1. Set the string column of section_id = -1 in matrix_users to
 	*      `{"dd133": []}` (empty array for the password component).
-	*   2. Remove the DEDALO_INSTALL_STATUS line from config/config_core.php.
+	*   2. Remove the `state.install_status` entry from ../private/state.php (v7 stores the
+	*      install status there, not in config/config_core.php).
 	*   Then re-run the install wizard and call this endpoint again.
 	*
 	* @param object $options - must contain `password` (string): the plaintext
@@ -539,7 +607,11 @@ final class install_config_manager {
 	public static function set_root_pw(object $options) : object {
 
 		// options
-			$password = safe_xss($options->password);
+			// NOTE: do NOT run safe_xss() on the password. It is never rendered in HTML —
+			// it goes straight into dedalo_encrypt_openssl() and the DB. XSS-escaping it would
+			// silently mangle legitimate characters (< > & " ') so the stored hash would not
+			// match what the user typed, leaving them unable to log in.
+			$password = $options->password ?? null;
 
 		// response
 			$response = new stdClass();
@@ -608,23 +680,18 @@ final class install_config_manager {
 
 	/**
 	* SET_INSTALL_STATUS
-	* Write or update the `DEDALO_INSTALL_STATUS` constant in config_core.php.
+	* Persist `DEDALO_INSTALL_STATUS` to the out-of-web-root state file ../private/state.php
+	* (STATE scope, dot-path `state.install_status`). The boot re-emits it as the live
+	* DEDALO_INSTALL_STATUS constant on every request; that constant gates the install wizard
+	* routes and the `set_root_pw()` action. (v7: this replaced the v6 scheme of writing a
+	* `define()` line into the web-served config/config_core.php.)
 	*
-	* `config/config_core.php` is loaded on every request via
-	* `config/config.php`. Writing `DEDALO_INSTALL_STATUS` there is the
-	* canonical way to signal that the system has finished installing. The
-	* constant gates the install wizard routes and the `set_root_pw()` action.
-	*
-	* Three code paths:
+	* Two code paths:
 	* 1. Constant already equals `$status` — no-op, returns success immediately.
-	* 2. Constant is absent from the file — appends a new `define()` line using
-	*    FILE_APPEND | LOCK_EX to avoid write races.
-	* 3. Constant exists but with a different value — replaces the existing line
-	*    via `preg_replace()`, then rewrites the whole file with LOCK_EX.
-	*
-	* If `config_core.php` does not exist yet it is created as an empty file
-	* before the append in path 2. A failure to create or write the file is
-	* logged as an ERROR and surfaced in the response message.
+	* 2. Otherwise — merge `state.install_status => $status` over the existing state.php (so
+	*    info_key/information/maintenance written earlier survive) and write the file atomically
+	*    via migration_committer::commit() (stage → back up → rename). A write failure is logged
+	*    as an ERROR and surfaced in the response message.
 	*
 	* The entire `$_SESSION['dedalo']` key is cleared after a successful write
 	* so that any cached session data derived from the old status is dropped.
@@ -637,80 +704,72 @@ final class install_config_manager {
 	*/
 	public static function set_install_status(string $status) : object {
 
+		require_once __DIR__ . '/class.install_config_persistor.php';
+		require_once DEDALO_ROOT_PATH . '/install/class.migration_committer.php';
+
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
 
-		// config_core write install status (config_core.php)
-			$config	= self::get_config();
-			$file	= $config->config_core_file_path;
-
-		// set file content
+		// already set: no-op
 			if (defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS===$status) {
-
 				$response->result	= true;
 				$response->msg		= 'OK. Dédalo status is already: '.$status;
 				return $response;
+			}
 
-			}else{
-
-				if(!file_exists($file)) {
-
-					if(!file_put_contents($file, '')) {
-						$response->msg = 'Error (1). It\'s not possible set the install status, review the PHP permissions to write in Dédalo directory: ' . $file;
-						debug_log(__METHOD__." ".$response->msg, logger::ERROR);
+			// guard: never SEAL 'installed' on an incomplete system (defense-in-depth vs a forged/early
+			// install_finish that would brick the box into a password-less 'installed' state: set_root_pw
+			// then refuses forever and get_structure_context returns empty). Requires the DB imported
+			// (matrix_users present) AND the root password set. Legit upgrades (to_update) satisfy both.
+				if ($status==='installed') {
+					$db_ready	= DBi::check_table_exists('matrix_users');
+					$root_ready	= $db_ready && (login::check_root_has_default_password()===false);
+					if (!$db_ready || !$root_ready) {
+						$response->msg = 'Error. Cannot mark the system installed: the database is not imported yet or the root password has not been set.';
+						debug_log(__METHOD__.' '.$response->msg, logger::ERROR);
 						return $response;
 					}
 				}
 
-				$content = file_get_contents($file);
-
-				// add vars
-				if (strpos($content, 'DEDALO_INSTALL_STATUS')===false) {
-
-					// line
-					$line = PHP_EOL . 'define(\'DEDALO_INSTALL_STATUS\', \''.$status.'\');';
-					// Write the contents to the file,
-					// using the FILE_APPEND flag to append the content to the end of the file
-					// and the LOCK_EX flag to prevent anyone else writing to the file at the same time
-					if(!file_put_contents($file, $line, FILE_APPEND | LOCK_EX)) {
-
-						$response->msg = 'Error (2). It\'s not possible set the install status, review the PHP permissions to write in Dédalo directory: '.$file;
-						debug_log(__METHOD__
-							. ' ' . $response->msg .PHP_EOL
-							. 'file: '.$file
-							, logger::ERROR
-						);
-						return $response;
-					}
-
-					$response->result	= true;
-					$response->msg		= 'All ready';
-
-					debug_log(__METHOD__." Added config_auto line with constant: DEDALO_INSTALL_STATUS  ", logger::DEBUG);
-
-
-				}elseif (strpos($content, 'DEDALO_INSTALL_STATUS')!==false && strpos($content, '\'DEDALO_INSTALL_STATUS\', \''.$status.'\'')===false) {
-
-					// replace line to updated value
-					$content = preg_replace('/define\(\'DEDALO_INSTALL_STATUS\',.+\);/', 'define(\'DEDALO_INSTALL_STATUS\', \''.$status.'\');', $content);
-					// Write the contents to the file,
-					// using the LOCK_EX flag to prevent anyone else writing to the file at the same time
-					if(!file_put_contents($file, $content, LOCK_EX)) {
-						$response->msg = 'Error (3). It\'s not possible set the install status, review the PHP permissions to write in Dédalo directory: ' . $file;
-						debug_log(__METHOD__." ".$response->msg, logger::ERROR);
-						return $response;
-					}
-
-					$response->result	= true;
-					$response->msg		= 'All ready';
-
-					debug_log(__METHOD__." Changed config_auto content with constant: DEDALO_INSTALL_STATUS = ''.$status.'' ".to_string(), logger::DEBUG);
+		// v7 install state lives OUTSIDE the web root, in ../private/state.php (STATE scope),
+		// NOT in a web-served config file. Merge state.install_status over the existing state so
+		// info_key/information/maintenance written earlier survive. The boot emits the raw value,
+		// so the string 'installed' becomes DEDALO_INSTALL_STATUS === 'installed' (the gate value).
+			$private	= dirname(DEDALO_ROOT_PATH) . '/private';
+			$state_path	= $private . '/state.php';
+			$existing	= [];
+			if (is_file($state_path)) {
+				try {
+					$existing = (array)(require $state_path);
+				} catch (\Throwable $e) {
+					// corrupt/partial state.php → start from empty; the existing file is backed up by
+					// migration_committer before overwrite, so nothing is silently lost.
+					$existing = [];
 				}
+			}
+
+			$content = install_config_persistor::render_state($existing, ['state.install_status' => $status]);
+
+			try {
+				migration_committer::commit(
+					['state' => $content],
+					['state' => $state_path],
+					$private . '/.install_backups',
+					[] // state.php is not a secret-only env file; default perms
+				);
+			} catch (Throwable $e) {
+				$response->msg = 'Error. Could not write the install status to ' . $state_path . ': ' . $e->getMessage()
+					. '. Review the PHP write permissions on the private directory.';
+				debug_log(__METHOD__." ".$response->msg, logger::ERROR);
+				return $response;
 			}
 
 		// refresh session cached data. Delete all session data
 			unset($_SESSION['dedalo']);
+
+			$response->result	= true;
+			$response->msg		= 'OK. Install status set to: '.$status;
 
 		return $response;
 	}//end set_install_status

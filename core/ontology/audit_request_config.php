@@ -46,7 +46,7 @@ if (php_sapi_name()!=='cli') {
 // Bootstrap
 // Loads the Dédalo autoloader, DB constants, and all core classes (including
 // DBi, dd_ontology_db_manager, and request_config_object) via config.php.
-require_once __DIR__ . '/../../config/config.php';
+require_once __DIR__ . '/../../config/bootstrap.php';
 
 // --errors-only flag
 // When present, warnings are still counted in the summary but are suppressed

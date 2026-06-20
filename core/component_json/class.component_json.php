@@ -692,21 +692,28 @@ class component_json extends component_common {
 					return $response;
 				}
 
-				// legacy raw export case as {"lg-nolan":[{"value":<any JSON>,"id":1}]}
-				// a single lang keyed object whose value is an array of items with 'value'
-				// property is interpreted as the legacy envelope and extracted.
-				// This heuristic handles v6-era exports that keyed data by language code
-				// (e.g. 'lg-nolan') even for non-translatable components.
+				// legacy raw export case as {"lg-nolan":[ <item> , ... ]}
+				// A single lang-keyed object whose value is a non-empty array is interpreted
+				// as a v6-era export: v6 keyed component data by language code (e.g. 'lg-nolan')
+				// even for non-translatable components. Unwrap the language key and normalise
+				// each element to a v7 envelope:
+				//  - an element already shaped {value:...} is kept as-is (v6 export of v7 data),
+				//  - a raw payload of any other shape is wrapped as {value:<payload>}
+				//    (v6 export of genuine v6 data, e.g. {"lg-nolan":[{"open_as":"window"}]}).
+				// Proper v7 raw exports never reach here: they carry the {"dedalo_data":...}
+				// envelope and take the import_data_is_wrapped===true path above.
 				if (is_object($decoded)) {
 					$ar_keys = array_keys((array)$decoded);
 					if (count($ar_keys)===1 && strpos($ar_keys[0], 'lg-')===0) {
 						$lang_value = $decoded->{$ar_keys[0]};
-						$is_envelope = is_array($lang_value) && !empty($lang_value) &&
-							count(array_filter($lang_value, function($v){
-								return is_object($v) && property_exists($v, 'value');
-							}))===count($lang_value);
-						if ($is_envelope===true) {
-							$response->result	= $lang_value;
+						if (is_array($lang_value) && !empty($lang_value)) {
+							$result = [];
+							foreach ($lang_value as $element) {
+								$result[] = (is_object($element) && property_exists($element, 'value'))
+									? $element
+									: (object)['value' => $element];
+							}
+							$response->result	= $result;
 							$response->msg		= 'OK';
 
 							return $response;

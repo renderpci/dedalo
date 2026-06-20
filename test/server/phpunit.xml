@@ -39,6 +39,10 @@
             <directory>common</directory>
         </testsuite>
 
+        <testsuite name="component_common">
+            <directory>component_common</directory>
+        </testsuite>
+
         <testsuite name="components">
             <directory>components</directory>
         </testsuite>

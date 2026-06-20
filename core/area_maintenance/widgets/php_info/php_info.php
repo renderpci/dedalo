@@ -38,8 +38,7 @@
 */
 
 // config dedalo
-// Bootstrap the Dédalo environment: autoloader, session, constants, login class.
-require dirname(__FILE__, 5).'/config/config.php';
+require dirname(__FILE__, 5).'/config/bootstrap.php';
 
 
 // Authentication guard

@@ -403,8 +403,17 @@ class tool_common {
 				// get the lang to be used to get the labels
 					$current_lang = lang::get_label_lang( DEDALO_APPLICATION_LANG );
 
+				// Defensive: normalize label items to objects. v6 CSV imports can
+				// deliver lang-keyed arrays where label objects are expected, which
+				// breaks the property reads/writes below and throws a fatal
+				// "Attempt to assign property 'lang' on array" (preventing even the
+				// import tool itself from opening to fix the data).
+					$ar_tool_labels = array_map(function($el){
+						return is_object($el) ? $el : (object)$el;
+					}, array_values((array)$tool_object->labels));
+
 				// add label with lang fallback
-				foreach ($tool_object->labels as $current_label_value) {
+				foreach ($ar_tool_labels as $current_label_value) {
 
 					// Defensive: skip malformed/stale entries that are not label
 					// objects (e.g. a lang-wrapped value from an outdated cache).
@@ -416,8 +425,8 @@ class tool_common {
 					$label_name = $current_label_value->name;
 					if(!isset($labels[$label_name])) {
 
-						$all_langs_label = array_filter((array)$tool_object->labels, function($el) use($label_name) {
-							return $el->name===$label_name;
+						$all_langs_label = array_filter($ar_tool_labels, function($el) use($label_name) {
+							return ($el->name ?? null)===$label_name;
 						});
 						foreach ($all_langs_label as $item) {
 							if (!isset($item->lang)) {
@@ -431,7 +440,7 @@ class tool_common {
 								);
 							}
 
-							if ($item->lang===$current_lang) {
+							if (($item->lang ?? null)===$current_lang) {
 								$labels[$label_name] = $item;
 								continue 2;
 							}
@@ -439,8 +448,10 @@ class tool_common {
 
 						// fallback lang. Get the first one as fallback value setting as lang current lang
 						$fallback_label = reset($all_langs_label);
-						$fallback_label->lang = DEDALO_APPLICATION_LANG; // inject current lang to prevent find errors
-						$labels[$label_name] = $fallback_label;
+						if (is_object($fallback_label)) {
+							$fallback_label->lang = DEDALO_APPLICATION_LANG; // inject current lang to prevent find errors
+							$labels[$label_name] = $fallback_label;
+						}
 					}
 				}
 

@@ -34,7 +34,7 @@
 * @package Dédalo
 * @subpackage Extras
 */
-include dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php';
+include dirname(dirname(dirname(dirname(__FILE__)))) .'/config/bootstrap.php';
 
 // Session release
 // Close the PHP session immediately so that concurrent requests from the same

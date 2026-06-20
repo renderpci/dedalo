@@ -58,7 +58,8 @@ class dd_diffusion_api {
 			'validate',
 			'get_ontology_map',
 			'retry_pending_deletions',
-			'rebuild_media_index'
+			'rebuild_media_index',
+			'get_engine_advisory'
 		];
 
 		/**
@@ -1706,4 +1707,176 @@ class dd_diffusion_api {
 
 		return $response;
 	}//end render_markdown_response
+
+
+
+	/** Tunables (overridable in tests to avoid real sleeps). */
+	public static int $recover_poll_attempts   = 5;
+	public static int $recover_poll_interval_us = 500000; // 0.5s
+
+	/** Test-observable: number of probe_engine() calls (asserts the recover loop is bounded). */
+	public static int $probe_count = 0;
+
+	/**
+	* GET_ENGINE_ADVISORY
+	* Probe the diffusion engine socket-first; for global-admins auto-recover an
+	* unreachable engine via the configured service command; return a role-tailored
+	* advisory the tool renders instead of a raw HTTP error.
+	* @param object $rqo { options?: { auto_recover?: bool } }
+	* @return object advisory (see build_engine_advisory)
+	*/
+	public static function get_engine_advisory(object $rqo) : object {
+
+		// Lazy-load: diffusion_server_control lives outside the diffusion/ tree so
+		// the SPL autoloader cannot find it; include explicitly (same pattern as
+		// diffuse_rdf / diffuse_xml in this file).
+		require_once DEDALO_CORE_PATH . '/area_maintenance/widgets/diffusion_server_control/class.diffusion_server_control.php';
+
+		$options      = $rqo->options ?? new stdClass();
+		$auto_recover = (($options->auto_recover ?? true) !== false);
+		$is_admin     = security::is_global_admin(logged_user_id())===true;
+		$service_cmd_configured = defined('DEDALO_DIFFUSION_SERVICE_CMD') && DEDALO_DIFFUSION_SERVICE_CMD!=='';
+
+		$probe     = self::probe_engine();
+		$recovered = false;
+
+		if ($probe->state==='unreachable' && $is_admin && $auto_recover && $service_cmd_configured) {
+			$start = diffusion_server_control::start_server(new stdClass());
+			if (!empty($start->result)) {
+				for ($i=0; $i < self::$recover_poll_attempts; $i++) {
+					usleep(self::$recover_poll_interval_us);
+					$probe = self::probe_engine();
+					if ($probe->state!=='unreachable') break;
+				}
+				$recovered = ($probe->state==='ok');
+			}
+		}
+
+		return self::build_engine_advisory($probe, $is_admin, $recovered, $service_cmd_configured);
+	}//end get_engine_advisory
+
+	/**
+	* PROBE_ENGINE
+	* One socket-first health call. Returns { state, checks, msg }.
+	* ok = engine answered result:true; unhealthy = answered result:false with checks;
+	* unreachable = no usable answer (connection failure / missing endpoint).
+	*/
+	public static function probe_engine() : object {
+
+		self::$probe_count++;
+
+		$res = diffusion_api_client::call((object)['action'=>'get_diffusion_status'], 5);
+
+		$out = new stdClass();
+		$out->checks = null;
+		$out->msg    = $res->msg ?? '';
+
+		if (!empty($res->result)) {
+			$out->state  = 'ok';
+			$out->checks = $res->data->checks ?? null;
+			return $out;
+		}
+		if (isset($res->data) && isset($res->data->checks)) {
+			$out->state  = 'unhealthy';
+			$out->checks = $res->data->checks;
+			return $out;
+		}
+		$out->state = 'unreachable';
+		return $out;
+	}//end probe_engine
+
+	/**
+	* FIRST_FAILING_CHECK
+	* @return object|null { name, msg } of the first check whose result!==true.
+	*/
+	public static function first_failing_check($checks) : ?object {
+		if (!is_object($checks)) return null;
+		foreach ($checks as $name => $check) {
+			if (is_object($check) && ($check->result ?? true)!==true) {
+				return (object)['name'=>(string)$name, 'msg'=>(string)($check->msg ?? '')];
+			}
+		}
+		return null;
+	}//end first_failing_check
+
+	/**
+	* READ_ENGINE_LOG_TAIL
+	* Last ~20 lines of the engine log (admin diagnostics). Bounded read; '' when absent.
+	*/
+	public static function read_engine_log_tail() : string {
+		$log = getenv('DEDALO_DIFFUSION_LOG_FILE') ?: '/tmp/dedalo-diffusion.log';
+		if (!is_file($log) || !is_readable($log)) return '';
+		$lines = @file($log, FILE_IGNORE_NEW_LINES);
+		if ($lines===false) return '';
+		return implode("\n", array_slice($lines, -20));
+	}//end read_engine_log_tail
+
+	/**
+	* BUILD_ENGINE_ADVISORY
+	* Pure: maps probe state + role + service-cmd availability to the advisory object.
+	*/
+	public static function build_engine_advisory(object $probe, bool $is_admin, bool $recovered, bool $service_cmd_configured) : object {
+
+		$advisory = new stdClass();
+		$advisory->result   = true;
+		$advisory->state    = $probe->state;
+		$advisory->is_admin = $is_admin;
+		$advisory->recovered= $recovered;
+		$advisory->checks   = $is_admin ? ($probe->checks ?? null) : null;
+		$advisory->service_cmd_configured = $service_cmd_configured;
+		$advisory->actions  = ['retry'];
+		$advisory->title    = '';
+		$advisory->cause    = '';
+		$advisory->steps    = [];
+		$advisory->log_tail = null;
+
+		if ($probe->state==='ok') {
+			$advisory->title = 'Diffusion engine ready';
+			return $advisory;
+		}
+
+		if (!$is_admin) {
+			$advisory->title = 'Diffusion is temporarily unavailable';
+			$advisory->steps = ['Please let your administrator know. You can keep working on everything else.'];
+			return $advisory;
+		}
+
+		if ($probe->state==='unhealthy') {
+			$failing = self::first_failing_check($probe->checks);
+			$advisory->title = 'Diffusion engine is running, but a dependency is failing';
+			$advisory->cause = $failing
+				? ($failing->name . ': ' . $failing->msg)
+				: ($probe->msg ?: 'A health check failed.');
+			$advisory->steps = [
+				'If the failing item is the database (sql), check the target database is running and reachable.',
+				'Verify the diffusion credentials/configuration in config.php.',
+				'Then click Retry.'
+			];
+			return $advisory;
+		}
+
+		// unreachable, admin
+		$advisory->title = $recovered ? 'Diffusion engine recovered' : 'Diffusion engine is not running';
+		if ($service_cmd_configured) {
+			$advisory->cause = 'The diffusion engine (Bun service) is not responding'
+				. ($recovered ? '' : ', and an automatic start attempt did not bring it up') . '.';
+			$advisory->steps = [
+				'Click "Restart engine" below.',
+				'If it still fails, open the log (Show log) and send it to your IT team.',
+				'As a last resort, on the server run: diffusion/service/service-ctl.sh restart'
+			];
+			$advisory->actions  = ['retry','restart_engine','show_log'];
+			$advisory->log_tail = self::read_engine_log_tail();
+		} else {
+			$advisory->cause = 'The diffusion engine is not responding, and no service control command is configured to start it automatically.';
+			$advisory->steps = [
+				'Set DEDALO_DIFFUSION_SERVICE_CMD in config.php (see diffusion/service/README.md).',
+				'Or start the engine from Maintenance → Diffusion server control.'
+			];
+		}
+		return $advisory;
+	}//end build_engine_advisory
+
+
+
 }//end class dd_diffusion_api

@@ -148,9 +148,7 @@ final class install_data_seeder {
 		if ($exec) {
 			$result   = pg_query($db_install_conn, $sql);
 			if (!$result) {
-				// (!) Error message label says "matrix_counter" — this is a copy-paste artifact;
-				//     the operation targets matrix_users, not matrix_counter.
-				$msg = " Error on db execution (matrix_counter): ".pg_last_error($db_install_conn);
+				$msg = " Error on db execution (matrix_users): ".pg_last_error($db_install_conn);
 				debug_log(__METHOD__.$msg, logger::ERROR);
 				$response->msg = $msg;
 				return $response;
@@ -253,8 +251,7 @@ final class install_data_seeder {
 		if ($exec) {
 			$result   = pg_query($db_install_conn, $sql);
 			if (!$result) {
-				// (!) Error message label says "matrix_counter" — copy-paste artifact; targets matrix_projects.
-				$msg = " Error on db execution (matrix_counter): ".pg_last_error($db_install_conn);
+				$msg = " Error on db execution (matrix_projects): ".pg_last_error($db_install_conn);
 				debug_log(__METHOD__.$msg, logger::ERROR);
 				$response->msg = $msg;
 				return $response;
@@ -397,8 +394,7 @@ final class install_data_seeder {
 		if ($exec) {
 			$result   = pg_query($db_install_conn, $sql);
 			if (!$result) {
-				// (!) Error message label says "matrix_counter" — copy-paste artifact; targets matrix_profiles.
-				$msg = " Error on db execution (matrix_counter): ".pg_last_error($db_install_conn);
+				$msg = " Error on db execution (matrix_profiles): ".pg_last_error($db_install_conn);
 				debug_log(__METHOD__.$msg, logger::ERROR);
 				$response->msg = $msg;
 				return $response;
@@ -455,8 +451,7 @@ final class install_data_seeder {
 		if ($exec) {
 			$result   = pg_query($db_install_conn, $sql);
 			if (!$result) {
-				// (!) Error message label says "matrix_counter" — copy-paste artifact; targets matrix_test.
-				$msg = " Error on db execution (matrix_counter): ".pg_last_error($db_install_conn);
+				$msg = " Error on db execution (".$table."): ".pg_last_error($db_install_conn);
 				debug_log(__METHOD__.$msg, logger::ERROR);
 				$response->msg = $msg;
 				return $response;

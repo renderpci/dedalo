@@ -9,24 +9,33 @@
 * checks whether another user already holds the same component and refuses
 * (returns in_use=true) if a conflict is detected.
 *
+* Concurrency:
+*   Every registry mutation (update_lock_components_state, force_unlock_all_components,
+*   clean_locks_garbage) runs inside a DBi transaction that holds a row lock on the
+*   single registry row (SELECT ... FOR UPDATE). This serialises concurrent focus/blur
+*   events so the read-modify-write can never lose an update or miss a conflict.
+*
 * Responsibilities:
 * - update_lock_components_state() — process focus/blur/delete_user_section_locks events
-*   and update the lock registry in the database accordingly.
+*   and update the lock registry in the database accordingly (transaction + row lock).
+* - get_lock_status()              — read-only check of whether another user holds a
+*   component; used by the client notify-on-release poll.
 * - force_unlock_all_components()  — remove every lock held by a given user (or all
 *   users), called on logout and session expiry.
 * - get_active_users()             — return the raw list of active focus locks (used
 *   by the API layer and by get_active_users_full()).
 * - get_active_users_full()        — enrich each lock entry with ontology labels for
 *   display in the maintenance area.
-* - clean_locks_garbage()          — prune stale locks whose timestamp exceeds
-*   MAXIMUM_LOCK_EVENT_TIME, run at boot via dd_init_test.php.
+* - drop_expired()                 — prune locks older than LOCK_TTL_SECONDS; run inline
+*   on every mutation (lazy GC) so abandoned locks self-heal without a scheduled job.
+* - clean_locks_garbage()          — explicit admin/maintenance sweep using drop_expired().
 * - equal_elements()               — helper for comparing two event objects by
 *   section_id, section_tipo, component_tipo, and action.
 *
 * Storage layout:
 *   Table : LOCK_COMPONENTS_TABLE ('matrix_notifications')
 *   Row   : id = RECORD_ID (1)  — shared with no other class (processes uses id=2)
-*   Column: data (text)         — JSON array of event-element objects:
+*   Column: data (jsonb)        — JSON array of event-element objects:
 *     [{ "section_id": string, "section_tipo": string, "component_tipo": string,
 *        "action": "focus"|"blur", "user_id": int, "full_username": string,
 *        "date": "YYYY-MM-DD HH:MM:SS" }, …]
@@ -42,10 +51,10 @@
 *   is the caller's responsibility.
 *
 * Known callers:
-* - dd_utils_api::update_lock_components_state() — API entry point for browser events.
+* - dd_utils_api::update_lock_components_state() / ::get_lock_status() — API entry points
+*   for browser focus/blur events and the notify-on-release poll.
 * - dd_area_maintenance_api::lock_components_actions() — admin get/force-unlock API.
 * - class.login::logout_user() / ::expire_session() — force-unlock on session end.
-* - dd_init_test.php — bootstrap garbage collection.
 *
 * @package Dédalo
 * @subpackage Core
@@ -64,13 +73,14 @@ class lock_components {
 	const LOCK_COMPONENTS_TABLE		= 'matrix_notifications';
 
 	/**
-	* Maximum age (in hours) a focus lock event may exist before being considered stale.
-	* clean_locks_garbage() removes entries older than this threshold. Five hours covers
-	* a full working day; locks surviving longer almost certainly belong to a crashed or
-	* disconnected browser session.
-	* @var int MAXIMUM_LOCK_EVENT_TIME
+	* Maximum age (in seconds) a focus lock may exist before being considered stale.
+	* The browser refreshes its lock with a heartbeat (a focus re-send) roughly every
+	* 45s, so a lock older than this almost certainly belongs to a crashed, closed, or
+	* disconnected session. Used by drop_expired() (lazy GC run on every registry
+	* mutation) and clean_locks_garbage() (the admin/maintenance sweep).
+	* @var int LOCK_TTL_SECONDS
 	*/
-	const MAXIMUM_LOCK_EVENT_TIME	= 5; // hours
+	const LOCK_TTL_SECONDS	= 150; // seconds (2.5 min ≈ 3 heartbeats of headroom)
 
 	/**
 	* Fixed row ID within LOCK_COMPONENTS_TABLE where the lock registry JSON is stored.
@@ -135,24 +145,32 @@ class lock_components {
 		// short vars
 			$id		= self::RECORD_ID;
 			$table	= self::LOCK_COMPONENTS_TABLE;
+			$conn	= DBi::_getConnection();
 
-		// load current db elements
-			$sql = 'SELECT data FROM "'.$table.'" WHERE id = $1 LIMIT 1';
-			$res = matrix_db_manager::exec_search($sql, [$id]);
+		// Serialise every registry mutation on the single registry row. The whole
+		// read-modify-write runs inside one transaction holding a row lock
+		// (SELECT ... FOR UPDATE), so two concurrent focus/blur events can never
+		// interleave to lose an update or miss a conflict (two users acquiring the
+		// same component). DBi self-heals a leaked block on the next pooled request.
+		DBi::begin_transaction();
+		try {
 
-			$num_rows = $res===false
-				? 0
-				: pg_num_rows($res);
+			// load + lock current db elements
+			$res = pg_query_params($conn, 'SELECT data FROM "'.$table.'" WHERE id = $1 FOR UPDATE', [$id]);
 
-			// create first row if empty table
-			if ($num_rows<1) {
-				$data		= '[]';
-				$strQuery	= "INSERT INTO \"$table\" (id, data) VALUES ($1, $2)";
-				pg_query_params(DBi::_getConnection(), $strQuery, [$id, $data]);
+			// create first row on empty table, then lock the freshly-created row
+			if ($res===false || pg_num_rows($res)<1) {
+				pg_query_params($conn, 'INSERT INTO "'.$table.'" (id, data) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING', [$id, '[]']);
+				$res  = pg_query_params($conn, 'SELECT data FROM "'.$table.'" WHERE id = $1 FOR UPDATE', [$id]);
+				$data = ($res!==false && pg_num_rows($res)>0)
+					? (json_decode(pg_fetch_result($res, 0, 0)) ?? [])
+					: [];
 			}else{
-				$data = pg_fetch_result($res, 0, 0);
+				$data = json_decode(pg_fetch_result($res, 0, 0)) ?? [];
 			}
-			$data = json_decode($data) ?? [];
+
+			// lazy GC: prune stale locks while we already hold the row lock (near-zero cost)
+			$data = self::drop_expired($data);
 
 		// switch action
 			$new_data = [];
@@ -250,46 +268,6 @@ class lock_components {
 					break;
 			}
 
-		// delete old elements of current user
-			// $ara_properties = array('user_id','section_id','section_tipo');
-			// foreach ($data as $key => $current_event_element) {
-
-			// 	# BLUR ACTION
-			// 	if ($event_element->action=='blur') {
-
-			// 		if (   $current_event_element->section_id==$event_element->section_id
-			// 			&& $current_event_element->section_tipo==$event_element->section_tipo
-			// 			&& $current_event_element->component_tipo==$event_element->component_tipo
-			// 			//&& $current_event_element->user_id==$event_element->user_id
-			// 			) {
-			// 			unset($data[$key]);
-			// 			//$add_element=false;
-			// 		}
-			// 	}
-
-			// 	if ($current_event_element->user_id==$event_element->user_id) {
-
-			// 		# SAME USER
-			// 		if (   $current_event_element->section_id==$event_element->section_id
-			// 			&& $current_event_element->section_tipo==$event_element->section_tipo
-			// 			) {
-			// 			unset($data[$key]);
-			// 		}
-
-			// 	}else{
-
-			// 		# DIFFERENT USER
-			// 		if ($current_event_element->section_id==$event_element->section_id &&
-			// 			$current_event_element->section_tipo==$event_element->section_tipo &&
-			// 			$current_event_element->component_tipo==$event_element->component_tipo
-			// 			) {
-			// 			//$response = "Error. User ".$event_element->full_username." is using this field. Please wait to finish";
-			// 			$response = sprintf(label::get_label('component_in_use'),$event_element->full_username);
-			// 			return $response;
-			// 		}
-			// 	}
-			// }//end foreach ($data as $key => $current_event_element) {
-
 		// update_lock_elements
 			if ($update_lock_elements===true) {
 
@@ -298,17 +276,25 @@ class lock_components {
 				// array_values() resets them to 0-based integers so json_encode() produces
 				// a JSON array ([…]) instead of a JSON object ({"1":…,"3":…}).
 					$new_data	= array_values($new_data);	// Recreate array keys to avoid produce json objects instead array
-					$new_data	= json_encode($new_data);		// Convert again to text before save to database
-					$strQuery	= "UPDATE \"$table\" SET data = $1 WHERE id = $2";
-					// sync mode
-					pg_send_query_params(DBi::_getConnection(), $strQuery, [$new_data, $id]);
-					pg_get_result(DBi::_getConnection());
+					$payload	= json_encode($new_data);	// Convert again to text before save to database
+					$w			= pg_query_params($conn, 'UPDATE "'.$table.'" SET data = $1 WHERE id = $2', [$payload, $id]);
+					if ($w===false) {
+						throw new RuntimeException(__METHOD__.' UPDATE failed: '.pg_last_error($conn));
+					}
 
 				// response
 					$response->result = true;
 					$response->msg 	  = 'Updated db lock elements';
 					$response->dato   = $data;
 			}//end if ($update_lock_elements===true)
+
+			DBi::commit_transaction();
+
+		}catch (\Throwable $e) {
+			DBi::rollback_transaction();
+			debug_log(__METHOD__.' Transaction failed: '.$e->getMessage(), logger::ERROR);
+			// $response retains result=false; any in_use set inside the switch is preserved
+		}
 
 
 		return $response;
@@ -349,6 +335,46 @@ class lock_components {
 
 
 	/**
+	* DROP_EXPIRED
+	* Remove lock entries older than LOCK_TTL_SECONDS (lazy garbage collection).
+	*
+	* Called inside the FOR UPDATE transaction of update_lock_components_state() — since
+	* the row lock is already held and the array already decoded, pruning here is
+	* near-zero cost and self-heals locks abandoned by crashed/closed sessions on every
+	* registry mutation. Also reused by clean_locks_garbage() and get_lock_status().
+	*
+	* Entries without a parseable 'date' are dropped (malformed/legacy shapes are stale
+	* by definition). The returned array is re-indexed so json_encode() yields a JSON
+	* array, not an object.
+	*
+	* @param array $data - decoded list of event-element objects
+	* @return array - the surviving (fresh) entries, 0-indexed
+	*/
+	protected static function drop_expired( array $data ) : array {
+
+		$now	= time();
+		$ttl	= self::LOCK_TTL_SECONDS;
+
+		$result = [];
+		foreach ($data as $event_element) {
+			if (!isset($event_element->date)) {
+				continue;
+			}
+			$ts = strtotime($event_element->date);
+			if ($ts===false) {
+				continue;
+			}
+			if ( ($ts + $ttl) >= $now ) {
+				$result[] = $event_element;
+			}
+		}
+
+		return array_values($result);
+	}//end drop_expired
+
+
+
+	/**
 	* FORCE_UNLOCK_ALL_COMPONENTS
 	* Remove active focus locks from the registry, optionally scoped to one user.
 	*
@@ -378,68 +404,74 @@ class lock_components {
 			$id		= self::RECORD_ID;
 			$table	= self::LOCK_COMPONENTS_TABLE;
 
-		// load current db elements
-			$sql		= "SELECT data FROM \"$table\" WHERE id = $1 LIMIT 1";
-			$res		= matrix_db_manager::exec_search($sql, [$id]);
+			$conn = DBi::_getConnection();
+
+		// load + lock current db elements (serialise against concurrent focus/blur)
+		DBi::begin_transaction();
+		try {
+
+			$res		= pg_query_params($conn, 'SELECT data FROM "'.$table.'" WHERE id = $1 FOR UPDATE', [$id]);
 			$num_rows	= $res===false
 				? 0
 				: pg_num_rows($res);
 
-		// create first row on empty table
-		if ($num_rows<1) {
+			// empty table: nothing to unlock
+			if ($num_rows<1) {
 
-			// response false
 				$response->result	= false;
 				$response->msg		= sprintf("Sorry. Record 1 on table %s not found. Ignored action.", $table);
+				debug_log(__METHOD__." $response->msg ", logger::DEBUG);
 
-			debug_log(__METHOD__
-				." $response->msg "
-				, logger::DEBUG
-			);
+			}else{
 
-		}else{
+				$data = (array)json_decode(pg_fetch_result($res, 0, 0));
 
-			$data	= pg_fetch_result($res, 0, 0);
-			$data	= (array)json_decode($data);
+				$removed_elements=0;
+				foreach ($data as $key => $current_event_element) {
 
-			$removed_elements=0;
-			foreach ($data as $key => $current_event_element) {
+					// Only remove focus locks; blur events are transient and should never
+					// accumulate, but guard anyway to avoid touching unexpected entry shapes.
+					if (isset($current_event_element->action) && $current_event_element->action==='focus') {
 
-				// Only remove focus locks; blur events are transient and should never
-				// accumulate, but guard anyway to avoid touching unexpected entry shapes.
-				if (isset($current_event_element->action) && $current_event_element->action==='focus') {
-
-					if ( empty($user_id) ) {
-						// All elements
-						// debug_log(__METHOD__." Deleting element from all users ".to_string($current_event_element), logger::DEBUG);
-						unset($data[$key]);
-						$removed_elements++;
-
-					}else{
-
-						if ( $current_event_element->user_id==$user_id ) {
-							// Only selected user elements (all sections)
-							debug_log(__METHOD__
-								." Deleting element from user $user_id ".to_string($current_event_element)
-								, logger::DEBUG
-							);
+						if ( empty($user_id) ) {
+							// All elements
 							unset($data[$key]);
 							$removed_elements++;
-						}
-					}//end if (empty($user_id)) {
-				}
-			}//end foreach ($data as $key => $current_event_element)
 
-			// Recreate data array keys
-				$new_data	= array_values($data); // Recreate array keys to avoid produce JSON objects instead array
-				$new_data	= json_encode($new_data); // Convert again to text before save to database
-				$strQuery	= "UPDATE \"$table\" SET data = $1 WHERE id = $2";
-				pg_send_query_params(DBi::_getConnection(), $strQuery, [$new_data, $id]);
-				$res = pg_get_result(DBi::_getConnection());
+						}else{
 
-			// response OK
-				$response->result	= true;
-				$response->msg		= 'Updated db lock elements. Removed '.$removed_elements.' elements';
+							if ( $current_event_element->user_id==$user_id ) {
+								// Only selected user elements (all sections)
+								debug_log(__METHOD__
+									." Deleting element from user $user_id ".to_string($current_event_element)
+									, logger::DEBUG
+								);
+								unset($data[$key]);
+								$removed_elements++;
+							}
+						}//end if (empty($user_id)) {
+					}
+				}//end foreach ($data as $key => $current_event_element)
+
+				// Recreate data array keys, then save
+					$new_data	= json_encode(array_values($data)); // re-index so json_encode yields an array, not an object
+					$w			= pg_query_params($conn, 'UPDATE "'.$table.'" SET data = $1 WHERE id = $2', [$new_data, $id]);
+					if ($w===false) {
+						throw new RuntimeException(__METHOD__.' UPDATE failed: '.pg_last_error($conn));
+					}
+
+				// response OK
+					$response->result	= true;
+					$response->msg		= 'Updated db lock elements. Removed '.$removed_elements.' elements';
+			}
+
+			DBi::commit_transaction();
+
+		}catch (\Throwable $e) {
+			DBi::rollback_transaction();
+			$response->result	= false;
+			$response->msg		= 'Error. force_unlock_all_components failed';
+			debug_log(__METHOD__.' Transaction failed: '.$e->getMessage(), logger::ERROR);
 		}
 
 
@@ -568,16 +600,83 @@ class lock_components {
 
 
 	/**
+	* GET_LOCK_STATUS
+	* Read-only check of whether a component is currently held by another user.
+	*
+	* Used by the client notify-on-release poll: a user blocked on a component polls this
+	* until in_use flips to false, then re-activates the field. It is a plain read (no
+	* FOR UPDATE / transaction) because it never mutates the registry, and it applies the
+	* same TTL filter as the write path so an expired holder reports as free.
+	*
+	* in_use is true only when a *different* user holds the triple — a user is never
+	* blocked by their own lock — mirroring the conflict rule in update_lock_components_state().
+	*
+	* @param object $event_element - must carry section_id, section_tipo, component_tipo
+	*   and the asking user_id (to exclude self-held locks)
+	* @return object $response
+	*   {
+	*     "result"        : bool,        // false only on a read error
+	*     "in_use"        : bool,        // true when another user holds this component
+	*     "full_username" : string|null  // the holder's display name when in_use
+	*   }
+	*/
+	public static function get_lock_status( object $event_element ) : object {
+
+		$response = new stdClass();
+			$response->result			= true;
+			$response->in_use			= false;
+			$response->full_username	= null;
+
+		// short vars
+			$id		= self::RECORD_ID;
+			$table	= self::LOCK_COMPONENTS_TABLE;
+
+		// load current db elements (read-only)
+			$sql = 'SELECT data FROM "'.$table.'" WHERE id = $1 LIMIT 1';
+			$res = matrix_db_manager::exec_search($sql, [$id]);
+			if ($res===false || pg_num_rows($res)<1) {
+				// no registry yet → nothing is locked
+				return $response;
+			}
+
+			$data = json_decode(pg_fetch_result($res, 0, 0)) ?? [];
+			$data = self::drop_expired($data);
+
+		// look for a live focus lock held by another user on the exact triple
+			foreach ($data as $current_event_element) {
+
+				if (!isset($current_event_element->action) || $current_event_element->action!=='focus') {
+					continue;
+				}
+				if (   $current_event_element->section_id == $event_element->section_id
+					&& $current_event_element->section_tipo === $event_element->section_tipo
+					&& $current_event_element->component_tipo === $event_element->component_tipo
+					&& $current_event_element->user_id != $event_element->user_id
+					) {
+					$response->in_use		= true;
+					$response->full_username	= $current_event_element->full_username ?? null;
+					break;
+				}
+			}
+
+
+		return $response;
+	}//end get_lock_status
+
+
+
+	/**
 	* CLEAN_LOCKS_GARBAGE
-	* Remove stale focus locks whose timestamp exceeds MAXIMUM_LOCK_EVENT_TIME hours.
+	* Remove stale focus locks older than LOCK_TTL_SECONDS.
 	*
-	* Called by dd_init_test.php on every bootstrap when DEDALO_LOCK_COMPONENTS is
-	* enabled. Stale locks accumulate when a browser session is closed abruptly (crash,
-	* network loss, force-quit) without sending a blur or logout event.
+	* This is the explicit admin/maintenance sweep (dd_area_maintenance_api). It is no
+	* longer called on every bootstrap — the hot path self-heals via drop_expired() run
+	* inside update_lock_components_state()'s locked transaction. Stale locks accumulate
+	* when a browser session is closed abruptly (crash, network loss, force-quit) without
+	* sending a blur or logout event.
 	*
-	* The expiry calculation adds MAXIMUM_LOCK_EVENT_TIME hours to the stored 'date'
-	* value and compares the result against the current server time. Entries that have
-	* passed expiry are dropped; fresh entries are kept and re-written unchanged.
+	* Entries older than LOCK_TTL_SECONDS (compared against the current server time) are
+	* dropped via drop_expired(); fresh entries are kept and re-written unchanged.
 	*
 	* A WARNING-level log entry is emitted for each expired lock to aid debugging of
 	* connectivity issues or abnormally long user sessions.
@@ -608,78 +707,54 @@ class lock_components {
 		// short vars
 			$id		= self::RECORD_ID;
 			$table	= self::LOCK_COMPONENTS_TABLE;
+			$conn	= DBi::_getConnection();
 
-		// load current db elements
-			$sql = "SELECT data FROM \"$table\" WHERE id = $1 LIMIT 1";
-			$res = matrix_db_manager::exec_search($sql, [$id]);
-			$num_rows = $res===false
+		// load + lock current db elements (serialise against concurrent focus/blur)
+		DBi::begin_transaction();
+		try {
+
+			$res		= pg_query_params($conn, 'SELECT data FROM "'.$table.'" WHERE id = $1 FOR UPDATE', [$id]);
+			$num_rows	= $res===false
 				? 0
 				: pg_num_rows($res);
 
-		// create FIRST ROW ON EMPTY TABLE
-		if ($num_rows<1) {
+			// empty table: nothing to clean
+			if ($num_rows<1) {
 
-			// response false
 				$response->result	= false;
 				$response->msg		= sprintf("Sorry. Record 1 on table %s not found. Ignored action.", $table);
+				debug_log(__METHOD__." $response->msg ", logger::DEBUG);
 
-			debug_log(__METHOD__
-				." $response->msg "
-				, logger::DEBUG
-			);
+			}else{
 
-		}else{
+				$data		= (array)json_decode(pg_fetch_result($res, 0, 0));
+				$new_data	= self::drop_expired($data);
 
-			// data
-				$data	= pg_fetch_result($res, 0, 0);
-				$data	= (array)json_decode($data);
-
-			// interval
-			// Build the expiry interval once and reuse it across the loop; DateTime
-			// objects are mutable, so a new $expires is derived per iteration via add()
-			// on a fresh clone of $event_date rather than mutating the shared $interval.
-				$hours		= lock_components::MAXIMUM_LOCK_EVENT_TIME;
-				$interval	= date_interval_create_from_date_string($hours." hours");
-				$now		= new DateTime();
-
-			$new_data = array();
-			$deleted_elements = false;
-			foreach ($data as $event_element) {
-
-				// (!) DateTime::add() mutates the object in place and returns $this.
-				// A new DateTime is constructed from $event_element->date each iteration
-				// to avoid reusing an already-modified object from a previous loop pass.
-				$event_date	= new DateTime($event_element->date);
-				$expires	= $event_date->add($interval);
-				if ( $expires < $now ) {
-					$deleted_elements = true;
+				if (count($new_data) !== count($data)) {
 					debug_log(__METHOD__
-						.' Lock event for component: '.$event_element->component_tipo.' from '.$event_date->format('Y-m-d H:i:s').' has expired (> '.$hours.' hours). Removed from DB '
+						.' Removed '.(count($data)-count($new_data)).' expired lock event(s) (> '.self::LOCK_TTL_SECONDS.' s)'
 						, logger::WARNING
 					);
-				}else{
-					$new_data[] = $event_element;
-				}
-			}//end foreach
-
-			if ($deleted_elements===true) {
-				// Recreate data array keys
-				$new_data	= array_values($new_data);	// Recreate array keys to avoid produce JSON objects instead array
-				$new_data	= json_encode($new_data);	// Convert again to text before save to database
-				$strQuery	= "UPDATE \"$table\" SET data = $1 WHERE id = $2";
-				// $result	= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_data, $id ));
-				pg_send_query_params(DBi::_getConnection(), $strQuery, [$new_data, $id]);
-				$res = pg_get_result(DBi::_getConnection());
-
-				// response OK Updated
+					$w = pg_query_params($conn, 'UPDATE "'.$table.'" SET data = $1 WHERE id = $2', [json_encode($new_data), $id]);
+					if ($w===false) {
+						throw new RuntimeException(__METHOD__.' UPDATE failed: '.pg_last_error($conn));
+					}
 					$response->result	= true;
 					$response->msg		= 'Updated db lock elements. Removed expired events';
-			}else{
-				// response OK
+				}else{
 					$response->result	= true;
 					$response->msg		= 'OK';
+				}
 			}
-		}//end if ($num_rows<1)
+
+			DBi::commit_transaction();
+
+		}catch (\Throwable $e) {
+			DBi::rollback_transaction();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed clean_locks_garbage';
+			debug_log(__METHOD__.' Transaction failed: '.$e->getMessage(), logger::ERROR);
+		}
 
 
 		return $response;

@@ -48,10 +48,11 @@
 */
 // Base
 // Core infrastructure that every other subsystem depends on; must be first.
-include DEDALO_CORE_PATH . '/base/class.Error.php';
+include_once DEDALO_CORE_PATH . '/base/class.Error.php'; // include_once: the P0 boot phase already loaded it
 include DEDALO_CORE_PATH . '/base/class.dd_cache.php';
 include DEDALO_CORE_PATH . '/base/class.processes.php';
 include DEDALO_CORE_PATH . '/base/class.system.php';
+include DEDALO_CORE_PATH . '/base/class.host_info.php';
 include DEDALO_CORE_PATH . '/base/class.OpcacheObjectManager.php';
 // Logger
 // include_once (not include) because config.php already loads logger.php before
