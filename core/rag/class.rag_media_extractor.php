@@ -137,7 +137,11 @@ abstract class rag_media_extractor {
 			return $source_path;
 		}
 
-		$tmp = rtrim(sys_get_temp_dir(), '/') . '/rag_embed_' . hash('xxh3', $source_path . '|' . $max_px) . '.jpg';
+		// Per-call unique name: a deterministic name (pure function of source+max_px)
+		// makes concurrent indexers (drain + backfill) collide on the same temp file —
+		// one truncates/reads while the other is still writing.
+		$tmp = rtrim(sys_get_temp_dir(), '/') . '/rag_embed_' . hash('xxh3', $source_path . '|' . $max_px)
+			. '_' . getmypid() . '_' . bin2hex(random_bytes(4)) . '.jpg';
 		$opts = new stdClass();
 			$opts->source_file	= $source_path;
 			$opts->target_file	= $tmp;

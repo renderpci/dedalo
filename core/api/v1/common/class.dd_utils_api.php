@@ -522,12 +522,15 @@ final class dd_utils_api {
 	public static function login(object $rqo) : object {
 
 		// options
-			$options = $rqo->options;
+			// Null-guard $rqo->options and its members (mirrors the sibling password-reset
+			// handlers) so a malformed request returns a normal login failure instead of
+			// raising a TypeError/warning on undefined property access.
+			$options = $rqo->options ?? new stdClass();
 
 		// login
 			$response = (object)login::Login((object)[
-				'username' => $options->username,
-				'password' => $options->auth
+				'username' => $options->username ?? '',
+				'password' => $options->auth ?? ''
 			]);
 
 

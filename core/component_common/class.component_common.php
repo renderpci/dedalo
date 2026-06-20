@@ -2812,9 +2812,13 @@ abstract class component_common extends common {
 				// project-filtered list to another (cross-tenant over/under-exposure).
 				// Pairs with the per-request cache clear (COMP-03).
 				$uid_user = (string) logged_user_id();
+				// include_negative changes the result set (e.g. it includes/excludes the
+				// root user from the users list, see trait.where.php), so it must be part
+				// of the cache key — otherwise the two shapes collide across worker requests.
+				$neg = $include_negative ? '_n1' : '_n0';
 				$uid = !empty($ar_sections_tipo)
-					? implode('-', $ar_sections_tipo) .'_'. $lang . '_' . $hash_id . '_u' . $uid_user
-					: $this->tipo .'_'. $lang . '_'. $hash_id . '_u' . $uid_user;
+					? implode('-', $ar_sections_tipo) .'_'. $lang . '_' . $hash_id . '_u' . $uid_user . $neg
+					: $this->tipo .'_'. $lang . '_'. $hash_id . '_u' . $uid_user . $neg;
 
 				if (isset(self::$list_of_values_data_cache[$uid])) {
 

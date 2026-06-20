@@ -187,13 +187,18 @@ abstract class rag_indexer {
 				if (!rag_vector_store::delete_stale($section_tipo, $section_id, $ct, $lg, $model, $cnt)) { $write_ok = false; break; }
 			}
 		}
+		// Fold the COMMIT result into the return value: a failed commit (dead
+		// connection / failed RELEASE SAVEPOINT) means the upserts/deletes were NOT
+		// persisted, so this must be a retryable failure — otherwise the queue marker
+		// is dropped and the record is silently never re-indexed.
+		$committed = false;
 		if ($write_ok) {
-			DBi_vector::commit();
+			$committed = DBi_vector::commit();
 		} else {
 			DBi_vector::rollback();
 		}
 
-		return $write_ok && !$embed_failure;
+		return $write_ok && $committed && !$embed_failure;
 	}//end index_record_text
 
 
@@ -313,9 +318,15 @@ abstract class rag_indexer {
 				if (!rag_vector_store::delete_stale($section_tipo, $section_id, $ct, $lg, $model, $cnt)) { $write_ok = false; break; }
 			}
 		}
-		$write_ok ? DBi_vector::commit() : DBi_vector::rollback();
+		// A failed COMMIT must surface as a retryable failure (see index_record_text).
+		$committed = false;
+		if ($write_ok) {
+			$committed = DBi_vector::commit();
+		} else {
+			DBi_vector::rollback();
+		}
 
-		return $write_ok && !$embed_failure;
+		return $write_ok && $committed && !$embed_failure;
 	}//end index_record_images
 
 

@@ -409,7 +409,10 @@ final class dd_manager {
 		// because it makes the API surface explicit and prevents an internal
 		// helper added later from accidentally becoming a remote endpoint.
 			$is_valid_public_method = false;
-			if (method_exists($dd_api, $rqo->action)) {
+			// is_string guard: a non-string action (e.g. client sends an array/object)
+			// would raise a TypeError under strict_types at method_exists()/ReflectionMethod.
+			// Falling through leaves $is_valid_public_method=false → uniform 'Undefined method'.
+			if (is_string($rqo->action) && method_exists($dd_api, $rqo->action)) {
 				$reflection = new ReflectionMethod($dd_api, $rqo->action);
 				if ($reflection->isPublic() && $reflection->isStatic()) {
 					if (defined($dd_api . '::API_ACTIONS')) {

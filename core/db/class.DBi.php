@@ -146,9 +146,15 @@ abstract class DBi {
 				metrics::inc('db_connection_total_calls_cached');
 				return self::$pg_conn_cache;
 			}
-			// Connection is dead, clear cache
-			self::$pg_conn_cache = null;
-			self::$pg_conn_valid_until = 0;
+			// Connection is dead, clear cache. DB-02: also clear the session-scoped
+			// statics — prepared statements live on the (now dead) backend session, and
+			// any in-flight transaction died with it. Leaving $prepared_statements
+			// populated makes exec_search skip re-preparing on the fresh session and
+			// fail with "prepared statement does not exist"; a stale $tx_depth would
+			// mis-nest the next transaction.
+			self::invalidate_connection_cache();
+			self::$tx_depth = 0;
+			self::$tx_owns_begin = false;
 		}
 
 		// Build connection string parameters
