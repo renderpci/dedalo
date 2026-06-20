@@ -440,13 +440,18 @@ const render_requeriments_list = function (requeriments_list, self, datalist_con
 		})
 
 		// value
+		// A null/undefined value means the metric is not available on this platform
+		// (e.g. CPU clock speed on Apple Silicon). Render a neutral "Not available"
+		// state — no success/failed icon — instead of the raw "null". This label lives
+		// only in the client display; the server sends the raw value.
+		const is_unavailable = value===null || typeof value==='undefined'
 		const class_add = (typeof value === 'boolean')
 			? (value===true ? ' success' : ' failed')
-			: ''
+			: (is_unavailable ? ' not_available' : '')
 		const value_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'value' + class_add,
-			inner_html		: JSON.stringify(value, null, 2),
+			inner_html		: is_unavailable ? 'Not available' : JSON.stringify(value, null, 2),
 			parent			: info_item
 		})
 
