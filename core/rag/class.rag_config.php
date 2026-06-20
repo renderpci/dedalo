@@ -187,6 +187,113 @@ abstract class rag_config {
 
 
 
+	// ------------------------------------------------------------------
+	// Phase 5b — image/object context (properties.rag.context)
+	// ------------------------------------------------------------------
+
+	/** @var array<string,?object> $context_cache */
+	private static array $context_cache = [];
+
+
+
+	/**
+	* GET_CONTEXT
+	* The section's RAG object-context: which images (+ view roles) form the
+	* visual signal, which components are typology/period/material, and the
+	* comparison scope. Returns null when not declared.
+	* Shape: { images:[{tipo,view}], metadata:{typology,period,material,…}, compare_scope }
+	* @param string $section_tipo
+	* @return ?object
+	*/
+	public static function get_context( string $section_tipo ) : ?object {
+
+		if (array_key_exists($section_tipo, self::$context_cache)) {
+			return self::$context_cache[$section_tipo];
+		}
+		$rag = self::get_rag($section_tipo);
+		$context = ($rag !== null && isset($rag->context) && is_object($rag->context)) ? $rag->context : null;
+		self::$context_cache[$section_tipo] = $context;
+		return $context;
+	}//end get_context
+
+
+
+	/**
+	* SECTION_HAS_IMAGE_CONTEXT  true when the section declares image components
+	* @param string $section_tipo
+	* @return bool
+	*/
+	public static function section_has_image_context( string $section_tipo ) : bool {
+
+		$context = self::get_context($section_tipo);
+		return $context !== null && !empty($context->images) && is_array($context->images);
+	}//end section_has_image_context
+
+
+
+	/**
+	* GET_CONTEXT_IMAGES  list of {tipo, view} declared image components
+	* @param string $section_tipo
+	* @return array<int,array{tipo:string,view:?string}>
+	*/
+	public static function get_context_images( string $section_tipo ) : array {
+
+		$context = self::get_context($section_tipo);
+		if ($context === null || empty($context->images) || !is_array($context->images)) {
+			return [];
+		}
+		$out = [];
+		foreach ($context->images as $img) {
+			$tipo = is_object($img) ? ($img->tipo ?? null) : (is_string($img) ? $img : null);
+			if (empty($tipo)) {
+				continue;
+			}
+			$out[] = [ 'tipo' => (string)$tipo, 'view' => is_object($img) ? ($img->view ?? null) : null ];
+		}
+		return $out;
+	}//end get_context_images
+
+
+
+	/**
+	* GET_CONTEXT_METADATA  { role => component_tipo } (typology/period/material/…)
+	* @param string $section_tipo
+	* @return array<string,string>
+	*/
+	public static function get_context_metadata( string $section_tipo ) : array {
+
+		$context = self::get_context($section_tipo);
+		if ($context === null || empty($context->metadata) || !is_object($context->metadata)) {
+			return [];
+		}
+		$out = [];
+		foreach ((array)$context->metadata as $role => $tipo) {
+			if (is_string($tipo) && $tipo !== '') {
+				$out[(string)$role] = $tipo;
+			}
+		}
+		return $out;
+	}//end get_context_metadata
+
+
+
+	/**
+	* GET_COMPARE_SCOPE  section_tipos to match an object against
+	* @param string $section_tipo
+	* @return array<int,string>
+	*/
+	public static function get_compare_scope( string $section_tipo ) : array {
+
+		$context = self::get_context($section_tipo);
+		$scope = $context->compare_scope ?? 'same_section';
+		if (is_array($scope)) {
+			return array_values(array_filter(array_map('strval', $scope)));
+		}
+		return [$section_tipo]; // 'same_section' (default)
+	}//end get_compare_scope
+
+
+
 	/**
 	* RESET  (tests / cache invalidation)
 	* @return void
@@ -195,6 +302,7 @@ abstract class rag_config {
 		self::$properties_cache		= [];
 		self::$section_enabled_cache= [];
 		self::$embeddable_cache		= [];
+		self::$context_cache		= [];
 	}//end reset
 
 

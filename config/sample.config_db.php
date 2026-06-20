@@ -155,3 +155,18 @@ define('DEDALO_RAG_LLM_TEMPERATURE',		0.0);   // factual default for grounded he
 define('DEDALO_RAG_LLM_SYSTEM_PROMPT',		'');    // '' = built-in default; per-section override via properties.rag.system_prompt
 // ask() throttle (planned; simple per-user/min counter)
 define('DEDALO_RAG_ASK_RATE_PER_MIN',		20);
+
+// --- RAG Phase 5b: image similarity & object characterization ---------------
+// Multimodal (joint text+image) encoder. Local default (a small CLIP/SigLIP HTTP
+// sidecar); external APIs allowed only for publishable objects.
+define('DEDALO_RAG_MULTIMODAL_PROVIDER',	'local');   // 'local' | 'external'
+define('DEDALO_RAG_MULTIMODAL_MODEL',		'siglip2'); // or jina-clip-v2 / open-clip id
+define('DEDALO_RAG_MULTIMODAL_ENDPOINT',	null);      // e.g. http://localhost:8082  (POST /image, /text)
+define('DEDALO_RAG_MULTIMODAL_API_KEY',		null);
+// Encoder input: read the downsized non-master quality, downscale to this longest side.
+define('DEDALO_RAG_IMAGE_MAX_PX',			512);
+// Object similarity tuning
+define('DEDALO_RAG_IMAGE_HYBRID',			true);  // blend visual NN with metadata/context (RRF)
+define('DEDALO_RAG_NEAR_DUPLICATE_SIMILARITY', 0.93); // 'same in the collection' threshold
+define('DEDALO_RAG_CHARACTERIZE_TOP_K',		20);    // neighbours aggregated into a proposal
+// (DEDALO_RAG_MEDIA_ENABLED above must be true to activate image ingestion/retrieval.)

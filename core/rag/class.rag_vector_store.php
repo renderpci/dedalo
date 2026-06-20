@@ -170,6 +170,24 @@ abstract class rag_vector_store {
 
 
 	/**
+	* DELETE_RECORD_MODALITY  remove a record's vectors of one modality only
+	* (text vs image are managed by separate indexer paths).
+	* @param string $section_tipo
+	* @param int $section_id
+	* @param string $modality  'text' | 'image'
+	* @return bool
+	*/
+	public static function delete_record_modality( string $section_tipo, int $section_id, string $modality ) : bool {
+
+		return DBi_vector::exec(
+			'DELETE FROM rag_embeddings WHERE section_tipo=$1 AND section_id=$2 AND modality=$3',
+			[$section_tipo, $section_id, $modality]
+		) !== false;
+	}//end delete_record_modality
+
+
+
+	/**
 	* DELETE_STALE
 	* Remove chunks of a (record, component, lang, model) whose chunk_index is
 	* >= $valid_count — i.e. chunks left over after the value shrank. MODEL-SCOPED
@@ -280,6 +298,64 @@ abstract class rag_vector_store {
 		}
 		return $rows;
 	}//end query
+
+
+
+	/**
+	* GET_RECORD_VECTORS
+	* Fetch a record's stored vectors (raw embeddings) for a model+modality — used
+	* for image→image "find similar to this object" without re-embedding. Parses
+	* the pgvector text form into PHP floats.
+	* @param string $section_tipo
+	* @param int $section_id
+	* @param string $model
+	* @param string $modality = 'image'
+	* @return array<int,array{chunk_index:int, view:?string, embedding:array<int,float>}>
+	*/
+	public static function get_record_vectors( string $section_tipo, int $section_id, string $model, string $modality='image' ) : array {
+
+		$result = DBi_vector::exec(
+			'SELECT chunk_index, chunk_meta, source_text, embedding::text AS emb
+				FROM rag_embeddings
+				WHERE section_tipo=$1 AND section_id=$2 AND model=$3 AND modality=$4
+				ORDER BY chunk_index',
+			[$section_tipo, $section_id, $model, $modality]
+		);
+		if ($result === false) {
+			return [];
+		}
+		$out = [];
+		while ($row = pg_fetch_assoc($result)) {
+			$meta = (isset($row['chunk_meta']) && is_string($row['chunk_meta'])) ? json_decode($row['chunk_meta'], true) : null;
+			$out[] = [
+				'chunk_index'	=> (int)$row['chunk_index'],
+				'view'			=> $meta['view'] ?? null,
+				'source_text'	=> $row['source_text'] ?? '',
+				'embedding'		=> self::parse_vector_text($row['emb'] ?? '')
+			];
+		}
+		return $out;
+	}//end get_record_vectors
+
+
+
+	/**
+	* PARSE_VECTOR_TEXT  '[0.1,0.2,…]' → float[]
+	* @param string $text
+	* @return array<int,float>
+	*/
+	public static function parse_vector_text( string $text ) : array {
+
+		$text = trim($text);
+		if ($text === '' || $text === '[]') {
+			return [];
+		}
+		$text = trim($text, "[]");
+		if ($text === '') {
+			return [];
+		}
+		return array_map('floatval', explode(',', $text));
+	}//end parse_vector_text
 
 
 

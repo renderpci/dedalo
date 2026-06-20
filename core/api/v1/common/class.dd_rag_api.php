@@ -31,7 +31,11 @@ final class dd_rag_api {
 		'similar_to',
 		'retrieve',
 		'ask',
-		'get_agent_context'
+		'get_agent_context',
+		// Phase 5b — image similarity & object characterization
+		'similar_objects',
+		'characterize_object',
+		'search_by_text_image'
 	];
 
 
@@ -332,6 +336,147 @@ final class dd_rag_api {
 		}
 		return $kept;
 	}//end fit_token_budget
+
+
+
+	// ---------------------------------------------------------------------
+	// Phase 5b — image similarity & object characterization
+	// ---------------------------------------------------------------------
+
+
+
+	/**
+	* SIMILAR_OBJECTS  image→image: objects visually close to this one
+	* @param object $rqo
+	* @return object
+	*/
+	public static function similar_objects( object $rqo ) : object {
+
+		$response = self::new_response('similar_objects');
+
+		$source			= $rqo->source ?? new stdClass();
+		$section_tipo	= (string)($source->section_tipo ?? '');
+		$section_id		= (int)($source->section_id ?? 0);
+		if ($section_tipo === '' || $section_id < 1) {
+			$response->errors[] = 'missing_record';
+			return $response;
+		}
+		if (common::get_permissions($section_tipo, $section_tipo) < 1
+			|| !security::user_can_access_record($section_tipo, $section_id, self::user_id())) {
+			$response->errors[] = 'forbidden_record';
+			return $response;
+		}
+
+		$near_dup = !empty($source->near_duplicate);
+		$min_sim  = $source->min_similarity
+			?? ($near_dup && defined('DEDALO_RAG_NEAR_DUPLICATE_SIMILARITY') ? (float)DEDALO_RAG_NEAR_DUPLICATE_SIMILARITY : null);
+
+		$objects = retrieval::find_similar_objects($section_tipo, $section_id, [
+			'mode'			=> ($source->mode ?? null) === 'visual' ? 'visual' : 'hybrid',
+			'view'			=> $source->view ?? null,
+			'section_tipos'	=> (!empty($source->section_tipos) && is_array($source->section_tipos)) ? $source->section_tipos : null,
+			'top_k'			=> self::clamp_top_k($source->top_k ?? null),
+			'min_similarity'=> $min_sim,
+			'user_id'		=> self::user_id()
+		]);
+
+		$response->result	= self::shape_objects($objects);
+		$response->msg		= 'ok';
+		return $response;
+	}//end similar_objects
+
+
+
+	/**
+	* CHARACTERIZE_OBJECT  propose typology / period / material from neighbours
+	* @param object $rqo
+	* @return object
+	*/
+	public static function characterize_object( object $rqo ) : object {
+
+		$response = self::new_response('characterize_object');
+
+		$source			= $rqo->source ?? new stdClass();
+		$section_tipo	= (string)($source->section_tipo ?? '');
+		$section_id		= (int)($source->section_id ?? 0);
+		if ($section_tipo === '' || $section_id < 1) {
+			$response->errors[] = 'missing_record';
+			return $response;
+		}
+		if (common::get_permissions($section_tipo, $section_tipo) < 1
+			|| !security::user_can_access_record($section_tipo, $section_id, self::user_id())) {
+			$response->errors[] = 'forbidden_record';
+			return $response;
+		}
+
+		$fields = (!empty($source->fields) && is_array($source->fields)) ? array_map('strval', $source->fields) : null;
+
+		$response->result	= rag_characterizer::characterize($section_tipo, $section_id, $fields, [
+			'top_k'		=> (int)($source->top_k ?? (defined('DEDALO_RAG_CHARACTERIZE_TOP_K') ? DEDALO_RAG_CHARACTERIZE_TOP_K : 20)),
+			'user_id'	=> self::user_id()
+		]);
+		$response->msg		= 'ok';
+		return $response;
+	}//end characterize_object
+
+
+
+	/**
+	* SEARCH_BY_TEXT_IMAGE  text description → matching object images
+	* @param object $rqo
+	* @return object
+	*/
+	public static function search_by_text_image( object $rqo ) : object {
+
+		$response = self::new_response('search_by_text_image');
+
+		$source	= $rqo->source ?? new stdClass();
+		$query	= trim((string)($source->query ?? ''));
+		if ($query === '') {
+			$response->errors[] = 'missing_query';
+			return $response;
+		}
+
+		$section_tipos = self::resolve_permitted_sections($source, $response);
+		if ($section_tipos === false) {
+			return $response;
+		}
+
+		$objects = retrieval::search_by_text_image($query, [
+			'section_tipos'	=> $section_tipos,
+			'top_k'			=> self::clamp_top_k($source->top_k ?? null),
+			'user_id'		=> self::user_id()
+		]);
+
+		$response->result	= self::shape_objects($objects);
+		$response->msg		= 'ok';
+		return $response;
+	}//end search_by_text_image
+
+
+
+	/**
+	* SHAPE_OBJECTS  object results with an explicit thumb_url + view
+	* @param array<int,array<string,mixed>> $objects
+	* @return array<int,object>
+	*/
+	private static function shape_objects( array $objects ) : array {
+
+		$out = [];
+		foreach ($objects as $o) {
+			$meta = $o['chunk_meta'] ?? [];
+			$out[] = (object)[
+				'section_tipo'	=> $o['section_tipo'] ?? null,
+				'section_id'	=> isset($o['section_id']) ? (int)$o['section_id'] : null,
+				'score'			=> $o['rrf_score'] ?? ($o['score'] ?? null),
+				'similarity'	=> isset($o['distance']) ? round(1.0 - (float)$o['distance'], 4) : null,
+				'view'			=> $meta['view'] ?? null,
+				'thumb_url'		=> $meta['thumb_url'] ?? null,
+				'context'		=> $o['source_text'] ?? null
+			];
+		}
+		return $out;
+	}//end shape_objects
 
 
 

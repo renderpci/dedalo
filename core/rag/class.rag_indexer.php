@@ -39,6 +39,23 @@ abstract class rag_indexer {
 			return false; // retryable: store not reachable
 		}
 
+		// text components and image objects index independently (different
+		// models/partitions, own atomic flushes); the record succeeds only if both do.
+		$text_ok  = self::index_record_text($section_tipo, $section_id);
+		$image_ok = self::index_record_images($section_tipo, $section_id);
+		return $text_ok && $image_ok;
+	}//end index_record
+
+
+
+	/**
+	* INDEX_RECORD_TEXT  embed the configured text components.
+	* @param string $section_tipo
+	* @param int $section_id
+	* @return bool
+	*/
+	private static function index_record_text( string $section_tipo, int $section_id ) : bool {
+
 		// EGRESS GATE (index-time)
 		if (!rag_security::record_can_egress($section_tipo, $section_id)) {
 			debug_log(__METHOD__ . " Skipping external-egress-forbidden record $section_tipo/$section_id (no local provider configured for restricted content)", logger::WARNING);
@@ -54,8 +71,9 @@ abstract class rag_indexer {
 
 		$component_tipos = rag_config::get_embeddable_component_tipos($section_tipo);
 		if (empty($component_tipos)) {
-			// nothing configured to embed → ensure any old vectors are gone
-			rag_vector_store::delete_record($section_tipo, $section_id);
+			// no text components configured → clear only TEXT vectors (image
+			// vectors, if any, are managed by index_record_images).
+			rag_vector_store::delete_record_modality($section_tipo, $section_id, 'text');
 			return true;
 		}
 
@@ -176,7 +194,154 @@ abstract class rag_indexer {
 		}
 
 		return $write_ok && !$embed_failure;
-	}//end index_record
+	}//end index_record_text
+
+
+
+	/**
+	* INDEX_RECORD_IMAGES
+	* Phase 5b: embed the object's images (declared in properties.rag.context) with
+	* the multimodal model into the image partition. One vector per image, tagged
+	* with its view (obverse/reverse/…). source_text = a context summary (typology/
+	* material/period labels) for hybrid scoring + display. Egress-gated by
+	* is_publishable for external providers; masters never read. Own atomic flush.
+	* @param string $section_tipo
+	* @param int $section_id
+	* @return bool
+	*/
+	private static function index_record_images( string $section_tipo, int $section_id ) : bool {
+
+		$mm = embedding_provider_multimodal::get();
+		if ($mm === null) {
+			return true; // multimodal not configured → nothing to do
+		}
+
+		$images = rag_config::get_context_images($section_tipo);
+		if (empty($images)) {
+			// context declares no images → clear any old image vectors
+			rag_vector_store::delete_record_modality($section_tipo, $section_id, 'image');
+			return true;
+		}
+
+		// external-egress gate (publishable-only for external providers)
+		if (!rag_media_extractor::can_egress_image($section_tipo, $section_id)) {
+			debug_log(__METHOD__ . " Skipping non-publishable image egress for $section_tipo/$section_id", logger::WARNING);
+			return true; // deliberate skip, not a failure
+		}
+
+		$model			= $mm->get_model();
+		$existing_hashes= rag_vector_store::diff_hashes($section_tipo, $section_id, $model);
+		$context_summary= self::build_context_summary($section_tipo, $section_id);
+		$egress_class	= rag_security::get_record_egress_class($section_tipo, $section_id);
+
+		$pending_upserts	= [];
+		$pending_stale		= []; // [component_tipo, lang, valid_count]
+		$dimension			= null;
+		$embed_failure		= false;
+
+		foreach ($images as $img) {
+
+			$component_tipo	= $img['tipo'];
+			$view			= $img['view'] ?? null;
+			$lang			= DEDALO_DATA_NOLAN;
+
+			$resolved = rag_media_extractor::get_image_for_embedding($component_tipo, $section_id, $section_tipo);
+			if ($resolved === null) {
+				// no image present → prune any prior vector for this component
+				$pending_stale[] = [$component_tipo, $lang, 0];
+				continue;
+			}
+
+			$source_hash = hash('sha256', 'img_v1|' . $resolved['bytes_hash'] . '|' . $context_summary);
+			$key = $component_tipo . '|' . $lang . '|0';
+
+			if (($existing_hashes[$key] ?? null) !== $source_hash) {
+				$embed = $mm->embed_image([ $resolved['base64'] ]);
+				$vec = $embed->vectors[0] ?? null;
+				if ($vec === null) {
+					debug_log(__METHOD__ . " Image embedding failed for $component_tipo/$section_id", logger::ERROR);
+					$embed_failure = true;
+					continue;
+				}
+				$dimension = $embed->dimension;
+				$pending_upserts[] = [
+					'section_tipo'	=> $section_tipo,
+					'section_id'	=> $section_id,
+					'component_tipo'=> $component_tipo,
+					'lang'			=> $lang,
+					'chunk_index'	=> 0,
+					'provider'		=> $mm->get_provider(),
+					'model'			=> $model,
+					'dimension'		=> $embed->dimension,
+					'embedding'		=> $vec,
+					'source_hash'	=> $source_hash,
+					'source_text'	=> $context_summary,
+					'token_count'	=> null,
+					'modality'		=> 'image',
+					'source_kind'	=> 'image_visual',
+					'egress_class'	=> $egress_class,
+					'parent_key'	=> $section_tipo . '_' . $section_id,
+					'chunk_meta'	=> [
+						'media_tipo'=> $component_tipo,
+						'view'		=> $view,
+						'quality'	=> $resolved['quality'],
+						'thumb_url'	=> $resolved['thumb_url'],
+						'width'		=> $resolved['width'],
+						'height'	=> $resolved['height']
+					]
+				];
+			}
+			$pending_stale[] = [$component_tipo, $lang, 1]; // one image per component
+		}
+
+		if (empty($pending_upserts) && empty($pending_stale)) {
+			return !$embed_failure;
+		}
+
+		if ($dimension !== null) {
+			rag_vector_store::ensure_model_partition($model, $dimension);
+		}
+		if (DBi_vector::begin() === false) {
+			return false;
+		}
+		$write_ok = true;
+		foreach ($pending_upserts as $row) {
+			if (!rag_vector_store::upsert($row)) { $write_ok = false; break; }
+		}
+		if ($write_ok) {
+			foreach ($pending_stale as [$ct, $lg, $cnt]) {
+				if (!rag_vector_store::delete_stale($section_tipo, $section_id, $ct, $lg, $model, $cnt)) { $write_ok = false; break; }
+			}
+		}
+		$write_ok ? DBi_vector::commit() : DBi_vector::rollback();
+
+		return $write_ok && !$embed_failure;
+	}//end index_record_images
+
+
+
+	/**
+	* BUILD_CONTEXT_SUMMARY  compact text of the object's metadata roles
+	* (typology/material/period labels) for hybrid scoring + result display.
+	* @param string $section_tipo
+	* @param int $section_id
+	* @return string
+	*/
+	private static function build_context_summary( string $section_tipo, int $section_id ) : string {
+
+		$metadata = rag_config::get_context_metadata($section_tipo);
+		if (empty($metadata)) {
+			return '';
+		}
+		$parts = [];
+		foreach ($metadata as $role => $component_tipo) {
+			$val = rag_text_extractor::get_component_value($component_tipo, $section_id, $section_tipo, DEDALO_DATA_LANG);
+			if (!empty($val)) {
+				$parts[] = $role . ': ' . trim($val);
+			}
+		}
+		return implode(' · ', $parts);
+	}//end build_context_summary
 
 
 

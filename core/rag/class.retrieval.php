@@ -145,6 +145,141 @@ abstract class retrieval {
 
 
 	/**
+	* FIND_SIMILAR_OBJECTS
+	* Phase 5b: image→image object similarity. Reads the object's stored image
+	* vectors and finds visually-nearest OTHER objects. For a multi-image object
+	* (coin obverse+reverse) the per-image result lists are RRF-fused so an object
+	* close on BOTH faces ranks above one close on a single face. Optional hybrid
+	* blends the visual ranking with a lexical match over the stored context
+	* summary (typology/material/period) — recommended for heritage. Explicit ACL;
+	* results carry thumb_url.
+	* @param string $section_tipo
+	* @param int $section_id
+	* @param array $opts { mode:'visual'|'hybrid', view?, section_tipos?, top_k?, candidates?, min_similarity?, user_id? }
+	* @return array<int,array<string,mixed>>  ranked objects (best first)
+	*/
+	public static function find_similar_objects( string $section_tipo, int $section_id, array $opts=[] ) : array {
+
+		if (!DBi_vector::is_configured()) {
+			return [];
+		}
+		$mm = embedding_provider_multimodal::get();
+		if ($mm === null) {
+			return [];
+		}
+		$model = $mm->get_model();
+
+		$self_vectors = rag_vector_store::get_record_vectors($section_tipo, $section_id, $model, 'image');
+		if (empty($self_vectors)) {
+			return []; // object has no image vectors (not indexed)
+		}
+
+		$mode			= $opts['mode'] ?? (defined('DEDALO_RAG_IMAGE_HYBRID') && DEDALO_RAG_IMAGE_HYBRID ? 'hybrid' : 'visual');
+		$view_filter	= $opts['view'] ?? null;
+		$section_tipos	= $opts['section_tipos'] ?? rag_config::get_compare_scope($section_tipo);
+		$top_k			= (int)($opts['top_k'] ?? (defined('DEDALO_RAG_TOP_K') ? DEDALO_RAG_TOP_K : 8));
+		$candidates		= (int)($opts['candidates'] ?? max(40, $top_k * 4));
+		$min_similarity	= $opts['min_similarity'] ?? null;
+		$user_id		= $opts['user_id'] ?? null;
+
+		// one ranked list per (matching) self image; exclude self from each
+		$ranked_lists	= [];
+		$context_summary= '';
+		foreach ($self_vectors as $sv) {
+			if ($context_summary === '' && !empty($sv['source_text'])) {
+				$context_summary = (string)$sv['source_text'];
+			}
+			if ($view_filter !== null && ($sv['view'] ?? null) !== $view_filter) {
+				continue;
+			}
+			if (empty($sv['embedding'])) {
+				continue;
+			}
+			$hits = rag_vector_store::query($sv['embedding'], $model, $candidates, null, $section_tipos, 'image');
+			$hits = array_values(array_filter($hits, static fn($h) =>
+				!((string)$h['section_tipo'] === $section_tipo && (int)$h['section_id'] === $section_id)
+			));
+			if (!empty($hits)) {
+				$ranked_lists[] = $hits;
+			}
+		}
+		if (empty($ranked_lists)) {
+			return [];
+		}
+
+		// hybrid: blend with a lexical match over the image rows' context summary
+		if ($mode === 'hybrid' && $context_summary !== '') {
+			$lex = rag_lexical::query($context_summary, $candidates, $section_tipos, 'image');
+			$lex = array_values(array_filter($lex, static fn($h) =>
+				!((string)$h['section_tipo'] === $section_tipo && (int)$h['section_id'] === $section_id)
+			));
+			if (!empty($lex)) {
+				$ranked_lists[] = $lex;
+			}
+		}
+
+		// fuse all lists (visual-per-view + optional lexical)
+		$fused = (count($ranked_lists) > 1)
+			? rag_fusion::fuse($ranked_lists, ['section_tipo','section_id','component_tipo','lang','chunk_index'])
+			: self::tag_score($ranked_lists[0]);
+
+		// near-duplicate / similarity floor (on best visual distance)
+		if ($min_similarity !== null) {
+			$fused = array_values(array_filter($fused, static fn($h) =>
+				(1.0 - (float)($h['distance'] ?? 1.0)) >= (float)$min_similarity
+			));
+		}
+
+		// EXPLICIT ACL, then collapse to best-per-object
+		$accessible = rag_security::filter_accessible($fused, $user_id);
+		$records = rag_fusion::collapse_to_records($accessible, isset($accessible[0]['rrf_score']) ? 'rrf_score' : 'score');
+
+		return array_slice($records, 0, $top_k);
+	}//end find_similar_objects
+
+
+
+	/**
+	* SEARCH_BY_TEXT_IMAGE
+	* Phase 5b: text→image. Encodes the query with the MULTIMODAL model's text
+	* tower (NOT the default text embedder) and finds matching object images.
+	* @param string $query
+	* @param array $opts { section_tipos?, top_k?, candidates?, user_id? }
+	* @return array<int,array<string,mixed>>
+	*/
+	public static function search_by_text_image( string $query, array $opts=[] ) : array {
+
+		$query = trim($query);
+		if ($query === '' || !DBi_vector::is_configured()) {
+			return [];
+		}
+		$mm = embedding_provider_multimodal::get();
+		if ($mm === null) {
+			return [];
+		}
+		$model = $mm->get_model();
+
+		$embed = $mm->embed_text_for_image_search([$query]);
+		$qvec = $embed->vectors[0] ?? null;
+		if ($qvec === null) {
+			return [];
+		}
+
+		$section_tipos	= $opts['section_tipos'] ?? [];
+		$top_k			= (int)($opts['top_k'] ?? (defined('DEDALO_RAG_TOP_K') ? DEDALO_RAG_TOP_K : 8));
+		$candidates		= (int)($opts['candidates'] ?? max(40, $top_k * 4));
+		$user_id		= $opts['user_id'] ?? null;
+
+		$hits = rag_vector_store::query($qvec, $model, $candidates, null, $section_tipos, 'image');
+		$accessible = rag_security::filter_accessible(self::tag_score($hits), $user_id);
+		$records = rag_fusion::collapse_to_records($accessible, 'score');
+
+		return array_slice($records, 0, $top_k);
+	}//end search_by_text_image
+
+
+
+	/**
 	* EXPAND_PARENTS
 	* Small-to-big: replace each passage with its parent section's full text
 	* (concatenated sibling chunks sharing parent_key) up to a token budget, for

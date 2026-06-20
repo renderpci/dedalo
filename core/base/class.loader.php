@@ -415,7 +415,8 @@ class class_loader {
 					'rag_chunker', 'rag_fusion', 'rag_lexical', 'rag_indexer', 'rag_queue',
 					'retrieval', 'rag_security', 'rag_llm_provider', 'rag_reranker',
 					'embedding_provider', 'embedding_provider_factory',
-					'embedding_provider_local_http', 'embedding_provider_openai'
+					'embedding_provider_local_http', 'embedding_provider_openai',
+					'embedding_provider_multimodal', 'rag_media_extractor', 'rag_characterizer'
 				], true)):
 				$file_path	= DEDALO_CORE_PATH . '/rag/class.' . $class_name . '.php';
 				break;
