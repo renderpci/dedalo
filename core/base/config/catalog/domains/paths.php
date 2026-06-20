@@ -211,6 +211,15 @@ return [
 	),
 
 	new config_key(
+		path:    'paths.export_hierarchy_path',
+		const:   'EXPORT_HIERARCHY_PATH',
+		type:    'string',
+		scope:   config_scope::DERIVED,
+		derived: static fn(array $r): string => $r['paths.root'] . '/install/import/hierarchy',
+		doc:     'export_hierarchy_path/ directory (inside install, import).',
+	),
+
+	new config_key(
 		path:    'paths.binary_base',
 		const:   null, // internal: media tool-binary base; the *_PATH consts derive from it
 		type:    'string',
