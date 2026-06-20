@@ -185,3 +185,6 @@ analysis
 
 # special agent dir to save plans and specs
 docs/superpowers
+
+# local copies of databases
+dedalo7_install.pgsql_*.gz
