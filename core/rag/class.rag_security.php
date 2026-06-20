@@ -46,7 +46,7 @@ abstract class rag_security {
 	*/
 	public static function get_record_egress_class( string $section_tipo, int $section_id ) : string {
 
-		// section-level forbidden list
+		// section-level forbidden list (explicit hard block)
 		$forbidden = defined('DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS')
 			? DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS
 			: [];
@@ -54,14 +54,27 @@ abstract class rag_security {
 			return 'restricted';
 		}
 
-		// best-effort per-record restriction: if the record is NOT accessible to
-		// an anonymous/global baseline, treat it as restricted. We probe with the
-		// superuser excluded by asking whether a record carries a project filter.
-		// security::user_can_access_record requires a user; here we conservatively
-		// classify any record whose section enforces project filtering and which
-		// is not globally public. Absent a cheap per-record signal, fall back to
-		// the section list above. (Extension point: inspect component_security_access.)
-		return 'public';
+		// Per-record signal: only a demonstrably PUBLISHABLE record may leave the
+		// host. This mirrors the image egress gate (rag_media_extractor::can_egress_image)
+		// so TEXT and MEDIA egress enforce the SAME publishable-only policy. A
+		// non-publishable (embargoed / project-restricted) record is 'restricted'
+		// even when its section is not in the forbidden list. is_publishable() treats
+		// a section without component_publication as publishable, so unrestricted
+		// content is unaffected. Fail-closed (restricted) on any error.
+		try {
+			if (!class_exists('diffusion_utils')) {
+				return 'restricted';
+			}
+			$locator = new stdClass();
+				$locator->section_tipo	= $section_tipo;
+				$locator->section_id	= $section_id;
+			return (diffusion_utils::is_publishable($locator) === true)
+				? 'public'
+				: 'restricted';
+		} catch (\Throwable $e) {
+			debug_log(__METHOD__." Fail-closed (restricted) for {$section_tipo}_{$section_id}: ".$e->getMessage(), logger::ERROR);
+			return 'restricted';
+		}
 	}//end get_record_egress_class
 
 
