@@ -140,7 +140,19 @@ final class dd_mailer {
 				}
 
 			// from
-				$from		= defined('DEDALO_SMTP_FROM') ? (string)DEDALO_SMTP_FROM : DEDALO_SMTP_USER;
+				// is_configured() only requires DEDALO_SMTP_HOST, so DEDALO_SMTP_USER may
+				// be undefined (e.g. an open relay). Guard the fallback the same way the
+				// auth block does — referencing an undefined constant would raise a fatal
+				// Error and break all mail.
+				$from		= defined('DEDALO_SMTP_FROM')
+					? (string)DEDALO_SMTP_FROM
+					: (defined('DEDALO_SMTP_USER') ? (string)DEDALO_SMTP_USER : '');
+				if ($from==='') {
+					$response->msg		= 'Error. Mailer From address not configured (DEDALO_SMTP_FROM missing)';
+					$response->errors[]	= 'mailer_not_configured';
+					debug_log(__METHOD__." No From address configured (DEDALO_SMTP_FROM / DEDALO_SMTP_USER missing)", logger::ERROR);
+					return $response;
+				}
 				$from_name	= defined('DEDALO_SMTP_FROM_NAME') ? (string)DEDALO_SMTP_FROM_NAME : '';
 				$mail->setFrom($from, $from_name);
 

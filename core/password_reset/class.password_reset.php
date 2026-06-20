@@ -107,6 +107,9 @@ final class password_reset {
 		$throttle_key = self::build_key('pwreset_req', $identifier);
 		if (self::is_throttled($throttle_key)) {
 			debug_log(__METHOD__." Request throttled for identifier", logger::WARNING);
+			// Apply the same constant-time delay as the other no-op paths so a throttled
+			// identifier is not observably faster than a normal request (timing oracle).
+			self::enumeration_delay();
 			return $response;
 		}
 		self::record_throttle_hit($throttle_key);
