@@ -132,4 +132,49 @@ class host_info {
 			'total' => self::get_ram_bytes() ?? 0,
 		];
 	}
+
+	/**
+	* PARSE_CPUINFO_MHZ
+	* Highest "cpu MHz" value across all cores in /proc/cpuinfo, rounded to int.
+	* @param string $raw
+	* @return int|null null when no MHz line is present
+	*/
+	public static function parse_cpuinfo_mhz(string $raw) : ?int {
+		if (preg_match_all('/^cpu MHz\s*:\s*([0-9.]+)/mi', $raw, $m) < 1) {
+			return null;
+		}
+		$values = array_map('floatval', $m[1]);
+		return (int)round(max($values));
+	}
+
+	/**
+	* GET_CPU_MHZ
+	* Peak CPU clock in MHz. Linux: /proc/cpuinfo. Darwin: sysctl hw.cpufrequency
+	* (Hz -> MHz); returns null on Apple Silicon, which does not expose that key.
+	* @return int|null
+	*/
+	public static function get_cpu_mhz() : ?int {
+		try {
+			switch (self::os_family()) {
+				case 'linux':
+					if (is_readable('/proc/cpuinfo')) {
+						$raw = @file_get_contents('/proc/cpuinfo');
+						if (is_string($raw) && $raw !== '') {
+							return self::parse_cpuinfo_mhz($raw);
+						}
+					}
+					return null;
+
+				case 'darwin':
+					$raw = @shell_exec('/usr/sbin/sysctl -n hw.cpufrequency 2>/dev/null');
+					$hz  = is_string($raw) ? self::parse_sysctl_int($raw) : null;
+					return $hz !== null ? (int)round($hz / 1_000_000) : null;
+
+				default:
+					return null;
+			}
+		} catch (\Throwable $e) {
+			return null;
+		}
+	}
 }//end class host_info

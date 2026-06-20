@@ -65,4 +65,19 @@ final class host_info_Test extends TestCase {
 		$this->assertArrayHasKey('total', $ram);
 		$this->assertArrayHasKey('type', $ram);
 	}
+
+	public function test_parse_cpuinfo_mhz_returns_peak_rounded() : void {
+		// max(2592.001, 3600.250) = 3600.250 -> 3600
+		$this->assertSame(3600, host_info::parse_cpuinfo_mhz($this->fixture('cpuinfo.txt')));
+	}
+
+	public function test_parse_cpuinfo_mhz_returns_null_when_absent() : void {
+		$this->assertNull(host_info::parse_cpuinfo_mhz("processor\t: 0\nmodel name\t: X\n"));
+	}
+
+	public function test_get_cpu_mhz_is_null_or_positive() : void {
+		$mhz = host_info::get_cpu_mhz();
+		// Apple Silicon returns null cleanly; Intel/Linux return a positive int.
+		$this->assertTrue($mhz === null || $mhz > 0);
+	}
 }
