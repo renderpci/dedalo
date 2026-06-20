@@ -481,6 +481,44 @@ const render_relation_table = async function(self, box, ref, lang, preview_id) {
 
 
 /**
+* ENSURE_PORTAL_META
+* Resolves a portal box's METADATA — its full default column set
+* (box.available_columns) + related section_tipo — record-independent and cached
+* on the box. Needed by the inspector column manager (which hides when
+* available_columns is absent). The fast datum render path supplies cell DATA but
+* not this metadata, so it's resolved lazily, on demand (when a portal cell is
+* selected), via one light build — NOT during every render (keeps print fast).
+* @param {Object} self
+* @param {Object} box - the selected cell block
+* @returns {Promise<boolean>} true if metadata is now available
+*/
+export const ensure_portal_meta = async function(self, box) {
+	if (!box || box.type!=='component' || !box.component_ref) return false
+	if (!is_relation_model(box.component_ref.model)) return false
+	if (Array.isArray(box.available_columns) && box.related_section_tipo) return true   // cached
+	const ref			= box.component_ref
+	const section_id	= self.preview_section_id
+	if (!section_id) return false
+	try {
+		const meta = await get_instance({
+			model: ref.model, tipo: ref.tipo, section_tipo: ref.section_tipo,
+			section_id: section_id, lang: page_globals.dedalo_data_lang, mode: 'edit',
+			permissions: 1, view: ref.view || 'default', id_variant: 'tp_meta_' + box.id, caller: self
+		})
+		await meta.build(true)
+		box.available_columns		= get_default_columns(meta)
+		box.related_section_tipo	= get_related_section_tipo(meta)
+		try { meta.destroy(true, true, true) } catch (e) { /* noop */ }
+		return Array.isArray(box.available_columns)
+	} catch (e) {
+		console.warn('tool_print: ensure_portal_meta failed', ref.tipo, e)
+		return false
+	}
+}//end ensure_portal_meta
+
+
+
+/**
 * FETCH_RELATION_LOCATORS
 * Reads a record's relation locators through one portal component directly from
 * the matrix `relation` column (action 'read_raw', type 'target_section') — no

@@ -72,7 +72,7 @@
 		reseat_ids
 	} from './canvas_tool_print.js'
 	import {make_print_ctx, layout_flow} from './flow_engine.js'
-	import {render_box_content, is_relation_model, column_key} from './render_box_tool_print.js'
+	import {render_box_content, is_relation_model, column_key, ensure_portal_meta} from './render_box_tool_print.js'
 	import {
 		query_layouts,
 		load_layout,
@@ -975,6 +975,15 @@ const sync_inspector = function(self, sel) {
 	// table column manager (relation cells only); the block acts as the "box"
 	if (is_table) {
 		render_table_columns_ui(self, block)
+		// the fast datum render path doesn't resolve a portal's full column set
+		// (box.available_columns); resolve it lazily on selection, then re-render the
+		// manager. Keeps print/render fast — the build only runs when a portal is
+		// actually selected for column editing.
+		if (!Array.isArray(block.available_columns)) {
+			ensure_portal_meta(self, block).then(ok => {
+				if (ok && self.sel && self.sel.cell_id===block.id) render_table_columns_ui(self, block)
+			})
+		}
 	} else if (self.inspector_columns) {
 		self.inspector_columns.classList.add('hide')
 		self.inspector_columns.replaceChildren()

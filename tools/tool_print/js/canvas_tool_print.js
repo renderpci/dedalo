@@ -557,6 +557,12 @@ const current_columns = function(box) {
 */
 const apply_columns = function(self, box, cols) {
 	box.table_columns = cols
+	// the column set changed → the single-read datum and the portal's render cache
+	// must be rebuilt: the datum's ddo_map needs the added column (or drops the
+	// removed one), and box._table_render's cache_key does NOT include columns so it
+	// would otherwise be reused stale. Force both to refetch/rebuild on re-render.
+	box._table_render		= null
+	self._editor_datum_key	= null
 	self.mark_dirty?.()
 	render_canvas(self, self.canvas_container)
 	if (self.sel) requestAnimationFrame(() => select_cell(self, self.sel.row_id, self.sel.cell_id))
