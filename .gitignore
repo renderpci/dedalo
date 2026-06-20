@@ -198,3 +198,9 @@ docs/superpowers
 
 # local copies of databases
 dedalo7_install.pgsql_*.gz
+
+# Test-run scratch fixtures: regenerated inline by each unit test (legacy_surface,
+# migration_extractor/runner, boot_subsystem/secret_state). NOT inputs — the pre-authored
+# test/server/unit/fixtures/host_info/ inputs are in a subdir and stay tracked.
+test/server/unit/fixtures/*.php
+test/server/unit/fixtures/*.env
