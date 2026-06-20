@@ -1,12 +1,14 @@
 # Updating code options
 
-In versions >= 6.4.1 Dédalo displays two different options to update its code: [Incremental](#incremental) and [Clean](#clean). Version < 6.4.1 only uses the [Incremental](#incremental) option.
+> See also: [Updating code](updating_code.md) · [Updates](index.md)
+
+In versions >= 6.4.1, Dédalo offers two options to update its code: [Incremental](#incremental) and [Clean](#clean). Versions < 6.4.1 only use the [Incremental](#incremental) option.
 
 ## Incremental
 
 The incremental option only replaces the modified files in the new version. It does not alter your `/dedalo` directory into `httpdocs` or your specific alias or other directories outside the Dédalo schema. To verify the changes, use `rsync`. Consequently, some older files will remain in your installation.
 
-This option is valid for patches and certain minor versions. However, in major updates, the most suitable option is to select `clean` because in mayor versions, changes could affect to Dédalo directories schema, moving files from/to a different location into the directory schema.
+This option is valid for patches and certain minor versions. However, for major updates the most suitable option is `clean`, because major versions can change the Dédalo directory schema, moving files to a different location within it.
 
 ## Clean
 

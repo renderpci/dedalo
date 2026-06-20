@@ -1,15 +1,21 @@
-# Dédalo Diffusion API Documentation
+# Diffusion API and Bun
+
+> See also: [Diffusion engine internals](engine_internals.md) · [Diffusion data flow](diffusion_data_flow.md) · [Diffusion config properties](diffusion_config_properties.md) · [Publication API](publication_api/index.md)
+
+The diffusion system is a data publication pipeline that transforms internal, ontology-driven work data into public-facing formats. It has two API layers: a PHP backend that extracts and prepares the data, and a Bun/TypeScript engine that parses it and writes it into MariaDB.
 
 ## Overview
 
-The Dédalo Diffusion system is a sophisticated data publication pipeline that transforms internal ontology-driven data into public-facing formats. It consists of two main API layers:
+The pipeline consists of two main API layers:
 
-1. **`dd_diffusion_api`** - The PHP backend API that extracts and prepares data from the work system
-2. **Bun Diffusion API** - A TypeScript/Bun middleware that processes, parses, and inserts data into MariaDB
+1. **`dd_diffusion_api`** — the PHP backend API that extracts and prepares data from the work system.
+2. **Bun diffusion API** — a TypeScript/Bun engine that processes, parses and inserts data into MariaDB.
+
+Per the Bun-owns-MariaDB rule, PHP never connects to MariaDB directly: every MariaDB operation goes through a Bun action.
 
 ## Architecture
 
-### High-Level Data Flow
+### High-level data flow
 
 ```mermaid
 flowchart TB
@@ -50,16 +56,16 @@ flowchart TB
 
 ## dd_diffusion_api
 
-The `dd_diffusion_api` class (`/core/api/v1/common/class.dd_diffusion_api.php`) is the main PHP entry point for diffusion operations.
+The `dd_diffusion_api` class (`core/api/v1/common/class.dd_diffusion_api.php`) is the main PHP entry point for diffusion operations.
 
-### Core Methods
+### Core methods
 
 #### `diffuse(object $rqo): object`
 
 The primary method that executes the diffusion process.
 
 **Parameters:**
-```php
+```js
 $rqo = {
     action: "diffuse",
     source: { tipo, section_tipo, ... },
@@ -75,7 +81,7 @@ $rqo = {
 ```
 
 **Response Structure:**
-```php
+```js
 {
     result: true,
     msg: "OK. Request done",
@@ -120,7 +126,7 @@ Retrieves diffusion configuration for a given section.
 
 **Use Case:** The tool_diffusion uses this to populate the publication interface with available diffusion targets.
 
-```php
+```js
 // Request
 {
     action: "get_diffusion_info",
@@ -148,7 +154,7 @@ Retrieves diffusion configuration for a given section.
 
 Returns raw parser definitions from ontology.
 
-```php
+```js
 // Request
 {
     action: "get_ontology_map",
@@ -165,7 +171,7 @@ Returns raw parser definitions from ontology.
 }
 ```
 
-### Diffusion Chain Processing
+### Diffusion chain processing
 
 The `diffusion_chain_processor` class handles recursive resolution of related data.
 
@@ -188,11 +194,11 @@ flowchart TD
 - **Deduplication**: Uses `diffusion_activity_logger` to prevent redundant processing
 - **Cross-Section Mapping**: Maintains `section_diffusion_map` for efficient lookup
 
-## Bun Diffusion API
+## Bun diffusion API
 
 The Bun-based middleware (`/diffusion/api/v1/`) provides high-performance data processing and MariaDB insertion.
 
-### Architecture Components
+### Architecture components
 
 ```mermaid
 flowchart LR
@@ -230,9 +236,9 @@ flowchart LR
     PS -->|SSE Stream| ROUTER
 ```
 
-### Core Modules
+### Core modules
 
-#### `index.ts` - Main Server
+#### `index.ts` — main server
 
 **Key Features:**
 - Unix socket server (configurable via `SOCKET_PATH`)
@@ -270,7 +276,7 @@ flowchart LR
 }
 ```
 
-#### `php_client.ts` - PHP Bridge
+#### `php_client.ts` — PHP bridge
 
 Forwards requests to the PHP `dd_diffusion_api` with:
 - Cookie header forwarding for session authentication
@@ -283,7 +289,7 @@ DEDALO_API_URL = "https://dedalo.dev/dedalo/core/api/v1/json/"
 REQUEST_TIMEOUT_MS = 120000
 ```
 
-#### `diffusion_processor.ts` - Parser Pipeline
+#### `diffusion_processor.ts` — parser pipeline
 
 Transforms PHP agnostic responses into SQL-ready data.
 
@@ -316,11 +322,11 @@ When `context.columns` is defined, passes all entries at once for cross-lang gro
 }
 ```
 
-### Parser System
+### Parser system
 
 The parser registry maps PHP-format function strings to TypeScript implementations.
 
-#### Parser Registry (`parsers/index.ts`)
+#### Parser registry (`parsers/index.ts`)
 
 ```typescript
 const parser_registry: Record<string, parser_fn> = {
@@ -437,9 +443,9 @@ const resolve_slot = (tipo_map, tipo, lang_key) => {
 // Output: [{ value: 1704067200 }]
 ```
 
-### Database Layer
+### Database layer
 
-#### `db.ts` - Connection Management
+#### `db.ts` — connection management
 
 **Pool Caching:**
 ```typescript
@@ -468,7 +474,7 @@ async function insert_table_data(table: processed_table): Promise<number> {
 }
 ```
 
-#### `sql_generator.ts` - SQL Builder
+#### `sql_generator.ts` — SQL builder
 
 **Composite Key:** `(section_id, lang)`
 
@@ -496,9 +502,9 @@ ON DUPLICATE KEY UPDATE
 | `field_decimal` | DECIMAL |
 | `field_boolean` | BOOLEAN |
 
-## Data Flow from tool_diffusion
+## Data flow from tool_diffusion
 
-### User Interaction Flow
+### User interaction flow
 
 ```mermaid
 sequenceDiagram
@@ -528,7 +534,7 @@ sequenceDiagram
     UI->>User: Show completion
 ```
 
-### tool_diffusion.js Key Methods
+### tool_diffusion.js key methods
 
 #### `get_diffusion_info()`
 
@@ -582,9 +588,9 @@ Checks Bun engine health:
 // - last_error
 ```
 
-## Configuration & Environment
+## Configuration and environment
 
-### Bun Environment Variables (`.env`)
+### Bun environment variables (`.env`)
 
 ```bash
 # Server
@@ -599,13 +605,13 @@ DEDALO_MEDIA_URL=/dedalo/media/
 DB_SOCKET=/tmp/mysql.sock
 DB_USER=dedalo_user
 DB_PASSWORD=secret
-
-# (legacy note: session validation is cookie passthrough to PHP, not Redis)
-REDIS_HOST=localhost
-REDIS_PORT=6379
 ```
 
-### Apache Configuration
+!!! note "No Redis"
+    Session validation is a cookie passthrough to PHP (Bun forwards the cookie to PHP
+    `get_environment`); the engine uses no Redis or external session store.
+
+### Apache configuration
 
 ```apache
 # Proxy to Bun Unix Socket
@@ -616,9 +622,9 @@ ProxyPassReverse /diffusion/api/v1/ unix:/tmp/diffusion.sock|http://localhost/
 # ProxyPass /diffusion/api/v1/ http://localhost:3000/ timeout=120
 ```
 
-## Use Cases & Examples
+## Use cases and examples
 
-### Use Case 1: Basic Publication
+### Use case 1: basic publication
 
 Publishing Oral History interviews to a website:
 
@@ -690,7 +696,7 @@ INSERT INTO informant (section_id, lang, name, surname)
 VALUES (1, 'lg-eng', 'Manuel', 'González');
 ```
 
-### Use Case 2: Multi-Language Publication
+### Use case 2: multilingual publication
 
 Publishing content in multiple languages with fallback:
 
@@ -725,7 +731,7 @@ flowchart TB
 // 4. Any available
 ```
 
-### Use Case 3: Complex Chain Resolution
+### Use case 3: complex chain resolution
 
 Three-level resolution (Interview → Image → Person → Toponym):
 
@@ -770,7 +776,7 @@ flowchart TB
 
 **Note:** Each level exponentially increases processing time. Monitor performance with large datasets.
 
-### Use Case 4: Custom Parser Chain
+### Use case 4: custom parser chain
 
 Combining multiple parsers for complex transformations:
 
@@ -817,7 +823,7 @@ text_format() → ["Spain (Country)", "Madrid (City)", "Center (District)"]
 merge(string) → "Spain (Country) > Madrid (City) > Center (District)"
 ```
 
-### Use Case 5: RDF Export
+### Use case 5: RDF export
 
 For RDF-type diffusion elements:
 
@@ -832,9 +838,9 @@ if ($diffusion_type === 'rdf') {
 
 The Bun layer handles RDF file merging and ZIP creation via `rdf_file_utils.ts`.
 
-## Advanced Topics
+## Advanced topics
 
-### Chunking Strategy
+### Chunking strategy
 
 For large datasets, Bun paginates requests:
 
@@ -858,7 +864,7 @@ const chunk_rqo = {
 - Allows progress tracking per chunk
 - Fault-tolerant (one bad chunk doesn't fail entire process)
 
-### Progress Store
+### Progress store
 
 In-memory process tracking with pub/sub:
 
@@ -873,7 +879,7 @@ update_progress(process_id, { counter, msg, ... });
 subscribe_to_process(process_id, callback);
 ```
 
-### Session Handling
+### Session handling
 
 Bun forwards cookies for PHP session validation:
 
@@ -888,7 +894,7 @@ if (cookie_header) {
 
 ## Troubleshooting
 
-### Common Issues
+### Common issues
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
@@ -898,7 +904,7 @@ if (cookie_header) {
 | SSE timeout | Proxy closing connection | Add `timeout=120` to ProxyPass |
 | Memory exhausted | Too many levels/records | Reduce `levels` or `chunk_size` |
 
-### Debug Mode
+### Debug mode
 
 Enable debug logging in Bun:
 ```bash
@@ -910,7 +916,7 @@ Enable Dédalo debug:
 define('SHOW_DEBUG', true);
 ```
 
-## API Reference Summary
+## API reference summary
 
 ### dd_diffusion_api (PHP)
 
@@ -921,7 +927,7 @@ define('SHOW_DEBUG', true);
 | `validate()` | `validate` | Validate ontology mapping |
 | `get_ontology_map()` | `get_ontology_map` | Get raw parser definitions |
 
-### Bun Endpoints
+### Bun endpoints
 
 | Endpoint | Purpose |
 |----------|---------|
@@ -930,7 +936,7 @@ define('SHOW_DEBUG', true);
 | `GET /api/v1/status` | Full system status |
 | `GET /api/v1/processes` | List active processes |
 
-### Parser Functions
+### Parser functions
 
 | Function | Module | Purpose |
 |----------|--------|---------|
@@ -946,7 +952,7 @@ define('SHOW_DEBUG', true);
 | `slice_chain` | parser_locator | Slice parent chain |
 
 
-## Delete Propagation & Publication Tracking (v7)
+## Delete propagation and publication tracking (v7)
 
 ### Publication tracking — the dd1758 activity log
 

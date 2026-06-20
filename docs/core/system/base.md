@@ -1,12 +1,11 @@
 # base
 
-> The bootstrap / loader layer (`core/base/`) — the very first Dédalo code to
-> run: it registers the class autoloader, installs the error handlers, and
-> provides the low-level utilities (file cache, OS/system probing, background
-> process tracking) that everything above `common` is built on.
+> See also: [Architecture overview](../architecture_overview.md) · [Sections](../sections/index.md) · [Components](../components/index.md)
 
-> See also: [Architecture overview](../architecture_overview.md) ·
-> [Sections](../sections/index.md) · [Components](../components/index.md)
+The bootstrap / loader layer (`core/base/`) is the very first Dédalo code to
+run: it registers the class autoloader, installs the error handlers, and
+provides the low-level utilities (file cache, OS/system probing, background
+process tracking) that everything above `common` is built on.
 
 This page is the **developer reference** for the `base` subsystem. `base` is not
 a single class — it is the *bootstrap directory* (`core/base/`) holding the

@@ -1,22 +1,24 @@
 # Management and maintenance
 
+> See also: [Users, profiles and permissions](users_and_permissions.md) · [Backup best practices](backup_best_practises.md) · [Updates](updates/index.md)
+
 ## Introduction
 
-Dédalo project is focused to manage cultural heritage data. Dédalo Projects preserve data about memory and cultural heritage, his data could be sensitive, his treatment need to respect the legacy deposited by informants, interviewees, etc and also all work done by researches, curators, etc. Data in Dédalo projects is very important, preserving data is the center of the management and maintenance.
+A Dédalo project is focused on managing cultural heritage data. Dédalo projects preserve data about memory and cultural heritage; that data can be sensitive, and its treatment must respect the legacy entrusted by informants and interviewees, as well as all the work done by researchers, curators and others. Data in Dédalo projects is very important, and preserving it is the heart of management and maintenance.
 
 ## Work environments
 
-Dédalo has two different environments, work system and publication system. Work system is used to manage the full catalog, it manage all project data, all information of the memory interviews, tangible/intangible heritage, documents, images, audiovisual, publications, etc. besides work system has the tools to research and analyze the catalog items. Work system is a private space with users control and full activity control.
+Dédalo has two environments: the work system and the publication system. The work system manages the full catalogue — all project data: memory interviews, tangible and intangible heritage, documents, images, audiovisual, publications and so on — and it provides the tools to research and analyze the catalogue items. The work system is a private space with user control and full activity logging.
 
-Publication system is the open and free public access to the data, publication system it is a reduced copy of the catalog, it store and manage only the data that can be public. Publication system is a separate system controlled by the administrators.
+The publication system is the open, free public access to the data. It is a reduced copy of the catalogue and stores only the data that can be public. The publication system is a separate system controlled by the administrators.
 
-Both systems are connected but only in one way, work system can add, change or remove data of the publication system, but publication system does not have way back to work system. Any change done in publication system is totally isolated of the work system, so any non authorized access to the publication system has not affection to the work system.
+The two systems are connected in one direction only: the work system can add, change or remove data in the publication system, but the publication system has no way back to the work system. Any change made in the publication system is fully isolated from the work system, so an unauthorized access to the publication system has no effect on the work system.
 
 ### Work system
 
-Work system is the principal system. Work system was builded with flexibility in mind, in this system data has not totally defined, it depends of the ontology resolution and relations and data values need to be resolved in real time.
+The work system is the main system. It was built with flexibility in mind: its data is not fully defined up front but depends on ontology resolution, and relations and data values are resolved in real time.
 
-Data is stored in JSON format and Dédalo use PostgreSQL as main database system.
+Data is stored in JSON format, and Dédalo uses PostgreSQL as its main database system.
 
 #### root user
 
@@ -46,10 +48,9 @@ For security reasons, the root user cannot be managed through the Dédalo web in
 
 General admin account is the every day administration account, the user is set in the users section and it has the global access to the installation, this account can manage the users, it has full data access, and it can perform daily administrative tasks.
 
-The first general admin user is create by root user, but this account can create other general admin users. Any general admin account can create other general admin, developers and users, assign profiles and projects  to them but it can not change his own configuration, only root and other general users can modified it.
+The first general admin user is created by the root user, but a general admin account can then create other general admin users. Any general admin account can create other general admins, developers and users, and assign profiles and projects to them — but it cannot change its own configuration; only root and other general admins can modify it.
 
-This accounts does not activate the debugger.
-This accounts does not have restrictions to data access. They have full data access.
+These accounts do not activate the debugger. They have no restrictions on data access — they have full data access.
 
 #### Users, profiles and permissions
 
@@ -64,25 +65,25 @@ See [Users, profiles and permissions](users_and_permissions.md) for:
 
 #### GNU/Linux account
 
-To admin a Dédalo installation you will need a user with administrative rights to access to GNU/Linux server.
+To administer a Dédalo installation you will need a user with administrative rights on the GNU/Linux server.
 
-You will need to install, update and perform management tasks. Dédalo system depends of PostgreSQL, PHP, Apache, MariaDB (or MySQL), etc. and any Dédalo project will need a GNU/Linux expert.
+You will need to install, update and perform management tasks. The Dédalo system depends on PostgreSQL, PHP, Apache, MariaDB (or MySQL) and others, so any Dédalo project will need a GNU/Linux expert.
 
 #### Maintenance panel
 
-The most daily task are performed into the Maintenance panel. It is locate inside the "System administration" menu.
+Most daily tasks are performed in the Maintenance panel, located inside the "System administration" menu.
 
 ![maintenance panel](assets/20230910_124038_maintenance_panel.png)
 
-The panel is only accessible by; general administration, developers users and root user.
+The panel is only accessible to general administrators, developer users and the root user.
 
-General administrators and developers need have a profile that allowed to access to the panel, if the general admin or developer user has a profile with not access to the panel it will not allowed to access and perform maintenance tasks.
+General administrators and developers also need a profile that grants access to the panel: if their profile does not grant access to the panel, they cannot enter it or perform maintenance tasks.
 
-Normal users with a profile with access to maintenance panel will not able to enter and perform any maintenance task. To be allowed the user need to be General administrator or developer user.
+A normal user, even with a profile that grants access to the maintenance panel, cannot enter it or perform any maintenance task. To be allowed, the user must be a general administrator or a developer.
 
 #### Maintenance tasks
 
-Before preform any critical maintenance task as a data update you will change Dédalo state to maintenance.
+Before performing any critical maintenance task, such as a data update, change the Dédalo state to maintenance.
 
 - [Changing to maintenance state.](maintenace_status.md)
 

@@ -1,8 +1,8 @@
 # search
 
-> The server query engine — compiles a **Search Query Object (SQO)** into a single prepared PostgreSQL statement over the JSONB `matrix_*` tables, runs it, and returns an iterable `db_result`.
-
 > See also: [SQO](../sqo.md) (the query DTO contract) · [RQO](../rqo.md) (the request that wraps an SQO) · [Sections](../sections/index.md) · [common](common.md)
+
+The server query engine compiles a **Search Query Object (SQO)** into a single prepared PostgreSQL statement over the JSONB `matrix_*` tables, runs it, and returns an iterable `db_result`.
 
 This page is the **class-level reference** for the `search` engine. For *what an
 SQO is* — its fields, the Mango-style filter grammar and the two-phase `parsed`
@@ -37,11 +37,11 @@ It sits at the boundary between the request layer and the database:
 
 ```mermaid
 flowchart TB
-    JS["client search.js"] -->|"rqo.sqo"| GATE["sanitize_client_sqo()\n(dd_manager / dd_utils_api)"]
+    JS["client search.js"] -->|"rqo.sqo"| GATE["sanitize_client_sqo()<br/>(dd_manager / dd_utils_api)"]
     GATE --> GI["search::get_instance(sqo)"]
     SRV["server-internal callers"] -->|"new search_query_object()"| GI
     GI -->|"mode dispatch"| ENG["search | search_tm | search_related"]
-    ENG -->|"search()"| PARSE["parse_sql_query()\n→ parse_sqo() → conform_filter()\n→ parse_sql_default/full_count/filter_by_locators"]
+    ENG -->|"search()"| PARSE["parse_sql_query()<br/>→ parse_sqo() → conform_filter()<br/>→ parse_sql_default/full_count/filter_by_locators"]
     PARSE -->|"$sql + $params"| EXEC["matrix_db_manager::exec_search()"]
     EXEC --> DBR["db_result (lazy JSON iterator)"]
 ```

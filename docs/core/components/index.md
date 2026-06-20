@@ -2,27 +2,27 @@
 
 > See also: [Architecture overview](../architecture_overview.md) · [Sections](../sections/index.md) · [Base classes](base_classes.md)
 
-Components are re-usable objects that can be instantiated by the ontology definition. Components are part of the sections and are used as fields with specific properties.
+Components are reusable objects instantiated from the ontology definition. They belong to sections and act as the fields of a record, each with its own properties.
 
-## Nomenclature of files
+## File nomenclature
 
-Every component definition has its own class, controller, and views. The components have a server part, develop in PHP language, and client part, develop in JavaScript and CSS.
+Every component definition has its own class, controller and views. A component has a server part, written in PHP, and a client part, written in JavaScript and CSS.
 
-CSS are develop with LESS language and it's not complied by itself, the final CSS is included as part of page.css.
+The CSS is written in LESS. It is not compiled on its own; the final CSS is included as part of `page.css`.
 
-The nomenclature of files follow this paths:
+File names follow these paths:
 
-1. **Server files:**
+1. **Server files**
 
-    Sever files are stored directly in the main directory of the component.
+    Server files are stored directly in the component's main directory.
 
     Class: `class.component_xxx.php`
 
     Controller: `component_xxx_json.php`
 
-2. **Client files:**
+2. **Client files**
 
-    Client files with logical, render and views are stored inside a `/js` directory
+    Client files (logic, render and views) are stored inside a `/js` directory.
 
     Class: `component_xxx.js`
 
@@ -36,13 +36,13 @@ The nomenclature of files follow this paths:
 
 -------------
 
-- xxx = specific name, (input_text | text_area | image | etc. )
-- yyy = mode, (edit | list | search)
+- xxx = specific name (input_text | text_area | image | etc.)
+- yyy = mode (edit | list | search)
 - zzz = view (default | line | mini | text | mosaic | etc.)
 
-Example of component_input_text
+Example of `component_input_text`:
 
-``` shell
+```text
 component_input_text
     ├── class.component_input_text.php
     ├── component_input_text_json.php
@@ -68,20 +68,20 @@ component_input_text
 
 ## Typologies of components
 
-Mainly Dédalo define two different behavior for components; literal components and related components. This typologies defines if the component has a related data or his data its managed by itself.
+Dédalo defines two main behaviours for components: literal components and related components. The typology says whether the component points at related data or manages its own data directly.
 
 ### Literal components
 
-Literal components manage direct data, final data, this data is independent of other ontology parts or components, this components save his data and does not need resolve it with others.
+Literal components manage direct, final data. This data is independent of other ontology nodes or components: a literal component saves its own value and does not need to resolve it against any other component.
 
-Literal components has three different ways to manage data; direct, media and info.
+Literal components manage data in three different ways: direct, media and info.
 
-- Direct components manage and control the format used.
-- Media components share his data format definition between other media components.
-- Info components give data from other components as information or calculations (summaries, state, etc ).
+- Direct components own and control the value format they use.
+- Media components share their data-format definition with the other media components.
+- Info components derive their data from other components as information or calculations (summaries, state, and so on).
 
-!!! note "About info as literal component"
-    Info components need other components to calculate his own data, but the result is save as direct data, so the component read and save like any other literal component.
+!!! note "Info as a literal component"
+    Info components need other components to calculate their own data, but the result is saved as direct data, so an info component reads and saves like any other literal component.
 
 #### Direct components
 
@@ -120,7 +120,7 @@ These components extend the `component_common` class. See [base classes](base_cl
 
 ### Related components
 
-Related components manage [locators](../locator.md) to point at other sections or components, sections pointed could be the same of the related component or other sections. The locator can specify if the pointed components is a literal or other related component.
+Related components manage [locators](../locator.md) that point at other sections or components. The pointed section can be the related component's own section or a different one. The locator can specify whether the pointed component is a literal or another related component.
 
 - [component_check_box](component_check_box.md) — multi-select of a closed list of values; each check stores a locator.
 - [component_dataframe](component_dataframe.md) — frame records (uncertainty, qualifiers, sources) paired to individual items of a main component.
@@ -141,7 +141,7 @@ These components extend the `component_relation_common` class. See [base classes
 
 ## Inheritance
 
-In server context. components classes inherit from common classes dependent of the component typology. The main component class is `component_common.php` and some components, as media components, share his own common class as `component_media_common.php`
+In server context, component classes inherit from common classes according to the component typology. The main component class is `component_common.php`, and some families, such as media components, share an intermediate common class such as `component_media_common.php`.
 
 ```mermaid
     flowchart RL
@@ -200,16 +200,16 @@ In server context. components classes inherit from common classes dependent of t
 
 ## Instantiation
 
-Usually components are called by sections but it's possible instantiate any component directly.
+Components are usually called by sections, but any component can also be instantiated directly.
 
-To instantiate a component is necessary indicate:
+To instantiate a component you must supply:
 
-1. His `model`, his name.
-2. His ontology `tipo`
-3. His `section_tipo` (some components could be instantiated in different sections)
-4. The language to be loaded and used.
+1. Its `model` (its name).
+2. Its ontology `tipo`.
+3. Its `section_tipo` (some components can be instantiated in different sections).
+4. The language to load and use.
 
-In the server the components are instantiated with `get_instance()` method in `component_common.php` class.
+In the server, components are instantiated with the `get_instance()` method of the `component_common.php` class.
 
 ```php
 $component = component_common::get_instance(
@@ -224,7 +224,7 @@ $component = component_common::get_instance(
  );
 ```
 
-In the client the components are instantiated by `instances.js` class.
+In the client, components are instantiated through the `instances.js` class.
 
 ```javascript
 const component = get_instance({
@@ -239,66 +239,67 @@ const component = get_instance({
 
 !!! info "JavaScript instantiation"
 
-    The `instances.js` class is a ES6 module and it can be include in this way:
+    The `instances.js` class is an ES6 module and can be imported like this:
 
     ```javascript
     import {get_instance} from '../../common/js/instances.js'
     ```
     
 ## DOM structure
-Components follow a standardized basic DOM structure for main modes and views.
 
-- Mode 'edit' view 'default'
+Components follow a standardized basic DOM structure for the main modes and views.
 
-``` shell
+- Mode `edit`, view `default`:
+
+```text
 ── wrapper_component
    ├── label
    ├── buttons_container
    └── content_data
-       └── content_value  
-           └── value  
+       └── content_value
+           └── value
 ```
 
-- Mode 'list' view 'default'
+- Mode `list`, view `default`:
 
-``` shell
+```text
 ── wrapper_component
-   └── value 
+   └── value
 ```
 
 ## Data management
 
-Components manage his own data, but their are not connected directly to the database, only sections can get and save data in the database, so, components get and save his data through their own section.
+Components manage their own data, but they are not connected directly to the database: only sections can read and save data in the database. A component therefore reads and saves its data through its own section.
 
 ## Translatable property
 
-Dédalo is a multilingual system, all information can be translatable in several languages. Components are translatable by default, but some components may be non-translatable such as component_number, non-translatable components have to define this property specifically as `false`.
+Dédalo is a multilingual system, so all information can be translated into several languages. Components are translatable by default, but some, such as `component_number`, are non-translatable; a non-translatable component must set this property explicitly to `false`.
 
 ### Translatable components
 
-Translatable components manage only the instance in the current language and their data will be only the instantiated language part of the data, for example, a component_input_text instantiated in the Català language will only manage the Català part of its data, the component will get its data from the section but you can only get one language at a time.
+A translatable component manages only the instance in the current language: its data is just the part of the value for the instantiated language. For example, a `component_input_text` instantiated in Catalan manages only the Catalan part of its data. The component gets its data from the section, but you can only work with one language at a time.
 
 ### Non-translatable components
 
-Every component has a language. Language need to be set when the component is instantiated, for non-translatable components language is defined as `lg-nolan`, and the component works in the same way that translatable component.
+Every component has a language. The language must be set when the component is instantiated. For non-translatable components the language is fixed to `lg-nolan`, and the component otherwise works the same way as a translatable one.
 
 ### Transliterate components
 
-In special cases, such as personal names, the component can be define as transliterate[^1], in these cases the language is define as `lg-nolan` by default, but the component can handle other languages as English `lg-eng`.
+In special cases, such as personal names, a component can be defined as transliterate[^1]. The language then defaults to `lg-nolan`, but the component can also handle other languages, such as English (`lg-eng`).
 
 [^1]: To express or represent in the characters of another alphabet.
 
 ## Properties
 
-The ontology defines the properties that will be used when the component will be instantiated. Properties define specific context of the component, such as CSS styles or the RQO to be used.
+The ontology defines the properties used when the component is instantiated. Properties set the component's specific context, such as its CSS styles or the RQO to use.
 
-Properties are write in JSON.
+Properties are written in JSON.
 
 ## Datum
 
-Datum is a JSON object with all needed to build and render the components. Datum object has two properties; `context` and `data`, `data` has a `value` property with the database value of the component.
+The datum is a JSON object holding everything needed to build and render a component. It has two properties: `context` and `data`. The `data` property carries a `value` property with the component's database value.
 
-Datum structure in JSON
+Datum structure in JSON:
 
 ```json
 {
@@ -311,26 +312,25 @@ Datum structure in JSON
 
 ## context
 
-Context defines his part of the ontology and all needs to build the component in client side.
-Components create his own context when the component is instantiated.
+The context describes the component's part of the ontology and everything needed to build the component on the client side. A component creates its own context when it is instantiated.
 
-Related components would need a subcontext to be instantiated such as component_portal, it needs all context of all components pointed in order to be built.
+A related component may need a subcontext to be built. For example, `component_portal` needs the context of every component it points at.
 
-Example of context for the *Birth town* [rsc91](https://dedalo.dev/ontology/rsc91) a component_portal.
+Example of the context for *Birth town* [rsc91](https://dedalo.dev/ontology/rsc91), a `component_portal`:
 
 ```json
 {
     "context" : {
-        "label"          : "Birth town", // resolution of the name of the component in the application lang
+        "label"          : "Birth town", // component name resolved in the application language
         "tipo"           : "rsc91", // ontology tipo
-        "section_tipo"   : "rsc197", // ontology section tipo
-        "model"          : "component_portal", // component model to be instantiated
-        "legacy_model"   : "component_autocomplete_hi", // old component model in versions <v6
-        "parent"         : "rsc197", // parent node in ontology
-        "parent_grouper" : "rsc76", // parent grouper in ontology
-        "lang"           : "lg-nolan", // lang to be instantiated
-        "mode"           : "edit", // mode to get data from database (edit, list, search, ...)
-        "translatable"   : false, // specify if the component could be translatable
+        "section_tipo"   : "rsc197", // ontology section_tipo
+        "model"          : "component_portal", // component model to instantiate
+        "legacy_model"   : "component_autocomplete_hi", // old component model in versions before v6
+        "parent"         : "rsc197", // parent node in the ontology
+        "parent_grouper" : "rsc76", // parent grouper in the ontology
+        "lang"           : "lg-nolan", // language to instantiate
+        "mode"           : "edit", // mode used to read data from the database (edit, list, search, ...)
+        "translatable"   : false, // whether the component can be translatable
         "properties"     : {
             "source": {
                 "mode": "autocomplete",
@@ -455,7 +455,7 @@ Example of context for the *Birth town* [rsc91](https://dedalo.dev/ontology/rsc9
                     "fields_separator": " | "
                 }
         }], // parsed request config, ready to be used.
-        "columns_map"       : [], // columns to be render with the components
+        "columns_map"       : [], // columns to render alongside the component
         "tools"             : [{
             "typo": "ddo",
             "model": "tool_propagate_component_data",
@@ -491,20 +491,20 @@ Example of context for the *Birth town* [rsc91](https://dedalo.dev/ontology/rsc9
             "show_in_component": true,
             "type": "tool"
         }], // tools active for the component
-        "sortable"    : true, // indicate if the components can be used to sort in list,
+        "sortable"    : true, // whether the component can be used to sort a list
         "type"        : "component", // type of the context object
-        "typo"        : "ddo", // 
-        "view"        : "line", // view to be used in render process
-        "sample_data" : [{"show":{"ddo_map":[{"mode":"edit","tipo":"test80","parent":"test3","section_tipo":"test3"}]}}] // is used to obtain an example of data to easily understand the expected value
+        "typo"        : "ddo", // ontology object type
+        "view"        : "line", // view to use when rendering
+        "sample_data" : [{"show":{"ddo_map":[{"mode":"edit","tipo":"test80","parent":"test3","section_tipo":"test3"}]}}] // an example of the expected data, to clarify the shape
     }
 }
 ```
 
 ## data
 
-Every component defines his own data structure, but all components have a `value` property with the stored database value. As all components store their data as an array, so the value is always an array.
+Every component defines its own data structure, but all components share a `value` property carrying the stored database value. Because all components store their data as an array, the value is always an array.
 
-Example of data for the Birth town [rsc91](https://dedalo.dev/ontology/rsc91) a component_portal (relation component)
+Example of the data for *Birth town* [rsc91](https://dedalo.dev/ontology/rsc91), a `component_portal` (a relation component):
 
 ```json
 {
@@ -512,17 +512,17 @@ Example of data for the Birth town [rsc91](https://dedalo.dev/ontology/rsc91) a 
     "section_tipo": "rsc197", // section_tipo of the component instance
     "tipo": "rsc91", // ontology tipo of the component instance
     "lang": "lg-nolan", // language of the component instance
-    "from_component_tipo": "rsc91", // sub-data component_tipo (used to be linked if the component is called by other component)
+    "from_component_tipo": "rsc91", // sub-data component_tipo (used to link back when the component is called by another component)
     "value": [
         {
             "type": "dd151",
             "section_id": "3896",
             "section_tipo": "es1",
-            "from_component_tipo": "rsc91",
+            "from_component_tipo": "rsc91"
         }
     ], // database value
-    "parent_tipo": "rsc197", // section or component that call to this component
-    "parent_section_id": "1", // section_id of the section or that call to this component 
+    "parent_tipo": "rsc197", // section or component that calls this component
+    "parent_section_id": "1", // section_id of the section or component that calls this component
     "pagination": {
         "total": 1,
         "limit": 10,
@@ -535,16 +535,16 @@ Example of data for the Birth town [rsc91](https://dedalo.dev/ontology/rsc91) a 
 
 ## Permissions
 
-Components can handle data and save. Permissions defines if the user can access, read, write or admin the component.
+Components can read and save data. Permissions define whether the user can access, read, write or administer the component.
 
-In server context permissions are set with the data saved in database, and it's checked every time that the system is required to load, save, etc.
+In server context, permissions are derived from the data saved in the database and are checked every time the system is asked to load, save, and so on.
 
-In client context, permissions are set and checked in every API call, they control the render and behavior of the component.
+In client context, permissions are set and checked on every API call; they control how the component is rendered and behaves.
 
-!!! warning "unauthorized changes in permissions"
-    To avoid unauthorized changes in permissions, every call to load and save is checked in the server context, previous to execute the call.
+!!! warning "Unauthorized changes in permissions"
+    To prevent unauthorized permission changes, every load and save call is checked in server context before it runs.
 
-Permission is set as int with the level of the access to the component instance.
+Permission is an integer giving the access level for the component instance.
 
 | permission | level |
 | --- |--- |
@@ -555,37 +555,37 @@ Permission is set as int with the level of the access to the component instance.
 
 ## tools
 
-Defines with tools can be used in the component instance. Tools add some functionalities to extend the standard behavior. For example if a component is translatable it will load the `tool_lang`.
+This defines which tools the component instance can use. Tools add functionality that extends the standard behaviour. For example, a translatable component loads `tool_lang`.
 
 ## Observers and observables
 
-Components can be configured to be observable by other components or observe other components.
+A component can be configured to be observable by other components, or to observe other components.
 
-Dédalo use two different configurations to create the observer/observable spaces. The server context and the client context. The main difference is that, in server context, observable/observer configuration is related to data changes, in client context can be configured to do other tasks as activate it, perform calculations, change his own data, etc.
+Dédalo uses two separate configurations to set up the observer/observable spaces: one for server context and one for client context. The main difference is that in server context the observer/observable configuration is about data changes, whereas in client context it can be configured for other tasks, such as activating a component, performing calculations, or changing its own data.
 
 ### Server context
 
-When a component is set as observable in server context, any change of his data will be send to the observer. Observer component can be configured to do actions as update values or change his own data depending of the value of the observable component.
+When a component is set as observable in server context, any change to its data is sent to the observer. The observer component can be configured to take actions such as updating values or changing its own data depending on the value of the observable component.
 
 ### Client context
 
-In client context components use the event_manager to subscribe and publish his actions. The configuration is set in the ontology properties.
+In client context, components use the `event_manager` to subscribe to and publish their actions. The configuration is set in the ontology properties.
 
-When a component is set as observable in client context, any action do it by the user will be publish in the event_manager, any other components could to subscribe itself to this actions and perform some tasks.
+When a component is set as observable in client context, any action the user performs on it is published in the `event_manager`. Other components subscribed to that action can then perform their own tasks.
 
-For example, when a component is activate by the user, the component will publish an `activate` action, and all other components, as are subscribe to this action, will be inactivated.
+For example, when the user activates a component, it publishes an `activate` action, and every other component subscribed to that action is deactivated.
 
-Some components perform actions in other components, as component_text_area to control the component_av time position, when the user click in the time_code tag of a transcription the component_av jump to the specific time code.
+Some components act on other components. For instance, `component_text_area` controls the `component_av` playback position: when the user clicks a time-code tag in a transcription, `component_av` jumps to that time code.
 
-### configuration
+### Configuration
 
-The observers and observables are configured in ontology properties of the components. The component the is observing the actions and changes has two way, what happen when is fire a event of the observable, what perform, in the client and in the server. Sometimes the perform action has parameters to configure the execution.
+Observers and observables are configured in the components' ontology properties. The observing component declares, for each event of the observable, what happens and what it performs, both on the client and on the server. Sometimes the performed action takes parameters that configure its execution.
 
 Example of observer configuration:
 
-When a Numismatic Object define his own Type [numisdata161](https://dedalo.dev/ontology/numisdata161), the Type [numisdata3](https://dedalo.dev/ontology/numisdata3) related and his equivalents types [numisdata36](https://dedalo.dev/ontology/numisdata36) will need to be update his own Coins field [numisdata77](https://dedalo.dev/ontology/numisdata77). The coins field in types get all coins in the equivalents types, so, when one type change all need to be update. In this situation the coins portal is observing the types field in numismatic object, the observable, any change in it will fire the process to update using `set_data_external` function.
+When a Numismatic Object sets its own Type [numisdata161](https://dedalo.dev/ontology/numisdata161), the related Type [numisdata3](https://dedalo.dev/ontology/numisdata3) and its equivalent types [numisdata36](https://dedalo.dev/ontology/numisdata36) must update their own Coins field [numisdata77](https://dedalo.dev/ontology/numisdata77). The Coins field in a type collects all coins from its equivalent types, so when one type changes they all need updating. Here the Coins portal observes the Type field of the Numismatic Object (the observable); any change to it triggers the update through the `set_data_external` function.
 
-Coins Update his own data when tipo is set in numismatic object:
+Coins updates its own data when the tipo is set in the Numismatic Object:
 
 ```json
 "observe": [{
@@ -614,7 +614,7 @@ Coins Update his own data when tipo is set in numismatic object:
  }]
 ```
 
-And the observable has a list of the components that observe it.
+And the observable keeps a list of the components that observe it:
 
 ```json
 "observers": [
@@ -625,4 +625,4 @@ And the observable has a list of the components that observe it.
 ]
 ```
 
-See the full definition of every component properties.
+See the per-component pages for the full definition of each component's properties.

@@ -1,6 +1,8 @@
-# Dédalo API — RQO Field Mapping
+# Dédalo API: RQO field mapping
 
-This document contains **precise, method-specific RQO field usage** extracted directly from Dédalo PHP API source code.
+> See also: [JSON API v1](dedalo_api_v1.md) · [Class reference](classes/dd_core_api.md) · [Diffusion API](diffusion_api_documentation.md)
+
+This page documents the precise, method-specific RQO field usage, extracted from the Dédalo PHP API source code.
 
 ## dd_core_api
 
@@ -131,8 +133,8 @@ This document contains **precise, method-specific RQO field usage** extracted di
     "section_id": 1,
     "section_tipo": "rsc167",
     "data": {
-      "oh1": [{value: "Title", lang: "lg-eng"}],
-      "oh2": [{value: "Description", lang: "lg-eng"}]
+      "oh1": [{ "value": "Title", "lang": "lg-eng" }],
+      "oh2": [{ "value": "Description", "lang": "lg-eng" }]
     }
   },
   "msg": "OK"

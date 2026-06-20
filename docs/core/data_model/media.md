@@ -48,7 +48,7 @@ translatable the language is appended to the filename (see
 
 ## Canonical JSON shape
 
-The stored dato is an **array with a single item**. The item carries a
+The stored data is an **array with a single item**. The item carries a
 `files_info` list (the canonical per-quality descriptors) plus the
 `original_normalized_name` / `modified_normalized_name` of the upload and an
 optional `lib_data` bag (used by `component_image`).

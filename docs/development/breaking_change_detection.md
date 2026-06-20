@@ -1,18 +1,20 @@
-# Breaking Change Detection
+# Breaking change detection
 
-Automated detection system for API, signature, and data model changes that could break client integrations or internal code.
+> See also: [Testing](testing.md) · [Development overview](index.md)
+
+An automated system that detects API, signature and data-model changes which could break client integrations or internal code.
 
 ## Overview
 
-Dédalo v7 includes a comprehensive breaking change detection system to protect against regressions in the v7_developer and master branches. The system detects three categories of breaking changes:
+Dédalo v7 includes a breaking-change detection system that guards against regressions on the `v7_developer` and `master` branches. It detects three categories of breaking change:
 
-1. **API Contract Changes** - JSON response structure modifications
-2. **Method Signature Changes** - PHP class/method signature modifications
-3. **Data Model Changes** - Ontology structure and tipo -> model mapping changes
+1. **API contract changes** — JSON response-structure modifications
+2. **Method signature changes** — PHP class/method signature modifications
+3. **Data model changes** — ontology structure and `tipo` → `model` mapping changes
 
-## Quick Start
+## Quick start
 
-### For CI/CD (Automated)
+### For CI/CD (automated)
 
 All checks run automatically on push/PR to `v7_developer` and `master`:
 
@@ -25,9 +27,9 @@ All checks run automatically on push/PR to `v7_developer` and `master`:
 # 5. Ontology Check
 ```
 
-### For Developers (Manual)
+### For developers (manual)
 
-#### API Contract Testing
+#### API contract testing
 
 ```bash
 # Run contract tests
@@ -40,7 +42,7 @@ UPDATE_SNAPSHOTS=true vendor/bin/phpunit --testsuite contract
 vendor/bin/phpunit --filter test_get_ontology_map_contract
 ```
 
-#### Method Signature Checking
+#### Method signature checking
 
 ```bash
 # Check signatures against baseline
@@ -53,7 +55,7 @@ php dev/signature_tracker/signature-check.php --create-baseline
 php dev/signature_tracker/signature-check.php --format=json
 ```
 
-#### Data Model Checking
+#### Data model checking
 
 ```bash
 # Check ontology against baseline
@@ -63,22 +65,22 @@ php dev/ontology_tracker/ontology-check.php
 php dev/ontology_tracker/ontology-check.php --create-baseline
 ```
 
-## What Constitutes a Breaking Change?
+## What constitutes a breaking change?
 
-### API Contract Changes (Breaking)
+### API contract changes (breaking)
 
 - **Removed fields** in JSON responses
 - **Type changes** for existing fields
-- **Renamed fields** (removal of old name)
+- **Renamed fields** (removal of the old name)
 - **Required field made optional** (may break strict clients)
 
-### API Contract Changes (Safe)
+### API contract changes (safe)
 
 - **New fields added** (backward compatible)
 - **Optional fields added**
 - **Field made optional** from required
 
-### Method Signature Changes (Breaking)
+### Method signature changes (breaking)
 
 - **Method removed**
 - **Parameter removed**
@@ -88,13 +90,13 @@ php dev/ontology_tracker/ontology-check.php --create-baseline
 - **Public method made private/protected**
 - **Static modifier changed**
 
-### Method Signature Changes (Safe)
+### Method signature changes (safe)
 
 - **New method added**
 - **Optional parameter added**
 - **Private method made public/protected**
 
-### Data Model Changes (Breaking)
+### Data model changes (breaking)
 
 - **Column removed** from dd_ontology/matrix_dd
 - **Column type changed** (e.g., VARCHAR → TEXT)
@@ -103,7 +105,7 @@ php dev/ontology_tracker/ontology-check.php --create-baseline
 - **Tipo removed** from ontology
 - **Critical system tipo modified**
 
-### Data Model Changes (Safe)
+### Data model changes (safe)
 
 - **New column added**
 - **New tipo added**
@@ -133,9 +135,9 @@ flowchart TD
     style L fill:#6bcf7f,color:#000
 ```
 
-## Tools Reference
+## Tools reference
 
-### API Contract Testing
+### API contract testing
 
 **Location:** `test/server/contract/`
 
@@ -143,24 +145,24 @@ flowchart TD
 |------|---------|
 | `ApiContractSnapshotTest.php` | PHPUnit tests for API endpoints |
 | `SnapshotComparator.php` | Utility for comparing/normalizing snapshots |
-| `snapshots/*.json` | Golden master snapshots |
+| `snapshots/*.json` | Golden-master snapshots |
 
-**Environment Variables:**
+**Environment variables:**
 
-- `UPDATE_SNAPSHOTS=true` - Update all snapshots (use after intentional changes)
+- `UPDATE_SNAPSHOTS=true` — update all snapshots (use after intentional changes)
 
-### Signature Tracking
+### Signature tracking
 
-**Location:** `tools/signature_tracker/`
+**Location:** `dev/signature_tracker/`
 
 | File | Purpose |
 |------|---------|
 | `SignatureExtractor.php` | Extracts class/method signatures via reflection |
-| `SignatureComparator.php` | Compares signatures with breaking change detection |
+| `SignatureComparator.php` | Compares signatures with breaking-change detection |
 | `signature-check.php` | CLI tool for checking/creating baselines |
 | `baselines/signatures.json` | Stored baseline signatures |
 
-**Tracked Classes:**
+**Tracked classes:**
 
 - Core API classes: `dd_diffusion_api`, `dd_utils_api`, `dd_api`
 - Component bases: `component_common`, `component_string_common`, etc.
@@ -168,7 +170,7 @@ flowchart TD
 - Data management: `matrix_common`, `RecordDataBoundObject`
 - Utilities: `common`, `dd_cache`, `locator`, `filter`
 
-### Ontology Tracking
+### Ontology tracking
 
 **Location:** `dev/ontology_tracker/`
 
@@ -179,24 +181,24 @@ flowchart TD
 | `ontology-check.php` | CLI tool for checking/creating baselines |
 | `baselines/ontology.json` | Stored ontology baseline |
 
-**Tracked Tables:**
+**Tracked tables:**
 
-- `dd_ontology` - Main ontology definitions
-- `matrix_dd` - Ontology matrix data
+- `dd_ontology` — main ontology definitions
+- `matrix_dd` — ontology matrix data
 
-**Critical Checks:**
+**Critical checks:**
 
-- Tipo → model mappings
-- Critical system tipos (dd1, dd2, etc.)
+- `tipo` → `model` mappings
+- Critical system tipos (`dd1`, `dd2`, …)
 - Table structure (columns, indexes)
 
-## Handling Breaking Changes
+## Handling breaking changes
 
-### Step 1: Detect
+### Step 1: detect
 
-CI will fail with breaking changes. Review the error output:
+CI fails on a breaking change. Review the error output:
 
-```
+```text
 ❌ Found changes in 2 class(es)
    Breaking: 1 | Warnings: 1
 
@@ -207,24 +209,24 @@ Category: tipo_model_mapping
   🔴 Tipo 'numisdata3' model changed from 'section' to 'component'
 ```
 
-### Step 2: Evaluate
+### Step 2: evaluate
 
 **Is this intentional?**
 
-- **Yes, planned change:** Proceed to update baselines
-- **No, accidental:** Revert the change
+- **Yes, a planned change:** proceed to update the baselines.
+- **No, accidental:** revert the change.
 
 **Does it require migration?**
 
-- **API changes:** May require client updates
-- **Method signature changes:** May require internal refactoring
-- **Data model changes:** May require database migration script
+- **API changes** may require client updates.
+- **Method signature changes** may require internal refactoring.
+- **Data model changes** may require a database migration script.
 
-### Step 3: Document
+### Step 3: document
 
-Add to commit message:
+Add to the commit message:
 
-```
+```text
 feat(api)!: change diffuse() return type to array
 
 BREAKING CHANGE: dd_diffusion_api::diffuse() now returns array instead of object
@@ -233,9 +235,9 @@ BREAKING CHANGE: dd_diffusion_api::diffuse() now returns array instead of object
 - See docs/development/breaking_change_detection.md for migration guide
 ```
 
-### Step 4: Update Baselines (if intentional)
+### Step 4: update baselines (if intentional)
 
-**API Contracts:**
+**API contracts:**
 
 ```bash
 UPDATE_SNAPSHOTS=true vendor/bin/phpunit --testsuite contract
@@ -253,15 +255,15 @@ php dev/signature_tracker/signature-check.php --create-baseline
 php dev/ontology_tracker/ontology-check.php --create-baseline
 ```
 
-### Step 5: Commit Changes
+### Step 5: commit the changes
 
-Include updated baselines in the same PR:
+Include the updated baselines in the same PR:
 
 ```bash
 git add test/server/contract/snapshots/
-git add tools/signature_tracker/baselines/
+git add dev/signature_tracker/baselines/
 git add dev/ontology_tracker/baselines/
-git commit -m "update baselines for v7.5.0 breaking changes"
+git commit -m "chore: update baselines for v7.5.0 breaking changes"
 ```
 
 ## Exit Codes
@@ -281,9 +283,9 @@ git commit -m "update baselines for v7.5.0 breaking changes"
 
 ## Troubleshooting
 
-### "No baseline found" Error
+### "No baseline found" error
 
-**Cause:** Baseline hasn't been created yet
+**Cause:** the baseline has not been created yet.
 
 **Fix:**
 ```bash
@@ -291,15 +293,15 @@ php dev/signature_tracker/signature-check.php --create-baseline
 php dev/ontology_tracker/ontology-check.php --create-baseline
 ```
 
-### False Positives on Dynamic Data
+### False positives on dynamic data
 
-**Cause:** Snapshots include timestamps, IDs, or session data
+**Cause:** snapshots include timestamps, ids or session data.
 
-**Fix:** Already handled by `SnapshotComparator` - it strips dynamic fields before comparison. If new dynamic fields appear, add them to `DYNAMIC_FIELDS` array.
+**Fix:** this is already handled by `SnapshotComparator`, which strips dynamic fields before comparison. If new dynamic fields appear, add them to the `DYNAMIC_FIELDS` array.
 
-### CI Fails but Local Passes
+### CI fails but local passes
 
-**Cause:** Outdated local baseline
+**Cause:** an outdated local baseline.
 
 **Fix:**
 ```bash
@@ -308,27 +310,23 @@ git checkout origin/master -- dev/ontology_tracker/baselines/
 git checkout origin/master -- test/server/contract/snapshots/
 ```
 
-### "Class not found" in Signature Check
+### "Class not found" in the signature check
 
-**Cause:** Autoloader can't find class file
+**Cause:** the autoloader cannot find the class file.
 
-**Fix:** Check class exists in `SignatureExtractor::CLASSES_TO_TRACK` or add autoload pattern in `autoloadClass()`.
+**Fix:** check that the class exists in `SignatureExtractor::CLASSES_TO_TRACK`, or add an autoload pattern in `autoloadClass()`.
 
-## Best Practices
+## Best practices
 
-1. **Update baselines in separate commit** from code changes (for review clarity)
-2. **Never update baselines without reviewing** the diff first
-3. **Document breaking changes** in commit messages and CHANGELOG
-4. **Test locally** before pushing: `vendor/bin/phpunit --testsuite contract`
-5. **Keep baselines in version control** - they are the contract
-6. **Use `--format=json`** for automated parsing in CI scripts
+1. **Update baselines in a separate commit** from code changes, for review clarity.
+2. **Never update a baseline without reviewing the diff first.**
+3. **Document breaking changes** in commit messages and the changelog.
+4. **Test locally before pushing:** `vendor/bin/phpunit --testsuite contract`.
+5. **Keep baselines in version control** — they are the contract.
+6. **Use `--format=json`** for automated parsing in CI scripts.
 
-## Related Documentation
+## Related
 
-- `docs/core/components.md` - Component structure and JSON format
-- `docs/diffusion/` - Diffusion API documentation
-- `docs/api/` - API reference
-
-## Questions?
-
-Contact: Dédalo Development Team
+- [Testing](testing.md) — the test suite, contract snapshots and CI.
+- [Components](../core/components/index.md) — component structure and JSON format.
+- [Diffusion API and Bun](../diffusion/dd_diffusion_api_and_bun.md) — diffusion API documentation.

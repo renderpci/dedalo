@@ -1,8 +1,8 @@
 # db
 
-> The PostgreSQL access layer (`core/db/`): the connection manager, the matrix table managers, the JSON record objects and the result wrappers. It is the **only** code in Dédalo's work system that opens a PostgreSQL connection or issues SQL.
-
 > See also: [Architecture overview](../architecture_overview.md) · [Sections](../sections/index.md) · [section_record](../sections/section_record.md) · [SQO](../sqo.md)
+
+The PostgreSQL access layer (`core/db/`) holds the connection manager, the matrix table managers, the JSON record objects and the result wrappers. It is the **only** code in Dédalo's work system that opens a PostgreSQL connection or issues SQL.
 
 ## Role
 

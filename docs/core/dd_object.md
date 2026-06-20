@@ -1,12 +1,16 @@
 # dd_object
 
+> See also: [RQO](rqo.md) · [SQO](sqo.md) · [request_config](request_config.md) · [Locator](locator.md) · [Glossary](glossary.md)
+
+The dd_object (ddo) is the normalized object Dédalo uses to call and modify ontology nodes — defining the order, view, mode, permissions, properties and CSS that change a section's or component's behavior on the fly. This page documents its purpose and its full property set.
+
 ## Introduction
 
-Dédalo Ontology defines sections, areas, components with a default behavior and configuration. To call and modify this ontology nodes Dédalo use dd_objects.
+The Dédalo ontology defines sections, areas and components with a default behavior and configuration. To call and modify these ontology nodes, Dédalo uses dd_objects.
 
-For example; a section has his components, but in the list mode, the section will show only some specific components, not all, so, it is necessary a pointer to define what components will showed and his order, dd_object is the structure to point this ontology nodes to create specific configurations for different situations.
+For example, a section has its components, but in list mode the section shows only some specific components, not all of them. A pointer is therefore needed to define which components are shown and in what order. The dd_object is the structure that points at ontology nodes to create specific configurations for different situations.
 
-ddd_object is the way to call and modify the ontology nodes.
+A dd_object is the way to call and modify ontology nodes.
 
 ## dd_object definition
 
@@ -14,30 +18,28 @@ ddd_object is the way to call and modify the ontology nodes.
 
 **dd_object** `object`
 
-dd_object or ddo is a common definition of properties for nodes of the ontology. dd_object is a flexible and extensible object used to group, order, assign and change properties of nodes of the ontology, but dd_objects are not the nodes of the ontology, they are the callers and modifiers of the default definitions. Every ddo is a configuration specific to the ontology node that it represent.
+A dd_object, or ddo, is a common definition of properties for ontology nodes. It is a flexible, extensible object used to group, order, assign and change the properties of ontology nodes. dd_objects are not the nodes of the ontology themselves; they are the callers and modifiers of the default definitions. Every ddo is a configuration specific to the ontology node it represents.
 
-ddo is use in multiple ways, for example ddos are used to define the order of the columns for lists; The section_list use it to define his columns with specific components in specific order and characteristics. The component_portal use it to define the components of the pointed section to show as columns.
+A ddo is used in many ways. For example, ddos define the order of the columns in lists: the section list uses them to define its columns with specific components in a specific order and with specific characteristics, and the component_portal uses them to define which components of the pointed section to show as columns.
 
-Also ddo is used to request information at working API. Changing ddo properties is possible to change areas, components and sections behaviors on the fly.
+A ddo is also used to request information from the work API. By changing ddo properties you can change the behavior of areas, components and sections on the fly.
 
-### Structure
-
-### Properties
+## Properties
 
 | Property | Type | Description | Value Type | Options | Default | Example |
 | --- | --- | --- | --- | --- | --- |  --- |
-| typo | private  | `type of object`. Fixed property used to identify the dd_object in client | string | ddo |   ddo  |   |
-| type | public | Defines the general model. It is used to apply common behaviors to components, buttons, etc.  | string | section \| component \| grouper \| button \| area \| tm \| widget \| install \| login \| menu \| tool \| detail \| dd_grid | component |  |
-| tipo | public |  Defines the ontology identification 'tipo' | string |  |  |  oh14 |
-| section_tipo | public |  Defines the ontology identification 'tipo' of the section, when the ddo is a section will be the same tipo ans section_tipo, when the ddo is a component it will be the section of it. | string |  |  |  oh1 |
-| parent | public | Defines the ontology identification 'tipo' of the parent caller, for components will be the section_tipo, for components called by portals will be the component_portal | string |   |   |  oh2 |
-| parent_grouper | public | Defines the ontology identification 'tipo' of the parent grouper or direct parent in hierarchy, for components will be a section_group, for sections will be the area | string |  |  |  oh7 |
-| lang | public | Defines the lang of the ddo | string |  |  |  lg-eng |
-| mode | public | Defines if the ddo will be config as edit, list, search, etc. | string |  |  |  list |
-| model | public | Defines the specific model. This property differs of type property; type define if the ddo is a component or section, but model define if the ddo is a component_input_text or a button_new, etc. | string |  |  |  component_input_text |
+| typo | private  | `type of object`. Fixed property used to identify the dd_object on the client. | string | ddo |   ddo  |   |
+| type | public | Defines the general model. Used to apply common behaviors to components, buttons, etc. | string | section \| component \| grouper \| button \| area \| tm \| widget \| install \| login \| menu \| tool \| detail \| dd_grid | component |  |
+| tipo | public |  Defines the ontology 'tipo'. | string |  |  |  oh14 |
+| section_tipo | public |  Defines the ontology 'tipo' of the section. When the ddo is a section it is the same as `tipo`; when the ddo is a component it is the section that contains it. | string |  |  |  oh1 |
+| parent | public | Defines the ontology 'tipo' of the parent caller: for components it is the section_tipo; for components called by portals it is the component_portal. | string |   |   |  oh2 |
+| parent_grouper | public | Defines the ontology 'tipo' of the parent grouper or direct parent in the hierarchy: for components it is a section_group; for sections it is the area. | string |  |  |  oh7 |
+| lang | public | Defines the lang of the ddo. | string |  |  |  lg-eng |
+| mode | public | Defines whether the ddo is configured as edit, list, search, etc. | string |  |  |  list |
+| model | public | Defines the specific model. This property differs from `type`: `type` defines whether the ddo is a component or a section, while `model` defines whether the ddo is a component_input_text, a button_new, etc. | string |  |  |  component_input_text |
 | legacy_model | public | Used to know the legacy model defined in ontology. In v6 some models was unified as component_autocomplete, component_autocomplete_hi, component_autocomplete_ts were convert to component_portal, legacy model store his old model for compatibility with v5 in some situation as publishing. | string |  |  |  component_autocomplete_hi |
 | properties | public | Defines the ontology properties of the ddo | object |  |  | {"source":"..."} |
-| permissions | public | Defines the user permissions. It will be the same or less permissions of the user. This property is set by default by the user permissions, but is possible to reduce the value to avoid the access or create a read only version of the ontology node. It's not possible set bigger value of the current user permissions | int | 0 \| 1 \| 2 |  |  1 |
+| permissions | public | Defines the user permissions. It is equal to or lower than the user's permissions. It defaults to the user's permissions, but the value can be reduced to deny access or create a read-only version of the ontology node. It cannot be set higher than the current user's permissions. | int | 0 \| 1 \| 2 |  |  1 |
 | label | public | Defines the name of the ontology node with the lang  | string |  |  |  Title |
 | labels | public | Defines the names of variables, used by tools  | array \[string]  |  |  |  \['Title'] |
 | translatable | public | Defines if the ontology node is translatable | bool  | true \| false | true | true |
@@ -67,19 +69,16 @@ Also ddo is used to request information at working API. Changing ddo properties 
 | matrix_table | public | Used by components to modify show_interface values | string |  |  | matrix_list |
 | relation_list | public | Used to know the legacy model defined in ontology. In v6 some models was unified as component_autocomplete, component_autocomplete_hi, component_autocomplete_ts were convert to component_portal, legacy model store his old model for compatibility with v5 in some situation as publishing. | string |  |  |  component_autocomplete_hi |
 
-| // object features. Use this container to add custom properties like 'notes_publication_tipo' in text area
-| public $features;
-| // array toolbar_buttons
-| public $toolbar_buttons;
-| // bool value_with_parents
-| public $value_with_parents;
+### Additional properties
 
-| // array search_operators_info
-| public $search_operators_info;
-| // string search_options_title
-| public $search_options_title;
-| // string target_section_tipo
-| public $target_section_tipo;
+Because `dd_object extends stdClass`, the following properties are attached dynamically (not declared on the class) when a build path needs them:
 
-| // debug: object
-| public $debug;
+| Property | Type | Description | Example |
+| --- | --- | --- | --- |
+| features | object | Container for custom properties, e.g. `notes_publication_tipo` in a text area. | `{"notes_publication_tipo": "..."}` |
+| toolbar_buttons | array | Toolbar buttons attached to the node. | `["button_save"]` |
+| value_with_parents | bool | Whether the value is rendered together with its ancestor chain. | `true` |
+| search_operators_info | array | Search operator metadata for the element (set during the request_config build). | |
+| search_options_title | string | Title for the search options, derived from `search_operators_info`. | |
+| target_section_tipo | string | Resolved target section tipo for the ddo. | `rsc197` |
+| debug | object | Debug payload, attached under debug conditions. | |

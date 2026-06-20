@@ -1,8 +1,8 @@
 # login
 
-> The server class `login` — Dédalo's authentication entry point: it validates credentials against the users section, builds the authenticated session, and arms the media-protection auth cookie.
-
 > See also: [security](security.md) · [component_password](../components/component_password.md) · [Architecture overview](../architecture_overview.md)
+
+The server class `login` is Dédalo's authentication entry point: it validates credentials against the users section, builds the authenticated session, and arms the media-protection auth cookie.
 
 ## Role
 

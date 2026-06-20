@@ -1,10 +1,12 @@
 # Updating data
 
-Data is the most important part of the Dédalo projects. Data, in Dédalo, has a abstraction layer and it depend of the Ontology definition. Some times the abstraction layer change or the global definitions need add some new or change the data structures. In those cases data need to be to be updated. Besides, some times the database schema need to be updated or the indexes need to be adjusted. All these changes are in the same update data process.
+> See also: [Updating ontology](updating_ontology.md) · [Updating code](updating_code.md) · [Backup and restore](../backup.md)
 
-Updating data is the most delicate update process and it's mandatory to create a backup of your database before update it.
+Data is the most important part of a Dédalo project. In Dédalo, data has an abstraction layer and depends on the ontology definition. Sometimes the abstraction layer changes, or the global definitions need to add or change data structures; in those cases the data must be updated. The database schema may also need updating, or the indexes adjusting. All these changes happen in the same update-data process.
 
-Not all code updates has implicit a data update. They updates process are independent, but data has a global dependency of Ontology and code version, so, some code updates will has a data update.
+Updating data is the most delicate update process, and it is mandatory to back up your database before running it.
+
+Not every code update implies a data update — the two processes are independent — but data depends on the ontology and code version, so some code updates do require a data update.
 
 ## Updating tasks
 

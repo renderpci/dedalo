@@ -71,7 +71,7 @@ The authoritative column set is declared in
 | `relation` | `stdClass` | [locator](../locator.md) arrays grouped by tipo: `{"dd20":[locator,…], "dd35":[…]}` |
 | `string` | `stdClass` | string literals (`component_input_text`, `component_text_area`, `component_email`, `component_password`) |
 | `date` | `stdClass` | date objects (`component_date`) |
-| `iri` | `stdClass` | IRI objects, e.g. `{"dd85":{"title":"…","uri":"https://…"}}` (`component_iri`) |
+| `iri` | `stdClass` | IRI objects, e.g. `{"dd85":[{"id":1,"iri":"https://…","title":"…"}]}` (`component_iri`) |
 | `geo` | `stdClass` | geolocation payloads (`component_geolocation`) |
 | `number` | `stdClass` | numeric values (`component_number`) |
 | `media` | `stdClass` | media descriptors (`component_3d`, `component_av`, `component_image`, `component_pdf`, `component_svg`) |
@@ -126,7 +126,7 @@ flowchart TB
     rec --> dt["date"]
     rec --> num["number"]
     rec --> med["media — 3d/av/image/pdf/svg"]
-    rec --> iri["iri — {title, uri}"]
+    rec --> iri["iri — {id, iri, title}"]
     rec --> geo["geo"]
     rec --> misc["misc — json/info/security/inverse/filter_records"]
     rec --> rs["relation_search"]
@@ -157,7 +157,7 @@ item envelope is:
 | --- | --- |
 | **`id`** | A stable, **server-minted per-item identity** (integer). Unique within the component's items in this record, never recycled. It is the pairing key for [dataframes](../components/component_dataframe.md) and Time Machine, and the addressing key for client-driven edits. |
 | **`lang`** | `lg-xxx` (`lg-spa`, `lg-eng`, …) for translatable components, or `lg-nolan` (`DEDALO_DATA_NOLAN`) for non-language values. The flat array interleaves all languages. |
-| **`value`** | The payload. A scalar string/number for text-like components; an object (e.g. an IRI `{title, uri}`, a date datum) for structural ones. Empty values are **deliberately preserved** (not pruned). |
+| **`value`** | The payload. A scalar string/number for the value-property components. Structural components (date, iri, geo, media) **flatten their payload fields directly onto the item** instead of using a `value` wrapper. Empty values are **deliberately preserved** (not pruned). |
 
 !!! note "Empty is not nothing"
     `{"value":""}` and `{"value":null}` are kept on purpose. A preserved empty
@@ -213,9 +213,9 @@ rewrite.
 ```
 
 ```json
-// component_iri "dd85", value is a structural object
+// component_iri "dd85", structural payload flattened onto the item (no `value` wrapper)
 [
-  { "id": 1, "lang": "lg-nolan", "value": { "title": "My site", "uri": "https://mysite.org" } }
+  { "id": 1, "lang": "lg-nolan", "iri": "https://mysite.org", "title": "My site" }
 ]
 ```
 
@@ -417,9 +417,9 @@ server class, client model, examples, and a v7 consolidation note).
 | --- | --- | --- | --- |
 | **[String](string.md)** | `string` | `{id, lang?, value: string}` | `component_input_text`, `component_text_area`, `component_email`, `component_password` |
 | **[Number](number.md)** | `number` | `{id, value: number}` | `component_number` |
-| **[Date](dd_date.md)** | `date` | `{id, value: date datum}` | `component_date` |
-| **[IRI](iri.md)** | `iri` | `{id, value: {title, uri}}` | `component_iri` |
-| **[Geo](geolocation.md)** | `geo` | `{id, value: geo payload}` | `component_geolocation` |
+| **[Date](dd_date.md)** | `date` | `{start, end?, period?, …}` (payload flattened) | `component_date` |
+| **[IRI](iri.md)** | `iri` | `{id, iri, title?, lang?}` (payload flattened) | `component_iri` |
+| **[Geo](geolocation.md)** | `geo` | GeoJSON item (payload flattened) | `component_geolocation` |
 | **[Media](media.md)** | `media` | media descriptor | `component_3d`, `component_av`, `component_image`, `component_pdf`, `component_svg` |
 | **[Relation (locator)](../locator.md)** | `relation` | `{section_tipo, section_id, type, from_component_tipo, lang?, id?}` | `component_select`, `component_portal`, `component_check_box`, `component_relation_*`, `component_dataframe`, `component_filter`, … |
 | **[Misc / direct object](misc.md)** | `misc` | direct `stdClass` | `component_json`, `component_security_access`, `component_info`, `component_inverse`, `component_filter_records` |

@@ -28,7 +28,7 @@ common::build_request_config() [3-stage orchestrator]
 └── trait.request_config_v5.php             # V5: auto-derived fallback (active default)
 ```
 
-### Trait Responsibilities
+### Trait responsibilities
 
 | Trait | Responsibility | Key Methods |
 |-------|----------------|-------------|
@@ -39,7 +39,7 @@ common::build_request_config() [3-stage orchestrator]
 
 The orchestrator (`build_request_config`), the cache-clone boundary helpers and the shape classes are the four things to understand first; the rest is detail.
 
-## V6 vs V5 Configuration
+## V6 vs V5 configuration
 
 This is the most misunderstood part of the system, so read it precisely. The selection is a single line in `get_ar_request_config()` (`class.common.php`):
 
@@ -112,19 +112,19 @@ flowchart TD
     S3 --> R[return]
 ```
 
-### STAGE 1 — RQO-derived (short-circuit)
+### Stage 1 — RQO-derived (short-circuit)
 
 `build_request_config_from_rqo($rqo)`. When the client API request targets **this** element (the rqo source tipo matches, or this tipo is in the requested sqo's `section_tipo`) **and** the request carries an explicit `show`, the config is rebuilt from the rqo rather than the ontology. Client-sent ddos pass `validate_requested_ddo()` (the same tipo / active-TLD / permission gate as ontology configs) and are then normalized by `consolidate_requested_ddo()`. If the result is non-null, it is assigned to `$this->request_config` and the method **returns immediately** — no base build, no preset, no caching.
 
 This is the reverse path used by time machine, `tool_qr`, graph view and search presets (a `section` instantiated with `add_show:true`). See [rqo.md](rqo.md) for the wire side and [sqo.md](sqo.md) for the sanitization that precedes it.
 
-### STAGE 2 — Base build (cacheable)
+### Stage 2 — Base build (cacheable)
 
 `resolve_preset_properties($tipo, $section_tipo, $mode)` optionally resolves a user layout preset (section `dd1244`) via `request_config_presets::get_request_config()`. **The preset never mutates the instance** — it travels as the `$properties_override` parameter into `get_ar_request_config($properties_override)`, and it stamps `$this->request_config_preset_hash` into the cache key so preset builds never collide with plain builds. See [request_config_presets.md](ontology/request_config_presets.md).
 
 `get_ar_request_config()` is the deterministic, cacheable build: it validates the section_tipo, checks the cache, resolves source properties and pagination defaults, then runs the **V6/V5 selector** above and caches the result (subject to the skip conditions below).
 
-### STAGE 3 — Overlay (per-call state)
+### Stage 3 — Overlay (per-call state)
 
 `overlay_request_state($request_config, $requested_sqo, $tipo)` applies per-call, request-scoped state to **this instance's private copy** of the config:
 

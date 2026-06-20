@@ -204,7 +204,7 @@ Identity accessors (`get_tipo`/`get_mode`/`get_lang`/`get_label`/…),
 [`common` base classes](../components/base_classes.md) and the
 [Architecture overview](../architecture_overview.md).
 
-## How it fits with the rest of Dedalo
+## How it fits with the rest of Dédalo
 
 - **[area](area.md)** — the area-base reference (the `area` / `area_common` /
   `common` chain); the shared layer `area_admin` extends supplies every method

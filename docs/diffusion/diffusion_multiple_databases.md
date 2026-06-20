@@ -1,10 +1,12 @@
-# Diffusion multiple databases (MySQL)
+# Diffusion: multiple databases (MySQL)
 
-It is possible from Dédalo to publish contents using one or more different databases for a better data organization.
-For example, you may want to have a PRE (pre-production) and PRO (production) different databases to allow easy test new schemas or configurations in a private test database before apply the changes to the production public database.
-You might also want to organize your public websites in different databases, such as "main website", "custom exhibition website", etc.
+> See also: [Diffusion data flow](diffusion_data_flow.md) · [Publication API](publication_api/index.md)
 
-To do this, you must config your Dédalo config files and the diffusion output Ontology definitions.
+Dédalo can publish content to one or more databases for better data organization. This page covers the legacy v1 SQL publication path; for new integrations, prefer [Publication API v2](publication_api/v2/index.md).
+
+For example, you might keep separate PRE (pre-production) and PRO (production) databases so you can test new schemas or configurations in a private test database before applying the changes to the production public database. You might also organize your public websites into different databases, such as "main website", "custom exhibition website" and so on.
+
+To do this, you configure your Dédalo config files and the diffusion output ontology definitions.
 
 ## Dédalo config file
 
@@ -43,37 +45,37 @@ Database configuration is only for the main database, but if multiple databases 
 define('MYSQL_DEDALO_DATABASE_CONN', 'web_my_entity_pro'); // main diffusion database
 ```
 
-All diffusion databases has to be created grant all privileges for the configured user, as following:
+Each diffusion database must be created, and the configured user must be granted privileges on it, for example:
 
 ```sql
-CREATE USER'dedalo_write'@'localhost' IDENTIFIED BY ''
-GRANT ALL PRIVILEGES ON `web\_dedalo`.* TO 'username'@'localhost'
+CREATE USER 'dedalo_write'@'localhost' IDENTIFIED BY 'your_password';
+GRANT ALL PRIVILEGES ON `web_dedalo`.* TO 'dedalo_write'@'localhost';
 ```
 
 ## Ontology config
 
-You can use common diffusion definitions such as the Dédalo default (focused on Oral History) or create your own definitions with new elements or aliases of already defined elements.
+You can use the common diffusion definitions, such as the Dédalo default (focused on Oral History), or create your own definitions with new elements or aliases of existing ones.
 
-Sample of Ontology custom definition for multiple databases
+Sample custom ontology definition for multiple databases:
 
    ![Ontology sample](assets/diffusion_multiple_databases.png){: .big}
 
-!!! info "More info about diffusion Ontology definitions in"
-    [Diffusion ontology](diffusion_data_flow.md#diffusion-ontology)
+!!! info "More about diffusion ontology definitions"
+    See [Diffusion ontology](diffusion_data_flow.md#diffusion-ontology).
 
-Sample of Tool diffusion window using multiple databases
+Sample tool_diffusion window using multiple databases:
 
-   ![Ontology sample](assets/tool_diffusion_multiple_db.png){: .big}
+   ![tool_diffusion with multiple databases](assets/tool_diffusion_multiple_db.png){: .big}
 
 ## Publication server config file
 
-You can use multiple sites calling the same publication server, but you must make sure to configure the server to get the target database from the API request instead of using a fixed value.
+Several sites can call the same publication server, but you must configure the server to read the target database from the API request instead of using a fixed value.
 
 ### server_config_api.php
 
-file is located in:
+The file is located at:
 
-```bash
+```text
 /dedalo/publication/server_api/v1/config_api/server_config_api.php
 ```
 
@@ -93,15 +95,15 @@ file is located in:
     define('MYSQL_DEDALO_SOCKET_CONN'   , null);
 ```
 
-Note that `$db_name` var if filled with the `db_name` request value passed by the site API call such as:
+The `$db_name` variable is filled with the `db_name` value passed by the site's API call, as shown below.
 
 ### An implementation example
 
-This example demonstrates a typical JavaScript connection, but you can adapt it to other languages (Python, Java, etc.) as needed.
+This example shows a typical JavaScript connection, but you can adapt it to other languages (Python, Java, etc.).
 
-To access to the API you can use a standard `fectch` connection.
+To access the API, use a standard `fetch` call.
 
-```bash
+```text
 /web_my_entity_pre/my_data_manager.js
 ```
 
@@ -147,14 +149,14 @@ const api_response = fetch(
 });
 ```
 
-In this case, db_name = `web_my_entity_pre`
+In this case, `db_name = web_my_entity_pre`.
 
-## Dédalo area maintenance access to Publication API ui (swagger)
+## Area maintenance access to the Publication API UI (Swagger)
 
-Maintenance area allow administrators to access to the Publication API ui viewer and select any site of current diffusion domain:
+The maintenance area lets administrators open the Publication API UI viewer and select any site of the current diffusion domain:
 
-   ![Ontology sample](assets/area_maintenance_publication_server.png){: .big}
+   ![Area maintenance publication server](assets/area_maintenance_publication_server.png){: .big}
 
-If you select one, the viewer `code` and `db_name` are filled with the settings from `API_WEB_USER_CODE_MULTIPLE`
+When you select a site, the viewer's `code` and `db_name` are filled from the settings in `API_WEB_USER_CODE_MULTIPLE`:
 
-![Ontology sample](assets/swagger_view.png){: .big}
+![Swagger view](assets/swagger_view.png){: .big}

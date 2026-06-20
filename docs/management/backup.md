@@ -1,6 +1,8 @@
 # How do I backup and restore the Dédalo data?
 
-Dédalo manage two different databases, the main database is work system, it has a full dataset with the ontology and all data. The second one is the publishing system, it is a copy with only the public data. If you want to create a backup you will need to make the backup of the two systems.
+> See also: [Backup best practices](backup_best_practises.md) · [Management and maintenance](index.md)
+
+Dédalo manages two databases. The main one is the work system, which holds the full dataset with the ontology and all the data. The second is the publishing system, a copy that holds only the public data. To create a backup, you must back up both systems.
 
 !!! note "Recreating a publication database with work data"
     Publishing system is a copy and is possible recreate it doing a publication in work system. But some times will be necessary a copy because the work system is not ready to publish his data.
@@ -13,7 +15,7 @@ You can perform a backup in different ways:
 
 ### Automatic backup
 
-By default Dédalo make backup automatically, if users change data. It's possible change this backup configuration as; directory, cadence and other parameters in config file changing Dédalo [bakup](../config/config.md#backup-variables) variables.
+By default Dédalo makes a backup automatically when users change data. You can change this backup configuration — directory, cadence and other parameters — in the config file by editing Dédalo's [backup](../config/config.md#backup-variables) variables.
 
 ### Manual backup
 
@@ -71,7 +73,7 @@ To import the file that you previously created, or restore the DB backup by runn
     ```sql
     CREATE DATABASE dedalo_database_name
     WITH ENCODING='UTF8'
-    OWNER=dedalo_user
+    OWNER=dedalo_database_user
     CONNECTION LIMIT=-1
     TABLESPACE=pg_default;
     ```
@@ -151,7 +153,7 @@ mysqldump -u publishing_bd_user_name -p -v my_publishing_database > mysql_dump_m
 Optional: if you want to compress the backup:
 
 ```shell
-tar zcf mmysql_dump_my_publishing_database-$(date +%Y-%m-%d-%H.%M.%S).sql.tar.gz mysql_dump_my_publishing_database.sql
+tar zcf mysql_dump_my_publishing_database-$(date +%Y-%m-%d-%H.%M.%S).sql.tar.gz mysql_dump_my_publishing_database.sql
 ```
 
 ## Restore a backup of publishing system

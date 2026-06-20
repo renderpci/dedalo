@@ -1,12 +1,14 @@
 # Using media components
 
+> See also: [Media pipeline](media_pipeline.md) · [Service Upload](services/service_upload.md) · [Locator](../core/locator.md)
+
 ## Introduction
 
-Media components are using to manage files as images, audiovisuals, pdf, svg, or others. If you want upload a media file into a tool o extend a component is useful to use the media components functionalities, as load the file, process into the server, save the file into a section, etc. instead to create new process for the existing components.
+Media components manage files such as images, audiovisuals, PDFs and SVGs. When you need to upload a media file from a tool, or extend a component, it is easier to reuse a media component's built-in functionality — load the file, process it on the server, save it to a section, and so on — than to build a new process of your own.
 
 ## Example
 
-This example show how use a Dédalo work API to upload a new image, store it, and re-used the uploaded image in other Dédalo parts or components.
+This example shows how to use the Dédalo work API to upload a new image, store it, and reuse the uploaded image in other Dédalo parts or components.
 
 Overview:
 
@@ -16,14 +18,14 @@ Overview:
     2. Store the new section as my_image_data to be used to get the image
     3. Create new component_image
     4. Open the tool_upload interface
-3. Load image, when the image is uploaded previously
-    1. Get my_image_data
-    2. Create a component_image with my_image_data
-    3. Get the URL of the quality that you want.
+3. Load a previously uploaded image:
+    1. Get `my_image_data`
+    2. Create a `component_image` from `my_image_data`
+    3. Get the URL of the quality you want
 
-Let's go!
+Step by step:
 
-1. First we need import some common methods:
+1. First, import some common methods:
 
     ```javascript
     // necessary imports
@@ -32,10 +34,10 @@ Let's go!
         import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
     ```
 
-2. Second will be to create the image section and store into the database. In you code the result of create the new section, with the [locator](../core/locator.md) will need to be stored into you data schema, the locator will use to read the image every time that will need necessary.
+2. Next, create the image section and store it in the database. In your code, the result of creating the new section — a [locator](../core/locator.md) — must be stored in your own data schema; you use that locator to read the image whenever you need it.
 
-    !!! note "About storing locator data into your data schema of the tool"
-        The locator is a object and it will use a item to re-create the component and the media section. Think if you will need to stored multiple images as array of locators.
+    !!! note "Storing locator data in your tool's data schema"
+        The locator is an object, and you use it to re-create the component and the media section. Consider whether you need to store multiple images as an array of locators.
 
     ```javascript
     // create new section for the image, it will create new record in the database.
@@ -92,9 +94,9 @@ Let's go!
     }
     ```
 
-3. To load an image previously uploaded.
+3. To load a previously uploaded image.
 
-    Get the previously stored data in the upload process. Before this process you will need to obtain a locator of the stored array in your data schema, in any way necessary; for loop, array.find...
+    Retrieve the data you stored during the upload step. First, obtain one locator from the stored array in your data schema, in whatever way suits you — a `for` loop, `Array.find`, and so on.
 
     ```javascript
     // NOTE: this variable is used to show the locator data and to understand the next code.

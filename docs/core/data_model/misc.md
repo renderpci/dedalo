@@ -51,7 +51,7 @@ value; **the component itself knows how to read and write its own shape**:
 'component_info'            => 'misc', // direct object
 'component_inverse'         => 'misc', // direct object
 'component_json'            => 'misc',
-'component_security_access'  => 'misc', // direct object
+'component_security_access' => 'misc', // direct object
 ```
 
 ### How it is keyed
@@ -126,7 +126,7 @@ nested to any depth. It is language-neutral (`lg-nolan`, non-translatable).
   and search views only build/read `entries[0]`.
 - **Import disambiguation:** a stored item `[{"value":1}]` is indistinguishable
   from a literal JSON value that happens to have a `value` property. The raw
-  export wraps the dato as `{"dedalo_data":[{"value":<any JSON>,"id":1}]}`; on
+  export wraps the data as `{"dedalo_data":[{"value":<any JSON>,"id":1}]}`; on
   import, `conform_import_data()` uses `import_data_is_wrapped` to detect the
   wrapper — when present each item must be an object with a `value` property; when
   absent the **entire** decoded value becomes the single monovalue

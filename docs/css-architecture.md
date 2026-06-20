@@ -1,10 +1,10 @@
-### Dédalo v7 CSS / LESS Architecture
+# Dédalo v7 CSS / LESS architecture
 
-This document summarizes how styles flow from `core/page/css/main.less` through layout, components, and widgets, and defines conventions to keep behavior predictable without changing current visual design.
+This document summarizes how styles flow from `core/page/css/main.less` through layout, components and widgets, and defines conventions to keep behavior predictable without changing the current visual design.
 
 ---
 
-### 1. Entry Point & Layering
+## 1. Entry point and layering
 
 **Entry file**
 
@@ -42,7 +42,7 @@ This document summarizes how styles flow from `core/page/css/main.less` through 
 
 ---
 
-### 2. Tokens, Mixins, and Shared Utilities
+## 2. Tokens, mixins and shared utilities
 
 **2.1 Tokens**
 
@@ -85,7 +85,7 @@ This document summarizes how styles flow from `core/page/css/main.less` through 
 
 ---
 
-### 3. Component CSS Contract
+## 3. Component CSS contract
 
 **3.1 Root selector**
 
@@ -130,7 +130,7 @@ Example (current pattern from `component_av.less` and `component_image.less`):
 
 ---
 
-### 4. Example: Media Components (`component_av` and `component_image`)
+## 4. Example: media components (`component_av` and `component_image`)
 
 **4.1 `component_av.less`**
 
@@ -171,7 +171,7 @@ Example (current pattern from `component_av.less` and `component_image.less`):
 
 ---
 
-### 5. Identified Issues and Risks
+## 5. Identified issues and risks
 
 **5.1 Ordering assumptions**
 
@@ -211,7 +211,7 @@ Example (current pattern from `component_av.less` and `component_image.less`):
 
 ---
 
-### 6. Conventions Going Forward
+## 6. Conventions going forward
 
 **6.1 Layering rules**
 
@@ -273,7 +273,7 @@ For any new component `component_xxx`:
 
 ---
 
-### 7. Suggested Non-breaking Refactors
+## 7. Suggested non-breaking refactors
 
 These are **suggestions** intended to be safe: they preserve visual output but improve structure and reuse.
 
@@ -321,7 +321,7 @@ These are **suggestions** intended to be safe: they preserve visual output but i
 
 ---
 
-### 8. Summary
+## 8. Summary
 
 - `main.less` already follows a solid layered structure; keeping that entrypoint and order stable is critical.
 - Layout and general layers provide a rich set of tokens and mixins that components should lean on instead of redefining behavior.

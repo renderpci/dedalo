@@ -1,8 +1,10 @@
 # Installation
 
-Dédalo is used to manage cultural properties as archeological, ethnological, documentary heritage, memory and oral history. Dédalo is a client -  server application, before install it, you will need an internet server with a Linux SO, with static ip, and a stable internet connection.
+> See also: [Apache configuration](apache_configuration.md) · [Install on RHEL-based systems](install_fedora.md) · [Configuration](../config/index.md)
 
-In this installation manual you will see how you can prepare your server before install Dédalo.
+Dédalo manages cultural properties such as archaeological, ethnological and documentary heritage, memory and oral history. It is a client–server application, so before installing it you will need an internet server running Linux, with a static IP and a stable internet connection.
+
+This manual shows how to prepare your server and install Dédalo.
 
 ## 1. Minimum and recommended server
 
@@ -24,14 +26,14 @@ Hardware:
 - Processor: 8 processors with 3+GHZ
 - RAM: minimal 32GB / recommended: 64 GB
 - HD for OS: 150GB+ for the system in RAID 10 (SSD)
-- HD for data: 1TB+ for the data in RAD 10 (if is possible SSD)
+- HD for data: 1TB+ for the data in RAID 10 (SSD if possible)
 
 Network:
 
-- Ip stable
-- minimal: 500mb/s / recommended: 1gpbs
+- Stable IP
+- minimal: 500mb/s / recommended: 1gbps
 - domain
-- SSL certificated
+- SSL certificate
 
 Backup:
 
@@ -42,22 +44,22 @@ Backup:
 
 ## 2. Installation options
 
-Instead install you can use our "ready to use" virtual machine with all installed and configured.
+Instead of installing from scratch, you can use our ready-to-use virtual machine, which comes fully installed and configured.
 
-### 2.1. Ready-to-use Virtual Machine for V7
+### 2.1. Ready-to-use virtual machine for V7
 
 TODO
 
-> Note: we do not recommended use this machine as production system, it could be fine to develop or learn about Dédalo. If you want to use it you will need change all passwords because are public.
+> Note: we do not recommend using this machine as a production system; it is fine for developing or learning about Dédalo. If you use it, change all passwords, because they are public.
 
-### 2.2. Video-guide for V7 installation
+### 2.2. Video guide for V7 installation
 
-Then, you can follow the steps in the V7 installation video:
-[Dedalo V7 installation video on Ubuntu](./install_help.md#video-guide-for-v6-installation)
+You can follow the steps in the V7 installation video:
+[Dédalo V7 installation video on Ubuntu](./install_help.md#video-guide-for-v6-installation)
 
 ### 2.3. Manual installation
 
-Then, install Dédalo manually, commands are for Ubuntu 24.04 (only as references, you can use other GNU/Linux):
+To install Dédalo manually, use the following commands. They are for Ubuntu 24.04 (as a reference only — you can use another GNU/Linux distribution):
 
 1. Download official LTS version of [Ubuntu Server](https://ubuntu.com/download/server).
 2. Install Ubuntu Server and all dependencies.
@@ -90,10 +92,10 @@ Then, install Dédalo manually, commands are for Ubuntu 24.04 (only as reference
         sudo apt install apache2 libapache2-mod-fcgid
         ```
 
-        Active modules
+        Activate modules
 
         ```shell
-        sudo a2enconf php8.4-fpm
+        sudo a2enconf php8.5-fpm
         sudo a2enmod actions fcgid alias proxy_fcgi
         sudo a2enmod ssl
         sudo a2enmod headers
@@ -291,12 +293,12 @@ Then, install Dédalo manually, commands are for Ubuntu 24.04 (only as reference
 
     7. Modify `[...]/dedalo/config/config_areas.php` with your areas configuration. Read the areas [configuration](../config/config_areas.md) documentation.
 
-6. Open Dédalo in the browser.
-7. Follow the instructions.
-8. Once the installation process is done, log in and head to the Development Area. There, update the Ontology and register all tools.
-9. Create an admin user.
-10. Log out and log in with the admin user.
-11. Create Users and Projects as you need.
+7. Open Dédalo in the browser.
+8. Follow the instructions.
+9. Once the installation process is done, log in and head to the Development Area. There, update the Ontology and register all tools.
+10. Create an admin user.
+11. Log out and log in with the admin user.
+12. Create Users and Projects as you need.
 
 ### 2.4. Options
 

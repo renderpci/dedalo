@@ -1,18 +1,16 @@
 # dd_component_text_area_api
 
-Overview
+> See also: [JSON API v1](../dedalo_api_v1.md) · [dd_core_api](dd_core_api.md)
 
-- API for the text area component (tags and related features).
+API for the text area component (tags and related features).
 
-How to call
+## How to call
 
 - POST JSON with `dd_api: "dd_component_text_area_api"` and `action` set to `delete_tag` or `get_tags_info`.
 
-Common fields
+## Common fields
 
-- `source` includes component identifiers; `options` may carry tag or pagination parameters.
-
-Methods
+- `source` includes the component identifiers; `options` may carry tag or pagination parameters.
 
 ## delete_tag
 
@@ -73,3 +71,4 @@ Methods
   "msg": [],
   "errors": []
 }
+```

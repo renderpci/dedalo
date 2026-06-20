@@ -316,7 +316,7 @@ runtime flags (`area_model`, `is_ontology`, `show_models` default `true`,
 `thesaurus_view_mode==='model'`, the `search_tipos` URL auto-search) rather than
 new code paths.
 
-## How it fits with the rest of Dedalo
+## How it fits with the rest of Dédalo
 
 - **[TS tree (`ts_object` / `dd_ts_api`)](../ontology/ts_object.md)** — the area is
   the *host*; every tree row is a `ts_object`. The area supplies roots and search

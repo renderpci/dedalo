@@ -8,7 +8,7 @@ Atoms-based export of a section's records to a flat table (CSV / TSV / ODS / XLS
 
 Concrete heritage scenario: a numismatics cataloguer has filtered the *Coins* section down to the issues of one mint and wants a report for a colleague. They open the tool on that filtered list, drag the *Inventory number*, *Weight*, *Diameter* and the related *Mint → name* into the active columns, choose **Breakdown / rows** so each linked type lands on its own row, tick **parents** on the type column to also get the term's ancestor chain, run the export, and download an XLSX. The same configuration can be saved as a named preset for the next batch.
 
-A second, machine-facing use: the **Dédalo (Raw)** format produces cells wrapped as `{"dedalo_data":…}` that the [CSV import tool](../../../tools/tool_import_dedalo_csv) re-imports byte-for-byte (round-trip) — a practical way to back up a section or move data between installations.
+A second, machine-facing use: the **Dédalo (Raw)** format produces cells wrapped as `{"dedalo_data":…}` that the [CSV import tool](tool_import_dedalo_csv.md) re-imports byte-for-byte (round-trip) — a practical way to back up a section or move data between installations.
 
 Use it when: someone needs section data as a spreadsheet/report, a re-importable backup, or the media files referenced by a record set. Do not use it for single-record edits or for tabular *editing* — it is read-only export.
 
@@ -88,7 +88,7 @@ const stream = await data_manager.request_fetch_stream({ body: rqo })
 
 The server emits NDJSON, one JSON object per line, discriminated by `t`:
 
-```
+```text
 {"t":"meta","section_tipo":"rsc167","total":128,"data_format":"grid_value","breakdown":"rows", ...}
 {"t":"col","i":0,"key":"...","label":"Inventory number","cell_type":"text", ...}
 {"t":"row","rec":12,"sub":0,"c":{"0":"NM-0001","1":"7.21"}}
@@ -104,6 +104,6 @@ Raw round-trip cell shape (`data_format:'dedalo_raw'`), re-importable by the CSV
 ## Related
 
 - [Exporting data](../../../core/exporting_data.md) — the end-user + developer guide for this tool (UI walkthrough, formats, breakdown, presets, NDJSON protocol, component `get_export_value` contract).
-- [tool_import_dedalo_csv](../../../tools/tool_import_dedalo_csv) — consumes the `dedalo_raw` export for the round-trip; see [Importing data](../../../core/importing_data.md).
+- [tool_import_dedalo_csv](tool_import_dedalo_csv.md) — consumes the `dedalo_raw` export for the round-trip; see [Importing data](../../../core/importing_data.md).
 - [Creating new tools](../creating_tools.md) · [Server contract](../server_contract.md) — the tool model, `API_ACTIONS`, gates and lifecycle this page builds on.
 - Source: `tools/tool_export/class.tool_export.php`, `class.export_tabulator.php`, `core/dd_grid/class.export_*.php`, `tools/tool_export/js/{tool_export,render_tool_export,flat_table,drag_tool_export,export_user_presets}.js`.

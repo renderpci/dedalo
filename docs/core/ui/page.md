@@ -152,7 +152,7 @@ widget uses them:
 
 Each component ships its style as `component_xxx/css/component_xxx.less` and is
 **not** compiled by itself — it is folded into `main.css` through this list (see
-[Components › Nomenclature of files](../components/index.md#nomenclature-of-files)).
+[Components › File nomenclature](../components/index.md#file-nomenclature)).
 The full layering rules, tokens and the per-component LESS contract live in
 [CSS / LESS architecture](../../css-architecture.md).
 
@@ -178,7 +178,7 @@ Theming is CSS-custom-property driven, not a separate stylesheet:
 beyond the empty `page()` factory; state is set in `init()`. The bootstrap in
 `index.js` is the canonical lifecycle:
 
-```javascript
+```js
 // core/page/js/index.js (essentials)
 import {get_instance} from '../../common/js/instances.js'
 
@@ -200,7 +200,7 @@ document.getElementById('main').appendChild(wrapper_page)
 Prototype wiring (in `page.js`) — `page` borrows from the shared client `common`
 and from `render_page`:
 
-```javascript
+```js
 page.prototype.edit    = render_page.prototype.edit   // builds the .wrapper.page DOM
 page.prototype.render  = common.prototype.render        // generic render → calls edit()
 page.prototype.refresh = common.prototype.refresh
@@ -308,7 +308,7 @@ inserts on `requestAnimationFrame`, and deduplicate by selector.
 
 ### The minimal bootstrap
 
-```javascript
+```js
 // index.js, condensed — the entire app entry
 const page_instance = await get_instance({ model:'page' })
 await page_instance.build(true)                  // -> server `start`
@@ -321,7 +321,7 @@ document.getElementById('main').appendChild(wrapper_page)
 `page` listens for `user_navigation`; any element (typically the menu) publishes
 a source to switch the main page element:
 
-```javascript
+```js
 import {event_manager} from '../../common/js/event_manager.js'
 
 event_manager.publish('user_navigation', {
@@ -333,7 +333,7 @@ event_manager.publish('user_navigation', {
 
 ### Injecting scoped CSS for a component
 
-```javascript
+```js
 import {set_element_css} from '../../page/js/css.js'
 
 // key is usually `${section_tipo}_${tipo}`; selectors are scoped under it
@@ -345,7 +345,7 @@ set_element_css('oh1_rsc75', {
 
 ### Toggling the theme
 
-```javascript
+```js
 import {toggle_theme, get_theme} from '../../page/js/theme.js'
 
 toggle_theme()        // light <-> dark, persisted to localStorage.dedalo_theme

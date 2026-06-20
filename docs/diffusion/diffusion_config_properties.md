@@ -1,19 +1,19 @@
 # Diffusion config properties
 
-Samples of diffusion configurations using Publication API v1.
+> See also: [Diffusion data flow](diffusion_data_flow.md) · [Diffusion engine internals](engine_internals.md) · [Diffusion API and Bun](dd_diffusion_api_and_bun.md)
 
-This is a draft  where to write some useful examples of Publication API Ontology configuration for complex parsers and definitions.
+Sample diffusion ontology configurations for the legacy v1 SQL diffusion path, focused on complex `process_dato` parsers and definitions.
 
-Please note that this documentation is incomplete and will grow over time.
-In the meantime, you can always see examples of real use cases in the Dédalo Ontology diffusion starting at `dd1190` or you can consult the existing map and process methods in the class `diffusion_sql` at [/dedalo/core/diffusion/class.diffusion_sql.php](https://github.com/renderpci/dedalo/blob/master/core/diffusion/class.diffusion_sql.php)
+!!! note "Work in progress"
+    This page is incomplete and will grow over time. For real-world examples, browse the Dédalo diffusion ontology starting at `dd1190`, or read the map and process methods in the `diffusion_sql` class (`core/diffusion/class.diffusion_sql.php`).
 
+## component_autocomplete_hi cases
 
-# component_autocomplete_hi cases
+### With custom parents (slice)
 
-With custom parents (slice)
->Selects a portion of the parents array
+Selects a portion of the parents array.
 
-#### direct
+#### Direct
 ```mermaid
   flowchart LR
   A[field : mdcat4611] --> | relation | id1([component : dmm1049])
@@ -38,7 +38,7 @@ With custom parents (slice)
 }
 ```
 
-#### deep
+#### Deep
 ```mermaid
   flowchart LR
   A[field : mdcat4589] --> | relation | id1([component : dmm1041]) --> | target | id2([component : rsc91])
@@ -65,10 +65,11 @@ With custom parents (slice)
 ```
 ---
 
-With custom parents (select_model)
->Filter results by model code like ["es2_8871"]
+### With custom parents (select_model)
 
-##### direct
+Filter results by model code, e.g. `["es2_8871"]`.
+
+#### Direct
 ```mermaid
   flowchart LR
   A[field : mdcat4611] --> | relation | id1([component : dmm1049])
@@ -90,7 +91,7 @@ With custom parents (select_model)
 }
 ```
 
-##### deep
+#### Deep
 ```mermaid
   flowchart LR
   A[field : mdcat4590] --> | relation | id1([component : dmm1041]) --> | target | id2([component : rsc91])
@@ -114,11 +115,12 @@ With custom parents (select_model)
 ```
 ---
 
-# component_portal cases
+## component_portal cases
 
-Generic resolution
->Resolves component value inside the portal at first level
-##### direct
+### Generic resolution
+
+Resolves the component value inside the portal at the first level.
+#### Direct
 ```mermaid
   flowchart LR
   A[field : mdcat4588] --> | relation | id1([component : dmm1041])
@@ -135,9 +137,10 @@ Generic resolution
 
 ---
 
-Anonymized name
->Process results anonymizing values like 'Juan Pérez Marina' to 'JPM'
-##### direct
+### Anonymized name
+
+Anonymizes values, e.g. 'Juan Pérez Marina' becomes 'JPM'.
+#### Direct
 ```mermaid
   flowchart LR
   A[field : mdcat4587] --> | relation | id1([component : dmm1041])
@@ -156,11 +159,12 @@ Anonymized name
 ```
 ---
 
-# component_section_id cases
+## component_section_id cases
 
-Map to 'terminoID'
->Process result from section_id to term_id like: 1023 => 'dmm1023'
-##### direct
+### Map to term_id
+
+Maps a `section_id` to a `term_id`, e.g. `1023` becomes `dmm1023`.
+#### Direct
 ```mermaid
   flowchart LR
   A[field : mdcat4586] --> | relation | id1([component : dmm1045])
@@ -173,11 +177,12 @@ Map to 'terminoID'
 
 ---
 
-# component_radio_button cases
+## component_radio_button cases
 
-Map locator to value
->Process result converting locators to mapped values like "1" => true, "2" => false
-##### direct
+### Map locator to value
+
+Converts locators to mapped values, e.g. `"1"` becomes `true`, `"2"` becomes `false`.
+#### Direct
 ```mermaid
   flowchart LR
   A[field : mdcat4599] --> | relation | id1([component : dmm1052])
@@ -196,11 +201,12 @@ Map locator to value
 
 ---
 
-# component_date cases
+## component_date cases
 
-Split date range
->Process result splitting and formatting a component_date value like dd_date => 1964
-##### direct
+### Split date range
+
+Splits and formats a `component_date` value, e.g. a `dd_date` becomes `1964`.
+#### Direct
 ```mermaid
   flowchart LR
   A[field : mdcat4607] --> | relation | id1([component : dmm1051])
@@ -216,7 +222,7 @@ Split date range
 }
 ```
 
-##### deep
+#### Deep
 ```mermaid
   flowchart LR
   A[field : mdcat4593] --> | relation | id1([component : dmm1041]) --> | target | id2([component : rsc89])

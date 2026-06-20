@@ -1,20 +1,22 @@
 # Adding or installing new hierarchies
 
-Hierarchies as thesaurus are an important area of Dédalo system. Dédalo use hierarchies in multiple scenarios, as normalized toponymy, languages, thematic, materials, techniques, etc. Adding or installing new hierarchies is and will be a important maintenance process.
+> See also: [Management and maintenance](index.md) · [Thesaurus dependencies](../config/thesaurus_dependeces.md)
 
-## Defining hierarchy
+Hierarchies (thesauri) are an important part of the Dédalo system. Dédalo uses hierarchies in many scenarios: normalized toponymy, languages, themes, materials, techniques and more. Adding or installing new hierarchies is an important maintenance task.
 
-Hierarchies are a complex structure of data with multiple relations formats, as his name defines, data will structure hierarchically with parent-children relation, Dédalo support more relations types as equality, change to, equivalence, or other relation types.
+## Defining a hierarchy
+
+Hierarchies are a complex data structure with several relation formats. As the name suggests, the data is structured hierarchically through parent-child relations; Dédalo also supports other relation types such as equality, change-to and equivalence.
 
 By default all hierarchies sections are a clone of the [hierarchy20](https://dedalo.dev/ontology/hierarchy20) section. But is possible use any other section adding the relations and definition to create a hierarchy with any flat section.
 
 Hierarchies are showed inside the Thesaurus area and they are viewed with a tree representation.
 
-What is the difference between hierarchy and thesaurus?
+What is the difference between a hierarchy and a thesaurus?
 
-Hierarchies are the structure of the data and the thesaurus will be the data itself, the data entered by users or imported. Any thesaurus has a main controlled that is defined into Dédalo ontology (as an expansion of the ontology) and this definition is named hierarchy.
+A hierarchy is the structure of the data; the thesaurus is the data itself — the data entered by users or imported. Every thesaurus has a controlled definition in the Dédalo ontology (as an expansion of the ontology), and that definition is called a hierarchy.
 
-In other words; Hierarchies are the meta information of the thesaurus.
+In other words, hierarchies are the meta information of the thesaurus.
 
 ### Creating new hierarchies
 
@@ -105,7 +107,7 @@ Both, common and private, hierarchies has the same process to be created.
 
 11. Build it clicking in the "Generate" button.
 
-    ![Alt text](assets/20231008_212940_build_the_hierarchy.png)
+    ![Build the hierarchy](assets/20231008_212940_build_the_hierarchy.png)
 
 12. Check in Thesaurus that this hierarchy is ready and set the permissions to users as you need.
 
@@ -113,9 +115,9 @@ Both, common and private, hierarchies has the same process to be created.
 
 #### Toponyms or other standardized hierarchies
 
-For simplified the creation and load toponymy hierarchies is possible use the Maintenance panel to control the all toponyms hierarchies.
+To simplify creating and loading toponymy hierarchies, you can use the Maintenance panel to manage all toponym hierarchies.
 
-Dédalo installations will pre-configure all counties, but their are not active and his data is not loaded by default. Only countries loaded in the install process will be accessible to users. To activate new one follow this steps:
+A Dédalo installation pre-configures all countries, but they are not active and their data is not loaded by default. Only the countries loaded during the install process are accessible to users. To activate a new one, follow these steps:
 
 1. Go to "Maintenance" panel in "System administration" menu.
 2. Locate the "Install hierarchies" block

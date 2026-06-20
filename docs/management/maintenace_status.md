@@ -1,16 +1,16 @@
 # Maintenance mode
 
-### Temporarily disable Dédalo access to the user interface
+> See also: [Management and maintenance](index.md) · [Updates](updates/index.md)
 
-Before a new installation or database upgrade of Dédalo server, it is highly recommended to change the Dédalo state to "maintenance" to prevent data changes, conflicts or user interaction with the new features before it is ready.
+Before a new installation or a database upgrade of the Dédalo server, it is highly recommended to change the Dédalo state to "maintenance". This prevents data changes, conflicts and user interaction with new features before they are ready.
 
-Maintenance state close the login to all user including general administrator and it is only possible to enter the working system using the root user.
+Maintenance state closes login to all users, including general administrators; only the root user can enter the work system.
 
 ## Alert to users
 
-When Dédalo switches to maintenance, all user sessions will be deleted and if the system has any registered users, the user will not be able to save their work. To avoid losing your work, you will need to alert all users before switching to maintenance mode.
+When Dédalo switches to maintenance, all user sessions are deleted, and any logged-in user will be unable to save their work. To avoid losing work, alert all users before switching to maintenance mode.
 
-To alert to users follow this steps:
+To alert users, follow these steps:
 
 1. Log in as `root`
 
@@ -87,7 +87,7 @@ To change the Dédalo status to maintenance follow this steps:
 
 3. Click the `Activate maintenance mode` button.
 
-    This action will change the DEDALO_MAINTENANCE_MODE to true`
+    This action will change `DEDALO_MAINTENANCE_MODE` to `true`.
 
 ??? tip "Option. If you want to do it manually in your server installation"
 
@@ -103,7 +103,7 @@ To change the Dédalo status to maintenance follow this steps:
         nano config.php
         ```
 
-    3. Locate the [`DEDALO_MAINTENANCE_MODE`](../config/config.md#defining-maintenance-mode) constant at the end of the config file and chagne it to `true`
+    3. Locate the [`DEDALO_MAINTENANCE_MODE`](../config/config.md#defining-maintenance-mode) constant at the end of the config file and change it to `true`
 
         ```php
         define('DEDALO_MAINTENANCE_MODE', true);

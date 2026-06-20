@@ -1,18 +1,18 @@
 # dd_manager
 
-Overview
+> See also: [JSON API v1](../dedalo_api_v1.md) · [dd_core_api](dd_core_api.md)
 
-- Internal manager/router that receives the decoded RQO and dispatches the call to the correct API class and method. Not typically called directly from clients — use the JSON entry point instead.
+Internal manager/router that receives the decoded RQO and dispatches the call to the correct API class and method. Clients do not call it directly — use the JSON entry point instead.
 
-How it works
+## How it works
 
 - `core/api/v1/json/index.php` decodes the incoming JSON into `$rqo` and passes it to `dd_manager->manage_request($rqo)`.
-- `dd_manager` maps `dd_api` + `action` to the final static method call and handles error wrapping and debug output.
+- `dd_manager` maps `dd_api` + `action` to the final static method call, and handles error wrapping and debug output.
 
-Notes for integrators
+## Notes for integrators
 
-- You generally don't need to call `dd_manager` directly. Use the endpoint and construct a valid RQO.
-- If extending or adding a new API class, ensure the new class is discoverable by the manager and follows the same static method convention `public static function <action>(object $rqo): object`.
+- You normally do not need to call `dd_manager` directly. Use the endpoint and construct a valid RQO.
+- When extending or adding a new API class, make sure the manager can discover it and that it follows the same static-method convention: `public static function <action>(object $rqo): object`.
 
 ## manage_request
 

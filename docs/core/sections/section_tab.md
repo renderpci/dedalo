@@ -31,8 +31,8 @@ Both are *groupers*: they are listed in `common::$groupers`
 `section::get_ar_grouper_models()`. Groupers carry **no record data** — they hold
 no `dato`, write nothing to the matrix, and are skipped when a section collects
 its data-bearing component children. Both classes are deliberately near-identical
-~40-line shells over [`common`](#); the only behaviour they add beyond
-construction is short-circuiting `get_tools()` to return `[]`.
+~40-line shells over [`common`](../components/base_classes.md); the only behaviour
+they add beyond construction is short-circuiting `get_tools()` to return `[]`.
 
 !!! note "Inheritance"
     `section_tab extends common`, so it inherits the shared object machinery:
@@ -113,7 +113,7 @@ inherited `common` structure-context cache still applies to its
 ## Public API / Key methods
 
 `section_tab` adds exactly **one** method of its own; everything else is
-inherited from [`common`](#).
+inherited from [`common`](../components/base_classes.md).
 
 | method | static? | purpose |
 | --- | --- | --- |

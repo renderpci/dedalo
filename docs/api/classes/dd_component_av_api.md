@@ -1,22 +1,20 @@
 # dd_component_av_api
 
-Overview
+> See also: [JSON API v1](../dedalo_api_v1.md) · [dd_component_3d_api](dd_component_3d_api.md)
 
-- Audio/Video component API: media streaming helpers, posterframe creation/deletion and fragment download.
+Audio/video component API: media-streaming helpers, posterframe creation and deletion, and fragment download.
 
-How to call
+## How to call
 
-- POST JSON with `dd_api: "dd_component_av_api"` and `action` such as `get_media_streams`, `create_posterframe`, `delete_posterframe`, `download_fragment`.
+- POST JSON with `dd_api: "dd_component_av_api"` and `action` set to `get_media_streams`, `create_posterframe`, `delete_posterframe`, or `download_fragment`.
 
-Common fields
+## Common fields
 
-- `source` should include file locators or identifiers; `options` contains media parameters (quality, target folder, timestamps for fragments).
-
-Methods
+- `source` should include the file locators or identifiers; `options` carries the media parameters (quality, target folder, timestamps for fragments).
 
 ## download_fragment
 
-- **Purpose:** Retrieve a media fragment (time range) from an AV asset.
+- **Purpose:** retrieve a media fragment (time range) from an AV asset.
 - **Accepts:** `source.tipo` (component tipo), `source.section_tipo`, `source.section_id`, optional `source.tag_id`, optional `source.lang`; `options.quality`, `options.tc_in_secs`, `options.tc_out_secs`, optional `options.watermark` (bool).
 - **Returns:** on success `response.result` is a URL string to the generated fragment; `msg` contains status and `errors` on failure.
 
@@ -130,3 +128,4 @@ Methods
   "msg": "OK. Request done dd_component_av_api::delete_posterframe",
   "errors": []
 }
+```

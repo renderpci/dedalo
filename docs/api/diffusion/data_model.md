@@ -1,8 +1,10 @@
-# Data Model: Diffusion Records
+# Data model: diffusion records
 
-The Diffusion Engine resolves records from the Dédalo Matrix into a relational, table-like structure stored in MariaDB.
+> See also: [Architecture](architecture.md) · [API endpoints](endpoints.md) · [Diffusion engine (hub)](README.md)
 
-## 1. Response Objects (Progress)
+The diffusion engine resolves records from the Dédalo matrix into a relational, table-like structure stored in MariaDB.
+
+## 1. Response objects (progress)
 
 Progress chunks follow the PHP SSE format to maintain compatibility with legacy client readers.
 
@@ -29,22 +31,22 @@ interface progress_data {
 }
 ```
 
-## 2. Table Structure
+## 2. Table structure
 
 The diffusion process generates tables based on the ontology configuration.
 
 - **Main Section**: Typically maps to one main table.
 - **Relations / Cross-Sections**: Can map to separate tables or be flattened into the main table depending on the DDO map.
 
-### Record Mapping
-- Every record has a `section_id` (PostgreSQL Matrix ID).
+### Record mapping
+- Every record has a `section_id` (PostgreSQL matrix id).
 - Column names correspond to the `tipo` or `label` defined in the ontology.
 
-## 3. Record Deletion Handling
+## 3. Record deletion handling
 
 When a record is no longer "publishable" (e.g., deleted in the Matrix or visibility changed), the PHP Resolution Engine returns a special deletion marker instead of the record data.
 
-### Deletion Format (PHP → Bun)
+### Deletion format (PHP → Bun)
 ```json
 {
   "section_id": "12345",
@@ -52,7 +54,7 @@ When a record is no longer "publishable" (e.g., deleted in the Matrix or visibil
 }
 ```
 
-### Deletion Logic
+### Deletion logic
 When Bun encounters `entries: "delete"`, it stops parsing for that record and prepares a `DELETE` statement:
 - **Scope**: Deletes **all language rows** for that `section_id` from the target table.
 - **Transaction**: Deletions are executed within the same transaction as record upserts per chunk.

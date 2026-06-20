@@ -294,7 +294,7 @@ The data-bearing widgets and the public-static methods their classes expose
     that widget's own `const API_ACTIONS` — not to the area class — or
     `widget_request` will reject it with an explicit `permissions error`.
 
-## How it fits with the rest of Dedalo
+## How it fits with the rest of Dédalo
 
 - **Areas / menu** — `area_maintenance` is one of the major areas iterated by
   `area::get_areas()` (model name `area_maintenance`), and is reachable in the
@@ -306,12 +306,12 @@ The data-bearing widgets and the public-static methods their classes expose
   subsystem; `register_tools()` imports tool nodes.
 - **Media protection** — the `media_control` widget and
   `set_media_access_mode()` write `DEDALO_MEDIA_ACCESS_MODE_CUSTOM` and trigger
-  `rebuild_media_index`; see `docs/config/media_protection.md`.
+  `rebuild_media_index`; see [Media protection](../../config/media_protection.md).
 - **Diffusion** — the `publication_api` widget reads the diffusion map and the
   `media_control` rebuild delegates to `dd_diffusion_api`; see
-  `docs/diffusion/dd_diffusion_api_and_bun.md`.
+  [Diffusion API and Bun](../../diffusion/dd_diffusion_api_and_bun.md).
 - **Tools** — `register_tools()` is the import path for the
-  [tools subsystem](../../development/tools/creating_tools.md); the widgets are a
+  [tools subsystem](../../development/tools/creating_tools.md). The widgets are a
   *different* extension surface (no `register.json`, no `tool_paths`).
 - **Search / SQO** — the `sqo_test_environment` widget and `update_ontology`'s use
   of `search_query_object` connect to [SQO](../sqo.md).
@@ -397,9 +397,9 @@ const api_response = await data_manager.request({
 - [SQO](../sqo.md) — the query format exercised by the SQO test environment.
 - [dd_area_maintenance_api](../../api/classes/dd_area_maintenance_api.md) — the
   generated API-class reference.
-- `docs/config/media_protection.md` — the media access control the
-  `media_control` widget configures.
-- `docs/diffusion/dd_diffusion_api_and_bun.md` — the diffusion engine the
-  `publication_api` widget and media-index rebuild talk to.
-- `docs/development/tools/creating_tools.md` — the tools subsystem
+- [Media protection](../../config/media_protection.md) — the media access control
+  the `media_control` widget configures.
+- [Diffusion API and Bun](../../diffusion/dd_diffusion_api_and_bun.md) — the
+  diffusion engine the `publication_api` widget and media-index rebuild talk to.
+- [Creating tools](../../development/tools/creating_tools.md) — the tools subsystem
   `register_tools()` imports into.

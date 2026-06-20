@@ -1,5 +1,9 @@
 # Exporting data
 
+> See also: [Importing data](importing_data.md) · [Component dataframe](components/component_dataframe.md) · [Glossary](glossary.md)
+
+Take a section's records and turn them into a flat downloadable table (CSV, TSV, ODS, XLSX, HTML or print), or a re-importable raw backup. This page covers the export tool's UI and, for developers, the export pipeline and component contract.
+
 ## Introduction
 
 Exporting is the counterpart of [importing](importing_data.md): it takes the data
@@ -215,7 +219,7 @@ travel alongside the data).
 
 ### The export pipeline
 
-```
+```text
 ar_ddo_to_export (chosen columns, user order)
         │  POST dd_tools_api → tool_export::get_export_grid()
         ▼

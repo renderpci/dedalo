@@ -1,11 +1,11 @@
 # api
 
-> The `core/api/` subsystem — the single HTTP entry point of the Dédalo **work
-> system**: it decodes a Request Query Object (RQO), runs the security gates,
-> dispatches the action to a `dd_*_api` handler, and returns a standard JSON
-> envelope whose `result` is the `{context, data}` ddo.
-
 > See also: [RQO](../rqo.md) · [SQO](../sqo.md) · [dd_object (ddo)](../dd_object.md) · [Architecture overview](../architecture_overview.md)
+
+The `core/api/` subsystem is the single HTTP entry point of the Dédalo **work
+system**: it decodes a Request Query Object (RQO), runs the security gates,
+dispatches the action to a `dd_*_api` handler, and returns a standard JSON
+envelope whose `result` is the `{context, data}` ddo.
 
 This page is the **subsystem reference** for `core/api/`. For the *request
 format* itself — every RQO property, the action catalogue, the response envelope
