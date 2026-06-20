@@ -1,17 +1,34 @@
 <?php declare(strict_types=1);
 /**
- * CLASS TOOL_UPDATE_CACHE
- * Manages Dédalo cache clean actions
- *
- * Key features:
- * - Bulk cache regeneration for components
- * - Chunk processing to manage memory usage
- * - Support for selective component regeneration
- * - Progress tracking for long-running operations
- *
- * @package Dedalo
- * @subpackage Tools
- */
+* CLASS TOOL_UPDATE_CACHE
+* Bulk cache-regeneration tool for Dédalo section components.
+*
+* Allows an operator to select one or more components belonging to a section and
+* force-regenerate their stored cache across every record returned by the current
+* search (i.e. honouring the active SQO filters). The operation runs in a
+* background CLI process to avoid web-request timeouts.
+*
+* Responsibilities:
+* - Validate inputs and enforce write-permission checks before touching any data.
+* - Create a bulk-process tracking record (dd800 section) so the run can be
+*   identified and reverted if needed.
+* - Process matching records in fixed-size chunks (CHUNK_SIZE = 1 000) via the
+*   recursive process_chunk() method, calling gc_collect_cycles() between chunks
+*   to keep memory stable over large datasets.
+* - Suppress activity logging and Time Machine snapshots for the duration of the
+*   batch, then restore both on success or failure (via try/finally).
+* - Provide get_component_list() as a synchronous helper that enriches an
+*   element-context list with each component's get_regenerate_options() result,
+*   so the browser UI can offer per-component regeneration flags.
+*
+* Extends tool_common (tools/tool_common/class.tool_common.php).
+*
+* Remote API entry-points are controlled by API_ACTIONS (see SEC-024 §9.2).
+* Background-runner access is controlled by BACKGROUND_RUNNABLE.
+*
+* @package Dédalo
+* @subpackage Tools
+*/
 class tool_update_cache extends tool_common {
 
 
@@ -43,60 +60,70 @@ class tool_update_cache extends tool_common {
 
 
 
-
-
-
 	/**
-	 * @var int Number of records processed in current operation
-	 */
+	* Running counter of records processed in the current update_cache call.
+	* Incremented inside process_chunk() after each record's components are
+	* regenerated. Reported back to the caller in the response object.
+	* @var int $n_records
+	*/
 	public static int $n_records = 0;
 
 	/**
-	 * @var int Total number of records to process
-	 */
+	* Total number of records matched by the active SQO for the current run.
+	* Set once via search::count() before the first chunk call. Used to
+	* report progress and calculate remaining work.
+	* @var int $total
+	*/
 	public static int $total = 0;
 
 	/**
-	 * @var int Default chunk size for processing records
-	 */
+	* Number of records fetched per recursive call in process_chunk().
+	* 1 000 is chosen to keep peak memory below PHP's limit while still
+	* amortising the overhead of repeated DB round-trips.
+	* @var int CHUNK_SIZE
+	*/
 	private const CHUNK_SIZE = 1000;
 
 	/**
-	 * @var int Maximum execution time in seconds (3 hours)
-	 */
+	* Maximum wall-clock time (seconds) granted to a single update_cache call.
+	* 10 800 s = 3 hours; set via set_time_limit() at the start of update_cache().
+	* Adjust in large deployments where full-section rebuilds exceed 3 hours.
+	* @var int MAX_EXECUTION_TIME
+	*/
 	private const MAX_EXECUTION_TIME = 10800;
 
 
 
 	/**
-	 * UPDATE_CACHE
-	 * Executes cache update for selected components in a section
-	 * Processes records in chunks to manage memory usage and prevent timeouts
-	 *
-	 * This method:
-	 * - Disables logging and time machine to improve performance
-	 * - Creates a bulk process record for tracking
-	 * - Processes records recursively in chunks defined by CHUNK_SIZE
-	 * - Re-enables logging after completion
-	 *
-	 * Note: Tool config is stored in the tool section data (tools_register)
-	 * Note: Requires active session with valid sqo (search query object)
-	 *
-	 * @param object $options Configuration object with the following properties:
-	 *   - section_tipo: string Section identifier (e.g., 'rsc197') - REQUIRED
-	 *   - components_selection: array Components to update, each with:
-	 *     - tipo: string Component tipo
-	 *     - regenerate_options: object Options for regeneration (e.g., {delete_normalized_files:true})
-	 *
-	 * @return object Response object with:
-	 *   - result: bool Success status
-	 *   - msg: string Status message
-	 *   - counter: int Number of records processed
-	 *   - total: int Total records found
-	 *   - n_components: int Number of components updated
-	 *
-	 * @throws Exception If session sqo is not found or invalid
-	 */
+	* UPDATE_CACHE
+	* Regenerates the stored cache for selected components across every record
+	* matched by the current section SQO.
+	*
+	* Execution flow:
+	* 1. Extend the PHP time limit to MAX_EXECUTION_TIME (3 h) and release
+	*    the session lock so the browser is not blocked during the long run.
+	* 2. Validate inputs (section_tipo, components_selection) and assert write
+	*    permission (level >= 2) on the section and each selected component.
+	* 3. Create a bulk-process tracking record in dd800 so the run is auditable
+	*    and reversible; the label includes section name + component names.
+	* 4. Clone the session SQO for the section (keyed by build_sqo_id()), cap
+	*    it at CHUNK_SIZE, and count total matching records.
+	* 5. Delegate to process_chunk(), which recurses through the full result set
+	*    one chunk at a time.
+	* 6. Restore logger_backend_activity::$enable_log and tm_record::$save_tm
+	*    in a finally block regardless of success or failure.
+	*
+	* (!) This method is dispatched as a background CLI process. The session is
+	*     closed before work begins (session_write_close()), so $_SESSION is
+	*     read-only from this point — only the SQO snapshot cloned in step 4 is
+	*     used for record retrieval.
+	*
+	* @param object $options - Must contain:
+	*   - section_tipo (string) e.g. 'rsc197'
+	*   - components_selection (array) each item: {tipo:string, regenerate_options:object|null}
+	* @return object - stdClass with:
+	*   result (bool), msg (string), counter (int), total (int), n_components (int)
+	*/
 	public static function update_cache(object $options) : object {
 
 		// set time limit
@@ -244,30 +271,38 @@ class tool_update_cache extends tool_common {
 
 
 	/**
-	 * PROCESS_CHUNK
-	 * Recursively processes cache updates in chunks to prevent memory overflow
-	 *
-	 * This method:
-	 * - Searches for records using the provided sqo (limited by CHUNK_SIZE)
-	 * - Iterates through each record and selected component
-	 * - Regenerates component data with provided options
-	 * - Recursively calls itself with incremented offset until no more records
-	 * - Calls gc_collect_cycles() between chunks to free memory
-	 *
-	 * Recursion terminates when row_count() returns 0 (no more records found)
-	 *
-	 * @param object $sqo Search query object for record retrieval
-	 *   Must include: limit (chunk size), offset (current position)
-	 * @param string $section_tipo Section type identifier (e.g., 'rsc197')
-	 * @param array $components_selection Components to regenerate, each with:
-	 *   - tipo: string Component tipo
-	 *   - regenerate_options: object|null Options for component regeneration
-	 * @param int $bulk_process_id Bulk process section identifier for tracking and reversion
-	 *
-	 * @return bool True on successful completion of all chunks
-	 *
-	 * @throws Exception If component instantiation or regeneration fails
-	 */
+	* PROCESS_CHUNK
+	* Processes one CHUNK_SIZE window of records and recurses until the result
+	* set is exhausted.
+	*
+	* For each record in the current window, every component listed in
+	* $components_selection is instantiated with cache=false (forcing a fresh
+	* load), assigned the $bulk_process_id for revert-tracking, pre-loaded via
+	* get_data(), and then regenerated via regenerate_component($options).
+	*
+	* Recursion contract:
+	* - If the search returned at least one row, gc_collect_cycles() is called
+	*   to release circular references, the SQO offset is incremented by
+	*   CHUNK_SIZE, and process_chunk() calls itself.
+	* - When row_count() returns 0 (window is empty), recursion terminates and
+	*   true is returned.
+	*
+	* (!) $sqo is passed by reference semantics within the recursive call: the
+	*     offset increment is applied to the same object, so do NOT share the
+	*     $sqo object with other concurrent operations.
+	*
+	* (!) Non-component tipos (portals, sections, etc.) are silently skipped
+	*     with an ERROR log entry when the model string does not contain
+	*     'component_'. This is an intentional guard, not a silent failure.
+	*
+	* @param object $sqo                 - Search query object; limit = CHUNK_SIZE, offset advances each call.
+	* @param string $section_tipo        - Section tipo identifier, e.g. 'rsc197'.
+	* @param array  $components_selection - Items: {tipo:string, regenerate_options:object|null}.
+	* @param int    $bulk_process_id     - Section ID of the dd800 bulk-process record; written to
+	*                                      each component instance for Time Machine revert support.
+	* @return bool - Always true on clean completion; individual component errors are logged, not thrown.
+	* @throws Exception If search or component instantiation throws an unhandled exception.
+	*/
 	public static function process_chunk(object $sqo, string $section_tipo, array $components_selection, int $bulk_process_id) : bool {
 
 		$start_time=start_time();
@@ -392,30 +427,36 @@ class tool_update_cache extends tool_common {
 
 
 	/**
-	 * GET_COMPONENT_LIST
-	 * Retrieves list of components available for cache updates
-	 * Uses get_section_elements_context to get full element context including section_groups
-	 *
-	 * This method enriches each component with its regenerate_options by calling
-	 * the static method get_regenerate_options() on each component model class.
-	 * If the method doesn't exist, a warning is logged and null is set.
-	 *
-	 * @see common::get_section_elements_context
-	 *
-	 * @param object $options Configuration options passed to get_section_elements_context:
-	 *   - ar_section_tipo: array|null Section types to include
-	 *   - use_real_sections: bool Default false
-	 *   - skip_permissions: bool Default false
-	 *   - ar_tipo_exclude_elements: array (optional) Elements to exclude
-	 *   - ar_components_exclude: array (optional) Components to exclude
-	 *
-	 * @return object Response object with:
-	 *   - result: array Component list, each element enriched with:
-	 *     - regenerate_options: object|null Options available for component regeneration
-	 *   - msg: string Status message
-	 *
-	 * @throws Exception If get_section_elements_context fails
-	 */
+	* GET_COMPONENT_LIST
+	* Returns the full element-context list for the requested section(s) and
+	* enriches each component entry with its declared regenerate_options.
+	*
+	* Delegates structural discovery to common::get_section_elements_context(),
+	* which walks the ontology and applies permission filters. For every element
+	* of type 'component', this method calls get_regenerate_options() on the
+	* corresponding model class (e.g. component_av::get_regenerate_options()) to
+	* retrieve the set of boolean/enum flags the component supports during
+	* regeneration (such as {delete_normalized_files:true} for media components).
+	*
+	* If a component model does not implement get_regenerate_options(), a WARNING
+	* is logged and $el->regenerate_options is set to null, which the browser UI
+	* renders as "no special options available".
+	*
+	* (!) skip_permissions is forwarded as-is from $options. Callers that pass
+	*     skip_permissions:true bypass ontology-permission filtering. Only trusted
+	*     internal callers should do so (the JS client passes true for this tool
+	*     because the security gate is already satisfied by API_ACTIONS checks).
+	*
+	* @param object $options - Forwarded to common::get_section_elements_context(); key fields:
+	*   - ar_section_tipo (array|null) section tipos to include
+	*   - use_real_sections (bool) default false
+	*   - skip_permissions (bool) default false
+	*   - ar_tipo_exclude_elements (array|null) element tipos to exclude
+	*   - ar_components_exclude (array) component tipos to exclude
+	* @return object - stdClass with:
+	*   result (array) enriched element-context list (each item gains ->regenerate_options),
+	*   msg (string) status message.
+	*/
 	public static function get_component_list(object $options) : object {
 
 		// filtered_components

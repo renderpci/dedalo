@@ -96,6 +96,10 @@
             <directory>ontology_engine</directory>
         </testsuite>
 
+        <testsuite name="rag">
+            <directory>rag</directory>
+        </testsuite>
+
         <testsuite name="search">
             <directory>search</directory>
         </testsuite>

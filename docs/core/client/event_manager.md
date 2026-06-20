@@ -26,7 +26,7 @@ tool iframes can reach it via `parent.window.event_manager` (or
 import across the frame boundary. Application code must **import and use this
 singleton**, never construct `event_manager_class` itself.
 
-```javascript
+```js
 import {event_manager} from '../../common/js/event_manager.js'
 ```
 
@@ -83,7 +83,7 @@ Most application events embed identity into the **name** so a publish reaches on
 the intended listeners. The common scoping keys are the instance id and the
 language-qualified id_base:
 
-```javascript
+```js
 // self.id        = tipo + section_tipo + section_id + mode + lang (the instance key)
 // self.id_base   = section_tipo + '_' + section_id + '_' + tipo
 event_manager.publish('render_'   + self.id, result_node)       // per-instance
@@ -190,7 +190,7 @@ A component instance subscribes during build and cleans up during destroy. This
 mirrors the real pattern in `events_subscription.js`: store the token, react in
 the callback, and let `destroy()` unsubscribe it.
 
-```javascript
+```js
 import {event_manager} from '../../common/js/event_manager.js'
 
 // --- during build: subscribe and KEEP the token ---

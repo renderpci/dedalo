@@ -1,35 +1,53 @@
 <?php declare(strict_types=1);
 /**
 * CLASS TOOL_IMPORT_DEDALO_CSV
-* Tool to import data into Dédalo from CSV files
+* Bulk-imports section records from semicolon-delimited CSV files into Dédalo.
 *
-* Key features:
-* - Import CSV files previously exported from Dédalo tool_export in raw format
-* - Support for multi-language values and component-specific data conforming
-* - Time machine history tracking for bulk imports
-* - Validation of component tipos against ontology definitions
-* - Progress tracking and error reporting for large batch operations
+* This is the server-side controller for the CSV import tool. It is paired with
+* `js/tool_import_dedalo_csv.js` (UI) and `js/render_tool_import_dedalo_csv.js`
+* (report rendering). It extends `tool_common` and follows the v7 tool conventions
+* (register.json, API_ACTIONS allowlist, BACKGROUND_RUNNABLE allowlist).
 *
-* Accepted cell formats (handled by every component conform_import_data):
-* - dedalo_data wrapper: {"dedalo_data": <dato>} as produced by tool_export 'dedalo_raw'
-*   format. Unwrapped transparently before conforming (see component_common::unwrap_dedalo_data).
-* - v7 dato (canonical): JSON array of objects, e.g. [{"value":"hello"}] for text/number/email,
-*   [{"start":{"year":2023}}] for dates, [{"iri":"https://..."}] for iri, locators for relations,
-*   [{"lat":39.46,"lon":-0.37}] for geolocation.
-* - v6 dato (legacy, auto-normalized): JSON array of plain values, e.g. ["hello"] or [104,-75.35].
-* - Multi-language JSON object: {"lg-eng":[...],"lg-spa":[...]} saved per lang via set_data_lang().
-* - Flat strings: plain text, numbers, emails ('a@b.com | c@d.com'), dates ('2023/10/26<>2023/10/27'),
-*   uris ('label, https://... | https://...'), relation section_id lists ('1,4,6'),
-*   geolocation coordinates ('lat, lon[, zoom[, alt]]'), lang codes ('lg-spa, lg-eng').
-* The 'id' and 'lang' item properties are auto-assigned on save and must not be supplied.
+* Round-trip invariant: a file exported by `tool_export` in 'dedalo_raw' format and
+* re-imported through this class MUST reproduce the exact stored datos for every
+* component. This is enforced by `test_import_files_raw_export_round_trip`.
 *
-* Empty cell semantics: an empty CSV cell conforms to null and CLEARS the existing
-* component data for that record (and lang, when translatable).
+* Accepted CSV cell formats (per-component conform_import_data() handles each):
+* - dedalo_data wrapper: {"dedalo_data": <dato>} — the shape produced by the raw
+*   export chokepoint (component_common::get_raw_value). Unwrapped by
+*   component_common::unwrap_dedalo_data() before conforming.
+* - v7 dato (canonical): JSON array of objects, e.g. [{"value":"hello"}] for
+*   text/number/email, [{"start":{"year":2023}}] for dates, [{"iri":"https://..."}]
+*   for IRI, locator objects for relations, [{"lat":39.46,"lon":-0.37}] for geolocation.
+* - v6 dato (legacy, auto-normalized): JSON array of plain scalars, e.g. ["hello"]
+*   or [104, -75.35]. Each component's conform_import_data() upgrades these.
+* - Multi-language JSON object: {"lg-eng":[...],"lg-spa":[...]} — iterated and saved
+*   per language via set_data_lang().
+* - Flat strings: plain text, numbers, emails ('a@b.com | c@d.com'), date ranges
+*   ('2023/10/26<>2023/10/27'), IRI records ('label, https://... | https://...'),
+*   relation section_id lists ('1,4,6'), geolocation ('lat, lon[, zoom[, alt]]'),
+*   lang codes ('lg-spa, lg-eng'). Parsing rules are per-component.
+* The 'id' and 'lang' item properties are auto-assigned on save; callers must not
+* supply them (except 'id' for component_iri, which pairs a value with its dataframe).
 *
-* Report channels: failed_rows (value ignored) and warning_rows (value imported,
-* needs user attention; e.g. select_lang codes not in the project languages).
+* Empty-cell semantics: an empty CSV cell conforms to null and CLEARS the existing
+* component data for that record (and that language, when the component is translatable).
 *
-* @package Dedalo
+* Report channels: failed_rows (value rejected — not imported) and warning_rows (value
+* imported but needs user attention, e.g. a select_lang code not in the project langs).
+*
+* Column-name suffixes in the CSV header are significant: tipo_dmy|mdy|ymd encodes the
+* date-field order; tipo_sectiontipo scopes a relation column. The header MUST match the
+* column-map 'tipo' exactly; mismatches are silently skipped.
+*
+* Upload staging area: DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH/<user_id>/
+* (typically DEDALO_MEDIA_PATH/import/files/<user_id>/).
+*
+* Bulk-process tracking: every import run creates a record in the bulk-process section
+* (DEDALO_BULK_PROCESS_SECTION_TIPO = dd800) so that individual component changes can be
+* attributed to the run and reverted via the time machine if needed.
+*
+* @package Dédalo
 * @subpackage Tools
 */
 class tool_import_dedalo_csv extends tool_common {
@@ -37,9 +55,13 @@ class tool_import_dedalo_csv extends tool_common {
 
 
 	/**
-	* SEC-024 (§9.2): explicit allowlist of methods callable via
-	* `dd_tools_api::tool_request`. Internal helpers (import_dedalo_csv_file,
-	* verify_csv_map, get_files_path) are intentionally absent.
+	* API_ACTIONS
+	* Explicit allowlist of methods callable via dd_tools_api::tool_request (SEC-024 §9.2).
+	*
+	* Only these five actions are reachable through the public API. Internal helpers
+	* (import_dedalo_csv_file, verify_csv_map, get_files_path) are intentionally absent
+	* — they are invoked only by the public actions above, never directly by API callers.
+	* @var array<string> $API_ACTIONS
 	*/
 	public const API_ACTIONS = [
 		'get_csv_files',
@@ -50,13 +72,16 @@ class tool_import_dedalo_csv extends tool_common {
 	];
 
 	/**
-	* SEC-024 / §9.1b: explicit CLI allowlist for `process_runner.php`.
-	* Only `import_files` runs with `background_running:true` from JS
-	* (see `tools/tool_import_dedalo_csv/js/tool_import_dedalo_csv.js`).
-	* The other actions (`get_csv_files`, `delete_csv_file`,
-	* `get_section_components_list`, `process_uploaded_file`) are
-	* interactive helpers and must not reach the background runner.
+	* BACKGROUND_RUNNABLE
+	* Explicit allowlist for process_runner.php (SEC-024 §9.1b).
+	*
+	* Only import_files is flagged background_running:true from the JS client (see
+	* tools/tool_import_dedalo_csv/js/tool_import_dedalo_csv.js). The remaining
+	* actions (get_csv_files, delete_csv_file, get_section_components_list,
+	* process_uploaded_file) are interactive helpers that must never reach the
+	* background runner because they depend on the real-time HTTP context.
 	* @see core/base/process_runner.php
+	* @var array<string> $BACKGROUND_RUNNABLE
 	*/
 	public const BACKGROUND_RUNNABLE = [
 		'import_files'
@@ -66,8 +91,18 @@ class tool_import_dedalo_csv extends tool_common {
 
 	/**
 	* GET_FILES_PATH
-	* Default CSV upload directory for current logged user
-	* @return string $files_path
+	* Returns the per-user CSV staging directory, creating it and its access-control
+	* files (.htaccess, .nginx.conf, index.html) on first use.
+	*
+	* The base path is set by DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH (typically
+	* DEDALO_MEDIA_PATH/import/files). The returned path is always scoped to the
+	* currently logged-in user: base_dir/<user_id>. Directory creation uses 0775 so
+	* that the web-server group can write while others cannot.
+	*
+	* (!) This method is intentionally absent from API_ACTIONS. It is called only by
+	* other methods in this class that already enforce the caller's identity, so it
+	* must never be callable directly from the API.
+	* @return string $files_path - absolute path to the user's upload directory
 	*/
 	public static function get_files_path() : string {
 
@@ -76,20 +111,24 @@ class tool_import_dedalo_csv extends tool_common {
 			mkdir($base_dir, 0775, true);
 		}
 
-		// Directory protection
+		// Directory protection (Apache)
+		// Deny direct HTTP access to the upload staging area. Written once on first use.
 		$htaccess_file = $base_dir . '/.htaccess';
 		if (!file_exists($htaccess_file)) {
 			$htaccess_content = "# Protect files and directories from prying eyes\nRequire all denied\n";
 			file_put_contents($htaccess_file, $htaccess_content);
 		}
-		
-		// NGINX protection equivalent
+
+		// Directory protection (NGINX)
+		// Equivalent deny directive for NGINX configurations.
 		$nginx_file = $base_dir . '/.nginx.conf';
 		if (!file_exists($nginx_file)) {
 			$nginx_content = "# NGINX protection\ndeny all;\n";
 			file_put_contents($nginx_file, $nginx_content);
 		}
-		
+
+		// Directory protection (directory listing fallback)
+		// Prevents index exposure on servers that serve directory listings by default.
 		$index_file = $base_dir . '/index.html';
 		if (!file_exists($index_file)) {
 			file_put_contents($index_file, "<html><head><title>Forbidden</title></head><body><h1>Forbidden</h1></body></html>");
@@ -104,14 +143,29 @@ class tool_import_dedalo_csv extends tool_common {
 
 	/**
 	* GET_CSV_FILES
-	* Read requested directory and return all files of the request extension found
-	* @param object $options = new stdClass()
+	* Scans the current user's CSV staging directory and returns metadata and preview
+	* data for every .csv file found there.
+	*
+	* For each file the method:
+	* 1. Parses the header row (row 0) via tool_common::read_csv_file_as_array().
+	* 2. Builds an ar_columns_map by resolving each column header through the ontology
+	*    (label + model). The special 'section_id' column is mapped with model 'section_id'.
+	*    Column headers that carry a suffix (e.g. 'test145_dmy') have the suffix stripped
+	*    before the ontology lookup — the full original header name is kept in 'tipo' so
+	*    that import_dedalo_csv_file can match it exactly against the CSV header row.
+	* 3. Validates up to 10 data rows as a JSON-format sanity check (sample_data_errors).
+	* 4. Returns a summary object per file: row/column counts, column map, and sample rows.
+	*
+	* (!) files_path from the client options is intentionally ignored (TOOLS-02): always
+	* confines to the authenticated caller's per-user directory to prevent arbitrary-file-read.
+	*
+	* @param object $options = new stdClass() - currently unused; reserved for future filters
 	* @return object $response
-	* {
-	* 	result	: array $files_info,
-	* 	msg		: string,
-	* 	error	: string|null
-	* }
+	*   - result  array<object> $files_info — one item per discovered .csv file, each
+	*             containing: dir, name, n_records, n_columns, file_info (header row),
+	*             ar_columns_map, sample_data (up to 10 data rows), sample_data_errors
+	*   - msg     string — summary or "No files found" message
+	*   - errors  array<string> — per-file read errors; a file with an error is skipped
 	*/
 	public static function get_csv_files(object $options=new stdClass()) : object {
 
@@ -185,11 +239,16 @@ class tool_import_dedalo_csv extends tool_common {
 								];
 							}
 
-							// column with date format as `test145_dmy` are allowed here
-							$el_base = $el;
-							if (strpos($el, '_')!==false) {
-								$el_base = substr($el, 0, strpos($el, '_'));
-							}
+							// suffix stripping for date-format and relation-target columns
+					// Column headers may carry a suffix such as 'test145_dmy' (date field
+					// order) or 'rsc85_rsc197' (relation target). The ontology lookup must
+					// use only the base tipo, but 'tipo' in the returned object keeps the
+					// full original header so that import_dedalo_csv_file can match it
+					// exactly against the CSV header row during the column-map comparison.
+						$el_base = $el;
+						if (strpos($el, '_')!==false) {
+							$el_base = substr($el, 0, strpos($el, '_'));
+						}
 
 							$safe_tipo = safe_tipo($el_base);
 
@@ -226,7 +285,11 @@ class tool_import_dedalo_csv extends tool_common {
 					continue;
 				}
 
-				// sample data of first n rows to verify is valid
+				// sample data — JSON-format sanity check on the first n data rows
+				// Only validates that cells starting with '[' or '{' are parseable JSON.
+				// Malformed JSON here would cause silent failures during import, so we
+				// surface them early in the file listing so the user can fix the file
+				// before attempting a full import run.
 					$sample_data		= [];
 					$sample_data_errors	= [];
 					$preview_max		= 10;
@@ -310,17 +373,25 @@ class tool_import_dedalo_csv extends tool_common {
 
 	/**
 	* DELETE_CSV_FILE
-	* 	Delete given CSV file from server
+	* Moves a named CSV file from the user's staging directory to a 'deleted' subdirectory.
+	*
+	* The file is not permanently erased: it is renamed with a datestamped suffix and
+	* placed in <staging_dir>/deleted/ so it can be recovered if a deletion was accidental.
+	*
+	* Security (TOOLS-01):
+	* - client-supplied files_path is ignored; always scoped to the authenticated user's
+	*   directory via get_files_path().
+	* - file_name is validated through safe_upload_target() before any filesystem use;
+	*   path-traversal attempts (e.g. '../other_user/file.csv') are rejected.
+	* - The target is checked with is_file() to ensure a directory cannot be deleted.
+	*
 	* @param object $options
-	* {
-	* 	file_name: string name.csv,
-	* 	files_path: string '/path' // optional
-	* }
+	*   - file_name string — basename of the .csv file to delete, e.g. 'export_oh1.csv'
+	*   - files_path string (ignored) — kept for API symmetry; always overridden
 	* @return object $response
-	* {
-	* 	result : bool,
-	* 	msg : string
-	* }
+	*   - result  bool   — true on success
+	*   - msg     string — human-readable outcome
+	*   - errors  array<string> — non-empty on failure (invalid name, permission error, etc.)
 	*/
 	public static function delete_csv_file(object $options) : object {
 
@@ -405,19 +476,35 @@ class tool_import_dedalo_csv extends tool_common {
 
 	/**
 	* IMPORT_FILES
-	* 	Import user selected files
+	* Orchestrates the bulk import of one or more CSV files in a single API call.
+	*
+	* This is the only BACKGROUND_RUNNABLE action: the JS client dispatches it with
+	* background_running:true so it runs under process_runner.php, which emits
+	* progress events the client polls. ignore_user_abort(true) prevents the PHP process
+	* from dying if the browser disconnects mid-run.
+	*
+	* For each file in options->files:
+	* 1. Asserts write permission (level >=2) on the target section_tipo (SEC-024 §9.2).
+	* 2. Consolidates the section counter so newly created records get sequential IDs.
+	* 3. Delegates to import_dedalo_csv_file() which handles the row-by-row work.
+	*
+	* The files_path option may be supplied as a fallback but is not sanitised here;
+	* the real staging directory is always derived from get_files_path() when absent.
+	*
 	* @param object $options
-	* {
-	* 	files: array,
-	* 	time_machine_save: bool,
-	* 	files_path: string optional
-	* }
+	*   - files             array<object>  — file descriptors; each carries:
+	*                                        file (string basename), section_tipo (string),
+	*                                        ar_columns_map (array<object>),
+	*                                        bulk_process_label (string)
+	*   - time_machine_save bool           — when true, saves a time-machine snapshot per
+	*                                        component change so the run can be reverted
+	*   - files_path        string|null    — optional override for the staging directory
 	* @return object $response
-	* {
-	* 	result : bool,
-	* 	msg : string,
-	* 	debug : object
-	* }
+	*   - result  array<object> — one per-file response object from import_dedalo_csv_file();
+	*             each carries result, msg, created_rows, updated_rows, failed_rows,
+	*             warning_rows, errors, time, file, section_tipo
+	*   - msg     string — 'Request done'
+	*   - debug   object (only when SHOW_DEBUG===true): exec_time, options
 	*/
 	public static function import_files(object $options) : object {
 		$start_time = start_time();
@@ -476,9 +563,14 @@ class tool_import_dedalo_csv extends tool_common {
 						';' // string csv delimiter
 					);
 
-				// counter. Consolidate counter. Set counter value to last section_id in section
+				// counter consolidation
+				// Before inserting any rows, advance the section's auto-increment counter
+				// to the highest existing section_id. This prevents gaps or collisions when
+				// the CSV contains explicit section_id values that were already in the DB.
 					$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
 					// Ignore invalid empty matrix tables
+					// An empty matrix_table means the section_tipo is not mapped — likely
+					// a misconfigured CSV. Skip entirely rather than risk a corrupt counter.
 					if (empty($matrix_table)) {
 						debug_log(__METHOD__
 							. " ERROR: Ignored invalid empty matrix table. Unable to resolve if section tipo exists! " . PHP_EOL
@@ -528,31 +620,55 @@ class tool_import_dedalo_csv extends tool_common {
 
 	/**
 	* IMPORT_DEDALO_CSV_FILE
-	* 	Import CSV array data to Dédalo sections and components
+	* Core import engine: processes a pre-parsed CSV data array row by row, writing
+	* each mapped cell to its target component.
 	*
-	* Processes CSV data row by row, creating new section records or updating existing ones.
-	* Handles component-specific data formatting, multi-language values, and metadata fields.
-	* Supports time machine history tracking for audit trail.
+	* This method is intentionally absent from API_ACTIONS and BACKGROUND_RUNNABLE —
+	* it is invoked only by import_files() after the security gate has passed.
 	*
-	* @param object $options Configuration object
-	* {
-	* 	@type string section_tipo The destination section type (e.g., "oh1")
-	* 	@type array ar_csv_data Array of CSV data rows (first row is headers)
-	* 	@type bool time_machine_save Whether to save time machine history
-	* 	@type array ar_columns_map Column mapping configuration with checked/map_to properties
-	* 	@type string current_file Original CSV filename for reference
-	* 	@type string bulk_process_label Human-readable label for the bulk operation
-	* }
+	* Per-row lifecycle:
+	* 1. Read section_id from the column identified as 'section_id' / 'component_section_id'.
+	*    Rows with a missing or zero section_id are skipped and logged.
+	* 2. Call section_record::exists_in_the_database(); create a new record (honouring the
+	*    CSV's explicit section_id) when the section does not yet exist.
+	* 3. For each checked, mapped column:
+	*    a. Decode the U+003B escape (literal semicolons escaped by tool_export).
+	*    b. Unwrap the dedalo_data envelope via component_common::unwrap_dedalo_data().
+	*    c. Call $component->conform_import_data() to normalize the cell to a v7 dato.
+	*    d. Dispatch through the metadata / multi-lang-object / flat-multi-lang / default
+	*       branch (see class header for branch descriptions).
+	*    e. Call $component->import_save(); failure pushes to $failed_rows.
+	*    f. If the unwrapped value carried a dataframe envelope, write it via
+	*       $component->import_dataframe_data() after the main data is saved.
 	*
-	* @return object Response object
-	* {
-	* 	@type bool result True on success
-	* 	@type string msg Summary message with statistics
-	* 	@type array created_rows Array of section_ids for newly created records
-	* 	@type array updated_rows Array of section_ids for updated records
-	* 	@type array failed_rows Array of failed row objects with error details
-	* 	@type string time Execution time in milliseconds
-	* }
+	* Side effects:
+	* - activity logging is disabled for the duration (logger_backend_activity::$enable_log=false)
+	*   and restored in the finally block.
+	* - tm_record::$save_tm is set to the time_machine_save flag; restored to true in finally.
+	* - diffusion propagation is disabled per component ($update_diffusion_info_propagate_changes=false)
+	*   to avoid expensive inverse-locator updates during bulk runs.
+	* - gc_collect_cycles() is called every 100 rows to avoid memory bloat.
+	* - A bulk-process section record (dd800) is created at run start, storing the file
+	*   name (dd797) and label (dd796) for time-machine attribution.
+	*
+	* @param object $options
+	*   - section_tipo       string         — destination section tipo, e.g. 'oh1'
+	*   - ar_csv_data        array<array>   — parsed CSV rows; row 0 is the header
+	*   - time_machine_save  bool           — whether to record time-machine history
+	*   - ar_columns_map     array<object>  — column-map from get_csv_files(); each entry:
+	*                                         tipo, label, model, checked, map_to, column_name,
+	*                                         optional decimal (component_number)
+	*   - current_file       string         — original CSV filename (stored in bulk-process record)
+	*   - bulk_process_label string         — human-readable label for the bulk-process record
+	* @return object $response
+	*   - result       bool          — true when at least one row was created or updated
+	*   - msg          string        — 'Section: X. Total records created:N - updated:M - failed:F - warnings:W'
+	*   - created_rows array<int>    — section_ids of newly inserted records
+	*   - updated_rows array<int>    — section_ids of updated records
+	*   - failed_rows  array<object> — rows/columns rejected; each: section_id, data, component_tipo, msg
+	*   - warning_rows array<object> — rows imported but flagged (same shape as failed_rows)
+	*   - time         string        — execution time in milliseconds
+	*   - errors       array<string> — fatal errors (e.g. empty CSV, missing section_id column)
 	*/
 	public static function import_dedalo_csv_file(object $options) : object {
 		$start_time = start_time();
@@ -564,7 +680,9 @@ class tool_import_dedalo_csv extends tool_common {
 		$current_file		= $options->current_file;
 		$bulk_process_label	= $options->bulk_process_label;
 
-		// Disable logging activity (!) IMPORTANT
+		// (!) Disable activity logging for the duration of the import
+		// Bulk imports would otherwise flood the activity log with one entry per component
+		// save. The original state is restored in the finally block regardless of outcome.
 		$original_log_state = logger_backend_activity::$enable_log;
 		logger_backend_activity::$enable_log = false;
 
@@ -588,6 +706,11 @@ class tool_import_dedalo_csv extends tool_common {
 				}
 
 			// section_id key column
+			// Locate the column index that holds the record's section_id. The column may
+			// be mapped as 'section_id' (virtual, added by get_csv_files) or as
+			// 'component_section_id' (the actual model for newer exports). Without this
+			// key we cannot identify which DB record to create/update, so a missing column
+			// is a fatal error for the whole file.
 			$columns		= array_column($csv_map, 'model');
 			$section_id_key	= array_search('section_id', $columns);
 			if ($section_id_key === false) {
@@ -598,7 +721,12 @@ class tool_import_dedalo_csv extends tool_common {
 				throw new Exception("component_section_id column not found in CSV mapping");
 			}
 
-			// Fixed private section tipos
+			// metadata section tipos
+			// These are the fixed system-level metadata components shared by every section
+			// (dd199 created_date, dd201 modified_date, dd200 created_by_user, dd197
+			// modified_by_user). They require special handling: their values must also be
+			// pushed directly onto the section object via set_created_date() etc. so that
+			// the DB columns (not just the component dato) are updated correctly.
 				$metadata_definition = section::get_metadata_definition();
 					$created_by_user	= $metadata_definition->created_by_user; 	// object ('tipo'=>'dd200', 'model'=>'component_select');
 					$created_date		= $metadata_definition->created_date; 		// object ('tipo'=>'dd199', 'model'=>'component_date');
@@ -664,10 +792,12 @@ class tool_import_dedalo_csv extends tool_common {
 					$bulk_process_label_component->set_data([$bulk_process_label_data]);
 					$bulk_process_label_component->save();
 
-				// SAVE_TIME_MACHINE
-					// Set section to save data for time machine
-					// No component time machine data will be saved when section saves later
-					// (based on checkbox value 'Save time machine history on import')
+				// time machine flag
+				// (!) tm_record::$save_tm is a global static that controls whether any
+				// subsequent component save records a time-machine snapshot. Setting it
+				// to false here suppresses snapshots for the entire run when the user
+				// has not requested history (import checkbox 'Save time machine history').
+				// The finally block unconditionally restores it to true.
 					tm_record::$save_tm = ($time_machine_save===true)
 						? true
 						: false;
@@ -692,7 +822,11 @@ class tool_import_dedalo_csv extends tool_common {
 
 					$section_record = section_record::get_instance( $section_tipo, $section_id );
 					$exists = $section_record->exists_in_the_database();
-					// if section does not exist in matrix, create it
+					// create missing record
+					// When the CSV contains a section_id not yet in the DB, insert a new
+					// record with that explicit ID. This preserves relations and IDs from the
+					// source system. The counter was consolidated before the row loop so it
+					// will not later re-issue this same ID.
 					if( $exists===false ){
 						$section = section::get_instance( $section_tipo );
 						$section->create_record( (object)[
@@ -721,16 +855,20 @@ class tool_import_dedalo_csv extends tool_common {
 							// 	"decimal": "."
 							// }
 
-						// excluded columns
-							// by name
+						// column exclusion filters
+							// by name — section_id is used only for record lookup, never written
 							if($column_map->model === 'section_id' || $column_map->model === 'component_section_id') {
 								continue; # Skip section_id value column
 							}
-							// by checked property
+							// by checked property — user may have deselected columns in the UI
 							if(!isset($column_map->checked) || $column_map->checked=== false || !isset($column_map->map_to)) {
 								continue;
 							}
-							// by head comparison. Check if the column_map is correct with the current column in the csv file (match needed)
+							// by head comparison
+							// Verify the column-map entry aligns with the actual CSV header at
+							// this key position. A mismatch indicates the column map was built
+							// for a different CSV layout; skip silently rather than write to
+							// the wrong component.
 							$current_csv_head_column = $csv_head_row[$key];
 							if($current_csv_head_column !== $column_map->tipo) {
 								continue;
@@ -754,7 +892,12 @@ class tool_import_dedalo_csv extends tool_common {
 								continue;
 							}
 
-						// component base
+						// component instantiation
+						// cache=false: we must get a fresh instance per row so that a prior
+						// row's dato does not contaminate the current one (no request-cache
+						// bleed, cf. audit-2026-06-worker-state-bleed). Lang is resolved from
+						// the ontology translatable flag: nolan for non-translatable components
+						// so their data is stored once without language discrimination.
 							$model_name		= ontology_node::get_model_by_tipo($component_tipo, true);
 							$translate		= ontology_node::get_translatable($component_tipo); //==='si' ? true : false;
 							$lang			= $translate===false ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
@@ -779,9 +922,10 @@ class tool_import_dedalo_csv extends tool_common {
 								$with_lang_versions	= $component->with_lang_versions;
 
 							// configure component
-								// DIFFUSION_INFO
-								// Note that this process can be very long if there are many inverse locators in this section
-								// To optimize save process in scripts of importation, you can disable this option if is not really necessary
+								// (!) Disable diffusion propagation for this component during import.
+								// Propagating inverse-locator changes is expensive when a section has
+								// many relations; for bulk imports it is unnecessary because the diffusion
+								// system is rebuilt separately after the import run completes.
 								$component->update_diffusion_info_propagate_changes = false;
 
 						// unwrap the dedalo_data wrapper when present
@@ -820,7 +964,11 @@ class tool_import_dedalo_csv extends tool_common {
 
 						switch (true) {
 
-							// created_date
+							// Branch 1 — metadata dates (dd199 created_date, dd201 modified_date)
+						// Writing these components requires a dual update: the component dato
+						// AND the section's dedicated DB column (set_created_date / set_modified_date).
+						// For modified_date: save_modified must also be forced to false so the
+						// section's on-save hook does not overwrite the imported timestamp with 'now'.
 							case ($component_tipo===$created_date->tipo): // dd199
 							// modified_date. Place it at end columns to prevent overwrite
 							case ($component_tipo===$modified_date->tipo): // dd201
@@ -847,7 +995,10 @@ class tool_import_dedalo_csv extends tool_common {
 								$component->import_save();
 							break;
 
-						// created_by_user
+						// Branch 2 — metadata users (dd200 created_by_user, dd197 modified_by_user)
+						// Same dual-update pattern: component dato + section DB column via
+						// set_created_by_userID / set_modified_by_userID. For modified_by_user:
+						// save_modified must be false to suppress the automatic 'modified' stamp.
 						case ($component_tipo===$created_by_user->tipo): // dd200
 						// modified_by_user. Place it at end columns to prevent overwrite
 						case ($component_tipo===$modified_by_user->tipo): // dd197
@@ -878,7 +1029,12 @@ class tool_import_dedalo_csv extends tool_common {
 
 						default:
 
-							// Elements 'translatable' can be formatted as JSON values like {"lg-eng":"My value","lg-spa":"Mi valor"}
+							// Branch 3a — multi-language object: {"lg-eng":[...],"lg-spa":[...]}
+							// When the conformed value is a plain object (not array) and the component
+							// supports translation or lang variants, iterate the lang keys and save
+							// each subset with set_data_lang() so every language is persisted
+							// independently. Each save call merges only that language's items and
+							// leaves other languages untouched.
 							if (($translate===true || $with_lang_versions===true) && is_object($conformed_value)) {
 
 								debug_log(__METHOD__
@@ -931,7 +1087,10 @@ class tool_import_dedalo_csv extends tool_common {
 										}
 									}//end if(!empty($conformed_value))
 
-								// Nolan optional key check
+								// nolan-keyed object unwrap
+								// Some non-translatable components (e.g. component_geolocation via
+								// a legacy export path) may arrive wrapped as {"lg-nolan": [items]}.
+								// Unwrap to the raw array before the flat-multi-lang grouping step.
 									if (is_object($conformed_value) && property_exists($conformed_value, 'lg-nolan')) {
 										$nolan				= 'lg-nolan';
 										$conformed_value	= $conformed_value->{$nolan};
@@ -981,26 +1140,31 @@ class tool_import_dedalo_csv extends tool_common {
 									}
 								}else{
 
-									// set dato
-										if ( $import_dataframe!==null && $import_has_dato===false ) {
-											// dataframe-only envelope: the component data is not
-											// touched, only the frames are written below
-										}else{
+									// set dato (Branch 3c — default path)
+								// When the raw export contained a dataframe-only envelope (no
+								// main dato), skip writing the component data entirely — only
+								// the frames will be written below. Otherwise, push the value
+								// via update_data_value (the unified API path that also updates
+								// the observable and handles component_relation_related correctly).
+									if ( $import_dataframe!==null && $import_has_dato===false ) {
+										// dataframe-only envelope: the component data is not
+										// touched, only the frames are written below
+									}else{
 
-											// Removed direct call
-											// unified with API calls with changed_data_item object
-												// $component->set_data( $conformed_value );
-												// $component->observable_dato = ($component->model === 'component_relation_related')
-												// 	? $component->get_data_with_references()
-												// 	: $conformed_value;
+										// Removed direct call
+										// unified with API calls with changed_data_item object
+											// $component->set_data( $conformed_value );
+											// $component->observable_dato = ($component->model === 'component_relation_related')
+											// 	? $component->get_data_with_references()
+											// 	: $conformed_value;
 
-											// added changed data object to set data and observable data
-											$changed_data_item = new stdClass();
-												$changed_data_item->action = 'set_data';
-												$changed_data_item->value = $conformed_value;
+										// added changed data object to set data and observable data
+										$changed_data_item = new stdClass();
+											$changed_data_item->action = 'set_data';
+											$changed_data_item->value = $conformed_value;
 
-											$component->update_data_value($changed_data_item);
-										}
+										$component->update_data_value($changed_data_item);
+									}
 
 									// Save of course
 										$save_result = $component->import_save();
@@ -1074,7 +1238,9 @@ class tool_import_dedalo_csv extends tool_common {
 			$response->errors[] = $e->getMessage();
 			debug_log(__METHOD__ . " CSV import failed with exception: " . $e->getMessage(), logger::ERROR);
 		} finally {
-			// Always restore the original log state
+			// (!) Always restore global state regardless of success or exception.
+			// Failure to restore would leave activity logging disabled or the time-machine
+			// suppressed for all subsequent requests in the same worker process.
 			logger_backend_activity::$enable_log = $original_log_state;
 			// back to set time machine to true for the next savings.
 			tm_record::$save_tm = true;
@@ -1087,15 +1253,28 @@ class tool_import_dedalo_csv extends tool_common {
 
 	/**
 	* VERIFY_CSV_MAP
-	* Validates CSV column mapping against ontology definitions
+	* Validates that every 'checked' + 'map_to' column in a CSV column map refers to a
+	* component that actually exists in the target section (or in the system metadata group).
 	*
-	* @param array $csv_map Array of column mapping objects with type and target information
-	* @param string $section_tipo The target section type to validate against
-	* @return object Response object
-	* {
-	* 	@type bool result True if mapping is valid
-	* 	@type string msg Status message or error description
-	* }
+	* The method resolves the complete tree of component tipos available in $section_tipo
+	* (including virtual and recursive children) and checks each mapped target against that
+	* list. Synthetic targets ('section_id', 'created_by_user', 'created_date',
+	* 'modified_by_user', 'modified_date', plus any tipo in DEDALO_SECTION_INFO_SECTION_GROUP)
+	* are allowed unconditionally because they are handled by special branches in
+	* import_dedalo_csv_file() rather than by ontology lookup.
+	*
+	* Returns early with result=false (not an exception) when a mapped tipo is not found, so
+	* the caller can report the specific invalid tipo to the user.
+	*
+	* (!) This method is absent from API_ACTIONS — it is a private validation helper
+	* called only by import_dedalo_csv_file().
+	*
+	* @param array $csv_map - array<object> column-map from get_csv_files() / the JS client;
+	*                         each entry must have at minimum: checked (bool), map_to (string)
+	* @param string $section_tipo - the destination section tipo to validate against
+	* @return object $response
+	*   - result bool   — true when all checked/mapped tipos are valid for the section
+	*   - msg   string  — 'OK. Request done successfully' on success; error description on failure
 	*/
 	public static function verify_csv_map(array $csv_map, string $section_tipo) : object {
 
@@ -1104,7 +1283,11 @@ class tool_import_dedalo_csv extends tool_common {
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed';
 
-		// ar_section_info
+		// ar_section_info — system metadata tipos shared by all sections
+		// These tipos (dd199, dd200, dd197, dd201, and more) live in the
+		// DEDALO_SECTION_INFO_SECTION_GROUP and are valid targets in every section.
+		// Previously the list was hard-coded (the commented-out array above); now it is
+		// resolved dynamically from the ontology so it stays in sync automatically.
 			// $ar_section_info = [
 			// 	'dd200',
 			// 	'dd199',
@@ -1117,7 +1300,9 @@ class tool_import_dedalo_csv extends tool_common {
 			// ];
 			$ar_section_info = ontology_node::get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP);
 
-		// ar_component_tipo
+		// ar_component_tipo — all component tipos reachable in this section
+		// resolve_virtual=true and recursive=true ensure that components living in
+		// virtual sections (e.g. portal groups) are included in the allowed set.
 			$ar_possible_component_tipo = section::get_ar_children_tipo_by_model_name_in_section(
 				$section_tipo, // section_tipo
 				['component_'], // ar_model_name
@@ -1127,7 +1312,7 @@ class tool_import_dedalo_csv extends tool_common {
 				false // search_exact
 			);
 
-		// check if the csv_map has any "map_to" it's necessary to create any component to mach with the csv columns.
+		// early exit — no column is actually mapped, nothing to validate
 			$map_to		= array_column($csv_map, 'map_to');
 			$non_empty	= array_filter($map_to);
 			if(empty($non_empty)) {
@@ -1137,8 +1322,8 @@ class tool_import_dedalo_csv extends tool_common {
 		// csv_map iterate
 			foreach ($csv_map as $column_map) {
 
-				// if the column don't has the checked property or the checked is false or the map_to property is missing the column will not processed
-				// this situation is not a error and go ahead with the other columns
+				// skip unchecked / unmapped columns — not an error; the user simply
+				// deselected these columns in the import UI
 				if(!isset($column_map->checked) || $column_map->checked ===false || empty($column_map->map_to) ){
 					continue;
 				}
@@ -1154,7 +1339,10 @@ class tool_import_dedalo_csv extends tool_common {
 
 				$component_tipo = $column_map->map_to;
 
-				// custom tipos
+				// allow synthetic / metadata targets without an ontology check
+				// These are either virtual keys ('section_id') that do not exist in the
+				// ontology or metadata tipos from DEDALO_SECTION_INFO_SECTION_GROUP that
+				// are valid in every section regardless of its own component tree.
 					if(	   $component_tipo==='section_id'
 						|| $component_tipo==='created_by_user'
 						|| $component_tipo==='created_date'
@@ -1191,11 +1379,13 @@ class tool_import_dedalo_csv extends tool_common {
 
 	/**
 	* BUILD_USER_LOCATOR
-	* @param string $value
-	* @param string $from_component_tipo
-	* Create a safe locator from CSV value.
-	* Value can be a int like 2 or an complete locator like {"type": "dd151","section_id": "2","section_tipo": "dd128","from_component_tipo": "dd197"}
-	* @return object|null $locator
+	* (DEAD CODE — method body is commented out; kept for reference)
+	* Was: build a safe locator from a CSV cell for user-type components (created_by_user,
+	* modified_by_user). Accepted either a plain int section_id or a full JSON locator object.
+	* Superseded by component_select::conform_import_data() which handles user locators directly.
+	* @param string $value - raw CSV cell value (int or JSON locator)
+	* @param string $from_component_tipo - the component tipo that owns the relation
+	* @return object|null $locator - full locator object, or null on empty/invalid input
 	*/
 		// public static function build_user_locator(string $value, string $from_component_tipo) : ?object {
 
@@ -1253,11 +1443,13 @@ class tool_import_dedalo_csv extends tool_common {
 
 	/**
 	* BUILD_AR_LOCATORS
-	* @param string $value
-	* @param string $from_component_tipo
-	* Create a safe locator from CSV value.
-	* Value can be a int like 2 or an complete locator like {"type": "dd151","section_id": "2","section_tipo": "dd128","from_component_tipo": "dd197"}
-	* @return array|null $locator
+	* (DEAD CODE — method body is commented out; kept for reference)
+	* Was: build an array of locators from a CSV cell for relation components. Handled
+	* both plain comma-separated section_id lists ('1,4,6') and full JSON locator arrays.
+	* Superseded by component_relation_common::conform_import_data() which now covers all
+	* these cases directly.
+	* @param object $options - type, column_name, section_tipo, value
+	* @return array|null $locator - array of locator objects, or null on empty/invalid input
 	*/
 		// public static function build_ar_locators(object $options) : ?array {
 
@@ -1349,8 +1541,13 @@ class tool_import_dedalo_csv extends tool_common {
 
 	/**
 	* BUILD_DATE_FROM_VALUE
-	* @param string $value
-	* @return object|null $date
+	* (DEAD CODE — method body is commented out; kept for reference)
+	* Was: parse a raw CSV string into a dd_date object suitable for component_date.
+	* Accepted either a JSON date object ({"start":{year,month,day,...}}) or a plain
+	* Unix timestamp string. Superseded by component_date::conform_import_data() which
+	* handles all accepted date formats directly.
+	* @param string $value - raw CSV cell value (JSON date object or Unix timestamp string)
+	* @return object|null $date - {component_dato: object, timestamp: int}, or null on failure
 	*/
 		// public static function build_date_from_value(string $value) : ?object {
 
@@ -1455,18 +1652,25 @@ class tool_import_dedalo_csv extends tool_common {
 
 	/**
 	* GET_SECTION_COMPONENTS_LIST
-	* Retrieves all available components for a given section type
+	* Returns the full list of component tipos available in a section, including the
+	* system metadata group, for use by the JS column-mapping UI.
 	*
-	* @param object $options Configuration object
-	* {
-	* 	@type string section_tipo The section type to query
-	* }
-	* @return object Response object
-	* {
-	* 	@type array result Array of component objects with label, value, and model properties
-	* 	@type string label The section type label from ontology
-	* 	@type string msg Status message
-	* }
+	* The list merges:
+	* - All component tipos in the section tree (virtual + recursive children resolved).
+	* - All tipos from DEDALO_SECTION_INFO_SECTION_GROUP (dd199, dd200, dd197, dd201, etc.)
+	*   which are present in every section and can be imported but are not enumerated in
+	*   the section's own component tree.
+	*
+	* Requires READ permission (level >=1) on the section_tipo (SEC-024 §9.2). Rejects
+	* requests where the resolved model is not 'section' to prevent mapping onto arbitrary
+	* ontology nodes.
+	*
+	* @param object $options
+	*   - section_tipo string — the target section tipo, e.g. 'oh1'
+	* @return object $response
+	*   - result  array<object>|false — each entry: {label: string, value: string, model: string}
+	*   - label   string — ontology term for the section_tipo (present on success only)
+	*   - msg     string — 'OK. Request done' on success, error description on failure
 	*/
 	public static function get_section_components_list(object $options) : object {
 
@@ -1542,21 +1746,36 @@ class tool_import_dedalo_csv extends tool_common {
 
 	/**
 	* PROCESS_UPLOADED_FILE
-	* Moves uploaded CSV file from temporary location to user's import directory
+	* Moves a freshly uploaded CSV file from the shared temporary upload directory to
+	* the authenticated user's per-user CSV staging directory.
 	*
-	* Called after file upload completion via 'upload_file_' event from JavaScript
+	* Called by the JS client after the 'upload_file_' event fires (i.e. after
+	* tool_upload has placed the file in DEDALO_UPLOAD_TMP_DIR/<user_id>/<key_dir>/).
+	* This is a separate step from import_files to allow users to review the file
+	* (via get_csv_files) before committing the import.
 	*
-	* @param object $options File upload configuration
-	* {
-	* 	@type object file_data Upload metadata (name, tmp_name, error, size, extension, etc.)
-	* }
-	* @return object Response object
-	* {
-	* 	@type bool result True on successful move
-	* 	@type string file_name Final filename in import directory
-	* 	@type string msg Status message
-	* 	@type object debug Debug information (when SHOW_DEBUG=true)
-	* }
+	* Security (TOOLS-03):
+	* - key_dir is sanitized via sanitize_key_dir() to prevent directory traversal.
+	* - tmp_name and file name are both validated through safe_upload_target() before
+	*   any filesystem read or rename; path-traversal attempts are rejected with a
+	*   logger::ERROR entry.
+	* - The target directory is always the authenticated user's own staging dir
+	*   (get_files_path()), never a caller-supplied path.
+	*
+	* @param object $options
+	*   - file_data object — upload metadata emitted by tool_upload:
+	*       name      string — original filename, e.g. 'exported_oh1.csv'
+	*       type      string — MIME type, e.g. 'text/csv'
+	*       key_dir   string — upload caller name, e.g. 'tool_upload'
+	*       tmp_name  string — PHP-assigned temp basename, e.g. 'phpJIQq4e'
+	*       error     int    — PHP upload error code (0 = success)
+	*       size      int    — file size in bytes
+	*       extension string — file extension, e.g. 'csv'
+	* @return object $response
+	*   - result    bool   — true on successful move
+	*   - file_name string — final basename in the staging directory (present on success)
+	*   - msg       string — 'OK. Request done successfully' on success, error on failure
+	*   - debug     object — exec_time (only when SHOW_DEBUG===true)
 	*/
 	public static function process_uploaded_file(object $options) : object {
 		$start_time=start_time();

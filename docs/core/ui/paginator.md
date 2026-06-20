@@ -140,7 +140,7 @@ core/paginator/
 The constructor wires the render modules onto its prototype rather than
 extending a base class:
 
-```javascript
+```js
 // core/paginator/js/paginator.js
 paginator.prototype.edit         = render_paginator.prototype.edit
 paginator.prototype.edit_in_list = render_paginator.prototype.edit
@@ -263,7 +263,7 @@ Any object can be a paginator caller if it provides:
 
 ### A caller wiring a paginator (section list pattern)
 
-```javascript
+```js
 import {paginator} from '../../paginator/js/paginator.js'
 import {event_manager} from '../../common/js/event_manager.js'
 
@@ -287,7 +287,7 @@ if (self.paginator===null) {
 
 ### Rendering it into the list
 
-```javascript
+```js
 self.paginator.build()
 const paginator_wrapper = await self.paginator.render() // dispatches to the mode's view
 list_wrapper.appendChild(paginator_wrapper)

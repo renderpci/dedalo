@@ -73,6 +73,44 @@ export const lifecycle_suites = [
 	'test_component_text_area',
 ]
 
+/** Per-tool suites (one Mocha file per tool under tools/) */
+export const tool_suites = [
+	'test_tool_qr',
+	'test_tool_assistant',
+	'test_tool_cataloging',
+	'test_tool_dd_label',
+	'test_tool_dev_template',
+	'test_tool_diffusion',
+	'test_tool_export',
+	'test_tool_hierarchy',
+	'test_tool_image_rotation',
+	'test_tool_import_dedalo_csv',
+	'test_tool_import_files',
+	'test_tool_import_marc21',
+	'test_tool_import_rdf',
+	'test_tool_import_zotero',
+	'test_tool_indexation',
+	'test_tool_lang',
+	'test_tool_lang_multi',
+	'test_tool_media_versions',
+	'test_tool_numisdata_epigraphy',
+	'test_tool_numisdata_order_coins',
+	'test_tool_ontology',
+	'test_tool_ontology_parser',
+	'test_tool_pdf_extractor',
+	'test_tool_posterframe',
+	'test_tool_print',
+	'test_tool_propagate_component_data',
+	'test_tool_subtitles',
+	'test_tool_tc',
+	'test_tool_time_machine',
+	'test_tool_tr_print',
+	'test_tool_transcription',
+	'test_tool_update_cache',
+	'test_tool_upload',
+	'test_tool_user_admin',
+]
+
 /**
  * Test groups rendered in the sidebar.
  * Component group uses elements.js definitions routed through test_component_full.
@@ -89,6 +127,12 @@ export const test_groups = [
 		title	: 'life-cycle',
 		type	: 'generic',
 		suites	: lifecycle_suites.map(name => ({ id: name, area: name }))
+	},
+	{
+		id		: 'tools',
+		title	: 'tools',
+		type	: 'generic',
+		suites	: tool_suites.map(name => ({ id: name, area: name }))
 	},
 	{
 		id		: 'component',

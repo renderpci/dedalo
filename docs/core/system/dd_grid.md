@@ -1,11 +1,11 @@
 # dd_grid
 
-> The server-side subsystem that resolves a record's component data into **flat,
-> tabular shapes** — both the legacy visual grid cell (`dd_grid_cell_object`) and
-> the modern, per-component **export atoms** contract (`export_*`) — plus the
-> matching client renderers under `core/dd_grid/js/`.
-
 > See also: [Exporting data](../exporting_data.md) · [Components](../components/index.md) · [Sections](../sections/index.md) · [Locator](../locator.md)
+
+The server-side subsystem that resolves a record's component data into **flat,
+tabular shapes** — both the legacy visual grid cell (`dd_grid_cell_object`) and
+the modern, per-component **export atoms** contract (`export_*`) — plus the
+matching client renderers under `core/dd_grid/js/`.
 
 ## Role
 

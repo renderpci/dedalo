@@ -1,8 +1,8 @@
 # security
 
-> The server class `security` — the authorization core of Dédalo: it turns a logged user's profile into an integer permission (0–3) over any ontology element, and exposes the gates that enforce it server-side on every read, write and per-record access.
-
 > See also: [component_security_access](../components/component_security_access.md) · [login](login.md) · [Architecture overview](../architecture_overview.md) · [Components — Permissions](../components/index.md#permissions)
+
+The server class `security` is the authorization core of Dédalo: it turns a logged user's profile into an integer permission (0–3) over any ontology element, and exposes the gates that enforce it server-side on every read, write and per-record access.
 
 This page is the **class-level reference** for `security`. For the *data* behind
 permissions — the per-profile permission matrix and how it is edited — read

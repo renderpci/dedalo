@@ -1,7 +1,9 @@
 # Backup Dédalo best practices – what to backup and how often
 
+> See also: [Backup and restore](backup.md) · [Management and maintenance](index.md)
+
 Before you begin using Dédalo in production, you should set up a backup host, schedule
-automated backups, and develop a recovery plan as part of an overall automated backups plan.
+automated backups, and develop a recovery plan as part of an overall backup strategy.
 
 ## Backup requirements and recommendations
 
@@ -20,9 +22,9 @@ We recommend that the backup host and your Dédalo instance be geographically di
 
 Storage space for the backup host: ~5x the size of the uncompressed Dédalo installation. Example: If you expect that your media files will require a 1TB, your backup host will need 5TB.
 
-Backing up media files will require the most space, you should consider calculating the size of your media files to configure backup space. Our recommendation is store almost 3 full copies of your media files, and create a incremental script for daily changes.
+Backing up media files requires the most space, so calculate the size of your media files when configuring the backup space. We recommend keeping about 3 full copies of your media files and creating an incremental script for daily changes.
 
-Use an RAID system for your backup, we recommend a RAID 5 or RAID 6. RAID 5 is design to fail 1 hard drive at a time, RAID 6 is design to fail 2 hard drives at a time. If your backup is a large storage and it has many hard drives a RAID 6 could be necessary.
+Use a RAID system for your backup; we recommend RAID 5 or RAID 6. RAID 5 is designed to survive 1 failed hard drive at a time, RAID 6 to survive 2. If your backup is large storage with many hard drives, RAID 6 may be necessary.
 
 ### What to backup and how often
 

@@ -4,6 +4,55 @@
 
 
 
+/**
+* RENDER_TOOL_USER_ADMIN
+*
+* Client-side render layer for tool_user_admin — the Dédalo tool that lets the
+* currently logged-in user view and update their own profile data (full name,
+* password, email, avatar) without navigating to the full section editor.
+*
+* The tool targets section dd128 (Users) and exposes a fixed subset of that
+* section's components, some in read-only mode (section id, username, profile)
+* and some as editable fields (full name, password, email, user image).
+*
+* Architecture:
+*   This module is a pure render companion.  It does NOT define the tool
+*   constructor — that lives in tool_user_admin.js.  Instead, it exports the
+*   `render_tool_user_admin` constructor whose sole purpose is to carry the
+*   `edit` prototype method.  tool_user_admin.js then mixes that method into
+*   `tool_user_admin.prototype.edit` (and also `.list`) via prototype assignment.
+*
+*   render_tool_user_admin.prototype.edit
+*     └── get_content_data (module-private)
+*           └── self.get_ddo_map()  (defined in tool_user_admin.js)
+*                 → self.get_component(ddo) per entry
+*                       → component_instance.build(true) + .render()
+*
+* DOM structure produced by this module:
+*   wrapper (ui.tool.build_wrapper_edit)
+*     └── content_data (ui.tool.build_content_data)
+*           └── components_container  .components_container
+*                 ├── .component_column  ← rendered dd330 (section id, read-only)
+*                 ├── .component_column  ← rendered dd132 (username, read-only)
+*                 ├── .component_column  ← rendered dd1725 (user profile, read-only)
+*                 ├── .component_column  ← rendered dd452 (full name, editable)
+*                 ├── .component_column  ← rendered dd133 (password, editable)
+*                 ├── .component_column  ← rendered dd134 (email, editable)
+*                 └── .component_column  ← rendered dd522 (user image, editable)
+*
+* All component columns are created before any async rendering begins so that
+* the insertion order matches the ddo_map order regardless of which Promise
+* resolves first (see Promise.all approach in get_content_data).
+*
+* Exports:
+*   {Function} render_tool_user_admin — Constructor; provides `.prototype.edit`.
+*
+* Dependencies:
+*   - ui (core/common/js/ui.js) — DOM builder helpers.
+*/
+
+
+
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
 
@@ -11,7 +60,16 @@
 
 /**
 * RENDER_TOOL_USER_ADMIN
-* Manages the component's logic and appearance in client side
+* Constructor for the render prototype object.
+*
+* The body is intentionally empty (returns true as a no-op sentinel).
+* All behaviour lives on `render_tool_user_admin.prototype.edit`.
+*
+* Usage in tool_user_admin.js:
+*   tool_user_admin.prototype.edit = render_tool_user_admin.prototype.edit
+*   tool_user_admin.prototype.list = render_tool_user_admin.prototype.edit
+*
+* @returns {boolean} true
 */
 export const render_tool_user_admin = function() {
 
@@ -22,10 +80,25 @@ export const render_tool_user_admin = function() {
 
 /**
 * EDIT
-* Render tool DOM nodes
-* This function is called by render common attached in 'tool_user_admin.js'
-* @param object options
-* @return HTMLElement wrapper
+* Builds and returns the full tool wrapper DOM for the user-admin tool.
+*
+* This method is wired into both `tool_user_admin.prototype.edit` and
+* `.list`, so the same DOM is produced in both edit and list modes.
+* It is invoked automatically by `tool_common.prototype.render` once the
+* tool has been initialised and built.
+*
+* Render levels:
+*   - 'full' (default) — builds the complete wrapper shell via
+*     `ui.tool.build_wrapper_edit` and embeds the content_data inside it.
+*     `wrapper.content_data` is set as a convenience pointer.
+*   - 'content' — skips the wrapper and returns only the content_data
+*     node directly; used for partial refreshes where the outer chrome
+*     already exists.
+*
+* @param {Object} options - Render configuration.
+* @param {string} [options.render_level='full'] - 'full' or 'content'.
+* @returns {Promise<HTMLElement>} The tool wrapper element (render_level 'full')
+*   or the content_data element (render_level 'content').
 */
 render_tool_user_admin.prototype.edit = async function(options) {
 
@@ -55,9 +128,26 @@ render_tool_user_admin.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* Render tool body or 'content_data'
-* @param object self
-* @return HTMLElement content_data
+* Module-private helper that builds and returns the content_data DOM node
+* containing all rendered user-profile components.
+*
+* Strategy:
+*   1. A DocumentFragment is used as a staging area so that all DOM work
+*      stays off-document until the fragment is appended to content_data.
+*   2. A `.component_column` div is pre-created for each ddo entry (in map
+*      order) before any async work begins.  This guarantees that components
+*      always appear in the order defined by get_ddo_map(), even though the
+*      individual component instances are built and rendered concurrently via
+*      Promise.all.
+*   3. Each component is obtained via `self.get_component(ddo)` (defined in
+*      tool_user_admin.js), which calls get_instance + build internally.
+*      The rendered node is appended directly into the pre-allocated column.
+*   4. Finally, `ui.tool.build_content_data` creates the standard
+*      content_data wrapper, the fragment is appended, and the node is
+*      returned to the caller.
+*
+* @param {Object} self - The tool_user_admin instance (used as `this` context).
+* @returns {Promise<HTMLElement>} The populated content_data DOM element.
 */
 const get_content_data = async function(self) {
 
@@ -74,6 +164,9 @@ const get_content_data = async function(self) {
 		const ddo_map = self.get_ddo_map()
 
 		// Create columns first to maintain order
+		// Pre-allocating columns before the async fan-out ensures that
+		// DOM insertion order mirrors ddo_map order even when individual
+		// component.render() Promises resolve out-of-order.
 		const columns = ddo_map.map(() => ui.create_dom_element({
 			element_type	: 'div',
 			class_name 		: 'component_column',
@@ -81,6 +174,8 @@ const get_content_data = async function(self) {
 		}))
 
 		// Load and render components in parallel
+		// Each ddo entry maps to one component_instance; building in parallel
+		// reduces total wait time for the initial paint.
 		await Promise.all(ddo_map.map(async (ddo, index) => {
 			const component_instance = await self.get_component(ddo)
 			const component_node = await component_instance.render()

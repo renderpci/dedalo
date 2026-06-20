@@ -13,7 +13,50 @@
 
 /**
 * RENDER_TOOL_IMPORT_ZOTERO
-* Manages the component's logic and appearance in client side
+*
+* Client-side render module for the Zotero bibliographic import tool.
+*
+* Exports:
+*   render_tool_import_zotero — hollow constructor whose prototype methods are
+*     mixed into tool_import_zotero via prototype assignment (see tool_import_zotero.js).
+*
+* Prototype methods (assigned externally to tool_import_zotero.prototype):
+*   edit — builds the full tool wrapper + content area in 'edit' mode.
+*
+* Internal helpers (module-private, not exported):
+*   get_content_data_edit — assembles the file drop-zone, temporary-section
+*     component inputs, and the "Import" button; wires the server request.
+*   set_import_mode — updates per-file <select> elements in the Dropzone preview
+*     to auto-assign target portals based on a filename suffix convention.
+*
+* Data flow:
+*   1. tool_import_zotero.build() constructs service_dropzone (handles file
+*      uploads to the server's tmp dir) and service_tmp_section (renders a live
+*      edit interface for optional metadata to be applied to every imported
+*      record — e.g. project assignment).
+*   2. render_tool_import_zotero.prototype.edit (→ get_content_data_edit) renders
+*      both services and adds the "Import" button.
+*   3. On button click the tool collects self.files_data (populated by
+*      service_dropzone) and service_tmp_section.get_components_data(), then
+*      issues a dd_tools_api / tool_request RQO to the PHP
+*      tool_import_zotero::import_files() action.
+*   4. On success the page is reloaded so the user can see the newly imported
+*      records.
+*
+* Key instance properties consumed here (set by tool_import_zotero):
+*   self.files_data          {Array}  — File metadata objects accumulated by
+*     service_dropzone; each entry has at least { name, previewElement }.
+*   self.service_dropzone    {Object} — service_dropzone instance; render() returns
+*     an HTMLElement with the Dropzone UI.
+*   self.service_tmp_section {Object} — service_tmp_section instance; render()
+*     returns component nodes; get_components_data() extracts current values.
+*   self.tool_config         {Object} — Registered tool configuration from dd1633;
+*     contains ddo_map (component descriptors) and import_mode ('section' | null).
+*   self.key_dir             {string} — Temporary upload directory key built from
+*     caller.tipo + '_' + caller.section_tipo (e.g. 'oh17_oh1'); tells the
+*     server where to find the uploaded files.
+*   self.caller              {Object} — The component or section that opened the
+*     tool; provides tipo, section_tipo, section_id for the server RQO.
 */
 export const render_tool_import_zotero = function() {
 
@@ -25,8 +68,16 @@ export const render_tool_import_zotero = function() {
 /**
 * EDIT
 * Render node for use in current mode
-* @param object options
-* @return HTMLElement wrapper
+*
+* Builds the full tool wrapper for 'edit' mode. If options.render_level is
+* 'content', the raw content_data node is returned immediately without a
+* wrapper (used by callers that embed the tool inside another container).
+*
+* @param {Object} options - Render options
+* @param {string} [options.render_level='full'] - 'full' returns the complete
+*   wrapper; 'content' returns only the inner content_data node.
+* @returns {Promise<HTMLElement>} Resolves to the wrapper (render_level='full')
+*   or to the content_data node (render_level='content').
 */
 render_tool_import_zotero.prototype.edit = async function(options) {
 
@@ -55,8 +106,36 @@ render_tool_import_zotero.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @param object self
-* @return HTMLElement content_data
+*
+* Assembles the content area for the Zotero import tool in edit mode.
+*
+* The content area contains (in DOM order, appended to a DocumentFragment):
+*   1. options_wrapper — reserved container for configuration controls.
+*      Currently it may be hidden (class_name_configuration='' | 'hide')
+*      depending on whether the tool was opened in 'section' import_mode.
+*      (!) class_name_configuration is built but never applied to any node —
+*      see flags.
+*   2. drop_zone — placeholder div that the service_dropzone template is NOT
+*      appended to; both appear side-by-side inside the fragment. (!) The
+*      drop_zone element is created but left empty; see flags.
+*   3. template_container — receives the rendered service_dropzone node, which
+*      carries the actual Dropzone upload UI.
+*   4. inputs_container — renders service_tmp_section components (metadata
+*      fields the user fills before import) with a localised caption label.
+*   5. buttons_bottom_container — holds the "Import" button.
+*
+* The "Import" button click handler:
+*   - Guards against empty files_data (no files uploaded).
+*   - Adds a CSS 'loading' class to self.node to block further interaction.
+*   - Collects components_temp_data from service_tmp_section.
+*   - Builds an RQO targeting dd_tools_api / tool_request / import_files with
+*     a 1-hour timeout (Zotero imports can be large).
+*   - On success, replaces the loading overlay with a localised result message
+*     and installs a click handler on self.node that reloads the page.
+*
+* @param {Object} self - The tool_import_zotero instance (this-context of the
+*   caller, passed explicitly so the closure does not capture the wrong this).
+* @returns {Promise<HTMLElement>} Resolves to the content_data div node.
 */
 const get_content_data_edit = async function(self) {
 
@@ -206,9 +285,36 @@ const get_content_data_edit = async function(self) {
 
 /**
 * SET_IMPORT_MODE
-* @param object self
-* @param bool apply
-* @return bool
+*
+* Updates the target-portal <select> elements in each Dropzone file-preview
+* card based on either a filename-suffix auto-detection pattern or an explicit
+* reset to the default portal.
+*
+* Auto-detect pattern (apply===true):
+*   Filenames must match /^(.+)-([a-zA-Z])\.([a-zA-Z]{3,4})$/ — e.g.
+*   "record-A.jpg" → suffix letter "A" (uppercased) → matched against
+*   tool_config.ddo_map entries where role==='component_option' and
+*   map_name===suffix. When a matching portal descriptor is found, its
+*   tipo value is written into the file card's .option_component_select element.
+*
+* Reset (apply!==true):
+*   Selects either the ddo_map entry flagged with default:true or falls back
+*   to the first <option> in the select widget.
+*
+* This function is module-private; it is not exported and is not currently
+* called from within this module. It appears to be a utility intended for
+* external callers (e.g. service_dropzone event handlers) that have access
+* to the tool instance.
+*
+* (!) The function is declared but not invoked anywhere in this file. If no
+* external caller uses it either, it is dead code — flag for review.
+*
+* @param {Object} self  - The tool_import_zotero instance; provides
+*   self.files_data (array of Dropzone file objects with previewElement) and
+*   self.tool_config.ddo_map (array of component descriptor objects).
+* @param {boolean} apply - When true, attempt auto-detection from the filename
+*   suffix; when false (or any falsy value), reset to the default portal.
+* @returns {boolean} Always returns true.
 */
 const set_import_mode = function (self, apply) {
 

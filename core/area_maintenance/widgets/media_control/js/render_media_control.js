@@ -12,7 +12,47 @@
 
 /**
 * RENDER_MEDIA_CONTROL
-* Manages the widget's logic and appearance in client side
+* Client-side view layer for the media_control area_maintenance widget.
+*
+* This module builds all DOM for the widget from the `value` snapshot that the
+* PHP class (class.media_control.php) returns via `get_value`. It is the
+* companion of media_control.js, which owns the constructor, prototype wiring,
+* and the two API-request methods (`set_media_access_mode`, `rebuild_media_index`).
+*
+* Widget value shape (set on `self.value` by area_maintenance::get_value):
+*   {
+*     mode             : string|false|null  // effective access mode: 'private'|'publication'|false(=off)|null(=unknown)
+*     mode_source      : string             // human-readable origin of the effective mode (config.php constant name)
+*     custom_override  : string|false|null  // DEDALO_MEDIA_ACCESS_MODE_CUSTOM; null = no override written yet
+*     config_mode      : string|false|null  // DEDALO_MEDIA_ACCESS_MODE constant (may be absent)
+*     legacy_protect   : boolean|null       // DEDALO_PROTECT_MEDIA_FILES (old constant, deprecated)
+*     cookie_name      : string             // media auth cookie name (default: 'dedalo_media_auth')
+*     public_qualities : Array<string>      // quality tokens visible to anonymous users in publication mode
+*     media_path       : string             // absolute filesystem path to the media directory
+*     htaccess         : { exists: boolean, up_to_date: boolean }  // Apache gate status
+*     markers          : { base_exists: boolean, pub_count: number|null, auth_count: number|null }
+*     engine           : { reachable: boolean, media_index_enabled: boolean|null,
+*                          pub_markers: number|null, databases: Array<string>, msg: string|null }
+*     is_root          : boolean            // true when the logged user is DEDALO_SUPERUSER
+*   }
+*
+* All private helpers (get_content_data_edit, build_status_block,
+* build_mode_selector, build_rebuild_block) are module-scope constants —
+* not exported, not prototype members.
+*
+* Entry point: render_media_control.prototype.list (assigned to both `.edit`
+* and `.list` on the media_control instance by media_control.js).
+*/
+
+
+
+/**
+* RENDER_MEDIA_CONTROL
+* Constructor stub for the render module. Exists solely to anchor the
+* prototype method `list`, which media_control.js assigns to both `.edit`
+* and `.list` on the main media_control instance (prototype-mixin pattern
+* used throughout Dédalo area_maintenance widgets).
+* The constructor itself performs no work.
 */
 export const render_media_control = function() {
 
@@ -23,16 +63,18 @@ export const render_media_control = function() {
 
 /**
 * LIST
-* Creates the nodes of current widget.
-* The created wrapper will be append to the widget body in area_maintenance
-* @param object options
-* Sample:
-* {
-*	render_level : "full"
-*	render_mode : "list"
-* }
-* @return HTMLElement wrapper
-* 	To append to the widget body node (area_maintenance)
+* Entry point for both 'edit' and 'list' render modes (media_control.js
+* assigns this prototype method to both `.edit` and `.list`). Builds the
+* full widget DOM from the pre-loaded `self.value` snapshot.
+*
+* When `options.render_level` is 'content' the function returns the inner
+* content_data node directly, bypassing the outer wrapper shell. This is the
+* fast-path used when reloading only the widget body (e.g. after a mode change
+* or index rebuild).
+*
+* @param {Object} options - render options forwarded by widget_common
+* @param {string} [options.render_level='full'] - 'full' = wrapper+content; 'content' = content only
+* @returns {Promise<HTMLElement>} wrapper (render_level 'full') or content_data (render_level 'content')
 */
 render_media_control.prototype.list = async function(options) {
 
@@ -61,8 +103,23 @@ render_media_control.prototype.list = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @param object self
-* @return HTMLElement content_data
+* Assembles the full widget content node from the current `self.value` snapshot.
+* Delegates each visual region to a dedicated build_* helper so this function
+* stays a structural overview.
+*
+* Layout order (top to bottom):
+*   1. Status block      — effective mode, cookie name, media path, .htaccess and
+*                          marker store health, diffusion engine reachability.
+*   2. Mode selector     — <select> + Apply button (root user only; non-root sees a note).
+*   3. Rebuild block     — "Rebuild media index" button + explanatory note.
+*   4. Refresh button    — re-fetches value from the server without a full page reload.
+*   5. body_response     — <pre> element updated after each API call with a JSON summary.
+*
+* The returned node is detached from the document; the caller (list) attaches
+* it inside the wrapper produced by ui.widget.build_wrapper_edit.
+*
+* @param {Object} self - the media_control widget instance (carries self.value)
+* @returns {Promise<HTMLElement>} the populated content_data div
 */
 const get_content_data_edit = async function(self) {
 
@@ -124,10 +181,39 @@ const get_content_data_edit = async function(self) {
 
 /**
 * BUILD_STATUS_BLOCK
-* Configuration and runtime status rows
-* @param object value
-* @param HTMLElement parent
-* @return HTMLElement status_block
+* Renders a two-column key/value panel showing the complete runtime status of
+* the media access control system.
+*
+* Source: the top-level fields of the `value` snapshot (mode, markers, htaccess,
+* engine). PHP populates these in class.media_control.php::get_value().
+*
+* Rows rendered (in order):
+*   - Mode            — effective access mode string or 'off'/'unknown', with a
+*                       CSS class (`mode_off`, `mode_private`, `mode_publication`)
+*                       for colour coding.
+*   - Mode source     — which config constant determines the effective mode.
+*   - Warning         — shown only when mode===false (world-readable); draws operator
+*                       attention with the `warning_text` class.
+*   - Auth cookie     — cookie name used by media_protection (default: 'dedalo_media_auth').
+*   - Media path      — absolute filesystem path to the media directory.
+*   - Marker store    — whether the `.publication/` directory tree exists and how many
+*                       pub/auth marker files are present (created at first login /
+*                       first publication if absent).
+*   - Apache .htaccess — presence and freshness of the media gate file
+*                        (auto-generated / auto-updated at next login when stale or missing).
+*   - Public qualities — comma-separated quality tokens visible to anonymous users
+*                        (shown only in 'publication' mode).
+*   - Diffusion engine — Bun engine reachability + DEDALO_MEDIA_PATH configuration check.
+*                        Stale markers are flagged when the engine is unreachable or has
+*                        DEDALO_MEDIA_PATH unset.
+*
+* The inner `add_row` closure uses `inner_html` for the trusted label and `.textContent`
+* for the server-sourced value — this prevents XSS if a path or mode string ever
+* contains HTML-significant characters (SEC-XSS guard).
+*
+* @param {Object}      value  - the full widget value snapshot (see module header)
+* @param {HTMLElement} parent - container to append the status block to
+* @returns {HTMLElement} the populated status_block div
 */
 const build_status_block = function(value, parent) {
 
@@ -219,11 +305,37 @@ const build_status_block = function(value, parent) {
 
 /**
 * BUILD_MODE_SELECTOR
-* Mode change control (root user only)
-* @param object self
-* @param object value
-* @param HTMLElement parent
-* @return HTMLElement|null
+* Renders the mode-change control: a <select> listing the four available access
+* modes plus an Apply button. Only the root user (DEDALO_SUPERUSER) can change
+* the mode; all other users see an explanatory note and the function returns null.
+*
+* Available modes (mapped to DEDALO_MEDIA_ACCESS_MODE_CUSTOM by set_media_access_mode):
+*   - 'config'      — remove the custom override; fall back to the config.php constant.
+*   - 'off'         — no protection; media files are world-readable.
+*   - 'private'     — only authenticated (logged-in) users can read media.
+*   - 'publication' — anonymous users can read media in published qualities only.
+*
+* The selector is pre-selected to reflect the *current* custom override
+* (`value.custom_override`): null maps to 'config', false maps to 'off',
+* and a string value maps to itself.
+*
+* On Apply:
+*   1. A `confirm()` dialog asks the operator to confirm the change.
+*   2. `self.set_media_access_mode(new_value)` is called (media_control.js prototype).
+*   3. On success the widget value is reloaded and the body re-rendered.
+*   4. On failure an alert shows the error message from the API.
+*
+* The `body_response` <pre> element (sibling of this block in content_data) is
+* updated via `.textContent` after every apply (SEC-XSS guard — api_response.msg
+* is server-sourced).
+*
+* (!) alert() is used here for operator feedback — this is intentional in
+* area_maintenance widgets and must not be changed to console.warn.
+*
+* @param {Object}      self   - the media_control widget instance
+* @param {Object}      value  - the full widget value snapshot (see module header)
+* @param {HTMLElement} parent - content_data node (also contains .body_response)
+* @returns {HTMLElement|null} the selector_block div, or null for non-root users
 */
 const build_mode_selector = function(self, value, parent) {
 
@@ -343,11 +455,33 @@ const build_mode_selector = function(self, value, parent) {
 
 /**
 * BUILD_REBUILD_BLOCK
-* Full resync of the publication markers from the publication databases
-* @param object self
-* @param object value
-* @param HTMLElement parent
-* @return HTMLElement rebuild_block
+* Renders the "Rebuild media index" control: a button and an explanatory note.
+*
+* Purpose: triggers a full resync of the publication marker files from the
+* publication databases by calling `self.rebuild_media_index()` (media_control.js
+* prototype → PHP class.media_control.php::rebuild_media_index →
+* dd_diffusion_api::rebuild_media_index). The operation walks all publication
+* database records in PHP and instructs the Bun engine to write a marker file
+* for each published media item. It can take several minutes on large instances
+* (media_control.js sets a 1-hour timeout on the API call).
+*
+* Typical use cases for triggering a rebuild:
+*   - Switching to 'publication' mode for the first time on an existing instance
+*     that already has published records.
+*   - Repairing marker drift caused by a period of diffusion engine downtime.
+*
+* On success the widget value is reloaded (marker counts in the status block
+* are updated). On failure an alert shows the server error message.
+*
+* The `body_response` <pre> element (sibling of this block in content_data) is
+* updated with a structured JSON summary after every call:
+*   { result, msg, markers, targets, errors }
+* All output is written via `.textContent` (SEC-XSS guard).
+*
+* @param {Object}      self   - the media_control widget instance
+* @param {Object}      value  - the full widget value snapshot (see module header, unused here)
+* @param {HTMLElement} parent - content_data node (also contains .body_response)
+* @returns {HTMLElement} the rebuild_block div
 */
 const build_rebuild_block = function(self, value, parent) {
 

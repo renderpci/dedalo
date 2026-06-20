@@ -1,18 +1,22 @@
 # Locator
 
+> See also: [Sections](sections/index.md) · [Component portal](components/component_portal.md) · [Component dataframe](components/component_dataframe.md) · [Glossary](glossary.md)
+
+A locator is the pointer Dédalo uses to connect data — a relative, directional reference from one record to another. This page covers what a locator is, its full property set, the relation `type` values, how it is stored and resolved, and its flat string form.
+
 ## Introduction
 
-Locator is the connection, the relation, between data. Dédalo uses a NoSQL model to store data in database, it is a flexible way to create schemas that can change by the time, usually NoSQL models has not relations between data, but we want to have data relations as classical SQL has, relation data is great, you have only 1 record with the information and is called by lots of other records. One change in the related data is automatically update in the caller. No duplicate data make than your catalogue could be maintainable in the time. Dédalo use the best of this two wolds the flexibility of NoSQL and the relations of SQL, why we need to choose one?
+A locator is the connection, the relation, between data. Dédalo uses a NoSQL model to store data in the database; it is a flexible way to create schemas that can change over time. NoSQL models usually have no relations between data, but we want data relations like classic SQL has. Related data is great: you keep the information in a single record that many other records point to. One change in the related data automatically updates every caller. Avoiding duplicate data keeps your catalogue maintainable over time. Dédalo takes the best of these two worlds — the flexibility of NoSQL and the relations of SQL. Why should we have to choose just one?
 
-## locator definition
+## Locator definition
 
 `./core/common/class.locator.php`
 
 **locator** `object`
 
-Locators are the way to connect data in Dédalo, besides locators are the own data for multiple components; selects, portals, check boxes, etc. These components uses locators to point and resolve his data.
+Locators are how Dédalo connects data. In addition, locators are the actual data of several components — selects, portals, check boxes, etc. These components use locators to point at and resolve their data.
 
-Locator is an extensible object, it depends of the data pointed and his properties could be extended by specific uses.
+A locator is an extensible object: it depends on the data it points at, and its properties can be extended for specific uses.
 
 A locator is the universal **value object (DTO)** that addresses a single entity in Dédalo's data model: a section record, a component within it, an inline tag, or a language record. The class `extends stdClass`, so callers may attach ad-hoc pseudo-properties (`id`, `paginated_key`, `label`) that survive JSON round-trips. **Properties are sparse**: only meaningful fields are set, and absent ones simply do not serialize.
 
@@ -21,7 +25,7 @@ A locator is the universal **value object (DTO)** that addresses a single entity
 
 ### Function and structure
 
-To understand how locator works, keep in mind that Dédalo uses a few tables to store lot of sections named, this tables are named as "matrix_XXX" and all of these tables has the same schema:
+To understand how a locator works, keep in mind that Dédalo uses a few tables to store many sections. These tables are named `matrix_XXX`, and they all share the same schema:
 
 ```mermaid
 erDiagram
@@ -51,12 +55,12 @@ erDiagram
     }
 ```
 
-The column `datos` contain all data of the section in json format.
+The `datos` column holds all the data of the section in JSON format.
 
 !!! note "JSON storage"
-    We use the JSONB (binary json) definition of PostgreSQL instead string json format.
+    We use the JSONB (binary JSON) type of PostgreSQL instead of the string JSON format.
 
-The columns section_id and section_tipo are the most basic format of locator:
+The `section_id` and `section_tipo` columns are the most basic form of a locator:
 
 ```json
 {
@@ -65,16 +69,16 @@ The columns section_id and section_tipo are the most basic format of locator:
 }
 ```
 
-When a component need to call to other section and get his data will use a locator.
+When a component needs to call another section and get its data, it uses a locator.
 
-Locator has a direction, the basic format is a unidirectional pointer; point to data (to).
+A locator has a direction. The basic form is a unidirectional pointer: it points to data (to).
 
 ```mermaid
     graph LR
     A((Oral History 1 :: Informants)) --locator--> B((People under study 88))
 ```
 
-The component "Informants" ([oh24](https://dedalo.dev/ontology/oh24)) of "Oral History" section ([oh1](https://dedalo.dev/ontology/oh1)) with section_id = 1 point to "People under study" section ([rsc197](https://dedalo.dev/ontology/rsc197)) amb section_id = 88. In these case the locator is store into "Informants" component and the data of this component_portal will be:
+The component "Informants" ([oh24](https://dedalo.dev/ontology/oh24)) of the "Oral History" section ([oh1](https://dedalo.dev/ontology/oh1)) with `section_id = 1` points to the "People under study" section ([rsc197](https://dedalo.dev/ontology/rsc197)) with `section_id = 88`. In this case the locator is stored in the "Informants" component, and the data of this component_portal is:
 
 ```json
 {
@@ -83,9 +87,9 @@ The component "Informants" ([oh24](https://dedalo.dev/ontology/oh24)) of "Oral H
 }
 ```
 
-Every time that the Oral history 1 will load the component informants will use the locator to call to People under study 88 to get his data.
+Every time Oral History 1 loads the Informants component, it uses the locator to call People under study 88 and get its data.
 
-The locator resolution will use the columns section_id and section_tipo in matrix tables to locate the specific row of the database.
+Locator resolution uses the `section_id` and `section_tipo` columns of the matrix tables to locate the specific row in the database.
 
 See it as tables:
 
@@ -93,7 +97,7 @@ Table: **matrix**
 
 | id | section_id | section_tipo | datos |
 | --- | --- | --- | --- |
-| 345 | 1 | oh1 | \[{"oh24":\[{"section_id": 88, "section_tipo": "rsc97"}]}] |
+| 345 | 1 | oh1 | \[{"oh24":\[{"section_id": 88, "section_tipo": "rsc197"}]}] |
 
 table: **matrix**
 
@@ -101,9 +105,9 @@ table: **matrix**
 | --- | --- | --- | --- |
 | 654 | 88 | rsc197 | \[{"rsc85":\["Adela"]},{"rsc86":\["García"]}] |
 
-When ask to informants field it will answer with the data in People under study 88, with the name ([rsc85](https://dedalo.dev/ontology/rsc85)) and surname ([rsc86](https://dedalo.dev/ontology/rsc86)) of the informant.
+When you ask for the Informants field, it answers with the data of People under study 88: the name ([rsc85](https://dedalo.dev/ontology/rsc85)) and surname ([rsc86](https://dedalo.dev/ontology/rsc86)) of the informant.
 
-Then the result will be:
+Then the result is:
 
 | id | section_id | section_tipo | datos |
 | --- | --- | --- | --- |
@@ -116,9 +120,9 @@ Locators can point to:
 - **tags** (parts or fragments of components) : with `tag_id`
 - **languages** : a record of the languages section (see `lang_to_locator`)
 
-Locator defines the source with the prefix *from*:
+A locator names its source with the *from* prefix:
 
-`from_section_tipo`: the section that has the component that store the locator, the caller, the source.
+`from_section_tipo`: the section holding the component that stores the locator — the caller, the source.
 
 ## Property reference
 
@@ -321,9 +325,9 @@ Notes for client work:
 
 ## Flat version
 
-Normal locator is a object, but, in some cases, is useful a string version of the locator, for example to be used as filename of images, pdf or audiovisual files. The flat version of the locator is a chained plain locator string without the properties name.
+A normal locator is an object, but in some cases a string version of the locator is useful — for example, as the filename of image, PDF or audiovisual files. The flat version of the locator is a plain, chained locator string without the property names.
 
-Example; the section_id 3 of an image could pointed in this way:
+Example: the `section_id` 3 of an image can be pointed at like this:
 
 ```json
 {
@@ -333,15 +337,15 @@ Example; the section_id 3 of an image could pointed in this way:
 }
 ```
 
-The locator says: get the record 3 (section_id) section image (section_tipo [rsc170](https://dedalo.dev/ontology/rsc170)) and give me the field of the image (component_tipo [rsc29](https://dedalo.dev/ontology/rsc29))
+The locator says: get record 3 (`section_id`) of the image section (`section_tipo` [rsc170](https://dedalo.dev/ontology/rsc170)) and give me the image field (`component_tipo` [rsc29](https://dedalo.dev/ontology/rsc29)).
 
-Flat version only uses the values of the locator and always has this structure:
+The flat version uses only the values of the locator and always has this structure:
 
 `component_tipo_section_tipo_section_id`
 
-The '_' character is use to separate the values (the class constant `locator::DELIMITER`), and the result of previous locator in his flat version will be: **rsc29_rsc170_3**
+The `_` character separates the values (the class constant `locator::DELIMITER`), and the flat version of the locator above is **rsc29_rsc170_3**.
 
-As the flat version is used to named the media files, the image is stored as: `rsc29_rsc170_3.jpg` in the server.
+Because the flat version is used to name media files, the image is stored on the server as `rsc29_rsc170_3.jpg`.
 
 !!! warning "Documentation drift — `get_flat()`"
     Older docs refer to a `get_flat()` method of the locator class, but **no such method exists in `class.locator.php` today**. The flat id is built where media components need it: `component_media_common::$id`, documented format `{component_tipo}_{section_tipo}_{section_id}` (e.g. `dd522_dd128_1`), used for file naming and URL generation. Likewise, typed `set_from_section_tipo` / `set_from_section_id` setters are referenced in some places but are not implemented — the `from_section_*` fields are populated via the dynamic `__construct` / property-write path.

@@ -145,7 +145,7 @@ A *mode* is a method named exactly like the value (`edit`, `list`, `search`,
 `tm`). For components it is bound from a `render_<mode>_<component>.js` file; for
 sections the bindings are explicit in `core/section/js/section.js`:
 
-```javascript
+```js
 // core/section/js/section.js
 section.prototype.edit      = render_edit_section.edit
 section.prototype.list      = render_list_section.list
@@ -157,7 +157,7 @@ A component's `render_<mode>` file is a thin **view switch** — it normalises a
 default (`fields_separator`), reads `self.context.view`, and delegates to the
 matching `view_*` builder. From `render_edit_component_input_text.js`:
 
-```javascript
+```js
 render_edit_component_input_text.prototype.edit = async function(options) {
     const self = this
     const view = self.context.view || 'default'
@@ -191,7 +191,7 @@ exposing a `render(self, options)`. Common views:
 !!! info "File nomenclature"
     `render_<mode>_<component>.js` = the mode switch;
     `view_<view>_<mode>_<component>.js` = the per-view emitter. See
-    [Components → Nomenclature of files](../components/index.md#nomenclature-of-files).
+    [Components → File nomenclature](../components/index.md#file-nomenclature).
 
 ## The `ui.*` builders
 

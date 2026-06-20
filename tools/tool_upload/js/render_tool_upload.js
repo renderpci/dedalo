@@ -13,7 +13,35 @@
 
 /**
 * RENDER_TOOL_UPLOAD
-* Manages the tool's logic and appearance in client side
+* Client-side rendering module for the tool_upload tool.
+*
+* Responsibilities:
+* - Builds the edit-mode wrapper DOM that hosts the `service_upload` file-picker widget
+*   (drag-and-drop, button, progress bar — all delegated to the `service_upload` service).
+* - Handles the `upload_file_done_<id>` event dispatched by `service_upload` after a
+*   successful upload: calls `process_uploaded_file_controller` to move the temp file to
+*   its final destination, shows a spinner + status message, and — when the caller is a
+*   component — re-instantiates and renders that component in a preview panel so the user
+*   can see the result without reloading the page.
+* - Provides the `get_content_data` helper that creates the two main DOM zones:
+*   `process_file` (status/spinner area) and `preview_component_container` (live preview).
+*
+* Life-cycle (orchestrated by `tool_upload.js`):
+*   tool_upload.init() → subscribes to 'upload_file_done_<id>'
+*   tool_upload.build() → creates and builds `service_upload` service instance
+*   tool_upload.render() [→ tool_common.prototype.render]
+*     → calls render_tool_upload.prototype.edit()
+*       → get_content_data() — builds fixed DOM slots
+*       → service_upload.build() then service_upload.render() — injects file picker
+*   [user picks/drops file]
+*   service_upload publishes 'upload_file_done_<id>' with file_data + process_options
+*   tool_upload.upload_done() [→ render_tool_upload.prototype.upload_done()]
+*     → process_uploaded_file_controller() → server-side move + component processing
+*     → optional: re-renders caller component in preview_component_container
+*
+* Main exports:
+* - `render_tool_upload` — constructor used as mixin prototype source by `tool_upload`.
+* - `get_content_data` — standalone DOM builder shared by the edit/list/mini views.
 */
 export const render_tool_upload = function() {
 
@@ -24,9 +52,27 @@ export const render_tool_upload = function() {
 
 /**
 * EDIT
-* Render node for use like button
-* @param object options
-* @return HTMLElement wrapper
+* Builds and returns the full edit-mode DOM node for tool_upload.
+*
+* Called as `render_tool_upload.prototype.edit` and also aliased to `.list` and
+* `.mini` in `tool_upload.js` so all three modes share the same layout.
+*
+* Steps:
+* 1. If `render_level === 'content'`, returns only the content_data fragment
+*    (used when the host layout wants to inject the tool into an existing shell).
+* 2. Otherwise builds the standard tool wrapper via `ui.tool.build_wrapper_edit`,
+*    creates a `service_upload_container` div immediately after the tool header,
+*    shows a temporary spinner while `service_upload` initialises, then appends
+*    the rendered service_upload node and removes the spinner.
+*
+* The `service_upload` instance must already exist on `self` at call time
+* (populated by `tool_upload.prototype.build()`).
+*
+* @param {Object} options - Render options.
+* @param {string} [options.render_level='full'] - 'full' builds the whole wrapper;
+*   'content' returns only the inner content_data fragment.
+* @returns {Promise<HTMLElement>} The finished wrapper element (or content_data
+*   fragment when render_level is 'content').
 */
 render_tool_upload.prototype.edit = async function (options) {
 
@@ -79,8 +125,23 @@ render_tool_upload.prototype.edit = async function (options) {
 
 /**
 * GET_CONTENT_DATA
-* @param object self
-* @return HTMLElement content_data
+* Builds the inner content DOM for the tool_upload UI.
+*
+* Creates two fixed zones that are later populated dynamically:
+* - `process_file` — receives a spinner and status text while the server processes
+*   the uploaded file; stored as `self.process_file` so `upload_done` can update it.
+* - `preview_component_container` — receives a freshly-rendered instance of the
+*   caller component after processing succeeds; stored as
+*   `self.preview_component_container`.
+*
+* Both nodes are stored as instance properties so `upload_done` can reference them
+* without re-querying the DOM.
+*
+* Wraps the fragment in `ui.tool.build_content_data(self)` to produce a
+* standard `.content_data` container element.
+*
+* @param {Object} self - The tool_upload instance.
+* @returns {HTMLElement} The populated content_data container element.
 */
 export const get_content_data = function(self) {
 
@@ -115,10 +176,46 @@ export const get_content_data = function(self) {
 
 /**
 * UPLOAD_DONE
-* Called on service_upload has finished of upload file using a event
-* @see event subscription at 'init' function
-* @param object options
-* @return bool
+* Reacts to a successful file upload and triggers server-side processing.
+*
+* Subscribed to the `upload_file_done_<id>` event published by `service_upload`
+* once all chunks have been joined server-side (see `tool_upload.prototype.init`
+* in tool_upload.js).
+*
+* Workflow:
+* 1. Clears and re-fills `self.process_file` with a spinner + "Processing file.."
+*    message so the user has visual feedback during the (potentially long)
+*    server-side move / transcoding step.
+* 2. Calls `self.process_uploaded_file_controller(file_data, process_options)`,
+*    which POSTs to `tool_upload::process_uploaded_file` on the PHP side via
+*    `data_manager.request` with a 3 600-second timeout (large media files can
+*    take a long time to transcode).
+* 3. On failure: shows the server error message as plain text (textContent, not
+*    innerHTML — avoids XSS from file paths or error strings with HTML characters)
+*    and adds the 'failed' CSS class.
+* 4. On success: shows the success message, hides the service_upload form and
+*    progress bar via `dd_request_idle_callback` (deferred to keep the UI
+*    responsive), and — when `self.caller.type === 'component'` — creates a fresh
+*    component instance (using `id_variant` to avoid id conflicts with the
+*    original caller instance), builds it, optionally calls its `upload_handler`
+*    callback (e.g. for 3D posterframe creation), and renders it into
+*    `self.preview_component_container`.
+*
+* Side effects:
+* - Mutates `self.process_file` DOM (clears children, adds spinner/text).
+* - Pushes the new component instance onto `self.ar_instances` so it is cleaned
+*   up by `destroy()`.
+* - Sets `component_instance.show_interface.tools = false` before rendering to
+*   suppress the component's own tool buttons inside the preview.
+*
+* @param {Object} options - Payload from the 'upload_file_done_<id>' event.
+* @param {Object} options.file_data - Server-side file metadata returned by
+*   service_upload after joining chunks:
+*   `{ error: number, extension: string, name: string, size: number,
+*      tmp_name: string, type: string }`.
+* @param {Object} [options.process_options] - Optional processing flags forwarded
+*   to the PHP handler (e.g. `{ ocr: true, ocr_lang: 'lg-spa' }`).
+* @returns {Promise<boolean>} Resolves to `true` on success, `false` on failure.
 */
 render_tool_upload.prototype.upload_done = async function (options) {
 
@@ -164,8 +261,8 @@ render_tool_upload.prototype.upload_done = async function (options) {
 			process_file_info.textContent = response.msg || 'Error on processing file!'
 			process_file_info.classList.add('failed')
 
-			if (api_response.errors?.length) {
-				alert(api_response.errors.join(' | '));
+			if (response.errors?.length) {
+				alert(response.errors.join(' | '));
 			}
 
 			return false
@@ -492,7 +589,7 @@ render_tool_upload.prototype.upload_done = async function (options) {
 // 				"<p><strong>" + file.name + ":</strong></p><pre>" +
 // 				e.target.result.replace(/</g, "&lt;").replace(/>/g, "&gt;") +
 // 				"</pre>"
-// 			);
+// 		);
 // 		}
 // 		reader.readAsText(file);
 // 	}

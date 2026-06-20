@@ -1,14 +1,16 @@
 # Updating ontology
 
-Dédalo ontology is the core of the application. Ontology control the data definition and how this data is interpreted. The ontology change some times every day. Updating ontology will ensure you that your Dédalo installation has the last definition.
+> See also: [Updating code](updating_code.md) · [Updating data](updating_data.md) · [Prefix tipos config](../../config/config.md#defining-prefix-tipos)
 
-In Dédalo v6 the ontology has been expanded with more rich definitions and the Dédalo behavior is more dependent of it.
+The Dédalo ontology is the core of the application. It controls the data definition and how the data is interpreted. The ontology changes several times a day. Updating the ontology ensures that your Dédalo installation has the latest definition.
 
-The version of the ontology is controlled by the timestamp and construction location of the definition.
+In Dédalo v6 the ontology was expanded with richer definitions, and Dédalo's behavior depends on it more than before.
+
+The ontology version is identified by the timestamp and the build location of the definition.
 
 > Dédalo 2023-09-10T13:38:47+02:00 Benimamet
 
-Ontology is build by different tld's. This tld's identify with part of the ontology is loaded and which parts will be updated.
+The ontology is built from different tlds. These tlds identify which part of the ontology is loaded and which parts will be updated.
 
 ## Shared and private ontologies
 
@@ -20,9 +22,9 @@ Some examples of common and shared tld's: `dd, rsc, oh, ich, tch, hierarchy, etc
 
 Some examples of private tld's: `mupreva, qdp, muvaet, etc.`
 
-The update process will replace all ontology definition to the last version, tld by tld, so the automatic process will see your configuration to update only the shared tld's.
+The update process replaces the whole ontology definition with the latest version, tld by tld; the automatic process reads your configuration and updates only the shared tlds.
 
-Private tld will need to update manually.
+Private tlds must be updated manually.
 
 Common and shared tld's are defined into the [config.php](../../config/config.md#defining-prefix-tipos) file.
 

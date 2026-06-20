@@ -306,7 +306,7 @@ not LESS variables — they must be overridable at runtime.
 
 ### Toggle the theme from JS
 
-```javascript
+```js
 import {get_theme, set_theme, toggle_theme} from '../../page/js/theme.js'
 
 get_theme()            // 'light' (default) | 'dark'

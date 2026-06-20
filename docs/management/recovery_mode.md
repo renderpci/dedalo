@@ -1,5 +1,7 @@
 # Recovery mode
 
+> See also: [Management and maintenance](index.md) · [Updating ontology](updates/updating_ontology.md)
+
 !!! info "Support version >= 6.4.0"
 
 The Dédalo Ontology is the core of the application. If it is damaged or misconfigured for any reason, it can cause the application to crash and the administrator will not have the working interface to fix it.
@@ -9,13 +11,15 @@ For these cases, Dédalo implements a special mode called "recovery mode" that b
 
 !!! note "The recovery status is saved in config_core file as: `define('DEDALO_RECOVERY_MODE', true);`"
 
-#### 1. From area maintenance
-If you have access to area maintenance panel, you can activate recovery mode from `Check config' tab.
+### 1. From area maintenance
+
+If you have access to the area maintenance panel, you can activate recovery mode from the `Check config` tab.
 
 ![widget Check config](assets/2025-01-20_check_config_widget.png)
 
-#### 2. Forcing from URL
-If yo do not have access to Area admin panel, you can force the recovery mode building a URL with the recovery key as parameter, like:
+### 2. Forcing from URL
+
+If you do not have access to the area admin panel, you can force recovery mode by building a URL with the recovery key as a parameter, like:
 
 > `https://mydomain/dedalo/core/page/?tipo=dd88&recovery=MyRecoveryKey`
 

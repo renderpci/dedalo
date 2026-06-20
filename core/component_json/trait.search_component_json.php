@@ -282,8 +282,10 @@ trait search_component_json {
             return self::dispatch_operator_sql_tm($query_object, $q, $ctx);
         }
 
-        // escape q string for JSON Path (double quotes)
-        $q_json_path = str_replace('"', '\\"', $q);
+        // escape q string for JSON Path. Backslash MUST be escaped before the double
+        // quote, otherwise a literal "\" in $q turns the following escaped quote into an
+        // unescaped terminator and breaks out of the JSONPath string literal.
+        $q_json_path = str_replace(['\\', '"'], ['\\\\', '\\"'], $q);
 
         switch (true) {
             case ($q === '!*' || $ctx->q_operator==='!*'):

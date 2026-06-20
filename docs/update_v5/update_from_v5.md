@@ -1,6 +1,8 @@
 # Update V5 to V6
 
-Version 6 is a complete rebuild version. Lot of code has been rebuilt from scratch and some data definitions has been changed.
+> See also: [Updating code](../management/updates/updating_code.md) · [Updates](../management/updates/index.md)
+
+Version 6 is a complete rebuild. A lot of the code has been rewritten from scratch, and some data definitions have changed.
 
 !!! warning "Upgrading from versions prior to v5"
     V6 only can be update from v5, previous versions (v4, v3, v2, v1, v0) need to be update it to v5 prior to update to version 6.
@@ -13,7 +15,7 @@ Before you start upgrading to update it is important to be aware of some of thes
 
 ## Important changes from v5
 
-1. In v6 all components data is storage as array, so some components has changed to be array. The update will change the data of these components in your database to convert it to array:
+1. In v6 all component data is stored as an array, so some components have changed to use arrays. The update converts the data of these components in your database to array form:
     * component_text_area
     * component_number
     * component_geolocation
@@ -134,8 +136,8 @@ Ready to update.
     ```shell
     cd ../httpdocs
     wget https://github.com/renderpci/dedalo/archive/refs/tags/v6.3.1.zip
-    unzip master.zip
-    mv dedalo-master dedalo
+    unzip v6.3.1.zip
+    mv dedalo-6.3.1 dedalo
     ```
 
 3. Config Dédalo to use your databases and your own media, etc.

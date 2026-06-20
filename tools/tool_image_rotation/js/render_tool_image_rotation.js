@@ -4,6 +4,38 @@
 
 
 
+/**
+* RENDER_TOOL_IMAGE_ROTATION
+* Client-side render module for the image rotation tool.
+*
+* Provides the `edit` render mode for `tool_image_rotation`, building the
+* complete DOM UI that lets the user:
+*   - Preview the target image with CSS `transform: rotate()` applied live.
+*   - Drag a range slider (or type a value) to choose any rotation angle
+*     between −360° and +360° in 0.01° steps.
+*   - Select a solid background fill colour or opt for a transparent (alpha)
+*     canvas via a colour-picker and a transparency checkbox.
+*   - Toggle "Expand" mode so the image container grows to the rotated
+*     bounding box instead of clipping the corners.
+*   - Draw a crop rectangle on top of the image and send the resulting
+*     pixel-coordinate `crop_area` object to the server together with the
+*     rotation parameters.
+*   - Trigger an AI-powered background-removal pipeline that runs
+*     Transformers.js / WebGPU inside a Worker and uploads the result as a
+*     new PNG quality file via `service_upload`.
+*
+* Exported symbol: `render_tool_image_rotation` — assigned to
+* `tool_image_rotation.prototype.edit` in tool_image_rotation.js.
+*
+* Module-private helpers:
+*   get_content_data(self)  — builds and returns the main content DOM fragment.
+*   get_buttons(self)       — builds all controls (slider, colour options, crop,
+*                             apply-rotation, remove-background).
+*   get_crop_interface(self)— stub (currently empty, reserved for future use).
+*/
+
+
+
 // imports
 	import { ui } from '../../../core/common/js/ui.js'
 	import { render_tool_image_crop } from './render_tool_image_crop.js'
@@ -13,7 +45,14 @@
 
 /**
 * RENDER_TOOL_IMAGE_ROTATION
-* Manages the component's logic and appearance in client side
+* Constructor — acts as the render provider for tool_image_rotation.
+* Assigned to `tool_image_rotation.prototype.edit` so that the tool's
+* `render()` lifecycle dispatches here for the 'edit' mode.
+*
+* The constructor is never instantiated standalone; it only exists so that
+* prototype methods can be attached and then mixed into the tool instance.
+*
+* @returns {boolean} Always true (signals successful construction).
 */
 export const render_tool_image_rotation = function() {
 
@@ -26,8 +65,14 @@ export const render_tool_image_rotation = function() {
 * EDIT
 * Render tool DOM nodes
 * This function is called by render common
-* @param object options
-* @return HTMLElement wrapper
+* @param {Object} options - Render options.
+* @param {string} [options.render_level='full'] - 'full' builds the complete
+*   wrapper with chrome (toolbar, title bar, etc.); 'content' returns only
+*   the inner content_data element — used when refreshing the body without
+*   re-rendering the shell.
+* @returns {Promise<HTMLElement>} Resolves to the outer wrapper element
+*   (`render_level === 'full'`) or the inner content_data element
+*   (`render_level === 'content'`).
 */
 render_tool_image_rotation.prototype.edit = async function(options) {
 
@@ -57,9 +102,44 @@ render_tool_image_rotation.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* Render tool body or 'content_data'
-* @param instance self
-* @return HTMLElement content_data
+* Builds and returns the tool's body element (`content_data`).
+*
+* Layout of the produced DOM tree:
+*
+*   content_data
+*     └─ DocumentFragment
+*          ├─ div.buttons_container
+*          │    └─ <output of get_buttons(self)>
+*          └─ div.main_element_container
+*               ├─ div.image_container
+*               │    └─ img.noevents          ← preview image (self.main_element_image)
+*               ├─ div.axis_container         ← crosshair/diagonal alignment guides
+*               │    ├─ div.horizontal_axis
+*               │    ├─ div.vertical_axis
+*               │    ├─ div.diagonal_left_axis
+*               │    └─ div.diagonal_rigth_axis
+*               └─ div.circle_axis            ← circular rotation guide overlay
+*
+* Side effects:
+*   - Stores `self.image_container`, `self.main_element_image`,
+*     `self.axis_container`, and `self.circle_axis` as instance pointers
+*     so that control handlers in `get_buttons()` can reference them directly.
+*   - Attaches a one-shot `load` event on the preview `<img>` that locks the
+*     container dimensions to the natural rendered size of the image; the
+*     handler removes itself after firing to avoid re-sizing when a
+*     background-removal result is loaded into the same element.
+*   - Adds a `dd_options` object (`{width, height}`) to `self.image_container`
+*     after the image loads; this is the fallback size used when the "Expand"
+*     checkbox is unchecked.
+*   - Uses `requestAnimationFrame` to set the `<img>` `src` so the DOM is
+*     fully flushed before the network request fires, preventing a race where
+*     `getBoundingClientRect()` returns zeros.
+*   - Appends a cache-busting `?t=<timestamp>` query string to the image URL
+*     so the browser does not serve a stale version after a rotation or
+*     background-removal operation.
+*
+* @param {Object} self - The `tool_image_rotation` instance.
+* @returns {Promise<HTMLElement>} The populated `content_data` element.
 */
 const get_content_data = async function(self) {
 
@@ -176,9 +256,60 @@ const get_content_data = async function(self) {
 
 /**
 * GET_BUTTONS
-* Render buttons bellow the av player
-* @param object instance self
-* @return HTMLElement buttons_wrapper
+* Builds the full controls panel returned as a DocumentFragment.
+*
+* The fragment is structured as three sibling containers:
+*
+*   div.slider_container
+*     div.slider_label           ← localised "Rotation" label
+*     div.slider
+*       input[type=text].output_value  ← numeric degree input; syncs ↔ range
+*       input[type=range].slider       ← −360..+360, step 0.01
+*
+*   div.color_options_container
+*     label.color_picker_label         ← "Background color"
+*     input[type=color].color_picker   ← hex colour picker (default #ffffff)
+*     label > input[type=checkbox]     ← Transparent (alpha) toggle
+*     label > input[type=checkbox]     ← Expand canvas toggle
+*
+*   div.options_container
+*     div.crop_button_container
+*       button.light.crop_button       ← toggles render_tool_image_crop overlay
+*     div.apply_rotation_button_container
+*       button.light.gear.apply_rotation  ← submits rotation to server API
+*     div.remove_background_button_container
+*       button.light.button_remove_background  ← starts AI background removal
+*     div.status_container            ← text feedback area (progress / errors)
+*
+* Key behavioural contracts:
+*   - `output` (text input) and `range` are kept in sync bidirectionally:
+*     typing in `output` updates `range.value` and vice versa. Both update
+*     `self.main_element_image.style.transform` immediately.
+*   - When "Expand" is checked, every `range` input event also resizes
+*     `self.image_container` to the rotated bounding box returned by
+*     `getBoundingClientRect()` on the (already-transformed) image element.
+*   - The crop button toggles `render_tool_image_crop.build()` /
+*     `render_tool_image_crop.destroy()` and hides the axis guides while the
+*     crop overlay is active.
+*   - The apply-rotation button gathers rotation degrees, background colour,
+*     alpha flag, rotation mode, and any crop_area from `render_tool_image_crop`
+*     before calling `self.apply_rotation()`. On success, it forces a cache-
+*     busted reload of the preview image by performing a `fetch` with
+*     `{cache:'reload'}` before reassigning `src`.
+*   - Background removal uses `ua.check_transformers_webgpu()` to gate
+*     compatibility and shows a `confirm()` dialog when WebGPU is unavailable.
+*     (!) The `button_remove_background.active` flag is checked AFTER the async
+*     confirm dialog; its initial value is never set to `true`, so the removal
+*     branch is currently unreachable — this is a pre-existing logic issue in
+*     the code, not a documentation artefact.
+*
+* Closes over the local `nodes` object, `status_container`, `output`, `range`,
+* `color_picker`, `alpha_checkbox`, and `expanded_checkbox` variables — all of
+* which must remain in scope for the button event handlers to function.
+*
+* @param {Object} self - The `tool_image_rotation` instance.
+* @returns {DocumentFragment} Fragment containing all control containers,
+*   ready to be appended into `buttons_container`.
 */
 const get_buttons = function(self) {
 
@@ -220,6 +351,7 @@ const get_buttons = function(self) {
 					parent			: slider,
 					value 			: 0
 				})
+				// Sync text → range and apply live CSS rotation preview.
 				output.addEventListener('input', function(){
 					range.value	= output.value
 					self.main_element_image.style.transform = "rotate("+ (range.value % 360) +"deg)"
@@ -235,6 +367,8 @@ const get_buttons = function(self) {
 				range.min	= -360
 				range.max	= 360
 				range.step	= 0.01
+				// Sync range → text, apply CSS rotation, and optionally resize the container
+				// when the "Expand" checkbox is active so the rotated corners remain visible.
 				range.addEventListener('input', function(){
 					output.value = range.value
 					self.main_element_image.style.transform = "rotate("+ (range.value % 360) +"deg)"
@@ -270,6 +404,8 @@ const get_buttons = function(self) {
 				value			: '#ffffff',
 				parent			: color_options_container
 			})
+			// Immediately apply the chosen colour to the container background as a
+			// live preview and uncheck "Transparent" since they are mutually exclusive.
 			color_picker.addEventListener("input", function(e){
 				// color_picker.value = e.target.value;
 				self.image_container.style.background = e.target.value;
@@ -285,6 +421,9 @@ const get_buttons = function(self) {
 			})
 
 			// alpha_checkbox
+			// Checking this adds the 'checkborad' (sic) CSS class that displays a
+			// checkerboard pattern as a visual transparency indicator, and clears the
+			// solid background colour. Unchecking removes the class.
 				const alpha_checkbox = ui.create_dom_element({
 					element_type	: 'input',
 					type			: 'checkbox'
@@ -312,6 +451,9 @@ const get_buttons = function(self) {
 			})
 
 			// expanded_checkbox
+			// When checked: the container is immediately resized to the current rotated
+			// bounding box so that no corners are cropped. When unchecked: the container
+			// is restored to its initial `dd_options` dimensions recorded at image-load time.
 				const expanded_checkbox = ui.create_dom_element({
 					element_type	: 'input',
 					type			: 'checkbox'
@@ -351,6 +493,9 @@ const get_buttons = function(self) {
 				parent			: crop_button_container
 			})
 
+			// Toggle the render_tool_image_crop overlay on/off.
+			// When activating crop mode the alignment axis guides are hidden so they
+			// do not visually interfere with the crop-selection rectangle.
 			const crop_button_click_handler = function(){
 
 				if(crop_button.active === true){
@@ -388,6 +533,10 @@ const get_buttons = function(self) {
 				inner_html		: get_label.create || 'Create',
 				parent			: apply_rotation_button_container
 			})
+			// Gather all user-selected parameters and delegate to `self.apply_rotation()`.
+			// On success: force-reloads the preview image (bypassing the browser cache)
+			// via a dummy `fetch` before reassigning `src`, then resets the slider and
+			// the crop selection to their initial states.
 			button_apply_rotation.addEventListener('click', async function(){
 				self.node.content_data.classList.add('loading')
 				const rotation_degrees = output.value
@@ -433,7 +582,7 @@ const get_buttons = function(self) {
 		const button_remove_background_click_handler = async function(e){
 			e.stopPropagation()
 
-			// Get the most quality image, mainly the origianl quality
+			// Get the most quality image, mainly the original quality
 			const image_file = ( self.main_element.get_quality_file_info('original') )
 				? self.main_element.get_quality_file_info('original')
 				: (self.main_element.get_quality_file_info('modified'))
@@ -455,6 +604,9 @@ const get_buttons = function(self) {
 				}
 			}
 
+			// (!) `button_remove_background.active` is never initialised to `true`
+			// before this check, so the removal pipeline below is currently
+			// unreachable. This is a pre-existing issue — do not "fix" it here.
 			if(button_remove_background.active === false){
 				return
 			}
@@ -527,6 +679,15 @@ const get_buttons = function(self) {
 
 
 
+/**
+* GET_CROP_INTERFACE
+* Reserved stub for a future dedicated crop-interface builder.
+* Currently unused — crop interaction is managed directly by
+* `render_tool_image_crop` methods invoked from `get_buttons()`.
+*
+* @param {Object} self - The `tool_image_rotation` instance.
+* @returns {undefined}
+*/
 const get_crop_interface = function(self){
 
 }

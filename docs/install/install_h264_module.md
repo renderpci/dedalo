@@ -1,7 +1,8 @@
 # Apache module to cut audiovisual files in real time
 
-This module add the feature to Apache http server to cut audiovisual fragments by specific time.
-It use the MPEG-4 Part 12, ISO/IEC 14496-12:2022 definition to find the in and out position and server the fragment as new audiovisual file.
+> See also: [Installation](index.md) · [Apache configuration](apache_configuration.md)
+
+This module adds to the Apache HTTP server the ability to cut audiovisual fragments by time. It uses the MPEG-4 Part 12 (ISO/IEC 14496-12:2022) definition to find the in and out positions and serve the fragment as a new audiovisual file.
 
 ## To install
 
@@ -60,7 +61,7 @@ You can get the module in `/dedalo/install/http_modules/mod_h264_streaming-3.0.0
     *Ubuntu/Debian*
 
     ```shell
-    apt install apache2-devel
+    apt install apache2-dev
     ```
 
     *Rocky/RedHat/Fedora*

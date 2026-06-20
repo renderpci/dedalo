@@ -1,8 +1,10 @@
-# The Raspa Data Quality Score: A Cumulative Scale for Cultural Heritage Data Assessment
+# The Raspa Data Quality Score
 
-To ensure the effective documentation, processing, and long-term preservation of cultural heritage information, the **Dédalo project** proposes the **Raspa Data Quality Score** a cumulative metric that evaluates data across ten progressive levels of computational readiness, semantic richness, and ethical transparency. This scale reflects the project's commitment to structured, interoperable, and ethically-managed data built entirely on **Free and Open Source Software (FOSS)**.
+> See also: [Introduction](index.md) · [Glossary](glossary.md)
 
-The Raspa data quality score has two dimensions; **Technical dimension** and **Community / social dimension**
+A cumulative scale for cultural heritage data assessment. To ensure the effective documentation, processing, and long-term preservation of cultural heritage information, the **Dédalo project** proposes the **Raspa Data Quality Score** — a cumulative metric that evaluates data across ten progressive levels of computational readiness, semantic richness, and ethical transparency. This scale reflects the project's commitment to structured, interoperable, and ethically managed data built entirely on **Free and Open Source Software (FOSS)**.
+
+The Raspa Data Quality Score has two dimensions: a **technical dimension** and a **community and social dimension**.
 
 ## Technical dimension
 
@@ -20,7 +22,7 @@ At **Level 4**, data becomes **traceable**, incorporating robust provenance trac
 
 At **Level 6**, **contextualization** becomes paramount. Data is enriched with metadata that articulates certainty levels, establishes source attribution chains, and embeds domain-specific framing—allowing users to assess the reliability and interpretative lens of the information.
 
-## Community / Social dimension
+## Community and social dimension
 
 **Level 7** recognizes **translatable data**, where linguistic content is decoupled from core data structures. Systems at this level support internationalization and localization, preserving semantic meaning across multiple languages, an essential requirement for global cultural heritage platforms.
 
@@ -33,7 +35,7 @@ Finally, **Level 10** is reserved for data that is **processed entirely through 
 ### Extra point
 
 Sustainable data.
-Data that is sustainable over time receives the an extra Raspa score, reflecting its resilience, long-term accessibility, and preservation-readiness. Sustainable data is not only well-structured and ethically processed, but also designed to withstand technological, organizational, and epistemological change.
+Data that is sustainable over time receives an extra Raspa score, reflecting its resilience, long-term accessibility, and preservation-readiness. Sustainable data is not only well-structured and ethically processed, but also designed to withstand technological, organizational, and epistemological change.
 
 Key characteristics of sustainable data include:
 
@@ -44,11 +46,11 @@ Key characteristics of sustainable data include:
 
 Sustainable data ensures that cultural heritage remains accessible, intelligible, and reusable not just today, but decades into the future, even as technologies evolve.
 
-## The Raspa Score table
+## The Raspa score table
 
 ### Technical dimension
 
-| Level | Data Quality Tier | Key Characteristics | Technical Requirements | Raspa's |
+| Level | Data Quality Tier | Key Characteristics | Technical Requirements | Raspa points |
 | --- | ---| --- | ---| :---: |
 | 0 | Unstructured Data | Human-readable only (books, PDFs) | No computational structure | |
 | 1 | Basic Structured Data | Machine-readable tables (CSV, Excel, SQL) | Relational schemas | ![raspa](assets/20250715_175300_paw.svg){width="30"} |
@@ -60,13 +62,13 @@ Sustainable data ensures that cultural heritage remains accessible, intelligible
 
 ### Community and social dimension
 
-| Level | Data Quality Tier | Key Characteristics | Technical Requirements | Raspa's |
+| Level | Data Quality Tier | Key Characteristics | Technical Requirements | Raspa points |
 | --- | ---| --- | --- | :---: |
 | 7 | Translatable Data | Language-agnostic representation | Internationalization frameworks, Unicode compliance | ![raspa](assets/20250715_175300_paw.svg){width="30"} |
 | 8 | Open Data | Standards-compliant public access | Open APIs (REST, GraphQL, etc.), CC licensing | ![raspa](assets/20250715_175300_paw.svg){width="30"} |
-| 9 | Multi-Standard Interoperable | Crosswalk capability across schemas | CIDOC CRM, Dublin Core, schema.org,, etc. mappings | ![raspa](assets/20250715_175300_paw.svg){width="30"} ![raspa](assets/20250715_175300_paw.svg){width="30"} |
+| 9 | Multi-Standard Interoperable | Crosswalk capability across schemas | CIDOC CRM, Dublin Core, schema.org, etc. mappings | ![raspa](assets/20250715_175300_paw.svg){width="30"} ![raspa](assets/20250715_175300_paw.svg){width="30"} |
 | 10 | Free Software Processed | End-to-end open toolchain | FOSS stack verification | ![raspa](assets/20250715_175300_paw.svg){width="30"} ![raspa](assets/20250715_175300_paw.svg){width="30"} |
-| +1 | Sustainable data | Log-term preservation and community involvement | Standardized formats, checksums and backups, network working data | ![raspa](assets/20250715_175300_paw.svg){width="30"} |
+| +1 | Sustainable data | Long-term preservation and community involvement | Standardized formats, checksums and backups, network working data | ![raspa](assets/20250715_175300_paw.svg){width="30"} |
 
 You can earn different Raspa points if the quality of your data meets the level, with a maximum of 15.
 

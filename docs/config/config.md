@@ -28,7 +28,7 @@
 
 DEDALO_HOST `string`
 
-This parameter use the name of the domain or ip of your installation. Used the header from the current request, if there is one, and store the domain or ip of the call.
+This parameter holds the domain or IP of your installation. It reads the host header from the current request, if there is one, and stores the domain or IP of the call.
 
 ```php
 define('DEDALO_HOST', $_SERVER['HTTP_HOST'] );
@@ -118,10 +118,10 @@ DEDALO_CONFIG_PATH `string`
 
 Used to define the the main config directory. Config directory has all specific files of Dédalo installation. This files are not changed by the system because every installation has his own configuration as connection to DDBB. The exception is the `config_core` file that is used by Dédalo to store the state of the installation.
 
-To update the config constants you will need to see the version changes in the sample_* files because this files will be sync by updates.
+To update the config constants you will need to review the version changes in the `sample_*` files, because these files are synced by updates.
 
 ```php
-define('DEDALO_LIB_BASE_PATH', dirname( dirname(__FILE__) ));
+define('DEDALO_CONFIG_PATH', DEDALO_ROOT_PATH .'/'. DEDALO_CONFIG);
 ```
 
 ---
@@ -324,15 +324,15 @@ define('DEDALO_EXTRAS_URL',  DEDALO_CORE_URL . '/extras');
 
 DEDALO_INSTALL_PATH  `string`
 
-This parameter defines the install path directory. Install path contains the files to be used in the installation process and the ontology and hierarchy updates. When Dédalo is installed first time this directory has a basic Dédalo configuration and the database schema to be implemented. When Dédalo update his ontology or common hierarchies, it will get changes from ontology servers and save into install directory previously to be implemented.
+This parameter defines the install path directory. The install path contains the files used in the installation process and in the ontology and hierarchy updates. When Dédalo is installed for the first time, this directory holds a basic Dédalo configuration and the database schema to be implemented. When Dédalo updates its ontology or common hierarchies, it fetches the changes from the ontology servers and saves them in the install directory before they are implemented.
 
 ```php
-define('DEDALO_EXTRAS_URL',  DEDALO_CORE_URL . '/extras');
+define('DEDALO_INSTALL_PATH', DEDALO_ROOT_PATH . '/install');
 ```
 
-> This parameter use previous constant definition:
+> This parameter uses the previous constant definition:
 >
-> DEDALO_CORE_PATH
+> DEDALO_ROOT_PATH
 
 ---
 
@@ -342,10 +342,10 @@ define('DEDALO_EXTRAS_URL',  DEDALO_CORE_URL . '/extras');
 
 DEDALO_INSTALL_URL  `string`
 
-This parameter defines the install uri directory. Install path contains the files to be used in the installation process and the ontology and hierarchy updates. When Dédalo is installed first time this directory has a basic Dédalo configuration and the database schema to be implemented. When Dédalo update his ontology or common hierarchies, it will get changes from ontology servers and save into install directory previously to be implemented.
+This parameter defines the install uri directory. The install path contains the files used in the installation process and in the ontology and hierarchy updates. When Dédalo is installed for the first time, this directory holds a basic Dédalo configuration and the database schema to be implemented. When Dédalo updates its ontology or common hierarchies, it fetches the changes from the ontology servers and saves them in the install directory before they are implemented.
 
 ```php
-define('DEDALO_EXTRAS_URL',  DEDALO_CORE_URL . '/extras');
+define('DEDALO_INSTALL_URL', DEDALO_ROOT_WEB . '/install');
 ```
 > Example: <https://master.dedalo.dev/dedalo/install>
 >
@@ -678,7 +678,7 @@ session_start_manager([
     'timeout_seconds'       => $timeout_seconds,
     'save_path'             => DEDALO_SESSIONS_PATH,
     'prevent_session_lock'  => defined('PREVENT_SESSION_LOCK') ? PREVENT_SESSION_LOCK : false,
-    'session_name'          => 'dedalo_'.DEDALO_ENTITY
+    'session_name'          => 'dedalo_'.DEDALO_ENTITY,
     'cookie_secure'         => $cookie_secure, // Only https (true | false)
     'cookie_samesite'       => $cookie_samesite // (None | Lax | Strict)
 ]);

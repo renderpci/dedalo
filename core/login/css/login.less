@@ -159,7 +159,239 @@
 
 				}
 			}
+
+			// two-step (identifier-first) login: step panels (username / password)
+			>.login_step {
+				flex: 1 1 100%;
+				display: flex;
+				flex-wrap: wrap;
+
+				>input, >button {
+					flex: 1 1 100%;
+					font-size: 1em;
+				}
+
+				>input {
+					margin: 0px;
+					margin-bottom: 1em;
+				}
+
+				// step buttons share the look of the form submit button
+				>.button_enter {
+					display: flex;
+					height: 3em;
+					margin: 0px;
+					text-align: center;
+					justify-content: center;
+					align-items: center;
+					transition: all 0.17s ease, padding 0s;
+					background-color: var(--color_orange_dedalo);
+
+					&.white {
+						background-color: transparent;
+						outline: none;
+						cursor: default;
+						pointer-events: none;
+					}
+
+					>.button_enter_loading {
+						position: relative;
+						height: 2rem;
+						width: 2rem;
+						margin: 0px;
+						top: unset;
+						left: unset;
+
+						&.spinner {
+							border-width: 3px;
+						}
+					}
+				}
+			}
+
+			// step 2: username confirmation chip with a "change user" link
+			>.login_step_password >.login_user_chip {
+				flex: 1 1 100%;
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 0.5em;
+				margin-bottom: 1em;
+				padding: 0.5em 0.85em;
+				border-radius: 3px;
+				background-color: @color_grey_16;
+				border: 1px solid @color_grey_13;
+
+				>.login_user_chip_name {
+					font-weight: 600;
+					color: @color_grey_5;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					white-space: nowrap;
+				}
+
+				>.login_change_user {
+					flex: 0 0 auto;
+					font-size: 0.8em;
+					cursor: pointer;
+					color: @color_grey_9;
+					text-decoration: none;
+					transition: color 0.15s ease;
+
+					&:hover {
+						color: var(--color_orange_dedalo);
+						text-decoration: underline;
+					}
+				}
+			}
 		}//end form
+
+		// password recovery (forgot password)
+		// "Forgot your password?" link, right-aligned just under the login form
+		>.forgot_password_link {
+			display: block;
+			width: 100%;
+			text-align: right;
+			font-size: 0.85em;
+			margin-top: -0.25em;
+			margin-bottom: 1.25em;
+			cursor: pointer;
+			color: @color_grey_9;
+			text-decoration: none;
+			transition: color 0.15s ease;
+
+			&:hover {
+				color: var(--color_orange_dedalo);
+				text-decoration: underline;
+			}
+		}
+
+		// recovery sub-forms: same flex layout as .login_form
+		>.reset_request_form,
+		>.reset_confirm_form {
+			display: flex;
+			flex-wrap: wrap;
+			margin: 0px;
+			margin-bottom: 1em;
+
+			// header block: masked icon + title + instruction
+			>.reset_header {
+				flex: 1 1 100%;
+				text-align: center;
+				margin-bottom: 1.5em;
+
+				>.reset_icon {
+					display: inline-block;
+					width: 2.5rem;
+					height: 2.5rem;
+					margin-bottom: 0.6rem;
+					background-color: var(--color_orange_dedalo);
+					-webkit-mask-repeat: no-repeat;
+							mask-repeat: no-repeat;
+					-webkit-mask-position: center;
+							mask-position: center;
+					-webkit-mask-size: contain;
+							mask-size: contain;
+
+					&.lock {
+						-webkit-mask-image: url('../../themes/default/icons/lock.svg');
+								mask-image: url('../../themes/default/icons/lock.svg');
+					}
+					&.email {
+						-webkit-mask-image: url('../../themes/default/icons/email.svg');
+								mask-image: url('../../themes/default/icons/email.svg');
+					}
+				}
+
+				>.reset_title {
+					margin: 0 0 0.4rem 0;
+					font-size: 1.15rem;
+					font-weight: 600;
+					color: @color_grey_5;
+				}
+
+				>.reset_description {
+					margin: 0;
+					font-size: 0.85rem;
+					line-height: 1.45;
+					color: @color_grey_9;
+				}
+			}
+
+			>input, >button {
+				flex: 1 1 100%;
+				font-size: 1em;
+			}
+
+			>input {
+				margin: 0px;
+				margin-bottom: 1em;
+			}
+
+			// one-time-code field: large, centered, spaced like an OTP input
+			>.reset_code_input {
+				text-align: center;
+				font-size: 1.6rem;
+				font-weight: 600;
+				letter-spacing: 0.55em;
+				// offset the trailing letter-spacing so the digits look centered
+				text-indent: 0.55em;
+				padding-top: 0.35em;
+				padding-bottom: 0.35em;
+
+				&::placeholder {
+					letter-spacing: 0.4em;
+					font-weight: 400;
+					opacity: 0.45;
+				}
+			}
+
+			>.button_enter {
+				display: flex;
+				height: 3em;
+				margin: 0px;
+				text-align: center;
+				justify-content: center;
+				align-items: center;
+				transition: all 0.17s ease, padding 0s;
+				background-color: var(--color_orange_dedalo);
+
+				&.white {
+					background-color: transparent;
+					outline: none;
+					cursor: default;
+					pointer-events: none;
+				}
+			}
+
+			// "Back to login" link with a leading back-arrow icon
+			>.reset_back_link {
+				flex: 1 1 100%;
+				margin-top: 0.85em;
+				font-size: 0.85em;
+				text-align: center;
+				cursor: pointer;
+				color: @color_grey_9;
+				text-decoration: none;
+				transition: color 0.15s ease;
+
+				&::before {
+					content: '';
+					display: inline-block;
+					width: 0.8em;
+					height: 0.8em;
+					margin-right: 0.4em;
+					vertical-align: -0.05em;
+					background-color: currentColor;
+					-webkit-mask: url('../../themes/default/icons/backward.svg') no-repeat center / contain;
+							mask: url('../../themes/default/icons/backward.svg') no-repeat center / contain;
+				}
+
+				&:hover {
+					color: var(--color_orange_dedalo);
+				}
+			}
+		}
 
 		// info_container where is placed server info like data version..
 		>.info_container {

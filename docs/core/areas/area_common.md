@@ -220,7 +220,7 @@ are verified against `core/area_common/class.area_common.php`.
     listing `<name>` in the area's ontology `properties.dashboard.metrics`.
     `get_dashboard_data()` invokes only the methods that exist.
 
-## How it fits with the rest of Dedalo
+## How it fits with the rest of Dédalo
 
 - **[common](../sections/section.md)** *(base)* — `area_common` inherits identity,
   `load_structure_data()`, `get_structure_context()`, permissions and the JSON

@@ -675,6 +675,11 @@ class request_config_object extends stdClass {
 		// Fields a client may legitimately define for a display ddo.
 		// 'model' is recalculated server-side; 'permissions' and other
 		// server-authoritative fields are intentionally absent.
+		// 'limit'/'offset' control only the OUTPUT pagination slice of an already
+		// permission-resolved, fully-loaded component (a relation/portal loads all
+		// its references regardless; the slice just bounds the returned rows — same
+		// as the UI "show all"). They are not permission fields; validated as
+		// non-negative ints below (0 = all), so they cannot escalate access.
 		static $allowed_fields = [
 			'typo',
 			'tipo',
@@ -691,7 +696,9 @@ class request_config_object extends stdClass {
 			'column_id',
 			'width',
 			'in_mosaic',
-			'hover'
+			'hover',
+			'limit',
+			'offset'
 		];
 
 		$sanitized = [];
@@ -709,6 +716,14 @@ class request_config_object extends stdClass {
 			foreach ($allowed_fields as $field) {
 				if (property_exists($current_ddo, $field)) {
 					$clean_ddo->{$field} = $current_ddo->{$field};
+				}
+			}
+
+			// pagination fields must be non-negative integers (0 = all). Drop any
+			// other shape so a tampered value can't reach pagination->limit.
+			foreach (['limit', 'offset'] as $pag) {
+				if (property_exists($clean_ddo, $pag) && (!is_int($clean_ddo->{$pag}) || $clean_ddo->{$pag} < 0)) {
+					unset($clean_ddo->{$pag});
 				}
 			}
 

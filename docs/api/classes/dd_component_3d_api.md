@@ -1,16 +1,16 @@
 # dd_component_3d_api
 
-Overview
+> See also: [JSON API v1](../dedalo_api_v1.md) · [dd_component_av_api](dd_component_av_api.md)
 
-- 3D component helpers: file management and posterframe handling for 3D assets.
+3D component helpers: file management and posterframe handling for 3D assets.
 
-How to call
+## How to call
 
-- POST JSON with `dd_api: "dd_component_3d_api"` and `action` such as `move_file_to_dir`, `delete_posterframe`.
+- POST JSON with `dd_api: "dd_component_3d_api"` and `action` set to `move_file_to_dir` or `delete_posterframe`.
 
-Common fields
+## Common fields
 
-- `options.file_data` or `options.target_dir` for move operations; `source` holds identifiers.
+- `options.file_data` or `options.target_dir` for move operations; `source` holds the identifiers.
 
 ## move_file_to_dir
 
@@ -69,3 +69,4 @@ Common fields
   "msg": "OK. Request done successfully dd_component_3d_api::delete_posterframe",
   "errors": []
 }
+```

@@ -1,8 +1,8 @@
 # logger
 
-> The server class `logger` — Dédalo's central logging facade: a small factory/registry that maps numeric severity levels and pluggable backends, sitting underneath both the `debug_log()` error-log stream and the persisted user-activity audit trail.
-
 > See also: [Architecture overview](../architecture_overview.md) · [Sections](../sections/index.md) · [section_record](../sections/section_record.md)
+
+The server class `logger` is Dédalo's central logging facade: a small factory/registry over numeric severity levels and pluggable backends, sitting underneath both the `debug_log()` error-log stream and the persisted user-activity audit trail.
 
 This page is the **class-level reference** for the logger subsystem. It covers
 the `logger` facade, the `logger_backend` contract, the one shipped backend
@@ -111,7 +111,7 @@ forces everything through regardless of level. Output goes to PHP's
 !!! info "Level shapes the message"
     `debug_log()` formats by level: `WARNING` appends the backtrace call
     sequence (`[seq]`); `ERROR` and `CRITICAL` add `[File]`/`[Line]` and ANSI
-    colour (yellow / red), set `$_ENV['DEDALO_LAST_ERROR']`, and `CRITICAL` also
+    color (yellow / red), set `$_ENV['DEDALO_LAST_ERROR']`, and `CRITICAL` also
     prints the full backtrace. Levels below `NOTICE` (i.e. `< 50`) trigger a
     `debug_backtrace()` capture.
 

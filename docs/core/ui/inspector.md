@@ -44,7 +44,7 @@ neighbouring client subsystems:
     `tool_common` / `tools_register` build the tool contexts (including the
     `show_in_inspector` flag), and `service_time_machine` answers the history
     queries. The only inspector field with a server echo is the
-    section-level `section::$show_inspector` boolean (see [How it fits](#how-it-fits-with-the-rest-of-dedalo)).
+    section-level `section::$show_inspector` boolean (see [How it fits](#how-it-fits-with-the-rest-of-dédalo)).
 
 ## Responsibilities
 
@@ -188,7 +188,7 @@ The inspector is **not** built through the `get_instance()` factory. The section
 instantiates it directly with `new inspector()` when it renders in edit mode and
 the user has permissions (`core/section/js/section.js`):
 
-```javascript
+```js
 // in section build, mode 'edit' only
 if (self.inspector==null && self.mode==='edit' && self.permissions) {
     const current_inspector = new inspector()
@@ -210,7 +210,7 @@ has a double-init guard (`is_init`) and tracks `self.status`
 
 Then the view builds and renders it (`core/section/js/view_default_edit_section.js`):
 
-```javascript
+```js
 const inspector_container = ui.create_dom_element({ id:'inspector_container', /* … */ })
 await self.inspector.build()                       // no-op, lifecycle parity
 const inspector_wrapper = await self.inspector.render()   // → edit()
@@ -321,7 +321,7 @@ load-bearing contracts:
 The inspector's tool buttons are not hardcoded. `get_content_data()` filters the
 caller's tool contexts:
 
-```javascript
+```js
 const inspector_tools = self.caller.context.tools.filter( el => el.show_in_inspector )
 ```
 
@@ -398,7 +398,7 @@ filters on looks like:
 
 The inspector then renders its button and, on `mousedown`, opens it:
 
-```javascript
+```js
 // render_inspector.js → get_content_data()
 const inspector_tools = self.caller.context.tools.filter( el => el.show_in_inspector )
 // for each tool_context: build a .light.blank button and …
@@ -412,7 +412,7 @@ open_tool({
 
 The bottom "view record data" button and the `read_raw` RQO the inspector builds:
 
-```javascript
+```js
 // inspector.prototype.get_raw_record_rqo()
 const rqo = {
     action  : 'read_raw',
@@ -436,7 +436,7 @@ const rqo = {
 
 ### Toggling the rail and persisting width
 
-```javascript
+```js
 // collapse/expand to the icon rail; reflows the layout via --inspector_width
 toggle_inspector_rail(self)   // persists { id:'inspector_rail_state', value:true } in the 'status' table
 ```

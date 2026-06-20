@@ -1,15 +1,17 @@
 # Updating code
 
-Dédalo v6 is an active, rapidly developing software project. It is, therefore, important to keep it updated and in best condition for stability and safety reasons.
+> See also: [Updating ontology](updating_ontology.md) · [Updating data](updating_data.md) · [Updating code options](updating_code_options.md)
 
-This guide is focused into update process of minor, fixes and patches of version 6. Major updates v4 to v5, v5 to v6 has his own dedicate guides.
+Dédalo v6 is an active, rapidly developing software project. It is therefore important to keep it updated and in good condition for stability and security reasons.
+
+This guide covers the update process for minor versions, fixes and patches of version 6. The major upgrades (v4 to v5, v5 to v6) have their own dedicated guides.
 
 !!! info "Migration from Dédalo v5"
-    If you want to switch to Dédalo v6 from previous release, Dédalo v5, please refer to the dedicated [migration guide](../../update_v5/update_from_v5.md) that will explain all the differences between these two releases and help you make the switch.
+    If you want to switch to Dédalo v6 from the previous release, Dédalo v5, please refer to the dedicated [migration guide](../../update_v5/update_from_v5.md). It explains the differences between the two releases and helps you make the switch.
 
-The update process is based in the Dédalo cadence numeration, it's a incremental process and sometimes it depends of the ontology version. Update the ontology previously to update Dédalo code following this [guide](updating_ontology.md).
+The update process is based on the Dédalo cadence numbering. It is incremental and sometimes depends on the ontology version. Update the ontology before updating the Dédalo code, following [this guide](updating_ontology.md).
 
-Update Dédalo code will need a control by IT team. The update is automatic but some changes as changes into config files will need changed manually because the update process can not change your specific configuration.
+Updating the Dédalo code should be supervised by the IT team. The update is automatic, but some changes — such as changes to config files — must be applied manually, because the update process cannot change your specific configuration.
 
 !!! warning "Update pre-production system and test before update new versions into production system"
     Is highly recommended to test your new Dédalo installation before deploying the changes into the production environment. This will help ensure that the update will not have a negative impact on your catalogue.
@@ -44,8 +46,7 @@ Dédalo could be updated using the integrated update code widget that update [au
 
         ![Updating code >=6.4.0 control panel](assets/20250226_092218_updating_code_version_6_4.png)
 
-        and select if you want [Incremental](updating_code_options.md/#incremental) or [clean](updating_code_options.md/#clean)
-        press the `Update` button
+        and select whether you want [Incremental](updating_code_options.md#incremental) or [Clean](updating_code_options.md#clean), then press the `Update` button.
 
     2. Version < 6.4.0
         In previous version to 6.4.0 the panel update directly to the latest version and the code is obtained from the server provider configured in [DEDALO_SOURCE_VERSION_URL](../../config/config.md#defining-source-version-uri) in `config.php`
@@ -199,7 +200,7 @@ Adapt the following tasks to your own virtual host directory structure.
 
 ## Issues
 
-Some times the update process will ask you to log-out and log-in to set the correct files and update the browser cache. In some cases the update is unfinished and some config variables are not assigned, in those cases the login can show an alert as error.
+Sometimes the update process asks you to log out and log in to set the correct files and refresh the browser cache. In some cases the update is left unfinished and some config variables are not assigned; the login may then show an alert as an error.
 
 ![Login error messages](assets/20250226_111925_login_errors.png)
 

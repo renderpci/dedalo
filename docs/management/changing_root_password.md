@@ -1,5 +1,7 @@
 # Changing root password
 
+> See also: [Management and maintenance](index.md) · [Users, profiles and permissions](users_and_permissions.md)
+
 ## Introduction
 
 The Dédalo root user is the most powerful administrative account, granting complete and unrestricted access to all system data and functions. Reserve this account exclusively for critical operations like installation, system updates, maintenance procedures, and diagnostic debugging.

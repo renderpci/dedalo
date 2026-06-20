@@ -1,0 +1,129 @@
+# RAG / Vector Data Processing (core/rag/)
+
+A retrieval-augmented-generation subsystem for Dédalo v7: a **vector version of
+selected data** in a separate **pgvector** instance, enabling semantic search,
+similar-record lookup, passage retrieval for agents, and grounded Q&A with
+citations. Built to reuse Dédalo's existing seams (export-atoms text extraction,
+the `properties` ontology config, the `save()`/`delete()` lifecycle, the
+per-project ACL) rather than parallel machinery.
+
+This is the **foundation** (ingestion → store → retrieval → API). It is strictly
+opt-in and fully dormant unless `DEDALO_RAG_ENABLED = true`.
+
+## What's implemented
+
+| Area | Classes |
+|------|---------|
+| Vector store | `DBi_vector`, `rag_vector_store` (per-model LIST partitions, `halfvec` >2000d, HNSW build-after-backfill) |
+| Embeddings | `embedding_provider` (+ `_local_http`, `_openai`), `embedding_provider_factory` (multilingual default) |
+| Config | `rag_config` (`properties.rag` resolution, no bespoke table) |
+| Ingestion | `rag_text_extractor` (get_value/export-atoms), `rag_chunker` (structure-aware **semantic** chunking), `rag_indexer` |
+| Freshness | `rag_queue` (matrix-DB marker, advisory single-flight drain, delete-by-observed-ts), hooks in `section_record::save()/delete()` |
+| Retrieval | `retrieval` (hybrid dense+lexical → RRF → **reranker** → **explicit ACL** → diversify → records/passages), `rag_fusion`, `rag_lexical` (accent-folded via `f_unaccent`), `rag_reranker` (cross-encoder; pass-through if unconfigured) |
+| Security | `rag_security` (per-record egress gate, ACL chokepoint) |
+| Generation | `rag_llm_provider` (Anthropic Citations / local; temperature, locator-titled citations), `dd_rag_api::ask` (context-token budgeting, live egress recompute, raw-JSON answer, configurable system prompt) |
+| API | `dd_rag_api` (`semantic_search`, `similar_to`, `retrieve`, `ask`, `get_agent_context`) |
+| Ops | `rag_queue::drain` (advisory single-flight, exponential backoff + `last_error`), `rag_queue::stats` (metrics), `core/rag/cli/rag_drain.php` (cron entry), `rag_indexer::reconcile_section`, `rag_vector_store::drop_model_partition` |
+| **Images (Phase 5b)** | `embedding_provider_multimodal` (joint image+text encoder; local default), `rag_media_extractor` (downsized non-master JPEG + `is_publishable` egress gate), image branch in `rag_indexer`, `retrieval::find_similar_objects` / `search_by_text_image`, `rag_characterizer` (typology/period proposals from neighbours), API `similar_objects` / `characterize_object` / `search_by_text_image` |
+
+### Images: object similarity & characterization (Phase 5b)
+Drives "objects close to this one", "the same in the collection" (near-duplicate), text→image search, and **proposing an object's typology/period from its visually-similar neighbours** (no LLM — aggregated + cited). Opt a section in via `properties.rag.context`:
+```json
+{ "rag": { "enabled": true,
+  "context": {
+    "images":   [ {"tipo":"numd5","view":"obverse"}, {"tipo":"numd6","view":"reverse"} ],
+    "metadata": { "typology":"numd10", "period":"numd20", "material":"numd30" },
+    "compare_scope": "same_section"
+} } }
+```
+Multi-image objects (coin obverse+reverse) fuse per-view result lists (RRF) so both-face matches win; hybrid blends visual similarity with a lexical match over the stored context summary. Needs a local multimodal sidecar at `DEDALO_RAG_MULTIMODAL_ENDPOINT` exposing `POST /image {model,images:[base64]}` and `POST /text {model,input:[text]}` → `{embeddings:[…]}` (and `DEDALO_RAG_MEDIA_ENABLED=true`). External multimodal APIs are used only for **publishable** objects (`diffusion_utils::is_publishable`); `original`/`modified` masters are never read.
+
+### The chunker (the advanced piece)
+`rag_chunker` does **structure-aware semantic chunking**, not fixed-size splits:
+1. **Structural hard boundaries** — headings / paragraphs / lists / tables /
+   `[page-n-X]` / timecode-speaker turns; a chunk never crosses one.
+2. **Semantic soft boundaries** — embeds consecutive sentences and breaks at
+   cosine-distance percentile breakpoints (degrades to structural-only when no
+   embedder / `strategy:'structural'`).
+3. **Min/max packing + double-merge** — absorbs orphan one-sentence segments.
+4. **Contextual enrichment** — prepends `{title} › {heading path}` to the
+   *embedded* text; raw text kept clean for citations.
+5. **Small-to-big** — each chunk carries a `parent_key`; `ask()` expands a hit to
+   its parent section for coherent generation.
+
+## Provisioning
+
+1. Provision a **separate** Postgres with the `vector` extension. Set the
+   `DEDALO_RAG_DB_*` constants (see `config/sample.config_db.php`).
+2. Run the DDL:
+   - `install/db/rag_embeddings.sql` → against the **RAG** instance.
+   - `install/db/matrix_rag_index_queue.sql` → against the **matrix** instance.
+3. Stand up an embeddings endpoint (default: local Ollama, `bge-m3` multilingual)
+   and set `DEDALO_RAG_PROVIDER` / `_MODEL` / `_ENDPOINT`.
+4. Opt a section in: set its node `properties.rag = {"enabled": true}` and the
+   text components' `properties.rag = {"embed": true}`.
+5. Set `DEDALO_RAG_ENABLED = true`.
+6. Backfill, then build the ANN index (see "Operations").
+
+## Operations
+
+- **Re-index on edit** is automatic: `save()`/`delete()` enqueue a marker; an
+  out-of-band drain does the heavy work off the editor path. A down vector store
+  never blocks a save. **Wire the drain to cron** (the missing-without-it piece):
+  `* * * * * cd /path/to/dedalo && php core/rag/cli/rag_drain.php >> rag_drain.log 2>&1`
+  (safe to overlap — `drain()` single-flights via an advisory lock). Failures
+  back off exponentially and record `last_error`; `rag_queue::stats()` reports depth.
+- **Reconcile** after direct-SQL changes/migrations: `rag_indexer::reconcile_section($tipo)`
+  enqueues add/delete drift between the matrix and the vector store.
+- **Model migration**: build the new model's index, re-backfill, then
+  `rag_vector_store::drop_model_partition($old_model)` to reclaim space.
+- **Backfill / index build**: drive `rag_indexer::index_record()` over a section,
+  then `rag_vector_store::build_ann_index($model, $dimension)` once (HNSW is built
+  after load, on an autocommit connection — never on the hot upsert path).
+
+## Security model (enforced)
+
+- **Retrieval ACL is explicit.** `retrieval` calls
+  `security::user_can_access_record()` on every candidate, for **all** actions,
+  *before* any score/count is returned. The SQO `filter_by_locators` fast path
+  does **not** run the project filter — so retrieval never relies on it.
+- **Index-time egress is gated per-record.** `rag_indexer` checks
+  `rag_security::record_can_egress()` before any text reaches an external
+  embedding provider; restricted records use a local provider or are skipped.
+- **Generation egress** forces a local provider when any passage is restricted.
+- **Grounding guardrail**: no context → deterministic refusal, no model call.
+- **Output sanitised** before return (untrusted model output → no stored XSS).
+
+## Not yet built (deferred phases)
+
+These are intentionally out of the foundation:
+- **Phase 5 tool** (`tools/tool_rag_index/`) — backfill/build/eval UI + CLI. The
+  underlying methods (`rag_indexer::index_record`, `rag_vector_store::build_ann_index`,
+  `rag_queue::drain`) exist and are callable.
+- **Phase 5b-B/C** — painting-segment (region) search + linking, and an optional
+  vision-LLM "describe object" (5b-A image similarity + characterization is built; see above).
+  PDF/AV already flow through the text path once their `component_text_area` is flagged.
+- **Phase 8 public service** — separate Bun service over a published-only
+  collection (co-located with diffusion).
+- **Retrieval-quality eval harness** — golden set + recall@k/nDCG.
+
+## Testing it end-to-end (as a user, with the MCP agent)
+
+1. **Provision** a separate Postgres+pgvector; run `install/db/rag_embeddings.sql` (RAG instance) and `install/db/matrix_rag_index_queue.sql` (matrix instance).
+2. **Start the embedding sidecar** — `core/rag/services/` (`pip install -r requirements.txt; uvicorn embed_server:app --port 8090`). It serves text + image embeddings locally (no paid API). See `core/rag/services/README.md`.
+3. **Configure** `private/config_db.inc` (`DEDALO_RAG_ENABLED`, `DEDALO_RAG_DB_*`, `DEDALO_RAG_ENDPOINT`/`_MODEL`; for images `DEDALO_RAG_MEDIA_ENABLED`, `DEDALO_RAG_MULTIMODAL_ENDPOINT`/`_MODEL`). Then verify wiring: **`php core/rag/cli/rag_selftest.php`** → all PASS.
+4. **Flag the ontology**: a text section (`properties.rag={enabled:true}` + a text component `{embed:true}`), and/or an object section with `properties.rag.context` (obverse/reverse image tipos + `metadata.{typology,period,material}`).
+5. **Create records as a user** in the Dédalo UI (add a coin, upload its images, save → auto-enqueued). For pre-existing data: **`php core/rag/cli/rag_backfill.php <section_tipo> --build-index`**.
+6. **Index**: `php core/rag/cli/rag_drain.php` (or wire to cron); `rag_queue::stats()` drains to 0.
+7. **Wire the agent**: set the MCP env (`DEDALO_WORK_API_URL`, service `USERNAME/PASSWORD` with read perms), `cd mcp/dedalo-work-mcp && npm run build`, start the agent. The RAG tools (`dedalo_semantic_search`, `dedalo_ask`, `dedalo_get_relevant_context`, `dedalo_similar_objects`, `dedalo_characterize_object`, `dedalo_search_by_text_image`) are now advertised.
+8. **Run prompts**, e.g. *"find objects similar to coin <tipo>/<id>"* → `dedalo_similar_objects`; *"propose the typology and period of object <tipo>/<id>"* → `dedalo_characterize_object`; *"what do informants say about X?"* → `dedalo_ask`. As a low-privilege MCP user, restricted records are absent from results (ACL); with an external multimodal provider, non-publishable images are never sent out.
+
+## Tests
+
+`test/server/rag/` (suite `rag`): `php vendor/bin/phpunit -c test/server/phpunit.xml --testsuite rag`
+- `rag_chunker_Test` / `rag_fusion_Test` / `rag_security_Test` / `rag_hardening_Test` / `rag_image_Test`
+  (semantic boundaries, fusion, ACL/egress, token budgeting/diversify/reranker, image proposal-aggregation + context) — pure logic, always run.
+- `rag_store_integration_Test` — end-to-end against a real pgvector instance;
+  skips cleanly when `DEDALO_RAG_DB_*` is not configured.
+
+Current: 37 tests / 113 assertions green (4 store-integration skip without a live vector DB).

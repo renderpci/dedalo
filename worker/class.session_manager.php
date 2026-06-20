@@ -62,10 +62,15 @@ final class session_manager {
 		worker_bootstrap::debug_log('RR Worker: Target Session Name: ' . $dedalo_session_name);
 
 		$cookies = $request->getCookieParams();
+		// AUTH-06 state-bleed: ALWAYS set the session id explicitly. With a cookie we
+		// resume that id; without one we pass '' so PHP mints a fresh id. Otherwise the
+		// process-global session_id() from the previous request would survive into a
+		// cookie-less request and session_start() would resume the prior user's session
+		// (cross-user auth/session hijack). Pairs with the use_strict_mode pin.
 		if (isset($cookies[$dedalo_session_name])) {
 			worker_bootstrap::debug_log('RR Worker: Found session cookie: ' . $cookies[$dedalo_session_name]);
-			session_id($cookies[$dedalo_session_name]);
 		}
+		session_id($cookies[$dedalo_session_name] ?? '');
 
 		// Save handler configuration
 		$save_handler = defined('DEDALO_SESSION_HANDLER') ? DEDALO_SESSION_HANDLER : 'redis';

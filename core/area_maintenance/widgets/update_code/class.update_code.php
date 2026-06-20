@@ -3,19 +3,62 @@
 include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
 /**
 * UPDATE_CODE
-* Get new code from code servers
-* and install it
+* Maintenance-area widget that downloads, verifies, and installs a new Dédalo
+* code release from a remote code server, or builds a release archive from a
+* local/remote Git repository.
+*
+* This class is the server-side business logic for the "Update code" panel in the
+* Dédalo maintenance dashboard. It is dispatched exclusively through
+* `dd_area_maintenance_api::widget_request()`, which applies authentication and
+* permission checks before forwarding calls here.
+*
+* Two public entry points are exposed through the API_ACTIONS allowlist:
+*  - update_code()           — full download-extract-install pipeline
+*  - build_version_from_git_master() — archive a Git branch into a deployable ZIP
+*
+* Internal helpers (check_remote_server, update_incremental, update_clean) are
+* called only from within this class and are intentionally omitted from API_ACTIONS
+* to prevent direct remote dispatch (SEC-044).
+*
+* `get_value()` is reached via the `get_widget_value` hard-coded route (not
+* through API_ACTIONS) and returns the current readiness state of all configured
+* CODE_SERVERS for the dashboard panel.
+*
+* Path and URL helpers (get_code_path, set_code_path, get_file_version,
+* set_development_path, get_code_url) derive structured filesystem locations from
+* the running Dédalo version triple [major, minor, patch] and the
+* DEDALO_CODE_FILES_DIR / DEDALO_CODE_FILES_URL constants.
+*
+* Update version catalogue: get_code_update_info() reads from class update (via
+* update::get_updates()) to determine which versions are safely reachable from the
+* caller's installed version, following the strict linear upgrade path enforced by
+* Dédalo (no downgrades, no skipping minor versions without explicit gateway patches).
+*
+* Relationships:
+*  - Dispatched by: dd_area_maintenance_api::widget_request()
+*  - Delegates data-migration steps to: update (core/base/update/class.update.php)
+*  - Uses tool_common::get_active_tool_names() to identify official tools during
+*    clean updates, so non-official (third-party) tools are preserved.
+*  - Writes JS language files post-install via backup::write_lang_file().
+*  - Logs activity to logger::$obj['activity'] on successful installs.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class update_code {
 
 
 
 	/**
-	* SEC-044: methods callable through `dd_area_maintenance_api::widget_request`.
-	* `check_remote_server`, `update_incremental`, `update_clean` are internal
-	* helpers invoked from `update_code` itself and must NOT be remotely
-	* dispatchable. `get_value` is invoked through `get_widget_value`
-	* (hard-coded method) and therefore not listed here.
+	* SEC-044: explicit allowlist of methods callable through
+	* `dd_area_maintenance_api::widget_request`.
+	*
+	* `check_remote_server`, `update_incremental`, and `update_clean` are internal
+	* helpers invoked only from within this class and must NOT be remotely
+	* dispatchable. `get_value` is invoked through the hard-coded `get_widget_value`
+	* route and is therefore also excluded here.
+	*
+	* @var array<string>
 	*/
 	public const API_ACTIONS = [
 		'update_code',
@@ -26,12 +69,23 @@ class update_code {
 
 	/**
 	* CHECK_REMOTE_SERVER
-	* Exec a curl request with given data to check current server status
-	* @param object $server
-	* {
-	* 	url: https://master.dedalo.dev/dedalo/core/api/v1/json/
-	* }
-	* @return object $response
+	* Probes a remote Dédalo code server to determine whether it is ready to
+	* serve code archives.
+	*
+	* Issues a POST to the server's JSON API endpoint using the `dd_utils_api`
+	* action `get_server_ready_status`. The raw cURL result string is decoded in
+	* place so callers receive a structured object rather than a JSON string.
+	*
+	* A 5-second timeout is enforced; the SERVER_PROXY constant (defined in
+	* config.php) is forwarded when present so installations behind a corporate
+	* proxy can still reach external code servers.
+	*
+	* @param object $server Remote server descriptor.
+	*                       Expected shape: { url: string } — e.g.
+	*                       { url: 'https://master.dedalo.dev/dedalo/core/api/v1/json/' }
+	* @return object $response  Standard Dédalo response with ->result, ->msg, ->errors, ->code.
+	*                           ->result is either false (not reachable) or the decoded
+	*                           server-readiness object returned by the remote API.
 	*/
 	public static function check_remote_server( object $server ) : object {
 
@@ -47,6 +101,8 @@ class update_code {
 		}
 
 		// rqo
+		// Build a request query object for dd_utils_api::get_server_ready_status,
+		// which validates that the remote host is a functioning Dédalo code server.
 			$rqo = new stdClass();
 				$rqo->dd_api	= 'dd_utils_api';
 				$rqo->action	= 'get_server_ready_status';
@@ -57,6 +113,9 @@ class update_code {
 			$rqo_string = 'rqo=' . json_encode($rqo);
 
 		// curl_request
+		// Short timeout (5 s) is intentional: this is a liveness check called for
+		// every configured server on every widget page load; we don't want a single
+		// unreachable server to stall the entire maintenance panel.
 			$response = curl_request((object)[
 				'url'				=> $server_url,
 				'post'				=> true,
@@ -71,6 +130,8 @@ class update_code {
 					: false // default case
 			]);
 
+			// Decode the JSON string that curl_request returns inside ->result so the
+			// caller receives a structured object rather than a raw string.
 			if (!empty($response->result) && is_string($response->result)) {
 				$decoded = json_decode($response->result);
 				if (json_last_error() === JSON_ERROR_NONE) {
@@ -85,9 +146,24 @@ class update_code {
 
 	/**
 	* GET_VALUE
-	* Returns updated widget value
-	* It is used to update widget data dynamically
-	* @return object $response
+	* Returns the current live status payload for the "Update code" dashboard widget.
+	*
+	* Called by the area_maintenance infrastructure through the `get_widget_value`
+	* hard-coded route (NOT via API_ACTIONS), so the widget panel can refresh its
+	* server readiness list without a full page reload.
+	*
+	* Reads the CODE_SERVERS constant (an array of server descriptor arrays defined
+	* in config.php), probes each one via check_remote_server(), and augments every
+	* descriptor with the liveness result before returning the collection.
+	*
+	* The returned ->result object also carries:
+	*  - dedalo_source_version_local_dir: local filesystem path where downloaded ZIP
+	*    archives are staged (DEDALO_SOURCE_VERSION_LOCAL_DIR constant).
+	*  - is_a_code_server: whether THIS installation acts as a distribution server
+	*    (IS_A_CODE_SERVER constant); when true the widget shows the "build ZIP" panel.
+	*
+	* @return object $response  ->result: { servers: array, dedalo_source_version_local_dir: string|null, is_a_code_server: bool }
+	*                           ->result is false on configuration error (missing CODE_SERVERS).
 	*/
 	public static function get_value() : object {
 
@@ -97,6 +173,8 @@ class update_code {
 			$response->errors	= [];
 
 		// servers
+		// CODE_SERVERS is a plain PHP array of associative arrays defined in config.php.
+		// Each entry typically has at least: [ 'url' => 'https://...', 'label' => '...' ]
 			$servers = (defined('CODE_SERVERS'))
 				? CODE_SERVERS
 				: null;
@@ -110,6 +188,8 @@ class update_code {
 			}
 
 		// check code servers
+		// Cast each server array to stdClass to allow property access and attach the
+		// liveness check result directly onto the descriptor before returning it.
 			$code_servers = [];
 			foreach ($servers as $current_server) {
 
@@ -144,19 +224,40 @@ class update_code {
 
 
 	/**
-	 * UPDATE_CODE
-	 *
-	 * Downloads the Dédalo code base in ZIP format from the repository, extracts it,
-	 * and applies the update based on the specified mode. Handles pre-update scripts,
-	 * file downloading, extraction, code swapping, and cache clearing.
-	 *
-	 * @param object $options Configuration options for the update.
-	 * @property object $options->file An object containing the file to download. Must have a 'url' property.
-	 * @property string $options->update_mode The update strategy to use (e.g., 'clean' or 'incremental').
-	 * @property mixed $options->info Additional information to pass to the update execution methods.
-	 *
-	 * @return object An object containing the operation result ($response->result) and messages ($response->msg, $response->errors).
-	 */
+	* UPDATE_CODE
+	* Full code-update pipeline: download → extract → install → clean up → rebuild caches.
+	*
+	* This is the primary API entry point for installing a new Dédalo release. The
+	* sequence is:
+	*  1. Run pre-update migration scripts via update::pre_update_version() so that any
+	*     required data transformations happen before the new PHP files land.
+	*     (!) The remaining steps below are currently unreachable because
+	*         update::pre_update_version() returns early at the top of the try block.
+	*         The comment "@TODO: move at the end of the update process" marks this
+	*         provisional placement. The steps below document the intended full pipeline.
+	*  2. Download the release ZIP from $options->file->url using cURL (300 s timeout).
+	*  3. Save the ZIP to DEDALO_SOURCE_VERSION_LOCAL_DIR/dedalo_code.zip.
+	*  4. Extract the ZIP; the archive root is always 'dedalo_code/' (set by build_version_code).
+	*  5. Delegate the file-installation step to either update_clean() or update_incremental()
+	*     depending on $options->update_mode.
+	*  6. Remove the staging ZIP and extracted directory.
+	*  7. Rebuild JS language files for all DEDALO_APPLICATION_LANGS.
+	*  8. Reset opcode cache and run garbage collection.
+	*  9. Log the installation to the activity log.
+	*
+	* @param object $options  Update configuration.
+	*                         ->file        object  — must have a ->url string pointing to the
+	*                                                 release ZIP on the code server.
+	*                         ->update_mode string  — 'clean' (full directory swap with backup)
+	*                                                 or 'incremental' (rsync overlay); defaults
+	*                                                 to 'incremental'.
+	*                         ->info        mixed   — extra data forwarded to the chosen install
+	*                                                 method (e.g. tool_names list for clean mode).
+	* @return object $response  Standard Dédalo response.
+	*                           ->result is false on any failure, or a stdClass with per-step
+	*                           diagnostic arrays (download_file, write_file, extract, remove_dir,
+	*                           remove_file) on success.
+	*/
 	public static function update_code(object $options) : object {
 		$start_time = start_time();
 
@@ -174,6 +275,9 @@ class update_code {
 
 			// Provisional position, @TODO: move at the end of the update process
 			// Run pre-update scripts (defined in updates.php) for this code version.
+			// (!) This early return means all code below inside the try block is
+			// currently unreachable. The full pipeline is preserved and documented
+			// for when this placeholder is relocated to its intended final position.
 			$update_response = update::pre_update_version();
 			return $update_response;
 
@@ -203,6 +307,9 @@ class update_code {
 				}
 
 			// Download zip file from server (master) curl mode (unified with download_remote_structure_file)
+			// A 300-second timeout accommodates large release archives over slow links.
+			// The POST body carries a null data payload, matching the code-server endpoint
+			// contract (the URL itself identifies the file; no additional payload is needed).
 				// data
 				$data_string = 'data=' . json_encode(null);
 				// curl_request
@@ -235,6 +342,7 @@ class update_code {
 				}
 
 				// result
+				// $result accumulates per-step diagnostic arrays returned to the caller.
 				$result = new stdClass();
 					$result->download_file = [
 						'Downloaded file: ' . $file_uri,
@@ -248,6 +356,8 @@ class update_code {
 				);
 
 			// Save contents to local dir
+			// DEDALO_SOURCE_VERSION_LOCAL_DIR is the staging area for downloaded archives
+			// (defined in config.php). It must be writable by the web-server process.
 				if ( !create_directory(DEDALO_SOURCE_VERSION_LOCAL_DIR) ) {
 					$response->msg .= 'Unable to create dir: '.DEDALO_SOURCE_VERSION_LOCAL_DIR;
 					debug_log(__METHOD__
@@ -276,6 +386,8 @@ class update_code {
 				];
 
 			// extract files from zip. (!) Note that 'ZipArchive' needs to be installed in PHP to allow work
+			// The ZipArchive PHP extension must be enabled on the server. If open() returns
+			// anything other than true the archive is corrupt or the path is wrong.
 				// CLI msg
 					if ( running_in_cli()===true ) {
 						print_cli((object)[
@@ -305,6 +417,10 @@ class update_code {
 				);
 
 			// Install the new code
+			// The ZIP archive is built by build_version_code() using --prefix=dedalo_code/,
+			// so extraction always produces a 'dedalo_code' subdirectory inside the staging
+			// area. That subdirectory is used as the rsync/cp source.
+			// resulting file is: 6.4.0_dedalo.zip (server) => dedalo_code.zip (downloaded) => /dedalo_code (unzipped)
 				// CLI msg
 					if ( running_in_cli()===true ) {
 						print_cli((object)[
@@ -363,6 +479,8 @@ class update_code {
 				);
 
 			// update JAVASCRIPT labels
+			// After a code swap the bundled JS label files may be stale. Regenerate
+			// them for every configured application language so the UI remains correct.
 				// CLI msg
 					if ( running_in_cli()===true ) {
 						print_cli((object)[
@@ -376,6 +494,8 @@ class update_code {
 				}
 
 			// version info. Get from new downloaded file 'version.inc'
+			// DEDALO_VERSION and DEDALO_BUILD are constants loaded from the newly
+			// installed version.inc, so they reflect the installed release after the swap.
 				$new_version_info = DEDALO_VERSION . ' Build ' . DEDALO_BUILD;
 
 			// debug
@@ -385,6 +505,10 @@ class update_code {
 				);
 
 			// pause and force garbage collector (prevent cached files generating errors)
+			// A brief sleep followed by opcache_reset() and gc_collect_cycles() gives PHP-FPM
+			// workers time to notice the new files before they serve the next request. Without
+			// this, stale opcode-cache entries can cause fatal errors on the first request
+			// after the swap.
 				sleep(1);
 				opcache_reset();
 				gc_collect_cycles();
@@ -433,10 +557,33 @@ class update_code {
 
 	/**
 	* UPDATE_INCREMENTAL
-	* Exec a incremental update adding the new files to current dedalo directory
-	* and replacing the new files (don't touch the config and media files)
-	* @param object $options
-	* @return object $response
+	* Overlays the new code onto the existing installation using rsync, preserving
+	* config and media directories.
+	*
+	* This is the default update strategy ('incremental'). It uses `rsync -avui` to
+	* copy only changed files from the extracted release directory ($source) into the
+	* live Dédalo root ($target), excluding:
+	*  - Any path matching the pattern [star]/config[star] (all config.php variants)
+	*  - The 'media' directory (uploaded media files)
+	*
+	* The approach is safe for running installations because unmodified files are
+	* skipped and a full directory backup is not required. The trade-off is that
+	* deleted files in the release are NOT removed from the target — old files can
+	* accumulate over many incremental updates.
+	*
+	* rsync flags used:
+	*  -a  archive mode (preserve permissions, timestamps, symlinks)
+	*  -v  verbose
+	*  -u  skip files newer on target (prevents overwriting locally edited files)
+	*  -i  itemize changes (useful for log inspection)
+	*  --no-owner --no-group --no-perms  avoid chown failures in restricted environments
+	*
+	* (!) rsync must be installed on the server. The method is not remotely callable
+	* via API_ACTIONS; it is invoked only by update_code() after validation.
+	*
+	* @param object $options  ->source string — path to extracted 'dedalo_code' directory.
+	*                         ->target string — path to the live DEDALO_ROOT_PATH.
+	* @return object $response  Standard Dédalo response; ->result true on success.
 	*/
 	public static function update_incremental( object $options ) : object {
 
@@ -457,6 +604,10 @@ class update_code {
 			}
 
 		// exec sync files using RSYNC
+		// Trailing slash on $source makes rsync copy the directory contents (not the
+		// directory itself) into $target — standard rsync idiom.
+		// $additional is retained as an empty string placeholder; the commented-out
+		// --dry-run value shows the intended preview mode that was never wired to a flag.
 			$exclude	= ' --exclude="*/config*" --exclude="media" ';
 			$additional = ''; // $is_preview===true ? ' --dry-run ' : '';
 			$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $additional . escapeshellarg($source.'/').' ' . escapeshellarg($target.'/');
@@ -500,10 +651,37 @@ class update_code {
 
 	/**
 	* UPDATE_CLEAN
-	* Exec a clean update moving current dedalo directory to a code backup
-	* moving the media directory and copying the config files to the fresh version
-	* @param object $options
-	* @return object $response
+	* Performs a full directory-swap upgrade: backs up the running installation,
+	* installs the fresh release tree, then migrates config, media, local, and
+	* third-party tools from the backup into the new tree.
+	*
+	* Step-by-step sequence:
+	*  1. Copy the extracted release directory to a parallel path (<target>_code) so
+	*     it can be prepared before the old code is removed from the web root.
+	*  2. Copy a fixed list of config files from the current live tree into <target>_code,
+	*     preserving instance-specific settings (database connection, API keys, etc.).
+	*     Files that do not exist on the current install are silently skipped.
+	*  3. Copy any third-party tool directories (those NOT listed in $options->info->tool_names,
+	*     or the hard-coded fallback list) from the current tools/ dir into <target>_code/tools/.
+	*  4. Move the current live directory to DEDALO_BACKUP_PATH/code/dedalo_<version>_<timestamp>.
+	*  5. Move the 'media' directory from the backup to <target>_code/media.
+	*  6. Move the 'local' directory from the backup to <target>_code/local.
+	*  7. Rename <target>_code to <target> (the new live installation).
+	*  8. Set recursive permissions 750 on the new live tree.
+	*
+	* (!) This method replaces the running code tree atomically. If any step fails
+	* between step 4 (old dir moved) and step 7 (rename), the installation is left
+	* in a broken state and manual recovery is required. This is the most disruptive
+	* update mode and should be reserved for major version upgrades.
+	*
+	* (!) This method is NOT listed in API_ACTIONS and must only be called from
+	* update_code() after all validation has passed.
+	*
+	* @param object $options  ->source string   — path to extracted 'dedalo_code' directory.
+	*                         ->target string   — path to the live DEDALO_ROOT_PATH (will be replaced).
+	*                         ->info   mixed    — optional; ->tool_names array overrides the default
+	*                                             list of official tools to skip during tool migration.
+	* @return object $response  Standard Dédalo response; ->result true on full success.
 	*/
 	public static function update_clean( object $options ) : object {
 
@@ -598,6 +776,12 @@ class update_code {
 			}
 
 		// tools
+		// Preserve non-official (third-party) tools from the current installation.
+		// The official Dédalo tool list is either provided by the code server in
+		// $options->info->tool_names (populated by get_code_update_info() via
+		// tool_common::get_active_tool_names()) or falls back to the hard-coded
+		// snapshot below. Any tool directory NOT in this list is considered third-party
+		// and is copied verbatim into the new release tree.
 			$dd_tools = $info->tool_names ?? [
 				'tool_cataloging',
 				'tool_dd_label',
@@ -632,10 +816,15 @@ class update_code {
 			];
 
 			$tools_src = "{$target}/tools";
+			// dir() returns a Directory object or false if the path does not exist.
+			// Using dir() instead of scandir() avoids loading all entries into memory
+			// at once, which matters for large tool directories.
 			$old_tools = dir($tools_src);
 			if ($old_tools !== false) {
 				while(($file = $old_tools->read()) !== false) {
 					if($file === "." || $file === "..") continue;
+					// Only copy directories (each tool lives in its own subdirectory)
+					// that are NOT in the official list — those come from the release ZIP.
 					if( is_dir($tools_src .'/'. $file) && !in_array($file, $dd_tools) ) {
 
 						$esc_file_src = escapeshellarg("{$tools_src}/{$file}");
@@ -816,9 +1005,28 @@ class update_code {
 
 	/**
 	* BUILD_VERSION_FROM_GIT_MASTER
-	* Called by client widget code via the API
-	* @param object $options
-	* @return object $response
+	* Creates a versioned ZIP archive from a Git branch and places it in the
+	* code-distribution directory so client installations can download and apply it.
+	*
+	* This is the API-accessible entry point for the "build version" action available
+	* on code-server installations (IS_A_CODE_SERVER === true). It:
+	*  1. Closes the PHP session before the long-running shell command to avoid
+	*     blocking the user's browser during the archive creation.
+	*  2. Delegates the actual `git archive` call to the private build_version_code().
+	*  3. Returns timing information in ->debug when SHOW_DEBUG is true.
+	*
+	* The $options->branch parameter controls which Git ref is archived:
+	*  - 'master'    → the current stable release branch (default)
+	*  - 'developer' → maps to 'v<major>_developer' and writes to the
+	*                  development path instead of the versioned code path
+	*  - any other string → passed directly to `git archive --remote`
+	*
+	* (!) This method shells out to `git archive`. Ensure DEDALO_CODE_SERVER_GIT_DIR
+	* points to a valid local or remote git repository.
+	*
+	* @param object $options  ->branch string [= 'master'] — Git branch or ref to archive.
+	* @return object $response  ->result true on success; ->debug (if SHOW_DEBUG) carries
+	*                           ->exec_time as a human-readable duration string.
 	*/
 	public static function build_version_from_git_master( object $options ) : object {
 
@@ -883,12 +1091,30 @@ class update_code {
 
 	/**
 	* BUILD_VERSION_CODE
-	* Creates the GIT archive form given branch
-	* executing a custom PHP command
-	* Private: do not call directly from API
+	* Low-level shell helper: runs `git archive` to create the release ZIP from a
+	* given branch and writes it to the configured code-distribution directory.
+	*
+	* Private — must only be called from build_version_from_git_master(). Not listed
+	* in API_ACTIONS.
+	*
+	* Archive naming convention:
+	*  - Stable:     <major>.<minor>.<patch>_dedalo.zip  (e.g. 6.4.0_dedalo.zip)
+	*                Written to: DEDALO_CODE_FILES_DIR/<major>/<major>.<minor>/
+	*  - Developer:  dedalo_development.zip
+	*                Written to: DEDALO_CODE_FILES_DIR/development/
+	*
+	* The ZIP prefix is always 'dedalo_code/' so that extracting it always produces
+	* the predictable subdirectory name that update_code() expects.
+	*
+	* Remote vs local Git:
+	*  - If DEDALO_CODE_SERVER_GIT_DIR starts with 'ssh://', `git archive --remote` is
+	*    used (no local checkout required).
+	*  - Otherwise a `cd <dir>; git archive` form is used for a local bare repository.
+	*  @see https://git-scm.com/docs/git-archive
+	*
 	* @see update_code::build_version_from_git_master
-	* @param string $branch
-	* @return string|true
+	* @param string $branch  Git branch or ref to archive.
+	* @return string|true  true on success; an error string (result_code + output) on failure.
 	*/
 	private static function build_version_code( string $branch ) : string|true {
 
@@ -902,10 +1128,13 @@ class update_code {
 			$target_path = update_code::set_code_path();
 
 		// build code target
-			$file_verion	= update_code::get_file_version();
-			$target			= $target_path .'/'.$file_verion.'.zip';
+			$file_version	= update_code::get_file_version();
+			$target			= $target_path .'/'.$file_version.'.zip';
 
 		// developer branch case
+		// The logical branch name 'developer' maps to the Git branch 'v<major>_developer'
+		// and the archive is written to the development path so the dashboard can offer a
+		// nightly/edge-channel download separately from release ZIPs.
 			if ($branch==='developer') {
 				$development_path	= update_code::set_development_path();
 				$target				= $development_path .'/dedalo_development.zip';
@@ -920,6 +1149,10 @@ class update_code {
 			$esc_target = escapeshellarg($target);
 
 		// command @see https://git-scm.com/docs/git-archive
+		// Shell redirection (>) is used to write the ZIP because git-archive streams the
+		// archive to stdout. This means the shell must interpret the full command string,
+		// which is why exec() receives a compound command rather than an argument array.
+		// All interpolated values are shell-quoted above to prevent injection.
 			$command = strpos($source, 'ssh://')!==false
 				? "git archive --remote={$esc_source} --verbose --format=zip --prefix=dedalo_code/ {$esc_branch} > {$esc_target}" // remote GIT
 				: "cd {$esc_source}; git archive --verbose --format=zip --prefix=dedalo_code/ {$esc_branch} > {$esc_target}"; // local GIT
@@ -947,12 +1180,22 @@ class update_code {
 
 	/**
 	* GET_CODE_PATH
-	* Get current version path for code
-	* Check if exists, and return the path or false.
-	* To create the path for the current version, it uses major, and minor
-	* such as /dedalo/code/6/6.4/
-	* @param array|null $version = null
-	* @return string|false $path
+	* Returns the filesystem path of the versioned code directory if it already
+	* exists, or false if it does not.
+	*
+	* The path structure follows: DEDALO_CODE_FILES_DIR/<major>/<major>.<minor>/
+	* For example, version [6, 4, 0] resolves to: /var/dedalo/code/6/6.4/
+	*
+	* Use set_code_path() instead when you need the path to be created on demand.
+	*
+	* Returns false when:
+	*  - major or minor cannot be resolved from the version array
+	*  - DEDALO_CODE_FILES_DIR is not defined
+	*  - the resolved directory does not exist on disk
+	*
+	* @param array|null $version [= null]  Version triple [major, minor, patch].
+	*                                      Defaults to the running Dédalo version via get_dedalo_version().
+	* @return string|false  Absolute directory path, or false if the directory does not exist.
 	*/
 	public static function get_code_path( ?array $version = null ) : string|false {
 
@@ -977,9 +1220,20 @@ class update_code {
 
 	/**
 	* SET_CODE_PATH
-	* Set current version path for code
-	* Check if it exists, otherwise create it
-	* @return string|false $path
+	* Returns the filesystem path of the versioned code distribution directory,
+	* creating it if it does not yet exist.
+	*
+	* Mirrors get_code_path() but calls create_directory() instead of is_dir(),
+	* so it is suitable for use before writing a new archive file. Uses the
+	* running Dédalo version (get_dedalo_version()) — no version argument is accepted
+	* because this method is only called during the build process of the current release.
+	*
+	* Returns false when:
+	*  - major or minor cannot be resolved
+	*  - DEDALO_CODE_FILES_DIR is not defined
+	*  - create_directory() fails (filesystem permission error)
+	*
+	* @return string|false  Absolute directory path, or false on failure.
 	*/
 	public static function set_code_path() : string|false {
 
@@ -1004,12 +1258,18 @@ class update_code {
 
 	/**
 	* GET_FILE_VERSION
-	* Get current version path for code
-	* Check if exists, and return the path or false.
-	* To create the path for the current version, it use major, and minor
-	* such as /dedalo/code/6/6.4/
-	* @param array|null $version = null
-	* @return string|false $path
+	* Returns the base filename (without extension) for the versioned release ZIP.
+	*
+	* Joins the version triple with dots and appends '_dedalo', producing the
+	* canonical file-naming convention used across the distribution system.
+	* Example: version [6, 4, 0] → '6.4.0_dedalo' → archive file: '6.4.0_dedalo.zip'
+	*
+	* The stale doc-block copy about paths and directories was from a paste error in
+	* the original source; this method returns a filename stem, not a path.
+	*
+	* @param array|null $version [= null]  Version triple [major, minor, patch].
+	*                                      Defaults to the running Dédalo version via get_dedalo_version().
+	* @return string  Filename stem, e.g. '6.4.0_dedalo'.
 	*/
 	public static function get_file_version( ?array $version = null ) : string {
 
@@ -1023,9 +1283,18 @@ class update_code {
 
 	/**
 	* SET_DEVELOPMENT_PATH
-	* Set current version path for development code, nightly version
-	* Check if exist, else create it.
-	* @return string|false $path
+	* Returns the filesystem path of the development/nightly code directory,
+	* creating it if it does not yet exist.
+	*
+	* The development path is always DEDALO_CODE_FILES_DIR/development/ regardless
+	* of the running version, because development archives overwrite a single fixed
+	* file (dedalo_development.zip) rather than a per-version file.
+	*
+	* Returns false when:
+	*  - DEDALO_CODE_FILES_DIR is not defined
+	*  - create_directory() fails
+	*
+	* @return string|false  Absolute path to the development directory, or false on failure.
 	*/
 	public static function set_development_path() : string|false {
 
@@ -1045,10 +1314,24 @@ class update_code {
 
 	/**
 	* GET_CODE_URL
-	* Get the current version URL for code directory
-	* Check if exists, and return the URL or false
-	* @param array|null $version = null
-	* @return string|false $url
+	* Returns the public HTTP(S) URL for the versioned code distribution directory,
+	* or false if the corresponding filesystem directory does not exist.
+	*
+	* URL structure mirrors the path: DEDALO_CODE_FILES_URL/<major>/<major>.<minor>/
+	* Example: version [6, 4, 0] → '/code/6/6.4' (relative to DEDALO_CODE_FILES_URL).
+	*
+	* The filesystem check (is_dir) ensures that a URL is only returned for
+	* directories that actually contain distribution files; this prevents the client
+	* update panel from offering a download link to a non-existent resource.
+	*
+	* Returns false when:
+	*  - major or minor cannot be resolved
+	*  - DEDALO_CODE_FILES_DIR or DEDALO_CODE_FILES_URL is not defined
+	*  - the versioned directory does not exist on disk
+	*
+	* @param array|null $version [= null]  Version triple [major, minor, patch].
+	*                                      Defaults to the running Dédalo version via get_dedalo_version().
+	* @return string|false  URL string (relative path from host root), or false.
 	*/
 	public static function get_code_url( ?array $version = null ) : string|false {
 
@@ -1067,28 +1350,66 @@ class update_code {
 			: false;
 
 		return $url;
-	}//end get_code_URl
+	}//end get_code_url
 
 
 
 	/**
 	* GET_CODE_UPDATE_INFO
-	* Collect local code files and set the valid files from given code version
-	* Called by API.
-	* Merge all information into one object using the available code files
-	* @param array $client_version
-	* 	as [6.4.0]
+	* Server-side endpoint called by client Dédalo installations to discover which
+	* release ZIPs are available and safe to apply from their current version.
+	*
+	* This is the primary API used by the remote client's "Update code" widget to
+	* populate its upgrade panel. It is called from get_code_update_info action on
+	* the code server.
+	*
+	* Algorithm overview:
+	*  1. Cast the client version triple to int so string comparison can't produce
+	*     wrong ordering (e.g. "10" > "9" as strings but not always as ints).
+	*  2. Walk all update descriptors from update::get_updates() to identify:
+	*     - $next_version: the lowest reachable next-major or next-minor bump from
+	*       the client version (used as a ceiling so the client doesn't skip rungs).
+	*     - $next_version_update_from: the exact version the client must be on
+	*       before it can install the next-major or next-minor release.
+	*     - $upper_versions: all descriptor versions strictly greater than the
+	*       client's current triple (candidates before further filtering).
+	*  3. Filter $upper_versions:
+	*     - Drop next-minor and next-patch entries above the identified $next_version
+	*       ceiling (prevents leaping from 6.2.x directly to 6.5.0).
+	*     - Drop the next-version entry itself if the client is not yet at the required
+	*       update_from gateway version.
+	*  4. For each surviving version, resolve the filesystem path and build a download
+	*     URL using get_code_url() / get_code_path() / get_file_version(). Files that
+	*     don't physically exist on disk are silently omitted.
+	*  5. Append the development/nightly ZIP if present.
+	*  6. Include server metadata (version, entity, tool list) in result->info so the
+	*     client can correlate official vs third-party tools during a clean update.
+	*
+	* The linear upgrade enforcement means:
+	*  - A client on 6.2.2 sees only patch ZIPs up to the latest 6.2.x.
+	*  - A client on the last patch of 6.2.x sees 6.3.0 become available.
+	*  - A client on the last minor of 6.x.y sees 7.0.0 become available.
+	*
+	* @param array $client_version  Version triple as integers or numeric strings,
+	*                               e.g. [6, 4, 0] or ['6', '4', '0'].
 	* @return object $response
-	* {
-	*	result : {
-	*		info : {},
-	* 		files : [{
-	* 			version : 6.4.1,
-	* 			compatible : true,
-	* 			url : https://master.dedalo.dev/code/6/6.4/6.4.1_dedalo.zip
-	* 		}]
-	* 	}
-	* }
+	*   ->result: {
+	*     info: {
+	*       version: string,        // e.g. '6.4.1'
+	*       date: string,           // ISO timestamp of this response
+	*       entity_id: string|null,
+	*       entity: string|null,
+	*       entity_label: string|null,
+	*       host: string|null,
+	*       tool_names: array       // official tool directory names on this server
+	*     },
+	*     files: [{
+	*       version: string,        // e.g. '6.4.1'
+	*       url: string,            // full URL to the release ZIP
+	*       date: string,           // file modification timestamp
+	*       force_update_mode?: string  // e.g. 'clean' if the update descriptor mandates it
+	*     }]
+	*   }
 	*/
 	public static function get_code_update_info( array $client_version ) : object {
 
@@ -1103,6 +1424,8 @@ class update_code {
 
 		// updates
 		// reads 'update.php' file object
+		// update::get_updates() includes updates.php and returns the $updates stdClass
+		// whose property keys are integer version codes (e.g. 640 for v6.4.0).
 			$updates_object = update::get_updates();
 
 			$next_version				= null;
@@ -1112,6 +1435,8 @@ class update_code {
 				// check the next valid major version
 				// only next major version is take in consideration
 				// as 7.0.0 but any other minor or path versions as 7.0.1 or 7.2.0
+				// A major boundary is always x.0.0; any other patch (7.0.1, 7.1.0)
+				// will be made visible only once the client reaches 7.0.0.
 				if( $update->version_major===$client_version[0]+1 &&
 					$update->version_medium===0 &&
 					$update->version_minor===0){
@@ -1130,6 +1455,9 @@ class update_code {
 						// reset any other major versions
 						// when client is in version 6.4.0 is not possible update to version 8.0.0
 						// only version 7.0.0 is available as a possible update.
+						// Resetting $upper_versions here ensures that if a later loop iteration
+						// finds a next-minor bump (which takes precedence), previously collected
+						// major-boundary candidates are discarded.
 						$upper_versions = [];
 				}
 
@@ -1137,6 +1465,8 @@ class update_code {
 				// only next minor version is take in consideration
 				// as 6.5.0 but any other path versions as 6.5.1 or 6.6.1
 				// this check overwrite previous major check
+				// A minor bump check always overwrites the major-bump result above because
+				// the client must exhaust its current minor series before crossing a major boundary.
 				if( $update->version_major===$client_version[0] &&
 					$update->version_medium===$client_version[1]+1 &&
 					$update->version_minor===0){
@@ -1160,6 +1490,10 @@ class update_code {
 				// check any other version bellow current client versions
 				// remove they as possibles. Downgrade is not available in Dédalo updates
 				// Go ahead!!!
+				// Three-field numeric comparison: any descriptor strictly greater than the
+				// client version on at least one field (while equal on all higher fields)
+				// qualifies as a candidate. All three cases must be checked independently
+				// because the triple is not flattened into a single comparable integer here.
 				$add = false;
 				// major
 				if( (int)$update->version_major > (int)$client_version[0] ){
@@ -1277,8 +1611,11 @@ class update_code {
 			$result->info->tool_names	= $tool_names;
 
 		// files
-			// build the file_path with the valid versions
-			// client will can select what is the update that it want use.
+		// For each version that passed the upgrade-path filter, check whether the
+		// corresponding ZIP file actually exists on this server's filesystem before
+		// advertising it. Files built by build_version_code() land here; if a version
+		// entry exists in updates.php but the ZIP was never built, it is silently omitted.
+		// The client receives only entries it can actually download.
 			$force_update_mode = null;
 			$protocol          = defined('DEDALO_PROTOCOL') ? DEDALO_PROTOCOL : 'https://';
 			$host              = defined('DEDALO_HOST') ? DEDALO_HOST : 'localhost';
@@ -1302,9 +1639,13 @@ class update_code {
 
 					$file_item = new stdClass();
 						$file_item->version	= implode('.', $valid_version);
+						// Construct the full public URL: protocol + host + code URL path + filename.
+						// The code_url returned by get_code_url() is a root-relative path (no host).
 						$file_item->url		= $protocol . $host . $code_url .'/'. basename( $file_name );
 						$file_item->date	= $file_date;
 
+					// force_update_mode is optional; omit the property entirely when null so the
+					// client can treat its absence as "no forced mode" without extra null checks.
 					if( !empty($force_update_mode) ){
 						$file_item->force_update_mode	= $force_update_mode;
 					}
@@ -1314,6 +1655,9 @@ class update_code {
 			}
 
 			// development version file
+			// Appended after release ZIPs so the client always sees stable versions first.
+			// The development file is always named 'dedalo_development.zip' at a fixed path;
+			// it does not go through the version-gate logic above.
 				$development_path	= update_code::set_development_path();
 				if ($development_path !== false) {
 					$development_file	= $development_path .'/dedalo_development.zip';
@@ -1343,7 +1687,7 @@ class update_code {
 
 
 		return $response;
-	}//end get_code_update_info( $ar_version )
+	}//end get_code_update_info
 
 
 

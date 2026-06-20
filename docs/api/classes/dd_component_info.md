@@ -1,18 +1,16 @@
 # dd_component_info
 
-Overview
+> See also: [JSON API v1](../dedalo_api_v1.md) · [dd_core_api](dd_core_api.md)
 
-- Generic component information API (widget helpers and lightweight component queries).
+Generic component-information API: widget helpers and lightweight component queries.
 
-How to call
+## How to call
 
 - POST JSON with `dd_api: "dd_component_info"` and `action: "get_widget_data"`.
 
-Common fields
+## Common fields
 
-- `source` should include locator fields used by the component to identify the widget (see method Accepts).
-
-Methods
+- `source` should include the locator fields that the component uses to identify the widget (see the method's Accepts list).
 
 ## get_widget_data
 
@@ -64,6 +62,6 @@ Methods
 
 ```
 
-Notes
+## Notes
 
-- If widgets are not defined for the component or the requested `widget_name` cannot be found, the response `result` will be `false` and `msg` will contain error information.
+- If the component defines no widgets, or the requested `widget_name` cannot be found, the response `result` is `false` and `msg` carries the error information.

@@ -292,7 +292,7 @@ back to `area_common_json.php`.
     [thesaurus / TS tree](../thesaurus/index.md) stack while still inheriting the
     structure-walk, metrics and permission scaffolding.
 
-## How it fits with the rest of Dedalo
+## How it fits with the rest of Dédalo
 
 - **Menu.** `menu::class` builds the back-office menu from `area::get_areas()`
   (honouring `config_areas.php` → `areas_deny`). Areas are the menu's top-level

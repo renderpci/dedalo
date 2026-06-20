@@ -4,6 +4,42 @@
 
 
 
+/**
+* RENDER_TOOL_DD_LABEL
+*
+* Client-side render layer for `tool_dd_label` — a developer-facing tool used
+* exclusively in section dd1340, component dd1372 (Tool labels) to compose
+* multi-language label sets for Dédalo tools.
+*
+* The tool presents a matrix UI:
+*   - rows    → named label keys (e.g. "title", "save", "cancel")
+*   - columns → one per project language (from page_globals.dedalo_projects_default_langs)
+*
+* Underlying data shape stored in component_json (dd1372):
+*   Array<{ lang: string, name: string, value: string }>
+*   e.g. [{ lang: "lg-eng", name: "title", value: "My tool" }, ...]
+*
+* The render module exports a single constructor (`render_tool_dd_label`) whose
+* `edit` method is mixed into `tool_dd_label.prototype.edit` at wire-up time in
+* `tool_dd_label.js`. Private helpers (`get_content_data`, `render_row`,
+* `render_language_label`) are module-scoped and not exported.
+*
+* Key contracts:
+*   - `self.ar_data`   — flat array of {lang, name, value} items; mutated in place.
+*   - `self.ar_names`  — ordered array of unique name keys; drives row order.
+*   - `self.label_matix` — pointer to the `<ul>` grid node; kept on `self` so that
+*     the add-row handler can append new rows without re-querying the DOM.
+*   - `self.update_data()` — defined on tool_dd_label; must be called after every
+*     mutation to propagate changes to the caller JSON editor.
+*   - `self.save_label_lang_sequence(value, key, lang)` — also defined on the main
+*     class; handles upsert/delete for a single cell's value.
+*
+* Exports:
+*   {Function} render_tool_dd_label — constructor (assigned to prototype chain)
+*/
+
+
+
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
 
@@ -11,7 +47,10 @@
 
 /**
 * RENDER_TOOL_DD_LABEL
-* Manages the component's logic and appearance in client side
+* Constructor for the render prototype mixin.
+* No state is initialised here; all instance state lives on the `tool_dd_label`
+* instance that inherits this prototype's methods.
+* @returns {boolean} Always true (Dédalo constructor convention).
 */
 export const render_tool_dd_label = function() {
 
@@ -22,9 +61,20 @@ export const render_tool_dd_label = function() {
 
 /**
 * EDIT
-* Render tool main node
-* @param object options = {}
-* @return HTMLElement wrapper
+* Renders the tool's main interactive node for edit mode.
+*
+* When `options.render_level === 'content'` the call returns early with just
+* the content_data fragment (used by tool_common internals that need only the
+* inner content without the outer wrapper). Otherwise it builds the full
+* wrapper node via `ui.tool.build_wrapper_edit` and attaches the content_data
+* fragment as a child, then stores a back-reference on `wrapper.content_data`
+* for later access by other lifecycle methods.
+*
+* @param {Object} options              - Render options passed by the tool lifecycle.
+* @param {string} [options.render_level] - When set to 'content', skip wrapper build
+*   and return only the inner content node.
+* @returns {Promise<HTMLElement>} Resolves to either the outer wrapper node
+*   (normal case) or the raw content_data node ('content' render_level).
 */
 render_tool_dd_label.prototype.edit = async function (options={}) {
 
@@ -54,9 +104,24 @@ render_tool_dd_label.prototype.edit = async function (options={}) {
 
 /**
 * GET_CONTENT_DATA
-* Render tool content_data node and children
-* @param object self
-* @return HTMLElement content_data
+* Builds and returns the full label-matrix content node.
+*
+* Constructs a `<ul class="label_matix">` CSS-grid element whose column layout
+* is computed dynamically from the number of project languages:
+*   grid-template-columns: 2em repeat(<lang_count + 1>, 1fr)
+* The extra column accommodates the row-action button (add/remove).
+*
+* Rendering order:
+*   1. A single header row (column names: action button | "name" | lang labels).
+*   2. One data row per entry in `self.ar_names` (existing named label keys).
+*
+* After building, the `<ul>` node is stored as `self.label_matix` so that the
+* add-row event handler in `render_row` can append new rows directly.
+*
+* @param {Object} self - The tool_dd_label instance.
+* @param {Array}  self.loaded_langs - Array of lang objects from page_globals.
+* @param {Array}  self.ar_names     - Ordered array of unique label key names.
+* @returns {Promise<HTMLElement>} The populated content_data container element.
 */
 const get_content_data = async function(self) {
 
@@ -73,6 +138,7 @@ const get_content_data = async function(self) {
 			class_name		: 'label_matix',
 			parent			: fragment
 		})
+		// Dynamic grid: 2em action column + one equal-width column per lang plus one for 'name'
 		label_matix.style = `grid-template-columns: 2em repeat(${ar_langs.length+1}, 1fr);`
 		// set pointer
 		self.label_matix = label_matix
@@ -113,13 +179,42 @@ const get_content_data = async function(self) {
 
 /**
 * RENDER_ROW
-* Render all tool rows
-* @param object self
-* @param array ar_langs
-* @param bool header
-* @param string name
-* @param int key
-* @return HTMLElement li
+* Builds a single `<li>` row for the label matrix grid.
+*
+* The row has three kinds of cells:
+*   1. Action cell (leftmost, 2em column):
+*      - Header row → "add" button; clicking it appends a new blank data row.
+*        The new row's key is computed as the current live count of `.label_data`
+*        rows (`safe_length`) rather than `self.ar_names.length`, to stay accurate
+*        even if names were removed without re-rendering.
+*      - Data row   → "remove" button; clicking it:
+*          a. Prompts the user for confirmation via `confirm()`.
+*          b. Re-derives its own position (`safe_key`) live from the DOM to avoid
+*             stale-index issues when multiple rows have been added/removed.
+*          c. Removes all `self.ar_data` entries whose `name` matches the row's
+*             label key (reverse-iteration splice pattern to avoid index shift).
+*          d. Removes the key from `self.ar_names`.
+*          e. Calls `self.update_data()` to propagate changes.
+*          f. Removes the `<li>` node from the DOM.
+*   2. Name cell: a `contenteditable` div showing the label key name.
+*      `save_label_value` (fired on blur and on Enter/Return) normalises the
+*      entered text to lowercase-and-underscored form and then updates all
+*      `ar_data` items whose `name` matches the old value, updates `ar_names`,
+*      refreshes the displayed text, and calls `self.update_data()`.
+*   3. Language cells: one per entry in `ar_langs`, each built by
+*      `render_language_label`.
+*
+* Note: `key` is `null` for the header row and is only used in data rows.
+*
+* @param {Object}      self     - The tool_dd_label instance.
+* @param {Array}       ar_langs - Array of lang descriptor objects
+*   (each has at least `.value` (lang code) and `.label` (display name)).
+* @param {boolean}     header   - True for the header row, false for data rows.
+* @param {string}      name     - The label key name (e.g. "title"); empty string
+*   for newly added rows.
+* @param {number|null} key      - Zero-based index of this row in `self.ar_names`;
+*   null for the header row.
+* @returns {Promise<HTMLElement>} The `<li>` element representing the row.
 */
 const render_row = async function(self, ar_langs, header, name, key) {
 
@@ -144,16 +239,17 @@ const render_row = async function(self, ar_langs, header, name, key) {
 			add_button.addEventListener('click', async (e) =>{
 				e.stopPropagation()
 
-				// safe_leght
+				// safe_length
+				// (!) Re-count live DOM rows so the key stays accurate after add/remove cycles.
 					const rows_list = li.parentNode.querySelectorAll('.label_data')
-					const safe_leght = [...rows_list].length
+					const safe_length = [...rows_list].length
 
 				const row = await render_row(
 					self,
 					ar_langs, // array ar_langs
 					false, // bool is header
 					'', // string name
-					safe_leght // self.ar_names.length // int key
+					safe_length // self.ar_names.length // int key
 				)
 				self.label_matix.appendChild(row)
 			})
@@ -175,6 +271,7 @@ const render_row = async function(self, ar_langs, header, name, key) {
 					}
 
 				// safe key
+				// Re-derive position from live DOM to stay correct after prior additions/removals.
 					const rows_list = li.parentNode.querySelectorAll('.label_data')
 					const safe_key = [...rows_list].findIndex(el => el==li)
 
@@ -182,6 +279,7 @@ const render_row = async function(self, ar_langs, header, name, key) {
 					const old_value = self.ar_names[safe_key]
 
 				// remove from array
+				// Reverse iteration to safely splice while walking the array.
 					for (let i = self.ar_data.length - 1; i >= 0; i--) {
 						const item = self.ar_data[i]
 						if(item.name===old_value) {
@@ -207,6 +305,10 @@ const render_row = async function(self, ar_langs, header, name, key) {
 			parent			: li
 		})
 		// save_label_value
+		// Normalises the key name entered by the user and propagates the change.
+		// Transformation: trim → lowercase → spaces replaced with underscores.
+		// Also updates all ar_data items whose 'name' matches the previous value,
+		// keeping the data layer consistent with the renamed key.
 		const save_label_value = () => {
 
 			const old_value		= self.ar_names[key]
@@ -262,22 +364,42 @@ const render_row = async function(self, ar_langs, header, name, key) {
 
 /**
 * RENDER_LANGUAGE_LABEL
-* Create each language_label node
-* @param object self
-* @param string current_lang
-* @param bool header
-* @param string|null name
-* @param int key
-* @return HTMLElement language_label
+* Creates the cell node for a single (name × language) intersection in the matrix.
+*
+* Behaviour differs between header and data rows:
+*   - Header row: renders a read-only div displaying the language's human-readable
+*     label (e.g. "English"). No events attached.
+*   - Data row:   renders a `contenteditable` div pre-filled with the stored
+*     translation value (looked up from `self.ar_data` by matching both `name`
+*     and `current_lang.value`). A `placeholder` dataset attribute is set to the
+*     label key name so CSS can show a hint when the cell is empty.
+*
+* Events (data rows only):
+*   - blur    → `self.save_label_lang_sequence(textContent, key, lang)` persists
+*               the cell value into `self.ar_data` and calls `self.update_data()`.
+*   - keydown → Same save on Enter/Return (keyCode 13); prevents newline insertion.
+*
+* Data lookup uses `Array.find`, so only the first matching item is used if the
+* data array somehow contains duplicates (which should not occur in normal use).
+*
+* @param {Object}      self         - The tool_dd_label instance.
+* @param {Object}      current_lang - Lang descriptor: `{ value: string, label: string }`.
+*   `value` is the lang code (e.g. "lg-eng"); `label` is the display name.
+* @param {boolean}     header       - True when rendering the matrix header row.
+* @param {string|null} name         - The label key name for this row; used as
+*   `placeholder` text and to look up existing data.
+* @param {number|null} key          - Zero-based row index in `self.ar_names`;
+*   forwarded to `save_label_lang_sequence` for accurate upsert targeting.
+* @returns {Promise<HTMLElement>} The cell `<div>` element.
 */
 const render_language_label = async function(self, current_lang, header, name, key) {
 
 	// get the current data for the node
-		const curernt_data = self.ar_data.find(item => item.name===name && item.lang===current_lang.value )
+		const current_data = self.ar_data.find(item => item.name===name && item.lang===current_lang.value )
 
 	// label
-		const label_value = typeof curernt_data!=='undefined'
-			? curernt_data.value || null
+		const label_value = typeof current_data!=='undefined'
+			? current_data.value || null
 			: null
 		const placeholder = name || ''
 

@@ -407,10 +407,10 @@ DEDALO_COMPONENT_RESOURCES_AV_DURATION_TIPO `string`
 
 Defines the 'component_tipo' in Dédalo ontology used for stored the duration of the audiovisual files.
 
-This param is used for get the duration of the audiovisual file in the real time cuts and don't calculate it every time.
+This param is used to get the duration of the audiovisual file for real-time cuts, instead of recalculating it every time.
 
 ```php
-define('DEDALO_COMPONENT_RESOURCES_AV_TIPO', 'rsc35');
+define('DEDALO_COMPONENT_RESOURCES_AV_DURATION_TIPO', 'rsc54');
 ```
 
 ---
@@ -548,7 +548,7 @@ AR_RESTRICTED_TERMS `array`
 Set the locators, in flat mode, of the terms used in the indexation for remove parts in audiovisual files. Restricted parts of audiovisual files can not be showed.
 
 ```php
-define('AR_RESTRICTED_TERMS', json_encode(['ts1_23, 'on_4']));
+define('AR_RESTRICTED_TERMS', json_encode(['ts1_23', 'on_4']));
 ```
 
 If you want to use only one restricted term you can use the property: [TERM_ID_RESTRICTED](#setting-the-locator-used-as-restriction)

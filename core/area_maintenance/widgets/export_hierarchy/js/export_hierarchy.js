@@ -4,6 +4,45 @@
 
 
 
+/**
+* EXPORT_HIERARCHY
+* Area-maintenance widget that exports section hierarchies to compressed files
+* and synchronises thesaurus active-status flags for those hierarchies.
+*
+* This widget is rendered inside the system-administrator maintenance area
+* (area_maintenance) and provides two long-running administrative operations:
+*
+*   1. Export hierarchies — fires `exec_export_hierarchy` which triggers the
+*      server to produce `.copy.gz` files under the configured
+*      `EXPORT_HIERARCHY_PATH` (e.g. `/install/import/hierarchy/`).  The caller
+*      supplies a comma-separated list of section tipos (e.g. `"es1,es2"`) or
+*      `"*"` for all active sections.
+*
+*   2. Sync hierarchy active-status — fires `sync_hierarchy_active_status` to
+*      reconcile the `Active` flag stored in hierarchy records against the
+*      corresponding `Active in thesaurus` flag.
+*
+* Both API calls route through `dd_area_maintenance_api::widget_request` with
+* a one-hour timeout and no retry on failure (retries=1 means a single attempt).
+*
+* Lifecycle follows the standard Dédalo widget pattern:
+*   init() → build() → render() → destroy()
+*
+* Widget value (loaded by `get_value` / `area_maintenance.prototype.get_value`):
+*   {
+*     export_hierarchy_path : string|null  // server-configured output directory,
+*                                          // null if EXPORT_HIERARCHY_PATH is unset
+*   }
+*
+* Server peer:  core/area_maintenance/widgets/export_hierarchy/class.export_hierarchy.php
+* API handler:  core/api/v1/common/class.dd_area_maintenance_api.php
+* DOM builder:  core/area_maintenance/widgets/export_hierarchy/js/render_export_hierarchy.js
+*
+* Main exports: `export_hierarchy` (constructor).
+*/
+
+
+
 // imports
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
@@ -14,6 +53,26 @@
 
 /**
 * EXPORT_HIERARCHY
+* Constructor for the export_hierarchy widget instance.
+*
+* Property declarations are intentionally bare (undefined) here; they are
+* populated by `widget_common.prototype.init` (identity fields) and by
+* `build` / `get_value` (data fields).  Callers should never access properties
+* before `init` and `build` have resolved.
+*
+* @property {string}       id            - Unique instance identifier set by init.
+* @property {string}       section_tipo  - Ontology tipo of the owning section (unused at render; kept for lifecycle parity).
+* @property {string}       section_id    - Section record id (unused at render; kept for lifecycle parity).
+* @property {string}       lang          - Active UI language code.
+* @property {string}       mode          - Render mode: 'edit' or 'list'.
+* @property {Object}       value         - Widget payload loaded by get_value.
+*   @property {string|null} value.export_hierarchy_path - Absolute server path where
+*     hierarchy export files are written, or null if EXPORT_HIERARCHY_PATH is not
+*     configured.  The DOM builder uses this to show/hide the export form.
+* @property {HTMLElement}  node          - Root DOM node injected into the page after render.
+* @property {Array}        events_tokens - Subscriptions accumulated during lifecycle; cleared by destroy.
+* @property {Array}        ar_instances  - Child widget/component instances; cleared by destroy.
+* @property {string}       status        - Lifecycle status string ('building' | 'built' | 'destroyed').
 */
 export const export_hierarchy = function() {
 
@@ -38,7 +97,23 @@ export const export_hierarchy = function() {
 
 /**
 * COMMON FUNCTIONS
-* extend functions from common
+* Prototype assignments that wire the standard Dédalo widget lifecycle and render
+* methods into export_hierarchy, keeping each responsibility in a single canonical
+* location.
+*
+* Lifecycle (from widget_common):
+*   init    — resolves identity fields from options; called before build.
+*   build   — overridden below; base is here only as the default fallback.
+*   render  — dispatches to this.edit() or this.list() based on this.mode.
+*   destroy — unsubscribes events_tokens; removes DOM node.
+*
+* Data loading (from area_maintenance):
+*   get_value — fires dd_area_maintenance_api::get_widget_value and stores
+*               the resolved payload in this.value.
+*
+* Render (from render_export_hierarchy):
+*   edit / list — both alias render_export_hierarchy.prototype.list, which
+*                 builds the two-section DOM (export form + sync form).
 */
 // prototypes assign
 	// lifecycle
@@ -55,9 +130,24 @@ export const export_hierarchy = function() {
 
 /**
 * BUILD
-* Custom build overwrites common widget method
-* @param bool autoload = false
-* @return bool
+* Custom build that overrides widget_common.prototype.build.
+*
+* Delegates to `widget_common.prototype.build` for the standard autoload path
+* (identity fields + optional value pre-fetch).  For this widget, the actual
+* data (this.value) is loaded lazily on panel-open via the area_maintenance
+* unified widget load() mechanism — see render_area_maintenance — so no extra
+* data fetching is needed here beyond what widget_common.prototype.build already
+* handles.
+*
+* Errors thrown by the base build are caught so that a failed data fetch does
+* not crash the whole maintenance area; the error is preserved on `self.error`
+* and logged to the console.
+*
+* @param {boolean} [autoload=false] - When true, widget_common.prototype.build
+*   will attempt to pre-load the widget value via get_value before the panel
+*   is opened.
+* @returns {Promise<boolean>} Resolves to the return value of
+*   widget_common.prototype.build (true on success).
 */
 export_hierarchy.prototype.build = async function(autoload=false) {
 
@@ -83,9 +173,32 @@ export_hierarchy.prototype.build = async function(autoload=false) {
 
 /**
 * EXEC_EXPORT_HIERARCHY
-* Call working API to exec the  export_hierarchy action.
-* @param string section_tipo
-* @return object result
+* Fires the server-side hierarchy export for one or more section tipos.
+*
+* Calls `dd_area_maintenance_api::widget_request` with action `export_hierarchy`.
+* The server iterates over the requested section tipos, serialises each
+* hierarchy tree, compresses it to a `.copy.gz` file, and writes it under the
+* path configured by `EXPORT_HIERARCHY_PATH` (e.g. `/install/import/hierarchy/`).
+*
+* The request is dispatched through a Web Worker (`use_worker: true`) because
+* the export can take several minutes for large ontologies; `prevent_lock: true`
+* keeps the PHP session unlocked so other browser tabs remain responsive.
+*
+* (!) This method is defined as an arrow function assigned to the prototype.
+*     Arrow functions do not bind `this`, so `self` inside the body refers to
+*     the enclosing module scope, not the widget instance.  The method therefore
+*     cannot read instance properties (e.g. this.value) — it only uses the
+*     section_tipo argument.  This is intentional: the operation is stateless.
+*
+* @param {string} section_tipo - Comma-separated section tipo codes to export,
+*   e.g. `"es1"`, `"es1,es2"`, or `"*"` for all active sections.
+* @returns {Promise<Object>} Resolves to the raw API response object:
+*   {
+*     result   : boolean,    // true on success
+*     errors   : Array,      // non-empty on partial or full failure
+*     msg      : string,     // human-readable summary
+*     ...      : *           // additional fields from the server handler
+*   }
 */
 export_hierarchy.prototype.exec_export_hierarchy = async (section_tipo) => {
 
@@ -119,9 +232,31 @@ export_hierarchy.prototype.exec_export_hierarchy = async (section_tipo) => {
 
 
 /**
-* sync_hierarchy_active_status
-* Call working API to exec the  sync_hierarchy_active_status action.
-* @return object result
+* SYNC_HIERARCHY_ACTIVE_STATUS
+* Fires the server-side operation that reconciles hierarchy `Active` flags with
+* thesaurus `Active in thesaurus` flags across all sections.
+*
+* Calls `dd_area_maintenance_api::widget_request` with action
+* `sync_hierarchy_active_status`.  The server walks every hierarchy record and
+* overwrites the local `Active` status to match the corresponding thesaurus term's
+* `Active in thesaurus` status, correcting drift that can accumulate when terms
+* are activated/deactivated through the thesaurus UI without touching hierarchy
+* records directly.
+*
+* Like `exec_export_hierarchy`, this is dispatched through a Web Worker with
+* `prevent_lock: true` and a one-hour timeout.  No options are sent because the
+* operation always runs across all sections.
+*
+* (!) This method is an arrow function on the prototype; it cannot access the
+*     widget instance via `this`.  See note in exec_export_hierarchy above.
+*
+* @returns {Promise<Object>} Resolves to the raw API response object:
+*   {
+*     result   : boolean,
+*     errors   : Array,
+*     msg      : string,
+*     ...      : *
+*   }
 */
 export_hierarchy.prototype.sync_hierarchy_active_status = async () => {
 

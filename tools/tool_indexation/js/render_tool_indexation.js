@@ -14,7 +14,42 @@
 
 /**
 * RENDER_TOOL_INDEXATION
-* Manages the component's logic and appearance in client side
+* Client-side render module for tool_indexation.
+*
+* This module provides the prototype methods that build the tool_indexation
+* DOM tree. It is mixed into tool_indexation via the prototype-assignment
+* pattern (tool_indexation.prototype.edit = render_tool_indexation.prototype.edit).
+*
+* Layout overview
+* ───────────────
+* The tool splits the viewport into two resizable panes using the Split.js
+* library (see https://github.com/nathancahill/split/tree/master/packages/splitjs):
+*
+*   left_container  — thesaurus / media / people viewer (swappable via the
+*                     viewer selector dropdown in the toolbar).
+*   right_container — stacked panels:
+*     1. transcription_component  : component_text_area where the user edits
+*                                   the transcription and creates index tags.
+*     2. info_container           : tabbed panel with three tabs:
+*          • Indexation  – the indexing_component (component_portal) that stores
+*                          locators linking tag ranges to thesaurus terms.
+*          • Info        – the indexation_note panel (tag annotation text).
+*          • References  – the references_component (inverse relations).
+*     3. tag_info_container       : floating panel that appears when the user
+*                                   clicks an existing index tag; shows the tag
+*                                   id, state selector, and delete button.
+*
+* Toolbar controls (appended to wrapper.tool_buttons_container):
+*   • render_related_list   — "Approach" <select> for choosing the top-section
+*                             locator (section_tipo + section_id) that scopes
+*                             the current indexation session.
+*   • render_viewer_selector — "Viewer" <select> to switch the left pane.
+*   • render_status         — status components for users and admins.
+*
+* All functions in this module are module-private except the constructor and
+* the edit prototype method, which is the sole export surface.
+*
+* @module render_tool_indexation
 */
 export const render_tool_indexation = function() {
 
@@ -25,8 +60,23 @@ export const render_tool_indexation = function() {
 
 /**
 * EDIT
-* Render node for use like button
-* @return HTMLElement wrapper
+* Builds and returns the full tool wrapper node for edit mode.
+*
+* Orchestrates the high-level DOM assembly:
+*   1. Calls get_content_data_edit to build the split-pane content area.
+*   2. Wraps it with ui.tool.build_wrapper_edit (standard tool chrome).
+*   3. Appends toolbar controls (related_list, viewer_selector, status).
+*   4. Fires get_tag_info to wire up the tag-click info panel.
+*
+* When options.render_level is 'content', the raw content_data element is
+* returned directly (skipping the wrapper), which is used by the framework
+* for partial refreshes.
+*
+* @param {Object} [options={render_level:'full'}] - Render options.
+*   @param {string} [options.render_level='full'] - 'full' returns the complete
+*     wrapper; 'content' returns only the inner content_data node.
+* @returns {Promise<HTMLElement>} The assembled wrapper (or content_data if
+*   render_level is 'content').
 */
 render_tool_indexation.prototype.edit = async function (options={render_level:'full'}) {
 
@@ -72,8 +122,52 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 
 /**
 * GET_CONTENT_DATA_EDIT
-* Render tool content_data
-* @return HTMLElement content_data
+* Builds the split-pane content area that forms the body of the tool.
+*
+* Creates the left_container / right_container pair, populates them, then
+* activates the Split.js resizer once the left_container enters the viewport
+* (to avoid layout thrash before the DOM is visible, and to skip the split on
+* small/mobile screens where innerWidth < 800 px).
+*
+* Left pane:
+*   • area_thesaurus rendered asynchronously; its node reference is kept as
+*     left_container.area_thesaurus_node so the viewer selector can show/hide
+*     it without re-rendering.
+*
+* Right pane (top to bottom):
+*   • transcription_component_container
+*       – lang_selector  : <select> that lets the user switch the display
+*         language of the transcription.  If the component has unsaved changes
+*         (is_data_changed === true) the user is prompted before switching.
+*         After confirmation a new component instance is fetched via
+*         self.get_component(lang) and rendered in its place.
+*       – transcription_component : the actual component_text_area.  An "(Original)"
+*         suffix is appended to the matching option if the component's current lang
+*         differs from the session lang (self.lang), signalling that the original
+*         language was auto-selected.
+*   • info_container
+*       – tag_info        : hosts tag_info_container (the floating tag-detail
+*                           panel, hidden by default via CSS class 'hide').
+*       – Three tab labels (Indexation / Info / References) that toggle the
+*         active CSS class on themselves and on their linked component_node
+*         through the local activate_tab closure.
+*   • indexation_container
+*       – component_indexing_container  : wraps indexing_component (component_portal).
+*       – indexation_note               : container for the tag annotation note view.
+*   • references_container
+*       – component_references_container : wraps references_component if present;
+*         logs a console.error and skips render when absent.
+*
+* Side effects:
+*   • self.info_container, self.indexation_note, self.tag_info_container are
+*     set as direct properties on self for later access by get_tag_info and
+*     the event handlers in tool_indexation.js.
+*   • content_data.left_container is set so render_viewer_selector can reach
+*     left pane nodes through wrapper.content_data.left_container.
+*
+* @param {Object} self - The tool_indexation instance.
+* @returns {Promise<HTMLElement>} The content_data wrapper element, ready to be
+*   inserted into the tool's wrapper node.
 */
 const get_content_data_edit = async function(self) {
 
@@ -240,6 +334,10 @@ const get_content_data_edit = async function(self) {
 
 			const tab_nodes = []
 
+			// activate_tab
+			// Switches the active CSS class between tab label nodes and their
+			// corresponding component_node panels.  Only the tab matching `name`
+			// receives the 'active' class; all others lose it.
 			const activate_tab = function( name ){
 
 				const tab_nodes_len = tab_nodes.length
@@ -314,6 +412,9 @@ const get_content_data_edit = async function(self) {
 
 	// split
 	// @see https://github.com/nathancahill/split/tree/master/packages/splitjs
+	// The IntersectionObserver callback fires once the left_container is actually
+	// in the viewport, ensuring Split.js can read computed sizes correctly.
+	// On narrow viewports (< 800 px) the split is skipped to avoid a poor UX.
 		when_in_viewport(
 			left_container, // node to observe
 			() => { // callback
@@ -344,10 +445,38 @@ const get_content_data_edit = async function(self) {
 
 /**
 * GET_TAG_INFO
-* When user click on index tag, event if fired and recovered by this tool.
-* This event (click_tag_index) fires current function that build tag info panel nodes
-* @param object self
-* 	Instance of the tool
+* Wires up the tag-detail panel that appears when the user clicks an index tag
+* in the transcription text area.
+*
+* This function is called once during edit() to build and attach the static
+* DOM structure of the tag_info_container panel. It then subscribes to two
+* reactive values via self.active_value() so the panel stays in sync as the
+* user navigates between tags:
+*
+*   • 'tag_id' callback — unhides the panel, updates the displayed tag ID, and
+*     refreshes the delete button label.
+*   • 'state' callback  — syncs the state <select> and updates the panel's CSS
+*     class to match the current tag state colour (e.g. 'n', 'd', 'r').
+*
+* Panel contents:
+*   • fragment_id_info   : a read-only label showing the current tag_id.
+*   • tag_state_selector : a <select> populated from self.label_states
+*     (built in tool_indexation.prototype.init).  On change it calls
+*     self.transcription_component.update_tag() with type 'indexIn', which the
+*     text area expands to update both the indexIn and indexOut markers.
+*     After success it sets window.unsaved_data = true to signal pending edits.
+*   • button_delete      : triggers self.delete_tag(tag_id).  On success the
+*     panel is hidden again (class 'hide' added).
+*
+* (!) tag_id is captured as a mutable let variable that is closed over by all
+* event handlers.  The 'tag_id' active_value callback is the sole writer;
+* all handlers read the same binding, so there is no stale-closure risk as
+* long as update_active_values is always called before the handlers fire.
+*
+* @param {Object} self - The tool_indexation instance (must have tag_info_container,
+*   label_states, transcription_component, delete_tag, and active_value set up
+*   before this function is called).
+* @returns {boolean} Always returns true.
 */
 const get_tag_info = function(self) {
 
@@ -391,6 +520,8 @@ const get_tag_info = function(self) {
 				parent			: tag_info_container
 			})
 
+			// Populate state options from self.label_states (set in tool_indexation.prototype.init).
+			// Values are short codes: 'n' (normal), 'd' (deleted), 'r' (to review).
 			for (let k = 0; k < self.label_states.length; k++) {
 				ui.create_dom_element({
 					element_type	: 'option',
@@ -448,6 +579,9 @@ const get_tag_info = function(self) {
 				.then(function(response){
 
 					// show/hide tag_info
+					// Hide the panel only when BOTH the tag deletion and locator
+					// deletion succeeded; partial failures leave the panel visible
+					// so the user can see the error state.
 					if (response && response.delete_tag.result!==false && response.delete_locator.result!==false) {
 						const toggle_node = self.tag_info_container // self.info_container
 						if (!toggle_node.classList.contains('hide')) {
@@ -464,6 +598,8 @@ const get_tag_info = function(self) {
 			})
 
 	// active values
+		// Subscribe to reactive tag_id changes; fired by update_active_values
+		// when the user clicks a different index tag in the transcription.
 		self.active_value('tag_id', function(value) {
 
 			tag_id							= value // update current tag_id var (let)
@@ -475,6 +611,8 @@ const get_tag_info = function(self) {
 					self.tag_info_container.classList.remove('hide')
 				}
 		})
+		// Subscribe to reactive state changes; keeps the selector and panel
+		// colour class in sync when the tag state is updated externally.
 		self.active_value('state', function(value) {
 
 			// fix selector value
@@ -501,10 +639,49 @@ const get_tag_info = function(self) {
 
 /**
 * RENDER_RELATED_LIST
-* This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
-* @param object self
-* 	tool instance
-* @return DocumentFragment
+* Builds the "Approach" toolbar control — a <select> that lets the user choose
+* which top-level section (section_tipo + section_id) scopes the current
+* indexation session.
+*
+* Data source
+* ───────────
+* self.related_sections_list is the datum returned by
+* tool_indexation.prototype.load_related_sections_list().  Its shape is:
+*   {
+*     context : [ { section_tipo, label, … }, … ],
+*     data    : [
+*       { typo: 'sections', value: [ { section_tipo, section_id }, … ] },
+*       { section_tipo, section_id, value: <display_value> },   // per component
+*       …
+*     ]
+*   }
+*
+* Each option in the <select> is labelled as:
+*   "<section label> | <section_id> | <component values joined by ' | '>"
+* The option's value attribute is the composite key
+* "<section_tipo>_<section_id>"; the real locator object is attached directly
+* as option.locator for easy retrieval on change.
+*
+* Persistence
+* ───────────
+* The last-selected option key is stored/retrieved via data_manager's local
+* IndexedDB table 'status' under the key 'tool_indexation_approach'.  On load
+* the stored value is restored; the visible class 'hidden' is removed only
+* after the async read completes to avoid flicker.  When only one option is
+* available (value_length === 1) it is auto-selected.
+*
+* Side effects:
+*   • self.top_locator is set to the first option's locator on build, and
+*     updated to the selected option's locator on every change event.
+*
+* Error handling:
+*   • If the 'sections' entry is missing from datum.data, an error message div
+*     is shown, console.error is logged, and an empty fragment is returned
+*     immediately (the select is not created).
+*
+* @param {Object} self - The tool_indexation instance. Must have
+*   self.related_sections_list already populated (set in build_custom).
+* @returns {DocumentFragment} Fragment containing the approach selector widget.
 */
 const render_related_list = function(self){
 
@@ -550,6 +727,9 @@ const render_related_list = function(self){
 			parent			: related_list_container
 		})
 
+		// Build one <option> per related section.  The locator object is
+		// stored on the option DOM node itself so the change handler can set
+		// self.top_locator without re-parsing the value string.
 		const value			= sections.value || []
 		const value_length	= value.length
 		for (let i = 0; i < value_length; i++) {
@@ -613,6 +793,9 @@ const render_related_list = function(self){
 		})
 
 	// select initial value. local DDBB table status
+	// Hides the selector while the async read is in flight (class 'hidden' was
+	// applied on creation); removes 'hidden' once the value is restored or
+	// confirmed absent, to prevent the select flashing at index 0.
 		data_manager.get_local_db_data(
 			status_id,
 			local_db_table,
@@ -640,10 +823,45 @@ const render_related_list = function(self){
 
 /**
 * RENDER_VIEWER_SELECTOR
-* Let user select left side viewer from options (thesaurus/audiovisual)
-* @param object self
-* 	tool instance
-* @return DocumentFragment
+* Builds the "Viewer" toolbar control — a <select> that switches the content
+* rendered in the left pane between thesaurus, people, and media viewers.
+*
+* Available viewer options (in order):
+*   • area_thesaurus  — hierarchical thesaurus browser (default).
+*   • people_section  — people/persons section browser linked as a relation linker.
+*   • media_component — AV player / media component.
+*
+* Labels are taken directly from the role component's .label property so they
+* reflect the ontology-configured display name.  If a role component is absent
+* on self, a descriptive fallback string is used (no throw).
+*
+* Lazy rendering
+* ──────────────
+* area_thesaurus is rendered eagerly in get_content_data_edit.  The other two
+* viewers (media_component, people_section) are rendered lazily on first
+* selection: the rendered node is stored as left_container.media_component_node
+* / left_container.people_section_node so that subsequent switches only toggle
+* the CSS class 'hide', avoiding redundant renders.
+*
+* Persistence
+* ───────────
+* The selected viewer key is stored to localStorage under
+* 'tool_indexation_viewer'.  If a stored value is present, the select is set
+* to that value and a synthetic 'change' event is dispatched synchronously so
+* the correct viewer is shown immediately on load.
+*
+* Side effects:
+*   • self.viewer is initialised to 'area_thesaurus' and updated on every
+*     change event.
+*   • left_container.media_component_node / .people_section_node are set on
+*     first lazy render.
+*
+* @param {Object} self    - The tool_indexation instance. Must have area_thesaurus,
+*   people_section, and media_component set (set in build_custom).
+* @param {HTMLElement} wrapper - The tool wrapper element; used to reach
+*   wrapper.content_data.left_container so the change handler can manipulate
+*   the left pane's children.
+* @returns {DocumentFragment} Fragment containing the viewer selector widget.
 */
 const render_viewer_selector = function(self, wrapper){
 
@@ -693,6 +911,8 @@ const render_viewer_selector = function(self, wrapper){
 			parent			: viewer_selector_container
 		})
 		// change event
+		// (!) hide_all must be called before the switch so that
+		// no two viewers are visible simultaneously.
 		const change_handler = async (e) => {
 			// fix the new viewer name
 			self.viewer = e.target.value
@@ -795,6 +1015,8 @@ const render_viewer_selector = function(self, wrapper){
 		}
 
 	// last_viewer. Set last selection if present.
+	// Dispatching the 'change' event synchronously applies the saved viewer
+	// before the DOM is returned, so the user sees the correct pane immediately.
 	const last_viewer = localStorage.getItem('tool_indexation_viewer')
 	if (last_viewer) {
 		select.value = last_viewer
@@ -809,11 +1031,21 @@ const render_viewer_selector = function(self, wrapper){
 
 /**
 * RENDER_STATUS
-* Render the status components to get control of the process of the tool
-* the components are defined in ontology as tool_config->name_of_the_tool->ddo_map
-* @param object self
-* 	instance of current tool
-* @return HTMLElement fragment
+* Renders the status control components defined in the tool's ontology
+* ddo_map under the roles 'status_user_component' and 'status_admin_component'.
+*
+* Each status component (if present on self) is rendered in 'mini' view with
+* both the tools toolbar and the save animation suppressed, so they appear as
+* compact inline indicators rather than full edit widgets.
+*
+* Called once during edit() and its result is appended to the toolbar.
+*
+* @param {Object} self - The tool_indexation instance.  Must have
+*   self.status_user_component and self.status_admin_component set (may be
+*   null/undefined if the respective ddo_map role is absent; those are silently
+*   skipped).
+* @returns {Promise<DocumentFragment>} Fragment containing the rendered status
+*   component nodes (may be empty if both status components are absent).
 */
 const render_status = async function(self) {
 

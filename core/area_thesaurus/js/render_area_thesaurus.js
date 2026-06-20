@@ -4,6 +4,38 @@
 
 
 
+/**
+* RENDER_AREA_THESAURUS
+*
+* Client-side rendering module for the area_thesaurus and area_ontology views.
+*
+* This module is responsible for the visual layer of the thesaurus area: it
+* assembles the full wrapper (buttons, search panel slot, content) for the initial
+* page load, and provides the lighter "content only" re-render path used by
+* navigate/refresh. It also exports render_root_term for use by other modules
+* that need to inject individual root nodes into the tree.
+*
+* Two important rendering paths coexist:
+*
+*   1. Normal (browse) path — render_content_data() builds the typology→root-term
+*      skeleton synchronously; each root term spawns a ts_object.get_instance()
+*      promise whose resolution replaces a loading placeholder in the DOM via
+*      requestAnimationFrame (non-blocking).
+*
+*   2. Search path — the server returns a ts_search result attached to the data
+*      item. The area delegates to ts_object.parse_search_result(), which walks
+*      the result set, opens matching branches, and highlights found terms. In the
+*      full render, this is deferred until the search filter fires its 'render_<id>'
+*      event; in the content-only path the call is awaited directly.
+*
+* Exports:
+*   render_area_thesaurus — constructor (assigned as area_thesaurus.prototype.list/edit)
+*   render_root_term      — standalone root-term placeholder builder (imported by
+*                           render_edit_ts_object for relation-level expansions)
+*/
+
+
+
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
@@ -14,7 +46,11 @@
 
 /**
 * RENDER_AREA_THESAURUS
-* Manages the area appearance in client side
+* Constructor for the render delegate.
+* area_thesaurus assigns its list/edit prototype method to
+* render_area_thesaurus.prototype.list, so this constructor is never
+* called directly with `new`; it acts as the prototype vehicle only.
+* @returns {boolean} Always true (no-op constructor body).
 */
 export const render_area_thesaurus = function() {
 
@@ -25,12 +61,47 @@ export const render_area_thesaurus = function() {
 
 /**
 * LIST
-* Render the area thesaurus in list mode
-* @param object options
-* {
-* 	render_level: string default: 'full'
-* }
-* @return HTMLElement
+* Render the area thesaurus in list mode.
+*
+* This method is assigned to both area_thesaurus.prototype.list and
+* area_thesaurus.prototype.edit, so it handles both browse and editor views.
+*
+* Two render levels are supported:
+*
+*   'full'    (default) — Builds the complete area wrapper including the
+*             buttons toolbar, an optional search_container slot, and the
+*             content_data subtree. Attaches keydown listeners and event
+*             subscriptions for deferred search rendering.
+*
+*   'content' — Skips the wrapper build and returns only the content_data
+*             subtree. Used by navigate() / refresh() to swap just the inner
+*             portion of an already-mounted wrapper.
+*
+* Data shape expected in self.data (one item matching tipo 'dd100' or 'dd5'):
+* ```
+*   {
+*     tipo        : "dd100",           // area tipo
+*     typologies  : [ { section_id, label, order }, ... ],
+*     value       : [ { typology_section_id, section_tipo, section_id,
+*                       children_tipo, root_terms: [...], order, ... }, ... ],
+*     ts_search?  : { result: [...], found: [...] }  // present when a search was executed
+*   }
+* ```
+*
+* When ts_search is present the method obtains a root ts_object instance and
+* calls parse_search_result() to build, open, and highlight the matching
+* branches. In the 'full' path this is deferred into a dd_request_idle_callback
+* that is triggered by the 'render_<filter.id>' event so that the search panel
+* has already finished rendering before the tree walk begins.
+*
+* A Ctrl+S keydown listener is installed to toggle .id_info nodes in the tree
+* between showing the TLD tipo identifier and the raw section identifier — a
+* debug/inspection aid for Ontology mode.
+*
+* @param {Object} options
+* @param {string} [options.render_level='full'] - Render depth: 'full' or 'content'.
+* @returns {Promise<HTMLElement>} The assembled wrapper node (full path) or the
+*   content_data element (content path).
 */
 render_area_thesaurus.prototype.list = async function(options) {
 
@@ -101,6 +172,8 @@ render_area_thesaurus.prototype.list = async function(options) {
 		}
 
 	// search_container
+		// Only created when a filter instance exists; the container starts empty
+		// and is populated lazily when the user opens the search panel.
 		if (self.filter) {
 			const search_container = ui.create_dom_element({
 				element_type	: 'div',
@@ -124,6 +197,9 @@ render_area_thesaurus.prototype.list = async function(options) {
 		wrapper.content_data = content_data
 
 	// ts_search case
+		// When the server already resolved a search (e.g. page loaded with an
+		// active filter), defer the tree-walk until the 'render_<filter.id>'
+		// event fires, which guarantees the search panel DOM is ready.
 		if (data.ts_search) {
 			const render_handler = (wrapper_search) => {
 				dd_request_idle_callback(
@@ -166,6 +242,11 @@ render_area_thesaurus.prototype.list = async function(options) {
 
 	// event keydown
 	// swap between title (section info as 'dd0') and title (tld as '[dd222]')
+		// id_info_mode tracks the current display state of all .id_info.ontology nodes.
+		// 'tld' shows the ontology tipo identifier (e.g. 'rsc14');
+		// 'section' shows the raw section_id stored in data-section.
+		// Ctrl+S toggles between the two within a requestIdleCallback so it
+		// never blocks input on large trees.
 		let id_info_mode = 'tld' // tld|section
 		const keydown_handler = (e) => {
 
@@ -193,6 +274,8 @@ render_area_thesaurus.prototype.list = async function(options) {
 				)
 			}
 		}
+		// Remove any previously registered keydown handler before adding a new one
+		// to avoid duplicate listeners when the area is refreshed without a full destroy.
 		if (self.keydown_handler) {
 			document.removeEventListener('keydown', self.keydown_handler)
 		}
@@ -207,8 +290,32 @@ render_area_thesaurus.prototype.list = async function(options) {
 
 /**
 * RENDER_CONTENT_DATA
-* @param object self
-* @return HTMLElement content_data
+* Build the scrollable typology+root-term tree subtree.
+*
+* Creates a content_data <div> containing a <ul class="thesaurus_list_wrapper">
+* whose children are typology <li> blocks. Each block has:
+*   - A .typology_name header div (acts as the collapse toggler).
+*   - A .typology_container div (the collapsible body), populated with
+*     placeholder wrappers returned by render_root_term() for each root term
+*     belonging to that typology.
+*
+* Ordering rules:
+*   - Typologies are sorted by their 'order' field (ascending, via sort_root_terms).
+*   - Within a typology, hierarchy sections with order !== 0 come first (sorted by
+*     sort_root_terms), followed by sections with order === 0 (also sorted by name).
+*   - Empty typologies (no hierarchy nodes or no root terms after permission
+*     filtering) are silently skipped.
+*
+* The expand/collapse state of each typology is persisted in the client-side
+* local DB via ui.collapse_toggle_track (key: 'collapsed_area_thesaurus_<section_id>').
+* The default state is 'opened'.
+*
+* (!) This function is module-private (not exported). It is also called for the
+* 'content' render level in non-search cases, so it must remain a fast,
+* synchronous operation.
+*
+* @param {Object} self - The area_thesaurus instance that owns the render.
+* @returns {HTMLElement} content_data <div> ready to be appended to the wrapper.
 */
 const render_content_data = function(self) {
 
@@ -251,6 +358,8 @@ const render_content_data = function(self) {
 				}
 
 			// thesaurus_type_block li
+				// add the 'model' CSS class when viewing in model mode so that
+				// ts_line elements render their model_value column.
 				const add_css = self.thesaurus_view_mode==='model'
 					? ' model'
 					: ''
@@ -279,6 +388,7 @@ const render_content_data = function(self) {
 				})
 
 			// collapse typology_name->typology_container children
+				// Collapse/expose callbacks update the arrow icon class on the header.
 				const collapse = () => {
 					typology_name.classList.remove('up')
 				}
@@ -337,9 +447,42 @@ const render_content_data = function(self) {
 
 /**
 * RENDER_ROOT_TERM
-* Create the ts_object instances and render it for the first level of terms.
-* @param object options
-* @return HTMLElement placeholder_wrapper
+* Create and render a ts_object instance for a single root-level thesaurus term.
+*
+* This is the non-blocking rendering path for root nodes: a placeholder <div> is
+* returned immediately so the caller can append it to the DOM without waiting.
+* The actual ts_object is fetched, built, and rendered asynchronously; once the
+* node is ready it replaces the placeholder via requestAnimationFrame so the
+* browser has time to paint.
+*
+* This pattern prevents the initial page render from blocking on N concurrent
+* server round-trips (one per root term). Each ts_object.get_instance() call
+* retrieves a cached instance or creates a new one via init().
+*
+* The ts_object instance is registered in self.ar_instances so that the area's
+* destroy cascade can reclaim it on rebuild (search, refresh, navigate).
+*
+* Key options forwarded to ts_object.get_instance():
+*   - section_tipo / section_id — identify the thesaurus term record.
+*   - children_tipo             — the component_relation_children tipo used when
+*                                 expanding child branches for this hierarchy.
+*   - thesaurus_mode            — 'default' (descriptors) or 'relation' etc.,
+*                                 read from self.context.thesaurus_mode.
+*   - ts_parent                 — fixed as 'root' so the instance key is
+*                                 distinct from deeper expansions of the same node.
+*   - linker                    — propagated from the area (set by the DS/portal
+*                                 caller via URL param `initiator`).
+*   - is_ontology               — true when model is 'area_ontology'; changes
+*                                 display and operation options in ts_object.
+*
+* @param {Object} options
+* @param {Object} options.self                   - The area_thesaurus instance.
+* @param {Object} options.root_term              - Root term descriptor from server data.
+*   Shape: { section_tipo, section_id, ... }
+* @param {Object} options.hierarchy_sections_item - Parent hierarchy section descriptor.
+*   Shape: { children_tipo, ... }
+* @returns {HTMLElement} placeholder_wrapper — a <div class="wrapper_placeholder"> that
+*   will be replaced in-place once the ts_object finishes rendering.
 */
 export const render_root_term = function (options) {
 
@@ -415,9 +558,20 @@ export const render_root_term = function (options) {
 
 /**
 * SORT_ROOT_TERMS
-* Sort elements by order value and alphabetic ascending.
-* If order value is the same, sort by target_section_name
-* @return int 1|-1
+* Comparator for sorting hierarchy section objects by their numeric 'order'
+* field, with a locale-aware alphabetical fallback on 'target_section_name'
+* when the order values are equal.
+*
+* Used with Array.prototype.sort() by render_content_data to place ordered
+* hierarchy sections before unordered ones, and to sort within each group.
+*
+* (!) Uses loose equality (==) for the order comparison so that numeric 0
+* and string '0' are treated as equal — this is intentional and must not
+* be changed to strict equality without verifying server output shapes.
+*
+* @param {Object} a - First hierarchy section object.
+* @param {Object} b - Second hierarchy section object.
+* @returns {number} Negative, zero, or positive integer per sort contract.
 */
 const sort_root_terms = function (a, b) {
 	// If first value is same
@@ -434,9 +588,29 @@ const sort_root_terms = function (a, b) {
 
 /**
 * GET_BUTTONS
-* @param object self
-* 	area instance
-* @return DocumentFragment fragment
+* Build the toolbar DocumentFragment for the thesaurus area.
+*
+* Assembles two fixed buttons (Search toggler, Show All) and a dynamic block of
+* context buttons defined in self.context.buttons (from the server context).
+* All buttons except 'button_delete' are rendered; button_new publishes a
+* 'new_section_<id>' event; button_import is currently a no-op (the tool_common
+* call is commented out pending the tool infrastructure refactor).
+*
+* Returns null early when no buttons are defined in the context, so the caller
+* can skip appending an empty fragment.
+*
+* The Search button publishes 'toggle_search_panel_<self.id>', which the
+* area_thesaurus init() handler picks up to lazily build and mount the filter.
+*
+* The Show All button calls self.filter.show_all() directly, which triggers
+* the filter to reset its SQO and re-request data without any active constraint.
+*
+* Additional tools are appended by ui.add_tools(), which reads self.tools[]
+* populated from the context during build().
+*
+* @param {Object} self - The area_thesaurus instance.
+* @returns {DocumentFragment|null} Fragment containing the buttons_container div,
+*   or null if self.context.buttons is absent.
 */
 const get_buttons = function(self) {
 
@@ -498,6 +672,9 @@ const get_buttons = function(self) {
 		})
 
 	// other buttons
+		// Iterate context-defined buttons, rendering each as a <button> element.
+		// 'button_delete' is excluded — deletion in the thesaurus uses a
+		// context-menu / ts_line action, not a toolbar button.
 		const ar_buttons_length = ar_buttons.length;
 		for (let i = 0; i < ar_buttons_length; i++) {
 
@@ -521,6 +698,9 @@ const get_buttons = function(self) {
 							event_manager.publish('new_section_' + self.id)
 							break;
 						case 'button_import':
+							// (!) button_import handler is intentionally a no-op:
+							// the tool_common.open_tool() call is commented out pending
+							// the tool infrastructure refactor. Do not remove this case.
 							// tool_common.open_tool({
 							// 	tool_context	: current_button.tools[0],
 							// 	caller			: self

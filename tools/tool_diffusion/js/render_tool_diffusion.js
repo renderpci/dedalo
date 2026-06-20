@@ -15,7 +15,46 @@
 
 /**
 * RENDER_TOOL_DIFFUSION
-* Manages the component's logic and appearance in client side
+*
+* Client-side render module for tool_diffusion.
+*
+* This module is responsible for building and wiring all DOM nodes shown by
+* the diffusion publishing tool.  It is invoked indirectly through
+* tool_diffusion.prototype.edit (prototype-assigned in tool_diffusion.js)
+* which calls render_tool_diffusion.prototype.edit below.
+*
+* Exported symbols:
+*  - render_tool_diffusion   Constructor (assigned as prototype source in tool_diffusion.js).
+*  - render_publication_items  Builds the per-diffusion-element accordion panels.
+*  - render_container_bottom   Builds the action buttons + progress area for one panel.
+*
+* Key data shapes consumed here:
+*
+*  self.diffusion_info  {Object} — result of dd_diffusion_api::get_diffusion_info.
+*    .section_diffusion_nodes  {Array}  flat array of ontology nodes that target this
+*      section.  Each node: { tipo, model, label, parents, children?,
+*      connection_status? }.  The `parents` path is used to find the
+*      diffusion_group and diffusion_element (or diffusion_element_alias)
+*      ancestors.
+*    .resolve_levels              {number}  default ontology resolution depth.
+*    .skip_publication_state_check {number} 1 = bypass component_publication check.
+*
+*  self.bun_status  {Object} — result of dd_diffusion_api::get_diffusion_status.
+*    .result  {boolean}  true when the Bun engine is reachable.
+*    .msg     {string}   human-readable status message.
+*
+*  self.active_processes  {Array}  — result of dd_diffusion_api::list_processes.
+*    Each entry: { process_id, started_at, ... }.  Used to reconnect an
+*    in-progress SSE stream after a page reload.
+*
+*  SSE chunk shape (sse_response) consumed by on_read callbacks:
+*    { is_running, total_time, result?, errors?,
+*      data: { msg, counter, total, section_label, current: { section_id, time }, total_ms } }
+*
+*  Final SSE payload extras (engine_result):
+*    .tables  {Array} — SQL engine summary: [{ table_name, records_affected, records_count }]
+*    .result  {boolean}
+*    .errors  {Array<string>}
 */
 export const render_tool_diffusion = function() {
 
@@ -26,10 +65,17 @@ export const render_tool_diffusion = function() {
 
 /**
 * EDIT
-* Render tool DOM nodes
-* This function is called by render common attached in 'tool_diffusion.js'
-* @param object options
-* @return HTMLElement wrapper
+* Build and return the top-level wrapper HTMLElement for the diffusion tool.
+*
+* Called by tool_common.prototype.render (through the prototype assignment in
+* tool_diffusion.js).  When render_level is 'content' the inner content_data
+* node is returned directly instead of a full wrapper (used for partial
+* refreshes without rebuilding the chrome).
+*
+* @param {Object} options
+* @param {string} [options.render_level='full'] - 'full' returns the whole wrapper;
+*   'content' returns only the inner content node.
+* @returns {Promise<HTMLElement>} wrapper or content_data node.
 */
 render_tool_diffusion.prototype.edit = async function(options) {
 
@@ -57,9 +103,26 @@ render_tool_diffusion.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* Render tool body or 'content_data'
-* @param instance self
-* @return HTMLElement content_data
+* Build the full body of the diffusion tool panel.
+*
+* Assembles, in order:
+*  1. Bun engine status row (green/red pill).
+*  2. Pending-deletions row (async count + retry button) — hidden when count = 0.
+*  3. Section identity header (name + tipo).
+*  4. diffusion_info_container:
+*     a. Depth-levels control (persisted in localStorage as 'diffusion_levels').
+*     b. Info toggle (<pre> with raw diffusion_info JSON).
+*     c. skip_publication_state_check checkbox
+*        (persisted as 'diffusion_skip_publication_state').
+*  5. Publication items accordion (one panel per diffusion element).
+*  6. Record-count info line ("Publishing N selected records").
+*
+* All values that are persisted in localStorage are restored immediately after
+* the input element is created so the UI reflects the user's last choice without
+* requiring a server round-trip.
+*
+* @param {Object} self - tool_diffusion instance.
+* @returns {Promise<HTMLElement>} content_data wrapper node.
 */
 const get_content_data = async function(self) {
 
@@ -123,6 +186,8 @@ const get_content_data = async function(self) {
 			text_content	: self.get_tool_label('retry') || 'Retry',
 			parent			: pending_deletions_node
 		})
+		// refresh_pending_deletions — queries the count and conditionally shows the row.
+		// Also called after a successful retry to update the badge.
 		const refresh_pending_deletions = function() {
 			self.retry_pending_deletions({count_only: true})
 			.then(function(response){
@@ -135,6 +200,7 @@ const get_content_data = async function(self) {
 				}
 			})
 		}
+		// Retry click: disabled while in-flight, refreshes badge on completion.
 		pending_deletions_button.addEventListener('click', function(e) {
 			e.preventDefault()
 			pending_deletions_button.disabled = true
@@ -179,6 +245,8 @@ const get_content_data = async function(self) {
 		})
 
 	// resolve_levels
+		// The depth value controls how many levels of related records the Bun
+		// engine resolves when building the publication datum.  Minimum is 1.
 		const resolve_levels_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'resolve_levels_container',
@@ -248,6 +316,8 @@ const get_content_data = async function(self) {
 		})
 
 	// info
+		// Collapsible <pre> showing the raw diffusion_info object — useful for
+		// diagnosing ontology mis-configuration without opening the browser console.
 		const button_info = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button info',
@@ -267,6 +337,9 @@ const get_content_data = async function(self) {
 		})
 
 	// skip_publication_state_check
+		// When checked, the diffusion engine does not filter out records whose
+		// component_publication is set to "not published".  Useful for staging
+		// environments or forced re-publications.  Persisted in localStorage.
 		const skip_publication_state_check_label = ui.create_dom_element({
 			element_type	: 'label',
 			text_content	: self.get_tool_label('skip_publication_state_check') || 'Ignore temporarily the publication status when publishing',
@@ -303,6 +376,8 @@ const get_content_data = async function(self) {
 		fragment.appendChild(publication_items)
 
 	// info_text
+		// In list mode, get the real record count from the caller's paginator.
+		// In edit mode (single-record view), total is always 1.
 		const total = (self.caller.mode==='edit')
 			? 1
 			: await self.caller.get_total()
@@ -327,11 +402,32 @@ const get_content_data = async function(self) {
 
 /**
 * RENDER_PUBLICATION_ITEMS
-* Every publication item is a diffusion server (multiple configurations could have more than one)
-* Sample: 'Publication web', 'Publication web PRE', 'Socrata', etc.
-* It consists of a header and a drop-down body.
-* @param object self
-* @return HTMLElement publication_items
+* Build the accordion of publication panels — one per diffusion element.
+*
+* Each diffusion element (e.g. "Publication web", "Socrata") is an entry in
+* self.diffusion_info.section_diffusion_nodes.  Nodes are first grouped by
+* their diffusion_group parent label so related targets can be shown under a
+* shared heading (future CSS grouping; currently each node creates its own
+* accordion entry regardless of group).
+*
+* For every node in every group this function:
+*  1. Locates the diffusion_element (or diffusion_element_alias) ancestor in
+*     node.parents to extract element_tipo and the diffusion type string.
+*  2. Derives a per-user, per-element, per-section process_id used to reconnect
+*     an in-flight stream after a page reload.
+*  3. Renders a collapsible panel with:
+*     - Name, type, diffusion element tipo, and diffusion node tipo rows, each
+*       with a link to open the ontology node in the dd5 documentation tool.
+*     - DB connection status (if reported by the server).
+*     - A fields sub-grid listing target column → source Dédalo component
+*       (collapsed by default; click label to expand).
+*     - A container_bottom with Publish button and SSE progress area.
+*
+* Collapse state for each panel is persisted in ui.collapse_toggle_track via
+* 'collapsed_diffusion_item_<element_tipo>'.
+*
+* @param {Object} self - tool_diffusion instance.
+* @returns {HTMLElement} publication_items container node.
 */
 export const render_publication_items = function(self) {
 
@@ -528,6 +624,7 @@ export const render_publication_items = function(self) {
 								text_content	: get_label.show || 'Show',
 								parent			: publication_items_grid
 							})
+							// Toggle all child detail rows in the grid when the fields header is clicked.
 							fields_value.addEventListener('click', function(e) {
 								ar_fields_nodes.map(el => {
 									el.classList.toggle('hide')
@@ -543,6 +640,7 @@ export const render_publication_items = function(self) {
 									const child = node.children[i]
 
 									// field (target)
+										// child.label is the destination column/field name in the publication target
 										const field_node = ui.create_dom_element({
 											element_type	: 'span',
 											text_content	: child.label,
@@ -552,6 +650,8 @@ export const render_publication_items = function(self) {
 										ar_fields_nodes.push(field_node)
 
 									// related (Dédalo source)
+										// related_label / related_tipo link back to the Dédalo component that
+										// feeds this field.  Clicking opens dd5 positioned on that component.
 										const related_item = ui.create_dom_element({
 											element_type	: 'div',
 											text_content	: child.related_label || '-',
@@ -613,12 +713,37 @@ export const render_publication_items = function(self) {
 
 /**
 * RENDER_CONTAINER_BOTTOM
-* Render container_bottom nodes
-* @param object self
-* @param object item - contains element_tipo, tipo, type, label, children
-* @param array lock_items
-* @param string process_id
-* @return HTMLElement container_bottom
+* Build the action area for a single diffusion element panel.
+*
+* Contains:
+*  - A "Publish" button that asks for confirmation before starting.
+*  - A response_message div used as the SSE progress container.
+*  - A bottom_additions div reserved for type-specific additions
+*    (the switch is intentionally empty; the old 'combine XML' post-action
+*    was removed because the Bun engine now handles consolidation for RDF and
+*    XML the same way).
+*
+* On mount, check_process_data inspects self.active_processes to see whether a
+* diffusion job with this process_id is still running (e.g. after a page
+* reload).  If found, update_process_status is called immediately to reconnect
+* the SSE polling stream.
+*
+* The publish button is given focus as soon as it scrolls into the viewport,
+* via when_in_viewport.
+*
+* @param {Object} self - tool_diffusion instance.
+* @param {Object} item - Descriptor for the current diffusion node.
+* @param {string} item.element_tipo - Ontology tipo of the diffusion_element parent.
+* @param {string} item.tipo - Ontology tipo of the diffusion node itself.
+* @param {string} item.type - Diffusion type string (e.g. 'database', 'rdf', 'xml').
+* @param {string} item.label - Human-readable name for this diffusion target.
+* @param {Array}  item.children - Field mappings (target column + Dédalo source).
+* @param {Array}  lock_items - Shared array of button elements to disable during publish.
+*   Shared across all panels in the same render_publication_items call so that
+*   launching one process locks all Publish buttons simultaneously.
+* @param {string} process_id - Unique identifier for the SSE stream, scoped to
+*   user + diffusion element + section tipo.
+* @returns {HTMLElement} container_bottom node.
 */
 export const render_container_bottom = function (self, item, lock_items, process_id) {
 
@@ -715,10 +840,35 @@ export const render_container_bottom = function (self, item, lock_items, process
 
 /**
 * PUBLISH_CONTENT
-* Trigger the publish records action against the API.
-* The export() call now returns a ReadableStream with per-record progress.
-* @param object self
-* @param object options
+* Initiate a diffusion publish run and display live SSE progress.
+*
+* Flow:
+*  1. Locks all lock_items (adds 'loading' class) and blurs the active element.
+*  2. Calls self.export() which opens a ReadableStream from the Bun diffusion
+*     API (action: 'diffuse', SSE protocol).
+*  3. Sets up a render_stream panel inside response_message with a Stop button
+*     that fires a cancel_process API call.
+*  4. Reads stream chunks via data_manager.read_stream.  Each chunk (sse_response)
+*     is formatted by compound_msg into a human-readable progress line using
+*     a rolling window of the last 50 per-record timing samples to compute the
+*     estimated time remaining.
+*  5. On completion (on_done): unlocks buttons, calls render_process_report to
+*     display the final SQL table summary or RDF/XML download buttons.
+*
+* The `process_id` is user+element+section scoped so concurrent diffusion jobs
+* for different elements remain independent.
+*
+* (!) alert() is used for cancel_process errors.  This is intentional legacy
+*     behaviour — do not replace with console.warn without verifying UX impact.
+*
+* @param {Object} self - tool_diffusion instance.
+* @param {Object} options
+* @param {HTMLElement} options.response_message - Container for SSE progress output.
+* @param {HTMLElement} options.publication_button - The triggering button (locked during run).
+* @param {Object}      options.item - Diffusion node descriptor (see render_container_bottom).
+* @param {string}      options.diffusion_tipo - Ontology tipo of the diffusion node.
+* @param {string}      options.process_id - Unique identifier for this SSE stream.
+* @returns {Promise<void>}
 */
 const publish_content = async (self, options) => {
 
@@ -890,12 +1040,25 @@ const publish_content = async (self, options) => {
 
 /**
 * UPDATE_PROCESS_STATUS
-* Polling reconnection handler.
-* Called from check_process_data when the page loads and finds
-* a process_id in IndexedDB from a previous session.
-* Connects to the Bun diffusion API's get_process_status endpoint.
-* @param object options
-* @return void
+* Reconnect to an already-running diffusion SSE stream after a page reload.
+*
+* Called from check_process_data (inside render_container_bottom) when
+* self.active_processes contains an entry whose process_id matches this panel.
+* It opens a NEW get_process_status stream from the Bun API so the user can
+* follow progress without having initiated the Publish click in this session.
+*
+* Behaviour is identical to publish_content's streaming loop: the same
+* compound_msg formatter, ar_samples rolling average, and render_process_report
+* call on completion are used.
+*
+* (!) alert() is used on cancel_process errors — same reasoning as publish_content.
+*
+* @param {Object} options
+* @param {Object}      options.self       - tool_diffusion instance.
+* @param {string}      options.process_id - SSE stream identifier to reconnect to.
+* @param {HTMLElement} options.container  - Node to render progress into (response_message).
+* @param {Array}       options.lock_items - Button elements to lock while stream is active.
+* @returns {void}
 */
 const update_process_status = (options) => {
 
@@ -1070,16 +1233,36 @@ const update_process_status = (options) => {
 
 /**
 * RENDER_PROCESS_REPORT
-* Manages last_update_record_response from process when
-* read_stream finishes (on done)
-* In some cases, like RDF export, a file is created and we need to get
-* user access to the file download
-* @param object options
-* {
-* 	last_sse_response: {data:last_update_record_response,..},
-* 	container: HTMLElement
-* }
-* @return bool
+* Render the post-completion report once a diffusion SSE stream finishes.
+*
+* Called from on_done in both publish_content and update_process_status.
+* Handles two mutually exclusive result shapes:
+*
+*  A) SQL engine result (engine_result.tables present):
+*     The Bun SQL engine appends a .tables array to the top-level SSE envelope.
+*     Renders a summary status badge (success / partial / fail) plus a grid of
+*     table names, affected rows, and unique record counts.  Also renders any
+*     error strings from engine_result.errors or the SSE envelope's .errors.
+*
+*  B) RDF / XML result (last_update_record_response set; engine_result.tables absent):
+*     Dispatches on last_update_record_response.class:
+*     - 'diffusion_rdf' / 'diffusion_xml': Bulk mode — if consolidated_files is
+*       present (merged_url + zip_url), shows two download buttons for the
+*       merged file and the ZIP archive.  Single-record mode — iterates
+*       diffusion_data[] and shows one download button per file_url.
+*     - default: no extra UI.
+*     Also renders any errors from last_update_record_response.errors.
+*
+* @param {Object} options
+* @param {Object}      options.self              - tool_diffusion instance (for get_tool_label).
+* @param {Object}      [options.last_sse_response={}] - Final SSE envelope from the stream.
+*   .data.last_update_record_response  {Object}  RDF/XML per-record response.
+*   .data.diffusion_data               {Array}   Per-file metadata for individual downloads.
+*   .data.consolidated_files           {Object}  { merged_url, zip_url } for bulk RDF/XML.
+*   .result                            {Object}  SQL engine result ({ tables, result, errors, msg }).
+*   .total_time                        {string}  Human-readable total elapsed time.
+* @param {HTMLElement} options.container - Node to append the report into (response_message).
+* @returns {boolean} true on success, false when there is no data to report.
 */
 const render_process_report = function(options) {
 

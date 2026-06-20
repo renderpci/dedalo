@@ -1,16 +1,19 @@
-# Dédalo Diffusion API Documentation
+# Dédalo Diffusion API
 
-This document describes the Request and Response formats for the Dédalo Diffusion API (`dd_diffusion_api::diffuse`).
+> See also: [JSON API v1](dedalo_api_v1.md) · [Diffusion engine (hub)](diffusion/README.md) · [Search Query Object (SQO)](../core/sqo.md)
 
-## 1. API Request Format
+This page describes the request and response formats for the Dédalo Diffusion API (`dd_diffusion_api::diffuse`), the PHP resolution engine that prepares work data for external distribution.
 
-The Dédalo Diffusion API accepts a standard JSON Request Query Object (RQO).
+## 1. API request format
+
+The Diffusion API accepts a standard JSON Request Query Object (RQO).
 
 ### Endpoint
-The API is typically accessed via the main Dédalo JSON endpoint:
-`POST /core/api/get_json.php`
 
-### Request Body (RQO)
+The API is accessed through the main Dédalo JSON endpoint:
+`POST /core/api/v1/json/index.php`
+
+### Request body (RQO)
 
 ```json
 {
@@ -18,14 +21,12 @@ The API is typically accessed via the main Dédalo JSON endpoint:
   "action": "diffuse",
   "source": {
     "diffusion_tipo": "rsc264"
-
   },
   "sqo": {
     "section_tipo": ["rsc170"],
-
     "limit": 10,
     "offset": 0,
-    "filter": { ... }
+    "filter": {}  // see SQO filter syntax
   },
   "options": {
     "include_debug": false,
@@ -55,8 +56,8 @@ Contains metadata about the context of the request.
 - **`lang`** (String, Optional): The preferred language for the response (e.g., `lg-eng`).
 
 #### 4. `sqo` (Object, Required)
-A standard Dédalo **Search Query Object** defining which records to fetch.
-See [Search Query Object Documentation](../core/sqo.md).
+A standard Dédalo Search Query Object (SQO) defining which records to fetch.
+See [Search Query Object (SQO)](../core/sqo.md).
 - **`section_tipo`** (Array<String>, Required): Array of section types to search (e.g., `["rsc170"]`).
 
 - **`limit`** (Integer, Optional): Maximum number of records to return. Default: System default.
@@ -75,7 +76,7 @@ Configuration flags for the resolution process.
 
 ---
 
-## 2. API Response Format
+## 2. API response format
 
 The response is a standardized JSON object containing metadata, hierarchy information, and the resolved data.
 
@@ -90,8 +91,8 @@ The response is a standardized JSON object containing metadata, hierarchy inform
       "lg-cat": "Català"
     }
   ],
-  "main": [ ... hierarchy ... ],
-  "datum": [ ... data resolution groups ... ]
+  "main": [ /* hierarchy */ ],
+  "datum": [ /* data resolution groups */ ]
 }
 ```
 
@@ -106,7 +107,7 @@ The response is a standardized JSON object containing metadata, hierarchy inform
 
 ---
 
-## 3. The `main` Hierarchy
+## 3. The `main` hierarchy
 
 The `main` array contains the breadcrumbs of the diffusion ontology.
 
@@ -116,7 +117,7 @@ The `main` array contains the breadcrumbs of the diffusion ontology.
   "term": "Public Inventory",
   "model": "diffusion_node",
   "parent": "rsc123",
-  "properties": { ... }
+  "properties": {}  // extra config, only for diffusion_element
 }
 ```
 
@@ -130,7 +131,7 @@ The `main` array contains the breadcrumbs of the diffusion ontology.
 
 ---
 
-## 4. The `datum` Object
+## 4. The `datum` object
 
 Each item in the `datum` array represents a resolution set for a specific section and its records.
 
@@ -143,7 +144,7 @@ Each item in the `datum` array represents a resolution set for a specific sectio
 - **`model`**: The model type.
 - **`context`**: Array of column/field definitions.
 
-### Context (Field Definitions)
+### Context (field definitions)
 The `context` provides metadata for each field (`entry`) in the records. Context is defined by the specific diffusion ontology used to generate the response. It is a flat list of all components that are present in the records.
 
 ```json
@@ -153,7 +154,7 @@ The `context` provides metadata for each field (`entry`) in the records. Context
     "tipo": "rsc927",
     "model": "field_text",
     "parent": "rsc264",
-    "parser": { ... },
+    "parser": {},  // external formatting config
     "varchar": 255,
     "length": 11
   }
@@ -170,7 +171,7 @@ The `context` provides metadata for each field (`entry`) in the records. Context
 - **`varchar`**: (Integer, Optional) Specified character length for VARCHAR fields.
 - **`length`**: (Integer, Optional) Specified numeric length/limit for INT fields.
 
-### Data (Records)
+### Data (records)
 The `data` array contains the actual records resolved.
 
 ```json
@@ -221,7 +222,7 @@ The `data` array contains the actual records resolved.
 
 ---
 
-## 5. Flattening and Resolution Logic
+## 5. Flattening and resolution logic
 
 The Diffusion API performs a deep resolution of relations and cross-sections but returns a **flattened** output:
 
@@ -234,7 +235,7 @@ The Diffusion API performs a deep resolution of relations and cross-sections but
 
 ---
 
-## 6. Metadata Sourcing Rules
+## 6. Metadata sourcing rules
 
 To ensure consistency between Dédalo's internal structure and the public diffusion output:
 
@@ -247,7 +248,7 @@ This allows Dédalo administrators to name a component "Project ID" internally w
 
 ---
 
-## 7. Additional Actions
+## 7. Additional actions
 
 The API supports other actions beyond `diffuse` for configuration and validation.
 
@@ -292,25 +293,25 @@ Retrieves the raw ontology mapping and parser definitions for a diffusion node w
     "result": true,
     "data": {
        "process": {
-           "ddo_map": [ ... ],
-           "parser": { ... }
+           "ddo_map": [],  // flat array of DDO nodes
+           "parser": {}    // parser definitions
        }
     }
   }
   ```
 
-## 8. Diffusion Lifecycle: Insert and Drop Rules
+## 8. Diffusion lifecycle: insert and drop rules
 
-The Diffusion API manages how records are synchronized with external systems, defining when records should be created/updated (Inserted) or removed (Dropped) based on their status and relationships.
+The Diffusion API manages how records are synchronized with external systems, defining when records should be created or updated (inserted) and when they should be removed (dropped), based on their status and relationships.
 
-### 8.1 Main Section and Cross Sections
+### 8.1 Main section and cross sections
 - **Main Section**: The primary record being processed (e.g., an Interview). These are the records explicitly targeted by the `sqo`.
 - **Cross Sections**: Related data resolved through "deep levels" (e.g., People, Places, or Documents linked to the Main Section). The resolution depth is controlled by the `levels` parameter in the request options.
 
-### 8.2 Publishable States Logic
-The system applies specific logic to determine which related records (cross sections) should be processed for update or deletion based on the state of the Main Section:
+### 8.2 Publishable states logic
+The system applies specific logic to decide which related records (cross sections) are processed for update or deletion, based on the state of the main section:
 
-#### Visualization: Resolution Flow
+#### Visualization: resolution flow
 
 ```mermaid
 flowchart TD
@@ -325,23 +326,23 @@ flowchart TD
     ReviewCrossAll --> End
 ```
 
-#### Summary Table
+#### Summary table
 
 | Main Section State | Main Record Action | Cross Section Review Scope | Rationale |
 |:---|:---|:---|:---|
 | **NOT Publishable** | Mark as `delete` | **Non-Publishable only** | Prevents deleting shared data (like a Person) that is still referenced by other valid records. |
 | **Publishable** | Update / Insert | **All (All types)** | Ensures full synchronization of the main record and its entire relationship graph. |
 
-#### Case 1: Main Section is NOT Publishable
+#### Case 1: main section is NOT publishable
 If the main section fails the "publishable" check (e.g., it is set to private or marked for deletion):
 - The record itself is marked for deletion in the diffusion stream.
 - **Review Rule**: Only **non-publishable** cross sections are reviewed for potential removal.
 - **Rationale**: Publishable cross sections are skipped because they may be shared by other publishable main sections (for example, a "Person" record linked to multiple "Interviews"). Deleting the non-publishable main section must not accidentally remove data that is still required by other valid records.
 
-#### Case 2: Main Section IS Publishable
+#### Case 2: main section IS publishable
 If the main section is authorized for diffusion:
 - The full record data is processed and returned.
 - **Review Rule**: **All** related cross sections are reviewed (both publishable and non-publishable) to ensure the local dataset and the destination are fully synchronized.
 
-### 8.3 Dropping Records
+### 8.3 Dropping records
 When a record needs to be removed from the destination, the API returns a signal (e.g., `"entries": "delete"`) for the specific `section_id`. This ensures that the destination database can purge all language variants for that specific record while maintaining referential integrity for shared entities.

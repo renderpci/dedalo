@@ -14,7 +14,42 @@
 
 /**
 * RENDER_TOOL_PROPAGATE_COMPONENT_DATA
-* Manages the component's logic and appearance in client side
+*
+* Client-side render layer for the tool_propagate_component_data tool.
+*
+* This module provides the DOM-building logic that turns a
+* `tool_propagate_component_data` instance into an interactive edit panel.
+* It is consumed exclusively by `tool_propagate_component_data.js`, which
+* assigns `render_tool_propagate_component_data.prototype.edit` onto the
+* tool's prototype chain.
+*
+* Responsibilities:
+*  - Build the full edit panel: section info header, component editor widget,
+*    three action buttons (Replace / Add / Delete), confirmation dialogs, and
+*    a live SSE progress reporter.
+*  - Guard against invalid caller contexts (requires a section in edit mode
+*    three levels up: tool → component → section_group → section).
+*  - Snapshot `section.rqo.sqo` at click time and send it to the PHP back-end
+*    via `self.propagate_component_data()`, which runs the bulk operation in a
+*    background CLI process.
+*  - Poll `dd_utils_api::get_process_status` via a Server-Sent Events stream and
+*    stream progress messages into the response panel until the CLI process ends.
+*
+* Caller context chain (three levels up from the tool):
+*   tool_propagate_component_data (self)
+*     → caller: component (e.g. component_json that hosts the tool button)
+*       → caller: section_group
+*         → caller: section  (must be model='section', mode='edit')
+*
+* Exports:
+*  - render_tool_propagate_component_data  (constructor, prototype host)
+*
+* Noteworthy globals used but NOT imported (declared in the /*global* / header):
+*  - event_manager  (module-global from the page bootstrap; used to publish/
+*    subscribe the 'process_done' cross-component event)
+*
+* @see tools/tool_propagate_component_data/js/tool_propagate_component_data.js
+* @see core/common/js/render_common.js (render_stream)
 */
 export const render_tool_propagate_component_data = function() {
 
@@ -25,10 +60,22 @@ export const render_tool_propagate_component_data = function() {
 
 /**
 * EDIT
-* Render tool DOM nodes
-* This function is called by render common attached in 'tool_propagate_component_data.js'
-* @param object options
-* @return HTMLElement wrapper
+* Render the tool's full edit panel.
+*
+* Entry point called by `tool_common.prototype.render` after the tool is
+* initialised and built.  Delegates all DOM work to the private
+* `get_content_data` helper, then wraps the result in the standard tool
+* wrapper returned by `ui.tool.build_wrapper_edit`.
+*
+* When `options.render_level === 'content'`, the raw `content_data` fragment
+* is returned directly (used by callers that embed the tool inside another
+* container rather than rendering a standalone wrapper).
+*
+* @param {Object} options - Render options forwarded from `tool_common.prototype.render`.
+* @param {string} [options.render_level='full'] - 'full' renders the full wrapper;
+*   'content' returns only the inner content_data node.
+* @returns {Promise<HTMLElement>} Resolves to the tool wrapper (full) or
+*   content_data node (content).
 */
 render_tool_propagate_component_data.prototype.edit = async function(options) {
 
@@ -56,9 +103,44 @@ render_tool_propagate_component_data.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* Render tool body or 'content_data'
-* @param object self
-* @return HTMLElement content_data
+* Build the interactive body of the propagation tool panel.
+*
+* Constructs the entire edit-mode UI as a DocumentFragment that is then
+* appended to the standard `content_data` node returned by
+* `ui.tool.build_content_data`.  The fragment contains:
+*
+*  1. `section_info` — displays the host component's human label and tipo.
+*  2. `components_list_container` — renders the `component_to_propagate`
+*     instance (a temporary, standalone clone of the main component whose
+*     value will be broadcast to all matching records).
+*  3. `buttons_container` — informational text (field name + target record
+*     count) and the three action buttons: Replace / Add / Delete.
+*  4. `response_message` — live SSE progress area populated by
+*     `update_process_status` while the background CLI runs.
+*
+* Guard: if the caller chain does not resolve to a section in edit mode, the
+* function renders an error message instead of the normal UI and returns early.
+*
+* Filter awareness: `section.rqo.sqo.filter` is inspected via `is_filter_empty`
+* to decide whether to show a blanket-replacement warning when the user clicks
+* an action button without any active filter.
+*
+* Process resumption: immediately after building the UI, `check_process_data`
+* looks up `local_db_id` in the browser's local DB. If a previous invocation
+* stored a pid/pfile there (e.g. the panel was closed and re-opened mid-run),
+* `update_process_status` is called again so the user can track the still-running
+* background job.
+*
+* @param {Object} self - The `tool_propagate_component_data` instance.
+*   Expected properties consumed here:
+*   - `self.caller`               {Object} component that opened the tool
+*   - `self.component_to_propagate` {Object} temporary component instance
+*   - `self.main_element`         {Object} source component descriptor
+*   - `self.config`               {Object} tool config (components_monovalue list)
+*   - `self.total`                {number} snapshot of the section total (set here)
+*   - `self.get_tool_label`       {Function} i18n label resolver
+*   - `self.propagate_component_data` {Function} API call method
+* @returns {Promise<HTMLElement>} Resolves to the populated `content_data` node.
 */
 const get_content_data = async function(self) {
 
@@ -111,6 +193,8 @@ const get_content_data = async function(self) {
 		lock_items.push(buttons_container)
 
 	// info_text
+		// Caller chain: tool → component (caller) → section_group (caller.caller) → section (caller.caller.caller).
+		// The tool is only meaningful when it lives inside a section that is in edit mode.
 		const section = self.caller.caller?.caller
 		if (!section || section.model!=='section' || section.mode!=='edit') {
 			console.error('Ignored call. Unable to get valid section. caller:', self.caller);
@@ -147,10 +231,15 @@ const get_content_data = async function(self) {
 			: true
 
 	// info_text
+		// Capture the total now and snapshot it onto self so the PHP back-end
+		// can validate that the client and server agree on the record count before
+		// committing the bulk write (security check in class.tool_propagate_component_data.php).
 		const total				= await section.get_total()
 		self.total				= total // fix total to check before propagate changes in server
 		const tipo_label		= '<strong>'+self.caller.label+'</strong>'
 		const all_records_label	= self.get_tool_label('all_records') || 'All'
+		// When no filter is active, prefix the count with "All" to make clear the
+		// operation will touch every record in the section, not just the visible subset.
 		const total_label		= (filter_empty === false)
 			? '<strong>'+total+'</strong>'
 			: '<strong>'+all_records_label+' - '+total+'</strong>'
@@ -164,6 +253,10 @@ const get_content_data = async function(self) {
 		})
 
 	// click_handler
+		// Shared handler for all three action buttons (replace / add / delete).
+		// Reads `action` from the DOM property set on each button element, runs
+		// two confirmation dialogs (a second one when no filter is active), then
+		// fires the background propagation request and wires up SSE progress tracking.
 		const click_handler = async (e) => {
 			e.stopPropagation()
 
@@ -238,6 +331,10 @@ const get_content_data = async function(self) {
 		button_replace.addEventListener('click', click_handler)
 
 	// button_add
+		// 'Add' is suppressed for mono-value component types (e.g. component_image,
+		// component_select) because they can only hold a single value; adding to them
+		// without replacing would be semantically undefined.
+		// The list is sourced from self.config.components_monovalue (register.json dd1633).
 		const components_monovalue = self.config?.components_monovalue
 			? self.config.components_monovalue.value
 			: []
@@ -272,6 +369,10 @@ const get_content_data = async function(self) {
 		})
 
 	// check process status always
+		// If a propagation was launched in a previous session or during a panel
+		// re-open, retrieve the saved pid/pfile from the browser local DB and
+		// resume streaming.  This ensures the UI reflects a still-running background
+		// process even after the modal is closed and re-opened.
 		const check_process_data = () => {
 			data_manager.get_local_db_data(
 				local_db_id,
@@ -303,9 +404,46 @@ const get_content_data = async function(self) {
 
 /**
 * UPDATE_PROCESS_STATUS
-* Call API get_process_status and render the info nodes
-* @param object options
-* @return void
+* Start or resume live SSE progress tracking for a background propagation job.
+*
+* This function is the bridge between the one-shot API call that launches the
+* background CLI process and the streaming UI that shows per-record progress.
+* It performs three things in sequence:
+*
+*  1. Visually locks the interactive widgets in `lock_items` (adds 'loading'
+*     class) and blurs any focused button to avoid double-clicks.
+*  2. Clears the `container` node and calls `data_manager.request_stream` to
+*     open a Server-Sent Events connection to `dd_utils_api::get_process_status`
+*     at 1-second intervals.
+*  3. Hands the resulting ReadableStream to `data_manager.read_stream`, which
+*     fires `on_read` on every SSE chunk and `on_done` when the PHP process exits.
+*
+* `on_read` builds a human-readable status line by concatenating the server's
+* `data.msg`, `data.section_label`, a progress counter (`counter / total`),
+* the current `section_id`, and the elapsed `total_time`.  This compound message
+* is written into the info panel managed by `render_stream`.
+*
+* `on_done` removes the 'loading' class from all lock_items and publishes the
+* `'process_done'` event via the module-global `event_manager` so that button
+* spinners and other cross-component listeners can react.
+*
+* (!) `event_manager` is a module-global injected by the page bootstrap — it is
+* declared in the file-level `/*global* /` comment but is NOT imported.  If the
+* bootstrap fails to define it, the `on_done` callback will throw a ReferenceError.
+*
+* @param {Object} options - Configuration object.
+* @param {number} options.pid - Unix process ID of the PHP CLI worker; used by
+*   the Stop button inside `render_stream` to send a `stop_process` API call.
+* @param {string} options.pfile - Path to the process output file; forwarded to
+*   `dd_utils_api::get_process_status` for log retrieval.
+* @param {string} options.local_db_id - Key under which the current pid/pfile are
+*   persisted in the browser local DB so the status panel can be resumed after a
+*   page reload or panel close/re-open.
+* @param {HTMLElement} options.container - DOM node for the SSE progress panel;
+*   its children are cleared before rendering.
+* @param {Array<HTMLElement>} options.lock_items - DOM nodes to decorate with the
+*   'loading' class during the process and clean up in `on_done`.
+* @returns {void}
 */
 const update_process_status = (options) => {
 
@@ -359,6 +497,11 @@ const update_process_status = (options) => {
 
 				const is_running = sse_response?.is_running ?? true
 
+				// compound_msg. Builds a pipe-separated progress string from all
+				// available server fields: message, section label, counter/total,
+				// current section_id, and elapsed time.  Shown only when the server
+				// sends a non-trivial msg (length > 5) to avoid displaying a raw
+				// JSON placeholder during process start-up.
 				const compound_msg = (sse_response) => {
 					const data = sse_response.data
 					const parts = []
@@ -376,6 +519,8 @@ const update_process_status = (options) => {
 					return parts.join(' | ')
 				}
 
+				// Choose the best available message: compound when the server sends a
+				// real msg; a generic wait/done string otherwise.
 				const msg = sse_response
 							&& sse_response.data
 							&& sse_response.data.msg
@@ -422,11 +567,11 @@ const update_process_status = (options) => {
 /**
 * CREATE_RESPONSE
 * Render a response node
-* @param object self
-* @param HTMLElement response_message
-* @param object response
-* @param string action
-* @return HTMLElement response_node
+* @param {Object} self
+* @param {HTMLElement} response_message
+* @param {Object} response
+* @param {string} action
+* @returns {HTMLElement} response_node
 */
 	// const create_response = function(self, response_message, response, action) {
 

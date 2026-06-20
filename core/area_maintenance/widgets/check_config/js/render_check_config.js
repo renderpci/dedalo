@@ -4,6 +4,72 @@
 
 
 
+/**
+* RENDER_CHECK_CONFIG
+*
+* Client-side rendering module for the `check_config` maintenance widget.
+*
+* Purpose
+* -------
+* The check_config widget audits the installation's PHP configuration files against
+* their corresponding `sample.*` templates and surfaces three categories of problems:
+*
+*   - Missing constants  — constants declared in `sample.config*.php` but absent
+*                          from the live `config*.php` (i.e. the installation needs
+*                          to add them).
+*   - Obsolete constants — constants present in `config*.php` but no longer in the
+*                          sample (i.e. leftovers that can be cleaned up).
+*   - Full constant list — a collapsible pre-formatted JSON dump of every constant
+*                          found in each sample file, for reference.
+*
+* Root-only controls (visible only when `page_globals.is_root === true`)
+* -----------------------------------------------------------------------
+*   - Maintenance mode  — toggles `DEDALO_MAINTENANCE_MODE`; non-root users are
+*                         kicked out and cannot log in while this is active.
+*   - Recovery mode     — toggles the Ontology backup table as the active Ontology
+*                         table, useful after a failed migration.
+*   - Notification      — sets or clears a `DEDALO_NOTIFICATION` banner that is
+*                         injected into every user's page via the component
+*                         activation/deactivation API (`update_lock_components_state`).
+*
+* Data contract (server → client)
+* --------------------------------
+* `self.value` is the `result` array returned by `check_config::get_value()`.
+* Each element is an object for one config-file comparison:
+*   {
+*     file_name                  : {string}  e.g. 'config', 'config_db', 'config_core'
+*     sample_vs_config           : {Array}   constant names in sample but not in live config
+*     config_vs_sample           : {Array}   constant names in live config but not in sample
+*     sample_config_constants_list : {Array} all constants found in the sample file
+*   }
+*
+* Widget card label style
+* -----------------------
+* When `sample_vs_config` of the first item is non-empty the module calls
+* `set_widget_label_style(self, 'danger', 'add', …)` so the card header turns
+* red, alerting the administrator that required constants are missing.
+*
+* Architecture
+* ------------
+* This file exports only `render_check_config` (prototype constructor).
+* `check_config.js` assigns `render_check_config.prototype.list` onto
+* `check_config.prototype.edit` and `check_config.prototype.list` so that
+* the standard lifecycle (`init → build → render`) flows through here.
+*
+* All DOM construction is delegated to private module-level functions:
+*   get_content_data_edit       — top-level layout builder
+*   render_config_vars_status   — missing/obsolete constants tables
+*   render_maintenance_mode     — maintenance mode toggle form
+*   render_recovery_mode        — recovery mode toggle form
+*   render_notification         — notification banner form
+*
+* Server peer:  core/area_maintenance/widgets/check_config/class.check_config.php
+* Lifecycle:    core/area_maintenance/widgets/check_config/js/check_config.js
+* API:          dd_area_maintenance_api → get_widget_value → check_config::get_value
+*/
+
+
+
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
@@ -14,7 +80,13 @@
 
 /**
 * RENDER_CHECK_CONFIG
-* Manages the component's logic and appearance in client side
+* Prototype constructor for the check_config widget render module.
+*
+* The constructor is a no-op; all rendering logic lives in the prototype
+* method `list` (assigned as both `edit` and `list` on `check_config`).
+* Never instantiate this directly — always use through a `check_config` instance.
+*
+* @returns {boolean} Always true (no-op constructor marker)
 */
 export const render_check_config = function() {
 
@@ -27,14 +99,17 @@ export const render_check_config = function() {
 * LIST
 * Creates the nodes of current widget.
 * The created wrapper will be append to the widget body in area_maintenance
-* @param object options
-* 	Sample:
-* 	{
-*		render_level : "full"
-		render_mode : "list"
-*   }
-* @return HTMLElement wrapper
-* 	To append to the widget body node (area_maintenance)
+*
+* Builds the full widget DOM tree when `render_level === 'full'`, or returns
+* only the raw `content_data` element when `render_level === 'content'` (used
+* by `common.prototype.refresh` for an efficient in-place content swap).
+*
+* @param {Object} options - Render options forwarded by the lifecycle caller
+* @param {string} [options.render_level='full'] - 'full' returns the outer wrapper;
+*   'content' returns only the inner content_data element
+* @returns {Promise<HTMLElement>} Widget wrapper (render_level='full') or content_data
+*   element (render_level='content') to be appended to the widget body node in
+*   area_maintenance
 */
 render_check_config.prototype.list = async function(options) {
 
@@ -63,8 +138,21 @@ render_check_config.prototype.list = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @param object self
-* @return HTMLElement content_data
+* Builds the top-level content DOM for the check_config widget.
+*
+* Layout:
+*   - Root-only section (guarded by `page_globals.is_root === true`):
+*       1. Maintenance mode toggle form
+*       2. Recovery mode toggle form
+*       3. Notification banner form
+*   - Config vars status tables (always visible):
+*       A div wrapping the output of `render_config_vars_status`, which shows
+*       the missing/obsolete constants comparison for all config files.
+*
+* @param {Object} self - The `check_config` widget instance; must expose
+*   `self.value` (the server-side comparison result array) and
+*   `self.caller` (the parent area_maintenance instance providing `init_form`)
+* @returns {Promise<HTMLElement>} The assembled content_data div
 */
 const get_content_data_edit = async function(self) {
 
@@ -110,8 +198,29 @@ const get_content_data_edit = async function(self) {
 /**
 * RENDER_CONFIG_VARS_STATUS
 * Create the necessary DOM nodes to display the config vars status.
-* @param object self Widget instance
-* @return DocumentFragment
+*
+* Iterates `self.value` (one item per config file) and renders two side-by-side
+* table columns:
+*
+*   Missing (sample_vs_config)  — constants required by the sample file but not
+*     yet defined in the live config; each file gets a labelled row showing either
+*     a newline-separated list of constant names or the "OK" label.
+*
+*   Obsolete (config_vs_sample) — constants present in the live config that are no
+*     longer in the sample template; shown in the right column with class 'obsolete'
+*     when non-empty.
+*
+* Below the two columns, each file also gets a collapsible `<pre>` block listing
+* every constant name found in its sample file (toggled by clicking the eye-icon
+* row).
+*
+* Side effect: if the first item's `sample_vs_config` array is non-empty, the
+* widget card header is coloured red via `set_widget_label_style(self, 'danger', 'add', …)`.
+* This uses a `when_in_dom` deferred call (inside `set_widget_label_style`) because
+* the fragment may not yet be attached to the live DOM.
+*
+* @param {Object} self - The `check_config` widget instance
+* @returns {DocumentFragment} Fragment containing the full comparison UI
 */
 const render_config_vars_status = function (self) {
 
@@ -181,6 +290,7 @@ const render_config_vars_status = function (self) {
 					: get_label.ok || 'OK'
 				ui.create_dom_element({
 					element_type	: 'div',
+					// CSS class 'missing' is applied when there are constants to add
 					class_name		: 'data' + (item.sample_vs_config.length>0 ? ' missing' : ''),
 					inner_html		: data_text,
 					parent			: file_container
@@ -209,6 +319,7 @@ const render_config_vars_status = function (self) {
 					: get_label.ok || 'OK'
 				ui.create_dom_element({
 					element_type	: 'div',
+					// CSS class 'obsolete' is applied when there are leftover constants
 					class_name		: 'data' + (item.config_vs_sample.length>0 ? ' obsolete' : ''),
 					inner_html		: data_text,
 					parent			: file_container
@@ -217,7 +328,7 @@ const render_config_vars_status = function (self) {
 
 			// list
 			{
-				// const_list_node
+				// const_list_node — clickable toggle row that reveals the full constant list
 				const const_list_node = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'datalist_container show_list',
@@ -226,6 +337,7 @@ const render_config_vars_status = function (self) {
 				})
 				const_list_node.addEventListener('click', function(e) {
 					e.stopPropagation();
+					// toggle visibility of the collapsible <pre> block
 					const_list_pre.classList.toggle('hide')
 				})
 				const const_list	= item.sample_config_constants_list || []
@@ -262,8 +374,29 @@ const render_config_vars_status = function (self) {
 /**
 * RENDER_MAINTENANCE_MODE
 * Creates the form nodes to switch between maintenance modes
-* @param object self
-* @return HTMLElement maintenance_mode_container
+*
+* Renders a labelled container with a submit form (built via `self.caller.init_form`)
+* that toggles the server-side `DEDALO_MAINTENANCE_MODE` flag.
+*
+* Behaviour
+* ---------
+* - The submit button label reflects the current state: "Activate" when the mode is
+*   off, "Deactivate" when on.
+* - When maintenance mode is currently OFF the submit button receives the CSS class
+*   `danger` (red) to warn the operator before activating it.
+* - On successful API response (`api_response.result === true`) `page_globals.maintenance_mode`
+*   is updated in-place and the page is refreshed via `dd_request_idle_callback` so
+*   all widgets re-render with the new flag state without a full navigation.
+* - The `trigger` object (rather than `on_submit`) is used here, meaning `build_form`
+*   handles the API call internally; `on_done` is the post-response hook.
+*
+* Guard: if `self.caller.init_form` is falsy (e.g. widget loaded outside a full
+* area_maintenance context) the form block is silently skipped; only the label and
+* the warning body_response are rendered.
+*
+* @param {Object} self - The `check_config` widget instance; `self.caller` must expose
+*   `init_form` (the `build_form` wrapper set up in `area_maintenance`)
+* @returns {HTMLElement} The assembled maintenance_mode_container div
 */
 const render_maintenance_mode = (self) => {
 
@@ -342,8 +475,31 @@ const render_maintenance_mode = (self) => {
 /**
 * RENDER_RECOVERY_MODE
 * Creates the form nodes to switch between recovery modes
-* @param object self
-* @return HTMLElement recovery_mode_container
+*
+* Renders a labelled container with a submit form (built via `self.caller.init_form`)
+* that toggles the server-side recovery mode flag. In recovery mode the Ontology
+* backup table is used instead of the main Ontology table, allowing the system to
+* stay operational after a failed migration.
+*
+* Behaviour
+* ---------
+* - The submit button label reflects the current state: "Activate" when the mode is
+*   off, "Deactivate" when on.
+* - When recovery mode is currently OFF the submit button receives the CSS class
+*   `danger` (red) as a visual warning.
+* - On successful API response (`api_response.result === true`) `page_globals.recovery_mode`
+*   is updated in-place, the page is refreshed via `dd_request_idle_callback`, and the
+*   URL is cleaned up by stripping any `recovery` query parameter that may have been
+*   injected by a previous recovery-triggered redirect — otherwise the recovery param
+*   would re-trigger recovery mode on the next page load.
+* - The `trigger` object (rather than `on_submit`) is used, so `build_form` handles the
+*   API call internally; `on_done` is the post-response hook.
+*
+* Guard: if `self.caller.init_form` is falsy the form block is silently skipped.
+*
+* @param {Object} self - The `check_config` widget instance; `self.caller` must expose
+*   `init_form` (the `build_form` wrapper set up in `area_maintenance`)
+* @returns {HTMLElement} The assembled recovery_mode_container div
 */
 const render_recovery_mode = (self) => {
 
@@ -427,8 +583,38 @@ const render_recovery_mode = (self) => {
 * Creates the form nodes to send user notifications
 * Note that this custom notifications are stored in core_config file
 * and read from API update_lock_components_state on every component activation/deactivation
-* @param object self
-* @return HTMLElement recovery_mode_container
+*
+* Renders a labelled container with a form (built via `self.caller.init_form`) that
+* sets or clears a global `DEDALO_NOTIFICATION` banner displayed to all users on every
+* component activation/deactivation poll.
+*
+* Shape of `page_globals.dedalo_notification` when active:
+*   { msg: {string}, class_name: {string} }  e.g. { msg: 'Planned downtime at 18:00', class_name: 'warning' }
+* When inactive: `false`.
+*
+* PHP sample declaration (for reference only):
+*   define('DEDALO_NOTIFICATION', ['msg' => $notice, 'class_name' => 'warning']);
+*
+* Behaviour
+* ---------
+* - When no notification is active a text input is shown for the message, and the
+*   `mandatory` flag is set so the form refuses to submit without content.
+* - When a notification is already active the text input is omitted; submitting
+*   removes the notification (sends `value: false` to the API).
+* - `on_submit` is used here (instead of `trigger`) so the module can issue the API
+*   call directly via `data_manager.request` with a 1-hour timeout and `retries: 1`,
+*   appropriate for a long-running config write operation.
+* - `notification_value` is either the typed message string (activate) or `false`
+*   (deactivate). On success `page_globals.dedalo_notification` is updated in-place
+*   to the normalised object form or `false`, and the page is refreshed via
+*   `dd_request_idle_callback`.
+* - On failure an error div is appended to `notification_body_response`.
+*
+* Guard: if `self.caller.init_form` is falsy the form block is silently skipped.
+*
+* @param {Object} self - The `check_config` widget instance; `self.caller` must expose
+*   `init_form` (the `build_form` wrapper set up in `area_maintenance`)
+* @returns {HTMLElement} The assembled notification_container div
 */
 const render_notification = (self) => {
 
@@ -466,6 +652,8 @@ const render_notification = (self) => {
 			confirm_text	: get_label.sure || 'Sure?',
 			body_info		: notification_container,
 			body_response	: notification_body_response,
+			// inputs are shown only when activating (no current notification);
+			// when deactivating, no input is needed — the API call uses value: false
 			inputs			: (dedalo_notification===false)
 				? [{
 					type		: 'text',
@@ -479,6 +667,7 @@ const render_notification = (self) => {
 				const input				= values.find(el => el.name==='notification_text')
 				const notification_text	= input?.value // string like 'My custom notification'
 
+				// activate: send message string; deactivate: send false
 				const notification_value = dedalo_notification===false
 					? notification_text
 					: false

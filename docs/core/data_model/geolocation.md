@@ -24,7 +24,7 @@ interface language.
 
 ## Canonical JSON shape
 
-The stored dato is an **array of point items** (in practice one item — one map
+The stored data is an **array of point items** (in practice one item — one map
 per component). Each item is the map center plus optional drawn shapes in
 `lib_data`:
 

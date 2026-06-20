@@ -250,7 +250,7 @@ subscription otherwise. Tearing down the section cascades `destroy` to all
 
 ## Worked example: instantiate, render, listen, destroy
 
-```javascript
+```js
 import { get_instance, delete_instance } from '../../common/js/instances.js'
 import { event_manager }                from '../../common/js/event_manager.js'
 

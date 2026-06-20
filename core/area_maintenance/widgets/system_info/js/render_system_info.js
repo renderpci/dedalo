@@ -4,6 +4,44 @@
 
 
 
+/**
+* RENDER_SYSTEM_INFO
+* Client-side rendering layer for the `system_info` maintenance widget.
+*
+* This module builds and populates the visual output for the System Info card
+* shown in the Dédalo maintenance area (`area_maintenance`).  It is paired with:
+*   - `system_info.js`           — lifecycle (init / build / render / destroy)
+*   - `class.system_info.php`    — server-side data: assembles `requeriments_list`,
+*                                  `system_list`, and any runtime `errors`.
+*   - `render_area_maintenance.js` — host shell; provides `set_widget_label_style`.
+*
+* Widget data shape (self.value, produced by `class.system_info::get_value`)
+* -------------------------------------------------------------------------
+*   {
+*     requeriments_list : Array<{ name: string, value: boolean|string, info: string }>,
+*     system_list       : Array<{ name: string, value: string|Object }>,
+*     errors            : string[]   // non-empty when server-side collection failed
+*   }
+*
+* Three sub-lists are rendered inside `datalist_container`:
+*   1. health_list       — live API round-trip checks (5 × check_server_health +
+*                          1 × get_environment), executed asynchronously in the browser.
+*   2. requeriments_list — PHP-collected system requirements check results.
+*   3. system_list       — low-level OS/hardware overview (OS, CPU, RAM, disk …).
+*
+* The widget card label is coloured `danger` (red) when any requirement fails or
+* when any health check fails, via `set_widget_label_style`.
+*
+* Public exports
+* --------------
+*   render_system_info  — prototype constructor; `edit` and `list` are assigned from
+*                         this prototype onto `system_info` in system_info.js.
+*
+* (!) `when_in_viewport` is imported but is not called anywhere in this module.
+*     It may have been intended for lazy-triggering `render_datalist` once the
+*     card scrolls into view, but the call was never added.
+*/
+
 // imports
 	import {ui} from '../../../../common/js/ui.js'
  	import {dd_request_idle_callback,when_in_viewport} from '../../../../common/js/events.js'
@@ -14,7 +52,16 @@
 
 /**
 * RENDER_SYSTEM_INFO
-* Manages the widget logic and appearance in client side
+* Prototype constructor for the system_info render module.
+*
+* Intentionally a no-op; all rendering logic lives in the prototype methods.
+* `system_info.js` assigns:
+*   system_info.prototype.edit = render_system_info.prototype.list
+*   system_info.prototype.list = render_system_info.prototype.list
+*
+* Never instantiate `render_system_info` directly; always call through a
+* `system_info` instance.
+* @returns {boolean} Always true.
 */
 export const render_system_info = function() {
 
@@ -27,13 +74,23 @@ export const render_system_info = function() {
 * LIST
 * Creates the nodes of current widget.
 * The created wrapper will be append to the widget body in area_maintenance
-* @param object options
+*
+* Entry point for both `edit` and `list` render modes (both are aliased to this
+* method in `system_info.js`).  Builds the wrapper shell via the shared
+* `ui.widget.build_wrapper_edit` helper, then delegates the inner content to
+* `render_content_data`.
+*
+* When `render_level === 'content'`, only the inner content_data element is
+* returned (used during refresh / re-render cycles initiated by
+* `widget_common.load`).
+*
+* @param {Object} options
 * 	Sample:
 * 	{
 *		render_level : "full"
 		render_mode : "list"
 *   }
-* @return HTMLElement wrapper
+* @returns {Promise<HTMLElement>} wrapper (full) or content_data (content-only)
 * 	To append to the widget body node (area_maintenance)
 */
 render_system_info.prototype.list = async function(options) {
@@ -63,8 +120,21 @@ render_system_info.prototype.list = async function(options) {
 
 /**
 * RENDER_CONTENT_DATA
-* @param object self
-* @return HTMLElement content_data
+* Builds the root content element for the system_info widget.
+*
+* Creates three child areas:
+*   1. An optional error banner — shown when `self.value.errors` is non-empty
+*      (i.e. the PHP data collection threw an exception).
+*   2. `datalist_container` — placeholder div initialised with a loading message;
+*      replaced by `render_datalist` immediately if `self.value` is already set.
+*      (When value is not yet set, `widget_common.load` will re-render at
+*       `render_level: 'content'` once the fetch completes, and the next call
+*       will hit `render_datalist`.)
+*   3. `body_response` — empty container reserved for future action-response
+*      feedback (e.g. from form submissions inside the widget).
+*
+* @param {Object} self - The `system_info` widget instance.
+* @returns {Promise<HTMLElement>} content_data root div element.
 */
 const render_content_data = async function(self) {
 
@@ -120,9 +190,18 @@ const render_content_data = async function(self) {
 
 /**
 * RENDER_DATALIST
-* Create the datalist nodes and add nodes to datalist_container
-* @param object self
-* @return bool
+* Populates `datalist_container` with the three sub-list sections.
+*
+* Clears the placeholder text, builds three sub-containers (health, requirements,
+* system overview) in a `DocumentFragment`, then replaces the container's content
+* in a single DOM operation.
+*
+* Also schedules (via `dd_request_idle_callback`) a CSS danger-class update on
+* the outer widget card label so it turns red when `errors` is non-empty.
+*
+* @param {Object} self - The `system_info` widget instance carrying `self.value`.
+* @param {HTMLElement} datalist_container - Target container to populate.
+* @returns {boolean} Always true.
 */
 const render_datalist = (self, datalist_container) => {
 
@@ -152,7 +231,7 @@ const render_datalist = (self, datalist_container) => {
 			parent			: fragment
 		})
 		health_list_container.appendChild(
-			render_health_list(self)
+			render_health_list(self, datalist_container)
 		)
 
 	// Dédalo requeriments_list
@@ -191,18 +270,46 @@ const render_datalist = (self, datalist_container) => {
 
 /**
 * RENDER_HEALTH_LIST
-* Render the list of Dédalo health check
-* @param object self
-* 	widget instance
-* @return DocumentFragment
+* Builds the live API health-check section.
+*
+* Fires `checks_list.length` (currently 6) asynchronous API probes in parallel
+* and appends a DOM row for each.  Five probes use `check_server_health` (the
+* lightweight PHP health endpoint); the sixth calls `get_environment` (a full
+* `dd_core_api` round-trip that verifies database connectivity and
+* core bootstrapping).
+*
+* Row anatomy: [ check name | result icon + raw JSON | timing + URL info ]
+*   - result column:  a green check icon on success, a red cancel icon on failure.
+*   - info column:    elapsed time in ms; adds class `warning` when slow
+*                     (>150 ms for health, >300 ms for environment calls).
+*
+* Timing: `performance.now()` captures the start just before the async call is
+* dispatched, so the elapsed time includes only the network round-trip and
+* micro-task scheduling overhead, not DOM creation time.
+*
+* (!) The `checks_list` array repeats `'check_server_health'` five times.  This
+*     is intentional: it measures API round-trip variance across multiple
+*     independent fetches rather than caching the first result.
+*
+* @param {Object} self - The `system_info` widget instance (used for
+*     `set_widget_label_style` calls via the failed_list guard).
+* @param {HTMLElement} datalist_container - The container node used as the
+*     positional anchor for `set_widget_label_style`.
+* @returns {DocumentFragment} Fragment containing the header row and one row per
+*     health probe; rows complete asynchronously after the fragment is returned.
 */
-const render_health_list = function (self) {
+const render_health_list = function (self, datalist_container) {
 
 	const fragment = new DocumentFragment()
 
 	const api_health_url = data_manager.health_url
 
 	// environment
+	// Sends a full dd_core_api 'get_environment' request.
+	// prevent_lock: true skips advisory section locks; retries is 1 so the check
+	// fails fast rather than blocking the UI for multiple retry cycles.
+	// timeout is set to 1 hour because this path may be reached during a slow
+	// initial server warm-up (opcache cold start, large PostgreSQL connection pool).
 	const get_environment = async () => {
 		return data_manager.request({
 			body : {
@@ -244,6 +351,9 @@ const render_health_list = function (self) {
 			parent			: info_item
 		})
 
+	// checks_list drives the loop: the first 5 entries stress-test the raw health
+	// endpoint (measuring round-trip variance), the last entry verifies the full
+	// API stack via get_environment.
 	const checks_list = [
 		'check_server_health',
 		'check_server_health',
@@ -318,6 +428,9 @@ const render_health_list = function (self) {
 					}
 
 					info_column.textContent = `The API health endpoint (${api_health_url}) check takes ${total_time.toFixed(2)}ms.`
+					// Warn when the health endpoint takes longer than 150 ms — it is an
+					// extremely lightweight PHP file and should never be this slow unless
+					// the web server or network is under load.
 					if (total_time > 150) {
 						info_column.classList.add('warning')
 					}
@@ -353,6 +466,8 @@ const render_health_list = function (self) {
 					}
 
 					info_column.textContent = `The API environment check takes ${total_time.toFixed(2)}ms.`
+					// 300 ms threshold for the full environment call (connects to Postgres,
+					// bootstraps core) — slower than the raw health endpoint is expected.
 					if (total_time > 300) {
 						info_column.classList.add('warning')
 					}
@@ -362,6 +477,10 @@ const render_health_list = function (self) {
 	}//end for (let i = 0; i < total_tries; i++)
 
 	// failed list
+	// `datalist_container` is received as a parameter (mirroring
+	// `render_requeriments_list`) so this guard can apply the danger style.
+	// Note: the health probes above resolve asynchronously, so this synchronous
+	// guard runs before they settle; failed_list is typically empty at this point.
 	if (failed_list.length>0) {
 		dd_request_idle_callback(
 			() => {
@@ -378,9 +497,27 @@ const render_health_list = function (self) {
 
 /**
 * RENDER_REQUERIMENTS_LIST
-* Render the list of Dédalo requirements check
-* @param array system_list
-* @return DocumentFragment
+* Builds the PHP-collected system requirements check section.
+*
+* Iterates `requeriments_list` (assembled server-side by `class.system_info::get_value`)
+* and creates one row per requirement.  Each row has three columns:
+*   - name  : human-readable requirement label (e.g. "PHP Supported version").
+*   - value : JSON-stringified check result; receives class `success` (green) or
+*             `failed` (red) when the item value is a boolean, plus a matching
+*             icon span inside the value column.
+*   - info  : explanatory text including the detected and minimum required values
+*             (e.g. "Version: 8.3.4 - minimum: 8.3.0").
+*
+* When any item fails (value === false), the item name is added to `failed_list`
+* and, on idle, the outer widget card label is flagged `danger` via
+* `set_widget_label_style`.
+*
+* @param {Array<{name: string, value: boolean|string, info: string}>} requeriments_list
+*     Server-supplied array of requirement check results.
+* @param {Object} self - The `system_info` widget instance.
+* @param {HTMLElement} datalist_container - The container node used as the
+*     positional anchor for `set_widget_label_style`.
+* @returns {DocumentFragment} Fragment with a header row and one row per requirement.
 */
 const render_requeriments_list = function (requeriments_list, self, datalist_container) {
 
@@ -498,9 +635,22 @@ const render_requeriments_list = function (requeriments_list, self, datalist_con
 
 /**
 * RENDER_SYSTEM_LIST
-* Render the list of server resources like OS, RAM, etc.
-* @param array system_list
-* @return DocumentFragment
+* Builds the server hardware/OS overview section.
+*
+* Iterates `system_list` (assembled server-side by `class.system_info::get_value`
+* using the `linfo` library) and creates a two-column row per item:
+*   - name  : human-readable label (e.g. "os", "cpu", "ram", "hd", "uptime" …).
+*   - value : rendered inside a `<pre>` element so that complex nested objects
+*             (e.g. mount point arrays, network interface maps) retain their
+*             JSON indentation.  Plain string values are used as-is; all other
+*             types are JSON-stringified with 2-space indent.
+*
+* This section is read-only and has no pass/fail semantics — no icon or colour
+* coding is applied.
+*
+* @param {Array<{name: string, value: string|Object}>} system_list
+*     Server-supplied array of OS/hardware snapshot items.
+* @returns {DocumentFragment} Fragment with a header row and one row per system item.
 */
 const render_system_list = function (system_list) {
 
@@ -550,6 +700,8 @@ const render_system_list = function (system_list) {
 		})
 
 		// value
+		// Use the raw string when available; fall back to JSON for objects/arrays
+		// so complex linfo structures (mounts, net interfaces) render readably.
 		const value_string = typeof value==='string'
 			? value
 			: JSON.stringify(value, null, 2)

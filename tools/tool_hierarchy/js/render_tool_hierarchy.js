@@ -4,6 +4,40 @@
 
 
 
+/**
+* RENDER_TOOL_HIERARCHY
+* Client-side view layer for tool_hierarchy.
+*
+* This module provides the DOM rendering logic for the Hierarchy tool, which
+* allows operators to generate a new custom Ontology virtual section (a
+* "hierarchy1" preset) derived from a caller section. The generated structure
+* creates all hierarchy elements required for thesaurus functionality
+* (ontology descriptors, dd_ontology entries, general term root nodes).
+*
+* Architecture:
+*   - `render_tool_hierarchy` is a lightweight constructor whose `edit` method
+*     is mixed into `tool_hierarchy.prototype.edit` by tool_hierarchy.js.
+*   - The main UI work happens in the private `get_content_data` function, which
+*     renders six ontology-field components (tld, name, active, typology, lang,
+*     real_section_tipo) and a Generate button that fires a server-side API call.
+*   - `render_component` is exported so that callers outside this module can
+*     reuse the same component-bootstrap pattern if needed.
+*
+* Ontology tipos used in this form (defined in DEDALO_HIERARCHY_* constants):
+*   hierarchy6   — TLD (top-level domain identifier, DEDALO_HIERARCHY_TLD2_TIPO)
+*   hierarchy5   — Name / term label (DEDALO_HIERARCHY_TERM_TIPO)
+*   hierarchy4   — Active flag (DEDALO_HIERARCHY_ACTIVE_TIPO)
+*   hierarchy9   — Typology reference (DEDALO_HIERARCHY_TYPOLOGY_TIPO)
+*   hierarchy8   — Language relation (DEDALO_HIERARCHY_LANG_TIPO)
+*   hierarchy109 — Real section tipo pointer (DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO)
+*
+* Exports:
+*   render_tool_hierarchy — constructor (prototype carries .edit)
+*   render_component      — async component bootstrap helper
+*/
+
+
+
 // imports
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
@@ -14,7 +48,13 @@
 
 /**
 * RENDER_TOOL_HIERARCHY
-* Manages the component's logic and appearance in client side
+* Constructor for the client-side render delegate of tool_hierarchy.
+*
+* Instances are never used standalone. tool_hierarchy.js copies
+* `render_tool_hierarchy.prototype.edit` onto `tool_hierarchy.prototype.edit`
+* so that the tool_common render pipeline calls it as `self.edit(options)`.
+*
+* @returns {boolean} Always returns true (no-op; fulfils prototype convention).
 */
 export const render_tool_hierarchy = function() {
 
@@ -27,8 +67,16 @@ export const render_tool_hierarchy = function() {
 * EDIT
 * Render tool DOM nodes
 * This function is called by render common attached in 'tool_dummy.js'
-* @param object options
-* @return HTMLElement wrapper
+*
+* Entry point called by `tool_common.prototype.render` when `mode === 'edit'`.
+* Builds the full wrapper (header + content) or, when `render_level === 'content'`,
+* returns only the inner content_data node (used for partial refreshes).
+*
+* @param {Object} options - Render options passed by tool_common.
+* @param {string} [options.render_level='full'] - 'full' returns a wrapped element
+*   with header; 'content' returns only the content_data node (no wrapper/header).
+* @returns {Promise<HTMLElement>} The constructed wrapper element (render_level 'full')
+*   or the raw content_data node (render_level 'content').
 */
 render_tool_hierarchy.prototype.edit = async function(options) {
 
@@ -59,8 +107,27 @@ render_tool_hierarchy.prototype.edit = async function(options) {
 /**
 * GET_CONTENT_DATA
 * Render tool body or 'content_data'
-* @param instance self
-* @return HTMLElement content_data
+*
+* Builds the main body of the tool UI: six ontology-field component instances
+* (rendered in edit mode) plus a Generate button. All components are collected
+* into `components_instances` so the click handler can validate them in bulk
+* and highlight the first invalid one before submitting.
+*
+* Layout of the returned content_data node:
+*   <div.content_data>
+*     <h2.user_info>            — instructional heading
+*     <div.msg_fields>          — "all fields are mandatory" notice
+*     <div.components_container>
+*       [6 component nodes]     — tld, name, active, typology, lang, real_section_tipo
+*     <div.buttons_container>
+*       <button.warning.gear>   — Generate (triggers API call)
+*       <span.checkbox-label>
+*         <input[checkbox]>     — force_to_create flag
+*     <div.messages_container>  — API response messages / errors
+*
+* @param {Object} self - The tool_hierarchy instance (provides caller context,
+*   section_tipo, section_id, ar_instances, get_tool_label, generate_virtual_section).
+* @returns {Promise<HTMLElement>} The constructed content_data <div> element.
 */
 const get_content_data = async function(self) {
 
@@ -93,31 +160,39 @@ const get_content_data = async function(self) {
 		const components_instances = []
 
 	// tld
+	// hierarchy6 (DEDALO_HIERARCHY_TLD2_TIPO) — the top-level domain identifier string
 		const tld_component_instance = await render_component(self, 'hierarchy6');
 		components_container.appendChild(tld_component_instance.node)
 		components_instances.push(tld_component_instance)
 
 	// name
+	// hierarchy5 (DEDALO_HIERARCHY_TERM_TIPO) — the human-readable name / term label
 		const name_component_instance = await render_component(self, 'hierarchy5');
 		components_container.appendChild(name_component_instance.node)
 		components_instances.push(name_component_instance)
 
 	// active
+	// hierarchy4 (DEDALO_HIERARCHY_ACTIVE_TIPO) — relation to the "active" flag term;
+	// validation checks section_id === 1 (the boolean-true term in the thesaurus)
 		const active_component_instance = await render_component(self, 'hierarchy4');
 		components_container.appendChild(active_component_instance.node)
 		components_instances.push(active_component_instance)
 
 	// typology
+	// hierarchy9 (DEDALO_HIERARCHY_TYPOLOGY_TIPO) — relation to the hierarchy type term
 		const typology_component_instance = await render_component(self, 'hierarchy9');
 		components_container.appendChild(typology_component_instance.node)
 		components_instances.push(typology_component_instance)
 
 	// lang
+	// hierarchy8 (DEDALO_HIERARCHY_LANG_TIPO) — relation to the target language term
 		const lang_component_instance = await render_component(self, 'hierarchy8');
 		components_container.appendChild(lang_component_instance.node)
 		components_instances.push(lang_component_instance)
 
 	// real_section_tipo
+	// hierarchy109 (DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO) — the tipo string of the
+	// real (non-virtual) section that backs this hierarchy; must be a non-empty string
 		const real_st_component_instance = await render_component(self, 'hierarchy109');
 		components_container.appendChild(real_st_component_instance.node)
 		components_instances.push(real_st_component_instance)
@@ -140,6 +215,8 @@ const get_content_data = async function(self) {
 			const click_handler = async (e) => {
 				e.stopPropagation();
 
+				// clear_messages: resets all previous error highlights and messages
+				// before starting a new validation + submission cycle
 				const clear_messages = () => {
 					messages_container.classList.remove('error')
 					messages_container.innerHTML = ''
@@ -148,6 +225,10 @@ const get_content_data = async function(self) {
 				clear_messages()
 
 				// set_loading
+				// Adds/removes the 'loading' CSS class and a spinner overlay so the UI
+				// gives visual feedback while the (potentially slow) server call runs.
+				// The spinner is appended to content_data.parentNode (the wrapper), not
+				// content_data itself, so it overlays the entire tool area.
 					let spinner
 					const set_loading = (set) => {
 						if (set) {
@@ -166,6 +247,9 @@ const get_content_data = async function(self) {
 					}
 
 				// set error
+				// Marks a single component as invalid: adds the 'error' CSS class to its
+				// node, activates (focuses) it so the user can see what is wrong, and
+				// writes the per-label error message into messages_container.
 					const set_error = (instance) => {
 						instance.node.classList.add('error')
 						ui.component.activate(instance)
@@ -174,6 +258,10 @@ const get_content_data = async function(self) {
 					}
 
 				// is valid
+				// Returns true when the component instance has no data that satisfies
+				// condition_fn, calling set_error as a side-effect before returning.
+				// Designed to be used with short-circuit OR so validation stops at the
+				// first failing field.
 					const is_invalid = (instance, condition_fn) => {
 						if (!instance.data?.entries || !condition_fn(instance.data?.entries)) {
 							set_error(instance)
@@ -183,6 +271,12 @@ const get_content_data = async function(self) {
 					}
 
 				// check value
+				// Each field has its own predicate:
+				//   tld / name / real_section_tipo — entries[0].value must be a non-empty string
+				//   active                         — entries[0].section_id must equal 1 (true term)
+				//   typology / lang                — entries[0].section_id must be truthy (any term selected)
+				// Validation short-circuits: the first failing field stops the check and
+				// focuses that component. Returns false to abort submission.
 					if (
 						is_invalid(tld_component_instance, val => val?.[0]?.value?.length) ||
 						is_invalid(name_component_instance, val => val?.[0]?.value?.length) ||
@@ -193,6 +287,11 @@ const get_content_data = async function(self) {
 					) return false
 
 				// confirm twice
+				// The generate action is destructive (it may overwrite existing ontology
+				// data) so it requires two sequential confirmations. A 1 s pause between
+				// them ensures the user cannot accidentally dismiss both dialogs by
+				// double-clicking. The second dialog shows the 'absolute_sure' label
+				// (e.g. "Are you absolutely sure?").
 					if (!confirm(get_label.sure || 'Sure?')) {
 						return false
 					}
@@ -207,6 +306,10 @@ const get_content_data = async function(self) {
 				set_loading(true)
 
 				// API call
+				// Delegates to tool_hierarchy.prototype.generate_virtual_section, which
+				// POSTs to dd_tools_api with the caller's section_id / section_tipo and
+				// the optional force_to_create flag. A try/catch handles network-level
+				// failures separately from server-reported errors in the response body.
 				let api_response
 				try {
 					api_response = await self.generate_virtual_section({
@@ -225,6 +328,8 @@ const get_content_data = async function(self) {
 				}
 
 				// messages
+				// The server returns a msg string or array. Arrays are joined with <br>
+				// so each message renders on its own line.
 					const msg = api_response.msg
 						? (Array.isArray(api_response.msg) ? api_response.msg.join('<br>') : api_response.msg)
 						: 'Unknown error'
@@ -236,6 +341,8 @@ const get_content_data = async function(self) {
 					})
 
 				// errors
+				// api_response.errors is an array of string error messages accumulated by
+				// the PHP handler; render each error below the main message.
 					if (api_response.errors?.length) {
 						ui.create_dom_element({
 							element_type	: 'div',
@@ -246,6 +353,11 @@ const get_content_data = async function(self) {
 					}
 
 				// reload section (caller)
+				// On success (result !== false), refresh the caller section so the new
+				// virtual section appears in its record, and also refresh the menu
+				// instance so the new hierarchy entry becomes visible in the navigation.
+				// Both refreshes are guarded with try/catch because the caller chain is
+				// not guaranteed to be present in all render contexts.
 					if (api_response.result !== false) {
 						try {
 							// refresh section
@@ -264,6 +376,9 @@ const get_content_data = async function(self) {
 			}
 			button_generate.addEventListener('click', click_handler)
 			// focus buttons
+			// Defer focus to an idle callback so the browser has completed its
+			// layout pass before we attempt to shift keyboard focus, avoiding
+			// potential scroll-jank on slow devices.
 			dd_request_idle_callback(
 				() => {
 					button_generate.focus()
@@ -271,6 +386,9 @@ const get_content_data = async function(self) {
 			)
 
 		// check box force to create
+		// When checked, the PHP handler calls hierarchy::delete_main first, removing any
+		// previously generated virtual section before rebuilding it from scratch.
+		// (!) This is a destructive option: existing thesaurus data may be lost.
 			const label_field_check_box = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'checkbox-label',
@@ -284,6 +402,8 @@ const get_content_data = async function(self) {
 			})
 
 	// messages_container
+	// Created after the buttons but declared at function scope so the click_handler
+	// closure (defined earlier) can reference it without a forward-declaration issue.
 		const messages_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'messages_container',
@@ -302,10 +422,32 @@ const get_content_data = async function(self) {
 
 /**
 * RENDER_COMPONENT
-* Creates de DOM nodes of the component based on given tipo
-* @param object self
-* @param string tipo
-* @return object component_instance
+* Creates the DOM nodes of the component based on given tipo
+*
+* Bootstraps a single Dédalo component instance for the given ontology tipo,
+* using the tool's caller section as the data context, and renders it in edit
+* mode. The instance is registered in `self.ar_instances` so that the
+* tool_common lifecycle (destroy, refresh) manages it automatically.
+*
+* Instance options set here:
+*   - model: null — forces `get_instance` to resolve the model from ontology,
+*     rather than accepting a hardcoded model name.
+*   - id_variant: self.name — appends the tool's name to the component id to
+*     prevent DOM id collisions when the same tipo is used in multiple contexts.
+*   - caller: self — marks this tool as the component's caller, which is checked
+*     by render logic to suppress tool-within-tool nesting (show_interface.tools)
+*     and the inline add button (show_interface.button_add).
+*   - lang: page_globals.dedalo_data_nolan — components in tool forms always
+*     operate on the language-neutral (nolan) lang slot regardless of the
+*     user's active interface language.
+*
+* @param {Object} self - The tool_hierarchy instance; must expose caller
+*   (with section_tipo and section_id), name, and ar_instances.
+* @param {string} tipo - The ontology tipo identifier of the component to render
+*   (e.g. 'hierarchy6', 'hierarchy5', 'hierarchy4', 'hierarchy9', 'hierarchy8',
+*   'hierarchy109').
+* @returns {Promise<Object>} The fully initialised, built, and rendered component
+*   instance. Its `.node` property holds the rendered HTMLElement.
 */
 export const render_component = async function (self, tipo) {
 
@@ -326,6 +468,8 @@ export const render_component = async function (self, tipo) {
 	// build
 	await component_instance.build(true)
 	// show_interface
+	// Suppress tool buttons and the inline "add" button so the components inside
+	// this tool form look like simple fields rather than full editing widgets.
 	component_instance.show_interface.tools = false
 	component_instance.show_interface.button_add = false
 	// render

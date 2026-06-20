@@ -17,7 +17,51 @@
 
 /**
 * TOOL_LANG_MULTI
-* Tool to translate contents from one language to the rest of the configured languages in any text component
+* Multi-language translation tool for Dédalo v7.
+*
+* Renders one editable component instance per configured project language side-by-side
+* so editors can review and translate content across all languages in a single view.
+* Supports two translation modes that can be selected per-session:
+*
+*   - Browser engine (client-side AI): uses the shared browser_translation worker
+*     (TranslateGemma 4B model via HuggingFace Transformers + ONNX).  The model is
+*     loaded once and kept alive in the worker until destroy() is called.  When
+*     translating to multiple targets, requests are serialised (single GPU/worker).
+*   - Server engine (babel / google): sends rqo requests to dd_tools_api via
+*     data_manager.  Multiple target languages are fired in bounded-concurrency batches
+*     of up to SERVER_CONCURRENCY (4) to avoid sequential latency.
+*
+* Instance properties (beyond tool_common defaults):
+*   @property {string}          lang              — Active UI language (page default or option override).
+*   @property {Array<Object>}   langs             — Sorted project languages [{label, value, tld2}, …];
+*                                                   the current lang is sorted to the front.
+*   @property {string}          source_lang       — The lang the user is currently editing (used as
+*                                                   translation source). Defaults to the caller's lang.
+*   @property {string|null}     target_lang       — Reserved; not used in the current implementation.
+*   @property {object|null}     main_element      — Resolved ar_instances entry matching the
+*                                                   ddo_map 'main_element' role.
+*   @property {string|null}     target_translator — Persisted engine name from local-DB
+*                                                   ('translator_engine_select' in 'status' table).
+*   @property {Map-like Object} lang_containers   — Keyed by lang value; holds each language's
+*                                                   target_component_container HTMLElement.
+*                                                   Populated by render_tool_lang_multi.
+*   @property {Map-like Object} lang_components   — Keyed by lang value; holds each language's
+*                                                   live component instance.
+*                                                   Populated asynchronously as spinners resolve.
+*   @property {HTMLElement}     status_container  — Shared progress/status banner element.
+*   @property {HTMLElement}     translator_engine_select — The engine <select> element.
+*   @property {HTMLElement}     translator_device_checkbox — Checkbox selecting wasm (CPU) vs webgpu.
+*   @property {Array|null}      json_langs        — Cached language-map data from get_json_langs();
+*                                                   lazy-populated on first browser translation call.
+*   @property {number|null}     status_hide_timeout — setTimeout handle used to auto-hide the
+*                                                   status_container after translate-all completes.
+*
+* Prototype methods delegated from shared modules:
+*   render  → tool_common.prototype.render
+*   refresh → common.prototype.refresh
+*   edit    → render_tool_lang_multi.prototype.edit
+*
+* Exports: tool_lang_multi (constructor)
 */
 export const tool_lang_multi = function () {
 
@@ -33,7 +77,7 @@ export const tool_lang_multi = function () {
 	this.target_lang	= null
 	this.langs			= null
 	this.caller			= null
-}//end page
+}//end tool_lang_multi
 
 
 
@@ -51,7 +95,11 @@ export const tool_lang_multi = function () {
 /**
 * DESTROY
 * Free the shared browser translation worker (and its cached model) on close.
-* @return bool
+*
+* Calls dispose_browser_worker() so the (potentially large) ONNX model is
+* released from GPU/memory when the tool panel is closed. Then falls through
+* to common.prototype.destroy for standard cleanup (event listeners, instances, DOM).
+* @returns {boolean} Result from common.prototype.destroy.
 */
 tool_lang_multi.prototype.destroy = function() {
 
@@ -65,8 +113,22 @@ tool_lang_multi.prototype.destroy = function() {
 
 /**
 * INIT
-* @param object options
-* @return bool common_init
+* Initialise the tool and compute the ordered language list.
+*
+* After delegating to tool_common.prototype.init (which seeds common tool
+* properties from `options` and rebuilds the caller in window mode), this method:
+*   1. Clones page_globals.dedalo_projects_default_langs so the original is untouched.
+*   2. Sorts the list so the active lang appears first (better UX — source is at top).
+*   3. Appends the synthetic 'lg-nolan' entry when the caller component uses that
+*      special no-language mode (lg-nolan is not included in project defaults).
+*
+* Side effects: sets self.lang, self.langs, self.source_lang, self.target_lang.
+*
+* @param {Object} options - Tool launch options forwarded from tool_common.
+*   @param {string}        [options.lang]   - Override language; falls back to page_globals.dedalo_data_lang.
+*   @param {Object|null}   [options.caller] - The component that opened the tool;
+*                                            its `lang` is used as the initial source_lang.
+* @returns {Promise<boolean>} common_init — the result from tool_common.prototype.init.
 */
 tool_lang_multi.prototype.init = async function(options) {
 
@@ -118,8 +180,24 @@ tool_lang_multi.prototype.init = async function(options) {
 
 /**
 * BUILD_CUSTOM
-* @param bool autoload = false
-* @return bool common_build
+* Build tool state after init: resolve the main_element instance and restore
+* the previously selected translator engine from local-DB.
+*
+* Delegates first to tool_common.prototype.build which loads tool CSS, processes
+* ddo_map entries into live instances, and optionally fetches component data.
+*
+* Then:
+*   1. Finds the ar_instances entry whose tipo matches the ddo_map 'main_element' role.
+*      All per-language component clones are derived from this entry's context in get_component().
+*   2. Reads the 'translator_engine_select' key from the local IndexedDB 'status' table
+*      to restore whichever engine the user last selected — so the UI is consistent across
+*      sessions without requiring a server round-trip.
+*
+* Side effects: sets self.main_element, self.target_translator.
+*
+* @param {boolean} [autoload=false] - Passed through to tool_common.prototype.build;
+*   when true, the build fetches fresh data from the API before rendering.
+* @returns {Promise<boolean>} common_build — the result from tool_common.prototype.build.
 */
 tool_lang_multi.prototype.build = async function(autoload=false) {
 
@@ -156,8 +234,20 @@ tool_lang_multi.prototype.build = async function(autoload=false) {
 
 /**
 * GET_COMPONENT
-* @param string lang
-* @return object component_instance
+* Asynchronously instantiate and build a component instance for a specific language.
+*
+* Clones the main_element's context object so each language gets its own isolated
+* options bag, then overrides `lang` and `mode` accordingly.  The returned instance
+* is already initialised and built (ready to render) via load_component().
+*
+* `to_delete_instances` is deliberately set to null so every language instance
+* remains alive in ar_instances — they are all needed simultaneously on screen.
+*
+* Called once per language row during the render phase (inside
+* create_target_component's ui.load_item_with_spinner callback).
+*
+* @param {string} lang - BCP-47-style language code (e.g. 'lg-eng', 'lg-spa').
+* @returns {Promise<Object>} component_instance — the initialised and built component.
 */
 tool_lang_multi.prototype.get_component = async function(lang) {
 
@@ -187,20 +277,30 @@ tool_lang_multi.prototype.get_component = async function(lang) {
 
 /**
 * AUTOMATIC_TRANSLATION
-* Call the API to translate the source lang component data to the target lang component data
-* using a online service like babel or Google translator and save the resulting value
-* (!) Tool lang config translator must to be exists in register_tools section
+* Send a server-side translation request for one source→target language pair.
 *
-* @param string translator
-* 	(name like 'babel' must to be defined in tool config)
-* @param string source_lang
-* 	(like 'lg-eng')
-* @param string target_lang
-* 	(like 'lg-spa')
-* @param HTMLElement buttons_container
-* 	(where will be place the message response)
+* Builds a standard dd_tools_api rqo and delegates to data_manager.request().
+* The tool's server-side handler (tool_lang_multi::automatic_translation) performs
+* the actual translation via the named engine (babel, google, etc.) and saves the
+* result directly into the component's data column.
 *
-* @return object api_response
+* After the API responds, the target language component is refreshed in-place
+* so the new translation appears without a full page reload.
+*
+* (!) The translator engine named by `translator` must be present in the tool's
+* register.json config (translator_engine list); unknown engine names will cause
+* the server handler to return result:false.
+*
+* (!) Timeout is 3600 s (1 hour) to accommodate large documents or slow engines.
+* retries is set to 1 (no retry) because a duplicate request could overwrite a
+* partially-saved result.
+*
+* @param {string}      translator        - Engine name as declared in tool config (e.g. 'babel').
+* @param {string}      source_lang       - Source language code (e.g. 'lg-eng').
+* @param {string}      target_lang       - Target language code (e.g. 'lg-spa').
+* @param {HTMLElement} buttons_container - Element that will receive the status/error message banner.
+* @returns {Promise<Object>} api_response — raw response from dd_tools_api:
+*   { result: boolean, msg: string, data?: * }
 */
 tool_lang_multi.prototype.automatic_translation = async function(translator, source_lang, target_lang, buttons_container) {
 
@@ -258,8 +358,20 @@ tool_lang_multi.prototype.automatic_translation = async function(translator, sou
 * SET_SOURCE_LANG
 * Set the active source language (the component the user is editing) and update
 * the visual highlight. Falls back to DEDALO_DATA_LANG when none is focused.
-* @param string lang (like 'lg-eng')
-* @return bool
+*
+* Iterates over self.lang_containers (populated by render_tool_lang_multi) and
+* toggles the 'source' CSS class on the container and the 'bold' class on its
+* title element.  This gives the editor a clear visual cue about which language
+* will be used as the translation source.
+*
+* No-ops when `lang` is already the active source (avoids redundant DOM writes)
+* or when `lang` is falsy.
+*
+* Called automatically on 'focusin' and 'input' events of each language component
+* (wired in create_target_component inside render_tool_lang_multi.js).
+*
+* @param {string} lang - Language code to set as source (e.g. 'lg-eng').
+* @returns {boolean} true when the source was changed; false when no-op.
 */
 tool_lang_multi.prototype.set_source_lang = function(lang) {
 
@@ -295,8 +407,25 @@ tool_lang_multi.prototype.set_source_lang = function(lang) {
 * Resolve the currently selected translator engine and the runtime options
 * derived from the UI (engine type and compute device). Shared by
 * translate_target and automatic_translation_all to keep them from drifting.
-* @param array translator_engine (optional, tool config engines)
-* @return object { translator_name, engine, is_browser, device }
+*
+* Engine resolution order:
+*   1. translator_engine_select DOM element value (what the user currently has in the <select>).
+*   2. Falls back to null if no engine is selected or the name cannot be matched.
+*
+* Device resolution (browser engine only):
+*   - translator_device_checkbox checked → 'wasm' (CPU; more compatible, slower).
+*   - unchecked (default)               → 'webgpu' (GPU; faster when supported).
+*
+* @param {Array<Object>} [translator_engine] - Engine config array from tool config;
+*   defaults to self.context.config.translator_engine.value if omitted.
+*   Each entry: { name: string, label: string, type: 'browser'|'server', … }
+* @returns {Object} Resolution result:
+*   {
+*     translator_name : {string|null}  — selected engine name,
+*     engine          : {Object|null}  — matched engine config entry,
+*     is_browser      : {boolean}      — true when engine.type === 'browser',
+*     device          : {string}       — 'wasm' | 'webgpu'
+*   }
 */
 tool_lang_multi.prototype.resolve_engine = function(translator_engine) {
 
@@ -319,16 +448,30 @@ tool_lang_multi.prototype.resolve_engine = function(translator_engine) {
 * RUN_BROWSER_TRANSLATION
 * Translate one component client-side (browser engine), lazy-loading the
 * json_langs map once and reusing it for subsequent calls.
-* @param object options
-* {
-* 	source_component	: object component instance
-* 	target_component	: object component instance
-* 	source_lang			: string
-* 	target_lang			: string
-* 	device				: string ('wasm' | 'webgpu')
-* 	container			: HTMLElement (optional, holds the streaming overlay)
-* }
-* @return promise
+*
+* json_langs is a lookup table mapping language codes to names and locale
+* strings expected by the ONNX translation model.  It is fetched once and
+* cached on self.json_langs to avoid repeated network requests across the
+* "translate all" loop.
+*
+* Delegates to translate_component_browser() (browser_translation.js) which
+* drives the shared worker, streams partial results into the target component's
+* DOM, and saves the final value when the worker posts 'end'.
+*
+* The streaming_overlay and streaming_overlay_content DOM elements (attached
+* directly to the container in render_tool_lang_multi.js) are passed through so
+* the browser engine can render live streaming text while the model generates.
+*
+* @param {Object} options
+* @param {Object}      options.source_component - Live component instance whose data is the translation source.
+* @param {Object}      options.target_component - Live component instance that receives the translated text.
+* @param {string}      options.source_lang      - Source language code (e.g. 'lg-eng').
+* @param {string}      options.target_lang      - Target language code (e.g. 'lg-spa').
+* @param {string}      options.device           - Compute device: 'wasm' (CPU) | 'webgpu' (GPU).
+* @param {HTMLElement} [options.container]      - The target_component_container; if present, its
+*                                                 .streaming_overlay and .streaming_overlay_content
+*                                                 properties are forwarded to the worker driver.
+* @returns {Promise<*>} Result from translate_component_browser (resolves when translation is saved).
 */
 tool_lang_multi.prototype.run_browser_translation = async function(options) {
 
@@ -359,15 +502,26 @@ tool_lang_multi.prototype.run_browser_translation = async function(options) {
 * TRANSLATE_TARGET
 * Translate the current source component into one target language using the
 * selected engine (browser = client-side AI, or server = babel/google).
-* @param object options
-* {
-* 	target_lang			: string
-* 	target_component	: object component instance
-* 	container			: HTMLElement (target_component_container)
-* 	translator_engine	: array (tool config engines)
-* 	source_lang			: string (optional, defaults to self.source_lang)
-* }
-* @return promise
+*
+* This is the per-language entry point used both by the individual translate
+* button wired into each language component's button bar and by the
+* translate_one closure inside automatic_translation_all.
+*
+* Engine dispatch:
+*   - is_browser → run_browser_translation (serialised in the caller for multi-target).
+*   - otherwise  → automatic_translation (server API call).
+*
+* When the browser engine is selected but the source component is not yet loaded
+* in self.lang_components, an error banner is shown and the promise rejects.
+*
+* @param {Object} options
+* @param {string}      options.target_lang       - Target language code (e.g. 'lg-spa').
+* @param {Object}      options.target_component  - Live component instance to receive the translation.
+* @param {HTMLElement} [options.container]       - Target component's outer container element;
+*                                                  used for the streaming overlay and error messages.
+* @param {Array}       [options.translator_engine] - Engine config array; defaults to tool config.
+* @param {string}      [options.source_lang]     - Source language override; defaults to self.source_lang.
+* @returns {Promise<*>} Result from the chosen engine call.
 */
 tool_lang_multi.prototype.translate_target = async function(options) {
 
@@ -413,11 +567,33 @@ tool_lang_multi.prototype.translate_target = async function(options) {
 * One-click translation of the current source component into every configured
 * language (except the source). Opens an overwrite/skip modal first; holding
 * Alt while clicking overwrites without the modal.
-* @param object options
-* {
-* 	event : MouseEvent (optional, used to detect Alt key)
-* }
-* @return promise array of per-lang results
+*
+* Pre-flight checks (each returns false early with a status banner):
+*   - No translator engines configured in tool config → abort.
+*   - Not all lang_components are loaded yet (async spinners) → abort with 'loading' message.
+*   - Source component is empty (is_component_empty) → abort with 'empty_source' message.
+*
+* Overwrite policy:
+*   - Alt+click → 'overwrite' unconditionally (skips the modal for power users).
+*   - Normal click → asks the user via ask_overwrite_mode modal:
+*       'overwrite' — translate all targets regardless of existing content.
+*       'skip'      — only translate targets whose value is currently empty.
+*       null (modal closed) — cancel; returns false.
+*
+* Scheduling strategy:
+*   - Browser engine: targets translated sequentially (single shared GPU/worker).
+*   - Server engine:  targets translated in batches of SERVER_CONCURRENCY (4)
+*     concurrent requests via Promise.all to cut latency without hammering the
+*     external service.
+*
+* After all targets complete, a summary banner 'completed (n/total)' is shown in
+* status_container, then the container auto-hides after ~10.5 s.
+*
+* @param {Object}    [options={}]   - Options bag.
+* @param {MouseEvent} [options.event] - The originating click event; used to
+*   detect Alt key for no-modal overwrite.
+* @returns {Promise<Array<Object>|boolean>} Array of per-lang results
+*   [{ lang: string, ok: boolean }, …], or false on abort/cancel.
 */
 tool_lang_multi.prototype.automatic_translation_all = async function(options={}) {
 
@@ -575,8 +751,19 @@ tool_lang_multi.prototype.automatic_translation_all = async function(options={})
 * ASK_OVERWRITE_MODE
 * Open a modal asking whether to overwrite existing translations or skip
 * languages that already have content.
-* @param object self
-* @return promise<string|null> 'overwrite' | 'skip' | null (cancelled)
+*
+* The modal contains two buttons:
+*   - "Skip non-empty" (secondary) → resolves 'skip'.
+*   - "Overwrite all" (warning)    → resolves 'overwrite'.
+* Closing via the X button or the backdrop resolves null (cancel).
+*
+* A `resolved` guard prevents the promise from settling more than once when
+* both a button and the on_close handler fire in quick succession.
+*
+* (!) This is a module-private helper — not exported or attached to the prototype.
+*
+* @param {Object} self - The tool_lang_multi instance (used for labels and ui.attach_to_modal).
+* @returns {Promise<string|null>} 'overwrite' | 'skip' | null (cancelled).
 */
 const ask_overwrite_mode = (self) => {
 

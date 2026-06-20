@@ -1,13 +1,14 @@
-
 # Service Upload
 
-Manages file upload tasks for Dédalo sections, areas and tools.  
+> See also: [Services](index.md) · [Add a service](../extending/add_a_service.md) · [Media pipeline](../media_pipeline.md)
+
+Manages file-upload tasks for Dédalo sections, areas and tools.
 
 ## Use
 
-Upload service is used in different scenarios, it can handle 1 file at a time, the service is file format agnostic, so it is possible to set the extensions allowed, the service can chunk files in scenarios where the size of the uploaded files is controlled (as maximum upload 100MB).
+The upload service is used in several scenarios. It handles one file at a time and is file-format agnostic, so you can set the allowed extensions. It can also chunk files where the upload size must be controlled (the maximum upload is 100 MB).
 
-Sample of use:
+Sample usage:
 
 ``` js
 // import instances module
@@ -34,7 +35,7 @@ my_container_node.appendChild(service_node)
 
 Preview
 
-![Tools development menu](assets/service_upload_image.png){ width="400" align=center }
+![Service upload interface](assets/service_upload_image.png){ width="400" align=center }
 
 ## Events
 

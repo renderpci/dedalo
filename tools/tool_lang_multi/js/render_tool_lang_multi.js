@@ -4,6 +4,41 @@
 
 
 
+/**
+* RENDER_TOOL_LANG_MULTI
+* Client-side render layer for the multi-language translation tool.
+*
+* Responsibilities:
+* - Build the full editing UI that shows every configured project language
+*   simultaneously, one language slot per column (`target_component_container`).
+* - Wire the per-slot and batch "translate" buttons to the translation engine
+*   (browser AI or server-side service).
+* - Maintain two instance-level maps on `self` that are shared with
+*   `tool_lang_multi.js` methods:
+*     · `self.lang_containers` — lang-value → target_component_container (for CSS highlights)
+*     · `self.lang_components` — lang-value → loaded component instance (for reads/writes)
+* - Track which language slot is the active translation source and update
+*   the visual highlight via `set_source_lang()`.
+*
+* Module layout:
+*   render_tool_lang_multi (constructor, exported) — placeholder constructor; edit()
+*     is attached to the prototype and delegated from tool_lang_multi.prototype.edit.
+*   get_content_data_edit (private) — builds the full content DOM: top bar
+*     (translate-all button + engine selector), status banner, and all language slots.
+*   create_target_component (exported) — creates one language column with its
+*     spinner, streaming overlay, source-tracking listeners, and per-slot translate
+*     button.
+*   is_component_empty (exported) — emptiness predicate used before asking for
+*     overwrite confirmation.
+*   build_automatic_translation (private) — builds the engine-selector `<select>`
+*     and device-mode checkbox sub-panel.
+*
+* Both `create_target_component` and `is_component_empty` are also imported by
+* tool_lang_multi.js, which is why they are named exports rather than closures.
+*
+* @module render_tool_lang_multi
+*/
+
 // imports
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
@@ -12,7 +47,10 @@
 
 /**
 * RENDER_TOOL_LANG_MULTI
-* Manages the component's logic and appearance in client side
+* Render namespace constructor for the multi-language translation tool.
+* Instantiated once; `edit()` is the sole prototype method and is delegated
+* from `tool_lang_multi.prototype.edit` (see tool_lang_multi.js).
+* @returns {boolean} true
 */
 export const render_tool_lang_multi = function() {
 
@@ -23,8 +61,19 @@ export const render_tool_lang_multi = function() {
 
 /**
 * EDIT
-* @param object options = {}
-* @return HTMLElement wrapper
+* Render the tool in edit mode. Optionally returns just the inner content
+* node (when `options.render_level === 'content'`) or the full wrapped
+* component node.
+*
+* Called via `tool_lang_multi.prototype.edit` (prototype delegation).
+* `this` is the `tool_lang_multi` instance.
+*
+* @param {Object} options - Render options.
+* @param {string} [options.render_level='full'] - 'full' builds the wrapper
+*   around the content; 'content' returns the raw content_data node for
+*   embedding inside an existing container.
+* @returns {Promise<HTMLElement>} The component wrapper (render_level 'full')
+*   or the content_data element (render_level 'content').
 */
 render_tool_lang_multi.prototype.edit = async function (options={}) {
 
@@ -52,8 +101,19 @@ render_tool_lang_multi.prototype.edit = async function (options={}) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @param object self
-* @return HTMLElement content_data
+* Build and populate the full edit-mode content node.
+*
+* Creates the top action bar (translate-all button + engine selector sub-panel),
+* a shared status/progress banner, and the scrollable column grid of language
+* slots. Initialises `self.lang_containers` and `self.lang_components` to empty
+* maps that are progressively filled as each slot's async spinner resolves.
+*
+* The translate-all button is rendered unconditionally but its click handler is
+* a no-op when no `translator_engine` is configured in the tool context, giving
+* a graceful degradation path for installations without a translation service.
+*
+* @param {Object} self - The `tool_lang_multi` instance.
+* @returns {Promise<HTMLElement>} The populated content_data element.
 */
 const get_content_data_edit = async function(self) {
 
@@ -138,13 +198,32 @@ const get_content_data_edit = async function(self) {
 
 /**
 * CREATE_TARGET_COMPONENT
-* @param object lang
-* {
-* 	label: 'English',
-* 	value: 'lg-eng'
-* }
-* @param object self
-* @return HTMLElment target_component_container
+* Build one language column: title bar, spinner placeholder, streaming overlay,
+* source-tracking event listeners, and (when configured) a per-slot translate
+* button injected into the rendered component's buttons fold.
+*
+* The function returns immediately after the container skeleton is created; the
+* actual component load happens asynchronously inside `ui.load_item_with_spinner`.
+* Once the async callback resolves, the spinner is replaced with the live
+* component node and the streaming overlay / translate button are wired up.
+*
+* Side effects on `self`:
+* - `self.lang_containers[lang.value]` is set to the returned container so that
+*   `set_source_lang()` can toggle the `.source` / `.bold` CSS classes.
+* - `self.lang_components[lang.value]` is set (inside the async callback) once
+*   the component instance has been loaded and rendered.
+*
+* The returned container element also has two non-standard properties attached
+* for the streaming use-case:
+* - `container.streaming_overlay`         — the overlay `<div>`
+* - `container.streaming_overlay_content` — the inner content `<div>`
+*
+* @param {Object} lang - Language descriptor from `page_globals.dedalo_projects_default_langs`.
+* @param {string} lang.label - Human-readable label, e.g. 'English'.
+* @param {string} lang.value - BCP 47-style language code, e.g. 'lg-eng'.
+* @param {Object} self - The `tool_lang_multi` instance.
+* @returns {HTMLElement} target_component_container — the column root element
+*   (with the spinner already inserted; the component node replaces it later).
 */
 export const create_target_component = (lang, self) => {
 
@@ -265,8 +344,20 @@ export const create_target_component = (lang, self) => {
 /**
 * IS_COMPONENT_EMPTY
 * Check whether a component instance has no meaningful value.
-* @param object component
-* @return bool
+*
+* A component is considered empty when its `data.value` array is absent,
+* zero-length, or contains only items whose resolved text is blank after
+* trimming. Both plain-string items (e.g. component_input_text) and object
+* items with a `.value` string property (e.g. component_text_area entries)
+* are handled by the same predicate.
+*
+* Used before showing the overwrite-confirmation dialog: if the target slot
+* is already empty there is nothing to overwrite and the confirm can be
+* skipped safely.
+*
+* @param {Object} component - A loaded Dédalo component instance. Must expose
+*   `component.data.value` (an Array of string or {value:string} items).
+* @returns {boolean} true when the component contains no non-blank text.
 */
 export const is_component_empty = (component) => {
 
@@ -288,8 +379,35 @@ export const is_component_empty = (component) => {
 
 /**
 * BUILD_AUTOMATIC_TRANSLATION
-* @param object options
-* @return HTMLElment automatic_translation_container
+* Build the engine-selector sub-panel: a `<select>` listing available
+* translation engines plus a collapsible configuration area that exposes
+* the device-mode checkbox (WebGPU vs WASM) for browser-based engines.
+*
+* The currently active engine is persisted to the local IndexedDB status
+* table via `data_manager.set_local_db_data` so it survives page reloads.
+* The device-mode preference is stored under the key 'translator_device_checkbox'.
+*
+* Visibility rules:
+* - The configuration panel is hidden by default.
+* - It is shown immediately if the initially selected engine has `type === 'browser'`
+*   (because the device-mode option is only relevant for browser engines).
+* - Selecting a different engine in the `<select>` toggles the panel live.
+* - The gear icon button always toggles the panel open/closed.
+*
+* The sub-panel is only appended to the DOM when `translator_engine` is truthy
+* (callers already guard this), so the returned element is always useful.
+*
+* @param {Object} options - Construction options.
+* @param {Object} options.self - The `tool_lang_multi` instance. The function
+*   sets `self.translator_engine_select` and `self.translator_device_checkbox`
+*   so that `tool_lang_multi.prototype.resolve_engine` can read the current
+*   user selection without querying the DOM from outside this module.
+* @param {Array<Object>} options.translator_engine - Engine descriptors from
+*   the tool config (`self.context.config.translator_engine.value`). Each
+*   descriptor has the shape:
+*   `{ name: string, label: string, type: 'browser'|'server', uri?: string, key?: string }`.
+* @returns {HTMLElement} automatic_translation_container — the root element of
+*   the engine selector panel.
 */
 const build_automatic_translation = (options) => {
 

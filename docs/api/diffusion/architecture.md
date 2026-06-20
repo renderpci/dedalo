@@ -1,6 +1,8 @@
-# Architecture: Hybrid Diffusion Engine
+# Architecture: hybrid diffusion engine
 
-Dédalo v7 uses a hybrid architecture for its Diffusion Engine, combining the flexibility of PHP for ontology/data resolution with the performance and streaming capabilities of Bun for API delivery and storage.
+> See also: [API endpoints](endpoints.md) · [Data model](data_model.md) · [Diffusion engine (hub)](README.md)
+
+Dédalo v7 uses a hybrid architecture for its diffusion engine. It combines the flexibility of PHP for ontology and data resolution with the performance and streaming capabilities of Bun for API delivery and storage.
 
 ## Components
 
@@ -37,9 +39,9 @@ The core logic for resolving Dédalo's complex ontology and data structures.
 ### 4. MariaDB (Target Database)
 The destination database where the diffused data is stored for public access or external consumption.
 
-## Request Flow
+## Request flow
 
-The following diagram illustrates the internal orchestration of a diffusion request, showing how it handles both small and large record sets through chunking.
+The following diagram shows the internal orchestration of a diffusion request, including how it handles both small and large record sets through chunking.
 
 ```mermaid
 flowchart TD
@@ -68,7 +70,7 @@ flowchart TD
 5.  **Streaming feedback**: After each chunk is processed, Bun enqueues an SSE message to the client.
 6.  **Reconnection**: If the client disconnects, Bun allows re-attaching to the process via `get_process_status`.
 
-## Scalability and Memory Management
+## Scalability and memory management
 
 By dividing the process into chunks:
 - **PHP** only needs to hold a small subset of records in memory at once.

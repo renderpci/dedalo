@@ -1,6 +1,8 @@
-# Installation on RHEL-based Systems
+# Installation on RHEL-based systems
 
-Dédalo can be installed on various RHEL-based distributions including:
+> See also: [Installation](index.md) · [Apache configuration](apache_configuration.md)
+
+Dédalo can be installed on various RHEL-based distributions, including:
 - Red Hat Enterprise Linux 9+
 - Rocky Linux 9
 - AlmaLinux 9
@@ -8,7 +10,7 @@ Dédalo can be installed on various RHEL-based distributions including:
 
 This guide provides distribution-specific installation instructions.
 
-## System Requirements
+## System requirements
 
 ### OS
 - **Supported Distributions**: 
@@ -30,9 +32,9 @@ This guide provides distribution-specific installation instructions.
 - 500 Mbps+ connection speed
 - SSL certificate installed
 
-## Installation Steps
+## Installation steps
 
-### 1. System Update and Base Packages
+### 1. System update and base packages
 
 ```bash
 # Update system packages
@@ -43,7 +45,7 @@ sudo dnf groupinstall "Development Tools" -y
 sudo dnf install wget curl git unzip zip tar make zlib-devel bzip2-devel openssl-devel ncurses-devel sqlite-devel readline-devel xz-devel libffi-devel -y
 ```
 
-### 2. Web Server and PHP Installation
+### 2. Web server and PHP installation
 
 ```bash
 # Install EPEL repository (for Rocky/Alma)
@@ -71,7 +73,7 @@ sudo firewall-cmd --permanent --add-service=https
 sudo firewall-cmd --reload
 ```
 
-### 3. Database Installation
+### 3. Database installation
 
 #### PostgreSQL
 ```bash
@@ -109,7 +111,7 @@ sudo systemctl enable --now mariadb
 sudo mysql_secure_installation
 ```
 
-### 4. Media Processing Tools
+### 4. Media processing tools
 
 ```bash
 # Install RPM Fusion repository for multimedia codecs
@@ -131,7 +133,7 @@ sudo dnf install poppler-utils ocrmypdf -y
 sudo dnf install ocrmypdf-lang-* -y
 ```
 
-### 5. Download and Configure Dédalo
+### 5. Download and configure Dédalo
 
 ```bash
 # Download Dédalo
@@ -159,7 +161,7 @@ EOF
 #   chmod 600 ~/.pgpass
 ```
 
-### 6. Configuration Files
+### 6. Configuration files
 
 ```bash
 cd /path/to/dedalo/config/
@@ -177,7 +179,7 @@ nano config_core.php   # Core settings
 nano config_areas.php  # Areas configuration
 ```
 
-### 7. Complete the Installation
+### 7. Complete the installation
 
 ```bash
 # Restart web server
@@ -195,7 +197,7 @@ sudo systemctl restart httpd
 
 ## Troubleshooting
 
-### Common Issues:
+### Common issues
 
 **1. PHP modules not loading:**
 ```bash

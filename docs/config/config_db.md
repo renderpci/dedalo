@@ -100,7 +100,7 @@ define('DEDALO_DB_PORT_CONN' , 5432);
 
 DEDALO_SOCKET_CONN `null or string`
 
-This parameter defines the connection to the database will use a UNIX socket instead tcp. By default Dédalo do not uses the socket connection (null)
+This parameter defines whether the database connection uses a UNIX socket instead of TCP. By default Dédalo does not use the socket connection (null).
 
 ```php
 define('DEDALO_SOCKET_CONN' , null);
@@ -276,8 +276,8 @@ define('MYSQL_DEDALO_DATABASE_CONN' , 'web_dedalo');
 All Diffusion databases must be created with full privileges for the configured user, as shown below:
 
 ```sql
-CREATE USER'dedalo_write'@'localhost' IDENTIFIED BY ''
-GRANT ALL PRIVILEGES ON `web\_dedalo`.* TO 'username'@'localhost'
+CREATE USER 'username'@'localhost' IDENTIFIED BY 'password';
+GRANT ALL PRIVILEGES ON `web_dedalo`.* TO 'username'@'localhost';
 ```
 
 See the multiple [diffusion databases](../diffusion/diffusion_multiple_databases.md) documentation.
@@ -290,10 +290,10 @@ See the multiple [diffusion databases](../diffusion/diffusion_multiple_databases
 
 MYSQL_DEDALO_DB_PORT_CONN `int`
 
-This parameter defines the host port of the server that is running the database. By default Dédalo uses default MySQL '3306' port.
+This parameter defines the host port of the server that is running the database. By default Dédalo uses the default MySQL '3306' port.
 
 ```php
-define('DEDALO_DB_PORT_CONN' , 3306);
+define('MYSQL_DEDALO_DB_PORT_CONN' , 3306);
 ```
 
 ---

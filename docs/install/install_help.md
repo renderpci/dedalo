@@ -1,10 +1,12 @@
 # Visual guide
 
+> See also: [Installation](index.md)
+
 ## Video-guide for V6 installation
 
-To Install Dédalo needs a server configured with PHP, Apache, PostgreSQL, MariaDB and other libraries.
+Installing Dédalo needs a server configured with PHP, Apache, PostgreSQL, MariaDB and other libraries.
 
-Next video show how install Dédalo in a Ubuntu Server step by step.
+The video below shows how to install Dédalo on an Ubuntu Server, step by step.
 
 !!! note "About the server configuration"
     Take account that this video is a example with a very simple configuration, for ex: the install process use default `/var/www/html` directory, do not change the default apache2 vhost and do not use a web user without admin privileges. This video do not pretend to create a production server, the goal is show how install a development environment, for install a production server you will ensure that the environment is safe.

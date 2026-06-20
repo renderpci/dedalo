@@ -4,6 +4,36 @@
 
 
 
+/**
+* UPDATE_ONTOLOGY MODULE
+*
+* Client-side controller for the Dédalo Ontology-update maintenance widget.
+* It coordinates a two-phase flow:
+*
+*   1. Fetch remote-server metadata (`get_ontology_update_info`) to discover
+*      which compressed snapshot files are available and which active TLD
+*      entries need updating.
+*   2. Submit the selected file list to the local server (`update_ontology`
+*      action on `dd_area_maintenance_api`) which downloads, imports, and
+*      reindexes the ontology tables, regenerates JS lang files, and flushes
+*      the hierarchy cache.
+*
+* Additionally the module exposes:
+*   - `supported_code_version` — version-range guard used after import to
+*     warn operators when the installed Dédalo code predates the newly
+*     loaded ontology.
+*   - Rendering is entirely delegated to `render_update_ontology.prototype.list`
+*     (assigned as both `edit` and `list` render modes) so that this file
+*     stays focused on data transport.
+*
+* Lifecycle (inherited from widget_common):
+*   init → build → render (→ edit / list) → destroy
+*
+* Server API entry-point: `dd_area_maintenance_api` action `widget_request`
+* with `source.model = 'update_ontology'`.
+*
+* @module update_ontology
+*/
 // imports
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
@@ -14,6 +44,29 @@
 
 /**
 * UPDATE_ONTOLOGY
+* Constructor for the update_ontology widget instance.
+*
+* All lifecycle properties are declared here (not in a class body) following
+* Dédalo's prototype-assignment pattern.  The `init` / `build` / `render` /
+* `destroy` methods are wired in the prototype block below.
+*
+* Instance properties:
+* @property {string}  id            - Widget identifier string (set by init).
+* @property {string}  section_tipo  - Ontology section tipo (e.g. 'dd0').
+* @property {string}  section_id    - Record section_id within section_tipo.
+* @property {string}  lang          - Active interface language code.
+* @property {string}  mode          - Render mode: 'edit' | 'list'.
+* @property {*}       value         - Hydrated widget value object fetched from
+*                                     `get_value`; shape defined by the server-side
+*                                     `update_ontology::get_value()` PHP method:
+*                                     { servers, current_ontology, prefix_tipos,
+*                                       structure_from_server, confirm_text }.
+* @property {HTMLElement} node      - Root DOM node of this widget after render.
+* @property {Array}   events_tokens - Subscriptions registered via event_manager;
+*                                     drained on destroy to avoid listener leaks.
+* @property {Array}   ar_instances  - Child widget/component instances managed
+*                                     by this widget.
+* @property {*}       status        - Runtime lifecycle status (set by framework).
 */
 export const update_ontology = function() {
 
@@ -46,8 +99,12 @@ export const update_ontology = function() {
 	update_ontology.prototype.build		= widget_common.prototype.build
 	update_ontology.prototype.render	= widget_common.prototype.render
 	update_ontology.prototype.destroy	= widget_common.prototype.destroy
+	// get_value fetches widget state from dd_area_maintenance_api::get_widget_value
+	// using `source.model = this.id` and returns api_response.result.
 	update_ontology.prototype.get_value	= area_maintenance.prototype.get_value
 	// render
+	// Both edit and list modes delegate to the same render_update_ontology.list
+	// implementation — the widget has no separate edit layout.
 	update_ontology.prototype.edit		= render_update_ontology.prototype.list
 	update_ontology.prototype.list		= render_update_ontology.prototype.list
 
@@ -60,9 +117,20 @@ export const update_ontology = function() {
 * to determine whether it is less than, equal to or greater than current.
 * If is greater than current installed returns false, else true
 * This required_version value comes from Ontology root term (dd1) properties
-* @param string required_version
-* 	Like '6.2.5'
-* @return bool
+*
+* Version strings use dot-separated integers, e.g. '6.2.5'.  The comparison
+* is lexicographic on each numeric segment so '6.10.0' > '6.9.0' as expected.
+*
+* Called after a successful `update_ontology` API response to check whether
+* the freshly imported ontology requires a newer Dédalo code version than
+* the one currently running.
+*
+* @param {string} required_version - Minimum code version string required by
+*   the newly loaded ontology, e.g. '6.2.5'.  Comes from
+*   `api_response.root_info.properties.version`.
+* @returns {boolean} `true` when the installed code version satisfies the
+*   requirement (installed >= required); `false` when the code is too old and
+*   the operator must upgrade before the new ontology can be used safely.
 */
 update_ontology.prototype.supported_code_version = (required_version) => {
 
@@ -88,13 +156,33 @@ update_ontology.prototype.supported_code_version = (required_version) => {
 /**
 * UPDATE_ONTOLOGY
 * Execs the update_ontology action on server using the Working API dd_area_maintenance_api
-* @param object options
-* {
-* 	server	: server,
-	files	: selected_files,
-	info	: result.info
-* }
-* @return object api_response
+*
+* Dispatches to `dd_area_maintenance_api::widget_request` with
+* `source.model = 'update_ontology'` and `source.action = 'update_ontology'`.
+* On the server the PHP method `update_ontology::update_ontology()` handles
+* this action (see `API_ACTIONS` allowlist in the PHP class).
+*
+* The request runs inside a web worker (`use_worker: true`) and uses a 1-hour
+* timeout because the server pipeline (download + pg_restore + dd_ontology
+* rebuild + lang-file generation + hierarchy cache flush) can legitimately
+* take tens of minutes on large deployments.
+*
+* `retries: 1` means exactly one attempt — retrying an ontology import
+* automatically could leave tables in a partially-imported state.
+*
+* @param {Object} options - Import parameters forwarded verbatim to PHP:
+*   @param {Object}   options.server - Target server descriptor chosen by the
+*     operator in the servers list; shape: `{ name, url, code, active }`.
+*   @param {Array}    options.files  - Filtered list of file descriptors to
+*     import, each: `{ section_tipo, tld, url, typology_id?, name_data? }`.
+*     Always includes `matrix_dd` first (shared private-list table).
+*   @param {Object}   options.info   - Remote ontology metadata returned by
+*     the prior `get_ontology_update_info` call; forwarded so the server can
+*     record provenance.
+* @returns {Promise<Object>} Resolves to the raw API response object:
+*   `{ result: boolean, msg: string, errors: string[], root_info?: Object }`.
+*   `root_info.properties.version` is used by the caller to run the version
+*   compatibility check via `supported_code_version`.
 */
 update_ontology.prototype.update_ontology = async (options) => {
 

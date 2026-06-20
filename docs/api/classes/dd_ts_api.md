@@ -1,40 +1,36 @@
-
 # dd_ts_api
 
-Overview
+> See also: [JSON API v1](../dedalo_api_v1.md) · [dd_core_api](dd_core_api.md)
 
-- Thesaurus / hierarchical tree API. Used to read nodes, children and manage tree ordering.
+Thesaurus / hierarchical-tree API. Use it to read nodes and their children, and to manage tree ordering and parentage.
 
-How to call
+## How to call
 
 - POST JSON with `dd_api: "dd_ts_api"` and `action` set to one of the methods below.
 
-Common fields
+## Common fields
 
-- `source` typically contains node identifiers or locator information. `options` may include payload data for add/update operations.
+- `source` carries the node identifiers (`section_tipo`, `section_id`) and related locator information.
+- `options` may carry payload data for the add/update operations.
 
-Methods
+## get_node_data
 
-- get_node_data
+- **Purpose:** return the parsed data for a thesaurus node.
+- **Accepts:** `source.section_tipo` (string), `source.section_id` (string|int), optional `source.children_tipo` (component tipo), optional `source.area_model` (string, defaults to `area_thesaurus`), optional `options.thesaurus_view_mode` (`default` | `model`).
+- **Returns:** `result` holds the parsed child-data object (as produced by `ts_object::parse_child_data`), or `false` on error; `msg` carries the status and `errors` holds any issues.
 
-## Methods
-
-### Example Request
+### Example request
 
 ```json
 {
   "dd_api": "dd_ts_api",
   "action": "get_node_data",
-  "source": {
-    "section_tipo": "doc_tipo_1"
-  },
-  "sqo": {
-    "limit": 10
-  }
+  "source": { "section_tipo": "oh1", "section_id": "1" },
+  "options": {}
 }
 ```
 
-### Example Response
+### Example response
 
 ```json
 {
@@ -44,184 +40,84 @@ Methods
 }
 ```
 
-- Purpose: Return information for a thesaurus node.
+## get_children_data
 
-### Example Request - 2
+- **Purpose:** list the children of a given node.
+- **Accepts:** `source.section_tipo`, `source.section_id`, optional `source.children_tipo`, optional `source.children` (array of locator objects), optional `source.model` (area model string), `options.pagination` (object with `limit`, `offset`, `total`), optional `options.thesaurus_view_mode`.
+- **Returns:** `result` is an object with `ar_children_data` (array of parsed children) and `pagination` (object with `limit`, `offset`, `total`); `msg` carries the status.
 
-```json
-{
-  "dd_api": "dd_ts_api",
-  "action": "get_node_data",
-  "options": {}
-}
-```
-
-### Example Response - 2
-
-```json
-{
-  "result": true,
-  "msg": "OK"
-}
-```
-
-- Accepts: `source.section_tipo` (string), `source.section_id` (string|int), optional `source.children_tipo` (component tipo), optional `source.area_model` (string, defaults to `area_thesaurus`), optional `options.thesaurus_view_mode` (`default`|`model`).
-- Returns: `response.result` contains the parsed child data object (as produced by `ts_object::parse_child_data`) or `false` on error; `msg` provides status and `errors` holds issues.
-- Example:
-
-    ```json
-    {
-      "dd_api": "dd_ts_api",
-      "action": "get_node_data",
-      "source": { "node_id": 123 },
-      "options": {}
-    }
-
-    ```
-
-- get_children_data
-
-### Example Request - 3
+### Example request
 
 ```json
 {
   "dd_api": "dd_ts_api",
   "action": "get_children_data",
-  "source": {
-    "section_tipo": "doc_tipo_1"
+  "source": { "section_tipo": "oh1", "section_id": "1" },
+  "options": { "pagination": { "limit": 50, "offset": 0 } }
+}
+```
+
+### Example response
+
+```json
+{
+  "result": {
+    "ar_children_data": [],
+    "pagination": { "limit": 50, "offset": 0, "total": 0 }
   },
-  "sqo": {
-    "limit": 10
-  }
-}
-```
-
-### Example Response - 3
-
-```json
-{
-  "result": true,
-  "msg": "OK",
-  "data": []
-}
-```
-
-- Purpose: List children nodes for a given node.
-
-### Example Request - 4
-
-```json
-{
-  "dd_api": "dd_ts_api",
-  "action": "get_children_data",
-  "options": {}
-}
-```
-
-### Example Response - 4
-
-```json
-{
-  "result": true,
   "msg": "OK"
 }
 ```
 
-- Accepts: `source.section_tipo`, `source.section_id`, optional `source.children_tipo`, optional `source.children` (array of locator objects), optional `source.model` (area model string), `options.pagination` (object with `limit`, `offset`, `total`), optional `options.thesaurus_view_mode`.
-- Returns: object in `response.result` with keys: `ar_children_data` (array of parsed children) and `pagination` (object with `limit`, `offset`, `total`). `msg` contains status.
-- Example:
+## add_child
 
-    ```json
-    {
-      "dd_api": "dd_ts_api",
-      "action": "get_children_data",
-      "source": { "node_id": 123, "recursive": true },
-      "options": { "limit": 50 }
-    }
+- **Purpose:** add a child node under a parent.
+- **Accepts:** `source.section_tipo` (string, new child tipo), `source.section_id` (string|int, parent section id).
+- **Returns:** `result` is the newly created `section_id` (int) on success; `msg` carries the status and `errors` may hold issues.
 
-    ```
-
-- add_child
-
-### Example Request - 5
+### Example request
 
 ```json
 {
   "dd_api": "dd_ts_api",
   "action": "add_child",
-  "source": {
-    "section_tipo": "doc_tipo_1"
-  },
-  "data": {
-    "component_tipo_1": "value"
-  }
+  "source": { "section_tipo": "oh1", "section_id": "1" }
 }
 ```
 
-### Example Response - 5
+### Example response
 
 ```json
 {
-  "result": true,
-  "msg": "Record created",
-  "section_id": 123
+  "result": 123,
+  "msg": "Record created"
 }
 ```
 
-- Purpose: Add a child node under a parent.
+## update_parent_data
 
-### Example Request - 6
+- **Purpose:** move a node to a new parent.
+- **Accepts:** `source.section_tipo`, `source.section_id`, `source.old_parent_section_id`, `source.old_parent_section_tipo`, `source.new_parent_section_id`, `source.new_parent_section_tipo`.
+- **Returns:** boolean `result` (`true` on success); `msg` carries the status and `errors` on failure.
 
-```json
-{
-  "dd_api": "dd_ts_api",
-  "action": "add_child",
-  "options": {}
-}
-```
-
-### Example Response - 6
-
-```json
-{
-  "result": true,
-  "msg": "OK"
-}
-```
-
-- Accepts: `source.section_tipo` (string, new child tipo), `source.section_id` (string|int, parent section id).
-- Returns: `response.result` is the newly created `section_id` (int) on success; `msg` contains status and `errors` may include issues.
-- Example:
-
-    ```json
-    {
-      "dd_api": "dd_ts_api",
-      "action": "add_child",
-      "source": { "parent_node_id": 123 },
-      "data": { "label": "New child", "properties": {} }
-    }
-
-    ```
-
-- update_parent_data
-
-### Example Request - 7
+### Example request
 
 ```json
 {
   "dd_api": "dd_ts_api",
   "action": "update_parent_data",
   "source": {
-    "section_id": 1,
-    "section_tipo": "doc_tipo_1"
-  },
-  "data": {
-    "component_tipo_1": "updated value"
+    "section_tipo": "oh1",
+    "section_id": "1",
+    "old_parent_section_id": "45",
+    "old_parent_section_tipo": "oh1",
+    "new_parent_section_id": "67",
+    "new_parent_section_tipo": "oh1"
   }
 }
 ```
 
-### Example Response - 7
+### Example response
 
 ```json
 {
@@ -230,60 +126,29 @@ Methods
 }
 ```
 
-- Purpose: Update parent metadata for a node.
+## save_order
 
-### Example Request - 8
+- **Purpose:** save the ordering of a node's children.
+- **Accepts:** `source.section_tipo` (string) and `source.ar_locators` (array of locators with ordering information).
+- **Returns:** `result` is the value returned by `component_relation_children::sort_children` (an array of changed values), or `false` on error; `msg` explains the result.
 
-```json
-{
-  "dd_api": "dd_ts_api",
-  "action": "update_parent_data",
-  "options": {}
-}
-```
-
-### Example Response - 8
-
-```json
-{
-  "result": true,
-  "msg": "OK"
-}
-```
-
-- Accepts: `source.section_tipo`, `source.section_id`, `source.old_parent_section_id`, `source.old_parent_section_tipo`, `source.new_parent_section_id` (or `parent_section_id`), `source.new_parent_section_tipo`.
-- Returns: boolean `response.result` (`true` on success); `msg` contains status and `errors` on failure.
-- Example:
-
-    ```json
-    {
-      "dd_api": "dd_ts_api",
-      "action": "update_parent_data",
-      "source": { "node_id": 123 },
-      "data": { "parent": 45 }
-    }
-
-    ```
-
-- save_order
-
-### Example Request - 9
+### Example request
 
 ```json
 {
   "dd_api": "dd_ts_api",
   "action": "save_order",
   "source": {
-    "section_id": 1,
-    "section_tipo": "doc_tipo_1"
-  },
-  "data": {
-    "component_tipo_1": "updated value"
+    "section_tipo": "oh1",
+    "ar_locators": [
+      { "section_id": "321", "order": 1 },
+      { "section_id": "322", "order": 2 }
+    ]
   }
 }
 ```
 
-### Example Response - 9
+### Example response
 
 ```json
 {
@@ -291,38 +156,4 @@ Methods
   "msg": "Record updated"
 }
 ```
-
-- Purpose: Save ordering for children of a node.
-
-### Example Request - 10
-
-```json
-{
-  "dd_api": "dd_ts_api",
-  "action": "save_order",
-  "options": {}
-}
-```
-
-### Example Response - 10
-
-```json
-{
-  "result": true,
-  "msg": "OK"
-}
-```
-
-- Accepts: `source.section_tipo` (string) and `source.ar_locators` (array of locators with ordering information).
-- Returns: `response.result` is the value returned by `component_relation_children::sort_children` (an array of changed values) or `false` on error; `response.msg` explains the result and `response.result` may also be used to count changes.
-- Example:
-
-    ```json
-    {
-      "dd_api": "dd_ts_api",
-      "action": "save_order",
-      "dd_api": "dd_ts_api",
-      "source": { "section_tipo": "ds1", "ar_locators": [{ "section_id": "321", "order": 1 }, { "section_id": "322", "order": 2 }] }
-    }
-
-    ```
+</content>

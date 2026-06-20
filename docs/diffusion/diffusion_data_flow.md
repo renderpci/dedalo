@@ -1,68 +1,69 @@
 # Dédalo diffusion data flow
 
-Dédalo has two different database system, work system and diffusion system, both are controlled by the ontology.
+> See also: [Diffusion API and Bun](dd_diffusion_api_and_bun.md) · [Diffusion engine internals](engine_internals.md) · [Publication API](publication_api/index.md) · [Glossary: diffusion](../core/glossary.md#diffusion)
 
-Diffusion system is used to dissemination/publication of content and it get his data from work system. But in the process to publish data Dédalo will do a transformation to adapt work data into different formats and standards. This means that work data and public data are totally separate, with different database and sometimes on different physical servers.
+Dédalo has two database systems — the work system and the diffusion system — both driven by the ontology. This page explains how data flows from one to the other when you publish.
 
-Diffusion system has been build to create flexible system with access **only** to data that can be public, preserving the original data of the work system.
+The diffusion system disseminates and publishes content, and it takes its data from the work system. When publishing, Dédalo transforms the work data to fit different formats and standards. Work data and public data therefore stay completely separate: different databases, sometimes on different physical servers.
 
-Researchers decide what data is public and what is not, and since they are separated, an attack on the public server or a technical problem in the publication area will not affect the working system.
+The diffusion system is built to be flexible and to expose **only** data that can be public, preserving the original work data. Researchers decide what is public and what is not. Because the two systems are separated, an attack on the public server or a technical problem in the publication area never affects the work system.
 
-Yuo can think in diffusion system as a copy of your data, a copy done in the moment of publication, in the same way that print a copy in paper. Diffusion data is a flat version ready to use in web pages.
+You can think of the diffusion system as a copy of your data, made at the moment of publication — much like printing a copy on paper. Diffusion data is a flat version, ready to use in web pages.
 
 ## Server
 
-Dédalo can be installed and configured in some different ways. It depends of your capacity and your own requirements. For a small museum or personal researched the installation could be done in the same server. For a medium or big collections is better to use two different servers one for the work system and other for the diffusion system. In a large museums with lots of visitants is possible replicate the diffusion system to second (or more) diffusion server to balance the visitors to avoid saturation.
+Dédalo can be installed and configured in several ways, depending on your capacity and requirements. For a small museum or a personal research project, everything can run on the same server. For a medium or large collection it is better to use two servers, one for the work system and one for the diffusion system. For a large museum with many visitors, you can replicate the diffusion system to a second (or further) diffusion server to balance the load and avoid saturation.
 
-1. The most basic configuration is a unique server with all systems (work system and diffusion system). The workspace and the diffusion is inside the same server. Pros: This configuration is easy to create and maintain, the server has all services, media, etc. Cons: any interference in website or attack will affect to work system.
+1. The most basic configuration is a single server hosting everything (work system and diffusion system). The workspace and the diffusion run inside the same server. Pros: easy to create and maintain; the server has all services, media and so on. Cons: any interference on the website, or an attack, affects the work system.
 
-   ![One servers](assets/20230408_180339_one_publication_server.svg)
+   ![One server configuration](assets/20230408_180339_one_publication_server.svg)
 
-   In this configuration all libs a services are shared between work system and diffusion system. Apache and PHP configuration are the same and all libraries are shared between both systems.
+   In this configuration all libraries and services are shared between the work system and the diffusion system. The Apache and PHP configuration is the same, and all libraries are shared between both systems.
 
    ![Architecture for one server](assets/20230411_172732_architecture_one_server.svg)
 
-2. The most typical, and maybe the most used configuration is the configuration with two servers, one for work system, and another for Diffusion. Pros: the website is totally separated of the work system and you can scale if you have a lot of traffic into website, an attack to the website do no affect to work system. Cons: double maintenance, double cost.
+2. The most typical configuration uses two servers, one for the work system and another for diffusion. Pros: the website is fully separated from the work system; you can scale if the website gets a lot of traffic; an attack on the website does not affect the work system. Cons: double maintenance, double cost.
 
-   ![Two servers](assets/20230408_182454_two_publication_servers.svg)
+   ![Two server configuration](assets/20230408_182454_two_publication_servers.svg)
 
-   In this configuration the libraries and servicers are not shared. Worksystem has his own Apache and PHP configuration and the system has the libraries to use at work system, MariaDB or MySQL is not installed.
+   Here the libraries and services are not shared. The work system has its own Apache and PHP configuration and the libraries it needs; MariaDB/MySQL is not installed on it.
 
-   ![Architecture for Work system](assets/20230411_172748_architecture_work_server.svg)
+   ![Architecture for the work system](assets/20230411_172748_architecture_work_server.svg)
 
-   In diffusion server Dédalo is not full installed, only publication API and shared libraries between works system and diffusion will be installed. Apache and PHP has his own configuration and PostgreSQL will not installed.
+   On the diffusion server Dédalo is not fully installed — only the Publication API and the libraries shared between the work system and diffusion. Apache and PHP have their own configuration, and PostgreSQL is not installed.
 
-   ![Architecture for diffusion system](assets/20230411_172757_architecture_diffusion_server.svg)
+   ![Architecture for the diffusion system](assets/20230411_172757_architecture_diffusion_server.svg)
 
-3. Three different servers, first for work system, the second for media, the third for diffusion. This configuration ensure that your media files are shared by work system and diffusion system without copy media data into diffusion system.
+3. Three servers: the first for the work system, the second for media, the third for diffusion. This configuration lets the work system and the diffusion system share media files without copying media into the diffusion system.
 
-   ![Alt text](assets/20230408_200232_three_publication_servers.svg)
+   ![Three server configuration](assets/20230408_200232_three_publication_servers.svg)
 
-In all configurations Dédalo will copy/export data from work system (stored in PostgreSQL) to diffusion system (stored in MariaDB/MySQL).
+In every configuration, Dédalo copies/exports data from the work system (stored in PostgreSQL) to the diffusion system (stored in MariaDB/MySQL).
 
 ## Configuration
 
-Diffusion system has two config file with his own parameters that need to be changed with the your own project environment.
+The diffusion system has two configuration files, each with its own parameters that you must adapt to your project environment.
 
-Work system will need access to MariaDB / MySQL database to publish data, to config this part:
+The work system needs access to a MariaDB/MySQL database to publish data. To configure this part:
 
-1. Changing parameters of [database configuration file](../config/config_db.md#changing-parameters-of-dédalo-database-config-file).
-   1. Changing parameters of database for diffusion system [configuration](../config/config_db.md#diffusion-system-database-variables)
+1. Change the parameters in the [database configuration file](../config/config_db.md#changing-parameters-of-dédalo-database-config-file).
+   1. Change the [database parameters for the diffusion system](../config/config_db.md#diffusion-system-database-variables).
 
-Diffusion system has his own [Publication API](./publication_api/index.md) to connect public web pages with the public database (use [v2](./publication_api/v2/index.md) for new integrations):
-2. Changing parameters of Dédalo public API configuration: [v2 deployment](./publication_api/v2/deployment.md) (`.env`) for new servers, or the legacy v1 [configuration file](./publication_api/public_api_configuration.md).
+The diffusion system has its own [Publication API](publication_api/index.md) to connect public web pages with the public database (use [v2](publication_api/v2/index.md) for new integrations):
+
+2. Change the parameters of Dédalo's public API configuration: [v2 deployment](publication_api/v2/deployment.md) (`.env`) for new servers, or the legacy v1 [configuration file](publication_api/public_api_configuration.md).
 
 ## Diffusion ontology
 
-All data flow from work system to diffusion system is controlled by diffusion ontology. Diffusion ontology is a specific part of the Dédalo ontology to define how the data will be published. The main idea is control the access to private data and how will be showed in the public web.
+The whole data flow from the work system to the diffusion system is controlled by the diffusion ontology — a specific part of the Dédalo ontology that defines how data is published. Its main purpose is to control access to private data and how data is shown on the public web.
 
-Diffusion system will not have all data managed by Dédalo work system, only specific data than researches want to publish will be accessible. To understand this, you need to know that some archives has a personal data as telephone or address that it can not to be public. And doing this transform you can control what data can be public and what no.
+The diffusion system does not hold all the data managed by the work system; only the specific data that researchers want to publish is accessible. For example, an archive may store personal data such as a telephone number or an address that must not be public. By transforming the data on publication, you control what can be public and what cannot.
 
-Besides, publication process could transform the original data into different "formats" or "versions".
+The publication process can also transform the original data into different "formats" or "versions".
 
-For example: if you want to show one city, you can choose how this data will be processed by the web, so you can to define different formats to achieve these needs. So, to publish "Valencia" you can think; what kind of data will I need? and format it.
+For example, if you want to show a city, you can choose how the web processes the data, defining different formats for different needs. To publish "Valencia", ask yourself: what kind of data do I need, and how should it be formatted?
 
-Let me explain it. Inside Dédalo a toponymy as Valencia is a thesaurus term with all administrative hierarchy:
+Inside Dédalo a toponymy such as Valencia is a thesaurus term with its full administrative hierarchy:
 
 ![Valencia schema](assets/20230408_182510_valencia.png)
 
@@ -84,16 +85,16 @@ So you can create different fields in the publication database with different da
 | toponymy_model  | Valencia, Municipality                                               |
 | etc             | etc                                                                  |
 
-And you will have your publish data for different situations, if you need search by community ("Comunitat Valenciana") instead the municipality, so, you can do it searching in the field "with_parents".
+You then have your published data ready for different situations. If you need to search by community ("Comunitat Valenciana") instead of the municipality, you can search the `with_parents` field.
 
-In other situation will need add Valencia as a point into a map, to do that, you will need to use the geo data, so, you can define the ontology to add it to the resolution:
+In another situation you might need to place Valencia as a point on a map. For that you need the geo data, so you can configure the ontology to add it to the resolution:
 
 | field    | value                                                                     |
 | ---------- | --------------------------------------------------------------------------- |
 | toponymy | Valencia                                                                  |
 | geo      | \{"alt":16,"lat":39.469860091745815,"lon":-0.3764533996582032,"zoom":12} |
 
-Or you will need to link the term and his parents with the thesaurus table then you can configure publication ontology to add his locators:
+Or you might need to link the term and its parents to the thesaurus table, in which case you can configure the publication ontology to add their locators:
 
 | field        | value                                                                |
 | -------------- | ---------------------------------------------------------------------- |
@@ -102,43 +103,43 @@ Or you will need to link the term and his parents with the thesaurus table then 
 | with_parents | Valencia, València, Valencia/Valéncia, Comunitat Valenciana, Spain |
 | data_parents | \["es1_7242", "es1_8131","es1_8842", "es1_8858", "es1_1"]           |
 
-The original data "Valencia" could be transformed into different fields to be used as specific needs without change the original data in PostgreSQL.
+The original data "Valencia" can be transformed into several fields for specific needs, without changing the original data in PostgreSQL.
 
-Doing those transformations we can adapt the data into publication database to be ready for different applications / optimizations, and create a very efficient websites, because the data is prepared to resolve the needs of the website, and, if in the future, you will need to add another combination not defined, is easy to include it.
+These transformations adapt the data in the publication database for different applications and optimizations, producing efficient websites: the data is prepared to serve the website's needs. If you later need another combination that was not defined, it is easy to add it.
 
-### How publication ontology works?
+### How the publication ontology works
 
-All publication process is defined in Dédalo ontology, and it is dependent of the [diffusion](https://dedalo.dev/ontology/dd3) node.
+The whole publication process is defined in the Dédalo ontology and depends on the [diffusion](https://dedalo.dev/ontology/dd3) node.
 
-Ontology defines some models to create a diffusion schema. This diffusion ontology defines the characteristics, relationships and nomenclatures of the destination tables and their columns, as well as the format of the data to be published.
+The ontology defines several models to build a diffusion schema. This diffusion ontology defines the characteristics, relationships and naming of the destination tables and their columns, as well as the format of the data to be published.
 
-There are pre-configured dissemination ontologies such as Oral History that can be extended and modified as needed.
+There are pre-configured diffusion ontologies, such as Oral History, that you can extend and modify as needed.
 
 ![Diffusion ontology description](assets/20230411_183922_API_ontology_description.svg)
 
-For each target element there is an object or element in the ontology (node in the hierarchy) that represents it and on which specific parameters can be configured. This node element has a 'model' that defines what it is, which determines the options it can use and how they will be dynamically interpreted by Dédalo.
+Each target element has a node in the ontology hierarchy that represents it and on which specific parameters can be configured. This node has a `model` that defines what it is; the model determines which options it can use and how Dédalo interprets them at runtime.
 
-For example, to represent a standard table and its columns in MySQL, we would define in the ontology a 'table' model element configured with a related term (TR) that points to the Oral History section (oh1) where the data will come from.
+For example, to represent a standard MySQL table and its columns, you define in the ontology a `table` model element configured with a related term (TR) pointing to the Oral History section (`oh1`), the source of the data.
 
-As a child of this term, we would create a 'field_varchar' model term (note that it corresponds to the standard MySQL column type preceded by the 'field_' prefix) and in its JSON properties, in this case, we would define the value of the length of desired characters, for example, {"varchar":160}.
+As a child of this term you create a `field_varchar` model term (it matches the standard MySQL column type, prefixed with `field_`); in its JSON properties you set the desired character length, for example `{"varchar":160}`.
 
-This element would point (related term) to the source component of the data, 'Code' (oh14). This is the case for all the desired columns.
+This element points (related term) to the source component of the data, `Code` (`oh14`). The same applies to every desired column.
 
-For a publication ontology to be operational, it is necessary to always create a 'field_enum' column related to the publication component of the section. In this way we will have control of whether a record is publishable or not.
+For a publication ontology to work, you must always create a `field_enum` column related to the section's publication component. This gives you control over whether a record is publishable or not.
 
 #### Common models
 
 **diffusion_root**
-Dédalo defines the publication architecture as an ontology subtree below the root diffusion node 'dd3' with the model "diffusion", this node ca not be changed, to build a specific diffusion model is necessary build a diffusion domain below the root diffusion node.
+Dédalo defines the publication architecture as an ontology subtree below the root diffusion node `dd3` (model `diffusion`). This node cannot be changed; to build a specific diffusion model, create a diffusion domain below the root diffusion node.
 
 **diffusion_domain**
-Every diffusion domain would be created using the custom diffusion model elements to describe the complete diffusion flow. One Dédalo installation can has some different diffusion domain nodes, each of these nodes for one specific publication.
+Each diffusion domain is built from the custom diffusion model elements that describe the complete diffusion flow. One Dédalo installation can have several diffusion domain nodes, each for a specific publication.
 
 **diffusion_group**
-Group of diffusion_elements, used to organize the hierarchy.
+A group of `diffusion_element` nodes, used to organize the hierarchy.
 
 **diffusion_element**
-The diffusion element define the start point into the model of publication. These nodes defines the publication format and the script that can convert the data to specific output.
+The diffusion element defines the start point of a publication model. These nodes define the publication format and the script that converts the data to a specific output.
 
 | model             | definition                                |
 | ----------------- | --------------------------------------- |
@@ -170,22 +171,22 @@ The diffusion element define the start point into the model of publication. Thes
 
 ##### Table nodes
 
-Within diffusion ontology, we should create as many table nodes as tables we would like to publish in the public database (mysql). Every table node is related through a Related Term (TR) with a source data section element. In the example below, `interview` table node is related with 'oh1' section (Oral History).
+In the diffusion ontology, create as many table nodes as tables you want to publish in the public database (MySQL). Every table node is related through a Related Term (TR) to a source section element. In the example below, the `interview` table node is related to the `oh1` section (Oral History).
 
 ##### Field nodes
 
-Within diffusion ontology, field nodes are the equivalent of mysql columns within a table. We would add as many field nodes to a table element as we would like to publish in the public database.
+In the diffusion ontology, field nodes are the equivalent of MySQL columns within a table. Add as many field nodes to a table element as columns you want to publish.
 
-Every field node is related through a Related Term (TR) with a source data component element, in the previous table example, publication, code, title and abstract fields nodes are related with some components within 'oh1' section (Oral History).
+Every field node is related through a Related Term (TR) to a source component. In the previous table example, the `publication`, `code`, `title` and `abstract` field nodes are related to components within the `oh1` section (Oral History).
 
-Depending on the selected field model, there are some different properties that must be set. These are some examples:
+Depending on the selected field model, you must set different properties. Some examples:
 
 | Dédalo field element | Dédalo property |
 | --- | --- |
 | field_enum | {"enum": {"1": "yes","2": "no"}} |
 | field_varchar | {"varchar":160} |
 
-Some times the source data should be processed before sending a response. There is a special property used to configure a function that should be executed to get the final data result:
+Sometimes the source data must be processed before it is returned. A special property configures a function to run to produce the final result:
 
 ```json
 {
@@ -215,7 +216,7 @@ Examples:
 }
 ```
 
-The function will process a component date of range type and will split it returning, in this case, the start date.
+The function processes a range-type date component and splits it, returning, in this case, the start date.
 
 ```json
 {
@@ -228,7 +229,7 @@ The function will process a component date of range type and will split it retur
 }
 ```
 
-The function will map the locators to their termID and, in this case, is not adding their parents.
+The function maps the locators to their term ID and, in this case, does not add their parents.
 
 #### Models for RDF
 
@@ -241,27 +242,25 @@ The function will map the locators to their termID and, in this case, is not add
 
 ## Dédalo diffusion engine
 
-It manages Dédalo’s diffusion schema and data.
+The diffusion engine manages Dédalo's diffusion schema and data.
 
-Diffusion engine will process the Dédalo data and transform to other formats using the diffusion ontology. When user publish data Diffusion engine will do the transoms and store the result into other databases or files using an ontology map that defines what sections and fields will be exported.
+It processes the Dédalo data and transforms it into other formats using the diffusion ontology. When a user publishes data, the engine performs the transforms and stores the result in other databases or files, guided by an ontology map that defines which sections and fields to export.
 
-The most common scenario is to publish the data in a separate MariaDB / MySQL database. All the published data is intentionally published by the administrators and therefore, the destination database can be used for consultation without compromising the original data stored in the Dédalo working database.
+The most common scenario is to publish the data into a separate MariaDB/MySQL database. All published data is published intentionally by the administrators, so the destination database can be queried without compromising the original data stored in the Dédalo work database.
 
-> Output could be targeted to another database or RDF files or any other format defined in the diffusion ontology. Every format will has his own diffusion engine.
+> The output can target another database, RDF files or any other format defined in the diffusion ontology. Each format has its own diffusion engine.
 
-Dédalo has some configurations already prepared for use as Oral History, Bibliography or Web, but you can build others, following the already existing elements patterns.
+Dédalo ships ready-made configurations for Oral History, Bibliography and Web, but you can build others by following the patterns of the existing elements.
 
-Each element of the ontology has several parameters that define the characteristics and the output format of the field in the MySQL table.
+Each ontology element has several parameters that define the characteristics and output format of the field in the MySQL table: for example, the column name, the column type (varchar, text, int, date, etc.) and the output processing (diffusion methods that post-process the data).
 
-For example, the column name, the column type (varchar, text, int, date, etc.) the output processing (diffusion methods to post process the data), etc.
-
-When data is published it will be accessible by the Publication Server API.
+Once data is published, it is accessible through the Publication Server API.
 
 ## Dédalo diffusion resolve levels
 
-In the process to publish data Dédalo will do a resolution of linked information to add as flat to the main data. The information inside Dédalo work system use a relation model resolved by locators, and one section can has a lots of ramifications to different resources, bibliography, thesaurus, etc. every information linked from portals or autocomplete is a level of information. The direct linked information to the main level is the first level, the information that is linked to the first level is the second, etc... When the user click the publication button Dédalo will follow every locator to resolve the linked data. This process could be very long in large databases and sometimes it is not necessary resolve all linked data.
+When publishing, Dédalo resolves linked information and flattens it into the main data. Information in the work system uses a relation model resolved by locators, and one section can branch into many resources — bibliography, thesaurus and so on. Every piece of information linked from a portal or an autocomplete is one *level* of information: information directly linked to the main level is the first level, information linked to the first level is the second, and so on. When the user clicks the publication button, Dédalo follows every locator to resolve the linked data. In large databases this process can take a long time, and resolving all linked data is not always necessary.
 
-Ex: If you have 1 interview of oh with 1 linked image and this image has a person linked as author that has 1 linked toponym for the birthplace. For publishing all linked information will be necessary 3 levels of resolution:
+For example, suppose you have one Oral History interview with one linked image, that image has a person linked as author, and that person has one linked toponym for their birthplace. Publishing all the linked information requires three levels of resolution:
 
 1 interview -> 1 image -> 1 person -> 1 toponym
 
@@ -300,13 +299,13 @@ flowchart TB
     level3:::level
 ```
 
-The default this parameter is 2 levels. If you increase the value of this parameter, the time needed by Dédalo to resolve the linked data in the publication process will also increase because the ramifications will multiple in x times for every level in exponential progression.
+The default value of this parameter is 2 levels. Increasing it also increases the time Dédalo needs to resolve the linked data, because the branches multiply at every level in an exponential progression.
 
-You can change this default parameter in [DEDALO_DIFFUSION_RESOLVE_LEVELS](../config/config.md#defining-resolution-levels-going-to-the-deeper-information) in server_config_api.php or manually in work system interface before dispatch the publication process.
+You can change this default in [DEDALO_DIFFUSION_RESOLVE_LEVELS](../config/config.md#defining-resolution-levels-going-to-the-deeper-information), or set it manually in the work-system interface before dispatching the publication process.
 
 ## Publishing data
 
-Publishing data is a process dispatched by users in work system. If the section is referred by some diffusion node, the work system will show the button to fire the process. Work system will see the diffusion ontology and will transform work data into the model of data defined in diffusion ontology.
+Publishing is a process dispatched by users in the work system. If a section is referenced by a diffusion node, the work system shows the button that fires the process. The work system reads the diffusion ontology and transforms the work data into the data model defined there.
 
 ![Alt text](assets/20230412_182230_publication_flow.svg)
 
@@ -323,16 +322,16 @@ graph TD
     G --> H[Dispatch the publication process]
 ```
 
-When the user publishes data from the 'Oral History' section (oh1) with the publication button, that have been activated because the section has a caller in diffusion ontology, the publication flow begins.
+When the user publishes data from the Oral History section (`oh1`) with the publication button — which appears because the section has a caller in the diffusion ontology — the publication flow begins.
 
-Dédalo then collects the required data from the section (oh1), traverses each of the terms defined in the section's publication ontology tree transforming the original data into flat export values. This conversion implies, for example, that the translatable data in Dédalo, which contains all languages simultaneously, is broken down at the time of publication into a value for each language that will generate a different record for each of them.
+Dédalo then collects the required data from the section (`oh1`) and traverses each term defined in the section's publication ontology tree, transforming the original data into flat export values. This conversion means, for example, that translatable data in Dédalo, which holds all languages at once, is broken down at publication time into one value per language, generating a separate record for each.
 
-!!! Note "Publication buttons"
-    The publication button appear in list and edit modes. In list will publish all records found (user can search to filter the records to be published), in the edit will be published only the record that is editing.
+!!! note "Publication buttons"
+    The publication button appears in list and edit modes. In list mode it publishes all records found (the user can search to filter which records to publish); in edit mode it publishes only the record being edited.
 
 ### Data managed
 
-Take account this data used in work system.
+Consider this data from the work system.
 
 Table **interview : oh1**
 
@@ -344,7 +343,7 @@ Table **interview : oh1**
 | [oh23](https://dedalo.dev/ontology/oh23) | Summary | My abstract translated | \["My abstract translated"] |
 | [oh24](https://dedalo.dev/ontology/oh24) | Informants | Manuel González, María Gómez | \[{"section_id" : "1","section_tipo" : "rsc197"},{"section_id" : "2", "section_tipo" : "rsc197"}] |
 
-The interview 1 has two informants (interviewees) linked by locators stored in `informants oh24` field. THerefore the table of informant will had two records:
+Interview 1 has two informants (interviewees) linked by locators stored in the `Informants` (`oh24`) field. The informant table therefore has two records:
 
 Table **informants : rsc197**
 
@@ -362,12 +361,12 @@ Table **informants : rsc197**
 | [rsc86](https://dedalo.dev/ontology/rsc86) | Surname | Gómez | \["Gómez"] |
 | [rsc89](https://dedalo.dev/ontology/rsc89) | Date of birth | 1945-09-30 | \[{"start":{"day":30,"year":1945,"month":9}}] |
 
-Lets go to publish this data and see what will stored into MariaDB/MySQL.
+Let's publish this data and see what is stored in MariaDB/MySQL.
 
-Diffusion ontology has this resolution
+The diffusion ontology has this resolution:
 
 | tipo | field name | model | get data from | name of working data |
-| --- | --- | --- | --- |  --- |
+| --- | --- | --- | --- | --- |
 | [oh66](https://dedalo.dev/ontology/oh66) | interview | table | [oh1](https://dedalo.dev/ontology/oh1)  | Oral history |
 | [oh100](https://dedalo.dev/ontology/oh100) | code | field_varchar | [oh14](https://dedalo.dev/ontology/oh14)  | Code |
 | [oh68](https://dedalo.dev/ontology/oh100) | title | field_text | [oh16](https://dedalo.dev/ontology/oh16)  | Title |
@@ -378,11 +377,11 @@ Diffusion ontology has this resolution
 | [rsc270](https://dedalo.dev/ontology/rsc270) | surname | field_text | [rsc86](https://dedalo.dev/ontology/rsc86) | Surname |
 | [rsc272](https://dedalo.dev/ontology/rsc272) | birthdate | field_date | [rsc89](https://dedalo.dev/ontology/rsc89) | Date of birth |
 
-First at all the publication process will verify if the database and the table exist in MariaDB / MySQL, if not, will create it automatically with the schema defined in diffusion ontology. By default Dédalo add the columns `id` `section_id` and `lang` because this columns are mandatory.
+First, the publication process checks whether the database and table exist in MariaDB/MySQL; if not, it creates them automatically with the schema defined in the diffusion ontology. Dédalo always adds the columns `id`, `section_id` and `lang`, because they are mandatory.
 
-Example; if diffusion ontology only has a `code` node defined as field_varchar of 160 characters, Dédalo will create the database, table and mandatory columns in this way.
+For example, if the diffusion ontology only has a `code` node defined as a `field_varchar` of 160 characters, Dédalo creates the database, table and mandatory columns like this:
 
-```SQL
+```sql
 CREATE TABLE `interview` (
     `id` int NOT NULL PRIMARY KEY,
     `section_id` int NOT NULL,
@@ -392,23 +391,23 @@ CREATE TABLE `interview` (
 ```
 
 !!! note "MariaDB / MySQL engine"
-    By default Dédalo use MyISAM as database engine, because the tables are only for read by the website and it will not required edition functionalities as InnoDB has. If you want change it, you will see the `./core/diffusion/class.diffusion_mysql.php`
+    By default Dédalo uses the MyISAM engine, because the tables are read-only for the website and do not need InnoDB's editing features. To change it, see `core/diffusion/class.diffusion_mysql.php`.
 
-The table `interview` will has the columns
+The `interview` table then has the columns:
 
 | id | section_id | lang | code |
 | --- | --- | --- | --- |
 | 1 | 1 | lg-eng | oh_code1 |
 
-These publish tables could be deleted at any time and for different reasons, since the original data is saved in the working system and it is possible to republish it to recreate the table.
+These published tables can be deleted at any time, for any reason, because the original data is kept in the work system and can be republished to recreate the table.
 
-If an user republish a previously published record, the actual record in MariaDB/MySQL will be delete and will recreated new one with the current data even if the data in work system was not changed (in this case the id will increment but the rest of data will be the same).
+When a user republishes a previously published record, the current row in MariaDB/MySQL is deleted and recreated with the current data, even if the work-system data did not change (in that case the `id` increments but the rest of the data stays the same).
 
 | id | section_id | lang | code |
 | --- | --- | --- | --- |
 | 2 | 1 | lg-eng | oh_code1 |
 
-Every language defined will create his own record and will store the lang code in lang column. Therefore publishing a multilingual data in English, Español and Català, as the same data you will get 3 different rows for the record 1 (section_id = 1).
+Each defined language creates its own row and stores the language code in the `lang` column. So publishing multilingual data in English, Spanish and Catalan produces 3 rows for record 1 (`section_id = 1`):
 
 | id | section_id | lang | title |
 | --- | --- | --- | --- |
@@ -416,9 +415,9 @@ Every language defined will create his own record and will store the lang code i
 | 2 | 1 | lg-spa | Mi título |
 | 3 | 1 | lg-cat | El meu títol |
 
-If the working data do not has the translation, publication process will do fallback to the main data lang defined in [DEDALO_DATA_LANG_DEFAULT](../config/config.md#defining-default-data-language) in `./config/config.php` file
+If the work data has no translation, the publication process falls back to the main data language defined in [DEDALO_DATA_LANG_DEFAULT](../config/config.md#defining-default-data-language) in `config/config.php`.
 
-For example if working data has the abstract in English and Español but it is not done in Català, (català is empty) you will get:
+For example, if the work data has the abstract in English and Spanish but not in Catalan (Catalan is empty), you get:
 
 | id | section_id | lang | abstract |
 | --- | --- | --- | --- |
@@ -426,7 +425,7 @@ For example if working data has the abstract in English and Español but it is n
 | 2 | 1 | lg-spa | Mi resumen traducido |
 | 3 | 1 | lg-cat | My abstract translated |
 
-If the working data is not translatable, as `code` is, the data will repeat in all rows.
+If the work data is not translatable, as `code` is, the value repeats in every row:
 
 | id | section_id | lang | code | title |
 | --- | --- | --- | --- | --- |
@@ -434,9 +433,9 @@ If the working data is not translatable, as `code` is, the data will repeat in a
 | 2 | 1 | lg-spa | oh_code1 | Mi título |
 | 3 | 1 | lg-cat | oh_code1 |  El meu titol |
 
-In diffusion process the related data is resolve in lot of cases but sometimes is necessary to have links between tables to resolve complex situation, in these cases the column will store an array of  `section_id` of the other table in JSON and how this data is not translatable it will repeat for every row.
+During diffusion, related data is resolved in many cases, but sometimes you need links between tables to handle complex situations. In those cases the column stores a JSON array of the other table's `section_id` values; since this data is not translatable, it repeats in every row.
 
-In this sample we have 2 informants (two interviewees) for the interview his section will have two `locators` to link with this persons.
+In this sample the interview has 2 informants (two interviewees), so its section has two locators linking to those people:
 
 ```json
 [
@@ -451,11 +450,11 @@ In this sample we have 2 informants (two interviewees) for the interview his sec
 ]
 ```
 
-When user do the publication you will have:
+After publication you have:
 
 Table **interview**:
 
-| id | section_id | lang | code | title | informant_data
+| id | section_id | lang | code | title | informant_data |
 | --- | --- | --- | --- | --- | --- |
 | 1 | 1 | lg-eng | oh_code1 | My title | \["1","2"]  |
 | 2 | 1 | lg-spa | oh_code1 | Mi título | \["1","2"]  |
@@ -468,7 +467,7 @@ Table **informant**:
 | 4 | 1 | lg-eng | Manuel | González |
 | 7 | 2 | lg-eng | María | Gómez |
 
-To avoid resolve data is possible to add the related data into the main table, therefore you can get the names of the informants in the same table of the interview.
+To avoid resolving the data later, you can add the related data into the main table, so you get the informants' names in the interview table itself:
 
 | id | section_id | lang | code | informant_data | informant |
 | --- | --- | --- | --- | --- | --- |
@@ -476,7 +475,7 @@ To avoid resolve data is possible to add the related data into the main table, t
 | 2 | 1 | lg-spa | oh_code1 | \["1","2"] | Manuel González, María Gómez |
 | 3 | 1 | lg-cat | oh_code1 | \["1","2"]  | Manuel González, María Gómez |
 
-Or is possible to define the resolve data of other fields as birth date of informants.
+You can also resolve other fields, such as the informants' birth dates:
 
 | id | section_id | lang | code  | informant_data | informant | birthdate |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -484,14 +483,14 @@ Or is possible to define the resolve data of other fields as birth date of infor
 | 2 | 1 | lg-spa | oh_code1 | \["1","2"]  | Manuel González, María Gómez | 1936, 1945-09-30 |
 | 3 | 1 | lg-cat | oh_code1 | \["1","2"]  | Manuel González, María Gómez | 1936, 1945-09-30 |
 
-Besides birth date will be in the informant table.
+The birth date also appears in the informant table:
 
 | id | section_id | lang | name | surname |  birthdate |
 | --- | --- | --- | --- | --- | --- |
 | 4 | 1 | lg-eng | Manuel | González |  1936 |
 | 7 | 2 | lg-eng | María | Gómez | 1945-09-30 |
 
-Sometimes, related data could be stored as an array instead a string.
+Sometimes related data is stored as an array instead of a string:
 
 | id | section_id | lang | code  | informant_data | informant | birthdate |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -499,7 +498,7 @@ Sometimes, related data could be stored as an array instead a string.
 | 2 | 1 | lg-spa | oh_code1 | \["1","2"] | \["Manuel González", "María Gómez"] | \["1936", "1945-09-30"] |
 | 3 | 1 | lg-cat | oh_code1 | \["1","2"] | \["Manuel González", "María Gómez"] | \["1936", "1945-09-30"] |
 
-The order of related data will be the same of the section_id array order, if the user change the order in the interview the resolution of the related data will be sync with it.
+The order of the related data matches the order of the `section_id` array. If the user reorders the informants in the interview, the resolved related data stays in sync:
 
 | id | section_id | lang | code  | informant_data | informant | birthdate |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -509,23 +508,23 @@ The order of related data will be the same of the section_id array order, if the
 
 ### Check the publication state
 
-skip_publication_state_check `int`
+`skip_publication_state_check` `int`
 
-When one user publishes some record, Dédalo checks if this information has changes that are not published, if Dédalo found new data to publish the diffusion process began and the information will be replaced in MySQL. If the register doesn't have new information the process is stopped for this record.
+When a user publishes a record, Dédalo checks whether it has unpublished changes. If it finds new data to publish, the diffusion process runs and the row is replaced in MySQL. If the record has no new data, the process is skipped for that record.
 
-Checking the publication status prevent double, triple o more publications of the same record and all process will be faster (some records will not published), but in some cases can be useful that Dédalo don't check the diffusion state, and perform the publication process for every record has new information or no.
+Checking the publication state prevents double (or more) publications of the same record and makes the whole process faster, since unchanged records are skipped. In some cases, though, it is useful to have Dédalo ignore the publication state and run the process for every record, whether it has new data or not.
 
-This property configures the publication process to check the new data status or ignore it. This property is stored into the global Dédalo `$_SESSION`.
+This property controls whether the publication process checks the data state or ignores it. It is stored in the global Dédalo `$_SESSION`.
 
 ```php
 $_SESSION['dedalo']['config']['skip_publication_state_check'] = 1;
 ```
 
-| Value | skip state check? |
-|  --- |  ---  |
-| 0 | don't check |
-| 1 | check  |
+| Value | Behavior |
+| --- | --- |
+| 0 | Check the publication state (skip unchanged records) |
+| 1 | Skip the check and publish every record |
 
-The property is possible change by users into the publication tool.
+Users can change this property in the publication tool.
 
 ![Ignore publication status](assets/20240623_185227_ignore_publication_status.png)

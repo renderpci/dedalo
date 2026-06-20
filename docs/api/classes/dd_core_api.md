@@ -1,18 +1,18 @@
 # dd_core_api
 
-Overview
+> See also: [JSON API v1](../dedalo_api_v1.md) · [RQO field mapping](../RQO_FIELD_MAPPING.md) · [dd_manager](dd_manager.md)
 
-- Core Dédalo API for section/record lifecycle and page context. Commonly used by front-end page builders and components.
+Core Dédalo API for the section/record lifecycle and page context. It is the API that front-end page builders and components use most.
 
-How to call
+## How to call
 
 - POST JSON to `/core/api/v1/json/index.php` with `dd_api: "dd_core_api"` and `action: "<method>"`.
 - The request uses the Request Query Object (RQO) shape: `dd_api`, `action`, `source`, `sqo`, `show`, `options`, `data`, `prevent_lock`, `pretty_print`.
 
-Notes
+## Notes
 
-- `source` and `sqo` are central: when missing the server frequently builds sensible defaults from `source` metadata.
-- For file uploads use multipart/form-data; the index auto-creates the upload RQO and forwards `$_FILES` into `rqo->options`.
+- `source` and `sqo` are central: when one is missing, the server often builds a sensible default from the `source` metadata.
+- For file uploads, use `multipart/form-data`. The endpoint auto-creates the upload RQO and forwards `$_FILES` into `rqo->options`.
 
 ## start
 

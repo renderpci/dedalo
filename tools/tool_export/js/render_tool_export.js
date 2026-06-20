@@ -5,6 +5,71 @@
 
 
 
+/**
+ * RENDER_TOOL_EXPORT
+ *
+ * Client-side view layer for the tool_export data-export tool.
+ *
+ * Responsibilities
+ * ----------------
+ * 1. Build and return the full edit DOM for the tool (grid layout: left component
+ *    picker, right user-selected columns, right-side config panel).
+ * 2. Manage the user-selection list: drag-and-drop add/sort, bulk activate/
+ *    deactivate, per-component "parents" checkbox, localStorage + IndexedDB
+ *    persistence.
+ * 3. Render the export config panel: format selector (value | grid_value |
+ *    dedalo_raw), breakdown mode (default | rows | columns), option checkboxes
+ *    (fill_the_gaps, show_tipo_in_label, value_with_parents), and the main
+ *    "Export" button that kicks off the NDJSON streaming request.
+ * 4. Render download buttons (CSV, TSV, ODS, XLSX, HTML, media ZIP) that
+ *    consume the flat_table accumulator produced by get_export_grid.
+ * 5. Manage the export-presets UI panel (create / save / select / lazy-load).
+ * 6. Build per-column DOM export_component nodes for the selection list, with
+ *    drag-sort handles and optional relation-model "parents" checkboxes.
+ * 7. Keep ar_ddo_to_export (the ordered list of ddo descriptors sent to the
+ *    server) in sync with the DOM order of the selection list.
+ *
+ * Key data shapes
+ * ---------------
+ * ddo (data-definition object) stored per column in ar_ddo_to_export:
+ *   {
+ *     id             : string   — composite id (compose_id output)
+ *     tipo           : string   — ontology tipo of the component (e.g. 'rsc29')
+ *     section_tipo   : string   — section tipo that owns the component
+ *     model          : string   — PHP class name (e.g. 'component_image')
+ *     parent         : string   — parent tipo
+ *     lang           : string   — language code (e.g. 'lg-eng')
+ *     mode           : string   — 'edit' | 'list'
+ *     label          : string   — human label
+ *     value_with_parents : boolean — per-column ancestor-chain export flag
+ *     path           : Array    — full path from the current section root
+ *   }
+ *
+ * flat_table (self.flat_table): instance of flat_table (flat_table.js) populated
+ * during the streaming export. It holds cols (Map), rows (Array) and exposes
+ * to_delimited() for CSV/TSV and render_table() for HTML/ODS/XLSX.
+ *
+ * progress_ui (self.progress_ui): { container, bar, text_bg, text_fg } — the
+ * dual-layer progress bar built in get_content_data_edit, updated by
+ * get_export_grid in tool_export.js during stream consumption.
+ *
+ * Exports
+ * -------
+ * render_tool_export  — constructor (assigned to tool_export.prototype.edit etc.)
+ * get_media_columns   — returns flat_table columns whose model is a media type
+ * get_media_models_in_data — unique media models present in current export data
+ * render_download_modal   — builds the quality-selection modal for media ZIP download
+ *
+ * Related files
+ * -------------
+ * tool_export.js           — constructor + prototype wiring + get_export_grid
+ * flat_table.js            — flat-table accumulator / NDJSON protocol consumer
+ * drag_tool_export.js      — dragstart / dragover / dragleave / drop handlers
+ *   (used by the left-panel component list; inner-list sort is do_sortable here)
+ * export_user_presets.js   — preset CRUD (load / create / save / apply)
+ * class.export_tabulator.php — PHP server that streams NDJSON to the client
+ */
+
 // imports
 	import {render_components_list} from '../../../core/common/js/render_common.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
@@ -23,20 +88,33 @@
 
 
 /**
-* RENDER_TOOL_EXPORT
-* Manages the component's logic and appearance in client side
-*/
+ * RENDER_TOOL_EXPORT
+ * Prototype namespace for the tool_export view layer.
+ * Constructed empty; all logic is attached as prototype methods below and
+ * mixed into tool_export via prototype assignment (tool_export.js).
+ */
 export const render_tool_export = function() {
 }//end render_tool_export
 
 
 
 /**
-* RELATION_MODELS
-* Mirror of component_relation_common::get_components_with_relations() (PHP).
-* Used to decide which selected export components get the per-component
-* 'parents' checkbox (ancestor chain export of their locator targets)
-*/
+ * RELATION_MODELS
+ * Set of component models whose locator targets can be traversed upward
+ * through an ancestor chain to produce additional "parents" columns in the
+ * export output.
+ *
+ * This is the client-side mirror of PHP's
+ * component_relation_common::get_components_with_relations().
+ *
+ * A selection-list item whose ddo.model is in this set receives a small
+ * "parents" checkbox (build_export_component). When checked the individual
+ * ddo.value_with_parents flag is set, overriding the global "Export parents"
+ * option for that specific column.
+ *
+ * (!) Keep in sync with component_relation_common::get_components_with_relations()
+ * on the PHP side whenever new relation component types are added.
+ */
 const relation_models = new Set([
 	'component_autocomplete',
 	'component_autocomplete_hi',
@@ -54,11 +132,21 @@ const relation_models = new Set([
 
 
 /**
-* EDIT
-* Render DOM nodes of the tool
-* @param object options
-* @return HTMLElement wrapper
-*/
+ * EDIT
+ * Renders the full edit-mode DOM tree for the tool_export widget and returns
+ * it wrapped in the standard tool wrapper element.
+ *
+ * When options.render_level === 'content', skips the outer wrapper and returns
+ * only the content_data DocumentFragment (used by partial re-renders / refresh).
+ * Otherwise the full wrapper is returned with content_data attached as a
+ * property so callers can reach it without re-querying the DOM.
+ *
+ * Delegates all layout work to get_content_data_edit().
+ *
+ * @param {Object} options
+ * @param {string} [options.render_level='full'] - 'full' | 'content'
+ * @returns {Promise<HTMLElement>} wrapper (or content_data when render_level==='content')
+ */
 render_tool_export.prototype.edit = async function (options) {
 
 	const self = this
@@ -86,10 +174,37 @@ render_tool_export.prototype.edit = async function (options) {
 
 
 /**
-* GET_CONTENT_DATA_EDIT
-* @param object self
-* @return HTMLElement content_data
-*/
+ * GET_CONTENT_DATA_EDIT
+ * Builds and returns the complete interior DOM of the tool_export edit view.
+ *
+ * Layout (three-column grid inside .grid_top):
+ *   LEFT  (.components_list_container) — scrollable list of all available
+ *         section components, rendered by render_components_list().  Each item
+ *         is draggable ('add' drag_type) into the middle panel.
+ *   MIDDLE (.selection_list_contaniner) — ordered list of columns chosen for
+ *         export, each a draggable export_component node (sort drag_type).
+ *         Restored from IndexedDB (tool_export_config) on first render.
+ *   RIGHT  (.export_buttons_config) — export presets toolbar, record count,
+ *         dual-layer progress bar, format / breakdown selectors, option
+ *         checkboxes, Export button, and response/feedback area.
+ *
+ * Below .grid_top:
+ *   .export_buttons_options — download format buttons (CSV / TSV / ODS / XLSX /
+ *     HTML / media ZIP / Print); starts with class 'loading' and is unblocked
+ *     when the NDJSON stream ends.
+ *   .export_data_container  — live preview table inserted by flat_table.render_table()
+ *     after the Export button is clicked.
+ *
+ * Side effects:
+ *   - Sets self.user_selection_list, self.components_list_container,
+ *     self.selection_list_contaniner, self.export_buttons_options,
+ *     self.progress_ui, self.button_export.
+ *   - Populates self.ar_ddo_to_export from persisted IndexedDB data on startup.
+ *   - Persists format/breakdown selectors in localStorage between page loads.
+ *
+ * @param {Object} self - The tool_export instance
+ * @returns {Promise<HTMLElement>} content_data node containing the full UI
+ */
 const get_content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
@@ -159,6 +274,12 @@ const get_content_data_edit = async function(self) {
 		empty_space.addEventListener('drop', function(e){self.on_drop(user_selection_list,e)})
 
 		// read saved ddo in local DB and restore elements if found
+		// The IndexedDB key 'tool_export_config' stores an object keyed by
+		// target_section_tipo; each value is an array of serialised ddo objects.
+		// This restores the user's previous column selection across page reloads
+		// without requiring server round-trips. The ddos are reconstructed in order
+		// and pushed individually so that each async build_export_component call
+		// appends in the correct position (ar_ddo_to_export is the authoritative list).
 			const id = 'tool_export_config'
 			data_manager.get_local_db_data(
 				id,
@@ -220,6 +341,10 @@ const get_content_data_edit = async function(self) {
 				parent			: total_records_label
 			})
 			// section get total
+			// Async: fires and forgets; self.total_records is used later by the
+			// streaming progress bar (get_export_grid) to display "n / total" progress.
+			// (!) locale is hardcoded to 'es-ES'; the commented-out line would derive
+			// it from page_globals but is left disabled. See flag in file header.
 			self.caller.get_total()
 			.then(function(total){
 				self.total_records = total;
@@ -302,6 +427,8 @@ const get_content_data_edit = async function(self) {
 				})
 
 				// fix selector value (note: stored legacy 'standard' value maps to 'value')
+				// The whitelist guard ensures that stale localStorage values (e.g. an old
+				// 'standard' string no longer in the option list) fall back safely to 'value'.
 				const stored_data_format = localStorage.getItem('selected_data_format_export')
 				self.data_format = (stored_data_format && ['value','grid_value','dedalo_raw'].includes(stored_data_format))
 					? stored_data_format
@@ -354,6 +481,14 @@ const get_content_data_edit = async function(self) {
 				: 'default'
 			select_breakdown_export.value = self.breakdown
 
+			// update_breakdown_state syncs the enabled/disabled state of both the
+			// breakdown mode selector and the global "value_with_parents" checkbox
+			// whenever the data format changes. Called once at init time
+			// (after select_breakdown_export is created) and once more implicitly
+			// when the data format selector fires 'change' (change_handler above).
+			// (!) The querySelector searches the whole document rather than a
+			// scoped container — works because only one tool instance renders at a
+			// time, but may misbehave when multiple instances coexist.
 			// enable the selector only when the breakdown format is active;
 			// the parents checkbox applies to value/breakdown formats only
 			// (dedalo_raw exports the dato as is)
@@ -477,6 +612,10 @@ const get_content_data_edit = async function(self) {
 						fill_the_gaps		: fill_the_gaps,
 						value_with_parents	: value_with_parents
 					}
+					// get_export_grid starts the NDJSON stream and returns the flat_table
+					// instance as soon as the 'meta' line arrives; rows continue streaming
+					// in the background. Awaiting here only waits for that first meta line,
+					// not for the entire stream to complete.
 					const flat_table = await self.get_export_grid(export_grid_options)
 
 					if (flat_table) {
@@ -485,7 +624,10 @@ const get_content_data_edit = async function(self) {
 						export_data_container.appendChild(table_node)
 
 						// media availability is recomputed when the stream ends:
-						// breakdown columns (and their leaf models) can arrive mid-stream
+						// breakdown columns (and their leaf models) can arrive mid-stream.
+						// The on_end callback fires from flat_table.finalize() when the
+						// server sends the 'end' line. We set it here (after get_export_grid
+						// returns) because the flat_table instance did not exist before.
 						flat_table.on_end = () => {
 							if (button_download_media) {
 								self.media_components_in_data = get_media_models_in_data(self)
@@ -609,6 +751,10 @@ const get_content_data_edit = async function(self) {
 		self.export_buttons_options = export_buttons_options;
 
 		// filename base name
+		// Built once at render time; all download buttons share the same base name.
+		// Note: toLocaleDateString() produces locale-dependent strings (e.g. '19/6/2026'
+		// on es-ES) which may contain slashes — safe inside data: URIs but may look
+		// odd in the saved filename depending on OS.
 		const filename = 'export_' +self.caller.label +'_'+ new Date().toLocaleDateString()+'-'+ self.caller.section_tipo
 
 		// csv. button_export_csv
@@ -630,7 +776,7 @@ const get_content_data_edit = async function(self) {
 					const link	= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
-					link.setAttribute('href', 'data	:text/csv;charset=utf-8,' + encodeURIComponent(csv_string));
+					link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv_string));
 					link.setAttribute('download', file);
 					document.body.appendChild(link);
 					link.click();
@@ -656,7 +802,7 @@ const get_content_data_edit = async function(self) {
 					const link	= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
-					link.setAttribute('href', 'data	:text/tsv;charset=utf-8,' + encodeURIComponent(tsv_string));
+					link.setAttribute('href', 'data:text/tsv;charset=utf-8,' + encodeURIComponent(tsv_string));
 					link.setAttribute('download', file);
 					document.body.appendChild(link);
 					link.click();
@@ -730,13 +876,15 @@ const get_content_data_edit = async function(self) {
 					html.appendChild(head);
 					head.appendChild(meta);
 					head.appendChild(body);
-					body.appendChild(export_data_container);
+					// Clone (not move) the live preview node so it stays mounted in the
+					// tool DOM after the download; appendChild would detach the live node.
+					body.appendChild(export_data_container.cloneNode(true));
 
 					// Download it
 					const link	= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
-					link.setAttribute('href', 'data	:text/text;charset=utf-8,' + html.outerHTML);
+					link.setAttribute('href', 'data:text/text;charset=utf-8,' + html.outerHTML);
 					link.setAttribute('download', file);
 					document.body.appendChild(link);
 					link.click();
@@ -790,15 +938,28 @@ const get_content_data_edit = async function(self) {
 
 
 /**
-* RENDER_PRESETS_UI
-* Builds the user export presets toolbar: a panel (hidden by default) holding
-* the presets list plus 'New preset' / 'Save preset' buttons, and a toggle
-* button that opens the panel and lazy-loads the list.
-* Mirrors the search presets UI (core/search/js/render_search.js).
-* @param object self - The tool_export instance
-* @param HTMLElement parent
-* @return HTMLElement presets_block
-*/
+ * RENDER_PRESETS_UI
+ * Builds the user export presets toolbar: a panel (hidden by default) holding
+ * the presets list plus 'New preset' / 'Save preset' buttons, and a toggle
+ * button that opens the panel and lazy-loads the list.
+ *
+ * Structure:
+ *   .export_presets
+ *     .export_presets_header  — always visible; contains title, '+' new button, chevron
+ *     .export_presets_panel   — collapsible body (display_none by default)
+ *       button.button_save_preset — hidden until a preset is selected
+ *       .export_presets_list      — preset section list is lazy-mounted on first open
+ *
+ * Side effects:
+ *   - Sets self.export_presets_panel, self.export_presets_list, self.button_save_preset.
+ *   - Lazy-loads presets via load_user_export_presets() on first panel open.
+ *
+ * Mirrors the search presets UI (core/search/js/render_search.js).
+ *
+ * @param {Object} self - The tool_export instance
+ * @param {HTMLElement} parent - DOM node to append the presets block to
+ * @returns {HTMLElement} presets_block
+ */
 const render_presets_ui = function(self, parent) {
 
 	// presets_block. Themed, collapsible block placed at the top of the config column
@@ -946,12 +1107,13 @@ const render_presets_ui = function(self, parent) {
 
 
 /**
-* TOGGLE_EXPORT_PRESETS
-* Shows or hides the export presets panel and lazy-loads the presets list on
-* first open.
-* @param object self - The tool_export instance
-* @return promise bool
-*/
+ * TOGGLE_EXPORT_PRESETS
+ * Shows or hides the export presets panel and lazy-loads the presets list on
+ * first open. Delegates the open path to open_export_presets() so that
+ * create_new_export_preset can also call open without toggling.
+ * @param {Object} self - The tool_export instance
+ * @returns {Promise<boolean>} true on success; undefined when panel node is missing
+ */
 const toggle_export_presets = async function(self) {
 
 	const panel = self.export_presets_panel
@@ -979,11 +1141,14 @@ const toggle_export_presets = async function(self) {
 
 
 /**
-* OPEN_EXPORT_PRESETS
-* Opens the export presets panel and lazy-loads the presets list on first open.
-* @param object self - The tool_export instance
-* @return promise bool
-*/
+ * OPEN_EXPORT_PRESETS
+ * Opens the export presets panel and lazy-loads the presets list on first open.
+ * Guards against repeated loads with the self.user_presets_section sentinel.
+ * Called by both toggle_export_presets (user header click) and the 'New preset'
+ * button handler so the panel is visible before the new preset is added.
+ * @param {Object} self - The tool_export instance
+ * @returns {Promise<boolean>} true on success, false when panel node is missing
+ */
 const open_export_presets = async function(self) {
 
 	const panel	= self.export_presets_panel
@@ -1022,11 +1187,27 @@ const open_export_presets = async function(self) {
 
 
 /**
-* BUILD_EXPORT_COMPONENT
-* Creates export_component DOM item
-* @param object ddo
-* @return HTMLElement export_component
-*/
+ * BUILD_EXPORT_COMPONENT
+ * Creates one selection-list DOM item representing a single export column.
+ *
+ * The returned element is a .export_component div with:
+ *   - .component_label <li>: breadcrumb label (path names joined with ' > ')
+ *     plus a <span> with the tipo and model for quick identification.
+ *   - (relation models only) .export_component_parents <label>: a checkbox
+ *     that overrides the global 'Export parents' option for this column.
+ *     The checkbox is prevented from triggering drag start/drag events.
+ *   - .button.close <span>: removes the item from the list and persists the
+ *     updated selection to IndexedDB.
+ *
+ * The returned element has element.ddo attached directly as a property so that
+ * sync_ar_ddo_to_export can walk the DOM and reconstruct ar_ddo_to_export
+ * without keeping a separate parallel data structure.
+ *
+ * do_sortable() is applied to the element to enable intra-list drag-to-sort.
+ *
+ * @param {Object} ddo - Column descriptor (see file module header for shape)
+ * @returns {Promise<HTMLElement>} The .export_component element
+ */
 render_tool_export.prototype.build_export_component = async function(ddo) {
 
 	const self = this
@@ -1114,14 +1295,20 @@ render_tool_export.prototype.build_export_component = async function(ddo) {
 
 
 /**
-* SYNC_AR_DDO_TO_EXPORT
-* Rebuilds ar_ddo_to_export from the current DOM order of the selection list.
-* The DOM is the single source of truth for column order: deriving the array
-* from it after every add / sort / remove keeps the export column order exactly
-* equal to the user order, and removes the fragile index math (and its off-by-one
-* / stale-index / async-race bugs) that previously kept the two in sync by hand.
-* @return void
-*/
+ * SYNC_AR_DDO_TO_EXPORT
+ * Rebuilds self.ar_ddo_to_export from the current DOM order of the selection list.
+ *
+ * The DOM (user_selection_list children) is the single source of truth for
+ * column order: deriving the array from it after every add / sort / remove
+ * keeps the export column order exactly equal to the visual order and avoids
+ * the fragile index math (off-by-one, stale-index, async-race bugs) that
+ * previously tried to keep the two in sync by hand.
+ *
+ * Only nodes with class 'export_component' AND a .ddo property are included;
+ * any transient DOM nodes (e.g. drag placeholders) are silently skipped.
+ *
+ * @returns {void}
+ */
 render_tool_export.prototype.sync_ar_ddo_to_export = function() {
 
 	const self = this
@@ -1139,11 +1326,28 @@ render_tool_export.prototype.sync_ar_ddo_to_export = function() {
 
 
 /**
-* DO_SORTABLE
-* Add drag and drop features to the element
-* @param DOM node element
-* @return void
-*/
+ * DO_SORTABLE
+ * Attaches HTML5 drag-and-drop event listeners directly to an .export_component
+ * element so it can be reordered within the user selection list or used as a
+ * drop target for new components dragged from the left-panel component list.
+ *
+ * Two drag paths are handled (discriminated by dataTransfer 'drag_type'):
+ *   'sort' — item is being reordered within the selection list. The stored
+ *            self.dragged element is moved before this element; the DOM order
+ *            then drives sync_ar_ddo_to_export().
+ *   'add'  — item is dragged from the left component list. A new ddo is
+ *            built from the dataTransfer payload, deduplicated against
+ *            ar_ddo_to_export, then a new export_component is inserted before
+ *            this element. sync_ar_ddo_to_export() derives the new order.
+ *
+ * The 'displaced' class is applied to the drop target element during dragenter
+ * and cleared on drop/dragend via the inner reset() function, providing a
+ * visual insertion hint.
+ *
+ * @param {HTMLElement} element - The .export_component node to make sortable
+ * @param {Object} self - The tool_export instance (for dragged, ar_ddo_to_export, callbacks)
+ * @returns {void}
+ */
 const do_sortable = function(element, self) {
 
 	// sortable
@@ -1290,14 +1494,20 @@ const do_sortable = function(element, self) {
 
 
 /**
-* GET_MEDIA_COLUMNS
-* Flat table columns holding media values. The column 'model' is the
-* LEAF component model resolved by the server (portals deep-resolve
-* correctly: a portal>image column reports component_image)
-* @param object self
-* 	tool_export instance
-* @return array columns
-*/
+ * GET_MEDIA_COLUMNS
+ * Returns all flat_table column descriptor objects whose model is a known
+ * media component type (component_image, component_av, component_pdf,
+ * component_svg, component_3d).
+ *
+ * The column 'model' is the LEAF component model resolved by the server:
+ * portal columns report the deepest concrete model, not 'component_portal'.
+ * self.media_components is the authoritative Set of media model names defined
+ * in the tool_export constructor.
+ *
+ * @param {Object} self - The tool_export instance (must have flat_table and media_components)
+ * @returns {Array<Object>} Array of flat_table col objects for media columns; empty array when
+ *   flat_table is absent or no media columns exist
+ */
 export const get_media_columns = (self) => {
 
 	if (!self.flat_table) return []
@@ -1315,12 +1525,18 @@ export const get_media_columns = (self) => {
 
 
 /**
-* GET_MEDIA_MODELS_IN_DATA
-* Unique media component models present in the export columns
-* @param object self
-* 	tool_export instance
-* @return array models
-*/
+ * GET_MEDIA_MODELS_IN_DATA
+ * Returns the deduplicated list of media component model names present in
+ * the current flat_table columns. Used to decide which quality selectors to
+ * render in the download modal and whether the media download button should
+ * be enabled.
+ *
+ * Wraps get_media_columns() and collapses multiple columns of the same model
+ * (e.g. two component_image columns) to a single entry.
+ *
+ * @param {Object} self - The tool_export instance
+ * @returns {Array<string>} Unique model name strings, e.g. ['component_image', 'component_av']
+ */
 export const get_media_models_in_data = (self) => {
 
 	const models = get_media_columns(self).map(col => col.model)
@@ -1331,13 +1547,27 @@ export const get_media_models_in_data = (self) => {
 
 
 /**
-* RENDER_DOWNLOAD_MODAL
-* Creates a standard dd_modal to allow quality selection for media
-* download files before collect the files
-* @param object self
-* 	tool_export instance
-* @return HTMLElement modal
-*/
+ * RENDER_DOWNLOAD_MODAL
+ * Creates a standard dd_modal that presents per-model quality selectors before
+ * starting the media ZIP download.
+ *
+ * For each model in self.media_components_in_data a <select> is rendered with
+ * available quality options:
+ *   component_image — options derived from the component_image context
+ *                     (ar_quality array from features; async via data_manager).
+ *   component_av    — fixed options: [dedalo_av_quality_default, 'original'].
+ *   component_3d | component_pdf | component_svg — fixed options: ['web', 'original'].
+ *
+ * The selected qualities are collected into a quality_parse map
+ * { model: { source, target } } and passed to download_media() when the user
+ * clicks OK.
+ *
+ * The component_image quality list is fetched asynchronously after the modal
+ * opens; it is populated into the existing <select> when the request resolves.
+ *
+ * @param {Object} self - The tool_export instance
+ * @returns {HTMLElement} The dd_modal DOM node (already attached to the document)
+ */
 export const render_download_modal = (self) => {
 
 	// body
@@ -1379,6 +1609,11 @@ export const render_download_modal = (self) => {
 				case 'component_image':
 					// Get the context of the default component image from resources
 					// (Any is valid to get the a generic context)
+					// (!) rsc29/rsc170 is a known canonical component_image in the Dédalo
+					// resource section used solely to read the ar_quality list from
+					// features. If that section is missing the modal renders an empty
+					// select and quality_parse[model] remains unset (download falls back
+					// to the cell URL as-is, no quality rewrite).
 					data_manager.get_element_context({
 						model			: 'component_image',
 						tipo			: 'rsc29',
@@ -1392,6 +1627,8 @@ export const render_download_modal = (self) => {
 
 						const ar_quality = api_response.result?.[0].features?.ar_quality || []
 
+						// Set quality_parse defaults: both source and target start as the
+						// system default quality; the user's change_handler updates target.
 						quality_parse[model] = {
 							source : page_globals.dedalo_image_quality_default,
 							target : page_globals.dedalo_image_quality_default
@@ -1518,26 +1755,43 @@ export const render_download_modal = (self) => {
 
 
 /**
-* DOWNLOAD_MEDIA
-* Search media files in the export flat table and download the found media
-* files fetching the URL.
-* Default quality is used (e.g. '1.5MB' in images) in the cells. If we want
-* to map to another quality (e.g. 'original') we set the 'quality_parse'
-* object value.
-* @param object self
-* 	tool_export instance
-* @param object|undefined quality_parse
-* 	sample: {
-*		component_image : {
-*			source : '1.5MB',
-*			target : 'original'
-*		}
-*	}
-* @return
-*/
+ * DOWNLOAD_MEDIA
+ * Collects media file URLs from the export flat_table, fetches them in parallel,
+ * and bundles all successful responses plus a manifest (info.txt) into a ZIP
+ * that is offered for browser download via a temporary anchor click.
+ *
+ * Quality mapping:
+ *   The flat_table stores media cells as-is from the export.  For standard /
+ *   breakdown formats the cell contains a URL with the source quality embedded
+ *   in the path segment (e.g. '/1.5MB/'). quality_parse provides a per-model
+ *   {source, target} pair so the URL is rewritten to the target quality before
+ *   fetching (string replace on the path segment).
+ *   For dedalo_raw format the cell is a JSON-encoded dedalo_data wrapper; the
+ *   URL is extracted from files_info[].file_path, and the target quality is
+ *   matched against files_info[].quality.
+ *
+ * Failure handling:
+ *   - Files that fail the fetch (non-ok HTTP response) are added to failed_files.
+ *   - Fetch errors (network) are logged when SHOW_DEBUG is true and silently skipped.
+ *   - failed_files and downloaded_files are both listed in info.txt inside the ZIP.
+ *
+ * Uses the client-zip library (./lib/client-zip/index.js) to stream Response
+ * objects directly into the ZIP without buffering all files in memory first.
+ *
+ * @param {Object} self - The tool_export instance (must have flat_table, media_components_in_data)
+ * @param {Object|undefined} quality_parse - Per-model quality mapping:
+ *   { component_image: { source: '1.5MB', target: 'original' }, ... }
+ *   When omitted a default mapping (image: original, av: original) is used.
+ * @returns {Promise<boolean|null>} true on success, null when no media columns or rows
+ */
 const download_media = async function (self, quality_parse) {
 
-	// quality_parse. Defines source and target quality for each model
+	// quality_parse. Defines source and target quality for each model.
+	// These defaults are only used when download_media is called without a
+	// quality_parse argument (e.g. from test code or a future direct call).
+	// In the normal UI path the modal always provides a quality_parse.
+	// (!) component_av default source is '404' — this is a placeholder value
+	// meaning "no specific source quality to rewrite from".
 	if (!quality_parse) {
 		// default value
 		quality_parse = {
@@ -1563,6 +1817,7 @@ const download_media = async function (self, quality_parse) {
 	const ar_models_set = new Set(self.media_components_in_data)
 
 	// media columns of the flat table (leaf model resolved by the server)
+	// The extra .filter() narrows to only models the user confirmed in the modal.
 	const media_columns = get_media_columns(self).filter(col => ar_models_set.has(col.model))
 
 	const rows = self.flat_table ? self.flat_table.rows : []
@@ -1634,6 +1889,10 @@ const download_media = async function (self, quality_parse) {
 		}
 	}
 
+	// Fire all fetches in parallel; each returns the Response object (which
+	// client-zip can consume directly as a ReadableStream without buffering).
+	// Non-ok responses are pushed to failed_files and excluded from the ZIP.
+	// Fetch errors (network failure) are swallowed silently when !SHOW_DEBUG.
 	const fetch_list = []
 	url_list.flat().forEach(function(url) {
 
@@ -1656,11 +1915,15 @@ const download_media = async function (self, quality_parse) {
 	const promise_items = await Promise.all(fetch_list)
 
 	// filter valid files (exclude not downloadable)
+	// promise_items contains undefined for failed/errored fetches; filtering removes them.
 	const files = promise_items.filter(el => el)
 
+	// el.url is the resolved URL of the Response (may differ from the requested URL
+	// after redirects). Used only for the info manifest, not for ZIP entry names.
 	const downloaded_files = files.map(el => el.url)
 
 	// info text file add to download file
+	// Appended as a plain-text manifest so the user can audit what was and was not included.
 	const info = {
 		name: "info.txt",
 		lastModified: new Date(),
@@ -1670,9 +1933,13 @@ const download_media = async function (self, quality_parse) {
 
 	// get the ZIP stream in a Blob
 	// Using lib client-zip @see https://github.com/Touffy/client-zip?tab=readme-ov-file
+	// client-zip streams Response bodies directly into the ZIP entry without buffering
+	// the whole file in memory, making this viable for large media sets.
 	const blob = await downloadZip(files).blob()
 
 	// make and click a temporary link to download the Blob
+	// URL.createObjectURL creates a transient blob URL; the link is removed
+	// immediately after the click — the browser still downloads the blob.
 	const link = document.createElement('a')
 	link.href = URL.createObjectURL(blob)
 	link.download = 'export_media.zip'

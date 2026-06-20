@@ -4,6 +4,49 @@
 
 
 
+/**
+* TOOL_EXPORT
+*
+* Top-level controller for the Dédalo v7 data-export tool.
+*
+* Responsibilities:
+* - Owns the instance state: the user's selected columns (`ar_ddo_to_export`),
+*   the active SQO (filter), streaming progress UI, and the accumulated
+*   `flat_table` result.
+* - Delegates rendering to `render_tool_export` (edit/build_export_component/
+*   sync_ar_ddo_to_export), drag-and-drop column reordering to `drag_tool_export`,
+*   and generic lifecycle (render/destroy/refresh) to `common`/`tool_common`.
+* - Exposes `get_export_grid()`, the streaming fetch entry point that posts an
+*   NDJSON export request to `dd_tools_api` and feeds the `flat_table`
+*   accumulator; also `get_export_xsl()` and `export_table_with_xlsx_lib()` for
+*   client-side format conversion.
+* - Persists the user's column selection per `target_section_tipo` to IndexedDB
+*   (`update_local_db_data`) so it survives page reloads.
+*
+* Architecture (export pipeline):
+*   1. User picks columns → DOM = source of truth → `sync_ar_ddo_to_export()`
+*      rebuilds `ar_ddo_to_export` from DOM order.
+*   2. `get_export_grid()` posts to `dd_tools_api::tool_request →
+*      tool_export::get_export_grid()` (server forces sqo.limit='ALL').
+*   3. Server streams NDJSON (meta / col / row / end lines); each line is
+*      dispatched to `flat_table.process_line()`.
+*   4. `flat_table` renders the live HTML preview and supplies the data for
+*      CSV/TSV/ODS/XLSX/HTML/media downloads — single source of truth.
+*
+* Key state:
+*   - `self.ar_ddo_to_export`   – ordered array of DDO objects for selected columns
+*   - `self.sqo`                – the caller section's search query object (cloned for export)
+*   - `self.target_section_tipo`– the section being exported (may differ from caller)
+*   - `self.flat_table`         – the live `flat_table` instance (set after streaming starts)
+*   - `self.progress_ui`        – optional { container, bar, text_bg, text_fg } node refs
+*   - `self.total_records`      – record count from the server `meta` line
+*
+* Main exports: `tool_export` (constructor).
+* See: tools/tool_export/class.tool_export.php (server side),
+*      tools/tool_export/js/render_tool_export.js,
+*      tools/tool_export/js/flat_table.js.
+*/
+
 // import
 	import {clone} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
@@ -23,7 +66,11 @@
 
 /**
 * TOOL_EXPORT
-* Tool to export data from sections
+* Constructor: initialises all instance properties to their zero/sentinel values.
+*
+* Properties set here are the authoritative list; `init()` fills them with real
+* data from `options` and the caller section. Keeping them here makes it easy
+* to audit state at construction time.
 */
 export const tool_export = function () {
 
@@ -82,19 +129,32 @@ export const tool_export = function () {
 
 /**
 * INIT
+* Runs once after the tool is instantiated.  Delegates generic tool
+* initialisation to `tool_common.prototype.init`, then seeds the
+* tool-export-specific instance vars that are not covered by `tool_common`.
 *
-* @param object options
-* Sample:
-* {
-*	lang: "lg-eng"
-*	mode: "edit"
-*	model: "tool_export"
-*	section_id: "1"
-*	section_tipo: "rsc167"
-*	tipo: "rsc36"
-*	tool_config: {section_id: "2", section_tipo: "dd1324", name: "tool_export", label: "Tool Indexation", icon: "/v6/tools/tool_export/img/icon.svg", …}
-* }
-* @return bool common_init
+* Side effects:
+* - Calls `self.caller.build(true)` to ensure the caller section's RQO/SQO
+*   are populated before being read (`self.source`, `self.sqo`).
+* - Sets `self.lang` from `options.lang` (the active data language, e.g.
+*   "lg-eng"), and `self.langs` from `page_globals.dedalo_projects_default_langs`.
+* - Resets transient state: `events_tokens`, `components_list`, `ar_instances`,
+*   `ar_ddo_to_export`, and initial pagination sentinels.
+*
+* @param {Object} options - Options object from the tool launcher.
+*   Sample:
+*   {
+*     lang: "lg-eng",
+*     mode: "edit",
+*     model: "tool_export",
+*     section_id: "1",
+*     section_tipo: "rsc167",
+*     tipo: "rsc36",
+*     tool_config: { section_id: "2", section_tipo: "dd1324", name: "tool_export",
+*                    label: "Tool Indexation", icon: "/v6/tools/tool_export/img/icon.svg", … }
+*   }
+* @returns {Promise<boolean>} Resolves to the value returned by `tool_common.prototype.init`
+*   (true on success, false if the generic init failed).
 */
 tool_export.prototype.init = async function(options) {
 
@@ -141,8 +201,21 @@ tool_export.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @param bool autoload = false
-* @return bool common_build
+* Fetches the available section components that can be offered as export columns
+* (the left-panel "components list" in the UI).
+*
+* Delegates to `tool_common.prototype.build` for generic scaffolding, then
+* calls `get_section_elements_context` (from `common.prototype`) to fetch the
+* ontology-driven component list for `target_section_tipo`, excluding
+* `section_elements_components_exclude` (e.g. `component_password`).
+*
+* The result is stored in `self.section_elements` and consumed by
+* `render_tool_export.prototype.edit` when building the left panel.
+*
+* @param {boolean} [autoload=false] - Passed through to `tool_common.prototype.build`;
+*   when true the build was triggered automatically (e.g. on init) rather than
+*   by explicit user action.
+* @returns {Promise<boolean>} The value returned by `tool_common.prototype.build`.
 */
 tool_export.prototype.build = async function(autoload=false) {
 
@@ -172,8 +245,15 @@ tool_export.prototype.build = async function(autoload=false) {
 
 /**
 * GET_SECTION_ID
-* @return string
-* 	as 'tmp_export_1'
+* Generates an incrementing unique ID string for temporary export section nodes.
+*
+* (!) Note: this mutates `self.section_id` in place by pre-incrementing it,
+* which means `section_id` drifts from any numeric ID set by the server during
+* the session. Only use this for transient DOM node IDs, never as a persistent
+* record identifier.
+*
+* @returns {string} A unique string of the form 'tmp_export_N', where N starts
+*   at the value of `self.section_id + 1` and increments on each call.
 */
 tool_export.prototype.get_section_id = function() {
 
@@ -195,10 +275,38 @@ tool_export.prototype.get_section_id = function() {
  * dispatched to a flat_table accumulator that also drives the live
  * HTML preview; CSV/TSV/XLSX downloads read the same flat data.
  *
- * @param {Object} options - Request options: data_format, breakdown,
- *   fill_the_gaps, show_tipo_in_label, ar_ddo_to_export
- * @returns {Promise<Object|null>} The flat_table instance, resolved once
- *   the meta line arrives (rows keep streaming in afterwards)
+ * Request shape:
+ *   dd_api: 'dd_tools_api', action: 'tool_request', source: create_source(self, 'get_export_grid')
+ *   options.section_tipo  – the caller's section_tipo (determines which records to fetch)
+ *   options.sqo           – cloned from self.sqo with limit=0/offset=0 (server forces 'ALL')
+ *   options.ar_ddo_to_export – the ordered column DDO array
+ *   options.ndjson_stream = true
+ *
+ * Streaming flow:
+ *   1. `data_manager.request_fetch_stream` opens the response body as a
+ *      ReadableStream; chunks are decoded and split on '\n'.
+ *   2. Each parsed line is dispatched via `flat_table.process_line()`.
+ *   3. On 'meta': resolve the outer Promise with the flat_table instance
+ *      so the caller can mount the preview while rows keep streaming.
+ *   4. On 'row' with sub===0: advance the progress bar (one record per
+ *      primary row; sub-rows share a record_id and are skipped for counting).
+ *   5. On stream end: hide the progress bar (500 ms delay for 100 % visibility),
+ *      remove 'loading' CSS class from action buttons.
+ *
+ * (!) The Promise is resolved on 'meta', NOT on stream end. Callers must NOT
+ * await the returned promise as a "done" signal — attach follow-up work to
+ * `flat_table.on_end` or poll/await `flat_table.end` instead.
+ *
+ * @param {Object} options - Export configuration.
+ * @param {string} options.data_format - Export format: 'value' | 'grid_value' | 'dedalo_raw'.
+ * @param {string} [options.breakdown='default'] - Breakdown mode: 'default' | 'rows' | 'columns'.
+ * @param {Array}  options.ar_ddo_to_export - Ordered array of DDO objects defining export columns.
+ * @param {boolean} [options.show_tipo_in_label] - Client-only: append ontology tipo to column headers.
+ * @param {boolean} [options.fill_the_gaps] - Server-side: repeat spanning values on exploded rows.
+ * @param {boolean} [options.value_with_parents=false] - Include ancestor chain for relation targets.
+ * @returns {Promise<flat_table|null>} Resolves with the live `flat_table` instance once
+ *   the 'meta' protocol line arrives; resolves null if the stream fails to start or if
+ *   the stream ends before 'meta' is received.
  */
 tool_export.prototype.get_export_grid = async function(options) {
 
@@ -268,6 +376,7 @@ tool_export.prototype.get_export_grid = async function(options) {
 		const initial_text = `0 / ${self.total_records || '?'}`;
 		self.progress_ui.text_bg.innerText = initial_text;
 		self.progress_ui.text_fg.innerText = initial_text;
+		// clipPath 'inset(0 100% 0 0)' hides the foreground text entirely at 0 %
 		self.progress_ui.text_fg.style.clipPath = 'inset(0 100% 0 0)';
 	}
 
@@ -341,6 +450,7 @@ tool_export.prototype.get_export_grid = async function(options) {
 									const current_text = `${records_processed} / ${self.total_records}`;
 									self.progress_ui.text_bg.innerText = current_text;
 									self.progress_ui.text_fg.innerText = current_text;
+									// clipPath reveals the coloured fg text proportionally to percent
 									self.progress_ui.text_fg.style.clipPath = `inset(0 ${100 - percent}% 0 0)`;
 								}
 							}
@@ -366,9 +476,26 @@ tool_export.prototype.get_export_grid = async function(options) {
 
 /**
 * GET_EXPORT_XSL
-* Load the export grid data and convert it to XLS format
-* @param object options
-* @return bool
+* Converts an HTML `<table>` node to a legacy Excel-compatible `.xls` file
+* and triggers a browser download via a synthetic `<a>` click.
+*
+* Uses the old Microsoft Office XML Spreadsheet format (MIME
+* `application/vnd.ms-excel`) encoded as a base-64 data URI; this avoids
+* any server round-trip and works in all modern browsers.  The method is
+* kept for backward compatibility — new export paths prefer `export_table_with_xlsx_lib`
+* (SheetJS) which produces a genuine `.xlsx` binary.
+*
+* (!) The `table` parameter is `options.table.firstChild`, NOT the outer
+* wrapper element; callers must ensure `options.table` has a `<table>` as
+* its first child. If `options.table` is already the `<table>` element itself,
+* `.firstChild` will resolve to the first `<thead>` or `<tbody>` and the output
+* will be malformed.
+*
+* @param {Object} options - Conversion options.
+* @param {HTMLElement} options.table - Container whose `firstChild` is the
+*   `<table>` element to serialise.
+* @param {string} options.filename - The suggested download filename (e.g. `"export.xls"`).
+* @returns {Promise<boolean>} Resolves `true` after the synthetic link is clicked.
 */
 tool_export.prototype.get_export_xsl = async function (options) {
 
@@ -416,14 +543,26 @@ tool_export.prototype.get_export_xsl = async function (options) {
 
 /**
 * EXPORT_TABLE_WITH_XLSX_LIB
-* Convert and export table to xlsx using the library xlsx.js
-* see: https://docs.sheetjs.com/docs/getting-started/installation/standalone#ecmascript-module-imports
-* @param options options
-* 	{
-* 		table : node html table
-* 		filename: string
-* 	}
-* @return promise: bool
+* Converts an HTML `<table>` node to a binary `.xlsx` file and triggers
+* a browser download using the SheetJS (`xlsx.js`) library.
+*
+* The library is **dynamically imported** on first call (lazy-load), so it is
+* only downloaded by the browser when the user actually requests an XLSX export.
+* The import path resolves to a local copy at `DEDALO_ROOT_WEB/lib/xlsx/build/xlsx.js`
+* (downloaded from https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs).
+*
+* The `{"raw":true}` option tells SheetJS to keep cell values as-is without
+* attempting type inference; this preserves leading zeros and long numeric strings
+* that would otherwise be coerced.
+*
+* See: https://docs.sheetjs.com/docs/getting-started/installation/standalone#ecmascript-module-imports
+*
+* @param {Object} options - Conversion options.
+* @param {HTMLElement} options.table - The `<table>` DOM element to export.
+*   Must be mounted in the document (SheetJS reads computed layout).
+* @param {string} options.filename - Suggested download filename including
+*   the `.xlsx` extension (e.g. `"records_rsc167.xlsx"`).
+* @returns {Promise<void>} Resolves once `XLSX.writeFile` triggers the download.
 */
 tool_export.prototype.export_table_with_xlsx_lib = async function( options ) {
 
@@ -444,10 +583,18 @@ tool_export.prototype.export_table_with_xlsx_lib = async function( options ) {
 
 /**
 * ON_CLOSE_ACTIONS
-* Executes specific action on close the tool
-* @param string open_as
-* 	modal|window
-* @return promise: bool
+* Hook called by the tool framework immediately before the tool panel closes.
+*
+* When `open_as` is `'modal'`, destroys the tool instance (removes its DOM
+* node and frees event listeners) so that re-opening the modal creates a
+* fresh instance rather than reusing stale state.
+*
+* (!) Refreshing the caller (`self.caller.refresh()`) is intentionally
+* suppressed — the caller is `component_json`, which must not be rebuilt just
+* because the export modal closed.
+*
+* @param {string} open_as - How the tool was opened: `'modal'` | `'window'`.
+* @returns {Promise<boolean>} Always resolves `true`.
 */
 tool_export.prototype.on_close_actions = async function(open_as) {
 
@@ -465,9 +612,24 @@ tool_export.prototype.on_close_actions = async function(open_as) {
 
 /**
 * UPDATE_LOCAL_DB_DATA
-* Read and replaces the tool_export_config data portion from current section
-* Saves the updated value read from self.ar_ddo_to_export
-* @return bool
+* Persists the current `ar_ddo_to_export` column selection to IndexedDB so
+* it can be restored the next time the user opens the export tool for the
+* same section.
+*
+* Storage key: `'tool_export_config'` in the `'data'` IndexedDB table.
+* Value shape: `{ [target_section_tipo]: ar_ddo_to_export, … }` — a single
+* object that holds configurations for ALL sections the user has ever exported,
+* keyed by `target_section_tipo`.  Only the entry for the current section is
+* updated; other sections' configs are preserved.
+*
+* When `target_section_tipo` is an Array (multiple-section export), only the
+* first element is used as the key to avoid object-key collisions.
+*
+* The commented-out block at the bottom of this method is dead code from an
+* earlier design that pushed individual DDO objects rather than replacing the
+* whole array; it is intentionally left in place for reference.
+*
+* @returns {Promise<boolean>} Resolves `true` after the IndexedDB write completes.
 */
 tool_export.prototype.update_local_db_data = async function() {
 
@@ -532,10 +694,22 @@ tool_export.prototype.update_local_db_data = async function() {
 
 /**
 * COMPOSE_ID
-* Compose the ddo id used in drag and drop in a unified way
-* @param object ddo
-* @param array path
-* @return string id
+* Builds the stable string ID used to identify a DDO column node in the
+* drag-and-drop UI and to key duplicate detection.
+*
+* Format: `<section_tipo>_<component_tipo>_…_list_<lang>`
+* Example: `rsc167_rsc10_list_lg-eng`
+*
+* The ID encodes the full traversal path (each path step contributes one
+* `section_tipo_component_tipo` segment) followed by the `lang` qualifier of
+* the DDO. This makes IDs unique across nested relation traversals that would
+* otherwise share the same leaf component_tipo.
+*
+* @param {Object} ddo  - The DDO (data-description object) for the export column;
+*   must have a `lang` property (e.g. `"lg-eng"`).
+* @param {Array}  path - The ordered traversal path from the top section to
+*   this component; each element must have `section_tipo` and `component_tipo`.
+* @returns {string} The composed column ID string.
 */
 tool_export.prototype.compose_id = function (ddo, path) {
 

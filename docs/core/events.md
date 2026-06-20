@@ -1,6 +1,8 @@
 # Events
 
-Dédalo implements an event manager used across all ontology definitions (areas, sections, components, tools, services, etc). The event manager is a observable-observer pattern but we implement a connection with the instances with tokens. Event manager centralize all events fired by observables and perform some functions or methods of the observers.
+> See also: [Browser client](client/index.md) · [Glossary](glossary.md)
+
+Dédalo implements an event manager used across all ontology definitions (areas, sections, components, tools, services, etc). The event manager is an observer/observable pattern, but the connection between instances is made with tokens. The event manager centralizes all events fired by observables and runs some functions or methods of the observers.
 
 ## Event definition
 
@@ -8,10 +10,10 @@ Every event is created as unique and centralize object, all instances can subscr
 
 - Auto-explained. Each event is auto-explained, the event_name is the key to subscribe or publish
 - Controlled by instances. The instances has control to create new ones and destroy it
-- Self container. The token is stored in the instances to be referenced in the event manager, the instance has store only the token to call it.
+- Self-contained. The token is stored in the instances to be referenced in the event manager; the instance stores only the token to call it.
 - objects with only 3 properties.
 
-All events are storen in the events array of the event manager.
+All events are stored in the events array of the event manager.
 
  Events format:
 
@@ -41,10 +43,10 @@ subscribe(event_name, callback)
 
 ##### Parameters
 
-- `event_name` : String with the name of the event to be subscribe, the event will be created into the events property. The name can contain some unique combination of parameters to identify the event as language or the own id of the component.
+- `event_name` : String with the name of the event to be subscribed, the event will be created into the events property. The name can contain some unique combination of parameters to identify the event as language or the own id of the component.
 - `callback` : Method or function to be performed when the event is fired like: 'fn_activate_component'
 
-!!! tip "Naming events
+!!! tip "Naming events"
     Using a combination of parameters added to the event name is possible to create a specific context to perform the event. For ex:
     ```event_manager.subscribe('render_' + self.lang, fn_render_lang)``` only will fire with the publisher send a render event with specific lang ignoring all other render events.
 
@@ -68,7 +70,7 @@ function fn_activate_component(component) {
 
 Event could be defined into the ontology as a property of the components. When a component has an event defined Dédalo will subscribe it into the event manager automatically.
 
-**Scope of the automatic subscription:** The ontology can define a observer property that specify the tipo that this component will listen, therefore the event has a scope of the same section_tipo and same section_id for the observer and observable.
+**Scope of the automatic subscription:** The ontology can define an observer property that specifies the tipo that this component will listen, therefore the event has a scope of the same section_tipo and same section_id for the observer and observable.
 
 To create the name of the event a id is created with this rule:
 
@@ -78,13 +80,13 @@ const id_base   = section_tipo +'_'+ section_id +'_'+ component_tipo
 const perform   = self.context.properties.observe[i].client.perform
 ```
 
-All components has his own id_base and can be referenced as: `self.id_base` so, the event can be fired by:
+All components have their own id_base and can be referenced as `self.id_base`, so the event can be fired by:
 
 ```js
 event_manager.publish(event +'_'+ self.section_tipo +'_'+ self.section_id +'_'+ self.tipo, perform)
 ```
 
-or the sort format with the id_base of the observable component:
+or the short format with the id_base of the observable component:
 
 ```js
 event_manager.publish(event +'_'+ self.id_base, perform)
@@ -464,7 +466,7 @@ event_manager.publish('image_quality_change_'+self.id, img_src)
 top_window.event_manager.publish('initiator_link_' + self.initiator, {
     section_tipo    : section_tipo,
     section_id      : section_id
-)
+})
 ```
 
 **Emitted by:**
@@ -513,7 +515,7 @@ window_base.event_manager.publish('link_term_' + linker_id, {
 
 **Emitted by:**
 
-render_ts_object.js
+- render_ts_object.js
 
 ### login_failed
 
@@ -764,7 +766,7 @@ event_manager.publish( 'show_save_button_' + self.id )
 event_manager.publish('sync_data_'+id_base_lang, {
     caller          : self,
     changed_data    : null
-}
+})
 ```
 
 **Emitted by:**
@@ -866,7 +868,7 @@ event_manager.publish('update_sections_list_' + self.id)
 
 **Emitted by:**
 
-render_search.js:
+- render_search.js
 
 ### update_value_
 
