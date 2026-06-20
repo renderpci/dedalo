@@ -52,6 +52,11 @@
 	import {PX_PER_MM, page_dims, mm_to_px, apply_box_style} from './canvas_tool_print.js'
 	import {render_box_content} from './render_box_tool_print.js'
 
+	// minimum space (px) that must remain on the current page to START line-splitting a
+	// text block there; below this the block is relocated to a fresh page first, so we
+	// never strand it as a 0–1 line orphan (≈ label + two text lines).
+	const LINE_FILL_MIN_PX = 60
+
 
 
 /**
@@ -190,7 +195,24 @@ export const layout_flow = async function(self, ctx) {
 			// continuation segments on fresh pages; returns used px on the last page
 			used = split_long_row(self, ctx, row_node, used, usable_px, info)
 		} else {
-			// unsplittable row: if there is already content on the page, pull the
+			// not block-splittable. If the row is a single text block (e.g. a long
+			// component_text_area paragraph), split it at LINE boundaries so it FILLS
+			// the remaining space on this page and flows onto the next — rather than
+			// jumping the whole block to a fresh page and leaving a gap. Only relocate
+			// first when too little room remains here to start a couple of lines.
+			const content	= row_node.querySelector('.cell_content')
+			const target	= content ? find_line_split_target(content) : null
+			if (target) {
+				if (used > 0 && (usable_px - used) < LINE_FILL_MIN_PX) {
+					ctx.current_page.column.removeChild(row_node)
+					make_page_node(ctx)
+					used = 0
+					ctx.current_page.column.appendChild(row_node)
+				}
+				used = split_text_by_lines(ctx, row_node, target, usable_px)
+				continue
+			}
+			// other unsplittable row: if there is already content on the page, pull the
 			// row off, start a fresh page, and re-append it there; if the page is
 			// already blank (used === 0) leave it in place to avoid an infinite loop
 			// where a row taller than a full page keeps triggering new empty pages
@@ -200,14 +222,6 @@ export const layout_flow = async function(self, ctx) {
 				used = 0
 				ctx.current_page.column.appendChild(row_node)
 				h = ctx.measure(row_node)
-			}
-			// still taller than a whole page: a single text block (e.g. a long
-			// component_text_area paragraph) with no internal block units to split at.
-			// Break it across pages at LINE boundaries.
-			if (h > usable_px) {
-				const content	= row_node.querySelector('.cell_content')
-				const target	= content ? find_line_split_target(content) : null
-				if (target) { used = split_text_by_lines(ctx, row_node, target, usable_px); continue }
 			}
 			used += h + gap
 		}
