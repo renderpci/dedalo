@@ -63,4 +63,73 @@ class host_info {
 		$hostname = gethostname();
 		return $hostname !== false ? $hostname : php_uname('n');
 	}
+
+	/**
+	* PARSE_MEMINFO
+	* Extract MemTotal (in kB) from /proc/meminfo content and convert to bytes.
+	* @param string $raw
+	* @return int|null bytes, or null when MemTotal is absent
+	*/
+	public static function parse_meminfo(string $raw) : ?int {
+		if (preg_match('/^MemTotal:\s+(\d+)\s*kB/mi', $raw, $m) === 1) {
+			return ((int)$m[1]) * 1024;
+		}
+		return null;
+	}
+
+	/**
+	* PARSE_SYSCTL_INT
+	* Read the first positive integer from raw `sysctl -n <key>` output.
+	* @param string $raw
+	* @return int|null null when empty, non-numeric, or <= 0
+	*/
+	public static function parse_sysctl_int(string $raw) : ?int {
+		$trimmed = trim($raw);
+		if ($trimmed === '' || !ctype_digit($trimmed)) {
+			return null;
+		}
+		$value = (int)$trimmed;
+		return $value > 0 ? $value : null;
+	}
+
+	/**
+	* GET_RAM_BYTES
+	* Total physical RAM in bytes. Linux: /proc/meminfo. Darwin: sysctl hw.memsize.
+	* @return int|null
+	*/
+	public static function get_ram_bytes() : ?int {
+		try {
+			switch (self::os_family()) {
+				case 'linux':
+					if (is_readable('/proc/meminfo')) {
+						$raw = @file_get_contents('/proc/meminfo');
+						if (is_string($raw) && $raw !== '') {
+							return self::parse_meminfo($raw);
+						}
+					}
+					return null;
+
+				case 'darwin':
+					$raw = @shell_exec('/usr/sbin/sysctl -n hw.memsize 2>/dev/null');
+					return is_string($raw) ? self::parse_sysctl_int($raw) : null;
+
+				default:
+					return null;
+			}
+		} catch (\Throwable $e) {
+			return null;
+		}
+	}
+
+	/**
+	* GET_RAM
+	* Structured RAM info for widget display.
+	* @return array{type:string, total:int}
+	*/
+	public static function get_ram() : array {
+		return [
+			'type'  => 'Physical',
+			'total' => self::get_ram_bytes() ?? 0,
+		];
+	}
 }//end class host_info

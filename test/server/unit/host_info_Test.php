@@ -27,4 +27,42 @@ final class host_info_Test extends TestCase {
 		$this->assertNotSame('', host_info::get_cpu_architecture());
 		$this->assertNotSame('', host_info::get_hostname());
 	}
+
+	private function fixture(string $name) : string {
+		return file_get_contents(__DIR__ . '/fixtures/host_info/' . $name);
+	}
+
+	public function test_parse_meminfo_returns_bytes() : void {
+		$raw = $this->fixture('meminfo.txt');
+		// 16384256 kB * 1024 = 16777478144 bytes
+		$this->assertSame(16384256 * 1024, host_info::parse_meminfo($raw));
+	}
+
+	public function test_parse_meminfo_returns_null_when_absent() : void {
+		$this->assertNull(host_info::parse_meminfo("Foo: 1 kB\nBar: 2 kB\n"));
+	}
+
+	public function test_parse_sysctl_int_reads_positive_integer() : void {
+		$this->assertSame(17179869184, host_info::parse_sysctl_int($this->fixture('sysctl_memsize.txt')));
+	}
+
+	public function test_parse_sysctl_int_rejects_non_numeric_and_zero() : void {
+		$this->assertNull(host_info::parse_sysctl_int(''));
+		$this->assertNull(host_info::parse_sysctl_int("\n"));
+		$this->assertNull(host_info::parse_sysctl_int('0'));
+		$this->assertNull(host_info::parse_sysctl_int('not-a-number'));
+	}
+
+	public function test_get_ram_bytes_is_positive_on_first_class_platform() : void {
+		if (host_info::os_family() === 'other') {
+			$this->markTestSkipped('Not a first-class platform');
+		}
+		$this->assertGreaterThan(0, host_info::get_ram_bytes());
+	}
+
+	public function test_get_ram_returns_total_array() : void {
+		$ram = host_info::get_ram();
+		$this->assertArrayHasKey('total', $ram);
+		$this->assertArrayHasKey('type', $ram);
+	}
 }
