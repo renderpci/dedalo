@@ -54,7 +54,7 @@ Multi-image objects (coin obverse+reverse) fuse per-view result lists (RRF) so b
 ## Provisioning
 
 1. Provision a **separate** Postgres with the `vector` extension. Set the
-   `DEDALO_RAG_DB_*` constants (see `config/sample.config_db.php`).
+   `DEDALO_RAG_DB_*` settings in `../private/.env` (declared in the config catalog `core/base/config/catalog/domains/rag.php`).
 2. Run the DDL:
    - `install/db/rag_embeddings.sql` → against the **RAG** instance.
    - `install/db/matrix_rag_index_queue.sql` → against the **matrix** instance.
@@ -111,7 +111,7 @@ These are intentionally out of the foundation:
 
 1. **Provision** a separate Postgres+pgvector; run `install/db/rag_embeddings.sql` (RAG instance) and `install/db/matrix_rag_index_queue.sql` (matrix instance).
 2. **Start the embedding sidecar** — `core/rag/services/` (`pip install -r requirements.txt; uvicorn embed_server:app --port 8090`). It serves text + image embeddings locally (no paid API). See `core/rag/services/README.md`.
-3. **Configure** `private/config_db.inc` (`DEDALO_RAG_ENABLED`, `DEDALO_RAG_DB_*`, `DEDALO_RAG_ENDPOINT`/`_MODEL`; for images `DEDALO_RAG_MEDIA_ENABLED`, `DEDALO_RAG_MULTIMODAL_ENDPOINT`/`_MODEL`). Then verify wiring: **`php core/rag/cli/rag_selftest.php`** → all PASS.
+3. **Configure** in `../private/.env` (by constant name; declared in `core/base/config/catalog/domains/rag.php`): `DEDALO_RAG_ENABLED=true`, `DEDALO_RAG_DB_*`, `DEDALO_RAG_ENDPOINT`/`_MODEL`; for images `DEDALO_RAG_MEDIA_ENABLED=true`, `DEDALO_RAG_MULTIMODAL_ENDPOINT`/`_MODEL`. Then verify wiring: **`php core/rag/cli/rag_selftest.php`** → all PASS.
 4. **Flag the ontology**: a text section (`properties.rag={enabled:true}` + a text component `{embed:true}`), and/or an object section with `properties.rag.context` (obverse/reverse image tipos + `metadata.{typology,period,material}`).
 5. **Create records as a user** in the Dédalo UI (add a coin, upload its images, save → auto-enqueued). For pre-existing data: **`php core/rag/cli/rag_backfill.php <section_tipo> --build-index`**.
 6. **Index**: `php core/rag/cli/rag_drain.php` (or wire to cron); `rag_queue::stats()` drains to 0.
