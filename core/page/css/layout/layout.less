@@ -295,8 +295,7 @@
 		}//end >.content_data
 
 		&.edit, &.search, &.player {
-			// grey line left and down of wrapper
-			box-shadow: -1px 1px 0 @color_grey_14, inset -1px 1px 0 @color_grey_14;
+			// no border/box-shadow outline on components (flat look)
 
 			// inside column, remove shadow
 			.column & {
@@ -375,7 +374,10 @@
 			}
 			&.active {
 				z-index: 3; // 3 allow over portal drag handlers
-				box-shadow: -1px 1px 0px @color_orange_dedalo, inset -1px 1px 0px @color_orange_dedalo;
+				// no border/box-shadow on active components (the orange text +
+				// light background already signal the active state). 'none'
+				// also overrides the grey edit/search/player outline above.
+				box-shadow: none;
 				color: @color_orange_dedalo;
 				// overflow. allow set flex-basis (properties width). Remember labels are 'text-overflow: ellipsis'
 				overflow: initial; // !important

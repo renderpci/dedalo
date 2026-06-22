@@ -51,7 +51,8 @@
 		height: 100%;
 		margin: 0; // Remove default margin for body
 		padding: 0; // Remove default padding for body
-		background-color: @color_grey_16; // Temporal !
+		background-color: var(--color_grey_14); // #f0f0f0 page canvas (light gray); white surfaces sit above it
+		// (palette token used directly so a stale tool-css :root cannot override it back to white)
 	}
 
 	b,
@@ -496,6 +497,25 @@
 		// on focus inputs, adds a soft shadow and outline
 		&:focus {
 			.hilite_mixin();
+		}
+	}
+
+	// literal component inputs (input_text, number, date): hide the outline
+	// border at rest and reveal it only when the component is hovered or active.
+	// :not(:focus) leaves the focus hilite (.hilite_mixin) untouched while editing.
+	.wrapper_component.component_input_text.edit,
+	.wrapper_component.component_number.edit,
+	.wrapper_component.component_date.edit {
+
+		input:not(:focus), .contenteditable:not(:focus) {
+			outline-color: transparent;
+		}
+
+		&:hover,
+		&.active {
+			input:not(:focus), .contenteditable:not(:focus) {
+				outline-color: @color_grey_14;
+			}
 		}
 	}
 
