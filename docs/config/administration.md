@@ -9,7 +9,7 @@
 
 - There is **one source of truth for defaults**: the **catalog** (`core/base/config/catalog/domains/*.php`) — every setting, its type, and its default.
 - Your **per-install values and secrets live OUTSIDE the web root**, in `../private/` (one level above the install).
-- `config/config.php` is just a **thin loader** — it has no values, and you never edit it.
+- `config/bootstrap.php` is just a **thin loader** — it has no values, and you never edit it. (Out-of-repo callers may also get a generated `config/config.php` that only `require`s it.)
 - You change settings by editing **`../private/.env`** (by the familiar `DEDALO_*` names), then reloading php-fpm.
 
 ```
@@ -23,7 +23,7 @@ Want to change a setting?  →  edit ../private/.env  →  reload php-fpm.   Tha
 ```mermaid
 flowchart TB
     subgraph WEB["🌐 web-served install root (e.g. served at /v7/)"]
-        ENTRY["config/config.php<br/>(loader only — never edit)"]
+        ENTRY["config/bootstrap.php<br/>(loader only — never edit)"]
         CATALOG["core/base/config/catalog/domains/*.php<br/>(defaults + types + docs — the reference)"]
     end
     subgraph PRIV["🔒 ../private/  (NOT web-served, chmod 600)"]
@@ -43,7 +43,7 @@ flowchart TB
 
 | File | Web-served? | What it holds | You edit it? |
 |---|---|---|---|
-| `config/config.php` | yes (but only *executes*) | the loader — no values | **never** |
+| `config/bootstrap.php` | yes (but only *executes*) | the loader — no values | **never** |
 | `core/base/config/catalog/domains/*.php` | yes (executes) | every setting: name, type, **default**, one-line doc | only to add a *new* setting or change a *global default* |
 | `../private/.env` | **no** | **secrets + your general config** | **yes — this is your main file** |
 | `../private/.env.<host>` | **no** | per-host overrides | yes, optional |
@@ -51,34 +51,36 @@ flowchart TB
 | `../private/passthrough.php` | **no** | custom `define()`s not in the catalog | rarely |
 | `../private/config.local.php` | **no** | optional PHP config for complex/computed values | optional (advanced) |
 
-> **Secrets are never in the web tree.** The `config/` directory contains only `config.php` + a deny rule. Add the matching web-server rule for defence in depth:
+> **Secrets are never in the web tree.** The `config/` directory contains only the loader (`bootstrap.php`), sample templates, and a deny rule. Add the matching web-server rule for defence in depth:
 > - Apache: a `config/.htaccess` with `Deny from all` (already present).
 > - NGINX: `location ^~ /v7/config/ { deny all; return 404; }` (adjust the mount).
 
 ---
 
-## 3. The fallback chain (precedence)
+## 3. How a config value is calculated — the chain & fallbacks
 
-Every setting is resolved by walking these layers from the bottom up — **each layer overrides the ones below it**:
+Every `DEDALO_*` constant gets its value at boot. **Which path it takes depends on the setting's _scope_ in the catalog.** Most settings are STATIC config (an override cascade); paths/URLs are derived; secrets and state come from files; a few are computed live per request.
+
+### 3.1 The override cascade (STATIC config — most settings)
+
+Resolved by applying layers **low → high; the highest layer that sets the key wins**, falling back to the catalog default:
 
 ```mermaid
 flowchart TB
-    A["1 ▪ Catalog default<br/>core/base/config/catalog/domains/*.php"]
-    B["2 ▪ config.local.php (optional PHP)"]
-    C["3 ▪ .env (shared)"]
-    D["4 ▪ .env.&lt;host&gt; (this host)"]
-    E["5 ▪ real process environment (export DEDALO_…)"]
-    A --> B --> C --> D --> E
-    E --> R(["✅ effective value"])
-    style A fill:#eef
-    style E fill:#efe
+    L0["① catalog default<br/>core/base/config/catalog/domains/*.php"]
+    L1["② boot-resolved paths.*<br/>install root + request mount"]
+    L2["③ ../private/config.local.php<br/>optional PHP"]
+    L3["④ ../private/.env<br/>shared"]
+    L4["⑤ ../private/.env.&lt;host&gt;<br/>this host"]
+    L5["⑥ real process env<br/>export DEDALO_X"]
+    L0 --> L1 --> L2 --> L3 --> L4 --> L5 --> R(["✅ effective value<br/>= the highest layer that set it"])
+    style L0 fill:#eef
+    style L5 fill:#efe
 ```
 
-**Plain English:** start from the catalog default; if `config.local.php` sets it, that wins; if `.env` sets it, that wins; if `.env.<host>` sets it, that wins; and a real shell environment variable always wins over everything (12-factor style).
+> Most installs use only **① default + ④ `.env`**, plus **⑤ `.env.<host>`** for per-environment differences. ② is computed automatically; ③ and ⑥ are there when you need them. (③ `config.local.php` and ④ `.env` can also override the ② `paths.*` keys.)
 
-> Most installs only use **layer 1 (defaults) + layer 3 (`.env`)**, plus **layer 4 (`.env.<host>`)** for per-environment differences. Layers 2 and 5 are there when you need them.
-
-### Worked example — `SHOW_DEBUG_PROFILER` (catalog default `false`)
+**Worked example — `SHOW_DEBUG_PROFILER` (catalog default `false`):**
 
 | Where it's set | Effective value on host `localhost` |
 |---|---|
@@ -86,6 +88,45 @@ flowchart TB
 | `.env`: `SHOW_DEBUG_PROFILER=true` | `true` |
 | `.env`: `…=true` **and** `.env.localhost`: `…=false` | `false` (host wins) |
 | above **and** shell: `export SHOW_DEBUG_PROFILER=1` | `true` (process env wins) |
+
+### 3.2 The full picture — calculation by scope
+
+Not every constant uses the cascade. This is how **each** kind of setting is resolved, and its fallback:
+
+```mermaid
+flowchart TD
+    START(["a DEDALO_* constant"]) --> SCOPE{"its catalog scope"}
+
+    SCOPE -->|"STATIC<br/>general config"| STA["override cascade (§3.1):<br/>default → paths → config.local → .env → .env.&lt;host&gt; → process env"]
+    SCOPE -->|"DERIVED /<br/>DERIVED_REQUEST"| DER["computed at boot by the key's derive() closure,<br/>from already-resolved values — e.g.<br/>DEDALO_CORE_PATH = paths.root.'/core',<br/>URLs from the request mount,<br/>tool binaries from the platform base"]
+    SCOPE -->|"SECRET<br/>salt, passwords, tokens"| SEC["from ../private/.env"]
+    SCOPE -->|"STATE<br/>install status, info key"| STT["from ../private/state.php"]
+    SCOPE -->|"REQUEST / USER<br/>SHOW_DEBUG, langs…"| REQ["computed LIVE per request, never cached:<br/>$_REQUEST &gt; session > catalog default"]
+    SCOPE -->|"PASSTHROUGH<br/>custom defines"| PAS["verbatim define() from<br/>../private/passthrough.php"]
+
+    SEC --> SECF{"present?"}
+    SECF -->|yes| USEIT(["use it"])
+    SECF -->|"no — fresh install"| SAFE(["empty default<br/>'' / 0 / false / [] — safety net"])
+    STT --> STTF{"present?"}
+    STTF -->|yes| USEIT
+    STTF -->|"no — fresh install"| SAFE
+```
+
+### 3.3 When it all happens — boot flow
+
+```mermaid
+flowchart TD
+    A(["entry: config/bootstrap.php<br/>(in-repo include; out-of-repo via a config.php shim)"]) --> B{"already migrated?<br/>../private/.migration.json"}
+    B -->|"no + legacy config_*.php present"| MIG["one-time auto-migration<br/>config_auto_migrate → writes ../private/"]
+    MIG -->|"blocked, e.g. a dynamic secret"| STOP(["503 / stderr + exit —<br/>never boot half-configured"])
+    MIG -->|ok| ENV
+    B -->|yes| ENV["load ../private/.env then .env.&lt;host&gt;<br/>host-layered, last wins"]
+    ENV --> COMP["boot::run → compile catalog + override layers<br/>resolve STATIC, compute DERIVED"]
+    COMP --> EMIT["emit DEDALO_* (compat_shim)<br/>+ SECRET (.env) + STATE (state.php) + passthrough"]
+    EMIT --> RS["request-state phase:<br/>SHOW_DEBUG / langs (live)"]
+    RS --> NET["fresh-install safety net:<br/>any undefined SECRET/STATE → empty default"]
+    NET --> DONE(["✅ every DEDALO_* defined"])
+```
 
 ---
 
@@ -232,29 +273,24 @@ It sits **below `.env`** in precedence (so `.env`/`.env.<host>` can still overri
 
 ## 9. Migrating a v6 install
 
-The migration tool reads your v6 `config_*.php` files and writes the v7 layout. It is **safe and reversible** — it never touches anything until you pass `--yes`, and it backs up every file first.
+Migration is **automatic and safe**. After you pull v7 onto a v6 box, the first request (or CLI run) detects the legacy `config_*.php`, runs a **one-time migration** that writes the `../private/` layout, and boots — so `git pull` alone moves the install to the `.env` model. The legacy files are backed up and quarantined out of the web root, and `DEDALO_INSTALL_STATUS` carries over, so an already-installed box stays installed (no wizard).
 
+If something **can't** be migrated automatically (e.g. a dynamically-computed secret), the loader **refuses to boot half-configured** — it returns a `503` (web) or a message (CLI) telling the operator exactly what to fix, rather than silently shipping a broken box.
+
+**Prefer to drive it by hand?** Opt out of the auto-run and use the CLI:
 ```bash
-# 1. Preview the plan (writes nothing)
-php install/migrate_config_v7.php --dry-run
-
-# 2. Confirm the migrated config reproduces your live config EXACTLY
-php install/validate_migration.php        # must print:  faithful: YES
-
-# 3. Write the v7 files (../private/.env + state.php + passthrough.php + Bun .env), with backups
-php install/migrate_config_v7.php --yes
-
-# 4. Flip: back up config.php, swap in the v7 loader, reload php-fpm, verify in a browser
-cp config/config.php config/config.php.bak
-cp <the v7 shim> config/config.php
+export DEDALO_AUTO_MIGRATE=0                 # stop bootstrap.php from auto-migrating
+php install/migrate_config_v7.php --dry-run  # preview the plan (writes nothing)
+php install/validate_migration.php           # diffs v6 vs migrated — must print: faithful: YES
+php install/migrate_config_v7.php --yes      # writes ../private/, quarantines the legacy files, installs the config.php shim (backs up first)
 ```
 
-What it produces:
+What the migration produces:
 - **`../private/.env`** — secrets **and** general config (the non-default overrides), by constant name.
 - **`../private/state.php`**, **`../private/passthrough.php`**, and the **Bun engine `.env`**.
 - It does **not** write `config.local.php`.
 
-> `validate_migration` boots both your real v6 config and the migrated v7 surface and diffs them — it is the gate that catches anything that didn't migrate cleanly (custom defines, runtime-computed values, non-standard paths). Reconcile whatever it flags, re-run until **`faithful: YES`**, then flip. The `*_URL` constants depend on the request mount and are verified in the browser, not in CLI.
+> The dry-run / validate gate catches anything that didn't migrate cleanly (custom defines, runtime-computed values, non-standard paths) — fix what it flags and re-run until **`faithful: YES`**. The `*_URL` constants depend on the request mount and are verified in the browser, not in CLI.
 
 ---
 
@@ -267,11 +303,11 @@ What it produces:
 | A value reads as `''` or `0` when you meant "none" | Use the literal **`null`**: `KEY=null`. |
 | JSON value looks broken | Wrap it in **single quotes**; ensure it's a single line. |
 | Login/session fails after a config change | Check `DEDALO_SESSION_HANDLER` + `DEDALO_SESSION_SAVE_PATH` (e.g. a redis socket path). |
-| Need to undo the v7 flip | Restore `config/config.php` from your backup + reload php-fpm; the v6 files are in your migration backup. |
+| Need to undo the migration | The legacy `config_*.php` are backed up + quarantined under `../backups/config_migration/…`; restore them to `config/`, remove `../private/.migration.json` (or all of `../private/`), and reload php-fpm. |
 
 **Quick sanity check from the CLI** (boots config and prints a value):
 ```bash
-php -r 'include "config/config.php"; echo DEDALO_DATABASE_CONN, "\n";'
+php -r 'include "config/bootstrap.php"; echo DEDALO_DATABASE_CONN, "\n";'
 ```
 
 ---

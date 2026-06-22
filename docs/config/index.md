@@ -1,7 +1,7 @@
 # Configuration
 
 
-> **⚠️ Dédalo v7 changed the configuration model.** Configuration and secrets now live **outside the web root** in `../private/` (`.env`, plus an optional per-host `.env.<host>`), and `config/config.php` is only a loader — there are no `config_*.php` files to rename or edit in place.
+> **⚠️ Dédalo v7 changed the configuration model.** Configuration and secrets now live **outside the web root** in `../private/` (`.env`, plus an optional per-host `.env.<host>`), and `config/bootstrap.php` is only a loader — there are no `config_*.php` files to rename or edit in place. Migration runs **automatically** when you pull v7 onto a v6 box.
 >
 > **▶ Start here: [Configuration Administrator Guide](administration.md)** — the complete v7 flow, `.env` syntax, fallback chain, per-host configs, secrets, and migrating a v6 install.
 >
