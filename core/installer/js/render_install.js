@@ -334,6 +334,12 @@ const reveal_section = function(section) {
 
 	if (!section) return
 
+	// let a step refresh its own content right before it appears — e.g. the install-DB
+	// confirmation grid, whose values are only known once the earlier steps are filled
+	if (typeof section._on_reveal === 'function') {
+		section._on_reveal()
+	}
+
 	section.classList.remove('hide')
 	section.classList.add('fade_in')
 
@@ -692,6 +698,8 @@ const get_content_data = function(self) {
 			content_data	: content_data
 		})
 		install_db.content_div.appendChild(render_install_db_block(self))
+		// refresh the DB confirmation grid from the entered values each time this step appears
+		install_db.section._on_reveal = self._refresh_install_db_config
 
 	// ── SET ROOT PASSWORD BLOCK ──
 		const set_pw = create_section_block({
@@ -1383,7 +1391,7 @@ const render_config_options = function(self) {
 						console.error("to_update api_response:", api_response);
 					}else{
 						console.log("to_update api_response:", api_response);
-						countdown_and_reload(to_update_status, 5)
+						countdown_and_reload(to_update_status, 3)
 						update_button.remove()
 					}
 
@@ -1831,25 +1839,40 @@ const render_install_db_block = function(self) {
 			class_name		: 'db_config_container',
 			parent			: fragment
 		})
-		// In the modernized flow the values were just collected/persisted, so show those rather
-		// than the (now stale) placeholder constants captured at context-build time.
-		const db_config_display = (self._cfg && self._cfg.db_database)
-			? { db_name: self._cfg.db_database, hostname: self._cfg.db_hostname, port: self._cfg.db_port, user_name: self._cfg.db_username }
-			: (properties.db_config || {})
-		for(const config_item in db_config_display){
-			ui.create_dom_element({
-				element_type 	: 'div',
-				class_name		: 'db_config key',
-				inner_html		: config_item,
-				parent			: db_config_container
-			})
-			ui.create_dom_element({
-				element_type 	: 'div',
-				class_name		: 'db_config value',
-				inner_html		: db_config_display[config_item],
-				parent			: db_config_container
-			})
+		// (Re)populate the confirmation grid. Every wizard block is built once up-front,
+		// BEFORE the operator fills the DB step, so reading self._cfg at build time would
+		// only ever show the catalog placeholders. This closure re-reads the values the
+		// operator actually entered and is run again whenever the step is revealed
+		// (wired via the section's _on_reveal hook in get_content_data).
+		const refresh_db_config = function() {
+			db_config_container.replaceChildren()
+			const db_config_display = (self._cfg && self._cfg.db_database)
+				? {
+					db_name		: self._cfg.db_database,
+					user_name	: self._cfg.db_username,
+					hostname	: self._cfg.db_hostname,
+					port		: self._cfg.db_port,
+					socket		: self._cfg.db_socket
+				}
+				: (properties.db_config || {})
+			for(const config_item in db_config_display){
+				ui.create_dom_element({
+					element_type 	: 'div',
+					class_name		: 'db_config key',
+					inner_html		: config_item,
+					parent			: db_config_container
+				})
+				ui.create_dom_element({
+					element_type 	: 'div',
+					class_name		: 'db_config value',
+					inner_html		: db_config_display[config_item] ?? '',
+					parent			: db_config_container
+				})
+			}
 		}
+		refresh_db_config()
+		// expose so the step can refresh itself when revealed (see get_content_data wiring)
+		self._refresh_install_db_config = refresh_db_config
 
 	// install_db_status msg
 		const install_db_status = create_status_msg(fragment)
