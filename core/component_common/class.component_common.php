@@ -962,7 +962,19 @@ abstract class component_common extends common {
 				if( !is_object($element) ) {
 					$new_element = new stdClass();
 						$new_element->value = $element;
-						if($this->translatable) {
+						// STRUCTURAL GUARD — lang orphan prevention.
+						// A literal (value-bearing) component stores its data per language, so a
+						// bare scalar wrapped here MUST carry a lang or it becomes a "lang orphan"
+						// ({value} with no lang) that the edit view cannot match/render.
+						// 'supports_translation' is the right gate: it is true ONLY for the literal
+						// models (component_string_common subclasses + component_iri) and false for
+						// every relation/locator component — so locators are never tagged. Using it
+						// (instead of the narrower 'translatable') means a NON-translatable literal
+						// saved via set_data([$scalar]) now stores its language-neutral value under
+						// $this->lang (DEDALO_DATA_NOLAN), exactly as the thesaurus editor expects.
+						// Explicitly-built data objects are left untouched (set_data_lang() is the
+						// canonical per-language writer for those).
+						if($this->supports_translation) {
 							$new_element->lang = $this->lang;
 						}
 					// Replace element with new_element

@@ -1897,4 +1897,53 @@ final class component_common_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_SET_DATA_TAGS_LANG_FOR_LITERALS
+	* Structural guard against "lang orphans": set_data() must never persist a literal
+	* (value-bearing) component value without a lang. A bare scalar set on a NON-translatable
+	* literal (component_input_text) must be tagged with the component lang (DEDALO_DATA_NOLAN)
+	* so the edit view can match/render it; relation/locator components (supports_translation
+	* === false) must be left untouched. In-memory only (set_data + get_data, no save()).
+	* @return void
+	*/
+	public function test_set_data_tags_lang_for_literals() : void {
+
+		$this->user_login();
+
+		$section_tipo = DEDALO_HIERARCHY_SECTION_TIPO;
+
+		// non-translatable literal (component_input_text): a bare scalar must gain a lang
+		$literal = component_common::get_instance(
+			ontology_node::get_model_by_tipo(DEDALO_HIERARCHY_TLD2_TIPO, true), // component_input_text
+			DEDALO_HIERARCHY_TLD2_TIPO, // hierarchy6
+			999999, 'list', DEDALO_DATA_NOLAN, $section_tipo, false
+		);
+		$this->assertFalse((bool)$literal->get_translatable(), 'precondition: tld component is non-translatable');
+		$this->assertTrue((bool)$literal->get_supports_translation(), 'precondition: tld component is a literal (supports_translation)');
+		$literal->set_data(['xx_regtest']);
+		$ldata = $literal->get_data();
+		$this->assertNotEmpty($ldata, 'literal data must be set');
+		$this->assertSame(DEDALO_DATA_NOLAN, $ldata[0]->lang ?? null, 'literal scalar must be tagged lang=lg-nolan (no lang orphan)');
+		$this->assertSame('xx_regtest', $ldata[0]->value ?? null, 'literal value must be preserved');
+
+		// relation/locator component: must NOT gain a lang
+		$relation = component_common::get_instance(
+			ontology_node::get_model_by_tipo(DEDALO_HIERARCHY_TYPOLOGY_TIPO, true), // component_select
+			DEDALO_HIERARCHY_TYPOLOGY_TIPO, // hierarchy9
+			999999, 'list', DEDALO_DATA_NOLAN, $section_tipo, false
+		);
+		$this->assertFalse((bool)$relation->get_supports_translation(), 'precondition: typology component is a relation (no per-lang data)');
+		$loc = new locator();
+			$loc->set_type(DEDALO_RELATION_TYPE_LINK);
+			$loc->set_section_tipo(DEDALO_HIERARCHY_TYPES_SECTION_TIPO);
+			$loc->set_section_id('1');
+			$loc->set_from_component_tipo(DEDALO_HIERARCHY_TYPOLOGY_TIPO);
+		$relation->set_data([$loc]);
+		$rdata = $relation->get_data();
+		$this->assertNotEmpty($rdata, 'relation data must be set');
+		$this->assertFalse(property_exists($rdata[0], 'lang'), 'relation/locator data must not be tagged with a lang');
+	}//end test_set_data_tags_lang_for_literals
+
+
+
 }//end class component_common_test
