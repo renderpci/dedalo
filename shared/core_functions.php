@@ -2519,12 +2519,16 @@ function get_current_data_version() : array {
 			}
 
 		// Query all updates records v7 sql
-			$sql = 'SELECT data FROM "matrix_updates" ORDER BY data->>\'dedalo_version\' DESC LIMIT 1;';
+			// (!) Order semantically, not lexically. A plain text DESC sort on dedalo_version
+			//     ranks '6.8.9' above '6.8.10' (because '9' > '1'), so the wrong "latest"
+			//     version is picked and the update version-match fails. Casting the dotted
+			//     version into an int array (e.g. '6.8.10' -> {6,8,10}) compares numerically.
+			$sql = 'SELECT data FROM "matrix_updates" ORDER BY string_to_array(data->>\'dedalo_version\', \'.\')::int[] DESC LIMIT 1;';
 			$db_result = matrix_db_manager::exec_search($sql, []);
 
 			// On error, try using v6 sql
 			if ($db_result===false) {
-				$sql = 'SELECT datos as data FROM "matrix_updates" ORDER BY datos->>\'dedalo_version\' DESC LIMIT 1;';
+				$sql = 'SELECT datos as data FROM "matrix_updates" ORDER BY string_to_array(datos->>\'dedalo_version\', \'.\')::int[] DESC LIMIT 1;';
 				$db_result = matrix_db_manager::exec_search($sql, []);
 			}
 
