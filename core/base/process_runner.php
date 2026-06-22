@@ -99,11 +99,21 @@
 		session_id($session_id);
 	}
 
-// config. Starts a new session with forced id from command arguments
-// Bootstrap the Dédalo environment: autoloader, DB connection, constants, and
-// all core classes including login. Must run AFTER session_id() so that the
-// session opened by config.php uses the ID injected above.
+// config. Bootstrap the Dédalo environment: autoloader, DB connection, constants, and
+// all core classes including login. Must run AFTER session_id() so the session started
+// below uses the forced ID.
+// (!) Under the CLI profile the WEB session boot phase (boot_web_phases::session_phase)
+//     is skipped, so bootstrap does NOT open the session itself — it is started
+//     explicitly right after, once the DEDALO_SESSION_* constants exist.
 	include dirname(__FILE__, 3).'/config/bootstrap.php';
+
+// start session (restore the caller's session by its forced id).
+// Reuses the exact same configuration as the WEB boot so login::is_logged() below can
+// authenticate this background job. Without this, $_SESSION stays empty under CLI and
+// every background process fails with "Authentication error: please login".
+	if (class_exists('boot_web_phases')) {
+		boot_web_phases::start_web_session();
+	}
 
 // unlock session. Only use for read
 // Close the session file for writing immediately after config bootstraps it.
