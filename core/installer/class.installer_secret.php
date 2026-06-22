@@ -9,7 +9,7 @@
 * round-trips through env_loader unchanged. These are shown to the admin once and must
 * never be rotated on an existing install (rotating the salt makes stored creds unreadable).
 */
-final class install_secret {
+final class installer_secret {
 
 	/**
 	* GENERATE_TOKEN

@@ -3,10 +3,10 @@
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 // Include manager class
-require_once DEDALO_CORE_PATH . '/install/class.install_config_manager.php';
+require_once DEDALO_CORE_PATH . '/installer/class.installer_config_manager.php';
 
 
-final class install_config_manager_Test extends BaseTestCase {
+final class installer_config_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_get_config
@@ -14,7 +14,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_get_config(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		$this->assertIsObject($config, 'expected config to be an object');
 
@@ -59,7 +59,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_get_db_status(): void {
 
-		$db_status = install_config_manager::get_db_status();
+		$db_status = installer_config_manager::get_db_status();
 
 		$this->assertIsObject($db_status, 'expected db_status to be an object');
 
@@ -95,7 +95,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_get_db_data_version(): void {
 
-		$version = install_config_manager::get_db_data_version();
+		$version = installer_config_manager::get_db_data_version();
 
 		// Version can be null if not set, or an array if set
 		$this->assertTrue(
@@ -117,7 +117,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_system_is_already_installed(): void {
 
-		$response = install_config_manager::system_is_already_installed();
+		$response = installer_config_manager::system_is_already_installed();
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -133,7 +133,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_to_update(): void {
 
-		$response = install_config_manager::to_update();
+		$response = installer_config_manager::to_update();
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -149,7 +149,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_set_root_pw(): void {
 
-		$response = install_config_manager::set_root_pw(new stdClass());
+		$response = installer_config_manager::set_root_pw(new stdClass());
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -165,7 +165,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_set_install_status(): void {
 
-		$response = install_config_manager::set_install_status('installed');
+		$response = installer_config_manager::set_install_status('installed');
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -177,12 +177,12 @@ final class install_config_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_is_static_only
-	* Verify install_config_manager is a static-only class
+	* Verify installer_config_manager is a static-only class
 	* @return void
 	*/
 	public function test_class_is_static_only(): void {
 
-		$reflection = new ReflectionClass('install_config_manager');
+		$reflection = new ReflectionClass('installer_config_manager');
 
 			// Should have a private constructor to prevent instantiation
 			$constructor = $reflection->getConstructor();
@@ -201,12 +201,12 @@ final class install_config_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_has_strict_types
-	* Verify install_config_manager uses strict types
+	* Verify installer_config_manager uses strict types
 	* @return void
 	*/
 	public function test_class_has_strict_types(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_config_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_config_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('declare(strict_types=1)', $content);
@@ -220,24 +220,24 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_static_db_install_name_property(): void {
 
-		$reflection = new ReflectionClass('install_config_manager');
+		$reflection = new ReflectionClass('installer_config_manager');
 		$property = $reflection->getProperty('db_install_name');
 
 		$this->assertTrue($property->isPublic());
 		$this->assertTrue($property->isStatic());
 		$this->assertEquals('string', $property->getType()->getName());
-		$this->assertEquals('dedalo7_install', install_config_manager::$db_install_name);
+		$this->assertEquals('dedalo7_install', installer_config_manager::$db_install_name);
 	}//end test_static_db_install_name_property
 
 
 	/**
 	* TEST_class_file_exists
-	* Verify install_config_manager class file exists
+	* Verify installer_config_manager class file exists
 	* @return void
 	*/
 	public function test_class_file_exists(): void {
 
-		$file_path = DEDALO_CORE_PATH . '/install/class.install_config_manager.php';
+		$file_path = DEDALO_CORE_PATH . '/installer/class.installer_config_manager.php';
 
 		$this->assertTrue(file_exists($file_path));
 	}//end test_class_file_exists
@@ -245,23 +245,23 @@ final class install_config_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_exists
-	* Verify install_config_manager class exists
+	* Verify installer_config_manager class exists
 	* @return void
 	*/
 	public function test_class_exists(): void {
 
-		$this->assertTrue(class_exists('install_config_manager'));
+		$this->assertTrue(class_exists('installer_config_manager'));
 	}//end test_class_exists
 
 
 	/**
 	* TEST_class_does_not_extend_common
-	* Verify install_config_manager doesn't extend common
+	* Verify installer_config_manager doesn't extend common
 	* @return void
 	*/
 	public function test_class_does_not_extend_common(): void {
 
-		$this->assertFalse(is_subclass_of('install_config_manager', 'common'));
+		$this->assertFalse(is_subclass_of('installer_config_manager', 'common'));
 	}//end test_class_does_not_extend_common
 
 
@@ -284,7 +284,7 @@ final class install_config_manager_Test extends BaseTestCase {
 		];
 
 		foreach ($expected_methods as $method) {
-			$this->assertTrue(method_exists('install_config_manager', $method));
+			$this->assertTrue(method_exists('installer_config_manager', $method));
 		}
 	}//end test_all_static_methods_exist
 
@@ -296,7 +296,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_preserves_tld_list(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		$expected_tlds = ['dd', 'rsc', 'hierarchy', 'ontology', 'ontologytype', 'localontology', 'lg', 'oh'];
 
@@ -313,7 +313,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_clean_tables_list(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		$expected_tables = ['matrix', 'matrix_users', 'matrix_projects', 'matrix_profiles', 'matrix_test'];
 
@@ -330,7 +330,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_target_file_path_format(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		$this->assertStringEndsWith('.pgsql', $config->target_file_path);
 		$this->assertStringEndsWith('.pgsql.gz', $config->target_file_path_compress);
@@ -346,10 +346,10 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_object_is_immutable_per_call(): void {
 
-		$config1 = install_config_manager::get_config();
+		$config1 = installer_config_manager::get_config();
 		$config1->db_install_name = 'modified_value';
 
-		$config2 = install_config_manager::get_config();
+		$config2 = installer_config_manager::get_config();
 
 		// config2 should not have the modified value from config1
 		$this->assertEquals('dedalo7_install', $config2->db_install_name);
@@ -363,7 +363,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_hierarchy_files_dir_exists(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 		$dir_path = $config->hierarchy_files_dir_path;
 
 		$this->assertTrue(is_dir($dir_path));
@@ -377,7 +377,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_core_file_path_exists(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 		$config_core_file = $config->config_core_file_path;
 
 		$this->assertTrue(is_string($config_core_file));
@@ -393,7 +393,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_complete(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		$expected_properties = [
 			'db_install_name',
@@ -422,7 +422,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_values_are_correct_types(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		$this->assertIsString($config->db_install_name);
 		$this->assertIsString($config->host_line);
@@ -445,7 +445,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_values_are_not_empty(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		$this->assertNotEmpty($config->db_install_name);
 		$this->assertNotEmpty($config->host_line);
@@ -466,7 +466,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_consistent(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// target_file_path_compress should be target_file_path + .gz
 		$this->assertEquals(
@@ -487,7 +487,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_environment_aware(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Config should use Dédalo environment paths
 		$this->assertStringContainsString(DEDALO_ROOT_PATH, $config->target_file_path);
@@ -502,7 +502,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_paths_are_absolute(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		$this->assertStringStartsWith('/', $config->target_file_path);
 		$this->assertStringStartsWith('/', $config->target_file_path_compress);
@@ -518,7 +518,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_arrays_are_valid(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Check to_preserve_tld contains valid TLD codes
 		foreach ($config->to_preserve_tld as $tld) {
@@ -539,7 +539,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_hierarchy_typologies_format(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		$this->assertIsArray($config->hierarchy_typologies);
 
@@ -558,7 +558,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_preserves_default_values(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Verify default installation database name
 		$this->assertEquals('dedalo7_install', $config->db_install_name);
@@ -578,18 +578,18 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_supports_customization(): void {
 
-		$original_name = install_config_manager::$db_install_name;
+		$original_name = installer_config_manager::$db_install_name;
 
 		// Customize db name
-		install_config_manager::$db_install_name = 'custom_install_db';
+		installer_config_manager::$db_install_name = 'custom_install_db';
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Config should reflect the custom value
 		$this->assertEquals('custom_install_db', $config->db_install_name);
 
 		// Restore original value
-		install_config_manager::$db_install_name = $original_name;
+		installer_config_manager::$db_install_name = $original_name;
 	}//end test_config_supports_customization
 
 
@@ -600,8 +600,8 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_get_db_status_is_idempotent(): void {
 
-		$status1 = install_config_manager::get_db_status();
-		$status2 = install_config_manager::get_db_status();
+		$status1 = installer_config_manager::get_db_status();
+		$status2 = installer_config_manager::get_db_status();
 
 		// Status should be the same
 		$this->assertEquals($status1, $status2);
@@ -615,8 +615,8 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_get_config_is_idempotent(): void {
 
-		$config1 = install_config_manager::get_config();
-		$config2 = install_config_manager::get_config();
+		$config1 = installer_config_manager::get_config();
+		$config2 = installer_config_manager::get_config();
 
 		// Values should be the same
 		$this->assertEquals($config1->db_install_name, $config2->db_install_name);
@@ -632,7 +632,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_secure(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Paths should not contain relative paths that could be exploited
 		$this->assertStringNotContainsString('..', $config->target_file_path);
@@ -651,7 +651,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_has_no_null_values(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		$essential_properties = [
 			'db_install_name',
@@ -678,7 +678,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_arrays_have_no_empty_values(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		foreach ($config->to_preserve_tld as $tld) {
 			$this->assertNotEmpty($tld);
@@ -701,7 +701,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_valid_for_installation(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Config should have all necessary data for installation
 		$this->assertNotEmpty($config->db_install_name);
@@ -723,10 +723,10 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_consistent_with_install_class(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// install class should use the same db_install_name
-		$this->assertEquals($config->db_install_name, install::$db_install_name);
+		$this->assertEquals($config->db_install_name, installer::$db_install_name);
 	}//end test_config_is_consistent_with_install_class
 
 
@@ -738,9 +738,9 @@ final class install_config_manager_Test extends BaseTestCase {
 	public function test_config_is_thread_safe(): void {
 
 		// Multiple calls should not interfere with each other
-		$config1 = install_config_manager::get_config();
-		$config2 = install_config_manager::get_config();
-		$config3 = install_config_manager::get_config();
+		$config1 = installer_config_manager::get_config();
+		$config2 = installer_config_manager::get_config();
+		$config3 = installer_config_manager::get_config();
 
 		// All should return the same values
 		$this->assertEquals($config1->db_install_name, $config2->db_install_name);
@@ -756,8 +756,8 @@ final class install_config_manager_Test extends BaseTestCase {
 	public function test_config_is_predictable(): void {
 
 		// Same input should always produce same output
-		$config1 = install_config_manager::get_config();
-		$config2 = install_config_manager::get_config();
+		$config1 = installer_config_manager::get_config();
+		$config2 = installer_config_manager::get_config();
 
 		$this->assertEquals($config1->db_install_name, $config2->db_install_name);
 		$this->assertEquals($config1->host_line, $config2->host_line);
@@ -772,7 +772,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_well_structured(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Config should have logical grouping of properties
 		$database_properties = ['db_install_name', 'host_line', 'port_line'];
@@ -800,7 +800,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_type_safe(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Config properties should maintain their types
 		$this->assertIsString($config->db_install_name);
@@ -824,9 +824,9 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_consistent_across_calls(): void {
 
-		$config1 = install_config_manager::get_config();
-		$config2 = install_config_manager::get_config();
-		$config3 = install_config_manager::get_config();
+		$config1 = installer_config_manager::get_config();
+		$config2 = installer_config_manager::get_config();
+		$config3 = installer_config_manager::get_config();
 
 		// All calls should return consistent values
 		$this->assertEquals($config1->db_install_name, $config2->db_install_name);
@@ -843,7 +843,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_user_friendly(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Config should be easy to access
 		$this->assertIsObject($config);
@@ -854,10 +854,10 @@ final class install_config_manager_Test extends BaseTestCase {
 		// port_line can be empty when using default port
 
 		// Config should be easy to modify
-		$original_name = install_config_manager::$db_install_name;
-		install_config_manager::$db_install_name = 'user_friendly_db';
-		$this->assertEquals('user_friendly_db', install_config_manager::$db_install_name);
-		install_config_manager::$db_install_name = $original_name;
+		$original_name = installer_config_manager::$db_install_name;
+		installer_config_manager::$db_install_name = 'user_friendly_db';
+		$this->assertEquals('user_friendly_db', installer_config_manager::$db_install_name);
+		installer_config_manager::$db_install_name = $original_name;
 	}//end test_config_is_user_friendly
 
 
@@ -868,7 +868,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_professional_quality(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Config should be complete
 		$this->assertObjectHasProperty('db_install_name', $config);
@@ -899,7 +899,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_cloud_ready(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Config should use absolute paths (cloud-friendly)
 		$this->assertStringStartsWith('/', $config->target_file_path);
@@ -909,10 +909,10 @@ final class install_config_manager_Test extends BaseTestCase {
 		$this->assertStringContainsString(DEDALO_ROOT_PATH, $config->target_file_path);
 
 		// Config should be easily configurable
-		$original_name = install_config_manager::$db_install_name;
-		install_config_manager::$db_install_name = 'cloud_db';
-		$this->assertEquals('cloud_db', install_config_manager::$db_install_name);
-		install_config_manager::$db_install_name = $original_name;
+		$original_name = installer_config_manager::$db_install_name;
+		installer_config_manager::$db_install_name = 'cloud_db';
+		$this->assertEquals('cloud_db', installer_config_manager::$db_install_name);
+		installer_config_manager::$db_install_name = $original_name;
 	}//end test_config_is_cloud_ready
 
 
@@ -923,7 +923,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_container_ready(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Config should use absolute paths (container-friendly)
 		$this->assertStringStartsWith('/', $config->target_file_path);
@@ -946,8 +946,8 @@ final class install_config_manager_Test extends BaseTestCase {
 	public function test_config_is_multi_instance_ready(): void {
 
 		// Config should be stateless (no shared state between instances)
-		$config1 = install_config_manager::get_config();
-		$config2 = install_config_manager::get_config();
+		$config1 = installer_config_manager::get_config();
+		$config2 = installer_config_manager::get_config();
 
 		// Each call should return a new object with same values
 		$this->assertNotSame($config1, $config2);
@@ -962,7 +962,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_scalable(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Config should support large numbers of TLDs and tables
 		$this->assertIsArray($config->to_preserve_tld);
@@ -981,7 +981,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_backward_compatible(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Config should have traditional properties
 		$this->assertObjectHasProperty('db_install_name', $config);
@@ -999,14 +999,14 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_forward_compatible(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Config should be extensible with new properties
 		$config->future_property = 'future_value';
 		$this->assertEquals('future_value', $config->future_property);
 
 		// But this doesn't affect the underlying config structure
-		$config2 = install_config_manager::get_config();
+		$config2 = installer_config_manager::get_config();
 		$this->assertObjectNotHasProperty('future_property', $config2);
 	}//end test_config_is_forward_compatible
 
@@ -1018,7 +1018,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_maintainable(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Property names should follow consistent naming convention
 		$properties = array_keys(get_object_vars($config));
@@ -1035,7 +1035,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_well_documented(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Property names should be self-documenting
 		$this->assertObjectHasProperty('db_install_name', $config);
@@ -1060,7 +1060,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	public function test_config_is_robust(): void {
 
 		// Config should handle various edge cases
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Should not break with empty arrays
 		$this->assertIsArray($config->to_preserve_tld);
@@ -1080,17 +1080,17 @@ final class install_config_manager_Test extends BaseTestCase {
 	public function test_config_is_testable(): void {
 
 		// Config should be easily testable
-		$this->assertIsObject(install_config_manager::get_config());
-		$this->assertIsObject(install_config_manager::get_db_status());
+		$this->assertIsObject(installer_config_manager::get_config());
+		$this->assertIsObject(installer_config_manager::get_db_status());
 		$this->assertTrue(
-			install_config_manager::get_db_data_version() === null || is_array(install_config_manager::get_db_data_version())
+			installer_config_manager::get_db_data_version() === null || is_array(installer_config_manager::get_db_data_version())
 		);
 
 		// Config should be modifiable for testing
-		$original_name = install_config_manager::$db_install_name;
-		install_config_manager::$db_install_name = 'test_db';
-		$this->assertEquals('test_db', install_config_manager::$db_install_name);
-		install_config_manager::$db_install_name = $original_name;
+		$original_name = installer_config_manager::$db_install_name;
+		installer_config_manager::$db_install_name = 'test_db';
+		$this->assertEquals('test_db', installer_config_manager::$db_install_name);
+		installer_config_manager::$db_install_name = $original_name;
 	}//end test_config_is_testable
 
 
@@ -1101,17 +1101,17 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_development_friendly(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Config should be easily modifiable for development
-		$original_name = install_config_manager::$db_install_name;
-		install_config_manager::$db_install_name = 'dev_test_db';
-		$dev_config = install_config_manager::get_config();
+		$original_name = installer_config_manager::$db_install_name;
+		installer_config_manager::$db_install_name = 'dev_test_db';
+		$dev_config = installer_config_manager::get_config();
 
 		$this->assertEquals('dev_test_db', $dev_config->db_install_name);
 
 		// Restore original value
-		install_config_manager::$db_install_name = $original_name;
+		installer_config_manager::$db_install_name = $original_name;
 	}//end test_config_is_development_friendly
 
 
@@ -1122,7 +1122,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_production_ready(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Config should have all necessary production settings
 		$this->assertNotEmpty($config->db_install_name);
@@ -1143,7 +1143,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_enterprise_ready(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Config should support enterprise features
 		$this->assertNotEmpty($config->to_preserve_tld);
@@ -1169,7 +1169,7 @@ final class install_config_manager_Test extends BaseTestCase {
 
 		// Config should always return valid data
 		for ($i = 0; $i < 5; $i++) {
-			$config = install_config_manager::get_config();
+			$config = installer_config_manager::get_config();
 			$this->assertIsObject($config);
 			$this->assertObjectHasProperty('db_install_name', $config);
 			$this->assertNotEmpty($config->db_install_name);
@@ -1187,7 +1187,7 @@ final class install_config_manager_Test extends BaseTestCase {
 		// Config operations should be fast (no file I/O on repeated calls)
 		$start = microtime(true);
 		for ($i = 0; $i < 10; $i++) {
-			install_config_manager::get_config();
+			installer_config_manager::get_config();
 		}
 		$end = microtime(true);
 
@@ -1203,7 +1203,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_paths_are_writable(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Check hierarchy files directory is writable
 		$this->assertTrue(is_writable($config->hierarchy_files_dir_path));
@@ -1221,7 +1221,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_values_are_sane(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// db_install_name should be reasonable length
 		$this->assertLessThan(100, strlen($config->db_install_name));
@@ -1244,7 +1244,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_handles_special_characters(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Paths should be properly escaped/handled
 		$this->assertStringNotContainsString('..', $config->target_file_path);
@@ -1260,7 +1260,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_get_db_install_conn(): void {
 
-		$conn = install_config_manager::get_db_install_conn();
+		$conn = installer_config_manager::get_db_install_conn();
 
 		$this->assertIsObject($conn, 'Expected get_db_install_conn to return an object');
 	}//end test_get_db_install_conn
@@ -1268,12 +1268,12 @@ final class install_config_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_has_docblock
-	* Verify install_config_manager has proper docblock
+	* Verify installer_config_manager has proper docblock
 	* @return void
 	*/
 	public function test_class_has_docblock(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_config_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_config_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('/**', $content);
@@ -1284,27 +1284,27 @@ final class install_config_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_declaration
-	* Verify install_config_manager class declaration is correct
+	* Verify installer_config_manager class declaration is correct
 	* @return void
 	*/
 	public function test_class_declaration(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_config_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_config_manager.php';
 		$content = file_get_contents($file);
 
-		$this->assertStringContainsString('class install_config_manager', $content);
+		$this->assertStringContainsString('class installer_config_manager', $content);
 		$this->assertStringContainsString('declare(strict_types=1)', $content);
 	}//end test_class_declaration
 
 
 	/**
 	* TEST_methods_have_return_types
-	* Verify install_config_manager methods have return type declarations
+	* Verify installer_config_manager methods have return type declarations
 	* @return void
 	*/
 	public function test_methods_have_return_types(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_config_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_config_manager.php';
 		$content = file_get_contents($file);
 
 		// Check for return type declarations in public methods
@@ -1315,12 +1315,12 @@ final class install_config_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_methods_have_parameter_types
-	* Verify install_config_manager methods have parameter type declarations
+	* Verify installer_config_manager methods have parameter type declarations
 	* @return void
 	*/
 	public function test_methods_have_parameter_types(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_config_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_config_manager.php';
 		$content = file_get_contents($file);
 
 		// Check for parameter type declarations
@@ -1332,12 +1332,12 @@ final class install_config_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_is_final
-	* Verify install_config_manager is final class (static utility class)
+	* Verify installer_config_manager is final class (static utility class)
 	* @return void
 	*/
 	public function test_class_is_final(): void {
 
-		$reflection = new ReflectionClass('install_config_manager');
+		$reflection = new ReflectionClass('installer_config_manager');
 
 		$this->assertTrue($reflection->isFinal());
 	}//end test_class_is_final
@@ -1345,12 +1345,12 @@ final class install_config_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_is_not_instantiable
-	* Verify install_config_manager cannot be instantiated (static utility class)
+	* Verify installer_config_manager cannot be instantiated (static utility class)
 	* @return void
 	*/
 	public function test_class_is_not_instantiable(): void {
 
-		$reflection = new ReflectionClass('install_config_manager');
+		$reflection = new ReflectionClass('installer_config_manager');
 
 		$this->assertFalse($reflection->isInstantiable());
 	}//end test_class_is_not_instantiable
@@ -1358,12 +1358,12 @@ final class install_config_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_no_protected_methods
-	* Verify install_config_manager has no protected methods
+	* Verify installer_config_manager has no protected methods
 	* @return void
 	*/
 	public function test_no_protected_methods(): void {
 
-		$reflection = new ReflectionClass('install_config_manager');
+		$reflection = new ReflectionClass('installer_config_manager');
 		$methods = $reflection->getMethods(ReflectionMethod::IS_PROTECTED);
 
 		$this->assertEquals(0, count($methods));
@@ -1372,12 +1372,12 @@ final class install_config_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_no_private_methods
-	* Verify install_config_manager has no private methods
+	* Verify installer_config_manager has no private methods
 	* @return void
 	*/
 	public function test_no_private_methods(): void {
 
-		$reflection = new ReflectionClass('install_config_manager');
+		$reflection = new ReflectionClass('installer_config_manager');
 		$methods = $reflection->getMethods(ReflectionMethod::IS_PRIVATE);
 
 		$this->assertEquals(1, count($methods));
@@ -1391,7 +1391,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_method_visibility(): void {
 
-		$reflection = new ReflectionClass('install_config_manager');
+		$reflection = new ReflectionClass('installer_config_manager');
 		$methods = $reflection->getMethods(ReflectionMethod::IS_PUBLIC);
 
 		foreach ($methods as $method) {
@@ -1409,7 +1409,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_static_property_visibility(): void {
 
-		$reflection = new ReflectionClass('install_config_manager');
+		$reflection = new ReflectionClass('installer_config_manager');
 		$property = $reflection->getProperty('db_install_name');
 
 		$this->assertTrue($property->isPublic());
@@ -1420,12 +1420,12 @@ final class install_config_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_namespace
-	* Verify install_config_manager is in correct namespace
+	* Verify installer_config_manager is in correct namespace
 	* @return void
 	*/
 	public function test_class_namespace(): void {
 
-		$reflection = new ReflectionClass('install_config_manager');
+		$reflection = new ReflectionClass('installer_config_manager');
 
 		// Class should be in global namespace (no namespace declaration)
 		$this->assertEquals('', $reflection->getNamespaceName());
@@ -1446,7 +1446,7 @@ final class install_config_manager_Test extends BaseTestCase {
 		];
 
 		foreach ($methods_to_test as $method) {
-			$response = install_config_manager::$method();
+			$response = installer_config_manager::$method();
 
 			$this->assertIsObject($response);
 			$this->assertObjectHasProperty('result', $response);
@@ -1464,7 +1464,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_hierarchy_typologies_have_valid_structure(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		foreach ($config->hierarchy_typologies as $typology) {
 			$this->assertObjectHasProperty('typology', $typology);
@@ -1482,7 +1482,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_install_checked_default_format(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		$this->assertIsArray($config->install_checked_default);
 
@@ -1501,7 +1501,7 @@ final class install_config_manager_Test extends BaseTestCase {
 
 		// Test non-destructive methods
 
-		$response = install_config_manager::system_is_already_installed();
+		$response = installer_config_manager::system_is_already_installed();
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
 		$this->assertObjectHasProperty('msg', $response);
@@ -1515,13 +1515,13 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_invalid_db_name_validation(): void {
 		// Temporarily set an invalid db name
-		$original_name = install_config_manager::$db_install_name;
-		install_config_manager::$db_install_name = 'invalid-db-name; DROP TABLE users;--';
+		$original_name = installer_config_manager::$db_install_name;
+		installer_config_manager::$db_install_name = 'invalid-db-name; DROP TABLE users;--';
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Restore original name
-		install_config_manager::$db_install_name = $original_name;
+		installer_config_manager::$db_install_name = $original_name;
 
 		// The get_config should still work but clone operations should fail validation
 		$this->assertIsObject($config);
@@ -1536,20 +1536,20 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_supports_multiple_environments(): void {
 
-		$original_name = install_config_manager::$db_install_name;
+		$original_name = installer_config_manager::$db_install_name;
 
 		// Simulate different environment
-		install_config_manager::$db_install_name = 'dev_install_db';
-		$dev_config = install_config_manager::get_config();
+		installer_config_manager::$db_install_name = 'dev_install_db';
+		$dev_config = installer_config_manager::get_config();
 		$this->assertEquals('dev_install_db', $dev_config->db_install_name);
 
 		// Simulate production environment
-		install_config_manager::$db_install_name = 'prod_install_db';
-		$prod_config = install_config_manager::get_config();
+		installer_config_manager::$db_install_name = 'prod_install_db';
+		$prod_config = installer_config_manager::get_config();
 		$this->assertEquals('prod_install_db', $prod_config->db_install_name);
 
 		// Restore original value
-		install_config_manager::$db_install_name = $original_name;
+		installer_config_manager::$db_install_name = $original_name;
 	}//end test_config_supports_multiple_environments
 
 
@@ -1560,7 +1560,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_config_is_extensible(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		// Config object can have additional properties added dynamically
 		$config->custom_property = 'custom_value';
@@ -1568,7 +1568,7 @@ final class install_config_manager_Test extends BaseTestCase {
 		$this->assertEquals('custom_value', $config->custom_property);
 
 		// But this doesn't affect subsequent calls
-		$config2 = install_config_manager::get_config();
+		$config2 = installer_config_manager::get_config();
 		$this->assertObjectNotHasProperty('custom_property', $config2);
 	}//end test_config_is_extensible
 
@@ -1580,7 +1580,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_get_db_data_version_returns_valid_structure(): void {
 
-		$version = install_config_manager::get_db_data_version();
+		$version = installer_config_manager::get_db_data_version();
 
 		if ($version !== null) {
 			$this->assertIsArray($version);
@@ -1602,7 +1602,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_system_is_already_installed_returns_valid_structure(): void {
 
-		$response = install_config_manager::system_is_already_installed();
+		$response = installer_config_manager::system_is_already_installed();
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -1620,7 +1620,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_to_update_returns_valid_structure(): void {
 
-		$response = install_config_manager::to_update();
+		$response = installer_config_manager::to_update();
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -1639,7 +1639,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	public function test_set_root_pw_accepts_object(): void {
 
 		$test_status = new stdClass();
-		$response = install_config_manager::set_root_pw($test_status);
+		$response = installer_config_manager::set_root_pw($test_status);
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -1655,7 +1655,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	public function test_set_install_status_accepts_object(): void {
 
 		$test_status = 'installed';
-		$response = install_config_manager::set_install_status($test_status);
+		$response = installer_config_manager::set_install_status($test_status);
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -1670,7 +1670,7 @@ final class install_config_manager_Test extends BaseTestCase {
 	*/
 	public function test_get_db_install_conn_returns_connection(): void {
 
-		$conn = install_config_manager::get_db_install_conn();
+		$conn = installer_config_manager::get_db_install_conn();
 
 		$this->assertIsObject($conn);
 		// The connection object should have typical DB connection properties
@@ -1686,15 +1686,15 @@ final class install_config_manager_Test extends BaseTestCase {
 	public function test_config_error_handling(): void {
 
 		// get_config should not throw exceptions under normal circumstances
-		$this->assertIsObject(install_config_manager::get_config());
+		$this->assertIsObject(installer_config_manager::get_config());
 
 		// get_db_status should not throw exceptions
-		$this->assertIsObject(install_config_manager::get_db_status());
+		$this->assertIsObject(installer_config_manager::get_db_status());
 
 		// get_db_data_version should not throw exceptions
 		$this->assertTrue(
-			install_config_manager::get_db_data_version() === null || is_array(install_config_manager::get_db_data_version())
+			installer_config_manager::get_db_data_version() === null || is_array(installer_config_manager::get_db_data_version())
 		);
 	}//end test_config_error_handling
 
-}//end class install_config_manager_Test
+}//end class installer_config_manager_Test

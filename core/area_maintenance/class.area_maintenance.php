@@ -1109,7 +1109,7 @@ class area_maintenance extends area_common {
 	* Any name not in the switch is rejected with an 'Error. Invalid name' response.
 	* Any value of a wrong type for the matched name is also rejected.
 	*
-	* The `config_core_file_path` is resolved through `install::get_config()` rather
+	* The `config_core_file_path` is resolved through `installer::get_config()` rather
 	* than a hardcoded path so that install overrides are respected.
 	*
 	* @param object $options - {
@@ -1218,7 +1218,7 @@ class area_maintenance extends area_common {
 		}
 
 		// config_core file (config_core.php)
-		$config = install::get_config();
+		$config = installer::get_config();
 		$file_path = $config->config_core_file_path;
 
 		// content string from file
@@ -1896,14 +1896,14 @@ class area_maintenance extends area_common {
 	* if the live `dd_ontology` table becomes corrupt or empty. It should be rebuilt
 	* after every successful ontology update so the recovery snapshot stays current.
 	*
-	* Delegates entirely to `install::build_recovery_version_file()`.
+	* Delegates entirely to `installer::build_recovery_version_file()`.
 	*
-	* @return object - Response from install::build_recovery_version_file()
+	* @return object - Response from installer::build_recovery_version_file()
 	*                  {result: bool, msg: string, errors?: array}.
 	*/
 	public static function build_recovery_version_file(): object {
 
-		return install::build_recovery_version_file();
+		return installer::build_recovery_version_file();
 	}//end build_recovery_version_file
 
 
@@ -1922,14 +1922,14 @@ class area_maintenance extends area_common {
 	* mode and the operator wants to restore the ontology without shell access.
 	* Listed in `API_ACTIONS`.
 	*
-	* Delegates entirely to `install::restore_dd_ontology_recovery_from_file()`.
+	* Delegates entirely to `installer::restore_dd_ontology_recovery_from_file()`.
 	*
-	* @return object - Response from install::restore_dd_ontology_recovery_from_file()
+	* @return object - Response from installer::restore_dd_ontology_recovery_from_file()
 	*                  {result: bool, msg: string, errors?: array}.
 	*/
 	public static function restore_dd_ontology_recovery_from_file(): object {
 
-		return install::restore_dd_ontology_recovery_from_file();
+		return installer::restore_dd_ontology_recovery_from_file();
 	}//end restore_dd_ontology_recovery_from_file
 
 

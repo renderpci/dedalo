@@ -3,19 +3,19 @@
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 // Include manager class
-require_once DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+require_once DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 
 
-final class install_database_manager_Test extends BaseTestCase {
+final class installer_database_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_is_static_only
-	* Verify install_database_manager is a static-only class
+	* Verify installer_database_manager is a static-only class
 	* @return void
 	*/
 	public function test_class_is_static_only(): void {
 
-		$reflection = new ReflectionClass('install_database_manager');
+		$reflection = new ReflectionClass('installer_database_manager');
 
 			// Should have a private constructor to prevent instantiation
 			$constructor = $reflection->getConstructor();
@@ -36,12 +36,12 @@ final class install_database_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_has_strict_types
-	* Verify install_database_manager uses strict types
+	* Verify installer_database_manager uses strict types
 	* @return void
 	*/
 	public function test_class_has_strict_types(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('declare(strict_types=1)', $content);
@@ -50,12 +50,12 @@ final class install_database_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_file_exists
-	* Verify install_database_manager class file exists
+	* Verify installer_database_manager class file exists
 	* @return void
 	*/
 	public function test_class_file_exists(): void {
 
-		$file_path = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file_path = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 
 		$this->assertTrue(file_exists($file_path));
 	}//end test_class_file_exists
@@ -63,23 +63,23 @@ final class install_database_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_exists
-	* Verify install_database_manager class exists
+	* Verify installer_database_manager class exists
 	* @return void
 	*/
 	public function test_class_exists(): void {
 
-		$this->assertTrue(class_exists('install_database_manager'));
+		$this->assertTrue(class_exists('installer_database_manager'));
 	}//end test_class_exists
 
 
 	/**
 	* TEST_class_does_not_extend_common
-	* Verify install_database_manager doesn't extend common
+	* Verify installer_database_manager doesn't extend common
 	* @return void
 	*/
 	public function test_class_does_not_extend_common(): void {
 
-		$this->assertFalse(is_subclass_of('install_database_manager', 'common'));
+		$this->assertFalse(is_subclass_of('installer_database_manager', 'common'));
 	}//end test_class_does_not_extend_common
 
 
@@ -101,7 +101,7 @@ final class install_database_manager_Test extends BaseTestCase {
 		];
 
 		foreach ($expected_methods as $method) {
-			$this->assertTrue(method_exists('install_database_manager', $method));
+			$this->assertTrue(method_exists('installer_database_manager', $method));
 		}
 	}//end test_all_static_methods_exist
 
@@ -113,7 +113,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_optimize_database_returns_object(): void {
 
-		$response = install_database_manager::optimize_database();
+		$response = installer_database_manager::optimize_database();
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -130,7 +130,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_clean_counters_returns_object(): void {
 
-		$response = install_database_manager::clean_counters();
+		$response = installer_database_manager::clean_counters();
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -147,7 +147,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_clean_tables_returns_object(): void {
 
-		$response = install_database_manager::clean_tables();
+		$response = installer_database_manager::clean_tables();
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -164,7 +164,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_create_extensions_returns_object(): void {
 
-		$response = install_database_manager::create_extensions();
+		$response = installer_database_manager::create_extensions();
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -182,12 +182,12 @@ final class install_database_manager_Test extends BaseTestCase {
 	public function test_clone_database_skip_if_exists(): void {
 
 		// Test with skip_if_exists = true
-		$response_skip = install_database_manager::clone_database(true);
+		$response_skip = installer_database_manager::clone_database(true);
 		$this->assertIsObject($response_skip);
 		$this->assertObjectHasProperty('result', $response_skip);
 
 		// Test with skip_if_exists = false
-		$response_no_skip = install_database_manager::clone_database(false);
+		$response_no_skip = installer_database_manager::clone_database(false);
 		$this->assertIsObject($response_no_skip);
 		$this->assertObjectHasProperty('result', $response_no_skip);
 	}//end test_clone_database_skip_if_exists
@@ -203,12 +203,12 @@ final class install_database_manager_Test extends BaseTestCase {
 		$this->markTestSkipped('Skipping this test for now. It takes long time and is not really used rigth now');
 
 		// Test with skip_if_exists = true
-		$response_skip = install_database_manager::clone_database_dump(true);
+		$response_skip = installer_database_manager::clone_database_dump(true);
 		$this->assertIsObject($response_skip);
 		$this->assertObjectHasProperty('result', $response_skip);
 
 		// Test with skip_if_exists = false
-		$response_no_skip = install_database_manager::clone_database_dump(false);
+		$response_no_skip = installer_database_manager::clone_database_dump(false);
 		$this->assertIsObject($response_no_skip);
 		$this->assertObjectHasProperty('result', $response_no_skip);
 	}//end test_clone_database_dump_skip_if_exists
@@ -216,12 +216,12 @@ final class install_database_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_has_docblock
-	* Verify install_database_manager has proper docblock
+	* Verify installer_database_manager has proper docblock
 	* @return void
 	*/
 	public function test_class_has_docblock(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('/**', $content);
@@ -232,12 +232,12 @@ final class install_database_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_is_final
-	* Verify install_database_manager is final class (static utility class)
+	* Verify installer_database_manager is final class (static utility class)
 	* @return void
 	*/
 	public function test_class_is_final(): void {
 
-		$reflection = new ReflectionClass('install_database_manager');
+		$reflection = new ReflectionClass('installer_database_manager');
 
 		$this->assertTrue($reflection->isFinal());
 	}//end test_class_is_final
@@ -245,12 +245,12 @@ final class install_database_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_is_not_instantiable
-	* Verify install_database_manager cannot be instantiated (static utility class)
+	* Verify installer_database_manager cannot be instantiated (static utility class)
 	* @return void
 	*/
 	public function test_class_is_not_instantiable(): void {
 
-		$reflection = new ReflectionClass('install_database_manager');
+		$reflection = new ReflectionClass('installer_database_manager');
 
 		$this->assertFalse($reflection->isInstantiable());
 	}//end test_class_is_not_instantiable
@@ -258,12 +258,12 @@ final class install_database_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_no_protected_methods
-	* Verify install_database_manager has no protected methods
+	* Verify installer_database_manager has no protected methods
 	* @return void
 	*/
 	public function test_no_protected_methods(): void {
 
-		$reflection = new ReflectionClass('install_database_manager');
+		$reflection = new ReflectionClass('installer_database_manager');
 		$methods = $reflection->getMethods(ReflectionMethod::IS_PROTECTED);
 
 		$this->assertEquals(0, count($methods));
@@ -272,12 +272,12 @@ final class install_database_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_no_private_methods
-	* Verify install_database_manager has no private methods
+	* Verify installer_database_manager has no private methods
 	* @return void
 	*/
 	public function test_no_private_methods(): void {
 
-		$reflection = new ReflectionClass('install_database_manager');
+		$reflection = new ReflectionClass('installer_database_manager');
 		$methods = $reflection->getMethods(ReflectionMethod::IS_PRIVATE);
 
 		$this->assertEquals(1, count($methods));
@@ -286,12 +286,12 @@ final class install_database_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_clean_tables_uses_config
-	* Verify clean_tables uses config from install_config_manager
+	* Verify clean_tables uses config from installer_config_manager
 	* @return void
 	*/
 	public function test_clean_tables_uses_config(): void {
 
-		$config = install_config_manager::get_config();
+		$config = installer_config_manager::get_config();
 
 		$this->assertIsArray($config->to_clean_tables);
 		$this->assertNotEmpty($config->to_clean_tables);
@@ -305,7 +305,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_optimize_database_uses_vacuum_analyze(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('VACUUM ANALYZE', $content);
@@ -314,15 +314,15 @@ final class install_database_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_clone_database_uses_config
-	* Verify clone_database uses config from install_config_manager
+	* Verify clone_database uses config from installer_config_manager
 	* @return void
 	*/
 	public function test_clone_database_uses_config(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
-		$this->assertStringContainsString('install_config_manager::get_config()', $content);
+		$this->assertStringContainsString('installer_config_manager::get_config()', $content);
 		$this->assertStringContainsString('db_install_name', $content);
 	}//end test_clone_database_uses_config
 
@@ -334,7 +334,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_create_extensions_uses_pg_query(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('pg_query', $content);
@@ -348,7 +348,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_clean_counters_uses_pg_query(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('pg_query', $content);
@@ -362,7 +362,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_clean_tables_uses_pg_query(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('pg_query', $content);
@@ -376,7 +376,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_clone_database_uses_pg_query(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('pg_query', $content);
@@ -390,7 +390,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_clone_database_uses_create_database_template(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('CREATE DATABASE', $content);
@@ -405,7 +405,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_clone_database_dump_uses_pg_dump(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('pg_dump', $content);
@@ -419,7 +419,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_clone_database_terminates_connections(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('pg_terminate_backend', $content);
@@ -434,7 +434,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_clean_tables_truncates_tables(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('TRUNCATE', $content);
@@ -448,7 +448,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_clean_counters_resets_sequences(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('RESTART', $content);
@@ -463,7 +463,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_create_extensions_creates_extensions(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('CREATE EXTENSION', $content);
@@ -477,7 +477,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_methods_use_debug_log(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('debug_log', $content);
@@ -491,7 +491,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_methods_use_error_handling(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('pg_last_error', $content);
@@ -506,7 +506,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_clone_database_uses_escaped_shell_args(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('escapeshellarg', $content);
@@ -520,7 +520,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_methods_have_documentation(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		// Check for method docblocks
@@ -539,7 +539,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_database_operations_use_DBi(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('DBi::_getConnection', $content);
@@ -554,7 +554,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_clone_database_uses_template(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('TEMPLATE', $content);
@@ -568,7 +568,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_clone_database_dump_uses_dump_restore(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('pg_dump', $content);
@@ -583,7 +583,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_is_secure(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		// Should use parameterized queries or proper escaping
@@ -602,7 +602,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_is_type_safe(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		// Methods should have return type declarations
@@ -621,7 +621,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_is_professional_quality(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		// Class should have comprehensive docblock
@@ -645,7 +645,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	public function test_class_is_testable(): void {
 
 		// Class should be static-only (easy to test)
-		$reflection = new ReflectionClass('install_database_manager');
+		$reflection = new ReflectionClass('installer_database_manager');
 			$constructor = $reflection->getConstructor();
 			$this->assertNotNull($constructor);
 			$this->assertTrue($constructor->isPrivate());
@@ -666,7 +666,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	public function test_class_is_reliable(): void {
 
 		// Methods should return consistent response structure
-		$response = install_database_manager::optimize_database();
+		$response = installer_database_manager::optimize_database();
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
 		$this->assertObjectHasProperty('msg', $response);
@@ -683,7 +683,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	public function test_class_is_thread_safe(): void {
 
 		// Class should be stateless (no instance properties)
-		$reflection = new ReflectionClass('install_database_manager');
+		$reflection = new ReflectionClass('installer_database_manager');
 		$properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE);
 		$this->assertEquals(0, count($properties));
 	}//end test_class_is_thread_safe
@@ -696,7 +696,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_is_scalable(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		// Should use efficient operations
@@ -713,7 +713,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_is_production_ready(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		// Should have proper error handling
@@ -737,7 +737,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_is_pure_static_utility(): void {
 
-		$reflection = new ReflectionClass('install_database_manager');
+		$reflection = new ReflectionClass('installer_database_manager');
 
 		// No public constructor (private constructor prevents instantiation)
 		$c = $reflection->getConstructor();
@@ -766,7 +766,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_follows_single_responsibility(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		// Class docblock should describe single responsibility
@@ -791,7 +791,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_follows_dependency_inversion(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		// Should use DBi abstraction for database operations
@@ -807,7 +807,7 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_has_cohesion(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		// All methods should be related to database operations
@@ -826,11 +826,11 @@ final class install_database_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_has_low_coupling(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_database_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_database_manager.php';
 		$content = file_get_contents($file);
 
 		// Should depend on minimal external classes
-		$this->assertStringContainsString('install_config_manager', $content);
+		$this->assertStringContainsString('installer_config_manager', $content);
 		$this->assertStringContainsString('DBi', $content);
 		$this->assertStringContainsString('debug_log', $content);
 		$this->assertStringContainsString('logger', $content);

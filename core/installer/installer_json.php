@@ -8,7 +8,7 @@
 * Responsibilities:
 * - Guard against direct HTTP access (SEC-026 §9.3).
 * - Resolve the installation wizard context when the caller requests it
-*   ($options->get_context). install::get_structure_context() runs a cascade
+*   ($options->get_context). installer::get_structure_context() runs a cascade
 *   of pre-flight checks (filesystem permissions, DB connectivity, PHP version)
 *   and on success returns a dd_object whose properties contain all information
 *   the JS install wizard needs to render the setup steps and progress UI.
@@ -21,15 +21,15 @@
 *
 * Execution context:
 *   This file is NOT a class or function — it is an include-script evaluated
-*   inside install::get_json() (inherited from common). The variables $this
+*   inside installer::get_json() (inherited from common). The variables $this
 *   (install), $options (stdClass with boolean flags), and SHOW_DEBUG
 *   (compile-time constant) are injected by the caller via PHP's include()
 *   scope; no explicit argument passing is needed.
 *
 *   Path resolution in common::get_json():
-*     $called_model = get_class($this);  // → 'install'
+*     $called_model = get_class($this);  // → 'installer'
 *     $path = DEDALO_CORE_PATH . '/' . $called_model . '/' . $called_model . '_json.php';
-*     // resolves to: <core>/install/install_json.php  (this file)
+*     // resolves to: <core>/installer/installer_json.php  (this file)
 *
 *   $options shape (populated by common::get_json() before the include):
 *     - get_context  bool  whether to build the ontology/install structure context
@@ -40,11 +40,11 @@
 *   get_component_permissions() which may return 0 for restricted elements.
 *   The install wizard must be reachable before any user session exists, so
 *   its permissions are unconditionally 1 (allow) here. The actual security
-*   boundary is enforced by install::get_structure_context(), which returns
+*   boundary is enforced by installer::get_structure_context(), which returns
 *   a partial (empty-properties) dd_object when DEDALO_INSTALL_STATUS is
 *   already 'installed', preventing re-entry after a completed setup.
 *
-* Context shape (one dd_object in $context, produced by install::get_structure_context()):
+* Context shape (one dd_object in $context, produced by installer::get_structure_context()):
 *   On failure / already-installed: dd_object with empty properties.
 *   On init-test failure: dd_object with properties.init_test set only.
 *   On DB failure: dd_object with properties.init_test + properties.db_status.
@@ -87,7 +87,7 @@
 * Called by:
 *   common::get_json()  →  includes this file  →  returns result
 *
-* @see class.install.php  install::get_structure_context(), install::__construct()
+* @see class.installer.php  installer::get_structure_context(), installer::__construct()
 * @see class.common.php   common::get_json(), common::build_element_json_output()
 * @see class.dd_utils_api.php  dd_utils_api::get_install_context()
 *
@@ -108,7 +108,7 @@ if (!isset($this)) { http_response_code(404); exit; }
 // configuration vars
 // $permissions is unconditionally 1: the install wizard must be served before
 // any authenticated session exists. The security boundary is inside
-// install::get_structure_context() (partial return when already installed).
+// installer::get_structure_context() (partial return when already installed).
 	$tipo			= $this->get_tipo();
 	$permissions	= 1;
 	$mode			= $this->get_mode();

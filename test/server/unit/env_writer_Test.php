@@ -81,7 +81,7 @@ final class env_writer_Test extends TestCase {
 	}
 
 	public function test_bool_secret_serializes_as_true_false_not_one_empty() : void {
-		// secrets use the same readable bool encoding as install_config_persistor — never 1/''
+		// secrets use the same readable bool encoding as installer_config_persistor — never 1/''
 		$classification = [
 			'DD_FLAG_ON'  => $this->entry(migration_destination::ENV, true),
 			'DD_FLAG_OFF' => $this->entry(migration_destination::ENV, false),

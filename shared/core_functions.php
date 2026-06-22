@@ -2633,7 +2633,7 @@ function check_basic_system() : object {
 		}
 
 	// database is available
-		// $db_install_conn = install::get_db_install_conn();
+		// $db_install_conn = installer::get_db_install_conn();
 		// if ($db_install_conn===false) {
 		// 	$response->msg = 'Error on connect with database.';
 		// 	debug_log(__METHOD__." ".$response->msg, logger::ERROR);

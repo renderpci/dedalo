@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-include_once __DIR__ . '/class.install_hierarchy_manager.php';
+include_once __DIR__ . '/class.installer_hierarchy_manager.php';
 
 /**
 * CLASS INSTALL_CONFIG_MANAGER
@@ -27,10 +27,10 @@ include_once __DIR__ . '/class.install_hierarchy_manager.php';
 * by a private constructor. All external callers use the static interface.
 *
 * Relationships:
-* - Included by `class.install_hierarchy_manager.php` (via the include at the
-*   top of that file) and by `class.install.php` which orchestrates the full
+* - Included by `class.installer_hierarchy_manager.php` (via the include at the
+*   top of that file) and by `class.installer.php` which orchestrates the full
 *   installation sequence.
-* - Delegates hierarchy typology discovery to `install_hierarchy_manager`.
+* - Delegates hierarchy typology discovery to `installer_hierarchy_manager`.
 * - Calls `DBi::_getNewConnection()` for PostgreSQL connection management and
 *   `DBi::check_table_exists()` / `pg_query()` for schema introspection.
 * - Calls `login::check_root_has_default_password()` to gate the
@@ -42,7 +42,7 @@ include_once __DIR__ . '/class.install_hierarchy_manager.php';
 * @package Dédalo
 * @subpackage Install
 */
-final class install_config_manager {
+final class installer_config_manager {
 
 	/**
 	* Name of the dedicated PostgreSQL database used during installation.
@@ -67,7 +67,7 @@ final class install_config_manager {
 	* Aggregates all install-related paths, database identifiers, table
 	* allow-lists, TLD preservation lists, and shell connection arguments into
 	* a single stdClass so that every other install manager can call
-	* `install_config_manager::get_config()` without re-deriving these values.
+	* `installer_config_manager::get_config()` without re-deriving these values.
 	*
 	* Key properties of the returned object:
 	* - `db_install_name`           — name of the PostgreSQL install database.
@@ -210,7 +210,7 @@ final class install_config_manager {
 		$target_file_path_compress	= $target_file_path.'.gz';
 		$hierarchy_files_dir_path	= DEDALO_ROOT_PATH . '/install/import/hierarchy';
 		$config_core_file_path		= DEDALO_CONFIG_PATH.'/config_core.php';
-		$hierarchy_typologies 		= install_hierarchy_manager::get_hierarchy_typlologies();
+		$hierarchy_typologies 		= installer_hierarchy_manager::get_hierarchy_typlologies();
 
 		// exclude_data_tables. Tables whose row DATA is fully removed during the clean
 		// phase, so the install image ships their structure (and sequences) but no rows.
@@ -218,7 +218,7 @@ final class install_config_manager {
 		// production-scale data — matrix_time_machine, matrix_activity, matrix_hierarchy,
 		// matrix_ontology, etc. — is never copied only to be deleted again. matrix_ontology
 		// is cloned schema-only here and its handful of preserved TLD-root rows are reloaded
-		// directly from source by install_database_manager::load_filtered_matrix_ontology()
+		// directly from source by installer_database_manager::load_filtered_matrix_ontology()
 		// (18k rows → ~8). matrix_ontology_main stays OFF this list: its rows are row-FILTERED
 		// in place by clean_tables() (a JSONB predicate) and it is tiny, so copy-then-filter is
 		// fine. Derived from to_clean_tables so the whitelist stays the single source of truth.
@@ -284,7 +284,7 @@ final class install_config_manager {
 	* PGPASSWORD is exported only for the duration of the child process and cleared immediately
 	* after, and is never interpolated into $command, so the secret reaches neither the process
 	* argument list nor any debug log of the command string. Mirrors the inline handling in
-	* install_database_manager::clone_database_dump().
+	* installer_database_manager::clone_database_dump().
 	*
 	* Binary-path resolution is the caller's responsibility — build commands with
 	* system::get_pg_bin_path() (never the raw DB_BIN_PATH constant), so binaries are found on
@@ -704,7 +704,7 @@ final class install_config_manager {
 	*/
 	public static function set_install_status(string $status) : object {
 
-		require_once __DIR__ . '/class.install_config_persistor.php';
+		require_once __DIR__ . '/class.installer_config_persistor.php';
 		require_once DEDALO_ROOT_PATH . '/install/class.migration_committer.php';
 
 		$response = new stdClass();
@@ -749,7 +749,7 @@ final class install_config_manager {
 				}
 			}
 
-			$content = install_config_persistor::render_state($existing, ['state.install_status' => $status]);
+			$content = installer_config_persistor::render_state($existing, ['state.install_status' => $status]);
 
 			try {
 				migration_committer::commit(
@@ -774,4 +774,4 @@ final class install_config_manager {
 		return $response;
 	}//end set_install_status
 
-}//end class install_config_manager
+}//end class installer_config_manager

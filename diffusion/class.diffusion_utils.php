@@ -636,7 +636,7 @@ class diffusion_utils {
 	* ontology write chokepoints (ontology::set_records_in_dd_ontology /
 	* regenerate_records_in_dd_ontology / delete_ontology), from
 	* tools_register::invalidate_all_tool_caches (import_tools rewrites the tool
-	* tld) and from install_ontology_manager::clean_ontology.
+	* tld) and from installer_ontology_manager::clean_ontology.
 	*
 	* The on-disk payload is a WRAPPER ['domain'=>..., 'map'=>...], never a bare
 	* array: it lets the domain config self-invalidate the file and avoids the

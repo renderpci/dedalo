@@ -1,29 +1,29 @@
 <?php declare(strict_types=1);
 
 // Include collaborator classes
-include_once __DIR__ . '/class.install_config_manager.php';
-include_once __DIR__ . '/class.install_database_manager.php';
-include_once __DIR__ . '/class.install_ontology_manager.php';
-include_once __DIR__ . '/class.install_hierarchy_manager.php';
-include_once __DIR__ . '/class.install_data_seeder.php';
-include_once __DIR__ . '/class.install_setup_manager.php';
+include_once __DIR__ . '/class.installer_config_manager.php';
+include_once __DIR__ . '/class.installer_database_manager.php';
+include_once __DIR__ . '/class.installer_ontology_manager.php';
+include_once __DIR__ . '/class.installer_hierarchy_manager.php';
+include_once __DIR__ . '/class.installer_data_seeder.php';
+include_once __DIR__ . '/class.installer_setup_manager.php';
 
 /**
 * INSTALL
 * Façade entry-point for all Dédalo installation and upgrade operations.
 *
 * Responsibilities:
-* - Exposes the single public API surface consumed by install_json.php and
+* - Exposes the single public API surface consumed by installer_json.php and
 *   dd_utils_api (the install API controller), keeping callers decoupled from
 *   the underlying manager hierarchy.
 * - Delegates every real operation to one of five specialised managers:
-*     install_config_manager   – config resolution, DB status, install-status file
-*     install_database_manager – DB cloning, cleaning, extensions, optimization
-*     install_ontology_manager – ontology stripping, recovery file export/import
-*     install_hierarchy_manager – hierarchy file discovery, import, activation
-*     install_data_seeder      – seeding root user, projects, profiles, test record
+*     installer_config_manager   – config resolution, DB status, install-status file
+*     installer_database_manager – DB cloning, cleaning, extensions, optimization
+*     installer_ontology_manager – ontology stripping, recovery file export/import
+*     installer_hierarchy_manager – hierarchy file discovery, import, activation
+*     installer_data_seeder      – seeding root user, projects, profiles, test record
 * - Extends `common` to satisfy the API compatibility contract (same constructor
-*   shape, set_tipo / set_lang / set_mode / set_model calls) that install_json.php
+*   shape, set_tipo / set_lang / set_mode / set_model calls) that installer_json.php
 *   and dd_utils_api expect from every handler object.
 * - Provides `get_structure_context()`, which is the standard method the JS client
 *   calls to build the installation wizard UI (pre-flight checks, DB status,
@@ -42,7 +42,7 @@ include_once __DIR__ . '/class.install_setup_manager.php';
 * @package Dédalo
 * @subpackage Core
 */
-class install extends common {
+class installer extends common {
 
 	/**
 	* CLASS VARS
@@ -52,7 +52,7 @@ class install extends common {
 	 * Name of the ephemeral PostgreSQL database used during install-image creation.
 	 * The current production database is cloned into this database, stripped of
 	 * user data, seeded with defaults, and then pg_dumped to the distributable
-	 * compressed file.  Mirrored from install_config_manager::$db_install_name.
+	 * compressed file.  Mirrored from installer_config_manager::$db_install_name.
 	 * @var string $db_install_name
 	 */
 	public static string $db_install_name = 'dedalo7_install';
@@ -65,7 +65,7 @@ class install extends common {
 	*
 	* Sets tipo to 'dd1590' (the Dédalo install section ontology node), language to
 	* the configured data language, mode to the supplied $mode, and model to
-	* 'install'.  These values mirror the shape expected by install_json.php and
+	* 'installer'.  These values mirror the shape expected by installer_json.php and
 	* dd_utils_api so that the install object behaves like any other common handler.
 	*
 	* @param string $mode [= 'install'] - Operating mode passed to common::set_mode().
@@ -77,7 +77,7 @@ class install extends common {
 		$this->set_tipo($tipo);
 		$this->set_lang(DEDALO_DATA_LANG);
 		$this->set_mode($mode);
-		$this->set_model('install');
+		$this->set_model('installer');
 	}//end __construct
 
 
@@ -95,7 +95,7 @@ class install extends common {
 	*     directories, wrong permissions, etc.  A false result stops execution and
 	*     logs at ERROR level; the partial properties object is still returned so the
 	*     UI can display the specific failure message.
-	*  3. Database configuration and connection check (install_config_manager::get_db_status()).
+	*  3. Database configuration and connection check (installer_config_manager::get_db_status()).
 	*     A false global_status stops execution.
 	*  4. If all guards pass, assembles the full properties object containing:
 	*       - dedalo_entity, db_config (name, user, host, port, socket)
@@ -162,7 +162,7 @@ class install extends common {
 					$server_info->pg_version = 'PostgreSQL ' . $pg_version;
 				}else{
 					try {
-						$conn = install_config_manager::get_db_install_conn();
+						$conn = installer_config_manager::get_db_install_conn();
 						if ($conn !== false) {
 							$pg_result = pg_query($conn, 'SELECT version()');
 							if ($pg_result !== false) {
@@ -234,7 +234,7 @@ class install extends common {
 			}
 
 		// check db_status (config_db.php and DB connection)
-			$db_status				= install_config_manager::get_db_status();
+			$db_status				= installer_config_manager::get_db_status();
 			$properties->db_status	= $db_status;
 			// On a FRESH install the config is still placeholder/unreachable. The modernized
 			// wizard COLLECTS, validates and persists the config itself (../private/.env), so we
@@ -263,14 +263,14 @@ class install extends common {
 		// (connectable but not yet imported) the matrix_updates table does not exist, and querying
 		// it logs a noisy (non-fatal) pg error — so gate on the table existing too.
 			$properties->db_data_version = ($db_status->db_connection_check===true && DBi::check_table_exists('matrix_updates'))
-				? install_config_manager::get_db_data_version()
+				? installer_config_manager::get_db_data_version()
 				: null;
 
 		// dedalo version
 			$properties->version = DEDALO_VERSION . ' - Build ' . DEDALO_BUILD;
 
 		// check if the install database file exist
-			$config = install_config_manager::get_config();
+			$config = installer_config_manager::get_config();
 			$properties->target_file_path = $config->target_file_path_compress;
 			$properties->target_file_path_exists = (file_exists($config->target_file_path_compress))
 				? true
@@ -279,7 +279,7 @@ class install extends common {
 		// get the hierarchy file path
 			$properties->hierarchy_files_dir_path = $config->hierarchy_files_dir_path;
 		// hierarchies
-			$hierarchies = install_hierarchy_manager::get_available_hierarchy_files();
+			$hierarchies = installer_hierarchy_manager::get_available_hierarchy_files();
 			$properties->hierarchies = $hierarchies->result !== false
 				? $hierarchies->result
 				: null;
@@ -305,13 +305,13 @@ class install extends common {
 	/**
 	* GET_CONFIG
 	* Returns the resolved install configuration object.
-	* Delegates to install_config_manager::get_config(), which assembles
+	* Delegates to installer_config_manager::get_config(), which assembles
 	* path constants, connection details, table lists, and hierarchy typologies
-	* into a single stdClass.  See install_config_manager for full shape.
+	* into a single stdClass.  See installer_config_manager for full shape.
 	* @return object $config
 	*/
 	public static function get_config() : object {
-		return install_config_manager::get_config();
+		return installer_config_manager::get_config();
 	}//end get_config
 
 	/**
@@ -323,7 +323,7 @@ class install extends common {
 	* @return PgSql\Connection|bool
 	*/
 	public static function get_db_install_conn() : PgSql\Connection|bool {
-		return install_config_manager::get_db_install_conn();
+		return installer_config_manager::get_db_install_conn();
 	}//end get_db_install_conn
 
 	/**
@@ -335,7 +335,7 @@ class install extends common {
 	* @return object
 	*/
 	public static function get_db_status() : object {
-		return install_config_manager::get_db_status();
+		return installer_config_manager::get_db_status();
 	}//end get_db_status
 
 	/**
@@ -346,7 +346,7 @@ class install extends common {
 	* @return array|null
 	*/
 	public function get_db_data_version() : ?array {
-		return install_config_manager::get_db_data_version();
+		return installer_config_manager::get_db_data_version();
 	}//end get_db_data_version
 
 	/**
@@ -358,7 +358,7 @@ class install extends common {
 	* @return object $response
 	*/
 	public static function to_update() : object {
-		return install_config_manager::to_update();
+		return installer_config_manager::to_update();
 	}//end to_update
 
 	/**
@@ -370,7 +370,7 @@ class install extends common {
 	*
 	* Steps (each step returns on failure, accumulating non-fatal errors):
 	*  1. Clone current production DB to the ephemeral install database via
-	*     install_database_manager::clone_database_dump() (lock-free pg_dump|psql,
+	*     installer_database_manager::clone_database_dump() (lock-free pg_dump|psql,
 	*     MVCC snapshot — does not terminate production sessions). The TEMPLATE-based
 	*     clone_database() remains available for maintenance-window use.
 	*  2. Strip custom ontology rows, leaving only core TLD namespaces
@@ -416,7 +416,7 @@ class install extends common {
 			}
 
 		// config
-			$config = install_config_manager::get_config();
+			$config = installer_config_manager::get_config();
 
 		// clone database to dedalo_install
 			// CLI msg
@@ -439,8 +439,8 @@ class install extends common {
 				$exclude_tables	= is_array($source_tables)
 					? array_values(array_diff($source_tables, $config->valid_tables))
 					: [];
-			$call_response = install_database_manager::clone_database_dump($skip_if_exists, $config->exclude_data_tables, $exclude_tables);
-			// $call_response = install_database_manager::clone_database($skip_if_exists);
+			$call_response = installer_database_manager::clone_database_dump($skip_if_exists, $config->exclude_data_tables, $exclude_tables);
+			// $call_response = installer_database_manager::clone_database($skip_if_exists);
 			if ($call_response->result===false) {
 				return $call_response;
 			}
@@ -457,7 +457,7 @@ class install extends common {
 					'msg' => 'Loading filtered matrix_ontology'
 				]);
 			}
-			$call_response = install_database_manager::load_filtered_matrix_ontology();
+			$call_response = installer_database_manager::load_filtered_matrix_ontology();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
@@ -472,7 +472,7 @@ class install extends common {
 					'msg' => 'Cleaning Ontology'
 				]);
 			}
-			$call_response = install_ontology_manager::clean_ontology();
+			$call_response = installer_ontology_manager::clean_ontology();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
@@ -487,7 +487,7 @@ class install extends common {
 					'msg' => 'Cleaning counters'
 				]);
 			}
-			$call_response = install_database_manager::clean_counters();
+			$call_response = installer_database_manager::clean_counters();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
@@ -502,7 +502,7 @@ class install extends common {
 					'msg' => 'Cleaning tables'
 				]);
 			}
-			$call_response = install_database_manager::clean_tables();
+			$call_response = installer_database_manager::clean_tables();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
@@ -517,7 +517,7 @@ class install extends common {
 					'msg' => 'Creating extensions (unaccent, pg_trgm ..)'
 				]);
 			}
-			$call_response = install_database_manager::create_extensions();
+			$call_response = installer_database_manager::create_extensions();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
@@ -532,7 +532,7 @@ class install extends common {
 					'msg' => 'Creating root user'
 				]);
 			}
-			$call_response = install_data_seeder::create_root_user();
+			$call_response = installer_data_seeder::create_root_user();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
@@ -547,7 +547,7 @@ class install extends common {
 					'msg' => 'Creating main project'
 				]);
 			}
-			$call_response = install_data_seeder::create_main_project();
+			$call_response = installer_data_seeder::create_main_project();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
@@ -562,7 +562,7 @@ class install extends common {
 					'msg' => 'Creating main profiles'
 				]);
 			}
-			$call_response = install_data_seeder::create_main_profiles();
+			$call_response = installer_data_seeder::create_main_profiles();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
@@ -577,7 +577,7 @@ class install extends common {
 					'msg' => 'Creating default test record'
 				]);
 			}
-			$call_response = install_data_seeder::create_test_record();
+			$call_response = installer_data_seeder::create_test_record();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
@@ -592,7 +592,7 @@ class install extends common {
 					'msg' => 'Importing hierarchy main records'
 				]);
 			}
-			$call_response = install_hierarchy_manager::import_hierarchy_main_records();
+			$call_response = installer_hierarchy_manager::import_hierarchy_main_records();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
@@ -607,7 +607,7 @@ class install extends common {
 					'msg' => 'Vacuum database'
 				]);
 			}
-			$call_response = install_database_manager::optimize_database();
+			$call_response = installer_database_manager::optimize_database();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
@@ -622,7 +622,7 @@ class install extends common {
 					'msg' => 'Creating compressed psql file'
 				]);
 			}
-			$call_response = install_ontology_manager::build_install_db_file();
+			$call_response = installer_ontology_manager::build_install_db_file();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
@@ -643,16 +643,16 @@ class install extends common {
 	* BUILD_MATRIX_HIERARCHY_MAIN_SQL
 	* Regenerates the install/import/matrix_hierarchy_main.sql seed file from the current
 	* database, keeping only the hierarchies whose TLD is in the to_install allow-list
-	* (core/install/hierarchies_to_install.json) and shipping them all INACTIVE.
+	* (core/installer/hierarchies_to_install.json) and shipping them all INACTIVE.
 	*
 	* On-demand maintenance task: run it when the canonical hierarchy set or the
 	* matrix_hierarchy_main schema changes, then commit the regenerated file. It is NOT part
 	* of build_install_version() (which imports whatever file is committed).
 	*
-	* @return object - response from install_hierarchy_manager::build_matrix_hierarchy_main_sql()
+	* @return object - response from installer_hierarchy_manager::build_matrix_hierarchy_main_sql()
 	*/
 	public static function build_matrix_hierarchy_main_sql() : object {
-		return install_hierarchy_manager::build_matrix_hierarchy_main_sql();
+		return installer_hierarchy_manager::build_matrix_hierarchy_main_sql();
 	}//end build_matrix_hierarchy_main_sql
 
 	/**
@@ -662,7 +662,7 @@ class install extends common {
 	* @return object $response
 	*/
 	public static function optimize_database() : object {
-		return install_database_manager::optimize_database();
+		return installer_database_manager::optimize_database();
 	}//end optimize_database
 
 	/**
@@ -675,7 +675,7 @@ class install extends common {
 	* @return object $response
 	*/
 	public static function install_db_from_default_file() : object {
-		return install_database_manager::install_db_from_default_file();
+		return installer_database_manager::install_db_from_default_file();
 	}//end install_db_from_default_file
 
 	/**
@@ -687,7 +687,7 @@ class install extends common {
 	* @return object $response
 	*/
 	public static function build_install_db_file() : object {
-		return install_ontology_manager::build_install_db_file();
+		return installer_ontology_manager::build_install_db_file();
 	}//end build_install_db_file
 
 	/**
@@ -703,7 +703,7 @@ class install extends common {
 	* @return object $response
 	*/
 	public static function activate_hierarchy(object $options) : object {
-		return install_hierarchy_manager::activate_hierarchy($options);
+		return installer_hierarchy_manager::activate_hierarchy($options);
 	}//end activate_hierarchy
 
 	/**
@@ -715,7 +715,7 @@ class install extends common {
 	* @return object $response - result is array of hierarchy descriptor objects or false
 	*/
 	public static function get_available_hierarchy_files() : object {
-		return install_hierarchy_manager::get_available_hierarchy_files();
+		return installer_hierarchy_manager::get_available_hierarchy_files();
 	}//end get_available_hierarchy_files
 
 	/**
@@ -731,7 +731,7 @@ class install extends common {
 	* @return array $typlologies
 	*/
 	public static function get_hierarchy_typlologies() : array {
-		return install_hierarchy_manager::get_hierarchy_typlologies();
+		return installer_hierarchy_manager::get_hierarchy_typlologies();
 	}//end get_hierarchy_typlologies
 
 	/**
@@ -748,7 +748,7 @@ class install extends common {
 	* @return object $response - result true, responses array of per-hierarchy results
 	*/
 	public static function install_hierarchies(object $options) : object {
-		return install_hierarchy_manager::install_hierarchies($options);
+		return installer_hierarchy_manager::install_hierarchies($options);
 	}//end install_hierarchies
 
 	/**
@@ -760,7 +760,7 @@ class install extends common {
 	* @return object $response - result true when already installed, false otherwise
 	*/
 	public static function system_is_already_installed() : object {
-		return install_config_manager::system_is_already_installed();
+		return installer_config_manager::system_is_already_installed();
 	}//end system_is_already_installed
 
 	/**
@@ -783,57 +783,57 @@ class install extends common {
 	* @return object $response
 	*/
 	public static function set_root_pw(object $options) : object {
-		return install_config_manager::set_root_pw($options);
+		return installer_config_manager::set_root_pw($options);
 	}//end set_root_pw
 
 
 	/**
 	* TEST_DB_CONNECTION
 	* Interactive PostgreSQL check with the values typed in the wizard (delegates to
-	* install_setup_manager). @see install_setup_manager::test_db_connection
+	* installer_setup_manager). @see installer_setup_manager::test_db_connection
 	*/
 	public static function test_db_connection(object $options) : object {
-		return install_setup_manager::test_db_connection($options);
+		return installer_setup_manager::test_db_connection($options);
 	}//end test_db_connection
 
 
 	/**
 	* TEST_DIFFUSION_CONNECTION
 	* Interactive MariaDB/MySQL check for the optional diffusion engine.
-	* @see install_setup_manager::test_diffusion_connection
+	* @see installer_setup_manager::test_diffusion_connection
 	*/
 	public static function test_diffusion_connection(object $options) : object {
-		return install_setup_manager::test_diffusion_connection($options);
+		return installer_setup_manager::test_diffusion_connection($options);
 	}//end test_diffusion_connection
 
 
 	/**
 	* CHECK_DIRECTORIES
 	* Verify (and optionally create) the main writable directories.
-	* @see install_setup_manager::check_directories
+	* @see installer_setup_manager::check_directories
 	*/
 	public static function check_directories(object $options) : object {
-		return install_setup_manager::check_directories($options);
+		return installer_setup_manager::check_directories($options);
 	}//end check_directories
 
 
 	/**
 	* PERSIST_CONFIG
 	* Write the collected configuration to ../private/.env (+ Bun .env) and state.php.
-	* @see install_setup_manager::persist_config
+	* @see installer_setup_manager::persist_config
 	*/
 	public static function persist_config(object $options) : object {
-		return install_setup_manager::persist_config($options);
+		return installer_setup_manager::persist_config($options);
 	}//end persist_config
 
 
 	/**
 	* VERIFY_ACTIVE_CONFIG
 	* Activation gate: confirm the saved config is live in this process.
-	* @see install_setup_manager::verify_active_config
+	* @see installer_setup_manager::verify_active_config
 	*/
 	public static function verify_active_config(object $options) : object {
-		return install_setup_manager::verify_active_config($options);
+		return installer_setup_manager::verify_active_config($options);
 	}//end verify_active_config
 
 	/**
@@ -850,7 +850,7 @@ class install extends common {
 	* @return object $response
 	*/
 	public static function set_install_status(string $status) : object {
-		return install_config_manager::set_install_status($status);
+		return installer_config_manager::set_install_status($status);
 	}//end set_install_status
 
 	/**
@@ -863,7 +863,7 @@ class install extends common {
 	* @return object $response - Includes file_size (bytes) on success.
 	*/
 	public static function build_recovery_version_file() : object {
-		return install_ontology_manager::build_recovery_version_file();
+		return installer_ontology_manager::build_recovery_version_file();
 	}//end build_recovery_version_file
 
 	/**
@@ -875,7 +875,7 @@ class install extends common {
 	* @return object $response
 	*/
 	public static function restore_dd_ontology_recovery_from_file() : object {
-		return install_ontology_manager::restore_dd_ontology_recovery_from_file();
+		return installer_ontology_manager::restore_dd_ontology_recovery_from_file();
 	}//end restore_dd_ontology_recovery_from_file
 
-}//end class install
+}//end class installer

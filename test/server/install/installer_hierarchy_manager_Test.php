@@ -3,19 +3,19 @@
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 // Include manager class
-require_once DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+require_once DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 
 
-final class install_hierarchy_manager_Test extends BaseTestCase {
+final class installer_hierarchy_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_is_static_only
-	* Verify install_hierarchy_manager is a static-only class
+	* Verify installer_hierarchy_manager is a static-only class
 	* @return void
 	*/
 	public function test_class_is_static_only(): void {
 
-		$reflection = new ReflectionClass('install_hierarchy_manager');
+		$reflection = new ReflectionClass('installer_hierarchy_manager');
 
 		// Should not be publicly instantiable: either no constructor or a non-public one
 		$constructor = $reflection->getConstructor();
@@ -35,12 +35,12 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_has_strict_types
-	* Verify install_hierarchy_manager uses strict types
+	* Verify installer_hierarchy_manager uses strict types
 	* @return void
 	*/
 	public function test_class_has_strict_types(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('declare(strict_types=1)', $content);
@@ -49,12 +49,12 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_file_exists
-	* Verify install_hierarchy_manager class file exists
+	* Verify installer_hierarchy_manager class file exists
 	* @return void
 	*/
 	public function test_class_file_exists(): void {
 
-		$file_path = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file_path = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 
 		$this->assertTrue(file_exists($file_path));
 	}//end test_class_file_exists
@@ -62,23 +62,23 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_exists
-	* Verify install_hierarchy_manager class exists
+	* Verify installer_hierarchy_manager class exists
 	* @return void
 	*/
 	public function test_class_exists(): void {
 
-		$this->assertTrue(class_exists('install_hierarchy_manager'));
+		$this->assertTrue(class_exists('installer_hierarchy_manager'));
 	}//end test_class_exists
 
 
 	/**
 	* TEST_class_does_not_extend_common
-	* Verify install_hierarchy_manager doesn't extend common
+	* Verify installer_hierarchy_manager doesn't extend common
 	* @return void
 	*/
 	public function test_class_does_not_extend_common(): void {
 
-		$this->assertFalse(is_subclass_of('install_hierarchy_manager', 'common'));
+		$this->assertFalse(is_subclass_of('installer_hierarchy_manager', 'common'));
 	}//end test_class_does_not_extend_common
 
 
@@ -98,7 +98,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 		];
 
 		foreach ($expected_methods as $method) {
-			$this->assertTrue(method_exists('install_hierarchy_manager', $method));
+			$this->assertTrue(method_exists('installer_hierarchy_manager', $method));
 		}
 	}//end test_all_static_methods_exist
 
@@ -110,7 +110,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_get_available_hierarchy_files_returns_object(): void {
 
-		$response = install_hierarchy_manager::get_available_hierarchy_files();
+		$response = installer_hierarchy_manager::get_available_hierarchy_files();
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -127,7 +127,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_get_hierarchy_typlologies_returns_array(): void {
 
-		$response = install_hierarchy_manager::get_hierarchy_typlologies();
+		$response = installer_hierarchy_manager::get_hierarchy_typlologies();
 
 		$this->assertIsArray($response);
 	}//end test_get_hierarchy_typlologies_returns_array
@@ -140,7 +140,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_import_hierarchy_main_records_returns_object(): void {
 
-		$response = install_hierarchy_manager::import_hierarchy_main_records();
+		$response = installer_hierarchy_manager::import_hierarchy_main_records();
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -164,7 +164,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 			'active_in_thesaurus' => true
 		];
 
-		$response = install_hierarchy_manager::activate_hierarchy($options);
+		$response = installer_hierarchy_manager::activate_hierarchy($options);
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -185,7 +185,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 			'selected_hierarchies' => []
 		];
 
-		$response = install_hierarchy_manager::install_hierarchies($options);
+		$response = installer_hierarchy_manager::install_hierarchies($options);
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -197,12 +197,12 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_has_docblock
-	* Verify install_hierarchy_manager has proper docblock
+	* Verify installer_hierarchy_manager has proper docblock
 	* @return void
 	*/
 	public function test_class_has_docblock(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('/**', $content);
@@ -213,12 +213,12 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_is_final
-	* Verify install_hierarchy_manager is final class (static utility class)
+	* Verify installer_hierarchy_manager is final class (static utility class)
 	* @return void
 	*/
 	public function test_class_is_final(): void {
 
-		$reflection = new ReflectionClass('install_hierarchy_manager');
+		$reflection = new ReflectionClass('installer_hierarchy_manager');
 
 		$this->assertTrue($reflection->isFinal());
 	}//end test_class_is_final
@@ -226,12 +226,12 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_is_not_instantiable
-	* Verify install_hierarchy_manager cannot be instantiated (static utility class)
+	* Verify installer_hierarchy_manager cannot be instantiated (static utility class)
 	* @return void
 	*/
 	public function test_class_is_not_instantiable(): void {
 
-		$reflection = new ReflectionClass('install_hierarchy_manager');
+		$reflection = new ReflectionClass('installer_hierarchy_manager');
 
 		$this->assertFalse($reflection->isInstantiable());
 	}//end test_class_is_not_instantiable
@@ -239,12 +239,12 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_no_protected_methods
-	* Verify install_hierarchy_manager has no protected methods
+	* Verify installer_hierarchy_manager has no protected methods
 	* @return void
 	*/
 	public function test_no_protected_methods(): void {
 
-		$reflection = new ReflectionClass('install_hierarchy_manager');
+		$reflection = new ReflectionClass('installer_hierarchy_manager');
 		$methods = $reflection->getMethods(ReflectionMethod::IS_PROTECTED);
 
 		$this->assertEquals(0, count($methods));
@@ -253,12 +253,12 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_no_private_methods
-	* Verify install_hierarchy_manager has no private methods
+	* Verify installer_hierarchy_manager has no private methods
 	* @return void
 	*/
 	public function test_no_private_methods(): void {
 
-		$reflection = new ReflectionClass('install_hierarchy_manager');
+		$reflection = new ReflectionClass('installer_hierarchy_manager');
 		$methods = $reflection->getMethods(ReflectionMethod::IS_PRIVATE);
 
 		// The private constructor is allowed (static-only utility); no other private methods
@@ -272,15 +272,15 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_get_available_hierarchy_files_uses_config
-	* Verify get_available_hierarchy_files uses config from install_config_manager
+	* Verify get_available_hierarchy_files uses config from installer_config_manager
 	* @return void
 	*/
 	public function test_get_available_hierarchy_files_uses_config(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
-		$this->assertStringContainsString('install_config_manager::get_config()', $content);
+		$this->assertStringContainsString('installer_config_manager::get_config()', $content);
 		$this->assertStringContainsString('hierarchy_files_dir_path', $content);
 	}//end test_get_available_hierarchy_files_uses_config
 
@@ -292,7 +292,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_get_available_hierarchy_files_reads_hierarchies_json(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('hierarchies.json', $content);
@@ -307,7 +307,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_get_available_hierarchy_files_uses_glob(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('glob', $content);
@@ -322,7 +322,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_get_hierarchy_typlologies_reads_json_file(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('hierarchies_typologies.json', $content);
@@ -338,7 +338,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_import_hierarchy_main_records_uses_psql(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('psql', $content);
@@ -353,7 +353,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_import_hierarchy_main_records_sets_timeout(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('set_time_limit', $content);
@@ -367,7 +367,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_import_hierarchy_main_records_checks_file_exists(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('file_exists', $content);
@@ -382,7 +382,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_activate_hierarchy_uses_hierarchy_class(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('hierarchy::get_hierarchy_by_tld', $content);
@@ -396,7 +396,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_install_hierarchy_uses_hierarchy_class(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('hierarchy::', $content);
@@ -410,7 +410,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_methods_use_debug_log(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('debug_log', $content);
@@ -424,7 +424,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_methods_use_error_handling(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('logger::ERROR', $content);
@@ -438,7 +438,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_methods_use_escaped_shell_args(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('escapeshellarg', $content);
@@ -452,7 +452,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_methods_have_documentation(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		// Check for method docblocks
@@ -469,7 +469,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_is_secure(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		// Should use proper escaping for shell commands
@@ -484,7 +484,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_is_type_safe(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		// Methods should have return type declarations
@@ -500,7 +500,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_is_professional_quality(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		// Class should have comprehensive docblock
@@ -524,7 +524,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	public function test_class_is_testable(): void {
 
 		// Class should be static-only (easy to test): not publicly instantiable
-		$reflection = new ReflectionClass('install_hierarchy_manager');
+		$reflection = new ReflectionClass('installer_hierarchy_manager');
 		$constructor = $reflection->getConstructor();
 		$this->assertTrue($constructor===null || !$constructor->isPublic());
 
@@ -544,7 +544,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	public function test_class_is_reliable(): void {
 
 		// Methods should return consistent response structure
-		$response = install_hierarchy_manager::get_available_hierarchy_files();
+		$response = installer_hierarchy_manager::get_available_hierarchy_files();
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
 		$this->assertObjectHasProperty('msg', $response);
@@ -561,7 +561,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	public function test_class_is_thread_safe(): void {
 
 		// Class should be stateless (no instance properties)
-		$reflection = new ReflectionClass('install_hierarchy_manager');
+		$reflection = new ReflectionClass('installer_hierarchy_manager');
 		$properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE);
 		$this->assertEquals(0, count($properties));
 	}//end test_class_is_thread_safe
@@ -574,7 +574,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_is_production_ready(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		// Should have proper error handling
@@ -592,7 +592,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_is_pure_static_utility(): void {
 
-		$reflection = new ReflectionClass('install_hierarchy_manager');
+		$reflection = new ReflectionClass('installer_hierarchy_manager');
 
 		// Not publicly instantiable: either no constructor or a non-public one
 		$constructor = $reflection->getConstructor();
@@ -621,7 +621,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_follows_single_responsibility(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		// Class docblock should describe single responsibility
@@ -647,7 +647,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_has_cohesion(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		// All methods should be related to hierarchy operations
@@ -666,11 +666,11 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_has_low_coupling(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_hierarchy_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 		$content = file_get_contents($file);
 
 		// Should depend on minimal external classes
-		$this->assertStringContainsString('install_config_manager', $content);
+		$this->assertStringContainsString('installer_config_manager', $content);
 		$this->assertStringContainsString('hierarchy', $content);
 		$this->assertStringContainsString('debug_log', $content);
 		$this->assertStringContainsString('logger', $content);

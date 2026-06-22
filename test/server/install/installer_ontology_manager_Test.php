@@ -3,19 +3,19 @@
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 // Include manager class
-require_once DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+require_once DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 
 
-final class install_ontology_manager_Test extends BaseTestCase {
+final class installer_ontology_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_is_static_only
-	* Verify install_ontology_manager is a static-only class
+	* Verify installer_ontology_manager is a static-only class
 	* @return void
 	*/
 	public function test_class_is_static_only(): void {
 
-		$reflection = new ReflectionClass('install_ontology_manager');
+		$reflection = new ReflectionClass('installer_ontology_manager');
 
 		// Constructor must not be public (private constructor is allowed for static-only classes)
 		$c = $reflection->getConstructor();
@@ -35,12 +35,12 @@ final class install_ontology_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_has_strict_types
-	* Verify install_ontology_manager uses strict types
+	* Verify installer_ontology_manager uses strict types
 	* @return void
 	*/
 	public function test_class_has_strict_types(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('declare(strict_types=1)', $content);
@@ -49,12 +49,12 @@ final class install_ontology_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_file_exists
-	* Verify install_ontology_manager class file exists
+	* Verify installer_ontology_manager class file exists
 	* @return void
 	*/
 	public function test_class_file_exists(): void {
 
-		$file_path = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file_path = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 
 		$this->assertTrue(file_exists($file_path));
 	}//end test_class_file_exists
@@ -62,23 +62,23 @@ final class install_ontology_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_exists
-	* Verify install_ontology_manager class exists
+	* Verify installer_ontology_manager class exists
 	* @return void
 	*/
 	public function test_class_exists(): void {
 
-		$this->assertTrue(class_exists('install_ontology_manager'));
+		$this->assertTrue(class_exists('installer_ontology_manager'));
 	}//end test_class_exists
 
 
 	/**
 	* TEST_class_does_not_extend_common
-	* Verify install_ontology_manager doesn't extend common
+	* Verify installer_ontology_manager doesn't extend common
 	* @return void
 	*/
 	public function test_class_does_not_extend_common(): void {
 
-		$this->assertFalse(is_subclass_of('install_ontology_manager', 'common'));
+		$this->assertFalse(is_subclass_of('installer_ontology_manager', 'common'));
 	}//end test_class_does_not_extend_common
 
 
@@ -97,7 +97,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 		];
 
 		foreach ($expected_methods as $method) {
-			$this->assertTrue(method_exists('install_ontology_manager', $method));
+			$this->assertTrue(method_exists('installer_ontology_manager', $method));
 		}
 	}//end test_all_static_methods_exist
 
@@ -109,7 +109,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_clean_ontology_returns_object(): void {
 
-		$response = install_ontology_manager::clean_ontology();
+		$response = installer_ontology_manager::clean_ontology();
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -126,7 +126,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_build_recovery_version_file_returns_object(): void {
 
-		$response = install_ontology_manager::build_recovery_version_file();
+		$response = installer_ontology_manager::build_recovery_version_file();
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -143,7 +143,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_restore_dd_ontology_recovery_from_file_returns_object(): void {
 
-		$response = install_ontology_manager::restore_dd_ontology_recovery_from_file();
+		$response = installer_ontology_manager::restore_dd_ontology_recovery_from_file();
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -160,7 +160,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_build_install_db_file_returns_object(): void {
 
-		$response = install_ontology_manager::build_install_db_file();
+		$response = installer_ontology_manager::build_install_db_file();
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -172,12 +172,12 @@ final class install_ontology_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_has_docblock
-	* Verify install_ontology_manager has proper docblock
+	* Verify installer_ontology_manager has proper docblock
 	* @return void
 	*/
 	public function test_class_has_docblock(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('/**', $content);
@@ -188,12 +188,12 @@ final class install_ontology_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_is_final
-	* Verify install_ontology_manager is final class (static utility class)
+	* Verify installer_ontology_manager is final class (static utility class)
 	* @return void
 	*/
 	public function test_class_is_final(): void {
 
-		$reflection = new ReflectionClass('install_ontology_manager');
+		$reflection = new ReflectionClass('installer_ontology_manager');
 
 		$this->assertTrue($reflection->isFinal());
 	}//end test_class_is_final
@@ -201,12 +201,12 @@ final class install_ontology_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_is_not_instantiable
-	* Verify install_ontology_manager cannot be instantiated (static utility class)
+	* Verify installer_ontology_manager cannot be instantiated (static utility class)
 	* @return void
 	*/
 	public function test_class_is_not_instantiable(): void {
 
-		$reflection = new ReflectionClass('install_ontology_manager');
+		$reflection = new ReflectionClass('installer_ontology_manager');
 
 		$this->assertFalse($reflection->isInstantiable());
 	}//end test_class_is_not_instantiable
@@ -214,12 +214,12 @@ final class install_ontology_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_no_protected_methods
-	* Verify install_ontology_manager has no protected methods
+	* Verify installer_ontology_manager has no protected methods
 	* @return void
 	*/
 	public function test_no_protected_methods(): void {
 
-		$reflection = new ReflectionClass('install_ontology_manager');
+		$reflection = new ReflectionClass('installer_ontology_manager');
 		$methods = $reflection->getMethods(ReflectionMethod::IS_PROTECTED);
 
 		$this->assertEquals(0, count($methods));
@@ -228,12 +228,12 @@ final class install_ontology_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_no_private_methods
-	* Verify install_ontology_manager has no private methods
+	* Verify installer_ontology_manager has no private methods
 	* @return void
 	*/
 	public function test_no_private_methods(): void {
 
-		$reflection = new ReflectionClass('install_ontology_manager');
+		$reflection = new ReflectionClass('installer_ontology_manager');
 		// Exclude the private constructor (allowed for static-only classes);
 		// there must be no other private methods.
 		$methods = array_filter(
@@ -249,15 +249,15 @@ final class install_ontology_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_clean_ontology_uses_config
-	* Verify clean_ontology uses config from install_config_manager
+	* Verify clean_ontology uses config from installer_config_manager
 	* @return void
 	*/
 	public function test_clean_ontology_uses_config(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
-		$this->assertStringContainsString('install_config_manager::get_config()', $content);
+		$this->assertStringContainsString('installer_config_manager::get_config()', $content);
 		$this->assertStringContainsString('to_preserve_tld', $content);
 	}//end test_clean_ontology_uses_config
 
@@ -269,7 +269,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_clean_ontology_uses_pg_query(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('pg_query', $content);
@@ -283,7 +283,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_clean_ontology_deletes_from_dd_ontology(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		// The DELETE statement is built as a multi-line SQL string, so assert
@@ -301,7 +301,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_clean_ontology_deletes_from_matrix_descriptors_dd(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		// The matrix_descriptors_dd deletion is gated by a table-exists check and
@@ -319,7 +319,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_clean_ontology_reindexes_tables(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('REINDEX TABLE "dd_ontology"', $content);
@@ -334,7 +334,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_build_recovery_version_file_creates_dd_ontology_recovery(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('CREATE TABLE "dd_ontology_recovery"', $content);
@@ -349,7 +349,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_build_recovery_version_file_uses_pg_dump(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('pg_dump', $content);
@@ -363,7 +363,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_build_recovery_version_file_uses_gzip(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('gzip', $content);
@@ -378,7 +378,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_restore_dd_ontology_recovery_from_file_uses_gunzip(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('gunzip', $content);
@@ -393,7 +393,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_restore_dd_ontology_recovery_from_file_checks_file_exists(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('file_exists', $content);
@@ -408,7 +408,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_build_install_db_file_uses_pg_dump(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('pg_dump', $content);
@@ -422,7 +422,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_build_install_db_file_uses_gzip(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('gzip', $content);
@@ -436,7 +436,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_methods_use_debug_log(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('debug_log', $content);
@@ -450,7 +450,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_methods_use_error_handling(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('pg_last_error', $content);
@@ -465,7 +465,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_methods_use_escaped_shell_args(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('escapeshellarg', $content);
@@ -479,7 +479,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_methods_have_documentation(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		// Check for method docblocks
@@ -495,7 +495,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_database_operations_use_DBi(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('DBi::_getConnection', $content);
@@ -510,7 +510,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_is_secure(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		// Should use proper escaping for shell commands
@@ -525,7 +525,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_is_type_safe(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		// Methods should have return type declarations
@@ -540,7 +540,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_is_professional_quality(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		// Class should have comprehensive docblock
@@ -564,7 +564,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	public function test_class_is_testable(): void {
 
 		// Class should be static-only (easy to test): constructor must not be public
-		$reflection = new ReflectionClass('install_ontology_manager');
+		$reflection = new ReflectionClass('installer_ontology_manager');
 		$c = $reflection->getConstructor();
 		$this->assertTrue($c===null || !$c->isPublic());
 
@@ -584,7 +584,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	public function test_class_is_reliable(): void {
 
 		// Methods should return consistent response structure
-		$response = install_ontology_manager::clean_ontology();
+		$response = installer_ontology_manager::clean_ontology();
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
 		$this->assertObjectHasProperty('msg', $response);
@@ -601,7 +601,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	public function test_class_is_thread_safe(): void {
 
 		// Class should be stateless (no instance properties)
-		$reflection = new ReflectionClass('install_ontology_manager');
+		$reflection = new ReflectionClass('installer_ontology_manager');
 		$properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE);
 		$this->assertEquals(0, count($properties));
 	}//end test_class_is_thread_safe
@@ -614,7 +614,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_is_production_ready(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		// Should have proper error handling
@@ -633,7 +633,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_is_pure_static_utility(): void {
 
-		$reflection = new ReflectionClass('install_ontology_manager');
+		$reflection = new ReflectionClass('installer_ontology_manager');
 
 		// No public constructor (private constructor enforces static-only usage)
 		$c = $reflection->getConstructor();
@@ -662,7 +662,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_follows_single_responsibility(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		// Class docblock should describe its single responsibility: ontology-level
@@ -686,7 +686,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_has_cohesion(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		// All methods should be related to ontology operations
@@ -703,11 +703,11 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_has_low_coupling(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_ontology_manager.php';
 		$content = file_get_contents($file);
 
 		// Should depend on minimal external classes
-		$this->assertStringContainsString('install_config_manager', $content);
+		$this->assertStringContainsString('installer_config_manager', $content);
 		$this->assertStringContainsString('DBi', $content);
 		$this->assertStringContainsString('debug_log', $content);
 		$this->assertStringContainsString('logger', $content);

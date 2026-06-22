@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-include_once __DIR__ . '/class.install_config_manager.php';
+include_once __DIR__ . '/class.installer_config_manager.php';
 
 /**
 * CLASS INSTALL_DATABASE_MANAGER
@@ -24,13 +24,13 @@ include_once __DIR__ . '/class.install_config_manager.php';
 * Callers must check `$response->result === true` before continuing.
 *
 * Relationships:
-* - Depends on `install_config_manager::get_config()` for resolved path, connection,
+* - Depends on `installer_config_manager::get_config()` for resolved path, connection,
 *   and whitelist values (never hardcodes these itself).
-* - Depends on `install_config_manager::get_db_install_conn()` for a live
+* - Depends on `installer_config_manager::get_db_install_conn()` for a live
 *   PgSql\Connection to the install (target) database.
 * - Calls `DBi::_getConnection()`, `DBi::_getNewConnection()`, and
 *   `DBi::invalidate_connection_cache()` from `core/db/class.DBi.php`.
-* - Called by `class.install.php` and the install JSON API handler.
+* - Called by `class.installer.php` and the install JSON API handler.
 *
 * Security note (SEC-041): every value interpolated into shell commands is
 * run through `escapeshellarg()`. Constants from `config/config.php` are
@@ -39,7 +39,7 @@ include_once __DIR__ . '/class.install_config_manager.php';
 * @package Dédalo
 * @subpackage Install
 */
-final class install_database_manager {
+final class installer_database_manager {
 
 	/**
 	* Private constructor to prevent instantiation (static utility class)
@@ -110,7 +110,7 @@ final class install_database_manager {
 	* diagnoses the probable cause — an empty/incorrect DEDALO_PASSWORD_CONN — and returns an
 	* error with diagnostic detail about the PHP process owner, home directory and DB host.
 	*
-	* Paths are resolved from `install_config_manager::get_config()`:
+	* Paths are resolved from `installer_config_manager::get_config()`:
 	* - `$config->target_file_path_compress` — the .gz source file
 	* - `$config->target_file_path`          — the uncompressed target (temporary)
 	*
@@ -126,7 +126,7 @@ final class install_database_manager {
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		// short vars
-			$config						= install_config_manager::get_config();
+			$config						= installer_config_manager::get_config();
 			$target_file_path_compress	= $config->target_file_path_compress;
 			$uncompressed_file			= $config->target_file_path;
 			// $exec: dev-time guard; kept always-true so future dry-run debugging
@@ -284,7 +284,7 @@ final class install_database_manager {
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		// short vars
-			$config	= install_config_manager::get_config();
+			$config	= installer_config_manager::get_config();
 			$exec	= true;
 
 		// new db connection
@@ -557,7 +557,7 @@ final class install_database_manager {
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		// short vars
-			$config	 = install_config_manager::get_config();
+			$config	 = installer_config_manager::get_config();
 			$exec	 = true;
 			$db_conn = DBi::_getConnection();
 
@@ -699,7 +699,7 @@ final class install_database_manager {
 			// would only be deleted again by clean_tables). This turns clone cost from
 			// O(production size) into ~O(install size). Each identifier is validated against
 			// the safe-identifier regex and shell-quoted (SEC-041 defence-in-depth) — the
-			// list comes from install_config_manager (deployer-controlled), not HTTP input.
+			// list comes from installer_config_manager (deployer-controlled), not HTTP input.
 				$exclude_data_flags = '';
 				foreach ($exclude_data_tables as $t) {
 					if (!is_string($t) || !preg_match('/^[a-z_][a-z0-9_$]*$/', $t)) {
@@ -796,7 +796,7 @@ final class install_database_manager {
 	*   psql <source>  -c "\copy (SELECT * FROM matrix_ontology WHERE section_tipo IN (...)) TO STDOUT"
 	*     | psql <install> -c "\copy matrix_ontology FROM STDIN"
 	* authenticated with PGPASSWORD (DBi::pg_exec) so source and install may be REMOTE. The
-	* preserved section_tipo roots derive from install_config_manager::get_config()->to_preserve_tld
+	* preserved section_tipo roots derive from installer_config_manager::get_config()->to_preserve_tld
 	* — the same single source of truth clean_tables() uses for its matrix_ontology pruning.
 	*
 	* Reliability: a shell pipe reports only the LAST stage's exit code, so a source-side failure
@@ -811,7 +811,7 @@ final class install_database_manager {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 
-		$config	= install_config_manager::get_config();
+		$config	= installer_config_manager::get_config();
 		$exec	= true;
 
 		// preserved section_tipo roots ('<tld>0'). SEC: config-derived; validate each against
@@ -865,7 +865,7 @@ final class install_database_manager {
 				}
 
 				// verify loaded count == source filtered count (pipe reports only last stage)
-				$install_conn = install_config_manager::get_db_install_conn();
+				$install_conn = installer_config_manager::get_db_install_conn();
 				if ($install_conn!==false && $expected!==null) {
 					$vr		= pg_query($install_conn, 'SELECT count(*) AS n FROM "matrix_ontology";');
 					$actual	= ($vr!==false) ? (int)(pg_fetch_assoc($vr)['n'] ?? -1) : -1;
@@ -916,8 +916,8 @@ final class install_database_manager {
 			$response->msg 		= 'Error. Request failed '.__METHOD__;
 
 		// short vars
-			$config				= install_config_manager::get_config();
-			$db_install_conn	= install_config_manager::get_db_install_conn();
+			$config				= installer_config_manager::get_config();
+			$db_install_conn	= installer_config_manager::get_db_install_conn();
 			$to_preserve_tld	= $config->to_preserve_tld;
 			$exec				= true;
 
@@ -1011,7 +1011,7 @@ final class install_database_manager {
 			$response->errors	= [];
 
 		// short vars
-			$config				= install_config_manager::get_config();
+			$config				= installer_config_manager::get_config();
 			$to_clean_tables	= $config->to_clean_tables;
 			$valid_tables		= $config->valid_tables;
 			$exec				= true;
@@ -1026,7 +1026,7 @@ final class install_database_manager {
 			}
 
 		// validate connection
-			$db_install_conn = install_config_manager::get_db_install_conn();
+			$db_install_conn = installer_config_manager::get_db_install_conn();
 			if ($db_install_conn === false) {
 				$msg = 'Error: Failed to get install database connection';
 				debug_log(__METHOD__.$msg, logger::ERROR);
@@ -1176,7 +1176,7 @@ final class install_database_manager {
 	*                 (f_unaccent(string::text) gin_trgm_ops)`).
 	*
 	* This method targets the *install* database connection returned by
-	* `install_config_manager::get_db_install_conn()`, not the production DB.
+	* `installer_config_manager::get_db_install_conn()`, not the production DB.
 	* It must be called after the target database has been created (either by
 	* `clone_database` / `clone_database_dump` or by `install_db_from_default_file`).
 	*
@@ -1189,7 +1189,7 @@ final class install_database_manager {
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		// short vars
-			$db_install_conn	= install_config_manager::get_db_install_conn();
+			$db_install_conn	= installer_config_manager::get_db_install_conn();
 
 		$sql = '
 			CREATE EXTENSION IF NOT EXISTS unaccent;
@@ -1217,4 +1217,4 @@ final class install_database_manager {
 		return $response;
 	}//end create_extensions
 
-}//end class install_database_manager
+}//end class installer_database_manager

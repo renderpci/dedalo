@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
-require_once __DIR__ . '/class.install_config_persistor.php';
-require_once __DIR__ . '/class.install_secret.php';
+require_once __DIR__ . '/class.installer_config_persistor.php';
+require_once __DIR__ . '/class.installer_secret.php';
 require_once dirname(__DIR__) . '/base/boot/class.env_loader.php';
 
 /**
@@ -15,7 +15,7 @@ require_once dirname(__DIR__) . '/base/boot/class.env_loader.php';
 *   - the MariaDB/diffusion subset (+ shared token)                   → diffusion/api/v1/.env
 * build_artifacts() is pure (content strings only); persist() is the thin disk-commit wrapper.
 */
-final class install_setup_manager {
+final class installer_setup_manager {
 
 	/**
 	* BUILD_ARTIFACTS
@@ -56,53 +56,53 @@ final class install_setup_manager {
 			? $existing_env['DEDALO_SALT_STRING']
 			: null;
 		if ($salt === null) {
-			$salt = install_secret::generate_token(32);
+			$salt = installer_secret::generate_token(32);
 			$generated['DEDALO_SALT_STRING'] = $salt;
 		}
 		$env_values['DEDALO_SALT_STRING'] = $salt;
 
-		// --- diffusion (optional): mysql config + shared internal token, dual-written ---
+		// --- diffusion (optional): MariaDB is Bun-ONLY — written to the Bun .env, NEVER the PHP
+		//     .env. Only the shared internal token is dual-written (PHP also uses it for the
+		//     server-to-server diffusion calls). ---
 		$env_bun = null;
 		if ($diffusion === true) {
-			$env_values['MYSQL_DEDALO_HOSTNAME_CONN'] = $submitted->mysql_hostname ?? 'localhost';
-			$env_values['MYSQL_DEDALO_DB_PORT_CONN']  = $submitted->mysql_port ?? 3306;
-			$env_values['MYSQL_DEDALO_USERNAME_CONN'] = $submitted->mysql_username ?? null;
-			$env_values['MYSQL_DEDALO_PASSWORD_CONN'] = $submitted->mysql_password ?? null;
-			$env_values['MYSQL_DEDALO_DATABASE_CONN'] = $submitted->mysql_database ?? null;
-			$env_values['MYSQL_DEDALO_SOCKET_CONN']   = $submitted->mysql_socket ?? null;
+			$mysql_socket = $submitted->mysql_socket ?? null;
 
 			$token = (isset($existing_env['DEDALO_DIFFUSION_INTERNAL_TOKEN']) && $existing_env['DEDALO_DIFFUSION_INTERNAL_TOKEN'] !== '')
 				? $existing_env['DEDALO_DIFFUSION_INTERNAL_TOKEN']
 				: null;
 			if ($token === null) {
-				$token = install_secret::generate_token(32);
+				$token = installer_secret::generate_token(32);
 				$generated['DEDALO_DIFFUSION_INTERNAL_TOKEN'] = $token;
 			}
-			$env_values['DEDALO_DIFFUSION_INTERNAL_TOKEN'] = $token;
+			$env_values['DEDALO_DIFFUSION_INTERNAL_TOKEN'] = $token; // shared → also the PHP .env
 
+			// Bun .env: MariaDB creds (translated to DB_* via env_sync::BUN_DB_MAP) + the shared
+			// token. Keyed here by the legacy MYSQL_DEDALO_* names purely as the BUN_DB_MAP lookup;
+			// these names are NOT written to the PHP side.
 			$bun_values = [
-				'MYSQL_DEDALO_HOSTNAME_CONN'      => $env_values['MYSQL_DEDALO_HOSTNAME_CONN'],
-				'MYSQL_DEDALO_DB_PORT_CONN'       => $env_values['MYSQL_DEDALO_DB_PORT_CONN'],
-				'MYSQL_DEDALO_USERNAME_CONN'      => $env_values['MYSQL_DEDALO_USERNAME_CONN'],
-				'MYSQL_DEDALO_PASSWORD_CONN'      => $env_values['MYSQL_DEDALO_PASSWORD_CONN'],
-				'MYSQL_DEDALO_DATABASE_CONN'      => $env_values['MYSQL_DEDALO_DATABASE_CONN'],
+				'MYSQL_DEDALO_HOSTNAME_CONN'      => $submitted->mysql_hostname ?? 'localhost',
+				'MYSQL_DEDALO_DB_PORT_CONN'       => $submitted->mysql_port ?? 3306,
+				'MYSQL_DEDALO_USERNAME_CONN'      => $submitted->mysql_username ?? null,
+				'MYSQL_DEDALO_PASSWORD_CONN'      => $submitted->mysql_password ?? null,
+				'MYSQL_DEDALO_DATABASE_CONN'      => $submitted->mysql_database ?? null,
 				'DEDALO_DIFFUSION_INTERNAL_TOKEN' => $token,
 			];
 			// MariaDB transport for the Bun engine:
-			//  - socket provided → DB_SOCKET (env_sync::MAP); db_config.ts treats any non-empty
-			//    DB_SOCKET as the transport, so we omit the key entirely when there is no socket.
+			//  - socket provided → DB_SOCKET; db_config.ts treats any non-empty DB_SOCKET as the
+			//    transport, so we omit the key entirely when there is no socket.
 			//  - no socket → DB_FORCE_TCP=1 so Bun uses DB_HOST/DB_PORT instead of silently falling
 			//    back to its default /tmp/mysql.sock and ignoring the host/port we wrote.
 			// NOTE: this is the DB connection socket — distinct from DEDALO_DIFFUSION_SOCKET_PATH
 			// (the Bun HTTP listen socket), which maps separately to SOCKET_PATH.
 			$bun_extra = [];
-			if (!empty($env_values['MYSQL_DEDALO_SOCKET_CONN'])) {
-				$bun_values['MYSQL_DEDALO_SOCKET_CONN'] = $env_values['MYSQL_DEDALO_SOCKET_CONN'];
+			if (!empty($mysql_socket)) {
+				$bun_values['MYSQL_DEDALO_SOCKET_CONN'] = $mysql_socket;
 			} else {
 				$bun_extra['DB_FORCE_TCP'] = '1';
 			}
 
-			$env_bun = install_config_persistor::render_bun($bun_values, $bun_extra);
+			$env_bun = installer_config_persistor::render_bun($bun_values, $bun_extra);
 		}
 
 		// --- ../private/state.php : install fingerprints (STATE scope, by dot-path) ---
@@ -112,9 +112,9 @@ final class install_setup_manager {
 		];
 
 		return (object)[
-			'env_php'   => install_config_persistor::render_env($existing_env, $env_values),
+			'env_php'   => installer_config_persistor::render_env($existing_env, $env_values),
 			'env_bun'   => $env_bun,
-			'state_php' => install_config_persistor::render_state($existing_state, $state_values),
+			'state_php' => installer_config_persistor::render_state($existing_state, $state_values),
 			'generated' => $generated,
 		];
 	}//end build_artifacts

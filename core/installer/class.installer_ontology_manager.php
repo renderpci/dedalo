@@ -8,7 +8,7 @@
 * Responsibilities:
 * - Strip dd_ontology (and the optional matrix_descriptors_dd table) of every
 *   row whose top-level-domain (TLD) is not on the preservation whitelist
-*   (`install_config_manager::get_config()->to_preserve_tld`).  This produces
+*   (`installer_config_manager::get_config()->to_preserve_tld`).  This produces
 *   the lean "install edition" ontology that ships with new Dédalo instances.
 * - Export the preserved core/resources ontology rows to a compressed pg_dump
 *   file (dd_ontology_recovery.sql.gz) via a temp table so the live table is
@@ -23,13 +23,13 @@
 * Callers must check `$response->result === true` before proceeding.
 *
 * Relationships:
-* - Depends on `install_config_manager::get_config()` for the TLD whitelist,
+* - Depends on `installer_config_manager::get_config()` for the TLD whitelist,
 *   resolved file paths, and connection parameters (never hardcodes them).
-* - Depends on `install_config_manager::get_db_install_conn()` for a
+* - Depends on `installer_config_manager::get_db_install_conn()` for a
 *   `PgSql\Connection` pointing at the install target database.
 * - Uses `DBi::_getConnection()` (shared production connection) for operations
 *   on the live database.
-* - Called exclusively through `class.install.php`, which exposes a thin
+* - Called exclusively through `class.installer.php`, which exposes a thin
 *   delegation facade for each method.
 * - Calls `diffusion_utils::delete_section_map_cache_file()` after ontology
 *   cleanup to keep the diffusion section-map cache coherent.
@@ -42,7 +42,7 @@
 * @package Dédalo
 * @subpackage Install
 */
-final class install_ontology_manager {
+final class installer_ontology_manager {
 
 	/**
 	* CONSTRUCTOR
@@ -56,7 +56,7 @@ final class install_ontology_manager {
 	* Removes non-preserved rows from dd_ontology and (if it exists)
 	* matrix_descriptors_dd, then REINDEXes both tables.
 	*
-	* Preservation is controlled by `install_config_manager::get_config()->to_preserve_tld`
+	* Preservation is controlled by `installer_config_manager::get_config()->to_preserve_tld`
 	* (e.g. 'dd', 'rsc', 'lg', 'hierarchy', 'ontology', 'ontologytype').  Any
 	* row whose `tld` column is not in that list is deleted from dd_ontology.
 	* For matrix_descriptors_dd the check is on the `parent` column using a
@@ -79,8 +79,8 @@ final class install_ontology_manager {
 			$response->msg 		= 'Error. Request failed '.__METHOD__;
 
 		// short vars
-			$config				= install_config_manager::get_config();
-			$db_install_conn	= install_config_manager::get_db_install_conn();
+			$config				= installer_config_manager::get_config();
+			$db_install_conn	= installer_config_manager::get_db_install_conn();
 			$exec				= true;
 
 		// clean dd_ontology
@@ -242,7 +242,7 @@ final class install_ontology_manager {
 
 		// export to file
 			// terminal command pg_dump
-			$config		= install_config_manager::get_config();
+			$config		= installer_config_manager::get_config();
 			$sql_file	= DEDALO_ROOT_PATH . '/install/db/dd_ontology_recovery.sql.gz';
 			// SEC-041 defence-in-depth.
 			// Dump only the temp table (-t dd_ontology_recovery) and pipe directly
@@ -258,7 +258,7 @@ final class install_ontology_manager {
 			);
 
 			// pg_shell_exec authenticates via PGPASSWORD (no ~/.pgpass), so the DB may be remote.
-			$command_res = install_config_manager::pg_shell_exec($command);
+			$command_res = installer_config_manager::pg_shell_exec($command);
 			debug_log(__METHOD__." Exec response (shell_exec) ".to_string($command_res), logger::DEBUG);
 
 		// delete temp table
@@ -316,7 +316,7 @@ final class install_ontology_manager {
 			$response->errors	= [];
 
 		// config
-			$config = install_config_manager::get_config();
+			$config = installer_config_manager::get_config();
 
 		// sql_file: dd_ontology_recovery.sql
 			$sql_file = DEDALO_ROOT_PATH . '/install/db/dd_ontology_recovery.sql.gz';
@@ -348,7 +348,7 @@ final class install_ontology_manager {
 			);
 
 			// exec command (PGPASSWORD auth via pg_shell_exec; DB may be remote)
-			$command_res = install_config_manager::pg_shell_exec($command);
+			$command_res = installer_config_manager::pg_shell_exec($command);
 
 			debug_log(__METHOD__
 				." Exec response (shell_exec) " . PHP_EOL
@@ -368,7 +368,7 @@ final class install_ontology_manager {
 	* SQL dump file that is bundled with new Dédalo instances.
 	*
 	* The target file path is resolved from
-	* `install_config_manager::get_config()->target_file_path_compress`
+	* `installer_config_manager::get_config()->target_file_path_compress`
 	* (typically DEDALO_ROOT_PATH/install/db/dedalo7_install.pgsql.gz).
 	*
 	* If the target file already exists it is renamed to a timestamped archive
@@ -394,12 +394,12 @@ final class install_ontology_manager {
 			$response->msg		= 'Error. Request failed '.__METHOD__.' ';
 
 		// short vars
-			$config						= install_config_manager::get_config();
+			$config						= installer_config_manager::get_config();
 			$exec						= true;
 			$target_file_path			= $config->target_file_path;
 			$target_file_path_compress	= $config->target_file_path_compress;
 			$db_install_name			= $config->db_install_name;
-			$db_install_conn			= install_config_manager::get_db_install_conn();
+			$db_install_conn			= installer_config_manager::get_db_install_conn();
 			// check target install database exists and connection is reliable
 			if ($db_install_conn===false) {
 				$msg = ' Error. DDBB connection error. Verify database "'.$db_install_name.'" exists and is accessible';
@@ -424,7 +424,7 @@ final class install_ontology_manager {
 			debug_log(__METHOD__." Executing terminal DB command ".to_string($command), logger::WARNING);
 			if ($exec) {
 				// pg_shell_exec authenticates via PGPASSWORD (no ~/.pgpass), so the DB may be remote.
-				$command_res = install_config_manager::pg_shell_exec($command);
+				$command_res = installer_config_manager::pg_shell_exec($command);
 				debug_log(__METHOD__." Exec response (shell_exec) ".to_string($command_res), logger::DEBUG);
 			}
 
@@ -434,4 +434,4 @@ final class install_ontology_manager {
 		return $response;
 	}//end build_install_db_file
 
-}//end class install_ontology_manager
+}//end class installer_ontology_manager

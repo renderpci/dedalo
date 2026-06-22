@@ -3,21 +3,21 @@
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 // Include manager class
-require_once DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+require_once DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 
 
-final class install_data_seeder_Test extends BaseTestCase
+final class installer_data_seeder_Test extends BaseTestCase
 {
 
 	/**
 	 * TEST_class_is_static_only
-	 * Verify install_data_seeder is a static-only class
+	 * Verify installer_data_seeder is a static-only class
 	 * @return void
 	 */
 	public function test_class_is_static_only(): void
 	{
 
-		$reflection = new ReflectionClass('install_data_seeder');
+		$reflection = new ReflectionClass('installer_data_seeder');
 
 		// Should have a private constructor to prevent instantiation
 		$constructor = $reflection->getConstructor();
@@ -38,13 +38,13 @@ final class install_data_seeder_Test extends BaseTestCase
 
 	/**
 	 * TEST_class_has_strict_types
-	 * Verify install_data_seeder uses strict types
+	 * Verify installer_data_seeder uses strict types
 	 * @return void
 	 */
 	public function test_class_has_strict_types(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('declare(strict_types=1)', $content);
@@ -53,13 +53,13 @@ final class install_data_seeder_Test extends BaseTestCase
 
 	/**
 	 * TEST_class_file_exists
-	 * Verify install_data_seeder class file exists
+	 * Verify installer_data_seeder class file exists
 	 * @return void
 	 */
 	public function test_class_file_exists(): void
 	{
 
-		$file_path = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file_path = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 
 		$this->assertTrue(file_exists($file_path));
 	}//end test_class_file_exists
@@ -67,25 +67,25 @@ final class install_data_seeder_Test extends BaseTestCase
 
 	/**
 	 * TEST_class_exists
-	 * Verify install_data_seeder class exists
+	 * Verify installer_data_seeder class exists
 	 * @return void
 	 */
 	public function test_class_exists(): void
 	{
 
-		$this->assertTrue(class_exists('install_data_seeder'));
+		$this->assertTrue(class_exists('installer_data_seeder'));
 	}//end test_class_exists
 
 
 	/**
 	 * TEST_class_does_not_extend_common
-	 * Verify install_data_seeder doesn't extend common
+	 * Verify installer_data_seeder doesn't extend common
 	 * @return void
 	 */
 	public function test_class_does_not_extend_common(): void
 	{
 
-		$this->assertFalse(is_subclass_of('install_data_seeder', 'common'));
+		$this->assertFalse(is_subclass_of('installer_data_seeder', 'common'));
 	}//end test_class_does_not_extend_common
 
 
@@ -105,7 +105,7 @@ final class install_data_seeder_Test extends BaseTestCase
 		];
 
 		foreach ($expected_methods as $method) {
-			$this->assertTrue(method_exists('install_data_seeder', $method));
+			$this->assertTrue(method_exists('installer_data_seeder', $method));
 		}
 	}//end test_all_static_methods_exist
 
@@ -118,7 +118,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_create_root_user_returns_object(): void
 	{
 
-		$response = install_data_seeder::create_root_user();
+		$response = installer_data_seeder::create_root_user();
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -136,7 +136,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_create_main_project_returns_object(): void
 	{
 
-		$response = install_data_seeder::create_main_project();
+		$response = installer_data_seeder::create_main_project();
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -154,7 +154,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_create_main_profiles_returns_object(): void
 	{
 
-		$response = install_data_seeder::create_main_profiles();
+		$response = installer_data_seeder::create_main_profiles();
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -172,7 +172,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_create_test_record_returns_object(): void
 	{
 
-		$response = install_data_seeder::create_test_record();
+		$response = installer_data_seeder::create_test_record();
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -184,13 +184,13 @@ final class install_data_seeder_Test extends BaseTestCase
 
 	/**
 	 * TEST_class_has_docblock
-	 * Verify install_data_seeder has proper docblock
+	 * Verify installer_data_seeder has proper docblock
 	 * @return void
 	 */
 	public function test_class_has_docblock(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('/**', $content);
@@ -201,13 +201,13 @@ final class install_data_seeder_Test extends BaseTestCase
 
 	/**
 	 * TEST_class_is_final
-	 * Verify install_data_seeder is final class (static utility class)
+	 * Verify installer_data_seeder is final class (static utility class)
 	 * @return void
 	 */
 	public function test_class_is_final(): void
 	{
 
-		$reflection = new ReflectionClass('install_data_seeder');
+		$reflection = new ReflectionClass('installer_data_seeder');
 
 		$this->assertTrue($reflection->isFinal());
 	}//end test_class_is_final
@@ -215,13 +215,13 @@ final class install_data_seeder_Test extends BaseTestCase
 
 	/**
 	 * TEST_class_is_not_instantiable
-	 * Verify install_data_seeder cannot be instantiated (static utility class)
+	 * Verify installer_data_seeder cannot be instantiated (static utility class)
 	 * @return void
 	 */
 	public function test_class_is_not_instantiable(): void
 	{
 
-		$reflection = new ReflectionClass('install_data_seeder');
+		$reflection = new ReflectionClass('installer_data_seeder');
 
 		$this->assertFalse($reflection->isInstantiable());
 	}//end test_class_is_not_instantiable
@@ -229,13 +229,13 @@ final class install_data_seeder_Test extends BaseTestCase
 
 	/**
 	 * TEST_no_protected_methods
-	 * Verify install_data_seeder has no protected methods
+	 * Verify installer_data_seeder has no protected methods
 	 * @return void
 	 */
 	public function test_no_protected_methods(): void
 	{
 
-		$reflection = new ReflectionClass('install_data_seeder');
+		$reflection = new ReflectionClass('installer_data_seeder');
 		$methods = $reflection->getMethods(ReflectionMethod::IS_PROTECTED);
 
 		$this->assertEquals(0, count($methods));
@@ -244,13 +244,13 @@ final class install_data_seeder_Test extends BaseTestCase
 
 	/**
 	 * TEST_no_private_methods
-	 * Verify install_data_seeder has no private methods
+	 * Verify installer_data_seeder has no private methods
 	 * @return void
 	 */
 	public function test_no_private_methods(): void
 	{
 
-		$reflection = new ReflectionClass('install_data_seeder');
+		$reflection = new ReflectionClass('installer_data_seeder');
 		$methods = $reflection->getMethods(ReflectionMethod::IS_PRIVATE);
 
 		$this->assertEquals(1, count($methods));
@@ -259,17 +259,17 @@ final class install_data_seeder_Test extends BaseTestCase
 
 	/**
 	 * TEST_create_root_user_uses_config
-	 * Verify create_root_user uses config from install_config_manager
+	 * Verify create_root_user uses config from installer_config_manager
 	 * @return void
 	 */
 	public function test_create_root_user_uses_config(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
-		$this->assertStringContainsString('install_config_manager::get_config()', $content);
-		$this->assertStringContainsString('install_config_manager::get_db_install_conn()', $content);
+		$this->assertStringContainsString('installer_config_manager::get_config()', $content);
+		$this->assertStringContainsString('installer_config_manager::get_db_install_conn()', $content);
 	}//end test_create_root_user_uses_config
 
 
@@ -281,7 +281,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_create_root_user_uses_pg_query(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('pg_query', $content);
@@ -296,7 +296,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_create_root_user_uses_v7_schema(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('data', $content);
@@ -316,7 +316,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_create_main_project_uses_v7_schema(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('data', $content);
@@ -336,7 +336,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_create_main_profiles_uses_v7_schema(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('data', $content);
@@ -356,7 +356,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_create_test_record_uses_v7_schema(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('data', $content);
@@ -376,7 +376,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_create_root_user_truncates_matrix_users(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('TRUNCATE "matrix_users"', $content);
@@ -392,7 +392,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_create_main_project_truncates_matrix_projects(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('TRUNCATE "matrix_projects"', $content);
@@ -408,7 +408,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_create_main_profiles_truncates_matrix_profiles(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('TRUNCATE "matrix_profiles"', $content);
@@ -424,7 +424,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_create_test_record_truncates_matrix_test(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		// create_test_record() builds the SQL from a $table variable set to 'matrix_test',
@@ -446,7 +446,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_methods_use_debug_log(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('debug_log', $content);
@@ -461,7 +461,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_methods_use_error_handling(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('pg_last_error', $content);
@@ -477,7 +477,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_methods_have_documentation(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		// Check for method docblocks
@@ -494,7 +494,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_class_is_secure(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		// Should use parameterized queries (no direct user input)
@@ -510,7 +510,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_class_is_type_safe(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		// Methods should have return type declarations
@@ -526,7 +526,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_class_is_professional_quality(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		// Class should have comprehensive docblock
@@ -551,7 +551,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	{
 
 		// Class should be static-only (easy to test): no constructor, or a non-public one
-		$reflection = new ReflectionClass('install_data_seeder');
+		$reflection = new ReflectionClass('installer_data_seeder');
 		$c = $reflection->getConstructor();
 		$this->assertTrue($c === null || !$c->isPublic());
 
@@ -572,7 +572,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	{
 
 		// Methods should return consistent response structure
-		$response = install_data_seeder::create_root_user();
+		$response = installer_data_seeder::create_root_user();
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
 		$this->assertObjectHasProperty('msg', $response);
@@ -590,7 +590,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	{
 
 		// Class should be stateless (no instance properties)
-		$reflection = new ReflectionClass('install_data_seeder');
+		$reflection = new ReflectionClass('installer_data_seeder');
 		$properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE);
 		$this->assertEquals(0, count($properties));
 	}//end test_class_is_thread_safe
@@ -604,7 +604,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_class_is_production_ready(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		// Should have proper error handling
@@ -621,7 +621,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_class_is_pure_static_utility(): void
 	{
 
-		$reflection = new ReflectionClass('install_data_seeder');
+		$reflection = new ReflectionClass('installer_data_seeder');
 
 		// Constructor should be private
 		$constructor = $reflection->getConstructor();
@@ -652,7 +652,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_class_follows_single_responsibility(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		// Class docblock should describe single responsibility: seeding bootstrap data
@@ -679,7 +679,7 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_class_has_cohesion(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		// All methods should be related to data seeding
@@ -699,11 +699,11 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_class_has_low_coupling(): void
 	{
 
-		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer_data_seeder.php';
 		$content = file_get_contents($file);
 
 		// Should depend on minimal external classes
-		$this->assertStringContainsString('install_config_manager', $content);
+		$this->assertStringContainsString('installer_config_manager', $content);
 		$this->assertStringContainsString('debug_log', $content);
 		$this->assertStringContainsString('logger', $content);
 	}//end test_class_has_low_coupling

@@ -18,7 +18,7 @@ require_once dirname(__DIR__) . '/base/boot/class.env_sync.php';
 * Quoting is delegated to env_value::quote so values round-trip through env_loader::parse
 * exactly as the migration writer's do.
 */
-final class install_config_persistor {
+final class installer_config_persistor {
 
 	/**
 	* RENDER_ENV
@@ -45,8 +45,9 @@ final class install_config_persistor {
 	* @return string Bun diffusion .env content (keys mapped via env_sync::MAP)
 	*/
 	public static function render_bun(array $values, array $extra = []) : string {
-		$lines = ['# Dédalo diffusion (Bun) .env — written by the installer; keys mapped via env_sync::MAP.'];
-		foreach (env_sync::MAP as $php_key => $bun_key) {
+		$lines = ['# Dédalo diffusion (Bun) .env — written by the installer; keys mapped via env_sync (MAP + BUN_DB_MAP).'];
+		// MAP = shared keys; BUN_DB_MAP = MariaDB (Bun-only) — both are written to the Bun .env.
+		foreach (array_merge(env_sync::MAP, env_sync::BUN_DB_MAP) as $php_key => $bun_key) {
 			if (!array_key_exists($php_key, $values)) {
 				continue;
 			}

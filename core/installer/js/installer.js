@@ -30,7 +30,7 @@
 * Security note: `get_install_context` runs WITHOUT a prior login; the server
 * must enforce that this action is unavailable once installation is complete.
 *
-* Exported symbols: `install` (constructor)
+* Exported symbols: `installer` (constructor)
 */
 
 
@@ -62,7 +62,7 @@
 *
 * @returns {boolean} true — constructors in this codebase conventionally return true
 */
-export const install = function() {
+export const installer = function() {
 
 	this.id
 
@@ -83,7 +83,7 @@ export const install = function() {
 	this.status
 
 	return true
-}//end install
+}//end installer
 
 
 
@@ -103,12 +103,12 @@ export const install = function() {
 * because the install wizard has a single unified view regardless of mode.
 */
 // prototypes assign
-	install.prototype.render	= common.prototype.render
-	install.prototype.install	= render_install.prototype.render
-	install.prototype.list		= render_install.prototype.render
-	install.prototype.edit		= render_install.prototype.render
-	install.prototype.destroy	= common.prototype.destroy
-	install.prototype.refresh	= common.prototype.refresh
+	installer.prototype.render	= common.prototype.render
+	installer.prototype.install	= render_install.prototype.render
+	installer.prototype.list		= render_install.prototype.render
+	installer.prototype.edit		= render_install.prototype.render
+	installer.prototype.destroy	= common.prototype.destroy
+	installer.prototype.refresh	= common.prototype.refresh
 
 
 
@@ -142,7 +142,7 @@ export const install = function() {
 * @param {Array|null} [options.datum=null] - Full datum array (normally null for install)
 * @returns {Promise<boolean>} Resolves to true on success; false if the instance was already initialized
 */
-install.prototype.init = async function(options) {
+installer.prototype.init = async function(options) {
 
 	const self = this
 
@@ -173,7 +173,7 @@ install.prototype.init = async function(options) {
 	self.data			= options.data		|| null
 	self.datum			= options.datum		|| null
 
-	self.type			= 'install'
+	self.type			= 'installer'
 	self.label			= null
 
 
@@ -214,7 +214,7 @@ install.prototype.init = async function(options) {
 * @param {boolean} [autoload=false] - When true, fetches install context from the API
 * @returns {Promise<boolean>} Resolves to true once the build phase is complete
 */
-install.prototype.build = async function(autoload=false) {
+installer.prototype.build = async function(autoload=false) {
 
 	const self = this
 

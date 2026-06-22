@@ -3,7 +3,7 @@
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
-final class install_Test extends BaseTestCase {
+final class installer_Test extends BaseTestCase {
 
 	/**
 	* TEST_class_extends_common
@@ -12,7 +12,7 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_class_extends_common(): void {
 
-		$this->assertTrue(is_subclass_of('install', 'common'));
+		$this->assertTrue(is_subclass_of('installer', 'common'));
 	}//end test_class_extends_common
 
 
@@ -23,7 +23,7 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_class_has_strict_types(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('declare(strict_types=1)', $content);
@@ -37,7 +37,7 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_class_file_exists(): void {
 
-		$file_path = DEDALO_CORE_PATH . '/install/class.install.php';
+		$file_path = DEDALO_CORE_PATH . '/installer/class.installer.php';
 
 		$this->assertTrue(file_exists($file_path));
 	}//end test_class_file_exists
@@ -50,7 +50,7 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_class_exists(): void {
 
-		$this->assertTrue(class_exists('install'));
+		$this->assertTrue(class_exists('installer'));
 	}//end test_class_exists
 
 
@@ -61,7 +61,7 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_class_has_constructor(): void {
 
-		$reflection = new ReflectionClass('install');
+		$reflection = new ReflectionClass('installer');
 
 		$this->assertNotNull($reflection->getConstructor());
 	}//end test_class_has_constructor
@@ -74,7 +74,7 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_class_is_instantiable(): void {
 
-		$reflection = new ReflectionClass('install');
+		$reflection = new ReflectionClass('installer');
 
 		$this->assertTrue($reflection->isInstantiable());
 	}//end test_class_is_instantiable
@@ -99,7 +99,7 @@ final class install_Test extends BaseTestCase {
 		];
 
 		foreach ($expected_methods as $method) {
-			$this->assertTrue(method_exists('install', $method));
+			$this->assertTrue(method_exists('installer', $method));
 		}
 	}//end test_all_facade_methods_exist
 
@@ -111,7 +111,7 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_get_config_returns_object(): void {
 
-		$config = install::get_config();
+		$config = installer::get_config();
 
 		$this->assertIsObject($config);
 	}//end test_get_config_returns_object
@@ -124,7 +124,7 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_get_db_status_returns_object(): void {
 
-		$status = install::get_db_status();
+		$status = installer::get_db_status();
 
 		$this->assertIsObject($status);
 	}//end test_get_db_status_returns_object
@@ -137,8 +137,8 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_get_db_data_version_returns_array_or_null(): void {
 
-		$install = new install();
-		$version = $install->get_db_data_version();
+		$installer = new installer();
+		$version = $installer->get_db_data_version();
 
 		$this->assertTrue(is_array($version) || is_null($version));
 	}//end test_get_db_data_version_returns_array_or_null
@@ -151,7 +151,7 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_to_update_returns_object(): void {
 
-		$response = install::to_update();
+		$response = installer::to_update();
 
 		$this->assertIsObject($response);
 	}//end test_to_update_returns_object
@@ -164,7 +164,7 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_class_has_docblock(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('/**', $content);
@@ -180,15 +180,15 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_class_includes_manager_classes(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('include_once', $content);
-		$this->assertStringContainsString('class.install_config_manager.php', $content);
-		$this->assertStringContainsString('class.install_database_manager.php', $content);
-		$this->assertStringContainsString('class.install_ontology_manager.php', $content);
-		$this->assertStringContainsString('class.install_hierarchy_manager.php', $content);
-		$this->assertStringContainsString('class.install_data_seeder.php', $content);
+		$this->assertStringContainsString('class.installer_config_manager.php', $content);
+		$this->assertStringContainsString('class.installer_database_manager.php', $content);
+		$this->assertStringContainsString('class.installer_ontology_manager.php', $content);
+		$this->assertStringContainsString('class.installer_hierarchy_manager.php', $content);
+		$this->assertStringContainsString('class.installer_data_seeder.php', $content);
 	}//end test_class_includes_manager_classes
 
 
@@ -199,42 +199,42 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_facade_delegates_to_managers(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer.php';
 		$content = file_get_contents($file);
 
-		$this->assertStringContainsString('install_config_manager::', $content);
-		$this->assertStringContainsString('install_database_manager::', $content);
-		$this->assertStringContainsString('install_ontology_manager::', $content);
-		$this->assertStringContainsString('install_hierarchy_manager::', $content);
-		$this->assertStringContainsString('install_data_seeder::', $content);
+		$this->assertStringContainsString('installer_config_manager::', $content);
+		$this->assertStringContainsString('installer_database_manager::', $content);
+		$this->assertStringContainsString('installer_ontology_manager::', $content);
+		$this->assertStringContainsString('installer_hierarchy_manager::', $content);
+		$this->assertStringContainsString('installer_data_seeder::', $content);
 	}//end test_facade_delegates_to_managers
 
 
 	/**
 	* TEST_get_config_delegates_to_config_manager
-	* Verify get_config delegates to install_config_manager
+	* Verify get_config delegates to installer_config_manager
 	* @return void
 	*/
 	public function test_get_config_delegates_to_config_manager(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer.php';
 		$content = file_get_contents($file);
 
-		$this->assertStringContainsString('install_config_manager::get_config()', $content);
+		$this->assertStringContainsString('installer_config_manager::get_config()', $content);
 	}//end test_get_config_delegates_to_config_manager
 
 
 	/**
 	* TEST_get_db_status_delegates_to_config_manager
-	* Verify get_db_status delegates to install_config_manager
+	* Verify get_db_status delegates to installer_config_manager
 	* @return void
 	*/
 	public function test_get_db_status_delegates_to_config_manager(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer.php';
 		$content = file_get_contents($file);
 
-		$this->assertStringContainsString('install_config_manager::get_db_status()', $content);
+		$this->assertStringContainsString('installer_config_manager::get_db_status()', $content);
 	}//end test_get_db_status_delegates_to_config_manager
 
 
@@ -245,15 +245,15 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_build_install_version_uses_multiple_managers(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('build_install_version', $content);
-		$this->assertStringContainsString('install_database_manager::clone_database_dump', $content);
-		$this->assertStringContainsString('install_ontology_manager::clean_ontology', $content);
-		$this->assertStringContainsString('install_database_manager::clean_counters', $content);
-		$this->assertStringContainsString('install_database_manager::clean_tables', $content);
-		$this->assertStringContainsString('install_ontology_manager::build_install_db_file', $content);
+		$this->assertStringContainsString('installer_database_manager::clone_database_dump', $content);
+		$this->assertStringContainsString('installer_ontology_manager::clean_ontology', $content);
+		$this->assertStringContainsString('installer_database_manager::clean_counters', $content);
+		$this->assertStringContainsString('installer_database_manager::clean_tables', $content);
+		$this->assertStringContainsString('installer_ontology_manager::build_install_db_file', $content);
 	}//end test_build_install_version_uses_multiple_managers
 
 
@@ -267,12 +267,12 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_get_structure_context_uses_managers(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer.php';
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('get_structure_context', $content);
-		$this->assertStringContainsString('install_config_manager::', $content);
-		$this->assertStringContainsString('install_hierarchy_manager::', $content);
+		$this->assertStringContainsString('installer_config_manager::', $content);
+		$this->assertStringContainsString('installer_hierarchy_manager::', $content);
 	}//end test_get_structure_context_uses_managers
 
 
@@ -283,18 +283,18 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_class_is_facade_pattern(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer.php';
 		$content = file_get_contents($file);
 
 		// Facade should include collaborator classes
 		$this->assertStringContainsString('include_once', $content);
 
 		// Facade should delegate to managers
-		$this->assertStringContainsString('install_config_manager::', $content);
-		$this->assertStringContainsString('install_database_manager::', $content);
-		$this->assertStringContainsString('install_ontology_manager::', $content);
-		$this->assertStringContainsString('install_hierarchy_manager::', $content);
-		$this->assertStringContainsString('install_data_seeder::', $content);
+		$this->assertStringContainsString('installer_config_manager::', $content);
+		$this->assertStringContainsString('installer_database_manager::', $content);
+		$this->assertStringContainsString('installer_ontology_manager::', $content);
+		$this->assertStringContainsString('installer_hierarchy_manager::', $content);
+		$this->assertStringContainsString('installer_data_seeder::', $content);
 	}//end test_class_is_facade_pattern
 
 
@@ -305,7 +305,7 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_class_has_static_properties(): void {
 
-		$reflection = new ReflectionClass('install');
+		$reflection = new ReflectionClass('installer');
 		$properties = $reflection->getProperties(ReflectionProperty::IS_STATIC);
 
 		$this->assertGreaterThan(0, count($properties));
@@ -319,7 +319,7 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_class_has_instance_properties(): void {
 
-		$reflection = new ReflectionClass('install');
+		$reflection = new ReflectionClass('installer');
 		$properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE);
 
 		$this->assertGreaterThan(0, count($properties));
@@ -333,7 +333,7 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_class_maintains_api_compatibility(): void {
 
-		$this->assertTrue(is_subclass_of('install', 'common'));
+		$this->assertTrue(is_subclass_of('installer', 'common'));
 	}//end test_class_maintains_api_compatibility
 
 
@@ -344,7 +344,7 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_class_is_professional_quality(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer.php';
 		$content = file_get_contents($file);
 
 		// Class should have comprehensive docblock
@@ -365,8 +365,8 @@ final class install_Test extends BaseTestCase {
 	public function test_facade_provides_simplified_interface(): void {
 
 		// Facade should provide high-level methods that hide complexity
-		$this->assertTrue(method_exists('install', 'build_install_version'));
-		$this->assertTrue(method_exists('install', 'set_root_pw'));
+		$this->assertTrue(method_exists('installer', 'build_install_version'));
+		$this->assertTrue(method_exists('installer', 'set_root_pw'));
 	}//end test_facade_provides_simplified_interface
 
 
@@ -377,15 +377,15 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_facade_coordinates_subsystem_operations(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer.php';
 		$content = file_get_contents($file);
 
 		// Facade should coordinate operations across multiple managers
-		$this->assertStringContainsString('install_config_manager::', $content);
-		$this->assertStringContainsString('install_database_manager::', $content);
-		$this->assertStringContainsString('install_ontology_manager::', $content);
-		$this->assertStringContainsString('install_hierarchy_manager::', $content);
-		$this->assertStringContainsString('install_data_seeder::', $content);
+		$this->assertStringContainsString('installer_config_manager::', $content);
+		$this->assertStringContainsString('installer_database_manager::', $content);
+		$this->assertStringContainsString('installer_ontology_manager::', $content);
+		$this->assertStringContainsString('installer_hierarchy_manager::', $content);
+		$this->assertStringContainsString('installer_data_seeder::', $content);
 	}//end test_facade_coordinates_subsystem_operations
 
 
@@ -396,15 +396,15 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_facade_is_thin_wrapper(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer.php';
 		$content = file_get_contents($file);
 
 		// Facade should delegate to managers rather than implement logic
-		$this->assertStringContainsString('install_config_manager::', $content);
-		$this->assertStringContainsString('install_database_manager::', $content);
-		$this->assertStringContainsString('install_ontology_manager::', $content);
-		$this->assertStringContainsString('install_hierarchy_manager::', $content);
-		$this->assertStringContainsString('install_data_seeder::', $content);
+		$this->assertStringContainsString('installer_config_manager::', $content);
+		$this->assertStringContainsString('installer_database_manager::', $content);
+		$this->assertStringContainsString('installer_ontology_manager::', $content);
+		$this->assertStringContainsString('installer_hierarchy_manager::', $content);
+		$this->assertStringContainsString('installer_data_seeder::', $content);
 	}//end test_facade_is_thin_wrapper
 
 
@@ -416,12 +416,12 @@ final class install_Test extends BaseTestCase {
 	public function test_facade_preserves_backward_compatibility(): void {
 
 		// Facade should extend common for API compatibility
-		$this->assertTrue(is_subclass_of('install', 'common'));
+		$this->assertTrue(is_subclass_of('installer', 'common'));
 
 		// Should have methods that match old API
-		$this->assertTrue(method_exists('install', 'get_config'));
-		$this->assertTrue(method_exists('install', 'get_db_status'));
-		$this->assertTrue(method_exists('install', 'build_install_version'));
+		$this->assertTrue(method_exists('installer', 'get_config'));
+		$this->assertTrue(method_exists('installer', 'get_db_status'));
+		$this->assertTrue(method_exists('installer', 'build_install_version'));
 	}//end test_facade_preserves_backward_compatibility
 
 
@@ -433,25 +433,25 @@ final class install_Test extends BaseTestCase {
 	public function test_facade_follows_solid_principles(): void {
 
 		// Single Responsibility: Facade provides simplified interface
-		$this->assertTrue(is_subclass_of('install', 'common'));
+		$this->assertTrue(is_subclass_of('installer', 'common'));
 
 		// Open/Closed: Can be extended without modification
-		$reflection = new ReflectionClass('install');
+		$reflection = new ReflectionClass('installer');
 		$this->assertTrue($reflection->isInstantiable());
 
 		// Liskov Substitution: Can be used where common is expected
-		$this->assertTrue(is_subclass_of('install', 'common'));
+		$this->assertTrue(is_subclass_of('installer', 'common'));
 
 		// Interface Segregation: Provides minimal necessary interface
-		$this->assertTrue(method_exists('install', 'build_install_version'));
-		$this->assertTrue(method_exists('install', 'get_config'));
+		$this->assertTrue(method_exists('installer', 'build_install_version'));
+		$this->assertTrue(method_exists('installer', 'get_config'));
 
 		// Dependency Inversion: Depends on abstractions (manager classes)
-		$this->assertTrue(class_exists('install_config_manager'));
-		$this->assertTrue(class_exists('install_database_manager'));
-		$this->assertTrue(class_exists('install_ontology_manager'));
-		$this->assertTrue(class_exists('install_hierarchy_manager'));
-		$this->assertTrue(class_exists('install_data_seeder'));
+		$this->assertTrue(class_exists('installer_config_manager'));
+		$this->assertTrue(class_exists('installer_database_manager'));
+		$this->assertTrue(class_exists('installer_ontology_manager'));
+		$this->assertTrue(class_exists('installer_hierarchy_manager'));
+		$this->assertTrue(class_exists('installer_data_seeder'));
 	}//end test_facade_follows_solid_principles
 
 
@@ -463,13 +463,13 @@ final class install_Test extends BaseTestCase {
 	public function test_facade_is_testable(): void {
 
 		// Facade should be instantiable
-		$reflection = new ReflectionClass('install');
+		$reflection = new ReflectionClass('installer');
 		$this->assertTrue($reflection->isInstantiable());
 
 		// Should have static methods for testing
-		$this->assertTrue(method_exists('install', 'get_config'));
-		$this->assertTrue(method_exists('install', 'get_db_status'));
-		$this->assertTrue(method_exists('install', 'to_update'));
+		$this->assertTrue(method_exists('installer', 'get_config'));
+		$this->assertTrue(method_exists('installer', 'get_db_status'));
+		$this->assertTrue(method_exists('installer', 'to_update'));
 	}//end test_facade_is_testable
 
 
@@ -480,16 +480,16 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_facade_is_maintainable(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer.php';
 		$content = file_get_contents($file);
 
 		// Facade should delegate to well-organized manager classes
 		$this->assertStringContainsString('include_once', $content);
-		$this->assertStringContainsString('install_config_manager', $content);
-		$this->assertStringContainsString('install_database_manager', $content);
-		$this->assertStringContainsString('install_ontology_manager', $content);
-		$this->assertStringContainsString('install_hierarchy_manager', $content);
-		$this->assertStringContainsString('install_data_seeder', $content);
+		$this->assertStringContainsString('installer_config_manager', $content);
+		$this->assertStringContainsString('installer_database_manager', $content);
+		$this->assertStringContainsString('installer_ontology_manager', $content);
+		$this->assertStringContainsString('installer_hierarchy_manager', $content);
+		$this->assertStringContainsString('installer_data_seeder', $content);
 	}//end test_facade_is_maintainable
 
 
@@ -500,7 +500,7 @@ final class install_Test extends BaseTestCase {
 	*/
 	public function test_facade_is_well_documented(): void {
 
-		$file = DEDALO_CORE_PATH . '/install/class.install.php';
+		$file = DEDALO_CORE_PATH . '/installer/class.installer.php';
 		$content = file_get_contents($file);
 
 		// Class docblock should describe purpose
@@ -521,14 +521,14 @@ final class install_Test extends BaseTestCase {
 	public function test_facade_is_production_ready(): void {
 
 		// Facade should maintain backward compatibility
-		$this->assertTrue(is_subclass_of('install', 'common'));
+		$this->assertTrue(is_subclass_of('installer', 'common'));
 
 		// Should delegate to well-tested manager classes
-		$this->assertTrue(class_exists('install_config_manager'));
-		$this->assertTrue(class_exists('install_database_manager'));
-		$this->assertTrue(class_exists('install_ontology_manager'));
-		$this->assertTrue(class_exists('install_hierarchy_manager'));
-		$this->assertTrue(class_exists('install_data_seeder'));
+		$this->assertTrue(class_exists('installer_config_manager'));
+		$this->assertTrue(class_exists('installer_database_manager'));
+		$this->assertTrue(class_exists('installer_ontology_manager'));
+		$this->assertTrue(class_exists('installer_hierarchy_manager'));
+		$this->assertTrue(class_exists('installer_data_seeder'));
 	}//end test_facade_is_production_ready
 
 
@@ -540,20 +540,20 @@ final class install_Test extends BaseTestCase {
 	public function test_refactoring_improved_maintainability(): void {
 
 		// Manager classes should exist
-		$this->assertTrue(class_exists('install_config_manager'));
-		$this->assertTrue(class_exists('install_database_manager'));
-		$this->assertTrue(class_exists('install_ontology_manager'));
-		$this->assertTrue(class_exists('install_hierarchy_manager'));
-		$this->assertTrue(class_exists('install_data_seeder'));
+		$this->assertTrue(class_exists('installer_config_manager'));
+		$this->assertTrue(class_exists('installer_database_manager'));
+		$this->assertTrue(class_exists('installer_ontology_manager'));
+		$this->assertTrue(class_exists('installer_hierarchy_manager'));
+		$this->assertTrue(class_exists('installer_data_seeder'));
 
 		// Each manager should be static-only (testable): a private constructor
 		// blocks instantiation while keeping the static interface usable.
 		$managers = [
-			'install_config_manager',
-			'install_database_manager',
-			'install_ontology_manager',
-			'install_hierarchy_manager',
-			'install_data_seeder'
+			'installer_config_manager',
+			'installer_database_manager',
+			'installer_ontology_manager',
+			'installer_hierarchy_manager',
+			'installer_data_seeder'
 		];
 
 		foreach ($managers as $manager) {
@@ -575,11 +575,11 @@ final class install_Test extends BaseTestCase {
 
 		// Test files should exist for each manager
 		$test_files = [
-			'/Users/paco/Trabajos/Dedalo/v7/master_dedalo/test/server/install/install_config_manager_Test.php',
-			'/Users/paco/Trabajos/Dedalo/v7/master_dedalo/test/server/install/install_database_manager_Test.php',
-			'/Users/paco/Trabajos/Dedalo/v7/master_dedalo/test/server/install/install_ontology_manager_Test.php',
-			'/Users/paco/Trabajos/Dedalo/v7/master_dedalo/test/server/install/install_hierarchy_manager_Test.php',
-			'/Users/paco/Trabajos/Dedalo/v7/master_dedalo/test/server/install/install_data_seeder_Test.php'
+			'/Users/paco/Trabajos/Dedalo/v7/master_dedalo/test/server/install/installer_config_manager_Test.php',
+			'/Users/paco/Trabajos/Dedalo/v7/master_dedalo/test/server/install/installer_database_manager_Test.php',
+			'/Users/paco/Trabajos/Dedalo/v7/master_dedalo/test/server/install/installer_ontology_manager_Test.php',
+			'/Users/paco/Trabajos/Dedalo/v7/master_dedalo/test/server/install/installer_hierarchy_manager_Test.php',
+			'/Users/paco/Trabajos/Dedalo/v7/master_dedalo/test/server/install/installer_data_seeder_Test.php'
 		];
 
 		foreach ($test_files as $test_file) {
@@ -596,14 +596,14 @@ final class install_Test extends BaseTestCase {
 	public function test_refactoring_maintained_backward_compatibility(): void {
 
 		// Facade should extend common
-		$this->assertTrue(is_subclass_of('install', 'common'));
+		$this->assertTrue(is_subclass_of('installer', 'common'));
 
 		// Should have same public API as before
-		$this->assertTrue(method_exists('install', 'get_config'));
-		$this->assertTrue(method_exists('install', 'get_db_status'));
-		$this->assertTrue(method_exists('install', 'build_install_version'));
-		$this->assertTrue(method_exists('install', 'set_root_pw'));
-		$this->assertTrue(method_exists('install', 'get_structure_context'));
+		$this->assertTrue(method_exists('installer', 'get_config'));
+		$this->assertTrue(method_exists('installer', 'get_db_status'));
+		$this->assertTrue(method_exists('installer', 'build_install_version'));
+		$this->assertTrue(method_exists('installer', 'set_root_pw'));
+		$this->assertTrue(method_exists('installer', 'get_structure_context'));
 	}//end test_refactoring_maintained_backward_compatibility
 
 }

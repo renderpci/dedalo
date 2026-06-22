@@ -15,7 +15,7 @@
  * these operations are idempotent when re-run against a blank install database.
  *
  * All SQL is executed against the install database connection obtained from
- * install_config_manager::get_db_install_conn() — NOT the production connection.
+ * installer_config_manager::get_db_install_conn() — NOT the production connection.
  *
  * Data is stored in the Dédalo v7 typed-column matrix schema:
  *   - data     (JSONB) — section-level metadata (label, dates, user ids)
@@ -25,12 +25,12 @@
  *   - meta     (JSONB) — per-component item counts, keyed by tipo
  *
  * This class has no constructor (static utility). It is called during installation
- * and collaborates with install_config_manager for config and connection details.
+ * and collaborates with installer_config_manager for config and connection details.
  *
  * @package Dédalo
  * @subpackage Install
  */
-final class install_data_seeder {
+final class installer_data_seeder {
 
 	/**
 	* Private constructor to prevent instantiation (static utility class)
@@ -45,7 +45,7 @@ final class install_data_seeder {
 	* The inserted row encodes:
 	*   - string['dd132']: username = 'root' (lang lg-nolan, language-neutral)
 	*   - string['dd133']: password array is intentionally left empty — the actual
-	*     encrypted password is written later by install_config_manager::set_root_pw().
+	*     encrypted password is written later by installer_config_manager::set_root_pw().
 	*   - relation['dd131']: points to project section_id=1 (the main project, dd64).
 	*   - relation['dd244']: points to profile section_id=2 (the "User" profile, dd64).
 	*   - relation['dd1725']: points to profile section_id=2 in the profiles table (dd234).
@@ -65,8 +65,8 @@ final class install_data_seeder {
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		// short vars
-			$config				= install_config_manager::get_config();
-			$db_install_conn	= install_config_manager::get_db_install_conn();
+			$config				= installer_config_manager::get_config();
+			$db_install_conn	= installer_config_manager::get_db_install_conn();
 			$exec				= true;
 
 		// v7 schema: data distributed across typed columns
@@ -186,8 +186,8 @@ final class install_data_seeder {
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		// short vars
-			$config				= install_config_manager::get_config();
-			$db_install_conn	= install_config_manager::get_db_install_conn();
+			$config				= installer_config_manager::get_config();
+			$db_install_conn	= installer_config_manager::get_db_install_conn();
 			$exec				= true;
 
 		// v7 schema: data distributed across typed columns
@@ -292,8 +292,8 @@ final class install_data_seeder {
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		// short vars
-			$config				= install_config_manager::get_config();
-			$db_install_conn	= install_config_manager::get_db_install_conn();
+			$config				= installer_config_manager::get_config();
+			$db_install_conn	= installer_config_manager::get_db_install_conn();
 			$exec				= true;
 
 		// Profile 1: Admin (section_id=1)
@@ -417,7 +417,7 @@ final class install_data_seeder {
 	* populate them programmatically at test time.
 	*
 	* (!) The table 'matrix_test' must already exist in the install database before this method
-	*     is called. It is created by install_database_manager earlier in the install sequence.
+	*     is called. It is created by installer_database_manager earlier in the install sequence.
 	*
 	* @return object $response - stdClass with bool result and string msg
 	*/
@@ -428,8 +428,8 @@ final class install_data_seeder {
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		// short vars
-			$config				= install_config_manager::get_config();
-			$db_install_conn	= install_config_manager::get_db_install_conn();
+			$config				= installer_config_manager::get_config();
+			$db_install_conn	= installer_config_manager::get_db_install_conn();
 			$exec				= true;
 			$section_tipo		= 'test3';
 			$table				= 'matrix_test';
@@ -464,4 +464,4 @@ final class install_data_seeder {
 		return $response;
 	}//end create_test_record
 
-}//end class install_data_seeder
+}//end class installer_data_seeder
