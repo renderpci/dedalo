@@ -74,7 +74,8 @@ final class session_manager {
 
 		// Save handler configuration
 		$save_handler = defined('DEDALO_SESSION_HANDLER') ? DEDALO_SESSION_HANDLER : 'redis';
-		$save_path    = defined('DEDALO_SESSION_SAVE_PATH') ? DEDALO_SESSION_SAVE_PATH : 'tcp://127.0.0.1:6379';
+		// The catalog always emits DEDALO_SESSION_SAVE_PATH (empty when unset), so test for a non-empty value.
+		$save_path    = (defined('DEDALO_SESSION_SAVE_PATH') && DEDALO_SESSION_SAVE_PATH !== '') ? DEDALO_SESSION_SAVE_PATH : 'tcp://127.0.0.1:6379';
 
 		// Support legacy RoadRunner KV if explicitly configured
 		if ($save_handler === 'roadrunner' && $this->kv_factory !== null) {

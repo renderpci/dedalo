@@ -14,7 +14,7 @@ require_once __DIR__ . '/class.legacy_surface.php';
 final class boot_diff {
 
 	/** v6 constants v7 intentionally drops (verified 0 consumers). */
-	private const DROPS = ['DEDALO_CONFIG', 'DEDALO_CORE', 'DEDALO_SHARED', 'DEDALO_TOOLS', 'DEDALO_LIB', 'DEDALO_SESSION_SAVE_PATH'];
+	private const DROPS = ['DEDALO_CONFIG', 'DEDALO_CORE', 'DEDALO_SHARED', 'DEDALO_TOOLS', 'DEDALO_LIB'];
 
 	/**
 	* @param array<string,mixed> $old constants from the legacy config.php boot

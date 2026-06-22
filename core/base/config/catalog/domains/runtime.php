@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../class.config_key.php';
 
 return [
 	new config_key(path: 'runtime.session_handler', const: 'DEDALO_SESSION_HANDLER', type: 'string', default: 'files', doc: 'Session save handler: files|redis|memcached|postgresql|user.'),
+	new config_key(path: 'runtime.session_save_path', const: 'DEDALO_SESSION_SAVE_PATH', type: 'string', default: '', doc: 'Session save path. Empty = handler default (files: sessions dir; redis: tcp://127.0.0.1:6379; memcached: 127.0.0.1:11211). For a redis unix socket use e.g. unix:///opt/homebrew/var/run/redis/redis.sock.'),
 	new config_key(path: 'runtime.cache_manager', const: 'DEDALO_CACHE_MANAGER', type: 'map', scope: config_scope::DERIVED, derived: static fn(array $r): array => ['manager' => 'files', 'files_path' => $r['paths.sessions_path']], doc: 'Cache manager (files_path = sessions dir).'),
 	new config_key(path: 'runtime.show_debug', const: 'SHOW_DEBUG', type: 'bool', scope: config_scope::USER, doc: 'Debug output (per logged user; resolved at boot).'),
 	new config_key(path: 'runtime.show_developer', const: 'SHOW_DEVELOPER', type: 'bool', scope: config_scope::USER, doc: 'Developer mode (per logged user).'),
