@@ -20,29 +20,22 @@
 *   - `get_value` is inherited from `area_maintenance.prototype.get_value`, which
 *     fires a long-lived (up to 1 h) worker request to
 *     `dd_area_maintenance_api::get_widget_value` and returns the parsed payload.
-*   - The server-side peer (`class.check_config.php::get_value`) compares three
-*     file pairs (config / config_db / config_core vs their sample.* counterparts)
-*     and returns one diff-item object per pair.
+*   - The server-side peer (`class.check_config.php::get_value`) reports the v7
+*     config status: DB connection/credentials, ../private config-source presence,
+*     and sample constants undefined at runtime.
 *   - DOM rendering and the maintenance/recovery/notification forms are handled
 *     entirely by `render_check_config.js`.
 *
-* Value shape (array of diff-item objects, one per config file):
-*   [
-*     {
-*       file_name                  : {string}   e.g. 'config'
-*       sample_vs_config           : {Array}    constants present in sample but
-*                                               absent/undefined in config  → "missing"
-*       config_vs_sample           : {Array}    constants present in config but
-*                                               absent in sample            → "obsolete"
-*       sample_config_constants_list : {Array}  full list of constants in sample file
-*       config_constants_list      : {Array}    full list of constants in live config
-*     },
-*     …  (one entry each for config_db and config_core)
-*   ]
+* Value shape (object returned by check_config::get_value):
+*   {
+*     db_status      : {Object}  DB connection + credential checks + global_status
+*     config_sources : {Array}   [{ name, required, exists, readable }] for ../private files
+*     constants      : {Array}   [{ file_name, missing:[...], sample_constants_list:[...] }]
+*   }
 *
-* When `sample_vs_config` is non-empty, the widget header is styled 'danger'
-* (red) by `set_widget_label_style` to signal that the active config is
-* missing required constants.
+* When `db_status.global_status` is not true, or any `constants[].missing` is
+* non-empty, the widget header is styled 'danger' (red) by `set_widget_label_style`
+* to signal a configuration problem.
 *
 * Main export: `check_config` (constructor).
 *
