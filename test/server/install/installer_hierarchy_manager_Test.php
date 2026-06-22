@@ -3,6 +3,11 @@
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 // Include manager class
+// installer_hierarchy_manager delegates path/connection lookups to installer_config_manager,
+// so it must be loaded too — otherwise the behavioral methods (get_available_hierarchy_files,
+// activate_hierarchy, install_hierarchies) fatal with "Class installer_config_manager not found"
+// when this file is run in isolation.
+require_once DEDALO_CORE_PATH . '/installer/class.installer_config_manager.php';
 require_once DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
 
 
@@ -175,6 +180,94 @@ final class installer_hierarchy_manager_Test extends BaseTestCase {
 
 
 	/**
+	* TEST_activate_hierarchy_fully_populates_record
+	* Regression guard for the install_hierarchies defect: activate_hierarchy must write
+	* the typology (hierarchy9 — a component_select whose value is a LOCATOR to the
+	* hierarchy13 taxonomy, NOT a bare integer) and the term/name (hierarchy5). Without
+	* both, hierarchy::generate_virtual_section() aborts ("typology is mandatory", then a
+	* TypeError on null $name_data) and the <tld>1/<tld>2 ontology virtual sections are
+	* never provisioned, leaving the hierarchy invisible in the thesaurus.
+	*
+	* The assertion on an EMPTY $response->errors catches both failure modes (it is where
+	* activate_hierarchy accumulates the generate_virtual_section error). Uses a unique tld
+	* so the identity-field block always runs, and removes everything it creates afterwards.
+	* @return void
+	*/
+	public function test_activate_hierarchy_fully_populates_record(): void {
+
+		// unique, letters-only tld (safe_tld() rejects digits): map the timestamp to a-j
+		$tld = 'rht' . strtr(substr((string)hrtime(true), -7), '0123456789', 'abcdefghij');
+
+		try {
+			$response = installer_hierarchy_manager::activate_hierarchy((object)[
+				'tld'                 => $tld,
+				'typology'            => 1,
+				'label'               => 'Regression Test Hierarchy',
+				'active_in_thesaurus' => true
+			]);
+
+			$this->assertTrue($response->result);
+			// no swallowed provisioning error (typology / name failures land here)
+			$this->assertEmpty($response->errors, 'generate_virtual_section must not report errors: ' . json_encode($response->errors ?? []));
+
+			$row = hierarchy::get_hierarchy_by_tld($tld);
+			$this->assertNotNull($row, 'the hierarchy must be findable by its tld (hierarchy6 persisted)');
+			$section_id   = (int)$row->section_id;
+			$section_tipo = DEDALO_HIERARCHY_SECTION_TIPO;
+
+			// typology (hierarchy9): persisted as a locator carrying the typology number
+			$typo = component_common::get_instance(
+				ontology_node::get_model_by_tipo(DEDALO_HIERARCHY_TYPOLOGY_TIPO, true),
+				DEDALO_HIERARCHY_TYPOLOGY_TIPO, $section_id, 'list', DEDALO_DATA_NOLAN, $section_tipo
+			);
+			$typo_data = $typo->get_data();
+			$this->assertNotEmpty($typo_data, 'typology (hierarchy9) must be persisted');
+			$this->assertEquals('1', (string)($typo_data[0]->section_id ?? ''), 'typology locator section_id must equal the typology number');
+
+			// term / name (hierarchy5): persisted in the default data language
+			$term = component_common::get_instance(
+				ontology_node::get_model_by_tipo(DEDALO_HIERARCHY_TERM_TIPO, true),
+				DEDALO_HIERARCHY_TERM_TIPO, $section_id, 'edit', DEDALO_DATA_LANG_DEFAULT, $section_tipo
+			);
+			$this->assertNotEmpty($term->get_data(), 'term/name (hierarchy5) must be persisted');
+
+		} finally {
+			self::cleanup_test_hierarchy($tld);
+		}
+	}//end test_activate_hierarchy_fully_populates_record
+
+
+	/**
+	* CLEANUP_TEST_HIERARCHY
+	* Remove every row a regression run created for $tld: its matrix_hierarchy_main record
+	* and the <tld>0/<tld>1/<tld>2 ontology nodes (dd_ontology + matrix_ontology[_main]).
+	* Best-effort: swallows DB errors so a partial run never aborts the suite.
+	* @param string $tld
+	* @return void
+	*/
+	private static function cleanup_test_hierarchy(string $tld): void {
+
+		try {
+			$conn = DBi::_getConnection();
+			if (!$conn) {
+				return;
+			}
+			$nodes = [$tld.'0', $tld.'1', $tld.'2'];
+			$in    = "'" . implode("','", array_map(static fn($t) => pg_escape_string($conn, $t), $nodes)) . "'";
+			$tld_e = pg_escape_string($conn, $tld);
+
+			@pg_query($conn, "DELETE FROM matrix_hierarchy_main WHERE string->'".DEDALO_HIERARCHY_TLD2_TIPO."'->0->>'value' = '".$tld_e."';");
+			@pg_query($conn, "DELETE FROM matrix_ontology WHERE section_tipo IN ($in);");
+			@pg_query($conn, "DELETE FROM matrix_ontology_main WHERE section_tipo IN ($in);");
+			@pg_query($conn, "DELETE FROM matrix_hierarchy WHERE section_tipo IN ('".$tld_e."1','".$tld_e."2');");
+			@pg_query($conn, "DELETE FROM dd_ontology WHERE tld = '".$tld_e."';");
+		} catch (\Throwable $e) {
+			// best-effort cleanup; never fail the suite over leftover test rows
+		}
+	}//end cleanup_test_hierarchy
+
+
+	/**
 	* TEST_install_hierarchy_returns_object
 	* Verify install_hierarchy returns object with result and msg
 	* @return void
@@ -253,7 +346,11 @@ final class installer_hierarchy_manager_Test extends BaseTestCase {
 
 	/**
 	* TEST_no_private_methods
-	* Verify installer_hierarchy_manager has no private methods
+	* Verify installer_hierarchy_manager exposes no UNEXPECTED private methods.
+	* A static utility class may legitimately keep private helpers; the allow-list
+	* documents the intentional ones (the private constructor enforcing static-only use,
+	* and get_hierarchy_component(), the shared component-resolution guard). Any other
+	* private method is flagged so a stray private API surface stays a conscious choice.
 	* @return void
 	*/
 	public function test_no_private_methods(): void {
@@ -261,12 +358,13 @@ final class installer_hierarchy_manager_Test extends BaseTestCase {
 		$reflection = new ReflectionClass('installer_hierarchy_manager');
 		$methods = $reflection->getMethods(ReflectionMethod::IS_PRIVATE);
 
-		// The private constructor is allowed (static-only utility); no other private methods
-		$methods = array_filter($methods, function($method){
-			return $method->getName() !== '__construct';
+		// Allowed private members: the static-only constructor and the internal helper.
+		$allowed = ['__construct', 'get_hierarchy_component'];
+		$methods = array_filter($methods, function($method) use ($allowed) {
+			return !in_array($method->getName(), $allowed, true);
 		});
 
-		$this->assertEquals(0, count($methods));
+		$this->assertEquals(0, count($methods), 'Unexpected private method(s): ' . implode(', ', array_map(fn($m) => $m->getName(), $methods)));
 	}//end test_no_private_methods
 
 
