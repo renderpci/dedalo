@@ -154,6 +154,8 @@ const create_field = function(options) {
 	cfg[name] = (nullable && value === '') ? null : value
 
 	input.addEventListener('input', function() {
+		// clear a previous failed-verification highlight as soon as the user edits
+		input.classList.remove('invalid')
 		cfg[name] = (nullable && input.value === '') ? null : input.value
 		if (typeof on_change === 'function') {
 			on_change()
@@ -319,6 +321,27 @@ const update_step_indicator = function(step_indicator, active_step) {
 		}
 	}
 }//end update_step_indicator
+
+
+/**
+* REVEAL_SECTION
+* Reveals a previously-hidden wizard step and smoothly scrolls it into view, so that
+* completing a step automatically advances the operator to the next one. Scrolling
+* happens inside the installer's own scroll container (.install.wrapper).
+* @param HTMLElement section
+*/
+const reveal_section = function(section) {
+
+	if (!section) return
+
+	section.classList.remove('hide')
+	section.classList.add('fade_in')
+
+	// wait one frame so the now-visible section has layout before scrolling to it
+	requestAnimationFrame(() => {
+		section.scrollIntoView({ behavior:'smooth', block:'start' })
+	})
+}//end reveal_section
 
 
 /**
@@ -713,7 +736,7 @@ const get_content_data = function(self) {
 			hierarchy_typologies	: properties.hierarchy_typologies,
 			// On a successful import, reveal the final Finish step.
 			callback		: function() {
-				self.node.content_data.install_finish_block.classList.remove('hide')
+				reveal_section(self.node.content_data.install_finish_block)
 				update_step_indicator(self.node.content_data.step_indicator, needs_config ? 11 : 7)
 			}
 		}
@@ -1322,7 +1345,7 @@ const render_config_options = function(self) {
 		})
 		install_button.addEventListener('mouseup', async function() {
 			// show the install_db
-			self.node.content_data.install_db_block.classList.remove('hide')
+			reveal_section(self.node.content_data.install_db_block)
 			update_step_indicator(self.node.content_data.step_indicator, 3)
 			self.node.content_data.config_block.config_block_options.remove();
 		})//end mouse_up event
@@ -1380,7 +1403,7 @@ const render_config_options = function(self) {
 		})
 		reset_root_button.addEventListener('mouseup', async function() {
 			// show the install_db
-			self.node.content_data.set_root_password_block.classList.remove('hide')
+			reveal_section(self.node.content_data.set_root_password_block)
 			self.node.content_data.config_block.config_block_options.remove();
 		})//end mouse_up event
 
@@ -1448,7 +1471,7 @@ const render_db_config_block = function(self) {
 			})
 			set_status_result(status, api_response)
 			if (api_response.result===true) {
-				self.node.content_data.entity_block.classList.remove('hide')
+				reveal_section(self.node.content_data.entity_block)
 				update_step_indicator(self.node.content_data.step_indicator, 3)
 			}
 		})
@@ -1480,12 +1503,16 @@ const render_entity_block = function(self) {
 		parent			: fragment
 	})
 
-	create_field({ parent:fragment, cfg, name:'entity', label:get_label.entity_name || 'Entity name', value:entity_val, placeholder:'my_institution', help:'Short machine name for this installation.' })
+	// keep references to the inputs so failed verification can highlight them (not just the status msg)
+	const entity_input		= create_field({ parent:fragment, cfg, name:'entity', label:get_label.entity_name || 'Entity name', value:entity_val, placeholder:'my_institution', help:'Short machine name for this installation.' })
 	create_field({ parent:fragment, cfg, name:'entity_label', label:get_label.entity_label || 'Entity label', value:'', placeholder:'My Institution', help:'Human-readable name (defaults to the entity name).' })
-	create_field({ parent:fragment, cfg, name:'information', label:get_label.information || 'Install information', value:'', placeholder:'My Institution archive', help:'Fixed install fingerprint. Do not change after install.' })
-	create_field({ parent:fragment, cfg, name:'info_key', label:get_label.info_key || 'Install info key', value:'', placeholder:'my_institution_key', help:'Fixed install fingerprint. Do not change after install.' })
+	const information_input	= create_field({ parent:fragment, cfg, name:'information', label:get_label.information || 'Install information', value:'', placeholder:'My Institution archive', help:'Fixed install fingerprint. Do not change after install.' })
+	const info_key_input	= create_field({ parent:fragment, cfg, name:'info_key', label:get_label.info_key || 'Install info key', value:'', placeholder:'my_institution_key', help:'Fixed install fingerprint. Do not change after install.' })
 	create_field({ parent:fragment, cfg, name:'timezone', label:get_label.timezone || 'Timezone', value:'Europe/Madrid', placeholder:'Europe/Madrid' })
 	create_field({ parent:fragment, cfg, name:'locale', label:get_label.locale || 'Locale', value:'es-ES', placeholder:'es-ES' })
+
+	// required field → its input, so validation can flag the exact offending field
+	const required_inputs = { entity:entity_input, information:information_input, info_key:info_key_input }
 
 	const status = create_status_msg(fragment)
 	const next_button = ui.create_dom_element({
@@ -1495,9 +1522,12 @@ const render_entity_block = function(self) {
 		parent			: fragment
 	})
 	next_button.addEventListener('mouseup', function() {
+		// clear any previous field highlights before re-validating
+		Object.values(required_inputs).forEach(input => input.classList.remove('invalid'))
 		// minimal required-field validation (no server round-trip needed)
 		const missing = ['entity','information','info_key'].filter(k => !cfg[k] || String(cfg[k]).trim()==='')
 		if (missing.length>0) {
+			missing.forEach(k => { if (required_inputs[k]) required_inputs[k].classList.add('invalid') })
 			status.classList.remove('ok'); status.classList.add('error')
 			status.textContent = (get_label.required_fields || 'Please fill the required fields') + ': ' + missing.join(', ')
 			return
@@ -1507,13 +1537,14 @@ const render_entity_block = function(self) {
 		const entity_val = String(cfg.entity).trim()
 		if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(entity_val)) {
 			const suggestion = entity_val.replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'my_entity'
+			entity_input.classList.add('invalid')
 			status.classList.remove('ok'); status.classList.add('error')
 			status.textContent = (get_label.entity_invalid || 'Entity name must start with a letter and contain only letters, numbers and underscores (no spaces). Try: ') + suggestion
 			return
 		}
 		status.classList.remove('error'); status.classList.add('ok')
 		status.textContent = 'OK'
-		self.node.content_data.diffusion_block.classList.remove('hide')
+		reveal_section(self.node.content_data.diffusion_block)
 		update_step_indicator(self.node.content_data.step_indicator, 4)
 	})
 
@@ -1601,7 +1632,7 @@ const render_diffusion_block = function(self) {
 			status.textContent = get_label.test_diffusion_first || 'Test the diffusion connection successfully before continuing (or disable it).'
 			return
 		}
-		self.node.content_data.persist_block.classList.remove('hide')
+		reveal_section(self.node.content_data.persist_block)
 		update_step_indicator(self.node.content_data.step_indicator, 5)
 	})
 
@@ -1676,7 +1707,7 @@ const render_persist_block = function(self) {
 		set_status_result(verify_status, api_response)
 		if (api_response.result===true) {
 			verify_button.remove()
-			self.node.content_data.directories_block.classList.remove('hide')
+			reveal_section(self.node.content_data.directories_block)
 			update_step_indicator(self.node.content_data.step_indicator, 6)
 		}
 		// if not active: status shows the reload guidance; the button stays for a re-check
@@ -1732,7 +1763,7 @@ const render_directories_block = function(self) {
 		set_status_result(status, api_response)
 		if (api_response.result===true) {
 			create_button.classList.add('hide')
-			self.node.content_data.install_db_block.classList.remove('hide')
+			reveal_section(self.node.content_data.install_db_block)
 			update_step_indicator(self.node.content_data.step_indicator, 7)
 		} else {
 			create_button.classList.remove('hide')
@@ -1844,7 +1875,7 @@ const render_install_db_block = function(self) {
 					console.log('DBB installed:', api_response);
 					set_status_result(install_db_status, api_response)
 					// show set_root_password_block
-					self.node.content_data.set_root_password_block.classList.remove('hide')
+					reveal_section(self.node.content_data.set_root_password_block)
 					// step indicator: "Set root password" is step 8 in the needs_config (11-step) flow
 					// and step 4 in the legacy (7-step) flow. Branch like the password/login blocks do.
 					update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 8 : 4)
@@ -2103,7 +2134,7 @@ const render_set_root_password_block = function(self) {
 					set_status_result(set_pw_status, api_response)
 					change_root_pw_button.remove();
 					// show next block: login (root logs in inside the installer)
-					self.node.content_data.login_block.classList.remove('hide')
+					reveal_section(self.node.content_data.login_block)
 					update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 9 : 5)
 				}else{
 					console.error(api_response.msg);
@@ -2185,7 +2216,7 @@ const render_login_block = async function(self) {
 							}
 
 						// login done → reveal the MANDATORY hierarchies import (now authenticated)
-							self.node.content_data.hierarchies_import_block.classList.remove('hide')
+							reveal_section(self.node.content_data.hierarchies_import_block)
 							update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 10 : 6)
 
 					}else{

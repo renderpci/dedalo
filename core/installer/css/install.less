@@ -201,6 +201,7 @@
 		padding: 1.5rem 1.75rem;
 		margin-top: 1.5rem;
 		margin-bottom: 1.5rem;
+		scroll-margin-top: 1.5rem; // breathing room when auto-scrolled into view on step advance
 		box-shadow: var(--ut_shadow);
 		transition: border-color 0.2s ease;
 
@@ -683,6 +684,17 @@
 				outline: none;
 				border-color: var(--ut_accent);
 				box-shadow: 0 0 0 3px var(--ut_accent_soft);
+			}
+			// failed verification → red highlight (cleared on edit). Mirrors the
+			// password field so every install field flags its own error, not just
+			// the status message.
+			&.invalid {
+				border-color: var(--ut_red) !important;
+				box-shadow: 0 0 0 3px var(--ut_red_soft);
+			}
+			&.valid {
+				border-color: var(--ut_green) !important;
+				box-shadow: 0 0 0 3px var(--ut_green_soft);
 			}
 		}
 		.install_field_help {
