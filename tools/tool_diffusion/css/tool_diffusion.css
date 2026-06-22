@@ -93,8 +93,8 @@
   --color_tag_indexation_removed: #2f8fff;
   --color_tag_indexation_to_review: #fc461a;
   --color_php: #777bb3;
-  --bg_app: var(--color_white);
-  --bg_surface: var(--color_grey_16);
+  --bg_app: var(--color_grey_14);
+  --bg_surface: var(--color_white);
   --bg_surface_alt: var(--color_grey_15);
   --bg_elevated: var(--color_white);
   --bg_input: var(--color_white);
