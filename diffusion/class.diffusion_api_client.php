@@ -97,6 +97,17 @@ class diffusion_api_client {
 				$curl_options->url = self::to_absolute_url(DEDALO_DIFFUSION_API_URL);
 			}
 
+		// release the PHP session write lock before the synchronous engine call.
+		// When a session cookie is attached (interactive context), the engine may call BACK
+		// into the PHP API (e.g. session validation / "PHP API reachable" health check) using
+		// that cookie. If this request still holds the session write lock, that callback blocks
+		// trying to open the same session → deadlock until the curl timeout (observed as
+		// httpcode 0 / "Operation timed out"). $_SESSION stays readable after close; engine
+		// calls never need to write our session.
+			if (session_status() === PHP_SESSION_ACTIVE) {
+				session_write_close();
+			}
+
 		// request
 			$curl_response = curl_request($curl_options);
 
