@@ -30,30 +30,48 @@ final class boot_web_phases {
 	/** P13 — start the PHP session (WEB only). Handler-conditional save path; v6 guard preserved. */
 	public static function session_phase() : boot_phase {
 		return new boot_phase('session_start', static function () : void {
-			if (session_status() === PHP_SESSION_ACTIVE || defined('DEDALO_RR_WORKER')) {
-				return;
-			}
-			$handler   = defined('DEDALO_SESSION_HANDLER') ? DEDALO_SESSION_HANDLER : 'files';
-			// Honor an explicit DEDALO_SESSION_SAVE_PATH (e.g. a redis unix socket) as v6 did; else map by handler.
-			// The catalog always emits the constant (empty when unset), so test for a non-empty value, not defined().
-			$save_path = (defined('DEDALO_SESSION_SAVE_PATH') && DEDALO_SESSION_SAVE_PATH !== '') ? DEDALO_SESSION_SAVE_PATH : match ($handler) {
-				'redis'     => 'tcp://127.0.0.1:6379',
-				'memcached' => '127.0.0.1:11211',
-				default     => DEDALO_SESSIONS_PATH,
-			};
-			session_start_manager([
-				'save_handler'         => $handler,
-				'timeout_seconds'      => 8 * 3600,
-				'save_path'            => $save_path,
-				'prevent_session_lock' => defined('PREVENT_SESSION_LOCK') ? PREVENT_SESSION_LOCK : false,
-				// PHP session names must be alphanumeric (no spaces/dots/etc.), so sanitize the entity
-				// — otherwise an entity like "My entity" yields an invalid name and session_start fails.
-				'session_name'         => 'dedalo_' . preg_replace('/[^A-Za-z0-9]/', '_', (string) DEDALO_ENTITY),
-				'cookie_secure'        => (DEDALO_PROTOCOL === 'https://'),
-				'cookie_samesite'      => (defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER === true) ? 'Lax' : 'Strict',
-			]);
+			self::start_web_session();
 		}, ['cli', 'cron', 'worker_init', 'test']);
 	}//end session_phase
+
+
+
+	/**
+	* START_WEB_SESSION
+	* Configures and starts the PHP session from the resolved Dédalo session constants
+	* (handler, save path, name, cookie flags). Idempotent: returns immediately when a
+	* session is already active or under a RoadRunner worker.
+	*
+	* Normally run by session_phase() during a WEB boot. It is ALSO called directly by
+	* core/base/process_runner.php: background CLI jobs boot under the CLI profile (which
+	* skips session_phase), yet must restore the caller's session — addressed by its forced
+	* session_id — so login::is_logged() can authenticate the job. Must run AFTER the boot
+	* has defined the DEDALO_SESSION_* / DEDALO_ENTITY / DEDALO_PROTOCOL constants.
+	*/
+	public static function start_web_session() : void {
+		if (session_status() === PHP_SESSION_ACTIVE || defined('DEDALO_RR_WORKER')) {
+			return;
+		}
+		$handler   = defined('DEDALO_SESSION_HANDLER') ? DEDALO_SESSION_HANDLER : 'files';
+		// Honor an explicit DEDALO_SESSION_SAVE_PATH (e.g. a redis unix socket) as v6 did; else map by handler.
+		// The catalog always emits the constant (empty when unset), so test for a non-empty value, not defined().
+		$save_path = (defined('DEDALO_SESSION_SAVE_PATH') && DEDALO_SESSION_SAVE_PATH !== '') ? DEDALO_SESSION_SAVE_PATH : match ($handler) {
+			'redis'     => 'tcp://127.0.0.1:6379',
+			'memcached' => '127.0.0.1:11211',
+			default     => DEDALO_SESSIONS_PATH,
+		};
+		session_start_manager([
+			'save_handler'         => $handler,
+			'timeout_seconds'      => 8 * 3600,
+			'save_path'            => $save_path,
+			'prevent_session_lock' => defined('PREVENT_SESSION_LOCK') ? PREVENT_SESSION_LOCK : false,
+			// PHP session names must be alphanumeric (no spaces/dots/etc.), so sanitize the entity
+			// — otherwise an entity like "My entity" yields an invalid name and session_start fails.
+			'session_name'         => 'dedalo_' . preg_replace('/[^A-Za-z0-9]/', '_', (string) DEDALO_ENTITY),
+			'cookie_secure'        => (DEDALO_PROTOCOL === 'https://'),
+			'cookie_samesite'      => (defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER === true) ? 'Lax' : 'Strict',
+		]);
+	}//end start_web_session
 
 	/** P14 — request/user-scoped define()s (WEB only). FPM-safe; needs session + core_functions + dd_tipos. */
 	public static function request_state_phase() : boot_phase {
