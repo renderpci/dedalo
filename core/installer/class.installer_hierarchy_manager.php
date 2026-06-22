@@ -616,10 +616,17 @@ final class installer_hierarchy_manager {
 			if ($section_exists===false) {
 
 				// tld
+					// Text fields (component_input_text) are non-translatable but still store
+					// their value under the language-neutral slot (lang = DEDALO_DATA_NOLAN
+					// 'lg-nolan'). set_data() only tags the lang for translatable components, so
+					// a bare set_data([$value]) here produced {value} WITHOUT a lang key, which
+					// the edit view (it matches data by lang) could not render. set_data_lang()
+					// tags the lang for any supports_translation component — matching how the
+					// thesaurus editor itself saves these fields.
 					$tld_tipo	= DEDALO_HIERARCHY_TLD2_TIPO; // hierarchy6
 					$component	= self::get_hierarchy_component($tld_tipo, $section_id, 'list', $section_tipo, $response->errors);
 					if ($component!==null) {
-						$component->set_data([$tld]);
+						$component->set_data_lang([(object)['value' => $tld]], DEDALO_DATA_NOLAN);
 						$component->save();
 					}
 
@@ -648,7 +655,7 @@ final class installer_hierarchy_manager {
 					$label_tipo	= DEDALO_HIERARCHY_LABEL_TIPO; // hierarchy7
 					$component	= self::get_hierarchy_component($label_tipo, $section_id, 'edit', $section_tipo, $response->errors);
 					if ($component!==null) {
-						$component->set_data([$label]);
+						$component->set_data_lang([(object)['value' => $label]], DEDALO_DATA_NOLAN);
 						$component->save();
 					}
 
@@ -662,7 +669,7 @@ final class installer_hierarchy_manager {
 					$term_tipo	= DEDALO_HIERARCHY_TERM_TIPO;	// hierarchy5
 					$component	= self::get_hierarchy_component($term_tipo, $section_id, 'edit', $section_tipo, $response->errors, DEDALO_DATA_LANG_DEFAULT);
 					if ($component!==null) {
-						$component->set_data([$label]);
+						$component->set_data_lang([(object)['value' => $label]], DEDALO_DATA_LANG_DEFAULT);
 						$component->save();
 					}
 
@@ -731,7 +738,7 @@ final class installer_hierarchy_manager {
 			// source_real_section_tipo
 			$component	= self::get_hierarchy_component(DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO, $section_id, 'edit', $section_tipo, $response->errors);
 			if ($component!==null) {
-				$component->set_data([DEDALO_THESAURUS_SECTION_TIPO]);
+				$component->set_data_lang([(object)['value' => DEDALO_THESAURUS_SECTION_TIPO]], DEDALO_DATA_NOLAN);
 				$component->save();
 			}
 
@@ -763,7 +770,7 @@ final class installer_hierarchy_manager {
 				$component		= self::get_hierarchy_component($component_tipo, $section_id, 'list', $section_tipo, $response->errors);
 				if ($component!==null) {
 					// Term virtual section tipo is always '<tld>1' (e.g. 'fauna1').
-					$component->set_data([$tld.'1']);
+					$component->set_data_lang([(object)['value' => $tld.'1']], DEDALO_DATA_NOLAN);
 					$component->save();
 				}
 
@@ -772,7 +779,7 @@ final class installer_hierarchy_manager {
 				$component		= self::get_hierarchy_component($component_tipo, $section_id, 'list', $section_tipo, $response->errors);
 				if ($component!==null) {
 					// Model virtual section tipo is always '<tld>2' (e.g. 'fauna2').
-					$component->set_data([$tld.'2']);
+					$component->set_data_lang([(object)['value' => $tld.'2']], DEDALO_DATA_NOLAN);
 					$component->save();
 				}
 

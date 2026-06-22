@@ -191,6 +191,10 @@ final class installer_hierarchy_manager_Test extends BaseTestCase {
 	* The assertion on an EMPTY $response->errors catches both failure modes (it is where
 	* activate_hierarchy accumulates the generate_virtual_section error). Uses a unique tld
 	* so the identity-field block always runs, and removes everything it creates afterwards.
+	*
+	* It also guards a follow-on defect: the text fields (component_input_text) must store a
+	* language-tagged value (lang=lg-nolan) — a bare set_data() dropped the lang key and the
+	* edit view rendered the fields blank.
 	* @return void
 	*/
 	public function test_activate_hierarchy_fully_populates_record(): void {
@@ -230,6 +234,19 @@ final class installer_hierarchy_manager_Test extends BaseTestCase {
 				DEDALO_HIERARCHY_TERM_TIPO, $section_id, 'edit', DEDALO_DATA_LANG_DEFAULT, $section_tipo
 			);
 			$this->assertNotEmpty($term->get_data(), 'term/name (hierarchy5) must be persisted');
+
+			// text fields (component_input_text) must store a language-tagged value so the
+			// edit view can render them. A bare set_data([$value]) on these non-translatable
+			// components dropped the lang key, leaving the editor fields blank. Assert both
+			// the stored lang AND that get_value() (what the editor reads) returns the value.
+			$tld_component = component_common::get_instance(
+				ontology_node::get_model_by_tipo(DEDALO_HIERARCHY_TLD2_TIPO, true),
+				DEDALO_HIERARCHY_TLD2_TIPO, $section_id, 'list', DEDALO_DATA_NOLAN, $section_tipo
+			);
+			$tld_data = $tld_component->get_data();
+			$this->assertNotEmpty($tld_data, 'tld (hierarchy6) must be persisted');
+			$this->assertSame(DEDALO_DATA_NOLAN, $tld_data[0]->lang ?? null, 'tld (hierarchy6) must carry lang=lg-nolan so the edit view can render it');
+			$this->assertSame($tld, $tld_component->get_value(), 'edit view (get_value) must return the tld');
 
 		} finally {
 			self::cleanup_test_hierarchy($tld);
