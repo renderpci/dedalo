@@ -16,6 +16,26 @@
 * Theming is driven by a single set of CSS custom properties (--ut_*).
 */
 /**
+* theme_tokens
+*
+* Shared UI theme tokens for Dédalo v7: CSP-safe font stacks, a small size scale,
+* and the light (default) + dark (`[data-theme="dark"]`) custom-property palette
+* (`--ut_*`).
+*
+* Single source of truth, imported by:
+*   - core/page/css/main.less        — so the installer / page shell can theme itself
+*   - test/client/css/unit_test.less — the unit-test runner chrome
+*
+* Dark is opt-in via `data-theme="dark"` on <html>, the same convention as
+* core/page/js/theme.js (localStorage key 'dedalo_theme'). The `--ut_*` prefix is
+* historical — these tokens originated in the unit-test client — and is kept to
+* avoid a large rename across the working runner.
+*
+* Accent = Dédalo logo orange (@color_orange_dedalo, from vars). System fonts only:
+* the app CSP (`font-src 'self' data:`, `style-src 'self'`) blocks web-font CDNs, so
+* the mono stack lands on SF Mono / Menlo for the technical, data-grid feel.
+*/
+/**
  * vars
  *
  * Common vars definitions

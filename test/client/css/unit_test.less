@@ -15,79 +15,9 @@
 *
 * Theming is driven by a single set of CSS custom properties (--ut_*).
 */
-@import (once) '../../../core/page/css/layout/vars';
-
-// ── fonts & sizes (theme-independent, CSP-safe) ─────────
-@font_sans: -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
-@font_mono: 'SF Mono', 'JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
-
-@size_base: 14px;
-@size_sm: 13px;
-@size_xs: 11px;
-
-// ── theme tokens ────────────────────────────────────────
-// Light is the default (:root). Dark overrides under [data-theme="dark"].
-:root {
-	--ut_bg_app: #f6f8fa;
-	--ut_bg_panel: #ffffff;
-	--ut_bg_elevated: #ffffff;
-	--ut_bg_hover: #eef1f5;
-	--ut_bg_input: #f6f8fa;
-	--ut_bg_active: rgba(247,138,28,.13);
-	--ut_border: rgba(27,31,36,.15);
-	--ut_border_strong: rgba(27,31,36,.28);
-	--ut_grid_dot: rgba(27,31,36,.045);
-	--ut_text_primary: #1f2328;
-	--ut_text_secondary: #4b545e;
-	--ut_text_muted: #6e7781;
-	--ut_text_dim: #818b97;
-	--ut_accent: @color_orange_dedalo;
-	--ut_accent_hi: #fca340;
-	--ut_accent_soft: rgba(247,138,28,.13);
-	--ut_on_accent: #2a1c05;
-	--ut_green: #1a7f37;
-	--ut_green_soft: rgba(26,127,55,.12);
-	--ut_green_glow: rgba(26,127,55,.3);
-	--ut_red: #cf222e;
-	--ut_red_soft: rgba(207,34,46,.1);
-	--ut_red_glow: rgba(207,34,46,.3);
-	--ut_run: #9a6700;
-	--ut_run_soft: rgba(154,103,0,.12);
-	--ut_pending: #afb8c1;
-	--ut_shadow: 0 1px 2px rgba(27,31,36,.06), 0 8px 24px -16px rgba(27,31,36,.25);
-	--ut_grain: .018;
-}
-
-:root[data-theme="dark"] {
-	--ut_bg_app: #0b0e14;
-	--ut_bg_panel: #111621;
-	--ut_bg_elevated: #161c28;
-	--ut_bg_hover: #1c2433;
-	--ut_bg_input: #0a0d13;
-	--ut_bg_active: rgba(247,138,28,.14);
-	--ut_border: rgba(148,163,184,.14);
-	--ut_border_strong: rgba(148,163,184,.26);
-	--ut_grid_dot: rgba(148,163,184,.05);
-	--ut_text_primary: #e6edf3;
-	--ut_text_secondary: #aeb9c7;
-	--ut_text_muted: #8b97a7;
-	--ut_text_dim: #7c8696;
-	--ut_accent: @color_orange_dedalo;
-	--ut_accent_hi: #fca340;
-	--ut_accent_soft: rgba(247,138,28,.16);
-	--ut_on_accent: #2a1c05;
-	--ut_green: #3fb950;
-	--ut_green_soft: rgba(63,185,80,.15);
-	--ut_green_glow: rgba(63,185,80,.4);
-	--ut_red: #f85149;
-	--ut_red_soft: rgba(248,81,73,.15);
-	--ut_red_glow: rgba(248,81,73,.45);
-	--ut_run: #d29922;
-	--ut_run_soft: rgba(210,153,34,.15);
-	--ut_pending: #586273;
-	--ut_shadow: 0 1px 0 rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
-	--ut_grain: .03;
-}
+// Shared fonts/sizes + the --ut_* light/dark token palette now live in one partial
+// so the installer and page shell reuse the exact same tokens (single source of truth).
+@import (once) '../../../core/page/css/layout/theme_tokens';
 
 // ── mocha colour remap ──────────────────────────────────
 // lib/mocha colours via --mocha-* vars that only flip on the OS

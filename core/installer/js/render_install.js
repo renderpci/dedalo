@@ -16,6 +16,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {component_password} from '../../component_password/js/component_password.js'
 	import {get_instance} from '../../common/js/instances.js'
+	import {toggle_theme, get_theme} from '../../page/js/theme.js'
 
 /**
 * RENDER_INSTALL
@@ -174,19 +175,33 @@ const create_field = function(options) {
 
 /**
 * ADD_SPINNER
-* Appends a spinner element to the given parent.
+* Appends a loading row (animated ring + label) to the given parent and returns the
+* wrapper so the caller can remove it in one shot. The ring colours come from the
+* theme tokens, so it stays visible in both light and dark.
 * @param HTMLElement parent
-* @return HTMLElement spinner
+* @param string label optional loading text (defaults to a localized "Working…")
+* @return HTMLElement spinner_wrap
 */
-const add_spinner = function(parent) {
+const add_spinner = function(parent, label) {
 
-	const spinner = ui.create_dom_element({
+	const spinner_wrap = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'spinner',
+		class_name		: 'spinner_wrap',
 		parent			: parent
 	})
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'install_spinner',
+		parent			: spinner_wrap
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'spinner_label',
+		inner_html		: label || get_label.loading || 'Working…',
+		parent			: spinner_wrap
+	})
 
-	return spinner
+	return spinner_wrap
 }//end add_spinner
 
 
@@ -212,9 +227,10 @@ const api_call_with_spinner = async function(options) {
 		button_node.classList.add('loading')
 	}
 
-	// reset status
+	// reset status + enter loading state (neutral surface for the spinner row)
 	if (status_node) {
 		status_node.classList.remove('ok', 'error', 'warning')
+		status_node.classList.add('loading')
 		status_node.textContent = ''
 	}
 
@@ -242,9 +258,12 @@ const api_call_with_spinner = async function(options) {
 		button_node.classList.remove('loading')
 	}
 
-	// remove spinner
+	// remove spinner + exit loading state
 	if (spinner) {
 		spinner.remove()
+	}
+	if (status_node) {
+		status_node.classList.remove('loading')
 	}
 
 	return api_response
@@ -427,11 +446,16 @@ const get_content_data = function(self) {
 			class_name		: 'install_header',
 			parent			: content_data
 		})
+		const brand_mark = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'install_mark',
+			parent			: header
+		})
 		ui.create_dom_element({
 			element_type	: 'img',
 			class_name		: 'install_logo',
 			src				: DEDALO_CORE_URL + '/themes/default/dedalo_logo_white.svg',
-			parent			: header
+			parent			: brand_mark
 		})
 		const brand = ui.create_dom_element({
 			element_type	: 'div',
@@ -455,6 +479,33 @@ const get_content_data = function(self) {
 			class_name		: 'install_version',
 			inner_html		: properties.version || '',
 			parent			: header
+		})
+
+		// theme toggle — light is default, dark is opt-in via data-theme="dark".
+		// Uses the shared app controller (core/page/js/theme.js), so the installer
+		// honours and updates the same 'dedalo_theme' preference as the rest of v7.
+		const theme_toggle = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'install_theme_toggle',
+			parent			: header
+		})
+		theme_toggle.type	= 'button'
+		theme_toggle.title	= get_label.theme_toggle || 'Toggle theme'
+		theme_toggle.innerHTML =
+			'<svg class="theme_icon theme_icon_moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>' +
+			'<svg class="theme_icon theme_icon_sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
+		// icon: light shows the moon (→ switch to dark), dark shows the sun (→ switch to light)
+		const sync_theme_icon = function() {
+			const is_dark	= get_theme() === 'dark'
+			const moon		= theme_toggle.querySelector('.theme_icon_moon')
+			const sun		= theme_toggle.querySelector('.theme_icon_sun')
+			if (moon) moon.style.display = is_dark ? 'none' : 'block'
+			if (sun)  sun.style.display  = is_dark ? 'block' : 'none'
+		}
+		sync_theme_icon()
+		theme_toggle.addEventListener('click', function() {
+			toggle_theme()
+			sync_theme_icon()
 		})
 
 	// ── STEP INDICATOR ──
