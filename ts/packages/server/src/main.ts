@@ -18,6 +18,7 @@ import { Db, MatrixDbManager, connectionConfigFromEnv } from '@dedalo/db';
 import { OntologyRepository } from '@dedalo/ontology';
 import {
   createCoreApiReadHandler,
+  createTsApiHandler,
   langConfigFromEnv,
   contextConfigFromEnv,
   mediaConfigFromEnv,
@@ -90,6 +91,17 @@ if (process.env.DEDALO_DATABASE_CONN) {
       // The pool, for the `save` action to reserve a per-request write connection.
       db,
       ...(toolProperties ? { toolProperties } : {}),
+    }),
+  );
+
+  // dd_ts_api: the thesaurus-tree write API (separate dd_api class). Currently serves
+  // only `add_child` for supported tree sections; everything else proxies to PHP.
+  registry.register(
+    createTsApiHandler({
+      db,
+      ontology,
+      langConfig,
+      searchQueryer: db,
     }),
   );
 }

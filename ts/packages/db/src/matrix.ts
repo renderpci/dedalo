@@ -320,6 +320,103 @@ export class MatrixDbManager {
   }
 
   /**
+   * Port of section_record::allocate_component_ids — the dataframe ITEM-ID (id_key)
+   * ALLOCATOR. Atomically allocates `count` consecutive item ids for one component
+   * (by tipo) on one record, returning the allocated id range. Each id is a main data
+   * item's stable `id`, which is the dataframe pairing key (id_key); concurrent PHP/TS
+   * workers editing the same record must NEVER mint the same id, so the read→incr→
+   * persist of the counter runs under a PostgreSQL advisory lock.
+   *
+   * This is CUTOVER-CRITICAL: it must allocate the SAME id PHP would from the same
+   * counter state, so the lock key, hash expression, counter path, and read/incr/write
+   * are reproduced VERBATIM from PHP (core/section_record/class.section_record.php
+   * ::allocate_component_ids, lines 1284-1364):
+   *
+   *   1. lock_key = "<table>_<section_tipo>_<section_id>_<tipo>"  (the table/record/
+   *      component triple — NOT the section_tipo alone the section_id allocator uses).
+   *   2. SELECT pg_advisory_lock( hashtextextended($1, 0) )  — SESSION-level (no
+   *      surrounding transaction needed; released by the matching unlock), with the
+   *      SECOND arg seed = 0. This DIFFERS from the section_id allocator, which uses
+   *      pg_advisory_XACT_lock( hashtext($section_tipo) ) (txn-scoped, single-arg
+   *      hashtext, no seed) + the matrix_counter UPSERT table.
+   *   3. re-read the PERSISTED counter:  SELECT (meta->$tipo->0->>'count')::int  FROM
+   *      <table> WHERE section_tipo=$2 AND section_id=$3 . Take max(persisted, in_memory)
+   *      as the base (in_memory absorbs unsaved in-request allocations; the caller
+   *      passes the in-memory counter it already read).
+   *   4. new_counter = base + count. Persist IMMEDIATELY (so concurrent processes see
+   *      it before the record save) via:  UPDATE <table> SET meta = jsonb_set(
+   *      COALESCE(meta,'{}'::jsonb), ARRAY[$tipo], '[{"count":<new>}]'::jsonb, true )
+   *      WHERE section_tipo AND section_id — but ONLY when the row exists.
+   *   5. unlock in a finally:  SELECT pg_advisory_unlock( hashtextextended($1, 0) ) .
+   *   6. return range(base+1 … new_counter).
+   *
+   * The meta storage format is `{ "<tipo>": [ { "count": <int> } ] }` (a one-element
+   * array whose [0].count is the counter) — identical to set_component_counter.
+   *
+   * (!) Runs on the reserved per-request connection (a SESSION-level lock must be held
+   * + released on the SAME connection). Returns the allocated ids AND the new counter
+   * so the caller can keep its in-memory counter in sync (PHP set_component_counter).
+   */
+  static async allocateComponentIds(
+    session: WriteSession,
+    table: string,
+    sectionTipo: string,
+    sectionId: number,
+    tipo: string,
+    count = 1,
+    inMemoryCounter = 0,
+  ): Promise<{ ids: number[]; newCounter: number }> {
+    assertTable(table);
+    if (count < 1) {
+      return { ids: [], newCounter: inMemoryCounter };
+    }
+
+    // advisory lock key from the (table, record, component) triple — VERBATIM PHP.
+    const lockKey = `${table}_${sectionTipo}_${sectionId}_${tipo}`;
+
+    // SESSION-level advisory lock (no surrounding transaction required), seed 0.
+    await session.query('SELECT pg_advisory_lock( hashtextextended($1, 0) )', [lockKey]);
+    try {
+      // re-read the PERSISTED counter (another process may have allocated since the
+      // record was loaded). meta->$tipo->0->>'count'.
+      const rows = await session.query<{ count: number | null }>(
+        `SELECT (meta->$1->0->>'count')::int AS count FROM "${table}" WHERE section_tipo=$2 AND section_id=$3`,
+        [tipo, sectionTipo, sectionId],
+      );
+      const rowExists = rows.length > 0;
+      const persisted =
+        rowExists && rows[0] && typeof rows[0].count === 'number' && Number.isInteger(rows[0].count)
+          ? rows[0].count
+          : 0;
+
+      // the in-memory counter may be ahead (unsaved allocations in this request).
+      const base = Math.max(persisted, inMemoryCounter);
+      const newCounter = base + count;
+
+      // persist immediately so concurrent processes see the allocation before save.
+      // PHP does jsonb_set(COALESCE(meta,'{}'), ARRAY[$tipo], '[{"count":<new>}]'::jsonb,
+      // true) binding a json_encode'd STRING + ::jsonb (text→jsonb cast → a proper
+      // ARRAY). postgres.js, however, infers the param type: a JS STRING bound to a
+      // ::jsonb placeholder is RE-encoded and stored as a jsonb STRING SCALAR (the
+      // double-encode trap, identical to the matrix-write note). So we bind the RAW JS
+      // array WITHOUT the ::jsonb cast — postgres.js serializes the array directly to a
+      // jsonb ARRAY, matching PHP's stored shape ([{count:<new>}]).
+      if (rowExists) {
+        await session.query(
+          `UPDATE "${table}" SET meta = jsonb_set( COALESCE(meta, '{}'::jsonb), ARRAY[$1], $2, true ) WHERE section_tipo=$3 AND section_id=$4`,
+          [tipo, [{ count: newCounter }], sectionTipo, sectionId],
+        );
+      }
+
+      const ids: number[] = [];
+      for (let i = base + 1; i <= newCounter; i++) ids.push(i);
+      return { ids, newCounter };
+    } finally {
+      await session.query('SELECT pg_advisory_unlock( hashtextextended($1, 0) )', [lockKey]);
+    }
+  }
+
+  /**
    * Port of matrix_db_manager::delete — the single-row DELETE. Removes the matrix
    * row for (section_tipo, section_id):
    *

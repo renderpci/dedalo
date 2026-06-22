@@ -49,6 +49,36 @@ export {
   SUPPORTED_ELEMENT_CONTEXT_MODELS,
 } from './read_handler.ts';
 export {
+  createTsApiHandler,
+  type TsApiHandlerOptions,
+} from './ts_api_handler.ts';
+export {
+  addChild,
+  UnsupportedAddChild,
+  type AddChildRequest,
+  type AddChildOptions,
+  type AddChildResult,
+  type AddChildSource,
+  type AddChildSessionInfo,
+} from './add_child.ts';
+export {
+  updateParentData,
+  UnsupportedUpdateParent,
+  type UpdateParentSource,
+  type UpdateParentOptions,
+  type UpdateParentResult,
+  type UpdateParentSessionInfo,
+} from './update_parent_data.ts';
+export {
+  saveOrder,
+  UnsupportedSaveOrder,
+  type SaveOrderSource,
+  type SaveOrderOptions,
+  type SaveOrderResult,
+  type SaveOrderSessionInfo,
+  type SaveOrderLocator,
+} from './save_order.ts';
+export {
   buildComponentElementContext,
   contextConfigFromEnv,
   type ContextConfig,
@@ -112,12 +142,16 @@ export {
   type BuildInputTextElementOptions,
 } from './input_text_element.ts';
 export {
+  saveComponent,
   saveInputText,
   UnsupportedSave,
+  type SaveComponentRequest,
+  type SaveComponentOptions,
   type SaveInputTextRequest,
   type SaveInputTextOptions,
   type SaveResult,
   type SaveSource,
+  type ChangedDataItem,
   type ChangedDataUpdate,
   type SaveSessionInfo,
 } from './save_input_text.ts';

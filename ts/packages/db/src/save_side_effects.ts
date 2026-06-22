@@ -130,6 +130,14 @@ export interface SaveActivityValues {
   /** The changed component tipo → the WHERE column (dd546). */
   tipo: string;
   sectionId: number | string;
+  /**
+   * The section_id as it should appear in the DATA (dd551) log_data bag, preserving
+   * its JS type. PHP stores log_data.section_id as whatever the component's $section_id
+   * was: a STRING for a normal frontend save (the request's string id), but an INTEGER
+   * for a server-side compound op like dd_ts_api::add_child (the just-allocated id). When
+   * omitted, defaults to String(sectionId) (the frontend-save behaviour).
+   */
+  logSectionId?: number | string;
   sectionTipo: string;
   lang: string;
   /** Component class name (get_called_class) → log_data.component_name. */
@@ -259,7 +267,7 @@ export class SaveSideEffectsDbManager {
     const logData = {
       msg: 'Saved component data',
       tipo: values.tipo,
-      section_id: String(values.sectionId),
+      section_id: values.logSectionId ?? String(values.sectionId),
       lang: values.lang,
       component_name: values.componentName,
       table: values.table,

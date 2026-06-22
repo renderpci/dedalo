@@ -195,6 +195,27 @@ const PORTED_EDIT_COMPONENT_MODELS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * Component models whose value SAVE (update/insert/remove) is ported + byte-verified.
+ * canHandleSave gates on these; every other model declines → proxy. Their data
+ * column + save-time transform + response element are reproduced in save_component.ts
+ * (input_text/text_area → `string`, number → `number`, date → `date`).
+ */
+const SUPPORTED_SAVE_MODELS: ReadonlySet<string> = new Set([
+  'component_input_text',
+  'component_text_area',
+  'component_number',
+  'component_date',
+  // component_select (RELATION family): add/remove a target locator. The save mutates
+  // ONLY the source row's `relation` slice (locator id from the meta counter, select is
+  // monovalue so insert REPLACES) + the audit stamp + source TM/activity — NO inverse
+  // ref is written to the target (proven by live capture; component_relation_common has
+  // no save override, observers are a no-op for plain selects). relation_parent/related
+  // are NOT here: their EDIT response element (main-item + subdatum walk) is un-ported,
+  // and parent inverse is dd_ts_api's job — declined → proxy.
+  'component_select',
+]);
+
+/**
  * Component models whose get_element_context is fully ported + byte-verified.
  * canHandleRequest gates on these for the get_element_context action; every
  * other model / element kind (section, area, tool, other components) declines →
@@ -746,16 +767,21 @@ export function createCoreApiReadHandler(opts: CoreApiReadHandlerOptions): ApiHa
   }
 
   /**
-   * canHandleRequest for the `save` action — the NARROW first mutation. Accept only:
+   * canHandleRequest for the `save` action — a single-component value mutation.
+   * Accept only:
    *   - the wiring is present (db + contextConfig + toolsQueryer, for the write +
    *     the response element),
-   *   - source.type==='component', model==='component_input_text',
+   *   - source.type==='component', model ∈ {input_text, text_area, number, date},
    *   - mode is edit (or absent → edit; list/tm/search saves diverge),
-   *   - EXACTLY ONE changed_data item with action==='update' (insert/remove/
-   *     sort_data/add_new_element change the array shape → declined),
+   *   - EXACTLY ONE changed_data item, action ∈ {update, insert, remove}
+   *     (sort_data / add_new_element / set_data change the array shape differently →
+   *     declined),
+   *   - per action: update/remove carry a numeric id (the found-by-id replace/remove
+   *     path); update/insert carry a data-item OBJECT value (a bare-string wipes the
+   *     column in PHP and is not ported),
    *   - the component is NON-translatable + carries no element special the response
-   *     builder declines (dataframe / with_lang_versions / non-default view / the
-   *     rsc329/dd546/activity specials),
+   *     builder declines (dataframe / dataframe_ddo / with_lang_versions / non-default
+   *     view / tool_config / the rsc329/dd546/activity specials),
    *   - the target matrix row EXISTS (an absent row takes a different write path).
    * Everything else declines → proxy to PHP.
    */
@@ -774,7 +800,7 @@ export function createCoreApiReadHandler(opts: CoreApiReadHandlerOptions): ApiHa
     const sectionTipo = source.section_tipo;
     const model =
       typeof source.model === 'string' ? source.model : await opts.ontology.getModelByTipo(tipo);
-    if (model !== 'component_input_text') return false;
+    if (model === null || !SUPPORTED_SAVE_MODELS.has(model)) return false;
     const mode = typeof source.mode === 'string' ? source.mode : 'edit';
     if (mode !== 'edit') return false;
 
@@ -784,39 +810,139 @@ export function createCoreApiReadHandler(opts: CoreApiReadHandlerOptions): ApiHa
       typeof sidRaw === 'number' ? sidRaw : Number.parseInt(String(sidRaw ?? ''), 10);
     if (!Number.isInteger(sectionId) || sectionId < 1) return false;
 
-    // changed_data: exactly one 'update' item, with a numeric id (the found-by-id
-    // replace path — the only one ported).
+    // changed_data: exactly one item with a supported action + the per-action shape.
     const data = (rqo as { data?: Record<string, unknown> }).data;
     const changedData = data?.changed_data;
     if (!Array.isArray(changedData) || changedData.length !== 1) return false;
     const item = changedData[0] as Record<string, unknown> | null;
-    if (!item || typeof item !== 'object' || item.action !== 'update') return false;
-    const idRaw = item.id;
-    const idNum = typeof idRaw === 'number' ? idRaw : Number.parseInt(String(idRaw ?? ''), 10);
-    if (!Number.isInteger(idNum)) return false;
-    // value must be the full data-item OBJECT (the frontend contract); a bare-string
-    // value wipes the column in PHP and is not the supported replace path.
-    if (item.value === null || typeof item.value !== 'object' || Array.isArray(item.value)) {
-      return false;
-    }
+    if (!item || typeof item !== 'object') return false;
+    const action = item.action;
+    if (action !== 'update' && action !== 'insert' && action !== 'remove') return false;
 
-    // element specials the response builder declines + translatable interleaving.
+    // element specials the response builder declines + the dataframe cascade the
+    // remove/insert array mutation does not reproduce + the translatable gate.
     const props = (await opts.ontology.getProperties(tipo)) ?? {};
     const p = props as {
       has_dataframe?: unknown;
+      dataframe_ddo?: unknown;
       with_lang_versions?: unknown;
       translatable?: unknown;
       view?: unknown;
       tool_config?: unknown;
     };
     if (p.has_dataframe === true || p.with_lang_versions === true) return false;
+    if (Object.prototype.hasOwnProperty.call(props, 'dataframe_ddo') && p.dataframe_ddo) {
+      return false;
+    }
     if (p.view !== undefined && p.view !== 'default') return false;
     if (Object.prototype.hasOwnProperty.call(props, 'tool_config')) return false;
-    // Translatable interleaving: writing the effective-lang slice as the whole column
-    // would drop other-lang items. The ported write path requires a single-lang
-    // (nolan) column → non-translatable. (component_input_text supports_translation is
-    // true by class, so translatability is the `translatable` ontology flag here.)
-    if (p.translatable === true) return false;
+    // Translatable literal components (input_text / text_area) are SUPPORTED: the save
+    // path mutates only the effective-lang slice of the mixed-lang column, with the
+    // cross-lang id-sync on insert/update and the remove-all-langs on remove
+    // (applyTranslatableMutation). number/date are nolan-by-class (never translatable).
+    // with_lang_versions (transliterate) is declined above; a translatable model OTHER
+    // than input_text/text_area (none today, defensively) declines here.
+    const translatable = p.translatable === true || (await opts.ontology.getTranslatable(tipo));
+    if (translatable && model !== 'component_input_text' && model !== 'component_text_area') {
+      return false;
+    }
+
+    // DATAFRAME slot detection. A literal main can host frame pairing locators (a
+    // component_dataframe slot in the `relation` column) WITHOUT carrying has_dataframe/
+    // dataframe_ddo on its OWN ontology node (the slot is declared in the RQO ddo_map,
+    // which the save RQO does not carry). On REMOVE this fires the id_key cascade
+    // (remove_dataframe_data_by_id) — PORTED for the NON-translatable case (the cascade
+    // unlinks the removed item's frames, writes the slot, logs the slot SAVE activity,
+    // merges remaining frames into the main TM row). insert/update never cascade.
+    // Detect by scanning the stored relation column for a frame whose main_component_tipo
+    // === this tipo. DECLINE the translatable+dataframe REMOVE (the PHP "gone from EVERY
+    // language" guard before the cascade is not reproduced) → proxy to PHP.
+    if (action === 'remove') {
+      const matrixTableDf = (await resolveMatrixTable(opts.ontology, sectionTipo)) ?? 'matrix';
+      const relationColumn = await opts.matrix.getColumn(
+        matrixTableDf,
+        sectionTipo,
+        sectionId,
+        'relation',
+      );
+      let ownsFrames = false;
+      if (relationColumn !== null && typeof relationColumn === 'object') {
+        for (const value of Object.values(relationColumn)) {
+          if (!Array.isArray(value)) continue;
+          if (
+            value.some(
+              (el) =>
+                el !== null &&
+                typeof el === 'object' &&
+                (el as { type?: unknown }).type === 'dd490' &&
+                (el as { main_component_tipo?: unknown }).main_component_tipo === tipo,
+            )
+          ) {
+            ownsFrames = true;
+            break;
+          }
+        }
+      }
+      if (ownsFrames && translatable) return false;
+    }
+
+    // Per-action id/key shape (depends on translatable):
+    //   remove : a numeric id is always required (id===null is the remove-all-langs
+    //            path, declined). The translatable remove drops the id from EVERY lang.
+    //   update : a numeric id locates the item; OR (translatable only) a null id WITH a
+    //            numeric key resolves the id from another lang at the same position
+    //            (the canonical "fill an empty lang for an existing item" path).
+    const idAsInt = (raw: unknown): number =>
+      typeof raw === 'number' ? raw : Number.parseInt(String(raw ?? ''), 10);
+    if (action === 'remove') {
+      if (!Number.isInteger(idAsInt(item.id))) return false;
+    }
+    if (action === 'update') {
+      const idNum = idAsInt(item.id);
+      if (!Number.isInteger(idNum)) {
+        // null id is admissible ONLY for a translatable component with a numeric key.
+        if (!translatable) return false;
+        const keyNum = typeof item.key === 'number' ? item.key : Number.NaN;
+        if (!Number.isInteger(keyNum)) return false;
+      }
+    }
+    if (action === 'update' || action === 'insert') {
+      // value must be the full data-item OBJECT (the frontend contract).
+      if (item.value === null || typeof item.value !== 'object' || Array.isArray(item.value)) {
+        return false;
+      }
+      // text_area: only a plain (markup/backslash-free) value is byte-stable through
+      // the PHP sanitize_text denylist — decline anything else (no regex-port risk).
+      if (model === 'component_text_area') {
+        const v = (item.value as { value?: unknown }).value;
+        if (typeof v !== 'string' || v.includes('<') || v.includes('\\')) return false;
+      }
+      // component_select: the value must be a well-formed locator (section_id +
+      // section_tipo present). A bad-formed locator PHP would drop diverges → decline.
+      // An autoreference locator (pointing at the OWN record) is dropped by PHP → decline.
+      if (model === 'component_select') {
+        const loc = item.value as { section_id?: unknown; section_tipo?: unknown };
+        if (
+          loc.section_id === undefined ||
+          loc.section_id === null ||
+          typeof loc.section_tipo !== 'string' ||
+          loc.section_tipo === ''
+        ) {
+          return false;
+        }
+        if (loc.section_tipo === sectionTipo && String(loc.section_id) === String(sectionId)) {
+          return false; // autoreference (own record) — PHP drops it.
+        }
+      }
+    }
+    // component_select: the EDIT response element needs the datalist (get_list_of_values)
+    // + the SQL queryer to enumerate the target section. Decline when the datalist shape
+    // is not byte-reproducible (V6 / filtered_by_search* / multi-target / multi-label /
+    // children) or no search queryer is wired. translatable selects are gated above.
+    if (model === 'component_select') {
+      if (opts.searchQueryer === undefined) return false;
+      if (!(await selectEditDatalistPorted(tipo))) return false;
+    }
     // input_text specials (notes rsc329 / activity dd546) the element builder declines.
     if (tipo === 'rsc329' || tipo === 'dd546') return false;
 
@@ -1100,6 +1226,23 @@ export function createCoreApiReadHandler(opts: CoreApiReadHandlerOptions): ApiHa
         // the server from the PHP session bridge). Anonymous → no user id → the save
         // declines below (UnsupportedSave) and the response reflects the failure.
         const session = tryCtx()?.session;
+        // component_select save: the EDIT response element needs the structure lang +
+        // a target-section datalist search (get_list_of_values). Wire them from the SQL
+        // queryer, identically to the EDIT-mode select read element. The save gate
+        // (canHandleSave) requires the queryer present for a select, so this is set.
+        const saveSearchQueryer = opts.searchQueryer;
+        const saveDatalistSearch =
+          saveSearchQueryer !== undefined
+            ? async (sectionTipos: string[]) =>
+                searchRecords(
+                  { section_tipo: sectionTipos, limit: 0 },
+                  {
+                    queryer: saveSearchQueryer,
+                    resolveTable: async (st) =>
+                      (await resolveMatrixTable(opts.ontology, st)) ?? 'matrix',
+                  },
+                )
+            : undefined;
         try {
           const { result, msg, errors } = await saveInputText(
             {
@@ -1120,6 +1263,10 @@ export function createCoreApiReadHandler(opts: CoreApiReadHandlerOptions): ApiHa
                 userId: session?.userId ?? null,
                 isGlobalAdmin: session?.isGlobalAdmin ?? false,
               },
+              structureLang: opts.contextConfig.structureLang,
+              ...(saveDatalistSearch !== undefined
+                ? { datalistRecordSearch: saveDatalistSearch }
+                : {}),
             },
           );
           return { result, msg, errors };

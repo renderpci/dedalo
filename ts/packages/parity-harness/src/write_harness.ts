@@ -54,6 +54,17 @@ export interface WriteApply {
   rqo: Record<string, unknown>;
 }
 
+/** A captured related row (e.g. a relation save's TARGET): identity + before/after payload. */
+export interface RelatedRowState {
+  table: string;
+  sectionTipo: string;
+  sectionId: number;
+  /** The payload columns BEFORE the write. */
+  before: MatrixPayload;
+  /** The payload columns AFTER the write. */
+  after: MatrixPayload;
+}
+
 /** Outcome of one write-parity run (one endpoint, one row). */
 export interface WriteRunResult {
   /** RAW response body bytes from the apply POST (the envelope ground truth). */
@@ -71,6 +82,13 @@ export interface WriteRunResult {
    * for the time-machine + activity side-effect diff.
    */
   sideRows: SideRowsByTable;
+  /**
+   * OPTIONAL related rows (e.g. a relation save's TARGET record), each with its
+   * before/after payload. For a relation save this PROVES the target is byte-identical
+   * (NO inverse ref written) — the crux of the relation-save parity. Empty when no
+   * related rows were requested. Always restored in the `finally` (defensively).
+   */
+  relatedRows: RelatedRowState[];
 }
 
 /** Captured side-table rows (parsed columns), keyed by table, ordered by id asc. */
@@ -229,9 +247,17 @@ export async function runWriteParity(
   sql: Sql,
   target: MatrixRowTarget,
   apply: WriteApply,
+  /**
+   * OPTIONAL related rows to ALSO snapshot/readback/restore (e.g. a relation save's
+   * TARGET record). For a relation save these prove the target row is byte-identical
+   * before/after (NO inverse-ref mutation). Each is restored in the `finally`.
+   */
+  relatedTargets: ReadonlyArray<MatrixRowTarget> = [],
 ): Promise<WriteRunResult> {
-  // 1. snapshot the row + side-table watermarks.
+  // 1. snapshot the row + the related rows + side-table watermarks.
   const before = await snapshotRow(sql, target);
+  const relatedBefore: MatrixPayload[] = [];
+  for (const rt of relatedTargets) relatedBefore.push(await snapshotRow(sql, rt));
   const watermarks: Record<string, number> = {};
   for (const t of SIDE_TABLES) watermarks[t] = await maxId(sql, t);
 
@@ -240,6 +266,7 @@ export async function runWriteParity(
   let after: MatrixPayload = before;
   const sideRows: SideRowsByTable = {};
   for (const t of SIDE_TABLES) sideRows[t] = [];
+  const relatedRows: RelatedRowState[] = [];
 
   try {
     // 2. apply: login + POST the save RQO with the session CSRF header.
@@ -256,8 +283,18 @@ export async function runWriteParity(
     status = res.status;
     responseBytes = await res.text();
 
-    // 3. readback the resulting row.
+    // 3. readback the resulting row + the related rows (the inverse-ref proof).
     after = await snapshotRow(sql, target);
+    for (let i = 0; i < relatedTargets.length; i++) {
+      const rt = relatedTargets[i]!;
+      relatedRows.push({
+        table: rt.table,
+        sectionTipo: rt.sectionTipo,
+        sectionId: rt.sectionId,
+        before: relatedBefore[i]!,
+        after: await snapshotRow(sql, rt),
+      });
+    }
 
     // 3b. capture the side-table rows the write created (id > watermark). PHP's
     // activity row is written at request shutdown, which can lag the HTTP response
@@ -275,8 +312,14 @@ export async function runWriteParity(
       await new Promise((r) => setTimeout(r, 150));
     }
   } finally {
-    // 4. restore: row payload back to snapshot, then clean side-table rows.
+    // 4. restore: row payload back to snapshot, then EVERY related row, then clean
+    // side-table rows. Restoring the related rows is defensive — a relation save must
+    // leave them byte-identical (NO inverse mutation), but we restore regardless so a
+    // divergence (an unexpected inverse write) is still cleaned up.
     await restoreRow(sql, target, before);
+    for (let i = 0; i < relatedTargets.length; i++) {
+      await restoreRow(sql, relatedTargets[i]!, relatedBefore[i]!);
+    }
     // PHP writes the activity/TM rows inside the request, but the commit can lag the
     // HTTP response slightly; a short settle + re-scan catches a late straggler so
     // the side tables are left exactly as before the run.
@@ -290,7 +333,7 @@ export async function runWriteParity(
     for (const t of SIDE_TABLES) await deleteSince(sql, t, watermarks[t] ?? 0);
   }
 
-  return { responseBytes, status, before, after, sideRows };
+  return { responseBytes, status, before, after, sideRows, relatedRows };
 }
 
 /**
@@ -948,5 +991,279 @@ function emptyPayload(): MatrixPayload {
  * is COMPARED verbatim.
  */
 export function canonicalizeReferencingRow(payload: MatrixPayload): string {
+  return stableStringify(normalizeRowForDiff(payload));
+}
+
+// ───────────────────────────── ADD_CHILD (dd_ts_api) parity ────────────────────
+//
+// add_child creates a NEW child term under a parent thesaurus node and links it
+// (the child's component_relation_parent locator + per-parent order). It is a
+// COMPOUND server-side op: create + 2 radio_button default saves + 1 order save + 1
+// relation_parent save, each producing a time-machine + activity row. The PARENT row
+// is NOT mutated (children are a computed inverse). So the parity run snapshots:
+//   - the counter (the new child section_id allocation MUST match PHP),
+//   - the PARENT row (to prove it is byte-identical before AND after),
+//   - the side-table watermarks,
+// applies the add_child, reads back the NEW child row + the parent row + every new
+// side row, then RESTORES: delete the child, restore the parent + counter, sweep the
+// side rows — leaving the test DB byte-identical.
+
+/** The add_child RQO + endpoint to apply it against. */
+export interface AddChildApply {
+  apiUrl: string;
+  username: string;
+  password: string;
+  /** The add_child RQO (action:'add_child', source) — CSRF injected by the harness. */
+  rqo: Record<string, unknown>;
+}
+
+/** Outcome of one ADD_CHILD-parity run. */
+export interface AddChildRunResult {
+  responseBytes: string;
+  status: number;
+  /** The new child section_id (response.result), or null on failure. */
+  newSectionId: number | null;
+  counterBefore: number | null;
+  counterAfter: number | null;
+  /** The new child row payload columns (readback), or null if absent. */
+  childRow: MatrixPayload | null;
+  /** The parent row payload BEFORE the apply. */
+  parentBefore: MatrixPayload;
+  /** The parent row payload AFTER the apply (must equal parentBefore). */
+  parentAfter: MatrixPayload;
+  /** All new side rows (TM + activity) created since the watermark, by table. */
+  sideRows: SideRowsByTable;
+}
+
+/**
+ * Run ONE add_child-parity cycle: snapshot (parent row + counter + watermarks) →
+ * apply (POST add_child) → readback (child row + parent row + side rows) → restore
+ * (delete child, restore parent + counter, sweep side rows). Always restores in a
+ * `finally`. The counter restore + child delete make the next engine allocate the
+ * SAME id, the core allocator-parity check.
+ */
+export async function runAddChildParity(
+  sql: Sql,
+  parent: MatrixRowTarget,
+  apply: AddChildApply,
+): Promise<AddChildRunResult> {
+  assertTable(parent.table);
+  const counterTable = counterTableFor(parent.table);
+
+  // 1. snapshot the parent row + the counter + side-table watermarks.
+  const parentBefore = await snapshotRow(sql, parent);
+  const counterBefore = await readCounter(sql, counterTable, parent.sectionTipo);
+  const watermarks: Record<string, number> = {};
+  for (const t of SIDE_TABLES) watermarks[t] = await maxId(sql, t);
+
+  let responseBytes = '';
+  let status = 0;
+  let newSectionId: number | null = null;
+  let counterAfter: number | null = counterBefore;
+  let childRow: MatrixPayload | null = null;
+  let parentAfter: MatrixPayload = parentBefore;
+  const sideRows: SideRowsByTable = {};
+  for (const t of SIDE_TABLES) sideRows[t] = [];
+
+  try {
+    // 2. apply: login + POST the add_child RQO.
+    const session = await login(apply.apiUrl, apply.username, apply.password);
+    const res = await fetch(apply.apiUrl, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        cookie: session.cookie,
+        'x-dedalo-csrf-token': session.csrfToken,
+      },
+      body: JSON.stringify(apply.rqo),
+    });
+    status = res.status;
+    responseBytes = await res.text();
+    const parsed = JSON.parse(responseBytes) as { result?: unknown };
+    const r = parsed.result;
+    newSectionId = typeof r === 'number' ? r : Number.isNaN(Number(r)) ? null : Number(r);
+
+    // 3. readback: counter, the new child row, the parent row (unchanged proof).
+    counterAfter = await readCounter(sql, counterTable, parent.sectionTipo);
+    if (newSectionId !== null) {
+      childRow = await readRowPayload(sql, parent.table, parent.sectionTipo, newSectionId);
+    }
+    parentAfter = await snapshotRow(sql, parent);
+
+    // 3b. capture the side rows. add_child writes 4 TM + 5 activity (NEW + 4 SAVE)
+    // rows for the add_child itself, PLUS the login activity rows in the same window.
+    // The diff isolates by structure; here we just settle until they stabilise.
+    for (let attempt = 0; attempt < 8; attempt++) {
+      let tm = 0;
+      for (const t of SIDE_TABLES) {
+        sideRows[t] = await captureSince(sql, t, watermarks[t] ?? 0);
+        if (t === 'matrix_time_machine') tm = sideRows[t].length;
+      }
+      // expect 4 TM rows for the 4 component saves; stop once present.
+      if (tm >= 4) break;
+      await new Promise((r2) => setTimeout(r2, 150));
+    }
+  } finally {
+    // 4. restore: delete the created child, restore the parent + counter, sweep side rows.
+    if (newSectionId !== null) {
+      await sql.unsafe(
+        `DELETE FROM "${parent.table}" WHERE section_tipo = $1 AND section_id = $2`,
+        [parent.sectionTipo, newSectionId],
+      );
+    }
+    await restoreRow(sql, parent, parentBefore);
+    await restoreCounter(sql, counterTable, parent.sectionTipo, counterBefore);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      let deleted = 0;
+      for (const t of SIDE_TABLES) deleted += await deleteSince(sql, t, watermarks[t] ?? 0);
+      if (deleted === 0 && attempt > 0) break;
+      await new Promise((r2) => setTimeout(r2, 150));
+    }
+    for (const t of SIDE_TABLES) await deleteSince(sql, t, watermarks[t] ?? 0);
+  }
+
+  return {
+    responseBytes,
+    status,
+    newSectionId,
+    counterBefore,
+    counterAfter,
+    childRow,
+    parentBefore,
+    parentAfter,
+    sideRows,
+  };
+}
+
+/**
+ * Volatile-leaf normalizer for the ADD_CHILD new-child row diff. The child row's
+ * volatile leaves (per the live PHP add_child on tchi1):
+ *   - data.created_date / data.created_by_user_id   — create metadata.
+ *   - relation.dd200[*].section_id (created_by_user) — create audit.
+ *   - relation.dd197[*].section_id (modified_by_user)— first-save audit.
+ *   - date.dd199[*].start.<clock>  (created_date)    — create.
+ *   - date.dd201[*].start.<clock>  (modified_date)   — first save.
+ * Everything else (the is_descriptor/is_indexable/order/parent locators, the meta
+ * counters, the order value) is COMPARED verbatim.
+ */
+export function normalizeAddChildRowForDiff(payload: MatrixPayload): MatrixPayload {
+  const clone = structuredClone(payload) as unknown as Record<string, unknown>;
+  const data = clone.data;
+  if (data !== null && typeof data === 'object') {
+    const d = data as Record<string, unknown>;
+    if ('created_date' in d) d.created_date = '<volatile>';
+    if ('created_by_user_id' in d) d.created_by_user_id = '<volatile>';
+  }
+  normalizeRelationSectionId(clone.relation, 'dd200');
+  normalizeRelationSectionId(clone.relation, 'dd197');
+  normalizeDateColumn(clone.date, 'dd199');
+  normalizeDateColumn(clone.date, 'dd201');
+  return clone as unknown as MatrixPayload;
+}
+
+/** Canonicalize an ADD_CHILD child row (volatile-normalized) to a stable string. */
+export function canonicalizeAddChildRow(payload: MatrixPayload): string {
+  return stableStringify(normalizeAddChildRowForDiff(payload));
+}
+
+// ─────────────────── MULTI-ROW (save_order / update_parent_data) parity ─────────
+//
+// save_order reorders the children of a parent: it mutates EVERY listed sibling row
+// (each gains/updates an order item in the number column) but touches NO counter and
+// NOT the parent. update_parent_data moves a node: it mutates the moved node's relation
+// + number columns AND recalculates the OLD parent's remaining siblings' order, but
+// NEVER the old/new parent rows (children are a computed inverse). Both need a snapshot
+// of MANY rows (the moved node + every sibling that may be renumbered), and the SAFETY
+// requirement is paramount: every touched row + the side-table watermarks restored.
+//
+// The harness snapshots a fixed set of target rows (caller-supplied), applies the op,
+// reads them all back, captures the side rows since the watermark, then RESTORES every
+// row to its snapshot + sweeps the side rows — leaving the test DB byte-identical.
+
+/** Outcome of one MULTI-ROW write-parity run. */
+export interface MultiRowRunResult {
+  responseBytes: string;
+  status: number;
+  /** Each target row's payload BEFORE the apply, keyed by "<tipo>/<id>". */
+  before: Record<string, MatrixPayload>;
+  /** Each target row's payload AFTER the apply, keyed by "<tipo>/<id>". */
+  after: Record<string, MatrixPayload>;
+  /** The side-table rows the op CREATED (TM + activity), keyed by table. */
+  sideRows: SideRowsByTable;
+}
+
+function rowKey(t: MatrixRowTarget): string {
+  return `${t.sectionTipo}/${t.sectionId}`;
+}
+
+/**
+ * Run ONE multi-row write-parity cycle: snapshot every target row + side watermarks →
+ * apply (login + POST the rqo) → readback every target row + side rows → restore every
+ * target row + sweep side rows. Always restores in a `finally`. The expectedTm hint
+ * controls the settle loop (how many TM rows to wait for before capturing).
+ */
+export async function runMultiRowWriteParity(
+  sql: Sql,
+  targets: ReadonlyArray<MatrixRowTarget>,
+  apply: WriteApply,
+  expectedTm = 1,
+): Promise<MultiRowRunResult> {
+  const before: Record<string, MatrixPayload> = {};
+  for (const t of targets) before[rowKey(t)] = await snapshotRow(sql, t);
+  const watermarks: Record<string, number> = {};
+  for (const tbl of SIDE_TABLES) watermarks[tbl] = await maxId(sql, tbl);
+
+  let responseBytes = '';
+  let status = 0;
+  const after: Record<string, MatrixPayload> = {};
+  const sideRows: SideRowsByTable = {};
+  for (const tbl of SIDE_TABLES) sideRows[tbl] = [];
+
+  try {
+    const session = await login(apply.apiUrl, apply.username, apply.password);
+    const res = await fetch(apply.apiUrl, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        cookie: session.cookie,
+        'x-dedalo-csrf-token': session.csrfToken,
+      },
+      body: JSON.stringify(apply.rqo),
+    });
+    status = res.status;
+    responseBytes = await res.text();
+
+    for (const t of targets) after[rowKey(t)] = await snapshotRow(sql, t);
+
+    for (let attempt = 0; attempt < 8; attempt++) {
+      let tm = 0;
+      for (const tbl of SIDE_TABLES) {
+        sideRows[tbl] = await captureSince(sql, tbl, watermarks[tbl] ?? 0);
+        if (tbl === 'matrix_time_machine') tm = sideRows[tbl].length;
+      }
+      if (tm >= expectedTm) break;
+      await new Promise((r) => setTimeout(r, 150));
+    }
+  } finally {
+    for (const t of targets) await restoreRow(sql, t, before[rowKey(t)]!);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      let deleted = 0;
+      for (const tbl of SIDE_TABLES) deleted += await deleteSince(sql, tbl, watermarks[tbl] ?? 0);
+      if (deleted === 0 && attempt > 0) break;
+      await new Promise((r) => setTimeout(r, 150));
+    }
+    for (const tbl of SIDE_TABLES) await deleteSince(sql, tbl, watermarks[tbl] ?? 0);
+  }
+
+  return { responseBytes, status, before, after, sideRows };
+}
+
+/**
+ * Volatile-leaf normalizer for the multi-row readback rows. The order saves stamp NO
+ * dd197/dd201 on these rows (the order/relation columns change, not the modify audit),
+ * but to be defensive against any audit re-stamp we reuse normalizeRowForDiff (dd201
+ * clock + dd197 section_id). The order/relation column values are compared verbatim.
+ */
+export function canonicalizeMultiRow(payload: MatrixPayload): string {
   return stableStringify(normalizeRowForDiff(payload));
 }
