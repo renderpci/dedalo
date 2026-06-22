@@ -29,8 +29,10 @@ if (!area) {
 }
 
 // inherit theme from URL — keep the chrome and the embedded Dédalo
-// components (styled by main.css via data-theme) in the same theme
-document.documentElement.setAttribute('data-theme', url_vars.theme === 'dark' ? 'dark' : 'light')
+// components (styled by main.css via data-theme) in the same theme.
+// Dédalo convention: light = no attribute; dark = data-theme="dark".
+if (url_vars.theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark')
+else document.documentElement.removeAttribute('data-theme')
 
 let ready = false
 try {
@@ -106,7 +108,8 @@ if (ready) {
 // listen for theme changes from parent
 window.addEventListener('message', function(e) {
 	if (e.data && e.data.type === 'theme') {
-		document.documentElement.setAttribute('data-theme', e.data.light ? 'light' : 'dark')
+		if (e.data.light) document.documentElement.removeAttribute('data-theme')
+		else document.documentElement.setAttribute('data-theme', 'dark')
 	}
 })
 
