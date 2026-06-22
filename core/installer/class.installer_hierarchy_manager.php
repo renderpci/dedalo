@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
 /**
-* CLASS INSTALL_HIERARCHY_MANAGER
+* CLASS INSTALLER_HIERARCHY_MANAGER
 * Discovery, import, activation, and installation of Dédalo thesaurus hierarchies
 * during the initial installation wizard.
 *
@@ -140,15 +140,16 @@ final class installer_hierarchy_manager {
 				// Falls back to an empty stdClass when the tld is not registered,
 				// so downstream null-coalescence produces 'undefined [...]' labels.
 				$current_hierarchy = array_find($hierarchies ?? [], function($el) use($tld){
-					return strtolower($el->tld)===strtolower($tld);
+					return strtolower($el->tld ?? '')===strtolower($tld);
 				}) ?? new stdClass();
 
 				$label					= $current_hierarchy->label ?? 'undefined ['.$tld.']';
-				// Files whose section_tipo contains '2' are model-record exports;
-				// all others are term-record exports.
-				$type					= strpos($section_tipo, '2')!==false ? 'model' : 'term';
+				// The numeric SUFFIX of section_tipo selects the record type:
+				// '<tld>1' → term records, '<tld>2' → model records. Match the trailing
+				// digit only (not any '2' elsewhere) so tld names can't be misclassified.
+				$type					= (preg_match('/(\d+)$/', $section_tipo, $m_type) && $m_type[1]==='2') ? 'model' : 'term';
 				$typology				= $current_hierarchy->typology ?? 'undefined typology ['.$tld.']';
-				$active_in_thesaurus	= $current_hierarchy->active_in_thesaurus ?? 'undefined typology ['.$tld.']';
+				$active_in_thesaurus	= $current_hierarchy->active_in_thesaurus ?? 'undefined active_in_thesaurus ['.$tld.']';
 
 				$item = (object)[
 					'file'					=> $file,
@@ -219,6 +220,16 @@ final class installer_hierarchy_manager {
 
 		$json_data = file_get_contents($json_file_path);
 		$typologies = json_decode($json_data);
+
+		// Harden the declared ': array' contract: a failed read (false) or malformed
+		// JSON (null) — or a JSON object — would otherwise raise a TypeError on return.
+		if (!is_array($typologies)) {
+			debug_log(__METHOD__
+				. " Error: hierarchies_typologies.json did not decode to an array: " . $json_file_path
+				, logger::ERROR
+			);
+			return [];
+		}
 
 		return $typologies;
 	}//end get_hierarchy_typlologies
@@ -662,7 +673,7 @@ final class installer_hierarchy_manager {
 			// Uses the locator class (vs raw json_decode above) because the target
 			// section_id is computed at runtime from $active_in_thesaurus.
 			// DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO = 'hierarchy125'.
-			$active_view_ts_tipo	= DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO;	// hierarchy4
+			$active_view_ts_tipo	= DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO;	// hierarchy125
 			$component				= self::get_hierarchy_component($active_view_ts_tipo, $section_id, 'list', $section_tipo, $response->errors);
 			if ($component!==null) {
 				// Map the boolean to yes (1) or no (2) section_id in the dd64 section.
@@ -762,7 +773,10 @@ final class installer_hierarchy_manager {
 					// file is present on disk. Some toponymy hierarchies ship without
 					// a model file; the absence is logged as a warning, not an error.
 					$dir_path		= $config->hierarchy_files_dir_path;
-					$models_file	= $dir_path . '/' . strtolower($tld) . '.copy.gz';
+					// Model data files use the '<tld>2.copy.gz' convention (digit 2 = models),
+					// e.g. 'ad2.copy.gz'. The earlier '<tld>.copy.gz' form never matched a shipped
+					// file, so this child-locator block was dead code.
+					$models_file	= $dir_path . '/' . strtolower($tld) . '2.copy.gz';
 					if (file_exists($models_file)) {
 
 						$component_tipo	= DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO;	// 'hierarchy59';
@@ -906,12 +920,15 @@ final class installer_hierarchy_manager {
 			$ok				= true;
 			foreach ($selected_tlds as $tld) {
 
-				// find the hierarchy in the available files (match by tld)
-				$found = null;
-				foreach ($available as $el) {
-					if ($el->tld === $tld) { $found = $el; break; }
-				}
-				if (empty($found)) {
+				// find ALL available files for this tld. A hierarchy ships up to two data files:
+				// the term export '<tld>1.copy.gz' and the model export '<tld>2.copy.gz'. Both share
+				// the same tld, so EVERY matching file must be imported — not just the first one (the
+				// previous `break` after the first match silently dropped the model data, leaving
+				// each hierarchy's '<tld>2' virtual section empty).
+				$matches = array_values(array_filter($available, static function($el) use($tld){
+					return ($el->tld ?? null) === $tld;
+				}));
+				if (empty($matches)) {
 					$msg = "Error: no available hierarchy file for tld '".$tld."'";
 					debug_log(__METHOD__.' '.$msg, logger::ERROR);
 					$response->errors[] = $msg;
@@ -919,19 +936,19 @@ final class installer_hierarchy_manager {
 					continue;
 				}
 
-				// PER-FILE VERIFICATION: the .copy.gz must still exist and be readable right now
-				// (prevents trying to import a non-existing/removed hierarchy file).
-				if (empty($found->file) || !is_file($found->file) || !is_readable($found->file)) {
-					$msg = "Error: hierarchy data file missing or unreadable for tld '".$tld."': ".to_string($found->file ?? null);
-					debug_log(__METHOD__.' '.$msg, logger::ERROR);
-					$response->errors[] = $msg;
-					$ok = false;
-					continue;
+				// metadata source: prefer the term item ('<tld>1'); its hierarchies.json-derived
+				// typology/label/active_in_thesaurus drive activation (all matches share them).
+				$meta = null;
+				foreach ($matches as $candidate) {
+					if (($candidate->type ?? null) === 'term') { $meta = $candidate; break; }
+				}
+				if ($meta === null) {
+					$meta = $matches[0];
 				}
 
 				// the typology must be a real number to activate the hierarchy (an unregistered
 				// tld in hierarchies.json yields a placeholder string — reject it explicitly).
-				if (!is_numeric($found->typology)) {
+				if (!is_numeric($meta->typology)) {
 					$msg = "Error: hierarchy '".$tld."' is not registered (no valid typology); skipped";
 					debug_log(__METHOD__.' '.$msg, logger::ERROR);
 					$response->errors[] = $msg;
@@ -939,42 +956,74 @@ final class installer_hierarchy_manager {
 					continue;
 				}
 
-				// resolve the target matrix table for the import.
-				// A brand-new hierarchy's virtual section (e.g. 'ts1') is NOT registered in the
-				// ontology until activate_hierarchy() runs (below), so get_matrix_table_from_tipo()
-				// returns '' for it (and logs a misleading ERROR). Probe the model first with the
-				// quiet ontology_node::get_model_by_tipo() — null means unregistered — and skip
-				// straight to the fallback to avoid the noisy error log. Core sections shipped in
-				// the seed (e.g. 'lg1' → matrix_langs) resolve directly. For everything else, fall
-				// back to the source thesaurus template table
-				// (DEDALO_THESAURUS_SECTION_TIPO → matrix_hierarchy) — what the virtual section
-				// inherits once activated.
-				$matrix_table = null;
-				$section_model = ontology_node::get_model_by_tipo($found->section_tipo);
-				if (!empty($section_model)) {
-					$matrix_table = common::get_matrix_table_from_tipo($found->section_tipo);
-				}
-				if (empty($matrix_table)) {
-					$matrix_table = common::get_matrix_table_from_tipo(DEDALO_THESAURUS_SECTION_TIPO);
-				}
-				if (empty($matrix_table)) {
-					$msg = "Error: could not resolve the target matrix table for hierarchy '".$tld."'";
-					debug_log(__METHOD__.' '.$msg, logger::ERROR);
-					$response->errors[] = $msg;
-					$ok = false;
-					continue;
+				// import every data file for this tld (terms + models) into its matrix table.
+				// Track the term ('<tld>1') outcome separately: without term data there is no
+				// hierarchy to activate, so a term-import failure skips activation; a model
+				// ('<tld>2') failure is recorded but does not block activation.
+				$primary_ok = true;
+				foreach ($matches as $found) {
+
+					$is_primary = (($found->type ?? null) === 'term');
+
+					// PER-FILE VERIFICATION: the .copy.gz must still exist and be readable right now
+					// (prevents trying to import a non-existing/removed hierarchy file).
+					if (empty($found->file) || !is_file($found->file) || !is_readable($found->file)) {
+						$msg = "Error: hierarchy data file missing or unreadable for tld '".$tld."': ".to_string($found->file ?? null);
+						debug_log(__METHOD__.' '.$msg, logger::ERROR);
+						$response->errors[] = $msg;
+						$ok = false;
+						if ($is_primary) { $primary_ok = false; }
+						continue;
+					}
+
+					// resolve the target matrix table for the import.
+					// A brand-new hierarchy's virtual section (e.g. 'ts1') is NOT registered in the
+					// ontology until activate_hierarchy() runs (below), so get_matrix_table_from_tipo()
+					// returns '' for it (and logs a misleading ERROR). Probe the model first with the
+					// quiet ontology_node::get_model_by_tipo() — null means unregistered — and skip
+					// straight to the fallback to avoid the noisy error log. Core sections shipped in
+					// the seed (e.g. 'lg1' → matrix_langs) resolve directly. For everything else, fall
+					// back to the source thesaurus template table
+					// (DEDALO_THESAURUS_SECTION_TIPO → matrix_hierarchy) — what the virtual section
+					// inherits once activated.
+					$matrix_table = null;
+					$section_model = ontology_node::get_model_by_tipo($found->section_tipo);
+					if (!empty($section_model)) {
+						$matrix_table = common::get_matrix_table_from_tipo($found->section_tipo);
+					}
+					if (empty($matrix_table)) {
+						$matrix_table = common::get_matrix_table_from_tipo(DEDALO_THESAURUS_SECTION_TIPO);
+					}
+					if (empty($matrix_table)) {
+						$msg = "Error: could not resolve the target matrix table for hierarchy '".$tld."' (".to_string($found->section_tipo).")";
+						debug_log(__METHOD__.' '.$msg, logger::ERROR);
+						$response->errors[] = $msg;
+						$ok = false;
+						if ($is_primary) { $primary_ok = false; }
+						continue;
+					}
+
+					// import the .copy.gz payload into its matrix table
+					$import_options = (object)[
+						'section_tipo'	=> $found->section_tipo,
+						'file_path'		=> $found->file,
+						'matrix_table'	=> $matrix_table
+					];
+					$import_response = backup::import_from_copy_file( $import_options );
+					$ar_responses[] = $import_response;
+					if (($import_response->result ?? false) !== true) {
+						$response->errors[] = "Error importing hierarchy '".$tld."' (".to_string($found->section_tipo)."): ".to_string($import_response->msg ?? '');
+						$ok = false;
+						if ($is_primary) { $primary_ok = false; }
+						continue;
+					}
 				}
 
-				// import the .copy.gz payload into its matrix table
-				$import_options = (object)[
-					'section_tipo'	=> $found->section_tipo,
-					'file_path'		=> $found->file,
-					'matrix_table'	=> $matrix_table
-				];
-				$import_response = backup::import_from_copy_file( $import_options );
-				$ar_responses[] = $import_response;
-				if (($import_response->result ?? false) !== true) {
-					$response->errors[] = "Error importing hierarchy '".$tld."': ".to_string($import_response->msg ?? '');
+				// without term data there is nothing to activate for this tld
+				if ($primary_ok !== true) {
+					$msg = "Error: term data not imported for tld '".$tld."'; activation skipped";
+					debug_log(__METHOD__.' '.$msg, logger::ERROR);
+					$response->errors[] = $msg;
 					$ok = false;
 					continue;
 				}
@@ -982,10 +1031,10 @@ final class installer_hierarchy_manager {
 				// create/activate the hierarchy + ontology virtual sections, using the VERIFIED
 				// metadata from the available file (tld/typology/label/active_in_thesaurus).
 				$activate_options = (object)[
-					'tld'					=> $found->tld,
-					'typology'				=> (int)$found->typology,
-					'label'					=> $found->label,
-					'active_in_thesaurus'	=> is_bool($found->active_in_thesaurus) ? $found->active_in_thesaurus : true
+					'tld'					=> $meta->tld,
+					'typology'				=> (int)$meta->typology,
+					'label'					=> $meta->label,
+					'active_in_thesaurus'	=> is_bool($meta->active_in_thesaurus) ? $meta->active_in_thesaurus : true
 				];
 				$activate_response = self::activate_hierarchy($activate_options);
 				$ar_responses[] = $activate_response;
