@@ -10,8 +10,90 @@
 		margin-top: 1rem;
 		margin-bottom: 1rem;
 
-		// tab headers
-		>.tab_label {
+		// label bar: relative box holding the clipped scroll strip + chevrons
+		>.tab_labels {
+			position: relative;
+		}
+
+		// scrolling strip. A single row that CLIPS its overflow (no scrollbar);
+		// the chevron buttons scroll it programmatically. min-width:0 lets it
+		// shrink within its container so it never pushes past the content column
+		// (which was overlapping the inspector before).
+		>.tab_labels >.tab_labels_strip {
+			display: flex;
+			flex-wrap: nowrap;
+			overflow: hidden;
+			scroll-behavior: smooth;
+			min-width: 0;
+			// cap the row to the visible content column so it can never slide
+			// under the fixed inspector; when it overflows, the chevrons scroll
+			// it. Below the desktop break the inspector is inline (full width).
+			max-width: calc(100vw - var(--inspector_width) - 2rem);
+
+			@media screen and (max-width: @width_break_point_0) {
+				max-width: calc(100vw - 1.5rem);
+			}
+		}
+
+		// chevron scroll buttons. Hidden until the JS detects overflow (.show).
+		>.tab_labels >.tab_scroll_btn {
+			display: none;
+			position: absolute;
+			top: 0;
+			bottom: 0;
+			width: 1.6rem;
+			align-items: center;
+			padding: 0px;
+			border: none;
+			cursor: pointer;
+			z-index: 3;
+
+			&.show {
+				display: flex;
+			}
+
+			&:after {
+				content: '';
+				width: 1em;
+				height: 1em;
+				.fn_add_mask('arrow_down.svg');
+				background-color: @color_grey_5;
+				transition: background-color 0.15s ease;
+			}
+
+			&:hover:after {
+				background-color: @color_orange_dedalo;
+			}
+
+			// left chevron, fades the tabs out toward the left edge
+			&.tab_scroll_left {
+				left: 0;
+				top: 12px;
+				justify-content: flex-start;
+				background: linear-gradient(to right, var(--color_grey_14) 62%, transparent);
+				&:after {
+					transform: rotate(90deg);
+				}
+			}
+
+			// right chevron, fades the tabs out toward the right edge
+			&.tab_scroll_right {
+				right: 0;
+				margin-right: 0;
+				justify-content: flex-end;
+				top: 12px;
+				background: linear-gradient(to left, var(--color_grey_14) 62%, transparent);
+				&:after {
+					transform: rotate(-90deg);
+				}
+			}
+		}
+
+		// tab headers (selector reaches into the strip; also covers the legacy
+		// flat structure so a stale-cached JS module never leaves them unstyled)
+		>.tab_labels .tab_label {
+			flex: 0 0 auto;
+			white-space: nowrap;
 			display: inline-block;
 			margin: 0px;
 			margin-left: -1px;
@@ -19,10 +101,6 @@
 			text-align: center;
 			color: @color_grey_10;
 			border: 1px solid transparent;
-			-webkit-user-select: none;
-			-khtml-user-select: none;
-			-moz-user-select: none;
-			-o-user-select: none;
 			user-select: none;
 			top: 1px;
 			position: relative;
@@ -44,8 +122,10 @@
 				background-color: @color_white;
 				color: @color_grey_7;
 				border: 1px solid @color_grey_14;
-				border-top: 2px solid @color_orange_dedalo;
+				// border-top: 2px solid @color_orange_dedalo;
 				border-bottom: 2px solid @color_white;
+				border-top-left-radius: 0.7rem;
+				border-top-right-radius: 0.7rem;
 				margin-bottom: 0px;
 				z-index: 1;
 			}
@@ -55,10 +135,20 @@
 		>.tab {
 			width: 100%;
 			display: none;
+			// same white rounded card as section_group
+			background-color: var(--color_white);
+			border-radius: 0.7rem;
 
 			&.active {
 				display: grid;
 			}
+		}
+
+		// only the FIRST tab (right after the label bar) squares its top-left
+		// corner, so it sits flush under the first tab label (which has no left
+		// margin). The rest keep the full 0.7rem rounding.
+		>.tab_labels + .tab {
+			border-top-left-radius: 0px;
 		}
 	}
 
