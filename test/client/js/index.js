@@ -24,7 +24,7 @@
 		window.SHOW_DEBUG = false
 		window.DEVELOPMENT_SERVER = false
 		window.DEDALO_API_URL = '../../core/api/v1/json/'
-		// app-global the full page injects server-side; some components (e.g. install)
+		// app-global the full page injects server-side; some components (e.g. installer)
 		// read it as a bare global fallback, so stub it to avoid a ReferenceError
 		window.PHP_VERSION = window.PHP_VERSION || ''
 
