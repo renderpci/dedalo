@@ -25,7 +25,7 @@
 * Data shapes:
 * - A hierarchy record in matrix_hierarchy_main is a standard Dédalo section of
 *   tipo DEDALO_HIERARCHY_SECTION_TIPO ('hierarchy1'). Its component fields are
-*   written individually through component_common::get_instance() + set_dato() +
+*   written individually through component_common::get_instance() + set_data() +
 *   Save(), using DEDALO_DATA_NOLAN ('') as the language (non-language-specific).
 * - A "file item" produced by get_available_hierarchy_files() is an anonymous
 *   stdClass with keys: file, file_name, section_tipo, tld, label, type
@@ -482,7 +482,7 @@ final class installer_hierarchy_manager {
 	*
 	* This method is idempotent with respect to the matrix record: it first calls
 	* hierarchy::get_hierarchy_by_tld() and only creates a new section when one
-	* does not already exist.  All component writes (set_dato + Save) are applied
+	* does not already exist.  All component writes (set_data + Save) are applied
 	* unconditionally so that re-running activation refreshes stale field values.
 	*
 	* Field-writing sequence (new record only):
@@ -602,24 +602,24 @@ final class installer_hierarchy_manager {
 					$tld_tipo	= DEDALO_HIERARCHY_TLD2_TIPO; // hierarchy6
 					$component	= self::get_hierarchy_component($tld_tipo, $section_id, 'list', $section_tipo, $response->errors);
 					if ($component!==null) {
-						$component->set_dato([$tld]);
-						$component->Save();
+						$component->set_data([$tld]);
+						$component->save();
 					}
 
 				// typology
 					$hierarchy_type_tipo	= DEDALO_HIERARCHY_TYPOLOGY_TIPO; // hierarchy9
 					$component				= self::get_hierarchy_component($hierarchy_type_tipo, $section_id, 'list', $section_tipo, $response->errors);
 					if ($component!==null) {
-						$component->set_dato([$typology]);
-						$component->Save();
+						$component->set_data([$typology]);
+						$component->save();
 					}
 
 				// label
 					$label_tipo	= DEDALO_HIERARCHY_LABEL_TIPO; // hierarchy7
 					$component	= self::get_hierarchy_component($label_tipo, $section_id, 'edit', $section_tipo, $response->errors);
 					if ($component!==null) {
-						$component->set_dato([$label]);
-						$component->Save();
+						$component->set_data([$label]);
+						$component->save();
 					}
 
 				// name
@@ -629,8 +629,8 @@ final class installer_hierarchy_manager {
 					$component	= self::get_hierarchy_component($name_tipo, $section_id, 'edit', $section_tipo, $response->errors);
 					if ($component!==null) {
 						$lang_locator = lang::get_lang_locator_from_code(DEDALO_DATA_LANG_DEFAULT);
-						$component->set_dato([$lang_locator]);
-						$component->Save();
+						$component->set_data([$lang_locator]);
+						$component->save();
 					}
 			}
 
@@ -653,8 +653,8 @@ final class installer_hierarchy_manager {
 					"from_component_tipo": "'.DEDALO_HIERARCHY_ACTIVE_TIPO.'"
 				  }
 				]');
-				$component->set_dato($dato);
-				$component->Save();
+				$component->set_data($dato);
+				$component->save();
 			}
 
 		// active in thesaurus
@@ -674,8 +674,8 @@ final class installer_hierarchy_manager {
 					$active_data->set_section_id($target_active_ts_section_id);
 					$active_data->set_from_component_tipo(DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO);
 
-				$component->set_dato($active_data);
-				$component->Save();
+				$component->set_data([$active_data]);
+				$component->save();
 			}
 
 		// set real section tipo (!) needed to create virtual section
@@ -687,8 +687,8 @@ final class installer_hierarchy_manager {
 			// source_real_section_tipo
 			$component	= self::get_hierarchy_component(DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO, $section_id, 'edit', $section_tipo, $response->errors);
 			if ($component!==null) {
-				$component->set_dato([DEDALO_THESAURUS_SECTION_TIPO]);
-				$component->Save();
+				$component->set_data([DEDALO_THESAURUS_SECTION_TIPO]);
+				$component->save();
 			}
 
 		// create ontology tld (generate_virtual_section)
@@ -719,8 +719,8 @@ final class installer_hierarchy_manager {
 				$component		= self::get_hierarchy_component($component_tipo, $section_id, 'list', $section_tipo, $response->errors);
 				if ($component!==null) {
 					// Term virtual section tipo is always '<tld>1' (e.g. 'fauna1').
-					$component->set_dato([$tld.'1']);
-					$component->Save();
+					$component->set_data([$tld.'1']);
+					$component->save();
 				}
 
 			// target model
@@ -728,8 +728,8 @@ final class installer_hierarchy_manager {
 				$component		= self::get_hierarchy_component($component_tipo, $section_id, 'list', $section_tipo, $response->errors);
 				if ($component!==null) {
 					// Model virtual section tipo is always '<tld>2' (e.g. 'fauna2').
-					$component->set_dato([$tld.'2']);
-					$component->Save();
+					$component->set_data([$tld.'2']);
+					$component->save();
 				}
 
 		// set children data
@@ -753,8 +753,8 @@ final class installer_hierarchy_manager {
 								"from_component_tipo": "'.DEDALO_HIERARCHY_CHILDREN_TIPO.'"
 							}
 						]');
-						$component->set_dato($dato);
-						$component->Save();
+						$component->set_data($dato);
+						$component->save();
 					}
 
 				// general model
@@ -776,8 +776,8 @@ final class installer_hierarchy_manager {
 									"from_component_tipo": "'.DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO.'"
 								}
 							]');
-							$component->set_dato($dato);
-							$component->Save();
+							$component->set_data($dato);
+							$component->save();
 						}
 
 					}else{
@@ -803,8 +803,8 @@ final class installer_hierarchy_manager {
 	* ontology model lookup and the instantiation. ontology_node::get_model_by_tipo()
 	* is declared ': ?string' and component_common::get_instance() ': ?object', so a
 	* broken/partial ontology can yield null at either step. Returning null here (and
-	* recording a non-fatal error) lets callers skip the set_dato()/Save() instead of
-	* fataling with "Call to a member function set_dato() on null".
+	* recording a non-fatal error) lets callers skip the set_data()/Save() instead of
+	* fataling with "Call to a member function set_data() on null".
 	*
 	* @param string $tipo          component tipo (e.g. DEDALO_HIERARCHY_LABEL_TIPO)
 	* @param mixed  $section_id     target section id
