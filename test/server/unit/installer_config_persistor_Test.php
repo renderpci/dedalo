@@ -75,4 +75,28 @@ final class installer_config_persistor_Test extends TestCase {
 		$this->assertSame('My Archive', $returned['state.information']); // added
 		$this->assertFalse($returned['state.maintenance_mode']);         // preserved
 	}
+
+	public function test_render_env_groups_by_typology_with_docs_and_preserves_custom_keys() : void {
+		$existing = ['MY_CUSTOM_LEGACY' => 'keepme']; // a hand-added key not in the catalog
+		$values = [
+			'DEDALO_DATABASE_CONN' => 'dedalo7',
+			'DEDALO_PASSWORD_CONN' => 'secret-pw',
+			'DEDALO_ENTITY'        => 'my_museum',
+			'DEDALO_SALT_STRING'   => 'salt-xyz',
+		];
+
+		$content = installer_config_persistor::render_env($existing, $values);
+		$parsed  = env_loader::parse($content);
+
+		// round-trip fidelity preserved despite the new section/comment lines
+		$this->assertSame('dedalo7', $parsed['DEDALO_DATABASE_CONN']);
+		$this->assertSame('secret-pw', $parsed['DEDALO_PASSWORD_CONN']);
+		$this->assertSame('keepme', $parsed['MY_CUSTOM_LEGACY']);            // custom key never dropped
+
+		// grouped by typology, with per-variable docs and secret markers
+		$this->assertStringContainsString('Database (PostgreSQL)', $content); // catalog-domain section header
+		$this->assertStringContainsString('# PostgreSQL database name.', $content); // catalog doc as comment
+		$this->assertStringContainsString('[secret — keep private]', $content);     // SECRET-scope marker
+		$this->assertStringContainsString('Other / custom', $content);              // catch-all for non-catalog keys
+	}
 }
