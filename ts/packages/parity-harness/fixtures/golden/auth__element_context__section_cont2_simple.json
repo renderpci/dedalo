@@ -1,0 +1,17 @@
+{
+  "label": "auth__element_context__section_cont2_simple",
+  "rqo": {
+    "dd_api": "dd_core_api",
+    "action": "get_element_context",
+    "source": {
+      "tipo": "cont2",
+      "model": "section",
+      "mode": "list"
+    },
+    "simple": true
+  },
+  "capturedAt": "2026-06-21T00:49:50.919Z",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "responseBytes": "{\"result\":{\"typo\":\"ddo\",\"sqo_session\":null,\"debug\":{\"exec_time\":\"1.147 ms\"}},\"msg\":\"OK. Request done successfully\",\"errors\":[],\"action\":\"get_element_context\",\"csrf_token\":\"139cc2a622b15eaa90ffb4df09af9a82c20e3519e8c55fbca0fa1b2531cc6110\",\"debug\":{\"api_exec_time\":\"8.485 ms\",\"memory_usage\":\"4 MB\",\"rqo\":{\"dd_api\":\"dd_core_api\",\"action\":\"get_element_context\",\"source\":{\"tipo\":\"cont2\",\"model\":\"section\",\"mode\":\"list\"},\"simple\":true},\"rqo_string\":\"{\\n    \\\"dd_api\\\": \\\"dd_core_api\\\",\\n    \\\"action\\\": \\\"get_element_context\\\",\\n    \\\"source\\\": {\\n        \\\"tipo\\\": \\\"cont2\\\",\\n        \\\"model\\\": \\\"section\\\",\\n        \\\"mode\\\": \\\"list\\\"\\n    },\\n    \\\"simple\\\": true\\n}\",\"real_execution_time\":\"9.351375 ms\"},\"dedalo_last_error\":\"{\\\"type\\\":2,\\\"message\\\":\\\"is_dir(): Unable to find the wrapper &quot;tcp&quot; - did you forget to enable it when you configured PHP?\\\",\\\"file\\\":\\\"\\\\/Users\\\\/render\\\\/Desktop\\\\/trabajos\\\\/dedalo\\\\/v7_dev\\\\/master_dedalo\\\\/shared\\\\/core_functions.php\\\",\\\"line\\\":2188}\"}"
+}

@@ -1,0 +1,156 @@
+{
+  "lockfileVersion": 1,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "@dedalo/core-ts",
+      "devDependencies": {
+        "@types/bun": "^1.1.0",
+        "typescript": "^5.6.0",
+      },
+    },
+    "packages/auth": {
+      "name": "@dedalo/auth",
+      "version": "0.0.0",
+      "dependencies": {
+        "@dedalo/runtime": "workspace:*",
+      },
+    },
+    "packages/components": {
+      "name": "@dedalo/components",
+      "version": "0.0.0",
+      "dependencies": {
+        "@dedalo/contract": "workspace:*",
+        "@dedalo/core-api": "workspace:*",
+        "@dedalo/db": "workspace:*",
+        "@dedalo/ontology": "workspace:*",
+        "@dedalo/runtime": "workspace:*",
+        "@dedalo/search": "workspace:*",
+      },
+      "devDependencies": {
+        "@dedalo/json-parity": "workspace:*",
+        "@dedalo/parity-harness": "workspace:*",
+      },
+    },
+    "packages/config": {
+      "name": "@dedalo/config",
+      "version": "0.0.0",
+      "dependencies": {
+        "zod": "^3.23.0",
+      },
+    },
+    "packages/contract": {
+      "name": "@dedalo/contract",
+      "version": "0.0.0",
+      "dependencies": {
+        "zod": "^3.23.0",
+      },
+    },
+    "packages/core-api": {
+      "name": "@dedalo/core-api",
+      "version": "0.0.0",
+      "dependencies": {
+        "@dedalo/contract": "workspace:*",
+        "@dedalo/runtime": "workspace:*",
+      },
+    },
+    "packages/db": {
+      "name": "@dedalo/db",
+      "version": "0.0.0",
+      "dependencies": {
+        "postgres": "^3.4.5",
+      },
+    },
+    "packages/json-parity": {
+      "name": "@dedalo/json-parity",
+      "version": "0.0.0",
+    },
+    "packages/ontology": {
+      "name": "@dedalo/ontology",
+      "version": "0.0.0",
+      "dependencies": {
+        "@dedalo/db": "workspace:*",
+        "@dedalo/runtime": "workspace:*",
+      },
+    },
+    "packages/parity-harness": {
+      "name": "@dedalo/parity-harness",
+      "version": "0.0.0",
+      "dependencies": {
+        "@dedalo/json-parity": "workspace:*",
+        "postgres": "^3.4.5",
+      },
+    },
+    "packages/registry": {
+      "name": "@dedalo/registry",
+      "version": "0.0.0",
+    },
+    "packages/runtime": {
+      "name": "@dedalo/runtime",
+      "version": "0.0.0",
+    },
+    "packages/search": {
+      "name": "@dedalo/search",
+      "version": "0.0.0",
+      "dependencies": {
+        "@dedalo/contract": "workspace:*",
+        "@dedalo/db": "workspace:*",
+      },
+    },
+    "packages/server": {
+      "name": "@dedalo/server",
+      "version": "0.0.0",
+      "dependencies": {
+        "@dedalo/auth": "workspace:*",
+        "@dedalo/components": "workspace:*",
+        "@dedalo/config": "workspace:*",
+        "@dedalo/core-api": "workspace:*",
+        "@dedalo/db": "workspace:*",
+        "@dedalo/json-parity": "workspace:*",
+        "@dedalo/ontology": "workspace:*",
+        "@dedalo/runtime": "workspace:*",
+      },
+    },
+  },
+  "packages": {
+    "@dedalo/auth": ["@dedalo/auth@workspace:packages/auth"],
+
+    "@dedalo/components": ["@dedalo/components@workspace:packages/components"],
+
+    "@dedalo/config": ["@dedalo/config@workspace:packages/config"],
+
+    "@dedalo/contract": ["@dedalo/contract@workspace:packages/contract"],
+
+    "@dedalo/core-api": ["@dedalo/core-api@workspace:packages/core-api"],
+
+    "@dedalo/db": ["@dedalo/db@workspace:packages/db"],
+
+    "@dedalo/json-parity": ["@dedalo/json-parity@workspace:packages/json-parity"],
+
+    "@dedalo/ontology": ["@dedalo/ontology@workspace:packages/ontology"],
+
+    "@dedalo/parity-harness": ["@dedalo/parity-harness@workspace:packages/parity-harness"],
+
+    "@dedalo/registry": ["@dedalo/registry@workspace:packages/registry"],
+
+    "@dedalo/runtime": ["@dedalo/runtime@workspace:packages/runtime"],
+
+    "@dedalo/search": ["@dedalo/search@workspace:packages/search"],
+
+    "@dedalo/server": ["@dedalo/server@workspace:packages/server"],
+
+    "@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
+
+    "@types/node": ["@types/node@26.0.0", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-vf2YFi1iY9lHGwNJMs01biZFbKJkrZR1T6/MlzjhJLPdntOHLhTrDSnSVcdtvjihi4VQNlrFRIxLsDBlQpAipA=="],
+
+    "bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
+
+    "postgres": ["postgres@3.4.9", "", {}, "sha512-GD3qdB0x1z9xgFI6cdRD6xu2Sp2WCOEoe3mtnyB5Ee0XrrL5Pe+e4CCnJrRMnL1zYtRDZmQQVbvOttLnKDLnaw=="],
+
+    "typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "undici-types": ["undici-types@8.3.0", "", {}, "sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ=="],
+
+    "zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
+  }
+}

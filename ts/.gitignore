@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.DS_Store
+
+# parity harness artifacts
+packages/*/fixtures/captured/*.bytes
+packages/json-parity/test/.php-fuzz-out

@@ -1,0 +1,11 @@
+{
+  "label": "bootstrap__get_install_context",
+  "rqo": {
+    "dd_api": "dd_core_api",
+    "action": "get_install_context"
+  },
+  "capturedAt": "2026-06-21T00:49:50.780Z",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "responseBytes": "{\"result\":false,\"msg\":\"Error. Undefined or unauthorized dd_core_api method (action) : get_install_context\",\"errors\":[\"Undefined method\"],\"action\":\"get_install_context\",\"dedalo_last_error\":\"Server errors occurred. Check the server log for details\"}"
+}

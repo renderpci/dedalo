@@ -1,0 +1,59 @@
+name: TS core (Bun) tests
+
+on:
+  push:
+    paths:
+      - 'ts/**'
+      - '.github/workflows/ts-core.yml'
+  pull_request:
+    paths:
+      - 'ts/**'
+      - '.github/workflows/ts-core.yml'
+
+jobs:
+  ts-core:
+    runs-on: ubuntu-latest
+
+    services:
+      # The @dedalo/auth RedisSessionStore integration tests run against this;
+      # they self-skip if Redis is unreachable, so CI is never blocked by it.
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    defaults:
+      run:
+        working-directory: ts
+
+    env:
+      REDIS_URL: redis://localhost:6379
+      # NOTE: the live Postgres integration tests (@dedalo/db, @dedalo/ontology,
+      # @dedalo/components) are gated on the DEDALO_*_CONN env and the real
+      # dedalo7_mib dataset (specific tipos/records), which cannot be reproduced
+      # from a bare Postgres image — so they are intentionally NOT given DB env
+      # here and skip cleanly. The PHP differential fuzz (@dedalo/json-parity)
+      # self-skips when `php` is absent. Unit + pure-logic suites run fully.
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          # Pin to match the diffusion engine CI; bump deliberately.
+          bun-version: 1.3.9
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck (strict, whole workspace)
+        run: bunx tsc --noEmit
+
+      - name: Run tests (coverage gate from bunfig.toml; live DB tests skip)
+        run: bun test
