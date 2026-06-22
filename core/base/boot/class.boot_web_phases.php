@@ -60,6 +60,19 @@ final class boot_web_phases {
 			'memcached' => '127.0.0.1:11211',
 			default     => DEDALO_SESSIONS_PATH,
 		};
+		// Defensive: a 'files' handler cannot use a stream-wrapper save path (e.g. a redis
+		// 'tcp://…' left over from a v6→v7 migration, where the save path was migrated but the
+		// handler defaulted to 'files'). session_start_manager would then call is_dir('tcp://…')
+		// and fatal ("Unable to find the wrapper tcp"). Fall back to the local sessions dir so a
+		// mis-migrated save path can never break session start / login.
+		if ($handler === 'files' && is_string($save_path) && strpos($save_path, '://') !== false) {
+			debug_log(__METHOD__
+				. " Ignoring non-filesystem session save_path for the 'files' handler; using DEDALO_SESSIONS_PATH." . PHP_EOL
+				. ' ignored save_path: ' . $save_path
+				, logger::WARNING
+			);
+			$save_path = DEDALO_SESSIONS_PATH;
+		}
 		session_start_manager([
 			'save_handler'         => $handler,
 			'timeout_seconds'      => 8 * 3600,
