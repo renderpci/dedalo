@@ -214,6 +214,17 @@ class area_thesaurus extends area_common {
 					continue;
 				}
 
+			// target_section_tipo check
+			// Every hierarchy must point to a target thesaurus section. An empty
+			// target_section_tipo propagates down to ontology_node::load_data and
+			// common::get_permissions, both of which log ERROR noise and cannot
+			// produce a usable tree node. Missing value is a data-integrity issue;
+			// log and skip.
+				if (empty($element->target_section_tipo)) {
+					debug_log(__METHOD__." Skipped hierarchy without target_section_tipo. section_id: $element->section_id ", logger::WARNING);
+					continue; // Skip
+				}
+
 			// typology data
 			// Every hierarchy must be assigned a typology so the tree can group it.
 			// Missing typology_id is a data-integrity issue; log and skip.
