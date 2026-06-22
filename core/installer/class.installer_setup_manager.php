@@ -405,6 +405,19 @@ final class installer_setup_manager {
 			$targets['env_bun']      = $bun_path;
 		}
 
+		// sample.env — a documented reference of every configurable constant, regenerated
+		// from the catalog on every save so ../private/ always ships current config help.
+		// Non-secret (defaults + placeholders) → default perms (NOT in the 0600 list).
+		// Never block the install: a render failure is logged and skipped; the critical
+		// files (.env/state.php) still commit.
+		require_once DEDALO_CORE_PATH . '/base/config/class.sample_env_renderer.php';
+		try {
+			$artifact_map['sample_env'] = sample_env_renderer::render();
+			$targets['sample_env']      = $private . '/sample.env';
+		} catch (\Throwable $e) {
+			debug_log(__METHOD__ . ' sample.env render skipped: ' . $e->getMessage(), logger::WARNING);
+		}
+
 		try {
 			$report = migration_committer::commit(
 				$artifact_map,
