@@ -1,6 +1,6 @@
 ---
 name: dedalo-rag
-description: The Dédalo v7 RAG / semantic-search subsystem (core/rag/) — a vector version of opted-in component data in a SEPARATE pgvector database, with structure-aware semantic chunking, hybrid (dense+lexical RRF) retrieval, explicit per-record ACL, a deferred matrix-DB queue, grounded Q&A with citations, AND multimodal OBJECT IMAGE similarity + neighbour-aggregated typology/period characterization (coins, ceramics, etc.). Use when modifying anything under core/rag/ (DBi_vector, rag_vector_store, embedding_provider*, embedding_provider_multimodal, rag_media_extractor, rag_characterizer, rag_config, rag_text_extractor, rag_chunker, rag_fusion, rag_lexical, rag_reranker, rag_indexer, rag_queue, retrieval, rag_security, rag_llm_provider, cli/rag_drain.php), core/api/v1/common/class.dd_rag_api.php (incl. similar_objects/characterize_object/search_by_text_image), install/db/rag_embeddings.sql, install/db/matrix_rag_index_queue.sql, the RAG hooks in core/section_record/class.section_record.php (save/delete), the dd_rag_api entry in dd_manager $allowed_api_classes / the core/rag loader case in class.loader.php, the DEDALO_RAG_* constants in config/sample.config_db.php, properties.rag / properties.rag.context ontology config, test/server/rag/, docs/core/rag.md, or core/rag/README.md.
+description: The Dédalo v7 RAG / semantic-search subsystem (core/rag/) — a vector version of opted-in component data in a SEPARATE pgvector database, with structure-aware semantic chunking, hybrid (dense+lexical RRF) retrieval, explicit per-record ACL, a deferred matrix-DB queue, grounded Q&A with citations, AND multimodal OBJECT IMAGE similarity + neighbour-aggregated typology/period characterization (coins, ceramics, etc.). Use when modifying anything under core/rag/ (DBi_vector, rag_vector_store, embedding_provider*, embedding_provider_multimodal, rag_media_extractor, rag_characterizer, rag_config, rag_text_extractor, rag_chunker, rag_fusion, rag_lexical, rag_reranker, rag_indexer, rag_queue, retrieval, rag_security, rag_llm_provider, cli/rag_drain.php), core/api/v1/common/class.dd_rag_api.php (incl. similar_objects/characterize_object/search_by_text_image), install/db/rag_embeddings.sql, install/db/matrix_rag_index_queue.sql, the RAG hooks in core/section_record/class.section_record.php (save/delete), the dd_rag_api entry in dd_manager $allowed_api_classes / the core/rag loader case in class.loader.php, the DEDALO_RAG_* config catalog (core/base/config/catalog/domains/rag.php, set via ../private/.env), properties.rag / properties.rag.context ontology config, test/server/rag/, docs/core/rag.md, or core/rag/README.md.
 ---
 
 # Dédalo v7 RAG / semantic search
@@ -118,8 +118,12 @@ guards every entry so absence ⇒ clean skip; `set_session_ef_search`.
   all other `core/rag/` classes resolved by an explicit loader switch-case (flat dir,
   NOT one-class-per-dir) — add new classes to that list.
 - `dd_manager::$allowed_api_classes` includes `'dd_rag_api'`.
-- Constants in `config/sample.config_db.php` (active config is out-of-repo
-  `private/config_db.inc`); everything guarded by `defined()`.
+- Config is **catalog-driven** (post v7 .env flip): all `DEDALO_RAG_*` keys declared in
+  `core/base/config/catalog/domains/rag.php` (registered in `catalog/catalog.php`), emitted as
+  constants at boot with defaults, overridden per-install from `../private/.env` by constant name
+  (secrets = `config_scope::SECRET`, env-only). Floats use `type:'string'` (no float caster type) +
+  `(float)` in code. NOT `define()` in `config/sample.config_db.php` (legacy; that file just points to .env).
+  Everything still guarded by `defined()`.
 
 ## Gotchas
 
