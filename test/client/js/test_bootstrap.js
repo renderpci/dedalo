@@ -10,16 +10,19 @@
 */
 
 // early theme init — runs in <head> before the body paints to avoid a
-// theme flash. frame.html passes ?theme=...; index.html falls back to the
-// saved preference. The module runners re-apply the same value later.
+// theme flash. Mirrors Dédalo's core/page/js/theme-init.js convention:
+// LIGHT is the default (no attribute); DARK is opt-in via data-theme="dark"
+// and localStorage 'dedalo_theme' === 'dark'. frame.html passes ?theme=...;
+// index.html falls back to the saved (app) preference.
 ;(function () {
 	try {
 		const params = new URLSearchParams(window.location.search)
 		let theme = params.get('theme')
 		if (theme !== 'light' && theme !== 'dark') {
-			theme = localStorage.getItem('dedalo_theme') === 'light' ? 'light' : 'dark'
+			theme = localStorage.getItem('dedalo_theme') === 'dark' ? 'dark' : 'light'
 		}
-		document.documentElement.setAttribute('data-theme', theme)
+		if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark')
+		else document.documentElement.removeAttribute('data-theme')
 	} catch (e) {}
 })()
 

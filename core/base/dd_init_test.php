@@ -979,8 +979,8 @@
 // 'dd_ontology_recovery' is a PostgreSQL table that holds a snapshot of the ontology
 // used as a fallback when the primary ontology data is corrupt or unavailable.
 // If the table is missing (e.g. after a bare-metal restore without this table), the
-// snapshot is re-imported from the on-disk JSON file via install::restore_dd_ontology_recovery_from_file(),
-// which delegates to install_ontology_manager::restore_dd_ontology_recovery_from_file().
+// snapshot is re-imported from the on-disk JSON file via installer::restore_dd_ontology_recovery_from_file(),
+// which delegates to installer_ontology_manager::restore_dd_ontology_recovery_from_file().
 // This is a silent self-healing step — no error is raised and boot continues normally.
 	// Only self-heal on an INSTALLED system. On a fresh install there is no database yet, so
 	// check_table_exists returns false and a restore attempt would just gunzip→psql against a
@@ -988,7 +988,7 @@
 	if (defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
 		$dd_ontology_recovery_exists	= DBi::check_table_exists('dd_ontology_recovery');
 		if (!$dd_ontology_recovery_exists) {
-			install::restore_dd_ontology_recovery_from_file();
+			installer::restore_dd_ontology_recovery_from_file();
 		}
 	}
 

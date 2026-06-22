@@ -51,7 +51,7 @@ Throughout the codebase a language is referred to by its **Dédalo lang code**: 
 
 ## The language config constants
 
-All language behaviour is configured in `config/sample.config.php` (the `// lang` block). The defining constants:
+All language behaviour is configured by the `lang` catalog domain (`core/base/config/catalog/domains/lang.php`); set values in `../private/.env`. The defining constants:
 
 | Constant | Plane | Meaning |
 | --- | --- | --- |
@@ -159,7 +159,7 @@ Both expose two engine families: **server** engines (Babel, an Apertium-based se
 
 A museum catalogues *Objects* in Spanish, English and Catalan, and wants to publish trilingually.
 
-**1 — Configure the project languages.** In `config.php`:
+**1 — Configure the project languages.** Set these by their `DEDALO_*` constants in `../private/.env` (the `define(...)` form below shows each constant's meaning):
 
 ```php
 define('DEDALO_PROJECTS_DEFAULT_LANGS', ['lg-spa', 'lg-eng', 'lg-cat']);
@@ -203,7 +203,7 @@ Switching the target to **Catalan** and repeating fills the third slot. (To do a
 Adding a language is configuration plus (sometimes) one data step — never a schema change.
 
 1. **Confirm the `lg1` record exists.** The languages section ships the full ISO 639-2 set, so the target language almost always already has a record (and therefore a stable `lg-xxx` code and `section_id`). If it does not, create the record in the languages section like any other thesaurus term: its alpha-3 code in `hierarchy41` and its names in `hierarchy25`.
-2. **Add the code to `DEDALO_PROJECTS_DEFAULT_LANGS`** in `config.php`. This is what makes the per-value slot appear on translatable components and adds the option to `component_select_lang`. (Diffusion picks it up automatically unless `DEDALO_DIFFUSION_LANGS` is overridden.)
+2. **Add the code to `DEDALO_PROJECTS_DEFAULT_LANGS`** in `../private/.env`. This is what makes the per-value slot appear on translatable components and adds the option to `component_select_lang`. (Diffusion picks it up automatically unless `DEDALO_DIFFUSION_LANGS` is overridden.)
 3. **To offer it as an *interface* language too**, add the `lg-xxx => Name` entry to `DEDALO_APPLICATION_LANGS`. The application UI will then resolve labels from each ontology node's `lg-xxx` term key (falling back to `DEDALO_STRUCTURE_LANG` for any node not yet translated).
 4. **Translate the content** for the new slot. Existing records have an empty `lg-xxx` slot served by [fallback](#translatable-components) until filled; use [`tool_lang`](tools/reference/tool_lang.md) (or `tool_lang_multi` for bulk) to populate them, or re-import a CSV that carries the new language column.
 
@@ -219,4 +219,4 @@ Adding a language is configuration plus (sometimes) one data step — never a sc
 - [Menu](../core/ui/menu.md) — the two language selectors (interface and data) in the top bar.
 - [Importing data → Multiple languages](../core/importing_data.md#multiple-languages) · [Exporting data](../core/exporting_data.md) — multi-language round-trips.
 - [Glossary](../core/glossary.md#translatable--lg-nolan--transliterate) — `translatable` / `lg-nolan` / `transliterate` and the [`lg` TLD](../core/glossary.md#tld).
-- Source: `config/sample.config.php` (`// lang` block), `core/common/class.lang.php`, `core/component_string_common/class.component_string_common.php`.
+- Source: `core/base/config/catalog/domains/lang.php`, `core/common/class.lang.php`, `core/component_string_common/class.component_string_common.php`.

@@ -55,13 +55,13 @@ The model value lives on the node and is surfaced server-side via `ontology_node
 
 ## 3. Wire it into the menu roster
 
-A node alone does not appear in the menu. The menu is built by `area::get_areas()`, which iterates a **fixed list of root-area models** and recursively collects each one's children (filtered by `config_areas.php`). See [area → get_areas](../../core/areas/area.md) and [Menu](../../core/ui/menu.md). You have two ways to surface a new area:
+A node alone does not appear in the menu. The menu is built by `area::get_areas()`, which iterates a **fixed list of root-area models** and recursively collects each one's children (filtered by the `areas.deny`/`areas.allow` config). See [area → get_areas](../../core/areas/area.md) and [Menu](../../core/ui/menu.md). You have two ways to surface a new area:
 
 - **Sub-area (recommended):** attach your area node as an ontology **child of an existing root area** (e.g. under `area_resource` or `area_admin`). `get_areas()` walks children recursively, so it is picked up automatically — no PHP edit.
 - **New root area:** if it must sit at the top level beside Resources/Admin/…, add its model to the `$ar_root_areas` roster inside `area::get_areas()` in `core/area/class.area.php`. This is the one PHP edit a root-level area requires; follow the existing `ontology_utils::get_ar_tipo_by_model('area_X')[0]` pattern (the newer entries guard a missing node with a warning instead of fataling).
 
 !!! warning "Allow/deny per installation"
-    `area::get_config_areas()` reads `config/config_areas.php` (`areas_deny` / `areas_allow`). If an installation lists your area tipo in `areas_deny` it is hidden from the menu and the security roster even though the node and class are correct. Check there if a correctly-wired area does not appear.
+    `area::get_config_areas()` reads the resolved `areas.deny` / `areas.allow` config (the `areas.php` catalog domain, overridable in `../private/config.local.php`). If an installation lists your area tipo in `areas.deny` it is hidden from the menu and the security roster even though the node and class are correct. Check there if a correctly-wired area does not appear.
 
 ## 4. Attach the sections it groups
 
@@ -107,7 +107,7 @@ If instead it had to be a **top-level** grouping beside Resources/Admin, step 3 
 - **Node model with no matching class.** A node `model: 'area_numisdata'` with no `core/area_numisdata/class.area_numisdata.php` cannot be autoloaded. The directory name *is* the contract — create the file even if its body is empty.
 - **Class name ≠ directory name.** `class.area_numisdata.php` must declare `class area_numisdata`. The loader resolves `area_numisdata` → `core/area_numisdata/class.area_numisdata.php`; a mismatch fails the realpath-containment / class-existence check.
 - **Expecting a root area to appear automatically.** `area::get_areas()` iterates a **fixed roster** of root models. A brand-new *root* area must be added to that list in `core/area/class.area.php`; only **sub-areas** (children of an existing root) are picked up by the recursive walk for free.
-- **Hidden by `config_areas.php`.** A correct area that never shows is often denied in `config/config_areas.php` (`areas_deny`). Check there before debugging code.
+- **Hidden by `areas.deny`.** A correct area that never shows is often listed in the `areas.deny` config (the `areas.php` catalog domain / `../private/config.local.php`). Check there before debugging code.
 - **Giving the area a matrix table.** Areas hold no records; `get_matrix_table_from_tipo()` returns `null` for `area*` models by design. Do not attach a `matrix_table` term — store data in the **sections** the area groups, not the area.
 - **Client export name mismatch.** If you add `core/area_numisdata/js/area_numisdata.js`, its named export must be exactly `area_numisdata`; the dynamic import in `instances.js` looks up the export by model name.
 - **Per-area metrics need ontology, not just code.** Defining `metric_<name>()` is half the job — the name must also be listed in the node's `properties.dashboard.metrics`, or `get_dashboard_data()` never invokes it.
@@ -116,7 +116,7 @@ If instead it had to be a **top-level** grouping beside Resources/Admin, step 3 
 
 - [Areas (index)](../../core/areas/index.md) — concept, inheritance chain, roster of shipped areas
 - [area_common](../../core/areas/area_common.md) — base class: `get_instance()`, JSON fallback, dashboard structure-walk, metric convention
-- [area](../../core/areas/area.md) — concrete top-level class: `get_areas()`, `config_areas.php` allow/deny
+- [area](../../core/areas/area.md) — concrete top-level class: `get_areas()`, `areas.deny`/`areas.allow`
 - [Sections (index)](../../core/sections/index.md) — the record-bearing leaves an area groups
 - [Menu](../../core/ui/menu.md) — the navigation tree built from `area::get_areas()`
 - [Ontology (index)](../../core/ontology/index.md) — the active schema the area walk reads

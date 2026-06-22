@@ -459,7 +459,7 @@ class dd_object extends stdClass implements JsonSerializable {
 		'button',
 		'tm',
 		'widget',
-		'install',
+		'installer',
 		'login',
 		'menu',
 		'tool',
@@ -2135,8 +2135,8 @@ class dd_object extends stdClass implements JsonSerializable {
 				return 'login';
 			case $model==='menu' :
 				return 'menu';
-			case $model==='install' :
-				return 'install';
+			case $model==='installer' :
+				return 'installer';
 			case $model==='dd_grid' :
 				return 'dd_grid';
 			case strpos($model, 'tool_')===0 :

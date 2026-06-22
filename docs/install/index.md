@@ -129,6 +129,8 @@ To install Dédalo manually, use the following commands. They are for Ubuntu 24.
 
     4. Install MariaDB or MySQL
 
+        > **v7 note:** Dédalo (PHP) does **not** connect to MariaDB — only the Bun diffusion engine does. You still install the MariaDB **server** here, but its **connection** is configured in `diffusion/api/v1/.env` (`DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, …), not in any PHP config file.
+
         Get the repository of the LTS version
 
         ```shell
@@ -260,49 +262,35 @@ To install Dédalo manually, use the following commands. They are for Ubuntu 24.
 
     You can configure Apache and PHP as you wish following your needs. If you need help you can follow [this guide](apache_configuration.md) as reference.
 
-6.  Dédalo Configuration.
-    Before changing the config files you will need copy/rename the sample config files removing the word "sample", you can rename or copy this files. Please read the [configuration](../config/index.md) documentation for further explanation on this.
+6.  Dédalo configuration
 
-    1. Rename `sample.config.php` to `config.php`.
+    **In v7 there are no config files to rename or edit during installation.** The web-served `config/` directory holds only the loader `config/bootstrap.php` and sample templates — there is nothing to copy. All per-install values and secrets live **outside the web root** in a `../private/` directory (a *sibling* of the install root), and the browser **install wizard writes them for you** in the next step (auto-generating the secrets).
 
-        ```shell
-        cd [...]/dedalo/config/
-        mv sample.config.php config.php
-        ```
+    The only thing to prepare is that the wizard can create `../private/`: make sure the directory **one level above** your Dédalo install root is **writable by the PHP/web user**. The installer creates `../private/` (`chmod 0700`) and writes `.env` / `state.php` there. For example, if Dédalo lives at `/var/www/httpdocs/dedalo`, the installer creates `/var/www/httpdocs/private/`.
 
-    2. Modify `[...]/dedalo/config/config.php` as you need. Usually, this involves the `DEDALO_ENTITY` string and the OS library paths. Read the [configuration](../config/config.md) documentation.
+    > **Advanced (optional):** instead of the wizard you can pre-author `../private/.env` by hand — run `php dev/gen_sample_env.php` to write the documented `../private/sample.env`, copy it to `../private/.env`, and edit it. See the **[Configuration Administrator Guide](../config/administration.md)** for the full model (the `.env` file, per-host `.env.<host>` overrides, secrets, and the settings catalog).
+    >
+    > **MariaDB/MySQL** is only used by the optional **diffusion** (publication) subsystem and is owned by the **Bun diffusion engine**, *not* PHP — its connection is configured in `diffusion/api/v1/.env` (the wizard writes it when you enable diffusion). PHP never connects to MariaDB. See the [diffusion engine](../diffusion/dd_diffusion_api_and_bun.md) docs.
 
-    3. Rename `sample.config_db.php` to `config_db.php`.
+7.  Open Dédalo in your browser.
 
-        ```shell
-        cd [...]/dedalo/config/
-        mv sample.config_db.php config_db.php
-        ```
+    Because the installation is not yet sealed, the **install wizard** starts automatically and walks you through these steps:
 
-    4. Modify `[...]/dedalo/config/config_db.php` with your database configuration. Read the database [configuration](../config/config_db.md) documentation.
+    1. **Diagnostics** — environment checks (PHP version, PostgreSQL, required extensions, writable paths).
+    2. **Database** — the PostgreSQL connection: the database and user you created in step 4.
+    3. **Entity** — your `DEDALO_ENTITY` name and locale.
+    4. **Diffusion** *(optional)* — enable the MariaDB/Bun publication engine and test its connection.
+    5. **Save config** — the wizard writes `../private/.env` and `../private/state.php` (and the Bun `diffusion/api/v1/.env` if you enabled diffusion), **auto-generating the secrets** (`DEDALO_SALT_STRING`, the diffusion token). You never edit a config file.
+    6. **Directories** — creates the media / sessions / backups directories.
+    7. **Install Dédalo DDBB** — loads the database schema into your PostgreSQL database.
+    8. **Set root password** — choose the `root` user password.
+    9. **Login** and **Install hierarchies** — log in and import the base ontology hierarchies.
+    10. **Done!** — the install is sealed (`DEDALO_INSTALL_STATUS=installed`, written to `../private/state.php`) and the wizard no longer runs.
 
-    5. Rename `sample.config_core.php` to `config_core.php`.
-
-        ```shell
-        cd [...]/dedalo/config/
-        mv sample.config_core.php config_core.php
-        ```
-
-    6. Rename `[...]/dedalo/config/sample.config_areas.php` to `[...]/dedalo/config/config_areas.php`.
-
-        ```shell
-        cd [...]/dedalo/config/
-        mv sample.config_areas.php config_areas.php
-        ```
-
-    7. Modify `[...]/dedalo/config/config_areas.php` with your areas configuration. Read the areas [configuration](../config/config_areas.md) documentation.
-
-7. Open Dédalo in the browser.
-8. Follow the instructions.
-9. Once the installation process is done, log in and head to the Development Area. There, update the Ontology and register all tools.
-10. Create an admin user.
-11. Log out and log in with the admin user.
-12. Create Users and Projects as you need.
+8.  Log in and head to the Development Area. There, update the Ontology and register all tools.
+9.  Create an admin user.
+10. Log out and log in with the admin user.
+11. Create Users and Projects as you need.
 
 ### 2.4. Options
 

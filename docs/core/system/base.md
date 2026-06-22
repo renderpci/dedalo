@@ -282,8 +282,6 @@ The only instance state is the static `system::$info_instance` (a memoised
 | `test_postgresql_version_supported($min='16.1')` | ✓ | Assert the PostgreSQL version is `>= $min`. |
 | `get_apache_version()` | ✓ | Probe the Apache (`httpd`/`apache2`) version via shell. |
 | `get_postgresql_version()` | ✓ | Probe the PostgreSQL (`pg_config`/`psql`) version via shell. |
-| `get_mysql_server()` | ✓ | Detect whether `mariadb` or `mysql` is installed (`null` if neither). |
-| `get_mysql_version($server=null)` | ✓ | Probe the MariaDB/MySQL version. |
 | `check_gd_lib()` / `check_curl()` | ✓ | Test for the GD extension / cURL availability. |
 | `check_sessions_path()` / `check_backup_path()` / `check_directory($name)` | ✓ | Verify (and create if missing) the sessions / backup / a named directory. |
 | `check_pgpass_file()` | ✓ | Verify `~/.pgpass` exists with `0600` permissions (fixing them if it can). |

@@ -244,43 +244,8 @@ final class DBi_test extends BaseTestCase {
 
 
 
-	/**
-	* TEST_getConnection_mysql
-	* @return void
-	*/
-	public function test_getConnection_mysql(): void {
-
-		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-
-		// default vars
-			$conn = DBi::_getConnection_mysql();
-
-			$this->assertTrue(
-				empty($_ENV['DEDALO_LAST_ERROR']),
-				'expected running without errors. DEDALO_LAST_ERROR: ' .$_ENV['DEDALO_LAST_ERROR']
-			);
-
-			$type	= gettype($conn);
-			$eq		= $type==='object' || $type==='boolean';
-			$this->assertTrue(
-				$eq,
-				'expected true (class===object) and received type: ' .$type
-			);
-
-			if($conn) {
-				$class	= get_class($conn);
-				$eq		= $class==='mysqli';
-				$this->assertTrue(
-					$eq,
-					'expected true (class===mysqli) and received class: ' .$class
-				);
-			}else {
-				$this->assertTrue(
-					$conn===false,
-					'expected true (conn===false) and received conn: ' . json_encode($conn)
-				);
-			}
-	} //end test_getConnection_mysql
+	// test_getConnection_mysql removed: PHP no longer connects to MariaDB/MySQL
+	// (DBi::_getConnection_mysql deleted — only the Bun diffusion engine connects).
 
 
 

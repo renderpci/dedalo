@@ -29,8 +29,10 @@ if (!area) {
 }
 
 // inherit theme from URL — keep the chrome and the embedded Dédalo
-// components (styled by main.css via data-theme) in the same theme
-document.documentElement.setAttribute('data-theme', url_vars.theme === 'dark' ? 'dark' : 'light')
+// components (styled by main.css via data-theme) in the same theme.
+// Dédalo convention: light = no attribute; dark = data-theme="dark".
+if (url_vars.theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark')
+else document.documentElement.removeAttribute('data-theme')
 
 let ready = false
 try {
@@ -43,7 +45,7 @@ try {
 		window.SHOW_DEBUG = false
 		window.DEVELOPMENT_SERVER = false
 		window.DEDALO_API_URL = '../../core/api/v1/json/'
-		// app-global the full page injects server-side; some components (e.g. install)
+		// app-global the full page injects server-side; some components (e.g. installer)
 		// read it as a bare global fallback, so stub it to avoid a ReferenceError
 		window.PHP_VERSION = window.PHP_VERSION || ''
 
@@ -106,7 +108,8 @@ if (ready) {
 // listen for theme changes from parent
 window.addEventListener('message', function(e) {
 	if (e.data && e.data.type === 'theme') {
-		document.documentElement.setAttribute('data-theme', e.data.light ? 'light' : 'dark')
+		if (e.data.light) document.documentElement.removeAttribute('data-theme')
+		else document.documentElement.setAttribute('data-theme', 'dark')
 	}
 })
 

@@ -179,16 +179,16 @@ final class dd_utils_api {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		$install = new install();
+		$installer = new installer();
 
 		// install JSON
 			$get_json_options = new stdClass();
 				$get_json_options->get_context	= true;
 				$get_json_options->get_data		= false;
-			$install_json = $install->get_json($get_json_options);
+			$installer_json = $installer->get_json($get_json_options);
 
 		// context add
-			$context = $install_json->context;
+			$context = $installer_json->context;
 
 		// response
 			$response->result	= $context;
@@ -674,7 +674,7 @@ final class dd_utils_api {
 	/**
 	* INSTALL
 	* Dispatcher for the install-wizard sub-actions. Routes $options->action to
-	* the matching install:: class method, enforcing the following guards:
+	* the matching installer:: class method, enforcing the following guards:
 	*
 	* - When DEDALO_INSTALL_STATUS === 'installed', all sub-actions are blocked
 	*   EXCEPT 'install_hierarchies' (which may run post-install to add new
@@ -685,11 +685,11 @@ final class dd_utils_api {
 	* - 'install_hierarchies' requires login::is_logged() === true.
 	*
 	* Supported sub-actions and their delegates:
-	*   install_db_from_default_file → install::install_db_from_default_file()
-	*   to_update                    → install::to_update()
-	*   install_hierarchies          → install::install_hierarchies()
-	*   set_root_pw                  → install::set_root_pw()
-	*   install_finish               → install::set_install_status('installed')
+	*   install_db_from_default_file → installer::install_db_from_default_file()
+	*   to_update                    → installer::to_update()
+	*   install_hierarchies          → installer::install_hierarchies()
+	*   set_root_pw                  → installer::set_root_pw()
+	*   install_finish               → installer::set_install_status('installed')
 	*
 	* @param object $rqo
 	* {
@@ -761,14 +761,14 @@ final class dd_utils_api {
 					}
 
 				// exec
-					$response = (object)install::install_db_from_default_file();
+					$response = (object)installer::install_db_from_default_file();
 
 				break;
 
 			case 'to_update':
 
 				//exec
-					$response = (object)install::to_update();
+					$response = (object)installer::to_update();
 				break;
 
 			case 'install_hierarchies':
@@ -784,50 +784,50 @@ final class dd_utils_api {
 				$install_hierarchies_options = $options;
 
 				// exec
-					$response = (object)install::install_hierarchies( $install_hierarchies_options );
+					$response = (object)installer::install_hierarchies( $install_hierarchies_options );
 
 				break;
 
 			case 'test_db_connection':
 
 				//exec
-					$response = (object)install::test_db_connection($options);
+					$response = (object)installer::test_db_connection($options);
 				break;
 
 			case 'test_diffusion_connection':
 
 				//exec
-					$response = (object)install::test_diffusion_connection($options);
+					$response = (object)installer::test_diffusion_connection($options);
 				break;
 
 			case 'check_directories':
 
 				//exec
-					$response = (object)install::check_directories($options);
+					$response = (object)installer::check_directories($options);
 				break;
 
 			case 'persist_config':
 
 				//exec
-					$response = (object)install::persist_config($options);
+					$response = (object)installer::persist_config($options);
 				break;
 
 			case 'verify_active_config':
 
 				//exec
-					$response = (object)install::verify_active_config($options);
+					$response = (object)installer::verify_active_config($options);
 				break;
 
 			case 'set_root_pw':
 
 				//exec
-					$response = (object)install::set_root_pw($options);
+					$response = (object)installer::set_root_pw($options);
 				break;
 
 			case 'install_finish':
 
 				//exec
-					$response = (object)install::set_install_status('installed');
+					$response = (object)installer::set_install_status('installed');
 				break;
 
 			default:

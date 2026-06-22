@@ -1109,7 +1109,7 @@ class area_maintenance extends area_common {
 	* Any name not in the switch is rejected with an 'Error. Invalid name' response.
 	* Any value of a wrong type for the matched name is also rejected.
 	*
-	* The `config_core_file_path` is resolved through `install::get_config()` rather
+	* The `config_core_file_path` is resolved through `installer::get_config()` rather
 	* than a hardcoded path so that install overrides are respected.
 	*
 	* @param object $options - {
@@ -1154,7 +1154,7 @@ class area_maintenance extends area_common {
 					$response->msg = 'Error. invalid value type. Only allow boolean';
 					return $response;
 				}
-				$write_value = json_encode((bool) $value);
+				$state_value = (bool) $value;
 				break;
 
 			case 'DEDALO_RECOVERY_MODE':
@@ -1164,7 +1164,7 @@ class area_maintenance extends area_common {
 					$response->msg = 'Error. invalid value type. Only allow boolean';
 					return $response;
 				}
-				$write_value = json_encode((bool) $value);
+				$state_value = (bool) $value;
 				break;
 
 			case 'DEDALO_MEDIA_ACCESS_MODE_CUSTOM':
@@ -1181,9 +1181,8 @@ class area_maintenance extends area_common {
 					$response->msg = 'Error. invalid value. Only allow null|false|private|publication';
 					return $response;
 				}
-				$write_value = $value===null
-					? 'null'
-					: ($value===false ? 'false' : "'".$value."'");
+				// null = no override | false = force protection off | 'private' | 'publication'
+				$state_value = $value;
 				break;
 
 			// Disable (Experimental with serious security implications)
@@ -1198,12 +1197,9 @@ class area_maintenance extends area_common {
 					$response->msg = 'Error. invalid value type. Only allow boolean|string';
 					return $response;
 				}
-				if (is_string($value)) {
-					$msg = safe_xss($value);
-					$write_value = '["msg" => "' . trim($msg) . '", "class_name" => "warning"]';
-				} else {
-					$write_value = 'false'; // no true is expected
-				}
+				$state_value = is_string($value)
+					? ['msg' => trim(safe_xss($value)), 'class_name' => 'warning']
+					: false; // bool false clears the notification
 				break;
 
 			default:
@@ -1211,81 +1207,39 @@ class area_maintenance extends area_common {
 				return $response;
 		}
 
-		// write_value check
-		if (!is_string($write_value)) {
-			$response->msg = 'Error. invalid value (3)';
+		// Persist the runtime override to the v7 STATE store (../private/state.php), keyed by
+		// its catalog dot-path. v6 wrote a define() into config/config_core.php, but the v7
+		// flip quarantines that file out of the web root; machine-written state now lives in
+		// ../private/state.php and is emitted back as the STATE constant at the next boot.
+		$state_path_map = [
+			'DEDALO_MAINTENANCE_MODE_CUSTOM'  => 'state.maintenance_mode_custom',
+			'DEDALO_RECOVERY_MODE'            => 'state.recovery_mode',
+			'DEDALO_MEDIA_ACCESS_MODE_CUSTOM' => 'state.media_access_mode_custom',
+			'DEDALO_NOTIFICATION_CUSTOM'      => 'state.notification_custom',
+		];
+		$state_path = $state_path_map[$name];
+
+		// ../private is the sibling of the install root (matches config/bootstrap.php and
+		// area::get_config_areas). On a fresh/unmigrated box the file may not exist yet.
+		$state_file = dirname(DEDALO_CONFIG_PATH, 2) . '/private/state.php';
+		$existing   = (is_file($state_file) && is_readable($state_file)) ? (require $state_file) : [];
+		if (!is_array($existing)) {
+			$existing = [];
+		}
+
+		// Reuse the installer's STATE serializer so the on-disk shape never drifts.
+		require_once DEDALO_CORE_PATH . '/installer/class.installer_config_persistor.php';
+		$content = installer_config_persistor::render_state($existing, [$state_path => $state_value]);
+
+		if (file_put_contents($state_file, $content, LOCK_EX) === false) {
+			$response->msg = 'Error. Cannot write the state file. Review PHP write permissions for: ' . $state_file;
+			debug_log(__METHOD__ . ' ' . $response->msg, logger::ERROR);
 			return $response;
 		}
 
-		// config_core file (config_core.php)
-		$config = install::get_config();
-		$file_path = $config->config_core_file_path;
-
-		// content string from file
-		$content = file_get_contents($file_path);
-
-		// add vars
-		if (strpos($content, $name) === false) {
-
-			// file do not exists or const DEDALO_MAINTENANCE_MODE_CUSTOM it's not defined case
-
-			// line
-			$line = PHP_EOL . "define('$name', " . $write_value . ");";
-			// Write the contents to the file,
-			// using the FILE_APPEND flag to append the content to the end of the file
-			// and the LOCK_EX flag to prevent anyone else writing to the file at the same time
-			if (!file_put_contents($file_path, $line, FILE_APPEND | LOCK_EX)) {
-
-				$response->msg = 'Error (2). It\'s not possible set the constant, review the PHP permissions to write in Dédalo directory: ' . $file_path;
-				debug_log(
-					__METHOD__
-					. ' ' . $response->msg . PHP_EOL
-					. 'file: ' . $file_path
-					,
-					logger::ERROR
-				);
-				return $response;
-			}
-
-			$response->result = true;
-			$response->msg = 'All ready';
-
-			debug_log(
-				__METHOD__
-				. " Added config_core line with constant: $name  "
-				,
-				logger::DEBUG
-			);
-
-		} elseif (strpos($content, $name) !== false) {
-
-			// file and constant exists like 'DEDALO_MAINTENANCE_MODE_CUSTOM'
-
-			// replace line to updated value
-			$content = preg_replace(
-				'/define\(\'' . $name . '\',.+\);/',
-				'define(\'' . $name . '\', ' . $write_value . ');',
-				$content
-			);
-			// Write the contents to the file,
-			// using the LOCK_EX flag to prevent anyone else writing to the file at the same time
-			if (!file_put_contents($file_path, $content, LOCK_EX)) {
-				$response->msg = 'Error (3). It\'s not possible set the constant, review the PHP permissions to write in Dédalo directory: ' . $file_path;
-				debug_log(__METHOD__ . " " . $response->msg, logger::ERROR);
-				return $response;
-			}
-
-			$response->result = true;
-			$response->msg = 'All ready';
-
-			debug_log(
-				__METHOD__
-				. " Changed config_core content with constant: $name = '" . to_string($value) . "' "
-				,
-				logger::DEBUG
-			);
-		}
-
+		$response->result = true;
+		$response->msg    = 'All ready';
+		debug_log(__METHOD__ . " Set state '$state_path' = '" . to_string($value) . "' (constant $name)", logger::DEBUG);
 
 		return $response;
 	}//end set_config_core
@@ -1896,14 +1850,14 @@ class area_maintenance extends area_common {
 	* if the live `dd_ontology` table becomes corrupt or empty. It should be rebuilt
 	* after every successful ontology update so the recovery snapshot stays current.
 	*
-	* Delegates entirely to `install::build_recovery_version_file()`.
+	* Delegates entirely to `installer::build_recovery_version_file()`.
 	*
-	* @return object - Response from install::build_recovery_version_file()
+	* @return object - Response from installer::build_recovery_version_file()
 	*                  {result: bool, msg: string, errors?: array}.
 	*/
 	public static function build_recovery_version_file(): object {
 
-		return install::build_recovery_version_file();
+		return installer::build_recovery_version_file();
 	}//end build_recovery_version_file
 
 
@@ -1922,14 +1876,14 @@ class area_maintenance extends area_common {
 	* mode and the operator wants to restore the ontology without shell access.
 	* Listed in `API_ACTIONS`.
 	*
-	* Delegates entirely to `install::restore_dd_ontology_recovery_from_file()`.
+	* Delegates entirely to `installer::restore_dd_ontology_recovery_from_file()`.
 	*
-	* @return object - Response from install::restore_dd_ontology_recovery_from_file()
+	* @return object - Response from installer::restore_dd_ontology_recovery_from_file()
 	*                  {result: bool, msg: string, errors?: array}.
 	*/
 	public static function restore_dd_ontology_recovery_from_file(): object {
 
-		return install::restore_dd_ontology_recovery_from_file();
+		return installer::restore_dd_ontology_recovery_from_file();
 	}//end restore_dd_ontology_recovery_from_file
 
 

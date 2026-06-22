@@ -1,6 +1,8 @@
 # Changing parameters of Dédalo database config file
 
-> **⚠️ Dédalo v7 — database settings moved to `../private/.env`.** There is no longer a `config/config_db.php`. The connection values now live in **`../private/.env`** by the same `DEDALO_*` / `MYSQL_*` constant names — **passwords (`DEDALO_PASSWORD_CONN`, `MYSQL_DEDALO_PASSWORD_CONN`) are secrets** in the top section; host/database/user/port are general config below it. A socket connection with no TCP port is written as `DEDALO_DB_PORT_CONN=null`. See the **[Configuration Administrator Guide](administration.md)**. The reference below still explains each setting's meaning.
+> **⚠️ Dédalo v7 — database settings moved to `../private/.env`.** There is no longer a `config/config_db.php`. The **PostgreSQL** work-system connection now lives in **`../private/.env`** by the same `DEDALO_*` constant names — the **password (`DEDALO_PASSWORD_CONN`) is a secret** in the top section; host/database/user/port are general config below it. A socket connection with no TCP port is written as `DEDALO_DB_PORT_CONN=null`. See the **[Configuration Administrator Guide](administration.md)**. The reference below still explains each setting's meaning.
+>
+> **MariaDB/MySQL is no longer configured in PHP.** The diffusion database is owned exclusively by the Bun diffusion engine — PHP never connects to it and defines no `MYSQL_DEDALO_*` constants. Its connection lives in the Bun engine's own env file **`diffusion/api/v1/.env`** (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SOCKET`) — see the **[Diffusion system database section below](#diffusion-system-database-mariadb)**.
 
 ./dedalo/config/config_db.php
 
@@ -206,106 +208,32 @@ define('DEDALO_DB_MANAGEMENT' , true);
 
 ---
 
-## Diffusion system database variables
+## Diffusion system database (MariaDB)
 
-The diffusion system database is the external and copy version of the data. In diffusion database Dédalo will export only the data that can be public and it will stored in flat format, the relationships will be calculated previously and resolved before store in rows (data will be previously resolved with its value without the data abstraction layer). The result is a SQL standard format of tables, rows and columns.
+The diffusion system database is the external, flat (publication) copy of the data, stored in MariaDB/MySQL: only public data is exported, relationships are pre-resolved, and the result is standard SQL tables/rows/columns.
 
----
+In Dédalo v7 **PHP does not connect to MariaDB at all.** Every MariaDB operation — publish, delete, backup — is performed by the [Bun diffusion engine](../diffusion/dd_diffusion_api_and_bun.md); PHP reaches it through the diffusion API client. There are therefore **no `MYSQL_DEDALO_*` constants** in Dédalo config anymore.
 
-### Dédalo hostname connection for MariaDB or MySQL
+Configure the MariaDB connection in the Bun engine's own environment file instead:
 
-./dedalo/config/config_db.php
+`diffusion/api/v1/.env`
 
-MYSQL_DEDALO_HOSTNAME_CONN `string`
+| key | meaning |
+| --- | --- |
+| `DB_HOST` | MariaDB host (e.g. `localhost`) |
+| `DB_PORT` | MariaDB port (e.g. `3306`) |
+| `DB_USER` | MariaDB user (must have write permissions) |
+| `DB_PASSWORD` | MariaDB password |
+| `DB_NAME` | main diffusion database (e.g. `web_dedalo`) |
+| `DB_SOCKET` | optional UNIX socket; when set it is used instead of `DB_HOST`/`DB_PORT` |
 
-This parameter defines the hostname of the server that is running the database.
-
-By default Dédalo do not uses tcp connection for the diffusion database. Database server and php / apache server could run in the same machine, but is possible that MariaDB or MySQL can run in other server machine.
-
-```php
-define('MYSQL_DEDALO_HOSTNAME_CONN', 'hostname');
-```
-
----
-
-### Dédalo database username for MySQL
-
-./dedalo/config/config_db.php
-
-MYSQL_DEDALO_USERNAME_CONN `string`
-
-This parameter defines the name of the user who can administer the database. This user must be an administrator or owner of the database, Dédalo must be able to create, update, delete and select all tables and records.
-
-```php
-define('MYSQL_DEDALO_USERNAME_CONN', 'username');
-```
-
----
-
-### Dédalo database password for MySQL
-
-./dedalo/config/config_db.php
-
-MYSQL_DEDALO_PASSWORD_CONN `string`
-
-This parameter defines the password of the database user.
-
-```php
-define('MYSQL_DEDALO_PASSWORD_CONN', 'password');
-```
-
----
-
-### Dédalo database information for MySQL
-
-./dedalo/config/config_db.php
-
-MYSQL_DEDALO_DATABASE_CONN `string`
-
-This parameter specifies the primary database name for MariaDB/MySQL. Note that the Diffusion ontology definition will override this value.
-
-All ontology-defined databases must:
-
-- Use the same connection parameters as specified here
-- Grant full access permissions to the user [MYSQL_DEDALO_USERNAME_CONN](#dédalo-database-username-for-mysql).
-
-```php
-define('MYSQL_DEDALO_DATABASE_CONN' , 'web_dedalo');
-```
-
-All Diffusion databases must be created with full privileges for the configured user, as shown below:
+On a fresh install the install wizard collects these values, validates the connection once, and writes this file for you. The diffusion database and its user must exist with full privileges, e.g.:
 
 ```sql
 CREATE USER 'username'@'localhost' IDENTIFIED BY 'password';
 GRANT ALL PRIVILEGES ON `web_dedalo`.* TO 'username'@'localhost';
 ```
 
-See the multiple [diffusion databases](../diffusion/diffusion_multiple_databases.md) documentation.
+See the [multiple diffusion databases](../diffusion/diffusion_multiple_databases.md) guide and the [Bun diffusion engine](../diffusion/dd_diffusion_api_and_bun.md) docs.
 
----
-
-### Dédalo database port host for MySQL
-
-./dedalo/config/config_db.php
-
-MYSQL_DEDALO_DB_PORT_CONN `int`
-
-This parameter defines the host port of the server that is running the database. By default Dédalo uses the default MySQL '3306' port.
-
-```php
-define('MYSQL_DEDALO_DB_PORT_CONN' , 3306);
-```
-
----
-
-### Dédalo database socket connection for MySQL
-
-./dedalo/config/config_db.php
-
-MYSQL_DEDALO_SOCKET_CONN `null || string`
-
-This parameter defines the connection to the database will use a UNIX socket instead tcp. By default Dédalo uses the socket connection for the diffusion database (MariaDB or MySQL)
-
-```php
-define('MYSQL_DEDALO_SOCKET_CONN', '/tmp/mysql.sock');
-```
+> The standalone **publication server** (`publication/server_api/`) is a separate deployable with its **own** read-only database config and still defines `MYSQL_DEDALO_*` in its `server_config_api.php` — see [server_config_api](../diffusion/publication_api/server_config_api.md). That is independent of this work install's database settings.

@@ -24,7 +24,7 @@
 		window.SHOW_DEBUG = false
 		window.DEVELOPMENT_SERVER = false
 		window.DEDALO_API_URL = '../../core/api/v1/json/'
-		// app-global the full page injects server-side; some components (e.g. install)
+		// app-global the full page injects server-side; some components (e.g. installer)
 		// read it as a bare global fallback, so stub it to avoid a ReferenceError
 		window.PHP_VERSION = window.PHP_VERSION || ''
 
@@ -198,20 +198,30 @@ window.load_test = function(area, model, test_name, on_complete) {
 	const icon_moon = theme_toggle?.querySelector('.theme_icon_moon')
 	const icon_sun = theme_toggle?.querySelector('.theme_icon_sun')
 
+	// Theme — synced to Dédalo's selection (core/page/js/theme.js convention):
+	// key 'dedalo_theme'; LIGHT is the default (no attribute, key removed);
+	// DARK = data-theme="dark" + stored 'dark'. Served same-origin as the app,
+	// so reading/writing this key reflects (and updates) the user's app theme.
 	function set_theme(light) {
-		document.documentElement.setAttribute('data-theme', light ? 'light' : 'dark')
-		if (icon_moon) icon_moon.style.display = light ? 'none' : 'block'
-		if (icon_sun) icon_sun.style.display = light ? 'block' : 'none'
-		try { localStorage.setItem('dedalo_theme', light ? 'light' : 'dark') } catch(e) {}
+		if (light) {
+			document.documentElement.removeAttribute('data-theme')
+			try { localStorage.removeItem('dedalo_theme') } catch(e) {}
+		} else {
+			document.documentElement.setAttribute('data-theme', 'dark')
+			try { localStorage.setItem('dedalo_theme', 'dark') } catch(e) {}
+		}
+		// icon: light shows moon (→ switch to dark), dark shows sun (→ switch to light)
+		if (icon_moon) icon_moon.style.display = light ? 'block' : 'none'
+		if (icon_sun) icon_sun.style.display = light ? 'none' : 'block'
 		// sync iframe
 		if (test_frame.contentWindow) {
 			test_frame.contentWindow.postMessage({ type: 'theme', light: light }, '*')
 		}
 	}
 
-	// restore saved theme (dark is the default terminal aesthetic)
+	// restore: light is the default; dark only when the app stored it explicitly
 	const saved = localStorage.getItem('dedalo_theme')
-	set_theme(saved === 'light')
+	set_theme(saved !== 'dark')
 
 	if (theme_toggle) {
 		theme_toggle.addEventListener('click', () => {

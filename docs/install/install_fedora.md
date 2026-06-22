@@ -96,6 +96,9 @@ sudo /usr/bin/postgresql-upgrade-15-to-16  # Adjust version as needed
 ```
 
 #### MariaDB (Alternative)
+
+> **v7 note:** PHP does **not** connect to MariaDB — only the Bun diffusion engine does. Install the MariaDB **server**, but configure its **connection** in `diffusion/api/v1/.env` (`DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, …), not in a PHP config file.
+
 ```bash
 # Install MariaDB repository
 sudo dnf install https://downloads.mariadb.com/MariaDB/mariadb_repo_setup -y
@@ -161,39 +164,36 @@ EOF
 #   chmod 600 ~/.pgpass
 ```
 
-### 6. Configuration files
+### 6. Configuration (v7)
+
+**There are no config files to rename or edit.** In v7 the web-served `config/` directory holds only the loader `config/bootstrap.php`; all per-install values and secrets live outside the web root in `../private/`, and the browser **install wizard writes them for you** in the next step (auto-generating the secrets).
+
+Just make sure the directory **one level above** the install root is writable by the PHP/web user — the installer creates `../private/` (`chmod 0700`) and writes `.env` / `state.php` there.
 
 ```bash
-cd /path/to/dedalo/config/
-
-# Rename sample configuration files
-mv sample.config.php config.php
-mv sample.config_db.php config_db.php
-mv sample.config_core.php config_core.php
-mv sample.config_areas.php config_areas.php
-
-# Edit configuration files as needed
-nano config.php        # Set DEDALO_ENTITY, paths, etc.
-nano config_db.php     # Database connection details
-nano config_core.php   # Core settings
-nano config_areas.php  # Areas configuration
+# e.g. install at /var/www/html/dedalo  →  installer creates /var/www/html/private/
+# ensure the parent dir is writable by the web/PHP user (apache / nginx / php-fpm)
+sudo chown apache:apache /var/www/html        # adjust to your web user
 ```
+
+> **Advanced:** instead of the wizard you can pre-author `../private/.env` by hand — run `php dev/gen_sample_env.php` (writes `../private/sample.env`), copy it to `../private/.env`, and edit. See the [Configuration Administrator Guide](../config/administration.md).
+>
+> **MariaDB** is only for the optional **diffusion** subsystem and is owned by the Bun engine (configured in `diffusion/api/v1/.env`), not PHP — PHP never connects to MariaDB.
 
 ### 7. Complete the installation
 
 ```bash
 # Restart web server
 sudo systemctl restart httpd
-
-# Open browser and navigate to your server IP
-# Follow the on-screen installation instructions
-
-# After installation:
-# 1. Log in as admin
-# 2. Go to Development Area
-# 3. Update Ontology
-# 4. Register all tools
 ```
+
+Open a browser at your server's address. Because the install is not yet sealed, the **install wizard** starts automatically: it collects the configuration (PostgreSQL connection, entity, optional diffusion), writes `../private/.env` + `state.php`, installs the database schema and base hierarchies, and lets you set the `root` password — then seals the install. See the [Ubuntu install guide](index.md#23-manual-installation) for the full step-by-step list.
+
+After installation:
+
+1. Log in as `root`.
+2. Go to the Development Area, update the Ontology and register all tools.
+3. Create an admin user, then log out and log in as that admin.
 
 ## Troubleshooting
 

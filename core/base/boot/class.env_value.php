@@ -5,7 +5,7 @@
 * The single source of truth for quoting a value into a `.env` line so that
 * env_loader::parse reads it back identically. Shared by the migration writer
 * (install/class.env_writer.php) and the runtime install writer
-* (core/install/class.install_config_persistor.php) so the quoting rules never drift.
+* (core/installer/class.installer_config_persistor.php) so the quoting rules never drift.
 */
 final class env_value {
 
@@ -48,7 +48,7 @@ final class env_value {
 	*  - array → JSON (list/map decoded back by the catalog type at boot);
 	*  - scalar → verbatim.
 	* The single serializer shared by the migration writer (env_writer) and the runtime
-	* install writer (install_config_persistor) so the encoding never drifts.
+	* install writer (installer_config_persistor) so the encoding never drifts.
 	* @param mixed $value
 	* @return string
 	*/

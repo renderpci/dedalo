@@ -8,18 +8,32 @@
 */
 final class env_sync {
 
-	/** PHP/.env key => Bun/.env key */
+	/**
+	* SHARED keys that live in BOTH .env files (PHP and Bun) — the drift contract.
+	* PHP/.env key => Bun/.env key.
+	*/
 	public const MAP = [
+		'DEDALO_DIFFUSION_SOCKET_PATH'		=> 'SOCKET_PATH',
+		'DEDALO_DIFFUSION_INTERNAL_TOKEN'	=> 'DIFFUSION_INTERNAL_TOKEN',
+		'DEDALO_API_URL'					=> 'DEDALO_API_URL',
+		'DEDALO_MEDIA_PATH'					=> 'DEDALO_MEDIA_PATH',
+	];
+
+	/**
+	* MariaDB connection: Bun-only. MariaDB config is NOT a PHP constant / catalog key /
+	* PHP .env value — it lives solely in the Bun engine's .env. This map exists only so the
+	* installer and the v6→v7 migration can WRITE the Bun .env (render_bun) and recognise the
+	* legacy v6 constant names. NOT part of the drift contract (compare() ignores it): the PHP
+	* side never carries these, so comparing would always report false drift.
+	* Legacy MariaDB constant name => Bun/.env key.
+	*/
+	public const BUN_DB_MAP = [
 		'MYSQL_DEDALO_HOSTNAME_CONN'		=> 'DB_HOST',
 		'MYSQL_DEDALO_DB_PORT_CONN'			=> 'DB_PORT',
 		'MYSQL_DEDALO_USERNAME_CONN'		=> 'DB_USER',
 		'MYSQL_DEDALO_PASSWORD_CONN'		=> 'DB_PASSWORD',
 		'MYSQL_DEDALO_DATABASE_CONN'		=> 'DB_NAME',
-		'MYSQL_DEDALO_SOCKET_CONN'			=> 'DB_SOCKET', // MariaDB DB socket (Bun reads process.env.DB_SOCKET)
-		'DEDALO_DIFFUSION_SOCKET_PATH'		=> 'SOCKET_PATH',
-		'DEDALO_DIFFUSION_INTERNAL_TOKEN'	=> 'DIFFUSION_INTERNAL_TOKEN',
-		'DEDALO_API_URL'					=> 'DEDALO_API_URL',
-		'DEDALO_MEDIA_PATH'					=> 'DEDALO_MEDIA_PATH',
+		'MYSQL_DEDALO_SOCKET_CONN'			=> 'DB_SOCKET', // Bun reads process.env.DB_SOCKET
 	];
 
 	/**

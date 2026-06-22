@@ -26,7 +26,7 @@ The update process replaces the whole ontology definition with the latest versio
 
 Private tlds must be updated manually.
 
-Common and shared tld's are defined into the [config.php](../../config/config.md#defining-prefix-tipos) file.
+Common and shared tld's are defined by `DEDALO_PREFIX_TIPOS` (set in `../private/.env`; default in the catalog). See the [Configuration Administrator Guide](../../config/administration.md).
 
 ## Update process
 

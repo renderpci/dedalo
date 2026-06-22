@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	import {render_hierarchies_import_block} from '../../../../install/js/render_install.js'
+	import {render_hierarchies_import_block} from '../../../../installer/js/render_install.js'
 
 
 

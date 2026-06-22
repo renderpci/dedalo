@@ -26,7 +26,7 @@ if (PHP_SAPI !== 'cli') {
 }
 
 // boot Dédalo (config + autoloader). __DIR__ = core/rag/cli
-require_once dirname(__DIR__, 3) . '/config/config.php';
+require_once dirname(__DIR__, 3) . '/config/bootstrap.php';
 
 if (!defined('DEDALO_RAG_ENABLED') || DEDALO_RAG_ENABLED !== true) {
 	fwrite(STDERR, "RAG is disabled (DEDALO_RAG_ENABLED !== true). Nothing to drain.\n");

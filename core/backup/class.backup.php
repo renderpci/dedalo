@@ -961,9 +961,29 @@ abstract class backup {
 			debug_log(__METHOD__." Gunzip response: ".json_encode($command_output), logger::DEBUG);
 
 		// verify uncompressed file exists
-			if (!file_exists($uncompressed_file) || filesize($uncompressed_file) == 0) {
-				$response->msg = 'Error. Uncompressed file was not created or is empty';
-				$response->errors[] = 'Uncompressed file missing or empty after gunzip';
+		// gunzip --keep returned 0 (success) above, so the uncompressed file must exist.
+		// A MISSING file here is a genuine decompression failure → error out.
+			if (!file_exists($uncompressed_file)) {
+				$response->msg = 'Error. Uncompressed file was not created';
+				$response->errors[] = 'Uncompressed file missing after gunzip';
+				return $response;
+			}
+
+		// empty export is valid, not an error
+		// A legitimately empty hierarchy ships a .copy.gz that decompresses to 0 bytes
+		// (e.g. the 'ad' / Andorra toponymy seed, plus ~14 other shipped hierarchies).
+		// There are no rows to load, so the \copy would be a no-op: treat it as a
+		// successful import rather than rejecting it. We skip the DELETE below too —
+		// the only real producers of empty exports are fresh hierarchy installs, where
+		// the target section_tipo has no prior rows for the scoped DELETE to remove.
+			if (filesize($uncompressed_file) === 0) {
+				// remove the leftover empty uncompressed file created by gunzip --keep
+				if (file_exists($uncompressed_file)) {
+					unlink($uncompressed_file);
+				}
+				$response->result	= true;
+				$response->msg		= 'OK. Empty export, nothing to import [import_from_copy_file] ' . basename($file_path);
+				$response->msg	   .= ' | '. exec_time_unit($start_time,'ms').' ms';
 				return $response;
 			}
 

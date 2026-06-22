@@ -63,8 +63,8 @@ Dédalo already restricts access through **areas/projects** (see `component_filt
 within a section the user is otherwise authorized for, restrict visibility down to a specific
 set of record ids — regardless of project assignment.
 
-The feature is gated by the global flag `DEDALO_FILTER_USER_RECORDS_BY_ID` (defined `false`
-in `config/sample.config.php`). When enabled, the search engine reads the logged user's
+The feature is gated by the global flag `DEDALO_FILTER_USER_RECORDS_BY_ID` (default `false`;
+set in `../private/.env`, catalog `features.php`). When enabled, the search engine reads the logged user's
 filter via the static `component_filter_records::get_user_filter_records($user_id)` and adds a
 `section_id IN (...)` restriction to the WHERE clause of the main section query
 (`core/search/trait.where.php`, `build_filter_by_user_records()`).

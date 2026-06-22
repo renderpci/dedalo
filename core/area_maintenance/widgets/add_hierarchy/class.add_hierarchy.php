@@ -11,14 +11,14 @@
 * - Aggregates three independent sources into one response object so the client
 *   only needs a single round-trip:
 *     · available .copy.gz hierarchy archive files on disk
-*       (install::get_available_hierarchy_files)
+*       (installer::get_available_hierarchy_files)
 *     · hierarchies already active in the running installation
 *       (hierarchy::get_active_elements)
 *     · install-config scalars required by the import UI
-*       (install::get_config → hierarchy_files_dir_path, hierarchy_typologies)
+*       (installer::get_config → hierarchy_files_dir_path, hierarchy_typologies)
 *
 * There are no mutating actions; the actual import is handled by the install
-* subsystem (install_hierarchy_manager / backup::import_from_copy_file) and
+* subsystem (installer_hierarchy_manager / backup::import_from_copy_file) and
 * invoked through the shared render_hierarchies_import_block UI component
 * (js/render_install.js), which fires its own API calls.
 *
@@ -42,7 +42,7 @@ class add_hierarchy {
 	* Assembles a result object with four keys:
 	*
 	*   hierarchies              — array of hierarchy descriptor objects returned
-	*                              by install::get_available_hierarchy_files(); each
+	*                              by installer::get_available_hierarchy_files(); each
 	*                              entry describes a .copy.gz archive on disk (label,
 	*                              type, typology, active_in_thesaurus, etc.).
 	*                              The property holds the ->result of the response.
@@ -76,10 +76,10 @@ class add_hierarchy {
 	*/
 	public static function get_value() : object {
 
-		$install_config = install::get_config();
+		$install_config = installer::get_config();
 
 		$result = (object)[
-			'hierarchies'				=> install::get_available_hierarchy_files()->result,
+			'hierarchies'				=> installer::get_available_hierarchy_files()->result,
 			'active_hierarchies'		=> hierarchy::get_active_elements(),
 			'hierarchy_files_dir_path'	=> $install_config->hierarchy_files_dir_path,
 			'hierarchy_typologies'		=> $install_config->hierarchy_typologies

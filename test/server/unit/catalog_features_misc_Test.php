@@ -148,13 +148,7 @@ final class catalog_features_misc_Test extends TestCase {
 			'db.management'     => [config_scope::STATIC, 'DEDALO_DB_MANAGEMENT'],
 			'db.bin_path'       => [config_scope::STATIC, 'DB_BIN_PATH'],
 			'db.php_bin_path'   => [config_scope::STATIC, 'PHP_BIN_PATH'],
-			'db.mysql.hostname' => [config_scope::STATIC, 'MYSQL_DEDALO_HOSTNAME_CONN'],
-			'db.mysql.username' => [config_scope::STATIC, 'MYSQL_DEDALO_USERNAME_CONN'],
-			'db.mysql.password' => [config_scope::SECRET, 'MYSQL_DEDALO_PASSWORD_CONN'],
-			'db.mysql.database' => [config_scope::STATIC, 'MYSQL_DEDALO_DATABASE_CONN'],
-			'db.mysql.port'     => [config_scope::STATIC, 'MYSQL_DEDALO_DB_PORT_CONN'],
-			'db.mysql.socket'   => [config_scope::STATIC, 'MYSQL_DEDALO_SOCKET_CONN'],
-			'db.mysql.bin_path' => [config_scope::STATIC, 'MYSQL_DB_BIN_PATH'],
+			// MariaDB (db.mysql.*) removed: handled exclusively by the Bun diffusion engine.
 		];
 		foreach ($expect as $path => [$scope, $const]) {
 			$this->assertArrayHasKey($path, $by, "missing db key: $path");
@@ -181,20 +175,14 @@ final class catalog_features_misc_Test extends TestCase {
 		$this->assertSame(6000,         $by['db.slow_query_ms']->default);
 		$this->assertTrue($by['db.management']->default);
 		$this->assertSame('/usr/bin/',  $by['db.bin_path']->default);
-		$this->assertSame(3306,         $by['db.mysql.port']->default);
-		$this->assertNull($by['db.mysql.socket']->default);
 		$this->assertSame('dedalo_mydatabase', $by['db.database']->default);
 		$this->assertSame('myusername',        $by['db.username']->default);
 		$this->assertSame('/usr/bin/php',      $by['db.php_bin_path']->default);
-		$this->assertSame('localhost',         $by['db.mysql.hostname']->default);
-		$this->assertSame('username',          $by['db.mysql.username']->default);
-		$this->assertSame('web_dedalo',        $by['db.mysql.database']->default);
-		$this->assertSame('/usr/bin/',         $by['db.mysql.bin_path']->default);
 	}
 
 	public function test_db_secret_keys_have_no_default() : void {
 		$by = $this->load('db.php');
-		foreach (['db.password', 'db.mysql.password'] as $p) {
+		foreach (['db.password'] as $p) {
 			$this->assertSame(config_scope::SECRET, $by[$p]->scope, "$p must be SECRET");
 			$this->assertNull($by[$p]->default, "SECRET key $p must have no default");
 		}

@@ -83,54 +83,7 @@ return [
 		default: '/usr/bin/php',
 		doc:     'Path to PHP binary.',
 	),
-	// MariaDB (publication)
-	new config_key(
-		path:    'db.mysql.hostname',
-		const:   'MYSQL_DEDALO_HOSTNAME_CONN',
-		type:    'string',
-		default: 'localhost',
-		doc:     'MariaDB/MySQL host.',
-	),
-	new config_key(
-		path:    'db.mysql.username',
-		const:   'MYSQL_DEDALO_USERNAME_CONN',
-		type:    'string',
-		default: 'username',
-		doc:     'MariaDB/MySQL username.',
-	),
-	new config_key(
-		path:    'db.mysql.password',
-		const:   'MYSQL_DEDALO_PASSWORD_CONN',
-		type:    'string',
-		scope:   config_scope::SECRET,
-		doc:     'MariaDB/MySQL password (env-only; never compiled).',
-	),
-	new config_key(
-		path:    'db.mysql.database',
-		const:   'MYSQL_DEDALO_DATABASE_CONN',
-		type:    'string',
-		default: 'web_dedalo',
-		doc:     'MariaDB/MySQL database name.',
-	),
-	new config_key(
-		path:    'db.mysql.port',
-		const:   'MYSQL_DEDALO_DB_PORT_CONN',
-		type:    'int',
-		default: 3306,
-		doc:     'MariaDB/MySQL port.',
-	),
-	new config_key(
-		path:    'db.mysql.socket',
-		const:   'MYSQL_DEDALO_SOCKET_CONN',
-		type:    'string',
-		default: null,
-		doc:     'MariaDB/MySQL unix socket path. Null = not used.',
-	),
-	new config_key(
-		path:    'db.mysql.bin_path',
-		const:   'MYSQL_DB_BIN_PATH',
-		type:    'string',
-		default: '/usr/bin/',
-		doc:     'Path to MariaDB/MySQL binaries.',
-	),
+	// MariaDB (publication) is handled exclusively by the Bun diffusion engine now: its
+	// connection lives only in diffusion/api/v1/.env (DB_*). PHP no longer defines
+	// MYSQL_DEDALO_* — see env_sync::BUN_DB_MAP for the install/migration → Bun handoff.
 ];

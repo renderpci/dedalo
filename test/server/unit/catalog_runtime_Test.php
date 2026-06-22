@@ -19,6 +19,7 @@ final class catalog_runtime_Test extends TestCase {
 		$by = $this->load();
 		$expect = [
 			'runtime.session_handler'  => [config_scope::STATIC, 'DEDALO_SESSION_HANDLER'],
+			'runtime.session_save_path'=> [config_scope::STATIC, 'DEDALO_SESSION_SAVE_PATH'],
 			'runtime.cache_manager'    => [config_scope::DERIVED, 'DEDALO_CACHE_MANAGER'],
 			'runtime.show_debug'       => [config_scope::USER,   'SHOW_DEBUG'],
 			'runtime.show_developer'   => [config_scope::USER,   'SHOW_DEVELOPER'],
@@ -56,5 +57,6 @@ final class catalog_runtime_Test extends TestCase {
 		$this->assertTrue($by['runtime.backup_on_login']->default);
 		$this->assertSame(8, $by['runtime.backup_time_range']->default);
 		$this->assertSame('files', $by['runtime.session_handler']->default);
+		$this->assertSame('', $by['runtime.session_save_path']->default);
 	}
 }
