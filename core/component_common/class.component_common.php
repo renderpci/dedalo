@@ -2311,7 +2311,7 @@ abstract class component_common extends common {
 	*				"xx": bool,
 	* 				"yy": int    *
 	*			},
-	*		"function": "set_dato_xxx"
+	*		"function": "set_data_xxx"
 	*		}
 	* 	},
 	*	"component_tipo": "ddxx"
