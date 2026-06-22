@@ -235,7 +235,7 @@ Two databases, bridged by a **locator/passage list**, never a join. **ACL is enf
 
 ## Enabling RAG
 
-1. **Provision the vector store.** A *separate* PostgreSQL with the `vector` extension. Set `DEDALO_RAG_DB_*` (see `config/sample.config_db.php`). Run the DDL:
+1. **Provision the vector store.** A *separate* PostgreSQL with the `vector` extension. Set `DEDALO_RAG_DB_*` in `../private/.env` (every RAG setting is declared in the config catalog `core/base/config/catalog/domains/rag.php` and overridden per-install via `.env` by constant name). Run the DDL:
    - `install/db/rag_embeddings.sql` → the **RAG** instance (partitioned table, HNSW, `unaccent`/`f_unaccent` for accent-folded lexical search).
    - `install/db/matrix_rag_index_queue.sql` → the **matrix** instance (the dirty-marker queue).
 2. **Stand up an embeddings endpoint.** Default: a local multilingual model (e.g. `bge-m3` via Ollama). Set `DEDALO_RAG_PROVIDER` / `_MODEL` / `_ENDPOINT`.
@@ -380,7 +380,7 @@ Ingestion reads a **downsized, non-master** image (`'1.5MB'` quality, never `ori
 
 ## Configuration & tests
 
-All constants are documented in `config/sample.config_db.php` (vector DB, provider/model, chunking, HNSW tuning, hybrid/rerank, generation, and the per-record egress policy). Tests live in `test/server/rag/` (suite `rag`):
+All settings are declared in the config catalog (`core/base/config/catalog/domains/rag.php` — vector DB, provider/model, chunking, HNSW tuning, hybrid/rerank, generation, egress policy, multimodal) and overridden per-install from `../private/.env` by constant name (`DEDALO_RAG_*`; secrets such as passwords/API keys are env-only). Tests live in `test/server/rag/` (suite `rag`):
 
 ```bash
 php vendor/bin/phpunit -c test/server/phpunit.xml --testsuite rag
