@@ -14,7 +14,7 @@ foreach ([
 	'paths',
 	'identity', 'runtime', 'lang', 'defaults',
 	'media_image', 'media_av', 'media_docs',
-	'features', 'diffusion', 'db', 'areas', 'state',
+	'rag', 'areas', 'state',
 ] as $domain) {
 	foreach (require __DIR__ . '/domains/' . $domain . '.php' as $key) {
 		$keys[] = $key;
