@@ -591,8 +591,9 @@ action/element pair). `reset_cache()` clears it.
 
 ## The Bun-owns-MariaDB rule
 
-PHP **never** opens a MariaDB connection — no `mysqli`, no
-`DBi::_getConnection_mysql`. Every MariaDB operation is a Bun action reached
+PHP **never** opens a MariaDB connection — there is no `mysqli` in PHP and no
+MariaDB connector in `DBi` (the former `DBi::_getConnection_mysql` was removed).
+Every MariaDB operation is a Bun action reached
 through `diffusion_api_client::call($body, $timeout=10)`:
 
 | operation | Bun action | Bun handler |

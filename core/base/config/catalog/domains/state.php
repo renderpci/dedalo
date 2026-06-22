@@ -33,4 +33,34 @@ return [
 		scope: config_scope::STATE,
 		doc:   'Install info key. Set before install; do not change after.',
 	),
+	// Runtime override flags written by the area_maintenance widgets (set_config_core).
+	// Machine-written to ../private/state.php; legacy v6 kept them in config_core.php.
+	new config_key(
+		path:  'state.maintenance_mode_custom',
+		const: 'DEDALO_MAINTENANCE_MODE_CUSTOM',
+		type:  'bool',
+		scope: config_scope::STATE,
+		doc:   'Maintenance mode runtime override (set from the maintenance area). Absent/false = no maintenance.',
+	),
+	new config_key(
+		path:  'state.notification_custom',
+		const: 'DEDALO_NOTIFICATION_CUSTOM',
+		type:  'map',
+		scope: config_scope::STATE,
+		doc:   "Browser notification runtime override: empty = none; otherwise ['msg'=>..., 'class_name'=>...]. Consumers gate on !empty().",
+	),
+	new config_key(
+		path:  'state.media_access_mode_custom',
+		const: 'DEDALO_MEDIA_ACCESS_MODE_CUSTOM',
+		type:  'string',
+		scope: config_scope::STATE,
+		doc:   "Media access mode runtime override: '' (no override) | 'false' | 'private' | 'publication'. media_protection::get_mode() treats ''/null as no override.",
+	),
+	new config_key(
+		path:  'state.recovery_mode',
+		const: 'DEDALO_RECOVERY_MODE',
+		type:  'bool',
+		scope: config_scope::STATE,
+		doc:   'Recovery mode flag (set during an API boot-failure scenario). Absent/false = normal operation.',
+	),
 ];

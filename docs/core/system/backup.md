@@ -75,7 +75,7 @@ Backups are deliberately kept **outside the web root** for security
 
 ### Configuration constants
 
-Defined in `config/sample.config.php` (and `config_db.php`):
+Set in `../private/.env`; defaults (and the derived `*_PATH` values) live in the catalog (`runtime.php`, `paths.php`, `db.php`):
 
 | constant | default | meaning |
 | --- | --- | --- |

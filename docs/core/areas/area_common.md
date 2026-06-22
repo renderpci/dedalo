@@ -229,7 +229,7 @@ are verified against `core/area_common/class.area_common.php`.
 - **`area` (concrete)** — `class area extends area_common` adds the menu/security
   assembly: `area::get_areas()` iterates the major root areas and recursively
   collects child areas/sections (`get_ar_children_areas_recursive()`), filtered by
-  `config_areas.php` (`areas_deny`/`areas_allow`). The result feeds both the menu
+  the `areas.deny`/`areas.allow` config. The result feeds both the menu
   and `component_security_access`.
 - **[Sections](../sections/index.md)** — areas group sections; the record-bearing
   leaves an area aggregates. `get_dashboard_child_sections()` walks down to them,

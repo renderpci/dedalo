@@ -50,7 +50,10 @@ return [
 	new config_key(
 		path:    'diffusion.custom',
 		const:   'DEDALO_DIFFUSION_CUSTOM',
-		type:    'bool',
+		// string|bool: false (default, disabled) | a custom file path. Typed 'string' so a path set
+		// via .env is NOT collapsed to a bool; the bool false default round-trips unchanged (the
+		// loader gates on !empty(), so false stays disabled).
+		type:    'string',
 		default: false,
 		doc:     'Optional custom file to manipulate diffusion options. string|bool.',
 	),

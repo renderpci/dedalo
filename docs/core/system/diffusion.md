@@ -114,8 +114,9 @@ Every publish/unpublish is logged to the dd1758 activity section in PostgreSQL.
 
 ### The Bun-owns-MariaDB rule (non-negotiable)
 
-PHP **never** opens a MariaDB connection — no `mysqli`, no
-`DBi::_getConnection_mysql`. Every MariaDB operation is an action on the Bun
+PHP **never** opens a MariaDB connection — there is no `mysqli` in PHP and no
+MariaDB connector in `DBi` (the former `DBi::_getConnection_mysql` was removed).
+Every MariaDB operation is an action on the Bun
 diffusion engine, reached through `diffusion_api_client::call()`:
 
 | operation | Bun action |

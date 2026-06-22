@@ -4,6 +4,9 @@
 
 ## Video-guide for V6 installation
 
+!!! warning "The v7 install differs"
+    This walkthrough shows the **v6-era** flow (renaming and editing `config*.php`). In v7 you do **not** edit config files — a browser **install wizard** collects your settings and writes `../private/.env` for you. Follow the current **[Installation guide](index.md#23-manual-installation)**; the server-setup steps (PHP, PostgreSQL, etc.) shown in the video still apply.
+
 Installing Dédalo needs a server configured with PHP, Apache, PostgreSQL, MariaDB and other libraries.
 
 The video below shows how to install Dédalo on an Ubuntu Server, step by step.

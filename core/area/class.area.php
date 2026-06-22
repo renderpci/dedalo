@@ -306,35 +306,29 @@ class area extends area_common {
 	*/
 	public static function get_config_areas() : object {
 
-		// Defaults: no allow/deny restrictions. Initialized up front so the
-		// returned object is always well-formed even when config_areas.php is
-		// absent or only defines one of the two variables.
-			$areas_deny		= [];
-			$areas_allow	= [];
-
-		// config_areas.php now lives outside the web-served tree, in ../private/.
-		// On a fresh install this file may legitimately not exist yet, so its
-		// absence is an expected state, NOT an error. Check existence before
-		// include: an include() on a missing file emits an E_WARNING that
-		// Error::captureError() promotes into $_ENV['DEDALO_LAST_ERROR'] (a
-		// phantom server error that can break the installer). The included file
-		// defines $areas_deny and/or $areas_allow.
-			$config_areas_path = dirname(DEDALO_CONFIG_PATH, 2) . '/private/config_areas.php';
-			if( is_file($config_areas_path) && is_readable($config_areas_path) ) {
-				include $config_areas_path;
-			} else {
-				debug_log(__METHOD__
-					." config_areas.php not found at '$config_areas_path' - using empty allow/deny defaults"
-					, logger::WARNING
-				);
-			}
-
-		// config_areas object
-		// Wrap the two loose variables populated by the include into a value object
-		// so callers receive a typed, named structure rather than checking globals.
+		// config_areas object. Always well-formed (empty allow/deny) even before config
+		// is booted, so callers (installer, CLI) never receive a malformed object.
 			$config_areas = new stdClass();
-				$config_areas->areas_deny	= $areas_deny;
-				$config_areas->areas_allow	= $areas_allow;
+				$config_areas->areas_deny	= [];
+				$config_areas->areas_allow	= [];
+
+		// v7: the deny/allow lists are catalog keys (areas.deny / areas.allow), read from
+		// the resolved config — no longer a separate config_areas.php include. The catalog
+		// ships the default deny list (dd137, rsc1, hierarchy20); override per-install via
+		// ../private/config.local.php. config is booted very early (P4), so it is available
+		// wherever menus/access are resolved; the guard keeps the rare pre-boot/degraded
+		// context (e.g. the installer) from fataling.
+			if ( class_exists('config') ) {
+				try {
+					$config_areas->areas_deny	= (array) config('areas.deny', []);
+					$config_areas->areas_allow	= (array) config('areas.allow', []);
+				} catch (\Throwable $e) {
+					debug_log(__METHOD__
+						." config not booted - using empty allow/deny defaults"
+						, logger::WARNING
+					);
+				}
+			}
 
 
 		return $config_areas;

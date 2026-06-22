@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/class.migration_destination.php';
 require_once __DIR__ . '/class.constant_map.php';
+require_once dirname(__DIR__) . '/core/base/boot/class.env_sync.php';
 
 /**
 * MIGRATION_CLASSIFIER
@@ -39,6 +40,12 @@ final class migration_classifier {
 	}//end classify
 
 	private static function route(string $name, ?config_scope $scope) : migration_destination {
+		// MariaDB is Bun-only: never written to the PHP side. The migration still hands its
+		// value to the Bun engine's .env (env_writer::render_bun via env_sync::BUN_DB_MAP),
+		// which reads the classification record regardless of this DROP destination.
+		if (array_key_exists($name, env_sync::BUN_DB_MAP)) {
+			return migration_destination::DROP;
+		}
 		if ($scope !== null) {
 			return match ($scope) {
 				config_scope::SECRET      => migration_destination::ENV,

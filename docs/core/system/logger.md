@@ -7,7 +7,7 @@ The server class `logger` is Dédalo's central logging facade: a small factory/r
 This page is the **class-level reference** for the logger subsystem. It covers
 the `logger` facade, the `logger_backend` contract, the one shipped backend
 (`logger_backend_activity`), the global `debug_log()` helper that consumes the
-logger's severity scale, and how all of it is wired up in `config.php`.
+logger's severity scale, and how all of it is wired up at boot.
 
 ## Role
 
@@ -81,10 +81,10 @@ returns `'[unknown]'` for any other value.
 
 ### The `LOGGER_LEVEL` threshold (config-driven)
 
-`debug_log()` is gated by the `LOGGER_LEVEL` constant defined in `config.php`:
+`debug_log()` is gated by the `LOGGER_LEVEL` constant, which Dédalo computes at boot from the per-user debug flags:
 
 ```php
-// config (sample.config.php)
+// computed at boot — catalog runtime.php (USER scope)
 define('LOGGER_LEVEL', (SHOW_DEBUG===true || SHOW_DEVELOPER===true)
     ? logger::DEBUG   // log everything
     : logger::ERROR   // log only ERROR/CRITICAL
@@ -166,8 +166,10 @@ Related, outside `core/logger/`:
 
 - `shared/core_functions.php` — defines the global `debug_log()` function that
   consumes `logger::*` levels and `LOGGER_LEVEL`.
-- `config/sample.config.php` — defines `LOGGER_LEVEL`, calls
-  `logger::register('activity', …)` and populates `logger::$obj['activity']`.
+- `core/base/config/catalog/domains/runtime.php` — defines `LOGGER_LEVEL`
+  (USER scope, computed at boot from `SHOW_DEBUG`/`SHOW_DEVELOPER`). The boot's
+  logger phase calls `logger::register('activity', …)` and populates
+  `logger::$obj['activity']`.
 - `core/base/class.loader.php` — `include`s the three logger class files at
   bootstrap.
 - `core/db/class.matrix_activity_db_manager.php` — the DB manager the activity
@@ -190,7 +192,7 @@ public static function get_instance(string $name) : ?logger_backend
 public static function level_to_string(int $log_level) : string
 ```
 
-Wiring in `config.php` (after the level threshold is defined):
+Wiring at boot — the logger phase (after the level threshold is defined):
 
 ```php
 // 1. register the 'activity' backend (scheme → logger_backend_activity)

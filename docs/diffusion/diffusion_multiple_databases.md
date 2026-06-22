@@ -25,25 +25,23 @@ define('API_WEB_USER_CODE_MULTIPLE', [
 ]);
 ```
 
-## Dédalo config_db file
+## Diffusion engine database config (Bun)
 
-Fill your MYSQL settings normally.
+In Dédalo v7 the MariaDB write connection is **not** a PHP setting — it lives in the Bun diffusion engine's env file `diffusion/api/v1/.env`. PHP never connects to MariaDB.
 
 !!! warning
-    Note that, from Dédalo side, **only one DB user and password** will be defined, and the DB user must have write permissions.
+    From the Dédalo side, **only one DB user and password** is defined, and that DB user must have write permissions.
 
-Sample:
+Sample (`diffusion/api/v1/.env`):
 
-```php
-define('MYSQL_DEDALO_USERNAME_CONN', 'my_user_with_write_permissions');
-define('MYSQL_DEDALO_PASSWORD_CONN', 'my_user_db_password');
+```ini
+DB_HOST=localhost
+DB_USER=my_user_with_write_permissions
+DB_PASSWORD=my_user_db_password
+DB_NAME=web_my_entity_pro   # main diffusion database
 ```
 
-Database configuration is only for the main database, but if multiple databases are set in Ontology, the diffusion engine will swap and write in the proper output DB using the same user and password.
-
-```php
-define('MYSQL_DEDALO_DATABASE_CONN', 'web_my_entity_pro'); // main diffusion database
-```
+The connection points at the main database, but if multiple databases are set in the Ontology, the diffusion engine swaps and writes to the proper output DB using the same user and password.
 
 Each diffusion database must be created, and the configured user must be granted privileges on it, for example:
 

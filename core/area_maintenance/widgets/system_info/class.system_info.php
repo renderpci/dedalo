@@ -146,43 +146,9 @@ class system_info {
 				'info'	=> 'Version: '. $version . ' - minimum: 16.1'
 			];
 
-			// mysql
-			// MySQL/MariaDB is optional — only the diffusion subsystem writes to it via
-			// the Bun server. The check is therefore guarded: it only runs when the
-			// MYSQL_DEDALO_DATABASE_CONN constant is set (meaning diffusion is configured)
-			// AND the connection is local (hostname === 'localhost' or a Unix socket is
-			// specified). Remote MySQL setups skip the check because `system::get_mysql_server()`
-			// shells out to the local CLI binary, which would not reflect the remote version.
-			if (	(defined('MYSQL_DEDALO_DATABASE_CONN') && !empty(MYSQL_DEDALO_DATABASE_CONN))
-				&& ( defined('MYSQL_DEDALO_HOSTNAME_CONN') && MYSQL_DEDALO_HOSTNAME_CONN==='localhost'
-					|| (defined('MYSQL_DEDALO_SOCKET_CONN') && !empty(MYSQL_DEDALO_SOCKET_CONN)) )
-				) {
-				$mysql_server = system::get_mysql_server();
-				if (empty($mysql_server)) {
-					// Configured but not installed — surface as a failing requirement.
-					$requeriments_list[] = (object)[
-						'name'	=> 'MySQL/MariaDB server not found',
-						'value'	=> false,
-						'info'	=> 'Not installed'
-					];
-				} else {
-					$version = system::get_mysql_version($mysql_server) ?? 'Unknown';
-					if ($mysql_server==='mariadb') {
-						$requeriments_list[] = (object)[
-							'name'	=> 'MariaDB supported version',
-							'value'	=> (version_compare(trim($version), '5.6') >= 0),
-							'info'	=> 'Version: '. $version . ' - minimum: 5.6'
-						];
-					}else
-					if ($mysql_server==='mysql') {
-						$requeriments_list[] = (object)[
-							'name'	=> 'MySQL supported version',
-							'value'	=> (version_compare(trim($version), '5.6') >= 0),
-							'info'	=> 'Version: '. $version . ' - minimum: 5.6'
-						];
-					}
-				}
-			}
+			// mysql / mariadb: no PHP-side check. MariaDB is owned exclusively by the Bun
+			// diffusion engine (configured in diffusion/api/v1/.env); PHP never connects to it,
+			// so there is no local MariaDB requirement to verify here.
 
 			// HTTP Protocol
 			// Dédalo requires HTTP/2 for performance (multiplexed requests, server push).

@@ -57,7 +57,10 @@ return [
 	new config_key(
 		path:    'features.media_access_mode',
 		const:   'DEDALO_MEDIA_ACCESS_MODE',
-		type:    'bool',
+		// string|bool: false (default, disabled) | 'private' | 'publication'. Typed 'string' so a
+		// 'private'/'publication' value set via .env is NOT collapsed to a bool by config_caster;
+		// the bool false default round-trips unchanged (get_mode() positive-matches the mode strings).
+		type:    'string',
 		default: false,
 		doc:     'Media file access control: false | \'private\' | \'publication\'.',
 	),

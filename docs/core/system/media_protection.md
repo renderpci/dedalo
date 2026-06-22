@@ -72,9 +72,9 @@ cookie (that is `login`'s job).
 `get_mode()` returns one of `false | 'private' | 'publication'` from a
 fixed priority chain:
 
-1. `DEDALO_MEDIA_ACCESS_MODE_CUSTOM` (in `config_core.php`, written from the
-   `media_control` widget; `null` means *no override*).
-2. `DEDALO_MEDIA_ACCESS_MODE` (in `config.php`).
+1. `DEDALO_MEDIA_ACCESS_MODE_CUSTOM` (machine-written to `../private/state.php`
+   from the `media_control` widget; `null`/empty means *no override*).
+2. `DEDALO_MEDIA_ACCESS_MODE` (from `../private/.env` / the catalog).
 3. legacy `DEDALO_PROTECT_MEDIA_FILES === true` ⇒ `'private'`.
 
 Anything that is not exactly `'private'` or `'publication'` resolves to `false`

@@ -123,7 +123,7 @@ class media_control {
 
 		// configuration
 			$mode = media_protection::get_mode();
-			$custom_override = defined('DEDALO_MEDIA_ACCESS_MODE_CUSTOM')
+			$custom_override = (defined('DEDALO_MEDIA_ACCESS_MODE_CUSTOM') && DEDALO_MEDIA_ACCESS_MODE_CUSTOM!=='')
 				? DEDALO_MEDIA_ACCESS_MODE_CUSTOM
 				: null;
 			$config_mode = defined('DEDALO_MEDIA_ACCESS_MODE')

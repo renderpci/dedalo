@@ -24,7 +24,6 @@ final class secret_sentinels {
 			'DEDALO_PASSWORD_CONN'			=> static fn(string $v) : bool => $v === 'mypassword',
 			'DEDALO_SALT_STRING'			=> static fn(string $v) : bool => $v === 'dedalo_six',
 			'API_WEB_USER_CODE'				=> static fn(string $v) : bool => preg_match('/^X{10,}$/', $v) === 1,
-			'MYSQL_DEDALO_PASSWORD_CONN'	=> static fn(string $v) : bool => preg_match('/^X+\.\.$/', $v) === 1,
 		];
 
 		$violations = [];

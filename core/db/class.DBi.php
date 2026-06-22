@@ -16,8 +16,8 @@
 * - Schema introspection helpers (check_table_exists, get_tables, check_column_exists,
 *   add_column, remove_column, get_indexes, get_functions, get_constraint_name_from_index) used
 *   during migration and bootstrap.
-* - An optional PDO accessor (_getConnectionPDO) and a legacy MySQLi accessor
-*   (_getConnection_mysql) for the few paths that still use those interfaces.
+* - An optional PDO accessor (_getConnectionPDO) for the few paths that still use it.
+* MariaDB/MySQL is NOT accessed from PHP: only the Bun diffusion engine connects to it.
 *
 * This class is declared abstract so it cannot be instantiated; all methods are static.
 * To close the cached connection explicitly call pg_close(DBi::_getConnection()).
@@ -744,110 +744,6 @@ abstract class DBi {
 
 		return $pdo_conn;
 	}//end _getConnectionPDO
-
-
-
-	/**
-	* _GETCONNECTION_MYSQL
-	* Returns a MySQLi connection to the auxiliary MySQL/MariaDB database.
-	*
-	* Used only by legacy import/export paths and the diffusion subsystem that still
-	* target a MariaDB instance (distinct from Dédalo's primary PostgreSQL store).
-	* All new code should target PostgreSQL via _getConnection(). Caches the mysqli
-	* instance in a function-static variable for the process lifetime.
-	*
-	* Connection setup order: enable strict error reporting → init → set connect timeout
-	* (10 s) → set autocommit (required for InnoDB row-level saves) → real_connect() →
-	* set charset to utf8mb4.
-	*
-	* @param string|null $host = MYSQL_DEDALO_HOSTNAME_CONN
-	* @param string $user = MYSQL_DEDALO_USERNAME_CONN
-	* @param string $password = MYSQL_DEDALO_PASSWORD_CONN
-	* @param string $database = MYSQL_DEDALO_DATABASE_CONN
-	* @param int|null $port = MYSQL_DEDALO_DB_PORT_CONN
-	* @param string|null $socket = MYSQL_DEDALO_SOCKET_CONN
-	* @param bool $cache = true - Return the cached mysqli instance when true
-	* @return mysqli|false - Connected mysqli instance, or false on any connection failure
-	*/
-	public static function _getConnection_mysql(
-		string|null		$host		= MYSQL_DEDALO_HOSTNAME_CONN,
-		string			$user		= MYSQL_DEDALO_USERNAME_CONN,
-		string			$password	= MYSQL_DEDALO_PASSWORD_CONN,
-		string			$database	= MYSQL_DEDALO_DATABASE_CONN,
-		int|string|null	$port		= MYSQL_DEDALO_DB_PORT_CONN,
-		string|null		$socket		= MYSQL_DEDALO_SOCKET_CONN,
-		bool			$cache		= true
-		) : mysqli|false {
-
-		// cache
-			static $mysqli;
-			if($cache === true && isset($mysqli)) {
-				return($mysqli);
-			}
-
-		// You should enable error reporting for mysqli before attempting to make a connection
-		// @see https://www.php.net/manual/en/mysqli-driver.report-mode.php
-			mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-
-		// init
-			$mysqli = mysqli_init();
-			if (!$mysqli) {
-				debug_log(__METHOD__ . " Error: mysqli_init failed", logger::DEBUG);
-				return false;
-			}
-
-		// options : set connect_timeout
-			if (!$mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 10)) {
-				debug_log(__METHOD__
-					. " Error setting MYSQLI_OPT_CONNECT_TIMEOUT". PHP_EOL
-					, logger::DEBUG
-				);
-			}
-
-		// options : set autocommit (needed for INNODB save)
-			if (!$mysqli->options(MYSQLI_INIT_COMMAND, 'SET AUTOCOMMIT = 1')) {
-				debug_log(__METHOD__
-					. " Error setting MYSQLI_INIT_COMMAND". PHP_EOL
-					, logger::DEBUG
-				);
-			}
-
-		// connect
-			try {
-				if ($port !== null && empty($port)) {
-					$port = null;
-				}
-				if (!$mysqli->real_connect($host, $user, $password, $database, $port, $socket)) {
-					debug_log(__METHOD__
-						. " Error on connect to MYSQL database ". PHP_EOL
-						. ' mysqli_connect_errno: ' .mysqli_connect_errno() . PHP_EOL
-						. ' mysqli_connect_error: ' .mysqli_connect_error()
-						, logger::DEBUG
-					);
-					return false;
-				}
-			} catch (mysqli_sql_exception $e) {
-				debug_log(__METHOD__
-					. " Error on connect to MYSQL database (Exception). ". PHP_EOL
-					. ' Message: ' . $e->getMessage() . PHP_EOL
-					. ' Code: ' . $e->getCode()
-					, logger::DEBUG
-				);
-				return false;
-			}
-
-		// UTF8 : Change character set to utf8mb4
-			if (!$mysqli->set_charset('utf8mb4')) {
-				debug_log(__METHOD__
-					." Error loading character set utf8mb4: ". PHP_EOL
-					. 'mysqli->error: ' . $mysqli->error
-					, logger::DEBUG
-				);
-			}
-
-
-		return $mysqli;
-	}//end _getConnection_mysql
 
 
 

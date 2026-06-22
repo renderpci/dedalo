@@ -20,7 +20,7 @@ if (PHP_SAPI !== 'cli') {
 	exit(2);
 }
 
-require_once dirname(__DIR__, 3) . '/config/config.php';
+require_once dirname(__DIR__, 3) . '/config/bootstrap.php';
 
 $section_tipo = $argv[1] ?? '';
 $build_index  = in_array('--build-index', array_slice($argv, 2), true);

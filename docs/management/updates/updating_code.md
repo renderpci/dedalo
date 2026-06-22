@@ -2,16 +2,19 @@
 
 > See also: [Updating ontology](updating_ontology.md) · [Updating data](updating_data.md) · [Updating code options](updating_code_options.md)
 
-Dédalo v6 is an active, rapidly developing software project. It is therefore important to keep it updated and in good condition for stability and security reasons.
+Dédalo is an active, rapidly developing software project. It is therefore important to keep it updated and in good condition for stability and security reasons.
 
-This guide covers the update process for minor versions, fixes and patches of version 6. The major upgrades (v4 to v5, v5 to v6) have their own dedicated guides.
+This guide covers the update process for minor versions, fixes and patches. The major upgrades (v4→v5, v5→v6) have their own dedicated guides.
 
 !!! info "Migration from Dédalo v5"
     If you want to switch to Dédalo v6 from the previous release, Dédalo v5, please refer to the dedicated [migration guide](../../update_v5/update_from_v5.md). It explains the differences between the two releases and helps you make the switch.
 
+!!! info "Upgrading a v6 install to v7"
+    On the **first** update from v6 to v7, Dédalo **automatically migrates your configuration** from the old `config/config_*.php` files to the new `../private/.env` layout (the legacy files are backed up and quarantined out of the web root). You don't copy or edit config files by hand. See the [Configuration Administrator Guide → Migrating a v6 install](../../config/administration.md#9-migrating-a-v6-install).
+
 The update process is based on the Dédalo cadence numbering. It is incremental and sometimes depends on the ontology version. Update the ontology before updating the Dédalo code, following [this guide](updating_ontology.md).
 
-Updating the Dédalo code should be supervised by the IT team. The update is automatic, but some changes — such as changes to config files — must be applied manually, because the update process cannot change your specific configuration.
+Updating the Dédalo code should be supervised by the IT team. The update is automatic, but some changes — such as **new configuration settings** — must be applied manually in `../private/.env`, because the update process cannot change your specific configuration.
 
 !!! warning "Update pre-production system and test before update new versions into production system"
     Is highly recommended to test your new Dédalo installation before deploying the changes into the production environment. This will help ensure that the update will not have a negative impact on your catalogue.
@@ -36,7 +39,7 @@ Dédalo could be updated using the integrated update code widget that update [au
 3. Locate "Update code" control panel"
 
     1. Version >= 6.4.0
-        In the panel, choose the server to obtain the code, by default, the panel show official Dédalo server, but is possible configure other mirrors or providers in [CODE_SERVERS](../../config/config.md#defining-server-code-provider) in `config.php`
+        In the panel, choose the server to obtain the code, by default, the panel show official Dédalo server, but is possible configure other mirrors or providers via `CODE_SERVERS`, set in `../private/.env` (see the [Configuration Administrator Guide](../../config/administration.md))
 
         ![Updating code >=6.4.0 control panel](assets/20250226_092214_updating_code_panel_6_4.png)
 
@@ -49,7 +52,7 @@ Dédalo could be updated using the integrated update code widget that update [au
         and select whether you want [Incremental](updating_code_options.md#incremental) or [Clean](updating_code_options.md#clean), then press the `Update` button.
 
     2. Version < 6.4.0
-        In previous version to 6.4.0 the panel update directly to the latest version and the code is obtained from the server provider configured in [DEDALO_SOURCE_VERSION_URL](../../config/config.md#defining-source-version-uri) in `config.php`
+        In previous version to 6.4.0 the panel update directly to the latest version and the code is obtained from the server provider configured in `DEDALO_SOURCE_VERSION_URL` (in v7, set in `../private/.env`)
 
         ![Updating code <6.4.0 control panel](assets/20230910_141614_updating_code_panel.png)
 
@@ -60,11 +63,11 @@ Dédalo could be updated using the integrated update code widget that update [au
     !!! warning "Re-login after update"
         Is important after updating the code, log out and log in to Dédalo to safely refresh the browser's cache files.
 
-4. Check the changes into sample.config files
+4. Check for new settings
 
-    Some code updates can change the config necessities and is necessary to add or remove manually. It will indicate into the "Check config" control panel.
+    Some code updates add or change configuration settings; the "Check config" control panel flags these.
 
-    If you config need to be updated, open the sample.config and your equivalent config file that was indicated and add the new variable/s.
+    In v7 settings live in `../private/.env`. Regenerate the documented reference with `php dev/gen_sample_env.php` (it writes `../private/sample.env`), compare it with your `.env`, and add any new `DEDALO_*` variable(s) there. See the [Configuration Administrator Guide](../../config/administration.md).
 
 5. Follow the update instructions and update data.
 
@@ -108,6 +111,7 @@ A typical Dédalo installation use a vhost of a GNU/Linux user with a directory 
 │    │    │    │    ├── test/
 │    │    │    │    ├── tools/
 │    │    │    │    └── Updates.md
+│    │    │    └── private/   # ../private: .env, state.php, secrets — OUTSIDE dedalo/, preserved across code updates
 │    │    ├── backups
 │    │    │    ├── code/
 │    │    │    ├── db/
@@ -122,6 +126,7 @@ A typical Dédalo installation use a vhost of a GNU/Linux user with a directory 
 * `dedalo_user` is the GNU/Linux user home directory and the PHP user (defined in the PHP-FPM pool).
 * `httpdocs` is the Document directory of the Apache HTTP server (the public virtual host).
 * `dedalo` is the Dedalo code directory.
+* `private` holds your per-install configuration and secrets (`../private/.env`, `state.php`); it lives **outside** the `dedalo` code directory, so it is preserved when you replace the code. Keep it outside the web root (see the [Configuration Administrator Guide](../../config/administration.md)).
 
 Please note that `sessions`, `backup`, and `logs` are located outside of `httpdocs` and are not accessible to Apache.
 
@@ -155,15 +160,11 @@ Adapt the following tasks to your own virtual host directory structure.
 
 5. Set the permissions of the 'dedalo' directory according to your Apache and PHP-FPM settings.
 
-6. Copy your config files into the new installation
+6. Your configuration is preserved automatically — nothing to copy.
 
-    ```shell
-    cd /home/dedalo_user
-    cp backups/code/dedalo_old/config/config.php httpdocs/dedalo/config/config.php
-    cp backups/code/dedalo_old/config/config_db.php httpdocs/dedalo/config/config_db.php
-    cp backups/code/dedalo_old/config/config_core.php httpdocs/dedalo/config/config_core.php
-    cp backups/code/dedalo_old/config/config_areas.php httpdocs/dedalo/config/config_areas.php
-    ```
+    In v7 all per-install configuration and secrets live in `../private/` (the `.env` file, `state.php`, …), **outside** the `dedalo/` code directory. Replacing the code does not touch it, so there are **no config files to copy** (unlike v6, where `config_*.php` lived inside the code directory).
+
+    > Upgrading from v6? The first v7 boot **auto-migrates** your old `config/config_*.php` into `../private/.env` and quarantines the legacy files — see the [Configuration Administrator Guide → Migrating a v6 install](../../config/administration.md#9-migrating-a-v6-install).
 
 7. Copy your **media** directory to the new installation
 
@@ -179,11 +180,9 @@ Adapt the following tasks to your own virtual host directory structure.
     mv backups/code/dedalo_old/media httpdocs/dedalo/media
     ```
 
-8. Check the changes into sample.config files
+8. Check for new settings
 
-    Some code updates can change the config necessities and is necessary to add or remove manually. It will indicate into the "Check config" control panel.
-
-    If you config need to be updated, open the sample.config and your equivalent config file that was indicated and add the new variable/s.
+    Some code updates add or change configuration settings; the "Check config" control panel flags these. In v7, regenerate `../private/sample.env` with `php dev/gen_sample_env.php`, compare it with your `../private/.env`, and add any new `DEDALO_*` variable(s) there. See the [Configuration Administrator Guide](../../config/administration.md).
 
 9. Follow the update instructions and update data.
 

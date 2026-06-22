@@ -16,7 +16,7 @@ if (PHP_SAPI !== 'cli') {
 	exit(2);
 }
 
-require_once dirname(__DIR__, 3) . '/config/config.php';
+require_once dirname(__DIR__, 3) . '/config/bootstrap.php';
 
 $pass = 0; $fail = 0;
 $ok   = function(string $label, string $detail='') use (&$pass) { $pass++; fwrite(STDOUT, "  [PASS] $label" . ($detail!=='' ? " — $detail" : '') . "\n"); };

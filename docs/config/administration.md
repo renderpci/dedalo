@@ -214,13 +214,13 @@ Secrets live in the top section of `../private/.env`:
 # Dédalo v7 secrets — chmod 600. Never commit.
 DEDALO_SALT_STRING='…'
 DEDALO_PASSWORD_CONN='…'
-MYSQL_DEDALO_PASSWORD_CONN='…'
 DEDALO_DIFFUSION_INTERNAL_TOKEN='…'
 ```
 
 - **⚠️ Never change `DEDALO_SALT_STRING`** on an existing install — it is used to encrypt/decrypt stored passwords; changing it makes every stored credential unreadable.
 - `.env` must be **`chmod 600`** and outside the web root (it is, in `../private/`). **Never commit it.**
 - Secrets that are structured (e.g. `API_WEB_USER_CODE_MULTIPLE`, `CODE_SERVERS`, `ONTOLOGY_SERVERS`) are stored as **single-quoted JSON** and decoded automatically.
+- **MariaDB/MySQL credentials are *not* here.** The diffusion database belongs to the Bun engine; its connection (incl. `DB_PASSWORD`) lives in `diffusion/api/v1/.env`. PHP never connects to MariaDB.
 
 ---
 

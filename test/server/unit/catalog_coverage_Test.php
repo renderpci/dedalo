@@ -27,7 +27,7 @@ final class catalog_coverage_Test extends TestCase {
 	}
 
 	public function test_all_types_are_known() : void {
-		$ok = ['int', 'bool', 'string', 'list', 'map'];
+		$ok = ['int', 'float', 'bool', 'string', 'list', 'map'];
 		foreach ($this->catalog() as $k) {
 			$this->assertContains($k->type, $ok, "bad type '{$k->type}' for {$k->path}");
 		}
@@ -41,8 +41,8 @@ final class catalog_coverage_Test extends TestCase {
 		}
 		$expectRequest = ['DEDALO_APPLICATION_LANG', 'DEDALO_DATA_LANG']; sort($expectRequest);
 		$expectUser    = ['LOGGER_LEVEL', 'SHOW_DEBUG', 'SHOW_DEVELOPER']; sort($expectUser);
-		$expectSecret  = ['API_WEB_USER_CODE_MULTIPLE', 'CODE_SERVERS', 'DEDALO_DIFFUSION_INTERNAL_TOKEN', 'DEDALO_PASSWORD_CONN', 'DEDALO_SALT_STRING', 'MYSQL_DEDALO_PASSWORD_CONN', 'ONTOLOGY_SERVERS']; sort($expectSecret);
-		$expectState   = ['DEDALO_INFORMATION', 'DEDALO_INFO_KEY', 'DEDALO_INSTALL_STATUS', 'DEDALO_MAINTENANCE_MODE']; sort($expectState);
+		$expectSecret  = ['API_WEB_USER_CODE_MULTIPLE', 'CODE_SERVERS', 'DEDALO_DIFFUSION_INTERNAL_TOKEN', 'DEDALO_PASSWORD_CONN', 'DEDALO_RAG_API_KEY', 'DEDALO_RAG_DB_PASSWORD_CONN', 'DEDALO_RAG_LLM_API_KEY', 'DEDALO_RAG_MULTIMODAL_API_KEY', 'DEDALO_RAG_RERANK_API_KEY', 'DEDALO_SALT_STRING', 'DEDALO_SMTP_PASS', 'ONTOLOGY_SERVERS']; sort($expectSecret);
+		$expectState   = ['DEDALO_INFORMATION', 'DEDALO_INFO_KEY', 'DEDALO_INSTALL_STATUS', 'DEDALO_MAINTENANCE_MODE', 'DEDALO_MAINTENANCE_MODE_CUSTOM', 'DEDALO_MEDIA_ACCESS_MODE_CUSTOM', 'DEDALO_NOTIFICATION_CUSTOM', 'DEDALO_RECOVERY_MODE']; sort($expectState);
 		$this->assertSame($expectRequest, $byScope['request'], 'REQUEST set drift');
 		$this->assertSame($expectUser, $byScope['user'], 'USER set drift');
 		$this->assertSame($expectSecret, $byScope['secret'], 'SECRET set drift');
@@ -59,8 +59,15 @@ final class catalog_coverage_Test extends TestCase {
 
 	public function test_no_compiled_key_looks_like_a_secret() : void {
 		$compiled = [config_scope::STATIC, config_scope::DERIVED, config_scope::DERIVED_REQUEST, config_scope::PASSTHROUGH];
+		// Vetted non-secret compiled keys that match the secret-name heuristic: RAG token
+		// COUNTS/budgets (not credentials). The real RAG credentials are scope SECRET.
+		$allow = [
+			'DEDALO_RAG_CHUNK_TOKENS', 'DEDALO_RAG_CHUNK_MIN_TOKENS', 'DEDALO_RAG_CHUNK_OVERLAP_TOKENS',
+			'DEDALO_RAG_CONTEXT_TOKEN_BUDGET', 'DEDALO_RAG_LLM_MAX_OUTPUT_TOKENS',
+			'DEDALO_RAG_MAX_PASSAGES_PER_RECORD', // 'PASSAGES' matches /PASS/ — a count, not a credential
+		];
 		foreach ($this->catalog() as $k) {
-			if ($k->const !== null && in_array($k->scope, $compiled, true)) {
+			if ($k->const !== null && !in_array($k->const, $allow, true) && in_array($k->scope, $compiled, true)) {
 				$this->assertSame(0, preg_match('/PASS|SECRET|TOKEN|SALT|_KEY$|CODE$/i', $k->const),
 					"compiled-scope key {$k->const} looks like a secret — should it be scope SECRET?");
 			}
