@@ -16,7 +16,7 @@
 *      the `get_install_context` API action (which intentionally bypasses the
 *      normal authentication gate — the user is not yet logged in).
 *   3. On `render()` / `install()` / `list()` / `edit()`: delegate immediately
-*      to `render_install.prototype.render`, which constructs the multi-step
+*      to `render_installer.prototype.render`, which constructs the multi-step
 *      wizard DOM (database init tests, config check, DB install, root-password
 *      setting, login, hierarchy import, and finish).
 *
@@ -24,7 +24,7 @@
 *   `init → build → render → destroy`
 *
 * Prototype methods are provided by mixing in `common.prototype` and
-* `render_install.prototype`. No additional instance methods are defined
+* `render_installer.prototype`. No additional instance methods are defined
 * directly on `install.prototype` beyond the lifecycle overrides below.
 *
 * Security note: `get_install_context` runs WITHOUT a prior login; the server
@@ -38,7 +38,7 @@
 // imports
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common,create_source} from '../../common/js/common.js'
-	import {render_install} from './render_install.js'
+	import {render_installer} from './render_installer.js'
 
 
 
@@ -93,9 +93,9 @@ export const installer = function() {
 *
 * Prototype assignments wire the standard Dédalo UI contracts onto `install`:
 *   render   — common.prototype.render (lifecycle entry; resolves mode → method)
-*   install  — delegates to render_install.prototype.render (install-wizard DOM)
-*   list     — also render_install.prototype.render (same view for list context)
-*   edit     — also render_install.prototype.render (same view for edit context)
+*   install  — delegates to render_installer.prototype.render (install-wizard DOM)
+*   list     — also render_installer.prototype.render (same view for list context)
+*   edit     — also render_installer.prototype.render (same view for edit context)
 *   destroy  — common.prototype.destroy (tears down events and child instances)
 *   refresh  — common.prototype.refresh (destroy deps → build → re-render)
 *
@@ -104,9 +104,9 @@ export const installer = function() {
 */
 // prototypes assign
 	installer.prototype.render	= common.prototype.render
-	installer.prototype.install	= render_install.prototype.render
-	installer.prototype.list		= render_install.prototype.render
-	installer.prototype.edit		= render_install.prototype.render
+	installer.prototype.install	= render_installer.prototype.render
+	installer.prototype.list		= render_installer.prototype.render
+	installer.prototype.edit		= render_installer.prototype.render
 	installer.prototype.destroy	= common.prototype.destroy
 	installer.prototype.refresh	= common.prototype.refresh
 

@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	import {render_hierarchies_import_block} from '../../../../installer/js/render_install.js'
+	import {render_hierarchies_import_block} from '../../../../installer/js/render_installer.js'
 
 
 
@@ -34,7 +34,7 @@
 *         hierarchy_typologies     : Array   – grouping categories for the hierarchy list
 *       }
 *   - The actual import UI (checkbox list + "Import hierarchies" button) is
-*     rendered by `render_hierarchies_import_block` from `render_install.js`,
+*     rendered by `render_hierarchies_import_block` from `render_installer.js`,
 *     which is shared between the install wizard and this widget.
 *
 * Exported symbols:
@@ -184,7 +184,7 @@ const get_content_data_edit = async function(self) {
 			})
 		}
 
-	// hierarchies_import_node. It built from render_install because is the same rendered.
+	// hierarchies_import_node. It built from render_installer because is the same rendered.
 		// Passes the flattened active_hierarchies array and the post-import callback.
 		// default_checked is empty ([]) so no hierarchies are pre-selected on open —
 		// the operator must explicitly choose which ones to import.

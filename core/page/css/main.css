@@ -6540,7 +6540,7 @@ dd-modal .footer.distribute {
   background-color: var(--color_white);
 }
 /**
-* install
+* installer
 *
 * Installer wizard UI, aligned with the unit-test client's "dev-dashboard / IDE"
 * look. Theme-aware: light is the default, dark is opt-in via `data-theme="dark"`
@@ -6551,7 +6551,7 @@ dd-modal .footer.distribute {
 * Included from main.less (which imports theme_tokens + vars before this file, so the
 * @font_* LESS vars and --ut_* custom properties are in scope here).
 */
-.install.wrapper {
+.installer.wrapper {
   position: fixed;
   left: 0;
   top: 0;
@@ -6565,7 +6565,7 @@ dd-modal .footer.distribute {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-.install.wrapper::before {
+.installer.wrapper::before {
   content: "";
   position: fixed;
   inset: 0;
@@ -6574,7 +6574,7 @@ dd-modal .footer.distribute {
   background: radial-gradient(900px 600px at 88% -8%, var(--ut_accent_soft), transparent 60%), radial-gradient(700px 500px at -6% 108%, var(--ut_green_soft), transparent 60%), radial-gradient(circle, var(--ut_grid_dot) 1px, transparent 1.4px);
   background-size: auto, auto, 22px 22px;
 }
-.install.wrapper::after {
+.installer.wrapper::after {
   content: "";
   position: fixed;
   inset: 0;
@@ -6584,14 +6584,14 @@ dd-modal .footer.distribute {
   opacity: var(--ut_grain);
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
-.install.wrapper .install_header {
+.installer.wrapper .installer_header {
   display: flex;
   align-items: center;
   gap: 0.85rem;
   padding: 1.5rem 0 0.5rem;
   margin-bottom: 1rem;
 }
-.install.wrapper .install_header .install_mark {
+.installer.wrapper .installer_header .installer_mark {
   width: 2.6rem;
   height: 2.6rem;
   flex-shrink: 0;
@@ -6601,29 +6601,29 @@ dd-modal .footer.distribute {
   background: linear-gradient(140deg, var(--ut_accent_hi), var(--ut_accent));
   box-shadow: 0 2px 12px -2px var(--ut_accent_soft), inset 0 0 0 1px rgba(255, 255, 255, 0.22);
 }
-.install.wrapper .install_header .install_logo {
+.installer.wrapper .installer_header .installer_logo {
   width: 1.5rem;
   height: 1.5rem;
   filter: brightness(0) invert(1);
 }
-.install.wrapper .install_header .install_brand {
+.installer.wrapper .installer_header .installer_brand {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
 }
-.install.wrapper .install_header .install_title {
+.installer.wrapper .installer_header .installer_title {
   font-size: 1.4rem;
   font-weight: 700;
   color: var(--ut_text_primary);
   letter-spacing: 0.01em;
   line-height: 1.2;
 }
-.install.wrapper .install_header .install_subtitle {
+.installer.wrapper .installer_header .installer_subtitle {
   font-size: 0.85rem;
   color: var(--ut_text_muted);
   font-weight: 400;
 }
-.install.wrapper .install_header .install_version {
+.installer.wrapper .installer_header .installer_version {
   margin-left: auto;
   font-family: 'SF Mono', 'JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
   font-size: 0.75rem;
@@ -6631,7 +6631,7 @@ dd-modal .footer.distribute {
   font-weight: 500;
   white-space: nowrap;
 }
-.install.wrapper .install_header .install_theme_toggle {
+.installer.wrapper .installer_header .installer_theme_toggle {
   margin: 0;
   padding: 0;
   width: 2.25rem;
@@ -6650,29 +6650,29 @@ dd-modal .footer.distribute {
   cursor: pointer;
   transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
 }
-.install.wrapper .install_header .install_theme_toggle:hover {
+.installer.wrapper .installer_header .installer_theme_toggle:hover {
   background: var(--ut_bg_hover);
   color: var(--ut_text_primary);
   border-color: var(--ut_border_strong);
   transform: none;
   box-shadow: none;
 }
-.install.wrapper .install_header .install_theme_toggle:active {
+.installer.wrapper .installer_header .installer_theme_toggle:active {
   transform: translateY(1px);
 }
-.install.wrapper .install_header .install_theme_toggle .theme_icon {
+.installer.wrapper .installer_header .installer_theme_toggle .theme_icon {
   display: block;
   width: 1rem;
   height: 1rem;
 }
-.install.wrapper .step_indicator {
+.installer.wrapper .step_indicator {
   display: flex;
   align-items: center;
   gap: 0;
   margin-bottom: 2rem;
   padding: 0 0.5rem;
 }
-.install.wrapper .step_indicator .step_dot {
+.installer.wrapper .step_indicator .step_dot {
   width: 2rem;
   height: 2rem;
   border-radius: 50%;
@@ -6688,27 +6688,27 @@ dd-modal .footer.distribute {
   flex-shrink: 0;
   position: relative;
 }
-.install.wrapper .step_indicator .step_dot.active {
+.installer.wrapper .step_indicator .step_dot.active {
   color: var(--ut_on_accent);
   background: var(--ut_accent);
   border-color: var(--ut_accent);
   box-shadow: 0 0 0 4px var(--ut_accent_soft);
 }
-.install.wrapper .step_indicator .step_dot.completed {
+.installer.wrapper .step_indicator .step_dot.completed {
   color: #fff;
   background: var(--ut_green);
   border-color: var(--ut_green);
 }
-.install.wrapper .step_indicator .step_line {
+.installer.wrapper .step_indicator .step_line {
   flex: 1;
   height: 2px;
   background: var(--ut_border);
   transition: background 0.4s ease;
 }
-.install.wrapper .step_indicator .step_line.completed {
+.installer.wrapper .step_indicator .step_line.completed {
   background: var(--ut_green);
 }
-.install.wrapper > .content_data {
+.installer.wrapper > .content_data {
   position: relative;
   z-index: 1;
   max-width: 56rem;
@@ -6716,7 +6716,7 @@ dd-modal .footer.distribute {
   padding: 2rem 2.5rem 6rem;
   line-height: 1.55rem;
 }
-.install.wrapper section {
+.installer.wrapper section {
   background: var(--ut_bg_panel);
   border: 1px solid var(--ut_border);
   border-radius: 12px;
@@ -6727,10 +6727,10 @@ dd-modal .footer.distribute {
   box-shadow: var(--ut_shadow);
   transition: border-color 0.2s ease;
 }
-.install.wrapper section:hover {
+.installer.wrapper section:hover {
   border-color: var(--ut_border_strong);
 }
-.install.wrapper section h1 {
+.installer.wrapper section h1 {
   font-size: 1.1rem;
   font-weight: 600;
   color: var(--ut_text_primary);
@@ -6742,18 +6742,18 @@ dd-modal .footer.distribute {
   gap: 0.5rem;
   letter-spacing: 0.01em;
 }
-.install.wrapper section h1 .section_icon {
+.installer.wrapper section h1 .section_icon {
   width: 1.25rem;
   height: 1.25rem;
   opacity: 0.6;
 }
-.install.wrapper section .content {
+.installer.wrapper section .content {
   color: var(--ut_text_secondary);
 }
-.install.wrapper section .content .description {
+.installer.wrapper section .content .description {
   padding: 0.5rem;
 }
-.install.wrapper .msg {
+.installer.wrapper .msg {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -6764,27 +6764,27 @@ dd-modal .footer.distribute {
   margin-top: 0.75rem;
   position: relative;
 }
-.install.wrapper .msg.ok {
+.installer.wrapper .msg.ok {
   background: var(--ut_green_soft);
   border: 1px solid var(--ut_green_soft);
   color: var(--ut_green);
 }
-.install.wrapper .msg.error {
+.installer.wrapper .msg.error {
   background: var(--ut_red_soft);
   border: 1px solid var(--ut_red_soft);
   color: var(--ut_red);
 }
-.install.wrapper .msg.warning {
+.installer.wrapper .msg.warning {
   background: var(--ut_run_soft);
   border: 1px solid var(--ut_run_soft);
   color: var(--ut_run);
 }
-.install.wrapper .msg.loading {
+.installer.wrapper .msg.loading {
   background: var(--ut_bg_hover);
   border: 1px solid var(--ut_border);
   color: var(--ut_text_secondary);
 }
-.install.wrapper .button_common_mixin {
+.installer.wrapper .button_common_mixin {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -6804,19 +6804,19 @@ dd-modal .footer.distribute {
   background: linear-gradient(180deg, var(--ut_accent_hi), var(--ut_accent));
   box-shadow: 0 2px 12px -3px var(--ut_accent_soft), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
-.install.wrapper .button_common_mixin:hover {
+.installer.wrapper .button_common_mixin:hover {
   filter: brightness(1.05);
   transform: translateY(-1px);
 }
-.install.wrapper .button_common_mixin:active {
+.installer.wrapper .button_common_mixin:active {
   transform: translateY(0);
   filter: brightness(0.98);
 }
-.install.wrapper .button_common_mixin.loading {
+.installer.wrapper .button_common_mixin.loading {
   opacity: 0.75;
   pointer-events: none;
 }
-.install.wrapper .button_common_mixin.loading::after {
+.installer.wrapper .button_common_mixin.loading::after {
   content: "";
   width: 0.95em;
   height: 0.95em;
@@ -6824,14 +6824,14 @@ dd-modal .footer.distribute {
   border: 2px solid currentColor;
   border-top-color: transparent;
   border-radius: 50%;
-  animation: install-spin 0.7s linear infinite;
+  animation: installer-spin 0.7s linear infinite;
 }
-.install.wrapper .button_common_mixin.success {
+.installer.wrapper .button_common_mixin.success {
   color: #fff;
   background: var(--ut_green);
   box-shadow: 0 2px 12px -3px var(--ut_green_glow);
 }
-.install.wrapper button {
+.installer.wrapper button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -6851,19 +6851,19 @@ dd-modal .footer.distribute {
   background: linear-gradient(180deg, var(--ut_accent_hi), var(--ut_accent));
   box-shadow: 0 2px 12px -3px var(--ut_accent_soft), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
-.install.wrapper button:hover {
+.installer.wrapper button:hover {
   filter: brightness(1.05);
   transform: translateY(-1px);
 }
-.install.wrapper button:active {
+.installer.wrapper button:active {
   transform: translateY(0);
   filter: brightness(0.98);
 }
-.install.wrapper button.loading {
+.installer.wrapper button.loading {
   opacity: 0.75;
   pointer-events: none;
 }
-.install.wrapper button.loading::after {
+.installer.wrapper button.loading::after {
   content: "";
   width: 0.95em;
   height: 0.95em;
@@ -6871,43 +6871,43 @@ dd-modal .footer.distribute {
   border: 2px solid currentColor;
   border-top-color: transparent;
   border-radius: 50%;
-  animation: install-spin 0.7s linear infinite;
+  animation: installer-spin 0.7s linear infinite;
 }
-.install.wrapper button.success {
+.installer.wrapper button.success {
   color: #fff;
   background: var(--ut_green);
   box-shadow: 0 2px 12px -3px var(--ut_green_glow);
 }
-.install.wrapper .help_block .description {
+.installer.wrapper .help_block .description {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.35rem;
   margin-bottom: 0.5rem;
 }
-.install.wrapper .help_block .description > .icon {
+.installer.wrapper .help_block .description > .icon {
   height: 1.1em;
   vertical-align: text-top;
   margin-right: 0.25rem;
   margin-left: 0.25rem;
   opacity: 0.7;
 }
-.install.wrapper .help_block .description > .link {
+.installer.wrapper .help_block .description > .link {
   color: var(--ut_accent);
   text-decoration: none;
   transition: color 0.2s;
 }
-.install.wrapper .help_block .description > .link:hover {
+.installer.wrapper .help_block .description > .link:hover {
   filter: brightness(1.1);
   text-decoration: underline;
 }
-.install.wrapper .init_test_block .diagnostics_grid {
+.installer.wrapper .init_test_block .diagnostics_grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
   gap: 0.75rem;
   margin-top: 0.75rem;
 }
-.install.wrapper .init_test_block .diagnostic_card {
+.installer.wrapper .init_test_block .diagnostic_card {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -6917,11 +6917,11 @@ dd-modal .footer.distribute {
   border-radius: 9px;
   transition: border-color 0.2s, background 0.2s;
 }
-.install.wrapper .init_test_block .diagnostic_card:hover {
+.installer.wrapper .init_test_block .diagnostic_card:hover {
   border-color: var(--ut_border_strong);
   background: var(--ut_bg_hover);
 }
-.install.wrapper .init_test_block .diagnostic_card .diagnostic_icon {
+.installer.wrapper .init_test_block .diagnostic_card .diagnostic_icon {
   width: 1.5rem;
   height: 1.5rem;
   flex-shrink: 0;
@@ -6932,36 +6932,36 @@ dd-modal .footer.distribute {
   font-size: 0.8rem;
   font-weight: 700;
 }
-.install.wrapper .init_test_block .diagnostic_card .diagnostic_icon.pass {
+.installer.wrapper .init_test_block .diagnostic_card .diagnostic_icon.pass {
   background: var(--ut_green_soft);
   color: var(--ut_green);
 }
-.install.wrapper .init_test_block .diagnostic_card .diagnostic_icon.fail {
+.installer.wrapper .init_test_block .diagnostic_card .diagnostic_icon.fail {
   background: var(--ut_red_soft);
   color: var(--ut_red);
 }
-.install.wrapper .init_test_block .diagnostic_card .diagnostic_icon.warn {
+.installer.wrapper .init_test_block .diagnostic_card .diagnostic_icon.warn {
   background: var(--ut_run_soft);
   color: var(--ut_run);
 }
-.install.wrapper .init_test_block .diagnostic_card .diagnostic_icon.info {
+.installer.wrapper .init_test_block .diagnostic_card .diagnostic_icon.info {
   background: rgba(56, 139, 253, 0.15);
   color: #4493f8;
 }
-.install.wrapper .init_test_block .diagnostic_card .diagnostic_info {
+.installer.wrapper .init_test_block .diagnostic_card .diagnostic_info {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
   min-width: 0;
 }
-.install.wrapper .init_test_block .diagnostic_card .diagnostic_info .diagnostic_label {
+.installer.wrapper .init_test_block .diagnostic_card .diagnostic_info .diagnostic_label {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ut_text_muted);
   font-weight: 600;
 }
-.install.wrapper .init_test_block .diagnostic_card .diagnostic_info .diagnostic_value {
+.installer.wrapper .init_test_block .diagnostic_card .diagnostic_info .diagnostic_value {
   font-size: 0.88rem;
   color: var(--ut_text_primary);
   font-weight: 500;
@@ -6969,7 +6969,7 @@ dd-modal .footer.distribute {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.install.wrapper .init_test_block .init_test_summary {
+.installer.wrapper .init_test_block .init_test_summary {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -6978,43 +6978,43 @@ dd-modal .footer.distribute {
   margin-top: 1rem;
   font-weight: 600;
 }
-.install.wrapper .init_test_block .init_test_summary.pass {
+.installer.wrapper .init_test_block .init_test_summary.pass {
   background: var(--ut_green_soft);
   border: 1px solid var(--ut_green_soft);
   color: var(--ut_green);
 }
-.install.wrapper .init_test_block .init_test_summary.fail {
+.installer.wrapper .init_test_block .init_test_summary.fail {
   background: var(--ut_red_soft);
   border: 1px solid var(--ut_red_soft);
   color: var(--ut_red);
 }
-.install.wrapper .init_test_block .init_test_summary.warn {
+.installer.wrapper .init_test_block .init_test_summary.warn {
   background: var(--ut_run_soft);
   border: 1px solid var(--ut_run_soft);
   color: var(--ut_run);
 }
-.install.wrapper .init_test_block .init_test_summary .summary_icon {
+.installer.wrapper .init_test_block .init_test_summary .summary_icon {
   font-size: 1.2rem;
 }
-.install.wrapper .config_block .container_errors {
+.installer.wrapper .config_block .container_errors {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
-.install.wrapper .config_block .key {
+.installer.wrapper .config_block .key {
   color: var(--ut_text_muted);
   padding-right: 0.25rem;
   font-size: 0.85rem;
 }
-.install.wrapper .config_block .key:after {
+.installer.wrapper .config_block .key:after {
   content: ' : ';
 }
-.install.wrapper .config_block .value {
+.installer.wrapper .config_block .value {
   padding-right: 3rem;
   font-weight: 600;
   color: var(--ut_text_primary);
 }
-.install.wrapper .install_db_block .db_config_container {
+.installer.wrapper .installer_db_block .db_config_container {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem 0;
@@ -7023,27 +7023,27 @@ dd-modal .footer.distribute {
   border-radius: 9px;
   border: 1px solid var(--ut_border);
 }
-.install.wrapper .install_db_block .db_config_container .key {
+.installer.wrapper .installer_db_block .db_config_container .key {
   color: var(--ut_text_muted);
   padding-right: 0.25rem;
   text-transform: uppercase;
   font-size: 0.8rem;
 }
-.install.wrapper .install_db_block .db_config_container .key:after {
+.installer.wrapper .installer_db_block .db_config_container .key:after {
   content: ' : ';
 }
-.install.wrapper .install_db_block .db_config_container .value {
+.installer.wrapper .installer_db_block .db_config_container .value {
   padding-right: 2rem;
   font-weight: 600;
   font-size: 0.88rem;
   color: var(--ut_text_primary);
 }
-.install.wrapper .set_root_password_block .description {
+.installer.wrapper .set_root_password_block .description {
   margin-bottom: 0.75rem;
   font-size: 0.88rem;
   line-height: 1.5;
 }
-.install.wrapper .set_root_password_block .password_value {
+.installer.wrapper .set_root_password_block .password_value {
   width: 22rem;
   margin-left: 0.5rem;
   margin-right: 1rem;
@@ -7057,20 +7057,20 @@ dd-modal .footer.distribute {
   font-size: 0.9rem;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.install.wrapper .set_root_password_block .password_value:focus {
+.installer.wrapper .set_root_password_block .password_value:focus {
   outline: none;
   border-color: var(--ut_accent);
   box-shadow: 0 0 0 3px var(--ut_accent_soft);
 }
-.install.wrapper .set_root_password_block .valid {
+.installer.wrapper .set_root_password_block .valid {
   border-color: var(--ut_green) !important;
   box-shadow: 0 0 0 3px var(--ut_green_soft);
 }
-.install.wrapper .set_root_password_block .invalid {
+.installer.wrapper .set_root_password_block .invalid {
   border-color: var(--ut_red) !important;
   box-shadow: 0 0 0 3px var(--ut_red_soft);
 }
-.install.wrapper .set_root_password_block .password_show_label {
+.installer.wrapper .set_root_password_block .password_show_label {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -7080,16 +7080,16 @@ dd-modal .footer.distribute {
   font-size: 0.82rem;
   transition: color 0.2s;
 }
-.install.wrapper .set_root_password_block .password_show_label:hover {
+.installer.wrapper .set_root_password_block .password_show_label:hover {
   color: var(--ut_text_primary);
 }
-.install.wrapper .set_root_password_block .password_show_label > .password_show {
+.installer.wrapper .set_root_password_block .password_show_label > .password_show {
   vertical-align: text-top;
   margin-right: 0.2rem;
   height: 1rem;
   accent-color: var(--ut_accent);
 }
-.install.wrapper .hierarchies_import_block .typology_label {
+.installer.wrapper .hierarchies_import_block .typology_label {
   font-size: 1rem;
   text-align: center;
   padding: 0.5rem 0;
@@ -7098,7 +7098,7 @@ dd-modal .footer.distribute {
   font-weight: 600;
   letter-spacing: 0.04em;
 }
-.install.wrapper .hierarchies_import_block .hierarchy_ul {
+.installer.wrapper .hierarchies_import_block .hierarchy_ul {
   padding: 0.75em;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
@@ -7106,7 +7106,7 @@ dd-modal .footer.distribute {
   list-style: none;
   margin: 0;
 }
-.install.wrapper .hierarchies_import_block .hierarchy_label {
+.installer.wrapper .hierarchies_import_block .hierarchy_label {
   cursor: pointer;
   line-height: 1.5rem;
   width: 94%;
@@ -7120,45 +7120,45 @@ dd-modal .footer.distribute {
   font-size: 0.85rem;
   transition: background 0.2s, color 0.2s;
 }
-.install.wrapper .hierarchies_import_block .hierarchy_label:hover {
+.installer.wrapper .hierarchies_import_block .hierarchy_label:hover {
   background: var(--ut_bg_hover);
   color: var(--ut_text_primary);
 }
-.install.wrapper .hierarchies_import_block .hierarchy_label > .hierarchy_checkbox {
+.installer.wrapper .hierarchies_import_block .hierarchy_label > .hierarchy_checkbox {
   margin-right: 0.25rem;
   vertical-align: text-bottom;
   line-height: 1rem;
   height: 1.1rem;
   accent-color: var(--ut_accent);
 }
-.install.wrapper .hierarchies_import_block .hierarchy_label .active_hierarchy {
+.installer.wrapper .hierarchies_import_block .hierarchy_label .active_hierarchy {
   color: var(--ut_green);
   font-size: 0.75rem;
   font-weight: 600;
 }
-.install.wrapper .install_finish_block {
+.installer.wrapper .installer_finish_block {
   margin-bottom: 3rem;
   text-align: center;
 }
-.install.wrapper .install_finish_block .description.msg.ok {
+.installer.wrapper .installer_finish_block .description.msg.ok {
   font-size: 1.1rem;
   padding: 1.25rem;
   justify-content: center;
 }
-.install.wrapper .install_field {
+.installer.wrapper .installer_field {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
   margin: 0.65rem 0;
 }
-.install.wrapper .install_field .install_field_label {
+.installer.wrapper .installer_field .installer_field_label {
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--ut_text_muted);
   font-weight: 600;
 }
-.install.wrapper .install_field .install_field_input {
+.installer.wrapper .installer_field .installer_field_input {
   height: 2.4rem;
   max-width: 28rem;
   background: var(--ut_bg_input);
@@ -7169,25 +7169,25 @@ dd-modal .footer.distribute {
   font-size: 0.9rem;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.install.wrapper .install_field .install_field_input:focus {
+.installer.wrapper .installer_field .installer_field_input:focus {
   outline: none;
   border-color: var(--ut_accent);
   box-shadow: 0 0 0 3px var(--ut_accent_soft);
 }
-.install.wrapper .install_field .install_field_input.invalid {
+.installer.wrapper .installer_field .installer_field_input.invalid {
   border-color: var(--ut_red) !important;
   box-shadow: 0 0 0 3px var(--ut_red_soft);
 }
-.install.wrapper .install_field .install_field_input.valid {
+.installer.wrapper .installer_field .installer_field_input.valid {
   border-color: var(--ut_green) !important;
   box-shadow: 0 0 0 3px var(--ut_green_soft);
 }
-.install.wrapper .install_field .install_field_help {
+.installer.wrapper .installer_field .installer_field_help {
   font-size: 0.78rem;
   color: var(--ut_text_muted);
   line-height: 1.35;
 }
-.install.wrapper .install_toggle_label {
+.installer.wrapper .installer_toggle_label {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -7197,42 +7197,42 @@ dd-modal .footer.distribute {
   font-size: 0.9rem;
   font-weight: 600;
 }
-.install.wrapper .install_toggle_label > .install_toggle {
+.installer.wrapper .installer_toggle_label > .installer_toggle {
   accent-color: var(--ut_accent);
   height: 1.05rem;
   width: 1.05rem;
 }
-.install.wrapper .diffusion_fields {
+.installer.wrapper .diffusion_fields {
   border-left: 2px solid var(--ut_accent_soft);
   padding-left: 1rem;
   margin: 0.5rem 0;
 }
-.install.wrapper .generated_secrets {
+.installer.wrapper .generated_secrets {
   margin-top: 1rem;
   padding: 1rem;
   background: var(--ut_accent_soft);
   border: 1px solid var(--ut_accent_soft);
   border-radius: 9px;
 }
-.install.wrapper .generated_secrets .generated_secrets_title {
+.installer.wrapper .generated_secrets .generated_secrets_title {
   color: var(--ut_accent);
   font-weight: 600;
   font-size: 0.85rem;
   margin-bottom: 0.65rem;
 }
-.install.wrapper .generated_secrets .generated_secret_row {
+.installer.wrapper .generated_secrets .generated_secret_row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   margin: 0.35rem 0;
 }
-.install.wrapper .generated_secrets .generated_secret_row .generated_secret_key {
+.installer.wrapper .generated_secrets .generated_secret_row .generated_secret_key {
   font-size: 0.78rem;
   color: var(--ut_text_muted);
   min-width: 16rem;
   font-family: 'SF Mono', 'JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
 }
-.install.wrapper .generated_secrets .generated_secret_row .generated_secret_val {
+.installer.wrapper .generated_secrets .generated_secret_row .generated_secret_val {
   flex: 1;
   height: 2rem;
   background: var(--ut_bg_input);
@@ -7243,13 +7243,13 @@ dd-modal .footer.distribute {
   font-family: 'SF Mono', 'JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
   font-size: 0.82rem;
 }
-.install.wrapper .directories_list {
+.installer.wrapper .directories_list {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
   margin: 0.75rem 0;
 }
-.install.wrapper .directories_list .directory_row {
+.installer.wrapper .directories_list .directory_row {
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -7259,83 +7259,83 @@ dd-modal .footer.distribute {
   border: 1px solid var(--ut_border);
   font-size: 0.85rem;
 }
-.install.wrapper .directories_list .directory_row .directory_icon {
+.installer.wrapper .directories_list .directory_row .directory_icon {
   font-weight: 700;
 }
-.install.wrapper .directories_list .directory_row .directory_label {
+.installer.wrapper .directories_list .directory_row .directory_label {
   font-weight: 600;
   color: var(--ut_text_primary);
   min-width: 12rem;
 }
-.install.wrapper .directories_list .directory_row .directory_path {
+.installer.wrapper .directories_list .directory_row .directory_path {
   color: var(--ut_text_muted);
   font-family: 'SF Mono', 'JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
   font-size: 0.8rem;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.install.wrapper .directories_list .directory_row.ok .directory_icon {
+.installer.wrapper .directories_list .directory_row.ok .directory_icon {
   color: var(--ut_green);
 }
-.install.wrapper .directories_list .directory_row.error {
+.installer.wrapper .directories_list .directory_row.error {
   border-color: var(--ut_red_soft);
 }
-.install.wrapper .directories_list .directory_row.error .directory_icon {
+.installer.wrapper .directories_list .directory_row.error .directory_icon {
   color: var(--ut_red);
 }
-.install.wrapper .spinner_wrap {
+.installer.wrapper .spinner_wrap {
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
   color: var(--ut_text_secondary);
   font-size: 0.85rem;
 }
-.install.wrapper .spinner_label {
+.installer.wrapper .spinner_label {
   color: var(--ut_text_secondary);
 }
-.install.wrapper .install_spinner {
+.installer.wrapper .installer_spinner {
   width: 1.05rem;
   height: 1.05rem;
   flex-shrink: 0;
   border: 2px solid var(--ut_border_strong);
   border-top-color: var(--ut_accent);
   border-radius: 50%;
-  animation: install-spin 0.7s linear infinite;
+  animation: installer-spin 0.7s linear infinite;
 }
-.install.wrapper .hide {
+.installer.wrapper .hide {
   display: none !important;
 }
-.install.wrapper .fade_in {
-  animation: install-fade-in 0.4s ease-out;
+.installer.wrapper .fade_in {
+  animation: installer-fade-in 0.4s ease-out;
 }
 @media (max-width: 48rem) {
-  .install.wrapper > .content_data {
+  .installer.wrapper > .content_data {
     padding: 1.25rem 1rem 4rem;
   }
-  .install.wrapper section {
+  .installer.wrapper section {
     padding: 1.15rem 1.25rem;
   }
-  .install.wrapper .init_test_block .diagnostics_grid {
+  .installer.wrapper .init_test_block .diagnostics_grid {
     grid-template-columns: 1fr;
   }
-  .install.wrapper .set_root_password_block .password_value {
+  .installer.wrapper .set_root_password_block .password_value {
     width: 100%;
   }
-  .install.wrapper .hierarchies_import_block .hierarchy_ul {
+  .installer.wrapper .hierarchies_import_block .hierarchy_ul {
     grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
   }
-  .install.wrapper .step_indicator .step_dot {
+  .installer.wrapper .step_indicator .step_dot {
     width: 1.6rem;
     height: 1.6rem;
     font-size: 0.65rem;
   }
 }
-@keyframes install-spin {
+@keyframes installer-spin {
   to {
     transform: rotate(360deg);
   }
 }
-@keyframes install-fade-in {
+@keyframes installer-fade-in {
   from {
     opacity: 0;
     transform: translateY(0.5rem);
