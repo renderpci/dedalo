@@ -445,6 +445,7 @@ render_installer.prototype.render = async function(options) {
 *   set_root_password_block   – set superuser password
 *   login_block               – first login after password is set
 *   hierarchies_import_block  – import thesaurus hierarchies
+*   register_tools_block      – register the available tools into the registry
 *   installer_finish_block      – finalize and reload
 *
 * @param {Object} self - The install instance (provides self.context.properties and self.node)
@@ -556,6 +557,7 @@ const get_content_data = function(self) {
 				get_label.set_root_pw_label || 'Set root password',
 				get_label.login_label || 'Login',
 				get_label.import_hierarchies_label || 'Install hierarchies',
+				get_label.register_tools || 'Register tools',
 				get_label.install_done || 'Done!'
 			]
 			: [
@@ -565,6 +567,7 @@ const get_content_data = function(self) {
 				get_label.set_root_pw_label || 'Set root password',
 				get_label.login_label || 'Login',
 				get_label.import_hierarchies_label || 'Install hierarchies',
+				get_label.register_tools || 'Register tools',
 				get_label.install_done || 'Done!'
 			]
 		for (let i = 0; i < step_labels.length; i++) {
@@ -742,15 +745,28 @@ const get_content_data = function(self) {
 			hierarchies				: properties.hierarchies,
 			default_checked			: properties.install_checked_default,
 			hierarchy_typologies	: properties.hierarchy_typologies,
-			// On a successful import, reveal the final Finish step.
+			// On a successful import, reveal the Register tools step.
 			callback		: function() {
-				reveal_section(self.node.content_data.installer_finish_block)
+				reveal_section(self.node.content_data.register_tools_block)
 				update_step_indicator(self.node.content_data.step_indicator, needs_config ? 11 : 7)
 			}
 		}
 		hierarchies.content_div.appendChild(
 			render_hierarchies_import_block(hierarchies_import_options)
 		)
+
+	// ── REGISTER TOOLS BLOCK ──
+	// Register the discoverable tools (import, export, time machine, …) into the
+	// registry so they appear in the application from the first boot. Runs AFTER
+	// login (it writes section records) and reveals the Finish step on completion.
+		const register_tools = create_section_block({
+			label			: get_label.register_tools || 'Register tools',
+			class_name		: 'register_tools_block',
+			hidden			: true,
+			parent			: content_data,
+			content_data	: content_data
+		})
+		register_tools.content_div.appendChild(render_register_tools_block(self))
 
 	// ── INSTALL FINISH BLOCK ──
 		const finish = create_section_block({
@@ -2532,6 +2548,148 @@ export const render_hierarchies_import_block = function(options) {
 
 	return fragment
 }//end render_hierarchies_import_block
+
+
+
+/**
+* RENDER_REGISTER_TOOLS_BLOCK
+* Creates the "Register tools" install step.
+*
+* Tools (import, export, time machine, …) live as directories under the tools path; until
+* they are registered into the database registry (section dd1324) they do not appear in the
+* application. A fresh install used to ship with an empty registry, so an administrator had
+* to discover Maintenance → Register tools on their own. This step runs the very same action
+* during install — making it an explicit, visible part of the flow so the tools menu is never
+* mistakenly left empty.
+*
+* On "Register tools" click it calls the 'register_tools' API action (which delegates to
+* installer::register_tools() → tools_register::import_tools()) and renders the per-tool
+* import report so the operator sees exactly what was registered, with versions and any
+* per-tool problems. Tool registration is best-effort: the Finish step is revealed on any
+* completed run (a single broken tool must not trap the install), with errors surfaced in
+* the report so they can be fixed and the action re-run.
+*
+* (!) Dynamic values from the report (tool names, versions, messages) are written with
+* textContent, never innerHTML (SEC-032: never innerHTML for server/filesystem-derived text).
+*
+* @param {Object} self - The install instance (provides self.node and self._needs_config)
+* @returns {DocumentFragment} Fragment with description, report list, status div and action button
+*/
+const render_register_tools_block = function(self) {
+
+	const fragment = new DocumentFragment()
+
+	// info
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'description',
+			inner_html		: get_label.register_tools_help || 'Register the available tools (import, export, time machine, …) so they appear in the application. This scans the tools directory and records each tool in the database. You can always re-run this later from Maintenance → Register tools.',
+			parent			: fragment
+		})
+
+	// report list (filled after the action runs)
+		const report_list = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'tools_report',
+			parent			: fragment
+		})
+
+	// status msg
+		const status = create_status_msg(fragment)
+
+	// register button
+		const register_button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'primary register_tools_button',
+			inner_html		: get_label.register_tools || 'Register tools',
+			parent			: fragment
+		})
+
+	/**
+	* RENDER_REPORT
+	* Paints one row per processed tool: ✓ registered, ⚠ registered with warnings, ✗ failed.
+	* @param {Array} report - per-tool import report objects from the API
+	*/
+	const render_report = function(report) {
+
+		report_list.textContent = ''
+
+		const ar_report = Array.isArray(report) ? report : []
+		if (ar_report.length<1) {
+			return
+		}
+
+		for (let i = 0; i < ar_report.length; i++) {
+			const item			= ar_report[i]
+			const ar_errors		= Array.isArray(item.errors) ? item.errors : []
+			const ar_warnings	= Array.isArray(item.warnings) ? item.warnings : []
+			const has_errors	= ar_errors.length>0
+			const ok			= item.imported===true && has_errors===false
+			const state			= ok ? 'ok' : (has_errors ? 'error' : 'warning')
+
+			const row = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'tool_row ' + state,
+				parent			: report_list
+			})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'tool_icon',
+				inner_html		: ok ? '&#10003;' : (has_errors ? '&#10007;' : '&#9888;'),
+				parent			: row
+			})
+			// name (textContent: filesystem-derived)
+			const name_node = ui.create_dom_element({ element_type:'span', class_name:'tool_name', parent:row })
+			name_node.textContent = item.name || (item.dir || '')
+			// version
+			const version_node = ui.create_dom_element({ element_type:'span', class_name:'tool_version', parent:row })
+			version_node.textContent = item.version ? ('v' + item.version) : ''
+			// per-tool errors / warnings
+			const messages = has_errors ? ar_errors : ar_warnings
+			if (messages.length>0) {
+				const detail = ui.create_dom_element({ element_type:'div', class_name:'tool_detail', parent:row })
+				detail.textContent = messages.join(' · ')
+			}
+		}
+	}//end render_report
+
+	register_button.addEventListener('mouseup', async function(){
+
+		// API call with spinner (registration can scan many tool dirs)
+			const api_response = await api_call_with_spinner({
+				action		: 'register_tools',
+				status_node	: status,
+				button_node	: register_button,
+				timeout		: 120 * 1000
+			})
+			console.log('register_tools response: ', api_response);
+
+		// report
+			render_report(api_response.report)
+
+		// status + advance.
+		// Best-effort: reveal Finish on any completed run so a single broken tool can't trap the
+		// install. A clean run removes the button; a run with per-tool errors keeps it for a retry.
+			const ar_errors = Array.isArray(api_response.errors) ? api_response.errors : []
+			if (api_response.result===true && ar_errors.length===0) {
+				status.classList.add('ok')
+				status.textContent = api_response.msg
+				register_button.remove()
+			}else{
+				console.error('register_tools errors:', ar_errors, api_response);
+				status.classList.add('warning')
+				status.textContent = ar_errors.length>0
+					? (api_response.msg + ' — ' + ar_errors[0])
+					: (api_response.msg || 'Tool registration finished with warnings')
+			}
+
+			reveal_section(self.node.content_data.installer_finish_block)
+			update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 12 : 8)
+	})
+
+
+	return fragment
+}//end render_register_tools_block
 
 
 

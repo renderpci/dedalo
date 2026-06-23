@@ -806,6 +806,60 @@
 		}
 	}
 
+	// ---- REGISTER TOOLS ----
+	// Per-tool import report shown by the "Register tools" install step. One row per
+	// processed tool, colour-keyed by outcome (ok / warning / error) so the operator can
+	// see at a glance which tools registered and which need attention.
+	.tools_report {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+		margin: 0.75rem 0;
+
+		.tool_row {
+			display: grid;
+			grid-template-columns: 1.2rem 1fr auto;
+			align-items: center;
+			gap: 0.6rem;
+			padding: 0.5rem 0.75rem;
+			border-radius: 9px;
+			background: var(--ut_bg_elevated);
+			border: 1px solid var(--ut_border);
+			font-size: 0.85rem;
+
+			.tool_icon {
+				font-weight: 700;
+			}
+			.tool_name {
+				font-weight: 600;
+				color: var(--ut_text_primary);
+			}
+			.tool_version {
+				color: var(--ut_text_muted);
+				font-family: @font_mono;
+				font-size: 0.8rem;
+				justify-self: end;
+			}
+			// per-tool error/warning detail spans the full width below the name row
+			.tool_detail {
+				grid-column: 1 / -1;
+				color: var(--ut_text_secondary);
+				font-size: 0.8rem;
+				line-height: 1.35;
+			}
+
+			&.ok .tool_icon { color: var(--ut_green); }
+			&.warning {
+				border-color: var(--ut_run_soft);
+				.tool_icon { color: var(--ut_run); }
+			}
+			&.error {
+				border-color: var(--ut_red_soft);
+				.tool_icon { color: var(--ut_red); }
+			}
+		}
+	}
+
 	// ---- SPINNER ----
 	// Inline loading row: a crisp accent ring + label, sitting inline in its parent.
 	// Uses a dedicated class (.installer_spinner) so it does NOT inherit the global

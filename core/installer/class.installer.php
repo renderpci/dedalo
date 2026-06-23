@@ -34,7 +34,8 @@ include_once __DIR__ . '/class.installer_setup_manager.php';
 *  2. install_db_from_default_file() – load the bundled .pgsql.gz seed database
 *  3. set_root_pw($options)         – set the root user password
 *  4. install_hierarchies($options) – activate the selected knowledge hierarchies
-*  5. set_install_status('installed') / to_update() – seal the installation
+*  5. register_tools()              – register the available tools into the registry
+*  6. set_install_status('installed') / to_update() – seal the installation
 *
 * Lifecycle of building a distributable install image (developer / CI):
 *  build_install_version()          – clone → clean → seed → pg_dump → .pgsql.gz
@@ -750,6 +751,60 @@ class installer extends common {
 	public static function install_hierarchies(object $options) : object {
 		return installer_hierarchy_manager::install_hierarchies($options);
 	}//end install_hierarchies
+
+	/**
+	* REGISTER_TOOLS
+	* Scans the tools directory and (re-)registers every discoverable tool into the
+	* database tool registry (section dd1324), so the tools (import, export, time
+	* machine, …) are available in the application immediately after a fresh install.
+	*
+	* This is the very same operation administrators can re-run later from
+	* Maintenance → Register tools (register_tools widget). Surfacing it as an explicit
+	* install step prevents the common mistake of finishing the install with an empty
+	* tools registry — which otherwise leaves the tools menu blank until someone
+	* discovers the maintenance action.
+	*
+	* Delegates the filesystem scan + database upsert + cache invalidation to
+	* tools_register::import_tools(), then flattens its per-tool report into a single
+	* errors list (mirroring register_tools::register_tools()). The full report is
+	* returned so the wizard can show the administrator exactly which tools were
+	* registered, with their versions and any per-tool problems.
+	*
+	* @return object $response
+	*   - result bool      true when every discovered tool registered without errors
+	*   - msg    string    human-readable summary
+	*   - errors string[]  flat list of per-tool error strings (empty when clean)
+	*   - report object[]  per-tool import report (name, version, imported, errors, warnings)
+	*/
+	public static function register_tools() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__METHOD__.']';
+			$response->errors	= [];
+			$response->report	= [];
+
+		// import_tools: filesystem scan → dd1324 upsert → tool cache invalidation
+			$report = tools_register::import_tools();
+			$response->report = $report;
+
+		// flatten per-tool errors from the import report into a single list
+			$errors = [];
+			foreach ($report as $item) {
+				if (!empty($item->errors)) {
+					$errors = array_merge($errors, (array)$item->errors);
+				}
+			}
+			$response->errors = $errors;
+
+		// result / msg
+			$response->result	= empty($errors);
+			$response->msg		= empty($errors)
+				? 'OK. '.count($report).' tools processed and registered successfully'
+				: 'Warning. Some tools were registered with errors';
+
+		return $response;
+	}//end register_tools
 
 	/**
 	* SYSTEM_IS_ALREADY_INSTALLED

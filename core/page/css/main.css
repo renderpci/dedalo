@@ -7283,6 +7283,57 @@ dd-modal .footer.distribute {
 .installer.wrapper .directories_list .directory_row.error .directory_icon {
   color: var(--ut_red);
 }
+.installer.wrapper .tools_report {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0.75rem 0;
+}
+.installer.wrapper .tools_report .tool_row {
+  display: grid;
+  grid-template-columns: 1.2rem 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 9px;
+  background: var(--ut_bg_elevated);
+  border: 1px solid var(--ut_border);
+  font-size: 0.85rem;
+}
+.installer.wrapper .tools_report .tool_row .tool_icon {
+  font-weight: 700;
+}
+.installer.wrapper .tools_report .tool_row .tool_name {
+  font-weight: 600;
+  color: var(--ut_text_primary);
+}
+.installer.wrapper .tools_report .tool_row .tool_version {
+  color: var(--ut_text_muted);
+  font-family: 'SF Mono', 'JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 0.8rem;
+  justify-self: end;
+}
+.installer.wrapper .tools_report .tool_row .tool_detail {
+  grid-column: 1 / -1;
+  color: var(--ut_text_secondary);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+.installer.wrapper .tools_report .tool_row.ok .tool_icon {
+  color: var(--ut_green);
+}
+.installer.wrapper .tools_report .tool_row.warning {
+  border-color: var(--ut_run_soft);
+}
+.installer.wrapper .tools_report .tool_row.warning .tool_icon {
+  color: var(--ut_run);
+}
+.installer.wrapper .tools_report .tool_row.error {
+  border-color: var(--ut_red_soft);
+}
+.installer.wrapper .tools_report .tool_row.error .tool_icon {
+  color: var(--ut_red);
+}
 .installer.wrapper .spinner_wrap {
   display: inline-flex;
   align-items: center;

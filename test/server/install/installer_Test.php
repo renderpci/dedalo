@@ -95,6 +95,7 @@ final class installer_Test extends BaseTestCase {
 			'to_update',
 			'build_install_version',
 			'set_root_pw',
+			'register_tools',
 			'get_structure_context'
 		];
 
@@ -155,6 +156,49 @@ final class installer_Test extends BaseTestCase {
 
 		$this->assertIsObject($response);
 	}//end test_to_update_returns_object
+
+
+	/**
+	* TEST_register_tools_returns_expected_shape
+	* Verify the install-step facade register_tools() returns the {result, msg, errors, report}
+	* contract the wizard relies on. Registering tools writes section records, so a session is
+	* forced first (mirrors tools_register_Test). The full import report must always be an array
+	* and result a bool, so the JS step can render its per-tool outcome list.
+	* @return void
+	*/
+	public function test_register_tools_returns_expected_shape(): void {
+
+		// register_tools writes section records (dd1324) → needs an authenticated session
+		if (login::is_logged()===false) {
+			login_test::force_login(TEST_USER_ID);
+		}
+
+		$response = installer::register_tools();
+
+		$this->assertIsObject($response);
+		$this->assertObjectHasProperty('result', $response);
+		$this->assertObjectHasProperty('msg', $response);
+		$this->assertObjectHasProperty('errors', $response);
+		$this->assertObjectHasProperty('report', $response);
+		$this->assertIsBool($response->result);
+		$this->assertIsArray($response->errors);
+		$this->assertIsArray($response->report);
+	}//end test_register_tools_returns_expected_shape
+
+
+	/**
+	* TEST_register_tools_is_static
+	* The install dispatcher (dd_utils_api::install) calls installer::register_tools() statically,
+	* exactly like the other install sub-actions. Lock that contract.
+	* @return void
+	*/
+	public function test_register_tools_is_static(): void {
+
+		$reflection = new ReflectionMethod('installer', 'register_tools');
+
+		$this->assertTrue($reflection->isStatic());
+		$this->assertTrue($reflection->isPublic());
+	}//end test_register_tools_is_static
 
 
 	/**
