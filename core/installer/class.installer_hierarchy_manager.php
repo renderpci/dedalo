@@ -1021,23 +1021,20 @@ final class installer_hierarchy_manager {
 					}
 
 					// resolve the target matrix table for the import.
-					// A brand-new hierarchy's virtual section (e.g. 'ts1') is NOT registered in the
-					// ontology until activate_hierarchy() runs (below), so get_matrix_table_from_tipo()
-					// returns '' for it (and logs a misleading ERROR). Probe the model first with the
-					// quiet ontology_node::get_model_by_tipo() — null means unregistered — and skip
-					// straight to the fallback to avoid the noisy error log. Core sections shipped in
-					// the seed (e.g. 'lg1' → matrix_langs) resolve directly. For everything else, fall
-					// back to the source thesaurus template table
-					// (DEDALO_THESAURUS_SECTION_TIPO → matrix_hierarchy) — what the virtual section
-					// inherits once activated.
-					$matrix_table = null;
-					$section_model = ontology_node::get_model_by_tipo($found->section_tipo);
-					if (!empty($section_model)) {
-						$matrix_table = common::get_matrix_table_from_tipo($found->section_tipo);
-					}
-					if (empty($matrix_table)) {
-						$matrix_table = common::get_matrix_table_from_tipo(DEDALO_THESAURUS_SECTION_TIPO);
-					}
+					// A hierarchy's term/model data is ALWAYS read back through the VIRTUAL section
+					// that activate_hierarchy() provisions below, and that virtual section inherits the
+					// thesaurus template (DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO is hard-set to
+					// DEDALO_THESAURUS_SECTION_TIPO → matrix_hierarchy). Therefore EVERY hierarchy
+					// .copy.gz payload must import into that template table.
+					//
+					// (!) Do NOT resolve the table from the file's own section_tipo: when the tld is
+					// ALSO a pre-existing core section (e.g. 'lg1', registered in the seed ontology with
+					// matrix_table = matrix_langs), get_matrix_table_from_tipo('lg1') returns
+					// 'matrix_langs'. The COPY then "succeeds" into matrix_langs while the activated
+					// hierarchy keeps reading matrix_hierarchy — so the hierarchy shows up EMPTY even
+					// though the install reported OK (the lg1 "not imported" bug). es1 escaped this only
+					// because, as a brand-new tipo, it resolved to '' and fell back to the right table.
+					$matrix_table = common::get_matrix_table_from_tipo(DEDALO_THESAURUS_SECTION_TIPO);
 					if (empty($matrix_table)) {
 						$msg = "Error: could not resolve the target matrix table for hierarchy '".$tld."' (".to_string($found->section_tipo).")";
 						debug_log(__METHOD__.' '.$msg, logger::ERROR);

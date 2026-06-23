@@ -255,6 +255,47 @@ final class installer_hierarchy_manager_Test extends BaseTestCase {
 
 
 	/**
+	* TEST_install_hierarchies_imports_into_thesaurus_template_table
+	* Regression guard for the "lg1 imported but invisible" defect.
+	*
+	* A hierarchy's term/model rows are read back through the VIRTUAL section that
+	* activate_hierarchy() provisions, and that section inherits the thesaurus template
+	* (DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO is hard-set to DEDALO_THESAURUS_SECTION_TIPO →
+	* matrix_hierarchy). So EVERY hierarchy .copy.gz MUST be COPY'd into that template table.
+	*
+	* The original code resolved the target table from the file's OWN section_tipo via
+	* get_matrix_table_from_tipo($found->section_tipo). For a tld that is ALSO a pre-existing
+	* core section (e.g. 'lg1', registered in the seed ontology with matrix_table = matrix_langs)
+	* that returned 'matrix_langs', so the rows were COPY'd into matrix_langs while the activated
+	* hierarchy kept reading matrix_hierarchy — the hierarchy showed up EMPTY even though the
+	* installer reported OK. es1 only worked because, as a brand-new tipo, it resolved to '' and
+	* fell back to the template table. This guard pins the table to the template and forbids the
+	* per-file resolution that diverts core-section tlds.
+	* @return void
+	*/
+	public function test_install_hierarchies_imports_into_thesaurus_template_table(): void {
+
+		$file    = DEDALO_CORE_PATH . '/installer/class.installer_hierarchy_manager.php';
+		$content = file_get_contents($file);
+
+		// the import target MUST be derived from the thesaurus template section tipo
+		$this->assertStringContainsString(
+			'common::get_matrix_table_from_tipo(DEDALO_THESAURUS_SECTION_TIPO)',
+			$content,
+			'hierarchy imports must target the thesaurus template table (matrix_hierarchy)'
+		);
+
+		// and MUST NOT resolve the import table from the file's own section_tipo — that is the
+		// exact line that diverted core-section tlds (lg1 → matrix_langs) and hid the hierarchy.
+		$this->assertStringNotContainsString(
+			'common::get_matrix_table_from_tipo($found->section_tipo)',
+			$content,
+			'import table must not be resolved from the per-file section_tipo (re-introduces the lg1 bug)'
+		);
+	}//end test_install_hierarchies_imports_into_thesaurus_template_table
+
+
+	/**
 	* CLEANUP_TEST_HIERARCHY
 	* Remove every row a regression run created for $tld: its matrix_hierarchy_main record
 	* and the <tld>0/<tld>1/<tld>2 ontology nodes (dd_ontology + matrix_ontology[_main]).
