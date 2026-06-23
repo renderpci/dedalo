@@ -513,6 +513,102 @@ const CASES: Case[] = [
       tipo: 'test54', section_tipo: 'test3', section_id: 999999999, lang: 'lg-spa',
     },
   },
+
+  // ── component_section_id (NO matrix column; value = the section_id) ───────────
+  // get_data() = [(int)section_id]; get_value = that id as a string, regardless of
+  // whether the matrix record exists. numisdata26 is the section_id component of
+  // section numisdata3 (matrix table 'matrix'). With-value record → "1".
+  {
+    label: 'section_id_single',
+    source: {
+      typo: 'source', type: 'component', action: 'get_value',
+      tipo: 'numisdata26', section_tipo: 'numisdata3', section_id: 1, lang: 'lg-spa',
+    },
+  },
+  // a different (existing) record → "9529"
+  {
+    label: 'section_id_other',
+    source: {
+      typo: 'source', type: 'component', action: 'get_value',
+      tipo: 'numisdata26', section_tipo: 'numisdata3', section_id: 9529, lang: 'lg-spa',
+    },
+  },
+  // MISSING record (no matrix row): the value is still the requested section_id →
+  // "999999999" (proves the value comes from section_id, NOT a stored column).
+  {
+    label: 'section_id_missing',
+    source: {
+      typo: 'source', type: 'component', action: 'get_value',
+      tipo: 'numisdata26', section_tipo: 'numisdata3', section_id: 999999999, lang: 'lg-spa',
+    },
+  },
+
+  // ── component_publication (RELATION family V5; relations [dd64 section, dd62 label]) ─
+  // Inherits component_relation_common::get_export_value exactly like select: the
+  // dd62 input_text label of the selected dd64 (si_no) target at DEDALO_DATA_LANG.
+  // numisdata413 → dd64/1 → dd62 lg-spa = "Sí".
+  {
+    label: 'publication_single',
+    source: {
+      typo: 'source', type: 'component', action: 'get_value',
+      tipo: 'numisdata413', section_tipo: 'numisdata3', section_id: 9529, lang: 'lg-spa',
+    },
+  },
+  // SAME record requested as lg-eng: the dd62 label is resolved at the GLOBAL
+  // DEDALO_DATA_LANG (lg-spa), NOT the source lang, so the value is still "Sí".
+  {
+    label: 'publication_eng_request',
+    source: {
+      typo: 'source', type: 'component', action: 'get_value',
+      tipo: 'numisdata413', section_tipo: 'numisdata3', section_id: 9529, lang: 'lg-eng',
+    },
+  },
+  // empty / missing record (no selection)
+  {
+    label: 'publication_empty',
+    source: {
+      typo: 'source', type: 'component', action: 'get_value',
+      tipo: 'numisdata413', section_tipo: 'numisdata3', section_id: 999999999, lang: 'lg-spa',
+    },
+  },
+
+  // ── component_filter (RELATION family; label HARDCODED to dd156 on dd153) ─────
+  // get_value = the project-name field (dd156, input_text) on each stored project
+  // (dd153) locator at DEDALO_DATA_LANG (lg-spa). numisdata128 in section numisdata3.
+  // single project (dd153/1) → "MIB Antigüedad".
+  {
+    label: 'filter_single',
+    source: {
+      typo: 'source', type: 'component', action: 'get_value',
+      tipo: 'numisdata128', section_tipo: 'numisdata3', section_id: 9529, lang: 'lg-spa',
+    },
+  },
+  // TWO projects (dd153/1 + dd153/5) → labels joined with records_separator ' | ':
+  // "MIB Antigüedad | Cores".
+  {
+    label: 'filter_multi',
+    source: {
+      typo: 'source', type: 'component', action: 'get_value',
+      tipo: 'numisdata128', section_tipo: 'numisdata3', section_id: 16240, lang: 'lg-spa',
+    },
+  },
+  // SAME single-project record requested as lg-eng: dd156 is resolved at DEDALO_DATA_LANG
+  // (lg-spa), so the value is unchanged ("MIB Antigüedad").
+  {
+    label: 'filter_eng_request',
+    source: {
+      typo: 'source', type: 'component', action: 'get_value',
+      tipo: 'numisdata128', section_tipo: 'numisdata3', section_id: 9529, lang: 'lg-eng',
+    },
+  },
+  // empty / missing record (no projects)
+  {
+    label: 'filter_empty',
+    source: {
+      typo: 'source', type: 'component', action: 'get_value',
+      tipo: 'numisdata128', section_tipo: 'numisdata3', section_id: 999999999, lang: 'lg-spa',
+    },
+  },
 ];
 
 async function main(): Promise<void> {

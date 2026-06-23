@@ -698,6 +698,202 @@ export async function runCreateParity(
   };
 }
 
+// ───────────────────────────── DUPLICATE parity ───────────────────────────────
+//
+// `duplicate` is a DECLINED action (the TS engine proxies it to PHP — it composes
+// un-ported component-save subsystems: portal/filter/relation saves + a
+// create-with-source-values INSERT + per-component TM/activity cascades). This
+// harness drives BOTH:
+//   - the PHP-vs-PHP BASELINE: prove the harness can snapshot → duplicate → restore a
+//     record cleanly, the response envelope is byte-stable (new id normalized), and
+//     the side-row COUNTS are deterministic.
+//   - the TS-PROXY gate: prove the TS engine forwards the duplicate to PHP
+//     byte-identically (the response, new id normalized).
+// SAFETY: snapshot the counter + side-table watermarks BEFORE the write; restore by
+// DELETING the created row + sweeping side rows by watermark + restoring the counter.
+
+/** The duplicate RQO (action:'duplicate', source.{section_tipo,section_id}) + endpoint. */
+export interface DuplicateApply {
+  apiUrl: string;
+  username: string;
+  password: string;
+  /**
+   * OPTIONAL endpoint to LOGIN against (default apiUrl). The TS proxy + session
+   * bridge rotates CSRF in a way the bare harness login races; the gate logs in via
+   * the test-DB PHP endpoint (shared session/DB) but POSTs the duplicate to the TS
+   * URL. The session cookie + CSRF token are valid for both (same backend).
+   */
+  loginUrl?: string;
+  /** The duplicate RQO — CSRF is injected by the harness. */
+  rqo: Record<string, unknown>;
+}
+
+/** Outcome of one DUPLICATE-parity run. */
+export interface DuplicateRunResult {
+  /** RAW response body bytes from the apply POST. */
+  responseBytes: string;
+  /** HTTP status of the apply POST. */
+  status: number;
+  /** The section_id the duplicate created (response.result), or null on failure. */
+  newSectionId: number | null;
+  /** The counter value BEFORE the duplicate (snapshot). */
+  counterBefore: number | null;
+  /** The counter value AFTER the duplicate (readback). */
+  counterAfter: number | null;
+  /** The new record's matrix-row payload (readback), or null if absent. */
+  row: MatrixPayload | null;
+  /** The number of side rows the duplicate created, per side table (since watermark). */
+  sideRowCounts: Record<string, number>;
+  /**
+   * The full side-table rows the duplicate created (id > the pre-write watermark, per
+   * table), captured before cleanup — the byte ground truth for the TM + activity diff.
+   * Keyed by table, ordered by id ascending. Includes the login activity rows (the diff
+   * isolates the duplicate's NEW/SAVE rows by the new section_id).
+   */
+  sideRows: SideRowsByTable;
+}
+
+/** Count rows of a side table created since a watermark. */
+async function countSince(sql: Sql, table: string, watermark: number): Promise<number> {
+  assertTable(table);
+  const rows = await sql.unsafe<Array<{ n: number }>>(
+    `SELECT count(*)::int AS n FROM "${table}" WHERE id > $1`,
+    [watermark],
+  );
+  return rows[0]?.n ?? 0;
+}
+
+/**
+ * Run ONE duplicate-parity cycle: snapshot (counter + watermarks) → apply (POST
+ * duplicate) → readback (counter + new row + side-row counts) → reset (delete the
+ * created row, restore the counter, sweep side rows by watermark). Always resets in a
+ * `finally`, even when the apply throws, so the next engine starts from the SAME state.
+ */
+export async function runDuplicateParity(
+  sql: Sql,
+  target: { table: string; sectionTipo: string },
+  apply: DuplicateApply,
+): Promise<DuplicateRunResult> {
+  assertTable(target.table);
+  const counterTable = counterTableFor(target.table);
+
+  // 1. snapshot the counter + side-table watermarks BEFORE the write (SAFETY).
+  const counterBefore = await readCounter(sql, counterTable, target.sectionTipo);
+  const watermarks: Record<string, number> = {};
+  for (const t of SIDE_TABLES) watermarks[t] = await maxId(sql, t);
+
+  let responseBytes = '';
+  let status = 0;
+  let newSectionId: number | null = null;
+  let counterAfter: number | null = counterBefore;
+  let row: MatrixPayload | null = null;
+  const sideRowCounts: Record<string, number> = {};
+  const sideRows: SideRowsByTable = {};
+  for (const t of SIDE_TABLES) sideRows[t] = [];
+
+  try {
+    // 2. apply: login (loginUrl or apiUrl) + POST the duplicate RQO to apiUrl.
+    const session = await login(apply.loginUrl ?? apply.apiUrl, apply.username, apply.password);
+    const res = await fetch(apply.apiUrl, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        cookie: session.cookie,
+        'x-dedalo-csrf-token': session.csrfToken,
+      },
+      body: JSON.stringify(apply.rqo),
+    });
+    status = res.status;
+    responseBytes = await res.text();
+    const parsed = JSON.parse(responseBytes) as { result?: unknown };
+    const r = parsed.result;
+    newSectionId = typeof r === 'number' ? r : Number.isNaN(Number(r)) ? null : Number(r);
+
+    // 3. readback: counter, the new row, the side rows (full + counts). The component
+    // saves' activity rows are written at PHP request shutdown, which can lag; settle +
+    // re-scan until the per-component TM row(s) appear (capped).
+    counterAfter = await readCounter(sql, counterTable, target.sectionTipo);
+    if (newSectionId !== null) {
+      row = await readRowPayload(sql, target.table, target.sectionTipo, newSectionId);
+    }
+    for (let attempt = 0; attempt < 6; attempt++) {
+      for (const t of SIDE_TABLES) {
+        sideRows[t] = await captureSince(sql, t, watermarks[t] ?? 0);
+        sideRowCounts[t] = sideRows[t].length;
+      }
+      if ((sideRowCounts.matrix_time_machine ?? 0) > 0) break;
+      await new Promise((r2) => setTimeout(r2, 200));
+    }
+  } finally {
+    // 4. reset: delete the created matrix row, restore the counter, sweep side rows.
+    if (newSectionId !== null) {
+      await sql.unsafe(
+        `DELETE FROM "${target.table}" WHERE section_tipo = $1 AND section_id = $2`,
+        [target.sectionTipo, newSectionId],
+      );
+    }
+    await restoreCounter(sql, counterTable, target.sectionTipo, counterBefore);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      let deleted = 0;
+      for (const t of SIDE_TABLES) deleted += await deleteSince(sql, t, watermarks[t] ?? 0);
+      if (deleted === 0 && attempt > 0) break;
+      await new Promise((r2) => setTimeout(r2, 200));
+    }
+    for (const t of SIDE_TABLES) await deleteSince(sql, t, watermarks[t] ?? 0);
+  }
+
+  return { responseBytes, status, newSectionId, counterBefore, counterAfter, row, sideRowCounts, sideRows };
+}
+
+/**
+ * Isolate the DUPLICATE's own side rows from the login rows that share the watermark
+ * window. The duplicate writes a 'NEW' activity (log_data.section_id = the new id) + per
+ * component a TM row (section_id = the new id) + a 'SAVE' activity (log_data.section_id =
+ * the new id). The login activity rows carry an unrelated section_id, so we isolate by
+ * the NEW section_id: TM rows by the `section_id` column, activity rows by the
+ * misc.dd551 log_data.section_id. Returns {tm, act} in id order.
+ */
+export function isolateDuplicateSideRows(
+  side: SideRowsByTable,
+  newSectionId: number | null,
+): { tm: Array<Record<string, unknown>>; act: Array<Record<string, unknown>> } {
+  if (newSectionId === null) return { tm: [], act: [] };
+  const tm = (side.matrix_time_machine ?? []).filter((r) => {
+    const sid = r.section_id;
+    const n = typeof sid === 'number' ? sid : Number(sid);
+    return n === newSectionId;
+  });
+  const act = (side.matrix_activity ?? []).filter((row) => {
+    const misc = row.misc as Record<string, unknown> | null;
+    const dd551 = misc?.['dd551'];
+    if (!Array.isArray(dd551) || dd551.length === 0) return false;
+    const value = (dd551[0] as Record<string, unknown> | null)?.['value'];
+    if (value === null || typeof value !== 'object') return false;
+    const sid = (value as Record<string, unknown>)['section_id'];
+    const n = Number(sid);
+    return Number.isInteger(n) && n === newSectionId;
+  });
+  return { tm, act };
+}
+
+/**
+ * Volatile-leaf normalizer for the DUPLICATE new-record row diff. Identical shape to the
+ * add_child child row (a create + per-component save): created/modified audit leaves are
+ * volatile (per-run/engine clock + user), everything else (the copied component data, the
+ * meta counters, the data label/section_tipo) is COMPARED verbatim.
+ *   - data.created_date / data.created_by_user_id
+ *   - relation.dd200[*].section_id (created_by_user) / relation.dd197[*].section_id (modified_by_user)
+ *   - date.dd199[*].start.<clock> (created_date) / date.dd201[*].start.<clock> (modified_date)
+ */
+export function normalizeDuplicateRowForDiff(payload: MatrixPayload): MatrixPayload {
+  return normalizeAddChildRowForDiff(payload);
+}
+
+/** Canonicalize a DUPLICATE new-record row (volatile-normalized) to a stable string. */
+export function canonicalizeDuplicateRow(payload: MatrixPayload): string {
+  return stableStringify(normalizeDuplicateRowForDiff(payload));
+}
+
 /**
  * Volatile-leaf normalizer for the CREATE fresh-row diff. The fresh row's volatile
  * leaves (per the live PHP create on oh1):

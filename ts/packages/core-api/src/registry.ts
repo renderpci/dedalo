@@ -8,6 +8,20 @@
 export type RqoLike = { readonly [k: string]: unknown };
 export type ApiResponse = Record<string, unknown>;
 
+/**
+ * Minimal authenticated-session view passed to `canHandleRequest` so a handler can
+ * gate on the user WITHOUT re-bridging (e.g. dd_ontology_api's resolve_section is
+ * only byte-reproducible for the superuser, whose security permission is fixed at
+ * 3; non-superuser permission filtering needs the un-ported permissions table →
+ * proxy). Optional: handlers that gate purely on rqo/ontology ignore it.
+ */
+export interface GateSession {
+  readonly isLogged: boolean;
+  readonly userId: number | null;
+  readonly isGlobalAdmin: boolean;
+  readonly isDeveloper: boolean;
+}
+
 export interface ApiHandler {
   /** The dd_api class name this handler implements (e.g. 'dd_core_api'). */
   readonly ddApi: string;
@@ -19,8 +33,11 @@ export interface ApiHandler {
    * a handler may natively own only some of them. When this returns false the
    * server proxies that specific request to PHP instead of dispatching natively.
    * Absent ⇒ the handler owns every listed action entirely.
+   *
+   * `session` is the resolved authenticated-session view (anonymous when
+   * unauthenticated), provided so user-sensitive gates need not re-bridge.
    */
-  canHandleRequest?(rqo: RqoLike): boolean | Promise<boolean>;
+  canHandleRequest?(rqo: RqoLike, session?: GateSession): boolean | Promise<boolean>;
   /** Execute an allowlisted action. May throw PermissionException. */
   dispatch(action: string, rqo: RqoLike): Promise<ApiResponse> | ApiResponse;
 }

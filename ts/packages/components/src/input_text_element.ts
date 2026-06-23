@@ -99,6 +99,13 @@ export interface InputTextElementSource {
    * section children.
    */
   from_component_tipo?: string;
+  /**
+   * TIME-MACHINE snapshot datum (matrix_time_machine.data). When PRESENT (the key
+   * exists, even if null), the data half resolves entries/fallback from this
+   * snapshot instead of the live matrix column — PHP get_data() tm branch + the
+   * list/tm get_list_value transform. Injected only in mode 'tm' (caller-gated).
+   */
+  tmData?: ComponentDatum[] | null;
 }
 
 /** Deps: the value-resolution deps + the context-builder deps (reused for the context half). */
@@ -196,6 +203,7 @@ export async function buildInputTextElement(
   const context: unknown[] = ctxResponse.result === false ? [] : ctxResponse.result;
 
   // ── DATA half: resolve entries + fallback via the get_value resolution ──
+  const hasTmData = Object.prototype.hasOwnProperty.call(source, 'tmData');
   const init: ComponentInit = {
     tipo,
     sectionTipo,
@@ -206,6 +214,7 @@ export async function buildInputTextElement(
     matrix: opts.matrix,
     ontology: opts.ontology,
     langConfig: opts.langConfig,
+    ...(hasTmData ? { tmData: source.tmData ?? null } : {}),
   };
   const component = await ComponentInputText.create(init);
   const effectiveLang = component.effectiveLang();

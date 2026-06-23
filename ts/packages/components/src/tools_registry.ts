@@ -26,7 +26,7 @@
  */
 
 import type { OntologyRepository } from '@dedalo/ontology';
-import type { ToolPropertiesMap } from './tool_properties_cache.ts';
+import type { ToolPropertiesMap, RegisteredToolsMap } from './tool_properties_cache.ts';
 
 /** Minimal parameterised SQL queryer (a Db / DbSession / test stub). */
 export interface ToolsQueryer {
@@ -119,6 +119,31 @@ export function asDatumArray(v: unknown): Datum[] {
 }
 
 /**
+ * Detect whether an injected map is a FULL RegisteredToolsMap (name→CachedSimpleTool)
+ * vs a properties-only ToolPropertiesMap (name→properties value). A CachedSimpleTool
+ * is a plain object carrying a string `name` + an `affectedModels` array — fields a
+ * raw properties value never has. Returns the map typed as RegisteredToolsMap when
+ * its first entry looks like a CachedSimpleTool, else null (→ properties-only path).
+ * An empty map → null (no authoritative cache → DB fallback).
+ */
+function asRegisteredToolsMap(
+  map: ToolPropertiesMap | RegisteredToolsMap | undefined,
+): RegisteredToolsMap | null {
+  if (!map || map.size === 0) return null;
+  const first = map.values().next().value as unknown;
+  if (
+    first !== null &&
+    typeof first === 'object' &&
+    !Array.isArray(first) &&
+    typeof (first as { name?: unknown }).name === 'string' &&
+    Array.isArray((first as { affectedModels?: unknown }).affectedModels)
+  ) {
+    return map as RegisteredToolsMap;
+  }
+  return null;
+}
+
+/**
  * Read the active registered tools (root: ALL of them) from the dd1324 registry
  * and build their simple tool objects, in registry section_id order — the order
  * tool_common::get_active_tools yields and the context `tools` array preserves.
@@ -129,8 +154,37 @@ export function asDatumArray(v: unknown): Datum[] {
 export async function getRegisteredTools(
   queryer: ToolsQueryer,
   ontology: OntologyRepository,
-  toolProperties?: ToolPropertiesMap,
+  toolProperties?: ToolPropertiesMap | RegisteredToolsMap,
 ): Promise<SimpleToolObject[]> {
+  // AUTHORITATIVE PATH: when a full RegisteredToolsMap (name→CachedSimpleTool) is
+  // injected, build the registered-tools list FROM the cache — exactly like PHP's
+  // get_all_registered_tools(), which serves the cached simple_tool_object verbatim
+  // (membership + order + affected_models/affected_tipos + the show_in_*/
+  // requirement flags + properties). The matrix_tools DB is PHP's fallback only
+  // when the cache is empty. Reading the cache here is what keeps the section/area
+  // tool set byte-identical to live PHP — the regenerated cache can carry an
+  // `affected_tipos` (e.g. tool_ontology) the live DB row never stored, which
+  // gates membership.
+  const cachedTools = asRegisteredToolsMap(toolProperties);
+  if (cachedTools !== null) {
+    return [...cachedTools.values()].map((t) => ({
+      sectionTipo: t.sectionTipo,
+      sectionId: t.sectionId,
+      name: t.name,
+      label: t.label,
+      affectedModels: t.affectedModels,
+      affectedTipos: t.affectedTipos,
+      showInInspector: t.showInInspector,
+      showInComponent: t.showInComponent,
+      requirementTranslatable: t.requirementTranslatable,
+      alwaysActive: t.alwaysActive,
+      properties: t.properties ?? null,
+    }));
+  }
+
+  // FALLBACK PATH (no cache, or a properties-only ToolPropertiesMap injected by a
+  // test): read the active tools from the DB and overlay cached properties.
+  const propsOnly = toolProperties as ToolPropertiesMap | undefined;
   const sql =
     'SELECT section_id, string, relation, misc ' +
     `FROM "${TOOLS_MATRIX_TABLE}" ` +
@@ -177,8 +231,8 @@ export async function getRegisteredTools(
       // lang-wrapped for the legacy-cached tools). Otherwise fall back to the
       // DB-derived lang-wrapped form (get_data()[0]->value wrapped per nolan).
       properties:
-        toolProperties && toolProperties.has(name)
-          ? (toolProperties.get(name) ?? null)
+        propsOnly && propsOnly.has(name)
+          ? (propsOnly.get(name) ?? null)
           : resolveJsonProperties(asDatumArray(misc[TIPO_PROPERTIES])),
     });
   }
@@ -290,6 +344,63 @@ function stripTags(s: string): string {
 }
 
 /**
+ * Port of shared/core_functions.php `tipo_in_array($tipo, $array)`: an
+ * affected_tipos entry matches `tipo` when it is
+ *   - a `*` wildcard → same TLD (top-level domain) as `tipo`, OR
+ *   - a `/regex/` (contains `/`) → PHP preg_match against `tipo`, OR
+ *   - the exact string `tipo`.
+ * The cache's affected_tipos lists carry exactly these three forms (e.g.
+ * tool_ontology's `['ontology35','/^(?!localontology0)[a-z]+0$/']`). The plain
+ * `in_array` fallback runs last so an exact entry still matches even if it also
+ * contains a `/` somewhere.
+ */
+function tipoInArray(tipo: string, array: string[]): boolean {
+  for (const current of array) {
+    if (current.includes('*')) {
+      if (getTldFromTipo(tipo) === getTldFromTipo(current)) return true;
+    }
+    if (current.includes('/')) {
+      const re = phpRegexToJs(current);
+      if (re !== null && re.test(tipo)) return true;
+    }
+  }
+  return array.includes(tipo);
+}
+
+/**
+ * get_tld_from_tipo: the alphabetic prefix of a tipo (e.g. 'numisdata809' →
+ * 'numisdata', 'rsc36' → 'rsc'). Used by the `*` wildcard branch of tipo_in_array.
+ */
+function getTldFromTipo(tipo: string): string {
+  const m = /^[a-zA-Z]+/.exec(tipo);
+  return m ? m[0] : tipo;
+}
+
+/**
+ * Convert a PHP-style delimited regex literal (`/pattern/flags`) to a JS RegExp.
+ * Only `/`-delimited patterns appear in the tool cache. PHP's `i`/`m`/`s`/`u`
+ * flags map 1:1 to JS; unsupported flags are dropped. Returns null on a malformed
+ * literal (the caller then treats it as a non-match, matching PHP's preg_match
+ * returning false on a bad pattern).
+ */
+function phpRegexToJs(literal: string): RegExp | null {
+  if (literal.length < 2 || literal[0] !== '/') return null;
+  const close = literal.lastIndexOf('/');
+  if (close <= 0) return null;
+  const pattern = literal.slice(1, close);
+  const rawFlags = literal.slice(close + 1);
+  const flags = rawFlags
+    .split('')
+    .filter((f) => 'gimsuy'.includes(f))
+    .join('');
+  try {
+    return new RegExp(pattern, flags);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Filter the registered tools for a COMPONENT context — port of the element-tools
  * loop in common::get_tools() restricted to a component caller.
  *
@@ -331,12 +442,13 @@ export function filterComponentTools(
 
     const matched =
       affectedModels.includes(ctx.model) ||
-      affectedTipos.includes(ctx.tipo) ||
+      tipoInArray(ctx.tipo, affectedTipos) ||
       affectedModels.includes('all_components');
     if (!matched) continue;
 
-    // affected_tipos specific restriction (e.g. tool_indexation only on 'rsc36')
-    if (affectedTipos.length > 0 && !affectedTipos.includes(ctx.tipo)) continue;
+    // affected_tipos specific restriction (e.g. tool_indexation only on 'rsc36').
+    // PHP: `if (!empty($affected_tipos[0])) { if(!tipo_in_array(...)) continue; }`.
+    if (affectedTipos.length > 0 && affectedTipos[0] && !tipoInArray(ctx.tipo, affectedTipos)) continue;
 
     // dd15 section: only tool_export allowed
     if (ctx.sectionTipo === TIME_MACHINE_SECTION_TIPO && tool.name !== 'tool_export') continue;
@@ -371,11 +483,13 @@ export function filterComponentTools(
  *     is_available depends on the diffusion section-map (have_section_diffusion);
  *     callers pass `diffusionSection` to gate it.
  *
- * The PHP affected_tipos restriction (`!empty($affected_tipos[0])`) only triggers
- * when affected_tipos[0] is a real tipo string; lang-wrapped affected_tipos
- * (e.g. tool_ontology's `{lg-nolan:[[...]]}`) leave index 0 empty, so the
- * restriction is skipped. We reproduce that by only enforcing the restriction
- * when `affectedTipos` is a non-empty list of plain tipo strings.
+ * The PHP affected_tipos restriction (`!empty($affected_tipos[0])`) triggers when
+ * the tool's cached affected_tipos is a non-empty list. Matching is via
+ * tipo_in_array (plain tipo / `*` TLD-wildcard / `/regex/`), so e.g. tool_ontology
+ * (affected_tipos = ['ontology35','/^(?!localontology0)[a-z]+0$/']) is restricted
+ * to ontology sections and excluded from numisdata809. The affected_tipos list is
+ * read from the install-time cache (the authoritative source PHP serves), NOT the
+ * matrix_tools DB row (which may carry an empty dd1350 the cache does not).
  */
 export function filterSectionAreaTools(
   tools: SimpleToolObject[],
@@ -405,11 +519,15 @@ export function filterSectionAreaTools(
 
     // match: model in affected_models OR tipo in affected_tipos. (all_components
     // is a component-only match → excluded for sections/areas.)
-    const matched = affectedModels.includes(ctx.model) || affectedTipos.includes(ctx.tipo);
+    const matched = affectedModels.includes(ctx.model) || tipoInArray(ctx.tipo, affectedTipos);
     if (!matched) continue;
 
-    // affected_tipos restriction: only when it is a real tipo-string list.
-    if (affectedTipos.length > 0 && !affectedTipos.includes(ctx.tipo)) continue;
+    // affected_tipos restriction (PHP: `if (!empty($affected_tipos[0]))`). When the
+    // tool declares a real affected_tipos list (plain tipos / `*` / `/regex/`) the
+    // section's tipo must match it via tipo_in_array — this is what excludes
+    // tool_ontology (affected_tipos = ['ontology35','/.../']) from non-ontology
+    // sections like numisdata809. The cache is the authoritative source of this list.
+    if (affectedTipos.length > 0 && affectedTipos[0] && !tipoInArray(ctx.tipo, affectedTipos)) continue;
 
     // dd15 section: only tool_export allowed.
     if (ctx.sectionTipo === TIME_MACHINE_SECTION_TIPO && tool.name !== 'tool_export') continue;

@@ -138,12 +138,22 @@ export interface ReadLocator {
  * explicit locator set was supplied. Returns the ordered, paginated locators
  * (section_id ASC, LIMIT/OFFSET applied). Injected by the handler so this module
  * does not depend on @dedalo/search. Signature matches searchRecords' core.
+ *
+ * The optional second argument carries an already-conformed Mango filter (the
+ * FILTERED search path): when present the records SELECT adds the per-component
+ * WHERE clauses (the SAME builders the filtered count uses) so the returned page
+ * is the matched, paginated section_ids. Absent → the plain (no-filter) page. The
+ * filter is typed `unknown` here so this module stays free of @dedalo/search; the
+ * handler passes the ConformedFilter through verbatim to searchRecords.
  */
-export type RecordSearch = (sqo: {
-  section_tipo: string[];
-  limit?: number | string;
-  offset?: number;
-}) => Promise<ReadLocator[]>;
+export type RecordSearch = (
+  sqo: {
+    section_tipo: string[];
+    limit?: number | string;
+    offset?: number;
+  },
+  filter?: unknown,
+) => Promise<ReadLocator[]>;
 
 /** The sections-marker entry per row (sections_json $current_value). */
 export interface SectionsEntry {
@@ -218,6 +228,15 @@ export interface BuildJsonRowsOptions {
    * builds (section_tipo array + limit/offset; select forced to []).
    */
   searchSqo?: { section_tipo: string[]; limit?: number | string; offset?: number };
+  /**
+   * An already-conformed Mango filter (the FILTERED search path). When present it
+   * is passed verbatim to `recordSearch` so the LIST page is the matched, paginated
+   * section_ids (the per-component WHERE clauses + $and/$or/$not assembly the count
+   * already byte-reproduces). Absent → the plain no-filter page. Typed `unknown` so
+   * this module does not import @dedalo/search; the handler supplies the
+   * ConformedFilter and threads it straight to searchRecords.
+   */
+  searchFilter?: unknown;
   /**
    * Enumerate ALL projects (dd153) — the global-admin unlimited search behind a
    * component_filter's datalist (get_user_authorized_projects). Required ONLY for
@@ -378,7 +397,7 @@ export async function buildJsonRows(
       if (row !== null) presentLocators.push(loc);
     }
   } else if (opts.recordSearch !== undefined && opts.searchSqo !== undefined) {
-    const page = await opts.recordSearch(opts.searchSqo);
+    const page = await opts.recordSearch(opts.searchSqo, opts.searchFilter);
     for (const loc of page) presentLocators.push(loc);
   }
 

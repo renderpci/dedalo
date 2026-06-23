@@ -35,8 +35,56 @@ import { readFile } from 'node:fs/promises';
  * value `undefined`/`null` means "the cache entry exists but carries no
  * properties" (the DDO drops `properties`). A key ABSENT means the cache has no
  * entry for that tool — the caller falls back to the DB-derived form.
+ *
+ * NOTE: this is now a VIEW over the richer RegisteredToolsMap — each value is the
+ * `properties` field of the cached simple_tool_object. `getRegisteredTools` reads
+ * the richer map directly; this type is retained for the public API + tests.
  */
 export type ToolPropertiesMap = ReadonlyMap<string, unknown>;
+
+/**
+ * One tool's cached simple_tool_object, as the install-time registered-tools
+ * cache (`{entity}_cache_tools_all_registered_tools.php`) stores it — the SAME
+ * object `tool_common::get_all_registered_tools()` returns and `common::get_tools()`
+ * filters. The cache is authoritative for the WHOLE object (membership, order,
+ * affected_models/affected_tipos, the show_in_* / requirement flags AND the
+ * per-tool properties), NOT just `properties`: it is written from each tool's
+ * register.json at import time and can diverge from the live matrix_tools DB row
+ * (e.g. a tool whose register.json declares `affected_tipos` the DB never stored).
+ * Reading these fields from the cache (as PHP does) is what keeps the section/area
+ * tool set byte-identical to live PHP.
+ *
+ * Fields mirror tools_register::create_simple_tool_object exactly:
+ *   name, section_tipo, section_id, label, affected_models, affected_tipos,
+ *   show_in_inspector, show_in_component, always_active, requirement_translatable,
+ *   properties.
+ */
+export interface CachedSimpleTool {
+  name: string;
+  sectionTipo: string;
+  sectionId: string;
+  /** Raw label data array [{lang,value}] (used by create_tool_simple_context). */
+  label: { lang: string; value: string }[];
+  /** Resolved affected model-name strings (already the dd1345 terms). */
+  affectedModels: string[];
+  /** affected_tipos: plain tipo strings, `*` wildcards and `/regex/` (or null). */
+  affectedTipos: string[] | null;
+  showInInspector: boolean;
+  showInComponent: boolean;
+  requirementTranslatable: boolean;
+  alwaysActive: boolean;
+  /** The tool's `properties` value verbatim (FLAT or lang-wrapped), or undefined. */
+  properties: unknown;
+}
+
+/**
+ * A name→CachedSimpleTool map. When present, `getRegisteredTools` builds the
+ * registered-tools list from THIS map (insertion order = the cache file's key
+ * order = section_id-ascending registry order), exactly like PHP's
+ * get_all_registered_tools(). A key ABSENT means the cache has no entry for that
+ * tool. An empty/absent map → DB-derived fallback for the whole list.
+ */
+export type RegisteredToolsMap = ReadonlyMap<string, CachedSimpleTool>;
 
 /**
  * Parse a value out of the PHP var_export-style cache literal, starting at
@@ -204,6 +252,28 @@ function parsePhpBracket(text: string, pos: number, forceObject: boolean): Parse
  */
 export function parseToolPropertiesCache(text: string): ToolPropertiesMap {
   const out = new Map<string, unknown>();
+  for (const [name, tool] of parseRegisteredToolsCache(text)) {
+    out.set(name, tool.properties);
+  }
+  return out;
+}
+
+/**
+ * Parse the FULL simple_tool_object for every tool out of the install-time
+ * registered-tools cache text. Each top-level `'name'=>(object)[ ... ]` block is
+ * structurally parsed and its fields mapped to a CachedSimpleTool. The map's
+ * iteration order is the cache file's key order — which is the
+ * section_id-ascending registry order PHP's get_active_tools() yields, so the
+ * resulting `tools` array order matches live PHP without a separate sort.
+ *
+ * This is the authoritative source `getRegisteredTools` uses: PHP's
+ * get_all_registered_tools() serves the cached object verbatim (membership +
+ * affected_models/affected_tipos + the show_in_* / requirement flags + properties),
+ * falling back to the matrix_tools DB only when the cache is empty. Reading the
+ * SAME fields here is what makes the section/area tool set byte-identical.
+ */
+export function parseRegisteredToolsCache(text: string): RegisteredToolsMap {
+  const out = new Map<string, CachedSimpleTool>();
 
   // Find each top-level entry "'tool_xxx'=>(object)[". Tool names are
   // ^tool_[a-z0-9_]+$ (validate_register), so a name-keyed object opener is an
@@ -218,33 +288,76 @@ export function parseToolPropertiesCache(text: string): ToolPropertiesMap {
   for (let i = 0; i < starts.length; i++) {
     const { name, objStart } = starts[i]!;
     try {
-      // Parse the FULL tool object block (objStart at its `[`), then read its
-      // OWN top-level `properties` key. A naive `indexOf("'properties'=>")` is
-      // WRONG: a tool block can carry a NESTED `properties` key (e.g. tool_lang's
-      // `ontology` descriptor holds `'properties'=>NULL` before the tool's own
-      // top-level `'properties'=>(object)[...]`), so the first textual match picks
-      // the nested null and drops the real value. Structural parsing extracts the
-      // top-level key unambiguously. `(object)` precedes the `[` at objStart.
+      // Parse the FULL tool object block (objStart at its `[`). A naive
+      // `indexOf("'properties'=>")` is WRONG: a tool block can carry a NESTED
+      // `properties` key (e.g. tool_lang's `ontology` descriptor holds
+      // `'properties'=>NULL` before the tool's own top-level
+      // `'properties'=>(object)[...]`), so the first textual match picks the
+      // nested null and drops the real value. Structural parsing extracts the
+      // top-level keys unambiguously. `(object)` precedes the `[` at objStart.
       const objText = '(object)' + text.slice(objStart);
       const parsed = parsePhpValue(objText, 0);
       const value = parsed.value;
-      if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-        const rec = value as Record<string, unknown>;
+      if (value === null || typeof value !== 'object' || Array.isArray(value)) continue;
+      const rec = value as Record<string, unknown>;
+      out.set(name, {
+        name,
+        sectionTipo: typeof rec.section_tipo === 'string' ? rec.section_tipo : 'dd1324',
+        sectionId: rec.section_id != null ? String(rec.section_id) : '',
+        label: toLabelArray(rec.label),
+        affectedModels: toStringList(rec.affected_models),
+        affectedTipos: toAffectedTipos(rec.affected_tipos),
+        showInInspector: rec.show_in_inspector === true,
+        showInComponent: rec.show_in_component === true,
+        requirementTranslatable: rec.requirement_translatable === true,
+        alwaysActive: rec.always_active === true,
         // A top-level `properties` key present (even null) → use it; absent →
-        // record `undefined` so the caller knows the entry existed without props.
-        out.set(name, 'properties' in rec ? rec.properties : undefined);
-      } else {
-        out.set(name, undefined);
-      }
+        // `undefined` (the DDO drops `properties`).
+        properties: 'properties' in rec ? rec.properties : undefined,
+      });
     } catch {
-      // A parse failure for one tool must not poison the rest; record absence so
-      // the caller falls back to the DB-derived form for that tool.
+      // A parse failure for one tool must not poison the rest; drop it so the
+      // caller falls back to the DB-derived form for that tool.
       // (Intentionally swallow: malformed cache entries are non-fatal.)
       out.delete(name);
     }
   }
 
   return out;
+}
+
+/** Coerce a cached `label` value ([{lang,value},...] of objects) to {lang,value}[]. */
+function toLabelArray(v: unknown): { lang: string; value: string }[] {
+  if (!Array.isArray(v)) return [];
+  const out: { lang: string; value: string }[] = [];
+  for (const item of v) {
+    if (item && typeof item === 'object' && !Array.isArray(item)) {
+      const o = item as { lang?: unknown; value?: unknown };
+      if (typeof o.lang === 'string' && typeof o.value === 'string') {
+        out.push({ lang: o.lang, value: o.value });
+      }
+    }
+  }
+  return out;
+}
+
+/** Coerce a cached value to a plain string[] (affected_models = resolved names). */
+function toStringList(v: unknown): string[] {
+  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+}
+
+/**
+ * affected_tipos as the cache stores it: NULL → null; an array of strings (plain
+ * tipos, `*` wildcards, `/regex/`) → that list. A non-array/non-null value (never
+ * emitted by the cache) → null so the membership filter is a no-op.
+ */
+function toAffectedTipos(v: unknown): string[] | null {
+  if (v == null) return null;
+  if (Array.isArray(v)) {
+    const list = v.filter((x): x is string => typeof x === 'string');
+    return list.length > 0 ? list : [];
+  }
+  return null;
 }
 
 /**
@@ -283,6 +396,48 @@ export async function loadToolPropertiesFromCacheFile(filePath: string): Promise
 export async function loadToolPropertiesFromEnv(
   env: Record<string, string | undefined> = process.env,
 ): Promise<ToolPropertiesMap | null> {
+  const text = await readRegisteredToolsCacheText(env);
+  return text === null ? null : parseToolPropertiesCache(text);
+}
+
+/**
+ * Load the FULL registered-tools cache (name→CachedSimpleTool) from the install-time
+ * cache FILE. Returns null when the file is missing/unreadable.
+ */
+export async function loadRegisteredToolsFromCacheFile(
+  filePath: string,
+): Promise<RegisteredToolsMap | null> {
+  let text: string;
+  try {
+    text = await readFile(filePath, 'utf8');
+  } catch {
+    return null;
+  }
+  return parseRegisteredToolsCache(text);
+}
+
+/**
+ * Resolve + parse the install-time registered-tools cache into the FULL
+ * RegisteredToolsMap from a Dédalo-style env map (same resolution order as
+ * loadToolPropertiesFromEnv). This is what `getRegisteredTools` consumes so the
+ * tool SET (membership/order/affected_tipos/flags) matches live PHP, not just the
+ * per-tool properties. Returns null when no candidate cache file is found.
+ */
+export async function loadRegisteredToolsFromEnv(
+  env: Record<string, string | undefined> = process.env,
+): Promise<RegisteredToolsMap | null> {
+  const text = await readRegisteredToolsCacheText(env);
+  return text === null ? null : parseRegisteredToolsCache(text);
+}
+
+/**
+ * Locate + read the entity-scoped registered-tools cache file text from the env.
+ * Mirrors DEDALO_CACHE_MANAGER['files_path'] resolution (cache/ or sessions/ dir).
+ * Returns the file text, or null when no candidate file exists/reads.
+ */
+async function readRegisteredToolsCacheText(
+  env: Record<string, string | undefined>,
+): Promise<string | null> {
   const entity = env.DEDALO_ENTITY;
   if (!entity) return null;
   const fileName = `${entity}_cache_tools_all_registered_tools.php`;
@@ -293,8 +448,11 @@ export async function loadToolPropertiesFromEnv(
   ].filter((d): d is string => typeof d === 'string' && d.length > 0);
   for (const dir of candidates) {
     const sep = dir.endsWith('/') ? '' : '/';
-    const map = await loadToolPropertiesFromCacheFile(`${dir}${sep}${fileName}`);
-    if (map !== null) return map;
+    try {
+      return await readFile(`${dir}${sep}${fileName}`, 'utf8');
+    } catch {
+      /* try next candidate */
+    }
   }
   return null;
 }

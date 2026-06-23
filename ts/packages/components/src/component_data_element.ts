@@ -282,6 +282,14 @@ export interface DataElementSource {
   caller_tipo?: string;
   /** ASSEMBLY caller from_component_tipo override (component/portal callers only). */
   from_component_tipo?: string;
+  /**
+   * TIME-MACHINE snapshot datum (matrix_time_machine.data). When PRESENT (the key
+   * exists, even if null), the data half resolves `entries` from this snapshot
+   * instead of the live matrix column — PHP get_data() tm branch + the per-model
+   * list/tm entries transform (get_list_value / get_data_lang). Only injected for
+   * SIMPLE non-dataframe/non-relation models in mode 'tm' (the caller gates this).
+   */
+  tmData?: ComponentDatum[] | null;
 }
 
 /** Deps: value-resolution deps + context-builder deps (reused for the context half). */
@@ -575,6 +583,11 @@ export async function buildDataElement(
   }
 
   // ── DATA half: resolve entries (+ fallback for text_area) ──
+  // TIME-MACHINE: when source carries `tmData` (the matrix_time_machine snapshot),
+  // inject it so getData() returns it directly; the per-model resolveDataEntries(mode)
+  // (list/tm → get_list_value; date/edit → get_data_lang) then renders the entries
+  // off the snapshot exactly as PHP does off $data_tm.
+  const hasTmData = Object.prototype.hasOwnProperty.call(source, 'tmData');
   const init: ComponentInit = {
     tipo,
     sectionTipo,
@@ -585,6 +598,7 @@ export async function buildDataElement(
     matrix: opts.matrix,
     ontology: opts.ontology,
     langConfig: opts.langConfig,
+    ...(hasTmData ? { tmData: source.tmData ?? null } : {}),
   };
 
   // get_data_item shared fields.
@@ -784,8 +798,15 @@ async function buildRelationSelectDataElement(
   mode: string,
   model: DataElementModel,
 ): Promise<DataElement> {
-  // LIST only: edit/tm/search resolve a datalist (get_list_of_values — unported).
-  if (mode !== 'list') {
+  // LIST always reaches here. TM is supported ONLY for the DATALIST family
+  // (radio_button / check_box / publication): their list/tm entries both come from
+  // get_list_value() (the matched datalist labels), and the value resolution is
+  // identical (the tm snapshot is injected via source.tmData). The relation_parent/
+  // related/portal/select families emit a different tm shape (main locator item +
+  // subdatum / get_list_of_values datalist) that is NOT ported → decline. EDIT/SEARCH
+  // for the whole family resolve a datalist (get_list_of_values) → decline.
+  const isDatalistTm = mode === 'tm' && DATALIST_MODELS.has(model);
+  if (mode !== 'list' && !isDatalistTm) {
     throw new UnsupportedDataElement(
       `${model} ${mode} mode (datalist / get_list_of_values) not ported (tipo ${tipo})`,
     );
@@ -809,6 +830,10 @@ async function buildRelationSelectDataElement(
   );
   const context: unknown[] = ctxResponse.result === false ? [] : ctxResponse.result;
 
+  // TIME-MACHINE: inject the snapshot so getData() returns it (after the relation
+  // filterTmData drops dd490 frames + non-locators) instead of the live matrix
+  // column. Only the DATALIST tm path reaches here with tmData present.
+  const hasTmData = Object.prototype.hasOwnProperty.call(source, 'tmData');
   const init: ComponentInit = {
     tipo,
     sectionTipo,
@@ -819,6 +844,7 @@ async function buildRelationSelectDataElement(
     matrix: opts.matrix,
     ontology: opts.ontology,
     langConfig: opts.langConfig,
+    ...(hasTmData ? { tmData: source.tmData ?? null } : {}),
   };
 
   // get_data_item shared fields. For a SECTION caller from_component_tipo stays the

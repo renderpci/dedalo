@@ -1,4 +1,4 @@
-import type { ApiHandler, ApiResponse, RqoLike } from '@dedalo/core-api';
+import type { ApiHandler, ApiResponse, RqoLike, GateSession } from '@dedalo/core-api';
 import {
   resolveGetValue,
   SUPPORTED_GET_VALUE_MODELS,
@@ -9,20 +9,29 @@ import { resolveCount, analyzeCountFilter, type CountSource } from './count_resp
 import { resolveMatrixTable } from './matrix_table.ts';
 import {
   buildComponentElementContext,
+  SEARCH_CONTEXT_MODELS,
   type ContextConfig,
   type ElementContextSource,
 } from './component_element_context.ts';
+import { buildRelationSelectComponentContext } from './relation_select_context.ts';
+import type { LabelsCache } from './labels_cache.ts';
 import {
   buildSectionElementContext,
   sectionHasUnportedButtonTools,
   sectionUsesV6RequestConfig,
 } from './section_element_context.ts';
 import { buildJsonRows, type ReadLocator } from './build_json_rows.ts';
+import {
+  buildDataElement,
+  UnsupportedDataElement,
+  type DataElementModel,
+  type DataElementSource,
+} from './component_data_element.ts';
 import type { ToolsQueryer } from './tools_registry.ts';
 import type { ToolPropertiesMap } from './tool_properties_cache.ts';
 import type { MediaConfig } from './media_config.ts';
 import type { Filter } from '@dedalo/contract';
-import { searchRecords } from '@dedalo/search';
+import { searchRecords, trimTipo, type ConformedFilter } from '@dedalo/search';
 import { tryCtx } from '@dedalo/runtime';
 import type { Db } from '@dedalo/db';
 import {
@@ -37,7 +46,25 @@ import {
   UnsupportedDelete,
   type DeleteSource,
 } from './delete_record.ts';
-import { UnsupportedInputTextElement } from './input_text_element.ts';
+import {
+  duplicateRecord,
+  UnsupportedDuplicate,
+  DUPLICATE_RESAVE_MODELS,
+  SECTION_INFO_TIPOS,
+  SKIP_COLUMNS,
+  MEDIA_COMPONENT_MODELS,
+  type DuplicateSource,
+} from './duplicate_record.ts';
+import {
+  buildInputTextElement,
+  UnsupportedInputTextElement,
+  type InputTextElementSource,
+} from './input_text_element.ts';
+import {
+  readRaw,
+  UnsupportedReadRaw,
+  type ReadRawRequest,
+} from './read_raw.ts';
 
 /**
  * The relation-bearing matrix tables the inverse-reference scan covers — the exact
@@ -216,6 +243,96 @@ const SUPPORTED_SAVE_MODELS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * Component models whose TIME-MACHINE read (the single-component `get_data` action
+ * with source.data_source='tm' + a matrix_id) is byte-reproducible.
+ *
+ * The tm read renders the historical snapshot from matrix_time_machine.data as the
+ * standalone single-component get_data element ({context:[ddo], data:[item]}). It is
+ * IDENTICAL to the same component's EDIT get_data element EXCEPT:
+ *   - context[0].mode = 'tm' (vs 'edit') — the only context delta,
+ *   - data[0].mode = 'tm',
+ *   - data[0].entries come from the tm snapshot (resolveDataEntries(mode='tm') =
+ *     the list/tm get_list_value transform) instead of the live matrix column.
+ * Everything else (tools/permissions/label/path + parent_tipo/parent_section_id/
+ * fallback_value) is byte-identical (verified live: input_text/number/email/date/
+ * json/geolocation tm vs edit differ ONLY in `mode` + entries source).
+ *
+ * EXCLUDED (declined → proxy, no guessed bytes) — all verified live:
+ *   - component_text_area: tm emits EXTRA data fields the edit element does not
+ *     (parent_section_tipo / created_by_user_id / matrix_id) — verified live — and
+ *     its tm context drops the edit toolbar_buttons/features; un-ported.
+ *   - the RELATION/SELECT family WHOSE TM CONTEXT IS THE RICH RELATION CONTEXT
+ *     (select/radio/check_box/relation_parent/related, portal): their tm context
+ *     carries target_sections/request_config/columns_map/path, which the tm dispatch's
+ *     generic context builder does NOT emit (only buildRelationSelectComponentContext
+ *     does, and it is not wired into the tm dispatch). Their tm DATA half (the dd490
+ *     relation-filter + datalist) IS now reproducible, but the rich context is not →
+ *     declined. (component_publication is the exception: its standalone context is the
+ *     BARE generic structure-context — see above — so its tm element is fully ported.)
+ *   - component_filter / component_iri tm: filter's tm context is the bare context but
+ *     its tm DATA half resolves the projects datalist (get_list_value over dd153) which
+ *     is the regular-user-vs-admin branch (not the simple datalist) — declined; iri's
+ *     get_properties unconditionally injects a source.request_config (component_dataframe
+ *     title) so its context is un-ported → declined.
+ *   - the DATAFRAME pairing branch (component_dataframe / from_component_tipo / id_key
+ *     pairing-key filtering over the merged tm row, component_common.php lines 1214-1225),
+ *     NOT reproduced — has_dataframe / dataframe_ddo components are gated out below.
+ */
+const SUPPORTED_TM_READ_MODELS: ReadonlySet<string> = new Set([
+  'component_input_text',
+  'component_number',
+  'component_date',
+  // component_email: NOW reproducible. The earlier decline was a real (latent) bug in
+  // the generic email value path, not a genuine divergence: PHP's get_data_lang filters
+  // by the CLASS-level supports_translation flag (TRUE for email, which extends
+  // component_string_common) — NOT the ontology `translatable` property (false for
+  // email). The tm/list `entries` come from get_list_value() = get_data_lang() over the
+  // tm snapshot, with the lang filter `el.lang === lg-nolan`: a snapshot item WITHOUT a
+  // `lang` key (the common email storage shape `{id,value}`) is filtered out →
+  // null-collapse → entries:null; an item WITH `lang:lg-nolan` is kept. ComponentGeneric
+  // now sets supportsTranslation=true for email so getFormattedDataLang applies that
+  // exact filter, making the email tm element byte-identical to the (already byte-green)
+  // email LIST/EDIT element + the generic structure-context. The same generic-path gate
+  // below excludes dataframe / non-default-view / tool_config / with_lang_versions.
+  'component_email',
+  // component_json / component_geolocation: NOW reproducible. Their COMPONENT
+  // structure-context's model-specific `features` block (json:
+  // {allowed_extensions:['json'], default_target_quality:null}; geo: {geo_provider})
+  // AND geo's sortable=false / no-`path` are ported in buildComponentElementContext
+  // (the get_element_context features work), so the tm element's context half now
+  // matches. The DATA half was already reproducible (the base-7 get_data_item off the
+  // tm snapshot via buildDataElement's tmData path — json→misc col, geo→geo col,
+  // entries verbatim from the snapshot). Verified byte-green vs the live PHP tm read
+  // (test18 json / test100 + numisdata264 geolocation). The same gate excludes the
+  // dataframe / non-default-view / tool_config / with_lang_versions specials.
+  'component_json',
+  'component_geolocation',
+  // component_publication: NOW reproducible. Publication is a relation-family component
+  // but its standalone get_element_context is the BARE generic structure-context (already
+  // byte-green via the generic builder + in SUPPORTED_ELEMENT_CONTEXT_MODELS), and its
+  // list/tm `entries` come from get_list_value() = the matched datalist labels. The tm
+  // get_data() relation-filter (drop dd490 frames + non-locators) is reproduced by
+  // ComponentRelationCommon.filterTmData; the datalist is enumerated by the injected
+  // record search. Byte-green ONLY for the V5 single-target / single-input_text-label
+  // shape (the same gate the publication LIST element uses) — a V6 / multi-target /
+  // multi-label / filtered_by_search* publication declines (the getListValue loud guard
+  // → UnsupportedDataElement, pre-declined by canHandleTmRead). Needs searchQueryer.
+  'component_publication',
+  // component_radio_button / component_check_box: NOW reproducible. Their tm context is
+  // the RICH relation request_config context (target_sections / request_config /
+  // columns_map / recursive path), which the tm dispatch rebuilds via
+  // buildRelationSelectComponentContext (mode 'tm') — the SAME byte-green builder the
+  // standalone get_element_context uses (mode-independent except the `mode` field). The
+  // tm DATA half = get_list_value() over the dd490-filtered tm snapshot (filterTmData)
+  // matched against the datalist (record-search enumerated). Byte-green ONLY for the V5
+  // single-target / single-input_text-label shape (selectLabelColumnsPorted for the
+  // context + selectEditDatalistPorted for the datalist) — a V6 / multi-target /
+  // multi-label radio/check declines. Needs searchQueryer.
+  'component_radio_button',
+  'component_check_box',
+]);
+
+/**
  * Component models whose get_element_context is fully ported + byte-verified.
  * canHandleRequest gates on these for the get_element_context action; every
  * other model / element kind (section, area, tool, other components) declines →
@@ -225,6 +342,113 @@ export const SUPPORTED_ELEMENT_CONTEXT_MODELS: ReadonlySet<string> = new Set([
   'component_input_text',
   'component_number',
   'component_date',
+  // component_email / component_publication: their standalone get_element_context
+  // is the BARE generic structure-context (typo…path) in BOTH modes — no
+  // model-specific context fields (verified live). The generic builder reproduces
+  // them byte-exactly (same family as input_text/number/date).
+  'component_email',
+  'component_publication',
+  // component_text_area: LIST-MODE ONLY. The text_area *_json controller adds
+  // context.toolbar_buttons + context.features (the dd_tipos source-constant bag)
+  // ONLY in the EDIT-mode branch; the LIST context is the bare generic shape. The
+  // EDIT mode is declined (those edit-only fields are not ported here) — gated by
+  // the per-mode check in canHandleElementContext.
+  'component_text_area',
+  // component_json: the generic structure-context PLUS context.features =
+  // {allowed_extensions:['json'], default_target_quality:null} (the fixed
+  // component_json_json full-context add — present in BOTH modes because the
+  // standalone get_element_context always takes the full context branch). Ported
+  // in buildComponentElementContext.
+  'component_json',
+  // component_geolocation: the generic structure-context PLUS context.features =
+  // {geo_provider} (properties.geo_provider ?? DEDALO_GEO_PROVIDER), sortable=false
+  // (the class get_sortable override → NO `path` key). Both modes. Ported in
+  // buildComponentElementContext. Needs DEDALO_GEO_PROVIDER in ContextConfig.
+  'component_geolocation',
+  // component_filter: the generic structure-context (add_request_config=false → NO
+  // request_config/columns_map, path=[]) PLUS a MINIMAL target_sections =
+  // [{tipo:'dd153', label}] (just tipo+label, NO permissions). Both modes. Ported
+  // in buildComponentElementContext.
+  'component_filter',
+  // component_select: the relation request_config context (target_sections +
+  // request_config + columns_map + recursive path) reused from the byte-green
+  // build_json_rows in-section select context. The standalone context is identical
+  // (the controller's context branch is mode-independent). Routed to
+  // buildRelationSelectComponentContext.
+  'component_select',
+  // component_relation_parent / component_relation_related: the relation
+  // request_config context (request_config + columns_map + view='line' +
+  // children_view='text' + path), NO target_sections (select-only). relation_parent
+  // uses the generic recursive get_query_path; relation_related uses its fixed
+  // two-step get_order_path override (self + hierarchy25). Both carry a stored V6
+  // source.request_config (buildRequestConfigV6List). Routed to
+  // buildRelationSelectComponentContext. Gated: no section_list child with a
+  // properties.view override (the list-mode view-from-section_list path is not
+  // reproduced — decline → proxy).
+  'component_relation_parent',
+  'component_relation_related',
+  // component_radio_button: its standalone get_element_context is the SAME shape as
+  // component_select (the radio_button_json controller builds get_structure_context
+  // with add_request_config=true) EXCEPT target_sections is the MINIMAL {tipo,label}
+  // descriptor (the array_map over get_ar_target_section_tipo(), no permissions block)
+  // — NOT the rich select descriptor. request_config (V5), columns_map and the
+  // recursive get_order_path `path` are byte-identical to the select shape. Routed to
+  // buildRelationSelectComponentContext. Gated: V5 only (no source.request_config),
+  // and the V5 target-section enumeration must resolve cleanly (no config_warnings).
+  'component_radio_button',
+  // component_check_box: the check_box_json controller builds get_structure_context
+  // with add_request_config=FALSE, so the DDO carries NO request_config / columns_map
+  // and path stays [] (the sortable get_order_path add needs add_request_config=true).
+  // It then appends the MINIMAL target_sections ({tipo,label}) over
+  // get_ar_target_section_tipo() — same shape as component_filter but with the
+  // V5-relation targets instead of the fixed dd153. Routed to
+  // buildRelationSelectComponentContext (which builds the V5 request_config ONLY to
+  // enumerate the target sections, then suppresses it from the output). Same gates as
+  // radio.
+  'component_check_box',
+  // component_section_id: its standalone get_element_context = the generic
+  // structure-context PLUS context.color = ontology_node::get_color(section_tipo)
+  // (the SECTION node's properties.color ?? '#b9b9b9'), inserted between sortable
+  // and legacy_model, AND tools=[] (component_section_id::get_tools() is overridden
+  // to [] in every mode). The standalone context build takes add_request_config but
+  // its single-component request_config yields no columns → path stays [] (NOT the
+  // in-section build_json_rows `column:'section_id'` step, which only appears under
+  // add_rqo=true in the section walk). Both modes (list+edit) take the full-context
+  // branch (color present in both). Ported in buildComponentElementContext. Verified
+  // byte-green vs live (numisdata1522/numisdata8, list+edit).
+  'component_section_id',
+  // component_iri: INTENTIONALLY ABSENT — confirmed un-gatable (final sweep,
+  // re-checked live). There is NO non-source iri to gate: component_iri::get_properties()
+  // UNCONDITIONALLY injects `source.request_config` carrying the dd560 "Title dataframe"
+  // (a component_dataframe) ddo_map into EVERY iri's properties (class.component_iri.php
+  // :476-523), so for any iri the standalone get_element_context (a) emits a `properties`
+  // object whose `source` the ontology-verbatim generic builder does NOT have, and (b)
+  // builds a FULL V6 request_config over that injected component_dataframe ddo_map —
+  // resolving the target section ddo (buttons/color/matrix_table) AND emitting
+  // `config_warnings` from the dataframe-ddo_map validation. The class additionally forces
+  // with_lang_versions=true + supports_translation=true. None of the request_config-over-
+  // dataframe build is ported, and the injection is class-universal (verified: even iris
+  // whose ontology properties are only {css} — e.g. numisdata98 — show the injected
+  // source.request_config + request_config[] + config_warnings live). → DECLINE → proxy.
+]);
+
+/**
+ * The SUPPORTED_ELEMENT_CONTEXT_MODELS that route to the relation/select context
+ * builder (buildRelationSelectComponentContext) instead of the generic
+ * buildComponentElementContext: the models whose standalone context carries the
+ * relation request_config block (or, for check_box, derives target_sections from it).
+ */
+const RELATION_CONTEXT_MODELS: ReadonlySet<string> = new Set([
+  'component_select',
+  'component_relation_parent',
+  'component_relation_related',
+  'component_radio_button',
+  'component_check_box',
+]);
+
+/** Models whose standalone get_element_context is byte-reproducible ONLY in LIST mode. */
+const LIST_ONLY_ELEMENT_CONTEXT_MODELS: ReadonlySet<string> = new Set([
+  'component_text_area',
 ]);
 
 /**
@@ -246,6 +470,13 @@ export type CoreApiReadHandlerOptions = Omit<ResolveGetValueOptions, 'matrixTabl
    * tool_properties_cache.ts.
    */
   toolProperties?: ToolPropertiesMap;
+  /**
+   * UI-labels cache (application lang) for the SEARCH-mode element context: the
+   * search_options_title operator tooltip is built from label::get_label() reads.
+   * Injected at boot (server) or pinned (tests). Optional: without it, search-mode
+   * get_element_context declines → proxies to PHP. See labels_cache.ts.
+   */
+  labelsCache?: LabelsCache;
   /**
    * Per-instance media config (the frozen DEDALO_IMAGE_* constants, built via
    * mediaConfigFromEnv at boot). Threaded into the element builder so the
@@ -353,11 +584,86 @@ export function createCoreApiReadHandler(opts: CoreApiReadHandlerOptions): ApiHa
       return true;
     }
 
+    // SEARCH-mode component branch (mode:'search'): the search-builder UI requests
+    // a component element to render its search input. The context is the same
+    // structure-context PLUS config.parent_grouper_label + search_operators_info +
+    // search_options_title. It is byte-reproducible for the scalar models whose
+    // operator map is static (SEARCH_CONTEXT_MODELS) AND only when the UI-labels
+    // cache is wired (search_options_title is built from label::get_label). Other
+    // models (select/relation/portal/publication/filter/json/geo/…) carry an
+    // un-ported search-form config (target sections, datalists, operator overrides)
+    // → decline → proxy.
+    const ctxMode = typeof source.mode === 'string' ? source.mode : 'list';
+    if (ctxMode === 'search') {
+      if (opts.labelsCache === undefined) return false;
+      if (!SEARCH_CONTEXT_MODELS.has(model)) return false;
+      const sProps = (await opts.ontology.getProperties(tipo)) as Record<string, unknown> | null;
+      if (sProps) {
+        // Decline any component whose context build needs request_config / add_rqo:
+        //  - tool_config: the tool ddo_map 'self' resolution path (not ported).
+        //  - source: a STORED request_config in properties (e.g. component_iri's
+        //    properties.source.request_config) → the full request_config build.
+        //  - unique / has_dataframe: set add_rqo=true in the *_json controller →
+        //    request_config + dataframe subdatum (not ported).
+        if (
+          Object.prototype.hasOwnProperty.call(sProps, 'tool_config') ||
+          Object.prototype.hasOwnProperty.call(sProps, 'source') ||
+          sProps.unique === true ||
+          sProps.has_dataframe === true
+        ) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    // LIST/EDIT component branch (the standalone structure-context).
     if (!SUPPORTED_ELEMENT_CONTEXT_MODELS.has(model)) return false;
+    // LIST-only models (text_area: its EDIT context adds the un-ported
+    // toolbar_buttons/features) decline in any non-list mode → proxy.
+    if (LIST_ONLY_ELEMENT_CONTEXT_MODELS.has(model) && ctxMode !== 'list') return false;
     // Decline components carrying tool_config in their ontology properties: the
     // tool ddo_map 'self' resolution path is not ported in this phase.
     const props = await opts.ontology.getProperties(tipo);
     if (props && Object.prototype.hasOwnProperty.call(props, 'tool_config')) return false;
+    // component_geolocation: a per-component properties.geo_provider override is
+    // reproduced, but DEDALO_GEO_PROVIDER must be wired (it always is via the env
+    // ContextConfig). No extra gate beyond tool_config.
+    // The relation-family models (select / relation_parent / relation_related)
+    // route to buildRelationSelectComponentContext. Apply the per-model gates that
+    // mirror its un-ported paths:
+    if (RELATION_CONTEXT_MODELS.has(model)) {
+      const p = props as Record<string, unknown> | null;
+      // A V5 select whose label columns are not all ported (nested relations /
+      // media labels / V6 source / section_list children) would diverge in the
+      // request_config build → decline (mirrors selectLabelColumnsPorted).
+      if (model === 'component_select' && !(await selectLabelColumnsPorted(tipo))) return false;
+      // component_radio_button / component_check_box: their standalone context's
+      // target_sections (and, for radio, the request_config block + recursive path)
+      // are built from the SAME V5 relation-node request_config as a select. They are
+      // byte-reproducible under the identical constraints: V5 only (no
+      // source.request_config), no section_list children, and every show-label column
+      // a ported leaf input_text-family/generic model (selectLabelColumnsPorted). A
+      // V6/nested/media-label radio/check would diverge → decline → proxy.
+      if (model === 'component_radio_button' || model === 'component_check_box') {
+        if (!(await selectLabelColumnsPorted(tipo))) return false;
+      }
+      // relation_parent / relation_related: decline when the component carries a
+      // section_list child with a properties.view override (the LIST-mode
+      // view-from-section_list resolution is not reproduced), or a non-default
+      // dataframe/lang special. The common case (a plain V6 relation column) has
+      // no section_list child, so this rarely declines.
+      if (model === 'component_relation_parent' || model === 'component_relation_related') {
+        if (p && (p.has_dataframe === true || p.with_lang_versions === true)) return false;
+        const children = await opts.ontology.getChildren(tipo);
+        for (const child of children) {
+          if ((await opts.ontology.getModelByTipo(child)) === 'section_list') {
+            const cp = (await opts.ontology.getProperties(child)) as { view?: unknown } | null;
+            if (cp && cp.view !== undefined) return false;
+          }
+        }
+      }
+    }
     return true;
   }
 
@@ -382,6 +688,82 @@ export function createCoreApiReadHandler(opts: CoreApiReadHandlerOptions): ApiHa
       out.push({ section_tipo: st, section_id: sidNum });
     }
     return out;
+  }
+
+  /**
+   * Enrich a request sqo's `filter` exactly as PHP conform_filter does, returning a
+   * NEW request-sqo object whose `filter` carries the per-clause fields the live
+   * read surfaces in `sqo_session.filter` AND in the overlaid request_config sqo:
+   *   - join_id      : null for single-step paths (the only shape served natively),
+   *   - table_alias  : trim_tipo(main_section_tipo) (the records-search main alias),
+   *   - table        : the resolved matrix table for the clause's section_tipo,
+   *   - component_path: [last path step's component_tipo].
+   * Key order (…path, join_id, table_alias, table, component_path) mirrors PHP's
+   * mutation order (search.php sets join_id/table_alias/table; get_search_query then
+   * appends component_path) so the serialized bytes match. Nested $and/$or/$not
+   * groups recurse; non-clause group items pass through. The original sqo is NOT
+   * mutated. The data the WHERE builder consumes is the SEPARATE conformed tree
+   * (analyzeCountFilter) — this enrichment is ONLY for the surfaced session sqo.
+   */
+  async function enrichRequestSqoFilter(
+    sqoObj: Record<string, unknown>,
+    mainSectionTipo: string,
+  ): Promise<Record<string, unknown>> {
+    const rawFilter = sqoObj.filter;
+    if (rawFilter === null || typeof rawFilter !== 'object') return sqoObj;
+    const mainAlias = trimTipo(mainSectionTipo) ?? 'mix';
+    const tableCache = new Map<string, string>();
+    const resolveTable = async (st: string): Promise<string> => {
+      const cached = tableCache.get(st);
+      if (cached !== undefined) return cached;
+      const t = (await resolveMatrixTable(opts.ontology, st)) ?? 'matrix';
+      tableCache.set(st, t);
+      return t;
+    };
+
+    const enrichGroup = async (group: Record<string, unknown>): Promise<Record<string, unknown>> => {
+      const out: Record<string, unknown> = {};
+      for (const [op, items] of Object.entries(group)) {
+        if (!Array.isArray(items)) {
+          out[op] = items;
+          continue;
+        }
+        const enrichedItems: unknown[] = [];
+        for (const item of items) {
+          if (item === null || typeof item !== 'object') {
+            enrichedItems.push(item);
+            continue;
+          }
+          const obj = item as Record<string, unknown>;
+          // A leaf clause carries `path`; a nested group does not.
+          if (!Object.prototype.hasOwnProperty.call(obj, 'path')) {
+            enrichedItems.push(await enrichGroup(obj));
+            continue;
+          }
+          const path = Array.isArray(obj.path) ? (obj.path as Array<Record<string, unknown>>) : [];
+          const last = path[path.length - 1];
+          const compTipo =
+            last && typeof last.component_tipo === 'string' ? last.component_tipo : undefined;
+          const stepSt =
+            last && typeof last.section_tipo === 'string' ? last.section_tipo : mainSectionTipo;
+          const table = await resolveTable(stepSt);
+          // Preserve original key order, then append the enrichment keys in PHP order.
+          const enriched: Record<string, unknown> = { ...obj };
+          enriched.join_id = null;
+          enriched.table_alias = mainAlias;
+          enriched.table = table;
+          if (compTipo !== undefined) {
+            enriched.component_path = [compTipo];
+          }
+          enrichedItems.push(enriched);
+        }
+        out[op] = enrichedItems;
+      }
+      return out;
+    };
+
+    const enrichedFilter = await enrichGroup(rawFilter as Record<string, unknown>);
+    return { ...sqoObj, filter: enrichedFilter };
   }
 
   /**
@@ -658,6 +1040,83 @@ export function createCoreApiReadHandler(opts: CoreApiReadHandlerOptions): ApiHa
   }
 
   /**
+   * canHandleRequest for the TIME-MACHINE single-component read: the `get_data`
+   * action with source.data_source='tm' + a numeric matrix_id. Accept only:
+   *   - the context wiring is present (contextConfig + toolsQueryer; the element
+   *     reuses the byte-green component structure-context builder),
+   *   - source is a COMPONENT in a SUPPORTED_TM_READ_MODELS model (input_text /
+   *     number / email / date / json / geolocation),
+   *   - the component is NON-dataframe (has_dataframe true or a non-empty
+   *     dataframe_ddo would trigger the merged-tm-row filtering, un-ported) and
+   *     carries no non-default `view` / `with_lang_versions` / `tool_config`
+   *     (those surface extra context fields the standalone builder does not emit),
+   *   - the input_text specials (rsc329 notes / dd546 activity) decline,
+   *   - a positive integer section_id + matrix_id are present.
+   * Everything else declines → proxy to PHP (which has the full tm + dataframe
+   * machinery). The matrix_time_machine read itself can't fail the gate (a missing
+   * row → entries=null, exactly as PHP renders it).
+   */
+  async function canHandleTmRead(rqo: RqoLike): Promise<boolean> {
+    if (opts.contextConfig === undefined || opts.toolsQueryer === undefined) return false;
+    const source = (rqo as { source?: Record<string, unknown> }).source;
+    if (!source) return false;
+    if (source.data_source !== 'tm') return false;
+    // matrix_id must be a positive integer (the tm row PK).
+    const midRaw = source.matrix_id;
+    const matrixId =
+      typeof midRaw === 'number' ? midRaw : Number.parseInt(String(midRaw ?? ''), 10);
+    if (!Number.isInteger(matrixId) || matrixId < 1) return false;
+    if (typeof source.tipo !== 'string') return false;
+    const tipo = source.tipo;
+    const model =
+      typeof source.model === 'string' ? source.model : await opts.ontology.getModelByTipo(tipo);
+    if (model === null || !SUPPORTED_TM_READ_MODELS.has(model)) return false;
+    // section_id must be a concrete positive integer.
+    const sidRaw = source.section_id;
+    const sectionId =
+      typeof sidRaw === 'number' ? sidRaw : Number.parseInt(String(sidRaw ?? ''), 10);
+    if (!Number.isInteger(sectionId) || sectionId < 1) return false;
+    // input_text specials the element builder declines.
+    if (tipo === 'rsc329' || tipo === 'dd546') return false;
+    // dataframe / lang-versions / non-default view / tool_config specials decline.
+    const props = (await opts.ontology.getProperties(tipo)) ?? {};
+    const p = props as {
+      has_dataframe?: unknown;
+      dataframe_ddo?: unknown;
+      with_lang_versions?: unknown;
+      view?: unknown;
+      tool_config?: unknown;
+    };
+    if (p.has_dataframe === true || p.with_lang_versions === true) return false;
+    if (Object.prototype.hasOwnProperty.call(props, 'dataframe_ddo') && p.dataframe_ddo) {
+      return false;
+    }
+    if (p.view !== undefined && p.view !== 'default') return false;
+    if (Object.prototype.hasOwnProperty.call(props, 'tool_config')) return false;
+    // component_publication (DATALIST family): the tm `entries` = get_list_value()
+    // over the datalist, which needs the SQL queryer to enumerate the target section
+    // AND the byte-reproducible single-target / single-input_text-label V5 shape (the
+    // getListOfValues loud guard would otherwise throw → decline). Reuse the select
+    // edit datalist gate (same shape: exactly one target section + one leaf label, no
+    // V6 source / filtered_by_search* / section_list children).
+    if (model === 'component_publication') {
+      if (opts.searchQueryer === undefined) return false;
+      if (!(await selectEditDatalistPorted(tipo))) return false;
+    }
+    // component_radio_button / component_check_box: the tm element needs BOTH the rich
+    // relation CONTEXT (buildRelationSelectComponentContext — byte-green only for the V5
+    // leaf-label shape, selectLabelColumnsPorted) AND the datalist DATA (get_list_value
+    // — selectEditDatalistPorted: exactly one target + one leaf input_text label). Needs
+    // the SQL queryer to enumerate the target section's datalist.
+    if (model === 'component_radio_button' || model === 'component_check_box') {
+      if (opts.searchQueryer === undefined) return false;
+      if (!(await selectLabelColumnsPorted(tipo))) return false;
+      if (!(await selectEditDatalistPorted(tipo))) return false;
+    }
+    return true;
+  }
+
+  /**
    * canHandleRequest for the build_json_rows `read` (default action) path: accept
    * only the narrow, byte-verified case — a SECTION in LIST mode whose
    * request_config columns are ALL input_text, V5 (not V6), no tool_config /
@@ -695,11 +1154,16 @@ export function createCoreApiReadHandler(opts: CoreApiReadHandlerOptions): ApiHa
     // ── path selection ──
     //  - EXPLICIT locators (sqo.filter_by_locators present, well-formed): the
     //    capped explicit-record render.
+    //  - FILTERED search (sqo.filter present, NO filter_by_locators, EXPLICIT
+    //    limit+offset, NO custom order, fully-ported filter): the real SEARCH-RESULTS
+    //    view → searchRecords WITH the conformed filter WHERE. Needs the SQL queryer.
     //  - PLAIN sqo (section_tipo + limit/offset, NO filter_by_locators, NO filter,
-    //    NO order): the real LIST view → searchRecords. Needs the SQL queryer.
+    //    NO order): the real LIST view → searchRecords. DECLINED (session-stateful).
     const hasFbl =
       sqoObj !== undefined &&
       Object.prototype.hasOwnProperty.call(sqoObj, 'filter_by_locators');
+    const hasFilter =
+      sqoObj !== undefined && Object.prototype.hasOwnProperty.call(sqoObj, 'filter');
     const locators = hasFbl ? explicitLocators(sqoObj) : null;
 
     // The limit (cap differs per path: explicit is single-record; list is paginated).
@@ -714,6 +1178,46 @@ export function createCoreApiReadHandler(opts: CoreApiReadHandlerOptions): ApiHa
       if (locators.length > MAX_BUILD_JSON_ROWS_LIMIT) return false;
       // every locator must target the request's section_tipo (single-section render).
       if (locators.some((l) => l.section_tipo !== sectionTipo)) return false;
+    } else if (hasFilter) {
+      // ── FILTERED-search path (searchRecords + conformed filter WHERE) ──
+      // VERIFIED LIVE (rsc205, str-contains 'ed' on rsc141, limit 5 offset 0): the
+      // matched, paginated section_ids — and the WHOLE rendered response — are
+      // BYTE-STABLE across (a) a fresh session, (b) a session with a prior plain
+      // read, and (c) a session with a prior filtered read. That is because PHP's
+      // session merge (dd_core_api build_json_rows, lines 2170-2198) only fills SQO
+      // properties the request OMITS (`!property_exists($sqo, …)`): when the request
+      // carries `filter` AND `limit` AND `offset`, NONE are inherited from session, so
+      // the explicit filter is authoritative and the search is byte-stable
+      // statelessly. We therefore serve it natively, gating tightly so the session
+      // merge can never change the result:
+      //   - section_tipo must be exactly [sectionTipo] (single-section search),
+      //   - LIST mode only (edit forces limit=1 + a different shape),
+      //   - EXPLICIT limit AND offset present (else session could inject them),
+      //   - NO custom sqo.order (a custom order flips $use_window=true — not ported),
+      //   - NO filter_by_locators in the sqo (handled above),
+      //   - the filter must CONFORM (security gate) AND use ONLY ported operators/
+      //     families (string ==/contains, number =) — else decline → proxy.
+      if (mode !== 'list') return false;
+      if (opts.searchQueryer === undefined) return false;
+      const stArr = sqoObj?.section_tipo;
+      if (!Array.isArray(stArr) || stArr.length !== 1 || stArr[0] !== sectionTipo) return false;
+      // limit + offset must be EXPLICIT integers in the request (no session merge).
+      if (!Object.prototype.hasOwnProperty.call(sqoObj!, 'limit')) return false;
+      if (!Object.prototype.hasOwnProperty.call(sqoObj!, 'offset')) return false;
+      if (!Number.isInteger(limit) || limit < 0) return false;
+      const rawOffset = sqoObj!.offset;
+      const offsetNum =
+        typeof rawOffset === 'number' ? rawOffset : Number.parseInt(String(rawOffset ?? ''), 10);
+      if (!Number.isInteger(offsetNum) || offsetNum < 0) return false;
+      // A custom order is not ported (would flip $use_window=true → wrapper subquery).
+      if (Object.prototype.hasOwnProperty.call(sqoObj!, 'order')) return false;
+      // The filter must conform + be fully ported (analyzeCountFilter never throws;
+      // invalid/unsupported/empty → null → decline → proxy).
+      const conformed = await analyzeCountFilter(sqoObj!.filter as Filter, {
+        resolveModel: (tipo) => opts.ontology.getModelByTipo(tipo),
+        dataLang: opts.langConfig.dataLang,
+      });
+      if (conformed === null) return false;
     } else {
       // ── plain-sqo LIST path (searchRecords) — DECLINED → proxy to PHP ──
       // PHP's plain-sqo list (no explicit filter_by_locators) is SESSION-STATEFUL:
@@ -989,6 +1493,85 @@ export function createCoreApiReadHandler(opts: CoreApiReadHandlerOptions): ApiHa
   }
 
   /**
+   * canHandleRequest for the `duplicate` action — copy a section record → NEW record.
+   * Accept ONLY an all-ported-save-model section, gated on the ACTUAL populated source
+   * columns (the duplicate re-saves only what is stored). Accept when:
+   *   - the db is wired (reserved-conn allocator + INSERT + re-save cascade),
+   *   - the session is GLOBAL-ADMIN (root): permission >= 2 AND the only byte-stable
+   *     component_filter::set_data branch (the regular-user non-access-locator merge is
+   *     not reproducible),
+   *   - source.section_tipo + a concrete section_id (>=1), a real SECTION model that is
+   *     NOT the activity section (dd542) nor the projects section (dd153, the extra
+   *     set_projects write), NOT carrying tool_config,
+   *   - the source row EXISTS and its relation_search column is NULL (the hierarchical
+   *     ancestor-index builder is un-ported),
+   *   - EVERY populated component (skipping the data/meta/relation_search columns + the
+   *     dd196 audit group) is a ported NOLAN re-save model (input_text/text_area/number/
+   *     date/select/filter/publication/radio_button/check_box), NOT media/portal/
+   *     relation_parent/children, and NOT translatable.
+   * Everything else declines → proxy to PHP.
+   */
+  async function canHandleDuplicate(rqo: RqoLike, session?: GateSession): Promise<boolean> {
+    if (opts.db === undefined) return false;
+    // Only a global-admin session is byte-reproducible (filter pass-through + perm>=2).
+    // The session is the gate-time snapshot (server passes it to canHandleRequest BEFORE
+    // the request context exists, so tryCtx() is empty here — use the param).
+    if (!session || session.isGlobalAdmin !== true || session.userId === null) return false;
+
+    const source = (rqo as { source?: Record<string, unknown> }).source;
+    if (!source || typeof source.section_tipo !== 'string' || source.section_tipo === '') {
+      return false;
+    }
+    const sectionTipo = source.section_tipo;
+    if (sectionTipo === 'dd542' || sectionTipo === 'dd153') return false;
+    const sidRaw = source.section_id;
+    const sectionId =
+      typeof sidRaw === 'number' ? sidRaw : Number.parseInt(String(sidRaw ?? ''), 10);
+    if (!Number.isInteger(sectionId) || sectionId < 1) return false;
+
+    // Must be a real section, no tool_config.
+    const model = await opts.ontology.getModelByTipo(sectionTipo);
+    if (model !== 'section') return false;
+    const props = await opts.ontology.getProperties(sectionTipo);
+    if (props && Object.prototype.hasOwnProperty.call(props, 'tool_config')) return false;
+
+    // The source row must EXIST.
+    const matrixTable = (await resolveMatrixTable(opts.ontology, sectionTipo)) ?? 'matrix';
+    const row = await opts.matrix.getRow(matrixTable, sectionTipo, sectionId);
+    if (row === null) return false;
+
+    // relation_search must be NULL (the ancestor-index build is un-ported).
+    const relSearch = (row as Record<string, unknown>).relation_search;
+    if (relSearch !== null && relSearch !== undefined) return false;
+
+    // EVERY populated non-skip component must be a ported NOLAN re-save model.
+    const RESAVE_COLUMNS = ['relation', 'string', 'date', 'iri', 'geo', 'number', 'media', 'misc'];
+    for (const col of RESAVE_COLUMNS) {
+      if (SKIP_COLUMNS.has(col)) continue;
+      const colData = (row as Record<string, unknown>)[col];
+      if (colData === null || colData === undefined || typeof colData !== 'object') continue;
+      for (const [tipo, items] of Object.entries(colData as Record<string, unknown>)) {
+        if (items === null) continue;
+        if (SECTION_INFO_TIPOS.has(tipo)) continue; // dd196 audit group skipped
+        const cm = await opts.ontology.getModelByTipo(tipo);
+        if (cm === null) return false;
+        if (MEDIA_COMPONENT_MODELS.has(cm)) return false;
+        if (cm === 'component_portal') return false;
+        if (cm === 'component_relation_parent' || cm === 'component_relation_children') return false;
+        if (!DUPLICATE_RESAVE_MODELS.has(cm)) return false;
+        // Translatable input_text/text_area produce per-lang TM rows — not ported.
+        if (
+          (cm === 'component_input_text' || cm === 'component_text_area') &&
+          (await opts.ontology.getTranslatable(tipo))
+        ) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
    * canHandleRequest for the `delete` action — the NARROW first DELETE. Accept only:
    *   - the db is wired (reserved-conn pipeline),
    *   - delete_mode==='delete_record' (delete_data, the data-only empty, is not ported),
@@ -1069,15 +1652,91 @@ export function createCoreApiReadHandler(opts: CoreApiReadHandlerOptions): ApiHa
     return true;
   }
 
+  /**
+   * canHandleRequest for the `read_raw` action — a RAW record read driven by a base
+   * list search. Accept only the byte-reproducible shape:
+   *   - the SQL queryer is wired (drives the records search),
+   *   - options.section_tipo + options.tipo present,
+   *   - type ∈ {section, component} (target_section's relation scan is declined),
+   *   - for component: the model resolves to a known matrix column,
+   *   - the sqo is EITHER empty (→ result:[]) OR a NO-filter / fully-CONFORMING-filter
+   *     section_tipo list with NO custom order / filter_by_locators. An un-ported /
+   *     non-conforming filter, a custom order, or filter_by_locators DECLINES → proxy.
+   * Everything else proxies to PHP (PHP owns the un-ported search shapes + the
+   * target_section scan + non-superuser permission checks).
+   */
+  async function canHandleReadRaw(rqo: RqoLike): Promise<boolean> {
+    if (opts.searchQueryer === undefined) return false;
+    const options = (rqo as { options?: Record<string, unknown> }).options;
+    if (!options || typeof options.section_tipo !== 'string' || options.section_tipo === '') {
+      // PHP returns an error envelope (not a proxy) for empty section_tipo; serve it
+      // natively so the byte-identical error is reproduced.
+      return options !== undefined;
+    }
+    const tipo = typeof options.tipo === 'string' ? options.tipo : '';
+    if (tipo === '') return true; // the (reproducible) empty-tipo error envelope.
+    const type = typeof options.type === 'string' ? options.type : null;
+    if (type === 'target_section') return false; // relation scan not ported → proxy.
+    if (type !== 'section' && type !== 'component') return false;
+
+    if (type === 'component') {
+      const model =
+        typeof options.model === 'string'
+          ? options.model
+          : await opts.ontology.getModelByTipo(tipo);
+      // An un-resolvable model declines (proxy); a resolvable one whose column is
+      // unknown is served natively (the byte-identical error envelope, in readRaw).
+      if (model === null) return false;
+    }
+
+    const sqo = (rqo as { sqo?: unknown }).sqo;
+    const sqoEmpty =
+      sqo === null ||
+      sqo === undefined ||
+      (typeof sqo === 'object' && Object.keys(sqo as Record<string, unknown>).length === 0);
+    if (sqoEmpty) return true; // result:[] — reproducible.
+
+    if (typeof sqo !== 'object') return false;
+    const sqoObj = sqo as Record<string, unknown>;
+    if (Object.prototype.hasOwnProperty.call(sqoObj, 'filter_by_locators')) return false;
+    if (Object.prototype.hasOwnProperty.call(sqoObj, 'order')) return false;
+    if (Object.prototype.hasOwnProperty.call(sqoObj, 'filter')) {
+      // Only a fully-conforming + ported filter is served (else proxy).
+      const conformed = await analyzeCountFilter(sqoObj.filter as Filter, {
+        resolveModel: (t) => opts.ontology.getModelByTipo(t),
+        dataLang: opts.langConfig.dataLang,
+      });
+      if (conformed === null) return false;
+    }
+    return true;
+  }
+
   return {
     ddApi: 'dd_core_api',
-    apiActions: new Set(['read', 'count', 'get_element_context', 'save', 'create', 'delete']),
+    apiActions: new Set([
+      'read',
+      'read_raw',
+      'count',
+      'get_element_context',
+      'save',
+      'create',
+      'duplicate',
+      'delete',
+    ]),
 
-    async canHandleRequest(rqo: RqoLike): Promise<boolean> {
+    async canHandleRequest(rqo: RqoLike, session?: GateSession): Promise<boolean> {
       const action = (rqo as { action?: unknown }).action;
 
       if (action === 'create') {
         return canHandleCreate(rqo);
+      }
+
+      if (action === 'duplicate') {
+        return canHandleDuplicate(rqo, session);
+      }
+
+      if (action === 'read_raw') {
+        return canHandleReadRaw(rqo);
       }
 
       if (action === 'delete') {
@@ -1114,10 +1773,11 @@ export function createCoreApiReadHandler(opts: CoreApiReadHandlerOptions): ApiHa
         return conformed !== null;
       }
 
-      // read: two native sub-paths.
+      // read: three native sub-paths.
       //  - source.action==='get_value' → the per-component plain-value path.
+      //  - source.data_source==='tm'   → the single-component TIME-MACHINE read.
       //  - the DEFAULT action (no/other source.action) → build_json_rows, the
-      //    section record-render. Both decline → proxy when not fully ported.
+      //    section record-render. All decline → proxy when not fully ported.
       const source = (rqo as { source?: Record<string, unknown> }).source;
       if (!source) return false;
       if (source.action === 'get_value') {
@@ -1127,11 +1787,66 @@ export function createCoreApiReadHandler(opts: CoreApiReadHandlerOptions): ApiHa
           typeof source.model === 'string' ? source.model : await opts.ontology.getModelByTipo(tipo);
         return model !== null && SUPPORTED_GET_VALUE_MODELS.has(model);
       }
+      // TIME-MACHINE single-component read (get_data with data_source='tm').
+      if (source.data_source === 'tm') {
+        return canHandleTmRead(rqo);
+      }
       // build_json_rows default action.
       return canHandleBuildJsonRows(rqo);
     },
 
     async dispatch(action: string, rqo: RqoLike): Promise<ApiResponse> {
+      if (action === 'read_raw') {
+        if (opts.searchQueryer === undefined) {
+          return {
+            result: false,
+            msg: 'Error. Request failed [read_raw] ',
+            errors: ['read_raw not wired'],
+          };
+        }
+        const searchQueryer = opts.searchQueryer;
+        const recordSearch = async (
+          searchSqo: { section_tipo: string[]; limit?: number | string; offset?: number },
+          filter?: ConformedFilter,
+        ) =>
+          searchRecords(searchSqo, {
+            queryer: searchQueryer,
+            resolveTable: async (st) => (await resolveMatrixTable(opts.ontology, st)) ?? 'matrix',
+            ...(filter ? { filter } : {}),
+          });
+        // Re-conform the filter (stateless) so dispatch never depends on
+        // canHandleRequest having run. canHandleRequest already proved it conforms.
+        const sqoObj = (rqo as { sqo?: unknown }).sqo;
+        const conformed =
+          sqoObj !== null &&
+          typeof sqoObj === 'object' &&
+          Object.prototype.hasOwnProperty.call(sqoObj, 'filter')
+            ? await analyzeCountFilter((sqoObj as Record<string, unknown>).filter as Filter, {
+                resolveModel: (t) => opts.ontology.getModelByTipo(t),
+                dataLang: opts.langConfig.dataLang,
+              })
+            : null;
+        try {
+          const { result, msg, errors, table } = await readRaw(
+            rqo as ReadRawRequest,
+            { ontology: opts.ontology, matrix: opts.matrix, recordSearch },
+            conformed ?? undefined,
+          );
+          return table !== undefined
+            ? { result, msg, errors, table }
+            : { result, msg, errors };
+        } catch (err) {
+          if (err instanceof UnsupportedReadRaw) {
+            return {
+              result: false,
+              msg: 'Error. Request failed [read_raw] ',
+              errors: [err.message],
+            };
+          }
+          throw err;
+        }
+      }
+
       if (action === 'create') {
         if (opts.db === undefined) {
           return { result: false, msg: 'Error. Request failed [create]', errors: ['create not wired'] };
@@ -1162,6 +1877,50 @@ export function createCoreApiReadHandler(opts: CoreApiReadHandlerOptions): ApiHa
         } catch (err) {
           if (err instanceof UnsupportedCreate) {
             return { result: false, msg: 'Error. Request failed [create]', errors: [err.message] };
+          }
+          throw err;
+        }
+      }
+
+      if (action === 'duplicate') {
+        if (opts.db === undefined) {
+          return {
+            result: false,
+            msg: 'Error. Request failed [duplicate] ',
+            errors: ['duplicate not wired'],
+          };
+        }
+        const source = (rqo as { source?: DuplicateSource }).source;
+        if (!source || typeof source.section_tipo !== 'string') {
+          return {
+            result: false,
+            msg: 'API Error: (duplicate) Empty section_tipo (is mandatory)',
+            errors: ['empty section tipo'],
+          };
+        }
+        const session = tryCtx()?.session;
+        try {
+          const { result, msg, errors } = await duplicateRecord(
+            { source },
+            {
+              db: opts.db,
+              ontology: opts.ontology,
+              langConfig: opts.langConfig,
+              matrix: opts.matrix,
+              session: {
+                userId: session?.userId ?? null,
+                isGlobalAdmin: session?.isGlobalAdmin ?? false,
+              },
+            },
+          );
+          return { result, msg, errors };
+        } catch (err) {
+          if (err instanceof UnsupportedDuplicate) {
+            return {
+              result: false,
+              msg: 'Error. Request failed [duplicate] ',
+              errors: [err.message],
+            };
           }
           throw err;
         }
@@ -1308,12 +2067,36 @@ export function createCoreApiReadHandler(opts: CoreApiReadHandlerOptions): ApiHa
           });
           return { result, msg, errors };
         }
+        // Relation-family components (select / relation_parent / relation_related):
+        // route to the relation/select context builder (request_config block).
+        if (ctxModel !== null && RELATION_CONTEXT_MODELS.has(ctxModel)) {
+          const { result, msg, errors } = await buildRelationSelectComponentContext(
+            {
+              tipo: source.tipo,
+              section_tipo:
+                typeof source.section_tipo === 'string' ? source.section_tipo : source.tipo,
+              model: ctxModel,
+              ...(typeof source.lang === 'string' ? { lang: source.lang } : {}),
+              ...(typeof source.mode === 'string' ? { mode: source.mode } : {}),
+            },
+            {
+              ontology: opts.ontology,
+              toolsQueryer: opts.toolsQueryer,
+              contextConfig: opts.contextConfig,
+              dataLang: opts.langConfig.dataLang,
+              structureLang: opts.contextConfig.structureLang,
+              ...(opts.toolProperties ? { toolProperties: opts.toolProperties } : {}),
+            },
+          );
+          return { result, msg, errors };
+        }
         const { result, msg, errors } = await buildComponentElementContext(source, {
           ontology: opts.ontology,
           toolsQueryer: opts.toolsQueryer,
           contextConfig: opts.contextConfig,
           dataLang: opts.langConfig.dataLang,
           ...(opts.toolProperties ? { toolProperties: opts.toolProperties } : {}),
+          ...(opts.labelsCache ? { labelsCache: opts.labelsCache } : {}),
         });
         return { result, msg, errors };
       }
@@ -1352,6 +2135,140 @@ export function createCoreApiReadHandler(opts: CoreApiReadHandlerOptions): ApiHa
         return { result: false, msg: 'Error. Request failed', errors: ['empty source'] };
       }
 
+      // TIME-MACHINE single-component read (get_data + data_source='tm'): render the
+      // matrix_time_machine snapshot as the standalone single-component get_data
+      // element {context:[ddo(mode:tm)], data:[item(mode:tm, entries=snapshot)]}.
+      // dispatch re-derives eligibility statelessly; canHandleTmRead already proved
+      // the model/wiring conform.
+      if (
+        (source as { data_source?: unknown }).data_source === 'tm' &&
+        (source as { action?: unknown }).action !== 'get_value'
+      ) {
+        if (opts.contextConfig === undefined || opts.toolsQueryer === undefined) {
+          return { result: false, msg: 'Error. Request failed', errors: ['no context config'] };
+        }
+        const tmSrc = source as unknown as Record<string, unknown>;
+        const tipo = tmSrc.tipo as string;
+        const sectionTipo =
+          typeof tmSrc.section_tipo === 'string' ? (tmSrc.section_tipo as string) : tipo;
+        const model =
+          typeof tmSrc.model === 'string'
+            ? (tmSrc.model as string)
+            : await opts.ontology.getModelByTipo(tipo);
+        const sidRaw = tmSrc.section_id;
+        const sectionId =
+          typeof sidRaw === 'number' ? sidRaw : Number.parseInt(String(sidRaw ?? ''), 10);
+        const midRaw = tmSrc.matrix_id;
+        const matrixId =
+          typeof midRaw === 'number' ? midRaw : Number.parseInt(String(midRaw ?? ''), 10);
+        const matrixTable = (await resolveMatrixTable(opts.ontology, sectionTipo)) ?? 'matrix';
+        // Read the snapshot datum from matrix_time_machine (PHP get_component_tm_data).
+        const tmData = await opts.matrix.getTimeMachineData(sectionTipo, tipo, matrixId);
+        const contextDeps = {
+          toolsQueryer: opts.toolsQueryer,
+          contextConfig: opts.contextConfig,
+          ...(opts.toolProperties ? { toolProperties: opts.toolProperties } : {}),
+        };
+        try {
+          // input_text has its OWN element builder (fallback_value handling); the
+          // other simple models go through the generic buildDataElement.
+          let element: { context: unknown[]; data: unknown[] };
+          if (model === 'component_input_text') {
+            const itSource: InputTextElementSource = {
+              tipo,
+              section_tipo: sectionTipo,
+              section_id: sectionId,
+              mode: 'tm',
+              model,
+              ...(typeof tmSrc.lang === 'string' ? { lang: tmSrc.lang as string } : {}),
+              tmData,
+            };
+            const it = await buildInputTextElement(itSource, {
+              matrix: opts.matrix,
+              ontology: opts.ontology,
+              langConfig: opts.langConfig,
+              matrixTable,
+              context: contextDeps,
+            });
+            element = { context: it.context, data: it.data };
+          } else {
+            const dataSource: DataElementSource = {
+              tipo,
+              section_tipo: sectionTipo,
+              section_id: sectionId,
+              mode: 'tm',
+              model: model as DataElementModel,
+              ...(typeof tmSrc.lang === 'string' ? { lang: tmSrc.lang as string } : {}),
+              tmData,
+            };
+            // DATALIST family (publication / radio_button / check_box) tm: the
+            // entries come from get_list_value() = match the tm-filtered locators
+            // against the target section's datalist. That needs the record search.
+            const searchQueryer = opts.searchQueryer;
+            const datalistRecordSearch =
+              searchQueryer !== undefined
+                ? async (sectionTipos: string[]) =>
+                    searchRecords(
+                      { section_tipo: sectionTipos, limit: 0 },
+                      {
+                        queryer: searchQueryer,
+                        resolveTable: async (st) =>
+                          (await resolveMatrixTable(opts.ontology, st)) ?? 'matrix',
+                      },
+                    )
+                : undefined;
+            const el = await buildDataElement(dataSource, {
+              matrix: opts.matrix,
+              ontology: opts.ontology,
+              langConfig: opts.langConfig,
+              matrixTable,
+              context: contextDeps,
+              ...(datalistRecordSearch !== undefined ? { datalistRecordSearch } : {}),
+            });
+            // RELATION-CONTEXT models (radio_button / check_box): their tm context is
+            // the RICH relation request_config context (target_sections / request_config
+            // / columns_map / recursive path), which buildDataElement's generic context
+            // builder does NOT emit. Re-build it via buildRelationSelectComponentContext
+            // (mode 'tm') — the same byte-green builder the standalone get_element_context
+            // uses, mode-independent except for the `mode` field. publication keeps its
+            // bare generic context (NOT a RELATION_CONTEXT model).
+            let context = el.context;
+            if (model !== null && RELATION_CONTEXT_MODELS.has(model)) {
+              const { result } = await buildRelationSelectComponentContext(
+                {
+                  tipo,
+                  section_tipo: sectionTipo,
+                  model,
+                  ...(typeof tmSrc.lang === 'string' ? { lang: tmSrc.lang as string } : {}),
+                  mode: 'tm',
+                },
+                {
+                  ontology: opts.ontology,
+                  toolsQueryer: opts.toolsQueryer,
+                  contextConfig: opts.contextConfig,
+                  dataLang: opts.langConfig.dataLang,
+                  structureLang: opts.contextConfig.structureLang,
+                  ...(opts.toolProperties ? { toolProperties: opts.toolProperties } : {}),
+                },
+              );
+              context = result === false ? [] : result;
+            }
+            element = { context, data: el.data };
+          }
+          return {
+            result: { context: element.context, data: element.data },
+            msg: 'OK. Request done successfully',
+            errors: [],
+          };
+        } catch (e) {
+          if (e instanceof UnsupportedDataElement || e instanceof UnsupportedInputTextElement) {
+            // Should not happen (canHandleTmRead pre-gates), but fail soft to proxy.
+            return { result: false, msg: 'Error. Request failed', errors: ['tm read declined'] };
+          }
+          throw e;
+        }
+      }
+
       // build_json_rows (default action): the section record-render. dispatch
       // re-derives eligibility (stateless) so it never depends on canHandleRequest
       // having run, then assembles the {context,data}.
@@ -1379,22 +2296,47 @@ export function createCoreApiReadHandler(opts: CoreApiReadHandlerOptions): ApiHa
         const offset =
           typeof rawOffset === 'number' ? rawOffset : Number.parseInt(String(rawOffset ?? '0'), 10);
 
-        // PLAIN-sqo LIST path: wire the records search + the section_tipo/limit/offset
+        // LIST / SEARCH path: wire the records search + the section_tipo/limit/offset
         // SQO that drives it. buildJsonRows calls recordSearch when no explicit
-        // locator set was supplied. The resolver maps each section_tipo to its
-        // matrix table (same resolveMatrixTable the section render uses).
+        // locator set was supplied, passing through the optional conformed filter (the
+        // FILTERED search). The resolver maps each section_tipo to its matrix table
+        // (same resolveMatrixTable the section render uses). The conformed filter is
+        // re-derived here statelessly (so dispatch never depends on canHandleRequest
+        // having run) and threaded into searchRecords' deps as `filter`, which reuses
+        // the SAME per-component WHERE builders the filtered count uses.
+        const hasFilter =
+          sqoObj !== undefined && Object.prototype.hasOwnProperty.call(sqoObj, 'filter');
+        const searchFilter =
+          !hasFbl && hasFilter && sqoObj?.filter !== undefined
+            ? await analyzeCountFilter(sqoObj.filter as Filter, {
+                resolveModel: (tipo) => opts.ontology.getModelByTipo(tipo),
+                dataLang: opts.langConfig.dataLang,
+              })
+            : null;
+        // The request sqo surfaced as `sqo_session` / overlaid onto the request_config
+        // sqo. For a FILTERED search PHP enriches each filter clause (join_id /
+        // table_alias / table / component_path); reproduce that so those surfaces are
+        // byte-green. The plain / explicit-locator paths surface the raw sqo verbatim.
+        const requestSqoForSession =
+          searchFilter !== null && sqoObj !== undefined
+            ? await enrichRequestSqoFilter(sqoObj, sectionTipo)
+            : sqoObj;
         const searchQueryer = opts.searchQueryer;
         const recordSearch =
           !hasFbl && searchQueryer !== undefined
-            ? async (searchSqoArg: {
-                section_tipo: string[];
-                limit?: number | string;
-                offset?: number;
-              }) =>
+            ? async (
+                searchSqoArg: {
+                  section_tipo: string[];
+                  limit?: number | string;
+                  offset?: number;
+                },
+                filter?: unknown,
+              ) =>
                 searchRecords(searchSqoArg, {
                   queryer: searchQueryer,
                   resolveTable: async (st) =>
                     (await resolveMatrixTable(opts.ontology, st)) ?? 'matrix',
+                  ...(filter ? { filter: filter as ConformedFilter } : {}),
                 })
             : undefined;
         const searchSqo =
@@ -1471,10 +2413,11 @@ export function createCoreApiReadHandler(opts: CoreApiReadHandlerOptions): ApiHa
             ...(locators !== undefined ? { locators } : {}),
             ...(recordSearch !== undefined ? { recordSearch } : {}),
             ...(searchSqo !== undefined ? { searchSqo } : {}),
+            ...(searchFilter !== null ? { searchFilter } : {}),
             ...(projectsSearch !== undefined ? { projectsSearch } : {}),
             ...(datalistRecordSearch !== undefined ? { datalistRecordSearch } : {}),
             offset: Number.isInteger(offset) ? offset : 0,
-            ...(sqoObj ? { requestSqo: sqoObj } : {}),
+            ...(requestSqoForSession ? { requestSqo: requestSqoForSession } : {}),
           },
         );
         const msg = 'OK. Request done successfully';

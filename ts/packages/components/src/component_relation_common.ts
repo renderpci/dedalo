@@ -4,6 +4,15 @@ import { ComponentGeneric } from './component_generic.ts';
 import { resolveMatrixTable } from './matrix_table.ts';
 import type { ExportValue } from './export_value.ts';
 import type { DataColumnName } from './component_common.ts';
+import type { ComponentDatum } from '@dedalo/db';
+
+/**
+ * The positive dataframe-frame marker on a relation locator (PHP
+ * DEDALO_RELATION_TYPE_DATAFRAME, dd_tipos.php). A TM row for a relation/literal
+ * component stores the main + dataframe data merged; is_dataframe_entry() detects a
+ * frame by `el.type === 'dd490'` (trait.dataframe_common::is_dataframe_entry).
+ */
+const RELATION_TYPE_DATAFRAME = 'dd490';
 
 /**
  * Shared read-side port of PHP `component_relation_common::get_export_value` — the
@@ -141,6 +150,36 @@ export abstract class ComponentRelationCommon extends ComponentCommon {
   // false (the component_common default) so getData() returns all locators.
   protected override readonly supportsTranslation = false;
 
+  /**
+   * Filter a TIME-MACHINE snapshot for the relation's OWN locators (PHP
+   * component_common::get_data tm branch, lines 1185-1212). A relation TM row stores
+   * the main + merged dataframe data under one tipo, so the relation render keeps
+   * ONLY: (a) object entries, (b) that are NOT dd490 dataframe frames
+   * (is_dataframe_entry), (c) that carry section_tipo + section_id (a real locator).
+   * Non-objects and frames are dropped. array_values re-indexes (no key gaps).
+   *
+   * NB: only the NON-dataframe relation models reach this (the tm gate declines
+   * has_dataframe / dataframe_ddo components), so the component_dataframe slot-pairing
+   * branch (lines 1214-1225) is intentionally NOT reproduced here — those components
+   * proxy to PHP.
+   */
+  protected override filterTmData(
+    data: ComponentDatum[] | null,
+  ): ComponentDatum[] | null {
+    if (data === null) return null;
+    return data.filter((el): el is ComponentDatum => {
+      if (el === null || typeof el !== 'object') return false;
+      const obj = el as Record<string, unknown>;
+      if (obj.type === RELATION_TYPE_DATAFRAME) return false; // dataframe frame
+      return (
+        obj.section_tipo !== undefined &&
+        obj.section_tipo !== null &&
+        obj.section_id !== undefined &&
+        obj.section_id !== null
+      );
+    });
+  }
+
   /** records_separator (' | ') joining multiple selected locators. */
   private recordsSeparator = DEFAULT_RECORDS_SEPARATOR;
   /** fields_separator (', ') joining multiple label components on one locator. */
@@ -170,7 +209,25 @@ export abstract class ComponentRelationCommon extends ComponentCommon {
    * multi-section ddos, dataframe, section_list children, …) throw rather than
    * silently diverge, so a wrong-byte result can never escape the parity gate.
    */
+  /**
+   * Subclass hook to OVERRIDE the V5/V6 label-component derivation. Returning a
+   * non-null array short-circuits the ontology-relations/request_config resolution
+   * entirely. Used by component_filter, whose ddo_map is NOT derived from its own
+   * (empty) relations but is HARDCODED in PHP trait.request_config_v5::
+   * resolve_ar_related_list (model==='component_filter' → [DEDALO_SECTION_PROJECTS_TIPO,
+   * DEDALO_PROJECTS_NAME_TIPO]); clean_and_extract_related then drops the section tipo
+   * and keeps the name field (dd156, input_text) as the single label on each locator's
+   * project (dd153) target. Default returns null (use the standard resolution).
+   */
+  protected async labelComponentsOverride(): Promise<LabelComponent[] | null> {
+    return null;
+  }
+
   private async resolveLabelComponents(): Promise<LabelComponent[]> {
+    const override = await this.labelComponentsOverride();
+    if (override !== null) {
+      return override;
+    }
     const properties = await this.ontology.getProperties(this.tipo);
     const source = properties?.['source'];
     const requestConfig =

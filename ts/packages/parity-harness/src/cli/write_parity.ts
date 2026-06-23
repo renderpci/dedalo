@@ -28,6 +28,7 @@ import {
   openTestDb,
   runWriteParity,
   runCreateParity,
+  runDuplicateParity,
   runDeleteParity,
   runAddChildParity,
   runMultiRowWriteParity,
@@ -38,6 +39,8 @@ import {
   canonicalizeNewActivityRow,
   canonicalizeReferencingRow,
   canonicalizeAddChildRow,
+  canonicalizeDuplicateRow,
+  isolateDuplicateSideRows,
   canonicalizeMultiRow,
   type MatrixRowTarget,
   type WriteApply,
@@ -45,6 +48,8 @@ import {
   type SideRowsByTable,
   type CreateApply,
   type CreateRunResult,
+  type DuplicateApply,
+  type DuplicateRunResult,
   type DeleteApply,
   type DeleteRowTarget,
   type DeleteRunResult,
@@ -230,6 +235,138 @@ function diffCreateRuns(label: string, a: CreateRunResult, b: CreateRunResult): 
   }
 
   return sameId && sameCounter && envelope.equal && rowEqual && actEqual;
+}
+
+// ───────────────────────────── DUPLICATE parity ───────────────────────────────
+
+/** The duplicate source record (env-driven; default oh1/2 — a small record). */
+const DUP_SECTION_TIPO = env.WP_DUP_SECTION_TIPO ?? 'oh1';
+const DUP_SECTION_ID = env.WP_DUP_SECTION_ID ?? '2';
+
+/**
+ * The duplicate RQO. The frontend's "duplicate record" button sends exactly
+ * { action:'duplicate', source:{ section_tipo, section_id } } — section_id is a string.
+ */
+function buildDuplicateRqo(): Record<string, unknown> {
+  return {
+    dd_api: 'dd_core_api',
+    action: 'duplicate',
+    source: { section_tipo: DUP_SECTION_TIPO, section_id: DUP_SECTION_ID },
+  };
+}
+
+function duplicateApplyFor(apiUrl: string, loginUrl?: string): DuplicateApply {
+  return {
+    apiUrl,
+    ...(loginUrl ? { loginUrl } : {}),
+    username: env.WP_USER ?? 'root',
+    password: env.WP_PASS ?? '123123aS',
+    rqo: buildDuplicateRqo(),
+  };
+}
+
+/**
+ * Normalize the duplicate response bytes: the `result` (the new section_id) is a
+ * fresh allocation per run, so mask it. csrf_token/debug are handled by diffJson's
+ * default volatile/drop sets. The msg/errors/action are compared verbatim.
+ */
+function normalizeDuplicateResponse(bytes: string): string {
+  try {
+    const obj = JSON.parse(bytes) as Record<string, unknown>;
+    if ('result' in obj) obj.result = '<new_section_id>';
+    return JSON.stringify(obj);
+  } catch {
+    return bytes;
+  }
+}
+
+/**
+ * Diff two DUPLICATE runs (PHP-vs-PHP baseline OR PHP-vs-TS gate). The duplicate copies
+ * a source record into a NEW record (create-with-source-values + the per-component
+ * re-save cascade). The gate proves byte parity for:
+ *   - the SAME new section_id from the SAME reset counter state (the allocator parity —
+ *     both engines start from the restored counter, so they MUST allocate the same id),
+ *   - the counter advanced by exactly 1 in each run,
+ *   - the response envelope (new section_id masked — also identical when un-masked since
+ *     the same id is allocated, but we mask defensively),
+ *   - the NEW record's matrix row (volatile audit leaves normalized; the COPIED
+ *     component data + meta counters + data label compared verbatim),
+ *   - the duplicate's side rows: the 'NEW' activity + per-component TM + 'SAVE' activity
+ *     (isolated from the login rows by the new section_id), byte-equal in id order.
+ */
+function diffDuplicateRuns(label: string, a: DuplicateRunResult, b: DuplicateRunResult): boolean {
+  // ── ALLOCATOR PARITY: same new id from the same reset counter state. ──
+  const sameId = a.newSectionId !== null && a.newSectionId === b.newSectionId;
+  console.log(
+    `${label} :: new section_id allocation: ${a.newSectionId} vs ${b.newSectionId} ` +
+      `(counter ${a.counterBefore}→${a.counterAfter} vs ${b.counterBefore}→${b.counterAfter}) ` +
+      `${sameId ? 'MATCH' : 'DIVERGENCE'}`,
+  );
+  const sameCounter = a.counterBefore === b.counterBefore && a.counterAfter === b.counterAfter;
+  const aDelta = a.counterBefore !== null && a.counterAfter !== null ? a.counterAfter - a.counterBefore : null;
+  const bDelta = b.counterBefore !== null && b.counterAfter !== null ? b.counterAfter - b.counterBefore : null;
+  const counterOk = aDelta === 1 && bDelta === 1 && sameCounter;
+  if (!counterOk) console.log(`${label} :: counter state DIVERGENCE (Δ${aDelta} vs Δ${bDelta})`);
+
+  // response envelope (new id masked).
+  const envelope = diffJson(
+    normalizeDuplicateResponse(a.responseBytes),
+    normalizeDuplicateResponse(b.responseBytes),
+  );
+  console.log(formatDiffReport(`${label} :: response envelope (new id masked)`, envelope));
+
+  // new record row (volatile-normalized: created/modified audit leaves).
+  let rowEqual = false;
+  if (a.row !== null && b.row !== null) {
+    const d = diffJson(canonicalizeDuplicateRow(a.row), canonicalizeDuplicateRow(b.row));
+    console.log(formatDiffReport(`${label} :: new record row (volatile-normalized)`, d));
+    rowEqual = d.equal;
+  } else {
+    console.log(`${label} :: new record row DIVERGENCE — a=${a.row !== null} b=${b.row !== null}`);
+  }
+
+  // duplicate side rows: the NEW activity + per-component TM + SAVE activity, isolated
+  // from the login rows by the new section_id, byte-compared in id order.
+  const aSide = isolateDuplicateSideRows(a.sideRows, a.newSectionId);
+  const bSide = isolateDuplicateSideRows(b.sideRows, b.newSectionId);
+
+  let tmEqual = true;
+  if (aSide.tm.length !== bSide.tm.length) {
+    console.log(`${label} :: TM row count ${aSide.tm.length} vs ${bSide.tm.length} — DIVERGENCE`);
+    tmEqual = false;
+  } else if (aSide.tm.length === 0) {
+    console.log(`${label} :: no per-component TM rows isolated — DIVERGENCE`);
+    tmEqual = false;
+  } else {
+    for (let i = 0; i < aSide.tm.length; i++) {
+      const d = diffJson(
+        canonicalizeSideRow('matrix_time_machine', aSide.tm[i]!),
+        canonicalizeSideRow('matrix_time_machine', bSide.tm[i]!),
+      );
+      console.log(formatDiffReport(`${label} :: TM[${i}] (volatile-normalized)`, d));
+      tmEqual = tmEqual && d.equal;
+    }
+  }
+
+  let actEqual = true;
+  if (aSide.act.length !== bSide.act.length) {
+    console.log(`${label} :: activity row count ${aSide.act.length} vs ${bSide.act.length} — DIVERGENCE`);
+    actEqual = false;
+  } else if (aSide.act.length === 0) {
+    console.log(`${label} :: no NEW/SAVE activity rows isolated — DIVERGENCE`);
+    actEqual = false;
+  } else {
+    for (let i = 0; i < aSide.act.length; i++) {
+      const d = diffJson(
+        canonicalizeSideRow('matrix_activity', aSide.act[i]!),
+        canonicalizeSideRow('matrix_activity', bSide.act[i]!),
+      );
+      console.log(formatDiffReport(`${label} :: activity[${i}] (volatile-normalized)`, d));
+      actEqual = actEqual && d.equal;
+    }
+  }
+
+  return sameId && counterOk && envelope.equal && rowEqual && tmEqual && actEqual;
 }
 
 /**
@@ -927,14 +1064,18 @@ async function main(): Promise<void> {
                     ? 'create-gate'
                     : has('--create-baseline')
                       ? 'create-baseline'
-                      : has('--gate')
-                        ? 'gate'
-                        : has('--baseline')
-                          ? 'baseline'
-                          : null;
+                      : has('--duplicate-gate')
+                        ? 'duplicate-gate'
+                        : has('--duplicate-baseline')
+                          ? 'duplicate-baseline'
+                          : has('--gate')
+                            ? 'gate'
+                            : has('--baseline')
+                              ? 'baseline'
+                              : null;
   if (mode === null) {
     console.error(
-      'Usage: write_parity.ts (--baseline | --gate | --create-* | --delete-* | --addchild-* | --saveorder-* | --move-*) [--inverse]',
+      'Usage: write_parity.ts (--baseline | --gate | --create-* | --duplicate-* | --delete-* | --addchild-* | --saveorder-* | --move-*) [--inverse]',
     );
     process.exit(2);
   }
@@ -1063,6 +1204,39 @@ async function main(): Promise<void> {
       const diffLabel = mode === 'create-gate' ? 'CREATE PHP-vs-TS' : 'CREATE PHP-vs-PHP';
       console.log(`\n── DIFF (${diffLabel}) ──`);
       green = diffCreateRuns(diffLabel, runA, runB);
+    } else if (mode === 'duplicate-baseline' || mode === 'duplicate-gate') {
+      // DUPLICATE parity: snapshot counter+watermarks → duplicate → restore (delete
+      // copy + sweep side rows + restore counter), ×2. `duplicate` is DECLINED (TS
+      // proxies); the gate proves the TS proxy forwards byte-identically (PHP-vs-TS)
+      // and the PHP-vs-PHP baseline proves the harness restore + envelope stability.
+      const dupTarget = { table: TARGET.table, sectionTipo: DUP_SECTION_TIPO };
+      const aUrl = phpUrl;
+      const bUrl = mode === 'duplicate-gate' ? tsUrl : phpUrl;
+      const aLabel = mode === 'duplicate-gate' ? 'PHP' : 'PHP run #1';
+      const bLabel = mode === 'duplicate-gate' ? 'TS ' : 'PHP run #2';
+      console.log(`duplicate source: ${DUP_SECTION_TIPO}/${DUP_SECTION_ID}`);
+      console.log(`\n── DUPLICATE ${aLabel} (${aUrl}) ──`);
+      const runA = await runDuplicateParity(sql, dupTarget, duplicateApplyFor(aUrl));
+      console.log(
+        `   status=${runA.status} new_section_id=${runA.newSectionId} ` +
+          `counter ${runA.counterBefore}→${runA.counterAfter} ` +
+          `tm=${runA.sideRowCounts.matrix_time_machine ?? 0} act=${runA.sideRowCounts.matrix_activity ?? 0} ` +
+          `bytes=${runA.responseBytes.length}`,
+      );
+      console.log(`\n── DUPLICATE ${bLabel} (${bUrl}) ──`);
+      // For the gate, the TS run logs in via PHP (shared session/DB) but POSTs to TS —
+      // the TS proxy's own login + session-bridge races the harness CSRF handshake.
+      const bLoginUrl = mode === 'duplicate-gate' ? phpUrl : undefined;
+      const runB = await runDuplicateParity(sql, dupTarget, duplicateApplyFor(bUrl, bLoginUrl));
+      console.log(
+        `   status=${runB.status} new_section_id=${runB.newSectionId} ` +
+          `counter ${runB.counterBefore}→${runB.counterAfter} ` +
+          `tm=${runB.sideRowCounts.matrix_time_machine ?? 0} act=${runB.sideRowCounts.matrix_activity ?? 0} ` +
+          `bytes=${runB.responseBytes.length}`,
+      );
+      const diffLabel = mode === 'duplicate-gate' ? 'DUPLICATE PHP-vs-TS' : 'DUPLICATE PHP-vs-PHP';
+      console.log(`\n── DIFF (${diffLabel}) ──`);
+      green = diffDuplicateRuns(diffLabel, runA, runB);
     } else if (mode === 'baseline') {
       console.log(`\n── PHP run #1 (${phpUrl}) ──`);
       const rel = relatedTargets();

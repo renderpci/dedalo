@@ -108,26 +108,34 @@ export function buildFetchHandler(opts: ServerOptions): (req: Request) => Promis
     if (rqo && opts.registry.canHandle(rqo.dd_api, rqo.action)) {
       // canHandle already verified dd_api is a registered string.
       const handler = opts.registry.get(rqo.dd_api as string);
-      const ownsRequest = handler?.canHandleRequest ? await handler.canHandleRequest(rqo) : handler !== undefined;
+      // Bridge the PHP session ONCE, BEFORE the per-request gate (auth truth + CSRF +
+      // the logged user id). The gate may need the session (e.g. dd_ontology_api's
+      // resolve_section is only byte-reproducible for the superuser). Custom
+      // buildRouterDeps (tests) bypasses the bridge → anonymous context + anonymous gate.
+      let deps: RouterDeps | null = null;
+      let session: SessionSnapshot = ANONYMOUS_SESSION;
+      if (!opts.buildRouterDeps) {
+        const bridged = await bridgeSession(opts.phpApiUrl, req.headers.get('cookie'));
+        deps = bridgedDeps(opts, req, bridged);
+        session = snapshotFromBridge(bridged);
+      }
+      const ownsRequest = handler?.canHandleRequest
+        ? await handler.canHandleRequest(rqo, session)
+        : handler !== undefined;
       if (ownsRequest) {
-        // Bridge the PHP session ONCE (auth truth + CSRF + the logged user id the
-        // write path stamps). Custom buildRouterDeps (tests) bypasses the bridge →
-        // anonymous context.
-        let deps: RouterDeps;
-        let session: SessionSnapshot = ANONYMOUS_SESSION;
         if (opts.buildRouterDeps) {
           deps = await opts.buildRouterDeps(req, rqo);
-        } else {
-          const bridged = await bridgeSession(opts.phpApiUrl, req.headers.get('cookie'));
-          deps = bridgedDeps(opts, req, bridged);
-          session = snapshotFromBridge(bridged);
         }
+        // deps is non-null here: either bridged above or built from buildRouterDeps.
         const response = await runWithContext(createRequestContext({ session }), () =>
-          dispatch(rqo, deps),
+          dispatch(rqo, deps as RouterDeps),
         );
         const flags = rqo.pretty_print ? BASE_FLAGS | JSON_PRETTY_PRINT : BASE_FLAGS;
         const body = dedaloJsonEncode(response, flags);
         const headers = new Headers({ 'content-type': 'application/json' });
+        // Diagnostic-only marker (never part of the JSON body, so byte-parity is
+        // unaffected): identifies a NATIVELY-served response for the parity harness.
+        headers.set('x-dedalo-served', 'native');
         applyCors(headers, origin);
         return new Response(body, { status: 200, headers });
       }
@@ -135,6 +143,8 @@ export function buildFetchHandler(opts: ServerOptions): (req: Request) => Promis
 
     // Proxy path: forward verbatim to PHP (byte-parity).
     const proxied = await proxyToPhp(opts.phpApiUrl, rawBody, req.headers);
+    // Diagnostic-only marker (header, not body) — identifies a PROXIED response.
+    proxied.headers.set('x-dedalo-served', 'proxy');
     applyCors(proxied.headers, origin);
     return new Response(proxied.bytes, { status: proxied.status, headers: proxied.headers });
   };

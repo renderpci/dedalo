@@ -22,8 +22,18 @@ const FIXTURE_DIRS = [
   { label: 'read/get_value', dir: join(import.meta.dir, '../../components/test/fixtures') },
   { label: 'count', dir: join(import.meta.dir, '../../search/test/fixtures') },
   { label: 'get_element_context', dir: join(import.meta.dir, '../../components/test/fixtures_context') },
+  { label: 'get_element_context/search', dir: join(import.meta.dir, '../../components/test/fixtures_search_context') },
   { label: 'read/build_json_rows', dir: join(import.meta.dir, '../../components/test/fixtures_read') },
+  { label: 'read/time_machine', dir: join(import.meta.dir, '../../components/test/fixtures_tm') },
   { label: 'read/build_json_rows_edit', dir: join(import.meta.dir, '../../components/test/fixtures_read_edit') },
+  { label: 'read/filtered_search', dir: join(import.meta.dir, '../../components/test/fixtures_search') },
+  { label: 'read_raw', dir: join(import.meta.dir, '../../components/test/fixtures_read_raw') },
+  { label: 'dd_utils_api', dir: join(import.meta.dir, '../../components/test/fixtures_utils') },
+  { label: 'dd_ontology_api', dir: join(import.meta.dir, '../../components/test/fixtures_ontology') },
+  { label: 'dd_diffusion_api', dir: join(import.meta.dir, '../../components/test/fixtures_diffusion') },
+  { label: 'dd_agent_api', dir: join(import.meta.dir, '../../components/test/fixtures_agent') },
+  { label: 'dd_tools_api', dir: join(import.meta.dir, '../../components/test/fixtures_tools') },
+  { label: 'dd_ts_api', dir: join(import.meta.dir, '../../components/test/fixtures_ts_api') },
 ];
 
 const session = await login(PHP_URL, 'root', '123123aS');

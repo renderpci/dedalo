@@ -18,6 +18,7 @@ export { ComponentRelationRelated } from './component_relation_related.ts';
 export { ComponentRelationChildren } from './component_relation_children.ts';
 export { ComponentPortal } from './component_portal.ts';
 export { ComponentPublication } from './component_publication.ts';
+export { ComponentSectionId } from './component_section_id.ts';
 export {
   ExportValue,
   type ExportAtom,
@@ -32,6 +33,20 @@ export {
   type MediaConfig,
   mediaConfigFromEnv,
 } from './media_config.ts';
+export {
+  type MediaPathConfig,
+  type MediaIdentity,
+  type FileExistsFn,
+  mediaPathConfigFromEnv,
+  shardPath,
+  mediaId,
+  getMediaUrlDir,
+  getMediaPathDir,
+  getMediaFilepath,
+  buildMediaUrl,
+  getMediaUrlWithExistence,
+  bunFileExists,
+} from './media_path.ts';
 export { ComponentImage, type MediaFileInfo } from './component_image.ts';
 export {
   buildGetValueResponse,
@@ -80,12 +95,22 @@ export {
 } from './save_order.ts';
 export {
   buildComponentElementContext,
+  buildToolDdo,
   contextConfigFromEnv,
+  SEARCH_CONTEXT_MODELS,
   type ContextConfig,
   type ElementContextSource,
   type ElementContextResponse,
   type BuildComponentElementContextOptions,
 } from './component_element_context.ts';
+export {
+  parseLabelsCache,
+  makeLabelsCache,
+  loadLabelsCacheFromEnv,
+  labelsCacheFileName,
+  decorateUntranslated,
+  type LabelsCache,
+} from './labels_cache.ts';
 export {
   getRegisteredTools,
   filterComponentTools,
@@ -100,7 +125,12 @@ export {
   parseToolPropertiesCache,
   loadToolPropertiesFromCacheFile,
   loadToolPropertiesFromEnv,
+  parseRegisteredToolsCache,
+  loadRegisteredToolsFromCacheFile,
+  loadRegisteredToolsFromEnv,
   type ToolPropertiesMap,
+  type RegisteredToolsMap,
+  type CachedSimpleTool,
 } from './tool_properties_cache.ts';
 export {
   buildSectionElementContext,
@@ -174,6 +204,29 @@ export {
   type DeleteSessionInfo,
 } from './delete_record.ts';
 export {
+  duplicateRecord,
+  UnsupportedDuplicate,
+  DUPLICATE_RESAVE_MODELS,
+  SECTION_INFO_TIPOS,
+  SKIP_COLUMNS,
+  MEDIA_COMPONENT_MODELS,
+  type DuplicateRecordRequest,
+  type DuplicateRecordOptions,
+  type DuplicateResult,
+  type DuplicateSource,
+  type DuplicateSessionInfo,
+} from './duplicate_record.ts';
+export {
+  readRaw,
+  UnsupportedReadRaw,
+  type ReadRawRequest,
+  type ReadRawOptions,
+  type ReadRawSqo,
+  type ReadRawOptionsDeps,
+  type ReadRawResult,
+  type ReadRawLocator,
+} from './read_raw.ts';
+export {
   buildDataElement,
   UnsupportedDataElement,
   DEFAULT_TEXT_AREA_EDIT_FEATURES,
@@ -231,3 +284,88 @@ export {
   type SelectDataItem,
   type BuildSelectElementOptions,
 } from './select_element.ts';
+export {
+  createUtilsApiHandler,
+  versionConfigFromEnv,
+  type UtilsApiHandlerOptions,
+} from './utils_api_handler.ts';
+export {
+  buildLoginContextResponse,
+  buildInstallContextResponse,
+  buildLoginInfo,
+  buildLoginItems,
+  getCurrentDataVersion,
+  LOGIN_TIPO,
+  INSTALL_TIPO,
+  ONTOLOGY_ROOT_TIPO,
+  type UtilsQueryer,
+  type UtilsVersionConfig,
+  type LoginInfoEntry,
+  type LoginItem,
+  type LoginContextDdo,
+  type InstallContextDdo,
+} from './utils_api_context.ts';
+export {
+  createOntologyApiHandler,
+  type OntologyApiHandlerOptions,
+} from './ontology_api_handler.ts';
+export {
+  createDiffusionApiHandler,
+  diffusionConfigFromEnv,
+  type DiffusionApiHandlerOptions,
+} from './diffusion_api_handler.ts';
+export {
+  getSectionDiffusionNodes,
+  validateDiffusionElements,
+  WalkState,
+  DEDALO_DIFFUSION_TIPO,
+  type DiffusionWalkConfig,
+  type SectionDiffusionNode,
+  type DiffusionParent,
+  type DiffusionChild,
+  type DiffusionCheck,
+  type DiffusionValidateElement,
+  type DiffusionValidateResult,
+} from './diffusion_nodes.ts';
+export {
+  createToolsApiHandler,
+  type ToolsApiHandlerOptions,
+} from './tools_api_handler.ts';
+export {
+  buildNodeDescriptor,
+  buildSectionDescriptor,
+  buildGlossarySections,
+  buildGlossarySectionDescriptor,
+  buildGlossaryComponentDescriptor,
+  extractPortalTargets,
+  getSectionRealTipo,
+  getSectionComponentTipos,
+  resolvePathHops,
+  searchOntology,
+  searchExactTerm,
+  searchFuzzyTerm,
+  isPortalModel,
+  isSafeTipo,
+  checkTipoIsValid,
+  getComponentColumnType,
+  PortalTargetNotString,
+  type NodeDescriptor,
+  type SectionDescriptor,
+  type GlossaryEntry,
+  type GlossarySectionDescriptor,
+  type GlossaryComponentDescriptor,
+  type PathHop,
+  type ResolvedPath,
+  type PortalTargets,
+  type PortalTargetTerm,
+} from './ontology_api_actions.ts';
+export {
+  createAgentApiHandler,
+  makeLlmMapLoaderFromEnv,
+  type AgentApiHandlerOptions,
+  type LlmMapLoader,
+} from './agent_api_handler.ts';
+export {
+  createComponentMediaApiHandlers,
+  COMPONENT_MEDIA_API_ACTIONS,
+} from './component_media_api_handler.ts';

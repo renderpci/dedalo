@@ -8,14 +8,24 @@
  * section whose section_map carries the full thesaurus block (component_number order +
  * component_relation_parent parent + is_descriptor/is_indexable radio_buttons).
  *
- * The two READS (`get_node_data`, `get_children_data`) are DECLINED → proxied to PHP.
- * Their response (`result`) is the full ts_object::get_data() node payload — the
- * ddo_map element walk (get_ar_elements + process_element_details), the term label
- * resolution (ts_term_resolver), the component_relation_index count block
- * (count_result, which embeds non-deterministic generated SQL strings + timings),
- * component_svg, is_indexable + the permission elements — a ~1500-line un-ported
- * subsystem with no existing TS builder and a volatile, byte-fragile count payload.
- * Porting it is out of scope; the reads stay proxied (byte-identical by definition).
+ * The two READS (`get_node_data`, `get_children_data`) are served natively for the
+ * byte-reproducible cases (ts_node_data.ts): the ddo_map element walk (term / icon /
+ * link_children), the term value, is_indexable, the permission elements (fixed 3 for a
+ * superuser), and the component_relation_index `count_result`.
+ *
+ * COUNT_RESULT NON-DETERMINISM (re-examined): the index icon's count_result embeds a
+ * generated SQL string + timing — but those live ONLY under `count_result.debug`
+ * (search::count() writes them under `if(SHOW_DEBUG)`, keyed `debug`). The parity
+ * differ drops `debug` at ANY depth, so the surviving contract is the DETERMINISTIC
+ * `count_result = { total, totals_group:[{key,value,label}] }` (an integer total +
+ * per-section_tipo counts + their term labels). Verified live: two identical PHP calls
+ * produce byte-different raw bytes (the timing) that the differ normalises to EQUAL.
+ *
+ * The gate (canHandleNodeRead) accepts only a SUPERUSER session + a section whose
+ * thesaurus map + section_list_thesaurus ddo_map resolve to PORTED elements only; the
+ * un-ported `img` (component_svg) element, the relation_index `show_data`
+ * (children-recursive) count, the model-view variant, the ontology/hierarchy roots, the
+ * direct-children list mode and the paginated-children slice all DECLINE → proxy to PHP.
  *
  * The PHP API_ACTIONS allowlist is preserved verbatim so the router's SEC-024 method
  * check matches PHP; the three writes are dispatched here when the gate accepts,
@@ -40,6 +50,14 @@ import {
 } from './update_parent_data.ts';
 import { saveOrder, UnsupportedSaveOrder, type SaveOrderSource } from './save_order.ts';
 import { resolveThesaurusOrderMap } from './ts_order_common.ts';
+import {
+  getNodeData,
+  getChildrenData,
+  UnsupportedNodeRead,
+  type NodeData,
+  type NodeDataDeps,
+} from './ts_node_data.ts';
+import type { GateSession } from '@dedalo/core-api';
 
 export interface TsApiHandlerOptions {
   db: Db;
@@ -143,17 +161,81 @@ export function createTsApiHandler(opts: TsApiHandlerOptions): ApiHandler {
     return true;
   }
 
+  /** Build the node-read deps bag from the handler options + session. */
+  function nodeReadDeps(isSuperuser: boolean): NodeDataDeps {
+    return {
+      db: opts.db,
+      ontology: opts.ontology,
+      langConfig: opts.langConfig,
+      searchQueryer: opts.db,
+      isSuperuser,
+    };
+  }
+
+  /**
+   * canHandleRequest for the READS (get_node_data / get_children_data). Accept only the
+   * byte-reproducible cases: a SUPERUSER session (permissions fixed at 3) + a present
+   * source with a section_tipo whose thesaurus map + section_list_thesaurus ddo_map
+   * resolve to ported elements only (term / icon / link_children; the img/component_svg
+   * element and the relation_index `show_data` children-recursive count are NOT ported).
+   * The deep per-element reproduction runs in dispatch and declines via UnsupportedNodeRead
+   * → a failed envelope; the gate keeps the common (un-reproducible) sections off the
+   * dispatch path so they proxy to PHP. The volatile count_result SQL/timing lives under
+   * count_result.debug (dropped by the parity differ), so the count contract is byte-green.
+   */
+  async function canHandleNodeRead(rqo: RqoLike, session?: GateSession): Promise<boolean> {
+    if (!session || session.isGlobalAdmin !== true || session.userId === null) return false;
+    const source = (rqo as { source?: Record<string, unknown> }).source;
+    if (!source) return false;
+    const sectionTipo = source['section_tipo'];
+    const sectionIdRaw = source['section_id'];
+    if (typeof sectionTipo !== 'string' || sectionTipo === '') return false;
+    if (typeof sectionIdRaw !== 'string' && typeof sectionIdRaw !== 'number') return false;
+    const sectionId = Number.parseInt(String(sectionIdRaw), 10);
+    if (!Number.isInteger(sectionId) || sectionId <= 0) return false;
+
+    // get_children_data: a children_tipo of model component_relation_children is required.
+    if ((rqo as { action?: unknown }).action === 'get_children_data') {
+      const childrenTipo = source['children_tipo'];
+      if (typeof childrenTipo !== 'string' || childrenTipo === '') return false;
+      const children = source['children'];
+      if (children !== undefined && children !== null) return false; // direct-list mode → proxy
+      // A non-default pagination slice (offset>0 / explicit total beyond limit) is not ported.
+      const options = (rqo as { options?: Record<string, unknown> }).options;
+      const pagination = options?.['pagination'];
+      if (pagination !== undefined && pagination !== null) return false; // explicit pagination → proxy
+    }
+    // Model-view (thesaurus_view_mode=model) is not reproduced.
+    const options = (rqo as { options?: Record<string, unknown> }).options;
+    const viewMode = options?.['thesaurus_view_mode'];
+    if (viewMode !== undefined && viewMode !== 'default') return false;
+
+    // Probe reproducibility WITHOUT touching the DB rows: a thesaurus map must resolve and
+    // the section_list_thesaurus ddo_map must be all-ported (term/icon/link_children, no
+    // img/show_data). Run a cheap dry build of the node and decline on UnsupportedNodeRead.
+    try {
+      await getNodeData({ section_tipo: sectionTipo, section_id: sectionId }, nodeReadDeps(true));
+      return true;
+    } catch (err) {
+      if (err instanceof UnsupportedNodeRead) return false;
+      // An unexpected error at gate time → decline (proxy) rather than 500.
+      return false;
+    }
+  }
+
   return {
     ddApi: 'dd_ts_api',
     apiActions: API_ACTIONS,
 
-    async canHandleRequest(rqo: RqoLike): Promise<boolean> {
+    async canHandleRequest(rqo: RqoLike, session?: GateSession): Promise<boolean> {
       const action = (rqo as { action?: unknown }).action;
       if (action === 'add_child') return canHandleAddChild(rqo);
       if (action === 'update_parent_data' || action === 'save_order') {
         return canHandleOrderWrite(rqo);
       }
-      // The reads (get_node_data, get_children_data) are proxied to PHP (see scope).
+      if (action === 'get_node_data' || action === 'get_children_data') {
+        return canHandleNodeRead(rqo, session);
+      }
       return false;
     },
 
@@ -223,6 +305,72 @@ export function createTsApiHandler(opts: TsApiHandlerOptions): ApiHandler {
           return { result, msg, errors };
         } catch (err) {
           if (err instanceof UnsupportedSaveOrder) {
+            return { result: false, msg: 'Error. Request failed', errors: [err.message] };
+          }
+          throw err;
+        }
+      }
+
+      if (action === 'get_node_data') {
+        const source = (rqo as { source?: Record<string, unknown> }).source;
+        const sectionTipo = source?.['section_tipo'];
+        const sectionId = Number.parseInt(String(source?.['section_id']), 10);
+        if (typeof sectionTipo !== 'string' || !Number.isInteger(sectionId)) {
+          return {
+            result: false,
+            msg: 'Invalid request. Source data is missing.',
+            errors: ['Missing source property in the request object.'],
+          };
+        }
+        try {
+          const node: NodeData = await getNodeData(
+            { section_tipo: sectionTipo, section_id: sectionId },
+            nodeReadDeps(sessionInfo.isGlobalAdmin),
+          );
+          return {
+            result: node,
+            msg: 'OK. get_node_data request done successfully',
+            errors: [],
+          };
+        } catch (err) {
+          if (err instanceof UnsupportedNodeRead) {
+            return { result: false, msg: 'Error. Request failed', errors: [err.message] };
+          }
+          throw err;
+        }
+      }
+
+      if (action === 'get_children_data') {
+        const source = (rqo as { source?: Record<string, unknown> }).source;
+        const sectionTipo = source?.['section_tipo'];
+        const sectionId = Number.parseInt(String(source?.['section_id']), 10);
+        const childrenTipo = source?.['children_tipo'];
+        if (
+          typeof sectionTipo !== 'string' ||
+          !Number.isInteger(sectionId) ||
+          typeof childrenTipo !== 'string'
+        ) {
+          return {
+            result: false,
+            msg: 'Invalid request. Source data is missing.',
+            errors: ['Missing source property in the request object.'],
+          };
+        }
+        const options = (rqo as { options?: Record<string, unknown> }).options;
+        const pagination = (options?.['pagination'] ?? null) as
+          | { limit?: number; offset?: number; total?: number }
+          | null;
+        try {
+          const result = await getChildrenData(
+            { section_tipo: sectionTipo, section_id: sectionId },
+            childrenTipo,
+            pagination,
+            300, // default_limit (dd_ts_api::get_children_data)
+            nodeReadDeps(sessionInfo.isGlobalAdmin),
+          );
+          return { result, msg: 'OK. Request done successfully', errors: [] };
+        } catch (err) {
+          if (err instanceof UnsupportedNodeRead) {
             return { result: false, msg: 'Error. Request failed', errors: [err.message] };
           }
           throw err;

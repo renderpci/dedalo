@@ -50,7 +50,7 @@
  *     ancestors are in the all-projects set); reported, not separately gated.
  */
 
-import { ComponentRelationCommon } from './component_relation_common.ts';
+import { ComponentRelationCommon, type LabelComponent } from './component_relation_common.ts';
 import type { ComponentInit, DataColumnName } from './component_common.ts';
 import type { ComponentDatum, MatrixDbManager } from '@dedalo/db';
 import type { OntologyRepository } from '@dedalo/ontology';
@@ -120,6 +120,19 @@ export class ComponentFilter extends ComponentRelationCommon {
   /** get_ar_target_section_tipo() → [DEDALO_SECTION_PROJECTS_TIPO]. */
   static targetSectionTipos(): string[] {
     return [PROJECTS_SECTION_TIPO];
+  }
+
+  /**
+   * component_filter's get_value label set is HARDCODED (PHP trait.request_config_v5
+   * ::resolve_ar_related_list, model==='component_filter' → [dd153, dd156]). After
+   * clean_and_extract_related drops dd153 (the section/target), the only label is the
+   * project-name field dd156 (component_input_text, 'string' column), resolved on each
+   * stored locator's project (dd153) target at DEDALO_DATA_LANG. The locator already
+   * carries section_tipo=dd153, so the relation_common per-locator resolution reads
+   * dd156 on the project record in its resolved matrix table (matrix_projects).
+   */
+  protected override async labelComponentsOverride(): Promise<LabelComponent[] | null> {
+    return [{ tipo: PROJECTS_NAME_TIPO, model: 'component_input_text', column: 'string' }];
   }
 
   /**

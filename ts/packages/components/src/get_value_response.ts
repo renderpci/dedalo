@@ -9,6 +9,9 @@ import { ComponentCheckBox } from './component_check_box.ts';
 import { ComponentRelationParent } from './component_relation_parent.ts';
 import { ComponentRelationRelated } from './component_relation_related.ts';
 import { ComponentRelationChildren } from './component_relation_children.ts';
+import { ComponentSectionId } from './component_section_id.ts';
+import { ComponentFilter } from './component_filter.ts';
+import { ComponentPublication } from './component_publication.ts';
 import type { ComponentInit, DataColumnName } from './component_common.ts';
 
 /**
@@ -48,6 +51,17 @@ export const SUPPORTED_GET_VALUE_MODELS = new Set<string>([
   'component_relation_parent',
   'component_relation_related',
   'component_relation_children',
+  // component_section_id: the section primary key itself (no matrix column) —
+  // get_data() = [(int)section_id], get_value = that id as a string.
+  'component_section_id',
+  // component_publication: RELATION-family V5 select; relations [section(dropped),
+  // input_text label]. Inherits component_relation_common::get_export_value exactly
+  // like component_select (label resolved on the locator target at DEDALO_DATA_LANG).
+  'component_publication',
+  // component_filter: RELATION-family; label set HARDCODED to the project-name field
+  // (dd156, input_text) on each stored project (dd153) locator (PHP resolve_ar_related_list
+  // component_filter branch). Joined ' | ' across projects.
+  'component_filter',
 ]);
 
 /** Matrix family column for each supported model (PHP section_record_data::$column_map). */
@@ -72,11 +86,19 @@ function dataColumnForModel(model: string): DataColumnName | null {
     case 'component_check_box':
     case 'component_relation_parent':
     case 'component_relation_related':
+    // component_publication / component_filter also store locators in 'relation'
+    // (publication = a single selection; filter = project locators).
+    case 'component_publication':
+    case 'component_filter':
       // RELATION family: locators stored in the 'relation' matrix column.
       return 'relation';
     case 'component_relation_children':
       // No stored column (get_data is computed by search); 'relation' is a
       // harmless placeholder — ComponentRelationChildren overrides getData.
+      return 'relation';
+    case 'component_section_id':
+      // No matrix column: the value is the section_id itself. 'relation' is a
+      // harmless placeholder (ComponentSectionId never reads the column).
       return 'relation';
     default:
       return null;
@@ -234,6 +256,18 @@ async function resolveValueForModel(model: string, init: ComponentInit): Promise
     }
     case 'component_relation_children': {
       const component = await ComponentRelationChildren.create(init);
+      return component.getValue();
+    }
+    case 'component_section_id': {
+      const component = await ComponentSectionId.create(init);
+      return component.getValue();
+    }
+    case 'component_publication': {
+      const component = await ComponentPublication.create(init);
+      return component.getValue();
+    }
+    case 'component_filter': {
+      const component = await ComponentFilter.create(init);
       return component.getValue();
     }
     default:

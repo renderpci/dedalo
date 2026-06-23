@@ -21,5 +21,6 @@ export {
   type ApiHandler,
   type ApiResponse,
   type RqoLike,
+  type GateSession,
 } from './registry.ts';
 export { dispatch, type RouterDeps } from './router.ts';

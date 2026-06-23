@@ -137,6 +137,43 @@ export class MatrixDbManager {
     return row.items ?? [];
   }
 
+  /**
+   * Read the `data` column of a Time Machine row for the (section_tipo, tipo,
+   * matrix_id) triplet — the snapshotted component datum. Port of
+   * component_common::get_component_tm_data(): the SQO is
+   * mode='tm' + filter_by_locators [{matrix_id, section_tipo, tipo}] + ORDER BY id
+   * DESC, which search_tm compiles to
+   *   SELECT * FROM matrix_time_machine
+   *   WHERE section_tipo=$1 AND tipo=$2 AND id=$3 ORDER BY id DESC NULLS LAST
+   *   (fetch_one → the first row).
+   * `id` is the matrix_time_machine PK (unique), so the section_tipo/tipo predicates
+   * are redundant but kept to mirror PHP exactly. Returns the decoded `data` array
+   * (the stored datum, identical in shape to the live family column items), or null
+   * when no row matches (PHP: empty record → tm_data = [] → null on the simple path,
+   * but the read itself returns null; the caller maps absence to PHP's behaviour).
+   *
+   * NOTE: this is the SIMPLE-model read — it does NOT apply the dataframe/relation
+   * is_dataframe_entry / from_component_tipo filtering of get_data()'s tm branch
+   * (lines 1166-1226). Callers MUST gate to non-dataframe, non-relation models.
+   */
+  async getTimeMachineData(
+    sectionTipo: string,
+    componentTipo: string,
+    matrixId: number,
+  ): Promise<ComponentDatum[] | null> {
+    const sql =
+      `SELECT "data" AS items FROM "matrix_time_machine" ` +
+      `WHERE section_tipo = $1 AND tipo = $2 AND id = $3 ` +
+      `ORDER BY id DESC NULLS LAST LIMIT 1`;
+    const row = await this.one<{ items: ComponentDatum[] | null }>(sql, [
+      sectionTipo,
+      componentTipo,
+      matrixId,
+    ]);
+    if (row === null) return null;
+    return row.items ?? null;
+  }
+
   /** Count rows of a given section_tipo in a table. */
   async countBySectionTipo(table: string, sectionTipo: string): Promise<number> {
     assertTable(table);

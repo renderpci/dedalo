@@ -37,9 +37,24 @@ export class ComponentGeneric extends ComponentCommon {
   // the atom's `lang` field mirrors is_translatable, so resolve it from ontology.
   private readonly model: string;
 
+  /**
+   * The PHP CLASS-level `$supports_translation` flag, which drives get_data_lang()'s
+   * language filter and is INDEPENDENT of the ontology `translatable` property
+   * (component_common.php:1287-1294). component_email extends component_string_common
+   * (supports_translation=true) while component_number extends component_common
+   * (supports_translation=false). This is byte-significant for the email list/tm
+   * `entries`: the email constructor fixes lang to lg-nolan but still runs
+   * get_data_lang's `el.lang === lg-nolan` filter, so a stored item WITHOUT a `lang`
+   * key (e.g. `{id,value}`) is excluded → get_list_value null-collapses → entries:null,
+   * whereas an item WITH `lang:lg-nolan` is kept. number/json/geo (supports_translation
+   * =false) skip the filter and return the raw data unchanged.
+   */
+  protected override readonly supportsTranslation: boolean;
+
   private constructor(init: ComponentInit, model: string) {
     super(init);
     this.model = model;
+    this.supportsTranslation = model === 'component_email';
   }
 
   static async create(init: ComponentInit, model: string): Promise<ComponentGeneric> {
@@ -193,12 +208,18 @@ export class ComponentGeneric extends ComponentCommon {
    * get_data_lang() applied to the number-formatted data. ComponentCommon.getDataLang
    * filters the RAW getData(); for the number model the PHP get_data() override
    * formats every value, so we re-derive the lang slice from the formatted data here.
+   *
+   * The language filter is gated on the CLASS-level `supportsTranslation` flag (PHP
+   * get_data_lang), NOT the ontology `translatable` property — they differ for email
+   * (supports_translation=true, ontology-non-translatable). With supportsTranslation
+   * true the items are filtered by `el.lang === effectiveLang`; a stored item lacking
+   * a `lang` key is dropped (→ list/tm null-collapse, → edit []). number
+   * (supportsTranslation=false) returns the formatted data unfiltered.
    */
   private async getFormattedDataLang(): Promise<ComponentDatum[] | null> {
     const data = await this.getFormattedData();
     if (data === null || data.length === 0) return data;
-    const isTranslatable = await this.ontology.getTranslatable(this.tipo);
-    if (!isTranslatable) return data;
+    if (!this.supportsTranslation) return data;
     const safeLang = this.getLang();
     return data.filter(
       (el): el is ComponentDatum =>

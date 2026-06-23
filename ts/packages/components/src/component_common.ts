@@ -47,6 +47,17 @@ export interface ComponentInit {
    * when its get_data needs it and it is absent.
    */
   searchQueryer?: SearchQueryer;
+  /**
+   * TIME-MACHINE data source. When set (data_source='tm'), getData() returns this
+   * array DIRECTLY instead of reading the live matrix column — a port of PHP
+   * component_common::get_data()'s tm branch (sets $this->data_resolved = $data_tm
+   * and returns; no live load). The array is the matrix_time_machine `data` column
+   * (the snapshotted datum, identical in shape to the live column items). null means
+   * "tm row had no data" (PHP returns null). Only SIMPLE non-dataframe/non-relation
+   * models inject this — the dataframe/relation tm filtering of get_data() is NOT
+   * reproduced here (gated out by the caller). Mutually exclusive with a live read.
+   */
+  tmData?: ComponentDatum[] | null;
 }
 
 /**
@@ -71,6 +82,13 @@ export abstract class ComponentCommon {
   protected readonly langConfig: LangConfig;
   /** Optional SQL queryer for search-computed components (see ComponentInit). */
   protected readonly searchQueryer: SearchQueryer | undefined;
+  /**
+   * Time-machine data source. When `tmActive` is true, getData() returns
+   * `tmData` directly (the matrix_time_machine snapshot) instead of the live
+   * matrix column — PHP get_data() tm branch. `tmData` may be null (empty tm row).
+   */
+  private readonly tmActive: boolean;
+  private readonly tmData: ComponentDatum[] | null;
 
   /**
    * Whether this component supports translation at the data level
@@ -98,6 +116,8 @@ export abstract class ComponentCommon {
     this.langConfig = init.langConfig;
     this.searchQueryer = init.searchQueryer;
     this.requestedLang = init.lang;
+    this.tmActive = Object.prototype.hasOwnProperty.call(init, 'tmData');
+    this.tmData = init.tmData ?? null;
   }
 
   /** The component's own tipo. */
@@ -130,6 +150,16 @@ export abstract class ComponentCommon {
    */
   protected async getData(): Promise<ComponentDatum[] | null> {
     if (this.dataResolved !== undefined) return this.dataResolved;
+    // TIME-MACHINE branch: return the injected snapshot directly (PHP get_data()
+    // sets $this->data_resolved = $data_tm and returns; no live matrix load). The
+    // SIMPLE models carry no dataframe/relation filtering (filterTmData is identity);
+    // the RELATION family (component_relation_common) overrides filterTmData to apply
+    // PHP get_data()'s tm relation-filter (drop dd490 dataframe frames + non-locator
+    // entries), since TM rows store the main + dataframe data merged under one tipo.
+    if (this.tmActive) {
+      this.dataResolved = this.filterTmData(this.tmData);
+      return this.dataResolved;
+    }
     if (this.sectionId === null) {
       this.dataResolved = null;
       return null;
@@ -151,6 +181,17 @@ export abstract class ComponentCommon {
     // empty get_data_lang filter result over a non-empty get_data).
     this.dataResolved = items !== null && items.length === 0 ? null : items;
     return this.dataResolved;
+  }
+
+  /**
+   * Hook: filter the TIME-MACHINE snapshot for this component's OWN data. The base
+   * (simple-model) implementation is identity — the tm row holds only the
+   * component's own items. The RELATION family overrides it to drop dd490 dataframe
+   * frames + non-locator entries (PHP component_common::get_data tm branch, lines
+   * 1166-1226), since a relation TM row stores the main + merged dataframe data.
+   */
+  protected filterTmData(data: ComponentDatum[] | null): ComponentDatum[] | null {
+    return data;
   }
 
   /**

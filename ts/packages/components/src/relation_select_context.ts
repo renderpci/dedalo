@@ -78,6 +78,18 @@ export interface TargetSectionDescriptor {
   permissions_new: number | null;
 }
 
+/**
+ * The MINIMAL target_sections descriptor emitted by component_radio_button_json /
+ * component_check_box_json (and component_filter): just {tipo, label} — NO
+ * permissions / permissions_new block. Built by the `array_map` in those
+ * controllers over get_ar_target_section_tipo(), label = ontology term in
+ * DEDALO_DATA_LANG (get_term_by_tipo(..., DEDALO_DATA_LANG, true, true)).
+ */
+export interface MinimalTargetSectionDescriptor {
+  tipo: string;
+  label: string;
+}
+
 /** strip_tags — the term is plain text here; minimal port. */
 function stripTags(s: string): string {
   return s.replace(/<[^>]*>/g, '');
@@ -154,6 +166,33 @@ export async function buildQueryPath(
   return path;
 }
 
+/** DEDALO_THESAURUS_TERM_TIPO — the relation_related fixed second path step. */
+const THESAURUS_TERM_TIPO = 'hierarchy25';
+
+/**
+ * Port of component_relation_related::get_order_path (the override): a fixed
+ * two-step path — the component itself, then DEDALO_THESAURUS_TERM_TIPO
+ * (hierarchy25, the thesaurus term input_text) — BOTH carrying the SAME
+ * `section_tipo` (the caller's section_tipo, NOT hierarchy25's own section).
+ * Key order is component_tipo, model, name, section_tipo (the PHP object literal
+ * order, which differs from the generic get_query_path order). `name` uses the
+ * ontology term in DEDALO_DATA_LANG (get_term_by_tipo default lang).
+ */
+export async function buildRelationRelatedOrderPath(
+  ontology: OntologyRepository,
+  componentTipo: string,
+  sectionTipo: string,
+  dataLang: string,
+): Promise<OrderPathStep[]> {
+  const step = async (tipo: string): Promise<OrderPathStep> => ({
+    component_tipo: tipo,
+    model: (await ontology.getModelByTipo(tipo)) ?? '',
+    name: stripTags((await ontology.getLabel(tipo, dataLang)) ?? ''),
+    section_tipo: sectionTipo,
+  });
+  return [await step(componentTipo), await step(THESAURUS_TERM_TIPO)];
+}
+
 /**
  * Resolve a select's target_sections (component_select_json target_sections add):
  * one descriptor per linked section tipo (the request_config sqo section_tipo).
@@ -190,6 +229,24 @@ async function buildTargetSections(
       permissions,
       permissions_new: hasButtonNew ? permissions : null,
     });
+  }
+  return out;
+}
+
+/**
+ * Resolve the MINIMAL target_sections for component_radio_button / component_check_box:
+ * one {tipo,label} per linked section tipo (the request_config sqo section_tipo),
+ * label = ontology term in DEDALO_DATA_LANG. NO permissions block (the radio/check
+ * controllers' array_map over get_ar_target_section_tipo()).
+ */
+async function buildMinimalTargetSections(
+  ontology: OntologyRepository,
+  targetSectionTipos: string[],
+  dataLang: string,
+): Promise<MinimalTargetSectionDescriptor[]> {
+  const out: MinimalTargetSectionDescriptor[] = [];
+  for (const st of targetSectionTipos) {
+    out.push({ tipo: st, label: (await ontology.getLabel(st, dataLang)) ?? '' });
   }
   return out;
 }
@@ -254,6 +311,28 @@ export async function buildRelationSelectComponentContext(
   if (base.result === false) return base;
   const baseDdo = base.result[0] as Record<string, unknown>;
 
+  // ── relation_parent / relation_related properties mutation ──
+  // Both *_json controllers force context.properties.show_interface.button_add =
+  // false (defaulting show_interface to {} when absent), suppressing the inline
+  // 'add' affordance. The mutation preserves any pre-existing show_interface keys
+  // and only overrides button_add; when show_interface is absent it is appended as
+  // the LAST properties key (object insertion order). component_select does NOT do
+  // this (its controller has no such mutation).
+  if (model === 'component_relation_parent' || model === 'component_relation_related') {
+    const baseProps =
+      baseDdo.properties && typeof baseDdo.properties === 'object'
+        ? (baseDdo.properties as Record<string, unknown>)
+        : {};
+    const existingSi =
+      baseProps.show_interface && typeof baseProps.show_interface === 'object'
+        ? (baseProps.show_interface as Record<string, unknown>)
+        : {};
+    baseDdo.properties = {
+      ...baseProps,
+      show_interface: { ...existingSi, button_add: false },
+    };
+  }
+
   // ── request_config (the component's OWN build_request_config). The select /
   //    radio / check_box take the V5 list path; relation_parent/related carry a
   //    stored source.request_config → V6 path. permissions: root. ──
@@ -304,16 +383,58 @@ export async function buildRelationSelectComponentContext(
       }
     }
   }
-  const emitTargetSections = model === 'component_select';
-  const targetSections = emitTargetSections
-    ? await buildTargetSections(ontology, targetSectionTipos, permissions, opts.dataLang)
-    : null;
+  // ── target_sections. component_select emits the RICH descriptor
+  //    ({tipo,label,permissions,permissions_new}); component_radio_button and
+  //    component_check_box emit the MINIMAL descriptor ({tipo,label}) via their
+  //    controllers' array_map over get_ar_target_section_tipo(). The relation
+  //    (parent/related) controllers emit none. ──
+  const isCheckBox = model === 'component_check_box';
+  const isRadio = model === 'component_radio_button';
+  let targetSections: unknown[] | null = null;
+  if (model === 'component_select') {
+    targetSections = await buildTargetSections(
+      ontology,
+      targetSectionTipos,
+      permissions,
+      opts.dataLang,
+    );
+  } else if (isRadio || isCheckBox) {
+    targetSections = await buildMinimalTargetSections(ontology, targetSectionTipos, opts.dataLang);
+  }
 
   // ── columns_map: [] for these components (get_columns_map null → '?? []'). ──
   const columnsMap: unknown[] = [];
 
-  // ── path: recursive get_query_path. ──
-  const path = await buildQueryPath(ontology, tipo, sectionTipo, opts.dataLang);
+  // ── view / children_view (relation-family non-select): get_view() resolves to
+  //    'line' and get_children_view() to 'text' via the legacy-model default for
+  //    component_relation_parent / component_relation_related (common::resolve_view
+  //    / get_children_view). component_select / radio_button resolve view=null
+  //    (dropped), so they emit neither. These sit BETWEEN columns_map and sortable. ──
+  let view: string | null = null;
+  let childrenView: string | null = null;
+  if (model === 'component_relation_parent' || model === 'component_relation_related') {
+    view = 'line';
+    childrenView = 'text';
+  }
+
+  // component_check_box builds its context with add_request_config=FALSE (the
+  // check_box_json controller), so the DDO carries NO request_config / columns_map
+  // and the sortable path-add is skipped (path stays []). radio_button / select /
+  // relation build with add_request_config=true → the request_config block + the
+  // recursive get_order_path.
+  const emitRequestConfig = !isCheckBox;
+
+  // ── path: get_order_path. component_relation_related OVERRIDES get_order_path
+  //    with a fixed two-step path (self + the thesaurus-term input_text hierarchy25,
+  //    both keyed component_tipo/model/name/section_tipo, sharing the SAME
+  //    section_tipo). All other relation models use the generic recursive
+  //    get_query_path (buildQueryPath). check_box: path is [] (add_request_config
+  //    false → the sortable get_order_path gate is not reached). ──
+  const path = isCheckBox
+    ? []
+    : model === 'component_relation_related'
+      ? await buildRelationRelatedOrderPath(ontology, tipo, sectionTipo, opts.dataLang)
+      : await buildQueryPath(ontology, tipo, sectionTipo, opts.dataLang);
 
   // ── reassemble in dd_object declaration order, inserting the relation block
   //    (target_sections / request_config / columns_map) at its dd_object property
@@ -329,9 +450,14 @@ export async function buildRelationSelectComponentContext(
     if (k === 'path') continue; // re-emitted at the end with the recursive value
     out[k] = v;
     if (k === insertAnchor) {
-      if (emitTargetSections && targetSections !== null) out.target_sections = targetSections;
-      out.request_config = requestConfig;
-      out.columns_map = columnsMap;
+      if (targetSections !== null) out.target_sections = targetSections;
+      if (emitRequestConfig) {
+        out.request_config = requestConfig;
+        out.columns_map = columnsMap;
+        // view / children_view sit right after columns_map (relation non-select).
+        if (view !== null) out.view = view;
+        if (childrenView !== null) out.children_view = childrenView;
+      }
     }
   }
   // base always emits `legacy_model` then `path`; path goes last.
