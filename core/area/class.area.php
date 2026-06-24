@@ -109,55 +109,8 @@ class area extends area_common {
 		// get the config_areas file to allow and deny some specific areas defined by installation.
 			$config_areas = self::get_config_areas();
 
-		// root_areas
-			$ar_root_areas		= [];
-			$ar_root_areas[]	= ontology_utils::get_ar_tipo_by_model('area_root')[0];
-			$ar_root_areas[]	= ontology_utils::get_ar_tipo_by_model('area_activity')[0];
-			$ar_root_areas[]	= ontology_utils::get_ar_tipo_by_model('area_resource')[0];
-			$ar_root_areas[]	= ontology_utils::get_ar_tipo_by_model('area_tool')[0];
-			$ar_root_areas[]	= ontology_utils::get_ar_tipo_by_model('area_thesaurus')[0];
-
-			// area_graph. check (if user do not have the Ontology updated)
-			$area_graph = ontology_utils::get_ar_tipo_by_model('area_graph');
-			if (isset($area_graph[0])) {
-				$ar_root_areas[] = $area_graph[0];
-			}else{
-				debug_log(__METHOD__
-					. " WARNING. Model 'area_graph' is not defined! Update your Ontology ASAP "
-					, logger::WARNING
-				);
-			}
-			$ar_root_areas[] = ontology_utils::get_ar_tipo_by_model('area_admin')[0];
-
-			// area_maintenance. Temporal check (if user do not have the Ontology updated, error is given here)
-			$area_maintenance = ontology_utils::get_ar_tipo_by_model('area_maintenance');
-			if (isset($area_maintenance[0])) {
-				$ar_root_areas[] = $area_maintenance[0]; // dd88
-			}else{
-				debug_log(__METHOD__
-					. " WARNING. Model 'area_maintenance' is not defined! Update your Ontology ASAP " . PHP_EOL
-					. ' Fixed resolution is returned to allow all works temporally'
-					, logger::ERROR
-				);
-				if (!defined('DEDALO_AREA_MAINTENANCE_TIPO')) {
-					define('DEDALO_AREA_MAINTENANCE_TIPO', 'dd88');
-				}
-				$ar_root_areas[] = DEDALO_AREA_MAINTENANCE_TIPO; // dd88
-			}
-
-			// area_development
-			$ar_root_areas[] = ontology_utils::get_ar_tipo_by_model('area_development')[0];
-
-			// area_ontology. check (if user do not have the Ontology updated)
-			$area_ontology = ontology_utils::get_ar_tipo_by_model('area_ontology');
-			if (isset($area_ontology[0])) {
-				$ar_root_areas[] = $area_ontology[0];
-			}else{
-				debug_log(__METHOD__
-					. " WARNING. Model 'area_ontology' is not defined! Update your Ontology ASAP "
-					, logger::WARNING
-				);
-			}
+		// root_areas (shared with get_all_areas)
+			$ar_root_areas = self::get_ar_root_area_tipos();
 
 			$areas = [];
 			foreach ($ar_root_areas as $area_tipo) {
@@ -273,6 +226,126 @@ class area extends area_common {
 
 		return $ar_children_areas_recursive;
 	}//end get_ar_children_areas_recursive
+
+
+
+	/**
+	* GET_AR_ROOT_AREA_TIPOS
+	* Ordered list of the root area tipos (resolved from area models). Shared by
+	* get_areas() (which then deny-filters + descends) and get_all_areas() (which
+	* keeps everything). Extracted so both walk an identical root set.
+	*
+	* @return array<string> ordered root area tipos
+	*/
+	public static function get_ar_root_area_tipos() : array {
+
+		$ar_root_areas		= [];
+		$ar_root_areas[]	= ontology_utils::get_ar_tipo_by_model('area_root')[0];
+		$ar_root_areas[]	= ontology_utils::get_ar_tipo_by_model('area_activity')[0];
+		$ar_root_areas[]	= ontology_utils::get_ar_tipo_by_model('area_resource')[0];
+		$ar_root_areas[]	= ontology_utils::get_ar_tipo_by_model('area_tool')[0];
+		$ar_root_areas[]	= ontology_utils::get_ar_tipo_by_model('area_thesaurus')[0];
+
+		// area_graph. check (if user do not have the Ontology updated)
+		$area_graph = ontology_utils::get_ar_tipo_by_model('area_graph');
+		if (isset($area_graph[0])) {
+			$ar_root_areas[] = $area_graph[0];
+		}else{
+			debug_log(__METHOD__
+				. " WARNING. Model 'area_graph' is not defined! Update your Ontology ASAP "
+				, logger::WARNING
+			);
+		}
+		$ar_root_areas[] = ontology_utils::get_ar_tipo_by_model('area_admin')[0];
+
+		// area_maintenance. Temporal check (if user do not have the Ontology updated, error is given here)
+		$area_maintenance = ontology_utils::get_ar_tipo_by_model('area_maintenance');
+		if (isset($area_maintenance[0])) {
+			$ar_root_areas[] = $area_maintenance[0]; // dd88
+		}else{
+			debug_log(__METHOD__
+				. " WARNING. Model 'area_maintenance' is not defined! Update your Ontology ASAP " . PHP_EOL
+				. ' Fixed resolution is returned to allow all works temporally'
+				, logger::ERROR
+			);
+			if (!defined('DEDALO_AREA_MAINTENANCE_TIPO')) {
+				define('DEDALO_AREA_MAINTENANCE_TIPO', 'dd88');
+			}
+			$ar_root_areas[] = DEDALO_AREA_MAINTENANCE_TIPO; // dd88
+		}
+
+		// area_development
+		$ar_root_areas[] = ontology_utils::get_ar_tipo_by_model('area_development')[0];
+
+		// area_ontology. check (if user do not have the Ontology updated)
+		$area_ontology = ontology_utils::get_ar_tipo_by_model('area_ontology');
+		if (isset($area_ontology[0])) {
+			$ar_root_areas[] = $area_ontology[0];
+		}else{
+			debug_log(__METHOD__
+				. " WARNING. Model 'area_ontology' is not defined! Update your Ontology ASAP "
+				, logger::WARNING
+			);
+		}
+
+		return $ar_root_areas;
+	}//end get_ar_root_area_tipos
+
+
+
+	/**
+	* GET_ALL_AREAS
+	* The UNfiltered counterpart of get_areas(): walks the same root areas + recursive
+	* children but skips NOTHING, flagging each node's current denied/allowed state so a
+	* UI (config_areas widget) can show and re-enable currently-denied areas/sections.
+	*
+	* @return array<object> each {tipo, model, parent, label, denied:bool, allowed:bool}
+	*/
+	public static function get_all_areas() : array {
+
+		$config_areas	= self::get_config_areas();
+		$deny			= $config_areas->areas_deny;
+		$allow			= $config_areas->areas_allow;
+
+		$ar_root_areas	= self::get_ar_root_area_tipos();
+
+		$areas = [];
+		foreach ($ar_root_areas as $area_tipo) {
+
+			$areas[] = self::build_area_state_node($area_tipo, $deny, $allow);
+
+			$ar_group_areas = self::get_ar_children_areas_recursive($area_tipo);
+			foreach ($ar_group_areas as $child_area_tipo) {
+				$areas[] = self::build_area_state_node($child_area_tipo, $deny, $allow);
+			}
+		}
+
+		return $areas;
+	}//end get_all_areas
+
+
+	/**
+	* BUILD_AREA_STATE_NODE
+	* Builds one area/section descriptor with its current deny/allow flags.
+	*
+	* @param string $tipo
+	* @param array<string> $deny
+	* @param array<string> $allow
+	* @return object {tipo, model, parent, label, denied, allowed}
+	*/
+	private static function build_area_state_node(string $tipo, array $deny, array $allow) : object {
+
+		$ontology_node = ontology_node::get_instance($tipo);
+
+		return (object)[
+			'tipo'		=> $ontology_node->get_tipo(),
+			'model'		=> $ontology_node->get_model(),
+			'parent'	=> $ontology_node->get_parent(),
+			'label'		=> $ontology_node->get_term( DEDALO_APPLICATION_LANG ),
+			'denied'	=> in_array($tipo, $deny, true),
+			'allowed'	=> in_array($tipo, $allow, true)
+		];
+	}//end build_area_state_node
 
 
 
