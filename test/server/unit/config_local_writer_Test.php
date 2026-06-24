@@ -16,7 +16,14 @@ final class config_local_writer_Test extends TestCase {
 	protected function tearDown() : void {
 		foreach (glob($this->tmp . '/.install_backups/*') ?: [] as $f) { @unlink($f); }
 		@rmdir($this->tmp . '/.install_backups');
-		foreach (glob($this->tmp . '/*') ?: [] as $f) { @unlink($f); }
+		foreach (glob($this->tmp . '/*') ?: [] as $f) {
+			if (is_dir($f)) {
+				@chmod($f, 0700);
+				@rmdir($f);
+			} else {
+				@unlink($f);
+			}
+		}
 		@rmdir($this->tmp);
 	}
 
@@ -49,9 +56,28 @@ final class config_local_writer_Test extends TestCase {
 		$this->assertSame(['dd137'], $loaded['areas.deny']);
 	}
 
-	public function test_non_writable_dir_returns_false() : void {
-		$target = '/proc/nonexistent_dir_dedalo/config.local.php'; // unwritable on macOS/Linux CI
+	public function test_noncreatable_parent_dir_returns_false() : void {
+		$target = '/dev/null/dedalo_cannot/config.local.php'; // /dev/null is a file, not a dir; path cannot be created cross-platform
 		$r = config_local_writer::set_values(['areas.deny' => []], $target);
 		$this->assertFalse($r->result);
+	}
+
+	public function test_dir_is_writable_probe_returns_false_when_dir_not_writable() : void {
+		if (function_exists('posix_getuid') && posix_getuid() === 0) {
+			$this->markTestSkipped('chmod write-protection is bypassed as root');
+		}
+
+		$readonly_dir = $this->tmp . '/readonly_subdir';
+		@mkdir($readonly_dir, 0700);
+		$target = $readonly_dir . '/config.local.php';
+
+		// Make directory read-only (no write permission)
+		@chmod($readonly_dir, 0500);
+
+		$r = config_local_writer::set_values(['areas.deny' => []], $target);
+		$this->assertFalse($r->result);
+
+		// Restore directory to writable state for cleanup
+		@chmod($readonly_dir, 0700);
 	}
 }
