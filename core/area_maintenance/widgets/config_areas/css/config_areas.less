@@ -1,3 +1,6 @@
+// Uses the shared theme tokens (core/page/css/layout/theme_tokens.less, --ut_*),
+// which flip under [data-theme="dark"] — so chips and the suggestions dropdown stay
+// legible in both light and dark mode. Fallbacks are the light-theme values.
 .wrapper_widget.config_areas {
 
 	// current deny list, as removable chips
@@ -15,10 +18,11 @@
 		gap				: 8px;
 		padding			: 3px 4px 3px 10px;
 		border-radius	: 4px;
-		background-color: var(--ut_color_hover, rgba(0,0,0,0.05));
+		background-color: var(--ut_bg_hover, #eef1f5);
+		color			: var(--ut_text_primary, #1f2328);
 
 		.config_areas_chip_label small {
-			opacity		: 0.6;
+			color		: var(--ut_text_muted, #6e7781);
 			margin-left	: 6px;
 		}
 
@@ -29,9 +33,9 @@
 			font-size	: 16px;
 			line-height	: 1;
 			padding		: 0 6px;
-			opacity		: 0.6;
+			color		: var(--ut_text_muted, #6e7781);
 
-			&:hover { opacity: 1; }
+			&:hover { color: var(--ut_text_primary, #1f2328); }
 		}
 	}
 
@@ -41,9 +45,13 @@
 		margin		: 10px 0;
 
 		.config_areas_search {
-			width		: 100%;
-			box-sizing	: border-box;
-			padding		: 6px 8px;
+			width			: 100%;
+			box-sizing		: border-box;
+			padding			: 6px 8px;
+			border-radius	: 4px;
+			background-color: var(--ut_bg_input, #f6f8fa);
+			color			: var(--ut_text_primary, #1f2328);
+			border			: 1px solid var(--ut_border, rgba(27,31,36,.15));
 		}
 
 		.config_areas_suggestions {
@@ -53,9 +61,11 @@
 			right			: 0;
 			max-height		: 260px;
 			overflow-y		: auto;
-			background-color: var(--ut_color_bg, #fff);
-			border			: 1px solid var(--ut_color_border, rgba(0,0,0,0.15));
+			background-color: var(--ut_bg_elevated, #ffffff);
+			color			: var(--ut_text_primary, #1f2328);
+			border			: 1px solid var(--ut_border, rgba(27,31,36,.15));
 			border-top		: 0;
+			box-shadow		: var(--ut_shadow, 0 8px 24px -16px rgba(27,31,36,.25));
 
 			&.hide { display: none; }
 		}
@@ -64,9 +74,9 @@
 			padding	: 5px 8px;
 			cursor	: pointer;
 
-			small { opacity: 0.6; margin-left: 6px; }
+			small { color: var(--ut_text_muted, #6e7781); margin-left: 6px; }
 
-			&:hover { background-color: var(--ut_color_hover, rgba(0,0,0,0.07)); }
+			&:hover { background-color: var(--ut_bg_hover, #eef1f5); }
 		}
 	}
 
