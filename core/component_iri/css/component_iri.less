@@ -7,6 +7,50 @@
 
 	&.edit {
 
+		// pen + trash (inside the embedded dataframe) and the iri's own
+		// remove/link action buttons are hidden at rest and revealed only when the
+		// whole component is hovered or active. The title/url input outlines behave
+		// the same way (:not(:focus) keeps the focus hilite while editing).
+		.component_dataframe .column_section_id,
+		.component_dataframe .column_remove,
+		>.content_data >.content_value >.button.remove,
+		>.content_data >.content_value >.button.link {
+			opacity: 0;
+			pointer-events: none;
+			transition: opacity var(--transition-fast);
+		}
+
+		>.content_data >.content_value >.input_value:not(:focus) {
+			outline-color: transparent;
+		}
+
+		// group the embedded dataframe's pen + trash together at the right (like
+		// the component_portal view_line) so the linked-record text sits on the left.
+		.component_dataframe .section_record {
+			>.column_section_id {
+				order: 2;
+				margin-left: auto;
+			}
+			>.column_remove {
+				order: 3;
+			}
+		}
+
+		&:hover,
+		&.active {
+			.component_dataframe .column_section_id,
+			.component_dataframe .column_remove,
+			>.content_data >.content_value >.button.remove,
+			>.content_data >.content_value >.button.link {
+				opacity: 1;
+				pointer-events: auto;
+			}
+
+			>.content_data >.content_value >.input_value:not(:focus) {
+				outline-color: @color_grey_14;
+			}
+		}
+
 		// disabled (E.g. Tool Time machine preview)
 		// Hide pen and trash icons.
 		&.disabled_component {

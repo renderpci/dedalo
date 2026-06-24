@@ -1,21 +1,29 @@
 <?php declare(strict_types=1);
 /**
 * CHECK_CONFIG
-* Maintenance-area widget that audits the live installation's PHP config files
-* against their bundled sample counterparts.
+* Maintenance-area widget that audits the live installation's configuration.
+*
+* v7 config system note:
+*   Configuration no longer lives in web-served PHP files. `config_db.php` and
+*   `config_core.php` were removed; `config.php` is now a thin bootstrap shim
+*   (it just requires bootstrap.php). DB credentials and secrets live in
+*   ../private/.env, and machine-written runtime state lives in ../private/state.php
+*   (both out of the web root). Constants are emitted at boot from those sources
+*   plus the config catalog (core/base/config/catalog/).
 *
 * Responsibilities:
-* - For each of the three config files (config, config_db, config_core) it
-*   compares the set of PHP constants declared in the live file against those
-*   declared in the matching sample.*.php template.
-* - Reports two asymmetries:
-*   config_vs_sample — constants present in the live config but absent from the
-*   sample, suggesting they may be stale or mis-named.
-*   sample_vs_config — constants present in the sample but not yet `define()`-d
-*   in the running PHP process, signalling a missing or outdated installation.
+* - Reports the live database status via installer::get_db_status(): whether the
+*   DEDALO_*_CONN credentials are still sample placeholders, whether a real
+*   PostgreSQL connection can be opened, and whether the target DB is writable.
+* - Reports the presence/readability of the new private config sources
+*   (../private/.env, ../private/state.php and the optional config.local.php).
+* - Reports which constants declared in the shipped sample templates
+*   (sample.config.php, sample.config_db.php) are not `define()`-d in the running
+*   PHP process — a proxy for an incomplete or outdated configuration. The check
+*   is against defined() (not a file-vs-file diff) so it is agnostic to where the
+*   constant is now resolved from (.env, catalog or state.php).
 * - The JS renderer (render_check_config.js) colours the widget header red when
-*   sample_vs_config is non-empty, alerting the administrator that their
-*   installation is likely misconfigured.
+*   the DB status is not fully OK or any sample constant is missing at runtime.
 * - This class exposes no directly callable API methods (`API_ACTIONS = []`);
 *   it is only invoked through `dd_area_maintenance_api::get_widget_value()`,
 *   which hard-codes the call to `get_value()`.
@@ -54,31 +62,37 @@ class check_config {
 
 	/**
 	* GET_VALUE
-	* Compares each live config file against its sample template and returns
-	* a structured diff for all three config files.
+	* Audits the v7 configuration and returns a structured status object.
 	*
 	* Called by `dd_area_maintenance_api::get_widget_value()` with no arguments.
 	* The method is synchronous and read-only; it never writes to disk.
 	*
 	* Return shape:
 	* {
-	*   result: [
-	*     {
-	*       file_name:                    string,  // "config" | "config_db" | "config_core"
-	*       config_vs_sample:             string[], // constants in live file but not in sample
-	*       sample_vs_config:             string[], // sample constants not defined at runtime
-	*       sample_config_constants_list: string[], // full list of constants in the sample file
-	*       config_constants_list:        string[], // full list of constants in the live file
+	*   result: {
+	*     db_status: {            // from installer::get_db_status()
+	*       config_db_name_check:    bool,
+	*       config_user_name_check:  bool,
+	*       config_pw_check:         bool,
+	*       config_information_check:bool,
+	*       config_info_key_check:   bool,
+	*       config_check:            bool,
+	*       db_connection_check:     bool,
+	*       db_writable_check:       bool,
+	*       global_status:           bool
 	*     },
-	*     ...
-	*   ],
+	*     config_sources: [        // presence of ../private config files
+	*       { name: string, required: bool, exists: bool, readable: bool },
+	*       ...
+	*     ],
+	*     constants: [             // sample constants not defined() at runtime
+	*       { file_name: string, missing: string[], sample_constants_list: string[] },
+	*       ...
+	*     ]
+	*   },
 	*   msg:    string,
 	*   errors: string[],
 	* }
-	*
-	* If a sample or live config file is missing or unreadable the iteration skips
-	* that file, records an error string in $response->errors, and continues to
-	* the next file.
 	*
 	* @return object $response
 	*/
@@ -89,104 +103,73 @@ class check_config {
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 			$response->errors	= [];
 
-		// result
-			$result = [];
+		// installer (delegates to installer_config_manager). include_once'd here so the
+		// widget works even when invoked outside a context that already loaded it.
+			require_once DEDALO_CORE_PATH . '/installer/class.installer.php';
 
-		// ar_files_name iterate
-			$ar_files_name = [
-				'config',
-				'config_db',
-				'config_core'
+		$result = new stdClass();
+
+		// 1. database status (credentials + live connection + write test)
+		//    installer::get_db_status() reads the .env-sourced DEDALO_*_CONN constants,
+		//    rejects the sample placeholders (e.g. 'myusername', 'dedalo_mydatabase'),
+		//    opens a real pg_connect, and runs a CREATE/INSERT/DROP probe.
+			$result->db_status = installer::get_db_status();
+
+		// 2. private config sources presence
+		//    .env (DB + secrets) and state.php (runtime state) are mandatory once the
+		//    system is configured; config.local.php is an optional hand-authored override.
+			$private = dirname(DEDALO_ROOT_PATH) . '/private';
+			$ar_sources = [
+				(object)['name' => '.env',				'path' => $private.'/.env',				'required' => true],
+				(object)['name' => 'state.php',			'path' => $private.'/state.php',		'required' => true],
+				(object)['name' => 'config.local.php',	'path' => $private.'/config.local.php',	'required' => false]
 			];
-			foreach ($ar_files_name as $file_name) {
+			$config_sources = [];
+			foreach ($ar_sources as $source) {
+				$item = new stdClass();
+					$item->name		= $source->name;
+					$item->required	= $source->required;
+					$item->exists	= file_exists($source->path);
+					$item->readable	= $item->exists && is_readable($source->path);
+				$config_sources[] = $item;
+				if ($source->required===true && $item->readable===false) {
+					$response->errors[] = 'Required config source missing or unreadable: ' . $source->name;
+				}
+			}
+			$result->config_sources = $config_sources;
+
+		// 3. sample constants not defined() at runtime
+		//    Only sample files that still ship are inspected (sample.config / sample.config_db);
+		//    a removed sample (e.g. sample.config_core.php) is expected in v7 and skipped silently.
+		//    Testing against defined() rather than a live-file diff keeps the check valid
+		//    regardless of where the constant is now resolved from (.env, catalog, state.php).
+		//    $ignore lists constants set elsewhere or auto-derived, to avoid false positives.
+			$ignore = ['DEDALO_MAINTENANCE_MODE','DEDALO_API_URL'];
+			$ar_sample_files = ['config','config_db'];
+			$constants = [];
+			foreach ($ar_sample_files as $file_name) {
+
+				$sample_path = DEDALO_CONFIG_PATH . '/sample.'.$file_name.'.php';
+				if (!file_exists($sample_path) || !is_readable($sample_path)) {
+					continue;
+				}
+
+				$sample_constants_list = area_maintenance::get_file_constants($sample_path);
+
+				$missing = [];
+				foreach ($sample_constants_list as $const_name) {
+					if (!in_array($const_name, $ignore) && !defined($const_name)) {
+						$missing[] = $const_name;
+					}
+				}
 
 				$item = new stdClass();
-					$item->file_name		= $file_name;
-					$item->config_vs_sample	= [];
-					$item->sample_vs_config	= [];
-
-
-				// sample file
-				// Guard against missing or unreadable sample templates; without a sample
-				// file the diff is meaningless so the entry is skipped entirely.
-					$sample_path = DEDALO_CONFIG_PATH . '/sample.'.$file_name.'.php';
-					if (!file_exists($sample_path) || !is_readable($sample_path)) {
-						debug_log(__METHOD__
-							. " Ignored sample config comparison because the sample config file do not exists." . PHP_EOL
-							. ' sample_path: ' . to_string($sample_path)
-							, logger::ERROR
-						);
-						$response->errors[] = 'Sample config file unavailable: ' . 'sample.'.$file_name.'.php';
-						continue;
-					}
-
-				// sample_config_constants_list
-				// Extract every `define('CONSTANT_NAME', ...)` call from the sample file
-				// using get_file_constants(), which applies SEC-069 realpath confinement.
-					$sample_config_constants_list = area_maintenance::get_file_constants(
-						$sample_path
-					);
-					$item->sample_config_constants_list	= $sample_config_constants_list;
-
-				// config file
-				// Guard against missing or unreadable live config files.
-					$config_path = DEDALO_CONFIG_PATH . '/'.$file_name.'.php';
-					if (!file_exists($config_path) || !is_readable($config_path)) {
-						debug_log(__METHOD__
-							. " Ignored config comparison because the config file do not exists." . PHP_EOL
-							. ' config_path: ' . to_string($config_path)
-							, logger::ERROR
-						);
-						$response->errors[] = 'Config file unavailable: ' . $file_name.'.php';
-						continue;
-					}
-
-				// config_constants_list
-				// Extract every `define(...)` from the live config file; same helper,
-				// same path-confinement rules as for the sample above.
-					$config_constants_list = area_maintenance::get_file_constants(
-						$config_path
-					);
-					$item->config_constants_list = $config_constants_list;
-
-				// config_vs_sample. Compares defined config constants vs sample config
-				// Identifies constants that exist in the live file but not in the sample,
-				// which may indicate site-local additions (normal) or stale/typo names
-				// (the administrator should review them).
-				// The $ignore list contains constants that are intentionally optional:
-				//   DEDALO_MAINTENANCE_MODE_CUSTOM — written dynamically by set_maintenance_mode()
-				//   DEDALO_NOTIFICATION           — written dynamically by set_notification()
-				//   GEONAMES_ACCOUNT_USERNAME     — optional GeoNames integration credential
-				//   EXPORT_HIERARCHY_PATH         — optional export override path
-					$ignore = ['DEDALO_MAINTENANCE_MODE_CUSTOM','DEDALO_NOTIFICATION','GEONAMES_ACCOUNT_USERNAME','EXPORT_HIERARCHY_PATH'];
-					foreach ($config_constants_list as $const_name) {
-						if (!in_array($const_name, $sample_config_constants_list)) {
-							// exceptions (ignore optional constants that could be disabled)
-							if (!in_array($const_name, $ignore)) {
-								$item->config_vs_sample[] = $const_name;
-							}
-						}
-					}
-
-				// sample_vs_config. Compares defined sample constants vs config
-				// Identifies constants declared in the sample that are not yet defined in
-				// the running PHP process. A non-empty list means the live config is
-				// missing constants that a fresh install would have, and the JS renderer
-				// will colour the widget header red (danger style).
-				// The $ignore list contains constants present in sample files but excluded
-				// from the "missing" check because they are set elsewhere or superseded:
-				//   DEDALO_MAINTENANCE_MODE — superseded at runtime by DEDALO_MAINTENANCE_MODE_CUSTOM
-				//   DEDALO_API_URL          — auto-derived from other constants in config.php
-					$ignore = ['DEDALO_MAINTENANCE_MODE','DEDALO_API_URL'];
-					foreach ($sample_config_constants_list as $const_name) {
-						if (!in_array($const_name, $ignore) && !defined($const_name)) {
-							$item->sample_vs_config[] = $const_name;
-						}
-					}
-
-				// add
-					$result[] = $item;
-			}//end foreach
+					$item->file_name				= 'sample.'.$file_name;
+					$item->missing					= $missing;
+					$item->sample_constants_list	= $sample_constants_list;
+				$constants[] = $item;
+			}
+			$result->constants = $constants;
 
 
 		// response

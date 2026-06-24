@@ -11,6 +11,10 @@
 		.section_record.edit & {
 			width: 100%;
 			margin-bottom: 0.5rem;
+			// white rounded card (matches the inspector cards / section_tab panel)
+			background-color: var(--bg_surface);
+			border-radius: 0.7rem;
+			// overflow: hidden;
 
 			@media screen and (max-width: @width_break_point_1) {
 				width: 100% !important;
@@ -18,11 +22,36 @@
 
 			>.label {
 				.label_top(); // defined in layout
+				background: none;
+				// white header, rounded top corners, more breathing room
+				// background-color: var(--color_white);
+				// border-top-left-radius: 0.7rem;
+				// border-top-right-radius: 0.7rem;
+				padding: 0.66em;
+				// collapse arrow first, then the group title
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+
+				// move the icon_arrow chevron from the right edge to the start
+				&:after {
+					position: static;
+					order: -1;
+					right: auto;
+					margin: 0px;
+					padding: 0px;
+					flex: 0 0 auto;
+				}
 			}
 			>.content_data {
-				contain: style;
+				// contain: style;
 				display: grid;
 				align-content: stretch;
+				// grouper body is a white card floating on the light-gray page
+				// (palette token used directly so a stale tool-css :root cannot override it)
+				// background-color: var(--color_white);
+				// border-bottom-left-radius: 0.7rem;
+				// border-bottom-right-radius: 0.7rem;
 
 				@media screen and (max-width: @width_break_point_1) {
 					display: block;

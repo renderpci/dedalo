@@ -140,39 +140,110 @@ render_section_tab.prototype.edit = async function(options) {
 					const children_length	= children.length
 					// Map of child tipo → label DOM node for fast lookup by active_tab() and status restore.
 					const children_object	= {}
+					// Horizontal label bar. The labels live in their own scroll
+					// container so that on narrow screens they scroll sideways in a
+					// single row instead of wrapping (which broke the tab effect).
+					const tab_labels = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'tab_labels',
+						parent			: wrapper
+					})
+					const tab_labels_strip = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'tab_labels_strip',
+						parent			: tab_labels
+					})
 					for (let i = 0; i < children_length; i++) {
 						const child = children[i]
 						const child_node = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'tab_label',
 							inner_html		: child.label,
-							parent			: wrapper
+							parent			: tab_labels_strip
 						})
 						// Attach tipo directly to the node so the click handler can
 						// identify which child to activate without a closure variable.
 						child_node.tipo = child.tipo
 						child_node.addEventListener("click", function(e) {
 							e.stopPropagation()
-							active_tab(child_node)
+							active_tab(child_node, true)
 						})
 						children_object[child.tipo] = child_node
 					}
 
+					// scroll chevrons. Shown only when the labels overflow the strip.
+					const scroll_left_btn = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'tab_scroll_btn tab_scroll_left',
+						parent			: tab_labels
+					})
+					const scroll_right_btn = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'tab_scroll_btn tab_scroll_right',
+						parent			: tab_labels
+					})
+					// scroll the strip by ~70% of its visible width
+					const scroll_strip = (dir) => {
+						const step = Math.max(120, tab_labels_strip.clientWidth * 0.7)
+						tab_labels_strip.scrollBy({ left: dir * step, behavior: 'smooth' })
+					}
+					scroll_left_btn.addEventListener('click', (e) => { e.stopPropagation(); scroll_strip(-1) })
+					scroll_right_btn.addEventListener('click', (e) => { e.stopPropagation(); scroll_strip(1) })
+					// bring a label fully into view horizontally — never scroll the page
+					const ensure_label_visible = (label) => {
+						const lr = label.getBoundingClientRect()
+						const sr = tab_labels_strip.getBoundingClientRect()
+						if (lr.left < sr.left) {
+							tab_labels_strip.scrollBy({ left: lr.left - sr.left - 8, behavior: 'smooth' })
+						} else if (lr.right > sr.right) {
+							tab_labels_strip.scrollBy({ left: lr.right - sr.right + 8, behavior: 'smooth' })
+						}
+					}
+					// show/hide the chevrons based on overflow + scroll position
+					const update_scroll_btns = () => {
+						const max = tab_labels_strip.scrollWidth - tab_labels_strip.clientWidth
+						const has_overflow = max > 2
+						scroll_left_btn.classList.toggle('show', has_overflow && tab_labels_strip.scrollLeft > 1)
+						scroll_right_btn.classList.toggle('show', has_overflow && tab_labels_strip.scrollLeft < (max - 1))
+					}
+					// debounced update — runs AFTER layout settles (resize/reflow fire
+					// while sizes are still transient). The cleanup lives here (not in
+					// the observer) because the observer's first callback fires while
+					// the wrapper is still detached during render, which would otherwise
+					// disconnect it immediately. Once the bar leaves the DOM for good,
+					// the next event tears the global resize listener + observer down.
+					let upd_timer = null
+					const schedule_update = () => {
+						clearTimeout(upd_timer)
+						upd_timer = setTimeout(() => {
+							if (!document.body.contains(tab_labels_strip)) {
+								window.removeEventListener('resize', schedule_update)
+								strip_ro.disconnect()
+								return
+							}
+							update_scroll_btns()
+						}, 80)
+					}
+					tab_labels_strip.addEventListener('scroll', update_scroll_btns)
+					window.addEventListener('resize', schedule_update)
+					const strip_ro = new ResizeObserver(schedule_update)
+					strip_ro.observe(tab_labels_strip)
+					schedule_update()
+
 				// active_tab
 				// Closure over wrapper, children_object, status_id, and status_table.
 				// Called on click and once on initial render to restore persisted state.
-					const active_tab = (child_node) => {
+					const active_tab = (child_node, scroll=false) => {
 
 						const tipo = child_node.tipo;
 
 						// clean all active
-						// Remove 'active' from every sibling label before adding it to
-						// the selected one, ensuring only one tab appears selected at a time.
-							[...wrapper.childNodes].map(el => {
-								if(el.classList.contains('active')) {
-									el.classList.remove('active')
-								}
+						// Panels are direct children of the wrapper; the labels now
+						// live inside the .tab_labels bar, so clear 'active' from both.
+							[...wrapper.childNodes].forEach(el => {
+								if (el.classList) el.classList.remove('active')
 							})
+							Object.values(children_object).forEach(el => el.classList.remove('active'))
 
 						// publish the activate event
 						// The child section_tab in 'tab' view mode listens for this event
@@ -194,6 +265,13 @@ render_section_tab.prototype.edit = async function(options) {
 						// active self
 						// Mark the label node itself so CSS can style the selected tab header.
 							child_node.classList.add('active')
+
+						// on click, keep the chosen tab visible (horizontal only — never
+						// scroll the page), then refresh the chevrons
+							if (scroll) {
+								ensure_label_visible(child_node)
+							}
+							update_scroll_btns()
 					}
 
 				// status

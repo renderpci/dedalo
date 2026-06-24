@@ -85,6 +85,26 @@
 
 }//end .component_select
 
+// edit: the dropdown border and up/down arrows are hidden at rest and revealed
+// only when the component is hovered or active (:not(:focus) keeps an open/
+// focused select fully styled).
+.component_select.edit,
+.component_select_lang.edit {
+
+	>.content_data >.content_value >.select:not(:focus) {
+		outline-color: transparent;
+		background-image: none;
+	}
+
+	&:hover,
+	&.active {
+		>.content_data >.content_value >.select:not(:focus) {
+			outline-color: @color_grey_13;
+			background-image: var(--select_icon_url);
+		}
+	}
+}
+
 :root[data-theme="dark"] .component_select,
 :root[data-theme="dark"] .component_select_lang,
 :root[data-theme="dark"] .component_relation_model {

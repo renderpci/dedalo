@@ -157,6 +157,7 @@ body.inspector_resizing {
 					// every block collapses to its centered icon header
 					.inspector_content_data > div {
 						margin: 0.25rem 0.3rem;
+						background-color: transparent;
 					}
 
 					.element_info_head,
@@ -192,14 +193,35 @@ body.inspector_resizing {
 						display: none;
 					}
 
-					// stack the top action buttons vertically as rail icons
+					// stack the top action / tool icons vertically as rail icons,
+					// centred and sized exactly like the block-header icons above
+					// so the whole rail column is uniform. The buttons are <span>
+					// icons now (button block_icon <icon>), so target them as spans.
 					.buttons_container.top,
 					.tools_container.top {
 						flex-direction: column;
+						flex-wrap: nowrap;
 						align-items: center;
+						gap: 0.5rem;
+						padding: 0px;
 
-						>button {
-							margin-left: 0px;
+						>span {
+							flex: 0 0 auto;
+							// match the block-header icon: 1.4em at the same 0.72rem
+							// font so the glyph renders the same size everywhere.
+							font-size: 0.72rem;
+							width: 1.4em;
+							height: 1.4em;
+							min-width: 0px;
+							margin: 0px;
+							padding: 0px;
+							justify-content: center;
+
+							// label is hidden in the rail, so the icon's trailing
+							// text-gap would shift it off the centre line — drop it
+							&:before {
+								margin-right: 0px;
+							}
 						}
 					}
 				}

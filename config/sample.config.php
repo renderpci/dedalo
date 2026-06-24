@@ -888,25 +888,20 @@
 
 
 
-// mailer
-	// SMTP relay through an EXISTING mailbox (no local mail server required).
-	// Used by core/dd_mailer to send transactional email such as the
-	// "forgot password" recovery code (see core/password_reset).
-	// Leave DEDALO_SMTP_HOST undefined to disable all outgoing mail.
-		// define('DEDALO_SMTP_HOST', 'smtp.example.com');     // SMTP server hostname (required to enable mail)
-		// define('DEDALO_SMTP_PORT', 587);                    // 587 (STARTTLS) or 465 (SMTPS)
-		// define('DEDALO_SMTP_SECURE', 'tls');                // 'tls' (STARTTLS) | 'ssl' (SMTPS) | 'none'
-		// define('DEDALO_SMTP_USER', 'no-reply@example.com'); // mailbox login (leave '' for no auth)
-		// define('DEDALO_SMTP_PASS', '');                     // mailbox password
-		// define('DEDALO_SMTP_FROM', 'no-reply@example.com'); // From address (a mailbox the relay owns)
-		// define('DEDALO_SMTP_FROM_NAME', 'Dédalo');          // optional From display name
-		// define('DEDALO_SMTP_VERIFY_PEER', true);            // TLS certificate verification (keep true)
-
-// password recovery (forgot password)
-	// Tunables for the self-service password recovery flow (core/password_reset).
-	// Safe defaults are used when these are not defined.
-		// define('DEDALO_PWRESET_CODE_TTL', 600);     // seconds a recovery code stays valid (default 600)
-		// define('DEDALO_PWRESET_MAX_ATTEMPTS', 5);   // wrong-code guesses per issued code before it is voided (default 5)
+// mailer (outgoing SMTP relay) + password recovery
+	// MIGRATED to the v7 config catalog — do NOT define these here.
+	// Declared in: core/base/config/catalog/domains/mailer.php
+	// Per-install values go in ../private/.env (keyed by the constant name), e.g.:
+	//   DEDALO_SMTP_HOST=smtp.example.com    # null/unset = all outgoing mail disabled
+	//   DEDALO_SMTP_PORT=587                 # 587 STARTTLS | 465 SMTPS
+	//   DEDALO_SMTP_SECURE=tls               # tls | ssl | none
+	//   DEDALO_SMTP_USER=no-reply@example.com
+	//   DEDALO_SMTP_PASS=...                 # SECRET — keep in .env only (chmod 600)
+	//   DEDALO_SMTP_FROM=no-reply@example.com
+	//   DEDALO_SMTP_FROM_NAME=Dédalo
+	//   DEDALO_SMTP_VERIFY_PEER=true
+	//   DEDALO_PWRESET_CODE_TTL=600          # recovery code lifetime (seconds)
+	//   DEDALO_PWRESET_MAX_ATTEMPTS=5        # wrong-code guesses before a code is voided
 
 
 

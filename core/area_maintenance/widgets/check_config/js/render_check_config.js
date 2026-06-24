@@ -34,20 +34,18 @@
 *
 * Data contract (server → client)
 * --------------------------------
-* `self.value` is the `result` array returned by `check_config::get_value()`.
-* Each element is an object for one config-file comparison:
+* `self.value` is the `result` object returned by `check_config::get_value()`:
 *   {
-*     file_name                  : {string}  e.g. 'config', 'config_db', 'config_core'
-*     sample_vs_config           : {Array}   constant names in sample but not in live config
-*     config_vs_sample           : {Array}   constant names in live config but not in sample
-*     sample_config_constants_list : {Array} all constants found in the sample file
+*     db_status      : {Object}  per-check booleans + global_status (see installer::get_db_status)
+*     config_sources : {Array}   [{ name, required, exists, readable }] for ../private files
+*     constants      : {Array}   [{ file_name, missing:[...], sample_constants_list:[...] }]
 *   }
 *
 * Widget card label style
 * -----------------------
-* When `sample_vs_config` of the first item is non-empty the module calls
-* `set_widget_label_style(self, 'danger', 'add', …)` so the card header turns
-* red, alerting the administrator that required constants are missing.
+* When `db_status.global_status` is not true, or any `constants[].missing` is
+* non-empty, the module calls `set_widget_label_style(self, 'danger', 'add', …)`
+* so the card header turns red, alerting the administrator of a config problem.
 *
 * Architecture
 * ------------
@@ -197,46 +195,124 @@ const get_content_data_edit = async function(self) {
 
 /**
 * RENDER_CONFIG_VARS_STATUS
-* Create the necessary DOM nodes to display the config vars status.
+* Create the necessary DOM nodes to display the v7 config status.
 *
-* Iterates `self.value` (one item per config file) and renders two side-by-side
-* table columns:
+* Reads `self.value` (the object returned by check_config::get_value) and renders
+* three stacked status tables:
 *
-*   Missing (sample_vs_config)  — constants required by the sample file but not
-*     yet defined in the live config; each file gets a labelled row showing either
-*     a newline-separated list of constant names or the "OK" label.
+*   Database connection — per-check rows from `db_status` (connection, writable,
+*     and the credential placeholder checks). Each row shows OK or Error.
 *
-*   Obsolete (config_vs_sample) — constants present in the live config that are no
-*     longer in the sample template; shown in the right column with class 'obsolete'
-*     when non-empty.
+*   Config sources (../private) — presence/readability of the new config files
+*     (.env, state.php and the optional config.local.php). An optional source that
+*     is simply absent is shown as acceptable.
 *
-* Below the two columns, each file also gets a collapsible `<pre>` block listing
-* every constant name found in its sample file (toggled by clicking the eye-icon
-* row).
+*   Missing constants — for each shipped sample file, the constants that are not
+*     `define()`-d in the running PHP process, with a collapsible `<pre>` block
+*     listing the full sample constant set (toggled by the eye-icon row).
 *
-* Side effect: if the first item's `sample_vs_config` array is non-empty, the
-* widget card header is coloured red via `set_widget_label_style(self, 'danger', 'add', …)`.
-* This uses a `when_in_dom` deferred call (inside `set_widget_label_style`) because
-* the fragment may not yet be attached to the live DOM.
+* Side effect: if `db_status.global_status` is not true, or any sample constant is
+* undefined at runtime, the widget card header is coloured red via
+* `set_widget_label_style(self, 'danger', 'add', …)`. This uses a `when_in_dom`
+* deferred call (inside `set_widget_label_style`) because the fragment may not yet
+* be attached to the live DOM.
 *
 * @param {Object} self - The `check_config` widget instance
-* @returns {DocumentFragment} Fragment containing the full comparison UI
+* @returns {DocumentFragment} Fragment containing the full status UI
 */
 const render_config_vars_status = function (self) {
 
-	// value
-	const value = self.value || [];
+	// value (v7 object shape: { db_status, config_sources, constants })
+	const value = self.value || {};
 
 	const fragment = new DocumentFragment();
 
-	// tables
+	// tables (reference node for the when_in_dom widget-label style toggle)
 		const tables = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'tables',
 			parent			: fragment
 		})
 
-	// missing_container
+	// add_status_row — helper that renders a label + ok/fail data cell
+		const add_status_row = (parent, label_text, ok, state_text) => {
+			const row = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'file_container',
+				parent			: parent
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'label',
+				inner_html		: label_text,
+				parent			: row
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'data' + (ok ? '' : ' missing'),
+				inner_html		: state_text !== undefined
+					? state_text
+					: (ok ? (get_label.ok || 'OK') : 'Error'),
+				parent			: row
+			})
+			return row
+		}
+
+	// ---- database connection status ----
+		const db_status = value.db_status || {}
+		const db_status_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'table db_status_container',
+			parent			: tables
+		})
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'label',
+			inner_html		: 'Database connection',
+			parent			: db_status_container
+		})
+		const db_checks = [
+			['Connection',		db_status.db_connection_check],
+			['Writable',		db_status.db_writable_check],
+			['Database name',	db_status.config_db_name_check],
+			['User name',		db_status.config_user_name_check],
+			['Password',		db_status.config_pw_check],
+			['Information',		db_status.config_information_check],
+			['Info key',		db_status.config_info_key_check]
+		]
+		for (let i = 0; i < db_checks.length; i++) {
+			const ok = db_checks[i][1]===true
+			add_status_row(db_status_container, db_checks[i][0], ok, ok ? (get_label.ok || 'OK') : 'Error')
+		}
+
+	// ---- private config sources (../private) ----
+		const config_sources = value.config_sources || []
+		const config_sources_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'table config_sources_container',
+			parent			: tables
+		})
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'label',
+			inner_html		: 'Config sources (../private)',
+			parent			: config_sources_container
+		})
+		for (let i = 0; i < config_sources.length; i++) {
+			const source = config_sources[i]
+			// an optional source that is simply absent is acceptable (not a failure)
+			const acceptable = source.readable===true || source.required===false
+			const state_text = source.readable===true
+				? (get_label.ok || 'OK')
+				: (source.exists===true
+					? 'Not readable'
+					: (source.required===true ? 'Missing' : 'Not set (optional)'))
+			add_status_row(config_sources_container, source.name, acceptable, state_text)
+		}
+
+	// ---- sample constants not defined() at runtime ----
+		const constants = value.constants || []
+		let any_missing = false
 		const missing_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'table missing_container',
@@ -248,114 +324,61 @@ const render_config_vars_status = function (self) {
 			inner_html		: 'Missing constants',
 			parent			: missing_container
 		})
+		for (let i = 0; i < constants.length; i++) {
 
-	// obsolete_container
-		const obsolete_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'table obsolete_container',
-			parent			: tables
-		})
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'label',
-			inner_html		: 'Obsolete constants',
-			parent			: obsolete_container
-		})
-
-	// result iterate
-		const value_length = value.length
-		for (let i = 0; i < value_length; i++) {
-
-			const item = value[i]
-
-			// missing
-			{
-				// file_container (grid)
-				const file_container = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'file_container ' + item.file_name,
-					parent			: missing_container
-				})
-				// sample_vs_config
-				// label
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'label sample_vs_config',
-					inner_html		: `${item.file_name}`,
-					parent			: file_container
-				})
-				// data
-				const data_text = item.sample_vs_config.length>0
-					? item.sample_vs_config.join('<br>')
-					: get_label.ok || 'OK'
-				ui.create_dom_element({
-					element_type	: 'div',
-					// CSS class 'missing' is applied when there are constants to add
-					class_name		: 'data' + (item.sample_vs_config.length>0 ? ' missing' : ''),
-					inner_html		: data_text,
-					parent			: file_container
-				})
+			const item		= constants[i]
+			const missing	= item.missing || []
+			if (missing.length>0) {
+				any_missing = true
 			}
 
-			// obsolete
-			{
-				// file_container (grid)
-				const file_container = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'file_container ' + item.file_name,
-					parent			: obsolete_container
-				})
-				// config_vs_sample
-				// label
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'label config_vs_sample',
-					inner_html		: `${item.file_name}`,
-					parent			: file_container
-				})
-				// data
-				const data_text = item.config_vs_sample.length>0
-					? item.config_vs_sample.join('<br>')
-					: get_label.ok || 'OK'
-				ui.create_dom_element({
-					element_type	: 'div',
-					// CSS class 'obsolete' is applied when there are leftover constants
-					class_name		: 'data' + (item.config_vs_sample.length>0 ? ' obsolete' : ''),
-					inner_html		: data_text,
-					parent			: file_container
-				})
-			}
+			// file_container (grid)
+			const file_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'file_container ' + item.file_name,
+				parent			: missing_container
+			})
+			// label
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'label sample_vs_config',
+				inner_html		: `${item.file_name}`,
+				parent			: file_container
+			})
+			// data
+			ui.create_dom_element({
+				element_type	: 'div',
+				// CSS class 'missing' is applied when there are constants undefined at runtime
+				class_name		: 'data' + (missing.length>0 ? ' missing' : ''),
+				inner_html		: missing.length>0 ? missing.join('<br>') : (get_label.ok || 'OK'),
+				parent			: file_container
+			})
 
-			// list
-			{
-				// const_list_node — clickable toggle row that reveals the full constant list
-				const const_list_node = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'datalist_container show_list',
-					inner_html		: '<span class="button icon eye"></span>Display all sample.'+item.file_name+' constants list',
-					parent			: fragment
-				})
-				const_list_node.addEventListener('click', function(e) {
-					e.stopPropagation();
-					// toggle visibility of the collapsible <pre> block
-					const_list_pre.classList.toggle('hide')
-				})
-				const const_list	= item.sample_config_constants_list || []
-				const const_list_pre = ui.create_dom_element({
-					element_type	: 'pre',
-					class_name		: 'hide',
-					inner_html		: JSON.stringify(const_list, null, 2),
-					parent			: const_list_node
-				})
-			}
-		}//end for (let i = 0; i < value_length; i++)
+			// const_list_node — clickable toggle row that reveals the full constant list
+			const const_list_node = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'datalist_container show_list',
+				inner_html		: '<span class="button icon eye"></span>Display all '+item.file_name+' constants list',
+				parent			: fragment
+			})
+			const const_list		= item.sample_constants_list || []
+			const const_list_pre	= ui.create_dom_element({
+				element_type	: 'pre',
+				class_name		: 'hide',
+				inner_html		: JSON.stringify(const_list, null, 2),
+				parent			: const_list_node
+			})
+			const_list_node.addEventListener('click', function(e) {
+				e.stopPropagation();
+				// toggle visibility of the collapsible <pre> block
+				const_list_pre.classList.toggle('hide')
+			})
+		}//end for (let i = 0; i < constants.length; i++)
 
-	// Check if some config present var in sample is not defined in config
-	// If true, set widget label header style 'danger' (in red color)
-		const value_config		= value?.[0] || {}
-		const sample_vs_config	= value_config.sample_vs_config || []
-		if (sample_vs_config.length>0) {
-			// set widget container label color style
+	// Widget label header style: red (danger) when the DB status is not fully OK
+	// or any sample constant is undefined at runtime.
+		const db_ok = db_status.global_status===true
+		if (!db_ok || any_missing===true) {
 			set_widget_label_style(self, 'danger', 'add',
 				tables // reference node to attach in when_in_dom event
 			)

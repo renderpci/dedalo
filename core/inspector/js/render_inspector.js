@@ -414,7 +414,7 @@ render_inspector.prototype.edit = async function(options) {
 		decorate_block_header(label, 'panel', get_label.inspector || 'Inspector')
 		// rail collapse / expand toggle
 		const rail_toggle = ui.create_dom_element({
-			element_type	: 'button',
+			element_type	: 'span',
 			class_name		: 'inspector_rail_toggle',
 			title			: get_label.collapse || 'Collapse / expand',
 			parent			: label
@@ -570,8 +570,8 @@ const get_content_data = function(self) {
 
 		// button_search. Show and hide all search elements
 			const button_search = ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'light search',
+				element_type	: 'span',
+				class_name		: 'button block_icon light search',
 				title			: get_label.find || "Search",
 				parent			: buttons_container
 			})
@@ -585,8 +585,8 @@ const get_content_data = function(self) {
 			const section_button_new = section_buttons.find(el => el.model==='button_new')
 			if (section_button_new) {
 				const button_new = ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: 'light add_light',
+					element_type	: 'span',
+					class_name		: 'button block_icon light add_light',
 					title			: section_button_new.label || 'New',
 					parent			: buttons_container
 				})
@@ -601,8 +601,8 @@ const get_content_data = function(self) {
 		// use the section_button_new, if it's defined user can create or duplicate the section
 			if (section_button_new) {
 				const button_duplicate = ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: 'light duplicate',
+					element_type	: 'span',
+					class_name		: 'button block_icon light duplicate',
 					title			: get_label.duplicate || "Duplicate",
 					parent			: buttons_container
 				})
@@ -621,8 +621,8 @@ const get_content_data = function(self) {
 			const section_button_delete = section_buttons.find(el => el.model==='button_delete')
 			if (section_button_delete) {
 				const button_delete = ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: 'light remove',
+					element_type	: 'span',
+					class_name		: 'button block_icon light remove',
 					title			: section_button_delete.label || 'Delete',
 					parent			: buttons_container
 				})
@@ -641,8 +641,8 @@ const get_content_data = function(self) {
 			// Opens the list of all sections that have a direct relation to the current
 			// one, rendered via render_open_list_with_direct_relations.
 			const button_target_section = ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'light list',
+				element_type	: 'span',
+				class_name		: 'button block_icon light list',
 				title			: get_label.open_relationships || 'Open relationships',
 				parent			: buttons_container
 			})
@@ -678,8 +678,8 @@ const get_content_data = function(self) {
 
 		// button_graph . Switch the section to the interactive relations graph view
 			const button_graph = ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'light graph',
+				element_type	: 'span',
+				class_name		: 'button block_icon light graph',
 				title			: get_label.graph || 'Graph',
 				parent			: buttons_container
 			})
@@ -715,8 +715,8 @@ const get_content_data = function(self) {
 			const tool_diffusion = self.caller.tools.find(el => el.name==='tool_diffusion')
 			if (tool_diffusion) {
 				const button_diffusion = ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: 'light diffusion',
+					element_type	: 'span',
+					class_name		: 'button block_icon light diffusion',
 					title			: get_label.diffusion || 'Diffusion',
 					parent			: buttons_container
 				})
@@ -756,11 +756,11 @@ const get_content_data = function(self) {
 					// bg color. E.g. '--tool_ontology_color'  (a CSS custom property defined by the tool)
 					const button_bg_color = `--${tool_context.name}_color`
 					const tool_button = ui.create_dom_element({
-						element_type	: 'button',
-						class_name		: 'light blank',
+						element_type	: 'span',
+						class_name		: 'button block_icon light blank',
 						style			: {
-							'--icon-path' : `url('${tool_context.icon}')`,
-							'--button-bg-color' : `var(${button_bg_color})`
+							'mask-image' : `url('${tool_context.icon}')`,
+							// '--button-bg-color' : `var(${button_bg_color})`
 						},
 						title  : tool_context.label,
 						parent : inspector_tools_length > 1 ? tools_container : buttons_container
@@ -869,7 +869,7 @@ const get_content_data = function(self) {
 		// in a new tab so developers can inspect the JSON structure without leaving the
 		// edit view.  Uses DEDALO_API_URL which is injected globally by the PHP template.
 			const data_link = ui.create_dom_element({
-				element_type	: 'button',
+				element_type	: 'span',
 				class_name		: 'light eye data_link',
 				text_content	: get_label.record || 'View record data',
 				parent			: buttons_bottom_container
@@ -898,7 +898,7 @@ const get_content_data = function(self) {
 		// canonical serialization format for tool registration in the v7 tools architecture.
 			if (self.section_tipo==='dd1340') {
 				const register_download = ui.create_dom_element({
-					element_type	: 'button',
+					element_type	: 'span',
 					class_name		: 'warning download register_download',
 					text_content	: 'Download register file',
 					parent			: buttons_bottom_container
@@ -1383,7 +1383,7 @@ export const render_component_info = function(self, component) {
 
 		// button copy value (created once)
 		const button_value_copy_node = ui.create_dom_element({
-			element_type	: 'button',
+			element_type	: 'span',
 			class_name		: 'button_value_copy warning hide',
 			inner_html		: get_label.copy || 'Copy',
 			parent			: value_node

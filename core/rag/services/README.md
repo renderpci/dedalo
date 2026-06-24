@@ -35,17 +35,25 @@ curl -s localhost:8090/embed -H 'content-type: application/json' \
   -d '{"input":["hola mundo","blue-and-white ceramic"]}' | head -c 120
 ```
 
-## Point Dédalo at it (`private/config_db.inc`)
+## Point Dédalo at it (`../private/.env`)
 
-```php
-define('DEDALO_RAG_ENABLED', true);
-// text
-define('DEDALO_RAG_ENDPOINT', 'http://127.0.0.1:8090/embed');
-define('DEDALO_RAG_MODEL',    'paraphrase-multilingual-MiniLM-L12-v2'); // ~384-dim, multilingual
-// images
-define('DEDALO_RAG_MEDIA_ENABLED', true);
-define('DEDALO_RAG_MULTIMODAL_ENDPOINT', 'http://127.0.0.1:8090');
-define('DEDALO_RAG_MULTIMODAL_MODEL',    'clip-ViT-B-32');             // ~512-dim joint image+text
+RAG settings are declared in the config catalog (`core/base/config/catalog/domains/rag.php`)
+and set per-install in `../private/.env` by constant name (one `KEY=VALUE` per line):
+
+```dotenv
+DEDALO_RAG_ENABLED=true
+# text
+DEDALO_RAG_ENDPOINT=http://127.0.0.1:8090/embed
+DEDALO_RAG_MODEL=paraphrase-multilingual-MiniLM-L12-v2   # ~384-dim, multilingual
+# images
+DEDALO_RAG_MEDIA_ENABLED=true
+DEDALO_RAG_MULTIMODAL_ENDPOINT=http://127.0.0.1:8090
+DEDALO_RAG_MULTIMODAL_MODEL=clip-ViT-B-32               # ~512-dim joint image+text
+# the separate pgvector DB
+DEDALO_RAG_DB_HOSTNAME_CONN=localhost
+DEDALO_RAG_DB_DATABASE_CONN=dedalo_rag
+DEDALO_RAG_DB_USERNAME_CONN=dedalo_rag
+DEDALO_RAG_DB_PASSWORD_CONN=...                          # secret (env-only)
 ```
 
 Default models can be overridden with env vars `RAG_TEXT_MODEL` / `RAG_CLIP_MODEL`.

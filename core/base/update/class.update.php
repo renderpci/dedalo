@@ -1204,8 +1204,9 @@ class update {
 	*   { "dedalo_version": "<major>.<medium>.<minor>", "update_date": "YYYY-MM-DD HH:MM:SS" }
 	*
 	* This table is the authoritative source for get_current_data_version(); the most
-	* recent row (ordered by data->>'dedalo_version' DESC) determines which update step
-	* will be offered on the next maintenance screen load.
+	* recent row (ordered by semantic version DESC, i.e. string_to_array(data->>'dedalo_version','.')::int[]
+	* so that 6.8.10 ranks above 6.8.9) determines which update step will be offered on
+	* the next maintenance screen load.
 	*
 	* A parameterised query ($1) is used instead of string concatenation because
 	* json_encode() does not escape single quotes, making direct interpolation unsafe

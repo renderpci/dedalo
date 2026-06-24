@@ -380,7 +380,7 @@ Ingestion reads a **downsized, non-master** image (`'1.5MB'` quality, never `ori
 
 ## Configuration & tests
 
-All constants are defined in the catalog domain `core/base/config/catalog/domains/rag.php` and listed in the generated `../private/sample.env` — set them in `../private/.env` (vector DB, provider/model, chunking, HNSW tuning, hybrid/rerank, generation, and the per-record egress policy). Tests live in `test/server/rag/` (suite `rag`):
+All settings are declared in the config catalog (`core/base/config/catalog/domains/rag.php` — vector DB, provider/model, chunking, HNSW tuning, hybrid/rerank, generation, egress policy, multimodal) listed in `../private/sample.env` and overridden per-install from `../private/.env` by constant name (`DEDALO_RAG_*`; secrets such as passwords/API keys are env-only). Tests live in `test/server/rag/` (suite `rag`):
 
 ```bash
 php vendor/bin/phpunit -c test/server/phpunit.xml --testsuite rag
