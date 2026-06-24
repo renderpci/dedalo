@@ -1,0 +1,32 @@
+.wrapper_widget.config_areas {
+
+	.config_areas_list {
+		display			: flex;
+		flex-direction	: column;
+		gap				: 2px;
+		margin			: 8px 0;
+		max-height		: 420px;
+		overflow-y		: auto;
+	}
+
+	.config_areas_row {
+		display			: flex;
+		align-items		: center;
+		gap				: 8px;
+		padding			: 3px 6px;
+		cursor			: pointer;
+
+		&:hover {
+			background-color : var(--ut_color_hover, rgba(0,0,0,0.04));
+		}
+
+		.config_areas_label small {
+			opacity		: 0.6;
+			margin-left	: 6px;
+		}
+	}
+
+	.button_submit {
+		margin-top : 10px;
+	}
+}
