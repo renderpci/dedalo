@@ -79,7 +79,7 @@ const get_content_data = function(self) {
 	})
 
 	// non-writable banner
-	if (writable===false) {
+	if (!writable) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'info_text error',
@@ -112,7 +112,7 @@ const get_content_data = function(self) {
 			parent			: row
 		})
 		checkbox.checked = !deny_set.has(area.tipo) // checked == allowed
-		checkbox.disabled = (writable===false)
+		checkbox.disabled = !writable
 		checkbox.addEventListener('change', () => {
 			if (checkbox.checked) {
 				deny_set.delete(area.tipo)
@@ -121,6 +121,7 @@ const get_content_data = function(self) {
 			}
 		})
 
+		// inner_html source is trusted server-side ontology data (admin-curated labels/tipos), not end-user input
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'config_areas_label',
@@ -143,7 +144,7 @@ const get_content_data = function(self) {
 		inner_html		: get_label.save || 'Save',
 		parent			: content_data
 	})
-	button_save.disabled = (writable===false)
+	button_save.disabled = !writable
 	button_save.addEventListener('click', async (e) => {
 		e.stopPropagation()
 		button_save.classList.add('lock')

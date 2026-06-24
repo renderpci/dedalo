@@ -42,17 +42,23 @@ class config_areas {
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 			$response->errors	= [];
 
-		$config_areas = area::get_config_areas();
+		try {
+			$config_areas = area::get_config_areas();
 
-		$result = (object)[
-			'areas'			=> area::get_all_areas(),
-			'areas_deny'	=> $config_areas->areas_deny,
-			'areas_allow'	=> $config_areas->areas_allow,
-			'writable'		=> config_local_writer::is_writable()
-		];
+			$result = (object)[
+				'areas'			=> area::get_all_areas(),
+				'areas_deny'	=> $config_areas->areas_deny,
+				'areas_allow'	=> $config_areas->areas_allow,
+				'writable'		=> config_local_writer::is_writable()
+			];
 
-		$response->result	= $result;
-		$response->msg		= 'OK. Request done successfully';
+			$response->result	= $result;
+			$response->msg		= 'OK. Request done successfully';
+		} catch (\Throwable $e) {
+			$response->errors[]	= $e->getMessage();
+			$response->msg		= 'Error building config_areas value: ' . $e->getMessage();
+			return $response;
+		}
 
 		return $response;
 	}//end get_value

@@ -9,7 +9,7 @@ final class area_get_all_areas_Test extends TestCase {
 		$filtered = area::get_areas();
 		$this->assertNotEmpty($all);
 		// unfiltered tree has at least as many nodes as the deny-filtered one
-		$this->assertGreaterThanOrEqual(count($filtered), count($all));
+		$this->assertGreaterThanOrEqual(count($filtered), count($all), 'get_all_areas (unfiltered) must have >= node count than deny-filtered get_areas');
 	}
 
 	public function test_every_node_has_state_consistent_with_deny_list() : void {

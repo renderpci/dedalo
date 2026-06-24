@@ -25,6 +25,12 @@ final class config_areas_widget_Test extends TestCase {
 		$this->assertSame(['dd137'], $out->areas_deny);
 	}
 
+	public function test_prepare_lists_rejects_invalid_tipo_in_allow() : void {
+		$out = config_areas::prepare_lists([], ['zzz_not_a_tipo_999']);
+		$this->assertSame([], $out->areas_allow);
+		$this->assertContains('zzz_not_a_tipo_999', $out->invalid);
+	}
+
 	public function test_get_value_shape() : void {
 		$response = config_areas::get_value();
 		$this->assertTrue($response->result !== false);
