@@ -1,28 +1,72 @@
 .wrapper_widget.config_areas {
 
-	.config_areas_list {
+	// current deny list, as removable chips
+	.config_areas_deny_chips {
 		display			: flex;
 		flex-direction	: column;
-		gap				: 2px;
+		gap				: 3px;
 		margin			: 8px 0;
-		max-height		: 420px;
-		overflow-y		: auto;
 	}
 
-	.config_areas_row {
+	.config_areas_chip {
 		display			: flex;
 		align-items		: center;
+		justify-content	: space-between;
 		gap				: 8px;
-		padding			: 3px 6px;
-		cursor			: pointer;
+		padding			: 3px 4px 3px 10px;
+		border-radius	: 4px;
+		background-color: var(--ut_color_hover, rgba(0,0,0,0.05));
 
-		&:hover {
-			background-color : var(--ut_color_hover, rgba(0,0,0,0.04));
-		}
-
-		.config_areas_label small {
+		.config_areas_chip_label small {
 			opacity		: 0.6;
 			margin-left	: 6px;
+		}
+
+		.config_areas_chip_remove {
+			border		: 0;
+			background	: transparent;
+			cursor		: pointer;
+			font-size	: 16px;
+			line-height	: 1;
+			padding		: 0 6px;
+			opacity		: 0.6;
+
+			&:hover { opacity: 1; }
+		}
+	}
+
+	// add-to-deny search + typeahead dropdown
+	.config_areas_add {
+		position	: relative;
+		margin		: 10px 0;
+
+		.config_areas_search {
+			width		: 100%;
+			box-sizing	: border-box;
+			padding		: 6px 8px;
+		}
+
+		.config_areas_suggestions {
+			position		: absolute;
+			z-index			: 10;
+			left			: 0;
+			right			: 0;
+			max-height		: 260px;
+			overflow-y		: auto;
+			background-color: var(--ut_color_bg, #fff);
+			border			: 1px solid var(--ut_color_border, rgba(0,0,0,0.15));
+			border-top		: 0;
+
+			&.hide { display: none; }
+		}
+
+		.config_areas_suggestion {
+			padding	: 5px 8px;
+			cursor	: pointer;
+
+			small { opacity: 0.6; margin-left: 6px; }
+
+			&:hover { background-color: var(--ut_color_hover, rgba(0,0,0,0.07)); }
 		}
 	}
 
