@@ -1,5 +1,5 @@
 /**
-* install
+* installer
 *
 * Installer wizard UI, aligned with the unit-test client's "dev-dashboard / IDE"
 * look. Theme-aware: light is the default, dark is opt-in via `data-theme="dark"`
@@ -10,7 +10,7 @@
 * Included from main.less (which imports theme_tokens + vars before this file, so the
 * @font_* LESS vars and --ut_* custom properties are in scope here).
 */
-.install.wrapper {
+.installer.wrapper {
 	position: fixed;
 	left: 0;
 	top: 0;
@@ -49,14 +49,14 @@
 	}
 
 	// ---- HEADER / BRAND ----
-	.install_header {
+	.installer_header {
 		display: flex;
 		align-items: center;
 		gap: 0.85rem;
 		padding: 1.5rem 0 0.5rem;
 		margin-bottom: 1rem;
 
-		.install_mark {
+		.installer_mark {
 			width: 2.6rem;
 			height: 2.6rem;
 			flex-shrink: 0;
@@ -66,30 +66,30 @@
 			background: linear-gradient(140deg, var(--ut_accent_hi), var(--ut_accent));
 			box-shadow: 0 2px 12px -2px var(--ut_accent_soft), inset 0 0 0 1px rgba(255,255,255,0.22);
 		}
-		.install_logo {
+		.installer_logo {
 			width: 1.5rem;
 			height: 1.5rem;
 			// white logo asset → keep it white on the orange brand mark (both themes)
 			filter: brightness(0) invert(1);
 		}
-		.install_brand {
+		.installer_brand {
 			display: flex;
 			flex-direction: column;
 			gap: 0.1rem;
 		}
-		.install_title {
+		.installer_title {
 			font-size: 1.4rem;
 			font-weight: 700;
 			color: var(--ut_text_primary);
 			letter-spacing: 0.01em;
 			line-height: 1.2;
 		}
-		.install_subtitle {
+		.installer_subtitle {
 			font-size: 0.85rem;
 			color: var(--ut_text_muted);
 			font-weight: 400;
 		}
-		.install_version {
+		.installer_version {
 			margin-left: auto;
 			font-family: @font_mono;
 			font-size: 0.75rem;
@@ -99,7 +99,7 @@
 		}
 
 		// theme toggle (icon button) — overrides the generic button mixin below
-		.install_theme_toggle {
+		.installer_theme_toggle {
 			margin: 0;
 			padding: 0;
 			width: 2.25rem;
@@ -315,7 +315,7 @@
 				border: 2px solid currentColor;
 				border-top-color: transparent;
 				border-radius: 50%;
-				animation: install-spin 0.7s linear infinite;
+				animation: installer-spin 0.7s linear infinite;
 			}
 		}
 		&.success {
@@ -493,7 +493,7 @@
 	}//end .config_block
 
 	// ---- INSTALL DB BLOCK ----
-	.install_db_block {
+	.installer_db_block {
 
 		.db_config_container {
 			display: flex;
@@ -521,7 +521,7 @@
 			}
 		}
 
-	}//end .install_db_block
+	}//end .installer_db_block
 
 	// ---- SET ROOT PASSWORD BLOCK ----
 	.set_root_password_block {
@@ -644,7 +644,7 @@
 	}//end .hierarchies_import_block
 
 	// ---- INSTALL FINISH BLOCK ----
-	.install_finish_block {
+	.installer_finish_block {
 		margin-bottom: 3rem;
 		text-align: center;
 
@@ -653,23 +653,23 @@
 			padding: 1.25rem;
 			justify-content: center;
 		}
-	}//end .install_finish_block
+	}//end .installer_finish_block
 
 	// ---- FORM FIELDS (collect-configuration steps) ----
-	.install_field {
+	.installer_field {
 		display: flex;
 		flex-direction: column;
 		gap: 0.3rem;
 		margin: 0.65rem 0;
 
-		.install_field_label {
+		.installer_field_label {
 			font-size: 0.78rem;
 			text-transform: uppercase;
 			letter-spacing: 0.05em;
 			color: var(--ut_text_muted);
 			font-weight: 600;
 		}
-		.install_field_input {
+		.installer_field_input {
 			height: 2.4rem;
 			max-width: 28rem;
 			background: var(--ut_bg_input);
@@ -697,14 +697,14 @@
 				box-shadow: 0 0 0 3px var(--ut_green_soft);
 			}
 		}
-		.install_field_help {
+		.installer_field_help {
 			font-size: 0.78rem;
 			color: var(--ut_text_muted);
 			line-height: 1.35;
 		}
 	}
 
-	.install_toggle_label {
+	.installer_toggle_label {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.4rem;
@@ -714,7 +714,7 @@
 		font-size: 0.9rem;
 		font-weight: 600;
 
-		>.install_toggle {
+		>.installer_toggle {
 			accent-color: var(--ut_accent);
 			height: 1.05rem;
 			width: 1.05rem;
@@ -806,9 +806,63 @@
 		}
 	}
 
+	// ---- REGISTER TOOLS ----
+	// Per-tool import report shown by the "Register tools" install step. One row per
+	// processed tool, colour-keyed by outcome (ok / warning / error) so the operator can
+	// see at a glance which tools registered and which need attention.
+	.tools_report {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+		margin: 0.75rem 0;
+
+		.tool_row {
+			display: grid;
+			grid-template-columns: 1.2rem 1fr auto;
+			align-items: center;
+			gap: 0.6rem;
+			padding: 0.5rem 0.75rem;
+			border-radius: 9px;
+			background: var(--ut_bg_elevated);
+			border: 1px solid var(--ut_border);
+			font-size: 0.85rem;
+
+			.tool_icon {
+				font-weight: 700;
+			}
+			.tool_name {
+				font-weight: 600;
+				color: var(--ut_text_primary);
+			}
+			.tool_version {
+				color: var(--ut_text_muted);
+				font-family: @font_mono;
+				font-size: 0.8rem;
+				justify-self: end;
+			}
+			// per-tool error/warning detail spans the full width below the name row
+			.tool_detail {
+				grid-column: 1 / -1;
+				color: var(--ut_text_secondary);
+				font-size: 0.8rem;
+				line-height: 1.35;
+			}
+
+			&.ok .tool_icon { color: var(--ut_green); }
+			&.warning {
+				border-color: var(--ut_run_soft);
+				.tool_icon { color: var(--ut_run); }
+			}
+			&.error {
+				border-color: var(--ut_red_soft);
+				.tool_icon { color: var(--ut_red); }
+			}
+		}
+	}
+
 	// ---- SPINNER ----
 	// Inline loading row: a crisp accent ring + label, sitting inline in its parent.
-	// Uses a dedicated class (.install_spinner) so it does NOT inherit the global
+	// Uses a dedicated class (.installer_spinner) so it does NOT inherit the global
 	// app `.spinner` (general.less), which is position:absolute + padding !important
 	// and would otherwise float the ring to the centre of the box. The ring base uses
 	// --ut_border_strong so it stays visible in light AND dark (the old
@@ -823,14 +877,14 @@
 	.spinner_label {
 		color: var(--ut_text_secondary);
 	}
-	.install_spinner {
+	.installer_spinner {
 		width: 1.05rem;
 		height: 1.05rem;
 		flex-shrink: 0;
 		border: 2px solid var(--ut_border_strong);
 		border-top-color: var(--ut_accent);
 		border-radius: 50%;
-		animation: install-spin 0.7s linear infinite;
+		animation: installer-spin 0.7s linear infinite;
 	}
 
 	// ---- HIDE UTILITY ----
@@ -840,7 +894,7 @@
 
 	// ---- FADE-IN ANIMATION ----
 	.fade_in {
-		animation: install-fade-in 0.4s ease-out;
+		animation: installer-fade-in 0.4s ease-out;
 	}
 
 	// ---- RESPONSIVE ----
@@ -869,10 +923,10 @@
 }
 
 // ---- KEYFRAMES ----
-@keyframes install-spin {
+@keyframes installer-spin {
 	to { transform: rotate(360deg); }
 }
-@keyframes install-fade-in {
+@keyframes installer-fade-in {
 	from { opacity: 0; transform: translateY(0.5rem); }
 	to   { opacity: 1; transform: translateY(0); }
 }

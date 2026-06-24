@@ -63,14 +63,21 @@ final class boot_paths {
 		$script_fname = str_replace('\\', '/', (string)($server['SCRIPT_FILENAME'] ?? ''));
 		$root_fs      = rtrim(str_replace('\\', '/', $root), '/');
 
-		if ($script_name !== '' && $script_fname !== '' && $root_fs !== '' && str_starts_with($script_fname, $root_fs)) {
-			$suffix = substr($script_fname, strlen($root_fs)); // e.g. /core/api/v1/json/index.php
-			if ($suffix === '') {
-				return rtrim($script_name, '/'); // script IS the install root (unusual)
+		if ($script_name !== '' && $script_fname !== '' && $root_fs !== '') {
+			// Primary: SCRIPT_FILENAME already shares the install-root prefix (no symlink in play).
+			$web = self::strip_install_suffix($script_name, $script_fname, $root_fs);
+			if ($web === null) {
+				// Recovery: Apache leaves DOCUMENT_ROOT's symlink UNresolved in SCRIPT_FILENAME
+				// (e.g. /opt/homebrew/var/www/Sites -> /Users/.../Sites), while $root comes from
+				// __DIR__ with symlinks resolved — so the raw prefix won't match. Canonicalize the
+				// script path and retry; the executing script always exists, so realpath() succeeds.
+				$real = realpath($script_fname);
+				if ($real !== false) {
+					$web = self::strip_install_suffix($script_name, str_replace('\\', '/', $real), $root_fs);
+				}
 			}
-			// require a '/' boundary so /srv/dedalo doesn't spuriously match /srv/dedalo2/...
-			if ($suffix[0] === '/' && str_ends_with($script_name, $suffix)) {
-				return rtrim(substr($script_name, 0, -strlen($suffix)), '/'); // '' for a root mount
+			if ($web !== null) {
+				return $web;
 			}
 		}
 
@@ -78,4 +85,32 @@ final class boot_paths {
 		$segments = explode('/', (string)($server['REQUEST_URI'] ?? ''));
 		return '/' . ($segments[1] ?? '');
 	}//end resolve_root_web
+
+	/**
+	* If the script's filesystem path sits under the install root, strip that same below-root
+	* suffix off the script's URL path (SCRIPT_NAME) and return the remaining web mount point
+	* ('' for a root-mounted install). The below-root suffix is identical in the filesystem and
+	* the URL, so it can be matched on either the raw or the realpath-canonicalized script path.
+	* Returns null when the paths don't line up, so the caller can try a recovery or fall back.
+	*
+	* @param string $script_name  SCRIPT_NAME (URL path of the running script)
+	* @param string $script_fname SCRIPT_FILENAME-derived filesystem path (forward-slashed)
+	* @param string $root_fs       install root filesystem path (forward-slashed, no trailing '/')
+	* @return ?string web mount point, or null when it cannot be derived
+	*/
+	private static function strip_install_suffix(string $script_name, string $script_fname, string $root_fs) : ?string {
+
+		if (!str_starts_with($script_fname, $root_fs)) {
+			return null;
+		}
+		$suffix = substr($script_fname, strlen($root_fs)); // e.g. /core/api/v1/json/index.php
+		if ($suffix === '') {
+			return rtrim($script_name, '/'); // script IS the install root (unusual)
+		}
+		// require a '/' boundary so /srv/dedalo doesn't spuriously match /srv/dedalo2/...
+		if ($suffix[0] === '/' && str_ends_with($script_name, $suffix)) {
+			return rtrim(substr($script_name, 0, -strlen($suffix)), '/'); // '' for a root mount
+		}
+		return null;
+	}//end strip_install_suffix
 }

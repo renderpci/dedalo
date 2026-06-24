@@ -682,12 +682,13 @@ final class dd_utils_api {
 	* - 'install_db_from_default_file' additionally checks that the target
 	*   database is empty (no matrix_users table) before importing, preventing
 	*   data loss on an already-initialized database.
-	* - 'install_hierarchies' requires login::is_logged() === true.
+	* - 'install_hierarchies' and 'register_tools' require login::is_logged() === true.
 	*
 	* Supported sub-actions and their delegates:
 	*   install_db_from_default_file → installer::install_db_from_default_file()
 	*   to_update                    → installer::to_update()
 	*   install_hierarchies          → installer::install_hierarchies()
+	*   register_tools               → installer::register_tools()
 	*   set_root_pw                  → installer::set_root_pw()
 	*   install_finish               → installer::set_install_status('installed')
 	*
@@ -785,6 +786,21 @@ final class dd_utils_api {
 
 				// exec
 					$response = (object)installer::install_hierarchies( $install_hierarchies_options );
+
+				break;
+
+			case 'register_tools':
+
+				// Security: registering tools writes section records (dd1324) via section_record,
+				// so it needs an authenticated session — exactly like install_hierarchies. The root
+				// user is already logged in inside the wizard at this stage of the install flow.
+					if (login::is_logged()!==true) {
+						$response->msg = 'Error. You are not logged in';
+						return $response;
+					}
+
+				// exec
+					$response = (object)installer::register_tools();
 
 				break;
 

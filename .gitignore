@@ -204,3 +204,5 @@ dedalo7_install.pgsql_*.gz
 # test/server/unit/fixtures/host_info/ inputs are in a subdir and stay tracked.
 test/server/unit/fixtures/*.php
 test/server/unit/fixtures/*.env
+.dockerignore
+bun.lock

@@ -19,7 +19,7 @@
 	import {toggle_theme, get_theme} from '../../page/js/theme.js'
 
 /**
-* RENDER_INSTALL
+* RENDER_INSTALLER
 * Client-side renderer for the Dédalo first-run installation wizard.
 *
 * This module drives a sequential, multi-step installation UI that runs without
@@ -34,13 +34,13 @@
 *   7. Hierarchy (thesaurus tree) import
 *   8. Finish / reload
 *
-* The constructor is a no-op stub; all logic lives on the prototype. `install.js`
-* assigns `render_install.prototype.render` to `install.prototype.edit` and related
+* The constructor is a no-op stub; all logic lives on the prototype. `installer.js`
+* assigns `render_installer.prototype.render` to `installer.prototype.edit` and related
 * render modes, so this prototype method is the single entry point invoked by the
 * common render dispatcher.
 *
 * Exported symbols:
-*   - render_install           (constructor, assigned to install.prototype)
+*   - render_installer           (constructor, assigned to installer.prototype)
 *   - render_hierarchies_import_block  (also used standalone by activation screens)
 */
 
@@ -127,13 +127,13 @@ const create_field = function(options) {
 
 	const field = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'install_field',
+		class_name		: 'installer_field',
 		parent			: parent
 	})
 
 	ui.create_dom_element({
 		element_type	: 'label',
-		class_name		: 'install_field_label',
+		class_name		: 'installer_field_label',
 		inner_html		: label,
 		parent			: field
 	})
@@ -141,7 +141,7 @@ const create_field = function(options) {
 	const input = ui.create_dom_element({
 		element_type	: 'input',
 		type			: type,
-		class_name		: 'install_field_input',
+		class_name		: 'installer_field_input',
 		value			: value,
 		placeholder		: placeholder,
 		parent			: field
@@ -165,7 +165,7 @@ const create_field = function(options) {
 	if (help !== '') {
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'install_field_help',
+			class_name		: 'installer_field_help',
 			inner_html		: help,
 			parent			: field
 		})
@@ -193,7 +193,7 @@ const add_spinner = function(parent, label) {
 	})
 	ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'install_spinner',
+		class_name		: 'installer_spinner',
 		parent			: spinner_wrap
 	})
 	ui.create_dom_element({
@@ -327,7 +327,7 @@ const update_step_indicator = function(step_indicator, active_step) {
 * REVEAL_SECTION
 * Reveals a previously-hidden wizard step and smoothly scrolls it into view, so that
 * completing a step automatically advances the operator to the next one. Scrolling
-* happens inside the installer's own scroll container (.install.wrapper).
+* happens inside the installer's own scroll container (.installer.wrapper).
 * @param HTMLElement section
 */
 const reveal_section = function(section) {
@@ -372,13 +372,13 @@ const countdown_and_reload = function(status_node, seconds=5) {
 
 
 /**
-* RENDER_INSTALL
+* RENDER_INSTALLER
 * Manages the component's logic and appearance in client side
 */
-export const render_install = function() {
+export const render_installer = function() {
 
 	return true
-}//end render_install
+}//end render_installer
 
 
 
@@ -386,7 +386,7 @@ export const render_install = function() {
 * RENDER
 * Render node for use in install mode
 *
-* Entry point called by the common render dispatcher (install.prototype.edit, .list, …).
+* Entry point called by the common render dispatcher (installer.prototype.edit, .list, …).
 * Builds the full install wizard DOM tree wrapped in a top-level div.wrapper.install
 * element and returns it, or returns the inner content_data fragment directly when
 * render_level is 'content'.
@@ -398,7 +398,7 @@ export const render_install = function() {
 * @param {string} [options.render_level='full'] - 'full' returns wrapper; 'content' returns inner fragment only
 * @returns {Promise<HTMLElement>} The wrapper div (render_level 'full') or content_data div ('content')
 */
-render_install.prototype.render = async function(options) {
+render_installer.prototype.render = async function(options) {
 
 	const self = this
 
@@ -414,7 +414,7 @@ render_install.prototype.render = async function(options) {
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'wrapper install'
+			class_name		: 'wrapper installer'
 		})
 		wrapper.appendChild(content_data)
 		// set pointers
@@ -441,11 +441,12 @@ render_install.prototype.render = async function(options) {
 *   help_block                – documentation links
 *   init_test_block           – server environment pre-flight results
 *   config_block              – database configuration check + action selector
-*   install_db_block          – create DB from bundled SQL file
+*   installer_db_block          – create DB from bundled SQL file
 *   set_root_password_block   – set superuser password
 *   login_block               – first login after password is set
 *   hierarchies_import_block  – import thesaurus hierarchies
-*   install_finish_block      – finalize and reload
+*   register_tools_block      – register the available tools into the registry
+*   installer_finish_block      – finalize and reload
 *
 * @param {Object} self - The install instance (provides self.context.properties and self.node)
 * @returns {HTMLElement} content_data div containing all wizard sections
@@ -472,40 +473,40 @@ const get_content_data = function(self) {
 	// ── HEADER / BRAND ──
 		const header = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'install_header',
+			class_name		: 'installer_header',
 			parent			: content_data
 		})
 		const brand_mark = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'install_mark',
+			class_name		: 'installer_mark',
 			parent			: header
 		})
 		ui.create_dom_element({
 			element_type	: 'img',
-			class_name		: 'install_logo',
+			class_name		: 'installer_logo',
 			src				: DEDALO_CORE_URL + '/themes/default/dedalo_logo_white.svg',
 			parent			: brand_mark
 		})
 		const brand = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'install_brand',
+			class_name		: 'installer_brand',
 			parent			: header
 		})
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'install_title',
+			class_name		: 'installer_title',
 			inner_html		: 'Dédalo',
 			parent			: brand
 		})
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'install_subtitle',
+			class_name		: 'installer_subtitle',
 			inner_html		: get_label.installation_help || 'Installation Wizard',
 			parent			: brand
 		})
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'install_version',
+			class_name		: 'installer_version',
 			inner_html		: properties.version || '',
 			parent			: header
 		})
@@ -515,7 +516,7 @@ const get_content_data = function(self) {
 		// honours and updates the same 'dedalo_theme' preference as the rest of v7.
 		const theme_toggle = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'install_theme_toggle',
+			class_name		: 'installer_theme_toggle',
 			parent			: header
 		})
 		theme_toggle.type	= 'button'
@@ -556,6 +557,7 @@ const get_content_data = function(self) {
 				get_label.set_root_pw_label || 'Set root password',
 				get_label.login_label || 'Login',
 				get_label.import_hierarchies_label || 'Install hierarchies',
+				get_label.register_tools || 'Register tools',
 				get_label.install_done || 'Done!'
 			]
 			: [
@@ -565,6 +567,7 @@ const get_content_data = function(self) {
 				get_label.set_root_pw_label || 'Set root password',
 				get_label.login_label || 'Login',
 				get_label.import_hierarchies_label || 'Install hierarchies',
+				get_label.register_tools || 'Register tools',
 				get_label.install_done || 'Done!'
 			]
 		for (let i = 0; i < step_labels.length; i++) {
@@ -690,16 +693,16 @@ const get_content_data = function(self) {
 	}
 
 	// ── INSTALL DB BLOCK ──
-		const install_db = create_section_block({
+		const installer_db = create_section_block({
 			label			: get_label.install_db_label || 'Install Dédalo DDBB',
-			class_name		: 'install_db_block',
+			class_name		: 'installer_db_block',
 			hidden			: true,
 			parent			: content_data,
 			content_data	: content_data
 		})
-		install_db.content_div.appendChild(render_install_db_block(self))
+		installer_db.content_div.appendChild(render_installer_db_block(self))
 		// refresh the DB confirmation grid from the entered values each time this step appears
-		install_db.section._on_reveal = self._refresh_install_db_config
+		installer_db.section._on_reveal = self._refresh_installer_db_config
 
 	// ── SET ROOT PASSWORD BLOCK ──
 		const set_pw = create_section_block({
@@ -742,9 +745,9 @@ const get_content_data = function(self) {
 			hierarchies				: properties.hierarchies,
 			default_checked			: properties.install_checked_default,
 			hierarchy_typologies	: properties.hierarchy_typologies,
-			// On a successful import, reveal the final Finish step.
+			// On a successful import, reveal the Register tools step.
 			callback		: function() {
-				reveal_section(self.node.content_data.install_finish_block)
+				reveal_section(self.node.content_data.register_tools_block)
 				update_step_indicator(self.node.content_data.step_indicator, needs_config ? 11 : 7)
 			}
 		}
@@ -752,15 +755,28 @@ const get_content_data = function(self) {
 			render_hierarchies_import_block(hierarchies_import_options)
 		)
 
-	// ── INSTALL FINISH BLOCK ──
-		const finish = create_section_block({
-			label			: get_label.install_done || 'Done!',
-			class_name		: 'install_finish_block',
+	// ── REGISTER TOOLS BLOCK ──
+	// Register the discoverable tools (import, export, time machine, …) into the
+	// registry so they appear in the application from the first boot. Runs AFTER
+	// login (it writes section records) and reveals the Finish step on completion.
+		const register_tools = create_section_block({
+			label			: get_label.register_tools || 'Register tools',
+			class_name		: 'register_tools_block',
 			hidden			: true,
 			parent			: content_data,
 			content_data	: content_data
 		})
-		finish.content_div.appendChild(render_install_finish_block(self))
+		register_tools.content_div.appendChild(render_register_tools_block(self))
+
+	// ── INSTALL FINISH BLOCK ──
+		const finish = create_section_block({
+			label			: get_label.install_done || 'Done!',
+			class_name		: 'installer_finish_block',
+			hidden			: true,
+			parent			: content_data,
+			content_data	: content_data
+		})
+		finish.content_div.appendChild(render_installer_finish_block(self))
 
 
 	return content_data
@@ -784,9 +800,9 @@ const render_help_block = function(self) {
 	const fragment = new DocumentFragment()
 
 	// installation info
-		const install_info_node = ui.create_dom_element({
+		const installer_info_node = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'description install_info_node',
+			class_name		: 'description installer_info_node',
 			inner_html		: get_label.installation_help_info || 'Installation info: ',
 			parent			: fragment
 		})
@@ -794,7 +810,7 @@ const render_help_block = function(self) {
 			element_type	: 'img',
 			class_name		: 'info icon',
 			src				: 'https://dedalo.dev/tpl/assets/img/logos/logo_dedalo.svg',
-			parent			: install_info_node
+			parent			: installer_info_node
 		})
 		// link
 		const link_install = ui.create_dom_element({
@@ -802,15 +818,15 @@ const render_help_block = function(self) {
 			class_name		: 'link',
 			href			: 'https://dedalo.dev/docs/install/install/',
 			inner_html		: 'https://dedalo.dev/docs/install/install/',
-			parent			: install_info_node
+			parent			: installer_info_node
 		})
 		link_install.target	= '_blank'
 		link_install.rel	= 'noopener noreferrer' // SEC-033
 
 	// installation config
-		const install_config_node = ui.create_dom_element({
+		const installer_config_node = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'description install_config_node',
+			class_name		: 'description installer_config_node',
 			inner_html		: get_label.installation_config || 'Installation config: ',
 			parent			: fragment
 		})
@@ -818,7 +834,7 @@ const render_help_block = function(self) {
 			element_type	: 'img',
 			class_name		: 'info icon',
 			src				: 'https://dedalo.dev/tpl/assets/img/logos/logo_dedalo.svg',
-			parent			: install_config_node
+			parent			: installer_config_node
 		})
 		const link_configuration = ui.create_dom_element({
 			element_type	: 'a',
@@ -826,7 +842,7 @@ const render_help_block = function(self) {
 			href			: 'https://dedalo.dev/docs/config/configuration/',
 			inner_html		: 'https://dedalo.dev/docs/config/configuration/',
 			target			: '_blank',
-			parent			: install_config_node
+			parent			: installer_config_node
 		})
 		link_configuration.target	= '_blank'
 		link_configuration.rel		= 'noopener noreferrer' // SEC-033
@@ -1329,7 +1345,7 @@ const render_config_block = function(self) {
 * Creates the action-selector section shown after configuration checks pass.
 *
 * Renders up to three mutually exclusive buttons:
-*   - "To install"        – always present; reveals install_db_block and removes this options panel.
+*   - "To install"        – always present; reveals installer_db_block and removes this options panel.
 *   - "To update"         – only present when db_data_version[0] < 6 (migration from v5/v6);
 *                           calls the 'to_update' API action and triggers a 5-second reload countdown.
 *   - "To change root"    – always present; reveals set_root_password_block for a standalone
@@ -1344,16 +1360,16 @@ const render_config_options = function(self) {
 
 	const fragment = new DocumentFragment()
 
-	// install_db_button
-		const install_button = ui.create_dom_element({
+	// installer_db_button
+		const installer_button = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'primary install_button',
+			class_name		: 'primary installer_button',
 			inner_html		: get_label.to_install || 'To install',
 			parent			: fragment
 		})
-		install_button.addEventListener('mouseup', async function() {
-			// show the install_db
-			reveal_section(self.node.content_data.install_db_block)
+		installer_button.addEventListener('mouseup', async function() {
+			// show the installer_db
+			reveal_section(self.node.content_data.installer_db_block)
 			update_step_indicator(self.node.content_data.step_indicator, 3)
 			self.node.content_data.config_block.config_block_options.remove();
 		})//end mouse_up event
@@ -1377,7 +1393,7 @@ const render_config_options = function(self) {
 			update_button.addEventListener('mouseup', async function() {
 
 				// remove other options
-					install_button.remove()
+					installer_button.remove()
 
 				// API call with spinner
 					const api_response = await api_call_with_spinner({
@@ -1405,12 +1421,12 @@ const render_config_options = function(self) {
 	// form; useful when the operator forgets the root password on an existing installation.
 		const reset_root_button = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'primary install_button',
+			class_name		: 'primary installer_button',
 			inner_html		: get_label.to_change_pw || 'To change root',
 			parent			: fragment
 		})
 		reset_root_button.addEventListener('mouseup', async function() {
-			// show the install_db
+			// show the installer_db
 			reveal_section(self.node.content_data.set_root_password_block)
 			self.node.content_data.config_block.config_block_options.remove();
 		})//end mouse_up event
@@ -1586,11 +1602,11 @@ const render_diffusion_block = function(self) {
 	// enable toggle
 		const toggle_label = ui.create_dom_element({
 			element_type	: 'label',
-			class_name		: 'install_toggle_label',
+			class_name		: 'installer_toggle_label',
 			inner_html		: get_label.enable_diffusion || 'Enable diffusion database',
 			parent			: fragment
 		})
-		const toggle = ui.create_dom_element({ element_type:'input', type:'checkbox', class_name:'install_toggle' })
+		const toggle = ui.create_dom_element({ element_type:'input', type:'checkbox', class_name:'installer_toggle' })
 		toggle_label.prepend(toggle)
 
 	// fieldset (hidden until enabled)
@@ -1771,7 +1787,7 @@ const render_directories_block = function(self) {
 		set_status_result(status, api_response)
 		if (api_response.result===true) {
 			create_button.classList.add('hide')
-			reveal_section(self.node.content_data.install_db_block)
+			reveal_section(self.node.content_data.installer_db_block)
 			update_step_indicator(self.node.content_data.step_indicator, 7)
 		} else {
 			create_button.classList.remove('hide')
@@ -1787,7 +1803,7 @@ const render_directories_block = function(self) {
 
 
 /**
-* RENDER_INSTALL_DB_BLOCK
+* RENDER_INSTALLER_DB_BLOCK
 * Creates the database installation section.
 *
 * Verifies that the bundled SQL source file exists at the expected server path
@@ -1802,7 +1818,7 @@ const render_directories_block = function(self) {
 * @param {Object} self - The install instance (provides self.context.properties and self.node)
 * @returns {DocumentFragment} Fragment with file path info, db config grid, action button, and status div
 */
-const render_install_db_block = function(self) {
+const render_installer_db_block = function(self) {
 
 	// short vars
 		const properties = self.context.properties
@@ -1872,46 +1888,46 @@ const render_install_db_block = function(self) {
 		}
 		refresh_db_config()
 		// expose so the step can refresh itself when revealed (see get_content_data wiring)
-		self._refresh_install_db_config = refresh_db_config
+		self._refresh_installer_db_config = refresh_db_config
 
-	// install_db_status msg
-		const install_db_status = create_status_msg(fragment)
+	// installer_db_status msg
+		const installer_db_status = create_status_msg(fragment)
 
-	// install_db_button
-		const install_db_button = ui.create_dom_element({
+	// installer_db_button
+		const installer_db_button = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'primary install_db_button',
+			class_name		: 'primary installer_db_button',
 			inner_html		: get_label.installation_from_file || 'INSTALL DATABASE FROM FILE',
 			parent			: fragment
 		})
-		install_db_button.addEventListener('mouseup', async function() {
+		installer_db_button.addEventListener('mouseup', async function() {
 
 			// API call with spinner
 				const api_response = await api_call_with_spinner({
 					action			: 'install_db_from_default_file',
-					status_node		: install_db_status,
-					button_node		: install_db_button
+					status_node		: installer_db_status,
+					button_node		: installer_db_button
 				})
 
 			// manage result
 				if (api_response.result===true) {
 					console.log('DBB installed:', api_response);
-					set_status_result(install_db_status, api_response)
+					set_status_result(installer_db_status, api_response)
 					// show set_root_password_block
 					reveal_section(self.node.content_data.set_root_password_block)
 					// step indicator: "Set root password" is step 8 in the needs_config (11-step) flow
 					// and step 4 in the legacy (7-step) flow. Branch like the password/login blocks do.
 					update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 8 : 4)
-					install_db_button.remove();
+					installer_db_button.remove();
 				}else{
 					console.error(api_response.msg);
-					set_status_result(install_db_status, api_response)
+					set_status_result(installer_db_status, api_response)
 				}
 		})//end mouse_up event
 
 
 	return fragment
-}//end render_install_db_block
+}//end render_installer_db_block
 
 
 
@@ -2536,23 +2552,165 @@ export const render_hierarchies_import_block = function(options) {
 
 
 /**
-* RENDER_INSTALL_FINISH_BLOCK
+* RENDER_REGISTER_TOOLS_BLOCK
+* Creates the "Register tools" install step.
+*
+* Tools (import, export, time machine, …) live as directories under the tools path; until
+* they are registered into the database registry (section dd1324) they do not appear in the
+* application. A fresh install used to ship with an empty registry, so an administrator had
+* to discover Maintenance → Register tools on their own. This step runs the very same action
+* during install — making it an explicit, visible part of the flow so the tools menu is never
+* mistakenly left empty.
+*
+* On "Register tools" click it calls the 'register_tools' API action (which delegates to
+* installer::register_tools() → tools_register::import_tools()) and renders the per-tool
+* import report so the operator sees exactly what was registered, with versions and any
+* per-tool problems. Tool registration is best-effort: the Finish step is revealed on any
+* completed run (a single broken tool must not trap the install), with errors surfaced in
+* the report so they can be fixed and the action re-run.
+*
+* (!) Dynamic values from the report (tool names, versions, messages) are written with
+* textContent, never innerHTML (SEC-032: never innerHTML for server/filesystem-derived text).
+*
+* @param {Object} self - The install instance (provides self.node and self._needs_config)
+* @returns {DocumentFragment} Fragment with description, report list, status div and action button
+*/
+const render_register_tools_block = function(self) {
+
+	const fragment = new DocumentFragment()
+
+	// info
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'description',
+			inner_html		: get_label.register_tools_help || 'Register the available tools (import, export, time machine, …) so they appear in the application. This scans the tools directory and records each tool in the database. You can always re-run this later from Maintenance → Register tools.',
+			parent			: fragment
+		})
+
+	// report list (filled after the action runs)
+		const report_list = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'tools_report',
+			parent			: fragment
+		})
+
+	// status msg
+		const status = create_status_msg(fragment)
+
+	// register button
+		const register_button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'primary register_tools_button',
+			inner_html		: get_label.register_tools || 'Register tools',
+			parent			: fragment
+		})
+
+	/**
+	* RENDER_REPORT
+	* Paints one row per processed tool: ✓ registered, ⚠ registered with warnings, ✗ failed.
+	* @param {Array} report - per-tool import report objects from the API
+	*/
+	const render_report = function(report) {
+
+		report_list.textContent = ''
+
+		const ar_report = Array.isArray(report) ? report : []
+		if (ar_report.length<1) {
+			return
+		}
+
+		for (let i = 0; i < ar_report.length; i++) {
+			const item			= ar_report[i]
+			const ar_errors		= Array.isArray(item.errors) ? item.errors : []
+			const ar_warnings	= Array.isArray(item.warnings) ? item.warnings : []
+			const has_errors	= ar_errors.length>0
+			const ok			= item.imported===true && has_errors===false
+			const state			= ok ? 'ok' : (has_errors ? 'error' : 'warning')
+
+			const row = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'tool_row ' + state,
+				parent			: report_list
+			})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'tool_icon',
+				inner_html		: ok ? '&#10003;' : (has_errors ? '&#10007;' : '&#9888;'),
+				parent			: row
+			})
+			// name (textContent: filesystem-derived)
+			const name_node = ui.create_dom_element({ element_type:'span', class_name:'tool_name', parent:row })
+			name_node.textContent = item.name || (item.dir || '')
+			// version
+			const version_node = ui.create_dom_element({ element_type:'span', class_name:'tool_version', parent:row })
+			version_node.textContent = item.version ? ('v' + item.version) : ''
+			// per-tool errors / warnings
+			const messages = has_errors ? ar_errors : ar_warnings
+			if (messages.length>0) {
+				const detail = ui.create_dom_element({ element_type:'div', class_name:'tool_detail', parent:row })
+				detail.textContent = messages.join(' · ')
+			}
+		}
+	}//end render_report
+
+	register_button.addEventListener('mouseup', async function(){
+
+		// API call with spinner (registration can scan many tool dirs)
+			const api_response = await api_call_with_spinner({
+				action		: 'register_tools',
+				status_node	: status,
+				button_node	: register_button,
+				timeout		: 120 * 1000
+			})
+			console.log('register_tools response: ', api_response);
+
+		// report
+			render_report(api_response.report)
+
+		// status + advance.
+		// Best-effort: reveal Finish on any completed run so a single broken tool can't trap the
+		// install. A clean run removes the button; a run with per-tool errors keeps it for a retry.
+			const ar_errors = Array.isArray(api_response.errors) ? api_response.errors : []
+			if (api_response.result===true && ar_errors.length===0) {
+				status.classList.add('ok')
+				status.textContent = api_response.msg
+				register_button.remove()
+			}else{
+				console.error('register_tools errors:', ar_errors, api_response);
+				status.classList.add('warning')
+				status.textContent = ar_errors.length>0
+					? (api_response.msg + ' — ' + ar_errors[0])
+					: (api_response.msg || 'Tool registration finished with warnings')
+			}
+
+			reveal_section(self.node.content_data.installer_finish_block)
+			update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 12 : 8)
+	})
+
+
+	return fragment
+}//end render_register_tools_block
+
+
+
+/**
+* RENDER_INSTALLER_FINISH_BLOCK
 * Creates the final step section shown after hierarchy import completes.
 *
 * Renders a success description and a "Let's go!" button. On click the button calls the
 * 'install_finish' API action which disables install mode server-side (removes/renames the
-* install lock file). On success a 5-second countdown updates install_finish_status via
+* install lock file). On success a 5-second countdown updates installer_finish_status via
 * textContent and then triggers location.reload() to boot into the normal Dédalo UI.
 *
 * On failure the spinner is removed but the button stays locked (class 'loading' is not
 * removed on error) — this is intentional: if install_finish fails the operator should
-* not retry without understanding the server error shown in install_finish_status.
+* not retry without understanding the server error shown in installer_finish_status.
 *
 * @param {Object} self - The install instance (provides self.node; unused in this function
 *                        body but retained for API consistency with other render functions)
 * @returns {DocumentFragment} Fragment with description, finish button, and status div
 */
-const render_install_finish_block = function(self) {
+const render_installer_finish_block = function(self) {
 
 	const fragment = new DocumentFragment();
 
@@ -2564,23 +2722,23 @@ const render_install_finish_block = function(self) {
 			parent			: fragment
 		})
 
-	// install_finish_status msg
-		const install_finish_status = create_status_msg(fragment)
+	// installer_finish_status msg
+		const installer_finish_status = create_status_msg(fragment)
 
-	// install_finish_button
-		const install_finish_button = ui.create_dom_element({
+	// installer_finish_button
+		const installer_finish_button = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'success install_finish_button',
+			class_name		: 'success installer_finish_button',
 			inner_html		: get_label.install_finished || ' Let\'s go! ',
 			parent			: fragment
 		})
-		install_finish_button.addEventListener('mouseup', async function(){
+		installer_finish_button.addEventListener('mouseup', async function(){
 
 			// API call with spinner
 				const api_response = await api_call_with_spinner({
 					action			: 'install_finish',
-					status_node		: install_finish_status,
-					button_node		: install_finish_button
+					status_node		: installer_finish_status,
+					button_node		: installer_finish_button
 				})
 
 			// manage result
@@ -2591,20 +2749,20 @@ const render_install_finish_block = function(self) {
 					// to prevent a re-click without understanding the failure.
 
 					console.error("install_finish api_response:", api_response);
-					install_finish_status.classList.add('error')
-					install_finish_status.textContent = api_response.msg
+					installer_finish_status.classList.add('error')
+					installer_finish_status.textContent = api_response.msg
 				}else{
 					console.log("install_finish api_response:", api_response);
-					install_finish_status.classList.add('ok')
-					install_finish_status.textContent = api_response.msg + ' Setting up!'
-					install_finish_button.remove()
-					countdown_and_reload(install_finish_status, 5)
+					installer_finish_status.classList.add('ok')
+					installer_finish_status.textContent = api_response.msg + ' Setting up!'
+					installer_finish_button.remove()
+					countdown_and_reload(installer_finish_status, 5)
 				}
 		})
 
 
 	return fragment
-}//end render_install_finish_block
+}//end render_installer_finish_block
 
 
 

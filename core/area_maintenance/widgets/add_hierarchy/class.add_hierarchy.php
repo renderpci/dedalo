@@ -20,7 +20,7 @@
 * There are no mutating actions; the actual import is handled by the install
 * subsystem (installer_hierarchy_manager / backup::import_from_copy_file) and
 * invoked through the shared render_hierarchies_import_block UI component
-* (js/render_install.js), which fires its own API calls.
+* (js/render_installer.js), which fires its own API calls.
 *
 * No API_ACTIONS constant is declared because this widget exposes no callable
 * actions beyond the hard-coded get_widget_value() dispatch path used by

@@ -962,15 +962,29 @@ abstract class component_common extends common {
 				if( !is_object($element) ) {
 					$new_element = new stdClass();
 						$new_element->value = $element;
-						if($this->translatable) {
-							$new_element->lang = $this->lang;
-						}
 					// Replace element with new_element
 					$element = $new_element;
 					debug_log(__METHOD__
 						. " New element created (is not object): " . json_encode($element)
 						, logger::WARNING
 					);
+				}
+
+				// STRUCTURAL GUARD — lang orphan prevention (scalars AND data objects).
+				// A literal (value-bearing) component stores its data per language, so EVERY
+				// element it persists MUST carry a 'lang'; one without is a "lang orphan" the
+				// edit view cannot match/render. 'supports_translation' is the precise gate: it
+				// is true ONLY for the literal models (component_string_common subclasses +
+				// component_iri) and false for every relation/locator component — so a locator is
+				// never tagged. Tag the component's current lang ($this->lang is DEDALO_DATA_NOLAN
+				// for non-translatable literals) whenever it is missing — covering both
+				// set_data([$scalar]) and set_data([{value:…}]) (an explicitly-built object that
+				// omitted the lang). An explicit lang already present is never overwritten.
+				if( $this->supports_translation===true
+					&& is_object($element)
+					&& empty($element->lang ?? null)
+					&& !empty($this->lang) ) {
+					$element->lang = $this->lang;
 				}
 
 				// Determine if the value has a valid, non-empty ID to be treated as existing data.
@@ -2311,7 +2325,7 @@ abstract class component_common extends common {
 	*				"xx": bool,
 	* 				"yy": int    *
 	*			},
-	*		"function": "set_dato_xxx"
+	*		"function": "set_data_xxx"
 	*		}
 	* 	},
 	*	"component_tipo": "ddxx"

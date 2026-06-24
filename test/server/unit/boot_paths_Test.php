@@ -102,4 +102,42 @@ final class boot_paths_Test extends TestCase {
 		);
 		$this->assertSame('/dedalo2', $r['paths.root_web']); // fallback to first segment, not '/dedalo'
 	}
+
+	public function test_root_web_resolves_symlinked_document_root() : void {
+		// Real-world Apache case: DOCUMENT_ROOT is a symlink (e.g. /opt/homebrew/var/www/Sites ->
+		// /Users/me/Sites), so SCRIPT_FILENAME keeps the UNresolved symlink while $root (from __DIR__)
+		// is symlink-resolved. The raw prefix won't match; realpath() recovery must still derive the
+		// full multi-segment mount instead of dropping to the first-URI-segment fallback.
+		$base = sys_get_temp_dir() . '/boot_paths_symlink_' . getmypid() . '_' . uniqid();
+		@mkdir($base . '/real/master_dedalo/core/page', 0777, true);
+		file_put_contents($base . '/real/master_dedalo/core/page/index.php', '<?php');
+		// $root in production comes from __DIR__ → symlinks resolved. realpath() the created tree so
+		// the test mirrors that (sys_get_temp_dir() itself sits under macOS's /var -> /private/var link).
+		$real = realpath($base . '/real');        // canonical tree (what __DIR__ yields)
+		$link = $base . '/link';                  // symlinked DOCUMENT_ROOT alias
+		symlink($real, $link);
+
+		try {
+			$r = boot_paths::resolve(
+				$real . '/master_dedalo/config',   // $root = $real/master_dedalo (canonical)
+				[
+					'HTTP_HOST'       => 'h',
+					'REQUEST_URI'     => '/v7-install/master_dedalo/core/page/index.php',
+					'SCRIPT_NAME'     => '/v7-install/master_dedalo/core/page/index.php',
+					'SCRIPT_FILENAME' => $link . '/master_dedalo/core/page/index.php', // unresolved symlink
+				],
+				'fpm-fcgi'
+			);
+			// must keep the full mount, not the broken first-segment '/v7-install'
+			$this->assertSame('/v7-install/master_dedalo', $r['paths.root_web']);
+		} finally {
+			@unlink($link);
+			@unlink($real . '/master_dedalo/core/page/index.php');
+			@rmdir($real . '/master_dedalo/core/page');
+			@rmdir($real . '/master_dedalo/core');
+			@rmdir($real . '/master_dedalo');
+			@rmdir($real);
+			@rmdir($base);
+		}
+	}
 }

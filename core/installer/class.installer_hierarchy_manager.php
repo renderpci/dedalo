@@ -26,7 +26,9 @@
 * - A hierarchy record in matrix_hierarchy_main is a standard Dédalo section of
 *   tipo DEDALO_HIERARCHY_SECTION_TIPO ('hierarchy1'). Its component fields are
 *   written individually through component_common::get_instance() + set_data() +
-*   Save(), using DEDALO_DATA_NOLAN ('') as the language (non-language-specific).
+*   save(). Most fields use DEDALO_DATA_NOLAN ('lg-nolan') as the language
+*   (non-language-specific); the translatable term/name (hierarchy5) is written in
+*   DEDALO_DATA_LANG_DEFAULT.
 * - A "file item" produced by get_available_hierarchy_files() is an anonymous
 *   stdClass with keys: file, file_name, section_tipo, tld, label, type
 *   ('term'|'model'), typology (int), active_in_thesaurus (bool).
@@ -498,31 +500,35 @@ final class installer_hierarchy_manager {
 	*
 	* Field-writing sequence (new record only):
 	*   1. TLD             (DEDALO_HIERARCHY_TLD2_TIPO 'hierarchy6')   — e.g. 'fauna'
-	*   2. Typology        (DEDALO_HIERARCHY_TYPOLOGY_TIPO 'hierarchy9') — int, e.g. 1
+	*   2. Typology        (DEDALO_HIERARCHY_TYPOLOGY_TIPO 'hierarchy9') — a LOCATOR to the
+	*      typology taxonomy (DEDALO_HIERARCHY_TYPES_SECTION_TIPO 'hierarchy13') whose
+	*      section_id is the typology number (1=Thematic, 2=Toponymy, …); NOT a bare int.
 	*   3. Label           (DEDALO_HIERARCHY_LABEL_TIPO 'hierarchy7')  — display name
-	*   4. Language        (DEDALO_HIERARCHY_LANG_TIPO 'hierarchy8')   — lang locator
+	*   4. Term/name       (DEDALO_HIERARCHY_TERM_TIPO 'hierarchy5')   — translatable name
+	*      written in DEDALO_DATA_LANG_DEFAULT; required by generate_virtual_section().
+	*   5. Language        (DEDALO_HIERARCHY_LANG_TIPO 'hierarchy8')   — lang locator
 	*      for DEDALO_DATA_LANG_DEFAULT (the installation's default data language).
 	*
 	* Field-writing sequence (always applied):
-	*   5. Active flag           (DEDALO_HIERARCHY_ACTIVE_TIPO 'hierarchy4')
+	*   6. Active flag           (DEDALO_HIERARCHY_ACTIVE_TIPO 'hierarchy4')
 	*      — a relation locator pointing to DEDALO_SECTION_SI_NO_TIPO / NUMERICAL_MATRIX_VALUE_YES.
-	*   6. Active-in-thesaurus   (DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO 'hierarchy125')
+	*   7. Active-in-thesaurus   (DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO 'hierarchy125')
 	*      — locator pointing to YES or NO depending on $options->active_in_thesaurus.
-	*   7. Source real section   (DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO 'hierarchy109')
+	*   8. Source real section   (DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO 'hierarchy109')
 	*      — hardcoded to [DEDALO_THESAURUS_SECTION_TIPO ('hierarchy20')]; required
 	*        for generate_virtual_section() to know which template to clone.
 	*
 	* Virtual section generation:
-	*   8. hierarchy::generate_virtual_section() provisions the two ontology
+	*   9. hierarchy::generate_virtual_section() provisions the two ontology
 	*      virtual sections (<tld>1 for terms, <tld>2 for models) derived from
 	*      DEDALO_THESAURUS_SECTION_TIPO. Errors are collected but do not abort.
 	*
-	*   9. Target section tipos  (hierarchy53 / hierarchy58) — '<tld>1' / '<tld>2'.
+	*  10. Target section tipos  (hierarchy53 / hierarchy58) — '<tld>1' / '<tld>2'.
 	*
 	* Children locators (only when $options->typology === 2, i.e. Toponymy):
-	*  10. DEDALO_HIERARCHY_CHILDREN_TIPO ('hierarchy45') — a dd48 locator pointing
+	*  11. DEDALO_HIERARCHY_CHILDREN_TIPO ('hierarchy45') — a dd48 locator pointing
 	*      to section_id '1' of '<tld>1' (root term node).
-	*  11. DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO ('hierarchy59') — a dd48 locator
+	*  12. DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO ('hierarchy59') — a dd48 locator
 	*      pointing to section_id '2' of '<tld>2' (root model node).  Written only
 	*      if the corresponding model .copy.gz file exists on disk.
 	*
@@ -610,18 +616,38 @@ final class installer_hierarchy_manager {
 			if ($section_exists===false) {
 
 				// tld
+					// Text fields (component_input_text) are non-translatable but still store
+					// their value under the language-neutral slot (lang = DEDALO_DATA_NOLAN
+					// 'lg-nolan'). set_data() only tags the lang for translatable components, so
+					// a bare set_data([$value]) here produced {value} WITHOUT a lang key, which
+					// the edit view (it matches data by lang) could not render. set_data_lang()
+					// tags the lang for any supports_translation component — matching how the
+					// thesaurus editor itself saves these fields.
 					$tld_tipo	= DEDALO_HIERARCHY_TLD2_TIPO; // hierarchy6
 					$component	= self::get_hierarchy_component($tld_tipo, $section_id, 'list', $section_tipo, $response->errors);
 					if ($component!==null) {
-						$component->set_data([$tld]);
+						$component->set_data_lang([(object)['value' => $tld]], DEDALO_DATA_NOLAN);
 						$component->save();
 					}
 
 				// typology
+					// hierarchy9 is a component_select whose value is a LOCATOR pointing
+					// to the typology taxonomy section (DEDALO_HIERARCHY_TYPES_SECTION_TIPO
+					// 'hierarchy13'); the selected option's section_id IS the typology number
+					// (1=Thematic, 2=Toponymy, …). A plain integer is silently rejected by the
+					// select component, leaving hierarchy9 empty — which makes
+					// hierarchy::generate_virtual_section() abort with "typology is mandatory"
+					// (it reads $data[0]->section_id), so the <tld>1/<tld>2 virtual sections
+					// are never provisioned and the hierarchy cannot display in the thesaurus.
 					$hierarchy_type_tipo	= DEDALO_HIERARCHY_TYPOLOGY_TIPO; // hierarchy9
 					$component				= self::get_hierarchy_component($hierarchy_type_tipo, $section_id, 'list', $section_tipo, $response->errors);
 					if ($component!==null) {
-						$component->set_data([$typology]);
+						$typology_locator = new locator();
+							$typology_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+							$typology_locator->set_section_tipo(DEDALO_HIERARCHY_TYPES_SECTION_TIPO);
+							$typology_locator->set_section_id((string)$typology);
+							$typology_locator->set_from_component_tipo(DEDALO_HIERARCHY_TYPOLOGY_TIPO);
+						$component->set_data([$typology_locator]);
 						$component->save();
 					}
 
@@ -629,7 +655,21 @@ final class installer_hierarchy_manager {
 					$label_tipo	= DEDALO_HIERARCHY_LABEL_TIPO; // hierarchy7
 					$component	= self::get_hierarchy_component($label_tipo, $section_id, 'edit', $section_tipo, $response->errors);
 					if ($component!==null) {
-						$component->set_data([$label]);
+						$component->set_data_lang([(object)['value' => $label]], DEDALO_DATA_NOLAN);
+						$component->save();
+					}
+
+				// term / display name
+					// hierarchy5 (DEDALO_HIERARCHY_TERM_TIPO) is the hierarchy's translatable
+					// name. hierarchy::generate_virtual_section() reads it (as $name_data) and
+					// passes it to provision_virtual_sections(), which type-hints array — so a
+					// missing/null hierarchy5 raises a TypeError that rolls back the whole
+					// virtual-section provisioning. Write it in the default data language
+					// (the same lang the term records are authored in, see hierarchy8 below).
+					$term_tipo	= DEDALO_HIERARCHY_TERM_TIPO;	// hierarchy5
+					$component	= self::get_hierarchy_component($term_tipo, $section_id, 'edit', $section_tipo, $response->errors, DEDALO_DATA_LANG_DEFAULT);
+					if ($component!==null) {
+						$component->set_data_lang([(object)['value' => $label]], DEDALO_DATA_LANG_DEFAULT);
 						$component->save();
 					}
 
@@ -698,7 +738,7 @@ final class installer_hierarchy_manager {
 			// source_real_section_tipo
 			$component	= self::get_hierarchy_component(DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO, $section_id, 'edit', $section_tipo, $response->errors);
 			if ($component!==null) {
-				$component->set_data([DEDALO_THESAURUS_SECTION_TIPO]);
+				$component->set_data_lang([(object)['value' => DEDALO_THESAURUS_SECTION_TIPO]], DEDALO_DATA_NOLAN);
 				$component->save();
 			}
 
@@ -730,7 +770,7 @@ final class installer_hierarchy_manager {
 				$component		= self::get_hierarchy_component($component_tipo, $section_id, 'list', $section_tipo, $response->errors);
 				if ($component!==null) {
 					// Term virtual section tipo is always '<tld>1' (e.g. 'fauna1').
-					$component->set_data([$tld.'1']);
+					$component->set_data_lang([(object)['value' => $tld.'1']], DEDALO_DATA_NOLAN);
 					$component->save();
 				}
 
@@ -739,7 +779,7 @@ final class installer_hierarchy_manager {
 				$component		= self::get_hierarchy_component($component_tipo, $section_id, 'list', $section_tipo, $response->errors);
 				if ($component!==null) {
 					// Model virtual section tipo is always '<tld>2' (e.g. 'fauna2').
-					$component->set_data([$tld.'2']);
+					$component->set_data_lang([(object)['value' => $tld.'2']], DEDALO_DATA_NOLAN);
 					$component->save();
 				}
 
@@ -825,9 +865,13 @@ final class installer_hierarchy_manager {
 	* @param string $mode           component mode ('list' | 'edit')
 	* @param string $section_tipo   owning section tipo (DEDALO_HIERARCHY_SECTION_TIPO)
 	* @param array  $errors         accumulator (by ref) for non-fatal error messages
+	* @param string $lang           data language; DEDALO_DATA_NOLAN for the usual
+	*                               non-language-specific fields, an actual lang
+	*                               (e.g. DEDALO_DATA_LANG_DEFAULT) for translatable
+	*                               fields such as the term/name (hierarchy5).
 	* @return object|null component_common instance, or null on failure
 	*/
-	private static function get_hierarchy_component(string $tipo, mixed $section_id, string $mode, string $section_tipo, array &$errors) : ?object {
+	private static function get_hierarchy_component(string $tipo, mixed $section_id, string $mode, string $section_tipo, array &$errors, string $lang=DEDALO_DATA_NOLAN) : ?object {
 
 		$model_name = ontology_node::get_model_by_tipo($tipo, true);
 		if (empty($model_name)) {
@@ -842,7 +886,7 @@ final class installer_hierarchy_manager {
 			$tipo,
 			$section_id,
 			$mode,
-			DEDALO_DATA_NOLAN,
+			$lang,
 			$section_tipo
 		);
 		if (!is_object($component)) {
@@ -977,23 +1021,20 @@ final class installer_hierarchy_manager {
 					}
 
 					// resolve the target matrix table for the import.
-					// A brand-new hierarchy's virtual section (e.g. 'ts1') is NOT registered in the
-					// ontology until activate_hierarchy() runs (below), so get_matrix_table_from_tipo()
-					// returns '' for it (and logs a misleading ERROR). Probe the model first with the
-					// quiet ontology_node::get_model_by_tipo() — null means unregistered — and skip
-					// straight to the fallback to avoid the noisy error log. Core sections shipped in
-					// the seed (e.g. 'lg1' → matrix_langs) resolve directly. For everything else, fall
-					// back to the source thesaurus template table
-					// (DEDALO_THESAURUS_SECTION_TIPO → matrix_hierarchy) — what the virtual section
-					// inherits once activated.
-					$matrix_table = null;
-					$section_model = ontology_node::get_model_by_tipo($found->section_tipo);
-					if (!empty($section_model)) {
-						$matrix_table = common::get_matrix_table_from_tipo($found->section_tipo);
-					}
-					if (empty($matrix_table)) {
-						$matrix_table = common::get_matrix_table_from_tipo(DEDALO_THESAURUS_SECTION_TIPO);
-					}
+					// A hierarchy's term/model data is ALWAYS read back through the VIRTUAL section
+					// that activate_hierarchy() provisions below, and that virtual section inherits the
+					// thesaurus template (DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO is hard-set to
+					// DEDALO_THESAURUS_SECTION_TIPO → matrix_hierarchy). Therefore EVERY hierarchy
+					// .copy.gz payload must import into that template table.
+					//
+					// (!) Do NOT resolve the table from the file's own section_tipo: when the tld is
+					// ALSO a pre-existing core section (e.g. 'lg1', registered in the seed ontology with
+					// matrix_table = matrix_langs), get_matrix_table_from_tipo('lg1') returns
+					// 'matrix_langs'. The COPY then "succeeds" into matrix_langs while the activated
+					// hierarchy keeps reading matrix_hierarchy — so the hierarchy shows up EMPTY even
+					// though the install reported OK (the lg1 "not imported" bug). es1 escaped this only
+					// because, as a brand-new tipo, it resolved to '' and fell back to the right table.
+					$matrix_table = common::get_matrix_table_from_tipo(DEDALO_THESAURUS_SECTION_TIPO);
 					if (empty($matrix_table)) {
 						$msg = "Error: could not resolve the target matrix table for hierarchy '".$tld."' (".to_string($found->section_tipo).")";
 						debug_log(__METHOD__.' '.$msg, logger::ERROR);
