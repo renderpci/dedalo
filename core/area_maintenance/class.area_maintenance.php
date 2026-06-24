@@ -152,7 +152,14 @@ class area_maintenance extends area_common {
 		$item->id = 'config_areas';
 		$item->category = 'config';
 		$item->type = 'widget';
-		$item->label = label::get_label('config_areas') ?? 'Config areas (allow/deny)';
+		// Prefer an ontology label term (properties.name='config_areas', translatable like
+		// the other widgets). Until that term is authored, label::get_label() returns the
+		// key wrapped in <mark>, so fall back to a readable literal — and auto-upgrade to the
+		// ontology label as soon as it exists, with no code change needed.
+		$config_areas_label = label::get_label('config_areas');
+		$item->label = (mb_strpos($config_areas_label, '<mark') === false)
+			? $config_areas_label
+			: 'Config areas (allow/deny)';
 		$ar_widgets[] = $this->widget_factory($item);
 
 		// update_ontology *
