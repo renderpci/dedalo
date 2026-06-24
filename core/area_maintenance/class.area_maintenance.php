@@ -162,6 +162,18 @@ class area_maintenance extends area_common {
 			: 'Config areas (allow/deny)';
 		$ar_widgets[] = $this->widget_factory($item);
 
+		// menu_skip_tipos *
+		$item = new stdClass();
+		$item->id = 'menu_skip_tipos';
+		$item->category = 'config';
+		$item->type = 'widget';
+		// Prefer an ontology label term; fall back to a readable literal (auto-upgrades when authored).
+		$menu_skip_label = label::get_label('menu_skip_tipos');
+		$item->label = (mb_strpos($menu_skip_label, '<mark') === false)
+			? $menu_skip_label
+			: 'Menu: skip grouping tipos';
+		$ar_widgets[] = $this->widget_factory($item);
+
 		// update_ontology *
 		$item = new stdClass();
 		$item->id = 'update_ontology';
@@ -496,6 +508,7 @@ class area_maintenance extends area_common {
 			'make_backup',
 			'check_config',
 			'config_areas',
+			'menu_skip_tipos',
 			'update_ontology',
 			'register_tools',
 			'move_tld',
@@ -1201,6 +1214,18 @@ class area_maintenance extends area_common {
 				$state_value = $value;
 				break;
 
+			case 'DEDALO_ENTITY_MENU_SKIP_TIPOS_CUSTOM':
+				// menu skip-tipos runtime override (menu_skip_tipos widget). An array (even
+				// empty) REPLACES the base DEDALO_ENTITY_MENU_SKIP_TIPOS in menu.php; the
+				// caller (menu_skip_tipos::save_menu_skip_tipos) has already validated/deduped
+				// the tipos, so here we only enforce the type.
+				if ($value_type !== 'array') {
+					$response->msg = 'Error. invalid value type. Only allow array';
+					return $response;
+				}
+				$state_value = array_values($value);
+				break;
+
 			// Disable (Experimental with serious security implications)
 			case 'DEDALO_NOTIFICATION_CUSTOM':
 				if (logged_user_id() !== DEDALO_SUPERUSER) {
@@ -1228,10 +1253,11 @@ class area_maintenance extends area_common {
 		// flip quarantines that file out of the web root; machine-written state now lives in
 		// ../private/state.php and is emitted back as the STATE constant at the next boot.
 		$state_path_map = [
-			'DEDALO_MAINTENANCE_MODE_CUSTOM'  => 'state.maintenance_mode_custom',
-			'DEDALO_RECOVERY_MODE'            => 'state.recovery_mode',
-			'DEDALO_MEDIA_ACCESS_MODE_CUSTOM' => 'state.media_access_mode_custom',
-			'DEDALO_NOTIFICATION_CUSTOM'      => 'state.notification_custom',
+			'DEDALO_MAINTENANCE_MODE_CUSTOM'       => 'state.maintenance_mode_custom',
+			'DEDALO_RECOVERY_MODE'                 => 'state.recovery_mode',
+			'DEDALO_MEDIA_ACCESS_MODE_CUSTOM'      => 'state.media_access_mode_custom',
+			'DEDALO_NOTIFICATION_CUSTOM'           => 'state.notification_custom',
+			'DEDALO_ENTITY_MENU_SKIP_TIPOS_CUSTOM' => 'state.entity_menu_skip_tipos_custom',
 		];
 		$state_path = $state_path_map[$name];
 
@@ -1342,6 +1368,42 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end set_media_access_mode
+
+
+
+	/**
+	* SET_ENTITY_MENU_SKIP_TIPOS
+	* Persists the menu skip-tipos runtime override (DEDALO_ENTITY_MENU_SKIP_TIPOS_CUSTOM)
+	* to ../private/state.php via `set_config_core()`. When set it replaces the base
+	* DEDALO_ENTITY_MENU_SKIP_TIPOS in menu.php — so it can override a base list deployed
+	* via .env (which config.local.php cannot).
+	*
+	* Called from the `menu_skip_tipos` widget (which validates/dedupes the tipos first).
+	* Not listed in `API_ACTIONS` (the widget dispatches through `widget_request`).
+	*
+	* @param object $options - { value: string[] — list of ontology tipos (may be empty) }
+	* @return object - {result: bool, msg: string, errors: array}.
+	*/
+	public static function set_entity_menu_skip_tipos(object $options): object {
+
+		$value = $options->value ?? null;
+
+		if (!is_array($value)) {
+			$response = new stdClass();
+			$response->result = false;
+			$response->msg = 'Error. Request failed: value must be an array';
+			$response->errors = [];
+			return $response;
+		}
+
+		$response = area_maintenance::set_config_core((object) [
+			'name' => 'DEDALO_ENTITY_MENU_SKIP_TIPOS_CUSTOM',
+			'value' => array_values($value)
+		]);
+
+
+		return $response;
+	}//end set_entity_menu_skip_tipos
 
 
 

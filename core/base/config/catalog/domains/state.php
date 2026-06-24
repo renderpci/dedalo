@@ -57,6 +57,13 @@ return [
 		doc:   "Media access mode runtime override: '' (no override) | 'false' | 'private' | 'publication'. media_protection::get_mode() treats ''/null as no override.",
 	),
 	new config_key(
+		path:  'state.entity_menu_skip_tipos_custom',
+		const: 'DEDALO_ENTITY_MENU_SKIP_TIPOS_CUSTOM',
+		type:  'list',
+		scope: config_scope::STATE,
+		doc:   'Menu skip-tipos runtime override (set from the menu_skip_tipos maintenance widget). When NON-EMPTY it REPLACES the base DEDALO_ENTITY_MENU_SKIP_TIPOS in menu.php; empty (a list key resolves to [] when unset) = no override, use the base. Lets an admin override a base list deployed via .env.',
+	),
+	new config_key(
 		path:  'state.recovery_mode',
 		const: 'DEDALO_RECOVERY_MODE',
 		type:  'bool',
