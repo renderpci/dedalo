@@ -147,6 +147,14 @@ class area_maintenance extends area_common {
 		$item->label = label::get_label('check_config') ?? 'Check config';
 		$ar_widgets[] = $this->widget_factory($item);
 
+		// config_areas *
+		$item = new stdClass();
+		$item->id = 'config_areas';
+		$item->category = 'config';
+		$item->type = 'widget';
+		$item->label = label::get_label('config_areas') ?? 'Config areas (allow/deny)';
+		$ar_widgets[] = $this->widget_factory($item);
+
 		// update_ontology *
 		$item = new stdClass();
 		$item->id = 'update_ontology';
@@ -480,6 +488,7 @@ class area_maintenance extends area_common {
 		return [
 			'make_backup',
 			'check_config',
+			'config_areas',
 			'update_ontology',
 			'register_tools',
 			'move_tld',
