@@ -166,6 +166,15 @@ Options -Indexes
 #     allowing same-origin <object> SVG (component_image renders SVG media via
 #     <object type="image/svg+xml"> so it can cache-bust the inner raster image
 #     through contentDocument — see core/component_image/js/view_default_edit_image.js).
+#   * `script-src`/`connect-src` allow `https://cdn.jsdelivr.net` and the
+#     HuggingFace hosts (`huggingface.co`, `*.huggingface.co`) because the AI
+#     assistant (tools/tool_assistant) dynamically `import()`s Transformers.js
+#     from jsDelivr and `fetch()`es the ONNX-runtime WASM (jsDelivr) plus the
+#     model weights (HuggingFace Hub `resolve/` → `cdn-lfs*.huggingface.co`
+#     and the Xet storage backend on `*.hf.co`, e.g. `us.aws.cdn.hf.co`)
+#     for browser-side local inference. Deployers running the assistant in
+#     server-proxy mode (`config.api_url`) can drop these and add their API host
+#     to `connect-src` instead.
 #   * `base-uri 'self'` + `form-action 'self'` prevent <base> hijacking and
 #     cross-origin form posts.
 #   * `frame-ancestors 'self'` mirrors the X-Frame-Options SAMEORIGIN policy
@@ -186,10 +195,10 @@ Options -Indexes
 	RequestHeader unset Proxy
 
 	# Content Security Policy (enforced).
-	Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval' blob: 'sha256-tGMkWyBVqSrhE1glBFdD2I51om9BJkjuXVKgevMfXS4='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.tile.openstreetmap.org *.tile.osm.org *.basemaps.cartocdn.com server.arcgisonline.com dh.gu.se; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob: http://127.0.0.1:* http://localhost:*; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'self'; base-uri 'self'; form-action 'self'"
+	Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval' blob: https://cdn.jsdelivr.net 'sha256-tGMkWyBVqSrhE1glBFdD2I51om9BJkjuXVKgevMfXS4='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.tile.openstreetmap.org *.tile.osm.org *.basemaps.cartocdn.com server.arcgisonline.com dh.gu.se; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob: http://127.0.0.1:* http://localhost:* https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://hf.co https://*.hf.co; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'self'; base-uri 'self'; form-action 'self'"
 
 	# Report-Only version (for monitoring — swap with enforced line above if needed):
-	# Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-eval' blob: 'sha256-tGMkWyBVqSrhE1glBFdD2I51om9BJkjuXVKgevMfXS4='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.tile.openstreetmap.org *.tile.osm.org *.basemaps.cartocdn.com server.arcgisonline.com dh.gu.se; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob: http://127.0.0.1:* http://localhost:*; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'self'; base-uri 'self'; form-action 'self'"
+	# Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-eval' blob: https://cdn.jsdelivr.net 'sha256-tGMkWyBVqSrhE1glBFdD2I51om9BJkjuXVKgevMfXS4='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.tile.openstreetmap.org *.tile.osm.org *.basemaps.cartocdn.com server.arcgisonline.com dh.gu.se; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob: http://127.0.0.1:* http://localhost:* https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://hf.co https://*.hf.co; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'self'; base-uri 'self'; form-action 'self'"
 </IfModule>
 
 # Legacy header section preserved (commented) for reference.
