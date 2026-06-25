@@ -1,33 +1,39 @@
 # Development
 
+> See also: [Documentation style guide](documentation_style_guide.md) · [Code documentation standard](code_documentation_standard.md) · [Extending Dédalo](extending/index.md) · [Diffusion API](../diffusion/diffusion_data_flow.md)
+
+This is the developer guide for the Dédalo **work system** — how to add new functionality and how to start developing inside it. If instead you want to build a public website that reads from Dédalo, you call the [diffusion API](../diffusion/diffusion_data_flow.md), Dédalo's public REST API.
+
 ## Introduction
 
-Dédalo ecosystem has two different systems, work system and diffusion system, work system si connected to diffusion system to share public data into websites; virtual exhibitions, online catalogs, interactive games or any other diffusion data.
-
-This guide is to add new functionalities or begin to develop in work system. If you want to develop a public website getting information from Dédalo API you will need know how do call to [diffusion API](../diffusion/diffusion_data_flow.md), Dédalo public REST API.
+The Dédalo ecosystem has two systems: the **work system** and the **diffusion system**. The work system is connected to the diffusion system, which publishes selected data to websites — virtual exhibitions, online catalogues, interactive games or any other public output.
 
 ## Ecosystem
 
-Dédalo work system is a client-server application based in web technology. Server is develop with PHP, client is develop with JavaScript and the client render the data in HTML and style it with CSS, CSS is write in LESS. For store data Dédalo use a PostgreSQL database with a NoSQL model, data is stored into JSONB (JSON Binary) fields. Apache is used as HTTP server.
+The Dédalo work system is a client-server web application. The server is written in PHP; the client is written in JavaScript, which renders the data as HTML and styles it with CSS (the CSS is authored in LESS). Dédalo stores its data in a PostgreSQL database using a NoSQL model: the data lives in JSONB (binary JSON) columns. Apache serves as the HTTP server.
 
-The server architecture is based in programming objects with different approach, sections has a factory model, components has inheritance of classes. Client code in JavaScript use import modules for inheritance and native prototype is used instead classes.
+The server architecture mixes two approaches: sections use a factory model, while components use class inheritance. The JavaScript client uses ES module imports for inheritance, relying on native prototypes rather than classes.
 
-## Code Style
+## Code style
 
-Dédalo use snake case for the name of methods, classes, variables, or any other definition.
+Dédalo uses snake case for the names of methods, classes, variables and every other definition.
 
-### Javascript
+Two house standards govern how Dédalo is documented:
+
+- [Code documentation standard](code_documentation_standard.md) — doc-blocks and inline comments inside the PHP/JS **source**.
+- [Documentation style guide](documentation_style_guide.md) — the prose documentation under `docs/` (this site).
+
+### JavaScript
 
 1. Variables
 
     1. Local variable declarations
 
-        In general use `const` for variables, it's inmutable and his scope is clear a well defined, when you need a mutable variable you can use `let`.
-        `var` do not has a clear scope and his use is avoid, do not use it.
+        Prefer `const`: it is immutable and its scope is clear and well defined. Use `let` only when you need a mutable variable. Do not use `var` — its scope is unclear, so its use is avoided.
 
     2. One variable per declaration
 
-        Every local variable declaration must declares only one variable. Declarations such as `const a = 1, b = 2;` are not used.
+        Every local variable declaration must declare only one variable. Declarations such as `const a = 1, b = 2;` are not used.
 
     3. Function parameters, options
 
@@ -56,7 +62,7 @@ Dédalo use snake case for the name of methods, classes, variables, or any other
         const a4 = new Array();
         ```
 
-        This works as expected except for the third case, a3 will be an array with 17 empty values, instead an array with the number 17 as the value.
+        This works as expected except for the third case: `a3` becomes an array with 17 empty slots, not an array holding the number 17.
 
         Instead, use `[]`:
 
@@ -67,16 +73,16 @@ Dédalo use snake case for the name of methods, classes, variables, or any other
         const a4 = [];
         ```
 
-        Explicitly allocating an array of a given length using new Array(length) is allowed when appropriate.
+        Explicitly allocating an array of a given length with `new Array(length)` is allowed when appropriate.
 
     5. Do not use the `Object` constructor
 
         Use an object literal `{}` or `{a: 0, b: 1, c: 2}` instead.
 
         ``` js
-        const a1 = { a : 1, b : 2, c : 3];
-        const a2 = { a : 1, b2 : 'my second value'];
-        const a3 = { my_other_property : 'other value'];
+        const a1 = { a : 1, b : 2, c : 3 };
+        const a2 = { a : 1, b2 : 'my second value' };
+        const a3 = { my_other_property : 'other value' };
         const a4 = {};
         ```
 
@@ -95,19 +101,19 @@ Dédalo use snake case for the name of methods, classes, variables, or any other
 
 2. Functions and inheritance
 
-    1. Prototypes instead classes
+    1. Prototypes instead of classes
 
-        Dédalo use a native javascript inheritance based in prototypes. ES6 introduce a `Class` word to generate inheritance, but this is not a new inheritance model, it is only a specific prototype model.
+        Dédalo uses native JavaScript inheritance based on prototypes. ES6 introduced the `class` keyword for inheritance, but this is not a new inheritance model — it is only a specific prototype model.
 
-        !!! note "About inheritance of JavaScript"
+        !!! note "About inheritance in JavaScript"
 
-            [In NDN you can read](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_classes): JavaScript is a prototype-based language — an object's behaviors are specified by its own properties and its prototype's properties. [...] In JavaScript, classes are mainly an abstraction over the existing prototypical inheritance mechanism — all patterns are convertible to prototype-based inheritance. Classes themselves are normal JavaScript values as well, and have their own prototype chains.
+            [From MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_classes): JavaScript is a prototype-based language — an object's behaviors are specified by its own properties and its prototype's properties. [...] In JavaScript, classes are mainly an abstraction over the existing prototypical inheritance mechanism — all patterns are convertible to prototype-based inheritance. Classes themselves are normal JavaScript values as well, and have their own prototype chains.
 
-            See [Mozilla documentation](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Inheritance_and_the_prototype_chain) for more information
+            See the [Mozilla documentation](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Inheritance_and_the_prototype_chain) for more information.
 
-    2. Use `self` instead `this`
+    2. Use `self` instead of `this`
 
-        To avoid conflicts and confusion, functions always declare `self` to get reference to main object.
+        To avoid conflicts and confusion, functions always declare `self` to hold a reference to the main object.
 
         ``` js
         component_text_area.prototype.init = async function(options) {
@@ -116,7 +122,7 @@ Dédalo use snake case for the name of methods, classes, variables, or any other
         }
         ```
 
-        `self` will use in other code parts to get, set, expand, etc, the main object. And it is used instead the this to avoid confusion.
+        `self` is then used elsewhere in the code to get, set or expand the main object. It is used instead of `this` to avoid confusion.
 
         ``` js
         const get_content_data = function(options) {
@@ -132,11 +138,11 @@ Dédalo use snake case for the name of methods, classes, variables, or any other
 
     3. Anonymous functions in events
 
-        Anonymous functions are avoided inside events. The function could be overlap by other anonymous functions creating an unclear situation.
+        Avoid anonymous functions inside events. An anonymous handler can be shadowed by other anonymous handlers, creating an unclear situation.
 
 3. ES modules
 
-    Dédalo use a native ES modules imports only. RequireJS, commonJS modules, or other import models are not supported.
+    Dédalo uses native ES module imports only. RequireJS, CommonJS modules and other import models are not supported.
 
     1. Import paths
 
@@ -186,13 +192,11 @@ Most "new" work in Dédalo is **ontology authoring**, not code — a new section
 
 For the *tool* extension surface (which has its own scaffolder and registration flow), see the [Tools](#tools) section below.
 
-## GIT commit style
+## Git commit style
 
-Since v6 Dédalo follows the conventional method [Commits v1.0](https://www.conventionalcommits.org/en/v1.0.0/) for commits.
+Since v6, Dédalo follows the [Conventional Commits v1.0](https://www.conventionalcommits.org/en/v1.0.0/) convention for commit messages.
 
-Use the imperative verb form to ensure that possible verbs used in commits, such as "fixed" or "updated", are written in the correct verb tense.  
-Apply the formula: “If applied, my commit will…”
-example: “If applied, my commit will (INSERT COMMIT MESSAGE TEXT)”
+Use the imperative verb form so that verbs such as "fix" or "update" are written in the correct tense. Apply the formula "If applied, my commit will…" — for example, "If applied, my commit will (INSERT COMMIT MESSAGE TEXT)".
 
 The prefixes to be used in the commits are as follows:
 
@@ -308,7 +312,7 @@ See [testing.md](testing.md) for full documentation on:
 - What contract (snapshot) tests verify
 - Writing a new server test
 
-## Breaking Change Detection
+## Breaking change detection
 
 Dédalo includes an automated system to detect breaking changes in API contracts, method signatures, and data models. This helps prevent regressions when developing new features.
 
@@ -320,7 +324,7 @@ See [breaking_change_detection.md](breaking_change_detection.md) for full docume
 - CI/CD integration
 - How to update baselines for intentional changes
 
-## Performance Metrics
+## Performance metrics
 
 Dédalo records lightweight per-subsystem performance metrics (search, ontology, DB reads/writes, tools, datalist, save, …) plus per-request monitoring, so developers can confirm the main processes run within reasonable timeframes and detect bottlenecks.
 

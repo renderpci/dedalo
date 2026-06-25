@@ -1,11 +1,11 @@
 {
-  "id": "3951",
+  "id": "3986",
   "section_id": "31",
   "section_tipo": "dd1340",
   "data": {
     "label": "Tools development",
     "section_id": 31,
-    "created_date": "2026-06-17 13:27:59",
+    "created_date": "2026-06-18 11:43:42",
     "section_tipo": "dd1340",
     "diffusion_info": null,
     "created_by_user_id": -1
@@ -247,13 +247,13 @@
         "id": 1,
         "lang": "lg-nolan",
         "start": {
-          "day": 17,
-          "hour": 13,
-          "time": 65132083679,
+          "day": 18,
+          "hour": 11,
+          "time": 65132163822,
           "year": 2026,
           "month": 6,
-          "minute": 27,
-          "second": 59
+          "minute": 43,
+          "second": 42
         }
       }
     ]
@@ -267,155 +267,143 @@
       {
         "id": 1,
         "value": {
-          "lg-nolan": [
+          "events": [
             {
-              "events": [
+              "type": "keyup",
+              "action": "click",
+              "validate": [
                 {
-                  "type": "keyup",
-                  "action": "click",
-                  "validate": [
-                    {
-                      "key": "ctrlKey",
-                      "value": true
-                    },
-                    {
-                      "key": "key",
-                      "value": "s"
-                    }
-                  ]
+                  "key": "ctrlKey",
+                  "value": true
+                },
+                {
+                  "key": "key",
+                  "value": "s"
                 }
-              ],
-              "open_as": "modal",
-              "windowFeatures": {
-                "width": "40rem"
-              }
+              ]
             }
-          ]
+          ],
+          "open_as": "modal",
+          "windowFeatures": {
+            "width": "40rem"
+          }
         }
       }
     ],
     "dd1350": [
       {
         "id": 1,
-        "value": {
-          "lg-nolan": [
-            [
-              "ontology35",
-              "/^(?!localontology0)[a-z]+0$/"
-            ]
-          ]
-        }
+        "value": [
+          "ontology35",
+          "/^(?!localontology0)[a-z]+0$/"
+        ]
       }
     ],
     "dd1372": [
       {
         "id": 1,
-        "value": {
-          "lg-nolan": [
-            [
-              {
-                "lang": "lg-eng",
-                "name": "process",
-                "value": "Process"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "process",
-                "value": "Procesar"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "process",
-                "value": "Procesar"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "process",
-                "value": "Procédé"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "process",
-                "value": "Processo"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "process",
-                "value": "Διαδικασία"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "process",
-                "value": "Prozess"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "export_to_jer_dd",
-                "value": "Export to jer_dd"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "export_to_jer_dd",
-                "value": "Exportar a jer_dd"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "export_to_jer_dd",
-                "value": "Exporta a jer_dd"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "export_to_jer_dd",
-                "value": "Exporter vers jer_dd"
-              },
-              {
-                "lang": "lg-por",
-                "name": "export_to_jer_dd",
-                "value": "Exportar para jer_dd"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "export_to_jer_dd",
-                "value": "Esportatu jer_dd-era"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "export_to_jer_dd",
-                "value": "Esporta in jer_dd"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "export_to_jer_dd",
-                "value": "Εξαγωγή σε jer_dd"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "export_to_jer_dd",
-                "value": "jer_dd मा निर्यात गर्नुहोस्"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "export_to_jer_dd",
-                "value": "Exportieren nach jer_dd"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "process",
-                "value": "प्रक्रिया"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "process",
-                "value": "Prozesua"
-              },
-              {
-                "lang": "lg-por",
-                "name": "process",
-                "value": "प्रक्रिया"
-              }
-            ]
-          ]
-        }
+        "value": [
+          {
+            "lang": "lg-eng",
+            "name": "process",
+            "value": "Process"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "process",
+            "value": "Procesar"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "process",
+            "value": "Procesar"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "process",
+            "value": "Procédé"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "process",
+            "value": "Processo"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "process",
+            "value": "Διαδικασία"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "process",
+            "value": "Prozess"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "export_to_jer_dd",
+            "value": "Export to jer_dd"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "export_to_jer_dd",
+            "value": "Exportar a jer_dd"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "export_to_jer_dd",
+            "value": "Exporta a jer_dd"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "export_to_jer_dd",
+            "value": "Exporter vers jer_dd"
+          },
+          {
+            "lang": "lg-por",
+            "name": "export_to_jer_dd",
+            "value": "Exportar para jer_dd"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "export_to_jer_dd",
+            "value": "Esportatu jer_dd-era"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "export_to_jer_dd",
+            "value": "Esporta in jer_dd"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "export_to_jer_dd",
+            "value": "Εξαγωγή σε jer_dd"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "export_to_jer_dd",
+            "value": "jer_dd मा निर्यात गर्नुहोस्"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "export_to_jer_dd",
+            "value": "Exportieren nach jer_dd"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "process",
+            "value": "प्रक्रिया"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "process",
+            "value": "Prozesua"
+          },
+          {
+            "lang": "lg-por",
+            "name": "process",
+            "value": "प्रक्रिया"
+          }
+        ]
       }
     ]
   },

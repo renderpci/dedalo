@@ -4,6 +4,38 @@
 
 
 
+/**
+* RENDER_TOOL_ONTOLOGY_PARSER
+*
+* Client-side render layer for the tool_ontology_parser tool.
+*
+* This module is the visual half of the ontology parser tool, which lets
+* authorised developers select individual ontology TLDs (top-level domains)
+* or entire typology groups and then trigger two long-running server operations:
+*
+*   - Export   — serialises each selected ontology to a JSON COPY file on the
+*                server so it can be distributed to other Dédalo installations.
+*   - Regenerate — rebuilds the dd_ontology table rows from the master ontology
+*                  data, effectively resyncing the run-time ontology cache.
+*
+* The module exports one symbol:
+*   render_tool_ontology_parser — constructor (prototype pattern); its `edit`
+*   method is mixed into tool_ontology_parser.prototype via tool_ontology_parser.js.
+*
+* Data shapes consumed from the tool instance (`self`):
+*   self.ontologies           {Array}  — flat list of ontology descriptor objects
+*                                        returned by the server's get_ontologies API:
+*                                        { target_section_tipo, tld, name,
+*                                          typology_id, typology_name }
+*   self.selected_ontologies  {Array}  — mutable array of tld strings that the
+*                                        user has checked; persisted to localStorage
+*                                        so selections survive page reloads.
+*
+* Security note — SEC-031: all API response text (msg / errors / ar_msg) is
+* written through _render_msg_lines() which emits DOM text nodes, never innerHTML,
+* so backend error strings cannot inject HTML or scripts.
+*/
+
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
@@ -28,7 +60,13 @@ const _render_msg_lines = (target, lines) => {
 
 /**
 * RENDER_TOOL_ONTOLOGY_PARSER
-* Manages the component's logic and appearance in client side
+* Constructor for the render layer of the ontology parser tool.
+*
+* Acts purely as a prototype namespace — no instance state is initialised here.
+* The `edit` method defined on its prototype is mixed into the tool's prototype
+* by tool_ontology_parser.js so that tool_common's render lifecycle can invoke it.
+*
+* @returns {boolean} Always returns true (constructor placeholder).
 */
 export const render_tool_ontology_parser = function() {
 
@@ -41,8 +79,10 @@ export const render_tool_ontology_parser = function() {
 * EDIT
 * Render tool DOM nodes
 * This function is called by render common attached in 'tool_dummy.js'
-* @param object options
-* @return HTMLElement wrapper
+* @param {Object} options
+* @param {string} [options.render_level='full'] - 'full' builds the complete wrapper;
+*   'content' returns only the inner content_data element (used for partial refreshes).
+* @returns {Promise<HTMLElement>} wrapper (render_level==='full') or content_data element.
 */
 render_tool_ontology_parser.prototype.edit = async function(options) {
 
@@ -73,8 +113,37 @@ render_tool_ontology_parser.prototype.edit = async function(options) {
 /**
 * GET_CONTENT_DATA
 * Render tool body or 'content_data'
-* @param instance self
-* @return HTMLElement content_data
+*
+* Builds the full tool body as a DocumentFragment and then wraps it in the
+* standard content_data container returned by ui.tool.build_content_data.
+*
+* DOM structure produced:
+*   content_data
+*   ├── h2.user_info                    (instructional text from tool labels)
+*   ├── div.ontologies_list_container   (checkbox tree of typologies → TLDs)
+*   ├── div.buttons_container
+*   │   ├── button.warning.gear         (Export)
+*   │   └── button.warning.repair       (Regenerate)
+*   ├── div.messages_container          (primary status / result message)
+*   ├── div.messages_container.process_messages.hidden  (per-TLD log lines)
+*   └── div.messages_container.process_error.hidden     (per-TLD error lines)
+*
+* The Export and Regenerate buttons share the same UX pattern:
+*   1. Confirm dialog guards against accidental invocation.
+*   2. Empty selection aborts early with an alert.
+*   3. A loading spinner is attached to content_data.parentNode while the API
+*      call is in flight (timeout: 180 s, retries: 1 — see tool_ontology_parser.js).
+*   4. The three message containers are updated via _render_msg_lines (SEC-031).
+*
+* (!) messages_container, process_messages_container, and process_error_container
+*     are declared AFTER the buttons but referenced inside the button click closures.
+*     This works because the closures capture the binding by reference and the
+*     variables are in the same function scope — they exist by the time any click
+*     can fire.  It is NOT a temporal dead zone issue (let/const are in the same
+*     block, resolved before any async event fires).
+*
+* @param {Object} self - The tool_ontology_parser instance.
+* @returns {Promise<HTMLElement>} The populated content_data wrapper element.
 */
 const get_content_data = async function(self) {
 
@@ -115,10 +184,13 @@ const get_content_data = async function(self) {
 			const click_export_handler = async (e) => {
 				e.stopPropagation();
 
+				// Guard: require explicit user confirmation before a potentially
+				// long-running, filesystem-writing server operation.
 				if (!confirm(get_label.sure || 'Sure?')) {
 					return
 				}
 
+				// Guard: at least one ontology TLD must be selected.
 				if (self.selected_ontologies.length===0) {
 					alert("Error: empty selection");
 					return
@@ -201,10 +273,13 @@ const get_content_data = async function(self) {
 			const click_regenerate_handler = async (e) => {
 				e.stopPropagation();
 
+				// Guard: require explicit user confirmation before regenerating
+				// all dd_ontology rows (a destructive, potentially slow operation).
 				if (!confirm(get_label.sure || 'Sure?')) {
 					return
 				}
 
+				// Guard: at least one ontology TLD must be selected.
 				if (self.selected_ontologies.length===0) {
 					alert("Error: empty selection");
 					return
@@ -306,18 +381,50 @@ const get_content_data = async function(self) {
 /**
 * RENDER_ONTOLOGIES_LIST
 * Creates the checkbox list selectors of all available ontology sections
-* @param object self
-* 	tool instance
-* @return DocumentFragment fragment
+*
+* Builds a two-level collapsible checkbox tree:
+*
+*   Level 1 — Typology group (label + parent checkbox)
+*     Level 2 — Individual ontology TLD items (label + child checkbox)
+*
+* Each typology label acts as a collapsible toggle (via ui.collapse_toggle_track).
+* Its open/closed state is persisted to the local DB under the key
+* 'tool_ontology_parser_<typology_id>'.
+*
+* Checking/unchecking a parent checkbox cascades to all child checkboxes via
+* synthetic 'change' events, so the child change handlers maintain
+* self.selected_ontologies consistently.
+*
+* Child checkbox state changes are debounced through dd_request_idle_callback
+* before writing to localStorage ('selected_ontologies') so that rapid
+* check/uncheck sequences do not thrash storage.
+*
+* Ontology item label display logic:
+*   - The `tld` value is always the primary visible text (set as inner_html of
+*     the label and as its title attribute for overflow tooltip).
+*   - If the first segment of `name` (before ' | ') differs from `tld`, a child
+*     <span class="item_label_name"> is appended with the human-readable name.
+*
+* @param {Object} self - The tool_ontology_parser instance.
+*   self.ontologies          {Array}  flat list of ontology descriptors
+*                                     (each has: tld, name, typology_id, typology_name)
+*   self.selected_ontologies {Array}  mutable array of currently selected tld strings
+* @returns {DocumentFragment} fragment containing the full typology/TLD tree.
 */
 const render_ontologies_list = function (self) {
 
 	const ontologies = self.ontologies || []
 
 	// parents unique
+	// Deduplicate ontologies by typology_id to build the top-level grouping.
+	// Map is used for O(1) dedup: iterating via values() preserves the last
+	// occurrence per key, which is fine since all entries for a typology share
+	// the same typology_id / typology_name.
 	const key = 'typology_id';
 	const unique_typologies = [...new Map(ontologies.map(el => [el[key], el] )).values()];
 
+	// Sort typologies ascending by typology_id.  Entries without a typology_id
+	// (null/undefined) are placed first by returning 0 (stable sort).
 	const sorted_typologies = unique_typologies
 		.sort( (a,b) => {
 			if (!a.typology_id) {
@@ -333,18 +440,25 @@ const render_ontologies_list = function (self) {
 
 		const typology_item = sorted_typologies[i]
 
-		// typology_label
+		// typology_label — the collapsible group header.
+		// 'icon_arrow' CSS class renders the collapse indicator; the 'up' class
+		// is toggled by collapse_toggle_track's expose/collapse callbacks.
 			const typology_label = ui.create_dom_element({
 				element_type	: 'label',
 				class_name		: 'item_label typology_label unselectable icon_arrow',
 				inner_html		: typology_item.typology_name || 'Without typology',
 				parent			: fragment
 			})
+			// Prevent the label's native click behaviour (which would toggle the
+			// checkbox inside it) — only the explicit checkbox click is acted on.
 			typology_label.addEventListener('click', (e) => {
 				e.preventDefault() // prevent interactions with the input checkbox
 			})
 
 		// input checkbox
+		// The parent checkbox is a UI convenience: checking it sets ALL children.
+		// It does NOT have its own entry in self.selected_ontologies; only child
+		// TLD strings are stored there.
 			const typology_input_checkbox = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'checkbox',
@@ -352,6 +466,8 @@ const render_ontologies_list = function (self) {
 				value			: typology_item.typology_id
 			})
 			// change event handler
+			// Cascade the parent checkbox state to every child input by dispatching
+			// synthetic 'change' events so the children's own handlers run.
 			const change_handler = (e) => {
 				const children_nodes = children_container.querySelectorAll('input')
 				for (let k = children_nodes.length - 1; k >= 0; k--) {
@@ -360,12 +476,15 @@ const render_ontologies_list = function (self) {
 				}
 			}
 			typology_input_checkbox.addEventListener('change', change_handler)
+			// stopPropagation keeps the click from bubbling up to typology_label's
+			// click handler (which calls e.preventDefault) — without this the
+			// checkbox state would toggle twice.
 			typology_input_checkbox.addEventListener('click', (e) => {
 				e.stopPropagation()
 			})
 			typology_label.append(typology_input_checkbox)
 
-		// children_container
+		// children_container — holds the individual TLD rows for this typology.
 			const children_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'children_container',
@@ -373,6 +492,8 @@ const render_ontologies_list = function (self) {
 			})
 
 		// track collapse toggle state of content
+		// ui.collapse_toggle_track persists open/closed state per collapsed_id
+		// in the local DB so the panel remembers its state across reloads.
 			ui.collapse_toggle_track({
 				toggler				: typology_label,
 				container			: children_container,
@@ -383,16 +504,19 @@ const render_ontologies_list = function (self) {
 			})
 
 		// children group items
+		// Filter to this typology's TLDs and sort alphabetically by name.
 			const children_ontologies = ontologies.filter(el => el.typology_id === typology_item.typology_id)
 				.sort( (a,b) => (a.name < b.name) ? -1 : 0)
 
 			const children_len = children_ontologies.length
+			// Track how many children start out checked so we can set the parent
+			// checkbox to checked if all children are pre-selected.
 			let children_checked_counter = 0 // number of checked children counter
 			for (let j = 0; j < children_len; j++) {
 
 				const child = children_ontologies[j];
 
-				// item_label
+				// item_label — primary text is the TLD; tooltip via title attribute.
 				const item_label = ui.create_dom_element({
 					element_type	: 'label',
 					class_name		: 'item_label unselectable',
@@ -401,7 +525,10 @@ const render_ontologies_list = function (self) {
 					parent			: children_container
 				})
 
-				// item_label_name
+				// item_label_name — optional supplementary human-readable name.
+				// The server stores names as "TLD | human name | ..." pipe-separated.
+				// Only the first segment is shown; if it equals the TLD it would be
+				// redundant, so the <span> is omitted in that case.
 				const name_first_part = child.name.split(' | ')[0]
 				if (name_first_part!==child.tld) {
 					 ui.create_dom_element({
@@ -420,12 +547,17 @@ const render_ontologies_list = function (self) {
 					value			: child.tld
 				})
 				// set value
+				// Restore the previously persisted selection from self.selected_ontologies
+				// (which was populated from localStorage during tool build).
 				if (self.selected_ontologies.find(el => el===child.tld)) {
 					input_checkbox.checked = true
 					children_checked_counter++ // update counter
 				}
 				item_label.prepend(input_checkbox)
 				// change event handler
+				// Keeps self.selected_ontologies in sync with the checkbox state and
+				// persists the updated array to localStorage via an idle callback so
+				// rapid toggling does not block the main thread.
 				const change_handler = (e) => {
 					if (input_checkbox.checked) {
 						// add if not is not already included

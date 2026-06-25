@@ -1,11 +1,11 @@
 {
-  "id": "3941",
+  "id": "3976",
   "section_id": "21",
   "section_tipo": "dd1340",
   "data": {
     "label": "Tools development",
     "section_id": 21,
-    "created_date": "2026-06-17 13:27:57",
+    "created_date": "2026-06-18 11:43:41",
     "section_tipo": "dd1340",
     "diffusion_info": null,
     "created_by_user_id": -1
@@ -201,13 +201,13 @@
         "id": 1,
         "lang": "lg-nolan",
         "start": {
-          "day": 17,
-          "hour": 13,
-          "time": 65132083677,
+          "day": 18,
+          "hour": 11,
+          "time": 65132163821,
           "year": 2026,
           "month": 6,
-          "minute": 27,
-          "second": 57
+          "minute": 43,
+          "second": 41
         }
       }
     ]
@@ -221,59 +221,51 @@
       {
         "id": 1,
         "value": {
-          "lg-nolan": [
-            {
-              "open_as": "window",
-              "windowFeatures": null
-            }
-          ]
+          "open_as": "window",
+          "windowFeatures": null
         }
       }
     ],
     "dd1372": [
       {
         "id": 1,
-        "value": {
-          "lg-nolan": [
-            [
-              {
-                "lang": "lg-spa",
-                "name": "used_in",
-                "value": "Usado en"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "used_in",
-                "value": "Usat a"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "used_in",
-                "value": "Used in"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "used_in",
-                "value": "Benutzt in"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "used_in",
-                "value": "Usato in"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "used_in",
-                "value": "Utilisé dans"
-              },
-              {
-                "lang": "lg-por",
-                "name": "used_in",
-                "value": "Usado em"
-              }
-            ]
-          ]
-        }
+        "value": [
+          {
+            "lang": "lg-spa",
+            "name": "used_in",
+            "value": "Usado en"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "used_in",
+            "value": "Usat a"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "used_in",
+            "value": "Used in"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "used_in",
+            "value": "Benutzt in"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "used_in",
+            "value": "Usato in"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "used_in",
+            "value": "Utilisé dans"
+          },
+          {
+            "lang": "lg-por",
+            "name": "used_in",
+            "value": "Usado em"
+          }
+        ]
       }
     ]
   },

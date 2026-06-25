@@ -89,7 +89,7 @@
 
 // config. Starts a new session with forced id from command arguments
 // Boots the full Dédalo environment: constants, autoloader, DB connections, session resume.
-	include dirname(__FILE__, 3) . '/config/config.php';
+	include dirname(__FILE__, 3) . '/config/bootstrap.php';
 
 // actions to run
 // The expensive computation: walks the ontology hierarchy for the given user and language,

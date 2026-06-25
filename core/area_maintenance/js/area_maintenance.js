@@ -4,6 +4,40 @@
 
 
 
+/**
+* AREA_MAINTENANCE
+* Controller class for the system-administrator maintenance area.
+*
+* This area aggregates a dashboard of "widgets" — self-contained tool panels
+* (backup, migration, config, integrity checks, diffusion, developer tools, etc.)
+* that a superuser can open and run without leaving the Dédalo UI.
+*
+* Architecture:
+*  - Follows the standard Dédalo area lifecycle: init → build → render.
+*  - `init`  delegates to `area_common.prototype.init` and then loads the
+*    highlight.js stylesheet needed by code-display widgets.
+*  - `build` fetches context + data via `build_autoload`, then populates
+*    `this.context`, `this.data`, and `this.widgets` (the flat datalist of
+*    widget definitions served by `class.area_maintenance.php::get_ar_widgets`).
+*  - `render` delegates to `common.prototype.render`, which in turn calls
+*    `this.edit()` (aliased from `render_area_maintenance.prototype.edit`),
+*    producing the full maintenance dashboard DOM.
+*  - `get_value` fires a long-lived worker request (up to 1 hour) to
+*    `dd_area_maintenance_api::get_widget_value` — used by widget instances
+*    to retrieve async operation results.
+*
+* Widget rendering is handled entirely in render_area_maintenance.js.
+* Individual widget JS modules live under core/area_maintenance/widgets/.
+*
+* Main exports: `area_maintenance` (constructor).
+*
+* @see core/area_maintenance/class.area_maintenance.php  — server widget registry
+* @see core/area_maintenance/js/render_area_maintenance.js — DOM rendering
+* @see core/area_common/js/area_common.js — shared area base / init contract
+*/
+
+
+
 // imports
 	import {common, build_autoload} from '../../common/js/common.js'
 	import {load_style} from '../../common/js/utils/index.js'
@@ -16,6 +50,25 @@
 
 /**
 * AREA_MAINTENANCE
+* Constructor for the maintenance area controller.
+*
+* Instance properties are declared here (undefined) and populated by
+* `area_common.prototype.init` (identity fields) and `build` (data fields).
+* The constructor is intentionally lightweight — all async work happens in
+* `init` and `build`.
+*
+* @property {string}        id      - Unique instance identifier, set by init.
+* @property {string}        model   - Module model name ('area_maintenance').
+* @property {string}        type    - Area type string (mirrors model).
+* @property {string}        tipo    - Ontology tipo (e.g. 'dd88').
+* @property {string}        mode    - Render mode: 'edit' or 'list'.
+* @property {string}        lang    - Active UI language code.
+* @property {Object}        datum   - Raw API response (context + data arrays).
+* @property {Object}        context - Area context record from the API response.
+* @property {Object}        data    - Area data record (section_tipo === tipo match).
+* @property {Array}         widgets - Flat list of widget definition objects from datalist.
+* @property {HTMLElement}   node    - Root DOM node after render.
+* @property {string}        status  - Lifecycle state: 'building' | 'built'.
 */
 export const area_maintenance = function() {
 
@@ -45,7 +98,19 @@ export const area_maintenance = function() {
 
 /**
 * COMMON FUNCTIONS
-* extend component functions from component common
+* Prototype assignments that wire shared lifecycle and render methods into
+* area_maintenance.  Each entry delegates to the canonical implementation so
+* that area_maintenance participates fully in the standard Dédalo lifecycle
+* without duplicating code.
+*
+* Lifecycle (from common):
+*   refresh          — tears down and rebuilds the instance in place.
+*   destroy          — removes the DOM node and cleans up event subscriptions.
+*   build_rqo_show   — constructs the request query object (rqo) for 'show' calls.
+*
+* Render (from render_area_maintenance):
+*   edit / list      — both produce the maintenance dashboard DOM; `list` is an
+*                      alias of `edit` so the area works in either mode.
 */
 // prototypes assign
 	area_maintenance.prototype.refresh			= common.prototype.refresh
@@ -58,9 +123,17 @@ export const area_maintenance = function() {
 
 /**
 * INIT
-* @param object options
-* @return bool common_init
-* Custom init
+* Initializes the area_maintenance instance.
+*
+* Extends `area_common.prototype.init` with maintenance-specific setup:
+* injects the highlight.js CSS (atom-one-dark theme) used by code-display
+* widgets (e.g. check_config, system_info).  The stylesheet is loaded once
+* per page via `load_style`, which is a no-op if the link tag already exists.
+*
+* @param {Object} options - Initialization options forwarded to area_common.init.
+*   Typically includes: id, model, tipo, mode, lang, section_tipo, section_id.
+* @returns {Promise<boolean>} Resolves to the return value of area_common.init
+*   (true on success).
 */
 area_maintenance.prototype.init = async function(options) {
 
@@ -81,8 +154,33 @@ area_maintenance.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @return promise
-*	bool true
+* Loads context and widget data from the API and populates the instance.
+*
+* When `autoload` is true (the normal path), the method:
+*  1. Issues a `build_autoload` request (context + data in one call).
+*  2. Aborts with false if the response is missing or has no context entries.
+*  3. Stores `api_response.result` in `self.datum`.
+*  4. Sets `self.context` only when not already set — this preserves any
+*     ddo_map overrides applied by section_record.js before build() was called.
+*     (e.g. oh27 may configure rsc368 with mode:list/view:line while the API
+*     would return the plain default mode:edit/view:default.)
+*  5. Sets `self.data`    — the data record whose tipo matches section_tipo.
+*  6. Sets `self.widgets` — the flat datalist array of widget definition objects
+*     (id, label, category, class, value…) as returned by
+*     `class.area_maintenance.php::get_ar_widgets`.
+*  7. Rebuilds `self.rqo` from the fresh context.
+*
+* When `autoload` is false (headless / embedding via render_update_data_maintenance),
+* only the initial rqo is built; the caller is responsible for supplying
+* `self.widgets` directly before calling build(false).
+*
+* `prevent_lock` is set on the rqo so that long-running maintenance calls do
+* not trigger the Dédalo record-lock mechanism.
+*
+* @param {boolean} [autoload=true] - When true, fetches context + data from the
+*   server.  Pass false to skip the network call (caller pre-populates widgets).
+* @returns {Promise<boolean>} true on success, false if the API response is
+*   missing or contains no context for this area.
 */
 area_maintenance.prototype.build = async function(autoload=true) {
 
@@ -141,7 +239,9 @@ area_maintenance.prototype.build = async function(autoload=true) {
 						self.context = context || {}
 					}
 				}
+				// data record: matched by tipo===section_tipo (the area's own section)
 				self.data		= self.datum.data.find(el => el.tipo===el.section_tipo)
+				// widgets: the datalist on the data record; empty array when absent
 				self.widgets	= self.data && self.data.datalist
 					? self.data.datalist
 					: []
@@ -156,7 +256,7 @@ area_maintenance.prototype.build = async function(autoload=true) {
 				self.rqo = await self.build_rqo_show(self.request_config_object, 'get_data')
 		}//end if (autoload===true)
 
-	// label
+	// label: use context label when available; fall back to a hardcoded default
 		self.label = self.context
 			? self.context.label
 			: 'Area Development'
@@ -172,10 +272,19 @@ area_maintenance.prototype.build = async function(autoload=true) {
 
 /**
 * RENDER
-* @param object options = {}
-*	render_level : level of deep that is rendered (full | content)
-* @return promise
-*	node first DOM node stored in instance 'node' array
+* Paints the maintenance dashboard into the DOM and publishes the
+* 'render_instance' event so that the page header menu can update the
+* active-area label.
+*
+* Delegates to `common.prototype.render`, which in turn calls `this.edit()`
+* (aliased from `render_area_maintenance.prototype.edit`) to build the full
+* dashboard wrapper, sticky toolbar, category chips, and widget grid.
+*
+* @param {Object} [options={}] - Render options.
+* @param {string} [options.render_level='full'] - Depth of rendering:
+*   'full'    — builds the complete wrapper including outer chrome.
+*   'content' — returns only the inner content_data node (used for refreshes).
+* @returns {Promise<HTMLElement>} The root DOM node stored in `this.node`.
 */
 area_maintenance.prototype.render = async function(options={}) {
 
@@ -195,9 +304,25 @@ area_maintenance.prototype.render = async function(options={}) {
 
 /**
 * INIT_FORM
-* Alias of build_form
-* @param object widget_object
-* @return HTMLElement form_container
+* Convenience alias that exposes `build_form` as an instance method so
+* individual widget instances can call `caller.init_form(widget_object)`
+* without importing render_area_maintenance directly.
+*
+* `build_form` creates a `<form>` with the supplied inputs, a submit button,
+* optional confirm dialog, spinner, and API request wiring.  See
+* render_area_maintenance.js::build_form for the full widget_object contract.
+*
+* @param {Object} widget_object - Widget form descriptor.  Key fields:
+*   body_info     {HTMLElement} — container for the form.
+*   body_response {HTMLElement} — container where API responses are printed.
+*   inputs        {Array}       — input descriptor objects (name, type, label, value, mandatory).
+*   trigger       {Object}      — API call descriptor (dd_api, action, source, options).
+*   confirm_text  {string}      — confirmation prompt text (default: label 'sure?').
+*   submit_label  {string}      — submit button text (default: 'OK').
+*   on_submit     {Function}    — optional override called instead of the API request.
+*   on_done       {Function}    — optional callback invoked after the API request.
+*   on_render     {Function}    — optional callback invoked after the form is rendered.
+* @returns {HTMLElement} The constructed `<form>` element.
 */
 area_maintenance.prototype.init_form = function(widget_object) {
 
@@ -208,8 +333,24 @@ area_maintenance.prototype.init_form = function(widget_object) {
 
 /**
 * GET_VALUE
-* @return mixed result
-* 	API response value
+* Fetches the current computed value for this widget from the server.
+*
+* Called by individual widget instances (e.g. system_info, update_data_version)
+* to retrieve their data payload.  The request is routed through a dedicated
+* web worker (`use_worker: true`) because some widgets run long maintenance
+* operations that would block the main thread.
+*
+* The server-side handler is `dd_area_maintenance_api::get_widget_value`, which
+* dispatches to the widget class identified by `source.model` (= `this.id`).
+*
+* Timeouts and retries: only one attempt is made (retries:1) with a 1-hour
+* ceiling — maintenance operations (e.g. full backup, data migration) can
+* legitimately take tens of minutes.
+*
+* @throws {Error} 'Invalid widget id' when `this.id` is falsy or empty —
+*   guards against accidental calls before init().
+* @returns {Promise<*>} The `result` field of the API response, whose shape
+*   varies per widget (object, array, or scalar).
 */
 area_maintenance.prototype.get_value = async function () {
 

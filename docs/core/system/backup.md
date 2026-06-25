@@ -1,8 +1,8 @@
 # backup
 
-> The static helper class that dumps, lists and restores Dédalo's databases — the PostgreSQL work database (`pg_dump`), the MariaDB/MySQL publication database (delegated to Bun), and the COPY-format restore path used to seed ontology and matrix data.
+> See also: [Architecture overview](../architecture_overview.md) · [Sections](../sections/index.md) · [Diffusion](diffusion.md)
 
-> See also: [Architecture overview](../architecture_overview.md) · [Sections](../sections/index.md) · [Diffusion](../../) (publication system)
+The static helper class that dumps, lists and restores Dédalo's databases: the PostgreSQL work database (`pg_dump`), the MariaDB/MySQL publication database (delegated to Bun), and the COPY-format restore path used to seed ontology and matrix data.
 
 ## Role
 
@@ -25,7 +25,7 @@ It sits at the boundary between the two Dédalo systems (see
 | concern | who owns it | how `backup` handles it |
 | --- | --- | --- |
 | **Work DB (PostgreSQL)** | PHP directly | `init_backup_sequence()` runs `pg_dump` to a custom-format file. |
-| **Publication DB (MariaDB/MySQL)** | Bun engine (see [memory: MariaDB is Bun's responsibility](#)) | `make_mysql_backup()` computes the target path and asks the Bun diffusion API (`backup_database` → `mysqldump`) to do the dump. PHP never connects to MariaDB. |
+| **Publication DB (MariaDB/MySQL)** | Bun engine | `make_mysql_backup()` computes the target path and asks the Bun diffusion API (`backup_database` → `mysqldump`) to do the dump. PHP never connects to MariaDB. |
 | **Restore / data seeding** | PostgreSQL COPY | `copy_from_file()` / `import_from_copy_file()` load PostgreSQL `COPY`-format files into matrix/ontology tables. |
 
 The class is consumed from three main surfaces: the **login flow**
@@ -75,7 +75,7 @@ Backups are deliberately kept **outside the web root** for security
 
 ### Configuration constants
 
-Defined in `config/sample.config.php` (and `config_db.php`):
+Set in `../private/.env`; defaults (and the derived `*_PATH` values) live in the catalog (`runtime.php`, `paths.php`, `db.php`):
 
 | constant | default | meaning |
 | --- | --- | --- |
@@ -105,7 +105,7 @@ event-driven and lazy:
    existing `.backup` file is younger than `DEDALO_BACKUP_TIME_RANGE` hours
    (computed via `get_last_modification_date()`), the run is skipped. A backup
    less than an hour old (same filename, one-hour resolution) is also skipped.
-   This makes the login-time backup effectively "at most one per N hours".
+   This makes the login-time backup effectively "at most one per `DEDALO_BACKUP_TIME_RANGE` hours".
 3. **Forced (on demand)** — the `make_backup` maintenance widget passes
    `skip_backup_time_range = true` (the file then uses second-resolution
    `Y-m-d_His` naming and the `_forced_` marker) so the curator can dump
@@ -159,9 +159,9 @@ All methods are `public static`. Grouped by concern.
 
 `backup` is a leaf utility wired into several flows rather than a hub:
 
-- **[Login](#)** — `login::login_user()` calls `init_backup_sequence()` when
-  `DEDALO_BACKUP_ON_LOGIN`, giving the "backup on first login of the day"
-  behaviour via the time-range guard.
+- **[Login](login.md)** — `login::login_user()` calls `init_backup_sequence()`
+  when `DEDALO_BACKUP_ON_LOGIN` is true, giving the "backup on first login of the
+  day" behavior via the time-range guard.
 - **`area_maintenance` → `make_backup` widget** — the on-screen UI. Its
   `API_ACTIONS` are `make_psql_backup` (alias of `init_backup_sequence` with
   `skip_backup_time_range=true`), `make_mysql_backup` (alias of

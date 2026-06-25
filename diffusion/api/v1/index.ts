@@ -34,7 +34,7 @@ import {
 	is_process_cancelled,
 }                                     from './lib/progress_store';
 import { merge_rdf_parts, merge_xml_parts, create_zip } from './lib/rdf_file_utils';
-import { writeFileSync }              from 'fs';
+import { writeFileSync, existsSync, unlinkSync } from 'fs';
 import path                           from 'path';
 import type {
 	rqo,
@@ -1155,6 +1155,20 @@ export async function handle_request(request: Request): Promise<Response> {
 
 if (import.meta.main) {
 
+	// Remove a stale socket file left by a previous crash or SIGKILL so that
+	// launchd / systemd KeepAlive restarts succeed without EADDRINUSE.
+	try {
+		if (existsSync(SOCKET_PATH)) {
+			unlinkSync(SOCKET_PATH);
+			console.log(`[diffusion] Removed stale socket: ${SOCKET_PATH}`);
+		}
+	} catch (error) {
+		// Non-fatal, but log it: if the stale socket can't be removed, the
+		// Bun.serve() bind below will fail with EADDRINUSE — this line is the
+		// breadcrumb that explains why.
+		console.error(`[diffusion] Could not remove stale socket ${SOCKET_PATH}:`, error);
+	}
+
 	const server = Bun.serve({
 		unix:        SOCKET_PATH,
 		idleTimeout: 120, // 2 minutes (matches PHP_CLIENT timeout)
@@ -1183,8 +1197,7 @@ if (import.meta.main) {
 		await close_all_pools();
 		// Remove the socket file
 		try {
-			const fs = await import('fs');
-			fs.unlinkSync(SOCKET_PATH);
+			unlinkSync(SOCKET_PATH);
 		} catch { /* ignore */ }
 		process.exit(0);
 	};

@@ -22,43 +22,60 @@
 </head>
 <body>
 	<div id="terminal" class="terminal">
-		<div class="terminal_title">dedalo — unit test</div>
-
-		<div class="terminal_prompt_bar">
-			<span class="terminal_prompt_prefix">~</span>
-			<span class="terminal_prompt_arrow">❯</span>
-			<input
-				type="text"
-				id="test_search"
-				class="terminal_input"
-				placeholder="filter tests"
-				autocomplete="off"
-				spellcheck="false"
-			/>
-			<div class="terminal_prompt_right">
-				<div id="test_global_stats" class="terminal_stats">
-					<span class="stat stat-total">0</span>
-					<span class="stat stat-pass">0</span>
-					<span class="stat stat-fail">0</span>
-					<span class="stat stat-pending">0</span>
-				</div>
-				<button id="test_run_all" class="terminal_btn" title="Run all tests sequentially">
-					<span class="run_all_text">run all</span>
-				</button>
-				<button id="theme_toggle" class="terminal_btn terminal_btn_icon" title="Toggle theme">
-					<svg class="theme_icon theme_icon_moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-					</svg>
-					<svg class="theme_icon theme_icon_sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
-						<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-					</svg>
-				</button>
+		<header class="terminal_topbar">
+			<div class="terminal_brand">
+				<span class="terminal_mark" aria-hidden="true">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 9 12 4 17"/><line x1="13" y1="17" x2="20" y2="17"/></svg>
+				</span>
+				<span class="terminal_brand_title">dédalo&nbsp;<b>unit test</b></span>
+				<span class="terminal_tag">client</span>
 			</div>
+
+			<div class="terminal_search">
+				<svg class="terminal_search_icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+				<input
+					type="text"
+					id="test_search"
+					class="terminal_input"
+					placeholder="filter tests"
+					autocomplete="off"
+					spellcheck="false"
+				/>
+				<kbd class="terminal_kbd">/</kbd>
+			</div>
+
+			<span class="terminal_spacer"></span>
+
+			<div id="test_global_stats" class="terminal_stats">
+				<span class="stat stat-total">0</span>
+				<span class="stat stat-pass">0</span>
+				<span class="stat stat-fail">0</span>
+				<span class="stat stat-pending">0</span>
+			</div>
+
+			<button id="test_run_all" class="terminal_btn terminal_btn_primary" title="Run all tests sequentially">
+				<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg>
+				<span class="run_all_text">run all</span>
+			</button>
+
+			<button id="theme_toggle" class="terminal_btn terminal_btn_icon" title="Toggle theme">
+				<svg class="theme_icon theme_icon_moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+				</svg>
+				<svg class="theme_icon theme_icon_sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+					<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+				</svg>
+			</button>
+		</header>
+
+		<div id="test_runbar" class="terminal_runbar">
+			<i class="runbar_seg runbar_seg_pass"></i><i class="runbar_seg runbar_seg_fail"></i><i class="runbar_seg runbar_seg_pend"></i>
 		</div>
 
 		<div class="terminal_body">
 			<!-- sidebar: test list -->
 			<div id="sidebar" class="terminal_sidebar">
+				<div class="terminal_sidebar_head">explorer<span class="terminal_sidebar_rule"></span></div>
 				<div id="content" class="section_record terminal_content"></div>
 			</div>
 

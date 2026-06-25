@@ -156,13 +156,13 @@ flowchart LR
 
 ### Importing
 
-```javascript
+```js
 import {get_instance} from '../../common/js/instances.js'
 ```
 
 ### Build or reuse a component
 
-```javascript
+```js
 // Programmatic instantiation: model is known, so no element-context API call.
 const input = await get_instance({
     model        : 'component_input_text',
@@ -188,7 +188,7 @@ const same = await get_instance({
 
 ### Build by tipo only (model resolved by the server)
 
-```javascript
+```js
 // model omitted: get_instance calls data_manager.get_element_context to learn
 // the model and the authoritative lang, and injects options.context to avoid a
 // second round-trip during init().
@@ -206,7 +206,7 @@ A section reads its `ddo_map` / `columns_map` and calls `get_instance` per child
 passing itself as `caller` so the child registers a back-pointer and the section
 keeps it in `ar_instances` for ordered teardown:
 
-```javascript
+```js
 const child = await get_instance({
     model        : column.model,
     tipo         : column.tipo,
@@ -221,7 +221,7 @@ self.ar_instances.push(child)
 
 ### Lookup, scan and teardown
 
-```javascript
+```js
 import {
     get_instance_by_id,
     find_instances,

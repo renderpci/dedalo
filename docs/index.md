@@ -112,6 +112,7 @@ Every documentation area, with a one-line description and an entry link. The **[
 | Diffusion (work side) | Data flow, config properties, multiple databases, engine internals and output formats (SQL/RDF/XML, [Markdown](./diffusion/diffusion_markdown.md)) | [diffusion/diffusion_data_flow.md](./diffusion/diffusion_data_flow.md) |
 | Publication API | Serving published data to the web — v2 (Bun/TypeScript, recommended) and legacy v1 | [diffusion/publication_api/index.md](./diffusion/publication_api/index.md) |
 | Development | Ecosystem, code style, commit/test conventions, breaking-change detection | [development/index.md](./development/index.md) |
+| Documentation standards | How Dédalo is documented: the code doc-block standard and the prose [style guide](./development/documentation_style_guide.md) | [development/code_documentation_standard.md](./development/code_documentation_standard.md) |
 | Extending Dédalo | The ontology-first cookbooks: add a component, section, area, service or widget | [development/extending/index.md](./development/extending/index.md) |
 | Testing | The three test layers (server PHPUnit, client browser harness, acceptance gate) | [development/testing.md](./development/testing.md) |
 | Media pipeline | The end-to-end media-file lifecycle: upload → master → derivatives → publication | [development/media_pipeline.md](./development/media_pipeline.md) |

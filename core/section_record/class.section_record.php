@@ -557,6 +557,19 @@ class section_record {
 		// save event
 		$this->save_event();
 
+		// RAG freshness hook. Best-effort, deferred: mark the record dirty so the
+		// out-of-band drain re-indexes its vectors. The leading defined() gate keeps
+		// the hot save path free for non-RAG installs (no autoload, no work).
+		// Wrapped so a queue failure can never fail the editor save.
+		if ( defined('DEDALO_RAG_ENABLED') && DEDALO_RAG_ENABLED===true
+			&& rag_config::section_is_rag_enabled($this->section_tipo) ) {
+			try {
+				rag_queue::enqueue_index($this->section_tipo, (int)$this->section_id);
+			} catch (\Throwable $e) {
+				debug_log(__METHOD__ . ' Notice. RAG enqueue_index failed (non-fatal): ' . $e->getMessage(), logger::WARNING);
+			}
+		}
+
 		return $result;
 	}//end save
 
@@ -966,6 +979,17 @@ class section_record {
 			// remove from cache
 			$cache_key = $section_tipo .'_' .$section_id;
 			section_record_instances_cache::delete($cache_key);
+
+		// RAG freshness hook (delete). Best-effort: mark the record for vector
+		// removal via the deferred drain. Never blocks or fails the delete.
+			if ( defined('DEDALO_RAG_ENABLED') && DEDALO_RAG_ENABLED===true
+				&& rag_config::section_is_rag_enabled($section_tipo) ) {
+				try {
+					rag_queue::enqueue_delete($section_tipo, (int)$section_id);
+				} catch (\Throwable $e) {
+					debug_log(__METHOD__ . ' Notice. RAG enqueue_delete failed (non-fatal): ' . $e->getMessage(), logger::WARNING);
+				}
+			}
 
 		// Log
 			debug_log(__METHOD__

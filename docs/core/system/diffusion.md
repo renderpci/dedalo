@@ -1,8 +1,8 @@
 # diffusion
 
-> The **publication** subsystem — it takes the subset of work data marked for publication and emits it to external targets (SQL tables in MariaDB, RDF files, XML files, Socrata), all driven by the diffusion ontology.
-
 > See also: [Architecture overview](../architecture_overview.md) · [Exporting data](../exporting_data.md) · [Sections](../sections/index.md) · [Locator](../locator.md)
+
+The **publication** subsystem takes the subset of work data marked for publication and emits it to external targets (SQL tables in MariaDB, RDF files, XML files, Socrata), all driven by the diffusion ontology.
 
 This is an **overview** of a large, multi-file, two-runtime subsystem (PHP + a
 Bun/TypeScript engine). It maps the pieces and links the source; it is not an
@@ -114,8 +114,9 @@ Every publish/unpublish is logged to the dd1758 activity section in PostgreSQL.
 
 ### The Bun-owns-MariaDB rule (non-negotiable)
 
-PHP **never** opens a MariaDB connection — no `mysqli`, no
-`DBi::_getConnection_mysql`. Every MariaDB operation is an action on the Bun
+PHP **never** opens a MariaDB connection — there is no `mysqli` in PHP and no
+MariaDB connector in `DBi` (the former `DBi::_getConnection_mysql` was removed).
+Every MariaDB operation is an action on the Bun
 diffusion engine, reached through `diffusion_api_client::call()`:
 
 | operation | Bun action |

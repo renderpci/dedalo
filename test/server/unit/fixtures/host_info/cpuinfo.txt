@@ -1,0 +1,6 @@
+processor	: 0
+model name	: Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz
+cpu MHz		: 2592.001
+processor	: 1
+model name	: Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz
+cpu MHz		: 3600.250

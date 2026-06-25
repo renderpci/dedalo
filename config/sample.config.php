@@ -888,8 +888,20 @@
 
 
 
-// mailer
-	// Custom connection config. Not used here.
+// mailer (outgoing SMTP relay) + password recovery
+	// MIGRATED to the v7 config catalog — do NOT define these here.
+	// Declared in: core/base/config/catalog/domains/mailer.php
+	// Per-install values go in ../private/.env (keyed by the constant name), e.g.:
+	//   DEDALO_SMTP_HOST=smtp.example.com    # null/unset = all outgoing mail disabled
+	//   DEDALO_SMTP_PORT=587                 # 587 STARTTLS | 465 SMTPS
+	//   DEDALO_SMTP_SECURE=tls               # tls | ssl | none
+	//   DEDALO_SMTP_USER=no-reply@example.com
+	//   DEDALO_SMTP_PASS=...                 # SECRET — keep in .env only (chmod 600)
+	//   DEDALO_SMTP_FROM=no-reply@example.com
+	//   DEDALO_SMTP_FROM_NAME=Dédalo
+	//   DEDALO_SMTP_VERIFY_PEER=true
+	//   DEDALO_PWRESET_CODE_TTL=600          # recovery code lifetime (seconds)
+	//   DEDALO_PWRESET_MAX_ATTEMPTS=5        # wrong-code guesses before a code is voided
 
 
 

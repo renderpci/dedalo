@@ -1,23 +1,38 @@
 <?php declare(strict_types=1);
 /**
  * CLASS TOOL_MEDIA_VERSIONS
- * Tool for managing media file versions and qualities
+ * API tool that exposes media file version management to the browser UI.
  *
- * Provides functionality to:
- * - Retrieve file information for different quality versions
- * - Delete specific file versions by quality
- * - Build new versions from originals
- * - Conform file headers for compatibility
- * - Apply rotation transformations
- * - Synchronize component file metadata
+ * Dédalo media components (component_image, component_av, component_pdf, etc.)
+ * produce multiple quality variants of each uploaded file (e.g. 'original',
+ * 'medium', 'thumb').  This tool acts as the secure HTTP/JSON gateway between
+ * the browser-side media-versions widget and those component methods.
  *
- * Key features:
- * - Runtime component instance management
- * - Consistent response objects across all methods
- * - Input validation for safety
- * - Support for asynchronous version building
+ * Responsibilities:
+ * - Validate incoming options (tipo, section_tipo, section_id, quality …) and
+ *   return a structured error response rather than throwing to the client.
+ * - Enforce dual-gate security (SEC-024): tipo-level permission check first,
+ *   then per-record scope check, before instantiating any component.
+ * - Instantiate the correct component model via ontology_node::get_model_by_tipo()
+ *   and delegate each operation to the component's own implementation.
+ * - Normalise the delegated response into the standard
+ *   {result, msg, errors[]} shape used by dd_tools_api.
  *
- * @package Dedalo
+ * Supported operations (all exposed via API_ACTIONS):
+ * - get_files_info    — read quality metadata for all versions (READ gate).
+ * - delete_quality    — remove a derived quality file (WRITE gate).
+ * - build_version     — transcode/generate a quality from the original (WRITE gate).
+ * - conform_headers   — remux a file's container headers; av-specific (WRITE gate).
+ * - rotate            — apply an ImageMagick rotation; image-specific (WRITE gate).
+ * - sync_files        — reconcile stored files_info with the filesystem (WRITE gate).
+ * - delete_version    — remove a specific version file, routing thumb vs non-thumb
+ *                       through the correct component method (WRITE gate).
+ *
+ * All methods are static because the tool is called through dd_tools_api without
+ * instantiation; the class inherits infrastructure (get_config, get_active_tools,
+ * etc.) from tool_common.
+ *
+ * @package Dédalo
  * @subpackage Media
  */
 class tool_media_versions extends tool_common {
@@ -42,14 +57,24 @@ class tool_media_versions extends tool_common {
 
 	/**
 	 * GET_FILES_INFO
-	 * Get file info for every quality like 'datalist' do
+	 * Returns metadata for every quality version attached to a media component.
 	 *
-	 * @param object $options Options containing: tipo, section_tipo, section_id
-	 * @return object $response Response with result (files_info array) or error message
-	 * @throws Exception If tipo or required parameters are missing
+	 * Delegates to component_media_common::get_files_info(), which scans the
+	 * filesystem and returns an array of file-info objects — one per quality tier —
+	 * carrying properties such as quality name, URL, size, extension, and whether
+	 * the file actually exists on disk.
 	 *
-	 * @package Dedalo
-	 * @subpackage Media
+	 * This is the read-only entry point used by the browser widget to populate the
+	 * version list panel.  The operation only requires READ permission (level 1).
+	 *
+	 * @param object $options {
+	 *   @type string $tipo         Component tipo (e.g. 'rsc37').
+	 *   @type string $section_tipo Section tipo that owns the record (e.g. 'rsc176').
+	 *   @type string|int $section_id  Record primary key within section_tipo.
+	 * }
+	 * @return object {result: array|false, msg: string}
+	 *   On success, result is the files_info array returned by the component.
+	 *   On validation failure or empty result, result is false.
 	 */
 	public static function get_files_info(object $options) : object {
 
@@ -106,14 +131,23 @@ class tool_media_versions extends tool_common {
 
 	/**
 	 * DELETE_QUALITY
-	 * Delete file of given quality
+	 * Permanently removes the physical file for one quality tier of a media component.
 	 *
-	 * @param object $options Options containing: tipo, section_tipo, section_id, quality
-	 * @return object $response Standardized response object with result, msg, errors
-	 * @throws Exception If component instance cannot be created
+	 * Delegates to component_media_common::delete_file($quality), which unlinks the
+	 * on-disk file and updates the stored files_info JSON so the database record no
+	 * longer references the deleted variant.  Only the single named quality is
+	 * affected; other quality files for the same record are left untouched.
 	 *
-	 * @package Dedalo
-	 * @subpackage Media
+	 * A WRITE permission gate (level 2) is enforced before the component is loaded.
+	 *
+	 * @param object $options {
+	 *   @type string     $tipo         Component tipo.
+	 *   @type string     $section_tipo Section tipo.
+	 *   @type string|int $section_id   Record primary key.
+	 *   @type string     $quality      Quality tier to delete (e.g. 'medium', 'original').
+	 * }
+	 * @return object {result: bool, msg: string, errors: array}
+	 *   result is true only when delete_file() confirms the file was removed.
 	 */
 	public static function delete_quality(object $options) : object {
 
@@ -169,14 +203,28 @@ class tool_media_versions extends tool_common {
 
 	/**
 	 * BUILD_VERSION
-	 * Creates a new version from original in given quality
+	 * Generates (or re-generates) a derived quality file from the stored original.
 	 *
-	 * @param object $options Options containing: tipo, section_tipo, section_id, quality, async
-	 * @return object $response Standardized response object with result, msg, errors
-	 * @throws Exception If component instance cannot be created
+	 * Delegates to component_media_common::build_version($quality, $async), which
+	 * runs the appropriate transcoding or conversion pipeline (FFmpeg for video/audio,
+	 * ImageMagick for images, Ghostscript for PDFs, etc.) to produce the requested
+	 * quality tier.  The new file is written to disk and the component's files_info
+	 * record is updated.
 	 *
-	 * @package Dedalo
-	 * @subpackage Media
+	 * When $async is true (the default), the transcoding job is dispatched
+	 * asynchronously so the HTTP response returns immediately; the client polls
+	 * get_files_info to detect completion.
+	 *
+	 * A WRITE permission gate (level 2) is enforced before the component is loaded.
+	 *
+	 * @param object $options {
+	 *   @type string     $tipo         Component tipo.
+	 *   @type string     $section_tipo Section tipo.
+	 *   @type string|int $section_id   Record primary key.
+	 *   @type string     $quality      Quality tier to build (e.g. 'medium', 'high').
+	 *   @type bool       $async        [= true] Whether to run transcode asynchronously.
+	 * }
+	 * @return object {result: bool, msg: string, errors: array}
 	 */
 	public static function build_version(object $options) : object {
 
@@ -233,14 +281,25 @@ class tool_media_versions extends tool_common {
 
 	/**
 	 * CONFORM_HEADERS
-	 * Creates a new version from original in given quality rebuilding headers
+	 * Rewrites a video/audio file's container headers without re-encoding the media.
 	 *
-	 * @param object $options Options containing: tipo, section_tipo, section_id, quality
-	 * @return object $response Standardized response object with result, msg, errors
-	 * @throws Exception If component instance cannot be created
+	 * Some media files uploaded with non-standard or malformed container metadata
+	 * (e.g. missing moov atom positioning, incorrect codec tags) fail to play in
+	 * certain browsers.  This operation remuxes the file using FFmpeg to produce a
+	 * spec-compliant container while preserving the encoded stream bit-for-bit.
 	 *
-	 * @package Dedalo
-	 * @subpackage Media
+	 * Delegates to component_av::conform_headers($quality).  The operation is
+	 * currently specific to component_av (see register.json specific_actions).
+	 *
+	 * A WRITE permission gate (level 2) is enforced before the component is loaded.
+	 *
+	 * @param object $options {
+	 *   @type string     $tipo         Component tipo; expected to resolve to component_av.
+	 *   @type string     $section_tipo Section tipo.
+	 *   @type string|int $section_id   Record primary key.
+	 *   @type string     $quality      Quality tier whose file headers should be conformed.
+	 * }
+	 * @return object {result: bool, msg: string, errors: array}
 	 */
 	public static function conform_headers(object $options) : object {
 
@@ -296,14 +355,33 @@ class tool_media_versions extends tool_common {
 
 	/**
 	 * ROTATE
-	 * Apply a rotation process to the selected file
+	 * Applies an in-place pixel rotation to one quality tier of an image component.
 	 *
-	 * @param object $options Options containing: tipo, section_tipo, section_id, quality, degrees
-	 * @return object $response Response with result (bool), msg, errors (array)
-	 * @throws Exception If component instance cannot be created
+	 * Delegates to component_image::rotate($rotation_options) which calls
+	 * ImageMagick::rotate() under the hood.  The method iterates the component's
+	 * data element's files_info array and operates only on the entry that matches
+	 * the requested quality; all other quality files are left untouched.
 	 *
-	 * @package Dedalo
-	 * @subpackage Media
+	 * The rotation is always performed in 'expanded' mode — the canvas grows to
+	 * contain the rotated image rather than clipping corners — matching the preset
+	 * defined in component_image.
+	 *
+	 * This action is specific to component_image (see register.json specific_actions).
+	 * A WRITE permission gate (level 2) is enforced before the component is loaded.
+	 *
+	 * Contract for $component->rotate():
+	 *   Returns null (or empty string) on success, or a non-empty error string on
+	 *   failure.  A non-empty return value flips $result to false and appends the
+	 *   error to $response->errors.
+	 *
+	 * @param object $options {
+	 *   @type string     $tipo         Component tipo; expected to resolve to component_image.
+	 *   @type string     $section_tipo Section tipo.
+	 *   @type string|int $section_id   Record primary key.
+	 *   @type string     $quality      Quality tier to rotate (e.g. 'original', 'medium').
+	 *   @type int|float  $degrees      Clockwise rotation angle in degrees.
+	 * }
+	 * @return object {result: bool, msg: string, errors: array}
 	 */
 	public static function rotate(object $options) : object {
 
@@ -382,14 +460,34 @@ class tool_media_versions extends tool_common {
 
 	/**
 	 * SYNC_FILES
-	 * Updated component files info data when is not sync (a file is deleted, etc.)
+	 * Reconciles a component's stored files_info metadata against the actual filesystem.
 	 *
-	 * @param object $options Options containing: tipo, section_tipo, section_id, regenerate_options
-	 * @return object $response Response with result (bool) and msg
-	 * @throws Exception If component instance cannot be created
+	 * When a file is deleted outside Dédalo (e.g. manually removed from disk), the
+	 * database record still contains stale files_info entries.  This method calls
+	 * component_media_common::regenerate_component(), which re-scans the filesystem,
+	 * rebuilds the files_info JSON, and persists the corrected state back to the DB.
 	 *
-	 * @package Dedalo
-	 * @subpackage Media
+	 * Unlike the other methods in this class, sync_files uses mode='edit' and the
+	 * current data language (DEDALO_DATA_LANG) because regenerate_component() must
+	 * load and then overwrite the live language-aware record.  cache=false is passed
+	 * to ensure the instance reads a fresh copy from the database rather than a
+	 * stale cached version.
+	 *
+	 * get_data() is called explicitly before regenerate_component() to preload the
+	 * existing datum so the regeneration routine has the original data available for
+	 * diffing and cleanup steps.
+	 *
+	 * A WRITE permission gate (level 2) is enforced before the component is loaded.
+	 *
+	 * @param object $options {
+	 *   @type string      $tipo               Component tipo.
+	 *   @type string      $section_tipo       Section tipo.
+	 *   @type string|int  $section_id         Record primary key.
+	 *   @type object|null $regenerate_options [= null] Optional flags forwarded to
+	 *                                         regenerate_component() (e.g.
+	 *                                         delete_normalized_files=true).
+	 * }
+	 * @return object {result: bool, msg: string}
 	 */
 	public static function sync_files(object $options) : object {
 
@@ -466,14 +564,32 @@ class tool_media_versions extends tool_common {
 
 	/**
 	 * DELETE_VERSION
-	 * Delete the selected file version
+	 * Removes a specific version file, routing thumb and non-thumb files to the
+	 * appropriate component method.
 	 *
-	 * @param object $options Options containing: tipo, section_tipo, section_id, quality, extension
-	 * @return object $response Response with result (bool), msg, errors (array)
-	 * @throws Exception If component instance cannot be created
+	 * Media components store a thumbnail separately from their main quality files:
+	 * thumbnails are managed by delete_thumb() while all other quality files are
+	 * handled by delete_file($quality, $extension).  This method inspects the
+	 * requested quality against component_media_common::get_thumb_quality() and
+	 * dispatches accordingly so the caller does not need to know the internal
+	 * thumbnail naming convention.
 	 *
-	 * @package Dedalo
-	 * @subpackage Media
+	 * Differences from delete_quality():
+	 * - Accepts an optional $extension parameter for formats that use it
+	 *   (e.g. component_pdf produces 'rsc37_rsc176_25.pdf').
+	 * - Routes thumb deletions through delete_thumb() instead of delete_file().
+	 *
+	 * A WRITE permission gate (level 2) is enforced before the component is loaded.
+	 *
+	 * @param object $options {
+	 *   @type string      $tipo         Component tipo.
+	 *   @type string      $section_tipo Section tipo.
+	 *   @type string|int  $section_id   Record primary key.
+	 *   @type string      $quality      Quality tier to remove.
+	 *   @type string|null $extension    [= null] File extension for formats where
+	 *                                   the extension is part of the filename key.
+	 * }
+	 * @return object {result: bool, msg: string, errors: array}
 	 */
 	public static function delete_version(object $options) : object {
 

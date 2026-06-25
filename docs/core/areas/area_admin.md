@@ -204,7 +204,7 @@ Identity accessors (`get_tipo`/`get_mode`/`get_lang`/`get_label`/…),
 [`common` base classes](../components/base_classes.md) and the
 [Architecture overview](../architecture_overview.md).
 
-## How it fits with the rest of Dedalo
+## How it fits with the rest of Dédalo
 
 - **[area](area.md)** — the area-base reference (the `area` / `area_common` /
   `common` chain); the shared layer `area_admin` extends supplies every method
@@ -212,8 +212,8 @@ Identity accessors (`get_tipo`/`get_mode`/`get_lang`/`get_label`/…),
 - **`area` (concrete menu class)** — `area::get_areas()` lists `area_admin`
   among the root areas and recursively collects its children to build the menu
   and the `component_security_access` full view; results are filtered through
-  `config_areas.php` (`areas_deny`/`areas_allow`). The Administration area is
-  `dd207` in a stock install (see `config/sample.config_areas.php`).
+  the `areas.deny`/`areas.allow` config. The Administration area is
+  `dd207` in a stock install (see the `areas.php` catalog domain).
 - **[Sections](../sections/index.md)** — the record-bearing leaves the area
   groups: **Users** (`dd128`) and **Profiles** (`dd234`).
 - **`security`** — consumes those sections: `security::get_user_profile()` and
@@ -257,7 +257,7 @@ $metric = area_common::get_activity_metric('dd207', 90);
 
 !!! note "Accuracy / uncertainty"
     The tipos cited (`dd207` Administration, `dd128` Users, `dd234` Profiles)
-    are the **stock** ontology values (`config/sample.config_areas.php`,
+    are the **stock** ontology values (`core/base/config/catalog/domains/areas.php`,
     `core/base/dd_tipos.php`); a given installation can differ. Always resolve
     the area via `ontology_utils::get_ar_tipo_by_model('area_admin')` and the
     sections via their `DEDALO_SECTION_*_TIPO` constants rather than hardcoding.

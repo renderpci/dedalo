@@ -1,8 +1,11 @@
 # media_engine
 
-> The server-side **media processing layer** — two stateless PHP wrappers (`Ffmpeg` and `ImageMagick`) that shell out to the installed `ffmpeg`/`ffprobe` and ImageMagick binaries to transcode, resize, rasterize, probe and derive media files for the media components.
-
 > See also: [component_image](../components/component_image.md) · [component_av](../components/component_av.md) · [component_pdf](../components/component_pdf.md) · [Media protection](../../config/media_protection.md)
+
+The server-side **media processing layer**: two stateless PHP wrappers
+(`Ffmpeg` and `ImageMagick`) that shell out to the installed `ffmpeg`/`ffprobe`
+and ImageMagick binaries to transcode, resize, rasterize, probe and derive media
+files for the media components.
 
 This page is the **subsystem reference** for `core/media_engine/`. It documents
 *what the engine does and how it is called*; for how each media component drives
@@ -337,9 +340,11 @@ engine. The verified call map:
 
 Other call sites:
 
-- [`tool_posterframe`](../../../tools/) and `dd_component_av_api` drive
-  `Ffmpeg::create_posterframe` / fragment building from the UI and API.
-- `tool_import_files` uses both engines during bulk media ingest.
+- [`tool_posterframe`](../../development/tools/reference/tool_posterframe.md) and
+  `dd_component_av_api` drive `Ffmpeg::create_posterframe` / fragment building
+  from the UI and API.
+- [`tool_import_files`](../../development/tools/reference/tool_import_files.md)
+  uses both engines during bulk media ingest.
 - The `system_info` maintenance widget reports `Ffmpeg::get_version()`,
   `get_ffprove_version()`, `check_lib('libx264')` and
   `ImageMagick::get_version()` so admins can confirm the host has working

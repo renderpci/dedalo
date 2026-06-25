@@ -39,6 +39,10 @@
             <directory>common</directory>
         </testsuite>
 
+        <testsuite name="component_common">
+            <directory>component_common</directory>
+        </testsuite>
+
         <testsuite name="components">
             <directory>components</directory>
         </testsuite>
@@ -90,6 +94,10 @@
 
         <testsuite name="ontology_engine">
             <directory>ontology_engine</directory>
+        </testsuite>
+
+        <testsuite name="rag">
+            <directory>rag</directory>
         </testsuite>
 
         <testsuite name="search">

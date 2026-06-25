@@ -1,8 +1,8 @@
 # tm_record
 
-> The server class `tm_record` — the PHP runtime object for a single **Time Machine** row (one historical version of one component/section change) stored in the flat `matrix_time_machine` table.
-
 > See also: [section_record](../sections/section_record.md) · [Sections concept](../sections/index.md) · [Components](../components/index.md) · [common contract](common.md)
+
+The server class `tm_record` is the PHP runtime object for a single **Time Machine** row: one historical version of one component or section change, stored in the flat `matrix_time_machine` table.
 
 This page is the **class-level reference** for `tm_record` and the Time Machine
 (`dd15`) data model: how every component save also writes a versioned row, the
@@ -237,7 +237,7 @@ model:
 saves), and `tm_record::save()` itself refuses any row whose `section_tipo` is
 `dd15`. The grid/list path is wired in `common::get_subdatum()` (the
 `dd_grid` + `dd15` branch) and `sections_json.php`, which call
-`tm_record::get_instance()` / `get_section_record()` to synthesise the row.
+`tm_record::get_instance()` / `get_section_record()` to synthesize the row.
 
 ## Public API
 
@@ -308,7 +308,7 @@ live data.
    there is no "save to Time Machine" action.
 
 2. **It is read *through* the section/component pipeline.**
-   `get_section_record()` synthesises a `dd15` [`section_record`](../sections/section_record.md)
+   `get_section_record()` synthesizes a `dd15` [`section_record`](../sections/section_record.md)
    and the ordinary [components](../components/index.md) read from it in `tm`
    mode. The viewer therefore reuses the entire normal render path
    (`common::get_subdatum()` `dd_grid`+`dd15` branch, `sections_json.php`).
@@ -367,7 +367,7 @@ if ($db_result !== false) {
 ### Render a historical row
 
 ```php
-// 1. load the TM row and synthesise its dd15 section_record (populates the cache)
+// 1. load the TM row and synthesize its dd15 section_record (populates the cache)
 $tm_record     = tm_record::get_instance( (int)$row->id );
 $section_record = $tm_record->get_section_record();
 
@@ -399,7 +399,7 @@ try {
 ## Related
 
 - [section_record](../sections/section_record.md) — the per-record DB I/O object
-  that `get_section_record()` synthesises for `dd15` and that `delete()` snapshots.
+  that `get_section_record()` synthesizes for `dd15` and that `delete()` snapshots.
 - [Sections concept](../sections/index.md) — the `matrix` storage model TM
   diverges from (TM is flat, not typed-JSONB).
 - [Components](../components/index.md) — the fields whose every save writes a TM

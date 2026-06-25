@@ -1,8 +1,8 @@
 # services
 
-> The `core/services/` subsystem — small, mostly client-side runtime objects that package a piece of shared interface/logic (file upload, rich-text editing, autocomplete search, …) so that **many** components, sections and tools can reuse it without re-implementing it.
-
 > See also: [Architecture overview](../architecture_overview.md) · [Components](../components/index.md) · [Tools](../../development/tools/creating_tools.md) · [common](common.md)
+
+The `core/services/` subsystem holds small, mostly client-side runtime objects that package a piece of shared interface/logic (file upload, rich-text editing, autocomplete search, …) so that **many** components, sections and tools can reuse it without re-implementing it.
 
 This page is the **subsystem reference** for `core/services/`. A service is not a
 section or a component — it does not live in the ontology and it has no `tipo`.
@@ -218,7 +218,7 @@ tags, and tracking an `is_dirty` flag that drives `save()` →
 
 ### service_time_machine
 
-The data/render logic of the [Time Machine](../../development/tools/creating_tools.md)
+The data/render logic of the [Time Machine](../../development/tools/reference/tool_time_machine.md)
 history list (section `dd15`). It hard-codes `tipo`/`section_tipo` to `dd15`,
 takes the caller's `section_tipo`/`section_id` as the record whose history to
 show, borrows `common.prototype.build_rqo_show` and a paginator, and renders the

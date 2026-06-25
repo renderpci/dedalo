@@ -97,8 +97,9 @@ class media_protection {
 	public static function get_mode() : string|false {
 
 		// custom override (writable from the maintenance area, like
-		// DEDALO_MAINTENANCE_MODE_CUSTOM). null means 'no override'.
-		if (defined('DEDALO_MEDIA_ACCESS_MODE_CUSTOM') && DEDALO_MEDIA_ACCESS_MODE_CUSTOM!==null) {
+		// DEDALO_MAINTENANCE_MODE_CUSTOM). null means 'no override'; '' is the
+		// catalog STATE empty-default (key absent from state.php) — also no override.
+		if (defined('DEDALO_MEDIA_ACCESS_MODE_CUSTOM') && DEDALO_MEDIA_ACCESS_MODE_CUSTOM!==null && DEDALO_MEDIA_ACCESS_MODE_CUSTOM!=='') {
 			$mode = DEDALO_MEDIA_ACCESS_MODE_CUSTOM;
 			return in_array($mode, ['private','publication'], true)
 				? $mode

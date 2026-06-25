@@ -4,6 +4,44 @@
 
 
 
+/**
+* TOOL_PROPAGATE_COMPONENT_DATA (module)
+*
+* Bulk-propagation tool that copies or merges the current value of a single
+* component into the same component across every record returned by the
+* section's active SQO (Search Query Object).
+*
+* The user configures the desired value using an interactive clone of the
+* source component (`component_to_propagate`), which is wired against a
+* synthetic temporal section (section_id = 1) so that edits are buffered in
+* the session store without touching real section data.  When the user
+* confirms an action the tool fires an asynchronous background job on the
+* server via `dd_tools_api → propagate_component_data`, then streams live
+* progress back with SSE through `dd_utils_api → get_process_status`.
+*
+* Supported actions (sent to the server):
+*   'replace' — overwrite the target component value in every matched record.
+*   'add'     — merge the propagation value into existing data (multi-value
+*               components only; mono-value models skip the "Add" button).
+*   'delete'  — remove matching entries from every record.
+*
+* Caller chain expected by this tool:
+*   self.caller           → the tool_button / component_json that opened it
+*   self.caller.caller    → (tool_button) the component being propagated
+*   self.caller.caller?.caller → the parent section instance (must be model
+*                                'section', mode 'edit') whose active SQO
+*                                defines the set of records to update.
+*
+* Main exports:
+*   tool_propagate_component_data — constructor (prototype chain below)
+*
+* (!) SHOW_DEVELOPER is referenced in the propagate_component_data method but is
+*     NOT listed in the /*global*\/ directive above. This is a pre-existing
+*     omission; do not change the code line or the directive.
+*/
+
+
+
 // import needed modules
 	import {dd_console,clone} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
@@ -16,7 +54,35 @@
 
 /**
 * TOOL_PROPAGATE_COMPONENT_DATA
-* Tool to make interesting things
+* Constructor for the propagate-component-data tool instance.
+*
+* Declares all instance properties used throughout the lifecycle.
+* Most are populated during `init` / `build` via `tool_common.prototype.init`
+* and are therefore null at construction time.
+*
+* Instance properties:
+*   id                    {string|null}  — Unique instance id (set by common init).
+*   model                 {string|null}  — Always 'tool_propagate_component_data'.
+*   mode                  {string|null}  — Render mode ('edit', 'list', …).
+*   node                  {HTMLElement|null} — Mounted DOM node after render.
+*   ar_instances          {Array|null}   — Live component instances from ddo_map.
+*   events_tokens         {Array|null}   — Event subscription tokens for cleanup.
+*   status                {*|null}       — Generic status flag (unused by this tool).
+*   main_element          {Object|null}  — The component instance identified by
+*                                          `role:"main_element"` in ddo_map; this is
+*                                          the component whose value will be propagated.
+*   type                  {string|null}  — Tool type tag from ontology.
+*   source_lang           {string|null}  — Source language code (unused here).
+*   target_lang           {string|null}  — Target language code (unused here).
+*   langs                 {Array|null}   — Available language list (unused here).
+*   caller                {Object|null}  — The tool-button/component that opened this tool.
+*   component_list        {*|null}       — Reserved; not used in current version.
+*   component_to_propagate {Object}      — The live clone component wired to the temp
+*                                          section, built by get_component_to_propagate.
+*                                          Declared without initialiser (undefined) —
+*                                          that is intentional in the original source.
+*
+* @returns {boolean} true — constructor sentinel, consistent with Dédalo convention.
 */
 export const tool_propagate_component_data = function () {
 
@@ -45,7 +111,15 @@ export const tool_propagate_component_data = function () {
 
 /**
 * COMMON FUNCTIONS
-* extend component functions from component common
+* Prototype assignments that wire shared lifecycle methods from the tool_common
+* and common base classes onto this tool.
+*
+* render  — delegates to tool_common's generic render entry point, which
+*            dispatches to `self.edit(options)` defined below.
+* destroy — shared teardown (unmounts node, clears events_tokens).
+* refresh — shared re-render helper (calls build then render).
+* edit    — concrete DOM builder from render_tool_propagate_component_data;
+*            called automatically by the inherited render path.
 */
 // prototypes assign
 	// render : using common render entry point
@@ -58,8 +132,20 @@ export const tool_propagate_component_data = function () {
 
 /**
 * INIT
-* Custom tool init
-* @return bool
+* Initialises the tool instance.
+*
+* Delegates to `tool_common.prototype.init`, which resolves the caller chain,
+* loads tool context from the API (dd1353/dd1324), populates `self.tool_config`,
+* and seeds all common instance properties (id, model, mode, lang, etc.).
+*
+* This override exists as an extension point for tool-specific state that
+* tool_common does not set. Currently no extra properties are initialised
+* beyond those provided by the generic init.
+*
+* @param {Object} options - Initialisation options forwarded from the tool launcher
+*   (open_tool). Typical keys: section_tipo, section_id, tipo, lang, caller, mode.
+* @returns {Promise<boolean>} Resolves to the return value of tool_common.prototype.init
+*   (true on success).
 */
 tool_propagate_component_data.prototype.init = async function(options) {
 
@@ -78,9 +164,21 @@ tool_propagate_component_data.prototype.init = async function(options) {
 
 /**
 * BUILD
-* Custom tool build
-* @param bool autoload
-* @return promise bool
+* Builds the tool after init: loads component instances from ddo_map, resolves
+* the main_element reference, and prepares the clone component used for
+* interactive value editing.
+*
+* Execution order:
+*   1. `tool_common.prototype.build` — loads tool CSS, iterates `tool_config.ddo_map`,
+*      instantiates every declared component and populates `self.ar_instances`.
+*   2. Identifies `main_element` (the component whose value will be propagated)
+*      by matching the `role:"main_element"` entry in ddo_map against ar_instances.
+*   3. `get_component_to_propagate()` — creates and saves the temporal clone of
+*      main_element that the user edits to set the propagation value.
+*
+* @param {boolean} [autoload=false] - When true, triggers an immediate data fetch
+*   inside the generic build step; forwarded unchanged to tool_common.
+* @returns {Promise<boolean>} Resolves to the return value of tool_common.prototype.build.
 */
 tool_propagate_component_data.prototype.build = async function(autoload=false) {
 
@@ -105,8 +203,33 @@ tool_propagate_component_data.prototype.build = async function(autoload=false) {
 
 /**
 * GET_COMPONENT_TO_PROPAGATE
-* Instance, build and save temporal data, self.main_element
-* @return promise
+* Creates, configures, and saves a temporary interactive clone of `main_element`
+* that the user edits to define the value they want to propagate.
+*
+* The clone is instantiated with `is_temporal:true` and a synthetic section_id of 1
+* so that save() writes to the server-side temporal/session store rather than to any
+* real section record. A unique `id_variant` (`'propagate_' + Date.now()`) prevents
+* instance-registry collisions when the tool is opened multiple times in a session.
+*
+* The clone's `context` is a deep copy of main_element.context so it inherits the
+* same ontology context (labels, types, etc.) without sharing state.
+*
+* After `get_instance` + `build`:
+*   - `datum` and `data` are deep-copied from main_element so the UI is pre-populated
+*     with the source record's current value. `data.section_id` is overwritten to
+*     the synthetic id (1) so saves target the temporal section.
+*   - `show_interface` flags are adjusted to enable add/link buttons (needed for
+*     relation-type components) while hiding the save animation, tools panel, and
+*     the list-from-component-data widget — the clone is display-only outside the
+*     normal component edit context.
+*   - `save()` is called immediately with action `'set_data'` to persist the
+*     pre-populated entries into the temporal section; this is the value that
+*     `propagate_component_data` will send to the server when the user confirms.
+*
+* The result is stored as `self.component_to_propagate`.
+*
+* @returns {Promise<boolean>} Resolves to true on success.
+* @throws {Error} Re-throws any error from get_instance, build, or save after logging.
 */
 tool_propagate_component_data.prototype.get_component_to_propagate = async function() {
 
@@ -169,11 +292,35 @@ tool_propagate_component_data.prototype.get_component_to_propagate = async funct
 
 /**
 * PROPAGATE_COMPONENT_DATA
-* Call API to propagate current value to all selected components
-* @param string action
-* 	values: replace|add|delete
-* @return promise
-* 	resolve object api_response
+* Fires the server-side bulk propagation job for the current tool state.
+*
+* Builds an RQO (Request Query Object) targeting `dd_tools_api → tool_request`,
+* which on the server resolves to
+*   `tool_propagate_component_data::propagate_component_data(options)`
+* (the `source` object produced by create_source encodes this routing).
+*
+* The propagation value is read from `self.component_to_propagate.data.entries` —
+* i.e. whatever the user has edited in the interactive clone built during build.
+*
+* SQO handling:
+*   The active section's `rqo.sqo` is deep-cloned so that modifying `offset`/`limit`
+*   does not affect the section's own state. `offset` and `limit` are both reset to 0
+*   to tell the server "process all records matching this filter, no pagination".
+*   The SQO is validated before the request is sent; if missing or if `self.total`
+*   is falsy the method aborts early with an `alert()` and returns undefined.
+*
+* The job is flagged `background_running: true` so the PHP process detaches and
+* returns a PID/pfile pair immediately. The render layer then polls progress via SSE.
+* The timeout is set to 3600 seconds (1 hour) to accommodate very large datasets.
+*
+* (!) SHOW_DEVELOPER is referenced in the `.then` callback but is NOT in the
+*     /*global*\/ directive — this is a pre-existing bug; do not change the code.
+* (!) alert() is used for error feedback instead of a UI notification — pre-existing.
+*
+* @param {string} action - Propagation mode: 'replace' | 'add' | 'delete'.
+* @returns {Promise<Object>} Resolves with the raw API response object containing at
+*   minimum `{ pid, pfile }` — the identifiers used to poll process status via SSE.
+*   Rejects when precondition checks (sqo / total) fail, after alerting the user.
 */
 tool_propagate_component_data.prototype.propagate_component_data = function(action) {
 
@@ -202,13 +349,13 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 		if (!sqo) {
 			console.error('Invalid SQO from section:', section);
 			alert("Error. Invalid SQO");
-			return
+			return Promise.reject(new Error('Invalid SQO'))
 		}
 
 		if (!self.total) {
 			console.error('Invalid total from section:', section);
 			alert("Error. Invalid total");
-			return
+			return Promise.reject(new Error('Invalid total'))
 		}
 
 		// clean sqo
@@ -257,17 +404,27 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 
 /**
 * ON_CLOSE_ACTIONS
-* Executes specific action on close the tool
-* @param string open_as
-* 	modal | window
-* @return promise: bool
+* Hook called by the tool shell (modal or window container) just before or as
+* the tool UI is dismissed. Performs cleanup appropriate to how the tool was opened.
+*
+* When `open_as === 'modal'`:
+*   1. Calls `self.caller.refresh()` to trigger a re-render of the originating
+*      component, ensuring any propagated changes become visible in the UI.
+*   2. Calls `self.destroy(true, true, true)` to unmount the tool DOM, clear event
+*      subscriptions, and remove the instance from the registry.
+*
+* When opened as a standalone window ('window') nothing is done here — the window
+* closing is handled by the browser/window manager outside of this hook.
+*
+* @param {string} open_as - How the tool was opened: 'modal' | 'window'.
+* @returns {Promise<boolean>} Always resolves to true.
 */
 tool_propagate_component_data.prototype.on_close_actions = async function(open_as) {
 
 	const self = this
 
 	if (open_as==='modal') {
-		self.caller.refresh() // never refresh caller (component_json)
+		self.caller.refresh() // refresh caller so propagated changes become visible
 		self.destroy(true, true, true)
 	}
 

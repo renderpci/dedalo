@@ -100,4 +100,3 @@ A failure (e.g. the definition's *active* flag is not Yes, or the TLD / source r
 - [Creating new tools](../creating_tools.md) · [Server contract](../server_contract.md) — the tool model, `API_ACTIONS`, gates and lifecycle this page builds on.
 - [Exporting data](../../../core/exporting_data.md) — once a hierarchy holds data, [tool_export](tool_export.md) flattens its records (with ancestor chains) to a spreadsheet.
 - Source: `tools/tool_hierarchy/class.tool_hierarchy.php`, `tools/tool_hierarchy/register.json`, `tools/tool_hierarchy/js/{tool_hierarchy,render_tool_hierarchy}.js`; core: `core/hierarchy/class.hierarchy.php` (`generate_virtual_section`, `create_thesaurus_general_term`, `delete_main`).
-```

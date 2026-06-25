@@ -246,7 +246,7 @@ lends `init` / `build` / `render` / `destroy` prototypes (the last three borrowe
 from `common`). A concrete widget JS (e.g. `calculation.js`) imports it and
 assigns those prototypes plus its own `render_<name>.js` view methods:
 
-```javascript
+```js
 import {widget_common}      from '../../widget_common/js/widget_common.js'
 import {render_calculation} from '../js/render_calculation.js'
 

@@ -1,17 +1,17 @@
 # dd_area_maintenance_api
 
-Overview
+> See also: [JSON API v1](../dedalo_api_v1.md) · [dd_utils_api](dd_utils_api.md) · [dd_manager](dd_manager.md)
 
-- Maintenance and administrative operations: system reindexing, component locking, ontology updates, and maintenance class requests.
+Maintenance and administrative operations: system reindexing, component locking, ontology updates, and maintenance class requests.
 
-How to call
+## How to call
 
 - POST JSON to `/core/api/v1/json/index.php` with `dd_api: "dd_area_maintenance_api"` and `action: "<method>"`.
 
-Notes
+## Notes
 
-- Most methods require admin/maintenance privileges.
-- Long-running operations can be checked via `get_process_status` in `dd_utils_api`.
+- Most methods require admin or maintenance privileges.
+- Check long-running operations through `get_process_status` in `dd_utils_api`.
 
 ## class_request
 

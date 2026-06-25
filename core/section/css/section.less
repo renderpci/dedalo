@@ -136,6 +136,9 @@ body.inspector_resizing {
 						justify-content: center;
 						padding-left: 0px;
 						padding-right: 0px;
+						// zero the bottom padding so the toggle sits exactly 1.3rem
+						// (the content_data padding-top) above the first icon
+						padding-bottom: 0px;
 
 						.block_label,
 						.block_icon {
@@ -144,6 +147,11 @@ body.inspector_resizing {
 						// chevron is meaningless in the rail
 						&:after {
 							display: none;
+						}
+						// match the icon column size
+						.inspector_rail_toggle {
+							width: 1.3rem;
+							height: 1.3rem;
 						}
 					}
 
@@ -154,9 +162,21 @@ body.inspector_resizing {
 						display: none;
 					}
 
-					// every block collapses to its centered icon header
-					.inspector_content_data > div {
-						margin: 0.25rem 0.3rem;
+					// rail content is a uniform vertical icon column: every visible
+					// child (toolbar/tools rows + block cards) sits an equal 1.3rem
+					// apart. padding-top sets the same distance below the toggle.
+					>.inspector_content_data {
+						display: flex;
+						flex-direction: column;
+						align-items: center;
+						gap: 1.3rem;
+						padding-top: 1.3rem;
+
+						// every block collapses to its centered icon header
+						>div {
+							margin: 0px;
+							background-color: transparent;
+						}
 					}
 
 					.element_info_head,
@@ -166,8 +186,13 @@ body.inspector_resizing {
 					.component_history_head,
 					.activity_info_head {
 						justify-content: center;
-						padding-left: 0px;
-						padding-right: 0px;
+						align-items: center;
+						// no padding so the card == its centred icon, and a fixed
+						// 1.3rem height so the 1.3rem column gap is the only spacing
+						// between icons (no stray line-height adding a pixel)
+						padding: 0px;
+						height: 1.3rem;
+						line-height: 1;
 
 						.block_label {
 							display: none;
@@ -177,8 +202,8 @@ body.inspector_resizing {
 							display: none;
 						}
 						.block_icon {
-							width: 1.4em;
-							height: 1.4em;
+							width: 1.3rem;
+							height: 1.3rem;
 						}
 					}
 
@@ -192,14 +217,32 @@ body.inspector_resizing {
 						display: none;
 					}
 
-					// stack the top action buttons vertically as rail icons
+					// stack the top action / tool icons vertically as rail icons,
+					// centred and sized exactly like the block-header icons above
+					// so the whole rail column is uniform. The buttons are <span>
+					// icons now (button block_icon <icon>), so target them as spans.
 					.buttons_container.top,
 					.tools_container.top {
 						flex-direction: column;
+						flex-wrap: nowrap;
 						align-items: center;
+						gap: 1.3rem;
+						padding: 0px;
 
-						>button {
-							margin-left: 0px;
+						>span {
+							flex: 0 0 auto;
+							width: 1.3rem;
+							height: 1.3rem;
+							min-width: 0px;
+							margin: 0px;
+							padding: 0px;
+							justify-content: center;
+
+							// label is hidden in the rail, so the icon's trailing
+							// text-gap would shift it off the centre line — drop it
+							&:before {
+								margin-right: 0px;
+							}
 						}
 					}
 				}

@@ -108,8 +108,8 @@ A `server` engine triggers the `automatic_translation` API action above; a `brow
 
 ## Related
 
-- [tool_lang_multi](../../../tools/tool_lang_multi) — translate one source component into *several* target languages in a single run; its `automatic_translation` delegates to `tool_lang::automatic_translation()` (with its own defense-in-depth gate) and shares the in-browser engine (`tools/tool_lang/js/browser_translation.js`).
-- [tool_transcription](../../../tools/tool_transcription) / [tool_subtitles](../../../tools/tool_subtitles) — other text/media-content tools that, like `tool_lang`, can use external/AI engines (Babel, Whisper).
-- [tool_export](../../../tools/tool_export) · [Exporting data](../../../core/exporting_data.md) — the read-only counterpart for getting (translated) data out of a section.
+- `tool_lang_multi` — translate one source component into *several* target languages in a single run; its `automatic_translation` delegates to `tool_lang::automatic_translation()` (with its own defense-in-depth gate) and shares the in-browser engine (`tools/tool_lang/js/browser_translation.js`).
+- [tool_transcription](tool_transcription.md) / [tool_subtitles](tool_subtitles.md) — other text/media-content tools that, like `tool_lang`, can use external/AI engines (Babel, Whisper).
+- [tool_export](tool_export.md) · [Exporting data](../../../core/exporting_data.md) — the read-only counterpart for getting (translated) data out of a section.
 - [Creating new tools](../creating_tools.md) · [Server contract](../server_contract.md) — the tool model, `API_ACTIONS`, permission gates and config resolution this page builds on.
 - Source: `tools/tool_lang/class.tool_lang.php`, `tools/tool_lang/translators/class.babel.php`, `tools/tool_lang/js/{tool_lang,render_tool_lang,browser_translation}.js`, `tools/tool_lang/register.json`.

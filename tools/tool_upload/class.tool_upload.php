@@ -1,28 +1,50 @@
 <?php declare(strict_types=1);
 /**
- * CLASS TOOL_UPLOAD
- * Manages file upload processing for Dédalo components
- *
- * This tool handles the post-upload processing of files that have been
- * uploaded to temporary storage. It moves files to their final destination
- * and triggers component-specific processing logic.
- *
- * Key features:
- * - Moves uploaded files from temporary to final storage
- * - Triggers component-specific file processing
- * - Logs upload activity for auditing
- * - Supports quality-based file organization
- *
- * @package Dedalo
- * @subpackage Tools
- */
+* CLASS TOOL_UPLOAD
+* Post-upload processing bridge between the generic upload service and Dédalo media components.
+*
+* Responsibilities:
+* - Receives the file_data descriptor written by service_upload (the generic HTTP endpoint that
+*   streams multipart uploads into DEDALO_UPLOAD_TMP_DIR) and hands it off to the target
+*   component so the component can move the file to its quality-specific storage directory and
+*   run its own post-processing logic (EXIF extraction, AV probing, PDF text extraction, etc.).
+* - Enforces two-tier security: project-scope record gate (assert_record_in_user_scope) first,
+*   then a write-level component permission gate (assert_component_permission, level ≥ 2).
+* - Writes an UPLOAD COMPLETE activity-log entry immediately before component processing begins,
+*   because the generic service_upload endpoint cannot determine when a chunked transfer is
+*   complete and therefore cannot log the final completion itself.
+* - Supports quality-based file organization by forwarding the caller-supplied quality string
+*   to set_quality() on the instantiated component, which changes the destination directory
+*   (e.g. 'original', 'web') prior to the add_file() call.
+*
+* Architecture notes:
+* - Extends tool_common, which provides the tool registry, context building, and API dispatch.
+* - The only exposed API action is process_uploaded_file(); all other internal steps are private
+*   to that method.
+* - Currently only the 'component' caller_type is supported; a default branch logs and rejects
+*   any unknown value so future caller_types can be added safely.
+* - The class carries no instance state; process_uploaded_file() is a static method.
+*
+* Relationships:
+* - Extends tool_common (tools/tool_common/class.tool_common.php).
+* - Delegates file staging to component_media_common::add_file(), which applies SEC-063
+*   path-confinement checks before touching the filesystem.
+* - Delegates media-specific post-processing to component_media_common::process_uploaded_file(),
+*   a hook overridden by concrete subclasses (component_image, component_av, component_pdf, …).
+*
+* @package    Dédalo
+* @subpackage Tools
+*/
 class tool_upload extends tool_common {
 
 
 
 	/**
 	* SEC-024 (§9.2): explicit allowlist of methods callable via
-	* `dd_tools_api::tool_request`.
+	* `dd_tools_api::tool_request`. Any method name absent from this list is
+	* rejected by tool_security before dispatch, so adding a new public static
+	* method here without registering it in API_ACTIONS does not expose it.
+	* @var array<string> API_ACTIONS
 	*/
 	public const API_ACTIONS = [
 		'process_uploaded_file'
@@ -31,40 +53,67 @@ class tool_upload extends tool_common {
 
 
 	/**
-	 * PROCESS_UPLOADED_FILE
-	 * This method is called after the file is already uploaded to temporary directory.
-	 * Moves the temp file to the final directory and launches the component process method
-	 *
-	 * Workflow:
-	 * 1. Validates required parameters
-	 * 2. Closes session to prevent UI blocking
-	 * 3. Logs upload activity
-	 * 4. Instantiates target component
-	 * 5. Moves file to final destination via component->add_file()
-	 * 6. Triggers component-specific processing via component->process_uploaded_file()
-	 *
-	 * @param object $options Configuration object with:
-	 *   - file_data: object Uploaded file information (name, size, tmp_name, etc.) - REQUIRED
-	 *   - tipo: string Component tipo identifier - REQUIRED
-	 *   - section_tipo: string Section tipo identifier - REQUIRED
-	 *   - section_id: int|null Section ID (null for new records)
-	 *   - caller_type: string Type of caller (currently only 'component' supported) - REQUIRED
-	 *   - quality: string|null Quality level for media files (e.g., 'original', 'web')
-	 *   - process_options: object|null Additional processing options
-	 *   - target_dir: string|null Target directory path (currently unused)
-	 *
-	 * @return object Response object with:
-	 *   - result: bool Success status
-	 *   - msg: string Status or error message
-	 *   - debug: object|null Debug information (if SHOW_DEBUG is true)
-	 *
-	 * @throws Exception If component instantiation fails
-	 * @throws Exception If file operations fail
-	 */
+	* PROCESS_UPLOADED_FILE
+	* Entry point called after service_upload has placed the file in the temporary staging
+	* directory. Orchestrates the complete post-upload lifecycle for a media component:
+	* security gating → activity logging → component instantiation → file staging (add_file)
+	* → component-specific processing (process_uploaded_file on the component).
+	*
+	* Workflow (happy path):
+	*   1. Extracts and validates required parameters from $options.
+	*   2. Calls session_write_close() so the PHP session lock is released immediately,
+	*      allowing the browser to keep sending UI requests while this (potentially slow)
+	*      processing runs.
+	*   3. Applies project-scope record gate via security::assert_record_in_user_scope()
+	*      (skipped when section_id is empty, i.e. the target record does not yet exist).
+	*   4. Logs an UPLOAD COMPLETE activity-log entry with the JSON-encoded file_data.
+	*      This is done here (not in service_upload) because service_upload cannot tell
+	*      whether a multipart/chunked transfer is complete.
+	*   5. Resolves the component model and instantiates the component via
+	*      component_common::get_instance() in 'edit' mode with DEDALO_DATA_NOLAN.
+	*   6. Asserts write permission (level ≥ 2) on the instantiated component via
+	*      security::assert_component_permission().
+	*   7. Forwards the caller-supplied quality string to set_quality() on the component
+	*      so add_file() writes the file into the correct quality subdirectory.
+	*   8. Calls component->add_file($file_data): validates, path-confines (SEC-063),
+	*      and moves the staged upload to its final location. Returns a $ready descriptor.
+	*   9. Calls component->process_uploaded_file($ready, $process_options): runs
+	*      component-specific post-processing (EXIF, AV probe, text extraction, etc.).
+	*      The base implementation (component_media_common) is a no-op hook; concrete
+	*      subclasses override it.
+	*
+	* The method currently supports only caller_type='component'. Unknown caller_type
+	* values fall through to the default case which logs and populates $response->errors
+	* without throwing so the caller can inspect the structured response.
+	*
+	* @param object $options {
+	*   file_data:       object   — upload descriptor from service_upload (name, type,
+	*                              tmp_dir, key_dir, tmp_name, error, size, extension). REQUIRED.
+	*   tipo:            string   — ontology tipo of the target component. REQUIRED.
+	*   section_tipo:    string   — ontology tipo of the parent section. REQUIRED.
+	*   section_id:      int|null — record ID; null/0 for records not yet saved.
+	*   caller_type:     string   — dispatch mode; currently only 'component'. REQUIRED.
+	*   quality:         string|null — quality level key (e.g. 'original', 'web') forwarded
+	*                                  to component->set_quality() before add_file().
+	*   process_options: object|null — opaque options forwarded verbatim to the component's
+	*                                  process_uploaded_file() hook.
+	*   target_dir:      string|null — reserved; extracted but not currently used.
+	* }
+	* @return object {
+	*   result: bool    — true on success, false on any failure.
+	*   msg:    string  — human-readable status or error description.
+	*   errors: array   — list of individual error strings (empty on full success).
+	*   debug?: object  — {exec_time: string} present only when SHOW_DEBUG === true.
+	* }
+	*/
 	public static function process_uploaded_file(object $options) : object {
 		$start_time=start_time();
 
-		// session close not block user interface
+		// release session lock immediately
+		// session_write_close() frees the exclusive PHP session lock so the browser
+		// can continue sending requests (e.g. progress polls) while this potentially
+		// slow media-processing call runs. Without this, all same-session requests
+		// would queue behind this call until it returns.
 		session_write_close();
 
 		// response
@@ -109,7 +158,10 @@ class tool_upload extends tool_common {
 				return $response;
 			}
 
-		// SEC-024 (§9.4): per-record gate.
+		// SEC-024 (§9.4): per-record gate
+		// Confirms the requested record falls within the user's allowed project scope.
+		// Skipped when section_id is empty/zero because the record may not yet exist
+		// (e.g. uploading a file before the section record has been saved for the first time).
 			if (!empty($section_id)) {
 				security::assert_record_in_user_scope($section_tipo, (int)$section_id, __METHOD__);
 			}
@@ -119,9 +171,14 @@ class tool_upload extends tool_common {
 
 				case ('component'):
 
-					// logger activity. Note that this log is here because generic service_upload
-					// is not capable to know if the uploaded file is the last one in a chunked file scenario
-						// safe_file_data. Prevent single quotes problems like file names as L'osuna.jpg
+					// activity log — logged here, not in service_upload
+					// service_upload is a generic HTTP endpoint that only knows about
+					// individual HTTP parts. It cannot determine when a chunked/multipart
+					// transfer is fully complete, so it cannot log "upload done". This is
+					// the first point where the full assembled file is confirmed.
+						// safe_file_data — escape single quotes in the JSON representation
+						// before writing to the activity log. File names like "L'osuna.jpg"
+						// would corrupt a naive SQL string if passed unescaped.
 						$file_data_encoded = json_encode($file_data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
 						if ($file_data_encoded === false) {
 							debug_log(__METHOD__ . ' Failed to encode file_data to JSON', logger::WARNING);
@@ -130,8 +187,11 @@ class tool_upload extends tool_common {
 						} else {
 							$connection = DBi::_getConnection();
 							if ($connection) {
+								// preferred path: use pg_escape_string() for correct PostgreSQL escaping
 								$safe_file_data = pg_escape_string($connection, $file_data_encoded);
 							} else {
+								// fallback when no DB connection is available; addslashes() is less
+								// robust than pg_escape_string() but avoids a log write failure
 								debug_log(__METHOD__ . ' Failed to get database connection for escaping', logger::WARNING);
 								$safe_file_data = addslashes($file_data_encoded); // Fallback to basic escaping
 								$response->errors[] = 'Failed to get database connection for escaping';
@@ -153,7 +213,10 @@ class tool_upload extends tool_common {
 							logged_user_id() // int
 						);
 
-					// component media
+					// instantiate target component
+					// get_model_by_tipo() resolves the PHP class name from the ontology tipo.
+					// get_instance() creates the component in 'edit' mode with DEDALO_DATA_NOLAN
+					// (language-neutral) because media components are not translatable by tipo.
 						$model		= ontology_node::get_model_by_tipo($tipo,true);
 						$component	= component_common::get_instance(
 							$model,
@@ -169,10 +232,18 @@ class tool_upload extends tool_common {
 					// Caller must have write (>=2) on (component).
 						security::assert_component_permission($component, 2);
 
-					// fix current component target quality (defines the destination directory for the file, like 'original')
+					// set quality before add_file() to select the destination directory
+					// set_quality() validates the value against the component's accepted quality
+					// list (get_ar_quality()). If $quality is null or invalid the component
+					// falls back to its default (usually 'original'). This must be called before
+					// add_file() because add_file() reads $this->quality to build the target path.
 						$component->set_quality($quality);
 
-					// add file
+					// stage the file into the component's media directory
+					// component_media_common::add_file() applies SEC-063 path-confinement
+					// checks (tmp_dir allowlist + realpath guard) before renaming the file.
+					// On success $add_file->ready contains the final file descriptor with
+					// the resolved path, extension, and size used in the next step.
 						$add_file = $component->add_file($file_data);
 						if ($add_file->result===false) {
 							$response->msg .= $add_file->msg;
@@ -180,7 +251,10 @@ class tool_upload extends tool_common {
 							return $response;
 						}
 
-					// post processing file (add_file returns final renamed file with path info)
+					// component-specific post-processing (add_file returns final renamed file with path info)
+					// The base implementation in component_media_common is a no-op hook that returns
+					// success immediately. Concrete subclasses override it to run media-specific
+					// operations (EXIF extraction, AV probing, PDF text extraction, etc.).
 						$process_file = $component->process_uploaded_file($add_file->ready, $process_options);
 						if ($process_file->result===false) {
 							$response->msg .= 'Errors occurred when processing file: '.$process_file->msg;
@@ -204,7 +278,7 @@ class tool_upload extends tool_common {
 					$response->msg .= "Unsupported caller_type: {$caller_type}. Only 'component' is currently supported.";
 					$response->errors[] = "Unsupported caller_type: {$caller_type}. Only 'component' is currently supported.";
 					break;
-			}//end switch (true)
+			}//end switch ($caller_type)
 
 		// debug
 			if(SHOW_DEBUG===true) {

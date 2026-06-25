@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 /**
-* DIFFUSION_SERVER_CONTROL
+* CLASS DIFFUSION_SERVER_CONTROL
 * Area maintenance widget: centralized control panel for the Bun (TypeScript)
 * diffusion server that performs SQL/RDF/XML publication in Dédalo v7.
 *
@@ -21,6 +21,13 @@
 *
 * All mutating actions are restricted to global admins. Read-only get_value is
 * available to any maintenance admin (the area itself is admin-gated).
+*
+* Entry points are routed through dd_area_maintenance_api::widget_request, which
+* enforces API_ACTIONS before dispatching. The shell-level lifecycle commands
+* (start/stop/restart) are further gated inside run_service_command.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class diffusion_server_control {
 
@@ -28,7 +35,9 @@ class diffusion_server_control {
 
 	/**
 	* SEC-044: explicit allowlist of methods callable through
-	* dd_area_maintenance_api::widget_request
+	* dd_area_maintenance_api::widget_request. Any public static method NOT listed
+	* here is unreachable from the API, regardless of visibility.
+	* @var array<int,string>
 	*/
 	public const API_ACTIONS = [
 		'get_value',
@@ -42,7 +51,8 @@ class diffusion_server_control {
 	/**
 	* Validated lifecycle keywords accepted by run_service_command. The keyword
 	* is substituted into DEDALO_DIFFUSION_SERVICE_CMD in place of `%action%`.
-	* @var array
+	* Keeping this list exhaustive and small is the primary shell-injection guard.
+	* @var array<int,string>
 	*/
 	private const SERVICE_ACTIONS = ['start', 'stop', 'restart'];
 
@@ -59,8 +69,17 @@ class diffusion_server_control {
 	/**
 	* GET_VALUE
 	* Aggregated, read-only snapshot powering the whole widget: server health,
-	* in-flight processes, effective configuration and pending-deletion count.
+	* in-flight processes, effective configuration, and pending-deletion count.
 	* Degrades gracefully when the engine is down (never throws).
+	*
+	* Returned object shape on success:
+	*  $response->result = {
+	*    server    : { reachable: bool, checks: object|null, msg: string },
+	*    processes : array  — in-flight diffusion processes ([] when engine down),
+	*    config    : object — see get_config_info() for the full shape,
+	*    pending   : int|null — pending-deletion count, null if ontology unavailable,
+	*    is_admin  : bool   — whether the logged-in user is a global admin
+	*  }
 	* @return object $response
 	*/
 	public static function get_value() : object {
@@ -134,8 +153,10 @@ class diffusion_server_control {
 
 	/**
 	* START_SERVER
-	* Start the diffusion server through the configured supervisor command.
-	* Global-admin gated. @return object
+	* Starts the diffusion server through the configured supervisor command.
+	* Global-admin gated. Delegates to run_service_command('start').
+	* @param object $options - unused; reserved for future flags
+	* @return object $response - see run_service_command() for the shape
 	*/
 	public static function start_server(object $options) : object {
 		return self::run_service_command('start');
@@ -145,8 +166,10 @@ class diffusion_server_control {
 
 	/**
 	* STOP_SERVER
-	* Stop the diffusion server through the configured supervisor command.
-	* Global-admin gated. @return object
+	* Stops the diffusion server through the configured supervisor command.
+	* Global-admin gated. Delegates to run_service_command('stop').
+	* @param object $options - unused; reserved for future flags
+	* @return object $response - see run_service_command() for the shape
 	*/
 	public static function stop_server(object $options) : object {
 		return self::run_service_command('stop');
@@ -156,8 +179,10 @@ class diffusion_server_control {
 
 	/**
 	* RESTART_SERVER
-	* Restart the diffusion server through the configured supervisor command.
-	* Global-admin gated. @return object
+	* Restarts the diffusion server through the configured supervisor command.
+	* Global-admin gated. Delegates to run_service_command('restart').
+	* @param object $options - unused; reserved for future flags
+	* @return object $response - see run_service_command() for the shape
 	*/
 	public static function restart_server(object $options) : object {
 		return self::run_service_command('restart');
@@ -205,10 +230,15 @@ class diffusion_server_control {
 
 	/**
 	* RETRY_PENDING_DELETIONS
-	* Retries propagation of pending unpublish deletions. Delegates to
-	* dd_diffusion_api (global-admin gated there too).
+	* Retries propagation of pending unpublish deletions stored in the dd1758
+	* activity log. Delegates entirely to dd_diffusion_api::retry_pending_deletions
+	* (global-admin check is enforced there; no need to duplicate it here).
+	*
+	* $options is passed through verbatim; relevant keys:
+	*  - count_only : bool  — when true, returns the pending count without retrying
+	*  - limit      : int   — max deletions to retry in one call (default 100)
 	* @param object $options
-	* @return object $response
+	* @return object $response - shape from dd_diffusion_api::retry_pending_deletions
 	*/
 	public static function retry_pending_deletions(object $options) : object {
 
@@ -293,9 +323,21 @@ class diffusion_server_control {
 
 	/**
 	* GET_CONFIG_INFO
-	* Read-only diagnostics: which endpoint the PHP side would use to reach the
-	* engine, whether the internal token and the service command are configured,
-	* and the publication language/levels config. No secrets are exposed.
+	* Read-only diagnostics: which endpoint PHP uses to reach the engine,
+	* whether the internal token and the service command are configured,
+	* and the publication language/levels config. No secrets are exposed
+	* (the service command template is reduced to a boolean flag).
+	*
+	* Returned object shape:
+	*  {
+	*    endpoint_in_use           : string  — human-readable active endpoint description,
+	*    socket_path               : string|null — DEDALO_DIFFUSION_SOCKET_PATH or null,
+	*    api_url                   : string  — DEDALO_DIFFUSION_API_URL or '',
+	*    internal_token_configured : bool,
+	*    service_cmd_configured    : bool,
+	*    langs                     : array   — DEDALO_DIFFUSION_LANGS or [],
+	*    resolve_levels            : mixed   — DEDALO_DIFFUSION_RESOLVE_LEVELS or null
+	*  }
 	* @return object
 	*/
 	private static function get_config_info() : object {

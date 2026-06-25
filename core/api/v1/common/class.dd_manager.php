@@ -62,7 +62,12 @@ final class dd_manager {
 		'get_code_update_info',
 		'get_diffusion_info',
 		'get_dedalo_files',
-		'read_raw'
+		'read_raw',
+		// Password recovery: invoked from the login screen before any session or
+		// CSRF token exists. Safe because they act only on an emailed one-time
+		// secret and are rate-limited inside password_reset.
+		'request_password_reset',
+		'confirm_password_reset'
 	];
 
 
@@ -318,7 +323,8 @@ final class dd_manager {
 				'dd_component_av_api',
 				'dd_component_3d_api',
 				'dd_mcp_api',
-				'dd_component_info'
+				'dd_component_info',
+				'dd_rag_api'
 			];
 			$dd_api_type	= $rqo->dd_api ?? 'dd_core_api';
 			if (!in_array($dd_api_type, $allowed_api_classes, true)) {
@@ -347,7 +353,10 @@ final class dd_manager {
 				'get_environment',
 				'get_ontology_update_info',
 				'get_code_update_info',
-				'get_server_ready_status'
+				'get_server_ready_status',
+				// Self-service password recovery (pre-auth, from the login screen)
+				'request_password_reset',
+				'confirm_password_reset'
 			];
 			$action = $rqo->action ?? null;
 			// SEC-018: require $action to be a string and use strict comparison so that
@@ -400,7 +409,10 @@ final class dd_manager {
 		// because it makes the API surface explicit and prevents an internal
 		// helper added later from accidentally becoming a remote endpoint.
 			$is_valid_public_method = false;
-			if (method_exists($dd_api, $rqo->action)) {
+			// is_string guard: a non-string action (e.g. client sends an array/object)
+			// would raise a TypeError under strict_types at method_exists()/ReflectionMethod.
+			// Falling through leaves $is_valid_public_method=false → uniform 'Undefined method'.
+			if (is_string($rqo->action) && method_exists($dd_api, $rqo->action)) {
 				$reflection = new ReflectionMethod($dd_api, $rqo->action);
 				if ($reflection->isPublic() && $reflection->isStatic()) {
 					if (defined($dd_api . '::API_ACTIONS')) {

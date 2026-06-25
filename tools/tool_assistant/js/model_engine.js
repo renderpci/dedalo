@@ -6,12 +6,68 @@
 
 /**
  * MODEL_ENGINE
- * Wraps Transformers.js for local LLM inference in the browser.
+ * Browser-side inference adapter for the Dédalo AI assistant.
+ *
+ * Wraps the Transformers.js library (loaded dynamically at runtime from the
+ * jsDelivr CDN) to provide a unified API that covers three execution paths:
+ *
+ *   1. Local WebGPU   — weights run natively on the GPU via the WebGPU backend.
+ *                       Fastest, but requires a WebGPU-capable browser.
+ *   2. Local WASM     — weights run in the browser's WebAssembly sandbox.
+ *                       Universal fallback; slower than WebGPU, no GPU required.
+ *   3. Remote server  — when `config.api_url` is set, no local weights are
+ *                       loaded; generation is routed to the server by the
+ *                       caller (`ai_assistant`). The engine marks itself
+ *                       loaded and returns immediately.
+ *
+ * Two internal loading strategies are used depending on model family:
+ *   - 'pipeline'  : uses `transformers.pipeline('text-generation', …)` — the
+ *                   high-level Transformers.js API, suitable for most HF models.
+ *   - 'qwen35'
+ *   - 'gemma4'    : uses `AutoProcessor` + a named model class directly
+ *                   (Qwen3_5ForConditionalGeneration / Gemma4ForConditionalGeneration).
+ *                   These families expose dedicated dtype maps (per-sub-model
+ *                   quantisation) and require the lower-level API.
+ *
+ * The class also handles:
+ *   - Automatic WebGPU→WASM fallback on `load()` failure or on mid-generation
+ *     device loss (retried only for known-recoverable error patterns).
+ *   - Token streaming with inline `<think>…</think>` and
+ *     `<tool_call>…</tool_call>` block filtering: thinking tokens are forwarded
+ *     to `on_think_token`; tool-call markup is stripped so the visible chat
+ *     bubble only shows prose.
+ *   - Structured tool-call parsing from both the Transformers.js native format
+ *     (v4.2+ pipeline with chat templates) and the Qwen3 XML-tag format.
+ *
+ * Consumed by: `ai_assistant` (tools/tool_assistant/js/ai_assistant.js).
+ * External dependency: https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0
+ *
+ * @module model_engine
  */
 export const model_engine = class model_engine {
 
 
 
+	/**
+	 * MODEL_ENGINE constructor
+	 * Initialises instance state; does NOT load model weights — call load() separately.
+	 *
+	 * @param {Object} config - Configuration options.
+	 * @param {string} [config.model_id='onnx-community/Qwen3.5-0.8B-ONNX'] - HuggingFace
+	 *   model ID or a local ONNX path recognisable by Transformers.js.
+	 * @param {string} [config.device='webgpu'] - Primary inference device: 'webgpu' or 'wasm'.
+	 * @param {string} [config.fallback_device='wasm'] - Device to use when the primary device
+	 *   fails. Applied both during load() and on mid-generation device-loss errors.
+	 * @param {string} [config.dtype='q4f16'] - Quantisation dtype for WebGPU loads.
+	 *   WASM loads always use 'q4' regardless of this setting.
+	 * @param {number} [config.max_new_tokens=512] - Default token budget per generation call.
+	 * @param {string} [config.thinking='none'] - Thinking level: 'none' | 'low' | 'high'.
+	 *   Any value other than 'none' enables the chat-template `enable_thinking` flag,
+	 *   which causes supporting models (Qwen3-family) to emit a `<think>…</think>` block
+	 *   before the visible answer.
+	 * @param {string} [config.api_url] - When present, the engine operates in server-proxy
+	 *   mode: load() is a no-op and `this._device` is set to 'server'.
+	 */
 	constructor(config={}) {
 		this._pipeline	= null
 		this._tokenizer	= null
@@ -28,6 +84,30 @@ export const model_engine = class model_engine {
 
 
 
+	/**
+	 * LOAD
+	 * Downloads and initialises model weights in the browser.
+	 *
+	 * The method is idempotent in practice — callers should check is_loaded()
+	 * before calling, but calling twice with the same config is safe (the second
+	 * call will re-fetch weights from the HTTP cache).
+	 *
+	 * Execution paths:
+	 *   1. Server mode (config.api_url set) → sets device='server', returns immediately.
+	 *   2. WebGPU requested but navigator.gpu absent → silently demotes to WASM.
+	 *   3. 'pipeline' model_type → delegates to _load_pipeline().
+	 *   4. 'qwen35' / 'gemma4' → delegates to _load_direct().
+	 *
+	 * On success, `this._loaded` becomes true and `this._device` reflects the actual
+	 * device used (may differ from the original config if a fallback occurred).
+	 *
+	 * @param {Object} [options={}] - Load-time options.
+	 * @param {Function} [options.on_progress] - Progress callback invoked with a number
+	 *   in [0, 100] as weight shards are downloaded. The engine calls it on each
+	 *   Transformers.js 'progress' event and once more with 100 on 'done'.
+	 * @returns {Promise<void>}
+	 * @throws {Error} If model loading fails on all available devices.
+	 */
 	async load(options={}) {
 
 		const on_progress = options.on_progress || (() => {})
@@ -47,6 +127,7 @@ export const model_engine = class model_engine {
 			device = this._config.fallback_device || 'wasm'
 		}
 
+		// WASM requires 'q4' (integer-only); WebGPU supports q4f16 (mixed float16/int4).
 		const dtype = device === 'wasm'
 			? 'q4'
 			: (this._config.dtype || 'q4f16')
@@ -57,6 +138,7 @@ export const model_engine = class model_engine {
 			'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0'
 		)
 
+		// Disable local model resolution — all models come from HuggingFace Hub via CDN.
 		transformers.env.allowLocalModels = false
 
 		this._TextStreamer = transformers.TextStreamer
@@ -75,6 +157,27 @@ export const model_engine = class model_engine {
 
 
 
+	/**
+	 * _LOAD_DIRECT
+	 * Loads a non-pipeline model family (qwen35, gemma4) using the low-level
+	 * AutoProcessor + named model class API.
+	 *
+	 * This path is needed because Qwen3.5 and Gemma4 expose per-sub-model dtype
+	 * configuration (vision encoder, embed_tokens, decoder_model_merged) that the
+	 * high-level `pipeline()` API cannot express.
+	 *
+	 * On WebGPU failure, retries automatically with WASM + 'q4' dtype.
+	 *
+	 * Side effects: populates `this._processor` and `this._model`.
+	 *
+	 * @param {Object} transformers - The Transformers.js module namespace.
+	 * @param {string} device - Primary device to attempt ('webgpu' or 'wasm').
+	 * @param {string} dtype - Base quantisation dtype (e.g. 'q4f16', 'q4').
+	 * @param {Function} on_progress - Progress callback (see load()).
+	 * @returns {Promise<string>} The device that was actually used ('webgpu' or 'wasm').
+	 * @throws {Error} If loading fails on the specified device and no fallback applies
+	 *   (i.e. device is not 'webgpu', or WebGPU failed for a non-retryable reason).
+	 */
 	async _load_direct(transformers, device, dtype, on_progress) {
 
 		const model_class_name	= model_engine._MODEL_CLASS_MAP[this._model_type]
@@ -124,6 +227,25 @@ export const model_engine = class model_engine {
 
 
 
+	/**
+	 * _LOAD_PIPELINE
+	 * Loads a 'pipeline' family model via the high-level `transformers.pipeline()` API.
+	 *
+	 * This is the default path for any model not matched by `_detect_model_type()`.
+	 * It is simpler than _load_direct because the pipeline API handles processor
+	 * selection and dtype application internally.
+	 *
+	 * On WebGPU failure, retries automatically with WASM + 'q4' dtype.
+	 *
+	 * Side effect: populates `this._pipeline`.
+	 *
+	 * @param {Object} transformers - The Transformers.js module namespace.
+	 * @param {string} device - Primary device to attempt ('webgpu' or 'wasm').
+	 * @param {string} dtype - Base quantisation dtype (e.g. 'q4f16', 'q4').
+	 * @param {Function} on_progress - Progress callback (see load()).
+	 * @returns {Promise<string>} The device that was actually used ('webgpu' or 'wasm').
+	 * @throws {Error} If loading fails on a non-WebGPU device, or if WASM retry also fails.
+	 */
 	async _load_pipeline(transformers, device, dtype, on_progress) {
 
 		const load_with_device = async function(dev, dt) {
@@ -162,6 +284,39 @@ export const model_engine = class model_engine {
 
 
 
+	/**
+	 * GENERATE
+	 * Runs one forward pass (prompt → completion) on the loaded model.
+	 *
+	 * Dispatches to _do_generate_pipeline() or _do_generate_direct() depending on
+	 * `this._model_type`. Streaming tokens arrive in real time via the `on_token`
+	 * and `on_think_token` callbacks; the returned promise resolves only after the
+	 * full generation is complete.
+	 *
+	 * WebGPU error recovery: if a generation fails on WebGPU with a recoverable
+	 * backend error (device-lost, unaligned accesses, buffer invalidated), the engine
+	 * unloads the model, reloads it on the fallback device (WASM), and retries the
+	 * same request once. Non-recoverable errors and WASM failures are thrown directly.
+	 *
+	 * @param {Object} [options={}] - Generation options.
+	 * @param {Array}  [options.messages=[]] - Chat-template messages array
+	 *   (each element: `{role: 'user'|'assistant'|'system'|'tool', content: string}`).
+	 * @param {Array}  [options.tools=[]] - JSON-schema tool declarations to expose
+	 *   to the model. Passed to the chat template; ignored when empty.
+	 * @param {number} [options.max_new_tokens=512] - Maximum new tokens to generate.
+	 *   Overrides config.max_new_tokens.
+	 * @param {Function} [options.on_token] - Callback invoked with each visible prose
+	 *   token chunk (string). Thinking and tool-call markup are filtered out before
+	 *   this callback fires.
+	 * @param {Function} [options.on_think_token] - Callback invoked with each token
+	 *   chunk from inside a `<think>…</think>` block, so the UI can render the
+	 *   model's reasoning separately.
+	 * @returns {Promise<Object>} Generation result object with shape:
+	 *   `{ full_text: string, raw_result: *, streamed_text: string }`.
+	 *   `full_text` is the cleaned visible answer (thinking/tool blocks stripped).
+	 *   `streamed_text` is the raw concatenated token stream (used by parse_tool_calls).
+	 * @throws {Error} If the model is not loaded, or if generation fails unrecoverably.
+	 */
 	async generate(options={}) {
 
 		const is_ready = this._model_type === 'pipeline'
@@ -213,6 +368,25 @@ export const model_engine = class model_engine {
 
 
 
+	/**
+	 * _IS_RETRYABLE_BACKEND_ERROR (static)
+	 * Determines whether a generation error is transient and worth retrying on
+	 * the fallback device (WASM), rather than propagating to the caller.
+	 *
+	 * Only a narrow set of error messages indicate a GPU-side transient failure
+	 * that a CPU/WASM context can recover from:
+	 *   - 'device lost'                   — GPU process crashed or timed out;
+	 *                                        reloading on WASM re-fetches weights.
+	 *   - 'unaligned accesses'            — Known WASM/CPU alignment bug;
+	 *                                        switching device helps.
+	 *   - 'invalid due to a previous error' — WebGPU buffer corrupted by a prior
+	 *                                        silent OOM; a fresh WASM context recovers.
+	 *
+	 * Everything else (OOM, bad_alloc, model logic errors) is considered fatal.
+	 *
+	 * @param {Error|*} err - The caught error object.
+	 * @returns {boolean} True if the error is retryable on the fallback device.
+	 */
 	static _is_retryable_backend_error(err) {
 
 		const message = err && err.message
@@ -233,6 +407,30 @@ export const model_engine = class model_engine {
 
 
 
+	/**
+	 * _RELOAD_AS_WASM
+	 * Disposes the current model/pipeline and reloads it on the configured fallback
+	 * device (defaults to 'wasm').
+	 *
+	 * Called automatically by generate() after a retryable WebGPU error. Can also be
+	 * called manually if the caller detects a device issue outside of generation.
+	 *
+	 * The method:
+	 *   1. Disposes the existing pipeline or model to release GPU/WASM memory.
+	 *   2. Yields to the JS event loop (setTimeout 0) so the browser can reclaim
+	 *      WebGPU buffers before the new allocation starts.
+	 *   3. Re-imports the Transformers.js CDN module (browser HTTP cache hit).
+	 *   4. Reloads via the same path (pipeline vs. direct) used during the first load.
+	 *
+	 * (!) Disposing before reallocating is critical: without it, the old WebGPU
+	 * allocations compete with the new WASM heap and cause bad_alloc on some devices.
+	 *
+	 * Side effects: resets `this._pipeline`, `this._model`, `this._processor`,
+	 * `this._loaded`, `this._device`, and all Transformers.js references.
+	 *
+	 * @returns {Promise<void>}
+	 * @throws {Error} If the fallback load itself fails.
+	 */
 	async _reload_as_wasm() {
 
 		// reload the SAME model on the configured fallback device (wasm by default)
@@ -285,6 +483,17 @@ export const model_engine = class model_engine {
 
 
 
+	/**
+	 * _IS_THINKING_ENABLED
+	 * Returns whether the model's chain-of-thought (thinking) mode is active.
+	 *
+	 * Thinking is controlled by `config.thinking`: any non-'none' string value
+	 * enables it. When enabled, the chat template sets `enable_thinking: true`,
+	 * which causes Qwen3-family models to emit a `<think>…</think>` block
+	 * before the answer. The streamer filters those tokens to `on_think_token`.
+	 *
+	 * @returns {boolean} True when thinking is enabled (level !== 'none' and !== false).
+	 */
 	_is_thinking_enabled() {
 		// `thinking` is a level string: 'none' | 'low' | 'high'. Any non-'none'
 		// value turns on the chat-template thinking flag.
@@ -294,6 +503,22 @@ export const model_engine = class model_engine {
 
 
 
+	/**
+	 * _DO_GENERATE_PIPELINE
+	 * Runs a generation pass using the Transformers.js pipeline API.
+	 *
+	 * Builds sampling parameters, attaches the streaming callback via a TextStreamer,
+	 * then calls `this._pipeline(messages, options)`. The streamer feeds visible
+	 * tokens to `on_token` and thinking tokens to `on_think_token` in real time.
+	 * After the pipeline resolves, the raw result is normalised by `_build_result()`.
+	 *
+	 * @param {Array}    messages       - Chat messages (role/content objects).
+	 * @param {Array}    tools          - Tool declarations (JSON-schema format).
+	 * @param {number}   max_new_tokens - Maximum tokens to generate.
+	 * @param {Function} on_token       - Callback for each visible prose chunk.
+	 * @param {Function} on_think_token - Callback for each thinking-block chunk.
+	 * @returns {Promise<Object>} Normalised result from _build_result().
+	 */
 	async _do_generate_pipeline(messages, tools, max_new_tokens, on_token, on_think_token) {
 
 		const generate_options = {
@@ -320,6 +545,28 @@ export const model_engine = class model_engine {
 
 
 
+	/**
+	 * _DO_GENERATE_DIRECT
+	 * Runs a generation pass using the low-level model + processor API
+	 * (used for 'qwen35' and 'gemma4' model families).
+	 *
+	 * Steps:
+	 *   1. Apply the model's chat template via `tokenizer.apply_chat_template()` to
+	 *      produce encoded input tensors.
+	 *   2. Call `this._model.generate()` with sampling parameters and a streamer.
+	 *   3. Slice out only the newly generated token IDs (skip the prompt prefix)
+	 *      and decode them to a string for the fallback text path in `_build_result`.
+	 *
+	 * The streamer feeds tokens to `on_token` and `on_think_token` in real time,
+	 * so the chat bubble updates before the promise resolves.
+	 *
+	 * @param {Array}    messages       - Chat messages (role/content objects).
+	 * @param {Array}    tools          - Tool declarations (JSON-schema format).
+	 * @param {number}   max_new_tokens - Maximum tokens to generate.
+	 * @param {Function} on_token       - Callback for each visible prose chunk.
+	 * @param {Function} on_think_token - Callback for each thinking-block chunk.
+	 * @returns {Promise<Object>} Normalised result from _build_result().
+	 */
 	async _do_generate_direct(messages, tools, max_new_tokens, on_token, on_think_token) {
 
 		const tokenizer		= this._processor.tokenizer || this._processor
@@ -360,6 +607,44 @@ export const model_engine = class model_engine {
 
 
 
+	/**
+	 * _CREATE_STREAMER
+	 * Constructs a Transformers.js TextStreamer that parses the raw token stream
+	 * on the fly, routing chunks to `on_token` (visible prose) or `on_think_token`
+	 * (chain-of-thought) while silently dropping `<tool_call>…</tool_call>` markup.
+	 *
+	 * Implementation — state machine:
+	 *   The streamer maintains a small state object with the following fields:
+	 *   - `text`       : full raw concatenation of every chunk (used by
+	 *                    parse_tool_calls and _build_result for post-processing).
+	 *   - `in_think`   : true while inside a `<think>…</think>` block.
+	 *   - `in_tool`    : true while inside a `<tool_call>…</tool_call>` block.
+	 *   - `seen_think` : latched to true once any `<think>` was opened (used by
+	 *                    _build_result to decide whether to strip the think prefix).
+	 *   - `pending`    : a look-ahead buffer that withholds the last few bytes
+	 *                    until it is certain they are not the start of a tag.
+	 *
+	 *   `flush_safe()` drains `pending` up to the last possible tag-prefix boundary
+	 *   so partial '<' sequences are never emitted prematurely.
+	 *   `process_buffer()` is the main dispatch loop:
+	 *     - inside `<think>` : forward to think_cb; advance on `</think>`.
+	 *     - inside `<tool_call>` : silently drop; advance on `</tool_call>`.
+	 *     - outside : call flush_safe(), detect the next opening tag.
+	 *
+	 *   (!) The 'keep last N chars' heuristic in process_buffer (8 for `</think>`,
+	 *   12 for `</tool_call>`) must stay in sync with the tag lengths; otherwise
+	 *   partial closing tags leak into the visible output.
+	 *
+	 * @param {Object}   tokenizer      - Transformers.js tokenizer instance (used by
+	 *   TextStreamer for decoding; must have a `decode()` method).
+	 * @param {Function} on_token       - Called with each decoded visible prose chunk.
+	 * @param {Function} on_think_token - Called with each decoded thinking-block chunk.
+	 * @returns {Object} Streamer handle:
+	 *   - `streamer`  {Object}   — TextStreamer instance to pass to generate options.
+	 *   - `get_text`  {Function} — Returns the full raw concatenated token string.
+	 *   - `flush`     {Function} — Must be called after generation ends to drain the
+	 *                              pending buffer; emits any remaining visible content.
+	 */
 	_create_streamer(tokenizer, on_token, on_think_token) {
 
 		const think_cb = on_think_token || function(){}
@@ -512,6 +797,34 @@ export const model_engine = class model_engine {
 
 
 
+	/**
+	 * _BUILD_RESULT
+	 * Normalises the raw generation output into the standard result object
+	 * returned by generate().
+	 *
+	 * Cleaning steps applied to `streamed_text`:
+	 *   1. If `</think>` is present, strip everything up to and including it
+	 *      (the thinking preamble).
+	 *   2. If `<think>` is present but no matching `</think>` (truncated), treat
+	 *      full_text as empty (the model only produced thinking, no answer).
+	 *   3. Strip any remaining `<tool_call>…</tool_call>` blocks via regex.
+	 *   4. Strip inline `call: name { … }` patterns (a looser tool-call format
+	 *      some model families emit outside XML tags).
+	 *   5. Trim whitespace.
+	 *
+	 * If after cleaning `full_text` is empty, fall back to `raw_result.generated_text`
+	 * (may be a string, a message array, or an arbitrary object from the pipeline).
+	 * The last assistant-role message is extracted from an array if needed.
+	 *
+	 * @param {string} streamed_text - Full raw concatenation of all streamed tokens
+	 *   (i.e. the value returned by `stream.get_text()`).
+	 * @param {*}      raw_result    - The unmodified return value from the underlying
+	 *   pipeline or model.generate() call.
+	 * @returns {Object} Normalised result:
+	 *   - `full_text`    {string} — Cleaned visible prose answer.
+	 *   - `raw_result`   {*}      — Original pipeline/model output (for parse_tool_calls).
+	 *   - `streamed_text`{string} — Unmodified raw token stream (for parse_tool_calls).
+	 */
 	_build_result(streamed_text, raw_result) {
 
 		let full_text = streamed_text
@@ -551,6 +864,35 @@ export const model_engine = class model_engine {
 
 
 
+	/**
+	 * PARSE_TOOL_CALLS
+	 * Extracts structured tool-call declarations from a generation result.
+	 *
+	 * Tries three extraction strategies in priority order:
+	 *
+	 *   1. Native pipeline format (Transformers.js v4.2+ with chat template):
+	 *      The pipeline returns `generated_text` as an array of messages; the last
+	 *      assistant message may carry a `tool_calls` array already parsed by the
+	 *      library. This is the most reliable path — returned immediately if present.
+	 *
+	 *   2. Qwen3 XML format — `<tool_call>{ … }</tool_call>`:
+	 *      Scanned via regex over `streamed_text`. Each match is JSON-parsed; if
+	 *      it has a `name` key it is normalised to the OpenAI function-call shape:
+	 *      `{ id, type: 'function', function: { name, arguments } }`.
+	 *      Malformed JSON blocks are silently skipped.
+	 *
+	 *   3. Inline call syntax — `call: name { … }`:
+	 *      A looser format emitted by some models outside XML tags. Parsed via
+	 *      `_parse_relaxed_arguments()` which tolerates single-quoted keys and
+	 *      unquoted values.
+	 *
+	 * Returns null (not an empty array) when no tool calls are found, so callers
+	 * can use a simple truthiness check.
+	 *
+	 * @param {Object} generation_result - The object returned by generate().
+	 * @returns {Array|null} Array of tool-call objects in the OpenAI function-call
+	 *   shape, or null if no tool calls were found.
+	 */
 	parse_tool_calls(generation_result) {
 
 		const text = generation_result.streamed_text || generation_result.full_text || ''
@@ -615,6 +957,27 @@ export const model_engine = class model_engine {
 
 
 
+	/**
+	 * _PARSE_RELAXED_ARGUMENTS (static)
+	 * Parses a tool-call argument block that may not be strict JSON.
+	 *
+	 * The method first attempts `JSON.parse()`. On failure it falls back to a
+	 * simple key:value splitter that tolerates:
+	 *   - Single-quoted or unquoted string keys.
+	 *   - Unquoted bare values (strings, numbers, booleans, null).
+	 *   - Values quoted with either ' or ".
+	 *
+	 * (!) The fallback parser is intentionally minimal: it does NOT handle nested
+	 * objects, arrays, or escaped quotes inside values. It is designed only for the
+	 * flat argument objects that small language models emit in the inline `call:`
+	 * format. Complex arguments should come via the XML `<tool_call>` format which
+	 * uses strict JSON.
+	 *
+	 * @param {string} raw_arguments - The raw argument string (typically the
+	 *   content between the outer braces of a tool-call block).
+	 * @returns {Object} Parsed arguments as a plain object. Returns `{}` on empty
+	 *   or unparseable input.
+	 */
 	static _parse_relaxed_arguments(raw_arguments) {
 
 		if (!raw_arguments || typeof raw_arguments !== 'string') {
@@ -653,6 +1016,19 @@ export const model_engine = class model_engine {
 
 
 
+	/**
+	 * UNLOAD
+	 * Disposes the model and releases all allocated resources (GPU buffers, WASM heap).
+	 *
+	 * Calls `.dispose()` on the pipeline or model if available, then nulls all
+	 * internal references. Yields to the JS event loop after disposal so the
+	 * browser garbage collector can reclaim GPU buffers before the next allocation.
+	 *
+	 * After calling unload(), `is_loaded()` returns false and `generate()` will
+	 * throw until `load()` is called again.
+	 *
+	 * @returns {Promise<void>}
+	 */
 	async unload() {
 		if (this._pipeline && typeof this._pipeline.dispose === 'function') {
 			try { await this._pipeline.dispose() } catch(e) {}
@@ -670,18 +1046,43 @@ export const model_engine = class model_engine {
 
 
 
+	/**
+	 * IS_LOADED
+	 * Returns whether model weights have been successfully loaded and the engine
+	 * is ready to generate. Also returns true in server-proxy mode (api_url set),
+	 * where `this._loaded` is set by load() without fetching local weights.
+	 *
+	 * @returns {boolean} True when the engine is ready for generation calls.
+	 */
 	is_loaded() {
 		return this._loaded
 	}//end is_loaded
 
 
 
+	/**
+	 * GET_DEVICE
+	 * Returns the device currently in use for inference.
+	 *
+	 * Possible values: 'webgpu', 'wasm', 'server'.
+	 * The value may change after a WebGPU→WASM fallback triggered by a load or
+	 * generation failure; callers should re-read this after any such event.
+	 *
+	 * @returns {string} Current inference device identifier.
+	 */
 	get_device() {
 		return this._device
 	}//end get_device
 
 
 
+	/**
+	 * GET_MODEL_ID
+	 * Returns the HuggingFace model ID (or ONNX path) this engine instance was
+	 * configured with. Useful for display in settings UI and logging.
+	 *
+	 * @returns {string} Model identifier string.
+	 */
 	get_model_id() {
 		return this._model_id
 	}//end get_model_id
@@ -690,17 +1091,60 @@ export const model_engine = class model_engine {
 
 	// ── Static helpers ────────────────────────────────────────────────
 
+	/**
+	 * _MODEL_CLASS_MAP (static)
+	 * Maps internal model_type keys to the Transformers.js exported class names
+	 * used by the direct (non-pipeline) loading path.
+	 *
+	 * Keys are the values returned by `_detect_model_type()`.
+	 * Values are property names on the Transformers.js module namespace object.
+	 * 'pipeline' family models are NOT listed here — they use `transformers.pipeline()`.
+	 *
+	 * @type {Object}
+	 */
 	static _MODEL_CLASS_MAP = {
 		qwen35	: 'Qwen3_5ForConditionalGeneration',
 		gemma4	: 'Gemma4ForConditionalGeneration'
 	}
 
+	/**
+	 * _DETECT_MODEL_TYPE (static)
+	 * Infers the model family from the model ID string so the engine can select
+	 * the correct loading and generation strategy.
+	 *
+	 * Detection is by substring matching on the model_id:
+	 *   - 'Qwen3.5' or 'Qwen3_5' → 'qwen35' (direct load via Qwen3_5ForConditionalGeneration)
+	 *   - 'Gemma4'  or 'gemma-4'  → 'gemma4'  (direct load via Gemma4ForConditionalGeneration)
+	 *   - anything else            → 'pipeline' (high-level transformers.pipeline() API)
+	 *
+	 * (!) When adding support for a new model family, add the detection pattern here
+	 * AND add the corresponding class name to `_MODEL_CLASS_MAP`.
+	 *
+	 * @param {string} model_id - HuggingFace model ID or ONNX path.
+	 * @returns {string} Model type key: 'qwen35', 'gemma4', or 'pipeline'.
+	 */
 	static _detect_model_type(model_id) {
 		if (model_id.indexOf('Qwen3.5') !== -1 || model_id.indexOf('Qwen3_5') !== -1) return 'qwen35'
 		if (model_id.indexOf('Gemma4') !== -1 || model_id.indexOf('gemma-4') !== -1) return 'gemma4'
 		return 'pipeline'
 	}
 
+	/**
+	 * _BUILD_DTYPE_CONFIG (static)
+	 * Constructs the per-sub-model dtype configuration object required by the
+	 * direct loading path (`_load_direct`).
+	 *
+	 * Transformers.js v4+ accepts an object instead of a scalar dtype so that
+	 * different sub-models within the same checkpoint can use different precision:
+	 *   - `embed_tokens` and `decoder_model_merged` use the caller-provided dtype
+	 *     (e.g. 'q4f16' for WebGPU, 'q4' for WASM).
+	 *   - Gemma4's `vision_encoder` is fixed at 'fp16' because the vision tower
+	 *     does not benefit from extreme int4 quantisation and degrades badly.
+	 *
+	 * @param {string} model_type - One of 'qwen35', 'gemma4' (direct families only).
+	 * @param {string} dtype      - Base quantisation dtype (e.g. 'q4f16', 'q4').
+	 * @returns {Object} Dtype config map for the Transformers.js `from_pretrained` call.
+	 */
 	static _build_dtype_config(model_type, dtype) {
 		if (model_type === 'gemma4') {
 			return {

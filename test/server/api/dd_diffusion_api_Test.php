@@ -135,6 +135,103 @@ final class dd_diffusion_api_Test extends BaseTestCase {
 
 
 
+	public function test_build_advisory_ok(): void {
+		$probe = (object)['state'=>'ok','checks'=>(object)[],'msg'=>''];
+		$adv = dd_diffusion_api::build_engine_advisory($probe, true, false, true);
+		$this->assertSame('ok', $adv->state);
+		$this->assertSame(['retry'], $adv->actions);
+		$this->assertNull($adv->log_tail);
+	}
+
+	public function test_build_advisory_user_is_calm_and_nontechnical(): void {
+		$probe = (object)['state'=>'unreachable','checks'=>null,'msg'=>'boom'];
+		$adv = dd_diffusion_api::build_engine_advisory($probe, false, false, true);
+		$this->assertSame('unreachable', $adv->state);
+		$this->assertFalse($adv->is_admin);
+		$this->assertSame(['retry'], $adv->actions);   // never offers shell actions
+		$this->assertNull($adv->checks);               // no internals leaked
+		$this->assertNull($adv->log_tail);
+		$this->assertStringContainsStringIgnoringCase('administrator', implode(' ', $adv->steps));
+	}
+
+	public function test_build_advisory_admin_unreachable_configured(): void {
+		$probe = (object)['state'=>'unreachable','checks'=>null,'msg'=>''];
+		$adv = dd_diffusion_api::build_engine_advisory($probe, true, false, true);
+		$this->assertSame(['retry','restart_engine','show_log'], $adv->actions);
+		$this->assertNotSame('', $adv->cause);
+		$this->assertNotEmpty($adv->steps);
+	}
+
+	public function test_build_advisory_admin_unreachable_unconfigured(): void {
+		$probe = (object)['state'=>'unreachable','checks'=>null,'msg'=>''];
+		$adv = dd_diffusion_api::build_engine_advisory($probe, true, false, false);
+		$this->assertSame(['retry'], $adv->actions); // no restart button without a service cmd
+		$this->assertStringContainsStringIgnoringCase('DEDALO_DIFFUSION_SERVICE_CMD', implode(' ', $adv->steps));
+	}
+
+	public function test_build_advisory_admin_unhealthy_names_failing_check(): void {
+		$checks = (object)[
+			'server'  => (object)['result'=>true,  'msg'=>'ok'],
+			'php_api' => (object)['result'=>true,  'msg'=>'ok'],
+			'sql'     => (object)['result'=>false, 'msg'=>'DB down'],
+		];
+		$probe = (object)['state'=>'unhealthy','checks'=>$checks,'msg'=>''];
+		$adv = dd_diffusion_api::build_engine_advisory($probe, true, false, true);
+		$this->assertSame('unhealthy', $adv->state);
+		$this->assertStringContainsString('sql', $adv->cause);
+		$this->assertStringContainsString('DB down', $adv->cause);
+		$this->assertSame(['retry'], $adv->actions);
+	}
+
+
+
+	public function test_get_engine_advisory_unreachable_no_recover(): void {
+		diffusion_api_client::$endpoint_override = '/tmp/dd_no_such_engine.sock';
+		try {
+			$adv = dd_diffusion_api::get_engine_advisory((object)[
+				'action'  => 'get_engine_advisory',
+				'options' => (object)['auto_recover'=>false]
+			]);
+		} finally {
+			diffusion_api_client::$endpoint_override = null;
+		}
+		$this->assertTrue($adv->result);
+		$this->assertSame('unreachable', $adv->state);
+		$this->assertFalse($adv->recovered);
+		$this->assertContains('retry', $adv->actions);
+	}
+
+	public function test_get_engine_advisory_admin_recover_attempt_does_not_loop(): void {
+		if (security::is_global_admin(logged_user_id())!==true) {
+			$this->markTestSkipped('logged test user is not a global admin');
+		}
+		// service cmd that "succeeds" but leaves the engine down → recovered stays false.
+		// Prove the poll is BOUNDED: with N attempts the engine is probed exactly
+		// 1 (initial) + N (recover polls) times and then stops — it does not loop.
+		diffusion_api_client::$endpoint_override   = '/tmp/dd_no_such_engine.sock';
+		diffusion_server_control::$service_cmd_override = 'true %action%';
+		$prev_attempts = dd_diffusion_api::$recover_poll_attempts;
+		$prev_interval = dd_diffusion_api::$recover_poll_interval_us;
+		dd_diffusion_api::$recover_poll_attempts   = 3;
+		dd_diffusion_api::$recover_poll_interval_us = 1;
+		dd_diffusion_api::$probe_count             = 0;
+		try {
+			$adv = dd_diffusion_api::get_engine_advisory((object)['action'=>'get_engine_advisory']);
+		} finally {
+			diffusion_api_client::$endpoint_override        = null;
+			diffusion_server_control::$service_cmd_override  = null;
+			dd_diffusion_api::$recover_poll_attempts    = $prev_attempts;
+			dd_diffusion_api::$recover_poll_interval_us = $prev_interval;
+		}
+		$this->assertSame('unreachable', $adv->state);
+		$this->assertFalse($adv->recovered);
+		$this->assertContains('restart_engine', $adv->actions);
+		// 1 initial probe + exactly 3 bounded recover polls = 4 (loop is bounded, not infinite)
+		$this->assertSame(4, dd_diffusion_api::$probe_count);
+	}
+
+
+
 	/**
 	* TEST_DIFFUSE_PIPELINE
 	* The PHP half of the publish pipeline: search + chain resolution +

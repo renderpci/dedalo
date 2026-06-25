@@ -9,34 +9,35 @@ This document does **not** re-explain the architecture or the wire format — se
 
 > Note on tipos: the examples use working-set conventions (`numisdata*`, `hierarchy*`, `rsc*`, `oh*`, `zenon1`, `dd15`). These are real tipos from the project ontology and test fixtures, not invented. The base `ontology.copy.gz` ships only core models (`rsc*`); project tipos come with the installed ontology.
 
-## Table of Contents
+## Table of contents
 
 **Display configs**
 
-1. [Section List Configuration](#1-section-list-configuration)
-2. [Section Edit Configuration](#2-section-edit-configuration)
-3. [Portal Component](#3-portal-component)
-4. [Autocomplete with Search/Choose](#4-autocomplete-with-searchchoose)
-5. [Autocomplete Thesaurus](#5-autocomplete-thesaurus)
-6. [External API Integration](#6-external-api-integration)
-7. [Hierarchical Portal](#7-hierarchical-portal)
-8. [Multi-Section Portal](#8-multi-section-portal)
-9. [With Pre-filters](#9-with-pre-filters)
-10. [With Fixed Filter](#10-with-fixed-filter)
-11. [With Interface Controls](#11-with-interface-controls)
-12. [Dynamic DDO Map](#12-dynamic-ddo-map)
+1. [Section list configuration](#1-section-list-configuration)
+2. [Section edit configuration](#2-section-edit-configuration)
+3. [Portal component](#3-portal-component)
+4. [Autocomplete with search/choose](#4-autocomplete-with-searchchoose)
+5. [Autocomplete thesaurus](#5-autocomplete-thesaurus)
+6. [External API integration](#6-external-api-integration)
+7. [Hierarchical portal](#7-hierarchical-portal)
+8. [Multi-section portal](#8-multi-section-portal)
+9. [With pre-filters](#9-with-pre-filters)
+10. [With fixed filter](#10-with-fixed-filter)
+11. [With interface controls](#11-with-interface-controls)
+12. [Dynamic DDO map](#12-dynamic-ddo-map)
 
 **End-to-end RQO flows** (the calls a client builds from the configs above)
 
-13. [Create → Edit Round-trip](#13-create-edit-round-trip)
-14. [Duplicate, Delete & Count](#14-duplicate-delete-count)
-15. [Time-machine Read](#15-time-machine-read)
-16. [Paginated Next Page & Multi-filter Search](#16-paginated-next-page-multi-filter-search)
-17. [Lazy Context & Graph Term Labels](#17-lazy-context-graph-term-labels)
+13. [Create → edit round-trip](#13-create-edit-round-trip)
+14. [Duplicate, delete and count](#14-duplicate-delete-count)
+15. [Time-machine read](#15-time-machine-read)
+16. [Paginated next page and multi-filter search](#16-paginated-next-page-multi-filter-search)
+17. [Lazy context and graph term labels](#17-lazy-context-graph-term-labels)
+18. [Portal full grid in one read (show-all, columns as siblings)](#18-portal-full-grid-in-one-read)
 
 ---
 
-## 1. Section List Configuration
+## 1. Section list configuration
 
 **Scenario**: Configure a section to display a list of numismatic objects with key columns.
 
@@ -106,7 +107,7 @@ This document does **not** re-explain the architecture or the wire format — se
 
 ---
 
-## 2. Section Edit Configuration
+## 2. Section edit configuration
 
 **Scenario**: Configure section edit mode with grouped components.
 
@@ -175,7 +176,7 @@ This document does **not** re-explain the architecture or the wire format — se
 
 ---
 
-## 3. Portal Component
+## 3. Portal component
 
 **Scenario**: Portal (a `component_portal` in list/show mode) displaying coins inside a type record, with a nested image column.
 
@@ -228,7 +229,7 @@ This document does **not** re-explain the architecture or the wire format — se
 
 ---
 
-## 4. Autocomplete with Search/Choose
+## 4. Autocomplete with search/choose
 
 **Scenario**: Autocomplete component with different fields for searching vs. selecting. This is the `service_autocomplete` flow (`source->action: 'search'`).
 
@@ -305,7 +306,7 @@ This document does **not** re-explain the architecture or the wire format — se
 
 ---
 
-## 5. Autocomplete Thesaurus
+## 5. Autocomplete thesaurus
 
 **Scenario**: Autocomplete for thesaurus terms with parent display.
 
@@ -382,7 +383,7 @@ This document does **not** re-explain the architecture or the wire format — se
 
 ---
 
-## 6. External API Integration
+## 6. External API integration
 
 **Scenario**: Zenon API integration for bibliographic search (`api_engine: "zenon"`).
 
@@ -470,7 +471,7 @@ This document does **not** re-explain the architecture or the wire format — se
 
 ---
 
-## 7. Hierarchical Portal
+## 7. Hierarchical portal
 
 **Scenario**: Portal with nested components (type → obverse/reverse coin portals → image).
 
@@ -540,7 +541,7 @@ This document does **not** re-explain the architecture or the wire format — se
 
 ---
 
-## 8. Multi-Section Portal
+## 8. Multi-section portal
 
 **Scenario**: Portal that searches across multiple section types (toponymy hierarchies for Spain, France, Italy).
 
@@ -605,7 +606,7 @@ This document does **not** re-explain the architecture or the wire format — se
 
 ---
 
-## 9. With Pre-filters
+## 9. With pre-filters
 
 **Scenario**: Portal pre-filtered by a list (dropdown) selection.
 
@@ -652,7 +653,7 @@ This document does **not** re-explain the architecture or the wire format — se
 
 ---
 
-## 10. With Fixed Filter
+## 10. With fixed filter
 
 **Scenario**: Portal showing only records related to the *current* record (context-dependent).
 
@@ -703,7 +704,7 @@ This document does **not** re-explain the architecture or the wire format — se
 
 ---
 
-## 11. With Interface Controls
+## 11. With interface controls
 
 **Scenario**: Portal with custom button configuration.
 
@@ -762,7 +763,7 @@ The full list of `interface` keys, their defaults, and what each controls is the
 
 ---
 
-## 12. Dynamic DDO Map
+## 12. Dynamic DDO map
 
 **Scenario**: Use `get_ddo_map` to build columns from a shared `section_map` instead of listing them inline.
 
@@ -825,7 +826,7 @@ The full list of `interface` keys, their defaults, and what each controls is the
 
 ---
 
-## 13. Create → Edit Round-trip
+## 13. Create → edit round-trip
 
 **Scenario**: The canonical "new record" lifecycle — create an empty record, then open it in edit mode. These are **RQO calls** the client makes (`dd_core_api`); they are not stored in the ontology.
 
@@ -888,7 +889,7 @@ Response (`result` is the new `section_id` as a string, or `false` on failure):
 
 ---
 
-## 14. Duplicate, Delete & Count
+## 14. Duplicate, delete and count
 
 **Scenario**: Record-lifecycle RQO calls beyond create — deep-copy, multi-record delete with mode flags, and a non-blocking count.
 
@@ -967,7 +968,7 @@ Response (`result` is the new `section_id` as a string, or `false` on failure):
 
 ---
 
-## 15. Time-machine Read
+## 15. Time-machine read
 
 **Scenario**: Read a component's historical value from the time-machine (`dd15`). The time-machine service model is permission-exempt by design (it serves snapshots, not live data).
 
@@ -1001,7 +1002,7 @@ Response (`result` is the new `section_id` as a string, or `false` on failure):
 
 ---
 
-## 16. Paginated Next Page & Multi-filter Search
+## 16. Paginated next page and multi-filter search
 
 **Scenario**: Advance a section list to its second page, and run a multi-clause search-panel filter. Both are RQO `read · search` calls; the session SQO keeps navigation continuous across calls.
 
@@ -1061,7 +1062,7 @@ Response (`result` is the new `section_id` as a string, or `false` on failure):
 
 ---
 
-## 17. Lazy Context & Graph Term Labels
+## 17. Lazy context and graph term labels
 
 **Scenario**: Two public read-only helpers used after a list/graph renders — lazy structure context for one element, and batch label resolution for graph nodes.
 
@@ -1106,9 +1107,59 @@ Response (`result` is the new `section_id` as a string, or `false` on failure):
 
 ---
 
-## Common Patterns
+## 18. Portal full grid in one read
 
-### Pattern: Minimal Configuration
+**Scenario**: Read one record and get a portal's **entire** related grid — all rows and the chosen columns — in a *single* call, instead of the default page. This is the **reverse path**: the client sends `show.ddo_map` and the server rebuilds the element's request_config from the RQO (`build_request_config_from_rqo`). It is how `tool_print` renders a record's bibliography portal without per-portal/per-row calls.
+
+```json
+{
+  "action" : "read",
+  "dd_api" : "dd_core_api",
+  "source" : {
+    "typo": "source", "type": "section", "action": "search", "model": "section",
+    "tipo": "numisdata6", "section_tipo": "numisdata6", "mode": "list", "lang": "lg-spa"
+  },
+  "sqo" : {
+    "section_tipo"       : ["numisdata6"],
+    "limit"              : 1,
+    "offset"             : 0,
+    "filter_by_locators" : [{ "section_tipo": "numisdata6", "section_id": 2 }]
+  },
+  "show" : {
+    "ddo_map" : [
+      { "tipo": "numisdata1007", "section_tipo": "self", "parent": "numisdata6", "mode": "list" },
+
+      { "tipo": "numisdata163", "section_tipo": "self", "parent": "numisdata6",
+        "model": "component_portal", "mode": "list", "view": "default",
+        "column_id": "numisdata163", "limit": 0 },
+
+      { "tipo": "rsc368", "section_tipo": "rsc332", "parent": "numisdata163", "column_id": "a",
+        "model": "component_portal", "mode": "list",
+        "with_value": { "mode": "list", "view": "line" }, "children_view": "text", "fixed_mode": true },
+      { "tipo": "rsc336", "section_tipo": "rsc332", "parent": "numisdata163", "column_id": "b",
+        "model": "component_input_text", "mode": "list", "fixed_mode": true },
+      { "tipo": "rsc369", "section_tipo": "rsc332", "parent": "numisdata163", "column_id": "c",
+        "model": "component_input_text", "mode": "list", "fixed_mode": true }
+    ],
+    "sqo_config" : { "full_count": false, "limit": 1, "offset": 0, "mode": "list", "operator": "$or" }
+  }
+}
+```
+
+**Explanation**:
+- `sqo.filter_by_locators` + `limit: 1` pin exactly the record to read; `show.ddo_map` is **client-sent**, so the server rebuilds this element's request_config from the RQO (the same `build_request_config_from_rqo` path used by time machine / graph view / `tool_print`).
+- `numisdata163` (Bibliografía) is a `component_portal`. Its **columns are the *sibling* ddos** `rsc368` / `rsc336` / `rsc369`, each carrying `parent: "numisdata163"` + a `column_id` (`a`/`b`/`c`) — **not** nested inside the portal ddo. The server collects them by `parent` (`get_children_recursive`) and grafts them into the portal's own (rebuilt) config. A `request_config`/`sqo` placed *on* the portal ddo would be ignored.
+- **`"limit": 0` on the portal ddo is the key**: it returns **all** related rows in this one read instead of the portal's mode default (1 in list, 10 in edit) — the read equivalent of the portal's "show all". The rows are loaded regardless (a portal always loads its references for sorting); `limit` only sets the *output slice*. See [dd_object.md → How a ddo_map resolves](dd_object.md#how-a-ddo_map-resolves-the-chain).
+- `with_value` (per-data mode/view), `children_view` and `fixed_mode` tune how each column renders.
+- The client-sent ddos pass the gate: `sanitize_client_ddo_map()` keeps only whitelisted fields (now including `limit`/`offset`, as non-negative ints) and `validate_requested_ddo()` re-checks tipo/TLD/permissions — so this cannot widen access, only the page size of data the user can already read.
+
+*See properties:* [per-ddo `limit` / `column_id` / `with_value` / `fixed_mode`](dd_object.md#properties), [the ddo chain + client whitelist](dd_object.md#how-a-ddo_map-resolves-the-chain), [`show.ddo_map`](rqo.md#show-object-optional), [config rebuilt from the client RQO (Stage 1)](request_config.md).
+
+---
+
+## Common patterns
+
+### Pattern: minimal configuration
 
 The smallest valid config — one column, defaults for everything else:
 
@@ -1128,7 +1179,7 @@ The smallest valid config — one column, defaults for everything else:
 }
 ```
 
-### Pattern: Read-Only Display
+### Pattern: read-only display
 
 ```json
 {
@@ -1151,7 +1202,7 @@ The smallest valid config — one column, defaults for everything else:
 }
 ```
 
-### Pattern: High-Volume Portal
+### Pattern: high-volume portal
 
 ```json
 {
@@ -1183,7 +1234,7 @@ The smallest valid config — one column, defaults for everything else:
 
 ---
 
-## Testing Your Configuration
+## Testing your configuration
 
 1. **Validate structure offline** — run the batch auditor (CI/cron friendly, exit code 1 on any error):
    ```bash

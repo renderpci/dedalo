@@ -1,5 +1,9 @@
 # Changing parameters of global Dédalo config file
 
+> **⚠️ Dédalo v7 — the *way* you set these changed.** This page is still an accurate reference for *what each setting does and its default*, but you **no longer edit a config file in place** — the web-served `config/` holds only the loader `config/bootstrap.php`. In v7 you set values in **`../private/.env`** (outside the web root) using the same `DEDALO_*` constant name. See the **[Configuration Administrator Guide](administration.md)** for the complete flow, the `.env` syntax, per-host configs, secrets, fallbacks and migration. The `define('NAME', …)` snippets below show each setting's meaning and default; to change one, write `NAME=value` in `.env` (e.g. `DEDALO_TIMEZONE='Europe/Madrid'`).
+>
+> _The instructions below describe the legacy v6 file-editing workflow, kept for reference._
+
 ./dedalo/config/config.php
 
 1. Locate the file into the directory: ../httpdocs/dedalo/config/
@@ -24,7 +28,7 @@
 
 DEDALO_HOST `string`
 
-This parameter use the name of the domain or ip of your installation. Used the header from the current request, if there is one, and store the domain or ip of the call.
+This parameter holds the domain or IP of your installation. It reads the host header from the current request, if there is one, and stores the domain or IP of the call.
 
 ```php
 define('DEDALO_HOST', $_SERVER['HTTP_HOST'] );
@@ -114,10 +118,10 @@ DEDALO_CONFIG_PATH `string`
 
 Used to define the the main config directory. Config directory has all specific files of Dédalo installation. This files are not changed by the system because every installation has his own configuration as connection to DDBB. The exception is the `config_core` file that is used by Dédalo to store the state of the installation.
 
-To update the config constants you will need to see the version changes in the sample_* files because this files will be sync by updates.
+To update the config constants you will need to review the version changes in the `sample_*` files, because these files are synced by updates.
 
 ```php
-define('DEDALO_LIB_BASE_PATH', dirname( dirname(__FILE__) ));
+define('DEDALO_CONFIG_PATH', DEDALO_ROOT_PATH .'/'. DEDALO_CONFIG);
 ```
 
 ---
@@ -320,15 +324,15 @@ define('DEDALO_EXTRAS_URL',  DEDALO_CORE_URL . '/extras');
 
 DEDALO_INSTALL_PATH  `string`
 
-This parameter defines the install path directory. Install path contains the files to be used in the installation process and the ontology and hierarchy updates. When Dédalo is installed first time this directory has a basic Dédalo configuration and the database schema to be implemented. When Dédalo update his ontology or common hierarchies, it will get changes from ontology servers and save into install directory previously to be implemented.
+This parameter defines the install path directory. The install path contains the files used in the installation process and in the ontology and hierarchy updates. When Dédalo is installed for the first time, this directory holds a basic Dédalo configuration and the database schema to be implemented. When Dédalo updates its ontology or common hierarchies, it fetches the changes from the ontology servers and saves them in the install directory before they are implemented.
 
 ```php
-define('DEDALO_EXTRAS_URL',  DEDALO_CORE_URL . '/extras');
+define('DEDALO_INSTALL_PATH', DEDALO_ROOT_PATH . '/install');
 ```
 
-> This parameter use previous constant definition:
+> This parameter uses the previous constant definition:
 >
-> DEDALO_CORE_PATH
+> DEDALO_ROOT_PATH
 
 ---
 
@@ -338,10 +342,10 @@ define('DEDALO_EXTRAS_URL',  DEDALO_CORE_URL . '/extras');
 
 DEDALO_INSTALL_URL  `string`
 
-This parameter defines the install uri directory. Install path contains the files to be used in the installation process and the ontology and hierarchy updates. When Dédalo is installed first time this directory has a basic Dédalo configuration and the database schema to be implemented. When Dédalo update his ontology or common hierarchies, it will get changes from ontology servers and save into install directory previously to be implemented.
+This parameter defines the install uri directory. The install path contains the files used in the installation process and in the ontology and hierarchy updates. When Dédalo is installed for the first time, this directory holds a basic Dédalo configuration and the database schema to be implemented. When Dédalo updates its ontology or common hierarchies, it fetches the changes from the ontology servers and saves them in the install directory before they are implemented.
 
 ```php
-define('DEDALO_EXTRAS_URL',  DEDALO_CORE_URL . '/extras');
+define('DEDALO_INSTALL_URL', DEDALO_ROOT_WEB . '/install');
 ```
 > Example: <https://master.dedalo.dev/dedalo/install>
 >
@@ -674,7 +678,7 @@ session_start_manager([
     'timeout_seconds'       => $timeout_seconds,
     'save_path'             => DEDALO_SESSIONS_PATH,
     'prevent_session_lock'  => defined('PREVENT_SESSION_LOCK') ? PREVENT_SESSION_LOCK : false,
-    'session_name'          => 'dedalo_'.DEDALO_ENTITY
+    'session_name'          => 'dedalo_'.DEDALO_ENTITY,
     'cookie_secure'         => $cookie_secure, // Only https (true | false)
     'cookie_samesite'       => $cookie_samesite // (None | Lax | Strict)
 ]);
@@ -781,7 +785,7 @@ DEDALO_BACKUP_ON_LOGIN  `bool`
 
 This parameter defines if Dédalo will do a backup when the users login. It prevents that issues doing to the data could repair quickly.
 
-If this constant is set to `true` Dédalo will check if the last backup is a copy done after the time defined by DEDALO_BACKUP_TIME_RANGE and will create new one if the time exceed this parameter. Dédalo will use the `.pgpass` file to connect to PostgreSQL and will create a `.backup` file in the backup directory.
+If this constant is set to `true` Dédalo will check if the last backup is a copy done after the time defined by DEDALO_BACKUP_TIME_RANGE and will create new one if the time exceed this parameter. Dédalo connects to PostgreSQL for the backup using the `DEDALO_PASSWORD_CONN` credentials (exported transiently as `PGPASSWORD`), so the database may be local or remote, and creates a `.backup` file in the backup directory. A `~/.pgpass` file is not required (it is still honored by libpq as a fallback when `DEDALO_PASSWORD_CONN` is empty).
 
 ```php
 define('DEDALO_BACKUP_ON_LOGIN'  , true);

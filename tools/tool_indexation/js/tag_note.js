@@ -5,7 +5,58 @@
 
 
 /**
-* TAG NOTE FILE extends tool_indexation
+* TAG_NOTE
+* Mixin module that adds "indexation note" rendering to tool_indexation.
+*
+* Purpose
+* -------
+* Each index tag created inside a transcription (component_text_area) may carry
+* an associated note record — a small free-text memo stored as a separate Dédalo
+* section (tipo `rsc377`, the DEDALO_INDEXATION_SECTION_TIPO constant). The note
+* has two components: a short title (rsc379) and a longer description (rsc380).
+*
+* When the user clicks an index tag in the text editor the tool fires
+* `click_tag_index_<id_base>`, which calls `render_indexation_note`. That function
+* inspects the tag's `data` field — a pseudo-stringified locator object — and
+* either renders the existing note (via `render_note`) or offers a button to
+* create a fresh note record (via `render_empty_note`).
+*
+* Integration
+* -----------
+* This file does NOT export a standalone class. Instead `tag_note` is a
+* constructor whose prototype methods are copied onto `tool_indexation.prototype`
+* in tool_indexation.js:
+*
+*   tool_indexation.prototype.render_indexation_note = tag_note.prototype.render_indexation_note
+*   tool_indexation.prototype.render_empty_note       = tag_note.prototype.render_empty_note
+*   tool_indexation.prototype.render_note             = tag_note.prototype.render_note
+*
+* The `self` inside every method therefore refers to the live `tool_indexation`
+* instance, giving access to:
+*   self.DEDALO_INDEXATION_SECTION_TIPO / TITLE_TIPO / DESCRIPTION_TIPO
+*   self.transcription_component   — the component_text_area being indexed
+*   self.indexation_note           — the DOM container managed by render_tool_indexation
+*   self.title_instance            — stored so the caller can activate it in-viewport
+*
+* Tag data format
+* ---------------
+* A tag object passed from component_text_area looks like:
+*   {
+*     tag_id : string,           // unique identifier within the text
+*     state  : 'n'|'r'|'d',     // normal / to-review / deleted
+*     label  : string,           // visible text in the editor
+*     data   : string            // pseudo-JSON locator, single-quotes used as delimiters:
+*                                //   "{'section_tipo':'rsc377','section_id':42}"
+*   }
+*
+* The `data` field uses single quotes instead of standard JSON double quotes
+* because it is stored in an HTML dataset attribute. `render_indexation_note`
+* replaces them before parsing.
+*
+* Exports
+* -------
+*   tag_note          — constructor (only used for its prototype)
+*   (module-private)  new_tag_note — async helper that POSTs a create RQO
 */
 
 
@@ -21,7 +72,10 @@
 
 /**
 * TAG_NOTE
-* Manages the component's logic and appearance in client side
+* Placeholder constructor whose prototype methods are mixed into tool_indexation.
+* Constructing a tag_note instance directly serves no purpose; the prototype
+* methods are extracted and grafted onto tool_indexation.prototype at module load
+* time (see tool_indexation.js).
 */
 export const tag_note = function() {
 
@@ -32,10 +86,24 @@ export const tag_note = function() {
 
 /**
 * RENDER_INDEXATION_NOTE
-* If tag contains valid note data (expected locator pseudo-stringified) renders
-* components node. Else button new is rendered
-* @param object tag
-* @return HTMLElement|null tag_note_node
+* Entry point called every time the user selects an index tag in the editor.
+* Decides whether to render an existing note or an empty-state "create" button.
+*
+* Flow:
+*  1. Guard: if `tag.data` is absent or too short to be a real locator, delegate
+*     to `render_empty_note` and return early.
+*  2. Normalise the stored pseudo-JSON (single-quote → double-quote) and parse it.
+*  3. Validate that the locator carries `section_tipo` and `section_id`.
+*  4. If valid, call `render_note({ locator })` to build the title + description nodes.
+*
+* @param {Object} tag - Tag descriptor from component_text_area's click event.
+*   Expected shape: { tag_id, state, label, data }
+*   where `data` is a single-quote-delimited JSON locator string
+*   e.g. "{'section_tipo':'rsc377','section_id':7}"
+* @returns {Promise<DocumentFragment|HTMLElement|null>} Resolves to:
+*   - A DocumentFragment containing the title + description nodes (existing note)
+*   - An HTMLElement with the "Create note" button (no note yet)
+*   - null if the locator was malformed (logged as a warning)
 */
 tag_note.prototype.render_indexation_note = async function(tag) {
 
@@ -86,9 +154,29 @@ tag_note.prototype.render_indexation_note = async function(tag) {
 
 /**
 * RENDER_EMPTY_NOTE
-* When tag have no data, a empty container with a new button is created
-* @param object tag
-* @return HTMLElement empty_note_container
+* Renders a placeholder container shown when a tag has no associated note yet.
+* The container holds a single "Create tag info note" button. Clicking it:
+*  1. Asks the user for confirmation.
+*  2. Calls `new_tag_note` to POST a new `rsc377` record.
+*  3. Writes the returned `section_id` back into the tag's `data` field via
+*     `transcription_component.update_tag`, then immediately saves the editor so
+*     the link is persisted even if the user navigates away.
+*  4. Clears `self.indexation_note` and re-renders the newly created note in place.
+*  5. Uses `when_in_viewport` to activate the title instance only once it enters
+*     the visible scroll area (avoids unnecessary DOM work for off-screen content).
+*
+* Side effects:
+*   - Mutates `self.indexation_note` (DOM container held by the tool UI).
+*   - Calls `self.transcription_component.save_editor()` immediately after tagging.
+*   - Sets `self.title_instance` so the caller can reference the rendered instance.
+*
+* (!) `alert()` is used on note-creation failure. This is a legacy browser pattern;
+*     Dédalo's notification system (event_manager.publish 'notification') is
+*     preferred for new code.
+*
+* @param {Object} tag - Tag descriptor from component_text_area.
+*   Shape: { tag_id: string, state: string, label: string, data: string }
+* @returns {HTMLElement} A div.empty_note containing the create button.
 */
 tag_note.prototype.render_empty_note = function(tag) {
 
@@ -192,9 +280,26 @@ tag_note.prototype.render_empty_note = function(tag) {
 
 /**
 * RENDER_NOTE
-* Render title and descriptions nodes after init and build the both instances
-* @param object options
-* @return HTMLElement fragment
+* Instantiates and builds the two note components (title + description) for an
+* existing note record and returns them in a DocumentFragment ready to append.
+*
+* Both components are created with `mode:'edit'` so the user can edit them
+* in-line. Their `.show_interface.tools` flag is set to false to suppress the
+* component's own toolbar (the tool provides its own UI chrome).
+*
+* After this call, `self.title_instance` is populated so that
+* `render_empty_note`'s `when_in_viewport` callback can reference it.
+*
+* Component types used:
+*   - DEDALO_INDEXATION_TITLE_TIPO       (rsc379) → model: component_input_text
+*   - DEDALO_INDEXATION_DESCRIPTION_TIPO (rsc380) → model: component_text_area
+*
+* @param {Object} options - Options object.
+* @param {Object} options.locator - Section locator for the note record.
+*   Shape: { section_tipo: string, section_id: number|string }
+*   Both fields are required; absence will cause get_instance to fail.
+* @returns {Promise<DocumentFragment>} Fragment containing the rendered title
+*   node followed by the rendered description node.
 */
 tag_note.prototype.render_note = async function(options) {
 
@@ -249,11 +354,25 @@ tag_note.prototype.render_note = async function(options) {
 
 /**
 * NEW_TAG_NOTE
-* Creates a new section record and returns the new section_id
-* @param object tag
-* @param string section_tipo
-* @return promise
-* 	resolve int|null new_section_id
+* Module-private async function that creates a new note section record via the
+* core data API and returns the new section_id on success.
+*
+* Sends a `create` RQO targeting the indexation-note section tipo. The server
+* allocates a new record and returns its integer id in `api_response.result`.
+*
+* Error handling: if `result` is absent, zero, or negative the function displays
+* an alert with the joined error messages from `api_response.errors` (or a
+* fallback string) and returns null.
+*
+* (!) Uses `alert()` on error — see note in render_empty_note. The `tag` parameter
+*     is only used in the fallback error message and for debug logging; it is not
+*     sent to the server.
+*
+* @param {Object} tag - Tag descriptor (used only for logging/error context).
+*   Shape: { tag_id: string, ... }
+* @param {string} section_tipo - Ontology tipo of the note section (rsc377).
+* @returns {Promise<number|null>} Resolves to the new section_id (positive integer)
+*   or null if creation failed.
 */
 const new_tag_note = async function(tag, section_tipo) {
 

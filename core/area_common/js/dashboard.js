@@ -4,16 +4,32 @@
 
 // imports
 	import {data_manager} from '../../common/js/data_manager.js'
+// (!) FLAG: `event_manager` is used in navigate_to_section (lines ~307, ~569) but is NOT
+// imported here and is NOT listed in the /*global*/ pragma. It is presumed to arrive in
+// scope from the caller module (area_common.js) at runtime.  This is fragile: if
+// dashboard.js is ever loaded independently the reference will throw ReferenceError.
+// Consider either importing event_manager from '../../common/js/event_manager.js'
+// or documenting the caller-injection contract explicitly.
 
 
+/**
+* CSS_VAR
+* Reads a CSS custom property from :root and returns its value, trimmed.
+* Falls back to `fallback` when the property is absent or empty, so that
+* module-level color constants track the active theme without being hard-coded.
+* @param {string} name     - CSS custom property name, e.g. '--color_primary'.
+* @param {string} fallback - Literal value returned when the property is unset.
+* @returns {string} Resolved value or fallback.
+*/
 // css_var. Reads a CSS custom property from :root with a literal fallback, so the
 // dashboard's default colors follow the active theme instead of being hardcoded.
 	const css_var = (name, fallback) => {
 		const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 		return v || fallback
 	}
-	// Default accent / muted used when a section has no configured color.
+	/** @var {string} DEFAULT_SECTION_COLOR - Accent color for sections without a configured color; resolves from --color_primary. */
 	const DEFAULT_SECTION_COLOR	= css_var('--color_primary', '#3b82f6')
+	/** @var {string} DEFAULT_MUTED_COLOR - Muted fallback used for the sunburst group average when no hex colors are available; resolves from --color_grey_7. */
 	const DEFAULT_MUTED_COLOR	= css_var('--color_grey_7', '#94a3b8')
 
 
@@ -28,24 +44,50 @@
 * Where `dashboard_data` is the object produced server-side by
 * `area_common::get_dashboard_data()`:
 *   {
-*     area_tipo, area_label, generated_at, metrics, sections: [
-*       { section_tipo, label, model, color, total, ... }
-*     ]
+*     area_tipo       {string}   — ontology identifier of the area
+*     area_label      {string}   — human-readable area title
+*     generated_at    {string}   — ISO timestamp of server generation
+*     metrics         {Object}   — arbitrary aggregated metrics (future use)
+*     sections        {Array}    — list of section descriptors:
+*       [{ section_tipo, label, model, color, total, recent_7d, ... }]
+*     activity_30d    {Object?}  — optional 30-day activity data:
+*       { days: [{date, by_section:{tipo:N}, by_user:{id:N}}],
+*         users: [{id, label}],
+*         available_ranges: [{key, label, days}] }
 *   }
+*
+* Rendering pipeline:
+*   1. Header (title + section/record count subtitle).
+*   2. KPI card grid with filter/sort toolbar — rendered synchronously.
+*   3. Chart block — lazy-loads D3 then upgrades when the host element has
+*      stable non-zero dimensions (ResizeObserver or rAF fallback).
+*   4. Activity timeline — appended only when activity_30d is present.
 *
 * D3 (lib/d3/d3-7.9.0) is lazy-loaded; the dashboard renders KPI cards first
 * and upgrades with charts once D3 is available, so it works without D3 too.
+*
+* Navigation contract: every chart element and card publishes 'user_navigation'
+* via `event_manager` (supplied by the caller scope) so the SPA router takes
+* over. Alt+click opens in a new tab instead.
 */
 
 
 
 /**
 * BUILD_DASHBOARD
-* @param object self
-* 	area instance (carries `tipo`, `mode`, `caller`, etc.)
-* @param object dashboard_data
-* 	Server payload (see header).
-* @return HTMLElement wrapper
+* Top-level entry point. Assembles the full dashboard DOM tree and appends
+* it to nothing — callers are expected to insert the returned element wherever
+* they need it (typically the area's main content container).
+*
+* Returns a minimal error state element when `dashboard_data` is absent or
+* malformed, so the caller never receives null and can safely append.
+*
+* D3 charts are triggered asynchronously after this function returns; the
+* returned `wrapper` element will be mutated once D3 has loaded and layout
+* dimensions are stable.
+* @param {Object} self          - Area instance (carries `tipo`, `mode`, `caller`, etc.).
+* @param {Object} dashboard_data - Server payload described in the module header.
+* @returns {HTMLElement} Fully assembled `.area_dashboard` wrapper element.
 */
 export const build_dashboard = function(self, dashboard_data) {
 
@@ -82,6 +124,20 @@ export const build_dashboard = function(self, dashboard_data) {
 				// Render each chart only when its host has stable non-zero dimensions.
 				// ResizeObserver is the most robust way to detect layout settlement;
 				// fallback to a double-rAF retry loop for older browsers.
+				/**
+				* RENDER_WHEN_READY
+				* Defers `render_fn` until `host` has non-zero width and is attached to the
+				* live DOM.  This avoids D3 charts drawing into zero-width containers, which
+				* would produce invisible or incorrectly scaled SVGs.
+				*
+				* Strategy A (modern): ResizeObserver fires once width > 0 and disconnects.
+				* Strategy B (fallback): rAF loop retries up to 60 frames (~1 s at 60 fps);
+				*   calls render_fn anyway on timeout so the chart appears even if the host
+				*   never reaches expected dimensions.
+				* @param {HTMLElement} host      - Container element to observe.
+				* @param {Function}   render_fn  - Zero-argument render callback.
+				* @returns {void}
+				*/
 				const render_when_ready = function(host, render_fn) {
 					// ResizeObserver path
 					if (typeof ResizeObserver !== 'undefined') {
@@ -142,8 +198,12 @@ export const build_dashboard = function(self, dashboard_data) {
 
 /**
 * BUILD_HEADER
-* @param object dashboard_data
-* @return HTMLElement
+* Builds the dashboard header: an `<h2>` title (area label or tipo fallback)
+* and a subtitle summarising the total section count and aggregate record count
+* across all sections that have a numeric `total` property.
+* @param {Object} dashboard_data - Full dashboard payload; reads `area_label`,
+*   `area_tipo`, and `sections[].total`.
+* @returns {HTMLElement} `.area_dashboard_header` div.
 */
 const build_header = function(dashboard_data) {
 
@@ -170,13 +230,18 @@ const build_header = function(dashboard_data) {
 
 /**
 * BUILD_CARDS
-* Wraps the KPI cards with a toolbar (live filter + sort selector) and
+* Wraps the KPI cards with a toolbar (live filter input + sort selector) and
 * renders the grid of section cards. Each card is clickable: navigates to
 * the section page using Dédalo's event-driven SPA navigation (user_navigation).
 * Cards include a `recent_7d` trend badge when the server payload provides it.
-* @param object self
-* @param object dashboard_data
-* @return HTMLElement wrapper containing toolbar + grid
+*
+* The grid is re-rendered in-place on every filter/sort change via the inner
+* `render_grid` closure; a 80 ms debounce prevents excessive re-renders while
+* the user types.  Sort options: total_desc (default), total_asc, label_asc,
+* label_desc, recent_desc.
+* @param {Object} self           - Area instance (not used directly; forwarded to build_card).
+* @param {Object} dashboard_data - Full dashboard payload; reads `sections`.
+* @returns {HTMLElement} `.area_dashboard_cards_block` div containing toolbar + grid.
 */
 const build_cards = function(self, dashboard_data) {
 
@@ -225,6 +290,15 @@ const build_cards = function(self, dashboard_data) {
 
 	const total_sections = dashboard_data.sections.length
 
+	/**
+	* RENDER_GRID
+	* Reads the current filter text and sort selection, derives the matching
+	* sorted subset of `dashboard_data.sections`, updates the summary badge,
+	* clears the grid container, and appends one card per visible section.
+	* Called on initial render and on every filter/sort event (debounced for
+	* the input, immediate for the select).
+	* @returns {void}
+	*/
 	const render_grid = function() {
 
 		const needle = filter_input.value.trim().toLowerCase()
@@ -283,12 +357,19 @@ const build_cards = function(self, dashboard_data) {
 * BUILD_CARD
 * Single KPI card: color stripe, label, big number, recent-activity trend
 * badge (when available), 30-day sparkline (when activity data exists),
-* and meta line.
-* @param object section
-* @param object|undefined dashboard_data
-* 	Optional full dashboard payload, used to build the per-card sparkline
-* 	from `activity_30d.days[].by_section[section_tipo]`.
-* @return HTMLElement
+* and a meta line showing the section tipo and model.
+*
+* Click behaviour:
+*   - Normal click  → publishes 'user_navigation' (SPA routing via event_manager).
+*   - Alt+click     → opens the section in a new browser tab.
+*
+* The CSS custom property `--accent` is set inline on the card element so the
+* color stripe and any hover effects pick up the section's configured color
+* without requiring a generated stylesheet.
+* @param {Object}        section        - Section descriptor from `dashboard_data.sections`.
+* @param {Object|undefined} dashboard_data - Full payload; forwarded to build_sparkline for
+*   the activity_30d series. May be undefined when called without activity data.
+* @returns {HTMLElement} `.area_dashboard_card` div.
 */
 const build_card = function(section, dashboard_data) {
 
@@ -361,12 +442,23 @@ const build_card = function(section, dashboard_data) {
 
 /**
 * BUILD_SPARKLINE
-* Inline SVG mini-chart showing daily activity counts for a single section
-* over the pre-loaded 30-day window. Pure SVG (no D3 dependency).
-* Returns null when there is no data or the series is entirely zero.
-* @param object section
-* @param object|undefined dashboard_data
-* @return SVGElement|null
+* Inline SVG mini-chart (100 × 22 viewBox) showing daily activity counts for a
+* single section over the pre-loaded 30-day window.  Pure SVG — no D3 dependency.
+*
+* The SVG contains three layers:
+*   1. Semi-transparent area fill under the line (fill-opacity 0.18).
+*   2. Stroke line (stroke-width 1.25, monotone).
+*   3. A filled circle at the peak-value day.
+* A `<title>` element provides an accessible tooltip with aggregate count,
+* peak value, and peak date.
+*
+* Returns `null` when:
+*   - `dashboard_data` or `activity_30d` is absent.
+*   - The `days` array has fewer than 2 entries.
+*   - All daily counts for this section are zero (flat-zero series suppressed).
+* @param {Object}           section        - Section descriptor; reads `section_tipo` and `color`.
+* @param {Object|undefined} dashboard_data - Full payload; reads `activity_30d.days`.
+* @returns {SVGElement|null} SVG element ready to append, or null when no data.
 */
 const build_sparkline = function(section, dashboard_data) {
 
@@ -451,14 +543,20 @@ const build_sparkline = function(section, dashboard_data) {
 /**
 * RENDER_SECTION_CHART
 * Owner of the "Records by section" chart area: renders a header with the
-* title and a chart-type selector (Bar / Pie / Treemap), keeps user choice
-* in localStorage, and re-renders the chart body on demand.
+* title and a chart-type selector (Bar / Pie / Treemap / Sunburst), keeps
+* the user's choice in localStorage under key `dedalo_dashboard_chart_type`,
+* and re-renders the chart body on demand.
+*
 * Click / Alt+click on any chart element navigates to the section list,
-* mirroring the KPI cards behaviour.
-* @param object d3
-* @param HTMLElement host	The `.area_dashboard_chart` container.
-* @param object dashboard_data
-* @return void
+* mirroring the KPI cards behaviour (via `navigate_to_section`).
+*
+* The inner `render` closure clears `body` and delegates to the appropriate
+* specific renderer (`render_bar_chart`, `render_pie_chart`, etc.) each time
+* the user switches chart type, so each renderer receives a clean container.
+* @param {Object}      d3             - D3 namespace (lazy-loaded by `load_d3`).
+* @param {HTMLElement} host           - The `.area_dashboard_chart` container; cleared on entry.
+* @param {Object}      dashboard_data - Full dashboard payload; forwarded to chart renderers.
+* @returns {void}
 */
 const render_section_chart = function(d3, host, dashboard_data) {
 
@@ -511,6 +609,13 @@ const render_section_chart = function(d3, host, dashboard_data) {
 		buttons[t.key] = btn
 		switcher.appendChild(btn)
 	}
+	/**
+	* UPDATE_ACTIVE
+	* Syncs the `is_active` CSS class and `aria-selected` attribute on all
+	* switcher buttons to reflect the current `current_type` value.
+	* Called on initial render and after each type-change click.
+	* @returns {void}
+	*/
 	const update_active = function() {
 		for (const t of types) {
 			buttons[t.key].classList.toggle('is_active', t.key === current_type)
@@ -527,6 +632,14 @@ const render_section_chart = function(d3, host, dashboard_data) {
 	body.classList.add('area_dashboard_chart_body')
 	host.appendChild(body)
 
+	/**
+	* RENDER
+	* Clears the chart body container and delegates to the appropriate
+	* specific renderer based on `current_type`.  Defined as a closure so
+	* it captures the mutable `current_type` variable updated by the switcher
+	* buttons.
+	* @returns {void}
+	*/
 	const render = function() {
 		body.innerHTML = ''
 		switch (current_type) {
@@ -552,11 +665,19 @@ const render_section_chart = function(d3, host, dashboard_data) {
 
 /**
 * NAVIGATE_TO_SECTION
-* Shared click handler used by every chart renderer so the navigation
+* Shared click/keydown handler used by every chart renderer so navigation
 * behaviour matches the KPI cards exactly.
-* @param object section	{section_tipo, model, ...}
-* @param Event|undefined ev
-* @return void
+*
+* - Alt+click: opens the section list in a new browser tab via `build_section_url`.
+* - Normal click (or Enter/Space from a chart renderer's keydown handler):
+*   publishes 'user_navigation' to the SPA event bus so the router
+*   transitions to the section's list view without a full page reload.
+*
+* (!) Relies on `event_manager` being available in scope (injected by caller
+* module); it is NOT imported in this file. See FLAG at the top of the file.
+* @param {Object}          section - Section descriptor; reads `section_tipo` and `model`.
+* @param {Event|undefined} ev      - The originating DOM event; checked for `altKey`.
+* @returns {void}
 */
 const navigate_to_section = function(section, ev) {
 
@@ -579,11 +700,23 @@ const navigate_to_section = function(section, ev) {
 
 /**
 * RENDER_BAR_CHART
-* Horizontal bar chart comparing section totals. Pure D3 (no external deps).
-* @param object d3
-* @param HTMLElement host	Body container (no title appended here).
-* @param object dashboard_data
-* @return void
+* Horizontal bar chart comparing section totals. Sections are sorted by total
+* descending; only the top 20 are shown by default (collapsed mode). A toggle
+* button is appended when there are more than 20 sections, re-calling this
+* function with `expanded = true` to show all.
+*
+* Layout constants (px): row_height=28, padding_left=180 (label column),
+* padding_right=48 (value label), padding_top=24, padding_bottom=32.
+* An invisible full-row rect overlays each bar group as a click/keyboard hit
+* target so clicking on the label or the whitespace also triggers navigation.
+*
+* SVG is sized to `host.offsetWidth` (synchronous layout) for reliable width
+* immediately after DOM insertion.
+* @param {Object}      d3             - D3 namespace.
+* @param {HTMLElement} host           - Body container; SVG is appended here.
+* @param {Object}      dashboard_data - Full dashboard payload; reads `sections`.
+* @param {boolean}     [expanded]     - When true, all sections are rendered (no fold).
+* @returns {void}
 */
 const render_bar_chart = function(d3, host, dashboard_data, expanded = false) {
 
@@ -739,12 +872,20 @@ const render_bar_chart = function(d3, host, dashboard_data, expanded = false) {
 /**
 * RENDER_PIE_CHART
 * Donut chart of section totals. Top 12 sections are shown individually;
-* the rest are grouped into a non-clickable "Other" slice to keep the chart
-* legible. Slices are clickable (SPA navigation), same as cards.
-* @param object d3
-* @param HTMLElement host
-* @param object dashboard_data
-* @return void
+* the rest are grouped into a non-clickable "Other (N)" slice to keep the
+* chart legible.  The donut center shows the grand total record count.
+*
+* A flex layout is built manually: D3 appends the SVG to `host`, then both
+* the SVG and a DOM legend are moved into a `.area_dashboard_chart_pie_layout`
+* wrapper for side-by-side display.
+*
+* Hover expands a slice via a separate `arc_hover` path (radius + 4 px) using
+* a 120 ms D3 transition. Only slices that are not the synthetic "Other" slice
+* are keyboard-focusable and navigable.
+* @param {Object}      d3             - D3 namespace.
+* @param {HTMLElement} host           - Body container; receives the flex layout wrapper.
+* @param {Object}      dashboard_data - Full dashboard payload; reads `sections`.
+* @returns {void}
 */
 const render_pie_chart = function(d3, host, dashboard_data) {
 
@@ -901,11 +1042,19 @@ const render_pie_chart = function(d3, host, dashboard_data) {
 * RENDER_TREEMAP_CHART
 * Treemap of section totals: each rectangle's area is proportional to the
 * section's total. Useful when there are many sections with widely different
-* sizes. Rectangles are clickable (SPA navigation).
-* @param object d3
-* @param HTMLElement host
-* @param object dashboard_data
-* @return void
+* sizes.  Rectangles are clickable (SPA navigation) and keyboard-accessible.
+*
+* Layout: D3 `treemap()` lays out a synthetic hierarchy
+*   `{ children: rows }` → `root.leaves()`.
+* Tiles are rendered as positioned `<div>` elements (not SVG) so CSS can style
+* text overflow naturally.  Label text and value text are only rendered when
+* the tile is wide enough (≥ 70 px) and tall enough (≥ 30 px / ≥ 46 px).
+*
+* Height is clamped between 280 px and 440 px; inner padding between tiles is 2 px.
+* @param {Object}      d3             - D3 namespace.
+* @param {HTMLElement} host           - Body container; receives a positioned div container.
+* @param {Object}      dashboard_data - Full dashboard payload; reads `sections`.
+* @returns {void}
 */
 const render_treemap_chart = function(d3, host, dashboard_data) {
 
@@ -987,15 +1136,28 @@ const render_treemap_chart = function(d3, host, dashboard_data) {
 
 /**
 * RENDER_SUNBURST_CHART
-* Two-ring sunburst:
-*   - Inner ring: sections grouped by `model` (area_label at the center).
-*   - Outer ring: individual sections, colored with their assigned color.
-* Outer-ring slices are clickable for SPA navigation; inner-ring slices
-* are informational (hover shows total + percentage).
-* @param object d3
-* @param HTMLElement host
-* @param object dashboard_data
-* @return void
+* Two-ring radial sunburst built with `d3.partition()`:
+*   - Inner ring: sections grouped by `model` (e.g. "section", "thesaurus").
+*     Fill color = average hex of the child sections' colors (via `average_hex`).
+*     Opacity: 0.65 (semi-transparent so the outer ring pops).
+*   - Outer ring: individual sections, colored with their assigned `section.color`.
+*     Opacity: 0.95.  These slices are clickable for SPA navigation.
+*   - Center label: grand total count + truncated area name.
+*
+* Hierarchy shape fed to `d3.hierarchy`:
+*   { name, _is_root: true, children: [
+*       { name: model, _is_group: true, children: [
+*           { name: label, section: <original>, value: total }
+*         ] }
+*     ] }
+*
+* Slice labels are rendered only when the arc angle span > 0.18 rad to avoid
+* label collisions on thin slices.  Labels are rotated along the arc midline;
+* labels past 90° are flipped 180° so text never appears upside-down.
+* @param {Object}      d3             - D3 namespace.
+* @param {HTMLElement} host           - Body container; SVG is appended here.
+* @param {Object}      dashboard_data - Full payload; reads `sections`, `area_label`, `area_tipo`.
+* @returns {void}
 */
 const render_sunburst_chart = function(d3, host, dashboard_data) {
 
@@ -1049,6 +1211,15 @@ const render_sunburst_chart = function(d3, host, dashboard_data) {
 		.innerRadius(d => d.y0)
 		.outerRadius(d => d.y1 - 1)
 
+	/**
+	* AVERAGE_HEX
+	* Computes the per-channel arithmetic mean of a list of 6-digit hex color
+	* strings to produce a blended fill for inner-ring group arcs.  Non-hex
+	* entries are silently skipped; falls back to DEFAULT_MUTED_COLOR when the
+	* list is empty or contains no parseable hex values.
+	* @param {string[]} hex_list - Array of strings like '#3b82f6' or '3b82f6'.
+	* @returns {string} Averaged hex color, e.g. '#7ab4d8'.
+	*/
 	// Average a list of hex colors for the inner-ring group color.
 	const average_hex = function(hex_list) {
 		if (!hex_list.length) return DEFAULT_MUTED_COLOR
@@ -1063,6 +1234,15 @@ const render_sunburst_chart = function(d3, host, dashboard_data) {
 		return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`
 	}
 
+	/**
+	* FILL_FOR
+	* Returns the CSS fill string for a D3 hierarchy node in the sunburst chart.
+	*   - Root node (_is_root):  transparent (hidden; only children are drawn).
+	*   - Group node (_is_group): average hex of child section colors.
+	*   - Leaf node (section):   section.color or DEFAULT_SECTION_COLOR.
+	* @param {Object} d - D3 hierarchy node carrying `.data` properties.
+	* @returns {string} CSS color value.
+	*/
 	// Resolve a fill color for any node.
 	const fill_for = function(d) {
 		if (d.data._is_root) return 'transparent'
@@ -1163,23 +1343,33 @@ const render_sunburst_chart = function(d3, host, dashboard_data) {
 
 /**
 * RENDER_ACTIVITY_TIMELINE
-* Stacked area chart showing daily activity over a selectable time range.
-* Each coloured band = one section; height = number of actions that day.
+* Stacked area / bar / line chart showing daily activity over a selectable
+* time range.  Each coloured band (or line) represents one section; the
+* height (or value) equals the number of recorded actions on that day.
 *
-* Default range (1 month) is pre-loaded in the dashboard payload.
-* Larger ranges (3m, 6m, 1y) are fetched on-demand via the
-* `get_activity_metric` API action and cached client-side.
+* Chart type is toggled between Area / Bars / Line with a switcher whose
+* selection is persisted in localStorage under `dedalo_dashboard_activity_chart_type`.
 *
-* Data source: dashboard_data.activity_30d = {
-*   days: [{ date, by_section: {tipo: N}, by_user: {id: N} }],
-*   users: [{ id, label }],
-*   available_ranges: [{ key, label, days }]
-* }
+* Time range selector:
+*   - 1 month (default): data pre-loaded in the server payload.
+*   - 3 m / 6 m / 1 y:  fetched on-demand via `fetch_range` and cached
+*     client-side in the `cache` map so the server is only hit once per range.
+*   - If the default 1-month range has no activity, the function auto-advances
+*     to the next wider range and pre-fetches it.
 *
-* @param object d3
-* @param HTMLElement host
-* @param object dashboard_data
-* @return void
+* After rendering the SVG, a DOM legend (one dot+label per section tipo) and,
+* when present, a top-5 user breakdown table are appended below the chart.
+*
+* Data source — `dashboard_data.activity_30d`:
+*   {
+*     days:             [{ date: string, by_section: {tipo: N}, by_user: {id: N} }]
+*     users:            [{ id: string|number, label: string }]
+*     available_ranges: [{ key: string, label: string, days: number }]
+*   }
+* @param {Object}      d3             - D3 namespace (lazy-loaded by `load_d3`).
+* @param {HTMLElement} host           - `.area_dashboard_activity` container element.
+* @param {Object}      dashboard_data - Full payload; reads `activity_30d` and `sections`.
+* @returns {void}
 */
 const render_activity_timeline = function(d3, host, dashboard_data) {
 
@@ -1258,6 +1448,12 @@ const render_activity_timeline = function(d3, host, dashboard_data) {
 		switcher_buttons[t.key] = btn
 		switcher.appendChild(btn)
 	}
+	/**
+	* UPDATE_SWITCHER_ACTIVE
+	* Syncs the `is_active` CSS class and `aria-selected` attribute on all
+	* activity chart-type switcher buttons to reflect `chart_type`.
+	* @returns {void}
+	*/
 	const update_switcher_active = function() {
 		for (const t of chart_types) {
 			switcher_buttons[t.key].classList.toggle('is_active', t.key === chart_type)
@@ -1284,6 +1480,12 @@ const render_activity_timeline = function(d3, host, dashboard_data) {
 	chart_container.classList.add('area_dashboard_activity_chart_container')
 	host.appendChild(chart_container)
 
+	/**
+	* SHOW_LOADING
+	* Replaces the chart container content with a `.area_dashboard_activity_loading`
+	* placeholder while an async range fetch is in progress.
+	* @returns {void}
+	*/
 	// Loading indicator
 	const show_loading = function() {
 		chart_container.innerHTML = ''
@@ -1293,6 +1495,27 @@ const render_activity_timeline = function(d3, host, dashboard_data) {
 		chart_container.appendChild(loader)
 	}
 
+	/**
+	* DRAW
+	* Clears `chart_container` and renders the selected chart type (area / bars /
+	* line) for the provided `activity_data` dataset.  This is the single
+	* re-renderable inner function — it is called on initial load, on range change,
+	* and on chart-type switch.
+	*
+	* Steps:
+	*   1. Collect the unique section tipos present in this dataset.
+	*   2. Pivot the days array into D3-stack-compatible row objects
+	*      `{ date, [tipo]: N, ... }`.
+	*   3. Build time (x) and linear (y) scales; y-domain differs by chart type
+	*      (stacked sum vs individual max).
+	*   4. Render gridlines, then the layer group via the appropriate branch
+	*      (bars / line / stacked area).
+	*   5. Add x-axis (D3 axisBottom with '%b %d' format) and y-axis.
+	*   6. Append a DOM legend and, when user data is available, a top-5 user
+	*      breakdown table.
+	* @param {Object} activity_data - Activity payload: `{ days, users, ... }`.
+	* @returns {void}
+	*/
 	// Inner render function — draws the stacked area for a given activity dataset
 	const draw = function(activity_data) {
 
@@ -1538,6 +1761,20 @@ const render_activity_timeline = function(d3, host, dashboard_data) {
 		}
 	}//end draw
 
+	/**
+	* FETCH_RANGE
+	* Retrieves the activity dataset for `range_key` (e.g. '3m', '6m', '1y').
+	* Results are stored in the module-local `cache` map so the API is only
+	* called once per range per page load.
+	*
+	* API action: `get_activity_metric` on `dd_core_api`.
+	* Request options: `{ area_tipo, range_days }`.
+	* On error or missing `api_response.data`, returns null (caller falls back
+	* to the default 1-month dataset).
+	* @param {string} range_key - One of the keys from `ranges` (e.g. '3m').
+	* @returns {Promise<Object|null>} Activity payload matching the structure of
+	*   `activity_30d`, or null on failure.
+	*/
 	// Fetch activity data for a range key (on-demand, cached)
 	const fetch_range = async function(range_key) {
 
@@ -1571,6 +1808,14 @@ const render_activity_timeline = function(d3, host, dashboard_data) {
 		return null
 	}
 
+	/**
+	* HAS_ANY_ACTIVITY
+	* Returns true when `activity_data.days` contains at least one day with
+	* non-empty `by_section` data.  Used to decide whether to skip the default
+	* range and auto-advance to the next wider range on initial render.
+	* @param {Object} activity_data - Activity payload to inspect.
+	* @returns {boolean}
+	*/
 	// Helper: check if a dataset has any actual activity
 	const has_any_activity = function(activity_data) {
 		if (!activity_data || !Array.isArray(activity_data.days)) return false
@@ -1626,8 +1871,19 @@ const render_activity_timeline = function(d3, host, dashboard_data) {
 
 /**
 * LOAD_D3
-* Lazy import the bundled D3 build. Returns the d3 namespace or null on failure.
-* @return Promise<object|null>
+* Lazy-imports the bundled D3 build from `DEDALO_ROOT_WEB/lib/d3/d3-7.9.0/dist/d3.min.js`.
+* The resolved namespace is cached on `window.__dedalo_d3` so multiple area page
+* loads within the same tab share a single import and avoid the module loading
+* overhead.
+*
+* Resolution order for the d3 export:
+*   1. `mod.default` (ES module default export).
+*   2. `mod` itself (named re-export bundle).
+*   3. `window.d3` (UMD global fallback when D3 was loaded as a script tag).
+*
+* Returns null when D3 cannot be loaded (network error, CSP block, etc.) so
+* callers can degrade gracefully.
+* @returns {Promise<Object|null>} Resolved D3 namespace or null on failure.
 */
 const load_d3 = async function() {
 
@@ -1663,9 +1919,11 @@ const load_d3 = async function() {
 /**
 * BUILD_SECTION_URL
 * Returns a URL pointing to the section list page for the given section descriptor.
-* Used by cards for alt+click new-tab behaviour. Mirrors the menu tree URL pattern.
-* @param object section
-* @return string
+* Used by cards and chart elements for Alt+click new-tab behaviour.
+* Mirrors the query-string URL pattern used by the Dédalo SPA router / menu tree:
+*   `<current-pathname>?tipo=<section_tipo>&mode=list`
+* @param {Object} section - Section descriptor; reads `section_tipo`.
+* @returns {string} URL string suitable for `window.open` or an `href`.
 */
 const build_section_url = function(section) {
 
@@ -1680,9 +1938,13 @@ const build_section_url = function(section) {
 
 /**
 * FORMAT_NUMBER
-* Locale-aware grouping (e.g. 12,345). Falls back to plain string.
-* @param number n
-* @return string
+* Locale-aware integer formatting with thousands grouping (e.g. 12,345).
+* Uses `Intl.NumberFormat` with no locale hint, so the browser's default
+* locale determines the separator character.
+* Falls back to `String(n)` when `n` is not a finite number or when
+* `Intl.NumberFormat` throws (e.g. in sandboxed environments).
+* @param {number} n - The number to format.
+* @returns {string} Formatted string, or an empty string when `n` is nullish/non-finite.
 */
 const format_number = function(n) {
 
@@ -1700,10 +1962,13 @@ const format_number = function(n) {
 
 /**
 * TRUNCATE
-* Clamp string length, append ellipsis when cut.
-* @param string s
-* @param number max
-* @return string
+* Clamps a string to at most `max` characters, appending a UTF-8 ellipsis
+* character ('…') when the string is cut.  The ellipsis counts toward the
+* character budget (the visible result is always ≤ `max` chars).
+* Returns an empty string when `s` is not a string.
+* @param {string} s   - String to truncate.
+* @param {number} max - Maximum character count (inclusive of ellipsis when added).
+* @returns {string} Original string or truncated version with trailing '…'.
 */
 const truncate = function(s, max) {
 

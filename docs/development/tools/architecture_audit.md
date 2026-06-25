@@ -31,7 +31,7 @@ Its main weakness is that it is **insider-oriented**. The contracts that make a 
 
 ### 2.2 Registration lifecycle
 
-```
+```text
 Maintenance UI "Register tools"
   → tools_register::import_tools()                 (class.tools_register.php:126)
     → get_valid_tool_directories()                 (:193)  scan DEDALO_TOOLS_PATH for tool_* dirs
@@ -300,7 +300,7 @@ Cross-cutting, every phase:
 
 For reference, the verified current minimum to ship a tool, which the roadmap above progressively shrinks:
 
-```
+```text
 tools/tool_example/
 ├── class.tool_example.php      extends tool_common; const API_ACTIONS;
 │                               public static function action(object $options): object

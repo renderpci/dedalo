@@ -1,19 +1,17 @@
 # dd_tools_api
 
-Overview
+> See also: [JSON API v1](../dedalo_api_v1.md) · [Tools reference](../../development/tools/reference/index.md)
 
-- API for user tools and tool requests.
+API for user tools and tool requests.
 
-How to call
+## How to call
 
 - POST JSON with `dd_api: "dd_tools_api"` and `action` set to `user_tools` or `tool_request`.
 
-Common fields
+## Common fields
 
-- `source` provides tool/context information (for `tool_request`).
+- `source` provides tool and context information (for `tool_request`, `source.model` is the tool name and `source.action` is the tool method).
 - `options` holds tool-specific parameters; `options.ar_requested_tools` can filter `user_tools`.
-
-Methods
 
 ## user_tools
 
@@ -69,3 +67,4 @@ Methods
   "msg": "Reindex completed",
   "errors": []
 }
+```

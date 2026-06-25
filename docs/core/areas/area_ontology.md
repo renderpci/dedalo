@@ -242,7 +242,7 @@ re-declare them.
     branch in the existing shared code is the right place — the two areas are
     intentionally kept as one machine.
 
-## How it fits with the rest of Dedalo
+## How it fits with the rest of Dédalo
 
 - **[area_thesaurus](area_thesaurus.md)** — the parent class; `area_ontology` is
   the same editor retargeted. Read it for the full method behaviour.

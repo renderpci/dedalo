@@ -1,4 +1,4 @@
-# Architecture Overview
+# Architecture overview
 
 This is the "how it all fits together" map of Dédalo v7. It is written for a
 developer who has just cloned the repository and wants the mental model before

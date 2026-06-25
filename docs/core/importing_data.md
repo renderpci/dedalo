@@ -1,22 +1,26 @@
 # Importing data
 
+> See also: [Exporting data](exporting_data.md) · [Locator](locator.md) · [Component dataframe](components/component_dataframe.md) · [Glossary](glossary.md)
+
+How to prepare and import data into Dédalo from CSV files, covering the v7 data format, per-component formats, and the locator-based relation model.
+
 ## Introduction
 
-To import data is an important part of Dédalo projects. Dédalo is a high structured data system, Dédalo manage literal data and relationships between data. Data normalization is inside the core of the application. Mainly Dédalo use lists, thesaurus, resources and other related sections to define his data.
+Importing data is an important part of Dédalo projects. Dédalo is a highly structured data system; it manages literal data and relationships between data. Data normalization is at the core of the application. Dédalo mainly uses lists, thesauri, resources and other related sections to define its data.
 
-Dédalo data model has a abstraction layer that use the ontology definitions to create components (as fields) and sections (as tables).
+The Dédalo data model has an abstraction layer that uses the ontology definitions to create components (as fields) and sections (as tables).
 
 ??? note "About plain text / non-normalized data"
 
-    Lots of catalogues in museums have a previous cataloging system, sometimes do it by itself in commercial applications as FileMaker, Access, etc. and sometimes this data has not structure and is saved as plain text without normalization. This situation create a lots of data inconsistencies that could generate a very difficult situations to resolve. Dédalo can import plain text without any structuring but it is not recommended. If you want import this kind of data, we recommend to do a clean process before import to Dédalo.
+    Lots of catalogues in museums have a previous cataloging system, sometimes created themselves in commercial applications such as FileMaker, Access, etc., and sometimes this data has no structure and is saved as plain text without normalization. This situation creates a lot of data inconsistencies that can lead to situations that are very difficult to resolve. Dédalo can import plain text without any structuring, but it is not recommended. If you want to import this kind of data, we recommend running a cleaning process before importing it into Dédalo.
 
 ## Format
 
-Dédalo use the [standard CSV](https://datatracker.ietf.org/doc/html/rfc4180) to import data with [UTF-8](http://www.unicode.org/versions/latest/) encoding without BOM (Byte Order Mark).
+Dédalo uses the [standard CSV](https://datatracker.ietf.org/doc/html/rfc4180) to import data with [UTF-8](http://www.unicode.org/versions/latest/) encoding without BOM (Byte Order Mark).
 
 !!! warning
 
-    Any other encoding different of UTF are not supported. Bad encoding files could break the import process at any time and the data imported could has typos and errors.
+    Any encoding other than UTF is not supported. Badly encoded files can break the import process at any time, and the imported data could have typos and errors.
 
 ??? note "Byte Order Mark (BOM)"
 
@@ -26,7 +30,7 @@ Dédalo use the [standard CSV](https://datatracker.ietf.org/doc/html/rfc4180) to
 
     *... Use of a BOM is neither required nor recommended for UTF-8, but may be encountered in contexts where UTF-8 data is converted from other encoding forms that use a BOM or where the BOM is used as a UTF-8 signature. See the “Byte Order Mark” subsection in Section 23.8, Specials, for more information...*
 
-By default Dédalo use a stringify JSON encoding in UTF-8 with double quotes `""` escaped marks for the data.
+By default Dédalo uses a stringified JSON encoding in UTF-8 with double-quote `""` escape marks for the data.
 
 Example of [locator](locator.md):
 
@@ -42,7 +46,7 @@ Will need to be encoded in CSV format as:
 
 > "\[{""type"":""dd151"",""section_id"":""2"",""section_tipo"":""rsc723""}]"
 
-But is possible to use a plain text to import flat data.
+But you can use plain text to import flat data.
 
 Example of text:
 
@@ -66,23 +70,23 @@ It will need to be encoded in CSV format as:
 
 ## File nomenclature (optional)
 
-Is highly recommended to use only [accii](https://itscj.ipsj.or.jp/ir/006.pdf) characters in the name of import files, so try to use names without spaces, accents or any special character.
+It is highly recommended to use only [ASCII](https://itscj.ipsj.or.jp/ir/006.pdf) characters in the name of import files, so try to use names without spaces, accents or any special character.
 
 ### Adding the section to the filename
 
-Filenames can be using to detect the section automatically when import, is possible specify it in this way:
+Filenames can be used to detect the section automatically on import; you can specify it in this way:
 
 > my_name_to_identify_data-section_tipo.csv
 
-Example, file with interviews data to import in Interviews section [oh1](https://dedalo.dev/ontology/oh1):
+Example, a file with interviews data to import into the Interviews section [oh1](https://dedalo.dev/ontology/oh1):
 
 > interviews_2015-oh1.csv
 
-But is possible indicate the destination section in the import CSV tool.
+But you can indicate the destination section in the import CSV tool.
 
 ## Using editors
 
-Is possible use a editor to create the CSV import files. If you want to use spreadsheet editor as LibreOffice [Calc](https://www.libreoffice.org/discover/calc/), remember that you will need to export CSV with UTF-8 encoding.
+You can use an editor to create the CSV import files. If you want to use a spreadsheet editor such as LibreOffice [Calc](https://www.libreoffice.org/discover/calc/), remember that you will need to export the CSV with UTF-8 encoding.
 
 ## Using a spreadsheet
 
@@ -92,7 +96,7 @@ Every CSV import file represents a single section. If you need to import multipl
 
 > my_import_types-numisdata3.csv
 
-Every column represent a component(field) and every row represent a record, data will be the cell that crosses the column and the row.
+Every column represents a component (field) and every row represents a record; the data is the cell that crosses the column and the row.
 
 | column A | column B | column X |
 | -------- | -------- | -------- |
@@ -101,20 +105,20 @@ Every column represent a component(field) and every row represent a record, data
 
 ### Defining the target component in the column name
 
-Every column in the first row in the file, the head, will content the ontology tipo of the target component of the section to be imported. At least one column need to be set as the section_id to identify the column with the unique id, by convention it will be the first one, but it is not mandatory.
+Every column in the first row of the file, the head, contains the ontology tipo of the target component of the section to be imported. At least one column must be set as the section_id to identify the column with the unique id; by convention it is the first one, but this is not mandatory.
 
-To import the component `Key` [numisdata81](https://dedalo.dev/ontology/numisdata81) and the component `Number` [numisdata27](https://dedalo.dev/ontology/numisdata27) as fields do the `Types` section [numisdata3](https://dedalo.dev/ontology/numisdata3), you will need to create a CSV as:
+To import the component `Key` [numisdata81](https://dedalo.dev/ontology/numisdata81) and the component `Number` [numisdata27](https://dedalo.dev/ontology/numisdata27) as fields of the `Types` section [numisdata3](https://dedalo.dev/ontology/numisdata3), you will need to create a CSV as:
 
 | section_id | numisdata81 | numisdata27 |
 | --- | --- | --- |
 | 1 | \[{"value":"key1"}] | \[{"value":"062"}] |
 | 2 | \[{"value":"key2"}] | \[{"value":"685a"}] |
 
-!!! note "Columns with names instead ontology tipo"
+!!! note "Columns with names instead of the ontology tipo"
 
-    Is possible use "human" names in the columns, but the import tool will not match with the component and you will need to set manually before import.
+    You can use "human" names in the columns, but the import tool will not match them to the component and you will need to set it manually before import.
 
-    the previous CSV could be named in this way:
+    The previous CSV could be named in this way:
 
     | id  | Key | Number |
     | --- | --- | ------ |
@@ -131,7 +135,7 @@ You can know the ontology tipo of the component picking one component and Dédal
 
 ![getting component information](assets/20230825_140121_getting_component_info.png)
 
-Besides, Dédalo will show the component data format and it is possible to copy it, as `[{"value":"062"}]`.
+Besides, Dédalo shows the component data format and you can copy it, as `[{"value":"062"}]`.
 
 Also you can check the ontology [here](https://dedalo.dev/ontology).
 
@@ -209,7 +213,7 @@ Canonical v7 input, array of objects with `value`:
 
 #### Multiple languages
 
-For translatable components, is possible to import multiple languages at once in two equivalent ways:
+For translatable components you can import multiple languages at once in two equivalent ways:
 
 1. **Flat v7 array** (the stored v7 format, as produced by the raw export): every item carries its own `lang` property:
 
@@ -246,7 +250,7 @@ In both cases every language present in the import value replaces that language 
     --- | ---
     1 | new data to import
 
-    The import process assume the Dédalo data lang defined by the user in menu and will import the value as unique value in the array. If exists previous data in that lang it will be replaced with a new array with the import value.
+    The import process assumes the Dédalo data lang defined by the user in the menu and imports the value as the single value in the array. If previous data exists in that lang, it is replaced with a new array holding the import value.
 
 2. An array of string values (v6 format)
 
@@ -254,7 +258,7 @@ In both cases every language present in the import value replaces that language 
     --- | ---
     1 | \["mi dato para importar","Otro dato"]
 
-    The import process assume the Dédalo data lang defined by the user in menu and will save into this lang, or if the component is non translatable will use `lg-nolan`. Each string will be automatically wrapped into a v7 object with `value` property.
+    The import process assumes the Dédalo data lang defined by the user in the menu and saves into this lang, or, if the component is non-translatable, uses `lg-nolan`. Each string is automatically wrapped into a v7 object with a `value` property.
 
 3. Multi-language object with plain strings
 
@@ -270,7 +274,7 @@ In both cases every language present in the import value replaces that language 
 
 Components: `component_text_area` and `component_html_text`.
 
-Dédalo uses standard HTML format to import formatted text. As Dédalo use ck-editor as text editor, HTML tags accepted are the same than [ck-editor](https://ckeditor.com/docs/ckeditor5/latest/features/basic-styles.html#available-text-styles):
+Dédalo uses standard HTML format to import formatted text. As Dédalo uses CKEditor as its text editor, the accepted HTML tags are the same as [CKEditor](https://ckeditor.com/docs/ckeditor5/latest/features/basic-styles.html#available-text-styles):
 
 1. `text_area` accepts:
 
@@ -311,7 +315,7 @@ Besides, import format text support some compatible elements and CSS styles:
 ```
 
 !!! note
-    This elements and styles will be changed to elements supported in the import process.
+    These elements and styles are changed to supported elements during the import process.
 
 Canonical v7 input:
 
@@ -364,21 +368,21 @@ section_id;numisdata18
     --- | ---
     1 | `["<p>El meu text per <strong>importar</strong></p>","<p>Altra dada</p>"]`
 
-In the flat string cases the import process assume the Dédalo data lang defined by the user in menu and will import the value as unique value in the array, replacing previous data of that lang.
+In the flat string cases the import process assumes the Dédalo data lang defined by the user in the menu and imports the value as the single value in the array, replacing previous data of that lang.
 
 #### Indexation tags
 
-Dédalo use a non standard HTML tags to define `indexation` `tags`, `tc`, `person`, `language`, `notes` and `references`.
+Dédalo uses non-standard HTML tags to define `indexation` `tags`, `tc`, `person`, `language`, `notes` and `references`.
 
-The main format of this tags follow this rules:
+The main format of these tags follows these rules:
 
-1. The tag is enclosing by `[]`
-2. the element are separated by `-` character
+1. The tag is enclosed by `[]`
+2. the elements are separated by the `-` character
 3. the first element is `tag_name` with the standard name of the tag
 4. the second element is the `state` of the tag with n|r|d options, n=normal, r=to review, d=deleted.
 5. unique id of the tag, int.
 6. data::data enclosing the locator in the case that this tag has a link to any data.
-7. locator is stringify version with double quotes `"` remplace with simple quotes `'`
+7. locator is a stringified version with the double quotes `"` replaced with simple quotes `'`
 
 ```text
 [tag_name-state-id-label-data:locator:data]
@@ -386,7 +390,7 @@ The main format of this tags follow this rules:
 
 ##### index
 
-index tag define a fragment inside of formatted text, index tag has a in and out format, the fragment will be in the middle of this tags.
+The index tag defines a fragment inside formatted text. The index tag has an in and out format; the fragment sits in the middle of these tags.
 
 ###### indexIn
 
@@ -406,9 +410,9 @@ Example:
 
 ##### tc
 
-Tc tag are using to point a specific audiovisual timecode at the beginning of paragraphs, it use to create a time relation between text and his audiovisual time.
+The tc tag is used to point to a specific audiovisual timecode at the beginning of paragraphs; it is used to create a time relation between the text and its audiovisual time.
 
-tc tags has his own format, the tc is enclosing by `TC_` and `_TC` marks.
+The tc tag has its own format: the tc is enclosed by `TC_` and `_TC` marks.
 
 ```text
 [TC_hh:mm:ss.ms_TC]
@@ -419,7 +423,7 @@ Example:
 
 ##### lang
 
-The lang tag is used to mark the change from the previous language. Example, an interview in Catalan in which the interviewee begin to speak in French.
+The lang tag is used to mark the change from the previous language. Example, an interview in Catalan in which the interviewee begins to speak in French.
 
 > \[lang-a-1-spa-data:['lg-spa']:data]
 
@@ -449,13 +453,13 @@ Example:
 
 ##### person
 
-The person tag is used to mark a person that is begin to talk. The tag use a locator to point into People under study [rsc197](https://dedalo.dev/ontology/rsc197) section.
+The person tag is used to mark a person who begins to talk. The tag uses a locator to point to the People under study [rsc197](https://dedalo.dev/ontology/rsc197) section.
 
 > \[person-a-1-Pedpi-data:{'section_tipo':'rsc197','section_id':'1','component_tipo':'oh24'}:data]
 
 ##### note
 
-The note tag is used to add a annotation in text. The annotation use a locator to point to Annotations [rsc326](https://dedalo.dev/ontology/rsc326) section. The state of the note could be a | b, a=private, b=public.
+The note tag is used to add an annotation in text. The annotation uses a locator to point to the Annotations [rsc326](https://dedalo.dev/ontology/rsc326) section. The state of the note can be a | b, a=private, b=public.
 
 Example:
 
@@ -463,7 +467,7 @@ Example:
 
 ##### reference
 
-The reference tag is used to a link to any other section. It use the locator to point at any other sections. The reference works pointed as HTML `<a href><a>` element. References has a in and out tag to indicate the beginning and end fo the reference.
+The reference tag is used to link to any other section. It uses the locator to point at any other section. The reference works like an HTML `<a href><a>` element. References have an in and out tag to indicate the beginning and end of the reference.
 
 ###### referenceIn
 
@@ -477,7 +481,7 @@ The reference tag is used to a link to any other section. It use the locator to 
 
 ### Numbers
 
-Component: `component_number`. The component do not use languages.
+Component: `component_number`. The component does not use languages.
 
 Canonical v7 input:
 
@@ -500,7 +504,7 @@ section_id;numisdata133
     | ----------- | ------------ |
     | 1           | 33.85        |
 
-    The import process assume this data as the full data, if exists previous data it will be replaced with a new array with the import value.
+    The import process assumes this data is the full data; if previous data exists, it is replaced with a new array holding the import value.
 
     The decimal separator (`.` or `,`) can be selected in the import tool for every number column.
 
@@ -514,7 +518,7 @@ section_id;numisdata133
 
 ### Email
 
-Component: `component_email`. The component do not use languages.
+Component: `component_email`. The component does not use languages.
 
 Canonical v7 input:
 
@@ -543,7 +547,7 @@ section_id;tch442
     | ----------- | ------ |
     | 1           | user@example.com \| admin@example.com |
 
-    will be parse as:
+    will be parsed as:
 
     ```json
     [{"value":"user@example.com"},{"value":"admin@example.com"}]
@@ -563,7 +567,7 @@ section_id;tch442
 
 ### Dates
 
-Component: `component_date`. The component do not use languages. The main format to import is the array of objects with `start` and optional `end` dd_date values.
+Component: `component_date`. The component does not use languages. The main format to import is the array of objects with `start` and optional `end` dd_date values.
 
 Canonical v7 input:
 
@@ -618,7 +622,7 @@ section_id;tch56
     2023/10/26<>2023/10/27
     ```
 
-    The '<>' separator indicate the range with the start date at left and end date at right.
+    The '<>' separator indicates the range, with the start date on the left and the end date on the right.
 
     ```json
     [{
@@ -635,19 +639,19 @@ section_id;tch56
     }]
     ```
 
-    Is possible to leave spaces between dates and the separator.
+    You can leave spaces between dates and the separator.
 
     ```text
     -150 <>      238
     ```
 
-    Is a valid range date, but the separator will be always in same format, a space between marks are not allowed:
+    is a valid range date, but the separator must always keep the same format; a space between the marks is not allowed:
 
     ```text
     -150< >238
     ```
 
-    it's not a valid range.
+    is not a valid range.
 
     It's allowed to use different [formats](#using-other-date-formats) indicating it in the name of the header as tch56_dmy.
 
@@ -668,9 +672,9 @@ section_id;tch56
     2023/10/26|1853/02/18
     ```
 
-    The '|' separator indicate multiple values. The values are not a star <> end dates, both are start dates, the second one is the start date of the second value.
+    The '|' separator indicates multiple values. The values are not start <> end dates; both are start dates, and the second one is the start date of the second value.
 
-    The previous string date will be parse as:
+    The previous string date will be parsed as:
 
     ```json
     [
@@ -691,7 +695,7 @@ section_id;tch56
     ]
     ```
 
-    Is possible to leave spaces between dates and the separator.
+    You can leave spaces between dates and the separator.
 
     ```text
     -150 |          -25
@@ -716,9 +720,9 @@ section_id;tch56
     2023/10/26<>2023/10/27|1853/02/18
     ```
 
-    To define multiple values with ranges is possible to use a combination of the '|' to indicate the multi value and the '<>' to indicate the range.
+    To define multiple values with ranges you can use a combination of the '|' to indicate the multi value and the '<>' to indicate the range.
 
-        The previous string date will be parse as two date values with the range of the first value with star and end dates:
+        The previous string date will be parsed as two date values, with the range of the first value having start and end dates:
 
     ```json
     [
@@ -744,7 +748,7 @@ section_id;tch56
     ]
     ```
 
-    Is possible leave a part of the range blank:
+    You can leave part of the range blank:
 
     ```text
     2023/10/26|<>1853/02/18
@@ -769,7 +773,7 @@ section_id;tch56
     ]
     ```
 
-    Is possible to leave spaces between dates and the separators.
+    You can leave spaces between dates and the separators.
 
     ```text
     2023/10/26 |   <>  1853/02/18
@@ -790,23 +794,23 @@ section_id;tch56
 
 ##### Using other date formats
 
-By default the string date formats use \[-]y/m/d, but its possible to import the date in other formats indicating in the column header the format as second parameter after the tipo, using the `_ as character between them.
+By default the string date formats use \[-]y/m/d, but you can import the date in other formats by indicating the format in the column header as a second parameter after the tipo, using the `_` character between them.
 
 | section_id | tch56_dmy |
 | ---------- | --------- |
 | 1          | 05/-205   |
 
-Is possible to use this formats
+You can use these formats
 
 | Format | Description |
 | --- | --- |
-| ymd | year/moth/day as 2023/10/26 |
-| mdy | moth/day/year as 10/26/2023 |
-| dmy | day/moth/year as 26/10/2023 |
+| ymd | year/month/day as 2023/10/26 |
+| mdy | month/day/year as 10/26/2023 |
+| dmy | day/month/year as 26/10/2023 |
 
 ##### Using other separators
 
-Default separator between day moth and year is `/` but is possible to use `-` and `.`
+The default separator between day, month and year is `/`, but you can use `-` and `.`
 
 ```text
 20-10-1945
@@ -828,9 +832,9 @@ Default separator between day moth and year is `/` but is possible to use `-` an
 
 #### Understanding relationships between data
 
-Dédalo use a data relation model based in [locators](locator.md), sections are connected between them with locators. Any related data is connected by locators, a list showed in a select is connected by locators, a image inside a section is connected by locators. Dédalo uses locators everywhere.
+Dédalo uses a data relation model based on [locators](locator.md); sections are connected to each other with locators. Any related data is connected by locators: a list shown in a select is connected by locators, an image inside a section is connected by locators. Dédalo uses locators everywhere.
 
-Locators are extensible connection between data and can be point to full section, component inside section or a part of the components inside a section. Besides, locators can create links to external data.
+Locators are an extensible connection between data and can point to a full section, a component inside a section, or a part of the components inside a section. Besides, locators can create links to external data.
 
 When you want to import data with relations, you will use locators.
 
@@ -858,8 +862,8 @@ erDiagram
     }
 ```
 
-It say that Type 1 has a link with Mint 5.
-The field Mint [numisdata30](https://dedalo.dev/ontology/numisdata30) in the section Types [numisdata3](https://dedalo.dev/ontology/numisdata3) has lint to id 5 of section Mints [numisdata6](https://dedalo.dev/ontology/numisdata6)
+It says that Type 1 has a link with Mint 5.
+The field Mint [numisdata30](https://dedalo.dev/ontology/numisdata30) in the section Types [numisdata3](https://dedalo.dev/ontology/numisdata3) has a link to id 5 of the section Mints [numisdata6](https://dedalo.dev/ontology/numisdata6)
 
 In Dédalo format it will be:
 
@@ -891,7 +895,7 @@ And it could be represented in CSV spreadsheet columns in this way:
 
 #### Importing
 
-By default import model use the JSON format of his data, an array of [locator](locator.md).
+By default the import model uses the JSON format of its data, an array of [locators](locator.md).
 
 ```json
 [{"type":"dd151","section_id":"2","section_tipo":"rsc723","from_component_tipo":"tch191"}]
@@ -912,7 +916,7 @@ section_id;tch191
 1;"[{""type"":""dd151"", ""section_id"":""2"", ""section_tipo"":""rsc723"", ""from_component_tipo"":""tch191""}]"
 ```
 
-It's possible remove the `type` and `from_component_tipo` properties because the head of the columns specify the value of `from_component_tipo` and the component knows his own `type`. So, is possible to define previous locator to import in this way:
+You can remove the `type` and `from_component_tipo` properties because the column head specifies the value of `from_component_tipo` and the component knows its own `type`. So you can define the previous locator to import in this way:
 
 ```json
 [{"section_id":"2","section_tipo":"rsc723"}]
@@ -926,7 +930,7 @@ It's possible remove the `type` and `from_component_tipo` properties because the
     1,4,6
     ```
 
-    To import this data, is necessary specify, in the column head of the component, the section_tipo using the `_ character to between them:
+    To import this data, you must specify, in the column head of the component, the section_tipo using the `_` character between them:
 
     `component_tipo + '_' + section_tipo`
 
@@ -934,7 +938,7 @@ It's possible remove the `type` and `from_component_tipo` properties because the
 
      **tch191_rsc723**
 
-    In this case the import process assume that all int values are section_id, the section_tipo become from the second tipo in the name of column head, from_component_tipo become from the first tipo in the name of column head and type is calculated asking to the component in server.
+    In this case the import process assumes that all int values are section_id, the section_tipo comes from the second tipo in the column head, from_component_tipo comes from the first tipo in the column head, and type is calculated by asking the component on the server.
 
     Example:
 
@@ -942,7 +946,7 @@ It's possible remove the `type` and `from_component_tipo` properties because the
     | --- | --- |
     | 1   | 1,4,6 |
 
-    will be parse as:
+    will be parsed as:
 
     ```json
     [
@@ -952,11 +956,11 @@ It's possible remove the `type` and `from_component_tipo` properties because the
     ]
     ```
 
-    When the component point to multiple sections this import way will not respect other sections values in his data. Previous data pointed to other sections, than the section indicate in the head, will be removed.
+    When the component points to multiple sections, this import method does not preserve other sections' values in its data. Previous data pointing to sections other than the one indicated in the head is removed.
 
     1. Importing unique values
 
-        Is possible import unique int as section_tipo
+        You can import a single int as section_tipo
 
         Example:
 
@@ -966,7 +970,7 @@ It's possible remove the `type` and `from_component_tipo` properties because the
 
     2. Removing section_tipo reference in head.
 
-        Is possible remove the section_tipo in the head of the column when the component use only 1 pointed section.
+        You can remove the section_tipo in the head of the column when the component points to only 1 section.
 
         Example:
 
@@ -975,9 +979,9 @@ It's possible remove the `type` and `from_component_tipo` properties because the
         | 1 | 1,4,6 |
 
         !!! warning "Components using with multiple sections"
-            This possibility is only available when the component point to 1 section. Multiple sections are not allowed to import in this way.
+            This possibility is only available when the component points to 1 section. Multiple sections cannot be imported in this way.
 
-        In this case the import process will ask to component in the server to get the section_tipo to be used, if the component has multiple sections it will fail to import, to avoid errors and inconsistencies
+        In this case the import process asks the component on the server for the section_tipo to be used; if the component has multiple sections it fails to import, to avoid errors and inconsistencies.
 
 ---
 
@@ -1023,7 +1027,7 @@ Lang codes must be **lowercase** alphanumeric with the `lg-` prefix (`lg-spa`, `
 
 ### Geolocation
 
-Component: `component_geolocation`. The component do not use languages. The data is an array with one item defining the map center (`lat`, `lon`), the map state (`zoom`, `alt`) and, optionally, the drawn shapes as GeoJSON layers (`lib_data`).
+Component: `component_geolocation`. The component does not use languages. The data is an array with one item defining the map center (`lat`, `lon`), the map state (`zoom`, `alt`) and, optionally, the drawn shapes as GeoJSON layers (`lib_data`).
 
 Canonical v7 input:
 
@@ -1085,7 +1089,7 @@ Latitude must be in range \[-90, 90] and longitude in \[-180, 180]; `zoom` defau
 
 ### JSON
 
-Component: `component_json`. The component do not use languages and stores **any arbitrary JSON** as a single value (monovalue).
+Component: `component_json`. The component does not use languages and stores **any arbitrary JSON** as a single value (monovalue).
 
 By default, the **entire cell content becomes the value**, whatever it is:
 
@@ -1118,10 +1122,10 @@ Row 1 will be saved as `[{"value":{"config":{"a":1}}}]`, row 4 as `[{"value":42}
 
 ### URI
 
-Component: `component_iri`. If the component does not use languages the main format to import is the array of `dd_iri` objects.
+Component: `component_iri`. The component does not use languages; the main format to import is the array of `dd_iri` objects.
 
 !!! info "Data format in version 6.8.0"
-    Data version for iri component has changed in version 6.8.0. `title` property has deprecated and will be removed in future verions.
+    The data version for the iri component changed in version 6.8.0. The `title` property is deprecated and will be removed in future versions.
     In version >= 6.8.0 use the property `label_id` to define the title.
 
 ```json
@@ -1138,7 +1142,7 @@ Component: `component_iri`. If the component does not use languages the main for
 
 !!! note "id exception for component_iri"
 
-    In general the `id` property is auto-assigned by the import process and should not be included in the CSV data. The IRI component is the exception: because the label dataframe is paired with the value through its `id`, is possible to set it explicitly to control that pairing.
+    In general the `id` property is auto-assigned by the import process and should not be included in the CSV data. The IRI component is the exception: because the label dataframe is paired with the value through its `id`, you can set it explicitly to control that pairing.
 
 Encoded in CSV format as:
 
@@ -1168,7 +1172,7 @@ To import multiple values in the same component/field, add new object to the arr
 
 #### Languages
 
-The import will marked this data as `lg-nolan` because the component interpreted that the URI has not language by default. But sometimes you will manage multilingual URI's, as wikipedia articles, so in those cases is possible identify the language of the URI in this way:
+The import marks this data as `lg-nolan` because the component interprets that the URI has no language by default. But sometimes you will handle multilingual URIs, such as Wikipedia articles, so in those cases you can identify the language of the URI in this way:
 
 ```json
 {
@@ -1188,7 +1192,7 @@ The table to import
 | ------------  | ------ |
 | 1             | {"lg-spa":\[{"iri":"https://es.wikipedia.org/wiki/Escrituras_paleohispánicas"}\],"lg-deu":\[{"iri":"https://de.wikipedia.org/wiki/Althispanische_Schriften"}\]} |
 
-#### Alternative formats to import URI's
+#### Alternative formats to import URIs
 
 1. Flat string (the simplest):
 
@@ -1200,7 +1204,7 @@ The table to import
     | ------------  | ------ |
     | 1             | https://dedalo.dev |
 
-    it will be parse as:
+    it will be parsed as:
 
     ```json
     [{
@@ -1210,7 +1214,7 @@ The table to import
 
 2. Array of strings:
 
-    Used to import multiple URI's into the component / field.
+    Used to import multiple URIs into the component / field.
 
     ```json
     ["https://dedalo.dev","https://dedalo.dev/docs"]
@@ -1220,7 +1224,7 @@ The table to import
     | ------------  | ------ |
     | 1             |  \["https://dedalo.dev","https://dedalo.dev/docs"]
 
-    will be parse as:
+    will be parsed as:
 
     ```json
     [
@@ -1231,7 +1235,7 @@ The table to import
 
 3. String with id label
 
-    To import the id label to be used to point specific value of the list of labels for the URI use the `, ` separator in this way:
+    To import the id label used to point to a specific value of the list of labels for the URI, use the `, ` separator in this way:
 
     ```text
     8, https://dedalo.dev
@@ -1241,7 +1245,7 @@ The table to import
     | ------------  | ------ |
     | 1             | 8, https://dedalo.dev |
 
-    It will be parse as:
+    It will be parsed as:
 
     ```json
     [{
@@ -1254,11 +1258,11 @@ The table to import
 
     !!! tip "Separator format"
 
-        Dédalo interpreted the `, ` separator between data to differentiate two parts, left of the comma is the id label and the right of the comma will be the URI, if you are using this separator is important to add the space between comma and the URI, because is possible identify the comma when the URI is clear, sometimes the title or the URI can use this character. To minimized errors ensure that the space is after the comma in the separator.
+        Dédalo interprets the `, ` separator between data to differentiate two parts: the left of the comma is the id label and the right of the comma is the URI. If you are using this separator it is important to add the space between the comma and the URI, because the comma can then be identified when the URI is clear, since sometimes the title or the URI can use this character. To minimize errors, ensure that the space is after the comma in the separator.
 
 4. String with label
 
-    To import the a new label or string value of the label you can use the `, ` separator in this way:
+    To import a new label or string value of the label you can use the `, ` separator in this way:
 
     ```text
     Dédalo, https://dedalo.dev
@@ -1268,11 +1272,11 @@ The table to import
     | ------------  | ------ |
     | 1             | Dédalo, https://dedalo.dev |
 
-    The string value will be checked in the import process. If the string value exists in the value list, it will be set with its own id(section_id), if not exist will create new value in the list.
+    The string value is checked during the import process. If the string value exists in the value list, it is set with its own id (section_id); if it does not exist, a new value is created in the list.
 
 5. String of multiple values
 
-    To import multiple values of the URI use the ` | ` separator in this way:
+    To import multiple values of the URI, use the ` | ` separator in this way:
 
     ```text
     https://dedalo.dev | https://dedalo.dev/docs
@@ -1282,7 +1286,7 @@ The table to import
     | ------------  | ------- |
     | 1             | https://dedalo.dev \| https://dedalo.dev/docs |
 
-    it will be parse as:
+    it will be parsed as:
 
     ```json
     [
@@ -1293,11 +1297,11 @@ The table to import
 
     !!! tip "Separator format"
 
-        Dédalo interpreted the ` | ` separator between data to differentiate two or more values. Is possible that some URI's will use this character inside the variables. To minimized errors ensure that the space is before and after of the separator character.
+        Dédalo interprets the ` | ` separator between data to differentiate two or more values. It is possible that some URIs will use this character inside the variables. To minimize errors, ensure that the space is before and after the separator character.
 
 6. String of multiple values with label id
 
-    Is possible combine the label string or id with the separator `, ` and the values separator ` | ` in the same string in this way:
+    You can combine the label string or id with the separator `, ` and the values separator ` | ` in the same string in this way:
 
     ```text
     Dédalo, https://dedalo.dev | https://dedalo.dev/docs
@@ -1307,7 +1311,7 @@ The table to import
     | ------------  | ------- |
     | 1             |  Dédalo, https://dedalo.dev \| https://dedalo.dev/docs |
 
-    it will be parse as:
+    it will be parsed as:
 
     ```json
     [

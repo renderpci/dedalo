@@ -1,8 +1,8 @@
 # db
 
-> The PostgreSQL access layer (`core/db/`): the connection manager, the matrix table managers, the JSON record objects and the result wrappers. It is the **only** code in Dédalo's work system that opens a PostgreSQL connection or issues SQL.
-
 > See also: [Architecture overview](../architecture_overview.md) · [Sections](../sections/index.md) · [section_record](../sections/section_record.md) · [SQO](../sqo.md)
+
+The PostgreSQL access layer (`core/db/`) holds the connection manager, the matrix table managers, the JSON record objects and the result wrappers. It is the **only** code in Dédalo's work system that opens a PostgreSQL connection or issues SQL.
 
 ## Role
 
@@ -37,11 +37,11 @@ PostgreSQL                 matrix tables (typed JSONB columns)
 
 !!! note "MariaDB is not here"
     This layer talks **only to PostgreSQL** (`pg_*` functions). The publication /
-    diffusion database (MariaDB/MySQL by default) is owned by the Bun diffusion
-    service; PHP never connects to it for normal operation. `DBi` does ship a
-    `_getConnection_mysql()` helper, but it is a legacy/utility path, not the
-    work-system data path. See the [architecture overview](../architecture_overview.md#the-two-systems)
-    for the work-vs-diffusion split.
+    diffusion database (MariaDB/MySQL) is owned **exclusively** by the Bun diffusion
+    service; **PHP never connects to it** — `DBi` ships no MariaDB connector (the
+    former `_getConnection_mysql()` helper was removed). See the
+    [architecture overview](../architecture_overview.md#the-two-systems) for the
+    work-vs-diffusion split.
 
 ## Responsibilities
 
@@ -184,7 +184,6 @@ verified against the source; signatures are abbreviated.
 | `_getConnection($host=…, $user=…, $password=…, $database=…, $port=…, $socket=…, $cache=true)` | ✓ | The main connector. Returns a cached `PgSql\Connection` (validated at most every 30 s), or `false`. On a persistent connection it first rolls back any abandoned transaction inherited from the pool. |
 | `_getNewConnection(…)` | ✓ | Alias of `_getConnection` with `cache=false` — a fresh, un-cached connection. |
 | `_getConnectionPDO(…)` | ✓ | A PostgreSQL PDO connection (used by a few PDO-based paths). |
-| `_getConnection_mysql(…)` | ✓ | A MySQL/MariaDB `mysqli` connection. **Legacy/utility only** — the work system never uses it (diffusion DB is Bun's). |
 | `invalidate_connection_cache()` | ✓ | Drop the cached connection **and** the prepared-statement registry (they are bound to the dead connection). Call after a backend may have been killed. |
 | `get_connection_string()` | ✓ | Build the `-h/-p/-U` connection string (for CLI tools like `pg_dump`). |
 

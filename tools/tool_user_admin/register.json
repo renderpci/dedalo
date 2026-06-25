@@ -1,11 +1,11 @@
 {
-  "id": "3929",
+  "id": "3964",
   "section_id": "9",
   "section_tipo": "dd1340",
   "data": {
     "label": "Tools development",
     "section_id": 9,
-    "created_date": "2026-06-17 13:27:56",
+    "created_date": "2026-06-18 11:43:39",
     "section_tipo": "dd1340",
     "diffusion_info": null,
     "created_by_user_id": -1
@@ -193,13 +193,13 @@
         "id": 1,
         "lang": "lg-nolan",
         "start": {
-          "day": 17,
-          "hour": 13,
-          "time": 65132083676,
+          "day": 18,
+          "hour": 11,
+          "time": 65132163819,
           "year": 2026,
           "month": 6,
-          "minute": 27,
-          "second": 56
+          "minute": 43,
+          "second": 39
         }
       }
     ]
@@ -213,24 +213,16 @@
       {
         "id": 1,
         "value": {
-          "lg-nolan": [
-            {
-              "ddo_map": []
-            }
-          ]
+          "ddo_map": []
         }
       }
     ],
     "dd1350": [
       {
         "id": 1,
-        "value": {
-          "lg-nolan": [
-            [
-              "dd85"
-            ]
-          ]
-        }
+        "value": [
+          "dd85"
+        ]
       }
     ]
   },

@@ -1,31 +1,30 @@
 # Updating code options
 
-In versions >= 6.4.1 Dédalo displays two different options to update its code: [Incremental](#incremental) and [Clean](#clean). Version < 6.4.1 only uses the [Incremental](#incremental) option.
+> See also: [Updating code](updating_code.md) · [Updates](index.md)
+
+In versions >= 6.4.1, Dédalo offers two options to update its code: [Incremental](#incremental) and [Clean](#clean). Versions < 6.4.1 only use the [Incremental](#incremental) option.
 
 ## Incremental
 
 The incremental option only replaces the modified files in the new version. It does not alter your `/dedalo` directory into `httpdocs` or your specific alias or other directories outside the Dédalo schema. To verify the changes, use `rsync`. Consequently, some older files will remain in your installation.
 
-This option is valid for patches and certain minor versions. However, in major updates, the most suitable option is to select `clean` because in mayor versions, changes could affect to Dédalo directories schema, moving files from/to a different location into the directory schema.
+This option is valid for patches and certain minor versions. However, for major updates the most suitable option is `clean`, because major versions can change the Dédalo directory schema, moving files to a different location within it.
 
 ## Clean
 
 The "clean" option replaces your current `/dedalo` directory with a new and fresh version of the code. It relocates your current code to the `backups/code/` directory, excluding it from the `httpdocs` virtual hosts. Subsequently, it installs the new version in a clean `dedalo` directory. Consequently, all older files will be removed during the installation but preserved in the backup.
 
-In the install process the "clean" option restores your configuration files, specific tools, and media directory from the  backup of your previous code. However, if you have specific aliases, other files, or directories, you will need to restore them manually.
+In v7 your configuration lives in `../private/` (outside the `dedalo/` code directory), so the "clean" option **preserves it automatically** — there is nothing to restore. The clean process still restores your specific (third-party) tools and the media directory from the backup of your previous code. If you have specific aliases, other files, or directories, you will need to restore them manually.
 
 You can see the typical Dédalo directory tree [here](updating_code.md#updating-manually).
 
 ### Files and directories restored by the clean installation process
 
-The following files will be restored during the clean installation process:
+Your main configuration in `../private/` (`.env`, `state.php`, …) lives **outside** the code directory, so it is never moved or restored — it simply stays in place across the update.
+
+The clean process restores these in-tree files (the standalone publication server keeps its own config inside the code):
 
 ```bash
-config/config.php
-config/config_db.php
-config/config_areas.php
-config/config_core.php
-config/config_defaults.json
 publication/server_api/v1/config_api/server_config_api.php
 publication/server_api/v1/config_api/server_config_headers.php
 ```

@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
 /**
 * CLASS TOOL_DEV_TEMPLATE
+* Production-shaped scaffolding template for new Dédalo tools.
 *
-* Production-shaped starting point for new Dédalo tools.
-* Copy this directory, rename every 'tool_dev_template' occurrence to your
+* Copy this directory and rename every 'tool_dev_template' occurrence to your
 * tool name (directory, class file, class name, JS files, CSS, register.json)
 * — or run the scaffolder, which does it for you:
 *
@@ -25,20 +25,27 @@
 *   dd_tools_api, so keep imperative gates inside long-running write methods
 *   as defense in depth.
 *
-* Note: this template is only registered when the install defines
+* Extends tool_common. Registered only when the install defines
 * SHOW_DEVELOPER=true (see tools_register::get_valid_tool_directories).
+*
+* @package Dédalo
+* @subpackage Tools
 */
 class tool_dev_template extends tool_common {
 
 
 
 	/**
-	* SEC-024: allowlist of methods callable via dd_tools_api::tool_request,
-	* in map form. The framework runs the declared gate before dispatch:
-	*  - get_component_data : read (level 1) on (section_tipo, tipo|component_tipo)
-	*  - handle_upload_file : write (level 2) on (section_tipo, tipo|component_tipo)
-	*  - long_process_demo  : developer-only
-	* Never list lifecycle hooks (is_available, on_register, on_remove) here.
+	* SEC-024 allowlist of methods callable via dd_tools_api::tool_request,
+	* declared in map form so the framework can enforce the permission gate
+	* automatically before dispatch. Each key is a method name; each value is a
+	* gate descriptor consumed by tool_security:
+	*  - get_component_data : 'tipo' gate, read (level 1) on (section_tipo, component_tipo)
+	*  - handle_upload_file : 'tipo' gate, write (level 2) on (section_tipo, component_tipo)
+	*  - long_process_demo  : 'developer' gate — only users with developer role may call it
+	* (!) Never list lifecycle hooks (is_available, on_register, on_remove) here — they are
+	* called internally by the framework and must not be exposed as API endpoints.
+	* @var array<string, array<string, string|int>> API_ACTIONS
 	*/
 	public const API_ACTIONS = [
 		'get_component_data' => ['permission' => 'tipo', 'min_level' => 1],
@@ -47,8 +54,13 @@ class tool_dev_template extends tool_common {
 	];
 
 	/**
-	* Methods that the CLI background runner (process_runner.php) is allowed
-	* to execute when called with `background: true`.
+	* Allowlist of method names that the CLI background runner
+	* (process_runner.php) may execute when the client passes `background: true`
+	* to tool_request. The background runner spawns a separate PHP process and
+	* does NOT pass through dd_tools_api, so imperative permission checks inside
+	* the listed methods are mandatory as defense-in-depth (see long_process_demo).
+	* Every method listed here MUST also appear in API_ACTIONS.
+	* @var list<string> BACKGROUND_RUNNABLE
 	*/
 	public const BACKGROUND_RUNNABLE = [
 		'long_process_demo'
@@ -58,17 +70,24 @@ class tool_dev_template extends tool_common {
 
 	/**
 	* GET_COMPONENT_DATA
-	* Sample READ action: loads a component instance and returns its data.
-	* The framework already asserted read permission on
-	* (options->section_tipo, options->component_tipo) before this runs.
-	* @param object $options
-	* {
-	*    "component_tipo": "rsc85",
-	*    "section_id": "1",
-	*    "section_tipo": "rsc197",
-	*    "config": null
+	* Sample READ action: loads a component instance and returns its raw data.
+	* Demonstrates the standard read-action pattern: declarative gate (API_ACTIONS
+	* level 1) handles schema-level permission; a second imperative
+	* assert_record_in_user_scope call inside the method confines access to
+	* records within the caller's project scope when a section_id is provided.
+	* The framework (dd_tools_api) already asserted read permission on
+	* (options->section_tipo, options->component_tipo) before dispatch.
+	* @param object $options {
+	*    "component_tipo": "rsc85",    - ontology tipo of the target component
+	*    "section_id": "1",            - record ID within the section
+	*    "section_tipo": "rsc197",     - ontology tipo of the parent section
+	*    "config": null                - optional per-call tool config override
 	* }
-	* @return object $response {result, msg, errors}
+	* @return object $response {
+	*    result: {model, component_tipo, component_data} | false,
+	*    msg: string,
+	*    errors: array
+	* }
 	*/
 	public static function get_component_data(object $options) : object {
 
@@ -86,6 +105,8 @@ class tool_dev_template extends tool_common {
 		// schema permission; when the action targets one specific record we also
 		// keep the caller inside their project scope. tool_security wraps the
 		// core assert with options handling, used here imperatively.
+		// isset() rather than !==null because the property itself may be absent
+		// when the caller invokes the action in a list-level context (no record).
 			if (isset($options->section_id)) {
 				security::assert_record_in_user_scope(
 					$section_tipo,
@@ -99,6 +120,11 @@ class tool_dev_template extends tool_common {
 			// $my_setting = tool_common::get_config_value(get_called_class(), 'my_setting', 'default');
 
 		// component data
+		// Resolve the PHP class name for component_tipo, then instantiate in 'list'
+		// mode so the component returns structured data without UI extras.
+		// DEDALO_DATA_NOLAN is the language-neutral constant ('lg-nolan') used when
+		// the caller has not requested a specific display language; components
+		// whose data is language-keyed will return all language variants.
 			$model		= ontology_node::get_model_by_tipo($component_tipo, true);
 			$component	= component_common::get_instance(
 				$model, // string model
@@ -126,23 +152,33 @@ class tool_dev_template extends tool_common {
 
 	/**
 	* HANDLE_UPLOAD_FILE
-	* Sample WRITE action: receives the file_data produced by service_upload
-	* and resolves the uploaded temporal file path with confinement checks.
-	* A real tool would process/move the file from here.
+	* Sample WRITE action: receives the file_data object produced by service_upload
+	* and resolves the temporal upload path with strict path-confinement checks.
+	* Demonstrates the canonical pattern for safely consuming uploaded files:
+	* sanitize caller-supplied path fragments with sanitize_key_dir() and
+	* basename(), then use realpath() to confirm the resolved path still lives
+	* inside DEDALO_UPLOAD_TMP_DIR/{user_id}/ (guards against directory-traversal
+	* attacks via crafted key_dir or tmp_name values).
+	* A real tool would process or move the file after this validation stage.
+	* The framework (dd_tools_api) already asserted write (level 2) permission on
+	* (options->section_tipo, options->component_tipo) before dispatch.
 	* @see https://dedalo.dev/docs/development/services/service_upload/
-	* @param object $options
-	* {
-	*    "component_tipo": "hierarchy31",
-	*    "section_id": "1",
-	*    "section_tipo": "es1",
-	*    "file_data": {
-	*        "name": "myfile.zip",
-	*        "key_dir": "component_geolocation",
-	*        "tmp_name": "myfile.zip",
+	* @param object $options {
+	*    "component_tipo": "hierarchy31",  - ontology tipo of the uploading component
+	*    "section_id": "1",                - record ID within the section
+	*    "section_tipo": "es1",            - ontology tipo of the parent section
+	*    "file_data": {                    - object written by service_upload
+	*        "name": "myfile.zip",         - display name (not used for path resolution)
+	*        "key_dir": "component_geolocation", - subdirectory under the user tmp dir
+	*        "tmp_name": "myfile.zip",     - filename inside key_dir
 	*        ...
 	*    }
 	* }
-	* @return object $response {result, msg, errors}
+	* @return object $response {
+	*    result: {file: string, size: int} | false,
+	*    msg: string,
+	*    errors: array
+	* }
 	*/
 	public static function handle_upload_file(object $options) : object {
 
@@ -161,12 +197,18 @@ class tool_dev_template extends tool_common {
 
 		// resolve the temporal upload path written by service_upload:
 		// DEDALO_UPLOAD_TMP_DIR / {user_id} / {key_dir} / {tmp_name}
-		// SEC: sanitize the caller-supplied path fragments and confine the
-		// resolved path inside the upload tmp dir (no '../' escapes).
+		// SEC: sanitize caller-supplied path fragments before building the path.
+		// sanitize_key_dir strips dangerous characters from the subdirectory name;
+		// basename ensures tmp_name cannot be a path traversal segment ('../../x').
 			$key_dir	= sanitize_key_dir((string)$file_data->key_dir);
 			$tmp_name	= basename((string)$file_data->tmp_name);
 			$tmp_file	= DEDALO_UPLOAD_TMP_DIR . '/' . logged_user_id() . '/' . $key_dir . '/' . $tmp_name;
 
+		// path confinement: realpath() resolves symlinks and '..' sequences.
+		// If $real_file does not begin with $upload_root the file has escaped the
+		// user's tmp directory — reject it regardless of how it got there.
+		// realpath() returns false for non-existent paths, so the check also
+		// acts as an existence guard (the file must actually be present).
 			$upload_root	= realpath(DEDALO_UPLOAD_TMP_DIR);
 			$real_file		= realpath($tmp_file);
 			if ($upload_root===false || $real_file===false
@@ -198,17 +240,26 @@ class tool_dev_template extends tool_common {
 
 	/**
 	* LONG_PROCESS_DEMO
-	* Sample BACKGROUND action (developer-only): simulates a long process.
-	* From the client, run it detached with:
-	*   this.tool_request({ action: 'long_process_demo', options: {...}, background: true })
-	* The HTTP response then returns immediately with the CLI pid; progress
-	* goes to the debug log. Listed in BACKGROUND_RUNNABLE so the CLI runner
-	* (process_runner.php) accepts it.
-	* @param object $options
-	* {
-	*    "iterations": 5
+	* Sample BACKGROUND action (developer-only): simulates a long-running process
+	* by sleeping one second per iteration and logging progress.
+	* Demonstrates the canonical background-action pattern:
+	* - The client calls with `background: true`; the HTTP response returns
+	*   immediately with the spawned CLI pid.
+	* - The CLI background runner (process_runner.php) then executes this method
+	*   in a separate PHP process; output goes to the debug log, NOT to the
+	*   HTTP response.
+	* - Because the CLI path bypasses dd_tools_api, this method imperatively
+	*   re-checks is_developer() as defense-in-depth before doing any work.
+	* Listed in BACKGROUND_RUNNABLE so the CLI runner accepts it.
+	* Iterations are capped at 10 to prevent runaway background processes.
+	* @param object $options {
+	*    "iterations": 5  - number of sleep cycles to simulate (capped at 10)
 	* }
-	* @return object $response {result, msg, errors}
+	* @return object $response {
+	*    result: {iterations_done: int} | false,
+	*    msg: string,
+	*    errors: array
+	* }
 	*/
 	public static function long_process_demo(object $options) : object {
 

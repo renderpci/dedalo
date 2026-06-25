@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global page_globals, SHOW_DEVELOPER */
+/*global page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -248,12 +248,10 @@ service_time_machine.prototype.build = async function(autoload=false) {
 			// This change is important because the components could be configured in edit mode
 			// if the component is loaded in edit mode it will fire the default data and save the section
 			// (!) IT'S A VERY BAD SITUATION, BECAUSE THE SECTION IS SAVED WITH THE TM DATA (OLD DATA)
-				self.rqo.show.ddo_map.map(ddo => {
+				self.rqo.show.ddo_map.forEach(ddo => {
 					// change ddo properties to safe mode and permissions
 					ddo.mode		= 'tm'
 					ddo.permissions	= 1
-
-					return ddo
 				})
 
 			// add component info. For API navigation track info only
@@ -276,11 +274,13 @@ service_time_machine.prototype.build = async function(autoload=false) {
 				// server: wrong response
 				if (!api_response || !api_response.result) {
 					console.error('Error: Invalid API response', api_response);
+					self.status = 'initialized' // do not leave the instance stuck in 'building'
 					return false
 				}
-				// server: bad build context
-				if(!api_response.result.context.length){
+				// server: bad build context (guard against a missing context array, not just an empty one)
+				if(!api_response.result.context || !api_response.result.context.length){
 					console.error("Error: service_time_machine context unavailable", api_response);
+					self.status = 'initialized' // do not leave the instance stuck in 'building'
 					return false
 				}
 
@@ -296,9 +296,10 @@ service_time_machine.prototype.build = async function(autoload=false) {
 					console.log('service_time_machine build api_response.result:', api_response.result);
 				}
 
-			// count rows
+			// count rows. Fire-and-forget (the paginator awaits get_total separately);
+			// catch so a rejected count request can't become an unhandled rejection.
 				if (!self.total) {
-					self.get_total()
+					self.get_total().catch(e => console.error('[service_time_machine] get_total failed:', e))
 				}
 		}//end if (autoload===true)
 
@@ -313,6 +314,14 @@ service_time_machine.prototype.build = async function(autoload=false) {
 
 			// event paginator_goto
 				const paginator_goto_handler = async (offset) => {
+					// ignore overlapping navigation while a refresh is in flight: offset
+					// lives on the shared self.rqo.sqo, so two concurrent refreshes could
+					// race and render an older page over a newer one.
+						if (self._tm_navigating===true) {
+							return
+						}
+						self._tm_navigating = true
+
 					// loading
 						const container = self.node.list_body
 									   || self.node.content_data
@@ -322,14 +331,17 @@ service_time_machine.prototype.build = async function(autoload=false) {
 							console.warn('No container found for pagination. Node:', self.node);
 						}
 
-					// fix new offset value
-						self.rqo.sqo.offset = offset
+					try {
+						// fix new offset value
+							self.rqo.sqo.offset = offset
 
-					// refresh
-						await self.refresh()
-
-					// loading
-						if (container) container.classList.remove('loading')
+						// refresh
+							await self.refresh()
+					} finally {
+						// loading
+							if (container) container.classList.remove('loading')
+							self._tm_navigating = false
+					}
 				}
 				self.events_tokens.push(
 					event_manager.subscribe('paginator_goto_'+self.paginator.id , paginator_goto_handler)
@@ -427,7 +439,7 @@ service_time_machine.prototype.build_request_config = function() {
 					// section case. Usually from Tool Time machine listing deleted sections
 
 					// sqo. filter
-					sqo.parsed = false,
+					sqo.parsed = false
 					sqo.filter = {
 						$and : [
 							{
@@ -691,6 +703,9 @@ service_time_machine.prototype.get_total = async function() {
 	// API error case
 		if (!api_count_response.result || api_count_response.error) {
 			console.error('Error on count total : api_count_response:', api_count_response);
+			// clear the lock so a later call retries the count instead of busy-polling
+			// 'resolving' forever (which would also hang the paginator awaiting get_total).
+			self.loading_total_status = null
 			return
 		}
 

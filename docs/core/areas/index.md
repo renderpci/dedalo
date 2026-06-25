@@ -48,7 +48,7 @@ Every area sits in a three-layer chain:
 | --- | --- |
 | **`common`** | The universal element machinery: identity (`tipo`/`mode`/`lang`), `load_structure_data()`, `get_structure_context()`, permissions, ontology/matrix-table resolution, the `{context, data}` JSON helpers and the static caches. The same base serves [`section`](../sections/section.md) and `component_common`. |
 | **`area_common`** | The shared area layer specialising `common` for menu-grouping nodes: the `get_instance()` factory, the section-shaped identity shims (`get_section_tipo()` returns the area's own tipo, `get_section_id()` returns `null`), the generic `get_json()` fallback to `area_common_json.php`, the recursive dashboard structure-walk, and the permission-aware dashboard metrics. |
-| **`area`** | The concrete **top-level** class. Adds the menu / security assembly — `get_areas()` iterates all major root areas, recursively collects child areas/sections, and filters the result against `config_areas.php` (`areas_deny`/`areas_allow`). The output feeds both the menu and `component_security_access`. |
+| **`area`** | The concrete **top-level** class. Adds the menu / security assembly — `get_areas()` iterates all major root areas, recursively collects child areas/sections, and filters the result against the `areas.deny`/`areas.allow` config. The output feeds both the menu and `component_security_access`. |
 
 `class area extends area_common`, and `class area_common extends common`. The
 concrete top-level areas (`area_admin`, `area_resource`, `area_thesaurus`, …)
@@ -77,7 +77,7 @@ full reference where one exists.
 | area | model | purpose | doc |
 | --- | --- | --- | --- |
 | `area_common` | (base) | The shared PHP base class every concrete area inherits — identity, the `get_json()` fallback, the dashboard structure-walk and the permission-aware metrics. | [area_common.md](area_common.md) |
-| `area` | `area` | The concrete top-level class adding the menu/security assembly (`get_areas()`, recursive children collection, `config_areas.php` allow/deny filtering). | [area.md](area.md) |
+| `area` | `area` | The concrete top-level class adding the menu/security assembly (`get_areas()`, recursive children collection, `areas.deny`/`areas.allow` filtering). | [area.md](area.md) |
 | `area_admin` | `area_admin` | Administration area — users, profiles, projects, configuration and other system-administration sections. | [area_admin.md](area_admin.md) |
 | `area_thesaurus` | `area_thesaurus` | Thesaurus area — controlled vocabularies rendered as a hierarchical TS tree; ships its own JSON controller and tree-building logic. | [area_thesaurus.md](area_thesaurus.md) |
 | `area_ontology` | `area_ontology` | Ontology area — the in-app editor over the ontology nodes themselves; ships its own JSON controller and tree view. | [area_ontology.md](area_ontology.md) |
@@ -109,7 +109,7 @@ everything from `area_common`.
     `area_development`, `area_ontology`. Each is resolved through
     `ontology_utils::get_ar_tipo_by_model` (with graceful warnings/fallbacks
     when an ontology node is missing), then its child areas/sections are
-    collected recursively and filtered against `config_areas.php`.
+    collected recursively and filtered against the `areas.deny`/`areas.allow` config.
 
 ---
 
@@ -118,7 +118,7 @@ everything from `area_common`.
 - [area_common](area_common.md) — the shared base class reference (identity,
   JSON fallback, dashboard structure-walk, permission-aware metrics).
 - [area](area.md) — the concrete top-level class reference (menu/security
-  assembly, `get_areas()`, `config_areas.php` filtering).
+  assembly, `get_areas()`, `areas.deny`/`areas.allow` filtering).
 - [Architecture overview](../architecture_overview.md) — where areas sit in the
   `areas → sections → components → data` hierarchy.
 - [Sections](../sections/index.md) — the record-bearing leaves an area groups.

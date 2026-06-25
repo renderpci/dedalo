@@ -12,10 +12,49 @@
 
 
 
-
 /**
 * RENDER_TOOL_QR
-* Manages the component's logic and appearance in client side
+*
+* Client-side render module for the QR tool (tool_qr).
+* Produces a paginated, printable A4 canvas of QR codes — one per record
+* returned by the section list — alongside configurable image and label
+* components read from the tool's ddo_map.
+*
+* Entry point: `render_tool_qr.prototype.edit` is mounted onto the
+* `tool_qr` prototype (see tool_qr.js) and called by `tool_common.prototype.render`.
+*
+* Exported symbols:
+*   - render_tool_qr  (constructor / namespace for the edit prototype method)
+*
+* Internal helpers (module-private):
+*   - get_content_data      builds the full content_data subtree
+*   - render_info_container builds the header controls row
+*   - render_canvas         builds the QR grid (one qr_wrapper per record)
+*   - render_component      instantiates and renders a single component node
+*   - generate_qr           wraps the EasyQRCodeJS library in a Promise
+*
+* Data shape expected on `self` (tool_qr instance after build):
+*   self.section               — section instance loaded by tool_qr.load_section()
+*   self.section.label         — {string} human-readable section label
+*   self.section.total         — {number} total record count (value.length, limit=0)
+*   self.section.data.value    — {Array<{section_id, section_tipo, ...}>} record list
+*   self.section.datum.context — {Array<Object>} component contexts (ddo_map entries)
+*   self.section.datum.data    — {Array<Object>} flat component data rows for all records
+*   self.tool_config.ddo_map   — {Array<Object>} ddo entries with optional `role` property
+*   self.config?.options?.host       — {string|undefined} overrides window.location.origin for URL
+*   self.config?.options?.entity_logo — {string|undefined} optional entity logo URL
+*   self.qr_canvas             — {HTMLElement} pointer set by render_canvas for orientation toggling
+*
+* ddo_map `role` values recognised by this renderer:
+*   'image'  — component whose rendered node goes into .image_container
+*   'label'  — component whose rendered node goes into .label_container
+*   (no role) — portal/parent component; included in the ddo_map but not rendered per-record
+*
+* The tool is activated via a button trigger (tch350) whose properties carry the
+* tool_config JSON. See register.json dd1362 for configuration examples.
+*
+* Third-party dependency: EasyQRCodeJS (loaded dynamically in tool_qr.init;
+* exposed as the global `QRCode`). See https://github.com/ushelp/EasyQRCodeJS
 */
 export const render_tool_qr = function() {
 
@@ -28,8 +67,18 @@ export const render_tool_qr = function() {
 * EDIT
 * Render tool DOM nodes
 * This function is called by render common attached in 'tool_dummy.js'
-* @param object options
-* @return HTMLElement wrapper
+*
+* Orchestrates the full render pipeline:
+*   1. Resolves content_data (calls get_content_data).
+*   2. If render_level is 'content', returns the bare content_data node
+*      (used when another layer is composing the tool panel).
+*   3. Otherwise wraps content_data in the standard tool shell via
+*      ui.tool.build_wrapper_edit (title bar, close/resize chrome).
+*
+* @param {Object} options - Render options forwarded from tool_common.prototype.render.
+* @param {string} [options.render_level='full'] - 'full' returns a complete wrapper;
+*   'content' returns the inner content_data node only.
+* @returns {Promise<HTMLElement>} The wrapper element (full) or content_data element (content).
 */
 render_tool_qr.prototype.edit = async function(options) {
 
@@ -58,8 +107,25 @@ render_tool_qr.prototype.edit = async function(options) {
 /**
 * GET_CONTENT_DATA
 * Render tool body or 'content_data'
-* @param instance self
-* @return HTMLElement content_data
+*
+* Assembles all visible regions of the tool panel into a DocumentFragment
+* and then transfers them into the standardised content_data div returned by
+* ui.tool.build_content_data.
+*
+* Regions built:
+*   - info_container   — header row (section label, record count, orientation selector)
+*   - qr_canvas        — the printable A4 grid of QR codes
+*   - footer_node      — common tool footer (icon + developer attribution)
+*
+* This function is async because render_canvas calls generate_qr which
+* returns Promises; however those Promises are not awaited inside this function —
+* they are pushed into qr_promises for fire-and-forget resolution. The canvas
+* DOM nodes are appended synchronously; the QR image data fills in asynchronously
+* via EasyQRCodeJS's onRenderingEnd callback. Callers can treat the returned
+* content_data as ready for insertion into the DOM immediately.
+*
+* @param {Object} self - tool_qr instance after build().
+* @returns {Promise<HTMLElement>} The populated content_data div.
 */
 const get_content_data = async function(self) {
 
@@ -104,8 +170,20 @@ const get_content_data = async function(self) {
 /**
 * RENDER_INFO_CONTAINER
 * Creates the top section info about records visualized
-* @param instance self
-* @return DocumentFragment
+*
+* Builds a DocumentFragment containing:
+*   - A <span class="section_label"> with the section's human-readable label.
+*   - A <span class="qr_totals"> showing total record count pulled from
+*     self.section.total.
+*   - A <div class="canvas_direction"> containing a <select class="canvas_selector">
+*     with 'portrait' and 'landscape' options. Changing the selection toggles
+*     the CSS class on self.qr_canvas so that the print stylesheet applies the
+*     correct page orientation. self.qr_canvas must already be set (by render_canvas)
+*     before the change event fires.
+*
+* @param {Object} self - tool_qr instance; must have self.section.label,
+*   self.section.total, and self.qr_canvas (populated by render_canvas).
+* @returns {DocumentFragment} Fragment ready to append into .info_container.
 */
 const render_info_container = (self) => {
 
@@ -122,7 +200,7 @@ const render_info_container = (self) => {
 		const totals_value = (get_label.total_records || 'Total records') + `: ${self.section.total}`
 		ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: get_label.active_elements || 'Active elements',
+			class_name		: 'qr_totals',
 			inner_html		: totals_value,
 			parent			: fragment
 		})
@@ -174,8 +252,37 @@ const render_info_container = (self) => {
 /**
 * RENDER_CANVAS
 * Creates the print canvas A4 and add the QR items
-* @param instance self
-* @return DocumentFragment
+*
+* Builds a <div class="qr_canvas"> and populates it with one
+* <div class="qr_wrapper"> per record in self.section.data.value.
+*
+* Each qr_wrapper contains:
+*   - <div class="qr_code">   — target node for EasyQRCodeJS; clicking opens the
+*                               record URL in a new browser tab.
+*   - <div class="qr_info">  — optional image_container (role='image' components),
+*                               the section_id as plain text, label_container
+*                               (role='label' components), and an optional entity logo.
+*
+* A pointer to the qr_canvas element is stored on self.qr_canvas so that
+* render_info_container's orientation change_handler can toggle CSS classes
+* without needing to query the DOM.
+*
+* The function pushes each generate_qr() Promise into qr_promises but does NOT
+* await them — the array is fire-and-forget. QR images appear asynchronously
+* as EasyQRCodeJS resolves each promise via its onRenderingEnd callback.
+*
+* URL format per record:
+*   `${host}${DEDALO_CORE_URL}/page/?tipo=${section_tipo}&section_id=${section_id}`
+* where host defaults to window.location.origin unless overridden in
+* self.config.options.host.
+*
+* Guard: returns early with an error message if self.tool_config or
+* self.section.datum.context is falsy, preventing a crash on missing config.
+*
+* @param {Object} self - tool_qr instance after build(); must expose
+*   self.tool_config.ddo_map, self.section.data.value,
+*   self.section.datum.context, and self.section.datum.data.
+* @returns {DocumentFragment} Fragment containing the populated qr_canvas div.
 */
 const render_canvas = (self) => {
 
@@ -327,13 +434,24 @@ const render_canvas = (self) => {
 
 
 /**
-* RENDER_component
+* RENDER_COMPONENT
 * Creates the component that manage the given context and
 * render it to create the final DOM node
-* @param object self
-* @param int section_id
-* @param object component_data
-* @return HTMLElement
+*
+* Resolves the component context entry from self.section.datum.context by
+* matching on both `tipo` and `section_tipo`, then instantiates the component
+* via get_instance, injects context and data from the section datum (bypassing
+* a network round-trip), builds it with autoload=false, and renders it.
+*
+* This mirrors the pattern used by tool_print and other list-view tools: context
+* and data are pre-fetched in bulk by the section's request_config, so individual
+* component instances just receive slices of that batch response.
+*
+* @param {Object} self - tool_qr instance; provides self.section.datum.context
+*   (Array of context objects keyed by tipo+section_tipo).
+* @param {Object} component_data - A single data row from self.section.datum.data,
+*   shaped as {tipo, section_tipo, section_id, ...component-specific fields}.
+* @returns {Promise<HTMLElement>} The rendered DOM node produced by component.render().
 */
 const render_component = async function (self, component_data) {
 
@@ -373,8 +491,38 @@ const render_component = async function (self, component_data) {
 
 /**
 * GENERATE_QR
+* Wraps EasyQRCodeJS QR code generation in a Promise that resolves when rendering
+* is complete, as signalled by the library's `onRenderingEnd` callback.
+*
 * @see https://github.com/ushelp/EasyQRCodeJS
-* @return
+*
+* The QRCode constructor call is deferred via dd_request_idle_callback so that
+* the browser can finish its current paint cycle before the (potentially
+* CPU-intensive) QR matrix computation begins. This keeps the UI responsive when
+* generating a large number of codes.
+*
+* A Worker-based alternative implementation is commented out — it was explored
+* but shelved because the EasyQRCodeJS library requires direct DOM access (a
+* canvas element) which is unavailable inside a Worker context.
+*
+* Visual defaults applied:
+*   - Dédalo logo centred in the QR (logoWidth/logoHeight = 20 px)
+*   - Timing pattern colour: #f78a1c (Dédalo brand orange)
+*   - Error correction level: H (highest; needed to preserve readability with
+*     a logo occluding the centre modules)
+*   - dotScale: 0.5 (smaller dots for a lighter visual appearance)
+*   - quietZone: 10 px border
+*
+* @param {Object} options - Configuration for QR generation.
+* @param {HTMLElement} options.container - DOM element that EasyQRCodeJS will
+*   render the QR canvas/SVG into.
+* @param {string} [options.text='dedalo.dev/dedalo'] - Content to encode in the QR.
+* @param {number} [options.width=200] - Width of the generated QR in pixels.
+* @param {number} [options.height=200] - Height of the generated QR in pixels.
+* @param {string} [options.logo='../../core/themes/default/dedalo_logo.svg'] - URL
+*   of the logo image to embed at the centre of the QR code.
+* @returns {Promise<boolean>} Resolves with `true` when EasyQRCodeJS fires
+*   `onRenderingEnd`. Never rejects — errors from the library are silent.
 */
 const generate_qr = function(options) {
 

@@ -172,12 +172,20 @@ class menu extends common {
 			// retrieve the skip parents, used to skip tipo and transfer to his parent-> grandparent etc
 			// These are grouping containers defined in DEDALO_ENTITY_MENU_SKIP_TIPOS. They act as
 			// organisational wrappers in the ontology but must not appear as clickable menu nodes.
-			$skip_parents = array_filter($ar_areas, function($item) {
-				return in_array($item->tipo, DEDALO_ENTITY_MENU_SKIP_TIPOS);
+			// Effective list: the runtime override DEDALO_ENTITY_MENU_SKIP_TIPOS_CUSTOM (set from the
+			// menu_skip_tipos maintenance widget → ../private/state.php) REPLACES the base when it is a
+			// NON-EMPTY array, so an admin can override a base list deployed via .env. Empty or absent
+			// (a list catalog key resolves to [] when unset) = use the base. ('empty = no override'
+			// matches the other _CUSTOM keys; to skip nothing, clear the base in .env.)
+			$skip_tipos = (defined('DEDALO_ENTITY_MENU_SKIP_TIPOS_CUSTOM') && !empty(DEDALO_ENTITY_MENU_SKIP_TIPOS_CUSTOM))
+				? DEDALO_ENTITY_MENU_SKIP_TIPOS_CUSTOM
+				: DEDALO_ENTITY_MENU_SKIP_TIPOS;
+			$skip_parents = array_filter($ar_areas, function($item) use($skip_tipos) {
+				return in_array($item->tipo, $skip_tipos);
 			});
 			// retrieve the access areas without the skip tipos
-			$access_areas = array_filter($ar_areas, function($item) {
-				return !in_array($item->tipo, DEDALO_ENTITY_MENU_SKIP_TIPOS);
+			$access_areas = array_filter($ar_areas, function($item) use($skip_tipos) {
+				return !in_array($item->tipo, $skip_tipos);
 			});
 			// rearrange the array to remunerate the arrays
 			// array_filter preserves keys; re-index so the for-loop below works correctly.

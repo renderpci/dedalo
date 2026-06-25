@@ -7,25 +7,25 @@
     (Bun/TypeScript): resource-oriented REST, RFC 9457 errors, `ETag` / `Link` caching, a bracketed
     filter DSL, batch queries and MCP support.
 
-Dédalo Publication API connects your archive data with the web.
+The Dédalo Publication API connects your archive data with the web.
 
 ## Introduction
 
-Dédalo stores all data in a private PostgreSQL database, only accessible by the back-end.
+Dédalo stores all data in a private PostgreSQL database, accessible only by the back-end.
 
-When it is needed to publish some of the data stored, Dédalo is able to do that through a publication tool (Dédalo diffusion engine).
+When you need to publish some of the stored data, Dédalo does it through a publication tool (the Dédalo diffusion engine).
 
-One of the most used publication services is the SQL publication format, and generally, these published data will be stored in a MySQL or MariaDB database. This database is accessible through Dédalo’s Public API.
+One of the most used publication services is the SQL publication format; this published data is usually stored in a MySQL or MariaDB database, which is accessible through Dédalo's Public API.
 
-Publication process transform your data into different formats as SQL, RDF or any other diffusion format without change your work data. This process is controlled by the ontology definition.
+The publication process transforms your data into different formats — SQL, RDF or any other diffusion format — without changing your work data. The process is controlled by the ontology definition.
 
-The purpose of this document is to guide you through the different available methods in the API, explaining every option and showing you how to use them with examples, code snippets and much more.
+This document guides you through the methods available in the API, explaining every option and showing how to use them with examples and code snippets.
 
 ## Diffusion ontology
 
-Diffusion ontology is a specific part of the Dédalo ontology to control what kind of data could be public and how this data need to be processed. The main idea is control the access to private data and how will be showed in the public web.
+The diffusion ontology is a specific part of the Dédalo ontology that controls which data can be public and how it must be processed. Its main purpose is to control access to private data and how it is shown on the public web.
 
-If you want to know more read [ontology](../diffusion_data_flow.md#diffusion-ontology) in diffusion data flow documentation.
+To learn more, see [Diffusion ontology](../diffusion_data_flow.md#diffusion-ontology) in the diffusion data flow documentation.
 
 ## Dédalo Publication Server API
 
@@ -229,7 +229,7 @@ Method: **GET**
 
 Get information about automatic portal resolution map. Publication schema is the definition to resolve the connection between fields and the tables.
 
-!!! info About portal fields
+!!! info "About portal fields"
     Portal is a relation between data, we name portal to fields with connections with other record in the same or other table.
     If you have a interview with two audiovisuals, yo will have a portal named `audiovisual` in the table `interview`, the portal will be a array with two section_id to locate the record in the table audiovisual.
 
@@ -355,7 +355,7 @@ The request to 'records' is a generic SQL query that returns the list of records
 
 This request is similar to a basic sql query but note that not all commands are supported or allowed for security reasons.
 
-!!! warning Security
+!!! warning "Security"
     All calls did to API are filtered and analyzed by server processes to avoid SQL injection. Any call is directly processed by database. Diffusion API is defined to be easy to use and understand and the calls maintain similar SQL syntax, but thinking in security all calls are filtered before will send to database.
 
 **Parameters:**
@@ -374,9 +374,9 @@ Database name. If not defined, the default database will be used `string`
 
 Table name in the database `string` **Mandatory**
 
-#### are_fields
+#### ar_fields
 
-Fields names to request data, similar to SELECT in SQL language. `sting || array`
+Field names to request data, similar to `SELECT` in SQL. `string || array`
 
 By default you will get all fields / columns of the table, but you can limited the information that you need to specific field o column setting the `ar_fields` parameter. The `ar_fields` use a comma separated list of required columns in table or strings array, both formats are allowed.
 
@@ -1618,7 +1618,7 @@ Only one term_id is allowed by request.
 
 Array of indexation locators with tag_id to be used in combination of term_id. `string` **Mandatory**
 
-!!! note About **tag_id**
+!!! note "About tag_id"
     tag_id is a part of Dédalo locator that identify a text fragment of a field (component) in work system. tag_id has in and out reference inside a text. to locate this part of text Dédalo locator use the path:
     `section_tipo -> section_id -> component_tipo -> tag_id`
     You can think in this path as:

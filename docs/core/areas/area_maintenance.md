@@ -53,13 +53,13 @@ It sits at the intersection of several subsystems rather than owning data:
   lang JS files, delete caches, log activity) and `rebuild_lang_files()`.
 - **Data-version migration** — `update_data_version()` (root + maintenance-mode
   gated, delegates to `update::update_version()`).
-- **Config-core mutation** — `set_config_core()` (the single write path into
-  `config_core.php`) and its typed front doors `set_maintenance_mode()`,
+- **Config-core mutation** — `set_config_core()` (the single write path for the
+  runtime overrides, into `../private/state.php`) and its typed front doors `set_maintenance_mode()`,
   `set_recovery_mode()`, `set_media_access_mode()`, `set_notification()`.
 - **Database housekeeping** — `create_db_extensions()`, `exec_db_maintenance()`
   (thin aliases of `db_tasks::*`).
 - **Recovery** — `build_recovery_version_file()` /
-  `restore_dd_ontology_recovery_from_file()` (aliases of `install::*`).
+  `restore_dd_ontology_recovery_from_file()` (aliases of `installer::*`).
 - **Test / diagnostics support** — `create_test_record()`,
   `long_process_stream()` (event-stream/CLI long-process tester), tool
   registration (`register_tools()`).
@@ -214,7 +214,7 @@ Grouped by concern. *static?* marks class-level (static) methods. Verified again
 
 | method | static? | purpose |
 | --- | --- | --- |
-| `set_config_core($options)` | ✓ (protected) | The single writer into `config_core.php`. Validates the constant name against a switch (`DEDALO_MAINTENANCE_MODE_CUSTOM`, `DEDALO_RECOVERY_MODE`, `DEDALO_MEDIA_ACCESS_MODE_CUSTOM`, `DEDALO_NOTIFICATION_CUSTOM`), type-checks the value, and appends/replaces the `define(...)` line. **Root-user gated** (except `DEDALO_RECOVERY_MODE`). |
+| `set_config_core($options)` | ✓ (protected) | The single writer for the runtime override flags into `../private/state.php` (STATE scope, via `installer_config_persistor::render_state`). Validates the constant name against a switch (`DEDALO_MAINTENANCE_MODE_CUSTOM`, `DEDALO_RECOVERY_MODE`, `DEDALO_MEDIA_ACCESS_MODE_CUSTOM`, `DEDALO_NOTIFICATION_CUSTOM`), type-checks the value, and writes it by its `state.*` dot-path. **Root-user gated** (except `DEDALO_RECOVERY_MODE`). |
 | `set_maintenance_mode($options)` | ✓ | Toggle `DEDALO_MAINTENANCE_MODE_CUSTOM` (bool) via `set_config_core`. |
 | `set_recovery_mode($options)` | ✓ | Toggle `DEDALO_RECOVERY_MODE` (bool) and set the live `$_ENV` flag. |
 | `set_media_access_mode($options)` | ✓ | Set `DEDALO_MEDIA_ACCESS_MODE_CUSTOM` (`null` \| `false` \| `'private'` \| `'publication'`). Called by the `media_control` widget. |
@@ -227,8 +227,8 @@ Grouped by concern. *static?* marks class-level (static) methods. Verified again
 | `create_db_extensions()` | ✓ | Force-create the PostgreSQL extensions (`db_tasks::create_extensions()`). |
 | `exec_db_maintenance()` | ✓ | Run basic PostgreSQL maintenance/reindexing (`db_tasks::exec_maintenance()`). |
 | `register_tools()` | ✓ | Import/register the tool ontology nodes (`tools_register::import_tools()`), aggregating per-tool errors. |
-| `build_recovery_version_file()` | ✓ | Alias of `install::build_recovery_version_file()` (writes `dd_ontology_recovery.sql`). |
-| `restore_dd_ontology_recovery_from_file()` | ✓ | Alias of `install::restore_dd_ontology_recovery_from_file()`. |
+| `build_recovery_version_file()` | ✓ | Alias of `installer::build_recovery_version_file()` (writes `dd_ontology_recovery.sql`). |
+| `restore_dd_ontology_recovery_from_file()` | ✓ | Alias of `installer::restore_dd_ontology_recovery_from_file()`. |
 
 #### Diagnostics / helpers
 
@@ -294,11 +294,11 @@ The data-bearing widgets and the public-static methods their classes expose
     that widget's own `const API_ACTIONS` — not to the area class — or
     `widget_request` will reject it with an explicit `permissions error`.
 
-## How it fits with the rest of Dedalo
+## How it fits with the rest of Dédalo
 
 - **Areas / menu** — `area_maintenance` is one of the major areas iterated by
   `area::get_areas()` (model name `area_maintenance`), and is reachable in the
-  menu only when permitted by `config_areas.php`. It inherits the area scaffolding
+  menu only when permitted by the `areas.deny`/`areas.allow` config. It inherits the area scaffolding
   from `area_common`/`common`. See the [Architecture overview](../architecture_overview.md)
   for where areas sit in the areas → sections → components hierarchy.
 - **Ontology** — `update_ontology()` rewrites `dd_ontology` (the active schema),
@@ -306,12 +306,12 @@ The data-bearing widgets and the public-static methods their classes expose
   subsystem; `register_tools()` imports tool nodes.
 - **Media protection** — the `media_control` widget and
   `set_media_access_mode()` write `DEDALO_MEDIA_ACCESS_MODE_CUSTOM` and trigger
-  `rebuild_media_index`; see `docs/config/media_protection.md`.
+  `rebuild_media_index`; see [Media protection](../../config/media_protection.md).
 - **Diffusion** — the `publication_api` widget reads the diffusion map and the
   `media_control` rebuild delegates to `dd_diffusion_api`; see
-  `docs/diffusion/dd_diffusion_api_and_bun.md`.
+  [Diffusion API and Bun](../../diffusion/dd_diffusion_api_and_bun.md).
 - **Tools** — `register_tools()` is the import path for the
-  [tools subsystem](../../development/tools/creating_tools.md); the widgets are a
+  [tools subsystem](../../development/tools/creating_tools.md). The widgets are a
   *different* extension surface (no `register.json`, no `tool_paths`).
 - **Search / SQO** — the `sqo_test_environment` widget and `update_ontology`'s use
   of `search_query_object` connect to [SQO](../sqo.md).
@@ -397,9 +397,9 @@ const api_response = await data_manager.request({
 - [SQO](../sqo.md) — the query format exercised by the SQO test environment.
 - [dd_area_maintenance_api](../../api/classes/dd_area_maintenance_api.md) — the
   generated API-class reference.
-- `docs/config/media_protection.md` — the media access control the
-  `media_control` widget configures.
-- `docs/diffusion/dd_diffusion_api_and_bun.md` — the diffusion engine the
-  `publication_api` widget and media-index rebuild talk to.
-- `docs/development/tools/creating_tools.md` — the tools subsystem
+- [Media protection](../../config/media_protection.md) — the media access control
+  the `media_control` widget configures.
+- [Diffusion API and Bun](../../diffusion/dd_diffusion_api_and_bun.md) — the
+  diffusion engine the `publication_api` widget and media-index rebuild talk to.
+- [Creating tools](../../development/tools/creating_tools.md) — the tools subsystem
   `register_tools()` imports into.

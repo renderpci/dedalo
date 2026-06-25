@@ -9,7 +9,7 @@ use Symfony\Component\Console\Formatter\NullOutputFormatter;
  */
 
 // Bootstrap
-$config_path = dirname(dirname(__DIR__)) . '/config/config.php';
+$config_path = dirname(dirname(__DIR__)) . '/config/bootstrap.php';
 if (!file_exists($config_path)) {
 	die("Error: Config file not found at $config_path\n");
 }

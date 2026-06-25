@@ -4,6 +4,29 @@
 
 
 
+/**
+* RENDER_TOOL_TRANSCRIPTION
+* Client-side view layer for the tool_transcription tool.
+*
+* This module exports the `render_tool_transcription` constructor whose prototype
+* method `edit` is mixed into the `tool_transcription` instance (see tool_transcription.js).
+* All DOM building for the transcription workspace lives here:
+*
+*   - Left panel  : the text-area component where the transcriptionist types.
+*   - Right panel : the AV media player, play-speed slider, keyboard-shortcut controls,
+*                   subtitle build button, and (when configured) the automatic-transcription
+*                   block that drives the local browser Whisper worker or a remote API server.
+*   - Header bar  : language selector, related-section dropdown, and optional external tool
+*                   buttons (tool_tr_print, tool_time_machine).
+*   - Activity strip: live save-notification area driven by the 'save' event.
+*
+* All private helpers are module-scoped `const` functions (not exported) and are therefore
+* invisible outside this file. They receive `self` (the tool instance) explicitly.
+*
+* Main export: `render_tool_transcription` (constructor)
+* Prototype method attached externally: `edit` (async, returns HTMLElement wrapper)
+*/
+
 // imports
 	import { event_manager } from '../../../core/common/js/event_manager.js'
 	import { data_manager } from '../../../core/common/js/data_manager.js'
@@ -29,9 +52,25 @@ export const render_tool_transcription = function() {
 
 /**
 * EDIT
-* Render tool main node
-* @param object options = {}
-* @return HTMLElement wrapper
+* Build and return the full edit-mode DOM wrapper for the transcription tool.
+*
+* When `render_level` is 'content', only the inner content_data fragment is returned
+* (used by refresh cycles that want to replace just the body, not the outer chrome).
+* Otherwise the full wrapper including header buttons and activity strip is built.
+*
+* Header elements (transcription-options and process-status) are rendered in parallel
+* via Promise.all to minimise latency; each resolves to a node that is appended in
+* document order once both are ready.
+*
+* Side effects:
+*   - Appends header nodes to `wrapper.tool_buttons_container`.
+*   - Appends the save-notification node to `wrapper.activity_info_container`.
+*
+* @param {Object} options - Render configuration object.
+* @param {string} [options.render_level='full'] - 'full' builds the complete wrapper;
+*   'content' returns only the inner content_data node.
+* @returns {Promise<HTMLElement>} The fully populated wrapper element, or the content_data
+*   node when render_level === 'content'.
 */
 render_tool_transcription.prototype.edit = async function(options={}) {
 
@@ -55,7 +94,7 @@ render_tool_transcription.prototype.edit = async function(options={}) {
 		const promises = []
 		// transcription_options are the buttons to get access to other tools (buttons in the header)
 		promises.push(
-			render_tanscription_options(self)
+			render_transcription_options(self)
 		)
 		// process status, render the status components for users and admins to control the process of the tool
 		promises.push(
@@ -81,8 +120,32 @@ render_tool_transcription.prototype.edit = async function(options={}) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @param object self
-* @return HTMLElement content_data
+* Build the two-column content body for the transcription tool's edit view.
+*
+* Layout:
+*   content_data
+*   ├── left_container   — the transcription text-area component
+*   └── right_container  — the media player + AV-specific controls + references component
+*
+* For `component_av` media, the right column is extended with:
+*   - A playback-speed range slider (0–2 × normal speed, step 0.1).
+*   - Keyboard-shortcut configuration inputs: play/pause key, auto-rewind duration (sec),
+*     and timecode-tag insertion key. Values are persisted to localStorage so they survive
+*     page reloads.
+*   - A subtitle-generation block (calls `self.build_subtitles_file()` then fires the
+*     'updated_subtitles_file_' event so the AV player reloads its caption track).
+*   - An automatic-transcription block (only when `self.context.config.transcriber_engine`
+*     is configured in the tool's ontology).
+*
+* The references component is always appended at the bottom of the right column, regardless
+* of the media model.
+*
+* Pointers to `left_container` and `right_container` are attached directly to the returned
+* `content_data` element so that other parts of the UI can reach them without re-querying.
+*
+* @param {Object} self - The tool_transcription instance.
+* @returns {HTMLElement} content_data node with `left_container` and `right_container`
+*   properties attached.
 */
 const get_content_data_edit = function(self) {
 
@@ -155,6 +218,7 @@ const get_content_data_edit = function(self) {
 							type 			: 'range',
 							parent 			: slider
 						})
+						// range: 0 (stopped/slowest) to 2× normal speed; default 1×
 						range.value	= output.value
 						range.min	= 0
 						range.max	= 2
@@ -189,19 +253,23 @@ const get_content_data_edit = function(self) {
 							})
 							// get the cookie of the key
 							const av_playpause_key_value		= localStorage.getItem('av_playpause_key')
+							// Fall back to 'Escape' when no stored preference exists
 							const av_playpause_keyboard_code	= av_playpause_key_value ? av_playpause_key_value : 'Escape' // Default 'Escape'
-							// get the user friendly name of the key code based in specific object imported form /common/utils/js/keyborad.js
+							// get the user friendly name of the key code based in specific object imported from /common/utils/js/keyboard.js
 							const av_playpause_keyboard_key										= keyboard_codes[av_playpause_keyboard_code]
 							component_text_area.context.features.av_player.av_play_pause_code	= av_playpause_keyboard_code
 							playpause_key_input.value											= av_playpause_keyboard_key
 
+							// On each keyup, capture the raw KeyboardEvent.code (e.g. 'KeyF', 'Escape')
+							// and display the human-readable key name. The code is persisted to localStorage
+							// so the text-area's AV player logic can intercept the correct key next render.
 							playpause_key_input.addEventListener('keyup', function(event){
-								const keyborard_code	= event.code
-								const keyborard_key		= event.key
+								const keyboard_code	= event.code
+								const keyboard_key		= event.key
 								// set the cookie of the key
-								localStorage.setItem('av_playpause_key', keyborard_code);
-								playpause_key_input.value											= keyborard_key
-								component_text_area.context.features.av_player.av_play_pause_code	= keyborard_code
+								localStorage.setItem('av_playpause_key', keyboard_code);
+								playpause_key_input.value											= keyboard_key
+								component_text_area.context.features.av_player.av_play_pause_code	= keyboard_code
 							})
 						// rewind value is the time that the av rewind when is paused by the play/pause key
 						// it change the text_area default rewind time to the user has specify
@@ -234,6 +302,8 @@ const get_content_data_edit = function(self) {
 							av_rewind_secs_input.value				= secs_val
 							component_text_area.context.features.av_player.av_rewind_seconds	= secs_val
 
+							// On each change, coerce the input to a valid integer; fall back to 3 if NaN
+							// to prevent the AV player from receiving a nonsensical rewind distance
 							av_rewind_secs_input.addEventListener('change', function(event){
 								// if the key pressed is not a number use the default
 								const value = parseInt(event.target.value)
@@ -267,19 +337,20 @@ const get_content_data_edit = function(self) {
 							// get the cookie of the key
 							const tag_insert_key_value = localStorage.getItem('tag_insert_key')
 
+							// Default 'F2' maps to the standard function key for inserting timecode tags
 							const tag_insert_keyboard_code			= tag_insert_key_value ? tag_insert_key_value : 'F2' // Default 'F2'
-							// get the user friendly name of the key code based in specific object imported form /common/utils/js/keyborad.js
+							// get the user friendly name of the key code based in specific object imported from /common/utils/js/keyboard.js
 							const tag_insert_keyboard_key			= keyboard_codes[tag_insert_keyboard_code]
 							tag_insert_key_input.value				= tag_insert_keyboard_key
 							component_text_area.context.features.av_player.av_insert_tc_code	= tag_insert_keyboard_code
 
 							tag_insert_key_input.addEventListener('keyup', function(event){
-								const keyborard_code					= event.code
-								const keyborard_key						= event.key
+								const keyboard_code					= event.code
+								const keyboard_key						= event.key
 								// set the cookie of the key
-								localStorage.setItem('tag_insert_key', keyborard_code);
-								tag_insert_key_input.value				= keyborard_key
-								component_text_area.context.features.av_player.av_insert_tc_code	= keyborard_code
+								localStorage.setItem('tag_insert_key', keyboard_code);
+								tag_insert_key_input.value				= keyboard_key
+								component_text_area.context.features.av_player.av_insert_tc_code	= keyboard_code
 							})
 
 				// subtitles_block
@@ -299,6 +370,8 @@ const get_content_data_edit = function(self) {
 							e.stopPropagation()
 
 							// force input_characters_per_line to fix value if is selected
+							// Blurring the active element ensures that a 'change' event fires on any
+							// focused input before the characters_per_line value is read by the API call
 							if (document.activeElement) {
 								document.activeElement.blur();
 							}
@@ -309,10 +382,13 @@ const get_content_data_edit = function(self) {
 							const response = await self.build_subtitles_file()
 							if (!response.result) {
 								// error case
+								// (!) alert() used here for error feedback — consider replacing with ui.show_message()
 								alert(response.msg || 'Unknown error on build_subtitles_file');
 							}else{
 								// success case
 								// update video to force load the new subtitles file
+								// The event name includes the media component id so that only the relevant
+								// AV player instance reacts (component_av subscribes in its 'player' view)
 								event_manager.publish('updated_subtitles_file_' + self.media_component.id, {
 									lang	: self.transcription_component.data.lang,
 									url		: response.url
@@ -356,6 +432,8 @@ const get_content_data_edit = function(self) {
 					})
 
 					// check if tool has transcriber engine configuration
+					// The transcriber_engine config key is set in the tool's ontology (register.json or similar).
+					// If absent, the automatic-transcription UI is silently omitted.
 					const transcriber_engine = (self.context.config)
 						? self.context.config.transcriber_engine.value
 						: false
@@ -368,6 +446,8 @@ const get_content_data_edit = function(self) {
 					}//end if (transcriber_engine)
 
 				// update video to force load the new subtitles file
+				// Fired immediately on render so that any previously generated .vtt file
+				// is loaded into the AV player's captions track without requiring a full page reload
 					event_manager.publish('updated_subtitles_file_' + self.media_component.id, {
 						lang : self.transcription_component.data.lang
 					})
@@ -400,10 +480,25 @@ const get_content_data_edit = function(self) {
 
 /**
 * RENDER_RELATED_LIST
-* This is used to build a select element to allow user select the top_section_tipo
-* and top_section_id of current indexation
-* @param object self
-* @return DocumentFragment
+* Build a `<select>` element listing all top-level sections that reference the
+* current transcription section, allowing the user to switch the active
+* top_section_tipo / top_section_id context.
+*
+* The data source is `self.relation_list`, a datum object loaded by
+* `tool_transcription.prototype.load_relation_list` during `build()`. Its `data`
+* array contains a 'sections' entry whose `.value` is an array of locators
+* `{ section_tipo, section_id }`. The corresponding labels come from `datum.context`.
+*
+* Each `<option>` element receives a `.locator` property (not a DOM attribute) so
+* that the change handler can retrieve the full locator object via
+* `this.options[this.selectedIndex].locator` without re-parsing the label string.
+*
+* Side effect: `self.top_locator` is set to the first locator immediately on
+* construction (before any user interaction) and updated on each `<select>` change.
+*
+* @param {Object} self - The tool_transcription instance.
+* @returns {DocumentFragment} Fragment containing the related-list wrapper div and
+*   the populated `<select>`, or an empty fragment when no 'sections' datum exists.
 */
 const render_related_list = function(self) {
 
@@ -447,6 +542,8 @@ const render_related_list = function(self) {
 			const ar_component_data	= data.filter(el => el.section_tipo===current_locator.section_top_tipo && el.section_id===current_locator.section_top_id)
 
 			// ar_component_value
+				// Collect text values from all components that belong to this section/id pair
+				// so the option label carries enough context to distinguish entries
 				const ar_component_value = []
 				for (let j = 0; j < ar_component_data.length; j++) {
 					const current_value = ar_component_data[j].value // toString(ar_component_data[j].value)
@@ -454,6 +551,7 @@ const render_related_list = function(self) {
 				}
 
 			// label
+			// Format: "Section Label | section_id | component_value_1 | component_value_2 …"
 				const label = 	section_label + ' | ' +
 								current_locator.section_top_id +' | ' +
 								ar_component_value.join(' | ')
@@ -464,6 +562,8 @@ const render_related_list = function(self) {
 					inner_html		: label,
 					parent			: select
 				})
+				// Attach the full locator object directly on the DOM node for fast retrieval
+				// in the change handler — avoids re-parsing the display label
 				option.locator = current_locator
 
 		}//end for
@@ -481,11 +581,23 @@ const render_related_list = function(self) {
 
 /**
 * RENDER_TANSCRIPTION_OPTIONS
-* This is used to build a optional buttons inside the header
-* @param object self
-* @return DocumentFragment
+* Build the header-bar fragment containing: the related-section selector,
+* a language switcher, and optional external-tool buttons.
+*
+* External tool buttons (tool_tr_print, tool_time_machine) are shown only when the
+* current user has access to those tools; availability is determined by
+* `self.get_user_tools()` which calls the `dd_tools_api` 'user_tools' action.
+* Each button opens the tool via `open_tool()` with the transcription component as caller.
+*
+* Language selector: when the user picks a different language the transcription
+* component is refreshed with `render_level: 'full'` so that the lang label in the
+* text-area header also updates.
+*
+* @param {Object} self - The tool_transcription instance.
+* @returns {Promise<DocumentFragment>} Resolved fragment with the selector, lang
+*   switcher, and any accessible tool buttons.
 */
-const render_tanscription_options = async function(self) {
+const render_transcription_options = async function(self) {
 
 	const fragment = new DocumentFragment()
 
@@ -574,7 +686,7 @@ const render_tanscription_options = async function(self) {
 		}
 
 	return fragment
-}//end render_tanscription_options
+}//end render_transcription_options
 
 
 
@@ -582,9 +694,18 @@ const render_tanscription_options = async function(self) {
 * RENDER_PROCESS_STATUS
 * Render the status components to get control of the process of the tool
 * the components are defined in ontology as tool_config->name_of_the_tool->ddo_map
-* @param object self
-* 	instance of current tool
-* @return DocumentFragment
+*
+* Renders the optional `status_user_component` and `status_admin_component` instances
+* that are resolved from the tool's `ddo_map` during `build()`. Both are displayed in
+* 'mini' view with their toolbar and save-animation suppressed so they fit compactly in
+* the header bar.
+*
+* Either component may be absent (e.g. user lacks the admin status component) — the
+* corresponding block is silently skipped.
+*
+* @param {Object} self - The tool_transcription instance.
+* @returns {Promise<DocumentFragment>} Fragment containing zero, one, or two rendered
+*   status component nodes.
 */
 const render_process_status = async function(self) {
 
@@ -616,10 +737,20 @@ const render_process_status = async function(self) {
 
 /**
 * RENDER_ACTIVITY_INFO
-* This is used to build a optional buttons inside the header
-* @param object self
-* 	instance of current tool
-* @return HTMLElement activity_info_body
+* Build the activity-info container and wire it to the 'save' event so that
+* each successful (or failed) save operation renders a transient notification node
+* inside the strip at the top of the tool.
+*
+* The event token is pushed onto `self.events_tokens` so that `destroy()` can
+* unsubscribe cleanly and prevent memory leaks.
+*
+* The 'save' event payload is expected to contain at minimum the fields consumed by
+* `render_node_info()` from notifications.js (instance reference, api_response, etc.).
+* The `container` property is injected before forwarding.
+*
+* @param {Object} self - The tool_transcription instance.
+* @returns {Promise<HTMLElement>} The activity_info_body div (initially empty; populated
+*   dynamically as 'save' events arrive).
 */
 const render_activity_info = async function(self) {
 
@@ -651,9 +782,30 @@ const render_activity_info = async function(self) {
 
 
 /**
-* get_SERVER_status
-* @param object options
-* @return HTMLElement automatic_transcription_container
+* GET_SERVER_STATUS
+* Poll the server to determine the current state of a background transcription process
+* and update the UI nodes accordingly.
+*
+* The status is keyed by a stable `server_process_id` derived from the media component's
+* tipo and section_id, stored in the local IndexedDB 'status' table via `data_manager`.
+*
+* Three server-side status codes are handled:
+*   1 — Process ended or pid is stale: clear local DB entry, mark UI as 'Inactive'.
+*   2 — Still processing: schedule a 4-second recursive poll, mark UI as 'Processing'.
+*   3 (or default) — Finished: clear local DB entry, mark UI as done, schedule a
+*       4-second delayed refresh of the transcription component so the new text appears.
+*
+* The poll is initiated once at call time via `check_current_server_status()`. If the
+* local DB holds no entry for this process (no job was ever started or it was already
+* cleaned up), the function returns immediately without touching the UI.
+*
+* @param {Object} options - Configuration object.
+* @param {Object} options.self  - The tool_transcription instance.
+* @param {Object} options.nodes - Named references to DOM nodes that must exist:
+*   `nodes.status_container`              — element showing current status text,
+*   `nodes.button_automatic_transcription` — the trigger button (enabled/disabled),
+*   `nodes.transcriber_engine_select`     — `<select>` holding the chosen engine name.
+* @returns {void}
 */
 const get_server_status = function (options) {
 
@@ -742,8 +894,48 @@ const get_server_status = function (options) {
 
 /**
 * RENDER_AUTOMATIC_TRANSCRIPTION
-* @param object options
-* @return HTMLElement automatic_transcription_container
+* Build the automatic-transcription control block appended to the right column when
+* a `transcriber_engine` is present in the tool's ontology config.
+*
+* This block contains:
+*   - A trigger button that starts the transcription job.
+*   - A collapsible configuration panel (gear icon) with:
+*       * Engine selector (`<select>`) — choices come from `context.config.transcriber_engine.value`.
+*       * Device checkbox — when checked, forces CPU/WASM mode (slower but compatible);
+*         when unchecked, uses WebGPU. Checking it also locks quality to 'small' because
+*         large Whisper models exceed WASM memory limits.
+*       * Quality selector (`<select>`) — populated from `context.config.transcriber_quality`.
+*       * Lang-info display — shows the current transcription language as "Label | tld3 | tld2"
+*         and updates whenever the transcription component is re-rendered (language change).
+*   - A status display that shows processing state (hidden initially).
+*
+* Engine/quality/device selections are persisted to the local IndexedDB 'status' table so
+* that the user's preferences survive page reloads.
+*
+* Two transcription execution paths exist (selected by `engine.type`):
+*   'browser' (default) — Spawns a Web Worker running the Whisper ONNX model via
+*     Transformers.js. Audio is fetched from the server as an ArrayBuffer, decoded via
+*     AudioContext at 16 kHz, and sent to the worker via postMessage. Worker messages
+*     (`init`, `on_chunk_start`, `callback_function`, `end`) drive the status display in
+*     real time. On completion, `parse_dedalo_format()` converts segments to the Dédalo
+*     HTML timecode format and `self.transcription_component.set_value()` saves the result.
+*   'server' — Sends an API request to the configured back-end service and then polls for
+*     completion via `get_server_status()` using the returned process pid stored in the
+*     local DB.
+*
+* A pre-flight WebGPU capability check (`ua.check_transformers_webgpu()`) warns the user
+* if the browser cannot run the model efficiently before starting the job.
+*
+* The `nodes` object is used as an internal message bus between the button handler,
+* configuration inputs, and status display to avoid repeated DOM queries.
+*
+* (!) `lang_info` is referenced in the button click handler via closure; it is declared
+* later in the same function body. This works because `const` is hoisted within the
+* function scope but the click handler only runs after the full function has returned.
+*
+* @param {Object} options - Configuration object.
+* @param {Object} options.self - The tool_transcription instance.
+* @returns {HTMLElement} The automatic_transcription_container div, ready to append.
 */
 const render_automatic_transcription = function (options) {
 
@@ -833,13 +1025,20 @@ const render_automatic_transcription = function (options) {
 
 							const pid = response.result.pid
 
+							// derive the same stable status key used by get_server_status()
+							const server_process_id = 'transcriber_process_'+self.media_component.section_tipo+'_'+self.media_component.section_id
+
 							// set the server pid to the local database
 							data_manager.set_local_db_data({
 								id	: server_process_id,
 								pid	: pid
 							}, 'status')
 
-							check_current_server_status()
+							// fire the status poll (get_server_status owns check_current_server_status)
+							get_server_status({
+								self : self,
+								nodes: nodes
+							})
 						}
 					})
 					break;
@@ -924,11 +1123,14 @@ const render_automatic_transcription = function (options) {
 						inner_html		: engine.label,
 						parent			: transcriber_engine_select
 					})
+					// Pre-select the engine that was last used (persisted as self.target_transcriber
+					// from the local DB during tool init)
 					if (self.target_transcriber===engine.name) {
 						option.selected = true
 					}
 				}
 				// local_db
+				// Persist the selected engine name so the next session starts with the same choice
 					const engine_id = 'transcriber_engine_select'
 					transcriber_engine_select.addEventListener('change', function(){
 						data_manager.set_local_db_data({
@@ -971,6 +1173,8 @@ const render_automatic_transcription = function (options) {
 				option_label.prepend(transcriber_device_checkbox)
 
 				// local_db
+				// When CPU/WASM mode is selected, the quality is locked to 'small' because
+				// larger Whisper models require WebGPU memory bandwidth — they cannot run in WASM
 					const device_id = 'transcriber_device_checkbox'
 					transcriber_device_checkbox.addEventListener('change', function(){
 						data_manager.set_local_db_data({

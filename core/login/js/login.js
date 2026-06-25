@@ -276,6 +276,82 @@ login.prototype.login = async function(options) {
 
 
 /**
+* REQUEST_PASSWORD_RESET
+* Step 1 of the self-service password recovery flow. Sends an identifier
+* (username or email) to dd_utils_api and returns the raw API response, which
+* carries an opaque reset_id used by confirm_password_reset().
+*
+* The response is deliberately generic (it does not reveal whether an account
+* exists). Callers should always advance to the code-entry view regardless of
+* result and use the returned reset_id for the confirm step.
+*
+* @param {Object} options
+* @param {string} options.identifier - username or email address
+* @returns {Promise<Object>} Raw API response { result, msg, reset_id }
+*/
+login.prototype.request_password_reset = async function(options) {
+
+	const identifier = options.identifier
+
+	const api_response = await data_manager.request({
+		body : {
+			action	: 'request_password_reset',
+			dd_api	: 'dd_utils_api',
+			options	: {
+				identifier	: identifier
+			}
+		}
+	})
+
+	if(SHOW_DEBUG===true) {
+		console.log('request_password_reset api_response:', api_response);
+	}
+
+	return api_response
+}//end request_password_reset
+
+
+
+/**
+* CONFIRM_PASSWORD_RESET
+* Step 2 of the password recovery flow. Sends the reset_id, the emailed 6-digit
+* code and the new password to dd_utils_api. On success the user's password is
+* updated server-side; no session is created, so the user logs in normally.
+*
+* @param {Object} options
+* @param {string} options.reset_id     - opaque token from request_password_reset
+* @param {string} options.code         - 6-digit code received by email
+* @param {string} options.new_password - the new password to set
+* @returns {Promise<Object>} Raw API response { result, msg, errors }
+*/
+login.prototype.confirm_password_reset = async function(options) {
+
+	const reset_id		= options.reset_id
+	const code			= options.code
+	const new_password	= options.new_password
+
+	const api_response = await data_manager.request({
+		body : {
+			action	: 'confirm_password_reset',
+			dd_api	: 'dd_utils_api',
+			options	: {
+				reset_id		: reset_id,
+				code			: code,
+				new_password	: new_password
+			}
+		}
+	})
+
+	if(SHOW_DEBUG===true) {
+		console.log('confirm_password_reset api_response:', api_response);
+	}
+
+	return api_response
+}//end confirm_password_reset
+
+
+
+/**
 * QUIT
 * Close current user session
 * (!) Note that quit menu event removes local indexedDB menu data before quit

@@ -1,20 +1,20 @@
 # Thesaurus dependencies
 
-## Introduction
+> See also: [Configuration](index.md) · [Installing new hierarchies](../management/install_new_hierarchies.md)
 
-Dédalo use different models for specific heritage field. For example, if you want create a tangible catalog of archeological collection, you will need to implement the `tch` (tangible cultural heritage) ontology model or tld, if you want work with numismatics heritage you will need to implement `numisdata` or if you want create a interviews archive you will need to implement `oh` tld, etc.
+Dédalo uses different models for each heritage field. For example, to build a tangible catalogue of an archaeological collection you implement the `tch` (tangible cultural heritage) ontology model (tld); to work with numismatic heritage you implement `numisdata`; to build an interview archive you implement the `oh` tld, and so on.
 
-All this ontology definitions get data, use, thesaurus, therefore the ontology model has dependencies of some specific thesaurus.
+All of these ontology definitions consume thesauri, so each ontology model depends on certain thesauri.
 
-Why thesaurus are not directly use the main tld?
+## Why thesauri do not use the main tld
 
-The quick answer is that thesaurus can be shared between disciplines.
+The short answer: a thesaurus can be shared across disciplines.
 
-The longer answer is that if you use the the same tld for the thesaurus when you implement the tld you are implemented the full definition with all sections and fields that maybe you don't want to use.
+The longer answer: if a thesaurus used the same tld as the catalogue model, implementing that tld would also implement the whole model — with every section and field, even the ones you don't want.
 
-For example; you want to implement `tch` model and it use the thesaurus `material`, seems that this material thesaurus definition should be defined with a `tch` tld instead his own tld, in this way the material thesaurus will implemented at same time that tch implementation. But material is also used by numismatic model `numisdata`, if the thesaurus use the `tch` tld when you implement the thesaurus you will implement full `tch` model that you don't want.
+For example, the `tch` model uses the `material` thesaurus. It might seem that `material` should carry the `tch` tld so it gets implemented alongside `tch`. But `material` is also used by the numismatic model `numisdata`; if it carried the `tch` tld, implementing the thesaurus would drag in the full `tch` model, which you don't want.
 
-Besides a thesaurus can be shared between projects and installations, so is necessary a specific tld.
+A thesaurus can also be shared between projects and installations, so it needs its own tld.
 
 ## Dependencies
 

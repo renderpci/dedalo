@@ -78,7 +78,7 @@ if (!defined('APP_ROOT')) {
 	define('APP_ROOT', dirname(__DIR__, 4)); // Go up 4 directories from this file to the root
 }
 if (!defined('DEDALO_ROOT_PATH')) {
-	if (!include APP_ROOT . '/config/config.php') {
+	if (!include APP_ROOT . '/config/bootstrap.php') {
 		throw new Exception('Config file not found');
 	}
 }

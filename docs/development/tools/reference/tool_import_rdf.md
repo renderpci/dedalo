@@ -100,4 +100,3 @@ A class node can additionally declare `"match": "<component_tipo>"` to tell `get
 - [tool_export](tool_export.md) and [Exporting data](../../../core/exporting_data.md) — the export counterpart (the `dedalo_raw` round-trip is a different, file-based path).
 - [Creating new tools](../creating_tools.md) · [Server contract](../server_contract.md) — the tool model, `API_ACTIONS`, gates and lifecycle this page builds on.
 - Source: `tools/tool_import_rdf/class.tool_import_rdf.php`, `tools/tool_import_rdf/js/{tool_import_rdf,render_tool_import_rdf}.js`, `tools/tool_import_rdf/register.json`. RDF parsing via the `sweetrdf/easyrdf` composer dependency; SSRF confinement via `is_safe_remote_url()` (`shared/core_functions.php`).
-```

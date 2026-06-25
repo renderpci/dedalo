@@ -238,10 +238,10 @@ final class dd_core_api {
 				if(!defined('DEDALO_INSTALL_STATUS') || DEDALO_INSTALL_STATUS!=='installed') {
 
 					// run install process
-						$install = new install();
+						$installer = new installer();
 
 					// get the install context, client only need context of the install to init the install instance
-						$context[] = $install->get_structure_context();
+						$context[] = $installer->get_structure_context();
 
 					// response to client
 						$response->result = (object)[
@@ -354,8 +354,8 @@ final class dd_core_api {
 							}else{
 
 								// run install process
-								$install = new install();
-								$context[] = $install->get_structure_context();
+								$installer = new installer();
+								$context[] = $installer->get_structure_context();
 							}
 
 					}else{

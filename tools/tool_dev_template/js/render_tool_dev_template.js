@@ -14,9 +14,39 @@
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 
 
+
 /**
 * RENDER_TOOL_DEV_TEMPLATE
-* Manages the component's logic and appearance in client side
+* Client-side render module for the tool_dev_template development scaffold.
+*
+* This module is the canonical starting point when creating the render layer of a
+* new Dédalo v7 tool.  It demonstrates the three main interaction patterns that a
+* tool render module typically needs:
+*
+*  1. Displaying a component inside the tool body (self.main_element, rendered via
+*     the standard component render pipeline).
+*  2. Fetching data from the server and reflecting it in the DOM (test_button 1 & 2,
+*     ui.load_item_with_spinner, self.get_some_data_from_server).
+*  3. Uploading files — generic variant via service_upload (test_button3) and the
+*     image-resource variant via open_tool(tool_upload) (test_button4).
+*
+* Architectural note:
+*  `render_tool_dev_template` is a constructor-as-namespace.  The single prototype
+*  method `edit` is mixed into the `tool_dev_template` class via `wire_tool()` in
+*  tool_dev_template.js.  The module-private `get_content_data` helper builds the
+*  actual DOM tree so that the public `edit` entry point stays thin.
+*
+* Globals expected at runtime (declared in the /*global*\/ directive above):
+*  - DD_TIPOS      — ontology tipo constants map (e.g. DD_TIPOS.DEDALO_SECTION_RESOURCES_IMAGE_TIPO)
+*  - DEDALO_MEDIA_URL — base URL for constructed media file URLs
+*
+* (!) DD_TIPOS and DEDALO_MEDIA_URL are NOT listed in the /*global*\/ directive at the
+*     top of this file, which will cause ESLint no-undef warnings on the four
+*     call-sites inside test_button4's click handler.  This is a pre-existing
+*     oversight in the scaffold; do not add runtime stubs or suppress the lint here —
+*     a real tool should declare them or import them from the appropriate module.
+*
+* @module render_tool_dev_template
 */
 export const render_tool_dev_template = function() {
 
@@ -28,9 +58,19 @@ export const render_tool_dev_template = function() {
 /**
 * EDIT
 * Render tool DOM nodes
-* This function is called by render common attached in 'tool_dummy.js'
-* @param object options
-* @return HTMLElement wrapper
+* This function is wired onto the tool prototype by wire_tool() in 'tool_dev_template.js'
+*
+* Entry point for the edit-mode render pipeline.  Delegates body construction to
+* the module-private `get_content_data` helper and then wraps the result in a
+* standard tool shell built by `ui.tool.build_wrapper_edit`.
+*
+* When `options.render_level === 'content'`, only the inner content_data node is
+* returned (used for partial refreshes without re-building the outer chrome).
+*
+* @param {Object} options
+* @param {string} [options.render_level='full'] - 'full' returns the full wrapper;
+*   'content' returns only the inner content_data node (partial refresh path)
+* @returns {Promise<HTMLElement>} wrapper element (full) or content_data node (content)
 */
 render_tool_dev_template.prototype.edit = async function(options) {
 
@@ -59,8 +99,43 @@ render_tool_dev_template.prototype.edit = async function(options) {
 /**
 * GET_CONTENT_DATA
 * Render tool body or 'content_data'
-* @param instance self
-* @return HTMLElement content_data
+*
+* Builds the complete inner DOM tree of the tool and returns it wrapped in the
+* standard content_data container created by `ui.tool.build_content_data`.
+*
+* Layout produced (top to bottom):
+*  1. info_container     — static descriptive text pointing developers to the docs.
+*  2. components_container / main_component_container — renders `self.main_element`
+*     (the component identified by `role: 'main_element'` in the ddo_map) into the
+*     DOM.  The render call is non-blocking (`.then`); the component node is appended
+*     whenever the promise resolves.
+*  3. footer_buttons_container — four demo buttons (see below).
+*  4. value_container    — display area shared by all four button callbacks.
+*
+* Demo buttons:
+*  - test_button  : reads self.main_element.data.value from the in-memory instance
+*    and displays it as pretty-printed JSON via ui.load_item_with_spinner.
+*  - test_button2 : calls self.get_some_data_from_server() (routes to the PHP
+*    get_component_data API action) and displays the result.
+*  - test_button3 : spawns a generic service_upload widget, subscribes to the
+*    'upload_file_done_' + self.id event, then calls self.file_upload_handler on
+*    completion and tears down the service instance.
+*  - test_button4 : creates a fresh resource-image section via data_manager,
+*    instantiates a component_image on that section, finds its tool_upload context,
+*    opens it in a modal via open_tool(), and handles the
+*    'process_uploaded_file_done_' event to display the resulting files_info.
+*
+* (!) value_container is referenced inside the four button click handlers that are
+*     registered before the variable is declared in the code below.  This works
+*     because closures capture the binding, not the value at registration time; the
+*     handlers are only invoked after the async function has fully returned and the
+*     user actually clicks — by then value_container is fully initialised.  A future
+*     refactor may wish to reorder the declaration for clarity.
+*
+* @param {Object} self - The tool_dev_template instance (provides self.main_element,
+*   self.id, self.get_tool_label, self.get_some_data_from_server,
+*   self.file_upload_handler)
+* @returns {Promise<HTMLElement>} content_data wrapper node ready to be inserted into the DOM
 */
 const get_content_data = async function(self) {
 
@@ -88,6 +163,9 @@ const get_content_data = async function(self) {
 			class_name		: 'main_component_container',
 			parent			: components_container
 		})
+		// Render self.main_element and append its node once ready.
+		// The .then is intentionally non-awaited so the rest of the DOM builds
+		// without blocking on the component render pipeline.
 		self.main_element.render()
 		.then(function(component_node){
 			main_component_container.appendChild(component_node)
@@ -101,6 +179,9 @@ const get_content_data = async function(self) {
 		})
 
 	// test_button 1
+	// Reads the current in-memory value of self.main_element and renders it as
+	// pretty-printed JSON inside value_container using a spinner while "loading".
+	// The 700 ms pause is artificial — replace with real async work in a real tool.
 		const test_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'primary',
@@ -129,6 +210,8 @@ const get_content_data = async function(self) {
 		})
 
 	// test_button 2
+	// Calls the server-side get_component_data action via self.get_some_data_from_server
+	// and displays the JSON result.  The 500 ms pause is artificial.
 		const test_button2 = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'primary',
@@ -160,6 +243,12 @@ const get_content_data = async function(self) {
 
 
 	// test_button3 upload_file (generic)
+	// Demonstrates the generic file-upload flow using service_upload:
+	//  1. Instantiates and renders a service_upload widget (allowed: zip, kml).
+	//  2. Subscribes to the 'upload_file_done_' + self.id event that service_upload
+	//     fires once the file transfer is complete.
+	//  3. In the handler: calls self.file_upload_handler (PHP: handle_upload_file),
+	//     destroys the service_upload widget, and shows a confirmation message.
 		const test_button3 = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'primary',
@@ -188,6 +277,8 @@ const get_content_data = async function(self) {
 					const service_upload_node = await service_upload.render()
 
 					// event upload_file_done_
+					// service_upload fires this event with a response object containing
+					// file_data (name, key_dir, tmp_name, etc.) once the upload succeeds.
 					event_manager.subscribe('upload_file_done_' + self.id, fn_upload_done)
 					async function fn_upload_done(response) {
 						// handle the result
@@ -204,6 +295,21 @@ const get_content_data = async function(self) {
 		})
 
 	// test_button4 upload_file (image)
+	// Demonstrates the image-resource upload flow using tool_upload (a dedicated
+	// upload tool that handles media encoding/conversion):
+	//  1. Creates a fresh rsc section (section_resources_image_tipo) via data_manager
+	//     create action so there is a real section_id to attach the image to.
+	//  2. Instantiates a component_image on that section as the upload context.
+	//  3. Locates the tool_upload tool in the component's tools array and opens it
+	//     as a modal via open_tool().
+	//  4. Subscribes to 'process_uploaded_file_done_' + tool.id; when fired:
+	//     closes the modal, rebuilds component_image to reload DDBB data, reads
+	//     files_info from the updated component data, and renders image previews.
+	//
+	// (!) DD_TIPOS and DEDALO_MEDIA_URL are referenced below but not declared in
+	//     the /*global*\/ directive at the top of this file.  This causes ESLint
+	//     no-undef warnings and will throw at runtime if those globals are absent.
+	//     A real tool must either import these constants or declare them globally.
 		const test_button4 = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'primary',
@@ -227,6 +333,8 @@ const get_content_data = async function(self) {
 					const component_resources_image_tipo = DD_TIPOS.DEDALO_COMPONENT_RESOURCES_IMAGE_TIPO // 'rsc29';
 
 					// data_manager. create
+					// Creates a new resource-image section record so we have a real
+					// section_id before instantiating the component_image.
 					const rqo = {
 						action	: 'create',
 						source	: {
@@ -242,6 +350,8 @@ const get_content_data = async function(self) {
 
 						// resource component used as tool_upload caller
 						// It is necessary because he knows the proper tool context
+						// The component_image instance holds the ddo_map that tool_upload
+						// needs to resolve the correct upload target and encoding config.
 							const component_image = await get_instance({
 								model			: 'component_image',
 								tipo			: component_resources_image_tipo,
@@ -253,9 +363,13 @@ const get_content_data = async function(self) {
 							await component_image.build(true);
 
 						// tool context. Get the upload tool context to be fired
+						// component_image.tools is populated during build() from the
+						// component's ddo_map; find the tool_upload entry by model name.
 							const tool_upload = component_image.tools.find(el => el.model === 'tool_upload')
 
 						// open_tool, it will be the interface to upload data in new window.
+						// open_as:'modal' renders the tool in an overlay dialog rather than
+						// a separate browser window.
 							const tool = await open_tool({
 								tool_context	: tool_upload,
 								open_as			: 'modal',
@@ -263,6 +377,9 @@ const get_content_data = async function(self) {
 							})
 
 						// event process_uploaded_file_done_
+						// tool_upload fires this event after the server finishes processing
+						// (encoding, thumbnail generation, etc.) — not just after the raw
+						// HTTP transfer completes.  api_response here is the PHP result object.
 							const fn_process_done = async function(api_response) {
 
 								// close modal. This action also destroys the tool
@@ -278,6 +395,8 @@ const get_content_data = async function(self) {
 									await component_image.build(true);
 									const data	= component_image.data || {}
 									const value	= data.value || []
+									// files_info is an array of file descriptors produced by the
+									// image processor; each entry contains extension, quality, file_path, etc.
 									const files_info = value[0]
 										? value[0].files_info
 										: null
@@ -296,6 +415,8 @@ const get_content_data = async function(self) {
 										})
 
 										// preview all available images
+										// Iterates files_info to build one <img> + metadata <pre> per variant.
+										// DEDALO_MEDIA_URL is the CDN/media-server base URL configured at install time.
 											const files_info_length = files_info.length
 											for (let k = 0; k < files_info_length; k++) {
 												const url = DEDALO_MEDIA_URL + files_info[k].file_path
@@ -327,6 +448,8 @@ const get_content_data = async function(self) {
 
 
 	// value_container
+	// Shared output area rendered at the bottom of the tool body.
+	// All four button callbacks write their results here (replacing previous content).
 		const value_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'value_container',
@@ -345,10 +468,28 @@ const get_content_data = async function(self) {
 
 /**
 * ADD_COMPONENT_SAMPLE
-* @param instance self
-* @param DOM node component_container
-* @param string lang
-* @return bool true
+* Exported helper that loads and renders a language-specific component instance
+* into a given container node.
+*
+* Intended use: a language-selector widget (e.g. a `<select>`) passes the chosen
+* `lang` value to this function on change.  When the user selects a blank/null lang
+* the container is cleared and the function returns `false` immediately.
+*
+* When a valid lang is supplied:
+*  1. Calls `self.load_component_sample({ lang, ddo })` to fetch context + data
+*     from the server and produce a live component instance.
+*  2. Renders the instance into a DOM node.
+*  3. Clears the container and appends the new node.
+*
+* (!) The call `self.load_component_sample({ lang: self, ddo: self.main_element })`
+*     passes `self` (the tool instance) as the `lang` argument instead of the `lang`
+*     parameter received by this function.  This is a pre-existing bug in the
+*     scaffold template — do not "fix" it here; document only.
+*
+* @param {Object} self - The tool_dev_template instance
+* @param {HTMLElement} component_container - DOM node that will hold the rendered component
+* @param {string|null} lang - Dédalo language code (e.g. 'lg-eng') or null/empty to clear
+* @returns {Promise<boolean>} true on success, false when lang is blank
 */
 export const add_component_sample = async (self, component_container, lang) => {
 
@@ -362,7 +503,7 @@ export const add_component_sample = async (self, component_container, lang) => {
 		}
 
 	const component = await self.load_component_sample({
-		lang	: self,
+		lang	: lang,
 		ddo		: self.main_element
 	})
 	const node 		= await component.render()

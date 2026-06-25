@@ -13,10 +13,21 @@ json_config.php
 
 # config ignore all except sample files
 config/*
+# config/bootstrap.php is the ONLY tracked loader (secret-free). config/config.php stays
+# ignored on purpose: it is the per-install untracked shim (require bootstrap.php) and, on a
+# pre-flip box, the legacy secrets file — tracking it would re-create the git-pull collision.
+!config/bootstrap.php
+# Ship the web-server hardening for config/ (deny + neutralize PHP) so a leftover legacy
+# config.php can never be served/executed; secret-free, safe to track.
+!config/.htaccess
 !config/sample.config.php
+# Admin-override TEMPLATE (returns []; secret-free) — documents the dot-path format for the
+# optional ../private/config.local.php. Referenced by bootstrap.php; safe to track.
+!config/sample.config.local.php
 !config/sample.config_db.php
 !config/sample.config_areas.php
 !config/sample.config_core.php
+!config/sample.env
 !config/dd_tipos.php
 !config/version.inc
 !/core/ontology/v5/config/config_ontology.php
@@ -181,3 +192,17 @@ mcp/.env
 .opencode
 analysis
 .claude
+
+# special agent dir to save plans and specs
+docs/superpowers
+
+# local copies of databases
+dedalo7_install.pgsql_*.gz
+
+# Test-run scratch fixtures: regenerated inline by each unit test (legacy_surface,
+# migration_extractor/runner, boot_subsystem/secret_state). NOT inputs — the pre-authored
+# test/server/unit/fixtures/host_info/ inputs are in a subdir and stay tracked.
+test/server/unit/fixtures/*.php
+test/server/unit/fixtures/*.env
+.dockerignore
+bun.lock

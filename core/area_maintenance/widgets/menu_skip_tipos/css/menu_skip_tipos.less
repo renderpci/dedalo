@@ -1,0 +1,84 @@
+// Uses the shared theme tokens (core/page/css/layout/theme_tokens.less, --ut_*),
+// which flip under [data-theme="dark"] — so chips and the suggestions dropdown stay
+// legible in both light and dark mode. Fallbacks are the light-theme values.
+.wrapper_widget.menu_skip_tipos {
+
+	.menu_skip_chips {
+		display			: flex;
+		flex-direction	: column;
+		gap				: 3px;
+		margin			: 8px 0;
+	}
+
+	.menu_skip_chip {
+		display			: flex;
+		align-items		: center;
+		justify-content	: space-between;
+		gap				: 8px;
+		padding			: 3px 4px 3px 10px;
+		border-radius	: 4px;
+		background-color: var(--ut_bg_hover, #eef1f5);
+		color			: var(--ut_text_primary, #1f2328);
+
+		.menu_skip_chip_label small {
+			color		: var(--ut_text_muted, #6e7781);
+			margin-left	: 6px;
+		}
+
+		.menu_skip_chip_remove {
+			border		: 0;
+			background	: transparent;
+			cursor		: pointer;
+			font-size	: 16px;
+			line-height	: 1;
+			padding		: 0 6px;
+			color		: var(--ut_text_muted, #6e7781);
+
+			&:hover { color: var(--ut_text_primary, #1f2328); }
+		}
+	}
+
+	.menu_skip_add {
+		position	: relative;
+		margin		: 10px 0;
+
+		.menu_skip_search {
+			width			: 100%;
+			box-sizing		: border-box;
+			padding			: 6px 8px;
+			border-radius	: 4px;
+			background-color: var(--ut_bg_input, #f6f8fa);
+			color			: var(--ut_text_primary, #1f2328);
+			border			: 1px solid var(--ut_border, rgba(27,31,36,.15));
+		}
+
+		.menu_skip_suggestions {
+			position		: absolute;
+			z-index			: 10;
+			left			: 0;
+			right			: 0;
+			max-height		: 260px;
+			overflow-y		: auto;
+			background-color: var(--ut_bg_elevated, #ffffff);
+			color			: var(--ut_text_primary, #1f2328);
+			border			: 1px solid var(--ut_border, rgba(27,31,36,.15));
+			border-top		: 0;
+			box-shadow		: var(--ut_shadow, 0 8px 24px -16px rgba(27,31,36,.25));
+
+			&.hide { display: none; }
+		}
+
+		.menu_skip_suggestion {
+			padding	: 5px 8px;
+			cursor	: pointer;
+
+			small { color: var(--ut_text_muted, #6e7781); margin-left: 6px; }
+
+			&:hover { background-color: var(--ut_bg_hover, #eef1f5); }
+		}
+	}
+
+	.button_submit {
+		margin-top : 10px;
+	}
+}

@@ -29,35 +29,35 @@ import {get_instance, get_all_instances} from '../../../core/common/js/instances
 				lang	: lang
 			})
 
-		// install
+		// installer
 			// const install_context = await (async function(){
 			// 	const rqo = {
 			// 		action	: 'get_element_context',
-			// 		source	: {model : 'install'}
+			// 		source	: {model : 'installer'}
 			// 	}
 			// 	const install_api_response = await data_manager.request({
 			// 		body : rqo
 			// 	})
 			// 	return install_api_response.result
-			// 		? install_api_response.result.find(el => el.model==='install')
+			// 		? install_api_response.result.find(el => el.model==='installer')
 			// 		: {}
 			// })()
 			elements.push({
-				model	: 'install',
+				model	: 'installer',
 				tipo	: 'dd1590',
 				mode	: 'install',
 				lang	: lang,
 				// context	: async function(){
 				// 	const rqo = {
 				// 		action	: 'get_element_context',
-				// 		source	: {model : 'install'}
+				// 		source	: {model : 'installer'}
 				// 	}
 				// 	const install_api_response = await data_manager.request({
 				// 		body : rqo
 				// 	})
 				// 	console.log('install_api_response:', install_api_response);
 				// 	return install_api_response.result
-				// 		? install_api_response.result.find(el => el.model==='install')
+				// 		? install_api_response.result.find(el => el.model==='installer')
 				// 		: {}
 				// }
 			})
@@ -108,7 +108,7 @@ import {get_instance, get_all_instances} from '../../../core/common/js/instances
 			'move_locator',
 			'move_tld',
 			'php_info',
-			'php_user',
+			'php_runtime',
 			'publication_api',
 			'register_tools',
 			'sequences_status',

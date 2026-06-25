@@ -254,14 +254,23 @@ const get_content_data = function(self) {
 			self.service_autocomplete_keys(e)
 		}
 		// remove the event when the caller is deactivate to avoid conflicts between events
+		// remove any previous subscription first: get_content_data re-runs on every
+		// source-selector change, so without this each pass would leave an orphaned
+		// 'deactivate_component' subscription firing for the page lifetime.
+		if (self._deactivate_token) {
+			event_manager.unsubscribe(self._deactivate_token)
+			const prev_index = self.events_tokens.indexOf(self._deactivate_token)
+			if (prev_index!==-1) {
+				self.events_tokens.splice(prev_index, 1)
+			}
+		}
 		const deactivate_component_handler = (component) => {
 			if (component.id===self.caller.id) {
 				document.removeEventListener('keydown', fn_service_autocomplete_keys, false)
 			}
 		}
-		self.events_tokens.push(
-			event_manager.subscribe('deactivate_component', deactivate_component_handler)
-		)
+		self._deactivate_token = event_manager.subscribe('deactivate_component', deactivate_component_handler)
+		self.events_tokens.push(self._deactivate_token)
 
 	// store handler reference for cleanup on destroy
 		self._fn_keydown = fn_service_autocomplete_keys
@@ -613,8 +622,9 @@ export const execute_search_render = async function(self, options) {
 				return
 			}
 
-		// cache result. Add if not already exists
-			if (!self.search_cache[q]) {
+		// cache result. Add if not already exists (bounded to avoid unbounded growth
+		// over a long typing session; once full, new queries simply skip the cache)
+			if (!self.search_cache[q] && Object.keys(self.search_cache).length < 100) {
 				self.search_cache[q] = api_response.result
 			}
 
@@ -639,6 +649,49 @@ export const execute_search_render = async function(self, options) {
 		}
 	}
 }//end execute_search_render
+
+
+
+/**
+* RUN_SEARCH
+* Fire an autocomplete search and render its result. Used by the option controls
+* (sections / filter_by_list checkboxes, operator, limit, per-field inputs); the
+* main search input uses execute_search_render. Both share self._search_seq so a
+* slower older request can never overwrite a newer one, regardless of which
+* control triggered it.
+*
+* @param {Object} self - The service_autocomplete instance
+* @returns {Promise<void>}
+*/
+export const run_search = async function(self) {
+
+	// request sequence token (shared with execute_search_render). A slower older
+	// request must not overwrite the results of a newer one from any control.
+	const my_seq = (typeof self._search_seq==='number' ? self._search_seq : 0) + 1
+	self._search_seq = my_seq
+
+	try {
+		const api_response = await self.autocomplete_search()
+
+		// a newer search superseded this one: drop the stale response
+		if (my_seq !== self._search_seq) {
+			return
+		}
+
+		const result = (api_response && api_response.result !== false)
+			? api_response.result
+			: null
+
+		await render_datalist(self, result)
+
+	} catch (error) {
+		// a failed search must not raise an unhandled rejection; clear the list.
+		console.error('[service_autocomplete] autocomplete search failed:', error)
+		if (my_seq === self._search_seq) {
+			await render_datalist(self, null)
+		}
+	}
+}//end run_search
 
 
 
@@ -987,9 +1040,8 @@ const render_option_checkbox = function(self, datalist_item) {
 
 				update_local_storage_ar_id(this)
 
-				// force re-search with new options
-					const api_response	= await self.autocomplete_search()
-					render_datalist(self, api_response.result)
+				// force re-search with new options (sequenced to avoid out-of-order renders)
+					await run_search(self)
 			}
 			input_checkbox.addEventListener('change', change_handler);
 
@@ -1100,12 +1152,12 @@ const render_inputs_list = function(self) {
 
 			// change event
 			const change_handler = async () => {
+				// reset search cache (a per-field input changes the query, like every other control)
+				self.search_cache = {}
 				// update filter_item q value from input
 				filter_item.q = component_input.value
-				// force search
-				const api_response = await self.autocomplete_search()
-				// refresh datalist
-				render_datalist(self, api_response.result)
+				// force search (sequenced to avoid out-of-order renders)
+				await run_search(self)
 			}
 			component_input.addEventListener('change', change_handler)
 
@@ -1191,9 +1243,8 @@ const render_operator_selector = function(self) {
 			// set the new operator selected
 			self.operator	= e.target.value
 
-			// launch search again
-			const api_response	= await self.autocomplete_search()
-			await render_datalist(self, api_response.result)
+			// launch search again (sequenced to avoid out-of-order renders)
+			await run_search(self)
 		})
 		const option_or = ui.create_dom_element({
 			element_type	: 'option',
@@ -1248,9 +1299,8 @@ const render_operator_selector = function(self) {
 			// update self limit
 			self.limit = value
 
-			// launch search again
-			const api_response	= await self.autocomplete_search()
-			await render_datalist(self, api_response.result)
+			// launch search again (sequenced to avoid out-of-order renders)
+			await run_search(self)
 
 			// update localStorage limit value
 			localStorage.setItem('service_autocomplete_limit', self.limit )
@@ -1791,6 +1841,13 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 					target.classList.remove('dragging');
 				}
 				target = null;
+			}
+			// remove any drag listeners left over from a previous open of the reused
+			// #choose_container, so repeated opens don't leak document listeners.
+			if (grid_choose_container._drag_listeners) {
+				const prev_listeners = grid_choose_container._drag_listeners
+				if (prev_listeners.mouseup) document.removeEventListener('mouseup', prev_listeners.mouseup)
+				if (prev_listeners.mousemove) document.removeEventListener('mousemove', prev_listeners.mousemove)
 			}
 			document.addEventListener('mouseup', mouseup_handler)
 

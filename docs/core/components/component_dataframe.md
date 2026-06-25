@@ -8,7 +8,7 @@
 
 `trait.dataframe_common::dataframe_entry_matches()` (PHP) and the find in `component_common/js/dataframe.js` (JS) are the ONLY pairing matchers. A frame matches a caller when:
 
-```
+```text
 el.type === 'dd490'
 AND el.from_component_tipo  === <slot tipo>        (when the caller supplies one)
 AND el.main_component_tipo  === caller.main_component_tipo
@@ -19,7 +19,7 @@ AND el.id_key               === caller.id_key       (the main item id)
 
 ## End-to-end data flow
 
-```
+```text
  MAIN COMPONENT (e.g. portal numisdata32, item id = 1, links → material1/3)
         │  the main item id (1) is the pairing key — never the target section_id (3)
         ▼

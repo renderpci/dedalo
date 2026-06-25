@@ -1,8 +1,8 @@
 # common
 
-> The abstract base class `common` — the universal parent of every section, component, area and ontology object. It owns the shared identity, the magic `get_*`/`set_*` accessors, structure-context building, the `request_config` pipeline, permissions, the worker-safe static caches and the JSON-controller dispatch that all Dédalo runtime objects inherit.
-
 > See also: [Architecture overview](../architecture_overview.md) · [Sections / `section`](../sections/section.md) · [Components](../components/index.md) · [Base classes](../components/base_classes.md) · [request_config](../request_config.md) · [dd_object](../dd_object.md)
+
+The abstract base class `common` is the universal parent of every section, component, area and ontology object. It owns the shared identity, the magic `get_*`/`set_*` accessors, structure-context building, the `request_config` pipeline, permissions, the worker-safe static caches and the JSON-controller dispatch that all Dédalo runtime objects inherit.
 
 This page is the **class-level reference** for `common` (`core/common/class.common.php`,
 ~4385 lines). It documents the contract `common` gives to *all* its subclasses,
@@ -77,7 +77,7 @@ machinery* those factories and instances rely on:
 - **JSON dispatch** — `get_json()` includes the per-model `*_json.php` controller
   and returns the normalized `{context, data}` response object.
 - **Subdatum resolution** — `get_subdatum()` resolves nested (portal/dataframe)
-  context+data from the request_config ddo maps.
+  context+data from the request_config DDO maps.
 - **Language** — `set_lang()`, `get_main_lang()`, `get_element_lang()`,
   `get_ar_all_langs()` and the no-lang fixing.
 - **Worker hygiene** — own the class-static caches and purge them in `clear()`.
@@ -213,7 +213,7 @@ below is verified against `core/common/class.common.php`.
 | `build_structure_context($permissions, $add_request_config, $simple)` | | (protected) Stamps per-instance variant fields onto a clone of the cached invariant core. |
 | `build_structure_context_core($add_request_config, $simple)` | | (protected) Build the cacheable invariant core stored in `$cache_structure_context`. |
 | `resolve_context_parent()` | | (protected) Resolve the context parent tipo for nested ddo linking. |
-| `get_subdatum($from_parent=null, $ar_locators=[])` | | Resolve nested (portal/dataframe) `{context, data}` from this element's request_config ddo maps; dedups context by `context_key`. |
+| `get_subdatum($from_parent=null, $ar_locators=[])` | | Resolve nested (portal/dataframe) `{context, data}` from this element's request_config DDO maps; dedups context by `context_key`. |
 | `build_element_json_output($context, $data=[])` | ✓ | Pack `{context, data}` into one response object. |
 | `get_data_item($value)` | | Wrap a value in the unified data item `{section_id, section_tipo, tipo, pagination, from_component_tipo, value}`. |
 | `context_key($item)` | ✓ | The client identity key `tipo_section_tipo_mode` for dedup. |

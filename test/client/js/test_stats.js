@@ -71,12 +71,28 @@ export function get_active_card() {
 
 export function update_global_stats() {
 	const el = document.getElementById('test_global_stats')
-	if (!el) return
-	const stats = el.querySelectorAll('.stat')
-	if (stats[0]) stats[0].textContent = global_stats.total
-	if (stats[1]) stats[1].textContent = global_stats.pass
-	if (stats[2]) stats[2].textContent = global_stats.fail
-	if (stats[3]) stats[3].textContent = global_stats.pending
+	if (el) {
+		const stats = el.querySelectorAll('.stat')
+		if (stats[0]) stats[0].textContent = global_stats.total
+		if (stats[1]) stats[1].textContent = global_stats.pass
+		if (stats[2]) stats[2].textContent = global_stats.fail
+		if (stats[3]) stats[3].textContent = global_stats.pending
+	}
+
+	// segmented progress bar (pass / fail / pending proportions)
+	const bar = document.getElementById('test_runbar')
+	if (bar) {
+		const pend = Math.max(0, global_stats.total - global_stats.pass - global_stats.fail)
+		const segs = {
+			'.runbar_seg_pass': global_stats.pass,
+			'.runbar_seg_fail': global_stats.fail,
+			'.runbar_seg_pend': pend
+		}
+		for (const [sel, n] of Object.entries(segs)) {
+			const seg = bar.querySelector(sel)
+			if (seg) seg.style.flexGrow = n
+		}
+	}
 }
 
 export function update_group_stats(group_key) {

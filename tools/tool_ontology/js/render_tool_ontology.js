@@ -12,7 +12,29 @@
 
 /**
 * RENDER_TOOL_ONTOLOGY
-* Manages the component's logic and appearance in client side
+* Client-side render module for tool_ontology.
+*
+* Provides the `edit` prototype method that tool_ontology delegates to for
+* DOM construction. The constructor is a no-op stub; all rendering logic lives
+* in the module-private `get_content_data` factory.
+*
+* Responsibilities:
+* - Build the tool's wrapper and content DOM tree via `ui.tool` helpers.
+* - Render a user-info header that identifies the ontology node (TLD + section_id
+*   in edit mode, or the caller's tipo in list/read mode).
+* - Display the total number of records that will be processed.
+* - Wire the "Process" button to `self.set_records_in_dd_ontology()` (defined in
+*   tool_ontology.js) and relay success/error messages to the UI.
+*
+* Caller types:
+* - **Component** (Tool button on a record): `caller.type === 'component'`.
+*   TLD is derived by stripping trailing digits from `caller.section_tipo`
+*   (e.g. 'dmm0' → 'dmm').
+* - **Section** (Inspector panel button): TLD comes from a `hierarchy6` or
+*   `ontology7` datum entry on `caller.datum.data`.
+*
+* This module is consumed exclusively by tool_ontology.js:
+*   `tool_ontology.prototype.edit = render_tool_ontology.prototype.edit`
 */
 export const render_tool_ontology = function() {
 
@@ -23,10 +45,18 @@ export const render_tool_ontology = function() {
 
 /**
 * EDIT
-* Render tool DOM nodes
-* This function is called by render common attached in 'tool_dummy.js'
-* @param object options
-* @return HTMLElement wrapper
+* Render tool DOM nodes.
+* Called by `tool_common.prototype.render` which is assigned to
+* `tool_ontology.prototype.render` in tool_ontology.js.
+*
+* When `render_level` is 'content', returns the bare content_data element
+* without the outer wrapper (used for partial re-renders and embedded views).
+* Otherwise returns a full wrapper produced by `ui.tool.build_wrapper_edit`.
+*
+* @param {Object} options - Render options passed by tool_common.
+* @param {string} [options.render_level='full'] - 'full' builds wrapper + content;
+*        'content' returns only the inner content_data element.
+* @returns {Promise<HTMLElement>} The wrapper element (full) or content_data (content).
 */
 render_tool_ontology.prototype.edit = async function(options) {
 
@@ -56,21 +86,33 @@ render_tool_ontology.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* Renders the tool body content including:
-* - User info header with TLD and section ID or tipo
-* - Total records indicator
-* - Components container
-* - Process button with API integration
-* - Messages container for API responses
+* Build and return the tool body element (`content_data`) populated with:
+*   1. A user-info header showing the ontology label (from tool labels).
+*   2. A term-id header showing either `<TLD><section_id>` (edit mode) or
+*      `caller.tipo` (list/read mode).
+*   3. A total-records indicator.
+*   4. A components container (populated by tool_common's build phase).
+*   5. A buttons container holding the "Process" action button.
+*   6. A messages container that receives API response text and error classes.
 *
-* Handles two caller types:
-* - Component: Extracts TLD from section_tipo, uses component's section_id
-* - Section: Finds hierarchy data (hierarchy6|ontology7) in datum to get TLD and section_id
+* TLD / section_id extraction differs by caller type:
+*   - Component caller (`caller.type === 'component'`): TLD is derived by
+*     removing trailing digits from `caller.section_tipo` (e.g. 'dmm0' → 'dmm');
+*     section_id comes from `caller.section_id`.
+*   - Section caller (inspector panel): TLD is read from the first entry of a
+*     `hierarchy6` or `ontology7` datum item in `caller.datum.data`; section_id
+*     comes from `caller.data.entries[0].section_id`.
 *
-* @param {object} self - Tool instance
-* @param {object} self.caller - Component or section that opened the tool
-* @returns {HTMLElement} content_data - The built content container
-* @throws {Error} When self or self.caller is invalid
+* If caller hierarchy data cannot be resolved, an inline error element is
+* rendered and the function still returns a valid (partially built) content_data.
+*
+* (!) Throws synchronously before the try/catch if `self` or `self.caller` is
+* falsy — those errors propagate to the caller (the `edit` method above).
+*
+* @param {Object} self - The tool_ontology instance.
+* @param {Object} self.caller - The component or section that opened the tool.
+* @returns {Promise<HTMLElement>} The assembled content_data element.
+* @throws {Error} When `self` or `self.caller` is missing/falsy (guard before try/catch).
 */
 const get_content_data = async function(self) {
 
@@ -94,9 +136,12 @@ const get_content_data = async function(self) {
 	})
 
 	/**
-	* Extract TLD and section_id from caller based on type
-	* For components: TLD is derived from section_tipo (removing trailing digits)
-	* For sections: TLD comes from hierarchy6 or ontology7 data in datum
+	* Extract TLD and section_id from caller based on type.
+	* For components: TLD is derived from section_tipo (removing trailing digits).
+	* For sections: TLD comes from hierarchy6 or ontology7 data in datum.
+	*
+	* Wrapped in try/catch so that a missing or malformed hierarchy datum renders
+	* a fallback error element rather than aborting the whole content build.
 	*/
 	try {
 
@@ -139,9 +184,9 @@ const get_content_data = async function(self) {
 			parent			: fragment
 		})
 
-		// Calculate total records to process
-		// Edit mode: always 1 record (single item being edited)
-		// Other modes: use caller.total or default to 0
+		// Calculate total records to process.
+		// Edit mode always processes exactly 1 record (the currently open item).
+		// List/read mode uses caller.total, which reflects the current SQO result count.
 		const total = caller.mode === 'edit'
 			? 1
 			: (caller.total || 0)
@@ -196,6 +241,10 @@ const get_content_data = async function(self) {
 	* Handles the process button click event.
 	* Manages UI state (spinner, loading class), calls the API method,
 	* and displays success/error messages in the messages container.
+	*
+	* Uses `button_generate.generating` as a re-entrancy guard to prevent
+	* duplicate API calls if the user clicks the button while a request is
+	* already in flight. The flag is always cleared in the `finally` block.
 	*
 	* @param {Event} e - Click event
 	* @returns {Promise<void>}
@@ -264,7 +313,7 @@ const get_content_data = async function(self) {
 			messages_container.classList.add('error')
 		} finally {
 			// Clean up UI state
-			content_data.classList.remove('loading')			
+			content_data.classList.remove('loading')
 			button_generate.classList.remove('button_spinner')
 			button_generate.generating = false
 		}
@@ -273,7 +322,11 @@ const get_content_data = async function(self) {
 
 	// focus buttons
 	when_in_dom(button_generate, () => {
-		// Force button to keep focused
+		// Keep focus on the process button once it enters the DOM.
+		// The tool opens in a modal whose own focus management may steal focus;
+		// this restores it with a 1 ms setTimeout re-focus on every blur event.
+		// (!) The blur listener is never removed, which may cause repeated re-focus
+		// attempts after the button is detached — a known minor side-effect.
 		function keep_focus(target) {
 		  target.focus({ preventScroll: true });
 		  target.addEventListener('blur', () => {

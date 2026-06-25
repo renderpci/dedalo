@@ -1,11 +1,11 @@
 {
-  "id": "3939",
+  "id": "3974",
   "section_id": "19",
   "section_tipo": "dd1340",
   "data": {
     "label": "Tools development",
     "section_id": 19,
-    "created_date": "2026-06-17 13:27:57",
+    "created_date": "2026-06-18 11:43:40",
     "section_tipo": "dd1340",
     "diffusion_info": null,
     "created_by_user_id": -1
@@ -217,13 +217,13 @@
         "id": 1,
         "lang": "lg-nolan",
         "start": {
-          "day": 17,
-          "hour": 13,
-          "time": 65132083677,
+          "day": 18,
+          "hour": 11,
+          "time": 65132163820,
           "year": 2026,
           "month": 6,
-          "minute": 27,
-          "second": 57
+          "minute": 43,
+          "second": 40
         }
       }
     ]
@@ -237,479 +237,471 @@
       {
         "id": 1,
         "value": {
-          "lg-nolan": [
-            {
-              "open_as": "window",
-              "windowFeatures": null
-            }
-          ]
+          "open_as": "window",
+          "windowFeatures": null
         }
       }
     ],
     "dd1372": [
       {
         "id": 1,
-        "value": {
-          "lg-nolan": [
-            [
-              {
-                "lang": "lg-spa",
-                "name": "file_processor",
-                "value": "Procesado"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "file_processor",
-                "value": "Procesat"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "file_processor",
-                "value": "Processor"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "file_processor",
-                "value": "Prozessor"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "file_processor",
-                "value": "Processore"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "file_processor",
-                "value": "Processeur"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "target_component",
-                "value": "Campo de destino"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "target_component",
-                "value": "Camp de destí"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "target_component",
-                "value": "Champ cible"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "target_component",
-                "value": "Campo obiettivo"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "target_component",
-                "value": "Zielfeld"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "target_component",
-                "value": "Target field"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "quality",
-                "value": "Calidad"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "quality",
-                "value": "Qualité"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "quality",
-                "value": "Qualità"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "quality",
-                "value": "Qualität"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "quality",
-                "value": "Qualitat"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "quality",
-                "value": "Quality"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "crop_50",
-                "value": "separa imágenes 50%"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "crop_50",
-                "value": "Split image at 50%"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "crop_50",
-                "value": "Bild teilen bei 50 %"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "crop_50",
-                "value": "Immagine divisa al 50%"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "crop_50",
-                "value": "Imatge dividida al 50%"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "crop_50",
-                "value": "Fractionner l'image à 50 %"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "crop_50",
-                "value": "Διαίρεση εικόνας στο 50%"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "file_processor",
-                "value": "Επεξεργαστής"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "target_component",
-                "value": "Πεδίο στόχου"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "target_component",
-                "value": "लक्ष्य क्षेत्र"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "file_processor",
-                "value": "प्रोसेसर"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "quality",
-                "value": "गुणस्तर"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "quality",
-                "value": "Ποιότητα"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "crop_50",
-                "value": "५०% मा छवि विभाजित गर्नुहोस्"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "match_name_with_previous_upload",
-                "value": "Match file name with previous upload"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "match_name_with_previous_upload",
-                "value": "Coincidencia del nombre con una carga anterior"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "match_name_with_previous_upload",
-                "value": "Coincidència del nom amb una carrega anterior"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "match_name_with_previous_upload",
-                "value": "Izena aurreko karga batekin bat dator"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "match_name_with_previous_upload",
-                "value": "Correspondance entre le nom et un téléchargement antérieur"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "match_name_with_previous_upload",
-                "value": "Corrispondenza del nome con un caricamento precedente"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "match_name_with_previous_upload",
-                "value": "Αντιστοίχιση του ονόματος με προηγούμενη μεταφόρτωση"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "match_name_with_previous_upload",
-                "value": "Abgleich des Namens mit einem früheren Upload"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "match_name_with_previous_upload",
-                "value": "अघिल्लो अपलोडसँग नाम मिलाउँदै"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "matching_id",
-                "value": "Matching ID"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "matching_id",
-                "value": "Coincidencia de ID"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "matching_id",
-                "value": "Coincidència d'ID"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "matching_id",
-                "value": "NAN bat etortzea"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "matching_id",
-                "value": "ID correspondant\n\n"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "matching_id",
-                "value": "ID di corrispondenza"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "matching_id",
-                "value": "Αντίστοιχη ταυτότητα\n\n"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "matching_id",
-                "value": "Passende ID\n\n"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "matching_id",
-                "value": "मिल्दो ID"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "matching_name",
-                "value": "Matching name"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "matching_name",
-                "value": "Nombre coincidente"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "matching_name",
-                "value": "Nom coincident"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "matching_name",
-                "value": "Bat datorren izena"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "matching_name",
-                "value": "Nom correspondant"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "matching_name",
-                "value": "Nome corrispondente"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "matching_name",
-                "value": "Αντίστοιχο όνομα"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "matching_name",
-                "value": "Passender Name"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "matching_name",
-                "value": "मिल्दो नाम"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "new_files",
-                "value": "New files"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "new_files",
-                "value": "Nuevos ficheros"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "new_files",
-                "value": "Nous fitxers"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "new_files",
-                "value": "Nuovi file"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "new_files",
-                "value": "Nouveaux fichiers"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "new_files",
-                "value": "Neue Dateien"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "new_files",
-                "value": "Νέα αρχεία"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "new_files",
-                "value": "Fitxategi berriak"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "crop_50",
-                "value": "bereizitako irudiak %50"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "quality",
-                "value": "Kalitatea"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "target_component",
-                "value": "Helburu-eremua"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "file_processor",
-                "value": "Prozesatua"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "new_files",
-                "value": "नयाँ फाइलहरू"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "replace_existing_files",
-                "value": "Sustituir archivos existentes"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "replace_existing_files",
-                "value": "Ordeztu lehendik dauden fitxategiak"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "replace_existing_files",
-                "value": "अवस्थित फाइलहरू बदल्नुहोस्"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "replace_existing_files",
-                "value": "Αντικατάσταση υφιστάμενων αρχείων"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "replace_existing_files",
-                "value": "Replace existing files"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "replace_existing_files",
-                "value": "Substitueix fitxers existents"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "replace_existing_files",
-                "value": "Ersetzen vorhandener Dateien"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "replace_existing_files",
-                "value": "Remplacer les fichiers existants"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "replace_existing_files",
-                "value": "Sostituire i file esistenti"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "name_indicates_id",
-                "value": "Name indicates id"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "name_indicates_id",
-                "value": "Nombre indica id"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "name_indicates_id",
-                "value": "Nom indica id"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "name_indicates_id",
-                "value": "Izenak identifikazioa adierazten du"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "name_indicates_id",
-                "value": "Name gibt ID an"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "name_indicates_id",
-                "value": "Το όνομα υποδεικνύει την ταυτότητα"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "name_indicates_id",
-                "value": "Nom indique id"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "name_indicates_id",
-                "value": "Il nome indica l'ID"
-              },
-              {
-                "lang": "lg-por",
-                "name": "name_indicates_id",
-                "value": "Nome indica id"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "name_indicates_id",
-                "value": "नामले पहिचान जनाउँछ"
-              }
-            ]
-          ]
-        }
+        "value": [
+          {
+            "lang": "lg-spa",
+            "name": "file_processor",
+            "value": "Procesado"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "file_processor",
+            "value": "Procesat"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "file_processor",
+            "value": "Processor"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "file_processor",
+            "value": "Prozessor"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "file_processor",
+            "value": "Processore"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "file_processor",
+            "value": "Processeur"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "target_component",
+            "value": "Campo de destino"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "target_component",
+            "value": "Camp de destí"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "target_component",
+            "value": "Champ cible"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "target_component",
+            "value": "Campo obiettivo"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "target_component",
+            "value": "Zielfeld"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "target_component",
+            "value": "Target field"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "quality",
+            "value": "Calidad"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "quality",
+            "value": "Qualité"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "quality",
+            "value": "Qualità"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "quality",
+            "value": "Qualität"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "quality",
+            "value": "Qualitat"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "quality",
+            "value": "Quality"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "crop_50",
+            "value": "separa imágenes 50%"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "crop_50",
+            "value": "Split image at 50%"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "crop_50",
+            "value": "Bild teilen bei 50 %"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "crop_50",
+            "value": "Immagine divisa al 50%"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "crop_50",
+            "value": "Imatge dividida al 50%"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "crop_50",
+            "value": "Fractionner l'image à 50 %"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "crop_50",
+            "value": "Διαίρεση εικόνας στο 50%"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "file_processor",
+            "value": "Επεξεργαστής"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "target_component",
+            "value": "Πεδίο στόχου"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "target_component",
+            "value": "लक्ष्य क्षेत्र"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "file_processor",
+            "value": "प्रोसेसर"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "quality",
+            "value": "गुणस्तर"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "quality",
+            "value": "Ποιότητα"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "crop_50",
+            "value": "५०% मा छवि विभाजित गर्नुहोस्"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "match_name_with_previous_upload",
+            "value": "Match file name with previous upload"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "match_name_with_previous_upload",
+            "value": "Coincidencia del nombre con una carga anterior"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "match_name_with_previous_upload",
+            "value": "Coincidència del nom amb una carrega anterior"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "match_name_with_previous_upload",
+            "value": "Izena aurreko karga batekin bat dator"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "match_name_with_previous_upload",
+            "value": "Correspondance entre le nom et un téléchargement antérieur"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "match_name_with_previous_upload",
+            "value": "Corrispondenza del nome con un caricamento precedente"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "match_name_with_previous_upload",
+            "value": "Αντιστοίχιση του ονόματος με προηγούμενη μεταφόρτωση"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "match_name_with_previous_upload",
+            "value": "Abgleich des Namens mit einem früheren Upload"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "match_name_with_previous_upload",
+            "value": "अघिल्लो अपलोडसँग नाम मिलाउँदै"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "matching_id",
+            "value": "Matching ID"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "matching_id",
+            "value": "Coincidencia de ID"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "matching_id",
+            "value": "Coincidència d'ID"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "matching_id",
+            "value": "NAN bat etortzea"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "matching_id",
+            "value": "ID correspondant\n\n"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "matching_id",
+            "value": "ID di corrispondenza"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "matching_id",
+            "value": "Αντίστοιχη ταυτότητα\n\n"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "matching_id",
+            "value": "Passende ID\n\n"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "matching_id",
+            "value": "मिल्दो ID"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "matching_name",
+            "value": "Matching name"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "matching_name",
+            "value": "Nombre coincidente"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "matching_name",
+            "value": "Nom coincident"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "matching_name",
+            "value": "Bat datorren izena"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "matching_name",
+            "value": "Nom correspondant"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "matching_name",
+            "value": "Nome corrispondente"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "matching_name",
+            "value": "Αντίστοιχο όνομα"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "matching_name",
+            "value": "Passender Name"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "matching_name",
+            "value": "मिल्दो नाम"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "new_files",
+            "value": "New files"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "new_files",
+            "value": "Nuevos ficheros"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "new_files",
+            "value": "Nous fitxers"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "new_files",
+            "value": "Nuovi file"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "new_files",
+            "value": "Nouveaux fichiers"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "new_files",
+            "value": "Neue Dateien"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "new_files",
+            "value": "Νέα αρχεία"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "new_files",
+            "value": "Fitxategi berriak"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "crop_50",
+            "value": "bereizitako irudiak %50"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "quality",
+            "value": "Kalitatea"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "target_component",
+            "value": "Helburu-eremua"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "file_processor",
+            "value": "Prozesatua"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "new_files",
+            "value": "नयाँ फाइलहरू"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "replace_existing_files",
+            "value": "Sustituir archivos existentes"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "replace_existing_files",
+            "value": "Ordeztu lehendik dauden fitxategiak"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "replace_existing_files",
+            "value": "अवस्थित फाइलहरू बदल्नुहोस्"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "replace_existing_files",
+            "value": "Αντικατάσταση υφιστάμενων αρχείων"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "replace_existing_files",
+            "value": "Replace existing files"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "replace_existing_files",
+            "value": "Substitueix fitxers existents"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "replace_existing_files",
+            "value": "Ersetzen vorhandener Dateien"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "replace_existing_files",
+            "value": "Remplacer les fichiers existants"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "replace_existing_files",
+            "value": "Sostituire i file esistenti"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "name_indicates_id",
+            "value": "Name indicates id"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "name_indicates_id",
+            "value": "Nombre indica id"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "name_indicates_id",
+            "value": "Nom indica id"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "name_indicates_id",
+            "value": "Izenak identifikazioa adierazten du"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "name_indicates_id",
+            "value": "Name gibt ID an"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "name_indicates_id",
+            "value": "Το όνομα υποδεικνύει την ταυτότητα"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "name_indicates_id",
+            "value": "Nom indique id"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "name_indicates_id",
+            "value": "Il nome indica l'ID"
+          },
+          {
+            "lang": "lg-por",
+            "name": "name_indicates_id",
+            "value": "Nome indica id"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "name_indicates_id",
+            "value": "नामले पहिचान जनाउँछ"
+          }
+        ]
       }
     ]
   },

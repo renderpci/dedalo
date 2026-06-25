@@ -47,12 +47,15 @@ final class dd_utils_api {
 		'change_lang',
 		'login',
 		'quit',
+		'request_password_reset',
+		'confirm_password_reset',
 		'install',
 		'upload',
 		'join_chunked_files_uploaded',
 		'list_uploaded_files',
 		'delete_uploaded_file',
 		'update_lock_components_state',
+		'get_lock_status',
 		'get_dedalo_files',
 		'get_process_status',
 		'get_process_status_poll',
@@ -176,16 +179,16 @@ final class dd_utils_api {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		$install = new install();
+		$installer = new installer();
 
 		// install JSON
 			$get_json_options = new stdClass();
 				$get_json_options->get_context	= true;
 				$get_json_options->get_data		= false;
-			$install_json = $install->get_json($get_json_options);
+			$installer_json = $installer->get_json($get_json_options);
 
 		// context add
-			$context = $install_json->context;
+			$context = $installer_json->context;
 
 		// response
 			$response->result	= $context;
@@ -520,17 +523,90 @@ final class dd_utils_api {
 	public static function login(object $rqo) : object {
 
 		// options
-			$options = $rqo->options;
+			// Null-guard $rqo->options and its members (mirrors the sibling password-reset
+			// handlers) so a malformed request returns a normal login failure instead of
+			// raising a TypeError/warning on undefined property access.
+			$options = $rqo->options ?? new stdClass();
 
 		// login
 			$response = (object)login::Login((object)[
-				'username' => $options->username,
-				'password' => $options->auth
+				'username' => $options->username ?? '',
+				'password' => $options->auth ?? ''
 			]);
 
 
 		return $response;
 	}//end login
+
+
+
+	/**
+	* REQUEST_PASSWORD_RESET
+	* Step 1 of the self-service password recovery flow. Thin adapter that forwards
+	* an identifier (username or email) to password_reset::request(), which emails a
+	* one-time code and returns an opaque reset_id.
+	*
+	* Intentionally unauthenticated and CSRF-exempt (whitelisted in dd_manager,
+	* same as 'login'): the login screen has no session or CSRF token yet. The
+	* endpoint is rate-limited inside password_reset and is anti-enumeration safe —
+	* it always returns the same generic response whether or not an account matches.
+	*
+	* @param object $rqo
+	* {
+	*	action	: 'request_password_reset',
+	*	dd_api	: 'dd_utils_api',
+	*	options	: {
+	*		identifier : string  username OR email address
+	*	}
+	* }
+	* @return object $response  Forwarded from password_reset::request
+	* - result   : true        always
+	* - msg      : string       generic confirmation
+	* - reset_id : string       opaque token passed back to confirm_password_reset
+	*/
+	public static function request_password_reset(object $rqo) : object {
+
+		$options	= $rqo->options ?? new stdClass();
+		$identifier	= (string)($options->identifier ?? '');
+
+		return password_reset::request($identifier);
+	}//end request_password_reset
+
+
+
+	/**
+	* CONFIRM_PASSWORD_RESET
+	* Step 2 of the password recovery flow. Thin adapter that forwards the reset_id,
+	* the emailed code and the new password to password_reset::confirm(), which
+	* verifies the code and writes the new password (Argon2id) on success.
+	*
+	* Unauthenticated and CSRF-exempt (whitelisted in dd_manager). A successful
+	* reset does NOT establish a session — the user logs in normally afterwards.
+	*
+	* @param object $rqo
+	* {
+	*	action	: 'confirm_password_reset',
+	*	dd_api	: 'dd_utils_api',
+	*	options	: {
+	*		reset_id     : string  opaque token from request_password_reset
+	*		code         : string  6-digit code received by email
+	*		new_password : string  the new plain-text password
+	*	}
+	* }
+	* @return object $response  Forwarded from password_reset::confirm
+	* - result : bool
+	* - msg    : string
+	* - errors : array  e.g. ['invalid_or_expired'|'too_many_attempts'|'weak_password']
+	*/
+	public static function confirm_password_reset(object $rqo) : object {
+
+		$options		= $rqo->options ?? new stdClass();
+		$reset_id		= (string)($options->reset_id ?? '');
+		$code			= (string)($options->code ?? '');
+		$new_password	= (string)($options->new_password ?? '');
+
+		return password_reset::confirm($reset_id, $code, $new_password);
+	}//end confirm_password_reset
 
 
 
@@ -598,7 +674,7 @@ final class dd_utils_api {
 	/**
 	* INSTALL
 	* Dispatcher for the install-wizard sub-actions. Routes $options->action to
-	* the matching install:: class method, enforcing the following guards:
+	* the matching installer:: class method, enforcing the following guards:
 	*
 	* - When DEDALO_INSTALL_STATUS === 'installed', all sub-actions are blocked
 	*   EXCEPT 'install_hierarchies' (which may run post-install to add new
@@ -606,14 +682,15 @@ final class dd_utils_api {
 	* - 'install_db_from_default_file' additionally checks that the target
 	*   database is empty (no matrix_users table) before importing, preventing
 	*   data loss on an already-initialized database.
-	* - 'install_hierarchies' requires login::is_logged() === true.
+	* - 'install_hierarchies' and 'register_tools' require login::is_logged() === true.
 	*
 	* Supported sub-actions and their delegates:
-	*   install_db_from_default_file → install::install_db_from_default_file()
-	*   to_update                    → install::to_update()
-	*   install_hierarchies          → install::install_hierarchies()
-	*   set_root_pw                  → install::set_root_pw()
-	*   install_finish               → install::set_install_status('installed')
+	*   install_db_from_default_file → installer::install_db_from_default_file()
+	*   to_update                    → installer::to_update()
+	*   install_hierarchies          → installer::install_hierarchies()
+	*   register_tools               → installer::register_tools()
+	*   set_root_pw                  → installer::set_root_pw()
+	*   install_finish               → installer::set_install_status('installed')
 	*
 	* @param object $rqo
 	* {
@@ -636,6 +713,30 @@ final class dd_utils_api {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed';
+
+		// SEC: optional install-window IP allowlist. When DEDALO_INSTALL_ALLOWED_IPS is set (comma-
+		// separated REMOTE_ADDR list; the token 'loopback' matches 127.0.0.1/::1) ONLY those clients
+		// may drive the pre-auth installer. Default unset = no restriction, so remote installs are not
+		// broken — it is the operator's lever to close the pre-auth window on a network-exposed box.
+		// Applies only during the install window (install_hierarchies post-install is login-gated).
+			$already_installed = defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed';
+			if ($already_installed===false) {
+				$allow_raw = defined('DEDALO_INSTALL_ALLOWED_IPS')
+					? (string)DEDALO_INSTALL_ALLOWED_IPS
+					: (string)getenv('DEDALO_INSTALL_ALLOWED_IPS');
+				if (trim($allow_raw)!=='') {
+					$client_ip	= (string)($_SERVER['REMOTE_ADDR'] ?? '');
+					$allow_list	= array_filter(array_map('trim', explode(',', $allow_raw)));
+					$is_loopback	= in_array($client_ip, ['127.0.0.1', '::1'], true);
+					$ip_allowed	= in_array($client_ip, $allow_list, true)
+						|| (in_array('loopback', $allow_list, true) && $is_loopback);
+					if ($ip_allowed===false) {
+						$response->msg = 'Error. Installer access is restricted (DEDALO_INSTALL_ALLOWED_IPS).';
+						debug_log(__METHOD__.' install access denied for REMOTE_ADDR '.to_string($client_ip), logger::ERROR);
+						return $response;
+					}
+				}
+			}
 
 		// check the dedalo install status (config_auto.php)
 		// When install is finished, it will be set automatically to 'installed'
@@ -661,19 +762,21 @@ final class dd_utils_api {
 					}
 
 				// exec
-					$response = (object)install::install_db_from_default_file();
+					$response = (object)installer::install_db_from_default_file();
 
 				break;
 
 			case 'to_update':
 
 				//exec
-					$response = (object)install::to_update();
+					$response = (object)installer::to_update();
 				break;
 
 			case 'install_hierarchies':
 
-				// check login for security
+				// Security: hierarchy import requires an authenticated session. During install the
+				// root user logs in IN the installer (without navigating away) right before this
+				// mandatory step, so a real session exists here — no anonymous/superuser shortcut.
 					if (login::is_logged()!==true) {
 						$response->msg = 'Error. You are not logged in';
 						return $response;
@@ -682,20 +785,65 @@ final class dd_utils_api {
 				$install_hierarchies_options = $options;
 
 				// exec
-					$response = (object)install::install_hierarchies( $install_hierarchies_options );
+					$response = (object)installer::install_hierarchies( $install_hierarchies_options );
 
+				break;
+
+			case 'register_tools':
+
+				// Security: registering tools writes section records (dd1324) via section_record,
+				// so it needs an authenticated session — exactly like install_hierarchies. The root
+				// user is already logged in inside the wizard at this stage of the install flow.
+					if (login::is_logged()!==true) {
+						$response->msg = 'Error. You are not logged in';
+						return $response;
+					}
+
+				// exec
+					$response = (object)installer::register_tools();
+
+				break;
+
+			case 'test_db_connection':
+
+				//exec
+					$response = (object)installer::test_db_connection($options);
+				break;
+
+			case 'test_diffusion_connection':
+
+				//exec
+					$response = (object)installer::test_diffusion_connection($options);
+				break;
+
+			case 'check_directories':
+
+				//exec
+					$response = (object)installer::check_directories($options);
+				break;
+
+			case 'persist_config':
+
+				//exec
+					$response = (object)installer::persist_config($options);
+				break;
+
+			case 'verify_active_config':
+
+				//exec
+					$response = (object)installer::verify_active_config($options);
 				break;
 
 			case 'set_root_pw':
 
 				//exec
-					$response = (object)install::set_root_pw($options);
+					$response = (object)installer::set_root_pw($options);
 				break;
 
 			case 'install_finish':
 
 				//exec
-					$response = (object)install::set_install_status('installed');
+					$response = (object)installer::set_install_status('installed');
 				break;
 
 			default:
@@ -1648,6 +1796,63 @@ final class dd_utils_api {
 
 		return $response;
 	}//end update_lock_components_state
+
+
+
+	/**
+	* GET_LOCK_STATUS
+	* Read-only check of whether a component is currently held by another user.
+	*
+	* Used by the client notify-on-release poll: a user blocked on a component (in_use
+	* returned by update_lock_components_state) polls this until in_use flips to false,
+	* then re-activates the field. Never mutates the registry.
+	*
+	* @param object $rqo
+	* {
+	*	dd_api  : string  'dd_utils_api'
+	*	action  : string  'get_lock_status'
+	*	options : {
+	*		section_id     : string
+	*		section_tipo   : string
+	*		component_tipo : string
+	*	}
+	* }
+	* @return object $response
+	* - result        : bool
+	* - in_use        : bool    true when another user currently holds a focus lock
+	* - full_username : string|null  the holder's display name when in_use
+	*/
+	public static function get_lock_status(object $rqo) : object {
+
+		// session unlock (allow concurrent requests from the same session)
+		session_write_close();
+
+		// options
+			$options		= $rqo->options;
+			$section_id		= $options->section_id;
+			$section_tipo	= $options->section_tipo;
+			$component_tipo	= $options->component_tipo ?? null;
+			$user_id		= logged_user_id();
+
+		// SEC: read permission on the section is required to query its lock state,
+			// mirroring update_lock_components_state().
+			if (!empty($section_tipo)) {
+				security::assert_section_permission($section_tipo, 1, __METHOD__);
+			}
+
+		// event_element (only the triple and the asking user_id are needed)
+			$event_element = new stdClass();
+				$event_element->section_id		= $section_id;
+				$event_element->section_tipo	= $section_tipo;
+				$event_element->component_tipo	= $component_tipo;
+				$event_element->user_id			= $user_id;
+
+		// response
+			$response = lock_components::get_lock_status( $event_element );
+
+
+		return $response;
+	}//end get_lock_status
 
 
 

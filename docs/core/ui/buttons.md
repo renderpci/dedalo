@@ -7,7 +7,7 @@
 
 > See also: [common contract](../system/common.md) · [Sections](../sections/index.md) ·
 > [section class reference](../sections/section.md) · [dd_object (ddo)](../dd_object.md) ·
-> [Tools](../../../tools) · [Ontology](../ontology/index.md)
+> [Tools](../../development/tools/creating_tools.md) · [Ontology](../ontology/index.md)
 
 ## Role
 
@@ -191,7 +191,7 @@ The section list views read `self.context.buttons` and build a
 non-ontology **Search** / **Show all** controls and a collapse toggle. The
 per-model wiring (from `view_default_list_section.js`):
 
-```javascript
+```js
 switch (current_button.model) {
     case 'button_new':
         event_manager.publish('new_section_' + self.id)
@@ -347,8 +347,9 @@ behaviour; the v7 context flow does not require it.
 - **[common](../system/common.md)** — `get_buttons_context()` and the
   structure-context stamp live here; `$cache_buttons_tools` is one of the
   worker-state-bleed-sensitive statics cleared by `common::clear()`.
-- **[Tools](../../../tools)** — `button_import` / `button_trigger` are the bridge
-  from a section header into the tools subsystem; they carry built tool contexts
+- **[Tools](../../development/tools/creating_tools.md)** — `button_import` /
+  `button_trigger` are the bridge from a section header into the tools subsystem;
+  they carry built tool contexts
   (`tool_common::create_tool_simple_context()` / `get_user_tools()` /
   `get_tool_configuration()`).
 - **[dd_object (ddo)](../dd_object.md)** — each button is emitted as a

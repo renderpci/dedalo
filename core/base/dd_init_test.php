@@ -11,7 +11,6 @@
 * - File-system write access for sessions, backups, media derivation trees, upload scratch space,
 *   and the import pipeline
 * - External binary availability: psql, ImageMagick, ffmpeg, ffprobe, qt-faststart
-* - PostgreSQL .pgpass credential file (when DEDALO_DB_MANAGEMENT is true)
 * - CURL extension and OpenSSL extension
 * - Active-lock garbage collection (when DEDALO_LOCK_COMPONENTS is enabled)
 * - PostgreSQL table existence checks for matrix_test and matrix_tools, with
@@ -49,7 +48,14 @@
 // $php_user: resolved at runtime for inclusion in diagnostic messages; helps ops trace which
 // system account lacks the required directory permissions.
 	$create_dir_permissions = 0750;
-	$php_user = exec('whoami');
+	// Prefer the real process user via whoami, but exec() may be disabled (disable_functions).
+	// Fall back to pure-PHP sources so diagnostics never show an empty user.
+	$php_user = function_exists('exec') ? (string) @exec('whoami') : '';
+	if ($php_user === '') {
+		$php_user = (function_exists('posix_geteuid') && function_exists('posix_getpwuid'))
+			? (posix_getpwuid(posix_geteuid())['name'] ?? get_current_user())
+			: get_current_user();
+	}
 
 
 
@@ -576,8 +582,10 @@
 	if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
 		// Nothing to do
 	}else{
-		$path	= DB_BIN_PATH . 'psql';
-		$res	= shell_exec('command -v '. $path);
+		// Resolve psql robustly (configured DB_BIN_PATH → platform base → PATH) so a fresh install
+		// on a non-standard layout (e.g. a Homebrew Mac) passes without hand-editing config.
+		$path	= system::get_pg_bin_path() . 'psql';
+		$res	= shell_exec('command -v '. escapeshellarg($path));
 		// trim() is safe on null as of PHP 8.x but $res is cast to string first to satisfy
 		// strict-types; the ternary keeps the null branch visible for future type-strictness.
 		$psql	= is_string($res)
@@ -600,31 +608,13 @@
 
 
 
-// PGPASS FILE CHECK
-// The .pgpass file in the PHP user's home directory stores PostgreSQL credentials so that
-// psql and pg_dump can authenticate without interactive password prompts.
-// This check only applies when DEDALO_DB_MANAGEMENT===true (local DB management).
-// A missing or malformed .pgpass is logged and added to errors but does NOT stop execution —
-// some environments use peer authentication or pg_hba.conf trust rules instead.
-// getenv('HOME') is preferred over $_SERVER['HOME'] to avoid contamination from
-// the web-server environment block in persistent-worker setups.
-	if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===true) {
-		if (!system::check_pgpass_file()) {
-
-			$php_user_home	= getenv('HOME'); //$_SERVER['HOME'];
-			$path			= $php_user_home . '/.pgpass';
-
-			$init_response->msg[] = 'Warning: Invalid .pgpass file' . PHP_EOL . ' Check your .pgpass file into php user home dir';
-			$init_response->errors[] = 'Invalid .pgpass file';
-			debug_log(
-				implode(PHP_EOL, $init_response->msg) . PHP_EOL
-				.' php_user_home: ' . to_string($php_user_home) . PHP_EOL
-				.' path: ' . to_string($path) . PHP_EOL
-				, logger::ERROR
-			);
-			// Do not stop here. Only inform the user.
-		}
-	}
+// PostgreSQL CLI authentication note
+// Dédalo no longer requires a ~/.pgpass file. The command-line tools (psql, pg_dump,
+// pg_restore) authenticate via the PGPASSWORD env var, exported transiently from
+// DEDALO_PASSWORD_CONN around each child process (see DBi::pg_shell_exec / DBi::pg_exec).
+// This lets the database live on a LOCAL or REMOTE server indistinguishably. A ~/.pgpass
+// file is still honored by libpq as a fallback when DEDALO_PASSWORD_CONN is empty
+// (e.g. peer / trust auth), so no startup check is needed here.
 
 
 
@@ -739,14 +729,15 @@
 
 
 // LOCK COMPONENTS
-// Pessimistic-locking garbage collection: removes stale lock records left behind by
-// PHP processes that crashed or timed out without releasing their component locks.
-// Only performed when the system is fully installed (not during initial setup) and only
-// when the locking feature is enabled. Running this during install would reference DB
-// tables that may not yet exist.
+// Stale-lock garbage collection is no longer run on every bootstrap. The hot path now
+// self-heals: lock_components::update_lock_components_state() prunes expired entries
+// (drop_expired) inside the row-locked transaction on every focus/blur, and the short
+// LOCK_TTL_SECONDS bounds how long an abandoned lock can survive. The explicit sweep
+// lock_components::clean_locks_garbage() remains available for the maintenance area.
+// (Guard site kept intentionally for reviewability; it deliberately does nothing here.)
 	if(defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
 		if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
-			lock_components::clean_locks_garbage();
+			// no-op: lazy GC handles stale locks on each registry mutation
 		}
 	}
 
@@ -988,19 +979,24 @@
 // 'dd_ontology_recovery' is a PostgreSQL table that holds a snapshot of the ontology
 // used as a fallback when the primary ontology data is corrupt or unavailable.
 // If the table is missing (e.g. after a bare-metal restore without this table), the
-// snapshot is re-imported from the on-disk JSON file via install::restore_dd_ontology_recovery_from_file(),
-// which delegates to install_ontology_manager::restore_dd_ontology_recovery_from_file().
+// snapshot is re-imported from the on-disk JSON file via installer::restore_dd_ontology_recovery_from_file(),
+// which delegates to installer_ontology_manager::restore_dd_ontology_recovery_from_file().
 // This is a silent self-healing step — no error is raised and boot continues normally.
-	$dd_ontology_recovery_exists	= DBi::check_table_exists('dd_ontology_recovery');
-	if (!$dd_ontology_recovery_exists) {
-		install::restore_dd_ontology_recovery_from_file();
+	// Only self-heal on an INSTALLED system. On a fresh install there is no database yet, so
+	// check_table_exists returns false and a restore attempt would just gunzip→psql against a
+	// missing DB (harmless but noisy). The recovery table is seeded by the normal install import.
+	if (defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
+		$dd_ontology_recovery_exists	= DBi::check_table_exists('dd_ontology_recovery');
+		if (!$dd_ontology_recovery_exists) {
+			installer::restore_dd_ontology_recovery_from_file();
+		}
 	}
 
 
 
 // FINAL RESULT AGGREGATION
 // Reaching this point means all mandatory checks passed. Set result=true.
-// $init_response->errors may still be non-empty (e.g. the .pgpass warning that does not
+// $init_response->errors may still be non-empty (e.g. a non-fatal warning that does not
 // stop execution), so the final message distinguishes a clean pass from a pass-with-warnings.
 // array_unshift ensures the summary line is the first human-readable message seen in any UI.
 	$init_response->result = true;

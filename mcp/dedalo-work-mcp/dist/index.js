@@ -16627,6 +16627,7 @@ data:
 
 // src/index.ts
 var import_pino = __toESM(require_pino(), 1);
+import { timingSafeEqual } from "node:crypto";
 
 // ../common/dist/index.js
 var __defProp2 = Object.defineProperty;
@@ -53209,7 +53210,7 @@ function hintFor(code) {
       return "CSRF token rejected. Retry the call; the client will fetch a fresh token automatically.";
     case "invalid_action":
     case "invalid_api_class":
-      return "The requested action is not exposed on this Dédalo instance. Discover valid actions with `dedalo_get_environment` and `dedalo_get_ontology_info`.";
+      return "The requested action is not exposed on this Dédalo instance. Discover valid actions with `dedalo_get_environment` and `dedalo_list_sections`.";
     case "login_failed":
       return "Check DEDALO_WORK_USERNAME and DEDALO_WORK_PASSWORD. The user must exist in Dédalo and be allowed to log in.";
     case "maintenance_mode":
@@ -53341,7 +53342,7 @@ function rqo(opts) {
 }
 
 // src/tools/_shared/schemas.ts
-var TipoSchema = exports_external2.string().min(1).regex(/^[a-zA-Z0-9_]+$/, "tipo must match [a-zA-Z0-9_]+").describe("Ontology tipo identifier (e.g. `oh1`, `dd1324`). Resolve from human names via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.");
+var TipoSchema = exports_external2.string().min(1).regex(/^[a-zA-Z0-9_]+$/, "tipo must match [a-zA-Z0-9_]+").describe("Ontology tipo identifier (e.g. `oh1`, `dd1324`). Resolve from human names via `dedalo_list_sections` then `dedalo_get_section_map`.");
 var AgentSectionSchema = exports_external2.string().min(1).describe('Section name (e.g. "Cecas", "Oral History") or tipo (e.g. "oh1"). The server resolves names automatically.');
 var LangSchema = exports_external2.string().regex(/^lg-[a-z]{2,8}$/, "lang must match `lg-xxx`").describe("Dédalo language code (e.g. `lg-eng`, `lg-spa`, `lg-nolan`).");
 var OptionalLangSchema = LangSchema.optional();
@@ -53377,16 +53378,35 @@ function registerDiscoveryTools(server, client, ctx) {
   }, ctx);
   registerTool(server, {
     name: "dedalo_list_sections",
-    description: `List all section tipos defined in the ontology. Returns labels, models and configuration. Use this to discover what record types exist.
-` + 'For a compact multilingual glossary with portal metadata, prefer `dedalo_ontology_glossary` (mode="sections").',
+    description: "Return a compact index of all Dédalo sections the current user can read: " + "tipo identifiers with multilingual labels (all languages). " + "Use this first to discover what record types exist, then call `dedalo_get_section_map` " + "on any section to get its full field list.",
     annotations: { tier: "primitive", readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "List sections" },
     inputSchema: exports_external2.object({ lang: OptionalLangSchema }),
-    handler: async ({ lang }) => client.call(rqo({ action: "get_ontology_info", source: { model: "section", lang } }))
+    handler: async ({ lang }) => client.call(rqo({ action: "list_sections_index", dd_api: "dd_agent_api", source: { lang } }))
+  }, ctx);
+  registerTool(server, {
+    name: "dedalo_get_section_map",
+    description: `Get the full field map for a Dédalo section.
+
+` + 'Accepts a section name in any language (e.g. "Oral History", "Historia oral") ' + `or a tipo identifier (e.g. "oh1").
+
+` + "Returns: section tipo, multilingual labels for the section and every field, " + `simplified type (text/html/date/number/link/media), and portal target section for link fields.
+
+` + `Typical workflow:
+` + "1. `dedalo_list_sections` → pick the section.\n" + "2. `dedalo_get_section_map` → learn field names and tipos.\n" + "3. `dedalo_search_records_view` / `dedalo_get_record` → read data.",
+    annotations: { tier: "primitive", readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Get section field map" },
+    inputSchema: exports_external2.object({
+      section: exports_external2.string().describe('Section name (any language) or tipo, e.g. "Oral History" or "oh1".'),
+      lang: OptionalLangSchema
+    }),
+    handler: async ({ section, lang }) => client.call(rqo({
+      action: "get_section_map",
+      dd_api: "dd_agent_api",
+      source: { section, lang }
+    }))
   }, ctx);
   registerTool(server, {
     name: "dedalo_get_section_elements_context",
-    description: `Get the context for all components within a section_tipo. Returns the complete element list with types, labels and configuration.
-` + 'For a lightweight component overview with portal metadata, prefer `dedalo_ontology_glossary` (mode="section").',
+    description: "[Advanced] Get the raw UI context for all components within a section_tipo. " + "Returns the complete element list with types, labels and configuration. " + "Prefer `dedalo_get_section_map` for a lighter, LLM-friendly field map.",
     annotations: { tier: "primitive", readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Get section elements context" },
     inputSchema: exports_external2.object({
       section_tipo: TipoSchema,
@@ -53397,7 +53417,7 @@ function registerDiscoveryTools(server, client, ctx) {
   }, ctx);
   registerTool(server, {
     name: "dedalo_get_element_context",
-    description: "Get UI context for a specific element (component or section). Returns structure, permissions, labels and metadata.",
+    description: "[Advanced] Get raw UI context for a specific element (component or section). " + "Returns structure, permissions, labels and metadata.",
     annotations: { tier: "primitive", readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Get element context" },
     inputSchema: exports_external2.object({
       tipo: TipoSchema,
@@ -53419,23 +53439,8 @@ function registerDiscoveryTools(server, client, ctx) {
     handler: async (a) => client.call(rqo({ action: "start", source: a }))
   }, ctx);
   registerTool(server, {
-    name: "dedalo_resolve_ontology",
-    description: 'Resolve an ontology term (e.g. "Oral History", "Interview") to its section structure with all components. ' + "Use `fuzzy` search_mode for natural-language input (default), or `exact` for precise JSONB term matches. " + "Returns the section tipo, labels, model, and full component tree. " + "This is the primary tool for discovering what fields/components a section contains from a human-readable name.",
-    annotations: { tier: "primitive", readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Resolve ontology term" },
-    inputSchema: exports_external2.object({
-      text: exports_external2.string().describe('Human-readable text to search for (e.g. "Oral History", "Interview").'),
-      lang: OptionalLangSchema,
-      search_mode: exports_external2.enum(["exact", "fuzzy"]).default("fuzzy").describe('Search mode: "fuzzy" for ILIKE pattern match (flexible), "exact" for JSONB containment (precise).')
-    }),
-    handler: async ({ text, lang, search_mode }) => client.call(rqo({
-      action: "resolve_section",
-      dd_api: "dd_ontology_api",
-      source: { text, lang, mode: search_mode }
-    }))
-  }, ctx);
-  registerTool(server, {
     name: "dedalo_search_ontology",
-    description: "Structured search of the Dédalo ontology by column values (model, parent, tld, etc.). " + "Returns matching ontology nodes with their metadata. " + "Use this to find all sections, components of a specific model, or nodes within a TLD namespace.",
+    description: "[Advanced] Structured search of the Dédalo ontology by column values (model, parent, tld, etc.). " + "Returns matching ontology nodes with their metadata. " + "Use this to find components of a specific model or nodes within a TLD namespace.",
     annotations: { tier: "primitive", readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Search ontology" },
     inputSchema: exports_external2.object({
       model: exports_external2.string().optional().describe('Filter by model name (e.g. "section", "component_text_area").'),
@@ -53452,39 +53457,13 @@ function registerDiscoveryTools(server, client, ctx) {
     }))
   }, ctx);
   registerTool(server, {
-    name: "dedalo_ontology_glossary",
-    description: "Get the ontology glossary: a map of human-readable names to Dédalo tipo identifiers with portal relationship metadata. " + `THIS IS THE PRIMARY TOOL for resolving natural language to Dédalo tipos.
-
-` + 'mode="sections": Returns ALL sections as a compact name→tipo dictionary (e.g. "Mint"→numisdata6, "Oral History"→oh1). ' + `Call once per session to build your mental map.
-
-` + `mode="section": Returns one section's full component tree WITH portal metadata. ` + "Portal components include is_portal=true and target_section_tipo showing where they link. " + `Example: oh1 "Oral History" has oh24 "Informant" (portal→rsc197 "Person").
-
-` + 'mode="path": Resolves a relational path like ["oh1","oh24","rsc197","rsc85"] and returns ' + `annotated metadata for each hop: section→portal→target section→leaf component.
-
-` + "ALWAYS use this before any tool requiring section_tipo or tipo parameters. " + "Terms are returned in all available languages.",
-    annotations: { tier: "primitive", readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Ontology glossary" },
-    inputSchema: exports_external2.object({
-      mode: exports_external2.enum(["sections", "section", "path"]).default("sections").describe(`"sections" = all sections map. "section" = one section's components. "path" = resolve relational path.`),
-      section_tipo: TipoSchema.optional().describe('Required when mode="section". The section to inspect.'),
-      path: exports_external2.array(TipoSchema).min(2).optional().describe('Required when mode="path". Array of tipos forming the relational path (e.g. ["oh1","oh24","rsc197","rsc85"]).'),
-      lang: OptionalLangSchema
-    }),
-    handler: async ({ mode, section_tipo, path, lang }) => client.call(rqo({
-      action: "get_glossary",
-      dd_api: "dd_ontology_api",
-      source: { mode, section_tipo, path, lang }
-    }))
-  }, ctx);
-  registerTool(server, {
     name: "dedalo_resolve_path",
-    description: "Resolve a relational path through the Dédalo ontology. Use this to understand cross-section relationships " + `and navigate from a section through portal components to related sections.
+    description: "[Advanced] Resolve a relational path through the Dédalo ontology. " + "Use this to understand cross-section relationships and navigate from a section " + `through portal components to related sections.
 
 ` + `Example: path=["oh1","oh24","rsc197","rsc85"] means:
 ` + `  oh1 (Oral History) → oh24 (Informant portal) → rsc197 (Person) → rsc85 (Name)
 
-` + "Returns annotated metadata for each hop: tipo, model, term, is_portal, target_section_tipo. " + "The leaf hop includes column_type (string, relation, date, geo, number, media) so you know " + `what data format to expect.
-
-` + "Use after `dedalo_ontology_glossary` to drill into portal relationships discovered in the component tree.",
+` + "Returns annotated metadata for each hop: tipo, model, term, is_portal, target_section_tipo. " + "The leaf hop includes column_type so you know what data format to expect.",
     annotations: { tier: "primitive", readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Resolve relational path" },
     inputSchema: exports_external2.object({
       path: exports_external2.array(TipoSchema).min(2).describe("Array of tipos forming the relational path. Must start with a section tipo, " + "followed by portal components and their target sections, ending at the leaf component."),
@@ -53517,7 +53496,7 @@ function buildPagination(raw, offset, limit) {
 function registerRecordsReadTools(server, client, ctx) {
   registerTool(server, {
     name: "dedalo_read_record",
-    description: "Read a single record by `section_tipo` + `section_id`. Returns the full record with components rendered for the requested mode.\n" + "**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.\n" + "Portal components return locators (section_tipo+section_id) not the linked data. To read the linked record, call this tool again with the locator's section_tipo and section_id.",
+    description: "Read a single record by `section_tipo` + `section_id`. Returns the full record with components rendered for the requested mode.\n" + "**Resolve `section_tipo` first** via `dedalo_list_sections` then `dedalo_get_section_map`.\n" + "Portal components return locators (section_tipo+section_id) not the linked data. To read the linked record, call this tool again with the locator's section_tipo and section_id.",
     annotations: { tier: "primitive", readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Read record" },
     inputSchema: exports_external2.object({
       section_tipo: TipoSchema,
@@ -53533,13 +53512,13 @@ function registerRecordsReadTools(server, client, ctx) {
   registerTool(server, {
     name: "dedalo_search_records",
     description: `Search records using the SQO (Search Query Object) DSL. Supports pagination, AND/OR filter trees, ordering, and full-count totals.
-` + "**Resolve `section_tipo` and component `tipo`s first** via `dedalo_ontology_glossary`.\n\n" + 'Simplified single-section filter (`filter` parameter):\n```json\n{ "operator": "AND", "rules": [ { "path": "oh14", "operator": "contains", "value": "Picasso" } ] }\n```\n\n' + "Cross-section filter via portal traversal (use `raw_sqo` for multi-hop paths):\n```json\n" + `{ "filter": { "$and": [{ "q": "Picasso", "path": [
+` + "**Resolve `section_tipo` and component `tipo`s first** via `dedalo_get_section_map`.\n\n" + 'Simplified single-section filter (`filter` parameter):\n```json\n{ "operator": "AND", "rules": [ { "path": "oh14", "operator": "contains", "value": "Picasso" } ] }\n```\n\n' + "Cross-section filter via portal traversal (use `raw_sqo` for multi-hop paths):\n```json\n" + `{ "filter": { "$and": [{ "q": "Picasso", "path": [
 ` + `  { "section_tipo": "oh1", "component_tipo": "oh24" },
 ` + `  { "section_tipo": "rsc197", "component_tipo": "rsc85" }
-` + "] }] } }\n```\n\n" + 'Use `dedalo_ontology_glossary` (mode="section") to discover portal components and their target_section_tipo, ' + "or `dedalo_resolve_path` to validate the relational path before searching.",
+` + "] }] } }\n```\n\n" + "Use `dedalo_get_section_map` to discover portal components and their target section (the `target` field on link-type fields), " + "or `dedalo_resolve_path` to validate the relational path before searching.",
     annotations: { tier: "primitive", readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Search records" },
     inputSchema: exports_external2.object({
-      section_tipo: exports_external2.union([TipoSchema, exports_external2.array(TipoSchema).min(1)]).describe("Single section_tipo or array for cross-section search. Resolve via `dedalo_ontology_glossary`."),
+      section_tipo: exports_external2.union([TipoSchema, exports_external2.array(TipoSchema).min(1)]).describe("Single section_tipo or array for cross-section search. Resolve via `dedalo_list_sections`."),
       lang: OptionalLangSchema,
       limit: PaginationSchema.shape.limit,
       offset: PaginationSchema.shape.offset,
@@ -53566,12 +53545,14 @@ function registerRecordsReadTools(server, client, ctx) {
       })();
       const primarySection = Array.isArray(section_tipo) ? section_tipo[0] : section_tipo;
       const res = await client.call(rqo({ action: "read", source: { model: "section", section_tipo: primarySection, lang }, sqo: built }));
-      return { ok: true, data: res, pagination: buildPagination(res, offset, limit) };
+      const effOffset = typeof built?.offset === "number" ? built.offset : offset;
+      const effLimit = typeof built?.limit === "number" ? built.limit : limit;
+      return { ok: true, data: res, pagination: buildPagination(res, effOffset, effLimit) };
     }
   }, ctx);
   registerTool(server, {
     name: "dedalo_read_raw",
-    description: "Read raw JSONB data for records without component rendering. Faster than `dedalo_read_record` when only stored values are needed.\n" + "**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.",
+    description: "Read raw JSONB data for records without component rendering. Faster than `dedalo_read_record` when only stored values are needed.\n" + "**Resolve `section_tipo` first** via `dedalo_list_sections` then `dedalo_get_section_map`.",
     annotations: { tier: "primitive", readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Read raw" },
     inputSchema: exports_external2.object({
       section_tipo: TipoSchema,
@@ -53594,7 +53575,7 @@ function registerRecordsReadTools(server, client, ctx) {
   registerTool(server, {
     name: "dedalo_count_records",
     description: `Count records matching an SQO filter. Returns the count without fetching record bodies. Use to determine total pages before searching.
-` + "**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.",
+` + "**Resolve `section_tipo` first** via `dedalo_list_sections` then `dedalo_get_section_map`.",
     annotations: { tier: "primitive", readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Count records" },
     inputSchema: exports_external2.object({
       section_tipo: TipoSchema,
@@ -53610,7 +53591,7 @@ function registerRecordsReadTools(server, client, ctx) {
   registerTool(server, {
     name: "dedalo_get_indexation_grid",
     description: `Get the indexation grid for a record. Returns thesaurus terms and their hierarchical relationships, useful for inspecting how a record is classified.
-` + "**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.",
+` + "**Resolve `section_tipo` first** via `dedalo_list_sections` then `dedalo_get_section_map`.",
     annotations: { tier: "primitive", readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Get indexation grid" },
     inputSchema: exports_external2.object({
       section_tipo: TipoSchema,
@@ -53625,7 +53606,7 @@ function registerRecordsReadTools(server, client, ctx) {
 function registerRecordsWriteTools(server, client, ctx) {
   registerTool(server, {
     name: "dedalo_create_record",
-    description: "Create a new record in the given `section_tipo`. Returns the new section_id.\n" + '**Resolve `section_tipo` first** via `dedalo_ontology_glossary` (e.g. "Mint"→numisdata6) or `dedalo_resolve_ontology`.',
+    description: "Create a new record in the given `section_tipo`. Returns the new section_id.\n" + '**Resolve `section_tipo` first** via `dedalo_list_sections` (e.g. "Mint"→numisdata6) then `dedalo_get_section_map`.',
     annotations: { tier: "primitive", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true, title: "Create record" },
     inputSchema: exports_external2.object({
       section_tipo: TipoSchema,
@@ -53636,7 +53617,7 @@ function registerRecordsWriteTools(server, client, ctx) {
   registerTool(server, {
     name: "dedalo_duplicate_record",
     description: `Create a copy of an existing record including all component values. Returns the new section_id.
-` + "**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.",
+` + "**Resolve `section_tipo` first** via `dedalo_list_sections` then `dedalo_get_section_map`.",
     annotations: { tier: "primitive", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true, title: "Duplicate record" },
     inputSchema: exports_external2.object({
       section_tipo: TipoSchema,
@@ -53648,7 +53629,7 @@ function registerRecordsWriteTools(server, client, ctx) {
   registerTool(server, {
     name: "dedalo_delete_record",
     description: `Permanently delete a record. This action cannot be undone. The Dédalo user profile must allow delete on the target section.
-` + "**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.",
+` + "**Resolve `section_tipo` first** via `dedalo_list_sections` then `dedalo_get_section_map`.",
     annotations: { tier: "primitive", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true, title: "Delete record" },
     inputSchema: exports_external2.object({
       section_tipo: TipoSchema,
@@ -53662,7 +53643,7 @@ function registerRecordsWriteTools(server, client, ctx) {
 // src/tools/primitives/components.ts
 function registerComponentTools(server, client, ctx) {
   const baseRecord = {
-    tipo: TipoSchema.describe('Component tipo to operate on. Resolve via `dedalo_ontology_glossary` (mode="section") or `dedalo_get_section_elements_context`.'),
+    tipo: TipoSchema.describe("Component tipo to operate on. Resolve via `dedalo_get_section_map`."),
     section_tipo: TipoSchema,
     section_id: SectionIdSchema,
     lang: OptionalLangSchema
@@ -53670,7 +53651,7 @@ function registerComponentTools(server, client, ctx) {
   registerTool(server, {
     name: "dedalo_portal_delete_locator",
     description: `Remove a locator from a portal component, detaching the linked record.
-` + 'Use `dedalo_ontology_glossary` (mode="section") to identify portal components and their target sections.',
+` + "Use `dedalo_get_section_map` to identify portal components (link-type fields) and their target sections.",
     annotations: { tier: "primitive", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: "Portal: delete locator" },
     inputSchema: exports_external2.object({ ...baseRecord, locator: LocatorSchema2 }),
     handler: async ({ tipo, section_tipo, section_id, lang, locator }) => client.call(rqo({ action: "delete_locator", dd_api: "dd_component_portal_api", source: { tipo, section_tipo, section_id, lang }, options: { locator }, prevent_lock: false }))
@@ -53984,12 +53965,99 @@ function registerMediaAgentTools(server, client, ctx) {
   }, ctx);
 }
 
+// src/tools/agent/rag.ts
+function registerRagAgentTools(server, client, ctx) {
+  registerTool(server, {
+    name: "dedalo_semantic_search",
+    description: "Semantic search: find records by MEANING (not keywords) over the vectorized archive. " + "Describe the idea; the system finds conceptually similar records across languages. " + `Returns ranked records (best first), ACL-filtered.
+
+` + '`section_tipos` are ontology tipos (e.g. ["oh1"]); a scope is required.',
+    annotations: { tier: "agent", readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Semantic search" },
+    inputSchema: exports_external2.object({
+      query: exports_external2.string().min(1).describe("Natural-language description of what to find."),
+      section_tipos: exports_external2.array(TipoSchema).min(1).describe("Sections (tipos) to search."),
+      top_k: exports_external2.number().int().min(1).max(50).default(8).describe("Max records to return.")
+    }),
+    handler: async ({ query, section_tipos, top_k }) => client.call(rqo({ action: "semantic_search", dd_api: "dd_rag_api", source: { query, section_tipos, top_k } }))
+  }, ctx);
+  registerTool(server, {
+    name: "dedalo_ask",
+    description: "Ask a question and get a GROUNDED answer with citations, synthesized only from the archive. " + "If no relevant permitted context exists, it refuses (grounded:false) rather than inventing. " + `Returns { answer, citations, provenance, grounded }. Treat it as a finding aid; verify via the citations.
+
+` + "`section_tipos` are ontology tipos; a scope is required.",
+    annotations: { tier: "agent", readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Ask (grounded Q&A)" },
+    inputSchema: exports_external2.object({
+      query: exports_external2.string().min(1).describe("The question to answer from the archive."),
+      section_tipos: exports_external2.array(TipoSchema).min(1).describe("Sections (tipos) to ground the answer in."),
+      top_k: exports_external2.number().int().min(1).max(50).default(8).describe("Max context passages.")
+    }),
+    handler: async ({ query, section_tipos, top_k }) => client.call(rqo({ action: "ask", dd_api: "dd_rag_api", source: { query, section_tipos, top_k } }))
+  }, ctx);
+  registerTool(server, {
+    name: "dedalo_get_relevant_context",
+    description: "Retrieve the most relevant PASSAGES (not a generated answer) for a query, so YOU can ground your " + "own reasoning in the archive. Returns ACL-filtered passages with their source record and provenance. " + "Prefer this when you want to read and reason over the evidence yourself.",
+    annotations: { tier: "agent", readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Get relevant context" },
+    inputSchema: exports_external2.object({
+      query: exports_external2.string().min(1).describe("What you need context about."),
+      section_tipos: exports_external2.array(TipoSchema).min(1).describe("Sections (tipos) to retrieve from."),
+      top_k: exports_external2.number().int().min(1).max(50).default(8).describe("Max passages.")
+    }),
+    handler: async ({ query, section_tipos, top_k }) => client.call(rqo({ action: "get_agent_context", dd_api: "dd_rag_api", source: { query, section_tipos, top_k } }))
+  }, ctx);
+  registerTool(server, {
+    name: "dedalo_similar_objects",
+    description: "Find objects VISUALLY similar to a given object record (coins, ceramics, …), using its images. " + "For a multi-image object (e.g. a coin obverse + reverse) both faces are considered. " + 'Set `near_duplicate` for "the same object in the collection". Returns objects with score, view and `thumb_url`.\n\n' + "Requires the object's section to declare images in `properties.rag.context` and image vectorization enabled.",
+    annotations: { tier: "agent", readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Similar objects (image)" },
+    inputSchema: exports_external2.object({
+      section_tipo: TipoSchema.describe("The seed object's section tipo."),
+      section_id: SectionIdSchema.describe("The seed object's record id."),
+      mode: exports_external2.enum(["visual", "hybrid"]).default("hybrid").describe('"hybrid" blends image with catalog context (recommended); "visual" is image-only.'),
+      view: exports_external2.string().optional().describe('Restrict to one image role (e.g. "obverse").'),
+      near_duplicate: exports_external2.boolean().default(false).describe("If true, return only near-identical matches."),
+      min_similarity: exports_external2.number().min(0).max(1).optional().describe("Explicit similarity floor (0–1)."),
+      section_tipos: exports_external2.array(TipoSchema).optional().describe("Sections to compare against; omit to use the section's configured scope."),
+      top_k: exports_external2.number().int().min(1).max(50).default(8).describe("Max objects to return.")
+    }),
+    handler: async ({ section_tipo, section_id, mode, view, near_duplicate, min_similarity, section_tipos, top_k }) => client.call(rqo({
+      action: "similar_objects",
+      dd_api: "dd_rag_api",
+      source: { section_tipo, section_id, similarity_mode: mode, view, near_duplicate, min_similarity, section_tipos, top_k }
+    }))
+  }, ctx);
+  registerTool(server, {
+    name: "dedalo_characterize_object",
+    description: "Propose an object's attributes (typology, period, material, …) by AGGREGATING its visually-similar " + "neighbours' cataloged metadata — a similarity-weighted vote for categorical fields and an earliest…latest " + "range for dates. Each proposal carries a confidence and the cited supporting objects (with thumbnails). " + `This is a grounded proposal from real records, NOT a generative guess — present it for human confirmation.
+
+` + '`fields` are ontology role keys from `properties.rag.context.metadata` (e.g. ["typology","period","material"]); omit for all.',
+    annotations: { tier: "agent", readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Characterize object" },
+    inputSchema: exports_external2.object({
+      section_tipo: TipoSchema.describe("The object's section tipo."),
+      section_id: SectionIdSchema.describe("The object's record id."),
+      fields: exports_external2.array(exports_external2.string()).optional().describe('Role keys to propose (e.g. ["typology","period"]). Omit for all declared.'),
+      top_k: exports_external2.number().int().min(1).max(100).default(20).describe("Neighbours to aggregate.")
+    }),
+    handler: async ({ section_tipo, section_id, fields, top_k }) => client.call(rqo({ action: "characterize_object", dd_api: "dd_rag_api", source: { section_tipo, section_id, fields, top_k } }))
+  }, ctx);
+  registerTool(server, {
+    name: "dedalo_search_by_text_image",
+    description: 'Find OBJECT IMAGES matching a textual description (e.g. "blue-and-white ceramic jar with handles"). ' + "The description is matched against objects' visual features via a joint image+text model. " + "Returns objects with `thumb_url`, ACL-filtered.\n\n" + "`section_tipos` are ontology tipos; a scope is required.",
+    annotations: { tier: "agent", readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Search objects by description" },
+    inputSchema: exports_external2.object({
+      query: exports_external2.string().min(1).describe("Visual description of the object(s) to find."),
+      section_tipos: exports_external2.array(TipoSchema).min(1).describe("Object sections (tipos) to search."),
+      top_k: exports_external2.number().int().min(1).max(50).default(8).describe("Max objects to return.")
+    }),
+    handler: async ({ query, section_tipos, top_k }) => client.call(rqo({ action: "search_by_text_image", dd_api: "dd_rag_api", source: { query, section_tipos, top_k } }))
+  }, ctx);
+}
+
 // src/tools/agent/index.ts
 function registerAgentTools(server, client, ctx) {
   registerSectionAgentTools(server, client, ctx);
   registerRecordAgentTools(server, client, ctx);
   registerSearchAgentTools(server, client, ctx);
   registerMediaAgentTools(server, client, ctx);
+  registerRagAgentTools(server, client, ctx);
 }
 
 // src/tools/index.ts
@@ -54011,13 +54079,13 @@ function registerAllTools(server, client, ctx) {
 // src/resources/ontology.ts
 function registerOntologyResources(server, client) {
   server.registerResource("ontology-sections", "dedalo://ontology/sections", {
-    description: "Complete glossary of all Dédalo sections: human-readable names mapped to tipo identifiers. " + "Terms in all available languages. Fetch this at session start to build your ontology map.",
+    description: "Compact index of all Dédalo sections accessible to the current user: " + "tipo identifiers with multilingual labels. " + "Fetch this once per session to know what record types exist.",
     mimeType: "application/json"
   }, async () => {
     const result = await client.call(rqo({
-      action: "get_glossary",
-      dd_api: "dd_ontology_api",
-      source: { mode: "sections" }
+      action: "list_sections_index",
+      dd_api: "dd_agent_api",
+      source: {}
     }));
     return {
       contents: [{
@@ -54030,16 +54098,16 @@ function registerOntologyResources(server, client) {
   server.registerResource("ontology-section-detail", new ResourceTemplate("dedalo://ontology/sections/{section_tipo}", {
     list: async () => {
       const result = await client.call(rqo({
-        action: "get_glossary",
-        dd_api: "dd_ontology_api",
-        source: { mode: "sections" }
+        action: "list_sections_index",
+        dd_api: "dd_agent_api",
+        source: {}
       }));
       const sections = result?.result ?? [];
       return {
         resources: sections.map((s) => ({
-          uri: `dedalo://ontology/sections/${s.section_tipo}`,
-          name: s.section_tipo,
-          description: typeof s.term === "object" ? Object.values(s.term).join(" / ") : s.term,
+          uri: `dedalo://ontology/sections/${s.tipo}`,
+          name: s.tipo,
+          description: typeof s.label === "object" ? Object.values(s.label).join(" / ") : String(s.label ?? s.tipo),
           mimeType: "application/json"
         }))
       };
@@ -54047,23 +54115,23 @@ function registerOntologyResources(server, client) {
     complete: {
       section_tipo: async (value) => {
         const result = await client.call(rqo({
-          action: "resolve_term",
-          dd_api: "dd_ontology_api",
-          source: { text: value, mode: "fuzzy", model: "section", limit: 20 }
+          action: "list_sections_index",
+          dd_api: "dd_agent_api",
+          source: {}
         }));
-        const nodes = result?.result ?? [];
-        return nodes.map((n) => n.tipo);
+        const sections = result?.result ?? [];
+        return sections.map((s) => s.tipo).filter((t) => t.startsWith(value));
       }
     }
   }), {
-    description: "Full component tree for a specific Dédalo section, including portal metadata (is_portal, target_section_tipo). " + "Use this to discover which components a section has and which portals link to other sections.",
+    description: "Full field map for a specific Dédalo section: tipo, multilingual labels, " + "simplified types (text/html/date/number/link/media), and portal targets. " + "Use this before reading or writing records to understand the available fields.",
     mimeType: "application/json"
   }, async (uri, variables) => {
     const section_tipo = variables.section_tipo;
     const result = await client.call(rqo({
-      action: "get_glossary",
-      dd_api: "dd_ontology_api",
-      source: { mode: "section", section_tipo }
+      action: "get_section_map",
+      dd_api: "dd_agent_api",
+      source: { section: section_tipo }
     }));
     return {
       contents: [{
@@ -54147,6 +54215,10 @@ async function main() {
   }
   if (useHttp) {
     const { port, host, allowedOrigins } = config4.http;
+    const isLoopback = host === "127.0.0.1" || host === "localhost" || host === "::1";
+    if (!isLoopback && !process.env.DEDALO_MCP_HTTP_TOKEN) {
+      logger.warn(`MCP HTTP transport bound to non-loopback host '${host}' without DEDALO_MCP_HTTP_TOKEN — set a token to authenticate clients.`);
+    }
     Bun.serve({
       port,
       hostname: host,
@@ -54163,6 +54235,16 @@ async function main() {
           corsHeaders["Access-Control-Allow-Origin"] = origin;
         if (req.method === "OPTIONS") {
           return new Response(null, { status: 204, headers: corsHeaders });
+        }
+        const requiredToken = process.env.DEDALO_MCP_HTTP_TOKEN;
+        if (requiredToken) {
+          const provided = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+          const enc = new TextEncoder;
+          const a = enc.encode(provided);
+          const b = enc.encode(requiredToken);
+          if (a.length !== b.length || !timingSafeEqual(a, b)) {
+            return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+          }
         }
         const sessionId = req.headers.get("mcp-session-id");
         let transport = sessionId ? httpTransports.get(sessionId) : undefined;

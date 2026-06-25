@@ -86,7 +86,12 @@ export function registerRecordsReadTools(server: McpServer, client: WorkClient, 
 			const res = await client.call(
 				rqo({ action: 'read', source: { model: 'section', section_tipo: primarySection, lang }, sqo: built })
 			);
-			return { ok: true as const, data: res, pagination: buildPagination(res, offset, limit) };
+			// Derive pagination from the SQO actually used: a raw_sqo can override
+			// limit/offset, so the request-level defaults would report wrong
+			// has_more/next_offset and make the client re-fetch or stop early.
+			const effOffset = typeof (built as any)?.offset === 'number' ? (built as any).offset : offset;
+			const effLimit  = typeof (built as any)?.limit  === 'number' ? (built as any).limit  : limit;
+			return { ok: true as const, data: res, pagination: buildPagination(res, effOffset, effLimit) };
 		},
 	}, ctx);
 

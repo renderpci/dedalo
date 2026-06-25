@@ -1,5 +1,7 @@
 # Changing parameters of Dédalo areas config file
 
+> **⚠️ Dédalo v7 — this file moved out of the web root to `../private/config_areas.php`.** Its format is unchanged; only the location moved (the area code loads it from `../private/`). Edit it there. See the **[Configuration Administrator Guide](administration.md)** for the full config model. The instructions below still describe the file's contents.
+
 ./dedalo/config/config_areas.php
 
 1. Locate the file into the directory: ../httpdocs/dedalo/config/
@@ -18,7 +20,7 @@
 
 ## Allowing / denying access variables
 
-Areas are referred to different parts in the ontology. Every Area has a specific and unique tipo (typology of indirect programming object). This configuration file allow or deny the access to specific areas. When deny access to specific areas it will removed from the menu and do not possible get access by any user, included root user. This config file is loaded previously than the security access, and remove specific tipos from the ontology. Dédalo use some private areas in the ontology as private lists of values, like Yes/no list, that is not accessible to be changed. This areas are deny in this file.
+Areas refer to different parts of the ontology. Every area has a specific, unique `tipo` (typology of indirect programming object). This configuration file allows or denies access to specific areas. When access to an area is denied, the area is removed from the menu and no user — not even the root user — can reach it. This config file is loaded before the security access check and removes the specified tipos from the ontology. Dédalo uses some private areas in the ontology as private lists of values, such as the Yes/No list, which must not be edited. Those areas are denied in this file.
 
 ---
 
@@ -28,10 +30,10 @@ Areas are referred to different parts in the ontology. Every Area has a specific
 
 areas_allow  `array`
 
-This variable has a list of tipos (array of tipos) that will be able to access by the menu and the profiles. By default Dédalo will access to all areas.
+This variable holds a list of tipos (an array of tipos) that can be accessed from the menu and the profiles. By default Dédalo grants access to all areas.
 
 ```php
-$areas_allow['dd137'];
+$areas_allow[] = 'dd137';
 ```
 
 ---
@@ -42,7 +44,7 @@ $areas_allow['dd137'];
 
 areas_deny `array`
 
-This variable has a list of tipos (array of tipos) that will be deny to acces by the menu and the profiles. By default Dédalo will only deny some private list.
+This variable holds a list of tipos (an array of tipos) that are denied access from the menu and the profiles. By default Dédalo only denies some private lists.
 
 ```php
 $areas_deny[] = 'dd137';
@@ -56,8 +58,8 @@ $areas_deny[] = 'dd137';
 >$areas_deny[] = 'hierarchy20'; // Thesaurus real section
 >```
 >
->It's the same that:
+>which is the same as:
 >
 >```php
->$areas_deny[ 'dd137', 'rsc1', hierarchy20'];
+>$areas_deny = [ 'dd137', 'rsc1', 'hierarchy20' ];
 >```

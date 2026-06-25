@@ -1,19 +1,36 @@
-# Request config presets (Section layout maps)
+# Request config presets (section layout maps)
+
+> See also: [Ontology](index.md) · [RQO](../rqo.md) · [dd_object](../dd_object.md) · [request_config](../request_config.md)
+
+Request config presets let administrators and privileged users override the
+default ontology definition for a section's layout — that is, redefine which
+elements (components, section groups, etc.) are displayed when the browser loads a
+section. This page explains how to create a preset and how to write its `ddo_map`.
 
 ## Introduction
 
-The Request Config Presets allow administrators and privileged users to overwrite the default ontology definitions for the section layout. This means that they can redefine which elements (components, section groups, etc.) are displayed when the browser loads the selected section.
-
 ### Main concepts
-The primary mechanism for rendering a section in Dédalo consists of retrieving the ontology section definition for the current section in the current mode ('edit' or 'list' primarily) and preparing all components for rendering on the client side, creating the context with all the necessary information (tipo, name, parent, tools, labels, etc.).
-Users can create a custom set of components by overwriting this default context and creating Request Config Presets, which will be loaded and parsed to generate the new set.
+
+The primary mechanism for rendering a section in Dédalo retrieves the ontology
+section definition for the current section in the current mode (`edit` or `list`,
+primarily) and prepares all components for rendering on the client side, creating
+the context with all the necessary information (tipo, name, parent, tools, labels,
+etc.). Users can create a custom set of components by overriding this default
+context with a request config preset, which is loaded and parsed to generate the
+new set.
 
 #### Request config
-A request config is a basic definition for creating a [RQO](../rqo.md) (Request Query Object) used in the Dédalo working API calls.
-It is defined in the Ontology node properties for standard use, but can be overwritten using the local (per installation) request configuration presets.
 
-## Creating new Request config presets
-To create a new preset, create a new record in section [`dd1244`](https://dedalo.dev/ontology/dd1244) - Request config presets (Layout map).
+A request config is a basic definition for creating a [RQO](../rqo.md) (Request
+Query Object) used in Dédalo's working API calls. It is defined in the ontology
+node properties for standard use, but can be overridden with the local
+(per-installation) request config presets.
+
+## Creating a new request config preset
+
+To create a new preset, create a new record in section
+[`dd1244`](https://dedalo.dev/ontology/dd1244) — Request config presets (Layout
+map).
 
 !!! note "Menu path: Administration > List of values > Settings and tools > Request config presets (Layout map)"
 
@@ -23,14 +40,14 @@ To create a new preset, create a new record in section [`dd1244`](https://dedalo
 
 - #### Name [dd624](https://dedalo.dev/ontology/dd624) String  
   Descriptive name of the preset.  
-  It is used only to human location and description of the preset.  
+  Used only for human-readable identification and description of the preset.  
     
     Sample: 'Numismatic Object list'  
 
 ---
 
 - #### Tipo [dd1242](https://dedalo.dev/ontology/dd1242) String
-  Tipo (ontology identifier [see more info](./index.md#what-dédalo-ontology-is)) of the element. Support is currently limited to sections.  
+  Tipo (ontology identifier [see more info](index.md#what-the-dédalo-ontology-is)) of the element. Support is currently limited to sections.  
   It is used to locate the preset by tipo.  
 
     Sample: '[numisdata4](https://dedalo.dev/ontology/numisdata4)'
@@ -38,9 +55,9 @@ To create a new preset, create a new record in section [`dd1244`](https://dedalo
 ---
 
 - #### Section tipo [dd642](https://dedalo.dev/ontology/dd642) String  
-  Tipo (ontology identifier [see more info](./index.md#what-dédalo-ontology-is)) of the section.  
+  Tipo (ontology identifier [see more info](index.md#what-the-dédalo-ontology-is)) of the section.  
   It is used to locate the preset by section_tipo.  
-  Note that 'could' seems redundant, but the combination of 'tipo' and 'section_tipo' will be used to extend the presets to components such as portals in the future.  
+  This may look redundant with `tipo`, but the combination of `tipo` and `section_tipo` will be used to extend presets to components such as portals in the future.  
 
     Sample: '[numisdata4](https://dedalo.dev/ontology/numisdata4)'
 
@@ -94,23 +111,23 @@ To create a new preset, create a new record in section [`dd1244`](https://dedalo
 ## Creating a [ddo_map](../rqo.md#parameters)
 
 The **ddo_map** contains the list of all [ddo](../dd_object.md) items to display.  
-There exists various **ddo_map** wrappers for different uses, but for display, we will use [show](../rqo.md#parameters) as follow:  
-*{show > ddo_map > [ddo 1, ddo 2, ..]}*.
+There are various **ddo_map** wrappers for different uses, but for display we use [show](../rqo.md#parameters), as follows:  
+*{show > ddo_map > [ddo 1, ddo 2, …]}*.
 
-All [ddo](../dd_object.md) items to render must be inside **show > ddo_map** array property and follow this pattern:
+All [ddo](../dd_object.md) items to render must sit inside the **show > ddo_map** array property and follow this pattern:
 
 
 
 * **info** : String with descriptive info about the **ddo**. Sample: *Type (component_portal)*
 * **mode** : String with the preset target **[mode](../dd_object.md#properties)**. Sample: *list*
 * **tipo** : String with the preset target **[tipo](../dd_object.md#properties)**. Sample: *numisdata158*
-* **view** : String optional overwrites the default **[view](../dd_object.md#properties)** of the component. Sample: *line*
-* **parent** : String with the **[tipo](../dd_object.md#properties)** of the section (the parent of current component). The value 'self' could be used to automatically resolve the current section type. Sample: *self*
-* **section_tipo**: String with the **[tipo](../dd_object.md#properties)** of the section. The value 'self' could be used to automatically resolve the current section type. Sample: *self*
+* **view** : String, optional. Overrides the default **[view](../dd_object.md#properties)** of the component. Sample: *line*
+* **parent** : String with the **[tipo](../dd_object.md#properties)** of the section (the parent of the current component). The value 'self' resolves to the current section type automatically. Sample: *self*
+* **section_tipo**: String with the **[tipo](../dd_object.md#properties)** of the section. The value 'self' resolves to the current section type automatically. Sample: *self*
 
-Mode **list** specifics
+List-mode specifics:
 
-* **width** : String optional, only for list mode. Overwrites the default column **[width](../dd_object.md#properties)** in the list. Sample: *5rem*
+* **width** : String, optional, list mode only. Overrides the default column **[width](../dd_object.md#properties)** in the list. Sample: *5rem*
 
 #### Sample of JSON data [dd625](https://dedalo.dev/ontology/dd625) value for **LIST** mode:
 
@@ -163,16 +180,16 @@ Mode **list** specifics
 ]
 ```
 
-Mode **edit** specifics
+Edit-mode specifics:
 
-* **properties** : Object optional, only for edit mode. Overwrites the default properties of the Ontology node **[properties](../dd_object.md#properties)**.
-This is usually used to change the CSS of a component or to add a custom label to it.  
+* **properties** : Object, optional, edit mode only. Overrides the default properties of the ontology node **[properties](../dd_object.md#properties)**.
+This is usually used to change a component's CSS or to give it a custom label.  
 
 
-    - **css** : To change the CSS of a element, set a selector like *.wrapper_component* and add properties with the desired styles like *"grid-column": "span 3"* in JSON format.  
-    Components main selectors are defined from [Components DOM structure](../components/index.md#dom-structure) and must to be set with the '.' as prefix like '.wrapper_component'.   
+    - **css** : To change the CSS of an element, set a selector such as *.wrapper_component* and add the desired style properties, e.g. *"grid-column": "span 3"*, in JSON format.  
+    A component's main selectors are defined in the [components DOM structure](../components/index.md#dom-structure) and must be set with a leading `.`, e.g. *.wrapper_component*.   
     
-    ``` shell
+    ```text
     ── .wrapper_component (all component wrapper div)
        ├── .label (name of the component div)
        ├── .buttons_container (buttons div hidden by default. Visible when component is active)
@@ -181,12 +198,12 @@ This is usually used to change the CSS of a component or to add a custom label t
     ```
     
     
-    - **label** : To change the label of the component, set an object with the Dedalo language code (like 'lg-eng') as key and the label (like 'My component label') as value. Add as many languages as you need.  
-    Please note that if the current selected application language is not one of the defined values, the first value will be used as a fallback.
+    - **label** : To change the label of the component, set an object with the Dédalo language code (e.g. 'lg-eng') as the key and the label (e.g. 'My component label') as the value. Add as many languages as you need.  
+    Note that if the currently selected application language is not one of the defined values, the first value is used as a fallback.
     
 Sample:
 
-```
+```json
     {
         "css": {
           ".wrapper_component": {
@@ -201,8 +218,8 @@ Sample:
     }
 ```
 
-* **parent_grouper** : String optional, only for edit mode. Overwrites the default **[parent_grouper](../dd_object.md#properties)** property of the ddo 
-(sets the parent node in the DOM to the current component node, usually a ***section_group*** defined previously).  
+* **parent_grouper** : String, optional, edit mode only. Overrides the ddo's default **[parent_grouper](../dd_object.md#properties)** property
+(sets the DOM parent of the current component node, usually a ***section_group*** defined previously).  
 Sample: *numisdata129*
 
 

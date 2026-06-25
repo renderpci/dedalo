@@ -12,7 +12,7 @@
 ## The client UI architecture in one paragraph
 
 Dédalo's golden rule is **the server describes, the client draws** (see the
-[architecture overview](../architecture_overview.md#the-datum-context-data)).
+[architecture overview](../architecture_overview.md#the-datum-contract)).
 The server never emits HTML for a record: it instantiates a section/component
 from the ontology and ships a single `{context, data}` datum — `context` is the
 *description* (model, label, permissions, css, tools, buttons, view, config) and

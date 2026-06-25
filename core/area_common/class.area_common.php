@@ -1,7 +1,39 @@
 <?php declare(strict_types=1);
 /**
 * AREA_COMMON
+* Abstract base for all Dédalo area classes; provides dashboard infrastructure and
+* the generic JSON controller fallback.
 *
+* An "area" in Dédalo is a top-level navigational node in the ontology tree
+* (e.g. area_resource, area_thesaurus, area_admin). `area_common` is not
+* instantiated directly; concrete subclasses (area, area_resource, area_admin,
+* area_thesaurus, area_graph, area_maintenance, area_development, area_ontology,
+* area_tool, area_publication, area_root, area_activities, area_activity) each
+* extend it and may override or augment the methods here.
+*
+* Responsibilities:
+* - Construction: sets tipo, mode, and lang, then loads structure data from the
+*   ontology via parent::load_structure_data().
+* - JSON controller dispatch: get_json() checks whether the concrete subclass
+*   ships its own <class>_json.php; if not it falls back to area_common_json.php,
+*   which builds the generic dashboard payload (context + metrics).
+* - Dashboard generation: get_dashboard_data() collects descendant section tipos,
+*   runs one or more named metric_* callbacks per section, and appends area-level
+*   activity data from matrix_activity (dd542).
+* - Record counting: count_section_records() queries PostgreSQL via the SQO search
+*   layer, respecting permissions and only targeting sections that have a real
+*   matrix_table backing them.
+* - Activity metrics: metric_activity_30d() issues a direct parameterised SQL query
+*   against matrix_activity, aggregating by day and section, and fills a continuous
+*   date series for the client activity chart.
+*
+* Extends: common (core/common/class.common.php)
+* Extended by: area, area_resource, area_admin, area_thesaurus, area_graph,
+*              area_maintenance, area_development, area_ontology, area_tool,
+*              area_publication, area_root, area_activities, area_activity
+*
+* @package Dédalo
+* @subpackage Core
 */
 class area_common extends common  {
 
@@ -9,17 +41,29 @@ class area_common extends common  {
 
 	/**
 	* CLASS VARS
+	* area_common inherits all instance properties from common (tipo, mode, lang,
+	* from_parent, properties, etc.). No additional static or instance properties
+	* are declared here; all state is accessed through the inherited getters/setters.
 	*/
 
 
 
 	/**
 	* GET_INSTANCE
-	* Singleton pattern
-	* @param string $model
-	* @param string $tipo
-	* @param string $mode = 'list'
-	* @return object $area_instance
+	* Factory method that instantiates an area subclass by its model name.
+	* Despite the "Singleton pattern" label this is NOT a singleton; it always
+	* creates a new instance.  The name mirrors the component convention so that
+	* callers can use area_common::get_instance() the same way they would call
+	* component_common::get_instance().
+	*
+	* Callers should resolve $model first via ontology_node::get_model_by_tipo()
+	* before invoking this factory, so that the concrete subclass (e.g. area_resource)
+	* is instantiated rather than the generic area.
+	*
+	* @param string $model     PHP class name of the concrete subclass (e.g. 'area_resource')
+	* @param string $tipo      Ontology tipo identifier for the area node (e.g. 'dd14')
+	* @param string $mode      Render mode passed to __construct; typically 'list'
+	* @return object           New instance of the concrete area subclass
 	*/
 	public static function get_instance( string $model, string $tipo, string $mode='list' ) : object {
 
@@ -32,8 +76,19 @@ class area_common extends common  {
 
 	/**
 	* __CONSTRUCT
-	* @param string $tipo
-	* @param string $mode
+	* Initialises the area instance with its ontology tipo and render mode, then
+	* triggers the parent structure-data load so that properties, labels, and
+	* children node lists are available immediately after construction.
+	*
+	* The constructor is protected so callers MUST use get_instance(); direct
+	* `new area_common(...)` is intentionally blocked.
+	*
+	* Side effects:
+	* - Calls parent::load_structure_data(), which populates $this->properties from
+	*   the ontology cache and sets up the context cache key for this node.
+	*
+	* @param string $tipo  Ontology tipo identifier for this area node
+	* @param string $mode  Render mode (typically 'list')
 	* @return void
 	*/
 	protected function __construct( string $tipo, string $mode ) {
@@ -51,9 +106,13 @@ class area_common extends common  {
 
 	/**
 	* GET_SECTION_TIPO
-	* Only to preserve compatibility with sections in some scenarios like building
-	* request_config
-	* @return string $tipo
+	* Returns the area's own tipo as its "section tipo".
+	* Areas are not sections but several infrastructure paths (request_config builders,
+	* context serialisers, the generic JSON controller) call get_section_tipo() on any
+	* element they receive. For areas, tipo === section_tipo by convention, so this
+	* shim returns $this->tipo directly, making area instances duck-type-compatible
+	* with section instances in those paths.
+	* @return string  The ontology tipo of this area (e.g. 'dd14')
 	*/
 	public function get_section_tipo() : string {
 
@@ -63,9 +122,14 @@ class area_common extends common  {
 
 
 	/**
-	* GET SECTION ID
-	* Overwrites common method
-	* @return null
+	* GET_SECTION_ID
+	* Always returns null for area instances.
+	* Areas are structural/navigational nodes in the ontology, not data-bearing
+	* section records. They have no row in any matrix_* table and therefore have
+	* no section_id. This override prevents the inherited common::get_section_id()
+	* from returning a stale or misleading value in contexts that call get_section_id()
+	* on any common-descended object.
+	* @return string|int|null  Always null
 	*/
 	public function get_section_id() : string|int|null {
 
@@ -82,8 +146,21 @@ class area_common extends common  {
 	* to inherit the generic dashboard payload without per-class boilerplate.
 	* Subclasses that ship their own <class>_json.php (area_thesaurus, area_graph, ...)
 	* keep their custom behaviour untouched.
-	* @param object|null $request_options
-	* @return object $json
+	*
+	* Dispatch logic:
+	* 1. Derive the expected controller path for the concrete class (e.g.
+	*    core/area_resource/area_resource_json.php).
+	* 2. If that file exists, delegate to parent::get_json() (common's standard flow).
+	* 3. Otherwise, build $options manually and include area_common_json.php in $this
+	*    scope so the generic controller runs with full access to the area instance.
+	*
+	* Note: $options is explicitly constructed here (not forwarded from $request_options)
+	* because the fallback include runs in this scope where $options is expected, mirroring
+	* what common::get_json() does before its own include.
+	*
+	* @param object|null $request_options  Optional flags: get_context, get_data,
+	*                                       get_request_config (all bool, same as common)
+	* @return object  JSON payload built by the applicable controller
 	*/
 	public function get_json( ?object $request_options=null ) : object {
 
@@ -124,13 +201,26 @@ class area_common extends common  {
 
 	/**
 	* GET_DASHBOARD_CHILD_SECTIONS
-	* Walks ontology children recursively under this area and returns the tipos of
-	* all descendant sections. Nested sub-areas are traversed so their sections are
-	* included in the parent area dashboard (e.g. 'resources' aggregates audiovisual,
-	* image, document, etc.).
-	* Excludes section_tool and any explicitly excluded models, plus virtual or
-	* untabled sections (no matrix_table → not countable).
-	* @return array<string> $ar_section_tipo
+	* Walks the ontology tree recursively downward from this area's tipo and collects
+	* the tipos of all descendant nodes whose model is 'section'. Sub-areas are
+	* transparently traversed so that a compound area (e.g. area_resource, which
+	* groups audiovisual, image, document sub-areas) exposes ALL of their sections
+	* in one flat list.
+	*
+	* Model filtering rules:
+	* - 'section' nodes are accepted and added to $ar_result.
+	* - 'area' nodes are descended into but not themselves added.
+	* - 'login', 'tools', 'section_list', 'filter', 'section_tool' are skipped
+	*   entirely (not descended and not added).
+	* - Any other model (components, portals, etc.) is silently skipped.
+	*
+	* A visited-set ($ar_visited) guards against cycles that might exist in a
+	* malformed ontology, preventing infinite recursion.
+	*
+	* Note: this method does NOT filter out untabled/virtual sections — callers
+	* such as count_section_records() must check matrix_table existence themselves.
+	*
+	* @return array<string>  Flat, deduplicated list of section tipos in ontology order
 	*/
 	public function get_dashboard_child_sections() : array {
 
@@ -181,13 +271,19 @@ class area_common extends common  {
 
 	/**
 	* COUNT_SECTION_RECORDS
-	* Returns total number of records for a section_tipo.
-	* Uses search::count() so it respects user permissions and project filters
-	* defined at SQO level (same behaviour as `dd_core_api::count`).
-	* Returns null when the section is not countable (no matrix_table) or when
-	* the current user has no read permission.
-	* @param string $section_tipo
-	* @return int|null $total
+	* Returns the total number of live records for a given section tipo.
+	*
+	* Uses the SQO/search layer (search_query_object + search::count()) so that
+	* the count respects project filters, access control, and any search extensions
+	* wired at the search level — the same behaviour as `dd_core_api::count`.
+	*
+	* Early-return conditions (both return null):
+	* - The current user has no read permission (< 1) for the section.
+	* - The section tipo has no backing matrix_table (virtual/pseudo sections
+	*   that exist in the ontology but store no rows in PostgreSQL).
+	*
+	* @param string $section_tipo  Ontology tipo of the section to count
+	* @return int|null             Record count, or null when not countable/accessible
 	*/
 	public function count_section_records(string $section_tipo) : ?int {
 
@@ -234,27 +330,39 @@ class area_common extends common  {
 	* sections with basic metrics. Designed to be extended by subclasses or by
 	* adding more `metric_*` methods.
 	*
+	* Metric extensibility: each name N in $ar_metric_names must correspond to a
+	* method `metric_<N>(string $section_tipo) : mixed` on this class or a subclass.
+	* Missing methods are silently skipped. To add a new per-section metric, define
+	* `metric_mymetric()` and pass 'mymetric' in the array (or configure it in the
+	* area ontology properties as `{ "dashboard": { "metrics": ["total","mymetric"] } }`).
+	*
+	* The activity_30d area-level metric is always computed and appended to the
+	* dashboard (not driven by $ar_metric_names). The per-section recent_7d badge
+	* is then derived from the last 7 days of that payload without a second SQL query.
+	*
 	* Returned structure:
 	* {
-	*   "area_tipo"   : "dd14",
-	*   "area_label"  : "Resources",
-	*   "generated_at": 1731768000,
-	*   "metrics"     : ["total"],
-	*   "sections"    : [
+	*   "area_tipo"    : "dd14",
+	*   "area_label"   : "Resources",
+	*   "generated_at" : 1731768000,
+	*   "metrics"      : ["total"],
+	*   "sections"     : [
 	*     {
-	*       "section_tipo": "rsc167",
-	*       "label"       : "Audiovisual",
-	*       "model"       : "section",
-	*       "color"       : "#3b82f6",
-	*       "total"       : 4321
+	*       "section_tipo" : "rsc167",
+	*       "label"        : "Audiovisual",
+	*       "model"        : "section",
+	*       "color"        : "#3b82f6",
+	*       "total"        : 4321,
+	*       "recent_7d"    : 12
 	*     },
 	*     ...
-	*   ]
+	*   ],
+	*   "activity_30d" : { "date_from": "...", "date_to": "...", "days": [...], ... }
 	* }
 	*
-	* @param array<string>|null $ar_metric_names Optional list of metric names.
-	*   Default ['total']. Each name N must have a matching method `metric_<N>`.
-	* @return object $dashboard
+	* @param array<string>|null $ar_metric_names  Named metrics to run per section;
+	*                                              defaults to ['total'].
+	* @return object  Fully populated dashboard payload
 	*/
 	public function get_dashboard_data(?array $ar_metric_names=null) : object {
 
@@ -306,6 +414,7 @@ class area_common extends common  {
 			$recent_window_size	= 7;
 			$recent_days		= array_slice($ar_days, -$recent_window_size);
 
+			// Accumulate per-section event counts across the last 7 days
 			$recent_by_section = [];
 			foreach ($recent_days as $day) {
 				$by_section = (array)($day->by_section ?? []);
@@ -314,6 +423,7 @@ class area_common extends common  {
 				}
 			}
 
+			// Attach badge count; 0 when the section had no activity in the window
 			foreach ($dashboard->sections as $section_item) {
 				$section_item->recent_7d = $recent_by_section[$section_item->section_tipo] ?? 0;
 			}
@@ -326,11 +436,17 @@ class area_common extends common  {
 
 	/**
 	* METRIC_TOTAL
-	* Basic metric: total number of records for a section.
-	* Subclasses or future metrics should follow the same signature
-	* `metric_<name>(string $section_tipo) : mixed`.
-	* @param string $section_tipo
-	* @return int|null
+	* Built-in per-section metric: total live record count.
+	* Delegates to count_section_records(), which handles permissions and
+	* virtual-section guards. Returns null when the count is not available so
+	* that the client can distinguish "zero records" from "not countable/accessible".
+	*
+	* Naming convention: all per-section metric methods must follow the signature
+	* `metric_<name>(string $section_tipo) : mixed` so that get_dashboard_data()
+	* can discover and invoke them by name via method_exists() + dynamic dispatch.
+	*
+	* @param string $section_tipo  Ontology tipo of the target section
+	* @return int|null             Record count, or null when unavailable
 	*/
 	protected function metric_total(string $section_tipo) : ?int {
 
@@ -341,29 +457,49 @@ class area_common extends common  {
 
 	/**
 	* METRIC_ACTIVITY_30D
-	* Area-level metric: user activity grouped by day and section.
-	* Queries matrix_activity directly using JSONB operators (no component instances)
-	* for performance. Only counts activities where the WHERE value (dd546) directly
-	* matches one of the area's child section tipos.
+	* Area-level metric: user activity aggregated by day and section over a rolling
+	* window (default: last 30 days).
 	*
-	* Default range is 30 days (1 month). Larger ranges are fetched on-demand
-	* via the API action `get_activity_metric` to avoid loading millions of rows
-	* on the initial dashboard render.
+	* Implementation notes:
+	* - Queries the matrix_activity PostgreSQL table (section tipo dd542) DIRECTLY
+	*   with parameterised SQL using JSONB operators, rather than instantiating
+	*   individual component objects per row.  This is intentional for performance:
+	*   activity tables can hold hundreds of thousands of rows.
+	* - The WHO field (dd543, component_portal) stores the user as a relation JSONB
+	*   column; the WHERE field (dd546, component_input_text) stores the target
+	*   section tipo as a string JSONB column.  The component tipo keys are read
+	*   from logger_backend_activity::$_COMPONENT_WHO / $_COMPONENT_WHERE so they
+	*   stay in sync if those ever change.
+	* - Only rows whose WHERE value matches one of this area's child section tipos
+	*   are counted; global system activity on other areas is excluded.
+	* - Empty days are filled in the output for continuous chart rendering on the
+	*   client; the chart must not infer a missing day as zero.
+	* - The initial dashboard load always fetches exactly 30 days. Larger ranges
+	*   (3 m / 6 m / 1 y) are retrieved on-demand via the `get_activity_metric` API
+	*   action to avoid over-fetching on every page load.
+	*
+	* Legacy compat: older activity records stored the WHERE value as a JSON-encoded
+	* array string (e.g. "[\"rsc167\"]"). The inner loop decodes these on the fly.
 	*
 	* Return structure:
 	* {
-	*   date_from: "2025-04-17",
-	*   date_to:   "2025-05-17",
-	*   days: [
-	*     { date: "2025-05-01", by_section: {rsc167: 12}, by_user: {"1": 15} },
+	*   "date_from"       : "2025-04-17",
+	*   "date_to"         : "2025-05-17",
+	*   "days"            : [
+	*     { "date": "2025-04-17", "by_section": {"rsc167": 4}, "by_user": {"1": 4} },
 	*     ...
 	*   ],
-	*   users: [ {id: "1", label: "Admin"}, ... ],
-	*   available_ranges: [...]
+	*   "users"           : [ {"id": "1", "label": "Admin"}, ... ],
+	*   "available_ranges": [
+	*     {"key": "1m", "label": "1 month",  "days": 30},
+	*     {"key": "3m", "label": "3 months", "days": 90},
+	*     {"key": "6m", "label": "6 months", "days": 180},
+	*     {"key": "1y", "label": "1 year",   "days": 365}
+	*   ]
 	* }
 	*
-	* @param int $range_days Number of days to query (default 30)
-	* @return object|null
+	* @param int $range_days  Number of past days to include (default 30)
+	* @return object|null     Aggregated activity payload, or null on error / no sections
 	*/
 	protected function metric_activity_30d(int $range_days=30) : ?object {
 
@@ -379,10 +515,15 @@ class area_common extends common  {
 		$date_from_str	= $date_from->format('Y-m-d');
 
 		// Component tipos for JSONB extraction
+		// dd546 = component_input_text storing the WHERE (target section tipo)
+		// dd543 = component_portal storing the WHO (logged-in user)
 		$where_tipo	= logger_backend_activity::$_COMPONENT_WHERE['tipo']; // dd546
 		$who_tipo	= logger_backend_activity::$_COMPONENT_WHO['tipo'];	// dd543
 
-		// Direct SQL with JSONB operators — avoids instantiating components per row
+		// Direct SQL with JSONB operators — avoids instantiating components per row.
+		// 'relation' and 'string' are JSONB columns in matrix_activity keyed by
+		// component tipo.  ->0 selects the first element of the JSONB array;
+		// ->> returns the value as text.
 		$sql	= 'SELECT' . PHP_EOL;
 		$sql	.= '  date_trunc(\'day\', "timestamp")::date AS day,' . PHP_EOL;
 		$sql	.= '  relation->\'' . $who_tipo . '\'->0->>\'section_id\' AS user_id,' . PHP_EOL;
@@ -418,6 +559,7 @@ class area_common extends common  {
 			$where_val = $row->where_tipo;
 
 			// Handle legacy array-encoded values (e.g. "[\"oh32\"]")
+			// Older logger versions serialised the value inside a JSON array string
 			if (is_string($where_val) && str_starts_with($where_val, '[')) {
 				$decoded = json_decode($where_val);
 				if (is_array($decoded) && !empty($decoded)) {
@@ -450,6 +592,9 @@ class area_common extends common  {
 		pg_free_result($result);
 
 		// Resolve user names (batch)
+		// login::logged_user_username() reads from the login section; a fallback
+		// label "User #N" ensures the chart is still usable if the user record
+		// has been deleted or is inaccessible.
 		$users = [];
 		foreach (array_keys($user_ids) as $uid) {
 			$label = login::logged_user_username((int)$uid);
@@ -459,7 +604,9 @@ class area_common extends common  {
 			];
 		}
 
-		// Fill all days (including empty ones) for continuous chart rendering
+		// Fill all days (including empty ones) for continuous chart rendering.
+		// Gaps would misalign chart x-axis labels; every calendar day in the
+		// range must appear even when activity count is zero.
 		$ar_days = [];
 		for ($i = clone $date_from; $i < $date_to; $i->modify('+1 day')) {
 			$d = $i->format('Y-m-d');
@@ -492,13 +639,25 @@ class area_common extends common  {
 
 	/**
 	* GET_ACTIVITY_METRIC
-	* Public static entry point for the API action `get_activity_metric`.
-	* Creates a temporary area instance from the given area_tipo and delegates
-	* to `metric_activity_30d` with the requested range.
+	* Static entry point for the API action `get_activity_metric`.
+	* Resolves the concrete area subclass from the ontology, instantiates it, and
+	* delegates to metric_activity_30d() with the requested date range.
 	*
-	* @param string $area_tipo The area tipo to query (required)
-	* @param int $range_days Number of days to query (default 30)
-	* @return object|null
+	* This method exists so that the API handler (dd_core_api or equivalent) can
+	* call a single static method without needing to know the concrete area subclass.
+	* Lazy instantiation via get_instance() ensures that the correct subclass
+	* (e.g. area_resource) is used, which may override metric_activity_30d() in the
+	* future.
+	*
+	* The method_exists() guard is a safety net: currently all area_* subclasses
+	* inherit metric_activity_30d() from this class, but a subclass could override
+	* it to remove the method (unlikely).
+	*
+	* @param string $area_tipo  Ontology tipo of the area to query (e.g. 'dd14')
+	* @param int $range_days    Number of past days to cover (default 30)
+	* @return object|null       Activity payload from metric_activity_30d(), or null
+	*                           when area_tipo is empty, model is unresolvable, or the
+	*                           metric method is not available on the instance
 	*/
 	public static function get_activity_metric(string $area_tipo, int $range_days=30) : ?object {
 
@@ -529,17 +688,32 @@ class area_common extends common  {
 
 	/**
 	* GET_DASHBOARD_COLOR
-	* Deterministic color from a section tipo. Uses a fixed HSL hue derived
-	* from the tipo hash so the same section always renders with the same
-	* color across reloads and sessions.
-	* @param string $tipo
-	* @return string $hex Color in #RRGGBB form
+	* Returns a deterministic #RRGGBB hex color for a section tipo, derived from
+	* a CRC32 hash of the tipo string.
+	*
+	* The algorithm:
+	* 1. crc32($tipo) produces a signed 32-bit integer; % 360 maps it to a hue
+	*    in [0, 359].  The modulo result can be negative on some platforms when
+	*    crc32 returns a negative value, but fmod() and the HSL formula still
+	*    produce a valid color in that case (PHP's % preserves sign).
+	* 2. Saturation is fixed at 65 % and lightness at 52 % to keep all generated
+	*    colors vivid and readable on both light and dark backgrounds.
+	* 3. Standard HSL-to-RGB conversion: chroma C, intermediate X, achromatic
+	*    offset m.  The six if/elseif branches correspond to the six sextants of
+	*    the color wheel.
+	*
+	* The color is stable: the same tipo always produces the same color across
+	* PHP versions (crc32 is deterministic) and across reloads / sessions.
+	*
+	* @param string $tipo  Section ontology tipo (e.g. 'rsc167')
+	* @return string       Hex color in lowercase #rrggbb format (e.g. '#3b82f6')
 	*/
 	public static function get_dashboard_color(string $tipo) : string {
 
 		// stable hue 0-359 from tipo
 		$hash	= crc32($tipo);
-		$hue	= $hash % 360;
+		// crc32() can return a negative int on 32-bit PHP; abs() keeps the hue in 0-359.
+		$hue	= abs($hash % 360);
 		$sat	= 65;	// %
 		$light	= 52;	// %
 

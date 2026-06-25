@@ -305,7 +305,9 @@ final class component_common_test extends BaseTestCase {
 				}
 
 				// Add id to new data
-				$new_data_fixed = array_map(function($item) use ($element, $direct_data) {
+				$expects_lang	= (bool)$component->get_supports_translation();
+					$component_lang	= $component->get_lang();
+					$new_data_fixed = array_map(function($item) use ($element, $direct_data, $expects_lang, $component_lang) {
 					if(in_array($element->model, $direct_data)) {
 						$data_element = $item;
 						$data_element->id = 1;
@@ -313,6 +315,9 @@ final class component_common_test extends BaseTestCase {
 						$data_element = new stdClass();
 						$data_element->value = $item;
 						$data_element->id = 1;
+						if($expects_lang) {
+							$data_element->lang = $component_lang;
+						}
 					}
 					return $data_element;
 				}, $new_data);
@@ -995,7 +1000,9 @@ final class component_common_test extends BaseTestCase {
 				$new_data_base	= call_user_func_array($element->new_value, $arguments);
 
 				// Add id to new data
-				$new_data = array_map(function($item) use ($element) {
+				$expects_lang	= (bool)$component->get_supports_translation();
+					$component_lang	= $component->get_lang();
+					$new_data = array_map(function($item) use ($element, $expects_lang, $component_lang) {
 					if(in_array($element->model, component_relation_common::get_components_with_relations())) {
 						$data_element = clone $item;
 						$data_element->id = 1;
@@ -1003,6 +1010,9 @@ final class component_common_test extends BaseTestCase {
 						$data_element = new stdClass();
 						$data_element->id = 1;
 						$data_element->value = $item;
+							if($expects_lang) {
+								$data_element->lang = $component_lang;
+							}
 					}
 					return $data_element;
 				}, $new_data_base);
@@ -1894,6 +1904,78 @@ final class component_common_test extends BaseTestCase {
 		$this->assertEquals('>=abc', component_common::remove_first_and_last_quotes('>="abc"'));
 		$this->assertEquals('*abc', component_common::remove_first_and_last_quotes('*"abc"'));
 	}//end test_remove_first_and_last_quotes
+
+
+
+	/**
+	* TEST_SET_DATA_TAGS_LANG_FOR_LITERALS
+	* Structural guard against "lang orphans": set_data() must never persist a literal
+	* (value-bearing) component value without a lang. A bare scalar set on a NON-translatable
+	* literal (component_input_text) must be tagged with the component lang (DEDALO_DATA_NOLAN)
+	* so the edit view can match/render it; relation/locator components (supports_translation
+	* === false) must be left untouched. In-memory only (set_data + get_data, no save()).
+	* @return void
+	*/
+	public function test_set_data_tags_lang_for_literals() : void {
+
+		$this->user_login();
+
+		$section_tipo = DEDALO_HIERARCHY_SECTION_TIPO;
+
+		// non-translatable literal (component_input_text): a bare scalar must gain a lang
+		$literal = component_common::get_instance(
+			ontology_node::get_model_by_tipo(DEDALO_HIERARCHY_TLD2_TIPO, true), // component_input_text
+			DEDALO_HIERARCHY_TLD2_TIPO, // hierarchy6
+			999999, 'list', DEDALO_DATA_NOLAN, $section_tipo, false
+		);
+		$this->assertFalse((bool)$literal->get_translatable(), 'precondition: tld component is non-translatable');
+		$this->assertTrue((bool)$literal->get_supports_translation(), 'precondition: tld component is a literal (supports_translation)');
+		$literal->set_data(['xx_regtest']);
+		$ldata = $literal->get_data();
+		$this->assertNotEmpty($ldata, 'literal data must be set');
+		$this->assertSame(DEDALO_DATA_NOLAN, $ldata[0]->lang ?? null, 'literal scalar must be tagged lang=lg-nolan (no lang orphan)');
+		$this->assertSame('xx_regtest', $ldata[0]->value ?? null, 'literal value must be preserved');
+
+		// non-translatable literal: an explicitly-built object WITHOUT a lang must also be
+		// tagged (the hierarchy7 case — a {value} object that omitted the lang property)
+		$literal_obj = component_common::get_instance(
+			ontology_node::get_model_by_tipo(DEDALO_HIERARCHY_LABEL_TIPO, true), // component_input_text (hierarchy7)
+			DEDALO_HIERARCHY_LABEL_TIPO,
+			999998, 'edit', DEDALO_DATA_NOLAN, $section_tipo, false
+		);
+		$literal_obj->set_data([(object)['value' => 'Spain']]); // object, no lang
+		$odata = $literal_obj->get_data();
+		$this->assertNotEmpty($odata, 'literal object data must be set');
+		$this->assertSame(DEDALO_DATA_NOLAN, $odata[0]->lang ?? null, 'literal object without lang must be tagged lang=lg-nolan');
+		$this->assertSame('Spain', $odata[0]->value ?? null, 'literal object value must be preserved');
+
+		// an explicit lang must never be overwritten
+		$literal_keep = component_common::get_instance(
+			ontology_node::get_model_by_tipo(DEDALO_HIERARCHY_LABEL_TIPO, true),
+			DEDALO_HIERARCHY_LABEL_TIPO,
+			999997, 'edit', DEDALO_DATA_NOLAN, $section_tipo, false
+		);
+		$literal_keep->set_data([(object)['value' => 'Hola', 'lang' => 'lg-spa']]);
+		$kdata = $literal_keep->get_data();
+		$this->assertSame('lg-spa', $kdata[0]->lang ?? null, 'an explicit lang must be preserved (never overwritten)');
+
+		// relation/locator component: must NOT gain a lang
+		$relation = component_common::get_instance(
+			ontology_node::get_model_by_tipo(DEDALO_HIERARCHY_TYPOLOGY_TIPO, true), // component_select
+			DEDALO_HIERARCHY_TYPOLOGY_TIPO, // hierarchy9
+			999999, 'list', DEDALO_DATA_NOLAN, $section_tipo, false
+		);
+		$this->assertFalse((bool)$relation->get_supports_translation(), 'precondition: typology component is a relation (no per-lang data)');
+		$loc = new locator();
+			$loc->set_type(DEDALO_RELATION_TYPE_LINK);
+			$loc->set_section_tipo(DEDALO_HIERARCHY_TYPES_SECTION_TIPO);
+			$loc->set_section_id('1');
+			$loc->set_from_component_tipo(DEDALO_HIERARCHY_TYPOLOGY_TIPO);
+		$relation->set_data([$loc]);
+		$rdata = $relation->get_data();
+		$this->assertNotEmpty($rdata, 'relation data must be set');
+		$this->assertFalse(property_exists($rdata[0], 'lang'), 'relation/locator data must not be tagged with a lang');
+	}//end test_set_data_tags_lang_for_literals
 
 
 

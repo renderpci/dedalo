@@ -323,7 +323,7 @@ $text = strip_tags($text, '');
 				error_log('Ignored bad locator from text:' . $text);
 				return;
 			}
-			require_once dirname(__FILE__, 4).'/config/config.php';
+			require_once dirname(__FILE__, 4).'/config/bootstrap.php';
 			$section_tipo	= $locator->section_tipo;
 			$section_id		= $locator->section_id;
 			$component_tipo	= $locator->component_tipo;

@@ -1,24 +1,61 @@
 <?php declare(strict_types=1);
 /**
 * CLASS TOOL_LANG
-* Tool for managing multilingual content and automatic translations
+* Server-side handler for the Dédalo multilingual translation tool.
 *
-* Provides automation for translating component data across multiple languages
-* using external translation services (Babel, Google Translate, etc.).
+* Provides a single API action — `automatic_translation` — that reads a
+* component's data in a source language, calls an external translation service,
+* and persists the translated text back to the same component in the target
+* language.  The class owns only the server path; the UI (language selectors,
+* progress overlay, translator picker) lives entirely in the JS layer
+* (tool_lang.js / render_tool_lang.js / browser_translation.js).
 *
-* Key features:
-* - Automatic translation of component data using external translator services
-* - Support for multiple translation engines (Babel, Google Translate)
-* - Translation-specific configuration stored in tool settings (Tools configuration section)
-* - Source and target language flexibility for each translation request
-* - Error handling and quota monitoring for translation services
-* - Batch translation of component array data
+* Supported translation engines:
+* - babel         — Apertium-based server; called via class.babel.php (cURL).
+*                   Included lazily on demand to avoid loading it for browser-only
+*                   requests.
+* - google_translation — stub; not yet implemented (returns an error response).
+* - browser_transformer — client-side AI model (TranslateGemma 4B / ONNX);
+*                   this case must NEVER reach the server and is intercepted early
+*                   with an explicit error to prevent silent failures.
 *
-* Translation workflow:
-* 1. Retrieves source text from component in source language
-* 2. Calls external translator service with configured credentials
-* 3. Saves translated result to target component in target language
-* 4. Handles translation engine-specific implementations and error states
+* Configuration (translator_config array):
+*   Stored in the tool's configuration record (section dd996 / dd1324, component
+*   dd999 / dd1633) as a JSON object. The relevant structure consumed here is:
+*     {
+*       "translator_config": {
+*         "type": "array",
+*         "value": [
+*           { "name": "babel", "uri": "https://…/babel_engine/", "key": "…" },
+*           { "name": "google_translation", "uri": "…", "key": "…" }
+*         ]
+*       }
+*     }
+*   Retrieved at runtime by tool_common::get_config() (two-tier: dd996 wins over
+*   dd1324 default).
+*
+* Security gates (SEC-024):
+*   - tipo-level write permission asserted via security::assert_tipo_permission()
+*     before reading or writing any component data.
+*   - Per-record scope asserted via security::assert_record_in_user_scope() when
+*     a concrete section_id is supplied.
+*
+* Data flow for a successful translation:
+*   1. Resolve translator config (URI + key) from tool_common::get_config().
+*   2. Instantiate source component in source_lang; call get_data_lang() to get
+*      the array of {value, lang} objects for that language.
+*   3. For each element, call the appropriate translator (babel::translate()).
+*   4. Re-instantiate the same component in target_lang; map translated strings
+*      back to {value, lang} objects; call set_data_lang() + save().
+*
+* Relationships:
+*   - Extends tool_common (base class for all Dédalo tools).
+*   - Delegates actual HTTP translation calls to class.babel.php (loaded via
+*     include_once when the 'babel' engine is selected).
+*   - Called by dd_tools_api::tool_request() which enforces the API_ACTIONS
+*     allowlist before dispatching.
+*   - The JS counterpart (tool_lang.prototype.automatic_translation_server)
+*     constructs the rqo and calls dd_tools_api with action='tool_request'.
 *
 * @package Dedalo
 * @subpackage Tools
@@ -30,6 +67,10 @@ class tool_lang extends tool_common {
 	/**
 	* SEC-024 (§9.2): explicit allowlist of methods callable via
 	* `dd_tools_api::tool_request`.
+	*
+	* Only 'automatic_translation' is exposed. Browser-side engines
+	* (browser_transformer) are intentionally absent — they run entirely in the
+	* browser and must never be dispatched to this server handler.
 	*/
 	public const API_ACTIONS = [
 		'automatic_translation'
@@ -39,37 +80,62 @@ class tool_lang extends tool_common {
 
 	/**
 	* AUTOMATIC_TRANSLATION
-	* Execute automatic translation of component data using configured translator service
+	* Translate a component's source-language data and save the result in the
+	* target language, using the configured external translation service.
 	*
-	* Retrieves source text from a component in the source language, sends it to an
-	* external translation service (Babel, Google Translate, etc.), and saves the 
-	* translated result to the target component in the target language.
+	* Workflow:
+	*   1. Validate required parameters (component_tipo, section_tipo).
+	*   2. Assert tipo-level write permission (SEC-024 §9.2) and, when a
+	*      section_id is present, per-record scope (SEC-024 §9.4).
+	*   3. Resolve the translator configuration (URI + API key) from the tool
+	*      config stored in section dd996 (user config) or dd1324 (default).
+	*   4. Load the source component via component_common::get_instance() in
+	*      'list' mode and retrieve its per-language data array with get_data_lang().
+	*   5. Translate each element through the selected engine (currently only
+	*      'babel' is fully implemented).
+	*   6. Save the translated values back to the same component in target_lang
+	*      via set_data_lang() + save().
 	*
-	* Translator configurations (URI, authentication keys) are stored in the tool's
-	* configuration section (Tools configuration - dd996) and retrieved at runtime.
+	* Empty translation result:
+	*   When the translator returns an empty array, the save step is skipped and
+	*   a warning message is returned.  Nothing is persisted in that case.
 	*
-	* @param object $options Configuration object for translation request
-	* {
-	* 	@type string source_lang Source language code (default: DEDALO_DATA_LANG)
-	* 	@type string target_lang Target language code for translation result
-	* 	@type string component_tipo The component type to translate
-	* 	@type int section_id The section ID containing the component
-	* 	@type string section_tipo The section type of the component
-	* 	@type string translator Name of translator service ('babel', 'google_translation', etc.)
-	* 	@type object config Optional translator configuration object
-	* }
+	* Quota detection:
+	*   The Babel engine returns a plain-text "Sorry. Quota exceeded" prefix when
+	*   the API key is exhausted.  This is detected by a str_starts_with() check
+	*   on the first translated value before attempting to save.
 	*
-	* @return object Response object
-	* {
-	* 	@type bool result True if translation succeeded
-	* 	@type string msg Status message or error description
-	* 	@type array errors Array of error message strings
-	* 	@type object debug Debug information when SHOW_DEBUG=true
-	* 	@type array debug->translated_data Array of translated values
-	* 	@type string debug->raw_result Raw response from translator service
-	* }
+	* Debug mode:
+	*   When SHOW_DEBUG===true, the response carries a 'debug' object with the
+	*   translated_data array and the raw response from the translator service.
 	*
-	* @throws Exception When translator config is invalid or required parameters missing
+	* @param object $options Translation request configuration.
+	*   {
+	*     source_lang    : string  — Source lang code (default: DEDALO_DATA_LANG).
+	*     target_lang    : string  — Target lang code (required).
+	*     component_tipo : string  — Ontology tipo of the component to translate.
+	*     section_id     : int     — Record ID containing the component.
+	*     section_tipo   : string  — Ontology tipo of the section.
+	*     translator     : string  — Engine name: 'babel' | 'google_translation'
+	*                                | 'browser_transformer'.
+	*     config         : object  — (optional) Client-side config hint; not used
+	*                                server-side (server always reads from dd996/dd1324).
+	*   }
+	*
+	* @return object Response stdClass.
+	*   {
+	*     result : bool   — True when translation was saved successfully.
+	*     msg    : string — Human-readable status or error description.
+	*     errors : array  — Array of short error-code strings; empty on success.
+	*     debug  : object — (only when SHOW_DEBUG===true)
+	*       {
+	*         translated_data : array  — Translated string values.
+	*         raw_result      : string — Raw response from translator service.
+	*       }
+	*   }
+	*
+	* @throws Exception When security::assert_tipo_permission() or
+	*   security::assert_record_in_user_scope() fail (throws before returning).
 	*/
 	public static function automatic_translation(object $options) : object {
 
@@ -111,6 +177,9 @@ class tool_lang extends tool_common {
 			$config = tool_common::get_config($tool_name) ?? new stdClass();
 
 		// config JSON . Must be compatible with tool properties translator_engine data
+			// $ar_translator_configs is the 'value' array from:
+			//   config->config->translator_config->value
+			// Shape: [ {name, uri, key}, … ]  — one entry per registered engine.
 			$ar_translator_configs	= $config->config->translator_config->value ?? [];
 			$translator_name		= $translator;
 			// search current translator config in tool config (stored in database, section 'dd996' Tools configuration)
@@ -119,6 +188,10 @@ class tool_lang extends tool_common {
 			}) ?? new stdClass();
 
 			// check config
+				// URI and key are required for all server-side engines.
+				// Browser-only engines (browser_transformer) are intercepted below
+				// before these checks are reached, so a missing URI/key here means
+				// the admin has not configured a server engine in dd996/dd1324.
 				if (empty($translator_config->uri)) {
 					$msg = 'Translator config URI is not defined';
 					$response->msg .= ' ' . $msg;
@@ -137,6 +210,9 @@ class tool_lang extends tool_common {
 			$key = $translator_config->key;
 
 		// Source text . Get source text from component (source_lang)
+			// 'list' mode is used here to get the raw stored data without UI
+			// rendering overhead; the result is consumed via get_data_lang()
+			// which returns the per-language filtered slice.
 			$model		= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component	= component_common::get_instance(
 				$model,
@@ -149,6 +225,9 @@ class tool_lang extends tool_common {
 			$data_lang = $component->get_data_lang($source_lang);
 
 		// iterate component array data
+			// $translated_data accumulates one translated string per element of $data_lang.
+			// Shape matches what set_data_lang() expects after the array_map below:
+			//   [ {value: string, lang: string}, … ]
 			$translated_data = [];
 			$translate = null; // Initialize to prevent undefined variable in debug section
 			foreach ($data_lang as $data_element) {
@@ -156,6 +235,11 @@ class tool_lang extends tool_common {
 			switch ($translator_name) {
 
 				case 'browser_transformer':
+					// browser_transformer is a client-side AI engine (TranslateGemma ONNX)
+					// that runs in a Web Worker.  It is never dispatched to this server
+					// endpoint; the JS layer calls automatic_translation_browser() instead.
+					// Guard here so a mis-routed request gets an explicit error rather than
+					// falling through to the babel default.
 					$response->msg = "Browser transformer is client-side only. This server path should not be reached.";
 					$response->errors[] = 'Client-side engine called on server';
 					return $response;
@@ -169,6 +253,9 @@ class tool_lang extends tool_common {
 
 				case 'babel':
 				default:
+					// Lazy-load the Babel adapter only when this engine is actually used.
+					// class.babel.php wraps the cURL call to the Apertium-based service,
+					// handles SSRF validation, HTML-entity decoding, and tag sanitization.
 					include_once( dirname(__FILE__) . '/translators/class.babel.php');
 					$translate = babel::translate((object)[
 						'uri'			=> $uri,
@@ -179,6 +266,8 @@ class tool_lang extends tool_common {
 					]);
 					$result	= $translate->result;
 					if ($result===false) {
+						// Truncate long error messages from the translation service
+						// (e.g. full HTML error pages) to avoid flooding the response.
 						$msg = strlen($translate->msg)>512 ? substr($translate->msg, 0, 512).'..' : $translate->msg;
 						$response->msg = $msg; // error msg
 						return $response;
@@ -194,11 +283,16 @@ class tool_lang extends tool_common {
 			if (empty($translated_data)) {
 
 				// skip save empty values
+				// An empty result most commonly indicates the source component had no data
+				// in source_lang.  Nothing is persisted; the caller is notified via msg.
 				debug_log(__METHOD__." Skip empty received translation value ", logger::ERROR);
 				$response->msg = 'Ignored empty result. Nothing is saved!';
 
 			}else{
 
+				// Quota detection: Babel returns a leading "Sorry. Quota exceeded" string
+				// when the API key has no remaining credits.  Bail out before saving to
+				// avoid persisting the error text as translated content.
 				$first_translated_data = $translated_data[0] ?? '';
 				if ( str_starts_with($first_translated_data, 'Sorry. Quota exceeded') ) {
 					debug_log(__METHOD__." ERROR: $first_translated_data ", logger::ERROR);
@@ -206,6 +300,9 @@ class tool_lang extends tool_common {
 					return $response;
 				}
 
+				// Re-instantiate the component in target_lang so that set_data_lang()
+				// writes to the correct language slot in the database.  Using the same
+				// $model avoids a redundant ontology lookup.
 				$component = component_common::get_instance(
 					$model,
 					$component_tipo,
@@ -215,6 +312,8 @@ class tool_lang extends tool_common {
 					$section_tipo
 				);
 
+				// Map translated strings back to the {value, lang} shape expected by
+				// set_data_lang(); one object per element preserving original order.
 				$component_data = array_map(function($item) use($target_lang) {
 					return (object)[
 						'value' => $item,
@@ -233,6 +332,8 @@ class tool_lang extends tool_common {
 			if(SHOW_DEBUG===true) {
 				$response->debug = new stdClass();
 				$response->debug->translated_data	= $translated_data;
+				// $translate may be null if every engine returned early (e.g. browser_transformer guard).
+				// The null-coalescing prevents an undefined-property notice in those cases.
 				$response->debug->raw_result		= $translate->raw_result ?? null;
 			}
 

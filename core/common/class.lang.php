@@ -126,6 +126,15 @@ class lang {
 
 		// short vars
 		$table		= lang::$langs_matrix_table;
+
+		// No langs table yet (e.g. a fresh install before the DB is imported): return quietly.
+		// Otherwise exec_search logs a noisy "relation does not exist" pg error and raises the
+		// "server errors" banner while the installer page builds its environment.
+		if (class_exists('DBi') && DBi::check_table_exists($table) === false) {
+			self::$resolve_multiple_lang_cache[$cache_key] = null;
+			return null;
+		}
+
 		$term_tipo	= DEDALO_THESAURUS_TERM_TIPO;
 		$code_tipo	= DEDALO_THESAURUS_CODE_TIPO; // hierarchy41
 

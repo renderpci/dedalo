@@ -18,7 +18,7 @@ if (php_sapi_name()!=='cli') {
 	die('This script must be run from CLI'.PHP_EOL);
 }
 
-require_once __DIR__ . '/../../config/config.php';
+require_once __DIR__ . '/../../config/bootstrap.php';
 
 $dry_run = in_array('--dry-run', (array)($_SERVER['argv'] ?? []));
 

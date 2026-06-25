@@ -10,14 +10,14 @@
 *
 * Responsibilities:
 * - Hardware / OS probing (RAM, CPU MHz, disk space, disk block-device layout)
-*   via the Linfo composer library (lazily loaded through a singleton accessor).
+*   via the host_info class (delegates to platform-native probes).
 * - Daemon version detection (Apache, PostgreSQL, MariaDB/MySQL) by shelling out
 *   to their CLI utilities, trying both a configured binary base path and the
 *   plain command name in $PATH as fallback.
 * - PHP environment checks (version gate, memory limit, GD extension, cURL,
 *   current-user identity, error-log path).
 * - Filesystem gate helpers used during installation: sessions directory,
-*   backup directory, arbitrary directory creation, PostgreSQL .pgpass permissions.
+*   backup directory, arbitrary directory creation.
 * - Media housekeeping: deleting expired session/cache files and stale AV upload
 *   chunk (.blob) files.
 *
@@ -26,8 +26,8 @@
 *   to locate daemon binaries on the host.
 * - Depends on `create_directory()` (shared/core_functions.php) for safe mkdir.
 * - Depends on `debug_log()` and the `logger` constants for structured logging.
-* - Uses the Linfo library (vendor/), loaded via Composer autoload, for hardware
-*   introspection; methods degrade gracefully to null/0 when Linfo is absent.
+* - Delegates hardware introspection to the host_info class; methods degrade
+*   gracefully to null/0 when probe data is unavailable.
 * - `dd_init_test.php` (same directory) drives many of these checks during the
 *   installation self-test flow.
 *
@@ -39,68 +39,23 @@ class system {
 
 
 	/**
-	* Singleton holder for the Linfo instance.
-	* Populated on first call to get_info(); re-used on subsequent calls.
-	* @var object|null $info_instance
-	*/
-	static $info_instance;
-
-
-
-	/**
-	* GET_INFO
-	* Loads composer lib 'Linfo' and gets the main data for the system
-	* @see https://github.com/jrgp/linfo
-	* @return object|null $info Returns Linfo instance or null if not available
-	*/
-	public static function get_info() : ?object {
-
-		if (isset(self::$info_instance)) {
-			return self::$info_instance;
-		}
-
-		try {
-			include_once DEDALO_ROOT_PATH . '/vendor/autoload.php';
-
-			// Check if class exists before instantiating (composer dependency)
-			if (!class_exists('\Linfo\Linfo')) {
-				debug_log(__METHOD__ . " Linfo class not found. Run composer install.", logger::WARNING);
-				return null;
-			}
-
-			self::$info_instance = new \Linfo\Linfo;
-		} catch (Exception $e) {
-			debug_log(__METHOD__ . " Failed to instantiate Linfo: " . $e->getMessage(), logger::ERROR);
-			return null;
-		}
-
-		return self::$info_instance;
-	}//end get_info
-
-
-
-	/**
 	* GET_RAM
 	* Get the system physical memory installed in the system
 	* in Gigabytes
 	*
-	* Reads the 'total' key from Linfo's getRam() result and converts bytes
-	* to whole gigabytes via rounding.  Returns 0 when Linfo is unavailable
-	* or when getRam() returns an unexpected shape.
+	* Delegates to host_info::get_ram_bytes() and converts bytes to whole
+	* gigabytes via rounding.  Returns 0 when the probe is unavailable.
+	* @see host_info::get_ram_bytes()
 	* @return int $total_gb Returns 0 if info unavailable
 	*/
 	public static function get_ram() : int {
 
-		$info = system::get_info();
-		if ($info === null) {
+		$bytes = host_info::get_ram_bytes();
+		if ($bytes === null) {
 			return 0;
 		}
 
-		$ram_info	= $info->getRam();
-		$total_gb	= intval( round((int)$ram_info['total'] / (1024 * 1024 * 1024), 0) );
-
-
-		return $total_gb;
+		return intval( round($bytes / (1024 * 1024 * 1024), 0) );
 	}//end get_ram
 
 
@@ -110,61 +65,12 @@ class system {
 	* Get the system processor clock frequency if is available
 	* in Mega Hertz. If is not resolved, null is returned.
 	* like: 3600
-	*
-	* Linfo's getCPU() output format varies across library versions and OS
-	* drivers — it may be an array of arrays, an array of objects, or a raw
-	* scalar/string.  The method handles all three shapes:
-	*   1. array of arrays  — reads $entry['MHz']
-	*   2. array of objects — reads $entry->MHz
-	*   3. anything else    — JSON-encodes and extracts via regex
-	* When multiple cores report different values, the highest MHz is returned
-	* so callers get the peak clock speed of the installed processor.
+	* @see host_info::get_cpu_mhz()
 	* @return int|null $total_mhz
 	*/
 	public static function get_mhz() : ?int {
 
-		$info = system::get_info();
-		if ($info === null) {
-			return null;
-		}
-
-		$cpu_info = $info->getCPU();
-
-		$mhz_values = [];
-
-		// If Linfo returns an array/object, try to read the MHz field directly
-		if (is_array($cpu_info)) {
-			foreach ($cpu_info as $entry) {
-				if (is_array($entry) && isset($entry['MHz'])) {
-					$mhz_values[] = intval(round(floatval($entry['MHz'])));
-				} elseif (is_object($entry) && property_exists($entry, 'MHz')) {
-					$mhz_values[] = intval(round(floatval($entry->MHz)));
-				}
-			}
-		} elseif (is_object($cpu_info)) {
-			foreach (get_object_vars($cpu_info) as $entry) {
-				if (is_array($entry) && isset($entry['MHz'])) {
-					$mhz_values[] = intval(round(floatval($entry['MHz'])));
-				} elseif (is_object($entry) && property_exists($entry, 'MHz')) {
-					$mhz_values[] = intval(round(floatval($entry->MHz)));
-				}
-			}
-		} else {
-			// Fallback: stringify / json-encode and extract with regex
-			$json = is_string($cpu_info) ? $cpu_info : @json_encode($cpu_info);
-			if (!empty($json)) {
-				preg_match_all('/"MHz"\s*:\s*"([0-9]+(?:\.[0-9]+)?)"/i', $json, $matches);
-				foreach ($matches[1] ?? [] as $m) {
-					$mhz_values[] = intval(round(floatval($m)));
-				}
-			}
-		}
-
-		if (!empty($mhz_values)) {
-			return intval(max($mhz_values));
-		}
-
-		return null;
+		return host_info::get_cpu_mhz();
 	}//end get_mhz
 
 
@@ -364,95 +270,82 @@ class system {
 
 
 	/**
-	* GET_MYSQL_SERVER
-	* Get the MariaDB/MySQL daemon version
-	* Usually, MariaDB is used, but sometimes a MySQL database could be
-	* used too. Try both in cascade
-	*
-	* Checks whether the 'mariadb' or 'mysql' CLI binary is reachable by
-	* running '<binary> -V' and inspecting the output.  The bare binary name
-	* is tried first (relies on $PATH), then the path from get_base_binary_path().
-	* Returns the name of the first binary that responds ('mariadb' or 'mysql'),
-	* or null when neither is found.
-	*
-	* (!) In v7, MariaDB is owned by the Bun diffusion layer; PHP never connects
-	* to it directly.  This method is used only for system-info / install checks.
-	* @return string|null $version - 'mariadb', 'mysql', or null
+	* GET_PG_BIN_PATH
+	* Resolve the directory (with trailing slash) that actually contains the PostgreSQL client
+	* binaries (psql, pg_dump). Order: the configured DB_BIN_PATH if psql is really there → the
+	* platform base from get_base_binary_path() (macOS /opt/homebrew/bin, Linux /usr/bin, or
+	* DEDALO_BINARY_BASE_PATH) → a PATH lookup (`command -v psql`) → finally the configured path.
+	* This lets a fresh install (whose DB_BIN_PATH is still the '/usr/bin/' default) find psql on
+	* a Homebrew Mac or any non-standard layout WITHOUT the administrator editing a config file.
+	* @return string e.g. '/opt/homebrew/bin/'
 	*/
-	public static function get_mysql_server() : ?string {
+	public static function get_pg_bin_path() : string {
 
-		$binary_base_path = get_base_binary_path();
-
-		// mariadb try
-			$cmd		= 'mariadb -V';
-			$version	= shell_exec($cmd);
-			if (empty($version)) {
-				$cmd		= $binary_base_path . '/'. $cmd;
-				$version	= shell_exec($cmd);
+		// 1) explicit config wins — but only if psql is actually there
+		if (defined('DB_BIN_PATH') && DB_BIN_PATH !== '') {
+			$configured = rtrim(DB_BIN_PATH, '/') . '/';
+			if (is_file($configured . 'psql')) {
+				return $configured;
 			}
+		}
 
-			if (!empty($version)) {
-				return 'mariadb';
-			}
+		// 2) platform base (the same resolver get_postgresql_version uses)
+		$base = rtrim(get_base_binary_path(), '/') . '/';
+		if (is_file($base . 'psql')) {
+			return $base;
+		}
 
-		// mysql try
-			$cmd		= 'mysql -V';
-			$version	= shell_exec($cmd);
-			if (empty($version)) {
-				$cmd		= $binary_base_path . '/'. $cmd;
-				$version	= shell_exec($cmd);
-			}
+		// 3) PATH lookup
+		$found = @shell_exec('command -v psql 2>/dev/null');
+		if (is_string($found) && trim($found) !== '') {
+			return rtrim(dirname(trim($found)), '/') . '/';
+		}
 
-			if (!empty($version)) {
-				return 'mysql';
-			}
-
-
-		return null;
-	}//end get_mysql_server
+		// 4) fall back to the configured path (or platform base) so a command can still be built
+		return (defined('DB_BIN_PATH') && DB_BIN_PATH !== '') ? rtrim(DB_BIN_PATH, '/') . '/' : $base;
+	}//end get_pg_bin_path
 
 
 
 	/**
-	* GET_MYSQL_VERSION
-	* Get the MYSQL daemon version
-	*
-	* When $mysql_server is null, calls get_mysql_server() to auto-detect
-	* the installed binary name ('mariadb' or 'mysql').  Then runs
-	* '<binary> -V' and extracts the numeric version with a sed pattern that
-	* matches the "from X.Y.Z" fragment common to both MariaDB and MySQL
-	* version strings.  If the binary-path-qualified command also fails,
-	* returns null.
-	* @param string|null $mysql_server = null
-	* 	mariadb|mysql|null
-	* @return string|null $version
+	* GET_PHP_BIN
+	* Resolve the PHP CLI binary (full path) used to spawn worker/cache processes. Order: the
+	* configured PHP_BIN_PATH if it points at a real file → the platform base
+	* (get_base_binary_path()) + '/php' → a PATH lookup (`command -v php`) → finally the configured
+	* value. Lets a fresh install find php on a Homebrew Mac or any non-standard layout WITHOUT the
+	* administrator editing a config file (mirrors get_pg_bin_path).
+	* @return string e.g. '/opt/homebrew/bin/php'
 	*/
-	public static function get_mysql_version( ?string $mysql_server=null ) : ?string {
+	public static function get_php_bin() : string {
 
-		// server: mariadb|mysql|null
-		$mysql_server = $mysql_server ?? system::get_mysql_server();
-		if (empty($mysql_server)) {
-			return null;
+		// 1) explicit config wins, if it points at a real binary
+		if (defined('PHP_BIN_PATH') && PHP_BIN_PATH !== '' && is_file(PHP_BIN_PATH)) {
+			return PHP_BIN_PATH;
 		}
 
-		$name		= $mysql_server;
-		$cmd		= $name.' -V | sed -n "s/.*'.$name.' from \([0-9.]*\).*/\1/p;" ';
-		$version	= shell_exec($cmd);
-
-		// try with binary path
-		if (empty($version)) {
-			$binary_base_path	= get_base_binary_path();
-			$cmd				= $binary_base_path . '/'. $cmd;
-			$version			= shell_exec($cmd);
+		// 2) platform base
+		$candidate = rtrim(get_base_binary_path(), '/') . '/php';
+		if (is_file($candidate)) {
+			return $candidate;
 		}
 
-		if (empty($version)) {
-			return null;
+		// 3) PATH lookup
+		$found = @shell_exec('command -v php 2>/dev/null');
+		if (is_string($found) && trim($found) !== '') {
+			return trim($found);
 		}
 
+		// 4) fall back to the configured value (or the PHP_BINARY running this process)
+		if (defined('PHP_BIN_PATH') && PHP_BIN_PATH !== '') {
+			return PHP_BIN_PATH;
+		}
+		return defined('PHP_BINARY') && PHP_BINARY !== '' ? PHP_BINARY : 'php';
+	}//end get_php_bin
 
-		return trim($version);
-	}//end get_mysql_version
+
+
+	// get_mysql_server() / get_mysql_version() removed: PHP no longer inspects or connects to
+	// MariaDB/MySQL. The database is owned exclusively by the Bun diffusion engine.
 
 
 
@@ -918,50 +811,6 @@ class system {
 
 		return false;
 	}//end check_directory
-
-
-
-	/**
-	* CHECK_PGPASS_FILE
-	* Check if PostgreSQL file '.pgpass' already exists
-	* and have the correct permissions: '0600'
-	* If file exists but permissions are not the expected,
-	* it will try to fix the file to correct value
-	*
-	* PostgreSQL's libpq silently ignores a .pgpass file whose permissions are
-	* too permissive — this means password-less connections will fail in
-	* surprising ways.  The method auto-remediates by calling chmod(0600) when
-	* needed and logs a WARNING so operators are informed the file was altered.
-	* Returns false if the file does not exist or if chmod() cannot fix the
-	* permissions.
-	* @see https://www.postgresql.org/docs/current/libpq-pgpass.html
-	* @return bool
-	*/
-	public static function check_pgpass_file() : bool {
-
-		$php_user_home	= getenv('HOME');
-		$path			= $php_user_home . '/.pgpass';
-
-		if (!file_exists($path)) {
-			return false;
-		}
-
-		$file_permissions = substr(sprintf('%o', fileperms($path)), -4);
-		if ($file_permissions!=='0600') {
-			// Try to change it
-			if(true===chmod($path, 0600)){
-				debug_log(__METHOD__
-					." Changed permissions of file .pgpass to 0600 "
-					, logger::WARNING
-				);
-				return true;
-			}
-
-			return false;
-		}
-
-		return true;
-	}//end check_pgpass_file
 
 
 

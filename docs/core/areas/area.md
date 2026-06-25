@@ -32,7 +32,7 @@ It sits in a three-class chain:
 
 | class | role |
 | --- | --- |
-| **`area`** *(this class)* | The concrete **top-level** class. Adds the menu/security assembly: `get_areas()`, recursive children collection, and `config_areas.php` allow/deny filtering. |
+| **`area`** *(this class)* | The concrete **top-level** class. Adds the menu/security assembly: `get_areas()`, recursive children collection, and `areas.deny`/`areas.allow` filtering. |
 | **`area_common`** | The shared layer specialising `common` for menu-grouping nodes: construction/identity, the `get_json()` fallback, the dashboard structure-walk, and the permission-aware metrics. |
 | **`common`** | The universal base ([base classes → Layer 1](../components/base_classes.md#layer-1-common)): structure loading, `tipo`/`mode`/`lang` accessors, permissions, ontology resolution, the `{context, data}` JSON output helpers and the static caches. |
 
@@ -68,12 +68,13 @@ It sits in a three-class chain:
 `area` (the concrete top-level class) adds:
 
 - **Menu / security assembly** — `get_areas()` enumerates every major root area
-  and recursively collects its child areas/sections, filtered against
-  `config_areas.php`. The result feeds both the menu and the security-access
-  full view.
+  and recursively collects its child areas/sections, filtered against the
+  configured areas **deny list** (`areas.deny`). The result feeds both the menu
+  and the security-access full view.
 - **Children criterion** — the static include/exclude model-name allowlists.
-- **Installation config** — `get_config_areas()` reads `config_areas.php`
-  (`areas_deny` / `areas_allow`).
+- **Installation config** — `get_config_areas()` reads the resolved
+  `areas.deny` / `areas.allow` config (catalog defaults, overridable in
+  `../private/config.local.php`). In v7 this is no longer a `config_areas.php` file.
 - **Identifier** — `get_identifier()` returns the area tipo as a flat string.
 
 ## Key concepts
@@ -223,9 +224,9 @@ Grouped by concern. *static?* marks class-level (static) methods.
 
 | method | static? | purpose |
 | --- | --- | --- |
-| `get_areas()` | ✓ | Enumerate all major root areas, resolve each via `ontology_utils::get_ar_tipo_by_model`, recursively collect their child areas/sections, filter against `config_areas.php` (`areas_deny`), and return an array of `{tipo, model, parent, properties, label}` objects. Drives the menu and the security full view. |
+| `get_areas()` | ✓ | Enumerate all major root areas, resolve each via `ontology_utils::get_ar_tipo_by_model`, recursively collect their child areas/sections, filter against the configured `areas.deny` list, and return an array of `{tipo, model, parent, properties, label}` objects. Drives the menu and the security full view. |
 | `get_ar_children_areas_recursive($tipo)` | ✓ *(protected)* | Walk one area's ontology children and collect descendant area/section tipos, honouring `$ar_children_include_model_name` / `$ar_children_exclude_modelo_name`. |
-| `get_config_areas()` | ✓ | Read `config_areas.php` and return `{areas_deny, areas_allow}` (empty arrays + error log if the file is missing). |
+| `get_config_areas()` | ✓ | Read the resolved `areas.deny` / `areas.allow` config (catalog defaults; overridable via `../private/config.local.php`) and return `{areas_deny, areas_allow}`. In v7 this no longer includes a `config_areas.php` file. |
 | `get_identifier()` | | Return a flat string identifier for the area — currently its tipo (e.g. `'dd42'`). Throws if the tipo is empty. |
 
 ### `area_common` — construction & identity
@@ -292,10 +293,10 @@ back to `area_common_json.php`.
     [thesaurus / TS tree](../thesaurus/index.md) stack while still inheriting the
     structure-walk, metrics and permission scaffolding.
 
-## How it fits with the rest of Dedalo
+## How it fits with the rest of Dédalo
 
 - **Menu.** `menu::class` builds the back-office menu from `area::get_areas()`
-  (honouring `config_areas.php` → `areas_deny`). Areas are the menu's top-level
+  (honouring the `areas.deny` list). Areas are the menu's top-level
   nodes; their children (sections and sub-areas) come from the ontology graph.
   See `core/menu/class.menu.php`.
 - **Security.** `component_security_access` calls `area::get_areas()` to
@@ -324,7 +325,7 @@ back to `area_common_json.php`.
 
 ```php
 // every major area + its recursive children, as flat JSON objects,
-// filtered by config_areas.php → areas_deny
+// filtered by the areas.deny list
 $areas = area::get_areas();
 foreach ($areas as $area) {
     // $area->tipo, $area->model, $area->parent, $area->properties, $area->label

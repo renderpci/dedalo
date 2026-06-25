@@ -1,0 +1,17 @@
+[Unit]
+Description=Dedalo diffusion engine (Bun)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=__APP_DIR__
+Environment=SOCKET_PATH=__SOCKET_PATH__
+ExecStart=__BUN_BIN__ run index.ts
+Restart=always
+RestartSec=2
+
+[Install]
+# user-scope unit (systemctl --user): default.target is the user manager's
+# boot target. The web user must control this without root, so it runs in the
+# user manager, not system scope (which would need root/polkit for start/stop).
+WantedBy=default.target

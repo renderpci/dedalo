@@ -570,6 +570,18 @@ final class component_json_test extends BaseTestCase {
 		$this->assertTrue(empty($response->errors), 'expected empty errors: '.to_string($response->errors));
 		$this->assertEquals(1, $response->result[0]->value->a);
 
+		// 6b. legacy lang keyed RAW payload (v6 export of genuine v6 data: the inner
+		// element is the raw JSON payload, NOT a {value:...} envelope). The lang key
+		// must be unwrapped AND the raw payload wrapped — not kept inside value.
+		$response = $component->conform_import_data('{"lg-nolan":[{"open_as":"window","windowFeatures":null}]}', self::$tipo);
+		$this->assertTrue(empty($response->errors), 'expected empty errors: '.to_string($response->errors));
+		$this->assertCount(1, $response->result, 'expected single monovalue item');
+		$this->assertEquals('window', $response->result[0]->value->open_as ?? null, 'expected lg-nolan unwrapped to the raw payload');
+		$this->assertFalse(
+			is_object($response->result[0]->value) && property_exists($response->result[0]->value, 'lg-nolan'),
+			'expected no lg-nolan wrapper left inside value'
+		);
+
 		// 7. scalar values
 		$response = $component->conform_import_data('42', self::$tipo);
 		$this->assertSame(42, $response->result[0]->value);

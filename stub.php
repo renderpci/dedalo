@@ -238,7 +238,6 @@ $options = new stdClass();
 function apcu_enabled(){};
 function logger_backend_activity(){};
 function get_base_binary_path(){};
-class Linfo{};
 class system{};
 if (!function_exists('pg_escape_string')) {
 	function pg_escape_string($connection = null, string $data = ''): ?string { return ''; }

@@ -1,18 +1,18 @@
 # dd_utils_api
 
-Overview
+> See also: [JSON API v1](../dedalo_api_v1.md) · [RQO field mapping](../RQO_FIELD_MAPPING.md) · [dd_core_api](dd_core_api.md)
 
-- Utility API for system operations: authentication, file uploads, system info, and process management.
+Utility API for system operations: authentication, file uploads, system info, and process management.
 
-How to call
+## How to call
 
 - POST JSON to `/core/api/v1/json/index.php` with `dd_api: "dd_utils_api"` and `action: "<method>"`.
-- For file uploads, use multipart/form-data with the JSON in the request body and files in `$_FILES`.
+- For file uploads, use `multipart/form-data` with the JSON in the request body and the files in `$_FILES`.
 
-Notes
+## Notes
 
-- `login` and `quit` are entry points for session management.
-- `upload` and related methods handle file ingestion; they require server-side directory configuration.
+- `login` and `quit` are the entry points for session management.
+- `upload` and the related methods handle file ingestion; they require server-side directory configuration.
 
 ## login
 
@@ -127,11 +127,11 @@ Handles single and chunked file uploads. Validates file type and size. Integrate
 
 Multipart/form-data:
 
-```
+```text
 dd_api: "dd_utils_api"
 action: "upload"
 options: {"key_dir": "media/upload", "tipo": null, "chunked": false}
-[File in \$_FILES['file_to_upload']]
+[File in $_FILES['file_to_upload']]
 ```
 
 ### Example Response

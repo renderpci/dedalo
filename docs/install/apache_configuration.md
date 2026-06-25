@@ -1,21 +1,10 @@
-# Apache Configuration for Dédalo with PHP 8.5
+# Apache configuration for Dédalo with PHP 8.5
 
-## Introduction
+> See also: [Installation](index.md) · [H.264 streaming module](install_h264_module.md)
 
-This documentation provides a comprehensive guide to configure a production-ready Apache web server for Dédalo with PHP 8.5, HTTP/2 support, and Let's Encrypt SSL certificates. This is only a reference of the configuration that can be used to deploy Dédalo on a production server, but you can change it according to your needs and requirements.
+This page is a reference for configuring a production-ready Apache web server for Dédalo with PHP 8.5, HTTP/2 support and Let's Encrypt SSL certificates. Treat it as a starting point and adapt it to your own needs and requirements.
 
-## Table of Contents
-
-1. [System Requirements](#system-requirements)
-2. [Certbot installation](#certbot-installation)
-3. [Directory Structure Setup](#directory-structure-setup)
-4. [Configuration Files](#configuration-files)
-5. [SSL/TLS Setup with Let's Encrypt](#ssltls-setup-with-lets-encrypt)
-6. [PHP Configuration](#php-configuration)
-7. [Testing and Verification](#testing-and-verification)
-8. [Troubleshooting](#troubleshooting)
-
-## System Requirements
+## System requirements
 
 -   Apache 2.4+
 -   PHP 8.5+
@@ -54,15 +43,15 @@ sudo systemctl restart apache2 php8.5-fpm
 
 ```
 
-## Directory Structure Setup
+## Directory structure setup
 
-Before configuring Apache, you need to set up the proper directory structure with correct user permissions:
+Before configuring Apache, set up the proper directory structure with the correct user permissions:
 
 Typically, Dédalo home is the home of the GNU/Linux `dedalo_user`, the home will be accessed by PHP but NOT for Apache, because in the GNU/Linux `dedalo_user` will be stored sessions and `.pgpass` and `backups` directories and files with a sensible and private data.
 
 A typical directory tree could be:
 
-```tree
+```text
 /
 ├── var/www/dedalo.dev
 │   └── /httpdocs
@@ -119,7 +108,7 @@ sudo chown -R dedalo_user:root /var/www/dedalo.dev/logs
 sudo chown -R dedalo_user:root /var/www/dedalo.dev/temp
 ```
 
-## Configuration Files
+## Configuration files
 
 ### About the log directory
 
@@ -131,7 +120,7 @@ This configuration is more straightforward than the default because all informat
 
 It is also recommended to configure automatic log rotation (by default every day).
 
-### Virtual Host Configuration with HTTP/2 and PHP 8.5
+### Virtual host configuration with HTTP/2 and PHP 8.5
 
 Create file: `/etc/apache2/sites-available/dedalo.dev.conf`
 
@@ -139,9 +128,9 @@ Create file: `/etc/apache2/sites-available/dedalo.dev.conf`
 nano /etc/apache2/sites-available/dedalo.dev.conf
 ```
 
-And set the configuration as you needs, for example:
+And set the configuration to suit your needs, for example:
 
-```conf
+```apache
 <VirtualHost *:80>
     ServerName dedalo.dev
     Redirect permanent / https://dedalo.dev/
@@ -179,9 +168,9 @@ And set the configuration as you needs, for example:
 </VirtualHost>
 ```
 
-## SSL/TLS Setup with Let's Encrypt
+## SSL/TLS setup with Let's Encrypt
 
-### Obtain Let's Encrypt SSL Certificate
+### Obtain a Let's Encrypt SSL certificate
 
 ```bash
 # Obtain certificate (interactively)
@@ -194,9 +183,9 @@ sudo certbot certonly --webroot -w /var/www/dedalo.dev -d dedalo.dev
 sudo crontab -l | { cat; echo "0 12 * * * certbot renew --quiet"; } | sudo crontab -
 ```
 
-## PHP Configuration
+## PHP configuration
 
-### PHP-FPM Process Manager Settings (Optional)
+### PHP-FPM process manager settings (optional)
 
 ```bash
 nano /etc/php/8.5/fpm/pool.d/dedalo.dev
@@ -221,14 +210,14 @@ php_admin_flag[log_errors] = on
 php_admin_value[error_log] = /var/www/dedalo.dev/logs/php_error_log
 ```
 
-## Testing and Verification
+## Testing and verification
 
 ```bash
 # Test configuration syntax
 sudo apachectl configtest
 
 # Enable site and modules
-sudo a2ensite dedalo.conf
+sudo a2ensite dedalo.dev.conf
 
 # Restart Apache
 sudo systemctl restart apache2
@@ -240,7 +229,7 @@ curl -I --http2 https://dedalo.dev
 # HTTP/2 200
 ```
 
-### Verification Commands
+### Verification commands
 
 ```bash
 # Check Apache modules
@@ -258,7 +247,7 @@ curl -I --http2 https://dedalo.dev
 
 ## Troubleshooting
 
-### Common Issues and Solutions
+### Common issues and solutions
 
 1. **Apache not starting after SSL configuration**
 
@@ -274,7 +263,7 @@ curl -I --http2 https://dedalo.dev
     - Verify Apache version >= 2.4.17
     - Ensure SSL is properly configured
 
-### Useful Logs for Debugging
+### Useful logs for debugging
 
 ```bash
 # Apache error log

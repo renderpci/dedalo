@@ -125,7 +125,7 @@ Grouped by concern. *static?* marks class-level methods. All names verified agai
 !!! note "`get_valor` is a magic accessor, not a real method"
     `get_typology_name()` calls `$component->get_valor($lang)`. `component_common` defines no `get_valor()`; it resolves through `common`'s `__call` accessor (returns the `valor` property if one exists, else `false`), after which the code falls back to `model::get_value_with_fallback_from_data(...)`. Treat the `get_valor` call as best-effort, with the fallback doing the real work.
 
-## How it fits with the rest of Dedalo
+## How it fits with the rest of Dédalo
 
 - **[area_common](area_common.md) / [area](area.md)** — `area_graph` is one of the root areas enumerated by `area::get_areas()` and rendered in the menu. It inherits all of `area_common`'s structure/identity scaffolding but overrides the payload via its own JSON controller.
 - **[TS tree / `ts_object`](../ontology/ts_object.md)** — the viewer is a thesaurus tree: each hierarchy root is a `wrap_ts_object` whose children load through the page-global `ts_object`, and `walk_hierarchy_data()` resolves search-path nodes with `new ts_object(section_id, section_tipo)->get_data()`. This is the same stack used by [`area_thesaurus`](area_thesaurus.md) / [`area_ontology`](area_ontology.md).

@@ -35,19 +35,25 @@ define('DEDALO_DB_MANAGEMENT',			true);
 
 
 
-// MYSQL (PUBLIC DATA)
-// MySQL connection for publication
-// MYSQL_DEDALO_HOSTNAME_CONN: string|null 'hostname' . Ex. 'localhost', '127.0.0.1' etc.
-define('MYSQL_DEDALO_HOSTNAME_CONN',	'localhost');
-// MYSQL_DEDALO_USERNAME_CONN: string 'username'
-define('MYSQL_DEDALO_USERNAME_CONN',	'username');
-// MYSQL_DEDALO_PASSWORD_CONN: string 'password'
-define('MYSQL_DEDALO_PASSWORD_CONN',	'password');
-// MYSQL_DEDALO_DATABASE_CONN: string 'web_dedalo'
-define('MYSQL_DEDALO_DATABASE_CONN',	'web_dedalo');
-// MYSQL_DEDALO_DB_PORT_CONN: string|null . Ex. 3306 or null for socket
-define('MYSQL_DEDALO_DB_PORT_CONN',		3306);
-// MYSQL_DEDALO_SOCKET_CONN: string|null . Ex. /tmp/mysql.sock if use
-define('MYSQL_DEDALO_SOCKET_CONN',		null);
-// MYSQL_DB_BIN_PATH: string '' . Ex. /usr/bin/' . Optional
-define('MYSQL_DB_BIN_PATH',				'/usr/bin/');
+// MYSQL / MARIADB (PUBLIC DATA)
+// Handled exclusively by the Bun diffusion engine now — configured in diffusion/api/v1/.env
+// (DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, DB_SOCKET). No PHP definitions needed.
+
+
+// =============================================================================
+// RAG / VECTOR DATA PROCESSING (core/rag/)
+// -----------------------------------------------------------------------------
+// RAG settings are NOT defined here. Since the v7 .env config flip, every RAG
+// setting is declared in the config catalog
+//   core/base/config/catalog/domains/rag.php
+// and overridden per-install from ../private/.env by its constant name, e.g.:
+//   DEDALO_RAG_ENABLED=true
+//   DEDALO_RAG_DB_HOSTNAME_CONN=localhost
+//   DEDALO_RAG_DB_DATABASE_CONN=dedalo_rag
+//   DEDALO_RAG_DB_PASSWORD_CONN=...            # secret (env-only)
+//   DEDALO_RAG_ENDPOINT=http://127.0.0.1:8090/embed
+//   DEDALO_RAG_MEDIA_ENABLED=true
+//   DEDALO_RAG_MULTIMODAL_ENDPOINT=http://127.0.0.1:8090
+// The whole subsystem is dormant while DEDALO_RAG_ENABLED is false (the default).
+// See core/rag/README.md and docs/core/rag.md.
+// =============================================================================

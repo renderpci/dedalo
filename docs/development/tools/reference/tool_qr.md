@@ -124,5 +124,4 @@ Optional per-tool config (dd996 / register `default_config`) to override the QR 
 - [tool_export](tool_export.md) — the other section-selection tool; if you actually need to get section data *out* (CSV/TSV/XLSX/round-trip), use export, not QR. See [Exporting data](../../../core/exporting_data.md).
 - [Tools catalog](index.md) — full list of shipped tools.
 - Source: `tools/tool_qr/class.tool_qr.php`, `tools/tool_qr/register.json`, `tools/tool_qr/js/{index,tool_qr,render_tool_qr,worker_qr}.js`, `tools/tool_qr/lib/qrcode/easy.qrcode.min.js`, `tools/tool_qr/css/tool_qr.less`.
-```
 

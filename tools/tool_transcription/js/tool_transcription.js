@@ -4,6 +4,68 @@
 
 
 
+/**
+* TOOL_TRANSCRIPTION (module)
+*
+* Dédalo tool that provides a side-by-side audiovisual player + text-area workspace
+* for creating and editing transcriptions of media resources. The tool surfaces in a
+* new browser window (`open_as: "window"` in register.json) launched from a section
+* toolbar button.
+*
+* Architectural overview
+* ----------------------
+* The tool follows the standard Dédalo tool lifecycle (tool_common):
+*   init(options) → build(autoload) → render() → edit()
+*
+* After `build()`, five named component roles are resolved from `tool_config.ddo_map`
+* and attached as direct properties (see `build` for the role list).  The two primary
+* roles are:
+*   - `media_component`          — a component_av (or compatible) rendered in 'player'
+*                                   view on the right side; the audio source for all
+*                                   transcription operations.
+*   - `transcription_component`  — a component_text_area rendered in edit mode on the
+*                                   left; receives and stores the transcription text.
+*
+* Transcription engines
+* ---------------------
+* Two engine paths exist, selected at runtime by the user via a drop-down:
+*
+*   browser  (default) — runs OpenAI Whisper ONNX entirely in the client via a
+*                         Web Worker (`browser_whisper.js`).  The server only prepares
+*                         the audio file; all neural-network inference happens client-side
+*                         using WebGPU (preferred) or WASM (fallback / compatibility
+*                         mode, limited to small models due to RAM constraints).
+*
+*   server             — delegates the entire transcription job to a remote service
+*                         (e.g. Babel); the client polls for completion via
+*                         `check_server_transcriber_status`.
+*
+* Both paths resolve to a `dd_format` array of paragraph objects:
+*   [ { dd_format: '[TC_00:00:05.600_TC] My transcription' }, … ]
+* which `parse_dedalo_format` converts to the `component_text_area` value shape
+* (an array containing a single HTML string).
+*
+* Subtitle generation
+* -------------------
+* `build_subtitles_file` requests the server to compute a WebVTT file from the current
+* transcription text.  On success it publishes `updated_subtitles_file_<media_id>` so
+* any open component_av player immediately reloads its captions track.
+*
+* Persistence
+* -----------
+* The transcription text is saved through the normal component_text_area save flow
+* (no tool-specific persistence).  The selected transcriber engine and quality level
+* are persisted in the client-side IndexedDB `status` table via `data_manager.set_local_db_data`
+* so user preferences survive page reloads.
+*
+* Exported symbols
+* ----------------
+*   tool_transcription    — tool constructor (prototype methods below)
+*   get_current_lang_info — utility that formats a lang code as "Label | tld3 | tld2"
+*/
+
+
+
 // import
 	import { dd_console, get_json_langs } from '../../../core/common/js/utils/index.js'
 	import { data_manager } from '../../../core/common/js/data_manager.js'
@@ -19,20 +81,40 @@
 */
 export const tool_transcription = function () {
 
+	// @var {string|null} id - Instance identifier assigned by get_instance.
 	this.id							= null
+	// @var {string|null} model - Always 'tool_transcription'; set by tool_common.init.
 	this.model						= null
+	// @var {string|null} mode - Render mode (typically 'edit').
 	this.mode						= null
+	// @var {HTMLElement|null} node - Root DOM node once rendered.
 	this.node						= null
+	// @var {Array} ar_instances - Component instances built from tool_config.ddo_map.
 	this.ar_instances				= null
+	// @var {string|null} status - Lifecycle state: 'initializing' | 'initialized' | 'building' | 'built'.
 	this.status						= null
+	// @var {Array} events_tokens - Subscription tokens returned by event_manager.subscribe;
+	//   collected here so destroy() can unsubscribe them all.
 	this.events_tokens				= []
+	// @var {string|null} type - Always 'tool'; set by tool_common.init.
 	this.type						= null
+	// @var {string|null} source_lang - Language code of the source transcription (e.g. 'lg-spa');
+	//   derived from transcription_component.lang after build resolves related_component_lang.
 	this.source_lang				= null
+	// @var {string|null} target_lang - Reserved for future translation target; currently unused.
 	this.target_lang				= null
+	// @var {Array|null} langs - Array of language objects from page_globals.dedalo_projects_default_langs.
 	this.langs						= null
+	// @var {Object|null} caller - The section or component instance that opened this tool.
 	this.caller						= null
+	// @var {Object|null} media_component - component_av (or compatible) to be transcribed;
+	//   matched from ar_instances via the 'media_component' role in tool_config.ddo_map.
 	this.media_component			= null // component av that will be transcribed (it could be the caller)
+	// @var {Object|null} transcription_component - component_text_area where the transcription
+	//   text is authored; matched via the 'transcription_component' role in tool_config.ddo_map.
 	this.transcription_component	= null // component text area where we are working into the tool
+	// @var {Object|null} relation_list - API datum from load_relation_list; contains the list
+	//   of top-section locators (section_tipo / section_id pairs) that reference the current record.
 	this.relation_list				= null // datum of relation_list (to obtaim list of top_section_tipo/id)
 
 	return true
@@ -54,8 +136,22 @@ export const tool_transcription = function () {
 
 /**
 * INIT
-* @param object options
-* @return bool common_init
+* Initialises the tool instance by delegating to `tool_common.prototype.init` and then
+* setting tool-specific properties that are not handled by the generic init.
+*
+* After the generic init resolves:
+*   - `self.langs` is populated from `page_globals.dedalo_projects_default_langs`.
+*   - `self.target_lang` is reset to null (translation target; not used in the current
+*     release but reserved for future machine-translation integration).
+*   - The previously selected transcriber engine is restored from the client-side
+*     IndexedDB `status` table under the key `'transcriber_engine_select'`, so the
+*     user's last choice is applied on the next open.
+*
+* The commented-out `self.source_lang` block below is intentionally preserved (dead code);
+* source_lang is now derived inside `build` from `transcription_component.context.options`.
+*
+* @param {Object} options - Standard tool_common init options (caller, model, lang, etc.)
+* @returns {Promise<boolean>} Result from tool_common.prototype.init (true on success).
 */
 tool_transcription.prototype.init = async function(options) {
 
@@ -96,8 +192,40 @@ tool_transcription.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @param bool autoload = false
-* @return bool common_build
+* Builds the tool by delegating to `tool_common.prototype.build` and then resolving
+* the five named component roles from `self.ar_instances`.
+*
+* Role resolution
+* ---------------
+* After the generic build populates `self.ar_instances` from `tool_config.ddo_map`,
+* each of the following role names is looked up in the ddo_map and matched to the
+* corresponding live instance:
+*   'media_component'          — component_av (or compatible media player)
+*   'transcription_component'  — component_text_area receiving the transcription text
+*   'status_user_component'    — component for user-facing workflow status (e.g. mini select)
+*   'status_admin_component'   — component for admin-facing workflow status
+*   'references_component'     — component listing related references
+*
+* If a role is not declared in the ontology ddo_map, a warning is logged and that role
+* is skipped (the property remains null on self).
+*
+* Language override
+* -----------------
+* When `transcription_component.context.options.related_component_lang` is defined and
+* differs from the component's current lang, the component is re-built under the correct
+* language.  This ensures the transcription text is loaded for the source language even
+* when the tool was opened from a component displaying a different translation.
+*
+* Relation list
+* -------------
+* After roles are resolved, `self.load_relation_list()` is called to fetch the list of
+* parent sections that link to the current transcription record.  The result is stored
+* in `self.relation_list` and consumed by `render_tool_transcription` to populate the
+* parent-section selector in the toolbar.
+*
+* @param {boolean} [autoload=false] - When true, fetches the tool's registered context
+*   from the API (tool_common.build behaviour).
+* @returns {Promise<boolean>} Result from tool_common.prototype.build (true on success).
 */
 tool_transcription.prototype.build = async function(autoload=false) {
 
@@ -162,8 +290,26 @@ tool_transcription.prototype.build = async function(autoload=false) {
 
 /**
 * LOAD_RELATION_LIST
-* Call API and get the list of related sections with the actual resource
-* @return object datum
+* Fetches the list of parent sections that relate to the current transcription record
+* via a `related_search` API call on the transcription component.
+*
+* The API is called with `mode: 'related_list'` and a filter that constrains results
+* to the single record identified by the transcription component's own section_tipo and
+* section_id.  The `section_tipo: ['all']` SQO parameter requests all section types
+* rather than limiting to a specific ontology branch.
+*
+* The returned datum is stored in `self.relation_list` and later consumed by
+* `render_related_list` (in render_tool_transcription.js) to build the parent-section
+* `<select>` element in the toolbar.
+*
+* Datum shape (api_response.result):
+* {
+*   context : Array  — per-section_tipo label/tipo metadata
+*   data    : Array  — flat list of component values keyed by section_tipo + section_id
+* }
+*
+* @returns {Promise<Object>} The API result datum (context + data arrays), or undefined
+*   if the API call fails.
 */
 tool_transcription.prototype.load_relation_list = async function() {
 
@@ -214,13 +360,24 @@ tool_transcription.prototype.load_relation_list = async function() {
 
 /**
 * GET_USER_TOOLS
-* Get the tools that user has access
-* @param array ar_requested_tools
-* 	Sample: ['tool_time_machine']
-* @return promise
-* 	Promise with array of the tool_simple_context of the tools requested if the user has access to it.
+* Queries the dd_tools_api to determine which of the requested tools are accessible
+* to the current user.  Used by the render layer to conditionally show optional toolbar
+* buttons (e.g. 'tool_time_machine', 'tool_tr_print').
+*
+* The result array contains one tool_simple_context object per accessible tool, each
+* with properties: name, model, label, icon, css, properties, etc.  Tools that the
+* user does not have permission to access are omitted from the array entirely.
+*
+* (!) `create_source(self, 'user_tools')` passes the action name as the second argument
+* to generate a source descriptor; the action string itself has no routing significance
+* here — only `dd_api: 'dd_tools_api'` and `action: 'user_tools'` in the rqo matter.
+*
+* @param {Array} ar_requested_tools - Names of tools to check, e.g. ['tool_time_machine']
+* @returns {Promise<Array>} Array of tool_simple_context objects for each accessible tool.
 */
 tool_transcription.prototype.get_user_tools = async function(ar_requested_tools) {
+
+	const self = this
 
 	// source. Note that second argument is the name of the function is the action that not has utility here
 		const source = create_source(self, 'user_tools')
@@ -261,12 +418,27 @@ tool_transcription.prototype.get_user_tools = async function(ar_requested_tools)
 * and save it to a normalized file path like '/httpdocs/dedalo/media/av/subtitles/rsc35_rsc167_1_lg-spa.vtt'
 * @see Note that component_av (in view 'player') is subscribed to event 'updated_subtitles_file_' + self.id
 * and must be publish the change to force the load of new file in the player captions track
-* @return promise
-* 	{
-* 		result : bool,
-* 		url: string,
-* 		msg: string
-* 	}
+*
+* The server-side handler reads the transcription component's stored value, parses the
+* Dédalo timecode tag format (`[TC_HH:MM:SS.mmm_TC]`), wraps each paragraph as a WebVTT
+* cue, and writes the file under the canonical media path.
+*
+* `max_charline` controls subtitle line-wrapping width (characters per line); the value
+* is read from `self.characters_per_line`, which is set by the characters-per-line input
+* in the render layer and persisted in localStorage as 'subtitles_characters_per_line'.
+*
+* The request uses `key: 0` to target the first (and only) datum item of the
+* transcription component — multi-item transcription components are not supported.
+*
+* Timeout is extended to 120 seconds; subtitle generation on long recordings may require
+* server-side parsing of large HTML strings.
+*
+* @returns {Promise<Object>} API response shape:
+*   {
+*     result : {boolean}  — true on success
+*     url    : {string}   — absolute URL of the generated .vtt file
+*     msg    : {string}   — human-readable status or error description
+*   }
 */
 tool_transcription.prototype.build_subtitles_file = async function() {
 
@@ -319,14 +491,47 @@ tool_transcription.prototype.build_subtitles_file = async function() {
 * AUTOMATIC_TRANSCRIPTION
 * Create a transformer pipeline with Whisper
 * using a browser WASM transcribe and save the resulting value
-* @param object options
-* {
-* 	transcriber_engine	: string,
-* 	transcriber_quality	: string
-* 	source_lang			: string as `lg-spa`
-* 	nodes				: object with HTML nodes
-* }
-* @return promise response
+*
+* This is the client-side (browser) transcription path.  It:
+*   1. Requests the server to produce a 16 kHz mono WAV file suitable for Whisper
+*      (action `create_transcribable_audio_file`) via dd_tools_api.
+*   2. Fetches the resulting audio file, decodes it with the Web Audio API at 16 kHz,
+*      and extracts the Float32Array from channel 0.
+*   3. Spawns a Web Worker (`browser_whisper.js`) that loads the chosen ONNX Whisper
+*      model and processes the audio.  The worker communicates back via `onmessage`
+*      with a status field:
+*        'init'              — model loading progress (0–100 %) or 'ready'
+*        'on_chunk_start'    — a new audio chunk is about to be decoded
+*        'callback_function' — intermediate word/phrase results (streaming display)
+*        'end'               — final transcription array; triggers parse_dedalo_format
+*   4. After the worker finishes, sends a cleanup request to delete the server-side
+*      temporary audio file (`delete_transcribable_audio_file`).
+*   5. Resolves the outer Promise with the `parse_dedalo_format` result — an array
+*      containing a single HTML string ready to be passed to
+*      `transcription_component.set_value(0, response[0])`.
+*
+* Device selection: when `nodes.transcriber_device_checkbox` is checked, the worker
+* runs in WASM mode (CPU-only); unchecked = WebGPU.  WASM mode only supports small
+* models because large ONNX models exceed the browser RAM limit for ArrayBuffer transfers.
+*
+* The server-preparation request uses a 3600-second timeout because large video files
+* may take significant time to re-encode.  The same timeout is applied to the cleanup
+* request (fire-and-forget: the Promise is not awaited).
+*
+* (!) Status container DOM output uses `textContent` throughout to prevent XSS from
+* worker-supplied transcription fragments (SEC-031 markers in render_tool_transcription.js).
+*
+* @param {Object} options - Transcription configuration
+* @param {string} options.transcriber_engine - Engine name selected by the user (e.g. 'local')
+* @param {string} options.transcriber_quality - ONNX model identifier (e.g. 'Xenova/whisper-small')
+* @param {string} options.source_lang - Dédalo language tag of the audio, e.g. 'lg-spa'; mapped
+*   to a two-letter ISO 639-1 code (tld2) before being passed to the Whisper worker
+* @param {Object} options.nodes - DOM node references held by the render layer:
+*   nodes.status_container             {HTMLElement} — status display area
+*   nodes.button_automatic_transcription {HTMLElement} — the trigger button (disabled during job)
+*   nodes.transcriber_device_checkbox  {HTMLInputElement} — WASM mode toggle
+* @returns {Promise<Array>} Resolves with the parse_dedalo_format result: an array of one
+*   HTML string, e.g. ['<p>[TC_00:00:01.000_TC] Hello world</p>'].
 */
 tool_transcription.prototype.automatic_transcription = async function(options) {
 
@@ -403,6 +608,8 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 						err_div.textContent = msg
 						nodes.status_container.appendChild(err_div)
 					}
+					// Map the Dédalo lang tag (e.g. 'lg-spa') to a two-letter ISO code
+					// ('es') that the Whisper model accepts as its `language` hint.
 					const lang_obj	= json_langs.find(item => item.dd_lang===source_lang)
 					const lang		= lang_obj
 						? lang_obj.tld2
@@ -425,6 +632,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 							const status	= data.status;
 							const device	= data.device;
 
+							// 'webgpu' path uses 'setting_up' label; 'wasm' (CPU) uses 'procesing'
 							const procesing_label = device==='webgpu' ? 'setting_up' : 'procesing';
 
 							// set the label for all status as initializing and the ready to Setting_up
@@ -433,6 +641,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 								? self.get_tool_label( procesing_label )
 								: self.get_tool_label( 'initializing' )
 
+							// Show download progress as percentage; omit when not available
 							const loaded = (progress)
 								? ` : ${parseInt(progress).toString().padStart(2, 0)}%`
 								: (status==='ready')
@@ -489,6 +698,8 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 
 				// Process the audio file to be sent to Worker
 				// Used as module is possible send the URI, but as worker the AudioContext is not available
+				// Re-sample the audio to exactly 16 kHz (Whisper's required sample rate) using
+				// the Web Audio API; then extract the mono Float32Array from channel 0.
 				const audio_buffer	= await fetch(response.result).then(res => res.arrayBuffer());
 				const audio_ctx		= new AudioContext({ sampleRate: 16000 });
 				const audio_data	= await audio_ctx.decodeAudioData(audio_buffer);
@@ -516,8 +727,23 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 * PARSE_DEDALO_FORMAT
 * Process the segments into the HTML format supported by Dédalo with the time code tag format
 * every segment is enclosed by a paragraph a <p> element
-* @param array transcripts
-* @return array data
+*
+* Converts an array of Whisper segment objects into the value shape expected by
+* `component_text_area.set_value`: an array with a single HTML string element.
+*
+* Each segment's `dd_format` string already contains the Dédalo timecode tag:
+*   '[TC_HH:MM:SS.mmm_TC] transcribed text'
+* This function wraps each such string in a `<p>` element and concatenates all
+* paragraphs into a single `innerHTML` string.
+*
+* A DocumentFragment + temporary div are used to build the DOM safely before
+* serialising to HTML; this avoids string concatenation XSS risks when `dd_format`
+* values contain special characters from recognised speech.
+*
+* @param {Array} transcripts - Array of segment objects from the Whisper worker 'end' event:
+*   [ { dd_format: '[TC_00:00:05.600_TC] My transcription' }, … ]
+* @returns {Array} data - Single-element array containing the complete HTML string:
+*   [ '<p>[TC_00:00:05.600_TC] My transcription</p><p>…</p>' ]
 * Dédalo transcription format as HTML:
 * <p>
 * 	[TC_00:00:05.600_TC] My transcription
@@ -560,12 +786,38 @@ const parse_dedalo_format = function( transcripts ){
 * Call the API to transcribe the audiovisual component with the source lang
 * using a online service like babel or Google transcribe and save the resulting value
 * (!) Tool transcription config transcriber must to be exists in register_tools section
-* @param object options
-* {
-* 	transcriber_engine : string,
-* 	transcriber_quality : string
-* }
-* @return promise response
+*
+* This is the server-side transcription path.  Unlike the browser path, this method
+* only dispatches the job request and receives an immediate response containing a
+* process ID (`pid`).  The caller is then responsible for polling via
+* `check_server_transcriber_status` until the job completes.
+*
+* The PHP handler (`class.tool_transcription.php::automatic_transcription`) is resolved
+* by `create_source(self, 'automatic_transcription')`.  That method must be listed in
+* the tool's `API_ACTIONS` constant on the server.
+*
+* The request carries both the transcription and media DDO locators so the server can:
+*   1. Read the media file path from the media component record.
+*   2. Submit it to the remote transcription service.
+*   3. Save the response text into the transcription component's section record.
+*
+* `self.context.config` is forwarded as-is so the PHP class can read installation-specific
+* settings (API keys, endpoint URLs) stored in the tool's registered config component.
+*
+* Timeout: 3600 seconds.  The response is immediate (the server kicks off a background
+* job and returns the pid), but network latency on slow connections can still be high.
+*
+* @param {Object} options - Server transcription options
+* @param {string} options.transcriber_engine - Engine name identifier (e.g. 'babel')
+* @param {string} options.transcriber_quality - Quality/model identifier (engine-specific)
+* @param {string} options.source_lang - Dédalo language tag of the audio, e.g. 'lg-spa'
+* @param {Object} options.nodes - DOM node references (same as automatic_transcription)
+* @returns {Promise<Object>} API response shape:
+*   {
+*     result : { pid: string }  — on success; pid used for status polling
+*     result : false            — on error
+*     msg    : {string}         — human-readable status or error description
+*   }
 */
 tool_transcription.prototype.automatic_transcription_server = async function(options) {
 
@@ -633,12 +885,29 @@ tool_transcription.prototype.automatic_transcription_server = async function(opt
 * using a online service like babel or Google and check if server has done
 * (!) Tool transcription config transcriber must to be exists in register_tools section
 *
-* @param object options
-* {
-* 	transcriber_engine : string,
-* 	pid : string|int
-* }
-* @return promise response
+* Polls the server for the current state of a previously submitted server transcription
+* job.  The `pid` value was returned by `automatic_transcription_server` and stored in
+* the client-side IndexedDB under the key `'transcriber_process_<section_tipo>_<section_id>'`.
+*
+* The server responds with a numeric status code that maps to one of three states:
+*   1 — No active process matching the pid (job vanished or was never started).
+*   2 — Job is still running; the caller should poll again after a delay.
+*   3 — Job completed; the transcription result has been written to the record.
+*
+* The `render_tool_transcription.get_server_status` helper wraps this method in a
+* recursive setTimeout loop (4-second interval) that stops on status 1 or 3.
+*
+* `self.context.config` is forwarded so the PHP handler can locate the correct remote
+* service connection settings (same as in `automatic_transcription_server`).
+*
+* @param {Object} options - Status check options
+* @param {string} options.transcriber_engine - Engine name (must match the job's engine)
+* @param {string|number} options.pid - Process ID returned by automatic_transcription_server
+* @returns {Promise<Object>} API response shape:
+*   {
+*     result : { status: number }  — 1 (inactive) | 2 (running) | 3 (done)
+*     msg    : {string}
+*   }
 */
 tool_transcription.prototype.check_server_transcriber_status = async function(options) {
 
@@ -692,7 +961,19 @@ tool_transcription.prototype.check_server_transcriber_status = async function(op
 * Resolve the current tool selected lang in this format:
 * 	Label | tld3 | tld2
 * 	Greek | lg-ell | el
-* @return string current_lang_info
+*
+* Looks up `lang` in `page_globals.dedalo_projects_default_langs` (an array of lang
+* objects with `value`, `label`, and `tld2` properties) and formats a human-readable
+* descriptor string.  Returns 'Unknown lang' when the code is not found in the project
+* langs array, so the display always has a fallback.
+*
+* Exported and consumed by `render_tool_transcription.js` to update the lang info
+* display in the transcriber configuration panel whenever the user switches the active
+* transcription language.
+*
+* @param {string} lang - Dédalo language tag, e.g. 'lg-ell'
+* @returns {string} Formatted string 'Label | tld3 | tld2' (e.g. 'Greek | lg-ell | el'),
+*   or 'Unknown lang' if the lang code is not present in the project langs list.
 */
 export const get_current_lang_info = function( lang ) {
 

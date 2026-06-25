@@ -3,35 +3,64 @@
 
 
 /**
- * Markdown utilities for browser-side translation pipeline.
+ * MARKDOWN_UTILS
+ * Bidirectional HTML ↔ Markdown conversion for the tool_lang browser translation pipeline.
  *
- * Provides bidirectional HTML↔Markdown conversion so the LLM receives
- * clean markdown (Dédalo tags stay as [[n]] placeholders) and the
- * restored output matches the original HTML structure.
+ * The LLM (browser-local Gemma model or remote API) operates on plain Markdown rather than
+ * raw HTML because HTML tags confuse seq2seq models and inflate token counts. This module
+ * bridges the gap:
  *
- * Flow:  HTML → html_to_markdown → [LLM] → markdown_to_html → HTML
+ *   HTML → html_to_markdown → [LLM translates] → markdown_to_html → HTML
+ *
+ * Dédalo inline tags (indexIn, tc, svg, geo, …) are replaced with [[n]] number placeholders
+ * BEFORE calling html_to_markdown, so the LLM never sees or corrupts them. The caller
+ * (browser_translation.js) is responsible for that substitution and for restoring the
+ * originals after markdown_to_html.
+ *
+ * Exports:
+ *   html_to_markdown            — DOM-parser walk: HTML string → Markdown string
+ *   markdown_to_html            — regex pass: Markdown string → HTML string
+ *   split_markdown_by_paragraph — split Markdown on \n\n+ boundaries → string[]
+ *   group_markdown_into_chunks  — merge paragraphs into ≤N-char chunks for batched API calls
  */
 
 
 
 /**
  * HTML_TO_MARKDOWN
- * Convert HTML to markdown for LLM translation.
+ * Convert an HTML string to Markdown suitable for LLM translation.
+ *
+ * Parses the HTML with DOMParser and walks the resulting DOM tree, converting
+ * each element to its closest Markdown equivalent. The conversion is lossy by
+ * design: only semantics the LLM needs to preserve (structure, emphasis, links)
+ * are encoded; presentation-only attributes (class, style, id) are discarded.
  *
  * Supported conversions:
- *   Block: <p> → \n\n, <br> → \n\n, <h1>–<h6> → #…######, <ul>/<ol> → -/1.,
- *          <blockquote> → >, <hr> → ---, <div> → recurse + \n\n,
- *          <table> → markdown table | … | with | --- | separator
- *   Inline: <strong>/<b> → **, <em>/<i> → *, <u> → __,
- *           <a href> → [text](url), <code> → `code`
- *   Unsupported tags → outerHTML verbatim
+ *   Block:  <p> → \n\n  |  <br> → \n\n  |  <h1>–<h6> → #…######
+ *           <ul>/<ol>/<li> → -/1.  |  <blockquote> → >  |  <hr> → ---
+ *           <div> → recurse + \n\n  |  <table> → GFM pipe table | … |
+ *           <pre> → fenced ``` code block
+ *   Inline: <strong>/<b> → **  |  <em>/<i> → *  |  <u> → __
+ *           <a href> → [text](url)  |  <code> → `code`  |  <img alt src> → ![alt](src)
+ *   Pass-through (raw outerHTML): <span>, <sub>, <sup>, <small>, <mark>, <del>, <s>, <ins>
+ *   Unknown tags: raw outerHTML verbatim.
  *
  * Text-node escaping: markdown metacharacters (*, _, [, ], `, \) are
- * backslash-escaped so literal characters survive the round-trip.
- * [[n]] placeholder strings are NOT escaped.
+ * backslash-escaped so literal text characters survive the HTML→MD→HTML round-trip.
+ * [[n]] placeholder tokens are intentionally NOT escaped — they must pass through
+ * the LLM unchanged and be detected by restore_placeholders after conversion back.
  *
- * @param {string} html - HTML string (already placeholderd)
- * @returns {string} - Markdown string
+ * Empty paragraph special case: whitespace-only <p> emits &nbsp; so that the
+ * paragraph is not collapsed by markdown_to_html's block splitter (which trims
+ * and skips empty blocks). This is necessary for CKEditor content that uses
+ * <p>&nbsp;</p> as explicit blank-line separators.
+ *
+ * Table with colspan/rowspan: falls back to raw outerHTML — Markdown pipe tables
+ * cannot represent merged cells without losing structure.
+ *
+ * @param {string} html - HTML string with Dédalo tags already replaced by [[n]] placeholders.
+ * @returns {string} Markdown string with trailing whitespace trimmed and runs of 3+ newlines
+ *   collapsed to 2 (a single paragraph boundary).
  */
 export function html_to_markdown(html) {
 
@@ -43,10 +72,16 @@ export function html_to_markdown(html) {
 	const placeholder_re = /^\[\[\d+\]\]$/;
 
 	/**
-	 * Escape markdown metacharacters in a text node.
-	 * Skips [[n]] placeholders entirely.
-	 * @param {string} text
-	 * @returns {string}
+	 * ESCAPE_MD (inner)
+	 * Backslash-escape Markdown metacharacters in a plain text string so they
+	 * are treated as literal characters by markdown_to_html.
+	 *
+	 * The text is first split on [[n]] placeholder tokens; the placeholders pass
+	 * through unmodified (they must survive to restore_placeholders); only the
+	 * non-placeholder segments are escaped. Escaped chars: \ * _ [ ] `
+	 *
+	 * @param {string} text - Raw text-node content.
+	 * @returns {string} Escaped text with [[n]] tokens preserved verbatim.
 	 */
 	function escape_md(text) {
 		if (!text) return '';
@@ -65,9 +100,21 @@ export function html_to_markdown(html) {
 	}
 
 	/**
-	 * Process a single DOM node into markdown.
-	 * @param {Node} node
-	 * @returns {string}
+	 * WALK (inner)
+	 * Recursively convert a single DOM node to its Markdown representation.
+	 *
+	 * Handles two node types:
+	 *   nodeType === 3 (Text) — escaped via escape_md().
+	 *   nodeType === 1 (Element) — dispatched through the tag switch; all other
+	 *     nodeType values (Comment, CDATA, …) are silently ignored (return '').
+	 *
+	 * The switch covers every tag documented in html_to_markdown. Inline elements
+	 * that have no standard Markdown equivalent (span, sub, sup, mark, del, s,
+	 * ins, small) fall through to raw outerHTML so their content is not lost.
+	 * Unknown tags also emit outerHTML to avoid silent data loss.
+	 *
+	 * @param {Node} node - Any DOM node from the parsed document body.
+	 * @returns {string} Markdown fragment for this node and all its descendants.
 	 */
 	function walk(node) {
 
@@ -202,19 +249,39 @@ export function html_to_markdown(html) {
 	}
 
 	/**
-	 * Walk all children of a node and concatenate their markdown.
-	 * @param {Node} node
-	 * @returns {string}
+	 * WALK_CHILDREN (inner)
+	 * Walk all child nodes of a given DOM element and concatenate their Markdown output.
+	 * Delegates each child to walk(); the results are joined without any separator
+	 * so block-level children emit their own trailing \n\n as needed.
+	 *
+	 * @param {Node} node - Parent DOM element whose children are to be walked.
+	 * @returns {string} Concatenated Markdown of all child nodes.
 	 */
 	function walk_children(node) {
 		return Array.from(node.childNodes).map(walk).join('');
 	}
 
 	/**
-	 * Convert a <table> element to markdown table syntax.
-	 * Tables with colspan/rowspan fall back to raw HTML.
-	 * @param {Element} table
-	 * @returns {string}
+	 * CONVERT_TABLE (inner)
+	 * Convert a <table> DOM element to a GitHub-Flavored Markdown (GFM) pipe table.
+	 *
+	 * Strategy:
+	 *   1. Bail to raw outerHTML if any cell carries colspan/rowspan — GFM tables
+	 *      cannot represent merged cells without losing data.
+	 *   2. Query all <tr> rows and collect their <th>/<td> cell texts; cell content
+	 *      is processed via walk_children() (inline HTML inside cells is converted).
+	 *   3. Collapse newlines and runs of whitespace inside each cell to a single space
+	 *      (Markdown table syntax requires all content on one line).
+	 *   4. Pad short rows to the widest row so the output is a valid rectangular table.
+	 *   5. Emit: header row → separator row (all `---`) → data rows.
+	 *      The first <tr> is always treated as the header regardless of whether its
+	 *      cells use <th> or <td>.
+	 *
+	 * The output does NOT include a trailing \n\n — the caller (the 'table' case in
+	 * walk()) appends that.
+	 *
+	 * @param {Element} table - A <table> DOM element from the parsed document.
+	 * @returns {string} GFM pipe-table string, or the element's outerHTML for complex tables.
 	 */
 	function convert_table(table) {
 
@@ -285,14 +352,37 @@ export function html_to_markdown(html) {
 
 /**
  * MARKDOWN_TO_HTML
- * Convert markdown back to HTML after LLM translation.
+ * Convert a Markdown string back to HTML after LLM translation.
  *
- * Produces bare HTML matching CKEditor output format:
- *   <p>, <strong>, <em>, <u>, <a>, <code>, <h1>–<h6>,
- *   <ul>/<ol>/<li>, <blockquote>, <hr>, <table>
+ * This is the inverse of html_to_markdown and is applied to the LLM's output
+ * before restoring the [[n]] Dédalo-tag placeholders. It implements a subset of
+ * CommonMark + GFM sufficient for CKEditor-compatible output.
  *
- * @param {string} md - Markdown string
- * @returns {string} - HTML string
+ * Algorithm (two-pass):
+ *   1. Split the input on \n\n+ boundaries into "blocks". Each block is classified
+ *      by its leading characters:
+ *        ``` ... ```  → <pre><code> (escape_html applied to the code body)
+ *        ---/--- or ***or ___ → <hr>
+ *        # … ######   → <h1>…<h6>
+ *        - / * / + lines (all) → <ul><li>…</li></ul>
+ *        1. 2. … lines (all) → <ol><li>…</li></ol>
+ *        > lines (all) → <blockquote>…</blockquote>
+ *        | … | … with | --- | separator → <table> via convert_md_table
+ *        Starts with < and ends with > → raw HTML passthrough (un-converted spans, etc.)
+ *        Everything else → <p> (single \n within a block becomes <br>)
+ *   2. Each block's text content is processed by process_inline() to convert
+ *      bold, italic, underline, code, and link syntax.
+ *
+ * Classification is done in priority order so that (for example) a block
+ * starting with `---` is treated as <hr> before falling through to paragraph.
+ * The regex /^\|[\s\-:|]+\|$/ detects the GFM separator row for tables.
+ *
+ * Produces bare HTML matching CKEditor output format — no class/style attributes
+ * beyond the optional `class="lang-X"` on fenced-code blocks.
+ *
+ * @param {string} md - Markdown string produced by the LLM.
+ * @returns {string} HTML string suitable for saving as a CKEditor component value.
+ *   Returns '' for falsy input.
  */
 export function markdown_to_html(md) {
 
@@ -383,10 +473,26 @@ export function markdown_to_html(md) {
 
 
 /**
- * Process inline markdown elements within a text string.
- * Order matters: code → bold+italic → bold → italic → underline → links.
- * @param {string} text
- * @returns {string}
+ * PROCESS_INLINE
+ * Apply inline Markdown syntax transformations to a text string, converting
+ * Markdown tokens to HTML inline elements.
+ *
+ * Processing order is significant — earlier rules protect content from later rules:
+ *   1. Unescape backslash-escaped Markdown metacharacters (inserted by escape_md).
+ *   2. Inline code `…` — processed first so ** or * inside backticks is not treated
+ *      as bold/italic markup.
+ *   3. Bold+italic ***…*** — must precede bold and italic individually so the three-star
+ *      sequence is consumed in full rather than as nested ** + *.
+ *   4. Bold **…**
+ *   5. Italic *…* — negative lookbehind/lookahead avoids matching inside <strong>.
+ *   6. Underline __…__ (Dédalo extension; not standard CommonMark).
+ *   7. Links [text](url)
+ *
+ * Does NOT handle block-level elements; call from within each block's text content
+ * after block classification in markdown_to_html.
+ *
+ * @param {string} text - Single-line or inline Markdown text segment.
+ * @returns {string} HTML string with inline elements applied. Returns '' for falsy input.
  */
 function process_inline(text) {
 
@@ -419,9 +525,22 @@ function process_inline(text) {
 
 
 /**
- * Convert markdown table lines to HTML table.
- * @param {string[]} lines - Array of markdown table rows
- * @returns {string} - HTML table string
+ * CONVERT_MD_TABLE
+ * Convert an array of GFM pipe-table lines to an HTML <table> string.
+ *
+ * Line layout expected:
+ *   lines[0]  — header row:  | H1 | H2 | H3 |
+ *   lines[1]  — separator:   | -- | -- | -- |  (ignored; just signals "this is a table")
+ *   lines[2+] — data rows:   | D1 | D2 | D3 |
+ *
+ * Each cell's text is processed through process_inline() so bold/italic/link
+ * syntax inside table cells is converted correctly.
+ *
+ * Output format: <table><thead><tr><th>…</th></tr></thead><tbody><tr><td>…</td></tr></tbody></table>
+ * <tbody> is omitted when there are no data rows (header-only table).
+ *
+ * @param {string[]} lines - Array of raw Markdown pipe-table lines (including the separator).
+ * @returns {string} HTML table string, or the raw lines joined by '\n' if fewer than 2 lines.
  */
 function convert_md_table(lines) {
 
@@ -458,9 +577,18 @@ function convert_md_table(lines) {
 
 
 /**
- * Parse a markdown table row into cell values.
- * @param {string} line - e.g. "| cell1 | cell2 | cell3 |"
- * @returns {string[]}
+ * PARSE_MD_ROW
+ * Split a single GFM pipe-table row into trimmed cell strings.
+ *
+ * Strips the leading and trailing `|` characters, then splits on the remaining
+ * `|` separators and trims whitespace from each cell. Empty leading/trailing
+ * cells (from `| … |` delimiters) are removed.
+ *
+ * Example:
+ *   "| cell1 | cell2 | cell3 |" → ["cell1", "cell2", "cell3"]
+ *
+ * @param {string} line - A single Markdown table row line.
+ * @returns {string[]} Array of cell content strings (not yet HTML-processed).
  */
 function parse_md_row(line) {
 	return line
@@ -472,9 +600,18 @@ function parse_md_row(line) {
 
 
 /**
- * Escape HTML special characters.
- * @param {string} text
- * @returns {string}
+ * ESCAPE_HTML
+ * Escape HTML special characters so that a string is safe to embed as text
+ * content inside an HTML element.
+ *
+ * Used exclusively within markdown_to_html for fenced code block bodies
+ * (<pre><code>…</code></pre>) where the raw code must not be interpreted as HTML.
+ * The order of replacements matters: & must be escaped first to avoid double-escaping.
+ *
+ * Replaces: & → &amp;  |  < → &lt;  |  > → &gt;  |  " → &quot;
+ *
+ * @param {string} text - Raw text that may contain HTML special characters.
+ * @returns {string} HTML-safe string.
  */
 function escape_html(text) {
 	return text
@@ -486,10 +623,17 @@ function escape_html(text) {
 
 
 /**
- * Split markdown into paragraph-level blocks.
- * Splits on \n\n+ boundaries, filtering empty blocks.
- * @param {string} md - Markdown string
- * @returns {string[]}
+ * SPLIT_MARKDOWN_BY_PARAGRAPH
+ * Split a Markdown string into its constituent paragraph-level blocks.
+ *
+ * Blocks are separated by one or more blank lines (\n\n+). After splitting,
+ * each block is trimmed of leading/trailing whitespace and empty blocks are
+ * discarded. The function is the low-level building block used by
+ * group_markdown_into_chunks to determine how to bin content for the LLM.
+ *
+ * @param {string} md - Markdown string to split.
+ * @returns {string[]} Array of non-empty trimmed block strings.
+ *   Returns an empty array for falsy input.
  */
 export function split_markdown_by_paragraph(md) {
 
@@ -504,16 +648,29 @@ export function split_markdown_by_paragraph(md) {
 
 
 /**
- * Group markdown blocks into chunks that fit within a character limit.
+ * GROUP_MARKDOWN_INTO_CHUNKS
+ * Merge paragraph-level Markdown blocks into chunks that fit within a character limit.
  *
- * Merges adjacent blocks (separated by \n\n) as long as the combined
- * length stays under maxChars. This reduces the number of calls to the
- * translation model while keeping each chunk short enough for the
- * model's token window.
+ * Batching reduces the number of calls to the translation model (one postMessage per
+ * chunk) while keeping each chunk short enough for the LLM's effective token window.
+ * The default limit of 1 000 characters was chosen to fit comfortably within the
+ * Gemma 4B browser model's context length and to avoid per-sentence fragmentation on
+ * short paragraphs.
  *
- * @param {string} md       - Markdown string
- * @param {number} maxChars - Soft limit per chunk (default 1000)
- * @returns {string[]}       - Array of chunk strings, each ≤ maxChars
+ * Algorithm (greedy, single-pass):
+ *   - For each block from split_markdown_by_paragraph():
+ *       • If the block alone exceeds maxChars: flush the accumulator, push the
+ *         oversized block as its own chunk (no sub-splitting — the LLM must handle it).
+ *       • Otherwise: if appending the block (with \n\n separator) keeps the accumulator
+ *         within maxChars, merge it; otherwise flush the accumulator and start a new one.
+ *   - After all blocks: flush any remaining accumulator content.
+ *
+ * The rejoined blocks inside each chunk are separated by \n\n so that markdown_to_html
+ * can re-parse them correctly after translation.
+ *
+ * @param {string} md        - Markdown string to split into chunks.
+ * @param {number} maxChars  - Soft upper bound (in characters) per chunk. Default: 1000.
+ * @returns {string[]} Array of chunk strings. Individual oversized blocks may exceed maxChars.
  */
 export function group_markdown_into_chunks(md, maxChars = 1000) {
 

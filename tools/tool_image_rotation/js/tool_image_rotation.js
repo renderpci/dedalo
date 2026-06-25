@@ -14,9 +14,63 @@
 	import { process_uploaded_file } from '../../tool_upload/js/tool_upload.js'
 
 
+
+/**
+* TOOL_IMAGE_ROTATION (module)
+* Image manipulation tool for Dédalo v7.
+*
+* Provides two image processing capabilities on a `component_image` record:
+*
+*   1. Rotation + crop — the user drags a range slider to pick degrees (-360…360,
+*      step 0.01) and optionally draws a crop rectangle; clicking "Apply" calls
+*      `apply_rotation()` which dispatches to the PHP back-end
+*      (`tool_image_rotation::apply_rotation`) where every derived quality is
+*      re-rendered server-side via ImageMagick.  The 'original' quality is always
+*      preserved untouched.
+*
+*   2. Background removal — runs the `briaai/RMBG-1.4` neural network entirely
+*      in the browser via a Web Worker (WebGPU or WASM fallback).  The resulting
+*      PNG blob is uploaded with `service_upload`, then converted from a temp file
+*      into a full derived-quality set by `tool_upload::process_uploaded_file`.
+*      Requires a WebGPU-capable browser for practical speed; users on incompatible
+*      browsers are warned via `confirm()` before the worker is started.
+*
+* Architecture:
+*   - `tool_image_rotation`      — main tool constructor; extends `tool_common`
+*       lifecycle (init → build → render → destroy).
+*   - `render_tool_image_rotation` — owns the DOM structure and control widgets
+*       (imported from `render_tool_image_rotation.js`).
+*   - `render_tool_image_crop`   — the drag-to-select crop overlay (imported by the
+*       render module).
+*   - PHP server-side: `class.tool_image_rotation.php`; the only exposed API action
+*       is `apply_rotation` (per `API_ACTIONS` allowlist, SEC-024 §9.2).
+*
+* Prototype methods assigned below (see COMMON FUNCTIONS block):
+*   - `render`  — delegated to `tool_common.prototype.render`
+*   - `destroy` — delegated to `common.prototype.destroy`
+*   - `refresh` — delegated to `common.prototype.refresh`
+*   - `edit`    — delegated to `render_tool_image_rotation.prototype.edit`
+*   - `init`    — overridden below (calls `tool_common.prototype.init`)
+*   - `build`   — overridden below; resolves `main_element` from `ddo_map`
+*   - `apply_rotation`              — sends rotation/crop params to the PHP API
+*   - `automatic_background_removal`— runs the in-browser WASM/WebGPU pipeline
+*
+* Exports:
+*   tool_image_rotation — the tool constructor.
+*/
+
+
+
 /**
 * TOOL_IMAGE_ROTATION
-* Tool to make interesting things
+* Constructor for the image rotation/crop/background-removal tool.
+*
+* All instance properties are initialised to null here; they are populated by
+* `tool_common.prototype.init` during the `init()` call and extended in `build()`.
+* The `//end page` label below is a legacy generator artefact and has no runtime
+* meaning.
+*
+* @returns {boolean} Always true (Dédalo constructor sentinel).
 */
 export const tool_image_rotation = function () {
 
@@ -55,7 +109,15 @@ export const tool_image_rotation = function () {
 
 /**
 * INIT
-* Custom tool init
+* Custom tool initialisation — delegates to `tool_common.prototype.init` and then
+* applies any tool-specific post-init steps (currently none beyond the common base).
+*
+* Called by the tool framework as the first lifecycle step; must be `await`-ed
+* before `build()` is invoked.
+*
+* @param {Object} options - Options forwarded verbatim to `tool_common.prototype.init`.
+*   Typically contains `{ caller, tool_config, lang, mode }`.
+* @returns {Promise<boolean>} Resolves with the result of `tool_common.prototype.init`.
 */
 tool_image_rotation.prototype.init = async function(options) {
 
@@ -74,9 +136,18 @@ tool_image_rotation.prototype.init = async function(options) {
 
 /**
 * BUILD
-* Custom tool build
-* @param bool autoload = false
-* @return bool
+* Custom tool build — calls `tool_common.prototype.build` (which loads CSS and
+* instantiates every entry in `tool_config.ddo_map`), then locates the
+* `main_element` instance in `ar_instances` for convenient access throughout the
+* tool.
+*
+* `main_element` is identified by matching the ddo_map entry whose `role` is
+* `'main_element'` to the built instance with the same `tipo`.  This is the
+* `component_image` whose files will be rotated / processed.
+*
+* @param {boolean} [autoload=false] - When true, child components fetch their own
+*   data automatically during build (forwarded to `tool_common.prototype.build`).
+* @returns {Promise<boolean>} Resolves with the result of `tool_common.prototype.build`.
 */
 tool_image_rotation.prototype.build = async function(autoload=false) {
 
@@ -106,14 +177,45 @@ tool_image_rotation.prototype.build = async function(autoload=false) {
 
 /**
 * APPLY_ROTATION
-* 	rotate all quality images with the value set by user in degrees
-* @param object options
-* {
-* 	rotation_degrees: float like '64.8'
-* 	background_color: string like '#ffffff'
-* 	alpha: bool
-* }
-* @return promise > bool
+* Sends rotation and optional crop parameters to the PHP back-end and waits for
+* the server to re-render every derived image quality.
+*
+* Flow:
+*   1. Asks the user to confirm (native browser `confirm()`).
+*   2. Builds an RQO (request query object) whose `source` encodes `self` and the
+*      method name `'apply_rotation'` — the framework routes this to
+*      `tool_image_rotation::apply_rotation()` on the PHP side.
+*   3. Dispatches via `data_manager.request` (dd_tools_api → tool_request action).
+*   4. Resolves the Promise with the server `response.result` (boolean true/false).
+*
+* The server applies rotation to every file quality except `'original'` (which is
+* permanently preserved).  If `crop_area` is also set the crop is applied after
+* rotation, with pixel coordinates scaled proportionally to each quality's
+* dimensions.
+*
+* Note: `SHOW_DEVELOPER` is referenced inside the `.then` callback but is not listed
+* in the `/*global*\/` header at the top of the file. (!) This will trigger an
+* eslint no-undef warning at runtime in strict environments.
+*
+* @param {Object} options - Rotation parameters collected from the UI widgets.
+* @param {number|string} options.rotation_degrees - Degrees to rotate; passed as a
+*   float string from the range input (e.g. `'64.8'`). A value of `"0"` skips the
+*   rotation phase server-side.
+* @param {string} options.background_color - Hex colour string for the background
+*   fill behind the rotated image (e.g. `'#ffffff'`). Ignored when `alpha` is true.
+* @param {boolean} options.alpha - When true, the server renders the background as
+*   transparent (requires a format that supports alpha, e.g. PNG or AVIF).
+* @param {string} options.rotation_mode - `'expanded'` grows the canvas to fit the
+*   full rotated image; `'default'` keeps the original canvas dimensions and clips
+*   corners.
+* @param {Object|null} options.crop_area - Pixel crop rectangle measured against the
+*   tool's preview image, or null to skip cropping.
+* @param {number} options.crop_area.x      - Left edge offset in display pixels.
+* @param {number} options.crop_area.y      - Top edge offset in display pixels.
+* @param {number} options.crop_area.width  - Crop width in display pixels.
+* @param {number} options.crop_area.height - Crop height in display pixels.
+* @returns {Promise<boolean>} Resolves with `true` on success, `false` on server
+*   error, or plain `false` (non-Promise) if the user cancels the confirm dialog.
 */
 tool_image_rotation.prototype.apply_rotation = function(options) {
 
@@ -173,17 +275,57 @@ tool_image_rotation.prototype.apply_rotation = function(options) {
 
 /**
 * AUTOMATIC_BACKGROUND_REMOVAL
-* Create a transformer pipeline to remove the image background
-* using a browser WASM and save the resulting value
-* @param object options
-* {
-* 	self_caller			: object, //the component_image instance
-* 	engine				: string // engine to be used as 'briaai/RMBG-1.4'
-* 	image				: string // the URK of the image to be used, usually the original image
-* 	original_file_name 	: string // the original image used to be saved when the final image will upload
-* 	nodes				: object // HTML nodes
-* }
-* @return promise response
+* Runs the `briaai/RMBG-1.4` subject-extraction model entirely in the browser
+* via a dedicated Web Worker, then uploads the resulting PNG to the server and
+* triggers full quality-set generation through `tool_upload::process_uploaded_file`.
+*
+* Pipeline steps:
+*   1. Spawns `remove_background.js` as a module Worker
+*      (`tools/tool_common/js/processors/remove_background/remove_background.js`).
+*   2. Posts the target image URL + model name + device preference to the worker.
+*   3. Receives progress messages (`init`, `on_chunk_start`, `callback_function`,
+*      `end`) and updates `nodes.status_container` to inform the user.
+*   4. On `end`: converts the `Uint8ClampedArray` pixel payload to `ImageData`,
+*      draws it to an `OffscreenCanvas`, and calls `canvas.convertToBlob` to get a
+*      PNG `Blob`.
+*   5. Calls the inner `upload_image()` closure which:
+*        a. Renames the blob to match the component's original file name (extension
+*           forced to `.png`).
+*        b. Uploads via `service_upload` to the server temp directory.
+*        c. Calls `process_uploaded_file` (tool_upload) to move and convert the
+*           temp file into all configured quality formats under the component's
+*           `'modified'` quality slot.
+*
+* Worker device selection: the code always requests `'webgpu'` (the `'wasm'`
+* alternative is commented out).  If the browser does not support WebGPU, the
+* worker falls back internally.  The caller checks `ua.check_transformers_webgpu()`
+* before spawning and shows a `confirm()` warning if WebGPU is absent.
+*
+* Note: `options.transcriber_engine` and `options.transcriber_quality` are
+* destructured from `options` but are never used within this method — they appear
+* to be copy-paste leftovers from a transcription pipeline. (!) Do not remove them
+* (doc-only rule); they are harmless dead assignments.
+*
+* Note: `button_remove_background.active === false` guard in the render module
+* references a property that is never set to `true` before the call, so the branch
+* will always short-circuit. (!) This is a pre-existing logic issue; do not fix here.
+*
+* @param {Object} options - Configuration for the removal pipeline.
+* @param {Object} options.self_caller - The live `component_image` instance whose
+*   file system paths and section context are used for the upload.
+* @param {string} options.engine - Hugging Face model identifier, e.g.
+*   `'briaai/RMBG-1.4'`.
+* @param {string} options.image - Absolute URL of the source image (typically the
+*   `'original'` quality file) passed to the worker for inference.
+* @param {string} options.original_file_name - File name (with extension) of the
+*   source image; used to name the output PNG (`extension replaced with .png`).
+* @param {Object} options.nodes - DOM node references used to update progress UI.
+* @param {HTMLElement} options.nodes.status_container - Element whose `innerHTML`
+*   is updated with progress labels during the worker pipeline.
+* @param {string}  [options.transcriber_engine]  - Unused; kept for legacy compat.
+* @param {string}  [options.transcriber_quality] - Unused; kept for legacy compat.
+* @returns {Promise<boolean>} Resolves with `true` when the image has been uploaded
+*   and processed successfully; the worker is terminated before resolution.
 */
 tool_image_rotation.prototype.automatic_background_removal = async function(options) {
 
@@ -350,7 +492,6 @@ tool_image_rotation.prototype.automatic_background_removal = async function(opti
 	})
 
 }//end automatic_background_removal
-
 
 
 

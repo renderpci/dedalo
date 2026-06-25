@@ -16,8 +16,8 @@
 * - Schema introspection helpers (check_table_exists, get_tables, check_column_exists,
 *   add_column, remove_column, get_indexes, get_functions, get_constraint_name_from_index) used
 *   during migration and bootstrap.
-* - An optional PDO accessor (_getConnectionPDO) and a legacy MySQLi accessor
-*   (_getConnection_mysql) for the few paths that still use those interfaces.
+* - An optional PDO accessor (_getConnectionPDO) for the few paths that still use it.
+* MariaDB/MySQL is NOT accessed from PHP: only the Bun diffusion engine connects to it.
 *
 * This class is declared abstract so it cannot be instantiated; all methods are static.
 * To close the cached connection explicitly call pg_close(DBi::_getConnection()).
@@ -146,9 +146,15 @@ abstract class DBi {
 				metrics::inc('db_connection_total_calls_cached');
 				return self::$pg_conn_cache;
 			}
-			// Connection is dead, clear cache
-			self::$pg_conn_cache = null;
-			self::$pg_conn_valid_until = 0;
+			// Connection is dead, clear cache. DB-02: also clear the session-scoped
+			// statics — prepared statements live on the (now dead) backend session, and
+			// any in-flight transaction died with it. Leaving $prepared_statements
+			// populated makes exec_search skip re-preparing on the fresh session and
+			// fail with "prepared statement does not exist"; a stale $tx_depth would
+			// mis-nest the next transaction.
+			self::invalidate_connection_cache();
+			self::$tx_depth = 0;
+			self::$tx_owns_begin = false;
 		}
 
 		// Build connection string parameters
@@ -178,7 +184,13 @@ abstract class DBi {
 			: pg_connect($str_connect); // default
 
 		if ($pg_conn_real === false) {
-			$errorMessage = pg_last_error() ?: "Unknown PostgreSQL connection error.";
+			// NB: pg_last_error() with no argument requires an already-open connection and THROWS
+			// ("No PostgreSQL connection opened yet") when the very first connect fails — exactly the
+			// fresh-install / DB-down case. Use the PHP warning emitted by pg_connect instead.
+			$last_php_error = error_get_last();
+			$errorMessage   = (is_array($last_php_error) && !empty($last_php_error['message']))
+				? $last_php_error['message']
+				: 'Unknown PostgreSQL connection error.';
 			debug_log(
 				__METHOD__ . ' Error. Could not connect to database (52) for ' . to_string($database) . '. Details: ' . $errorMessage,
 				logger::ERROR
@@ -474,40 +486,157 @@ abstract class DBi {
 
 
 	/**
-	* GET_CONNECTION_STRING
-	* Builds a libpq / psql-compatible connection string fragment from the Dédalo constants.
+	* BUILD_CONN_FLAGS
+	* Pure builder for the -h/-p/-U flag fragment used by every server-side psql /
+	* pg_dump invocation. Kept free of Dédalo constants so it is unit-testable and
+	* so the install path and the runtime path share one escaping rule (they used to
+	* diverge — only the install path escaped its values).
 	*
-	* The returned string contains -h (host) and optionally -p (port) and -U (user) flags
-	* suitable for shell invocation of psql, pg_dump, etc. It does NOT include a password
-	* or the database name (the commented-out line for the database name is intentionally
-	* left out — callers append the database as a positional argument). Only used by
-	* server-side tools that shell out to PostgreSQL utilities.
-	* @return string - Space-separated connection flags, e.g. "-h localhost -p 5432 -U dedalo"
+	* Rules:
+	* - Every value is passed through escapeshellarg() — defence-in-depth against a
+	*   deployer-supplied host/user that carries whitespace or shell metacharacters.
+	* - When $host is empty but $socket is set, the socket directory is emitted as the
+	*   -h argument (libpq / psql accept a directory path there). This makes socket-only
+	*   installs work for the CLI tools, matching the PHP pg_connect() socket path.
+	* - Empty values emit NO flag, so a fresh / unconfigured install never produces a
+	*   broken "-h " fragment; libpq then falls back to its own default resolution.
+	*
+	* @param string|null $host   DEDALO_HOSTNAME_CONN value (TCP host) or null/empty.
+	* @param int|string|null $port DEDALO_DB_PORT_CONN value or null/empty.
+	* @param string|null $user   DEDALO_USERNAME_CONN value or null/empty.
+	* @param string|null $socket DEDALO_SOCKET_CONN value (socket dir) or null/empty.
+	* @return string - Space-separated, shell-escaped connection flags.
 	*/
-	public static function get_connection_string() : string {
+	public static function build_conn_flags( ?string $host, int|string|null $port, ?string $user, ?string $socket=null ) : string {
 
 		$ar_sentence = [];
 
-		// database name
-		// $ar_sentence[] = DEDALO_DATABASE_CONN;
-
-		// host
-		$ar_sentence[] = '-h ' . DEDALO_HOSTNAME_CONN;
+		// host (real TCP host) takes precedence; otherwise fall back to the socket
+		// directory so socket-only installs are not broken for CLI tools.
+		if (!empty($host)) {
+			$ar_sentence[] = '-h ' . escapeshellarg($host);
+		} elseif (!empty($socket)) {
+			$ar_sentence[] = '-h ' . escapeshellarg($socket);
+		}
 
 		// port
-		if (!empty(DEDALO_DB_PORT_CONN)) {
-			$ar_sentence[] = '-p ' . DEDALO_DB_PORT_CONN;
+		if (!empty($port)) {
+			$ar_sentence[] = '-p ' . escapeshellarg((string)$port);
 		}
 
 		// user
-		$ar_sentence[] = '-U ' . DEDALO_USERNAME_CONN;
+		if (!empty($user)) {
+			$ar_sentence[] = '-U ' . escapeshellarg($user);
+		}
 
-		// connection_string
-		$connection_string = implode(' ', $ar_sentence);
+		return implode(' ', $ar_sentence);
+	}//end build_conn_flags
 
 
-		return $connection_string;
+
+	/**
+	* GET_CONNECTION_STRING
+	* Builds a libpq / psql-compatible connection string fragment from the Dédalo constants.
+	*
+	* The returned string contains -h (host, or the socket directory when no TCP host is
+	* configured) and optionally -p (port) and -U (user) flags suitable for shell invocation
+	* of psql, pg_dump, etc. It does NOT include a password or the database name (callers
+	* append the database as an escaped positional / -d argument). All values are shell-escaped
+	* (see build_conn_flags). Only used by server-side tools that shell out to PostgreSQL utilities.
+	* @return string - Space-separated connection flags, e.g. "-h 'localhost' -p '5432' -U 'dedalo'"
+	*/
+	public static function get_connection_string() : string {
+
+		return self::build_conn_flags(
+			defined('DEDALO_HOSTNAME_CONN') ? DEDALO_HOSTNAME_CONN : null,
+			defined('DEDALO_DB_PORT_CONN') ? DEDALO_DB_PORT_CONN : null,
+			defined('DEDALO_USERNAME_CONN') ? DEDALO_USERNAME_CONN : null,
+			defined('DEDALO_SOCKET_CONN') ? DEDALO_SOCKET_CONN : null
+		);
 	}//end get_connection_string
+
+
+
+	/**
+	* PG_ENV_SET
+	* Export the PostgreSQL password into the process environment so libpq-based
+	* command-line tools (psql, pg_dump, pg_restore) can authenticate against a
+	* LOCAL or REMOTE server without relying on a ~/.pgpass file.
+	*
+	* The secret is taken from DEDALO_PASSWORD_CONN and is NEVER interpolated into
+	* a command string, so it reaches neither the process argument list (visible to
+	* `ps`) nor any debug log of the command. Always pair with pg_env_clear() right
+	* after the child process has been spawned. When the password is empty (peer /
+	* trust auth, or an existing ~/.pgpass), nothing is exported and libpq falls back
+	* to its own resolution.
+	* @return void
+	*/
+	public static function pg_env_set() : void {
+
+		$pg_password = (string)DEDALO_PASSWORD_CONN;
+		if ($pg_password!=='') {
+			putenv('PGPASSWORD='.$pg_password);
+		}
+	}//end pg_env_set
+
+
+
+	/**
+	* PG_ENV_CLEAR
+	* Remove PGPASSWORD from the process environment. Call immediately after the
+	* PostgreSQL child process has been spawned (the child already inherited the
+	* value at fork time), so the secret does not linger for the rest of the request.
+	* @return void
+	*/
+	public static function pg_env_clear() : void {
+
+		putenv('PGPASSWORD');
+	}//end pg_env_clear
+
+
+
+	/**
+	* PG_SHELL_EXEC
+	* Run a PostgreSQL client shell command (psql / pg_dump / pipelines) with libpq
+	* authentication via the PGPASSWORD environment variable (see pg_env_set), so the
+	* target database may be LOCAL or REMOTE without a ~/.pgpass file. PGPASSWORD is
+	* exported only for the duration of the child process and cleared immediately after.
+	*
+	* Binary-path resolution is the caller's responsibility — build commands with
+	* system::get_pg_bin_path() so binaries are found on any host layout.
+	*
+	* @param string $command full shell command (binaries, -h/-p, -U, plus redirects/pipes)
+	* @return string|null     shell_exec() return value (stdout, or null when there is none)
+	*/
+	public static function pg_shell_exec(string $command) : ?string {
+
+		self::pg_env_set();
+		$result = shell_exec($command);
+		self::pg_env_clear();
+
+		return $result;
+	}//end pg_shell_exec
+
+
+
+	/**
+	* PG_EXEC
+	* Like pg_shell_exec but uses exec() so the caller can capture the output lines
+	* and the shell return code. PGPASSWORD is exported only around the call.
+	*
+	* @param string $command full shell command
+	* @param array $output captured stdout lines (by reference)
+	* @param int $result_code shell exit code (by reference)
+	* @return string|false last line of output, or false on failure (exec() contract)
+	*/
+	public static function pg_exec(string $command, array &$output, int &$result_code) : string|false {
+
+		self::pg_env_set();
+		$last_line = exec($command, $output, $result_code);
+		self::pg_env_clear();
+
+		return $last_line;
+	}//end pg_exec
 
 
 
@@ -619,110 +748,6 @@ abstract class DBi {
 
 
 	/**
-	* _GETCONNECTION_MYSQL
-	* Returns a MySQLi connection to the auxiliary MySQL/MariaDB database.
-	*
-	* Used only by legacy import/export paths and the diffusion subsystem that still
-	* target a MariaDB instance (distinct from Dédalo's primary PostgreSQL store).
-	* All new code should target PostgreSQL via _getConnection(). Caches the mysqli
-	* instance in a function-static variable for the process lifetime.
-	*
-	* Connection setup order: enable strict error reporting → init → set connect timeout
-	* (10 s) → set autocommit (required for InnoDB row-level saves) → real_connect() →
-	* set charset to utf8mb4.
-	*
-	* @param string|null $host = MYSQL_DEDALO_HOSTNAME_CONN
-	* @param string $user = MYSQL_DEDALO_USERNAME_CONN
-	* @param string $password = MYSQL_DEDALO_PASSWORD_CONN
-	* @param string $database = MYSQL_DEDALO_DATABASE_CONN
-	* @param int|null $port = MYSQL_DEDALO_DB_PORT_CONN
-	* @param string|null $socket = MYSQL_DEDALO_SOCKET_CONN
-	* @param bool $cache = true - Return the cached mysqli instance when true
-	* @return mysqli|false - Connected mysqli instance, or false on any connection failure
-	*/
-	public static function _getConnection_mysql(
-		string|null		$host		= MYSQL_DEDALO_HOSTNAME_CONN,
-		string			$user		= MYSQL_DEDALO_USERNAME_CONN,
-		string			$password	= MYSQL_DEDALO_PASSWORD_CONN,
-		string			$database	= MYSQL_DEDALO_DATABASE_CONN,
-		int|string|null	$port		= MYSQL_DEDALO_DB_PORT_CONN,
-		string|null		$socket		= MYSQL_DEDALO_SOCKET_CONN,
-		bool			$cache		= true
-		) : mysqli|false {
-
-		// cache
-			static $mysqli;
-			if($cache === true && isset($mysqli)) {
-				return($mysqli);
-			}
-
-		// You should enable error reporting for mysqli before attempting to make a connection
-		// @see https://www.php.net/manual/en/mysqli-driver.report-mode.php
-			mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-
-		// init
-			$mysqli = mysqli_init();
-			if (!$mysqli) {
-				debug_log(__METHOD__ . " Error: mysqli_init failed", logger::DEBUG);
-				return false;
-			}
-
-		// options : set connect_timeout
-			if (!$mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 10)) {
-				debug_log(__METHOD__
-					. " Error setting MYSQLI_OPT_CONNECT_TIMEOUT". PHP_EOL
-					, logger::DEBUG
-				);
-			}
-
-		// options : set autocommit (needed for INNODB save)
-			if (!$mysqli->options(MYSQLI_INIT_COMMAND, 'SET AUTOCOMMIT = 1')) {
-				debug_log(__METHOD__
-					. " Error setting MYSQLI_INIT_COMMAND". PHP_EOL
-					, logger::DEBUG
-				);
-			}
-
-		// connect
-			try {
-				if ($port !== null && empty($port)) {
-					$port = null;
-				}
-				if (!$mysqli->real_connect($host, $user, $password, $database, $port, $socket)) {
-					debug_log(__METHOD__
-						. " Error on connect to MYSQL database ". PHP_EOL
-						. ' mysqli_connect_errno: ' .mysqli_connect_errno() . PHP_EOL
-						. ' mysqli_connect_error: ' .mysqli_connect_error()
-						, logger::DEBUG
-					);
-					return false;
-				}
-			} catch (mysqli_sql_exception $e) {
-				debug_log(__METHOD__
-					. " Error on connect to MYSQL database (Exception). ". PHP_EOL
-					. ' Message: ' . $e->getMessage() . PHP_EOL
-					. ' Code: ' . $e->getCode()
-					, logger::DEBUG
-				);
-				return false;
-			}
-
-		// UTF8 : Change character set to utf8mb4
-			if (!$mysqli->set_charset('utf8mb4')) {
-				debug_log(__METHOD__
-					." Error loading character set utf8mb4: ". PHP_EOL
-					. 'mysqli->error: ' . $mysqli->error
-					, logger::DEBUG
-				);
-			}
-
-
-		return $mysqli;
-	}//end _getConnection_mysql
-
-
-
-	/**
 	* CHECK_TABLE_EXISTS
 	* Tests whether a table with the given name exists in the current database.
 	*
@@ -736,6 +761,13 @@ abstract class DBi {
 	public static function check_table_exists( string $table ) : bool {
 
 		$conn = DBi::_getConnection();
+
+		// No database connection (e.g. a fresh install before the DB is configured): the table
+		// cannot exist, and pg_escape_literal()/pg_query() would fatal on a false connection.
+		// Degrade gracefully — return false, consistent with the documented "does not exist".
+		if ($conn === false) {
+			return false;
+		}
 
 		$safe_table = pg_escape_literal($conn, $table);
 

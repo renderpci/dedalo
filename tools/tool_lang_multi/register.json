@@ -1,11 +1,11 @@
 {
-  "id": "3924",
+  "id": "3959",
   "section_id": "4",
   "section_tipo": "dd1340",
   "data": {
     "label": "Tools development",
     "section_id": 4,
-    "created_date": "2026-06-17 13:27:56",
+    "created_date": "2026-06-18 11:43:39",
     "section_tipo": "dd1340",
     "diffusion_info": null,
     "created_by_user_id": -1
@@ -185,13 +185,13 @@
         "id": 1,
         "lang": "lg-nolan",
         "start": {
-          "day": 17,
-          "hour": 13,
-          "time": 65132083676,
+          "day": 18,
+          "hour": 11,
+          "time": 65132163819,
           "year": 2026,
           "month": 6,
-          "minute": 27,
-          "second": 56
+          "minute": 43,
+          "second": 39
         }
       }
     ]
@@ -204,57 +204,53 @@
     "dd1372": [
       {
         "id": 1,
-        "value": {
-          "lg-nolan": [
-            [
-              {
-                "lang": "lg-eng",
-                "name": "automatic_translation",
-                "value": "Automatic translation"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "automatic_translation",
-                "value": "Traducción automática"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "automatic_translation",
-                "value": "Traducció automàtica"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "automatic_translation",
-                "value": "Traduction automatique"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "automatic_translation",
-                "value": "Traduzione automatica"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "automatic_translation",
-                "value": "Automatische Übersetzung"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "automatic_translation",
-                "value": "Αυτόματη μετάφραση"
-              },
-              {
-                "lang": "lg-por",
-                "name": "automatic_translation",
-                "value": "Tradução automática"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "automatic_translation",
-                "value": "Itzulpen automatikoa"
-              }
-            ]
-          ]
-        }
+        "value": [
+          {
+            "lang": "lg-eng",
+            "name": "automatic_translation",
+            "value": "Automatic translation"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "automatic_translation",
+            "value": "Traducción automática"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "automatic_translation",
+            "value": "Traducció automàtica"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "automatic_translation",
+            "value": "Traduction automatique"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "automatic_translation",
+            "value": "Traduzione automatica"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "automatic_translation",
+            "value": "Automatische Übersetzung"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "automatic_translation",
+            "value": "Αυτόματη μετάφραση"
+          },
+          {
+            "lang": "lg-por",
+            "name": "automatic_translation",
+            "value": "Tradução automática"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "automatic_translation",
+            "value": "Itzulpen automatikoa"
+          }
+        ]
       }
     ]
   },

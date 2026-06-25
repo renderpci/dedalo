@@ -1,8 +1,12 @@
 # media_protection
 
-> The pure/static PHP helper that generates and maintains the **web-server-enforced** media access control: the `.htaccess` gate, the fixed-name auth cookie machinery and the zero-byte marker allowlist that lets Apache/Nginx authorize multi-GB media with a single `stat()` — no PHP in the file-serving path.
-
 > See also: [Architecture overview](../architecture_overview.md) · [login](login.md) · [security](security.md)
+
+The pure, static PHP helper that generates and maintains the
+**web-server-enforced** media access control: the `.htaccess` gate, the
+fixed-name auth cookie machinery and the zero-byte marker allowlist that lets
+Apache/Nginx authorize multi-GB media with a single `stat()` — no PHP in the
+file-serving path.
 
 ## Role
 
@@ -68,9 +72,9 @@ cookie (that is `login`'s job).
 `get_mode()` returns one of `false | 'private' | 'publication'` from a
 fixed priority chain:
 
-1. `DEDALO_MEDIA_ACCESS_MODE_CUSTOM` (in `config_core.php`, written from the
-   `media_control` widget; `null` means *no override*).
-2. `DEDALO_MEDIA_ACCESS_MODE` (in `config.php`).
+1. `DEDALO_MEDIA_ACCESS_MODE_CUSTOM` (machine-written to `../private/state.php`
+   from the `media_control` widget; `null`/empty means *no override*).
+2. `DEDALO_MEDIA_ACCESS_MODE` (from `../private/.env` / the catalog).
 3. legacy `DEDALO_PROTECT_MEDIA_FILES === true` ⇒ `'private'`.
 
 Anything that is not exactly `'private'` or `'publication'` resolves to `false`
@@ -225,9 +229,8 @@ All methods are `static`. Grouped by concern.
   (`KEY_REGEX`), recomputes `pub/` as a pure union from `dbs/` state (never
   refcounts), and runs marker hooks **after** a successful SQL commit so markers
   mirror committed DB state and never lead it. Drift heals via boot
-  `reconcile()` and full `rebuild()`. See the
-  [dedalo-diffusion skill](../../../.agents/skills/) family for the wire
-  contract that carries `section_tipo`.
+  `reconcile()` and full `rebuild()`. See the `dedalo-diffusion` skill family for
+  the wire contract that carries `section_tipo`.
 - **`media_control` widget** (`core/area_maintenance/widgets/media_control/`) —
   the maintenance UI. `get_value()` reports config + status (including a
   read-only engine probe via `diffusion_api_client::call` with the

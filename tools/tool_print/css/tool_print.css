@@ -95,8 +95,8 @@
   --color_tag_indexation_removed: #2f8fff;
   --color_tag_indexation_to_review: #fc461a;
   --color_php: #777bb3;
-  --bg_app: var(--color_white);
-  --bg_surface: var(--color_grey_16);
+  --bg_app: var(--color_grey_14);
+  --bg_surface: var(--color_white);
   --bg_surface_alt: var(--color_grey_15);
   --bg_elevated: var(--color_white);
   --bg_input: var(--color_white);
@@ -206,6 +206,14 @@
   --print_grid_color: rgba(0, 0, 0, 0.06);
   --print_page_bg: #ffffff;
   --print_page_shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+  --tp_desk_bg: #e9e9e9;
+}
+:root[data-theme="dark"] {
+  --tool_print: #3da89a;
+  --tool_print_lighten_40: #1f3a35;
+  --tool_print_border: #2a7d6f;
+  --print_page_shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --tp_desk_bg: #2a2d31;
 }
 .wrapper_tool.tool_print .spinner {
   background-color: var(--tool_print);
@@ -232,8 +240,18 @@
   padding: 0.45rem 0.8rem;
   background: var(--bg_surface_alt);
   border-bottom: 1px solid var(--border_default);
+  box-shadow: var(--shadow-2);
   color: var(--fg_default);
   font-size: 0.8rem;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .toolbar_group_label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg_muted);
+  white-space: nowrap;
+  margin-right: -0.25rem;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .template_name_input {
   height: 1.9rem;
@@ -244,6 +262,12 @@
   color: var(--fg_default);
   border: 1px solid var(--border_default);
   border-radius: 4px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .template_name_input:focus {
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 2px var(--focus-ring_weak);
+  outline: none;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .tool_button.flash_ok {
   background: var(--color_green_success);
@@ -281,14 +305,32 @@
   border-radius: 4px;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.12s ease, border-color 0.12s ease;
+  transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .tool_button:hover {
   background: var(--bg_surface_alt);
   border-color: var(--border_strong);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-1);
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .tool_button:active {
   background: var(--bg_surface);
+  transform: translateY(0);
+  box-shadow: none;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .tool_button .tp_icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 0.3rem;
+  flex: 0 0 auto;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  background-color: currentColor;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .tool_button.btn_print {
   color: #fff;
@@ -298,9 +340,21 @@
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .tool_button.btn_print:hover {
   background: var(--tool_print_border);
+  box-shadow: var(--shadow-2);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .tool_button.btn_print .tp_icon {
+  -webkit-mask-image: url('../img/icon_print.svg');
+  mask-image: url('../img/icon_print.svg');
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .tool_button.btn_delete {
   color: var(--color_danger);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .tool_button.btn_delete:hover {
+  border-color: var(--color_danger);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .tool_button.btn_delete .tp_icon {
+  -webkit-mask-image: url('../img/icon_remove.svg');
+  mask-image: url('../img/icon_remove.svg');
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar select,
 .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .template_picker,
@@ -313,6 +367,14 @@
   border: 1px solid var(--border_default);
   border-radius: 4px;
   cursor: pointer;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar select:focus,
+.wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .template_picker:focus,
+.wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .zoom_select:focus {
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 2px var(--focus-ring_weak);
+  outline: none;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .template_picker {
   min-width: 12rem;
@@ -345,11 +407,37 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  transition: grid-template-columns var(--transition-base);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .panel_collapse_toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  cursor: pointer;
+  color: var(--fg_muted);
+  background: none;
+  border: none;
+  border-radius: 3px;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .panel_collapse_toggle:hover {
+  color: var(--fg_default);
+  background: var(--bg_surface_alt);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .panel_header_row {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 0.5rem;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .panel_title {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   font-size: 0.9rem;
-  margin: 0 0 0.5rem;
+  margin: 0;
   color: var(--fg_default);
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .palette_breadcrumb {
@@ -371,10 +459,12 @@
   border: 1px solid var(--border_default);
   border-radius: 3px;
   padding: 0.1rem 0.4rem;
+  transition: border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .palette_breadcrumb .palette_back:hover {
   border-color: var(--tool_print);
   color: var(--tool_print);
+  box-shadow: var(--shadow-1);
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .palette_breadcrumb .palette_crumbs {
   display: inline-flex;
@@ -422,8 +512,11 @@
   color: var(--fg_muted);
   font-size: 0.75rem;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   border-radius: 3px;
   margin-bottom: 0.2rem;
+  padding: 0.15rem 0.4rem;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .components_list_container .section_group_label {
   color: var(--fg_muted);
@@ -434,9 +527,13 @@
   cursor: grab;
   padding: 0.15rem 0.3rem;
   border-radius: 3px;
+  border: 1px solid transparent;
+  transition: background var(--transition-fast), border-color var(--transition-fast), padding var(--transition-fast);
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .component_label.element_draggable:hover {
   background: var(--tool_print_lighten_40);
+  border-color: var(--tool_print);
+  padding-left: 0.45rem;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel {
   grid-area: inspector;
@@ -448,16 +545,53 @@
   overflow: auto;
   padding: 0.5rem;
   color: var(--fg_default);
+  transition: grid-template-columns var(--transition-base);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .panel_collapse_toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  cursor: pointer;
+  color: var(--fg_muted);
+  background: none;
+  border: none;
+  border-radius: 3px;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .panel_collapse_toggle:hover {
+  color: var(--fg_default);
+  background: var(--bg_surface_alt);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .panel_header_row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 0.5rem;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .panel_title {
   font-size: 0.9rem;
-  margin: 0 0 0.5rem;
+  margin: 0;
   color: var(--fg_default);
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .panel_subtitle {
-  font-size: 0.8rem;
-  margin: 1rem 0 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.4rem;
+  padding-bottom: 0.25rem;
   color: var(--fg_muted);
+  border-bottom: 1px solid var(--border_default);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_section {
+  background: var(--bg_surface);
+  border: 1px solid var(--border_default);
+  border-radius: var(--radius-md);
+  padding: 0.5rem;
+  margin-bottom: 0.6rem;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_row {
   display: flex;
@@ -476,6 +610,13 @@
   color: var(--fg_default);
   border: 1px solid var(--border_default);
   border-radius: 3px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_row input:focus,
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_row select:focus {
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 2px var(--focus-ring_weak);
+  outline: none;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_row.inspector_check_row input[type="checkbox"] {
   width: auto;
@@ -485,10 +626,59 @@
   height: 1.5rem;
   padding: 1px;
   cursor: pointer;
+  border-radius: 3px;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_hint {
   font-size: 0.8rem;
   color: var(--fg_muted);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .margins_head {
+  margin-bottom: 0.25rem;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .margins_head .margins_link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--fg_muted);
+  cursor: pointer;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .margins_head .margins_link input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  cursor: pointer;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .margins_grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.3rem 0.6rem;
+  margin-bottom: 0.4rem;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .margins_grid .margin_field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--fg_muted);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .margins_grid .margin_field > span {
+  width: 1.1rem;
+  text-align: center;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .margins_grid .margin_field input {
+  width: 3.2rem;
+  padding: 0.15rem 0.3rem;
+  background: var(--bg_input);
+  color: var(--fg_default);
+  border: 1px solid var(--border_default);
+  border-radius: 3px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .margins_grid .margin_field input:focus {
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 2px var(--focus-ring_weak);
+  outline: none;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns {
   margin-top: 0.25rem;
@@ -505,6 +695,11 @@
   background: var(--bg_surface_alt);
   border: 1px solid var(--border_default);
   border-radius: 3px;
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns .column_row:hover {
+  box-shadow: var(--shadow-1);
+  border-color: var(--border_strong);
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns .column_row .column_name {
   flex: 1 1 auto;
@@ -585,6 +780,63 @@
   outline: 2px solid var(--tool_print);
   outline-offset: -1px;
 }
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns .column_row:has(+ .column_style_row) {
+  margin-bottom: 0;
+  border-bottom: none;
+  border-radius: 3px 3px 0 0;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns .column_style_row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 0.3rem;
+  padding: 0.2rem 0.35rem;
+  background: var(--bg_surface_alt);
+  border: 1px solid var(--border_default);
+  border-top: none;
+  border-radius: 0 0 3px 3px;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns .column_style_row .column_align {
+  width: 3.2rem;
+  font-size: 0.7rem;
+  padding: 0.05rem 0.15rem;
+  background: var(--bg_input);
+  color: var(--fg_default);
+  border: 1px solid var(--border_default);
+  border-radius: 3px;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns .column_style_row .column_color {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  color: var(--fg_muted);
+  cursor: pointer;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns .column_style_row .column_color .bg_swatch {
+  font-size: 0.82rem;
+  line-height: 1;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns .column_style_row .column_color input[type="color"] {
+  width: 1.5rem;
+  height: 1.1rem;
+  padding: 0;
+  cursor: pointer;
+  border: 1px solid var(--border_default);
+  border-radius: 3px;
+  background: none;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns .column_style_row .column_style_clear {
+  margin-left: auto;
+  cursor: pointer;
+  font-size: 0.8rem;
+  line-height: 1;
+  color: var(--fg_muted);
+  padding: 0 0.15rem;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns .column_style_row .column_style_clear:hover {
+  color: var(--color_danger);
+}
 .wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel .inspector_columns .column_addable {
   background: none;
 }
@@ -599,14 +851,11 @@
 .wrapper_tool.tool_print > .content_data.print_layout_editor .pages_viewport {
   grid-area: canvas;
   overflow: auto;
-  background: #e9e9e9;
+  background: var(--tp_desk_bg);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-:root[data-theme="dark"] .wrapper_tool.tool_print > .content_data.print_layout_editor .pages_viewport {
-  background: #2a2d31;
 }
 .wrapper_tool.tool_print .print_root {
   display: flex;
@@ -663,6 +912,12 @@
 }
 .wrapper_tool.tool_print .print_root .print_page .print_page_header .remove_page_btn {
   cursor: pointer;
+}
+.wrapper_tool.tool_print .print_root .print_page .margin_guide {
+  box-sizing: border-box;
+  border: 1px dashed rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  z-index: 0;
 }
 .wrapper_tool.tool_print .print_root .print_page .flow_column {
   display: block;
@@ -908,7 +1163,8 @@
 @media print {
   .wrapper_tool.tool_print .tool_header,
   .wrapper_tool.tool_print .no_print,
-  .wrapper_tool.tool_print .no_print * {
+  .wrapper_tool.tool_print .no_print *,
+  .wrapper_tool.tool_print .margin_guide {
     display: none !important;
   }
   .wrapper_tool.tool_print > .content_data.print_layout_editor {
@@ -928,9 +1184,12 @@
   }
   .wrapper_tool.tool_print .print_page {
     box-shadow: none !important;
+    box-sizing: border-box;
     break-after: page;
     page-break-after: always;
     overflow: hidden;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
   .wrapper_tool.tool_print .print_page:last-of-type {
     break-after: auto;
@@ -956,8 +1215,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 1rem;
-  height: 1rem;
+  min-width: 1.2rem;
+  height: 1.2rem;
   padding: 0 0.15rem;
   font-size: 0.62rem;
   line-height: 1;
@@ -965,6 +1224,7 @@
   color: #5a5f66;
   border-radius: 2px;
   user-select: none;
+  transition: background 0.1s ease, color 0.1s ease;
 }
 .wrapper_tool.tool_print .print_root.editor .flow_row .rc_btn:hover {
   background: rgba(0, 0, 0, 0.08);
@@ -984,7 +1244,7 @@
   flex-direction: column;
   gap: 1px;
   opacity: 0;
-  transition: opacity 0.1s ease;
+  transition: opacity var(--transition-fast);
   z-index: 4;
   background: #f7f8f9;
   border: 1px solid #cfd3d7;
@@ -1030,12 +1290,21 @@
 .wrapper_tool.tool_print .print_root.editor .flow_row.selected {
   outline: 1px solid var(--tool_print);
   outline-offset: 1px;
+  border-left: 3px solid var(--tool_print);
 }
 .wrapper_tool.tool_print .print_root.editor .flow_row.dragging {
   opacity: 0.4;
 }
 .wrapper_tool.tool_print .print_root.editor .flow_row.row_drop {
   outline: 2px dashed var(--tool_print);
+}
+.wrapper_tool.tool_print .print_root.editor .flow_continued.continued_selectable:hover {
+  outline: 1px dashed rgba(42, 125, 111, 0.55);
+  outline-offset: -1px;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_continued.continued_selectable.selected {
+  outline: 2px solid var(--tool_print);
+  outline-offset: -2px;
 }
 .wrapper_tool.tool_print .print_root.editor .flow_cell {
   cursor: pointer;
@@ -1072,6 +1341,7 @@
   height: 100%;
   cursor: col-resize;
   z-index: 6;
+  transition: background var(--transition-fast);
 }
 .wrapper_tool.tool_print .print_root.editor .flow_cell .cell_divider:hover {
   background: rgba(42, 125, 111, 0.3);
@@ -1080,6 +1350,9 @@
   min-height: 1.6rem;
   outline: 1px dashed #cfd3d7;
   outline-offset: -1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .wrapper_tool.tool_print .print_root.editor .flow_cell_empty::after {
   content: 'empty cell — drop a component';
@@ -1087,7 +1360,6 @@
   font-size: 0.7rem;
   opacity: 0.8;
   padding: 2px 4px;
-  display: inline-block;
 }
 .wrapper_tool.tool_print .print_root.editor .flow_column.col_drop {
   outline: 2px dashed rgba(42, 125, 111, 0.6);
@@ -1116,6 +1388,7 @@
   height: 7px;
   cursor: ns-resize;
   z-index: 6;
+  transition: background var(--transition-fast);
 }
 .wrapper_tool.tool_print .print_root.editor .flow_spacer .spacer_resize:hover {
   background: rgba(42, 125, 111, 0.3);
@@ -1135,6 +1408,8 @@ body.tp_col_resizing * {
 }
 .wrapper_tool.tool_print .print_root .cell_content .wrapper_component {
   display: block !important;
+  box-shadow: none !important;
+  border: none !important;
 }
 .wrapper_tool.tool_print .print_root .cell_content .wrapper_component,
 .wrapper_tool.tool_print .print_root .cell_content .wrapper_component *,
@@ -1146,3 +1421,197 @@ body.tp_col_resizing * {
   max-height: none !important;
   overflow: visible !important;
 }
+.wrapper_tool.tool_print .print_root .cell_content .value_container,
+.wrapper_tool.tool_print .print_root .cell_content .editor_container,
+.wrapper_tool.tool_print .print_root .cell_content [class*="ck-"] {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor.palette_collapsed {
+  grid-template-columns: 0 minmax(20rem, 1fr) 270px;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor.palette_collapsed .palette_panel {
+  padding: 0;
+  overflow: hidden;
+  border-right: none;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor.palette_collapsed .palette_panel .panel_header_row,
+.wrapper_tool.tool_print > .content_data.print_layout_editor.palette_collapsed .palette_panel .palette_breadcrumb,
+.wrapper_tool.tool_print > .content_data.print_layout_editor.palette_collapsed .palette_panel .palette_scroll {
+  display: none;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor.inspector_collapsed {
+  grid-template-columns: 240px minmax(20rem, 1fr) 0;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor.inspector_collapsed .inspector_panel {
+  padding: 0;
+  overflow: hidden;
+  border-left: none;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor.inspector_collapsed .inspector_panel .panel_header_row,
+.wrapper_tool.tool_print > .content_data.print_layout_editor.inspector_collapsed .inspector_panel .inspector_body {
+  display: none;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor.palette_collapsed.inspector_collapsed {
+  grid-template-columns: 0 minmax(20rem, 1fr) 0;
+}
+@media (max-width: 1024px) {
+  .wrapper_tool.tool_print > .content_data.print_layout_editor {
+    grid-template-columns: 200px minmax(15rem, 1fr) 240px;
+  }
+}
+@media (max-width: 960px) {
+  .wrapper_tool.tool_print > .content_data.print_layout_editor {
+    grid-template-columns: 100%;
+    grid-template-areas: "toolbar" "canvas";
+    min-height: auto;
+  }
+  .wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel,
+  .wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel {
+    position: relative;
+    top: 0;
+    max-height: none;
+    border: none;
+    border-top: 1px solid var(--border_default);
+  }
+  .wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel {
+    grid-area: auto;
+    order: 3;
+  }
+  .wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel {
+    grid-area: auto;
+    order: 4;
+  }
+  .wrapper_tool.tool_print > .content_data.print_layout_editor .pages_viewport {
+    grid-area: auto;
+    order: 2;
+    min-height: 50vh;
+  }
+  .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar {
+    position: relative;
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+.wrapper_tool.tool_print .print_root .cell_content {
+  border: 1px solid var(--tp_border_color, transparent);
+}
+.wrapper_tool.tool_print .print_root .cell_content.no_border {
+  border-color: transparent !important;
+}
+.wrapper_tool.tool_print .print_root .cell_content .print_label {
+  display: block;
+  font-size: 0.72em;
+  font-weight: 600;
+  line-height: 1.1;
+  color: #555;
+  margin: 0 0 1px;
+  text-align: inherit;
+}
+.wrapper_tool.tool_print .print_root .cell_content.hide_label .print_label {
+  display: none !important;
+}
+.wrapper_tool.tool_print .print_root .cell_content .static_text_print,
+.wrapper_tool.tool_print .print_root .cell_content .static_text_edit {
+  width: 100%;
+  min-height: 1em;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.wrapper_tool.tool_print .print_root .cell_content .portal_table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: inherit;
+  line-height: 1.25;
+  pointer-events: none;
+  table-layout: auto;
+}
+.wrapper_tool.tool_print .print_root .cell_content .portal_table th,
+.wrapper_tool.tool_print .print_root .cell_content .portal_table td {
+  border: 1px solid var(--tp_border_color, #d4d4d4);
+  padding: 2px 6px;
+  text-align: left;
+  vertical-align: top;
+  background: none !important;
+  color: inherit;
+  word-break: break-word;
+}
+.wrapper_tool.tool_print .print_root .cell_content .portal_table td *,
+.wrapper_tool.tool_print .print_root .cell_content .portal_table th * {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.wrapper_tool.tool_print .print_root .cell_content .portal_table thead th {
+  font-weight: 600;
+  font-size: 0.82em;
+  letter-spacing: 0.02em;
+  color: #333;
+  background: #eef1f3 !important;
+  border-bottom: 1.5px solid #b9c0c6;
+  white-space: nowrap;
+}
+.wrapper_tool.tool_print .print_root .cell_content .portal_table tbody tr:nth-child(even) td {
+  background: #f7f9fa !important;
+}
+.wrapper_tool.tool_print .print_root .cell_content .portal_table .wrapper_component,
+.wrapper_tool.tool_print .print_root .cell_content .portal_table .section_record,
+.wrapper_tool.tool_print .print_root .cell_content .portal_table .ddinfo_value,
+.wrapper_tool.tool_print .print_root .cell_content .portal_table .print_value,
+.wrapper_tool.tool_print .print_root .cell_content .portal_table .mini {
+  display: inline !important;
+  color: inherit;
+}
+.wrapper_tool.tool_print .print_root .cell_content .portal_table .separator,
+.wrapper_tool.tool_print .print_root .cell_content .portal_table .fields_separator,
+.wrapper_tool.tool_print .print_root .cell_content .portal_table .column_separator {
+  display: inline !important;
+  margin: 0 0.25em;
+  color: inherit;
+  opacity: 0.55;
+}
+.wrapper_tool.tool_print .print_root .cell_content .box_placeholder {
+  color: #999;
+  font-style: italic;
+  font-size: 0.75rem;
+}
+.wrapper_tool.tool_print .print_root .cell_content .box_unavailable {
+  color: #c0392b;
+}
+.wrapper_tool.tool_print .print_progress {
+  position: fixed;
+  z-index: 1000;
+  left: 50%;
+  top: 1.2rem;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.9rem;
+  background: var(--bg_surface, #fff);
+  color: var(--fg_default, #222);
+  border: 1px solid var(--border_default, #cfd3d7);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  font-size: 0.85rem;
+}
+.wrapper_tool.tool_print .print_progress .print_progress_label {
+  white-space: nowrap;
+}
+.wrapper_tool.tool_print .print_progress .print_progress_cancel {
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.6rem;
+  color: var(--color_danger, #c0392b);
+  background: var(--bg_input, #fff);
+  border: 1px solid var(--border_default, #cfd3d7);
+  border-radius: 4px;
+}
+.wrapper_tool.tool_print .print_progress .print_progress_cancel:hover {
+  border-color: var(--color_danger, #c0392b);
+}
+.wrapper_tool.tool_print .print_progress .print_progress_cancel:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/*# sourceMappingURL=tool_print.css.map */

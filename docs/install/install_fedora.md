@@ -1,6 +1,8 @@
-# Installation on RHEL-based Systems
+# Installation on RHEL-based systems
 
-Dédalo can be installed on various RHEL-based distributions including:
+> See also: [Installation](index.md) · [Apache configuration](apache_configuration.md)
+
+Dédalo can be installed on various RHEL-based distributions, including:
 - Red Hat Enterprise Linux 9+
 - Rocky Linux 9
 - AlmaLinux 9
@@ -8,7 +10,7 @@ Dédalo can be installed on various RHEL-based distributions including:
 
 This guide provides distribution-specific installation instructions.
 
-## System Requirements
+## System requirements
 
 ### OS
 - **Supported Distributions**: 
@@ -30,9 +32,9 @@ This guide provides distribution-specific installation instructions.
 - 500 Mbps+ connection speed
 - SSL certificate installed
 
-## Installation Steps
+## Installation steps
 
-### 1. System Update and Base Packages
+### 1. System update and base packages
 
 ```bash
 # Update system packages
@@ -43,7 +45,7 @@ sudo dnf groupinstall "Development Tools" -y
 sudo dnf install wget curl git unzip zip tar make zlib-devel bzip2-devel openssl-devel ncurses-devel sqlite-devel readline-devel xz-devel libffi-devel -y
 ```
 
-### 2. Web Server and PHP Installation
+### 2. Web server and PHP installation
 
 ```bash
 # Install EPEL repository (for Rocky/Alma)
@@ -71,7 +73,7 @@ sudo firewall-cmd --permanent --add-service=https
 sudo firewall-cmd --reload
 ```
 
-### 3. Database Installation
+### 3. Database installation
 
 #### PostgreSQL
 ```bash
@@ -94,6 +96,9 @@ sudo /usr/bin/postgresql-upgrade-15-to-16  # Adjust version as needed
 ```
 
 #### MariaDB (Alternative)
+
+> **v7 note:** PHP does **not** connect to MariaDB — only the Bun diffusion engine does. Install the MariaDB **server**, but configure its **connection** in `diffusion/api/v1/.env` (`DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, …), not in a PHP config file.
+
 ```bash
 # Install MariaDB repository
 sudo dnf install https://downloads.mariadb.com/MariaDB/mariadb_repo_setup -y
@@ -109,7 +114,7 @@ sudo systemctl enable --now mariadb
 sudo mysql_secure_installation
 ```
 
-### 4. Media Processing Tools
+### 4. Media processing tools
 
 ```bash
 # Install RPM Fusion repository for multimedia codecs
@@ -131,7 +136,7 @@ sudo dnf install poppler-utils ocrmypdf -y
 sudo dnf install ocrmypdf-lang-* -y
 ```
 
-### 5. Download and Configure Dédalo
+### 5. Download and configure Dédalo
 
 ```bash
 # Download Dédalo
@@ -151,48 +156,48 @@ COMMENT ON DATABASE dedalo_production IS 'Dédalo: Cultural Heritage Management 
 \q
 EOF
 
-# Create .pgpass file
-echo "*:*:*:dedalo_user:YourSecurePassword" > ~/.pgpass
-chmod 600 ~/.pgpass
+# No .pgpass file is required: Dédalo authenticates the PostgreSQL command-line
+# tools via the PGPASSWORD env var taken from DEDALO_PASSWORD_CONN (set in the
+# config step below), which works for a local or remote database alike.
+# A ~/.pgpass file is still honored by libpq as a fallback if you prefer it:
+#   echo "*:*:*:dedalo_user:YourSecurePassword" > ~/.pgpass
+#   chmod 600 ~/.pgpass
 ```
 
-### 6. Configuration Files
+### 6. Configuration (v7)
+
+**There are no config files to rename or edit.** In v7 the web-served `config/` directory holds only the loader `config/bootstrap.php`; all per-install values and secrets live outside the web root in `../private/`, and the browser **install wizard writes them for you** in the next step (auto-generating the secrets).
+
+Just make sure the directory **one level above** the install root is writable by the PHP/web user — the installer creates `../private/` (`chmod 0700`) and writes `.env` / `state.php` there.
 
 ```bash
-cd /path/to/dedalo/config/
-
-# Rename sample configuration files
-mv sample.config.php config.php
-mv sample.config_db.php config_db.php
-mv sample.config_core.php config_core.php
-mv sample.config_areas.php config_areas.php
-
-# Edit configuration files as needed
-nano config.php        # Set DEDALO_ENTITY, paths, etc.
-nano config_db.php     # Database connection details
-nano config_core.php   # Core settings
-nano config_areas.php  # Areas configuration
+# e.g. install at /var/www/html/dedalo  →  installer creates /var/www/html/private/
+# ensure the parent dir is writable by the web/PHP user (apache / nginx / php-fpm)
+sudo chown apache:apache /var/www/html        # adjust to your web user
 ```
 
-### 7. Complete the Installation
+> **Advanced:** instead of the wizard you can pre-author `../private/.env` by hand — run `php dev/gen_sample_env.php` (writes `../private/sample.env`), copy it to `../private/.env`, and edit. See the [Configuration Administrator Guide](../config/administration.md).
+>
+> **MariaDB** is only for the optional **diffusion** subsystem and is owned by the Bun engine (configured in `diffusion/api/v1/.env`), not PHP — PHP never connects to MariaDB.
+
+### 7. Complete the installation
 
 ```bash
 # Restart web server
 sudo systemctl restart httpd
-
-# Open browser and navigate to your server IP
-# Follow the on-screen installation instructions
-
-# After installation:
-# 1. Log in as admin
-# 2. Go to Development Area
-# 3. Update Ontology
-# 4. Register all tools
 ```
+
+Open a browser at your server's address. Because the install is not yet sealed, the **install wizard** starts automatically: it collects the configuration (PostgreSQL connection, entity, optional diffusion), writes `../private/.env` + `state.php`, installs the database schema and base hierarchies, and lets you set the `root` password — then seals the install. See the [Ubuntu install guide](index.md#23-manual-installation) for the full step-by-step list.
+
+After installation:
+
+1. Log in as `root`.
+2. Go to the Development Area, update the Ontology and register all tools.
+3. Create an admin user, then log out and log in as that admin.
 
 ## Troubleshooting
 
-### Common Issues:
+### Common issues
 
 **1. PHP modules not loading:**
 ```bash

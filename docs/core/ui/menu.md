@@ -309,7 +309,7 @@ $context = $menu->get_structure_context(); // dd_object
 
 ### Client: instantiate and build the menu
 
-```javascript
+```js
 // page.js forces a per-user id_variant so different users never share an instance
 const instance_options = {
     model      : 'menu',

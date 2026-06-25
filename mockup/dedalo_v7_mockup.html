@@ -1,0 +1,2156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-density="comfortable">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dédalo · new look &amp; feel (mockup)</title>
+<style>
+/* ============================================================================
+   Dédalo — next look &amp; feel mockup
+   Tokens echo core/page/css/layout/vars.less + theme_dark.less so this reads
+   as an evolution of the current design system, not a foreign skin.
+   ========================================================================== */
+
+/* ---- LIGHT (default) -------------------------------------------------- */
+:root {
+  /* brand + status (from vars.less) */
+  --orange:            #f78a1c;
+  --orange_soft:       #fdebd6;
+  --primary:           #2b77c7;
+  --success:           #28a745;
+  --danger:            #dc3545;
+  --warning:           #ed6223;
+  --info:              #17a2b8;
+
+  /* surfaces / text (semantic tokens, light) */
+  --bg_app:            #eef0f3;
+  --bg_surface:        #f6f7f9;
+  --bg_surface_alt:    #eceef1;
+  --bg_elevated:       #ffffff;
+  --bg_input:          #ffffff;
+  --bg_menu:           #1c2026;
+  --bg_menu_soft:      #262b33;
+  --fg_default:        #2b2f36;
+  --fg_muted:          #6c7480;
+  --fg_faint:          #9aa1ab;
+  --fg_inverse:        #ffffff;
+  --border_default:    #e0e3e8;
+  --border_strong:     #cdd2d9;
+  --shadow_sm:         0 1px 2px rgba(20,24,31,.06), 0 1px 3px rgba(20,24,31,.05);
+  --shadow_md:         0 4px 12px rgba(20,24,31,.08), 0 2px 6px rgba(20,24,31,.06);
+  --shadow_lg:         0 18px 48px rgba(20,24,31,.18), 0 6px 16px rgba(20,24,31,.12);
+  --focus_ring:        rgba(43,119,199,.35);
+  --scrim:             rgba(18,21,26,.42);
+
+  /* per-section accent (set on .app by JS) */
+  --accent:            var(--orange);
+  --accent_soft:       var(--orange_soft);
+
+  --radius:            10px;
+  --radius_sm:         7px;
+  --rail_w:            232px;
+  --rail_w_min:        60px;
+  --inspector_w:       312px;
+  --row_h:             44px;
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* ---- DARK ------------------------------------------------------------- */
+:root[data-theme="dark"] {
+  --orange:            #ffa54a;
+  --orange_soft:       #2c2418;
+  --primary:           #4a9eff;
+  --success:           #46c46c;
+  --danger:            #ef5560;
+  --warning:           #f08245;
+  --info:              #38c0d6;
+
+  --bg_app:            #101216;
+  --bg_surface:        #181b20;
+  --bg_surface_alt:    #1d2127;
+  --bg_elevated:       #23272e;
+  --bg_input:          #1c2026;
+  --bg_menu:           #0b0d10;
+  --bg_menu_soft:      #161a20;
+  --fg_default:        #e5e7ea;
+  --fg_muted:          #a3aab4;
+  --fg_faint:          #6c7480;
+  --fg_inverse:        #ffffff;
+  --border_default:    #2b303a;
+  --border_strong:     #3a414c;
+  --shadow_sm:         0 1px 2px rgba(0,0,0,.4);
+  --shadow_md:         0 6px 18px rgba(0,0,0,.5);
+  --shadow_lg:         0 22px 60px rgba(0,0,0,.62);
+  --focus_ring:        rgba(74,158,255,.45);
+  --scrim:             rgba(0,0,0,.6);
+}
+
+/* ---- density ---------------------------------------------------------- */
+:root[data-density="compact"] { --row_h: 34px; }
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  font-family: var(--font);
+  background: var(--bg_app);
+  color: var(--fg_default);
+  font-size: 13.5px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+button { font-family: inherit; cursor: pointer; }
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-thumb { background: var(--border_strong); border-radius: 8px; border: 3px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--fg_faint); background-clip: content-box; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
+
+/* ============================================================================
+   App shell
+   ========================================================================== */
+.app {
+  display: grid;
+  grid-template-rows: 50px 1fr;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "topbar topbar" "rail main";
+  height: 100vh;
+  transition: --accent .25s;
+}
+
+/* ---- top bar ---------------------------------------------------------- */
+.topbar {
+  grid-area: topbar;
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 14px;
+  background: var(--bg_menu);
+  color: var(--fg_inverse);
+  border-bottom: 1px solid #000;
+  z-index: 40;
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 650; letter-spacing: .2px; }
+.brand .glyph {
+  width: 26px; height: 26px; border-radius: 7px;
+  background: linear-gradient(135deg, var(--orange), #e0731a);
+  display: grid; place-items: center;
+  color: #fff; font-weight: 800; font-size: 15px;
+  box-shadow: 0 2px 8px rgba(247,138,28,.5);
+}
+.brand .ver {
+  font-size: 10px; font-weight: 600; letter-spacing: .5px;
+  color: var(--orange);
+  border: 1px solid color-mix(in srgb, var(--orange) 50%, transparent);
+  padding: 1px 6px; border-radius: 20px; margin-left: 2px;
+}
+.global-search {
+  flex: 0 1 440px; margin-left: 6px;
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.10);
+  color: var(--fg_inverse);
+  padding: 6px 12px; border-radius: 8px;
+  transition: background .15s, border-color .15s;
+}
+.global-search:focus-within { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.25); }
+.global-search svg { width: 16px; height: 16px; flex: none; }
+.global-search input { all: unset; flex: 1; color: #fff; font-size: 13px; min-width: 0; }
+.global-search input::placeholder { color: rgba(255,255,255,.5); }
+.global-search .kbd { font-size: 10.5px; color: rgba(255,255,255,.45); border: 1px solid rgba(255,255,255,.18); border-radius: 4px; padding: 1px 5px; }
+.topbar .spacer { flex: 1; }
+.top-actions { display: flex; align-items: center; gap: 4px; }
+.iconbtn {
+  width: 34px; height: 34px; border-radius: 8px;
+  display: grid; place-items: center;
+  background: transparent; border: none; color: rgba(255,255,255,.78);
+  transition: background .14s, color .14s;
+}
+.iconbtn:hover { background: rgba(255,255,255,.12); color: #fff; }
+.iconbtn svg { width: 18px; height: 18px; }
+.avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: linear-gradient(135deg,#5a9aff,#7d5bd0);
+  color: #fff; font-size: 12px; font-weight: 650;
+  display: grid; place-items: center; margin-left: 6px;
+  border: 1.5px solid rgba(255,255,255,.25);
+}
+
+/* ---- left rail -------------------------------------------------------- */
+.rail {
+  grid-area: rail;
+  width: var(--rail_w);
+  background: var(--bg_surface);
+  border-right: 1px solid var(--border_default);
+  display: flex; flex-direction: column;
+  transition: width .2s ease;
+  overflow: hidden;
+}
+.app[data-rail="min"] .rail { width: var(--rail_w_min); }
+.rail-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px 8px; color: var(--fg_muted);
+  font-size: 11px; font-weight: 650; letter-spacing: .6px; text-transform: uppercase;
+}
+.app[data-rail="min"] .rail-head span, .app[data-rail="min"] .nav-label, .app[data-rail="min"] .nav-group-title, .app[data-rail="min"] .badge { display: none; }
+.rail-toggle { background: none; border: none; color: var(--fg_faint); padding: 2px; border-radius: 6px; display: grid; place-items: center; }
+.rail-toggle:hover { background: var(--bg_surface_alt); color: var(--fg_default); }
+.nav { flex: 1; overflow-y: auto; padding: 4px 8px 14px; }
+.nav-group-title { padding: 14px 8px 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; color: var(--fg_faint); }
+.nav-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 8px 10px; margin: 1px 0; border-radius: 8px;
+  color: var(--fg_default); cursor: pointer;
+  border: 1px solid transparent;
+  transition: background .12s, color .12s;
+  position: relative;
+}
+.nav-item:hover { background: var(--bg_surface_alt); }
+.nav-item .ico { width: 18px; height: 18px; flex: none; color: var(--fg_muted); display: grid; place-items: center; }
+.nav-item .ico svg { width: 18px; height: 18px; }
+.nav-label { flex: 1; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav-item .badge {
+  font-size: 10.5px; color: var(--fg_muted); background: var(--bg_surface_alt);
+  border-radius: 20px; padding: 1px 7px; font-variant-numeric: tabular-nums;
+}
+.nav-item.active {
+  background: var(--accent_soft);
+  color: color-mix(in srgb, var(--accent) 72%, var(--fg_default));
+  font-weight: 600;
+}
+.nav-item.active .ico { color: var(--accent); }
+.nav-item.active::before {
+  content: ""; position: absolute; left: -8px; top: 8px; bottom: 8px; width: 3px;
+  border-radius: 3px; background: var(--accent);
+}
+.app[data-rail="min"] .nav-item { justify-content: center; padding: 9px 0; }
+.rail-foot { border-top: 1px solid var(--border_default); padding: 8px; }
+
+/* ---- menu search ---- */
+.menu-search {
+  margin: 2px 10px 6px; display: flex; align-items: center; gap: 7px;
+  background: var(--bg_input); border: 1px solid var(--border_default);
+  border-radius: 8px; padding: 6px 9px; color: var(--fg_muted);
+}
+.menu-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus_ring); }
+.menu-search input { all: unset; flex: 1; font-size: 12.5px; color: var(--fg_default); min-width: 0; }
+.menu-search svg { width: 15px; height: 15px; flex: none; }
+.app[data-rail="min"] .menu-search { display: none; }
+
+/* ---- area groups (hierarchical menu) ---- */
+.area-group { margin: 1px 0; }
+.area-row {
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 9px; border-radius: 8px; cursor: pointer; position: relative;
+  color: var(--fg_default); user-select: none;
+}
+.area-row:hover { background: var(--bg_surface_alt); }
+.area-row .chev { width: 14px; height: 14px; flex: none; color: var(--fg_faint); transition: transform .15s; display: grid; place-items: center; }
+.area-row .chev svg { width: 12px; height: 12px; }
+.area-group.open > .area-row .chev { transform: rotate(90deg); }
+.area-row .ico { width: 19px; height: 19px; flex: none; color: var(--fg_muted); display: grid; place-items: center; }
+.area-row .ico svg { width: 18px; height: 18px; }
+.area-row .lbl { flex: 1; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.area-row .cnt { font-size: 10px; color: var(--fg_faint); background: var(--bg_surface_alt); border-radius: 20px; padding: 1px 6px; font-variant-numeric: tabular-nums; }
+.area-children { overflow: hidden; max-height: 0; transition: max-height .2s ease; }
+.area-group.open > .area-children { max-height: 620px; }
+.sub-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 6px 9px 6px 30px; margin: 1px 0; border-radius: 7px; cursor: pointer; position: relative;
+  color: var(--fg_muted); font-size: 12.5px;
+}
+.sub-item:hover { background: var(--bg_surface_alt); color: var(--fg_default); }
+.sub-item .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border_strong); flex: none; }
+.sub-item .lbl { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sub-item .cnt { font-size: 10px; color: var(--fg_faint); font-variant-numeric: tabular-nums; }
+.sub-item .star { width: 13px; height: 13px; color: var(--fg_faint); opacity: 0; flex: none; }
+.sub-item:hover .star { opacity: .6; }
+.sub-item.active {
+  background: var(--accent_soft); color: color-mix(in srgb, var(--accent) 78%, var(--fg_default)); font-weight: 600;
+}
+.sub-item.active .dot { background: var(--accent); }
+.sub-item.active::before { content:""; position: absolute; left: 16px; top: 7px; bottom: 7px; width: 3px; border-radius: 3px; background: var(--accent); }
+.app[data-rail="min"] .area-row .chev, .app[data-rail="min"] .area-row .lbl, .app[data-rail="min"] .area-row .cnt, .app[data-rail="min"] .area-children { display: none; }
+.app[data-rail="min"] .area-row { justify-content: center; padding: 9px 0; }
+.menu-fav-title { padding: 12px 12px 5px; font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--fg_faint); display: flex; align-items: center; gap: 6px; }
+.menu-fav-title svg { width: 12px; height: 12px; }
+.app[data-rail="min"] .menu-fav-title { display: none; }
+
+/* ---- rail footer: project + user ---- */
+.rail-foot { border-top: 1px solid var(--border_default); padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+.project-switch {
+  display: flex; align-items: center; gap: 9px; padding: 7px 9px; border-radius: 8px; cursor: pointer;
+  background: var(--bg_surface_alt); border: 1px solid var(--border_default);
+}
+.project-switch:hover { border-color: var(--border_strong); }
+.project-switch .pj { width: 24px; height: 24px; border-radius: 6px; background: linear-gradient(135deg,var(--primary),#6b54c0); display: grid; place-items: center; color: #fff; font-size: 11px; font-weight: 700; flex: none; }
+.project-switch .pn { flex: 1; min-width: 0; }
+.project-switch .pn b { display: block; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.project-switch .pn small { font-size: 10.5px; color: var(--fg_faint); }
+.project-switch .sw { color: var(--fg_faint); }
+.project-switch .sw svg { width: 15px; height: 15px; }
+.app[data-rail="min"] .project-switch .pn, .app[data-rail="min"] .project-switch .sw { display: none; }
+.app[data-rail="min"] .project-switch { justify-content: center; padding: 7px 0; }
+
+/* ============================================================================
+   Main area: list | edit | inspector
+   ========================================================================== */
+.main { grid-area: main; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+/* breadcrumb / section header */
+.section-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 18px;
+  background: var(--bg_surface);
+  border-bottom: 1px solid var(--border_default);
+}
+.crumb { font-size: 12px; color: var(--fg_muted); }
+.crumb b { color: var(--fg_default); font-weight: 600; }
+.section-title { font-size: 16px; font-weight: 650; letter-spacing: -.1px; }
+.section-sub { font-size: 11.5px; color: var(--fg_faint); }
+.section-head .spacer { flex: 1; }
+
+/* segmented view switch */
+.seg { display: inline-flex; background: var(--bg_surface_alt); border-radius: 8px; padding: 3px; gap: 2px; }
+.seg button {
+  border: none; background: none; color: var(--fg_muted);
+  padding: 5px 11px; border-radius: 6px; font-size: 12.5px; font-weight: 550;
+  display: flex; align-items: center; gap: 6px;
+}
+.seg button svg { width: 15px; height: 15px; }
+.seg button.active { background: var(--bg_elevated); color: var(--fg_default); box-shadow: var(--shadow_sm); }
+
+/* toolbar */
+.toolbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 18px;
+  background: var(--bg_surface);
+  border-bottom: 1px solid var(--border_default);
+}
+.search-pill {
+  display: flex; align-items: center; gap: 8px; flex: 0 1 320px;
+  background: var(--bg_input); border: 1px solid var(--border_default);
+  padding: 7px 11px; border-radius: 8px; color: var(--fg_muted);
+}
+.search-pill:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus_ring); }
+.search-pill input { all: unset; flex: 1; color: var(--fg_default); font-size: 13px; }
+.search-pill svg { width: 16px; height: 16px; }
+.chip-filter {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--bg_input); border: 1px solid var(--border_default);
+  color: var(--fg_default); padding: 6px 11px; border-radius: 8px; font-size: 12.5px;
+}
+.chip-filter:hover { border-color: var(--border_strong); }
+.chip-filter svg { width: 14px; height: 14px; color: var(--fg_muted); }
+.chip-filter .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+.toolbar .spacer { flex: 1; }
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid var(--border_default); background: var(--bg_input);
+  color: var(--fg_default); padding: 7px 13px; border-radius: 8px;
+  font-size: 12.5px; font-weight: 550; transition: background .12s, border-color .12s, box-shadow .12s;
+}
+.btn:hover { background: var(--bg_surface_alt); border-color: var(--border_strong); }
+.btn svg { width: 15px; height: 15px; }
+.btn.primary { background: var(--accent); border-color: transparent; color: #fff; box-shadow: var(--shadow_sm); }
+.btn.primary:hover { background: color-mix(in srgb, var(--accent) 88%, #000); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--fg_muted); }
+.btn.ghost:hover { background: var(--bg_surface_alt); color: var(--fg_default); }
+
+/* ---- LIST view -------------------------------------------------------- */
+.work { flex: 1; min-height: 0; display: flex; overflow: hidden; position: relative; }
+.list-wrap { flex: 1; min-width: 0; overflow: auto; background: var(--bg_app); }
+table.list { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+table.list thead th {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--bg_surface);
+  text-align: left; font-weight: 600; font-size: 11.5px; letter-spacing: .3px;
+  color: var(--fg_muted); text-transform: uppercase;
+  padding: 9px 14px; border-bottom: 1px solid var(--border_default);
+  white-space: nowrap;
+}
+table.list tbody td {
+  padding: 0 14px; height: var(--row_h);
+  border-bottom: 1px solid var(--border_default);
+  color: var(--fg_default); vertical-align: middle; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; max-width: 320px;
+}
+table.list tbody tr { background: var(--bg_surface); transition: background .1s; }
+table.list tbody tr:hover { background: var(--bg_surface_alt); }
+table.list tbody tr.selected { background: var(--accent_soft); }
+table.list tbody tr.selected td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.cell-id { font-variant-numeric: tabular-nums; color: var(--fg_muted); font-size: 12px; }
+.cell-primary { font-weight: 600; color: var(--fg_default); }
+.thumb { width: 30px; height: 30px; border-radius: 6px; object-fit: cover; background: var(--bg_surface_alt); display: grid; place-items: center; color: var(--fg_faint); }
+.thumb svg { width: 15px; height: 15px; }
+.tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px; padding: 2px 9px; border-radius: 20px; font-weight: 550;
+  border: 1px solid transparent; white-space: nowrap;
+}
+.tag.green { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--success); border-color: color-mix(in srgb, var(--success) 30%, transparent); }
+.tag.amber { background: color-mix(in srgb, var(--warning) 15%, transparent); color: var(--warning); border-color: color-mix(in srgb, var(--warning) 32%, transparent); }
+.tag.grey  { background: var(--bg_surface_alt); color: var(--fg_muted); border-color: var(--border_default); }
+.tag.blue  { background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary); border-color: color-mix(in srgb, var(--primary) 30%, transparent); }
+.rel-chip {
+  display: inline-flex; align-items: center; gap: 5px; max-width: 100%;
+  background: var(--bg_surface_alt); border: 1px solid var(--border_default);
+  border-radius: 6px; padding: 1px 8px 1px 6px; font-size: 12px; color: var(--fg_default);
+}
+.rel-chip .lk { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); flex: none; }
+.uncert { color: var(--warning); font-weight: 700; margin-left: 3px; cursor: help; }
+
+.list-foot {
+  display: flex; align-items: center; gap: 14px;
+  padding: 9px 18px; border-top: 1px solid var(--border_default);
+  background: var(--bg_surface); color: var(--fg_muted); font-size: 12px;
+}
+.pager { display: inline-flex; gap: 2px; margin-left: auto; }
+.pager button { border: 1px solid var(--border_default); background: var(--bg_input); color: var(--fg_default); width: 30px; height: 30px; border-radius: 7px; font-size: 12.5px; }
+.pager button.active { background: var(--accent); color: #fff; border-color: transparent; }
+.pager button:hover:not(.active) { background: var(--bg_surface_alt); }
+
+/* ---- EDIT view -------------------------------------------------------- */
+.edit-wrap { flex: 1; min-width: 0; overflow: auto; background: var(--bg_app); display: none; }
+.app[data-mode="edit"] .list-wrap { display: none; }
+.app[data-mode="edit"] .edit-wrap { display: block; }
+.app[data-mode="edit"] .list-foot { display: none; }
+
+.record-head {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 22px; background: var(--bg_surface);
+  border-bottom: 1px solid var(--border_default);
+  position: sticky; top: 0; z-index: 5;
+}
+.record-id { font-size: 11.5px; color: var(--fg_muted); font-variant-numeric: tabular-nums; }
+.sid-badge {
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center; flex: none;
+  min-width: 58px; padding: 5px 10px; border-radius: 9px; cursor: pointer;
+  background: var(--accent_soft); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  color: color-mix(in srgb, var(--accent) 80%, var(--fg_default)); line-height: 1.1;
+}
+.sid-badge::before { content: "section_id"; font-size: 8.5px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; opacity: .75; }
+.sid-badge b { font-size: 17px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.record-title { font-size: 18px; font-weight: 680; letter-spacing: -.2px; }
+.record-head .spacer { flex: 1; }
+.backbtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border_default); background: var(--bg_input);
+  color: var(--fg_muted); padding: 7px 12px; border-radius: 8px; font-size: 12.5px;
+}
+.backbtn:hover { color: var(--fg_default); background: var(--bg_surface_alt); }
+.backbtn svg { width: 15px; height: 15px; }
+
+/* tabs */
+.tabs { display: flex; gap: 2px; padding: 0 22px; background: var(--bg_surface); border-bottom: 1px solid var(--border_default); position: sticky; top: 86px; z-index: 4; }
+.tabs button {
+  border: none; background: none; color: var(--fg_muted);
+  padding: 11px 14px; font-size: 13px; font-weight: 550; border-bottom: 2px solid transparent;
+}
+.tabs button:hover { color: var(--fg_default); }
+.tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* =========================================================================
+   EDIT MODE — calm, borderless. No grid lines, no cards. Data reads as plain
+   text in a roomy column layout that uses the full width (Dédalo records have
+   many components). Editing chrome (input underline, search box, toolbar,
+   tools) appears ONLY on the component you're actually working on.
+   ========================================================================= */
+.form { padding: 18px 26px 70px; max-width: 1500px; }
+/* each section_group is a collapsible surface panel, distinct from the page bg
+   (white in light, deep grey in dark via --bg_elevated). Calm: no inner lines. */
+.fieldset { margin: 0 0 16px; border: 1px solid var(--border_default); border-radius: 12px; background: var(--bg_elevated); box-shadow: var(--shadow_sm); padding: 0; }
+/* header sits fully INSIDE the panel (plain div, not a <legend>); chevron leads
+   the label; no colour square */
+.group-head {
+  display: flex; align-items: center; gap: 9px;
+  padding: 13px 20px 11px; cursor: pointer; user-select: none;
+  font-size: 11px; font-weight: 700; letter-spacing: .9px; text-transform: uppercase; color: var(--fg_muted);
+}
+.group-head:hover { color: var(--fg_default); }
+.group-head .gchev { color: var(--fg_faint); transition: transform .18s; display: grid; place-items: center; flex: none; }
+.group-head .gchev svg { width: 14px; height: 14px; }
+.fieldset.collapsed .group-head .gchev { transform: rotate(-90deg); }
+.group-head .lg-count { color: var(--fg_faint); font-weight: 600; text-transform: none; letter-spacing: 0; font-size: 10.5px; }
+.fieldset.collapsed .grid { display: none; }
+/* roomy column grid, no lines */
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); grid-auto-flow: row dense; gap: 20px 30px; background: none; align-items: start; padding: 6px 20px 18px; }
+.field {
+  position: relative; min-width: 0; cursor: text; grid-column: span 2;
+  padding: 6px 10px; margin: -6px -10px; border-radius: 9px; background: none;
+  display: flex; flex-direction: column; gap: 6px; transition: background .12s, box-shadow .12s;
+}
+.field:hover { background: var(--bg_surface_alt); }
+.field.active-comp { background: var(--accent_soft); }
+.field.w1 { grid-column: span 1; } .field.w2 { grid-column: span 2; }
+.field.w3 { grid-column: span 3; } .field.w4 { grid-column: span 4; }
+.field.media-left { grid-column: 1 / span 2; grid-row: 1 / span 3; }
+/* label */
+.field > label { font-size: 10.5px; font-weight: 650; letter-spacing: .35px; color: var(--fg_faint); display: flex; align-items: center; gap: 6px; text-transform: uppercase; white-space: nowrap; overflow: hidden; }
+.field.active-comp > label { color: color-mix(in srgb, var(--accent) 80%, var(--fg_default)); }
+.field > label .lbl-txt { overflow: hidden; text-overflow: ellipsis; }
+.field > label .req { color: var(--danger); font-size: 12px; }
+.field > label .help { display: none; }
+.field.active-comp > label .help { display: grid; width: 12px; height: 12px; border-radius: 50%; border: 1px solid var(--border_strong); color: var(--fg_faint); font-size: 8px; place-items: center; cursor: help; flex: none; }
+.field > label .unflag { color: var(--warning); font-weight: 800; cursor: help; }
+.field .wmark { margin-left: auto; font-size: 9px; color: var(--fg_faint); font-weight: 600; letter-spacing: .3px; flex: none; opacity: 0; transition: opacity .12s; }
+.field:hover .wmark { opacity: .65; }
+/* value — plain text, no box */
+.wval { font-size: 13.5px; color: var(--fg_default); min-height: 22px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; line-height: 1.45; }
+.wval .muted { color: var(--fg_faint); }
+.wval input.wedit { all: unset; width: 100%; font: inherit; color: var(--fg_default); border-bottom: 1px solid var(--accent); padding-bottom: 2px; }
+/* relations — each linked value is a ROW (handles long hierarchical toponymy:
+   "Benimàmet, Valencia, Valencia, Comunitat Valenciana, España" as leaf+path),
+   with per-value edit/unlink affordances revealed only when the comp is active */
+.rel-wrap { display: block; }
+.rel-list { display: flex; flex-direction: column; gap: 1px; width: 100%; }
+.rel-row { display: flex; align-items: flex-start; gap: 8px; padding: 2px 0; min-width: 0; }
+.rel-row .rv { flex: 1; min-width: 0; line-height: 1.45; }
+.rel-row .rv .leaf { color: var(--fg_default); font-weight: 500; }
+.rel-row .rv .path { color: var(--fg_faint); }
+/* uncertainty marker — inline, on the same line as the value it qualifies */
+.rinc { color: var(--warning); font-weight: 800; margin-left: 7px; cursor: help; }
+.rel-row .redit, .rel-row .rx { flex: none; color: var(--fg_faint); cursor: pointer; opacity: 0; transition: opacity .12s, color .12s; margin-top: 2px; }
+.field.active-comp .rel-row .redit, .field.active-comp .rel-row .rx { opacity: 1; }
+.rel-row .redit svg { width: 13px; height: 13px; display: block; }
+.rel-row .redit:hover { color: var(--accent); }
+.rel-row .rx { font-size: 15px; line-height: 1; }
+.rel-row .rx:hover { color: var(--danger); }
+.rel-actions { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.rel-add { color: var(--accent); font-weight: 600; cursor: pointer; opacity: 0; font-size: 12.5px; transition: opacity .12s; }
+.field:hover .rel-add, .field.active-comp .rel-add { opacity: 1; }
+/* autocomplete — appears ONLY on the active component, as a floating OVERLAY
+   (absolute) so it never reflows / resizes neighbouring components. */
+.ac-search { display: none; }
+.field.active-comp .ac-search {
+  display: block; position: absolute; left: 8px; right: 8px; top: 100%; z-index: 25;
+  background: var(--bg_elevated); border: 1px solid var(--border_default);
+  border-radius: 10px; box-shadow: var(--shadow_lg); padding: 8px; margin-top: 2px;
+}
+.ac-box { display: flex; align-items: center; gap: 7px; background: var(--bg_input); border: 1px solid var(--accent); border-radius: 8px; padding: 6px 10px; box-shadow: 0 0 0 3px var(--focus_ring); }
+.ac-box svg { width: 14px; height: 14px; color: var(--fg_muted); flex: none; }
+.ac-box input { all: unset; flex: 1; font-size: 12.5px; color: var(--fg_default); min-width: 0; }
+.ac-box .ac-op { font-size: 9px; font-weight: 700; color: var(--fg_muted); border: 1px solid var(--border_default); border-radius: 5px; padding: 1px 6px; background: var(--bg_surface); cursor: pointer; }
+.ac-results { margin-top: 5px; border-radius: 8px; overflow: hidden; background: var(--bg_elevated); box-shadow: var(--shadow_md); }
+.ac-results .acr { display: grid; grid-template-columns: 50px 1fr; gap: 8px; padding: 6px 10px; font-size: 12.5px; cursor: pointer; align-items: center; }
+.ac-results .acr:hover { background: var(--accent_soft); }
+.ac-results .acr .acsid { font-variant-numeric: tabular-nums; color: var(--fg_muted); font-size: 11px; }
+.ac-hint { font-size: 10px; color: var(--fg_faint); padding: 4px 2px 0; }
+/* switch */
+.switch { width: 34px; height: 20px; border-radius: 20px; background: var(--success); position: relative; flex: none; }
+.switch::after { content:""; position: absolute; top: 2px; left: 16px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: var(--shadow_sm); transition: left .15s; }
+.switch.off { background: var(--border_strong); }
+.switch.off::after { left: 2px; }
+.uncert-toggle { font-size: 10px; color: var(--warning); padding: 0; cursor: pointer; opacity: .85; }
+/* floating component tools — only on active */
+.wc-tools { position: absolute; top: -11px; right: 6px; display: none; gap: 1px; background: var(--accent); border-radius: 7px; padding: 2px; box-shadow: var(--shadow_md); z-index: 6; }
+.field.active-comp .wc-tools { display: flex; }
+.wc-tools button { width: 22px; height: 22px; border: none; background: transparent; border-radius: 5px; display: grid; place-items: center; color: #fff; }
+.wc-tools button:hover { background: rgba(255,255,255,.24); }
+.wc-tools button svg { width: 13px; height: 13px; }
+/* component_text_area — plain rich text. On active, the frame is drawn with
+   box-shadow (no layout shift) and the toolbar FLOATS above (absolute), so the
+   editor edits in place at its natural height without pushing anything. */
+.wtext { border: none; background: none; border-radius: 8px; }
+.field.active-comp .wtext { background: var(--bg_input); box-shadow: inset 0 0 0 1.5px var(--accent), 0 0 0 3px var(--focus_ring); border-radius: 8px; }
+.wtext-bar { display: none; align-items: center; gap: 1px; padding: 4px 6px; background: var(--bg_elevated); border: 1px solid var(--border_default); border-radius: 8px; box-shadow: var(--shadow_md); flex-wrap: wrap; }
+.field.active-comp .wtext-bar { display: flex; position: absolute; top: -13px; left: 8px; z-index: 24; max-width: calc(100% - 130px); }
+.wtext-bar button { min-width: 24px; height: 22px; padding: 0 4px; border: none; background: transparent; border-radius: 5px; color: var(--fg_muted); display: grid; place-items: center; font-size: 12px; font-weight: 800; font-family: Georgia, serif; }
+.wtext-bar button:hover { background: var(--bg_surface_alt); color: var(--fg_default); }
+.wtext-bar button svg { width: 14px; height: 14px; }
+.wtext-bar .sep { width: 1px; height: 16px; background: var(--border_default); margin: 0 4px; }
+.wtext-bar .semantic { color: var(--accent); }
+/* constant padding/height across resting↔active so activation never shifts neighbours */
+.wtext-body { padding: 4px 4px; font-size: 13.5px; line-height: 1.6; color: var(--fg_default); min-height: 22px; }
+.wtext-body b { font-weight: 700; } .wtext-body i { font-style: italic; } .wtext-body u { text-decoration: underline; }
+.wtext-body .ref { color: var(--primary); border-bottom: 1px dotted var(--primary); cursor: pointer; }
+.wtext-body .tperson { color: var(--info); font-weight: 500; }
+/* media — soft, no hard frame */
+.media-frame {
+  height: 180px; border-radius: 10px; border: none;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 9%, var(--bg_surface_alt)), var(--bg_surface_alt));
+  display: grid; place-items: center; color: var(--fg_muted); position: relative; overflow: hidden; margin-top: 2px;
+}
+.field.media-left .media-frame { height: calc(100% - 22px); min-height: 200px; }
+.media-frame .play { width: 50px; height: 50px; border-radius: 50%; background: rgba(0,0,0,.4); display: grid; place-items: center; }
+.media-frame .play svg { width: 21px; height: 21px; color: #fff; }
+.media-frame .meta { position: absolute; left: 11px; bottom: 9px; font-size: 11px; color: var(--fg_muted); }
+.media-frame .ov-tag { position: absolute; left: 9px; top: 8px; font-size: 10px; font-weight: 600; background: rgba(0,0,0,.45); color:#fff; padding: 2px 8px; border-radius: 20px; }
+
+/* ---- portal / autocomplete component: calm columns view + scoped search ---- */
+.portal { border: none; border-radius: 0; background: none; }
+.portal-bar { display: flex; align-items: center; gap: 8px; padding: 0 0 6px; background: none; border: none; min-height: 34px; }
+.portal-bar .ptarget { font-size: 11px; color: var(--fg_faint); display: inline-flex; align-items: center; gap: 6px; }
+.portal-bar .ptarget b { color: var(--fg_muted); }
+.portal-bar .ptarget .lk { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+.portal-bar .op { font-size: 10px; font-weight: 700; color: var(--fg_muted); border: none; border-radius: 5px; padding: 1px 7px; background: var(--bg_surface_alt); cursor: pointer; }
+.portal-bar .spacer { flex: 1; }
+.portal-search { display: flex; align-items: center; gap: 7px; background: var(--bg_input); border: 1px solid var(--accent); box-shadow: 0 0 0 3px var(--focus_ring); border-radius: 7px; padding: 5px 9px; color: var(--fg_muted); min-width: 200px; }
+.portal-search svg { width: 14px; height: 14px; }
+/* portal search + operator appear only when active; the foot stays present
+   (dimmed when inactive) so activation never changes the portal's height */
+.field:not(.active-comp) .portal-search, .field:not(.active-comp) .portal-bar .op { display: none; }
+.field:not(.active-comp) .portal-foot .padd { color: var(--fg_faint); }
+.portal-bar .hint-inactive { font-size: 10.5px; color: var(--fg_faint); margin-left: auto; opacity: 0; }
+.field:hover .portal-bar .hint-inactive { opacity: 1; }
+.field.active-comp .portal-bar .hint-inactive { display: none; }
+.portal-search input { all: unset; flex: 1; font-size: 12px; color: var(--fg_default); min-width: 0; }
+.portal-tbl { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
+.portal-tbl th { text-align: left; font-size: 9.5px; text-transform: uppercase; letter-spacing: .3px; color: var(--fg_faint); font-weight: 600; padding: 4px 10px; background: none; border-bottom: 1px solid var(--border_default); white-space: nowrap; }
+.portal-tbl td { padding: 6px 10px; border: none; white-space: nowrap; color: var(--fg_default); }
+.portal-tbl tbody tr:hover { background: var(--bg_surface_alt); }
+.portal-tbl .psid { font-variant-numeric: tabular-nums; color: var(--fg_muted); font-size: 11px; }
+.portal-tbl .prm { color: var(--fg_faint); cursor: pointer; opacity: 0; }
+.portal-tbl tr:hover .prm { opacity: 1; }
+.portal-tbl .prm:hover { color: var(--danger); }
+.portal-foot { padding: 6px 10px 0; font-size: 11.5px; }
+.portal-foot .padd { color: var(--accent); font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+
+/* ---- inline-editable list cells ---- */
+td.editable { position: relative; }
+td.editable:hover { box-shadow: inset 0 0 0 1px var(--border_strong); border-radius: 6px; cursor: text; }
+td.editable.rel:hover, td.editable.tagcell:hover { cursor: pointer; }
+td.editing { box-shadow: inset 0 0 0 2px var(--accent); background: var(--bg_input); }
+td .cell-input { all: unset; width: 100%; font: inherit; color: var(--fg_default); }
+td.dirty::after { content:""; position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--warning); }
+.inline-pop { position: absolute; z-index: 50; background: var(--bg_elevated); border: 1px solid var(--border_default); border-radius: 8px; box-shadow: var(--shadow_lg); padding: 5px; min-width: 150px; }
+.inline-pop .io { padding: 6px 9px; border-radius: 6px; font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 7px; }
+.inline-pop .io:hover { background: var(--bg_surface_alt); }
+.cell-edit-hint { position: fixed; bottom: 22px; left: 50%; }
+
+/* ---- INSPECTOR -------------------------------------------------------- */
+.inspector {
+  width: var(--inspector_w); flex: none;
+  background: var(--bg_surface); border-left: 1px solid var(--border_default);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.app[data-inspector="off"] .inspector { display: none; }
+.insp-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border_default); }
+.insp-head .t { font-size: 12px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--fg_muted); flex: 1; }
+.insp-body { flex: 1; overflow-y: auto; padding: 14px 16px; }
+.insp-card {
+  background: var(--bg_elevated); border: 1px solid var(--border_default);
+  border-radius: var(--radius_sm); padding: 13px 14px; margin-bottom: 13px; box-shadow: var(--shadow_sm);
+}
+.insp-card h4 { margin: 0 0 10px; font-size: 11.5px; letter-spacing: .4px; text-transform: uppercase; color: var(--fg_muted); display: flex; align-items: center; gap: 7px; }
+.insp-card h4 svg { width: 14px; height: 14px; }
+.kv { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 12.5px; border-bottom: 1px dashed var(--border_default); }
+.kv:last-child { border-bottom: none; }
+.kv .k { color: var(--fg_muted); }
+.kv .v { color: var(--fg_default); font-weight: 550; text-align: right; }
+.completeness { height: 7px; border-radius: 6px; background: var(--bg_surface_alt); overflow: hidden; margin: 4px 0 8px; }
+.completeness > span { display: block; height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--success), color-mix(in srgb, var(--success) 60%, var(--accent))); }
+.tl { position: relative; padding-left: 18px; }
+.tl::before { content:""; position: absolute; left: 4px; top: 4px; bottom: 4px; width: 2px; background: var(--border_default); }
+.tl-item { position: relative; padding: 0 0 13px; }
+.tl-item:last-child { padding-bottom: 0; }
+.tl-item::before { content:""; position: absolute; left: -17px; top: 3px; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg_elevated); }
+.tl-item .who { font-size: 12.5px; font-weight: 600; }
+.tl-item .what { font-size: 12px; color: var(--fg_muted); }
+.tl-item .when { font-size: 11px; color: var(--fg_faint); }
+.related-row { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-bottom: 1px dashed var(--border_default); font-size: 12.5px; cursor: pointer; }
+.related-row:last-child { border-bottom: none; }
+.related-row:hover .rr-t { color: var(--accent); }
+.related-row .rr-ic { width: 26px; height: 26px; border-radius: 6px; background: var(--bg_surface_alt); display: grid; place-items: center; color: var(--fg_muted); flex: none; }
+.related-row .rr-ic svg { width: 14px; height: 14px; }
+.related-row .rr-t { font-weight: 550; }
+.related-row .rr-s { font-size: 11px; color: var(--fg_faint); }
+.related-row .rr-n { margin-left: auto; font-size: 11px; color: var(--fg_muted); background: var(--bg_surface_alt); padding: 1px 7px; border-radius: 20px; }
+
+/* ---- inspector: paginator (section_id + record nav) ---- */
+.insp-pager {
+  display: flex; align-items: center; gap: 8px; padding: 9px 14px;
+  border-bottom: 1px solid var(--border_default); background: var(--bg_surface);
+}
+.insp-pager .nav-mini { display: inline-flex; gap: 2px; }
+.insp-pager .nav-mini button { width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--border_default); background: var(--bg_input); color: var(--fg_muted); display: grid; place-items: center; }
+.insp-pager .nav-mini button:hover { background: var(--bg_surface_alt); color: var(--fg_default); }
+.insp-pager .nav-mini button svg { width: 13px; height: 13px; }
+.insp-pager .pos { font-size: 11.5px; color: var(--fg_muted); font-variant-numeric: tabular-nums; }
+.insp-pager .sid { margin-left: auto; font-size: 11px; color: var(--fg_faint); font-variant-numeric: tabular-nums; }
+.insp-pager .sid b { color: var(--fg_muted); font-weight: 600; }
+
+/* ---- inspector: action button grid ---- */
+.insp-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 12px 14px 4px; }
+.ia {
+  display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 9px 4px;
+  border: 1px solid var(--border_default); background: var(--bg_input); border-radius: 9px;
+  color: var(--fg_muted); font-size: 10px; font-weight: 550; cursor: pointer; transition: background .12s, color .12s, border-color .12s;
+}
+.ia:hover { background: var(--bg_surface_alt); color: var(--fg_default); border-color: var(--border_strong); }
+.ia svg { width: 17px; height: 17px; }
+.ia.danger:hover { color: var(--danger); border-color: color-mix(in srgb,var(--danger) 40%,transparent); }
+.ia.accent { color: var(--accent); }
+.insp-tools-row { display: flex; gap: 6px; padding: 8px 14px 2px; flex-wrap: wrap; }
+.itool { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; border: 1px solid transparent; color: #fff; font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.itool svg { width: 14px; height: 14px; }
+
+/* ---- inspector: selection banner ---- */
+.insp-banner {
+  margin: 10px 14px 4px; padding: 6px 2px 10px; display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid var(--border_default);
+}
+.insp-banner .bi { width: 26px; height: 26px; border-radius: 7px; background: var(--bg_surface_alt); color: var(--fg_muted); display: grid; place-items: center; flex: none; }
+.insp-banner .bi svg { width: 15px; height: 15px; }
+.insp-banner .bt { flex: 1; min-width: 0; }
+.insp-banner .bt small { display: block; font-size: 10px; color: var(--fg_faint); text-transform: uppercase; letter-spacing: .4px; }
+.insp-banner .bt b { font-size: 13.5px; font-weight: 680; color: var(--fg_default); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.insp-banner .bbtn { font-size: 11px; background: var(--bg_surface_alt); color: var(--fg_muted); border: 1px solid var(--border_default); border-radius: 6px; padding: 4px 9px; font-weight: 600; }
+.insp-banner .bbtn:hover { background: var(--bg_elevated); color: var(--fg_default); }
+
+/* ---- inspector: collapsible blocks ---- */
+.iblock { margin: 0 14px 8px; border: 1px solid var(--border_default); border-radius: var(--radius_sm); background: var(--bg_elevated); overflow: hidden; box-shadow: var(--shadow_sm); }
+.iblock-head { display: flex; align-items: center; gap: 9px; padding: 10px 12px; cursor: pointer; user-select: none; }
+.iblock-head:hover { background: var(--bg_surface_alt); }
+.iblock-head .hi { width: 15px; height: 15px; color: var(--fg_muted); flex: none; display: grid; place-items: center; }
+.iblock-head .hi svg { width: 15px; height: 15px; }
+.iblock-head .ht { flex: 1; font-size: 11.5px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--fg_default); }
+.iblock-head .hn { font-size: 10px; color: var(--fg_faint); background: var(--bg_surface_alt); border-radius: 20px; padding: 1px 6px; }
+.iblock-head .hc { width: 14px; height: 14px; color: var(--fg_faint); transition: transform .15s; display: grid; place-items: center; }
+.iblock-head .hc svg { width: 12px; height: 12px; }
+.iblock.open .iblock-head .hc { transform: rotate(90deg); }
+.iblock-body { display: none; padding: 4px 13px 13px; }
+.iblock.open .iblock-body { display: block; }
+
+/* info grid (tipo/model/dates…) */
+.info-grid .ig { display: grid; grid-template-columns: 38% 1fr; gap: 8px; padding: 5px 0; font-size: 12px; border-bottom: 1px dashed var(--border_default); }
+.info-grid .ig:last-child { border-bottom: none; }
+.info-grid .ig .k { color: var(--fg_muted); }
+.info-grid .ig .v { color: var(--fg_default); font-weight: 550; text-align: right; word-break: break-word; }
+.info-grid .ig .v.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+.info-grid .ig .v a { color: var(--primary); text-decoration: none; cursor: pointer; }
+.iblock-body a svg { width: 14px; height: 14px; vertical-align: middle; }
+.audit { font-size: 11.5px; }
+.audit .au-line { display: flex; align-items: center; gap: 6px; padding: 3px 0; color: var(--fg_muted); }
+.audit .au-line .av-u { color: var(--fg_default); font-weight: 550; }
+
+/* time-machine mini grid */
+.tm-grid { font-size: 11.5px; }
+.tm-row { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; padding: 6px 0; align-items: center; border-bottom: 1px dashed var(--border_default); }
+.tm-row:last-child { border-bottom: none; }
+.tm-row .tm-u { width: 22px; height: 22px; border-radius: 50%; background: var(--bg_surface_alt); display: grid; place-items: center; font-size: 9px; font-weight: 700; color: var(--fg_muted); }
+.tm-row .tm-c b { color: var(--fg_default); font-weight: 600; }
+.tm-row .tm-c span { color: var(--fg_muted); }
+.tm-row .tm-d { color: var(--fg_faint); font-size: 10.5px; white-space: nowrap; }
+.tm-diff-add { color: var(--success); } .tm-diff-old { color: var(--fg_faint); text-decoration: line-through; }
+
+/* project selector */
+.proj-pick { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border: 1px solid var(--border_default); border-radius: 8px; background: var(--bg_input); cursor: pointer; }
+.proj-pick:hover { border-color: var(--border_strong); }
+.proj-pick .pj { width: 22px; height: 22px; border-radius: 6px; background: linear-gradient(135deg,var(--primary),#6b54c0); color: #fff; display: grid; place-items: center; font-size: 10px; font-weight: 700; }
+.proj-pick .pn { flex: 1; font-size: 12.5px; font-weight: 600; }
+.proj-pick svg { width: 14px; height: 14px; color: var(--fg_faint); }
+
+/* activity bubbles */
+.bubble { display: flex; gap: 9px; padding: 8px 9px; border-radius: 8px; background: var(--bg_surface_alt); margin-bottom: 7px; }
+.bubble:last-child { margin-bottom: 0; }
+.bubble .bz { width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; flex: none; }
+.bubble .bz.ok { background: var(--success); } .bubble .bz.warn { background: var(--warning); }
+.bubble .bb { flex: 1; min-width: 0; }
+.bubble .bb b { font-size: 12px; font-weight: 600; }
+.bubble .bb p { margin: 1px 0 0; font-size: 11px; color: var(--fg_muted); }
+.bubble .bb .bt { font-size: 10px; color: var(--fg_faint); }
+
+/* inspector bottom buttons */
+.insp-foot { padding: 6px 14px 16px; }
+.insp-foot .ibtn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 9px 11px; margin-top: 6px; border: 1px solid var(--border_default); background: var(--bg_input); color: var(--fg_default); border-radius: 8px; font-size: 12.5px; font-weight: 550; }
+.insp-foot .ibtn:hover { background: var(--bg_surface_alt); }
+.insp-foot .ibtn svg { width: 15px; height: 15px; color: var(--fg_muted); }
+.insp-foot .ibtn.warn svg { color: var(--warning); }
+
+/* ============================================================================
+   Tools menu + Export modal
+   ========================================================================== */
+.menu-pop {
+  position: absolute; top: 46px; right: 14px; width: 232px; z-index: 60;
+  background: var(--bg_elevated); border: 1px solid var(--border_default);
+  border-radius: var(--radius); box-shadow: var(--shadow_lg); padding: 6px; display: none;
+}
+.menu-pop.open { display: block; }
+.menu-pop .mi { display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 8px; font-size: 13px; color: var(--fg_default); cursor: pointer; }
+.menu-pop .mi:hover { background: var(--bg_surface_alt); }
+.menu-pop .mi svg { width: 17px; height: 17px; color: var(--fg_muted); }
+.menu-pop .mi .sc { margin-left: auto; font-size: 10.5px; color: var(--fg_faint); }
+.menu-pop .sep { height: 1px; background: var(--border_default); margin: 5px 4px; }
+.menu-pop .mh { padding: 7px 10px 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--fg_faint); }
+
+.scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 80; display: none; backdrop-filter: blur(2px); }
+.scrim.open { display: block; }
+.modal {
+  position: fixed; z-index: 90; inset: 0; margin: auto; display: none;
+  width: min(960px, 94vw); height: min(680px, 92vh);
+  background: var(--bg_surface); border: 1px solid var(--border_default);
+  border-radius: 14px; box-shadow: var(--shadow_lg); overflow: hidden;
+  grid-template-rows: auto 1fr auto;
+}
+.modal.open { display: grid; }
+.modal-head { display: flex; align-items: center; gap: 12px; padding: 15px 20px; border-bottom: 1px solid var(--border_default); background: var(--bg_elevated); }
+.modal-head .mk { width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg,var(--accent), color-mix(in srgb,var(--accent) 55%,#000)); display: grid; place-items: center; color: #fff; }
+.modal-head .mk svg { width: 17px; height: 17px; }
+.modal-head h3 { margin: 0; font-size: 15px; font-weight: 680; }
+.modal-head .sub { font-size: 12px; color: var(--fg_muted); }
+.modal-head .spacer { flex: 1; }
+.modal-body { display: grid; grid-template-columns: 240px 1fr; min-height: 0; }
+.export-side { border-right: 1px solid var(--border_default); padding: 16px; overflow-y: auto; background: var(--bg_surface); }
+.export-main { display: flex; flex-direction: column; min-height: 0; }
+.opt-group { margin-bottom: 18px; }
+.opt-group .ot { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--fg_muted); margin-bottom: 9px; }
+.radio-row, .check-row { display: flex; align-items: center; gap: 9px; padding: 6px 0; font-size: 12.5px; cursor: pointer; }
+.radio-row .rb { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border_strong); flex: none; display: grid; place-items: center; }
+.radio-row.on .rb { border-color: var(--accent); }
+.radio-row.on .rb::after { content:""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.check-row .cb { width: 16px; height: 16px; border-radius: 5px; border: 2px solid var(--border_strong); flex: none; display: grid; place-items: center; color: #fff; font-size: 11px; }
+.check-row.on .cb { background: var(--accent); border-color: var(--accent); }
+.fmt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fmt {
+  border: 1px solid var(--border_default); border-radius: 9px; padding: 10px; text-align: center;
+  font-size: 12px; font-weight: 600; color: var(--fg_muted); cursor: pointer; background: var(--bg_input);
+}
+.fmt.on { border-color: var(--accent); color: var(--accent); background: var(--accent_soft); }
+.fmt .ext { display: block; font-size: 16px; margin-bottom: 3px; }
+
+.export-cols { padding: 14px 18px; border-bottom: 1px solid var(--border_default); }
+.export-cols .ct { font-size: 11.5px; font-weight: 700; text-transform: uppercase; color: var(--fg_muted); margin-bottom: 9px; display: flex; align-items: center; gap: 8px; }
+.col-pills { display: flex; flex-wrap: wrap; gap: 7px; }
+.col-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--bg_input); border: 1px solid var(--border_default);
+  border-radius: 7px; padding: 5px 9px; font-size: 12px; cursor: grab;
+}
+.col-pill .grip { color: var(--fg_faint); letter-spacing: -2px; }
+.col-pill.sel { background: var(--accent_soft); border-color: color-mix(in srgb,var(--accent) 40%,transparent); color: color-mix(in srgb,var(--accent) 75%,var(--fg_default)); }
+.col-pill .x { color: var(--fg_faint); cursor: pointer; }
+.preview { flex: 1; overflow: auto; padding: 0 18px 18px; }
+.preview .pt { font-size: 11.5px; color: var(--fg_faint); margin: 14px 0 9px; }
+table.preview-tbl { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; border: 1px solid var(--border_default); border-radius: 8px; overflow: hidden; }
+table.preview-tbl th { background: var(--bg_surface_alt); text-align: left; padding: 8px 11px; font-size: 11px; text-transform: uppercase; color: var(--fg_muted); border-bottom: 1px solid var(--border_default); white-space: nowrap; }
+table.preview-tbl td { padding: 7px 11px; border-bottom: 1px solid var(--border_default); white-space: nowrap; }
+table.preview-tbl tr:last-child td { border-bottom: none; }
+.modal-foot { display: flex; align-items: center; gap: 12px; padding: 13px 20px; border-top: 1px solid var(--border_default); background: var(--bg_elevated); }
+.modal-foot .info { font-size: 12px; color: var(--fg_muted); }
+.modal-foot .spacer { flex: 1; }
+
+/* ============================================================================
+   Unified search — single interface (Fields · $and/$or canvas · Presets)
+   Mirrors core/search/js/render_search.js three-panel layout.
+   ========================================================================== */
+.search-panel {
+  position: absolute; inset: 0; z-index: 30; display: none;
+  grid-template-rows: auto 1fr auto; background: var(--bg_app);
+}
+.app[data-search="on"] .search-panel { display: grid; }
+.search-head { display: flex; align-items: center; gap: 12px; padding: 11px 18px; background: var(--bg_surface); border-bottom: 1px solid var(--border_default); }
+.search-head .mk { width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg,var(--accent), color-mix(in srgb,var(--accent) 55%,#000)); display: grid; place-items: center; color: #fff; }
+.search-head .mk svg { width: 16px; height: 16px; }
+.search-head h3 { margin: 0; font-size: 15px; font-weight: 650; }
+.search-head .sub { font-size: 11.5px; color: var(--fg_muted); }
+.search-head .spacer { flex: 1; }
+.search-toggles { display: inline-flex; gap: 2px; background: var(--bg_surface_alt); border-radius: 8px; padding: 3px; }
+.search-toggles button { border: none; background: none; color: var(--fg_muted); padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 550; }
+.search-toggles button.on { background: var(--bg_elevated); color: var(--fg_default); box-shadow: var(--shadow_sm); }
+.search-body { display: grid; grid-template-columns: 230px 1fr 250px; min-height: 0; }
+.app[data-search-fields="off"] .search-body { grid-template-columns: 0 1fr 250px; }
+.app[data-search-presets="off"] .search-body { grid-template-columns: 230px 1fr 0; }
+.app[data-search-fields="off"][data-search-presets="off"] .search-body { grid-template-columns: 0 1fr 0; }
+.sp-col { overflow-y: auto; min-width: 0; }
+.sp-fields { border-right: 1px solid var(--border_default); background: var(--bg_surface); padding: 12px; }
+.sp-presets { border-left: 1px solid var(--border_default); background: var(--bg_surface); padding: 12px; }
+.sp-col-title { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--fg_faint); margin: 0 0 9px; padding: 0 2px; }
+.app[data-search-fields="off"] .sp-fields, .app[data-search-presets="off"] .sp-presets { display: none; }
+.field-pill {
+  display: flex; align-items: center; gap: 8px; padding: 7px 9px; margin-bottom: 4px; border-radius: 8px;
+  border: 1px solid var(--border_default); background: var(--bg_input); font-size: 12.5px; cursor: grab;
+}
+.field-pill:hover { border-color: var(--accent); color: var(--accent); }
+.field-pill .fm { font-size: 9.5px; color: var(--fg_faint); margin-left: auto; }
+.field-pill:hover .fm { color: inherit; }
+.field-pill .grip { color: var(--fg_faint); letter-spacing: -2px; }
+
+.sp-canvas { padding: 16px 20px; overflow-y: auto; background: var(--bg_app); }
+.sgroup { border: 1.5px solid var(--border_default); border-radius: 12px; padding: 12px; margin-bottom: 12px; background: var(--bg_surface); position: relative; }
+.sgroup.or { border-color: color-mix(in srgb, var(--info) 45%, transparent); }
+.sgroup-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.bool { display: inline-flex; border-radius: 7px; overflow: hidden; border: 1px solid var(--border_default); }
+.bool button { border: none; background: var(--bg_input); color: var(--fg_muted); padding: 3px 11px; font-size: 11px; font-weight: 700; letter-spacing: .4px; }
+.bool button.on { background: var(--accent); color: #fff; }
+.sgroup-head .gl { font-size: 11px; color: var(--fg_faint); }
+.sgroup-head .spacer { flex: 1; }
+.sgroup-head .gx { color: var(--fg_faint); cursor: pointer; }
+.scrit { display: grid; grid-template-columns: 150px 120px 1fr auto; gap: 8px; align-items: center; padding: 6px 0; }
+.scrit + .scrit { border-top: 1px dashed var(--border_default); }
+.scrit .sf { font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 7px; }
+.scrit .sf .lk { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.scrit select, .scrit input { font: inherit; font-size: 12px; padding: 6px 8px; border-radius: 7px; border: 1px solid var(--border_default); background: var(--bg_input); color: var(--fg_default); width: 100%; }
+.scrit select:focus, .scrit input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus_ring); }
+.scrit .sx { color: var(--fg_faint); cursor: pointer; padding: 4px; }
+.scrit .sx:hover { color: var(--danger); }
+.add-group { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--accent); cursor: pointer; padding: 6px 9px; border-radius: 8px; border: 1px dashed color-mix(in srgb,var(--accent) 40%,transparent); }
+.add-group:hover { background: var(--accent_soft); }
+.canvas-hint { font-size: 11.5px; color: var(--fg_faint); margin: 4px 0 14px; }
+
+.preset-row { display: flex; align-items: center; gap: 8px; padding: 8px 9px; border-radius: 8px; border: 1px solid var(--border_default); background: var(--bg_input); margin-bottom: 6px; cursor: pointer; font-size: 12.5px; }
+.preset-row:hover { border-color: var(--accent); }
+.preset-row.on { background: var(--accent_soft); border-color: color-mix(in srgb,var(--accent) 40%,transparent); }
+.preset-row .pdot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); flex: none; }
+.preset-row .pn { flex: 1; min-width: 0; }
+.preset-row .pn small { display: block; font-size: 10px; color: var(--fg_faint); }
+.search-foot { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid var(--border_default); background: var(--bg_surface); }
+.search-foot .matches { font-size: 12.5px; color: var(--fg_muted); }
+.search-foot .matches b { color: var(--fg_default); }
+.search-foot .spacer { flex: 1; }
+
+/* ---- toast ------------------------------------------------------------ */
+.toast {
+  position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--bg_menu); color: #fff; padding: 11px 18px; border-radius: 10px;
+  box-shadow: var(--shadow_lg); font-size: 13px; display: flex; align-items: center; gap: 10px;
+  opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 200;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast .ok { color: var(--success); display: grid; place-items: center; }
+.toast .ok svg { width: 17px; height: 17px; }
+
+/* ---- responsive ------------------------------------------------------- */
+@media (max-width: 1180px) {
+  .app[data-inspector="on"] .inspector { position: fixed; right: 0; top: 50px; bottom: 0; z-index: 70; box-shadow: var(--shadow_lg); }
+  .global-search { flex-basis: 280px; }
+}
+@media (max-width: 900px) {
+  .app { grid-template-columns: 0 1fr; }
+  .rail { position: fixed; left: 0; top: 50px; bottom: 0; z-index: 75; box-shadow: var(--shadow_lg); transform: translateX(-100%); transition: transform .2s; width: var(--rail_w); }
+  .app[data-rail-mobile="open"] .rail { transform: translateX(0); }
+  .global-search { display: none; }
+  .grid { grid-template-columns: 1fr; }
+  .field.col-2 { grid-column: span 1; }
+  .modal-body { grid-template-columns: 1fr; }
+  .export-side { display: none; }
+}
+.mobile-only { display: none; }
+@media (max-width: 900px) { .mobile-only { display: grid; } }
+</style>
+</head>
+<body>
+<div class="app" id="app" data-mode="list" data-rail="full" data-inspector="off" data-rail-mobile="closed" data-search="off" data-search-fields="on" data-search-presets="on">
+
+  <!-- ============ TOP BAR ============ -->
+  <header class="topbar">
+    <button class="iconbtn mobile-only" onclick="toggleRailMobile()" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div class="brand">
+      <span class="glyph">D</span>
+      <span>Dédalo</span>
+      <span class="ver">v7 · new look</span>
+    </div>
+    <label class="global-search" onclick="openSearch()" title="Open the search builder">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input placeholder="Search the current section…" readonly style="cursor:pointer">
+      <span class="kbd">⌘F</span>
+    </label>
+    <div class="spacer"></div>
+    <div class="top-actions">
+      <button class="iconbtn" onclick="toggleDensity()" title="Toggle density">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <button class="iconbtn" onclick="toggleTheme()" title="Toggle theme" id="themeBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>
+      </button>
+      <button class="iconbtn" title="Notifications">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      </button>
+      <button class="iconbtn" title="Help">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4"/><path d="M12 17h.01"/></svg>
+      </button>
+      <div class="avatar">AP</div>
+    </div>
+  </header>
+
+  <!-- ============ LEFT RAIL ============ -->
+  <aside class="rail">
+    <div class="rail-head">
+      <span>Workspace</span>
+      <button class="rail-toggle" onclick="toggleRail()" title="Collapse">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+    </div>
+    <label class="menu-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input placeholder="Find a section or tool…" id="menuFilter" oninput="filterMenu(this.value)">
+    </label>
+    <nav class="nav" id="nav"></nav>
+    <div class="rail-foot">
+      <div class="project-switch" onclick="toast('Switch project / language')">
+        <span class="pn"><b>monedaiberica</b><small>Project · ca · es · en</small></span>
+        <span class="sw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 9l4-4 4 4M16 15l-4 4-4-4"/></svg></span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+
+    <!-- section header / breadcrumb -->
+    <div class="section-head">
+      <div>
+        <div class="crumb" id="crumb"></div>
+        <div class="section-title" id="secTitle"></div>
+      </div>
+      <div class="section-sub" id="secSub"></div>
+      <div class="spacer"></div>
+      <div class="seg">
+        <button class="active" id="segList" onclick="showList()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>List</button>
+        <button id="segGrid" onclick="toast('Gallery view')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Gallery</button>
+      </div>
+    </div>
+
+    <!-- toolbar -->
+    <div class="toolbar" id="listToolbar">
+      <!-- ONE search interface: this button (and the top bar) open the same builder -->
+      <button class="btn" onclick="openSearch()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>Search</button>
+      <button class="chip-filter" onclick="openSearch()" title="Active search — click to edit"><span class="dot"></span>Public · reviewed <b style="margin-left:4px;color:var(--fg_muted);font-weight:600">· 2 filters</b></button>
+      <div class="spacer"></div>
+      <button class="btn ghost" onclick="toast('Columns')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3v18M15 3v18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>Columns</button>
+      <button class="btn" onclick="openExport()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Export</button>
+      <button class="btn" id="toolsBtn" onclick="toggleTools(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a4 4 0 0 0-5 5L3 18v3h3l6.7-6.7a4 4 0 0 0 5-5l-2.8 2.8-2.1-2.1z"/></svg>Tools</button>
+      <button class="btn primary" onclick="toast('New record')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>New</button>
+    </div>
+
+    <div class="work">
+      <!-- LIST -->
+      <div class="list-wrap">
+        <table class="list">
+          <thead id="listHead"></thead>
+          <tbody id="listBody"></tbody>
+        </table>
+      </div>
+
+      <!-- EDIT -->
+      <div class="edit-wrap">
+        <div class="record-head">
+          <button class="backbtn" onclick="showList()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>Back</button>
+          <div class="sid-badge" id="recSid" title="section_id — the stable record identifier" onclick="toast('Copied section_id')"></div>
+          <div>
+            <div class="record-id" id="recId"></div>
+            <div class="record-title" id="recTitle"></div>
+          </div>
+          <div class="spacer"></div>
+          <button class="btn ghost" onclick="toast('Previous record')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+          <button class="btn ghost" onclick="toast('Next record')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
+          <button class="btn" onclick="toast('History / Time machine')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg></button>
+          <button class="btn primary" onclick="toast('Saved · all changes recorded')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save</button>
+        </div>
+        <div class="tabs" id="editTabs"></div>
+        <form class="form" id="editForm" onsubmit="return false"></form>
+      </div>
+
+      <!-- INSPECTOR -->
+      <aside class="inspector">
+        <div class="insp-head">
+          <span class="t">Inspector</span>
+          <button class="iconbtn" style="color:var(--fg_muted)" onclick="setInspector(false)" title="Hide">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+        </div>
+        <div class="insp-body" id="inspBody"></div>
+      </aside>
+
+      <!-- UNIFIED SEARCH (single interface) -->
+      <div class="search-panel">
+        <div class="search-head">
+          <div class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
+          <div>
+            <h3>Search</h3>
+            <div class="sub" id="searchSub"></div>
+          </div>
+          <div class="spacer"></div>
+          <div class="search-toggles">
+            <button class="on" id="tgFields" onclick="toggleSearchCol('fields')">Fields</button>
+            <button class="on" id="tgPresets" onclick="toggleSearchCol('presets')">Presets</button>
+          </div>
+          <button class="iconbtn" style="color:var(--fg_muted)" onclick="closeSearch()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+        </div>
+        <div class="search-body">
+          <div class="sp-col sp-fields">
+            <p class="sp-col-title">Fields — drag into the query</p>
+            <div id="searchFields"></div>
+          </div>
+          <div class="sp-col sp-canvas">
+            <p class="canvas-hint">Build a query by combining fields with AND / OR groups. The same builder is used everywhere — list, portals and saved searches.</p>
+            <div id="searchCanvas"></div>
+            <div class="add-group" onclick="toast('Add OR group')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg>Add group</div>
+          </div>
+          <div class="sp-col sp-presets">
+            <p class="sp-col-title">Saved searches (dd623)</p>
+            <div id="searchPresets"></div>
+            <div class="add-group" style="margin-top:8px" onclick="toast('Save current search as preset')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg>Save current</div>
+          </div>
+        </div>
+        <div class="search-foot">
+          <span class="matches">≈ <b id="searchMatches">312</b> records match</span>
+          <div class="spacer"></div>
+          <button class="btn ghost" onclick="toast('Search reset')">Reset</button>
+          <button class="btn" onclick="closeSearch()">Cancel</button>
+          <button class="btn primary" onclick="applySearch()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Apply search</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- list footer / pager -->
+    <div class="list-foot">
+      <span id="countLabel"></span>
+      <span style="color:var(--fg_faint)">·</span>
+      <span style="color:var(--fg_faint)">Updated 3 min ago</span>
+      <div class="pager">
+        <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <button class="active">1</button>
+        <button>2</button>
+        <button>3</button>
+        <button>…</button>
+        <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M9 18l6-6-6-6"/></svg></button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============ TOOLS POPOVER ============ -->
+  <div class="menu-pop" id="toolsMenu">
+    <div class="mh">Tools for this section</div>
+    <div class="mi" onclick="openExport()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Export data<span class="sc">⌘E</span></div>
+    <div class="mi" onclick="toast('Import (CSV / Dédalo)')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15V3m0 12-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Import data</div>
+    <div class="mi" onclick="toast('Print layout designer')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>Print &amp; report</div>
+    <div class="sep"></div>
+    <div class="mh">Publishing</div>
+    <div class="mi" onclick="toast('Diffusion targets')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M2 12h20M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18z"/></svg>Diffusion</div>
+    <div class="mi" onclick="toast('Indexation tool')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M7 12h10M11 18h2"/></svg>Indexation</div>
+    <div class="mi" onclick="toast('Time machine')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>Time machine</div>
+  </div>
+
+  <!-- ============ EXPORT MODAL ============ -->
+  <div class="scrim" id="scrim" onclick="closeExport()"></div>
+  <div class="modal" id="exportModal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <div class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></div>
+      <div>
+        <h3>Export data</h3>
+        <div class="sub" id="exportSub"></div>
+      </div>
+      <div class="spacer"></div>
+      <button class="iconbtn" style="color:var(--fg_muted)" onclick="closeExport()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="export-side">
+        <div class="opt-group">
+          <div class="ot">Scope</div>
+          <div class="radio-row on" onclick="pickRadio(this)"><span class="rb"></span>Current selection</div>
+          <div class="radio-row" onclick="pickRadio(this)"><span class="rb"></span>Whole result set</div>
+          <div class="radio-row" onclick="pickRadio(this)"><span class="rb"></span>Entire section</div>
+        </div>
+        <div class="opt-group">
+          <div class="ot">Data format</div>
+          <div class="radio-row on" onclick="pickRadio(this)"><span class="rb"></span>Resolved value</div>
+          <div class="radio-row" onclick="pickRadio(this)"><span class="rb"></span>Value + parents</div>
+          <div class="radio-row" onclick="pickRadio(this)"><span class="rb"></span>Dédalo raw (round-trip)</div>
+        </div>
+        <div class="opt-group">
+          <div class="ot">Relations breakdown</div>
+          <div class="radio-row on" onclick="pickRadio(this)"><span class="rb"></span>Default (joined)</div>
+          <div class="radio-row" onclick="pickRadio(this)"><span class="rb"></span>One row per relation</div>
+          <div class="radio-row" onclick="pickRadio(this)"><span class="rb"></span>One column per relation</div>
+        </div>
+        <div class="opt-group">
+          <div class="ot">Options</div>
+          <div class="check-row on" onclick="toggleCheck(this)"><span class="cb">✓</span>Include tipo in label</div>
+          <div class="check-row" onclick="toggleCheck(this)"><span class="cb">✓</span>Fill the gaps</div>
+          <div class="check-row on" onclick="toggleCheck(this)"><span class="cb">✓</span>Header row</div>
+        </div>
+      </div>
+      <div class="export-main">
+        <div class="export-cols">
+          <div class="ct">Selected columns <span style="color:var(--fg_faint);font-weight:500;text-transform:none">— drag to reorder</span></div>
+          <div class="col-pills" id="exportCols"></div>
+        </div>
+        <div class="preview">
+          <div class="pt">PREVIEW · first rows of the flat table</div>
+          <table class="preview-tbl" id="previewTbl"></table>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <div class="fmt-grid" style="grid-template-columns:repeat(4,auto)">
+        <div class="fmt on" onclick="pickFmt(this)"><span class="ext">CSV</span></div>
+        <div class="fmt" onclick="pickFmt(this)"><span class="ext">XLSX</span></div>
+        <div class="fmt" onclick="pickFmt(this)"><span class="ext">JSON</span></div>
+        <div class="fmt" onclick="pickFmt(this)"><span class="ext">ODS</span></div>
+      </div>
+      <div class="spacer"></div>
+      <div class="info" id="exportInfo"></div>
+      <button class="btn" onclick="closeExport()">Cancel</button>
+      <button class="btn primary" onclick="closeExport(); toast('Export started · preparing download')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Export</button>
+    </div>
+  </div>
+
+  <!-- toast -->
+  <div class="toast" id="toast"><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></span><span id="toastMsg"></span></div>
+</div>
+
+<script>
+/* ============================================================================
+   Icons (inline SVG strings)
+   ========================================================================== */
+const I = {
+  coin:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>',
+  coins: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="9" cy="7" rx="6" ry="3"/><path d="M3 7v6c0 1.66 2.7 3 6 3s6-1.34 6-3V7"/><path d="M15 11c2.5.3 6 1.4 6 3v3c0 1.66-2.7 3-6 3-1.3 0-2.5-.2-3.5-.5"/></svg>',
+  mint:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6"/></svg>',
+  object:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 3 7l9 5 9-5-9-5z"/><path d="M3 12l9 5 9-5M3 17l9 5 9-5"/></svg>',
+  av:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m10 9 5 3-5 3z"/></svg>',
+  img:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>',
+  place: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+  book:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+  link:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>',
+  user:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+  shield:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 5v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V5l-8-3z"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/></svg>',
+  chev:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>',
+  activity:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
+  tools: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a4 4 0 0 0-5 5L3 18v3h3l6.7-6.7a4 4 0 0 0 5-5l-2.8 2.8-2.1-2.1z"/></svg>',
+  tree:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="9" width="7" height="5" rx="1"/><rect x="14" y="16" width="7" height="5" rx="1"/><path d="M6.5 8v5.5a2 2 0 0 0 2 2H14M14 11.5H8.5"/></svg>',
+  graph: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="9" r="2.5"/><circle cx="9" cy="18" r="2.5"/><path d="M7 7.5 16.5 8.5M7.5 16 17 10.5M7 8l1.5 7.5"/></svg>',
+  admin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  folder:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
+  people:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 5.5a3 3 0 0 1 0 5.4M21 20a6 6 0 0 0-4-5.6"/></svg>',
+  doc:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg>',
+  importIc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15V3m0 12-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>',
+  exportIc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>',
+  globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M2 12h20M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18z"/></svg>',
+  print: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>',
+  star:  '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 2.9 6.3 6.8.6-5.1 4.5 1.5 6.7L12 17l-6 3.6 1.5-6.7L2.4 8.9l6.8-.6z"/></svg>',
+  starO: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3 2.6 5.6 6 .6-4.5 4 1.3 5.9L12 16l-5.4 3.1 1.3-5.9-4.5-4 6-.6z"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg>',
+  copy:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  eye:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>',
+  plus:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
+  list:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
+  note:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M8 12h6M8 16h4"/></svg>',
+  bolt:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
+  gear:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M3 12h3M18 12h3M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>',
+  loc:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+};
+
+/* ============================================================================
+   Real ontology data (from install/import/ontology/7.0 + ontology_llm_map)
+   ========================================================================== */
+const SECTIONS = {
+  numisdata3: {
+    tipo:'numisdata3', icon:I.coin, accent:'#f78a1c', accentSoft:'#fdebd6',
+    label:'Type', sub:'Coin type · numisdata3', area:'Numismatics',
+    count:'14,208', sidBase:12400,
+    columns:[
+      {key:'id',  label:'ID',          w:'68px'},
+      {key:'code',label:'Code',        w:'120px'},
+      {key:'mint',label:'Mint',        rel:true},
+      {key:'mat', label:'Material',    rel:true},
+      {key:'den', label:'Denomination',rel:true},
+      {key:'date',label:'Date'},
+      {key:'auth',label:'Authority',   rel:true},
+      {key:'st',  label:'Status',      tag:true},
+    ],
+    rows:[
+      {id:'rt-1', code:'RIC II 977', mint:'Roma', mat:'Gold', den:'Aureus',   date:'AD 103–111', auth:'Trajan',    st:['green','Reviewed'], _t:'Trajan · Aureus · Roma'},
+      {id:'rt-2', code:'RIC V 24',   mint:'Antioch', mat:'Silver', den:'Antoninianus', date:'AD 253–268', auth:'Gallienus', st:['green','Reviewed'], _t:'Gallienus · Antoninianus'},
+      {id:'rt-3', code:'RPC I 73',   mint:'Tarraco', mat:'Bronze', den:'As',  date:'27 BC–AD 14', auth:'Augustus', st:['amber','Draft'], _t:'Augustus · As · Tarraco', un:true},
+      {id:'rt-4', code:'RIC IV 192', mint:'Roma', mat:'Silver', den:'Denarius', date:'AD 193–211', auth:'Septimius Severus', st:['green','Reviewed'], _t:'Septimius Severus · Denarius'},
+      {id:'rt-5', code:'SNG 412',    mint:'Emporion', mat:'Silver', den:'Drachm', date:'241–218 BC', auth:'—', st:['grey','New'], _t:'Emporion · Drachm', un:true},
+      {id:'rt-6', code:'RIC II 25',  mint:'Lugdunum', mat:'Gold', den:'Aureus', date:'AD 69–79', auth:'Vespasian', st:['green','Reviewed'], _t:'Vespasian · Aureus'},
+      {id:'rt-7', code:'RPC III 89', mint:'Caesaraugusta', mat:'Bronze', den:'As', date:'AD 14–37', auth:'Tiberius', st:['amber','Draft'], _t:'Tiberius · As · Caesaraugusta'},
+    ],
+    tabs:['Identification','Iconography','Legends','Context','Bibliography','Internal'],
+    form:[
+      {legend:'Identification', fields:[
+        {l:'Code',         t:'text', v:'RIC II 977', req:true, w:1},
+        {l:'Key',          t:'text', v:'TRA-AU-103', w:1},
+        {l:'Is descriptor',t:'switch', v:true, w:1},
+        {l:'Category',     t:'rel',  v:['Imperial'], w:1},
+        {l:'Mint',         t:'rel',  v:[{t:'Roma', un:true}], w:1},
+        {l:'Material',     t:'rel',  v:['Gold'], w:1},
+        {l:'Denomination', t:'rel',  v:[{t:'Aureus', un:true}], w:1},
+        {l:'Date',         t:'text', v:'AD 103–111', un:true, w:1},
+        {l:'Authority',    t:'rel',  v:[{t:'Trajan', un:true}], w:2},
+        {l:'Technique',    t:'rel',  v:['Struck'], w:2},
+      ]},
+      {legend:'Iconography', fields:[
+        {l:'Obverse design', t:'area', v:'Laureate bust of Trajan, draped, right. IMP TRAIANO AVG GER DAC P M TR P.', w:2},
+        {l:'Reverse design', t:'area', v:'Roma seated left on cuirass, holding Victory and spear.', w:2},
+        {l:'Obverse symbol', t:'rel', v:['Laurel wreath',{t:'Aegis', un:true},'Globe'], w:2},
+        {l:'Reverse symbol', t:'rel', v:['Victory','Spear'], w:2},
+      ]},
+      {legend:'Specimens of this type', fields:[
+        // portal (relation numisdata77 → numisdata4) columns view + scoped search
+        {l:'Coins', t:'portal', w:4, target:'numisdata4', targetLabel:'Numismatic object',
+          cols:['section_id','Inventory','Collection','Findspot'],
+          rows:[['38001','MAN-1923/45/12','MAN — Madrid','—'],['38044','GNC-7781','GNC — Barcelona','Empúries']]},
+      ]},
+    ],
+  },
+
+  numisdata4: {
+    tipo:'numisdata4', icon:I.coins, accent:'#c9821f', accentSoft:'#f6e7cf',
+    label:'Numismatic object', sub:'Specimen · numisdata4', area:'Numismatics',
+    count:'58,941', sidBase:38000,
+    columns:[
+      {key:'id',  label:'ID',       w:'68px'},
+      {key:'thumb',label:'',        w:'44px', thumb:true},
+      {key:'inv', label:'Inventory',w:'130px'},
+      {key:'type',label:'Type',     rel:true},
+      {key:'coll',label:'Collection',rel:true},
+      {key:'find',label:'Findspot', rel:true},
+      {key:'st',  label:'Status',   tag:true},
+    ],
+    rows:[
+      {id:'no-1', inv:'MAN-1923/45/12', type:'Trajan · Aureus', coll:'MAN — Madrid', find:'—',        st:['green','Catalogued'], _t:'Aureus of Trajan'},
+      {id:'no-2', inv:'GNC-7781',       type:'Gallienus · Ant.', coll:'GNC — Barcelona', find:'Empúries', st:['green','Catalogued'], _t:'Antoninianus of Gallienus'},
+      {id:'no-3', inv:'MAN-1990/3/220', type:'Augustus · As',   coll:'MAN — Madrid', find:'Tarraco',  st:['amber','In study'], _t:'As of Augustus', un:true},
+      {id:'no-4', inv:'IVDJ-552',       type:'Sept. Severus · Den.', coll:'Inst. Valencia', find:'—',  st:['green','Catalogued'], _t:'Denarius of Septimius Severus'},
+      {id:'no-5', inv:'MAN-2011/9/8',   type:'Emporion · Drachm', coll:'MAN — Madrid', find:'Empúries', st:['grey','Draft'], _t:'Drachm of Emporion'},
+      {id:'no-6', inv:'GNC-4410',       type:'Vespasian · Aureus', coll:'GNC — Barcelona', find:'—',   st:['green','Catalogued'], _t:'Aureus of Vespasian'},
+    ],
+    tabs:['Identification','Collection','Findspot &amp; context','Bibliography','Internal'],
+    form:[
+      {legend:'Identification', fields:[
+        // image-left: media spans the left two columns + three rows; the
+        // identification components flow to its right, then full-width below
+        {l:'Obverse / Reverse', t:'media', media:'image', pos:'left'},
+        {l:'Inventory number',t:'text', v:'MAN-1923/45/12', req:true, w:2},
+        {l:'Code',            t:'text', v:'AU-0012', w:1},
+        {l:'Secondary number',t:'text', v:'1923-45', w:1},
+        {l:'Status',          t:'rel', v:['Catalogued'], w:1},
+        {l:'For statistics',  t:'switch', v:true, w:1},
+        // portal (relation to numisdata3) — columns view + its own scoped search
+        {l:'Type', t:'portal', w:4, un:true, target:'numisdata3', targetLabel:'Type',
+          cols:['section_id','Code','Mint','Material','Authority'],
+          rows:[['12407','RIC II 977','Roma','Gold','Trajan']]},
+      ]},
+      {legend:'Collection', fields:[
+        {l:'Collection',      t:'rel', v:[{t:'MAN — Madrid', un:true}], w:2},
+        {l:'Former collection',t:'rel', v:['Cervera bequest'], w:2},
+        {l:'Depositary',      t:'rel', v:['MAN — Madrid','Gabinet Numismàtic de Catalunya'], w:2},
+        {l:'Auction',         t:'rel', v:[], w:2},
+      ]},
+      {legend:'Findspot &amp; context', fields:[
+        {l:'Findspot',        t:'rel', v:[{t:'Tarraco, Tarragonès, Tarragona, Catalunya, España'},{t:'Empúries, l\'Escala, Alt Empordà, Girona, Catalunya, España', un:true}], w:2},
+        {l:'Find date',       t:'text', v:'1923', un:true, w:1},
+        {l:'Discovery method',t:'rel', v:[{t:'Excavation', un:true}], w:1},
+        {l:'Archeological context', t:'area', v:'Recovered from the forum precinct during the 1923 campaign.', w:4},
+      ]},
+    ],
+  },
+
+  numisdata6: {
+    tipo:'numisdata6', icon:I.mint, accent:'#9a6b3f', accentSoft:'#eee2d4',
+    label:'Mint', sub:'Cecas · numisdata6', area:'Numismatics',
+    count:'2,134', sidBase:2100,
+    columns:[
+      {key:'id',  label:'ID',      w:'68px'},
+      {key:'name',label:'Mint',    primary:true},
+      {key:'num', label:'Number',  w:'90px'},
+      {key:'place',label:'Place',  rel:true},
+      {key:'date',label:'Time frame'},
+      {key:'st',  label:'State',   tag:true},
+    ],
+    rows:[
+      {id:'mi-1', name:'Roma',       num:'RM-001', place:'Roma, Italia', date:'269 BC – AD 476', st:['green','Published'], _t:'Roma'},
+      {id:'mi-2', name:'Tarraco',    num:'TA-014', place:'Tarragona, Hispania', date:'27 BC – AD 260', st:['green','Published'], _t:'Tarraco'},
+      {id:'mi-3', name:'Emporion',   num:'EM-007', place:'L\'Escala, Girona', date:'5th–1st c. BC', st:['amber','Review'], _t:'Emporion', un:true},
+      {id:'mi-4', name:'Caesaraugusta',num:'CA-022', place:'Zaragoza', date:'AD 14 – 41', st:['green','Published'], _t:'Caesaraugusta'},
+      {id:'mi-5', name:'Antioch',    num:'AN-003', place:'Antakya, Turkey', date:'4th c. BC – AD 7th c.', st:['green','Published'], _t:'Antioch'},
+      {id:'mi-6', name:'Lugdunum',   num:'LU-009', place:'Lyon, France', date:'15 BC – AD 3rd c.', st:['grey','Draft'], _t:'Lugdunum'},
+    ],
+    tabs:['Identification','Location','Description','Hierarchy','Bibliography'],
+    form:[
+      {legend:'Identification', fields:[
+        {l:'Mint',      t:'text', v:'Tarraco', req:true, w:2},
+        {l:'Number',    t:'text', v:'TA-014', w:1},
+        {l:'State',     t:'rel',  v:['Published'], w:1},
+        {l:'Authorship',t:'rel',  v:['ICAC team'], w:2},
+        {l:'Project',   t:'rel',  v:['Online coins of Hispania'], w:2},
+      ]},
+      {legend:'Location', fields:[
+        {l:'Map', t:'media', media:'map', pos:'left'},
+        {l:'Place',         t:'rel', v:['Tarraco, Tarragonès, Tarragona, Catalunya, España'], un:true, w:2},
+        {l:'Indexation',    t:'rel', v:['Conventus Tarraconensis, Hispania Citerior'], w:2},
+        {l:'Time frame',    t:'text', v:'27 BC – AD 260', w:2},
+        {l:'Geolocation',   t:'text', v:'41.1189° N, 1.2445° E', w:2},
+      ]},
+      {legend:'Description', fields:[
+        {l:'Public comment',  t:'area', v:'Provincial mint active under Augustus and Tiberius, striking bronze and silver for Hispania Citerior.', w:2},
+        {l:'Internal comment',t:'area', v:'Cross-check RPC I attributions against the 2019 hoard study.', w:2},
+      ]},
+      {legend:'Hierarchy', fields:[
+        {l:'Parents',  t:'rel', v:['Hispania Citerior'], w:2},
+        {l:'Children', t:'rel', v:['Officina I','Officina II'], w:2},
+        {l:'Changes to',t:'rel', v:['Colonia Iulia Urbs Triumphalis'], w:2},
+      ]},
+    ],
+  },
+
+  tch1: {
+    tipo:'tch1', icon:I.object, accent:'#3f7a72', accentSoft:'#dceae8',
+    label:'Object', sub:'Cultural heritage object · tch1', area:'Cultural heritage',
+    count:'31,602', sidBase:31500,
+    columns:[
+      {key:'id',  label:'ID',      w:'68px'},
+      {key:'thumb',label:'',       w:'44px', thumb:true},
+      {key:'code',label:'Code',    w:'110px'},
+      {key:'title',label:'Title',  primary:true},
+      {key:'mat', label:'Material',rel:true},
+      {key:'tech',label:'Technique',rel:true},
+      {key:'date',label:'Dating'},
+      {key:'st',  label:'Revision',tag:true},
+    ],
+    rows:[
+      {id:'tc-1', code:'CER-0042', title:'Black-gloss kylix', mat:'Ceramic', tech:'Wheel-thrown', date:'4th c. BC', st:['green','Validated'], _t:'Black-gloss kylix'},
+      {id:'tc-2', code:'MET-0117', title:'Bronze fibula',     mat:'Bronze',  tech:'Cast',         date:'2nd c. BC', st:['amber','In revision'], _t:'Bronze fibula', un:true},
+      {id:'tc-3', code:'LIT-0233', title:'Votive altar',      mat:'Limestone',tech:'Carved',      date:'1st c. AD', st:['green','Validated'], _t:'Votive altar'},
+      {id:'tc-4', code:'GLS-0008', title:'Glass unguentarium',mat:'Glass',   tech:'Blown',        date:'1st–2nd c. AD', st:['grey','Draft'], _t:'Glass unguentarium'},
+      {id:'tc-5', code:'TEX-0051', title:'Coptic textile fragment',mat:'Linen',tech:'Tapestry weave',date:'5th–6th c. AD', st:['amber','In revision'], _t:'Coptic textile fragment'},
+      {id:'tc-6', code:'MET-0190', title:'Silver denarius mould',mat:'Silver',tech:'Cast',        date:'3rd c. AD', st:['green','Validated'], _t:'Silver denarius mould'},
+    ],
+    tabs:['Identification','Description','Measures &amp; condition','Media','Bibliography','Internal'],
+    form:[
+      {legend:'Identification', fields:[
+        {l:'Identifying image', t:'media', media:'image', pos:'left'},
+        {l:'Code',          t:'text', v:'CER-0042', req:true, w:1},
+        {l:'Title',         t:'text', v:'Black-gloss kylix', w:1},
+        {l:'Collection',    t:'rel',  v:['MAC — Empúries'], w:2},
+        {l:'Name of the property', t:'rel', v:['Kylix'], w:1},
+        {l:'Typology',      t:'rel',  v:['Drinking vessel'], w:1},
+        {l:'Material',      t:'rel',  v:['Ceramic'], un:true, w:1},
+        {l:'Technique',     t:'rel',  v:['Wheel-thrown'], un:true, w:1},
+        {l:'Dating',        t:'text', v:'4th c. BC', w:2},
+        {l:'Period / Culture',t:'rel',v:['Greek (Attic)'], w:2},
+      ]},
+      {legend:'Description', fields:[
+        {l:'Relevant description', t:'area', v:'Attic black-gloss kylix with offset rim and two horizontal handles; stamped palmettes on the interior tondo.', w:4},
+        {l:'Related people', t:'rel', v:['Workshop of the Viana Painter'], w:2},
+        {l:'Observations',   t:'area', v:'Reassembled from 11 fragments; one handle restored in 1994.', w:2},
+      ]},
+      {legend:'Related audiovisuals', fields:[
+        // portal (relation tch335 → rsc167) with columns view + scoped search
+        {l:'Audiovisuals', t:'portal', w:4, target:'rsc167', targetLabel:'Audiovisual',
+          cols:['section_id','Code','Title','Typology'],
+          rows:[['9521','AV-1140','Mint reconstruction (3D)','Animation']]},
+      ]},
+    ],
+  },
+
+  rsc167: {
+    tipo:'rsc167', icon:I.av, accent:'#7d5bd0', accentSoft:'#e8e1f6',
+    label:'Audiovisual', sub:'Audiovisual resource · rsc167', area:'Resources',
+    count:'9,587', sidBase:9500,
+    columns:[
+      {key:'id',  label:'ID',     w:'68px'},
+      {key:'thumb',label:'',      w:'44px', thumb:true},
+      {key:'code',label:'Code',   w:'110px'},
+      {key:'title',label:'Title', primary:true},
+      {key:'typo',label:'Typology',rel:true},
+      {key:'lang',label:'Language',w:'110px'},
+      {key:'date',label:'Dating'},
+      {key:'st',  label:'Quality',tag:true},
+    ],
+    rows:[
+      {id:'av-1', code:'AV-2201', title:'Oral memory — Empúries diggers', typo:'Interview', lang:'Catalan', date:'2018', st:['green','HD master'], _t:'Oral memory — Empúries diggers'},
+      {id:'av-2', code:'AV-1140', title:'Mint reconstruction (3D)', typo:'Animation', lang:'Spanish', date:'2021', st:['green','HD master'], _t:'Mint reconstruction (3D)'},
+      {id:'av-3', code:'AV-0907', title:'Restoration workshop session', typo:'Documentary', lang:'Catalan', date:'2016', st:['amber','SD copy'], _t:'Restoration workshop session', un:true},
+      {id:'av-4', code:'AV-2350', title:'Numismatics lecture series 02', typo:'Lecture', lang:'English', date:'2022', st:['green','HD master'], _t:'Numismatics lecture series 02'},
+      {id:'av-5', code:'AV-0455', title:'Field recording — coin hoard site', typo:'Field audio', lang:'—', date:'2009', st:['grey','Archive'], _t:'Field recording — coin hoard site'},
+    ],
+    tabs:['Identification','Content','Indexation','Internal'],
+    form:[
+      {legend:'Identification', fields:[
+        {l:'Audiovisual', t:'media', media:'av', pos:'left'},
+        {l:'Code',         t:'text', v:'AV-2201', req:true, w:1},
+        {l:'Dating',       t:'text', v:'2018', w:1},
+        {l:'Title',        t:'text', v:'Oral memory — Empúries diggers', w:2},
+        {l:'Typology',     t:'rel',  v:['Interview'], w:1},
+        {l:'Quality',      t:'rel',  v:['HD master'], w:1},
+        {l:'Original language', t:'text', v:'Catalan', w:1},
+        {l:'Date of admission', t:'text', v:'2019-03-12', w:1},
+        {l:'Collection / archive', t:'rel', v:['ICAC audiovisual archive'], w:2},
+      ]},
+      {legend:'Content', fields:[
+        {l:'Abstract',     t:'area', v:'Three veteran excavators recall the 1960s–70s campaigns at Empúries, the working conditions, and the discovery of the silver hoard.', w:4},
+        {l:'Description / transcription', t:'area', v:'00:00 Introduction · 04:12 First campaign · 18:40 The 1971 hoard · 39:05 Conservation memories.', w:4},
+        {l:'Descriptors',  t:'portal', w:4, target:'rsc167', targetLabel:'Place (es1)',
+          cols:['section_id','Term','Scope'],
+          rows:[['54021','Empúries','Settlement'],['54088','Oral history','Concept'],['54120','Archaeology','Discipline']]},
+      ]},
+    ],
+  },
+};
+const ORDER = ['numisdata3','numisdata4','numisdata6','tch1','rsc167'];
+
+/* Real Dédalo menu: top-level *areas* (area_activity / area_resource /
+   area_thesaurus / area_tool / area_graph / area_admin / area_maintenance /
+   area_ontology) with their sections nested underneath. Items whose `tipo`
+   matches a real SECTION are navigable; the rest are illustrative. */
+const MENU = [
+  { id:'dd14', icon:I.activity, label:'Activity', count:'live',
+    children:[
+      {label:'Change log',      tipo:'matrix_activity'},
+      {label:'My recent edits', tipo:'activity_me'},
+      {label:'Imports & jobs',  tipo:'activity_jobs'},
+    ]},
+  { id:'numis', icon:I.coin, label:'Numismatics', open:true,
+    children:[
+      {label:'Type',             tipo:'numisdata3'},
+      {label:'Numismatic object',tipo:'numisdata4'},
+      {label:'Mint',             tipo:'numisdata6'},
+      {label:'Authority',        tipo:'numisdata1374', count:'1,902'},
+      {label:'Hoard / Auction',  tipo:'numisdata224',  count:'766'},
+      {label:'Catalogue',        tipo:'numisdata300',  count:'318'},
+    ]},
+  { id:'tch', icon:I.object, label:'Cultural heritage',
+    children:[
+      {label:'Object',                 tipo:'tch1'},
+      {label:'Registration',           tipo:'tch10',  count:'31,602'},
+      {label:'Inspection / condition', tipo:'tch507', count:'8,140'},
+      {label:'Assessment',             tipo:'rsc806', count:'2,233'},
+    ]},
+  { id:'dd1', icon:I.folder, label:'Resources',
+    children:[
+      {label:'Audiovisual',  tipo:'rsc167'},
+      {label:'People',       tipo:'rsc197', count:'4,210', icon:I.people},
+      {label:'Document',     tipo:'rsc45',  count:'12,034', icon:I.doc},
+      {label:'Image',        tipo:'rsc170', count:'88,120', icon:I.img},
+      {label:'Bibliography', tipo:'rsc332', count:'9,765', icon:I.book},
+    ]},
+  { id:'dd9', icon:I.tree, label:'Thesaurus',
+    children:[
+      {label:'Places',            tipo:'es1',        count:'54,200', icon:I.loc},
+      {label:'Materials',         tipo:'material1',  count:'612'},
+      {label:'Techniques',        tipo:'technique1', count:'430'},
+      {label:'Periods & cultures',tipo:'dc1',        count:'1,120'},
+      {label:'Subjects',          tipo:'on1',        count:'7,880'},
+    ]},
+  { id:'dd11', icon:I.tools, label:'Tools',
+    children:[
+      {label:'Import data',     tipo:'tool_import',    icon:I.importIc},
+      {label:'Export data',     tipo:'tool_export',    icon:I.exportIc, action:'export'},
+      {label:'Diffusion',       tipo:'tool_diffusion', icon:I.globe},
+      {label:'Print & report',  tipo:'tool_print',     icon:I.print},
+    ]},
+  { id:'dd66', icon:I.graph, label:'Graph', single:true },
+  { id:'dd1', icon:I.admin, label:'Administration',
+    children:[
+      {label:'Users',        tipo:'dd64',  count:'48', icon:I.people},
+      {label:'Profiles',     tipo:'dd84',  count:'9'},
+      {label:'Projects',     tipo:'dd153', count:'6'},
+      {label:'Ontology',     tipo:'area_ontology', icon:I.tree},
+      {label:'Maintenance',  tipo:'dd88',  icon:I.gear},
+    ]},
+];
+const FAVOURITES = [
+  {label:'Type',              tipo:'numisdata3'},
+  {label:'Numismatic object', tipo:'numisdata4'},
+  {label:'Object',            tipo:'tch1'},
+];
+
+/* ============================================================================
+   State + rendering
+   ========================================================================== */
+let current = 'numisdata3';
+let selectedRow = null;
+let activeTab = 0;
+
+const app = document.getElementById('app');
+
+/* which area groups are expanded (persist within session) */
+const openAreas = new Set(MENU.filter(a=>a.open).map(a=>a.label));
+
+function subItemHTML(c){
+  const live = !!SECTIONS[c.tipo];
+  const s = live ? SECTIONS[c.tipo] : null;
+  const count = c.count || (s? s.count : '');
+  const active = live && c.tipo===current ? ' active' : '';
+  const ic = c.icon ? `<span style="width:14px;height:14px;display:grid;place-items:center;color:inherit">${c.icon}</span>` : '<span class="dot"></span>';
+  const handler = live ? `selectSection('${c.tipo}')` : (c.action==='export' ? 'openExport()' : `toast('Open ${c.label} · ${c.tipo}')`);
+  return `<div class="sub-item${active}" data-name="${c.label.toLowerCase()}" onclick="${handler}">
+      ${ic}<span class="lbl">${c.label}</span>${count?`<span class="cnt">${count}</span>`:''}
+      <span class="star">${I.starO}</span></div>`;
+}
+
+function buildMenu(){
+  const nav = document.getElementById('nav');
+  let html = '';
+  // favourites
+  html += `<div class="menu-fav-title">${I.star} Favourites</div>`;
+  FAVOURITES.forEach(c => html += subItemHTML(c));
+  // areas
+  MENU.forEach(a => {
+    const open = openAreas.has(a.label);
+    if (a.single){
+      html += `<div class="area-group"><div class="area-row" onclick="toast('Open ${a.label} area')">
+        <span class="chev" style="visibility:hidden">${I.chev}</span>
+        <span class="ico">${a.icon}</span><span class="lbl">${a.label}</span></div></div>`;
+      return;
+    }
+    html += `<div class="area-group${open?' open':''}" data-area="${a.label}">
+      <div class="area-row" onclick="toggleArea('${a.label}')">
+        <span class="chev">${I.chev}</span>
+        <span class="ico">${a.icon}</span>
+        <span class="lbl">${a.label}</span>
+        <span class="cnt">${a.children.length}</span>
+      </div>
+      <div class="area-children">${a.children.map(subItemHTML).join('')}</div>
+    </div>`;
+  });
+  nav.innerHTML = html;
+}
+function buildNav(){ buildMenu(); } // kept for callers
+
+function toggleArea(name){
+  if (openAreas.has(name)) openAreas.delete(name); else openAreas.add(name);
+  buildMenu();
+}
+function filterMenu(q){
+  q = q.toLowerCase().trim();
+  document.querySelectorAll('.area-group[data-area]').forEach(g => {
+    const subs = g.querySelectorAll('.sub-item');
+    let any = false;
+    subs.forEach(s => { const m = !q || s.dataset.name.includes(q); s.style.display = m?'':'none'; if(m) any=true; });
+    g.style.display = (!q || any) ? '' : 'none';
+    if (q) g.classList.add('open'); else g.classList.toggle('open', openAreas.has(g.dataset.area));
+  });
+}
+
+function selectSection(t){
+  current = t; selectedRow = null; activeTab = 0;
+  const s = SECTIONS[t];
+  app.style.setProperty('--accent', s.accent);
+  app.style.setProperty('--accent_soft', s.accentSoft);
+  document.getElementById('crumb').innerHTML = `${s.area} <span style="opacity:.5">/</span> <b>${s.label}</b>`;
+  document.getElementById('secTitle').textContent = s.label;
+  document.getElementById('secSub').textContent = `${s.count} records`;
+  document.getElementById('countLabel').textContent = `${s.count} records`;
+  const parent = MENU.find(a => a.children && a.children.some(c => c.tipo===t));
+  if (parent) openAreas.add(parent.label);
+  buildNav();
+  renderList();
+  showList();
+  closeSearch();
+  if (window.innerWidth <= 900) app.setAttribute('data-rail-mobile','closed');
+}
+
+const SID_CHIP = 'display:inline-block;min-width:50px;text-align:center;font-variant-numeric:tabular-nums;font-weight:650;color:color-mix(in srgb,var(--accent) 80%,var(--fg_default));background:var(--accent_soft);border-radius:6px;padding:2px 8px;border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);cursor:pointer';
+function renderList(){
+  const s = SECTIONS[current];
+  const head = document.getElementById('listHead');
+  const body = document.getElementById('listBody');
+  head.innerHTML = '<tr>' + s.columns.map(c =>
+    `<th style="${c.w?`width:${c.w}`:''}">${c.key==='id'?'section_id':c.label}</th>`).join('') + '</tr>';
+  body.innerHTML = s.rows.map((r,i) => {
+    const tds = s.columns.map(c => {
+      let v = r[c.key];
+      if (c.thumb) return `<td onclick="openRecord(${i})" style="cursor:pointer"><span class="thumb">${s.icon}</span></td>`;
+      if (c.key==='id') return `<td><span style="${SID_CHIP}" title="Open record (section_id)" onclick="openRecord(${i})">${s.sidBase+i}</span></td>`;
+      if (c.tag && Array.isArray(v)) return `<td class="editable tagcell" onclick="startTag(event,${i})"><span class="tag ${v[0]}">${v[0]==='green'?'● ':''}${v[1]}</span></td>`;
+      if (c.rel) return `<td class="editable rel" onclick="startRel(event,${i},'${c.key}')">${v&&v!=='—'?`<span class="rel-chip"><span class="lk"></span>${v}</span>`:'<span class="muted" style="color:var(--fg_faint)">—</span>'}${r.un&&c.rel?'<span class="uncert" title="Marked as uncertain">?</span>':''}</td>`;
+      const cls = c.primary ? 'cell-primary editable' : 'editable';
+      return `<td class="${cls}" onclick="startText(event,${i},'${c.key}')">${v==null?'':v}</td>`;
+    }).join('');
+    return `<tr data-i="${i}" ondblclick="openRecord(${i})">${tds}</tr>`;
+  }).join('');
+}
+
+/* ---- inline editing of list cells (a new v7 capability) ---- */
+let inlinePop = null;
+function closeInlinePop(){ if(inlinePop){ inlinePop.remove(); inlinePop=null; } }
+document.addEventListener('click', closeInlinePop);
+function placePop(pop, td){
+  const r = td.getBoundingClientRect();
+  pop.style.left = Math.min(r.left, window.innerWidth-260) + 'px';
+  pop.style.top = (r.bottom + 4) + 'px';
+}
+function startText(ev, i, key){
+  ev.stopPropagation(); closeInlinePop();
+  const td = ev.currentTarget;
+  if (td.classList.contains('editing')) return;
+  const cur = SECTIONS[current].rows[i][key] ?? '';
+  const primary = td.classList.contains('cell-primary');
+  td.classList.add('editing');
+  td.innerHTML = `<input class="cell-input" value="${String(cur).replace(/"/g,'&quot;')}">`;
+  const inp = td.querySelector('input'); inp.focus(); inp.select();
+  let done = false;
+  const commit = ()=>{ if(done) return; done=true; const nv = inp.value;
+    SECTIONS[current].rows[i][key] = nv;
+    td.classList.remove('editing'); td.classList.add('dirty');
+    td.innerHTML = nv; if(primary) td.classList.add('cell-primary');
+    toast('Saved · unsynced edit'); };
+  inp.addEventListener('blur', commit);
+  inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); inp.blur(); } if(e.key==='Escape'){ done=true; td.classList.remove('editing'); renderList(); } });
+}
+function startTag(ev, i){
+  ev.stopPropagation(); closeInlinePop();
+  const td = ev.currentTarget;
+  const opts = [['green','Reviewed'],['green','Published'],['amber','Draft'],['amber','In revision'],['grey','New']];
+  const pop = document.createElement('div'); pop.className = 'inline-pop';
+  pop.innerHTML = opts.map((o,idx)=>`<div class="io" data-idx="${idx}"><span class="tag ${o[0]}">${o[0]==='green'?'● ':''}${o[1]}</span></div>`).join('');
+  document.body.appendChild(pop); placePop(pop, td); inlinePop = pop;
+  pop.querySelectorAll('.io').forEach(ch=>ch.onclick=e=>{ e.stopPropagation(); SECTIONS[current].rows[i].st = opts[+ch.dataset.idx]; SECTIONS[current].rows[i]._dirty=true; closeInlinePop(); renderList(); markDirty(i); toast('Status updated'); });
+}
+function startRel(ev, i, key){
+  ev.stopPropagation(); closeInlinePop();
+  const td = ev.currentTarget;
+  const sample = ['Roma','Tarraco','Antioch','Emporion','Lugdunum','Caesaraugusta'];
+  const pop = document.createElement('div'); pop.className = 'inline-pop'; pop.style.minWidth = '230px';
+  pop.innerHTML = `<label class="portal-search" style="margin-bottom:6px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="Search related section…" autofocus></label>`
+    + `<div style="font-size:10px;color:var(--fg_faint);padding:2px 6px 4px">Scoped to the relation target</div>`
+    + sample.map(x=>`<div class="io"><span class="rel-chip"><span class="lk"></span>${x}</span></div>`).join('');
+  document.body.appendChild(pop); placePop(pop, td); inlinePop = pop;
+  pop.querySelector('input').addEventListener('click', e=>e.stopPropagation());
+  pop.querySelectorAll('.io').forEach(ch=>ch.onclick=e=>{ e.stopPropagation(); SECTIONS[current].rows[i][key] = ch.textContent.trim(); closeInlinePop(); renderList(); markDirty(i); toast('Linked · unsynced edit'); });
+}
+function markDirty(i){ const tr = document.querySelector(`#listBody tr[data-i="${i}"]`); if(tr){ tr.querySelectorAll('td')[2]?.classList.add('dirty'); } }
+
+/* ---- edit view ---- */
+function openRecord(i){
+  const s = SECTIONS[current];
+  selectedRow = i;
+  activeComponent = null;
+  const r = s.rows[i];
+  document.getElementById('recSid').innerHTML = `<b>${s.sidBase+i}</b>`;
+  document.getElementById('recId').textContent = `${s.label} · ${s.tipo}`;
+  document.getElementById('recTitle').textContent = r._t || r.title || r.name || r.code;
+  // tabs
+  const tabs = document.getElementById('editTabs');
+  tabs.innerHTML = s.tabs.map((t,ti)=>`<button class="${ti===activeTab?'active':''}" onclick="setTab(${ti})">${t}</button>`).join('');
+  renderForm();
+  app.setAttribute('data-mode','edit');
+  setInspector(true);
+  renderInspector(r);
+}
+function setTab(ti){ activeTab = ti;
+  document.querySelectorAll('#editTabs button').forEach((b,i)=>b.classList.toggle('active',i===ti));
+  renderForm();
+}
+const WPCT = {1:'25%',2:'50%',3:'75%',4:'100%'};
+// floating component tools (top-right, on active). Relations/portals also get a
+// "link a record" button here instead of an inline "+ link" in the value area.
+function wcTools(tipo, withLink){
+  return `<div class="wc-tools" onclick="event.stopPropagation()">
+    ${withLink ? `<button title="Link a record" onclick="event.stopPropagation();focusAc('${tipo}')">${I.link}</button>` : ''}
+    <button title="Edit" onclick="toast('Edit component')">${I.note}</button>
+    <button title="Open list" onclick="toast('Open as list')">${I.list}</button>
+    <button title="Tools" onclick="toast('Component tools')">${I.tools}</button>
+    <button title="Clear" onclick="toast('Clear value')">${I.trash}</button>
+  </div>`;
+}
+function focusAc(tipo){ const f = document.querySelector('.field.active-comp'); const inp = f && f.querySelector('.ac-box input, .portal-search input'); if(inp) inp.focus(); else toast('Search to link a record'); }
+function richText(v){
+  if(!v) return '<span class="muted">—</span>';
+  // demo rich rendering: bold the first clause, italicise «quoted», tag a name
+  let h = v.replace(/^([^.,;]+)([.,;])/, '<b>$1</b>$2')
+          .replace(/«([^»]+)»/g, '<i>«$1»</i>')
+          .replace(/\b(Trajan|Augustus|Viana Painter)\b/g, '<span class="tperson">$1</span>');
+  return h;
+}
+function renderForm(){
+  const s = SECTIONS[current];
+  const form = document.getElementById('editForm');
+  const sets = s.form;
+  let html = '';
+  let fi = 0; formComponents = {};
+  sets.forEach((fs) => {
+    const gkey = `${s.tipo}:${fs.legend}`;
+    const collapsed = collapsedGroups.has(gkey) ? ' collapsed' : '';
+    const chev = I.chev.replace('M9 18l6-6-6-6','M6 9l6 6 6-6');
+    html += `<div class="fieldset${collapsed}"><div class="group-head" onclick="toggleGroup(event,'${gkey.replace(/'/g,'')}')"><span class="gchev">${chev}</span><span class="group-label">${fs.legend}</span></div><div class="grid">`;
+    fs.fields.forEach(f => {
+      // width/position from the component's own grid definition (w = column span 1..4)
+      let cls = (f.pos==='left' && f.t==='media') ? 'media-left' : ('w' + (f.w || 2));
+      if (f.req) cls += ' mand';
+      const wmark = f.t!=='media' ? `<span class="wmark">${WPCT[f.w||2]}</span>` : '';
+      const model = MODEL_OF[f.t] || 'component_input_text';
+      const tipo = `${s.tipo}_${++fi}`;
+      formComponents[tipo] = { label:f.l, model, tipo, data: JSON.stringify(Array.isArray(f.v)?f.v:(f.rows||(f.v==null?'':f.v)), null, 1) };
+      const isActive = activeComponent && activeComponent.tipo===tipo;
+      const act = isActive ? ' active-comp' : '';
+      const withLink = (f.t==='rel' || f.t==='portal');
+      html += `<div class="field ${cls}${act}" onclick="activateComponent('${tipo}')">${wcTools(tipo, withLink)}`;
+      html += `<label><span class="lbl-txt">${f.l}</span>${f.req?'<span class="req">*</span>':''}<span class="help" title="${model}">i</span>${wmark}</label>`;
+
+      if (f.t==='text') {
+        const unc = f.un ? '<span class="rinc" title="This value is uncertain">?</span>' : '';
+        html += isActive
+          ? `<div class="wval"><input class="wedit" value="${String(f.v||'').replace(/"/g,'&quot;')}" onclick="event.stopPropagation()">${unc}</div>`
+          : `<div class="wval text">${f.v||'<span class="muted">—</span>'}${unc}</div>`;
+      }
+      else if (f.t==='area') {
+        html += `<div class="wtext">
+          <div class="wtext-bar" onclick="event.stopPropagation()">
+            <button title="Bold">B</button><button title="Italic" style="font-style:italic">I</button><button title="Underline" style="text-decoration:underline">U</button>
+            <span class="sep"></span>
+            <button title="Undo">${I.chev.replace('M9 18l6-6-6-6','M9 14 4 9l5-5')}</button><button title="Redo">${I.chev.replace('M9 18l6-6-6-6','M15 14l5-5-5-5')}</button>
+            <button title="Find &amp; replace">${I.search}</button><button title="HTML source" style="font-family:monospace;font-weight:600">&lt;/&gt;</button>
+            <span class="sep"></span>
+            <button class="semantic" title="Person tag">${I.user}</button><button class="semantic" title="Geo tag">${I.loc}</button><button class="semantic" title="Note">${I.note}</button><button class="semantic" title="Reference">${I.book}</button><button class="semantic" title="Language">ABC</button>
+          </div>
+          <div class="wtext-body">${richText(f.v)}</div>
+        </div>`;
+      }
+      else if (f.t==='switch') {
+        html += `<div class="wval"><span class="switch${f.v?'':' off'}"></span><span class="muted" style="margin-left:8px">${f.v?'Yes':'No'}</span></div>`;
+      }
+      else if (f.t==='rel') {
+        const rows = (f.v||[]).map(relRow).join('');
+        html += `<div class="wval rel-wrap"><div class="rel-list">${rows||'<span class="muted">Not linked</span>'}</div></div>`;
+        // autocomplete search — visible ONLY when this component is active (link via tools box)
+        html += acSearch(f.l, s.tipo);
+      }
+      else if (f.t==='portal') html += portalView(f);
+      else if (f.t==='media') html += mediaFrame(f.media);
+      html += `</div>`;
+    });
+    html += `</div></div>`;
+  });
+  form.innerHTML = html;
+}
+// one linked value as a row: leaf term + muted parent path; edit/unlink show on active.
+// "edit" opens the ORIGINAL related record so its data can be edited at source.
+function relRow(val){
+  const v = (val && typeof val==='object') ? val.t : val;   // value may carry its own uncertainty
+  const un = (val && typeof val==='object') ? val.un : false;
+  const parts = String(v).split(/,\s*/);
+  const leaf = parts.shift();
+  const path = parts.length ? `<span class="path">, ${parts.join(', ')}</span>` : '';
+  // uncertainty sits on the SAME line as its value (so multi-value relations flag each one)
+  const unc = un ? `<span class="rinc" title="This value is uncertain" onclick="event.stopPropagation()">?</span>` : '';
+  return `<div class="rel-row"><span class="rv"><span class="leaf">${leaf}</span>${path}${unc}</span>`
+    + `<span class="redit" title="Edit the original record" onclick="event.stopPropagation();toast('Open “${leaf}” to edit its data')">${I.note}</span>`
+    + `<span class="rx" title="Unlink" onclick="event.stopPropagation();toast('Unlink “${leaf}”')">×</span></div>`;
+}
+// the scoped autocomplete that drops in under an active relation (no clutter when inactive)
+function acSearch(label, sectionTipo){
+  const sample = [['Roma','Hispania Citerior'],['Tarraco','Hispania Citerior'],['Caesaraugusta','Hispania Citerior']];
+  return `<div class="ac-search" onclick="event.stopPropagation()">
+    <div class="ac-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input placeholder="Type to search the related section…" autofocus>
+      <span class="ac-op" onclick="toast('AND / OR')">AND</span>
+    </div>
+    <div class="ac-results">
+      ${sample.map(([t,sc])=>`<div class="acr" onclick="toast('Link ${t}')"><span class="acsid">${1200+Math.round(t.length*7)}</span><span>${t} <span style="color:var(--fg_faint)">· ${sc}</span></span></div>`).join('')}
+    </div>
+    <div class="ac-hint">Results scoped to the relation target · click to link</div>
+  </div>`;
+}
+// component_portal / component_autocomplete: columns view (always) + scoped search (active only)
+function portalView(f){
+  const cols = f.cols || [];
+  const head = '<tr>' + cols.map(c=>`<th>${c==='section_id'?'ID':c}</th>`).join('') + '<th></th></tr>';
+  const rows = (f.rows||[]).map(r => '<tr>' + r.map((v,ci)=>
+    cols[ci]==='section_id' ? `<td><span class="psid">${v}</span></td>` : `<td>${v}</td>`
+  ).join('') + '<td style="text-align:right"><span class="prm" title="Unlink">×</span></td></tr>').join('');
+  return `<div class="portal">
+    <div class="portal-bar">
+      <span class="ptarget"><span class="lk"></span>links to <b>${f.targetLabel||f.target}</b></span>
+      <span class="op" onclick="event.stopPropagation();toast('Toggle AND/OR')">AND</span>
+      <span class="spacer"></span>
+      <span class="hint-inactive">${(f.rows||[]).length} linked · click to search</span>
+      <label class="portal-search" onclick="event.stopPropagation()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input placeholder="Search in ${f.targetLabel||f.target}…">
+      </label>
+    </div>
+    <table class="portal-tbl"><thead>${head}</thead><tbody>${rows}</tbody></table>
+    <div class="portal-foot"><span class="padd" onclick="event.stopPropagation();toast('Autocomplete — search ${f.targetLabel||f.target}')">＋ link a record from ${f.targetLabel||f.target}</span></div>
+  </div>`;
+}
+function mediaFrame(kind){
+  if (kind==='av') return `<div class="media-frame"><span class="ov-tag">video</span><div class="play">${I.av}</div><div class="meta">oral_memory_empuries.mp4 · 48:12 · 1080p</div></div>`;
+  if (kind==='map') return `<div class="media-frame"><span class="ov-tag">geo</span><div class="play" style="background:transparent">${I.loc}</div><div class="meta">41.1189° N, 1.2445° E · leaflet</div></div>`;
+  return `<div class="media-frame"><span class="ov-tag">obverse / reverse</span><div class="play" style="background:transparent">${I.img}</div><div class="meta">obverse.tif · reverse.tif · 4096² · TIFF</div></div>`;
+}
+
+/* ---- inspector (real Dédalo block stack) ---- */
+const MODEL_OF = {text:'component_input_text', area:'component_text_area', rel:'component_relation', switch:'component_radio_button', media:'component_media', portal:'component_portal'};
+let activeComponent = null;                 // {label, tipo, model, data}
+let formComponents = {};                     // tipo -> component metadata (built in renderForm)
+const collapsedGroups = new Set();           // section_groups folded by the user (persisted across re-render)
+const openBlocks = new Set(['info','project']); // Info + Project expanded by default (real defaults)
+
+function toggleGroup(ev, gkey){
+  ev.stopPropagation();
+  const fs = ev.currentTarget.closest('.fieldset');
+  if (collapsedGroups.has(gkey)) collapsedGroups.delete(gkey); else collapsedGroups.add(gkey);
+  fs.classList.toggle('collapsed', collapsedGroups.has(gkey));
+}
+
+function toggleBlock(id){
+  if (openBlocks.has(id)) openBlocks.delete(id); else openBlocks.add(id);
+  const el = document.querySelector(`.iblock[data-b="${id}"]`);
+  if (el) el.classList.toggle('open', openBlocks.has(id));
+}
+function activateComponent(tipo){
+  activeComponent = formComponents[tipo] || null;
+  openBlocks.add('info'); openBlocks.add('comphist');
+  renderForm();
+  renderInspector(SECTIONS[current].rows[selectedRow]);
+}
+function backToSection(){ activeComponent = null; renderForm(); renderInspector(SECTIONS[current].rows[selectedRow]); }
+
+function block(id, icon, title, bodyHTML, count){
+  const open = openBlocks.has(id);
+  return `<div class="iblock${open?' open':''}" data-b="${id}">
+    <div class="iblock-head" onclick="toggleBlock('${id}')">
+      <span class="hi">${icon}</span><span class="ht">${title}</span>
+      ${count!=null?`<span class="hn">${count}</span>`:''}
+      <span class="hc">${I.chev}</span>
+    </div>
+    <div class="iblock-body">${bodyHTML}</div>
+  </div>`;
+}
+function ig(rows){ return `<div class="info-grid">${rows.map(([k,v,m])=>
+  `<div class="ig"><span class="k">${k}</span><span class="v${m?' '+m:''}">${v}</span></div>`).join('')}</div>`; }
+
+function renderInspector(r){
+  const s = SECTIONS[current];
+  const sid = s.sidBase + selectedRow;
+  const pos = selectedRow+1;
+  const ac = activeComponent;
+
+  // ---- selection banner (section vs component) ----
+  const banner = ac
+    ? `<div class="insp-banner"><span class="bi">${I.bolt}</span><div class="bt"><small>Component</small><b>${ac.label}</b></div><button class="bbtn" onclick="backToSection()">Section</button></div>`
+    : `<div class="insp-banner"><span class="bi">${s.icon}</span><div class="bt"><small>Section</small><b>${s.label}</b></div><button class="bbtn" onclick="toast('Back to list')">List</button></div>`;
+
+  // ---- Info block (dual mode) ----
+  const infoBody = ac
+    ? ig([
+        ['tipo', `<b>${ac.tipo}</b>`, 'mono'],
+        ['info', `<a onclick="toast('Open ontology')">ontology ↗</a> · <a onclick="toast('Docs')">docs ↗</a>`],
+        ['model', ac.model, 'mono'],
+        ['translatable', ac.model==='component_relation'?'false':'true'],
+        ['view', 'default - edit'],
+      ]) + `<div style="margin-top:8px"><div class="ig" style="border:none"><span class="k">Data</span><span class="v"><a onclick="toast('Copied data')">${I.copy}</a></span></div><div class="info-grid"><div class="ig" style="grid-template-columns:1fr"><span class="v mono" style="text-align:left;white-space:pre-wrap;background:var(--bg_surface_alt);padding:8px;border-radius:6px;max-height:96px;overflow:auto">${ac.data}</span></div></div></div>`
+    : ig([
+        ['tipo', `<b>${s.tipo}</b>`, 'mono'],
+        ['info', `<a onclick="toast('Open ontology')">ontology ↗</a> · <a onclick="toast('Docs')">docs ↗</a>`],
+        ['model', 'section', 'mono'],
+        ['table', `matrix_${s.area==='Numismatics'?'numisdata':(s.tipo.replace(/[0-9]/g,''))}`, 'mono'],
+        ['section_id', sid],
+        ['view', 'default - edit'],
+        ['Created', `12 Jun 2026 · <span style="color:var(--fg_default)">Import</span>`],
+        ['Modified', `Today 09:41 · <span style="color:var(--fg_default)">A. Peña</span>`],
+        ['Published', `${r.st && r.st[0]==='green' ? '18 Jun 2026 · diffusion_sql' : '<span style="color:var(--fg_faint)">Never</span>'}`],
+      ]);
+
+  // ---- Latest changes (section TM mini) ----
+  const tm = [
+    ['AP','A. Peña', `edited <b>${s.columns[2]?.label||'field'}</b>`, 'Today 09:41'],
+    ['MS','M. Soler', `set <b>Status</b> → reviewed`, 'Yest. 16:20'],
+    ['AP','A. Peña', `added <b>Bibliography</b>`, '14 Jun'],
+    ['IM','Import', `created record`, '12 Jun'],
+  ].map(([i,u,c,d])=>`<div class="tm-row"><span class="tm-u">${i}</span><span class="tm-c"><span>${u}</span> ${c}</span><span class="tm-d">${d}</span></div>`).join('');
+
+  // ---- Component history ----
+  const compHist = ac
+    ? [['v3','A. Peña','Today 09:41'],['v2','M. Soler','Yest. 16:20'],['v1','Import','12 Jun']]
+        .map(([v,u,d])=>`<div class="tm-row"><span class="tm-u">${u.slice(0,2).toUpperCase()}</span><span class="tm-c"><b>${v}</b> <span>· ${u}</span></span><span class="tm-d">${d}</span></div>`).join('')
+        + `<div style="font-size:11px;color:var(--fg_faint);margin-top:7px">Annotations (rsc329): <span style="color:var(--fg_muted)">1 note</span></div>`
+    : `<div style="font-size:11.5px;color:var(--fg_muted);padding:4px 0">Select a field in the form to see its value history and notes.</div>`;
+
+  // ---- Activity bubbles ----
+  const activity = `
+    <div class="bubble"><span class="bz ok"></span><div class="bb"><b>Saved</b><p>${s.columns[2]?.label||'Field'} updated · 1 component</p><span class="bt">just now</span></div></div>
+    <div class="bubble"><span class="bz ok"></span><div class="bb"><b>Indexed</b><p>Record queued for RAG re-index</p><span class="bt">2 min ago</span></div></div>
+    <div class="bubble"><span class="bz warn"></span><div class="bb"><b>Validation</b><p>“Findspot” recommended but empty</p><span class="bt">5 min ago</span></div></div>`;
+
+  document.getElementById('inspBody').innerHTML = `
+    <div class="insp-pager">
+      <span class="nav-mini"><button onclick="navRecord(-1)" title="Previous">${I.chev.replace('M9 18l6-6-6-6','M15 18l-6-6 6-6')}</button><button onclick="navRecord(1)" title="Next">${I.chev}</button></span>
+      <span class="pos">${pos} / ${s.rows.length}</span>
+      <span class="sid">section_id <b>${sid}</b></span>
+    </div>
+
+    <div class="insp-actions">
+      <button class="ia accent" onclick="toast('Search this section')">${I.search}<span>Search</span></button>
+      <button class="ia" onclick="toast('New record')">${I.plus}<span>New</span></button>
+      <button class="ia" onclick="toast('Duplicate record')">${I.copy}<span>Duplicate</span></button>
+      <button class="ia danger" onclick="toast('Delete record')">${I.trash}<span>Delete</span></button>
+      <button class="ia" onclick="toast('Open relationships')">${I.list}<span>Open rel.</span></button>
+      <button class="ia" onclick="toast('Relations graph')">${I.graph}<span>Graph</span></button>
+      <button class="ia" onclick="toast('Diffusion')">${I.globe}<span>Diffusion</span></button>
+      <button class="ia" onclick="toast('Time machine')">${I.clock}<span>History</span></button>
+    </div>
+    <div class="insp-tools-row">
+      <button class="itool" style="background:var(--accent)" onclick="openExport()">${I.exportIc} Export</button>
+      <button class="itool" style="background:var(--accent)" onclick="toast('Print & report')">${I.print} Print</button>
+    </div>
+
+    ${banner}
+
+    ${block('info', I.shield, 'Info', infoBody)}
+    ${block('project', I.gear, 'Project', `<div class="proj-pick" onclick="toast('Change project')"><span class="pn">monedaiberica</span>${I.chev}</div><div style="font-size:11px;color:var(--fg_faint);margin-top:7px">relation_list · dd153</div>`)}
+    ${block('relations', I.link, 'Relations', `<div style="font-size:11px;color:var(--fg_muted);margin-bottom:5px">Records that reference this one</div>${relatedRows()}`, relCount())}
+    ${block('latest', I.clock, 'Latest changes', `<div class="tm-grid">${tm}</div>`)}
+    ${block('comphist', I.note, 'Component history', `<div class="tm-grid">${compHist}</div>`)}
+    ${block('activity', I.activity, 'Activity', activity, 3)}
+
+    <div class="insp-foot">
+      <button class="ibtn" onclick="toast('Opening raw record JSON (read_raw)')">${I.eye} View record data</button>
+      <button class="ibtn warn" onclick="toast('Download register.json')">${I.importIc} Download register file</button>
+    </div>`;
+}
+function relCount(){ return (REL_MAP[current]||[]).reduce((a,x)=>a+parseInt(x[3].replace(/\D/g,''))||a,0) || (REL_MAP[current]||[]).length; }
+const REL_MAP = {
+  numisdata3:[['coins','Numismatic object','numisdata4','41'],['mint','Mint','numisdata6','1'],['book','Bibliography','rsc332','7'],['object','Moveable heritage','tch1','3']],
+  numisdata4:[['coin','Type','numisdata3','1'],['img','Images','rsc170','2'],['place','Findspot','es1','1'],['book','Bibliography','rsc332','4']],
+  numisdata6:[['coin','Types struck','numisdata3','318'],['place','Place','es1','1'],['mint','Child mints','numisdata6','2']],
+  tch1:[['img','Images','rsc170','5'],['av','Audiovisuals','rsc167','1'],['book','Bibliography','rsc332','3'],['coin','Numismatic type','numisdata3','2']],
+  rsc167:[['place','Descriptors','es1','3'],['object','Linked objects','tch1','4'],['user','Finder','rsc1152','1']],
+};
+function relatedRows(){
+  return (REL_MAP[current]||[]).map(([ic,t,sub,n])=>
+    `<div class="related-row" onclick="toast('Open ${t} (${sub})')"><span class="rr-ic">${I[ic]||I.link}</span><div><div class="rr-t">${t}</div><div class="rr-s">${sub}</div></div><span class="rr-n">${n}</span></div>`
+  ).join('');
+}
+function navRecord(dir){
+  const s = SECTIONS[current];
+  let i = (selectedRow + dir + s.rows.length) % s.rows.length;
+  activeComponent = null;
+  openRecord(i);
+}
+
+/* ---- view toggles ---- */
+function showList(){ app.setAttribute('data-mode','list'); setInspector(false);
+  document.getElementById('segList').classList.add('active'); document.getElementById('segGrid').classList.remove('active');
+}
+function setInspector(on){ app.setAttribute('data-inspector', on?'on':'off'); }
+
+/* ---- unified search (single interface) ---- */
+const OPERATORS = ['contains','equals','starts with','greater than','less than','is empty'];
+function buildSearch(){
+  const s = SECTIONS[current];
+  document.getElementById('searchSub').textContent = `${s.label} · ${s.tipo} — one builder for list, portals and saved searches`;
+  // Fields = the section's searchable components (use its list columns + a few more)
+  const fields = s.columns.filter(c=>!c.thumb).map(c=> c.key==='id'?{l:'section_id',m:'id'}:{l:c.label, m:(c.rel?'component_relation':(c.tag?'component_radio_button':'component_input_text'))});
+  document.getElementById('searchFields').innerHTML = fields.map(f=>
+    `<div class="field-pill" onclick="toast('Add “${f.l}” to query')"><span class="grip">⋮⋮</span>${f.l}<span class="fm">${f.m.replace('component_','')}</span></div>`).join('');
+  // Canvas: an AND group seeded with two real criteria
+  const c2 = s.columns.find(c=>c.rel) || s.columns[2];
+  const c3 = s.columns.find(c=>c.tag) || s.columns[1];
+  document.getElementById('searchCanvas').innerHTML = `
+    <div class="sgroup">
+      <div class="sgroup-head">
+        <span class="bool"><button class="on">AND</button><button onclick="toast('OR')">OR</button></span>
+        <span class="gl">all of the following</span><span class="spacer"></span><span class="gx" onclick="toast('Remove group')">×</span>
+      </div>
+      ${critRow('Public', 'equals', 'Yes', false)}
+      ${critRow(c3?c3.label:'Status', 'equals', 'reviewed', false)}
+      ${critRow(c2?c2.label:'Field', 'contains', '', true)}
+      <div class="add-group" style="margin-top:8px;border:none;padding:4px 0" onclick="toast('Drag a field here or click to add')">＋ add condition</div>
+    </div>`;
+  // Presets (dd623)
+  const presets = [['Public · reviewed', '2 conditions', true], ['My drafts', '1 condition', false], ['Empty findspot', '1 condition', false], ['Recently modified', '1 condition', false]];
+  document.getElementById('searchPresets').innerHTML = presets.map(p=>
+    `<div class="preset-row ${p[2]?'on':''}" onclick="toast('Load preset: ${p[0]}')"><span class="pdot"></span><span class="pn">${p[0]}<small>${p[1]}</small></span></div>`).join('');
+  const n = (parseInt((s.count||'0').replace(/\D/g,''))||300);
+  document.getElementById('searchMatches').textContent = Math.max(1, Math.round(n*0.18)).toLocaleString();
+}
+function critRow(field, op, val, rel){
+  return `<div class="scrit">
+    <span class="sf">${rel?'<span class="lk"></span>':''}${field}</span>
+    <select>${OPERATORS.map(o=>`<option ${o===op?'selected':''}>${o}</option>`).join('')}</select>
+    ${rel
+      ? `<span class="rel-chip" style="justify-self:start"><span class="lk"></span>pick…</span>`
+      : `<input value="${val}" placeholder="value">`}
+    <span class="sx" onclick="toast('Remove condition')">×</span>
+  </div>`;
+}
+function openSearch(){ buildSearch(); app.setAttribute('data-search','on'); }
+function closeSearch(){ app.setAttribute('data-search','off'); }
+function toggleSearchCol(which){
+  const key = which==='fields' ? 'data-search-fields' : 'data-search-presets';
+  const on = app.getAttribute(key) !== 'off';
+  app.setAttribute(key, on ? 'off' : 'on');
+  document.getElementById(which==='fields'?'tgFields':'tgPresets').classList.toggle('on', !on);
+}
+function applySearch(){ closeSearch(); toast('Search applied · filtering results'); }
+
+/* ---- rail / theme / density ---- */
+function toggleRail(){ app.setAttribute('data-rail', app.getAttribute('data-rail')==='full'?'min':'full'); }
+function toggleRailMobile(){ app.setAttribute('data-rail-mobile', app.getAttribute('data-rail-mobile')==='open'?'closed':'open'); }
+function toggleTheme(){
+  const root = document.documentElement;
+  const dark = root.getAttribute('data-theme')==='dark';
+  root.setAttribute('data-theme', dark?'light':'dark');
+  document.getElementById('themeBtn').innerHTML = dark
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5 3.5 3.5M20.5 20.5 19 19M19 5l1.5-1.5M3.5 20.5 5 19"/></svg>';
+}
+function toggleDensity(){
+  const root = document.documentElement;
+  root.setAttribute('data-density', root.getAttribute('data-density')==='compact'?'comfortable':'compact');
+  toast('Density: ' + root.getAttribute('data-density'));
+}
+
+/* ---- tools popover ---- */
+function toggleTools(e){ e.stopPropagation(); document.getElementById('toolsMenu').classList.toggle('open'); }
+document.addEventListener('click', ()=> document.getElementById('toolsMenu').classList.remove('open'));
+
+/* ---- export modal ---- */
+function openExport(){
+  document.getElementById('toolsMenu').classList.remove('open');
+  const s = SECTIONS[current];
+  document.getElementById('exportSub').textContent = `${s.label} · ${s.tipo} — flat table (export_tabulator)`;
+  document.getElementById('exportInfo').textContent = `${s.rows.length} rows · ${s.columns.filter(c=>!c.thumb).length} columns`;
+  // selected columns
+  const cols = s.columns.filter(c=>!c.thumb && c.label);
+  document.getElementById('exportCols').innerHTML = cols.map((c,i)=>
+    `<span class="col-pill ${i<5?'sel':''}"><span class="grip">⋮⋮</span>${c.label}<span class="x">×</span></span>`).join('')
+    + `<span class="col-pill" style="border-style:dashed;color:var(--fg_muted)">＋ add column</span>`;
+  // preview
+  const pcols = cols.slice(0,5);
+  let html = '<thead><tr>' + pcols.map(c=>`<th>${c.label}</th>`).join('') + '</tr></thead><tbody>';
+  s.rows.slice(0,5).forEach(r=>{
+    html += '<tr>' + pcols.map(c=>{
+      let v = r[c.key];
+      if (Array.isArray(v)) v = v[1]||v[0];
+      return `<td>${v==null?'':v}</td>`;
+    }).join('') + '</tr>';
+  });
+  html += '</tbody>';
+  document.getElementById('previewTbl').innerHTML = html;
+  document.getElementById('scrim').classList.add('open');
+  document.getElementById('exportModal').classList.add('open');
+}
+function closeExport(){
+  document.getElementById('scrim').classList.remove('open');
+  document.getElementById('exportModal').classList.remove('open');
+}
+function pickRadio(el){ el.parentElement.querySelectorAll('.radio-row').forEach(r=>r.classList.remove('on')); el.classList.add('on'); }
+function toggleCheck(el){ el.classList.toggle('on'); }
+function pickFmt(el){ el.parentElement.querySelectorAll('.fmt').forEach(f=>f.classList.remove('on')); el.classList.add('on'); }
+
+/* ---- toast ---- */
+let toastT;
+function toast(msg){
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ---- keyboard niceties ---- */
+document.addEventListener('keydown', e=>{
+  if ((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==='e'){ e.preventDefault(); openExport(); }
+  if ((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==='f'){ e.preventDefault(); openSearch(); }
+  if (e.key==='Escape'){
+    if (app.getAttribute('data-search')==='on'){ closeSearch(); return; }
+    closeExport(); if(app.getAttribute('data-mode')==='edit') showList();
+  }
+});
+
+/* init */
+buildNav();
+selectSection('numisdata3');
+</script>
+</body>
+</html>
