@@ -36,8 +36,8 @@
 	// colliding with the .inspector wrapper class on the same span.
 	.block_icon {
 		flex: 0 0 auto;
-		width: 1.3em;
-		height: 1.3em;
+		width: 1.3rem;
+		height: 1.3rem;
 		background-color: var(--fg_muted);
 		transition: background-color var(--transition-fast);
 
@@ -48,6 +48,22 @@
 		&.note		{ .fn_add_mask('note.svg'); }
 		&.activity	{ .fn_add_mask('gears.svg'); }
 		&.panel		{ .fn_add_mask('inspector.svg'); }
+
+		// fn_add_mask uses mask-size:contain, so each glyph fills a different
+		// fraction of its box depending on how much padding its SVG viewBox carries
+		// — which made some icons look bigger/smaller. Per-icon mask-size normalises
+		// every glyph to the same visual size (~90% of the box) and keeps the
+		// edge-filling ones (link/panel) from clipping. Covers the toolbar/tool
+		// icons too, since those spans also carry .block_icon.
+		// Normalise the glyph size WITHOUT touching mask-size. The masks stay at
+		// `contain` (the only value Safari sizes reliably on these intrinsically-
+		// sizeless SVGs); transform:scale then shrinks each glyph to the same
+		// visual size. scale can ONLY shrink the rendered glyph, so it can never
+		// clip — which percentage/length mask-size did in Safari. ~0.88 of the box.
+		&.link, &.panel, &.activity, &.list, &.diffusion  { transform: scale(0.89); }
+		&.add_light, &.search                             { transform: scale(0.91); }
+		&.info, &.note, &.blank                           { transform: scale(0.92); }
+		&.gear, &.graph, &.history, &.duplicate, &.remove { transform: scale(0.95); }
 	}
 
 	// inspector_div_content
@@ -329,9 +345,13 @@
 				overflow: visible;
 
 				>span {
-					height: 2rem;
+					// square icon box matching the block-header icons, so the
+					// Safari-safe two-value mask-size renders without distortion
+					width: 1.3rem;
+					height: 1.3rem;
+					box-sizing: border-box;
 					margin: 0px;
-					padding: 0.47rem;
+					padding: 0px;
 
 					// icon-only in the toolbar: drop the trailing text-gap so the
 					// glyph sits dead-centre in the button
