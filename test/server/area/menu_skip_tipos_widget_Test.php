@@ -6,12 +6,16 @@ require_once DEDALO_CORE_PATH . '/area_maintenance/widgets/menu_skip_tipos/class
 
 final class menu_skip_tipos_widget_Test extends TestCase {
 
-	public function test_prepare_list_drops_area_root() : void {
-		$root = ontology_utils::get_ar_tipo_by_model('area_root')[0] ?? null;
-		$this->assertNotNull($root, 'area_root tipo must resolve in this ontology');
-		$out = menu_skip_tipos::prepare_list([$root]);
-		$this->assertNotContains($root, $out->tipos);
-		$this->assertContains($root, $out->removed);
+	public function test_prepare_list_drops_top_level_areas() : void {
+		// Skipping a top-level area (e.g. dd69 = Activities) would promote its children into the
+		// top menu bar and deform it, so every area::get_ar_root_area_tipos() entry is rejected.
+		$roots = area::get_ar_root_area_tipos();
+		$this->assertNotEmpty($roots, 'root area tipos must resolve in this ontology');
+		$out = menu_skip_tipos::prepare_list($roots);
+		$this->assertSame([], $out->tipos, 'no top-level area should survive');
+		foreach ($roots as $root) {
+			$this->assertContains($root, $out->removed, "$root must be reported as removed");
+		}
 	}
 
 	public function test_prepare_list_rejects_invalid_tipo() : void {
@@ -20,10 +24,10 @@ final class menu_skip_tipos_widget_Test extends TestCase {
 		$this->assertContains('zzz_not_a_tipo_999', $out->invalid);
 	}
 
-	public function test_prepare_list_dedupes_and_keeps_valid_tipo() : void {
-		// dd69 (Activities) is a valid area tipo in a standard ontology
-		$out = menu_skip_tipos::prepare_list(['dd69', 'dd69']);
-		$this->assertSame(['dd69'], $out->tipos);
+	public function test_prepare_list_dedupes_and_keeps_valid_sub_grouping() : void {
+		// dd349 is a sub-grouping area (model 'area', not a top-level area) — valid + kept.
+		$out = menu_skip_tipos::prepare_list(['dd349', 'dd349']);
+		$this->assertSame(['dd349'], $out->tipos);
 	}
 
 	public function test_get_value_shape() : void {

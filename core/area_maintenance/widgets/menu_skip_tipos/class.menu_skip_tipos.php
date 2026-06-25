@@ -76,11 +76,15 @@ class menu_skip_tipos {
 
 	/**
 	* PREPARE_LIST
-	* Pure sanitiser: validates every tipo against the ontology, drops area_root (skipping the
-	* root would orphan the whole tree), and dedupes. Returns the cleaned list + diagnostics.
+	* Pure sanitiser: validates every tipo against the ontology, drops any TOP-LEVEL area,
+	* and dedupes. Returns the cleaned list + diagnostics.
 	*
-	* Unlike config_areas there is no broad anti-lockout guard: skipping a tipo is cosmetic
-	* (children still render), so it cannot remove access the way areas.deny does.
+	* The skip feature is for sub-grouping containers (e.g. "Oral History processes"): it hides
+	* the node and walks its children up to the grandparent. Skipping a TOP-LEVEL area (Activities,
+	* Resources, …) instead promotes ALL of that area's children into the top menu bar, which
+	* deforms/overflows it (the bar then collapses to the hamburger). So the top-level area tipos
+	* (area::get_ar_root_area_tipos) are rejected here. There is no access/security guard — skipping
+	* is purely cosmetic (children still render), unlike areas.deny.
 	*
 	* @param array<string> $tipos
 	* @return object { tipos:array, invalid:array, removed:array }
@@ -93,8 +97,8 @@ class menu_skip_tipos {
 			'removed'	=> []
 		];
 
-		$area_root = ontology_utils::get_ar_tipo_by_model('area_root');
-		$root_tipo = $area_root[0] ?? null;
+		// top-level areas (Catalogue/Activities/Resources/… + area_root) must not be skipped
+		$root_tipos = area::get_ar_root_area_tipos();
 
 		$clean = [];
 		foreach (array_unique($tipos) as $tipo) {
@@ -102,8 +106,8 @@ class menu_skip_tipos {
 				$out->invalid[] = $tipo;
 				continue;
 			}
-			if ($root_tipo!==null && $tipo===$root_tipo) {
-				$out->removed[] = $tipo; // skipping the root area is never meaningful
+			if (in_array($tipo, $root_tipos, true)) {
+				$out->removed[] = $tipo; // skipping a top-level area deforms the menu bar
 				continue;
 			}
 			$clean[] = $tipo;
@@ -151,7 +155,7 @@ class menu_skip_tipos {
 			'removed'	=> $prepared->removed
 		];
 		$response->msg = 'OK. Configuration saved. Changes apply on the next request'
-			. (empty($prepared->removed) ? '' : '. The root area cannot be skipped and was ignored.')
+			. (empty($prepared->removed) ? '' : '. Top-level areas cannot be skipped and were ignored.')
 			. (empty($prepared->invalid) ? '' : '. Invalid tipos were ignored.');
 
 		return $response;
