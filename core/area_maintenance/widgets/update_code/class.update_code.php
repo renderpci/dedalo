@@ -802,10 +802,13 @@ class update_code {
 	* executing a custom PHP command
 	* Private: do not call directly from API
 	* @see update_code::build_version_from_git_master
-	* @param string $branch
+	* Mode parameter defines the target where to write the zip file, like
+	* '/home/www/vhosts/master.dedalo.dev/httpdocs/dedalo/code/6/6.9/6.9.1_dedalo.zip' or
+	* '/home/www/vhosts/master.dedalo.dev/httpdocs/dedalo/code/development/dedalo_development.zip'
+	* @param string $mode 'master' or 'developer'
 	* @return string|true
 	*/
-	private static function build_version_code( string $branch ) : string|true {
+	private static function build_version_code( string $mode ) : string|true {
 
 		// version
 			$version = get_dedalo_version();
@@ -815,25 +818,33 @@ class update_code {
 		// to create the path for the current version, it use major, and minor as
 		// `/dedalo/code/6/6.4/
 			$target_path = update_code::set_code_path();
+			if ($target_path===false) {
+				return 'Error: unable to create version path';
+			}
 
 		// build code target
-			$file_verion	= update_code::get_file_version();
-			$target			= $target_path .'/'.$file_verion.'.zip';
+			$file_version	= update_code::get_file_version();
+			$target			= $target_path .'/'.$file_version.'.zip';
 
 		// developer branch case
-			if ($branch==='developer') {
+			if ($mode==='developer') {
 				$development_path	= update_code::set_development_path();
+				if ($development_path===false) {
+					return 'Error: unable to create development path';
+				}
 				$target				= $development_path .'/dedalo_development.zip';
-				$branch				= 'v'.$major_version.'_developer';
 			}
+
+		// fix branch
+			$branch = 'v'.$major_version.'_developer'; // 'v6_developer' always
 
 		// source
 			$source = DEDALO_CODE_SERVER_GIT_DIR;
 
 		// command @see https://git-scm.com/docs/git-archive
 			$command = strpos($source, 'ssh://')!==false
-				? "git archive --remote=$source --verbose --format=zip --prefix=dedalo_code/ $branch > $target" // remote GIT
-				: "cd $source; git archive --verbose --format=zip --prefix=dedalo_code/ $branch > $target "; // local GIT
+				? 'git archive --remote=' . escapeshellarg($source) . ' --verbose --format=zip --prefix=dedalo_code/ ' . escapeshellarg($branch) . ' > ' . escapeshellarg($target) // remote GIT
+				: 'cd ' . escapeshellarg($source) . ' && git archive --verbose --format=zip --prefix=dedalo_code/ ' . escapeshellarg($branch) . ' > ' . escapeshellarg($target); // local GIT
 
 		// debug
 			debug_log(__METHOD__
@@ -901,12 +912,11 @@ class update_code {
 
 	/**
 	* GET_FILE_VERSION
-	* Get current version path for code
-	* Check if exists, and return the path or false.
-	* To create the path for the current version, it use major, and minor
-	* such as /dedalo/code/6/6.4/
+	* Get current version file name for code
+	* To create the file name for the current version, it use major, minor, and patch
+	* such as 6.4.0_dedalo
 	* @param array|null $version = null
-	* @return string|false $path
+	* @return string $file_version
 	*/
 	public static function get_file_version( ?array $version = null ) : string {
 
