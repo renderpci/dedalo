@@ -62,6 +62,15 @@ final class config_local_writer {
 			return $response;
 		}
 
+		// config.local.php is require()d at boot, so OPcache caches it. With
+		// validate_timestamps + revalidate_freq>0, a fresh request (e.g. a live menu
+		// rebuild fired right after this save) could re-read the STALE cached copy for a
+		// few seconds. Force-invalidate the just-written file so the change is visible on
+		// the very next request, across all FPM workers (OPcache is shared memory).
+		if (function_exists('opcache_invalidate')) {
+			opcache_invalidate($path, true);
+		}
+
 		$response->result = true;
 		$response->msg    = 'OK. Configuration written to ' . $path;
 		$response->report = $report;

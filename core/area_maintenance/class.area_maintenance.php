@@ -1279,6 +1279,14 @@ class area_maintenance extends area_common {
 			return $response;
 		}
 
+		// state.php is require()d at boot, so OPcache caches it. Force-invalidate the
+		// just-written file so a fresh request (e.g. a live menu rebuild right after this
+		// save) sees the new STATE value immediately instead of the stale cached copy for
+		// up to revalidate_freq seconds (OPcache is shared across FPM workers).
+		if (function_exists('opcache_invalidate')) {
+			opcache_invalidate($state_file, true);
+		}
+
 		$response->result = true;
 		$response->msg    = 'All ready';
 		debug_log(__METHOD__ . " Set state '$state_path' = '" . to_string($value) . "' (constant $name)", logger::DEBUG);
