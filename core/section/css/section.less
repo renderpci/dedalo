@@ -136,6 +136,9 @@ body.inspector_resizing {
 						justify-content: center;
 						padding-left: 0px;
 						padding-right: 0px;
+						// zero the bottom padding so the toggle sits exactly 1.3rem
+						// (the content_data padding-top) above the first icon
+						padding-bottom: 0px;
 
 						.block_label,
 						.block_icon {
@@ -144,6 +147,11 @@ body.inspector_resizing {
 						// chevron is meaningless in the rail
 						&:after {
 							display: none;
+						}
+						// match the icon column size
+						.inspector_rail_toggle {
+							width: 1.3rem;
+							height: 1.3rem;
 						}
 					}
 
@@ -154,10 +162,21 @@ body.inspector_resizing {
 						display: none;
 					}
 
-					// every block collapses to its centered icon header
-					.inspector_content_data > div {
-						margin: 0.25rem 0.3rem;
-						background-color: transparent;
+					// rail content is a uniform vertical icon column: every visible
+					// child (toolbar/tools rows + block cards) sits an equal 1.3rem
+					// apart. padding-top sets the same distance below the toggle.
+					>.inspector_content_data {
+						display: flex;
+						flex-direction: column;
+						align-items: center;
+						gap: 1.3rem;
+						padding-top: 1.3rem;
+
+						// every block collapses to its centered icon header
+						>div {
+							margin: 0px;
+							background-color: transparent;
+						}
 					}
 
 					.element_info_head,
@@ -167,8 +186,13 @@ body.inspector_resizing {
 					.component_history_head,
 					.activity_info_head {
 						justify-content: center;
-						padding-left: 0px;
-						padding-right: 0px;
+						align-items: center;
+						// no padding so the card == its centred icon, and a fixed
+						// 1.3rem height so the 1.3rem column gap is the only spacing
+						// between icons (no stray line-height adding a pixel)
+						padding: 0px;
+						height: 1.3rem;
+						line-height: 1;
 
 						.block_label {
 							display: none;
@@ -178,8 +202,8 @@ body.inspector_resizing {
 							display: none;
 						}
 						.block_icon {
-							width: 1.4em;
-							height: 1.4em;
+							width: 1.3rem;
+							height: 1.3rem;
 						}
 					}
 
@@ -202,16 +226,13 @@ body.inspector_resizing {
 						flex-direction: column;
 						flex-wrap: nowrap;
 						align-items: center;
-						gap: 0.5rem;
+						gap: 1.3rem;
 						padding: 0px;
 
 						>span {
 							flex: 0 0 auto;
-							// match the block-header icon: 1.4em at the same 0.72rem
-							// font so the glyph renders the same size everywhere.
-							font-size: 0.72rem;
-							width: 1.4em;
-							height: 1.4em;
+							width: 1.3rem;
+							height: 1.3rem;
 							min-width: 0px;
 							margin: 0px;
 							padding: 0px;
