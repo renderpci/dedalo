@@ -21,6 +21,7 @@
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {area_maintenance} from '../../../../area_maintenance/js/area_maintenance.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {event_manager} from '../../../../common/js/event_manager.js'
 	import {render_menu_skip_tipos} from './render_menu_skip_tipos.js'
 
 
@@ -92,6 +93,12 @@ menu_skip_tipos.prototype.save = async function(tipos) {
 
 	if (SHOW_DEBUG===true) {
 		console.log('))) menu_skip_tipos save api_response:', api_response);
+	}
+
+	// On success, force the live menu to recalculate so the admin sees the
+	// skip effect immediately, without a logout/reload.
+	if (api_response && api_response.result) {
+		event_manager.publish('menu_config_changed', { source: 'menu_skip_tipos' })
 	}
 
 	return api_response

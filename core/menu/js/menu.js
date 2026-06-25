@@ -152,6 +152,19 @@ menu.prototype.init = function(options) {
 			event_manager.subscribe('quit', quit_handler)
 		)
 
+	// menu_config_changed event
+	// Published by the maintenance widgets that change what the menu shows
+	// (config_areas → areas.deny/allow; menu_skip_tipos → DEDALO_ENTITY_MENU_SKIP_TIPOS_CUSTOM).
+	// Rebuild the menu in place (build_autoload deletes the IndexedDB cache and re-fetches),
+	// so an admin sees the effect immediately without a logout/reload. The server reads the
+	// config fresh on every request, so the rebuilt menu reflects the just-saved change.
+		const config_changed_handler = () => {
+			self.refresh({ build_autoload: true })
+		}
+		self.events_tokens.push(
+			event_manager.subscribe('menu_config_changed', config_changed_handler)
+		)
+
 	// status update
 		self.status = 'initialized'
 
