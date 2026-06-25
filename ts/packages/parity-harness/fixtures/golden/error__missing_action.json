@@ -1,0 +1,10 @@
+{
+  "label": "error__missing_action",
+  "rqo": {
+    "dd_api": "dd_core_api"
+  },
+  "capturedAt": "2026-06-21T00:49:50.786Z",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "responseBytes": "{\"result\":false,\"msg\":\"Invalid action var (not found in rqo)\",\"errors\":[\"Undefined method\"],\"dedalo_last_error\":\"Server errors occurred. Check the server log for details\"}"
+}

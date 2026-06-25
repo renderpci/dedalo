@@ -1,0 +1,11 @@
+{
+  "label": "error__unknown_api_class",
+  "rqo": {
+    "dd_api": "dd_not_a_real_api",
+    "action": "whatever"
+  },
+  "capturedAt": "2026-06-21T00:49:50.783Z",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "responseBytes": "{\"result\":false,\"msg\":\"Error. Invalid API class: dd_not_a_real_api\",\"errors\":[\"invalid_api_class\"],\"dedalo_last_error\":\"Server errors occurred. Check the server log for details\"}"
+}

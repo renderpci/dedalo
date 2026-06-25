@@ -32,7 +32,11 @@ These are static files that you maintain by hand: they hold your database creden
 - **[Media protection](media_protection.md)** — web-server-enforced access control for media files (optional).
 - **[Search configuration and access control](search.md)** — search constants and the client-SQO trust boundary (optional).
 
-## Rename the configuration files
+> Note: You will need review the "sample" files of the new versions to add or remove the changes specify in the new version. Dédalo will not change your specific configuration files when it's updated automatically.
+
+## Rename Dédalo configuration files
+
+In the installation process you will has rename the sample files to active files, removing the "sample_" text of the filename. If you not did this step complete it before config your installation.
 
 When Dédalo is downloaded from GitHub, every config file ships with a `sample.` prefix. Before you configure your installation, rename each one to its active name by removing the prefix.
 

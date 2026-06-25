@@ -184,7 +184,11 @@ tool_diffusion.prototype.build = async function(autoload=false) {
 				self.get_diffusion_info(),
 				self.get_active_processes(),
 			])
+			// resolve_levels controls how many linked-section levels the PHP engine resolves
+			// and writes during a diffuse call. Defaults to 1 (direct relations only).
 			self.resolve_levels               = self.diffusion_info.resolve_levels ?? 1
+			// When truthy, the PHP diffuse() skips the publication-state guard that normally
+			// prevents unpublished records from being sent to diffusion targets.
 			self.skip_publication_state_check = self.diffusion_info.skip_publication_state_check ?? 1
 		} else {
 			// engine down/unhealthy: render() will show the advisory banner and skip the body
@@ -448,11 +452,29 @@ tool_diffusion.prototype.on_close_actions = async function(open_as) {
 
 
 /**
-* GET_ENGINE_ADVISORY
-* Server-side engine health + (admin) auto-recover + role-tailored advisory.
-* Dispatched by PHP dd_diffusion_api (NOT Bun) so it answers even when the engine
-* is down — returns clean JSON, never a 404. @param object options {auto_recover?}
-* @return promise<object> advisory
+* GET_DIFFUSION_STATUS
+* Checks the health and readiness of the Bun diffusion engine.
+*
+* Maps to the Bun-only `get_diffusion_status` action (index.ts `check_bun_health()`),
+* which verifies:
+*   - The Bun server itself is alive and accepting requests.
+*   - The PHP bridge (the internal Dédalo core API) is reachable from Bun.
+*   - Any configured SQL/RDF/XML target connections are healthy.
+*
+* PHP is NOT involved — this is a Bun-internal health check. The response shape is:
+*   { result: bool, msg: string, data: { ... health details ... } }
+*
+* The client reads `response.data || response.result` because older Bun builds returned
+* the health object under `result` before being normalised to `data`.
+*
+* On failure resolves with `{ result: false, msg: <error message> }` so the render
+* layer always receives a safe status object.
+*
+* The `options` parameter is accepted for interface consistency but currently unused;
+* the Bun handler takes no options for this action.
+*
+* @param {Object} options - Reserved for future use; pass {} for now.
+* @returns {Promise<Object>} Resolves with the Bun health-check result object.
 */
 tool_diffusion.prototype.get_engine_advisory = function(options={}) {
 
@@ -477,7 +499,10 @@ tool_diffusion.prototype.get_engine_advisory = function(options={}) {
 			if(SHOW_DEBUG===true) {
 				console.log('-> get_engine_advisory response:', response);
 			}
-			resolve(response)
+			// normalise: newer Bun builds return health details under 'data',
+			// older builds returned them under 'result' directly.
+			const result = response.data || response.result || {}
+			resolve(result)
 		})
 		.catch(function(err){
 			console.error('get_engine_advisory error:', err)

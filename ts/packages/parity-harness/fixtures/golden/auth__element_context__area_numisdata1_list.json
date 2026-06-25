@@ -1,0 +1,16 @@
+{
+  "label": "auth__element_context__area_numisdata1_list",
+  "rqo": {
+    "dd_api": "dd_core_api",
+    "action": "get_element_context",
+    "source": {
+      "tipo": "numisdata1",
+      "model": "area",
+      "mode": "list"
+    }
+  },
+  "capturedAt": "2026-06-21T00:49:50.931Z",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "responseBytes": "{\"result\":[{\"typo\":\"ddo\",\"type\":\"area\",\"tipo\":\"numisdata1\",\"section_tipo\":\"numisdata1\",\"parent\":\"numisdata1\",\"parent_grouper\":\"dd322\",\"lang\":\"lg-spa\",\"mode\":\"list\",\"model\":\"area\",\"properties\":{},\"permissions\":3,\"label\":\"NUMISDATA\",\"translatable\":false,\"tools\":[{\"typo\":\"ddo\",\"type\":\"tool\",\"section_tipo\":\"dd1324\",\"mode\":\"edit\",\"model\":\"tool_ontology_parser\",\"label\":\"Procesador de ontología\",\"css\":{\"url\":\"/v7_dev/tools/tool_ontology_parser/css/tool_ontology_parser.css\"},\"name\":\"tool_ontology_parser\",\"icon\":\"/v7_dev/tools/tool_ontology_parser/img/icon.svg\",\"show_in_inspector\":false,\"show_in_component\":false}],\"buttons\":[],\"request_config\":[{\"api_engine\":\"dedalo\",\"type\":\"main\",\"sqo\":{\"id\":null,\"section_tipo\":[{\"typo\":\"ddo\",\"tipo\":\"numisdata1\",\"model\":\"area\",\"permissions\":3,\"label\":\"NUMISDATA\",\"buttons\":[],\"color\":\"#b9b9b9\"}],\"mode\":null,\"filter\":null,\"limit\":null,\"offset\":null,\"total\":null,\"full_count\":null,\"group_by\":null,\"order\":null,\"filter_by_locators\":null,\"filter_by_locators_op\":null,\"allow_sub_select_by_id\":null,\"children_recursive\":null,\"remove_distinct\":null,\"skip_projects_filter\":null,\"parsed\":null,\"breakdown\":null,\"tables\":null,\"select\":null,\"generated_time\":null},\"show\":{\"ddo_map\":[],\"sqo_config\":{\"full_count\":false,\"limit\":1,\"offset\":0,\"mode\":\"list\",\"operator\":\"$or\"}},\"search\":null,\"choose\":null,\"hide\":null,\"api_config\":null}],\"columns_map\":[],\"sortable\":false,\"legacy_model\":\"area\",\"debug\":{\"exec_time\":\"4.025 ms\"}}],\"msg\":\"OK. Request done successfully\",\"errors\":[],\"action\":\"get_element_context\",\"csrf_token\":\"139cc2a622b15eaa90ffb4df09af9a82c20e3519e8c55fbca0fa1b2531cc6110\",\"debug\":{\"api_exec_time\":\"9.945 ms\",\"memory_usage\":\"6 MB\",\"rqo\":{\"dd_api\":\"dd_core_api\",\"action\":\"get_element_context\",\"source\":{\"tipo\":\"numisdata1\",\"model\":\"area\",\"mode\":\"list\"}},\"rqo_string\":\"{\\n    \\\"dd_api\\\": \\\"dd_core_api\\\",\\n    \\\"action\\\": \\\"get_element_context\\\",\\n    \\\"source\\\": {\\n        \\\"tipo\\\": \\\"numisdata1\\\",\\n        \\\"model\\\": \\\"area\\\",\\n        \\\"mode\\\": \\\"list\\\"\\n    }\\n}\",\"real_execution_time\":\"10.7765 ms\"},\"dedalo_last_error\":\"{\\\"type\\\":2,\\\"message\\\":\\\"is_dir(): Unable to find the wrapper &quot;tcp&quot; - did you forget to enable it when you configured PHP?\\\",\\\"file\\\":\\\"\\\\/Users\\\\/render\\\\/Desktop\\\\/trabajos\\\\/dedalo\\\\/v7_dev\\\\/master_dedalo\\\\/shared\\\\/core_functions.php\\\",\\\"line\\\":2188}\"}"
+}
