@@ -12,6 +12,9 @@
 		height: 100%;
 		position: relative;
 
+		background-color: var(--bg_surface);
+		border-radius: .7rem;
+
 		@media screen and (max-width: @width_break_point_0) {
 			display: block;
 		}
@@ -189,15 +192,17 @@
 		// head_column
 		.head_column {
 			display: flex;
-			background-color: @color_grey_14;
-			border-right: 1px solid @color_grey_13;
+			// background-color: @color_grey_14;
+			// border-right: 1px solid @color_grey_13;
 			box-shadow: 0px 1px 0px 0px @color_grey_13;
 			overflow: hidden;
 			color: @color_grey_5;
 			font-weight: 300;
-			padding: 0px;
+			padding: 0.5rem;
 			padding-left: 0.25rem;
 			padding-right: 0.25rem;
+
+
 
 			&.empty {
 				padding-left: unset;
@@ -497,7 +502,7 @@
 
 // column_section_id
 	.column.column_section_id {
-		background-color: @color_grey_15;
+		// background-color: @color_grey_15;
 		display: flex;
 		flex-direction: column;
 		align-items: center;

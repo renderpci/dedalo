@@ -1,6 +1,10 @@
 # dependencies (bun install)
 node_modules
 
+# track the Bun manifest: the root .gitignore blanket-ignores every package.json,
+# but `bun install --frozen-lockfile` (and CI) needs this one committed.
+!package.json
+
 # output
 out
 dist
