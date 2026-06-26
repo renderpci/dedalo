@@ -1,0 +1,29 @@
+/**
+* sequences_status
+*
+* Included from area_maintenance.less file.
+* The PHP side composes the report as HTML (server-styled). We wrap it in the
+* shared console block and turn its <hr> separators into kit hairlines so it reads
+* as one coherent diagnostic panel.
+*/
+.wrapper_widget.sequences_status {
+
+	.content_data > div {
+		.dd_console();
+		max-height: 32rem;
+		overflow: auto;
+		white-space: normal;
+		line-height: 1.7;
+
+		hr {
+			border: 0;
+			border-top: 1px solid var(--border_default);
+			margin: 0.35rem 0;
+		}
+
+		b {
+			font-weight: 600;
+			color: var(--fg_default);
+		}
+	}
+}//end sequences_status

@@ -179,7 +179,7 @@ const get_content_data_edit = async function(self) {
 	// datalist
 		const datalist_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'datalist_container',
+			class_name		: 'datalist_container dd_table',
 			parent			: content_data
 		})
 		// header
@@ -209,15 +209,12 @@ const get_content_data_edit = async function(self) {
 				// 'out_of_sync' CSS class on the last_section_id cell and the
 				// visibility of the "Fix counter" button.
 				const out_of_sync		= last_section_id!=='empty' && item.counter_value!==last_section_id
-				const class_type		= item.type
-					? ' ' + item.type
-					: ''
+				const is_header = item.type==='header'
 
 				// datalist_item_container
-					const ctn_class = item.type==='header' ? ' header' : ''
 					const datalist_item_container = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'datalist_item_container' + ctn_class,
+						class_name		: 'dd_tr',
 						parent			: datalist_container
 					})
 
@@ -226,7 +223,7 @@ const get_content_data_edit = async function(self) {
 				// section in list mode in a new window named 'section_view'.
 					const section_tipo_node = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'item_column' + class_type,
+						class_name		: (is_header ? 'dd_th' : 'dd_td'),
 						inner_html		: item.section_tipo,
 						parent			: datalist_item_container
 					})
@@ -249,7 +246,7 @@ const get_content_data_edit = async function(self) {
 				// section_name
 					ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'item_column' + class_type,
+						class_name		: (is_header ? 'dd_th' : 'dd_td'),
 						inner_html		: item.label,
 						parent			: datalist_item_container
 					})
@@ -257,7 +254,7 @@ const get_content_data_edit = async function(self) {
 				// counter_value
 					ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'item_column right' + class_type,
+						class_name		: (is_header ? 'dd_th num' : 'dd_td num'),
 						inner_html		: item.counter_value,
 						parent			: datalist_item_container
 					})
@@ -265,12 +262,12 @@ const get_content_data_edit = async function(self) {
 				// last_section_id
 				// The 'out_of_sync' CSS class highlights cells where the stored counter
 				// value no longer matches the highest section_id in the data matrix.
-					const lsid_class = item.type!=='header' && out_of_sync===true
-						? ' out_of_sync' + class_type
-						: class_type
+					const lsid_class = is_header
+					? 'dd_th num'
+					: ('dd_td num' + (out_of_sync===true ? ' alert' : ''))
 					ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'item_column right' + lsid_class,
+						class_name		: lsid_class,
 						inner_html		: last_section_id,
 						parent			: datalist_item_container
 					})
@@ -282,7 +279,7 @@ const get_content_data_edit = async function(self) {
 				// matrix_counter row with the real maximum section_id.
 					const fix_counter_container = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'item_column right fix_counter_container' + class_type,
+						class_name		: (is_header ? 'dd_th' : 'dd_td') + ' act fix_counter_container',
 						parent			: datalist_item_container
 					})
 					if (item.type==='header') {
@@ -335,7 +332,7 @@ const get_content_data_edit = async function(self) {
 				// the next insert will collide. Two confirmation dialogs guard this action.
 					const reset_counter_container = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'item_column right reset_counter_container' + class_type,
+						class_name		: (is_header ? 'dd_th' : 'dd_td') + ' act reset_counter_container',
 						parent			: datalist_item_container
 					})
 					if (item.type==='header') {
@@ -343,7 +340,7 @@ const get_content_data_edit = async function(self) {
 					}else{
 						const button_reset_counter = ui.create_dom_element({
 							element_type	: 'button',
-							class_name		: 'warning button_action reset_counter',
+							class_name		: 'light warning button_action reset_counter',
 							inner_html		: 'Reset counter',
 							parent			: reset_counter_container
 						})

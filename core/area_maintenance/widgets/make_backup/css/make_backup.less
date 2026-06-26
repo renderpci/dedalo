@@ -1,7 +1,8 @@
 /**
 * make_backup
 *
-* Included from area_maintenance.less file
+* Included from area_maintenance.less file.
+* SSE progress + backup-file lists rendered as console blocks.
 */
 .wrapper_widget.make_backup {
 
@@ -12,13 +13,23 @@
 	.body_response {
 		.backup_files_info {
 			margin: 0.5rem;
-			margin-top: 0px;
+			margin-top: 0;
 		}
 	}
 
+	.backup_files_list,
+	.mysql_backup_files_list {
+		.dd_console();
+		margin-top: 0.5rem;
+		max-height: 16rem;
+		overflow: auto;
+	}
+
 	.backup_toggle_button {
-		padding: 0.5rem;
+		padding: 0.4rem 0.6rem;
 		cursor: pointer;
+		color: var(--fg_muted);
+		font-size: 0.85rem;
 
 		&:active {
 			opacity: 0.5;

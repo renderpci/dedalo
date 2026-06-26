@@ -9,6 +9,10 @@
 * semantic tokens so the panel works in light and dark themes.
 */
 
+// shared front-panel design language (readout grid, severity chips, eyebrows,
+// notes, console + action-button mixins) used by every widget
+@import (once) './widget_kit';
+
 // masked svg helper used by group headers and card headers
 .fn_maintenance_icon(@icon_name) {
 	content: ' ';
@@ -44,10 +48,15 @@
 
 		button {
 			border: 1px solid var(--border_default);
+			border-radius: 6px;
 			font-size: 1em;
 			color: var(--fg_default);
 			margin-bottom: 0.25rem;
 		}
+
+		// unified semantic action buttons (success / danger / warning / primary)
+		// across every widget
+		.dd_action_buttons();
 
 		button.light.button_spinner::before {
 			background: none !important;
@@ -595,3 +604,10 @@
 	@import (once) '../widgets/unit_test/css/unit_test';
 	@import (once) '../widgets/update_ontology/css/update_ontology';
 	@import (once) '../widgets/update_code/css/update_code';
+	@import (once) '../widgets/dataframe_control/css/dataframe_control';
+	@import (once) '../widgets/environment/css/environment';
+	@import (once) '../widgets/export_hierarchy/css/export_hierarchy';
+	@import (once) '../widgets/php_runtime/css/php_runtime';
+	@import (once) '../widgets/publication_api/css/publication_api';
+	@import (once) '../widgets/sequences_status/css/sequences_status';
+	@import (once) '../widgets/update_data_version/css/update_data_version';

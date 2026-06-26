@@ -1,55 +1,81 @@
 /**
 * diffusion_server_control
 *
-* Included from area_maintenance.less file
+* Included from area_maintenance.less file.
+* The status readout, severity chips/pills, eyebrows, notes and action buttons all
+* come from the shared widget_kit (.dd_readout / .dd_badge / .dd_eyebrow / .dd_note).
+* Only this widget's section layout (lifecycle, processes, pending, config) lives here.
 */
 .wrapper_widget.diffusion_server_control {
+
+	@dsc_mono: Menlo, Monaco, Consolas, 'Courier New', monospace;
 
 	.diffusion_server_control_content {
 		display: flex;
 		flex-direction: column;
-		gap: 0.66rem;
 	}
 
-	.diffusion_server_control_status {
-		display: grid;
-		grid-template-columns: max-content 1fr;
-		gap: 0.2rem 1rem;
-		align-items: baseline;
-	}
-
-	.diffusion_server_control_row {
-		display: contents;
-	}
-
-	.diffusion_server_control_label {
-		font-weight: 500;
-		white-space: nowrap;
-	}
-
-	.diffusion_server_control_value {
-		word-break: break-word;
-
-		&.state_running,
-		&.check_ok {
-			color: @color_success;
-			font-weight: 600;
-		}
-		&.state_degraded {
-			color: @color_warning;
-			font-weight: 600;
-		}
-		&.state_stopped,
-		&.check_fail {
-			color: @color_danger;
-			font-weight: 600;
-		}
-		&.warning_text {
-			color: @color_danger;
-		}
-	}
-
+	// ---- sections ------------------------------------------------------
 	.diffusion_server_control_lifecycle,
+	.diffusion_server_control_processes,
+	.diffusion_server_control_pending,
+	.diffusion_server_control_config,
+	.diffusion_server_control_footer {
+		margin-top: 0.9rem;
+	}
+	// hairline dividers before the titled sub-sections + footer
+	.diffusion_server_control_processes,
+	.diffusion_server_control_config,
+	.diffusion_server_control_footer {
+		padding-top: 0.9rem;
+		border-top: 1px solid var(--border_default);
+	}
+
+	// section headings (eyebrows) get a little breathing room below them
+	.diffusion_server_control_processes > .dd_eyebrow,
+	.diffusion_server_control_config > .dd_eyebrow {
+		margin-bottom: 0.5rem;
+	}
+
+	// lifecycle: Start / Stop / Restart row (or a gating note)
+	.diffusion_server_control_lifecycle {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		flex-wrap: wrap;
+	}
+
+	// in-flight processes
+	.diffusion_server_control_processes {
+		display: flex;
+		flex-direction: column;
+	}
+	.diffusion_server_control_process_list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+	.diffusion_server_control_process {
+		display: flex;
+		align-items: center;
+		gap: 0.66rem;
+		justify-content: space-between;
+		flex-wrap: wrap;
+		padding: 0.45rem 0.7rem;
+		background-color: var(--bg_surface_alt);
+		border: 1px solid var(--border_default);
+		border-radius: 6px;
+	}
+	.diffusion_server_control_process_desc {
+		word-break: break-word;
+		font-family: @dsc_mono;
+		font-size: 0.82rem;
+	}
+
+	// pending unpublish deletions (inline metric)
 	.diffusion_server_control_pending {
 		display: flex;
 		align-items: center;
@@ -57,53 +83,19 @@
 		flex-wrap: wrap;
 	}
 
-	.diffusion_server_control_processes {
-		display: flex;
-		flex-direction: column;
-		gap: 0.33rem;
-	}
-
-	.diffusion_server_control_process_list {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0.33rem;
-	}
-
-	.diffusion_server_control_process {
-		display: flex;
-		align-items: center;
-		gap: 0.66rem;
-		justify-content: space-between;
-		flex-wrap: wrap;
-	}
-
-	.diffusion_server_control_process_desc {
-		word-break: break-word;
-	}
-
 	.diffusion_server_control_config {
 		display: flex;
 		flex-direction: column;
-		gap: 0.33rem;
 	}
 
-	.diffusion_server_control_note {
-		opacity: 0.7;
-		font-size: 0.9em;
-		line-height: 1.2em;
-
-		&.warning_text {
-			opacity: 1;
-			color: @color_danger;
-		}
+	.diffusion_server_control_footer {
+		display: flex;
 	}
 
+	// API response, as a console block
 	.body_response {
-		white-space: pre-wrap;
-		word-break: break-word;
+		.dd_console();
+		margin-top: 0.9rem;
 
 		&:empty {
 			display: none;

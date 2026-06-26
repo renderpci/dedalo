@@ -1,75 +1,34 @@
 /**
 * register_tools
 *
-* Included from area_maintenance.less file
+* Included from area_maintenance.less file.
+* The tool list is a shared .dd_table (kit); only the column template, the error
+* banner and the response block are widget-specific.
 */
 .wrapper_widget.register_tools {
 
-	.datalist_container {
-		position: relative;
-		min-height: 20rem;
+	// name · developer · installed · version · info
+	.dd_table {
+		grid-template-columns: minmax(6rem, 1.3fr) minmax(5rem, 1fr) 5rem 5rem minmax(7rem, 1.4fr);
 	}
 
-	.tool_item {
-		display: grid;
-		grid-template-columns: 1.4fr 1.3fr 3rem 4rem 1.5fr;
-		gap: 0.5rem;
-		line-height: 1.1rem;
-		border-bottom: 1px solid @color_grey_10;
-		margin-bottom: 0.25rem;
-		padding-bottom: 0.25rem;
-
-		&.header {
-			color: @color_black;
-			padding: 0.25rem;
-			padding-left: 0;
-			font-weight: 400;
-
-			.tool_warning {
-				color: unset;
-			}
-		}
-
-		.tool_name {
-			word-break: break-all;
-		}
-
-		.tool_version {
-			text-align: right;
-		}
-
-		.tool_installed_version {
-			text-align: right;
-		}
-
-		.developer {
-			word-break: break-all;
-		}
-
-		.tool_warning {
-			color: @color_orange_dedalo;
-		}
-
-		.warning {
-
-			&.tool_installed_version {
-				color: @color_white;
-				font-weight: normal;
-				background-color: @color_danger;
-				padding: 0.25rem;
-				padding-top: 0px;
-				padding-bottom: 0px;
-				border-radius: 3px;
-			}
-		}
+	// fatal-error banner (outdated ontology, etc.) as a contained danger note
+	.info_text.error {
+		margin-top: 0.75rem;
+		padding: 0.55rem 0.7rem;
+		color: var(--fg_default);
+		line-height: 1.35;
+		background-color: color-mix(in srgb, var(--color_danger) 11%, transparent);
+		border-left: 3px solid var(--color_danger);
+		border-radius: 0 6px 6px 0;
 	}
 
+	.body_response {
+		.dd_console();
+		margin-top: 0.75rem;
 
-
-	// errors
-	.info_text {
-		padding: 1rem;
-		border-radius: 4px;
-		margin-top: 1rem;
+		&:empty {
+			display: none;
+		}
 	}
-}//end register_tools
+}

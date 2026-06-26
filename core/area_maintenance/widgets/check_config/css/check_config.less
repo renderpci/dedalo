@@ -1,80 +1,75 @@
 /**
 * check_config
 *
-* Included from area_maintenance.less file
+* Included from area_maintenance.less file.
+* Aligned to the shared kit language: eyebrow section titles, titled readout cards
+* for the config-status tables, danger notes, console response blocks. The widget's
+* JS/markup is unchanged — only the look is re-skinned here.
 */
 .wrapper_widget.check_config {
 
-	.errors_container {
-		display: block;
-		padding: 0.66rem;
-		color: @color_danger;
-		font-weight: 500;
-		line-height: 1.1rem;
-		--icon-path : url('../../../core/themes/default/icons/warning.svg');
-		&:before {
-			background-color: @color_danger;
-			content: ' ';
-			display: inline-block;
-			height: 1.5em;
-			width: 1.5em;
-			margin-right: 0.5rem;
-			opacity: 1;
-			vertical-align: bottom;
-			// .fn_add_mask(@icon_name);
-			-webkit-mask-image: var(--icon-path);
-					mask-image: var(--icon-path);
-			-webkit-mask-size: contain;
-					mask-size: contain;
-			-webkit-mask-repeat: no-repeat;
-					mask-repeat: no-repeat;
-			-webkit-mask-position: center;
-					mask-position: center;
+	@cc_mono: Menlo, Monaco, Consolas, 'Courier New', monospace;
 
-			@media screen and (max-width: @width_break_point_1) {
-				margin-right: 0px;
-			}
-		}
+	// errors banner as a contained danger note
+	.errors_container {
+		margin-bottom: 0.75rem;
+		padding: 0.55rem 0.7rem 0.55rem 0.85rem;
+		color: var(--fg_default);
+		font-weight: 500;
+		line-height: 1.35;
+		background-color: color-mix(in srgb, var(--color_danger) 11%, transparent);
+		border-left: 3px solid var(--color_danger);
+		border-radius: 0 6px 6px 0;
 
 		>.error_pre {
-			background-color: unset;
+			.dd_console();
+			margin-top: 0.5rem;
+			background-color: var(--bg_surface);
 		}
 	}
 
-	// maintenance_mode & notifications
+	// ---- mode toggles (maintenance / recovery / notifications) ----------
 	.container {
 		width: 100%;
-		padding-bottom: 1.5rem;
+		padding-bottom: 1.25rem;
 
 		>.label {
+			display: block;
+			margin-bottom: 0.5rem;
+			font-size: 0.72rem;
 			font-weight: 600;
-			font-size: 1.1rem;
-			padding: 0px;
-			padding-bottom: 0.5rem;
+			letter-spacing: 0.04em;
 			text-transform: uppercase;
+			color: var(--fg_muted);
 		}
 
 		>.form_container {
-			padding: 0px;
+			padding: 0;
 
-			.button_submit {
+			// a mode that is OFF surfaces its enable button as a danger action
+			.button_submit.danger {
+				color: var(--color_danger);
+				font-weight: 600;
+				background-color: color-mix(in srgb, var(--color_danger) 10%, transparent);
+				border-color: color-mix(in srgb, var(--color_danger) 45%, transparent);
 
-				&.danger {
-					color: @color_grey_16 !important;
-					background-color: @color_danger;
-					font-weight: unset;
+				&:hover {
+					background-color: color-mix(in srgb, var(--color_danger) 18%, transparent);
 				}
 			}
 		}
+
 		>.body_response {
-			padding: 0.5rem;
+			.dd_console();
+			margin-top: 0.5rem;
+
+			&:empty {
+				display: none;
+			}
 		}
+	}
 
-		&.maintenance_mode_container {
-
-		}
-	}//end >.container
-
+	// ---- config status tables -------------------------------------------
 	.tables {
 		width: 100%;
 		display: flex;
@@ -82,49 +77,70 @@
 		gap: 1rem;
 	}
 
-	.db_status_container, .config_sources_container, .missing_container {
-		display: flex;
-		flex-direction: column;
+	// each status group = a titled, bordered readout card
+	.db_status_container,
+	.config_sources_container,
+	.missing_container {
+		border: 1px solid var(--border_default);
+		border-radius: 8px;
+		overflow: hidden;
+		background-color: var(--bg_surface);
 
 		>.label {
+			display: block;
+			padding: 0.5rem 0.85rem;
+			font-size: 0.68rem;
 			font-weight: 600;
-			font-size: 1.1rem;
-			padding: 0px;
-			padding-left: 0.5rem;
-			padding-bottom: 0.75rem;
+			letter-spacing: 0.04em;
 			text-transform: uppercase;
+			color: var(--fg_muted);
+			background-color: var(--bg_surface_alt);
+			border-bottom: 1px solid var(--border_default);
 		}
 
 		>.file_container {
 			display: grid;
-			grid-template-columns: 1fr 1fr;
+			grid-template-columns: minmax(10rem, 1fr) 2fr;
+			align-items: stretch;
 
 			>.label {
-				padding: 0.5rem;
-				border-bottom: 1px solid @color_grey_11;
+				display: flex;
+				align-items: center;
+				padding: 0.44rem 0.85rem;
+				font-size: 0.68rem;
+				font-weight: 600;
+				letter-spacing: 0.04em;
+				text-transform: uppercase;
+				color: var(--fg_muted);
+				background-color: var(--bg_surface_alt);
+				border-top: 1px solid var(--border_default);
+				border-right: 1px solid var(--border_default);
 			}
 
 			>.data {
-				padding: 0.5rem;
-				line-height: 1.2rem;
-				color: @color_green_success;
-				border-bottom: 1px solid @color_grey_11;
+				padding: 0.44rem 0.85rem;
+				line-height: 1.4;
+				font-family: @cc_mono;
+				font-size: 0.8rem;
+				color: var(--fg_default);
+				word-break: break-word;
+				border-top: 1px solid var(--border_default);
 
 				&.missing {
-					color: @color_danger;
-					font-weight: 600;
+					color: var(--color_danger);
+					font-weight: 700;
 				}
 			}
 		}
 	}
 
+	// ---- collapsible constant lists (eye-icon toggle) -------------------
 	.datalist_container {
 		margin-bottom: 0.5rem;
 
 		&.show_list {
 			cursor: pointer;
 			user-select: none;
-			vertical-align: bottom;
 			width: 100%;
 
 			>.icon {
@@ -136,38 +152,39 @@
 			display: grid;
 			align-items: center;
 			gap: 0.5rem;
-			line-height: 1.1rem;
-			margin-bottom: 0.25rem;
-			padding-bottom: 0.25rem;
+			line-height: 1.35;
+			padding: 0.3rem 0;
+			border-top: 1px solid var(--border_default);
+			font-size: 0.82rem;
 
 			&.header {
-				color: @color_black;
-				padding: 0.25rem;
-				padding-left: 0;
-				font-weight: 500;
+				border-top: 0;
+				font-size: 0.68rem;
+				font-weight: 600;
+				letter-spacing: 0.04em;
+				text-transform: uppercase;
+				color: var(--fg_muted);
 			}
 
 			>.item_column {
 				display: block;
+				font-family: @cc_mono;
 
 				&.right {
 					text-align: right;
-					padding-right: 0.5rem;
-
-					&.header {
-						padding-right: 0px;
-					}
 				}
-
 				&.center {
 					text-align: center;
 				}
-
 				&.non_defined {
-					color: @color_danger;
-					font-weight: bold;
+					color: var(--color_danger);
+					font-weight: 700;
 				}
+			}
+
+			&.header >.item_column {
+				font-family: inherit;
 			}
 		}
 	}
-}//end check_config
+}
