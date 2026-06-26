@@ -410,10 +410,9 @@ const render_build_recovery_version_file = function (self, value) {
 *     `render_build_recovery_version_file`.
 *   - A `process_response` div where the raw JSON API response is rendered.
 *
-* (!) Unlike the other two panels, this operation uses `action: 'class_request'`
-* on the server side (not `widget_request`), which bypasses the widget-level
-* `API_ACTIONS` security list defined in `class.build_database_version.php`.
-* The security boundary is enforced by the class dispatcher's own access controls.
+* Like the other panels, this operation dispatches via `widget_request` to
+* `build_database_version::restore_dd_ontology_recovery_from_file`, gated by the
+* widget-level `API_ACTIONS` list in `class.build_database_version.php`.
 *
 * (!) This handler calls `console.log` unconditionally (not guarded by
 * `SHOW_DEBUG`). This differs from the pattern used in the other two panels.

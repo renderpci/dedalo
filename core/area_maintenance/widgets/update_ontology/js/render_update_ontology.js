@@ -793,10 +793,12 @@ const render_rebuild_lang_files = function () {
 				use_worker	: true,
 				body		: {
 					dd_api			: 'dd_area_maintenance_api',
-					action			: 'class_request',
+					action			: 'widget_request',
 					prevent_lock	: true,
 					source			: {
-						action : 'rebuild_lang_files'
+						type	: 'widget',
+						model	: 'update_ontology',
+						action	: 'rebuild_lang_files'
 					},
 					options	: {}
 				},

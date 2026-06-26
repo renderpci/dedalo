@@ -41,6 +41,18 @@ class counters_status {
 
 
 	/**
+	* Allowlist of public API actions callable through widget_request (SEC-044).
+	* get_value is also used as the read-only probe via get_widget_value.
+	* @var array<int,string>
+	*/
+	const API_ACTIONS = [
+		'get_value',
+		'modify_counter'
+	];
+
+
+
+	/**
 	* GET_VALUE
 	* Runs the full matrix_counter audit and returns the result for the widget.
 	*
@@ -86,6 +98,70 @@ class counters_status {
 
 		return $response;
 	}//end get_value
+
+
+
+	/**
+	* MODIFY_COUNTER
+	* Repairs ('fix') or resets ('reset') the section_id counter for a given section
+	* tipo, then re-reads all counters so the client receives a fresh snapshot.
+	*
+	* Delegates to counter::modify_counter() (which enforces Global Admin internally)
+	* and counter::check_counters(). session_write_close() is called at entry because
+	* a 'fix' can scan a large matrix table and would otherwise block concurrent
+	* requests from the same browser session.
+	*
+	* @param object $rqo - {
+	*   options: {
+	*     section_tipo:   string,  // ontology tipo of the section whose counter to repair
+	*     counter_action: string   // 'reset' | 'fix'
+	*   }
+	* }
+	* @return object - {result: bool, msg: string, datalist: array} (full counter status)
+	*/
+	public static function modify_counter( object $rqo ) : object {
+
+		session_write_close();
+
+		// options
+			$options = $rqo->options;
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__METHOD__.']';
+
+		// short vars
+			$section_tipo = $options->section_tipo;
+			if (empty($section_tipo)) {
+				$response->msg = 'Error: empty mandatory section_tipo';
+				return $response;
+			}
+			$counter_action = $options->counter_action; // reset|fix
+
+		// modify_counter
+			// Returns false if the caller is not a Global Admin or if the action
+			// is unknown; counter::modify_counter() logs its own error internally.
+			$result = counter::modify_counter(
+				$section_tipo,
+				$counter_action
+			);
+
+		// check_counters
+			// Always re-read all counters after the repair so the client receives a
+			// fresh snapshot regardless of whether the repair succeeded or failed.
+			$result_check_counters	= counter::check_counters();
+
+		// response
+			$response->result	= $result;
+			$response->msg		= $result===true
+				? 'OK. '.$counter_action.' counter successfully ' . $section_tipo
+				: 'Error on '.$counter_action.' counter ' . $section_tipo;
+			$response->datalist	= $result_check_counters->datalist ?? [];
+
+
+		return $response;
+	}//end modify_counter
 
 
 

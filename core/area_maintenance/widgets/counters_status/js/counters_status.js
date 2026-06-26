@@ -209,8 +209,13 @@ counters_status.prototype.modify_counter = async function(options) {
 			use_worker	: true,
 			body		: {
 				dd_api			: 'dd_area_maintenance_api',
-				action			: 'modify_counter',
+				action			: 'widget_request',
 				prevent_lock	: true,
+				source	: {
+					type	: 'widget',
+					model	: 'counters_status',
+					action	: 'modify_counter'
+				},
 				options	: {
 					section_tipo	: section_tipo,
 					counter_action	: counter_action

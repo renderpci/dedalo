@@ -456,8 +456,10 @@ const render_maintenance_mode = (self) => {
 			body_response	: maintenance_mode_body_response,
 			trigger : {
 				dd_api	: 'dd_area_maintenance_api',
-				action	: 'class_request',
+				action	: 'widget_request',
 				source	: {
+					type : 'widget',
+					model : 'check_config',
 					action : 'set_maintenance_mode'
 				},
 				options	: {
@@ -559,8 +561,10 @@ const render_recovery_mode = (self) => {
 			body_response	: recovery_mode_body_response,
 			trigger : {
 				dd_api	: 'dd_area_maintenance_api',
-				action	: 'class_request',
+				action	: 'widget_request',
 				source	: {
+					type : 'widget',
+					model : 'check_config',
 					action : 'set_recovery_mode'
 				},
 				options	: {
@@ -698,9 +702,11 @@ const render_notification = (self) => {
 				const api_response = await data_manager.request({
 					body : {
 						dd_api			: 'dd_area_maintenance_api',
-						action			: 'class_request',
+						action			: 'widget_request',
 						prevent_lock	: true,
 						source			: {
+							type : 'widget',
+							model : 'check_config',
 							action : 'set_notification',
 						},
 						options : {

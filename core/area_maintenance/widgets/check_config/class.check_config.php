@@ -15,22 +15,25 @@
 * - Reports the live database status via installer::get_db_status(): whether the
 *   DEDALO_*_CONN credentials are still sample placeholders, whether a real
 *   PostgreSQL connection can be opened, and whether the target DB is writable.
-* - Reports the presence/readability of the new private config sources
-*   (../private/.env, ../private/state.php and the optional config.local.php).
-* - Reports which constants declared in the shipped sample templates
-*   (sample.config.php, sample.config_db.php) are not `define()`-d in the running
-*   PHP process — a proxy for an incomplete or outdated configuration. The check
-*   is against defined() (not a file-vs-file diff) so it is agnostic to where the
-*   constant is now resolved from (.env, catalog or state.php).
+* - Reports the presence/readability of the private config sources that actually
+*   drive a v7 install (../private/.env, ../private/state.php and the optional
+*   ../private/config.local.php).
 * - The JS renderer (render_check_config.js) colours the widget header red when
-*   the DB status is not fully OK or any sample constant is missing at runtime.
-* - This class exposes no directly callable API methods (`API_ACTIONS = []`);
-*   it is only invoked through `dd_area_maintenance_api::get_widget_value()`,
-*   which hard-codes the call to `get_value()`.
+*   the DB status is not fully OK or a required private config source is missing.
 *
-* Constant discovery is delegated to `area_maintenance::get_file_constants()`,
-* which reads the source text with a regex and applies SEC-069 realpath
-* confinement before touching the filesystem.
+* Historical note (removed in v7):
+*   Earlier revisions also diffed the running process against the shipped
+*   sample.config.php / sample.config_db.php templates and listed any constant
+*   not `define()`-d at runtime. Those web-served config files (and their sample
+*   templates) are no longer part of the configuration flow — constants are now
+*   emitted from ../private/.env + ../private/state.php + the config catalog — so
+*   that check produced only false positives (e.g. base-path constants that are
+*   defined elsewhere) and was dropped.
+*
+* - Exposes three root-only mode toggles through `widget_request`
+*   (set_maintenance_mode / set_recovery_mode / set_notification, see API_ACTIONS).
+*   The read-only audit `get_value()` is invoked separately through
+*   `dd_area_maintenance_api::get_widget_value()`, which hard-codes the call.
 *
 * Extends: (none — standalone widget class, not part of the class hierarchy)
 * API entry point: dd_area_maintenance_api::get_widget_value()
@@ -49,14 +52,23 @@ class check_config {
 	* means that every `widget_request` call targeting this widget is denied by the
 	* SEC-044 gate in `dd_area_maintenance_api::widget_request()`.
 	*
-	* `get_value` is the only public method on this class and it is invoked through
-	* the separate `get_widget_value` endpoint (hard-coded method name), which does
-	* not consult `API_ACTIONS`. Therefore `get_value` is intentionally absent from
-	* this list.
+	* `get_value` is invoked through the separate `get_widget_value` endpoint
+	* (hard-coded method name), which does not consult `API_ACTIONS`, so it is
+	* intentionally absent from this list.
+	*
+	* The mode toggles (set_maintenance_mode / set_recovery_mode / set_notification)
+	* are thin wrappers that delegate to the shared area_maintenance implementation:
+	* the underlying state is global (maintenance / recovery mode is also driven by
+	* dd_core_api during the recovery flow), so the logic stays on area_maintenance
+	* while the widget reaches it through the canonical widget_request path.
 	*
 	* @var array<string>
 	*/
-	public const API_ACTIONS = [];
+	public const API_ACTIONS = [
+		'set_maintenance_mode',
+		'set_recovery_mode',
+		'set_notification'
+	];
 
 
 
@@ -83,10 +95,6 @@ class check_config {
 	*     },
 	*     config_sources: [        // presence of ../private config files
 	*       { name: string, required: bool, exists: bool, readable: bool },
-	*       ...
-	*     ],
-	*     constants: [             // sample constants not defined() at runtime
-	*       { file_name: string, missing: string[], sample_constants_list: string[] },
 	*       ...
 	*     ]
 	*   },
@@ -138,39 +146,6 @@ class check_config {
 			}
 			$result->config_sources = $config_sources;
 
-		// 3. sample constants not defined() at runtime
-		//    Only sample files that still ship are inspected (sample.config / sample.config_db);
-		//    a removed sample (e.g. sample.config_core.php) is expected in v7 and skipped silently.
-		//    Testing against defined() rather than a live-file diff keeps the check valid
-		//    regardless of where the constant is now resolved from (.env, catalog, state.php).
-		//    $ignore lists constants set elsewhere or auto-derived, to avoid false positives.
-			$ignore = ['DEDALO_MAINTENANCE_MODE','DEDALO_API_URL'];
-			$ar_sample_files = ['config','config_db'];
-			$constants = [];
-			foreach ($ar_sample_files as $file_name) {
-
-				$sample_path = DEDALO_CONFIG_PATH . '/sample.'.$file_name.'.php';
-				if (!file_exists($sample_path) || !is_readable($sample_path)) {
-					continue;
-				}
-
-				$sample_constants_list = area_maintenance::get_file_constants($sample_path);
-
-				$missing = [];
-				foreach ($sample_constants_list as $const_name) {
-					if (!in_array($const_name, $ignore) && !defined($const_name)) {
-						$missing[] = $const_name;
-					}
-				}
-
-				$item = new stdClass();
-					$item->file_name				= 'sample.'.$file_name;
-					$item->missing					= $missing;
-					$item->sample_constants_list	= $sample_constants_list;
-				$constants[] = $item;
-			}
-			$result->constants = $constants;
-
 
 		// response
 			$response->result	= $result;
@@ -181,6 +156,47 @@ class check_config {
 
 		return $response;
 	}//end get_value
+
+
+
+	/**
+	* SET_MAINTENANCE_MODE
+	* Widget-request wrapper. Maintenance mode is global system state (also driven by
+	* dd_core_api during recovery), so the implementation stays on area_maintenance;
+	* this thin façade lets the check_config widget toggle it via widget_request.
+	* @param object $options - { active: bool } (see area_maintenance::set_maintenance_mode)
+	* @return object
+	*/
+	public static function set_maintenance_mode( object $options ) : object {
+
+		return area_maintenance::set_maintenance_mode( $options );
+	}//end set_maintenance_mode
+
+
+
+	/**
+	* SET_RECOVERY_MODE
+	* Widget-request wrapper delegating to the global area_maintenance implementation.
+	* @param object $options
+	* @return object
+	*/
+	public static function set_recovery_mode( object $options ) : object {
+
+		return area_maintenance::set_recovery_mode( $options );
+	}//end set_recovery_mode
+
+
+
+	/**
+	* SET_NOTIFICATION
+	* Widget-request wrapper delegating to the global area_maintenance implementation.
+	* @param object $options
+	* @return object
+	*/
+	public static function set_notification( object $options ) : object {
+
+		return area_maintenance::set_notification( $options );
+	}//end set_notification
 
 
 
