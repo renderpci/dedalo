@@ -13265,10 +13265,11 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 /**
 * check_config
 *
-* Included from area_maintenance.less file.
-* Aligned to the shared kit language: eyebrow section titles, titled readout cards
-* for the config-status tables, danger notes, console response blocks. The widget's
-* JS/markup is unchanged — only the look is re-skinned here.
+* Included from area_maintenance.less.
+* The config-status readout is built from the shared widget kit (widget_kit.less):
+* `.dd_eyebrow` section headings + `.dd_readout` key/value grid + `.dd_badge`
+* severity chips. Only the mode-toggle forms, the error banner and the inter-section
+* spacing keep widget-local styles here.
 */
 .wrapper_widget.check_config .errors_container {
   margin-bottom: 0.75rem;
@@ -13335,116 +13336,20 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .wrapper_widget.check_config .container > .body_response:empty {
   display: none;
 }
-.wrapper_widget.check_config .tables {
-  width: 100%;
+.wrapper_widget.check_config .container > .warning_message {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.wrapper_widget.check_config .status_sections {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
 }
-.wrapper_widget.check_config .db_status_container,
-.wrapper_widget.check_config .config_sources_container,
-.wrapper_widget.check_config .missing_container {
-  border: 1px solid var(--border_default);
-  border-radius: 8px;
-  overflow: hidden;
-  background-color: var(--bg_surface);
+.wrapper_widget.check_config .status_sections > .dd_eyebrow {
+  margin: 0.85rem 0 0.4rem;
 }
-.wrapper_widget.check_config .db_status_container > .label,
-.wrapper_widget.check_config .config_sources_container > .label,
-.wrapper_widget.check_config .missing_container > .label {
-  display: block;
-  padding: 0.5rem 0.85rem;
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--fg_muted);
-  background-color: var(--bg_surface_alt);
-  border-bottom: 1px solid var(--border_default);
-}
-.wrapper_widget.check_config .db_status_container > .file_container,
-.wrapper_widget.check_config .config_sources_container > .file_container,
-.wrapper_widget.check_config .missing_container > .file_container {
-  display: grid;
-  grid-template-columns: minmax(10rem, 1fr) 2fr;
-  align-items: stretch;
-}
-.wrapper_widget.check_config .db_status_container > .file_container > .label,
-.wrapper_widget.check_config .config_sources_container > .file_container > .label,
-.wrapper_widget.check_config .missing_container > .file_container > .label {
-  display: flex;
-  align-items: center;
-  padding: 0.44rem 0.85rem;
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--fg_muted);
-  background-color: var(--bg_surface_alt);
-  border-top: 1px solid var(--border_default);
-  border-right: 1px solid var(--border_default);
-}
-.wrapper_widget.check_config .db_status_container > .file_container > .data,
-.wrapper_widget.check_config .config_sources_container > .file_container > .data,
-.wrapper_widget.check_config .missing_container > .file_container > .data {
-  padding: 0.44rem 0.85rem;
-  line-height: 1.4;
-  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
-  font-size: 0.8rem;
-  color: var(--fg_default);
-  word-break: break-word;
-  border-top: 1px solid var(--border_default);
-}
-.wrapper_widget.check_config .db_status_container > .file_container > .data.missing,
-.wrapper_widget.check_config .config_sources_container > .file_container > .data.missing,
-.wrapper_widget.check_config .missing_container > .file_container > .data.missing {
-  color: var(--color_danger);
-  font-weight: 700;
-}
-.wrapper_widget.check_config .datalist_container {
-  margin-bottom: 0.5rem;
-}
-.wrapper_widget.check_config .datalist_container.show_list {
-  cursor: pointer;
-  user-select: none;
-  width: 100%;
-}
-.wrapper_widget.check_config .datalist_container.show_list > .icon {
-  vertical-align: bottom;
-}
-.wrapper_widget.check_config .datalist_container .datalist_item_container {
-  display: grid;
-  align-items: center;
-  gap: 0.5rem;
-  line-height: 1.35;
-  padding: 0.3rem 0;
-  border-top: 1px solid var(--border_default);
-  font-size: 0.82rem;
-}
-.wrapper_widget.check_config .datalist_container .datalist_item_container.header {
-  border-top: 0;
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--fg_muted);
-}
-.wrapper_widget.check_config .datalist_container .datalist_item_container > .item_column {
-  display: block;
-  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
-}
-.wrapper_widget.check_config .datalist_container .datalist_item_container > .item_column.right {
-  text-align: right;
-}
-.wrapper_widget.check_config .datalist_container .datalist_item_container > .item_column.center {
-  text-align: center;
-}
-.wrapper_widget.check_config .datalist_container .datalist_item_container > .item_column.non_defined {
-  color: var(--color_danger);
-  font-weight: 700;
-}
-.wrapper_widget.check_config .datalist_container .datalist_item_container.header > .item_column {
-  font-family: inherit;
+.wrapper_widget.check_config .status_sections > .dd_eyebrow:first-child {
+  margin-top: 0;
 }
 .wrapper_widget.config_areas .config_areas_deny_chips {
   display: flex;

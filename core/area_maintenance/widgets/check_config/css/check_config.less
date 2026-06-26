@@ -1,14 +1,13 @@
 /**
 * check_config
 *
-* Included from area_maintenance.less file.
-* Aligned to the shared kit language: eyebrow section titles, titled readout cards
-* for the config-status tables, danger notes, console response blocks. The widget's
-* JS/markup is unchanged — only the look is re-skinned here.
+* Included from area_maintenance.less.
+* The config-status readout is built from the shared widget kit (widget_kit.less):
+* `.dd_eyebrow` section headings + `.dd_readout` key/value grid + `.dd_badge`
+* severity chips. Only the mode-toggle forms, the error banner and the inter-section
+* spacing keep widget-local styles here.
 */
 .wrapper_widget.check_config {
-
-	@cc_mono: Menlo, Monaco, Consolas, 'Courier New', monospace;
 
 	// errors banner as a contained danger note
 	.errors_container {
@@ -67,124 +66,25 @@
 				display: none;
 			}
 		}
+
+		>.warning_message {
+			margin-top: 0.5rem;
+			font-size: 0.85rem;
+			font-weight: 500;
+		}
 	}
 
-	// ---- config status tables -------------------------------------------
-	.tables {
-		width: 100%;
+	// ---- config status readout (shared kit: .dd_eyebrow + .dd_readout) ---
+	// stack each section heading above its readout card with even spacing
+	.status_sections {
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
-	}
 
-	// each status group = a titled, bordered readout card
-	.db_status_container,
-	.config_sources_container,
-	.missing_container {
-		border: 1px solid var(--border_default);
-		border-radius: 8px;
-		overflow: hidden;
-		background-color: var(--bg_surface);
-
-		>.label {
-			display: block;
-			padding: 0.5rem 0.85rem;
-			font-size: 0.68rem;
-			font-weight: 600;
-			letter-spacing: 0.04em;
-			text-transform: uppercase;
-			color: var(--fg_muted);
-			background-color: var(--bg_surface_alt);
-			border-bottom: 1px solid var(--border_default);
+		>.dd_eyebrow {
+			margin: 0.85rem 0 0.4rem;
 		}
-
-		>.file_container {
-			display: grid;
-			grid-template-columns: minmax(10rem, 1fr) 2fr;
-			align-items: stretch;
-
-			>.label {
-				display: flex;
-				align-items: center;
-				padding: 0.44rem 0.85rem;
-				font-size: 0.68rem;
-				font-weight: 600;
-				letter-spacing: 0.04em;
-				text-transform: uppercase;
-				color: var(--fg_muted);
-				background-color: var(--bg_surface_alt);
-				border-top: 1px solid var(--border_default);
-				border-right: 1px solid var(--border_default);
-			}
-
-			>.data {
-				padding: 0.44rem 0.85rem;
-				line-height: 1.4;
-				font-family: @cc_mono;
-				font-size: 0.8rem;
-				color: var(--fg_default);
-				word-break: break-word;
-				border-top: 1px solid var(--border_default);
-
-				&.missing {
-					color: var(--color_danger);
-					font-weight: 700;
-				}
-			}
-		}
-	}
-
-	// ---- collapsible constant lists (eye-icon toggle) -------------------
-	.datalist_container {
-		margin-bottom: 0.5rem;
-
-		&.show_list {
-			cursor: pointer;
-			user-select: none;
-			width: 100%;
-
-			>.icon {
-				vertical-align: bottom;
-			}
-		}
-
-		.datalist_item_container {
-			display: grid;
-			align-items: center;
-			gap: 0.5rem;
-			line-height: 1.35;
-			padding: 0.3rem 0;
-			border-top: 1px solid var(--border_default);
-			font-size: 0.82rem;
-
-			&.header {
-				border-top: 0;
-				font-size: 0.68rem;
-				font-weight: 600;
-				letter-spacing: 0.04em;
-				text-transform: uppercase;
-				color: var(--fg_muted);
-			}
-
-			>.item_column {
-				display: block;
-				font-family: @cc_mono;
-
-				&.right {
-					text-align: right;
-				}
-				&.center {
-					text-align: center;
-				}
-				&.non_defined {
-					color: var(--color_danger);
-					font-weight: 700;
-				}
-			}
-
-			&.header >.item_column {
-				font-family: inherit;
-			}
+		>.dd_eyebrow:first-child {
+			margin-top: 0;
 		}
 	}
 }
