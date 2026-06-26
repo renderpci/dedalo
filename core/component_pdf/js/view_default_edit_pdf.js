@@ -353,6 +353,12 @@ const get_content_value = function(i, current_value, self) {
 						self.pdf_viewer.open({
 							url : pdf_url
 						})
+						.catch(function(error) {
+							// PDF document could not be opened (e.g. 404 when the DB
+							// files_info is out of sync with the files on disk). Handle
+							// gracefully instead of leaving an uncaught promise rejection.
+							console.warn('Ignored error opening PDF (file may be missing or out of sync):', (error && error.message) || error);
+						})
 
 					// listener cleanup
 					// Remove the listener immediately after use to avoid a stale reference
