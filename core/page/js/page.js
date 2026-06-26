@@ -54,7 +54,7 @@
 	import {cookie_manager} from '../../common/js/utils/cookie_manager.js'
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {render_relogin} from '../../login/js/render_login.js'
-	import {prune_rules,get_inserted_rules} from '../../page/js/css.js'
+	import {prune_orphan_rules,get_inserted_rules} from '../../page/js/css.js'
 	import {render_page, render_notification_msg} from './render_page.js'
 
 
@@ -1393,13 +1393,17 @@ page.prototype.set_document_title = function (title) {
 
 /**
 * DD_GARBAGE_COLLECTOR
-* Clears all dynamically injected CSS rules when the runtime rule-set exceeds
-* `max_size` (currently 500 entries).
+* Removes orphaned dynamically injected CSS rules when the runtime rule-set
+* exceeds `max_size` (currently 500 entries).
 *
 * Background: `css.js` injects per-element style rules (colours, widths, …) via
 * `CSSStyleSheet.insertRule`. These accumulate across navigations and can cause
-* measurable memory pressure. Pruning the entire set on navigation is safe because
-* the rules are regenerated on the next render cycle.
+* measurable memory pressure.
+*
+* (!) Only rules whose selector no longer matches any element in the DOM are
+* pruned. Wiping the ENTIRE set is NOT safe: a partial (`render_level:'content'`)
+* refresh does not re-apply wrapper-level CSS, so nuking visible components'
+* rules leaves them unstyled (e.g. mosaic portals losing their grid on Safari).
 *
 * Runs inside `dd_request_idle_callback` so it does not block the navigation paint.
 * Called by `navigate()` after destroying stale instances.
@@ -1414,11 +1418,12 @@ const dd_garbage_collector = function () {
 			const max_size			= 500;
 			if (inserted_rules.size > max_size) {
 
-				// Delete all CSS injected rules to optimize memory
-				prune_rules(() => true);
+				// Remove only the rules whose component is no longer in the DOM.
+				// (!) Never strips CSS from components still visible on screen.
+				const pruned = prune_orphan_rules();
 
 				if(SHOW_DEBUG===true) {
-					console.log('Deleted CSS inserted_rules to reduce memory footprint. Max size: ', max_size );
+					console.log('Pruned orphan CSS rules to reduce memory footprint. Removed:', pruned, ' remaining:', inserted_rules.size );
 				}
 			}
 		}
