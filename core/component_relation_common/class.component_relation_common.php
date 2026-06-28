@@ -1622,7 +1622,9 @@ class component_relation_common extends component_common {
 		$data = $this->get_data();
 
 		// if the ddo provides a data_slice property, use it to slice the data
-		if(isset($ddo->data_slice)){
+		// (guard null: a relation with no locators yields null, e.g. a publication with no
+		// authors when resolving author_main's data_slice → array_slice(null) would fatal).
+		if(isset($ddo->data_slice) && is_array($data)){
 			$data = array_slice($data, $ddo->data_slice->offset, $ddo->data_slice->length);
 		}
 
