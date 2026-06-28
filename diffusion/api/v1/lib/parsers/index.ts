@@ -8,7 +8,7 @@
 import { default_join, text_format, map_value, v5_html } from './parser_text';
 import { select_properties, select_keys, format_string_date, string_date, unix_timestamp } from './parser_date';
 import date_default from './parser_date';
-import { get_section_id, get_section_tipo, get_term_id, truncate_by_term_id, truncate_by_model, filter_by_section_tipo, filter_parents_by_term_id, slice_chain, parents, map_section_tipo_to_name } from './parser_locator';
+import { get_section_id, get_section_id_grouped, get_section_tipo, get_term_id, get_locator, truncate_by_term_id, truncate_by_model, filter_by_section_tipo, filter_parents_by_term_id, slice_chain, parents, map_section_tipo_to_name } from './parser_locator';
 import { get_first, get_tail, count, merge, replace } from './parser_helper';
 import { widget } from './parser_info';
 import info_default from './parser_info';
@@ -44,6 +44,8 @@ const parser_registry: Record<string, parser_fn> = {
 	'parser_locator::get_section_id':				get_section_id,
 	'parser_locator::get_section_tipo':				get_section_tipo,
 	'parser_locator::get_term_id':					get_term_id,
+	'parser_locator::get_section_id_grouped':		get_section_id_grouped,
+	'parser_locator::get_locator':					get_locator,
 	'parser_locator::filter_parents_by_term_id':	filter_parents_by_term_id,
 	'parser_locator::parents':						parents,
 	'parser_locator::truncate_by_term_id':			truncate_by_term_id,

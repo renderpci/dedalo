@@ -42,9 +42,11 @@ export function widget(data: data_item[] | null, options: parser_options): data_
 			const current_widget_name = widget_name[i];
 			const current_select      = select[i]      ?? null;
 
-			// Filter dato items matching widget + id (mirrors PHP array_filter)
+			// Filter dato items matching widget + id (mirrors PHP array_filter).
+			// Widget outputs carry the selector under `widget_id` (some legacy under `id`).
 			const matched = data_array.filter(
-				(el: any) => el?.widget === current_widget_name && el?.id === current_select
+				(el: any) => el?.widget === current_widget_name
+					&& (el?.id === current_select || el?.widget_id === current_select)
 			);
 
 			for (const el of matched) {
