@@ -184,12 +184,20 @@ return [
 	),
 
 	new config_key(
+		path:    'paths.media_dir',
+		const:   'DEDALO_MEDIA_DIR',
+		type:    'string',
+		default: 'media',
+		doc:     'media directory/URL folder name (default "media"). Set to match a legacy '
+			.'instance (e.g. "media_mib") so diffused media URLs are byte-identical.',
+	),
+	new config_key(
 		path:    'paths.media_url',
 		const:   'DEDALO_MEDIA_URL',
 		type:    'string',
 		scope:   config_scope::DERIVED,
-		derived: static fn(array $r): string => $r['paths.root_web'] . '/media',
-		doc:     'media/ web URL (DEDALO_ROOT_WEB . \'/media\').',
+		derived: static fn(array $r): string => $r['paths.root_web'] . '/' . ($r['paths.media_dir'] ?? 'media'),
+		doc:     'media/ web URL (DEDALO_ROOT_WEB . \'/\' . DEDALO_MEDIA_DIR).',
 	),
 
 	new config_key(
