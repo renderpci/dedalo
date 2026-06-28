@@ -866,6 +866,38 @@ class component_info extends component_common {
 	* @return string|null $diffusion_value - Serialised value string, or null when empty.
 	*
 	*/
+	/**
+	* GET_DIFFUSION_DATA
+	* Emits the widget output objects ({widget, id, value}) verbatim as the diffusion
+	* value so parser_info::widget can select a specific stat by widget_name + id
+	* (e.g. get_archive_weights / media_diameter). The default component_common path
+	* flattens each item to its scalar value, losing the widget/id needed to select.
+	* Stats are language-independent → emitted as NOLAN (the lang expansion fills all langs).
+	* @param object $ddo
+	* @param ?string $diffusion_element_tipo
+	* @return array
+	*/
+	public function get_diffusion_data( object $ddo, ?string $diffusion_element_tipo=null ) : array {
+
+		$data = $this->get_data(); // [{widget, key, id, value}, ...]
+		if (empty($data)) {
+			return [];
+		}
+
+		$result = [];
+		foreach ($data as $item) {
+			$ddo_obj = new diffusion_data_object();
+			$ddo_obj->set_tipo($this->tipo);
+			$ddo_obj->set_lang(DEDALO_DATA_NOLAN);
+			$ddo_obj->set_value($item); // full {widget, id, value} object
+			$result[] = $ddo_obj;
+		}
+
+		return $result;
+	}//end get_diffusion_data
+
+
+
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		// Default behavior is get value
