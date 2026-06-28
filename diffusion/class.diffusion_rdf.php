@@ -37,24 +37,16 @@ class diffusion_rdf {
 		// fix url
 		$this->DEDALO_EXTRAS_BASE_URL = DEDALO_ROOT_WEB . '/'. basename(dirname(DEDALO_CORE_PATH)) .'/'. basename(DEDALO_CORE_PATH) .'/'. basename(DEDALO_EXTRAS_PATH);
 
-		// easyrdf files load
-			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Graph.php';
-			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/RdfNamespace.php';
-			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Format.php';
-			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/TypeMapper.php';
-			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Resource.php';
-			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal.php';
-			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/Boolean.php';
-			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/Date.php';
-			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/DateTime.php';
-			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/Decimal.php';
-			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/HexBinary.php';
-			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/HTML.php';
-			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/Integer.php';
-			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/XML.php';
-			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Utils.php';
-			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Serialiser.php';
-			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Serialiser/RdfXml.php';
+		// easyrdf load via composer PSR-4 autoload (EasyRdf\ => vendor/sweetrdf/easyrdf/lib).
+		// The previous manual includes used DEDALO_LIB_PATH . '/vendor/...' (= master_dedalo/lib/
+		// vendor), a path that never existed (vendor is at master_dedalo/vendor). See composer.json
+		// SEC-101-followup: the dependency is meant to load through composer autoload.
+			if (!class_exists('EasyRdf\\Graph')) {
+				$autoload_file = dirname(DEDALO_CORE_PATH) . '/vendor/autoload.php';
+				if (is_file($autoload_file)) {
+					include_once $autoload_file;
+				}
+			}
 	}//end __construct
 
 
