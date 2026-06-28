@@ -256,6 +256,9 @@ export default function (data: data_item[] | null, options: parser_options): dat
 	const date_mode         = (options.date_mode as string)         ?? 'date';
 	const records_separator = (options.records_separator as string) ?? ' | ';
 	const fields_separator  = (options.fields_separator as string)  ?? ', ';
+	// v6 joins a date range start/end with a bare comma (no space) — "start_ts,end_ts"
+	// (see mode doc above). Configurable, but defaults to v6 behavior.
+	const range_separator   = (options.range_separator as string)   ?? ',';
 
 	// Collect one [formatted_string] per date object — parallel to text_format output shape.
 	// merge/auto-completion downstream handles joining across records.
@@ -281,7 +284,7 @@ export default function (data: data_item[] | null, options: parser_options): dat
 						ar_date.push(format_dd_date(date_obj.end as dd_date_part, 'Y-m-d H:i:s'));
 					}
 					if (ar_date.length > 0) {
-						ar_diffusion_items.push({ ...item, value: [ar_date.join(fields_separator)] });
+						ar_diffusion_items.push({ ...item, value: [ar_date.join(range_separator)] });
 					}
 					break;
 				}
@@ -455,6 +458,10 @@ function format_dd_date(date_part: dd_date_part, pattern: string): string {
 	}
 
 	let result = pattern;
+	// 'Y' = padded year (full date formats, e.g. "-094" — v6 sprintf %04d).
+	// 'y' = RAW year (year-only formats, e.g. v6 date_format "year" → "-72" NOT "-072").
+	// Replace 'y' first so it is not consumed by the 'Y' rule's output.
+	result = result.replace(/y/g, String(year));
 	result = result.replace(/Y/g, year_str);
 	result = result.replace(/m/g, String(month).padStart(2, '0'));
 	result = result.replace(/d/g, String(day).padStart(2, '0'));
