@@ -428,6 +428,10 @@ class component_iri extends component_common {
 					if(!empty($current_data)) {
 						$cloned_data = clone $current_data;
 						$cloned_data->title = $this->resolve_title($current_data);
+						// Strip the internal per-item lang marker (lg-nolan): it is a storage
+						// detail not part of the diffused IRI shape. v6 omits it; keeping it
+						// would diverge ({id,iri,title} vs {id,iri,lang,title}).
+						unset($cloned_data->lang);
 						$processed_data[] = $cloned_data;
 					}
 				}

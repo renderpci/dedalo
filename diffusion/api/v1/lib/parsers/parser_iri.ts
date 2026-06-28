@@ -83,12 +83,11 @@ export function flat(data: data_item[] | null, options: parser_options): any {
 			const iri   = entry.iri?.trim()   ?? '';
 			const title = entry.title?.trim() ?? '';
 
-			if (!iri) continue;
-
-			// Build "title<sep>iri" or just "iri" when title is absent
-			const formatted = title
+			// v6 component_iri emits one record PER iri entry even when empty (so two
+			// empty iris diffuse as " | ", not null/skipped). Include empties as "".
+			const formatted = (title && iri)
 				? `${title}${fields_separator}${iri}`
-				: iri;
+				: (iri || title);
 
 			all_formatted_entries.push(formatted);
 		}
