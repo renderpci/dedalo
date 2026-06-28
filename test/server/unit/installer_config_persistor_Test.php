@@ -68,8 +68,7 @@ final class installer_config_persistor_Test extends TestCase {
 
 		$php = installer_config_persistor::render_state($existing, $state);
 
-		// must be valid PHP returning the merged array
-		$returned = eval('?>' . $php);
+		$returned = $this->require_valid_php($php);
 		$this->assertSame('installed', $returned['state.install_status']);
 		$this->assertSame('development', $returned['state.info_key']);   // overwritten
 		$this->assertSame('My Archive', $returned['state.information']); // added
@@ -98,5 +97,20 @@ final class installer_config_persistor_Test extends TestCase {
 		$this->assertStringContainsString('# PostgreSQL database name.', $content); // catalog doc as comment
 		$this->assertStringContainsString('[secret — keep private]', $content);     // SECRET-scope marker
 		$this->assertStringContainsString('Other / custom', $content);              // catch-all for non-catalog keys
+	}
+
+	private function require_valid_php(string $php) : mixed {
+		$tmp = tmpfile();
+		$this->assertIsResource($tmp);
+
+		fwrite($tmp, $php);
+		$meta = stream_get_meta_data($tmp);
+		$path = $meta['uri'];
+
+		try {
+			return require $path;
+		} finally {
+			fclose($tmp);
+		}
 	}
 }

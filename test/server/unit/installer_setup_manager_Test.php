@@ -59,7 +59,7 @@ final class installer_setup_manager_Test extends TestCase {
 	public function test_info_key_and_information_go_to_state_not_env() : void {
 		$out = installer_setup_manager::build_artifacts($this->submitted(false), [], [], false);
 		$env   = env_loader::parse($out->env_php);
-		$state = eval('?>' . $out->state_php);
+		$state = $this->require_valid_php($out->state_php);
 
 		$this->assertArrayNotHasKey('DEDALO_INFORMATION', $env);
 		$this->assertArrayNotHasKey('DEDALO_INFO_KEY', $env);
@@ -95,5 +95,20 @@ final class installer_setup_manager_Test extends TestCase {
 		$out = installer_setup_manager::build_artifacts($this->submitted(false), $existing_env, [], false);
 		$env = env_loader::parse($out->env_php);
 		$this->assertSame('pre-existing-salt', $env['DEDALO_SALT_STRING']);
+	}
+
+	private function require_valid_php(string $php) : mixed {
+		$tmp = tmpfile();
+		$this->assertIsResource($tmp);
+
+		fwrite($tmp, $php);
+		$meta = stream_get_meta_data($tmp);
+		$path = $meta['uri'];
+
+		try {
+			return require $path;
+		} finally {
+			fclose($tmp);
+		}
 	}
 }
