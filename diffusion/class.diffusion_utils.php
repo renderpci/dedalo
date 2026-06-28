@@ -1163,6 +1163,7 @@ class diffusion_utils {
 	public static function get_section_node_for_element( string $diffusion_element_tipo, string $section_tipo ) : ?object {
 
 		$nodes = self::get_section_diffusion_nodes($section_tipo);
+		$alias_match = null;
 		foreach ($nodes as $node) {
 			foreach ($node->parents ?? [] as $path_item) {
 				if ($path_item->model!=='diffusion_element' && $path_item->model!=='diffusion_element_alias') {
@@ -1170,13 +1171,23 @@ class diffusion_utils {
 				}
 				// first element found in the path decides this node's element
 				if (self::element_path_matches($path_item, $diffusion_element_tipo)) {
-					return $node;
+					// a section can resolve to BOTH a real 'table' node and a 'table_alias'
+					// node (e.g. rsc197 → numisdata50 "people" + numisdata58 "other_people").
+					// v6 writes to the REAL table, so prefer it; remember the alias only as a
+					// fallback when no real table node matches.
+					if (($node->model ?? null) === 'table_alias') {
+						if ($alias_match === null) {
+							$alias_match = $node;
+						}
+					} else {
+						return $node;
+					}
 				}
 				break;
 			}
 		}
 
-		return null;
+		return $alias_match;
 	}//end get_section_node_for_element
 
 
