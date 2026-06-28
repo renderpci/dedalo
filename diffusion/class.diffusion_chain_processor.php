@@ -78,14 +78,25 @@ class diffusion_chain_processor {
 		$level        		= $options->level ?? 0;
 		$is_publishable 	= $options->is_publishable;
 
+		// Path-aware cycle detection: $visited is the ancestor chain of section locators
+		// for the CURRENT recursion branch (not a global set). Add the current section so a
+		// descendant that links back to it is blocked, while sibling references to the same
+		// section via different branches still resolve (e.g. a coin referencing two types
+		// that both resolve the same mint/material → both must appear in the grouped output).
+		$visited = $options->visited ?? [];
+		$current_key = $section_tipo . '_' . $section_id;
+		if (!in_array($current_key, $visited, true)) {
+			$visited[] = $current_key;
+		}
+
 		// Find children of this parent node that belong to the current section_tipo
-		$children = array_filter($ddo_map, fn($item) => 
+		$children = array_filter($ddo_map, fn($item) =>
 			$item->parent === $parent && (empty($item->section_tipo) || $item->section_tipo === $section_tipo)
 		);
 
 		$ar_results = [];
 		foreach ($children as $ddo) {
-			$ddo_results = $this->resolve_ddo_value($ddo, $ddo_map, $section_tipo, $section_id, $level, $is_publishable);
+			$ddo_results = $this->resolve_ddo_value($ddo, $ddo_map, $section_tipo, $section_id, $level, $is_publishable, $visited);
 			$ar_results = array_merge($ar_results, $ddo_results);
 		}
 
@@ -110,7 +121,7 @@ class diffusion_chain_processor {
 	 * @param bool $is_publishable
 	 * @return array
 	 */
-	private function resolve_ddo_value(object $ddo, array $ddo_map, string $section_tipo, string|int $section_id, int $level, bool $is_publishable): array {
+	private function resolve_ddo_value(object $ddo, array $ddo_map, string $section_tipo, string|int $section_id, int $level, bool $is_publishable, array $visited = []): array {
 
 		$current_tipo = $ddo->tipo;
 		
@@ -149,7 +160,7 @@ class diffusion_chain_processor {
 		// 1. RELATION COMPONENT BRANCH: Handles both queuing and recursion
 		$is_relation_component = in_array($model_name, component_relation_common::get_components_with_relations()) || $model_name === 'relation_list';
 		if ($is_relation_component) {
-			return $this->process_relation_component($ddo, $element, $ddo_map, $children, $level, $is_publishable);
+			return $this->process_relation_component($ddo, $element, $ddo_map, $children, $level, $is_publishable, $visited);
 		}
 
 		// 2. TERMINAL CASE: Standard components are always terminal
@@ -173,14 +184,31 @@ class diffusion_chain_processor {
 	 * @param bool $is_publishable
 	 * @return array Array containing a single diffusion_data_object wrapping all resolved relational values
 	 */
-	private function process_relation_component(object $ddo, object $element, array $ddo_map, array $children, int $level, bool $is_publishable): array {
+	private function process_relation_component(object $ddo, object $element, array $ddo_map, array $children, int $level, bool $is_publishable, array $visited = []): array {
 		
 		$current_tipo 	= $ddo->tipo;
 
 		// Extract raw data (locators referring to linked sections)
 		$diffusion_data = $element->get_diffusion_data($ddo, self::$diffusion_element_tipo);
-		$element_model 	= $element->get_model(); 
+		$element_model 	= $element->get_model();
+
+		// fn_terminal: the ddo's fn already produced the FINAL value (a lang-wrapped scalar
+		// payload, NOT locators to iterate/recurse). Return it verbatim. Used by deep custom
+		// resolutions that reproduce a v6 algorithm whole (e.g. designs iconography via
+		// component_portal::get_diffusion_iconography). Gated by the flag so normal relation
+		// fns (which DO return locators) are unaffected.
+		if (($ddo->fn_terminal ?? false) === true) {
+			return $diffusion_data;
+		}
+
 		$ar_locators 	= $diffusion_data[0]->get_value() ?? [];
+
+		// add_parents metadata (parent chains with term labels), keyed by
+		// "section_tipo_section_id". Computed by component_relation_common::get_diffusion_data
+		// when ddo->fn==='add_parents'. Captured here so it can be re-attached to the raw
+		// fallback locators below — otherwise the relation branch discards it and the
+		// parser_locator::parents term resolution has nothing to walk (place / indexation).
+		$parents_meta = $diffusion_data[0]->meta ?? null;
 
 		// Normalize locators to array for uniform processing iteration
 		if (!is_array($ar_locators)) {
@@ -253,7 +281,35 @@ class diffusion_chain_processor {
 
 			// Skip unpublishable locators from value collection.
 			// A related section that is not published must not appear in the output values.
-			if($is_publishable === false || $current_is_publishable === false){
+			// EXCEPTION: component_relation_parent emits a STRUCTURAL hierarchy root (e.g. a
+			// thesaurus's hierarchy1 node) as the parent of a top-level term. That node is not
+			// itself "publishable", yet v6 always includes it (the parent field does not apply
+			// a publishable filter). Keep it so parent/parents/parents_term resolve.
+			// component_select links (e.g. a coin's catalogue reference → its catalogue node) are
+			// VALUE SOURCES: the chain reads a scalar (abbreviation, etc.) THROUGH the linked node,
+			// which v6 does regardless of that node's publishability. The node's OWN row still
+			// respects publishability via the queueing block above (lines ~261-270), so keeping the
+			// value here does not leak an unpublishable row — it only lets the chain continue to the
+			// deeper ddo (e.g. numisdata303 abbreviation).
+			// VALUE-SOURCE bypass: a relation read THROUGH to a deeper scalar (the locator is an
+			// intermediate, not the final output) — v6 reads that scalar regardless of the linked
+			// record's publishability (e.g. catalogue_type_mint numisdata309→numisdata303 abbrev;
+			// a publication's author rsc139→rsc197 person→rsc86/rsc85 name). Gate on having
+			// CHILDREN so a LEAF relation whose locator IS the output (e.g. relations_coins
+			// numisdata77→coin section_id) still respects publishability. The node's own row is
+			// handled by the queue block above regardless.
+			// An add_parents column (place / indexation) reads each locator's OWN term (and
+			// parent chain) as the output value via parser_locator::parents — the locator IS a
+			// value source even with no children ddos, so v6 includes unpublishable locators
+			// too (e.g. a hoard's indexation location tchi1 "Peninsular", publishable=false).
+			$is_add_parents = (($ddo->fn ?? null) === 'add_parents');
+			$is_value_source_select = (!empty($children) || $is_add_parents)
+				&& in_array($element_model, ['component_select','component_portal','component_autocomplete','component_autocomplete_hi'], true);
+			if(($is_publishable === false || $current_is_publishable === false)
+				&& $element_model !== 'component_relation_parent'
+				&& $element_model !== 'component_relation_children'
+				&& $element_model !== 'component_relation_index'
+				&& !$is_value_source_select){
 				continue;
 			}
 
@@ -264,19 +320,29 @@ class diffusion_chain_processor {
 
 			// B. RECURSION: Resolve child fields if explicitly defined in DDO map for this specific section_tipo
 			// We only recurse if the locator's target section_tipo is explicitly mapped in the whitelist ($valid_sections_tipo).
-			// Guard with depth check ($level > 0) and recursion cache to prevent circular re-resolution.
+			// NOTE: the EXPLICIT ddo_map chain is NOT gated by $level — its depth is already bounded by
+			// the ddo_map's parent-chain structure (each recursion only follows ddos whose parent ===
+			// $current_tipo) and the $visited ancestor guard prevents cycles. v6 has no such limit, so a
+			// deep explicit chain (e.g. bibliography_author numisdata162→rsc368→rsc139→rsc85, or the 4-ddo
+			// ref_coins_image chain) must resolve fully. $level still decrements and only gates the
+			// INVERSE/target queueing (resolve_ddo_value, "$level > 0"), so the cascade stays bounded.
 			$child_results = [];
-			if ($validated === true && $level > 0) {
-				$recursion_key = $locator->section_tipo . '_' . $locator->section_id;
-				if (!isset(self::$recursively_resolved[$recursion_key])) {
-					self::$recursively_resolved[$recursion_key] = true;
+			if ($validated === true) {
+				// Path-aware cycle guard: only skip if this locator is already an ANCESTOR
+				// in the current recursion branch ($visited). This replaces the old global
+				// per-field dedup, which wrongly blocked legitimate sibling references that
+				// resolve the same section twice (e.g. a coin's two type refs both yielding
+				// the same mint/material → v6 emits both in the grouped output).
+				$locator_key = $locator->section_tipo . '_' . $locator->section_id;
+				if (!in_array($locator_key, $visited, true)) {
 					$child_results = $this->resolve_chain((object)[
 						'ddo_map'      		=> $ddo_map,
 						'parent'       		=> $current_tipo,
 						'section_tipo' 		=> $locator->section_tipo,
 						'section_id'   		=> $locator->section_id,
 						'level'        		=> $level - 1,
-						'is_publishable' 	=> $current_is_publishable
+						'is_publishable' 	=> $current_is_publishable,
+						'visited'      		=> $visited
 					]);
 				}
 			}
@@ -287,16 +353,35 @@ class diffusion_chain_processor {
 					$val = $res->get_value();
 					if($is_first_ddo){
 						$val = array_map(function($item) use($locator) {
-							$item->section_id = $locator->section_id;
-							$item->section_tipo = $locator->section_tipo;
+							// Only stamp the parent's identity onto TERMINAL scalar items
+							// (e.g. a resolved name string) which carry no locator of their
+							// own and need the parent's identity for grouping. Leaf LOCATORS
+							// (e.g. coins reached through a filtered relation) already carry
+							// their own section_tipo/section_id — overwriting them would yield
+							// the parent's ids instead of the target's.
+							if (empty($item->section_tipo ?? null)) {
+								$item->section_id   = $locator->section_id;
+								$item->section_tipo = $locator->section_tipo;
+							}
 							return $item;
 						}, $val);
 					}
-					if (is_array($val)) {
-						$relation_values = array_merge($relation_values, $val);
-					} else {
-						$relation_values[] = $val;
-					}
+						if (is_array($val)) {
+							// v6 empty_value: this parent locator's child resolved to nothing — emit a
+							// placeholder (section_id = empty_value scalar) so per-item alignment is kept
+							// (e.g. a coin with no hoard -> "0" in the merged ref_coins_hoard_data list).
+							$ev_first = $ddo->empty_value ?? null;
+							if (empty($val) && !empty($ev_first)) {
+								$placeholder = clone $locator;
+								$placeholder->section_id         = (string)$ev_first[0];
+								$placeholder->from_component_tipo = $current_tipo;
+								$relation_values[] = $placeholder;
+							} else {
+								$relation_values = array_merge($relation_values, $val);
+							}
+						} else {
+							$relation_values[] = $val;
+						}
 				}
 			} else {
 
@@ -307,6 +392,18 @@ class diffusion_chain_processor {
 				// relation_list case or component_auto_complete_hi with a end ddo only with the section_tipo defined.
 				// in those cases only the locator filtered by the section_tipo defined is the value.
 				if(!empty($valid_sections_tipo) && !in_array($locator->section_tipo, $valid_sections_tipo)){
+					// v6 empty_value: when this parent locator's child resolved empty (so the
+					// locator would be skipped), emit a placeholder so per-item alignment is kept
+					// — e.g. ref_coins_hoard_data: a coin with no hoard emits "0", keeping every
+					// coin in the merged list. get_section_id reads section_id, so set it to the
+					// empty_value scalar.
+					$ev_ph = $ddo->empty_value ?? null;
+					if (!empty($ev_ph)) {
+						$placeholder = clone $locator;
+						$placeholder->section_id   = (string)$ev_ph[0];
+						$placeholder->from_component_tipo = $current_tipo;
+						$relation_values[] = $placeholder;
+					}
 					continue;
 				}else{
 					// Fallback: If no children resolved (either bypassed due to not being in the
@@ -316,6 +413,13 @@ class diffusion_chain_processor {
 					// `$relation_values = $new_diffusion_data` reassigned it, discarding
 					// every value collected from earlier locators in this loop (and mixing
 					// the wrapper shape into the flat value-item list that line 319 expects).
+					// Re-attach the captured add_parents chain so parser_locator::parents
+					// can resolve the term path (place / indexation). Clone to avoid
+					// mutating the shared locator object.
+					if ($parents_meta !== null) {
+						$locator = clone $locator;
+						$locator->meta = $parents_meta;
+					}
 					$relation_values[] = $locator;
 				}
 			}
