@@ -175,6 +175,11 @@ function get_column_definition(col_name: string, table: processed_table): string
 	const safe_col = escape_identifier(col_name);
 
 	if (col_name === 'section_id') {
+		// Global (aggregate) tables key on a composite "{section_tipo}_{section_id}"
+		// string, so their section_id column must be VARCHAR, not INT.
+		if ((table as any).composite_section_id) {
+			return `${safe_col} VARCHAR(255) NOT NULL`;
+		}
 		return `${safe_col} INT(12) NOT NULL`;
 	}
 	if (col_name === 'lang') {
