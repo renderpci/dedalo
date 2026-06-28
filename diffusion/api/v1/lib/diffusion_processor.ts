@@ -71,10 +71,105 @@ export function process_response(response: php_api_response): processed_table[] 
 		const table = process_datum_group(datum, database_name);
 		if (table) {
 			tables.push(table);
+
+			// global_table_maps: derive secondary aggregate table(s) from this source
+			// table's already-parsed columns (v6 save_global_table_data equivalent).
+			const gtm = (datum as any).global_table_maps;
+			if (Array.isArray(gtm) && gtm.length > 0) {
+				for (const gt of build_global_tables(datum, table, gtm)) {
+					tables.push(gt);
+				}
+			}
 		}
 	}
 
 	return tables;
+}
+
+
+
+/**
+ * BUILD_GLOBAL_TABLES
+ * Reproduces v6 save_global_table_data: for a source table that declares
+ * global_table_maps, emit one row per source record into a shared aggregate table,
+ * keyed by the composite "{ref_section_tipo}_{ref_section_id}" and carrying selected
+ * source columns mapped to target columns.
+ */
+function build_global_tables(
+	datum:        datum_group,
+	source_table: processed_table,
+	global_table_maps: Array<{ table_name: string; columns_map: any[] }>
+): processed_table[] {
+
+	const ref_section_tipo = String(datum.section_tipo);
+	const out: processed_table[] = [];
+
+	for (const map of global_table_maps) {
+		if (!map.table_name) continue;
+
+		const records: processed_record[] = [];
+		for (const rec of source_table.records) {
+			const composite = `${ref_section_tipo}_${rec.section_id}`;
+			const columns: Record<string, any> = {
+				ref_section_id:   String(rec.section_id),
+				ref_section_tipo: ref_section_tipo,
+				// 'table' is a structural column of the global table that v6 leaves null
+				// (the writer uses 'ref_table', which is not a real column). Mirror it.
+				table:            null,
+			};
+
+			for (const cm of (map.columns_map ?? [])) {
+				const target  = cm.target_column;
+				const sources = cm.source_columns ?? [];
+				const vals    = sources
+					.map((s: string) => rec.columns[s])
+					.filter((v: any) => v !== undefined && v !== null);
+
+				let value: any;
+				if (cm.format === 'string') {
+					const sep = cm.separator ?? ' | ';
+					value = vals.map((v: any) => typeof v === 'string' ? v : JSON.stringify(v)).join(sep);
+				} else if (sources.length < 2) {
+					// single source: pass the source column value through verbatim
+					value = vals.length > 0 ? vals[0] : null;
+				} else {
+					value = JSON.stringify(vals);
+				}
+				columns[target] = value;
+			}
+
+			records.push({ section_id: composite, lang: rec.lang, columns });
+		}
+
+		const deletions = (source_table.deletions ?? []).map(
+			(d: any) => `${ref_section_tipo}_${d}` as any
+		);
+
+		// Type every derived column as MEDIUMTEXT (except the int-ish ref_section_id):
+		// the mapped values are arbitrary-length JSON/strings copied from source columns.
+		// Data parity compares values, not column types, so a wide text type is safe.
+		const columns_context: Record<string, any> = {};
+		if (records.length > 0) {
+			for (const col of Object.keys(records[0].columns)) {
+				columns_context[col] = (col === 'ref_section_id')
+					? { model: 'field_int', term: col, tipo: '' }
+					: { model: 'field_mediumtext', term: col, tipo: '' };
+			}
+		}
+
+		out.push({
+			database_name: source_table.database_name,
+			table_name:    map.table_name,
+			section_tipo:  ref_section_tipo,
+			records,
+			deletions,
+			columns_context,
+			// section_id holds the composite "{section_tipo}_{section_id}" key → VARCHAR.
+			composite_section_id: true,
+		} as any);
+	}
+
+	return out;
 }
 
 
@@ -303,7 +398,12 @@ function process_record(
 		}
 
 		if (!entries || entries.length === 0) {
-			// No data for this field at all
+			// No data for this field at all. If a v6-parity default_value is configured
+			// (e.g. norder→"0" from map_parent_to_norder, descriptor→"yes" enum default),
+			// emit it instead of leaving the column null.
+			if ((ctx as any).default_value !== undefined && (ctx as any).default_value !== null) {
+				lang_values.set('nolan', String((ctx as any).default_value));
+			}
 			continue;
 		}
 
@@ -324,6 +424,11 @@ function process_record(
 					if (e.meta)        item.meta         = e.meta;
 					if (e.section_id   != null) item.section_id   = e.section_id;
 					if (e.section_tipo != null) item.section_tipo = e.section_tipo;
+					// Preserve relation-edge metadata so parser_locator::get_locator with_meta /
+					// index_meta can emit the v6 children/indexation formats.
+					if ((e as any).from_component_tipo != null) (item as any).from_component_tipo = (e as any).from_component_tipo;
+					if ((e as any).type != null) (item as any).type = (e as any).type;
+					if ((e as any).from_component_top_tipo != null) (item as any).from_component_top_tipo = (e as any).from_component_top_tipo;
 					return item;
 				});
 
@@ -549,6 +654,28 @@ function process_record(
 		}
 	}
 
+	// Fields flagged empty_to_string (v6 process_dato_arguments.fallback parity) emit ''
+	// for an empty result instead of a literal empty-json string ('[]' / 'null' / '{}').
+	const empty_to_string_cols = new Set(
+		context.filter((c: any) => c.empty_to_string).map((c: any) => sanitize_column_name(c.term))
+	);
+	// default_value (v6 parity, e.g. norder→"0"): emit the constant when the column resolves
+	// empty. Covers both the no-entries case (handled earlier) and the empty-resolved case
+	// (e.g. a parent entry whose value is null), which the no-data path does not catch.
+	const default_value_map = new Map<string, string>(
+		context.filter((c: any) => c.default_value !== undefined && c.default_value !== null)
+			.map((c: any) => [sanitize_column_name(c.term), String(c.default_value)])
+	);
+	const apply_ets = (col: string, val: string | null): string | null => {
+		if (empty_to_string_cols.has(col) && (val === null || val === '' || val === '[]' || val === 'null' || val === '{}')) {
+			return '';
+		}
+		if (default_value_map.has(col) && (val === null || val === '' || val === '[]' || val === 'null')) {
+			return default_value_map.get(col)!;
+		}
+		return val;
+	};
+
 	// ---------------------------------------------------------------
 	// PHASE 2: Expand to one record per lang
 	// ---------------------------------------------------------------
@@ -557,9 +684,9 @@ function process_record(
 		const columns: Record<string, string | null> = {};
 		for (const [column_name, lang_values] of column_parsed_values) {
 			// Take nolan or first available
-			columns[column_name] = lang_values.get('nolan')
+			columns[column_name] = apply_ets(column_name, lang_values.get('nolan')
 				?? get_first_value(lang_values)
-				?? null;
+				?? null);
 		}
 		return [{
 			section_id: record.section_id,
@@ -603,6 +730,11 @@ function process_record(
 
 			// Priority 5: no data
 			columns[column_name] = null;
+		}
+
+		// empty_to_string (v6 fallback parity): normalize empty-json results to ''
+		for (const col of Object.keys(columns)) {
+			columns[col] = apply_ets(col, columns[col]);
 		}
 
 		results.push({
@@ -713,12 +845,18 @@ function inject_columns_into_parser(
 	const extra: Record<string, unknown> = { columns };
 	if (main_lang) extra.main_lang = main_lang;
 
+	// An explicit parser_helper::merge with merge:"unique" is a VALUE dedupe (v6
+	// "merged_unique", e.g. collapsing a relation_list's resolved section_ids), not a
+	// column merge — injecting columns would force the column-merge path and drop it.
+	const is_value_merge = (p: parser_definition) =>
+		p?.fn === 'parser_helper::merge' && (p.options as any)?.merge === 'unique';
+
 	if (Array.isArray(parser)) {
-		return parser.map(p => ({ ...p, options: { ...p.options, ...extra } }));
+		return parser.map(p => is_value_merge(p) ? p : ({ ...p, options: { ...p.options, ...extra } }));
 	}
 
 	const p = parser as parser_definition;
-	return { ...p, options: { ...p.options, ...extra } };
+	return is_value_merge(p) ? p : { ...p, options: { ...p.options, ...extra } };
 }
 
 
@@ -873,7 +1011,8 @@ function apply_parser_chain(
 				typeof item === 'object' &&
 				Array.isArray(item.value) &&
 				item.value.length > 0 &&
-				typeof item.value[0] === 'string'
+				(typeof item.value[0] === 'string' ||
+					(typeof item.value[0] === 'object' && item.value[0] !== null))
 		);
 		if (has_array_values) {
 			// Only run the column-aware merge when EVERY column has a corresponding output
