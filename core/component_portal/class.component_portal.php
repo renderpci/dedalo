@@ -461,4 +461,69 @@ class component_portal extends component_relation_common {
 
 
 
+
+	/**
+	* GET_DIFFUSION_ICONOGRAPHY
+	* Reproduces v6 component_autocomplete_hi 3-level nested diffusion (designs "iconography"):
+	* this portal -> scenes -> inner autocomplete_hi relation -> terms whose get_locator_value
+	* (hierarchy25 dataframe) is the label. Joins: within a term -> term_separator (default " | ");
+	* across terms in a scene -> fields_separator (default ", "); across scenes -> scene_separator
+	* (default " | "). Inner relation tipo + separators come from $ddo. Returns lang-wrapped
+	* [{lang,value}] for DEDALO_DIFFUSION_LANGS. (See v6 v5_component_autocomplete_hi.php $_get_valor.)
+	* @param object $ddo
+	* @param string|null $diffusion_element_tipo
+	* @return array
+	*/
+	public function get_diffusion_iconography( object $ddo, ?string $diffusion_element_tipo=null ) : array {
+
+		$inner_tipo  = $ddo->inner_relation ?? 'numisdata722';
+		$term_sep    = $ddo->term_separator ?? ' | ';
+		$fields_sep  = $ddo->fields_separator ?? ', ';
+		$scene_sep   = $ddo->scene_separator ?? ' | ';
+
+		// scenes via a CLEAN ddo (no fn) to avoid re-entering this method
+		$clean_ddo = (object)['tipo' => $this->get_tipo()];
+		$scenes = $this->get_diffusion_data($clean_ddo, $diffusion_element_tipo)[0]->get_value();
+		if (empty($scenes)) {
+			return [];
+		}
+
+		// pre-resolve the term locators per scene (lang-independent)
+		$scene_terms = [];
+		foreach ((array)$scenes as $scene) {
+			if (!is_object($scene) || empty($scene->section_tipo)) continue;
+			$ac = component_common::get_instance('component_autocomplete_hi', $inner_tipo, $scene->section_id, 'list', DEDALO_DATA_LANG, $scene->section_tipo);
+			if (!$ac) continue;
+			$terms = $ac->get_diffusion_data((object)['tipo'=>$inner_tipo], $diffusion_element_tipo)[0]->get_value();
+			$scene_terms[] = (array)$terms;
+		}
+
+		$langs = defined('DEDALO_DIFFUSION_LANGS') ? DEDALO_DIFFUSION_LANGS : [DEDALO_DATA_LANG];
+		$result = [];
+		foreach ($langs as $lang) {
+			$ar_scene = [];
+			foreach ($scene_terms as $terms) {
+				$ar_term = [];
+				foreach ($terms as $term) {
+					if (!is_object($term)) continue;
+					$valor = component_relation_common::get_locator_value($term, $lang, false, null);
+					if (!empty($valor)) {
+						$ar_term[] = implode($term_sep, $valor);
+					}
+				}
+				if (!empty($ar_term)) {
+					$ar_scene[] = implode($fields_sep, $ar_term);
+				}
+			}
+			$str = !empty($ar_scene) ? implode($scene_sep, $ar_scene) : null;
+			if ($str !== null) {
+				// tipo MUST equal this column's tipo so the Bun processor's merge-with-columns
+				// (parser:{} path) matches the slot per lang and emits the value.
+				$result[] = (object)['tipo' => $this->get_tipo(), 'lang' => $lang, 'value' => $str];
+			}
+		}
+
+		return $result;
+	}//end get_diffusion_iconography
+
 }//end class component_portal
