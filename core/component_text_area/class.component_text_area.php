@@ -1660,6 +1660,20 @@ class component_text_area extends component_string_common {
 
 
 
+	/**
+	* GET_GEOLOCATION_DATA
+	* Non-geojson variant of get_geojson_data: returns the v5/v6 array format
+	* ([{layer_id, text:'', layer_data:[{type,lon,lat}, ...]}]). Used by diffusion fields
+	* whose v6 process_dato was diffusion_sql::build_geolocation_data (NOT _geojson).
+	* @return array
+	*/
+	public function get_geolocation_data() : array {
+
+		return $this->build_geolocation_data(false);
+	}//end get_geolocation_data
+
+
+
 
 	/**
 	* BUILD_GEOLOCATION_DATA
@@ -1679,7 +1693,7 @@ class component_text_area extends component_string_common {
 	* when it has no data, or when lib_data is absent.
 	* @return array - array of objects {layer_id, text, layer_data}, one per geo layer
 	*/
-	public function build_geolocation_data() : array {
+	public function build_geolocation_data(bool $geojson=true) : array {
 
 		$ar_elements = [];
 
@@ -1750,13 +1764,33 @@ class component_text_area extends component_string_common {
 			// Therefore, the data in component_geolocation will be used
 			foreach ($lib_data as $layer) {
 
-				$layer_data = $layer->layer_data ?? null;
 				$layer_id	= $layer->layer_id ?? null;
 
-				// create a new value for the layer
+				if ($geojson === true) {
+					// geojson: keep the layer's FeatureCollection verbatim
+					$layer_data = $layer->layer_data ?? null;
+				} else {
+					// non-geojson (v6 build_geolocation_data, false): a flat array of
+					// {type, lon, lat} extracted from each feature's geometry.
+					$layer_data = [];
+					if (isset($layer->layer_data->features) && is_array($layer->layer_data->features)) {
+						foreach ($layer->layer_data->features as $feature) {
+							if (isset($feature->geometry)) {
+								$layer_data[] = (object)[
+									'type' => $feature->geometry->type ?? null,
+									'lon'  => $feature->geometry->coordinates[0] ?? null,
+									'lat'  => $feature->geometry->coordinates[1] ?? null
+								];
+							}
+						}
+					}
+				}
+
+				// create a new value for the layer.
+				// text is ALWAYS '' (v6 parity: "only to maintain v5 diffusion format").
 				$current_value = (object)[
 					'layer_id'		=> $layer_id,
-					'text'			=> $text_map[$layer_id] ?? '',
+					'text'			=> '',
 					'layer_data'	=> $layer_data
 				];
 
@@ -2387,5 +2421,35 @@ class component_text_area extends component_string_common {
 	}//end get_diffusion_v5_references_html
 
 
+
+
+	/**
+	* GET_DIFFUSION_DATA
+	* Override: html_entity_decode ONLY — the complete, universal server-side decoder
+	* (v6 component_text_area::get_diffusion_value html_entity_decode parity). Decodes
+	* STANDARD HTML entities (e.g. &le; -> U+2264) while leaving UNKNOWN ones (e.g. &ic;,
+	* and non-HTML401 &apos;) intact — exactly PHP html_entity_decode default.
+	*
+	* The v5 (legacy <br>) markup NORMALIZATION is NOT done here. It is the OPT-IN parser
+	* parser_text::v5_html, which the migration assigns ONLY to columns that must stay
+	* backward-compatible. New diffusion columns omit it and keep <p> paragraphs — so the
+	* obsolete v5 format is a compatibility option, never an obligation for new data.
+	* @param object $ddo
+	* @param string|null $diffusion_element_tipo
+	* @return array
+	*/
+	public function get_diffusion_data( object $ddo, ?string $diffusion_element_tipo=null ) : array {
+
+		$diffusion_data = parent::get_diffusion_data($ddo, $diffusion_element_tipo);
+
+		foreach ($diffusion_data as $ddo_obj) {
+			$val = $ddo_obj->get_value();
+			if (is_string($val) && $val !== '') {
+				$ddo_obj->set_value( html_entity_decode($val) );
+			}
+		}
+
+		return $diffusion_data;
+	}//end get_diffusion_data
 
 }//end class component_text_area
