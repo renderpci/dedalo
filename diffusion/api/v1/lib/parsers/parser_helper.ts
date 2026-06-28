@@ -28,10 +28,17 @@ export function get_first(data: data_item[] | null, options: parser_options): da
 			lang_seen.add(lang);
 			
 			const val = item.value;
-			const final_val = (Array.isArray(val) && val.length > 0) 
-				? val[0] 
+			let final_val: any = (Array.isArray(val) && val.length > 0)
+				? val[0]
 				: val;
-				
+			// Unwrap a diffusion_data_object wrapper (e.g. get_diffusion_norder emits
+			// [{errors,tipo,value:N,id}]) down to its scalar .value, so int/string output
+			// formats the value, not "[object Object]". Guarded to the dd-object shape.
+			if (final_val && typeof final_val === 'object' && !Array.isArray(final_val)
+				&& 'value' in final_val && ('errors' in final_val || 'id' in final_val || 'tipo' in final_val)) {
+				final_val = (final_val as any).value;
+			}
+
 			result.push({
 				...item,
 				value: final_val
@@ -86,7 +93,15 @@ export function count(data: data_item[] | null, options: parser_options): data_i
 
 	for (const item of data) {
 		const value = item.value;
-		count_val += Array.isArray(value) ? value.length : 0;
+		if (Array.isArray(value)) {
+			count_val += value.length;
+		} else if (value !== null && value !== undefined && value !== '') {
+			count_val += 1;
+		} else if ((item as any).section_id != null) {
+			// a relation locator item (e.g. an author rsc139→person) carries a null scalar
+			// value but still counts as ONE element — v6 count_data_elements counts locators.
+			count_val += 1;
+		}
 	}
 
 	return [{
@@ -137,7 +152,40 @@ export function merge(data: data_item[] | null, options: parser_options): data_i
 	// Internal auto-completion calls in apply_parser_chain omit columns — return null
 	// so their `if (merged) result = merged` guard is a no-op and data flows through.
 	const columns = options.columns as Array<{ tipo: string; model: string }> | undefined;
-	if (!columns || columns.length === 0) return null;
+	if (!columns || columns.length === 0) {
+		// Standalone use (no column context): collapse a flat data array into one
+		// item per lang whose value is the list of item values — e.g. after
+		// parser_locator::get_section_id (split) on a relation_list, with merge:"unique"
+		// to dedupe (v6 output "merged_unique", e.g. a hoard's coin types → ["14809"]).
+		if (!data || data.length === 0) return null;
+		const unique = (options?.merge as string | undefined) === 'unique';
+		const by_lang   = new Map<string, any[]>();
+		const ref_lang  = new Map<string, data_item>();
+		for (const it of data) {
+			const lk = (!it.lang || it.lang === 'lg-nolan') ? '__nolan__' : it.lang;
+			if (!by_lang.has(lk)) { by_lang.set(lk, []); ref_lang.set(lk, it); }
+			const v = it.value;
+			if (v !== null && v !== undefined && v !== '') by_lang.get(lk)!.push(v);
+		}
+		const records_sep_sa = (options?.records_separator as string) ?? ' | ';
+		const implode_sa     = options?.implode === true;
+		const out: data_item[] = [];
+		for (const [lk, vals] of by_lang) {
+			let vv = vals;
+			if (unique) {
+				const seen = new Set<string>(); vv = [];
+				for (const v of vals) { const k = JSON.stringify(v); if (!seen.has(k)) { seen.add(k); vv.push(v); } }
+			}
+			const ref = ref_lang.get(lk)!;
+			// implode:true → v6 "merged_unique_implode": join the per-lang values into ONE
+			// string by records_separator (e.g. a mint's variant names
+			// "Murtili | Mirtilis | Myrtilis | Mirtiles"). Otherwise keep the array (v6
+			// "merged_unique", consumed downstream as a JSON list, e.g. a hoard's coin types).
+			const final_v = implode_sa ? vv.map((v: any) => String(v)).join(records_sep_sa) : vv;
+			out.push({ tipo: ref.tipo, lang: lk === '__nolan__' ? null : lk, value: final_v, id: ref.id } as data_item);
+		}
+		return out.length > 0 ? out : null;
+	}
 
 	const merge_style = options?.merge    as string | undefined;
 	const fields_sep  = (options?.fields_separator  as string) ?? ', ';
@@ -220,7 +268,16 @@ export function merge(data: data_item[] | null, options: parser_options): data_i
 		// Build col_values per section (ordered, with "" for missing/empty slots)
 		const sections_col_values: string[][] = seen_sections.map(section_key => {
 			const tipo_map = section_data.get(section_key)!;
-			return columns.map(col => resolve_slot(tipo_map, col.tipo, lang_key));
+			return columns.map(col => {
+				const v = resolve_slot(tipo_map, col.tipo, lang_key);
+				// v6 resolves a field_text→input_text column via get_locator_value, which applies
+				// strip_tags(trim($value)). input_text holds no block HTML, so this only normalizes
+				// stray whitespace (e.g. a title " Las guerras..." → "Las guerras..."). text_area
+				// columns (e.g. a transcription) are NOT input_text and keep their <br> HTML.
+				return col.model === 'component_input_text' && v !== ''
+					? v.replace(/<[^>]*>/g, '').trim()
+					: v;
+			});
 		});
 
 		// When empty_columns is false, strip empty slots from every section before merging
@@ -243,16 +300,27 @@ export function merge(data: data_item[] | null, options: parser_options): data_i
 				break;
 
 			case 'pipe':
-				// Each section_id → JSON.stringify(col_values); sections joined by records_sep
+				// Each section_id → JSON.stringify(col_values); sections joined by records_sep.
+				// v6 emits pure-integer values as JSON numbers (e.g. mint_number [1], not ["1"]).
+				// Round-trip guard (String(Number(v))===v) coerces "1"→1 but leaves "007",
+				// non-numeric, and precision-losing strings untouched.
 				final_value = effective_col_values
-					.map(cv => JSON.stringify(cv))
+					.map(cv => JSON.stringify((cv as any[]).map(v =>
+						(typeof v === 'string' && v !== '' && String(Number(v)) === v) ? Number(v) : v
+					)))
 					.join(records_sep);
 				break;
 
-			case 'unique':
+			case 'unique': {
 				// Flatten all slot values, filter empty slots, deduplicate
-				final_value = [...new Set(effective_col_values.flat().filter(v => v !== ''))];
+				const unique_vals = [...new Set(effective_col_values.flat().filter(v => v !== ''))];
+				// options.implode joins the unique values into one string (v6 merged_unique_implode);
+				// otherwise the deduplicated array is returned (v6 merged_unique).
+				final_value = (options.implode === true)
+					? unique_vals.join(records_sep)
+					: unique_vals;
 				break;
+			}
 
 			case 'string':
 				// Columns joined by fields_sep within each section; sections joined by records_sep.
