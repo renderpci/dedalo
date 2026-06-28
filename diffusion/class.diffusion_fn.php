@@ -198,67 +198,51 @@ abstract class diffusion_fn {
 
 		// Extract basic component info
 		$tipo	= $element_instance->tipo;
-		$data	= $element_instance->get_data_lang();
 		$lang	= $element_instance->get_lang();
 
-		// Default position is 0 (first position or not found)
+		// Identifiers for the current element (the term whose sibling position we want)
+		$caller_section_id   = $element_instance->get_section_id();
+		$caller_section_tipo = $element_instance->get_section_tipo();
+
+		// Default position is 0 (first position, no parent, or not found)
 		$norder = 0;
 
-		// Only proceed if we have valid parent reference data
-		if (!empty($data) && is_array($data) && isset($data[0]->section_tipo) && isset($data[0]->section_id)) {
+		// Resolve the caller's PARENT.
+		// PRIMARY: component_relation_parent::get_parents() — for thesaurus terms the parent
+		// edge is the INVERSE of the parent's relation_children, so the stored relation_parent
+		// dato is empty and the parent must be COMPUTED (same path the parent column uses).
+		// FALLBACK: when the element itself carries the parent in its own data (a
+		// component_relation_parent ddo that DOES store it), use that.
+		$parent_loc = null;
+		$parents    = component_relation_parent::get_parents($caller_section_id, $caller_section_tipo);
+		if (!empty($parents[0]->section_id) && !empty($parents[0]->section_tipo)) {
+			$parent_loc = $parents[0];
+		} else {
+			$data = $element_instance->get_data_lang();
+			if (!empty($data) && is_array($data) && isset($data[0]->section_tipo, $data[0]->section_id)) {
+				$parent_loc = $data[0];
+			}
+		}
 
-			// Get identifiers for the current element (the one whose position we're finding)
-			$caller_section_id = $element_instance->get_section_id();
-			$caller_section_tipo = $element_instance->get_section_tipo();
+		if ($parent_loc) {
 
-			// Build a locator to search for in the parent's children list
+			// The parent's ORDERED children are the caller's siblings; norder = the caller's
+			// 0-based index in that list (v6 diffusion_sql::map_parent_to_norder semantics).
+			$children = component_relation_children::get_children(
+				$parent_loc->section_id,
+				$parent_loc->section_tipo
+			);
+
 			$locator_to_find = new locator();
 				$locator_to_find->set_section_tipo($caller_section_tipo);
 				$locator_to_find->set_section_id($caller_section_id);
 
-			// Extract parent section reference from the data
-			$section_tipo = $data[0]->section_tipo;
-			$section_id = $data[0]->section_id;
-
-			// Find the component_relation_children in the parent section
-			// This component stores the ordered list of children
-			$children_tipo = section::get_ar_children_tipo_by_model_name_in_section(
-				$section_tipo,
-				['component_relation_children'],
-				true,
-				true,
-				true,
-				true
-			);
-
-			if (isset($children_tipo[0])) {
-				// Get the relation_children component instance
-				$component_relation_children = component_common::get_instance(
-					'component_relation_children',
-					$children_tipo[0],
-					$section_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					$section_tipo
-				);
-				
-				// Get the ordered list of children locators
-				$relation_children_data = $component_relation_children->get_data();
-				
-				// Search for our locator in the children list
-				foreach ($relation_children_data as $key => $children_locator) {
-					// Compare only section_tipo and section_id (ignore other locator properties)
-					if( true===locator::compare_locators( $locator_to_find, $children_locator, ['section_tipo','section_id']) ) {
-						$norder = $key;  // Found! Use the array index as position
-						break;
-					}
+			foreach ($children as $key => $children_locator) {
+				// Compare only section_tipo and section_id (ignore other locator properties)
+				if( true===locator::compare_locators( $locator_to_find, $children_locator, ['section_tipo','section_id']) ) {
+					$norder = $key;  // Found! Use the array index as position
+					break;
 				}
-			} else {
-				// Log error if the expected component doesn't exist in the parent section
-				debug_log(__METHOD__
-					." Error. searched component_relation_children not found in section '$section_tipo'"
-					, logger::ERROR
-				);
 			}
 		}
 
