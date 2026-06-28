@@ -1039,6 +1039,27 @@ class dd_diffusion_api {
 			$datum_object->set_parent($parent);
 			$datum_object->set_context($context);
 
+			// global_table_maps: v6 secondary aggregate-table write (save_global_table_data).
+			// Carry the columns_map + resolved target table name so the Bun engine can derive
+			// the global table rows from this source table's already-parsed columns.
+			if (!empty($properties->global_table_maps)) {
+				$global_table_maps = [];
+				foreach ($properties->global_table_maps as $map) {
+					$gt_tipo = $map->table_tipo ?? null;
+					if (empty($gt_tipo)) {
+						continue;
+					}
+					$gt_node = ontology_node::get_instance($gt_tipo);
+					$global_table_maps[] = (object)[
+						'table_name'  => $gt_node ? $gt_node->get_term(DEDALO_STRUCTURE_LANG) : $gt_tipo,
+						'columns_map' => $map->columns_map ?? []
+					];
+				}
+				if (!empty($global_table_maps)) {
+					$datum_object->global_table_maps = $global_table_maps;
+				}
+			}
+
 		// Ontology-level is_publishable override
 		// When the diffusion node itself carries is_publishable (e.g. always-publish
 		// reference tables), skip the per-record publication component check entirely.
@@ -1146,10 +1167,21 @@ class dd_diffusion_api {
 					}
 				}
 				if (!empty($all_values) || ($options->include_empty ?? false) === true) {
+					// preserve_order (per diffusion node): when true, DON'T merge entries that
+					// share section_id — keep each in raw resolution order. v6 emits some columns
+					// (e.g. mints relations_coins) as the inverse-reference order with duplicate
+					// target ids INTERLEAVED, not collapsed/grouped by target. Default false keeps
+					// the standard group-by-metadata behaviour for every other field.
+					$node_props_po = ontology_node::get_instance($node_tipo);
+					$preserve_order = $node_props_po && (($node_props_po->get_properties()->process->preserve_order ?? false) === true);
+					$order_counter = 0;
+
 					// Group values by shared metadata (tipo, lang, id, section_id, section_tipo)
 					$grouped = [];
 					foreach ($all_values as $item) {
-						$group_key = ($item->tipo ?? '') . '|' . ($item->lang ?? '') . '|' . ($item->id ?? '') . '|' . ($item->section_id ?? '') . '|' . ($item->section_tipo ?? '');
+						$group_key = $preserve_order
+							? ('order_' . ($order_counter++))
+							: ($item->tipo ?? '') . '|' . ($item->lang ?? '') . '|' . ($item->id ?? '') . '|' . ($item->section_id ?? '') . '|' . ($item->section_tipo ?? '');
 						if (!isset($grouped[$group_key])) {
 							$field_group = (object)[
 								'tipo'          => $item->tipo ?? null,
@@ -1240,6 +1272,13 @@ class dd_diffusion_api {
 
 		$properties = $diffusion_node_instance->get_properties();
 
+		// exclude_column: the node participates in resolution/publication logic but must
+		// NOT become an output column (v6 parity — e.g. a publication-control enum like
+		// numisdata847). Returning empty context omits it from the target table schema.
+		if (!empty($properties->exclude_column)) {
+			return $context;
+		}
+
 		// tipo and term come from the diffusion node, not from the component
 		$term = $diffusion_node_instance->get_term(DEDALO_STRUCTURE_LANG);
 
@@ -1310,6 +1349,18 @@ class dd_diffusion_api {
 
 		if(isset($properties->index)){
 			$context[0]->index = $properties->index;
+		}
+
+		// empty_to_string: emit '' (not '[]'/'null') when the resolved value is empty.
+		// v6-parity for fields with a process_dato_arguments.fallback that resolves empty.
+		if(isset($properties->process->empty_to_string)){
+			$context[0]->empty_to_string = $properties->process->empty_to_string;
+		}
+
+		// default_value: emit this constant when the field has no data at all.
+		// v6-parity for fields whose process_dato returns a default (norder→0, descriptor→yes).
+		if(isset($properties->process->default_value)){
+			$context[0]->default_value = $properties->process->default_value;
 		}
 
 		return $context;
