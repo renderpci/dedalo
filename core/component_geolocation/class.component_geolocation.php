@@ -323,6 +323,42 @@ class component_geolocation extends component_common {
 	* @see ontology publication use in mdcat4091
 	* @return ?string - JSON-encoded layer array, or null when coordinates are absent/sentinel.
 	*/
+	/**
+	* GET_DIFFUSION_DATA
+	* Geolocation diffusion value: the stored point object(s). v7 stores an internal
+	* per-point `id` key that v6 never emitted; strip it so the diffused `map` column
+	* matches v6 byte-for-byte. (The geojson path get_diffusion_value_as_geojson() is a
+	* separate method and is unaffected.)
+	* @param object $ddo
+	* @param ?string $diffusion_element_tipo
+	* @return array
+	*/
+	public function get_diffusion_data( object $ddo, ?string $diffusion_element_tipo=null ) : array {
+
+		$diffusion_data = parent::get_diffusion_data($ddo, $diffusion_element_tipo);
+
+		$strip_id = function($point) {
+			if (is_object($point) && isset($point->id)) {
+				$point = clone $point;
+				unset($point->id);
+			}
+			return $point;
+		};
+
+		foreach ($diffusion_data as $ddo_obj) {
+			$v = $ddo_obj->get_value();
+			if (is_array($v)) {
+				$ddo_obj->set_value(array_map($strip_id, $v));
+			} else {
+				$ddo_obj->set_value($strip_id($v));
+			}
+		}
+
+		return $diffusion_data;
+	}//end get_diffusion_data
+
+
+
 	public function get_diffusion_value_as_geojson() : ?string {
 
 		$data = $this->get_data(); // object as {"alt": 281, "lat": "41.56236346", "lon": "2.01215141", "zoom": 15}
