@@ -425,16 +425,42 @@ export function v5_html(data: data_item[] | null, options: parser_options): any 
 
 	if (!data || data.length === 0) return null;
 
-	const first = data[0];
-	const raw   = first.value;
+	// Fan out over ALL items, preserving each item's lang. When this column also
+	// carries `columns` metadata, the processor passes every language entry at once;
+	// returning only data[0] would collapse every language to the first one's value
+	// (e.g. lg-spa showing the Catalan text). One cleaned item per input item lets the
+	// per-lang expansion pick the correct value for each language.
+	const out: any[] = [];
+	for (const item of data) {
 
-	if (raw === null || raw === undefined) return null;
+		const raw = item.value;
+		if (raw === null || raw === undefined) continue;
 
-	// 1. Decode HTML entities (mirrors PHP html_entity_decode)
-	let value = decode_html_entities(String(raw));
+		// Entity decoding is NOT done here: the PHP side (component_text_area::get_diffusion_data
+		// → html_entity_decode, the complete server-side decoder) already decoded every entity
+		// before the dump. This parser is the OPT-IN v5 (legacy <br>) normalization layer.
+		const value = clean_v5_html(String(raw));
+		if (!value) continue;
+
+		// Preserve item.id so v5_html can be CHAINED before another parser that references
+		// the ddo id (e.g. [v5_html, text_format] with pattern "${a}" on the design columns).
+		out.push({ id: item.id ?? null, value, tipo: item.tipo, lang: item.lang });
+	}
+
+	return out.length > 0 ? out : null;
+}
+
+
+/**
+ * CLEAN_V5_HTML
+ * The 8-step v5 HTML normalization applied to a single decoded string.
+ * Entity decoding itself stays in PHP (component_text_area::get_diffusion_data uses
+ * html_entity_decode — the complete server-side decoder); this only normalizes markup.
+ */
+function clean_v5_html(value: string): string {
 
 	// 2. Empty guard
-	if (!value || value.trim() === '') return null;
+	if (!value || value.trim() === '') return '';
 
 	// 3. Remove empty paragraphs
 	if (value === '<p></p>' || value === '<p> </p>') {
@@ -464,29 +490,5 @@ export function v5_html(data: data_item[] | null, options: parser_options): any 
 	// 8. Trim &nbsp; at boundaries and surrounding whitespace
 	value = value.replace(/^&nbsp;|&nbsp;$/g, '').trim();
 
-	if (!value) return null;
-
-	return [{
-		id:    null,
-		value: value,
-		tipo:  first.tipo,
-		lang:  first.lang
-	}];
-}
-
-
-/**
- * DECODE_HTML_ENTITIES
- * Converts common HTML entities to their character equivalents.
- * Mirrors PHP html_entity_decode behaviour for the subset used in diffusion text.
- */
-function decode_html_entities(str: string): string {
-	return str
-		.replace(/&amp;/g,   '&')
-		.replace(/&lt;/g,    '<')
-		.replace(/&gt;/g,    '>')
-		.replace(/&quot;/g,  '"')
-		.replace(/&#039;/g,  "'")
-		.replace(/&apos;/g,  "'")
-		.replace(/&nbsp;/g,  '\u00a0');
+	return value;
 }
