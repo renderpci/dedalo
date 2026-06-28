@@ -6,6 +6,35 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 
 	$process = new stdClass();
 
+	// component_relation_children (thesaurus "children"): a node may be passed with the
+	// legacy model (component_check_box); when the real model is component_relation_children
+	// emit the raw child locators {section_tipo, section_id, from_component_tipo, type}
+	// (v6 format) via get_locator + the relation ddo_map, regardless of the legacy $model.
+	if ($tipo && ontology_node::get_model_by_tipo($tipo) === 'component_relation_children') {
+		$process->ddo_map = !empty($ddo_map)
+			? $ddo_map
+			: [ (object)['tipo' => $tipo, 'section_tipo' => 'self'] ];
+		$process->parser = [
+			(object)['fn' => 'parser_locator::get_locator', 'options' => (object)['with_meta' => true]]
+		];
+		$process->output_format = 'json';
+		return $process;
+	}
+
+	// component_relation_index (thesaurus "indexation"): emit the inverse index references
+	// in v6's key order {type, section_id, section_tipo, from_component_tipo, from_component_top_tipo}
+	// via get_locator index_meta. from_component_tipo is the index component itself ($tipo).
+	if ($tipo && ontology_node::get_model_by_tipo($tipo) === 'component_relation_index') {
+		$process->ddo_map = !empty($ddo_map)
+			? $ddo_map
+			: [ (object)['tipo' => $tipo, 'section_tipo' => 'self'] ];
+		$process->parser = [
+			(object)['fn' => 'parser_locator::get_locator', 'options' => (object)['index_meta' => true, 'from_component_tipo' => $tipo]]
+		];
+		$process->output_format = 'json';
+		return $process;
+	}
+
 	switch($model){
 		case 'component_3d':
 		case 'component_av':
@@ -183,7 +212,31 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 			break;
 		case 'component_input_text':
 			$records_separator =' | ';
-			// nothing to do, the default proceess is compatible with the v6
+			// v6 resolve_value joins MULTIPLE resolved values by " | " (e.g. a relation that
+			// yields several records — a publication's authors → several first names / surnames).
+			// Without a join parser the diffusion processor keeps only the LAST value
+			// (authors_name showed just "Mário" instead of "Joâo | José | Leonel | Mário").
+			// parser_helper::merge (string mode) joins them; for a single value it is a no-op,
+			// so direct one-value input_text columns are unaffected.
+			//
+			// IMPORTANT: emit ONLY the parser here — do NOT set $process->ddo_map. The CALLERS
+			// own the input_text ddo_map (the get_diffusion_value branch attaches the
+			// [relation, target] map, and the relation_list branch array_merges it). Setting it
+			// here too produced a DOUBLE ddo_map (the chain twice → over-resolution, e.g.
+			// mint_number's value grew past its column width and the coins insert failed).
+			$parser_process = (object)[
+				'parser' => [
+					(object)[
+						'fn' => 'parser_helper::merge',
+						'options' => (object)[
+							'merge' => 'string',
+							'records_separator' => $records_separator
+						]
+					]
+				],
+				'output_format' => 'string'
+			];
+			$process = $parser_process;
 			break;
 		case 'component_inverse':
 			break;
@@ -472,8 +525,8 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 								'options' => (object)[
 									'value' => 'term',
 									"include_parents" => $add_parents,
-									'fields_separator' => $divisor ?? ' - ',
-									'records_separator' => $divisor_parents ?? $records_separator ?? ', '
+									'fields_separator' => $divisor_parents ?? $divisor ?? ' - ',
+									'records_separator' => $records_separator ?? ', '
 								]
 							]
 						],
@@ -673,7 +726,37 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					}
 				}
 
-				$parser_options = new stdClass();									
+				// value_with_parents: a hierarchical (autocomplete_hi) component whose v6
+				// config requests the full parent term path. v6 get_diffusion_value emits
+				// the term chain (term + ancestors) joined by ' - '. Emit parser_locator::parents
+				// + add_parents on the leaf ddo instead of the leaf-only text_format.
+				if (!empty($target_component_properties->value_with_parents) && !empty($ddo_map)) {
+
+					$ddo_map[count($ddo_map)-1]->fn = 'add_parents';
+
+					$parser_process = (object)[
+						'fn' => 'add_parents',
+						'parser' => [
+							(object)[
+								'fn' => 'parser_locator::parents',
+								'options' => (object)[
+									'value'             => 'term',
+									'include_parents'   => true,
+									'fields_separator'  => ' - ',
+									'records_separator' => ', '
+								]
+							]
+						],
+						'ddo_map'       => $ddo_map,
+						'output_format' => 'string'
+					];
+					unset($parser_process->fn);
+					$process = $parser_process;
+					$process->output_sample = "El Baix Maestrat - Castellón/Castelló - Comunidad Valenciana - España";
+					break;
+				}
+
+				$parser_options = new stdClass();
 					$parser_options->pattern = implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? []));
 					$parser_options->records_separator = $records_separator;
 					$parser_options->fields_separator = $fields_separator;
@@ -681,8 +764,8 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 				if($group_by_section_id){
 					$parser_options->group_by_section_id = $group_by_section_id;
 				}
-				
-				$parser_process = (object)[					
+
+				$parser_process = (object)[
 					'parser' => [
 						(object)[
 							'fn' => 'parser_text::text_format',
@@ -696,7 +779,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					$process->ddo_map = $ddo_map;
 				}
 				$process->output_sample = "Pere | Manuel";
-				
+
 				break;
 
 			}
@@ -821,7 +904,10 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 						"include_parents" => $add_parents,
 						'fields_separator' => $fields_separator,
 						'records_separator' => $records_separator,
-						'merge' => 'flat'
+						// resolve_value=true (thesaurus parents_term) wants the ancestor TERMS as
+						// SEPARATE array elements (v6 ["North Iberians","Iberian","Culture"]), not a
+						// single fields_separator-joined string. merge 'unique' flattens the chain.
+						'merge' => 'unique'
 					];
 					if($parent_section_tipo !== false) {
 						$parser_options->parent_section_tipo = $parent_section_tipo;
@@ -1408,6 +1494,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 											"fn": "parser_helper::merge",
 											"options": {
 											"merge": "string",
+											"empty_columns": false,
 											"fields_separator": " | ",
 											"records_separator": " - "
 											}

@@ -39,6 +39,36 @@ include_once __DIR__ . '/v1_get_diffusion_dato.php';
 include_once __DIR__ . '/v1_get_diffusion_value.php';
 include_once __DIR__ . '/v1_get_valor.php';
 
+/**
+ * DIFFUSION_BUILD_ADD_PARENTS_PROCESS
+ * Canonical ancestor-chain process for v6 add_parents columns (the thesaurus "parents"
+ * family). Uses the single resolver fn 'add_parents' (component_relation_common, which
+ * already includes the relation_parent hierarchy-root fallback) — it emits the per-locator
+ * ancestor chains into the diffusion_data_object meta — and shapes them with
+ * parser_locator::parents. This replaces the former per-ddo get_diffusion_data_recursive
+ * fn (removed): one canonical resolver, output shaping in the parser. The 'value' selects
+ * the output (term_id | term | section_id), mirroring the parser the column would have used.
+ * @param string $value  parser_locator::parents value mode (default 'term_id')
+ * @return stdClass  process object
+ */
+function diffusion_build_add_parents_process(string $value='term_id') : stdClass {
+	return (object)[
+		'fn'     => 'add_parents',
+		'parser' => [ (object)[
+			'fn'      => 'parser_locator::parents',
+			'options' => (object)[
+				'merge'               => 'unique',
+				'value'               => $value,
+				'include_parents'     => true,
+				'fields_separator'    => ', ',
+				'records_separator'   => null,
+				'parent_section_tipo' => null
+			]
+		]],
+		'output_format' => 'json'
+	];
+}
+
 force_login(-1);
 
 $root_tipo = DEDALO_DIFFUSION_TIPO; // Diffusion Root
@@ -172,6 +202,14 @@ function process_node($node, $level) {
 			break;
 		case 'table':
 			$diffusion_type = 'table';
+			// Carry global_table_maps (v6 secondary aggregate-table write) verbatim to v7
+			// properties. The Bun engine derives the global table rows from this source
+			// table's already-parsed columns (composite key {section_tipo}_{section_id} +
+			// columns_map source→target). See diffusion_processor.ts build_global_tables.
+			if (isset($props->global_table_maps)) {
+				$new_props = new stdClass();
+				$new_props->global_table_maps = $props->global_table_maps;
+			}
 			break;
 		// All Field Types
 		case 'field_enum':
@@ -186,6 +224,19 @@ function process_node($node, $level) {
 		case 'field_point':
 		case 'field_mediumtext':
 			$diffusion_type = 'field';
+
+				// RDF-in-column (nomisma_rdf): v6 process_dato=diffusion_sql::generate_rdf embeds a
+				// per-record RDF doc from another element. v7 routes it via properties.diffusion.type
+				// ='rdf' + diffusion_element_tipo (dd_diffusion_api rdf_field_nodes → diffusion_rdf::
+				// build_rdf_xml). NOT YET ENABLED: that embedded-RDF path currently aborts the whole
+				// diffuse in the harness (needs the build_rdf_xml 'pure' path debugged). The EasyRdf
+				// autoload bug it surfaced (class.diffusion_rdf.php → composer autoload) IS fixed.
+				// Re-enable once the engine path is stable:
+				//   if (($props->process_dato ?? null) === 'diffusion_sql::generate_rdf') {
+				//       $new_props = new stdClass();
+				//       $new_props->diffusion = (object)['type'=>'rdf','diffusion_element_tipo'=>$props->diffusion_element_tipo ?? null];
+				//       break;
+				//   }
 			
 			// Calculate effective count ignoring behavioral properties (info, exclude_column, is_publicable)
 			$props_check = is_object($props) ? clone $props : (object)[];
@@ -255,7 +306,16 @@ function process_node($node, $level) {
 							if($target_ddo_map && !isset($props->process_dato) && !isset($data_to_be_used)){
 								
 								$parent_tipos = array_column($target_ddo_map, 'parent');
-								$last_items = array_filter($target_ddo_map, fn($item) => !in_array($item->tipo, $parent_tipos));
+								// Exclude component_dataframe columns (uncertainty/qualifier frames):
+								// they are skipped when the ddo_map is built, so they must not inflate
+								// the target-section count and force the multi-section merge path. A
+								// single hierarchical column with a sibling dataframe (e.g. place →
+								// hierarchy25 + numisdata272) is NOT multi-section; it should resolve
+								// through the parents path that honours value_with_parents.
+								$last_items = array_filter($target_ddo_map, function($item) use ($parent_tipos) {
+									if (in_array($item->tipo, $parent_tipos)) return false;
+									return ontology_node::get_model_by_tipo($item->tipo) !== 'component_dataframe';
+								});
 								$section_tipos = array_unique(array_column($last_items, 'section_tipo'));
 								$count_sections = count($section_tipos);
 
@@ -341,6 +401,13 @@ function process_node($node, $level) {
 
 							// 0 emtpy propiedades
 							if($is_empty($props)) {
+									// The hierarchical component (rel_info) decides whether v6 emits the full parent
+									// term path (value_with_parents:true, e.g. place) or just the leaf term (no flag,
+									// e.g. descriptors: "Iberian, Ordination").
+									$comp_node_e  = ontology_node::get_instance($rel_info['tipo']);
+									$comp_props_e = $comp_node_e ? $comp_node_e->get_propiedades(true) : null;
+									$with_parents_e = (is_object($comp_props_e) && ($comp_props_e->value_with_parents ?? false) === true);
+
 
 								$parser_process = (object)[
 									'fn' => 'add_parents',
@@ -349,6 +416,7 @@ function process_node($node, $level) {
 											'fn' => 'parser_locator::parents',
 											'options' => (object)[
 												'value' => 'term',
+												'include_parents' => $with_parents_e,
 												'fields_separator' => $props->source->divisor ?? ' - ',
 												'records_separator' => $props->source->records_separator ?? ', '
 											]
@@ -563,6 +631,21 @@ function process_node($node, $level) {
 									$new_props->process = new stdClass();
 									$new_props = new stdClass();
 									$new_props->process = $parser_process;
+									// Resolve the parent relation component so the chain fetches its diffusion
+									// data (incl. the hierarchy1 root fallback for top-level thesaurus terms).
+									$ddo_parent_rp = (object)['tipo' => $rel_info['tipo'], 'section_tipo' => 'self'];
+								// add_parents (thesaurus 'parents' field): resolve the FULL ancestor chain
+								// recursively (v6 get_parents_recursive) instead of just the direct parent.
+								$add_parents_rp = $props->process_dato_arguments->custom_arguments->add_parents
+									?? $props->process_dato_arguments->add_parents ?? false;
+								if ($add_parents_rp === true) {
+									// Canonical ancestor-chain pattern: process-level add_parents (chain → meta)
+									// + parser_locator::parents (shapes it), mirroring the parents_term column.
+									// Replaces the removed per-ddo get_diffusion_data_recursive fn.
+									$new_props->process = diffusion_build_add_parents_process('term_id');
+								} else {
+									$new_props->process->ddo_map = [ $ddo_parent_rp ];
+								}
 									$new_props->process->output_sample = ["es1_1257","fr1_3"];
 
 								// "is_publicable" = true
@@ -595,19 +678,53 @@ function process_node($node, $level) {
 								];
 
 								$new_props = new stdClass();
-									$new_props->process = new stdClass();
-									$new_props = new stdClass();
 									$new_props->process = $parser_process;
 									$new_props->process->output_sample = 2;
+									// parser_helper::count counts the resolved data items, so it needs a
+									// ddo_map that resolves the field's relation locators (e.g. authors
+									// rsc139) — without it there is nothing to count and the column is 0.
+									if(!empty($rel_info['tipo'])){
+										$new_props->process->ddo_map = [ (object)['tipo' => $rel_info['tipo'], 'section_tipo' => 'self'] ];
+									}
 
 								// "is_publicable" = true
 								if(isset($props->is_publicable) && $props->is_publicable === true){
 									$new_props->is_publishable = $props->is_publicable;
 								}
-								
+
 								echo "{$indent}- [$tipo] $model_name\n";
 								echo "{$indent}  [RULE APPLIED] diffusion_sql::count_data_elements\n";
 								break;
+
+								// 2.3 "process_dato" = "diffusion_sql::split_data": resolve a SINGLE relation
+								// entry's display (e.g. publications author_main = FIRST author "surname, name").
+								if($process_dato && $process_dato === "diffusion_sql::split_data"){
+									$pda_sd  = $props->process_dato_arguments ?? null;
+									$q_sd    = $pda_sd->q ?? [];
+									$off_sd  = (is_array($q_sd) && isset($q_sd[0]->key)) ? (int)$q_sd[0]->key : 0;
+									$rel_sd  = $rel_info['tipo'] ?? null;
+									if($rel_sd){
+										$rprops_sd = ontology_node::get_instance($rel_sd)->get_properties();
+										$show_sd   = $rprops_sd->source->request_config[0]->show->ddo_map ?? [];
+										$ddo_sd    = [ (object)['tipo'=>$rel_sd, 'section_tipo'=>'self', 'data_slice'=>(object)['offset'=>$off_sd, 'length'=>1]] ];
+										$lids_sd   = [];
+										foreach($show_sd as $sc_sd){
+											$lid_sd = chr(ord('a') + count($lids_sd)); $lids_sd[] = $lid_sd;
+											$ddo_sd[] = (object)['id'=>$lid_sd, 'tipo'=>$sc_sd->tipo, 'parent'=>$rel_sd];
+										}
+										$pat_sd = implode(', ', array_map(fn($l)=>'${'.$l.'}', $lids_sd));
+										$new_props = new stdClass();
+										$new_props->process = (object)[
+											'parser' => [ (object)['fn'=>'parser_text::text_format', 'options'=>(object)['pattern'=>$pat_sd]] ],
+											'ddo_map' => $ddo_sd,
+											'output_format' => 'string'
+										];
+										if(isset($props->is_publicable) && $props->is_publicable === true){ $new_props->is_publishable = $props->is_publicable; }
+										if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+										echo "{$indent}  [RULE APPLIED] diffusion_sql::split_data -> relation display (entry $off_sd)\n";
+										break;
+									}
+								}
 
 							}
 
@@ -752,7 +869,7 @@ function process_node($node, $level) {
 									
 									$model = ontology_node::get_legacy_model_by_tipo($target_component_tipo);
 
-									$new_props = new stdClass(); 
+									$new_props = new stdClass();
 									$new_props->process = get_diffusion_value(
 										$target_component_tipo,
 										$model,
@@ -763,6 +880,14 @@ function process_node($node, $level) {
 										$option_obj,
 										$ddo_map
 									);
+
+									// get_diffusion_value(input_text) emits no ddo_map (the input_text case
+									// is a no-op), so attach the built [relation, target] map ourselves —
+									// otherwise the column resolves only the relation locator and yields null
+									// (e.g. publications authors_name/surname rsc734/rsc735 → rsc139 → rsc85/rsc86).
+									if($model === 'component_input_text'){
+										$new_props->process->ddo_map = $ddo_map;
+									}
 
 									// "is_publicable" = true
 									if(isset($props->is_publicable) && $props->is_publicable === true){
@@ -1446,6 +1571,21 @@ function process_node($node, $level) {
 									$new_props->process = new stdClass();
 									$new_props = new stdClass();
 									$new_props->process = $parser_process;
+									// Resolve the parent relation component so the chain fetches its diffusion
+									// data (incl. the hierarchy1 root fallback for top-level thesaurus terms).
+									$ddo_parent_rp = (object)['tipo' => $rel_info['tipo'], 'section_tipo' => 'self'];
+								// add_parents (thesaurus 'parents' field): resolve the FULL ancestor chain
+								// recursively (v6 get_parents_recursive) instead of just the direct parent.
+								$add_parents_rp = $props->process_dato_arguments->custom_arguments->add_parents
+									?? $props->process_dato_arguments->add_parents ?? false;
+								if ($add_parents_rp === true) {
+									// Canonical ancestor-chain pattern: process-level add_parents (chain → meta)
+									// + parser_locator::parents (shapes it), mirroring the parents_term column.
+									// Replaces the removed per-ddo get_diffusion_data_recursive fn.
+									$new_props->process = diffusion_build_add_parents_process('term_id');
+								} else {
+									$new_props->process->ddo_map = [ $ddo_parent_rp ];
+								}
 									$new_props->process->output_sample = ["es1_1257","fr1_3"];
 
 								// "is_publicable" = true
@@ -1478,16 +1618,20 @@ function process_node($node, $level) {
 								];
 
 								$new_props = new stdClass();
-									$new_props->process = new stdClass();
-									$new_props = new stdClass();
 									$new_props->process = $parser_process;
 									$new_props->process->output_sample = 2;
+									// parser_helper::count counts the resolved data items, so it needs a
+									// ddo_map that resolves the field's relation locators (e.g. authors
+									// rsc139) — without it there is nothing to count and the column is 0.
+									if(!empty($rel_info['tipo'])){
+										$new_props->process->ddo_map = [ (object)['tipo' => $rel_info['tipo'], 'section_tipo' => 'self'] ];
+									}
 
 								// "is_publicable" = true
 								if(isset($props->is_publicable) && $props->is_publicable === true){
 									$new_props->is_publishable = $props->is_publicable;
 								}
-								
+
 								echo "{$indent}- [$tipo] $model_name\n";
 								echo "{$indent}  [RULE APPLIED] diffusion_sql::count_data_elements\n";
 								break;
@@ -1924,11 +2068,9 @@ function process_node($node, $level) {
 								$parser_process = [
 									(object)[
 										'fn' => 'parser_locator::get_section_id',
-										'id' => 'a'
 									],
 									(object)[
 										'fn' => 'parser_helper::get_first',
-										'id' => 'a'
 									]
 								];
 
@@ -1998,6 +2140,25 @@ function process_node($node, $level) {
 										'section_tipo' => 'self'
 									]
 								];
+
+								// component_relation_children (thesaurus "children" field): emit the raw
+								// child locators with from_component_tipo + type (v6 format), not the
+								// check_box section_id list. Resolve the relation via the ddo_map.
+								if (ontology_node::get_model_by_tipo($rel_info['tipo']) === 'component_relation_children') {
+									$new_props = new stdClass();
+									$new_props->process = (object)[
+										'ddo_map' => $ddo_map_cb,
+										'parser'  => [
+											(object)['fn' => 'parser_locator::get_locator', 'options' => (object)['with_meta' => true]]
+										],
+										'output_format' => 'json'
+									];
+									if(isset($props->is_publicable) && $props->is_publicable === true){ $new_props->is_publishable = $props->is_publicable; }
+									if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] component_relation_children -> get_locator (with_meta)\n";
+									break;
+								}
 
 								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
 									$rel_info['tipo'],
@@ -2196,11 +2357,9 @@ function process_node($node, $level) {
 								$parser_process = [
 									(object)[
 										'fn' => 'parser_locator::get_section_id',
-										'id' => 'a'
 									],
 									(object)[
 										'fn' => 'parser_helper::get_first',
-										'id' => 'a'
 									]
 								];
 
@@ -2332,15 +2491,35 @@ function process_node($node, $level) {
 										$ddo_map_cp
 									);
 
+									// v6 get_diffusion_dato preserves the source dataframe-reference
+									// grouping: the target section_ids are grouped per reference and
+									// emitted as JSON arrays joined by " | " (e.g.
+									// `["99927"] | ["128187","133934","99927"]`). Use the grouping
+									// parser. EXCEPTION: output "merged" flattens into one union list
+									// (e.g. ref_coins_union) — keep the flat get_section_id then.
+									if (($output_v5 ?? null) !== 'merged') {
+										$new_props->process->parser = [
+											(object)['fn' => 'parser_locator::get_section_id_grouped']
+										];
+										$new_props->process->output_format = 'string';
+									}
+
+										// preserve_order: the SAME coin can be referenced more than once (a coin whose
+										// obverse AND reverse cite this type -> two numisdata9 entries, same section_id).
+										// v6 keeps them in raw reference order; the default group-by-section_id merges them
+										// adjacent and reshuffles the grouping. Emit each entry as its own group so
+										// ref_coins / ref_coins_union match v6.
+										$new_props->process->preserve_order = true;
+
 									if(isset($props->is_publicable) && $props->is_publicable === true) {
 										$new_props->is_publishable = $props->is_publicable;
 									}
 									if(isset($props->varchar)){
 										$new_props->varchar = $props->varchar;
 									}
-									
+
 									echo "{$indent}- [$tipo] $model_name\n";
-									echo "{$indent}  [RULE APPLIED] get_diffusion_resolve_value\n";
+									echo "{$indent}  [RULE APPLIED] get_diffusion_resolve_value (grouped)\n";
 									break;
 
 								} else if($final_method_cp === 'get_diffusion_resolve_value') {
@@ -2454,9 +2633,36 @@ function process_node($node, $level) {
 										|| $check_general_merge==='merged_unique')){
 											$new_props->process->output_format = 'json';
 									}							
+								} else if($final_method_cp === 'get_diffusion_value'
+									&& ontology_node::get_legacy_model_by_tipo($final_target) === 'component_autocomplete_hi'
+									&& !empty($ddo_map_cp)) {
+									// Portal -> scene -> autocomplete_hi NESTED display (e.g. designs iconography).
+									// v6 component_autocomplete_hi diffusion is a 3-LEVEL nested join (within term
+									// " | ", across terms ", ", across scenes " | ") that a flat ddo_map cannot
+									// express. Delegate to component_portal::get_diffusion_iconography which replicates
+									// v6 get_locator_value per term. fn lives on the PORTAL (first) ddo; fn_terminal
+									// makes the chain return the fn's lang-wrapped value verbatim (no locator iteration).
+									$portal_ddo = (object)[
+										'tipo'         => $ddo_map_cp[0]->tipo,
+										'section_tipo' => 'self',
+										'fn'           => 'get_diffusion_iconography',
+										'fn_terminal'  => true
+									];
+									$new_props = new stdClass();
+									$new_props->process = (object)[
+										'ddo_map'       => [$portal_ddo],
+										'output_format' => 'string'
+									];
+									if(isset($props->is_publicable) && $props->is_publicable === true || $is_publicable_cp === true){
+										$new_props->is_publishable = true;
+									}
+									if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] portal->autocomplete_hi nested -> get_diffusion_iconography fn\n";
+									break;
 								} else { // get_diffusion_value or fallback
 									$model_cp = ontology_node::get_legacy_model_by_tipo($final_target);
-									
+
 									// Reconstruct add_parents if found in hierarchy
 									if($custom_parents_config) {
 										$parser_options = new stdClass();
@@ -2523,6 +2729,25 @@ function process_node($node, $level) {
 									]
 								];
 
+								// component_relation_children (thesaurus "children" field): emit the raw
+								// child locators with from_component_tipo + type (v6 format), not the
+								// check_box section_id list. Resolve the relation via the ddo_map.
+								if (ontology_node::get_model_by_tipo($rel_info['tipo']) === 'component_relation_children') {
+									$new_props = new stdClass();
+									$new_props->process = (object)[
+										'ddo_map' => $ddo_map_cb,
+										'parser'  => [
+											(object)['fn' => 'parser_locator::get_locator', 'options' => (object)['with_meta' => true]]
+										],
+										'output_format' => 'json'
+									];
+									if(isset($props->is_publicable) && $props->is_publicable === true){ $new_props->is_publishable = $props->is_publicable; }
+									if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] component_relation_children -> get_locator (with_meta)\n";
+									break;
+								}
+
 								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
 									$rel_info['tipo'],
 									'component_check_box',
@@ -2533,6 +2758,10 @@ function process_node($node, $level) {
 									null,
 									$ddo_map_cb
 								);
+								// Ensure the relation component is resolved by the chain so the field
+								// gets its diffusion data (e.g. the term's child locators). Without a
+								// ddo_map the chain has nothing to resolve and the column is empty.
+								$new_props->process->ddo_map = $ddo_map_cb;
 
 								// "is_publicable" = true
 								if(isset($props->is_publicable) && $props->is_publicable === true){
@@ -2611,11 +2840,9 @@ function process_node($node, $level) {
 								$parser_process = [
 									(object)[
 										'fn' => 'parser_locator::get_section_id',
-										'id' => 'a'
 									],
 									(object)[
 										'fn' => 'parser_helper::get_first',
-										'id' => 'a'
 									]
 								];
 
@@ -2756,11 +2983,9 @@ function process_node($node, $level) {
 								$parser_process = [
 									(object)[
 										'fn' => 'parser_locator::get_section_id',
-										'id' => 'a'
 									],
 									(object)[
 										'fn' => 'parser_helper::get_first',
-										'id' => 'a'
 									]
 								];
 
@@ -2897,6 +3122,21 @@ function process_node($node, $level) {
 								$new_props = new stdClass();
 									$new_props->process = new stdClass();
 									$new_props->process->parser = $parser_process;
+									// resolve the parent relation so the chain fetches its diffusion data
+									// (incl. the hierarchy1 root fallback for top-level thesaurus terms)
+									$ddo_parent_rp = (object)['tipo' => $rel_info['tipo'], 'section_tipo' => 'self'];
+								// add_parents (thesaurus 'parents' field): resolve the FULL ancestor chain
+								// recursively (v6 get_parents_recursive) instead of just the direct parent.
+								$add_parents_rp = $props->process_dato_arguments->custom_arguments->add_parents
+									?? $props->process_dato_arguments->add_parents ?? false;
+								if ($add_parents_rp === true) {
+									// Canonical ancestor-chain pattern: process-level add_parents (chain → meta)
+									// + parser_locator::parents (shapes it), mirroring the parents_term column.
+									// Replaces the removed per-ddo get_diffusion_data_recursive fn.
+									$new_props->process = diffusion_build_add_parents_process('term_id');
+								} else {
+									$new_props->process->ddo_map = [ $ddo_parent_rp ];
+								}
 									$new_props->process->output_format = 'json';
 									$new_props->process->output_sample = ["es1_1"];
 
@@ -2991,6 +3231,21 @@ function process_node($node, $level) {
 								$new_props = new stdClass();
 									$new_props->process = new stdClass();
 									$new_props->process->parser = $parser_process;
+									// resolve the parent relation so the chain fetches its diffusion data
+									// (incl. the hierarchy1 root fallback for top-level thesaurus terms)
+									$ddo_parent_rp = (object)['tipo' => $rel_info['tipo'], 'section_tipo' => 'self'];
+								// add_parents (thesaurus 'parents' field): resolve the FULL ancestor chain
+								// recursively (v6 get_parents_recursive) instead of just the direct parent.
+								$add_parents_rp = $props->process_dato_arguments->custom_arguments->add_parents
+									?? $props->process_dato_arguments->add_parents ?? false;
+								if ($add_parents_rp === true) {
+									// Canonical ancestor-chain pattern: process-level add_parents (chain → meta)
+									// + parser_locator::parents (shapes it), mirroring the parents_term column.
+									// Replaces the removed per-ddo get_diffusion_data_recursive fn.
+									$new_props->process = diffusion_build_add_parents_process('term_id');
+								} else {
+									$new_props->process->ddo_map = [ $ddo_parent_rp ];
+								}
 									$new_props->process->output_format = 'json';
 									$new_props->process->output_sample = ["es1_1"];
 
@@ -3065,14 +3320,24 @@ function process_node($node, $level) {
 									true)[0];
 									
 								if (!empty($section_tipo)) {
-									$section_map = section::get_section_map($section_tipo);
-									
-									$order_tipo = $section_map->thesaurus->order ?? null;
-
-									
-									if (empty($order_tipo)) {
-										break;
-									}						
+									// v6 map_parent_to_norder = the term's 0-based position among its
+									// PARENT's ordered children (sibling index), NOT a stored `number`
+									// order (which is empty for most thesaurus terms → 0). Resolved by the
+									// canonical diffusion mixin diffusion_fn::map_parent_to_norder (reached
+									// via common::__call), on the shared ts section_id component (hierarchy22
+									// = self) which carries the term context. That fn computes the parent
+									// (component_relation_parent::get_parents — the thesaurus parent edge is
+									// an inverse, so the stored dato is empty) then the sibling index.
+									$new_props = new stdClass();
+									$new_props->process = (object)[
+										'ddo_map' => [ (object)['tipo' => 'hierarchy22', 'section_tipo' => 'self', 'fn' => 'map_parent_to_norder'] ],
+										'parser'  => [ (object)['fn' => 'parser_helper::get_first'] ],
+										'output_format' => 'int',
+										'default_value' => '0'
+									];
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] map_parent_to_norder -> diffusion_fn::map_parent_to_norder (sibling position)\n";
+									break;
 
 									$tld_source = get_tld_from_tipo($tipo);
 									$source_section_tipo = $tld_source.'0';
@@ -3115,6 +3380,11 @@ function process_node($node, $level) {
 									);	
 
 									$new_props->process->output_sample = [1];
+									// norder is numeric; v6 map_parent_to_norder returns int 0 when the
+									// order/parent is empty. int output + default_value "0" makes the
+									// engine emit "0" for the empty/no-data case — matching v6.
+									$new_props->process->output_format = 'int';
+									$new_props->process->default_value = "0";
 
 									if(isset($props->is_publicable) && $props->is_publicable === true){
 										$new_props->is_publishable = $props->is_publicable;
@@ -3226,11 +3496,9 @@ function process_node($node, $level) {
 								$parser_process_rb = [
 									(object)[
 										'fn' => 'parser_locator::get_section_id',
-										'id' => 'a'
 									],
 									(object)[
 										'fn' => 'parser_helper::get_first',
-										'id' => 'a'
 									],
 									(object)[
 										'fn' => 'parser_text::map_value',
@@ -3311,11 +3579,9 @@ function process_node($node, $level) {
 								$parser_process = [
 									(object)[
 										'fn' => 'parser_locator::get_section_id',
-										'id' => 'a'
 									],
 									(object)[
 										'fn' => 'parser_helper::get_first',
-										'id' => 'a'
 									]
 								];
 
@@ -3343,11 +3609,9 @@ function process_node($node, $level) {
 								$parser_process_rb_mv = [
 									(object)[
 										'fn' => 'parser_locator::get_section_id',
-										'id' => 'a'
 									],
 									(object)[
 										'fn' => 'parser_helper::get_first',
-										'id' => 'a'
 									],
 									(object)[
 										'fn' => 'parser_text::map_value',
@@ -3457,6 +3721,26 @@ function process_node($node, $level) {
 
 								echo "{$indent}- [$tipo] $model_name\n";
 								echo "{$indent}  [RULE APPLIED] relation_related empty props -> get_diffusion_value\n";
+								break;
+							}
+
+							// 1.5 data_to_be_used = "dato" -> flat list of related section_ids
+							if (($props->data_to_be_used ?? null) === 'dato') {
+								$new_props = new stdClass();
+								$new_props->process = get_diffusion_dato(
+									'component_relation_related',
+									null,
+									null,
+									null,
+									$ddo_map_rr
+								);
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_related data_to_be_used=dato -> get_section_id\n";
 								break;
 							}
 
@@ -3858,11 +4142,9 @@ function process_node($node, $level) {
 								$parser_process = [
 									(object)[
 										'fn' => 'parser_locator::get_section_id',
-										'id' => 'a'
 									],
 									(object)[
 										'fn' => 'parser_helper::get_first',
-										'id' => 'a'
 									]
 								];
 
@@ -4065,7 +4347,55 @@ function process_node($node, $level) {
 							break;
 						case 'component_email':
 							break;
-						
+
+							case 'component_json':
+								// component_json holds a JSON object; emit it as a JSON column (output_format
+								// json → the engine JSON.stringifies the object instead of String()'ing it to
+								// '[object Object]'). The migrate switch had no component_json case.
+								$ddo_map_cj = [ (object)['tipo' => $rel_info['tipo'], 'section_tipo' => 'self'] ];
+								$new_props = new stdClass();
+								$new_props->process = (object)[ 'ddo_map' => $ddo_map_cj, 'output_format' => 'json' ];
+								if(isset($props->is_publicable) && $props->is_publicable === true){ $new_props->is_publishable = $props->is_publicable; }
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] component_json -> output_format json\n";
+								break;
+
+						case 'component_info':
+							// v6 process_dato=resolve_component_value over a stats widget
+							// (e.g. get_archive_weights) with custom_arguments selecting one
+							// value (select + value_format). Delegate to get_diffusion_dato's
+							// component_info handler (→ parser_info::widget) and resolve the
+							// info component on self.
+							$pda_info             = $props->process_dato_arguments ?? null;
+							$custom_arguments_info = $pda_info->custom_arguments ?? null;
+							if (!empty($custom_arguments_info)) {
+
+								$ddo_map_info = [
+									(object)['tipo' => $rel_info['tipo'], 'section_tipo' => 'self']
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = get_diffusion_dato(
+									'component_info',
+									$custom_arguments_info,
+									$pda_info,
+									null,
+									$ddo_map_info
+								);
+								$new_props->process->ddo_map = $ddo_map_info;
+
+								if (isset($props->varchar)) {
+									$new_props->varchar = $props->varchar;
+								}
+								if (isset($props->is_publicable) && $props->is_publicable === true) {
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] component_info resolve_component_value -> parser_info::widget (select)\n";
+							}
+							break;
+
 						case 'component_input_text':
 
 							$is_empty_cd = function($props) {
@@ -4080,6 +4410,22 @@ function process_node($node, $level) {
 							};
 
 							$process_dato = isset($props->process_dato) ? $props->process_dato : null;
+
+							// map_locator_to_terminoID on an INPUT_TEXT (v6 quirk): v6 applies term_id_from_locator
+							// to each non-locator input value → the empty marker "_". Reproduce for byte-parity
+							// (thesaurus "color" field hierarchy136).
+							if( $process_dato && ($process_dato === "diffusion_sql::map_locator_to_terminoID" || $process_dato === "diffusion_sql::map_locator_to_term_id") ){
+								$new_props = new stdClass();
+								$new_props->process = (object)[
+									'ddo_map' => [ (object)['tipo' => $rel_info['tipo'], 'section_tipo' => 'self'] ],
+									'parser'  => [ (object)['fn' => 'parser_locator::get_term_id', 'options' => (object)['coerce_non_locator' => true]] ],
+									'output_format' => 'json'
+								];
+								if(isset($props->is_publicable) && $props->is_publicable === true){ $new_props->is_publishable = $props->is_publicable; }
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+								echo "{$indent}  [RULE APPLIED] input_text map_locator_to_terminoID -> get_term_id (coerce, v6 quirk)\n";
+								break;
+							}
 
 							// 1 "process_dato" = "diffusion_sql::map_target_section_tipo"
 							if( $process_dato 
@@ -4145,8 +4491,11 @@ function process_node($node, $level) {
 							if($process_dato && ($process_dato === "diffusion_sql::build_geolocation_data_geojson" || $process_dato === "diffusion_sql::build_geolocation_data")) {
 
 								// Specific for geojson
+								$geo_fn = ($process_dato === "diffusion_sql::build_geolocation_data_geojson")
+									? "get_geojson_data"
+									: "get_geolocation_data";
 								$parser_process = (object)[
-									"fn" => "get_geojson_data"
+									"fn" => $geo_fn
 								];							
 
 								$new_props = new stdClass();
@@ -4154,6 +4503,13 @@ function process_node($node, $level) {
 								$new_props->process = $parser_process;
 								$new_props->process->output_format = "json";
 								$new_props->process->output_sample = "Yes";
+
+								// v6 fallback (process_dato_arguments.fallback): when geojson is empty, v6 falls
+								// back to the fallback component (commonly empty -> ''). Without it v7 emits
+								// JSON.stringify([])='[]'. Flag the engine to emit '' for empty on such fields.
+								if(!empty($props->process_dato_arguments->fallback)){
+									$new_props->process->empty_to_string = true;
+								}
 
 								echo "{$indent}- [$tipo] $model_name\n";
 								echo "{$indent}  [RULE APPLIED] componet_text_area -> diffusion_sql::build_geolocation_data_geojson\n";							
@@ -4442,11 +4798,9 @@ function process_node($node, $level) {
 								$parser_process = [
 									(object)[
 										'fn' => 'parser_locator::get_section_id',
-										'id' => 'a'
 									],
 									(object)[
 										'fn' => 'parser_helper::get_first',
-										'id' => 'a'
 									]
 								];
 
@@ -4655,14 +5009,14 @@ function process_node($node, $level) {
 
 							// 0 empty propiedades: default V6 behavior — delegate to get_diffusion_value() trait
 							// The trait builds letter-id ddo_map from related components + parser_text::text_format
-							if($is_empty_relation_list($props)) {
+							if($is_empty_relation_list($props) || ($props->data_to_be_used ?? null) === 'dato_full') {
 
 								$new_props = new stdClass(); $new_props->process = get_dato(
 									'relation_list',
 									null,
 									null,
 									null,
-									null
+									$ddo_map_relation_list
 								);
 
 								// "is_publicable" = true
@@ -4676,7 +5030,7 @@ function process_node($node, $level) {
 								}
 
 								echo "{$indent}- [$tipo] $model_name\n";
-								echo "{$indent}  [RULE APPLIED] relation_list empty props -> get_dato (letter-id ddo_map)\n";
+								echo "{$indent}  [RULE APPLIED] relation_list empty props -> get_dato (get_locator + relation ddo_map)\n";
 								break;
 							}
 
@@ -4702,6 +5056,12 @@ function process_node($node, $level) {
 									null,
 									$ddo_map_relation_list
 								);
+
+								// preserve_order: v6 "merged" output of an inverse relation_list keeps the RAW
+								// reference order with duplicate target ids INTERLEAVED (not grouped by section_id).
+								// Signal dd_diffusion_api to skip the section_id merge (e.g. mints relations_coins).
+								$rl_output_po = $process_dato_args->output ?? ($props->output ?? null);
+								if ($rl_output_po === 'merged') { $new_props->process->preserve_order = true; }
 
 								// "is_publicable" = true
 								if(isset($props->is_publicable) && $props->is_publicable === true){
@@ -4822,29 +5182,29 @@ function process_node($node, $level) {
 								$target_component_tipo = $process_dato_args->target_component_tipo ?? null;
 								
 								$model_rl = ontology_node::get_legacy_model_by_tipo($target_component_tipo);
-								$new_props = new stdClass(); $new_props->process = get_diffusion_dato(								
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
 									$model_rl,
 									null,
 									$process_dato_args,
-									null								
+									null
 								);
-
-								if($model_rl==='component_autocomplete'){
-									// add the merge to pipe
-									$parser_process = (object)[
-										'fn' => 'parser_helper::merge',
-										'options' => [
-											'merge' => 'pipe'
-										]
-									];
-									$new_props->process->parser[] = $parser_process;
-								}
 
 								// add target component to ddo_map
 								$ddo_map_relation_list[] = (object)['tipo' => $target_component_tipo, 'parent' => $rel_info['tipo']];
-	
 								$new_props->process->ddo_map = $ddo_map_relation_list;
-								$new_props->process->output_format = 'json';
+
+								// v6 get_diffusion_dato groups the target section_ids per source
+								// reference (dataframe id reset) → JSON arrays joined by " | "
+								// (e.g. ["75"] | ["75"]). output "merged" flattens into one union.
+								$output_rl = $process_dato_args->output ?? null;
+								if ($output_rl !== 'merged') {
+									$new_props->process->parser = [
+										(object)['fn' => 'parser_locator::get_section_id_grouped']
+									];
+									$new_props->process->output_format = 'string';
+								} else {
+									$new_props->process->output_format = 'json';
+								}
 							
 								// "is_publicable" = true
 								if(isset($props->is_publicable) && $props->is_publicable === true){
@@ -4971,6 +5331,23 @@ function process_node($node, $level) {
 											]
 										];
 										$new_props->process->output_format = 'json';
+									} else if ($output_rl === 'merged_unique' || $output_rl === 'merged_unique_implode') {
+										// unique: deduplicate the values (v6 merged_unique[_implode]).
+										// _implode joins to a single string; plain merged_unique stays an array.
+										// The implode flag may live on the OUTER process_dato_arguments
+										// (the inner custom_arg often carries plain merged_unique).
+										$outer_output_rl = $props->process_dato_arguments->output ?? null;
+										$is_implode = ($output_rl === 'merged_unique_implode' || $outer_output_rl === 'merged_unique_implode');
+										$merge_opts = (object)[
+											'merge'             => 'unique',
+											'records_separator' => $split_str_rl
+										];
+										if ($is_implode) { $merge_opts->implode = true; }
+										$new_props->process->parser = (object)[
+											'fn'      => 'parser_helper::merge',
+											'options' => $merge_opts
+										];
+										$new_props->process->output_format = $is_implode ? 'string' : 'json';
 									} else {
 										// string: flat concatenation
 										$new_props->process->parser = (object)[
@@ -5173,6 +5550,39 @@ function save_node($node_info) {
 	$val = $node_info['properties'];
 	if (is_object($val) && count((array)$val) === 0) {
 		$val = null;
+	}
+
+	// --- LEGACY v5 (<br>) COMPATIBILITY ---
+	// PHP component_text_area::get_diffusion_data now ONLY decodes entities; the obsolete v5
+	// markup normalization (<p>→<br>, strip </p>, leading/trailing <br>, &nbsp;/trim) lives in
+	// the OPT-IN parser parser_text::v5_html. Any MIGRATED column whose chain resolves a
+	// text_area / html_text source gets v5_html PREPENDED so it keeps its current <br> output
+	// (so [v5_html, text_format] composes — v5_html preserves the ddo id). New v7-native columns
+	// are not migrated → no v5_html → they keep <p> paragraphs (compat, never an obligation).
+	if (is_object($val) && isset($val->process->ddo_map) && is_array($val->process->ddo_map)) {
+		$resolves_text_area = false;
+		foreach ($val->process->ddo_map as $ddo_e) {
+			$src_tipo = $ddo_e->tipo ?? null;
+			if (!empty($src_tipo)) {
+				$src_model = ontology_node::get_model_by_tipo($src_tipo);
+				if ($src_model === 'component_text_area' || $src_model === 'component_html_text') {
+					$resolves_text_area = true;
+					break;
+				}
+			}
+		}
+		if ($resolves_text_area) {
+			$parser = $val->process->parser ?? [];
+			if (!is_array($parser)) { $parser = [$parser]; }
+			$has_v5 = false;
+			foreach ($parser as $pp) {
+				if (($pp->fn ?? '') === 'parser_text::v5_html') { $has_v5 = true; break; }
+			}
+			if (!$has_v5) {
+				array_unshift($parser, (object)['fn' => 'parser_text::v5_html']);
+				$val->process->parser = $parser;
+			}
+		}
 	}
 
 	// --- PRIMARY: Write directly to dd_ontology.properties ---

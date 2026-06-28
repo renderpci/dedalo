@@ -29,7 +29,10 @@ function get_dato($model, $custom_arguments, $output, $output_options, $ddo_map)
 				// date_format
 					switch ($date_format) {
 						case 'year':
-							$pattern	= "Y";												
+							// 'y' = RAW year (no zero-pad): v6 date_format "year" emits "-72",
+							// not "-072". The 'date'/'full' patterns below keep padded 'Y'
+							// (full date strings DO pad, e.g. "-094-00-00 00:00:00").
+							$pattern	= "y";
 							break;
 						case 'unix_timestamp':
 							$pattern	= "unix_timestamp";
@@ -105,9 +108,15 @@ function get_dato($model, $custom_arguments, $output, $output_options, $ddo_map)
 			break;
 		case 'relation_list':
 
-			$parser_process = (object)[					
+			$parser_process = (object)[
+				'parser' => [
+					(object)['fn' => 'parser_locator::get_locator']
+				],
 				"output_format" => "json"
 			];
+			if($ddo_map){
+				$parser_process->ddo_map = $ddo_map;
+			}
 			$process = $parser_process;
 			$process->output_sample = [(object)[ "section_id" => "1", "section_tipo" => "55"]];
 

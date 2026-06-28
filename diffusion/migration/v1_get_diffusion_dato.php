@@ -76,10 +76,14 @@ function get_diffusion_dato($model, $custom_arguments, $process_dato_arguments, 
 				"output_format" => "json"
 			];
 
-			$merge_option = 'pipe';
-			if ($output === 'merged') {
-				$merge_option = null;
-			} else if ($output === 'merged_group') {
+			// Default: NO merge. get_section_id already emits one section_id per related
+			// record; with output_format:"json" the engine flattens them into a single
+			// JSON array (e.g. ["40507","40531",...]) — exactly the v6 'dato' list output.
+			// A merge(pipe) here is wrong: merge resolves slots by column tipo, but
+			// relation/portal data_items carry a null tipo, so every slot collapses to ""
+			// (yielding [""]). Only the explicit grouped/unique outputs need a merge.
+			$merge_option = null;
+			if ($output === 'merged_group') {
 				$merge_option = 'flat';
 			} else if ($output === 'merged_unique') {
 				$merge_option = 'unique';
