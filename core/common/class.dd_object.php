@@ -388,6 +388,23 @@ class dd_object extends stdClass implements JsonSerializable {
 	protected ?string $fn = null;
 
 	/**
+	 * When true, the $fn produces the FINAL diffusion value (a scalar/lang-wrapped payload),
+	 * not locators to iterate/recurse. The chain returns the fn result verbatim. Used by
+	 * whole-algorithm custom resolutions (e.g. designs iconography get_diffusion_iconography).
+	 * @var ?bool $fn_terminal
+	 */
+	protected ?bool $fn_terminal = null;
+
+	/**
+	 * empty_value
+	 * Placeholder value emitted (per parent locator) when a relation's child resolves
+	 * empty, preserving per-item alignment — reproduces v6 resolve_value empty_value
+	 * (e.g. ref_coins_hoard_data: a coin with no hoard emits "0", keeping all coins aligned).
+	 * @var ?array $empty_value
+	 */
+	protected ?array $empty_value = null;
+
+	/**
 	 * Diffusion node tipo that binds this DDO to a specific diffusion
 	 * configuration/node in the diffusion pipeline.
 	 * Note: the class header uses the public alias 'diffusion_node_tipo'; the
@@ -1883,6 +1900,34 @@ class dd_object extends stdClass implements JsonSerializable {
 
 		return true;
 	}//end set_fn
+
+
+
+	/**
+	* SET_FN_TERMINAL
+	* @param bool|null $value
+	* @return bool
+	*/
+	public function set_fn_terminal(?bool $value) : bool {
+
+		$this->fn_terminal = $value;
+
+		return true;
+	}//end set_fn_terminal
+
+
+
+	/**
+	* SET_EMPTY_VALUE
+	* @param array|null $value
+	* @return bool
+	*/
+	public function set_empty_value(?array $value) : bool {
+
+		$this->empty_value = $value;
+
+		return true;
+	}//end set_empty_value
 
 
 
