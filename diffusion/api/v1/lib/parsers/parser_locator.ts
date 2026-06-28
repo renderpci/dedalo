@@ -15,6 +15,51 @@ interface locator {
 
 
 
+/**
+ * ITEM_LOCATORS
+ * Resolve the locator object(s) carried by a data_item.
+ *
+ * Two contracts coexist:
+ *   1. Legacy: item.value is the locator object (or an array of them).
+ *   2. Relation/portal (current PHP output): entry.value is null and the locator
+ *      lives as first-class fields on the data_item — item.section_id / item.section_tipo
+ *      (promoted from the field group by flatten_fields()).
+ *
+ * Locator objects in item.value win when present; otherwise we synthesize one from
+ * the item fields. This lets the get_section_id / get_section_tipo / get_term_id
+ * extractors work for relation and portal components, whose value is null.
+ */
+function item_locators(item: data_item): any[] {
+
+	const val = item.value;
+	const candidates = Array.isArray(val) ? val : [val];
+	// Unwrap diffusion_data_object wrappers: get_diffusion_data_info (component_section_id)
+	// emits [{ ..., value: { section_tipo, section_id } }], i.e. the locator nested under
+	// .value rather than at the top level. Reach into .value when it carries the locator.
+	const unwrapped = candidates.map(c =>
+		(c && typeof c === 'object' && c.value && typeof c.value === 'object'
+			&& ('section_id' in c.value || 'section_tipo' in c.value))
+			? c.value
+			: c
+	);
+	const objs = unwrapped.filter(l =>
+		typeof l === 'object' && l !== null && ('section_id' in l || 'section_tipo' in l)
+	);
+	if (objs.length > 0) {
+		return objs;
+	}
+
+	const has_sid   = item.section_id   !== undefined && item.section_id   !== null && item.section_id   !== '';
+	const has_stipo = item.section_tipo !== undefined && item.section_tipo !== null && item.section_tipo !== '';
+	if (has_sid || has_stipo) {
+		return [{ section_tipo: item.section_tipo, section_id: item.section_id }];
+	}
+
+	return [];
+}
+
+
+
 
 /**
  * GET_SECTION_ID
@@ -39,8 +84,7 @@ export function get_section_id(data: data_item[] | null, options: parser_options
 	if (split) {
 		let split_idx = 0;
 		for (const item of data) {
-			const val = item.value;
-			const locators = Array.isArray(val) ? val : [val];
+			const locators = item_locators(item);
 			for (const locator of locators) {
 				if (typeof locator === 'object' && locator !== null && 'section_id' in locator) {
 					const current_section_id = (locator as any).section_id;
@@ -59,10 +103,9 @@ export function get_section_id(data: data_item[] | null, options: parser_options
 	}
 
 	for (const item of data) {
-		const val = item.value;
-		const locators = Array.isArray(val) ? val : [val];
+		const locators = item_locators(item);
 
-		const section_ids: any[] = []; 
+		const section_ids: any[] = [];
 		for (const locator of locators) {
 			if (typeof locator === 'object' && locator !== null && 'section_id' in locator) {
 				const current_section_id = (locator as any).section_id;
@@ -102,8 +145,7 @@ export function get_section_tipo(data: data_item[] | null, options: parser_optio
 	if (split) {
 		let split_idx = 0;
 		for (const item of data) {
-			const val = item.value;
-			const locators = Array.isArray(val) ? val : [val];
+			const locators = item_locators(item);
 			for (const locator of locators) {
 				if (typeof locator === 'object' && locator !== null && 'section_tipo' in locator) {
 					const current_section_tipo = (locator as any).section_tipo;
@@ -122,10 +164,9 @@ export function get_section_tipo(data: data_item[] | null, options: parser_optio
 	}
 
 	for (const item of data) {
-		const val = item.value;
-		const locators = Array.isArray(val) ? val : [val];
+		const locators = item_locators(item);
 
-		const section_tipos: any[] = []; 
+		const section_tipos: any[] = [];
 		for (const locator of locators) {
 			if (typeof locator === 'object' && locator !== null && 'section_tipo' in locator) {
 				const current_section_tipo = (locator as any).section_tipo;
@@ -211,8 +252,7 @@ export function get_term_id(data: data_item[] | null, options: parser_options): 
 	if (split) {
 		let split_idx = 0;
 		for (const item of data) {
-			const val = item.value;
-			const locators = Array.isArray(val) ? val : [val];
+			const locators = item_locators(item);
 			for (const loc of locators) {
 				if (typeof loc === 'object' && loc !== null && 'section_tipo' in loc && 'section_id' in loc) {
 					const tid = term_id_from_locator(loc as locator);
@@ -230,9 +270,13 @@ export function get_term_id(data: data_item[] | null, options: parser_options): 
 		return result.length > 0 ? result : null;
 	}
 
+	// coerce_non_locator: v6 map_locator_to_terminoID applies term_id_from_locator to EVERY
+	// dato entry, even non-locators (e.g. a color input_text "#f78a1c"), yielding the
+	// empty-marker "_" (section_tipo '' + '_' + section_id ''). Reproduce that v6 behavior.
+	const coerce = (options as any)?.coerce_non_locator === true;
+
 	for (const item of data) {
-		const val = item.value;
-		const locators = Array.isArray(val) ? val : [val];
+		const locators = item_locators(item);
 
 		const term_ids: string[] = [];
 		for (const loc of locators) {
@@ -241,11 +285,126 @@ export function get_term_id(data: data_item[] | null, options: parser_options): 
 				if (tid !== null) term_ids.push(tid);
 			}
 		}
+		if (coerce && term_ids.length === 0) {
+			const vals = Array.isArray(item.value) ? item.value : (item.value != null && item.value !== '' ? [item.value] : []);
+			for (const v of vals) {
+				if (v != null && v !== '') term_ids.push('_');
+			}
+			// Empty input under coerce → no data (NULL), matching v6 (an empty color is None,
+			// not "[]"). Only items with an actual value emit the "_" marker.
+			if (term_ids.length === 0) continue;
+		}
 		result.push({
 			...item,
 			value: term_ids
 		});
 	}
+
+	return result.length > 0 ? result : null;
+}
+
+
+
+/**
+ * GET_SECTION_ID_GROUPED
+ * Reproduces v6 get_diffusion_dato grouping of dataframe-paired references: the source
+ * is a list of references, each carrying an ordered set of target locators (the dataframe
+ * `id` runs 1..n within a reference). A new group starts whenever the id resets to 1 or
+ * decreases. Each group's section_ids are emitted as a JSON array; groups are joined by
+ * records_separator (default " | ") — e.g. `["99927"] | ["128187","133934","99927"]`.
+ */
+export function get_section_id_grouped(data: data_item[] | null, options: parser_options): data_item[] | null {
+
+	if (!data || data.length === 0) return null;
+
+	const records_sep = (options?.records_separator as string) ?? ' | ';
+
+	const groups: string[][] = [];
+	let current: string[] | null = null;
+	let prev_id: number | null = null;
+
+	for (const item of data) {
+		const locators = item_locators(item);
+		if (locators.length === 0) continue;
+		const sid = locators[0].section_id;
+		if (sid === undefined || sid === null) continue;
+
+		const id = Number((item as any).id);
+		const reset = current === null || (Number.isFinite(id) && prev_id !== null && id <= prev_id);
+		if (reset) {
+			current = [];
+			groups.push(current);
+		}
+		current!.push(String(sid));
+		prev_id = Number.isFinite(id) ? id : prev_id;
+	}
+
+	if (groups.length === 0) return null;
+
+	const value = groups.map(g => JSON.stringify(g)).join(records_sep);
+	return [{ ...data[0], value }];
+}
+
+
+
+/**
+ * GET_LOCATOR
+ * Emits each related record as a locator object {section_tipo, section_id} (strings),
+ * reproducing the v6 'dato' output for a plain relation field (e.g. dd_relations:
+ * [{"section_tipo":"numisdata3","section_id":"2062"}, ...]). With output_format:"json"
+ * the engine JSON.stringifies the resulting array.
+ */
+export function get_locator(data: data_item[] | null, options: parser_options): data_item[] | null {
+
+	if (!data || data.length === 0) return null;
+	const result: data_item[] = [];
+
+	// with_meta: also emit from_component_tipo + type per locator (v6 thesaurus children
+	// format {section_tipo, section_id, from_component_tipo, type}). Default emits the bare
+	// {section_tipo, section_id} (v6 dd_relations / relation_list format).
+	const with_meta = (options as any)?.with_meta === true;
+	// index_meta: v6 component_relation_index format with its specific key order
+	// {type, section_id, section_tipo, from_component_tipo, from_component_top_tipo}.
+	const index_meta = (options as any)?.index_meta === true;
+	const index_from_component_tipo = (options as any)?.from_component_tipo ?? null;
+
+	for (const item of data) {
+		const objs = item_locators(item)
+			.filter(l => l && (l.section_tipo != null || l.section_id != null))
+			.map(l => {
+				if (index_meta) {
+					// preserve v6 key order exactly
+					const loc: any = {};
+					const typ = (l as any).type ?? (item as any).type;
+					if (typ != null) loc.type = typ;
+					loc.section_id   = String(l.section_id);
+					loc.section_tipo = String(l.section_tipo);
+					const fct = (l as any).from_component_tipo ?? (item as any).from_component_tipo ?? index_from_component_tipo;
+					if (fct != null) loc.from_component_tipo = fct;
+					const fctt = (l as any).from_component_top_tipo ?? (item as any).from_component_top_tipo;
+					if (fctt != null) loc.from_component_top_tipo = fctt;
+					return loc;
+				}
+				const loc: any = { section_tipo: String(l.section_tipo), section_id: String(l.section_id) };
+				if (with_meta) {
+					const fct = (l as any).from_component_tipo ?? (item as any).from_component_tipo;
+					const typ = (l as any).type ?? (item as any).type;
+					if (fct != null) loc.from_component_tipo = fct;
+					if (typ != null) loc.type = typ;
+				}
+				return loc;
+			});
+		result.push({ ...item, value: objs });
+	}
+
+	// v6 relation_list returns inverse references grouped by their source section, so
+	// the emitted locators are ordered by section_tipo (records within a section keep
+	// their resolution order). Stable-sort by section_tipo to reproduce that grouping.
+	result.sort((a, b) => {
+		const sa = (Array.isArray(a.value) && a.value[0]) ? a.value[0].section_tipo : '';
+		const sb = (Array.isArray(b.value) && b.value[0]) ? b.value[0].section_tipo : '';
+		return sa < sb ? -1 : (sa > sb ? 1 : 0);
+	});
 
 	return result.length > 0 ? result : null;
 }
@@ -311,16 +470,20 @@ export function parents(data: data_item[] | null, options: parser_options): data
 
 	const result: data_item[] = [];
 
+	// Accumulate across ALL data items into ONE map. Each related record arrives as a
+	// separate data_item (relation/portal contract: one group per linked record), so the
+	// parent chains of every locator must be collected together and joined by
+	// records_separator at the end. Per-item assembly would emit one result per locator
+	// and the processor would keep only the last (losing every other locator's chain).
+	// Each entry carries the ordered chain values AND the composite key of the originating
+	// locator (section_tipo_section_id — unique even when two section types share an id).
+	const lang_nodes: Record<string, { chain: string[], section_composite: string }[]> = {};
+
 	for (const item of data) {
 		const parents_map = (item as any).meta;
-		const val         = item.value;
-		const values      = Array.isArray(val) ? val : [val];
-
-		// Map to collect extracted values by language.
-		// Each entry carries the ordered chain values AND the composite key of the originating locator.
-		// Composite key = section_tipo + '_' + section_id — guarantees uniqueness even when
-		// two different section types share the same numeric section_id (e.g. es1_1 vs fr1_1).
-		const lang_nodes: Record<string, { chain: string[], section_composite: string }[]> = {};
+		// Read the locator from item.value (legacy) or the promoted item.section_id/
+		// section_tipo fields (relation/portal contract, where value is null).
+		const values      = item_locators(item);
 
 		for (const current_val of values) {
 			if (!current_val || typeof current_val !== 'object') continue;
@@ -360,17 +523,17 @@ export function parents(data: data_item[] | null, options: parser_options): data
 							// 1. exact lang
 							const exact_lang_objs = node.term.filter((t: any) => t.lang === lang);
 							if (exact_lang_objs.length > 0) {
-								term_str = exact_lang_objs.map((t: any) => t.value).join(' | ');
+								term_str = exact_lang_objs.map((t: any) => t.value).join(', ');
 							} else {
 								// 2. main_lang fallback
 								const main_lang_objs = main_lang ? node.term.filter((t: any) => t.lang === main_lang) : [];
 								if (main_lang_objs.length > 0) {
-									term_str = main_lang_objs.map((t: any) => t.value).join(' | ');
+									term_str = main_lang_objs.map((t: any) => t.value).join(', ');
 								} else {
 									// 3. first available language group
 									const first_lang = node.term[0].lang;
 									const first_lang_objs = node.term.filter((t: any) => t.lang === first_lang);
-									term_str = first_lang_objs.map((t: any) => t.value).join(' | ');
+									term_str = first_lang_objs.map((t: any) => t.value).join(', ');
 								}
 							}
 						}
@@ -415,38 +578,45 @@ export function parents(data: data_item[] | null, options: parser_options): data
 			}
 		}
 
-		// Each locator's parent chain is self-contained — variable-length chains
-		// should NOT be padded to a fixed column width. Join values within each
-		// chain with fields_separator, then join chains with records_separator.
-		for (const [lang, chain_entries] of Object.entries(lang_nodes)) {
-			if (chain_entries.length === 0) continue;
+	}
 
-			const ref_item = lang === '__nolan__'
-				? item
-				: (data as data_item[]).find(d => d.lang === lang) || item;
+	// Each locator's parent chain is self-contained — variable-length chains
+	// should NOT be padded to a fixed column width. Join values within each
+	// chain with fields_separator, then join chains with records_separator.
+	for (const [lang, chain_entries] of Object.entries(lang_nodes)) {
+		if (chain_entries.length === 0) continue;
 
-			const chain_strings: string[] = chain_entries
-				.map(({ chain }) => chain.join(fields_separator))
-				.filter(s => s.length > 0);
+		const ref_item = lang === '__nolan__'
+			? data[0]
+			: (data as data_item[]).find(d => d.lang === lang) || data[0];
 
-			if (chain_strings.length === 0) continue;
+		const chain_strings: string[] = chain_entries
+			.map(({ chain }) => chain.join(fields_separator))
+			.filter(s => s.length > 0);
 
-			let final_value: any;
-			if (merge_style === 'unique') {
-				final_value = [...new Set(chain_entries.flatMap(({ chain }) => chain))];
-			} else if (merge_style === 'flat') {
-				final_value = chain_strings;
-			} else {
-				// 'string' (default for term) and undefined fallback
-				final_value = chain_strings.join(records_separator);
-			}
+		if (chain_strings.length === 0) continue;
 
-			result.push({
-				...ref_item,
-				lang:  lang === '__nolan__' ? null : lang,
-				value: final_value,
-			});
+		let final_value: any;
+		if (merge_style === 'unique') {
+			// v6 add_parents emits ONE label per parent and NEVER deduplicates: two distinct
+			// parents that resolve to the same label in a given language must BOTH appear
+			// (e.g. terr1 parents_term in lg-ara →
+			// ["Regiones griegas","Toponimia histórica","Toponimia histórica"]). Flatten the
+			// per-parent values WITHOUT a Set. (The 'unique' mode name is legacy; it only ever
+			// looked correct when sibling labels happened to be distinct, e.g. in lg-eng.)
+			final_value = chain_entries.flatMap(({ chain }) => chain);
+		} else if (merge_style === 'flat') {
+			final_value = chain_strings;
+		} else {
+			// 'string' (default for term) and undefined fallback
+			final_value = chain_strings.join(records_separator);
 		}
+
+		result.push({
+			...ref_item,
+			lang:  lang === '__nolan__' ? null : lang,
+			value: final_value,
+		});
 	}
 
 	if (result.length === 0) return null;
