@@ -3335,13 +3335,25 @@ abstract class component_common extends common {
 			}
 
 			if(!empty($data)) {
+				// ddo lang pin (opt-in): when the ddo fixes a lang, v6 resolves this terminal
+				// in that fixed lang (e.g. DEDALO_DATA_LANG) regardless of the diffusion row
+				// lang. Keep only that lang's entry and emit it lang-neutral (lang=null) so the
+				// pinned value appears in EVERY diffusion-lang row. ddos without ->lang are
+				// unaffected (e.g. type_full_value's numisdata81 "Clave", a translatable field
+				// v6 always emits in the data lang for all 12 diffusion langs).
+				$pin_lang = $ddo->lang ?? null;
 				$diffusion_data = [];
 				foreach ($data as $current_data) {
 					if(!empty($current_data)) {
 
+						$current_lang = is_object($current_data) ? ($current_data->lang ?? null) : null;
+						if ($pin_lang !== null && $current_lang !== null && $current_lang !== $pin_lang) {
+							continue;
+						}
+
 						$diffusion_data_object = new diffusion_data_object( (object)[
 							'tipo'	=> $this->tipo,
-							'lang'	=> $current_data->lang ?? null,
+							'lang'	=> ($pin_lang !== null) ? null : $current_lang,
 							'value'	=> $current_data->value ?? $current_data ?? null,
 							'id'	=> $ddo->id ?? null
 						]);
