@@ -1397,7 +1397,14 @@ final class dd_utils_api {
 		// API-02: confine the client-supplied name under $file_path before any
 		// filesystem use; reject names that would escape the upload tree.
 			try {
-				$target_path	 = safe_upload_target($file_path, 'tmp_'.$file_data->name, false);
+				// Sanitise the joined file name with the SAME helper add_file() applies
+				// to tmp_name (sanitize_key_dir), so the assembled file and the later
+				// lookup agree. Otherwise names with spaces/accents (e.g.
+				// 'Moneda Ibérica 3.pdf') are written raw here but looked up sanitised
+				// in add_file() -> 'Source file not found'. The non-chunked upload path
+				// already sanitises its name (see sanitize_key_dir($name) above).
+				$safe_joined_name = sanitize_key_dir('tmp_'.$file_data->name);
+				$target_path	 = safe_upload_target($file_path, $safe_joined_name, false);
 				$tmp_joined_file = basename($target_path);
 			} catch (\Throwable $e) {
 				$response->msg = 'Invalid joined file name.';

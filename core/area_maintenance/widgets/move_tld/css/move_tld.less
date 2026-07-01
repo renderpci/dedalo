@@ -1,7 +1,8 @@
 /**
 * move_tld
 *
-* Included from area_maintenance.less file
+* Included from area_maintenance.less file.
+* Shared file-picker list look (checkbox row + collapsible JSON preview).
 */
 .wrapper_widget.move_tld {
 
@@ -10,20 +11,19 @@
 		flex-wrap: wrap;
 		align-items: center;
 		justify-content: space-between;
-		margin-top: 0.25rem;
-		margin-bottom: 0.25rem;
-		border-bottom: 1px solid @color_grey_15;
+		padding: 0.15rem 0;
+		border-bottom: 1px solid var(--border_default);
 
 		>.label {
 			display: flex;
 			align-items: center;
+			gap: 0.4rem;
 			height: 2rem;
-			margin-top: 1px;
 			cursor: pointer;
+			color: var(--fg_default);
 
 			&.selected {
-				font-weight: 400;
-				color: @color_black;
+				font-weight: 600;
 			}
 
 			>input {
@@ -31,11 +31,12 @@
 			}
 		}
 
-		// arrow
+		// collapse arrow
 		>.show_file_content {
 			cursor: pointer;
 			padding-right: 1.5rem;
 		}
+
 		>.file_content_container {
 			width: 100%;
 			z-index: 0;

@@ -318,9 +318,17 @@ export const dd_request_idle_callback = function (callback) {
 		// Use requestIdleCallback to schedule work if available
 		requestIdleCallback(callback, { timeout: 1000 })
 	} else {
-		// Fallback for browsers without requestIdleCallback support like Safari
-		window.requestAnimationFrame(callback)
-		// setTimeout(callback, 1);
+		// Fallback for browsers without requestIdleCallback support (e.g. older Safari).
+		// (!) Use setTimeout (a macrotask) instead of requestAnimationFrame so the work
+		// is deferred OFF the animation frame: it then runs AFTER the rAF-batched CSS
+		// flush (see css.js) instead of interleaving with it. Pass a minimal deadline
+		// object to keep the requestIdleCallback contract for callbacks that read it.
+		setTimeout(function () {
+			callback({
+				didTimeout		: false,
+				timeRemaining	: function () { return 50 }
+			})
+		}, 1)
 	}
 }//end dd_request_idle_callback
 

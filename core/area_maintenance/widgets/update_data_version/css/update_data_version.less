@@ -1,0 +1,34 @@
+/**
+* update_data_version
+*
+* Included from area_maintenance.less file.
+* Update notice as a danger note; semantic result text; command blocks keep their
+* shared body_info styling.
+*/
+.wrapper_widget.update_data_version {
+
+	.updates_container {
+		margin: 0.5rem 0;
+	}
+
+	.alert_update {
+		margin-bottom: 0.5rem;
+		padding: 0.55rem 0.7rem;
+		color: var(--fg_default);
+		line-height: 1.4;
+		background-color: color-mix(in srgb, var(--color_warning) 12%, transparent);
+		border-left: 3px solid var(--color_warning);
+		border-radius: 0 6px 6px 0;
+	}
+
+	.info_text {
+		&.error_text {
+			color: var(--color_danger);
+			font-weight: 600;
+		}
+		&.success_text {
+			color: var(--color_success);
+			font-weight: 600;
+		}
+	}
+}//end update_data_version

@@ -6,8 +6,9 @@
 
 /**
 * CHECK_CONFIG
-* Maintenance widget that compares the active Dédalo configuration files against
-* their shipped sample counterparts and reports missing or obsolete PHP constants.
+* Maintenance widget that audits the live v7 installation's configuration: the
+* database connection/credential status and the presence of the ../private config
+* sources (.env, state.php, config.local.php).
 *
 * The widget also provides root-only controls for toggling maintenance mode,
 * recovery mode, and broadcasting a site-wide user notification — each backed by
@@ -21,8 +22,7 @@
 *     fires a long-lived (up to 1 h) worker request to
 *     `dd_area_maintenance_api::get_widget_value` and returns the parsed payload.
 *   - The server-side peer (`class.check_config.php::get_value`) reports the v7
-*     config status: DB connection/credentials, ../private config-source presence,
-*     and sample constants undefined at runtime.
+*     config status: DB connection/credentials and ../private config-source presence.
 *   - DOM rendering and the maintenance/recovery/notification forms are handled
 *     entirely by `render_check_config.js`.
 *
@@ -30,12 +30,11 @@
 *   {
 *     db_status      : {Object}  DB connection + credential checks + global_status
 *     config_sources : {Array}   [{ name, required, exists, readable }] for ../private files
-*     constants      : {Array}   [{ file_name, missing:[...], sample_constants_list:[...] }]
 *   }
 *
-* When `db_status.global_status` is not true, or any `constants[].missing` is
-* non-empty, the widget header is styled 'danger' (red) by `set_widget_label_style`
-* to signal a configuration problem.
+* When `db_status.global_status` is not true, or a required `config_sources` entry
+* is missing/unreadable, the widget header is styled 'danger' (red) by
+* `set_widget_label_style` to signal a configuration problem.
 *
 * Main export: `check_config` (constructor).
 *
@@ -67,7 +66,7 @@
 * @property {string|number} section_id  - Record identifier within the parent section.
 * @property {string}      lang          - Active UI language code (e.g. 'lg-eng').
 * @property {string}      mode          - Render mode: 'edit' | 'list'.
-* @property {Array|null}  value         - Diff-item array populated by load() → get_value().
+* @property {Object|null} value         - Audit result object populated by load() → get_value().
 *                                         See module header for the exact shape.
 * @property {HTMLElement|null} node     - Root DOM node produced by render().
 * @property {Array}       events_tokens - Subscriptions registered during render; cleared on destroy.

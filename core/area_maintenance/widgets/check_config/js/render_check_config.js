@@ -11,16 +11,20 @@
 *
 * Purpose
 * -------
-* The check_config widget audits the installation's PHP configuration files against
-* their corresponding `sample.*` templates and surfaces three categories of problems:
+* The check_config widget audits the live v7 installation's configuration and
+* surfaces two readout cards:
 *
-*   - Missing constants  — constants declared in `sample.config*.php` but absent
-*                          from the live `config*.php` (i.e. the installation needs
-*                          to add them).
-*   - Obsolete constants — constants present in `config*.php` but no longer in the
-*                          sample (i.e. leftovers that can be cleaned up).
-*   - Full constant list — a collapsible pre-formatted JSON dump of every constant
-*                          found in each sample file, for reference.
+*   - Database connection — the live DB status from `installer::get_db_status()`:
+*                           a real connection + write probe plus the credential
+*                           placeholder checks.
+*   - Config sources      — presence/readability of the files that actually drive
+*                           a v7 install (`../private/.env`, `../private/state.php`
+*                           and the optional `../private/config.local.php`).
+*
+* Note: earlier revisions also diffed the running process against the shipped
+* `sample.config*.php` templates and listed undefined constants. Those web-served
+* config files are no longer part of the v7 configuration flow (constants are
+* emitted from .env + state.php + the catalog), so that section was removed.
 *
 * Root-only controls (visible only when `page_globals.is_root === true`)
 * -----------------------------------------------------------------------
@@ -38,14 +42,13 @@
 *   {
 *     db_status      : {Object}  per-check booleans + global_status (see installer::get_db_status)
 *     config_sources : {Array}   [{ name, required, exists, readable }] for ../private files
-*     constants      : {Array}   [{ file_name, missing:[...], sample_constants_list:[...] }]
 *   }
 *
 * Widget card label style
 * -----------------------
-* When `db_status.global_status` is not true, or any `constants[].missing` is
-* non-empty, the module calls `set_widget_label_style(self, 'danger', 'add', …)`
-* so the card header turns red, alerting the administrator of a config problem.
+* When `db_status.global_status` is not true, or a required `config_sources` entry
+* is missing/unreadable, the module calls `set_widget_label_style(self, 'danger',
+* 'add', …)` so the card header turns red, alerting the administrator.
 *
 * Architecture
 * ------------
@@ -56,7 +59,8 @@
 *
 * All DOM construction is delegated to private module-level functions:
 *   get_content_data_edit       — top-level layout builder
-*   render_config_vars_status   — missing/obsolete constants tables
+*   add_status_row              — one key/value row in a .dd_readout grid
+*   render_config_vars_status   — DB connection + config-source status cards
 *   render_maintenance_mode     — maintenance mode toggle form
 *   render_recovery_mode        — recovery mode toggle form
 *   render_notification         — notification banner form
@@ -143,12 +147,12 @@ render_check_config.prototype.list = async function(options) {
 *       1. Maintenance mode toggle form
 *       2. Recovery mode toggle form
 *       3. Notification banner form
-*   - Config vars status tables (always visible):
-*       A div wrapping the output of `render_config_vars_status`, which shows
-*       the missing/obsolete constants comparison for all config files.
+*   - Config vars status cards (always visible):
+*       A div wrapping the output of `render_config_vars_status`, which shows the
+*       database connection status and the ../private config-source presence.
 *
 * @param {Object} self - The `check_config` widget instance; must expose
-*   `self.value` (the server-side comparison result array) and
+*   `self.value` (the server-side audit result object) and
 *   `self.caller` (the parent area_maintenance instance providing `init_form`)
 * @returns {Promise<HTMLElement>} The assembled content_data div
 */
@@ -194,25 +198,73 @@ const get_content_data_edit = async function(self) {
 
 
 /**
+* ADD_STATUS_ROW
+* Appends one key/value row to a shared-kit `.dd_readout` grid.
+*
+* Emits the canonical kit markup — `.dd_row` (display:contents) wrapping a `.dd_k`
+* uppercase key cell and a `.dd_v` value cell whose inner `.dd_badge` carries the
+* severity chip, so the chip hugs its own text instead of stretching the grid cell.
+*
+* The value is written via `.textContent` (never parsed as HTML); the label is a
+* trusted in-code string set as innerHTML.
+*
+* @param {HTMLElement} parent      - the `.dd_readout` container
+* @param {string}      label       - field name (trusted; set as innerHTML)
+* @param {string}      value_text  - field value (set as textContent)
+* @param {string}      [state_class=''] - kit chip token, e.g. 'state_ok' |
+*   'state_danger' | 'state_warning' | 'mono'
+* @returns {HTMLElement} the created `.dd_row`
+*/
+const add_status_row = function(parent, label, value_text, state_class='') {
+
+	const row = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'dd_row',
+		parent			: parent
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'dd_k',
+		inner_html		: label,
+		parent			: row
+	})
+	const value_node = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'dd_v',
+		parent			: row
+	})
+	const value_badge = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: ('dd_badge ' + state_class).trim(),
+		parent			: value_node
+	})
+	value_badge.textContent = value_text
+
+	return row
+}//end add_status_row
+
+
+
+/**
 * RENDER_CONFIG_VARS_STATUS
 * Create the necessary DOM nodes to display the v7 config status.
 *
 * Reads `self.value` (the object returned by check_config::get_value) and renders
-* three stacked status tables:
+* two stacked readout cards using the shared area_maintenance kit
+* (`.dd_eyebrow` section heading + `.dd_readout` grid + `.dd_badge` severity chips):
 *
-*   Database connection — per-check rows from `db_status` (connection, writable,
-*     and the credential placeholder checks). Each row shows OK or Error.
+*   Database connection — per-check rows from `db_status` (live connection, write
+*     probe, and the credential placeholder checks). Each row is a calm green
+*     `state_ok` chip when healthy, or a red `state_danger` chip with a short
+*     reason when it fails.
 *
-*   Config sources (../private) — presence/readability of the new config files
-*     (.env, state.php and the optional config.local.php). An optional source that
-*     is simply absent is shown as acceptable.
+*   Config sources (../private) — presence/readability of the files that actually
+*     drive a v7 install (.env, state.php and the optional config.local.php). A
+*     required source that is missing/unreadable is `state_danger`; an optional
+*     source that is simply absent stays calm (neutral `mono` chip, no colour).
 *
-*   Missing constants — for each shipped sample file, the constants that are not
-*     `define()`-d in the running PHP process, with a collapsible `<pre>` block
-*     listing the full sample constant set (toggled by the eye-icon row).
-*
-* Side effect: if `db_status.global_status` is not true, or any sample constant is
-* undefined at runtime, the widget card header is coloured red via
+* Side effect: if `db_status.global_status` is not true, or a required private
+* config source is missing/unreadable, the widget card header is coloured red via
 * `set_widget_label_style(self, 'danger', 'add', …)`. This uses a `when_in_dom`
 * deferred call (inside `set_widget_label_style`) because the fragment may not yet
 * be attached to the live DOM.
@@ -222,169 +274,97 @@ const get_content_data_edit = async function(self) {
 */
 const render_config_vars_status = function (self) {
 
-	// value (v7 object shape: { db_status, config_sources, constants })
+	// value (v7 object shape: { db_status, config_sources })
 	const value = self.value || {};
 
 	const fragment = new DocumentFragment();
 
-	// tables (reference node for the when_in_dom widget-label style toggle)
-		const tables = ui.create_dom_element({
+	// status_sections — reference node for the when_in_dom widget-label style toggle
+		const status_sections = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'tables',
+			class_name		: 'status_sections',
 			parent			: fragment
 		})
 
-	// add_status_row — helper that renders a label + ok/fail data cell
-		const add_status_row = (parent, label_text, ok, state_text) => {
-			const row = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'file_container',
-				parent			: parent
-			})
-			ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'label',
-				inner_html		: label_text,
-				parent			: row
-			})
-			ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'data' + (ok ? '' : ' missing'),
-				inner_html		: state_text !== undefined
-					? state_text
-					: (ok ? (get_label.ok || 'OK') : 'Error'),
-				parent			: row
-			})
-			return row
-		}
-
 	// ---- database connection status ----
 		const db_status = value.db_status || {}
-		const db_status_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'table db_status_container',
-			parent			: tables
-		})
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'label',
+			class_name		: 'dd_eyebrow',
 			inner_html		: 'Database connection',
-			parent			: db_status_container
+			parent			: status_sections
 		})
+		const db_readout = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dd_readout',
+			parent			: status_sections
+		})
+		// [ label, ok_boolean, fail_text ] — fail_text explains what an Error means
 		const db_checks = [
-			['Connection',		db_status.db_connection_check],
-			['Writable',		db_status.db_writable_check],
-			['Database name',	db_status.config_db_name_check],
-			['User name',		db_status.config_user_name_check],
-			['Password',		db_status.config_pw_check],
-			['Information',		db_status.config_information_check],
-			['Info key',		db_status.config_info_key_check]
+			['Connection',		db_status.db_connection_check,		'Failed'],
+			['Writable',		db_status.db_writable_check,		'Not writable'],
+			['Database name',	db_status.config_db_name_check,		'Sample placeholder'],
+			['User name',		db_status.config_user_name_check,	'Sample placeholder'],
+			['Password',		db_status.config_pw_check,			'Sample placeholder'],
+			['Information',		db_status.config_information_check,	'Not set'],
+			['Info key',		db_status.config_info_key_check,	'Not set']
 		]
 		for (let i = 0; i < db_checks.length; i++) {
 			const ok = db_checks[i][1]===true
-			add_status_row(db_status_container, db_checks[i][0], ok, ok ? (get_label.ok || 'OK') : 'Error')
+			add_status_row(
+				db_readout,
+				db_checks[i][0],
+				ok ? (get_label.ok || 'OK') : db_checks[i][2],
+				ok ? 'state_ok' : 'state_danger'
+			)
 		}
 
 	// ---- private config sources (../private) ----
 		const config_sources = value.config_sources || []
-		const config_sources_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'table config_sources_container',
-			parent			: tables
-		})
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'label',
+			class_name		: 'dd_eyebrow',
 			inner_html		: 'Config sources (../private)',
-			parent			: config_sources_container
+			parent			: status_sections
+		})
+		const sources_readout = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dd_readout',
+			parent			: status_sections
 		})
 		for (let i = 0; i < config_sources.length; i++) {
 			const source = config_sources[i]
-			// an optional source that is simply absent is acceptable (not a failure)
-			const acceptable = source.readable===true || source.required===false
-			const state_text = source.readable===true
-				? (get_label.ok || 'OK')
-				: (source.exists===true
-					? 'Not readable'
-					: (source.required===true ? 'Missing' : 'Not set (optional)'))
-			add_status_row(config_sources_container, source.name, acceptable, state_text)
+			// readable → OK; required & not readable → danger; optional & absent → calm
+			let state_text
+			let state_class
+			if (source.readable===true) {
+				state_text	= get_label.ok || 'OK'
+				state_class	= 'state_ok'
+			}else if (source.exists===true) {
+				state_text	= 'Not readable'
+				state_class	= 'state_danger'
+			}else if (source.required===true) {
+				state_text	= 'Missing'
+				state_class	= 'state_danger'
+			}else{
+				// optional source simply absent — no action needed, stay calm
+				state_text	= 'Not set (optional)'
+				state_class	= 'mono'
+			}
+			add_status_row(sources_readout, source.name, state_text, state_class)
 		}
 
-	// ---- sample constants not defined() at runtime ----
-		const constants = value.constants || []
-		let any_missing = false
-		const missing_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'table missing_container',
-			parent			: tables
-		})
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'label',
-			inner_html		: 'Missing constants',
-			parent			: missing_container
-		})
-		for (let i = 0; i < constants.length; i++) {
-
-			const item		= constants[i]
-			const missing	= item.missing || []
-			if (missing.length>0) {
-				any_missing = true
-			}
-
-			// file_container (grid)
-			const file_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'file_container ' + item.file_name,
-				parent			: missing_container
-			})
-			// label
-			ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'label sample_vs_config',
-				inner_html		: `${item.file_name}`,
-				parent			: file_container
-			})
-			// data
-			ui.create_dom_element({
-				element_type	: 'div',
-				// CSS class 'missing' is applied when there are constants undefined at runtime
-				class_name		: 'data' + (missing.length>0 ? ' missing' : ''),
-				inner_html		: missing.length>0 ? missing.join('<br>') : (get_label.ok || 'OK'),
-				parent			: file_container
-			})
-
-			// const_list_node — clickable toggle row that reveals the full constant list
-			const const_list_node = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'datalist_container show_list',
-				inner_html		: '<span class="button icon eye"></span>Display all '+item.file_name+' constants list',
-				parent			: fragment
-			})
-			const const_list		= item.sample_constants_list || []
-			const const_list_pre	= ui.create_dom_element({
-				element_type	: 'pre',
-				class_name		: 'hide',
-				inner_html		: JSON.stringify(const_list, null, 2),
-				parent			: const_list_node
-			})
-			const_list_node.addEventListener('click', function(e) {
-				e.stopPropagation();
-				// toggle visibility of the collapsible <pre> block
-				const_list_pre.classList.toggle('hide')
-			})
-		}//end for (let i = 0; i < constants.length; i++)
-
 	// Widget label header style: red (danger) when the DB status is not fully OK
-	// or any sample constant is undefined at runtime.
-		const db_ok = db_status.global_status===true
-		if (!db_ok || any_missing===true) {
+	// or a required private config source is missing/unreadable.
+		const db_ok		= db_status.global_status===true
+		const sources_ok	= config_sources.every(s => s.readable===true || s.required===false)
+		if (!db_ok || !sources_ok) {
 			set_widget_label_style(self, 'danger', 'add',
-				tables // reference node to attach in when_in_dom event
+				status_sections // reference node to attach in when_in_dom event
 			)
 		}else{
 			set_widget_label_style(self, 'danger', 'remove',
-				tables // reference node to attach in when_in_dom event
+				status_sections // reference node to attach in when_in_dom event
 			)
 		}
 
@@ -439,7 +419,6 @@ const render_maintenance_mode = (self) => {
 	// body_response warning
 	const maintenance_mode_body_response = ui.create_dom_element({
 		element_type	: 'div',
-		inner_html		: "Warning! On true, users other than 'root' will be kicked and will not be able to login in this mode.",
 		class_name		: 'body_response'
 	})
 
@@ -456,8 +435,10 @@ const render_maintenance_mode = (self) => {
 			body_response	: maintenance_mode_body_response,
 			trigger : {
 				dd_api	: 'dd_area_maintenance_api',
-				action	: 'class_request',
+				action	: 'widget_request',
 				source	: {
+					type : 'widget',
+					model : 'check_config',
 					action : 'set_maintenance_mode'
 				},
 				options	: {
@@ -485,6 +466,14 @@ const render_maintenance_mode = (self) => {
 			form_container.button_submit.classList.add('danger')
 		}
 	}
+
+	// warning_message
+	const warning_message = ui.create_dom_element({
+		element_type	: 'div',
+		inner_html		: "Warning! On true, users other than 'root' will be kicked and will not be able to login in this mode.",
+		class_name		: 'warning_message',
+		parent			: maintenance_mode_container
+	})
 
 	// add maintenance_mode_body_response at end
 	maintenance_mode_container.appendChild(maintenance_mode_body_response)
@@ -542,7 +531,6 @@ const render_recovery_mode = (self) => {
 	// body_response warning
 	const recovery_mode_body_response = ui.create_dom_element({
 		element_type	: 'div',
-		inner_html		: "Warning! On true, Ontology backup table will be used instead the main Ontology table.",
 		class_name		: 'body_response'
 	})
 
@@ -559,8 +547,10 @@ const render_recovery_mode = (self) => {
 			body_response	: recovery_mode_body_response,
 			trigger : {
 				dd_api	: 'dd_area_maintenance_api',
-				action	: 'class_request',
+				action	: 'widget_request',
 				source	: {
+					type : 'widget',
+					model : 'check_config',
 					action : 'set_recovery_mode'
 				},
 				options	: {
@@ -591,6 +581,14 @@ const render_recovery_mode = (self) => {
 			form_container.button_submit.classList.add('danger')
 		}
 	}
+
+	// warning_message
+	const warning_message = ui.create_dom_element({
+		element_type	: 'div',
+		inner_html		: "Warning! On true, Ontology backup table will be used instead the main Ontology table.",
+		class_name		: 'warning_message',
+		parent			: recovery_mode_container
+	})
 
 	// add recovery_mode_body_response at end
 	recovery_mode_container.appendChild(recovery_mode_body_response)
@@ -659,7 +657,6 @@ const render_notification = (self) => {
 	// body response
 	const notification_body_response = ui.create_dom_element({
 		element_type	: 'div',
-		inner_html		: "Notification. " + JSON.stringify(dedalo_notification, null, 2),
 		class_name		: 'body_response'
 	})
 	// sample: define('DEDALO_NOTIFICATION', ['msg' => $notice, 'class_name' => 'warning']);
@@ -698,9 +695,11 @@ const render_notification = (self) => {
 				const api_response = await data_manager.request({
 					body : {
 						dd_api			: 'dd_area_maintenance_api',
-						action			: 'class_request',
+						action			: 'widget_request',
 						prevent_lock	: true,
 						source			: {
+							type : 'widget',
+							model : 'check_config',
 							action : 'set_notification',
 						},
 						options : {
@@ -743,6 +742,14 @@ const render_notification = (self) => {
 			}
 		})
 	}
+
+	// warning_message
+	const warning_message = ui.create_dom_element({
+		element_type	: 'div',
+		inner_html		: "Notification: " + JSON.stringify(dedalo_notification, null, 2),
+		class_name		: 'warning_message',
+		parent			: notification_container
+	})
 
 	// add notification_body_response at end
 	notification_container.appendChild(notification_body_response)

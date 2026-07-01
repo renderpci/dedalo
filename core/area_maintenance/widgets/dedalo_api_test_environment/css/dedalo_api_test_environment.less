@@ -1,19 +1,16 @@
 /**
 * dedalo_api_test_environment
 *
-* Included from area_maintenance.less file
+* Included from area_maintenance.less file.
+* Neutral kit surface (the green accent is kept on the JSON-editor menu only);
+* the API response is a console block.
 */
 .wrapper_widget.dedalo_api_test_environment {
-	background-color: @color_green_light;
 
 	>.content_data {
 
-		>label {
-
-		}
-
 		>.button_submit {
-			margin: 0.25rem;
+			margin: 0.25rem 0.25rem 0.5rem;
 		}
 
 		>.editor_json_container {
@@ -22,29 +19,24 @@
 			min-height: 450px;
 
 			.jse-menu {
-				--jse-theme-color: @color_success;
+				--jse-theme-color: var(--color_success);
 			}
-
 			.jsoneditor {
 				z-index: 1;
 			}
 		}
 
 		>.body_response {
-			max-width: calc(100vw - 4rem);
+			max-width: 100%;
 
 			>.api_response {
-				white-space: pre-wrap;
-				padding: 1.2rem;
-				line-height: 1.1rem;
-				font-family: monospace;
+				.dd_console();
+				margin-top: 0.5rem;
 			}
 
-			>.pre {
-				>.json-container {
-					white-space: pre-wrap;
-					overflow: auto;
-				}
+			>.pre > .json-container {
+				white-space: pre-wrap;
+				overflow: auto;
 			}
 		}
 	}

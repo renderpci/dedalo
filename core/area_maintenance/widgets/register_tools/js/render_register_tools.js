@@ -160,13 +160,13 @@ const render_content_data = async function(self) {
 		// header
 			const tool_item = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'tool_item header',
+				class_name		: 'dd_tr header',
 				parent			: content_data
 			})
 			// name
 			ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'tool_name',
+				class_name		: 'dd_th',
 				inner_html		: get_label.name || 'Name',
 				parent			: tool_item
 			})
@@ -174,7 +174,7 @@ const render_content_data = async function(self) {
 			// developer
 			ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'developer',
+				class_name		: 'dd_th',
 				inner_html		: get_label.developer || 'Developer',
 				parent			: tool_item
 			})
@@ -182,7 +182,7 @@ const render_content_data = async function(self) {
 			// installed_version
 			const installed_version_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'tool_installed_version',
+				class_name		: 'dd_th num',
 				inner_html		: get_label.installed || 'Installed',
 				parent			: tool_item
 			})
@@ -190,7 +190,7 @@ const render_content_data = async function(self) {
 			// available version
 			ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'tool_version',
+				class_name		: 'dd_th num',
 				inner_html		: get_label.version || 'Version',
 				parent			: tool_item
 			})
@@ -198,7 +198,7 @@ const render_content_data = async function(self) {
 			// warning
 			ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'tool_warning',
+				class_name		: 'dd_th',
 				// (!) label key is 'informacion' (Spanish legacy key); displays as 'Info'
 				inner_html		: get_label.informacion || 'Info',
 				parent			: tool_item
@@ -208,7 +208,7 @@ const render_content_data = async function(self) {
 		// and can replace its contents on subsequent calls (e.g. after registration)
 			const datalist_container = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'datalist_container',
+				class_name		: 'datalist_container dd_table',
 				parent			: content_data
 			})
 			render_datalist(self, datalist_container)
@@ -356,14 +356,14 @@ const render_datalist = (self, datalist_container) => {
 		// tool_item
 		const tool_item = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'tool_item',
+			class_name		: 'dd_tr',
 			parent			: fragment
 		})
 
 		// name
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'tool_name',
+			class_name		: 'dd_td',
 			inner_html		: name,
 			parent			: tool_item
 		})
@@ -371,7 +371,7 @@ const render_datalist = (self, datalist_container) => {
 		// developer
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'developer',
+			class_name		: 'dd_td',
 			inner_html		: developer,
 			parent			: tool_item
 		})
@@ -379,19 +379,19 @@ const render_datalist = (self, datalist_container) => {
 		// installed_version
 		const installed_version_node = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'tool_installed_version',
+			class_name		: 'dd_td num',
 			inner_html		: installed_version,
 			parent			: tool_item
 		})
 		// highlight the installed version cell when it does not match the current on-disk version
 		if (installed_version!==version) {
-			installed_version_node.classList.add('warning')
+			installed_version_node.classList.add('alert')
 		}
 
 		// available version
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'tool_version',
+			class_name		: 'dd_td num',
 			inner_html		: version,
 			parent			: tool_item
 		})
@@ -406,17 +406,24 @@ const render_datalist = (self, datalist_container) => {
 		}
 		const warning_node = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'tool_warning',
-			inner_html		: ar_warning.join('<br>'),
+			class_name		: 'dd_td',
 			parent			: tool_item
 		})
+		if (ar_warning.length) {
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'dd_badge state_warning',
+				inner_html		: ar_warning.join('<br>'),
+				parent			: warning_node
+			})
+		}
 	}
 
 	// clean node
 	// removeChild loop is used instead of innerHTML='' to avoid triggering
 	// event-listener leaks or unexpected mutation observer callbacks
-	while (datalist_container.firstChild) {
-		datalist_container.removeChild(datalist_container.firstChild);
+	while (datalist_container.children.length > 1) {
+		datalist_container.removeChild(datalist_container.lastChild);
 	}
 
 	// append

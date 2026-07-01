@@ -198,9 +198,11 @@ const get_content_data_edit = async function(self) {
 				body_response	: body_response,
 				trigger : {
 					dd_api	: 'dd_area_maintenance_api',
-					action	: 'class_request',
+					action	: 'widget_request',
 					source	: {
-						action : 'create_test_record'
+						type	: 'widget',
+						model	: 'unit_test',
+						action	: 'create_test_record'
 					},
 					options	: {}
 				}

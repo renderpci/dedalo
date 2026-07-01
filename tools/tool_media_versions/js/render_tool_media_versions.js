@@ -582,13 +582,9 @@ const render_file = function(quality, self) {
 
 		// file_info: thumb uses the unfiltered disk list; other qualities use the
 		// extension-filtered safe list to avoid showing alternate-format entries here
-		const files_info = (quality==='thumb')
+		const files_info = ((quality==='thumb')
 			? self.files_info_disk // thumb is not in files_info_safe (different extension case)
-			: self.files_info_safe
-		if(!files_info) {
-			console.error('render_file: files_info not found')
-			return file_info_node
-		}
+			: self.files_info_safe) || [] // fallback to empty array to keep render rock-solid
 		const file_info = files_info.find(el => el.quality===quality)
 		if (file_info && file_info.file_exist===true) {
 			if (file_info.file_path) {

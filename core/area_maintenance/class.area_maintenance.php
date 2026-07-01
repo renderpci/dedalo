@@ -83,13 +83,7 @@ class area_maintenance extends area_common {
 	 * class's own `API_ACTIONS` (rolled out per-widget in a follow-up).
 	 */
 	public const array API_ACTIONS = [
-		'create_test_record',
 		'long_process_stream',
-		'rebuild_lang_files',
-		'restore_dd_ontology_recovery_from_file',
-		'set_maintenance_mode',
-		'set_notification',
-		'set_recovery_mode',
 	];
 
 
@@ -422,6 +416,7 @@ class area_maintenance extends area_common {
 		$item = new stdClass();
 		$item->id = 'sequences_status';
 		$item->category = 'integrity';
+		$item->class = 'width_100';
 		$item->type = 'widget';
 		$item->tipo = $this->tipo;
 		$item->label = 'DB SEQUENCES STATUS';
@@ -860,101 +855,6 @@ class area_maintenance extends area_common {
 			return $response;
 		}
 	}//end long_process_stream
-
-
-
-	/**
-	* CREATE_TEST_RECORD
-	* Provisions a known fixture record in `matrix_test` so that unit tests have
-	* a deterministic starting state.
-	*
-	* The operation runs three sequential SQL statements:
-	*   1. TRUNCATE matrix_test       — removes any leftover rows from prior runs.
-	*   2. ALTER SEQUENCE … RESTART   — resets the id auto-increment to 1 so test
-	*                                   assertions on section_id are stable.
-	*   3. INSERT INTO matrix_test    — inserts a single row whose `datos` column is
-	*                                   populated from the bundled `test_data.json`
-	*                                   file next to this class file.
-	*
-	* Precondition: the `matrix_test` table and its sequence `matrix_test_id_seq`
-	* must already exist in PostgreSQL (created by the DB install scripts). If the
-	* table is absent all three statements will fail with a pg_last_error() message.
-	*
-	* This method is listed in `API_ACTIONS` and is callable from the `unit_test`
-	* widget in the maintenance dashboard.
-	*
-	* @return object - {result: bool, msg: string}; result is false if any SQL step
-	*                  fails, with msg containing the pg_last_error() details.
-	*/
-	public static function create_test_record(): object {
-
-		$response = new stdClass();
-		$response->result = false;
-		$response->msg = 'Error. Request failed ' . __METHOD__;
-
-		// short vars
-		$db_conn = DBi::_getConnection();
-		$section_tipo = 'test3';
-		$table = 'matrix_test';
-
-		// test data
-		$test_data = file_get_contents(dirname(__FILE__) . '/test_data.json');
-
-		// exec SQL
-		// Statement 1: TRUNCATE table
-		$sql1 = 'TRUNCATE TABLE ' . $table;
-		$result = pg_query($db_conn, $sql1);
-		if (!$result) {
-			$msg = " Error on TRUNCATE: " . pg_last_error($db_conn);
-			debug_log(
-				__METHOD__
-				. $msg . PHP_EOL
-				. ' SQL: ' . $sql1
-				,
-				logger::ERROR
-			);
-			$response->msg = $msg;
-			return $response;
-		}
-
-		// Statement 2: Reset sequence
-		$sql2 = 'ALTER SEQUENCE ' . $table . '_id_seq RESTART WITH 1';
-		$result = pg_query($db_conn, $sql2);
-		if (!$result) {
-			$msg = " Error on ALTER SEQUENCE: " . pg_last_error($db_conn);
-			debug_log(
-				__METHOD__
-				. $msg . PHP_EOL
-				. ' SQL: ' . $sql2
-				,
-				logger::ERROR
-			);
-			$response->msg = $msg;
-			return $response;
-		}
-
-		// Statement 3: INSERT data (using prepared statement for security)
-		$sql3 = 'INSERT INTO ' . $table . ' ("section_id", "section_tipo", "datos") VALUES ($1, $2, $3)';
-		$result = pg_query_params($db_conn, $sql3, ['1', $section_tipo, $test_data]);
-		if (!$result) {
-			$msg = " Error on INSERT: " . pg_last_error($db_conn);
-			debug_log(
-				__METHOD__
-				. $msg . PHP_EOL
-				. ' SQL: ' . $sql3
-				,
-				logger::ERROR
-			);
-			$response->msg = $msg;
-			return $response;
-		}
-
-		$response->result = true;
-		$response->msg = 'OK. Request done ' . __METHOD__;
-
-
-		return $response;
-	}//end create_test_record
 
 
 
@@ -1872,105 +1772,9 @@ class area_maintenance extends area_common {
 
 
 
-	/**
-	* REBUILD_LANG_FILES
-	* Regenerates the JavaScript label/translation files for every application language.
-	*
-	* Calls `backup::write_lang_file()` for each language code in DEDALO_APPLICATION_LANGS.
-	* These files are static JS bundles served to the browser so the client-side UI
-	* can display localised labels without an API round-trip. They must be rebuilt
-	* whenever ontology labels change (typically after `update_ontology`).
-	*
-	* The `$options` parameter is accepted for API contract consistency but is
-	* currently unused; callers may pass an empty stdClass.
-	*
-	* Errors from individual language writes are collected and returned; the response
-	* `result` is only set to `true` when all languages succeed without error.
-	*
-	* Listed in `API_ACTIONS`; also called internally by `update_ontology()` as step 7.
-	*
-	* @param object $options - Unused; present for API contract uniformity.
-	* @return object - {
-	*   result:  bool,
-	*   msg:     string,
-	*   errors:  array<string>,
-	*   updated: array|null — the DEDALO_APPLICATION_LANGS array on success, absent on failure
-	* }
-	*/
-	public static function rebuild_lang_files(object $options): object {
-
-		// response
-		$response = new stdClass();
-		$response->result = false;
-		$response->msg = 'Error. Request failed [' . __METHOD__ . ']';
-		$response->errors = [];
-
-		// write_lang_file
-		$ar_langs = DEDALO_APPLICATION_LANGS;
-		foreach ($ar_langs as $lang => $label) {
-			$result = backup::write_lang_file($lang);
-			if ($result !== true) {
-				$response->errors[] = 'Failed write lang file: ' . $lang;
-			}
-		}
-
-		// response
-		if (count($response->errors) === 0) {
-			$response->result = true;
-			$response->msg = 'OK. Request done successfully';
-			$response->updated = $ar_langs;
-		}
-
-
-		return $response;
-	}//end rebuild_lang_files
 
 
 
-	/**
-	* BUILD_RECOVERY_VERSION_FILE
-	* Snapshots the current `dd_ontology` table into the recovery SQL file
-	* (`dedalo/install/db/dd_ontology_recovery.sql`).
-	*
-	* This file is the fallback source used by `restore_dd_ontology_recovery_from_file()`
-	* if the live `dd_ontology` table becomes corrupt or empty. It should be rebuilt
-	* after every successful ontology update so the recovery snapshot stays current.
-	*
-	* Delegates entirely to `installer::build_recovery_version_file()`.
-	*
-	* @return object - Response from installer::build_recovery_version_file()
-	*                  {result: bool, msg: string, errors?: array}.
-	*/
-	public static function build_recovery_version_file(): object {
-
-		return installer::build_recovery_version_file();
-	}//end build_recovery_version_file
-
-
-
-	/**
-	* RESTORE_DD_ONTOLOGY_RECOVERY_FROM_FILE
-	* Restores the `dd_ontology` table from the recovery SQL snapshot file
-	* (`dedalo/install/db/dd_ontology_recovery.sql`).
-	*
-	* This is a last-resort recovery operation for situations where `dd_ontology` is
-	* corrupt, missing, or empty and the system is in recovery mode. The snapshot
-	* loaded here was built by `build_recovery_version_file()` during a previous
-	* healthy state.
-	*
-	* Typically invoked from the `check_config` widget when the system is in recovery
-	* mode and the operator wants to restore the ontology without shell access.
-	* Listed in `API_ACTIONS`.
-	*
-	* Delegates entirely to `installer::restore_dd_ontology_recovery_from_file()`.
-	*
-	* @return object - Response from installer::restore_dd_ontology_recovery_from_file()
-	*                  {result: bool, msg: string, errors?: array}.
-	*/
-	public static function restore_dd_ontology_recovery_from_file(): object {
-
-		return installer::restore_dd_ontology_recovery_from_file();
-	}//end restore_dd_ontology_recovery_from_file
 
 
 

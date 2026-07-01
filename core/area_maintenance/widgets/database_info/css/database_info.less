@@ -1,16 +1,15 @@
 /**
 * database_info
 *
-* Included from area_maintenance.less file
+* Included from area_maintenance.less file.
+* Sections share the kit language: eyebrow group headings, console output blocks,
+* a readout-style index table. Operation logic/markup is unchanged.
 */
 .wrapper_widget.database_info {
 
 	.version_info {
-		background-color: transparent;
-	}
-
-	.button_rebuild_indexes {
-
+		.dd_console();
+		margin-bottom: 1rem;
 	}
 
 	>.content_data {
@@ -18,25 +17,32 @@
 		>.group_container {
 			padding: 0;
 			margin-bottom: 1rem;
-			border-top: 1px solid @color_grey_10;
 			padding-top: 1rem;
+			border-top: 1px solid var(--border_default);
 
 			>.group_label {
-				padding-bottom: 0.25rem;
+				margin-bottom: 0.5rem;
+				font-size: 0.72rem;
+				font-weight: 600;
+				letter-spacing: 0.04em;
+				text-transform: uppercase;
+				color: var(--fg_muted);
 			}
 
 			>.info_node {
-				padding: 0px;
-				line-height: 1.1rem;
-				margin-bottom: 0.25rem;
+				padding: 0;
+				margin-bottom: 0.5rem;
+				color: var(--fg_muted);
+				line-height: 1.4;
 			}
 
 			>.form_container {
-				padding-top: 0px;
+				padding-top: 0;
 			}
 
 			.response_node {
-				padding: 1rem;
+				.dd_console();
+				margin-top: 0.5rem;
 				position: relative;
 
 				&::after {
@@ -44,7 +50,7 @@
 					position: absolute;
 					top: 0.5rem;
 					right: 0.5rem;
-					color: @color_grey_10;
+					color: var(--fg_muted);
 					cursor: pointer;
 				}
 			}
@@ -60,62 +66,47 @@
 			}
 
 			.recreate_db_options_container {
-				border-top: 2px dotted @color_grey_11;
 				display: grid;
 				grid-template-columns: repeat(3, 1fr);
-				padding-top: 2rem;
-				text-align: left;
+				padding-top: 1.5rem;
 				margin-bottom: 1rem;
+				text-align: left;
+				border-top: 1px dashed var(--border_default);
 
 				> div {
 					margin-right: 1rem;
 					height: 100%;
-
 					display: flex;
 					flex-wrap: wrap;
 					align-content: space-between;
 
-					// Add borders between columns except for the last one
 					&:not(:last-child) {
-						border-right: 1px solid @color_grey_11;
+						border-right: 1px solid var(--border_default);
 					}
 				}
 			}
 		}
 
-		// indexes table styles
+		// indexes table — same readout look (header rail, hairline rows, mono defs)
 		.indexes_container {
 			margin-top: 1rem;
 			margin-bottom: 1rem;
-
-			// Colors (theme-aware via semantic tokens)
-			@color_thead: var(--color_hilite);
-			@color_text_base: var(--fg_muted);
-			@color_text_light: var(--fg_muted);
-			@color_over: var(--bg_surface_alt);
 
 			.indexes_label {
 				text-align: right;
 				padding-right: 1.5rem;
 				cursor: pointer;
 				font-weight: 500;
-				color: @color_text_base;
-			}
-
-			.indexes_content {
-				// shown by default
+				color: var(--fg_muted);
 			}
 
 			.indexes_table_name {
 				margin-top: 1rem;
 				margin-bottom: 0.5rem;
-				color: @color_text_light;
-				font-size: 0.9rem;
-				font-weight: 500;
-				color: var(--fg_default);
 				padding-left: 0.5rem;
-				text-transform: none;
 				font-size: 1rem;
+				font-weight: 600;
+				color: var(--fg_default);
 			}
 
 			.indexes_table {
@@ -123,49 +114,47 @@
 				border-collapse: collapse;
 				margin-bottom: 1rem;
 				font-size: 0.85rem;
+				border: 1px solid var(--border_default);
+				border-radius: 8px;
+				overflow: hidden;
 
 				thead {
-					background-color: @color_thead;
+					background-color: var(--bg_surface_alt);
 
 					th {
 						text-align: left;
-						padding: 0.5rem 0.75rem;
+						padding: 0.44rem 0.85rem;
+						font-size: 0.68rem;
 						font-weight: 600;
-						color: @color_text_base;
-						border-bottom: 1px solid @color_grey_10;
+						letter-spacing: 0.04em;
+						text-transform: uppercase;
+						color: var(--fg_muted);
 					}
 				}
 
 				tbody {
-					tr {
-						// &:nth-child(odd) {
-						// 	background-color: @color_grey_13;
-						// }
-
-						&:hover {
-							background-color: @color_over;
-						}
+					tr:hover {
+						background-color: var(--bg_surface_alt);
 					}
 
 					td {
-						padding: 0.4rem 0.75rem;
-						border-bottom: 1px solid @color_grey_11;
+						padding: 0.4rem 0.85rem;
+						border-top: 1px solid var(--border_default);
+						color: var(--fg_default);
 
 						&.index_name {
 							font-weight: 500;
-							color: @color_text_base;
 						}
-
 						&.index_size {
 							text-align: right;
-							color: @color_text_light;
+							color: var(--fg_muted);
 							white-space: nowrap;
+							font-variant-numeric: tabular-nums;
 						}
-
 						&.indexdef {
-							font-family: monospace;
+							font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
 							font-size: 0.8rem;
-							color: @color_text_light;
+							color: var(--fg_muted);
 							word-break: break-all;
 						}
 					}
@@ -173,5 +162,4 @@
 			}
 		}
 	}
-
 }//end database_info

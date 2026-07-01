@@ -141,12 +141,17 @@ const get_content_data_edit = async function(self) {
 	// rebuild media index
 		build_rebuild_block(self, value, content_data)
 
-	// refresh button
+	// refresh button (footer action: re-reads status from the server)
+		const footer = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'media_control_footer',
+			parent			: content_data
+		})
 		const button_refresh = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'light button_refresh',
 			inner_html		: get_label.refresh || 'Refresh',
-			parent			: content_data
+			parent			: footer
 		})
 		button_refresh.addEventListener('click', async (e) => {
 			e.stopPropagation()
@@ -192,8 +197,8 @@ const get_content_data_edit = async function(self) {
 *                       CSS class (`mode_off`, `mode_private`, `mode_publication`)
 *                       for colour coding.
 *   - Mode source     — which config constant determines the effective mode.
-*   - Warning         — shown only when mode===false (world-readable); draws operator
-*                       attention with the `warning_text` class.
+*   - Warning         — shown only when mode===false (world-readable); flagged as a
+*                       `state_danger` chip (real security exposure).
 *   - Auth cookie     — cookie name used by media_protection (default: 'dedalo_media_auth').
 *   - Media path      — absolute filesystem path to the media directory.
 *   - Marker store    — whether the `.publication/` directory tree exists and how many
@@ -219,30 +224,40 @@ const build_status_block = function(value, parent) {
 
 	const status_block = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'media_control_status',
+		class_name		: 'dd_readout',
 		parent			: parent
 	})
 
 	// row helper. label is fixed widget text; row_value goes in as
-	// textContent (SEC-XSS: server strings are never parsed as HTML)
+	// textContent (SEC-XSS: server strings are never parsed as HTML).
+	// class_name is a state token applied to the inner badge (.mc_v) so the
+	// status chip hugs its own text instead of stretching the grid cell:
+	//   'mono'                            machine string (path, cookie, constant)
+	//   'mode_off'|'mode_private'|'mode_publication'   effective-mode pill
+	//   'state_ok'|'state_warning'|'state_danger'      health chip
 	const add_row = (label, row_value, class_name='') => {
 		const row = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'media_control_row',
+			class_name		: 'dd_row',
 			parent			: status_block
 		})
 		ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'media_control_label',
+			class_name		: 'dd_k',
 			inner_html		: label,
 			parent			: row
 		})
 		const value_node = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: ('media_control_value ' + class_name).trim(),
+			class_name		: 'dd_v',
 			parent			: row
 		})
-		value_node.textContent = row_value
+		const value_badge = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: ('dd_badge ' + class_name).trim(),
+			parent			: value_node
+		})
+		value_badge.textContent = row_value
 		return row
 	}
 
@@ -252,21 +267,22 @@ const build_status_block = function(value, parent) {
 			? 'mode_off'
 			: (value.mode==='publication' ? 'mode_publication' : 'mode_private')
 		add_row('Mode', mode, mode_class)
-		add_row('Mode source', value.mode_source || 'unknown')
+		add_row('Mode source', value.mode_source || 'unknown', 'mono')
 		if (value.mode===false) {
-			add_row('Warning', 'Media files are world-readable (no access control)', 'warning_text')
+			// world-readable is a real security exposure, not a will-self-heal notice
+			add_row('Warning', 'Media files are world-readable (no access control)', 'state_danger')
 		}
 
 	// auth cookie
-		add_row('Auth cookie', value.cookie_name || 'dedalo_media_auth')
+		add_row('Auth cookie', value.cookie_name || 'dedalo_media_auth', 'mono')
 
 	// media path + marker store
-		add_row('Media path', value.media_path || 'unknown')
+		add_row('Media path', value.media_path || 'unknown', 'mono')
 		const markers = value.markers || {}
 		add_row('Marker store', markers.base_exists
 			? `OK (${markers.pub_count ?? 0} published record markers, ${markers.auth_count ?? 0} auth markers)`
 			: 'Not created yet (created at first login / publication)',
-			markers.base_exists ? '' : 'warning_text'
+			markers.base_exists ? 'state_ok' : 'state_warning'
 		)
 
 	// .htaccess (Apache gate)
@@ -276,7 +292,7 @@ const build_status_block = function(value, parent) {
 			: (htaccess.up_to_date===false
 				? 'Outdated (regenerated at next login)'
 				: 'OK')
-		add_row('Apache .htaccess', htaccess_status, htaccess.exists && htaccess.up_to_date!==false ? '' : 'warning_text')
+		add_row('Apache .htaccess', htaccess_status, htaccess.exists && htaccess.up_to_date!==false ? 'state_ok' : 'state_warning')
 
 	// public qualities (publication mode)
 		if (value.mode==='publication') {
@@ -284,18 +300,22 @@ const build_status_block = function(value, parent) {
 			add_row('Public qualities', qualities.length
 				? qualities.join(', ')
 				: 'None (anonymous users cannot read any media)',
-				qualities.length ? '' : 'warning_text'
+				qualities.length ? 'state_ok' : 'state_warning'
 			)
 		}
 
-	// diffusion engine (markers writer)
+	// diffusion engine (markers writer). unreachable freezes markers (danger);
+	// reachable-but-misconfigured is a recoverable warning
 		const engine = value.engine || {}
 		const engine_status = !engine.reachable
 			? 'Unreachable — publication markers are frozen until it is back'
 			: (engine.media_index_enabled!==true
 				? 'Reachable, but DEDALO_MEDIA_PATH is NOT set in its .env — markers are not maintained'
 				: `OK (${engine.pub_markers ?? 0} markers, ${(engine.databases || []).length} publication database dir(s))`)
-		add_row('Diffusion engine', engine_status, engine.reachable && engine.media_index_enabled===true ? '' : 'warning_text')
+		const engine_class = !engine.reachable
+			? 'state_danger'
+			: (engine.media_index_enabled!==true ? 'state_warning' : 'state_ok')
+		add_row('Diffusion engine', engine_status, engine_class)
 
 
 	return status_block
@@ -342,7 +362,7 @@ const build_mode_selector = function(self, value, parent) {
 	if (value.is_root!==true) {
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'media_control_note',
+			class_name		: 'dd_note',
 			inner_html		: 'Only the root user can change the media access mode.',
 			parent			: parent
 		})
@@ -357,7 +377,7 @@ const build_mode_selector = function(self, value, parent) {
 
 	ui.create_dom_element({
 		element_type	: 'span',
-		class_name		: 'media_control_label',
+		class_name		: 'dd_eyebrow',
 		inner_html		: 'Change mode',
 		parent			: selector_block
 	})
@@ -499,7 +519,7 @@ const build_rebuild_block = function(self, value, parent) {
 	})
 	ui.create_dom_element({
 		element_type	: 'span',
-		class_name		: 'media_control_note',
+		class_name		: 'dd_note',
 		inner_html		: 'Resyncs the publication markers from the publication databases (run once when enabling publication mode, or to repair drift). It can take a while on large instances.',
 		parent			: rebuild_block
 	})

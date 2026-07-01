@@ -16,7 +16,6 @@
 *   (widget_request, get_widget_value) with two-layer security: widget-ID
 *   allowlist + SEC-044/SEC-069 realpath confinement.
 * - Surface component locking state (lock_components_actions).
-* - Expose counter repair operations (modify_counter).
 * - Expose ontology-change-file listing and parsing for the security-access UI
 *   (get_simple_schema_changes_files, parse_simple_schema_changes_files).
 *
@@ -51,7 +50,6 @@ final class dd_area_maintenance_api {
 		'widget_request',
 		'get_widget_value',
 		'lock_components_actions',
-		'modify_counter',
 		'get_simple_schema_changes_files',
 		'parse_simple_schema_changes_files'
 	];
@@ -597,77 +595,6 @@ final class dd_area_maintenance_api {
 
 
 
-	/**
-	* MODIFY_COUNTER
-	* Repairs or resets the section_id counter for a given section tipo, then
-	* re-checks all counters to return the full up-to-date counter table.
-	*
-	* Delegates to:
-	*   counter::modify_counter($section_tipo, $counter_action) — performs the
-	*     requested action ('reset' or 'fix') on the named section's counter.
-	*   counter::check_counters() — reads back all counters and returns them as
-	*     a datalist for the maintenance UI to render.
-	*
-	* session_write_close() is called at entry because counter repair can be slow
-	* (especially 'fix', which scans the matrix table). Closing the session early
-	* prevents PHP from blocking concurrent requests from the same browser session
-	* while the repair runs.
-	*
-	* Requires Global Admin privileges; counter::modify_counter() enforces this
-	* internally and returns false if the check fails.
-	*
-	* @param object $rqo - {
-	*   options: {
-	*     section_tipo:   string,  // ontology tipo identifying the section whose counter to repair
-	*     counter_action: string   // 'reset' (delete and recreate at 0) | 'fix' (scan matrix and correct)
-	*   }
-	* }
-	* @return object - {result: bool, msg: string, datalist: array}; datalist contains
-	*                  the full counter status from check_counters()
-	*/
-	public static function modify_counter( object $rqo ) : object {
-
-		session_write_close();
-
-		// options
-			$options = $rqo->options;
-
-		// response
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__METHOD__.']';
-
-		// short vars
-			$section_tipo = $options->section_tipo;
-			if (empty($section_tipo)) {
-				$response->msg = 'Error: empty mandatory section_tipo';
-				return $response;
-			}
-			$counter_action = $options->counter_action; // reset|fix
-
-		// modify_counter
-			// Returns false if the caller is not a Global Admin or if the action
-			// is unknown; counter::modify_counter() logs its own error internally.
-			$result = counter::modify_counter(
-				$section_tipo,
-				$counter_action
-			);
-
-		// check_counters
-			// Always re-read all counters after the repair so the client receives a
-			// fresh snapshot regardless of whether the repair succeeded or failed.
-			$result_check_counters	= counter::check_counters();
-
-		// response
-			$response->result	= $result;
-			$response->msg		= $result===true
-				? 'OK. '.$counter_action.' counter successfully ' . $section_tipo
-				: 'Error on '.$counter_action.' counter ' . $section_tipo;
-			$response->datalist	= $result_check_counters->datalist ?? [];
-
-
-		return $response;
-	}//end modify_counter
 
 
 

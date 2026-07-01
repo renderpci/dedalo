@@ -49,7 +49,8 @@ class update_ontology {
 	*/
 	public const API_ACTIONS = [
 		'export_to_translate',
-		'update_ontology'
+		'update_ontology',
+		'rebuild_lang_files'
 	];
 
 
@@ -730,6 +731,48 @@ class update_ontology {
 
 		return $item;
 	}//end get_row_item_with_langs
+
+
+
+	/**
+	* REBUILD_LANG_FILES
+	* Regenerates the JavaScript label/translation files for every application language.
+	*
+	* Calls backup::write_lang_file() for each language code in DEDALO_APPLICATION_LANGS;
+	* these static JS bundles let the client-side UI show localised labels without an
+	* API round-trip. They must be rebuilt whenever ontology labels change (typically
+	* after update_ontology, which also performs this as its final step).
+	*
+	* @param object $options - Unused; present for API contract uniformity.
+	* @return object - { result: bool, msg: string, errors: array<string>, updated?: array }
+	*/
+	public static function rebuild_lang_files(object $options): object {
+
+		// response
+		$response = new stdClass();
+		$response->result = false;
+		$response->msg = 'Error. Request failed [' . __METHOD__ . ']';
+		$response->errors = [];
+
+		// write_lang_file
+		$ar_langs = DEDALO_APPLICATION_LANGS;
+		foreach ($ar_langs as $lang => $label) {
+			$result = backup::write_lang_file($lang);
+			if ($result !== true) {
+				$response->errors[] = 'Failed write lang file: ' . $lang;
+			}
+		}
+
+		// response
+		if (count($response->errors) === 0) {
+			$response->result = true;
+			$response->msg = 'OK. Request done successfully';
+			$response->updated = $ar_langs;
+		}
+
+
+		return $response;
+	}//end rebuild_lang_files
 
 
 

@@ -138,12 +138,17 @@ const get_content_data_edit = async function(self) {
 	// config / diagnostics block
 		build_config_block(value, content_data)
 
-	// refresh button
+	// refresh button (footer action: re-reads server state)
+		const footer = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'diffusion_server_control_footer',
+			parent			: content_data
+		})
 		const button_refresh = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'light button_refresh',
 			inner_html		: get_label.refresh || 'Refresh',
-			parent			: content_data
+			parent			: footer
 		})
 		button_refresh.addEventListener('click', async (e) => {
 			e.stopPropagation()
@@ -173,35 +178,42 @@ const get_content_data_edit = async function(self) {
 * The `row_value` string is assigned via `.textContent` — server-sourced strings are
 * never parsed as HTML (SEC-XSS guard).
 *
-* An optional `class_name` token is appended to the value span's class list; callers
-* use this to apply semantic colour classes such as `state_stopped`, `state_degraded`,
-* `state_running`, `check_ok`, `check_fail`, or `warning_text`.
+* An optional `class_name` token is applied to the inner badge (.dd_badge) so the
+* status chip hugs its own text instead of stretching the grid cell. Callers use
+* it for semantic states: `pill_danger`/`pill_warning`/`pill_ok` (the
+* server pill), `state_ok`/`state_warning`/`state_danger`
+* (health chips), or `mono` (machine strings: endpoints, lang codes).
 *
 * @param {HTMLElement} parent     - container to append the row to
 * @param {string}      label      - human-readable field name (trusted, set as innerHTML)
 * @param {string}      row_value  - field value (untrusted; set as textContent)
-* @param {string}      [class_name=''] - additional CSS class for the value span
+* @param {string}      [class_name=''] - state token for the value badge
 * @returns {HTMLElement} the newly created row div
 */
 const add_row = function(parent, label, row_value, class_name='') {
 
 	const row = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'diffusion_server_control_row',
+		class_name		: 'dd_row',
 		parent			: parent
 	})
 	ui.create_dom_element({
 		element_type	: 'span',
-		class_name		: 'diffusion_server_control_label',
+		class_name		: 'dd_k',
 		inner_html		: label,
 		parent			: row
 	})
 	const value_node = ui.create_dom_element({
 		element_type	: 'span',
-		class_name		: ('diffusion_server_control_value ' + class_name).trim(),
+		class_name		: 'dd_v',
 		parent			: row
 	})
-	value_node.textContent = row_value
+	const value_badge = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: ('dd_badge ' + class_name).trim(),
+		parent			: value_node
+	})
+	value_badge.textContent = row_value
 
 	return row
 }//end add_row
@@ -217,9 +229,9 @@ const add_row = function(parent, label, row_value, class_name='') {
 *   { reachable: boolean, checks: { server, php_api, sql }|null, msg: string }
 *
 * Three display states:
-*   - "Stopped / unreachable" (state_stopped)  — server.reachable === false
-*   - "Running (degraded)"   (state_degraded)  — reachable but at least one subsystem check failed
-*   - "Running"              (state_running)   — reachable and all checks passed
+*   - "Stopped / unreachable" (pill_danger)  — server.reachable === false
+*   - "Running (degraded)"   (pill_warning)  — reachable but at least one subsystem check failed
+*   - "Running"              (pill_ok)        — reachable and all checks passed
 *
 * When the engine returns a `checks` object the function iterates the three fixed
 * subsystem keys in display order and adds one row per available check. The fixed
@@ -236,7 +248,7 @@ const build_status_block = function(value, parent) {
 
 	const status_block = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'diffusion_server_control_status',
+		class_name		: 'dd_readout',
 		parent			: parent
 	})
 
@@ -251,9 +263,10 @@ const build_status_block = function(value, parent) {
 		const state_label = !reachable
 			? 'Stopped / unreachable'
 			: (degraded ? 'Running (degraded)' : 'Running')
+		// server-state pill, mapped to the shared kit pill vocabulary
 		const state_class = !reachable
-			? 'state_stopped'
-			: (degraded ? 'state_degraded' : 'state_running')
+			? 'pill_danger'
+			: (degraded ? 'pill_warning' : 'pill_ok')
 		add_row(status_block, 'Server', state_label, state_class)
 		if (server.msg) {
 			add_row(status_block, 'Detail', server.msg)
@@ -277,7 +290,7 @@ const build_status_block = function(value, parent) {
 					status_block,
 					check_labels[key] || key,
 					(check.result===true ? 'OK' : 'FAIL') + (check.msg ? ' — ' + check.msg : ''),
-					check.result===true ? 'check_ok' : 'check_fail'
+					check.result===true ? 'state_ok' : 'state_danger'
 				)
 			}
 		}
@@ -327,7 +340,7 @@ const build_lifecycle_block = function(self, value, parent) {
 		if (!is_admin) {
 			ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'diffusion_server_control_note',
+				class_name		: 'dd_note',
 				inner_html		: 'Only global administrators can start, stop or restart the diffusion server.',
 				parent			: lifecycle_block
 			})
@@ -336,7 +349,7 @@ const build_lifecycle_block = function(self, value, parent) {
 		if (!cmd_ready) {
 			ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'diffusion_server_control_note warning_text',
+				class_name		: 'dd_note state_warning',
 				inner_html		: 'Lifecycle control is disabled: set DEDALO_DIFFUSION_SERVICE_CMD in config.php (e.g. "systemctl --user %action% dedalo-diffusion") to enable start/stop/restart. Status monitoring works regardless.',
 				parent			: lifecycle_block
 			})
@@ -411,7 +424,7 @@ const build_processes_block = function(self, value, parent) {
 
 	ui.create_dom_element({
 		element_type	: 'span',
-		class_name		: 'diffusion_server_control_label',
+		class_name		: 'dd_eyebrow',
 		inner_html		: 'In-flight processes',
 		parent			: processes_block
 	})
@@ -419,7 +432,7 @@ const build_processes_block = function(self, value, parent) {
 	if (processes.length===0) {
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'diffusion_server_control_note',
+			class_name		: 'dd_note',
 			inner_html		: 'No diffusion processes are currently running.',
 			parent			: processes_block
 		})
@@ -492,7 +505,7 @@ const build_processes_block = function(self, value, parent) {
 * each pending deletion to the diffusion targets. The operation can be long-running
 * (widget_request timeout is set to 1 hour in diffusion_server_control.js).
 *
-* The `warning_text` CSS class is applied when pending > 0 to draw operator attention;
+* The `state_warning` chip is applied when pending > 0 to draw operator attention;
 * a count of 0 is a healthy state and receives no additional styling.
 *
 * @param {Object}      self   - the diffusion_server_control widget instance
@@ -519,7 +532,7 @@ const build_pending_block = function(self, value, parent) {
 		pending_block,
 		'Pending unpublish deletions',
 		count_label,
-		count_known && pending>0 ? 'warning_text' : ''
+		count_known && pending>0 ? 'state_warning' : ''
 	)
 
 	// retry button (admin + pending>0)
@@ -554,11 +567,11 @@ const build_pending_block = function(self, value, parent) {
 * Rows rendered:
 *   - Endpoint in use        — "unix socket: <path>" | "http: <url>" | "none (…)"
 *   - Internal token         — "configured" | "not configured"
-*   - Service command        — "configured" | "not configured" (warning_text when absent)
+*   - Service command        — "configured" | "not configured" (state_warning when absent)
 *   - Publication languages  — comma-separated list from DEDALO_DIFFUSION_LANGS, or "none"
 *   - Resolve levels         — integer from DEDALO_DIFFUSION_RESOLVE_LEVELS, or "unknown"
 *
-* The inner grid reuses the `diffusion_server_control_status` CSS class (two-column
+* The inner grid reuses the shared `dd_readout` CSS class (two-column
 * key/value layout) so it is visually consistent with the status block.
 *
 * @param {Object}      value  - the full widget value snapshot (see module header)
@@ -577,22 +590,24 @@ const build_config_block = function(value, parent) {
 
 	ui.create_dom_element({
 		element_type	: 'span',
-		class_name		: 'diffusion_server_control_label',
+		class_name		: 'dd_eyebrow',
 		inner_html		: 'Configuration',
 		parent			: config_block
 	})
 
 	const grid = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'diffusion_server_control_status',
+		class_name		: 'dd_readout',
 		parent			: config_block
 	})
 
-	add_row(grid, 'Endpoint in use', config.endpoint_in_use || 'unknown')
-	add_row(grid, 'Internal token', config.internal_token_configured===true ? 'configured' : 'not configured')
+	add_row(grid, 'Endpoint in use', config.endpoint_in_use || 'unknown', 'mono')
+	add_row(grid, 'Internal token', config.internal_token_configured===true ? 'configured' : 'not configured',
+		config.internal_token_configured===true ? 'state_ok' : '')
 	add_row(grid, 'Service command', config.service_cmd_configured===true ? 'configured' : 'not configured',
-		config.service_cmd_configured===true ? '' : 'warning_text')
-	add_row(grid, 'Publication languages', Array.isArray(config.langs) ? (config.langs.join(', ') || 'none') : 'none')
+		config.service_cmd_configured===true ? 'state_ok' : 'state_warning')
+	add_row(grid, 'Publication languages', Array.isArray(config.langs) ? (config.langs.join(', ') || 'none') : 'none',
+		Array.isArray(config.langs) && config.langs.length ? 'mono' : '')
 	add_row(grid, 'Resolve levels', config.resolve_levels!==null && config.resolve_levels!==undefined ? String(config.resolve_levels) : 'unknown')
 
 

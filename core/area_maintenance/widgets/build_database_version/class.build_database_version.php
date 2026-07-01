@@ -42,7 +42,9 @@ class build_database_version {
 	 */
 	public const API_ACTIONS = [
 		'build_install_version',
-		'build_matrix_hierarchy_main_sql'
+		'build_matrix_hierarchy_main_sql',
+		'build_recovery_version_file',
+		'restore_dd_ontology_recovery_from_file'
 	];
 
 	/**
@@ -144,6 +146,34 @@ class build_database_version {
 
 		return $response;
 	}//end build_matrix_hierarchy_main_sql
+
+
+
+	/**
+	 * BUILD_RECOVERY_VERSION_FILE
+	 * Thin wrapper that forwards to installer::build_recovery_version_file().
+	 * Exports the live dd_ontology table to the recovery SQL snapshot used as a
+	 * fallback by restore_dd_ontology_recovery_from_file().
+	 * @return object $response - {result: bool, msg: string, errors?: array}
+	 */
+	public static function build_recovery_version_file(): object {
+
+		return installer::build_recovery_version_file();
+	}//end build_recovery_version_file
+
+
+
+	/**
+	 * RESTORE_DD_ONTOLOGY_RECOVERY_FROM_FILE
+	 * Thin wrapper that forwards to installer::restore_dd_ontology_recovery_from_file().
+	 * Restores the dd_ontology table from the recovery SQL snapshot previously built
+	 * by build_recovery_version_file().
+	 * @return object $response - {result: bool, msg: string, errors?: array}
+	 */
+	public static function restore_dd_ontology_recovery_from_file(): object {
+
+		return installer::restore_dd_ontology_recovery_from_file();
+	}//end restore_dd_ontology_recovery_from_file
 
 
 

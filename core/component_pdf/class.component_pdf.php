@@ -1244,6 +1244,14 @@ class component_pdf extends component_media_common implements component_media_in
 		// if the file uploaded is not a valid PDF, don't process as OCR of get his text.
 		// this cases are: «odt», «doc», «pages» files, or other document file.
 			if( !file_exists($source_file) ){
+				// Original (uploaded) file is missing: derived versions can not be rebuilt.
+				// Still reconcile the stored files_info with the real files on disk so the DB
+				// stops referencing missing files (rock-solid sync). save() runs
+				// update_component_data_files_info() internally before storing.
+				$dato = $this->get_dato();
+				if (!empty($dato)) {
+					$this->save();
+				}
 				return true;
 			}
 
