@@ -614,6 +614,13 @@ class diffusion_rdf {
 
 						$current_locator = $data[$i];
 
+						// guard: a relation/portal can yield a non-object (e.g. false) entry in its
+						// dato; skip it (don't pass it to is_publishable, which requires an object).
+						if (!is_object($current_locator)) {
+							$max_items++;
+							continue;
+						}
+
 						// Check target is publicable
 							$current_is_publicable = diffusion_utils::is_publishable($current_locator);
 							if ($current_is_publicable!==true) {
@@ -651,7 +658,13 @@ class diffusion_rdf {
 								$ddo->tipo			= $current_tipo;
 								$ddo->section_tipo	= $section_tipo;
 								$ddo->parent		= $section_tipo;
-								$ddo->fn			= "get_diffusion_data";
+								// NOTE: do NOT set $ddo->fn = "get_diffusion_data" here. get_ddo_value
+								// already resolves via $element->get_diffusion_data($ddo); setting the ddo's
+								// fn to "get_diffusion_data" makes component_relation_common::get_diffusion_data
+								// dispatch $ddo->fn back to itself ($this->get_diffusion_data($ddo)) → infinite
+								// self-recursion → OOM (e.g. the collection portal numisdata159 on a coin).
+								// v6 used $ddo->value_fn = "get_diffusion_value" (a different, non-recursive
+								// dispatch). Leaving fn unset lets get_diffusion_data resolve the data normally.
 
 							$ddo_map[] = $ddo;
 						}
