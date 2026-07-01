@@ -1383,6 +1383,9 @@ class component_relation_children extends component_relation_common {
 				(int)$section_id
 			);
 
+			// Read the per-parent order value via the dataframe pairing contract: the
+			// order is a dataframe (number->{order_tipo} = [{id,value},…]) keyed by the
+			// parent-link id_key; get_value_by_id_key resolves the item by its `id`.
 			$order_value = null;
 			if ($id_key>0) {
 				$order_component = component_common::get_instance(

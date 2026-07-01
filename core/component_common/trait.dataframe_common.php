@@ -787,6 +787,33 @@ trait dataframe_common {
 
 
 	/**
+	 * IS_INLINE_VALUE_COMPONENT
+	 * Returns true when this component stores inline value items (paired by `id`),
+	 * false when it stores locators (e.g. component_dataframe, whose locators carry
+	 * `id_key` pointing at a main item's `id`).
+	 *
+	 * The 5 inline-value methods (get_data_by_id_key, add_value_by_id_key,
+	 * remove_by_id_key, get_value_by_id_key, update_value_by_id_key) operate on
+	 * inline value items and MUST NOT be called on locator-storage components:
+	 * doing so corrupts the locator bag (matching the wrong field, or appending
+	 * non-locator objects). This guard makes the misuse loud rather than silent.
+	 * @return bool - true when safe to use the inline-value methods
+	 */
+	private function is_inline_value_component() : bool {
+		if ($this->model === 'component_dataframe') {
+			debug_log(__METHOD__
+				. ' Inline-value methods must not be called on component_dataframe'
+				. ' (it stores locators, not inline value items).'
+				. ' tipo: ' . to_string($this->tipo ?? null)
+				, logger::ERROR
+			);
+			return false;
+		}
+		return true;
+	}//end is_inline_value_component
+
+
+	/**
 	 * GET_DATA_BY_ID_KEY
 	 * Filters this component's inline data items by the unified dataframe pairing
 	 * key (id_key = the main component item id) and returns the matching subset.
@@ -795,18 +822,26 @@ trait dataframe_common {
 	 * sibling-order component_number): every value is paired with ONE item of its
 	 * main component by id_key — exactly like every other dataframe. There are no
 	 * parent-record context keys (the retired section_tipo_key/section_id_key).
+	 *
+	 * (!) The pairing key on the LOCATOR side is the field `id_key`; on the MAIN
+	 * COMPONENT ITEM side it is the auto-allocated field `id`. These methods
+	 * operate on main component items, so they match on `id`. Frame locators
+	 * (matched by dataframe_entry_matches) read `id_key` — do not confuse them.
 	 * @param int $id_key - the main component item id this value is paired with
 	 * @return array|null - filtered data items, or null when the component has no data or no match
 	 */
 	public function get_data_by_id_key(int $id_key) : ?array {
+		if (!$this->is_inline_value_component()) {
+			return null;
+		}
 		$data = $this->get_data();
 		if (empty($data)) {
 			return null;
 		}
 
 		$filtered = array_values(array_filter($data, function($item) use ($id_key) {
-			return isset($item->id_key)
-				&& (int)$item->id_key === (int)$id_key;
+			return isset($item->id)
+				&& (int)$item->id === (int)$id_key;
 		}));
 
 		return empty($filtered) ? null : $filtered;
@@ -817,16 +852,24 @@ trait dataframe_common {
 	 * ADD_VALUE_BY_ID_KEY
 	 * Appends a new inline data item carrying the unified pairing key id_key
 	 * (the main component item id) to this component's data array.
+	 *
+	 * The new item's `id` is set to $id_key directly (NOT auto-allocated): the
+	 * pairing contract requires the order item's id to equal the parent-link
+	 * locator's id, so auto-allocation would break the pairing. parent::set_data
+	 * preserves an explicitly-set id (it only auto-allocates when id is absent).
 	 * @param mixed $value - the value payload to store
 	 * @param int $id_key - the main component item id this value is paired with
 	 * @return bool - result of set_data()
 	 */
 	public function add_value_by_id_key($value, int $id_key) : bool {
+		if (!$this->is_inline_value_component()) {
+			return false;
+		}
 		$data = $this->get_data() ?? [];
 
 		$new_item = new stdClass();
 			$new_item->value	= $value;
-			$new_item->id_key	= $id_key;
+			$new_item->id		= $id_key;
 
 		$data[] = $new_item;
 
@@ -842,12 +885,15 @@ trait dataframe_common {
 	 * @return bool - result of set_data() on the filtered array
 	 */
 	public function remove_by_id_key(int $id_key) : bool {
+		if (!$this->is_inline_value_component()) {
+			return false;
+		}
 		$data = $this->get_data() ?? [];
 
 		$filtered = array_values(array_filter($data, function($item) use ($id_key) {
 			return !(
-				isset($item->id_key)
-				&& (int)$item->id_key === (int)$id_key
+				isset($item->id)
+				&& (int)$item->id === (int)$id_key
 			);
 		}));
 
@@ -863,6 +909,9 @@ trait dataframe_common {
 	 * @return mixed|null - the stored value, or null when not found
 	 */
 	public function get_value_by_id_key(int $id_key) {
+		if (!$this->is_inline_value_component()) {
+			return null;
+		}
 		$context_data = $this->get_data_by_id_key($id_key);
 		if (empty($context_data)) {
 			return null;
@@ -882,12 +931,15 @@ trait dataframe_common {
 	 * @return bool - result of set_data() or add_value_by_id_key()
 	 */
 	public function update_value_by_id_key($value, int $id_key) : bool {
+		if (!$this->is_inline_value_component()) {
+			return false;
+		}
 		$data = $this->get_data() ?? [];
 		$found = false;
 
 		foreach ($data as $item) {
-			if (isset($item->id_key)
-				&& (int)$item->id_key === (int)$id_key) {
+			if (isset($item->id)
+				&& (int)$item->id === (int)$id_key) {
 					$item->value = $value;
 					$found = true;
 				break;

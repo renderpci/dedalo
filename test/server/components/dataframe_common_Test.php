@@ -38,15 +38,15 @@ final class dataframe_common_test extends BaseTestCase {
 	public function test_get_data_by_id_key() {
 		$component = $this->build_component_instance();
 
-		// Set test data paired by id_key (the main item id)
+		// Set test data paired by id (the main item id; stored as `id`, paired via id_key)
 		$test_data = [
-			(object)['value' => 1, 'id_key' => 10],
-			(object)['value' => 2, 'id_key' => 8],
-			(object)['value' => 1, 'id_key' => 2]
+			(object)['value' => 1, 'id' => 10],
+			(object)['value' => 2, 'id' => 8],
+			(object)['value' => 1, 'id' => 2]
 		];
 		$component->set_data($test_data);
 
-		// Filter by id_key 10
+		// Filter by id_key 10 (resolves to the item whose `id` === 10)
 		$result = $component->get_data_by_id_key(10);
 
 		$this->assertIsArray($result);
@@ -63,7 +63,7 @@ final class dataframe_common_test extends BaseTestCase {
 		$component = $this->build_component_instance();
 
 		$test_data = [
-			(object)['value' => 1, 'id_key' => 10]
+			(object)['value' => 1, 'id' => 10]
 		];
 		$component->set_data($test_data);
 
@@ -88,7 +88,7 @@ final class dataframe_common_test extends BaseTestCase {
 		$data = $component->get_data();
 		$this->assertCount(1, $data);
 		$this->assertEquals(5, $data[0]->value);
-		$this->assertEquals(10, $data[0]->id_key);
+		$this->assertEquals(10, $data[0]->id);
 	}
 
 	/**
@@ -100,9 +100,9 @@ final class dataframe_common_test extends BaseTestCase {
 		$component = $this->build_component_instance();
 
 		$test_data = [
-			(object)['value' => 1, 'id_key' => 10],
-			(object)['value' => 2, 'id_key' => 8],
-			(object)['value' => 1, 'id_key' => 5]
+			(object)['value' => 1, 'id' => 10],
+			(object)['value' => 2, 'id' => 8],
+			(object)['value' => 1, 'id' => 5]
 		];
 		$component->set_data($test_data);
 
@@ -112,7 +112,7 @@ final class dataframe_common_test extends BaseTestCase {
 
 		$data = $component->get_data();
 		$this->assertCount(2, $data);
-		$this->assertEquals(8, $data[0]->id_key);
+		$this->assertEquals(8, $data[0]->id);
 	}
 
 	/**
@@ -124,7 +124,7 @@ final class dataframe_common_test extends BaseTestCase {
 		$component = $this->build_component_instance();
 
 		$test_data = [
-			(object)['value' => 8, 'id_key' => 10]
+			(object)['value' => 8, 'id' => 10]
 		];
 		$component->set_data($test_data);
 
@@ -135,14 +135,19 @@ final class dataframe_common_test extends BaseTestCase {
 
 	/**
 	 * TEST_UPDATE_VALUE_BY_ID_KEY
-	 * Test updating the value for a specific id_key
+	 * Test updating the value for a specific id_key.
+	 * Regression: the item must be updated IN PLACE — no duplicate appended, the
+	 * item count stays the same, and the item `id` is preserved. (Pre-fix the
+	 * trait matched on `id_key` instead of `id`, so the existing item was never
+	 * found and add_value_by_id_key appended a duplicate on every update.)
 	 * @return void
 	 */
 	public function test_update_value_by_id_key() {
 		$component = $this->build_component_instance();
 
 		$test_data = [
-			(object)['value' => 1, 'id_key' => 10]
+			(object)['value' => 1, 'id' => 10],
+			(object)['value' => 7, 'id' => 11]
 		];
 		$component->set_data($test_data);
 
@@ -151,7 +156,27 @@ final class dataframe_common_test extends BaseTestCase {
 		$this->assertTrue($result);
 
 		$data = $component->get_data();
-		$this->assertEquals(99, $data[0]->value);
+		// no duplicate: count unchanged
+		$this->assertCount(2, $data);
+		// the targeted item's value changed and its id is preserved
+		$updated = null;
+		foreach ($data as $item) {
+			if ((int)$item->id === 10) {
+				$updated = $item;
+			}
+		}
+		$this->assertNotNull($updated);
+		$this->assertEquals(99, $updated->value);
+		$this->assertEquals(10, $updated->id);
+		// the sibling item is untouched
+		$other = null;
+		foreach ($data as $item) {
+			if ((int)$item->id === 11) {
+				$other = $item;
+			}
+		}
+		$this->assertNotNull($other);
+		$this->assertEquals(7, $other->value);
 	}
 
 	/**
