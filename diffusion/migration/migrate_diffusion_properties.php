@@ -702,26 +702,36 @@ function process_node($node, $level) {
 									$pda_sd  = $props->process_dato_arguments ?? null;
 									$q_sd    = $pda_sd->q ?? [];
 									$off_sd  = (is_array($q_sd) && isset($q_sd[0]->key)) ? (int)$q_sd[0]->key : 0;
+									// q_operator ">" => ALL entries AFTER index `key` (e.g. author_others =
+									// authors[1:], each "surname, name" joined by ", "). No operator => a
+									// SINGLE entry at `key` (e.g. author_main = authors[0]).
+									$op_sd   = (is_array($q_sd) && isset($q_sd[0]->q_operator)) ? $q_sd[0]->q_operator : null;
+									$rest_sd = ($op_sd === '>');
+									$slice_off_sd = $rest_sd ? ($off_sd + 1) : $off_sd;
+									$slice_len_sd = $rest_sd ? null : 1; // null length = all remaining (array_slice)
 									$rel_sd  = $rel_info['tipo'] ?? null;
 									if($rel_sd){
 										$rprops_sd = ontology_node::get_instance($rel_sd)->get_properties();
 										$show_sd   = $rprops_sd->source->request_config[0]->show->ddo_map ?? [];
-										$ddo_sd    = [ (object)['tipo'=>$rel_sd, 'section_tipo'=>'self', 'data_slice'=>(object)['offset'=>$off_sd, 'length'=>1]] ];
+										$ddo_sd    = [ (object)['tipo'=>$rel_sd, 'section_tipo'=>'self', 'data_slice'=>(object)['offset'=>$slice_off_sd, 'length'=>$slice_len_sd]] ];
 										$lids_sd   = [];
 										foreach($show_sd as $sc_sd){
 											$lid_sd = chr(ord('a') + count($lids_sd)); $lids_sd[] = $lid_sd;
 											$ddo_sd[] = (object)['id'=>$lid_sd, 'tipo'=>$sc_sd->tipo, 'parent'=>$rel_sd];
 										}
 										$pat_sd = implode(', ', array_map(fn($l)=>'${'.$l.'}', $lids_sd));
+										$opts_sd = (object)['pattern'=>$pat_sd];
+										// joining the multiple entries (author_others) uses the same ", " divisor
+										if($rest_sd){ $opts_sd->records_separator = ', '; }
 										$new_props = new stdClass();
 										$new_props->process = (object)[
-											'parser' => [ (object)['fn'=>'parser_text::text_format', 'options'=>(object)['pattern'=>$pat_sd]] ],
+											'parser' => [ (object)['fn'=>'parser_text::text_format', 'options'=>$opts_sd] ],
 											'ddo_map' => $ddo_sd,
 											'output_format' => 'string'
 										];
 										if(isset($props->is_publicable) && $props->is_publicable === true){ $new_props->is_publishable = $props->is_publicable; }
 										if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
-										echo "{$indent}  [RULE APPLIED] diffusion_sql::split_data -> relation display (entry $off_sd)\n";
+										echo "{$indent}  [RULE APPLIED] diffusion_sql::split_data -> relation display (".($rest_sd ? "entries >$off_sd" : "entry $off_sd").")\n";
 										break;
 									}
 								}
