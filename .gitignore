@@ -206,3 +206,10 @@ test/server/unit/fixtures/*.php
 test/server/unit/fixtures/*.env
 .dockerignore
 bun.lock
+diffusion/migration/helpers/v6_cov.json
+diffusion/migration/helpers/v6_result.json
+diffusion/migration/helpers/v7_cov.json
+diffusion/migration/helpers/v7_result.json
+.gitignore
+diffusion/migration/helpers/v6_result.json
+diffusion/migration/helpers/v7_result.json
