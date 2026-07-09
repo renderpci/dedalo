@@ -237,5 +237,4 @@ The server CSS for the parent itself is minimal (`core/component_relation_parent
 - **Sortable.** `get_sortable()` returns `true`, so this component may be used as a sort column in list contexts.
 - **Observers / observables.** Not wired by default; observer/observable behaviour, when needed, is configured in the ontology `properties` like any other component (see the index page *Observers and observables* section).
 - **Related components:** [component_relation_children](component_relation_children.md) (the inverse downward view), [component_relation_related](component_relation_related.md), [component_relation_index](component_relation_index.md), [component_portal](component_portal.md) (client alias), [component_select](component_select.md), [component_autocomplete](component_portal.md), [component_dataframe](component_dataframe.md).
-</content>
-</invoke>
+

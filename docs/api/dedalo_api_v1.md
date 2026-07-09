@@ -182,5 +182,4 @@ Example `source` snippet:
 - **[dd_component_3d_api](classes/dd_component_3d_api.md)** — 3D component helpers.
 - **[dd_component_info](classes/dd_component_info.md)** — generic component info helpers.
 - **[dd_manager](classes/dd_manager.md)** — internal request manager/router.
-</content>
-</invoke>
+

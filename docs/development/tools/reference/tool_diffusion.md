@@ -129,5 +129,4 @@ await self.retry_pending_deletions({ count_only: true })  // → { result, count
 - [Tools catalog](index.md) — index of all per-tool reference pages.
 - [`tool_export`](tool_export.md) — the *other* way data leaves Dédalo: a user-shaped flat-table export (CSV/spreadsheet/raw round-trip) rather than publishing to a live target. See also the core guide [Exporting data](../../../core/exporting_data.md).
 - Diffusion subsystem core docs: [Diffusion](../../../core/system/diffusion.md), [`dd_diffusion_api` and the Bun engine](../../../diffusion/dd_diffusion_api_and_bun.md), [Diffusion data flow](../../../diffusion/diffusion_data_flow.md), [Diffusion config properties](../../../diffusion/diffusion_config_properties.md), [Multiple databases](../../../diffusion/diffusion_multiple_databases.md).
-</content>
-</invoke>
+

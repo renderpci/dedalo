@@ -394,5 +394,4 @@ $has_gd        = system::check_gd_lib();          // bool
   — the OPcache tuning / mechanism deep-dive for the serialiser used by
   `dd_cache`.
 - [Glossary](../glossary.md) — nomenclature (tipo, entity, section_tipo, …).
-</content>
-</invoke>
+

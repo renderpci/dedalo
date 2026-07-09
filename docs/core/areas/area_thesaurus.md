@@ -407,5 +407,3 @@ $result = $area->search_thesaurus($sqo);
 - [SQO](../sqo.md) — the query format used by `search_thesaurus()`.
 - [Architecture overview](../architecture_overview.md) — areas → sections →
   components → data.
-</content>
-</invoke>

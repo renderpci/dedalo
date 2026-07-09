@@ -277,5 +277,3 @@ Typical import structure (advanced — the persisted item):
 - **Observers / observables.** This component's client overlay subscribes to events published by related components (e.g. `click_tag_draw`, `key_up_f2`) through the ontology `observe` block, running `load_tag_into_vector_editor` / `get_data_tag`. Wiring is configured in the ontology, not in the component code.
 - **Permissions.** Resolved via `get_component_permissions()` (0 none / 1 read / 2 read+write / 3 admin). Upload and saves require level >= 2; uploads are additionally gated server-side by `assert_section_permission`.
 - **Related components:** [component_av](component_av.md), [component_pdf](component_pdf.md), [component_3d](component_3d.md), [component_svg](component_svg.md), [component_iri](component_iri.md), [component_input_text](component_input_text.md), [component_portal](component_portal.md).
-</content>
-</invoke>

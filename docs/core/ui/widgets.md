@@ -463,5 +463,4 @@ in a `component_info` node's `properties.widgets` with the matching
   `search_session` scopes.
 - [Architecture overview](../architecture_overview.md) — server-build /
   client-render data flow and the `{context, data}` datum.
-</content>
-</invoke>
+

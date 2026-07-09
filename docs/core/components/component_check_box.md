@@ -239,5 +239,4 @@ It also accepts a plain `section_id` number / number sequence when the target se
 - **Default tools.** Tools are read-only context, assembled from the model + ontology; the component class does not hardcode them.
 - **Permissions.** Resolved via `get_component_permissions()` (0 none / 1 read / 2 read+write / 3 admin). Read users (level 1) get read-only labels; selecting/saving requires level >= 2.
 - **Related components:** `component_radio_button`, `component_select` (single-choice variants of the same closed list), [component_portal](component_portal.md), [component_dataframe](component_dataframe.md).
-</content>
-</invoke>
+

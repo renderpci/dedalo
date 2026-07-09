@@ -305,5 +305,4 @@ media_protection::write_htaccess();                              // no-op unless
 - `core/media_protection/class.media_protection.php` — the source.
 - `diffusion/api/v1/lib/media_index.ts` — the Bun owner of rule-B markers.
 - `config/nginx.conf.sample` — the Nginx mirror of the generated `.htaccess`.
-</content>
-</invoke>
+

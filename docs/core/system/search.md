@@ -429,5 +429,4 @@ $resolved = $search->get_sql_query_resolved(); // placeholders interpolated for 
 - [Locator](../locator.md) — the typed pointers `search_related` resolves.
 - [Architecture overview](../architecture_overview.md#a-note-on-search-sqo) —
   where search sits in the request lifecycle.
-</content>
-</invoke>
+

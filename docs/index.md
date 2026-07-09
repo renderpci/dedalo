@@ -131,5 +131,4 @@ Every documentation area, with a one-line description and an entry link. The **[
 | Updates | Updating code, data and ontology safely | [management/updates/index.md](./management/updates/index.md) |
 | Update from v5 | Migration notes for upgrading from Dédalo v5 | [update_v5/update_from_v5.md](./update_v5/update_from_v5.md) |
 | Change log | Release history and notable changes | [change_log.md](./change_log.md) |
-</content>
-</invoke>
+

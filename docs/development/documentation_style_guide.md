@@ -185,5 +185,4 @@ Terms are alphabetical; codes (`dd151`) file under their first letter.
 - [ ] Internal links are relative, end in `.md`, and resolve.
 - [ ] Terminology matches the canonical table above and the Glossary.
 - [ ] Anything unverifiable is flagged, not invented.
-</content>
-</invoke>
+
