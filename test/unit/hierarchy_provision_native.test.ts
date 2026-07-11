@@ -51,6 +51,9 @@ const NAME = `${TLD} native`;
 
 let hierarchyId: number | undefined;
 let provisioned: GenerateVirtualSectionResponse | undefined;
+/** Throwaway grantee (see buildGranteeFixture) — never a real user/profile. */
+let granteeUserId: number | undefined;
+let granteeProfileId: number | undefined;
 
 interface NodeShape {
 	suffix: string; // tipo with the tld prefix stripped ('0' | '1' | '2')
@@ -61,6 +64,41 @@ interface NodeShape {
 	is_translatable: boolean;
 	is_main: boolean;
 	term: Record<string, string> | null;
+}
+
+/**
+ * SCRATCH GRANTEE — provisioning now grants the creating user's PROFILE level 2
+ * over the two new virtual sections (PHP set_section_permissions). The grant is
+ * written to a REAL profile record, so this file must NOT provision as a real
+ * user: user -1 resolves to profile dd234/2, a live production record with
+ * thousands of grants. Instead we create a throwaway profile + a throwaway user
+ * pointing at it (dd1725), provision as that user, assert the grant landed on
+ * the throwaway, and delete both in the purge.
+ */
+async function buildGranteeFixture(): Promise<{ userId: number; profileId: number }> {
+	const profileId = await createSectionRecord('dd234', -1);
+	const userId = await createSectionRecord('dd128', -1);
+	// dd1725 = the user's profile-select locator (security::get_user_profile).
+	await updateMatrixKeyData('matrix_users', 'dd128', userId, 'relation', 'dd1725', [
+		{
+			id: 1,
+			type: 'dd151',
+			section_tipo: 'dd234',
+			section_id: String(profileId),
+			from_component_tipo: 'dd1725',
+		},
+	]);
+	return { userId, profileId };
+}
+
+/** The scratch profile's dd774 grant entries, as stored. */
+async function granteeGrants(): Promise<{ tipo: string; section_tipo: string; value: number }[]> {
+	if (granteeProfileId === undefined) return [];
+	const rows = (await sql.unsafe(
+		"SELECT misc->'dd774' AS grants FROM matrix_profiles WHERE section_tipo = 'dd234' AND section_id = $1",
+		[granteeProfileId],
+	)) as { grants: { tipo: string; section_tipo: string; value: number }[] | null }[];
+	return rows[0]?.grants ?? [];
 }
 
 /** Same hierarchy1 registry fixture the differential seeds (typology 1). */
@@ -164,16 +202,42 @@ async function purgeScratch(): Promise<void> {
 	await sql.unsafe('DELETE FROM matrix_time_machine WHERE section_tipo = $1', [`${TLD}0`]);
 	// The scratch section's counter row (PHP resets it in delete_ontology step 4).
 	await sql.unsafe('DELETE FROM matrix_counter WHERE tipo = $1', [`${TLD}0`]);
+
+	// The throwaway grantee: profile (+ its dd774 grants), user, and the TM rows
+	// the grant's save chokepoint wrote. Real users/profiles are never touched —
+	// only the ids this run created.
+	if (granteeProfileId !== undefined) {
+		await sql.unsafe(
+			"DELETE FROM matrix_profiles WHERE section_tipo = 'dd234' AND section_id = $1",
+			[granteeProfileId],
+		);
+		await sql.unsafe(
+			"DELETE FROM matrix_time_machine WHERE section_tipo = 'dd234' AND section_id = $1",
+			[granteeProfileId],
+		);
+	}
+	if (granteeUserId !== undefined) {
+		await sql.unsafe("DELETE FROM matrix_users WHERE section_tipo = 'dd128' AND section_id = $1", [
+			granteeUserId,
+		]);
+		await sql.unsafe(
+			"DELETE FROM matrix_time_machine WHERE section_tipo = 'dd128' AND section_id = $1",
+			[granteeUserId],
+		);
+	}
 	await clearOntologyDerivedCaches();
 }
 
 beforeAll(async () => {
 	await purgeScratch(); // defensive: a crashed earlier run must not skew the pins
+	const grantee = await buildGranteeFixture();
+	granteeUserId = grantee.userId;
+	granteeProfileId = grantee.profileId;
 	hierarchyId = await buildHierarchyFixture();
 	provisioned = await generateVirtualSection({
 		section_id: hierarchyId,
 		section_tipo: 'hierarchy1',
-		userId: -1,
+		userId: granteeUserId,
 	});
 }, 120000);
 
@@ -182,10 +246,55 @@ afterAll(async () => {
 });
 
 describe('generate_virtual_section — TS-native provisioning of a scratch TLD', () => {
-	test('provisioning succeeds; the only error is the ledgered non-fatal permission grant', () => {
+	test('provisioning succeeds with NO errors (the permission grant is ported)', () => {
 		expect(provisioned?.result).toBe(true);
-		expect(provisioned?.errors.length).toBe(1);
-		expect(provisioned?.errors[0]).toContain('set_section_permissions');
+		expect(provisioned?.errors).toEqual([]);
+	});
+
+	// PHP hierarchy::generate_virtual_section :745-761 → component_security_access
+	// ::set_section_permissions(ar_section_tipo:[<tld>1,<tld>2], permissions:2):
+	// the creating user's PROFILE is granted level 2 over both new virtual
+	// sections AND every element inside them, or the hierarchy they just built is
+	// invisible to them.
+	test('the creating user’s profile is granted level 2 over <tld>1 and <tld>2', async () => {
+		const grants = await granteeGrants();
+		const find = (tipo: string, sectionTipo: string) =>
+			grants.find((entry) => entry.tipo === tipo && entry.section_tipo === sectionTipo);
+
+		expect(find(`${TLD}1`, `${TLD}1`)?.value).toBe(2);
+		expect(find(`${TLD}2`, `${TLD}2`)?.value).toBe(2);
+	});
+
+	test('the grant expands to the sections’ elements, keyed by the virtual section', async () => {
+		const grants = await granteeGrants();
+
+		// Elements are read from the REAL source section (rsc167) but keyed by the
+		// section AS ADDRESSED (zznt1/zznt2) — that pairing is the whole point:
+		// permissions.ts looks grants up as `${section_tipo}_${tipo}`.
+		for (const virtualSection of [`${TLD}1`, `${TLD}2`]) {
+			const elements = grants.filter(
+				(entry) => entry.section_tipo === virtualSection && entry.tipo !== virtualSection,
+			);
+			expect(elements.length).toBeGreaterThan(0);
+			expect(elements.every((entry) => entry.value === 2)).toBe(true);
+			// The elements are the source section's components, never the source
+			// section tipo itself (which would grant rsc167 wholesale).
+			expect(elements.some((entry) => entry.tipo === REAL_SECTION)).toBe(false);
+		}
+	});
+
+	// Every persisted item carries an id (PHP set_data → set_data_item_counter);
+	// the save chokepoint stamps it. A pair is stored exactly once — rerunning a
+	// grant updates in place instead of appending a duplicate.
+	test('grant entries carry an item id and no (tipo, section_tipo) pair repeats', async () => {
+		const grants = await granteeGrants();
+		expect(grants.length).toBeGreaterThan(0);
+		expect(grants.every((entry) => Number.isFinite((entry as { id?: number }).id as number))).toBe(
+			true,
+		);
+
+		const keys = grants.map((entry) => `${entry.section_tipo}_${entry.tipo}`);
+		expect(new Set(keys).size).toBe(keys.length);
 	});
 
 	test('dd_ontology node structure (root + descriptor + model twin, typology-1 groupers)', async () => {

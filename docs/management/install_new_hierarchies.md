@@ -114,14 +114,13 @@ Both, common and private, hierarchies has the same process to be created.
         action, ported at `tools/tool_hierarchy/server/tool_hierarchy.ts`: it
         provisions the `<tld>1`/`<tld>2` virtual sections and their
         `dd_ontology` nodes (via `generateVirtualSection()` in
-        `src/core/resolve/hierarchy_provision.ts`) and seeds the two thesaurus
+        `src/core/ontology/hierarchy_provision.ts`) and seeds the two thesaurus
         portal roots so the tree shows the hierarchy immediately. The write
         gate (section permission ≥ 2) is enforced the same way as any other
-        write. One gap: it does **not** grant permissions on the newly created
-        sections the way PHP's `set_section_permissions()` does — see the
-        "Programmatic grant (dev)" note in
-        [Users, profiles and permissions](users_and_permissions.md), and set
-        the permissions manually in step 12 below.
+        write. It also grants **your own profile** level `2` over the two new
+        sections and everything inside them (PHP's `set_section_permissions()`,
+        ported) — so the hierarchy is usable immediately. Other users still need
+        their permissions set in step 12 below.
 
 12. Check in Thesaurus that this hierarchy is ready and set the permissions to users as you need.
 

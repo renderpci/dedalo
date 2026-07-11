@@ -88,11 +88,15 @@ export type InfoWidgetDescriptor =
 			name: string;
 			path: string;
 			isAsync?: true;
-			/** Registered-but-unported: compute throws WidgetUnportedError (ledgered in rewrite/LEDGER.md). */
+			/**
+			 * Registered-but-unported: compute throws WidgetUnportedError. The `reason`
+			 * is the never-narrow declaration itself and is tripwired for substance
+			 * (info_widget_registry_tripwire) — say WHY the port is missing, right here.
+			 */
 			unported: { reason: string };
 	  };
 
-/** A registered widget whose server compute is not ported yet (rewrite/LEDGER.md row required). */
+/** A registered widget whose server compute is not ported yet (a substantive `unported.reason` is required). */
 export class WidgetUnportedError extends Error {
 	constructor(name: string, reason: string) {
 		super(`component_info widget '${name}' is not ported: ${reason}`);

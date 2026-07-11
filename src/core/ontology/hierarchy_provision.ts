@@ -23,9 +23,11 @@
  *  - hierarchy53/58 items are {id:1, lang:lg-nolan, value:<tld>1|<tld>2}.
  *
  * LEDGER:
- *  - set_section_permissions has no TS write path — the grant is NON-FATAL: an
- *    error string is pushed to response.errors and provisioning continues (PHP
- *    treats a failed grant as non-fatal too).
+ *  - set_section_permissions is PORTED (security/section_permissions.ts): the
+ *    creating user's PROFILE is granted level 2 over <tld>1 / <tld>2 and every
+ *    element inside them, so the new hierarchy is visible to them immediately.
+ *    Still NON-FATAL by PHP contract — a failed grant collects an error and
+ *    provisioning continues rather than rolling back.
  *  - createThesaurusGeneralTerm seeds the portal element (target record + link
  *    locator); it does NOT rename the new term after the hierarchy (PHP
  *    set_term_value) — deferred/ledgered; the seed itself is what the tree needs.
@@ -37,6 +39,8 @@ import { sql } from '../db/postgres.ts';
 import { withTransaction } from '../db/postgres.ts';
 import { applyAddNewElement } from '../relations/save.ts';
 import { createSectionRecord } from '../section/record/create_record.ts';
+import { setSectionPermissions } from '../security/section_permissions.ts';
+import { clearOntologyDerivedCaches } from './cache_invalidation.ts';
 import {
 	DATA_NOLAN,
 	HIERARCHY_ACTIVE,
@@ -217,6 +221,12 @@ export async function generateVirtualSection(
 			});
 		});
 	} catch (error) {
+		// The rolled-back writes are gone from the DB, but the reads they fed
+		// (model/children/real-tipo lookups over the half-built <tld> nodes, now
+		// especially the grant's element walk) have already populated the
+		// ontology-derived caches with rows that no longer exist. Drop them, or
+		// the next request resolves a phantom hierarchy.
+		await clearOntologyDerivedCaches();
 		response.result = false;
 		response.msg = 'Error. Hierarchy provisioning failed and was rolled back';
 		response.errors.push(String(error));
@@ -397,10 +407,25 @@ async function provisionVirtualSections(args: ProvisionArgs): Promise<void> {
 		throw new Error(`insert_dd_ontology_record failed for model: ${nodeSectionTipo}/2`);
 	}
 
-	// --- user permission grant (NON-FATAL — no TS write path; see LEDGER) ---
-	response.errors.push(
-		`set_section_permissions not implemented in TS for [${tld2}1, ${tld2}2] user ${userId} (non-fatal)`,
-	);
+	// --- user permission grant (PHP class.hierarchy.php:745-761) ---
+	// Allow the user who just created the hierarchy to actually SEE it: grant
+	// their profile level 2 over the two new virtual sections and everything in
+	// them. NON-FATAL by PHP contract — a failed grant does not roll the
+	// provisioning back (the sections are valid; an admin can re-grant), so the
+	// error is collected and we continue. A THROW would roll back the whole
+	// transaction, hence the catch.
+	try {
+		const granted = await setSectionPermissions({
+			sectionTipos: [`${tld2}1`, `${tld2}2`],
+			userId,
+			permissions: 2,
+		});
+		if (granted.ok !== true) {
+			response.errors.push(`Error setting permissions for current user: ${granted.error}`);
+		}
+	} catch (error) {
+		response.errors.push(`Error setting permissions for current user: ${String(error)}`);
+	}
 
 	// --- target-section pointers written back on the registry record ---
 	// PHP saves the hierarchy53/58 components ON $section_tipo (class.hierarchy.php

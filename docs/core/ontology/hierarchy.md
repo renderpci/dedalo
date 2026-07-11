@@ -52,15 +52,18 @@ PHP's schema-diffing and export tooling have not been ported:
   sweep in `exportHierarchySyncActiveStatus()`, the tree-boot projection in
   `area/tree.ts`).
 - **Virtual sections** — `generateVirtualSection()`
-  (`src/core/resolve/hierarchy_provision.ts`) generates the descriptor
+  (`src/core/ontology/hierarchy_provision.ts`) generates the descriptor
   (`{tld}1`) and model (`{tld}2`) sections from a master record, wiring their
   `dd_ontology` nodes, parent groupers and the master record's target-section
   pointers, inside ONE transaction (rollback on any validation/write failure —
   a stronger guarantee than PHP's un-transacted sequence). **User-permission
-  grants are NOT written** (PHP's `set_section_permissions()` step is
-  non-fatal in TS too: an error string is pushed to `response.errors` and
-  provisioning continues, matching PHP's own non-fatal treatment of a failed
-  grant).
+  grants ARE written**: the creating user's profile is granted level `2` over
+  the two new sections and every element inside them
+  (`setSectionPermissions()`, `src/core/security/section_permissions.ts` — the
+  port of PHP `component_security_access::set_section_permissions()`), or the
+  hierarchy they just built would be invisible to them. A failed grant stays
+  NON-FATAL, as in PHP: the error is collected in `response.errors` and
+  provisioning is not rolled back.
 - **Configuration lookups** — a thesaurus section's **main language**
   (`getMainLang()`, private to `term_resolver.ts`) and its **section_map**
   element tipos (`getSectionMap()` / `getSectionMapValue()`,
@@ -202,7 +205,7 @@ listed is an honest gap, not an oversight in this doc.
 
 | PHP | TS | module | purpose |
 | --- | --- | --- | --- |
-| `generate_virtual_section($options)` | `generateVirtualSection(options)` | `resolve/hierarchy_provision.ts` | Validates (active/tld/source-section/typology/name, PHP's exact order), then — inside **one transaction** — provisions the descriptor + model virtual sections, their `dd_ontology` nodes, parent groupers, and writes the master record's target-section pointers back. Permission grants are non-fatal-skipped (no TS write path). |
+| `generate_virtual_section($options)` | `generateVirtualSection(options)` | `ontology/hierarchy_provision.ts` | Validates (active/tld/source-section/typology/name, PHP's exact order), then — inside **one transaction** — provisions the descriptor + model virtual sections, their `dd_ontology` nodes, parent groupers, and writes the master record's target-section pointers back. Grants the creating user's profile level `2` over both new sections (`setSectionPermissions()`); a failed grant is non-fatal, as in PHP. |
 | `get_default_section_tipo_term($tld)` / `get_default_section_tipo_model($tld)` | *(inline)* `` `${tld}1` `` / `` `${tld}2` `` | `resolve/hierarchy_provision.ts` | Same string-concat rule, not exposed as named helpers. |
 
 ### Configuration lookups (the hot path)

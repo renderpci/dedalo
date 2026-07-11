@@ -155,7 +155,7 @@ async function getProperties(tipo: string): Promise<Record<string, unknown> | nu
  * tipo itself when there is none (i.e. it is already a real section).
  */
 const realTipoCache = createOntologyCache<string, string>();
-async function getSectionRealTipo(sectionTipo: string): Promise<string> {
+export async function getSectionRealTipo(sectionTipo: string): Promise<string> {
 	const cached = realTipoCache.get(sectionTipo);
 	if (cached !== undefined) return cached;
 	let real = sectionTipo;
@@ -236,19 +236,64 @@ const SECTION_CHILD_MODEL_REQUIRED: readonly string[] = [
 	'component_',
 ];
 
-/** filter_children_by_models: keep children whose resolved model contains any required substring (deduped, order-preserving). */
-async function filterChildrenByModels(children: readonly string[]): Promise<string[]> {
+/**
+ * filter_children_by_models (search_exact=false): keep children whose resolved
+ * model CONTAINS any required substring (deduped, order-preserving). The
+ * required list is a parameter because the two callers pass different ones —
+ * the ACL-tree walk uses SECTION_CHILD_MODEL_REQUIRED, the permission grant
+ * uses GRANT_CHILD_MODEL_REQUIRED (PHP passes ar_model_name_required per call).
+ */
+async function filterChildrenByModels(
+	children: readonly string[],
+	required: readonly string[] = SECTION_CHILD_MODEL_REQUIRED,
+): Promise<string[]> {
 	const result: string[] = [];
 	const seen = new Set<string>();
 	for (const childTipo of children) {
 		if (seen.has(childTipo)) continue;
 		const model = (await getModelByTipo(childTipo)) ?? '';
-		if (SECTION_CHILD_MODEL_REQUIRED.some((required) => model.includes(required))) {
+		if (required.some((requiredModel) => model.includes(requiredModel))) {
 			result.push(childTipo);
 			seen.add(childTipo);
 		}
 	}
 	return result;
+}
+
+/**
+ * The model-name substrings component_security_access::set_section_permissions
+ * grants over (PHP ar_model_name_required at class.component_security_access
+ * .php:869). Deliberately NOT the same list as SECTION_CHILD_MODEL_REQUIRED
+ * above — 'button' here vs 'button_' there, and no 'tab'/'section_tab' — so the
+ * two walks stay independent ports of their own PHP call sites.
+ */
+const GRANT_CHILD_MODEL_REQUIRED: readonly string[] = [
+	'component',
+	'button',
+	'section_group',
+	'relation_list',
+	'time_machine_list',
+];
+
+/**
+ * The element tipos a section grant expands to — PHP
+ * get_ar_children_tipo_by_model_name_in_section(real_section,
+ * GRANT_CHILD_MODEL_REQUIRED, from_cache=true, resolve_virtual=FALSE,
+ * recursive=TRUE, search_exact=false) as called by set_section_permissions.
+ *
+ * count(required) > 1 && recursive ⇒ the source is get_ar_recursive_children
+ * (the DEEP walk through section_group/tab groupers, minus the default
+ * box-elements/area/semantic-node excludes), then the model filter. The caller
+ * resolves the real section first (PHP does), so resolve_virtual is false here
+ * and NO exclude_elements subtraction runs — matching the oracle.
+ */
+export async function getGrantChildrenTipos(realSectionTipo: string): Promise<string[]> {
+	const recursiveChildren = await getArRecursiveChildren(
+		realSectionTipo,
+		RECURSIVE_DEFAULT_EXCLUDE_MODELS,
+		[],
+	);
+	return filterChildrenByModels(recursiveChildren, GRANT_CHILD_MODEL_REQUIRED);
 }
 
 /**

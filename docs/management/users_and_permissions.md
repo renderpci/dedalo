@@ -296,20 +296,22 @@ Goal: a profile that can **read** the *Archaeological objects* section (say
    at all (`0`). The user only sees records inside their assigned projects.
 
 !!! note "Programmatic grant (dev)"
-    In PHP, to grant a profile read+write over a list of sections *and all
-    their children* in code — e.g. when generating hierarchies — use
-    `component_security_access::set_section_permissions()` (default level `2`,
-    accepts `0`), which merges into the existing matrix and resets the
-    permissions table.
+    To grant a profile read+write over a list of sections *and all their
+    children* in code — e.g. when generating hierarchies — call
+    `setSectionPermissions()` (`src/core/security/section_permissions.ts`), the
+    port of PHP's `component_security_access::set_section_permissions()`.
+    Default level `2`, `0` accepted; it merges into the existing matrix (an
+    existing `(tipo, section_tipo)` pair is updated in place, never duplicated)
+    and invalidates the permissions table.
 
-    **TS gap:** this programmatic grant has **no TS write path**. The TS
-    hierarchy provisioner (`generateVirtualSection()` in
-    `src/core/resolve/hierarchy_provision.ts`) logs a non-fatal warning instead
-    of granting permissions on the new `<tld>1`/`<tld>2` sections — a freshly
-    provisioned hierarchy on the TS server needs its permissions granted
-    manually (or via a PHP install sharing the database) until this is ported.
-    See [install new hierarchies](install_new_hierarchies.md) for the
-    surrounding workflow.
+    The grant lands on the user's **profile** record (`dd234`), resolved through
+    their profile-select (`dd1725`) — never on the user record. A user with no
+    profile assigned cannot be granted anything: the call returns `ok:false`
+    with an error rather than throwing, and callers decide whether that is
+    fatal (hierarchy provisioning treats it as non-fatal, like PHP).
+
+    This is what makes a freshly provisioned hierarchy visible to the user who
+    created it — see [install new hierarchies](install_new_hierarchies.md).
 
 ## Related
 

@@ -59,8 +59,10 @@ function storeEntry<K, V>(cache: Map<K, CacheEntry<V>>, key: K, value: V): void 
 /** DEDALO_SUPERUSER — the root user id (fail-closed gates key on this). */
 export const SUPERUSER_ID = -1;
 const USERS_SECTION = 'dd128';
-const PROFILES_SECTION = 'dd234';
-const SECURITY_ACCESS_COMPONENT = 'dd774';
+/** dd234 — the profiles section; a profile record HOLDS the dd774 grant matrix. */
+export const PROFILES_SECTION = 'dd234';
+/** dd774 — the component_security_access datum (misc column) on a profile record. */
+export const SECURITY_ACCESS_COMPONENT = 'dd774';
 const PROFILE_SELECT_COMPONENT = 'dd1725';
 const GLOBAL_ADMIN_COMPONENT = 'dd244';
 const DEVELOPER_COMPONENT = 'dd515';
@@ -144,8 +146,15 @@ export async function resolvePrincipal(userId: number): Promise<Principal> {
 	return principal;
 }
 
-/** user (dd128) → profile-select (dd1725) → profile record id in dd234. */
-async function resolveProfileId(userId: number): Promise<number | null> {
+/**
+ * user (dd128) → profile-select (dd1725) → profile record id in dd234 (PHP
+ * security::get_user_profile). Exported for the grant writer
+ * (security/section_permissions.ts), which must write to the SAME profile
+ * record this resolves — the superuser (-1) included: it has a real dd128 row
+ * carrying a dd1725 profile locator, and PHP has no superuser short-circuit
+ * here, so a grant for -1 lands on that profile like any other user's.
+ */
+export async function resolveProfileId(userId: number): Promise<number | null> {
 	return readUserRelationTargetId(userId, PROFILE_SELECT_COMPONENT);
 }
 
