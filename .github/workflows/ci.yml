@@ -4,7 +4,7 @@
 # directory may target the self-hosted runner. A fork PR runs attacker-controlled
 # code, and the self-hosted Mac holds the real ../private/.env and the live matrix
 # Postgres — a self-hosted PR job there is remote code execution on the data host.
-# The DB/parity/client tier lives in .github/workflows-private/ (inert here; GitHub
+# The DB/parity/client tier lives in .github/workflows-selfhosted/ (inert here; GitHub
 # only executes .github/workflows/) and runs ONLY on the private mirror.
 # Do NOT move a self-hosted job back into this directory.
 #

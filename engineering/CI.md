@@ -17,7 +17,7 @@ ratcheted with a reason).
 **Two repos, by trust level.** GitHub is public and gets the hermetic tier only;
 everything that needs the live Postgres runs on a PRIVATE mirror with the
 self-hosted runner. GitHub executes ONLY `.github/workflows/` — so the
-self-hosted tier is parked, inert but preserved, in `.github/workflows-private/`.
+self-hosted tier is parked, inert but preserved, in `.github/workflows-selfhosted/`.
 
 | Workflow | Trigger | Runner | Runs |
 |---|---|---|---|
@@ -25,9 +25,9 @@ self-hosted tier is parked, inert but preserved, in `.github/workflows-private/`
 | `.github/workflows/main.yml` | push to **master** | hosted ubuntu | `hermetic` |
 | `.gitlab-ci.yml` | MR + default-branch push (GitLab mirror) | GitLab shared runners | hermetic tier only — the SAME scripts/ci/hermetic.sh |
 | *— PRIVATE MIRROR ONLY (inert on the public repo) —* | | | |
-| `.github/workflows-private/selfhosted.yml` | dispatch (restore PR/push triggers on the mirror) | self-hosted mac | `verify` (scripts/verify.ts --base origin/master) + `full` (bun test test/unit test/parity) |
-| `.github/workflows-private/nightly.yml` | cron 01:00 UTC + manual | self-hosted mac | full `bun test` (unit+parity+integration/MariaDB) + client gate (scripts/ci/client_gate.sh) |
-| `.github/workflows-private/deploy.yml` | manual dispatch | self-hosted mac | **PARKED** — loud failure until DEPLOY_HOST/DEPLOY_SSH_KEY secrets exist, then deploy/deploy.sh |
+| `.github/workflows-selfhosted/selfhosted.yml` | dispatch (restore PR/push triggers on the mirror) | self-hosted mac | `verify` (scripts/verify.ts --base origin/master) + `full` (bun test test/unit test/parity) |
+| `.github/workflows-selfhosted/nightly.yml` | cron 01:00 UTC + manual | self-hosted mac | full `bun test` (unit+parity+integration/MariaDB) + client gate (scripts/ci/client_gate.sh) |
+| `.github/workflows-selfhosted/deploy.yml` | manual dispatch | self-hosted mac | **PARKED** — loud failure until DEPLOY_HOST/DEPLOY_SSH_KEY secrets exist, then deploy/deploy.sh |
 
 **Branch:** the workflows used to trigger on `main`, a branch that does not exist
 in this repo — `main.yml` therefore NEVER FIRED, and `ci.yml`'s verify job diffed
@@ -133,7 +133,7 @@ The old precondition ("acceptable ONLY while the repo is private") was prose,
 and prose does not stop a paste. It is now **rule 5 of
 `ci_workflow_tripwire.test.ts`**: no `runs-on:` naming `self-hosted` may exist
 under `.github/workflows/`. The self-hosted jobs live in
-`.github/workflows-private/`, which GitHub never executes.
+`.github/workflows-selfhosted/`, which GitHub never executes.
 
 Consequence: the DB/parity/client tier does not run on GitHub. Options, in order
 of preference — (a) a PRIVATE mirror repo with the runner attached; (b) the
@@ -178,7 +178,7 @@ the GitHub UI — none of it can be done from the CLI without a token.
 Only if/when the full suite must run in CI rather than locally:
 
 1. Create a PRIVATE GitHub repo (or use the `gitdedalo` remote); push `master` to it.
-2. Move `.github/workflows-private/*.yml` into `.github/workflows/` **on that mirror
+2. Move `.github/workflows-selfhosted/*.yml` into `.github/workflows/` **on that mirror
    only**, and restore the real triggers in `selfhosted.yml` (the `pull_request` /
    `push: [master]` lines are commented at the top of its `on:` block).
 3. Register the runner there: Settings → Actions → Runners → new macOS/arm64 runner

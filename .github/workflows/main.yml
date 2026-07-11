@@ -8,7 +8,7 @@
 # PUBLIC-REPO POSTURE: the full DB/parity suite cannot run here — it needs the live
 # matrix Postgres, which only the self-hosted Mac has, and this repo is PUBLIC (see
 # ci.yml's header for why that forbids self-hosted jobs). The full tier lives in
-# .github/workflows-private/ and runs on the private mirror. Here, a red `hermetic`
+# .github/workflows-selfhosted/ and runs on the private mirror. Here, a red `hermetic`
 # is the alarm.
 #
 # Invariants in this file are enforced by test/unit/ci_workflow_tripwire.test.ts.

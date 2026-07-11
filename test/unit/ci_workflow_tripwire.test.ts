@@ -23,7 +23,7 @@
  *      open a PR, and a `runs-on: self-hosted` job would execute that fork's
  *      code on the Mac holding the real ../private/.env and the live matrix
  *      Postgres — RCE on the data host. The self-hosted tier is preserved,
- *      inert, in .github/workflows-private/ (GitHub executes only
+ *      inert, in .github/workflows-selfhosted/ (GitHub executes only
  *      .github/workflows/) for a PRIVATE mirror. This was prose in CI.md and
  *      prose does not stop a paste; now it is a gate.
  *
@@ -33,7 +33,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const repoRoot = join(import.meta.dir, '..', '..');
@@ -55,14 +55,25 @@ const targetsSelfHosted = (src: string) => /^\s*runs-on:.*self-hosted/m.test(src
 const workflowDir = join(repoRoot, '.github', 'workflows');
 const workflowFiles = readdirSync(workflowDir).filter(yaml);
 
-/** INERT on the public repo — the self-hosted tier, kept for the private mirror. */
-const privateDir = join(repoRoot, '.github', 'workflows-private');
-const privateFiles = existsSync(privateDir) ? readdirSync(privateDir).filter(yaml) : [];
+/**
+ * INERT on the public repo — the self-hosted tier, kept for the private mirror.
+ * GitHub executes ONLY .github/workflows/, so these never run here; that
+ * structural fact IS the protection (they hold no secrets — only `${{ secrets.X }}`
+ * names, which are meaningless without the secret).
+ *
+ * NOT existsSync-guarded, deliberately: these files must stay VERSION-CONTROLLED.
+ * If they were gitignored or deleted, a soft guard would make the pin/oracle rules
+ * below pass VACUOUSLY over an empty list — the silent-narrowing trap. readdirSync
+ * throws instead, so removing the tier is a LOUD red, and the mirror (which is a
+ * push of this repo) keeps receiving them.
+ */
+const selfHostedDir = join(repoRoot, '.github', 'workflows-selfhosted');
+const selfHostedFiles = readdirSync(selfHostedDir).filter(yaml);
 
 /** Every workflow YAML, wherever it lives: the pin + oracle rules bind to both tiers. */
 const allWorkflows: Array<{ rel: string; src: string }> = [
 	...workflowFiles.map((f) => ({ rel: join('.github', 'workflows', f), src: '' })),
-	...privateFiles.map((f) => ({ rel: join('.github', 'workflows-private', f), src: '' })),
+	...selfHostedFiles.map((f) => ({ rel: join('.github', 'workflows-selfhosted', f), src: '' })),
 ].map((w) => ({ ...w, src: read(w.rel) }));
 
 /** verify.ts TRIPWIRES entries (the quoted test paths inside the array). */
@@ -109,7 +120,26 @@ describe('CI workflow tripwire', () => {
 		);
 		expect(
 			offenders,
-			'renderpci/dedalo is PUBLIC. A `runs-on: self-hosted` job here executes fork-PR code on the Mac that holds ../private/.env and the live matrix Postgres. Move it to .github/workflows-private/ (inert; for the private mirror). If the repo ever goes private again, retire this rule deliberately — do not just delete it:',
+			'renderpci/dedalo is PUBLIC. A `runs-on: self-hosted` job here executes fork-PR code on the Mac that holds ../private/.env and the live matrix Postgres. Move it to .github/workflows-selfhosted/ (inert; GitHub executes only .github/workflows/). If the repo ever goes private again, retire this rule deliberately — do not just delete it:',
+		).toEqual([]);
+	});
+
+	// The self-hosted tier must stay IN THE REPO. Gitignoring it would (a) never reach
+	// the private mirror, which is a push of this repo, and (b) make the pin/oracle
+	// rules above pass vacuously over an empty list. It carries no secrets — only
+	// `${{ secrets.X }}` names — so there is nothing to hide, and hiding it would only
+	// remove it from review.
+	test('the self-hosted tier is version-controlled and non-empty (never gitignored)', () => {
+		expect(
+			selfHostedFiles.length,
+			'.github/workflows-selfhosted/ has no workflow YAML. It is the parked DB/parity/client tier — if it was deleted or gitignored, restore it: the private mirror receives it by PUSH, and this gate guards its bun pin + ORACLE_REQUIRED wiring.',
+		).toBeGreaterThan(0);
+		const stray = selfHostedFiles.filter(
+			(f) => !targetsSelfHosted(read(join('.github', 'workflows-selfhosted', f))),
+		);
+		expect(
+			stray,
+			'Workflow in .github/workflows-selfhosted/ that targets no self-hosted runner — if it can run hosted, it belongs in .github/workflows/ where it will actually execute:',
 		).toEqual([]);
 	});
 
@@ -120,7 +150,7 @@ describe('CI workflow tripwire', () => {
 		expect(tag).toBe(bunPin);
 	});
 
-	// Binds to BOTH tiers: the self-hosted jobs now live in workflows-private/, and the
+	// Binds to BOTH tiers: the self-hosted jobs now live in workflows-selfhosted/, and the
 	// invariant has to travel with them or it silently stops guarding anything.
 	test('self-hosted workflows running parity/verify set ORACLE_REQUIRED: "1"', () => {
 		for (const { rel, src } of allWorkflows) {
