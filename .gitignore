@@ -15,4 +15,4 @@ client/dedalo/lib/
 # Local-only foundation audits (security analysis etc.) — not version-controlled
 audits/
 .claude_migration_component_alias_preimage.json
-rewrite
+rewrite/
