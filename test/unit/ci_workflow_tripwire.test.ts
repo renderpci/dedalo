@@ -124,6 +124,44 @@ describe('CI workflow tripwire', () => {
 		).toEqual([]);
 	});
 
+	/**
+	 * Rule 6 — hermetic.sh stubs EVERY required-no-default config key.
+	 *
+	 * The bug this exists to prevent (2026-07-11, the first real CI run): hermetic.sh
+	 * stubbed 5 of the 8 required keys. On a developer machine the missing three were
+	 * silently satisfied by ../private/.env, so the script passed locally and died on
+	 * the bare runner with `Missing required config key 'PROJECTS_DEFAULT_LANGS'`. A
+	 * hermetic script that reads a file it swears it does not read is not hermetic —
+	 * and only CI could tell us. Now the stub list cannot drift from the catalog.
+	 */
+	test('scripts/ci/hermetic.sh stubs every required-no-default key in src/config/config.ts', () => {
+		const configSrc = read('src/config/config.ts');
+		const required = new Set(
+			[
+				...configSrc.matchAll(
+					/(?:requireEnv|requireOrInstallSentinel|requireJsonArrayOrInstallSentinel|requireJsonMapOrInstallSentinel)\(\s*'([A-Z0-9_]+)'/g,
+				),
+			].map((m) => m[1] as string),
+		);
+		expect(
+			required.size,
+			'no required config keys parsed — the regex or config.ts moved',
+		).toBeGreaterThan(0);
+
+		const hermetic = read('scripts/ci/hermetic.sh');
+		// Both stub forms: `: "${KEY:=default}"` and the if-block used for JSON values
+		// (a `}` inside a `:=` default terminates the expansion — see hermetic.sh).
+		const stubbed = new Set(
+			[...hermetic.matchAll(/\$\{([A-Z0-9_]+):[=-]/g)].map((m) => m[1] as string),
+		);
+
+		const unstubbed = [...required].filter((key) => !stubbed.has(key)).sort();
+		expect(
+			unstubbed,
+			'Required config keys with no stub in scripts/ci/hermetic.sh. On a bare CI runner there is no ../private/.env, so the config catalog THROWS at module init and the whole hermetic tier dies (with cascading "Cannot access \'config\' before initialization" TDZ noise). Add a harmless stub — it only has to parse:',
+		).toEqual([]);
+	});
+
 	// The self-hosted tier must stay IN THE REPO. Gitignoring it would (a) never reach
 	// the private mirror, which is a push of this repo, and (b) make the pin/oracle
 	// rules above pass vacuously over an empty list. It carries no secrets — only

@@ -39,7 +39,7 @@ jobs:
             echo "See docs/CI.md §Deploy for the activation checklist."           >&2
             exit 1
           fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref }}
       - name: Load deploy key

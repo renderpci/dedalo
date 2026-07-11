@@ -27,7 +27,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Glob } from 'bun';
-import { WIDGET_MODULES } from '../../src/core/area_maintenance/widgets/registry.ts';
+import { ALL_WIDGET_MODULES } from '../../src/core/area_maintenance/widgets/registry.ts';
 import {
 	type WidgetHandler,
 	ownershipMark,
@@ -110,7 +110,7 @@ interface ActionEntry {
 
 function allActions(): ActionEntry[] {
 	const entries: ActionEntry[] = [];
-	for (const module of WIDGET_MODULES) {
+	for (const module of ALL_WIDGET_MODULES) {
 		for (const [action, handler] of Object.entries(module.apiActions ?? {})) {
 			entries.push({ key: `${module.spec.id}.${action}`, handler });
 		}
