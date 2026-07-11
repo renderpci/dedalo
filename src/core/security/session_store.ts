@@ -24,7 +24,8 @@
  */
 
 import { Database } from 'bun:sqlite';
-import { join, resolve } from 'node:path';
+import { mkdirSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { privateDir, readEnv } from '../../config/env.ts';
 
 /** Session cookie name — TS-native, distinct from any PHP cookie. */
@@ -92,6 +93,16 @@ const sessionDbPath = readEnv('DEDALO_SESSION_DB_PATH') ?? LIVE_SESSION_DB_PATH;
 /** The resolved on-disk session store path (honours the override) — read-only
  * accessor for status surfaces (e.g. the check_config maintenance widget). */
 export const SESSION_DB_PATH = sessionDbPath;
+
+// BOOTSTRAP ORDER (install): sqlite's `create: true` creates the FILE, never its
+// parent DIRECTORY — an absent one is SQLITE_CANTOPEN. This module opens the DB
+// at import, which on a fresh tree happens BEFORE the installer has run
+// persistConfig/checkDirectories (the steps that would mkdir privateDir), so
+// merely importing anything that reaches the session store used to abort the
+// install. Create the parent ourselves: 0o700 because this file holds session
+// and throttle state (same mode install/config_persist.ts gives privateDir).
+// Recursive+idempotent, and a no-op mode-wise when the directory already exists.
+mkdirSync(dirname(sessionDbPath), { recursive: true, mode: 0o700 });
 
 const database = new Database(sessionDbPath, { create: true });
 // busy_timeout is PER-CONNECTION state: set it immediately after every open,
