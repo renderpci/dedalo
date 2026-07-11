@@ -40,7 +40,9 @@
 	"files": {
 		"ignore": [
 			"node_modules",
-			// Harness / editor tooling config (not project source).
+			// Agent / editor tooling config (not project source). `.agents/` is the real
+			// home; `.claude` is a symlink alias to it, so ignore both spellings.
+			".agents/**",
 			".claude/**",
 			".vscode/**",
 			// client/ is a byte-identical copy of the PHP-master client — never edited, never linted.

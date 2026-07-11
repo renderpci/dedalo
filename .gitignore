@@ -8,9 +8,12 @@ node_modules/
 .env
 client/dedalo/lib/
 
-# Claude Code machine-local state (skills ARE versioned; these are not)
-.claude/settings.local.json
-.claude/scheduled_tasks.lock
+# Agent tooling. `.agents/` is the real home (skills + workflows ARE versioned);
+# `.claude` is a committed symlink alias to it, so Claude Code keeps working.
+# Machine-local state below is never versioned. Git does not descend into the
+# symlink, so these must name the REAL path — `.claude/...` rules would be dead.
+.agents/settings.local.json
+.agents/scheduled_tasks.lock
 
 # Local-only foundation audits (security analysis etc.) — not version-controlled
 audits/
