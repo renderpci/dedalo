@@ -24,7 +24,7 @@ describe('PHP oracle canary', () => {
 	// ORACLE_MODE=fixtures (DEC-14b): the oracle for this run is the harvested
 	// golden store — assert it is present and say EXACTLY what this run does
 	// and does not verify (read-path parity vs frozen PHP; write-path gates
-	// are skipped). rewrite/ORACLE_HARVEST.md.
+	// are skipped). engineering/ORACLE_HARVEST.md.
 	test.if(oracleMode() === 'fixtures')(
 		'ORACLE_MODE=fixtures — parity runs against the harvested golden store, not live PHP',
 		() => {
@@ -32,7 +32,7 @@ describe('PHP oracle canary', () => {
 			if (stats.interactions === 0) {
 				throw new Error(
 					'ORACLE_MODE=fixtures but test/parity/fixtures/oracle_harvest/ is empty or missing. ' +
-						'Run `bun run scripts/oracle_harvest.ts` against the live oracle first (rewrite/ORACLE_HARVEST.md).',
+						'Run `bun run scripts/oracle_harvest.ts` against the live oracle first (engineering/ORACLE_HARVEST.md).',
 				);
 			}
 			console.warn(

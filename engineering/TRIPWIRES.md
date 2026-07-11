@@ -1,0 +1,41 @@
+# TRIPWIRE INDEX (DEC-12: every documented invariant has one)
+
+**This file is a machine-read contract, not a status note.**
+`test/unit/ci_workflow_tripwire.test.ts` asserts that the `TRIPWIRES` array in
+`scripts/verify.ts` equals the first column of the table below, EXACTLY (the
+12-vs-14 drift found 2026-07-09 stays fixed), and that every listed file exists
+on disk. `scripts/ci/hermetic.sh` runs a SUBSET of the same list — the hosted
+tier may run fewer gates, never unknown ones.
+
+Adding a tripwire means adding a row here AND to `scripts/verify.ts` in the same
+change; either alone is a red gate.
+
+Home-of-record rule (amends S2-45): the tripwire index lives HERE, in
+`engineering/`, because it is mechanically enforced and must travel with the
+code. Coverage STATE — measured baselines, per-subsystem progress, the
+known-open gap list — stays in `rewrite/LEDGER.md`, which links here and never
+duplicates this table.
+
+| Tripwire | Invariant |
+|---|---|
+| test/unit/sql_confinement_tripwire.test.ts | Tiered SQL confinement (T1–T4, DEC-09) |
+| test/unit/config_env_tripwire.test.ts | No `process.env.`/`Bun.env`/`import.meta.env` outside src/config/ (2026-07-07 audit: Bun.env + import.meta.env added) |
+| test/unit/config_census_tripwire.test.ts | The config census agrees three ways (2026-07-11): {env keys READ in src/} == {keys `src/config/migration_map.ts` classifies — non-DROPPED targets ∪ NEW_IN_V7}, and every constant a real v6 install can set is classified (vendored `test/fixtures/v6_config/`), each DROPPED one carrying a reason. Adding an engine key without classifying it, or targeting a key nothing reads, fails here |
+| test/unit/module_state_tripwire.test.ts | No cross-request module state — `let`/`var`, `new (Weak)?Map/Set`, AND self-mutated `const` object/array literals (2026-07-07 audit: const-object shape added; ALLOWLISTED_MODULE_CONST) |
+| test/unit/diffusion_boundaries.test.ts | diffusion→core direction; MariaDB confined to targets/mariadb/ |
+| test/unit/boundary_seam_tripwire.test.ts | core→diffusion seam grows facade-only (S3-02) |
+| test/unit/coex_tag_tripwire.test.ts | POST-CUTOVER form (2026-07-11): the live COEX inventory stays EMPTY forever — no `COEX` tag in src/ or tools/, because the PHP engine is retired and a cross-engine coexistence hedge is impossible by definition. Reads only src/+tools/ (the closed COEXISTENCE ledger is process history, not a repo contract) |
+| test/unit/descriptor_completeness_tripwire.test.ts | Component descriptors declare required facets (S2-26) |
+| test/unit/import_scc_tripwire.test.ts | No static value-import SCC of size >1 (S2-20; allowlist empty) |
+| test/unit/ws_a_tripwires.test.ts | json_codec at jsonb binds; no inline locator compares |
+| test/unit/client_serving.test.ts | client/ serving contract SINCE THE CUTOVER: SELF-CONSISTENCY — assets serve byte-identical to the TS-owned `client/` tree on disk at the same /dedalo/* paths (no silent serving-layer rewrites); traversal fail-closed; API routing; validators/gzip; main.css owned outright with exactly one WC-018 block |
+| test/unit/mcp_write_scope_tripwire.test.ts | Every record-addressing MCP write tool asserts `principalCanAccessRecord` before any engine runs (AI-01; iterates `TOOL_REGISTRY.filter(t=>t.write)`, exemptions named) |
+| test/unit/agent_egress_tripwire.test.ts | Every READ tool the agent loop can execute is egress-classified — gated by addressed section (record content) or exempt WITH a reason (ontology structure); iterates `TOOL_REGISTRY.filter(t=>!t.write)` ∪ `dedalo_semantic_search`; a new unclassified read tool fails CI, never silently ships record content to an EXTERNAL model provider (src/ai/agent/egress.ts; "Memory projects" privacy) |
+| test/unit/matrix_copy_columns_tripwire.test.ts | `MATRIX_COPY_COLUMNS` (ontology data-IO psql `\copy` export) = `['section_id','section_tipo', ...MATRIX_JSONB_COLUMNS]` — a new jsonb column can't silently drop from `.copy.gz` dumps |
+| test/unit/consultation_only_sections_tripwire.test.ts | `CONSULTATION_ONLY_SECTIONS` (Activity dd542, Time Machine dd15, +future) are read-only for EVERY door: `getSectionPermissions` caps at 1 (even superuser; NOT leaked into `getPermissions`) + every write engine (create/duplicate/delete/save) refuses before any DB. Registry: `src/core/concepts/section.ts`; parity rationale WC-010 |
+| test/unit/root_user_hidden_tripwire.test.ts | The root user record (dd128, section_id -1) is hidden from every search door — `buildSearchSql` ANDs `section_id > 0` when the main section is `config.usersSectionTipo` (rows, full_count, typeahead, `filter_by_locators` pins, `isRecordInScope`; PHP trait.where.php:100-103) + `principalCanAccessRecord` refuses `section_id < 1` BEFORE the admin bypass, all sections (PHP class.security.php:1007) — while the direct-fetch label paths (readMatrixRecord, resolveLocatorLabels, getDatalist, resolve_data chips) still resolve -1 |
+| test/unit/test3_canonical_fixture.test.ts | The canonical test3 fixture (src/core/test_data/) is the single verified source of playground test data: complete vs the test3 ontology subtree (populate or ledger — never silent), manifest-true (REQUIRED_SHAPES, no holes, stale-ledger self-tests), and seed round-trips exactly (restoreCanonicalTest3 → deep-equal; resetTestSection → exactly-canonical table + exact counter, snapshot-protected). Needs the DB (not hermetic) |
+| test/unit/update_ownership_tripwire.test.ts | Standalone-ownership classification is TOTAL over the maintenance-widget EXECUTE surface (UPDATE_PROCESS Phase 0): every `apiActions` entry is marked `gated` (consults `core/update/ownership.ts` — TS install seal AND `DEDALO_ENGINE_OWNS_INSTALL`), marked `denied` (engineDenied), or a named ENGINE_NATIVE exemption with a reason; the gated set is FROZEN (un-gating = red); denied handlers are pure engine_denied refusals; engine/data version literals live ONLY in `src/core/update/version.ts` (quote-anchored scan over src/+tools/). Marker-based over the live registry (support.ts OWNERSHIP_MARK) |
+| test/unit/info_widget_registry_tripwire.test.ts | component_info widget framework (`widgets/registry.ts` is the ONE dispatch home): every descriptor `path` binds to the client module `client/dedalo/core/widgets/<path>/js/<name>.js`; every PORTED widget named in a gate `test()` title; every UNPORTED stub carries a SUBSTANTIVE `unported.reason` in its own descriptor (the never-narrow law is enforced at the stub, not in a doc); no `INFO_WIDGETS`/`ASYNC_WIDGETS`/widget_name-switch outside the registry; DB census — every ontology-declared `widget_name` registered (unknown → `WidgetNotRegisteredError`, never silent []) |
+| test/unit/ci_workflow_tripwire.test.ts | CI wiring invariants (engineering/CI.md): bun pin via `bun-version-file` / `oven/bun:<tag>` = `.bun-version`; self-hosted parity/verify jobs set `ORACLE_REQUIRED: "1"`; GitHub + GitLab hermetic tiers both run `scripts/ci/hermetic.sh`; hermetic tripwires ⊆ verify.ts TRIPWIRES; verify.ts TRIPWIRES = THIS index exactly |
+| test/parity/oracle_canary.test.ts | Oracle absence is LOUD, never a silent green |

@@ -11,8 +11,14 @@
  *     this verification datum).
  *  2. GATE COVERAGE — every PORTED widget's name appears in a `test(` title
  *     of a parity/unit gate (no widget lands without an assertion naming it).
- *  3. LEDGER HONESTY — every UNPORTED stub is ledgered in rewrite/LEDGER.md
- *     by name (never-narrow law: silent [] was the pre-framework defect).
+ *  3. UNPORTED HONESTY — every UNPORTED stub carries a SUBSTANTIVE
+ *     `unported.reason` on its own descriptor (never-narrow law: silent [] was
+ *     the pre-framework defect). Until 2026-07-11 the declaration lived in
+ *     rewrite/LEDGER.md and was checked by substring; that file is internal
+ *     process and left the repo, so the declaration moved to the stub itself —
+ *     a strictly stronger gate (it sits next to the code it excuses, it cannot
+ *     be satisfied by an unrelated mention elsewhere in a long document, and it
+ *     survives any doc reshuffle).
  *  4. SINGLE DISPATCH — the registry map is built ONLY in widgets/registry.ts
  *     and no src/ file resurrects the pre-split shapes (a widget_name switch
  *     or the ASYNC_WIDGETS set).
@@ -89,15 +95,19 @@ describe('info widget registry tripwire', () => {
 		).toEqual([]);
 	});
 
-	test('every UNPORTED stub is ledgered by name in rewrite/LEDGER.md', () => {
-		const ledger = readFileSync(join(REPO_ROOT, 'rewrite/LEDGER.md'), 'utf-8');
-		const unledgered = widgets
-			.filter((widget) => 'unported' in widget)
-			.map((widget) => widget.name)
-			.filter((name) => !ledger.includes(name));
+	test('every UNPORTED stub declares a substantive reason on its own descriptor', () => {
+		// The type already demands `unported: { reason: string }` — but '' satisfies
+		// the compiler. The never-narrow law wants a real explanation of the gap, so
+		// require prose a human actually wrote, in the file that carries the stub.
+		const MIN_REASON = 20;
+		const undeclared: string[] = [];
+		for (const widget of widgets) {
+			if (!('unported' in widget)) continue; // `in` narrows the descriptor union
+			if (widget.unported.reason.trim().length < MIN_REASON) undeclared.push(widget.name);
+		}
 		expect(
-			unledgered,
-			`Unported widget stubs with no rewrite/LEDGER.md row — the never-narrow law requires a ledger line per uncovered path: ${unledgered.join(', ')}`,
+			undeclared,
+			`Unported widget stubs with no substantive \`unported.reason\` (>= ${MIN_REASON} chars) — the never-narrow law requires each uncovered path to say WHY, next to the stub: ${undeclared.join(', ')}`,
 		).toEqual([]);
 	});
 

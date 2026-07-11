@@ -12,7 +12,7 @@ Entry format: id · date · decision reference · shape before (PHP) / after (TS
 reason · gate reconciliation.
 
 **Fixture interaction (DEC-14b):** the PHP wire shape is also frozen in the
-oracle-harvest golden store (`rewrite/ORACLE_HARVEST.md`). A new entry here must
+oracle-harvest golden store (`engineering/ORACLE_HARVEST.md`). A new entry here must
 state whether the affected gates need a re-harvest (they do NOT when the gate
 transforms the PHP/fixture response before diffing — the WC-001 pattern).
 

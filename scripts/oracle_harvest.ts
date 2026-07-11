@@ -1,7 +1,7 @@
 /**
  * ORACLE HARVEST (DEC-14b) — freeze the live PHP oracle's parity responses as
  * versioned golden fixtures, so the differential suite survives PHP's
- * decommissioning. Full story: rewrite/ORACLE_HARVEST.md.
+ * decommissioning. Full story: engineering/ORACLE_HARVEST.md.
  *
  * Usage:
  *   bun run scripts/oracle_harvest.ts               # harvest every read-path gate

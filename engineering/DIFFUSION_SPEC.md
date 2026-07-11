@@ -1,7 +1,7 @@
 # DIFFUSION_SPEC — Rebuild Dédalo Diffusion as a first-class TS/Bun engine
 
 Standing master prompt for the diffusion rebuild (the diffusion counterpart of
-`rewrite/REWRITE_SPEC.md`). Produced 2026-07-05 from three exploration passes (PHP
+`engineering/REWRITE_SPEC.md`). Produced 2026-07-05 from three exploration passes (PHP
 diffusion engine + dd1190 ontology mechanics; the production Bun engine at
 `v7/master_dedalo/diffusion/api/v1/`; the export subsystem + TS tree state) and
 two design passes (engine core; runtime/operations), with the user's decisions
@@ -81,7 +81,7 @@ principle:
 5. **Postgres only via `src/core/db/`; MariaDB only via
    `src/diffusion/targets/mariadb/`.** "Bun owns MariaDB" becomes a **module
    boundary**: `src/core/**` never imports the MariaDB client (enforce with a
-   lint/grep gate). Amend `rewrite/REWRITE_SPEC.md` §4 accordingly.
+   lint/grep gate). Amend `engineering/REWRITE_SPEC.md` §4 accordingly.
 6. **Don't fork shared conventions.** dd1758 (publication ledger, actions
    published/unpublished/unpublish_pending, locator `section_id` serialized as
    *string*), the media-marker store (key `{section_tipo}_{section_id}`,

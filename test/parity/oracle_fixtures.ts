@@ -242,7 +242,7 @@ export function finalizeHarvestGate(
 				'gate reds under ORACLE_MODE=fixtures with NO engine change, the shared data moved after the ' +
 				'harvest: adjudicate (data-side diff only?), then re-harvest this gate with ' +
 				'`bun run scripts/oracle_harvest.ts --gate <name>.test.ts` in the same change that adjudicates the red. ' +
-				'After PHP decommissioning there is no re-harvest: fixtures + the cutover DB snapshot are the pinned pair (rewrite/ORACLE_HARVEST.md).',
+				'After PHP decommissioning there is no re-harvest: fixtures + the cutover DB snapshot are the pinned pair (engineering/ORACLE_HARVEST.md).',
 		},
 		interactions,
 	};
@@ -298,14 +298,14 @@ export function lookupInteraction(
 		throw new Error(
 			`ORACLE_MODE=fixtures: no recorded oracle response for ${kind} request action='${String(
 				rqo.action,
-			)}' (hash ${hash}). Either the gate issues a request that was never harvested (re-run \`bun run scripts/oracle_harvest.ts\` while the PHP oracle is alive), or the request is non-deterministic / side-effecting and the gate belongs in FIXTURE_EXEMPT_GATES (test/parity/oracle_fixtures.ts). See rewrite/ORACLE_HARVEST.md.`,
+			)}' (hash ${hash}). Either the gate issues a request that was never harvested (re-run \`bun run scripts/oracle_harvest.ts\` while the PHP oracle is alive), or the request is non-deterministic / side-effecting and the gate belongs in FIXTURE_EXEMPT_GATES (test/parity/oracle_fixtures.ts). See engineering/ORACLE_HARVEST.md.`,
 		);
 	}
 	return found;
 }
 
 // ---------------------------------------------------------------------------
-// Gate classification (the fixture-exempt list — rewrite/ORACLE_HARVEST.md)
+// Gate classification (the fixture-exempt list — engineering/ORACLE_HARVEST.md)
 // ---------------------------------------------------------------------------
 
 /**
@@ -325,13 +325,13 @@ export function lookupInteraction(
  *   - they gate on hasLivePhpOracle() and SKIP under ORACLE_MODE=fixtures.
  * After PHP decommissioning these gates retire with the oracle — their
  * coverage must be re-expressed as TS-native integration tests (tracked in
- * rewrite/ORACLE_HARVEST.md §cutover).
+ * engineering/ORACLE_HARVEST.md §cutover).
  */
 export const FIXTURE_EXEMPT_GATES: readonly string[] = [
 	// EMPTY since the 2026-07-11 cutover (runbook §3): the 23 live-only gates
 	// retired WITH the PHP oracle — their surviving contracts live in the
 	// TS-native test/unit/*_native.test.ts twins (the DEC-14b punch list in
-	// rewrite/ORACLE_HARVEST.md maps every retired gate to its twin).
+	// engineering/ORACLE_HARVEST.md maps every retired gate to its twin).
 ];
 
 /**

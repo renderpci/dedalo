@@ -1,6 +1,6 @@
 # PROMPT: Rebuild the Dédalo section family in native TypeScript
 
-Standing spec for the section family, companion to `rewrite/REWRITE_SPEC.md` (whose constraints — §2 absolute constraints, §2b code style, §7 security — apply here unchanged) and `engineering/RELATIONS_SPEC.md` (the relation family; sections and relations meet at the subdatum seam and this spec does not re-open relation internals). PHP reference tree: `v7/master_dedalo` (read-only). All `file:line` anchors below point into that tree and have been verified against it.
+Standing spec for the section family, companion to `engineering/REWRITE_SPEC.md` (whose constraints — §2 absolute constraints, §2b code style, §7 security — apply here unchanged) and `engineering/RELATIONS_SPEC.md` (the relation family; sections and relations meet at the subdatum seam and this spec does not re-open relation internals). PHP reference tree: `v7/master_dedalo` (read-only). All `file:line` anchors below point into that tree and have been verified against it.
 
 ---
 

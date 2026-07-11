@@ -1,13 +1,13 @@
 /**
  * Tripwire (DEC-12): the CI wiring's invariants hold — the workflow YAMLs are
  * plain config nobody type-checks, so each rule below is enforced here or it
- * silently rots (rewrite/CI.md).
+ * silently rots (engineering/CI.md).
  *
  *   1. Bun pin — every GitHub workflow using setup-bun pins via
  *      `bun-version-file: .bun-version` (never an inline version), and the
  *      .gitlab-ci.yml `oven/bun:<tag>` image tag equals .bun-version. The pin
  *      is load-bearing: Bun.sql jsonb-inference drift is a data-corruption
- *      class (rewrite/COEXISTENCE.md).
+ *      class.
  *   2. Oracle honesty — every self-hosted workflow that runs test/parity or
  *      scripts/verify.ts sets ORACLE_REQUIRED: "1", so an absent PHP oracle is
  *      a RED canary, never a silent green (the CLAUDE.md "oracle trap").
@@ -16,8 +16,12 @@
  *      hermetic.sh's tripwire list stays a SUBSET of scripts/verify.ts
  *      TRIPWIRES (the hosted tier may run fewer gates, never unknown ones).
  *   4. Tripwire index integrity — scripts/verify.ts TRIPWIRES equals the
- *      rewrite/LEDGER.md "Tripwire index" rows exactly (the 12-vs-14 drift found
+ *      engineering/TRIPWIRES.md rows exactly (the 12-vs-14 drift found
  *      2026-07-09 stays fixed), and every listed test file exists.
+ *
+ * EVERY path this gate reads is version-controlled, so it runs on a bare clone.
+ * The index moved out of rewrite/LEDGER.md on 2026-07-11 for exactly that
+ * reason: rewrite/ is internal process and is not in the repo.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -50,12 +54,12 @@ function hermeticTripwires(): string[] {
 	return [...block.matchAll(/(test\/[^\s)]+\.test\.ts)/g)].map((m) => m[1] as string);
 }
 
-/** rewrite/LEDGER.md "Tripwire index" table rows (first column, test paths). */
+/** engineering/TRIPWIRES.md table rows (first column, test paths). */
 function ledgerTripwires(): string[] {
-	const src = read('rewrite/LEDGER.md');
-	const section = src.match(/## Tripwire index[\s\S]*?(?=\n## |$)/)?.[0];
-	if (!section) throw new Error('rewrite/LEDGER.md: "Tripwire index" section not found');
-	return [...section.matchAll(/^\| (test\/[^\s|]+\.test\.ts) \|/gm)].map((m) => m[1] as string);
+	const src = read('engineering/TRIPWIRES.md');
+	const rows = [...src.matchAll(/^\| (test\/[^\s|]+\.test\.ts) \|/gm)].map((m) => m[1] as string);
+	if (rows.length === 0) throw new Error('engineering/TRIPWIRES.md: no tripwire rows found');
+	return rows;
 }
 
 describe('CI workflow tripwire', () => {
@@ -115,7 +119,7 @@ describe('CI workflow tripwire', () => {
 		}
 	});
 
-	test('verify.ts TRIPWIRES equals the LEDGER Tripwire index exactly', () => {
+	test('verify.ts TRIPWIRES equals the engineering/TRIPWIRES.md index exactly', () => {
 		expect([...verifyTripwires()].sort()).toEqual([...ledgerTripwires()].sort());
 	});
 

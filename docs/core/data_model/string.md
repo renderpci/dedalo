@@ -155,7 +155,7 @@ extends `component_common` directly but still writes to the `string` column.
     The TS server's own auth mechanism hashes/verifies credentials with
     Argon2id via `Bun.password` (`src/core/security/auth.ts`) — the same
     algorithm — but that is a separate, native TS session system (not
-    PHP-session-compatible; see `rewrite/REWRITE_SPEC.md`), distinct from this
+    PHP-session-compatible; see `engineering/REWRITE_SPEC.md`), distinct from this
     `component_password` **data field**. The `component_password` descriptor
     (`src/core/components/component_password/descriptor.ts`) declares only its
     column/translation routing so far; the `set_data()` hashing hook and the

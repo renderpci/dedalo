@@ -215,7 +215,7 @@ The full enforcement diagram and method list are in
     after a profile's dd774 data or a user's profile assignment changes; the
     companion `clearUserProjectsCache()` does the same for layer-2 project
     grants. Because the TS process is request-scoped via `AsyncLocalStorage`
-    (see `rewrite/REWRITE_SPEC.md`), there is no cross-request identity bleed to
+    (see `engineering/REWRITE_SPEC.md`), there is no cross-request identity bleed to
     worry about — but these two caches are long-lived across requests by
     design and still need explicit invalidation, exactly like PHP's per-user
     disk cache.

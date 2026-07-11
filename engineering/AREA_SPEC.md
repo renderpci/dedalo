@@ -1,6 +1,6 @@
 # PROMPT: Rebuild the Dédalo area family in native TypeScript
 
-Standing spec for the area family, companion to `rewrite/REWRITE_SPEC.md` (whose constraints — §2 absolute constraints, §2b code style, §7 security — apply here unchanged), `engineering/RELATIONS_SPEC.md`, and `engineering/SECTION_SPEC.md` (areas contain sections; this spec does not re-open section internals). PHP reference tree: `v7/master_dedalo` (read-only). All `file:line` anchors below point into that tree and have been verified against it. Live-ontology corpus from `dedalo_mib_v7`.
+Standing spec for the area family, companion to `engineering/REWRITE_SPEC.md` (whose constraints — §2 absolute constraints, §2b code style, §7 security — apply here unchanged), `engineering/RELATIONS_SPEC.md`, and `engineering/SECTION_SPEC.md` (areas contain sections; this spec does not re-open section internals). PHP reference tree: `v7/master_dedalo` (read-only). All `file:line` anchors below point into that tree and have been verified against it. Live-ontology corpus from `dedalo_mib_v7`.
 
 Scope: **area, area_root, area_activity, area_publication, area_resource, area_tool, area_thesaurus, area_admin, area_development, area_ontology** (+ `area_common`, the PHP base they all extend, as the shared TS core). Out of scope, explicitly ledgered — never silently narrowed:
 

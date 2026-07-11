@@ -170,7 +170,7 @@ function hasRawPhpCredentials(): boolean {
 /**
  * True when AN oracle is available for read-path differentials: the live PHP
  * server (base URL AND dev credentials), or — under ORACLE_MODE=fixtures — the
- * harvested golden store (DEC-14b; rewrite/ORACLE_HARVEST.md). Used as the
+ * harvested golden store (DEC-14b; engineering/ORACLE_HARVEST.md). Used as the
  * collection-time condition for describe.if()/test.if() so bun reports
  * explicit SKIPS (S2-40) instead of silently green no-op tests on machines
  * without any oracle.
@@ -187,7 +187,7 @@ export function hasPhpCredentials(): boolean {
  * ORACLE_MODE=fixtures). The condition for the fixture-EXEMPT gates — the
  * ones whose PHP-side round-trips are real mutations (create/save/delete/
  * widget actions) and therefore cannot be served from frozen fixtures. See
- * FIXTURE_EXEMPT_GATES in oracle_fixtures.ts and rewrite/ORACLE_HARVEST.md.
+ * FIXTURE_EXEMPT_GATES in oracle_fixtures.ts and engineering/ORACLE_HARVEST.md.
  */
 export function hasLivePhpOracle(): boolean {
 	return oracleMode() !== 'fixtures' && hasRawPhpCredentials();

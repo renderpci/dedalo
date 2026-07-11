@@ -211,7 +211,7 @@ An excavation yields an object with no clear context. The researcher asks the co
 
 # Part V — For developers
 
-**RAG, the agent loop, and MCP are a greenfield TypeScript/Bun build** — per `rewrite/REWRITE_SPEC.md` §8, these three subsystems were never in PHP production, so there is nothing to port; they are designed fresh on top of the stable typed core (`rewrite/STATUS.md`, "AI (Phase 8)"). Two pieces of pure algorithm math (the RRF fusion formula and the structural/semantic chunking pipeline) were validated against an earlier internal PHP prototype's frozen test vectors for confidence (`test/unit/rag_fusion_php_port.test.ts`, `test/unit/rag_chunker_php_port.test.ts`) — but the surrounding architecture (database choice, API wiring, ACL enforcement, egress policy, the ingestion queue, the agent/MCP layer) is original TS design, not a translation of a PHP class tree.
+**RAG, the agent loop, and MCP are a greenfield TypeScript/Bun build** — per `engineering/REWRITE_SPEC.md` §8, these three subsystems were never in PHP production, so there is nothing to port; they are designed fresh on top of the stable typed core (`rewrite/STATUS.md`, "AI (Phase 8)"). Two pieces of pure algorithm math (the RRF fusion formula and the structural/semantic chunking pipeline) were validated against an earlier internal PHP prototype's frozen test vectors for confidence (`test/unit/rag_fusion_php_port.test.ts`, `test/unit/rag_chunker_php_port.test.ts`) — but the surrounding architecture (database choice, API wiring, ACL enforcement, egress policy, the ingestion queue, the agent/MCP layer) is original TS design, not a translation of a PHP class tree.
 
 The code lives in three trees:
 
@@ -452,4 +452,4 @@ Vectorizing heritage and memory carries responsibilities beyond the technical:
 
 ---
 
-*Subsystem code: `src/ai/rag/`, `src/ai/agent/`, `src/ai/mcp/` (see `rewrite/STATUS.md`, "AI (Phase 8)", and `rewrite/REWRITE_SPEC.md` §8). Conceptual neighbours: [architecture overview](../architecture_overview.md), [SQO](../sqo.md), [exporting data](../exporting_data.md), [ontology](../ontology/index.md).*
+*Subsystem code: `src/ai/rag/`, `src/ai/agent/`, `src/ai/mcp/` (see `rewrite/STATUS.md`, "AI (Phase 8)", and `engineering/REWRITE_SPEC.md` §8). Conceptual neighbours: [architecture overview](../architecture_overview.md), [SQO](../sqo.md), [exporting data](../exporting_data.md), [ontology](../ontology/index.md).*

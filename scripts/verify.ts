@@ -10,8 +10,8 @@
  *                     backbone: SQL confinement, no cross-request state, config
  *                     env, json_codec/locator, SCC, descriptor completeness,
  *                     COEX tags, boundary seam, client byte-identity, oracle
- *                     canary — the authoritative list is rewrite/LEDGER.md
- *                     "Tripwire index"; TRIPWIRES below must match it)
+ *                     canary — the authoritative list is engineering/TRIPWIRES.md;
+ *                     TRIPWIRES below must match it)
  *   4. neighbours   — the unit/parity test files that IMPORT any changed src
  *                     file (targeted; NOT the full suite)
  *
@@ -34,8 +34,9 @@ import { $ } from 'bun';
 $.throws(false); // we inspect exit codes ourselves; a red stage is data, not a crash
 
 // ---------------------------------------------------------------------------
-// The tripwires (rewrite/LEDGER.md "Tripwire index"). Kept explicit — this
-// list IS the invariant backbone; if a tripwire is added, add it here too.
+// The tripwires (engineering/TRIPWIRES.md). Kept explicit — this list IS the
+// invariant backbone; if a tripwire is added, add it here too (ci_workflow_tripwire
+// asserts this array equals that index EXACTLY, so neither can drift alone).
 // ---------------------------------------------------------------------------
 const TRIPWIRES = [
 	'test/unit/sql_confinement_tripwire.test.ts',

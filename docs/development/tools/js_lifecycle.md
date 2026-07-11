@@ -88,7 +88,7 @@ const response = await self.tool_request({
 The helper builds the full rqo (source via `create_source`, `prevent_lock: true`) and posts it through `data_manager`. Permission errors arrive as the standard `permissions_denied` response. For streaming (NDJSON) use `data_manager.request_fetch_stream` directly (see `tool_export`).
 
 !!! note "`prevent_lock` is vestigial in TS"
-    `prevent_lock` released a PHP per-session write-lock so a long tool request didn't block the user's other tabs. The TS engine has no such lock (its request-scoped `AsyncLocalStorage` context replaces the PHP global-static-plus-session-lock model entirely — see `rewrite/REWRITE_SPEC.md`); the field is still accepted by the RQO schema for wire compatibility with the unchanged client but is not read by the TS dispatcher.
+    `prevent_lock` released a PHP per-session write-lock so a long tool request didn't block the user's other tabs. The TS engine has no such lock (its request-scoped `AsyncLocalStorage` context replaces the PHP global-static-plus-session-lock model entirely — see `engineering/REWRITE_SPEC.md`); the field is still accepted by the RQO schema for wire compatibility with the unchanged client but is not read by the TS dispatcher.
 
 ## Modal and window modes
 
