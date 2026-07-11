@@ -1,0 +1,423 @@
+/**
+* section
+*
+* Included from main.less file
+*/
+
+// while dragging the inspector resize handle: suppress selection and force the cursor
+body.inspector_resizing {
+	user-select: none;
+	cursor: col-resize;
+}
+
+.section {
+	display: table;
+	width: 100%;
+	padding: 1rem;
+
+	// shared
+	>.search_container {
+		contain: style;
+		width: 100%;
+		position: relative;
+
+		>.spinner {
+			position: relative;
+			margin: 20px;
+		}
+	}
+
+	&.edit {
+		width: calc(100vw - var(--inspector_width) - 0.25rem);
+		margin-bottom: 10rem;
+
+		&.no_inspector {
+			width: 100%;
+		}
+
+		// inside modal box body
+		.body & {
+			width: 100%;
+			margin-bottom: 0px;
+		}
+
+		@media screen and (max-width: @width_break_point_0) {
+			width: 100%;
+		}
+
+		&.full_width {
+			width: 100%;
+			>.inspector_container {
+				display: none;
+			}
+		}
+
+		>.inspector_container {
+			contain: style;
+			display: flex;
+			flex-direction: column;
+			height: 100%;
+			max-height: calc(100vh - 5rem);
+			width: var(--inspector_width);
+			position: fixed;
+			left: calc(100vw - var(--inspector_width) - 0.75rem);
+			z-index: 2;
+			padding-right: 13px;
+			padding-left: 1px;
+
+			// inspector wrapper takes full height when no assistant is visible
+			> .wrapper_inspector {
+				flex: 1 1 auto;
+				overflow-y: auto;
+				overflow-y: overlay;
+				min-height: 0;
+			}
+
+			// assistant panel (below inspector)
+			> .assistant_container {
+				flex: 1 1 0;
+				min-height: 0;
+				display: none; // hidden by default, toggled via JS
+				flex-direction: column;
+				border-top: 2px solid @color_grey_12;
+				overflow: visible;
+
+				&.show {
+					display: flex;
+				}
+			}
+
+			// when assistant is shown, inspector gets a max proportion
+			&.has_assistant > .wrapper_inspector {
+				flex: 0 1 auto;
+				max-height: 50%;
+			}
+
+			// resize handle. Sits on the panel's left edge, drives --inspector_width
+			>.inspector_resize_handle {
+				position: absolute;
+				left: -3px;
+				top: 0px;
+				width: 6px;
+				height: 100%;
+				cursor: col-resize;
+				z-index: 3;
+				touch-action: none;
+
+				&:hover {
+					background-color: var(--focus_ring);
+					opacity: 0.3;
+				}
+			}
+
+			// rail mode. Whole panel collapses to a thin vertical strip of icons.
+			// Only above the desktop breakpoint; below it the panel is inline full-width.
+			&.inspector_rail {
+			@media screen and (min-width: (@width_break_point_0 + 1)) {
+
+				// hide the resize handle while railed
+				>.inspector_resize_handle {
+					display: none;
+				}
+
+				// rail toggle flips to point the other way (expand)
+				.inspector_rail_toggle {
+					transform: rotate(180deg);
+				}
+
+				// keep the assistant out of the rail
+				>.assistant_container {
+					display: none;
+				}
+
+				.wrapper_inspector.inspector {
+					// center the main header and show only the toggle
+					>.label {
+						justify-content: center;
+						padding-left: 0px;
+						padding-right: 0px;
+						// zero the bottom padding so the toggle sits exactly 1.3rem
+						// (the content_data padding-top) above the first icon
+						padding-bottom: 0px;
+
+						.block_label,
+						.block_icon {
+							display: none;
+						}
+						// chevron is meaningless in the rail
+						&:after {
+							display: none;
+						}
+						// match the icon column size
+						.inspector_rail_toggle {
+							width: 1.3rem;
+							height: 1.3rem;
+						}
+					}
+
+					// chrome that has no icon representation is hidden
+					.paginator_container,
+					.selection_info,
+					.buttons_container.bottom {
+						display: none;
+					}
+
+					// rail content is a uniform vertical icon column: every visible
+					// child (toolbar/tools rows + block cards) sits an equal 1.3rem
+					// apart. padding-top sets the same distance below the toggle.
+					>.inspector_content_data {
+						display: flex;
+						flex-direction: column;
+						align-items: center;
+						gap: 1.3rem;
+						padding-top: 1.3rem;
+
+						// every block collapses to its centered icon header
+						>div {
+							margin: 0px;
+							background-color: transparent;
+						}
+					}
+
+					.element_info_head,
+					.project_head,
+					.relation_list_head,
+					.time_machine_list_head,
+					.component_history_head,
+					.activity_info_head {
+						justify-content: center;
+						align-items: center;
+						// no padding so the card == its centred icon, and a fixed
+						// 1.3rem height so the 1.3rem column gap is the only spacing
+						// between icons (no stray line-height adding a pixel)
+						padding: 0px;
+						height: 1.3rem;
+						line-height: 1;
+
+						.block_label {
+							display: none;
+						}
+						// chevron is meaningless in the rail
+						&:after {
+							display: none;
+						}
+						.block_icon {
+							width: 1.3rem;
+							height: 1.3rem;
+						}
+					}
+
+					// block bodies stay hidden regardless of per-block state
+					.element_info,
+					.project_container,
+					.relation_list_body,
+					.time_machine_list_body,
+					.component_history_body,
+					.activity_info_body {
+						display: none;
+					}
+
+					// stack the top action / tool icons vertically as rail icons,
+					// centred and sized exactly like the block-header icons above
+					// so the whole rail column is uniform. The buttons are <span>
+					// icons now (button block_icon <icon>), so target them as spans.
+					.buttons_container.top,
+					.tools_container.top {
+						flex-direction: column;
+						flex-wrap: nowrap;
+						align-items: center;
+						gap: 1.3rem;
+						padding: 0px;
+
+						>span {
+							flex: 0 0 auto;
+							width: 1.3rem;
+							height: 1.3rem;
+							min-width: 0px;
+							margin: 0px;
+							padding: 0px;
+							justify-content: center;
+
+							// label is hidden in the rail, so the icon's trailing
+							// text-gap would shift it off the centre line — drop it
+							&:before {
+								margin-right: 0px;
+							}
+						}
+					}
+				}
+			}//end @media min-width
+			}//end &.inspector_rail
+
+			@media screen and (max-width: @width_break_point_0) {
+				display: inline;
+				width: 100%;
+				left: 0px;
+				position: initial;
+
+				>.wrapper_inspector {
+					>.label {
+						background-color: @color_grey_13
+					}
+				}
+
+				// rail + resize do not apply on the inline full-width layout
+				>.inspector_resize_handle,
+				.inspector_rail_toggle {
+					display: none;
+				}
+			}
+		}//end .inspector_container
+
+		>.search_container {
+			contain: contain;
+		}
+
+		>.content_data {
+			contain: contain;
+			display: flex;
+			flex-wrap: wrap;
+			width: 100%;
+
+			>*:not(.full_width) {
+				flex: 1;
+			}
+		}
+	}//end &.edit
+
+	&.list {
+		// section buttons container (export, new, print, etc.)
+		>.buttons_container {
+			display: flex;
+			justify-content: space-between;
+
+			button {
+				margin-bottom: 0.25rem;
+				white-space: nowrap;
+			}
+
+			>.search_buttons_container {
+				display: flex;
+			}
+
+			// other_buttons_block
+			>.other_buttons_block {
+				display: flex;
+				flex-wrap: wrap;
+				justify-content: flex-end;
+				width: 100%;
+				padding: 0px;
+			}
+
+			// button show_other_buttons_button
+			>.show_other_buttons_button {
+				height: 2.2rem;
+				transform: rotate(90deg);
+				width: 1rem;
+				padding: 12px;
+
+				&:before {
+					// content: 'Toggle buttons';
+					content: attr(data-label);
+					display: block;
+					transform: rotate(-90deg);
+					margin-top: 9rem;
+					white-space: nowrap;
+					padding-right: 1.1rem;
+				}
+
+				&.up {
+					&:before {
+						display: none;
+					}
+				}
+				&:focus {
+					outline: none;
+				}
+			}
+		}
+
+		>.paginator_container {
+			height: 39px;
+
+			@media screen and (max-width: @width_break_point_0) {
+				height: auto;
+				min-height: 39px;
+			}
+		}
+
+		>.list_body >.content_data {
+			width: 100%;
+
+			@media screen and (max-width: @width_break_point_1) {
+				padding: 0;;
+			}
+
+			.column {
+				&.column_drag {
+					justify-content: center;
+					align-items: center;
+					align-content: center;
+					.button.move{
+						height: 1.5rem;
+						width: 1.5rem;
+					}
+				}
+			}
+		}
+
+	}//end &.list
+
+}//end .section
+
+.open_relations_modal{
+	font-size: 1.1em;
+
+	.label{
+		line-height: 1.2em;
+	}
+
+	.target_sections_content{
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		padding-top: 2rem;
+		grid-row-gap: 0.5rem;
+	}
+
+	.radio_button_content{
+		text-align: center;
+		padding: 2rem;
+
+		.found_records_label{
+			padding-left: 2rem;
+		}
+	}
+	.button_open_container{
+		text-align: center;
+		.success{
+			font-size: 1.2em;
+		}
+	}
+}
+
+@import (once) './view_graph_section';
+@import (once) './view_base_section';
+
+// standalone assistant panel (list mode: no inspector_container, attached to document.body)
+.assistant_container.standalone {
+	position: fixed;
+	top: var(--menu_heigth, 2.6rem);
+	right: 0.75rem;
+	width: var(--inspector_width, 22rem);
+	height: calc(100vh - var(--menu_heigth, 2.6rem));
+	max-height: calc(100vh - var(--menu_heigth, 2.6rem));
+	z-index: 2;
+	border: 1px solid @color_grey_12;
+	border-radius: 6px;
+	box-shadow: -2px 0 8px rgba(0,0,0,0.08);
+	display: none; // hidden by default, toggled via JS
+
+	&.show {
+		display: flex;
+	}
+}

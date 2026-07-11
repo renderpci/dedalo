@@ -1,0 +1,310 @@
+{
+  "id": "3979",
+  "section_id": "24",
+  "section_tipo": "dd1340",
+  "data": {
+    "label": "Tools development",
+    "section_id": 24,
+    "created_date": "2026-06-18 11:43:41",
+    "section_tipo": "dd1340",
+    "diffusion_info": null,
+    "created_by_user_id": -1
+  },
+  "relation": {
+    "dd197": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd197"
+      }
+    ],
+    "dd200": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd200"
+      }
+    ],
+    "dd1330": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "51",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      }
+    ],
+    "dd1332": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1332"
+      }
+    ],
+    "dd1337": [
+      {
+        "id": 1,
+        "type": "dd675",
+        "section_id": "1",
+        "section_tipo": "dd153",
+        "from_component_tipo": "dd1337"
+      }
+    ],
+    "dd1354": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1354"
+      }
+    ]
+  },
+  "string": {
+    "dd612": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "<p>Genera una versió imprimible de la transcripció d'una entrevista. Utilitzat per personalitzar la sortida d'impressió, afegint o eliminant les etiquetes de codi de temps, indexació, persones, etc.</p>"
+      },
+      {
+        "id": 2,
+        "lang": "lg-deu",
+        "value": "<p>Erzeugt eine druckbare Version des Interviewprotokolls. Sie können den Ausdruck durch Hinzufügen oder Entfernen von Tags für Zeitcode, Indexierung, Personen usw. anpassen.</p>"
+      },
+      {
+        "id": 3,
+        "lang": "lg-ell",
+        "value": "<p>Δημιουργεί μια εκτυπώσιμη έκδοση του πρακτικού της συνέντευξης. Σας επιτρέπει να προσαρμόσετε την εκτύπωση προσθέτοντας ή αφαιρώντας ετικέτες για τον κώδικα ώρας, την ευρετηρίαση, τα άτομα κ.λπ.</p>"
+      },
+      {
+        "id": 4,
+        "lang": "lg-eng",
+        "value": "<p>Generates a printable version of the interview transcript. Allows you to customize the printout by adding or removing tags for time code, indexing, people, etc.</p>"
+      },
+      {
+        "id": 5,
+        "lang": "lg-fra",
+        "value": "<p>Générez une version imprimable de la transcription de l'entretien. Utilisé pour personnaliser la sortie d'impression en ajoutant ou en supprimant des balises pour le code temporel, l'indexation, les personnes, etc.</p>"
+      },
+      {
+        "id": 6,
+        "lang": "lg-nep",
+        "value": "<p>अन्तर्वार्ता ट्रान्सक्रिप्टको मुद्रण योग्य संस्करण उत्पन्न गर्दछ। समय कोड, अनुक्रमणिका, व्यक्ति, इत्यादिका लागि ट्यागहरू थपेर वा हटाएर प्रिन्टआउटलाई अनुकूलन गर्न अनुमति दिन्छ।</p>"
+      },
+      {
+        "id": 7,
+        "lang": "lg-spa",
+        "value": "<p>Genera una versión imprimible de la transcripción de una entrevista. Utilizado para personalizar la salida de impresión, añadiendo o eliminando las etiquetas de código de tiempo, indexación, personas, etc.</p>"
+      }
+    ],
+    "dd799": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "Impresió de transcripció"
+      },
+      {
+        "id": 2,
+        "lang": "lg-deu",
+        "value": "Transkription drucken"
+      },
+      {
+        "id": 3,
+        "lang": "lg-ell",
+        "value": "Εκτύπωση μεταγραφής"
+      },
+      {
+        "id": 4,
+        "lang": "lg-eng",
+        "value": "Print transcription"
+      },
+      {
+        "id": 5,
+        "lang": "lg-eus",
+        "value": "Transkripzioa inprimatzea"
+      },
+      {
+        "id": 6,
+        "lang": "lg-nep",
+        "value": "प्रिन्ट ट्रान्सक्रिप्शन"
+      },
+      {
+        "id": 7,
+        "lang": "lg-spa",
+        "value": "Impresión de transcripción"
+      }
+    ],
+    "dd1326": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "tool_tr_print"
+      }
+    ],
+    "dd1327": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "1.0.2"
+      }
+    ],
+    "dd1328": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "6.0.0"
+      }
+    ],
+    "dd1644": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "Dédalo team"
+      }
+    ]
+  },
+  "date": {
+    "dd199": [
+      {
+        "id": 1,
+        "start": {
+          "day": 30,
+          "hour": 17,
+          "time": 65001980137,
+          "year": 2022,
+          "month": 5,
+          "minute": 35,
+          "second": 37
+        }
+      }
+    ],
+    "dd201": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "start": {
+          "day": 18,
+          "hour": 11,
+          "time": 65132163821,
+          "year": 2026,
+          "month": 6,
+          "minute": 43,
+          "second": 41
+        }
+      }
+    ]
+  },
+  "iri": null,
+  "geo": null,
+  "number": null,
+  "media": null,
+  "misc": {
+    "dd1335": [
+      {
+        "id": 1,
+        "value": {
+          "open_as": "window",
+          "windowFeatures": null
+        }
+      }
+    ],
+    "dd1350": [
+      {
+        "id": 1,
+        "value": [
+          "rsc36"
+        ]
+      }
+    ]
+  },
+  "relation_search": null,
+  "meta": {
+    "dd197": [
+      {
+        "count": 1
+      }
+    ],
+    "dd199": [
+      {
+        "count": 1
+      }
+    ],
+    "dd200": [
+      {
+        "count": 1
+      }
+    ],
+    "dd201": [
+      {
+        "count": 1
+      }
+    ],
+    "dd612": [
+      {
+        "count": 7
+      }
+    ],
+    "dd799": [
+      {
+        "count": 7
+      }
+    ],
+    "dd1326": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1327": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1328": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1330": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1332": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1335": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1337": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1350": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1354": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1644": [
+      {
+        "count": 1
+      }
+    ]
+  }
+}

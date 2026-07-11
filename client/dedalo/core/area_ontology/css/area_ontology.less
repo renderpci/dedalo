@@ -1,0 +1,38 @@
+/**
+* area_ontology
+*
+* Only use to set general ontology styles, not dynamic rows
+* Specific CSS for ts_object must be written in ts_object.less
+*
+* Included from main.less file
+*/
+.area_ontology {
+	height: 100%;
+
+	>.buttons_container {
+
+		// button tool_ontology_export in area
+		button.tool_ontology_parser {
+			background-color: @color_green_ontology;
+			border: none;
+		}
+
+	}
+
+	>.content_data {
+
+		>.thesaurus_list_wrapper {
+			background-color: unset;
+
+			>.thesaurus_type_block {
+
+				>.typology_name {
+					background-color: @color_green_ontology;
+					color: @color_white;
+				}
+			}
+		}
+
+	}
+
+}//end .area_ontology

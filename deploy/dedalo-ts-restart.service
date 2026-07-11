@@ -1,0 +1,8 @@
+# Restart helper fired by dedalo-ts-watchdog.service OnFailure (audit S2-38).
+
+[Unit]
+Description=Restart the Dedalo TS server after a failed health probe
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart dedalo-ts.service

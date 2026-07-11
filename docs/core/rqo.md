@@ -1,0 +1,615 @@
+# Request Query Object (RQO)
+
+> PHP oracle: `./core/common/class.request_query_object.php`
+> API entry: `./core/api/v1/json/index.php` → `dd_manager::manage_request()`
+> TS rewrite: shape `src/core/concepts/rqo.ts` (`Rqo` zod schema) · dispatch
+> `src/core/api/dispatch.ts` (`dispatchRqo()` + the explicit `ACTION_REGISTRY`)
+
+## Overview
+
+The Request Query Object (RQO) is the single, normalized message format used by every client→server call to the Dédalo work API. One RQO answers four questions:
+
+| Question | RQO property |
+|----------|--------------|
+| **Who** is calling? | `source` (the element instance: tipo, section_tipo, section_id, mode, lang...) |
+| **What** should be done? | `dd_api` (API class) + `action` (API method) + `source->action` (per-element modifier) |
+| **Over which records?** | `sqo` (Search Query Object: filter, limit, offset, order) |
+| **What should come back / be displayed?** | `show` / `search` / `choose` / `hide` (ddo_map layouts) |
+
+Everything else (`data`, `options`, `prevent_lock`, `pretty_print`, `id`) is payload and transport tuning.
+
+In one sentence:
+
+- **Why** — one wire format for *every* component type and every operation, so the client transport, the security gate, and the dispatcher are written once instead of per-component. This is unchanged by the rewrite — it is the whole reason the vanilla-JS client and the wire contract could be kept as-is while the server underneath was replaced.
+- **What** — a plain JSON object. PHP: `stdClass` server-side, described by `class.request_query_object.php`. TS: validated against the `Rqo` zod schema (`src/core/concepts/rqo.ts`). Either way it carries a caller identity (`source`), an action (`dd_api`+`action`), an optional query (`sqo`) and optional layout maps (`show`/`search`/`choose`/`hide`).
+- **How** — the client builds it from the `request_config` the server injected into the element context, POSTs it to the same `api/v1/json` path. TS: the request is schema-validated (`rqoSchema.safeParse`), then `dispatchRqo()` (`src/core/api/dispatch.ts`) runs it through the `ACTION_REGISTRY` and returns the standard envelope. PHP: the gate sanitizes the untrusted parts and `dd_manager::manage_request()` dispatches it to one `dd_*_api` method.
+
+For the server-side config the client builds this from, see [request_config.md](request_config.md); for copy-paste ontology JSON and end-to-end RQO flows, see the cookbook [request_config_examples.md](request_config_examples.md). The [SQO](sqo.md) carried inside the RQO and the [DDO](dd_object.md) field set are documented separately.
+
+## Why RQO exists
+
+- **Before v6** every component type had its own `trigger` endpoint with its own interface. A `component_autocomplete` spoke a different dialect than `component_autocomplete_hi` or `component_portal`; any shared behavior had to be re-implemented per trigger.
+- **v5 introduced the SQO** — an SQL abstraction that unified *queries* (its `filter` maps to `WHERE`, its `select` to `SELECT`), designed around Dédalo relations and data paths.
+- **v6 unified the API** and first tried to use the SQO as the whole call format. It was quickly insufficient: a call also has to say *who* is calling, *what action* to perform, and *how to lay out* the result — none of which `SQO->select` was designed for.
+
+The RQO wraps the SQO and adds the caller identity, the action dispatch and the layout maps. **SQO = the query; RQO = the request.**
+
+## The contract at a glance
+
+A section list view requesting its first page of records:
+
+```json
+{
+	"id"     : "section_oh1_list",
+	"action" : "read",
+	"dd_api" : "dd_core_api",
+	"prevent_lock" : true,
+	"source" : {
+		"typo"         : "source",
+		"type"         : "section",
+		"action"       : "search",
+		"model"        : "section",
+		"tipo"         : "oh1",
+		"section_tipo" : "oh1",
+		"section_id"   : null,
+		"mode"         : "list",
+		"lang"         : "lg-eng"
+	},
+	"sqo" : {
+		"section_tipo" : ["oh1"],
+		"filter"       : null,
+		"limit"        : 10,
+		"offset"       : 0,
+		"order"        : [{"direction":"ASC","path":[{"component_tipo":"section_id"}]}]
+	}
+}
+```
+
+And the standard response envelope:
+
+```json
+{
+	"result" : { "...action specific..." : "context/data, records, count, etc." },
+	"msg"    : "OK. Request done successfully",
+	"errors" : [],
+	"debug"  : { "real_execution_time": "123 ms" }
+}
+```
+
+- `result` — the action's payload (`false` on failure). Shape depends on the action: `read` returns `{context, data}`, `count` returns a number, etc.
+- `msg` — human-readable outcome string.
+- `errors` — array of issue strings; empty on success. Server exceptions reach the client through this channel.
+- `debug` / `dedalo_last_error` — added under `SHOW_DEBUG` / when server errors were logged.
+
+!!! note "One RQO per HTTP call"
+	In Dédalo 7 the API endpoint decodes **a single RQO object** per request (`core/api/v1/json/index.php` → `dd_manager::manage_request($rqo)`). Batching several operations is done with several `fetch` calls (the client `data_manager` runs them concurrently), not by sending an array of RQOs.
+
+## Request lifecycle
+
+The vanilla-JS client, its RQO builders (`create_source()`, `build_rqo_show()`/`build_rqo_search()`, `data_manager.js`) and the wire message itself are **unchanged** — the client is copied as-is and still POSTs the same JSON to the same conceptual gate sequence. What changed is the SERVER behind the endpoint: PHP's reflection-based `dd_manager::manage_request()` is replaced by an explicit TS action registry (`src/core/api/dispatch.ts`) with no dynamic method lookup — an unregistered `(dd_api, action)` pair simply does not exist, rather than falling back to "any public static method is callable".
+
+```mermaid
+graph TD
+	A["Client element instance<br/>(section, component, service...)"] -- "create_source() + build_rqo_show()/build_rqo_search()" --> B["data_manager.request({body: rqo})<br/>POST JSON + X-Dedalo-Csrf-Token"]
+	B --> C["HTTP layer<br/>decode + build ApiRequestContext"]
+	C -- "sanitizeClientSqo(rqo.sqo)" --> D["dispatchRqo()<br/>(src/core/api/dispatch.ts)"]
+	D -- "ACTION_REGISTRY lookup + auth + CSRF" --> E["ACTION_REGISTRY[dd_api][action](rqo, context)"]
+	E -- SQO --> F["buildSearchSql() / search engine<br/>(src/core/search/)"]
+	F -- SQL --> G[("matrix tables (PostgreSQL, shared with PHP)")]
+	G --> E
+	E -- "response {result, msg, errors}" --> A
+```
+
+Step by step (TS server; the PHP mechanics it replaces are named inline for the coexistence period):
+
+1. **Build** — unchanged: the element instance builds its RQO from its `request_config` (injected in its context by the server; see [request_config.md](request_config.md)), picks the active config object (`api_engine === 'dedalo' && type === 'main'`), deep-clones it, and fills the live state. Helpers: `create_source()`, `common.build_rqo_show()`, `common.build_rqo_search()` in `core/common/js/common.js` (copied as-is).
+2. **Send** — unchanged: `data_manager.request({body: rqo})` POSTs it as JSON with the `X-Dedalo-Csrf-Token` header, retry/timeout handling and optional local-DB caching. On a `csrf_failed` rejection it refreshes the cached token and retries exactly once.
+3. **Gate** (`src/server.ts`) — the whole decoded JSON body is validated in one pass by `rqoSchema.safeParse()` (`src/core/concepts/rqo.ts`) — malformed JSON or a body that fails the schema is rejected with HTTP 400 *before* any dispatch gate runs (there is no PHP-style two-step "decode raw stdClass, THEN sanitize its subtrees"). Because `rqoSchema`'s `show`/`search`/`choose` blocks are typed through `ddoMapSchema` (`src/core/concepts/ddo.ts`), which is a **strict whitelist** (zod's default `.strip()` drops any key not listed — mirrors PHP's `sanitize_client_ddo_map` allowed-fields set), the ddo-whitelist scrub happens as a side effect of schema validation rather than as a separate named function call. `rqo.sqo` is additionally run through `sanitizeClientSqo()` (`src/core/concepts/sqo.ts`) once the handler needs it, stripping server-only SQO fields, forcing `parsed=false`, and clamping `limit` to `CLIENT_MAX_LIMIT` — same guarantee as PHP's `search_query_object::sanitize_client_sqo()`. There is no PHP-style `$_FILES`/`$_REQUEST` XSS scrub step because there is no PHP superglobal request path to scrub — the file-upload endpoint is a separate route (`handleMediaUpload`).
+4. **Dispatch** (`dispatchRqo()`, `src/core/api/dispatch.ts`) — runs its gates in order: (1) `ACTION_REGISTRY[dd_api]?.[action]` lookup — undefined action **or** unregistered `(dd_api, action)` pair is rejected identically (no separate "unknown class" vs "unknown method" distinction, and no PHP-style reflection fallback: a class with no declared allowlist cannot make an undeclared method reachable, ever); (2) auth — session required unless `action` is in `NO_LOGIN_ACTIONS`; (3) CSRF — required for authenticated actions not in `CSRF_EXEMPT_ACTIONS` (constant-time `verifyCsrf`), returning the fresh token so the client's one-shot retry can succeed; (4) the handler runs inside `runWithRequestLangs()`, seeding the request-scoped application/data language from the session (`src/core/resolve/request_lang.ts`) — the TS equivalent of PHP's per-request `DEDALO_*_LANG` constants, but request-scoped by construction (`AsyncLocalStorage`) rather than by manual `common::clear()` discipline. There is no separate maintenance-area permission pre-gate step — `dd_area_maintenance_api` handlers check it themselves.
+5. **Execute** — the registered handler runs the action directly (no `$dd_api::$action($rqo)` reflection call): for data actions it resolves permissions for `source`, then calls the section/relations/search engines directly, resolving `show`/`search`/`choose`/`hide` ddo_maps into context+data via `src/core/resolve/structure_context.ts` and `src/core/section/read.ts`.
+6. **Respond** — the standard envelope goes back as JSON; every response from an authenticated session gets a fresh `csrf_token` appended. An unhandled handler exception is caught at the very top of `dispatchRqo()` and degrades to `{result:false, errors:[...]}` at HTTP 200 — deliberately **not** a raw 500, because the copied vanilla client only reads `api_response.result` and has no PHP-era 500-page handling.
+
+## Properties
+
+All properties live in `request_query_object` (`$direct_keys`): `id`, `api_engine`, `dd_api`, `action`, `source`, `sqo`, `show`, `search`, `choose`, `data`, `prevent_lock`, `options`, `pretty_print`.
+
+**Documented as mandatory:** `dd_api`, `action`, `source` — **documented as optional:** everything else. If only a `source` is sent, the server derives the SQO and layout from the user preset or the ontology `request_config` (see *RQO and request_config* below).
+
+!!! note "What is actually enforced"
+	PHP: the "mandatory" labels are a documentation convention; the class enforces nothing. In practice the HTTP path never constructs a `request_query_object` — `index.php` operates on the raw `stdClass` from `json_decode`. The real, code-level requirements are: the dispatcher rejects a request with no `action`; `dd_api` is *defaulted* to `dd_core_api` when absent; and `read` separately requires a non-empty `source->section_tipo`. `api_engine` is always forced to `'dedalo'` on construction unless overridden. (Note also that the class declares setters only for `dd_api`, `action`, `source`, `sqo`, `show`, `search`, `choose`, `options` — there is no setter for `id`/`api_engine`/`data`/`prevent_lock`/`pretty_print`, so hydrating a full payload *through the constructor* would fatal. This never happens on the HTTP path.)
+
+	TS: `rqoSchema` (`src/core/concepts/rqo.ts`) genuinely enforces its declared shape via `safeParse()` at the HTTP boundary (`src/server.ts`) — a body that fails validation is rejected outright with HTTP 400, `errors` carrying the zod issue list. Only `action` is a required (non-optional) field in the schema; everything else, including `dd_api`, is `.optional()` with the same "defaults to `dd_core_api`" behavior applied inside `dispatchRqo()`. The schema is `.passthrough()`, so there is no PHP-style "class has no setter for this key" failure mode — an unrecognized top-level key is kept, not rejected.
+
+### id : `string` *Optional*
+
+Client-side identifier of the request, echoed for correlation/debugging. Conventionally built from the caller context (e.g. `section_oh1_list`).
+
+### api_engine : `string` *Optional, default `'dedalo'`*
+
+Backend engine for data retrieval: `dedalo` (internal) or an external engine name such as `zenon`. External engines resolve their connection details from the target section's `api_config` properties.
+
+### dd_api : `string` *Mandatory, default `'dd_core_api'`*
+
+The API class that will handle the call. PHP: only whitelisted classes are accepted (`dd_manager::manage_request`'s strict `in_array`). TS: only classes that are top-level KEYS of `ACTION_REGISTRY` (`src/core/api/dispatch.ts`) are reachable — there is no separate whitelist array to keep in sync, the registry object's keys ARE the whitelist.
+
+| Class | Purpose | TS status |
+|-------|---------|-----------|
+| `dd_core_api` | Core data lifecycle: read/save/create/delete/count, element contexts | ✅ ported (see the action table below) |
+| `dd_tools_api` | Tool execution (export, import, time machine, diffusion launchers...) | ✅ `user_tools`, `tool_request` (the latter sub-dispatches into `src/core/tools/dispatch.ts`, its own per-tool explicit registry) |
+| `dd_ts_api` | Thesaurus tree operations (expand, move, indexation...) | ✅ `get_node_data`, `get_children_data`, `add_child`, `update_parent_data`, `save_order` |
+| `dd_utils_api` | Utilities: login context, uploads, locks, environment | ✅ (login/quit/change_lang/locks/uploads/system_info/sqo-test-console; see `dispatch.ts` for the exact action set) |
+| `dd_ontology_api` | Ontology browsing/editing | ⬜ not registered — not reachable via this RQO mechanism yet |
+| `dd_diffusion_api` | Publishing (diffuse, validate, get_ontology_map) — auto-selected for those actions in PHP | 🟡 only `rebuild_media_index` is registered on this dispatch table; `diffuse`/`validate`/`get_ontology_map` are not — publishing is driven through a separate diffusion engine process reached over a unix socket (see the `resolve/diffusion_*.ts` modules), not this RQO action registry |
+| `dd_area_maintenance_api` | Admin maintenance widgets | ✅ `widget_request`, `get_widget_value`, `lock_components_actions` |
+| `dd_agent_api`, `dd_mcp_api` | Agent / MCP integrations | ⬜ not registered under these names — Agent/MCP/RAG are a separate greenfield seam (`rewrite/STATUS.md` Phase 8); RAG specifically IS reachable here as `dd_rag_api` |
+| `dd_component_portal_api`, `dd_component_text_area_api`, `dd_component_av_api`, `dd_component_3d_api`, `dd_component_info` | Component-specific endpoints (pagination, transcription, media...) | 🟡 `dd_component_portal_api` (`delete_locator`), `dd_component_av_api` (posterframe + media streams), `dd_component_3d_api` (posterframe) are ported; `dd_component_text_area_api`/`dd_component_info` are not registered |
+| `dd_rag_api` | Semantic search / RAG retrieval — no PHP equivalent | ✅ TS-native (`src/ai/rag/api.ts`) |
+
+The default when `dd_api` is unset is `dd_core_api` in both engines.
+
+PHP's `API_ACTIONS` mechanism is **opt-in per class** (SEC-024): dispatch first requires the target method be **public AND static** (verified by reflection); *then*, only if the class declares an `API_ACTIONS` constant, the action must additionally be present in it — a class with no `API_ACTIONS` constant falls back to "any public static method is callable". TS has no such fallback at all: `dispatchRqo()`'s single lookup (`ACTION_REGISTRY[dd_api]?.[action]`) IS the whole check — an unregistered action is unreachable unconditionally, for every class, with no opt-in/opt-out distinction to reason about.
+
+### action : `string` *Mandatory*
+
+The API class method to execute. PHP's complete, authoritative `dd_core_api::API_ACTIONS` list (every callable core action) is shown below with its TS `ACTION_REGISTRY['dd_core_api']` status (`src/core/api/dispatch.ts`):
+
+| Action | Purpose | `result` shape | TS status |
+|--------|---------|----------------|-----------|
+| `start` | First-load bootstrap. Resolves the URL element (section / section_tool / area_* / tool_* / component_*) to its structure context plus environment. Handles recovery mode, install-not-ready and not-logged (login context). | `{context: array, data: []}`; always also `response.environment` | ✅ ported (incl. the tool deep-link and menu-shell branches) |
+| `read` | Fetch context+data for a source element. Sub-dispatches on `source->action` (see below). Always calls `log_activity`. | `{context: array, data: array}` | ✅ ported (menu/area/relation-list/TM/resolve_data/get_data branches); `source->action: 'get_value'`/`'related_search'` are NOT dispatched — see [source->action modifiers](#sourceaction-modifiers) below |
+| `read_raw` | Unrendered JSONB straight from the matrix table, by `options->type` (`section` / `component` / `target_section`). Used by `tool_export`. | `result: array` of raw rows; plus `response.table` | ✅ ported |
+| `create` | Insert an empty record into a section's matrix table (counter service). Requires write (≥ 2). | `result: string` new `section_id`, or `false` | ✅ ported |
+| `duplicate` | Deep-copy a record. Two gates: section write (≥ 2) **and** `security::assert_record_in_user_scope()`. | `result: string` new `section_id`, or `false` | ✅ ported (the scope gate runs a real search for non-admins) |
+| `delete` | Remove records via `sections::delete()`. Target = `sqo` (preferred, multi-record) or `source->section_id`. Section model only, write (≥ 2). | forwarded from `sections::delete()` | ✅ ported; `options.delete_with_children`/`delete_diffusion_records` are accepted on the wire but not yet branched on — see [request_config_examples.md #14](request_config_examples.md#14-duplicate-delete-count) |
+| `save` | Persist component changes. Only `source->type:'component'` is implemented. | `result: {context, data}` (refreshed element) or `false` | ✅ ported, same `source->type:'component'`-only scope |
+| `count` | `COUNT(*)` for the SQO. Forces `full_count=true`, merges the session filter, returns `0` on permission denial (no leak). | `result: {total: int}` (or `0`) | ✅ ported (incl. `mode:'related'` inverse-count) |
+| `get_element_context` | Structure context for one element, **no data**. `simple:true` → lightweight context. | `result: object` (context) | ✅ ported (section/component/area/tool models) |
+| `get_section_elements_context` | Component contexts for one/more sections (filter panel, export columns). | `result: array` of component contexts | ✅ ported |
+| `get_indexation_grid` | Thesaurus indexation grid for a component in a record. Read perm asserted. | `result: object` (grid) | ⬜ not registered |
+| `get_environment` | Bootstrap payload (`page_globals`, `plain_vars`, labels). No-arg; also called inside `start`. | `result: {page_globals, plain_vars, get_label}` | ✅ ported |
+| `get_matrix_ontology_locator` | Maps a `source->tipo` to its target `{section_tipo, section_id}` via TLD. | `result: {section_tipo, section_id}` | ⬜ not registered |
+| `get_section_terms` | Batch-resolves authoritative section_map term labels for ≤ 1000 locators (graph node labels). Silent skip on unreadable. | `result: object` keyed `"{section_tipo}_{section_id}" => term` | ⬜ not registered |
+| `test` | No-arg diagnostic stub. | trivial | ⬜ not registered |
+
+Other `dd_*_api` classes declare their own action sets (PHP `API_ACTIONS`; TS the class's own key in `ACTION_REGISTRY`) — e.g. `dd_tools_api` exposes `user_tools` and `tool_request` (both ported); `dd_diffusion_api`'s PHP `diffuse`/`validate`/`get_ontology_map` are not on the TS registry (see the `dd_api` table above).
+
+### source : `object` *Mandatory*
+
+Identity of the calling element — built client-side by `create_source()` (`core/common/js/common.js`):
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `typo` | `string` | Always `'source'` |
+| `type` | `string` | Element type: `component`, `section`, `area`, ... (drives e.g. `save` dispatch) |
+| `action` | `string` | **Modifier of the main action** for this element. E.g. `read` + `source->action: 'get_value'` returns the plain component value instead of context+data |
+| `model` | `string` | Element model (`section`, `component_portal`, ...). Recalculated server-side from `tipo` when omitted |
+| `tipo` | `string` | Ontology tipo of the element |
+| `section_tipo` | `string` | Target section tipo (mandatory in `read`) |
+| `section_id` | `string\|int\|null` | Record id; `null` for lists/new records |
+| `mode` | `string` | `edit` \| `list` \| `search` \| `tm` \| ... |
+| `lang` | `string` | Data language (`lg-eng`, `lg-nolan`, ...) |
+| `view` | `string` | View variant (`default`, `line`, `mosaic`, ...) |
+| `matrix_id`, `data_source` | optional | Time machine: address a specific matrix row / `'tm'` data source |
+| `is_temporal` | `bool` optional | Temporal instances (e.g. `tool_propagate_component_data`) |
+| `caller_dataframe` | `object` optional | Dataframe pairing info (see component_dataframe docs) |
+| `value` | `array` optional | Values to resolve (portal in search mode) |
+
+Component instances can extend the source via `self.source_add`, an object that `create_source()` spreads onto the source so a model can inject extra read-API keys without touching the builder. (The `component_relation_model` `ar_target_section_tipo` case is the documented example, though no shipping caller currently populates `source_add` — the consumer is live, the producer is currently dormant.)
+
+#### `source->action` modifiers
+
+The **top-level `action` selects the API method** (`$dd_api::{$rqo->action}($rqo)`). `source->action` is a **secondary dispatch** consumed *inside* the method. Same top-level `read`, different per-element behavior:
+
+| `source->action` | Inside `read` routes to | Behavior | TS status |
+|------------------|-------------------------|----------|-----------|
+| `get_value` | `get_component_value()` | Plain rendered component value — no context, no data (components only) | ⬜ not dispatched in `src/core/api/dispatch.ts`'s `read` handler |
+| `search` *(default)* | `build_json_rows()` → `search` | `sections` instance + SQO; section list/edit and `service_autocomplete`. Persists the SQO to the session for section edit/list/list_thesaurus | ✅ ported (`readSection()`); session-SQO persistence is NOT ported — see [request_config.md → Session override](request_config.md#session-override) |
+| `related_search` | `build_json_rows()` → `related_search` | Inverse relations (sections pointing **to** the source) | ⬜ not dispatched in the `read` handler by this name (the conceptually-equivalent inverse-reference engine, `search_related.ts`, is wired for `count`'s `mode:'related'` and the relation-list panel, just not under this `source->action` label) |
+| `get_data` | `build_json_rows()` → `get_data` | Data-only for a single component/area; honors `matrix_id` / `data_source:'tm'` (time machine), pagination, `ar_target_section_tipo` | ✅ ported (`readComponentData()`) |
+| `resolve_data` | `build_json_rows()` → `resolve_data` | Injects a `source->value` locator array into a component and resolves it (portals in search mode) | ✅ ported (`resolveSearchData()`) |
+| `get_relation_list` | `build_json_rows()` → `get_relation_list` | Legacy relation_list path | ✅ ported (`buildRelationList()`; edit mode only, matching PHP) |
+
+`save` ignores `source->action` and instead switches on **`source->type`** — true in both engines. Only `type:'component'` is implemented (PHP builds a `component_common` instance, checks `get_component_permissions() ≥ 2`, applies `data->changed_data` and saves; TS: `dispatch.ts`'s `save` handler + `saveComponentData()`, same permission threshold and same `type:'component'`-only scope). Any other type returns `result:false` — there is **no** `section` save case despite older docs implying one. Within a component save, the per-item operation comes from each `changed_data[].action`: `insert`, `update`, `remove`, `set_data`, `sort_data`, `sort_by_column`, `add_new_element` (the inserting actions also recompute the pagination offset so the new item is revealed). In `search` mode the whole value replaces the datum.
+
+### sqo : `object` *Optional*
+
+The Search Query Object — filter (`WHERE`-equivalent), `section_tipo` targets, `limit`, `offset`, `order`, `full_count`. Full definition in [sqo.md](sqo.md) / `class.search_query_object.php`.
+
+Security: the HTTP API is the only untrusted SQO source. `sanitize_client_sqo()` strips server-only fields (`sentence`, `params`, SQL column aliases...), forces `parsed=false` and clamps `limit` before the SQO reaches the search pipeline.
+
+### show : `object` *Optional*
+
+What to display and how — the layout of section lists and portal columns.
+
+- **ddo_map** : `array` — chains of ddo objects (`{tipo, section_tipo, parent, mode, ...}`) linked by `parent` to form resolution paths. The server resolves each chain into context and data. A **portal's columns are sibling ddos** carrying `parent: <portal_tipo>` (+ `column_id`); a portal regenerates its *own* request_config server-side, so a nested `request_config`/`sqo` on a portal ddo is **not** honored — see the chain resolution in [dd_object.md](dd_object.md#how-a-ddo_map-resolves-the-chain). A per-ddo **`limit`** sets that component's *output pagination slice* (a portal loads all references then slices; `limit: 0` = all rows, the read equivalent of "show all").
+- **get_ddo_map** : `object` *Optional* — compute the ddo_map dynamically from the ontology instead of listing it: `{model: 'section_map', columns: [...]}`. Lets different sections share common search/columns (mint, type, etc.).
+- **fields_separator** / **records_separator** : `string` — used when values are flattened to strings (e.g. `" | "`, `"<br>"`).
+- **sqo_config** : `object` — display-specific SQO tuning (`operator`, `limit`, `offset`, `full_count`).
+- **interface** : `object` — UI element switches. <a id="show-interface"></a>This table is the **canonical home** for the `show.interface` controls; other docs link here rather than copying it.
+
+| Key | Default | Controls |
+|-----|---------|----------|
+| `read_only` | `false` | Edit ability of the component |
+| `save_animation` | `true` | Green save feedback line |
+| `value_buttons` | `true` | Per-value buttons (edit, remove...) |
+| `button_add` | `true` | Add-new-record button |
+| `button_delete` | `true` | Delete button on portal rows |
+| `button_delete_link` | `true` | "Unlink" option in the delete modal |
+| `button_delete_link_and_record` | `true` | "Unlink and delete" option in the delete modal |
+| `button_link` | `true` | Link-existing-record button |
+| `button_edit` | `false` | Edit button in portals/sections |
+| `button_edit_options` | — | `{action_mousedown: 'navigate'\|'open_window', action_contextmenu: 'navigate'\|'open_window'}` |
+| `button_list` | `true` | Go-to-target-section button (e.g. component_radio_button) |
+| `tools` | `true` | Component tools entry |
+| `button_external` | `false` | Refresh button for external portal data |
+| `button_fullscreen` | `true` | Fullscreen toggle |
+| `button_save` | `true` | Save button |
+| `button_tree` | `false` | Tree button |
+| `show_autocomplete` | `true` | Record search autocomplete |
+| `show_section_id` | `true` | section_id shown in edit buttons |
+
+### search : `object` *Optional*
+
+Fields available to the search process (used by `service_autocomplete` and the search panel). Same sub-shape as `show` (`ddo_map`, `get_ddo_map`, `sqo_config`, separators). Fallback chain: when `search` is defined it replaces `show` for searching; when `choose` is absent, `search` also drives the result list.
+
+### choose : `object` *Optional*
+
+Fields shown when picking a result in `service_autocomplete`. Same sub-shape. When defined, its `ddo_map` overrides `search`/`show` for the picker list. The server resolves `choose.sqo_config.limit` with the fallback chain *choose → search/show sqo_config → 25*.
+
+### hide : `object` *Optional*
+
+`ddo_map` of elements whose context and data must be **resolved but not rendered** — internal values the caller component needs (e.g. `Location` [actv19](https://dedalo.dev/ontology/actv19)).
+
+### data : `object` *Optional*
+
+Request payload for write actions. For `save`, carries `changed_data` (the modified values); also used as pre-calculated container (datalist, pagination) to avoid recomputation.
+
+### options : `object` *Optional*
+
+Heterogeneous extra parameters for components and tools — e.g. upload descriptors:
+
+```json
+{
+	"options": {
+		"file_data": { "name": "test26_test3_1.jpg", "tmp_dir": "DEDALO_UPLOAD_TMP_DIR", "key_dir": "3d", "tmp_name": "tmp_test26_test3_1.jpg" },
+		"target_dir": "posterframe"
+	}
+}
+```
+
+When files are POSTed without a JSON body (e.g. CKEditor image upload), `index.php` synthesizes an RQO with `action:'upload'`, `dd_api:'dd_utils_api'`, `options:{}`. It then merges `array_merge($_POST, $_GET)` into `options` (each value `safe_xss`-sanitized) and attaches each `$_FILES` entry verbatim (binary, not text). The CSRF fallback for this multipart path reads `options.csrf_token`.
+
+### prevent_lock : `bool` *Optional*
+
+PHP: closes the PHP session (`session_write_close()`) before the work runs, so this request does not serialize behind — or block — other requests of the same session. Use for read-only/long calls (`count` does it by default). Never combine with actions that must write session state.
+
+TS: accepted on the wire but **deliberately INERT** (`src/core/concepts/rqo.ts`) — PHP session-file locking has no Bun equivalent (TS sessions are an in-memory/SQLite store, not file-locked per request), so there is nothing for this flag to prevent. The real client and the MCP write tools still set it; the TS server neither needs nor honors it. Unrelated to the component EDIT locks (`src/core/section/locks.ts`, the soft-lock focus/blur mechanism) despite the similar name.
+
+### pretty_print : `bool` *Optional*
+
+Pretty-printed JSON response (debugging).
+
+## Use cases and examples
+
+### Read one record in edit mode
+
+```json
+{
+	"action" : "read",
+	"dd_api" : "dd_core_api",
+	"source" : { "typo":"source", "type":"section", "action":"search", "model":"section",
+		"tipo":"oh1", "section_tipo":"oh1", "section_id":3, "mode":"edit", "lang":"lg-eng" },
+	"sqo"    : { "section_tipo":["oh1"], "limit":1, "offset":0,
+		"filter_by_locators":[{"section_tipo":"oh1","section_id":3}] }
+}
+```
+
+### Save a component value
+
+```json
+{
+	"action" : "save",
+	"dd_api" : "dd_core_api",
+	"source" : { "typo":"source", "type":"component", "action":null, "model":"component_input_text",
+		"tipo":"oh16", "section_tipo":"oh1", "section_id":"124", "mode":"edit", "lang":"lg-eng" },
+	"data"   : { "changed_data": [ {"action":"update","key":0,"value":"Interview about..."} ] }
+}
+```
+
+`save` dispatches on `source->type` (only `component` is implemented), instantiates the element and applies `data->changed_data`. `oh16` here is a `component_input_text`. The per-value operation is `changed_data[].action` (`update` shown; also `insert`, `remove`, `set_data`, `sort_data`, `sort_by_column`, `add_new_element`).
+
+### Autocomplete search (service_autocomplete)
+
+```json
+{
+	"action" : "read",
+	"dd_api" : "dd_core_api",
+	"source" : { "typo":"source", "type":"component", "action":"search", "model":"component_portal",
+		"tipo":"rsc17", "section_tipo":"oh1", "section_id":3, "mode":"edit", "lang":"lg-eng" },
+	"sqo"    : { "section_tipo":["rsc197"], "filter":{"$or":[{ "q":"smith", "path":[{ "section_tipo":"rsc197","component_tipo":"rsc85" }] }]},
+		"limit":25, "offset":0 },
+	"search" : { "ddo_map":[ {"tipo":"rsc85","section_tipo":"rsc197","parent":"rsc197","mode":"list"} ] },
+	"choose" : { "ddo_map":[ {"tipo":"rsc85","section_tipo":"rsc197","parent":"rsc197","mode":"list"} ], "fields_separator":" | " }
+}
+```
+
+Note the dispatch split: the top-level `action` is `read` (it must be in `dd_core_api::API_ACTIONS`); the *search* behavior comes from `source->action: 'search'`. Built client-side by `build_rqo_search()` from the component's `request_config` (operator default `$or`, choose limit fallback 25).
+
+### Count without blocking the session
+
+```json
+{
+	"action" : "count",
+	"dd_api" : "dd_core_api",
+	"prevent_lock" : true,
+	"source" : { "typo":"source", "type":"section", "model":"section", "tipo":"oh1", "section_tipo":"oh1", "mode":"list" },
+	"sqo"    : { "section_tipo":["oh1"], "filter": null }
+}
+```
+
+### Component value only (source->action modifier)
+
+```json
+{
+	"action" : "read",
+	"dd_api" : "dd_core_api",
+	"source" : { "typo":"source", "type":"component", "action":"get_value", "model":"component_select",
+		"tipo":"oh37", "section_tipo":"oh1", "section_id":3, "mode":"list", "lang":"lg-eng" }
+}
+```
+
+Same top-level `action` (`read`), different per-element behavior: `source->action:'get_value'` short-circuits to the plain value.
+
+### Tool execution
+
+```json
+{
+	"action" : "tool_request",
+	"dd_api" : "dd_tools_api",
+	"prevent_lock" : true,
+	"source" : { "typo":"source", "type":"tool", "action":"get_export_grid", "model":"tool_export",
+		"tipo":"oh1", "section_tipo":"oh1", "mode":"list" },
+	"options": { "section_tipo":"oh1", "data_format":"csv", "breakdown":"default", "ar_ddo_to_export":[ "..." ] }
+}
+```
+
+The generic `tool_request` action routes to `{source->model}::{source->action}(options)` — here `tool_export::get_export_grid()`. Tool methods are additionally gated by each tool's `API_ACTIONS` registration (see tools docs).
+
+### Create a new record
+
+```json
+{
+	"action" : "create",
+	"dd_api" : "dd_core_api",
+	"source" : { "typo":"source", "type":"section", "model":"section", "tipo":"oh1", "section_tipo":"oh1", "mode":"list" }
+}
+```
+
+Inserts an empty row and returns the new id: `{"result":"128", ...}`. Requires section write (≥ 2). The canonical "new record" flow is then a `read` in edit mode filtered by that id:
+
+```json
+{
+	"action" : "read",
+	"dd_api" : "dd_core_api",
+	"source" : { "typo":"source", "type":"section", "action":"search", "model":"section",
+		"tipo":"oh1", "section_tipo":"oh1", "section_id":128, "mode":"edit", "lang":"lg-eng" },
+	"sqo"    : { "section_tipo":["oh1"], "limit":1, "offset":0,
+		"filter_by_locators":[{"section_tipo":"oh1","section_id":128}] }
+}
+```
+
+### Duplicate a record
+
+```json
+{
+	"action" : "duplicate",
+	"dd_api" : "dd_core_api",
+	"source" : { "typo":"source", "type":"section", "model":"section", "tipo":"oh1", "section_tipo":"oh1", "section_id":2, "mode":"list" }
+}
+```
+
+Deep-copies record `2` and returns the new `section_id`. Two gates apply: section write (≥ 2) **and** `assert_record_in_user_scope()` (a write user outside the source record's project scope cannot clone it).
+
+### Delete records (mode and flags)
+
+```json
+{
+	"action" : "delete",
+	"dd_api" : "dd_core_api",
+	"source" : { "typo":"source", "action":"delete", "model":"section", "tipo":"oh1",
+		"section_tipo":"oh1", "section_id":null, "mode":"list", "lang":"lg-eng",
+		"delete_mode":"delete_record" },
+	"options": { "delete_diffusion_records":true, "delete_with_children":false },
+	"sqo"    : { "section_tipo":["oh1"], "filter_by_locators":[{"section_tipo":"oh1","section_id":"127"}], "limit":1 }
+}
+```
+
+Target rows come from `sqo` (preferred, multi-record) or `source->section_id`. Note the placement: `delete_mode` (`delete_data` keeps the row skeleton / `delete_record` removes the whole row) lives on **`source`**, while `delete_diffusion_records` and `delete_with_children` live on **`options`**. Section model only, write (≥ 2).
+
+### Element context without data (lazy load)
+
+```json
+{
+	"action" : "get_element_context",
+	"dd_api" : "dd_core_api",
+	"source" : { "typo":"source", "type":"component", "model":"component_input_text",
+		"tipo":"oh16", "section_tipo":"oh1", "section_id":3, "mode":"edit", "lang":"lg-eng" },
+	"simple" : true
+}
+```
+
+Returns only the structure context (no data) for one element — used to lazily fetch a component's context after a list renders. `simple:true` selects the lightweight context builder. Pairs with `get_section_elements_context` for the search panel's field list.
+
+### Time-machine read (data_source: tm)
+
+```json
+{
+	"action" : "read",
+	"dd_api" : "dd_core_api",
+	"prevent_lock" : true,
+	"source" : { "typo":"source", "type":"component", "action":"get_data", "model":"component_input_text",
+		"tipo":"oh16", "section_tipo":"oh1", "section_id":3, "mode":"tm", "lang":"lg-eng",
+		"data_source":"tm", "matrix_id":"45012" }
+}
+```
+
+`source->action:'get_data'` + `data_source:'tm'` addresses a specific historical matrix row (`matrix_id`) through the time-machine service (section `dd15`, `DEDALO_TIME_MACHINE_SECTION_TIPO`). Service models are exempt from the normal section permission gate.
+
+### Paginated next page (session SQO continuity)
+
+```json
+{
+	"action" : "read",
+	"dd_api" : "dd_core_api",
+	"prevent_lock" : true,
+	"source" : { "typo":"source", "type":"section", "action":"search", "model":"section",
+		"tipo":"oh1", "section_tipo":"oh1", "mode":"list", "lang":"lg-eng" },
+	"sqo"    : { "section_tipo":["oh1"], "limit":10, "offset":10,
+		"order":[{"direction":"ASC","path":[{"component_tipo":"section_id"}]}] }
+}
+```
+
+Advancing `offset` requests the second page. The active filter is preserved across calls by the session SQO (`section::get_session_sqo`) — the client only needs to send the new window.
+
+### Multi-clause search-panel filter
+
+```json
+{
+	"action" : "read",
+	"dd_api" : "dd_core_api",
+	"source" : { "typo":"source", "type":"section", "action":"search", "model":"section",
+		"tipo":"oh1", "section_tipo":"oh1", "mode":"list", "lang":"lg-eng" },
+	"sqo"    : { "section_tipo":["oh1"], "limit":10, "offset":0,
+		"filter":{ "$and":[
+			{ "q":"interview", "path":[{"section_tipo":"oh1","component_tipo":"oh16"}] },
+			{ "$or":[
+				{ "q":"1975", "path":[{"section_tipo":"oh1","component_tipo":"oh25"}] },
+				{ "q":"1976", "path":[{"section_tipo":"oh1","component_tipo":"oh25"}] }
+			] }
+		] } }
+}
+```
+
+A search-panel filter with several clauses across component paths combined with `$and`/`$or`. The `filter` grammar is the SQO's — see [sqo.md](sqo.md#filter).
+
+### Raw matrix rows for export (read_raw)
+
+```json
+{
+	"action" : "read_raw",
+	"dd_api" : "dd_core_api",
+	"prevent_lock" : true,
+	"source" : { "typo":"source", "type":"section", "model":"section", "tipo":"oh1", "section_tipo":"oh1", "mode":"list" },
+	"options": { "type":"section" }
+}
+```
+
+Returns unrendered JSONB straight from the matrix table — `options->type` selects `section` (full rows), `component` (one component's datum per row) or `target_section` (relation locators matching `options->tipo`). Used by `tool_export`.
+
+### Batch term labels for a graph (get_section_terms)
+
+```json
+{
+	"action" : "get_section_terms",
+	"dd_api" : "dd_core_api",
+	"prevent_lock" : true,
+	"source" : { "typo":"source", "type":"section", "model":"section", "tipo":"oh1", "section_tipo":"oh1", "mode":"list" },
+	"locators": [
+		{"section_tipo":"oh1","section_id":3},
+		{"section_tipo":"rsc197","section_id":12}
+	]
+}
+```
+
+Resolves authoritative section_map term labels for up to 1000 locators in one call (graph node labels); the result is keyed `"{section_tipo}_{section_id}" => term`. Unreadable/invalid locators are skipped silently.
+
+## Response shapes by action
+
+The envelope is always `{result, msg, errors, action, csrf_token}`; only the **shape of `result`** varies. Quick reference (full detail in the action table above):
+
+| Action | `result` on success |
+|--------|---------------------|
+| `read` (`search`/`get_data`/...) | `{context: [...], data: [...]}` |
+| `read` (`get_value`) | the plain rendered component value |
+| `read_raw` | `array` of raw JSONB rows (+ `response.table`) |
+| `count` | `{total: <int>}` (or `0` on permission denial) |
+| `create` / `duplicate` | `<new section_id>` (string) or `false` |
+| `delete` | object forwarded from `sections::delete()` |
+| `save` | `{context, data}` of the refreshed element, or `false` |
+| `get_element_context` | a single context `object` |
+| `get_section_elements_context` | `array` of component contexts |
+| `get_environment` | `{page_globals, plain_vars, get_label}` |
+| `get_matrix_ontology_locator` | `{section_tipo, section_id}` |
+| `get_section_terms` | `{ "<tipo>_<id>": "<term>", ... }` |
+
+On failure `result` is `false` and `errors[]` carries a code (`Undefined method`, `invalid_api_class`, `not_logged`, `csrf_failed`, `permissions error`, `permissions_denied`). A failed `read` also clears the stale session SQO key.
+
+## RQO and request_config
+
+The RQO and the [request_config](request_config.md) are the two halves of the same contract:
+
+- **request_config = configuration** (server → client). Defined in ontology `properties->source->request_config` (or user layout presets), resolved per element and injected into the element's context. It declares *what an element can request*: target sections, ddo_maps for show/search/choose/hide, sqo defaults, interface switches.
+- **RQO = request** (client → server). The client builds it *from* the request_config: `build_rqo_show()`/`build_rqo_search()` copy the sqo/sqo_config/ddo_maps into a concrete call, adding the live state (current filter, page, query string).
+
+Because the ontology cannot know installation-specific values, the request_config uses placeholders that are resolved server-side before reaching the client — `section_tipo: "self"`, `parent: "self"`, dynamic `sqo.section_tipo` sources (`section`, `hierarchy_types`, `ontology_sections`, `field_value`, `self`). By the time the client builds an RQO, those are concrete tipos. The full `section_tipo` source vocabulary and the self-resolution contract are defined in [request_config.md](request_config.md).
+
+The reverse path also exists: when a client sends `rqo->show` (e.g. time machine, `tool_qr`, graph view, search presets — `section` instantiated with `add_show:true`), the server rebuilds the element's request_config **from the RQO**. PHP: `common::build_request_config_from_rqo`, with client-sent ddos passing the same validation as ontology configs — whitelist scrub (`sanitize_client_ddo_map`) plus tipo/TLD/permission checks (`validate_requested_ddo`); rejected ddos are dropped and reported through `config_warnings` under `SHOW_DEBUG`. TS covers the same use case with a narrower mechanism (`processRqoChildren()` replacing `show.ddo_map`, called from `src/core/resolve/structure_context.ts` when the request carries client children ddos) — see [request_config.md → RQO-derived narrowing](request_config.md#rqo-derived-narrowing-the-reverse-path-partial) for the exact gap against PHP's full short-circuit (there is no separate TS `validate_requested_ddo`/`config_warnings` pass documented as ported).
+
+## Security model summary
+
+PHP's gate runs in a fixed sequence (`index.php` then `dd_manager::manage_request`); the TS rewrite folds the equivalent checks into `rqoSchema.safeParse()` (schema validation, `src/server.ts`) followed by `dispatchRqo()`'s four ordered gates (`src/core/api/dispatch.ts`, quoted in its own header comment: "mirrors PHP `dd_manager::manage_request`"). Both are shown below; where TS has NOT (yet) ported a PHP gate, it says so explicitly rather than implying parity.
+
+| Order | Gate | PHP | TS | Protects |
+|-------|------|-----|-----|----------|
+| 1 | CORS origin check | `index.php` | not yet ported as a named gate — confirm the framework/reverse-proxy layer's posture before exposing the TS server directly to a browser origin different from its own | `Access-Control-Allow-Origin` echoed only for an allowed origin (SEC-012) |
+| 2 | XSS scrub | `index.php` legacy `$_REQUEST`/`$_FILES` branches | N/A — there is no PHP-superglobal request path to scrub; the JSON body is validated by a schema, not string-sanitized | Form/query-parameter payloads |
+| 3 | SQO/ddo schema validation | `sanitize_client_sqo` + `sanitize_client_ddo_map`, `index.php` | `rqoSchema.safeParse()` (`src/core/concepts/rqo.ts`) rejects the WHOLE malformed body up front; `ddoMapSchema`'s strict `.strip()` whitelists `show`/`search`/`choose` ddos as a side effect of that same parse; `sanitizeClientSqo()` (`src/core/concepts/sqo.ts`) additionally scrubs `rqo.sqo` | Server-only SQO fields, unbounded limits, pre-parsed SQL, injected ddo fields beyond the display whitelist |
+| 4 | `action` present | `dd_manager` | `dispatchRqo()` gate 1 (folded into the registry lookup below — a missing/non-string `action` fails the same lookup) | Reject a request with no action |
+| 5 | `dd_api` + `action` allowlist | `dd_manager` (dd_api whitelist) + `API_ACTIONS` per class (method must be public + static, and — if declared — listed) | `dispatchRqo()` gate 1: `ACTION_REGISTRY[dd_api]?.[action]` — ONE explicit lookup replaces both PHP checks; there is no reflection fallback, so an unregistered pair is unreachable by construction, not by convention | Only known (class, action) pairs are callable |
+| 6 | Login + no-login allowlist | `dd_manager`; PHP no-login actions: `start`, `change_lang`, `login`, `get_login_context`, `install`, `get_install_context`, `get_environment`, `get_ontology_update_info`, `get_code_update_info`, `get_server_ready_status` | `dispatchRqo()` gate 2: `NO_LOGIN_ACTIONS` (`src/core/api/dispatch.ts`) = `start`, `get_environment`, `get_login_context`, `login` — a trimmed list matching what is actually implemented; `change_lang`/`install`/`get_install_context`/the update-info actions are either always-authenticated or not yet ported | Session required except the no-login actions |
+| 7 | CSRF token | `X-Dedalo-Csrf-Token` header ↔ session token, `hash_equals`; PHP `CSRF_EXEMPT_ACTIONS` diverges from the no-login list (see the warning below) | `dispatchRqo()` gate 3: `CSRF_EXEMPT_ACTIONS` (`src/core/api/dispatch.ts`) is currently **identical** to `NO_LOGIN_ACTIONS` — `verifyCsrf()` constant-time compare; on failure the response carries `errors:['csrf_failed']` plus the session's current token so the client's one-shot retry can succeed | Cross-site request forgery |
+| 8 | Maintenance permission | `dd_manager`: `dd_area_maintenance_api` requires maintenance-area perm ≥ 2, pre-dispatch | not a separate dispatch-level gate — each `dd_area_maintenance_api` handler (`widget_request`, `get_widget_value`, `lock_components_actions`) resolves the principal and checks permission itself, inside the handler | `dd_area_maintenance_api` requires maintenance-area perm ≥ 2 |
+| 9 | `validate_requested_ddo` | `common` (rqo-derived config) | not ported as a named pass — see the RQO-derived narrowing gap above | Invalid tipos, inactive TLDs, unauthorized elements |
+| 10 | Permission checks | per action (`read`, `count`, `save`...); inner `permission_exception` → uniform `permissions_denied` | per handler in `ACTION_REGISTRY` (`getPermissions()`, `src/core/security/permissions.ts`); handlers return a `denied()` `ApiResult` directly rather than throwing+catching an exception class | Section/element access levels |
+
+!!! warning "PHP's two allowlists are NOT identical — TS's currently ARE"
+	PHP's **no-login actions** (`start`, `change_lang`, `login`, `get_login_context`, `install`, `get_install_context`, `get_environment`, `get_ontology_update_info`, `get_code_update_info`, `get_server_ready_status`) and **CSRF-exempt actions** (`start`, `get_environment`, `get_login_context`, `get_install_context`, `get_server_ready_status`, `get_ontology_update_info`, `get_code_update_info`, `get_diffusion_info`, `get_dedalo_files`, `read_raw`) diverge — e.g. `change_lang`/`login`/`install` are no-login **but still require CSRF** in PHP.
+
+	TS's `NO_LOGIN_ACTIONS` and `CSRF_EXEMPT_ACTIONS` (`src/core/api/dispatch.ts`) are, as of this writing, the exact SAME four actions (`start`, `get_environment`, `get_login_context`, `login`). This is not a deliberate design decision to unify them — it is a byproduct of only the base bootstrap/login flow being ported so far. Do not assume they will stay identical as more PHP no-login/CSRF-exempt actions (installer, update-info, `read_raw`, `get_dedalo_files`, `get_diffusion_info`) get ported; check the current arrays before relying on either list.
+
+!!! note "Known gaps to be aware of"
+	PHP's `sanitize_client_ddo_map` scrubs `show.ddo_map` and `search.ddo_map` but **not** `choose.ddo_map` — TS's schema-based approach (`ddoMapSchema` applied uniformly through `rqoDdoBlockSchema` to `show`, `search`, AND `choose`) does not have this asymmetry, since all three share the same schema. TS's `sanitizeClientSqo()` mirrors PHP's `sanitize_client_sqo` behavior (clamps only when the SQO is an object).
+
+## Best practices
+
+1. **Build RQOs from the request_config** the server injected — don't hand-craft sqo/ddo_maps in client code when the config already defines them (`build_rqo_show`/`build_rqo_search`).
+2. **Always send `source` complete** (`tipo`, `section_tipo`, `mode`, `lang`): the server resolves defaults from it and `read` rejects an empty `section_tipo`.
+3. **Use `prevent_lock: true`** for read-only calls that may run long (counts, exports preflight) so they don't serialize the user's session.
+4. **Let the server own limits**: send `limit: null` to get the mode/model default; client limits are clamped server-side anyway.
+5. **Use `source->action` modifiers** instead of new top-level actions when the behavior is a variant of read/save for one element type.
+6. **New API methods must be registered in `ACTION_REGISTRY`** (`src/core/api/dispatch.ts`; PHP: added to the class's `API_ACTIONS`) — they are unreachable otherwise (by design, and more strictly so in TS: there is no reflection fallback at all).
+7. **Never put credentials or server-only state in an RQO**: the object is logged in debug environments and echoed in error contexts.
+
+## Troubleshooting
+
+- **`Invalid RQO`** (TS, HTTP 400) — the body failed `rqoSchema.safeParse()`; the response `errors` array carries the zod issue list — check the exact field/path it names. PHP's equivalent `Invalid action var (not found in rqo)` fires when the body has no `action`.
+- **`Undefined or unauthorized method (action)`** (TS) — the `(dd_api, action)` pair is not registered in `ACTION_REGISTRY` (`src/core/api/dispatch.ts`) — typo, or the action genuinely is not ported yet (check `rewrite/STATUS.md`). PHP's equivalents are `Error. Invalid API class` (dd_api not whitelisted) and `Undefined method` (action missing from `API_ACTIONS`) — TS folds both into one check.
+- **`Empty source 'section_tipo'`** — `read` requires it; verify `create_source()` received a fully initialized instance.
+- **Empty result with no error** — likely a dropped/failed ddo resolution (invalid tipo, inactive TLD, no permissions) inside `processSingleDdo()` (`src/core/relations/request_config/v6.ts`). TS does not yet surface a `config_warnings` field the way PHP does under `SHOW_DEBUG` — step through the builder/read path directly.
+- **Stale list after editing** — TS has no session-SQO store yet (see `rewrite/STATUS.md` "sqo_session"), so unlike PHP there is no server-side navigation-SQO replay to check; verify the client is actually sending the filter/limit it should on the follow-up call, and check the client local-DB cache (`cache_handler`).
+- **CSRF errors on first call** — the token is minted on `start`/`login` and appended to every authenticated response's `csrf_token` field (`dispatchRqo()`); ensure the bootstrap call ran. The client retries a `csrf_failed` rejection once automatically — the TS CSRF-failure response carries the session's CURRENT token specifically so that retry can succeed.
+- **`Authentication required` on an action you expected to be public** — check `NO_LOGIN_ACTIONS` in `src/core/api/dispatch.ts` directly; it is a short, explicitly trimmed list (currently `start`, `get_environment`, `get_login_context`, `login`), narrower than PHP's.
+- **`save` silently did nothing** — only `source->type:'component'` is implemented in both engines; any other type returns `result:false`. Check `source->type` and that each `changed_data[].action` is a recognized operation.
+- **Picker columns (`choose.ddo_map`)** — unlike PHP (which does not scrub `choose.ddo_map`), TS validates `choose` through the same strict `ddoMapSchema` as `show`/`search` at the `rqoSchema.safeParse()` boundary — a `choose` ddo with a non-whitelisted field is silently stripped of that field, not rejected outright.
+
+## Related documentation
+
+- [request_config.md](request_config.md) — the server-side config build (V6/V5, self-resolution, the `section_tipo` source vocabulary, caching, presets) that produces what the client turns into RQOs
+- [request_config_examples.md](request_config_examples.md) — the ontology `request_config` JSON cookbook (section list/edit, portals, autocomplete, fixed filters, dynamic ddo_map...)
+- [sqo.md](sqo.md) — the Search Query Object (filter/limit/order) carried inside the RQO
+- [dd_object.md](dd_object.md) — the DDO (one ddo_map entry / column) field set
+- `src/core/concepts/rqo.ts` — the TS `Rqo`/`RqoSource` zod schemas + `ApiResponse` envelope shape
+- `src/core/api/dispatch.ts` — `dispatchRqo()`, the `ACTION_REGISTRY`, `NO_LOGIN_ACTIONS`/`CSRF_EXEMPT_ACTIONS`
+- PHP oracle: `core/common/class.request_query_object.php`, `core/api/v1/common/class.dd_core_api.php` (`API_ACTIONS`)
+- `core/common/js/common.js` — client builders (`create_source`, `build_rqo_show`, `build_rqo_search`) — copied as-is
+- `core/common/js/data_manager.js` — client transport (retries, timeout, CSRF, local cache) — copied as-is

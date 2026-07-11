@@ -1,0 +1,565 @@
+/**
+* inspector
+*
+* Included from main.less file
+*
+* Visual language: modern, calm and unobtrusive. Neutral surfaces, soft
+* hairline borders and gentle elevation carry the structure; the Dédalo orange
+* is reserved as a sparing accent (active header rule, section_id, rail toggle,
+* row affordances). All values come from the semantic tokens in vars.less so the
+* panel retunes for light/dark automatically. Responsive behaviour (rail mode +
+* inline full-width below the desktop break) is defined in section.less; the
+* rules here only need to stay compatible with it.
+*/
+
+// inspector wrapper
+.inspector {
+	contain: content;
+	display: block;
+	margin: 0px;
+	margin-bottom: var(--space-3);
+	padding: 0px;
+	width: 100%;
+	// the panel itself draws nothing: it is transparent and lets the page's
+	// light-gray canvas show through. Only the white content cards float on it.
+	background-color: transparent;
+
+	&.inspector_fixed {
+		position: fixed;
+		top: 0px;
+		width: 18.5% !important;
+	}
+
+	// block_icon. Leading mask icon for block headers and the main label.
+	// Defined at wrapper scope so it reaches the main >.label icon too.
+	// NOTE: the main-label modifier is 'panel' (NOT 'inspector') to avoid
+	// colliding with the .inspector wrapper class on the same span.
+	.block_icon {
+		flex: 0 0 auto;
+		width: 1.3rem;
+		height: 1.3rem;
+		background-color: var(--fg_muted);
+		transition: background-color var(--transition-fast);
+
+		&.info		{ .fn_add_mask('info.svg'); }
+		&.gear		{ .fn_add_mask('gear.svg'); }
+		&.link		{ .fn_add_mask('link.svg'); }
+		&.history	{ .fn_add_mask('history.svg'); }
+		&.note		{ .fn_add_mask('note.svg'); }
+		&.activity	{ .fn_add_mask('gears.svg'); }
+		&.panel		{ .fn_add_mask('inspector.svg'); }
+
+		// fn_add_mask uses mask-size:contain, so each glyph fills a different
+		// fraction of its box depending on how much padding its SVG viewBox carries
+		// — which made some icons look bigger/smaller. Per-icon mask-size normalises
+		// every glyph to the same visual size (~90% of the box) and keeps the
+		// edge-filling ones (link/panel) from clipping. Covers the toolbar/tool
+		// icons too, since those spans also carry .block_icon.
+		// Normalise the glyph size WITHOUT touching mask-size. The masks stay at
+		// `contain` (the only value Safari sizes reliably on these intrinsically-
+		// sizeless SVGs); transform:scale then shrinks each glyph to the same
+		// visual size. scale can ONLY shrink the rendered glyph, so it can never
+		// clip — which percentage/length mask-size did in Safari. ~0.88 of the box.
+		&.link, &.panel, &.activity, &.list, &.diffusion  { transform: scale(0.89); }
+		&.add_light, &.search                             { transform: scale(0.91); }
+		&.info, &.note, &.blank                           { transform: scale(0.92); }
+		&.gear, &.graph, &.history, &.duplicate, &.remove { transform: scale(0.95); }
+	}
+
+	// inspector_div_content
+	>.inspector_content_data {
+		display: block;
+		margin: 0px;
+		padding: 0px;
+		position: relative;
+
+		// content cards. Each top-level block is a rounded almost-white surface
+		// that sits flat on the light-gray canvas — no border, no shadow. The
+		// gap between the card fill and the canvas is the only separation.
+		>div {
+			contain: content;
+			margin: var(--space-3);
+			background-color: var(--bg_surface); // #ffffff (palette token: robust against stale tool-css :root)
+			border-radius: var(--inspector_block_radius);
+			overflow: hidden; // clip rounded corners over inner content
+
+			&.project_wrap {
+				contain: layout;
+			}
+		}
+
+		// block headers. Flex row: icon + label + (right) chevron, with hover
+		// feedback. These spans also carry .icon_arrow (chevron + base padding);
+		// inspector loads after general.less so this padding wins — keep the
+		// right side roomy (1.6rem) so the label never runs under the chevron.
+		.element_info_head,
+		.project_head,
+		.relation_list_head,
+		.time_machine_list_head,
+		.component_history_head,
+		.activity_info_head {
+			display: flex;
+			align-items: center;
+			gap: var(--space-3);
+			padding: var(--space-3) 1.6rem var(--space-3) var(--space-4);
+			// uppercase muted label and a hairline that ties it to the body.
+			border-bottom: 1px solid var(--color_grey_14);
+			color: var(--color_grey_7);
+			font-weight: 600;
+			font-size: 0.72rem;
+			text-transform: uppercase;
+			letter-spacing: 0.06em;
+			user-select: none;
+			transition: background-color var(--transition-fast), color var(--transition-fast);
+
+			&:hover {
+				// background-color: var(--color_grey_14);
+				color: var(--color_grey_4);
+
+				.block_icon {
+					background-color: var(--color_orange_dedalo);
+				}
+			}
+			&:active {
+				opacity: 0.85;
+			}
+
+			// label text wrapper, allows hiding text in rail mode while keeping the icon
+			.block_label {
+				flex: 1 1 auto;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+				font-size: .8rem;
+			}
+		}
+
+		// icon_arrow chevron color tracks the theme via semantic token
+		.icon_arrow {
+			&:after {
+				background-color: var(--fg_muted);
+				transition: transform 0.26s var(--ease-standard), background-color var(--transition-fast);
+			}
+		}
+
+		// paginator. Not a card: it sits flat and transparent on the panel,
+		// with the nav controls and page info centred across the inspector.
+		>.paginator_container {
+			contain: content;
+			height: 73px;
+			background-color: transparent;
+
+			@media screen and (max-width: @width_break_point_0) {
+				min-height: 66px;
+			}
+
+			// centre the nav controls + page info within the inspector width
+			.content_data {
+				justify-content: center;
+				padding-left: 0px;
+			}
+			.nav_buttons {
+				width: 100%;
+				justify-content: center;
+			}
+
+			// section id info in inspector paginator. Reads as a quiet accent
+			// chip pinned to the top-right corner of the paginator.
+			>.section_id {
+				position: absolute;
+				right: var(--space-3);
+				top: var(--space-3);
+				padding: 0.1rem 0.5rem;
+				border-radius: var(--radius-pill);
+				background-color: var(--color_orange_light);
+				font-weight: 600;
+				font-size: 1.05rem;
+				line-height: 1.3rem;
+				letter-spacing: 0.01em;
+				color: var(--color_orange_dark);
+
+				@media screen and (max-width: @width_break_point_0) {
+					top: 0.85rem;
+				}
+			}
+
+			// forces line break (full width) and centres the page-info text
+			.paginator_info {
+				width: 100%;
+				text-align: center;
+			}
+		}
+
+		// selection_info
+		>.selection_info {
+			contain: content;
+			color: @color_orange_dedalo;
+			padding: var(--space-3) var(--space-4);
+			font-size: 1.05rem;
+			text-align: center;
+			background-color: var(--color_orange_light);
+
+			.selection_info_label {
+				display: inline-block;
+				max-width: 86%;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+				vertical-align: middle;
+			}
+
+			.span {
+				cursor: pointer;
+				float: right;
+				vertical-align: middle;
+				background-color: var(--fg_muted);
+				transition: background-color var(--transition-fast), opacity var(--transition-fast);
+
+				&:hover {
+					background-color: @color_orange_dedalo;
+				}
+				&:active {
+					opacity: 0.4;
+				}
+			}
+		}
+
+		// element_info
+		>.element_info_wrap	>.element_info {
+			contain: content;
+			display: grid;
+			grid-gap: 1px; // hairline rhythm between key/value rows
+			grid-template-columns: minmax(min-content, 35%) minmax(65%, 80%);
+			margin-top: 0px;
+			margin-bottom: 0px;
+			font-size: 0.86rem;
+			background-color: var(--bg_app); // light-gray shows through the grid gaps as faint, flat separators
+
+			.link, .pen, .tree, .edit {
+				background-color: @color_orange_dedalo;
+				margin-right: var(--space-3);
+				transition: background-color var(--transition-fast);
+			}
+
+			.span {
+				&:active {
+					opacity: 0.3;
+				}
+			}
+
+			.key {
+				background-color: var(--bg_surface_alt);
+				padding: var(--space-2) var(--space-3);
+				text-align: right;
+				text-transform: capitalize;
+				font-size: 0.78rem;
+				font-weight: 500;
+				color: var(--fg_muted);
+				display: flex;
+				align-items: center;
+				justify-content: flex-end;
+
+				&.wide {
+					grid-column-start: 1;
+					grid-column-end: 3;
+					text-align: center;
+					justify-content: center;
+				}
+			}
+			.value {
+				background-color: var(--bg_surface);
+				padding: var(--space-2) var(--space-3);
+				color: var(--fg_default);
+
+				&.wide {
+					grid-column-start: 1;
+					grid-column-end: 3;
+					max-height: 16.6rem;
+					overflow: auto;
+					word-break: break-word;
+				}
+
+				&.code {
+					white-space: pre-wrap;
+					display: flex;
+					flex-direction: column;
+					background-color: var(--bg_surface_alt);
+					border-radius: var(--radius-md);
+					min-height: 3rem;
+
+					&.monospace {
+						word-break: break-all;
+						font-family: monospace;
+						font-size: 0.76rem;
+					}
+
+					.button_value_copy {
+						align-self: center;
+						font-size: 0.9rem;
+						margin: 0px;
+
+						&:active {
+							opacity: 0.5;
+						}
+					}
+				}
+
+				&.bold {
+					font-size: 0.9rem;
+					font-weight: 600;
+				}
+			}
+
+			&.auto_height {
+				.code {
+					max-height: none;
+				}
+			}
+		}
+
+		// project_wrap
+		.project_wrap {
+			.wrapper_component.component_filter {
+				>.label {
+					display: none;
+				}
+			}
+		}
+
+		// buttons_container / tools_container (top action + tool rows).
+		// These are toolbars, not content cards: render them flat and
+		// transparent (no card fill, no radius) so the icon buttons float
+		// directly on the panel. The icons spread across the full card width.
+		>.buttons_container, >.tools_container {
+
+			&.top {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				justify-content: space-evenly; // centered + evenly distributed across the card width
+				gap: var(--space-2);
+				margin: 0px var(--space-3);
+				padding: var(--space-2) 0px;
+				background-color: transparent;
+				border-radius: 0px;
+				overflow: visible;
+
+				>span {
+					// square icon box matching the block-header icons, so the
+					// Safari-safe two-value mask-size renders without distortion
+					width: 1.3rem;
+					height: 1.3rem;
+					box-sizing: border-box;
+					margin: 0px;
+					padding: 0px;
+
+					// icon-only in the toolbar: drop the trailing text-gap so the
+					// glyph sits dead-centre in the button
+					&:before {
+						margin-right: 0px;
+					}
+				}
+			}
+		}
+
+		// the toolbar/tool icons are masked spans now (button block_icon <icon>):
+		// .block_icon paints them grey; just tint them with Dédalo orange on hover.
+		span.light {
+			&:hover {
+				background-color: var(--color_orange_dedalo);
+			}
+		}
+
+		// indexation_list
+		.indexation_list_container {
+			.indexation_list_head {
+				text-transform: capitalize;
+			}
+			.indexation_list_body {
+				background-color: @color_orange_dedalo;
+				padding: 1rem 0.33rem;
+				font-size: 0.78rem;
+				color: @color_white;
+			}
+		}
+
+		// relation_list
+		>.relation_list_container {
+			>.relation_list_body {
+				contain: content;
+			}
+		}
+
+		// time_machine_list
+		>.time_machine_list {
+
+			>.time_machine_list_body {
+				contain: content;
+				font-size: 0.78rem;
+			}
+		}
+
+		// project_container
+		>.project_container {
+
+		}
+
+		>.component_history {
+			.component_history_body {
+				contain: content;
+			}
+		}
+
+		// activity_info
+		.activity_info {
+			contain: content;
+
+			.activity_info_body {
+				max-height: 10rem;
+				overflow-y: auto;
+				padding: 0px;
+			}
+
+			// former node_info_save_msg
+			.bubble {
+				// (!) moved to general.less > .bubbles_notification_container for convenience
+			}
+		}
+
+		// buttons_bottom_container
+		>.buttons_container.bottom {
+			padding: var(--space-3);
+			padding-top: var(--space-2);
+
+			>span {
+				width: 100%;
+				margin-top: var(--space-2);
+			}
+		}
+
+	}//end .inspector_content_data
+
+
+	.css_section_group_content {
+		display: table;
+	}
+
+	.css_button_generic > span {
+		display: none;
+	}
+
+	>.label {
+
+		.label_top(); // defined in layout
+		// override the mixin's raw greys so the header tracks the theme. The
+		// main panel header is a quiet flat surface — no border, no shadow.
+		background-color: var(--bg_surface_alt);
+		color: var(--fg_default);
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		// .label_top sets padding:0.33em which clobbers the 1.33rem right padding
+		// that .icon_arrow reserves for its chevron. Restore it (plus a little) so
+		// the flex row (incl. the rail toggle) never runs under the chevron.
+		padding-right: 1.6rem;
+
+		// label text wrapper (hidden in rail mode, keeps the toggle visible)
+		.block_label {
+			flex: 1 1 auto;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		// rail collapse / expand toggle button.
+		// sits left of the whole-content collapse chevron (.icon_arrow:after),
+		// which is kept clear by the label's reserved padding-right above
+		.inspector_rail_toggle {
+			flex: 0 0 auto;
+			.fn_add_mask('arrow-circle-right.svg');
+			// the icon's circle touches the viewBox edges; shrink the mask within the
+			// box so the outer stroke isn't clipped (looks cut) at small sizes
+			-webkit-mask-size: 82%;
+					mask-size: 82%;
+			background-color: var(--fg_muted);
+			width: 1.4em;
+			height: 1.4em;
+			cursor: pointer;
+			border: none;
+			padding: 0px;
+			margin: 0px;
+			border-radius: var(--radius-pill);
+			transition: transform var(--transition-base), background-color var(--transition-fast);
+
+			&:hover {
+				background-color: var(--color_orange_dedalo);
+			}
+		}
+
+		@media screen and (min-width: @width_break_point_1) {
+			position: sticky;
+			top: -0.1px;
+			z-index: 4;
+		}
+
+		&.is_pinned {
+			// stays flat when pinned — no border or shadow
+		}
+	}
+
+	.nav_buttons {
+		padding-bottom: 0.5em;
+
+		>.icon_bs {
+
+		}
+	}
+
+	.displayed_records {
+		display: none;
+	}
+
+	.goto_page {
+		clear: left;
+		display: inline-block;
+		padding-top: 0.25em;
+	}
+
+	// ---- responsive: inline full-width layout (below the desktop break) ----
+	// Below @width_break_point_0 the panel drops its fixed rail position and
+	// renders inline at full width (see section.less). Give the cards a touch
+	// more room and larger touch targets so it reads well on tablets/phones.
+	@media screen and (max-width: @width_break_point_0) {
+		border-left: none;
+
+		>.inspector_content_data {
+			>div {
+				margin: var(--space-3) var(--space-4);
+			}
+
+			.element_info_head,
+			.project_head,
+			.relation_list_head,
+			.time_machine_list_head,
+			.component_history_head,
+			.activity_info_head {
+				padding-top: var(--space-4);
+				padding-bottom: var(--space-4);
+				font-size: 0.92rem;
+			}
+
+			>.buttons_container, >.tools_container {
+				&.top >span {
+					height: 2.4rem;
+				}
+			}
+
+			>.element_info_wrap >.element_info {
+				font-size: 0.95rem;
+			}
+		}
+	}
+
+}//end .inspector

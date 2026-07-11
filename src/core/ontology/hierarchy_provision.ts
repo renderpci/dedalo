@@ -1,0 +1,485 @@
+/**
+ * Hierarchy provisioning — PHP hierarchy::generate_virtual_section (:228) +
+ * provision_virtual_sections (:459) + create_thesaurus_general_term (:1899).
+ *
+ * A "hierarchy" (a controlled vocabulary, master record in matrix_hierarchy_main
+ * / hierarchy1) is turned into two runtime VIRTUAL sections:
+ *   <tld>1 — descriptors (the actual terms)
+ *   <tld>2 — models/typologies
+ * plus their dd_ontology nodes, a user permission grant, and the hierarchy53/58
+ * target-section pointers written back on the hierarchy1 record.
+ *
+ * generate_virtual_section runs pre-tx VALIDATIONS in PHP's exact order, then the
+ * entire write phase inside ONE withTransaction — a mid-sequence throw rolls the
+ * whole thing back so a half-built hierarchy is never committed (parity with PHP
+ * DBi::transaction). createSectionRecord acquires the per-tipo counter lock inside
+ * that tx, so the wrapper is also required for concurrency.
+ *
+ * BYTE PINS (verified against PHP):
+ *  - descriptor ontology7 tld item uses lang lg-spa (DEDALO_DATA_LANG); the
+ *    matrix_ontology_main tld item (addMainSection) uses lg-nolan — different.
+ *  - the ontology15 parent locator written here is BARE {section_tipo, section_id}
+ *    (no type/from_component_tipo) — pinned.
+ *  - hierarchy53/58 items are {id:1, lang:lg-nolan, value:<tld>1|<tld>2}.
+ *
+ * LEDGER:
+ *  - set_section_permissions has no TS write path — the grant is NON-FATAL: an
+ *    error string is pushed to response.errors and provisioning continues (PHP
+ *    treats a failed grant as non-fatal too).
+ *  - createThesaurusGeneralTerm seeds the portal element (target record + link
+ *    locator); it does NOT rename the new term after the hierarchy (PHP
+ *    set_term_value) — deferred/ledgered; the seed itself is what the tree needs.
+ */
+
+import { readMatrixRecord } from '../db/matrix.ts';
+import { updateMatrixKeyData, updateMatrixRecord } from '../db/matrix_write.ts';
+import { sql } from '../db/postgres.ts';
+import { withTransaction } from '../db/postgres.ts';
+import { applyAddNewElement } from '../relations/save.ts';
+import { createSectionRecord } from '../section/record/create_record.ts';
+import {
+	DATA_NOLAN,
+	HIERARCHY_ACTIVE,
+	HIERARCHY_LANG,
+	HIERARCHY_MAIN_SECTION,
+	HIERARCHY_MODEL_TYPE_GROUP,
+	HIERARCHY_MODEL_TYPE_TLD,
+	HIERARCHY_SOURCE_REAL_SECTION,
+	HIERARCHY_TARGET_SECTION,
+	HIERARCHY_TARGET_SECTION_MODEL,
+	HIERARCHY_TERM,
+	HIERARCHY_TLD,
+	HIERARCHY_TYPE_GROUP,
+	HIERARCHY_TYPE_TLD,
+	HIERARCHY_TYPOLOGY,
+	ONTOLOGY_CONNECTED_TO,
+	ONTOLOGY_IS_DESCRIPTOR,
+	ONTOLOGY_IS_MODEL,
+	ONTOLOGY_MODEL,
+	ONTOLOGY_PARENT,
+	ONTOLOGY_PUBLICATION,
+	ONTOLOGY_TERM,
+	ONTOLOGY_TLD,
+	ONTOLOGY_TRANSLATABLE,
+	RELATION_TYPE_LINK,
+	SI_NO_NO,
+	SI_NO_SECTION,
+	SI_NO_YES,
+	STRUCTURE_LANG,
+} from './ontology_tipos.ts';
+import {
+	addMainSection,
+	createDdOntologyRootNode,
+	createParentGrouper,
+	insertDdOntologyRecord,
+} from './ontology_write.ts';
+import { getMatrixTableFromTipo, getModelByTipo } from './resolver.ts';
+import { getSectionIdFromTipo, getTldFromTipo } from './tld.ts';
+
+const MATRIX_ONTOLOGY = 'matrix_ontology';
+
+export interface GenerateVirtualSectionOptions {
+	section_id: number;
+	section_tipo: string;
+	userId?: number;
+}
+
+export interface GenerateVirtualSectionResponse {
+	result: boolean;
+	msg: string;
+	errors: string[];
+}
+
+/** relation locator with a string section_id (matrix byte shape). */
+function relLocator(fields: {
+	id?: number;
+	type: string;
+	section_tipo: string;
+	section_id: string | number;
+	from_component_tipo: string;
+}): Record<string, unknown> {
+	const locator: Record<string, unknown> = {};
+	if (fields.id !== undefined) locator.id = fields.id;
+	locator.type = fields.type;
+	locator.section_id = String(fields.section_id);
+	locator.section_tipo = fields.section_tipo;
+	locator.from_component_tipo = fields.from_component_tipo;
+	return locator;
+}
+
+/**
+ * Provision the two virtual sections + dd_ontology nodes for a hierarchy1 record
+ * (PHP hierarchy::generate_virtual_section). Validations first, then ONE tx.
+ */
+export async function generateVirtualSection(
+	options: GenerateVirtualSectionOptions,
+): Promise<GenerateVirtualSectionResponse> {
+	const userId = options.userId ?? -1;
+	const sectionTipo = options.section_tipo;
+	const sectionId = Number(options.section_id);
+	const response: GenerateVirtualSectionResponse = {
+		result: false,
+		msg: 'Error. Request failed ',
+		errors: [],
+	};
+
+	const table = await getMatrixTableFromTipo(sectionTipo);
+	if (table === null) {
+		response.errors.push(`no matrix table for '${sectionTipo}'`);
+		return response;
+	}
+	const record = await readMatrixRecord(table, sectionTipo, sectionId);
+	if (record === null) {
+		response.errors.push(`hierarchy record not found: ${sectionTipo}/${sectionId}`);
+		return response;
+	}
+	const relation = (record.columns.relation as Record<string, unknown[]> | null) ?? {};
+	const stringCol = (record.columns.string as Record<string, unknown[]> | null) ?? {};
+
+	// 1. active (hierarchy4 → dd64/1, loose ==)
+	const activeLocator = (
+		relation[HIERARCHY_ACTIVE] as { section_tipo?: string; section_id?: unknown }[] | undefined
+	)?.[0];
+	if (
+		activeLocator === undefined ||
+		activeLocator.section_tipo !== SI_NO_SECTION ||
+		Number(activeLocator.section_id) !== SI_NO_YES
+	) {
+		response.msg += 'Current hierarchy is not active';
+		response.errors.push(`Empty hierarchy active value: ${HIERARCHY_ACTIVE}`);
+		return response;
+	}
+
+	// 2. tld (hierarchy6, lowercased)
+	const tldValue = (stringCol[HIERARCHY_TLD] as { value?: unknown }[] | undefined)?.[0]?.value;
+	const tld2 = tldValue ? String(tldValue).toLowerCase() : '';
+	if (tld2 === '') {
+		response.msg += 'Error on get tld2. Empty value (tld is mandatory)';
+		response.errors.push(`Empty hierarchy tld value: ${HIERARCHY_TLD}`);
+		return response;
+	}
+
+	// 3. source real section (hierarchy109) — non-empty AND model === 'section'
+	const realSectionTipoValue = (
+		stringCol[HIERARCHY_SOURCE_REAL_SECTION] as { value?: unknown }[] | undefined
+	)?.[0]?.value;
+	const realSectionTipo = realSectionTipoValue ? String(realSectionTipoValue) : '';
+	if (realSectionTipo === '') {
+		response.msg +=
+			'Error on get source_real_section_tipo. Empty value (source_real_section_tipo is mandatory)';
+		response.errors.push(`Empty source section_tipo value: ${HIERARCHY_SOURCE_REAL_SECTION}`);
+		return response;
+	}
+	const realSectionModel = await getModelByTipo(realSectionTipo);
+	if (realSectionModel !== 'section') {
+		response.msg +=
+			'Error on get source_real_section_tipo. Invalid model (only sections tipo are valid)';
+		response.errors.push(`Invalid source section_tipo model: ${realSectionModel}`);
+		return response;
+	}
+
+	// 4. typology (hierarchy9 → int section_id >= 1)
+	const typologyLocator = (
+		relation[HIERARCHY_TYPOLOGY] as { section_id?: unknown }[] | undefined
+	)?.[0];
+	const typologyId =
+		typologyLocator?.section_id !== undefined ? Math.trunc(Number(typologyLocator.section_id)) : 0;
+	if (typologyId < 1) {
+		response.msg += 'Error on get typology. Empty value (typology is mandatory)';
+		response.errors.push('Invalid typology');
+		return response;
+	}
+
+	// 5. name (hierarchy5 all langs; fallback 'Hierarchy <tld>')
+	const nameItems =
+		(stringCol[HIERARCHY_TERM] as { id?: number; lang?: string; value?: unknown }[] | undefined) ??
+		[];
+	const nameData = nameItems
+		.filter(
+			(item): item is { id?: number; lang: string; value: unknown } =>
+				typeof item.lang === 'string',
+		)
+		.map((item) => ({ id: item.id ?? 1, lang: item.lang, value: String(item.value ?? '') }));
+
+	// --- write phase, ONE transaction (rollback on any throw) ---
+	try {
+		await withTransaction(async () => {
+			await provisionVirtualSections({
+				tld2,
+				typologyId,
+				realSectionTipo,
+				nameData,
+				hierarchySectionId: sectionId,
+				hierarchySectionTipo: sectionTipo,
+				hierarchyTable: table,
+				userId,
+				response,
+			});
+		});
+	} catch (error) {
+		response.result = false;
+		response.msg = 'Error. Hierarchy provisioning failed and was rolled back';
+		response.errors.push(String(error));
+		return response;
+	}
+
+	response.result = true;
+	response.msg =
+		response.errors.length === 0 ? 'Request done successfully' : 'Request done with errors';
+	return response;
+}
+
+interface ProvisionArgs {
+	tld2: string;
+	typologyId: number;
+	realSectionTipo: string;
+	nameData: { id?: number; lang: string; value: string }[];
+	hierarchySectionId: number;
+	hierarchySectionTipo: string;
+	/** The registry record's OWN matrix table (hierarchy1 → matrix_hierarchy_main,
+	 * ontology35 → matrix_ontology_main) — PHP resolves it from the section tipo. */
+	hierarchyTable: string;
+	userId: number;
+	response: GenerateVirtualSectionResponse;
+}
+
+/** Write phase of generate_virtual_section (PHP provision_virtual_sections). */
+async function provisionVirtualSections(args: ProvisionArgs): Promise<void> {
+	const {
+		tld2,
+		typologyId,
+		realSectionTipo,
+		nameData,
+		hierarchySectionId,
+		hierarchySectionTipo,
+		hierarchyTable,
+		userId,
+		response,
+	} = args;
+	const nodeSectionTipo = `${tld2}0`;
+
+	// ontology main + root node
+	const mainSectionId = await addMainSection(
+		{ tld: tld2, typology_id: typologyId, name_data: nameData },
+		userId,
+	);
+	if (mainSectionId === null) {
+		throw new Error(`add_main_section failed for tld: ${tld2}`);
+	}
+	await createDdOntologyRootNode(
+		{ tld: tld2, typology_id: typologyId, name_data: nameData },
+		userId,
+	);
+
+	// --- descriptor section <tld>0 / 1 ---
+	await createSectionRecord(nodeSectionTipo, userId, new Date(), 1);
+	const writeDescriptor = (
+		column: 'relation' | 'string',
+		tipo: string,
+		value: unknown,
+	): Promise<void> => updateMatrixKeyData(MATRIX_ONTOLOGY, nodeSectionTipo, 1, column, tipo, value);
+
+	await writeDescriptor('relation', ONTOLOGY_PUBLICATION, [
+		relLocator({
+			id: 1,
+			type: RELATION_TYPE_LINK,
+			section_tipo: SI_NO_SECTION,
+			section_id: SI_NO_YES,
+			from_component_tipo: ONTOLOGY_PUBLICATION,
+		}),
+	]);
+	await writeDescriptor('relation', ONTOLOGY_IS_DESCRIPTOR, [
+		relLocator({
+			id: 1,
+			type: RELATION_TYPE_LINK,
+			section_tipo: SI_NO_SECTION,
+			section_id: SI_NO_YES,
+			from_component_tipo: ONTOLOGY_IS_DESCRIPTOR,
+		}),
+	]);
+	// is_model (ontology30) intentionally NOT written for the descriptor (defaults NO).
+	await writeDescriptor('relation', ONTOLOGY_MODEL, [
+		relLocator({
+			id: 1,
+			type: RELATION_TYPE_LINK,
+			section_tipo: 'dd0',
+			section_id: '6',
+			from_component_tipo: ONTOLOGY_MODEL,
+		}),
+	]);
+	await writeDescriptor('relation', ONTOLOGY_TRANSLATABLE, [
+		relLocator({
+			id: 1,
+			type: RELATION_TYPE_LINK,
+			section_tipo: SI_NO_SECTION,
+			section_id: SI_NO_NO,
+			from_component_tipo: ONTOLOGY_TRANSLATABLE,
+		}),
+	]);
+	// connected-to → the real source section node <realTld>0/<realId>
+	const relationSectionTipo = `${getTldFromTipo(realSectionTipo)}0`;
+	const relationSectionId = getSectionIdFromTipo(realSectionTipo);
+	await writeDescriptor('relation', ONTOLOGY_CONNECTED_TO, [
+		relLocator({
+			id: 1,
+			type: RELATION_TYPE_LINK,
+			section_tipo: relationSectionTipo,
+			section_id: relationSectionId ?? '',
+			from_component_tipo: ONTOLOGY_CONNECTED_TO,
+		}),
+	]);
+	// tld — lang lg-spa (DEDALO_DATA_LANG) — DIFFERS from addMainSection's lg-nolan
+	await writeDescriptor('string', ONTOLOGY_TLD, [{ id: 1, lang: STRUCTURE_LANG, value: tld2 }]);
+	// name
+	if (nameData.length > 0) {
+		await writeDescriptor(
+			'string',
+			ONTOLOGY_TERM,
+			nameData.map((item) => ({ id: item.id ?? 1, lang: item.lang, value: item.value })),
+		);
+	}
+
+	// parent grouper (hierarchytype) → BARE parent locator on <tld>0/1
+	const descriptorGrouperTipo = await createParentGrouper(
+		HIERARCHY_TYPE_GROUP,
+		HIERARCHY_TYPE_TLD,
+		typologyId,
+		userId,
+	);
+	const descriptorParentNodeTipo = `${getTldFromTipo(descriptorGrouperTipo)}0`;
+	const descriptorParentSectionId = getSectionIdFromTipo(descriptorGrouperTipo);
+	await writeDescriptor('relation', ONTOLOGY_PARENT, [
+		{ section_tipo: descriptorParentNodeTipo, section_id: String(descriptorParentSectionId ?? '') },
+	]);
+	if ((await insertDdOntologyRecord(nodeSectionTipo, 1)) === null) {
+		throw new Error(`insert_dd_ontology_record failed for descriptor: ${nodeSectionTipo}/1`);
+	}
+
+	// --- model section <tld>0 / 2 (copy of record 1, is_model flipped) ---
+	await createSectionRecord(nodeSectionTipo, userId, new Date(), 2);
+	const record1 = await readMatrixRecord(MATRIX_ONTOLOGY, nodeSectionTipo, 1);
+	if (record1 !== null) {
+		// copy the ontology component columns from record 1 to record 2
+		const copyValues: Record<string, unknown> = {};
+		for (const column of ['relation', 'string', 'number', 'misc'] as const) {
+			const value = record1.columns[column];
+			if (value !== null && value !== undefined) copyValues[column] = value;
+		}
+		if (Object.keys(copyValues).length > 0) {
+			await updateMatrixRecord(MATRIX_ONTOLOGY, nodeSectionTipo, 2, copyValues as never);
+		}
+	}
+	const writeModel = (column: 'relation' | 'string', tipo: string, value: unknown): Promise<void> =>
+		updateMatrixKeyData(MATRIX_ONTOLOGY, nodeSectionTipo, 2, column, tipo, value);
+	// flip is_model → YES
+	await writeModel('relation', ONTOLOGY_IS_MODEL, [
+		relLocator({
+			id: 1,
+			type: RELATION_TYPE_LINK,
+			section_tipo: SI_NO_SECTION,
+			section_id: SI_NO_YES,
+			from_component_tipo: ONTOLOGY_IS_MODEL,
+		}),
+	]);
+	// parent grouper (hierarchymtype) → BARE parent locator on <tld>0/2
+	const modelGrouperTipo = await createParentGrouper(
+		HIERARCHY_MODEL_TYPE_GROUP,
+		HIERARCHY_MODEL_TYPE_TLD,
+		typologyId,
+		userId,
+	);
+	const modelParentNodeTipo = `${getTldFromTipo(modelGrouperTipo)}0`;
+	const modelParentSectionId = getSectionIdFromTipo(modelGrouperTipo);
+	await writeModel('relation', ONTOLOGY_PARENT, [
+		{ section_tipo: modelParentNodeTipo, section_id: String(modelParentSectionId ?? '') },
+	]);
+	if ((await insertDdOntologyRecord(nodeSectionTipo, 2)) === null) {
+		throw new Error(`insert_dd_ontology_record failed for model: ${nodeSectionTipo}/2`);
+	}
+
+	// --- user permission grant (NON-FATAL — no TS write path; see LEDGER) ---
+	response.errors.push(
+		`set_section_permissions not implemented in TS for [${tld2}1, ${tld2}2] user ${userId} (non-fatal)`,
+	);
+
+	// --- target-section pointers written back on the registry record ---
+	// PHP saves the hierarchy53/58 components ON $section_tipo (class.hierarchy.php
+	// :766-800), so the table is the registry record's own (hierarchy1 →
+	// matrix_hierarchy_main). Hardcoding matrix_ontology_main here made the
+	// write-back a silent no-op for hierarchy1-driven provisioning (caught by
+	// test/unit/hierarchy_provision_native.test.ts).
+	await updateMatrixKeyData(
+		hierarchyTable,
+		hierarchySectionTipo,
+		hierarchySectionId,
+		'string',
+		HIERARCHY_TARGET_SECTION,
+		[{ id: 1, lang: DATA_NOLAN, value: `${tld2}1` }],
+	);
+	await updateMatrixKeyData(
+		hierarchyTable,
+		hierarchySectionTipo,
+		hierarchySectionId,
+		'string',
+		HIERARCHY_TARGET_SECTION_MODEL,
+		[{ id: 1, lang: DATA_NOLAN, value: `${tld2}2` }],
+	);
+}
+
+/**
+ * Seed a thesaurus General Term / General Term Model portal root
+ * (PHP create_thesaurus_general_term). Skips when the portal already has data;
+ * resolves the target section from hierarchy53 (term) / hierarchy58 (model), then
+ * delegates to applyAddNewElement and persists the appended link locator.
+ * Returns true when it created an element, false when skipped/unresolvable.
+ */
+export async function createThesaurusGeneralTerm(
+	sectionTipo: string,
+	sectionId: number,
+	generalTermTipo: 'hierarchy45' | 'hierarchy59',
+): Promise<boolean> {
+	if (generalTermTipo !== 'hierarchy45' && generalTermTipo !== 'hierarchy59') {
+		return false;
+	}
+	const table = await getMatrixTableFromTipo(sectionTipo);
+	if (table === null) return false;
+	const record = await readMatrixRecord(table, sectionTipo, sectionId);
+	const currentItems = (record?.columns.relation as Record<string, unknown[]> | null)?.[
+		generalTermTipo
+	] as unknown[] | undefined;
+	if (currentItems !== undefined && currentItems.length > 0) {
+		return false; // already seeded
+	}
+
+	// target section from hierarchy53 (term) / hierarchy58 (model)
+	const targetTipo =
+		generalTermTipo === 'hierarchy59' ? HIERARCHY_TARGET_SECTION_MODEL : HIERARCHY_TARGET_SECTION;
+	const targetValue = (record?.columns.string as Record<string, unknown[]> | null)?.[targetTipo] as
+		| { value?: unknown }[]
+		| undefined;
+	const targetSectionTipo = targetValue?.[0]?.value ? String(targetValue[0].value) : '';
+	if (targetSectionTipo === '') {
+		return false;
+	}
+
+	const existing = (currentItems ?? []) as unknown[];
+	const outcome = await applyAddNewElement(
+		existing,
+		targetSectionTipo,
+		generalTermTipo,
+		sectionTipo,
+		sectionId,
+	);
+	if (outcome === null) {
+		return false;
+	}
+	await updateMatrixKeyData(
+		table,
+		sectionTipo,
+		sectionId,
+		'relation',
+		generalTermTipo,
+		outcome.items,
+	);
+	return true;
+}

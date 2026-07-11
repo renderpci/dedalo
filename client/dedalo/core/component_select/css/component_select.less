@@ -1,0 +1,118 @@
+/**
+* component_select
+* 	&& component_select_lang
+*
+* Included from main.less file
+*/
+.component_select,
+.component_select_lang,
+.component_relation_model {
+
+	// shared
+	>.content_data {
+
+		>.content_value {
+			width: 100%;
+			display: flex;
+			align-items: center;
+
+			.q_operator {
+				width: 3rem;
+				text-align: center;
+			}
+
+			// select
+			>.select {
+				width: 100%;
+				max-width: 24rem;
+				background-color: field;
+				text-overflow: ellipsis;
+				padding-left: 0.5rem;
+			}
+
+			.show_on_active {
+				margin-left: 0.5rem;
+				margin-right: 0px;
+			}
+		}
+	}
+
+	&.view_mini {
+
+		&.edit {
+			background-color: transparent;
+			outline: none;
+			color: unset;
+			box-shadow: none;
+			display: flex;
+
+			&:after {
+				display: none;
+			}
+
+			.buttons_container, .developer_info, .show_on_active {
+				display: none !important;
+			}
+
+			.label {
+				flex: 1 0 auto;
+				padding-left: 0px;
+				padding-right: 0px;
+			}
+			.content_data {
+				padding-top: 0px;
+				padding-bottom: 0px;
+				padding-right: 0px;
+
+				.select {
+					width: auto;
+				}
+			}
+		}
+	}
+
+	&.view_line {
+		display: inline-block;
+
+		>.content_data >.content_value >.select {
+			height: 1.5rem;
+			margin-left: 1px;
+			margin-right: 0px;
+			margin-top: 0.10rem;
+			padding-left: 0.25rem;
+		}
+	}
+
+}//end .component_select
+
+// edit: the dropdown border and up/down arrows are hidden at rest and revealed
+// only when the component is hovered or active (:not(:focus) keeps an open/
+// focused select fully styled).
+.component_select.edit,
+.component_select_lang.edit {
+
+	>.content_data >.content_value >.select:not(:focus) {
+		outline-color: transparent;
+		background-image: none;
+	}
+
+	&:hover,
+	&.active {
+		>.content_data >.content_value >.select:not(:focus) {
+			outline-color: @color_grey_13;
+			background-image: var(--select_icon_url);
+		}
+	}
+}
+
+:root[data-theme="dark"] .component_select,
+:root[data-theme="dark"] .component_select_lang,
+:root[data-theme="dark"] .component_relation_model {
+	> .content_data > .content_value > .select {
+		background-color: var(--select_bg);
+		color: var(--select_fg);
+		outline: var(--select_outline);
+		-webkit-appearance: none;
+		appearance: none;
+	}
+}

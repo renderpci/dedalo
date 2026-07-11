@@ -1,0 +1,38 @@
+/**
+* counters_status
+*
+* Included from area_maintenance.less file.
+* The audit report is a shared .dd_table (kit); only the column template and the
+* error banner are widget-specific.
+*/
+.wrapper_widget.counters_status {
+
+	.counters_total {
+		margin-bottom: 0.75rem;
+		font-size: 0.85rem;
+		color: var(--fg_muted);
+	}
+
+	// errors banner — a contained danger note with a console list inside
+	.errors_container {
+		margin-bottom: 0.75rem;
+		padding: 0.55rem 0.7rem;
+		color: var(--fg_default);
+		font-weight: 500;
+		line-height: 1.35;
+		background-color: color-mix(in srgb, var(--color_danger) 11%, transparent);
+		border-left: 3px solid var(--color_danger);
+		border-radius: 0 6px 6px 0;
+
+		>.error_pre {
+			.dd_console();
+			margin-top: 0.5rem;
+			background-color: var(--bg_surface);
+		}
+	}
+
+	// counter audit table: tipo · name · counter · last id · fix · reset
+	.dd_table {
+		grid-template-columns: minmax(5rem, 8rem) minmax(7rem, 1fr) 5rem 5.5rem 7rem 9rem;
+	}
+}

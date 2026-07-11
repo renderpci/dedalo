@@ -1,0 +1,15 @@
+# Bun runtime configuration (precedent: diffusion/api/v1/bunfig.toml)
+console.depth = 10
+
+[test]
+# Parity tests talk to a live PHP server / real DB; keep a generous timeout.
+timeout = 30000
+# Confine test discovery to our test/ tree — the COPIED CLIENT (client/dedalo)
+# contains view files whose names match test globs (core/widgets/test/…).
+root = "test"
+# S1-18: point session_store at a per-run scratch sqlite BEFORE any test module
+# imports it — bun test must never touch the live ../private session store.
+# S2-20: component_registry.ts registers the ontology↔components model lookup
+# (the same module-load side effect production boot performs — see
+# src/core/ontology/resolver.ts seam note).
+preload = ["./test/preload/session_db.ts", "./test/preload/component_registry.ts"]

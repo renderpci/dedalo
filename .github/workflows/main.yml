@@ -1,0 +1,50 @@
+# Post-merge gate on main — the full measured baseline (docs/LEDGER.md
+# "Measured baselines"), not the PR's targeted verify: a merge that breaks a
+# non-neighbour test goes red within one push, not one night.
+#
+# Invariants in this file are enforced by test/unit/ci_workflow_tripwire.test.ts.
+name: main
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: main-selfhosted
+  cancel-in-progress: false
+
+jobs:
+  hermetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - name: Hermetic tier (install + tsc + biome + static tripwires)
+        run: bash scripts/ci/hermetic.sh
+
+  full:
+    runs-on: [self-hosted, macOS, dedalo-mac]
+    timeout-minutes: 60
+    env:
+      ORACLE_REQUIRED: "1"
+      DIFFUSION_JOBS_TABLE: dedalo_ts_test_ci_diffusion_jobs
+      DIFFUSION_ACTIVITY_TABLE: dedalo_ts_test_ci_activity_diffusion
+    steps:
+      - uses: actions/checkout@v4
+      - name: Link sibling paths (../private, PHP tree, client lib)
+        run: bash scripts/ci/link_siblings.sh
+      - name: Runner preconditions (bun pin, env, service probes)
+        run: bash scripts/ci/env_guard.sh
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Full suite (unit + parity, live oracle)
+        shell: bash
+        run: bun test test/unit test/parity 2>&1 | tee full-suite.log
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: full-suite-log
+          path: full-suite.log

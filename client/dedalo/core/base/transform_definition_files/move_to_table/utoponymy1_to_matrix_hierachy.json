@@ -1,0 +1,13 @@
+[
+	{
+		"section_tipo": "utoponymy1",
+		"source_table": "matrix_list",
+		"target_table": "matrix_hierarchy"
+	},
+	{
+		"section_tipo": "trademark1",
+		"source_table": "matrix_list",
+		"target_table": "matrix_hierarchy"
+	}
+
+]

@@ -1,0 +1,194 @@
+/**
+* update_code
+*
+* Included from area_maintenance.less file
+*/
+.wrapper_widget.update_code {
+
+	>.content_data {
+
+		.config_grid {
+			grid-template-columns: 3fr 6fr;
+			gap: 0.25rem;
+
+			.label {
+				display: flex;
+				align-items: flex-start;
+				flex-wrap: nowrap;
+
+				&.bold {
+					padding-bottom: 0.5rem !important;
+				}
+			}
+
+			&.servers_grid {
+
+				.label {
+					display: block;
+					cursor: pointer;
+					padding-bottom: 0px;
+					padding-top: 0.2rem;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					white-space: nowrap;
+
+					input[type="radio"] {
+						cursor: pointer;
+						width: unset;
+						height: unset;
+						padding: 0;
+						margin: 0 .5em .5em 0;
+						vertical-align: text-top;
+					}
+				}
+
+				.value {
+					padding: 0.5rem;
+					padding-bottom: 0px;
+					padding-top: 0.2rem;
+
+					.icon {
+						margin-left: 0.5rem;
+					}
+				}
+
+				.active {
+					color: @color_black;
+					font-weight: 500;
+				}
+			}
+		}
+
+		.build_version_group {
+			border: 1px solid @color_orange;
+			border-radius: 4px;
+			padding: 0.66rem;
+			margin-top: 0.5rem;
+		}
+	}
+
+}//end update_code
+
+
+// modal styles
+.widget_update_code_modal {
+
+	.modal_content {
+		width: 890px;
+		max-width: 100%;
+	}
+
+	.body {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		font-size: 1.1rem;
+
+		.beta_updates_container {
+			width: 100%;
+			text-align: right;
+			margin-top: 3rem;
+			padding-right: 1.5rem;
+
+			>.version_label {
+				cursor: pointer;
+
+				>input {
+					cursor: pointer;
+					vertical-align: bottom;
+					margin-right: 0.33rem;
+				}
+			}
+		}
+
+		.files_container {
+			width: 100;
+			text-align: left;
+			margin-top: 2rem;
+
+			.file_container {
+				border-bottom: 1px @color_grey_13 solid;
+				padding: 0.5rem;
+				border-radius: 3px;
+				display: flex;
+				gap: 1rem;
+				margin-bottom: 0.5rem;
+
+				&:active {
+					opacity: 0.7;
+				}
+
+				.version_label {
+					cursor: pointer;
+					display: contents;
+
+					input {
+						vertical-align: bottom;
+						cursor: pointer;
+					}
+				}
+				.value {
+					font-weight: 300;
+					color: @color_grey_9;
+				}
+
+				&.development {
+					background-color: @color_orange_dedalo;
+					color: @color_white;
+
+					.value {
+						color: @color_white;
+					}
+				}
+			}
+
+			.file_container:last-child {
+				border-bottom: none;
+				margin-bottom: 0px;
+			}
+		}
+	}
+
+	.footer {
+		position: relative;
+		display: block;
+		text-align: center;
+		margin-top: 2rem;
+		min-height: 6rem;
+
+		// update_mode_container. Radio buttons update mode user selection
+		>.update_mode_container {
+			padding: 1rem;
+			margin-bottom: 1.5rem;
+			display: flex;
+			width: 100%;
+			justify-content: center;
+			gap: 1rem;
+
+			>label {
+				cursor: pointer;
+
+				input {
+					cursor: pointer;
+					vertical-align: bottom;
+				}
+			}
+		}
+
+		pre {
+			text-align: left;
+			margin: 2rem;
+			display: inline-flex;
+		}
+
+		>.response {
+			padding-bottom: 6rem;
+			padding-top: 0;
+		}
+
+		.spinner {
+			margin: 0px;
+			top: 2rem;
+		}
+	}
+}

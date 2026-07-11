@@ -1,0 +1,68 @@
+{
+	"_provenance": {
+		"captured": "2026-07-10",
+		"method": "scratchpad capture_dec14b_p1.ts — provisioned test218/test52 fixture + scratch test3/900311; TS dispatchRqo vs live PHP oracle (WC-001 adopted on the PHP side), comparable projection verified deep-equal before freezing"
+	},
+	"items": [
+		{
+			"tipo": "test218",
+			"section_tipo": "test3",
+			"section_id": 900311,
+			"mode": "list",
+			"lang": "lg-nolan",
+			"from_component_tipo": "test52",
+			"entries": [
+				{
+					"id": 1,
+					"type": "dd490",
+					"id_key": 1,
+					"section_id": "121",
+					"section_tipo": "dd1706",
+					"from_component_tipo": "test218",
+					"main_component_tipo": "test52",
+					"paginated_key": 0
+				}
+			],
+			"pagination": {
+				"total": 1,
+				"limit": 5,
+				"offset": 0
+			},
+			"counter": null,
+			"row_section_id": 900311,
+			"parent_tipo": "test3"
+		},
+		{
+			"tipo": "dd1715",
+			"section_tipo": "dd1706",
+			"section_id": "121",
+			"mode": "list",
+			"lang": "lg-nolan",
+			"from_component_tipo": "test218",
+			"entries": [
+				{
+					"id": 1,
+					"lang": "lg-nolan",
+					"value": "Zenon"
+				}
+			],
+			"pagination": null,
+			"counter": null,
+			"row_section_id": 900311,
+			"parent_tipo": "test3"
+		},
+		{
+			"tipo": "test52",
+			"section_tipo": "test3",
+			"section_id": 900311,
+			"mode": "list",
+			"lang": "lg-spa",
+			"from_component_tipo": "test52",
+			"entries": [],
+			"pagination": null,
+			"counter": 0,
+			"row_section_id": 900311,
+			"parent_tipo": "test3"
+		}
+	]
+}

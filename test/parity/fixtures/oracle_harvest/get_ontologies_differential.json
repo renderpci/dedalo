@@ -1,0 +1,2320 @@
+{
+	"meta": {
+		"gate": "get_ontologies_differential",
+		"captured_at": "2026-07-11T08:24:27.010Z",
+		"capture_commit": "d2d0746",
+		"oracle_base_url_sha256": "e817688f9da2918c",
+		"entity": "monedaiberica",
+		"interaction_count": 3,
+		"drift_policy": "These interactions freeze LIVE PHP oracle responses over the mutable shared DB. If this gate reds under ORACLE_MODE=fixtures with NO engine change, the shared data moved after the harvest: adjudicate (data-side diff only?), then re-harvest this gate with `bun run scripts/oracle_harvest.ts --gate <name>.test.ts` in the same change that adjudicates the red. After PHP decommissioning there is no re-harvest: fixtures + the cutover DB snapshot are the pinned pair (rewrite/ORACLE_HARVEST.md)."
+	},
+	"interactions": {
+		"1a326f5bb2c4c2345ec1fb9d": {
+			"kind": "json",
+			"rqo": {
+				"action": "get_environment",
+				"dd_api": "dd_core_api"
+			},
+			"status": 200,
+			"body": {
+				"result": {
+					"page_globals": {
+						"dedalo_last_error": null,
+						"is_logged": false,
+						"is_global_admin": false,
+						"is_developer": false,
+						"is_root": false,
+						"user_id": null,
+						"username": null,
+						"full_username": null,
+						"dedalo_entity": "monedaiberica",
+						"dedalo_entity_id": 10,
+						"dedalo_version": null,
+						"dedalo_build": null,
+						"mode": "list",
+						"dedalo_application_langs_default": "lg-spa",
+						"dedalo_application_lang": "lg-spa",
+						"dedalo_data_lang": "lg-spa",
+						"dedalo_data_lang_selector": true,
+						"dedalo_data_lang_sync": false,
+						"dedalo_data_nolan": "lg-nolan",
+						"dedalo_application_langs": [
+							{
+								"label": "Castellano",
+								"value": "lg-spa"
+							},
+							{
+								"label": "Català",
+								"value": "lg-cat"
+							},
+							{
+								"label": "English",
+								"value": "lg-eng"
+							},
+							{
+								"label": "Français",
+								"value": "lg-fra"
+							},
+							{
+								"label": "Português",
+								"value": "lg-por"
+							},
+							{
+								"label": "German",
+								"value": "lg-deu"
+							},
+							{
+								"label": "Ελληνικά",
+								"value": "lg-ell"
+							},
+							{
+								"label": "Italiano",
+								"value": "lg-ita"
+							}
+						],
+						"dedalo_projects_default_langs": [
+							{
+								"label": "Nepali",
+								"value": "lg-nep",
+								"tld2": "ne"
+							},
+							{
+								"label": "English",
+								"value": "lg-eng",
+								"tld2": "en"
+							},
+							{
+								"label": "German",
+								"value": "lg-deu",
+								"tld2": "de"
+							},
+							{
+								"label": "French",
+								"value": "lg-fra",
+								"tld2": "fr"
+							},
+							{
+								"label": "Valencià",
+								"value": "lg-vlca",
+								"tld2": "ca"
+							},
+							{
+								"label": "Arabic Cluster",
+								"value": "lg-ara",
+								"tld2": "ar"
+							},
+							{
+								"label": "Catalan",
+								"value": "lg-cat",
+								"tld2": "ca"
+							},
+							{
+								"label": "Greek",
+								"value": "lg-ell",
+								"tld2": "el"
+							},
+							{
+								"label": "Basque",
+								"value": "lg-eus",
+								"tld2": "eu"
+							},
+							{
+								"label": "Italian",
+								"value": "lg-ita",
+								"tld2": "it"
+							},
+							{
+								"label": "Portuguese",
+								"value": "lg-por",
+								"tld2": "pt"
+							},
+							{
+								"label": "Castellano",
+								"value": "lg-spa",
+								"tld2": "es"
+							}
+						],
+						"dedalo_image_quality_default": "1.5MB",
+						"dedalo_av_quality_default": "404",
+						"dedalo_quality_thumb": "thumb",
+						"tag_id": null,
+						"dedalo_protect_media_files": 1,
+						"DEDALO_NOTIFICATIONS": 0,
+						"ip_api": {
+							"url": "https://ipapi.co/$ip/json/",
+							"href": "https://ipapi.co/?q=$ip",
+							"country_code": "country_code"
+						},
+						"fallback_image": "/dedalo/core/themes/default/default.svg",
+						"locale": "es-ES",
+						"dedalo_date_order": "dmy",
+						"component_active": null,
+						"stream_readers": [],
+						"maintenance_mode": false,
+						"dedalo_notification": false,
+						"recovery_mode": false,
+						"data_version": [
+							7,
+							0,
+							0
+						]
+					},
+					"plain_vars": {
+						"DEDALO_ENVIRONMENT": true,
+						"DEDALO_API_URL": "/dedalo/core/api/v1/json/",
+						"DEDALO_DIFFUSION_API_URL": "/dedalo/diffusion/api/v1/",
+						"DEDALO_CORE_URL": "/dedalo/core",
+						"DEDALO_ROOT_WEB": "/dedalo",
+						"DEDALO_MEDIA_URL": "/dedalo/media",
+						"DEDALO_TOOLS_URL": "/dedalo/tools",
+						"DEDALO_TOOLS_URLS": {},
+						"SHOW_DEBUG": false,
+						"SHOW_DEVELOPER": false,
+						"DEVELOPMENT_SERVER": true,
+						"DEDALO_UPLOAD_SERVICE_CHUNK_FILES": 5,
+						"DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT": 50,
+						"DEDALO_LOCK_COMPONENTS": true,
+						"DEDALO_MAINTENANCE_MODE": false,
+						"DEDALO_NOTIFICATION": null,
+						"DEDALO_RR_WORKER": false,
+						"DD_TIPOS": {
+							"DEDALO_RELATION_TYPE_INDEX_TIPO": "dd96",
+							"DEDALO_SECTION_INFO_INVERSE_RELATIONS": "dd1596",
+							"DEDALO_RELATION_TYPE_LINK": "dd151",
+							"DEDALO_SECTION_RESOURCES_IMAGE_TIPO": "rsc170",
+							"DEDALO_COMPONENT_RESOURCES_IMAGE_TIPO": "rsc29"
+						}
+					},
+					"get_label": {
+						"continue": "Continuar",
+						"change_user": "Cambiar",
+						"recover_password": "¿Olvidaste tu contraseña?",
+						"recover_password_title": "Recupera tu contraseña",
+						"recover_password_help": "Introduce tu usuario o correo electrónico y te enviaremos un código de recuperación de 8 dígitos.",
+						"username_or_email": "Usuario o correo electrónico",
+						"send_code": "Enviar código de recuperación",
+						"back_to_login": "Volver al inicio de sesión",
+						"recovery_code_title": "Revisa tu correo",
+						"recovery_code_help": "Hemos enviado un código de 8 dígitos a tu correo. Introdúcelo junto con tu nueva contraseña.",
+						"new_password": "Nueva contraseña",
+						"repeat_password": "Repite la nueva contraseña",
+						"reset_password": "Restablecer contraseña",
+						"invalid_username": "Usuario no válido",
+						"invalid_auth_code": "¡Código de acceso no válido!",
+						"enter_username_or_email": "Introduce tu usuario o correo electrónico",
+						"enter_recovery_code": "Introduce el código de recuperación de 8 dígitos",
+						"password_too_short": "Contraseña demasiado corta. Usa al menos 8 caracteres",
+						"passwords_do_not_match": "Las contraseñas no coinciden",
+						"request_code_first": "Solicita primero un código de recuperación",
+						"recovery_code_sent": "Si existe una cuenta, se ha enviado un código de recuperación.",
+						"password_updated": "Tu contraseña se ha actualizado. Ya puedes iniciar sesión.",
+						"recovery_invalid_or_expired": "Código no válido o caducado",
+						"recovery_too_many_attempts": "Demasiados intentos. Solicita un nuevo código.",
+						"recovery_reset_failed": "No se ha podido actualizar la contraseña. Inténtalo de nuevo más tarde.",
+						"different_from": "Distinto de",
+						"tool_ts_print": "Impresión del tesauro",
+						"title": "Título",
+						"page": "Página",
+						"beginning": "Inicio",
+						"herramienta": "Herramienta",
+						"audiovisual": "Audiovisual",
+						"mostrar": "mostrar",
+						"create_identify_image": "Crear imagen identificativa",
+						"created": "creado",
+						"by_user": "por usuario",
+						"idioma_de_destino": "Idioma de destino",
+						"open_relationships": "Abrir relaciones",
+						"contenido_actual": "Contenido actual",
+						"anadir_ficheros": "Añadir ficheros",
+						"comenzar_la_carga": "Comenzar la carga",
+						"cancelar_la_carga": "Cancelar la carga",
+						"gestion_de_archivos": "Gestión de archivos",
+						"import_preview": "Previsualización de importación",
+						"found_records": "Todos los registros encontrados",
+						"view_pdf": "Ver / descargar PDF",
+						"aplicar_y_salvar": "Aplicar y salvar",
+						"find": "Buscar",
+						"project": "Proyecto",
+						"donde": "Dónde",
+						"que": "Qué",
+						"registros_creados": "Registros creados",
+						"directorio_de_destino": "Directorio de destino",
+						"nombre_fichero": "Nombre del fichero",
+						"fichero_de_zotero_procesado_correctamente": "Fichero de Zotero procesado correctamente",
+						"tool_calendar": "Calendario",
+						"original": "Original",
+						"nombre_fichero_completo": "Nombre completo del fichero",
+						"extension": "extensión",
+						"registros_visualizados": "Registros visualizados",
+						"nombre_automatico": "Nombre automático",
+						"tamano_archivo": "Tamaño del archivo",
+						"formato_incorrecto": "Formato incorrecto",
+						"ir_al_perfil": "Ir al perfil",
+						"etiqueta_salvar_texto": "y guarde el texto",
+						"etiquetas_perdidas": "Etiquetas perdidas",
+						"conform_headers": "Conformar cabeceras",
+						"fichero_de_bibtex_procesado_correctamente": "Fichero BibTex procesado correctamente",
+						"elementos_desactivos": "elementos desactivos",
+						"file": "Fichero",
+						"conservar_los_cambios_transcripcion": "Para conservar los cambios, NO CIERRE ESTA VENTANA. Inicie sesión en otra ventana del navegador y, a continuación, vuelva a esta ventana y guarde el contenido (presionando el botón 'Guardar')",
+						"usuarios_activos": "Usuarios activos",
+						"tool_import_files": "Importar ficheros",
+						"play_speed": "Velocidad de reproducción",
+						"play_pause_key": "Play/pause tecla",
+						"auto_rewind": "Auto-rebobinado",
+						"insert_tag": "Insertar etiqueta",
+						"opciones": "Opciones",
+						"update_ontology": "Actualizar Ontología",
+						"build_structure_css": "Generar estructura css",
+						"section_tipo": "Tipo de la sección",
+						"remove_av_temporals": "Borrar temporales de audio/video",
+						"tool_semantic_nodes": "Relaciones semánticas",
+						"pagina_de": "Página X de Y.",
+						"volver": "Volver",
+						"sections": "secciones",
+						"remove": "Quitar",
+						"no_access": "Sin acceso aquí",
+						"imagen_info": "Imagen info.",
+						"years": "años",
+						"days": "días",
+						"months": "meses",
+						"year": "año",
+						"month": "mes",
+						"leer": "Leer",
+						"ruta_carpeta_ficheros": "Ruta de carpeta ficheros a importar",
+						"tool_import_dedalo_csv": "Importar Dédalo csv",
+						"mover": "Mover",
+						"mover_datos_de_componentes": "Mover datos de componentes",
+						"timecodes": "Códigos de tiempo",
+						"indexations": "Indexaciones",
+						"indexations_info": "Index info",
+						"lines": "Líneas",
+						"date": "Fecha",
+						"municipio": "Municipio",
+						"entrevista": "Entrevista",
+						"informantes": "Informantes",
+						"head": "Cabecera",
+						"provisional": "Provisional",
+						"relations": "Relaciones",
+						"heramientas": "Herramientas",
+						"persons": "Personas",
+						"vacio": "vacío",
+						"import": "Importar",
+						"eliminar_etiqueta": "¿Eliminar etiqueta?",
+						"print": "Imprimir",
+						"tool_structuration": "Estructuración",
+						"crear_capitulo": "Crear capítulo",
+						"mostrar_ocultar_etiquetas": "Mostrar/ocultar etiquetas",
+						"approach": "Enfoque",
+						"structurations": "Estructuraciones",
+						"tool_lang_multi": "Multi-lenguaje",
+						"selected_text": "Texto seleccionado",
+						"automatic_translation": "Traducción automática",
+						"copiar_a_destino": "Copiar a destino",
+						"propagar_marcas": "Propagar marcas",
+						"total_parrafos": "Total párrafos",
+						"solo_nuevas": "Sólo nuevas",
+						"recreate_all": "Recrear todas",
+						"order_change": "Cambio de orden",
+						"max": "Máx.",
+						"tool_import_rdf": "Importar RDF",
+						"export_json_ontology": "Exportar Ontología JSON",
+						"renumerar_secciones": "Renumerar secciones",
+						"name_to_field": "Sufijo indica campo",
+						"name_to_record_id": "Prefijo indica ID",
+						"presets_de_busqueda": "Config. de búsqueda",
+						"presets_de_exportacion": "Config. de exportación",
+						"search_options": "Opciones de búsqueda",
+						"fields": "Campos",
+						"and": "y",
+						"or": "o",
+						"go_to_page": "Ir a la página",
+						"go_to_record": "Ir al registro",
+						"does_not_contain": "No contiene",
+						"contains": "Contiene",
+						"begins_with": "Empieza con",
+						"end_with": "Acaba con",
+						"literal": "Literal",
+						"between": "Entre",
+						"sequence": "Secuencia",
+						"greater_than_or_equal": "Mayor o igual que",
+						"less_than_or_equal": "Menor o igual que",
+						"greater_than": "Mayor que",
+						"less_than": "Menor que",
+						"list": "Listado",
+						"edicion": "Edición",
+						"new": "Nuevo",
+						"entrada": "Entrada",
+						"salida": "Salida",
+						"recuperar": "recuperar",
+						"record": "registro",
+						"fail_to_save": "¡Fallo al guardar!",
+						"loading": "Cargando...",
+						"cerrar": "Cerrar",
+						"fichero": "Fichero",
+						"size": "Tamaño",
+						"download": "Descargar",
+						"upload": "Subir fichero",
+						"delete": "Borrar",
+						"build": "Generar",
+						"version": "Versión",
+						"processing": "Procesando",
+						"por_favor_espere": "Por favor, espere",
+						"seleccione_el_fichero_a_subir": "Seleccione el fichero a subir",
+						"file_uploaded_successfully": "Archivo subido con éxito",
+						"error_on_upload_file": "Error al subir el archivo",
+						"select_a_file": "Seleccione un fichero",
+						"el_directorio_no_existe": "El directorio no existe o no es accesible",
+						"insertar": "Insertar",
+						"accion": "Acción",
+						"tecla": "Tecla",
+						"visualizar": "Visualizar",
+						"rotate": "Rotar",
+						"imagen": "imagen",
+						"cancel": "Cancelar",
+						"indexacion": "indexación",
+						"indexings": "indexaciones",
+						"descriptores": "descriptores",
+						"tag": "etiqueta",
+						"section": "sección",
+						"tesauro": "tesauro",
+						"tool_av_versions": "Ficheros de audio/video",
+						"tool_image_versions": "Ficheros de imagen",
+						"tool_upload": "Carga de archivos",
+						"tool_relation": "Relaciones",
+						"tool_transcription": "Transcripción",
+						"situation": "Estado de registro",
+						"full": "completo",
+						"modo": "modo",
+						"search_in_current_lang": "Buscar en el idioma actual",
+						"existente": "existente",
+						"search_in_all_langs": "Buscar en todos los idiomas",
+						"recurso": "recurso",
+						"delete_resource_and_links": "Borrar el recurso y todos sus vínculos",
+						"tool_layout_print": "Impresión",
+						"ir_al_listado": "Ir al listado",
+						"modelos": "modelos",
+						"jerarquias": "jerarquías",
+						"terms": "Términos",
+						"language": "idioma",
+						"value_out_of_range": "Valor fuera de rango",
+						"registrar_herramientas": "Registrar herramientas",
+						"registros_actualizados": "registros actualizados",
+						"saved": "guardado",
+						"sin_fichero": "Sin fichero",
+						"seleccione_una_etiqueta_para_indexar": "Seleccione una etiqueta para indexar",
+						"nueva_plantilla_vacia": "Nueva plantilla vacía",
+						"caracteres_por_linea": "Caracteres por línea",
+						"zoom": "Zoom",
+						"longitude": "Longitud",
+						"latitude": "Latitud",
+						"build_subtitles": "Crear subtítulos",
+						"sure": "¿Seguro?",
+						"sure_delete_entry_all_langs": "Esta entrada se eliminará de todos los idiomas.",
+						"weight": "Peso",
+						"items": "Elementos",
+						"average": "Media",
+						"min": "Mín.",
+						"cataloging": "Catalogación",
+						"preset": "Config",
+						"informacion": "Información",
+						"uploaded_file_was_only_partially_uploaded": "El archivo subido fue sólo parcialmente cargado",
+						"no_file_was_uploaded": "Ningún archivo fue subido",
+						"carga": "Carga",
+						"recuperar_component": "Recuperar componente",
+						"recuperar_seccion": "Recuperar sección",
+						"carga_completada": "Carga completada",
+						"eliminar_archivo": "Eliminar archivo",
+						"estadisticas": "Estadísticas",
+						"importar_ficheros": "Importar ficheros",
+						"ver_ficha_existente": "Ver ficha existente",
+						"tool_pdf_versions": "Ficheros PDF",
+						"filter": "filtro",
+						"idioma_de_origen": "Idioma de origen",
+						"preview": "vista previa",
+						"code": "Código",
+						"standard": "Estándar",
+						"format": "Formato",
+						"activate_all_columns": "Activar todas las columnas",
+						"disable_all_columns": "Desactivar todas las columnas",
+						"error_empty_offset": "Error. Valor de tc offset vacío",
+						"updating": "Actualizando",
+						"creating": "Creando",
+						"versions": "Versiones",
+						"layer": "Capa",
+						"reading": "Leyendo",
+						"references": "Referencias",
+						"tool_qr": "Códigos QR",
+						"exactly": "Exactamente",
+						"duplicated": "Duplicado",
+						"tool_watermark": "Notas",
+						"tool_cataloging": "Catalogación",
+						"tool_import_marc21": "Importar MARC 21",
+						"tool_user_admin": "Administración de usuario",
+						"tool_translation": "Traducción",
+						"digitization": "Digitalización",
+						"latest_changes": "Últimos cambios",
+						"borrar_secciones": "Borrar secciones",
+						"email": "E-mail",
+						"unsaved_changes": "¡Sin salvar!",
+						"show_buttons": "Mostrar botones",
+						"copy": "Copiar",
+						"deleted_tags": "Etiquetas borradas",
+						"source": "Origen",
+						"import_json_ontology": "Importar ontología JSON",
+						"register_tools": "Registrar herramientas",
+						"value": "Valor",
+						"duplicate": "Duplicar",
+						"component": "Componente",
+						"model": "Modelo",
+						"type": "Tipo",
+						"publish": "Publicar",
+						"previous": "Previo",
+						"replace": "Reemplazar",
+						"replace_all": "Reemplazar todos",
+						"match_case": "Coincidir mayúsculas y minúsculas",
+						"whole_words": "Palabras completas",
+						"find_and_replace": "Buscar y reemplazar",
+						"instalar": "Instalar",
+						"remove_filter": "Eliminar filtro",
+						"update_data_version": "Actualizar la versión del dato",
+						"check_config": "Comprobar configuración",
+						"delete_diffusion_records": "Borrar registros de difusión",
+						"loading_dedalo_files": "Cargando ficheros de Dédalo",
+						"ontology": "Ontología",
+						"developer": "Desarrollador",
+						"installed": "Instalado",
+						"layer_selector": "Selector de capas",
+						"build_database_version": "Construir versión de base de datos",
+						"tool_portal": "Portal",
+						"tool_import_images": "Importar imágenes",
+						"ficha": "ficha",
+						"procesar": "procesar",
+						"mostrar_filtrados": "Mostrar filtrados",
+						"ir_al_fragmento": "Ir al fragmento",
+						"update_cache": "Actualizar caché",
+						"dir_path": "Ruta de directorio",
+						"file_path": "Ruta de archivo",
+						"name": "Nombre",
+						"modified": "modificado",
+						"campos_personalizados": "Campos Personalizados",
+						"records_displayed": "Registros mostrados de X a Y de Z",
+						"day": "día",
+						"acabado": "Acabado",
+						"site_under_maintenance": "Sistema en mantenimiento. Disculpe las molestias",
+						"borrara_la_etiqueta_seleccionada": "Borrará la etiqueta seleccionada en todos los idiomas así como todas la relaciones e indexaciones asociadas a ella",
+						"seleccionado": "seleccionado",
+						"total_records": "Registros totales",
+						"processing_wait": "Procesando... por favor espere",
+						"historico": "Histórico",
+						"validado": "Validado",
+						"verifique_datos_de_instalacion": "Verifique que los datos de instalación son correctos. Si no lo son, configure la información relativa a la base de datos en las preferencias de Dédalo (config_db.php)",
+						"eliminar_imagenes_tras_la_importacion": "Eliminar imágenes tras la importación",
+						"numero_inventario": "Número de inventario",
+						"editar_registro": "Editar registro",
+						"index_tags_deleted": "etiquetas de indexación borradas fueron creadas al comienzo del texto.",
+						"index_tags_fixed": "etiquetas de indexación rotas fueron arregladas.",
+						"review_tags": "Por favor revise la posición de las etiquetas azules (borradas accidentalmente)",
+						"contenido_no_autorizado": "Usted no está autorizado a ver este contenido",
+						"tool_import_av": "Importar audio/video",
+						"delete_component_tipo_of_section_tipo": "Borrar todo el componente de la sección",
+						"skip_publication_state_check": "Ignorar temporalmente el estado de publicación al publicar",
+						"edit_template": "Editar plantilla",
+						"error_de_conexion": "Error de conexión. Recargue la página pasados unos segundos",
+						"tool_tc": "Codigos de tiempo",
+						"info_fichero": "Información del fichero",
+						"actualizar_vista": "Actualizar vista",
+						"structurations_info": "Estructuraciones info",
+						"yes": "si",
+						"same_name_same_record": "Mismo nombre mismo registro. Crea nuevo ID",
+						"no_empty": "Contiene información",
+						"abv_scope_note": "NA",
+						"tool_add_component_data": "Añadir contenido al campo",
+						"next": "Siguiente",
+						"guardar": "Guardar",
+						"dividir_palabras": "Dividir palabras",
+						"tool_time_machine": "Máquina del tiempo",
+						"carga_de_archivo_completada": "Carga de archivo completada",
+						"delete_data_only": "Borrar sólo datos",
+						"crear_nuevo_fragmento": "Crear nuevo fragmento con selección",
+						"tool_indexation": "Indexación",
+						"list_from_component_data": "Lista de datos de componente",
+						"mostrar_inspector": "Mostrar Inspector",
+						"value_already_exists": "El valor ya existe",
+						"search_operators": "Operadores de búsqueda",
+						"duracion": "Duración",
+						"temp_dir_not_accessible": "Carpeta temporal no accesible",
+						"failed_to_writte_file_to_disk": "No se pudo escribir el archivo en el disco",
+						"extensiones_soportadas": "Extensiones soportadas",
+						"component_history": "Historial del componente",
+						"delete_found_records": "Se eliminarán todos los registros encontrados.",
+						"seconds_abbr": "Seg.",
+						"all_records_found": "Todos registros los encontrados",
+						"data_was_not_modified_save_canceled": "Los datos no fueron modificados. Salvar cancelado.",
+						"activity": "Actividad",
+						"select_one_project": "Debe seleccionar al menos un proyecto",
+						"no_hay_etiqueta_seleccionada": "El código de usuario no existe",
+						"publicado": "Publicado",
+						"full_screen": "Pantalla completa",
+						"export_hierarchy": "Exportar jerarquía",
+						"skip_deletion_cause_children": "Se ha omitido la eliminación del registro actual porque tiene hijos",
+						"tool_diffusion": "Publicar",
+						"number_page_of_total_pages": "Página %s de %s",
+						"numero_recurso": "Número del recurso",
+						"transcripcion_automatica": "Transcripción automática",
+						"desbloquear_todos_los_componentes": "Desbloquear todos los componentes",
+						"update": "Actualizar",
+						"are_you_sure_to_delete_this_record": "¿Está seguro de borrar este registro?",
+						"make_backup": "Hacer copia de seguridad",
+						"ruta_carpeta_ficheros_renombrar": "Ruta de carpeta ficheros a renombrar",
+						"new_fixed_page": "Nueva página fija",
+						"fragment": "fragmento",
+						"selecionar_texto": "Seleccionar texto",
+						"field": "campo:",
+						"reload": "Recargar",
+						"filesize_is_too_big": "El tamaño de archivo es demasiado grande",
+						"abandonando_esta_pagina": "Abandonando esta página perderá los datos que no haya salvado",
+						"open": "Abrir",
+						"delete_data_and_record": "Borrar registro completo",
+						"state": "Estado de validación",
+						"tool_posterframe": "Fotograma",
+						"select_page_of_the_doc": "Seleccione una página del documento:",
+						"seleccione_un_idioma_de_destino": "Seleccione un idioma de destino",
+						"tool_import_zotero": "Importar de Zotero",
+						"descarga": "Descarga",
+						"nueva version": "Nueva versión",
+						"uploaded_file_exceeds_the_maximum_size": "El archivo subido excede el tamaño máximo permitido",
+						"actividad_horaria": "Actividad horaria",
+						"tool_metadata": "Metadata",
+						"exportar_jerarquias": "Exportar jerarquias",
+						"translatable": "Traducible",
+						"select_search_section": "Seleccione una sección de búsqueda.",
+						"build_install_version": "Construir una versión de instalación",
+						"not_allow_to_create_note": "No puede crear notas de un cambio que no es suyo",
+						"value_already_exits_in_other_langs": "El valor ya existe en otro idioma",
+						"error_source_target_lang": "Lenguaje de origen y destino NO pueden tener el mismo idioma",
+						"tool_sort": "Herramienta de ordenación",
+						"import_bibtex_help": "Añada el fichero BIBTex y los correspondientes ficheros PDF desde su disco duro. Una vez cargados, seleccione 'Importar ficheros'",
+						"are_you_sure_to_overwrite_text": "¿Está seguro de sobrescribir el texto?",
+						"component_alternative": "Campo alternativo. No usar salvo que el término no se encuentre normalizado. Utilize en su lugar: %s",
+						"relacionar_fragmento_seleccionado": "Relacionar fragmento seleccionado",
+						"para_crear_un_fragmento": "Para crear un nuevo fragmento, simplemente seleccione una parte del texto y pulse «Nuevo fragmento» abajo",
+						"uploaded_file_exceeds_the_directive": "El archivo subido excede la directiva upload_max_filesize en php.ini",
+						"tool_replace_component_data": "Reemplazar datos del campo",
+						"total_pages": "Páginas totales",
+						"now": "Ahora",
+						"para_revisar": "Para revisar",
+						"registros_modificados": "Registros modificados",
+						"generar_turnos": "Generar turnos de visitas",
+						"label_deleted": "Borrada",
+						"label_to_review": "Por revisar",
+						"save_template": "Salvar plantilla",
+						"active_elements": "elementos activos",
+						"tool_export": "Exportar",
+						"new_fluid_page": "Nueva página fluida",
+						"tool_administration": "Herramienta de administración",
+						"tool_subtitles": "Subtítulos",
+						"new_page": "Nueva página",
+						"component_tipo": "Tipo del componente",
+						"salir": "Salir",
+						"warning": "Atención",
+						"altitude": "Altitud",
+						"tool_tr_print": "Transcripción impresión",
+						"vincular_recurso": "Vincular recurso",
+						"no": "no",
+						"changes": "cambios",
+						"empty": "Vacío",
+						"similar_to": "Similar a",
+						"abv_narrowed_term": "TE",
+						"abv_related_term": "TR",
+						"abv_use_for": "UP",
+						"abv_broader_term": "TG",
+						"search": "Búsqueda",
+						"tool_description": "Herramienta de descripción",
+						"calidad": "Calidad",
+						"create": "Crear",
+						"invalid_extension": "Extensión no válida",
+						"tool_lang": "Lenguaje",
+						"tool_update_cache": "Actualizar caché",
+						"data": "datos",
+						"relacion_anadida": "Relación añadida",
+						"user_code_does_not_exist_error": "El código de usuario no existe",
+						"total": "Total",
+						"php_extension_stopped_the_upload_file": "Una extensión de PHP detuvo la carga de archivos",
+						"breakdown": "Desglose",
+						"children_recursive": "Hijos",
+						"diameter": "Diámetro",
+						"shift_key": "Mayúsculas",
+						"error_invalid_date_format": "Error: formato de fecha invalido",
+						"alert_limit_of_emails": "Atención, superado el límite de correos.",
+						"of": "de",
+						"empty_selection": "Selección vacía",
+						"levels": "Niveles",
+						"inspector": "Inspector",
+						"translation": "Traducción",
+						"error": "Error",
+						"proceso_completado": "Proceso completado",
+						"tiempo": "Tiempo",
+						"geolocalizacion": "Geolocalización",
+						"mapa": "Mapa",
+						"preview_of_print": "Previsualización de importación",
+						"show_all": "Mostrar todos",
+						"save": "Salvar",
+						"all": "Todos",
+						"label_normal": "Normal",
+						"sync_last_version": "Sincronizando la información con la última versión",
+						"current_record": "Registro actual",
+						"discard_changes": "¿Descartar los cambios no salvados?",
+						"apply": "Aplicar",
+						"georeferenciacion_en_formato": "Georeferenciación en formato Longitud,Latitud ej. 39.46264,-0.37615",
+						"all_this_values_will_be_removed": "Todos estos valores también se eliminarán",
+						"component_in_use": "Atención: El usuario %s está usando este campo. Por favor, espere a que termine la edición.",
+						"tool_import_bibtex": "Importar de BibTex",
+						"component_deprecated": "Campo en proceso de desaparición. Este campo se fusiona con: %s",
+						"error_generate_hierarchy": "Esta jerarquía no está activa y no se puede generar",
+						"exceeded_limit": "Se ha rebasado el máximo número de valores para este campo. Límite =",
+						"seleccione_fotograma": "Seleccione fotograma en el reproductor y pulse «CREAR POSTERFRAME» para crear un fotograma a partir del video",
+						"delete_only_the_link": "Borrar sólo el vínculo",
+						"choose_page_between": "Página seleccionable entre ${page_in} y ${page_out}. Total de páginas: ${total_pages}.",
+						"are_you_sure_to_delete_note": "¿Seguro que desea borrar esta nota?",
+						"email_limit_explanation": "Los correos seleccionados para enviar superan el límite máximo de su sistema operativo, por lo que se ha procedido a crear paquetes que no superen este máximo. Haga click en los siguientes botones para crear los correos.",
+						"fecha_o_rango_en_formato": "Fecha o rango en formato  DD/MM/YYYY ó DD/MM/YYYY-DD/MM/YYYY",
+						"procesando_media_en_background": "Procesando media en segundo plano. Este proceso puede tardar, pero puede continuar trabajando.",
+						"error_el_codigo_de_usuario_no_existe": "Error. El código de usuario no existe en Dédalo. Contacte con el administrador.",
+						"user_without_profile_error": "Error: El usuario y la clave introducidos son correctos pero el usuario actual no está correctamente configurado. Por favor, contacte con su administrador para asignar perfil a su usuario.",
+						"open_relationships_of_field": "¿Abrir las relaciones de {0} del registro actual (1) o de todos los registros encontrados ({1})?",
+						"import_zotero_help": "Añada el fichero JSON de Zotero y los correspondientes ficheros PDF desde su disco duro. Una vez cargados, seleccione 'Importar ficheros'",
+						"remove_hidden_data": "Atención: Al cambiar este valor, se eliminará la información contenida en los campos que serán ocultados. ¿Desea continuar?",
+						"will_open_all_related_records": "Esto abrirá todos los datos relacionados de {0} de todos los registros en una nueva ventana sin filtros. ¿Está seguro?",
+						"no_se_encontraron_registros": "No se encontraron registros",
+						"default_lang_of_file_to_import": "Idioma por defecto del archivo a importar. Datos sin idioma especificado serán importados en:",
+						"por_favor_indexe_desde_una_seccion_de_inventario": "Por favor, indexe desde una sección de inventario (ej. Historia Oral) y no desde un  recurso",
+						"user_without_projects_error": "Error: El usuario y la clave introducidos son correctos pero el usuario actual no está correctamente configurado. Por favor, contacte con su administrador para asignar proyectos autorizados a su usuario.",
+						"type_root_password": "Escriba y vuelva a escribir la contraseña de superusuario deseada y guárdela en un lugar seguro. Utilice una contraseña segura de 8 a 32 caracteres que contenga, al menos, una letra mayúscula, una letra minúscula y un número. No se permiten caracteres idénticos en orden secuencial ('aa', '11', 'BB', etc.). No se permite el orden numérico ('123', '345', etc.) ni alfabético ('aBC', 'hIjK', etc.)."
+					}
+				},
+				"msg": "OK. Request done successfully",
+				"errors": [],
+				"action": "get_environment",
+				"csrf_token": "__FIXTURE_CSRF__",
+				"dedalo_last_error": null
+			}
+		},
+		"4aebc5191a8c768b39e839e1": {
+			"kind": "json",
+			"rqo": {
+				"action": "login",
+				"dd_api": "dd_utils_api",
+				"options": {
+					"username": "__ORACLE_USER__",
+					"auth": "__ORACLE_AUTH__"
+				}
+			},
+			"status": 200,
+			"body": {
+				"result": true,
+				"msg": " Login.. ",
+				"errors": [],
+				"result_options": {
+					"user_image": "/dedalo/core/themes/default/raspas/raspa_screen.jpg",
+					"user_id": -1
+				},
+				"default_section": "dd88",
+				"action": "login",
+				"csrf_token": "__FIXTURE_CSRF__",
+				"dedalo_last_error": null
+			}
+		},
+		"1750be60dff3c4069f4796e9": {
+			"kind": "json",
+			"rqo": {
+				"action": "tool_request",
+				"dd_api": "dd_tools_api",
+				"source": {
+					"model": "tool_ontology_parser",
+					"action": "get_ontologies"
+				},
+				"options": {}
+			},
+			"status": 200,
+			"body": {
+				"result": [
+					{
+						"target_section_tipo": "ontologytype0",
+						"tld": "ontologytype",
+						"name": "Tipologías de ontología | ontologytype",
+						"typology_id": 1,
+						"typology_name": "Temáticas"
+					},
+					{
+						"target_section_tipo": "dd0",
+						"tld": "dd",
+						"name": "Dédalo | dd",
+						"typology_id": 14,
+						"typology_name": "Núcleo"
+					},
+					{
+						"target_section_tipo": "hierarchy0",
+						"tld": "hierarchy",
+						"name": "Jerarquía | hierarchy",
+						"typology_id": 14,
+						"typology_name": "Núcleo"
+					},
+					{
+						"target_section_tipo": "lg0",
+						"tld": "lg",
+						"name": "Lenguajes | lg",
+						"typology_id": 3,
+						"typology_name": "Lenguajes"
+					},
+					{
+						"target_section_tipo": "nexus0",
+						"tld": "nexus",
+						"name": "Nexo | nexus",
+						"typology_id": 14,
+						"typology_name": "Núcleo"
+					},
+					{
+						"target_section_tipo": "ontology0",
+						"tld": "ontology",
+						"name": "Ontología | ontology",
+						"typology_id": 14,
+						"typology_name": "Núcleo"
+					},
+					{
+						"target_section_tipo": "rsc0",
+						"tld": "rsc",
+						"name": "Recurso | rsc",
+						"typology_id": 14,
+						"typology_name": "Núcleo"
+					},
+					{
+						"target_section_tipo": "test0",
+						"tld": "test",
+						"name": "Test | test",
+						"typology_id": 5,
+						"typology_name": "Especial"
+					},
+					{
+						"target_section_tipo": "ww0",
+						"tld": "ww",
+						"name": "Web | ww",
+						"typology_id": 5,
+						"typology_name": "Especial"
+					},
+					{
+						"target_section_tipo": "actv0",
+						"tld": "actv",
+						"name": "Actividad | actv",
+						"typology_id": 12,
+						"typology_name": "Actividades"
+					},
+					{
+						"target_section_tipo": "dmm0",
+						"tld": "dmm",
+						"name": "Memoria democrática | dmm",
+						"typology_id": 8,
+						"typology_name": "Catálogo"
+					},
+					{
+						"target_section_tipo": "ich0",
+						"tld": "ich",
+						"name": "Patrimonio cultural inmaterial | ich",
+						"typology_id": 8,
+						"typology_name": "Catálogo"
+					},
+					{
+						"target_section_tipo": "isad0",
+						"tld": "isad",
+						"name": "ISAD(g) | isad",
+						"typology_id": 8,
+						"typology_name": "Catálogo"
+					},
+					{
+						"target_section_tipo": "numisdata0",
+						"tld": "numisdata",
+						"name": "Patrimonio numismático | numisdata",
+						"typology_id": 8,
+						"typology_name": "Catálogo"
+					},
+					{
+						"target_section_tipo": "tch0",
+						"tld": "tch",
+						"name": "Patrimonio cultural material | tch",
+						"typology_id": 8,
+						"typology_name": "Catálogo"
+					},
+					{
+						"target_section_tipo": "tchi0",
+						"tld": "tchi",
+						"name": "Patrimonio cultural material inmueble | tchi",
+						"typology_id": 8,
+						"typology_name": "Catálogo"
+					},
+					{
+						"target_section_tipo": "zenon0",
+						"tld": "zenon",
+						"name": "Zenon | zenon",
+						"typology_id": 8,
+						"typology_name": "Catálogo"
+					},
+					{
+						"target_section_tipo": "category0",
+						"tld": "category",
+						"name": "category",
+						"typology_id": 1,
+						"typology_name": "Temáticas"
+					},
+					{
+						"target_section_tipo": "ceramics0",
+						"tld": "ceramics",
+						"name": "ceramics",
+						"typology_id": 1,
+						"typology_name": "Temáticas"
+					},
+					{
+						"target_section_tipo": "dc0",
+						"tld": "dc",
+						"name": "Chronology",
+						"typology_id": 1,
+						"typology_name": "Temáticas"
+					},
+					{
+						"target_section_tipo": "deposit0",
+						"tld": "deposit",
+						"name": "deposit",
+						"typology_id": 1,
+						"typology_name": "Temáticas"
+					},
+					{
+						"target_section_tipo": "ds0",
+						"tld": "ds",
+						"name": "ds",
+						"typology_id": 4,
+						"typology_name": "Semánticas"
+					},
+					{
+						"target_section_tipo": "emakumeak0",
+						"tld": "emakumeak",
+						"name": "emakumeak",
+						"typology_id": 8,
+						"typology_name": "Catálogo"
+					},
+					{
+						"target_section_tipo": "es0",
+						"tld": "es",
+						"name": "es",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "excavation0",
+						"tld": "excavation",
+						"name": "excavation",
+						"typology_id": 12,
+						"typology_name": "Actividades"
+					},
+					{
+						"target_section_tipo": "material0",
+						"tld": "material",
+						"name": "material",
+						"typology_id": 11,
+						"typology_name": "Tipología"
+					},
+					{
+						"target_section_tipo": "mdcat0",
+						"tld": "mdcat",
+						"name": "mdcat",
+						"typology_id": 8,
+						"typology_name": "Catálogo"
+					},
+					{
+						"target_section_tipo": "mht0",
+						"tld": "mht",
+						"name": "mht",
+						"typology_id": 8,
+						"typology_name": "Catálogo"
+					},
+					{
+						"target_section_tipo": "mupreva0",
+						"tld": "mupreva",
+						"name": "mupreva",
+						"typology_id": 8,
+						"typology_name": "Catálogo"
+					},
+					{
+						"target_section_tipo": "murapa0",
+						"tld": "murapa",
+						"name": "murapa",
+						"typology_id": 8,
+						"typology_name": "Catálogo"
+					},
+					{
+						"target_section_tipo": "numisdatacatalog0",
+						"tld": "numisdatacatalog",
+						"name": "numisdatacatalog",
+						"typology_id": 8,
+						"typology_name": "Catálogo"
+					},
+					{
+						"target_section_tipo": "object0",
+						"tld": "object",
+						"name": "object",
+						"typology_id": 11,
+						"typology_name": "Tipología"
+					},
+					{
+						"target_section_tipo": "places0",
+						"tld": "places",
+						"name": "places",
+						"typology_id": 9,
+						"typology_name": "Ubicaciones"
+					},
+					{
+						"target_section_tipo": "resanalysis0",
+						"tld": "resanalysis",
+						"name": "resanalysis",
+						"typology_id": 10,
+						"typology_name": "Laboratorio | Restauración"
+					},
+					{
+						"target_section_tipo": "rescause0",
+						"tld": "rescause",
+						"name": "rescause",
+						"typology_id": 10,
+						"typology_name": "Laboratorio | Restauración"
+					},
+					{
+						"target_section_tipo": "rolejob0",
+						"tld": "rolejob",
+						"name": "rolejob",
+						"typology_id": 4,
+						"typology_name": "Semánticas"
+					},
+					{
+						"target_section_tipo": "technique0",
+						"tld": "technique",
+						"name": "technique",
+						"typology_id": 1,
+						"typology_name": "Temáticas"
+					},
+					{
+						"target_section_tipo": "ts0",
+						"tld": "ts",
+						"name": "ts",
+						"typology_id": 1,
+						"typology_name": "Temáticas"
+					},
+					{
+						"target_section_tipo": "ubication0",
+						"tld": "ubication",
+						"name": "ubication",
+						"typology_id": 9,
+						"typology_name": "Ubicaciones"
+					},
+					{
+						"target_section_tipo": "utoponymy0",
+						"tld": "utoponymy",
+						"name": "utoponymy",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "www0",
+						"tld": "www",
+						"name": "www",
+						"typology_id": 6,
+						"typology_name": "Sítios web"
+					},
+					{
+						"target_section_tipo": "oh0",
+						"tld": "oh",
+						"name": "Historia Oral | oh",
+						"typology_id": 8,
+						"typology_name": "Catálogo"
+					},
+					{
+						"target_section_tipo": "ad0",
+						"tld": "ad",
+						"name": "ad",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "cont0",
+						"tld": "cont",
+						"name": "cont",
+						"typology_id": 1,
+						"typology_name": "Temáticas"
+					},
+					{
+						"target_section_tipo": "cu0",
+						"tld": "cu",
+						"name": "cu",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "cult0",
+						"tld": "cult",
+						"name": "cult",
+						"typology_id": 1,
+						"typology_name": "Temáticas"
+					},
+					{
+						"target_section_tipo": "culture0",
+						"tld": "culture",
+						"name": "culture",
+						"typology_id": 1,
+						"typology_name": "Temáticas"
+					},
+					{
+						"target_section_tipo": "depositiontype0",
+						"tld": "depositiontype",
+						"name": "depositiontype",
+						"typology_id": 1,
+						"typology_name": "Temáticas"
+					},
+					{
+						"target_section_tipo": "discoverytype0",
+						"tld": "discoverytype",
+						"name": "discoverytype",
+						"typology_id": 1,
+						"typology_name": "Temáticas"
+					},
+					{
+						"target_section_tipo": "dz0",
+						"tld": "dz",
+						"name": "dz",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "fr0",
+						"tld": "fr",
+						"name": "fr",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "gr0",
+						"tld": "gr",
+						"name": "gr",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "grup0",
+						"tld": "grup",
+						"name": "grup",
+						"typology_id": 1,
+						"typology_name": "Temáticas"
+					},
+					{
+						"target_section_tipo": "htoponymy0",
+						"tld": "htoponymy",
+						"name": "htoponymy",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "icon0",
+						"tld": "icon",
+						"name": "icon",
+						"typology_id": 1,
+						"typology_name": "Temáticas"
+					},
+					{
+						"target_section_tipo": "it0",
+						"tld": "it",
+						"name": "it",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "li0",
+						"tld": "li",
+						"name": "li",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ma0",
+						"tld": "ma",
+						"name": "ma",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "objet0",
+						"tld": "objet",
+						"name": "objet",
+						"typology_id": null,
+						"typology_name": ""
+					},
+					{
+						"target_section_tipo": "on0",
+						"tld": "on",
+						"name": "on",
+						"typology_id": 1,
+						"typology_name": "Temáticas"
+					},
+					{
+						"target_section_tipo": "peri0",
+						"tld": "peri",
+						"name": "peri",
+						"typology_id": 1,
+						"typology_name": "Temáticas"
+					},
+					{
+						"target_section_tipo": "pt0",
+						"tld": "pt",
+						"name": "pt",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "rolepos0",
+						"tld": "rolepos",
+						"name": "rolepos",
+						"typology_id": 4,
+						"typology_name": "Semánticas"
+					},
+					{
+						"target_section_tipo": "roleusr0",
+						"tld": "roleusr",
+						"name": "roleusr",
+						"typology_id": 4,
+						"typology_name": "Semánticas"
+					},
+					{
+						"target_section_tipo": "sccmk0",
+						"tld": "sccmk",
+						"name": "sccmk",
+						"typology_id": 7,
+						"typology_name": "Epigrafía"
+					},
+					{
+						"target_section_tipo": "scell0",
+						"tld": "scell",
+						"name": "scell",
+						"typology_id": 7,
+						"typology_name": "Epigrafía"
+					},
+					{
+						"target_section_tipo": "sclat0",
+						"tld": "sclat",
+						"name": "sclat",
+						"typology_id": 7,
+						"typology_name": "Epigrafía"
+					},
+					{
+						"target_section_tipo": "scsym0",
+						"tld": "scsym",
+						"name": "scsym",
+						"typology_id": 7,
+						"typology_name": "Epigrafía"
+					},
+					{
+						"target_section_tipo": "sctxr0",
+						"tld": "sctxr",
+						"name": "sctxr",
+						"typology_id": 7,
+						"typology_name": "Epigrafía"
+					},
+					{
+						"target_section_tipo": "scxibm0",
+						"tld": "scxibm",
+						"name": "scxibm",
+						"typology_id": 7,
+						"typology_name": "Epigrafía"
+					},
+					{
+						"target_section_tipo": "scxibo0",
+						"tld": "scxibo",
+						"name": "scxibo",
+						"typology_id": 7,
+						"typology_name": "Epigrafía"
+					},
+					{
+						"target_section_tipo": "scxpu0",
+						"tld": "scxpu",
+						"name": "scxpu",
+						"typology_id": 7,
+						"typology_name": "Epigrafía"
+					},
+					{
+						"target_section_tipo": "seri0",
+						"tld": "seri",
+						"name": "seri",
+						"typology_id": 1,
+						"typology_name": "Temáticas"
+					},
+					{
+						"target_section_tipo": "tema0",
+						"tld": "tema",
+						"name": "tema",
+						"typology_id": 1,
+						"typology_name": "Temáticas"
+					},
+					{
+						"target_section_tipo": "terr0",
+						"tld": "terr",
+						"name": "terr",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "tn0",
+						"tld": "tn",
+						"name": "tn",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "uncertainty0",
+						"tld": "uncertainty",
+						"name": "uncertainty",
+						"typology_id": 4,
+						"typology_name": "Semánticas"
+					},
+					{
+						"target_section_tipo": "us0",
+						"tld": "us",
+						"name": "us",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "xx0",
+						"tld": "xx",
+						"name": "xx",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "special0",
+						"tld": "special",
+						"name": "special",
+						"typology_id": 15,
+						"typology_name": "Otros"
+					},
+					{
+						"target_section_tipo": "hierarchytype0",
+						"tld": "hierarchytype",
+						"name": "Tipologías de jerarquía | hierarchytype",
+						"typology_id": 1,
+						"typology_name": "Temáticas"
+					},
+					{
+						"target_section_tipo": "hierarchymtype0",
+						"tld": "hierarchymtype",
+						"name": "Tipologías de jerarquía [m] | hierarchymtype",
+						"typology_id": 1,
+						"typology_name": "Temáticas"
+					},
+					{
+						"target_section_tipo": "flora0",
+						"tld": "flora",
+						"name": "flora",
+						"typology_id": 15,
+						"typology_name": "Otros"
+					},
+					{
+						"target_section_tipo": "fauna0",
+						"tld": "fauna",
+						"name": "fauna",
+						"typology_id": 15,
+						"typology_name": "Otros"
+					},
+					{
+						"target_section_tipo": "navarra0",
+						"tld": "navarra",
+						"name": "navarra",
+						"typology_id": 15,
+						"typology_name": "Otros"
+					},
+					{
+						"target_section_tipo": "af0",
+						"tld": "af",
+						"name": "af",
+						"typology_id": 15,
+						"typology_name": "Otros"
+					},
+					{
+						"target_section_tipo": "hr0",
+						"tld": "hr",
+						"name": "Croacia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "lb0",
+						"tld": "lb",
+						"name": "Líbano",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "al0",
+						"tld": "al",
+						"name": "Albania",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "am0",
+						"tld": "am",
+						"name": "Armenia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ao0",
+						"tld": "ao",
+						"name": "Angola",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ar0",
+						"tld": "ar",
+						"name": "Argentina",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "at0",
+						"tld": "at",
+						"name": "Austria",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "au0",
+						"tld": "au",
+						"name": "Australia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "az0",
+						"tld": "az",
+						"name": "Azerbaiyán",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ba0",
+						"tld": "ba",
+						"name": "Bosnia y Herzegovina",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "be0",
+						"tld": "be",
+						"name": "Bélgica",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "bg0",
+						"tld": "bg",
+						"name": "Bulgaria",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "mx0",
+						"tld": "mx",
+						"name": "México",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "bh0",
+						"tld": "bh",
+						"name": "Bahréin",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "bi0",
+						"tld": "bi",
+						"name": "Burundi",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "eh0",
+						"tld": "eh",
+						"name": "Sahara Occidental",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "gt0",
+						"tld": "gt",
+						"name": "Guatemala",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "jo0",
+						"tld": "jo",
+						"name": "Jordania",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "pg0",
+						"tld": "pg",
+						"name": "Papúa Nueva Guinea",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "si0",
+						"tld": "si",
+						"name": "Eslovenia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "sz0",
+						"tld": "sz",
+						"name": "Suazilandia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "bj0",
+						"tld": "bj",
+						"name": "Benín",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "bo0",
+						"tld": "bo",
+						"name": "Bolivia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ps0",
+						"tld": "ps",
+						"name": "Palestina (ANP)",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "br0",
+						"tld": "br",
+						"name": "Brasil",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "bw0",
+						"tld": "bw",
+						"name": "Botsuana",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "by0",
+						"tld": "by",
+						"name": "Bielorrusia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "bz0",
+						"tld": "bz",
+						"name": "Belice",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ca0",
+						"tld": "ca",
+						"name": "Canadá",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "cd0",
+						"tld": "cd",
+						"name": "República Democrática del Congo",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "cg0",
+						"tld": "cg",
+						"name": "República del Congo",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ch0",
+						"tld": "ch",
+						"name": "Suiza",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ci0",
+						"tld": "ci",
+						"name": "Costa de Marfil",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "cl0",
+						"tld": "cl",
+						"name": "Chile",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "cm0",
+						"tld": "cm",
+						"name": "Camerún",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "co0",
+						"tld": "co",
+						"name": "Colombia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "de0",
+						"tld": "de",
+						"name": "Alemania",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "cr0",
+						"tld": "cr",
+						"name": "Costa Rica",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "cy0",
+						"tld": "cy",
+						"name": "Chipre",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "cz0",
+						"tld": "cz",
+						"name": "República Checa",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "dj0",
+						"tld": "dj",
+						"name": "Yibuti",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "dk0",
+						"tld": "dk",
+						"name": "Dinamarca",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ec0",
+						"tld": "ec",
+						"name": "Ecuador",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ee0",
+						"tld": "ee",
+						"name": "Estonia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "eg0",
+						"tld": "eg",
+						"name": "Egipto",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "er0",
+						"tld": "er",
+						"name": "Eritrea",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "et0",
+						"tld": "et",
+						"name": "Etiopía",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "fj0",
+						"tld": "fj",
+						"name": "Fiyi",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ga0",
+						"tld": "ga",
+						"name": "Gabón",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "gb0",
+						"tld": "gb",
+						"name": "Reino Unido",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ge0",
+						"tld": "ge",
+						"name": "Georgia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "gm0",
+						"tld": "gm",
+						"name": "Gambia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "gn0",
+						"tld": "gn",
+						"name": "Guinea",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "gq0",
+						"tld": "gq",
+						"name": "Guinea Ecuatorial",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "hn0",
+						"tld": "hn",
+						"name": "Honduras",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "hu0",
+						"tld": "hu",
+						"name": "Hungría",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "id0",
+						"tld": "id",
+						"name": "Indonesia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ie0",
+						"tld": "ie",
+						"name": "Irlanda",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "il0",
+						"tld": "il",
+						"name": "Israel",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "in0",
+						"tld": "in",
+						"name": "India",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "iq0",
+						"tld": "iq",
+						"name": "Iraq",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ir0",
+						"tld": "ir",
+						"name": "Irán",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "jp0",
+						"tld": "jp",
+						"name": "Japón",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ke0",
+						"tld": "ke",
+						"name": "Kenia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "kg0",
+						"tld": "kg",
+						"name": "Kirguistán",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "kh0",
+						"tld": "kh",
+						"name": "Camboya",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ki0",
+						"tld": "ki",
+						"name": "Kiribati",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "kw0",
+						"tld": "kw",
+						"name": "Kuwait",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "kz0",
+						"tld": "kz",
+						"name": "Kazajistán",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "la0",
+						"tld": "la",
+						"name": "Laos",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "lt0",
+						"tld": "lt",
+						"name": "Lituania",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "lu0",
+						"tld": "lu",
+						"name": "Luxemburgo",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "lv0",
+						"tld": "lv",
+						"name": "Letonia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ly0",
+						"tld": "ly",
+						"name": "Libia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "md0",
+						"tld": "md",
+						"name": "Moldavia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "me0",
+						"tld": "me",
+						"name": "Montenegro",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "mk0",
+						"tld": "mk",
+						"name": "ARY Macedonia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ml0",
+						"tld": "ml",
+						"name": "Malí",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "mm0",
+						"tld": "mm",
+						"name": "Myanmar",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "mr0",
+						"tld": "mr",
+						"name": "Mauritania",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "mw0",
+						"tld": "mw",
+						"name": "Malawi",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "my0",
+						"tld": "my",
+						"name": "Malasia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "mz0",
+						"tld": "mz",
+						"name": "Mozambique",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "na0",
+						"tld": "na",
+						"name": "Namibia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ne0",
+						"tld": "ne",
+						"name": "Níger",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ng0",
+						"tld": "ng",
+						"name": "Nigeria",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ni0",
+						"tld": "ni",
+						"name": "Nicaragua",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "nl0",
+						"tld": "nl",
+						"name": "Países Bajos",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "no0",
+						"tld": "no",
+						"name": "Noruega",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "np0",
+						"tld": "np",
+						"name": "Nepal",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "om0",
+						"tld": "om",
+						"name": "Omán",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "pa0",
+						"tld": "pa",
+						"name": "Panamá",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "pe0",
+						"tld": "pe",
+						"name": "Perú",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ph0",
+						"tld": "ph",
+						"name": "Filipinas",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "pk0",
+						"tld": "pk",
+						"name": "Pakistán",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "pl0",
+						"tld": "pl",
+						"name": "Polonia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "pr0",
+						"tld": "pr",
+						"name": "Puerto Rico",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "py0",
+						"tld": "py",
+						"name": "Paraguay",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "qa0",
+						"tld": "qa",
+						"name": "Qatar",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ro0",
+						"tld": "ro",
+						"name": "Rumania",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "rs0",
+						"tld": "rs",
+						"name": "Serbia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ru0",
+						"tld": "ru",
+						"name": "ru",
+						"typology_id": 15,
+						"typology_name": "Otros"
+					},
+					{
+						"target_section_tipo": "rw0",
+						"tld": "rw",
+						"name": "Ruanda",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "sa0",
+						"tld": "sa",
+						"name": "Arabia Saudita",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "sb0",
+						"tld": "sb",
+						"name": "Islas Salomón",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "sd0",
+						"tld": "sd",
+						"name": "Sudán",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "se0",
+						"tld": "se",
+						"name": "Suecia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "sg0",
+						"tld": "sg",
+						"name": "Singapur",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "sk0",
+						"tld": "sk",
+						"name": "Eslovaquia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "sn0",
+						"tld": "sn",
+						"name": "Senegal",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "so0",
+						"tld": "so",
+						"name": "Somalia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "st0",
+						"tld": "st",
+						"name": "Santo Tomé y Príncipe",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "sv0",
+						"tld": "sv",
+						"name": "El Salvador",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "sy0",
+						"tld": "sy",
+						"name": "Siria",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "td0",
+						"tld": "td",
+						"name": "Chad",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "th0",
+						"tld": "th",
+						"name": "Tailandia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "tj0",
+						"tld": "tj",
+						"name": "Tayikistán",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "tm0",
+						"tld": "tm",
+						"name": "Turkmenistán",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "to0",
+						"tld": "to",
+						"name": "Tonga",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "tr0",
+						"tld": "tr",
+						"name": "Turquía",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "tv0",
+						"tld": "tv",
+						"name": "Tuvalu",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "tz0",
+						"tld": "tz",
+						"name": "Tanzania",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ua0",
+						"tld": "ua",
+						"name": "Ucrania",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ug0",
+						"tld": "ug",
+						"name": "Uganda",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "uy0",
+						"tld": "uy",
+						"name": "Uruguay",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "uz0",
+						"tld": "uz",
+						"name": "Uzbekistán",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ve0",
+						"tld": "ve",
+						"name": "Venezuela",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "vn0",
+						"tld": "vn",
+						"name": "Vietnam",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "vu0",
+						"tld": "vu",
+						"name": "Vanuatu",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "ws0",
+						"tld": "ws",
+						"name": "Samoa",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "xk0",
+						"tld": "xk",
+						"name": "xk",
+						"typology_id": 15,
+						"typology_name": "Otros"
+					},
+					{
+						"target_section_tipo": "ye0",
+						"tld": "ye",
+						"name": "Yemen",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "za0",
+						"tld": "za",
+						"name": "Sudáfrica",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "zm0",
+						"tld": "zm",
+						"name": "Zambia",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "zw0",
+						"tld": "zw",
+						"name": "Zimbabue",
+						"typology_id": 2,
+						"typology_name": "Toponimias"
+					},
+					{
+						"target_section_tipo": "render0",
+						"tld": "render",
+						"name": "render",
+						"typology_id": 15,
+						"typology_name": "Otros"
+					}
+				],
+				"msg": "OK. Request done",
+				"errors": [],
+				"action": "tool_request",
+				"csrf_token": "__FIXTURE_CSRF__",
+				"debug": {
+					"api_exec_time": "701.259 ms",
+					"memory_usage": "30 MB",
+					"rqo": {
+						"action": "tool_request",
+						"dd_api": "dd_tools_api",
+						"source": {
+							"model": "tool_ontology_parser",
+							"action": "get_ontologies"
+						},
+						"options": {}
+					},
+					"rqo_string": "{\n    \"action\": \"tool_request\",\n    \"dd_api\": \"dd_tools_api\",\n    \"source\": {\n        \"model\": \"tool_ontology_parser\",\n        \"action\": \"get_ontologies\"\n    },\n    \"options\": {}\n}",
+					"real_execution_time": "704.077917 ms"
+				},
+				"dedalo_last_error": null
+			}
+		}
+	}
+}

@@ -1,0 +1,158 @@
+// error_reports (WC-018, TS-only widget). Included from area_maintenance.less.
+// Styled to match the system_info readout language (bordered card, tinted
+// uppercase header, hairline grid rows, monospace values, theme-aware colours).
+// Scoped under .error_reports_widget (the content_data class in the render JS).
+.error_reports_widget {
+
+	@er_mono: Menlo, Monaco, Consolas, 'Courier New', monospace;
+
+	font-size: 0.85rem;
+	// base colour on the ROOT so every cell defaults to a theme-readable colour
+	// instead of inheriting the dashboard's (which clashes on the --bg_surface*
+	// panels in dark mode).
+	color: var(--fg_default);
+
+	.error_reports_summary {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem 1.5rem;
+		align-items: baseline;
+		margin: 0 0 0.9rem 0;
+	}
+
+	.error_reports_total {
+		font-weight: 700;
+		font-size: 1rem;
+		color: var(--fg_default);
+	}
+
+	.error_reports_meta {
+		color: var(--fg_muted);
+		font-size: 0.8rem;
+	}
+
+	.error_reports_target {
+		margin: 0 0 0.9rem 0;
+		font-size: 0.8rem;
+		color: var(--fg_muted);
+
+		b {
+			color: var(--fg_default);
+		}
+		// override the global `code` rule (display:block + dark bg + 1.3rem),
+		// which otherwise renders the target as unreadable dark-on-dark.
+		code {
+			display: inline;
+			background-color: transparent;
+			padding: 0;
+			font-family: @er_mono;
+			font-size: 0.8rem;
+			font-weight: 400;
+			color: var(--fg_default);
+		}
+	}
+
+	.error_reports_table {
+		border: 1px solid var(--border_default);
+		border-radius: 8px;
+		overflow: hidden;
+		background-color: var(--bg_surface);
+	}
+
+	.er_row {
+		display: grid;
+		grid-template-columns: 11.5rem 9rem 4.5rem 9rem minmax(0, 1fr);
+		align-items: center;
+		border-top: 1px solid var(--border_default);
+
+		&:first-of-type {
+			border-top: 0;
+		}
+
+		> * {
+			padding: 0.44rem 0.85rem;
+			min-width: 0;
+		}
+
+		// header row: tinted rail + uppercase eyebrow cells
+		&.header {
+			border-top: 0;
+			background-color: var(--bg_surface_alt);
+
+			> * {
+				font-size: 0.68rem;
+				font-weight: 600;
+				letter-spacing: 0.04em;
+				text-transform: uppercase;
+				color: var(--fg_muted);
+			}
+		}
+
+		&.report {
+			cursor: pointer;
+
+			&:hover,
+			&.open {
+				background-color: var(--bg_surface_alt);
+			}
+		}
+
+		.er_when {
+			font-family: @er_mono;
+			font-size: 0.75rem;
+			color: var(--fg_muted);
+		}
+		.er_from {
+			font-weight: 600;
+			color: var(--fg_default);
+		}
+		.er_desc {
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			color: var(--fg_default);
+		}
+	}
+
+	.er_detail {
+		border-top: 1px solid var(--border_default);
+		padding: 0.6rem 0.85rem;
+		background-color: var(--bg_surface_alt);
+	}
+
+	.er_field {
+		margin: 0 0 0.35rem 0;
+		color: var(--fg_default);
+		word-break: break-word;
+
+		.er_label {
+			font-weight: 600;
+			color: var(--fg_muted);
+			margin-right: 0.4rem;
+		}
+	}
+
+	.er_pre {
+		margin: 0.3rem 0 0.6rem 0;
+		padding: 0.5rem;
+		background-color: var(--bg_surface);
+		border: 1px solid var(--border_default);
+		border-radius: 6px;
+		font-family: @er_mono;
+		font-size: 0.78rem;
+		white-space: pre-wrap;
+		word-break: break-word;
+		max-height: 16rem;
+		overflow: auto;
+		color: var(--fg_default);
+	}
+
+	.error_reports_footer {
+		margin: 0.9rem 0 0 0;
+	}
+
+	.error_reports_empty {
+		color: var(--fg_muted);
+		padding: 0.9rem;
+	}
+}

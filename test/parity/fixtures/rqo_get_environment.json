@@ -1,0 +1,8 @@
+{
+	"comment": "Anonymous, CSRF-exempt probe — the simplest real RQO. Auth not required.",
+	"requires_login": false,
+	"rqo": {
+		"action": "get_environment",
+		"dd_api": "dd_core_api"
+	}
+}

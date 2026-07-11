@@ -1,0 +1,321 @@
+/**
+* TOOL_LANG
+*
+* Loaded on tool init
+*/
+
+// imports
+@import (once) '../../../core/page/css/layout/vars';
+
+// local vars
+:root {
+	--tool_lang: #7f75e0;
+	--tool_lang_border: #584bd7;
+}
+@tool_color : var(--tool_lang);
+
+// column_id (section_tool list)
+	.column_section_id > .button_edit.list_tool_lang {
+
+		&:hover {
+			background-color: @tool_color;
+		}
+		>.icon {
+			-webkit-mask-image: url('../img/icon.svg');
+			mask-image: url('../img/icon.svg');
+		}
+	}
+
+// tool wrapper
+.wrapper_tool.tool_lang {
+
+	.spinner {
+		background-color: @tool_color;
+	}
+
+	// custom_select_style. Apply different select appearance
+	.custom_select_style {
+		width: fit-content;
+		height: 2em;
+		font-size: 0.94rem;
+		margin-bottom: 0.5rem;
+	}
+
+	>.tool_header {
+		background-color: @tool_color;
+		position: relative;
+
+		@media screen and (max-width: @width_break_point_0) {
+			flex-wrap: wrap;
+		}
+
+		>.tool_buttons_container {
+			display: flex;
+			align-items: flex-start;
+
+			@media screen and (max-width: @width_break_point_0) {
+				flex-wrap: wrap;
+				margin-top: 1rem;
+			}
+
+			>div, >button {
+				margin: 0rem;
+				margin-left: 0.5rem;
+				margin-right: 0rem;
+				min-height: 2rem;
+
+				@media screen and (max-width: @width_break_point_0) {
+					margin-bottom: 1rem;
+					flex: 1 0 auto;
+				}
+			}
+
+			select {
+				opacity: 1;
+				padding: 0.33rem;
+				background-color: @color_grey_15;
+				border-radius: 3px;
+				margin-right: 0px;
+				max-width: 20rem;
+				min-width: 7rem;
+
+				@media screen and (max-width: @width_break_point_0) {
+
+				}
+			}
+
+			// status components wrapper
+			>.wrapper_component {
+				background-color: transparent;
+
+				>.label, label {
+					color: @color_white;
+				}
+			}
+		}
+	}//end >.tool_header
+
+
+	>.content_data {
+
+		// components_container
+		>.components_container {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			grid-gap: 1em;
+			z-index: 0;
+
+			@media screen and (max-width: @width_break_point_0) {
+				grid-template-columns: 1fr;
+			}
+
+			select {
+				.custom_select_style;
+			}
+
+			// loading overlay during automatic translation
+			&.loading {
+				position: relative;
+				pointer-events: none;
+
+				&::after {
+					content: '';
+					position: absolute;
+					inset: 0;
+					background: rgba(255,255,255,0.7);
+					z-index: 10;
+				}
+			}
+
+			.top {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+
+				>.lang_label {
+					padding-right: 0.5rem;
+					text-transform: uppercase;
+					font-weight: 300;
+				}
+			}
+
+			// left/right columns inside components_container grid
+			.left_block,
+			.right_block {
+				display: flex;
+				flex-direction: column;
+				min-height: 0;
+			}
+
+			.content_data.component {
+				height: calc(100vh - 14rem);
+				align-content: flex-start;
+
+				// placeholder of dataframe inside component_iri
+				.component_placeholder {
+					margin-top: 0px;
+				}
+			}
+
+			.source_component_container {
+				flex: 1;
+				min-height: 0;
+				overflow-y: auto;
+			}
+			.target_component_container {
+				flex: 1;
+				min-height: 0;
+				position: relative; // positioning context for streaming_overlay
+
+				// streaming overlay: render accumulated html in place of the target component
+				// to simulate where the final result will appear
+				>.streaming_overlay {
+					position: absolute;
+					top: 0;
+					left: 0;
+					width: 100%;
+					height: 100%;
+					background: @color_white;
+					overflow-y: auto;
+					padding: 1rem;
+					z-index: 5;
+
+					&.hide {
+						display: none;
+					}
+
+					>.streaming_overlay_content {
+						white-space: pre-wrap;
+						word-break: break-word;
+						font-size: 0.95em;
+						line-height: 1.4;
+					}
+				}
+			}
+		}//end .components_container
+
+		// buttons_container
+		>.buttons_container {
+			padding-top: 1em;
+			padding-bottom: 1em;
+			display: flex;
+			justify-content: space-between;
+
+			// automatic_translation_container
+			>.automatic_translation_container {
+				position: relative;
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+
+				// status message shown during/after translation (takes own row above button)
+				>.status_container {
+					flex: 0 0 100%;
+					text-align: left;
+					margin-bottom: 0.25em;
+					font-size: 0.9em;
+					min-height: 1.2em;
+				}
+
+				.button_automatic_translation {
+					background-color: @tool_color;
+					border-color: var(--tool_lang_border);
+				}
+
+				>select {
+					margin-left: 0.75em;
+					width: fit-content;
+					height: 2.75em;
+					font-size: 0.80em;
+				}
+
+				// configuration gear icon (mask-image from core theme)
+				>.icon.gear {
+					width: 1.2em;
+					min-width: 1.2em;
+					height: 1.2em;
+					background-color: @color_grey_5;
+					-webkit-mask-image: url('../img/gear.svg');
+					mask-image: url('../img/gear.svg');
+					-webkit-mask-size: contain;
+					mask-size: contain;
+					-webkit-mask-repeat: no-repeat;
+					mask-repeat: no-repeat;
+					-webkit-mask-position: center;
+					mask-position: center;
+					cursor: pointer;
+					opacity: 0.5;
+					transition: opacity 0.2s;
+					margin-left: 0.5em;
+
+					&:hover {
+						opacity: 1;
+					}
+				}
+
+				// collapsible configuration panel
+				>.configuration_container {
+					position: absolute;
+					top: 100%;
+					left: 0;
+					background: @color_white;
+					border: 1px solid @color_grey_12;
+					border-radius: 3px;
+					padding: 0.5rem 0.75rem;
+					margin-top: 0.25em;
+					z-index: 100;
+					white-space: nowrap;
+
+					.device_container {
+						display: flex;
+						align-items: center;
+
+						>label {
+							cursor: pointer;
+							user-select: none;
+
+							>input {
+								margin-right: 0.33rem;
+							}
+						}
+					}
+				}
+			}
+
+			// copy_to_target button
+			>.secondary {
+				background-color: @tool_color;
+				border-color: var(--tool_lang_border);
+				color: @color_white;
+				min-height: 2.75em;
+			}
+
+			// success text after translation completes
+			.status_container .success_text {
+				color: @color_green_success;
+				font-weight: 500;
+			}
+
+			// propagate_marks_container
+			>.propagate_marks_container {
+				display: flex;
+				align-items: center;
+
+				>label {
+					display: flex;
+					margin-right: 0.5rem;
+					vertical-align: middle;
+
+					>input {
+						margin-right: 0.25rem;
+					}
+				}
+			}
+		}//end >.buttons_container
+	}//end content_data
+}//end wrapper_tool
+
+// modal header tool modification
+.tool_header.tool_lang {
+	background-color: @tool_color;
+}

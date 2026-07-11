@@ -1,0 +1,980 @@
+[
+	{
+		"id": null,
+		"class_list": null,
+		"type": "row",
+		"label": null,
+		"row_count": 2,
+		"column_count": null,
+		"column_labels": null,
+		"fields_separator": null,
+		"records_separator": null,
+		"cell_type": null,
+		"action": null,
+		"value": [
+			{
+				"id": null,
+				"class_list": "caption section oh1 audiovisual",
+				"type": "column",
+				"label": "Historia Oral",
+				"row_count": null,
+				"column_count": null,
+				"column_labels": null,
+				"fields_separator": null,
+				"records_separator": null,
+				"cell_type": null,
+				"action": null,
+				"value": [
+					{
+						"id": null,
+						"class_list": "head oh",
+						"type": "row",
+						"label": null,
+						"row_count": 1,
+						"column_count": null,
+						"column_labels": null,
+						"fields_separator": null,
+						"records_separator": null,
+						"cell_type": null,
+						"action": null,
+						"value": [
+							{
+								"id": null,
+								"class_list": null,
+								"type": "column",
+								"label": "Audiovisual",
+								"row_count": 1,
+								"column_count": 1,
+								"column_labels": null,
+								"fields_separator": ", ",
+								"records_separator": " | ",
+								"cell_type": null,
+								"action": null,
+								"value": [
+									{
+										"id": null,
+										"class_list": null,
+										"type": "row",
+										"label": null,
+										"row_count": null,
+										"column_count": null,
+										"column_labels": null,
+										"fields_separator": null,
+										"records_separator": null,
+										"cell_type": null,
+										"action": null,
+										"value": [
+											{
+												"id": null,
+												"class_list": null,
+												"type": "column",
+												"label": "Audiovisual",
+												"row_count": null,
+												"column_count": null,
+												"column_labels": null,
+												"fields_separator": ", ",
+												"records_separator": " | ",
+												"cell_type": "img",
+												"action": null,
+												"value": ["/dedalo/media/av/posterframe/rsc35_rsc167_90002.jpg"],
+												"fallback_value": [],
+												"data": null,
+												"render_label": null,
+												"column": null,
+												"ar_columns_obj": [
+													{
+														"id": "oh1_oh25_rsc167_rsc35",
+														"group": "oh1_oh25_rsc167"
+													}
+												],
+												"features": null,
+												"model": "component_av"
+											}
+										],
+										"fallback_value": null,
+										"data": null,
+										"render_label": null,
+										"column": null,
+										"ar_columns_obj": null,
+										"features": null,
+										"model": null
+									}
+								],
+								"fallback_value": null,
+								"data": null,
+								"render_label": null,
+								"column": null,
+								"ar_columns_obj": [
+									{
+										"id": "oh1_oh25_rsc167_rsc35",
+										"group": "oh1_oh25_rsc167"
+									}
+								],
+								"features": null,
+								"model": "component_portal"
+							},
+							{
+								"id": null,
+								"class_list": null,
+								"type": "column",
+								"label": "Código",
+								"row_count": null,
+								"column_count": null,
+								"column_labels": null,
+								"fields_separator": " | ",
+								"records_separator": " | ",
+								"cell_type": "text",
+								"action": null,
+								"value": ["SCRATCH-AV-TWIN"],
+								"fallback_value": [],
+								"data": null,
+								"render_label": null,
+								"column": null,
+								"ar_columns_obj": [
+									{
+										"id": "oh1_oh14"
+									}
+								],
+								"features": null,
+								"model": "component_input_text"
+							},
+							{
+								"id": null,
+								"class_list": null,
+								"type": "column",
+								"label": "Proyecto",
+								"row_count": 1,
+								"column_count": 0,
+								"column_labels": null,
+								"fields_separator": ", ",
+								"records_separator": " | ",
+								"cell_type": null,
+								"action": null,
+								"value": [],
+								"fallback_value": null,
+								"data": null,
+								"render_label": null,
+								"column": null,
+								"ar_columns_obj": [],
+								"features": null,
+								"model": "component_filter"
+							},
+							{
+								"id": null,
+								"class_list": null,
+								"type": "column",
+								"label": "Informantes",
+								"row_count": 1,
+								"column_count": 0,
+								"column_labels": null,
+								"fields_separator": " - ",
+								"records_separator": " | ",
+								"cell_type": null,
+								"action": null,
+								"value": [],
+								"fallback_value": null,
+								"data": null,
+								"render_label": null,
+								"column": null,
+								"ar_columns_obj": [],
+								"features": null,
+								"model": "component_portal"
+							},
+							{
+								"id": null,
+								"class_list": null,
+								"type": "column",
+								"label": "Municipio de la entrevista",
+								"row_count": 1,
+								"column_count": 0,
+								"column_labels": null,
+								"fields_separator": ", ",
+								"records_separator": " | ",
+								"cell_type": null,
+								"action": null,
+								"value": [],
+								"fallback_value": null,
+								"data": null,
+								"render_label": null,
+								"column": null,
+								"ar_columns_obj": [],
+								"features": null,
+								"model": "component_portal"
+							}
+						],
+						"fallback_value": null,
+						"data": null,
+						"render_label": false,
+						"column": null,
+						"ar_columns_obj": null,
+						"features": null,
+						"model": null
+					},
+					{
+						"id": null,
+						"class_list": "line oh",
+						"type": "row",
+						"label": null,
+						"row_count": 1,
+						"column_count": null,
+						"column_labels": null,
+						"fields_separator": null,
+						"records_separator": null,
+						"cell_type": null,
+						"action": null,
+						"value": [
+							{
+								"id": null,
+								"class_list": null,
+								"type": "column",
+								"label": "Audiovisual",
+								"row_count": 1,
+								"column_count": 1,
+								"column_labels": null,
+								"fields_separator": ", ",
+								"records_separator": " | ",
+								"cell_type": null,
+								"action": null,
+								"value": [
+									{
+										"id": null,
+										"class_list": null,
+										"type": "row",
+										"label": null,
+										"row_count": null,
+										"column_count": null,
+										"column_labels": null,
+										"fields_separator": null,
+										"records_separator": null,
+										"cell_type": null,
+										"action": null,
+										"value": [
+											{
+												"id": null,
+												"class_list": "oh indexation",
+												"type": "column",
+												"label": "Descripción / transcripción av",
+												"row_count": null,
+												"column_count": null,
+												"column_labels": null,
+												"fields_separator": ", ",
+												"records_separator": " | ",
+												"cell_type": null,
+												"action": null,
+												"value": [
+													{
+														"id": null,
+														"class_list": "record_link",
+														"type": "column",
+														"label": null,
+														"row_count": null,
+														"column_count": null,
+														"column_labels": null,
+														"fields_separator": null,
+														"records_separator": null,
+														"cell_type": "record_link",
+														"action": null,
+														"value": [
+															{
+																"section_id": "90002",
+																"section_tipo": "rsc167"
+															}
+														],
+														"fallback_value": null,
+														"data": null,
+														"render_label": null,
+														"column": null,
+														"ar_columns_obj": null,
+														"features": null,
+														"model": null
+													},
+													{
+														"id": null,
+														"class_list": "tag_id",
+														"type": "column",
+														"label": null,
+														"row_count": null,
+														"column_count": null,
+														"column_labels": null,
+														"fields_separator": null,
+														"records_separator": null,
+														"cell_type": "button",
+														"action": null,
+														"value": [
+															{
+																"class_list": "button tag_id",
+																"label": "Abrir Herramienta de indexación",
+																"value": ["77"],
+																"action": {
+																	"event": "click",
+																	"method": "open_tool",
+																	"module_path": "../../../tools/tool_common/js/tool_common.js",
+																	"options": {
+																		"caller": {
+																			"tipo": "rsc167",
+																			"section_tipo": "rsc167",
+																			"section_id": "90002",
+																			"mode": "indexation_list",
+																			"model": "section",
+																			"lang": "lg-spa"
+																		},
+																		"caller_options": {
+																			"tag_id": "77"
+																		},
+																		"tool_context": {
+																			"typo": "ddo",
+																			"type": "tool",
+																			"section_tipo": "dd1324",
+																			"mode": "edit",
+																			"model": "tool_indexation",
+																			"properties": {
+																				"open_as": "window",
+																				"windowFeatures": null
+																			},
+																			"label": "Herramienta de indexación",
+																			"css": {
+																				"url": "/dedalo/tools/tool_indexation/css/tool_indexation.css"
+																			},
+																			"name": "tool_indexation",
+																			"icon": "/dedalo/tools/tool_indexation/img/icon.svg",
+																			"show_in_inspector": false,
+																			"show_in_component": true,
+																			"tool_config": {
+																				"ddo_map": [
+																					{
+																						"info": "Transcription - component_text_area",
+																						"mode": "edit",
+																						"role": "transcription_component",
+																						"tipo": "rsc36",
+																						"section_id": "self",
+																						"section_tipo": "rsc167",
+																						"model": "component_text_area",
+																						"translatable": true,
+																						"label": "Descripción / transcripción av"
+																					},
+																					{
+																						"info": "Indexation - component_autocomplete_hi",
+																						"mode": "edit",
+																						"role": "indexing_component",
+																						"tipo": "rsc860",
+																						"section_id": "self",
+																						"section_tipo": "rsc167",
+																						"model": "component_portal",
+																						"translatable": false,
+																						"label": "Indexación"
+																					},
+																					{
+																						"info": "Audiovisual - component_av",
+																						"mode": "edit",
+																						"role": "media_component",
+																						"tipo": "rsc35",
+																						"section_id": "self",
+																						"section_tipo": "rsc167",
+																						"model": "component_av",
+																						"translatable": false,
+																						"label": "Audiovisual"
+																					},
+																					{
+																						"info": "People - section",
+																						"mode": "list_thesaurus",
+																						"role": "people_section",
+																						"tipo": "rsc197",
+																						"view": "thesaurus_list",
+																						"section_id": null,
+																						"section_tipo": "rsc197",
+																						"model": "section",
+																						"translatable": false,
+																						"label": "Personas"
+																					},
+																					{
+																						"info": "Thesaurus - area_thesaurus",
+																						"mode": "relation",
+																						"role": "area_thesaurus",
+																						"tipo": "dd100",
+																						"section_id": null,
+																						"section_tipo": "dd100",
+																						"model": "area_thesaurus",
+																						"translatable": true,
+																						"label": "Tesauro"
+																					},
+																					{
+																						"info": "Estado IN - component_checkbox ",
+																						"mode": "edit",
+																						"role": "status_user_component",
+																						"tipo": "rsc437",
+																						"section_id": "self",
+																						"section_tipo": "rsc167",
+																						"model": "component_check_box",
+																						"translatable": false,
+																						"label": "Estado IN"
+																					},
+																					{
+																						"info": "Validación IN - component_select",
+																						"mode": "edit",
+																						"role": "status_admin_component",
+																						"tipo": "rsc439",
+																						"section_id": "self",
+																						"section_tipo": "rsc167",
+																						"model": "component_select",
+																						"translatable": false,
+																						"label": "Validación IN"
+																					},
+																					{
+																						"info": "References - component_autocomplete_hi",
+																						"mode": "edit",
+																						"role": "references_component",
+																						"tipo": "rsc1368",
+																						"section_id": "self",
+																						"section_tipo": "rsc167",
+																						"model": "component_portal",
+																						"translatable": false,
+																						"label": "Referencias"
+																					}
+																				]
+																			}
+																		}
+																	}
+																}
+															}
+														],
+														"fallback_value": null,
+														"data": null,
+														"render_label": null,
+														"column": null,
+														"ar_columns_obj": null,
+														"features": null,
+														"model": null
+													},
+													{
+														"id": null,
+														"class_list": "button_indexation",
+														"type": "column",
+														"label": null,
+														"row_count": null,
+														"column_count": null,
+														"column_labels": null,
+														"fields_separator": null,
+														"records_separator": null,
+														"cell_type": "button",
+														"action": null,
+														"value": [
+															{
+																"class_list": "button label",
+																"label": "Abrir Herramienta de indexación",
+																"action": {
+																	"event": "click",
+																	"method": "open_tool",
+																	"module_path": "../../../tools/tool_common/js/tool_common.js",
+																	"options": {
+																		"caller": {
+																			"tipo": "rsc167",
+																			"section_tipo": "rsc167",
+																			"section_id": "90002",
+																			"mode": "indexation_list",
+																			"model": "section",
+																			"lang": "lg-spa"
+																		},
+																		"tool_context": {
+																			"typo": "ddo",
+																			"type": "tool",
+																			"section_tipo": "dd1324",
+																			"mode": "edit",
+																			"model": "tool_indexation",
+																			"properties": {
+																				"open_as": "window",
+																				"windowFeatures": null
+																			},
+																			"label": "Herramienta de indexación",
+																			"css": {
+																				"url": "/dedalo/tools/tool_indexation/css/tool_indexation.css"
+																			},
+																			"name": "tool_indexation",
+																			"icon": "/dedalo/tools/tool_indexation/img/icon.svg",
+																			"show_in_inspector": false,
+																			"show_in_component": true,
+																			"tool_config": {
+																				"ddo_map": [
+																					{
+																						"info": "Transcription - component_text_area",
+																						"mode": "edit",
+																						"role": "transcription_component",
+																						"tipo": "rsc36",
+																						"section_id": "self",
+																						"section_tipo": "rsc167",
+																						"model": "component_text_area",
+																						"translatable": true,
+																						"label": "Descripción / transcripción av"
+																					},
+																					{
+																						"info": "Indexation - component_autocomplete_hi",
+																						"mode": "edit",
+																						"role": "indexing_component",
+																						"tipo": "rsc860",
+																						"section_id": "self",
+																						"section_tipo": "rsc167",
+																						"model": "component_portal",
+																						"translatable": false,
+																						"label": "Indexación"
+																					},
+																					{
+																						"info": "Audiovisual - component_av",
+																						"mode": "edit",
+																						"role": "media_component",
+																						"tipo": "rsc35",
+																						"section_id": "self",
+																						"section_tipo": "rsc167",
+																						"model": "component_av",
+																						"translatable": false,
+																						"label": "Audiovisual"
+																					},
+																					{
+																						"info": "People - section",
+																						"mode": "list_thesaurus",
+																						"role": "people_section",
+																						"tipo": "rsc197",
+																						"view": "thesaurus_list",
+																						"section_id": null,
+																						"section_tipo": "rsc197",
+																						"model": "section",
+																						"translatable": false,
+																						"label": "Personas"
+																					},
+																					{
+																						"info": "Thesaurus - area_thesaurus",
+																						"mode": "relation",
+																						"role": "area_thesaurus",
+																						"tipo": "dd100",
+																						"section_id": null,
+																						"section_tipo": "dd100",
+																						"model": "area_thesaurus",
+																						"translatable": true,
+																						"label": "Tesauro"
+																					},
+																					{
+																						"info": "Estado IN - component_checkbox ",
+																						"mode": "edit",
+																						"role": "status_user_component",
+																						"tipo": "rsc437",
+																						"section_id": "self",
+																						"section_tipo": "rsc167",
+																						"model": "component_check_box",
+																						"translatable": false,
+																						"label": "Estado IN"
+																					},
+																					{
+																						"info": "Validación IN - component_select",
+																						"mode": "edit",
+																						"role": "status_admin_component",
+																						"tipo": "rsc439",
+																						"section_id": "self",
+																						"section_tipo": "rsc167",
+																						"model": "component_select",
+																						"translatable": false,
+																						"label": "Validación IN"
+																					},
+																					{
+																						"info": "References - component_autocomplete_hi",
+																						"mode": "edit",
+																						"role": "references_component",
+																						"tipo": "rsc1368",
+																						"section_id": "self",
+																						"section_tipo": "rsc167",
+																						"model": "component_portal",
+																						"translatable": false,
+																						"label": "Referencias"
+																					}
+																				]
+																			}
+																		}
+																	}
+																}
+															}
+														],
+														"fallback_value": null,
+														"data": null,
+														"render_label": null,
+														"column": null,
+														"ar_columns_obj": null,
+														"features": null,
+														"model": null
+													},
+													{
+														"id": null,
+														"class_list": "button_transcription",
+														"type": "column",
+														"label": null,
+														"row_count": null,
+														"column_count": null,
+														"column_labels": null,
+														"fields_separator": null,
+														"records_separator": null,
+														"cell_type": "button",
+														"action": null,
+														"value": [
+															{
+																"class_list": "button document",
+																"label": "Abrir Transcripción",
+																"action": {
+																	"event": "click",
+																	"method": "open_tool",
+																	"module_path": "../../../tools/tool_common/js/tool_common.js",
+																	"options": {
+																		"caller": {
+																			"tipo": "rsc167",
+																			"section_tipo": "rsc167",
+																			"section_id": "90002",
+																			"tag_id": "77",
+																			"mode": "indexation_list",
+																			"model": "section",
+																			"lang": "lg-spa",
+																			"section_top_tipo": "oh1",
+																			"section_top_id": "90002"
+																		},
+																		"tool_context": {
+																			"typo": "ddo",
+																			"type": "tool",
+																			"section_tipo": "dd1324",
+																			"mode": "edit",
+																			"model": "tool_transcription",
+																			"properties": {
+																				"open_as": "window",
+																				"windowFeatures": null
+																			},
+																			"label": "Transcripción",
+																			"css": {
+																				"url": "/dedalo/tools/tool_transcription/css/tool_transcription.css"
+																			},
+																			"name": "tool_transcription",
+																			"icon": "/dedalo/tools/tool_transcription/img/icon.svg",
+																			"show_in_inspector": true,
+																			"show_in_component": true,
+																			"tool_config": {
+																				"ddo_map": [
+																					{
+																						"mode": "edit",
+																						"role": "media_component",
+																						"tipo": "rsc35",
+																						"section_id": "self",
+																						"section_tipo": "rsc167",
+																						"model": "component_av",
+																						"translatable": false,
+																						"label": "Audiovisual"
+																					},
+																					{
+																						"mode": "edit",
+																						"role": "transcription_component",
+																						"tipo": "rsc36",
+																						"section_id": "self",
+																						"section_tipo": "rsc167",
+																						"model": "component_text_area",
+																						"translatable": true,
+																						"label": "Descripción / transcripción av"
+																					},
+																					{
+																						"mode": "edit",
+																						"role": "status_user_component",
+																						"tipo": "rsc431",
+																						"section_id": "self",
+																						"section_tipo": "rsc167",
+																						"model": "component_check_box",
+																						"translatable": false,
+																						"label": "Estado TR"
+																					},
+																					{
+																						"mode": "edit",
+																						"role": "status_admin_component",
+																						"tipo": "rsc285",
+																						"section_id": "self",
+																						"section_tipo": "rsc167",
+																						"model": "component_select",
+																						"translatable": false,
+																						"label": "Validación TR"
+																					}
+																				]
+																			}
+																		}
+																	}
+																}
+															}
+														],
+														"fallback_value": null,
+														"data": null,
+														"render_label": null,
+														"column": null,
+														"ar_columns_obj": null,
+														"features": null,
+														"model": null
+													},
+													{
+														"id": null,
+														"class_list": "button_av_player",
+														"type": "column",
+														"label": null,
+														"row_count": null,
+														"column_count": null,
+														"column_labels": null,
+														"fields_separator": null,
+														"records_separator": null,
+														"cell_type": "button",
+														"action": null,
+														"value": [
+															{
+																"class_list": "button film",
+																"label": "Abrir av",
+																"action": {
+																	"event": "click",
+																	"method": "open_av_player",
+																	"module_path": "../../component_av/js/component_av.js",
+																	"options": {
+																		"section_tipo": "rsc167",
+																		"section_id": "90002",
+																		"component_tipo": "rsc35",
+																		"tc_in_secs": 5,
+																		"tc_out_secs": 12.5
+																	}
+																}
+															}
+														],
+														"fallback_value": null,
+														"data": null,
+														"render_label": null,
+														"column": null,
+														"ar_columns_obj": null,
+														"features": null,
+														"model": null
+													},
+													{
+														"id": null,
+														"class_list": "text_fragment",
+														"type": "column",
+														"label": null,
+														"row_count": null,
+														"column_count": null,
+														"column_labels": null,
+														"fields_separator": null,
+														"records_separator": null,
+														"cell_type": "text",
+														"action": null,
+														"value": ["texto etiquetado & validado del fragmento AV"],
+														"fallback_value": null,
+														"data": null,
+														"render_label": null,
+														"column": null,
+														"ar_columns_obj": null,
+														"features": null,
+														"model": null
+													},
+													{
+														"id": null,
+														"class_list": "tc_in",
+														"type": "column",
+														"label": null,
+														"row_count": null,
+														"column_count": null,
+														"column_labels": null,
+														"fields_separator": null,
+														"records_separator": null,
+														"cell_type": "text",
+														"action": null,
+														"value": ["00:00:05.000"],
+														"fallback_value": null,
+														"data": null,
+														"render_label": null,
+														"column": null,
+														"ar_columns_obj": null,
+														"features": null,
+														"model": null
+													},
+													{
+														"id": null,
+														"class_list": "tc_out",
+														"type": "column",
+														"label": null,
+														"row_count": null,
+														"column_count": null,
+														"column_labels": null,
+														"fields_separator": null,
+														"records_separator": null,
+														"cell_type": "text",
+														"action": null,
+														"value": ["00:00:12.500"],
+														"fallback_value": null,
+														"data": null,
+														"render_label": null,
+														"column": null,
+														"ar_columns_obj": null,
+														"features": null,
+														"model": null
+													},
+													{
+														"id": null,
+														"class_list": "duration_tc",
+														"type": "column",
+														"label": null,
+														"row_count": null,
+														"column_count": null,
+														"column_labels": null,
+														"fields_separator": null,
+														"records_separator": null,
+														"cell_type": "text",
+														"action": null,
+														"value": ["00:00:07.500"],
+														"fallback_value": null,
+														"data": null,
+														"render_label": null,
+														"column": null,
+														"ar_columns_obj": null,
+														"features": null,
+														"model": null
+													},
+													{
+														"id": null,
+														"class_list": "button_download_av",
+														"type": "column",
+														"label": null,
+														"row_count": null,
+														"column_count": null,
+														"column_labels": null,
+														"fields_separator": null,
+														"records_separator": null,
+														"cell_type": "button",
+														"action": null,
+														"value": [
+															{
+																"class_list": "button download",
+																"label": "Descargar fragmento",
+																"action": {
+																	"event": "click",
+																	"method": "download_av_fragment",
+																	"module_path": "../../component_av/js/component_av.js",
+																	"options": {
+																		"tipo": "rsc35",
+																		"section_tipo": "rsc167",
+																		"section_id": "90002",
+																		"tag_id": "77",
+																		"lang": "lg-spa",
+																		"tc_in_secs": 5,
+																		"tc_out_secs": 12.5,
+																		"quality": "404",
+																		"watermark": false
+																	}
+																}
+															}
+														],
+														"fallback_value": null,
+														"data": null,
+														"render_label": null,
+														"column": null,
+														"ar_columns_obj": null,
+														"features": null,
+														"model": null
+													},
+													{
+														"id": null,
+														"class_list": "button_download_av watermark",
+														"type": "column",
+														"label": null,
+														"row_count": null,
+														"column_count": null,
+														"column_labels": null,
+														"fields_separator": null,
+														"records_separator": null,
+														"cell_type": "button",
+														"action": null,
+														"value": [
+															{
+																"class_list": "button download",
+																"label": "Descargar fragmento (Watermark)",
+																"action": {
+																	"event": "click",
+																	"method": "download_av_fragment",
+																	"module_path": "../../component_av/js/component_av.js",
+																	"options": {
+																		"tipo": "rsc35",
+																		"section_tipo": "rsc167",
+																		"section_id": "90002",
+																		"tag_id": "77",
+																		"lang": "lg-spa",
+																		"tc_in_secs": 5,
+																		"tc_out_secs": 12.5,
+																		"quality": "404",
+																		"watermark": true
+																	}
+																}
+															}
+														],
+														"fallback_value": null,
+														"data": null,
+														"render_label": null,
+														"column": null,
+														"ar_columns_obj": null,
+														"features": null,
+														"model": null
+													}
+												],
+												"fallback_value": [],
+												"data": null,
+												"render_label": null,
+												"column": null,
+												"ar_columns_obj": [
+													{
+														"id": "oh1_oh25_rsc167_rsc36",
+														"group": "oh1_oh25_rsc167"
+													}
+												],
+												"features": null,
+												"model": "component_text_area"
+											}
+										],
+										"fallback_value": null,
+										"data": null,
+										"render_label": null,
+										"column": null,
+										"ar_columns_obj": null,
+										"features": null,
+										"model": null
+									}
+								],
+								"fallback_value": null,
+								"data": null,
+								"render_label": null,
+								"column": null,
+								"ar_columns_obj": [
+									{
+										"id": "oh1_oh25_rsc167_rsc36",
+										"group": "oh1_oh25_rsc167"
+									}
+								],
+								"features": null,
+								"model": "component_portal"
+							}
+						],
+						"fallback_value": null,
+						"data": null,
+						"render_label": false,
+						"column": null,
+						"ar_columns_obj": null,
+						"features": null,
+						"model": null
+					}
+				],
+				"fallback_value": null,
+				"data": null,
+				"render_label": true,
+				"column": null,
+				"ar_columns_obj": null,
+				"features": {
+					"color": "#86458c"
+				},
+				"model": null
+			}
+		],
+		"fallback_value": null,
+		"data": null,
+		"render_label": null,
+		"column": null,
+		"ar_columns_obj": null,
+		"features": null,
+		"model": null
+	}
+]

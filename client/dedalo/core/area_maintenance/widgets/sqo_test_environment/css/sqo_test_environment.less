@@ -1,0 +1,44 @@
+/**
+* sqo_test_environment
+*
+* Included from area_maintenance.less file.
+* Neutral kit surface (the blue accent is kept on the JSON-editor menu only);
+* the query response is a console block.
+*/
+.wrapper_widget.sqo_test_environment {
+
+	>.content_data {
+
+		>.button_submit {
+			margin: 0.25rem 0.25rem 0.5rem;
+		}
+
+		>.editor_json_container {
+			display: block;
+			height: 50vh;
+			min-height: 450px;
+
+			.jse-menu {
+				--jse-theme-color: var(--color_primary);
+				color: var(--color_white) !important;
+			}
+			.jsoneditor {
+				z-index: 1;
+			}
+		}
+
+		>.body_response {
+			max-width: 100%;
+
+			>.api_response {
+				.dd_console();
+				margin-top: 0.5rem;
+			}
+
+			>.pre > .json-container {
+				white-space: pre-wrap;
+				overflow: auto;
+			}
+		}
+	}
+}//end sqo_test_environment

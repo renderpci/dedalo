@@ -1,0 +1,183 @@
+{
+	"typo": "ddo",
+	"model": "component_pdf",
+	"label": "pdf",
+	"tipo": "test85",
+	"section_tipo": "test3",
+	"legacy_model": "component_pdf",
+	"parent": "test3",
+	"parent_grouper": "test45",
+	"lang": "lg-nolan",
+	"mode": "edit",
+	"translatable": false,
+	"properties": {
+		"observe": [
+			{
+				"client": {
+					"event": "click_tag_pdf",
+					"perform": {
+						"function": "go_to_page"
+					}
+				},
+				"component_tipo": "test97"
+			},
+			{
+				"client": {
+					"event": "key_up_f2",
+					"perform": {
+						"function": "get_data_tag"
+					}
+				},
+				"component_tipo": "test97"
+			}
+		],
+		"max_items_folder": 1000
+	},
+	"css": null,
+	"permissions": 2,
+	"tools": [
+		{
+			"typo": "ddo",
+			"model": "tool_media_versions",
+			"name": "tool_media_versions",
+			"label": "Media versions",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"specific_actions": {
+					"rotate": [
+						"component_image"
+					],
+					"conform_headers": [
+						"component_av"
+					]
+				}
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_media_versions/css/tool_media_versions.css"
+			},
+			"icon": "/dedalo/tools/tool_media_versions/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_pdf_extractor",
+			"name": "tool_pdf_extractor",
+			"label": "Extract PDF file content",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": null,
+			"css": {
+				"url": "/dedalo/tools/tool_pdf_extractor/css/tool_pdf_extractor.css"
+			},
+			"icon": "/dedalo/tools/tool_pdf_extractor/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_time_machine",
+			"name": "tool_time_machine",
+			"label": "Time machine",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_time_machine/css/tool_time_machine.css"
+			},
+			"icon": "/dedalo/tools/tool_time_machine/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_transcription",
+			"name": "tool_transcription",
+			"label": "Transcription",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_transcription/css/tool_transcription.css"
+			},
+			"icon": "/dedalo/tools/tool_transcription/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_upload",
+			"name": "tool_upload",
+			"label": "Upload",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": {
+					"top": 0,
+					"left": "return screen.width -760",
+					"width": 760,
+					"height": 708
+				}
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_upload/css/tool_upload.css"
+			},
+			"icon": "/dedalo/tools/tool_upload/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		}
+	],
+	"buttons": [],
+	"request_config": null,
+	"columns_map": null,
+	"sortable": false,
+	"type": "component",
+	"new_dataframe": null,
+	"view": "default",
+	"children_view": null,
+	"debug": {
+		"exec_time": "1.211 ms"
+	},
+	"features": {
+		"allowed_extensions": [
+			"pdf",
+			"doc",
+			"pages",
+			"odt",
+			"ods",
+			"rtf",
+			"ppt",
+			"pages"
+		],
+		"default_target_quality": "original",
+		"ar_quality": [
+			"original",
+			"web"
+		],
+		"default_quality": "web",
+		"quality": "web",
+		"key_dir": "pdf",
+		"alternative_extensions": [
+			"jpg"
+		],
+		"extension": "pdf"
+	}
+}

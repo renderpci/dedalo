@@ -1,0 +1,4 @@
+[
+{"old":"deposit1"	,"new": "depositiontype1" 		,"type":"section"	,"perform":["replace_tipo"]	,"info": "Old deposit => depositiontype1 Deposition type descriptors"},
+{"old":"deposit2"	,"new": "depositiontype2" 		,"type":"section"	,"perform":["replace_tipo"]	,"info": "Old deposit => depositiontype2 Deposition type descriptors models"}
+]

@@ -1,0 +1,24 @@
+{
+	"comment": "Real dd_core_api::read of one section record (numisdata6 #1, exists in dev DB). Requires PHP_API_USERNAME/PASSWORD in private/.env.",
+	"requires_login": true,
+	"rqo": {
+		"action": "read",
+		"dd_api": "dd_core_api",
+		"prevent_lock": true,
+		"source": {
+			"model": "section",
+			"tipo": "numisdata6",
+			"section_tipo": "numisdata6",
+			"section_id": "1",
+			"mode": "list",
+			"lang": "lg-spa",
+			"action": "search"
+		},
+		"sqo": {
+			"section_tipo": ["numisdata6"],
+			"filter_by_locators": [{ "section_tipo": "numisdata6", "section_id": "1" }],
+			"limit": 1,
+			"offset": 0
+		}
+	}
+}

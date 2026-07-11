@@ -1,0 +1,1247 @@
+/**
+* TOOL_PRINT
+*
+* Visual print-layout editor styles. Editor chrome carries .no_print; the
+* .print_root surface is the only subtree that survives @media print.
+* Loaded on tool init (compiled to tool_print.css).
+*/
+
+// imports
+@import (once) '../../../core/page/css/layout/vars';
+
+// local vars
+:root {
+	--tool_print: #2a7d6f;
+	--tool_print_lighten_40: #d6ece8;
+	--tool_print_border: #1f5d53;
+	--print_grid_color: rgba(0,0,0,.06);
+	--print_page_bg: #ffffff;
+	--print_page_shadow: 0 1px 6px rgba(0,0,0,.25);
+	--tp_desk_bg: #e9e9e9;
+}
+
+// dark theme overrides (self-contained — no dependency on global theme_dark.less)
+:root[data-theme="dark"] {
+	--tool_print:            #3da89a;
+	--tool_print_lighten_40: #1f3a35;
+	--tool_print_border:     #2a7d6f;
+	--print_page_shadow:     0 2px 8px rgba(0,0,0,.5);
+	--tp_desk_bg:            #2a2d31;
+}
+@tool_color : var(--tool_print);
+
+.wrapper_tool.tool_print {
+
+	.spinner { background-color: @tool_color; }
+
+	> .content_data.print_layout_editor {
+		display: grid;
+		grid-template-columns: 240px minmax(20rem, 1fr) 270px;
+		grid-template-rows: auto 1fr;
+		grid-template-areas:
+			"toolbar toolbar toolbar"
+			"palette canvas  inspector";
+		width: 100%;
+		// the page (body) scrolls; palette + inspector are sticky (see below) so
+		// they stay visible while the canvas pages scroll past
+		min-height: 90vh;
+		gap: 0;
+
+		.print_toolbar {
+			grid-area: toolbar;
+			position: sticky;
+			top: 0;
+			z-index: 20;
+			display: flex;
+			flex-wrap: nowrap;
+			overflow-x: auto;
+			align-items: center;
+			gap: .4rem .75rem;
+			padding: .45rem .8rem;
+			background: var(--bg_surface_alt);
+			border-bottom: 1px solid var(--border_default);
+			box-shadow: var(--shadow-2);
+			color: var(--fg_default);
+			font-size: .8rem;
+
+			.toolbar_group_label {
+				font-size: .65rem;
+				font-weight: 600;
+				text-transform: uppercase;
+				letter-spacing: .04em;
+				color: var(--fg_muted);
+				white-space: nowrap;
+				margin-right: -.25rem;
+			}
+
+			.template_name_input {
+				height: 1.9rem;
+				min-width: 9rem;
+				padding: 0 .4rem;
+				font-size: .8rem;
+				background: var(--bg_input);
+				color: var(--fg_default);
+				border: 1px solid var(--border_default);
+				border-radius: 4px;
+				transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+				&:focus { border-color: var(--focus-ring); box-shadow: 0 0 0 2px var(--focus-ring_weak); outline: none; }
+			}
+			.tool_button.flash_ok { background: var(--color_green_success); color:#fff; border-color: var(--color_green_success); }
+			.tool_button.flash_error { background: var(--color_danger); color:#fff; border-color: var(--color_danger); }
+
+			.toolbar_group {
+				display: flex;
+				align-items: center;
+				gap: .35rem;
+				padding-right: .75rem;
+				border-right: 1px solid var(--border_default);
+			}
+			.toolbar_group:last-child {
+				border-right: none;
+				padding-right: 0;
+			}
+
+			// buttons
+			.tool_button {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				height: 1.9rem;
+				margin: 0;
+				padding: 0 .7rem;
+				font-size: .8rem;
+				line-height: 1;
+				color: var(--fg_default);
+				background: var(--bg_input);
+				border: 1px solid var(--border_default);
+				border-radius: 4px;
+				cursor: pointer;
+				white-space: nowrap;
+				transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+
+				&:hover { background: var(--bg_surface_alt); border-color: var(--border_strong); transform: translateY(-1px); box-shadow: var(--shadow-1); }
+				&:active { background: var(--bg_surface); transform: translateY(0); box-shadow: none; }
+
+				// icon span inside a button (SVG mask)
+				.tp_icon {
+					display: inline-block;
+					width: 14px;
+					height: 14px;
+					margin-right: .3rem;
+					flex: 0 0 auto;
+					-webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+					-webkit-mask-position: center; mask-position: center;
+					-webkit-mask-size: contain; mask-size: contain;
+					background-color: currentColor;
+				}
+			}
+			.tool_button.btn_print {
+				color: #fff;
+				background: @tool_color;
+				border-color: var(--tool_print_border);
+				font-weight: 600;
+				&:hover { background: var(--tool_print_border); box-shadow: var(--shadow-2); }
+				.tp_icon { -webkit-mask-image: url('../img/icon_print.svg'); mask-image: url('../img/icon_print.svg'); }
+			}
+			.tool_button.btn_delete {
+				color: var(--color_danger);
+				&:hover { border-color: var(--color_danger); }
+				.tp_icon { -webkit-mask-image: url('../img/icon_remove.svg'); mask-image: url('../img/icon_remove.svg'); }
+			}
+
+			// selects
+			select,
+			.template_picker,
+			.zoom_select {
+				height: 1.9rem;
+				padding: 0 .4rem;
+				font-size: .8rem;
+				color: var(--fg_default);
+				background: var(--bg_input);
+				border: 1px solid var(--border_default);
+				border-radius: 4px;
+				cursor: pointer;
+				transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+				&:focus { border-color: var(--focus-ring); box-shadow: 0 0 0 2px var(--focus-ring_weak); outline: none; }
+			}
+			.template_picker { min-width: 12rem; }
+			.zoom_select { width: 4.5rem; }
+
+			// checkbox labels
+			.toolbar_check {
+				display: inline-flex;
+				align-items: center;
+				gap: .35rem;
+				font-size: .8rem;
+				white-space: nowrap;
+				cursor: pointer;
+				user-select: none;
+
+				input { margin: 0; cursor: pointer; }
+			}
+		}
+
+		.palette_panel {
+			grid-area: palette;
+			border-right: 1px solid var(--border_default);
+			padding: .5rem;
+			color: var(--fg_default);
+			position: sticky;
+			top: 2.9rem;
+			align-self: start;
+			max-height: calc(100vh - 2.9rem);
+			overflow: hidden;
+			display: flex;
+			flex-direction: column;
+			transition: grid-template-columns var(--transition-base);
+
+			// collapse toggle button in the panel header
+			.panel_collapse_toggle {
+				flex: 0 0 auto;
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				width: 1.4rem;
+				height: 1.4rem;
+				cursor: pointer;
+				color: var(--fg_muted);
+				background: none;
+				border: none;
+				border-radius: 3px;
+				transition: color var(--transition-fast), background var(--transition-fast);
+				&:hover { color: var(--fg_default); background: var(--bg_surface_alt); }
+			}
+
+			.panel_header_row {
+				flex: 0 0 auto;
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				margin: 0 0 .5rem;
+			}
+
+			.panel_title { flex: 1 1 auto; font-size: .9rem; margin: 0; color: var(--fg_default); }
+
+			// breadcrumb / back for the relation drill-down (replace navigation)
+			.palette_breadcrumb {
+				flex: 0 0 auto;
+				display: flex;
+				align-items: center;
+				flex-wrap: wrap;
+				gap: .25rem .4rem;
+				margin-bottom: .4rem;
+				padding-bottom: .35rem;
+				border-bottom: 1px solid var(--border_default);
+				font-size: .75rem;
+
+				.palette_back {
+					cursor: pointer;
+					font-weight: 600;
+					color: var(--fg_default);
+					background: var(--bg_surface_alt);
+					border: 1px solid var(--border_default);
+					border-radius: 3px;
+					padding: .1rem .4rem;
+					transition: border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+					&:hover { border-color: @tool_color; color: @tool_color; box-shadow: var(--shadow-1); }
+				}
+				.palette_crumbs {
+					display: inline-flex;
+					align-items: center;
+					flex-wrap: wrap;
+					gap: .15rem;
+					color: var(--fg_muted);
+
+					.crumb.clickable { cursor: pointer; color: @tool_color; &:hover { text-decoration: underline; } }
+					.crumb_sep { opacity: .5; padding: 0 .1rem; }
+				}
+			}
+
+			// the scrolling component list (independent of canvas/inspector)
+			.palette_scroll {
+				flex: 1 1 auto;
+				min-height: 0;
+				overflow: auto;
+			}
+
+			// single-column list (no core side-by-side Miller columns)
+			.components_list_container {
+				display: block;
+				width: 100%;
+				border: none;
+				background: none;
+				font-size: inherit;
+
+				> ul { max-height: none; overflow: visible; }
+				ul { display: block; width: 100%; }
+				// drill-down is handled by the replace navigation, so the core
+				// secondary column is never populated — keep it out of the flow
+				.target_list_container { display: none; }
+				.section_bar_label {
+					background: var(--bg_surface_alt);
+					color: var(--fg_muted);
+					font-size: .75rem;
+					font-weight: 600;
+					text-transform: uppercase;
+					letter-spacing: .03em;
+					border-radius: 3px;
+					margin-bottom: .2rem;
+					padding: .15rem .4rem;
+				}
+				.section_group_label {
+					color: var(--fg_muted);
+					font-size: .78rem;
+					margin-top: .35rem;
+				}
+			}
+
+			.component_label.element_draggable {
+				cursor: grab;
+				padding: .15rem .3rem;
+				border-radius: 3px;
+				border: 1px solid transparent;
+				transition: background var(--transition-fast), border-color var(--transition-fast), padding var(--transition-fast);
+			}
+			.component_label.element_draggable:hover {
+				background: var(--tool_print_lighten_40);
+				border-color: var(--tool_print);
+				padding-left: .45rem;
+			}
+		}
+
+		.inspector_panel {
+			grid-area: inspector;
+			border-left: 1px solid var(--border_default);
+			position: sticky;
+			top: 2.9rem;
+			align-self: start;
+			max-height: calc(100vh - 2.9rem);
+			overflow: auto;
+			padding: .5rem;
+			color: var(--fg_default);
+			transition: grid-template-columns var(--transition-base);
+
+			.panel_collapse_toggle {
+				flex: 0 0 auto;
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				width: 1.4rem;
+				height: 1.4rem;
+				cursor: pointer;
+				color: var(--fg_muted);
+				background: none;
+				border: none;
+				border-radius: 3px;
+				transition: color var(--transition-fast), background var(--transition-fast);
+				&:hover { color: var(--fg_default); background: var(--bg_surface_alt); }
+			}
+
+			.panel_header_row {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				margin: 0 0 .5rem;
+			}
+
+			.panel_title { font-size: .9rem; margin: 0; color: var(--fg_default); }
+			.panel_subtitle {
+				font-size: .7rem;
+				font-weight: 600;
+				text-transform: uppercase;
+				letter-spacing: .04em;
+				margin: 0 0 .4rem;
+				padding-bottom: .25rem;
+				color: var(--fg_muted);
+				border-bottom: 1px solid var(--border_default);
+			}
+
+			// visual card wrapper for property groups
+			.inspector_section {
+				background: var(--bg_surface);
+				border: 1px solid var(--border_default);
+				border-radius: var(--radius-md);
+				padding: .5rem;
+				margin-bottom: .6rem;
+			}
+			.inspector_row {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: .5rem;
+				margin-bottom: .3rem;
+				font-size: .8rem;
+				color: var(--fg_default);
+
+				input, select {
+					width: 6rem;
+					padding: .15rem .3rem;
+					background: var(--bg_input);
+					color: var(--fg_default);
+					border: 1px solid var(--border_default);
+					border-radius: 3px;
+					transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+					&:focus { border-color: var(--focus-ring); box-shadow: 0 0 0 2px var(--focus-ring_weak); outline: none; }
+				}
+				&.inspector_check_row input[type="checkbox"] { width: auto; }
+				input[type="color"].inspector_color {
+					width: 2.6rem;
+					height: 1.5rem;
+					padding: 1px;
+					cursor: pointer;
+					border-radius: 3px;
+				}
+			}
+			.inspector_hint { font-size: .8rem; color: var(--fg_muted); }
+
+			// per-side page margins + link toggle
+			.margins_head {
+				margin-bottom: .25rem;
+				.margins_link {
+					display: inline-flex;
+					align-items: center;
+					gap: .25rem;
+					font-size: .75rem;
+					color: var(--fg_muted);
+					cursor: pointer;
+					input[type="checkbox"] { width: auto; margin: 0; cursor: pointer; }
+				}
+			}
+			.margins_grid {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: .3rem .6rem;
+				margin-bottom: .4rem;
+				.margin_field {
+					display: flex;
+					align-items: center;
+					justify-content: space-between;
+					gap: .3rem;
+					font-size: .75rem;
+					color: var(--fg_muted);
+					> span { width: 1.1rem; text-align: center; }
+					input {
+						width: 3.2rem;
+						padding: .15rem .3rem;
+						background: var(--bg_input);
+						color: var(--fg_default);
+						border: 1px solid var(--border_default);
+						border-radius: 3px;
+						transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+						&:focus { border-color: var(--focus-ring); box-shadow: 0 0 0 2px var(--focus-ring_weak); outline: none; }
+					}
+				}
+			}
+
+			// table-column manager
+			.inspector_columns {
+				margin-top: .25rem;
+
+				.column_row {
+					display: flex;
+					align-items: center;
+					justify-content: space-between;
+					gap: .5rem;
+					margin-bottom: .15rem;
+					padding: .15rem .35rem;
+					font-size: .8rem;
+					color: var(--fg_default);
+					background: var(--bg_surface_alt);
+					border: 1px solid var(--border_default);
+					border-radius: 3px;
+					transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+					&:hover { box-shadow: var(--shadow-1); border-color: var(--border_strong); }
+
+					.column_name { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+					.column_header_input {
+						flex: 1 1 auto;
+						width: auto;
+						min-width: 3rem;
+						font-size: .76rem;
+						padding: .1rem .3rem;
+						background: var(--bg_input);
+						color: var(--fg_default);
+						border: 1px solid var(--border_default);
+						border-radius: 3px;
+					}
+					.column_ctrls { display: flex; align-items: center; gap: .25rem; flex: 0 0 auto; }
+					.column_width {
+						width: 2.8rem;
+						font-size: .7rem;
+						padding: 0 .15rem;
+						background: var(--bg_input);
+						color: var(--fg_default);
+						border: 1px solid var(--border_default);
+						border-radius: 3px;
+					}
+						.button {
+							flex: 0 0 auto; width: 15px; height: 15px; cursor: pointer;
+							-webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+							-webkit-mask-position: center; mask-position: center;
+							-webkit-mask-size: contain; mask-size: contain;
+							background-color: var(--fg_muted); transition: background-color .12s ease;
+						}
+						.button:hover { background-color: var(--fg_default); }
+						.column_grip { -webkit-mask-image: url('../img/icon_grip.svg'); mask-image: url('../img/icon_grip.svg'); cursor: grab; }
+						.column_remove { -webkit-mask-image: url('../img/icon_remove.svg'); mask-image: url('../img/icon_remove.svg'); background-color: var(--color_danger); }
+						.column_remove:hover { background-color: var(--color_danger); opacity: .75; }
+						.column_add { -webkit-mask-image: url('../img/icon_add.svg'); mask-image: url('../img/icon_add.svg'); background-color: var(--color_green_success); }
+						.column_add:hover { background-color: var(--color_green_success); opacity: .8; }
+						&.dragging { opacity: .4; }
+						&.drop_target { outline: 2px solid @tool_color; outline-offset: -1px; }
+				}
+				// active column header line connects to its style line below
+				.column_row:has(+ .column_style_row) {
+					margin-bottom: 0;
+					border-bottom: none;
+					border-radius: 3px 3px 0 0;
+				}
+				// per-column style line: align + text colour + background colour + clear
+				.column_style_row {
+					display: flex;
+					align-items: center;
+					gap: .35rem;
+					margin: 0 0 .3rem;
+					padding: .2rem .35rem;
+					background: var(--bg_surface_alt);
+					border: 1px solid var(--border_default);
+					border-top: none;
+					border-radius: 0 0 3px 3px;
+
+					.column_align {
+						width: 3.2rem; font-size: .7rem; padding: .05rem .15rem;
+						background: var(--bg_input); color: var(--fg_default);
+						border: 1px solid var(--border_default); border-radius: 3px;
+					}
+					.column_color {
+						display: inline-flex; align-items: center; gap: .2rem;
+						font-size: .72rem; color: var(--fg_muted); cursor: pointer;
+						.bg_swatch { font-size: .82rem; line-height: 1; }
+						input[type="color"] {
+							width: 1.5rem; height: 1.1rem; padding: 0; cursor: pointer;
+							border: 1px solid var(--border_default); border-radius: 3px; background: none;
+						}
+					}
+					.column_style_clear {
+						margin-left: auto; cursor: pointer; font-size: .8rem; line-height: 1;
+						color: var(--fg_muted); padding: 0 .15rem;
+						&:hover { color: var(--color_danger); }
+					}
+				}
+				.column_addable {
+					background: none;
+					.column_name { color: var(--fg_muted); }
+				}
+				.column_drag_hint { margin-top: .35rem; font-size: .75rem; color: var(--fg_muted); }
+			}
+		}
+
+		.pages_viewport {
+			grid-area: canvas;
+			overflow: auto;
+			background: var(--tp_desk_bg);
+			padding: 1.5rem;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+		}
+	}
+
+	// the printable surface ------------------------------------------------
+	.print_root {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1.5rem;
+
+		// transient continuation pages for cross-page table flow
+		.print_page.flow_continuation .flow_continuation_box {
+			position: absolute;
+			border: none !important;
+			background: none !important;
+			&:hover { border: none !important; box-shadow: none !important; }
+		}
+
+		// continuation pages are auto-generated, NOT real editable pages — mark
+		// them visibly so the dashed border + badge distinguish them from real pages
+		.print_page.flow_continuation {
+			box-shadow: none !important;
+			border: 2px dashed var(--border_strong);
+
+			.flow_continuation_badge {
+				position: absolute;
+				top: 4px;
+				left: 4px;
+				z-index: 3;
+				padding: 1px 6px;
+				font-size: .65rem;
+				font-weight: 600;
+				line-height: 1.4;
+				color: var(--fg_inverse);
+				background: var(--border_strong);
+				border-radius: 3px;
+				pointer-events: none;
+				white-space: nowrap;
+				opacity: .85;
+			}
+		}
+
+		.print_page {
+			position: relative;
+			background: var(--print_page_bg);
+			box-shadow: var(--print_page_shadow);
+			flex: 0 0 auto;
+
+			.print_page_header {
+				position: absolute;
+				top: -1.3rem;
+				left: 0;
+				right: 0;
+				height: 1.2rem;
+				display: flex;
+				align-items: center;
+				gap: .4rem;
+				font-size: .7rem;
+				color: #555;
+				.remove_page_btn { cursor: pointer; }
+			}
+
+			// editor-only guide marking the clear margin box (2 cm default)
+			.margin_guide {
+				box-sizing: border-box;
+				border: 1px dashed rgba(0,0,0,.18);
+				pointer-events: none;
+				z-index: 0;
+			}
+
+			// v2 document-flow: content column + rows of cells
+			.flow_column { display: block; }
+			.flow_row { display: flex; align-items: flex-start; width: 100%; }
+			.flow_cell { box-sizing: border-box; min-width: 0; }
+			.flow_cell .cell_content { width: 100%; height: auto; }
+			.flow_spacer { width: 100%; }
+
+			.box {
+				position: absolute;
+				box-sizing: border-box;
+				// every component's footprint is always visible (clear space,
+				// no page grid). Accent outline + very faint fill.
+				border: 1px solid fade(#2a7d6f, 35%);
+				background: fade(#2a7d6f, 4%);
+
+				&:hover { border-color: @tool_color; }
+				&.selected {
+					border: 1px solid @tool_color;
+					box-shadow: 0 0 0 1px @tool_color;
+					background: fade(#2a7d6f, 8%);
+				}
+				&.column_drop_target {
+					outline: 2px dashed @tool_color;
+					outline-offset: -2px;
+					background: fade(#2a7d6f, 12%);
+				}
+
+				.box_header {
+					position: absolute;
+					top: -1.1rem;
+					left: 0;
+					right: 0;
+					height: 1rem;
+					display: none;
+					align-items: center;
+					justify-content: space-between;
+					gap: .3rem;
+					padding: 0 .2rem;
+					font-size: .65rem;
+					background: @tool_color;
+					color: #fff;
+					cursor: move;
+					white-space: nowrap;
+					overflow: hidden;
+					.box_remove { cursor: pointer; padding: 0 .2rem; }
+				}
+				&:hover .box_header,
+				&.selected .box_header { display: flex; }
+
+				.box_content {
+					width: 100%;
+					height: 100%;
+					box-sizing: border-box;
+					overflow: hidden;
+					display: flex;
+					flex-direction: column;
+					padding: 1px 3px;
+					color: #111;
+					// box frame — color/visibility driven by the inspector Border
+					// control (apply_box_style sets --tp_border_color, transparent = off)
+					border: 1px solid var(--tp_border_color, transparent);
+
+					// the rendered (flattened) component value fills the box and
+					// inherits the box font/alignment. pointer-events:none makes the
+					// static clone totally inert (no edit events even via delegation)
+					// and lets a click fall through to select the box.
+					.wrapper_component {
+						width: 100%;
+						margin: 0;
+						padding: 0;
+						color: inherit;
+						font-size: inherit;
+						text-align: inherit;
+						background: none;
+						display: block;
+						pointer-events: none;
+					}
+					// force every nested element to the box text color — Dédalo's
+					// read-only list views render values in a muted grey otherwise
+					.wrapper_component * { color: inherit; }
+					.wrapper_component .tool_buttons_container,
+					.wrapper_component .buttons_container,
+					.wrapper_component .paginator_container,
+					.wrapper_component .button { display: none; }
+
+					// component field label (optional, identifies the component)
+					.print_label {
+						display: block;
+						font-size: .72em;
+						font-weight: 600;
+						line-height: 1.1;
+						color: #555;
+						margin: 0 0 1px;
+						padding: 0;
+						text-align: inherit;
+					}
+					&.hide_label .print_label { display: none !important; }
+
+					// free-text box (editable in place / printed)
+					.static_text_edit,
+					.static_text_print {
+						width: 100%;
+						min-height: 1em;
+						outline: none;
+						white-space: pre-wrap;
+						word-break: break-word;
+					}
+					.static_text_edit:empty::before {
+						content: attr(data-placeholder);
+						color: #aaa;
+					}
+
+					.relation_value .relation_item {
+						margin: 0 0 .2em;
+						line-height: 1.25;
+					}
+
+					// portal as a clean flat table (columns + rows)
+					.portal_table {
+						width: 100%;
+						border-collapse: collapse;
+						font-size: inherit;
+						line-height: 1.25;
+						pointer-events: none;
+						table-layout: auto;
+
+						th, td {
+							border: 1px solid var(--tp_border_color, #d4d4d4);
+							padding: 2px 6px;
+							text-align: left;
+							vertical-align: top;
+							background: none !important;
+							color: inherit;
+							word-break: break-word;
+						}
+						// neutralize core cell chrome (dark section_id column, input
+						// underlines) — keep only the table's own th/td borders
+						td *, th * { background: none !important; border: none !important; box-shadow: none !important; color: inherit; }
+
+						thead th {
+							font-weight: 600;
+							font-size: .82em;
+							letter-spacing: .02em;
+							color: #333;
+							background: #eef1f3 !important;
+							border-bottom: 1.5px solid #b9c0c6;
+							white-space: nowrap;
+						}
+						tbody tr:nth-child(even) td { background: #f7f9fa !important; }
+
+						// flatten nested component rendering inline so cells stay compact
+						.wrapper_component,
+						.section_record,
+						.ddinfo_value,
+						.print_value,
+						.mini { display: inline; color: inherit; }
+						.separator,
+						.fields_separator,
+						.column_separator { display: inline; margin: 0 .25em; color: inherit; opacity: .55; }
+					}
+
+					.box_placeholder {
+						color: #999;
+						font-style: italic;
+						font-size: .75rem;
+					}
+					.box_unavailable { color: #c0392b; }
+				}
+
+				.box_handle {
+					position: absolute;
+					width: 8px;
+					height: 8px;
+					background: #fff;
+					border: 1px solid @tool_color;
+					box-sizing: border-box;
+					display: none;
+				}
+				&.selected .box_handle { display: block; }
+
+				.h_nw { left: -4px;  top: -4px;    cursor: nwse-resize; }
+				.h_n  { left: 50%;   top: -4px;    margin-left: -4px; cursor: ns-resize; }
+				.h_ne { right: -4px; top: -4px;    cursor: nesw-resize; }
+				.h_e  { right: -4px; top: 50%;     margin-top: -4px; cursor: ew-resize; }
+				.h_se { right: -4px; bottom: -4px; cursor: nwse-resize; }
+				.h_s  { left: 50%;   bottom: -4px; margin-left: -4px; cursor: ns-resize; }
+				.h_sw { left: -4px;  bottom: -4px; cursor: nesw-resize; }
+				.h_w  { left: -4px;  top: 50%;     margin-top: -4px; cursor: ew-resize; }
+			}
+		}
+	}
+
+	// print -----------------------------------------------------------------
+	@media print {
+		.tool_header,
+		.no_print,
+		.no_print *,
+		.margin_guide { display: none !important; }
+
+		> .content_data.print_layout_editor {
+			display: block;
+			min-height: 0;
+			overflow: visible !important;
+		}
+		.pages_viewport {
+			overflow: visible !important;
+			background: none !important;
+			padding: 0 !important;
+			display: block !important;
+		}
+		.print_root {
+			display: block;
+			gap: 0;
+		}
+		.print_page {
+			box-shadow: none !important;
+			box-sizing: border-box;
+			break-after: page;
+			page-break-after: always;
+			// clip the page box to its own mm size so a sub-pixel overflow can't
+			// spill onto an extra blank sheet. Content is laid out inside the page
+			// margins (default 20mm / 2cm), so nothing real is clipped. NOTE: requires the
+			// print dialog at Scale 100% / no "fit to page" for the mm math to hold.
+			overflow: hidden;
+			break-inside: avoid;
+			page-break-inside: avoid;
+		}
+		.print_page:last-of-type {
+			break-after: auto;
+			page-break-after: auto;
+		}
+		// continuation pages print as clean pages (editor marker removed)
+		.print_page.flow_continuation {
+			border: none !important;
+			outline: none !important;
+		}
+		.print_page .box {
+			border: none !important;
+			background: none !important;
+			box-shadow: none !important;
+		}
+		.print_page .box .box_content { overflow: hidden; }
+	}
+}
+
+
+// v2 document-flow editor chrome (selection, drag-reorder, drop zones) ---------
+.wrapper_tool.tool_print {
+
+	.print_root.editor {
+
+		.flow_row {
+			position: relative;
+
+			// NOTE: this chrome sits on the always-WHITE page, so it uses FIXED
+			// page-appropriate colors (never theme tokens — those flip to light
+			// gray in dark mode and vanish on white paper).
+			// small chrome buttons (grip / ▲▼ / +cell / ✕ / insert)
+			.rc_btn {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				min-width: 1.2rem;
+				height: 1.2rem;
+				padding: 0 .15rem;
+				font-size: .62rem;
+				line-height: 1;
+				cursor: pointer;
+				color: #5a5f66;
+				border-radius: 2px;
+				user-select: none;
+				transition: background .1s ease, color .1s ease;
+				&:hover { background: rgba(0,0,0,.08); color: #1a1a1a; }
+			}
+			.rc_grip { cursor: grab; letter-spacing: -2px; }
+			.rc_remove:hover { color: #c0392b; }
+
+			.row_chrome {
+				position: absolute;
+				top: 0;
+				display: flex;
+				flex-direction: column;
+				gap: 1px;
+				opacity: 0;
+				transition: opacity var(--transition-fast);
+				z-index: 4;
+				background: #f7f8f9;
+				border: 1px solid #cfd3d7;
+				border-radius: 3px;
+				padding: 1px;
+				box-shadow: 0 1px 3px rgba(0,0,0,.15);
+			}
+			.row_chrome_left  { left: -1.5rem; }
+			.row_chrome_right { right: -1.5rem; }
+
+			.row_insert {
+				position: absolute;
+				left: 50%;
+				bottom: -.7rem;
+				transform: translateX(-50%);
+				display: flex;
+				gap: .3rem;
+				opacity: 0;
+				transition: opacity .1s ease;
+				z-index: 5;
+				.rc_btn {
+					min-width: auto;
+					padding: 0 .35rem;
+					font-size: .62rem;
+					background: #ffffff;
+					border: 1px solid #cfd3d7;
+					color: #5a5f66;
+					box-shadow: 0 1px 3px rgba(0,0,0,.15);
+					&:hover { border-color: @tool_color; color: @tool_color; }
+				}
+			}
+			&:hover .row_chrome,
+			&:hover .row_insert,
+			&.selected .row_chrome { opacity: 1; }
+
+			&.selected { outline: 1px solid @tool_color; outline-offset: 1px; border-left: 3px solid @tool_color; }
+			&.dragging { opacity: .4; }
+			&.row_drop { outline: 2px dashed @tool_color; }
+		}
+
+		// continuation segment of a split table/text (later pages): clickable to
+		// select the master cell; mirrors the master's selected outline
+		.flow_continued.continued_selectable {
+			&:hover { outline: 1px dashed rgba(42,125,111,.55); outline-offset: -1px; }
+			&.selected { outline: 2px solid @tool_color; outline-offset: -2px; }
+		}
+
+		.flow_cell {
+			cursor: pointer;
+			position: relative;
+			&:hover { outline: 1px dashed fade(#2a7d6f, 50%); outline-offset: -1px; }
+			&.selected { outline: 2px solid @tool_color; outline-offset: -2px; }
+			&.cell_drop { outline: 2px dashed @tool_color; background: fade(#2a7d6f, 6%); }
+
+			.cell_remove {
+				position: absolute;
+				top: 1px;
+				right: 1px;
+				z-index: 3;
+				opacity: 0;
+			}
+			&:hover .cell_remove,
+			&.selected .cell_remove { opacity: .9; }
+
+			// drag-to-resize divider on the cell's right edge
+			.cell_divider {
+				position: absolute;
+				top: 0;
+				right: -3px;
+				width: 6px;
+				height: 100%;
+				cursor: col-resize;
+				z-index: 6;
+				transition: background var(--transition-fast);
+				&:hover { background: fade(#2a7d6f, 30%); }
+			}
+		}
+		.flow_cell_empty {
+			min-height: 1.6rem;
+			outline: 1px dashed #cfd3d7;
+			outline-offset: -1px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			&::after {
+				content: 'empty cell — drop a component';
+				color: #9a9a9a;
+				font-size: .7rem;
+				opacity: .8;
+				padding: 2px 4px;
+			}
+		}
+
+		.flow_column.col_drop { outline: 2px dashed fade(#2a7d6f, 60%); outline-offset: -3px; }
+
+		// spacer rows: show a faint band + label so they're discoverable + removable
+		.flow_spacer {
+			outline: 1px dashed #cfd3d7;
+			outline-offset: -1px;
+			background: repeating-linear-gradient(45deg, transparent, transparent 5px, fade(#888, 12%) 5px, fade(#888, 12%) 6px);
+			&::after {
+				content: 'spacer';
+				position: absolute;
+				left: .3rem;
+				top: 50%;
+				transform: translateY(-50%);
+				font-size: .62rem;
+				color: #8a8a8a;
+				opacity: .9;
+			}
+			// bottom drag handle to set the spacer height
+			.spacer_resize {
+				position: absolute;
+				left: 0;
+				right: 0;
+				bottom: -3px;
+				height: 7px;
+				cursor: ns-resize;
+				z-index: 6;
+				transition: background var(--transition-fast);
+				&:hover { background: fade(#2a7d6f, 30%); }
+			}
+		}
+	}
+}
+
+body.tp_row_resizing,
+body.tp_row_resizing * { cursor: ns-resize !important; user-select: none !important; }
+
+body.tp_col_resizing,
+body.tp_col_resizing * { cursor: col-resize !important; user-select: none !important; }
+
+
+// Page content text ALWAYS follows the box's text color (set by apply_box_style /
+// the inspector Text color). Dédalo's core component CSS colors .wrapper_component
+// with --fg_default, which is light gray in dark mode and otherwise ignores the
+// box color — so force every value (table columns, text_area, any component) to
+// inherit. The page is white paper, so this is safe in both themes.
+// only DESCENDANTS — the .cell_content node itself carries the box text color
+// (inline, via apply_box_style); overriding it would erase the source.
+.wrapper_tool.tool_print .print_root .cell_content * { color: inherit !important; }
+
+
+// Component values on the page must grow to their natural height. The app's edit
+// views impose fixed heights / internal scroll (a text_area renders as a CKEditor
+// with a ~180px scrollable .value_container, and .wrapper_component is a grid),
+// which clips the row. On paper everything flows: force natural height + visible
+// overflow, and flatten the grid wrapper to block so it grows with its content.
+// Also strip the component's own chrome (dark-theme box-shadow on the wrapper,
+// CKEditor padding/margin on .value_container) so only the cell frame border
+// (driven by the inspector Border control) is visible and text sits flush.
+.wrapper_tool.tool_print .print_root .cell_content .wrapper_component {
+	display: block !important;
+	box-shadow: none !important;
+	border: none !important;
+}
+.wrapper_tool.tool_print .print_root .cell_content .wrapper_component,
+.wrapper_tool.tool_print .print_root .cell_content .wrapper_component *,
+.wrapper_tool.tool_print .print_root .cell_content .value_container,
+.wrapper_tool.tool_print .print_root .cell_content .editor_container,
+.wrapper_tool.tool_print .print_root .cell_content [class*="ck-"] {
+	height: auto !important;
+	min-height: 0 !important;
+	max-height: none !important;
+	overflow: visible !important;
+}
+.wrapper_tool.tool_print .print_root .cell_content .value_container,
+.wrapper_tool.tool_print .print_root .cell_content .editor_container,
+.wrapper_tool.tool_print .print_root .cell_content [class*="ck-"] {
+	padding: 0 !important;
+	margin: 0 !important;
+}
+
+
+// collapsible side panels -----------------------------------------------------
+.wrapper_tool.tool_print {
+
+	> .content_data.print_layout_editor {
+
+		// collapsed palette: shrink to a thin rail
+		&.palette_collapsed {
+			grid-template-columns: 0 minmax(20rem, 1fr) 270px;
+			.palette_panel {
+				padding: 0;
+				overflow: hidden;
+				border-right: none;
+				.panel_header_row, .palette_breadcrumb, .palette_scroll { display: none; }
+			}
+		}
+
+		// collapsed inspector: shrink to 0
+		&.inspector_collapsed {
+			grid-template-columns: 240px minmax(20rem, 1fr) 0;
+			.inspector_panel {
+				padding: 0;
+				overflow: hidden;
+				border-left: none;
+				.panel_header_row, .inspector_body { display: none; }
+			}
+		}
+
+		// both collapsed: canvas gets max space
+		&.palette_collapsed.inspector_collapsed {
+			grid-template-columns: 0 minmax(20rem, 1fr) 0;
+		}
+	}
+}
+
+
+// responsive ------------------------------------------------------------------
+.wrapper_tool.tool_print {
+
+	@media (max-width: 1024px) {
+		> .content_data.print_layout_editor {
+			grid-template-columns: 200px minmax(15rem, 1fr) 240px;
+		}
+	}
+
+	@media (max-width: 960px) {
+		> .content_data.print_layout_editor {
+			grid-template-columns: 100%;
+			grid-template-areas:
+				"toolbar"
+				"canvas";
+			min-height: auto;
+
+			.palette_panel,
+			.inspector_panel {
+				position: relative;
+				top: 0;
+				max-height: none;
+				border: none;
+				border-top: 1px solid var(--border_default);
+			}
+			.palette_panel { grid-area: auto; order: 3; }
+			.inspector_panel { grid-area: auto; order: 4; }
+			.pages_viewport { grid-area: auto; order: 2; min-height: 50vh; }
+
+			.print_toolbar {
+				position: relative;
+				flex-wrap: wrap;
+				overflow-x: visible;
+			}
+		}
+	}
+}
+
+
+// v2 flow cells (.cell_content) need the same VALUE/TABLE styling the legacy
+// absolute boxes had — the relation/portal table display was lost because that
+// styling is nested under the dead `.box .box_content` ancestor (v2 cells are
+// `.flow_cell > .cell_content`, no `.box`). Re-apply it here.
+.wrapper_tool.tool_print .print_root .cell_content {
+
+	// cell frame — color/visibility driven by the inspector Border control
+	// (apply_box_style sets --tp_border_color, transparent = off; no_border
+	// class is a hard override for the editor + print)
+	border: 1px solid var(--tp_border_color, transparent);
+	&.no_border { border-color: transparent !important; }
+
+	.print_label {
+		display: block;
+		font-size: .72em;
+		font-weight: 600;
+		line-height: 1.1;
+		color: #555;
+		margin: 0 0 1px;
+		text-align: inherit;
+	}
+	&.hide_label .print_label { display: none !important; }
+
+	.static_text_print,
+	.static_text_edit { width: 100%; min-height: 1em; white-space: pre-wrap; word-break: break-word; }
+
+	// portal/relation rendered as a clean flat table (columns + rows)
+	.portal_table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: inherit;
+		line-height: 1.25;
+		pointer-events: none;          // clicks fall through to select the cell
+		table-layout: auto;            // overridden inline to 'fixed' when columns have widths
+
+		th, td {
+			border: 1px solid var(--tp_border_color, #d4d4d4);
+			padding: 2px 6px;
+			text-align: left;
+			vertical-align: top;
+			background: none !important;
+			color: inherit;
+			word-break: break-word;
+		}
+		td *, th * { background: none !important; border: none !important; box-shadow: none !important; }
+		thead th {
+			font-weight: 600;
+			font-size: .82em;
+			letter-spacing: .02em;
+			color: #333;
+			background: #eef1f3 !important;
+			border-bottom: 1.5px solid #b9c0c6;
+			white-space: nowrap;
+		}
+		tbody tr:nth-child(even) td { background: #f7f9fa !important; }
+
+		// flatten nested component rendering inline so cells stay compact
+		.wrapper_component, .section_record, .ddinfo_value, .print_value, .mini { display: inline !important; color: inherit; }
+		.separator, .fields_separator, .column_separator { display: inline !important; margin: 0 .25em; color: inherit; opacity: .55; }
+	}
+
+	.box_placeholder { color: #999; font-style: italic; font-size: .75rem; }
+	.box_unavailable { color: #c0392b; }
+}
+
+
+// multi-record print progress overlay (shown while the document renders
+// off-screen, before the print dialog). Carries .no_print so it never prints.
+.wrapper_tool.tool_print .print_progress {
+	position: fixed;
+	z-index: 1000;
+	left: 50%;
+	top: 1.2rem;
+	transform: translateX(-50%);
+	display: flex;
+	align-items: center;
+	gap: .75rem;
+	padding: .5rem .9rem;
+	background: var(--bg_surface, #fff);
+	color: var(--fg_default, #222);
+	border: 1px solid var(--border_default, #cfd3d7);
+	border-radius: 6px;
+	box-shadow: 0 4px 16px rgba(0,0,0,.25);
+	font-size: .85rem;
+
+	.print_progress_label { white-space: nowrap; }
+	.print_progress_cancel {
+		cursor: pointer;
+		font-size: .8rem;
+		padding: .2rem .6rem;
+		color: var(--color_danger, #c0392b);
+		background: var(--bg_input, #fff);
+		border: 1px solid var(--border_default, #cfd3d7);
+		border-radius: 4px;
+		&:hover { border-color: var(--color_danger, #c0392b); }
+		&:disabled { opacity: .5; cursor: default; }
+	}
+}

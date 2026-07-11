@@ -1,0 +1,74 @@
+// Biome config (JSONC so rule decisions can carry their justification inline).
+{
+	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+	"organizeImports": { "enabled": true },
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab",
+		"lineWidth": 100
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "single",
+			"semicolons": "always"
+		}
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+			"style": {
+				"noVar": "error"
+			},
+			"suspicious": {
+				"noExplicitAny": "warn"
+			}
+			// performance/noDelete stays ON: accidental `delete` is worth catching. The
+			// intentional sites (PHP unset() wire-shape parity, process.env unsetting)
+			// carry inline biome-ignore comments with reasons — the established repo convention.
+		}
+	},
+	"overrides": [
+		{
+			// Tests assert presence with expect(...).not.toBeNull()/toBeDefined() before
+			// using `!`; duplicating runtime guards at ~200 gate sites adds noise without
+			// safety. Production code (src/, tools/*/server) must still narrow properly.
+			"include": ["test/**"],
+			"linter": { "rules": { "style": { "noNonNullAssertion": "off" } } }
+		}
+	],
+	"files": {
+		"ignore": [
+			"node_modules",
+			// Harness / editor tooling config (not project source).
+			".claude/**",
+			".vscode/**",
+			// client/ is a byte-identical copy of the PHP-master client — never edited, never linted.
+			"client/**",
+			"test/parity/fixtures/*.response.json",
+			// Captured API sample payloads (fixture data, 2.7 MiB — over Biome's maxSize).
+			"src/core/components/*/samples/*.json",
+			// Ontology seed dumps (data, not source; ontology_llm_map.json is 5.9 MiB).
+			"install/import/**",
+			// Browser-served tool assets follow the PHP-master client conventions.
+			"tools/*/js/**",
+			"tools/*/css/**",
+			"tools/*/img/**",
+			"tools/*/register.json",
+			"src/core/tools/client/**",
+			// Byte-identical copies of PHP-master browser assets (vendored qrcode lib,
+			// transformers.js bundle + worker shims) — verified identical to ../../v7/master_dedalo.
+			"tools/tool_qr/lib/**",
+			"tools/tool_lang/translators/browser_transformer/**",
+			"tools/tool_transcription/transcribers/browser_whisper/**",
+			// Documentation bundle (prebuilt site assets, not server source; renamed
+			// docs_v7 → docs in the 2026-07-10 docs-tree split).
+			"docs/**",
+			// Harvested oracle fixture store (frozen PHP responses — data, not source).
+			"test/parity/fixtures/oracle_harvest/**",
+			// WC-020 migration pre-image (the restore point the --execute run wrote;
+			// gitignored data artifact, owner deletes it once satisfied).
+			".claude_migration_component_alias_preimage.json"
+		]
+	}
+}

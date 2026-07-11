@@ -1,0 +1,225 @@
+# PRODUCTION.md — operating the Dédalo TS server
+
+Status: 2026-07 · the deployment reference required by the ops baseline
+(audit DEC-17; items S2-32/33/35/36/37/38/39, S2-17, S3-48). One page per
+concern; the reference systemd units live in `deploy/`.
+
+## 1. Runtime (S2-36)
+
+The Bun runtime is **pinned**: `.bun-version` + `package.json` `engines.bun`
+(currently `1.3.9`). The code is coupled to version-specific Bun behavior —
+`Bun.sql` jsonb parameter inference (a drift here is the realized S1-07/S1-08
+corruption class), the Bun.sql MariaDB adapter (diffusion), `Bun.serve`
+defaults. The server echoes its runtime at boot and **warns loudly** when it
+differs from the pin. Never run `bun upgrade` on a production box; upgrade =
+change the pin, run the full suite, deploy. `ExecStart` should point at the
+pinned binary path, not a floating `bun` on `$PATH`.
+
+## 2. Process supervision (S2-38, S2-17)
+
+Reference units in `deploy/`:
+
+- `dedalo-ts.service` — `Restart=always`, journald log capture, SIGTERM stop.
+- `dedalo-ts-watchdog.service` + `.timer` — every 30 s:
+  `curl --fail --unix-socket /tmp/dedalo_ts.sock http://localhost/health`;
+  on failure restarts the main unit. (systemd `WatchdogSec` needs `sd_notify`,
+  which Bun does not speak — the curl timer is the equivalent.)
+- `dedalo-backup.service` + `.timer` — the nightly backup set (§6).
+
+`/health` answers `200 {result:'ok', db:'ok'}` only when **Postgres answers**
+(S3-48); DB down / pool wedged → `503 {db:'down'}` → watchdog restart + a
+red monitoring check.
+
+**Graceful shutdown (S2-17).** On SIGTERM/SIGINT the server: stops the
+diffusion scheduler cadences → stops accepting connections → drains in-flight
+requests up to `SERVER_SHUTDOWN_GRACE_MS` (default 10000) → marks still-live
+media transcode jobs `interrupted` in their pfiles → journals dying background
+tool jobs → closes the Postgres pool → unlinks the socket → exits 0.
+Diffusion RUNNERS are separate processes and survive restarts by design; the
+sweeper heals anything that does not.
+
+**Double-start guard.** At boot, a pre-existing socket file is **probed with a
+connect()**: if something answers, the server refuses to start (exit 1)
+instead of silently stealing the live instance's socket.
+
+**Boot warm-up + poison latch (first-load TDZ class).** Before listening, the
+server serially evaluates the whole `src/core` module graph
+(`warmCoreModuleGraph`), so a concurrent first-request burst can never race
+module evaluation into a TDZ-poisoned module (Bun caches a failed evaluation
+for the whole process life — observed once as 1114 identical read failures
+with a green DB-only health check). A warm-up failure aborts the boot (exit 1
+— a visible crash loop beats a silently degraded server). Defense in depth:
+if a TDZ-shaped `ReferenceError` ever reaches the dispatch catch anyway, the
+process flips a poison latch (`core/api/process_health.ts`) — `/health`
+answers `503 {process:'poisoned'}` from then on and the watchdog recycles the
+process within its 30 s cadence. Gate: `test/unit/process_health.test.ts`.
+
+## 3. Sockets, reverse proxy, timeouts (S2-33)
+
+Production serving is **unix-socket-only**: `SERVER_UNIX_SOCKET` (default
+`/tmp/dedalo_ts.sock`). The reverse proxy owns TCP/TLS, serves the client
+statics + media (with the marker-based protection), and forwards `/api` +
+dynamic routes to the socket. The TCP listener (`SERVER_TCP_PORT`) is a dev
+convenience — do not expose it.
+
+Both listeners set an explicit `idleTimeout` (`SERVER_IDLE_TIMEOUT_S`,
+default 255 — Bun's maximum; the silent Bun default of 10 s killed slow
+exports/searches mid-handler). **Match the proxy**: a proxy read-timeout below
+the slowest legitimate request (large exports, tool actions) re-introduces the
+same failure one hop earlier. nginx sketch:
+
+```nginx
+upstream dedalo_ts { server unix:/tmp/dedalo_ts.sock; }
+server {
+    listen 443 ssl;
+    http2 on;                      # multiplexes the ~100-module ES boot graph
+    # ... TLS certs, media (protected — see the media-protection block) ...
+
+    # API + dynamic routes → the Bun socket. MUST keep precedence over the
+    # static /dedalo/ prefix below (regex locations win over prefix ones).
+    location ~ ^/(api/v1/|dedalo/core/api/) {
+        proxy_pass http://dedalo_ts;
+        proxy_http_version 1.1;
+        proxy_read_timeout 300s;   # ≥ the slowest legitimate request
+        proxy_send_timeout 300s;
+        proxy_buffering off;       # SSE + NDJSON streaming (diffusion, export)
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    # Client statics — nginx serves the copied client tree directly. Mirrors
+    # the Bun dev/fallback semantics (src/core/api/static_asset.ts): the tree
+    # is re-synced IN PLACE (not content-hashed), so text assets revalidate
+    # (etag → 304, the client's service worker replays If-None-Match) and are
+    # NEVER `immutable`. The 2026-07-09 boot probe measured 25 files / 1.4 MB
+    # uncompressed on a cold boot — gzip + 304s are the whole win here.
+    location /dedalo/ {
+        alias /path/to/master_dedalo/client/dedalo/;   # scripts/sync_client.sh target
+        etag on;
+        add_header Cache-Control "no-cache";           # revalidate; 304s are cheap
+        add_header X-Content-Type-Options "nosniff";
+        add_header X-Frame-Options "SAMEORIGIN";
+        add_header Referrer-Policy "strict-origin-when-cross-origin";
+        gzip on;
+        gzip_types text/css application/javascript application/json image/svg+xml;
+        gzip_min_length 1024;
+        location ~* \.(png|jpe?g|gif|webp|ico|woff2?|ttf|otf)$ {
+            add_header Cache-Control "public, max-age=3600";
+        }
+        # Tool assets (/dedalo/tools/, /dedalo/core/tools_common/) live in the
+        # repo tools/ + src/core/tools/client/ trees, NOT under client/ — proxy
+        # them to the socket (the Bun handlers enforce the server/-subtree and
+        # extension fail-closed rules).
+        location /dedalo/tools/ { proxy_pass http://dedalo_ts; }
+        location /dedalo/core/tools_common/ { proxy_pass http://dedalo_ts; }
+    }
+}
+```
+
+`TRUSTED_PROXY_HOPS` (default 1) must equal the number of proxies appending
+X-Forwarded-For, or the login throttle keys on the wrong address.
+
+**Assistant streaming (`dd_mcp_api:agent_chat_stream`, WC-013):** the chat is
+an SSE response that can run for minutes on hard questions (adaptive-thinking
+turns). It sends `: ping` heartbeats every 15 s and `X-Accel-Buffering: no`,
+so the nginx sketch above (proxy_buffering off + generous read timeout)
+already covers it — a proxy that buffers or times out under ~30 s will stall
+or kill the chat. The non-streaming `agent_chat` twin has no heartbeat; the
+client prefers the stream action for exactly this reason.
+
+## 4. Database pool + statement timeouts (S2-32)
+
+Config keys (all in `../private/.env`; catalog `src/config/config.ts` `ops`):
+
+| Key | Default | Guidance |
+|---|---|---|
+| `DB_POOL_MAX` | 10 | Per PROCESS. Budget: server + each diffusion runner (up to `DEDALO_DIFFUSION_MAX_RUNNERS`) + RAG drain + coexisting PHP must stay under Postgres `max_connections` (typically 100). Example: server 10 + 2 runners × 10 + PHP ~20 → fine; 8 runners × 10 → NOT. |
+| `DB_POOL_ACQUIRE_TIMEOUT_MS` | 0 (wait forever) | Set (e.g. 30000) so pool exhaustion becomes a loud error instead of a silent indefinite hang. |
+| `DB_STATEMENT_TIMEOUT_MS` | 0 (off) | **Recommend 60000 in production**: one runaway query must not occupy a connection forever. |
+| `DEDALO_SLOW_QUERY_MS` | 0 (off) | Warn-log statements slower than this. |
+
+All four keys are live in `src/core/db/postgres.ts` (verified 2026-07-07):
+`DB_POOL_MAX` sizes the pool, an acquire gate fronts it so saturation is
+observable (`db_pool_waits` counter) and bounded (`DB_POOL_ACQUIRE_TIMEOUT_MS`
+fail-loud), `DB_STATEMENT_TIMEOUT_MS` is a per-connection GUC, and
+`DEDALO_SLOW_QUERY_MS` warn-logs slow statements.
+
+## 5. Observability (S2-37)
+
+- **Access log**: `DEDALO_ACCESS_LOG=true` → one JSON line per API request on
+  stdout: `{ts, type:'access', request_id, user_id, api:'class::action',
+  status, ms}`. journald captures it (`journalctl -u dedalo-ts -o cat | jq`).
+- **Slow requests**: `DEDALO_SLOW_REQUEST_MS` (default 5000) warn-logs slower
+  handlers regardless of the access-log flag.
+- **Counters endpoint**: `GET /api/v1/counters` — session-gated,
+  **global-admin only** (404 otherwise). Aggregates request totals/latency,
+  slow-request and pool-wait counters, diffusion queue depths + scheduler
+  state, media job headroom, background tool job stats, RSS, uptime.
+- **Error correlation**: every handler exception logs server-side with its
+  `request_id`; the client receives the id, never the exception text.
+
+## 6. Backups (S2-35)
+
+The **backup set is four stores** — the matrix DB alone is not a backup:
+
+1. **Matrix Postgres DB** — the make_backup widget (or `pg_dump -F c -b`).
+   The TS server threads `PGPASSWORD` from `DB_PASSWORD`, verifies a
+   **non-empty artifact**, surfaces the pg_dump log tail on failure, and
+   deletes empty artifacts (a zero-byte "backup" discovered at restore time
+   is the worst failure mode). Default dir: `<private>/backups/db`
+   (`DEDALO_BACKUP_DIR` overrides).
+2. **RAG pgvector DB** (`DEDALO_RAG_*`) — separate database, separate dump.
+3. **Media originals** (`MEDIA_PATH`) — the `original` quality is the source
+   of truth every derivative rebuilds from; derivatives need no backup.
+4. **`../private/`** — `.env` secrets, session store, `ts_state.json`.
+
+`deploy/dedalo-backup.service` + `.timer` is the reference nightly job.
+MariaDB **diffusion targets are derived data** — rebuildable by re-publishing;
+no dump surface exists (DIFFUSION_SPEC §8.6). Restore-test quarterly.
+
+## 7. Schema: migrations + provisioning (S2-39, DEC-17/DEC-19)
+
+- **TS-owned tables** (`dedalo_ts_*`): ordered migrations in
+  `install/db/migrations/NNNN_name.sql`, applied at boot by
+  `install/db/migrate.ts` into the `dedalo_ts_schema_migrations` version
+  table (one transaction per file; idempotent; never edit an applied file).
+  Subsystem lazy `CREATE TABLE IF NOT EXISTS` bootstraps remain as fallback.
+- **Shared matrix/dd_ontology schema**: provisioned by the **TS-native
+  installer** (`src/core/install/`, DEC-19 — the former cutover blocker is
+  RESOLVED). A fresh, empty PostgreSQL database is provisioned by restoring the
+  vendored seed dump `install/db/dedalo_install.pgsql.gz` (full schema +
+  extensions + populated core `dd_ontology` + root user + default
+  project/profiles), then setting the Argon2id root password. Two frontends
+  drive one engine: the browser wizard (auto-served when unconfigured) and the
+  headless CLI `bun run scripts/install.ts` (npm `dedalo:install`). See
+  **`docs/install/ts_native_install.md`** for the operator guide. PHP is no longer required to
+  install a TS instance.
+
+### 7.1 Install mode + restart-after-configure
+
+A server booted with none of `ENTITY`/`DB_NAME`/`DB_HOST`/`DB_USER` set enters
+**install mode** (`config.installMode`): it skips all DB-dependent boot steps,
+`/health` reports `db:down`, and it serves ONLY the install wizard. The browser
+`persist_config` step writes `../private/.env` and then **exits the process**;
+the supervisor (`deploy/dedalo-ts.service` `Restart=always`) restarts it into
+configured mode. The wizard's separate manual `verify_active_config` click +
+the client's request retries bridge the gap. The pre-auth install surface is
+gated: reachable only while UNSEALED and only from `DEDALO_INSTALL_ALLOWED_IPS`
+(unset = open, dev default); once `install_finish` seals the instance the
+surface returns 404. The CLI needs no restart (it sets the env before importing
+config). Dev without systemd: prefer the CLI, or run the server under a restart
+loop to exercise the browser wizard.
+
+## 8. Diffusion scheduler placement
+
+`DEDALO_DIFFUSION_SCHEDULER_ENABLED=false` starts the server without the
+claim/sweep cadences (run them in a dedicated instance/host instead). The
+delete-propagation executor registers regardless. `DEDALO_DIFFUSION_MAX_RUNNERS`
+(default 2) is enforced atomically inside the claim statement.
+
+## 9. Residue lifecycle (S3-46/62/63/64)
+
+Automatic: media pfiles reconciled at boot + pruned after 30 days (terminal);
+in-memory job registries evict terminal records after 1 h (pfile mirror
+remains); `login_attempts` rows GC'd past the throttle window; terminal
+diffusion job rows purged after 7 days (daily, sweeper cadence); the dd1758
+ledger keeps the durable publication audit trail.

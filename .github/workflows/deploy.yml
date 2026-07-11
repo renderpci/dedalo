@@ -1,0 +1,50 @@
+# Manual deploy — PARKED until a target server exists (docs/CI.md §Deploy).
+#
+# No staging/production box exists yet (2026-07-09). This workflow is wired
+# end-to-end but fails loudly at the guard step until the repo (or the chosen
+# environment) defines the DEPLOY_HOST + DEPLOY_SSH_KEY secrets. Dispatching
+# it today and getting the loud PARKED failure is the expected result.
+#
+# When a server exists: set the secrets, provision deploy/dedalo-ts.service
+# (+ watchdog/backup units) on the host per docs/PRODUCTION.md, then dispatch.
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Deploy target
+        type: choice
+        options: [staging, production]
+        required: true
+      ref:
+        description: Git ref (sha/tag/branch) to deploy
+        default: main
+        required: true
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, macOS, dedalo-mac]
+    timeout-minutes: 20
+    environment: ${{ inputs.target }}
+    steps:
+      - name: Guard — refuse until a deploy target is configured
+        run: |
+          if [ -z "${{ secrets.DEPLOY_HOST }}" ]; then
+            echo "PARKED: no deploy target configured (secrets.DEPLOY_HOST empty)." >&2
+            echo "See docs/CI.md §Deploy for the activation checklist."           >&2
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - name: Load deploy key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+      - name: Deploy over SSH (with health check + rollback)
+        run: bash deploy/deploy.sh --host "${{ secrets.DEPLOY_HOST }}" --ref "${{ inputs.ref }}"

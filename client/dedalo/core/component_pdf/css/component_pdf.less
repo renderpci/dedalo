@@ -1,0 +1,122 @@
+/**
+* component_pdf
+*
+* Included from main.less file
+*/
+.component_pdf {
+
+	&.disabled_component {
+		>.content_data {
+			pointer-events: initial !important;
+		}
+	}
+
+	&.edit {
+
+		>.content_data {
+
+			// Wrapper height/overflow handled by .media_wrapper.edit in layout.less
+
+			// pdf container
+			>.content_value {
+
+				>img {
+					height: 100%;
+				}
+
+				// viewer container (lazy load wrapper)
+				>.pdf_viewer_container {
+					display: flex;
+					flex-direction: column;
+					width: 100%;
+					height: 100%;
+
+					&.loading {
+						min-height: var(--media_min_height);
+						background: @color_grey_3 url('../../themes/default/icons/spinner.svg') no-repeat center center;
+						background-size: 2em;
+					}
+
+					// iframe
+					>.pdf_viewer_frame {
+						display: block;
+						flex: 1 1 auto;
+						min-height: 0;
+						order: 1;
+						width: 100%;
+						border-right: 1px solid @color_grey_3;
+						background-color: @color_grey_3;
+					}
+
+					>.fields {
+						height: 30px;
+						flex: 0 0 auto;
+						width: 100%;
+						order: 2;
+						background-color: @color_grey_3;
+						padding: 0px;
+						padding-left: 1.25em;
+						margin: 0px;
+						display: flex;
+						align-items: center;
+						font-size: 1em;
+
+						span {
+							color: @color_white;
+							text-transform: capitalize;
+						}
+						input {
+							width: 5em;
+							margin-left: 1em;
+							text-align: center;
+							height: 20px;
+							background-color: @color_grey_10;
+							outline-color: @color_grey_10_dark;
+							color: @color_white;
+						}
+					}
+				}
+			}
+		}
+
+
+	}//end &.edit
+
+	&.view_viewer {
+
+		.content_data {
+			height: 100vh;
+
+			.content_value {
+				height: 100%;
+			}
+		}
+	}
+
+	&.view_player {
+		display: block;
+		height: 100%;
+	}
+
+	&.view_line {
+		display: block;
+
+		>.content_data {
+			min-height: unset;
+		}
+	}
+
+	&.view_text {
+		display: inline-block;
+
+		>img {
+			height: 100%;
+		}
+	}
+
+	// with suffix _mini like 'component_pdf_mini'
+	&_mini {
+		.media_mini_mixin();
+	}
+
+}//end .component_pdf

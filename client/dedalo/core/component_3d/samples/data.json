@@ -1,0 +1,72 @@
+[
+  {
+	"id": 4,
+	"files_info": [
+	  {
+		"quality": "original",
+		"extension": "glb",
+		"file_name": "test26_test3_1.glb",
+		"file_path": "/3d/original/0/test26_test3_1.glb",
+		"file_size": 4780672,
+		"file_time": {
+		  "day": 25,
+		  "hour": 22,
+		  "time": 65116738419,
+		  "year": 2025,
+		  "month": 12,
+		  "minute": 53,
+		  "second": 39,
+		  "timestamp": "2025-12-25 22:53:39"
+		},
+		"file_exist": true
+	  },
+	  {
+		"quality": "web",
+		"extension": "glb",
+		"file_name": "test26_test3_1.glb",
+		"file_path": "/3d/web/0/test26_test3_1.glb",
+		"file_size": 19066216,
+		"file_time": {
+		  "day": 22,
+		  "hour": 11,
+		  "time": 65116439867,
+		  "year": 2025,
+		  "month": 12,
+		  "minute": 57,
+		  "second": 47,
+		  "timestamp": "2025-12-22 11:57:47"
+		},
+		"file_exist": true
+	  },
+	  {
+		"quality": "thumb",
+		"extension": "jpg",
+		"file_name": "test26_test3_1.jpg",
+		"file_path": "/3d/thumb/0/test26_test3_1.jpg",
+		"file_size": 5506,
+		"file_time": {
+		  "day": 25,
+		  "hour": 22,
+		  "time": 65116738420,
+		  "year": 2025,
+		  "month": 12,
+		  "minute": 53,
+		  "second": 40,
+		  "timestamp": "2025-12-25 22:53:40"
+		},
+		"file_exist": true
+	  }
+	],
+	"original_file_name": "test26_test3_5280.glb",
+	"original_upload_date": {
+	  "day": 25,
+	  "hour": 22,
+	  "time": 65116738419,
+	  "year": 2025,
+	  "month": 12,
+	  "minute": 53,
+	  "second": 39
+	},
+	"original_normalized_name": "test26_test3_1.glb"
+  }
+]

@@ -1,0 +1,102 @@
+{
+	"meta": {
+		"captured_at": "2026-07-06T23:49:56.903Z",
+		"capture_commit": "e90c9b5",
+		"database": "web_numisdata_mib",
+		"element": "numisdata29",
+		"langs": ["lg-spa", "lg-eng", "lg-fra", "lg-por"],
+		"drift_policy": "These cells freeze the OLD diffusion engine’s published bytes (the oracle for the ported ddo fns). The live tables are prunable: when the drift canary in diffusion_publish_e2e reports divergence, adjudicate whether the live change is rot (keep the fixture) or a deliberate re-publish (re-run this script with --force)."
+	},
+	"cells": {
+		"coins|64019|public_info": {
+			"lg-spa": {
+				"exists": true,
+				"value": "<p>ACIP 2</p><p></p>"
+			},
+			"lg-eng": {
+				"exists": true,
+				"value": "<p>ACIP 2</p><p></p>"
+			},
+			"lg-fra": {
+				"exists": true,
+				"value": "<p>ACIP 2</p><p></p>"
+			},
+			"lg-por": {
+				"exists": true,
+				"value": "<p>ACIP 2</p><p></p>"
+			}
+		},
+		"coins|203|countermark_obverse": {
+			"lg-spa": {
+				"exists": false,
+				"value": null
+			},
+			"lg-eng": {
+				"exists": false,
+				"value": null
+			},
+			"lg-fra": {
+				"exists": false,
+				"value": null
+			},
+			"lg-por": {
+				"exists": false,
+				"value": null
+			}
+		},
+		"mints|75|georef_geojson": {
+			"lg-spa": {
+				"exists": false,
+				"value": null
+			},
+			"lg-eng": {
+				"exists": false,
+				"value": null
+			},
+			"lg-fra": {
+				"exists": false,
+				"value": null
+			},
+			"lg-por": {
+				"exists": false,
+				"value": null
+			}
+		},
+		"findspots|3|georef_geojson": {
+			"lg-spa": {
+				"exists": true,
+				"value": "[{\"layer_id\":1,\"text\":\"\",\"layer_data\":{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[-0.281717,39.682943],[-0.278577,39.683036],[-0.27565,39.682489],[-0.272916,39.681245],[-0.272565,39.67884],[-0.276241,39.677242],[-0.28078,39.676752],[-0.284338,39.678289],[-0.28525,39.681721],[-0.281717,39.682943]]]},\"properties\":{}}]}}]"
+			},
+			"lg-eng": {
+				"exists": true,
+				"value": "[{\"layer_id\":1,\"text\":\"\",\"layer_data\":{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[-0.281717,39.682943],[-0.278577,39.683036],[-0.27565,39.682489],[-0.272916,39.681245],[-0.272565,39.67884],[-0.276241,39.677242],[-0.28078,39.676752],[-0.284338,39.678289],[-0.28525,39.681721],[-0.281717,39.682943]]]},\"properties\":{}}]}}]"
+			},
+			"lg-fra": {
+				"exists": true,
+				"value": "[{\"layer_id\":1,\"text\":\"\",\"layer_data\":{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[-0.281717,39.682943],[-0.278577,39.683036],[-0.27565,39.682489],[-0.272916,39.681245],[-0.272565,39.67884],[-0.276241,39.677242],[-0.28078,39.676752],[-0.284338,39.678289],[-0.28525,39.681721],[-0.281717,39.682943]]]},\"properties\":{}}]}}]"
+			},
+			"lg-por": {
+				"exists": true,
+				"value": "[{\"layer_id\":1,\"text\":\"\",\"layer_data\":{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[-0.281717,39.682943],[-0.278577,39.683036],[-0.27565,39.682489],[-0.272916,39.681245],[-0.272565,39.67884],[-0.276241,39.677242],[-0.28078,39.676752],[-0.284338,39.678289],[-0.28525,39.681721],[-0.281717,39.682943]]]},\"properties\":{}}]}}]"
+			}
+		},
+		"designs|401|iconography": {
+			"lg-spa": {
+				"exists": true,
+				"value": null
+			},
+			"lg-eng": {
+				"exists": true,
+				"value": null
+			},
+			"lg-fra": {
+				"exists": true,
+				"value": null
+			},
+			"lg-por": {
+				"exists": true,
+				"value": null
+			}
+		}
+	}
+}

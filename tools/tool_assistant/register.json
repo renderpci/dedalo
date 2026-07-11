@@ -1,0 +1,632 @@
+{
+  "id": "3988",
+  "section_id": "33",
+  "section_tipo": "dd1340",
+  "data": {
+    "label": "Tools development",
+    "section_id": 33,
+    "created_date": "2026-06-18 12:17:10",
+    "section_tipo": "dd1340",
+    "diffusion_info": null,
+    "created_by_user_id": -1
+  },
+  "relation": {
+    "dd197": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd197"
+      }
+    ],
+    "dd200": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd200"
+      }
+    ],
+    "dd1337": [
+      {
+        "id": 1,
+        "type": "dd675",
+        "section_id": "1",
+        "section_tipo": "dd153",
+        "from_component_tipo": "dd1337"
+      }
+    ],
+    "dd1354": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1354"
+      }
+    ]
+  },
+  "string": {
+    "dd612": [
+      {
+        "id": 1,
+        "lang": "lg-eng",
+        "value": "<p>AI assistant powered by the Dédalo server agent. Ask questions about your data in natural language; with write mode enabled it proposes changes that you review and confirm before anything is saved. The model is selectable per conversation (local/private or external, as configured on the server).</p>"
+      },
+      {
+        "id": 2,
+        "lang": "lg-spa",
+        "value": "<p>Asistente de IA impulsado por el agente del servidor Dédalo. Haga preguntas sobre sus datos en lenguaje natural; con el modo de escritura activado propone cambios que usted revisa y confirma antes de guardar nada. El modelo se selecciona por conversación (local/privado o externo, según la configuración del servidor).</p>"
+      }
+    ],
+    "dd799": [
+      {
+        "id": 1,
+        "lang": "lg-eng",
+        "value": "AI assistant"
+      },
+      {
+        "id": 2,
+        "lang": "lg-spa",
+        "value": "Asistente de IA"
+      }
+    ],
+    "dd1326": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "tool_assistant"
+      }
+    ],
+    "dd1327": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "2.0.0"
+      }
+    ],
+    "dd1328": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "7.0.0"
+      }
+    ],
+    "dd1644": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "Dédalo team"
+      }
+    ]
+  },
+  "date": {
+    "dd199": [
+      {
+        "id": 1,
+        "start": {
+          "day": 18,
+          "hour": 12,
+          "time": 65132165588,
+          "year": 2026,
+          "month": 6,
+          "minute": 13,
+          "second": 8
+        }
+      }
+    ],
+    "dd201": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "start": {
+          "day": 18,
+          "hour": 12,
+          "time": 65132165830,
+          "year": 2026,
+          "month": 6,
+          "minute": 17,
+          "second": 10
+        }
+      }
+    ]
+  },
+  "iri": null,
+  "geo": null,
+  "number": null,
+  "media": null,
+  "misc": {
+    "dd1350": [
+      {
+        "id": 1,
+        "value": {
+          "open_as": "modal",
+          "windowFeatures": null
+        }
+      }
+    ],
+    "dd1372": [
+      {
+        "id": 1,
+        "value": [
+          {
+            "lang": "lg-eng",
+            "name": "send",
+            "value": "Send"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "send",
+            "value": "Enviar"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "send",
+            "value": "Enviar"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "send",
+            "value": "Invia"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "send",
+            "value": "Senden"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "send",
+            "value": "Envoyer"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "thinking",
+            "value": "Thinking..."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "thinking",
+            "value": "Pensando..."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "thinking",
+            "value": "Pensant..."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "thinking",
+            "value": "Pensando..."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "thinking",
+            "value": "Denke nach..."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "thinking",
+            "value": "Réflexion..."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "calling_tool",
+            "value": "Calling tool..."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "calling_tool",
+            "value": "Llamando herramienta..."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "confirm_action",
+            "value": "Confirm action"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "confirm_action",
+            "value": "Confirmar acción"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "new_conversation",
+            "value": "New conversation"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "new_conversation",
+            "value": "Nueva conversación"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "generation_stopped",
+            "value": "Generation stopped."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "generation_stopped",
+            "value": "Generación detenida."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "stop",
+            "value": "Stop"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "stop",
+            "value": "Detener"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "history",
+            "value": "History"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "history",
+            "value": "Historial"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "copy",
+            "value": "Copy"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "copy",
+            "value": "Copiar"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "delete_thread",
+            "value": "Delete conversation"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "delete_thread",
+            "value": "Eliminar conversación"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "ask_placeholder",
+            "value": "Ask something..."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "ask_placeholder",
+            "value": "Pregunta algo..."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "denied",
+            "value": "User denied this action."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "denied",
+            "value": "El usuario denegó esta acción."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "settings",
+            "value": "Settings"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "settings",
+            "value": "Configuración"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "no_threads",
+            "value": "No saved conversations"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "no_threads",
+            "value": "Sin conversaciones guardadas"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "new_conversation_started",
+            "value": "New conversation started."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "new_conversation_started",
+            "value": "Nueva conversación iniciada."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "assistant_ready",
+            "value": "Ready. Ask about your data."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "assistant_ready",
+            "value": "Listo. Pregunte sobre sus datos."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "agent_disabled",
+            "value": "The assistant is disabled on this server."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "agent_disabled",
+            "value": "El asistente está desactivado en este servidor."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "model",
+            "value": "Model"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "model",
+            "value": "Modelo"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "local_private",
+            "value": "local / private"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "local_private",
+            "value": "local / privado"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "external_service",
+            "value": "external service"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "external_service",
+            "value": "servicio externo"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "vision_capable",
+            "value": "vision"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "vision_capable",
+            "value": "visión"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "write_mode",
+            "value": "Allow the assistant to propose changes"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "write_mode",
+            "value": "Permitir que el asistente proponga cambios"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "write_mode_hint",
+            "value": "Changes are proposed as a plan you review and confirm before anything is saved."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "write_mode_hint",
+            "value": "Los cambios se proponen como un plan que usted revisa y confirma antes de guardar nada."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "proposed_changes",
+            "value": "Proposed changes"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "proposed_changes",
+            "value": "Cambios propuestos"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "apply",
+            "value": "Apply"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "apply",
+            "value": "Aplicar"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "cancel",
+            "value": "Cancel"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "cancel",
+            "value": "Cancelar"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "applying",
+            "value": "Applying…"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "applying",
+            "value": "Aplicando…"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "applied",
+            "value": "Applied"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "applied",
+            "value": "Aplicado"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "apply_failed",
+            "value": "Apply failed"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "apply_failed",
+            "value": "Error al aplicar"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "skipped",
+            "value": "skipped"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "skipped",
+            "value": "omitido"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "created",
+            "value": "created"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "created",
+            "value": "creado"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "plan_discarded",
+            "value": "Proposed changes discarded"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "plan_discarded",
+            "value": "Cambios propuestos descartados"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "attach_image",
+            "value": "Attach image"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "attach_image",
+            "value": "Adjuntar imagen"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "image_too_large",
+            "value": "Image too large (max 5 MB)"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "image_too_large",
+            "value": "Imagen demasiado grande (máx. 5 MB)"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "image_type_unsupported",
+            "value": "Unsupported image type"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "image_type_unsupported",
+            "value": "Tipo de imagen no compatible"
+          }
+        ]
+      }
+    ],
+    "dd1633": [
+      {
+        "id": 1,
+        "value": {}
+      }
+    ]
+  },
+  "relation_search": null,
+  "meta": {
+    "dd197": [
+      {
+        "count": 1
+      }
+    ],
+    "dd199": [
+      {
+        "count": 1
+      }
+    ],
+    "dd200": [
+      {
+        "count": 1
+      }
+    ],
+    "dd201": [
+      {
+        "count": 1
+      }
+    ],
+    "dd612": [
+      {
+        "count": 2
+      }
+    ],
+    "dd799": [
+      {
+        "count": 2
+      }
+    ],
+    "dd1326": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1327": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1328": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1337": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1350": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1354": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1372": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1633": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1644": [
+      {
+        "count": 1
+      }
+    ]
+  }
+}

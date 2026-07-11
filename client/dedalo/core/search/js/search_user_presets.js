@@ -1,0 +1,818 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
+/*global page_globals, SHOW_DEBUG, SHOW_DEVELOPER */
+/*eslint no-undef: "error"*/
+
+/**
+* SEARCH_USER_PRESETS
+* Manages the lifecycle of user-defined search presets for the Dédalo search panel.
+*
+* Two section types are involved:
+*   - dd623 (presets_section_tipo)     : permanent named presets stored per user or globally.
+*   - dd655 (temp_presets_section_tipo): one transient "editing" preset per user/section
+*     that tracks the in-progress filter state across page reloads. It is created
+*     automatically on first use and updated whenever the user modifies the search panel.
+*
+* Exported ontology constants (dd-tipo codes) allow callers outside this module to
+* reference the correct section types without hard-coding tipo strings.
+*
+* Main exports:
+*   get_editing_preset_json_filter - Load or create the temp preset for the current session.
+*   load_user_search_presets       - Fetch the full list of named presets for the section.
+*   edit_user_search_preset        - Open a named preset in edit mode for the modal editor.
+*   load_search_preset             - Retrieve the JSON filter stored in a specific preset record.
+*   create_new_search_preset       - Create a brand-new preset record and populate its fields.
+*   save_preset                    - Persist the current filter to an existing preset record.
+*   save_temp_preset               - Thin wrapper: save the current filter to the temp preset.
+*   delete_user_search_preset      - Remove a named preset record from the database.
+*/
+
+
+
+// import
+	import {data_manager} from '../../common/js/data_manager.js'
+	import {get_instance} from '../../common/js/instances.js'
+	import {create_source} from '../../common/js/common.js'
+
+
+
+// vars
+	// Section tipos (ontology type codes) that identify the two preset storage sections.
+	// Exported so callers can reference them without repeating the string literals.
+	export const presets_section_tipo					= 'dd623'
+	export const temp_presets_section_tipo				= 'dd655'
+	// component_json_preset_tipo. Where preset filter is stored (component_json)
+	const presets_component_json_tipo					= 'dd625'
+	// component_section_value_tipo. Where section_tipo is stored (component_input_text)
+	const presets_component_section_value_tipo			= 'dd642'
+	// component_user_value_tipo. Where user_id is stored (component_select)
+	const presets_component_user_id_value_tipo			= 'dd654'
+	// presets_component_name_value_tipo. Where preset name is stored
+	const presets_component_name_value_tipo				= 'dd624'
+	// presets_component_public_value_tipo. Where preset public value is stored
+	const presets_component_public_value_tipo			= 'dd640'
+	// presets_component_default_value_tipo. Where preset is default value is stored
+	const presets_component_default_value_tipo			= 'dd641'
+	// presets_component_save_arguments_value_tipo. Where preset save arguments value is stored
+	const presets_component_save_arguments_value_tipo	= 'dd648'
+
+
+
+/**
+* GET_EDITING_PRESET_JSON_FILTER
+* Retrieves the currently active search filter (temp preset) for the user.
+*
+* The "editing preset" is a single dd655 record keyed by (section_tipo, user_id).
+* It persists the user's in-progress filter across page loads so the search panel
+* is restored to the last state when the user navigates away and comes back.
+*
+* Flow:
+*   1. If self.component_json_data is already populated (cache hit), return its
+*      first entry directly without hitting the API.
+*   2. Otherwise issue a read request filtered by the current section_tipo and the
+*      authenticated user (page_globals.user_id → dd128 locator).
+*   3. If a record exists, cache it on self.component_json_data and return entries[0].
+*   4. If no record exists yet, call create_new_search_preset() to provision one,
+*      then build a synthetic component_json_data stub (entries: [{"$and":[]}]) and
+*      return the empty filter. This ensures subsequent saves have a valid section_id.
+*
+* Side effects:
+*   - Populates self.component_json_data on first successful resolution.
+*   - On API failure, pushes an entry to page_globals.api_errors (standard error
+*     handling that surfaces login / permission problems to the UI wrapper).
+*
+* @param {Object} self - The search instance. Must expose section_tipo and component_json_data.
+* @returns {Promise<Object|null>} The JSON filter object (e.g. {"$and":[...]}) or null on error.
+*/
+export const get_editing_preset_json_filter = async function(self) {
+
+	// source
+		const source = create_source(self, 'search')
+		// set / overwrite some properties
+		source.tipo			= temp_presets_section_tipo
+		source.section_tipo	= temp_presets_section_tipo
+		source.model		= 'section'
+		// config. set config options like read_only to allow custom server behaviors
+		source.config = {
+			// set the read_only to true, it will used to assign permissions to at least 1 in the target section and components.
+			read_only : true
+		}
+
+	// cache
+		if (self.component_json_data) {
+			// data already is fixed
+			const json_filter = self.component_json_data.entries && self.component_json_data.entries[0]
+				? self.component_json_data.entries[0]
+				: null
+			return json_filter
+		}
+
+	// sqo
+		// The filter requires both conditions to be true ($and):
+		//   1. section_tipo field equals the caller's section_tipo (scopes preset to the right search panel)
+		//   2. user_id field equals the current user (scopes preset to the authenticated user)
+		const sqo = {
+			section_tipo	: [temp_presets_section_tipo],
+			filter			: {
+				"$and": [
+					{
+						q		: self.section_tipo,
+						path	: [
+							{
+								name			: "Section tipo",
+								component_tipo	: presets_component_section_value_tipo, // dd642,
+								section_tipo	: temp_presets_section_tipo,
+								model			: "component_input_text"
+							}
+						],
+						type : "jsonb"
+					},
+					{
+						q : {
+							section_id		: '' + page_globals.user_id,
+							section_tipo	: "dd128"
+						},
+						path : [
+							{
+								name			: "User",
+								component_tipo	: presets_component_user_id_value_tipo, // dd654,
+								section_tipo	: temp_presets_section_tipo,
+								model			: "component_select"
+							}
+						],
+						type : "jsonb"
+					}
+				]
+			}
+		}
+
+	// show
+		// Only request the JSON filter component (dd625); metadata components are not needed here.
+		const show = {
+			ddo_map : [{
+				tipo			: presets_component_json_tipo, // dd625 component_json data
+				section_tipo	: temp_presets_section_tipo,
+				parent			: temp_presets_section_tipo
+			}]
+		}
+
+	// rqo
+		const rqo = {
+			action : 'read',
+			source	: source,
+			sqo		: sqo,
+			show	: show
+		}
+
+	// API request
+		const api_response = await data_manager.request({
+			body		: rqo,
+			use_worker	: true
+		})
+		// debug
+		if(SHOW_DEBUG===true) {
+			console.log(`${self.model} [get_editing_preset_json_filter] api_response:`, api_response);
+		}
+
+	// response check
+		if (!api_response || !api_response.result) {
+
+			// api_errors.
+				// It's important to set instance as api_errors because this
+				// generates a temporal wrapper. Once solved the problem, (usually a not login scenario)
+				// the instance could be built and rendered again replacing the temporal wrapper
+				page_globals.api_errors.push(
+					{
+						error	: 'request', // error type
+						msg		: `${self.model} build get_editing_preset_json_filter api_response: `+ (api_response.msg || api_response.error),
+						trace	: 'search user preset get_editing_preset_json_filter'
+					}
+				)
+				// debug
+				if(SHOW_DEBUG===true) {
+					console.error('SERVER: page_globals.api_errors:', page_globals.api_errors);
+				}
+
+			return null
+		}
+
+	// editing_preset
+		const data					= api_response.result.data || []
+		const component_json_data	= data.find(el => el.tipo===presets_component_json_tipo)
+
+	// json_filter. existing section case
+		if (component_json_data) {
+
+			// fix value
+			self.component_json_data = component_json_data
+
+			// json_filter . component_json_data data.entries is an array, select the first entry
+			const json_filter = component_json_data.entries && component_json_data.entries[0]
+				? component_json_data.entries[0]
+				: null
+
+			return json_filter
+		}
+
+	// default_json_filter. no section exist case. Create a new one and get new the section_id
+		const section_id = await create_new_search_preset({
+			self			: self,
+			section_tipo	: temp_presets_section_tipo
+		})
+
+		// default_json_filter create
+		const json_filter = {"$and":[]}
+
+		// fix fake value
+		// Builds a synthetic component_json_data stub so that save_preset / save_temp_preset
+		// can resolve section_tipo + section_id on subsequent calls without another API round-trip.
+		self.component_json_data = {
+			tipo			: presets_component_json_tipo,
+			section_tipo	: temp_presets_section_tipo,
+			section_id		: section_id,
+			entries			: [json_filter]
+		}
+
+	return json_filter
+}//end get_editing_preset_json_filter
+
+
+
+/**
+* LOAD_USER_SEARCH_PRESETS
+* Fetches the list of saved search presets for the current user and section.
+*
+* Returns all dd623 records that belong to the given section_tipo AND are either:
+*   - Owned by the current user (locator_user → dd128 match), OR
+*   - Marked as public (locator_public_true → dd64 match via dd640 component_radio_button).
+*
+* The result is rendered as a 'search_user_presets' view inside a section instance
+* (list mode, limited to 15 records). The caller receives the fully built section
+* instance and is responsible for rendering it into the DOM.
+*
+* @param {Object} self - The search instance. Must expose section_tipo and section_id.
+* @returns {Promise<Object>} The built section instance containing the presets list.
+*/
+export const load_user_search_presets = async function(self) {
+
+	// sqo
+		// locator_user: selects records belonging to the authenticated user (dd128 = users section).
+		const locator_user = {
+			section_id		: '' + page_globals.user_id,
+			section_tipo	: 'dd128'
+		}
+		// locator_public_true: selects records marked as public.
+		// section_id '1' / dd64 (boolean true locator) matched against dd640 (radio button component).
+		const locator_public_true = {
+			section_id			: '1',
+			section_tipo		: 'dd64',
+			from_component_tipo	: presets_component_public_value_tipo // 'dd640'
+		}
+		const filter = {
+			"$and": [
+				{
+					// Must match the caller's section_tipo so each search panel only
+					// sees its own presets, not presets for other sections.
+					q		: self.section_tipo,
+					path	: [{
+						component_tipo	: presets_component_section_value_tipo, // 'dd642',
+						section_tipo	: presets_section_tipo, // 'dd623'
+						model			: 'component_input_text',
+						name			: 'Section tipo'
+					}],
+					type: 'jsonb'
+				},
+				{
+					// Presets are visible if public OR owned by the current user.
+					"$or": [
+						{
+							q		: locator_public_true,
+							path	: [{
+								component_tipo	: presets_component_public_value_tipo, // 'dd640',
+								section_tipo	: presets_section_tipo, // 'dd623'
+								model			: 'component_radio_button',
+								name			: 'Public'
+							}],
+							type: 'jsonb'
+						},
+						{
+							q		: locator_user,
+							path	: [{
+								component_tipo	: presets_component_user_id_value_tipo, // 'dd654',
+								section_tipo	: presets_section_tipo, // 'dd623'
+								model			: 'component_select',
+								name			: 'User'
+							}],
+							type: 'jsonb'
+						}
+					]
+				}
+			]
+		}
+		const sqo = {
+			select			: [],
+			section_tipo	: [{
+				tipo : presets_section_tipo // 'dd623'
+			}],
+			filter			: filter,
+			limit			: 15,
+			offset			: 0
+		}
+
+	// request_config
+		// Only show the preset name (dd624) in list mode; the full filter JSON is
+		// loaded separately when the user selects a preset to apply (load_search_preset).
+		const request_config = [{
+			sqo			: sqo,
+			api_engine	: 'dedalo',
+			type		: 'main',
+			show 		: {
+				ddo_map : [{
+					tipo			: presets_component_name_value_tipo, // 'dd624',
+					section_tipo	: presets_section_tipo, // 'dd623',
+					parent			: presets_section_tipo // 'dd623'
+				}]
+			}
+		}]
+
+	// section
+		// id_variant disambiguates this list instance from other section instances
+		// for the same section_tipo that might exist on the same page.
+		const instance_options = {
+			model			: 'section',
+			tipo			: presets_section_tipo, // 'dd623'
+			section_tipo	: presets_section_tipo, // 'dd623'
+			section_id		: null,
+			mode			: 'list',
+			lang			: page_globals.dedalo_data_lang,
+			request_config	: request_config,
+			add_show		: true,
+			id_variant		: self.section_tipo + '_search_user_presets',
+			inspector		: false, // (!) disable elements
+			filter			: false, // (!) disable elements
+			session_save	: true, // Set as true to save the session and preserve counter coherence
+			view			: 'search_user_presets',
+			caller			: self
+		}
+		const section = await get_instance(instance_options)
+		await section.build(true)
+
+
+	return section
+}//end load_user_search_presets
+
+
+
+/**
+* EDIT_USER_SEARCH_PRESET
+* Initializes a preset record in edit mode for the modal editor.
+*
+* Opens the dd623 record identified by section_id in edit mode, exposing all four
+* editable metadata fields: name (dd624), public flag (dd640), default flag (dd641),
+* and save-arguments flag (dd648). The filter JSON (dd625) is intentionally excluded —
+* editing the raw filter is handled separately via the search panel UI.
+*
+* The tools and inspector overlays are suppressed (show_interface.tools: false) so
+* that the minimal edit form appears without Dédalo's standard toolbar chrome.
+*
+* @param {Object} self - The search instance. Must expose section_tipo.
+* @param {string|number} section_id - The section_id of the preset record to edit.
+* @returns {Promise<Object>} The built section instance in edit mode.
+*/
+export const edit_user_search_preset = async function(self, section_id) {
+
+	// request_config
+		const request_config = [{
+			api_engine	: 'dedalo',
+			type		: 'main',
+			show		: {
+				ddo_map : [
+					{
+						tipo			: presets_component_name_value_tipo, // 'dd624',
+						section_tipo	: presets_section_tipo, // 'dd623'
+						parent			: presets_section_tipo, // 'dd623'
+						properties : {
+							show_interface : {
+								tools : false
+							}
+						}
+					},
+					{
+						tipo			: presets_component_public_value_tipo, // 'dd640',
+						section_tipo	: presets_section_tipo, // 'dd623'
+						parent			: presets_section_tipo, // 'dd623'
+						properties : {
+							show_interface : {
+								tools : false
+							}
+						}
+					},
+					{
+						tipo			: presets_component_default_value_tipo, // 'dd641',
+						section_tipo	: presets_section_tipo, // 'dd623'
+						parent			: presets_section_tipo, // 'dd623'
+						properties : {
+							show_interface : {
+								tools : false
+							}
+						}
+					},
+					{
+						tipo			: presets_component_save_arguments_value_tipo, // 'dd648',
+						section_tipo	: presets_section_tipo, // 'dd623'
+						parent			: presets_section_tipo, // 'dd623'
+						properties : {
+							show_interface : {
+								tools : false
+							}
+						}
+					}
+				]
+			}
+		}]
+
+	// section
+		const instance_options = {
+			model			: 'section',
+			tipo			: presets_section_tipo, // 'dd623'
+			section_tipo	: presets_section_tipo, // 'dd623'
+			section_id		: section_id,
+			mode			: 'edit',
+			lang			: page_globals.dedalo_data_lang,
+			request_config	: request_config,
+			add_show		: true,
+			session_save	: false, // Set as false to prevent overwrite of the current session
+			id_variant		: self.section_tipo +'_'+ section_id + '_search_user_preset_edit'
+		}
+		const section = await get_instance(instance_options)
+		// filter search disallow
+			section.filter = false
+		// inspector disallow
+			section.inspector = false
+		// build
+			await section.build(true)
+
+
+	return section
+}//end edit_user_search_preset
+
+
+
+/**
+* LOAD_SEARCH_PRESET
+* Retrieves the JSON filter data for a specific saved preset.
+*
+* Builds a standalone component_json instance (dd625, model component_json) for the
+* given section_id, builds it to load server data, then extracts entries[0].
+*
+* Uses page_globals.dedalo_data_nolan (the language-neutral lang code) because the
+* preset JSON filter is language-independent metadata, not translatable text.
+*
+* Returns an empty filter object {"$and":[]} as default when no entries are present,
+* so the caller always receives a valid filter tree root to work with.
+*
+* @param {Object} options - Options object.
+* @param {string} options.section_id - The section_id of the preset record to load.
+* @returns {Promise<Object>} The JSON filter object (e.g. {"$and":[...]}).
+*/
+export const load_search_preset = async function(options) {
+
+	// options
+		const section_id = options.section_id
+
+	// component
+		const instance_options = {
+			tipo			: presets_component_json_tipo, // dd625
+			section_tipo	: presets_section_tipo, // dd623
+			section_id		: section_id,
+			model			: 'component_json',
+			mode			: 'edit',
+			lang			: page_globals.dedalo_data_nolan
+		}
+		const component = await get_instance(instance_options)
+		await component.build(true)
+		const entries = component.data.entries
+
+	// json_filter
+		const json_filter = (entries && entries[0])
+			? entries[0]
+			: {"$and":[]} // default
+
+
+	return json_filter
+}//end load_search_preset
+
+
+
+/**
+* CREATE_NEW_SEARCH_PRESET
+* Creates a new search preset record in the database.
+*
+* Provisions a fresh section record of the given section_tipo (either dd623 for a named
+* preset or dd655 for the temp editing preset), then populates three fields in parallel:
+*   1. dd642 (component_input_text)  — stores the caller's section_tipo string.
+*   2. dd654 (component_select)      — stores the current user as a dd128 locator.
+*   3. dd625 (component_json)        — stores the current DOM filter state via
+*      self.parse_dom_to_json_filter({save_arguments: true}).
+*
+* All three component saves are launched concurrently via Promise.all to minimize
+* latency; order is irrelevant because they target different components of the same record.
+*
+* @param {Object} options - Options object.
+* @param {Object} options.self - The search instance. Must expose section_tipo and parse_dom_to_json_filter().
+* @param {string} options.section_tipo - The section tipo for the new record ('dd623' or 'dd655').
+* @returns {Promise<string|boolean>} The new section_id string, or false on creation failure.
+*/
+export const create_new_search_preset = async function(options) {
+
+	// options
+	const self			= options.self
+	const section_tipo	= options.section_tipo // temp or user preset section
+
+	// short vars
+	// dd128 is the users section; user_id identifies the record for the authenticated user.
+	const locator_user	= {
+		section_id		: '' + page_globals.user_id,
+		section_tipo	: 'dd128'
+	}
+
+	// data_manager. create
+	const rqo = {
+		action	: 'create',
+		source	: {
+			section_tipo : section_tipo
+		}
+	}
+	const api_response = await data_manager.request({
+		body		: rqo,
+		use_worker	: true
+	})
+
+	if (!api_response.result || api_response.result <= 0) {
+		console.error('Error on create new preset section. api_response:', api_response);
+		return false
+	}
+
+	const new_section_id = api_response.result
+
+	const save_promises = []
+
+	// save section_tipo value
+	// Stores which search panel section this preset belongs to (scoping key).
+	save_promises.push(
+		(async () => {
+			const component_instance_section_tipo = await get_instance({
+				tipo			: presets_component_section_value_tipo, // 'dd642',
+				model			: 'component_input_text',
+				section_tipo	: section_tipo,
+				section_id		: new_section_id,
+				mode			: 'edit'
+			})
+			await component_instance_section_tipo.build(true)
+			const changed_data_section = [{
+				action	: 'insert',
+				id		: null,
+				value	: {value: self.section_tipo}
+			}]
+			await component_instance_section_tipo.save(changed_data_section)
+		})()
+	)
+
+	// save user value
+	// Associates this preset with the current user so it is visible only to them
+	// (unless marked public via dd640).
+	save_promises.push(
+		(async () => {
+			const component_instance_user = await get_instance({
+				tipo			: presets_component_user_id_value_tipo, // 'dd654',
+				model			: 'component_select',
+				section_tipo	: section_tipo,
+				section_id		: new_section_id,
+				mode			: 'edit'
+			})
+			await component_instance_user.build(true)
+			const changed_data_user = [{
+				action	: 'insert',
+				id		: null,
+				value	: locator_user
+			}]
+			await component_instance_user.save(changed_data_user)
+		})()
+	)
+
+	// save current DOM filter
+	// Serializes the live search panel filter model and persists it as the initial preset value.
+	save_promises.push(
+		(async () => {
+			const component_instance_json = await get_instance({
+				tipo			: presets_component_json_tipo, // 'dd625',
+				model			: 'component_json',
+				section_tipo	: section_tipo,
+				section_id		: new_section_id,
+				mode			: 'edit'
+			})
+			await component_instance_json.build(true)
+
+			// parse current DOM filter for save it
+			const json_filter_parsed = self.parse_dom_to_json_filter({
+				save_arguments : true
+			})
+
+			const json_filter = json_filter_parsed.filter
+			if (json_filter) {
+				const changed_data_json = [{
+					action	: 'insert',
+					id		: null,
+					value	: json_filter
+				}]
+				await component_instance_json.save(changed_data_json)
+			}
+		})()
+	)
+
+	await Promise.all(save_promises)
+
+	return new_section_id
+}//end create_new_search_preset
+
+
+
+/**
+* SAVE_PRESET
+* Saves the current filter structure to a specific preset record.
+*
+* Serializes the search panel's live filter model via self.parse_dom_to_json_filter()
+* and persists it to the dd625 (component_json) field of the target preset record.
+*
+* Uses the 'set_data' action (not 'update') to atomically replace the entire entries
+* array. This avoids entry duplication that would occur if 'insert' or 'update' were
+* used repeatedly on a single-entry field whose entry id might drift between calls.
+*
+* After a successful save, self.component_json_data.entries is updated in place so
+* that subsequent saves within the same session use the current entry value without
+* requiring a fresh API read.
+*
+* @param {Object} options - Options object.
+* @param {Object} options.self - The search instance. Must expose parse_dom_to_json_filter() and component_json_data.
+* @param {string} options.section_tipo - The section tipo of the target preset record.
+* @param {string} options.section_id - The section_id of the target preset record.
+* @returns {Promise<Object|boolean>} The API response object, or false on validation/save failure.
+*/
+export const save_preset = async function(options) {
+
+	// options
+	const self			= options.self
+	const section_tipo	= options.section_tipo
+	const section_id	= options.section_id
+
+	// Verify vars
+	if (!section_tipo || !section_id) {
+		console.error('Invalid section_tipo or section_id:', section_tipo, section_id);
+		return false
+	}
+
+	// filter value
+	// Note that filter_obj may contain empty values.
+	// This is normal, as we need to save empty components in the search panel of the preset.
+	const parsed = self.parse_dom_to_json_filter({})
+	const filter_obj = parsed.filter || null
+
+	// Validate filter_obj
+	if (!filter_obj) {
+		console.error('Invalid filter_obj from parse_dom_to_json_filter');
+		return false
+	}
+
+	// resolve actual entry id from component data to preserve it in the new entry
+	// Carrying the existing entry id ensures the server treats this as an update of
+	// the same logical entry rather than creating a duplicate.
+	const entry_id = self.component_json_data?.entries?.[0]?.id || null
+
+	// build the single entry value (preset is monovalue)
+	const entry_value = { value : filter_obj }
+	if (entry_id !== null) {
+		entry_value.id = entry_id
+	}
+
+	// rqo. save
+	// Uses 'set_data' action instead of 'update' to replace the entire entries array.
+	// This prevents duplication from accumulated entries with different ids.
+	const rqo = {
+		action	: 'save',
+		source	: {
+			tipo			: presets_component_json_tipo,
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			lang			: page_globals.dedalo_data_nolan,
+			type			: 'component'
+		},
+		data	: {
+			changed_data : [
+				{
+					action	: 'set_data',
+					id		: null,
+					value	: [entry_value]
+				}
+			]
+		}
+	}
+
+	// API request
+	const api_response = await data_manager.request({
+		body		: rqo,
+		use_worker	: true
+	})
+
+	// error check
+	if (!api_response.result) {
+		console.error(`Error on save preset (${section_tipo} - ${section_id}). api_response:`, api_response);
+		return false
+	}
+
+	// Update cache with the new filter
+	// Used when user back from a tool and open the search
+	// if the cache is not refresh the data search changes will be accumulated into the components
+	if (self.component_json_data) {
+		self.component_json_data.entries = [entry_value]
+	}
+
+
+	return api_response
+}//end save_preset
+
+
+
+/**
+* SAVE_TEMP_PRESET
+* Saves the current interface state to the user's temporary preset.
+*
+* Thin wrapper around save_preset() that resolves section_tipo and section_id from
+* self.component_json_data, which is populated during the initial call to
+* get_editing_preset_json_filter(). Guards against premature calls (before build
+* completes and component_json_data is set) by returning early with a console error.
+*
+* This function is called automatically when the user's search panel is reset
+* (search.prototype.reset) so that the temp preset always reflects the current state.
+*
+* @param {Object} self - The search instance. Must have component_json_data set.
+* @returns {Promise<Object|undefined>} The API response from save_preset, or undefined if not ready.
+*/
+export const save_temp_preset = async function(self) {
+
+	// check self.component_json_data
+		if (!self.component_json_data) {
+			console.error('Invalid component_json_data:', self.component_json_data );
+			return
+		}
+
+	return save_preset({
+		self			: self,
+		section_tipo	: self.component_json_data.section_tipo,
+		section_id		: self.component_json_data.section_id
+	})
+}//end save_temp_preset
+
+
+
+/**
+* DELETE_USER_SEARCH_PRESET
+* Deletes a search preset from the database.
+*
+* Sends a 'delete' action for the given section_id in the dd623 (presets_section_tipo)
+* section. The caller is responsible for updating any list UI after deletion.
+*
+* Only named presets (dd623) can be deleted this way. The temp editing preset (dd655)
+* is never explicitly deleted — it is reused across sessions.
+*
+* @param {string} section_id - The section_id of the dd623 preset record to delete.
+* @returns {Promise<Object|boolean>} The API response, or false if section_id is falsy.
+*/
+export const delete_user_search_preset = async function(section_id) {
+
+	// check
+		if (!section_id) {
+			console.error('Invalid section_id:', section_id);
+			return false
+		}
+
+	// rqo
+		const rqo = {
+			action	: 'delete',
+			source	: {
+				section_tipo	: presets_section_tipo, // 'dd623'
+				section_id		: section_id,
+				model			: 'section'
+			}
+		}
+
+	// API request
+		const api_response = await data_manager.request({
+			body		: rqo,
+			use_worker	: true
+		})
+
+	return api_response
+}//end delete_user_search_preset
+
+
+
+// @license-end

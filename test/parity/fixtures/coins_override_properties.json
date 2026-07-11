@@ -1,0 +1,66 @@
+{
+	"css": {
+		".wrapper_component": {
+			"grid-row": "2 /span 4",
+			"grid-column": "1 /span 2"
+		},
+		".wrapper_component >.list_body": {
+			"grid-template-columns": "1fr"
+		},
+		".wrapper_component >.list_body .section_record": {
+			"height": "28rem"
+		},
+		".wrapper_component >.list_body >.content_data .section_record .component_image >.content_data": {
+			"height": "28rem"
+		}
+	},
+	"view": "mosaic",
+	"source": {
+		"mode": "external",
+		"request_config": [
+			{
+				"sqo": {
+					"section_tipo": [
+						{
+							"value": ["numisdata4"],
+							"source": "section"
+						}
+					]
+				},
+				"show": {
+					"ddo_map": [
+						{
+							"info": "Publishable (component_publication)",
+							"mode": "edit",
+							"tipo": "numisdata158",
+							"view": "line",
+							"hover": true,
+							"parent": "self",
+							"section_tipo": "numisdata4"
+						},
+						{
+							"info": "Obverse (component_portal)",
+							"tipo": "numisdata164",
+							"parent": "self",
+							"in_mosaic": true,
+							"section_tipo": "numisdata4"
+						},
+						{
+							"info": "Reverse (component_portal)",
+							"tipo": "numisdata165",
+							"parent": "self",
+							"in_mosaic": true,
+							"section_tipo": "numisdata4"
+						}
+					],
+					"sqo_config": {
+						"limit": 1
+					}
+				}
+			}
+		],
+		"data_from_field": ["numisdata36"],
+		"section_to_search": ["numisdata4"],
+		"component_to_search": ["numisdata161"]
+	}
+}

@@ -1,0 +1,1019 @@
+{
+	"meta": {
+		"captured_at": "2026-07-10T12:18:05.778Z",
+		"capture_commit": "b1cd464",
+		"comment": "Canonical test3 playground records (single verified source). Consumed by src/core/test_data/seed.ts; verified by test/unit/test3_canonical_fixture.test.ts against src/core/test_data/manifest.ts.",
+		"drift_policy": "The live rows are mutable (client sweeps write test3/1). A red canonical gate with NO engine change means the live record drifted: run restoreCanonicalTest3() to heal, or — when the drift is a DELIBERATE fixture change — re-capture with `bun run scripts/capture_test3_fixture.ts` and reconcile manifest.ts in the same change."
+	},
+	"section_tipo": "test3",
+	"records": [
+		{
+			"section_id": 1,
+			"data": {
+				"label": "Test",
+				"section_id": 1,
+				"created_date": "2017-11-19 17:41:43",
+				"section_tipo": "test3",
+				"diffusion_info": null,
+				"created_by_user_id": -1
+			},
+			"relation": {
+				"dd197": [
+					{
+						"id": 1,
+						"type": "dd151",
+						"section_id": "-1",
+						"section_tipo": "dd128",
+						"from_component_tipo": "dd197"
+					}
+				],
+				"test54": [],
+				"test70": [
+					{
+						"id": 1,
+						"type": "dd151",
+						"section_id": "1",
+						"section_tipo": "dd153",
+						"from_component_tipo": "test70"
+					},
+					{
+						"id": 2,
+						"type": "dd151",
+						"section_id": "2",
+						"section_tipo": "dd153",
+						"from_component_tipo": "test70"
+					}
+				],
+				"test71": [],
+				"test80": [
+					{
+						"id": 1,
+						"type": "dd151",
+						"section_id": "27",
+						"section_tipo": "test3",
+						"from_component_tipo": "test80"
+					}
+				],
+				"test87": [
+					{
+						"id": 1,
+						"type": "dd151",
+						"section_id": "1",
+						"section_tipo": "dd64",
+						"from_component_tipo": "test87"
+					}
+				],
+				"test88": [
+					{
+						"id": 1,
+						"type": "dd151",
+						"section_id": "1",
+						"section_tipo": "dd64",
+						"from_component_tipo": "test88"
+					},
+					{
+						"id": 2,
+						"type": "dd151",
+						"section_id": "2",
+						"section_tipo": "dd64",
+						"from_component_tipo": "test88"
+					}
+				],
+				"test89": [
+					{
+						"id": 1,
+						"type": "dd151",
+						"section_id": "17344",
+						"section_tipo": "lg1",
+						"from_component_tipo": "test89"
+					}
+				],
+				"test91": [
+					{
+						"id": 1,
+						"type": "dd151",
+						"section_id": "1",
+						"section_tipo": "dd64",
+						"from_component_tipo": "test91"
+					}
+				],
+				"test92": [
+					{
+						"id": 1,
+						"type": "dd151",
+						"section_id": "1",
+						"section_tipo": "dd64",
+						"from_component_tipo": "test92"
+					}
+				],
+				"test101": [
+					{
+						"id": 1,
+						"type": "dd675",
+						"section_id": "1",
+						"section_tipo": "dd153",
+						"from_component_tipo": "test101"
+					}
+				],
+				"test169": [],
+				"test201": []
+			},
+			"string": {
+				"test17": [
+					{
+						"id": 1,
+						"lang": "lg-eng",
+						"value": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi cursus eros nec metus efficitur, rutrum commodo massa molestie. <br>Etiam eros quam, interdum in purus vel, pulvinar porta neque. Nam ultricies turpis ut urna laoreet, at efficitur sapien mollis. Sed gravida, augue ac placerat posuere, risus erat ullamcorper mauris, sed elementum odio ipsum et tortor. Maecenas in congue ligula. <br>Quisque volutpat sapien nec convallis tristique. Sed pellentesque odio at massa gravida, vel rutrum ante luctus. Maecenas gravida consequat ante. Suspendisse sed ullamcorper turpis."
+					}
+				],
+				"test52": [
+					{
+						"id": 1,
+						"lang": "lg-eng",
+						"value": "input text content of one"
+					}
+				],
+				"test97": [
+					{
+						"id": 1,
+						"lang": "lg-spa",
+						"value": "<p>[page-n-1]</p><p>KALAKORIKOS</p><p>C alahorra - R ioja (L a ) - R ioja (L a ) - E spaña</p><p></p><p>Algunos autores la citan como ciudad berona (DCPH II: 221-222); en época sertoriana se la nombra como</p><p>celtibérica, pero en el siglo I a.C. Estrabón (3,4,10) la cita en territorio vascón. Poco antes del 27 a.C.</p><p>obtuvo el estatuto de municipio de cives romani (Plinio, N.H. III, 24), utilizando el latín en sus series</p><p>monetales (RPC I, 431-451).</p><p>La producción monetaria se puede agrupar en dos fases. De la primera se conocen tres tipos (MIB 13), fechados los tres primeros entre ca. 140 y el 120 a.C, y de la segunda sólo un tipo (MIB 4), emitido</p><p>entre ca. 120 y el 100 a.C. En el anverso, en el cual no se grabó ninguna leyenda, se representa una</p><p>cabeza masculina mirando a la derecha que, en el tipo MIB 2 (= ACIP 1790) se ha descrito como de tipo</p><p>vascón y en el tipo MIB 4 (= ACIP 1791, CNH 276/3, Vives 56/4), el peinado, como de arcos concéntricos;</p><p>el retrato va acompañado del símbolo creciente con estrella y, detrás, un delfín vertical. Todas las</p><p>unidades de bronce presentan, en el reverso, un jinete con lanza mirando a la derecha, bajo el cual se</p><p>encuentra, curvada y al aire, la inscripción ibérica kalakorikos. Solo un tipo (MIB 3 = ACIP 1792)</p><p>representa mitades, mostrando un caballo galopando a derecha.</p><p>La ciudad, ya convertida en municipio acuñó diversas emisiones durante los reinados de Augusto y</p><p>Tiberio (RPC I, 431-451). En el anverso muestran el retrato del emperador y en el reverso un toro. En dos</p><p>tipos del comienzo de su producción municipal, el nombre de la ciudad Calagurris Iulia lleva el</p><p>sobrenombre de Nassica (RPC I, 431-432).</p><p>AGUSTÍN DIEZ CASTILLO (UNIVERSITAT DE VALÈNCIA) | Introducción</p><p>PERE PAU RIPOLLÈS ALEGRE (UNIVERSITAT DE VALÈNCIA) | Introducción, Ordenación emisiones</p><p></p><p>ca. 140-120 a.C.</p><p></p><p>MIB 1789 | 104/1, Estrella de cuatro puntas</p><p>Bronce. Unidad. 16,41 g (4). 29,33 mm (3).</p><p>Cabeza masculina, con collar, a dcha. Jinete, con lanza, a dcha. |</p><p>Leyenda curva</p><p>Delfín | Creciente con estrella</p><p>kalakorikos</p><p>ACIP 1789 | CNH 276/1 | Vives 56/1</p><p></p><p>Museo Arqueológico Nacional</p><p></p><p>MIB 1790 | 104/2, Cabeza vascona, estrella de cinco puntas</p><p>Bronce. Unidad. 12,52 g (24). 27,42 mm (16).</p><p>Cabeza masculina, con collar, a dcha. Jinete, con lanza, a dcha. |</p><p>Leyenda curva</p><p>Delfín | Creciente con estrella</p><p>|</p><p>ACIP 1790 | CNH 276/2 | Vives 56/2</p><p></p><p>kalakorikos | kalakorikos</p><p></p><p>Cayón subastas | 16-05-2012 <> 18-05-2012</p><p></p><p></p><p>[page-n-2]</p><p>MIB 1792 | 104/3, Caballo</p><p>Bronce. Media unidad. 7,44 g (2). 22 mm (2).</p><p>Cabeza masculina, con collar, a dcha. Caballo galopando, con rienda</p><p>suelta al aire, a dcha. | Leyenda</p><p>curva</p><p>Delfín | Creciente con estrella</p><p>Creciente externo</p><p>ACIP 1792 | CNH 277/4 | Vives 56/3</p><p></p><p>kalakorikos</p><p></p><p>Jesús Vico | 09-10-2012</p><p></p><p>ca. 120-100 a.C.</p><p></p><p>MIB 15010 | 104/4, Peinado de arcos concéntricos Bronce. Unidad. 11,96 g (25). 25,61 mm (23).</p><p>MIB 1791 | 104/4a, Leyenda kalakorikos</p><p>10,56 g (15). 25,43 mm (12).</p><p></p><p>Cabeza masculina, con collar, a dcha. Jinete, con lanza, a dcha. |</p><p>Leyenda curva</p><p>Delfín | Creciente con estrella</p><p>ACIP 1791 | CNH 276/3 | Vives 56/4</p><p></p><p>kalakorikos</p><p></p><p>MIB 15388 | 104/4b, Leyenda kalakoriko-s</p><p></p><p>Jesús Vico | 11-11-2010</p><p></p><p>14,06 g (10). 25,8 mm (11).</p><p></p><p>Cabeza masculina, con collar, a dcha. Jinete, con lanza, a dcha. |</p><p>Leyenda curva</p><p>Delfín | Creciente con estrella</p><p>kalakoriko - s</p><p></p><p>Jesús Vico | 11-11-2010</p><p></p><p></p><p>[page-n-3]</p><p>REFERENCIAS BIBLIOGRÁFICAS</p><p></p><p>Amela Valverde, Luis (2014): La ceca de Kalakorikos (Hesperia:</p><p>Mon. 53). Revista Numismática Hécate 1. | Hécate</p><p>Beltrán Martínez, Antonio (1984): Numismática antigua del área</p><p>de Calahorra. Actas del Symposium de historia de</p><p>Calahorra IActas del Symposium de Historia de Calahorra.</p><p>Calahorra. Bimilenario de su fundación, Madrid.</p><p>Burillo Mozota, Francisco (2002): Etnias y ciudades estado en el</p><p>valle medio del Ebro, el caso de Kalakorikos/Calagurris</p><p>Nassica. Kalakorikos: Revista para el estudio, defensa,</p><p>protección y divulgación del patrimonio histórico, artístico</p><p>y cultural de Calahorra y su entorno 7.</p><p>Collantes Pérez-Ardá, Esteban (1997): Historia de las cecas de</p><p>Hispania Antigua. Madrid, p. 110-113.</p><p>Domínguez Arranz, Almudena (1979): Las cecas ibéricas del Valle</p><p>del Ebro. Zaragoza, p. 111-115. | Institución Fernando del</p><p>Católico · Diputación de Zaragoza</p><p>García-Bellido, María Paz; Blázquez Cerrato, María de las Cruces</p><p>(2001): Diccionario de cecas y pueblos hispánicos: con</p><p>una introducción a la numismática antigua de la Península</p><p>Ibérica (2 vols.). Madrid, p. 2-221.</p><p></p><p>Jordán Cólera, Carlos (2019): Lengua y Epigrafía Celtibéricas.</p><p>Zaragoza, p. 311-312.</p><p>Martín Valls, Ricardo (1967): La circulación monetaria ibérica.</p><p>Valladolid, p. 38-39. | Zenon</p><p>Pueyo, J. del (1996): La moneda riojana. La Rioja.</p><p>Ruiz Trapero, María (1968): Las acuñaciones hispano-romanas de</p><p>Calagurris. Barcelona.</p><p>Untermann, Jürgen (1975): Monumenta Linguarum Hispanicarum.</p><p>Band I. Die Münzlegenden. Wiesbaden, n. A.53.</p><p>Untermann, Jürgen (1995): La latinización de Hispania a través</p><p>del documento monetal. La Moneda Hispánica. Ciudad y</p><p>Territorio. Actas del I Encuentro Peninsular de</p><p>Numismática Antigua, Madrid.</p><p>Villaronga Garriga, Leandre (1993): Las emisiones monetarias</p><p>con el tipo de cabeza vascona. Studia paleohispanica et</p><p>indogermanica. J. Untermann ab amicis hispanicis oblata,</p><p>Barcelona.</p><p>Wodtko, Dagmar (2000): Monumenta Linguarum Hispanicarum.</p><p>Band V.1. Wörterbuch der keltiberischen Inschriften.</p><p>Wiesbaden, p. 151.</p><p></p><p></p><p>[page-n-4]</p><p></p>"
+					}
+				],
+				"test152": [
+					{
+						"id": 1,
+						"lang": "lg-nolan",
+						"value": "TUdHMGV4WEhLTXJ0UWxvMEk5UGZDZ1NnRjFhQldBc3NDQi9rMnErTVhvYz0="
+					}
+				],
+				"test208": [
+					{
+						"id": 1,
+						"lang": "lg-nolan",
+						"value": "myemail@mydomain.net"
+					},
+					{
+						"id": 2,
+						"lang": "lg-nolan",
+						"value": "myemail2@mydomain2.net"
+					}
+				]
+			},
+			"date": {
+				"dd201": [
+					{
+						"id": 1,
+						"lang": "lg-nolan",
+						"start": {
+							"day": 10,
+							"hour": 13,
+							"time": 65134157105,
+							"year": 2026,
+							"month": 7,
+							"minute": 25,
+							"second": 5
+						}
+					}
+				],
+				"test145": [
+					{
+						"id": 1,
+						"lang": "lg-nolan",
+						"start": {
+							"day": 9,
+							"time": 20198505600,
+							"year": 1628,
+							"month": 6
+						}
+					},
+					{
+						"id": 2,
+						"lang": "lg-nolan",
+						"start": {
+							"day": 25,
+							"time": 65068444800,
+							"year": 2024,
+							"month": 6
+						}
+					}
+				]
+			},
+			"iri": {
+				"test140": [
+					{
+						"id": 1,
+						"iri": "http://elraspa.com",
+						"lang": "lg-nolan",
+						"title": "Title or IRI"
+					}
+				]
+			},
+			"geo": {
+				"test100": [
+					{
+						"id": 1,
+						"alt": 0,
+						"lat": 39.45952823913757,
+						"lon": -0.3274998574173816,
+						"zoom": 16
+					}
+				]
+			},
+			"number": {
+				"test22": [
+					{
+						"id": 1,
+						"value": 99
+					}
+				],
+				"test139": [
+					{
+						"id": 1,
+						"value": 365
+					},
+					{
+						"id": 2,
+						"value": 100
+					}
+				],
+				"test211": [
+					{
+						"id": 1,
+						"value": 8888
+					}
+				]
+			},
+			"media": {
+				"test26": [
+					{
+						"id": 1,
+						"files_info": [
+							{
+								"quality": "original",
+								"extension": "glb",
+								"file_name": "test26_test3_1.glb",
+								"file_path": "/3d/original/0/test26_test3_1.glb",
+								"file_size": 4780672,
+								"file_time": {
+									"day": 25,
+									"hour": 19,
+									"time": 65068514740,
+									"year": 2024,
+									"month": 6,
+									"minute": 25,
+									"second": 40,
+									"timestamp": "2024-06-25 19:25:40"
+								},
+								"file_exist": true
+							},
+							{
+								"quality": "web",
+								"extension": "glb",
+								"file_name": "test26_test3_1.glb",
+								"file_path": "/3d/web/0/test26_test3_1.glb",
+								"file_size": 4780672,
+								"file_time": {
+									"day": 25,
+									"hour": 19,
+									"time": 65068514740,
+									"year": 2024,
+									"month": 6,
+									"minute": 25,
+									"second": 40,
+									"timestamp": "2024-06-25 19:25:40"
+								},
+								"file_exist": true
+							},
+							{
+								"quality": "thumb",
+								"extension": "jpg",
+								"file_name": "test26_test3_1.jpg",
+								"file_path": "/3d/thumb/0/test26_test3_1.jpg",
+								"file_size": 5778,
+								"file_time": {
+									"day": 25,
+									"hour": 19,
+									"time": 65068514741,
+									"year": 2024,
+									"month": 6,
+									"minute": 25,
+									"second": 41,
+									"timestamp": "2024-06-25 19:25:41"
+								},
+								"file_exist": true
+							}
+						],
+						"original_file_name": "test26_test3_1_deleted_2023-04-29_154330.glb",
+						"original_upload_date": {
+							"day": 25,
+							"hour": 19,
+							"time": 65068514740,
+							"year": 2024,
+							"month": 6,
+							"minute": 25,
+							"second": 40
+						},
+						"original_normalized_name": "test26_test3_1.glb"
+					}
+				],
+				"test85": [
+					{
+						"id": 1,
+						"files_info": [
+							{
+								"quality": "original",
+								"extension": "pdf",
+								"file_name": "test85_test3_1.pdf",
+								"file_path": "/pdf/original/0/test85_test3_1.pdf",
+								"file_size": 255969,
+								"file_time": {
+									"day": 25,
+									"hour": 19,
+									"time": 65068514811,
+									"year": 2024,
+									"month": 6,
+									"minute": 26,
+									"second": 51,
+									"timestamp": "2024-06-25 19:26:51"
+								},
+								"file_exist": true
+							},
+							{
+								"quality": "original",
+								"extension": "jpg",
+								"file_name": "test85_test3_1.jpg",
+								"file_path": "/pdf/original/0/test85_test3_1.jpg",
+								"file_size": 2655920,
+								"file_time": {
+									"day": 25,
+									"hour": 19,
+									"time": 65068514813,
+									"year": 2024,
+									"month": 6,
+									"minute": 26,
+									"second": 53,
+									"timestamp": "2024-06-25 19:26:53"
+								},
+								"file_exist": true
+							},
+							{
+								"quality": "web",
+								"extension": "pdf",
+								"file_name": "test85_test3_1.pdf",
+								"file_path": "/pdf/web/0/test85_test3_1.pdf",
+								"file_size": 255969,
+								"file_time": {
+									"day": 25,
+									"hour": 19,
+									"time": 65068514811,
+									"year": 2024,
+									"month": 6,
+									"minute": 26,
+									"second": 51,
+									"timestamp": "2024-06-25 19:26:51"
+								},
+								"file_exist": true
+							},
+							{
+								"quality": "web",
+								"extension": "jpg",
+								"file_name": "test85_test3_1.jpg",
+								"file_path": "/pdf/web/0/test85_test3_1.jpg",
+								"file_size": 437269,
+								"file_time": {
+									"day": 25,
+									"hour": 19,
+									"time": 65068514813,
+									"year": 2024,
+									"month": 6,
+									"minute": 26,
+									"second": 53,
+									"timestamp": "2024-06-25 19:26:53"
+								},
+								"file_exist": true
+							},
+							{
+								"quality": "thumb",
+								"extension": "jpg",
+								"file_name": "test85_test3_1.jpg",
+								"file_path": "/pdf/thumb/0/test85_test3_1.jpg",
+								"file_size": 18340,
+								"file_time": {
+									"day": 25,
+									"hour": 19,
+									"time": 65068514814,
+									"year": 2024,
+									"month": 6,
+									"minute": 26,
+									"second": 54,
+									"timestamp": "2024-06-25 19:26:54"
+								},
+								"file_exist": true
+							}
+						],
+						"original_file_name": "pdf test.pdf",
+						"original_upload_date": {
+							"day": 25,
+							"hour": 19,
+							"time": 65068514811,
+							"year": 2024,
+							"month": 6,
+							"minute": 26,
+							"second": 51
+						},
+						"original_normalized_name": "test85_test3_1.pdf"
+					}
+				],
+				"test94": [
+					{
+						"id": 1,
+						"files_info": [
+							{
+								"quality": "original",
+								"extension": "mp4",
+								"file_name": "test94_test3_1.mp4",
+								"file_path": "/av/original/0/test94_test3_1.mp4",
+								"file_size": 14906377,
+								"file_time": {
+									"day": 26,
+									"hour": 9,
+									"time": 65063207294,
+									"year": 2024,
+									"month": 4,
+									"minute": 8,
+									"second": 14,
+									"timestamp": "2024-04-26 09:08:14"
+								},
+								"file_exist": true
+							},
+							{
+								"quality": "404",
+								"extension": "mp4",
+								"file_name": "test94_test3_1.mp4",
+								"file_path": "/av/404/0/test94_test3_1.mp4",
+								"file_size": 14908012,
+								"file_time": {
+									"day": 25,
+									"hour": 13,
+									"time": 65068492160,
+									"year": 2024,
+									"month": 6,
+									"minute": 9,
+									"second": 20,
+									"timestamp": "2024-06-25 13:09:20"
+								},
+								"file_exist": true
+							},
+							{
+								"quality": "240",
+								"extension": "mp4",
+								"file_name": "test94_test3_1.mp4",
+								"file_path": "/av/240/0/test94_test3_1.mp4",
+								"file_size": 5624602,
+								"file_time": {
+									"day": 26,
+									"hour": 11,
+									"time": 65063214832,
+									"year": 2024,
+									"month": 4,
+									"minute": 13,
+									"second": 52,
+									"timestamp": "2024-04-26 11:13:52"
+								},
+								"file_exist": true
+							},
+							{
+								"quality": "thumb",
+								"extension": "jpg",
+								"file_name": "test94_test3_1.jpg",
+								"file_path": "/av/thumb/0/test94_test3_1.jpg",
+								"file_size": 14027,
+								"file_time": {
+									"day": 25,
+									"hour": 19,
+									"time": 65068514654,
+									"year": 2024,
+									"month": 6,
+									"minute": 24,
+									"second": 14,
+									"timestamp": "2024-06-25 19:24:14"
+								},
+								"file_exist": true
+							}
+						],
+						"original_upload_date": {
+							"day": 25,
+							"hour": 13,
+							"time": 65068492139,
+							"year": 2024,
+							"month": 6,
+							"minute": 8,
+							"second": 59
+						},
+						"original_normalized_name": "test94_test3_1.mp4"
+					}
+				],
+				"test99": [
+					{
+						"id": 1,
+						"lib_data": null,
+						"files_info": [
+							{
+								"quality": "original",
+								"extension": "jpg",
+								"file_name": "test99_test3_1.jpg",
+								"file_path": "/image/original/0/test99_test3_1.jpg",
+								"file_size": 1144040,
+								"file_time": {
+									"day": 21,
+									"hour": 9,
+									"time": 65060096684,
+									"year": 2024,
+									"month": 3,
+									"minute": 4,
+									"second": 44,
+									"timestamp": "2024-03-21 09:04:44"
+								},
+								"file_exist": true
+							},
+							{
+								"quality": "original",
+								"extension": "avif",
+								"file_name": "test99_test3_1.avif",
+								"file_path": "/image/original/0/test99_test3_1.avif",
+								"file_size": 2848718,
+								"file_time": {
+									"day": 25,
+									"hour": 19,
+									"time": 65068514314,
+									"year": 2024,
+									"month": 6,
+									"minute": 18,
+									"second": 34,
+									"timestamp": "2024-06-25 19:18:34"
+								},
+								"file_exist": true
+							},
+							{
+								"quality": "1.5MB",
+								"extension": "jpg",
+								"file_name": "test99_test3_1.jpg",
+								"file_path": "/image/1.5MB/0/test99_test3_1.jpg",
+								"file_size": 240920,
+								"file_time": {
+									"day": 25,
+									"hour": 19,
+									"time": 65068514307,
+									"year": 2024,
+									"month": 6,
+									"minute": 18,
+									"second": 27,
+									"timestamp": "2024-06-25 19:18:27"
+								},
+								"file_exist": true
+							},
+							{
+								"quality": "1.5MB",
+								"extension": "avif",
+								"file_name": "test99_test3_1.avif",
+								"file_path": "/image/1.5MB/0/test99_test3_1.avif",
+								"file_size": 395856,
+								"file_time": {
+									"day": 25,
+									"hour": 19,
+									"time": 65068514314,
+									"year": 2024,
+									"month": 6,
+									"minute": 18,
+									"second": 34,
+									"timestamp": "2024-06-25 19:18:34"
+								},
+								"file_exist": true
+							},
+							{
+								"quality": "thumb",
+								"extension": "jpg",
+								"file_name": "test99_test3_1.jpg",
+								"file_path": "/image/thumb/0/test99_test3_1.jpg",
+								"file_size": 12846,
+								"file_time": {
+									"day": 25,
+									"hour": 19,
+									"time": 65068514313,
+									"year": 2024,
+									"month": 6,
+									"minute": 18,
+									"second": 33,
+									"timestamp": "2024-06-25 19:18:33"
+								},
+								"file_exist": true
+							}
+						],
+						"original_upload_date": {
+							"day": 26,
+							"hour": 10,
+							"time": 65063212070,
+							"year": 2024,
+							"month": 4,
+							"minute": 27,
+							"second": 50
+						},
+						"original_normalized_name": "test99_test3_1.jpg"
+					}
+				],
+				"test177": [
+					{
+						"id": 1,
+						"files_info": [
+							{
+								"quality": "original",
+								"extension": "svg",
+								"file_name": "test177_test3_1.svg",
+								"file_path": "/svg/original/0/test177_test3_1.svg",
+								"file_size": 803959,
+								"file_time": {
+									"day": 25,
+									"hour": 19,
+									"time": 65068514885,
+									"year": 2024,
+									"month": 6,
+									"minute": 28,
+									"second": 5,
+									"timestamp": "2024-06-25 19:28:05"
+								},
+								"file_exist": true
+							},
+							{
+								"quality": "web",
+								"extension": "svg",
+								"file_name": "test177_test3_1.svg",
+								"file_path": "/svg/web/0/test177_test3_1.svg",
+								"file_size": 803959,
+								"file_time": {
+									"day": 25,
+									"hour": 19,
+									"time": 65068514886,
+									"year": 2024,
+									"month": 6,
+									"minute": 28,
+									"second": 6,
+									"timestamp": "2024-06-25 19:28:06"
+								},
+								"file_exist": true
+							},
+							{
+								"quality": "thumb",
+								"extension": "jpg",
+								"file_name": "test177_test3_1.jpg",
+								"file_path": "/svg/thumb/0/test177_test3_1.jpg",
+								"file_size": 3670,
+								"file_time": {
+									"day": 25,
+									"hour": 19,
+									"time": 65068514887,
+									"year": 2024,
+									"month": 6,
+									"minute": 28,
+									"second": 7,
+									"timestamp": "2024-06-25 19:28:07"
+								},
+								"file_exist": true
+							}
+						],
+						"original_file_name": "test177_test3_1.svg",
+						"original_upload_date": {
+							"day": 25,
+							"hour": 19,
+							"time": 65068514886,
+							"year": 2024,
+							"month": 6,
+							"minute": 28,
+							"second": 6
+						},
+						"original_normalized_name": "test177_test3_1.svg"
+					}
+				]
+			},
+			"misc": {
+				"test18": [
+					{
+						"id": 1,
+						"value": {
+							"a": 1,
+							"b": [2]
+						}
+					}
+				],
+				"test69": [
+					{
+						"id": 1,
+						"value": [
+							{
+								"tipo": "rsc167",
+								"value": [30, 26]
+							}
+						]
+					}
+				],
+				"test157": [
+					{
+						"id": 1,
+						"tipo": "oh25",
+						"value": 689,
+						"section_tipo": "oh1"
+					}
+				]
+			},
+			"relation_search": null,
+			"meta": {
+				"test17": [
+					{
+						"count": 1
+					}
+				],
+				"test18": [
+					{
+						"count": 75
+					}
+				],
+				"test22": [
+					{
+						"count": 1
+					}
+				],
+				"test26": [
+					{
+						"count": 7
+					}
+				],
+				"test52": [
+					{
+						"count": 78
+					}
+				],
+				"test54": [
+					{
+						"count": 133
+					}
+				],
+				"test69": [
+					{
+						"count": 50
+					}
+				],
+				"test70": [
+					{
+						"count": 1
+					}
+				],
+				"test71": [
+					{
+						"count": 135
+					}
+				],
+				"test80": [
+					{
+						"count": 3
+					}
+				],
+				"test85": [
+					{
+						"count": 5
+					}
+				],
+				"test87": [
+					{
+						"count": 63
+					}
+				],
+				"test88": [
+					{
+						"count": 109
+					}
+				],
+				"test89": [
+					{
+						"count": 71
+					}
+				],
+				"test91": [
+					{
+						"count": 5
+					}
+				],
+				"test92": [
+					{
+						"count": 376
+					}
+				],
+				"test94": [
+					{
+						"count": 7
+					}
+				],
+				"test97": [
+					{
+						"count": 1
+					}
+				],
+				"test99": [
+					{
+						"count": 5
+					}
+				],
+				"test100": [
+					{
+						"count": 7
+					}
+				],
+				"test101": [
+					{
+						"count": 149
+					}
+				],
+				"test139": [
+					{
+						"count": 2
+					}
+				],
+				"test140": [
+					{
+						"count": 93
+					}
+				],
+				"test145": [
+					{
+						"count": 3
+					}
+				],
+				"test152": [
+					{
+						"count": 81
+					}
+				],
+				"test157": [
+					{
+						"count": 15
+					}
+				],
+				"test169": [
+					{
+						"count": 1
+					}
+				],
+				"test177": [
+					{
+						"count": 5
+					}
+				],
+				"test201": [
+					{
+						"count": 76
+					}
+				],
+				"test208": [
+					{
+						"count": 77
+					}
+				],
+				"test211": [
+					{
+						"count": 75
+					}
+				]
+			}
+		},
+		{
+			"section_id": 2,
+			"data": {
+				"label": "Unit Test Section (using matrix_test table)",
+				"section_id": null,
+				"created_date": "2026-07-05 01:36:12",
+				"section_tipo": "test3",
+				"diffusion_info": null,
+				"created_by_user_id": -1
+			},
+			"relation": {
+				"dd197": [
+					{
+						"id": 1,
+						"type": "dd151",
+						"section_id": "-1",
+						"section_tipo": "dd128",
+						"from_component_tipo": "dd197"
+					}
+				],
+				"dd200": [
+					{
+						"id": 1,
+						"type": "dd151",
+						"section_id": "-1",
+						"section_tipo": "dd128",
+						"from_component_tipo": "dd200"
+					}
+				]
+			},
+			"string": null,
+			"date": {
+				"dd199": [
+					{
+						"id": 1,
+						"lang": "lg-nolan",
+						"start": {
+							"day": 5,
+							"hour": 1,
+							"time": 65133682572,
+							"year": 2026,
+							"month": 7,
+							"minute": 36,
+							"second": 12
+						}
+					}
+				],
+				"dd201": [
+					{
+						"id": 1,
+						"lang": "lg-nolan",
+						"start": {
+							"day": 10,
+							"hour": 13,
+							"time": 65134157104,
+							"year": 2026,
+							"month": 7,
+							"minute": 25,
+							"second": 4
+						}
+					}
+				]
+			},
+			"iri": null,
+			"geo": null,
+			"number": null,
+			"media": null,
+			"misc": null,
+			"relation_search": null,
+			"meta": {
+				"test80": [
+					{
+						"count": 450
+					}
+				]
+			}
+		},
+		{
+			"section_id": 27,
+			"data": {
+				"label": "Test",
+				"section_id": 27,
+				"created_date": "2021-05-10 10:00:00",
+				"section_tipo": "test3",
+				"diffusion_info": null,
+				"created_by_user_id": -1
+			},
+			"relation": {
+				"dd197": [
+					{
+						"id": 1,
+						"type": "dd151",
+						"section_id": "-1",
+						"section_tipo": "dd128",
+						"from_component_tipo": "dd197"
+					}
+				]
+			},
+			"string": {
+				"test52": [
+					{
+						"lang": "lg-spa",
+						"value": "El dos"
+					}
+				]
+			},
+			"date": {
+				"dd201": [
+					{
+						"id": 1,
+						"lang": "lg-nolan",
+						"start": {
+							"day": 4,
+							"hour": 17,
+							"time": 65133653516,
+							"year": 2026,
+							"month": 7,
+							"minute": 31,
+							"second": 56
+						}
+					}
+				]
+			},
+			"iri": null,
+			"geo": null,
+			"number": null,
+			"media": null,
+			"misc": null,
+			"relation_search": null,
+			"meta": null
+		}
+	]
+}

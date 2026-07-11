@@ -1,0 +1,576 @@
+{
+	"_captured": "2026-07-02 live PHP client (Chrome), scratch numisdata3/42621 with 12 numisdata77 locators (targets numisdata4/101-112). Drag reorder in edit/mosaic: page 1 row 2->0 (reqid 1116), page 2 row 10->9 ABSOLUTE keys (reqid 1142), paginator get_data offset 9 (reqid 1135). Placeholder 42621 is patched to the twin host id at replay.",
+	"paginate_offset9": {
+		"id": "component_portal_numisdata77_numisdata3_42621_edit_lg-nolan_numisdata3_numisdata3_42621_numisdata3_42621",
+		"action": "read",
+		"source": {
+			"typo": "source",
+			"type": "component",
+			"action": "get_data",
+			"model": "component_portal",
+			"tipo": "numisdata77",
+			"section_tipo": "numisdata3",
+			"section_id": 42621,
+			"mode": "edit",
+			"view": "mosaic",
+			"lang": "lg-nolan"
+		},
+		"sqo": {
+			"section_tipo": ["numisdata4"],
+			"limit": 9,
+			"offset": 9,
+			"filter_by_locators": [
+				{
+					"section_tipo": "numisdata3",
+					"section_id": 42621
+				}
+			],
+			"total": 12
+		}
+	},
+	"sort_data_page1": {
+		"action": "save",
+		"source": {
+			"typo": "source",
+			"type": "component",
+			"action": null,
+			"model": "component_portal",
+			"tipo": "numisdata77",
+			"section_tipo": "numisdata3",
+			"section_id": 42621,
+			"mode": "edit",
+			"view": "mosaic",
+			"lang": "lg-nolan",
+			"properties": {
+				"view": "mosaic",
+				"source": {
+					"mode": "external",
+					"request_config": [
+						{
+							"sqo": {
+								"section_tipo": [
+									{
+										"value": ["numisdata4"],
+										"source": "section"
+									}
+								]
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"info": "Publishable (component_publication)",
+										"mode": "edit",
+										"tipo": "numisdata158",
+										"view": "line",
+										"hover": true,
+										"parent": "self",
+										"section_tipo": "numisdata4"
+									},
+									{
+										"info": "Obverse (component_portal)",
+										"tipo": "numisdata164",
+										"parent": "self",
+										"in_mosaic": true,
+										"section_tipo": "numisdata4"
+									},
+									{
+										"info": "Countermark obverse (component_text_area)",
+										"tipo": "numisdata154",
+										"parent": "self",
+										"section_tipo": "numisdata4"
+									},
+									{
+										"info": "Reverse (component_portal)",
+										"tipo": "numisdata165",
+										"parent": "self",
+										"in_mosaic": true,
+										"section_tipo": "numisdata4"
+									},
+									{
+										"info": "Countermark reverse (component_text_area)",
+										"tipo": "numisdata197",
+										"parent": "self",
+										"section_tipo": "numisdata4"
+									}
+								],
+								"sqo_config": {
+									"limit": 9
+								}
+							}
+						}
+					],
+					"data_from_field": ["numisdata36"],
+					"section_to_search": ["numisdata4"],
+					"component_to_search": ["numisdata161"]
+				},
+				"observe": [
+					{
+						"info": "Fired when equivalent terms data changes, it could change when numismatic object was linked with type or when it's changed by itself adding equivalents terms. The numisdata161 doesn't fire here because it's necesary update all equivalents types; see-> numisdata36",
+						"client": {
+							"event": "update_value",
+							"perform": {
+								"function": "refresh"
+							}
+						},
+						"server": {
+							"config": {
+								"use_self_section": true,
+								"use_observable_dato": true
+							},
+							"perform": {
+								"params": {
+									"save": true,
+									"changed": false,
+									"current_dato": false,
+									"references_limit": 0
+								},
+								"function": "set_dato_external"
+							}
+						},
+						"component_tipo": "numisdata36"
+					}
+				],
+				"ar_tools_name": {
+					"tool_sort": {
+						"source_list": [
+							{
+								"section_list": [
+									{
+										"info": "Section id",
+										"modo": "list",
+										"tipo": "numisdata130",
+										"model": "component_section_id"
+									},
+									{
+										"info": "Peso",
+										"modo": "list",
+										"tipo": "numisdata133",
+										"model": "component_number"
+									},
+									{
+										"info": "coleccion",
+										"modo": "list",
+										"tipo": "numisdata159",
+										"model": "component_autocomplete"
+									},
+									{
+										"info": "subasta",
+										"modo": "list",
+										"tipo": "numisdata147",
+										"model": "component_autocomplete"
+									},
+									{
+										"info": "peculiariedad de producción",
+										"modo": "list",
+										"tipo": "numisdata152",
+										"model": "component_autocomplete"
+									},
+									{
+										"info": "Portal imagen anverso",
+										"modo": "list",
+										"tipo": "numisdata164",
+										"model": "component_portal"
+									},
+									{
+										"info": "Portal imagen reverso",
+										"modo": "list",
+										"tipo": "numisdata165",
+										"model": "component_portal"
+									},
+									{
+										"info": "Descartes",
+										"modo": "list",
+										"tipo": "numisdata157",
+										"model": "component_select"
+									}
+								],
+								"section_tipo": "numisdata4"
+							}
+						],
+						"source_order": [
+							{
+								"path": [
+									{
+										"name": "Peso",
+										"model": "component_number",
+										"section_tipo": "numisdata4",
+										"component_tipo": "numisdata133"
+									}
+								],
+								"type": "integer",
+								"direction": "DESC NULLS LAST",
+								"component_path": ["components", "numisdata133", "valor", "lg-nolan"]
+							}
+						],
+						"target_component_tipo": "numisdata11",
+						"sub_target_component_tipo": "numisdata9"
+					}
+				}
+			}
+		},
+		"data": {
+			"section_id": 42621,
+			"section_tipo": "numisdata3",
+			"tipo": "numisdata77",
+			"mode": "edit",
+			"lang": "lg-nolan",
+			"from_component_tipo": "numisdata77",
+			"entries": [
+				{
+					"id": 1,
+					"type": "dd151",
+					"section_id": "101",
+					"section_tipo": "numisdata4",
+					"from_component_tipo": "numisdata77",
+					"paginated_key": 0
+				},
+				{
+					"id": 2,
+					"type": "dd151",
+					"section_id": "102",
+					"section_tipo": "numisdata4",
+					"from_component_tipo": "numisdata77",
+					"paginated_key": 1
+				},
+				{
+					"id": 3,
+					"type": "dd151",
+					"section_id": "103",
+					"section_tipo": "numisdata4",
+					"from_component_tipo": "numisdata77",
+					"paginated_key": 2
+				},
+				{
+					"id": 4,
+					"type": "dd151",
+					"section_id": "104",
+					"section_tipo": "numisdata4",
+					"from_component_tipo": "numisdata77",
+					"paginated_key": 3
+				},
+				{
+					"id": 5,
+					"type": "dd151",
+					"section_id": "105",
+					"section_tipo": "numisdata4",
+					"from_component_tipo": "numisdata77",
+					"paginated_key": 4
+				},
+				{
+					"id": 6,
+					"type": "dd151",
+					"section_id": "106",
+					"section_tipo": "numisdata4",
+					"from_component_tipo": "numisdata77",
+					"paginated_key": 5
+				},
+				{
+					"id": 7,
+					"type": "dd151",
+					"section_id": "107",
+					"section_tipo": "numisdata4",
+					"from_component_tipo": "numisdata77",
+					"paginated_key": 6
+				},
+				{
+					"id": 8,
+					"type": "dd151",
+					"section_id": "108",
+					"section_tipo": "numisdata4",
+					"from_component_tipo": "numisdata77",
+					"paginated_key": 7
+				},
+				{
+					"id": 9,
+					"type": "dd151",
+					"section_id": "109",
+					"section_tipo": "numisdata4",
+					"from_component_tipo": "numisdata77",
+					"paginated_key": 8
+				},
+				{
+					"id": 3,
+					"type": "dd151",
+					"section_id": "103",
+					"section_tipo": "numisdata4",
+					"from_component_tipo": "numisdata77",
+					"paginated_key": 2
+				}
+			],
+			"debug_model": "component_portal",
+			"debug_label": "Monedas",
+			"debug_dataframe": null,
+			"parent_tipo": "numisdata3",
+			"parent_section_id": 42621,
+			"pagination": {
+				"total": 12,
+				"limit": 9,
+				"offset": 0
+			},
+			"row_section_id": 42621,
+			"changed_data": [
+				{
+					"action": "sort_data",
+					"source_key": 2,
+					"target_key": 0,
+					"value": {
+						"id": 3,
+						"type": "dd151",
+						"section_id": "103",
+						"section_tipo": "numisdata4",
+						"from_component_tipo": "numisdata77",
+						"paginated_key": 2
+					}
+				}
+			]
+		}
+	},
+	"sort_data_page2": {
+		"action": "save",
+		"source": {
+			"typo": "source",
+			"type": "component",
+			"action": null,
+			"model": "component_portal",
+			"tipo": "numisdata77",
+			"section_tipo": "numisdata3",
+			"section_id": 42621,
+			"mode": "edit",
+			"view": "mosaic",
+			"lang": "lg-nolan",
+			"properties": {
+				"view": "mosaic",
+				"source": {
+					"mode": "external",
+					"request_config": [
+						{
+							"sqo": {
+								"section_tipo": [
+									{
+										"value": ["numisdata4"],
+										"source": "section"
+									}
+								]
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"info": "Publishable (component_publication)",
+										"mode": "edit",
+										"tipo": "numisdata158",
+										"view": "line",
+										"hover": true,
+										"parent": "self",
+										"section_tipo": "numisdata4"
+									},
+									{
+										"info": "Obverse (component_portal)",
+										"tipo": "numisdata164",
+										"parent": "self",
+										"in_mosaic": true,
+										"section_tipo": "numisdata4"
+									},
+									{
+										"info": "Countermark obverse (component_text_area)",
+										"tipo": "numisdata154",
+										"parent": "self",
+										"section_tipo": "numisdata4"
+									},
+									{
+										"info": "Reverse (component_portal)",
+										"tipo": "numisdata165",
+										"parent": "self",
+										"in_mosaic": true,
+										"section_tipo": "numisdata4"
+									},
+									{
+										"info": "Countermark reverse (component_text_area)",
+										"tipo": "numisdata197",
+										"parent": "self",
+										"section_tipo": "numisdata4"
+									}
+								],
+								"sqo_config": {
+									"limit": 9
+								}
+							}
+						}
+					],
+					"data_from_field": ["numisdata36"],
+					"section_to_search": ["numisdata4"],
+					"component_to_search": ["numisdata161"]
+				},
+				"observe": [
+					{
+						"info": "Fired when equivalent terms data changes, it could change when numismatic object was linked with type or when it's changed by itself adding equivalents terms. The numisdata161 doesn't fire here because it's necesary update all equivalents types; see-> numisdata36",
+						"client": {
+							"event": "update_value",
+							"perform": {
+								"function": "refresh"
+							}
+						},
+						"server": {
+							"config": {
+								"use_self_section": true,
+								"use_observable_dato": true
+							},
+							"perform": {
+								"params": {
+									"save": true,
+									"changed": false,
+									"current_dato": false,
+									"references_limit": 0
+								},
+								"function": "set_dato_external"
+							}
+						},
+						"component_tipo": "numisdata36"
+					}
+				],
+				"ar_tools_name": {
+					"tool_sort": {
+						"source_list": [
+							{
+								"section_list": [
+									{
+										"info": "Section id",
+										"modo": "list",
+										"tipo": "numisdata130",
+										"model": "component_section_id"
+									},
+									{
+										"info": "Peso",
+										"modo": "list",
+										"tipo": "numisdata133",
+										"model": "component_number"
+									},
+									{
+										"info": "coleccion",
+										"modo": "list",
+										"tipo": "numisdata159",
+										"model": "component_autocomplete"
+									},
+									{
+										"info": "subasta",
+										"modo": "list",
+										"tipo": "numisdata147",
+										"model": "component_autocomplete"
+									},
+									{
+										"info": "peculiariedad de producción",
+										"modo": "list",
+										"tipo": "numisdata152",
+										"model": "component_autocomplete"
+									},
+									{
+										"info": "Portal imagen anverso",
+										"modo": "list",
+										"tipo": "numisdata164",
+										"model": "component_portal"
+									},
+									{
+										"info": "Portal imagen reverso",
+										"modo": "list",
+										"tipo": "numisdata165",
+										"model": "component_portal"
+									},
+									{
+										"info": "Descartes",
+										"modo": "list",
+										"tipo": "numisdata157",
+										"model": "component_select"
+									}
+								],
+								"section_tipo": "numisdata4"
+							}
+						],
+						"source_order": [
+							{
+								"path": [
+									{
+										"name": "Peso",
+										"model": "component_number",
+										"section_tipo": "numisdata4",
+										"component_tipo": "numisdata133"
+									}
+								],
+								"type": "integer",
+								"direction": "DESC NULLS LAST",
+								"component_path": ["components", "numisdata133", "valor", "lg-nolan"]
+							}
+						],
+						"target_component_tipo": "numisdata11",
+						"sub_target_component_tipo": "numisdata9"
+					}
+				}
+			}
+		},
+		"data": {
+			"section_id": 42621,
+			"section_tipo": "numisdata3",
+			"tipo": "numisdata77",
+			"mode": "edit",
+			"lang": "lg-nolan",
+			"from_component_tipo": "numisdata77",
+			"entries": [
+				{
+					"id": 10,
+					"type": "dd151",
+					"section_id": "110",
+					"section_tipo": "numisdata4",
+					"from_component_tipo": "numisdata77",
+					"paginated_key": 9
+				},
+				{
+					"id": 11,
+					"type": "dd151",
+					"section_id": "111",
+					"section_tipo": "numisdata4",
+					"from_component_tipo": "numisdata77",
+					"paginated_key": 10
+				},
+				{
+					"id": 12,
+					"type": "dd151",
+					"section_id": "112",
+					"section_tipo": "numisdata4",
+					"from_component_tipo": "numisdata77",
+					"paginated_key": 11
+				},
+				{
+					"id": 11,
+					"type": "dd151",
+					"section_id": "111",
+					"section_tipo": "numisdata4",
+					"from_component_tipo": "numisdata77",
+					"paginated_key": 10
+				}
+			],
+			"debug_model": "component_portal",
+			"debug_label": "Monedas",
+			"debug_dataframe": null,
+			"parent_tipo": "numisdata77",
+			"parent_section_id": 42621,
+			"pagination": {
+				"total": 12,
+				"limit": 9,
+				"offset": 9
+			},
+			"changed_data": [
+				{
+					"action": "sort_data",
+					"source_key": 10,
+					"target_key": 9,
+					"value": {
+						"id": 11,
+						"type": "dd151",
+						"section_id": "111",
+						"section_tipo": "numisdata4",
+						"from_component_tipo": "numisdata77",
+						"paginated_key": 10
+					}
+				}
+			]
+		}
+	}
+}

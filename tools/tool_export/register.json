@@ -1,0 +1,422 @@
+{
+  "id": "3971",
+  "section_id": "16",
+  "section_tipo": "dd1340",
+  "data": {
+    "label": "Tools development",
+    "section_id": 16,
+    "created_date": "2026-06-18 11:43:40",
+    "section_tipo": "dd1340",
+    "diffusion_info": null,
+    "created_by_user_id": -1
+  },
+  "relation": {
+    "dd197": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd197"
+      }
+    ],
+    "dd200": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd200"
+      }
+    ],
+    "dd1330": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      }
+    ],
+    "dd1331": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1331"
+      }
+    ],
+    "dd1332": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1332"
+      }
+    ],
+    "dd1333": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1333"
+      }
+    ],
+    "dd1337": [
+      {
+        "id": 1,
+        "type": "dd675",
+        "section_id": "1",
+        "section_tipo": "dd153",
+        "from_component_tipo": "dd1337"
+      }
+    ],
+    "dd1354": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1354"
+      }
+    ]
+  },
+  "string": {
+    "dd612": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "<p>Exportació de dades a diferents formats, csv, excel, html, etc</p>"
+      },
+      {
+        "id": 2,
+        "lang": "lg-deu",
+        "value": "<p>Datenexport in verschiedene Formate, CSV, Excel, HTML usw</p>"
+      },
+      {
+        "id": 3,
+        "lang": "lg-ell",
+        "value": "<p>Εξαγωγή δεδομένων σε διαφορετικές μορφές, csv, excel, html κ.λπ</p>"
+      },
+      {
+        "id": 4,
+        "lang": "lg-eng",
+        "value": "<p>Data export to different formats, csv, excel, html, etc</p>"
+      },
+      {
+        "id": 5,
+        "lang": "lg-nep",
+        "value": "<p>विभिन्न ढाँचाहरूमा डाटा निर्यात, csv, एक्सेल, html, आदि</p>"
+      },
+      {
+        "id": 6,
+        "lang": "lg-spa",
+        "value": "<p>Exportación de datos a diferentes formatos, csv, excel, html, etc.</p>"
+      }
+    ],
+    "dd799": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "Exportar"
+      },
+      {
+        "id": 2,
+        "lang": "lg-deu",
+        "value": "Exportieren"
+      },
+      {
+        "id": 3,
+        "lang": "lg-eng",
+        "value": "Export"
+      },
+      {
+        "id": 4,
+        "lang": "lg-eus",
+        "value": "Esportatu"
+      },
+      {
+        "id": 5,
+        "lang": "lg-fra",
+        "value": "Exportation"
+      },
+      {
+        "id": 6,
+        "lang": "lg-ita",
+        "value": "Esportazione"
+      },
+      {
+        "id": 7,
+        "lang": "lg-nep",
+        "value": "निर्यात गर्नुहोस्"
+      },
+      {
+        "id": 8,
+        "lang": "lg-por",
+        "value": "Exportação"
+      },
+      {
+        "id": 9,
+        "lang": "lg-spa",
+        "value": "Exportar"
+      }
+    ],
+    "dd1326": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "tool_export"
+      }
+    ],
+    "dd1327": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "2.0.3"
+      }
+    ],
+    "dd1328": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "6.0.0"
+      }
+    ],
+    "dd1644": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "Dédalo team"
+      }
+    ]
+  },
+  "date": {
+    "dd199": [
+      {
+        "id": 1,
+        "start": {
+          "day": 20,
+          "hour": 9,
+          "time": 64976982390,
+          "year": 2021,
+          "month": 8,
+          "minute": 46,
+          "second": 30
+        }
+      }
+    ],
+    "dd201": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "start": {
+          "day": 18,
+          "hour": 11,
+          "time": 65132163820,
+          "year": 2026,
+          "month": 6,
+          "minute": 43,
+          "second": 40
+        }
+      }
+    ]
+  },
+  "iri": null,
+  "geo": null,
+  "number": null,
+  "media": null,
+  "misc": {
+    "dd1335": [
+      {
+        "id": 1,
+        "value": {
+          "open_as": "window",
+          "windowFeatures": null
+        }
+      }
+    ],
+    "dd1372": [
+      {
+        "id": 1,
+        "value": [
+          {
+            "lang": "lg-eng",
+            "name": "fill_the_gaps",
+            "value": "Fill the gaps"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "fill_the_gaps",
+            "value": "Rellenar los huecos"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "fill_the_gaps",
+            "value": "Ampler els vuits"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "fill_the_gaps",
+            "value": "Combler les lacunes"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "fill_the_gaps",
+            "value": "Colmare le lacune"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "fill_the_gaps",
+            "value": "Συμπληρώστε τα κενά"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "fill_the_gaps",
+            "value": "Füllen Sie die Lücken"
+          },
+          {
+            "lang": "lg-por",
+            "name": "fill_the_gaps",
+            "value": "Preencher as lacunas"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "show_tipo_in_label",
+            "value": "Show ontology tipo"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "show_tipo_in_label",
+            "value": "Mostrar el tipo de la ontología"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "show_tipo_in_label",
+            "value": "Mostar el tipo de l'ontologia"
+          },
+          {
+            "lang": "lg-por",
+            "name": "show_tipo_in_label",
+            "value": "Mostrar tipo de ontologia"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "show_tipo_in_label",
+            "value": "Montrer l'ontologie tipo"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "show_tipo_in_label",
+            "value": "Mostra il tipo di ontologia"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "show_tipo_in_label",
+            "value": "Εμφάνιση οντολογίας tipo"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "show_tipo_in_label",
+            "value": "Ontologie anzeigen tipo"
+          }
+        ]
+      }
+    ]
+  },
+  "relation_search": null,
+  "meta": {
+    "dd197": [
+      {
+        "count": 1
+      }
+    ],
+    "dd199": [
+      {
+        "count": 1
+      }
+    ],
+    "dd200": [
+      {
+        "count": 1
+      }
+    ],
+    "dd201": [
+      {
+        "count": 1
+      }
+    ],
+    "dd612": [
+      {
+        "count": 6
+      }
+    ],
+    "dd799": [
+      {
+        "count": 9
+      }
+    ],
+    "dd1326": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1327": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1328": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1330": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1331": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1332": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1333": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1335": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1337": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1354": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1372": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1644": [
+      {
+        "count": 1
+      }
+    ]
+  }
+}

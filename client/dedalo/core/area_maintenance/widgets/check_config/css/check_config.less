@@ -1,0 +1,90 @@
+/**
+* check_config
+*
+* Included from area_maintenance.less.
+* The config-status readout is built from the shared widget kit (widget_kit.less):
+* `.dd_eyebrow` section headings + `.dd_readout` key/value grid + `.dd_badge`
+* severity chips. Only the mode-toggle forms, the error banner and the inter-section
+* spacing keep widget-local styles here.
+*/
+.wrapper_widget.check_config {
+
+	// errors banner as a contained danger note
+	.errors_container {
+		margin-bottom: 0.75rem;
+		padding: 0.55rem 0.7rem 0.55rem 0.85rem;
+		color: var(--fg_default);
+		font-weight: 500;
+		line-height: 1.35;
+		background-color: color-mix(in srgb, var(--color_danger) 11%, transparent);
+		border-left: 3px solid var(--color_danger);
+		border-radius: 0 6px 6px 0;
+
+		>.error_pre {
+			.dd_console();
+			margin-top: 0.5rem;
+			background-color: var(--bg_surface);
+		}
+	}
+
+	// ---- mode toggles (maintenance / recovery / notifications) ----------
+	.container {
+		width: 100%;
+		padding-bottom: 1.25rem;
+
+		>.label {
+			display: block;
+			margin-bottom: 0.5rem;
+			font-size: 0.72rem;
+			font-weight: 600;
+			letter-spacing: 0.04em;
+			text-transform: uppercase;
+			color: var(--fg_muted);
+		}
+
+		>.form_container {
+			padding: 0;
+
+			// a mode that is OFF surfaces its enable button as a danger action
+			.button_submit.danger {
+				color: var(--color_danger);
+				font-weight: 600;
+				background-color: color-mix(in srgb, var(--color_danger) 10%, transparent);
+				border-color: color-mix(in srgb, var(--color_danger) 45%, transparent);
+
+				&:hover {
+					background-color: color-mix(in srgb, var(--color_danger) 18%, transparent);
+				}
+			}
+		}
+
+		>.body_response {
+			.dd_console();
+			margin-top: 0.5rem;
+
+			&:empty {
+				display: none;
+			}
+		}
+
+		>.warning_message {
+			margin-top: 0.5rem;
+			font-size: 0.85rem;
+			font-weight: 500;
+		}
+	}
+
+	// ---- config status readout (shared kit: .dd_eyebrow + .dd_readout) ---
+	// stack each section heading above its readout card with even spacing
+	.status_sections {
+		display: flex;
+		flex-direction: column;
+
+		>.dd_eyebrow {
+			margin: 0.85rem 0 0.4rem;
+		}
+		>.dd_eyebrow:first-child {
+			margin-top: 0;
+		}
+	}
+}

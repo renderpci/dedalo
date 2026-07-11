@@ -1,0 +1,32 @@
+/**
+* export_hierarchy
+*
+* Included from area_maintenance.less file.
+* Helper text muted, output as console blocks, errors as contained danger notes.
+*/
+.wrapper_widget.export_hierarchy {
+
+	.info_text,
+	.import_hint {
+		color: var(--fg_muted);
+		line-height: 1.4;
+	}
+
+	pre {
+		.dd_console();
+		margin-top: 0.5rem;
+		max-height: 26rem;
+		overflow: auto;
+	}
+
+	.export_errors,
+	.response_error {
+		margin-top: 0.5rem;
+		padding: 0.55rem 0.7rem;
+		color: var(--fg_default);
+		line-height: 1.35;
+		background-color: color-mix(in srgb, var(--color_danger) 11%, transparent);
+		border-left: 3px solid var(--color_danger);
+		border-radius: 0 6px 6px 0;
+	}
+}//end export_hierarchy

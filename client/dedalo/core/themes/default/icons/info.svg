@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 1024 1024" style="enable-background:new 0 0 1024 1024;" xml:space="preserve">
+<path class="st0" d="M512,20C240.3,20,20,240.3,20,512s220.3,492,492,492s492-220.3,492-492S783.7,20,512,20z M512,918
+	c-224.2,0-406-181.8-406-406s181.8-406,406-406s406,181.8,406,406S736.2,918,512,918z"/>
+<rect x="472.6" y="382.7" class="st0" width="78.8" height="389.1"/>
+<circle class="st0" cx="512" cy="317.9" r="53.3"/>
+</svg>

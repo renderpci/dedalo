@@ -1,0 +1,70 @@
+{
+	"result": true,
+	"msg": "OK. Request done",
+	"langs": { "lg-eng": "English" },
+	"main_lang": "lg-eng",
+	"main": [{ "diffusion_tipo": "test1", "term": "web_test_diffusion", "model": "database" }],
+	"datum": [
+		{
+			"diffusion_tipo": "test5",
+			"section_tipo": "test3",
+			"term": "column_order",
+			"model": "table",
+			"parent": "test1",
+			"context": [
+				{
+					"term": "place",
+					"tipo": "f10",
+					"model": "field_text",
+					"parent": "test5",
+					"parser": {},
+					"columns": [
+						{ "tipo": "c10", "model": "component_input_text" },
+						{ "tipo": "c11", "model": "component_input_text" }
+					]
+				}
+			],
+			"data": [
+				{
+					"section_id": 1,
+					"fields": {
+						"f10": [
+							{
+								"tipo": "c10",
+								"lang": null,
+								"entries": [{ "value": "Madrid", "errors": [] }],
+								"id": null,
+								"section_id": 100,
+								"section_tipo": "rsc1"
+							},
+							{
+								"tipo": "c11",
+								"lang": null,
+								"entries": [{ "value": "Spain", "errors": [] }],
+								"id": null,
+								"section_id": 100,
+								"section_tipo": "rsc1"
+							},
+							{
+								"tipo": "c10",
+								"lang": null,
+								"entries": [{ "value": "Paris", "errors": [] }],
+								"id": null,
+								"section_id": 200,
+								"section_tipo": "rsc1"
+							},
+							{
+								"tipo": "c11",
+								"lang": null,
+								"entries": [{ "value": "France", "errors": [] }],
+								"id": null,
+								"section_id": 200,
+								"section_tipo": "rsc1"
+							}
+						]
+					}
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,20 @@
+[
+	{
+	  "id": 1,
+	  "iri": "http://dedalo.dev/es",
+	  "lang": "lg-spa",
+	  "title": "Título uno en español"
+	},
+	{
+	  "id": 1,
+	  "iri": "http://dedalo.dev/en",
+	  "lang": "lg-eng",
+	  "title": "Title one in english"
+	},
+	{
+	  "id": 1,
+	  "iri": "http://dedalo.dev/nolan",
+	  "lang": "lg-nolan",
+	  "title": "Label one nolan"
+	}
+]

@@ -1,0 +1,3364 @@
+{
+	"meta": {
+		"gate": "dedalo_files_differential",
+		"captured_at": "2026-07-11T08:24:06.416Z",
+		"capture_commit": "d2d0746",
+		"oracle_base_url_sha256": "e817688f9da2918c",
+		"entity": "monedaiberica",
+		"interaction_count": 3,
+		"drift_policy": "These interactions freeze LIVE PHP oracle responses over the mutable shared DB. If this gate reds under ORACLE_MODE=fixtures with NO engine change, the shared data moved after the harvest: adjudicate (data-side diff only?), then re-harvest this gate with `bun run scripts/oracle_harvest.ts --gate <name>.test.ts` in the same change that adjudicates the red. After PHP decommissioning there is no re-harvest: fixtures + the cutover DB snapshot are the pinned pair (rewrite/ORACLE_HARVEST.md)."
+	},
+	"interactions": {
+		"1a326f5bb2c4c2345ec1fb9d": {
+			"kind": "json",
+			"rqo": {
+				"action": "get_environment",
+				"dd_api": "dd_core_api"
+			},
+			"status": 200,
+			"body": {
+				"result": {
+					"page_globals": {
+						"dedalo_last_error": null,
+						"is_logged": false,
+						"is_global_admin": false,
+						"is_developer": false,
+						"is_root": false,
+						"user_id": null,
+						"username": null,
+						"full_username": null,
+						"dedalo_entity": "monedaiberica",
+						"dedalo_entity_id": 10,
+						"dedalo_version": null,
+						"dedalo_build": null,
+						"mode": "list",
+						"dedalo_application_langs_default": "lg-spa",
+						"dedalo_application_lang": "lg-spa",
+						"dedalo_data_lang": "lg-spa",
+						"dedalo_data_lang_selector": true,
+						"dedalo_data_lang_sync": false,
+						"dedalo_data_nolan": "lg-nolan",
+						"dedalo_application_langs": [
+							{
+								"label": "Castellano",
+								"value": "lg-spa"
+							},
+							{
+								"label": "Català",
+								"value": "lg-cat"
+							},
+							{
+								"label": "English",
+								"value": "lg-eng"
+							},
+							{
+								"label": "Français",
+								"value": "lg-fra"
+							},
+							{
+								"label": "Português",
+								"value": "lg-por"
+							},
+							{
+								"label": "German",
+								"value": "lg-deu"
+							},
+							{
+								"label": "Ελληνικά",
+								"value": "lg-ell"
+							},
+							{
+								"label": "Italiano",
+								"value": "lg-ita"
+							}
+						],
+						"dedalo_projects_default_langs": [
+							{
+								"label": "Nepali",
+								"value": "lg-nep",
+								"tld2": "ne"
+							},
+							{
+								"label": "English",
+								"value": "lg-eng",
+								"tld2": "en"
+							},
+							{
+								"label": "German",
+								"value": "lg-deu",
+								"tld2": "de"
+							},
+							{
+								"label": "French",
+								"value": "lg-fra",
+								"tld2": "fr"
+							},
+							{
+								"label": "Valencià",
+								"value": "lg-vlca",
+								"tld2": "ca"
+							},
+							{
+								"label": "Arabic Cluster",
+								"value": "lg-ara",
+								"tld2": "ar"
+							},
+							{
+								"label": "Catalan",
+								"value": "lg-cat",
+								"tld2": "ca"
+							},
+							{
+								"label": "Greek",
+								"value": "lg-ell",
+								"tld2": "el"
+							},
+							{
+								"label": "Basque",
+								"value": "lg-eus",
+								"tld2": "eu"
+							},
+							{
+								"label": "Italian",
+								"value": "lg-ita",
+								"tld2": "it"
+							},
+							{
+								"label": "Portuguese",
+								"value": "lg-por",
+								"tld2": "pt"
+							},
+							{
+								"label": "Castellano",
+								"value": "lg-spa",
+								"tld2": "es"
+							}
+						],
+						"dedalo_image_quality_default": "1.5MB",
+						"dedalo_av_quality_default": "404",
+						"dedalo_quality_thumb": "thumb",
+						"tag_id": null,
+						"dedalo_protect_media_files": 1,
+						"DEDALO_NOTIFICATIONS": 0,
+						"ip_api": {
+							"url": "https://ipapi.co/$ip/json/",
+							"href": "https://ipapi.co/?q=$ip",
+							"country_code": "country_code"
+						},
+						"fallback_image": "/dedalo/core/themes/default/default.svg",
+						"locale": "es-ES",
+						"dedalo_date_order": "dmy",
+						"component_active": null,
+						"stream_readers": [],
+						"maintenance_mode": false,
+						"dedalo_notification": false,
+						"recovery_mode": false,
+						"data_version": [
+							7,
+							0,
+							0
+						]
+					},
+					"plain_vars": {
+						"DEDALO_ENVIRONMENT": true,
+						"DEDALO_API_URL": "/dedalo/core/api/v1/json/",
+						"DEDALO_DIFFUSION_API_URL": "/dedalo/diffusion/api/v1/",
+						"DEDALO_CORE_URL": "/dedalo/core",
+						"DEDALO_ROOT_WEB": "/dedalo",
+						"DEDALO_MEDIA_URL": "/dedalo/media",
+						"DEDALO_TOOLS_URL": "/dedalo/tools",
+						"DEDALO_TOOLS_URLS": {},
+						"SHOW_DEBUG": false,
+						"SHOW_DEVELOPER": false,
+						"DEVELOPMENT_SERVER": true,
+						"DEDALO_UPLOAD_SERVICE_CHUNK_FILES": 5,
+						"DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT": 50,
+						"DEDALO_LOCK_COMPONENTS": true,
+						"DEDALO_MAINTENANCE_MODE": false,
+						"DEDALO_NOTIFICATION": null,
+						"DEDALO_RR_WORKER": false,
+						"DD_TIPOS": {
+							"DEDALO_RELATION_TYPE_INDEX_TIPO": "dd96",
+							"DEDALO_SECTION_INFO_INVERSE_RELATIONS": "dd1596",
+							"DEDALO_RELATION_TYPE_LINK": "dd151",
+							"DEDALO_SECTION_RESOURCES_IMAGE_TIPO": "rsc170",
+							"DEDALO_COMPONENT_RESOURCES_IMAGE_TIPO": "rsc29"
+						}
+					},
+					"get_label": {
+						"continue": "Continuar",
+						"change_user": "Cambiar",
+						"recover_password": "¿Olvidaste tu contraseña?",
+						"recover_password_title": "Recupera tu contraseña",
+						"recover_password_help": "Introduce tu usuario o correo electrónico y te enviaremos un código de recuperación de 8 dígitos.",
+						"username_or_email": "Usuario o correo electrónico",
+						"send_code": "Enviar código de recuperación",
+						"back_to_login": "Volver al inicio de sesión",
+						"recovery_code_title": "Revisa tu correo",
+						"recovery_code_help": "Hemos enviado un código de 8 dígitos a tu correo. Introdúcelo junto con tu nueva contraseña.",
+						"new_password": "Nueva contraseña",
+						"repeat_password": "Repite la nueva contraseña",
+						"reset_password": "Restablecer contraseña",
+						"invalid_username": "Usuario no válido",
+						"invalid_auth_code": "¡Código de acceso no válido!",
+						"enter_username_or_email": "Introduce tu usuario o correo electrónico",
+						"enter_recovery_code": "Introduce el código de recuperación de 8 dígitos",
+						"password_too_short": "Contraseña demasiado corta. Usa al menos 8 caracteres",
+						"passwords_do_not_match": "Las contraseñas no coinciden",
+						"request_code_first": "Solicita primero un código de recuperación",
+						"recovery_code_sent": "Si existe una cuenta, se ha enviado un código de recuperación.",
+						"password_updated": "Tu contraseña se ha actualizado. Ya puedes iniciar sesión.",
+						"recovery_invalid_or_expired": "Código no válido o caducado",
+						"recovery_too_many_attempts": "Demasiados intentos. Solicita un nuevo código.",
+						"recovery_reset_failed": "No se ha podido actualizar la contraseña. Inténtalo de nuevo más tarde.",
+						"different_from": "Distinto de",
+						"tool_ts_print": "Impresión del tesauro",
+						"title": "Título",
+						"page": "Página",
+						"beginning": "Inicio",
+						"herramienta": "Herramienta",
+						"audiovisual": "Audiovisual",
+						"mostrar": "mostrar",
+						"create_identify_image": "Crear imagen identificativa",
+						"created": "creado",
+						"by_user": "por usuario",
+						"idioma_de_destino": "Idioma de destino",
+						"open_relationships": "Abrir relaciones",
+						"contenido_actual": "Contenido actual",
+						"anadir_ficheros": "Añadir ficheros",
+						"comenzar_la_carga": "Comenzar la carga",
+						"cancelar_la_carga": "Cancelar la carga",
+						"gestion_de_archivos": "Gestión de archivos",
+						"import_preview": "Previsualización de importación",
+						"found_records": "Todos los registros encontrados",
+						"view_pdf": "Ver / descargar PDF",
+						"aplicar_y_salvar": "Aplicar y salvar",
+						"find": "Buscar",
+						"project": "Proyecto",
+						"donde": "Dónde",
+						"que": "Qué",
+						"registros_creados": "Registros creados",
+						"directorio_de_destino": "Directorio de destino",
+						"nombre_fichero": "Nombre del fichero",
+						"fichero_de_zotero_procesado_correctamente": "Fichero de Zotero procesado correctamente",
+						"tool_calendar": "Calendario",
+						"original": "Original",
+						"nombre_fichero_completo": "Nombre completo del fichero",
+						"extension": "extensión",
+						"registros_visualizados": "Registros visualizados",
+						"nombre_automatico": "Nombre automático",
+						"tamano_archivo": "Tamaño del archivo",
+						"formato_incorrecto": "Formato incorrecto",
+						"ir_al_perfil": "Ir al perfil",
+						"etiqueta_salvar_texto": "y guarde el texto",
+						"etiquetas_perdidas": "Etiquetas perdidas",
+						"conform_headers": "Conformar cabeceras",
+						"fichero_de_bibtex_procesado_correctamente": "Fichero BibTex procesado correctamente",
+						"elementos_desactivos": "elementos desactivos",
+						"file": "Fichero",
+						"conservar_los_cambios_transcripcion": "Para conservar los cambios, NO CIERRE ESTA VENTANA. Inicie sesión en otra ventana del navegador y, a continuación, vuelva a esta ventana y guarde el contenido (presionando el botón 'Guardar')",
+						"usuarios_activos": "Usuarios activos",
+						"tool_import_files": "Importar ficheros",
+						"play_speed": "Velocidad de reproducción",
+						"play_pause_key": "Play/pause tecla",
+						"auto_rewind": "Auto-rebobinado",
+						"insert_tag": "Insertar etiqueta",
+						"opciones": "Opciones",
+						"update_ontology": "Actualizar Ontología",
+						"build_structure_css": "Generar estructura css",
+						"section_tipo": "Tipo de la sección",
+						"remove_av_temporals": "Borrar temporales de audio/video",
+						"tool_semantic_nodes": "Relaciones semánticas",
+						"pagina_de": "Página X de Y.",
+						"volver": "Volver",
+						"sections": "secciones",
+						"remove": "Quitar",
+						"no_access": "Sin acceso aquí",
+						"imagen_info": "Imagen info.",
+						"years": "años",
+						"days": "días",
+						"months": "meses",
+						"year": "año",
+						"month": "mes",
+						"leer": "Leer",
+						"ruta_carpeta_ficheros": "Ruta de carpeta ficheros a importar",
+						"tool_import_dedalo_csv": "Importar Dédalo csv",
+						"mover": "Mover",
+						"mover_datos_de_componentes": "Mover datos de componentes",
+						"timecodes": "Códigos de tiempo",
+						"indexations": "Indexaciones",
+						"indexations_info": "Index info",
+						"lines": "Líneas",
+						"date": "Fecha",
+						"municipio": "Municipio",
+						"entrevista": "Entrevista",
+						"informantes": "Informantes",
+						"head": "Cabecera",
+						"provisional": "Provisional",
+						"relations": "Relaciones",
+						"heramientas": "Herramientas",
+						"persons": "Personas",
+						"vacio": "vacío",
+						"import": "Importar",
+						"eliminar_etiqueta": "¿Eliminar etiqueta?",
+						"print": "Imprimir",
+						"tool_structuration": "Estructuración",
+						"crear_capitulo": "Crear capítulo",
+						"mostrar_ocultar_etiquetas": "Mostrar/ocultar etiquetas",
+						"approach": "Enfoque",
+						"structurations": "Estructuraciones",
+						"tool_lang_multi": "Multi-lenguaje",
+						"selected_text": "Texto seleccionado",
+						"automatic_translation": "Traducción automática",
+						"copiar_a_destino": "Copiar a destino",
+						"propagar_marcas": "Propagar marcas",
+						"total_parrafos": "Total párrafos",
+						"solo_nuevas": "Sólo nuevas",
+						"recreate_all": "Recrear todas",
+						"order_change": "Cambio de orden",
+						"max": "Máx.",
+						"tool_import_rdf": "Importar RDF",
+						"export_json_ontology": "Exportar Ontología JSON",
+						"renumerar_secciones": "Renumerar secciones",
+						"name_to_field": "Sufijo indica campo",
+						"name_to_record_id": "Prefijo indica ID",
+						"presets_de_busqueda": "Config. de búsqueda",
+						"presets_de_exportacion": "Config. de exportación",
+						"search_options": "Opciones de búsqueda",
+						"fields": "Campos",
+						"and": "y",
+						"or": "o",
+						"go_to_page": "Ir a la página",
+						"go_to_record": "Ir al registro",
+						"does_not_contain": "No contiene",
+						"contains": "Contiene",
+						"begins_with": "Empieza con",
+						"end_with": "Acaba con",
+						"literal": "Literal",
+						"between": "Entre",
+						"sequence": "Secuencia",
+						"greater_than_or_equal": "Mayor o igual que",
+						"less_than_or_equal": "Menor o igual que",
+						"greater_than": "Mayor que",
+						"less_than": "Menor que",
+						"list": "Listado",
+						"edicion": "Edición",
+						"new": "Nuevo",
+						"entrada": "Entrada",
+						"salida": "Salida",
+						"recuperar": "recuperar",
+						"record": "registro",
+						"fail_to_save": "¡Fallo al guardar!",
+						"loading": "Cargando...",
+						"cerrar": "Cerrar",
+						"fichero": "Fichero",
+						"size": "Tamaño",
+						"download": "Descargar",
+						"upload": "Subir fichero",
+						"delete": "Borrar",
+						"build": "Generar",
+						"version": "Versión",
+						"processing": "Procesando",
+						"por_favor_espere": "Por favor, espere",
+						"seleccione_el_fichero_a_subir": "Seleccione el fichero a subir",
+						"file_uploaded_successfully": "Archivo subido con éxito",
+						"error_on_upload_file": "Error al subir el archivo",
+						"select_a_file": "Seleccione un fichero",
+						"el_directorio_no_existe": "El directorio no existe o no es accesible",
+						"insertar": "Insertar",
+						"accion": "Acción",
+						"tecla": "Tecla",
+						"visualizar": "Visualizar",
+						"rotate": "Rotar",
+						"imagen": "imagen",
+						"cancel": "Cancelar",
+						"indexacion": "indexación",
+						"indexings": "indexaciones",
+						"descriptores": "descriptores",
+						"tag": "etiqueta",
+						"section": "sección",
+						"tesauro": "tesauro",
+						"tool_av_versions": "Ficheros de audio/video",
+						"tool_image_versions": "Ficheros de imagen",
+						"tool_upload": "Carga de archivos",
+						"tool_relation": "Relaciones",
+						"tool_transcription": "Transcripción",
+						"situation": "Estado de registro",
+						"full": "completo",
+						"modo": "modo",
+						"search_in_current_lang": "Buscar en el idioma actual",
+						"existente": "existente",
+						"search_in_all_langs": "Buscar en todos los idiomas",
+						"recurso": "recurso",
+						"delete_resource_and_links": "Borrar el recurso y todos sus vínculos",
+						"tool_layout_print": "Impresión",
+						"ir_al_listado": "Ir al listado",
+						"modelos": "modelos",
+						"jerarquias": "jerarquías",
+						"terms": "Términos",
+						"language": "idioma",
+						"value_out_of_range": "Valor fuera de rango",
+						"registrar_herramientas": "Registrar herramientas",
+						"registros_actualizados": "registros actualizados",
+						"saved": "guardado",
+						"sin_fichero": "Sin fichero",
+						"seleccione_una_etiqueta_para_indexar": "Seleccione una etiqueta para indexar",
+						"nueva_plantilla_vacia": "Nueva plantilla vacía",
+						"caracteres_por_linea": "Caracteres por línea",
+						"zoom": "Zoom",
+						"longitude": "Longitud",
+						"latitude": "Latitud",
+						"build_subtitles": "Crear subtítulos",
+						"sure": "¿Seguro?",
+						"sure_delete_entry_all_langs": "Esta entrada se eliminará de todos los idiomas.",
+						"weight": "Peso",
+						"items": "Elementos",
+						"average": "Media",
+						"min": "Mín.",
+						"cataloging": "Catalogación",
+						"preset": "Config",
+						"informacion": "Información",
+						"uploaded_file_was_only_partially_uploaded": "El archivo subido fue sólo parcialmente cargado",
+						"no_file_was_uploaded": "Ningún archivo fue subido",
+						"carga": "Carga",
+						"recuperar_component": "Recuperar componente",
+						"recuperar_seccion": "Recuperar sección",
+						"carga_completada": "Carga completada",
+						"eliminar_archivo": "Eliminar archivo",
+						"estadisticas": "Estadísticas",
+						"importar_ficheros": "Importar ficheros",
+						"ver_ficha_existente": "Ver ficha existente",
+						"tool_pdf_versions": "Ficheros PDF",
+						"filter": "filtro",
+						"idioma_de_origen": "Idioma de origen",
+						"preview": "vista previa",
+						"code": "Código",
+						"standard": "Estándar",
+						"format": "Formato",
+						"activate_all_columns": "Activar todas las columnas",
+						"disable_all_columns": "Desactivar todas las columnas",
+						"error_empty_offset": "Error. Valor de tc offset vacío",
+						"updating": "Actualizando",
+						"creating": "Creando",
+						"versions": "Versiones",
+						"layer": "Capa",
+						"reading": "Leyendo",
+						"references": "Referencias",
+						"tool_qr": "Códigos QR",
+						"exactly": "Exactamente",
+						"duplicated": "Duplicado",
+						"tool_watermark": "Notas",
+						"tool_cataloging": "Catalogación",
+						"tool_import_marc21": "Importar MARC 21",
+						"tool_user_admin": "Administración de usuario",
+						"tool_translation": "Traducción",
+						"digitization": "Digitalización",
+						"latest_changes": "Últimos cambios",
+						"borrar_secciones": "Borrar secciones",
+						"email": "E-mail",
+						"unsaved_changes": "¡Sin salvar!",
+						"show_buttons": "Mostrar botones",
+						"copy": "Copiar",
+						"deleted_tags": "Etiquetas borradas",
+						"source": "Origen",
+						"import_json_ontology": "Importar ontología JSON",
+						"register_tools": "Registrar herramientas",
+						"value": "Valor",
+						"duplicate": "Duplicar",
+						"component": "Componente",
+						"model": "Modelo",
+						"type": "Tipo",
+						"publish": "Publicar",
+						"previous": "Previo",
+						"replace": "Reemplazar",
+						"replace_all": "Reemplazar todos",
+						"match_case": "Coincidir mayúsculas y minúsculas",
+						"whole_words": "Palabras completas",
+						"find_and_replace": "Buscar y reemplazar",
+						"instalar": "Instalar",
+						"remove_filter": "Eliminar filtro",
+						"update_data_version": "Actualizar la versión del dato",
+						"check_config": "Comprobar configuración",
+						"delete_diffusion_records": "Borrar registros de difusión",
+						"loading_dedalo_files": "Cargando ficheros de Dédalo",
+						"ontology": "Ontología",
+						"developer": "Desarrollador",
+						"installed": "Instalado",
+						"layer_selector": "Selector de capas",
+						"build_database_version": "Construir versión de base de datos",
+						"tool_portal": "Portal",
+						"tool_import_images": "Importar imágenes",
+						"ficha": "ficha",
+						"procesar": "procesar",
+						"mostrar_filtrados": "Mostrar filtrados",
+						"ir_al_fragmento": "Ir al fragmento",
+						"update_cache": "Actualizar caché",
+						"dir_path": "Ruta de directorio",
+						"file_path": "Ruta de archivo",
+						"name": "Nombre",
+						"modified": "modificado",
+						"campos_personalizados": "Campos Personalizados",
+						"records_displayed": "Registros mostrados de X a Y de Z",
+						"day": "día",
+						"acabado": "Acabado",
+						"site_under_maintenance": "Sistema en mantenimiento. Disculpe las molestias",
+						"borrara_la_etiqueta_seleccionada": "Borrará la etiqueta seleccionada en todos los idiomas así como todas la relaciones e indexaciones asociadas a ella",
+						"seleccionado": "seleccionado",
+						"total_records": "Registros totales",
+						"processing_wait": "Procesando... por favor espere",
+						"historico": "Histórico",
+						"validado": "Validado",
+						"verifique_datos_de_instalacion": "Verifique que los datos de instalación son correctos. Si no lo son, configure la información relativa a la base de datos en las preferencias de Dédalo (config_db.php)",
+						"eliminar_imagenes_tras_la_importacion": "Eliminar imágenes tras la importación",
+						"numero_inventario": "Número de inventario",
+						"editar_registro": "Editar registro",
+						"index_tags_deleted": "etiquetas de indexación borradas fueron creadas al comienzo del texto.",
+						"index_tags_fixed": "etiquetas de indexación rotas fueron arregladas.",
+						"review_tags": "Por favor revise la posición de las etiquetas azules (borradas accidentalmente)",
+						"contenido_no_autorizado": "Usted no está autorizado a ver este contenido",
+						"tool_import_av": "Importar audio/video",
+						"delete_component_tipo_of_section_tipo": "Borrar todo el componente de la sección",
+						"skip_publication_state_check": "Ignorar temporalmente el estado de publicación al publicar",
+						"edit_template": "Editar plantilla",
+						"error_de_conexion": "Error de conexión. Recargue la página pasados unos segundos",
+						"tool_tc": "Codigos de tiempo",
+						"info_fichero": "Información del fichero",
+						"actualizar_vista": "Actualizar vista",
+						"structurations_info": "Estructuraciones info",
+						"yes": "si",
+						"same_name_same_record": "Mismo nombre mismo registro. Crea nuevo ID",
+						"no_empty": "Contiene información",
+						"abv_scope_note": "NA",
+						"tool_add_component_data": "Añadir contenido al campo",
+						"next": "Siguiente",
+						"guardar": "Guardar",
+						"dividir_palabras": "Dividir palabras",
+						"tool_time_machine": "Máquina del tiempo",
+						"carga_de_archivo_completada": "Carga de archivo completada",
+						"delete_data_only": "Borrar sólo datos",
+						"crear_nuevo_fragmento": "Crear nuevo fragmento con selección",
+						"tool_indexation": "Indexación",
+						"list_from_component_data": "Lista de datos de componente",
+						"mostrar_inspector": "Mostrar Inspector",
+						"value_already_exists": "El valor ya existe",
+						"search_operators": "Operadores de búsqueda",
+						"duracion": "Duración",
+						"temp_dir_not_accessible": "Carpeta temporal no accesible",
+						"failed_to_writte_file_to_disk": "No se pudo escribir el archivo en el disco",
+						"extensiones_soportadas": "Extensiones soportadas",
+						"component_history": "Historial del componente",
+						"delete_found_records": "Se eliminarán todos los registros encontrados.",
+						"seconds_abbr": "Seg.",
+						"all_records_found": "Todos registros los encontrados",
+						"data_was_not_modified_save_canceled": "Los datos no fueron modificados. Salvar cancelado.",
+						"activity": "Actividad",
+						"select_one_project": "Debe seleccionar al menos un proyecto",
+						"no_hay_etiqueta_seleccionada": "El código de usuario no existe",
+						"publicado": "Publicado",
+						"full_screen": "Pantalla completa",
+						"export_hierarchy": "Exportar jerarquía",
+						"skip_deletion_cause_children": "Se ha omitido la eliminación del registro actual porque tiene hijos",
+						"tool_diffusion": "Publicar",
+						"number_page_of_total_pages": "Página %s de %s",
+						"numero_recurso": "Número del recurso",
+						"transcripcion_automatica": "Transcripción automática",
+						"desbloquear_todos_los_componentes": "Desbloquear todos los componentes",
+						"update": "Actualizar",
+						"are_you_sure_to_delete_this_record": "¿Está seguro de borrar este registro?",
+						"make_backup": "Hacer copia de seguridad",
+						"ruta_carpeta_ficheros_renombrar": "Ruta de carpeta ficheros a renombrar",
+						"new_fixed_page": "Nueva página fija",
+						"fragment": "fragmento",
+						"selecionar_texto": "Seleccionar texto",
+						"field": "campo:",
+						"reload": "Recargar",
+						"filesize_is_too_big": "El tamaño de archivo es demasiado grande",
+						"abandonando_esta_pagina": "Abandonando esta página perderá los datos que no haya salvado",
+						"open": "Abrir",
+						"delete_data_and_record": "Borrar registro completo",
+						"state": "Estado de validación",
+						"tool_posterframe": "Fotograma",
+						"select_page_of_the_doc": "Seleccione una página del documento:",
+						"seleccione_un_idioma_de_destino": "Seleccione un idioma de destino",
+						"tool_import_zotero": "Importar de Zotero",
+						"descarga": "Descarga",
+						"nueva version": "Nueva versión",
+						"uploaded_file_exceeds_the_maximum_size": "El archivo subido excede el tamaño máximo permitido",
+						"actividad_horaria": "Actividad horaria",
+						"tool_metadata": "Metadata",
+						"exportar_jerarquias": "Exportar jerarquias",
+						"translatable": "Traducible",
+						"select_search_section": "Seleccione una sección de búsqueda.",
+						"build_install_version": "Construir una versión de instalación",
+						"not_allow_to_create_note": "No puede crear notas de un cambio que no es suyo",
+						"value_already_exits_in_other_langs": "El valor ya existe en otro idioma",
+						"error_source_target_lang": "Lenguaje de origen y destino NO pueden tener el mismo idioma",
+						"tool_sort": "Herramienta de ordenación",
+						"import_bibtex_help": "Añada el fichero BIBTex y los correspondientes ficheros PDF desde su disco duro. Una vez cargados, seleccione 'Importar ficheros'",
+						"are_you_sure_to_overwrite_text": "¿Está seguro de sobrescribir el texto?",
+						"component_alternative": "Campo alternativo. No usar salvo que el término no se encuentre normalizado. Utilize en su lugar: %s",
+						"relacionar_fragmento_seleccionado": "Relacionar fragmento seleccionado",
+						"para_crear_un_fragmento": "Para crear un nuevo fragmento, simplemente seleccione una parte del texto y pulse «Nuevo fragmento» abajo",
+						"uploaded_file_exceeds_the_directive": "El archivo subido excede la directiva upload_max_filesize en php.ini",
+						"tool_replace_component_data": "Reemplazar datos del campo",
+						"total_pages": "Páginas totales",
+						"now": "Ahora",
+						"para_revisar": "Para revisar",
+						"registros_modificados": "Registros modificados",
+						"generar_turnos": "Generar turnos de visitas",
+						"label_deleted": "Borrada",
+						"label_to_review": "Por revisar",
+						"save_template": "Salvar plantilla",
+						"active_elements": "elementos activos",
+						"tool_export": "Exportar",
+						"new_fluid_page": "Nueva página fluida",
+						"tool_administration": "Herramienta de administración",
+						"tool_subtitles": "Subtítulos",
+						"new_page": "Nueva página",
+						"component_tipo": "Tipo del componente",
+						"salir": "Salir",
+						"warning": "Atención",
+						"altitude": "Altitud",
+						"tool_tr_print": "Transcripción impresión",
+						"vincular_recurso": "Vincular recurso",
+						"no": "no",
+						"changes": "cambios",
+						"empty": "Vacío",
+						"similar_to": "Similar a",
+						"abv_narrowed_term": "TE",
+						"abv_related_term": "TR",
+						"abv_use_for": "UP",
+						"abv_broader_term": "TG",
+						"search": "Búsqueda",
+						"tool_description": "Herramienta de descripción",
+						"calidad": "Calidad",
+						"create": "Crear",
+						"invalid_extension": "Extensión no válida",
+						"tool_lang": "Lenguaje",
+						"tool_update_cache": "Actualizar caché",
+						"data": "datos",
+						"relacion_anadida": "Relación añadida",
+						"user_code_does_not_exist_error": "El código de usuario no existe",
+						"total": "Total",
+						"php_extension_stopped_the_upload_file": "Una extensión de PHP detuvo la carga de archivos",
+						"breakdown": "Desglose",
+						"children_recursive": "Hijos",
+						"diameter": "Diámetro",
+						"shift_key": "Mayúsculas",
+						"error_invalid_date_format": "Error: formato de fecha invalido",
+						"alert_limit_of_emails": "Atención, superado el límite de correos.",
+						"of": "de",
+						"empty_selection": "Selección vacía",
+						"levels": "Niveles",
+						"inspector": "Inspector",
+						"translation": "Traducción",
+						"error": "Error",
+						"proceso_completado": "Proceso completado",
+						"tiempo": "Tiempo",
+						"geolocalizacion": "Geolocalización",
+						"mapa": "Mapa",
+						"preview_of_print": "Previsualización de importación",
+						"show_all": "Mostrar todos",
+						"save": "Salvar",
+						"all": "Todos",
+						"label_normal": "Normal",
+						"sync_last_version": "Sincronizando la información con la última versión",
+						"current_record": "Registro actual",
+						"discard_changes": "¿Descartar los cambios no salvados?",
+						"apply": "Aplicar",
+						"georeferenciacion_en_formato": "Georeferenciación en formato Longitud,Latitud ej. 39.46264,-0.37615",
+						"all_this_values_will_be_removed": "Todos estos valores también se eliminarán",
+						"component_in_use": "Atención: El usuario %s está usando este campo. Por favor, espere a que termine la edición.",
+						"tool_import_bibtex": "Importar de BibTex",
+						"component_deprecated": "Campo en proceso de desaparición. Este campo se fusiona con: %s",
+						"error_generate_hierarchy": "Esta jerarquía no está activa y no se puede generar",
+						"exceeded_limit": "Se ha rebasado el máximo número de valores para este campo. Límite =",
+						"seleccione_fotograma": "Seleccione fotograma en el reproductor y pulse «CREAR POSTERFRAME» para crear un fotograma a partir del video",
+						"delete_only_the_link": "Borrar sólo el vínculo",
+						"choose_page_between": "Página seleccionable entre ${page_in} y ${page_out}. Total de páginas: ${total_pages}.",
+						"are_you_sure_to_delete_note": "¿Seguro que desea borrar esta nota?",
+						"email_limit_explanation": "Los correos seleccionados para enviar superan el límite máximo de su sistema operativo, por lo que se ha procedido a crear paquetes que no superen este máximo. Haga click en los siguientes botones para crear los correos.",
+						"fecha_o_rango_en_formato": "Fecha o rango en formato  DD/MM/YYYY ó DD/MM/YYYY-DD/MM/YYYY",
+						"procesando_media_en_background": "Procesando media en segundo plano. Este proceso puede tardar, pero puede continuar trabajando.",
+						"error_el_codigo_de_usuario_no_existe": "Error. El código de usuario no existe en Dédalo. Contacte con el administrador.",
+						"user_without_profile_error": "Error: El usuario y la clave introducidos son correctos pero el usuario actual no está correctamente configurado. Por favor, contacte con su administrador para asignar perfil a su usuario.",
+						"open_relationships_of_field": "¿Abrir las relaciones de {0} del registro actual (1) o de todos los registros encontrados ({1})?",
+						"import_zotero_help": "Añada el fichero JSON de Zotero y los correspondientes ficheros PDF desde su disco duro. Una vez cargados, seleccione 'Importar ficheros'",
+						"remove_hidden_data": "Atención: Al cambiar este valor, se eliminará la información contenida en los campos que serán ocultados. ¿Desea continuar?",
+						"will_open_all_related_records": "Esto abrirá todos los datos relacionados de {0} de todos los registros en una nueva ventana sin filtros. ¿Está seguro?",
+						"no_se_encontraron_registros": "No se encontraron registros",
+						"default_lang_of_file_to_import": "Idioma por defecto del archivo a importar. Datos sin idioma especificado serán importados en:",
+						"por_favor_indexe_desde_una_seccion_de_inventario": "Por favor, indexe desde una sección de inventario (ej. Historia Oral) y no desde un  recurso",
+						"user_without_projects_error": "Error: El usuario y la clave introducidos son correctos pero el usuario actual no está correctamente configurado. Por favor, contacte con su administrador para asignar proyectos autorizados a su usuario.",
+						"type_root_password": "Escriba y vuelva a escribir la contraseña de superusuario deseada y guárdela en un lugar seguro. Utilice una contraseña segura de 8 a 32 caracteres que contenga, al menos, una letra mayúscula, una letra minúscula y un número. No se permiten caracteres idénticos en orden secuencial ('aa', '11', 'BB', etc.). No se permite el orden numérico ('123', '345', etc.) ni alfabético ('aBC', 'hIjK', etc.)."
+					}
+				},
+				"msg": "OK. Request done successfully",
+				"errors": [],
+				"action": "get_environment",
+				"csrf_token": "__FIXTURE_CSRF__",
+				"dedalo_last_error": null
+			}
+		},
+		"4aebc5191a8c768b39e839e1": {
+			"kind": "json",
+			"rqo": {
+				"action": "login",
+				"dd_api": "dd_utils_api",
+				"options": {
+					"username": "__ORACLE_USER__",
+					"auth": "__ORACLE_AUTH__"
+				}
+			},
+			"status": 200,
+			"body": {
+				"result": true,
+				"msg": " Login.. ",
+				"errors": [],
+				"result_options": {
+					"user_image": "/dedalo/core/themes/default/raspas/raspa_screen.jpg",
+					"user_id": -1
+				},
+				"default_section": "dd88",
+				"action": "login",
+				"csrf_token": "__FIXTURE_CSRF__",
+				"dedalo_last_error": null
+			}
+		},
+		"dd39fe01a7dbf5af1fef5973": {
+			"kind": "json",
+			"rqo": {
+				"action": "get_dedalo_files",
+				"dd_api": "dd_utils_api"
+			},
+			"status": 200,
+			"body": {
+				"result": [
+					{
+						"type": "css",
+						"url": "/dedalo/core/page/css/main.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_section_id/js/view_mini_section_id.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_section_id/js/view_default_list_section_id.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_section_id/js/view_text_section_id.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_section_id/js/render_search_component_section_id.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_section_id/js/view_default_edit_section_id.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_section_id/js/render_edit_component_section_id.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_section_id/js/component_section_id.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_section_id/js/render_list_component_section_id.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_check_box/js/view_default_list_check_box.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_check_box/js/render_edit_component_check_box.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_check_box/js/view_mini_list_check_box.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_check_box/js/render_search_component_check_box.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_check_box/js/view_line_edit_check_box.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_check_box/js/view_text_list_check_box.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_check_box/js/view_tools_edit_check_box.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_check_box/js/render_list_component_check_box.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_check_box/js/component_check_box.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_check_box/js/view_default_edit_check_box.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_svg/js/view_line_edit_svg.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_svg/js/view_text_list_svg.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_svg/js/view_mini_list_svg.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_svg/js/view_default_list_svg.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_svg/js/view_tag_list_svg.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_svg/js/render_list_component_svg.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_svg/js/render_search_component_svg.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_svg/js/component_svg.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_svg/js/render_edit_component_svg.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_svg/js/view_default_edit_svg.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/page/js/page.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/page/js/theme-init.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/page/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/page/js/theme.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/page/js/render_page.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/page/js/css.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_password/js/view_mini_password.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_password/js/view_default_list_password.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_password/js/view_text_list_password.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_password/js/render_list_component_password.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_password/js/view_default_edit_password.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_password/js/component_password.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_password/js/render_edit_component_password.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section/js/view_graph_solved_section.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section/js/section.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section/js/view_thesaurus_list_section.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section/js/render_edit_section.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section/js/render_list_section.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section/js/render_open_list_with_direct_relations.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section/js/view_default_list_section.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section/js/view_search_user_presets.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section/js/render_solved_section.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section/js/view_default_edit_section.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section/js/view_export_user_presets.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section/js/build_graph_data.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section/js/view_base_list_section.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section/js/render_common_section.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section/js/view_graph_edit_section.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section/js/view_graph_list_section.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/ts_object/js/render_ts_line.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/ts_object/js/drag_and_drop.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/ts_object/js/view_default_edit_ts_object.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/ts_object/js/ts_object.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/ts_object/js/render_edit_ts_object.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/ts_object/js/render_ts_id_column.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/ts_object/js/render_ts_dialogs.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_string_common/js/component_string_common.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area/js/render_area.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area/js/area.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_root/js/area_root.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_date/js/render_list_component_date.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_date/js/component_date.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_date/js/view_default_edit_date.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_date/js/render_edit_component_date.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_date/js/view_text_list_date.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_date/js/view_mini_date.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_date/js/view_line_edit_date.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_date/js/render_search_component_date.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_date/js/view_default_list_date.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/inspector/js/render_inspector.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/inspector/js/inspector.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_email/js/render_edit_component_email.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_email/js/render_search_component_email.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_email/js/view_default_list_email.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_email/js/render_list_component_email.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_email/js/view_line_edit_email.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_email/js/view_mini_email.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_email/js/view_text_list_email.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_email/js/view_default_edit_email.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_email/js/component_email.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_portal/js/view_mosaic_edit_portal.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_portal/js/view_indexation_edit_portal.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_portal/js/render_edit_component_portal.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_portal/js/render_search_component_portal.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_portal/js/view_default_edit_portal.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_portal/js/view_line_edit_portal.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_portal/js/view_text_list_portal.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_portal/js/drag_and_drop.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_portal/js/view_default_list_portal.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_portal/js/view_tree_edit_portal.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_portal/js/render_list_component_portal.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_portal/js/view_indexation_list_portal.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_portal/js/view_content_edit_portal.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_portal/js/component_portal.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_portal/js/view_mini_portal.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_portal/js/view_line_list_portal.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_portal/js/buttons.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/js/area_maintenance.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/js/render_area_maintenance.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/js/render_update_data_maintenance.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/php_user/js/render_php_user.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/php_user/js/php_user.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/unit_test/js/render_unit_test.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/unit_test/js/unit_test.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/config_areas/js/render_config_areas.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/config_areas/js/config_areas.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/make_backup/js/make_backup.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/make_backup/js/render_make_backup.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/move_locator/js/move_locator.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/move_locator/js/render_move_locator.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/move_to_table/js/render_move_to_table.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/move_to_table/js/move_to_table.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/media_control/js/render_media_control.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/media_control/js/media_control.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/register_tools/js/register_tools.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/register_tools/js/render_register_tools.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/move_lang/js/render_move_lang.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/move_lang/js/move_lang.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/publication_api/js/render_publication_api.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/publication_api/js/publication_api.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/build_database_version/js/build_database_version.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/build_database_version/js/render_build_database_version.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/diffusion_server_control/js/diffusion_server_control.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/diffusion_server_control/js/render_diffusion_server_control.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/update_code/js/render_update_code.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/update_code/js/update_code.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/export_hierarchy/js/export_hierarchy.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/export_hierarchy/js/render_export_hierarchy.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/update_ontology/js/render_update_ontology.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/update_ontology/js/update_ontology.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/lock_components/js/lock_components.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/lock_components/js/render_lock_components.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/menu_skip_tipos/js/render_menu_skip_tipos.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/menu_skip_tipos/js/menu_skip_tipos.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/sqo_test_environment/js/render_sqo_test_environment.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/sqo_test_environment/js/sqo_test_environment.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/sequences_status/js/sequences_status.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/sequences_status/js/render_sequences_status.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/system_info/js/system_info.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/system_info/js/render_system_info.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/counters_status/js/render_counters_status.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/counters_status/js/counters_status.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/update_data_version/js/update_data_version.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/update_data_version/js/render_update_data_version.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/move_to_portal/js/move_to_portal.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/move_to_portal/js/render_move_to_portal.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/environment/js/render_environment.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/environment/js/environment.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/move_tld/js/move_tld.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/move_tld/js/render_move_tld.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/add_hierarchy/js/add_hierarchy.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/add_hierarchy/js/render_add_hierarchy.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/database_info/js/render_database_info.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/database_info/js/database_info.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/check_config/js/check_config.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/check_config/js/render_check_config.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/dedalo_api_test_environment/js/dedalo_api_test_environment.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/dedalo_api_test_environment/js/render_dedalo_api_test_environment.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/php_runtime/js/php_runtime.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/php_runtime/js/render_php_runtime.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/php_info/js/php_info.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/php_info/js/render_php_info.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/dataframe_control/js/dataframe_control.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_maintenance/widgets/dataframe_control/js/render_dataframe_control.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_thesaurus/js/area_thesaurus.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_thesaurus/js/render_area_thesaurus.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section_record/js/view_default_edit_section_record.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section_record/js/render_list_section_record.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section_record/js/section_record.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section_record/js/render_edit_section_record.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section_record/js/view_default_list_section_record.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section_record/js/view_mini_section_record.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section_record/js/view_text_section_record.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/relation_list/js/relation_list.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/relation_list/js/render_relation_list.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_av/js/view_player_edit_av.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_av/js/component_av.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_av/js/view_text_list_av.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_av/js/view_mini_list_av.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_av/js/view_default_list_av.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_av/js/view_viewer_edit_av.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_av/js/render_search_component_av.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_av/js/render_edit_component_av.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_av/js/view_default_edit_av.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_av/js/render_list_component_av.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_publication/js/view_mini_list_publication.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_publication/js/view_text_list_publication.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_publication/js/render_search_component_publication.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_publication/js/render_list_component_publication.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_publication/js/view_line_edit_publication.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_publication/js/render_edit_component_publication.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_publication/js/view_default_edit_publication.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_publication/js/component_publication.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_publication/js/view_default_list_publication.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_filter_records/js/view_mini_list_filter_records.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_filter_records/js/render_edit_component_filter_records.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_filter_records/js/render_list_component_filter_records.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_filter_records/js/view_default_edit_filter_records.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_filter_records/js/view_text_list_filter_records.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_filter_records/js/render_search_component_filter_records.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_filter_records/js/component_filter_records.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_filter_records/js/view_default_list_filter_records.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_resource/js/area_resource.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_3d/js/view_mini_list_3d.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_3d/js/view_text_list_3d.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_3d/js/component_3d.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_3d/js/viewer/viewer.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_3d/js/viewer/environments.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_3d/js/render_list_component_3d.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_3d/js/view_default_edit_3d.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_3d/js/render_edit_component_3d.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_3d/js/render_search_component_3d.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_3d/js/view_default_list_3d.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/dd_grid/js/view_default_dd_grid.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/dd_grid/js/render_list_dd_grid.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/dd_grid/js/view_mini_dd_grid.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/dd_grid/js/view_table_dd_grid.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/dd_grid/js/view_indexation_dd_grid.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/dd_grid/js/dd_grid.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/dd_grid/js/view_descriptors_dd_grid.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_pdf/js/view_default_edit_pdf.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_pdf/js/render_edit_component_pdf.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_pdf/js/component_pdf.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_pdf/js/view_default_list_pdf.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_pdf/js/view_viewer_pdf.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_pdf/js/render_list_component_pdf.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_pdf/js/render_search_component_pdf.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_pdf/js/view_text_list_pdf.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_pdf/js/view_mini_pdf.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_tool/js/area_tool.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_input_text/js/events_subscription.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_input_text/js/view_mini_input_text.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_input_text/js/view_colorpicker_edit_input_text.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_input_text/js/view_default_list_input_text.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_input_text/js/view_text_input_text.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_input_text/js/render_search_component_input_text.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_input_text/js/view_line_edit_input_text.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_input_text/js/view_default_edit_input_text.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_input_text/js/render_edit_component_input_text.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_input_text/js/view_ip_list_input_text.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_input_text/js/component_input_text.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_input_text/js/render_list_component_input_text.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section_tab/js/render_section_tab.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section_tab/js/section_tab.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/search/js/search_user_presets.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/search/js/search_utils.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/search/js/render_search.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/search/js/search.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/search/js/search_drag.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_radio_button/js/render_search_component_radio_button.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_radio_button/js/component_radio_button.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_radio_button/js/view_line_edit_radio_button.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_radio_button/js/view_default_edit_radio_button.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_radio_button/js/render_list_component_radio_button.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_radio_button/js/view_default_list_radio_button.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_radio_button/js/render_edit_component_radio_button.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_radio_button/js/view_text_list_radio_button.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_radio_button/js/view_rating_edit_radio_button.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_radio_button/js/view_mini_list_radio_button.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_relation_model/js/component_relation_model.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/instances.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/events.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/ui.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/error_capture.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/ui-search.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/worker_data.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/dd-modal.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/utils/util.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/utils/lzstring.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/utils/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/utils/keyboard.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/utils/cookie_manager.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/utils/cookie.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/utils/notifications.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/ua.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/lang/lg-eng.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/lang/lg-vlca.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/lang/lg-ita.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/lang/lg-ell.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/lang/lg-deu.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/lang/lg-por.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/lang/lg-cat.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/lang/lg-nep.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/lang/lg-glg.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/lang/lg-fra.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/lang/lg-spa.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/data_manager.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/error_report_launcher.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/event_manager.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/section_map.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/common.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/render_common.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/common/js/tr.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_relation_related/js/component_relation_related.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_text_area/js/view_mini_text_area.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_text_area/js/view_line_edit_text_area.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_text_area/js/render_edit_component_text_area.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_text_area/js/render_draw.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_text_area/js/render_search_component_text_area.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_text_area/js/view_default_list_text_area.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_text_area/js/view_note_text_area.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_text_area/js/view_text_list_text_area.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_text_area/js/view_default_edit_text_area.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_text_area/js/render_list_component_text_area.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_text_area/js/component_text_area.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_text_area/js/render_reference.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_inverse/js/component_inverse.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_inverse/js/view_text_inverse.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_inverse/js/render_list_component_inverse.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_inverse/js/view_mini_inverse.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_inverse/js/view_default_edit_inverse.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_inverse/js/view_default_list_inverse.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_inverse/js/render_edit_component_inverse.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_common/js/area_common.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_common/js/dashboard.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_relation_index/js/component_relation_index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_media_common/js/component_media_common.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_relation_parent/js/component_relation_parent.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_publication/js/area_publication.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_select/js/component_select.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_select/js/render_list_component_select.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_select/js/view_default_list_select.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_select/js/view_mini_list_select.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_select/js/view_line_edit_select.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_select/js/view_text_list_select.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_select/js/render_edit_component_select.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_select/js/render_search_component_select.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_select/js/view_default_edit_select.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/menu/js/render_menu.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/menu/js/render_menu_mobile.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/menu/js/render_menu_tree.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/menu/js/menu.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/menu/js/view_default_edit_menu.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_dataframe/js/component_dataframe.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_dataframe/js/view_mini_list_dataframe.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_dataframe/js/view_default_list_dataframe.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_filter/js/view_mini_list_filter.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_filter/js/view_default_list_filter.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_filter/js/render_list_component_filter.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_filter/js/component_filter.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_filter/js/view_collapse_list_filter.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_filter/js/view_default_edit_filter.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_filter/js/render_search_component_filter.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_filter/js/render_edit_component_filter.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_filter/js/view_text_list_filter.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_filter/js/view_line_edit_filter.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_relation_children/js/component_relation_children.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_iri/js/view_default_list_iri.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_iri/js/output_component_iri.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_iri/js/render_search_component_iri.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_iri/js/render_list_component_iri.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_iri/js/component_iri.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_iri/js/render_edit_component_iri.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_iri/js/view_default_edit_iri.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_iri/js/view_line_edit_iri.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_iri/js/view_text_list_iri.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_iri/js/view_mini_iri.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_development/js/area_development.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_activity/js/area_activity.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_external/js/render_search_component_external.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_external/js/view_mini_list_external.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_external/js/view_default_edit_component_external.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_external/js/view_text_list_component_external.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_external/js/view_default_list_component_external.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_external/js/render_list_component_external.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_external/js/component_external.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_external/js/render_edit_component_external.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_image/js/render_search_component_image.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_image/js/render_list_component_image.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_image/js/view_default_list_image.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_image/js/view_mosaic_list_image.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_image/js/render_edit_component_image.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_image/js/view_text_list_image.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_image/js/vector_editor.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_image/js/view_default_edit_image.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_image/js/component_image.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_image/js/view_viewer_image.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_image/js/view_mini_image.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_geolocation/js/view_default_edit_geolocation.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_geolocation/js/view_mini_geolocation.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_geolocation/js/view_default_list_geolocation.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_geolocation/js/component_geolocation.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_geolocation/js/render_list_component_geolocation.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_geolocation/js/render_search_component_geolocation.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_geolocation/js/view_text_list_geolocation.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_geolocation/js/render_edit_component_geolocation.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/paginator/js/render_paginator_micro.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/paginator/js/render_paginator_mini.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/paginator/js/paginator.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/paginator/js/render_paginator.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/installer/js/installer.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/installer/js/render_installer.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_admin/js/area_admin.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_graph/js/render_area_graph.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_graph/js/area_graph.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_number/js/view_text_list_number.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_number/js/view_line_edit_number.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_number/js/view_default_edit_number.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_number/js/render_search_component_number.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_number/js/render_edit_component_number.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_number/js/view_mini_number.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_number/js/component_number.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_number/js/render_list_component_number.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_number/js/view_default_list_number.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_info/js/component_info.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_info/js/render_list_component_info.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_info/js/render_edit_component_info.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_info/js/view_default_edit_info.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_info/js/view_default_list_info.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_info/js/view_line_edit_info.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_info/js/view_mini_info.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_common/js/events_subscription.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_common/js/dataframe.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_common/js/component_common.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section_group/js/render_section_group.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/section_group/js/section_group.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_security_access/js/render_list_component_security_access.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_security_access/js/component_security_access.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_security_access/js/view_mini_list_security_access.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_security_access/js/view_text_list_security_access.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_security_access/js/render_search_component_security_access.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_security_access/js/view_default_edit_security_access.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_security_access/js/view_default_list_security_access.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_security_access/js/render_edit_component_security_access.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_security_access/js/worker_security_access.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_select_lang/js/component_select_lang.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/login/js/login.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/login/js/render_login.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/login/saml/js/saml.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/login/saml/js/render_saml.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/services/service_dropzone/js/service_dropzone.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/services/service_dropzone/js/render_edit_service_dropzone.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/services/service_upload/js/render_edit_service_upload.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/services/service_upload/js/service_upload.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/services/service_subtitles/js/service_subtitles.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/services/service_tmp_section/js/render_edit_service_tmp_section.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/services/service_tmp_section/js/service_tmp_section.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/services/service_autocomplete/js/service_autocomplete.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/services/service_autocomplete/js/view_default_autocomplete.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/services/service_ckeditor/js/service_ckeditor.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/services/service_ckeditor/js/render_text_editor.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/services/service_time_machine/js/view_mini_time_machine_list.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/services/service_time_machine/js/view_history_time_machine_list.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/services/service_time_machine/js/view_default_time_machine_list.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/services/service_time_machine/js/render_service_time_machine_list.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/services/service_time_machine/js/view_tool_time_machine_list.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/services/service_time_machine/js/service_time_machine.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/dmm/get_archive_states/js/get_archive_states.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/dmm/get_archive_states/js/render_get_archive_states.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/state/js/render_edit_state.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/state/js/state.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/state/js/render_list_state.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/mdcat/sum_dates/js/render_sum_dates.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/mdcat/sum_dates/js/sum_dates.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/calculation/js/calculation.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/calculation/js/render_calculation.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/dd/user_activity/js/user_activity.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/dd/user_activity/js/render_user_activity.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/oh/media_icons/js/render_media_icons.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/oh/media_icons/js/media_icons.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/oh/tags/js/tags.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/oh/tags/js/render_tags.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/oh/descriptors/js/render_list_descriptors.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/oh/descriptors/js/render_edit_descriptors.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/oh/descriptors/js/descriptors.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/numisdata/get_coins_by_period/js/render_get_coins_by_period.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/numisdata/get_coins_by_period/js/get_coins_by_period.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/numisdata/get_archive_weights/js/get_archive_weights.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/numisdata/get_archive_weights/js/render_get_archive_weights.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/widgets/widget_common/js/widget_common.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/area_ontology/js/area_ontology.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_json/js/render_list_component_json.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_json/js/component_json.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_json/js/view_text_json.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_json/js/view_collapse_list_json.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_json/js/render_edit_component_json.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_json/js/view_default_edit_json.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_json/js/view_mini_json.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_json/js/render_search_component_json.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_json/js/view_default_list_json.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/core/component_filter_master/js/component_filter_master.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_cataloging/css/tool_cataloging.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_cataloging/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_cataloging/js/tool_cataloging.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_cataloging/js/view_tool_cataloging_mosaic.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_cataloging/js/render_tool_cataloging.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_ontology_parser/css/tool_ontology_parser.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_ontology_parser/js/tool_ontology_parser.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_ontology_parser/js/render_tool_ontology_parser.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_ontology_parser/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_numisdata_order_coins/css/tool_numisdata_order_coins.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_numisdata_order_coins/js/tool_numisdata_order_coins.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_numisdata_order_coins/js/render_tool_numisdata_order_coins.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_numisdata_order_coins/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_numisdata_order_coins/js/view_coins_mosaic_portal.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_lang/css/tool_lang.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_lang/js/tool_lang-min.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_lang/js/tool_lang.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_lang/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_lang/js/render_tool_lang.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_lang/js/browser_translation.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_lang/js/markdown_utils.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_lang_multi/css/tool_lang_multi.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_lang_multi/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_lang_multi/js/render_tool_lang_multi.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_lang_multi/js/tool_lang_multi.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_propagate_component_data/css/tool_propagate_component_data.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_propagate_component_data/js/render_tool_propagate_component_data.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_propagate_component_data/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_propagate_component_data/js/tool_propagate_component_data.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_print/css/tool_print.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_print/js/render_box_tool_print.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_print/js/render_tool_print.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_print/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_print/js/canvas_tool_print.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_print/js/flow_engine.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_print/js/print_layout_presets.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_print/js/tool_print.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_tc/css/tool_tc.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_tc/js/tool_tc.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_tc/js/render_tool_tc.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_tc/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_tr_print/css/tool_tr_print.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_tr_print/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_tr_print/js/tool_tr_print.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_tr_print/js/render_tool_tr_print.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_qr/css/tool_qr.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_qr/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_qr/js/worker_qr.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_qr/js/tool_qr.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_qr/js/render_tool_qr.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_import_dedalo_csv/css/tool_import_dedalo_csv.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_import_dedalo_csv/js/render_tool_import_dedalo_csv.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_import_dedalo_csv/js/tool_import_dedalo_csv.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_import_dedalo_csv/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_posterframe/css/tool_posterframe.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_posterframe/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_posterframe/js/tool_posterframe.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_posterframe/js/render_tool_posterframe.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_pdf_extractor/css/tool_pdf_extractor.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_pdf_extractor/js/render_tool_pdf_extractor.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_pdf_extractor/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_pdf_extractor/js/tool_pdf_extractor.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_ontology/css/tool_ontology.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_ontology/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_ontology/js/render_tool_ontology.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_ontology/js/tool_ontology.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_media_versions/css/tool_media_versions.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_media_versions/js/tool_media_versions.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_media_versions/js/render_tool_media_versions.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_media_versions/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_subtitles/css/tool_subtitles.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_subtitles/js/render_tool_subtitles.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_subtitles/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_subtitles/js/tool_subtitles.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_hierarchy/css/tool_hierarchy.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_hierarchy/js/render_tool_hierarchy.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_hierarchy/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_hierarchy/js/tool_hierarchy.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_import_marc21/css/tool_import_marc21.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_import_marc21/js/render_tool_import_marc21.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_import_marc21/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_import_marc21/js/tool_import_marc21.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_export/css/tool_export.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_export/js/render_tool_export.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_export/js/flat_table.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_export/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_export/js/drag_tool_export.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_export/js/tool_export.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_export/js/export_user_presets.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_indexation/css/tool_indexation.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_indexation/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_indexation/js/tag_note.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_indexation/js/render_tool_indexation.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_indexation/js/tool_indexation.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_image_rotation/css/tool_image_rotation.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_image_rotation/js/render_tool_image_rotation.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_image_rotation/js/tool_image_rotation.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_image_rotation/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_image_rotation/js/render_tool_image_crop.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_dev_template/css/tool_dev_template.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_dev_template/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_dev_template/js/render_tool_dev_template.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_dev_template/js/tool_dev_template.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_transcription/css/tool_transcription.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_transcription/js/tool_transcription.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_transcription/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_transcription/js/render_tool_transcription.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_assistant/css/tool_assistant.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_assistant/js/conversation_store.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_assistant/js/chat_render.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_assistant/js/client_context.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_assistant/js/ai_assistant.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_assistant/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_assistant/js/render_tool_assistant.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_assistant/js/tool_assistant.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_assistant/js/client_tools.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_assistant/js/model_engine.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_assistant/js/mcp_client.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_assistant/js/markdown.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_import_rdf/css/tool_import_rdf.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_import_rdf/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_import_rdf/js/tool_import_rdf.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_import_rdf/js/render_tool_import_rdf.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_upload/css/tool_upload.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_upload/js/render_tool_upload.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_upload/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_upload/js/tool_upload.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_numisdata_epigraphy/css/tool_numisdata_epigraphy.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_numisdata_epigraphy/js/render_tool_numisdata_epigraphy.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_numisdata_epigraphy/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_numisdata_epigraphy/js/tool_numisdata_epigraphy.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_time_machine/css/tool_time_machine.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_time_machine/js/tool_time_machine.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_time_machine/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_time_machine/js/render_tool_time_machine.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_common/js/tool_common.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_common/js/processors/remove_background/remove_background.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_common/js/render_tool_common.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_diffusion/css/tool_diffusion.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_diffusion/js/render_tool_diffusion.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_diffusion/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_diffusion/js/tool_diffusion.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_import_zotero/css/tool_import_zotero.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_import_zotero/js/tool_import_zotero.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_import_zotero/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_import_zotero/js/render_tool_import_zotero.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_dd_label/css/tool_dd_label.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_dd_label/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_dd_label/js/render_tool_dd_label.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_dd_label/js/tool_dd_label.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_import_files/css/tool_import_files.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_import_files/js/render_tool_import_files.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_import_files/js/tool_import_files.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_import_files/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_user_admin/css/tool_user_admin.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_user_admin/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_user_admin/js/render_tool_user_admin.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_user_admin/js/tool_user_admin.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_update_cache/css/tool_update_cache.css"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_update_cache/js/render_tool_update_cache.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_update_cache/js/index.js"
+					},
+					{
+						"type": "js",
+						"url": "/dedalo/tools/tool_update_cache/js/tool_update_cache.js"
+					}
+				],
+				"msg": "OK. Request done successfully",
+				"dedalo_version": "7.0.0.dev",
+				"action": "get_dedalo_files",
+				"csrf_token": "__FIXTURE_CSRF__",
+				"debug": {
+					"api_exec_time": "186.372 ms",
+					"memory_usage": "4 MB",
+					"rqo": {
+						"action": "get_dedalo_files",
+						"dd_api": "dd_utils_api"
+					},
+					"rqo_string": "{\n    \"action\": \"get_dedalo_files\",\n    \"dd_api\": \"dd_utils_api\"\n}",
+					"real_execution_time": "190.222166 ms"
+				},
+				"dedalo_last_error": null
+			}
+		}
+	}
+}

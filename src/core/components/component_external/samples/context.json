@@ -1,0 +1,43 @@
+{
+	"typo": "ddo",
+	"type": "component",
+	"tipo": "zenon4",
+	"section_tipo": "zenon1",
+	"parent": "rsc368",
+	"parent_grouper": "zenon2",
+	"lang": "lg-nolan",
+	"mode": "list",
+	"model": "component_external",
+	"properties": {
+		"fields_map": [
+			{
+				"local": "dato",
+				"remote": "title"
+			}
+		]
+	},
+	"permissions": 3,
+	"label": "Title",
+	"translatable": false,
+	"tools": [],
+	"buttons": [],
+	"sortable": true,
+	"legacy_model": "component_external",
+	"path": [
+		{
+			"component_tipo": "rsc368",
+			"model": "component_portal",
+			"name": "Publication",
+			"section_tipo": "rsc332"
+		},
+		{
+			"name": "Title",
+			"model": "component_external",
+			"section_tipo": "zenon1",
+			"component_tipo": "zenon4"
+		}
+	],
+	"debug": {
+		"exec_time": "0.055 ms"
+	}
+}

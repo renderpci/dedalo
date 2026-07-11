@@ -1,0 +1,611 @@
+{
+  "id": "3962",
+  "section_id": "7",
+  "section_tipo": "dd1340",
+  "data": {
+    "label": "Tools development",
+    "section_id": 7,
+    "created_date": "2026-06-18 11:43:39",
+    "section_tipo": "dd1340",
+    "diffusion_info": null,
+    "created_by_user_id": -1
+  },
+  "relation": {
+    "dd197": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd197"
+      }
+    ],
+    "dd200": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd200"
+      }
+    ],
+    "dd1330": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "8",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      },
+      {
+        "id": 2,
+        "type": "dd151",
+        "section_id": "30",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      },
+      {
+        "id": 3,
+        "type": "dd151",
+        "section_id": "20",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      },
+      {
+        "id": 4,
+        "type": "dd151",
+        "section_id": "50",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      },
+      {
+        "id": 5,
+        "type": "dd151",
+        "section_id": "52",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      }
+    ],
+    "dd1331": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1331"
+      }
+    ],
+    "dd1332": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1332"
+      }
+    ],
+    "dd1333": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1333"
+      }
+    ],
+    "dd1337": [
+      {
+        "id": 1,
+        "type": "dd675",
+        "section_id": "1",
+        "section_tipo": "dd153",
+        "from_component_tipo": "dd1337"
+      }
+    ],
+    "dd1354": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1354"
+      }
+    ]
+  },
+  "string": {
+    "dd612": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "<p>Gestiona fitxers multimèdia amb diferents versions de qualitat</p>"
+      },
+      {
+        "id": 2,
+        "lang": "lg-eng",
+        "value": "<p>Manages media files with different quality versions</p>"
+      },
+      {
+        "id": 3,
+        "lang": "lg-ita",
+        "value": "<p>Gestisce file multimediali con diverse versioni di qualità</p>"
+      },
+      {
+        "id": 4,
+        "lang": "lg-por",
+        "value": "<p>Gere ficheiros multimédia com diferentes versões de qualidade</p>"
+      },
+      {
+        "id": 5,
+        "lang": "lg-spa",
+        "value": "<p>Gestiona archivos multimedia con diferentes versiones de calidad.</p>"
+      }
+    ],
+    "dd799": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "Versions de mitjans"
+      },
+      {
+        "id": 2,
+        "lang": "lg-deu",
+        "value": "Medienversionen"
+      },
+      {
+        "id": 3,
+        "lang": "lg-ell",
+        "value": "Εκδόσεις πολυμέσων"
+      },
+      {
+        "id": 4,
+        "lang": "lg-eng",
+        "value": "Media versions"
+      },
+      {
+        "id": 5,
+        "lang": "lg-eus",
+        "value": "Baliabideen bertsioak"
+      },
+      {
+        "id": 6,
+        "lang": "lg-fra",
+        "value": "Versions pour les médias"
+      },
+      {
+        "id": 7,
+        "lang": "lg-ita",
+        "value": "Versioni multimediali"
+      },
+      {
+        "id": 8,
+        "lang": "lg-nep",
+        "value": "मिडिया संस्करणहरू"
+      },
+      {
+        "id": 9,
+        "lang": "lg-por",
+        "value": "Versões multimédia"
+      },
+      {
+        "id": 10,
+        "lang": "lg-spa",
+        "value": "Versiones media"
+      }
+    ],
+    "dd1326": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "tool_media_versions"
+      }
+    ],
+    "dd1327": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "2.0.4"
+      }
+    ],
+    "dd1328": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "6.2.6"
+      }
+    ],
+    "dd1644": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "Dédalo team"
+      }
+    ]
+  },
+  "date": {
+    "dd199": [
+      {
+        "id": 1,
+        "start": {
+          "day": 7,
+          "hour": 17,
+          "time": 64991957642,
+          "year": 2022,
+          "month": 2,
+          "minute": 34,
+          "second": 2
+        }
+      }
+    ],
+    "dd201": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "start": {
+          "day": 18,
+          "hour": 11,
+          "time": 65132163819,
+          "year": 2026,
+          "month": 6,
+          "minute": 43,
+          "second": 39
+        }
+      }
+    ]
+  },
+  "iri": null,
+  "geo": null,
+  "number": null,
+  "media": null,
+  "misc": {
+    "dd1335": [
+      {
+        "id": 1,
+        "value": {
+          "specific_actions": {
+            "rotate": [
+              "component_image"
+            ],
+            "conform_headers": [
+              "component_av"
+            ]
+          }
+        }
+      }
+    ],
+    "dd1372": [
+      {
+        "id": 1,
+        "value": [
+          {
+            "lang": "lg-fra",
+            "name": "show_data",
+            "value": "Afficher les données"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "files_info_is_unsync",
+            "value": "Datei-Infodaten sind unsynchronisiert"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "show_data",
+            "value": "Daten anzeigen"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "sync_data",
+            "value": "Daten synchronisieren"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "sync_data",
+            "value": "Dati di sincronizzazione"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "sync_data",
+            "value": "Données de synchronisation"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "files_info_is_unsync",
+            "value": "Files info data is unsync"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "files_info_is_unsync",
+            "value": "Files info data is unsync"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "files_info_is_unsync",
+            "value": "Les dades d'informació dels fitxers no estan sincronitzades"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "files_info_is_unsync",
+            "value": "Les données d'information sur les fichiers ne sont pas synchronisées"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "files_info_is_unsync",
+            "value": "Los datos de información de los archivos no están sincronizados"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "show_data",
+            "value": "Mostra dati"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "show_data",
+            "value": "Mostrar dades"
+          },
+          {
+            "lang": "lg-por",
+            "name": "show_data",
+            "value": "Mostrar dados"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "show_data",
+            "value": "Mostrar datos"
+          },
+          {
+            "lang": "lg-por",
+            "name": "files_info_is_unsync",
+            "value": "Os dados de informação dos ficheiros não estão sincronizados"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "show_data",
+            "value": "Show data"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "sync_data",
+            "value": "Sincronitzar dades"
+          },
+          {
+            "lang": "lg-por",
+            "name": "sync_data",
+            "value": "Sincronizar dados"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "sync_data",
+            "value": "Sincronizar datos"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "sync_data",
+            "value": "Sync data"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "sync_data",
+            "value": "Δεδομένα συγχρονισμού"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "show_data",
+            "value": "Εμφάνιση δεδομένων"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "files_info_is_unsync",
+            "value": "Τα δεδομένα πληροφοριών αρχείων δεν είναι συγχρονισμένα"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "show_data",
+            "value": "डाटा देखाउनुहोस्"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "sync_data",
+            "value": "डेटा सिंक गर्नुहोस्"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "files_info_is_unsync",
+            "value": "फाइल जानकारी डेटा सिंक छैन"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "delete_normalized_files",
+            "value": "Delete normalized files"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "delete_normalized_files",
+            "value": "Borrar archivos normalizados"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "delete_normalized_files",
+            "value": "Esborrar fitxers normalitzats"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "delete_normalized_files",
+            "value": ""
+          },
+          {
+            "lang": "lg-por",
+            "name": "delete_normalized_files",
+            "value": "Eliminar ficheiros normalizados"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "delete_normalized_files",
+            "value": "Supprimer les fichiers normalisés"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "delete_normalized_files",
+            "value": "Eliminare i file normalizzati"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "delete_normalized_files",
+            "value": "Διαγραφή κανονικοποιημένων αρχείων"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "delete_normalized_files",
+            "value": "Normalisierte Dateien löschen"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "delete_normalized_files",
+            "value": "सामान्यीकृत फाइलहरू मेटाउनुहोस्"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "regenerate",
+            "value": "Regenerate files"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "regenerate",
+            "value": "Regenerar ficheros"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "regenerate",
+            "value": "Regenerar fitxers"
+          },
+          {
+            "lang": "lg-por",
+            "name": "regenerate",
+            "value": "Regenerar ficheiros"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "regenerate",
+            "value": ""
+          },
+          {
+            "lang": "lg-fra",
+            "name": "regenerate",
+            "value": "Régénérer les fichiers\n"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "regenerate",
+            "value": "Rigenerare i file"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "regenerate",
+            "value": "Αναγέννηση αρχείων"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "regenerate",
+            "value": "Dateien neu generieren"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "regenerate",
+            "value": "फाइलहरू पुन: उत्पन्न गर्नुहोस्"
+          }
+        ]
+      }
+    ]
+  },
+  "relation_search": null,
+  "meta": {
+    "dd197": [
+      {
+        "count": 1
+      }
+    ],
+    "dd199": [
+      {
+        "count": 1
+      }
+    ],
+    "dd200": [
+      {
+        "count": 1
+      }
+    ],
+    "dd201": [
+      {
+        "count": 1
+      }
+    ],
+    "dd612": [
+      {
+        "count": 5
+      }
+    ],
+    "dd799": [
+      {
+        "count": 10
+      }
+    ],
+    "dd1326": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1327": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1328": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1330": [
+      {
+        "count": 5
+      }
+    ],
+    "dd1331": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1332": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1333": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1335": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1337": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1354": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1372": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1644": [
+      {
+        "count": 1
+      }
+    ]
+  }
+}

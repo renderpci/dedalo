@@ -1,0 +1,13 @@
+# Cadence for dedalo-ts-watchdog.service (audit S2-38).
+#   sudo systemctl enable --now dedalo-ts-watchdog.timer
+
+[Unit]
+Description=Run the Dedalo TS health watchdog every 30s
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=30
+AccuracySec=5
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,48 @@
+[
+	{
+		"label": "MDCAT transformations",
+		"info": "Move custom mdcat tld to a generic dmm",
+		"dedalo_version": "6.2.4",
+		"files": [
+			"1_censo_simbologia_mdcat813_to_dmm269.json",
+			"2_fosas_mdcat1531to_dmm480.json",
+			"3_deportation_nazi_camps_mdcat1015_to_dmm1500.json",
+			"4_espais_mdcat757_to_dmm916.json",
+			"5_desaparecidos_mdcat1654_to_dmm1023.json",
+			"6_research_mdcat4418_to_dmm524.json",
+			"7_desaparecidos_mdcat1654_to_dmm1023.json"
+		]
+	},
+	{
+		"label": "Old period => dc Chronological descriptors",
+		"info": "Move old custom period tld to a generic dc",
+		"dedalo_version": "6.2.4",
+		"files": [
+			"chronological_hierarchy_peri1_to_dc1.json"
+		]
+	},
+	{
+		"label": "Finds => Immobile",
+		"info": "Move old custom finds tld to a generic Immobile",
+		"dedalo_version": "6.2.4",
+		"files": [
+			"finds_numisdata279_to_tchi1.json"
+		]
+	},
+	{
+		"label": "Old objet => object Object descriptors",
+		"info": "Move old custom objet tld to a generic object",
+		"dedalo_version": "6.2.4",
+		"files": [
+			"object_hierarchy_objet1_to_object1.json"
+		]
+	},
+	{
+		"label": "Old Register section => New Register section",
+		"info": "Move old tch2 tld to tch10",
+		"dedalo_version": "6.2.4",
+		"files": [
+			"register_tch2_to_tch10.json"
+		]
+	}
+]

@@ -1,0 +1,12 @@
+# Nightly cadence for dedalo-backup.service (audit S2-35).
+#   sudo systemctl enable --now dedalo-backup.timer
+
+[Unit]
+Description=Run the Dedalo backup set nightly
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

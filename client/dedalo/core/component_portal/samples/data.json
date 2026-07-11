@@ -1,0 +1,23 @@
+[
+	{
+	  "id": 1,
+	  "type": "dd151",
+	  "section_id": "49",
+	  "section_tipo": "test3",
+	  "from_component_tipo": "test80"
+	},
+	{
+	  "id": 2,
+	  "type": "dd151",
+	  "section_id": "50",
+	  "section_tipo": "test3",
+	  "from_component_tipo": "test80"
+	},
+	{
+	  "id": 4,
+	  "type": "dd151",
+	  "section_id": "52",
+	  "section_tipo": "test3",
+	  "from_component_tipo": "test80"
+	}
+]

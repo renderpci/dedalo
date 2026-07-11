@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# OS noise
+.DS_Store
+
+# Never commit secrets (config lives in ../private/, outside the repo)
+.env
+client/dedalo/lib/
+
+# Claude Code machine-local state (skills ARE versioned; these are not)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# Local-only foundation audits (security analysis etc.) — not version-controlled
+audits/
+.claude_migration_component_alias_preimage.json
+rewrite

@@ -1,0 +1,628 @@
+{
+	"meta": {
+		"captured_at": "2026-07-06T23:46:46.089Z",
+		"capture_commit": "e90c9b5",
+		"php_api_base_url": "http://localhost:8080/dedalo/core/api/v1/json/",
+		"entity": "monedaiberica",
+		"http_status": 200,
+		"requires_login": true,
+		"comment": "Real dd_core_api::read of one section record (numisdata6 #1, exists in dev DB). Requires PHP_API_USERNAME/PASSWORD in private/.env.",
+		"drift_policy": "This fixture pins a live shared-DB record. If the replay gate reds with NO engine change, the record was edited on the shared DB: verify the diff is data-side only, then re-capture with `bun run scripts/capture_fixture.ts <name>` in the same change that adjudicates the red."
+	},
+	"response": {
+		"result": {
+			"context": [
+				{
+					"typo": "ddo",
+					"type": "section",
+					"tipo": "numisdata6",
+					"section_tipo": "numisdata6",
+					"parent": "numisdata6",
+					"parent_grouper": "numisdata1",
+					"lang": "lg-nolan",
+					"mode": "list",
+					"model": "section",
+					"properties": {
+						"source": {
+							"request_config": [
+								{
+									"sqo": {
+										"section_tipo": [
+											{
+												"value": [
+													"numisdata6"
+												],
+												"source": "section"
+											}
+										]
+									},
+									"show": {
+										"ddo_map": [
+											{
+												"info": "Publishable component_publication",
+												"mode": "edit",
+												"tipo": "numisdata434",
+												"view": "line",
+												"width": "4.5rem",
+												"parent": "self",
+												"section_tipo": "self"
+											},
+											{
+												"info": "Ceca component_input_text",
+												"tipo": "numisdata16",
+												"width": "8rem",
+												"parent": "self",
+												"section_tipo": "self"
+											},
+											{
+												"info": "Information private component_text_area",
+												"tipo": "numisdata17",
+												"parent": "self",
+												"section_tipo": "self"
+											},
+											{
+												"info": "Information public component_text_area",
+												"tipo": "numisdata18",
+												"parent": "self",
+												"section_tipo": "self"
+											}
+										],
+										"fields_separator": " | "
+									},
+									"api_engine": "dedalo"
+								}
+							]
+						}
+					},
+					"permissions": 3,
+					"label": "Cecas",
+					"translatable": false,
+					"tools": [
+						{
+							"typo": "ddo",
+							"type": "tool",
+							"section_tipo": "dd1324",
+							"mode": "edit",
+							"model": "tool_diffusion",
+							"label": "Difusión",
+							"css": {
+								"url": "/dedalo/tools/tool_diffusion/css/tool_diffusion.css"
+							},
+							"name": "tool_diffusion",
+							"icon": "/dedalo/tools/tool_diffusion/img/icon.svg",
+							"show_in_inspector": false,
+							"show_in_component": false
+						},
+						{
+							"typo": "ddo",
+							"type": "tool",
+							"section_tipo": "dd1324",
+							"mode": "edit",
+							"model": "tool_export",
+							"properties": {
+								"open_as": "window",
+								"windowFeatures": null
+							},
+							"label": "Exportar",
+							"css": {
+								"url": "/dedalo/tools/tool_export/css/tool_export.css"
+							},
+							"name": "tool_export",
+							"icon": "/dedalo/tools/tool_export/img/icon.svg",
+							"show_in_inspector": false,
+							"show_in_component": false
+						},
+						{
+							"typo": "ddo",
+							"type": "tool",
+							"section_tipo": "dd1324",
+							"mode": "edit",
+							"model": "tool_import_dedalo_csv",
+							"properties": {
+								"open_as": "window",
+								"windowFeatures": null
+							},
+							"label": "Importación",
+							"css": {
+								"url": "/dedalo/tools/tool_import_dedalo_csv/css/tool_import_dedalo_csv.css"
+							},
+							"name": "tool_import_dedalo_csv",
+							"icon": "/dedalo/tools/tool_import_dedalo_csv/img/icon.svg",
+							"show_in_inspector": false,
+							"show_in_component": false
+						},
+						{
+							"typo": "ddo",
+							"type": "tool",
+							"section_tipo": "dd1324",
+							"mode": "edit",
+							"model": "tool_time_machine",
+							"properties": {
+								"open_as": "window",
+								"windowFeatures": null
+							},
+							"label": "Máquina del tiempo",
+							"css": {
+								"url": "/dedalo/tools/tool_time_machine/css/tool_time_machine.css"
+							},
+							"name": "tool_time_machine",
+							"icon": "/dedalo/tools/tool_time_machine/img/icon.svg",
+							"show_in_inspector": false,
+							"show_in_component": true
+						},
+						{
+							"typo": "ddo",
+							"type": "tool",
+							"section_tipo": "dd1324",
+							"mode": "edit",
+							"model": "tool_update_cache",
+							"label": "Actualizar caché",
+							"css": {
+								"url": "/dedalo/tools/tool_update_cache/css/tool_update_cache.css"
+							},
+							"name": "tool_update_cache",
+							"icon": "/dedalo/tools/tool_update_cache/img/icon.svg",
+							"show_in_inspector": false,
+							"show_in_component": false
+						},
+						{
+							"typo": "ddo",
+							"type": "tool",
+							"section_tipo": "dd1324",
+							"mode": "edit",
+							"model": "tool_print",
+							"properties": {
+								"open_as": "window",
+								"windowFeatures": null
+							},
+							"label": "Maquetación de impresión",
+							"css": {
+								"url": "/dedalo/tools/tool_print/css/tool_print.css"
+							},
+							"name": "tool_print",
+							"icon": "/dedalo/tools/tool_print/img/icon.svg",
+							"show_in_inspector": true,
+							"show_in_component": false
+						}
+					],
+					"buttons": [
+						{
+							"typo": "ddo",
+							"type": "button",
+							"tipo": "numisdata120",
+							"model": "button_new",
+							"label": "Nuevo"
+						},
+						{
+							"typo": "ddo",
+							"type": "button",
+							"tipo": "numisdata121",
+							"model": "button_delete",
+							"label": "Borrar"
+						}
+					],
+					"request_config": [
+						{
+							"api_engine": "dedalo",
+							"type": "main",
+							"sqo": {
+								"section_tipo": [
+									{
+										"typo": "ddo",
+										"tipo": "numisdata6",
+										"model": "section",
+										"permissions": 3,
+										"label": "Cecas",
+										"buttons": [
+											{
+												"model": "button_new",
+												"permissions": 3
+											},
+											{
+												"model": "button_delete",
+												"permissions": 3
+											}
+										],
+										"color": "#b9b9b9",
+										"matrix_table": "matrix"
+									}
+								],
+								"limit": 1,
+								"filter_by_locators": [
+									{
+										"section_tipo": "numisdata6",
+										"section_id": "1"
+									}
+								],
+								"offset": 0
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"info": "Publishable component_publication",
+										"mode": "edit",
+										"tipo": "numisdata434",
+										"view": "line",
+										"width": "4.5rem",
+										"parent": "numisdata6",
+										"section_tipo": [
+											"numisdata6"
+										],
+										"model": "component_publication",
+										"label": "Público",
+										"fixed_mode": true
+									},
+									{
+										"info": "Ceca component_input_text",
+										"tipo": "numisdata16",
+										"width": "8rem",
+										"parent": "numisdata6",
+										"section_tipo": [
+											"numisdata6"
+										],
+										"model": "component_input_text",
+										"label": "Ceca",
+										"mode": "list",
+										"fixed_mode": true
+									},
+									{
+										"info": "Information private component_text_area",
+										"tipo": "numisdata17",
+										"parent": "numisdata6",
+										"section_tipo": [
+											"numisdata6"
+										],
+										"model": "component_text_area",
+										"label": "Información interna",
+										"mode": "list",
+										"fixed_mode": true
+									},
+									{
+										"info": "Information public component_text_area",
+										"tipo": "numisdata18",
+										"parent": "numisdata6",
+										"section_tipo": [
+											"numisdata6"
+										],
+										"model": "component_text_area",
+										"label": "Información pública",
+										"mode": "list",
+										"fixed_mode": true
+									}
+								],
+								"fields_separator": " | ",
+								"sqo_config": {
+									"full_count": false,
+									"limit": 10,
+									"offset": 0,
+									"mode": "list",
+									"operator": "$or"
+								}
+							},
+							"search": null,
+							"choose": null,
+							"hide": null,
+							"api_config": null
+						}
+					],
+					"columns_map": [],
+					"config": {
+						"relation_list_tipo": "numisdata576"
+					},
+					"sortable": false,
+					"section_map": {
+						"thesaurus": {
+							"term": "numisdata16",
+							"order": "numisdata1508",
+							"parent": "numisdata22"
+						}
+					},
+					"matrix_table": "matrix",
+					"legacy_model": "section",
+					"sqo_session": {
+						"section_tipo": [
+							"numisdata6"
+						],
+						"filter_by_locators": [
+							{
+								"section_tipo": "numisdata6",
+								"section_id": "1"
+							}
+						],
+						"limit": 1,
+						"offset": 0
+					}
+				},
+				{
+					"typo": "ddo",
+					"type": "component",
+					"tipo": "numisdata434",
+					"section_tipo": "numisdata6",
+					"parent": "numisdata6",
+					"parent_grouper": "numisdata14",
+					"lang": "lg-nolan",
+					"mode": "edit",
+					"model": "component_publication",
+					"properties": {
+						"dato_default": [
+							{
+								"section_id": "2",
+								"section_tipo": "dd64"
+							}
+						]
+					},
+					"permissions": 3,
+					"label": "Público",
+					"translatable": false,
+					"tools": [
+						{
+							"typo": "ddo",
+							"type": "tool",
+							"section_tipo": "dd1324",
+							"mode": "edit",
+							"model": "tool_propagate_component_data",
+							"label": "Propaga datos de componentes",
+							"css": {
+								"url": "/dedalo/tools/tool_propagate_component_data/css/tool_propagate_component_data.css"
+							},
+							"name": "tool_propagate_component_data",
+							"icon": "/dedalo/tools/tool_propagate_component_data/img/icon.svg",
+							"show_in_inspector": true,
+							"show_in_component": true
+						},
+						{
+							"typo": "ddo",
+							"type": "tool",
+							"section_tipo": "dd1324",
+							"mode": "edit",
+							"model": "tool_time_machine",
+							"properties": {
+								"open_as": "window",
+								"windowFeatures": null
+							},
+							"label": "Máquina del tiempo",
+							"css": {
+								"url": "/dedalo/tools/tool_time_machine/css/tool_time_machine.css"
+							},
+							"name": "tool_time_machine",
+							"icon": "/dedalo/tools/tool_time_machine/img/icon.svg",
+							"show_in_inspector": false,
+							"show_in_component": true
+						}
+					],
+					"buttons": [],
+					"css": {
+						".wrapper_component": {
+							"grid-row": "1",
+							"grid-column": "2"
+						}
+					},
+					"view": "line",
+					"sortable": true,
+					"legacy_model": "component_publication",
+					"path": [
+						{
+							"name": "Público",
+							"model": "component_publication",
+							"section_tipo": "numisdata6",
+							"component_tipo": "numisdata434"
+						},
+						{
+							"name": "Valor",
+							"model": "component_input_text",
+							"section_tipo": "dd64",
+							"component_tipo": "dd62"
+						}
+					]
+				},
+				{
+					"typo": "ddo",
+					"type": "component",
+					"tipo": "numisdata16",
+					"section_tipo": "numisdata6",
+					"parent": "numisdata6",
+					"parent_grouper": "numisdata14",
+					"lang": "lg-spa",
+					"mode": "list",
+					"model": "component_input_text",
+					"properties": {
+						"multi_value": true
+					},
+					"permissions": 3,
+					"label": "Ceca",
+					"translatable": true,
+					"tools": [],
+					"buttons": [],
+					"sortable": true,
+					"legacy_model": "component_input_text",
+					"path": [
+						{
+							"name": "Ceca",
+							"model": "component_input_text",
+							"section_tipo": "numisdata6",
+							"component_tipo": "numisdata16"
+						}
+					]
+				},
+				{
+					"typo": "ddo",
+					"type": "component",
+					"tipo": "numisdata17",
+					"section_tipo": "numisdata6",
+					"parent": "numisdata6",
+					"parent_grouper": "numisdata14",
+					"lang": "lg-spa",
+					"mode": "list",
+					"model": "component_text_area",
+					"properties": {},
+					"permissions": 3,
+					"label": "Información interna",
+					"translatable": true,
+					"tools": [],
+					"buttons": [],
+					"sortable": true,
+					"legacy_model": "component_text_area",
+					"path": [
+						{
+							"name": "Información interna",
+							"model": "component_text_area",
+							"section_tipo": "numisdata6",
+							"component_tipo": "numisdata17"
+						}
+					]
+				},
+				{
+					"typo": "ddo",
+					"type": "component",
+					"tipo": "numisdata18",
+					"section_tipo": "numisdata6",
+					"parent": "numisdata6",
+					"parent_grouper": "numisdata14",
+					"lang": "lg-spa",
+					"mode": "list",
+					"model": "component_text_area",
+					"properties": {},
+					"permissions": 3,
+					"label": "Información pública",
+					"translatable": true,
+					"tools": [],
+					"buttons": [],
+					"view": "html_text",
+					"sortable": true,
+					"legacy_model": "component_html_text",
+					"path": [
+						{
+							"name": "Información pública",
+							"model": "component_text_area",
+							"section_tipo": "numisdata6",
+							"component_tipo": "numisdata18"
+						}
+					]
+				}
+			],
+			"data": [
+				{
+					"typo": "sections",
+					"tipo": "numisdata6",
+					"section_tipo": [],
+					"entries": [
+						{
+							"section_tipo": "numisdata6",
+							"section_id": 1,
+							"paginated_key": 0
+						}
+					]
+				},
+				{
+					"section_id": 1,
+					"section_tipo": "numisdata6",
+					"tipo": "numisdata434",
+					"mode": "edit",
+					"lang": "lg-nolan",
+					"from_component_tipo": "numisdata434",
+					"entries": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "numisdata434"
+						}
+					],
+					"debug_model": "component_publication",
+					"debug_label": "Público",
+					"debug_dataframe": null,
+					"datalist": [
+						{
+							"value": {
+								"section_tipo": "dd64",
+								"section_id": "2"
+							},
+							"label": "No",
+							"section_id": "2",
+							"hide": []
+						},
+						{
+							"value": {
+								"section_tipo": "dd64",
+								"section_id": "1"
+							},
+							"label": "Sí",
+							"section_id": "1",
+							"hide": []
+						}
+					],
+					"row_section_id": 1,
+					"parent_tipo": "numisdata6"
+				},
+				{
+					"section_id": 1,
+					"section_tipo": "numisdata6",
+					"tipo": "numisdata16",
+					"mode": "list",
+					"lang": "lg-spa",
+					"from_component_tipo": "numisdata16",
+					"entries": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Desconocida"
+						}
+					],
+					"debug_model": "component_input_text",
+					"debug_label": "Ceca",
+					"debug_dataframe": null,
+					"parent_tipo": "numisdata6",
+					"parent_section_id": 1,
+					"fallback_value": null,
+					"row_section_id": 1
+				},
+				{
+					"section_id": 1,
+					"section_tipo": "numisdata6",
+					"tipo": "numisdata17",
+					"mode": "list",
+					"lang": "lg-spa",
+					"from_component_tipo": "numisdata17",
+					"entries": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>Añadir MIB enlace</p>"
+						}
+					],
+					"debug_model": "component_text_area",
+					"debug_label": "Información interna",
+					"debug_dataframe": null,
+					"parent_tipo": "numisdata6",
+					"fallback_value": null,
+					"row_section_id": 1
+				},
+				{
+					"section_id": 1,
+					"section_tipo": "numisdata6",
+					"tipo": "numisdata18",
+					"mode": "list",
+					"lang": "lg-spa",
+					"from_component_tipo": "numisdata18",
+					"entries": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>La ceca de Abariltur es conocida únicamente a través de los escasos divisores que acuñó, pues no aparece en las fuentes...</p>"
+						}
+					],
+					"debug_model": "component_text_area",
+					"debug_label": "Información pública",
+					"debug_dataframe": null,
+					"parent_tipo": "numisdata6",
+					"fallback_value": null,
+					"row_section_id": 1
+				}
+			]
+		},
+		"msg": "OK. Request done successfully",
+		"errors": [],
+		"action": "read"
+	}
+}

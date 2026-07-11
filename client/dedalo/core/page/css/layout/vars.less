@@ -1,0 +1,345 @@
+/**
+ * vars
+ *
+ * Common vars definitions
+ *
+ * Included from main.less file
+ *
+ * DARK MODE NOTE:
+ * All `@color_*` LESS variables are mapped to CSS custom properties
+ * (`var(--color_*)`) defined on `:root`. The light palette lives in this file
+ * and the dark palette overrides those same custom properties under
+ * `:root[data-theme="dark"]` (see `theme_dark.less`). LESS color functions
+ * like `darken()` / `lighten()` / `fade()` cannot operate on CSS variables, so
+ * former uses have been replaced by explicit derived tokens (e.g.
+ * `--color_primary_hover_bg`) defined statically in both palettes.
+ */
+
+// root. default values of vars could be overwritten from ontology CSS config
+:root {
+	--component_height: auto; // default components wrapper height
+	--component_width: 50%; // default components wrapper width
+	// general sizes
+	--inspector_width: 19rem;
+	--inspector_rail_width: 48px; // width when inspector collapses into the icon rail
+	--inspector_block_radius: 8px; // corner radius of inspector content cards
+	--component_label_height: 1.5rem;
+	--content_data_min_height: 2.66rem; // +/- 47.8px
+	// media heights (3d,av,image,pdf,svg)
+	--media_min_height: 392px; // Min height for a component wrapper of media (av, image, pdf, svg, json)
+	--media_max_height: inherit; // Max height for a component wrapper of media (av, image, pdf...)
+	--media_min_width: 102px;
+	--media_fade_speed: 0.3s; // Shared fade-in duration for lazily-initialised content (media, json, geolocation, ...)
+	--media_viewer_height: calc(100vh - 3rem); // Usable height for a media component in fullscreen viewer mode
+	// heights for non-media lazily-initialised widgets that share the same loading contract
+	--text_area_min_height: 200px; // Min height for the rich-text (ckeditor) editor wrapper
+	--geolocation_min_height: 495px; // Min height for the geolocation (leaflet) edit wrapper
+	--geolocation_player_height: 605px; // Min height for the geolocation player/transcription map
+	--geolocation_map_min_height: 320px; // Min height for the leaflet map surface itself
+	--view_text_height: 1.2rem;
+	--view_line_height: 5rem;
+	--column_id_width: 6rem; // Default id column width for list
+	--section_id_font_size: 1.25rem; // Default font size for section_id column
+
+	// ---- COLOR PALETTE (LIGHT) ----
+	// Each token is overridden under `:root[data-theme="dark"]` in theme_dark.less.
+	--color_white:                    #ffffff;
+	--color_grey_16:                  #fcfcfc; // used in list rows background
+	--color_grey_15:                  #f6f6f6; // used in section record column_section_id background
+	--color_grey_14:                  #f0f0f0; // pure white (used as outline in components shadow -edit-)
+	--color_grey_13:                  #e6e6e6; // used in component active background
+	--color_grey_12:                  #d1d5db; // used by spinner base
+	--color_grey_11:                  #cccccc; // Used by dd_grid
+	--color_grey_10:                  #bbbbbb;
+	--color_grey_9:                   #aaaaaa; // used by separator
+	--color_grey_8:                   #999999; // used by the component labels
+	--color_grey_7:                   #7f7f7f; // used in page font
+	--color_grey_6:                   #6c757d; // used in button primary (dark blue?)
+	--color_grey_5:                   #5b5b5b; // used as background for list header
+	--color_grey_4:                   #353535; // used in page font
+	--color_grey_3:                   #343a40; // used in button primary (dark grey)
+	--color_grey_2:                   #2c313a; // used as background for code blocks
+	--color_grey_1:                   #212529; // used in buttons text default
+	--color_black:                    #000000; // pure black
+	--color_hilite_3:                 #faf7df; // used in search components and maintenance widgets
+	--color_hilite:                   #fce8d2; // used in search components and maintenance widgets
+	--color_hilite_2:                 #ffda86; // used in tool cataloging and tool_numismatic_order_coins drag
+	--color_hilite_yellow:            #ffef3d; // used in ts_object to hilite terms
+	--color_orange:                   #f8b544; // used in security read only option
+	--color_orange_dedalo:            #f78a1c; // Dédalo logo orange
+	--color_warning:                  #ed6223; // used to show alert warning text in inspector
+	--color_mandatory:                #ffeaea; // used in mandatory components (light red)
+	--color_red_light:                #ff9e87; // used in indexation tool (light red)
+	--color_danger:                   #dc3545; // used in button primary (red) and area development widgets
+	--color_green_light:              #c0e4cd; // used in API test RQO in maintenance
+	--color_green_success:            #5cb85c; // used in components animation on save value
+	--color_success:                  #28a745; // used in button primary (green)
+	--color_green_ontology_hover:     #4e7a75; // used in ontology tree to show hover in typology grouper
+	--color_green_ontology:           #276f67; // used in area_ontology
+	--color_blue_light:               #bac9e8; // used in area development widgets
+	--color_blue_light_2:             #aad3df; // used in component_geolocation
+	--color_cyan:                     #3dfff5; // used in ts object delete button option (as inverted = red)
+	--color_info:                     #17a2b8; // used in button primary (cyan)
+	--color_primary:                  #2b77c7; // used in button primary (blue)
+	--color_blue:                     #3883fa; // used in area development widgets
+	--color_blue_2:                   #3070d8; // used in SQO in maintenance
+	--color_blue_3:                   #0875e3; // used in ts object add button option (as inverted = dedalo orange)
+	--color_input_focus:              #3b87fd; // hi-lite blue base on checkbox, radio buttons, etc
+	--color_purple_light:             #eae0f4; // used in ts object edit button option (as inverted = green)
+	--color_purple:                   #a347a3; // used in ts object edit button option (as inverted = green)
+	--color_grey_blue:                #bbbbbb; // Used in modal header and inspector's chevron
+	// ontology
+	--color_ontology_css:             #826b85; // used in ontology to define CSS component
+	--color_ontology_rqo:             #9d4a4a; // used in ontology to define RQO component
+	--color_ontology_properties:      #1b531f; // used in ontology to define Properties component
+	--color_ontology_properties_v5:   #e9dd9f; // used in ontology to define V5 Properties component
+	// tags
+	--color_tag_indexation_normal:    #ffa43d; //ffa43d ffaa00
+	--color_tag_indexation_removed:   #2f8fff;
+	--color_tag_indexation_to_review: #fc461a;
+	// libs colors
+	--color_php:                      #777bb3;
+
+	// ---- SEMANTIC SURFACE TOKENS ----
+	// Use these in new code instead of raw color tokens. They give a single
+	// place to retune backgrounds / borders / text per theme.
+	--bg_app:          var(--color_grey_14); // #f0f0f0 page canvas (light gray) so white surfaces float flat above it
+	--bg_surface:      var(--color_white);   // #ffffff content/grouper cards
+	--bg_surface_alt:  var(--color_grey_15);
+	--bg_elevated:     var(--color_white);
+	--bg_input:        var(--color_white);
+	--bg_header:       var(--color_grey_5);
+	--bg_menu:         var(--color_grey_1);
+	--fg_default:      var(--color_grey_4);
+	--fg_muted:        var(--color_grey_7);
+	--fg_inverse:      var(--color_white);
+	--border_default:  var(--color_grey_13);
+	--border_strong:   var(--color_grey_11);
+	--shadow_default:  rgba(0, 0, 0, 0.1);
+	--focus_ring:      var(--color_input_focus);
+	--focus_ring_weak: rgba(59, 135, 253, 0.4); // = color_input_focus @ 40% for the focus glow
+
+	// ---- SPACING SCALE ----
+	// Compact density (base font 0.8125rem). Reuses the 0.25/0.5/1rem rhythm
+	// already used across the codebase, so adopting it is a like-for-like swap.
+	--space-0: 0;
+	--space-1: 0.125rem; //  2px hairline gaps
+	--space-2: 0.25rem;  //  4px
+	--space-3: 0.5rem;   //  8px
+	--space-4: 0.75rem;  // 12px
+	--space-5: 1rem;     // 16px
+	--space-6: 1.5rem;   // 24px
+	--space-7: 2rem;     // 32px
+	--space-8: 3rem;     // 48px
+
+	// ---- RADIUS SCALE ----
+	--radius-sm:   3px;
+	--radius-md:   0.25rem; // 4px
+	--radius-lg:   7px;     // cards, dropdowns, modals
+	--radius-pill: 999px;   // tags / chips
+
+	// ---- ELEVATION SCALE ----
+	// Composed shadows built on --shadow_default so they retune per theme
+	// automatically (no dark override needed). Resting=1, floating=2/3, modal=4.
+	--shadow-1:     0 1px 2px var(--shadow_default);
+	--shadow-2:     0 2px 6px var(--shadow_default);
+	--shadow-3:     0 4px 12px var(--shadow_default);
+	--shadow-4:     0 4px 8px var(--shadow_default), 0 6px 20px var(--shadow_default);
+	--shadow-focus: 0 0 0 3px var(--focus_ring_weak);
+
+	// ---- MOTION ----
+	--ease-standard:   cubic-bezier(0.2, 0, 0, 1);
+	--ease-out:        cubic-bezier(0, 0, 0.2, 1);
+	--transition-fast: 120ms var(--ease-standard); // micro hovers
+	--transition-base: 200ms var(--ease-standard); // general hovers
+	--transition-slow: 400ms var(--ease-standard); // theme / modal cross-fades
+
+	// ---- COMPONENT SEMANTIC TOKENS ----
+	--menu_dropdown_text:       var(--color_grey_14);
+	--menu_dropdown_bg:         var(--color_grey_16);
+	--menu_dropdown_border:     var(--color_grey_9);
+	--menu_dropdown_li_border:  var(--color_grey_7);
+	--debug_info_bar_bg:        var(--color_grey_4);
+	--debug_info_bar_text:      var(--color_grey_8);
+	--checkbox_bg:              var(--color_grey_16);
+	--checkbox_border:          var(--color_grey_8);
+	--checkbox_checked_bg:      var(--color_primary);
+	--checkbox_checkmark:       var(--color_white);
+	--input_bg:                 var(--color_grey_16);
+	--input_fg:                 var(--color_grey_4);
+	--input_outline:            none;
+	--select_bg:                var(--color_grey_16);
+	--select_fg:                var(--color_grey_4);
+	--select_outline:           none;
+	--select_icon_url:          url('../../themes/default/icons/select_arrows.svg');
+	--toolbar_btn_hover_bg:     var(--color_grey_11);
+	--toolbar_btn_icon_filter:  none;
+
+	// ---- MODAL TOKENS ----
+	--modal_overlay_bg:            rgba(0, 0, 0, 0.4);
+	--modal_overlay_bg_weak:      rgba(0, 0, 0, 0.075);
+	--modal_content_bg:           var(--color_white);
+	--modal_content_shadow:       var(--shadow-4);
+	--modal_header_bg:            var(--color_orange_dedalo);
+	--modal_header_shadow:        var(--shadow-2);
+	--modal_header_color:         var(--color_white);
+	--modal_btn_color:            var(--color_white);
+	--modal_btn_hover_color:      var(--color_black);
+	--modal_mini_header_bg:       var(--color_orange_dedalo);
+	--modal_radius:               var(--radius-lg);
+
+	// ---- DERIVED TOKENS (darken/lighten replacements) ----
+	// Pre-computed values for former darken()/lighten() calls so they
+	// can be overridden per-theme in theme_dark.less.
+
+	// button: primary
+	--color_primary_border:          #2972bf;
+	--color_primary_hover_bg:        #266ab2;
+	--color_primary_hover_border:    #2565aa;
+	// button: secondary
+	--color_secondary_border:        #677078;
+	--color_secondary_hover_bg:      #60686f;
+	--color_secondary_hover_border:  #5b636a;
+	// button: success
+	--color_success_border:          #269f42;
+	--color_success_hover_bg:        #23923c;
+	--color_success_hover_border:    #218a39;
+	// button: danger
+	--color_danger_border:           #da2c3d;
+	--color_danger_hover_bg:         #d32535;
+	--color_danger_hover_border:     #ca2333;
+	--color_danger_dark:             #bd2130;
+	// button: orange / warning
+	--color_orange_border:           #f78512;
+	--color_orange_hover_bg:         #f17d08;
+	--color_orange_hover_border:     #e77808;
+	--color_orange_dark:             #c06407;
+	--color_orange_light:            #fffaf5;
+	// button: info
+	--color_info_border:             #169aaf;
+	--color_info_hover_bg:           #148ea1;
+	--color_info_hover_border:       #138698;
+	// button: light
+	--color_light_border:            #f1f1f1;
+	--color_light_hover_bg:          #e9e9e9;
+	--color_light_hover_border:      #e4e4e4;
+	// button: dark
+	--color_dark_border:             #2f353a;
+	--color_dark_hover_bg:           #292d32;
+	--color_dark_hover_border:       #24282c;
+	// component / service derived
+	--color_tag_indexation_normal_dark:   #ff8c0a;
+	--color_tag_indexation_normal_darker: #e07700;
+	--color_green_success_dark:           #449d44;
+	--color_grey_10_light:                #d4d4d4;
+	--color_grey_10_dark:                 #a2a2a2;
+	--color_grey_4_light:                 #3a3a3a;
+	--menu_bg_active_border:              #fa8500;
+	--service_bg_dark:                    #c56607;
+}
+
+// colors — LESS aliases over CSS custom properties.
+// Existing rules across the codebase use `@color_*`; mapping them to
+// `var(--color_*)` makes every existing reference theme-aware without
+// touching the rule sites.
+	@color_white					: var(--color_white);
+	@color_grey_16					: var(--color_grey_16);
+	@color_grey_15					: var(--color_grey_15);
+	@color_grey_14					: var(--color_grey_14);
+	@color_grey_13					: var(--color_grey_13);
+	@color_grey_12					: var(--color_grey_12);
+	@color_grey_11					: var(--color_grey_11);
+	@color_grey_10					: var(--color_grey_10);
+	@color_grey_9					: var(--color_grey_9);
+	@color_grey_8 					: var(--color_grey_8);
+	@color_grey_7					: var(--color_grey_7);
+	@color_grey_6					: var(--color_grey_6);
+	@color_grey_5					: var(--color_grey_5);
+	@color_grey_4					: var(--color_grey_4);
+	@color_grey_3					: var(--color_grey_3);
+	@color_grey_2					: var(--color_grey_2);
+	@color_grey_1					: var(--color_grey_1);
+	@color_black					: var(--color_black);
+	@color_hilite_3 				: var(--color_hilite_3);
+	@color_hilite 					: var(--color_hilite);
+	@color_hilite_2 				: var(--color_hilite_2);
+	@color_hilite_yellow			: var(--color_hilite_yellow);
+	@color_orange					: var(--color_orange);
+	@color_orange_dedalo			: var(--color_orange_dedalo);
+	@color_warning					: var(--color_warning);
+	@color_mandatory				: var(--color_mandatory);
+	@color_red_light				: var(--color_red_light);
+	@color_danger					: var(--color_danger);
+	@color_green_light				: var(--color_green_light);
+	@color_green_success			: var(--color_green_success);
+	@color_success					: var(--color_success);
+	@color_green_ontology_hover		: var(--color_green_ontology_hover);
+	@color_green_ontology			: var(--color_green_ontology);
+	@color_blue_light				: var(--color_blue_light);
+	@color_blue_light_2				: var(--color_blue_light_2);
+	@color_cyan 					: var(--color_cyan);
+	@color_info						: var(--color_info);
+	@color_primary					: var(--color_primary);
+	@color_blue						: var(--color_blue);
+	@color_blue_2					: var(--color_blue_2);
+	@color_blue_3					: var(--color_blue_3);
+	@color_input_focus				: var(--color_input_focus);
+	@color_purple_light				: var(--color_purple_light);
+	@color_purple					: var(--color_purple);
+
+	// ontology
+	@color_ontology_css				: var(--color_ontology_css);
+	@color_ontology_rqo				: var(--color_ontology_rqo);
+	@color_ontology_properties		: var(--color_ontology_properties);
+	@color_ontology_properties_v5	: var(--color_ontology_properties_v5);
+
+	// tags
+	@color_tag_indexation_normal	: var(--color_tag_indexation_normal);
+	@color_tag_indexation_removed	: var(--color_tag_indexation_removed);
+	@color_tag_indexation_to_review	: var(--color_tag_indexation_to_review);
+
+	// libs colors
+	@color_php 						: var(--color_php);
+
+	// derived tokens (darken/lighten replacements)
+	@color_primary_border               : var(--color_primary_border);
+	@color_primary_hover_bg             : var(--color_primary_hover_bg);
+	@color_primary_hover_border         : var(--color_primary_hover_border);
+	@color_secondary_border             : var(--color_secondary_border);
+	@color_secondary_hover_bg           : var(--color_secondary_hover_bg);
+	@color_secondary_hover_border       : var(--color_secondary_hover_border);
+	@color_success_border               : var(--color_success_border);
+	@color_success_hover_bg             : var(--color_success_hover_bg);
+	@color_success_hover_border         : var(--color_success_hover_border);
+	@color_danger_border                : var(--color_danger_border);
+	@color_danger_hover_bg              : var(--color_danger_hover_bg);
+	@color_danger_hover_border          : var(--color_danger_hover_border);
+	@color_danger_dark                  : var(--color_danger_dark);
+	@color_orange_border                : var(--color_orange_border);
+	@color_orange_hover_bg              : var(--color_orange_hover_bg);
+	@color_orange_hover_border          : var(--color_orange_hover_border);
+	@color_orange_dark                  : var(--color_orange_dark);
+	@color_orange_light                 : var(--color_orange_light);
+	@color_info_border                  : var(--color_info_border);
+	@color_info_hover_bg                : var(--color_info_hover_bg);
+	@color_info_hover_border            : var(--color_info_hover_border);
+	@color_light_border                 : var(--color_light_border);
+	@color_light_hover_bg               : var(--color_light_hover_bg);
+	@color_light_hover_border           : var(--color_light_hover_border);
+	@color_dark_border                  : var(--color_dark_border);
+	@color_dark_hover_bg                : var(--color_dark_hover_bg);
+	@color_dark_hover_border            : var(--color_dark_hover_border);
+	@color_tag_indexation_normal_dark   : var(--color_tag_indexation_normal_dark);
+	@color_tag_indexation_normal_darker : var(--color_tag_indexation_normal_darker);
+	@color_green_success_dark           : var(--color_green_success_dark);
+	@color_grey_10_light                : var(--color_grey_10_light);
+	@color_grey_10_dark                 : var(--color_grey_10_dark);
+	@color_grey_4_light                 : var(--color_grey_4_light);
+	@menu_bg_active_border              : var(--menu_bg_active_border);
+	@service_bg_dark                    : var(--service_bg_dark);
+
+// break points
+	@width_break_point_0 : 1024px; // desktop small;
+	@width_break_point_1 : 960px; // mobile
+	@width_break_point_2 : 780px; // images minimum width
+	@width_break_point_3 : 1185px; // menu break;

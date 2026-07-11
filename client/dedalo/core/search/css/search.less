@@ -1,0 +1,583 @@
+/**
+* search
+*
+* Included from main.less file
+*/
+
+// search_component (shared at least by unit_test preview)
+	.search_component {
+		background-color: @color_grey_15;
+		display: flex;
+		position: relative;
+		margin: 2px;
+		min-height: 55px;
+		border-radius: 2px;
+		// flex: 1 1 32.4%;
+		flex: 0 1 32.8%;
+		flex-wrap: wrap;
+
+		// allow to view tooltip over other components
+		&:hover {
+			z-index: 2;
+		}
+
+		>.wrapper_component {
+			flex-grow: 1;
+			display: grid;
+			padding-bottom: 0.8rem;
+
+			>.label {
+				padding: 0.5em;
+			}
+
+			>.content_data {
+				padding: 0.5em !important;
+				max-height: 22rem;
+				// overflow: auto; // Removed becuse breaks component_date icon calendar
+			}
+
+			// disable column edit change mode (portals)
+			.column_component_portal {
+				pointer-events: none !important;
+			}
+		}
+
+		>.button.close {
+			position: absolute;
+			right: 0px;
+			top: 3px;
+			z-index: 3;
+
+			&:active {
+				opacity: 0.5;
+			}
+		}
+
+		>.button.up,
+		>.button.down {
+			position: absolute;
+			bottom: 0.1rem;
+			z-index: 3;
+			opacity: 0.4;
+			background-image: url(../../themes/default/icons/sort_up.svg);
+			background-color: transparent;
+			background-repeat: no-repeat;
+
+			&:hover {
+				opacity: 1;
+			}
+			&:active {
+				opacity: 0.5;
+			}
+			&.disabled {
+				opacity: 0.15;
+				pointer-events: none;
+			}
+		}
+		>.button.down {
+			right: -0.2rem;
+			transform: rotate(90deg) scale(0.90);
+		}
+		>.button.up {
+			right: 0.75rem;
+			transform: rotate(-90deg) scale(0.90);
+		}
+	}//end .search_component
+
+// wrapper_search
+	.wrapper_search {
+		position: relative;
+
+		// filter_button
+		>.filter_button {
+			margin-bottom: 0.5em;
+			float: left;
+
+			// when parent (wrapper_search) have class 'list'
+			.list & {
+				position: absolute;
+				top: -2em;
+			}
+		}
+
+		// button_save_preset
+		.button_save_preset {
+			z-index: 3;
+			background-color: @color_danger;
+			width: calc(100% - 1rem);
+			color: @color_white ;
+			margin: 0.5rem;
+			font-weight: 500;
+		}
+
+		// search_global_container
+		>.search_global_container {
+			display: flex;
+			position: relative;
+			width: 100%;
+			z-index: 1;
+			outline: 0.5px solid @color_grey_13;
+
+			.list&, .relation& {
+				margin-top: 0.5em;
+			}
+
+			.edit& {
+				margin-bottom: 0.5em;
+			}
+
+			&.hide {
+				padding: 0px;
+			}
+
+			// toggle_container_selector
+			>.toggle_container_selector {
+				margin: 0px;
+
+				&.sections {
+					background-color: @color_grey_10;
+				}
+			}
+
+			// search_container_selector
+			>.search_container_selector {
+				position: relative;
+			}
+
+			// search_container_selection | components_list_container
+			// Center selection drag area
+			>.search_container_selection {
+				flex-grow: 1;
+				align-self: flex-start;
+				background-color: @color_grey_14;
+				padding-top: 0px;
+				position: sticky;
+				top: 0.25rem;
+
+				.search_group_container {
+					display: flex;
+					justify-content: flex-end;
+					position: -webkit-sticky;
+					position: -moz-sticky;
+					position: sticky;
+
+					@media screen and (max-width: @width_break_point_0) {
+						flex-wrap: wrap;
+					}
+
+					.search_group {
+						position: relative;
+						min-height: 5.8rem;
+						min-width: 165px;
+						margin: 0px;
+						padding: 1px;
+						padding-right: 17px;
+						padding-left: 23px;
+						background-color: @color_grey_16;
+						outline: 1px solid var(--color_grey_13);
+						width: 100%;
+						display: grid;
+						grid-template-columns: 1fr 1fr 1fr;
+
+						&.column_2 {
+							grid-template-columns: 1fr 1fr;
+						}
+
+						&.column_1 {
+							grid-template-columns: 1fr;
+						}
+
+						@media screen and (max-width: @width_break_point_0) {
+							grid-template-columns: 1fr 1fr;
+						}
+
+						@media screen and (max-width: @width_break_point_0) {
+							grid-template-columns: 1fr;
+						}
+
+						&.root_search_group {
+							margin: 0px;
+							margin-left: 5px;
+							margin-right: 5px;
+							justify-content: flex-start;
+							border-radius: 2px;
+						}
+
+						// search_component
+						>.search_component {
+							// defined at top to share css
+						}
+
+						.invalid_component{
+							width: 90%;
+							display: flex;
+							justify-content: center;
+							align-items: center;
+							font-size: 1.5rem;
+						}
+
+						>.operator {
+							height: 100%;
+							position: absolute;
+							left: 0px;
+							top: 0px;
+							margin: 0px;
+							padding: 0.27rem;
+							text-align: center;
+							max-width: 32px;
+							writing-mode: vertical-lr;
+							text-transform: uppercase;
+							cursor: pointer;
+							user-select: none;
+							-moz-user-select: none;
+							-webkit-user-select: none;
+							letter-spacing: 1px;
+							color: @color_grey_14;
+							opacity: 0.6;
+
+							&:hover {
+								opacity: 0.7;
+							}
+
+							&.and {
+								background-color: @color_green_success;
+							}
+							&.or {
+								background-color: @color_primary;
+							}
+						}//end >.operator
+
+						>.button.close {
+							position: absolute;
+							right: 0px;
+							top: 0px;
+						}
+
+						>.button.add {
+							position: absolute;
+							right: 0px;
+							top: 1.4em;
+							color: @color_black;
+						}
+
+					}//end .search_group
+
+					// search_buttons_container
+					>.search_buttons_container {
+						min-height: 5em;
+						min-width: 12rem;
+						display: flex;
+						flex: 0 1 auto;
+						padding: 0px;
+						margin: 0px;
+						padding: 0.25em;
+
+						>* {
+							height: 100%;
+							width: 100%;
+							margin: 0px;
+							display: flex;
+							flex-direction: column;
+						}
+
+						.button {
+							height: 100%;
+							width: 100%;
+							margin: 0px;
+							padding: 0px;
+							padding-left: 0.25rem;
+							padding-right: 0.25rem;
+							font-size: 1em;
+							background-color: @color_tag_indexation_normal;
+							opacity: 1;
+							color: @color_white;
+							border: 1px solid @color_white;
+							border-radius: 0.25em;
+							word-break: break-word;
+
+							&:hover {
+								background-color: @color_tag_indexation_normal_dark;
+							}
+						}
+
+						// max_group
+						>.max_group {
+							align-items: center;
+							background-color: var(--color_white);
+							position: relative;
+							border-radius: 4px;
+							overflow: hidden;
+							min-width: 4.7rem;
+
+							.max_input_label {
+								display: block;
+								width: 100%;
+								text-align: center;
+								padding: 1em;
+								position: absolute;
+								pointer-events: none;
+							}
+
+							input.max_input {
+								background-color: transparent;
+								color: var(--color_black);
+								border: none;
+								width: 100%;
+								text-align: center;
+								font-size: 1.1em;
+								padding-top: 2em;
+								padding-bottom: 0.33rem;
+								// flex: 1 1 auto;
+								flex: 0;
+								min-height: 5.4rem;
+							}
+
+							.children_recursive_label {
+								flex: 1 1 auto;
+								cursor: pointer;
+								padding: 0.5rem;
+								padding-left: 0.25rem;
+								padding-right: 0.25rem;
+								word-break: break-all;
+								font-size: 10px;
+
+								// input
+								.children_recursive {
+									margin-right: 0.25rem;
+									vertical-align: text-bottom;
+								}
+							}
+						}
+
+						// reset group
+						>.reset_group {
+							padding-left: 0.25em;
+							padding-right: 0.25em;
+
+							.button.reload {
+								flex-grow: 1;
+								mask-size: 1.9em;
+								 -webkit-mask-size: 1.9em;
+
+								&:before {
+									background-color: transparent;
+								}
+							}
+							.button.show_all {
+								flex-grow: 1;
+							}
+						}
+
+						// submit
+						>.button.submit {
+							background-color: @color_green_success;
+							&:hover {
+								background-color: @color_green_success_dark;
+							}
+						}
+
+					}//end .search_buttons_container
+
+				}//end .search_group_container
+
+				// root search_group
+				>.search_group_container:first-of-type >.search_group {
+					>.button.add {
+						top: 3px;
+					}
+				}
+			}//end search_container_selection
+
+
+			// thesaurus list of available section (Thesaurus only)
+			>.wrapper_sections_selector {
+				max-width: 130px;
+				min-width: 110px;
+
+				// select
+				>.typology_selector {
+					// padding: 0px;
+					width: 10rem;
+				}
+
+				>.wrapper_sections_selector_ul {
+
+					>li {
+						display: inline-block;
+						height: auto;
+						font-size: 0.9rem;
+
+						>label {
+							>input {
+								margin-right: 0.33rem;
+							}
+						}
+					}
+				}
+			}
+
+			// right: user presets list
+			.search_container_selection_presets {
+				background-color: @color_grey_15;
+				width: 160px;
+				min-width: 140px;
+				display: block;
+
+				// component_presets_label at top
+				>.component_presets_label {
+					display: inline-flex;
+					width: 100%;
+					background-color: @color_grey_5;
+					color: @color_white;
+					text-align: center;
+					padding: 4px;
+
+					mark {
+						color: @color_white;
+						background-color: initial;
+						opacity: initial;
+					}
+
+					>.button.add {
+						color: @color_grey_5;
+						background-color: @color_grey_15;
+						cursor: pointer;
+						z-index: 9;
+						margin-left: 0.33rem;
+					}
+				}//end .component_presets_label
+
+				// section list user presets
+				>.wrapper_section {
+					padding: 0px;
+
+					>.paginator_container {
+						height: unset;
+					}
+
+					>.list_body {
+						display: block;
+
+						.section_record {
+							display: grid;
+							grid-template-columns: 1.5rem 1.1rem 1fr 1.5rem;
+							border-bottom: 1px solid @color_grey_10;
+
+							&.selected {
+								background-color: @color_orange_dedalo;
+								.button.icon {
+									background-color: @color_white ;
+								}
+								.wrapper_component {
+									color: @color_white ;
+								}
+							}
+						}
+
+						// columns
+						.column {
+							outline: none;
+
+							&.column_delete {
+
+							}
+
+							.button.icon {
+								background-color: @color_grey_10;
+								margin: 0px;
+								margin-top: 0.27rem;
+								margin-right: 025rem;
+								height: 1rem;
+								width: 1rem;
+							}
+						}
+						.column_apply_preset {
+
+							.button_apply_preset {
+								transform: scaleX(-1);
+								background-color: @color_grey_10;
+							}
+						}
+						.column_edit {
+
+							.button_edit {
+
+							}
+						}
+						.column_section {
+							pointer-events: none;
+
+							.wrapper_component > span {
+								padding: 0.25rem;
+							}
+						}
+						.column_delete {
+
+							.button_delete {
+
+							}
+						}
+					}
+				}
+			}//end .search_container_selection_presets
+		}//end .search_global_container
+	}//end .wrapper_search
+
+// button toggle container_selector (list of fields) and button toggle presets
+	.toggle_container_selector, .toggle_container_selection_presets {
+		background-color: @color_grey_11;
+		writing-mode: vertical-lr;
+		text-transform: uppercase;
+		cursor: pointer;
+		color: @color_grey_15;
+		padding: 0.25rem;
+		padding-top: 0.75rem;
+		letter-spacing: 1px;
+
+		&:active {
+			opacity: 0.7;
+		}
+		:root[data-theme="dark"] & {
+			color: @color_grey_7;
+		}
+	}
+
+// thesaurus_search_selector
+	.thesaurus_search_selector {
+		margin-top: 7px;
+		width: 100%;
+
+		> ul {
+			display: flex;
+			flex-flow: wrap;
+			justify-content: flex-start;
+
+			> li {
+				padding-right: 10px;
+				padding:5px;
+				white-space: nowrap;
+				cursor: pointer;
+
+				> input {
+					cursor: pointer;
+				}
+
+				> label {
+					margin-left: 3px;
+					cursor: pointer;
+				}
+			}
+		}
+	}//end thesaurus_search_selector
+
+// search_global_container
+// Prevent interactions with the text contents of draggable elements from being select able.
+	.search_global_container[draggable] {
+		-moz-user-select: none;
+		-khtml-user-select: none;
+		-webkit-user-select: none;
+		user-select: none;
+		// Required to make elements draggable in old WebKit
+		-khtml-user-drag: element;
+		-webkit-user-drag: element;
+	}

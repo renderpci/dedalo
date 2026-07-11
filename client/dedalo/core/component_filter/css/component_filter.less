@@ -1,0 +1,209 @@
+/**
+* component_filter
+* 	&& component_filter_master
+*
+* Included from main.less file
+*/
+.component_filter,
+.component_filter_master {
+
+	&.edit, &.search {
+		display: block; // important because don't have label (default is grid)
+
+		>.content_data {
+			display: block;
+			padding: 0.5em;
+			padding-bottom: 1rem;
+			overflow: auto;
+			max-height: 20rem;
+
+			// ul branch
+			.branch {
+				display: block;
+				max-height: unset;
+
+				// li item_li
+				>.item_li {
+					margin-top: 0.30rem;
+					margin-left: 1.25rem;
+					align-items: stretch;
+					line-height: 1.1rem;
+
+					// checkbox option
+					.item_input {
+						margin-right: 0.25rem;
+						vertical-align: text-bottom;
+						cursor: pointer;
+					}
+
+					>.item_label {
+
+					}
+				}
+			}
+
+			>.branch >.item_li {
+				margin-left: 0.5rem;
+				margin-top: 0.25rem;
+			}
+
+			// li grouper
+			.grouper {
+				width: auto;
+				display: block;
+
+				>.item_label {
+					text-overflow: ellipsis;
+					overflow: hidden;
+					max-width: calc(100% - 3rem);
+					display: inline-block;
+					white-space: nowrap;
+					vertical-align: bottom;
+				}
+
+				>.grouper_label {
+					width: fit-content;
+					padding-left: 0px;
+					padding-top: 0.5em;
+					padding-bottom: 0.25em;
+					padding-right: 1.66rem;
+					opacity: 0.7;
+					font-size: 0.82em;
+				}
+			}
+
+			.icon_arrow {
+				position: relative;
+				top: 2px;
+				left: 1px;
+			}
+		}
+
+	}//end .edit
+
+	&.search {
+
+		>.content_data {
+			display: flex;
+			max-height: 16rem;
+
+			>.q_operator {
+
+			}
+
+			// ul first level
+			>.branch {
+				width: calc(100% - 3.5rem);
+				font-size: 0.9rem;
+				line-height: 0.9rem;
+
+				.item_li {
+					line-height: 1.2rem;
+				}
+			}
+
+			.icon_arrow {
+				position: relative;
+				top: 3px;
+				left: 1px;
+			}
+		}
+
+	}
+
+	&.view_collapse {
+		cursor: n-resize;
+		line-height: 1.1rem;
+
+		&:hover {
+			background-color: @color_hilite_3;
+		}
+
+		&.collapsed {
+			cursor: s-resize;
+			height: 2.5rem;
+			overflow: hidden;
+		}
+	}
+
+	&.list {
+		max-height: 5rem;
+		overflow: auto;
+		font-size: 96%;
+	}
+
+}//end .component_filter
+
+// inside inspector
+.wrapper_inspector {
+
+	.component_filter {
+
+		>.content_data {
+			font-size: 0.85rem;
+			padding-bottom: 0.5rem;
+
+			.branch .item_li {
+				margin-top: 0.25rem;
+				line-height: 1rem;
+
+				>.item_label {
+					.item_input {
+						margin-right: 0.25rem;
+					}
+				}
+			}
+
+			>.branch >.item_li {
+				margin-left: 0px;
+			}
+		}
+
+		&.fullscreen {
+			padding: 1rem;
+
+			>.label {
+				display: block !important;
+			}
+
+			>.content_data {
+				font-size: 1rem;
+				padding: 1rem;
+
+				.branch .item_li {
+					line-height: 1.2rem;
+				}
+			}
+		}
+	}
+}
+// dark mode: checkbox inputs
+:root[data-theme="dark"] .component_filter input[type="checkbox"],
+:root[data-theme="dark"] .component_filter_master input[type="checkbox"] {
+	background-color: var(--checkbox_bg);
+	border: 1px solid var(--checkbox_border);
+	-webkit-appearance: none;
+	appearance: none;
+	width: 1em;
+	height: 1em;
+	border-radius: 2px;
+	cursor: pointer;
+	position: relative;
+
+	&:checked {
+		background-color: var(--checkbox_checked_bg);
+		border-color: var(--checkbox_checked_bg);
+
+		&:after {
+			content: '';
+			position: absolute;
+			left: 0.25em;
+			top: 0.05em;
+			width: 0.35em;
+			height: 0.6em;
+			border: solid var(--checkbox_checkmark);
+			border-width: 0 2px 2px 0;
+			transform: rotate(45deg);
+		}
+	}
+}

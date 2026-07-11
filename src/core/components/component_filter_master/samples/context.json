@@ -1,0 +1,93 @@
+{
+	"typo": "ddo",
+	"model": "component_filter_master",
+	"label": "Projects",
+	"tipo": "dd170",
+	"section_tipo": "dd128",
+	"legacy_model": "component_filter_master",
+	"parent": "dd128",
+	"parent_grouper": "dd129",
+	"lang": "lg-nolan",
+	"mode": "edit",
+	"translatable": false,
+	"properties": {},
+	"css": {
+		".wrapper_component": {
+			"grid-column": "span 4"
+		},
+		".wrapper_component >.content_data": {
+			"max-height": "none"
+		}
+	},
+	"permissions": 3,
+	"tools": [
+		{
+			"typo": "ddo",
+			"model": "tool_propagate_component_data",
+			"name": "tool_propagate_component_data",
+			"label": "Propagate component data",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": null,
+			"css": {
+				"url": "/dedalo/tools/tool_propagate_component_data/css/tool_propagate_component_data.css"
+			},
+			"icon": "/dedalo/tools/tool_propagate_component_data/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_time_machine",
+			"name": "tool_time_machine",
+			"label": "Time machine",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_time_machine/css/tool_time_machine.css"
+			},
+			"icon": "/dedalo/tools/tool_time_machine/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		}
+	],
+	"buttons": [],
+	"request_config": null,
+	"columns_map": null,
+	"sortable": true,
+	"type": "component",
+	"path": [
+		{
+			"component_tipo": "dd170",
+			"model": "component_filter_master",
+			"name": "Projects",
+			"section_tipo": "dd128"
+		},
+		{
+			"component_tipo": "dd156",
+			"model": "component_input_text",
+			"name": "Project (name)",
+			"section_tipo": "dd153"
+		}
+	],
+	"new_dataframe": null,
+	"view": null,
+	"children_view": null,
+	"debug": {
+		"exec_time": "0.078 ms"
+	},
+	"target_sections": [
+		{
+			"tipo": "dd153",
+			"label": "Projects"
+		}
+	]
+}

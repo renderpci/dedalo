@@ -1,0 +1,40 @@
+{
+	"section_id": 1,
+	"section_tipo": "roleusr1",
+	"tipo": "hierarchy40",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "hierarchy40",
+	"entries": [
+		{
+			"type": "dd96",
+			"section_tipo": "rsc170",
+			"section_id": "1",
+			"from_component_top_tipo": "rsc1054"
+		},
+		{
+			"type": "dd96",
+			"section_tipo": "rsc170",
+			"section_id": "33",
+			"from_component_top_tipo": "rsc1054"
+		},
+		{
+			"type": "dd96",
+			"section_tipo": "rsc420",
+			"section_id": "48",
+			"from_component_top_tipo": "rsc909"
+		}
+	],
+	"debug_model": "component_relation_index",
+	"debug_label": "Indexations",
+	"debug_dataframe": null,
+	"parent_tipo": "roleusr1",
+	"parent_section_id": false,
+	"pagination": {
+		"total": 0,
+		"limit": 10,
+		"offset": 0
+	},
+	"row_section_id": 1,
+	"changed_data": []
+}

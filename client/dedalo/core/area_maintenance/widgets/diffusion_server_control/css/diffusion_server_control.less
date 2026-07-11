@@ -1,0 +1,129 @@
+/**
+* diffusion_server_control
+*
+* Included from area_maintenance.less file.
+* The status readout, severity chips/pills, eyebrows, notes and action buttons all
+* come from the shared widget_kit (.dd_readout / .dd_badge / .dd_eyebrow / .dd_note).
+* Only this widget's section layout (scheduler, job queue, pending, config) lives here.
+*/
+.wrapper_widget.diffusion_server_control {
+
+	@dsc_mono: Menlo, Monaco, Consolas, 'Courier New', monospace;
+
+	.diffusion_server_control_content {
+		display: flex;
+		flex-direction: column;
+	}
+
+	// ---- sections ------------------------------------------------------
+	.diffusion_server_control_scheduler,
+	.diffusion_server_control_jobs,
+	.diffusion_server_control_pending,
+	.diffusion_server_control_config,
+	.diffusion_server_control_footer {
+		margin-top: 0.9rem;
+	}
+	// hairline dividers before the titled sub-sections + footer
+	.diffusion_server_control_scheduler,
+	.diffusion_server_control_jobs,
+	.diffusion_server_control_config,
+	.diffusion_server_control_footer {
+		padding-top: 0.9rem;
+		border-top: 1px solid var(--border_default);
+	}
+
+	// section headings (eyebrows) get a little breathing room below them
+	.diffusion_server_control_scheduler > .dd_eyebrow,
+	.diffusion_server_control_jobs > .dd_eyebrow,
+	.diffusion_server_control_config > .dd_eyebrow {
+		margin-bottom: 0.5rem;
+	}
+
+	// scheduler: readout + pause/resume toggle
+	.diffusion_server_control_scheduler {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.6rem;
+
+		.button_scheduler {
+			align-self: flex-start;
+		}
+	}
+
+	// durable job queue table
+	.diffusion_server_control_jobs {
+		display: flex;
+		flex-direction: column;
+	}
+	.diffusion_server_control_job_table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 0.82rem;
+
+		th,
+		td {
+			text-align: left;
+			padding: 0.4rem 0.6rem;
+			border-bottom: 1px solid var(--border_default);
+			vertical-align: middle;
+		}
+		th {
+			font-weight: 600;
+			color: var(--text_muted, inherit);
+			white-space: nowrap;
+		}
+		// process / target columns carry machine strings
+		td:first-child,
+		td:nth-child(2) {
+			font-family: @dsc_mono;
+			word-break: break-word;
+		}
+		.job_actions {
+			display: flex;
+			gap: 0.4rem;
+			flex-wrap: wrap;
+			white-space: nowrap;
+		}
+	}
+
+	// block-level purge control
+	.diffusion_server_control_purge {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+		margin-top: 0.7rem;
+
+		.purge_hours {
+			width: 5rem;
+		}
+	}
+
+	// pending unpublish deletions (inline metric)
+	.diffusion_server_control_pending {
+		display: flex;
+		align-items: center;
+		gap: 0.66rem;
+		flex-wrap: wrap;
+	}
+
+	.diffusion_server_control_config {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.diffusion_server_control_footer {
+		display: flex;
+	}
+
+	// API response, as a console block
+	.body_response {
+		.dd_console();
+		margin-top: 0.9rem;
+
+		&:empty {
+			display: none;
+		}
+	}
+}

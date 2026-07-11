@@ -1,0 +1,451 @@
+/**
+* TOOL_DIFFUSION
+*
+* Loaded on tool init
+*/
+
+// imports
+@import (once) '../../../core/page/css/layout/vars';
+
+// local vars
+:root {
+	--tool_diffusion: #8aa364;
+	--tool_diffusion_text: #040503;
+	--tool_diffusion_border: #7d9558;
+}
+@tool_color : var(--tool_diffusion);
+
+// tool wrapper
+// Encapsulate all tool content to prevent core collisions
+.wrapper_tool.tool_diffusion {
+
+	// custom colors
+	--color_1: @tool_color;
+	--color_2: #9c6dd3;
+	--color_3: #6196c0;
+	--color_4: #b36f7c;
+	--color_5: #aaa50a;
+
+	.spinner {
+		background-color: @tool_color;
+	}
+
+	>.content_data {
+
+		// section_info: section name and tipo information as 'Types --- numistata3'
+		.section_info {
+			display: flex;
+			justify-content: space-between;
+
+			.section_name {
+				font-size: 1.5rem;
+				padding: 1rem;
+			}
+			.section_tipo {
+				font-size: 1.5rem;
+				padding: 1rem;
+				color: @color_grey_8;
+				font-weight: 200;
+			}
+		}
+
+		// diffusion_info_container: levels, info display button, info text JSON
+		.diffusion_info_container {
+			padding: 1rem;
+
+			.resolve_levels_container {
+
+				.note_about_levels {
+					margin-left: 0.5rem;
+				}
+
+				input {
+					text-align: center;
+					background-color: @color_grey_15;
+					width: 3rem;
+					border: 1px solid @color_grey_13;
+					border-radius: 3px;
+					margin-left: 1rem;
+					margin-right: 1rem;
+					padding: 0.2rem;
+
+					&.skip_publication_state_check_input {
+						margin-right: 0.5rem;
+						width: auto;
+						margin-left: 3rem;
+						vertical-align: text-bottom;
+					}
+				}
+			}
+
+			.button.info {
+				float: right;
+				height: 1.5rem;
+				width: 1.5rem;
+				top: -1rem;
+				position: relative;
+			}
+
+			// info_div: JSON stringify info about diffusion domain config
+			pre.info_div {
+				width: 100%;
+				margin-top: 1.5rem;
+				border-radius: 3px;
+			}
+
+			// info_text: info about number of records to publish
+			.info_text {
+				padding: 2rem;
+				padding-left: 0px;
+				font-weight: 300;
+				padding-bottom: 0;
+				padding-top: 1.5rem;
+				font-weight: 500;
+
+				&::before {
+					content: " ";
+					display: inline-block;
+					background-image: url(../img/icon.svg);
+					background-repeat: no-repeat;
+					width: 1rem;
+					height: 1rem;
+					margin-right: 0.5rem;
+				}
+			}
+		}
+
+		// publication_items. Every section_map generates a new one
+		.publication_items {
+			display: block;
+			padding: 0.5rem;
+
+			// publication_item_label. Change background color to easy differentiate labels
+			>.publication_item_label {
+				padding: 0.5rem;
+				font-weight: 600;
+				min-height: 2rem;
+				background-color: @tool_color;
+				color: @color_white;
+				margin-top: 0.33rem;
+				cursor: pointer;
+				text-transform: uppercase;
+
+				&:nth-of-type(1) {
+					background-color: var(--color_1);
+				}
+
+				&:nth-of-type(3) {
+					background-color: var(--color_2);
+				}
+
+				&:nth-of-type(5) {
+					background-color: var(--color_3);
+				}
+
+				&:nth-of-type(7) {
+					background-color: var(--color_4);
+				}
+
+				&:after {
+					right: 0.25rem;
+					background-color: @color_grey_14;
+				}
+			}
+
+			>.publication_item_body {
+
+				>.publication_items_grid {
+			    	width: 100%;
+					background-color: @color_grey_15;
+					display: grid;
+					gap: 0.75rem;
+					align-content: space-between;
+					grid-template-columns: 1fr 3fr;
+					margin-bottom: 1rem;
+					border: 1px solid @color_grey_13;
+					padding: 1rem;
+					z-index: 0;
+
+					.label, .value {
+						line-height: 1.3rem;
+					}
+
+					.label {
+						opacity: 0.8;
+					}
+
+					.value {
+						font-weight: bold;
+						display: flex;
+						align-items: center;
+
+						&.fail {
+							color: @color_danger;
+						}
+						&.success {
+							color: @color_success;
+						}
+
+						&.light {
+							font-weight: 100;
+							font-family: monospace;
+							font-size: 0.95rem;
+							color: @color_grey_10;
+						}
+					}
+
+					.value_info {
+						margin-left: 1rem;
+						font-weight: 300;
+						font-size: 0.9rem;
+						color: @color_grey_8;
+					}
+
+					.button.tree {
+						zoom: 0.9;
+						vertical-align: middle;
+						margin-left: 0.5rem;
+						background-color: @color_orange_dedalo;
+					}
+
+					.pre {
+						z-index: 0;
+					}
+
+					.fields_grid_value.label {
+						margin-left: 3rem;
+					}
+
+					.fields_grid_value.link {
+						cursor: pointer;
+
+						&:hover {
+							color: var(--tool_diffusion_text);
+							font-weight: 400;
+						}
+
+						&:active {
+							opacity: 0.4;
+						}
+					}
+
+					.value.link {
+						padding: 0px;
+						display: inline-block;
+
+						&:after {
+							right: unset;
+							padding-left: 3rem;
+							top: 0.25rem;
+						}
+					}
+
+					.fields_grid_value_obs {
+						line-height: 0.95rem;
+						padding-left: 1.25rem;
+						margin-left: 2rem;
+						font-size: 80%;
+						color: @color_grey_9;
+					}
+
+					.container_bottom {
+						position: relative;
+						grid-column: span 2;
+						display: flex;
+						flex-wrap: wrap;
+						justify-content: center;
+						padding: 0px;
+
+						>.buttons_container {
+							display: flex;
+							align-items: center;
+
+							// publication_button: default style
+							.publication_button {
+								margin: 1rem;
+								background-color: @tool_color;
+								border-color: var(--tool_diffusion_border);
+
+								&.not_ready {
+									opacity: 0.4;
+								}
+							}
+
+							// additions
+							.bottom_additions {
+								margin-left: 1rem;
+
+								>label {
+									display: flex;
+									align-items: center;
+									cursor: pointer;
+
+									>input {
+										margin-right: 0.33rem;
+									}
+								}
+							}
+						}
+
+						.response_message {
+							padding: 1rem;
+							width: 100%;
+							overflow-wrap: break-word;
+							line-height: 1.1rem;
+
+							// button download RDF mainly
+							>button {
+								display: block;
+								width: auto;
+								margin: 1rem auto;
+							}
+						}
+
+						.spinner {
+							left: 48%;
+						}
+					}
+				}
+
+				&:nth-of-type(4) {
+					>.publication_items_grid .container_bottom >.buttons_container >.publication_button {
+						background-color: var(--color_2);
+					}
+				}
+
+				&:nth-of-type(6) {
+					>.publication_items_grid .container_bottom >.buttons_container >.publication_button {
+						background-color: var(--color_3);
+					}
+				}
+
+				&:nth-of-type(8) {
+					>.publication_items_grid .container_bottom >.buttons_container >.publication_button {
+						background-color: var(--color_4);
+					}
+				}
+
+				&:nth-of-type(10) {
+					>.publication_items_grid .container_bottom >.buttons_container >.publication_button {
+						background-color: var(--color_5);
+					}
+				}
+			}
+		}
+
+		// diffusion_report: Bun SQL diffusion result display
+		.diffusion_report {
+			padding: 1rem;
+			width: 100%;
+
+			.report_summary {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				padding: 0.75rem 1rem;
+				margin-bottom: 0.75rem;
+				border-radius: 3px;
+				font-weight: 500;
+
+				&.success {
+					background-color: @color_success;
+					color: @color_white;
+				}
+				&.partial {
+					background-color: @color_warning;
+					color: @color_white;
+				}
+				&.fail {
+					background-color: @color_danger;
+					color: @color_white;
+				}
+			}
+
+			.tables_report {
+				width: 100%;
+				display: grid;
+				grid-template-columns: 1fr auto auto;
+				gap: 0.25rem 1rem;
+				background-color: @color_grey_15;
+				border: 1px solid @color_grey_13;
+				padding: 0.75rem 1rem;
+				border-radius: 3px;
+
+				.header {
+					font-weight: 600;
+					opacity: 0.7;
+					text-transform: uppercase;
+					box-shadow: none;
+				}
+				.header.table_name {
+					text-align: left;
+					border-bottom-left-radius: 1em;
+					border-top-left-radius: 1em;
+				}
+				.header.rows_total {
+					text-align: right;
+				}
+				.header.records_count {
+					text-align: right;
+					border-bottom-right-radius: 1em;
+					border-top-right-radius: 1em;
+				}
+
+				.cell {
+					padding: .2rem 0 0 2em;
+					line-height: 1.4;
+				}
+				.cell.rows_total,
+				.cell.records_count {
+					text-align: right;
+					font-weight: 600;
+					padding-right: 1em;
+					font-variant-numeric: tabular-nums;
+
+					&.zero {
+						opacity: 0.4;
+						font-weight: 400;
+					}
+				}
+			}
+
+			.error_list {
+				margin-top: 1rem;
+
+				.error_item {
+					padding: 0.5rem 0.75rem;
+					margin-bottom: 0.25rem;
+					font-size: 0.9rem;
+					font-family: monospace;
+					word-break: break-word;
+					border-radius: 2px;
+					background-color: @color_danger !important;
+					color: @color_white !important;
+				}
+			}
+		}
+	}//end content_data
+}//end wrapper_tool
+
+// modal header tool modification
+.tool_header.tool_diffusion {
+	background-color: @tool_color;
+}
+
+// engine advisory banner
+.diffusion_engine_advisory {
+	margin: 1em;
+	padding: 1em 1.2em;
+	border-radius: 6px;
+	border-left: 4px solid #c98a00;
+	background: #fff8e6;
+	color: #4a3b00;
+
+	&.unreachable { border-left-color: #b3261e; background: #fdeceb; color: #5f1512; }
+	.advisory_title { margin: 0 0 .4em; font-size: 1.05em; }
+	.advisory_cause { margin: 0 0 .6em; }
+	.advisory_steps { margin: 0 0 .8em 1.1em; }
+	.advisory_actions { display: flex; gap: .5em; }
+	.advisory_log { margin-top: .8em; max-height: 14em; overflow: auto; background: #1e1e1e; color: #ddd; padding: .6em; font-size: .8em; }
+	.advisory_log.hide { display: none; }
+}

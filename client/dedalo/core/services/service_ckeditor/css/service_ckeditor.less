@@ -1,0 +1,365 @@
+/**
+* service_ckeditor
+*
+* Included from main.less file
+*/
+
+// ddEdit custom toolbar
+.toolbar_container {
+	// container details defined in component_text_area
+	display: flex;
+	flex-wrap: wrap;
+	position: absolute;
+	background-color: @color_white;
+	box-shadow: 0px 1px 0px 0px @color_grey_13;
+	left: 6px;
+	top: 6px;
+	height: auto;
+	padding: 0.05rem;
+	width: calc(100% - 12px);
+	z-index: 3; // images in html_text overlay the z-index: 2
+
+	// custom toolbar of ddEditor
+	>.toolbar_button {
+		height: 1.5em;
+		padding: 0.25rem;
+		padding-right: 0.33em;
+		padding-left: 0.25em;
+		border-radius: 0.25em;
+		cursor: pointer;
+
+		&.separator {
+			pointer-events: none;
+		}
+
+		&:hover {
+			background-color: @color_grey_11;
+		}
+		&:active {
+			opacity: 0.6;
+		}
+		&.active {
+			background-color: @color_grey_11;
+		}
+		&.disable {
+			opacity: 25%;
+		}
+
+		img {
+			height: 100%;
+		}
+	}
+
+	// standard ckeditor inline toolbar moved inside toolbar_container
+	// inline editor toolbar
+	.ck-balloon-panel.ck-toolbar-container {
+		display: contents;
+		position: relative;
+		z-index: 0;
+		left: 0px !important;
+		top: 0px !important;
+		box-shadow: none;
+		border: 0px;
+
+		.ck-toolbar.ck-toolbar_grouping {
+			outline: none;
+			margin: 0px !important;
+			height: 1.70rem;
+
+			// 1 - items wrapper
+			.ck-toolbar__items {
+				margin: 0px !important;
+				padding: 0px !important;
+			}
+
+			// 2 - separator
+			.ck-toolbar__separator {
+				height: 100%;
+			}
+
+			// 3 folded grouped-dropdown
+			.ck-toolbar__grouped-dropdown {
+				white-space: nowrap;
+			}
+
+			.ck-dropdown,
+			.ck-toolbar__separator,
+			.ck-file-dialog-button,
+			.ck-button {
+				min-height: 22px;
+				margin: 0px;
+				margin-top: 0px;
+				margin-bottom: 0px;
+				white-space: nowrap;
+			}
+
+			.ck-splitbutton.ck-dropdown__button {
+				white-space: nowrap;
+			}
+
+			// dropdown like 'paragraph'
+			.ck-dropdown.ck-heading-dropdown {
+				width: 8rem;
+				max-height: unset;
+				white-space: nowrap;
+			}
+
+			// svg icons
+			.ck-icon {
+				// height: 19px;
+			}
+
+			// separators
+			.ck-toolbar__separator {
+				height: 16px;
+			}
+			input, label {
+				height: unset;
+				min-height: unset;
+				font-size: unset;
+			}
+		}
+	}//end .ck-balloon-panel
+
+}//end .toolbar_container
+
+// source ckeditor
+.ck-source-editing-area {
+	height: calc(100% - 1.5rem);
+	width: 100%;
+	margin: 0.5rem;
+	margin-left: 1rem;
+	margin-right: 1rem;
+	z-index: 0;
+
+	>textarea {
+		overflow: auto;
+	}
+}
+
+.ck-content {
+	// fix reset ol, ul padding that hide the list styles like 01. xx
+	ol, ul {
+		padding-left: 1.5em;
+	}
+}
+
+.ck-placeholder {
+	opacity: 0.33;
+}
+
+dd-modal .find_and_replace {
+
+	background-color: @color_grey_15;
+
+	input{
+		margin-bottom: 1px;
+		&:focus{
+			background-color: @color_mandatory;
+			outline: 1px solid @color_orange_dedalo;
+			box-shadow: none;
+		}
+	}
+
+	.replace_container {
+		padding-top	: 1.5em;
+	}
+
+	.options_container {
+		display: flex;
+		align-items: center;
+		padding-top: 1.5em;
+
+		.label_match_case{
+			padding-right:0.3em;
+		}
+
+		.label_whole_words {
+			padding-left:1.0em;
+			padding-right:0.3em;
+		}
+
+		/* toggle-pill-color */
+		.check input[type="checkbox"] {
+			display: none;
+		}
+		.check input[type="checkbox"] + label {
+			display: inline-block;
+			position: relative;
+			width: 3em;
+			height: 1.6em;
+			border-radius: 1em;
+			background: @color_grey_13;
+			cursor: pointer;
+			-webkit-user-select: none;
+			-moz-user-select: none;
+			user-select: none;
+			-webkit-transition: background 0.1s ease-in-out;
+			transition: background 0.1s ease-in-out;
+		}
+		.check input[type="checkbox"] + label:before {
+			content: "";
+			display: inline-block;
+			width: 1.2em;
+			height: 1.2em;
+			border-radius: 1em;
+			background: @color_white;
+			box-shadow: 2px 0px 5px @color_grey_10;
+			position: absolute;
+			left: 0.2em;
+			top: 0.2em;
+			-webkit-transition: all 0.2s ease-in-out;
+			transition: all 0.2s ease-in-out;
+		}
+		.check input[type="checkbox"]:checked + label {
+			background: @color_green_success;
+		}
+		.check input[type="checkbox"]:checked + label:before {
+			box-shadow: -2px 0px 5px @color_grey_10;
+			left: 1.6em;
+		}
+ 		/* toggle-pill-color end */
+	}
+}//end dd-modal
+
+// ---- DARK MODE ----
+// CKEditor uses --ck-color-* CSS custom properties internally.
+// Override them under :root[data-theme="dark"] so the entire CKEditor UI
+// (toolbar, dropdowns, panels, buttons, inputs, source editor, etc.)
+// adapts to the dark palette. See vars.less / theme_dark.less for token definitions.
+:root[data-theme="dark"] {
+
+	// Base
+	--ck-color-base-background:				var(--color_white);
+	--ck-color-base-text:					var(--color_black);
+	--ck-color-base-border:					var(--color_grey_11);
+	--ck-color-base-active:					var(--color_input_focus);
+	--ck-color-base-active-focus:			var(--color_input_focus);
+	--ck-color-base-error:					var(--color_danger);
+
+	// Toolbar
+	--ck-color-toolbar-background:			var(--color_white);
+	--ck-color-toolbar-border:				var(--color_grey_13);
+
+	// Buttons — default state (text/icon color via --ck-color-button-default-color)
+	--ck-color-button-default-background:			transparent;
+	--ck-color-button-default-hover-background:		var(--toolbar_btn_hover_bg);
+	--ck-color-button-default-active-background:	var(--toolbar_btn_hover_bg);
+	--ck-color-button-default-disabled-background:	transparent;
+	--ck-color-button-default-color:				var(--color_black);
+
+	// Buttons — on state (active toggle)
+	--ck-color-button-on-background:				var(--color_grey_13);
+	--ck-color-button-on-hover-background:			var(--color_grey_12);
+	--ck-color-button-on-active-background:				var(--color_grey_12);
+	--ck-color-button-on-disabled-background:		var(--color_grey_14);
+	--ck-color-button-on-color:						var(--color_black);
+
+	// Button save / cancel (dialogs)
+	--ck-color-button-save:							var(--color_success);
+	--ck-color-button-cancel:						var(--color_danger);
+
+	// Dropdown
+	--ck-color-dropdown-panel-background:	var(--color_grey_15);
+	--ck-color-dropdown-panel-border:		var(--color_grey_11);
+
+	// Input
+	--ck-color-input-background:			var(--color_grey_16);
+	--ck-color-input-border:				var(--color_grey_11);
+	--ck-color-input-text:					var(--color_black);
+	--ck-color-input-disabled-background:	var(--color_grey_14);
+	--ck-color-input-disabled-border:		var(--color_grey_12);
+	--ck-color-input-disabled-text:			var(--color_grey_8);
+
+	// Labeled field (balloon label background)
+	--ck-color-labeled-field-label-background: var(--color_white);
+
+	// List
+	--ck-color-list-background:						var(--color_grey_15);
+	--ck-color-list-button-hover-background:		var(--color_grey_13);
+	--ck-color-list-button-on-background:			var(--color_grey_12);
+	--ck-color-list-button-on-background-focus:		var(--color_grey_11);
+	--ck-color-list-button-on-text:					var(--color_black);
+
+	// Balloon panel (dropdowns, tooltips, dialogs)
+	--ck-color-panel-background:			var(--color_grey_15);
+	--ck-color-panel-border:				var(--color_grey_11);
+
+	// Tooltip
+	--ck-color-tooltip-background:			var(--color_grey_4);
+	--ck-color-tooltip-text:				var(--color_white);
+
+	// Engine
+	--ck-color-engine-placeholder-text:		var(--color_grey_8);
+
+	// Text / typography
+	--ck-color-text:						var(--color_black);
+	--ck-color-link-default:				var(--color_blue);
+	--ck-color-link-selected-background:	var(--color_blue_light);
+
+	// Focus ring
+	--ck-color-focus-border:				var(--color_input_focus);
+	--ck-color-focus-outer-shadow:			rgba(74, 158, 255, 0.25);
+	--ck-color-focus-disabled-shadow:		transparent;
+
+	// Shadows
+	--ck-color-shadow-drop:				0 2px 6px rgba(0,0,0,0.45);
+	--ck-color-shadow-drop-active:		0 3px 9px rgba(0,0,0,0.5);
+	--ck-color-shadow-inner:			inset 0 2px 4px rgba(0,0,0,0.4);
+
+	// Upload bar
+	--ck-color-upload-bar-background:		var(--color_primary);
+
+	// --- Selectors for CKEditor elements not fully covered by CSS vars ---
+
+	// Force icon/button color at every cascade level.
+	// CKEditor sets SVG fills via JS inline styles (ck-icon__fill) + use elements with color:inherit.
+	// !important is needed to override JS-set inline styles.
+	.ck-toolbar .ck-button,
+	.ck-toolbar .ck-button .ck-button__icon,
+	.ck-toolbar .ck-button .ck-button__icon use,
+	.ck-toolbar .ck-button .ck-button__icon use *,
+	.ck-toolbar .ck-button .ck-icon,
+	.ck-toolbar .ck-button .ck-icon * {
+		color: var(--color_grey_4) !important;
+		fill: var(--color_grey_4) !important;
+		// stroke: var(--color_black) !important;
+	}
+
+	// toolbar custom icons filter (for custom svg/img that need color inversion)
+	.ck-toolbar .ck-button .ck-icon {
+		filter: brightness(0) invert(1) !important;
+	}
+
+	// source editing area
+	.ck-source-editing-area > textarea {
+		background-color: var(--color_grey_16);
+		color: var(--color_black);
+	}
+
+	// balloon panel border
+	.ck-balloon-panel {
+		border-color: var(--color_grey_11);
+	}
+
+	// custom toolbar buttons (ddEditor mode)
+	.toolbar_button {
+		&:hover, &.active {
+			background-color: var(--toolbar_btn_hover_bg);
+		}
+		img {
+			filter: brightness(0) invert(1) !important;
+		}
+	}
+}
+
+// find_and_replace dark mode
+:root[data-theme="dark"] dd-modal .find_and_replace {
+	background-color: var(--color_grey_15);
+
+	input {
+		background-color: var(--color_grey_16);
+		color: var(--color_black);
+		border-color: var(--color_grey_11);
+	}
+}

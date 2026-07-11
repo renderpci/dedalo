@@ -1,0 +1,20 @@
+{
+	"resultCount": 1,
+	"records": [
+		{
+			"id": "000848571",
+			"title": "Las acuñaciones provinciales romanas de Hispania ",
+			"authors": {
+				"primary": {
+					"Ripollès Alegre, P. P. (Pere Pau)": []
+				},
+				"secondary": [],
+				"corporate": []
+			},
+			"publicationDates": ["2010"],
+			"recordPage": "/Record/000848571",
+			"physicalDescriptions": ["328 p. : ill. ; 29 cm."]
+		}
+	],
+	"status": "OK"
+}

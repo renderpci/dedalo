@@ -1,0 +1,83 @@
+/**
+* add_hierarchy
+*
+* Included from area_maintenance.less file.
+* Checkbox grid of importable hierarchies, aligned to the kit (eyebrow section
+* heading, semantic tokens, success colour for already-installed hierarchies).
+*/
+.wrapper_widget.add_hierarchy {
+
+	.description {
+		padding-bottom: 0.5rem;
+		color: var(--fg_muted);
+		line-height: 1.4;
+	}
+
+	.hierarchy_container {
+		padding: 1rem 0;
+	}
+
+	.typology_label {
+		padding: 0 0 0.4rem;
+		font-size: 0.72rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--fg_muted);
+		border-bottom: 1px solid var(--border_default);
+	}
+
+	// hierarchies_import_block
+	.hierarchy_ul {
+		padding: 1rem 0 1rem 1.5rem;
+		display: grid;
+		grid-template-columns: repeat(6, 1fr);
+		gap: 0.25rem;
+
+		@media screen and (max-width: @width_break_point_1) {
+			grid-template-columns: repeat(4, 1fr);
+		}
+		@media screen and (min-width: 2000px) {
+			grid-template-columns: repeat(8, 1fr);
+		}
+	}
+
+	.hierarchy_label {
+		display: inline-block;
+		cursor: pointer;
+		line-height: 1.5rem;
+		margin-bottom: 2px;
+		padding-right: 0.75rem;
+		color: var(--fg_default);
+
+		&:hover {
+			box-shadow: 0 1px 0 var(--border_strong);
+		}
+
+		>.hierarchy_checkbox {
+			vertical-align: text-bottom;
+			height: 1rem;
+			width: 1rem;
+			margin: 0 0.5rem 0 -1.5rem;
+		}
+
+		// hierarchy already installed
+		>.active_hierarchy {
+			color: var(--color_success);
+			font-weight: 700;
+		}
+	}
+
+	.msg {
+		position: relative;
+		padding: 2rem;
+
+		.spinner {
+			top: 0;
+		}
+	}
+
+	.button_refresh {
+		float: right;
+	}
+}//end add_hierarchy

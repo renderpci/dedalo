@@ -1,0 +1,49 @@
+# Nightly full-fat run — everything the repo can gate on this machine:
+# the whole bun test tree (unit + parity + integration/MariaDB) plus the
+# browser client gate (puppeteer against a CI-scoped server on :3510).
+#
+# GitHub caveats (docs/CI.md): schedules run only on the default branch, and
+# GitHub pauses them after ~60 days of repo inactivity — re-enable from the
+# Actions tab. Cron is UTC (01:00 UTC ≈ 03:00 Europe/Madrid).
+#
+# Invariants in this file are enforced by test/unit/ci_workflow_tripwire.test.ts.
+name: nightly
+
+on:
+  schedule:
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-selfhosted
+  cancel-in-progress: false
+
+jobs:
+  full-and-client:
+    runs-on: [self-hosted, macOS, dedalo-mac]
+    timeout-minutes: 90
+    env:
+      ORACLE_REQUIRED: "1"
+      DIFFUSION_JOBS_TABLE: dedalo_ts_test_ci_diffusion_jobs
+      DIFFUSION_ACTIVITY_TABLE: dedalo_ts_test_ci_activity_diffusion
+    steps:
+      - uses: actions/checkout@v4
+      - name: Link sibling paths (../private, PHP tree, client lib)
+        run: bash scripts/ci/link_siblings.sh
+      - name: Runner preconditions (bun pin, env, service probes)
+        run: bash scripts/ci/env_guard.sh
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Full suite (unit + parity + integration)
+        shell: bash
+        run: bun test 2>&1 | tee nightly-suite.log
+      - name: Client gate (browser suite vs CI server on :3510)
+        shell: bash
+        run: bash scripts/ci/client_gate.sh 2>&1 | tee client-gate.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nightly-logs
+          path: |
+            nightly-suite.log
+            client-gate.log

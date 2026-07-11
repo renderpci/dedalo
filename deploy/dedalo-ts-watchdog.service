@@ -1,0 +1,19 @@
+# Dédalo TS watchdog — one-shot health probe (audit S2-38).
+#
+# /health checks liveness AND database reachability (audit S3-48): it answers
+# 503 when Postgres is down or the pool is wedged, so this probe catches the
+# "process alive but service dead" class systemd's Restart=always cannot see.
+# Enabled by dedalo-ts-watchdog.timer (every 30 s).
+
+[Unit]
+Description=Dedalo TS health watchdog (curl /health over the unix socket)
+Requisite=dedalo-ts.service
+After=dedalo-ts.service
+
+[Service]
+Type=oneshot
+# --fail: non-2xx exits non-zero → OnFailure restart. --max-time bounds a hung
+# server. Match the socket path to SERVER_UNIX_SOCKET in ../private/.env.
+ExecStart=/usr/bin/curl --fail --silent --show-error --max-time 10 \
+    --unix-socket /tmp/dedalo_ts.sock http://localhost/health
+OnFailure=dedalo-ts-restart.service

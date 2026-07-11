@@ -1,0 +1,46 @@
+{
+	"section_id": 1,
+	"section_tipo": "dmm480",
+	"tipo": "dmm567",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "dmm567",
+	"entries": [
+		{
+			"id": 1,
+			"type": "dd151",
+			"section_id": "1",
+			"section_tipo": "dmm798",
+			"from_component_tipo": "dmm567"
+		},
+		{
+			"section_id": "2",
+			"section_tipo": "dmm798",
+			"id": 2,
+			"type": "dd151",
+			"from_component_tipo": "dmm567"
+		}
+	],
+	"debug_model": "component_check_box",
+	"debug_label": "Deposit type",
+	"debug_dataframe": null,
+	"datalist": [
+		{
+			"value": {
+				"section_id": "1",
+				"section_tipo": "dmm798"
+			},
+			"label": "<mark>Fossa</mark>",
+			"section_id": "1"
+		},
+		{
+			"value": {
+				"section_id": "2",
+				"section_tipo": "dmm798"
+			},
+			"label": "Grave",
+			"section_id": "2"
+		}
+	],
+	"changed_data": []
+}

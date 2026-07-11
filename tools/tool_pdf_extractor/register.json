@@ -1,0 +1,660 @@
+{
+  "id": "3982",
+  "section_id": "27",
+  "section_tipo": "dd1340",
+  "data": {
+    "label": "Tools development",
+    "section_id": 27,
+    "created_date": "2026-06-18 11:43:41",
+    "section_tipo": "dd1340",
+    "diffusion_info": null,
+    "created_by_user_id": -1
+  },
+  "relation": {
+    "dd197": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd197"
+      }
+    ],
+    "dd200": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd200"
+      }
+    ],
+    "dd1330": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "30",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      }
+    ],
+    "dd1331": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1331"
+      }
+    ],
+    "dd1332": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1332"
+      }
+    ],
+    "dd1333": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1333"
+      }
+    ],
+    "dd1337": [
+      {
+        "id": 1,
+        "type": "dd675",
+        "section_id": "1",
+        "section_tipo": "dd153",
+        "from_component_tipo": "dd1337"
+      }
+    ],
+    "dd1354": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1354"
+      }
+    ]
+  },
+  "string": {
+    "dd612": [
+      {
+        "id": 1,
+        "lang": "lg-deu",
+        "value": "<p>Extrahieren Sie den Inhalt der zu verwendenden PDF-Datei in die entsprechenden Felder, z. B. text_areas.</p>"
+      },
+      {
+        "id": 2,
+        "lang": "lg-ell",
+        "value": "<p>Εξαγάγετε το περιεχόμενο του PDF που θα χρησιμοποιηθεί στα σχετικά πεδία, όπως το text_areas.</p>"
+      },
+      {
+        "id": 3,
+        "lang": "lg-eng",
+        "value": "<p>Extract the content of the PDF to be used into the fields related, like text_areas.</p>"
+      },
+      {
+        "id": 4,
+        "lang": "lg-nep",
+        "value": "<p>सम्बन्धित क्षेत्रहरूमा प्रयोग गर्न PDF को सामग्री निकाल्नुहोस्, जस्तै text_areas।</p>"
+      }
+    ],
+    "dd799": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "Extreu el contingut del PDF"
+      },
+      {
+        "id": 2,
+        "lang": "lg-deu",
+        "value": "PDF-Inhalt extrahieren"
+      },
+      {
+        "id": 3,
+        "lang": "lg-ell",
+        "value": "Εξαγωγή περιεχομένου PDF"
+      },
+      {
+        "id": 4,
+        "lang": "lg-eng",
+        "value": "Extract PDF file content"
+      },
+      {
+        "id": 5,
+        "lang": "lg-eus",
+        "value": "Atera edukia PDFtik"
+      },
+      {
+        "id": 6,
+        "lang": "lg-fra",
+        "value": "Extraire le contenu du PDF"
+      },
+      {
+        "id": 7,
+        "lang": "lg-ita",
+        "value": "Estrarre il contenuto del PDF"
+      },
+      {
+        "id": 8,
+        "lang": "lg-nep",
+        "value": "PDF फाइल सामग्री निकाल्नुहोस्"
+      },
+      {
+        "id": 9,
+        "lang": "lg-por",
+        "value": "Extrair conteúdo de PDF"
+      },
+      {
+        "id": 10,
+        "lang": "lg-spa",
+        "value": "Extrae el contenido del PDF"
+      }
+    ],
+    "dd1326": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "tool_pdf_extractor"
+      }
+    ],
+    "dd1327": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "1.0.4"
+      }
+    ],
+    "dd1328": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "6.0.0"
+      }
+    ],
+    "dd1362": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "<p>Manages the extraction of text from PDF files (not OCR) used for publication searches.</p><p>Adds the page number for easy location of articles or parts of the document.</p><p>To work, it requires the installation of a daemon like 'pdftotext', whose path is defined in the config as 'PDF_AUTOMATIC_TRANSCRIPTION_ENGINE' and is usually: '/usr/bin/pdftotext'.</p><p>More information about automatic transcription engine using XPDF from http://www.foolabs.com/xpdf/ or https://pdftot</p>"
+      }
+    ],
+    "dd1644": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "Dédalo team"
+      }
+    ]
+  },
+  "date": {
+    "dd199": [
+      {
+        "id": 1,
+        "start": {
+          "day": 21,
+          "hour": 12,
+          "time": 64934222820,
+          "year": 2020,
+          "month": 4,
+          "minute": 7,
+          "second": 0
+        }
+      }
+    ],
+    "dd201": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "start": {
+          "day": 18,
+          "hour": 11,
+          "time": 65132163821,
+          "year": 2026,
+          "month": 6,
+          "minute": 43,
+          "second": 41
+        }
+      }
+    ]
+  },
+  "iri": null,
+  "geo": null,
+  "number": null,
+  "media": null,
+  "misc": {
+    "dd1372": [
+      {
+        "id": 1,
+        "value": [
+          {
+            "lang": "lg-spa",
+            "name": "page_in",
+            "value": "Página inicial"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "page_out",
+            "value": "Página final"
+          },
+          {
+            "lang": "lg-vlca",
+            "name": "page_out",
+            "value": "sdfsdfs"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "page_out",
+            "value": "Page out"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "page_in",
+            "value": "Page in"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "total_pages",
+            "value": "Páginas totales"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "total_pages",
+            "value": "Total pages"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "page_in",
+            "value": "Pàgina inicial"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "page_out",
+            "value": "Pàgina final"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "total_pages",
+            "value": "Pàgines totals"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "proces_method",
+            "value": "Método de procesado"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "proces_method",
+            "value": "Mètode de processament"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "proces_method",
+            "value": "Processing method"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "do_process",
+            "value": "Procesar"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "do_process",
+            "value": "Processar"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "do_process",
+            "value": "Process"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "page_in",
+            "value": "पृष्ठ मा"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "page_out",
+            "value": "पृष्ठ बाहिर"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "page_in",
+            "value": "Σελίδα μέσα"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "page_out",
+            "value": "Σελίδα έξω"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "total_pages",
+            "value": "कुल पृष्ठहरू"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "total_pages",
+            "value": "Σύνολο σελίδων"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "proces_method",
+            "value": "Μέθοδος επεξεργασίας"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "proces_method",
+            "value": "प्रशोधन विधि"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "proces_method",
+            "value": "Verarbeitungsmethode"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "do_process",
+            "value": "प्रक्रिया"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "do_process",
+            "value": "διαδικασία"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "do_process",
+            "value": "Verfahren"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "total_pages",
+            "value": "Alle Seiten"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "page_in",
+            "value": "Seite ein"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "page_out",
+            "value": "Seite raus"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "select_text",
+            "value": "Select text"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "select_text",
+            "value": "Seleccionar texto"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "select_text",
+            "value": "Seleccioneu el text"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "select_text",
+            "value": "Hautatu testua"
+          },
+          {
+            "lang": "lg-por",
+            "name": "select_text",
+            "value": "Selecionar texto"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "select_text",
+            "value": "Sélectionner le texte"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "select_text",
+            "value": "Seleziona il testo"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "select_text",
+            "value": "Επιλέξτε κείμενο"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "select_text",
+            "value": "Text auswählen"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "select_text",
+            "value": "पाठ चयन गर्नुहोस्"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "page_in",
+            "value": "Hasierako orrialdea"
+          },
+          {
+            "lang": "lg-por",
+            "name": "page_in",
+            "value": "Página inicial"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "page_in",
+            "value": "Page d'accueil"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "page_in",
+            "value": "Pagina iniziale"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "total_pages",
+            "value": "Orriak guztira"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "page_out",
+            "value": "Pagina finale"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "total_pages",
+            "value": "Pagine totali"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "total_pages",
+            "value": "Nombre total de pages"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "page_out",
+            "value": "Page finale"
+          },
+          {
+            "lang": "lg-por",
+            "name": "page_out",
+            "value": "Página final"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "page_out",
+            "value": "Azken orrialdea"
+          },
+          {
+            "lang": "lg-por",
+            "name": "total_pages",
+            "value": "Total de páginas"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "proces_method",
+            "value": "Modalità di elaborazione"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "proces_method",
+            "value": "Méthode de traitement"
+          },
+          {
+            "lang": "lg-por",
+            "name": "proces_method",
+            "value": "Método de processamento"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "proces_method",
+            "value": "Prozesatzeko metodoa"
+          },
+          {
+            "lang": "lg-por",
+            "name": "do_process",
+            "value": "Processo"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "do_process",
+            "value": "Prozesua"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "do_process",
+            "value": "Processus"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "do_process",
+            "value": "Processo"
+          }
+        ]
+      }
+    ],
+    "dd1633": [
+      {
+        "id": 1,
+        "value": {
+          "html_engine": {
+            "type": "string",
+            "default": "/usr/local/bin/pdftohtml"
+          },
+          "text_engine": {
+            "type": "string",
+            "default": "/usr/local/bin/pdftotext"
+          }
+        }
+      }
+    ]
+  },
+  "relation_search": null,
+  "meta": {
+    "dd197": [
+      {
+        "count": 1
+      }
+    ],
+    "dd199": [
+      {
+        "count": 1
+      }
+    ],
+    "dd200": [
+      {
+        "count": 1
+      }
+    ],
+    "dd201": [
+      {
+        "count": 1
+      }
+    ],
+    "dd612": [
+      {
+        "count": 4
+      }
+    ],
+    "dd799": [
+      {
+        "count": 10
+      }
+    ],
+    "dd1326": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1327": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1328": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1330": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1331": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1332": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1333": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1337": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1354": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1362": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1372": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1633": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1644": [
+      {
+        "count": 1
+      }
+    ]
+  }
+}

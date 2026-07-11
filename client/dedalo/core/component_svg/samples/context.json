@@ -1,0 +1,122 @@
+{
+	"typo": "ddo",
+	"model": "component_svg",
+	"label": "Vectorial",
+	"tipo": "rsc855",
+	"section_tipo": "rsc302",
+	"legacy_model": "component_svg",
+	"parent": "rsc302",
+	"parent_grouper": "rsc856",
+	"lang": "lg-nolan",
+	"mode": "edit",
+	"translatable": false,
+	"properties": {
+		"additional_path": "rsc33",
+		"max_items_folder": 1000
+	},
+	"css": {
+		".wrapper_component": {
+			"grid-column": "span 1"
+		}
+	},
+	"permissions": 3,
+	"tools": [
+		{
+			"typo": "ddo",
+			"model": "tool_media_versions",
+			"name": "tool_media_versions",
+			"label": "Versiones media",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"specific_actions": {
+					"rotate": [
+						"component_image"
+					],
+					"conform_headers": [
+						"component_av"
+					]
+				}
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_media_versions/css/tool_media_versions.css"
+			},
+			"icon": "/dedalo/tools/tool_media_versions/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_time_machine",
+			"name": "tool_time_machine",
+			"label": "Máquina del tiempo",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_time_machine/css/tool_time_machine.css"
+			},
+			"icon": "/dedalo/tools/tool_time_machine/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_upload",
+			"name": "tool_upload",
+			"label": "Carga de ficheros",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": {
+					"top": 0,
+					"left": "return screen.width -760",
+					"width": 760,
+					"height": 708
+				}
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_upload/css/tool_upload.css"
+			},
+			"icon": "/dedalo/tools/tool_upload/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		}
+	],
+	"buttons": [],
+	"request_config": null,
+	"columns_map": null,
+	"sortable": false,
+	"type": "component",
+	"new_dataframe": null,
+	"view": null,
+	"children_view": null,
+	"debug": {
+		"exec_time": "0.159 ms"
+	},
+	"features": {
+		"allowed_extensions": [
+			"svg"
+		],
+		"default_target_quality": "original",
+		"ar_quality": [
+			"original",
+			"web"
+		],
+		"default_quality": "web",
+		"quality": "web",
+		"key_dir": "svg",
+		"alternative_extensions": null,
+		"extension": "svg"
+	}
+}

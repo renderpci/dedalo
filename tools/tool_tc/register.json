@@ -1,0 +1,428 @@
+{
+  "id": "3968",
+  "section_id": "13",
+  "section_tipo": "dd1340",
+  "data": {
+    "label": "Tools development",
+    "section_id": 13,
+    "created_date": "2026-06-18 11:43:40",
+    "section_tipo": "dd1340",
+    "diffusion_info": null,
+    "created_by_user_id": -1
+  },
+  "relation": {
+    "dd197": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd197"
+      }
+    ],
+    "dd200": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd200"
+      }
+    ],
+    "dd1330": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "51",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      }
+    ],
+    "dd1331": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1331"
+      }
+    ],
+    "dd1332": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1332"
+      }
+    ],
+    "dd1333": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1333"
+      }
+    ],
+    "dd1337": [
+      {
+        "id": 1,
+        "type": "dd675",
+        "section_id": "1",
+        "section_tipo": "dd153",
+        "from_component_tipo": "dd1337"
+      }
+    ],
+    "dd1354": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1354"
+      }
+    ]
+  },
+  "string": {
+    "dd612": [
+      {
+        "id": 1,
+        "lang": "lg-eng",
+        "value": "<p>Manages offset timecode of transcriptions tags by adding or subtracting seconds</p>"
+      },
+      {
+        "id": 2,
+        "lang": "lg-spa",
+        "value": "<p>Herramienta para gestionar los códigos de tiempo de una transcripción.</p>"
+      }
+    ],
+    "dd799": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "Codis de temps"
+      },
+      {
+        "id": 2,
+        "lang": "lg-deu",
+        "value": "Zeitcodes"
+      },
+      {
+        "id": 3,
+        "lang": "lg-ell",
+        "value": "Κωδικοί ώρας"
+      },
+      {
+        "id": 4,
+        "lang": "lg-eng",
+        "value": "Time codes"
+      },
+      {
+        "id": 5,
+        "lang": "lg-eus",
+        "value": "Denbora-kodeak"
+      },
+      {
+        "id": 6,
+        "lang": "lg-fra",
+        "value": "Codes de temps"
+      },
+      {
+        "id": 7,
+        "lang": "lg-ita",
+        "value": "Codici di tempo"
+      },
+      {
+        "id": 8,
+        "lang": "lg-nep",
+        "value": "समय कोडहरू"
+      },
+      {
+        "id": 9,
+        "lang": "lg-por",
+        "value": "Códigos de tempo"
+      },
+      {
+        "id": 10,
+        "lang": "lg-spa",
+        "value": "Códigos de tiempo"
+      }
+    ],
+    "dd1326": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "tool_tc"
+      }
+    ],
+    "dd1327": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "2.0.2"
+      }
+    ],
+    "dd1328": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "6.0.0"
+      }
+    ],
+    "dd1362": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "<p>Restricted to rsc36 (AV transcription)</p>"
+      }
+    ],
+    "dd1644": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "Dédalo team"
+      }
+    ]
+  },
+  "date": {
+    "dd199": [
+      {
+        "id": 1,
+        "start": {
+          "day": 23,
+          "hour": 18,
+          "time": 64926383439,
+          "year": 2020,
+          "month": 1,
+          "minute": 30,
+          "second": 39
+        }
+      }
+    ],
+    "dd201": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "start": {
+          "day": 18,
+          "hour": 11,
+          "time": 65132163820,
+          "year": 2026,
+          "month": 6,
+          "minute": 43,
+          "second": 40
+        }
+      }
+    ]
+  },
+  "iri": null,
+  "geo": null,
+  "number": null,
+  "media": null,
+  "misc": {
+    "dd1350": [
+      {
+        "id": 1,
+        "value": [
+          "rsc36"
+        ]
+      }
+    ],
+    "dd1372": [
+      {
+        "id": 1,
+        "value": [
+          {
+            "lang": "lg-spa",
+            "name": "offset_in_seconds",
+            "value": "Offset en segundos"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "offset_in_seconds",
+            "value": "Offset en segons"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "offset_in_seconds",
+            "value": "Μετατόπιση σε δευτερόλεπτα"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "offset_in_seconds",
+            "value": "Offset in seconds"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "apply",
+            "value": "Aplicar"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "apply",
+            "value": "Apply"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "apply",
+            "value": "Ισχύουν"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "apply",
+            "value": "Aplicar"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "empty_offset_value",
+            "value": "Error. Empty offset value"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "empty_offset_value",
+            "value": "Error. Valor de offset buit"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "empty_offset_value",
+            "value": "Error. Valor de offset vacío"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "empty_offset_value",
+            "value": "Λάθος. Κενή τιμή μετατόπισης"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "offset_in_seconds",
+            "value": "सेकेन्डमा अफसेट"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "apply",
+            "value": "निवेदन गर्नु"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "empty_offset_value",
+            "value": "त्रुटि। खाली अफसेट मान"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "empty_offset_value",
+            "value": "Fehler. Leerer Offsetwert"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "apply",
+            "value": "Anwenden"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "offset_in_seconds",
+            "value": "Offset in Sekunden"
+          }
+        ]
+      }
+    ]
+  },
+  "relation_search": null,
+  "meta": {
+    "dd197": [
+      {
+        "count": 1
+      }
+    ],
+    "dd199": [
+      {
+        "count": 1
+      }
+    ],
+    "dd200": [
+      {
+        "count": 1
+      }
+    ],
+    "dd201": [
+      {
+        "count": 1
+      }
+    ],
+    "dd612": [
+      {
+        "count": 2
+      }
+    ],
+    "dd799": [
+      {
+        "count": 10
+      }
+    ],
+    "dd1326": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1327": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1328": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1330": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1331": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1332": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1333": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1337": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1350": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1354": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1362": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1372": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1644": [
+      {
+        "count": 1
+      }
+    ]
+  }
+}

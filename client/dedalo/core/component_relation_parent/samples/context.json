@@ -1,0 +1,182 @@
+{
+	"typo": "ddo",
+	"model": "component_relation_parent",
+	"label": "relation_parent",
+	"tipo": "test71",
+	"section_tipo": "test3",
+	"legacy_model": "component_relation_parent",
+	"parent": "test3",
+	"parent_grouper": "test45",
+	"lang": "lg-nolan",
+	"mode": "edit",
+	"translatable": false,
+	"properties": {
+		"source": {
+			"records_mode": "list",
+			"request_config": [
+				{
+					"sqo": {
+						"section_tipo": [
+							{
+								"source": "self"
+							}
+						]
+					},
+					"show": {
+						"ddo_map": [
+							{
+								"tipo": "test52",
+								"parent": "self",
+								"section_tipo": "self",
+								"value_with_parents": true
+							}
+						]
+					}
+				}
+			]
+		},
+		"show_interface": {
+			"button_add": false,
+			"read_only": false,
+			"save_animation": true,
+			"value_buttons": true,
+			"button_delete": true,
+			"button_delete_link": true,
+			"button_delete_link_and_record": true,
+			"button_link": true,
+			"button_edit": false,
+			"button_list": true,
+			"button_edit_options": {
+				"action_mousedown": "navigate",
+				"action_contextmenu": "open_window"
+			},
+			"tools": true,
+			"button_external": false,
+			"button_tree": false,
+			"button_fullscreen": true,
+			"button_save": true,
+			"show_autocomplete": true,
+			"show_section_id": true,
+			"list_from_component_data": true,
+			"label": true
+		}
+	},
+	"css": null,
+	"permissions": 2,
+	"tools": [
+		{
+			"typo": "ddo",
+			"model": "tool_propagate_component_data",
+			"name": "tool_propagate_component_data",
+			"label": "Propaga datos de componentes",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": null,
+			"css": {
+				"url": "/dedalo/tools/tool_propagate_component_data/css/tool_propagate_component_data.css"
+			},
+			"icon": "/dedalo/tools/tool_propagate_component_data/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_time_machine",
+			"name": "tool_time_machine",
+			"label": "Máquina del tiempo",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_time_machine/css/tool_time_machine.css"
+			},
+			"icon": "/dedalo/tools/tool_time_machine/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		}
+	],
+	"buttons": [],
+	"request_config": [
+		{
+			"api_engine": "dedalo",
+			"type": "main",
+			"sqo": {
+				"section_tipo": [
+					{
+						"typo": "ddo",
+						"tipo": "test3",
+						"model": "section",
+						"label": "Unit Test Section (using matrix_test table)",
+						"color": "#b9b9b9",
+						"permissions": 3,
+						"buttons": [
+							{
+								"model": "button_new",
+								"permissions": 3
+							},
+							{
+								"model": "button_delete",
+								"permissions": 3
+							}
+						],
+						"matrix_table": "matrix_test"
+					}
+				],
+				"limit": 10
+			},
+			"show": {
+				"ddo_map": [
+					{
+						"tipo": "test52",
+						"parent": "test71",
+						"section_tipo": [
+							"test3"
+						],
+						"value_with_parents": true,
+						"model": "component_input_text",
+						"label": "input_text",
+						"mode": "list",
+						"view": "text",
+						"column_id": "test71"
+					}
+				],
+				"sqo_config": {
+					"full_count": false,
+					"limit": 10,
+					"offset": 0,
+					"mode": "edit",
+					"operator": "$or"
+				}
+			},
+			"search": null,
+			"choose": null,
+			"api_config": null
+		}
+	],
+	"columns_map": [],
+	"sortable": true,
+	"type": "component",
+	"path": [
+		{
+			"name": "relation_parent",
+			"model": "component_relation_parent",
+			"section_tipo": "test3",
+			"component_tipo": "test71"
+		}
+	],
+	"new_dataframe": null,
+	"view": "line",
+	"children_view": "text",
+	"debug": {
+		"exec_time": "5.878 ms"
+	},
+	"fields_separator": " | ",
+	"records_separator": " | "
+}

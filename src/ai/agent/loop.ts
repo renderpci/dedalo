@@ -1,0 +1,437 @@
+/**
+ * The Dédalo agent loop (spec §8; DoD: "AI tools denied exactly where humans
+ * are denied").
+ *
+ * A manual tool-use loop over the SAME shared tool registry the MCP server
+ * exposes (src/ai/mcp/registry.ts) plus the RAG semantic search — every tool
+ * call executes under the caller's `Principal` through `runTool`, so the
+ * agent can never read, search, or retrieve anything the human API would deny
+ * that user, and every result reaches the model as the same structured
+ * envelope (with its model-facing hints) the MCP surfaces emit. Failed tools
+ * return `is_error` results (the model can adapt); the loop is capped at
+ * MAX_ITERATIONS and returns the transcript for auditability.
+ *
+ * WRITE MODE (the propose→confirm→apply harness): the model gets the READ
+ * tools plus ONE synthetic tool, `propose_change_plan`. NO write ever executes
+ * inside the loop — a valid proposal is validated (labels stamped to tipos,
+ * every gate dry-run) and ENDS the turn, returning the resolved plan + hash
+ * for the human to confirm; the confirmed plan executes later through
+ * applyChangePlan (src/ai/agent/change_plan.ts). An invalid proposal comes
+ * back to the model as an is_error tool result so it can repair and re-propose.
+ *
+ * EGRESS (src/ai/agent/egress.ts): when the conversation's model is EXTERNAL,
+ * every record-content tool call is gated BEFORE its handler runs and
+ * semantic-search hits are filtered per record — restricted repository
+ * content never enters an external model context. Local models are never
+ * gated; the stdio server and mcp_proxy are unaffected (no model involved).
+ *
+ * MULTI-TURN is stateless: the caller resends prior user/assistant TEXT
+ * (AgentHistoryEntry[]) each turn — tool traffic is never replayed (an
+ * untrusted client could spoof tool results, i.e. fabricated grounding), the
+ * model re-runs tools when it needs data. The loop returns the ready-to-
+ * resend history for the next turn.
+ *
+ * The LLM side is a seam (llm_provider.ts): the offline gates drive the loop
+ * with a deterministic scripted provider; production plugs in the official
+ * Anthropic SDK provider (anthropic_provider.ts) or the OpenAI-compatible
+ * local provider (openai_compat_provider.ts) via the model catalog.
+ */
+
+import type { Principal } from '../../core/security/permissions.ts';
+import { wrapError } from '../mcp/envelope.ts';
+import {
+	type RegistryGates,
+	getToolSpec,
+	registeredTools,
+	runTool,
+	toAgentToolDefinition,
+} from '../mcp/registry.ts';
+import { semanticSearch } from '../rag/retrieval.ts';
+import { type ValidatedChangePlan, validateChangePlan } from './change_plan.ts';
+import {
+	type AgentEgressOptions,
+	filterEgressHits,
+	gateAgentToolCall,
+	gateAgentToolResult,
+} from './egress.ts';
+import type {
+	AgentImage,
+	AgentLlmProvider,
+	AgentToolDefinition,
+	AgentToolResult,
+	AgentTranscriptEntry,
+	AgentTurnDelta,
+	AgentTurnUsage,
+} from './llm_provider.ts';
+import { type AgentUiContext, buildContextBlock, buildSystemPrompt } from './system_prompt.ts';
+
+/** Hard cap on model turns — a runaway-loop backstop, not a tuning knob. */
+const MAX_ITERATIONS = 12;
+
+/** The RAG tool is loop-local (it is not part of the MCP registry yet). */
+const SEMANTIC_SEARCH_TOOL: AgentToolDefinition = {
+	name: 'dedalo_semantic_search',
+	description:
+		'Hybrid semantic + lexical search over indexed record texts. Returns scored snippets with their (section_tipo, section_id, component_tipo).',
+	input_schema: {
+		type: 'object',
+		properties: {
+			query: { type: 'string' },
+			limit: { type: 'number' },
+		},
+		required: ['query'],
+	},
+};
+
+/** The synthetic write-mode tool: propose (never execute) a change plan. */
+const PROPOSE_TOOL: AgentToolDefinition = {
+	name: 'propose_change_plan',
+	description:
+		'Propose a change plan for human confirmation. NOTHING is written when ' +
+		'you call this — a human reviews the resolved plan first. Each op is one ' +
+		'write tool call; {ref: "<op_id>"} chains onto records created by earlier ' +
+		'ops. Call it at most once, with the COMPLETE plan.',
+	input_schema: {
+		type: 'object',
+		properties: {
+			plan_version: { const: 1 },
+			summary: { type: 'string', description: 'What the plan does, one sentence.' },
+			ops: {
+				type: 'array',
+				items: {
+					type: 'object',
+					properties: {
+						op_id: { type: 'string' },
+						tool: {
+							type: 'string',
+							description:
+								'A write tool: dedalo_create_record, dedalo_find_or_create, ' +
+								'dedalo_set_field, dedalo_portal_link, dedalo_portal_unlink, ' +
+								'dedalo_upload_media, dedalo_save_component, dedalo_delete_record, ' +
+								'dedalo_duplicate_record.',
+						},
+						args: { type: 'object' },
+						summary: { type: 'string', description: 'Human-readable one-liner for this op.' },
+					},
+					required: ['op_id', 'tool', 'args', 'summary'],
+				},
+			},
+		},
+		required: ['plan_version', 'summary', 'ops'],
+	},
+};
+
+/**
+ * The READ tool surface offered to the model (writes only ever travel the
+ * propose→confirm→apply path) plus the RAG semantic search.
+ */
+export const AGENT_TOOLS: AgentToolDefinition[] = [
+	...registeredTools().map(toAgentToolDefinition),
+	SEMANTIC_SEARCH_TOOL,
+];
+
+/** Argument keys worth surfacing in a human-readable tool summary. */
+const SUMMARY_KEYS = [
+	'section_tipo',
+	'section_id',
+	'component_tipo',
+	'tipo',
+	'query',
+	'name',
+	'label',
+	'path',
+	'filter',
+	'limit',
+] as const;
+
+/**
+ * A short human-readable summary of a tool call for UI activity chips
+ * ("dedalo_search_records: section_tipo=oh1 query=Pujol"). Pure; capped.
+ */
+export function summarizeToolArgs(input: Record<string, unknown>): string {
+	const parts: string[] = [];
+	for (const key of SUMMARY_KEYS) {
+		const value = input[key];
+		if (value === undefined || value === null) continue;
+		const rendered = typeof value === 'object' ? JSON.stringify(value) : String(value);
+		parts.push(`${key}=${rendered}`);
+	}
+	const summary = parts.join(' ');
+	return summary.length > 140 ? `${summary.slice(0, 139)}…` : summary;
+}
+
+/** Execute one READ tool call under the principal. Errors become is_error results. */
+async function executeTool(
+	principal: Principal,
+	name: string,
+	input: Record<string, unknown>,
+	toolUseId: string,
+	egress?: AgentEgressOptions,
+): Promise<AgentToolResult> {
+	if (name === 'dedalo_semantic_search') {
+		try {
+			const query = String((input as { query: unknown }).query ?? '');
+			// Clamp like the registry search tools do: an injected `limit` would
+			// otherwise drive hybridCandidates' over-fetch (limit*4) unbounded.
+			const requested = Number((input as { limit?: unknown }).limit ?? 10);
+			const limit = Number.isFinite(requested) ? Math.min(Math.max(requested, 1), 100) : 10;
+			const hits = await semanticSearch(principal, query, limit);
+			if (egress?.external === true) {
+				// Per-hit egress filter: restricted records never enter an external
+				// model context; the model is told results were withheld.
+				const { allowed, removed } = await filterEgressHits(egress, hits);
+				return {
+					tool_use_id: toolUseId,
+					content: JSON.stringify({ hits: allowed, restricted_hits_removed: removed }),
+					is_error: false,
+				};
+			}
+			return { tool_use_id: toolUseId, content: JSON.stringify(hits), is_error: false };
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			return { tool_use_id: toolUseId, content: message, is_error: true };
+		}
+	}
+
+	const spec = getToolSpec(name);
+	// The loop executes only read tools; an unknown OR write-tool name is
+	// refused the same way (the model can adapt, nothing executes).
+	if (spec === undefined || spec.write) {
+		return { tool_use_id: toolUseId, content: `Unknown tool: ${name}`, is_error: true };
+	}
+	if (egress !== undefined) {
+		// External-egress gate BEFORE the handler runs (fail-closed).
+		const refusal = await gateAgentToolCall(egress, name, input);
+		if (refusal !== null) {
+			return { tool_use_id: toolUseId, content: JSON.stringify(refusal), is_error: true };
+		}
+	}
+	const envelope = await runTool(spec, principal, input);
+	if (egress !== undefined && envelope.ok) {
+		// ...and again on the RESULT: a public record can resolve labels of
+		// records in a restricted section through its portals (egress.ts).
+		const refusal = await gateAgentToolResult(egress, name, envelope);
+		if (refusal !== null) {
+			return { tool_use_id: toolUseId, content: JSON.stringify(refusal), is_error: true };
+		}
+	}
+	return {
+		tool_use_id: toolUseId,
+		content: JSON.stringify(envelope),
+		is_error: !envelope.ok,
+	};
+}
+
+/** The user question: plain text, or text with attached images (vision). */
+export type AgentQuestion = string | { text: string; images?: AgentImage[] };
+
+/** One prior conversation turn, resent by the (stateless) caller. TEXT only. */
+export interface AgentHistoryEntry {
+	role: 'user' | 'assistant';
+	text: string;
+}
+
+/** Loop progress events, forwarded to the streaming surface. */
+export type AgentLoopEvent =
+	| AgentTurnDelta
+	| { type: 'tool_use'; id: string; name: string; summary: string }
+	| { type: 'tool_result'; id: string; name: string; ok: boolean; code?: string }
+	| { type: 'iteration'; n: number; max: number };
+
+export interface AgentRunOptions {
+	/** 'read' (default) or 'write' — write adds propose_change_plan. */
+	mode?: 'read' | 'write';
+	/** Write-section allowlist forwarded into plan validation. */
+	writableSections?: Set<string>;
+	/** Prior conversation turns (client-resent; the server holds no state). */
+	history?: AgentHistoryEntry[];
+	/** What the user is currently viewing (prepended to THIS turn only). */
+	uiContext?: AgentUiContext;
+	/** The conversation's egress posture (external models gate record content). */
+	egress?: AgentEgressOptions;
+	/** Progress sink for the streaming surface. */
+	onEvent?: (event: AgentLoopEvent) => void;
+	/** Prebuilt system prompt; defaults to buildSystemPrompt(mode, egress). */
+	systemPrompt?: string;
+}
+
+export interface AgentRunResult {
+	/** The model's final text answer. */
+	answer: string;
+	/** Full transcript (question, turns, tool results) for auditing. */
+	transcript: AgentTranscriptEntry[];
+	/** Why the loop ended. */
+	stop: 'end_turn' | 'max_iterations' | 'refusal' | 'max_tokens' | 'change_plan';
+	/** The validated plan awaiting human confirmation (write mode only). */
+	change_plan?: ValidatedChangePlan;
+	/** Accumulated provider usage across the run's turns (when reported). */
+	usage: AgentTurnUsage;
+	/** Ready-to-resend text history for the caller's NEXT turn. */
+	history: AgentHistoryEntry[];
+}
+
+/**
+ * Run the agent loop: question → model turn → execute requested tools under
+ * the principal → feed results back → repeat until the model stops (or, in
+ * write mode, proposes a valid change plan — which ends the turn UNEXECUTED).
+ */
+export async function runAgent(
+	principal: Principal,
+	question: AgentQuestion,
+	provider: AgentLlmProvider,
+	options: AgentRunOptions = {},
+): Promise<AgentRunResult> {
+	const writeMode = options.mode === 'write';
+	const gates: RegistryGates = {
+		allowWrite: writeMode,
+		writableSections: options.writableSections,
+	};
+	const questionText = typeof question === 'string' ? question : question.text;
+	const images = typeof question === 'string' ? undefined : question.images;
+
+	// The volatile context block rides on THIS turn's text only — never the
+	// system prompt (cache prefix), never the resendable history.
+	const contextBlock = buildContextBlock(options.uiContext);
+	const firstEntry: AgentTranscriptEntry = {
+		role: 'user',
+		text: `${contextBlock}${questionText}`,
+		...(images !== undefined ? { images } : {}),
+	};
+
+	// Prior turns (text-only) map onto plain transcript entries — no provider
+	// change needed, and byte-identical resends keep the cache prefix warm.
+	const transcript: AgentTranscriptEntry[] = [];
+	for (const entry of options.history ?? []) {
+		transcript.push(
+			entry.role === 'user'
+				? { role: 'user', text: entry.text }
+				: {
+						role: 'assistant',
+						turn: { text: entry.text, tool_uses: [], stop_reason: 'end_turn' },
+					},
+		);
+	}
+	transcript.push(firstEntry);
+
+	const tools = writeMode ? [...AGENT_TOOLS, PROPOSE_TOOL] : AGENT_TOOLS;
+	const system =
+		options.systemPrompt ??
+		buildSystemPrompt({
+			mode: writeMode ? 'write' : 'read',
+			egress: options.egress?.external === true ? 'external' : 'local',
+		});
+
+	const usage: AgentTurnUsage = {};
+	const addUsage = (turnUsage?: AgentTurnUsage) => {
+		if (turnUsage === undefined) return;
+		for (const key of ['input_tokens', 'output_tokens', 'cache_read_input_tokens'] as const) {
+			const value = turnUsage[key];
+			if (typeof value === 'number') usage[key] = (usage[key] ?? 0) + value;
+		}
+	};
+	const historyOut = (answer: string): AgentHistoryEntry[] => [
+		...(options.history ?? []),
+		{ role: 'user', text: questionText },
+		{ role: 'assistant', text: answer },
+	];
+
+	const runOne = async (use: {
+		id: string;
+		name: string;
+		input: Record<string, unknown>;
+	}): Promise<AgentToolResult> => {
+		options.onEvent?.({
+			type: 'tool_use',
+			id: use.id,
+			name: use.name,
+			summary: summarizeToolArgs(use.input),
+		});
+		const result = await executeTool(principal, use.name, use.input, use.id, options.egress);
+		options.onEvent?.({
+			type: 'tool_result',
+			id: use.id,
+			name: use.name,
+			ok: !result.is_error,
+			...(result.is_error ? { code: extractErrorCode(result.content) } : {}),
+		});
+		return result;
+	};
+
+	for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+		options.onEvent?.({ type: 'iteration', n: iteration + 1, max: MAX_ITERATIONS });
+		const turn = await provider.createTurn({ system, tools, transcript }, options.onEvent);
+		addUsage(turn.usage);
+		transcript.push({ role: 'assistant', turn });
+
+		if (turn.stop_reason !== 'tool_use' || turn.tool_uses.length === 0) {
+			return {
+				answer: turn.text,
+				transcript,
+				stop: turn.stop_reason === 'tool_use' ? 'end_turn' : turn.stop_reason,
+				usage,
+				history: historyOut(turn.text),
+			};
+		}
+
+		// A proposal ends the turn WITHOUT executing anything — validate it and
+		// hand the resolved plan up for human confirmation. An invalid proposal
+		// flows back as an is_error result so the model can repair it.
+		const proposal = writeMode
+			? turn.tool_uses.find((use) => use.name === 'propose_change_plan')
+			: undefined;
+		if (proposal !== undefined) {
+			try {
+				const validated = await validateChangePlan(principal, proposal.input, gates);
+				const answer = turn.text !== '' ? turn.text : validated.summary;
+				return {
+					answer,
+					transcript,
+					stop: 'change_plan',
+					change_plan: validated,
+					usage,
+					history: historyOut(answer),
+				};
+			} catch (error) {
+				// Every tool_use of the turn needs a result (Messages-API contract):
+				// the failed proposal becomes is_error; sibling READ calls execute.
+				const results = await Promise.all(
+					turn.tool_uses.map((use) =>
+						use.id === proposal.id
+							? Promise.resolve({
+									tool_use_id: use.id,
+									content: JSON.stringify(wrapError(error)),
+									is_error: true,
+								})
+							: runOne(use),
+					),
+				);
+				transcript.push({ role: 'tool_results', results });
+				continue;
+			}
+		}
+
+		// Execute ALL requested tools (parallel-safe: every handler is read-only
+		// and principal-scoped) and feed the results back as one entry.
+		const results = await Promise.all(turn.tool_uses.map((use) => runOne(use)));
+		transcript.push({ role: 'tool_results', results });
+	}
+
+	const cappedAnswer = 'Stopped: the agent reached its iteration cap before finishing.';
+	return {
+		answer: cappedAnswer,
+		transcript,
+		stop: 'max_iterations',
+		usage,
+		history: historyOut(cappedAnswer),
+	};
+}
+
+/** Pull the envelope error code out of an is_error tool result (best effort). */
+function extractErrorCode(content: string): string | undefined {
+	try {
+		const decoded = JSON.parse(content) as { error?: { code?: unknown } };
+		return typeof decoded.error?.code === 'string' ? decoded.error.code : undefined;
+	} catch {
+		return undefined;
+	}
+}

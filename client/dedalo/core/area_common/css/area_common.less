@@ -1,0 +1,619 @@
+/**
+* area_common
+*
+* Dashboard styles shared across all area_* pages.
+* Included from main.less file.
+* Uses CSS custom properties so dark-mode switches automatically.
+*/
+
+.area_dashboard {
+	width: 100%;
+	padding: 1.5rem;
+
+	// ---- HEADER ----
+	.area_dashboard_header {
+		margin-bottom: 1.5rem;
+
+		.area_dashboard_title {
+			font-size: 1.75rem;
+			font-weight: 600;
+			color: var(--fg_default);
+			margin: 0 0 0.25rem 0;
+		}
+
+		.area_dashboard_subtitle {
+			font-size: 0.875rem;
+			color: var(--fg_muted);
+		}
+	}
+
+	// ---- KPI CARDS BLOCK ----
+	.area_dashboard_cards_block {
+		margin-bottom: 2rem;
+	}
+
+	.area_dashboard_cards_toolbar {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin-bottom: 0.75rem;
+
+		.area_dashboard_cards_filter {
+			flex: 1 1 240px;
+			max-width: 360px;
+			padding: 0.45rem 0.75rem;
+			font-size: 0.875rem;
+			background: var(--bg_input);
+			border: 1px solid var(--border_default);
+			border-radius: 0.375rem;
+			color: var(--fg_default);
+
+			&:focus {
+				outline: none;
+				border-color: var(--focus_ring);
+				box-shadow: var(--shadow-focus);
+			}
+		}
+
+		.area_dashboard_cards_sort {
+			appearance: none;
+			// padding: 0.45rem 1.75rem 0.45rem 0.6rem;
+			font-size: 0.8125rem;
+			background: var(--bg_input);
+			border: 1px solid var(--border_default);
+			border-radius: 0.375rem;
+			color: var(--fg_default);
+			cursor: pointer;
+			background-image: linear-gradient(45deg, transparent 50%, var(--fg_muted) 50%),
+			                  linear-gradient(135deg, var(--fg_muted) 50%, transparent 50%);
+			background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+			background-size: 5px 5px;
+			background-repeat: no-repeat;
+		}
+
+		.area_dashboard_cards_summary {
+			margin-left: auto;
+			font-size: 0.8125rem;
+			color: var(--fg_muted);
+			font-variant-numeric: tabular-nums;
+		}
+	}
+
+	// ---- KPI CARDS GRID ----
+	.area_dashboard_grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+		gap: 1rem;
+	}
+
+	.area_dashboard_card {
+		position: relative;
+		display: block;
+		background: var(--bg_elevated);
+		border: 1px solid var(--border_default);
+		border-radius: 0.5rem;
+		padding: 1rem 1rem 0.75rem 1rem;
+		overflow: hidden;
+		cursor: pointer;
+		transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+		box-shadow: var(--shadow-1);
+
+		&:hover {
+			transform: translateY(-2px);
+			box-shadow: var(--shadow-3);
+		}
+
+		// color accent stripe on top
+		.area_dashboard_card_stripe {
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			height: 4px;
+			background-color: var(--accent, var(--color_primary));
+			border-radius: 0.5rem 0.5rem 0 0;
+		}
+
+		.area_dashboard_card_label {
+			font-size: 0.8125rem;
+			font-weight: 500;
+			color: var(--fg_muted);
+			text-transform: uppercase;
+			letter-spacing: 0.03em;
+			margin-top: 0.25rem;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		.area_dashboard_card_value {
+			font-size: 2rem;
+			font-weight: 600;
+			color: var(--fg_default);
+			margin: 0.375rem 0;
+			line-height: 1.1;
+		}
+
+		.area_dashboard_card_trend {
+			display: inline-block;
+			margin-bottom: 0.4rem;
+			padding: 0.1rem 0.45rem;
+			font-size: 0.7rem;
+			font-weight: 600;
+			line-height: 1.3;
+			color: var(--accent);
+			background: color-mix(in srgb, var(--accent) 12%, transparent);
+			border-radius: 999px;
+			font-variant-numeric: tabular-nums;
+			letter-spacing: 0.01em;
+		}
+
+		.area_dashboard_card_sparkline {
+			display: block;
+			width: 100%;
+			height: 22px;
+			margin: 0 0 0.4rem 0;
+			overflow: visible;
+		}
+
+		.area_dashboard_card_meta {
+			font-size: 0.75rem;
+			color: var(--fg_muted);
+			font-family: monospace;
+			opacity: 0.7;
+		}
+	}
+
+	// ---- CHART ----
+	.area_dashboard_chart {
+		background: var(--bg_elevated);
+		border: 1px solid var(--border_default);
+		border-radius: 0.5rem;
+		padding: 1.25rem;
+		box-shadow: var(--shadow-1);
+
+		.area_dashboard_chart_title {
+			font-size: 1rem;
+			font-weight: 600;
+			color: var(--fg_default);
+			margin-bottom: 1rem;
+		}
+
+		// ---- Chart type switcher (Bar / Pie / Treemap) ----
+		.area_dashboard_chart_header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 1rem;
+			margin-bottom: 0.75rem;
+
+			.area_dashboard_chart_title {
+				margin-bottom: 0;
+			}
+		}
+
+		.area_dashboard_chart_switcher {
+			display: inline-flex;
+			background: var(--bg_input);
+			border: 1px solid var(--border_default);
+			border-radius: 0.375rem;
+			padding: 2px;
+
+			.area_dashboard_chart_switcher_btn {
+				appearance: none;
+				background: transparent;
+				border: 0;
+				padding: 0.3rem 0.7rem;
+				font-size: 0.8125rem;
+				color: var(--fg_muted);
+				cursor: pointer;
+				border-radius: 0.25rem;
+				transition: background 0.12s ease, color 0.12s ease;
+
+				&:hover {
+					color: var(--fg_default);
+				}
+
+				&.is_active {
+					background: var(--bg_elevated);
+					color: var(--fg_default);
+					font-weight: 600;
+					box-shadow: var(--shadow-1);
+				}
+
+				&:focus-visible {
+					outline: 2px solid var(--border_strong);
+					outline-offset: 1px;
+				}
+			}
+		}
+
+		.area_dashboard_chart_body {
+			width: 100%;
+		}
+
+		// ---- Pie/donut ----
+		.area_dashboard_chart_pie_layout {
+			display: flex;
+			align-items: center;
+			gap: 1rem;
+			flex-wrap: wrap;
+		}
+
+		.area_dashboard_chart_pie_slice {
+			transition: opacity 0.12s ease;
+
+			&:focus-visible {
+				outline: 2px solid var(--border_strong);
+				outline-offset: 2px;
+			}
+		}
+
+		.area_dashboard_chart_pie_total {
+			fill: var(--fg_default);
+			font-size: 22px;
+			font-weight: 600;
+		}
+
+		.area_dashboard_chart_pie_total_label {
+			fill: var(--fg_muted);
+			font-size: 11px;
+			text-transform: uppercase;
+			letter-spacing: 0.05em;
+		}
+
+		.area_dashboard_chart_pie_legend {
+			flex: 0 0 auto;
+			display: flex;
+			flex-direction: column;
+			gap: 0.25rem;
+			max-height: 320px;
+			overflow-y: auto;
+
+			.area_dashboard_chart_pie_legend_item {
+				display: grid;
+				grid-template-columns: 10px 1fr auto;
+				align-items: center;
+				gap: 0.5rem;
+				padding: 0.25rem 0.4rem;
+				font-size: 0.8125rem;
+				border-radius: 0.25rem;
+
+				&.is_clickable {
+					cursor: pointer;
+
+					&:hover {
+						background: var(--bg_input);
+					}
+
+					&:focus-visible {
+						outline: 2px solid var(--border_strong);
+						outline-offset: -2px;
+					}
+				}
+
+				.area_dashboard_chart_pie_legend_dot {
+					width: 10px;
+					height: 10px;
+					border-radius: 50%;
+				}
+
+				.area_dashboard_chart_pie_legend_label {
+					color: var(--fg_default);
+					overflow: hidden;
+					text-overflow: ellipsis;
+					white-space: nowrap;
+				}
+
+				.area_dashboard_chart_pie_legend_value {
+					color: var(--fg_muted);
+					font-variant-numeric: tabular-nums;
+				}
+			}
+		}
+
+		// ---- Sunburst ----
+		.area_dashboard_chart_sunburst_slice {
+			transition: opacity 0.12s ease;
+
+			&:hover {
+				opacity: 1 !important;
+			}
+
+			&:focus-visible {
+				outline: 2px solid var(--border_strong);
+				outline-offset: 2px;
+			}
+		}
+
+		.area_dashboard_chart_sunburst_labels text {
+			fill: var(--fg_inverse);
+			font-size: 10px;
+			font-weight: 600;
+			text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+			pointer-events: none;
+		}
+
+		// ---- Treemap ----
+		.area_dashboard_chart_treemap {
+			margin: 0 auto;
+			max-width: 100%;
+			border-radius: 0.375rem;
+			overflow: hidden;
+
+			.area_dashboard_chart_treemap_tile {
+				position: absolute;
+				color: var(--fg_inverse);
+				padding: 0.35rem 0.5rem;
+				box-sizing: border-box;
+				cursor: pointer;
+				overflow: hidden;
+				transition: filter 0.12s ease, transform 0.12s ease;
+				text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+
+				&:hover {
+					filter: brightness(1.1);
+				}
+
+				&:focus-visible {
+					outline: 2px solid var(--fg_inverse);
+					outline-offset: -2px;
+				}
+
+				.area_dashboard_chart_treemap_label {
+					font-size: 0.8125rem;
+					font-weight: 600;
+					line-height: 1.2;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					display: -webkit-box;
+					-webkit-line-clamp: 2;
+					line-clamp: 2;
+					-webkit-box-orient: vertical;
+				}
+
+				.area_dashboard_chart_treemap_value {
+					font-size: 0.75rem;
+					opacity: 0.9;
+					font-variant-numeric: tabular-nums;
+					margin-top: 0.15rem;
+				}
+			}
+		}
+
+		.area_dashboard_chart_svg {
+			display: block;
+			width: 100%;
+			max-width: 100%;
+
+			.area_dashboard_chart_grid line {
+				stroke: var(--border_default);
+				stroke-dasharray: 3 3;
+				stroke-opacity: 0.5;
+			}
+
+			.area_dashboard_chart_axis line {
+				stroke: var(--border_strong);
+				stroke-width: 1;
+			}
+
+			.area_dashboard_chart_axis text {
+				fill: var(--fg_muted);
+				font-size: 11px;
+			}
+
+			.area_dashboard_chart_label {
+				fill: var(--fg_default);
+				font-size: 12px;
+				font-weight: 500;
+			}
+
+			.area_dashboard_chart_bar {
+				transition: opacity 0.12s ease;
+
+				&:hover,
+				&:focus {
+					opacity: 0.85;
+					outline: none;
+				}
+
+				&:focus-visible .area_dashboard_chart_hit {
+					stroke: var(--border_strong);
+					stroke-width: 1.5;
+					stroke-dasharray: 3 2;
+				}
+			}
+
+			.area_dashboard_chart_value {
+				fill: var(--fg_default);
+				font-size: 11px;
+				font-weight: 500;
+			}
+
+			rect {
+				rx: 3;
+				rx: 3;
+				transition: opacity 0.15s ease;
+				cursor: default;
+
+				&:hover {
+					opacity: 0.85;
+				}
+			}
+		}
+
+		.area_dashboard_chart_toggle {
+			display: inline-block;
+			margin-top: 0.75rem;
+			padding: 0.35rem 0.75rem;
+			font-size: 0.8125rem;
+			font-weight: 500;
+			color: var(--color_primary);
+			background: transparent;
+			border: 1px solid var(--border_default);
+			border-radius: 0.375rem;
+			cursor: pointer;
+			transition: background 0.12s ease, border-color 0.12s ease;
+
+			&:hover {
+				background: var(--bg_hover);
+				border-color: var(--color_primary);
+			}
+
+			&:active {
+				transform: translateY(1px);
+			}
+		}
+	}
+
+	// ---- ACTIVITY TIMELINE ----
+	.area_dashboard_activity {
+		background: var(--bg_elevated);
+		border: 1px solid var(--border_default);
+		border-radius: 0.5rem;
+		padding: 1.25rem;
+		box-shadow: var(--shadow-1);
+		margin-top: 1.5rem;
+
+		// Header row: title + chart-type switcher + range selector
+		.area_dashboard_activity_header {
+			display: flex;
+			align-items: center;
+			gap: 0.75rem;
+			flex-wrap: wrap;
+			margin-bottom: 1rem;
+
+			.area_dashboard_chart_title {
+				margin-bottom: 0; // override default
+				margin-right: auto;
+			}
+		}
+
+		// Line renderer (multi-line activity chart)
+		.area_dashboard_activity_svg {
+			.area_dashboard_activity_line {
+				transition: stroke-width 0.12s ease;
+
+				&:hover {
+					stroke-width: 2.5;
+				}
+			}
+		}
+
+		.area_dashboard_activity_range_select {
+			appearance: none;
+			background: var(--bg_input);
+			border: 1px solid var(--border_default);
+			border-radius: 0.375rem;
+			padding: 0.3rem 2rem 0.3rem 0.6rem;
+			font-size: 0.8125rem;
+			color: var(--fg_default);
+			cursor: pointer;
+			background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M3 5l3 3 3-3'/%3E%3C/svg%3E");
+			background-repeat: no-repeat;
+			background-position: right 0.5rem center;
+			transition: border-color 0.12s ease;
+
+			&:hover {
+				border-color: var(--border_strong);
+			}
+			&:focus {
+				outline: 2px solid var(--color_primary);
+				outline-offset: 1px;
+			}
+		}
+
+		.area_dashboard_activity_loading {
+			text-align: center;
+			padding: 4rem 0;
+			color: var(--fg_muted);
+			font-size: 0.875rem;
+		}
+
+		.area_dashboard_activity_svg {
+			display: block;
+			width: 100%;
+			max-width: 100%;
+
+			.area_dashboard_chart_grid line {
+				stroke: var(--border_default);
+				stroke-dasharray: 3 3;
+				stroke-opacity: 0.5;
+			}
+
+			.area_dashboard_chart_axis text {
+				fill: var(--fg_muted);
+				font-size: 10px;
+			}
+
+			.area_dashboard_activity_layers path {
+				transition: opacity 0.15s ease;
+				cursor: default;
+
+				&:hover {
+					opacity: 1 !important;
+				}
+			}
+		}
+
+		.area_dashboard_activity_legend {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.75rem;
+			margin-top: 0.75rem;
+			padding-top: 0.75rem;
+			border-top: 1px solid var(--border_default);
+
+			.area_dashboard_activity_legend_item {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.3rem;
+				font-size: 0.75rem;
+				color: var(--fg_muted);
+				white-space: nowrap;
+			}
+
+			.area_dashboard_activity_legend_dot {
+				display: inline-block;
+				width: 10px;
+				height: 10px;
+				border-radius: 2px;
+				flex-shrink: 0;
+			}
+		}
+
+		.area_dashboard_activity_users {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.5rem 1.5rem;
+			margin-top: 0.75rem;
+			padding-top: 0.75rem;
+			border-top: 1px solid var(--border_default);
+
+			.area_dashboard_activity_user_row {
+				display: flex;
+				align-items: baseline;
+				gap: 0.5rem;
+				font-size: 0.8125rem;
+			}
+
+			.area_dashboard_activity_user_name {
+				color: var(--fg_default);
+				font-weight: 500;
+			}
+
+			.area_dashboard_activity_user_count {
+				color: var(--fg_muted);
+				font-variant-numeric: tabular-nums;
+			}
+		}
+	}
+
+	// ---- EMPTY STATE ----
+	&.area_dashboard_empty {
+		padding: 3rem;
+		text-align: center;
+		color: var(--fg_muted);
+		font-size: 1rem;
+	}
+}

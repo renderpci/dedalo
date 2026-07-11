@@ -1,0 +1,200 @@
+/**
+* TOOL_UPDATE_CACHE
+*
+* Loaded on tool init
+*/
+
+// imports
+@import (once) '../../../core/page/css/layout/vars';
+
+// local vars
+:root {
+	--tool_update_cache: #62866a;
+}
+@tool_color: var(--tool_update_cache);
+
+// tool wrapper
+// Encapsulate all tool content to prevent core collisions
+.wrapper_tool.tool_update_cache {
+
+	.spinner {
+		background-color: @tool_color;
+	}
+
+	>.content_data {
+		position: relative;
+
+		.section_info {
+			display: flex;
+			justify-content: space-between;
+
+			.section_name {
+				font-size: 1.5rem;
+				padding: 1rem;
+			}
+
+			.section_tipo {
+				font-size: 1.5rem;
+				padding: 1rem;
+				color: @color_grey_8;
+				font-weight: 200;
+			}
+		}
+
+		>.components_list_container {
+			display: block;
+			padding: 1rem;
+			width: 100%;
+			border: 0px;
+
+			ul {
+				max-height: unset;
+			}
+
+			// ul list container (global UL container of the list)
+			>.list_container {
+
+				// ul_regular: every group container (section group + components)
+				>.ul_regular {
+					font-size: 1.1rem;
+					overflow: visible;
+
+					// common li_line (section_group_label & li_container)
+					>.li_line {
+						display: grid;
+						grid-template-columns: 2fr 2fr 1fr;
+						column-gap: 0.5rem;
+						min-height: 2rem;
+						align-items: center;
+
+						// columns
+						>span {
+						}
+					}
+
+					// li section group line (section group name | Regenerate options | Info)
+					>.section_group_label {
+						cursor: default;
+						padding: 0.5rem;
+
+						&:active {
+							opacity: unset;
+						}
+					}
+
+					// li component (label | regenerate | info)
+					>.li_container {
+						padding: 0px;
+						box-shadow: @color_grey_13 0 1px 0px 0px;
+
+						&:hover {
+							background-color: @color_grey_14;
+						}
+
+						// column component_label
+						>.component_label {
+							display: block;
+							padding: 0.5rem;
+							width: 100%;
+							height: 100%;
+							cursor: pointer;
+
+							&.hilite {
+								background-color: @color_hilite;
+							}
+
+							>input {
+								margin-right: 0.5rem;
+								vertical-align: bottom;
+							}
+						}
+
+						// column regenerate_container
+						>.regenerate_container {
+							position: relative;
+
+							>.regenerate_options_container {
+
+								>.head_node {
+									width: 2rem;
+									position: absolute;
+									top: 0px;
+									right: 0px;
+									display: none;
+								}
+
+								>.body_node {
+									padding: 0.25rem;
+									padding-left: 0;
+
+									label {
+										color: @color_grey_7;
+										cursor: pointer;
+									}
+
+									input {
+										margin-right: 0.5rem;
+										vertical-align: bottom;
+									}
+								}
+							}
+						}
+
+						// column info_node
+						>.info_node {
+							color: @color_grey_8;
+							font-size: 1rem;
+						}
+					}
+				}
+			}
+		}
+
+		>.buttons_container {
+			display: flex;
+			padding: 1rem;
+			position: relative;
+
+			.button_apply {
+				background-color: @tool_color;
+				padding-left: 1.5rem;
+				padding-right: 1.5rem;
+			}
+
+			.response_message {
+				padding: 0.5rem;
+				padding-left: 2rem;
+
+				.msg_detail {
+					margin-left: 1rem;
+					font-weight: 500;
+				}
+			}
+		}
+
+		>.response_message {
+
+			>.process_status_node {
+				padding: 1rem;
+				margin-left: 1rem;
+				margin-right: 1rem;
+			}
+
+			>.report_node {
+				padding: 1rem;
+
+				>.msg_detail {
+					font-size: 1.2rem;
+					padding: 1rem;
+					display: inline-block;
+					padding-left: 0px;
+				}
+			}
+		}
+	}//end content_data
+}//end wrapper_tool
+
+// modal header tool modification
+.tool_header.tool_update_cache {
+	background-color: @tool_color;
+}

@@ -1,0 +1,300 @@
+/**
+* component_geolocation
+*
+* Included from main.less file
+*/
+.component_geolocation {
+
+	@elements_over_z_index : 1000;
+
+	// shared
+	.leaflet_map {
+		background-color: @color_blue_light_2;
+	}
+	// map
+	.leaflet_map.leaflet-container {
+		position: relative;
+		width: 100%;
+		height: 100%;
+		min-height: var(--geolocation_map_min_height);
+		margin: 0px;
+		padding: 0px;
+		padding-bottom: 5px;
+		z-index: 0;
+
+		background-color: @color_blue_light_2;
+		max-height: 100%;
+
+		.leaflet-control-zoom a {
+			font-size: initial !important;
+			font-weight: bold;
+		}
+	}//end .leaflet_map
+
+	&.disabled_component {
+		// tool bar at right
+		.leaflet-pm-toolbar {
+			display: none !important;
+		}
+		// zoom buttons
+		.leaflet-top.leaflet-left {
+			display: none !important;
+		}
+	}
+
+	&.edit {
+
+		>.content_data {
+			height: calc(100% - var(--component_label_height));
+			min-height: var(--geolocation_min_height);
+			flex-direction: column;
+			z-index: 0;
+
+	    	>.content_value {
+				flex: 1 1 auto;
+				flex-direction: column;
+				background-color: @color_blue_light_2;
+				resize: vertical;
+				overflow: hidden;
+
+	    		>.map_inputs {
+					display: flex;
+					max-width: calc(100% - 8.5rem);
+
+					>label {
+						margin-right: 0.5rem;
+					}
+
+					>input {
+						width: 7rem;
+						text-align: center;
+
+						&.zoom {
+							width: 2rem;
+						}
+
+						&.altitude {
+							width: 2.5rem;
+						}
+					}
+				}
+	    	}
+
+			// map
+			.leaflet_map.leaflet-container {
+
+			}//end .leaflet_map
+
+		}//end >.content_data
+
+
+		// FIELDS
+		// --------------------------------------------------
+			.geolocation_text {
+				font-size: 14px;
+				top: 2px;
+				margin-right: 5px;
+			}
+
+			.map_inputs {
+				-webkit-touch-callout: none;
+				-webkit-user-select: none;
+				-khtml-user-select: none;
+				-moz-user-select: none;
+				-ms-user-select: none;
+				user-select: none;
+				position: absolute;
+				top: 10px;
+				left: 48px;
+				margin-right: 3rem;
+				background-color: @color_white;
+				padding: 0.4em;
+				padding-bottom: 2px;
+				padding-top: 3px;
+				border-radius: 4px;
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				z-index: 1;
+				// From new leaflet 1.0 (removed shadow and add solid line around)
+				border: 2px solid 	@color_grey_10;
+				background-clip: padding-box;
+				color: @color_grey_10;
+			}
+			.map_inputs span:not(:nth-of-type(1)) {
+				padding-left: 5px;
+			}
+			.map_inputs input[name="zoom"] {
+				width: 28px;
+				text-align: center;
+			}
+
+			.map_inputs input {
+				margin-left: 3px;
+				padding: 0px;
+				padding-left: 0.25rem;
+				padding-right: 0.25rem;
+				text-overflow: ellipsis;
+			}
+
+			// altitude -----------------------------
+			.map_inputs	.input_altitude {
+				width: 28px;
+			    text-align: center;
+			}
+
+			.map_inputs	.map_reload {
+				.fn_build_button('reload.svg');
+				width: 1.2em;
+				height: 1.2em;
+			}
+			.map_inputs	.map_reload:hover {
+				opacity: 1;
+			}
+			.map_inputs	.map_reload:active {
+				opacity: 1;
+				background: @color_orange_dedalo;
+			}
+
+			.map_inputs	.map_point {
+				.fn_build_button('geo.svg');
+				width: 1.2em;
+				height: 1.2em;
+			}
+			.map_inputs	.map_point:hover {
+				opacity: 1;
+			}
+			.map_inputs	.map_point:active {
+				opacity: 1;
+				background: @color_orange_dedalo;
+			}
+
+		// PLAYER container (Transcription) ----------------------
+			.leaflet_map_player {
+				padding: 0px;
+				margin: 0px;
+				position: relative;
+				margin-top: 5px;
+
+				.content_data {
+					width: 100%;
+					height: 100%;
+					margin: 0px;
+					padding: 0px;
+				}
+				.leaflet_map {
+					min-height: var(--geolocation_player_height);
+				}
+			}
+
+		// MAP FULL SCREEN ---------------------------
+			.leaflet-top,
+			.leaflet-bottom {
+				z-index: @elements_over_z_index;
+			}
+
+			.leaflet-control-layers {
+				z-index: @elements_over_z_index;
+			}
+
+			.leaflet-draw-draw-circle {
+				display: none !important;
+			}
+	}//end .view_default
+
+	&.view_line {
+		display: inline-block;
+		width: 100%;
+		height: 30.5rem;
+
+		>.content_data {
+			display: block;
+			height: 100% !important;
+			overflow: hidden;
+
+			>.content_value {
+				height: calc(30.5rem - 1rem);
+			}
+		}
+	}
+
+	&.view_print {
+		.leaflet-control-container {
+			display: none;
+		}
+	}
+
+	// --- DARK MODE ---
+	:root[data-theme="dark"] & {
+
+		// Darken the standard OSM tiles with a CSS filter (no dark tile provider).
+		// Applied only to the tile pane (.leaflet-layer); controls keep their
+		// variable-based dark styling below so they stay readable.
+		.leaflet-layer {
+			filter : brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.6);
+		}
+
+		// coordinate overlay panel
+		.map_inputs {
+			color        : var(--fg_default);
+			border-color : var(--border_strong);
+
+			.map_reload,
+			.map_point {
+				background : var(--fg_muted);
+			}
+			.map_reload:active,
+			.map_point:active {
+				background : @color_orange_dedalo;
+			}
+		}
+
+		// Leaflet control bar (zoom buttons, layer toggle)
+		.leaflet-bar a {
+			background-color    : var(--bg_elevated);
+			color               : var(--fg_default);
+			border-bottom-color : var(--border_default);
+		}
+		.leaflet-bar a:hover,
+		.leaflet-bar a:focus {
+			background-color : var(--bg_header);
+		}
+		.leaflet-bar a.leaflet-disabled {
+			background-color : var(--bg_elevated);
+			color            : var(--fg_muted);
+		}
+
+		// Leaflet layers control (collapsed container + expanded panel)
+		.leaflet-control-layers,
+		.leaflet-control-layers-expanded {
+			background-color : var(--bg_elevated);
+			color            : var(--fg_default);
+			border-color     : var(--border_default);
+		}
+		// layers toggle icon (dark by default → invert so it shows on dark bg)
+		.leaflet-control-layers-toggle {
+			filter : invert(1) hue-rotate(180deg);
+		}
+
+		// Leaflet popups
+		.leaflet-popup-content-wrapper,
+		.leaflet-popup-tip {
+			background : var(--bg_elevated);
+			color      : var(--fg_default);
+		}
+
+		// Leaflet tooltips
+		.leaflet-tooltip {
+			background-color : var(--bg_elevated);
+			color            : var(--fg_default);
+			border-color     : var(--border_default);
+		}
+
+		// Geoman text marker textarea
+		.pm-textarea {
+			background-color : var(--bg_elevated);
+			color            : var(--fg_default);
+		}
+	}//end dark mode
+
+}//end .component_geolocation

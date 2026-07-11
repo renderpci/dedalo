@@ -1,0 +1,197 @@
+{
+	"typo": "ddo",
+	"model": "component_portal",
+	"label": "portal",
+	"tipo": "test80",
+	"section_tipo": "test3",
+	"legacy_model": "component_portal",
+	"parent": "test3",
+	"parent_grouper": "test45",
+	"lang": "lg-nolan",
+	"mode": "edit",
+	"translatable": false,
+	"properties": {
+		"source": {
+			"request_config": [
+				{
+					"sqo": {
+						"section_tipo": [
+							{
+								"value": [
+									"test3"
+								],
+								"source": "section"
+							}
+						]
+					},
+					"show": {
+						"ddo_map": [
+							{
+								"info": "component_input_text traducible",
+								"mode": "list",
+								"tipo": "test52",
+								"parent": "self",
+								"section_tipo": "self"
+							}
+						]
+					},
+					"search": {
+						"ddo_map": [
+							{
+								"tipo": "test52",
+								"parent": "self",
+								"section_tipo": "self"
+							}
+						],
+						"sqo_config": {
+							"limit": 30
+						},
+						"fields_separator": ", "
+					}
+				}
+			]
+		}
+	},
+	"css": null,
+	"permissions": 2,
+	"tools": [
+		{
+			"typo": "ddo",
+			"model": "tool_propagate_component_data",
+			"name": "tool_propagate_component_data",
+			"label": "Propagate component data",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": null,
+			"css": {
+				"url": "/dedalo/tools/tool_propagate_component_data/css/tool_propagate_component_data.css"
+			},
+			"icon": "/dedalo/tools/tool_propagate_component_data/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_time_machine",
+			"name": "tool_time_machine",
+			"label": "Time machine",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_time_machine/css/tool_time_machine.css"
+			},
+			"icon": "/dedalo/tools/tool_time_machine/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		}
+	],
+	"buttons": [],
+	"request_config": [
+		{
+			"api_engine": "dedalo",
+			"type": "main",
+			"sqo": {
+				"section_tipo": [
+					{
+						"typo": "ddo",
+						"tipo": "test3",
+						"model": "section",
+						"label": "Test Unit (data on matrix_test)",
+						"color": "#b9b9b9",
+						"permissions": 3,
+						"buttons": [
+							{
+								"model": "button_new",
+								"permissions": 3
+							},
+							{
+								"model": "button_delete",
+								"permissions": 3
+							}
+						],
+						"matrix_table": "matrix_test"
+					}
+				],
+				"limit": 10
+			},
+			"show": {
+				"ddo_map": [
+					{
+						"info": "component_input_text traducible",
+						"mode": "list",
+						"tipo": "test52",
+						"parent": "test80",
+						"section_tipo": [
+							"test3"
+						],
+						"model": "component_input_text",
+						"label": "input_text",
+						"fixed_mode": true,
+						"view": "default",
+						"column_id": "test52"
+					}
+				],
+				"sqo_config": {
+					"full_count": false,
+					"limit": 10,
+					"offset": 0,
+					"mode": "edit",
+					"operator": "$or"
+				}
+			},
+			"search": {
+				"ddo_map": [
+					{
+						"tipo": "test52",
+						"parent": "test80",
+						"section_tipo": [
+							"test3"
+						],
+						"model": "component_input_text",
+						"label": "input_text",
+						"mode": "list"
+					}
+				],
+				"sqo_config": {
+					"limit": 30
+				},
+				"fields_separator": ", "
+			},
+			"choose": null,
+			"api_config": null
+		}
+	],
+	"columns_map": [],
+	"sortable": true,
+	"type": "component",
+	"path": [
+		{
+			"component_tipo": "test80",
+			"model": "component_portal",
+			"name": "portal",
+			"section_tipo": "test3"
+		},
+		{
+			"component_tipo": "test52",
+			"model": "component_input_text",
+			"name": "input_text",
+			"section_tipo": "test3"
+		}
+	],
+	"new_dataframe": null,
+	"view": "default",
+	"children_view": null,
+	"debug": {
+		"exec_time": "5.79 ms"
+	},
+	"fields_separator": " | ",
+	"records_separator": " | "
+}

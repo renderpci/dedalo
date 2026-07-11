@@ -1,0 +1,45 @@
+/**
+* move_lang
+*
+* Included from area_maintenance.less file.
+* Shared file-picker list look (checkbox row + collapsible JSON preview).
+*/
+.wrapper_widget.move_lang {
+
+	.file_container {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.15rem 0;
+		border-bottom: 1px solid var(--border_default);
+
+		>.label {
+			display: flex;
+			align-items: center;
+			gap: 0.4rem;
+			height: 2rem;
+			cursor: pointer;
+			color: var(--fg_default);
+
+			&.selected {
+				font-weight: 600;
+			}
+
+			>input {
+				cursor: pointer;
+			}
+		}
+
+		// collapse arrow
+		>.show_file_content {
+			cursor: pointer;
+			padding-right: 1.5rem;
+		}
+
+		>.file_content_container {
+			width: 100%;
+			z-index: 0;
+		}
+	}
+}//end move_lang

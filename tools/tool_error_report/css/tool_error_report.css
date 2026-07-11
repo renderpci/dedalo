@@ -1,0 +1,73 @@
+/*
+* TOOL_ERROR_REPORT
+* Hand-compiled twin of tool_error_report.less (the TS engine has no LESS
+* build — keep both files in lockstep).
+*/
+
+:root {
+	--tool_error_report: #7152a5;
+	--tool_error_report_lighten_40: #dfd8eb;
+	--tool_error_report_lighten_5: #7e60b0;
+	--tool_error_report_border: #5a4183;
+	--tool_error_report_lighten_10: #8c71b9;
+}
+.tool_error_report .error_report_intro {
+	margin: 0 0 1em 0;
+	line-height: 1.4;
+}
+.tool_error_report .error_report_summary {
+	margin: 0 0 1em 0;
+	padding: 0.6em 0.8em;
+	background: rgba(0, 0, 0, 0.04);
+	border-radius: 4px;
+}
+.tool_error_report .error_report_summary .error_report_summary_row {
+	line-height: 1.5;
+}
+.tool_error_report .error_report_summary .error_report_summary_label {
+	font-weight: bold;
+}
+.tool_error_report .error_report_errors {
+	margin: 0 0 1em 0;
+}
+.tool_error_report .error_report_errors summary {
+	cursor: pointer;
+}
+.tool_error_report .error_report_errors .error_report_error_item {
+	margin: 0.5em 0;
+	padding: 0.5em;
+	background: rgba(0, 0, 0, 0.05);
+	font-size: 0.85em;
+	white-space: pre-wrap;
+	word-break: break-word;
+	max-height: 12em;
+	overflow: auto;
+}
+.tool_error_report .error_report_description_label {
+	display: block;
+	font-weight: bold;
+	margin: 0 0 0.3em 0;
+}
+.tool_error_report .error_report_description {
+	width: 100%;
+	box-sizing: border-box;
+	resize: vertical;
+	margin: 0 0 1em 0;
+}
+.tool_error_report .error_report_footer {
+	display: flex;
+	align-items: center;
+	gap: 1em;
+}
+.tool_error_report .error_report_response.error {
+	color: #b00020;
+}
+.tool_error_report .error_report_response.success {
+	color: #1b7d2c;
+}
+.tool_error_report .error_report_note {
+	font-style: italic;
+}
+.tool_header.tool_error_report {
+	background-color: var(--tool_error_report);
+}

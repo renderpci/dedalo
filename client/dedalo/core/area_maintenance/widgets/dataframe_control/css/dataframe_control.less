@@ -1,0 +1,31 @@
+/**
+* dataframe_control
+*
+* Included from area_maintenance.less file.
+* Integrity report as a bordered summary card; orphan detail as a console block.
+* Action buttons (.primary / .warning) are unified by the kit's .dd_action_buttons.
+*/
+.wrapper_widget.dataframe_control {
+
+	.summary {
+		margin-bottom: 0.75rem;
+		padding: 0.7rem 0.85rem;
+		border: 1px solid var(--border_default);
+		border-radius: 8px;
+		background-color: var(--bg_surface);
+		font-size: 0.85rem;
+		line-height: 1.6;
+		color: var(--fg_default);
+	}
+
+	.orphan_items {
+		.dd_console();
+		margin-top: 0.5rem;
+		max-height: 14rem;
+		overflow: auto;
+	}
+
+	button {
+		margin-right: 0.4rem;
+	}
+}//end dataframe_control

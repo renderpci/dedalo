@@ -1,0 +1,329 @@
+{
+  "id": "3978",
+  "section_id": "23",
+  "section_tipo": "dd1340",
+  "data": {
+    "label": "Tools development",
+    "section_id": 23,
+    "created_date": "2026-06-18 11:43:41",
+    "section_tipo": "dd1340",
+    "diffusion_info": null,
+    "created_by_user_id": -1
+  },
+  "relation": {
+    "dd197": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd197"
+      }
+    ],
+    "dd200": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd200"
+      }
+    ],
+    "dd1330": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "51",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      }
+    ],
+    "dd1332": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1332"
+      }
+    ],
+    "dd1333": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1333"
+      }
+    ],
+    "dd1337": [
+      {
+        "id": 1,
+        "type": "dd675",
+        "section_id": "1",
+        "section_tipo": "dd153",
+        "from_component_tipo": "dd1337"
+      }
+    ],
+    "dd1354": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1354"
+      }
+    ]
+  },
+  "string": {
+    "dd612": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "<p>Crea i edita els subtítols d'una transcripció per utilitzar-los en format VTT</p>"
+      },
+      {
+        "id": 2,
+        "lang": "lg-deu",
+        "value": "<p>Erstellen und bearbeiten Sie die Untertitel einer Abschrift zur Verwendung im VTT-Format.</p>"
+      },
+      {
+        "id": 3,
+        "lang": "lg-ell",
+        "value": "<p>Δημιουργήστε και επεξεργαστείτε τους υπότιτλους μιας μεταγραφής για να τους χρησιμοποιήσετε σε μορφή VTT</p>"
+      },
+      {
+        "id": 4,
+        "lang": "lg-eng",
+        "value": "<p>Creates and edits the subtitles of a transcript for use in VTT format.</p>"
+      },
+      {
+        "id": 5,
+        "lang": "lg-fra",
+        "value": "<p>Créer et éditer les sous-titres d'une transcription pour les utiliser au format VTT</p>"
+      },
+      {
+        "id": 6,
+        "lang": "lg-ita",
+        "value": "<p>Crea e modifica i sottotitoli di una trascrizione per usarli in formato VTT</p>"
+      },
+      {
+        "id": 7,
+        "lang": "lg-spa",
+        "value": "<p>Crea y edita los subtítulos de una transcripción para utilizarlos en formato VTT</p>"
+      }
+    ],
+    "dd799": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "Subtítols"
+      },
+      {
+        "id": 2,
+        "lang": "lg-deu",
+        "value": "Untertitel"
+      },
+      {
+        "id": 3,
+        "lang": "lg-ell",
+        "value": "Υπότιτλος"
+      },
+      {
+        "id": 4,
+        "lang": "lg-eng",
+        "value": "Subtitles"
+      },
+      {
+        "id": 5,
+        "lang": "lg-eus",
+        "value": "Azpitituluak"
+      },
+      {
+        "id": 6,
+        "lang": "lg-fra",
+        "value": "Sous-titres"
+      },
+      {
+        "id": 7,
+        "lang": "lg-ita",
+        "value": "Sottotitolo"
+      },
+      {
+        "id": 8,
+        "lang": "lg-spa",
+        "value": "Subtítulos"
+      }
+    ],
+    "dd1326": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "tool_subtitles"
+      }
+    ],
+    "dd1327": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "1.0.1"
+      }
+    ],
+    "dd1328": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "6.0.0"
+      }
+    ],
+    "dd1644": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "Dédalo team"
+      }
+    ]
+  },
+  "date": {
+    "dd199": [
+      {
+        "id": 1,
+        "start": {
+          "day": 6,
+          "hour": 17,
+          "time": 65002584908,
+          "year": 2022,
+          "month": 6,
+          "minute": 35,
+          "second": 8
+        }
+      }
+    ],
+    "dd201": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "start": {
+          "day": 18,
+          "hour": 11,
+          "time": 65132163821,
+          "year": 2026,
+          "month": 6,
+          "minute": 43,
+          "second": 41
+        }
+      }
+    ]
+  },
+  "iri": null,
+  "geo": null,
+  "number": null,
+  "media": null,
+  "misc": {
+    "dd1335": [
+      {
+        "id": 1,
+        "value": {
+          "open_as": "window",
+          "windowFeatures": null
+        }
+      }
+    ],
+    "dd1350": [
+      {
+        "id": 1,
+        "value": [
+          "rsc36"
+        ]
+      }
+    ]
+  },
+  "relation_search": null,
+  "meta": {
+    "dd197": [
+      {
+        "count": 1
+      }
+    ],
+    "dd199": [
+      {
+        "count": 1
+      }
+    ],
+    "dd200": [
+      {
+        "count": 1
+      }
+    ],
+    "dd201": [
+      {
+        "count": 1
+      }
+    ],
+    "dd612": [
+      {
+        "count": 7
+      }
+    ],
+    "dd799": [
+      {
+        "count": 8
+      }
+    ],
+    "dd1326": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1327": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1328": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1330": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1332": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1333": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1335": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1337": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1350": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1354": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1644": [
+      {
+        "count": 1
+      }
+    ]
+  }
+}

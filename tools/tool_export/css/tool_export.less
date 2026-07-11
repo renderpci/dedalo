@@ -1,0 +1,743 @@
+/**
+* TOOL_EXPORT
+*
+* Loaded on tool init
+*/
+
+// imports
+@import (once) '../../../core/page/css/layout/vars';
+
+// local vars
+:root {
+	--tool_export: #7152a5;
+	--tool_export_lighten_40: #dfd8eb;
+	--tool_export_lighten_5: #7e60b0;
+	--tool_export_border: #5a4183;
+	--tool_export_lighten_10: #8c71b9;
+}
+@tool_color : var(--tool_export);
+
+// tool wrapper
+// Encapsulate all tool content to prevent core collisions
+.wrapper_tool.tool_export {
+
+	.spinner {
+		background-color: @tool_color;
+	}
+
+	@media print {
+	    .tool_header, .no_print, .no_print * {
+	        display: none !important;
+	    }
+	}
+
+	>.content_data {
+		width: 100%;
+
+		// grid_top . 3 columns grid
+		>.grid_top {
+			width: 100%;
+			max-width: 100vw;
+			min-height: 90vh;
+			display: grid;
+			grid-template-columns: auto minmax(25rem, 1fr) 200px;
+
+			@media screen and (max-width: @width_break_point_1) {
+				display: block;
+			}
+
+			// components_list_container. List of available section components to drag (at left)
+			>.components_list_container {
+				max-width: 100%;
+				overflow: auto;
+				max-height: calc(100vh - 7.5rem);
+
+				@media screen and (max-width: @width_break_point_1) {
+					max-height: unset;
+					width: 100%;
+					margin-bottom: 1.5rem;
+					overflow: visible;
+				}
+
+				// ul list_container
+				>.list_container {
+					border-left: 1px solid @color_grey_10;
+					max-height: unset;
+				}
+			}//end components_list_container
+
+			// export_components_container. User dragged component list (at right)
+			>.selection_list_contaniner {
+				display: flex;
+				flex-direction: column;
+				padding: 1em;
+				padding-top: 0;
+				position: relative;
+				margin-left: 1rem;
+				overflow: auto;
+				width: calc(100% - 2rem);
+				max-height: calc(100vh - 7.5rem);
+
+				@media screen and (max-width: @width_break_point_1) {
+					max-height: unset;
+					margin: 0px;
+					margin-bottom: 1.5rem;
+					overflow: visible;
+					min-height: 35vh;
+					background-color: @color_grey_16;
+					padding: 0px;
+					padding-left: 0.33rem;
+					padding-right: 0.33rem;
+					width: 100%;
+				}
+
+				>.empty_space {
+					height: 100%;
+					max-height: 100%;
+					width: 100%;
+				}
+
+				// h1 list_title
+				.list_title {
+					margin-bottom: 1em;
+					font-size: 1.2em;
+				}
+				.user_selection_list{
+
+					&.dragover {
+						outline: 1px solid @tool_color;
+					}
+
+					>.list_title {
+						font-weight: bold;
+						padding-top: 0.25rem;
+						margin-top: 0rem;
+						letter-spacing: 1px;
+						font-weight: 600;
+					}
+
+					>.export_component {
+						background-color: @color_grey_16;
+						display: flex;
+						width: 100%;
+						position: relative;
+						justify-content: space-between;
+						align-items: center;
+						margin: 0px;
+						list-style: none;
+						padding: 0px;
+						padding-left: 0.75rem;
+						border-left: 1px solid @color_orange_dedalo;
+						border-bottom: 1px solid @color_grey_14;
+						transition: opacity 150ms;
+
+						&:last-of-type {
+
+							&:after {
+								content: " ";
+								display: block;
+								height: 4rem;
+								width: 100%;
+								position: absolute;
+								top: 1.7rem;
+								left: 0;
+							}
+						}
+
+						&.displaced {
+							padding-top: 2rem;
+						}
+
+						&:hover {
+							cursor: move;
+							background-color: var(--tool_export_lighten_40);
+						}
+
+						&:active {
+							background-color: var(--tool_export_lighten_5);
+							color: @color_white;
+
+							>.button {
+								background-color: @color_white;
+							}
+						}
+
+						&.active {
+							animation: active_animation 0.5s ease-out;
+
+							@keyframes active_animation {
+								0%  {
+									background-color: var(--tool_export_lighten_5);
+									color: @color_white;
+								}
+								65%  {
+									color: @color_white;
+								}
+								100% {
+									background-color: @color_grey_16;
+									color: unset;
+								}
+							}
+						}
+
+						>.component_label {
+							width: 100%;
+							padding: 0.65rem;
+							padding-left: 0.33rem;
+
+							>span {
+								padding-left: 1rem;
+								color: @color_grey_9;
+								font-size: 0.9rem;
+							}
+						}
+
+						// per-component 'export parents' checkbox (relation components)
+						>.export_component_parents {
+							display: flex;
+							align-items: center;
+							gap: 0.25rem;
+							font-size: 0.8rem;
+							color: @color_grey_7;
+							white-space: nowrap;
+							padding-right: 0.5rem;
+							cursor: pointer;
+
+							>.option_check_box {
+								cursor: pointer;
+								margin: 0;
+							}
+						}
+
+						&.dragging {
+							opacity: 0.2;
+							width: auto;
+						}
+
+						&.dragover {
+							opacity: 0.5;
+							pointer-events: none;
+						}
+					}
+				}
+			}//end .user_selection_list
+
+			// export_buttons_config. Mode selector and export button (at right)
+			>.export_buttons_config {
+				background-color: @color_grey_16;
+				padding: 1em;
+				padding-top: 0;
+				position: relative;
+
+				@media screen and (max-width: @width_break_point_1) {
+					background-color: unset;
+				}
+
+				// export_presets. User saved export configurations (per user, DB backed).
+				// Compact, themed, collapsible block at the top of the config column.
+				>.export_presets {
+					margin-bottom: 1.5rem;
+					border: 1px solid @color_grey_13;
+					border-radius: 3px;
+					overflow: hidden;
+
+					&.open {
+						background-color: @color_grey_15;
+					}
+
+					// header. title + new + collapse toggle
+					>.export_presets_header {
+						display: flex;
+						align-items: center;
+						gap: 0.33rem;
+						padding: 0.5rem 0.66rem;
+						background-color: @tool_color;
+						color: @color_white;
+						cursor: pointer;
+
+						>.export_presets_title {
+							flex: 1 1 auto;
+							font-weight: 600;
+							font-size: 0.9rem;
+							text-transform: uppercase;
+							letter-spacing: 1px;
+							white-space: nowrap;
+							overflow: hidden;
+							text-overflow: ellipsis;
+						}
+
+						// new (+) and toggle buttons
+						>.export_presets_new,
+						>.export_presets_toggle {
+							flex: 0 0 auto;
+							cursor: pointer;
+							display: flex;
+							align-items: center;
+							justify-content: center;
+							background-color: @color_white;
+							color: @tool_color;
+							width: 1.25rem;
+							height: 1.25rem;
+							border-radius: 2px;
+							position: relative;
+
+							&:hover {
+								background-color: var(--tool_export_lighten_40);
+							}
+						}
+
+						// new (+) glyph
+						>.export_presets_new {
+							font-size: 1.1rem;
+							font-weight: 700;
+							line-height: 1;
+						}
+
+						// collapse toggle chevron
+						>.export_presets_toggle:after {
+							content: "";
+							width: 0.4rem;
+							height: 0.4rem;
+							border-right: 2px solid @tool_color;
+							border-bottom: 2px solid @tool_color;
+							transform: translateY(-25%) rotate(45deg);
+						}
+					}//end .export_presets_header
+
+					// rotate chevron when the panel is open
+					&.open >.export_presets_header >.export_presets_toggle:after {
+						transform: translateY(25%) rotate(-135deg);
+					}
+
+					// panel. collapsible body
+					>.export_presets_panel {
+
+						&.display_none {
+							display: none;
+						}
+
+						// save changes button
+						>.export_presets_save {
+							display: block;
+							width: calc(100% - 1rem);
+							margin: 0.5rem;
+							background-color: @tool_color;
+							border-color: var(--tool_export_border);
+
+							&:hover {
+								background-color: var(--tool_export_lighten_10);
+							}
+
+							&.hide {
+								display: none;
+							}
+						}
+
+						// presets list (section list view)
+						>.export_presets_list {
+
+							.export_presets_loading {
+								display: block;
+								padding: 0.5rem;
+								font-size: 0.85rem;
+							}
+
+							>.wrapper_section {
+								padding: 0;
+
+								>.paginator_container {
+									height: unset;
+									padding: 0 0.5rem;
+								}
+
+								>.list_body {
+									display: block;
+
+									.section_record {
+										display: grid;
+										grid-template-columns: 1.4rem 1.2rem 1fr 1.4rem;
+										align-items: center;
+										border-top: 1px solid @color_grey_13;
+										padding: 0.15rem 0.5rem;
+										cursor: pointer;
+
+										&:hover {
+											background-color: var(--tool_export_lighten_40);
+										}
+
+										// applied / selected preset
+										&.selected {
+											background-color: @tool_color;
+											color: @color_white;
+
+											.button.icon {
+												background-color: @color_white;
+											}
+											.wrapper_component {
+												color: @color_white;
+											}
+										}
+
+										// name column. truncate long names
+										.column_section,
+										.wrapper_component {
+											min-width: 0;
+											pointer-events: none;
+
+											>span {
+												display: block;
+												overflow: hidden;
+												text-overflow: ellipsis;
+												white-space: nowrap;
+												padding: 0.1rem 0.25rem;
+												font-size: 0.85rem;
+											}
+										}
+
+										// control columns (apply / edit / delete)
+										.column {
+											outline: none;
+
+											.button.icon {
+												background-color: @color_grey_10;
+												margin: 0;
+												height: 1rem;
+												width: 1rem;
+											}
+										}
+
+										.column_apply_preset .button_apply_preset {
+											transform: scaleX(-1);
+										}
+									}
+								}
+							}
+						}//end .export_presets_list
+					}//end .export_presets_panel
+				}//end .export_presets
+
+				.section_label {
+					font-size: 1.25rem;
+					line-height: 1.5rem;
+					margin-bottom: 2rem;
+				}
+
+				.spinner {
+					top: 1rem;
+					position: relative;
+				}
+
+				>.records_info {
+					background-color: @color_cyan;
+				}
+
+				>.section_label {
+					font-weight: 400;
+				}
+
+				.total_records {
+					font-weight: bold;
+				}
+
+				>.data_format {
+					padding-top: 1rem;
+					padding-bottom: 1rem;
+
+					>.select_data_format_export {
+						margin-top: 1rem;
+						margin-bottom: 1rem;
+						margin-left: 1rem;
+					}
+				}
+				>.options_to_check {
+					margin-bottom: 2rem;
+					grid-template-columns: auto 1fr;
+					display: grid;
+					row-gap: 1em;
+
+					>.check_label{
+						display: contents;
+
+						.option_check_box {
+							cursor: pointer;
+						}
+					}
+				}
+
+				>.button_export {
+					width: 100%;
+					margin-left: 0;
+					background-color: @tool_color;
+					border-color: var(--tool_export_border);
+					position: sticky;
+					top: 2rem;
+					padding: 1rem;
+					font-size: 1.2rem;
+					z-index: 1;
+
+					&:not(.loading):hover {
+						background-color: var(--tool_export_lighten_10);
+					}
+
+					&.loading {
+						opacity: 0.4 !important;
+					}
+				}
+
+				// response_container
+				>.response_container {
+					padding: 0.3rem;
+					color: @tool_color;
+					text-align: center;
+					padding-top: 1rem;
+					padding-bottom: 0px;
+				}
+
+				// button activation
+				>.activation {
+					width: 100%;
+					opacity: 0.6;
+					margin-bottom: 0.5rem;
+
+					&.activate_all_columns {
+						margin-top: 2rem;
+					}
+				}
+
+				// Progress Bar
+				.export_progress_container {
+					font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+					width: 100%;
+					background-color: @color_grey_14;
+					border-radius: 4px;
+					margin-top: 1rem;
+					overflow: hidden;
+					position: relative;
+					height: 1.5rem;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+
+					&.hide {
+						display: none;
+					}
+
+					.export_progress_bar {
+						height: 100%;
+						width: 0%;
+						background-color: @tool_color;
+						position: absolute;
+						left: 0;
+						top: 0;
+						transition: width 0.3s ease;
+						z-index: 2;
+					}
+
+					.export_progress_text {
+						position: absolute;
+						left: 0;
+						top: 0;
+						width: 100%;
+						height: 100%;
+						display: flex;
+						align-items: center;
+						justify-content: center;
+						font-size: 0.90rem;
+						font-weight: 600;
+						pointer-events: none;
+
+						&.bg {
+							color: @color_grey_1;
+							z-index: 1;
+						}
+
+						&.fg {
+							color: @color_white;
+							z-index: 3;
+							clip-path: inset(0 100% 0 0);
+						}
+					}
+				}
+			}//end .export_buttons_config
+		}//end .grid_top
+
+		// export_buttons_options. Download buttons for CSV, excel, HTML etc.
+		>.export_buttons_options {
+			width: 100%;
+			margin-top: 1em;
+			background-color: @color_grey_14;
+			padding-top: 1rem;
+			padding-bottom: 1rem;
+			z-index: 1;
+
+			// buttons
+			.processing_import {
+				background-color: @tool_color;
+				border-color: var(--tool_export_border);
+				margin-bottom: 0.25rem;
+
+				@media screen and (max-width: @width_break_point_1) {
+					margin: 0.5rem;
+					width: calc(50% - 1rem);
+				}
+			}
+		}
+
+		// export_data_container. Grid / table of result record values to save
+		>.export_data_container {
+			position: relative;
+			width: 100%;
+			max-width: calc(100vw - 3rem);
+			min-height: 40vh;
+			max-height: 78vh; // container scrolls internally so the header can stick
+			overflow: auto;
+			margin: 0px;
+			background-color: @color_grey_16;
+			border: 1px solid @color_grey_13;
+			border-radius: 8px;
+			box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+
+			// export_flat_table. Modern result grid (sticky header, frozen id
+			// column, zebra rows, hover). Theme-aware: greys flip under
+			// data-theme="dark", so grey_16 surface + grey_4 text stays legible.
+			.export_flat_table {
+				border-collapse: separate;
+				border-spacing: 0;
+				width: max-content;
+				min-width: 100%;
+				font-size: 0.85rem;
+				line-height: 1.45;
+				color: @color_grey_4;
+				font-variant-numeric: tabular-nums;
+
+				// sticky header
+				.row_header > th {
+					position: sticky;
+					top: 0;
+					z-index: 2;
+					background-color: @tool_color;
+					color: @color_white;
+					text-align: left;
+					font-weight: 600;
+					font-size: 0.72rem;
+					text-transform: uppercase;
+					letter-spacing: 0.05em;
+					padding: 0.66rem 0.9rem;
+					white-space: nowrap;
+					border-right: 1px solid rgba(255,255,255,0.12);
+					border-bottom: 2px solid var(--tool_export_border);
+
+					// top-left corner sits above the frozen id column
+					&:first-child {
+						position: sticky;
+						left: 0;
+						z-index: 3;
+					}
+					&:last-child {
+						border-right: none;
+					}
+				}
+
+				// body cells
+				td {
+					padding: 0.5rem 0.9rem;
+					border-bottom: 1px solid @color_grey_13;
+					vertical-align: top;
+					max-width: 30rem;
+					word-break: break-word;
+					background-color: @color_grey_16; // opaque so frozen col masks
+				}
+
+				// zebra striping
+				tr:not(.row_header):nth-of-type(even) td {
+					background-color: @color_grey_15;
+				}
+
+				// row hover (opaque to keep the frozen first column masked)
+				tr:not(.row_header):hover td {
+					background-color: @color_grey_13;
+				}
+
+				// frozen first column (record id)
+				td:first-child {
+					position: sticky;
+					left: 0;
+					z-index: 1;
+					font-weight: 600;
+					color: @color_grey_7;
+					white-space: nowrap;
+					box-shadow: 1px 0 0 @color_grey_13;
+				}
+
+				// breakdown sub-rows: tie visually to their parent record
+				tr.sub_row td {
+					border-bottom: 1px solid @color_grey_14;
+				}
+				tr.sub_row td:first-child {
+					color: @color_grey_9;
+					box-shadow: 1px 0 0 @color_grey_13, inset 3px 0 0 var(--tool_export_lighten_40);
+				}
+
+				// empty cells get a faint placeholder dash
+				td:empty::after {
+					content: "–";
+					color: @color_grey_10;
+				}
+
+				// media thumbnails
+				.export_media_thumb {
+					height: 44px;
+					width: auto;
+					max-width: 88px;
+					object-fit: cover;
+					border-radius: 4px;
+					border: 1px solid @color_grey_13;
+					background-color: @color_grey_15;
+					margin: 2px 4px 2px 0;
+					vertical-align: middle;
+					transition: transform 120ms ease;
+
+					&:hover {
+						transform: scale(1.04);
+					}
+				}
+
+				// links (iri cells)
+				td a {
+					color: var(--color_primary);
+					text-decoration: none;
+
+					&:hover {
+						text-decoration: underline;
+					}
+				}
+			}//end .export_flat_table
+		}//end .export_data_container
+	}//end >.content_data
+
+	// select style
+	.select_style {
+		width: fit-content;
+		height: 2em;
+		font-size: 0.80em;
+	}
+}//end .wrapper_tool.tool_export
+
+
+// header tool_export modal modification
+.tool_header.tool_export {
+	background-color: @tool_color;
+}
+
+// tool_export_modal
+.tool_export_modal {
+
+	.quality_selector {
+		margin: 1rem;
+	}
+
+	.success {
+		padding-left: 1rem;
+		padding-right: 1rem;
+	}
+}

@@ -1,0 +1,41 @@
+{
+	"typo": "ddo",
+	"model": "component_section_id",
+	"label": "Id",
+	"tipo": "dd784",
+	"section_tipo": "dd153",
+	"legacy_model": "component_section_id",
+	"parent": "dd153",
+	"parent_grouper": "dd154",
+	"lang": "lg-nolan",
+	"mode": "edit",
+	"translatable": false,
+	"properties": {},
+	"css": {
+		".wrapper_component": {
+			"grid-column": "span 1"
+		}
+	},
+	"permissions": 3,
+	"tools": [],
+	"buttons": [],
+	"request_config": null,
+	"columns_map": null,
+	"sortable": true,
+	"type": "component",
+	"path": [
+		{
+			"name": "Id",
+			"model": "component_section_id",
+			"section_tipo": "dd153",
+			"component_tipo": "dd784"
+		}
+	],
+	"new_dataframe": null,
+	"view": null,
+	"children_view": null,
+	"debug": {
+		"exec_time": "0.184 ms"
+	},
+	"color": "#b9b9b9"
+}

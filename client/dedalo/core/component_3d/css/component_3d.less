@@ -1,0 +1,109 @@
+/**
+* component_3d
+*
+* Included from main.less file
+*/
+.component_3d {
+
+	&.disabled_component {
+		.content_data.component {
+			pointer-events: initial !important;
+		}
+	}
+
+	&.edit {
+
+		&.fullscreen {
+			>.content_data >.content_value {
+				height: 100% !important;
+			}
+		}
+
+		>.content_data {
+
+			// 3d_container
+			>.content_value {
+
+				canvas {
+					max-width: 100%;
+				}
+
+				.axes {
+					width: 100px;
+					height: 100px;
+					margin: 20px;
+					padding: 0px;
+					position: absolute;
+					left: 0px;
+					bottom: 0px;
+					z-index: 10;
+					pointer-events: none;
+				}
+
+				.gui-wrapper {
+					position: absolute;
+					top: 0;
+					right: 0;
+					bottom: 0;
+					overflow: auto;
+					max-height: 100%;
+					height: fit-content;
+				}
+			}
+
+			// posterframe
+			.posterframe {
+				.media_posterframe_mixin();
+				// 3d-specific sizing (fills the container)
+				height: 100%;
+				width: 100%;
+				min-width: 100%;
+			}
+		}
+	}
+
+	// player 3d_control_buttons
+	.threeD_control_buttons {
+		.media_control_buttons_mixin();
+	}//end .threeD_control_buttons
+
+	&.view_line {
+		display: inline-block;
+
+		>.content_data {
+			>.content_value {
+				margin-top: 1rem;
+			}
+		}
+
+
+		&.list {
+			height: var(--view_line_height); // 5rem;
+			width: 6rem;
+			min-width: 6rem;
+		}
+	}
+
+	&.view_viewer {
+		height: 100%;
+
+		.content_value.media_content_value {
+			height: var(--media_viewer_height);
+		}
+	}
+
+	&.view_text {
+		display: inline-block;
+		width: auto;
+
+		>img {
+			height: 100%;
+		}
+	}
+
+	// with suffix _mini like 'component_3d_mini'
+	&_mini {
+		.media_mini_mixin();
+	}
+
+}//end .component_3d

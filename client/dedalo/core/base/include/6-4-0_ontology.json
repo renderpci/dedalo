@@ -1,0 +1,522 @@
+{
+    "date": "2024-12-24T20:02:31+01:00",
+    "host": "localhost:8080",
+    "entity": "monedaiberica",
+    "version": "6.4.0",
+    "entity_id": 10,
+    "version_inf": "Specifies the minimum software version with which the Ontology is compatible.",
+    "entity_label": "monedaiberica",
+    "active_ontologies": [
+        {
+            "tld": "dd",
+            "name": "Dédalo | dd",
+            "name_data": {
+                "lg-cat": [
+                    "Dédalo | dd"
+                ],
+                "lg-deu": [
+                    "Dédalo | dd"
+                ],
+                "lg-eng": [
+                    "Dédalo | dd"
+                ],
+                "lg-fra": [
+                    "Dédalo | dd"
+                ],
+                "lg-ita": [
+                    "Dédalo | dd"
+                ],
+                "lg-spa": [
+                    "Dédalo | dd"
+                ]
+            },
+            "typology_id": "14",
+            "typology_name": "Actividades"
+        },
+        {
+            "tld": "hierarchy",
+            "name": "Jerarquía | hierarchy",
+            "name_data": {
+                "lg-eng": [
+                    "Hierarchy | hierarchy"
+                ],
+                "lg-spa": [
+                    "Jerarquía | hierarchy"
+                ]
+            },
+            "typology_id": "14",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "lg",
+            "name": "Lenguajes | lg",
+            "name_data": {
+                "lg-eng": [
+                    "Languages | lg"
+                ],
+                "lg-spa": [
+                    "Lenguajes | lg"
+                ]
+            },
+            "typology_id": "3",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "nexus",
+            "name": "Nexo | nexus",
+            "name_data": {
+                "lg-eng": [
+                    "Nexus | nexus"
+                ],
+                "lg-spa": [
+                    "Nexo | nexus"
+                ]
+            },
+            "typology_id": "14",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "ontology",
+            "name": "Ontología | ontology",
+            "name_data": {
+                "lg-eng": [
+                    "Ontology | ontology"
+                ],
+                "lg-spa": [
+                    "Ontología | ontology"
+                ]
+            },
+            "typology_id": "14",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "rsc",
+            "name": "Recurso | rsc",
+            "name_data": {
+                "lg-eng": [
+                    "Resource | rsc"
+                ],
+                "lg-spa": [
+                    "Recurso | rsc"
+                ]
+            },
+            "typology_id": "5",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "test",
+            "name": "Test | test",
+            "name_data": {
+                "lg-eng": [
+                    "Test | test"
+                ],
+                "lg-spa": [
+                    "Test | test"
+                ]
+            },
+            "typology_id": "5",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "ww",
+            "name": "Web | ww",
+            "name_data": {
+                "lg-eng": [
+                    "Web | ww"
+                ],
+                "lg-spa": [
+                    "Web | ww"
+                ]
+            },
+            "typology_id": "5",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "actv",
+            "name": "Actividad | actv",
+            "name_data": {
+                "lg-eng": [
+                    "Activity | actv"
+                ],
+                "lg-spa": [
+                    "Actividad | actv"
+                ]
+            },
+            "typology_id": "12",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "dmm",
+            "name": "Memoria democrática | dmm",
+            "name_data": {
+                "lg-eng": [
+                    "Democratic memory | dmm"
+                ],
+                "lg-spa": [
+                    "Memoria democrática | dmm"
+                ]
+            },
+            "typology_id": "8",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "ich",
+            "name": "Patrimonio cultural inmaterial | ich",
+            "name_data": {
+                "lg-eng": [
+                    "Intangible cultural heritage | ich"
+                ],
+                "lg-spa": [
+                    "Patrimonio cultural inmaterial | ich"
+                ]
+            },
+            "typology_id": "8",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "isad",
+            "name": "ISAD(g) | isad",
+            "name_data": {
+                "lg-eng": [
+                    "ISAD(g) | isad"
+                ],
+                "lg-spa": [
+                    "ISAD(g) | isad"
+                ]
+            },
+            "typology_id": "8",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "numisdata",
+            "name": "Patrimonio numismático | numisdata",
+            "name_data": {
+                "lg-eng": [
+                    "Numismatic heritage | numisdata"
+                ],
+                "lg-spa": [
+                    "Patrimonio numismático | numisdata"
+                ]
+            },
+            "typology_id": "8",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "tch",
+            "name": "Patrimonio cultural material | tch",
+            "name_data": {
+                "lg-eng": [
+                    "Patrimonio cultural material | tch"
+                ],
+                "lg-spa": [
+                    "Patrimonio cultural material | tch"
+                ]
+            },
+            "typology_id": "8",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "tchi",
+            "name": "Patrimonio cultural material inmueble | tchi",
+            "name_data": {
+                "lg-eng": [
+                    "Tangible cultural heritage, Immovable | tchi"
+                ],
+                "lg-spa": [
+                    "Patrimonio cultural material inmueble | tchi"
+                ]
+            },
+            "typology_id": "8",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "zenon",
+            "name": "Zenon | zenon",
+            "name_data": {
+                "lg-eng": [
+                    "Zenon | zenon"
+                ],
+                "lg-spa": [
+                    "Zenon | zenon"
+                ]
+            },
+            "typology_id": "8",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "category",
+            "name": "category",
+            "name_data": {
+                "lg-spa": [
+                    "category"
+                ]
+            },
+            "typology_id": "1",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "ceramics",
+            "name": "ceramics",
+            "name_data": {
+                "lg-spa": [
+                    "ceramics"
+                ]
+            },
+            "typology_id": "1",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "dc",
+            "name": "dc",
+            "name_data": {
+                "lg-spa": [
+                    "dc"
+                ]
+            },
+            "typology_id": "1",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "deposit",
+            "name": "deposit",
+            "name_data": {
+                "lg-spa": [
+                    "deposit"
+                ]
+            },
+            "typology_id": "1",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "ds",
+            "name": "ds",
+            "name_data": {
+                "lg-spa": [
+                    "ds"
+                ]
+            },
+            "typology_id": "4",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "emakumeak",
+            "name": "emakumeak",
+            "name_data": {
+                "lg-spa": [
+                    "emakumeak"
+                ]
+            },
+            "typology_id": "8",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "es",
+            "name": "es",
+            "name_data": {
+                "lg-spa": [
+                    "es"
+                ]
+            },
+            "typology_id": "2",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "excavation",
+            "name": "excavation",
+            "name_data": {
+                "lg-spa": [
+                    "excavation"
+                ]
+            },
+            "typology_id": "12",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "material",
+            "name": "material",
+            "name_data": {
+                "lg-spa": [
+                    "material"
+                ]
+            },
+            "typology_id": "11",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "mdcat",
+            "name": "mdcat",
+            "name_data": {
+                "lg-spa": [
+                    "mdcat"
+                ]
+            },
+            "typology_id": "8",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "mht",
+            "name": "mht",
+            "name_data": {
+                "lg-spa": [
+                    "mht"
+                ]
+            },
+            "typology_id": "8",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "mupreva",
+            "name": "mupreva",
+            "name_data": {
+                "lg-spa": [
+                    "mupreva"
+                ]
+            },
+            "typology_id": "8",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "murapa",
+            "name": "murapa",
+            "name_data": {
+                "lg-spa": [
+                    "murapa"
+                ]
+            },
+            "typology_id": "8",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "numisdatacatalog",
+            "name": "numisdatacatalog",
+            "name_data": {
+                "lg-spa": [
+                    "numisdatacatalog"
+                ]
+            },
+            "typology_id": "8",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "object",
+            "name": "object",
+            "name_data": {
+                "lg-spa": [
+                    "object"
+                ]
+            },
+            "typology_id": "11",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "places",
+            "name": "places",
+            "name_data": {
+                "lg-spa": [
+                    "places"
+                ]
+            },
+            "typology_id": "9",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "resanalysis",
+            "name": "resanalysis",
+            "name_data": {
+                "lg-spa": [
+                    "resanalysis"
+                ]
+            },
+            "typology_id": "10",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "rescause",
+            "name": "rescause",
+            "name_data": {
+                "lg-spa": [
+                    "rescause"
+                ]
+            },
+            "typology_id": "10",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "rolejob",
+            "name": "rolejob",
+            "name_data": {
+                "lg-spa": [
+                    "rolejob"
+                ]
+            },
+            "typology_id": "4",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "technique",
+            "name": "technique",
+            "name_data": {
+                "lg-spa": [
+                    "technique"
+                ]
+            },
+            "typology_id": "1",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "ts",
+            "name": "ts",
+            "name_data": {
+                "lg-spa": [
+                    "ts"
+                ]
+            },
+            "typology_id": "1",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "ubication",
+            "name": "ubication",
+            "name_data": {
+                "lg-spa": [
+                    "ubication"
+                ]
+            },
+            "typology_id": "9",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "utoponymy",
+            "name": "utoponymy",
+            "name_data": {
+                "lg-spa": [
+                    "utoponymy"
+                ]
+            },
+            "typology_id": "2",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "www",
+            "name": "www",
+            "name_data": {
+                "lg-spa": [
+                    "www"
+                ]
+            },
+            "typology_id": "6",
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "oh",
+            "name": "oh",
+            "name_data": {
+                "lg-spa": [
+                    "oh"
+                ]
+            },
+            "typology_id": "8",
+            "typology_name": "Especial"
+        }
+    ]
+}

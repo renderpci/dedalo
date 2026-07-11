@@ -1,0 +1,4614 @@
+{
+	"meta": {
+		"gate": "menu_differential",
+		"captured_at": "2026-07-11T08:24:48.585Z",
+		"capture_commit": "d2d0746",
+		"oracle_base_url_sha256": "e817688f9da2918c",
+		"entity": "monedaiberica",
+		"interaction_count": 3,
+		"drift_policy": "These interactions freeze LIVE PHP oracle responses over the mutable shared DB. If this gate reds under ORACLE_MODE=fixtures with NO engine change, the shared data moved after the harvest: adjudicate (data-side diff only?), then re-harvest this gate with `bun run scripts/oracle_harvest.ts --gate <name>.test.ts` in the same change that adjudicates the red. After PHP decommissioning there is no re-harvest: fixtures + the cutover DB snapshot are the pinned pair (rewrite/ORACLE_HARVEST.md)."
+	},
+	"interactions": {
+		"1a326f5bb2c4c2345ec1fb9d": {
+			"kind": "json",
+			"rqo": {
+				"action": "get_environment",
+				"dd_api": "dd_core_api"
+			},
+			"status": 200,
+			"body": {
+				"result": {
+					"page_globals": {
+						"dedalo_last_error": null,
+						"is_logged": false,
+						"is_global_admin": false,
+						"is_developer": false,
+						"is_root": false,
+						"user_id": null,
+						"username": null,
+						"full_username": null,
+						"dedalo_entity": "monedaiberica",
+						"dedalo_entity_id": 10,
+						"dedalo_version": null,
+						"dedalo_build": null,
+						"mode": "list",
+						"dedalo_application_langs_default": "lg-spa",
+						"dedalo_application_lang": "lg-spa",
+						"dedalo_data_lang": "lg-spa",
+						"dedalo_data_lang_selector": true,
+						"dedalo_data_lang_sync": false,
+						"dedalo_data_nolan": "lg-nolan",
+						"dedalo_application_langs": [
+							{
+								"label": "Castellano",
+								"value": "lg-spa"
+							},
+							{
+								"label": "Català",
+								"value": "lg-cat"
+							},
+							{
+								"label": "English",
+								"value": "lg-eng"
+							},
+							{
+								"label": "Français",
+								"value": "lg-fra"
+							},
+							{
+								"label": "Português",
+								"value": "lg-por"
+							},
+							{
+								"label": "German",
+								"value": "lg-deu"
+							},
+							{
+								"label": "Ελληνικά",
+								"value": "lg-ell"
+							},
+							{
+								"label": "Italiano",
+								"value": "lg-ita"
+							}
+						],
+						"dedalo_projects_default_langs": [
+							{
+								"label": "Nepali",
+								"value": "lg-nep",
+								"tld2": "ne"
+							},
+							{
+								"label": "English",
+								"value": "lg-eng",
+								"tld2": "en"
+							},
+							{
+								"label": "German",
+								"value": "lg-deu",
+								"tld2": "de"
+							},
+							{
+								"label": "French",
+								"value": "lg-fra",
+								"tld2": "fr"
+							},
+							{
+								"label": "Valencià",
+								"value": "lg-vlca",
+								"tld2": "ca"
+							},
+							{
+								"label": "Arabic Cluster",
+								"value": "lg-ara",
+								"tld2": "ar"
+							},
+							{
+								"label": "Catalan",
+								"value": "lg-cat",
+								"tld2": "ca"
+							},
+							{
+								"label": "Greek",
+								"value": "lg-ell",
+								"tld2": "el"
+							},
+							{
+								"label": "Basque",
+								"value": "lg-eus",
+								"tld2": "eu"
+							},
+							{
+								"label": "Italian",
+								"value": "lg-ita",
+								"tld2": "it"
+							},
+							{
+								"label": "Portuguese",
+								"value": "lg-por",
+								"tld2": "pt"
+							},
+							{
+								"label": "Castellano",
+								"value": "lg-spa",
+								"tld2": "es"
+							}
+						],
+						"dedalo_image_quality_default": "1.5MB",
+						"dedalo_av_quality_default": "404",
+						"dedalo_quality_thumb": "thumb",
+						"tag_id": null,
+						"dedalo_protect_media_files": 1,
+						"DEDALO_NOTIFICATIONS": 0,
+						"ip_api": {
+							"url": "https://ipapi.co/$ip/json/",
+							"href": "https://ipapi.co/?q=$ip",
+							"country_code": "country_code"
+						},
+						"fallback_image": "/dedalo/core/themes/default/default.svg",
+						"locale": "es-ES",
+						"dedalo_date_order": "dmy",
+						"component_active": null,
+						"stream_readers": [],
+						"maintenance_mode": false,
+						"dedalo_notification": false,
+						"recovery_mode": false,
+						"data_version": [
+							7,
+							0,
+							0
+						]
+					},
+					"plain_vars": {
+						"DEDALO_ENVIRONMENT": true,
+						"DEDALO_API_URL": "/dedalo/core/api/v1/json/",
+						"DEDALO_DIFFUSION_API_URL": "/dedalo/diffusion/api/v1/",
+						"DEDALO_CORE_URL": "/dedalo/core",
+						"DEDALO_ROOT_WEB": "/dedalo",
+						"DEDALO_MEDIA_URL": "/dedalo/media",
+						"DEDALO_TOOLS_URL": "/dedalo/tools",
+						"DEDALO_TOOLS_URLS": {},
+						"SHOW_DEBUG": false,
+						"SHOW_DEVELOPER": false,
+						"DEVELOPMENT_SERVER": true,
+						"DEDALO_UPLOAD_SERVICE_CHUNK_FILES": 5,
+						"DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT": 50,
+						"DEDALO_LOCK_COMPONENTS": true,
+						"DEDALO_MAINTENANCE_MODE": false,
+						"DEDALO_NOTIFICATION": null,
+						"DEDALO_RR_WORKER": false,
+						"DD_TIPOS": {
+							"DEDALO_RELATION_TYPE_INDEX_TIPO": "dd96",
+							"DEDALO_SECTION_INFO_INVERSE_RELATIONS": "dd1596",
+							"DEDALO_RELATION_TYPE_LINK": "dd151",
+							"DEDALO_SECTION_RESOURCES_IMAGE_TIPO": "rsc170",
+							"DEDALO_COMPONENT_RESOURCES_IMAGE_TIPO": "rsc29"
+						}
+					},
+					"get_label": {
+						"continue": "Continuar",
+						"change_user": "Cambiar",
+						"recover_password": "¿Olvidaste tu contraseña?",
+						"recover_password_title": "Recupera tu contraseña",
+						"recover_password_help": "Introduce tu usuario o correo electrónico y te enviaremos un código de recuperación de 8 dígitos.",
+						"username_or_email": "Usuario o correo electrónico",
+						"send_code": "Enviar código de recuperación",
+						"back_to_login": "Volver al inicio de sesión",
+						"recovery_code_title": "Revisa tu correo",
+						"recovery_code_help": "Hemos enviado un código de 8 dígitos a tu correo. Introdúcelo junto con tu nueva contraseña.",
+						"new_password": "Nueva contraseña",
+						"repeat_password": "Repite la nueva contraseña",
+						"reset_password": "Restablecer contraseña",
+						"invalid_username": "Usuario no válido",
+						"invalid_auth_code": "¡Código de acceso no válido!",
+						"enter_username_or_email": "Introduce tu usuario o correo electrónico",
+						"enter_recovery_code": "Introduce el código de recuperación de 8 dígitos",
+						"password_too_short": "Contraseña demasiado corta. Usa al menos 8 caracteres",
+						"passwords_do_not_match": "Las contraseñas no coinciden",
+						"request_code_first": "Solicita primero un código de recuperación",
+						"recovery_code_sent": "Si existe una cuenta, se ha enviado un código de recuperación.",
+						"password_updated": "Tu contraseña se ha actualizado. Ya puedes iniciar sesión.",
+						"recovery_invalid_or_expired": "Código no válido o caducado",
+						"recovery_too_many_attempts": "Demasiados intentos. Solicita un nuevo código.",
+						"recovery_reset_failed": "No se ha podido actualizar la contraseña. Inténtalo de nuevo más tarde.",
+						"different_from": "Distinto de",
+						"tool_ts_print": "Impresión del tesauro",
+						"title": "Título",
+						"page": "Página",
+						"beginning": "Inicio",
+						"herramienta": "Herramienta",
+						"audiovisual": "Audiovisual",
+						"mostrar": "mostrar",
+						"create_identify_image": "Crear imagen identificativa",
+						"created": "creado",
+						"by_user": "por usuario",
+						"idioma_de_destino": "Idioma de destino",
+						"open_relationships": "Abrir relaciones",
+						"contenido_actual": "Contenido actual",
+						"anadir_ficheros": "Añadir ficheros",
+						"comenzar_la_carga": "Comenzar la carga",
+						"cancelar_la_carga": "Cancelar la carga",
+						"gestion_de_archivos": "Gestión de archivos",
+						"import_preview": "Previsualización de importación",
+						"found_records": "Todos los registros encontrados",
+						"view_pdf": "Ver / descargar PDF",
+						"aplicar_y_salvar": "Aplicar y salvar",
+						"find": "Buscar",
+						"project": "Proyecto",
+						"donde": "Dónde",
+						"que": "Qué",
+						"registros_creados": "Registros creados",
+						"directorio_de_destino": "Directorio de destino",
+						"nombre_fichero": "Nombre del fichero",
+						"fichero_de_zotero_procesado_correctamente": "Fichero de Zotero procesado correctamente",
+						"tool_calendar": "Calendario",
+						"original": "Original",
+						"nombre_fichero_completo": "Nombre completo del fichero",
+						"extension": "extensión",
+						"registros_visualizados": "Registros visualizados",
+						"nombre_automatico": "Nombre automático",
+						"tamano_archivo": "Tamaño del archivo",
+						"formato_incorrecto": "Formato incorrecto",
+						"ir_al_perfil": "Ir al perfil",
+						"etiqueta_salvar_texto": "y guarde el texto",
+						"etiquetas_perdidas": "Etiquetas perdidas",
+						"conform_headers": "Conformar cabeceras",
+						"fichero_de_bibtex_procesado_correctamente": "Fichero BibTex procesado correctamente",
+						"elementos_desactivos": "elementos desactivos",
+						"file": "Fichero",
+						"conservar_los_cambios_transcripcion": "Para conservar los cambios, NO CIERRE ESTA VENTANA. Inicie sesión en otra ventana del navegador y, a continuación, vuelva a esta ventana y guarde el contenido (presionando el botón 'Guardar')",
+						"usuarios_activos": "Usuarios activos",
+						"tool_import_files": "Importar ficheros",
+						"play_speed": "Velocidad de reproducción",
+						"play_pause_key": "Play/pause tecla",
+						"auto_rewind": "Auto-rebobinado",
+						"insert_tag": "Insertar etiqueta",
+						"opciones": "Opciones",
+						"update_ontology": "Actualizar Ontología",
+						"build_structure_css": "Generar estructura css",
+						"section_tipo": "Tipo de la sección",
+						"remove_av_temporals": "Borrar temporales de audio/video",
+						"tool_semantic_nodes": "Relaciones semánticas",
+						"pagina_de": "Página X de Y.",
+						"volver": "Volver",
+						"sections": "secciones",
+						"remove": "Quitar",
+						"no_access": "Sin acceso aquí",
+						"imagen_info": "Imagen info.",
+						"years": "años",
+						"days": "días",
+						"months": "meses",
+						"year": "año",
+						"month": "mes",
+						"leer": "Leer",
+						"ruta_carpeta_ficheros": "Ruta de carpeta ficheros a importar",
+						"tool_import_dedalo_csv": "Importar Dédalo csv",
+						"mover": "Mover",
+						"mover_datos_de_componentes": "Mover datos de componentes",
+						"timecodes": "Códigos de tiempo",
+						"indexations": "Indexaciones",
+						"indexations_info": "Index info",
+						"lines": "Líneas",
+						"date": "Fecha",
+						"municipio": "Municipio",
+						"entrevista": "Entrevista",
+						"informantes": "Informantes",
+						"head": "Cabecera",
+						"provisional": "Provisional",
+						"relations": "Relaciones",
+						"heramientas": "Herramientas",
+						"persons": "Personas",
+						"vacio": "vacío",
+						"import": "Importar",
+						"eliminar_etiqueta": "¿Eliminar etiqueta?",
+						"print": "Imprimir",
+						"tool_structuration": "Estructuración",
+						"crear_capitulo": "Crear capítulo",
+						"mostrar_ocultar_etiquetas": "Mostrar/ocultar etiquetas",
+						"approach": "Enfoque",
+						"structurations": "Estructuraciones",
+						"tool_lang_multi": "Multi-lenguaje",
+						"selected_text": "Texto seleccionado",
+						"automatic_translation": "Traducción automática",
+						"copiar_a_destino": "Copiar a destino",
+						"propagar_marcas": "Propagar marcas",
+						"total_parrafos": "Total párrafos",
+						"solo_nuevas": "Sólo nuevas",
+						"recreate_all": "Recrear todas",
+						"order_change": "Cambio de orden",
+						"max": "Máx.",
+						"tool_import_rdf": "Importar RDF",
+						"export_json_ontology": "Exportar Ontología JSON",
+						"renumerar_secciones": "Renumerar secciones",
+						"name_to_field": "Sufijo indica campo",
+						"name_to_record_id": "Prefijo indica ID",
+						"presets_de_busqueda": "Config. de búsqueda",
+						"presets_de_exportacion": "Config. de exportación",
+						"search_options": "Opciones de búsqueda",
+						"fields": "Campos",
+						"and": "y",
+						"or": "o",
+						"go_to_page": "Ir a la página",
+						"go_to_record": "Ir al registro",
+						"does_not_contain": "No contiene",
+						"contains": "Contiene",
+						"begins_with": "Empieza con",
+						"end_with": "Acaba con",
+						"literal": "Literal",
+						"between": "Entre",
+						"sequence": "Secuencia",
+						"greater_than_or_equal": "Mayor o igual que",
+						"less_than_or_equal": "Menor o igual que",
+						"greater_than": "Mayor que",
+						"less_than": "Menor que",
+						"list": "Listado",
+						"edicion": "Edición",
+						"new": "Nuevo",
+						"entrada": "Entrada",
+						"salida": "Salida",
+						"recuperar": "recuperar",
+						"record": "registro",
+						"fail_to_save": "¡Fallo al guardar!",
+						"loading": "Cargando...",
+						"cerrar": "Cerrar",
+						"fichero": "Fichero",
+						"size": "Tamaño",
+						"download": "Descargar",
+						"upload": "Subir fichero",
+						"delete": "Borrar",
+						"build": "Generar",
+						"version": "Versión",
+						"processing": "Procesando",
+						"por_favor_espere": "Por favor, espere",
+						"seleccione_el_fichero_a_subir": "Seleccione el fichero a subir",
+						"file_uploaded_successfully": "Archivo subido con éxito",
+						"error_on_upload_file": "Error al subir el archivo",
+						"select_a_file": "Seleccione un fichero",
+						"el_directorio_no_existe": "El directorio no existe o no es accesible",
+						"insertar": "Insertar",
+						"accion": "Acción",
+						"tecla": "Tecla",
+						"visualizar": "Visualizar",
+						"rotate": "Rotar",
+						"imagen": "imagen",
+						"cancel": "Cancelar",
+						"indexacion": "indexación",
+						"indexings": "indexaciones",
+						"descriptores": "descriptores",
+						"tag": "etiqueta",
+						"section": "sección",
+						"tesauro": "tesauro",
+						"tool_av_versions": "Ficheros de audio/video",
+						"tool_image_versions": "Ficheros de imagen",
+						"tool_upload": "Carga de archivos",
+						"tool_relation": "Relaciones",
+						"tool_transcription": "Transcripción",
+						"situation": "Estado de registro",
+						"full": "completo",
+						"modo": "modo",
+						"search_in_current_lang": "Buscar en el idioma actual",
+						"existente": "existente",
+						"search_in_all_langs": "Buscar en todos los idiomas",
+						"recurso": "recurso",
+						"delete_resource_and_links": "Borrar el recurso y todos sus vínculos",
+						"tool_layout_print": "Impresión",
+						"ir_al_listado": "Ir al listado",
+						"modelos": "modelos",
+						"jerarquias": "jerarquías",
+						"terms": "Términos",
+						"language": "idioma",
+						"value_out_of_range": "Valor fuera de rango",
+						"registrar_herramientas": "Registrar herramientas",
+						"registros_actualizados": "registros actualizados",
+						"saved": "guardado",
+						"sin_fichero": "Sin fichero",
+						"seleccione_una_etiqueta_para_indexar": "Seleccione una etiqueta para indexar",
+						"nueva_plantilla_vacia": "Nueva plantilla vacía",
+						"caracteres_por_linea": "Caracteres por línea",
+						"zoom": "Zoom",
+						"longitude": "Longitud",
+						"latitude": "Latitud",
+						"build_subtitles": "Crear subtítulos",
+						"sure": "¿Seguro?",
+						"sure_delete_entry_all_langs": "Esta entrada se eliminará de todos los idiomas.",
+						"weight": "Peso",
+						"items": "Elementos",
+						"average": "Media",
+						"min": "Mín.",
+						"cataloging": "Catalogación",
+						"preset": "Config",
+						"informacion": "Información",
+						"uploaded_file_was_only_partially_uploaded": "El archivo subido fue sólo parcialmente cargado",
+						"no_file_was_uploaded": "Ningún archivo fue subido",
+						"carga": "Carga",
+						"recuperar_component": "Recuperar componente",
+						"recuperar_seccion": "Recuperar sección",
+						"carga_completada": "Carga completada",
+						"eliminar_archivo": "Eliminar archivo",
+						"estadisticas": "Estadísticas",
+						"importar_ficheros": "Importar ficheros",
+						"ver_ficha_existente": "Ver ficha existente",
+						"tool_pdf_versions": "Ficheros PDF",
+						"filter": "filtro",
+						"idioma_de_origen": "Idioma de origen",
+						"preview": "vista previa",
+						"code": "Código",
+						"standard": "Estándar",
+						"format": "Formato",
+						"activate_all_columns": "Activar todas las columnas",
+						"disable_all_columns": "Desactivar todas las columnas",
+						"error_empty_offset": "Error. Valor de tc offset vacío",
+						"updating": "Actualizando",
+						"creating": "Creando",
+						"versions": "Versiones",
+						"layer": "Capa",
+						"reading": "Leyendo",
+						"references": "Referencias",
+						"tool_qr": "Códigos QR",
+						"exactly": "Exactamente",
+						"duplicated": "Duplicado",
+						"tool_watermark": "Notas",
+						"tool_cataloging": "Catalogación",
+						"tool_import_marc21": "Importar MARC 21",
+						"tool_user_admin": "Administración de usuario",
+						"tool_translation": "Traducción",
+						"digitization": "Digitalización",
+						"latest_changes": "Últimos cambios",
+						"borrar_secciones": "Borrar secciones",
+						"email": "E-mail",
+						"unsaved_changes": "¡Sin salvar!",
+						"show_buttons": "Mostrar botones",
+						"copy": "Copiar",
+						"deleted_tags": "Etiquetas borradas",
+						"source": "Origen",
+						"import_json_ontology": "Importar ontología JSON",
+						"register_tools": "Registrar herramientas",
+						"value": "Valor",
+						"duplicate": "Duplicar",
+						"component": "Componente",
+						"model": "Modelo",
+						"type": "Tipo",
+						"publish": "Publicar",
+						"previous": "Previo",
+						"replace": "Reemplazar",
+						"replace_all": "Reemplazar todos",
+						"match_case": "Coincidir mayúsculas y minúsculas",
+						"whole_words": "Palabras completas",
+						"find_and_replace": "Buscar y reemplazar",
+						"instalar": "Instalar",
+						"remove_filter": "Eliminar filtro",
+						"update_data_version": "Actualizar la versión del dato",
+						"check_config": "Comprobar configuración",
+						"delete_diffusion_records": "Borrar registros de difusión",
+						"loading_dedalo_files": "Cargando ficheros de Dédalo",
+						"ontology": "Ontología",
+						"developer": "Desarrollador",
+						"installed": "Instalado",
+						"layer_selector": "Selector de capas",
+						"build_database_version": "Construir versión de base de datos",
+						"tool_portal": "Portal",
+						"tool_import_images": "Importar imágenes",
+						"ficha": "ficha",
+						"procesar": "procesar",
+						"mostrar_filtrados": "Mostrar filtrados",
+						"ir_al_fragmento": "Ir al fragmento",
+						"update_cache": "Actualizar caché",
+						"dir_path": "Ruta de directorio",
+						"file_path": "Ruta de archivo",
+						"name": "Nombre",
+						"modified": "modificado",
+						"campos_personalizados": "Campos Personalizados",
+						"records_displayed": "Registros mostrados de X a Y de Z",
+						"day": "día",
+						"acabado": "Acabado",
+						"site_under_maintenance": "Sistema en mantenimiento. Disculpe las molestias",
+						"borrara_la_etiqueta_seleccionada": "Borrará la etiqueta seleccionada en todos los idiomas así como todas la relaciones e indexaciones asociadas a ella",
+						"seleccionado": "seleccionado",
+						"total_records": "Registros totales",
+						"processing_wait": "Procesando... por favor espere",
+						"historico": "Histórico",
+						"validado": "Validado",
+						"verifique_datos_de_instalacion": "Verifique que los datos de instalación son correctos. Si no lo son, configure la información relativa a la base de datos en las preferencias de Dédalo (config_db.php)",
+						"eliminar_imagenes_tras_la_importacion": "Eliminar imágenes tras la importación",
+						"numero_inventario": "Número de inventario",
+						"editar_registro": "Editar registro",
+						"index_tags_deleted": "etiquetas de indexación borradas fueron creadas al comienzo del texto.",
+						"index_tags_fixed": "etiquetas de indexación rotas fueron arregladas.",
+						"review_tags": "Por favor revise la posición de las etiquetas azules (borradas accidentalmente)",
+						"contenido_no_autorizado": "Usted no está autorizado a ver este contenido",
+						"tool_import_av": "Importar audio/video",
+						"delete_component_tipo_of_section_tipo": "Borrar todo el componente de la sección",
+						"skip_publication_state_check": "Ignorar temporalmente el estado de publicación al publicar",
+						"edit_template": "Editar plantilla",
+						"error_de_conexion": "Error de conexión. Recargue la página pasados unos segundos",
+						"tool_tc": "Codigos de tiempo",
+						"info_fichero": "Información del fichero",
+						"actualizar_vista": "Actualizar vista",
+						"structurations_info": "Estructuraciones info",
+						"yes": "si",
+						"same_name_same_record": "Mismo nombre mismo registro. Crea nuevo ID",
+						"no_empty": "Contiene información",
+						"abv_scope_note": "NA",
+						"tool_add_component_data": "Añadir contenido al campo",
+						"next": "Siguiente",
+						"guardar": "Guardar",
+						"dividir_palabras": "Dividir palabras",
+						"tool_time_machine": "Máquina del tiempo",
+						"carga_de_archivo_completada": "Carga de archivo completada",
+						"delete_data_only": "Borrar sólo datos",
+						"crear_nuevo_fragmento": "Crear nuevo fragmento con selección",
+						"tool_indexation": "Indexación",
+						"list_from_component_data": "Lista de datos de componente",
+						"mostrar_inspector": "Mostrar Inspector",
+						"value_already_exists": "El valor ya existe",
+						"search_operators": "Operadores de búsqueda",
+						"duracion": "Duración",
+						"temp_dir_not_accessible": "Carpeta temporal no accesible",
+						"failed_to_writte_file_to_disk": "No se pudo escribir el archivo en el disco",
+						"extensiones_soportadas": "Extensiones soportadas",
+						"component_history": "Historial del componente",
+						"delete_found_records": "Se eliminarán todos los registros encontrados.",
+						"seconds_abbr": "Seg.",
+						"all_records_found": "Todos registros los encontrados",
+						"data_was_not_modified_save_canceled": "Los datos no fueron modificados. Salvar cancelado.",
+						"activity": "Actividad",
+						"select_one_project": "Debe seleccionar al menos un proyecto",
+						"no_hay_etiqueta_seleccionada": "El código de usuario no existe",
+						"publicado": "Publicado",
+						"full_screen": "Pantalla completa",
+						"export_hierarchy": "Exportar jerarquía",
+						"skip_deletion_cause_children": "Se ha omitido la eliminación del registro actual porque tiene hijos",
+						"tool_diffusion": "Publicar",
+						"number_page_of_total_pages": "Página %s de %s",
+						"numero_recurso": "Número del recurso",
+						"transcripcion_automatica": "Transcripción automática",
+						"desbloquear_todos_los_componentes": "Desbloquear todos los componentes",
+						"update": "Actualizar",
+						"are_you_sure_to_delete_this_record": "¿Está seguro de borrar este registro?",
+						"make_backup": "Hacer copia de seguridad",
+						"ruta_carpeta_ficheros_renombrar": "Ruta de carpeta ficheros a renombrar",
+						"new_fixed_page": "Nueva página fija",
+						"fragment": "fragmento",
+						"selecionar_texto": "Seleccionar texto",
+						"field": "campo:",
+						"reload": "Recargar",
+						"filesize_is_too_big": "El tamaño de archivo es demasiado grande",
+						"abandonando_esta_pagina": "Abandonando esta página perderá los datos que no haya salvado",
+						"open": "Abrir",
+						"delete_data_and_record": "Borrar registro completo",
+						"state": "Estado de validación",
+						"tool_posterframe": "Fotograma",
+						"select_page_of_the_doc": "Seleccione una página del documento:",
+						"seleccione_un_idioma_de_destino": "Seleccione un idioma de destino",
+						"tool_import_zotero": "Importar de Zotero",
+						"descarga": "Descarga",
+						"nueva version": "Nueva versión",
+						"uploaded_file_exceeds_the_maximum_size": "El archivo subido excede el tamaño máximo permitido",
+						"actividad_horaria": "Actividad horaria",
+						"tool_metadata": "Metadata",
+						"exportar_jerarquias": "Exportar jerarquias",
+						"translatable": "Traducible",
+						"select_search_section": "Seleccione una sección de búsqueda.",
+						"build_install_version": "Construir una versión de instalación",
+						"not_allow_to_create_note": "No puede crear notas de un cambio que no es suyo",
+						"value_already_exits_in_other_langs": "El valor ya existe en otro idioma",
+						"error_source_target_lang": "Lenguaje de origen y destino NO pueden tener el mismo idioma",
+						"tool_sort": "Herramienta de ordenación",
+						"import_bibtex_help": "Añada el fichero BIBTex y los correspondientes ficheros PDF desde su disco duro. Una vez cargados, seleccione 'Importar ficheros'",
+						"are_you_sure_to_overwrite_text": "¿Está seguro de sobrescribir el texto?",
+						"component_alternative": "Campo alternativo. No usar salvo que el término no se encuentre normalizado. Utilize en su lugar: %s",
+						"relacionar_fragmento_seleccionado": "Relacionar fragmento seleccionado",
+						"para_crear_un_fragmento": "Para crear un nuevo fragmento, simplemente seleccione una parte del texto y pulse «Nuevo fragmento» abajo",
+						"uploaded_file_exceeds_the_directive": "El archivo subido excede la directiva upload_max_filesize en php.ini",
+						"tool_replace_component_data": "Reemplazar datos del campo",
+						"total_pages": "Páginas totales",
+						"now": "Ahora",
+						"para_revisar": "Para revisar",
+						"registros_modificados": "Registros modificados",
+						"generar_turnos": "Generar turnos de visitas",
+						"label_deleted": "Borrada",
+						"label_to_review": "Por revisar",
+						"save_template": "Salvar plantilla",
+						"active_elements": "elementos activos",
+						"tool_export": "Exportar",
+						"new_fluid_page": "Nueva página fluida",
+						"tool_administration": "Herramienta de administración",
+						"tool_subtitles": "Subtítulos",
+						"new_page": "Nueva página",
+						"component_tipo": "Tipo del componente",
+						"salir": "Salir",
+						"warning": "Atención",
+						"altitude": "Altitud",
+						"tool_tr_print": "Transcripción impresión",
+						"vincular_recurso": "Vincular recurso",
+						"no": "no",
+						"changes": "cambios",
+						"empty": "Vacío",
+						"similar_to": "Similar a",
+						"abv_narrowed_term": "TE",
+						"abv_related_term": "TR",
+						"abv_use_for": "UP",
+						"abv_broader_term": "TG",
+						"search": "Búsqueda",
+						"tool_description": "Herramienta de descripción",
+						"calidad": "Calidad",
+						"create": "Crear",
+						"invalid_extension": "Extensión no válida",
+						"tool_lang": "Lenguaje",
+						"tool_update_cache": "Actualizar caché",
+						"data": "datos",
+						"relacion_anadida": "Relación añadida",
+						"user_code_does_not_exist_error": "El código de usuario no existe",
+						"total": "Total",
+						"php_extension_stopped_the_upload_file": "Una extensión de PHP detuvo la carga de archivos",
+						"breakdown": "Desglose",
+						"children_recursive": "Hijos",
+						"diameter": "Diámetro",
+						"shift_key": "Mayúsculas",
+						"error_invalid_date_format": "Error: formato de fecha invalido",
+						"alert_limit_of_emails": "Atención, superado el límite de correos.",
+						"of": "de",
+						"empty_selection": "Selección vacía",
+						"levels": "Niveles",
+						"inspector": "Inspector",
+						"translation": "Traducción",
+						"error": "Error",
+						"proceso_completado": "Proceso completado",
+						"tiempo": "Tiempo",
+						"geolocalizacion": "Geolocalización",
+						"mapa": "Mapa",
+						"preview_of_print": "Previsualización de importación",
+						"show_all": "Mostrar todos",
+						"save": "Salvar",
+						"all": "Todos",
+						"label_normal": "Normal",
+						"sync_last_version": "Sincronizando la información con la última versión",
+						"current_record": "Registro actual",
+						"discard_changes": "¿Descartar los cambios no salvados?",
+						"apply": "Aplicar",
+						"georeferenciacion_en_formato": "Georeferenciación en formato Longitud,Latitud ej. 39.46264,-0.37615",
+						"all_this_values_will_be_removed": "Todos estos valores también se eliminarán",
+						"component_in_use": "Atención: El usuario %s está usando este campo. Por favor, espere a que termine la edición.",
+						"tool_import_bibtex": "Importar de BibTex",
+						"component_deprecated": "Campo en proceso de desaparición. Este campo se fusiona con: %s",
+						"error_generate_hierarchy": "Esta jerarquía no está activa y no se puede generar",
+						"exceeded_limit": "Se ha rebasado el máximo número de valores para este campo. Límite =",
+						"seleccione_fotograma": "Seleccione fotograma en el reproductor y pulse «CREAR POSTERFRAME» para crear un fotograma a partir del video",
+						"delete_only_the_link": "Borrar sólo el vínculo",
+						"choose_page_between": "Página seleccionable entre ${page_in} y ${page_out}. Total de páginas: ${total_pages}.",
+						"are_you_sure_to_delete_note": "¿Seguro que desea borrar esta nota?",
+						"email_limit_explanation": "Los correos seleccionados para enviar superan el límite máximo de su sistema operativo, por lo que se ha procedido a crear paquetes que no superen este máximo. Haga click en los siguientes botones para crear los correos.",
+						"fecha_o_rango_en_formato": "Fecha o rango en formato  DD/MM/YYYY ó DD/MM/YYYY-DD/MM/YYYY",
+						"procesando_media_en_background": "Procesando media en segundo plano. Este proceso puede tardar, pero puede continuar trabajando.",
+						"error_el_codigo_de_usuario_no_existe": "Error. El código de usuario no existe en Dédalo. Contacte con el administrador.",
+						"user_without_profile_error": "Error: El usuario y la clave introducidos son correctos pero el usuario actual no está correctamente configurado. Por favor, contacte con su administrador para asignar perfil a su usuario.",
+						"open_relationships_of_field": "¿Abrir las relaciones de {0} del registro actual (1) o de todos los registros encontrados ({1})?",
+						"import_zotero_help": "Añada el fichero JSON de Zotero y los correspondientes ficheros PDF desde su disco duro. Una vez cargados, seleccione 'Importar ficheros'",
+						"remove_hidden_data": "Atención: Al cambiar este valor, se eliminará la información contenida en los campos que serán ocultados. ¿Desea continuar?",
+						"will_open_all_related_records": "Esto abrirá todos los datos relacionados de {0} de todos los registros en una nueva ventana sin filtros. ¿Está seguro?",
+						"no_se_encontraron_registros": "No se encontraron registros",
+						"default_lang_of_file_to_import": "Idioma por defecto del archivo a importar. Datos sin idioma especificado serán importados en:",
+						"por_favor_indexe_desde_una_seccion_de_inventario": "Por favor, indexe desde una sección de inventario (ej. Historia Oral) y no desde un  recurso",
+						"user_without_projects_error": "Error: El usuario y la clave introducidos son correctos pero el usuario actual no está correctamente configurado. Por favor, contacte con su administrador para asignar proyectos autorizados a su usuario.",
+						"type_root_password": "Escriba y vuelva a escribir la contraseña de superusuario deseada y guárdela en un lugar seguro. Utilice una contraseña segura de 8 a 32 caracteres que contenga, al menos, una letra mayúscula, una letra minúscula y un número. No se permiten caracteres idénticos en orden secuencial ('aa', '11', 'BB', etc.). No se permite el orden numérico ('123', '345', etc.) ni alfabético ('aBC', 'hIjK', etc.)."
+					}
+				},
+				"msg": "OK. Request done successfully",
+				"errors": [],
+				"action": "get_environment",
+				"csrf_token": "__FIXTURE_CSRF__",
+				"dedalo_last_error": null
+			}
+		},
+		"4aebc5191a8c768b39e839e1": {
+			"kind": "json",
+			"rqo": {
+				"action": "login",
+				"dd_api": "dd_utils_api",
+				"options": {
+					"username": "__ORACLE_USER__",
+					"auth": "__ORACLE_AUTH__"
+				}
+			},
+			"status": 200,
+			"body": {
+				"result": true,
+				"msg": " Login.. ",
+				"errors": [],
+				"result_options": {
+					"user_image": "/dedalo/core/themes/default/raspas/raspa_screen.jpg",
+					"user_id": -1
+				},
+				"default_section": "dd88",
+				"action": "login",
+				"csrf_token": "__FIXTURE_CSRF__",
+				"dedalo_last_error": null
+			}
+		},
+		"c0fb173b82fd4593c168654a": {
+			"kind": "json",
+			"rqo": {
+				"action": "read",
+				"dd_api": "dd_core_api",
+				"prevent_lock": true,
+				"source": {
+					"typo": "source",
+					"model": "menu",
+					"tipo": "dd85",
+					"section_tipo": "dd85",
+					"action": "get_data",
+					"mode": "list",
+					"lang": "lg-eng"
+				}
+			},
+			"status": 200,
+			"body": {
+				"result": {
+					"context": [
+						{
+							"typo": "ddo",
+							"type": "menu",
+							"tipo": "dd85",
+							"lang": "lg-spa",
+							"mode": "edit",
+							"model": "menu",
+							"permissions": 2,
+							"label": "Menú",
+							"tools": [
+								{
+									"typo": "ddo",
+									"type": "tool",
+									"section_tipo": "dd1324",
+									"mode": "edit",
+									"model": "tool_user_admin",
+									"label": "Administración de usuario",
+									"css": {
+										"url": "/dedalo/tools/tool_user_admin/css/tool_user_admin.css"
+									},
+									"name": "tool_user_admin",
+									"icon": "/dedalo/tools/tool_user_admin/img/icon.svg",
+									"show_in_inspector": false,
+									"show_in_component": false
+								}
+							],
+							"debug": {
+								"exec_time": "121.916 ms"
+							}
+						}
+					],
+					"data": [
+						{
+							"tipo": "dd85",
+							"model": "menu",
+							"tree_datalist": [
+								{
+									"tipo": "dd242",
+									"model": "area_root",
+									"parent": "dd1",
+									"label": "Inventario"
+								},
+								{
+									"tipo": "dd321",
+									"model": "area",
+									"parent": "dd242",
+									"label": "Patrimonio Inmueble"
+								},
+								{
+									"tipo": "tchi1",
+									"model": "section",
+									"parent": "dd321",
+									"label": "Inmuebles"
+								},
+								{
+									"tipo": "dd322",
+									"model": "area",
+									"parent": "dd242",
+									"label": "Patrimonio Mueble"
+								},
+								{
+									"tipo": "dd351",
+									"model": "area",
+									"parent": "dd322",
+									"label": "Patrimonio documental"
+								},
+								{
+									"tipo": "dd354",
+									"model": "area",
+									"parent": "dd322",
+									"label": "Patrimonio Artístico"
+								},
+								{
+									"tipo": "numisdata6",
+									"model": "section",
+									"parent": "dd322",
+									"label": "Cecas"
+								},
+								{
+									"tipo": "numisdata3",
+									"model": "section",
+									"parent": "dd322",
+									"label": "Tipo"
+								},
+								{
+									"tipo": "numisdata4",
+									"model": "section",
+									"parent": "dd322",
+									"label": "Objeto numismático"
+								},
+								{
+									"tipo": "numisdata5",
+									"model": "section",
+									"parent": "dd322",
+									"label": "Complejo"
+								},
+								{
+									"tipo": "numisdata38",
+									"model": "section",
+									"parent": "dd322",
+									"label": "Diseño"
+								},
+								{
+									"tipo": "numisdata54",
+									"model": "section",
+									"parent": "dd322",
+									"label": "Iconografía"
+								},
+								{
+									"tipo": "numisdata41",
+									"model": "section",
+									"parent": "dd322",
+									"label": "Leyenda"
+								},
+								{
+									"tipo": "numisdata809",
+									"model": "section",
+									"parent": "dd322",
+									"label": "Marca"
+								},
+								{
+									"tipo": "numisdata300",
+									"model": "section",
+									"parent": "dd322",
+									"label": "Catálogos"
+								},
+								{
+									"tipo": "numisdata267",
+									"model": "section",
+									"parent": "dd322",
+									"label": "Monedas ordenadas"
+								},
+								{
+									"tipo": "numisdata276",
+									"model": "section",
+									"parent": "dd322",
+									"label": "Localización"
+								},
+								{
+									"tipo": "tch7",
+									"model": "section",
+									"parent": "dd322",
+									"label": "Catálogo"
+								},
+								{
+									"tipo": "tch20",
+									"model": "section",
+									"parent": "dd322",
+									"label": "Catálogos tipológicos"
+								},
+								{
+									"tipo": "tch10",
+									"model": "section",
+									"parent": "dd322",
+									"label": "Registro"
+								},
+								{
+									"tipo": "tch200",
+									"model": "section",
+									"parent": "dd322",
+									"label": "Inventario"
+								},
+								{
+									"tipo": "tch1",
+									"model": "section",
+									"parent": "dd322",
+									"label": "Objeto"
+								},
+								{
+									"tipo": "tch100",
+									"model": "section",
+									"parent": "dd322",
+									"label": "Fotografía"
+								},
+								{
+									"tipo": "tch300",
+									"model": "section",
+									"parent": "dd322",
+									"label": "Documentos"
+								},
+								{
+									"tipo": "tch178",
+									"model": "section",
+									"parent": "dd322",
+									"label": "Conjuntos - OBSOLETO"
+								},
+								{
+									"tipo": "dd323",
+									"model": "area",
+									"parent": "dd242",
+									"label": "Inmaterial"
+								},
+								{
+									"tipo": "oh1",
+									"model": "section",
+									"parent": "dd323",
+									"label": "Historia Oral"
+								},
+								{
+									"tipo": "ich10",
+									"model": "area",
+									"parent": "dd323",
+									"label": "PCI - IPCE"
+								},
+								{
+									"tipo": "ich1",
+									"model": "section",
+									"parent": "ich10",
+									"label": "Bienes"
+								},
+								{
+									"tipo": "ich100",
+									"model": "section",
+									"parent": "ich10",
+									"label": "Elementos y Procesos"
+								},
+								{
+									"tipo": "ich96",
+									"model": "section",
+									"parent": "ich10",
+									"label": "Participación / ejecución"
+								},
+								{
+									"tipo": "dd356",
+									"model": "area",
+									"parent": "dd242",
+									"label": "Natural"
+								},
+								{
+									"tipo": "dd320",
+									"model": "area",
+									"parent": "dd356",
+									"label": "Patrimonio Natural"
+								},
+								{
+									"tipo": "dd69",
+									"model": "area_activity",
+									"parent": "dd1",
+									"label": "Actividades"
+								},
+								{
+									"tipo": "rsc684",
+									"model": "area",
+									"parent": "dd69",
+									"label": "Restauración"
+								},
+								{
+									"tipo": "rsc550",
+									"model": "section",
+									"parent": "rsc684",
+									"label": "Intervención"
+								},
+								{
+									"tipo": "rsc611",
+									"model": "section",
+									"parent": "rsc684",
+									"label": "Proceso de restauración"
+								},
+								{
+									"tipo": "rsc574",
+									"model": "section",
+									"parent": "rsc684",
+									"label": "Analíticas"
+								},
+								{
+									"tipo": "rsc1500",
+									"model": "section",
+									"parent": "rsc684",
+									"label": "Parámetros de conservación preventiva"
+								},
+								{
+									"tipo": "rsc949",
+									"model": "section",
+									"parent": "rsc684",
+									"label": "Condiciones de almacenamiento"
+								},
+								{
+									"tipo": "rsc976",
+									"model": "section",
+									"parent": "rsc684",
+									"label": "Inspecciones / Estado de conservación"
+								},
+								{
+									"tipo": "numisdata1200",
+									"model": "area",
+									"parent": "dd69",
+									"label": "NUMISDATA"
+								},
+								{
+									"tipo": "numisdata1199",
+									"model": "section",
+									"parent": "numisdata1200",
+									"label": "Excavaciones"
+								},
+								{
+									"tipo": "numisdata167",
+									"model": "section",
+									"parent": "numisdata1200",
+									"label": "Intervención"
+								},
+								{
+									"tipo": "numisdata179",
+									"model": "section",
+									"parent": "numisdata1200",
+									"label": "Composición"
+								},
+								{
+									"tipo": "numisdata269",
+									"model": "section",
+									"parent": "numisdata1200",
+									"label": "Analíticas"
+								},
+								{
+									"tipo": "numisdata224",
+									"model": "section",
+									"parent": "numisdata1200",
+									"label": "Subastas"
+								},
+								{
+									"tipo": "dd14",
+									"model": "area_resource",
+									"parent": "dd1",
+									"label": "Recursos"
+								},
+								{
+									"tipo": "dmm480",
+									"model": "section",
+									"parent": "dd14",
+									"label": "Mapa de fosas"
+								},
+								{
+									"tipo": "rsc75",
+									"model": "section",
+									"parent": "rsc1",
+									"label": "Personas"
+								},
+								{
+									"tipo": "rsc2",
+									"model": "section",
+									"parent": "rsc1",
+									"label": "Media recursos"
+								},
+								{
+									"tipo": "rsc3",
+									"model": "section",
+									"parent": "rsc1",
+									"label": "Media publicaciones"
+								},
+								{
+									"tipo": "rsc4",
+									"model": "section",
+									"parent": "rsc1",
+									"label": "Media administración"
+								},
+								{
+									"tipo": "rsc295",
+									"model": "section",
+									"parent": "rsc1",
+									"label": "Entidades"
+								},
+								{
+									"tipo": "rsc333",
+									"model": "section",
+									"parent": "rsc1",
+									"label": "Media bibliografía"
+								},
+								{
+									"tipo": "rsc412",
+									"model": "section",
+									"parent": "rsc1",
+									"label": "Media Biografías"
+								},
+								{
+									"tipo": "rsc203",
+									"model": "area",
+									"parent": "dd14",
+									"label": "Personas, grupos o comunidades"
+								},
+								{
+									"tipo": "rsc424",
+									"model": "section",
+									"parent": "rsc203",
+									"label": "Unidad familiar"
+								},
+								{
+									"tipo": "rsc197",
+									"model": "section",
+									"parent": "rsc203",
+									"label": "Personas"
+								},
+								{
+									"tipo": "rsc106",
+									"model": "section",
+									"parent": "rsc203",
+									"label": "Entidad"
+								},
+								{
+									"tipo": "rsc420",
+									"model": "section",
+									"parent": "rsc203",
+									"label": "Hitos biográficos"
+								},
+								{
+									"tipo": "rsc167",
+									"model": "section",
+									"parent": "dd14",
+									"label": "Audiovisual"
+								},
+								{
+									"tipo": "rsc170",
+									"model": "section",
+									"parent": "dd14",
+									"label": "Imagen"
+								},
+								{
+									"tipo": "rsc302",
+									"model": "section",
+									"parent": "dd14",
+									"label": "Documento vectorial"
+								},
+								{
+									"tipo": "rsc176",
+									"model": "section",
+									"parent": "dd14",
+									"label": "Documento PDF"
+								},
+								{
+									"tipo": "rsc202",
+									"model": "section",
+									"parent": "dd14",
+									"label": "Documento 3D"
+								},
+								{
+									"tipo": "rsc179",
+									"model": "section",
+									"parent": "dd14",
+									"label": "Partitura"
+								},
+								{
+									"tipo": "rsc332",
+									"model": "section",
+									"parent": "dd14",
+									"label": "Referencia bibliográfica"
+								},
+								{
+									"tipo": "rsc205",
+									"model": "section",
+									"parent": "dd14",
+									"label": "Publicaciones"
+								},
+								{
+									"tipo": "rsc996",
+									"model": "section",
+									"parent": "dd14",
+									"label": "Consultas a fondos documentales"
+								},
+								{
+									"tipo": "rsc204",
+									"model": "area",
+									"parent": "dd14",
+									"label": "Documentación administrativa"
+								},
+								{
+									"tipo": "rsc621",
+									"model": "section",
+									"parent": "rsc204",
+									"label": "Movimientos"
+								},
+								{
+									"tipo": "rsc182",
+									"model": "section",
+									"parent": "rsc204",
+									"label": "Expediente administrativo"
+								},
+								{
+									"tipo": "rsc185",
+									"model": "section",
+									"parent": "rsc204",
+									"label": "Informes"
+								},
+								{
+									"tipo": "rsc188",
+									"model": "section",
+									"parent": "rsc204",
+									"label": "Boletín o Diario oficial"
+								},
+								{
+									"tipo": "rsc191",
+									"model": "section",
+									"parent": "rsc204",
+									"label": "Acta de cesión"
+								},
+								{
+									"tipo": "rsc236",
+									"model": "section",
+									"parent": "rsc204",
+									"label": "Dosieres"
+								},
+								{
+									"tipo": "rsc245",
+									"model": "section",
+									"parent": "rsc204",
+									"label": "Cuestionario"
+								},
+								{
+									"tipo": "rsc476",
+									"model": "section",
+									"parent": "rsc204",
+									"label": "Documentación oficial"
+								},
+								{
+									"tipo": "rsc682",
+									"model": "section",
+									"parent": "rsc204",
+									"label": "Imágenes"
+								},
+								{
+									"tipo": "rsc806",
+									"model": "section",
+									"parent": "rsc204",
+									"label": "Valoraciones económicas"
+								},
+								{
+									"tipo": "rsc913",
+									"model": "section",
+									"parent": "rsc204",
+									"label": "Coordenadas"
+								},
+								{
+									"tipo": "rsc939",
+									"model": "section",
+									"parent": "rsc204",
+									"label": "Biografías de los bienes"
+								},
+								{
+									"tipo": "rsc1080",
+									"model": "area",
+									"parent": "dd14",
+									"label": "Auxiliares"
+								},
+								{
+									"tipo": "rsc1081",
+									"model": "section",
+									"parent": "rsc1080",
+									"label": "Medidas"
+								},
+								{
+									"tipo": "rsc1093",
+									"model": "section",
+									"parent": "rsc1080",
+									"label": "Inscripciones"
+								},
+								{
+									"tipo": "rsc226",
+									"model": "section",
+									"parent": "rsc1080",
+									"label": "Origen de los datos"
+								},
+								{
+									"tipo": "rsc326",
+									"model": "section",
+									"parent": "rsc1080",
+									"label": "Anotaciones"
+								},
+								{
+									"tipo": "rsc1152",
+									"model": "section",
+									"parent": "rsc1080",
+									"label": "Referencias de personas"
+								},
+								{
+									"tipo": "rsc1035",
+									"model": "section",
+									"parent": "rsc1080",
+									"label": "Referencia de autores"
+								},
+								{
+									"tipo": "rsc370",
+									"model": "section",
+									"parent": "rsc1080",
+									"label": "Estructuraciones de texto"
+								},
+								{
+									"tipo": "rsc425",
+									"model": "section",
+									"parent": "rsc1080",
+									"label": "Referencias"
+								},
+								{
+									"tipo": "rsc1221",
+									"model": "section",
+									"parent": "rsc1080",
+									"label": "Otras codificaciones"
+								},
+								{
+									"tipo": "rsc377",
+									"model": "section",
+									"parent": "rsc1080",
+									"label": "Notas de indexación"
+								},
+								{
+									"tipo": "rsc832",
+									"model": "section",
+									"parent": "rsc1080",
+									"label": "Notas Time Machine"
+								},
+								{
+									"tipo": "rsc1242",
+									"model": "section",
+									"parent": "rsc1080",
+									"label": "Marco de dato | Incertidumbre"
+								},
+								{
+									"tipo": "rsc1299",
+									"model": "section",
+									"parent": "rsc1080",
+									"label": "Referencias de entidades"
+								},
+								{
+									"tipo": "rsc1327",
+									"model": "section",
+									"parent": "rsc1080",
+									"label": "Magnitudes/proporciones/valores"
+								},
+								{
+									"tipo": "rsc1340",
+									"model": "section",
+									"parent": "rsc1080",
+									"label": "Uso y función"
+								},
+								{
+									"tipo": "rsc1389",
+									"model": "section",
+									"parent": "rsc1080",
+									"label": "Procesos de trabajo"
+								},
+								{
+									"tipo": "rsc1379",
+									"model": "section",
+									"parent": "rsc1080",
+									"label": "Anotaciones del marco de datos"
+								},
+								{
+									"tipo": "numisdata1410",
+									"model": "area",
+									"parent": "dd14",
+									"label": "NUMISDATA"
+								},
+								{
+									"tipo": "numisdata1374",
+									"model": "section",
+									"parent": "numisdata1410",
+									"label": "Grupo de autoridades"
+								},
+								{
+									"tipo": "numisdata1411",
+									"model": "section",
+									"parent": "numisdata1410",
+									"label": "Peculiaridad de producción"
+								},
+								{
+									"tipo": "numisdata31",
+									"model": "section",
+									"parent": "numisdata1410",
+									"label": "Fuentes del contenido"
+								},
+								{
+									"tipo": "numisdata1480",
+									"model": "section",
+									"parent": "numisdata1410",
+									"label": "Corrección de datos por periodo"
+								},
+								{
+									"tipo": "zenon1",
+									"model": "section",
+									"parent": "dd14",
+									"label": "Zenon"
+								},
+								{
+									"tipo": "dd35",
+									"model": "area_tool",
+									"parent": "dd1",
+									"label": "Procesos"
+								},
+								{
+									"tipo": "oh80",
+									"model": "area",
+									"parent": "dd35",
+									"label": "Historia Oral"
+								},
+								{
+									"tipo": "rsc167",
+									"model": "section",
+									"parent": "oh80",
+									"label": "Transcripción entrevistas",
+									"config": {
+										"source_model": "section_tool",
+										"source_section_tipo": "oh81",
+										"target_section_tipo": "rsc167",
+										"tool_context": {
+											"typo": "ddo",
+											"type": "tool",
+											"section_tipo": "dd1324",
+											"mode": "edit",
+											"model": "tool_transcription",
+											"properties": {
+												"open_as": "window",
+												"windowFeatures": null
+											},
+											"label": "Transcripción",
+											"css": {
+												"url": "/dedalo/tools/tool_transcription/css/tool_transcription.css"
+											},
+											"name": "tool_transcription",
+											"icon": "/dedalo/tools/tool_transcription/img/icon.svg",
+											"show_in_inspector": true,
+											"show_in_component": true,
+											"tool_config": {
+												"ddo_map": [
+													{
+														"mode": "edit",
+														"role": "media_component",
+														"tipo": "rsc35",
+														"section_id": "self",
+														"section_tipo": "rsc167",
+														"model": "component_av",
+														"translatable": false,
+														"label": "Audiovisual"
+													},
+													{
+														"mode": "edit",
+														"role": "transcription_component",
+														"tipo": "rsc36",
+														"section_id": "self",
+														"section_tipo": "rsc167",
+														"model": "component_text_area",
+														"translatable": true,
+														"label": "Descripción / transcripción av"
+													},
+													{
+														"mode": "edit",
+														"role": "status_user_component",
+														"tipo": "rsc431",
+														"section_id": "self",
+														"section_tipo": "rsc167",
+														"model": "component_check_box",
+														"translatable": false,
+														"label": "Estado TR"
+													},
+													{
+														"mode": "edit",
+														"role": "status_admin_component",
+														"tipo": "rsc285",
+														"section_id": "self",
+														"section_tipo": "rsc167",
+														"model": "component_select",
+														"translatable": false,
+														"label": "Validación TR"
+													},
+													{
+														"mode": "edit",
+														"role": "references_component",
+														"tipo": "rsc1368",
+														"section_id": "self",
+														"section_tipo": "rsc167",
+														"model": "component_portal",
+														"translatable": false,
+														"label": "Referencias"
+													}
+												]
+											}
+										}
+									}
+								},
+								{
+									"tipo": "rsc167",
+									"model": "section",
+									"parent": "oh80",
+									"label": "Indexación entrevistas",
+									"config": {
+										"source_model": "section_tool",
+										"source_section_tipo": "oh83",
+										"target_section_tipo": "rsc167",
+										"tool_context": {
+											"typo": "ddo",
+											"type": "tool",
+											"section_tipo": "dd1324",
+											"mode": "edit",
+											"model": "tool_indexation",
+											"properties": {
+												"open_as": "window",
+												"windowFeatures": null
+											},
+											"label": "Herramienta de indexación",
+											"css": {
+												"url": "/dedalo/tools/tool_indexation/css/tool_indexation.css"
+											},
+											"name": "tool_indexation",
+											"icon": "/dedalo/tools/tool_indexation/img/icon.svg",
+											"show_in_inspector": false,
+											"show_in_component": true,
+											"tool_config": {
+												"ddo_map": [
+													{
+														"info": "Transcription - component_text_area",
+														"mode": "edit",
+														"role": "transcription_component",
+														"tipo": "rsc36",
+														"section_id": "self",
+														"section_tipo": "rsc167",
+														"model": "component_text_area",
+														"translatable": true,
+														"label": "Descripción / transcripción av"
+													},
+													{
+														"info": "Indexation - component_autocomplete_hi",
+														"mode": "edit",
+														"role": "indexing_component",
+														"tipo": "rsc860",
+														"section_id": "self",
+														"section_tipo": "rsc167",
+														"model": "component_portal",
+														"translatable": false,
+														"label": "Indexación"
+													},
+													{
+														"info": "Audiovisual - component_av",
+														"mode": "edit",
+														"role": "media_component",
+														"tipo": "rsc35",
+														"section_id": "self",
+														"section_tipo": "rsc167",
+														"model": "component_av",
+														"translatable": false,
+														"label": "Audiovisual"
+													},
+													{
+														"info": "People - section",
+														"mode": "list_thesaurus",
+														"role": "people_section",
+														"tipo": "rsc197",
+														"view": "thesaurus_list",
+														"section_id": null,
+														"section_tipo": "rsc197",
+														"model": "section",
+														"translatable": false,
+														"label": "Personas"
+													},
+													{
+														"info": "Thesaurus - area_thesaurus",
+														"mode": "relation",
+														"role": "area_thesaurus",
+														"tipo": "dd100",
+														"section_id": null,
+														"section_tipo": "dd100",
+														"model": "area_thesaurus",
+														"translatable": true,
+														"label": "Tesauro"
+													},
+													{
+														"info": "Estado IN - component_checkbox ",
+														"mode": "edit",
+														"role": "status_user_component",
+														"tipo": "rsc437",
+														"section_id": "self",
+														"section_tipo": "rsc167",
+														"model": "component_check_box",
+														"translatable": false,
+														"label": "Estado IN"
+													},
+													{
+														"info": "Validación IN - component_select",
+														"mode": "edit",
+														"role": "status_admin_component",
+														"tipo": "rsc439",
+														"section_id": "self",
+														"section_tipo": "rsc167",
+														"model": "component_select",
+														"translatable": false,
+														"label": "Validación IN"
+													},
+													{
+														"info": "References - component_autocomplete_hi",
+														"mode": "edit",
+														"role": "references_component",
+														"tipo": "rsc1368",
+														"section_id": "self",
+														"section_tipo": "rsc167",
+														"model": "component_portal",
+														"translatable": false,
+														"label": "Referencias"
+													}
+												]
+											}
+										}
+									}
+								},
+								{
+									"tipo": "rsc167",
+									"model": "section",
+									"parent": "oh80",
+									"label": "Traducción entrevistas",
+									"config": {
+										"source_model": "section_tool",
+										"source_section_tipo": "oh85",
+										"target_section_tipo": "rsc167",
+										"tool_context": {
+											"typo": "ddo",
+											"type": "tool",
+											"section_tipo": "dd1324",
+											"mode": "edit",
+											"model": "tool_lang",
+											"properties": {
+												"open_as": "window",
+												"windowFeatures": null
+											},
+											"label": "Traducción",
+											"css": {
+												"url": "/dedalo/tools/tool_lang/css/tool_lang.css"
+											},
+											"name": "tool_lang",
+											"icon": "/dedalo/tools/tool_lang/img/icon.svg",
+											"show_in_inspector": true,
+											"show_in_component": true,
+											"tool_config": {
+												"ddo_map": [
+													{
+														"mode": "edit",
+														"role": "main_element",
+														"tipo": "rsc36",
+														"section_id": "self",
+														"section_tipo": "rsc167",
+														"model": "component_text_area",
+														"translatable": true,
+														"label": "Descripción / transcripción av"
+													},
+													{
+														"mode": "edit",
+														"role": "status_user_component",
+														"tipo": "rsc438",
+														"section_id": "self",
+														"section_tipo": "rsc167",
+														"model": "component_check_box",
+														"translatable": false,
+														"label": "Estado TL"
+													},
+													{
+														"mode": "edit",
+														"role": "status_admin_component",
+														"tipo": "rsc493",
+														"section_id": "self",
+														"section_tipo": "rsc167",
+														"model": "component_select",
+														"translatable": false,
+														"label": "Validación TL"
+													}
+												]
+											}
+										}
+									}
+								},
+								{
+									"tipo": "dd606",
+									"model": "area",
+									"parent": "dd35",
+									"label": "Patrimonio documental"
+								},
+								{
+									"tipo": "numisdata200",
+									"model": "area",
+									"parent": "dd35",
+									"label": "Numismática"
+								},
+								{
+									"tipo": "numisdata3",
+									"model": "section",
+									"parent": "numisdata200",
+									"label": "Descripciones de leyendas",
+									"config": {
+										"source_model": "section_tool",
+										"source_section_tipo": "numisdata201",
+										"target_section_tipo": "numisdata3",
+										"tool_context": {
+											"typo": "ddo",
+											"type": "tool",
+											"section_tipo": "dd1324",
+											"mode": "edit",
+											"model": "tool_numisdata_epigraphy",
+											"properties": {
+												"open_as": "window",
+												"windowFeatures": null
+											},
+											"label": "Descripciones epigráficas",
+											"css": {
+												"url": "/dedalo/tools/tool_numisdata_epigraphy/css/tool_numisdata_epigraphy.css"
+											},
+											"name": "tool_numisdata_epigraphy",
+											"icon": "/dedalo/tools/tool_numisdata_epigraphy/img/icon.svg",
+											"show_in_inspector": false,
+											"show_in_component": false,
+											"tool_config": {
+												"ddo_map": [
+													{
+														"mode": "edit",
+														"role": "coins",
+														"tipo": "numisdata203",
+														"section_id": "self",
+														"section_tipo": "numisdata3",
+														"model": "component_alias",
+														"translatable": false,
+														"label": "Monedas"
+													},
+													{
+														"mode": "edit",
+														"role": "epigraphy",
+														"tipo": "numisdata560",
+														"section_id": "self",
+														"section_tipo": "numisdata3",
+														"model": "component_portal",
+														"translatable": false,
+														"label": "Epigrafía"
+													},
+													{
+														"mode": "edit",
+														"role": "obverse_legend",
+														"tipo": "numisdata40",
+														"section_id": "self",
+														"section_tipo": "numisdata3",
+														"model": "component_portal",
+														"translatable": false,
+														"label": "Leyenda anverso"
+													},
+													{
+														"mode": "edit",
+														"role": "reverse_legend",
+														"tipo": "numisdata71",
+														"section_id": "self",
+														"section_tipo": "numisdata3",
+														"model": "component_portal",
+														"translatable": false,
+														"label": "Leyenda reverso"
+													},
+													{
+														"mode": "edit",
+														"role": "legend_text",
+														"tipo": "numisdata195",
+														"autoload": false,
+														"section_tipo": "numisdata41",
+														"auto_init_editor": true,
+														"model": "component_text_area",
+														"translatable": false,
+														"label": "Leyenda"
+													},
+													{
+														"mode": "edit",
+														"role": "obverse_desing",
+														"tipo": "numisdata39",
+														"section_id": "self",
+														"section_tipo": "numisdata3",
+														"model": "component_portal",
+														"translatable": false,
+														"label": "Diseño anverso"
+													},
+													{
+														"mode": "edit",
+														"role": "reverse_desing",
+														"tipo": "numisdata70",
+														"section_id": "self",
+														"section_tipo": "numisdata3",
+														"model": "component_portal",
+														"translatable": false,
+														"label": "Diseño reverso"
+													},
+													{
+														"mode": "edit",
+														"role": "obverse_symbol",
+														"tipo": "numisdata60",
+														"section_id": "self",
+														"section_tipo": "numisdata3",
+														"model": "component_portal",
+														"translatable": false,
+														"label": "Símbolo anverso"
+													},
+													{
+														"mode": "edit",
+														"role": "reverse_symbol",
+														"tipo": "numisdata72",
+														"section_id": "self",
+														"section_tipo": "numisdata3",
+														"model": "component_portal",
+														"translatable": false,
+														"label": "Símbolo reverso"
+													},
+													{
+														"mode": "edit",
+														"role": "desing_text",
+														"tipo": "numisdata64",
+														"autoload": false,
+														"section_tipo": "numisdata38",
+														"auto_init_editor": true,
+														"model": "component_text_area",
+														"translatable": true,
+														"label": "Diseño"
+													},
+													{
+														"mode": "edit",
+														"role": "obverse_mark",
+														"tipo": "numisdata1026",
+														"section_id": "self",
+														"section_tipo": "numisdata3",
+														"model": "component_portal",
+														"translatable": false,
+														"label": "Marca anverso"
+													},
+													{
+														"mode": "edit",
+														"role": "reverse_mark",
+														"tipo": "numisdata1015",
+														"section_id": "self",
+														"section_tipo": "numisdata3",
+														"model": "component_portal",
+														"translatable": false,
+														"label": "Marca reverso"
+													},
+													{
+														"mode": "edit",
+														"role": "mark_text",
+														"tipo": "numisdata989",
+														"autoload": false,
+														"section_tipo": "numisdata809",
+														"auto_init_editor": true,
+														"model": "component_text_area",
+														"translatable": false,
+														"label": "Marca"
+													},
+													{
+														"mode": "edit",
+														"role": "edge_desing",
+														"tipo": "numisdata1252",
+														"section_id": "self",
+														"section_tipo": "numisdata3",
+														"model": "component_portal",
+														"translatable": false,
+														"label": "Diseño canto"
+													},
+													{
+														"mode": "edit",
+														"role": "edge_legend",
+														"tipo": "numisdata1253",
+														"section_id": "self",
+														"section_tipo": "numisdata3",
+														"model": "component_portal",
+														"translatable": false,
+														"label": "Leyenda canto"
+													}
+												]
+											}
+										}
+									}
+								},
+								{
+									"tipo": "numisdata625",
+									"model": "section_tool",
+									"parent": "numisdata200",
+									"label": "Descripciones de contramarcas"
+								},
+								{
+									"tipo": "numisdata3",
+									"model": "section",
+									"parent": "numisdata200",
+									"label": "Ordenación",
+									"config": {
+										"source_model": "section_tool",
+										"source_section_tipo": "numisdata670",
+										"target_section_tipo": "numisdata3",
+										"tool_context": {
+											"typo": "ddo",
+											"type": "tool",
+											"section_tipo": "dd1324",
+											"mode": "edit",
+											"model": "tool_numisdata_order_coins",
+											"properties": {
+												"open_as": "window",
+												"windowFeatures": null
+											},
+											"label": "Ordenación de objetos numismáticos",
+											"css": {
+												"url": "/dedalo/tools/tool_numisdata_order_coins/css/tool_numisdata_order_coins.css"
+											},
+											"name": "tool_numisdata_order_coins",
+											"icon": "/dedalo/tools/tool_numisdata_order_coins/img/icon.svg",
+											"show_in_inspector": false,
+											"show_in_component": false,
+											"tool_config": {
+												"ddo_map": [
+													{
+														"mode": "edit",
+														"role": "coins",
+														"tipo": "numisdata77",
+														"properties": {
+															"css": {
+																".wrapper_component": {
+																	"grid-row": "2 /span 4",
+																	"grid-column": "1 /span 2"
+																},
+																".wrapper_component >.list_body": {
+																	"grid-template-columns": "1fr"
+																},
+																".wrapper_component >.list_body .section_record": {
+																	"height": "12rem"
+																},
+																".wrapper_component >.list_body >.content_data .section_record .component_image >.content_data": {
+																	"height": "12rem"
+																}
+															},
+															"view": "coins_mosaic",
+															"source": {
+																"mode": "external",
+																"columns_map": [
+																	{
+																		"id": "a",
+																		"label": "numisdata133",
+																		"in_mosaic": true
+																	},
+																	{
+																		"id": "b",
+																		"label": "numisdata164",
+																		"in_mosaic": true
+																	},
+																	{
+																		"id": "c",
+																		"label": "numisdata165",
+																		"in_mosaic": true
+																	}
+																],
+																"request_config": [
+																	{
+																		"sqo": {
+																			"limit": 1000,
+																			"section_tipo": [
+																				{
+																					"value": [
+																						"numisdata4"
+																					],
+																					"source": "section"
+																				}
+																			]
+																		},
+																		"show": {
+																			"ddo_map": [
+																				{
+																					"info": "Weight (component_number)",
+																					"tipo": "numisdata133",
+																					"view": "line",
+																					"parent": "self",
+																					"column_id": "a",
+																					"section_tipo": "numisdata4",
+																					"fields_separator": " | "
+																				},
+																				{
+																					"info": "Diameter (component_number)",
+																					"tipo": "numisdata135",
+																					"view": "line",
+																					"parent": "self",
+																					"column_id": "a",
+																					"section_tipo": "numisdata4",
+																					"fields_separator": " | "
+																				},
+																				{
+																					"info": "Collection (component_autocomplete)",
+																					"tipo": "numisdata159",
+																					"view": "line",
+																					"parent": "self",
+																					"column_id": "a",
+																					"section_tipo": "numisdata4"
+																				},
+																				{
+																					"info": "Auction (component_autocomplete)",
+																					"tipo": "numisdata147",
+																					"view": "line",
+																					"parent": "self",
+																					"column_id": "a",
+																					"section_tipo": "numisdata4"
+																				},
+																				{
+																					"info": "peculiariedad de producción (component_autocomplete)",
+																					"tipo": "numisdata152",
+																					"view": "line",
+																					"model": "component_autocomplete",
+																					"parent": "self",
+																					"column_id": "a",
+																					"section_tipo": "numisdata4"
+																				},
+																				{
+																					"info": "Obverse (component_portal)",
+																					"tipo": "numisdata164",
+																					"view": "mosaic",
+																					"parent": "self",
+																					"column_id": "b",
+																					"in_mosaic": true,
+																					"section_tipo": "numisdata4"
+																				},
+																				{
+																					"info": "Reverse (component_portal)",
+																					"tipo": "numisdata165",
+																					"view": "mosaic",
+																					"parent": "self",
+																					"column_id": "c",
+																					"in_mosaic": true,
+																					"section_tipo": "numisdata4"
+																				},
+																				{
+																					"info": "Descartes (component_select)",
+																					"mode": "edit",
+																					"tipo": "numisdata157",
+																					"view": "line",
+																					"model": "component_select",
+																					"parent": "self",
+																					"section_tipo": "numisdata4"
+																				}
+																			],
+																			"sqo_config": {
+																				"limit": 1000
+																			}
+																		}
+																	}
+																]
+															}
+														},
+														"section_id": "self",
+														"section_tipo": "numisdata3",
+														"model": "component_portal",
+														"translatable": false,
+														"label": "Monedas"
+													},
+													{
+														"mode": "edit",
+														"role": "ordered_coins",
+														"tipo": "numisdata11",
+														"properties": {
+															"css": {
+																".wrapper_component": {
+																	"grid-row": "6",
+																	"grid-column": "1 /span 2"
+																},
+																".wrapper_component >.list_body": {
+																	"grid-template-columns": "auto 1fr 8rem auto"
+																},
+																".wrapper_component >.list_body >.content_data .list_body": {
+																	"height": "auto",
+																	"display": "flex",
+																	"flex-wrap": "wrap"
+																},
+																".wrapper_component .section_record .column_component_portal": {
+																	"flex": "initial"
+																},
+																".wrapper_component >.list_body >.content_data .section_record .component_image": {
+																	"width": "7.2rem",
+																	"height": "7.2rem"
+																}
+															},
+															"source": {
+																"request_config": [
+																	{
+																		"sqo": {
+																			"limit": 300,
+																			"section_tipo": [
+																				{
+																					"value": [
+																						"numisdata267"
+																					],
+																					"source": "section"
+																				}
+																			]
+																		},
+																		"show": {
+																			"ddo_map": [
+																				{
+																					"info": "Sorted Coins (component_portal)",
+																					"tipo": "numisdata9",
+																					"limit": 300,
+																					"parent": "self",
+																					"section_tipo": "self"
+																				},
+																				{
+																					"info": "Portal Image obverse (component_portal)",
+																					"tipo": "numisdata164",
+																					"parent": "numisdata9",
+																					"section_tipo": "numisdata4"
+																				},
+																				{
+																					"info": "Image (component_image)",
+																					"tipo": "rsc29",
+																					"parent": "numisdata164",
+																					"section_tipo": "rsc170"
+																				},
+																				{
+																					"info": "Portal Image reverse (component_portal)",
+																					"tipo": "numisdata165",
+																					"parent": "numisdata9",
+																					"section_tipo": "numisdata4"
+																				},
+																				{
+																					"info": "Image (component_image)",
+																					"tipo": "rsc29",
+																					"parent": "numisdata165",
+																					"section_tipo": "rsc170"
+																				},
+																				{
+																					"info": "Title (component_select)",
+																					"mode": "list",
+																					"tipo": "numisdata10",
+																					"view": "line",
+																					"width": "15rem",
+																					"parent": "self",
+																					"section_tipo": "self"
+																				}
+																			],
+																			"sqo_config": {
+																				"limit": 300
+																			}
+																		}
+																	}
+																]
+															},
+															"max_records": 300
+														},
+														"section_id": "self",
+														"section_tipo": "numisdata3",
+														"model": "component_portal",
+														"translatable": false,
+														"label": "Monedas ordenadas"
+													}
+												]
+											}
+										}
+									}
+								},
+								{
+									"tipo": "dd100",
+									"model": "area_thesaurus",
+									"parent": "dd1",
+									"label": "Tesauro"
+								},
+								{
+									"tipo": "hierarchy56",
+									"model": "area_thesaurus",
+									"parent": "dd100",
+									"label": "Términos",
+									"config": {
+										"swap_tipo": "dd100"
+									}
+								},
+								{
+									"tipo": "hierarchy121",
+									"model": "area",
+									"parent": "hierarchy56",
+									"label": "Toponimia"
+								},
+								{
+									"tipo": "es1",
+									"model": "section",
+									"parent": "hierarchy121",
+									"label": "España"
+								},
+								{
+									"tipo": "fr1",
+									"model": "section",
+									"parent": "hierarchy121",
+									"label": "Francia"
+								},
+								{
+									"tipo": "pt1",
+									"model": "section",
+									"parent": "hierarchy121",
+									"label": "Portugal"
+								},
+								{
+									"tipo": "ma1",
+									"model": "section",
+									"parent": "hierarchy121",
+									"label": "Marruecos"
+								},
+								{
+									"tipo": "it1",
+									"model": "section",
+									"parent": "hierarchy121",
+									"label": "Italia"
+								},
+								{
+									"tipo": "tn1",
+									"model": "section",
+									"parent": "hierarchy121",
+									"label": "Túnez"
+								},
+								{
+									"tipo": "htoponymy1",
+									"model": "section",
+									"parent": "hierarchy121",
+									"label": "Historical toponymy"
+								},
+								{
+									"tipo": "utoponymy1",
+									"model": "section",
+									"parent": "hierarchy121",
+									"label": "Unofficial toponymy"
+								},
+								{
+									"tipo": "ds1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Roles de personas"
+								},
+								{
+									"tipo": "material1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Materias"
+								},
+								{
+									"tipo": "cult1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Cultura"
+								},
+								{
+									"tipo": "object1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Objeto"
+								},
+								{
+									"tipo": "terr1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Toponimia histórica"
+								},
+								{
+									"tipo": "rolejob1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Roles de oficios"
+								},
+								{
+									"tipo": "rolepos1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Roles de cargos"
+								},
+								{
+									"tipo": "peri1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Período"
+								},
+								{
+									"tipo": "roleusr1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Roles de usuario"
+								},
+								{
+									"tipo": "grup1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Grupo"
+								},
+								{
+									"tipo": "cont1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Tipología yacimiento"
+								},
+								{
+									"tipo": "technique1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Técnicas"
+								},
+								{
+									"tipo": "ts1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Descriptores temáticos"
+								},
+								{
+									"tipo": "objet1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Nombre del objeto"
+								},
+								{
+									"tipo": "ww1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "monedaiberica.org"
+								},
+								{
+									"tipo": "icon1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Iconografía"
+								},
+								{
+									"tipo": "tema1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Tema"
+								},
+								{
+									"tipo": "on1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Descriptores onomásticos"
+								},
+								{
+									"tipo": "seri1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Serie"
+								},
+								{
+									"tipo": "numisdata348",
+									"model": "area",
+									"parent": "hierarchy56",
+									"label": "NUMISDATA"
+								},
+								{
+									"tipo": "numisdata561",
+									"model": "area",
+									"parent": "numisdata348",
+									"label": "Epigrafías"
+								},
+								{
+									"tipo": "scell1",
+									"model": "section",
+									"parent": "numisdata561",
+									"label": "Griego"
+								},
+								{
+									"tipo": "scxpu1",
+									"model": "section",
+									"parent": "numisdata561",
+									"label": "Púnico"
+								},
+								{
+									"tipo": "scxibo1",
+									"model": "section",
+									"parent": "numisdata561",
+									"label": "Paleohispánico septentrional"
+								},
+								{
+									"tipo": "scxibm1",
+									"model": "section",
+									"parent": "numisdata561",
+									"label": "Paleohispánico meridional"
+								},
+								{
+									"tipo": "sctxr1",
+									"model": "section",
+									"parent": "numisdata561",
+									"label": "Iberico suroeste"
+								},
+								{
+									"tipo": "sclat1",
+									"model": "section",
+									"parent": "numisdata561",
+									"label": "Latín"
+								},
+								{
+									"tipo": "scsym1",
+									"model": "section",
+									"parent": "numisdata561",
+									"label": "Símbolos"
+								},
+								{
+									"tipo": "sccmk1",
+									"model": "section",
+									"parent": "numisdata561",
+									"label": "Contramarcas"
+								},
+								{
+									"tipo": "numisdata650",
+									"model": "area",
+									"parent": "numisdata348",
+									"label": "Catálogos"
+								},
+								{
+									"tipo": "numisdata651",
+									"model": "section",
+									"parent": "numisdata650",
+									"label": "Catálogo"
+								},
+								{
+									"tipo": "numisdata665",
+									"model": "section",
+									"parent": "numisdata650",
+									"label": "Catálogo MIB"
+								},
+								{
+									"tipo": "numisdata691",
+									"model": "section",
+									"parent": "numisdata650",
+									"label": "Catálogo Pere"
+								},
+								{
+									"tipo": "numisdatacatalog1",
+									"model": "section",
+									"parent": "numisdata650",
+									"label": "Numisdata catalog"
+								},
+								{
+									"tipo": "numisdata349",
+									"model": "section",
+									"parent": "numisdata348",
+									"label": "Numisdata web"
+								},
+								{
+									"tipo": "numisdata713",
+									"model": "section",
+									"parent": "numisdata348",
+									"label": "Web numisdata_mib_portugal"
+								},
+								{
+									"tipo": "depositiontype1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Tipo de depósito"
+								},
+								{
+									"tipo": "discoverytype1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Tipo de hallazgo"
+								},
+								{
+									"tipo": "uncertainty1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Causas de incertidumbre"
+								},
+								{
+									"tipo": "culture1",
+									"model": "section",
+									"parent": "hierarchy56",
+									"label": "Culture"
+								},
+								{
+									"tipo": "hierarchytype1",
+									"model": "area",
+									"parent": "hierarchy56",
+									"label": "Temáticas"
+								},
+								{
+									"tipo": "dc1",
+									"model": "section",
+									"parent": "hierarchytype1",
+									"label": "Chronology"
+								},
+								{
+									"tipo": "hierarchytype2",
+									"model": "area",
+									"parent": "hierarchy56",
+									"label": "Toponimias"
+								},
+								{
+									"tipo": "hierarchytype15",
+									"model": "area",
+									"parent": "hierarchy56",
+									"label": "Otros"
+								},
+								{
+									"tipo": "render1",
+									"model": "section",
+									"parent": "hierarchytype15",
+									"label": "render"
+								},
+								{
+									"tipo": "ru1",
+									"model": "section",
+									"parent": "hierarchytype15",
+									"label": "ru"
+								},
+								{
+									"tipo": "special1",
+									"model": "section",
+									"parent": "hierarchytype15",
+									"label": "special"
+								},
+								{
+									"tipo": "xk1",
+									"model": "section",
+									"parent": "hierarchytype15",
+									"label": "xk"
+								},
+								{
+									"tipo": "flora1",
+									"model": "section",
+									"parent": "hierarchytype15",
+									"label": "flora"
+								},
+								{
+									"tipo": "fauna1",
+									"model": "section",
+									"parent": "hierarchytype15",
+									"label": "fauna"
+								},
+								{
+									"tipo": "navarra1",
+									"model": "section",
+									"parent": "hierarchytype15",
+									"label": "navarra"
+								},
+								{
+									"tipo": "af1",
+									"model": "section",
+									"parent": "hierarchytype15",
+									"label": "af"
+								},
+								{
+									"tipo": "hierarchy57",
+									"model": "area_thesaurus",
+									"parent": "dd100",
+									"label": "Modelos",
+									"config": {
+										"thesaurus_view_mode": "model",
+										"swap_tipo": "dd100",
+										"url_vars": {
+											"thesaurus_view_mode": "model"
+										}
+									}
+								},
+								{
+									"tipo": "hierarchy122",
+									"model": "area",
+									"parent": "hierarchy57",
+									"label": "Toponimía"
+								},
+								{
+									"tipo": "es2",
+									"model": "section",
+									"parent": "hierarchy122",
+									"label": "España modelos"
+								},
+								{
+									"tipo": "fr2",
+									"model": "section",
+									"parent": "hierarchy122",
+									"label": "Francia modelos"
+								},
+								{
+									"tipo": "pt2",
+									"model": "section",
+									"parent": "hierarchy122",
+									"label": "Portugal modelos"
+								},
+								{
+									"tipo": "ma2",
+									"model": "section",
+									"parent": "hierarchy122",
+									"label": "Marruecos modelos"
+								},
+								{
+									"tipo": "utoponymy2",
+									"model": "section",
+									"parent": "hierarchy122",
+									"label": "Unofficial toponymy [m]"
+								},
+								{
+									"tipo": "it2",
+									"model": "section",
+									"parent": "hierarchy122",
+									"label": "Italia [m]"
+								},
+								{
+									"tipo": "htoponymy2",
+									"model": "section",
+									"parent": "hierarchy122",
+									"label": "Historical toponymy [m]"
+								},
+								{
+									"tipo": "tn2",
+									"model": "section",
+									"parent": "hierarchy122",
+									"label": "Túnez [m]"
+								},
+								{
+									"tipo": "lg2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Lenguajes modelos"
+								},
+								{
+									"tipo": "technique2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Técnicas [m]"
+								},
+								{
+									"tipo": "ts2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Descriptores temáticos modelos"
+								},
+								{
+									"tipo": "ds2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Semantic modelos"
+								},
+								{
+									"tipo": "material2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Materias [m]"
+								},
+								{
+									"tipo": "object2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Objeto [m]"
+								},
+								{
+									"tipo": "rolejob2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Roles de oficios [m]"
+								},
+								{
+									"tipo": "rolepos2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Roles de cargos [m]"
+								},
+								{
+									"tipo": "roleusr2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Roles de usuario [m]"
+								},
+								{
+									"tipo": "cult2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Cultura [m]"
+								},
+								{
+									"tipo": "ww2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "monedaiberica.org [m]"
+								},
+								{
+									"tipo": "terr2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Territorio [m]"
+								},
+								{
+									"tipo": "peri2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Período [m]"
+								},
+								{
+									"tipo": "grup2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Grupo [m]"
+								},
+								{
+									"tipo": "on2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Descriptores onomásticos [m]"
+								},
+								{
+									"tipo": "scxpu2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Púnico [m]"
+								},
+								{
+									"tipo": "tchi2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Tipologías de inmuebles"
+								},
+								{
+									"tipo": "scxibo2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Ibérico oriental [m]"
+								},
+								{
+									"tipo": "scxibm2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Ibérico meridional [m]"
+								},
+								{
+									"tipo": "tch2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Tipos de registros de patrimonio mueble"
+								},
+								{
+									"tipo": "numisdata966",
+									"model": "area",
+									"parent": "hierarchy57",
+									"label": "NUMISDATA"
+								},
+								{
+									"tipo": "numisdata680",
+									"model": "section",
+									"parent": "numisdata966",
+									"label": "Tipo de nodo de catálogo"
+								},
+								{
+									"tipo": "sctxr2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Sudlusitano [m]"
+								},
+								{
+									"tipo": "sclat2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Latín [m]"
+								},
+								{
+									"tipo": "scsym2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Símbolos [m]"
+								},
+								{
+									"tipo": "scell2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Griego [m]"
+								},
+								{
+									"tipo": "sccmk2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Contramarcas [m]"
+								},
+								{
+									"tipo": "cont2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Tipología yacimiento [m]"
+								},
+								{
+									"tipo": "objet2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Nombre del objeto [m]"
+								},
+								{
+									"tipo": "icon2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Iconografía [m]"
+								},
+								{
+									"tipo": "tema2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Tema [m]"
+								},
+								{
+									"tipo": "seri2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Serie [m]"
+								},
+								{
+									"tipo": "culture2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Culture [m]"
+								},
+								{
+									"tipo": "depositiontype2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Tipo de depósito [m]"
+								},
+								{
+									"tipo": "discoverytype2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Tipo de hallazgo [m]"
+								},
+								{
+									"tipo": "uncertainty2",
+									"model": "section",
+									"parent": "hierarchy57",
+									"label": "Causas de incertidumbre [m]"
+								},
+								{
+									"tipo": "hierarchymtype2",
+									"model": "area",
+									"parent": "hierarchy57",
+									"label": "Toponimias"
+								},
+								{
+									"tipo": "hierarchymtype15",
+									"model": "area",
+									"parent": "hierarchy57",
+									"label": "Otros"
+								},
+								{
+									"tipo": "ru2",
+									"model": "section",
+									"parent": "hierarchymtype15",
+									"label": "ru"
+								},
+								{
+									"tipo": "special2",
+									"model": "section",
+									"parent": "hierarchymtype15",
+									"label": "special"
+								},
+								{
+									"tipo": "xk2",
+									"model": "section",
+									"parent": "hierarchymtype15",
+									"label": "xk"
+								},
+								{
+									"tipo": "flora2",
+									"model": "section",
+									"parent": "hierarchymtype15",
+									"label": "flora"
+								},
+								{
+									"tipo": "fauna2",
+									"model": "section",
+									"parent": "hierarchymtype15",
+									"label": "fauna"
+								},
+								{
+									"tipo": "navarra2",
+									"model": "section",
+									"parent": "hierarchymtype15",
+									"label": "navarra"
+								},
+								{
+									"tipo": "af2",
+									"model": "section",
+									"parent": "hierarchymtype15",
+									"label": "af"
+								},
+								{
+									"tipo": "render2",
+									"model": "section",
+									"parent": "hierarchymtype15",
+									"label": "render"
+								},
+								{
+									"tipo": "hierarchymtype1",
+									"model": "area",
+									"parent": "hierarchy57",
+									"label": "Temáticas"
+								},
+								{
+									"tipo": "dc2",
+									"model": "section",
+									"parent": "hierarchymtype1",
+									"label": "Chronology"
+								},
+								{
+									"tipo": "hierarchy1",
+									"model": "section",
+									"parent": "dd100",
+									"label": "Jerarquías"
+								},
+								{
+									"tipo": "lg1",
+									"model": "section",
+									"parent": "dd100",
+									"label": "Lenguajes"
+								},
+								{
+									"tipo": "dd101",
+									"model": "area",
+									"parent": "dd100",
+									"label": "Toponimia"
+								},
+								{
+									"tipo": "dd630",
+									"model": "area_graph",
+									"parent": "dd1",
+									"label": "Grafos"
+								},
+								{
+									"tipo": "dd207",
+									"model": "area_admin",
+									"parent": "dd1",
+									"label": "Administración"
+								},
+								{
+									"tipo": "dd128",
+									"model": "section",
+									"parent": "dd207",
+									"label": "Usuarios"
+								},
+								{
+									"tipo": "dd234",
+									"model": "section",
+									"parent": "dd207",
+									"label": "Perfiles"
+								},
+								{
+									"tipo": "dd153",
+									"model": "section",
+									"parent": "dd207",
+									"label": "Proyectos"
+								},
+								{
+									"tipo": "dd542",
+									"model": "section",
+									"parent": "dd207",
+									"label": "Actividad"
+								},
+								{
+									"tipo": "dd15",
+									"model": "section",
+									"parent": "dd207",
+									"label": "Máquina del tiempo"
+								},
+								{
+									"tipo": "dd996",
+									"model": "section",
+									"parent": "dd207",
+									"label": "Configuración de herramientas"
+								},
+								{
+									"tipo": "dd68",
+									"model": "area",
+									"parent": "dd207",
+									"label": "Listas de valores"
+								},
+								{
+									"tipo": "dd64",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Si/No"
+								},
+								{
+									"tipo": "dd42",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Eventos de actividad"
+								},
+								{
+									"tipo": "dd363",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Positivo / Negativo"
+								},
+								{
+									"tipo": "dd938",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Estado de los datos"
+								},
+								{
+									"tipo": "dd1178",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Estados de los objectos"
+								},
+								{
+									"tipo": "dd501",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Estado de los datos - admin"
+								},
+								{
+									"tipo": "dd174",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Estados - usuario"
+								},
+								{
+									"tipo": "hierarchy13",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Tipología de jerarquías"
+								},
+								{
+									"tipo": "dd810",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Tipología de bibliografía"
+								},
+								{
+									"tipo": "dd208",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Tipología de actividades"
+								},
+								{
+									"tipo": "dd833",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Difusión"
+								},
+								{
+									"tipo": "dd861",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Género"
+								},
+								{
+									"tipo": "dd839",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Copia DVD"
+								},
+								{
+									"tipo": "dd889",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Calidad del contenido"
+								},
+								{
+									"tipo": "dd911",
+									"model": "section",
+									"parent": "dd137",
+									"label": "clases CSS"
+								},
+								{
+									"tipo": "dd957",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Formato del original AV"
+								},
+								{
+									"tipo": "dd976",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Relación aspecto"
+								},
+								{
+									"tipo": "dd875",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Calidad de la cinta original"
+								},
+								{
+									"tipo": "dd1117",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Tipología recurso"
+								},
+								{
+									"tipo": "dd567",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Estado Cinta"
+								},
+								{
+									"tipo": "dd985",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Estándar del Color Audiovisual"
+								},
+								{
+									"tipo": "dd203",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Procesos de tratamiento de texto"
+								},
+								{
+									"tipo": "dd1342",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Modelos de destino"
+								},
+								{
+									"tipo": "dd292",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Tipología de número normalizado"
+								},
+								{
+									"tipo": "dd90",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Procesos de investigación"
+								},
+								{
+									"tipo": "dd299",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Publico/privado"
+								},
+								{
+									"tipo": "dd307",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Espacio de Color"
+								},
+								{
+									"tipo": "dd460",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Unidades de Medida"
+								},
+								{
+									"tipo": "dd469",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Tipos de vías"
+								},
+								{
+									"tipo": "dd492",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Roles de publicaciones"
+								},
+								{
+									"tipo": "dd516",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Procesos de restauración"
+								},
+								{
+									"tipo": "dd562",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Marco de dato activo"
+								},
+								{
+									"tipo": "dd1663",
+									"model": "section",
+									"parent": "dd137",
+									"label": "Tipología de número normalizado"
+								},
+								{
+									"tipo": "rsc480",
+									"model": "area",
+									"parent": "dd68",
+									"label": "Personas"
+								},
+								{
+									"tipo": "dd922",
+									"model": "section",
+									"parent": "rsc480",
+									"label": "Categoría Laboral / Cargo"
+								},
+								{
+									"tipo": "rsc403",
+									"model": "section",
+									"parent": "rsc480",
+									"label": "Niveles de educación"
+								},
+								{
+									"tipo": "dd882",
+									"model": "section",
+									"parent": "rsc480",
+									"label": "Profesiones"
+								},
+								{
+									"tipo": "rsc450",
+									"model": "section",
+									"parent": "rsc480",
+									"label": "Tipología de personas"
+								},
+								{
+									"tipo": "dd365",
+									"model": "section",
+									"parent": "rsc480",
+									"label": "Estados civiles"
+								},
+								{
+									"tipo": "dd372",
+									"model": "section",
+									"parent": "rsc480",
+									"label": "Partidos políticos"
+								},
+								{
+									"tipo": "dd381",
+									"model": "section",
+									"parent": "rsc480",
+									"label": "Sindicatos"
+								},
+								{
+									"tipo": "dd408",
+									"model": "section",
+									"parent": "rsc480",
+									"label": "Religiones"
+								},
+								{
+									"tipo": "rsc461",
+									"model": "section",
+									"parent": "rsc480",
+									"label": "Nacionalidades"
+								},
+								{
+									"tipo": "rsc482",
+									"model": "section",
+									"parent": "rsc480",
+									"label": "Tipos de documentos"
+								},
+								{
+									"tipo": "dd942",
+									"model": "section",
+									"parent": "rsc480",
+									"label": "Tipo de asociación / grupo"
+								},
+								{
+									"tipo": "rsc520",
+									"model": "section",
+									"parent": "rsc480",
+									"label": "Lugares de nacimiento"
+								},
+								{
+									"tipo": "rsc528",
+									"model": "section",
+									"parent": "rsc480",
+									"label": "Tipos de defunción"
+								},
+								{
+									"tipo": "rsc538",
+									"model": "section",
+									"parent": "rsc480",
+									"label": "Cementerio"
+								},
+								{
+									"tipo": "rsc650",
+									"model": "section",
+									"parent": "rsc480",
+									"label": "Otras filiaciones"
+								},
+								{
+									"tipo": "rsc873",
+									"model": "section",
+									"parent": "rsc480",
+									"label": "Condiciones"
+								},
+								{
+									"tipo": "rsc884",
+									"model": "section",
+									"parent": "rsc480",
+									"label": "Tipos de condiciones"
+								},
+								{
+									"tipo": "rsc1119",
+									"model": "section",
+									"parent": "rsc480",
+									"label": "Género"
+								},
+								{
+									"tipo": "ich187",
+									"model": "area",
+									"parent": "dd68",
+									"label": "PCI"
+								},
+								{
+									"tipo": "ich145",
+									"model": "section",
+									"parent": "ich187",
+									"label": "Ámbitos del Patrimonio Cultural Inmaterial"
+								},
+								{
+									"tipo": "ich179",
+									"model": "section",
+									"parent": "ich187",
+									"label": "Tipo de periodicidad"
+								},
+								{
+									"tipo": "ich171",
+									"model": "section",
+									"parent": "ich187",
+									"label": "Tipo de calendario"
+								},
+								{
+									"tipo": "ich128",
+									"model": "section",
+									"parent": "ich187",
+									"label": "Regímenes de protección"
+								},
+								{
+									"tipo": "ich135",
+									"model": "section",
+									"parent": "ich187",
+									"label": "Tipo de participación / ejecución"
+								},
+								{
+									"tipo": "tch145",
+									"model": "area",
+									"parent": "dd68",
+									"label": "Bienes muebles"
+								},
+								{
+									"tipo": "tch266",
+									"model": "section",
+									"parent": "tch145",
+									"label": "Tipologías de materiales"
+								},
+								{
+									"tipo": "tch126",
+									"model": "section",
+									"parent": "tch145",
+									"label": "Catálogos"
+								},
+								{
+									"tipo": "rsc1311",
+									"model": "section",
+									"parent": "tch145",
+									"label": "Tipos de magnitudes"
+								},
+								{
+									"tipo": "rsc1319",
+									"model": "section",
+									"parent": "tch145",
+									"label": "Unidades de magnitudes"
+								},
+								{
+									"tipo": "rsc1357",
+									"model": "section",
+									"parent": "tch145",
+									"label": "Autenticidad"
+								},
+								{
+									"tipo": "rsc481",
+									"model": "area",
+									"parent": "dd68",
+									"label": "Media"
+								},
+								{
+									"tipo": "rsc304",
+									"model": "section",
+									"parent": "rsc481",
+									"label": "Soporte del original"
+								},
+								{
+									"tipo": "rsc312",
+									"model": "section",
+									"parent": "rsc481",
+									"label": "Formato del original"
+								},
+								{
+									"tipo": "rsc212",
+									"model": "section",
+									"parent": "rsc481",
+									"label": "Series / revistas / colecciones"
+								},
+								{
+									"tipo": "dd1313",
+									"model": "section",
+									"parent": "rsc481",
+									"label": "Tipología de documento administrativo"
+								},
+								{
+									"tipo": "rsc229",
+									"model": "section",
+									"parent": "rsc481",
+									"label": "Pertenencia"
+								},
+								{
+									"tipo": "dd1132",
+									"model": "section",
+									"parent": "rsc481",
+									"label": "Colección / archivo"
+								},
+								{
+									"tipo": "dd898",
+									"model": "section",
+									"parent": "rsc481",
+									"label": "Lugar de captación"
+								},
+								{
+									"tipo": "dd528",
+									"model": "section",
+									"parent": "rsc481",
+									"label": "Tipología de medidas"
+								},
+								{
+									"tipo": "rsc388",
+									"model": "section",
+									"parent": "rsc481",
+									"label": "Personas / Roles"
+								},
+								{
+									"tipo": "rsc669",
+									"model": "section",
+									"parent": "rsc481",
+									"label": "Marcas"
+								},
+								{
+									"tipo": "rsc740",
+									"model": "section",
+									"parent": "rsc481",
+									"label": "Tipologías de recursos"
+								},
+								{
+									"tipo": "rsc1169",
+									"model": "section",
+									"parent": "rsc481",
+									"label": "Tipos de precisión"
+								},
+								{
+									"tipo": "rsc1233",
+									"model": "section",
+									"parent": "rsc481",
+									"label": "Tipologías de códigos"
+								},
+								{
+									"tipo": "rsc1370",
+									"model": "section",
+									"parent": "rsc481",
+									"label": "Expresiones repetitivas"
+								},
+								{
+									"tipo": "rsc685",
+									"model": "area",
+									"parent": "dd68",
+									"label": "Intervención"
+								},
+								{
+									"tipo": "rsc603",
+									"model": "section",
+									"parent": "rsc685",
+									"label": "Tipo de analítica"
+								},
+								{
+									"tipo": "rsc1448",
+									"model": "section",
+									"parent": "rsc685",
+									"label": "Tipologías de intervención"
+								},
+								{
+									"tipo": "rsc931",
+									"model": "section",
+									"parent": "rsc685",
+									"label": "Estados de conservación"
+								},
+								{
+									"tipo": "rsc717",
+									"model": "area",
+									"parent": "dd68",
+									"label": "Movimientos"
+								},
+								{
+									"tipo": "rsc624",
+									"model": "section",
+									"parent": "rsc717",
+									"label": "Tipo de movimiento"
+								},
+								{
+									"tipo": "rsc567",
+									"model": "section",
+									"parent": "rsc717",
+									"label": "Causas"
+								},
+								{
+									"tipo": "rsc576",
+									"model": "section",
+									"parent": "rsc717",
+									"label": "Causa concreta"
+								},
+								{
+									"tipo": "rsc723",
+									"model": "section",
+									"parent": "rsc717",
+									"label": "Formas de ingreso"
+								},
+								{
+									"tipo": "rsc1108",
+									"model": "section",
+									"parent": "rsc717",
+									"label": "Tipos de recuperación"
+								},
+								{
+									"tipo": "dd1454",
+									"model": "area",
+									"parent": "dd68",
+									"label": "Administración"
+								},
+								{
+									"tipo": "dd1318",
+									"model": "section",
+									"parent": "dd1454",
+									"label": "Tipologías de proyecto"
+								},
+								{
+									"tipo": "dd1308",
+									"model": "section",
+									"parent": "dd1454",
+									"label": "Línea de investigación"
+								},
+								{
+									"tipo": "rsc756",
+									"model": "section",
+									"parent": "dd1454",
+									"label": "Regímenes de protección"
+								},
+								{
+									"tipo": "dd1455",
+									"model": "section",
+									"parent": "dd1454",
+									"label": "Categorías de protección"
+								},
+								{
+									"tipo": "rsc767",
+									"model": "section",
+									"parent": "dd1454",
+									"label": "Estados administrativos"
+								},
+								{
+									"tipo": "rsc777",
+									"model": "section",
+									"parent": "dd1454",
+									"label": "Situaciones administrativas"
+								},
+								{
+									"tipo": "rsc788",
+									"model": "section",
+									"parent": "dd1454",
+									"label": "Tipo de divisa"
+								},
+								{
+									"tipo": "rsc797",
+									"model": "section",
+									"parent": "dd1454",
+									"label": "Motivos de valoraciones"
+								},
+								{
+									"tipo": "rsc822",
+									"model": "section",
+									"parent": "dd1454",
+									"label": "Condiciones de acceso"
+								},
+								{
+									"tipo": "rsc836",
+									"model": "section",
+									"parent": "dd1454",
+									"label": "Certeza de dato"
+								},
+								{
+									"tipo": "rsc846",
+									"model": "section",
+									"parent": "dd1454",
+									"label": "Idiomas"
+								},
+								{
+									"tipo": "rsc1014",
+									"model": "section",
+									"parent": "dd1454",
+									"label": "Tipología de acceso a fondos"
+								},
+								{
+									"tipo": "rsc1473",
+									"model": "section",
+									"parent": "dd1454",
+									"label": "Serie documental"
+								},
+								{
+									"tipo": "rsc1464",
+									"model": "section",
+									"parent": "dd1454",
+									"label": "Fondo documental"
+								},
+								{
+									"tipo": "rsc1064",
+									"model": "section",
+									"parent": "dd1454",
+									"label": "Tipos de gestión"
+								},
+								{
+									"tipo": "rsc1255",
+									"model": "area",
+									"parent": "dd68",
+									"label": "Marcos de datos"
+								},
+								{
+									"tipo": "rsc1256",
+									"model": "section",
+									"parent": "rsc1255",
+									"label": "Niveles de valoración"
+								},
+								{
+									"tipo": "dd1706",
+									"model": "section",
+									"parent": "rsc1255",
+									"label": "Etiquetas de URIs"
+								},
+								{
+									"tipo": "numisdata375",
+									"model": "area",
+									"parent": "dd68",
+									"label": "NUMISDATA"
+								},
+								{
+									"tipo": "numisdata241",
+									"model": "section",
+									"parent": "numisdata375",
+									"label": "Método de descubrimiento"
+								},
+								{
+									"tipo": "numisdata283",
+									"model": "section",
+									"parent": "numisdata375",
+									"label": "Etiquetas"
+								},
+								{
+									"tipo": "numisdata341",
+									"model": "section",
+									"parent": "numisdata375",
+									"label": "Validación"
+								},
+								{
+									"tipo": "numisdata474",
+									"model": "section",
+									"parent": "numisdata375",
+									"label": "Tipo de descubrimiento"
+								},
+								{
+									"tipo": "numisdata481",
+									"model": "section",
+									"parent": "numisdata375",
+									"label": "Autenticidad"
+								},
+								{
+									"tipo": "numisdata486",
+									"model": "section",
+									"parent": "numisdata375",
+									"label": "Alteración"
+								},
+								{
+									"tipo": "numisdata82",
+									"model": "section",
+									"parent": "numisdata375",
+									"label": "Transcripciones de leyendas"
+								},
+								{
+									"tipo": "numisdata712",
+									"model": "section",
+									"parent": "numisdata375",
+									"label": "Tipologías de ordenación"
+								},
+								{
+									"tipo": "numisdata1232",
+									"model": "section",
+									"parent": "numisdata375",
+									"label": "Grado de conservación"
+								},
+								{
+									"tipo": "numisdata1243",
+									"model": "section",
+									"parent": "numisdata375",
+									"label": "Calidad dato"
+								},
+								{
+									"tipo": "numisdata1398",
+									"model": "section",
+									"parent": "numisdata375",
+									"label": "Grados de corrosión"
+								},
+								{
+									"tipo": "numisdata1416",
+									"model": "section",
+									"parent": "numisdata375",
+									"label": "Localizaciones en objecto"
+								},
+								{
+									"tipo": "numisdata1554",
+									"model": "section",
+									"parent": "numisdata375",
+									"label": "Categoría de tipos"
+								},
+								{
+									"tipo": "dd1453",
+									"model": "area",
+									"parent": "dd68",
+									"label": "Configuraciones y útiles"
+								},
+								{
+									"tipo": "dd477",
+									"model": "section",
+									"parent": "dd1453",
+									"label": "Plantillas web"
+								},
+								{
+									"tipo": "dd1436",
+									"model": "section",
+									"parent": "dd1453",
+									"label": "Rendeadores web"
+								},
+								{
+									"tipo": "dd25",
+									"model": "section",
+									"parent": "dd1453",
+									"label": "Lista"
+								},
+								{
+									"tipo": "dd1440",
+									"model": "section",
+									"parent": "dd1453",
+									"label": "Elementos web"
+								},
+								{
+									"tipo": "dd623",
+									"model": "section",
+									"parent": "dd1453",
+									"label": "Configuraciones de búsquedas"
+								},
+								{
+									"tipo": "dd655",
+									"model": "section",
+									"parent": "dd1453",
+									"label": "Configuraciones de búsquedas actuales"
+								},
+								{
+									"tipo": "dd1244",
+									"model": "section",
+									"parent": "dd1453",
+									"label": "Configuraciones de visualización"
+								},
+								{
+									"tipo": "dd32",
+									"model": "area",
+									"parent": "dd207",
+									"label": "Auxiliares"
+								},
+								{
+									"tipo": "dd20",
+									"model": "section",
+									"parent": "dd32",
+									"label": "Plantillas de maquetación"
+								},
+								{
+									"tipo": "dd30",
+									"model": "section",
+									"parent": "dd32",
+									"label": "Maquetación"
+								},
+								{
+									"tipo": "dd1521",
+									"model": "section",
+									"parent": "dd32",
+									"label": "Actividad de usuarios"
+								},
+								{
+									"tipo": "dd1324",
+									"model": "section",
+									"parent": "dd32",
+									"label": "Registro de herramientas"
+								},
+								{
+									"tipo": "dd800",
+									"model": "section",
+									"parent": "dd32",
+									"label": "Processos"
+								},
+								{
+									"tipo": "dd88",
+									"model": "area_maintenance",
+									"parent": "dd207",
+									"label": "Mantenimiento"
+								},
+								{
+									"tipo": "dd770",
+									"model": "area_development",
+									"parent": "dd1",
+									"label": "Desarrollo"
+								},
+								{
+									"tipo": "dd1500",
+									"model": "section",
+									"parent": "dd770",
+									"label": "Ontología"
+								},
+								{
+									"tipo": "dd1560",
+									"model": "section",
+									"parent": "dd770",
+									"label": "Ontology commons"
+								},
+								{
+									"tipo": "dd1266",
+									"model": "section",
+									"parent": "dd770",
+									"label": "TLD"
+								},
+								{
+									"tipo": "dd1052",
+									"model": "area",
+									"parent": "dd770",
+									"label": "Red de entidades"
+								},
+								{
+									"tipo": "dd1000",
+									"model": "section",
+									"parent": "dd1052",
+									"label": "Entidades Dédalo"
+								},
+								{
+									"tipo": "dd1010",
+									"model": "section",
+									"parent": "dd1052",
+									"label": "Servicios de publicación"
+								},
+								{
+									"tipo": "dd1020",
+									"model": "section",
+									"parent": "dd1052",
+									"label": "Tipo de servicio"
+								},
+								{
+									"tipo": "dd1323",
+									"model": "area",
+									"parent": "dd770",
+									"label": "Herramientas"
+								},
+								{
+									"tipo": "dd73",
+									"model": "section",
+									"parent": "dd1323",
+									"label": "Herramientas"
+								},
+								{
+									"tipo": "dd1340",
+									"model": "section",
+									"parent": "dd1323",
+									"label": "Desarrollo de herramientas"
+								},
+								{
+									"tipo": "dd1100",
+									"model": "section",
+									"parent": "dd770",
+									"label": "web dedalo"
+								},
+								{
+									"tipo": "dd1447",
+									"model": "section",
+									"parent": "dd770",
+									"label": "Procesador de toponimia"
+								},
+								{
+									"tipo": "test1",
+									"model": "area",
+									"parent": "dd770",
+									"label": "Area de pruebas (TESTS)"
+								},
+								{
+									"tipo": "test3",
+									"model": "section",
+									"parent": "test1",
+									"label": "Unit Test Section (using matrix_test table)"
+								},
+								{
+									"tipo": "test2",
+									"model": "section",
+									"parent": "test1",
+									"label": "Test section reference cases"
+								},
+								{
+									"tipo": "test65",
+									"model": "section",
+									"parent": "test1",
+									"label": "Test section"
+								},
+								{
+									"tipo": "test183",
+									"model": "section",
+									"parent": "test1",
+									"label": "Test autocomplete"
+								},
+								{
+									"tipo": "test38",
+									"model": "section",
+									"parent": "test1",
+									"label": "Test list section"
+								},
+								{
+									"tipo": "dd5",
+									"model": "area_ontology",
+									"parent": "dd1",
+									"label": "Ontología"
+								},
+								{
+									"tipo": "ontology35",
+									"model": "section",
+									"parent": "dd5",
+									"label": "Ontologías principales"
+								},
+								{
+									"tipo": "ontology1",
+									"model": "section",
+									"parent": "dd5",
+									"label": "Ontología"
+								},
+								{
+									"tipo": "ontology40",
+									"model": "area",
+									"parent": "dd5",
+									"label": "Instancias"
+								},
+								{
+									"tipo": "ontologytype11",
+									"model": "area",
+									"parent": "ontology40",
+									"label": "Tipología"
+								},
+								{
+									"tipo": "material0",
+									"model": "section",
+									"parent": "ontologytype11",
+									"label": "material"
+								},
+								{
+									"tipo": "object0",
+									"model": "section",
+									"parent": "ontologytype11",
+									"label": "object"
+								},
+								{
+									"tipo": "ontologytype10",
+									"model": "area",
+									"parent": "ontology40",
+									"label": "Laboratorio | Restauración"
+								},
+								{
+									"tipo": "rescause0",
+									"model": "section",
+									"parent": "ontologytype10",
+									"label": "rescause"
+								},
+								{
+									"tipo": "resanalysis0",
+									"model": "section",
+									"parent": "ontologytype10",
+									"label": "resanalysis"
+								},
+								{
+									"tipo": "ontologytype12",
+									"model": "area",
+									"parent": "ontology40",
+									"label": "Actividades"
+								},
+								{
+									"tipo": "actv0",
+									"model": "section",
+									"parent": "ontologytype12",
+									"label": "Actividad | actv"
+								},
+								{
+									"tipo": "excavation0",
+									"model": "section",
+									"parent": "ontologytype12",
+									"label": "excavation"
+								},
+								{
+									"tipo": "ontologytype4",
+									"model": "area",
+									"parent": "ontology40",
+									"label": "Semánticas"
+								},
+								{
+									"tipo": "rolejob0",
+									"model": "section",
+									"parent": "ontologytype4",
+									"label": "rolejob"
+								},
+								{
+									"tipo": "rolepos0",
+									"model": "section",
+									"parent": "ontologytype4",
+									"label": "rolepos"
+								},
+								{
+									"tipo": "roleusr0",
+									"model": "section",
+									"parent": "ontologytype4",
+									"label": "roleusr"
+								},
+								{
+									"tipo": "uncertainty0",
+									"model": "section",
+									"parent": "ontologytype4",
+									"label": "uncertainty"
+								},
+								{
+									"tipo": "ds0",
+									"model": "section",
+									"parent": "ontologytype4",
+									"label": "ds"
+								},
+								{
+									"tipo": "ontologytype9",
+									"model": "area",
+									"parent": "ontology40",
+									"label": "Ubicaciones"
+								},
+								{
+									"tipo": "ubication0",
+									"model": "section",
+									"parent": "ontologytype9",
+									"label": "ubication"
+								},
+								{
+									"tipo": "places0",
+									"model": "section",
+									"parent": "ontologytype9",
+									"label": "places"
+								},
+								{
+									"tipo": "ontologytype3",
+									"model": "area",
+									"parent": "ontology40",
+									"label": "Lenguajes"
+								},
+								{
+									"tipo": "lg0",
+									"model": "section",
+									"parent": "ontologytype3",
+									"label": "Lenguajes | lg"
+								},
+								{
+									"tipo": "ontologytype6",
+									"model": "area",
+									"parent": "ontology40",
+									"label": "Sítios web"
+								},
+								{
+									"tipo": "www0",
+									"model": "section",
+									"parent": "ontologytype6",
+									"label": "www"
+								},
+								{
+									"tipo": "ontologytype7",
+									"model": "area",
+									"parent": "ontology40",
+									"label": "Epigrafía"
+								},
+								{
+									"tipo": "scxibo0",
+									"model": "section",
+									"parent": "ontologytype7",
+									"label": "scxibo"
+								},
+								{
+									"tipo": "scsym0",
+									"model": "section",
+									"parent": "ontologytype7",
+									"label": "scsym"
+								},
+								{
+									"tipo": "scxpu0",
+									"model": "section",
+									"parent": "ontologytype7",
+									"label": "scxpu"
+								},
+								{
+									"tipo": "sclat0",
+									"model": "section",
+									"parent": "ontologytype7",
+									"label": "sclat"
+								},
+								{
+									"tipo": "sctxr0",
+									"model": "section",
+									"parent": "ontologytype7",
+									"label": "sctxr"
+								},
+								{
+									"tipo": "sccmk0",
+									"model": "section",
+									"parent": "ontologytype7",
+									"label": "sccmk"
+								},
+								{
+									"tipo": "scxibm0",
+									"model": "section",
+									"parent": "ontologytype7",
+									"label": "scxibm"
+								},
+								{
+									"tipo": "scell0",
+									"model": "section",
+									"parent": "ontologytype7",
+									"label": "scell"
+								},
+								{
+									"tipo": "ontologytype14",
+									"model": "area",
+									"parent": "ontology40",
+									"label": "Núcleo"
+								},
+								{
+									"tipo": "nexus0",
+									"model": "section",
+									"parent": "ontologytype14",
+									"label": "Nexo | nexus"
+								},
+								{
+									"tipo": "ontology0",
+									"model": "section",
+									"parent": "ontologytype14",
+									"label": "Ontología | ontology"
+								},
+								{
+									"tipo": "rsc0",
+									"model": "section",
+									"parent": "ontologytype14",
+									"label": "Recurso | rsc"
+								},
+								{
+									"tipo": "hierarchy0",
+									"model": "section",
+									"parent": "ontologytype14",
+									"label": "Jerarquía | hierarchy"
+								},
+								{
+									"tipo": "hierarchytype0",
+									"model": "section",
+									"parent": "ontologytype14",
+									"label": "Tipologías de jerarquía | hierarchytype"
+								},
+								{
+									"tipo": "hierarchymtype0",
+									"model": "section",
+									"parent": "ontologytype14",
+									"label": "Tipologías de jerarquía [m] | hierarchymtype"
+								},
+								{
+									"tipo": "ontologytype0",
+									"model": "section",
+									"parent": "ontologytype14",
+									"label": "Tipologías de ontología | ontologytype"
+								},
+								{
+									"tipo": "dd0",
+									"model": "section",
+									"parent": "ontologytype14",
+									"label": "Dédalo | dd"
+								},
+								{
+									"tipo": "ontologytype2",
+									"model": "area",
+									"parent": "ontology40",
+									"label": "Toponimias"
+								},
+								{
+									"tipo": "utoponymy0",
+									"model": "section",
+									"parent": "ontologytype2",
+									"label": "utoponymy"
+								},
+								{
+									"tipo": "fr0",
+									"model": "section",
+									"parent": "ontologytype2",
+									"label": "fr"
+								},
+								{
+									"tipo": "hr0",
+									"model": "section",
+									"parent": "ontologytype2",
+									"label": "Croacia"
+								},
+								{
+									"tipo": "tn0",
+									"model": "section",
+									"parent": "ontologytype2",
+									"label": "tn"
+								},
+								{
+									"tipo": "es0",
+									"model": "section",
+									"parent": "ontologytype2",
+									"label": "es"
+								},
+								{
+									"tipo": "htoponymy0",
+									"model": "section",
+									"parent": "ontologytype2",
+									"label": "htoponymy"
+								},
+								{
+									"tipo": "it0",
+									"model": "section",
+									"parent": "ontologytype2",
+									"label": "it"
+								},
+								{
+									"tipo": "ma0",
+									"model": "section",
+									"parent": "ontologytype2",
+									"label": "ma"
+								},
+								{
+									"tipo": "terr0",
+									"model": "section",
+									"parent": "ontologytype2",
+									"label": "terr"
+								},
+								{
+									"tipo": "pt0",
+									"model": "section",
+									"parent": "ontologytype2",
+									"label": "pt"
+								},
+								{
+									"tipo": "ontologytype15",
+									"model": "area",
+									"parent": "ontology40",
+									"label": "Otros"
+								},
+								{
+									"tipo": "render0",
+									"model": "section",
+									"parent": "ontologytype15",
+									"label": "render"
+								},
+								{
+									"tipo": "ru0",
+									"model": "section",
+									"parent": "ontologytype15",
+									"label": "ru"
+								},
+								{
+									"tipo": "special0",
+									"model": "section",
+									"parent": "ontologytype15",
+									"label": "special"
+								},
+								{
+									"tipo": "xk0",
+									"model": "section",
+									"parent": "ontologytype15",
+									"label": "xk"
+								},
+								{
+									"tipo": "flora0",
+									"model": "section",
+									"parent": "ontologytype15",
+									"label": "flora"
+								},
+								{
+									"tipo": "fauna0",
+									"model": "section",
+									"parent": "ontologytype15",
+									"label": "fauna"
+								},
+								{
+									"tipo": "navarra0",
+									"model": "section",
+									"parent": "ontologytype15",
+									"label": "navarra"
+								},
+								{
+									"tipo": "af0",
+									"model": "section",
+									"parent": "ontologytype15",
+									"label": "af"
+								},
+								{
+									"tipo": "objet0",
+									"model": "section",
+									"parent": "ontologytype15",
+									"label": "objet"
+								},
+								{
+									"tipo": "ontologytype5",
+									"model": "area",
+									"parent": "ontology40",
+									"label": "Especial"
+								},
+								{
+									"tipo": "ww0",
+									"model": "section",
+									"parent": "ontologytype5",
+									"label": "Web | ww"
+								},
+								{
+									"tipo": "test0",
+									"model": "section",
+									"parent": "ontologytype5",
+									"label": "Test | test"
+								},
+								{
+									"tipo": "ontologytype8",
+									"model": "area",
+									"parent": "ontology40",
+									"label": "Catálogo"
+								},
+								{
+									"tipo": "oh0",
+									"model": "section",
+									"parent": "ontologytype8",
+									"label": "Historia Oral | oh"
+								},
+								{
+									"tipo": "dmm0",
+									"model": "section",
+									"parent": "ontologytype8",
+									"label": "Memoria democrática | dmm"
+								},
+								{
+									"tipo": "isad0",
+									"model": "section",
+									"parent": "ontologytype8",
+									"label": "ISAD(g) | isad"
+								},
+								{
+									"tipo": "ich0",
+									"model": "section",
+									"parent": "ontologytype8",
+									"label": "Patrimonio cultural inmaterial | ich"
+								},
+								{
+									"tipo": "emakumeak0",
+									"model": "section",
+									"parent": "ontologytype8",
+									"label": "emakumeak"
+								},
+								{
+									"tipo": "numisdatacatalog0",
+									"model": "section",
+									"parent": "ontologytype8",
+									"label": "numisdatacatalog"
+								},
+								{
+									"tipo": "mupreva0",
+									"model": "section",
+									"parent": "ontologytype8",
+									"label": "mupreva"
+								},
+								{
+									"tipo": "mht0",
+									"model": "section",
+									"parent": "ontologytype8",
+									"label": "mht"
+								},
+								{
+									"tipo": "murapa0",
+									"model": "section",
+									"parent": "ontologytype8",
+									"label": "murapa"
+								},
+								{
+									"tipo": "tch0",
+									"model": "section",
+									"parent": "ontologytype8",
+									"label": "Patrimonio cultural material | tch"
+								},
+								{
+									"tipo": "zenon0",
+									"model": "section",
+									"parent": "ontologytype8",
+									"label": "Zenon | zenon"
+								},
+								{
+									"tipo": "tchi0",
+									"model": "section",
+									"parent": "ontologytype8",
+									"label": "Patrimonio cultural material inmueble | tchi"
+								},
+								{
+									"tipo": "numisdata0",
+									"model": "section",
+									"parent": "ontologytype8",
+									"label": "Patrimonio numismático | numisdata"
+								},
+								{
+									"tipo": "mdcat0",
+									"model": "section",
+									"parent": "ontologytype8",
+									"label": "mdcat"
+								},
+								{
+									"tipo": "ontologytype1",
+									"model": "area",
+									"parent": "ontology40",
+									"label": "Temáticas"
+								},
+								{
+									"tipo": "ts0",
+									"model": "section",
+									"parent": "ontologytype1",
+									"label": "ts"
+								},
+								{
+									"tipo": "technique0",
+									"model": "section",
+									"parent": "ontologytype1",
+									"label": "technique"
+								},
+								{
+									"tipo": "cont0",
+									"model": "section",
+									"parent": "ontologytype1",
+									"label": "cont"
+								},
+								{
+									"tipo": "discoverytype0",
+									"model": "section",
+									"parent": "ontologytype1",
+									"label": "discoverytype"
+								},
+								{
+									"tipo": "cult0",
+									"model": "section",
+									"parent": "ontologytype1",
+									"label": "cult"
+								},
+								{
+									"tipo": "dc0",
+									"model": "section",
+									"parent": "ontologytype1",
+									"label": "Chronology"
+								},
+								{
+									"tipo": "category0",
+									"model": "section",
+									"parent": "ontologytype1",
+									"label": "category"
+								},
+								{
+									"tipo": "ceramics0",
+									"model": "section",
+									"parent": "ontologytype1",
+									"label": "ceramics"
+								},
+								{
+									"tipo": "deposit0",
+									"model": "section",
+									"parent": "ontologytype1",
+									"label": "deposit"
+								},
+								{
+									"tipo": "grup0",
+									"model": "section",
+									"parent": "ontologytype1",
+									"label": "grup"
+								},
+								{
+									"tipo": "culture0",
+									"model": "section",
+									"parent": "ontologytype1",
+									"label": "culture"
+								},
+								{
+									"tipo": "depositiontype0",
+									"model": "section",
+									"parent": "ontologytype1",
+									"label": "depositiontype"
+								},
+								{
+									"tipo": "icon0",
+									"model": "section",
+									"parent": "ontologytype1",
+									"label": "icon"
+								},
+								{
+									"tipo": "on0",
+									"model": "section",
+									"parent": "ontologytype1",
+									"label": "on"
+								},
+								{
+									"tipo": "peri0",
+									"model": "section",
+									"parent": "ontologytype1",
+									"label": "peri"
+								},
+								{
+									"tipo": "seri0",
+									"model": "section",
+									"parent": "ontologytype1",
+									"label": "seri"
+								},
+								{
+									"tipo": "tema0",
+									"model": "section",
+									"parent": "ontologytype1",
+									"label": "tema"
+								}
+							],
+							"info_data": {
+								"dedalo_version": "7.0.0.dev",
+								"dedalo_build": "2026-03-14T13:52:19+02:00",
+								"dedalo_db_name": "dedalo_mib_v7",
+								"pg_version": "18.4 (Homebrew)",
+								"php_version": "8.5.4 jit: 0",
+								"memory": "8G",
+								"php_sapi_name": "fpm-fcgi",
+								"entity": "monedaiberica",
+								"php_user": "render",
+								"php_session_handler": "files",
+								"pg_db": "18.4 (Homebrew)",
+								"server_software": "Apache/2.4.66 (Unix) OpenSSL/3.6.2",
+								"ip_server": "::1"
+							},
+							"show_ontology": true,
+							"username": "root"
+						}
+					],
+					"debug": {
+						"sqo": {
+							"id": "undefined",
+							"section_tipo": [
+								"dd85"
+							],
+							"mode": "list",
+							"filter": null,
+							"limit": 10,
+							"offset": 0,
+							"total": null,
+							"full_count": null,
+							"group_by": null,
+							"order": null,
+							"filter_by_locators": null,
+							"filter_by_locators_op": null,
+							"allow_sub_select_by_id": null,
+							"children_recursive": null,
+							"remove_distinct": null,
+							"skip_projects_filter": null,
+							"parsed": null,
+							"breakdown": null,
+							"tables": null,
+							"select": null,
+							"generated_time": null
+						},
+						"exec_time": "1028.902 ms",
+						"memory_usage": "26 MB"
+					}
+				},
+				"msg": "OK. Request done successfully",
+				"errors": [],
+				"debug": {
+					"api_exec_time": "1030.932 ms",
+					"memory_usage": "26 MB",
+					"rqo": {
+						"action": "read",
+						"dd_api": "dd_core_api",
+						"prevent_lock": true,
+						"source": {
+							"typo": "source",
+							"model": "menu",
+							"tipo": "dd85",
+							"section_tipo": "dd85",
+							"action": "get_data",
+							"mode": "list",
+							"lang": "lg-eng"
+						}
+					},
+					"rqo_string": "{\n    \"action\": \"read\",\n    \"dd_api\": \"dd_core_api\",\n    \"prevent_lock\": true,\n    \"source\": {\n        \"typo\": \"source\",\n        \"model\": \"menu\",\n        \"tipo\": \"dd85\",\n        \"section_tipo\": \"dd85\",\n        \"action\": \"get_data\",\n        \"mode\": \"list\",\n        \"lang\": \"lg-eng\"\n    }\n}",
+					"real_execution_time": "1 sec"
+				},
+				"action": "read",
+				"csrf_token": "__FIXTURE_CSRF__",
+				"dedalo_last_error": null
+			}
+		}
+	}
+}

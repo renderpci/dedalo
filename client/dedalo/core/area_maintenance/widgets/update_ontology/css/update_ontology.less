@@ -1,0 +1,95 @@
+/**
+* update_ontology
+*
+* Included from area_maintenance.less file
+*/
+.wrapper_widget.update_ontology {
+
+	>.content_data {
+
+		>.pre_clean {
+			background-color: transparent;
+			opacity: 0.8;
+			margin: 0px;
+		}
+
+		.config_grid {
+			grid-template-columns: 3fr 5fr;
+			gap: 0.25rem;
+
+			.label {
+				display: flex;
+				align-items: flex-start;
+				flex-wrap: nowrap;
+
+				&.bold {
+					padding-bottom: 0.5rem !important;
+				}
+			}
+
+			&.servers_grid {
+
+				.label {
+					display: block;
+					cursor: pointer;
+					padding-bottom: 0px;
+					padding-top: 0.2rem;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					white-space: nowrap;
+
+					input[type="radio"] {
+						cursor: pointer;
+						width: unset;
+						height: unset;
+						padding: 0;
+						margin: 0 .5em .5em 0;
+						vertical-align: text-top;
+					}
+				}
+
+				.value {
+					padding: 0.5rem;
+					padding-bottom: 0px;
+					padding-top: 0.2rem;
+
+					.icon {
+						margin-left: 0.5rem;
+					}
+				}
+
+				.active {
+					color: @color_black;
+					font-weight: 500;
+				}
+			}
+		}
+
+		.form_container {
+			padding-top: 0px;
+		}
+
+		// additional containers
+		>.container {
+			padding-top: 1.5rem;
+
+			&.rebuild_lang_files_container {
+
+
+			}
+			&.rebuild_lang_files_container {
+
+
+			}
+
+			>.info_text {
+				padding-bottom: 0.5rem;
+			}
+		}
+
+	}
+
+
+
+
+}//end update_ontology

@@ -1,0 +1,11 @@
+-- 0001_baseline — marker migration (audit S2-39).
+--
+-- The TS-owned operational tables that existed BEFORE this runner shipped are
+-- still bootstrapped by their subsystems' lazy CREATE TABLE IF NOT EXISTS
+-- (diffusion job queue: src/diffusion/jobs/schema.ts; component locks:
+-- src/core/section/locks.ts; RAG queue/vector store: src/ai/rag/*). Their DDL
+-- is deliberately NOT duplicated here — two authoritative copies of the same
+-- CREATE drift. This baseline only anchors the version sequence; every future
+-- TS-owned schema CHANGE (new table, new column, new index) lands as the next
+-- numbered file in this directory and runs at boot before serving.
+SELECT 1;

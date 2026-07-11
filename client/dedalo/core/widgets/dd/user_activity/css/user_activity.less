@@ -1,0 +1,248 @@
+/**
+* widget user_activity
+*
+* Included from main.less file
+*/
+
+.wrapper_widget.user_activity {
+
+	>.content_data {
+
+
+		// ul
+		>.values_container {
+			display: contents;
+
+			// li
+			>.widget_item.user_activity {
+
+				.raw_value {
+					margin: 1rem;
+					background-color: @color_grey_15;
+					border-radius: 3px;
+				}
+
+				// ============================================
+				//   USER ACTIVITY CHART PANEL
+				// ============================================
+				.user_activity_charts {
+					display: flex;
+					flex-direction: column;
+					gap: 1.25rem;
+					padding: 1rem;
+				}
+
+				.user_activity_charts_empty {
+					padding: 2rem;
+					text-align: center;
+					color: @color_grey_8;
+					font-size: 0.875rem;
+				}
+
+				// ---- Summary KPI strip ----
+				.user_activity_summary {
+					display: grid;
+					grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+					gap: 0.75rem;
+				}
+
+				.user_activity_summary_tile {
+					background: @color_grey_15;
+					border: 1px solid @color_grey_13;
+					border-radius: 0.5rem;
+					padding: 0.75rem 1rem;
+
+					.user_activity_summary_label {
+						font-size: 0.75rem;
+						color: @color_grey_8;
+						text-transform: uppercase;
+						letter-spacing: 0.04em;
+						margin-bottom: 0.25rem;
+					}
+
+					.user_activity_summary_value {
+						font-size: 1.4rem;
+						font-weight: 600;
+						color: @color_grey_3;
+						line-height: 1.15;
+						overflow: hidden;
+						text-overflow: ellipsis;
+						white-space: nowrap;
+					}
+
+					.user_activity_summary_hint {
+						margin-top: 0.2rem;
+						font-size: 0.75rem;
+						color: @color_grey_8;
+					}
+				}
+
+				// ---- Charts grid ----
+				.user_activity_charts_grid {
+					display: grid;
+					grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+					gap: 1rem;
+				}
+
+				.user_activity_chart {
+					background: @color_grey_15;
+					border: 1px solid @color_grey_13;
+					border-radius: 0.5rem;
+					padding: 1rem;
+					display: flex;
+					flex-direction: column;
+					gap: 0.75rem;
+					min-width: 0;
+				}
+
+				.user_activity_chart_title {
+					font-size: 0.875rem;
+					font-weight: 600;
+					color: @color_grey_3;
+				}
+
+				.user_activity_chart_body {
+					min-height: 100px;
+					min-width: 0;
+				}
+
+				.user_activity_chart_loading {
+					padding: 2.5rem 0;
+					text-align: center;
+					color: @color_grey_8;
+					font-size: 0.8125rem;
+				}
+
+				.user_activity_chart_fallback {
+					margin: 0;
+					padding: 0.75rem;
+					background: @color_grey_15;
+					border-radius: 0.25rem;
+					font-size: 0.75rem;
+					color: @color_grey_3;
+					max-height: 240px;
+					overflow: auto;
+				}
+
+				// ---- Donut "what" chart ----
+				.user_activity_slice {
+					transition: opacity 0.12s ease;
+				}
+
+				.user_activity_donut_total {
+					font-size: 1.4rem;
+					font-weight: 600;
+					fill: @color_grey_3;
+				}
+
+				.user_activity_donut_total_label {
+					font-size: 0.7rem;
+					fill: @color_grey_8;
+					text-transform: uppercase;
+					letter-spacing: 0.05em;
+				}
+
+				.user_activity_legend {
+					display: flex;
+					flex-direction: column;
+					gap: 0.25rem;
+					margin-top: 0.75rem;
+					max-height: 140px;
+					overflow-y: auto;
+
+					.user_activity_legend_item {
+						display: grid;
+						grid-template-columns: 10px 1fr auto;
+						align-items: center;
+						gap: 0.5rem;
+						font-size: 0.8125rem;
+						padding: 0.15rem 0.25rem;
+
+						.user_activity_legend_dot {
+							width: 10px;
+							height: 10px;
+							border-radius: 50%;
+						}
+
+						.user_activity_legend_label {
+							color: @color_grey_3;
+							overflow: hidden;
+							text-overflow: ellipsis;
+							white-space: nowrap;
+						}
+
+						.user_activity_legend_value {
+							color: @color_grey_8;
+							font-variant-numeric: tabular-nums;
+						}
+					}
+				}
+
+				// ---- Horizontal bar charts (where + publish) ----
+				.user_activity_where_row {
+					transition: opacity 0.12s ease;
+					outline: none;
+
+					&:hover {
+						opacity: 0.85;
+					}
+
+					&:focus-visible rect:first-of-type {
+						stroke: @color_grey_8;
+						stroke-width: 1;
+						stroke-dasharray: 2 2;
+					}
+				}
+
+				.user_activity_where_label {
+					fill: @color_grey_3;
+					font-size: 11px;
+				}
+
+				.user_activity_where_value {
+					fill: @color_grey_3;
+					font-size: 11px;
+					font-weight: 500;
+				}
+
+				.user_activity_where_more {
+					margin-top: 0.4rem;
+					font-size: 0.75rem;
+					color: @color_grey_8;
+					text-align: right;
+				}
+
+				// ---- 24-hour vertical bars ----
+				.user_activity_when_bar {
+					transition: opacity 0.12s ease;
+
+					&:hover {
+						opacity: 1 !important;
+					}
+				}
+
+				.user_activity_axis_label {
+					fill: @color_grey_8;
+					font-size: 10px;
+					font-variant-numeric: tabular-nums;
+				}
+
+				.user_activity_chart_empty {
+					padding: 1.5rem 0;
+					text-align: center;
+					color: @color_grey_8;
+					font-size: 0.8125rem;
+				}
+			}
+
+		}//end .values_container
+
+	}//end .content_data
+
+	&.edit {
+		.label, .value {
+			font-size: inherit;
+		}
+	}
+
+}//end .wrapper_widget.user_activity

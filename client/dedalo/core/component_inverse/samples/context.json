@@ -1,0 +1,49 @@
+{
+	"typo": "ddo",
+	"model": "component_inverse",
+	"label": "Catalogue",
+	"tipo": "rsc555",
+	"section_tipo": "rsc550",
+	"legacy_model": "component_inverse",
+	"parent": "rsc550",
+	"parent_grouper": "rsc552",
+	"lang": "lg-nolan",
+	"mode": "edit",
+	"translatable": false,
+	"properties": {},
+	"css": {
+		".wrapper_component": {
+			"max-height": "5.5rem",
+			"text-align": "center",
+			"grid-column": "span 1",
+			"background-color": "#ee9916"
+		},
+		".wrapper_component>.label": {
+			"color": "#ffffff"
+		},
+		".wrapper_component>.content_data": {
+			"color": "#ffffff"
+		}
+	},
+	"permissions": 3,
+	"tools": [],
+	"buttons": [],
+	"request_config": null,
+	"columns_map": null,
+	"sortable": true,
+	"type": "component",
+	"path": [
+		{
+			"name": "Catalogue",
+			"model": "component_inverse",
+			"section_tipo": "rsc550",
+			"component_tipo": "rsc555"
+		}
+	],
+	"new_dataframe": null,
+	"view": null,
+	"children_view": null,
+	"debug": {
+		"exec_time": "0.288 ms"
+	}
+}

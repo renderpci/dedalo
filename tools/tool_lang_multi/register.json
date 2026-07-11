@@ -1,0 +1,350 @@
+{
+  "id": "3959",
+  "section_id": "4",
+  "section_tipo": "dd1340",
+  "data": {
+    "label": "Tools development",
+    "section_id": 4,
+    "created_date": "2026-06-18 11:43:39",
+    "section_tipo": "dd1340",
+    "diffusion_info": null,
+    "created_by_user_id": -1
+  },
+  "relation": {
+    "dd197": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd197"
+      }
+    ],
+    "dd200": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd200"
+      }
+    ],
+    "dd1330": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "3",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      }
+    ],
+    "dd1331": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1331"
+      }
+    ],
+    "dd1332": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1332"
+      }
+    ],
+    "dd1333": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1333"
+      }
+    ],
+    "dd1337": [
+      {
+        "id": 1,
+        "type": "dd675",
+        "section_id": "1",
+        "section_tipo": "dd153",
+        "from_component_tipo": "dd1337"
+      }
+    ],
+    "dd1354": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1354"
+      }
+    ]
+  },
+  "string": {
+    "dd612": [
+      {
+        "id": 1,
+        "lang": "lg-deu",
+        "value": "<p>Tool zum Übersetzen des Inhalts in jede andere konfigurierte Sprache.</p>"
+      },
+      {
+        "id": 2,
+        "lang": "lg-ell",
+        "value": "<p>Εργαλείο για τη μετάφραση του περιεχομένου σε οποιαδήποτε άλλη διαμορφωμένη γλώσσα.</p>"
+      },
+      {
+        "id": 3,
+        "lang": "lg-eng",
+        "value": "<p>Tool to translate the content to any other configured language.</p>"
+      },
+      {
+        "id": 4,
+        "lang": "lg-nep",
+        "value": "<p>कुनै पनि अन्य कन्फिगर गरिएको भाषामा सामग्री अनुवाद गर्न उपकरण।</p>"
+      }
+    ],
+    "dd799": [
+      {
+        "id": 1,
+        "lang": "lg-eng",
+        "value": "Multi-language"
+      },
+      {
+        "id": 2,
+        "lang": "lg-eus",
+        "value": "Hainbat hizkuntza"
+      },
+      {
+        "id": 3,
+        "lang": "lg-nep",
+        "value": "बहु-भाषा"
+      },
+      {
+        "id": 4,
+        "lang": "lg-spa",
+        "value": "Multi-lenguage"
+      }
+    ],
+    "dd1326": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "tool_lang_multi"
+      }
+    ],
+    "dd1327": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "2.0.2"
+      }
+    ],
+    "dd1328": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "6.0.0"
+      }
+    ],
+    "dd1362": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "<p>For automatic translation, constant 'DEDALO_TRANSLATOR_ENGINE' with all translators must be defined in Dédalo /config/tools/config_tool_lang.json file like:</p><p></p><p>define('DEDALO_TRANSLATOR_ENGINE',&nbsp; '[</p><p>{</p><p>&nbsp; name\": \"babel\",</p><p>&nbsp; \"label\": \"Babel\",</p><p>&nbsp; \"uri\": \"https://babel.render.es/babel_engine/\",</p><p>&nbsp; \"key\": \"9Fre!ksadas132aPlsdiugJKAH\"</p><p>}</p><p>]');</p>"
+      }
+    ],
+    "dd1644": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "Dédalo team"
+      }
+    ]
+  },
+  "date": {
+    "dd199": [
+      {
+        "id": 1,
+        "start": {
+          "day": 17,
+          "hour": 18,
+          "time": 64928541858,
+          "year": 2020,
+          "month": 2,
+          "minute": 4,
+          "second": 18
+        }
+      }
+    ],
+    "dd201": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "start": {
+          "day": 18,
+          "hour": 11,
+          "time": 65132163819,
+          "year": 2026,
+          "month": 6,
+          "minute": 43,
+          "second": 39
+        }
+      }
+    ]
+  },
+  "iri": null,
+  "geo": null,
+  "number": null,
+  "media": null,
+  "misc": {
+    "dd1372": [
+      {
+        "id": 1,
+        "value": [
+          {
+            "lang": "lg-eng",
+            "name": "automatic_translation",
+            "value": "Automatic translation"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "automatic_translation",
+            "value": "Traducción automática"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "automatic_translation",
+            "value": "Traducció automàtica"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "automatic_translation",
+            "value": "Traduction automatique"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "automatic_translation",
+            "value": "Traduzione automatica"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "automatic_translation",
+            "value": "Automatische Übersetzung"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "automatic_translation",
+            "value": "Αυτόματη μετάφραση"
+          },
+          {
+            "lang": "lg-por",
+            "name": "automatic_translation",
+            "value": "Tradução automática"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "automatic_translation",
+            "value": "Itzulpen automatikoa"
+          }
+        ]
+      }
+    ]
+  },
+  "relation_search": null,
+  "meta": {
+    "dd197": [
+      {
+        "count": 1
+      }
+    ],
+    "dd199": [
+      {
+        "count": 1
+      }
+    ],
+    "dd200": [
+      {
+        "count": 1
+      }
+    ],
+    "dd201": [
+      {
+        "count": 1
+      }
+    ],
+    "dd612": [
+      {
+        "count": 4
+      }
+    ],
+    "dd799": [
+      {
+        "count": 4
+      }
+    ],
+    "dd1326": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1327": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1328": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1330": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1331": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1332": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1333": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1337": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1354": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1362": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1372": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1644": [
+      {
+        "count": 1
+      }
+    ]
+  }
+}

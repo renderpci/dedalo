@@ -1,0 +1,558 @@
+/**
+* login
+*
+* Included from main.less file
+*/
+.login {
+	position: fixed;
+	left: 0px;
+	top: 0px;
+	height: 100%;
+	width: 100%;
+	z-index: 999;
+
+	--user_login_image : ''; // Added on login, like url('../../themes/default/raspas/raspa_pantalla_1.jpg');
+
+	>.content_data {
+		background-color: @color_grey_15;
+		border: solid 1px @color_grey_13;
+		border-radius: 0.5em;
+		.centered();
+		max-width: 24em;
+		padding: 2em;
+		padding-bottom: 1em;
+
+		&.overlay {
+			background-color: @color_white;
+			box-shadow: 10px 10px 62px 0px @color_grey_8;
+		}
+
+		&.error_message {
+			padding: 2rem;
+			line-height: 1.75rem;
+			font-size: 1.2rem;
+
+			&.warning {
+				background-color: @color_warning;
+				color: @color_white;
+			}
+		}
+
+		@media screen and (max-width: @width_break_point_1) {
+			width: 70vw;
+		}
+
+		>.top {
+			display: block;
+			text-align: center;
+			padding-bottom: 1.75rem;
+
+			// display the text as 'Loading Dédalo files'
+			.loader_label {
+				display: block;
+				width: 100%;
+				overflow: hidden;
+				white-space: nowrap;
+				text-overflow: ellipsis;
+				font-size: 1.4rem;
+				padding-left: 0px;
+				padding-right: 0px;
+			}
+		}
+
+		// lang selector
+		>.select_lang {
+			height: 2.5em;
+			width: 100%;
+			font-size: 1em;
+			margin: 0px;
+			margin-bottom: 1em;
+			border-radius: 3px;
+			// remove browser appearance style
+			background: url('../../themes/default/icons/select_arrows.svg');
+			background-repeat: no-repeat;
+			background-position: 97%;
+			background-size: 0.8rem;
+			-moz-appearance: none;
+			-webkit-appearance: none;
+			appearance: none;
+			padding-left: 1em;
+			background-color: @color_grey_16;
+			opacity: 0.7;
+			border: 1px solid @color_grey_13;
+		}
+
+		// form
+		>.login_form {
+			display: flex;
+			flex-wrap: wrap;
+			margin: 0px;
+			margin-bottom: 1em;
+
+			>input, >button {
+				flex: 1 1 100%;
+				font-size: 1em;
+			}
+
+			>input {
+				margin: 0px;
+				margin-bottom: 1em;
+			}
+
+			>.dev_server_options {
+				color: @color_grey_10;
+				padding-bottom: 0.5rem;
+				padding-top: 0.5rem;
+			}
+
+			>.use_service_worker_container {
+				padding: 0.5rem;
+				padding: .5rem;
+				padding-top: 0;
+				margin-bottom: 1rem;
+				margin-top: 0.5rem;
+				cursor: pointer;
+
+				>input {
+					margin-right: 0.5rem;
+					vertical-align: bottom;
+					cursor: pointer;
+				}
+
+				>.icon {
+					vertical-align: bottom;
+					margin-left: 0.5rem;
+				}
+			}
+
+			// submit button
+			>.button_enter {
+				display: flex;
+				height: 3em;
+				margin: 0px;
+				text-align: center;
+				transition: all 0.17s ease, padding 0s;
+				background-color: var(--color_orange_dedalo);
+
+				&.white {
+					background-color: transparent;
+					outline: none;
+					cursor: default;
+					pointer-events: none;
+				}
+
+				// spinner
+				>.button_enter_loading {
+					position: relative;
+					height: 2rem;
+					width: 2rem;
+					margin: 0px;
+					top: unset;
+					left: unset;
+
+					&.spinner {
+						border-width: 3px;
+					}
+				}
+
+				>.button_enter_label {
+
+				}
+			}
+
+			// two-step (identifier-first) login: step panels (username / password)
+			>.login_step {
+				flex: 1 1 100%;
+				display: flex;
+				flex-wrap: wrap;
+
+				>input, >button {
+					flex: 1 1 100%;
+					font-size: 1em;
+				}
+
+				>input {
+					margin: 0px;
+					margin-bottom: 1em;
+				}
+
+				// step buttons share the look of the form submit button
+				>.button_enter {
+					display: flex;
+					height: 3em;
+					margin: 0px;
+					text-align: center;
+					justify-content: center;
+					align-items: center;
+					transition: all 0.17s ease, padding 0s;
+					background-color: var(--color_orange_dedalo);
+
+					&.white {
+						background-color: transparent;
+						outline: none;
+						cursor: default;
+						pointer-events: none;
+					}
+
+					>.button_enter_loading {
+						position: relative;
+						height: 2rem;
+						width: 2rem;
+						margin: 0px;
+						top: unset;
+						left: unset;
+
+						&.spinner {
+							border-width: 3px;
+						}
+					}
+				}
+			}
+
+			// step 2: username confirmation chip with a "change user" link
+			>.login_step_password >.login_user_chip {
+				flex: 1 1 100%;
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 0.5em;
+				margin-bottom: 1em;
+				padding: 0.5em 0.85em;
+				border-radius: 3px;
+				background-color: @color_grey_16;
+				border: 1px solid @color_grey_13;
+
+				>.login_user_chip_name {
+					font-weight: 600;
+					color: @color_grey_5;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					white-space: nowrap;
+				}
+
+				>.login_change_user {
+					flex: 0 0 auto;
+					font-size: 0.8em;
+					cursor: pointer;
+					color: @color_grey_9;
+					text-decoration: none;
+					transition: color 0.15s ease;
+
+					&:hover {
+						color: var(--color_orange_dedalo);
+						text-decoration: underline;
+					}
+				}
+			}
+		}//end form
+
+		// password recovery (forgot password)
+		// "Forgot your password?" link, right-aligned just under the login form
+		>.forgot_password_link {
+			display: block;
+			width: 100%;
+			text-align: right;
+			font-size: 0.85em;
+			margin-top: -0.25em;
+			margin-bottom: 1.25em;
+			cursor: pointer;
+			color: @color_grey_9;
+			text-decoration: none;
+			transition: color 0.15s ease;
+
+			&:hover {
+				color: var(--color_orange_dedalo);
+				text-decoration: underline;
+			}
+		}
+
+		// recovery sub-forms: same flex layout as .login_form
+		>.reset_request_form,
+		>.reset_confirm_form {
+			display: flex;
+			flex-wrap: wrap;
+			margin: 0px;
+			margin-bottom: 1em;
+
+			// header block: masked icon + title + instruction
+			>.reset_header {
+				flex: 1 1 100%;
+				text-align: center;
+				margin-bottom: 1.5em;
+
+				>.reset_icon {
+					display: inline-block;
+					width: 2.5rem;
+					height: 2.5rem;
+					margin-bottom: 0.6rem;
+					background-color: var(--color_orange_dedalo);
+					-webkit-mask-repeat: no-repeat;
+							mask-repeat: no-repeat;
+					-webkit-mask-position: center;
+							mask-position: center;
+					-webkit-mask-size: contain;
+							mask-size: contain;
+
+					&.lock {
+						-webkit-mask-image: url('../../themes/default/icons/lock.svg');
+								mask-image: url('../../themes/default/icons/lock.svg');
+					}
+					&.email {
+						-webkit-mask-image: url('../../themes/default/icons/email.svg');
+								mask-image: url('../../themes/default/icons/email.svg');
+					}
+				}
+
+				>.reset_title {
+					margin: 0 0 0.4rem 0;
+					font-size: 1.15rem;
+					font-weight: 600;
+					color: @color_grey_5;
+				}
+
+				>.reset_description {
+					margin: 0;
+					font-size: 0.85rem;
+					line-height: 1.45;
+					color: @color_grey_9;
+				}
+			}
+
+			>input, >button {
+				flex: 1 1 100%;
+				font-size: 1em;
+			}
+
+			>input {
+				margin: 0px;
+				margin-bottom: 1em;
+			}
+
+			// one-time-code field: large, centered, spaced like an OTP input
+			>.reset_code_input {
+				text-align: center;
+				font-size: 1.6rem;
+				font-weight: 600;
+				letter-spacing: 0.55em;
+				// offset the trailing letter-spacing so the digits look centered
+				text-indent: 0.55em;
+				padding-top: 0.35em;
+				padding-bottom: 0.35em;
+
+				&::placeholder {
+					letter-spacing: 0.4em;
+					font-weight: 400;
+					opacity: 0.45;
+				}
+			}
+
+			>.button_enter {
+				display: flex;
+				height: 3em;
+				margin: 0px;
+				text-align: center;
+				justify-content: center;
+				align-items: center;
+				transition: all 0.17s ease, padding 0s;
+				background-color: var(--color_orange_dedalo);
+
+				&.white {
+					background-color: transparent;
+					outline: none;
+					cursor: default;
+					pointer-events: none;
+				}
+			}
+
+			// "Back to login" link with a leading back-arrow icon
+			>.reset_back_link {
+				flex: 1 1 100%;
+				margin-top: 0.85em;
+				font-size: 0.85em;
+				text-align: center;
+				cursor: pointer;
+				color: @color_grey_9;
+				text-decoration: none;
+				transition: color 0.15s ease;
+
+				&::before {
+					content: '';
+					display: inline-block;
+					width: 0.8em;
+					height: 0.8em;
+					margin-right: 0.4em;
+					vertical-align: -0.05em;
+					background-color: currentColor;
+					-webkit-mask: url('../../themes/default/icons/backward.svg') no-repeat center / contain;
+							mask: url('../../themes/default/icons/backward.svg') no-repeat center / contain;
+				}
+
+				&:hover {
+					color: var(--color_orange_dedalo);
+				}
+			}
+		}
+
+		// info_container where is placed server info like data version..
+		>.info_container {
+			display: grid;
+			grid-template-columns: 1.2fr 2fr;
+			font-size: 0.8em;
+			opacity: 0.5;
+			line-height: 1.3em;
+		}
+
+		// saml_container
+		>.saml_container {
+			width: 100%;
+			padding-top: 2rem;
+			padding-bottom: 1rem;
+
+			>.saml_wrapper {
+				width: 100%;
+
+				>.button_enter {
+					display: flex;
+					height: 3em;
+					width: 100%;
+					margin: 0px;
+					text-align: center;
+					transition: all 0.17s ease, padding 0s;
+					.fn_append_icon('saml.svg', @color_white, 1);
+
+					&:active {
+						opacity: 0.5;
+					}
+				}
+			}
+		}
+
+		// powered by
+		.powered_by {
+			width: 100%;
+			text-align: center;
+			margin-top: 2rem;
+			margin-bottom: 1rem;
+
+			.dedalo_logo {
+				height: 3rem;
+				width: 100%;
+				margin-bottom: 0.25rem;
+			}
+			.dedalo_link {
+				font-size: 0.87rem;
+				text-decoration: none;
+				color: @color_orange_dedalo;
+			}
+		}
+
+		// messages from API are showed here
+		>.messages_container {
+			position: relative;
+			width: 100%;
+			padding: 0.5rem;
+
+			>.component_message {
+				position: relative;
+				top: 1rem !important;
+				margin-bottom: 1.5em;
+				border-radius: 0.2em;
+
+				>span {
+					padding: 0.20em;
+					line-height: 1.1em;
+
+					&.error {
+						padding-left: 0.5em;
+						color: @color_white;
+					}
+				}
+			}
+		}
+	}
+
+	// loading_files
+	.cont {
+		display: block;
+		height: 200px;
+		width: 200px;
+		margin: 1rem auto;
+		box-shadow: 0px 0px 1em @color_grey_13;
+		border-radius: 100%;
+		position: relative;
+		text-align: center;
+		contain: layout paint; // isolate layout and paint calculations
+
+		// load the user image or the Dédalo icon
+		&:after {
+			background-position: 0px top;
+			background-repeat: no-repeat;
+			background-size: 527px 1024px;
+			background-image: var(--user_login_image);
+			background-size: cover;
+			position: absolute;
+			display: block;
+			height: 160px;
+			width: 160px;
+			left: 50%;
+			top: 50%;
+			margin-top: -80px;
+			margin-left: -80px;
+			border-radius: 100%;
+
+			// text counter like '80%'
+			box-shadow: inset 0px 0px 1em @color_grey_13;
+			content: attr(data-pct); //'%';
+			font-size: 2em;
+			color: @color_white;
+			text-shadow: 0 0 0.5em @color_black;
+			line-height: 160px;
+			font-variant-numeric: tabular-nums; // keep text width stable
+		}
+
+		svg circle {
+		  stroke-dashoffset: 0;
+		  stroke: @color_grey_7;
+		  stroke-width: 1em;
+		}
+		svg .bar {
+			stroke: @color_orange_dedalo;
+			will-change: stroke-dashoffset; // hint browser about animation
+		}
+	}// end cont
+
+	// raspa_loading. Only for root user
+	&.raspa_loading {
+
+		&:before {
+			content: ' ';
+			position: fixed;
+			height: 100%;
+			width: 100%;
+			z-index: -1;
+			transform: scaleX(-1);
+			top: 0px;
+			left: 0px;
+			background-image: var(--user_login_image);
+			background-size: cover;
+			background-position: 0px top;
+			background-repeat: no-repeat;
+			content: '';
+			transform: unset;
+			opacity: 0;
+			transition: opacity 0.8s ease-in-out;
+			will-change: opacity; // hardware accelerate opacity transition
+		}
+
+		&.active {
+			&:before {
+				opacity: 1;
+			}
+		}
+
+		.cont {
+
+		}
+	}//end &.raspa_loading
+
+}//end .login

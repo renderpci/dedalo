@@ -1,0 +1,263 @@
+/**
+* component_iri
+*
+* Included from main.less file
+*/
+.component_iri {
+
+	&.edit {
+
+		// pen + trash (inside the embedded dataframe) and the iri's own
+		// remove/link action buttons are hidden at rest and revealed only when the
+		// whole component is hovered or active. The title/url input outlines behave
+		// the same way (:not(:focus) keeps the focus hilite while editing).
+		.component_dataframe .column_section_id,
+		.component_dataframe .column_remove,
+		>.content_data >.content_value >.button.remove,
+		>.content_data >.content_value >.button.link {
+			opacity: 0;
+			pointer-events: none;
+			transition: opacity var(--transition-fast);
+		}
+
+		>.content_data >.content_value >.input_value:not(:focus) {
+			outline-color: transparent;
+		}
+
+		// group the embedded dataframe's pen + trash together at the right (like
+		// the component_portal view_line) so the linked-record text sits on the left.
+		.component_dataframe .section_record {
+			>.column_section_id {
+				order: 2;
+				margin-left: auto;
+			}
+			>.column_remove {
+				order: 3;
+			}
+		}
+
+		&:hover,
+		&.active {
+			.component_dataframe .column_section_id,
+			.component_dataframe .column_remove,
+			>.content_data >.content_value >.button.remove,
+			>.content_data >.content_value >.button.link {
+				opacity: 1;
+				pointer-events: auto;
+			}
+
+			>.content_data >.content_value >.input_value:not(:focus) {
+				outline-color: @color_grey_14;
+			}
+		}
+
+		// disabled (E.g. Tool Time machine preview)
+		// Hide pen and trash icons.
+		&.disabled_component {
+			.component_dataframe >.content_data {
+				.column_section_id,	.column_remove {
+					display: none !important;
+				}
+			}
+		}
+
+		>.content_data {
+			padding-right: 0.6rem;
+
+			>.content_value {
+				align-items: center;
+				display: flex;
+				flex-wrap: wrap;
+
+				&.read_only {
+
+					>.iri {
+						padding-left: 0.5rem;
+					}
+				}
+
+				// dataframe inside
+				>.component_dataframe {
+					width: calc(30% - 0.5rem);
+					height: 2rem;
+
+					>.content_data {
+						>.section_record {
+							// One line only always
+							flex-wrap: nowrap;
+
+							// Icon pen
+							.column.column_section_id {
+								min-height: 1.6rem;
+							}
+						}
+					}
+
+					@media screen and (max-width: @width_break_point_1) {
+						height: unset;
+						min-height: unset;
+
+						>.content_data {
+						    padding: 0px;
+						    padding-left: 0.5rem;
+
+						    >.section_record {
+						    	// Icon pen
+								.column.column_section_id {
+									min-height: 1.2rem;
+								}
+							}
+						}
+					}
+				}
+
+				// input (text title && url)
+				>.input_value {
+					padding-right: 0.5rem;
+
+					&.title {
+						width: calc(20% - 0.5rem);
+						padding-left: 0.5rem;
+
+					}
+
+					&.url {
+						width: 50%;
+						&:focus {
+							padding-right: 3.15rem;
+						}
+					}
+
+					@media screen and (max-width: @width_break_point_1) {
+						margin-right: 1px;
+
+						&.title {
+							width: 100%;
+						}
+
+						&.url {
+							width: 100%;
+							margin-bottom: 1rem;
+						}
+					}
+				}
+
+				// buttons
+				>.button {
+					position: absolute;
+					top: 0.5rem;
+					right: 0.7rem;
+					z-index: 1;
+
+					&.active_check {
+						margin-right: 1.5rem;
+					}
+
+					&:hover {
+						background-color: @color_orange_dark;
+					}
+
+					&.link {
+						right: 2.25rem;
+					}
+
+					&.remove {
+						right: 0.66rem;
+					}
+
+					@media screen and (max-width: @width_break_point_1) {
+						top: 5.2rem;
+
+						&.remove {
+							right: 0.45rem;
+						}
+
+						&.link {
+							right: 2.20rem;
+						}
+					}
+				}
+
+				.transliterate_value {
+					width: 100%;
+					padding-top: 0.5rem;
+					padding-bottom: 0.5rem;
+					padding-right: 1rem;
+					text-align: right;
+					color: @color_orange_dedalo;
+					opacity: 0.65;
+
+					.title {
+
+						&::after {
+							content: " - ";
+							display: inline-block;
+							padding-left: 0.5rem;
+							padding-right: 0.5rem;
+						}
+					}
+				}
+			}
+		}
+
+	}//end &.edit
+
+	&.search {
+		>.content_data {
+
+			>.q_operator {
+				width: 3rem;
+				text-align: center;
+			}
+
+			>.content_value {
+				width: calc(100% - 3.5rem);
+			}
+		}
+	}
+
+	&.view_line {
+		display: block;
+
+		>.content_data {
+			display: contents;
+
+			>.content_value {
+				flex-wrap: wrap;
+
+				>.input_value {
+					flex: 1 1 100%;
+
+					&.url {
+						padding-right: 0px;
+					}
+				}
+
+				.button.hidden_button {
+					display: none;
+				}
+			}
+		}
+	}
+
+	&.view_print {
+		.content_value {
+			>.title {
+				padding-right: 1rem;
+			}
+		}
+	}
+
+	// with suffix _mini like 'component_date_mini'
+	&_mini {
+
+		a {
+			margin-left: .2rem;
+			margin-right: .2rem;
+		}
+	}
+
+}//end .component_iri
+
+// component_dataframe inside case details
+// @see component_dataframe.less &.view_line

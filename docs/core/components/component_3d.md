@@ -1,0 +1,240 @@
+# component_3d
+
+## Overview
+
+```json
+{
+    "could_be_translatable" : false,
+    "is_literal"            : true,
+    "is_related"            : false,
+    "is_media"              : true,
+    "modes"                 : ["edit","list","tm","search"],
+    "default_tools" : [
+        "tool_media_versions",
+        "tool_posterframe",
+        "tool_time_machine",
+        "tool_upload"
+    ],
+    "render_views" :[
+        {
+            "view" : "default | line",
+            "mode" : "edit"
+        },
+        {
+            "view" : "default | column | mini | text",
+            "mode" : "list | tm"
+        },
+        {
+            "view" : "default",
+            "mode" : "search"
+        }
+    ],
+    "data"        : "array (single item)",
+    "sample_data" : [
+        {
+            "id": 4,
+            "files_info": [
+                {
+                    "quality": "original",
+                    "extension": "glb",
+                    "file_name": "test26_test3_1.glb",
+                    "file_path": "/3d/original/0/test26_test3_1.glb",
+                    "file_size": 4780672,
+                    "file_time": { "timestamp": "2025-12-25 22:53:39" },
+                    "file_exist": true
+                },
+                {
+                    "quality": "web",
+                    "extension": "glb",
+                    "file_name": "test26_test3_1.glb",
+                    "file_path": "/3d/web/0/test26_test3_1.glb",
+                    "file_exist": true
+                },
+                {
+                    "quality": "thumb",
+                    "extension": "jpg",
+                    "file_name": "test26_test3_1.jpg",
+                    "file_path": "/3d/thumb/0/test26_test3_1.jpg",
+                    "file_exist": true
+                }
+            ],
+            "original_file_name": "venus_statue.glb",
+            "original_upload_date": { "timestamp": "2025-12-25 22:53:39" },
+            "original_normalized_name": "test26_test3_1.glb"
+        }
+    ],
+    "value"        : "string (url) | null",
+    "sample_value" : "/3d/web/0/test26_test3_1.glb"
+}
+```
+
+!!! note "Typology"
+    `component_3d` is a **literal-media** component. In the TS server there is no per-component class hierarchy: `component_3d` is a lightweight descriptor (`src/core/components/component_3d/descriptor.ts` — `{ model: 'component_3d', column: 'media' }`) resolved by the shared horizontal engines. It does **not** store binary data in the section matrix; the matrix `media` column holds a thin JSON pointer to the 3D files on disk. All of the type-specific behavior PHP put on the `component_3d` class — the `DEDALO_3D_*` quality catalog, the posterframe handling, the conversion hook — lives in `src/core/concepts/media.ts` (the type catalog), `src/core/media/path.ts` / `files_info.ts` (path grammar + disk scan), `src/core/media/processing.ts` (`regenerate3d`) and `src/core/media/tools/posterframe.ts`; the structural machinery (path building, `files_info` scanning, upload binding, versioning) is shared by all five media models, not duplicated per type. See `engineering/MEDIA_SPEC.md`.
+
+!!! info "About `default_tools`"
+    The list above is what a 3D instance receives in `context.tools` (verified from the model sample `src/core/components/component_3d/samples/context.json`): `tool_media_versions`, `tool_posterframe`, `tool_time_machine` and `tool_upload`. The toolbar is assembled from the model + ontology; nothing hardcodes it. Server-side each of these is a registered module under `tools/tool_media_versions/server/`, `tools/tool_posterframe/server/`, `tools/tool_time_machine/server/`, `tools/tool_upload/server/` (see the *dedalo-tools* skill).
+
+## Definition
+
+`component_3d` manages **3D model files** as a media field of a section. It handles upload, on-disk storage, quality/versioning, a still **posterframe** image (and a raster thumbnail derived from it for list views), and serves the displayable file URL for an interactive WebGL viewer. The client renders the model in `edit` mode with a three.js-based viewer (`core/component_3d/js/viewer/viewer.js`, loaded via the `three` import map); `list`/`tm`/`search` show the lightweight poster/thumb image instead of loading the heavy model.
+
+**Why it exists.** Cultural-heritage collections increasingly include 3D captures of objects — photogrammetry or laser-scan models of sculptures, ceramics, coins, architectural fragments, archaeological finds. These need first-class management (versioned originals, a web-optimised delivery copy, a preview still) exactly like images or audiovisual files, but with a vector/mesh payload and an interactive viewer rather than a flat raster. `component_3d` is the field type for that payload.
+
+**When to use it.**
+
+- A record needs an interactive 3D model the cataloguer uploads and the public can rotate/zoom: *3D model of a statue*, *Scan of a vessel*, *Photogrammetry of a relief*.
+- The source comes from a scanning/modelling pipeline as `.glb`, `.gltf`, `.obj`, `.fbx`, `.dae` (or a `.zip` bundle), and you want Dédalo to keep the original plus a `web` delivery copy and a still preview.
+
+**When not to use it.**
+
+- A flat raster photograph of the object → use `component_image`.
+- Audio or video documentation → use `component_av`.
+- A vector drawing / line art for inline embedding → use [component_svg](component_svg.md).
+- A document (catalogue sheet, report) → use `component_pdf`.
+
+## Data model
+
+**Data:** `array` with a **single item** (`data[0]`). The item is an object that, after `regenerate_component()` runs, carries the source-file descriptors (`original_file_name`, `original_normalized_name`, `original_upload_date`) and the live `files_info` array reconstructed from disk.
+
+**Value:** `string` (the default-quality file URL) or `null`. As with every component the stored unit is an array; the displayable value is derived from it.
+
+**Storage shape.** A component never touches the database directly; it reads and writes through its section, which stores the component data in the section matrix `media` column (`src/core/section/read.ts`, `src/core/section/record/save_component.ts`). For `component_3d` the persisted item describes the **source filenames**, not the renderable files — the renderable picture (`files_info`) is reconstructed at read time by `scanFilesInfo()` (`src/core/media/files_info.ts`), which scans disk per quality and extension, mirroring PHP `get_files_info()`. Because 3D is non-translatable, the single item lives in the `lg-nolan` slot.
+
+Stored item (on disk, before files_info is recomputed — see `core/component_3d/samples/data.json`):
+
+```json
+[
+    {
+        "id": 4,
+        "original_file_name": "venus_statue.glb",
+        "original_normalized_name": "test26_test3_1.glb",
+        "original_upload_date": { "timestamp": "2025-12-25 22:53:39" },
+        "files_info": [
+            { "quality": "original", "extension": "glb", "file_name": "test26_test3_1.glb", "file_path": "/3d/original/0/test26_test3_1.glb", "file_exist": true },
+            { "quality": "web",      "extension": "glb", "file_name": "test26_test3_1.glb", "file_path": "/3d/web/0/test26_test3_1.glb",      "file_exist": true },
+            { "quality": "thumb",    "extension": "jpg", "file_name": "test26_test3_1.jpg", "file_path": "/3d/thumb/0/test26_test3_1.jpg",    "file_exist": true }
+        ]
+    }
+]
+```
+
+API datum (`get_data_item`, surfaced under `data.entries` — see `core/component_3d/samples/api_data.json`): the same item plus a top-level `posterframe_url` and, in `edit` mode, a `media_info` field (the media-streams header, currently `false` for 3D).
+
+!!! note "Naming & storage path"
+    The on-disk filename is deterministic: `id . '.' . extension`, where `id = {component_tipo}_{section_tipo}_{order_id}` (e.g. `test26_test3_1.glb`). The full path is `DEDALO_MEDIA_PATH + folder + initial_media_path + '/' + quality + additional_path + '/' + file_name`. `folder` is `DEDALO_3D_FOLDER` (`/3d`, `config.media.threeD.folder`); `initial_media_path` / `additional_path` come from section/component properties (see *Properties & options*). In the TS server this whole grammar is computed by `buildMediaIdentifier()` / `buildMediaLocation()` (`src/core/media/path.ts`), and every resulting absolute path is confined inside the media root by the single `assertInsideMediaRoot()` chokepoint; the quality string itself is validated by `assertValidQuality()` (`src/core/concepts/media.ts`, SEC-065 strengthened — charset **and** ladder membership, not just charset). The posterframe lives in a sibling `posterframe` quality folder: `DEDALO_3D_FOLDER + '/posterframe' + additional_path + '/' + id . '.jpg'` (`src/core/media/tools/posterframe.ts`).
+
+## Ontology instantiation
+
+A `component_3d` is created as an ontology node whose `model` is `component_3d`. Its `parent` is the section (or grouper) it belongs to, and its `section_tipo` wires it into that section. The node declares its label through the standard `lg-*` terms; it is non-translatable, so `translatable` is `false` (and may be omitted, since media is non-translatable by default).
+
+Node definition (shape):
+
+```json
+{
+    "tipo"         : "test26",
+    "model"        : "component_3d",
+    "parent"       : "test3",
+    "section_tipo" : "test3",
+    "lg-eng"       : "3D model",
+    "lg-spa"       : "Modelo 3D",
+    "translatable" : false,
+    "properties"   : { }
+}
+```
+
+Realistic `properties` block — split the on-disk storage into folders of at most 1000 records and give the field a wide grid span:
+
+```json
+{
+    "max_items_folder" : 1000,
+    "css" : {
+        ".wrapper_component": { "grid-column": "span 12" }
+    }
+}
+```
+
+`section_tipo` / `parent` tell the section which column owns this component's data; on `save()` the component hands its data column to the section, which is the single writer to the database. The 3D **files** themselves are written to disk by the upload pipeline and the conversion hooks, not by the section save.
+
+## Properties & options
+
+All properties are optional and live in the ontology node `properties` JSON. Verified names consumed by `component_3d` / `component_media_common`:
+
+### max_items_folder
+
+- **Values:** integer (commonly `1000`).
+- **Effect:** controls the on-disk fan-out. When no explicit `additional_path` is configured, the bucket is derived as `'/' . max_items_folder * floor(section_id / max_items_folder)` (e.g. record 1 → `/0`, record 1500 → `/1000`). Keeps directories from accumulating an unbounded number of files. Ported as `additionalPath()` in `src/core/media/path.ts`, fed from ontology by `resolveMediaPathOptions()` (`src/core/media/ontology_path.ts`, reading `properties.max_items_folder`). If unset and no `additional_path` is given, no extra subfolder is added.
+
+### additional_path
+
+- **Values:** a component `tipo` (e.g. an `component_input_text` column in the same section).
+- **Effect:** when present, PHP reads that component's value for the current record and uses it (normalised to a leading slash, no trailing slash) as the subfolder appended after the quality folder, taking precedence over `max_items_folder`. `buildMediaLocation()` (`src/core/media/path.ts`) already accepts a pre-resolved `additionalPathOverride`, but `resolveMediaPathOptions()` does **not yet** read a sibling component's value into it — today the TS path builder only honours the `max_items_folder` numeric bucket for `component_3d`. A component configured with `additional_path` instead of (or ahead of) `max_items_folder` will resolve to the wrong bucket until this ontology lookup is wired. Ledgered gap.
+
+### initial_media_path
+
+- **Values:** string (verify in ontology), declared on the **section** node, keyed by component `tipo`.
+- **Effect:** an extra path segment inserted between `folder` and the quality folder. Read by `resolveMediaPathOptions()` (`src/core/media/ontology_path.ts`) from the section's `properties.initial_media_path[component_tipo]` and applied by `buildMediaLocation()` (`src/core/media/path.ts`).
+
+### external_source
+
+- **Values:** a component `tipo` (typically a `component_iri`) in the same section.
+- **Effect:** marks the media as living **outside** Dédalo. `scanFilesInfo()` (`src/core/media/files_info.ts`) already accepts an `externalSource` override and emits the `external:true` entry the same way PHP does, and `resolveMediaToolContext()` reads it for tool calls — but the read path only **surfaces** the resolved `external_source` value on the API datum for `component_image` today (`src/core/section/read.ts`, `resolveExternalSource()`); `component_3d` items do not yet carry it in list/edit reads. Ledgered gap.
+
+### target_filename
+
+- **Values:** a component `tipo` (e.g. a `component_input_text` "Original file name").
+- **Effect:** in PHP, when the stored item has no `original_file_name`, `regenerate_component()` reads this component's value to populate `original_file_name` / `original_normalized_name` / `original_upload_date`. The TS ingest orchestrator (`processUploadedFile()`, `src/core/media/ingest/process_uploaded_file.ts`) records the upload's own filename/date but does **not yet** read or write a `target_filename` sibling component on upload; `target_filename` is honoured today only by the bulk `tool_import_files` matcher (`src/core/tools/import_files_match.ts`). Ledgered gap for the interactive-upload path.
+
+!!! note "Standard context properties"
+    Like every component, `component_3d` also honours the generic ontology context blocks carried into the datum `context`: `css` (style stamped on `.wrapper_component`), `request_config` (RQO) and `view` (the render view to use). These are not component-specific options. Any other custom key seen in production should be verified in the ontology.
+
+!!! info "Qualities are config, not properties"
+    The quality model is fixed in config, not in node `properties`: `DEDALO_3D_AR_QUALITY = ['original','web']`, `DEDALO_3D_QUALITY_ORIGINAL = 'original'`, `DEDALO_3D_QUALITY_DEFAULT = 'web'`, plus a `thumb` quality. Supported upload extensions are `DEDALO_3D_EXTENSIONS_SUPPORTED = ['glb','gltf','obj','fbx','dae','zip']`; the canonical/best delivery extension is `glb` (`DEDALO_3D_EXTENSION`). In the TS server these are read through `mediaTypeOf('component_3d')` (`src/core/concepts/media.ts`), itself built from the env-based config catalog (`config.media.threeD`, `src/config/config.ts`) under the same `DEDALO_*` key names/defaults — never hardcoded in a module body (`engineering/MEDIA_SPEC.md` §3). The `context.features` block the client edit view reads is built separately by `buildMediaFeatures()` (`src/core/section/media_features.ts`), which mirrors the same PHP defaults.
+
+## Render views & modes
+
+Views are selected from `context.view` (default `default`) and dispatched by the per-mode render files. Verified from `core/component_3d/js/`:
+
+| View | edit | list / tm | search | Notes |
+| --- | :---: | :---: | :---: | --- |
+| `default` | yes | yes | yes | edit: full interactive three.js viewer (`view_default_edit_3d`) with quality selector, control buttons and posterframe fallback; list: poster/thumb `<img>` (`view_default_list_3d`); search: a text `input` filter (`render_search_component_3d`). |
+| `line` | yes | — | — | Compact edit variant; the label node is suppressed, otherwise renders the default edit view. |
+| `column` | — | yes | — | Falls through to the `default` list view. |
+| `mini` | — | yes | — | Minimal `<img>` thumbnail (`view_mini_list_3d`), `component_3d_mini`. |
+| `text` | — | yes | — | Small inline `<img>` (`view_text_list_3d`). |
+| `print` | yes | — | — | Reuses the edit render but forces read-only (`permissions = 1`). |
+
+Modes:
+
+- **edit** — read/write. Loads the three.js viewer to display the `web`-quality model interactively; a quality selector lists the existing `glb` files; the posterframe image is the fallback/preview. `tool_upload` binds a new model; `tool_posterframe` captures a still (the client `create_posterframe()` renders the current view to a JPG, uploads it and calls the `dd_component_3d_api::move_file_to_dir` action, which also builds the thumb).
+- **list / tm** — read-only. `tm` (Time Machine) reuses the list render. Both show the still image (thumb, falling back to posterframe), never the heavy model.
+- **search** — builds a simple text filter input; one `input` per filter, publishing `change_search_element`.
+
+DOM (edit / default): `wrapper_component component_3d <tipo> edit media_wrapper` → `label`, `buttons`, `content_data.media_content_data` → `content_value` (canvas viewer + `posterframe` + control buttons).
+
+## Import / export model
+
+**Import.** Media import binds files into the component rather than transmitting binary in the row. A 3D item is described with the same structure as the stored data — `files_info` plus the source-file fields — and the system normalises and generates the qualities on processing:
+
+```json
+[{
+    "original_file_name": "venus_statue.glb",
+    "original_upload_date": "2025-12-25 22:53:39",
+    "files_info": [
+        { "quality": "original", "extension": "glb", "file_name": "test26_test3_1.glb", "file_path": "/3d/original/0/test26_test3_1.glb" }
+    ]
+}]
+```
+
+See [importing data](../importing_data.md).
+
+**Export.** `get_export_value()` emits a **single export atom** carrying the 3D model URL with `cell_type` `img`. In `edit` mode it is the default-quality (`web`) model URL; otherwise it is the **posterframe** URL. URL absoluteness comes from the `export_context` (`absolute_urls`). When the media is external (`external_source`), diffusion/export surface the external URI instead. See [exporting data](../exporting_data.md).
+
+## Notes
+
+- **Conversion pipeline (current state).** Neither PHP nor the TS port transcodes 3D formats: `regenerate3d()` (`src/core/media/processing.ts`) copies the original file to the `web` quality via `copyToQuality()`, matching PHP's `build_version('web')` no-op-conversion. Config still defines converter paths for a future implementation — `DEDALO_3D_GLTFPACK_PATH` (`.obj`/`.gltf` → `.glb`/`.gltf`), `DEDALO_3D_FBX2GLTF_PATH` (`.fbx`), `DEDALO_3D_COLLADA2GLTF_PATH` (`.dae`) — ledgered PHP-dead (never invoked on either engine, `engineering/MEDIA_SPEC.md` §Out-of-scope). Non-`.glb` uploads are stored as-is. The posterframe is generated client-side from the three.js viewer and bound server-side (see below); no server-side 3D screenshot/metadata extraction exists on either engine.
+- **Posterframe & thumb.** The posterframe is a JPG still kept in a `posterframe` quality folder. `create_thumb()` rasterises it (via ImageMagick) into the `thumb` quality used by list/mini/text views — ported as `buildThumb()` (`src/core/media/engine/imagemagick.ts`). `removeSectionMediaFiles` (`src/core/section/record/delete_record.ts`) soft-moves a whole record's media (posterframe included) into `deleted/` on section delete; a component-level `remove_component_media_files()`/`restore_component_media_files()` twin for 3D specifically is covered by the shared `file_ops.ts` primitives (`moveToDeleted`, `listDeletedVersions`) but is not yet wired into the Time Machine restore path for a single component (see the *dedalo-time-machine* note below).
+- **API actions.** The TS server registers the same two `dd_component_3d_api` actions PHP does (`src/core/api/dispatch.ts`): `move_file_to_dir` (binds a client-rendered posterframe snapshot staged upload to the component, write permission ≥ 2 required, then rebuilds derivatives via `moveUploadedToMediaDir()`, `src/core/media/tools/posterframe.ts`) and `delete_posterframe` (`deletePosterframe()`, a true unlink). The model upload itself goes through the shared multipart upload endpoint (`src/core/media/ingest/upload_endpoint.ts`) → `tool_upload.process_uploaded_file` (`tools/tool_upload/server/index.ts`) → `processUploadedFile()` (`src/core/media/ingest/process_uploaded_file.ts`).
+- **Access control.** PHP guards files with `media_protection` (`DEDALO_MEDIA_ACCESS_MODE`: `false` / `private` / `publication`): a daily-rotated `dedalo_media_auth` cookie for logged-in users, `.publication/pub/{section_tipo}_{section_id}` markers for anonymous publication access, enforced fail-closed by the web server. The TS server does **not** yet implement that scheme: today it serves media through a dev-only session-gated route (`src/server.ts`, any authenticated TS session, traversal-guarded, fail-closed 404 for the rest) — production-grade marker/cookie media protection is its own subsystem, out of scope for the media rebuild (see the *dedalo-media-protection* skill).
+- **Default tools.** A 3D instance exposes `tool_media_versions`, `tool_posterframe`, `tool_time_machine` and `tool_upload` in `context.tools`. Tools are read-only context.
+- **Permissions.** Resolved via `getPermissions()` (`src/core/security/permissions.ts`; 0 none / 1 read / 2 read+write / 3 admin). Read users (level 1) get a read-only render; uploads, posterframe writes, deletes and saves require level ≥ 2 — enforced per-action by the tool registry's `minLevel` gate.
+- **Related components:** [component_svg](component_svg.md), `component_image`, `component_av`, `component_pdf` (the other media components — all sharing `src/core/media/*`, not a PHP-style common base class); [component_iri](component_iri.md) (used as `external_source` / `target_filename`), [component_input_text](component_input_text.md).

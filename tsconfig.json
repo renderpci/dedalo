@@ -1,0 +1,22 @@
+{
+	// Based on the proven Bun config of the production diffusion engine
+	// (v7/master_dedalo/diffusion/api/v1/tsconfig.json), with extra strictness
+	// that pays off in a JSONB-heavy codebase (see plan §A1).
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "ES2022",
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
+		"noFallthroughCasesInSwitch": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"noEmit": true,
+		"types": ["bun"]
+	},
+	"include": ["src/**/*.ts", "test/**/*.ts", "scripts/**/*.ts", "tools/**/*.ts"],
+	"exclude": ["node_modules"]
+}

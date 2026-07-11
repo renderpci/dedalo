@@ -1,0 +1,214 @@
+/**
+* functions
+*
+* Common button styles
+*
+* Included from main.less file
+*/
+
+
+// truncate_text
+	.truncate_text(@width) {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		width: @width;
+	}
+
+// fn_build_tag_indexation. indexation tag builder
+	.fn_build_tag_indexation(@bg_color:@color_orange_dedalo, @text_color:var(--fg_inverse)) {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 1.6rem;
+		font-size: 0.85rem;
+		margin-right: 1px;
+		padding-top: 2px;
+		padding-bottom: 2px;
+		padding-left: 5px;
+		padding-right: 0.65rem;
+		background-color: @bg_color;
+		mask-image: radial-gradient(42% 56% ellipse at 129% 50%, transparent 0%, transparent 11px, #ffffff 0.5px);
+		border-bottom-left-radius: 6px;
+		border-top-left-radius: 6px;
+		color: @text_color;
+		cursor: pointer;
+
+		&:active {
+			opacity: 0.5;
+		}
+	}//end .fn_build_tag_indexation(
+
+// fn_build_tag_tc. tc tag builder
+	.fn_build_tag_tc(@bg_color:#000000, @text_color:#00e500) {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background-color: @bg_color;
+		border-radius: 4.5px;
+		color: @text_color;
+		font-size: 0.85rem;
+		padding: 0px;
+		padding-left: 5px;
+		padding-right: 5px;
+		min-width: 20px;
+	}//end .fn_build_tag_tc
+
+// fn_build_tag_note. tc tag builder
+	.fn_build_tag_note(@bg_color:@color_orange_dedalo, @text_color:var(--fg_inverse)) {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		position: relative;
+		background-color: @bg_color;
+		color: @text_color;
+		font-size: 0.85rem;
+		border-radius: 2px;
+		padding: 0px;
+		padding-left: 5px;
+		padding-right: 5px;
+		min-width: 20px;
+		&::before {
+			position: absolute;
+			content: "";
+			border: 4px solid transparent;
+			border-bottom-width: 0px;
+			right: 0px;
+			border-top-color: @bg_color;
+    		top: 10px;
+		}
+	}//end .fn_build_tag_note
+
+	// fn_build_tag_reference. indexation tag builder
+	.fn_build_tag_reference(@bg_color:@color_orange_dedalo, @text_color:var(--fg_inverse)) {
+			display: flex;
+			align-items: center;
+			justify-content: flex-start;
+			min-width: 2.7rem;
+			font-size: 1rem;
+			margin-right: 1px;
+			padding-top: 2px;
+			padding-bottom: 2px;
+			padding-left: 5px;
+			padding-right: .65rem;
+			background-color: @bg_color;
+			border-radius: 9px;
+			color: @text_color;
+			cursor: pointer;
+			background-image: url(../../themes/default/icons/link_white.svg);
+			background-size: 1rem;
+			background-repeat: no-repeat;
+			background-position: right 5px top 2px;
+			padding-right: 1.3rem;
+			flex-wrap: nowrap;
+
+		&:active {
+			opacity: 0.5;
+		}
+	}//end .fn_build_tag_reference
+
+
+	// media_control_buttons_mixin. Shared player control bar for media components
+	// (component_av .av_control_buttons, component_3d .threeD_control_buttons).
+	.media_control_buttons_mixin() {
+		display: flex;
+		flex-wrap: wrap;
+		width: 100%;
+		align-items: center;
+		justify-content: center;
+		padding-bottom: 0.75rem;
+		padding-top: 0.75rem;
+
+		>button {
+			height: 2rem;
+			text-align: center;
+			margin-bottom: 0.25rem;
+			margin-top: 0.25rem;
+
+			&:before {
+				margin: 0px;
+			}
+
+			&:last-of-type {
+				margin-right: 0px;
+			}
+		}
+	}//end .media_control_buttons_mixin
+
+	// media_viewer_download_mixin. Shared floating download button in media
+	// fullscreen viewer (component_image, component_av, component_3d).
+	.media_viewer_download_mixin() {
+		position: fixed;
+		right: 10px;
+		bottom: 10px;
+		z-index: 2;
+		width: 3em;
+		height: 3em;
+		padding: unset;
+		margin: unset;
+
+		&:before {
+			height: 1.5em;
+			width: 1.5em;
+			margin: unset;
+		}
+	}//end .media_viewer_download_mixin
+
+	// media_posterframe_mixin. Shared poster image rendering for media with a
+	// preview frame (component_av, component_3d). Sizing differs per component
+	// and is set by the caller; this covers only the common fit/focus behavior.
+	.media_posterframe_mixin() {
+		max-height: 100%;
+		max-width: 100%;
+		background-repeat: no-repeat;
+		background-size: contain;
+		background-position: center;
+		object-fit: contain;
+		object-position: center;
+		align-self: center;
+
+		// on focus adds a soft shadow and outline
+		&:focus {
+			.hilite_mixin(-1px);
+		}
+	}//end .media_posterframe_mixin
+
+	// media_mini_mixin. Shared inline mini thumbnail for media components
+	// (image, av, 3d, pdf use 2rem; svg passes var(--view_text_height)).
+	.media_mini_mixin(@img_height: 2rem) {
+		display: inline-block;
+		vertical-align: middle;
+
+		img {
+			height: @img_height;
+		}
+	}//end .media_mini_mixin
+
+	// fn_build_tag_draw. indexation tag builder
+	.fn_build_tag_draw(@bg_color:@color_orange_dedalo, @text_color:var(--fg_inverse)) {
+			display: flex;
+			align-items: center;
+			justify-content: flex-start;
+			min-width: 2.7rem;
+			font-size: 1rem;
+			margin-right: 1px;
+			padding-top: 2px;
+			padding-bottom: 2px;
+			padding-left: 5px;
+			padding-right: .65rem;
+			background-color: @bg_color;
+			border-radius: 9px;
+			color: @text_color;
+			cursor: pointer;
+			background-image: url(../../themes/default/icons/eye.svg);
+			background-size: 1rem;
+			background-repeat: no-repeat;
+			background-position: right 5px top 2px;
+			padding-right: 1.3rem;
+			flex-wrap: nowrap;
+
+		&:active {
+			opacity: 0.5;
+		}
+	}//end .fn_build_tag_draw(
+

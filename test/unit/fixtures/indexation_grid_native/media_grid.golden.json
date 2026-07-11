@@ -1,0 +1,285 @@
+[
+	{
+		"id": null,
+		"class_list": null,
+		"type": "row",
+		"label": null,
+		"row_count": 1,
+		"column_count": null,
+		"column_labels": null,
+		"fields_separator": null,
+		"records_separator": null,
+		"cell_type": null,
+		"action": null,
+		"value": [
+			{
+				"id": null,
+				"class_list": "caption section numisdata5 tch",
+				"type": "column",
+				"label": "Complejo",
+				"row_count": null,
+				"column_count": null,
+				"column_labels": null,
+				"fields_separator": null,
+				"records_separator": null,
+				"cell_type": null,
+				"action": null,
+				"value": [
+					{
+						"id": null,
+						"class_list": "line tch",
+						"type": "row",
+						"label": null,
+						"row_count": 1,
+						"column_count": null,
+						"column_labels": null,
+						"fields_separator": null,
+						"records_separator": null,
+						"cell_type": null,
+						"action": null,
+						"value": [
+							{
+								"id": null,
+								"class_list": null,
+								"type": "column",
+								"label": "Id",
+								"row_count": 1,
+								"column_count": null,
+								"column_labels": null,
+								"fields_separator": ", ",
+								"records_separator": " | ",
+								"cell_type": "section_id",
+								"action": null,
+								"value": [90002],
+								"fallback_value": [],
+								"data": null,
+								"render_label": null,
+								"column": null,
+								"ar_columns_obj": [
+									{
+										"id": "numisdata5_numisdata210"
+									}
+								],
+								"features": null,
+								"model": "component_section_id"
+							},
+							{
+								"id": null,
+								"class_list": null,
+								"type": "column",
+								"label": "Imagen identificativa",
+								"row_count": 1,
+								"column_count": 1,
+								"column_labels": null,
+								"fields_separator": ", ",
+								"records_separator": " | ",
+								"cell_type": null,
+								"action": null,
+								"value": [
+									{
+										"id": null,
+										"class_list": null,
+										"type": "row",
+										"label": null,
+										"row_count": null,
+										"column_count": null,
+										"column_labels": null,
+										"fields_separator": null,
+										"records_separator": null,
+										"cell_type": null,
+										"action": null,
+										"value": [
+											{
+												"id": null,
+												"class_list": null,
+												"type": "column",
+												"label": "Imagen",
+												"row_count": null,
+												"column_count": null,
+												"column_labels": null,
+												"fields_separator": ", ",
+												"records_separator": " | ",
+												"cell_type": "img",
+												"action": null,
+												"value": ["/dedalo/media/image/thumb/90000000/rsc29_rsc170_90000002.jpg"],
+												"fallback_value": [],
+												"data": null,
+												"render_label": null,
+												"column": null,
+												"ar_columns_obj": [
+													{
+														"id": "numisdata5_numisdata1100_rsc170_rsc29",
+														"group": "numisdata5_numisdata1100_rsc170"
+													}
+												],
+												"features": null,
+												"model": "component_image"
+											}
+										],
+										"fallback_value": null,
+										"data": null,
+										"render_label": null,
+										"column": null,
+										"ar_columns_obj": null,
+										"features": null,
+										"model": null
+									}
+								],
+								"fallback_value": null,
+								"data": null,
+								"render_label": null,
+								"column": null,
+								"ar_columns_obj": [
+									{
+										"id": "numisdata5_numisdata1100_rsc170_rsc29",
+										"group": "numisdata5_numisdata1100_rsc170"
+									}
+								],
+								"features": null,
+								"model": "component_portal"
+							},
+							{
+								"id": null,
+								"class_list": null,
+								"type": "column",
+								"label": "Nombre",
+								"row_count": null,
+								"column_count": null,
+								"column_labels": null,
+								"fields_separator": ", ",
+								"records_separator": " | ",
+								"cell_type": "text",
+								"action": null,
+								"value": [],
+								"fallback_value": [],
+								"data": null,
+								"render_label": null,
+								"column": null,
+								"ar_columns_obj": [
+									{
+										"id": "numisdata5_numisdata211"
+									}
+								],
+								"features": null,
+								"model": "component_input_text"
+							},
+							{
+								"id": null,
+								"class_list": null,
+								"type": "column",
+								"label": "Marco temporal",
+								"row_count": null,
+								"column_count": null,
+								"column_labels": null,
+								"fields_separator": ", ",
+								"records_separator": " | ",
+								"cell_type": "text",
+								"action": null,
+								"value": [],
+								"fallback_value": [],
+								"data": null,
+								"render_label": null,
+								"column": null,
+								"ar_columns_obj": [
+									{
+										"id": "numisdata5_numisdata214"
+									}
+								],
+								"features": null,
+								"model": "component_date"
+							},
+							{
+								"id": null,
+								"class_list": null,
+								"type": "column",
+								"label": "Código anterior",
+								"row_count": null,
+								"column_count": null,
+								"column_labels": null,
+								"fields_separator": ", ",
+								"records_separator": " | ",
+								"cell_type": "text",
+								"action": null,
+								"value": [],
+								"fallback_value": [],
+								"data": null,
+								"render_label": null,
+								"column": null,
+								"ar_columns_obj": [
+									{
+										"id": "numisdata5_numisdata1192"
+									}
+								],
+								"features": null,
+								"model": "component_input_text"
+							},
+							{
+								"id": null,
+								"class_list": null,
+								"type": "column",
+								"label": "Periodo",
+								"row_count": 1,
+								"column_count": 0,
+								"column_labels": null,
+								"fields_separator": " - ",
+								"records_separator": " | ",
+								"cell_type": null,
+								"action": null,
+								"value": [],
+								"fallback_value": null,
+								"data": null,
+								"render_label": null,
+								"column": null,
+								"ar_columns_obj": [],
+								"features": null,
+								"model": "component_portal"
+							},
+							{
+								"id": null,
+								"class_list": null,
+								"type": "column",
+								"label": "Hallazgo",
+								"row_count": 1,
+								"column_count": 0,
+								"column_labels": null,
+								"fields_separator": ", ",
+								"records_separator": " | ",
+								"cell_type": null,
+								"action": null,
+								"value": [],
+								"fallback_value": null,
+								"data": null,
+								"render_label": null,
+								"column": null,
+								"ar_columns_obj": [],
+								"features": null,
+								"model": "component_portal"
+							}
+						],
+						"fallback_value": null,
+						"data": null,
+						"render_label": false,
+						"column": null,
+						"ar_columns_obj": null,
+						"features": null,
+						"model": null
+					}
+				],
+				"fallback_value": null,
+				"data": null,
+				"render_label": true,
+				"column": null,
+				"ar_columns_obj": null,
+				"features": null,
+				"model": null
+			}
+		],
+		"fallback_value": null,
+		"data": null,
+		"render_label": null,
+		"column": null,
+		"ar_columns_obj": null,
+		"features": null,
+		"model": null
+	}
+]

@@ -1,0 +1,84 @@
+/**
+* TOOL_DD_LABEL
+*
+* Loaded on tool init
+*/
+
+// imports
+@import (once) '../../../core/page/css/layout/vars';
+
+// local vars
+:root {
+	--tool_dd_label: #818181;
+	--tool_dd_label_border: #5b5b5b;
+}
+@tool_color : var(--tool_dd_label);
+
+// tool wrapper
+// Encapsulate all tool content to prevent core collisions
+.wrapper_tool.tool_dd_label {
+
+	.spinner {
+		background-color: @tool_color;
+	}
+
+	>.content_data {
+
+		>.label_matix {
+			display: grid;
+			margin-top: 1rem;
+
+			>.row {
+				display: contents;
+
+				>* {
+					align-items: center;
+					justify-items: center;
+					word-break: break-word;
+					padding: 0.25rem;
+				}
+
+				>.button {
+					margin-top: 0.25rem;
+				}
+
+				&.label_header {
+					>.button {
+						padding: 0.6em;
+						margin-top: 0.5rem;
+					}
+					>.label {
+						padding: 0.6em;
+						text-align: center;
+						background-color: @tool_color;
+						color: @color_white;
+						font-weight: 400;
+						z-index: 2;
+						border-right: 1px solid @color_white;
+
+						&.name {
+							background-color: var(--tool_dd_label_border);
+						}
+					}
+				}
+
+				&.label_data {
+					// system info
+					>.label {
+						border: 1px solid @color_grey_7;
+
+						&[contentEditable=true]:empty:not(:focus):before{
+						    content:attr(data-placeholder);
+							color: @color_grey_11;
+						}
+					}
+				}
+			}
+		}//end >.label_matix
+	}//end content_data
+}//end .wrapper_tool.tool_dd_label
+
+// modal header tool modification
+.tool_header.tool_dd_label {
+	background-color: @tool_color;
+}

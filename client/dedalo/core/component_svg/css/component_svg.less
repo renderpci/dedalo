@@ -1,0 +1,94 @@
+/**
+* component_svg
+*
+* Included from main.less file
+*/
+.component_svg {
+
+	&.edit {
+
+		>.content_data {
+
+			// sqg container
+			>.content_value {
+
+				// image container
+				>.image_container {
+					height: 100%;
+					max-height: 100%;
+					// reserve space while the lazy-loaded svg is still loading, so the
+					// wrapper does not collapse to ~0 height and then jump on load. This
+					// prevents layout shift and keeps the restore-scroll on the selected
+					// component accurate. Matches component_pdf / component_json behavior.
+					min-height: var(--media_min_height);
+					width: 100%;
+					position: relative;
+					display: flex;
+					justify-content: center;
+				}
+
+				// img
+				>.image.svg_element {
+					padding: 0px;
+					height: 100%;
+					max-height: 100%;
+					max-width: 100%;
+					object-fit: contain;
+					object-position: center;
+				}
+			}
+		}
+	}
+
+	&.list {
+
+		>.content_data {
+
+			>img {
+				padding: 0.33rem !important;
+			}
+		}
+	}
+
+	&.view_viewer {
+
+		.content_data {
+
+			.content_value {
+				height: var(--media_viewer_height);
+			}
+		}
+	}
+
+	&.view_line {
+
+		&.list {
+			height: var(--view_text_height); //	2rem;
+		}
+		&.edit {
+			max-height: 15rem;
+			display: inline-block;
+			img {
+				height: 100%;
+				max-height: 15rem;
+				max-width: 100%;
+				object-fit: contain;
+				object-position: center;
+			}
+		}
+	}
+
+	// with suffix _mini like 'component_svg_mini'
+	&_mini {
+		.media_mini_mixin(var(--view_text_height));
+	}
+
+	&.view_tag {
+		img {
+			width: 100%;
+			height: 100%;
+			object-fit: contain;
+		}
+	}
+
+}//end .component_svg

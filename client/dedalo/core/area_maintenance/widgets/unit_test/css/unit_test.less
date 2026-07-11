@@ -1,0 +1,40 @@
+/**
+* unit_test
+*
+* Included from area_maintenance.less file.
+* Long-process stream and test-module list rendered as console blocks.
+*/
+.wrapper_widget.unit_test {
+
+	.long_process_container {
+		margin-bottom: 1.25rem;
+
+		.info_text {
+			margin: 0 0.5rem;
+			color: var(--fg_muted);
+		}
+
+		.input_update_rate {
+			width: 4rem;
+			text-align: center;
+		}
+
+		.long_process_response {
+			.dd_console();
+			margin-top: 1rem;
+			max-height: 16rem;
+			overflow: auto;
+
+			&:empty {
+				display: none;
+			}
+		}
+	}
+
+	.list_of_test {
+		.dd_console();
+		margin-top: 0.75rem;
+		max-height: 16rem;
+		overflow: auto;
+	}
+}//end unit_test

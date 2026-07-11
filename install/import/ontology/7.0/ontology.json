@@ -1,0 +1,1258 @@
+{
+    "date": "2026-07-10T11:15:08+02:00",
+    "host": "",
+    "entity": "monedaiberica",
+    "version": "7.0.0",
+    "entity_id": 10,
+    "entity_label": "monedaiberica",
+    "active_ontologies": [
+        {
+            "tld": "ontologytype",
+            "name": "Tipologías de ontología | ontologytype",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "Tipologías de ontología | ontologytype"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-eng",
+                    "value": "Ontology typologies | ontologytype"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-deu",
+                    "value": "Ontologie-Typen | ontologytype"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-fra",
+                    "value": "Types d'ontologie | ontologytype"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-ita",
+                    "value": "Tipi di ontologia | ontologytype"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-cat",
+                    "value": "Tipus d'ontologia | ontologytype"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-ell",
+                    "value": "Τύποι οντολογίας | ontologytype"
+                }
+            ],
+            "typology_id": 1,
+            "typology_name": "Temáticas"
+        },
+        {
+            "tld": "dd",
+            "name": "Dédalo | dd",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-cat",
+                    "value": "Dédalo | dd"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-deu",
+                    "value": "Dédalo | dd"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-eng",
+                    "value": "Dédalo | dd"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-fra",
+                    "value": "Dédalo | dd"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-ita",
+                    "value": "Dédalo | dd"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "Dédalo | dd"
+                }
+            ],
+            "typology_id": 14,
+            "typology_name": "Núcleo"
+        },
+        {
+            "tld": "hierarchy",
+            "name": "Jerarquía | hierarchy",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-eng",
+                    "value": "Hierarchy | hierarchy"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "Jerarquía | hierarchy"
+                }
+            ],
+            "typology_id": 14,
+            "typology_name": "Núcleo"
+        },
+        {
+            "tld": "lg",
+            "name": "Lenguajes | lg",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-eng",
+                    "value": "Languages | lg"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "Lenguajes | lg"
+                }
+            ],
+            "typology_id": 3,
+            "typology_name": "Lenguajes"
+        },
+        {
+            "tld": "nexus",
+            "name": "Nexo | nexus",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-eng",
+                    "value": "Nexus | nexus"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "Nexo | nexus"
+                }
+            ],
+            "typology_id": 14,
+            "typology_name": "Núcleo"
+        },
+        {
+            "tld": "ontology",
+            "name": "Ontología | ontology",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-eng",
+                    "value": "Ontology | ontology"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "Ontología | ontology"
+                }
+            ],
+            "typology_id": 14,
+            "typology_name": "Núcleo"
+        },
+        {
+            "tld": "rsc",
+            "name": "Recurso | rsc",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-eng",
+                    "value": "Resource | rsc"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "Recurso | rsc"
+                }
+            ],
+            "typology_id": 14,
+            "typology_name": "Núcleo"
+        },
+        {
+            "tld": "test",
+            "name": "Test | test",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-eng",
+                    "value": "Test | test"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "Test | test"
+                }
+            ],
+            "typology_id": 5,
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "ww",
+            "name": "Web | ww",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-eng",
+                    "value": "Web | ww"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "Web | ww"
+                }
+            ],
+            "typology_id": 5,
+            "typology_name": "Especial"
+        },
+        {
+            "tld": "actv",
+            "name": "Actividad | actv",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-eng",
+                    "value": "Activity | actv"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "Actividad | actv"
+                }
+            ],
+            "typology_id": 12,
+            "typology_name": "Actividades"
+        },
+        {
+            "tld": "dmm",
+            "name": "Memoria democrática | dmm",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-eng",
+                    "value": "Democratic memory | dmm"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "Memoria democrática | dmm"
+                }
+            ],
+            "typology_id": 8,
+            "typology_name": "Catálogo"
+        },
+        {
+            "tld": "ich",
+            "name": "Patrimonio cultural inmaterial | ich",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-eng",
+                    "value": "Intangible cultural heritage | ich"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "Patrimonio cultural inmaterial | ich"
+                }
+            ],
+            "typology_id": 8,
+            "typology_name": "Catálogo"
+        },
+        {
+            "tld": "isad",
+            "name": "ISAD(g) | isad",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-eng",
+                    "value": "ISAD(g) | isad"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "ISAD(g) | isad"
+                }
+            ],
+            "typology_id": 8,
+            "typology_name": "Catálogo"
+        },
+        {
+            "tld": "numisdata",
+            "name": "Patrimonio numismático | numisdata",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-eng",
+                    "value": "Numismatic heritage | numisdata"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "Patrimonio numismático | numisdata"
+                }
+            ],
+            "typology_id": 8,
+            "typology_name": "Catálogo"
+        },
+        {
+            "tld": "tch",
+            "name": "Patrimonio cultural material | tch",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-eng",
+                    "value": "Tangible cultural heritage | tch"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "Patrimonio cultural material | tch"
+                }
+            ],
+            "typology_id": 8,
+            "typology_name": "Catálogo"
+        },
+        {
+            "tld": "tchi",
+            "name": "Patrimonio cultural material inmueble | tchi",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-eng",
+                    "value": "Tangible cultural heritage, Immovable | tchi"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "Patrimonio cultural material inmueble | tchi"
+                }
+            ],
+            "typology_id": 8,
+            "typology_name": "Catálogo"
+        },
+        {
+            "tld": "zenon",
+            "name": "Zenon | zenon",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-eng",
+                    "value": "Zenon | zenon"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "Zenon | zenon"
+                }
+            ],
+            "typology_id": 8,
+            "typology_name": "Catálogo"
+        },
+        {
+            "tld": "category",
+            "name": "category",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "category"
+                }
+            ],
+            "typology_id": 1,
+            "typology_name": "Temáticas"
+        },
+        {
+            "tld": "ceramics",
+            "name": "ceramics",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "ceramics"
+                }
+            ],
+            "typology_id": 1,
+            "typology_name": "Temáticas"
+        },
+        {
+            "tld": "dc",
+            "name": "Chronology",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "Chronology"
+                }
+            ],
+            "typology_id": 1,
+            "typology_name": "Temáticas"
+        },
+        {
+            "tld": "deposit",
+            "name": "deposit",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "deposit"
+                }
+            ],
+            "typology_id": 1,
+            "typology_name": "Temáticas"
+        },
+        {
+            "tld": "ds",
+            "name": "ds",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "ds"
+                }
+            ],
+            "typology_id": 4,
+            "typology_name": "Semánticas"
+        },
+        {
+            "tld": "emakumeak",
+            "name": "emakumeak",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "emakumeak"
+                }
+            ],
+            "typology_id": 8,
+            "typology_name": "Catálogo"
+        },
+        {
+            "tld": "es",
+            "name": "es",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "es"
+                }
+            ],
+            "typology_id": 2,
+            "typology_name": "Toponimias"
+        },
+        {
+            "tld": "excavation",
+            "name": "excavation",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "excavation"
+                }
+            ],
+            "typology_id": 12,
+            "typology_name": "Actividades"
+        },
+        {
+            "tld": "material",
+            "name": "material",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "material"
+                }
+            ],
+            "typology_id": 11,
+            "typology_name": "Tipología"
+        },
+        {
+            "tld": "mht",
+            "name": "mht",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "mht"
+                }
+            ],
+            "typology_id": 8,
+            "typology_name": "Catálogo"
+        },
+        {
+            "tld": "mupreva",
+            "name": "mupreva",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "mupreva"
+                }
+            ],
+            "typology_id": 8,
+            "typology_name": "Catálogo"
+        },
+        {
+            "tld": "murapa",
+            "name": "murapa",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "murapa"
+                }
+            ],
+            "typology_id": 8,
+            "typology_name": "Catálogo"
+        },
+        {
+            "tld": "numisdatacatalog",
+            "name": "numisdatacatalog",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "numisdatacatalog"
+                }
+            ],
+            "typology_id": 8,
+            "typology_name": "Catálogo"
+        },
+        {
+            "tld": "object",
+            "name": "object",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "object"
+                }
+            ],
+            "typology_id": 11,
+            "typology_name": "Tipología"
+        },
+        {
+            "tld": "places",
+            "name": "places",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "places"
+                }
+            ],
+            "typology_id": 9,
+            "typology_name": "Ubicaciones"
+        },
+        {
+            "tld": "resanalysis",
+            "name": "resanalysis",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "resanalysis"
+                }
+            ],
+            "typology_id": 10,
+            "typology_name": "Laboratorio | Restauración"
+        },
+        {
+            "tld": "rescause",
+            "name": "rescause",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "rescause"
+                }
+            ],
+            "typology_id": 10,
+            "typology_name": "Laboratorio | Restauración"
+        },
+        {
+            "tld": "rolejob",
+            "name": "rolejob",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "rolejob"
+                }
+            ],
+            "typology_id": 4,
+            "typology_name": "Semánticas"
+        },
+        {
+            "tld": "technique",
+            "name": "technique",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "technique"
+                }
+            ],
+            "typology_id": 1,
+            "typology_name": "Temáticas"
+        },
+        {
+            "tld": "ts",
+            "name": "ts",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "ts"
+                }
+            ],
+            "typology_id": 1,
+            "typology_name": "Temáticas"
+        },
+        {
+            "tld": "ubication",
+            "name": "ubication",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "ubication"
+                }
+            ],
+            "typology_id": 9,
+            "typology_name": "Ubicaciones"
+        },
+        {
+            "tld": "utoponymy",
+            "name": "utoponymy",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "utoponymy"
+                }
+            ],
+            "typology_id": 2,
+            "typology_name": "Toponimias"
+        },
+        {
+            "tld": "www",
+            "name": "www",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "www"
+                }
+            ],
+            "typology_id": 6,
+            "typology_name": "Sítios web"
+        },
+        {
+            "tld": "oh",
+            "name": "Historia Oral | oh",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-eng",
+                    "value": "Oral History | oh"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "Historia Oral | oh"
+                }
+            ],
+            "typology_id": 8,
+            "typology_name": "Catálogo"
+        },
+        {
+            "tld": "cont",
+            "name": "cont",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "cont"
+                }
+            ],
+            "typology_id": 1,
+            "typology_name": "Temáticas"
+        },
+        {
+            "tld": "cult",
+            "name": "cult",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "cult"
+                }
+            ],
+            "typology_id": 1,
+            "typology_name": "Temáticas"
+        },
+        {
+            "tld": "culture",
+            "name": "culture",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "culture"
+                }
+            ],
+            "typology_id": 1,
+            "typology_name": "Temáticas"
+        },
+        {
+            "tld": "depositiontype",
+            "name": "depositiontype",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "depositiontype"
+                }
+            ],
+            "typology_id": 1,
+            "typology_name": "Temáticas"
+        },
+        {
+            "tld": "discoverytype",
+            "name": "discoverytype",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "discoverytype"
+                }
+            ],
+            "typology_id": 1,
+            "typology_name": "Temáticas"
+        },
+        {
+            "tld": "fr",
+            "name": "fr",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "fr"
+                }
+            ],
+            "typology_id": 2,
+            "typology_name": "Toponimias"
+        },
+        {
+            "tld": "grup",
+            "name": "grup",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "grup"
+                }
+            ],
+            "typology_id": 1,
+            "typology_name": "Temáticas"
+        },
+        {
+            "tld": "htoponymy",
+            "name": "htoponymy",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "htoponymy"
+                }
+            ],
+            "typology_id": 2,
+            "typology_name": "Toponimias"
+        },
+        {
+            "tld": "icon",
+            "name": "icon",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "icon"
+                }
+            ],
+            "typology_id": 1,
+            "typology_name": "Temáticas"
+        },
+        {
+            "tld": "it",
+            "name": "it",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "it"
+                }
+            ],
+            "typology_id": 2,
+            "typology_name": "Toponimias"
+        },
+        {
+            "tld": "ma",
+            "name": "ma",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "ma"
+                }
+            ],
+            "typology_id": 2,
+            "typology_name": "Toponimias"
+        },
+        {
+            "tld": "objet",
+            "name": "objet",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "objet"
+                }
+            ],
+            "typology_id": null,
+            "typology_name": null
+        },
+        {
+            "tld": "on",
+            "name": "on",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "on"
+                }
+            ],
+            "typology_id": 1,
+            "typology_name": "Temáticas"
+        },
+        {
+            "tld": "peri",
+            "name": "peri",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "peri"
+                }
+            ],
+            "typology_id": 1,
+            "typology_name": "Temáticas"
+        },
+        {
+            "tld": "pt",
+            "name": "pt",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "pt"
+                }
+            ],
+            "typology_id": 2,
+            "typology_name": "Toponimias"
+        },
+        {
+            "tld": "rolepos",
+            "name": "rolepos",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "rolepos"
+                }
+            ],
+            "typology_id": 4,
+            "typology_name": "Semánticas"
+        },
+        {
+            "tld": "roleusr",
+            "name": "roleusr",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "roleusr"
+                }
+            ],
+            "typology_id": 4,
+            "typology_name": "Semánticas"
+        },
+        {
+            "tld": "sccmk",
+            "name": "sccmk",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "sccmk"
+                }
+            ],
+            "typology_id": 7,
+            "typology_name": "Epigrafía"
+        },
+        {
+            "tld": "scell",
+            "name": "scell",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "scell"
+                }
+            ],
+            "typology_id": 7,
+            "typology_name": "Epigrafía"
+        },
+        {
+            "tld": "sclat",
+            "name": "sclat",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "sclat"
+                }
+            ],
+            "typology_id": 7,
+            "typology_name": "Epigrafía"
+        },
+        {
+            "tld": "scsym",
+            "name": "scsym",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "scsym"
+                }
+            ],
+            "typology_id": 7,
+            "typology_name": "Epigrafía"
+        },
+        {
+            "tld": "sctxr",
+            "name": "sctxr",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "sctxr"
+                }
+            ],
+            "typology_id": 7,
+            "typology_name": "Epigrafía"
+        },
+        {
+            "tld": "scxibm",
+            "name": "scxibm",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "scxibm"
+                }
+            ],
+            "typology_id": 7,
+            "typology_name": "Epigrafía"
+        },
+        {
+            "tld": "scxibo",
+            "name": "scxibo",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "scxibo"
+                }
+            ],
+            "typology_id": 7,
+            "typology_name": "Epigrafía"
+        },
+        {
+            "tld": "scxpu",
+            "name": "scxpu",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "scxpu"
+                }
+            ],
+            "typology_id": 7,
+            "typology_name": "Epigrafía"
+        },
+        {
+            "tld": "seri",
+            "name": "seri",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "seri"
+                }
+            ],
+            "typology_id": 1,
+            "typology_name": "Temáticas"
+        },
+        {
+            "tld": "tema",
+            "name": "tema",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "tema"
+                }
+            ],
+            "typology_id": 1,
+            "typology_name": "Temáticas"
+        },
+        {
+            "tld": "terr",
+            "name": "terr",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "terr"
+                }
+            ],
+            "typology_id": 2,
+            "typology_name": "Toponimias"
+        },
+        {
+            "tld": "tn",
+            "name": "tn",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "tn"
+                }
+            ],
+            "typology_id": 2,
+            "typology_name": "Toponimias"
+        },
+        {
+            "tld": "uncertainty",
+            "name": "uncertainty",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "uncertainty"
+                }
+            ],
+            "typology_id": 4,
+            "typology_name": "Semánticas"
+        },
+        {
+            "tld": "special",
+            "name": "special",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "special"
+                }
+            ],
+            "typology_id": 15,
+            "typology_name": "Otros"
+        },
+        {
+            "tld": "hierarchytype",
+            "name": "Tipologías de jerarquía | hierarchytype",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "Tipologías de jerarquía | hierarchytype"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-eng",
+                    "value": "Hierarchy typologies | hierarchytype"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-deu",
+                    "value": "Typologien der Hierarchie | hierarchytype"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-fra",
+                    "value": "Typologies hiérarchiques | hierarchytype"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-ita",
+                    "value": "Tipologie di gerarchia | hierarchytype"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-cat",
+                    "value": "Tipus de jerarquies | hierarchytype"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-ell",
+                    "value": "Τυπολογίες ιεραρχίας | hierarchytype"
+                }
+            ],
+            "typology_id": 1,
+            "typology_name": "Temáticas"
+        },
+        {
+            "tld": "hierarchymtype",
+            "name": "Tipologías de jerarquía [m] | hierarchymtype",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "Tipologías de jerarquía [m] | hierarchymtype"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-eng",
+                    "value": "Hierarchy typologies [m] | hierarchymtype"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-deu",
+                    "value": "Typologien der Hierarchie [m] | hierarchymtype"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-fra",
+                    "value": "Typologies hiérarchiques [m] | hierarchymtype"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-ita",
+                    "value": "Tipologie di gerarchia [m] | hierarchymtype"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-cat",
+                    "value": "Tipus de jerarquies [m] | hierarchymtype"
+                },
+                {
+                    "id": 1,
+                    "lang": "lg-ell",
+                    "value": "Τυπολογίες ιεραρχίας [m] | hierarchymtype"
+                }
+            ],
+            "typology_id": 1,
+            "typology_name": "Temáticas"
+        },
+        {
+            "tld": "flora",
+            "name": "flora",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "flora"
+                }
+            ],
+            "typology_id": 15,
+            "typology_name": "Otros"
+        },
+        {
+            "tld": "fauna",
+            "name": "fauna",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "fauna"
+                }
+            ],
+            "typology_id": 15,
+            "typology_name": "Otros"
+        },
+        {
+            "tld": "navarra",
+            "name": "navarra",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "navarra"
+                }
+            ],
+            "typology_id": 15,
+            "typology_name": "Otros"
+        },
+        {
+            "tld": "af",
+            "name": "af",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "af"
+                }
+            ],
+            "typology_id": 15,
+            "typology_name": "Otros"
+        },
+        {
+            "tld": "ru",
+            "name": "ru",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "ru"
+                }
+            ],
+            "typology_id": 15,
+            "typology_name": "Otros"
+        },
+        {
+            "tld": "xk",
+            "name": "xk",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "xk"
+                }
+            ],
+            "typology_id": 15,
+            "typology_name": "Otros"
+        },
+        {
+            "tld": "render",
+            "name": "render",
+            "name_data": [
+                {
+                    "id": 1,
+                    "lang": "lg-spa",
+                    "value": "render"
+                }
+            ],
+            "typology_id": 15,
+            "typology_name": "Otros"
+        }
+    ]
+}

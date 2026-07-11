@@ -1,0 +1,107 @@
+/**
+ * Phase B differential gate: the files_info SCANNER round-trips REAL stored
+ * data. The physical media files are not synced to this dev box (DB only), so
+ * we use the live stored `files_info` (rsc29 images in rsc170) as the ORACLE:
+ * materialize a scratch tree matching each stored entry (size + mtime), scan it
+ * with scanFilesInfo, and assert the scan reproduces the stored entries exactly
+ * (path grammar, size, dd_date file_time, quality, extension). This proves the
+ * scanner reconstructs the byte-compatible index from disk without needing the
+ * real media files.
+ *
+ * The path-options oracle (max_items_folder=1000, no initial_media_path) is
+ * resolved from the live ontology — its bucket (e.g. /373000 for id 373733)
+ * matches the stored file_path, cross-checking the path builder too.
+ */
+
+import { afterAll, describe, expect, test } from 'bun:test';
+import { mkdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { mediaTypeOf } from '../../src/core/concepts/media.ts';
+import { sql } from '../../src/core/db/postgres.ts';
+import { scanFilesInfo } from '../../src/core/media/files_info.ts';
+import { resolveMediaPathOptions } from '../../src/core/media/ontology_path.ts';
+
+const ROOT = `${tmpdir()}/dedalo_media_fi_diff_${process.pid}`;
+const image = mediaTypeOf('component_image')!;
+
+interface StoredEntry {
+	quality: string;
+	extension: string;
+	file_name: string;
+	file_path: string;
+	file_size: number;
+	file_time: { timestamp: string } & Record<string, number | string>;
+	file_exist: boolean;
+}
+
+afterAll(() => {
+	rmSync(ROOT, { recursive: true, force: true });
+});
+
+/** Fetch a few real rsc170 image records that carry files_info. */
+async function fetchRealMediaRecords(
+	limit: number,
+): Promise<{ sectionId: number; item: Record<string, unknown> }[]> {
+	const rows = (await sql.unsafe(
+		`SELECT section_id, media->'rsc29'->0 AS item
+		 FROM matrix
+		 WHERE section_tipo = 'rsc170' AND media IS NOT NULL
+		   AND media->'rsc29'->0->'files_info' IS NOT NULL
+		 LIMIT ${limit}`,
+	)) as { section_id: number; item: Record<string, unknown> }[];
+	return rows.map((r) => ({ sectionId: Number(r.section_id), item: r.item }));
+}
+
+/** Materialize each stored files_info entry as a scratch file (size + mtime). */
+function materialize(entries: StoredEntry[]): void {
+	for (const entry of entries) {
+		if (!entry.file_exist || !entry.file_path) continue;
+		const abs = `${ROOT}${entry.file_path}`;
+		mkdirSync(abs.slice(0, abs.lastIndexOf('/')), { recursive: true });
+		// Write exactly file_size bytes so the scan reproduces the stored size.
+		writeFileSync(abs, Buffer.alloc(entry.file_size, 0x20));
+		// Set mtime from the stored dd_date timestamp so the scan reproduces file_time.
+		const mtime = new Date(entry.file_time.timestamp.replace(' ', 'T'));
+		utimesSync(abs, mtime, mtime);
+	}
+}
+
+describe('files_info scanner — round-trips real stored data (Phase B oracle)', () => {
+	test('scan of a materialized scratch tree reproduces the stored files_info', async () => {
+		const records = await fetchRealMediaRecords(5);
+		expect(records.length).toBeGreaterThan(0);
+		const pathOpts = await resolveMediaPathOptions('rsc29', 'rsc170');
+		expect(pathOpts.maxItemsFolder).toBe(1000);
+
+		for (const { sectionId, item } of records) {
+			const stored = (item.files_info as StoredEntry[]).filter((e) => e.file_exist);
+			if (stored.length === 0) continue;
+			materialize(stored);
+
+			const scanned = scanFilesInfo(
+				image,
+				{ componentTipo: 'rsc29', sectionTipo: 'rsc170', sectionId, lang: null },
+				{ ...pathOpts, mediaRoot: ROOT },
+				{
+					originalNormalizedName: (item.original_normalized_name as string) ?? null,
+					modifiedNormalizedName: (item.modified_normalized_name as string) ?? null,
+				},
+			);
+
+			// Every stored entry must be reproduced with identical shape.
+			for (const s of stored) {
+				const match = scanned.find((e) => e.file_path === s.file_path);
+				expect(match, `missing scan for ${s.file_path}`).toBeDefined();
+				expect(match!.quality).toBe(s.quality);
+				expect(match!.extension).toBe(s.extension);
+				expect(match!.file_name).toBe(s.file_name);
+				expect(match!.file_size).toBe(s.file_size);
+				expect(match!.file_exist).toBe(true);
+				// dd_date file_time byte-equal (virtual-calendar 'time' included).
+				expect(match!.file_time).toEqual(s.file_time as never);
+			}
+			// No phantom entries: the scan emits exactly the materialized files.
+			expect(scanned.length).toBe(stored.length);
+		}
+	});
+});

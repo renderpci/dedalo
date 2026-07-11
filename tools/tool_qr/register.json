@@ -1,0 +1,277 @@
+{
+  "id": "3985",
+  "section_id": "30",
+  "section_tipo": "dd1340",
+  "data": {
+    "label": "Tools development",
+    "section_id": 30,
+    "created_date": "2026-06-18 11:43:42",
+    "section_tipo": "dd1340",
+    "diffusion_info": null,
+    "created_by_user_id": -1
+  },
+  "relation": {
+    "dd197": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd197"
+      }
+    ],
+    "dd200": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd200"
+      }
+    ],
+    "dd1331": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1331"
+      }
+    ],
+    "dd1332": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1332"
+      }
+    ],
+    "dd1333": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1333"
+      }
+    ],
+    "dd1337": [
+      {
+        "id": 1,
+        "type": "dd675",
+        "section_id": "1",
+        "section_tipo": "dd153",
+        "from_component_tipo": "dd1337"
+      }
+    ],
+    "dd1354": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1354"
+      }
+    ],
+    "dd1601": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1601"
+      }
+    ]
+  },
+  "string": {
+    "dd612": [
+      {
+        "id": 1,
+        "lang": "lg-eng",
+        "value": "<p>Creates QR codes for records. Used to print labels with item information for easy location in the warehouse</p>"
+      }
+    ],
+    "dd799": [
+      {
+        "id": 1,
+        "lang": "lg-eng",
+        "value": "QR"
+      }
+    ],
+    "dd1326": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "tool_qr"
+      }
+    ],
+    "dd1327": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "1.0.1"
+      }
+    ],
+    "dd1328": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "6.2.8"
+      }
+    ],
+    "dd1362": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "<p>Use a button trigger to enable this tool (see `tch350`) in a section.</p><p>Samples of button config in properties:</p><p>&nbsp;</p><p>For specific section as tch1:</p><p>{</p><p>&nbsp;\"tool_config\": {</p><p>&nbsp; &nbsp;\"tool_qr\": {</p><p>&nbsp; &nbsp; &nbsp;\"ddo_map\": [</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"mode\": \"list\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"tch66\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"typo\": \"ddo\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"view\": \"mosaic\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"label\": \"Identifying images 2\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"model\": \"component_portal\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"parent\": \"tch1\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"tch1\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"mode\": \"list\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"image\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc29\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"typo\": \"ddo\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"view\": \"list\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"label\": \"Image\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"model\": \"component_image\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"parent\": \"tch66\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"mode\": \"list\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"label\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"tch63\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"typo\": \"ddo\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"view\": \"list\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"label\": \"Title\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"model\": \"component_input_text\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"parent\": \"tch1\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"tch1\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;}</p><p>&nbsp; &nbsp; &nbsp;]</p><p>&nbsp; &nbsp;}</p><p>&nbsp;}</p><p>}</p><p>&nbsp;</p><p>Fot shared button in virutal sections is possible specifiy `self` instead the section in this way:</p><p>&nbsp;</p><p>{</p><p>&nbsp;\"tool_config\": {</p><p>&nbsp; &nbsp;\"tool_qr\": {</p><p>&nbsp; &nbsp; &nbsp;\"ddo_map\": [</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"mode\": \"list\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"tch66\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"typo\": \"ddo\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"view\": \"mosaic\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"label\": \"Identifying images 2\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"model\": \"component_portal\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"parent\": \"self\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"self\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"mode\": \"list\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"image\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc29\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"typo\": \"ddo\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"view\": \"list\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"label\": \"Image\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"model\": \"component_image\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"parent\": \"tch66\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"mode\": \"list\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"label\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"tch63\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"typo\": \"ddo\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"view\": \"list\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"label\": \"Title\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"model\": \"component_input_text\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"parent\": \"self\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"self\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;}</p><p>&nbsp; &nbsp; &nbsp;]</p><p>&nbsp; &nbsp;}</p><p>&nbsp;}</p><p>}</p><p>&nbsp;</p><p>Boths samples works in tch1, but the second wotks for all virtual sections as `tc100`, `tch200`, `tch300` (inventory, photogrpahs, documents) that are virtual sections of `tch7` (catalogue), a button triguer configured as previuos example as child of `tch7` will be operative for all tch sections.</p>"
+      }
+    ],
+    "dd1644": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "Dédalo team"
+      }
+    ]
+  },
+  "date": {
+    "dd199": [
+      {
+        "id": 1,
+        "start": {
+          "day": 30,
+          "hour": 10,
+          "time": 65076950541,
+          "year": 2024,
+          "month": 9,
+          "minute": 42,
+          "second": 21
+        }
+      }
+    ],
+    "dd201": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "start": {
+          "day": 18,
+          "hour": 11,
+          "time": 65132163822,
+          "year": 2026,
+          "month": 6,
+          "minute": 43,
+          "second": 42
+        }
+      }
+    ]
+  },
+  "iri": null,
+  "geo": null,
+  "number": null,
+  "media": null,
+  "misc": {
+    "dd1335": [
+      {
+        "id": 1,
+        "value": {
+          "open_as": "window",
+          "windowFeatures": null
+        }
+      }
+    ]
+  },
+  "relation_search": null,
+  "meta": {
+    "dd197": [
+      {
+        "count": 1
+      }
+    ],
+    "dd199": [
+      {
+        "count": 1
+      }
+    ],
+    "dd200": [
+      {
+        "count": 1
+      }
+    ],
+    "dd201": [
+      {
+        "count": 1
+      }
+    ],
+    "dd612": [
+      {
+        "count": 1
+      }
+    ],
+    "dd799": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1326": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1327": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1328": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1331": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1332": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1333": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1335": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1337": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1354": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1362": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1601": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1644": [
+      {
+        "count": 1
+      }
+    ]
+  }
+}

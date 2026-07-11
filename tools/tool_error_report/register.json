@@ -1,0 +1,23 @@
+{
+	"$schema": "../../src/core/tools/client/register.schema.json",
+	"name": "tool_error_report",
+	"version": "1.0.0",
+	"label": {
+		"lg-eng": "Error report",
+		"lg-spa": "Informe de errores",
+		"lg-cat": "Informe d'errors"
+	},
+	"description": {
+		"lg-eng": "Report a problem to the Dédalo maintainers: collects the current page context and any captured JavaScript errors, adds your description, and sends the report to the master installation.",
+		"lg-spa": "Informa de un problema a los mantenedores de Dédalo: recoge el contexto de la página actual y los errores JavaScript capturados, añade tu descripción y envía el informe a la instalación master.",
+		"lg-cat": "Informa d'un problema als mantenidors de Dédalo: recull el context de la pàgina actual i els errors JavaScript capturats, afegeix la teva descripció i envia l'informe a la instal·lació master."
+	},
+	"developer": "Dédalo team",
+	"affected_models": [],
+	"show_in_inspector": false,
+	"show_in_component": false,
+	"active": true,
+	"properties": {
+		"open_as": "modal"
+	}
+}

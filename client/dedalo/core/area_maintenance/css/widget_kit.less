@@ -1,0 +1,327 @@
+/**
+* widget_kit
+*
+* Shared "front-panel" design language for area_maintenance widgets. Imported by
+* area_maintenance.less BEFORE the per-widget stylesheets so every widget draws
+* from one visual vocabulary instead of inventing its own ad-hoc classes.
+*
+* Generic primitives (prefix dd_, so they never collide with widget classes):
+*   .dd_readout / .dd_row / .dd_k / .dd_v / .dd_badge  two-tone key/value readout
+*                                                      + severity chip system
+*   .dd_eyebrow   uppercase section micro-heading
+*   .dd_note      muted helper note (+ .state_warning / .state_danger alert box)
+*
+* Mixins (called from area_maintenance.less so the look reaches every widget):
+*   .dd_console()          monospace output/log block
+*   .dd_action_buttons()   semantic .success / .danger / .warning / primary buttons
+*
+* Severity vocabulary, used everywhere — calm by default, colour only where action
+* is needed: state_ok (quiet green rule) · state_warning (amber chip) · state_danger
+* (red chip) · the *_pill / mode_* variants for single-token status pills.
+* All colour routes through semantic tokens + color-mix, so it holds light & dark.
+*/
+
+@dd_mono: Menlo, Monaco, Consolas, 'Courier New', monospace;
+
+// ---- readout grid -------------------------------------------------------
+.dd_readout {
+	display: grid;
+	grid-template-columns: max-content 1fr;
+	align-items: stretch;
+	border: 1px solid var(--border_default);
+	border-radius: 8px;
+	overflow: hidden;
+	background-color: var(--bg_surface);
+}
+.dd_row {
+	display: contents;
+}
+.dd_readout .dd_k,
+.dd_readout .dd_v {
+	padding: 0.44rem 0.85rem;
+	border-top: 1px solid var(--border_default);
+	line-height: 1.4;
+}
+.dd_readout .dd_row:first-child .dd_k,
+.dd_readout .dd_row:first-child .dd_v {
+	border-top: 0;
+}
+.dd_readout .dd_k {
+	display: flex;
+	align-items: center;
+	background-color: var(--bg_surface_alt);
+	border-right: 1px solid var(--border_default);
+}
+.dd_readout .dd_v {
+	display: flex;
+	align-items: center;
+	min-width: 0;
+	color: var(--fg_default);
+}
+
+// uppercase micro-label — the key cell and any standalone section heading
+.dd_k,
+.dd_eyebrow {
+	font-size: 0.68rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--fg_muted);
+}
+.dd_k {
+	white-space: nowrap;
+}
+.dd_eyebrow {
+	display: block;
+}
+
+// ---- data table ---------------------------------------------------------
+// For multi-column tabular widgets (counters, register_tools…). The widget sets
+// grid-template-columns on .dd_table; rows are display:contents so every cell
+// aligns to one shared grid. Same border / rail / eyebrow language as .dd_readout.
+.dd_table {
+	display: grid;
+	align-items: stretch;
+	border: 1px solid var(--border_default);
+	border-radius: 8px;
+	overflow: hidden;
+	background-color: var(--bg_surface);
+	font-size: 0.85rem;
+}
+.dd_tr {
+	display: contents;
+}
+.dd_table .dd_th,
+.dd_table .dd_td {
+	display: flex;
+	align-items: center;
+	min-width: 0;
+	padding: 0.4rem 0.7rem;
+	border-top: 1px solid var(--border_default);
+	line-height: 1.35;
+	word-break: break-word;
+}
+.dd_table .dd_tr:first-child .dd_th,
+.dd_table .dd_tr:first-child .dd_td {
+	border-top: 0;
+}
+.dd_table .dd_th {
+	font-size: 0.68rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--fg_muted);
+	background-color: var(--bg_surface_alt);
+}
+// numeric / machine-value column: right-aligned, tabular monospace
+.dd_table .dd_th.num,
+.dd_table .dd_td.num {
+	justify-content: flex-end;
+	font-family: @dd_mono;
+	font-size: 0.8rem;
+	font-variant-numeric: tabular-nums;
+}
+.dd_table .dd_th.num {
+	font-size: 0.68rem;
+	font-family: inherit;
+}
+// a cell whose value needs attention (e.g. a drifted counter)
+.dd_table .dd_td.alert {
+	color: var(--color_danger);
+	font-weight: 700;
+}
+// right-aligned action cell (buttons). children must not shrink below their
+// content width (otherwise button labels wrap vertically in a flex cell)
+.dd_table .dd_th.act,
+.dd_table .dd_td.act {
+	justify-content: flex-end;
+	white-space: nowrap;
+}
+.dd_table .dd_td.act {
+	padding-top: 0.25rem;
+	padding-bottom: 0.25rem;
+}
+.dd_table .dd_td.act > * {
+	flex: 0 0 auto;
+	margin: 0;
+}
+
+// ---- value badge + severity chips --------------------------------------
+.dd_badge {
+	min-width: 0;
+	word-break: break-word;
+}
+.dd_badge.mono {
+	font-family: @dd_mono;
+	font-size: 0.82rem;
+	color: var(--fg_default);
+}
+
+// single-token status pill (with leading dot)
+.dd_badge.pill_ok,
+.dd_badge.pill_warning,
+.dd_badge.pill_danger,
+.dd_badge.mode_off,
+.dd_badge.mode_on,
+.dd_badge.mode_private,
+.dd_badge.mode_publication {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.1rem 0.6rem 0.1rem 0.5rem;
+	border: 1px solid transparent;
+	border-radius: 999px;
+	font-weight: 600;
+	font-size: 0.82rem;
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+
+	&:before {
+		content: '';
+		flex: 0 0 auto;
+		width: 0.5rem;
+		height: 0.5rem;
+		border-radius: 50%;
+		background-color: currentColor;
+	}
+}
+.dd_badge.pill_ok,
+.dd_badge.mode_on,
+.dd_badge.mode_private,
+.dd_badge.mode_publication {
+	color: var(--color_success);
+	background-color: color-mix(in srgb, var(--color_success) 13%, transparent);
+	border-color: color-mix(in srgb, var(--color_success) 35%, transparent);
+}
+.dd_badge.pill_warning {
+	color: var(--color_warning);
+	background-color: color-mix(in srgb, var(--color_warning) 13%, transparent);
+	border-color: color-mix(in srgb, var(--color_warning) 35%, transparent);
+}
+.dd_badge.pill_danger,
+.dd_badge.mode_off {
+	color: var(--color_danger);
+	background-color: color-mix(in srgb, var(--color_danger) 13%, transparent);
+	border-color: color-mix(in srgb, var(--color_danger) 35%, transparent);
+}
+
+// health chips (may wrap): a slim severity rule in every case; only states that
+// need action add a tinted fill, so a healthy panel stays calm
+.dd_badge.state_ok,
+.dd_badge.state_warning,
+.dd_badge.state_danger {
+	display: inline-block;
+	border-left: 3px solid;
+	font-size: 0.85rem;
+	line-height: 1.4;
+	color: var(--fg_default);
+}
+.dd_badge.state_ok {
+	padding: 0.04rem 0 0.04rem 0.6rem;
+	border-left-color: var(--color_success);
+}
+.dd_badge.state_warning,
+.dd_badge.state_danger {
+	padding: 0.22rem 0.6rem;
+	border-radius: 0 5px 5px 0;
+}
+.dd_badge.state_warning {
+	background-color: color-mix(in srgb, var(--color_warning) 12%, transparent);
+	border-left-color: var(--color_warning);
+}
+.dd_badge.state_danger {
+	background-color: color-mix(in srgb, var(--color_danger) 11%, transparent);
+	border-left-color: var(--color_danger);
+}
+
+// ---- notes --------------------------------------------------------------
+.dd_note {
+	color: var(--fg_muted);
+	font-size: 0.85rem;
+	line-height: 1.4;
+}
+.dd_note.state_warning,
+.dd_note.state_danger {
+	width: 100%;
+	padding: 0.55rem 0.7rem;
+	color: var(--fg_default);
+	border-left: 3px solid;
+	border-radius: 0 6px 6px 0;
+}
+.dd_note.state_warning {
+	background-color: color-mix(in srgb, var(--color_warning) 12%, transparent);
+	border-left-color: var(--color_warning);
+}
+.dd_note.state_danger {
+	background-color: color-mix(in srgb, var(--color_danger) 11%, transparent);
+	border-left-color: var(--color_danger);
+}
+
+// ---- mixins -------------------------------------------------------------
+// monospace output / log block (apply to a widget's <pre>/response container)
+.dd_console() {
+	padding: 0.7rem 0.85rem;
+	font-family: @dd_mono;
+	font-size: 0.8rem;
+	line-height: 1.45;
+	color: var(--fg_default);
+	white-space: pre-wrap;
+	word-break: break-word;
+	background-color: var(--bg_surface_alt);
+	border: 1px solid var(--border_default);
+	border-radius: 6px;
+}
+
+// semantic action-button variants. Call inside a scope that already has
+// `button` base styles (e.g. .area_maintenance > .content_data). Covers both the
+// `.light.*` variants and the plain `.success/.danger/.warning/.primary` buttons
+// (used app-wide, solid by default) so every maintenance button matches.
+.dd_action_buttons() {
+	button.success, button.light.success,
+	button.danger, button.light.danger,
+	button.warning, button.light.warning {
+		font-weight: 600;
+	}
+	button.success, button.light.success {
+		color: var(--color_success);
+		border: 1px solid color-mix(in srgb, var(--color_success) 45%, transparent);
+		background-color: color-mix(in srgb, var(--color_success) 10%, transparent);
+
+		&:hover {
+			background-color: color-mix(in srgb, var(--color_success) 18%, transparent);
+		}
+	}
+	button.danger, button.light.danger {
+		color: var(--color_danger);
+		border: 1px solid color-mix(in srgb, var(--color_danger) 45%, transparent);
+		background-color: color-mix(in srgb, var(--color_danger) 10%, transparent);
+
+		&:hover {
+			background-color: color-mix(in srgb, var(--color_danger) 18%, transparent);
+		}
+	}
+	button.warning, button.light.warning {
+		color: var(--color_warning);
+		border: 1px solid color-mix(in srgb, var(--color_warning) 45%, transparent);
+		background-color: color-mix(in srgb, var(--color_warning) 10%, transparent);
+
+		&:hover {
+			background-color: color-mix(in srgb, var(--color_warning) 18%, transparent);
+		}
+	}
+	// primary action (the main "do it" button of a widget) — filled blue
+	button.primary, button.light.button_apply {
+		color: var(--color_white);
+		background-color: var(--color_primary);
+		border: 1px solid var(--color_primary);
+		font-weight: 600;
+
+		&:hover {
+			background-color: var(--color_primary);
+			filter: brightness(1.08);
+		}
+		&:before {
+			background: none !important;
+		}
+	}
+}

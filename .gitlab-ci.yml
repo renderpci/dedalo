@@ -1,0 +1,18 @@
+# GitLab CI — hermetic tier only (docs/CI.md).
+#
+# GitLab is the mirror host: shared runners run the SAME scripts/ci/hermetic.sh
+# as the GitHub `hermetic` job (typecheck + lint + DB-less tripwires), so the
+# two platforms cannot drift. The self-hosted tiers (live Postgres, PHP oracle,
+# client gate) run ONLY via GitHub Actions — one runner machine-owner, no
+# cross-system collision on the shared scratch DB surfaces.
+#
+# The image tag must equal .bun-version (the load-bearing Bun.sql jsonb pin);
+# test/unit/ci_workflow_tripwire.test.ts enforces it.
+
+hermetic:
+  image: oven/bun:1.3.9
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - bash scripts/ci/hermetic.sh

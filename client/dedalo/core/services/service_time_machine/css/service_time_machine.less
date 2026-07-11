@@ -1,0 +1,268 @@
+/**
+* service_time_machine
+*
+* Included from main.less file
+*/
+
+.service_time_machine {
+
+	&.view_default {
+		background-color: @color_hilite;
+
+		.head_column {
+			text-align: left;
+
+			.name {
+			    margin-left: 0.1rem;
+			}
+		}
+
+		.column_service_time_machine {
+			padding: 0.25rem;
+
+			> span {
+				word-break: break-word;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				display: -webkit-box;
+				-webkit-line-clamp: 10; /* number of lines to show */
+				line-clamp: 10;
+				-webkit-box-orient: vertical;
+			}
+		}
+	}//end &.view_default
+
+	// view_mini. Used in inspector section and component changes history
+	&.view_mini {
+
+		>.paginator_container {
+
+			>.wrapper_paginator >.content_data {
+				height: 2rem;
+			}
+		}
+
+		.list_body {
+			display: grid;
+			grid-template-columns: 1fr 1.5fr 2fr !important;
+			align-items: end;
+
+			>.header_wrapper_list {
+
+				.head_column {
+					font-size: 0.85rem;
+					text-align: left;
+
+					// When column
+					&.dd559 {
+						display: none;
+					}
+
+					.name {
+					    margin-left: 0.1rem;
+					}
+				}
+			}
+
+			>.content_data {
+
+				>.section_record {
+					display: contents;
+
+					.column_service_time_machine {
+						font-size: 0.82rem;
+						padding: 0.25rem;
+						overflow: hidden;
+
+						.span_value {
+							word-break: break-all;
+							overflow: hidden;
+							text-overflow: ellipsis;
+							display: -webkit-box;
+							-webkit-line-clamp: 10; /* number of lines to show */
+							line-clamp: 10;
+							-webkit-box-orient: vertical;
+							height: 100%;
+						}
+
+						// When (date as 18/02/2026 09:40:42)
+						&.column_dd559 {
+							grid-column: 1;
+							grid-column-end: 4;
+							box-shadow: none;
+							// background-color: @color_grey_15;
+							padding: 0.33rem;
+							padding-bottom: 0px;
+							color: @color_orange_dedalo;
+						}
+
+						// Who (user name)
+						&.column_dd578 {
+							grid-column: 1;
+							.span_value();
+
+							span {
+								padding: 0px;
+							}
+						}
+
+						// What (value)
+						&.column_dd577 {
+							grid-column: 2;
+							.span_value();
+							word-break: normal;
+						}
+
+						// Value
+						&.column_dd1574 {
+							grid-column: 3;
+							.span_value();
+						}
+					}
+					// value
+					.column:nth-child(4) {
+						img {
+							max-height: 3rem;
+
+							&.tc, &.index, &.note, &.person, &.lang, &.geo, &.page {
+								max-height: 1rem;
+							}
+							&.view_text {
+								max-height: 4rem;
+							}
+							&.svg {
+								min-height: 2rem;
+							}
+							&.draw {
+								max-height: 1.2rem;
+							}
+						}
+					}
+				}//end >.section_record
+			}//end >.content_data
+		}
+	}//end &.view_mini
+
+	&.time_machine_list {
+		// value
+		.column:nth-child(4) {
+			img {
+				max-height: 4rem;
+
+				&.view_text {
+					max-height: 4rem;
+				}
+				&.svg {
+					min-height: 2rem;
+				}
+				&.draw {
+					max-height: 1.2rem;
+				}
+			}
+		}
+	}//end &.time_machine_list
+
+	// view_tool. Used in tool_time_machine section and components list
+	&.view_tool {
+
+		>.list_body {
+			height: auto;
+		}
+
+		.content_data > .section_record {
+
+			.column_service_time_machine {
+				max-height: unset;
+
+				> span {
+					// default column item padding
+					// used for matrix_id, when, who, where, annotation
+					padding: 0.12rem;
+				}
+
+				.wrapper_component {
+					pointer-events: none !important;
+				}
+
+				.component_text_area {
+
+					img {
+						max-height: 1rem;
+
+						&.view_text {
+							max-height: 5rem;
+						}
+						&.svg {
+							min-height: 2rem;
+						}
+					}
+				}
+			}
+		}
+	}//end &.view_tool
+
+	&.view_history {
+
+		.list_body {
+			display: contents;
+		}
+
+		.no_records {
+			position: relative;
+			top: 0px;
+		}
+
+		.content_data > .section_record {
+			display: grid;
+			grid-template-columns: 1fr 1fr 1fr 2.65rem;
+			border-left: 2px solid @color_orange_dedalo;
+
+			.column {
+				display: grid;
+				outline: none;
+				padding: 0.33rem;
+				padding-bottom: 0.25rem;
+				font-size: 90%;
+			}
+
+			@bg_color: @color_grey_13;
+
+			// when (date)
+			.column:nth-child(1)  {
+				grid-column: span 1;
+				background-color: @bg_color;
+			}
+			// who (user name)
+			.column:nth-child(2) {
+				grid-column: span 2;
+				background-color: @bg_color;
+			}
+			// value
+			.column:nth-child(3) {
+				grid-column: span 4;
+				font-size: 90%;
+				word-break: break-all;
+
+				img {
+					max-height: 1rem;
+					vertical-align: text-bottom;
+
+					&.view_text {
+						max-height: 4rem;
+					}
+					&.svg {
+						min-height: 2rem;
+					}
+				}
+			}
+			// notes icon
+			.column:nth-child(4) {
+				grid-column: span 1;
+				grid-column-start: 4;
+    			grid-row-start: 1;
+    			background-color: @bg_color;
+			}
+		}
+	}//end &.view_history
+
+}//end .service_time_machine

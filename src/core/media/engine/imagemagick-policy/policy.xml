@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policymap [
+  <!ELEMENT policymap (policy)*>
+  <!ATTLIST policymap xmlns CDATA #FIXED ''>
+  <!ELEMENT policy EMPTY>
+  <!ATTLIST policy xmlns CDATA #FIXED '' domain NMTOKEN #REQUIRED
+    name NMTOKEN #IMPLIED pattern CDATA #IMPLIED rights NMTOKEN #IMPLIED
+    stealth NMTOKEN #IMPLIED value CDATA #IMPLIED>
+]>
+<!--
+  Hardened ImageMagick policy for the Dédalo TS media engine (foundation audit
+  MEDIA-02). Loaded via MAGICK_CONFIGURE_PATH (set by engine/imagemagick.ts).
+
+  Dédalo rasterizes PDFs (buildPdfCover → Ghostscript delegate) and converts
+  raster images, so the PDF coder stays enabled and safety there depends on
+  Ghostscript >= 9.50 (SAFER by default — a hard deploy requirement). This policy
+  removes the OTHER classic ImageMagick/Ghostscript RCE / SSRF / file-disclosure
+  vectors that Dédalo never needs: the PostScript/EPS/XPS coders, the scripting
+  coders (MSL/MVG), remote-fetch delegates (URL/HTTP/HTTPS/FTP), and @-indirection.
+-->
+<policymap>
+  <!-- Remote fetch / SSRF via delegates -->
+  <policy domain="delegate" rights="none" pattern="URL" />
+  <policy domain="delegate" rights="none" pattern="HTTP" />
+  <policy domain="delegate" rights="none" pattern="HTTPS" />
+  <policy domain="delegate" rights="none" pattern="FTP" />
+  <policy domain="coder" rights="none" pattern="URL" />
+  <policy domain="coder" rights="none" pattern="HTTPS" />
+  <policy domain="coder" rights="none" pattern="HTTP" />
+  <policy domain="coder" rights="none" pattern="FTP" />
+  <policy domain="coder" rights="none" pattern="MSL" />
+  <policy domain="coder" rights="none" pattern="MVG" />
+  <policy domain="coder" rights="none" pattern="TEXT" />
+  <policy domain="coder" rights="none" pattern="SHOW" />
+  <policy domain="coder" rights="none" pattern="WIN" />
+  <policy domain="coder" rights="none" pattern="PLT" />
+  <!-- PostScript family: the CVE-2018-16509 class. Dédalo never processes PS/EPS/XPS. -->
+  <policy domain="coder" rights="none" pattern="PS" />
+  <policy domain="coder" rights="none" pattern="PS2" />
+  <policy domain="coder" rights="none" pattern="PS3" />
+  <policy domain="coder" rights="none" pattern="EPS" />
+  <policy domain="coder" rights="none" pattern="EPT" />
+  <policy domain="coder" rights="none" pattern="XPS" />
+  <!-- Indirect reads via @filename in arguments -->
+  <policy domain="path" rights="none" pattern="@*" />
+</policymap>

@@ -1,0 +1,56 @@
+# PR gate — two tiers (docs/CI.md):
+#   hermetic — GitHub-hosted; typecheck + lint + DB-less tripwires via the
+#              shared scripts/ci/hermetic.sh (same script as .gitlab-ci.yml).
+#   verify   — self-hosted Mac (live Postgres + PHP oracle + PHP sibling tree);
+#              scripts/verify.ts --base origin/main: the touched-file-aware
+#              "definition of done" (typecheck, lint, ALL tripwires, neighbour
+#              tests). ORACLE_REQUIRED=1: an absent oracle is a RED canary, by
+#              design — restart PHP at :8080 and re-run (never green-wash it).
+#
+# Invariants in this file are enforced by test/unit/ci_workflow_tripwire.test.ts.
+name: ci
+
+on:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hermetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version # the load-bearing pin — never inline a version
+      - name: Hermetic tier (install + tsc + biome + static tripwires)
+        run: bash scripts/ci/hermetic.sh
+
+  verify:
+    runs-on: [self-hosted, macOS, dedalo-mac]
+    timeout-minutes: 30
+    env:
+      ORACLE_REQUIRED: "1"
+      DIFFUSION_JOBS_TABLE: dedalo_ts_test_ci_diffusion_jobs
+      DIFFUSION_ACTIVITY_TABLE: dedalo_ts_test_ci_activity_diffusion
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # verify.ts needs the merge-base vs origin/main
+      - name: Link sibling paths (../private, PHP tree, client lib)
+        run: bash scripts/ci/link_siblings.sh
+      - name: Runner preconditions (bun pin, env, service probes)
+        run: bash scripts/ci/env_guard.sh
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Verify branch vs origin/main
+        shell: bash # explicit: enables pipefail so tee cannot mask a red exit
+        run: bun run scripts/verify.ts --base origin/main 2>&1 | tee verify.log
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: verify-log
+          path: verify.log

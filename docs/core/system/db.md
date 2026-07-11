@@ -1,0 +1,358 @@
+# db
+
+> See also: [Architecture overview](../architecture_overview.md) · [Sections](../sections/index.md) · [section_record](../sections/section_record.md) · [SQO](../sqo.md)
+
+The PostgreSQL access layer (`src/core/db/`) holds the connection/transaction primitives, the matrix table read/write functions, the single JSONB codec, the ontology and Time Machine table modules and the schema-asset rebuilders. It is the **only** code in the TS work server that opens a PostgreSQL connection or issues SQL.
+
+## Role
+
+`src/core/db/` is the bottom layer of the work-system stack. Everything above it —
+[`section`](../sections/section.md), [`section_record`](../sections/section_record.md),
+components, search — resolves *what* to read or write; `src/core/db/` is *how* the
+bytes actually reach PostgreSQL. There is no god object here and no PHP-style
+class-per-record: this is plain infrastructure — a handful of modules exporting
+functions over Bun's built-in SQL client.
+
+It sits directly below the section-record write pipeline:
+
+```text
+section / component / resolve  (resolve data; never touch the DB)
+        │
+section_record/record_write    (the per-record write contract)
+        │  delegates every read/save/delete to a db-layer function
+        ▼
+src/core/db/                    ← this subsystem
+  ├── postgres.ts        connection pool, transactions, advisory locks
+  ├── matrix.ts          matrix table READ + the identifier allowlists
+  ├── matrix_write.ts    matrix CRUD writes (update / update_by_key / insert / delete)
+  ├── json_codec.ts      the single JSONB encode/decode chokepoint (byte-compat)
+  ├── time_machine.ts    matrix_time_machine read + the audit-write function
+  ├── dd_ontology.ts     the ontology (dd_ontology) table I/O
+  ├── db_assets.ts       schema extensions/functions/constraints/indexes rebuild
+  └── db_pg_definitions.json   the canonical extension/function/index/constraint SQL
+        │
+PostgreSQL                      matrix tables (typed JSONB columns)
+```
+
+!!! note "MariaDB is not here"
+    This layer talks **only to PostgreSQL** (Bun's `SQL` Postgres client). The
+    publication / diffusion database (MariaDB/MySQL) is owned **exclusively** by
+    the Bun diffusion engine (`diffusion/api/v1/`); the work server ships no
+    MariaDB connector at all. See the
+    [architecture overview](../architecture_overview.md#the-two-systems) for the
+    work-vs-diffusion split.
+
+!!! note "One long-lived process, not RoadRunner workers"
+    The PHP server ran on RoadRunner workers with a per-worker cached connection
+    that had to be invalidated by hand. The TS server is a single long-lived Bun
+    process holding **one shared connection pool** (`postgres.ts`), and request
+    identity never touches it — an in-flight transaction is pinned to a reserved
+    connection through `AsyncLocalStorage`, not through a global static. The
+    cross-request connection-state bleed hazard is structurally gone.
+
+## Responsibilities
+
+- **Connection handling** — hold the single process-wide `SQL` pool and expose
+  the `sql` handle every caller uses (`postgres.ts`).
+- **Transactions** — a managed transaction API (`withTransaction`) with
+  single-connection semantics via `AsyncLocalStorage` and flatten-nesting (an
+  inner `withTransaction` joins the ambient transaction).
+- **Matrix record read** — `readMatrixRecord` returns one row's typed JSONB
+  columns both parsed and as raw `::text` twins for parity diffing (`matrix.ts`).
+- **Matrix record write** — the typed write verbs over the `matrix*` tables:
+  `updateMatrixRecord` (whole-column upsert), `updateMatrixKeysData` /
+  `updateMatrixKeyData` (surgical per-key `jsonb_set_lax`), the item-id
+  allocators, the counter-driven and explicit-id inserts, and
+  `deleteMatrixRecord` (`matrix_write.ts`).
+- **JSONB codec** — the single encode/decode chokepoint that keeps every write
+  byte-compatible with the PHP `json_handler` output (`json_codec.ts`).
+- **Ontology I/O** — CRUD, whole-row upsert, filtered search and the backup-table
+  protocol over the ontology table `dd_ontology` (`dd_ontology.ts`).
+- **Time Machine I/O** — read of `matrix_time_machine` snapshots and the audit
+  `recordTimeMachine` write appended by the save pipeline (`time_machine.ts`).
+- **Schema maintenance** — (re)apply the declared extensions/functions/
+  constraints/indexes and the `REINDEX`/`VACUUM` maintenance sentences
+  (`db_assets.ts` over `db_pg_definitions.json`).
+- **Injection boundary** — table and column names are identifiers (they cannot
+  be bound as parameters) and are validated against fixed allowlists before
+  interpolation; every user-facing value is a bound parameter.
+
+## Data model
+
+The physical model is the **matrix** table family described in the
+[sections concept page](../sections/index.md#storage-detail-the-data-column-is-split-into-typed-jsonb-columns).
+Every matrix row is keyed by the composite `(section_tipo, section_id)` and stores
+the record payload across **typed JSONB columns** rather than one blob. The
+canonical lists live as `const` allowlists in `matrix.ts`:
+
+| const | contents | purpose |
+| --- | --- | --- |
+| `MATRIX_JSONB_COLUMNS` | `data`, `relation`, `string`, `date`, `iri`, `geo`, `number`, `media`, `misc`, `relation_search`, `meta` | the 11 typed JSONB columns of a matrix row; `readMatrixRecord` projects each column plus its `::text` twin, and every write validates its column against this set. |
+| `MATRIX_TABLE_ALLOWLIST` | the allow-list of `matrix*` table names (`matrix`, `matrix_hierarchy`, `matrix_users`, `matrix_dataframe`, `matrix_activity`, …) | every read/write validates its `tableName` against this list via `assertMatrixTable()` — a table not in it is refused. This is the SQL-injection guard for table names. |
+
+Each component model maps to exactly **one** of these columns. The mapping lives
+on the per-model DESCRIPTOR (`src/core/components/component_X/descriptor.ts`,
+field `column`; e.g. `component_input_text → string`, `component_portal →
+relation`) and is read through `getColumnNameByModel()` in
+`src/core/ontology/resolver.ts`. The db layer itself does not know about
+components — it reads and writes columns and JSON keys; the tipo→column mapping is
+done one layer up.
+
+!!! note "`section_id` is allocated by a counter table"
+    `insertMatrixRecordWithCounter()` does **not** rely on a serial PK for the
+    logical record id. In one statement it takes an advisory lock, computes
+    `COALESCE(MAX(section_id),0)+1` as a self-healing fallback, UPSERTs a
+    per-section counter into `matrix_counter` (or `matrix_counter_dd` for
+    `_dd`/ontology tables), and inserts the row with the returned counter as its
+    `section_id`. `insertMatrixRecordWithExplicitId()` is the import/provisioning
+    twin that takes a caller-chosen id and raises the counter to
+    `GREATEST(value, section_id)` so a later auto-allocation can never reuse it.
+
+## Files & structure
+
+```text
+src/core/db/
+├── postgres.ts            connection pool + withTransaction + acquireNodeLock
+├── matrix.ts              matrix READ + MATRIX_JSONB_COLUMNS / MATRIX_TABLE_ALLOWLIST
+├── matrix_write.ts        matrix CRUD writes + item-id allocators + inserts
+├── json_codec.ts          encodeForJsonb / decodeFromJsonb — the byte-compat chokepoint
+├── time_machine.ts        matrix_time_machine read + recordTimeMachine audit write
+├── dd_ontology.ts         dd_ontology CRUD/upsert/search + backup-table protocol
+├── db_assets.ts           schema-asset (re)build over the vendored definitions
+└── db_pg_definitions.json the canonical extension/function/constraint/index SQL
+```
+
+There is **no `acc/` directory** and no `RecordObj_*` family. The PHP layer carried
+two record-object generations (the v7 `JSON_RecordObj_matrix` plus the legacy
+`RecordObj_dd` / `RecordObj_time_machine` / `search_v6`); the TS port has neither.
+Raw record data is fetched by the plain `readMatrixRecord()` function and resolved
+by the horizontal engines (`src/core/resolve/`, `src/core/section/read.ts`), not by
+a cached per-row object. There is likewise **no `object_cache` LRU**: the
+`section_record`/component instance caches existed to survive a persistent worker;
+with request-scoped resolution they are unnecessary.
+
+### How the write pipeline dispatches into this layer
+
+`src/core/section_record/record_write.ts` is the per-record write contract. It
+owns the *shape* of a save (which keys, which columns, the delete-key guard) and
+delegates the actual SQL to the db-layer functions — a normal component save
+resolves to `updateMatrixKeysData(table, section_tipo, section_id, writes)`; a
+whole-column replace to `updateMatrixRecord(...)`; a delete to
+`deleteMatrixRecord(...)`. The matrix table for a tipo is resolved from the
+ontology (`getMatrixTableFromTipo()`), never hardcoded.
+
+### The single JSONB codec
+
+`json_codec.ts` is the one place matrix JSONB values are encoded for a write. Both
+servers write the same jsonb columns and must stay byte-compatible: PostgreSQL
+canonicalizes jsonb on parse, so byte-compat reduces to *semantic* equality of
+what each server sends. `encodeForJsonb()` walks the value and **rejects** what
+JSON cannot represent faithfully (`undefined`, `NaN`/`Infinity`, functions,
+symbols, dropped object properties) rather than let `JSON.stringify` silently lose
+data. Unmodified columns can be passed through untouched as the branded
+`RawJsonText` (their raw `::text` read) instead of re-encoding — the lossless path.
+
+!!! warning "Bind jsonb as `::text::jsonb`"
+    Bun's SQL client JSON-encodes a parameter it infers to be jsonb, which would
+    double-encode a pre-encoded JSON string. Every write in this layer therefore
+    binds jsonb values as `$n::text::jsonb`: the parameter is sent as text and
+    Postgres parses it, keeping `json_codec` — not the driver — in charge of the
+    byte-compat semantics.
+
+## Public API
+
+Grouped by concern. Names below are verified against the source; signatures are
+abbreviated.
+
+### Connection & transactions (`postgres.ts`)
+
+| symbol | purpose |
+| --- | --- |
+| `sql` | The database handle used everywhere. A `Proxy` over the pool that, on every use, routes to the ambient transaction connection when one is active (see `withTransaction`) and to the pool otherwise. The tagged-template form ``sql`SELECT … ${value}` `` always binds values as parameters; `sql.unsafe(text, params)` is the positional-parameter form used when the query text is built from allowlisted identifiers. |
+| `withTransaction(work)` | Run `work` inside a single `BEGIN … COMMIT/ROLLBACK` on one reserved connection; every query issued through `sql` while `work` runs is pinned to it (in-tx reads see in-tx writes, like PHP's per-request connection). A throw rolls back. Nesting **joins** the ambient transaction — no nested `BEGIN`, no savepoint. |
+| `isInTransaction()` | `true` when the current async context is inside a `withTransaction` block. |
+| `acquireNodeLock(sectionTipo, sectionId)` | `SELECT pg_advisory_xact_lock(hashtext('<tipo>_<id>'))` — a per-record transaction lock, hash-input byte-identical to PHP so the two servers are mutually exclusive on the same node during coexistence. Throws if called outside a transaction (the lock would release immediately). |
+| `closeDatabasePool()` | End the pool (tests and graceful shutdown). |
+
+!!! note "Transactions flatten, they do not nest with savepoints"
+    PHP's `DBi` maintained a transaction *depth* with SAVEPOINT-based nesting. The
+    TS `withTransaction` instead makes an inner call join the outer transaction:
+    the outer commit/rollback is authoritative. This keeps composed mutation
+    helpers (each defensively wrapping their own writes) from fragmenting one
+    logical operation into independent transactions.
+
+### Matrix read (`matrix.ts`)
+
+| symbol | purpose |
+| --- | --- |
+| `readMatrixRecord(tableName, sectionTipo, sectionId)` | `SELECT id, section_id, section_tipo, <each JSONB column + its ::text twin> … WHERE section_tipo=$1 AND section_id=$2 LIMIT 1`. Returns a `MatrixRecord` (`columns` parsed, `rawText` byte-exact) or `null`. |
+| `assertMatrixTable(tableName)` | Throw unless `tableName` is in `MATRIX_TABLE_ALLOWLIST` (the identifier gate every read/write calls first). |
+| `MATRIX_JSONB_COLUMNS` / `MATRIX_TABLE_ALLOWLIST` | The canonical column set and table allowlist (see [Data model](#data-model)). |
+
+### Matrix write (`matrix_write.ts`)
+
+| symbol | purpose |
+| --- | --- |
+| `updateMatrixRecord(table, sectionTipo, sectionId, values, options?)` | Whole-column upsert: UPDATE the given columns, INSERT the same columns if 0 rows matched (the PHP `update()` upsert-by-update). `values` is `{column: value}`; each jsonb value goes through the codec (or passes through as `RawJsonText` with `rawTextPassthrough`). Returns `'updated' | 'inserted'`. |
+| `updateMatrixKeysData(table, sectionTipo, sectionId, writes)` | Surgical per-key update — one UPDATE covering every `{column, key, value}` pair. A non-null value upserts via `jsonb_set_lax` over `COALESCE(col,'{}')`; a `null` value **removes** the key with `#-` (a NULL column stays NULL; a column that loses its last key keeps `'{}'`). This is the call a component save resolves to. |
+| `updateMatrixKeyData(table, sectionTipo, sectionId, column, key, value)` | Single-pair convenience wrapper over `updateMatrixKeysData`. |
+| `allocateComponentItemId(table, sectionTipo, sectionId, componentTipo)` | Atomically allocate the next data-item id for a component (increment the per-component counter in the `meta` column via one `UPDATE … RETURNING`; row-level locking serializes concurrent allocations — no explicit advisory lock needed). |
+| `absorbComponentItemIds(table, sectionTipo, sectionId, componentTipo, items)` | Raise a component's item-id counter to at least the max explicit id in `items` (imports/migrations/restored data) so later allocations never reuse them; never lowers. PHP runs this on every `set_data`. |
+| `insertMatrixRecordWithCounter(table, sectionTipo, jsonbColumns)` | INSERT a new record, allocating `section_id` from the matrix counter under an advisory lock in one statement (the PHP `create()` contract). Returns the new `section_id`. |
+| `insertMatrixRecordWithExplicitId(table, sectionTipo, sectionId, jsonbColumns)` | INSERT with a caller-chosen `section_id` (import / ontology-provisioning path), raising the counter to `GREATEST(value, section_id)`. Throws if the row already exists. |
+| `deleteMatrixRecord(table, sectionTipo, sectionId)` | `DELETE … WHERE section_tipo AND section_id RETURNING id`. Returns the number of rows removed (0 or 1). |
+
+!!! warning "Column names are identifiers, keys are data"
+    In `updateMatrixKeysData()` the **column** is interpolated into the SQL `SET`
+    clause (PostgreSQL cannot bind a column name), so it is validated against
+    `MATRIX_JSONB_COLUMNS`. The JSON **key** (the component tipo) is likewise
+    checked against the tipo grammar `/^[a-z]+[0-9]+$/` before it is inlined into
+    the jsonb path. Every value is a bound `$n::text::jsonb` parameter — data,
+    never SQL. This is the injection boundary of the write path.
+
+### JSON codec (`json_codec.ts`)
+
+| symbol | purpose |
+| --- | --- |
+| `encodeForJsonb(value)` | Validate (reject `undefined`/`NaN`/`Infinity`/functions/symbols/`bigint`/dropped keys) and return compact JSON text (`RawJsonText`) to bind as a `::text::jsonb` parameter. The PHP counterpart is `json_handler::encode` with `JSON_UNESCAPED_UNICODE`. |
+| `decodeFromJsonb(jsonText)` | Parse jsonb text back into a JS value (thin `JSON.parse` wrapper kept for auditability). |
+| `asRawJsonText(jsonText)` | Brand a string as already-encoded JSON so a write passes it through untouched (the lossless path for an unmodified column read via `rawText`). |
+
+### Ontology I/O (`dd_ontology.ts`)
+
+The ontology lives in its own table (`dd_ontology`), keyed by `tipo`.
+`dd_ontology.ts` is the ontology counterpart of `matrix_write.ts` and the WRITE
+side of the ontology; the cached READ registry every engine resolves against lives
+in `src/core/ontology/resolver.ts`.
+
+| symbol | purpose |
+| --- | --- |
+| `upsertDdOntologyNode(node)` | Whole-row `INSERT … ON CONFLICT(tipo) DO UPDATE` writing every allowlisted column, so a re-parse never leaves stale data behind (PHP `create()`). Returns the row id. |
+| `readDdOntologyRow(tipo)` | Read one raw node's columns by `tipo` (uncached probe for the parser). |
+| `updateDdOntologyColumns(tipo, values)` | Partial column update with INSERT fallback on 0 rows (the PHP `update()` upsert, the sync-order path). |
+| `deleteDdOntologyNode(tipo)` | Delete one node. |
+| `searchDdOntology(values, order?, limit?)` | Filtered node search (scalar `=` or `{operator, value}` over an operator allowlist); returns matching tipos. |
+| `getActiveTlds()` / `deleteTldNodes(tld)` | The installed-TLD set and per-TLD delete (`safeTld`-gated). |
+| `createBackupTable(tlds)` / `restoreFromBackupTable(tlds)` / `dropBackupTable()` | The `dd_ontology_bk` backup protocol that is the rollback for a destructive regenerate. |
+
+Every write fans out `clearOntologyDerivedCaches()` (the single invalidation
+chokepoint in `src/core/ontology/cache_invalidation.ts`) so no reader observes a
+stale node. The term fuzzy/exact search primitives (`search_fuzzy_term` /
+`search_exact_term`) are **ledgered as not yet ported** — see the module header and
+[STATUS.md](../../../rewrite/STATUS.md).
+
+### Time Machine I/O (`time_machine.ts`)
+
+`matrix_time_machine` does **not** follow the standard matrix contract: rows are
+flat audit columns, one row per component change. The dd15 virtual section
+addresses a row by its own `id` (as `section_id`), while the row's `section_tipo`
+column holds the **source** section — never filter TM by `section_tipo='dd15'`.
+
+| symbol | purpose |
+| --- | --- |
+| `readTimeMachineRow(tmRowId)` | Read one TM row by its primary key (the dd15 `section_id`). |
+| `readTimeMachineHistory(sourceSectionTipo, sourceSectionId, componentTipo, limit?)` | Change history of one component on one source record, newest first. |
+| `recordTimeMachine(entry, timestamp)` | Append one audit row for a component data change (PHP `tm_record::create` → `tm_db_manager::create`); skipped for excluded sections and non-positive ids. Called by the save/delete pipeline. |
+| `TimeMachineWriteHook` / `TimeMachineEntry` | The hook contract the save pipeline honours so TM history cannot be silently dropped. |
+| `nowDbTimestamp()` | Postgres-style timestamp for TM rows (PHP `dd_date::get_timestamp_now_for_db`). |
+| `TIME_MACHINE_SECTION_TIPO` (`'dd15'`) / `TM_EXCLUDED_SECTIONS` | The virtual section tipo and the excluded-section set. |
+
+### Schema assets (`db_assets.ts`)
+
+| symbol | purpose |
+| --- | --- |
+| `createExtensions()` | Run the `CREATE EXTENSION` sentences (pg_trgm/unaccent-backed indexes need them). |
+| `rebuildFunctions()` | Drop + recreate the declared SQL functions (`f_unaccent` etc.). |
+| `rebuildConstraints()` / `rebuildIndexes(tables?)` | Per-entry, per-declared-table drop + add of constraints / indexes. |
+| `execMaintenance()` | Run the `ar_maintenance` sentences (`REINDEX TABLE …` etc.). |
+| `recreateDbAssets()` | The full sequence: extensions → constraints → functions → indexes → maintenance. |
+| `optimizeTables(tables)` | Per validated table, `REINDEX TABLE CONCURRENTLY` then `VACUUM ANALYZE`. |
+
+`db_pg_definitions.json` is the vendored 1:1 conversion of the PHP
+`db_pg_definitions.php` arrays (`ar_extensions`, `ar_function`, `ar_constraint`,
+`ar_index`, `ar_maintenance`); `db_assets.ts` consumes them so the schema extras
+are declared in one place shared conceptually with the PHP install.
+
+## How it fits with the rest of Dédalo
+
+- **The write pipeline is the main caller of the matrix functions.** A component
+  reads via the section-read engines and writes via
+  `section_record/record_write.ts`, which resolve to `readMatrixRecord()` /
+  `updateMatrixKeysData()`. Resolution code never issues SQL directly.
+- **Search compiles down to `sql`.** The [SQO](../sqo.md) search engine in
+  `src/core/search/` builds a prepared statement over the JSONB matrix columns and
+  runs it through the shared `sql` handle (Bun's client caches/prepares
+  statements itself; there is no hand-rolled prepared-statement registry to
+  invalidate).
+- **The ontology is itself matrix/`dd_ontology` data.** The active schema (areas,
+  sections, components, tools) is stored in `dd_ontology` and read/written through
+  `dd_ontology.ts` / `resolver.ts`. See the
+  [architecture overview](../architecture_overview.md#the-ontology-is-the-active-schema).
+- **Time Machine** snapshots flow through `time_machine.ts`; the save and delete
+  pipelines append audit rows via `recordTimeMachine()`.
+- **Diffusion is out of scope.** Publication data goes to MariaDB via the Bun
+  diffusion engine, not through this layer. See the
+  [architecture overview](../architecture_overview.md#the-two-systems).
+
+## Examples
+
+### Run a unit of work in a managed transaction
+
+```ts
+// Commits on success; rolls back and rethrows on any throw.
+const newId = await withTransaction(async () => {
+    const id = await insertMatrixRecordWithCounter('matrix', sectionTipo, values);
+    // ... more writes, all pinned to the same connection ...
+    return id;
+});
+```
+
+### Lock a record before mutating it (must be inside a transaction)
+
+```ts
+await withTransaction(async () => {
+    // serialize concurrent writers on this exact record
+    await acquireNodeLock(sectionTipo, sectionId);
+
+    // ... read-modify-write the row safely ...
+    await updateMatrixKeysData('matrix', 'oh1', 5, [
+        { column: 'string', key: 'oh25', value: ['Hello'] },
+    ]);
+});
+```
+
+### A surgical per-key write (what a component save becomes)
+
+```ts
+// set string.oh25 = ['Hello'] and clear meta.oh25 in one UPDATE
+await updateMatrixKeysData('matrix', 'oh1', 5, [
+    { column: 'string', key: 'oh25', value: ['Hello'] },
+    { column: 'meta',   key: 'oh25', value: null }, // null removes the key
+]);
+```
+
+### Read a record with automatic JSON decoding + a byte-exact twin
+
+```ts
+const record = await readMatrixRecord('matrix', 'oh1', 5);
+if (record !== null) {
+    record.columns.string;   // already parsed (a JS value)
+    record.rawText.string;   // the byte-exact ::text of the same column (parity)
+}
+```
+
+!!! note "Prefer the high-level path"
+    The examples above touch the db functions directly to document the surface. In
+    application code you almost always go through the section-read engines /
+    `section_record/record_write.ts` and the [SQO](../sqo.md) engine — those add
+    the metadata, Time Machine, permission and relation handling that the raw
+    functions deliberately do not.
+
+## Related
+
+- [section_record](../sections/section_record.md) — the per-record write contract; the main caller of the matrix write functions.
+- [section](../sections/section.md) — the section type/orchestrator; resolves records through the read engines.
+- [Sections concept](../sections/index.md) — the matrix table model and the typed-JSONB column split.
+- [Architecture overview](../architecture_overview.md) — the work-vs-diffusion split, the matrix data model, the request lifecycle.
+- [SQO](../sqo.md) — the search query object compiled into prepared SQL over the matrix columns via the `sql` handle.
+- [Locator](../locator.md) — the pointer type stored in the `relation` column.
