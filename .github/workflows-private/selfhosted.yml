@@ -1,0 +1,86 @@
+# SELF-HOSTED TIER — PRIVATE MIRROR ONLY. Never place this file (or any job with
+# `runs-on: [self-hosted, …]`) under .github/workflows/ on the PUBLIC repo.
+#
+# Why this directory exists (2026-07-11): renderpci/dedalo went PUBLIC. GitHub only
+# executes workflows under .github/workflows/, so everything here is INERT on the
+# public repo — preserved, reviewed, and ready to be activated on a PRIVATE mirror
+# that has the self-hosted runner attached.
+#
+# The danger being avoided: on a public repo anyone can fork and open a PR. A PR job
+# with `runs-on: self-hosted` executes that fork's code on the Mac that holds the real
+# ../private/.env and the live matrix Postgres with real Dédalo data. That is RCE on
+# the data host. GitHub's own guidance is: do not use self-hosted runners with public
+# repositories.
+#
+# These two jobs were lifted verbatim out of ci.yml (`verify`) and main.yml (`full`)
+# when the public repo was stripped back to the hermetic tier.
+#
+# ORACLE NOTE (post-cutover): ORACLE_REQUIRED=1 is now largely VESTIGIAL. PHP is
+# decommissioned and `oracleMode()` defaults to `fixtures`, so the live-oracle canary
+# test is skipped and parity replays the frozen store credlessly. The flag is kept so
+# that if anyone ever sets ORACLE_MODE=live, an absent oracle still hard-fails rather
+# than silently skipping. The self-hosted tier's REAL remaining dependency is the live
+# Postgres (unit tests read real records), plus the PHP tree for client/dedalo/lib
+# (118 MB, gitignored — see scripts/ci/link_siblings.sh).
+name: selfhosted
+
+on:
+  workflow_dispatch:
+  # On the private mirror, restore the real triggers:
+  #   pull_request:            # for `verify`
+  #   push: { branches: [master] }   # for `full`
+
+concurrency:
+  group: selfhosted
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: [self-hosted, macOS, dedalo-mac]
+    timeout-minutes: 30
+    env:
+      ORACLE_REQUIRED: "1"
+      DIFFUSION_JOBS_TABLE: dedalo_ts_test_ci_diffusion_jobs
+      DIFFUSION_ACTIVITY_TABLE: dedalo_ts_test_ci_activity_diffusion
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # verify.ts needs the merge-base vs origin/master
+      - name: Link sibling paths (../private, PHP tree, client lib)
+        run: bash scripts/ci/link_siblings.sh
+      - name: Runner preconditions (bun pin, env, service probes)
+        run: bash scripts/ci/env_guard.sh
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Verify branch vs origin/master
+        shell: bash # explicit: enables pipefail so tee cannot mask a red exit
+        run: bun run scripts/verify.ts --base origin/master 2>&1 | tee verify.log
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: verify-log
+          path: verify.log
+
+  full:
+    runs-on: [self-hosted, macOS, dedalo-mac]
+    timeout-minutes: 60
+    env:
+      ORACLE_REQUIRED: "1"
+      DIFFUSION_JOBS_TABLE: dedalo_ts_test_ci_diffusion_jobs
+      DIFFUSION_ACTIVITY_TABLE: dedalo_ts_test_ci_activity_diffusion
+    steps:
+      - uses: actions/checkout@v4
+      - name: Link sibling paths (../private, PHP tree, client lib)
+        run: bash scripts/ci/link_siblings.sh
+      - name: Runner preconditions (bun pin, env, service probes)
+        run: bash scripts/ci/env_guard.sh
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Full suite (unit + parity, frozen-fixture oracle)
+        shell: bash
+        run: bun test test/unit test/parity 2>&1 | tee full-suite.log
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: full-suite-log
+          path: full-suite.log

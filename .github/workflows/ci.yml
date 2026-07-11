@@ -1,11 +1,16 @@
-# PR gate — two tiers (docs/CI.md):
-#   hermetic — GitHub-hosted; typecheck + lint + DB-less tripwires via the
-#              shared scripts/ci/hermetic.sh (same script as .gitlab-ci.yml).
-#   verify   — self-hosted Mac (live Postgres + PHP oracle + PHP sibling tree);
-#              scripts/verify.ts --base origin/main: the touched-file-aware
-#              "definition of done" (typecheck, lint, ALL tripwires, neighbour
-#              tests). ORACLE_REQUIRED=1: an absent oracle is a RED canary, by
-#              design — restart PHP at :8080 and re-run (never green-wash it).
+# PR gate — HERMETIC TIER ONLY (engineering/CI.md).
+#
+# PUBLIC-REPO POSTURE (2026-07-11): renderpci/dedalo is PUBLIC, so NO job in this
+# directory may target the self-hosted runner. A fork PR runs attacker-controlled
+# code, and the self-hosted Mac holds the real ../private/.env and the live matrix
+# Postgres — a self-hosted PR job there is remote code execution on the data host.
+# The DB/parity/client tier lives in .github/workflows-private/ (inert here; GitHub
+# only executes .github/workflows/) and runs ONLY on the private mirror.
+# Do NOT move a self-hosted job back into this directory.
+#
+# hermetic — GitHub-hosted; typecheck + lint + DB-less tripwires via the shared
+#            scripts/ci/hermetic.sh (the same script .gitlab-ci.yml runs, so the two
+#            platforms cannot drift). No secrets, no DB, no oracle.
 #
 # Invariants in this file are enforced by test/unit/ci_workflow_tripwire.test.ts.
 name: ci
@@ -28,29 +33,3 @@ jobs:
           bun-version-file: .bun-version # the load-bearing pin — never inline a version
       - name: Hermetic tier (install + tsc + biome + static tripwires)
         run: bash scripts/ci/hermetic.sh
-
-  verify:
-    runs-on: [self-hosted, macOS, dedalo-mac]
-    timeout-minutes: 30
-    env:
-      ORACLE_REQUIRED: "1"
-      DIFFUSION_JOBS_TABLE: dedalo_ts_test_ci_diffusion_jobs
-      DIFFUSION_ACTIVITY_TABLE: dedalo_ts_test_ci_activity_diffusion
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # verify.ts needs the merge-base vs origin/main
-      - name: Link sibling paths (../private, PHP tree, client lib)
-        run: bash scripts/ci/link_siblings.sh
-      - name: Runner preconditions (bun pin, env, service probes)
-        run: bash scripts/ci/env_guard.sh
-      - name: Install
-        run: bun install --frozen-lockfile
-      - name: Verify branch vs origin/main
-        shell: bash # explicit: enables pipefail so tee cannot mask a red exit
-        run: bun run scripts/verify.ts --base origin/main 2>&1 | tee verify.log
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: verify-log
-          path: verify.log

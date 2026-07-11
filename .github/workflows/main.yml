@@ -1,16 +1,25 @@
-# Post-merge gate on main — the full measured baseline (docs/LEDGER.md
-# "Measured baselines"), not the PR's targeted verify: a merge that breaks a
-# non-neighbour test goes red within one push, not one night.
+# Post-push gate on the default branch — HERMETIC TIER ONLY (engineering/CI.md).
+#
+# BRANCH: `master` is this repo's default branch (renderpci/dedalo — the historic
+# Dédalo repo, where the v4/v5/v6 PHP branches live alongside it). This workflow
+# used to trigger on `main`, a branch that does not exist here, so it NEVER FIRED.
+# Fixed 2026-07-11.
+#
+# PUBLIC-REPO POSTURE: the full DB/parity suite cannot run here — it needs the live
+# matrix Postgres, which only the self-hosted Mac has, and this repo is PUBLIC (see
+# ci.yml's header for why that forbids self-hosted jobs). The full tier lives in
+# .github/workflows-private/ and runs on the private mirror. Here, a red `hermetic`
+# is the alarm.
 #
 # Invariants in this file are enforced by test/unit/ci_workflow_tripwire.test.ts.
 name: main
 
 on:
   push:
-    branches: [main]
+    branches: [master]
 
 concurrency:
-  group: main-selfhosted
+  group: main-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -24,27 +33,3 @@ jobs:
           bun-version-file: .bun-version
       - name: Hermetic tier (install + tsc + biome + static tripwires)
         run: bash scripts/ci/hermetic.sh
-
-  full:
-    runs-on: [self-hosted, macOS, dedalo-mac]
-    timeout-minutes: 60
-    env:
-      ORACLE_REQUIRED: "1"
-      DIFFUSION_JOBS_TABLE: dedalo_ts_test_ci_diffusion_jobs
-      DIFFUSION_ACTIVITY_TABLE: dedalo_ts_test_ci_activity_diffusion
-    steps:
-      - uses: actions/checkout@v4
-      - name: Link sibling paths (../private, PHP tree, client lib)
-        run: bash scripts/ci/link_siblings.sh
-      - name: Runner preconditions (bun pin, env, service probes)
-        run: bash scripts/ci/env_guard.sh
-      - name: Install
-        run: bun install --frozen-lockfile
-      - name: Full suite (unit + parity, live oracle)
-        shell: bash
-        run: bun test test/unit test/parity 2>&1 | tee full-suite.log
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: full-suite-log
-          path: full-suite.log

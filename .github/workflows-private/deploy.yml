@@ -19,7 +19,7 @@ on:
         required: true
       ref:
         description: Git ref (sha/tag/branch) to deploy
-        default: main
+        default: master
         required: true
 
 concurrency:

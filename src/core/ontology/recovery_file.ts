@@ -30,7 +30,7 @@ export const RECOVERY_PRESERVE_TLDS = [
 	'hierarchy',
 	'ontology',
 	'ontologytype',
-	'test'
+	'test',
 ] as const;
 
 export const RECOVERY_FILE_PATH = join(projectRoot, 'install', 'db', 'dd_ontology_recovery.sql.gz');

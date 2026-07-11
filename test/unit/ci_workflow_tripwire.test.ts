@@ -18,6 +18,14 @@
  *   4. Tripwire index integrity — scripts/verify.ts TRIPWIRES equals the
  *      engineering/TRIPWIRES.md rows exactly (the 12-vs-14 drift found
  *      2026-07-09 stays fixed), and every listed test file exists.
+ *   5. PUBLIC-REPO POSTURE (2026-07-11) — NO self-hosted job may live in
+ *      .github/workflows/. renderpci/dedalo is PUBLIC: anyone can fork it and
+ *      open a PR, and a `runs-on: self-hosted` job would execute that fork's
+ *      code on the Mac holding the real ../private/.env and the live matrix
+ *      Postgres — RCE on the data host. The self-hosted tier is preserved,
+ *      inert, in .github/workflows-private/ (GitHub executes only
+ *      .github/workflows/) for a PRIVATE mirror. This was prose in CI.md and
+ *      prose does not stop a paste; now it is a gate.
  *
  * EVERY path this gate reads is version-controlled, so it runs on a bare clone.
  * The index moved out of rewrite/LEDGER.md on 2026-07-11 for exactly that
@@ -25,7 +33,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const repoRoot = join(import.meta.dir, '..', '..');
@@ -33,10 +41,29 @@ const read = (rel: string) => readFileSync(join(repoRoot, rel), 'utf8');
 
 const bunPin = read('.bun-version').trim();
 
+const yaml = (f: string) => f.endsWith('.yml') || f.endsWith('.yaml');
+
+/**
+ * A job actually TARGETS the self-hosted runner — i.e. a `runs-on:` directive names
+ * it. Deliberately NOT a substring scan: these files must be free to *discuss*
+ * self-hosted in their headers (the whole public-repo posture is documented there),
+ * and a naive includes('self-hosted') would flag the warning that prevents the bug.
+ */
+const targetsSelfHosted = (src: string) => /^\s*runs-on:.*self-hosted/m.test(src);
+
+/** EXECUTED by GitHub — the public tier. Hermetic only (rule 5). */
 const workflowDir = join(repoRoot, '.github', 'workflows');
-const workflowFiles = readdirSync(workflowDir).filter(
-	(f) => f.endsWith('.yml') || f.endsWith('.yaml'),
-);
+const workflowFiles = readdirSync(workflowDir).filter(yaml);
+
+/** INERT on the public repo — the self-hosted tier, kept for the private mirror. */
+const privateDir = join(repoRoot, '.github', 'workflows-private');
+const privateFiles = existsSync(privateDir) ? readdirSync(privateDir).filter(yaml) : [];
+
+/** Every workflow YAML, wherever it lives: the pin + oracle rules bind to both tiers. */
+const allWorkflows: Array<{ rel: string; src: string }> = [
+	...workflowFiles.map((f) => ({ rel: join('.github', 'workflows', f), src: '' })),
+	...privateFiles.map((f) => ({ rel: join('.github', 'workflows-private', f), src: '' })),
+].map((w) => ({ ...w, src: read(w.rel) }));
 
 /** verify.ts TRIPWIRES entries (the quoted test paths inside the array). */
 function verifyTripwires(): string[] {
@@ -64,16 +91,26 @@ function ledgerTripwires(): string[] {
 
 describe('CI workflow tripwire', () => {
 	test('every GitHub workflow using setup-bun pins via bun-version-file, never inline', () => {
-		for (const file of workflowFiles) {
-			const src = read(join('.github', 'workflows', file));
+		for (const { rel, src } of allWorkflows) {
 			if (!src.includes('setup-bun')) continue;
-			expect(src, `${file}: setup-bun must use bun-version-file: .bun-version`).toContain(
+			expect(src, `${rel}: setup-bun must use bun-version-file: .bun-version`).toContain(
 				'bun-version-file: .bun-version',
 			);
-			expect(src, `${file}: inline bun-version would drift from the .bun-version pin`).not.toMatch(
+			expect(src, `${rel}: inline bun-version would drift from the .bun-version pin`).not.toMatch(
 				/bun-version:\s/,
 			);
 		}
+	});
+
+	// Rule 5 — the public-repo security posture, mechanically.
+	test('NO self-hosted job lives in .github/workflows/ (public repo — fork PRs would get RCE on the data host)', () => {
+		const offenders = workflowFiles.filter((f) =>
+			targetsSelfHosted(read(join('.github', 'workflows', f))),
+		);
+		expect(
+			offenders,
+			'renderpci/dedalo is PUBLIC. A `runs-on: self-hosted` job here executes fork-PR code on the Mac that holds ../private/.env and the live matrix Postgres. Move it to .github/workflows-private/ (inert; for the private mirror). If the repo ever goes private again, retire this rule deliberately — do not just delete it:',
+		).toEqual([]);
 	});
 
 	test('.gitlab-ci.yml oven/bun image tag equals the .bun-version pin', () => {
@@ -83,16 +120,17 @@ describe('CI workflow tripwire', () => {
 		expect(tag).toBe(bunPin);
 	});
 
+	// Binds to BOTH tiers: the self-hosted jobs now live in workflows-private/, and the
+	// invariant has to travel with them or it silently stops guarding anything.
 	test('self-hosted workflows running parity/verify set ORACLE_REQUIRED: "1"', () => {
-		for (const file of workflowFiles) {
-			const src = read(join('.github', 'workflows', file));
-			if (!src.includes('self-hosted')) continue;
+		for (const { rel, src } of allWorkflows) {
+			if (!targetsSelfHosted(src)) continue;
 			const runsOracleGates =
 				src.includes('test/parity') ||
 				src.includes('scripts/verify.ts') ||
 				/\bbun test\b/.test(src);
 			if (!runsOracleGates) continue;
-			expect(src, `${file}: self-hosted oracle-gated job must set ORACLE_REQUIRED: "1"`).toContain(
+			expect(src, `${rel}: self-hosted oracle-gated job must set ORACLE_REQUIRED: "1"`).toContain(
 				'ORACLE_REQUIRED: "1"',
 			);
 		}

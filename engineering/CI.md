@@ -1,18 +1,45 @@
 # CI/CD — pipeline map, invariants, runbooks
 
-Foundation built 2026-07-09 (prepare-only: workflows are inert until the repo
-is pushed — see the activation runbook at the bottom). Invariants in the
+Foundation built 2026-07-09. **ACTIVATED 2026-07-11** on `renderpci/dedalo`
+(GitHub), which is a **PUBLIC** repo whose default branch is **`master`** — two
+facts that reshape the whole design (see Security posture). Invariants in the
 workflow files are enforced by `test/unit/ci_workflow_tripwire.test.ts`.
+
+The hermetic tier first ran GREEN on 2026-07-11 (55/55 static tripwires, tsc +
+biome clean). Getting there needed two fixes that had shipped red in the initial
+commit — the workflows had never actually executed: a `biome` format error in
+`src/core/ontology/recovery_file.ts`, and a `ws_a_tripwires` false positive on
+`src/core/test_data/seed.ts` (typed-number fixture identity, not a locator —
+ratcheted with a reason).
 
 ## Pipeline map
 
+**Two repos, by trust level.** GitHub is public and gets the hermetic tier only;
+everything that needs the live Postgres runs on a PRIVATE mirror with the
+self-hosted runner. GitHub executes ONLY `.github/workflows/` — so the
+self-hosted tier is parked, inert but preserved, in `.github/workflows-private/`.
+
 | Workflow | Trigger | Runner | Runs |
 |---|---|---|---|
-| `.github/workflows/ci.yml` | pull_request | hosted ubuntu + self-hosted mac | `hermetic` (scripts/ci/hermetic.sh) + `verify` (scripts/verify.ts --base origin/main, live oracle) |
-| `.github/workflows/main.yml` | push to main | hosted ubuntu + self-hosted mac | `hermetic` + full `bun test test/unit test/parity` (the LEDGER measured baseline) |
-| `.github/workflows/nightly.yml` | cron 01:00 UTC + manual | self-hosted mac | full `bun test` (unit+parity+integration/MariaDB) + client gate (scripts/ci/client_gate.sh) |
-| `.github/workflows/deploy.yml` | manual dispatch | self-hosted mac | **PARKED** — loud failure until DEPLOY_HOST/DEPLOY_SSH_KEY secrets exist, then deploy/deploy.sh |
+| `.github/workflows/ci.yml` | pull_request | hosted ubuntu | `hermetic` (scripts/ci/hermetic.sh) |
+| `.github/workflows/main.yml` | push to **master** | hosted ubuntu | `hermetic` |
 | `.gitlab-ci.yml` | MR + default-branch push (GitLab mirror) | GitLab shared runners | hermetic tier only — the SAME scripts/ci/hermetic.sh |
+| *— PRIVATE MIRROR ONLY (inert on the public repo) —* | | | |
+| `.github/workflows-private/selfhosted.yml` | dispatch (restore PR/push triggers on the mirror) | self-hosted mac | `verify` (scripts/verify.ts --base origin/master) + `full` (bun test test/unit test/parity) |
+| `.github/workflows-private/nightly.yml` | cron 01:00 UTC + manual | self-hosted mac | full `bun test` (unit+parity+integration/MariaDB) + client gate (scripts/ci/client_gate.sh) |
+| `.github/workflows-private/deploy.yml` | manual dispatch | self-hosted mac | **PARKED** — loud failure until DEPLOY_HOST/DEPLOY_SSH_KEY secrets exist, then deploy/deploy.sh |
+
+**Branch:** the workflows used to trigger on `main`, a branch that does not exist
+in this repo — `main.yml` therefore NEVER FIRED, and `ci.yml`'s verify job diffed
+against a non-existent `origin/main`. Fixed 2026-07-11: everything targets
+`master`. Nothing tripwires branch names; re-check them if the default changes.
+
+**Oracle (post-cutover):** `ORACLE_REQUIRED: "1"` is now largely VESTIGIAL. PHP is
+decommissioned and `oracleMode()` defaults to `fixtures`, so parity replays the
+frozen store credlessly and the live-oracle canary test is skipped. The flag is
+kept so that an explicit `ORACLE_MODE=live` run still hard-fails on an absent
+oracle instead of silently skipping. Ignore any older text below telling you to
+"restart PHP at :8080" — there is no PHP to restart.
 
 Two tiers, by dependency footprint:
 
@@ -91,49 +118,77 @@ Unparking checklist (first server):
    production).
 3. First dispatch of deploy.yml against staging IS the deploy.sh test.
 
-## Security posture (hard precondition)
+## Security posture (THE hard constraint — now tripwired)
+
+**The repo went PUBLIC. The self-hosted runner must never be attached to it.**
 
 The self-hosted runner executes workflow code with access to the real
-`../private/.env` and the live Postgres. That is acceptable ONLY while the
-repo is private with no outside collaborators. **Before adding collaborators
-or going public**: require approval for outside-collaborator workflow runs
-(already set), and reconsider whether PR jobs may target the self-hosted
-runner at all.
+`../private/.env` and the live matrix Postgres. On a public repo, **anyone can
+fork and open a PR** — and a PR job with `runs-on: [self-hosted, …]` would run
+that fork's code on the machine holding the credentials and the real Dédalo
+data. That is remote code execution on the data host. GitHub's own guidance is
+explicit: do not use self-hosted runners with public repositories.
 
-## Activation runbook (one-time, when ready to push)
+The old precondition ("acceptable ONLY while the repo is private") was prose,
+and prose does not stop a paste. It is now **rule 5 of
+`ci_workflow_tripwire.test.ts`**: no `runs-on:` naming `self-hosted` may exist
+under `.github/workflows/`. The self-hosted jobs live in
+`.github/workflows-private/`, which GitHub never executes.
 
-1. ~~Pre-push: decide untracked `install/import/`~~ RESOLVED 2026-07-10
-   (UPDATE_PROCESS Phase 2): `install/import/ontology/` is COMMITTED — it is
-   the vendored ontology data package the update pipeline imports from (the
-   'Local files' source) and the dir the export pipeline regenerates. Sanity
-   still applies before push: `git ls-files | xargs du -m | sort -rn | head`
-   (nothing near GitHub's 100 MB blob limit).
-2. `gh repo create <owner>/<name> --private --source . --remote origin --push`
-3. GitLab: create the project, add as second remote (or GitHub→GitLab push
-   mirroring). The first push runs the `.gitlab-ci.yml` hermetic pipeline on
-   shared runners — that run is the GitLab smoke test.
-4. GitHub repo settings: Actions → restrict allowed actions; require approval
-   for outside collaborators; scope the runner group to this repo.
-   Branch-protection caveat: required status checks on private repos need a
-   paid plan — the free-tier posture is "red main.yml is the alarm".
-5. Self-hosted runner: Settings → Actions → Runners → new macOS/arm64 runner
-   into `~/actions-runner-dedalo/` (outside all Dédalo trees), labels
-   `dedalo-mac`, name `dedalo-mac-1`. **ONE runner only.** Then
-   `./svc.sh install && ./svc.sh start` (LaunchAgent — runs while this user
-   is logged in). Put the pinned bun dir (`~/.bun/bin`) in the runner's
-   `.path` file; env_guard catches drift regardless. Sleep note: a sleeping
-   Mac queues jobs (queued-not-lost); `sudo pmset -a sleep 0` if that ever
-   matters.
-6. Smoke sequence:
-   - push branch `ci-smoke` (whitespace change) + open a PR → `hermetic` and
-     `verify` both green;
-   - push a deliberate biome violation → `hermetic` red on the hosted runner;
-     revert;
-   - stop the PHP server → re-run `verify` → RED via the oracle canary;
-     restart PHP → green (proves ORACLE_REQUIRED wiring);
-   - merge → watch `main.yml` full run; record its duration in
-     rewrite/LEDGER.md;
-   - manually dispatch `nightly.yml` once (don't wait for cron);
-   - dispatch `deploy.yml` → the loud PARKED failure is the passing test.
-7. GitHub pauses cron schedules after ~60 days of repo inactivity —
-   re-enable from the Actions tab if nightly goes quiet.
+Consequence: the DB/parity/client tier does not run on GitHub. Options, in order
+of preference — (a) a PRIVATE mirror repo with the runner attached; (b) the
+private `gitdedalo` remote; (c) simply `bun run scripts/verify.ts` locally before
+pushing. If the repo is ever made private again, retire rule 5 DELIBERATELY (with
+a ledger line) rather than deleting it in passing.
+
+Also set, in GitHub repo settings: Actions → General → "Require approval for all
+outside collaborators", and restrict allowed actions to GitHub-authored +
+`oven-sh/setup-bun`.
+
+## Activation runbook — GitHub (public repo, hermetic tier)
+
+The repo is already pushed (`renderpci/dedalo`, branches `master` + `v7`), so the
+old "create the repo and push" steps are gone. What remains is settings work in
+the GitHub UI — none of it can be done from the CLI without a token.
+
+1. **Enable Actions**: Settings → Actions → General → Allow all actions, or (better)
+   "Allow <owner>, and select non-<owner>, actions" and allowlist `oven-sh/setup-bun@*`
+   plus `actions/*`. The workflows only use `actions/checkout`, `actions/upload-artifact`
+   and `oven-sh/setup-bun`.
+2. **Fork-PR safety**: Settings → Actions → General → Fork pull request workflows from
+   outside collaborators → **"Require approval for all outside collaborators"**. On a
+   public repo this is the difference between a review and an automatic run.
+3. **Do NOT register a self-hosted runner on this repo.** See Security posture. Rule 5
+   of `ci_workflow_tripwire` fails the build if a self-hosted job reappears under
+   `.github/workflows/`.
+4. **Smoke sequence** (proves the wiring, costs nothing):
+   - push a branch with a whitespace change, open a PR → `ci / hermetic` runs on
+     ubuntu and goes green;
+   - add a deliberate biome violation → `hermetic` goes RED; revert;
+   - merge to `master` → `main / hermetic` fires (it never did before: it was
+     listening on a branch named `main` that does not exist here).
+5. **Branch protection** (public repos get this free): Settings → Rules → Rulesets →
+   require the `hermetic` status check on `master`, and require a PR to merge.
+   Without it, the posture is only "a red run is the alarm".
+6. **GitLab mirror**: the same `.gitlab-ci.yml` hermetic tier runs there on shared
+   runners — no runner, no secrets needed.
+
+## Activation runbook — the DB tier (PRIVATE mirror)
+
+Only if/when the full suite must run in CI rather than locally:
+
+1. Create a PRIVATE GitHub repo (or use the `gitdedalo` remote); push `master` to it.
+2. Move `.github/workflows-private/*.yml` into `.github/workflows/` **on that mirror
+   only**, and restore the real triggers in `selfhosted.yml` (the `pull_request` /
+   `push: [master]` lines are commented at the top of its `on:` block).
+3. Register the runner there: Settings → Actions → Runners → new macOS/arm64 runner
+   into `~/actions-runner-dedalo/` (outside all Dédalo trees), labels `dedalo-mac`,
+   name `dedalo-mac-1`. **ONE runner only** — a single slot serializes every
+   self-hosted job machine-wide, which is the isolation guarantee for the shared
+   scratch DB surfaces. Then `./svc.sh install && ./svc.sh start` (LaunchAgent —
+   runs while this user is logged in). Put the pinned bun dir (`~/.bun/bin`) in the
+   runner's `.path`; env_guard catches drift regardless. A sleeping Mac queues jobs
+   (queued-not-lost); `sudo pmset -a sleep 0` if that matters.
+4. GitHub pauses cron schedules after ~60 days of repo inactivity — re-enable
+   `nightly` from the Actions tab if it goes quiet.
+5. Dispatch `deploy.yml` → the loud PARKED failure is the passing test.

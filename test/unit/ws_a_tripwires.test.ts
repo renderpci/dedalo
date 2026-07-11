@@ -130,6 +130,15 @@ const INLINE_SECTION_ID_MATCH_RATCHET = new Set<string>([
 	'src/core/components/component_info/widgets/state/state.ts',
 	'src/core/search/builders/builder_string.ts',
 	'src/core/section/locks.ts', // lock-triple key equality (documented non-locator use)
+	// Documented NON-LOCATOR use (2026-07-11, first green hermetic run): seed.ts's
+	// `record.section_id === CLONE_SOURCE_ID` matches a CanonicalRecord inside the
+	// in-memory test3 fixture, where section_id is a TYPED `number` (CanonicalRecord
+	// = { section_id: number } & …) compared against the numeric const CLONE_SOURCE_ID.
+	// There is no locator here — no section_tipo/component_tipo/type quad — so
+	// compareLocators is inapplicable, and the loose-numeric hazard the law exists for
+	// ('05' vs 5, a DB-stored string) cannot arise on a typed number. The regex simply
+	// cannot see the type. NOT an upward extension of the inline-matcher debt.
+	'src/core/test_data/seed.ts',
 	'src/core/section/read.ts',
 	'src/core/security/auth.ts',
 	'src/core/tools/register.ts', // radio-button truthy check (dd64/1), not locator matching
