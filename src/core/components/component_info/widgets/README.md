@@ -44,7 +44,7 @@ unported stub · single dispatch home · DB census over declared widget_names.
 4. Add a differential gate case naming the widget in its `test()` title
    (`test/parity/info_widget_differential.test.ts` pattern: scratch-twin
    fixtures, byte-compare vs the live PHP oracle — read the ORACLE TRAP note
-   in CLAUDE.md first).
+   in AGENTS.md first).
 5. Calculation process fns: add to `calculation/functions.ts`
    `CALCULATION_FUNCTIONS` — never load ontology-named files.
 6. Not portable yet? Register an `unported` stub (`{name, path, unported:

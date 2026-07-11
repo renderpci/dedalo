@@ -214,6 +214,7 @@ master_dedalo/
 
 | Doc | What |
 |---|---|
+| [`AGENTS.md`](AGENTS.md) | Instructions for coding agents — hard rules, commands, docs index (`CLAUDE.md` is a symlink to it) |
 | [`docs/rewrite.md`](docs/rewrite.md) | The full story of the PHP → TypeScript rewrite |
 | [`engineering/REWRITE_SPEC.md`](engineering/REWRITE_SPEC.md) | Master spec: constraints, security, architecture |
 | [`engineering/TRIPWIRES.md`](engineering/TRIPWIRES.md) | The tripwire index — every enforced invariant and the gate that proves it |

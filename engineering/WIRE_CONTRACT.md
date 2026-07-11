@@ -886,7 +886,7 @@ transforms the PHP/fixture response before diffing — the WC-001 pattern).
   STORED misc values id-keyed. Verified live 2026-07-10: the PHP client
   renders every stored numisdata archive (17,087 records) AND every live
   calculation BLANK. The server must satisfy the client's contract
-  (CLAUDE.md hard rule) — emitting both keys is the test_info widget's own
+  (AGENTS.md hard rule) — emitting both keys is the test_info widget's own
   precedent and repairs rendering without mutating stored data.
 - **Gate reconciliation:** `test/parity/info_widget_differential.test.ts`
   `phpEntries` normalizes the PHP response with the SAME production

@@ -483,7 +483,7 @@ Key hygiene (from the test): **track every created row and delete it in
     `*_differential.test.ts` case that byte-compares `computeInfoWidgets` (or the
     `get_widget_data` envelope) against the live PHP oracle
     (`test/parity/info_widget_differential.test.ts`). Read the **Oracle Trap**
-    note in `CLAUDE.md` first — a green differential with no oracle proves
+    note in `AGENTS.md` first — a green differential with no oracle proves
     nothing.
 
 ---
@@ -505,7 +505,7 @@ bottom — the first three are the usual culprits.
 
 !!! note "Never patch the client"
     `client/` is byte-identical to the PHP client and must not be edited
-    (CLAUDE.md hard rule). If a widget renders blank, fix the **server payload**
+    (AGENTS.md hard rule). If a widget renders blank, fix the **server payload**
     — the missing key, the missing datalist, the un-normalized entry — not the
     render. When a real client fix is needed it goes upstream to the PHP client
     and is re-synced (DEC-16).

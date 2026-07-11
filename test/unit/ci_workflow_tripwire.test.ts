@@ -10,7 +10,7 @@
  *      class.
  *   2. Oracle honesty — every self-hosted workflow that runs test/parity or
  *      scripts/verify.ts sets ORACLE_REQUIRED: "1", so an absent PHP oracle is
- *      a RED canary, never a silent green (the CLAUDE.md "oracle trap").
+ *      a RED canary, never a silent green (the AGENTS.md "oracle trap").
  *   3. No hermetic drift — the GitHub hermetic jobs AND .gitlab-ci.yml all
  *      invoke the shared scripts/ci/hermetic.sh (one source of truth), and
  *      hermetic.sh's tripwire list stays a SUBSET of scripts/verify.ts
