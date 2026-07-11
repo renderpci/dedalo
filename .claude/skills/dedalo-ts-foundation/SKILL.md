@@ -1,11 +1,11 @@
 ---
 name: dedalo-ts-foundation
-description: Master orientation for the Dédalo v7 TypeScript/Bun rewrite — READ THIS FIRST before any src/ work. Covers what v7 TS is (a from-scratch Bun/TS rewrite of the PHP monolith, which is a READ-ONLY oracle on the SAME Postgres), the codebase's load-bearing law ("tripwire or delete"), the 11 tripwires and what each guards, the subsystem/dependency map, the post-WS-C home rule (dispatch.ts = registry+gates+envelope only → api/handlers/<class>.ts; read routing in section/read_facade.ts), where the audit lives, and the map to every sibling skill. Use when starting any src/ TS work, asking "where does X live", "how is the TS server structured", architecture/layering/boundary questions, "is there an invariant about…", checking a flagged path before touching it, or onboarding. Live state: rewrite/LEDGER.md. Spec: rewrite/REWRITE_SPEC.md.
+description: Master orientation for the Dédalo v7 TypeScript/Bun rewrite — READ THIS FIRST before any src/ work. Covers what v7 TS is (a from-scratch Bun/TS rewrite of the PHP monolith, which is a READ-ONLY oracle on the SAME Postgres), the codebase's load-bearing law ("tripwire or delete"), the 11 tripwires and what each guards, the subsystem/dependency map, the post-WS-C home rule (dispatch.ts = registry+gates+envelope only → api/handlers/<class>.ts; read routing in section/read_facade.ts), where the audit lives, and the map to every sibling skill. Use when starting any src/ TS work, asking "where does X live", "how is the TS server structured", architecture/layering/boundary questions, "is there an invariant about…", checking a flagged path before touching it, or onboarding. Live state: rewrite/LEDGER.md. Spec: engineering/REWRITE_SPEC.md.
 ---
 
 # Dédalo v7 foundation (TypeScript/Bun rewrite)
 
-**Read this first for any `src/` work.** Dédalo v7 TS is a from-scratch rewrite of the PHP monolith (`v7/master_dedalo`) on Bun 1.3.9 + strict TypeScript. During coexistence the **PHP server is a READ-ONLY oracle running on the SAME Postgres** — every TS behavior is verified differentially against it, and PHP can re-parse any row TS writes. Authoritative overview: `rewrite/REWRITE_SPEC.md`. **Live measured state (where we are right now): `rewrite/LEDGER.md`.** Historical narrative (how we got here): `rewrite/STATUS.md`.
+**Read this first for any `src/` work.** Dédalo v7 TS is a from-scratch rewrite of the PHP monolith (`v7/master_dedalo`) on Bun 1.3.9 + strict TypeScript. During coexistence the **PHP server is a READ-ONLY oracle running on the SAME Postgres** — every TS behavior is verified differentially against it, and PHP can re-parse any row TS writes. Authoritative overview: `engineering/REWRITE_SPEC.md`. **Live measured state (where we are right now): `rewrite/LEDGER.md`.** Historical narrative (how we got here): `rewrite/STATUS.md`.
 
 Do not read this skill as a spec copy — it POINTS. Specs and the ledger hold the content; this teaches how to work without breaking the rails.
 
@@ -61,7 +61,7 @@ A component model is added by writing a descriptor (`src/core/components/compone
 
 ## Config: one env reader
 
-`readEnv` (`src/config/env.ts`) is the ONLY thing that reads the environment; the typed catalog is `src/config/config.ts` (`config.ops` holds pool/observability keys). **No direct `process.env` outside `src/config/`** — tripwired (`config_env_tripwire`). Deeper: **`dedalo-ts-ops-config`**; operating the server: `engineering/PRODUCTION.md`, `rewrite/STAGING_VALIDATION.md`.
+`readEnv` (`src/config/env.ts`) is the ONLY thing that reads the environment; the typed catalog is `src/config/config.ts` (`config.ops` holds pool/observability keys). **No direct `process.env` outside `src/config/`** — tripwired (`config_env_tripwire`). Deeper: **`dedalo-ts-ops-config`**; operating the server: `engineering/PRODUCTION.md`, `engineering/STAGING_VALIDATION.md`.
 
 ## Where the audit lives & what it means for new work
 
@@ -77,7 +77,7 @@ Reach for the specialist when you cross into its area:
 
 - **`dedalo-ts-write-path`** — jsonb writes & the `::text::jsonb` bind trap (`encodeForJsonb` in `src/core/db/json_codec.ts`), `withTransaction` (`src/core/db/postgres.ts`), `insertMatrixRecordWithCounter` (`src/core/db/matrix_write.ts`), `compareLocators` (`src/core/concepts/locator.ts`), `dbTimestamp` (`src/core/db/db_timestamp.ts`), PHP-oracle-on-same-Postgres write parity.
 - **`dedalo-ts-isolation-caching`** — the 3 AsyncLocalStorage stores (transaction ALS in `postgres.ts`; request-lang ALS `runWithRequestLangs`/`currentApplicationLang`/`currentDataLang` in `src/core/resolve/request_lang.ts`; request-context ALS `currentPrincipal` in `src/core/security/request_context.ts`) and the cache factories `createOntologyCache`/`createDataCache` (`src/core/ontology/cache_factory.ts`). Model: `engineering/REQUEST_ISOLATION.md`.
-- **`dedalo-ts-testing`** — differential gates, `hasPhpCredentials` (`test/parity/php_client.ts`), `ORACLE_MODE=fixtures` (`test/parity/oracle_fixtures.ts`), scratch-write hygiene. Fixture mode: `rewrite/ORACLE_HARVEST.md`.
+- **`dedalo-ts-testing`** — differential gates, `hasPhpCredentials` (`test/parity/php_client.ts`), `ORACLE_MODE=fixtures` (`test/parity/oracle_fixtures.ts`), scratch-write hygiene. Fixture mode: `engineering/ORACLE_HARVEST.md`.
 - **`dedalo-ts-extension`** — adding component models / descriptors / facets.
 - **`dedalo-ts-ops-config`** — env/config catalog, pool/observability, running & supervising the server.
 

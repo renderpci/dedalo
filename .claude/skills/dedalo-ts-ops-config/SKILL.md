@@ -1,6 +1,6 @@
 ---
 name: dedalo-ts-ops-config
-description: Configuration discipline and running the Dédalo v7 TS/Bun server in production. Use when reading or adding a DEDALO_* config key, touching process.env / src/config/env.ts (readEnv) / src/config/config.ts / ../private/.env, wiring a COEXISTENCE flag (DEDALO_DIFFUSION_NATIVE, DEDALO_DEV_MODE, DEDALO_SESSION_DB_PATH), or doing anything ops: deploy/systemd, the unix socket + reverse proxy (SERVER_UNIX_SOCKET), graceful shutdown (SIGTERM drain), boot migrations, backups, /health, /api/v1/counters observability, or pool sizing (DB_POOL_MAX). Also for "config key isn't taking effect", config_env_tripwire or coex_tag_tripwire failures, and "how do we run this in production". Authoritative ops doc: engineering/PRODUCTION.md; validation checklist: rewrite/STAGING_VALIDATION.md; PHP↔TS shared-DB rules: rewrite/COEXISTENCE.md; config precedence + key census: dedalo-config skill + ../private/sample.env.
+description: Configuration discipline and running the Dédalo v7 TS/Bun server in production. Use when reading or adding a DEDALO_* config key, touching process.env / src/config/env.ts (readEnv) / src/config/config.ts / ../private/.env, wiring a COEXISTENCE flag (DEDALO_DIFFUSION_NATIVE, DEDALO_DEV_MODE, DEDALO_SESSION_DB_PATH), or doing anything ops: deploy/systemd, the unix socket + reverse proxy (SERVER_UNIX_SOCKET), graceful shutdown (SIGTERM drain), boot migrations, backups, /health, /api/v1/counters observability, or pool sizing (DB_POOL_MAX). Also for "config key isn't taking effect", config_env_tripwire or coex_tag_tripwire failures, and "how do we run this in production". Authoritative ops doc: engineering/PRODUCTION.md; validation checklist: engineering/STAGING_VALIDATION.md; PHP↔TS shared-DB rules: rewrite/COEXISTENCE.md; config precedence + key census: dedalo-config skill + ../private/sample.env.
 ---
 
 # Dédalo v7 TS — ops & config discipline
@@ -97,7 +97,7 @@ Verified behaviors in `src/server.ts` — do not regress these:
 ## Validation (the audit's biggest coverage hole)
 
 Ops is **code-verified, not yet failover-tested.** Before trusting a deploy, run the
-checklist in **rewrite/STAGING_VALIDATION.md** — it proves shutdown/restart/failover/health/pool
+checklist in **engineering/STAGING_VALIDATION.md** — it proves shutdown/restart/failover/health/pool
 behavior through a REAL restart, which no unit test exercises.
 
 ## Bun coupling

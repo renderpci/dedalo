@@ -5,7 +5,7 @@ description: The reusable workflow for the Dédalo PHP→TypeScript/Bun rewrite 
 
 # Dédalo TS rewrite — PHP-oracle parity debugging
 
-The rewrite lives in `/Users/render/Desktop/trabajos/dedalo/v7_ts/master_dedalo`. The PHP reference (`v7/master_dedalo`) is READ-ONLY and is the ORACLE: when TS and PHP disagree, PHP is right unless it is a pinned live defect. Master spec `rewrite/REWRITE_SPEC.md`; per-subsystem specs in `docs/*_SPEC.md`; running ledger `rewrite/STATUS.md` (house style: ✅ rows cite their gate test; open items carry a blocking reason; NEVER silently narrow scope — throw loudly + ledger).
+The rewrite lives in `/Users/render/Desktop/trabajos/dedalo/v7_ts/master_dedalo`. The PHP reference (`v7/master_dedalo`) is READ-ONLY and is the ORACLE: when TS and PHP disagree, PHP is right unless it is a pinned live defect. Master spec `engineering/REWRITE_SPEC.md`; per-subsystem specs in `docs/*_SPEC.md`; running ledger `rewrite/STATUS.md` (house style: ✅ rows cite their gate test; open items carry a blocking reason; NEVER silently narrow scope — throw loudly + ledger).
 
 ## Environment
 

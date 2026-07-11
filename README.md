@@ -202,8 +202,7 @@ master_dedalo/
 │   ├── unit/                  # TS-native unit gates (*_native.test.ts)
 │   └── parity/                # Frozen-fixture parity tests (no oracle, no creds)
 ├── tools/                     # Dédalo tools (tool_export, tool_print, etc.)
-├── engineering/               # Specs: WIRE_CONTRACT, RELATIONS_SPEC, SECTION_SPEC, etc.
-├── rewrite/                   # Rewrite state: LEDGER, STATUS, REWRITE_SPEC, CI, etc.
+├── engineering/               # Specs + contracts: REWRITE_SPEC, WIRE_CONTRACT, TRIPWIRES, CI, etc.
 ├── docs/                      # Documentation (incl. rewrite.md)
 ├── scripts/                   # Install, migration, verification scripts
 └── install/                   # Install subsystem
@@ -216,14 +215,16 @@ master_dedalo/
 | Doc | What |
 |---|---|
 | [`docs/rewrite.md`](docs/rewrite.md) | The full story of the PHP → TypeScript rewrite |
-| [`rewrite/REWRITE_SPEC.md`](rewrite/REWRITE_SPEC.md) | Master spec: constraints, security, architecture |
-| [`rewrite/LEDGER.md`](rewrite/LEDGER.md) | Current state — measured baselines, per-subsystem coverage, tripwire index |
+| [`engineering/REWRITE_SPEC.md`](engineering/REWRITE_SPEC.md) | Master spec: constraints, security, architecture |
+| [`engineering/TRIPWIRES.md`](engineering/TRIPWIRES.md) | The tripwire index — every enforced invariant and the gate that proves it |
 | [`engineering/WIRE_CONTRACT.md`](engineering/WIRE_CONTRACT.md) | Ledgered wire-shape divergences from PHP |
 | [`engineering/CONVENTIONS.md`](engineering/CONVENTIONS.md) | Error-handling/logging convention + dynamic-import rules |
 | [`engineering/DIFFUSION_SPEC.md`](engineering/DIFFUSION_SPEC.md) | Native diffusion subsystem spec |
 | [`engineering/RELATIONS_SPEC.md`](engineering/RELATIONS_SPEC.md) | Relations family spec |
 | [`engineering/SECTION_SPEC.md`](engineering/SECTION_SPEC.md) | Section family spec |
-| [`rewrite/CUTOVER_RUNBOOK.md`](rewrite/CUTOVER_RUNBOOK.md) | The operator procedure that froze PHP and made TS the single engine |
+| [`engineering/ORACLE_HARVEST.md`](engineering/ORACLE_HARVEST.md) | The frozen parity fixture store: how it replays, why it can't be re-harvested |
+| [`engineering/CI.md`](engineering/CI.md) | CI/CD pipeline map, hermetic vs self-hosted tiers |
+| [`engineering/PRODUCTION.md`](engineering/PRODUCTION.md) | Ops: supervision, socket, backups, health |
 
 ---
 

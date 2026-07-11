@@ -78,7 +78,7 @@ Read env only via `readEnv` / `requireEnv` (`src/config/env.ts`); typed catalog 
 
 ## Verifying a write against the oracle
 
-Differential write gates need live PHP on the same Postgres — see the **`dedalo-parity-debugging`** skill for the harness. Gate with `describe.if(hasPhpCredentials())` (`test/parity/php_client.ts:178`); `ORACLE_MODE=fixtures` (`test/parity/oracle_fixtures.ts`) replays recorded pairs offline (`rewrite/ORACLE_HARVEST.md`, DEC-14b); `test/parity/oracle_canary.test.ts` makes oracle absence LOUD (never a silent green).
+Differential write gates need live PHP on the same Postgres — see the **`dedalo-parity-debugging`** skill for the harness. Gate with `describe.if(hasPhpCredentials())` (`test/parity/php_client.ts:178`); `ORACLE_MODE=fixtures` (`test/parity/oracle_fixtures.ts`) replays recorded pairs offline (`engineering/ORACLE_HARVEST.md`, DEC-14b); `test/parity/oracle_canary.test.ts` makes oracle absence LOUD (never a silent green).
 
 **Scratch-write hygiene — NEVER mutate a real record.** Round-trip/save/delete tests write only to scratch twins: `matrix_test`, provisioned test TLDs, or `dedalo_ts_test_*`. A test that touches a real §id is a bug even if it passes.
 

@@ -18,7 +18,7 @@ The live-oracle era is over. The baselines of record are FROZEN:
   against that pair, never mix.
 - **Write-path contracts** live in the TS-native `test/unit/*_native.test.ts`
   gates (DEC-14b — each retired differential's twin is mapped in
-  `rewrite/ORACLE_HARVEST.md`).
+  `engineering/ORACLE_HARVEST.md`).
 - A re-harvest is IMPOSSIBLE by definition. Any fixture change is a
   deliberate contract edit and needs its `engineering/WIRE_CONTRACT.md`
   entry the same day — the WC ledger remains the wire law.
@@ -40,9 +40,17 @@ The live-oracle era is over. The baselines of record are FROZEN:
 - **Invariants are tripwired or deleted** (DEC-12). If you state a rule in a
   header/README, add a mechanical gate. Coverage-state lists live ONLY in
   `rewrite/LEDGER.md` / `rewrite/STATUS.md` — headers may link, never duplicate
-  (S2-45).
+  (S2-45). ONE carve-out (2026-07-11): the **tripwire index is a machine-read
+  contract** and lives in `engineering/TRIPWIRES.md`, because `rewrite/` is not
+  in the repo.
+- **`rewrite/` is INTERNAL PROCESS and gitignored** — plans, status, history,
+  the closed COEXISTENCE ledger, the runbooks. It is not on a clone, so **no
+  gate, script or error message may read a path under it**. Anything mechanically
+  enforced, or that a consumer of the engine needs, belongs in `engineering/`
+  (permanent definitions) — that is the difference between the two directories.
 - **Never silently narrow scope**: uncovered paths throw loudly and get a
-  ledger line.
+  ledger line — in `rewrite/LEDGER.md` if it is state, but next to the code (a
+  `reason` field, a named exemption) if a gate must verify it.
 - **DB writes in tests only on scratch surfaces**; clean up after.
 
 ## Commands
@@ -59,19 +67,27 @@ The live-oracle era is over. The baselines of record are FROZEN:
 
 ## Docs index
 
+**`engineering/` = what the system IS** (permanent definitions, in the repo).
+**`rewrite/` = how we GOT HERE** (process/history, gitignored, local-only).
+When in doubt: if a gate reads it or a consumer needs it, it is `engineering/`.
+
 | Doc | What |
 |---|---|
-| `rewrite/LEDGER.md` | **Current state** — measured baselines, per-subsystem coverage, tripwire index. Update rows in place. |
-| `rewrite/STATUS.md` | Historical narrative ledger (long-form phase history; being frozen — see its banner). |
+| `engineering/REWRITE_SPEC.md` | Master spec: constraints, security chokepoints, architecture. |
+| `engineering/TRIPWIRES.md` | **The tripwire index** — machine-read: `verify.ts` TRIPWIRES must equal it exactly. |
 | `engineering/WIRE_CONTRACT.md` | Ledgered wire-shape divergences from PHP (WC-nn). |
-| `rewrite/REWRITE_SPEC.md` | Master spec: constraints, security chokepoints, architecture. |
 | `engineering/RELATIONS_SPEC.md`, `engineering/SECTION_SPEC.md` | Family specs — **read the dated §1 addenda first**: the rebuilds they instruct already landed. |
 | `engineering/DIFFUSION_SPEC.md` | Native diffusion subsystem (`src/diffusion/`, Bun-owns-MariaDB tiering). |
 | `engineering/CONVENTIONS.md` | Error-handling/logging convention + the dynamic-import rules. |
-| `rewrite/COEXISTENCE.md` | PHP-coexistence scaffolding ledger (COEX tags, removal conditions, cutover blockers). |
+| `engineering/ORACLE_HARVEST.md` | The frozen fixture store: how it replays, why a re-harvest is impossible, the retired-differential twin map. |
 | `engineering/PRODUCTION.md` | Ops: supervision, socket, backups, health. |
-| `rewrite/CI.md` | CI/CD: pipeline map, hermetic vs self-hosted tiers, seam env, activation runbook. |
-| `rewrite/CUTOVER_RUNBOOK.md` | The one-day operator procedure that freezes PHP and makes TS the single engine (COEX walk, parity flip, client ownership). |
+| `engineering/STAGING_VALIDATION.md` | Exercise the ops hardening before production. |
+| `engineering/CI.md` | CI/CD: pipeline map, hermetic vs self-hosted tiers, seam env, activation runbook. |
+| *— internal, not in the repo —* | |
+| `rewrite/LEDGER.md` | **Current state** — measured baselines, per-subsystem coverage, known-open gaps. Update rows in place. |
+| `rewrite/STATUS.md` | Historical narrative ledger (long-form phase history; frozen — see its banner). |
+| `rewrite/COEXISTENCE.md` | CLOSED PHP-coexistence ledger (COEX tags, removal conditions) — history since the cutover. |
+| `rewrite/CUTOVER_RUNBOOK.md` | The one-day operator procedure that froze PHP and made TS the single engine. |
 | `rewrite/client_tests.md` | Client-gate baseline. |
 | `audits/2026-07_foundation/` | Foundation audit: FINDINGS / DECISIONS / REMEDIATION (finding ids like S2-26 resolve here). |
 
@@ -90,7 +106,8 @@ principal) is ALS-scoped — never captured at module level.
 
 ## Tripwires
 
-The authoritative tripwire list is the **"Tripwire index" in `rewrite/LEDGER.md`**
-(S2-45: coverage lists live there, never in headers). `scripts/verify.ts`
+The authoritative tripwire list is **`engineering/TRIPWIRES.md`** (in the repo,
+because it is machine-read; the rest of the coverage state stays in
+`rewrite/LEDGER.md`). `scripts/verify.ts`
 TRIPWIRES must match it — `test/unit/ci_workflow_tripwire.test.ts` guards the
 CI wiring around them.
