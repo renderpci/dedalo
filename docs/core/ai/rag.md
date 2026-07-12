@@ -225,7 +225,7 @@ It is registered in the API dispatch as the `dd_rag_api` action class (`src/core
 
 ```mermaid
 flowchart TB
-    save["save_event.ts save/delete hook<br/>(registerRagRecordHook)"] -->|enqueue marker (best-effort)| Q[("rag_index_queue<br/>(matrix DB, dedalo7_mib)")]
+    save["save_event.ts save/delete hook<br/>(registerRagRecordHook)"] -->|"enqueue marker (best-effort)"| Q[("rag_index_queue<br/>(matrix DB, dedalo7_mib)")]
     Q -->|cli/rag_drain.ts, advisory-lock single-flight| IDX["RagIndexer<br/>(indexer.ts)"]
     IDX -->|readComponentText, READ-ONLY| EX["component_text.ts"]
     IDX -->|structure-aware semantic chunking| CH["chunker.ts"]
@@ -234,9 +234,9 @@ flowchart TB
     API["dd_rag_api (ragApiActions)"] --> RET["retrieval.ts"]
     RET -->|denseSearch: pgvector cosine ANN| VS
     RET -->|lexicalSearch: Postgres FTS + f_unaccent| VS
-    RET -->|fuse: RRF (fusion.ts) → aclGate| ACL["getPermissions (schema) +<br/>buildSearchSql filter_by_locators (per-record)"]
+    RET -->|"fuse: RRF (fusion.ts) → aclGate"| ACL["getPermissions (schema) +<br/>buildSearchSql filter_by_locators (per-record)"]
     RET -->|records or passages| API
-    API -->|ask: runAsk (ask.ts)| LLM["LlmProvider<br/>(HttpLlmProvider / StubLlmProvider)"]
+    API -->|"ask: runAsk (ask.ts)"| LLM["LlmProvider<br/>(HttpLlmProvider / StubLlmProvider)"]
 ```
 
 Two Postgres databases, bridged by a **locator/passage list**, never a join: the matrix (`dedalo7_mib`, wherever `config.db` points) holds the dirty-marker queue and is the ACL source of truth; a **separate** database (`dedalo7_rag` by default, overridable via `DEDALO_RAG_DB_NAME`/`RAG_DB_NAME`, reusing the matrix host/user/password from `config.db`) holds only vectors and is fully rebuildable. **ACL is enforced explicitly inside `retrieval.ts`'s `aclGate`/`aclFilterCandidates`** — never inside the store — as a two-step check per candidate: (1) schema ACL, `getPermissions(principal, sectionTipo, componentTipo) >= 1`; (2) per-record projects ACL, a principal-scoped existence probe built with `buildSearchSql({ filter_by_locators: […] })`, so a hit a non-admin's project scope excludes is dropped **before** any score or count leaves the server (never an existence oracle).
