@@ -59,7 +59,7 @@ You can also copy `tools/tool_dev_template` by hand and rename every `tool_dev_t
         └── index.ts               # exports `tool: ToolServerModule` — never served
 ```
 
-`tools/` is the repo-root, **TS-owned** tree: it was seeded once from the PHP client tool tree and now diverges deliberately (`scripts/sync_client.sh` no longer syncs it). The common machinery (registry, loader, dispatch, security, config, the `tool_common` client base) is NOT a tool — it lives in `src/core/tools/`.
+`tools/` is the repo-root, **TS-owned** tree. The common machinery (registry, loader, dispatch, security, config, the `tool_common` client base) is NOT a tool — it lives in `src/core/tools/`.
 
 ## 2. Edit register.json
 
@@ -123,7 +123,7 @@ tool_numisdata_import.prototype.do_import = async function() {
 }
 ```
 
-The relative import `../../../core/tools_common/js/tool_common.js` resolves through the **served** URL tree, not the repo tree: `tool_common.js` itself lives at `src/core/tools/client/js/tool_common.js` and is served at `/dedalo/core/tools_common/js/tool_common.js` (see *Roots & static serving* in `engineering/TOOLS_SPEC.md`). The vanilla-JS client lifecycle (`init`/`build`/`render`, `tool_request`, `wire_tool`, `open_tool`) is otherwise unchanged from the PHP era — the client tree was copied as-is. Lifecycle, `ddo_map`, modal/window modes, labels: [JS lifecycle](js_lifecycle.md).
+The relative import `../../../core/tools_common/js/tool_common.js` resolves through the **served** URL tree, not the repo tree: `tool_common.js` itself lives at `src/core/tools/client/js/tool_common.js` and is served at `/dedalo/core/tools_common/js/tool_common.js` (see *Roots & static serving* in `engineering/TOOLS_SPEC.md`). Lifecycle, `ddo_map`, modal/window modes, labels: [JS lifecycle](js_lifecycle.md).
 
 ## 5. Register the tool
 
@@ -142,7 +142,7 @@ The tool button now appears on matching elements (per `affected_models` / `affec
 
 ## 7. Test
 
-Follow the existing parity-test pattern for a real tool (e.g. `test/parity/tool_export_differential.test.ts` or `test/unit/tools_dispatch.test.ts`): drive the same `tool_request` through the TS dispatcher (and, where a PHP oracle is reachable, through PHP) and diff the response. See the `dedalo-parity-debugging` skill for the differential-gate workflow this project uses throughout the rewrite.
+Follow the existing test pattern for a real tool (e.g. `test/parity/tool_export_differential.test.ts` or `test/unit/tools_dispatch.test.ts`): drive the same `tool_request` through the dispatcher and assert on the response — parity gates replay the frozen fixture store (`test/parity/fixtures/oracle_harvest/`) rather than a live external server. See the `dedalo-ts-testing` skill for the two test tiers and the fixture-replay workflow.
 
 ## Out-of-repo tools
 

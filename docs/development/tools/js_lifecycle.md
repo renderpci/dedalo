@@ -1,6 +1,6 @@
 # Tools JS lifecycle
 
-The client-side contract of a Dédalo tool — copied as-is from the PHP client tree and unchanged by the TS rewrite (only the server side changed). Base module: `src/core/tools/client/js/tool_common.js`, served at `/dedalo/core/tools_common/js/tool_common.js` (see *Roots & static serving* in `engineering/TOOLS_SPEC.md`). Reference implementation: `tools/tool_dev_template/js/`.
+The client-side contract of a Dédalo tool — vanilla constructor-function/prototype JS, no build step. Base module: `src/core/tools/client/js/tool_common.js`, served at `/dedalo/core/tools_common/js/tool_common.js` (see *Roots & static serving* in `engineering/TOOLS_SPEC.md`). Reference implementation: `tools/tool_dev_template/js/`.
 
 ## Files
 
@@ -87,8 +87,8 @@ const response = await self.tool_request({
 
 The helper builds the full rqo (source via `create_source`, `prevent_lock: true`) and posts it through `data_manager`. Permission errors arrive as the standard `permissions_denied` response. For streaming (NDJSON) use `data_manager.request_fetch_stream` directly (see `tool_export`).
 
-!!! note "`prevent_lock` is vestigial in TS"
-    `prevent_lock` released a PHP per-session write-lock so a long tool request didn't block the user's other tabs. The TS engine has no such lock (its request-scoped `AsyncLocalStorage` context replaces the PHP global-static-plus-session-lock model entirely — see `engineering/REWRITE_SPEC.md`); the field is still accepted by the RQO schema for wire compatibility with the unchanged client but is not read by the TS dispatcher.
+!!! note "`prevent_lock` is vestigial"
+    There is no per-session write-lock to release — request state is scoped per-request via `AsyncLocalStorage` (see `engineering/REWRITE_SPEC.md`), so a long tool request never blocks the user's other tabs. The field is still accepted by the RQO schema (`src/core/concepts/rqo.ts`) for wire compatibility with the unchanged client, but the dispatcher does not read it.
 
 ## Modal and window modes
 

@@ -1,9 +1,8 @@
 # Tools server contract
 
-The TS-side contract every tool's server package must follow. Reference implementation: `tools/tool_dev_template/server/index.ts` (+ its handlers). Machinery: `src/core/tools/{module,dispatch,security,loader,paths,config,register,background,cache}.ts`. Concept spec: `engineering/TOOLS_SPEC.md`.
+The contract every tool's server package must follow. Reference implementation: `tools/tool_dev_template/server/index.ts` (+ its handlers). Machinery: `src/core/tools/{module,dispatch,security,loader,paths,config,register,background,cache}.ts`. Concept spec: `engineering/TOOLS_SPEC.md`.
 
-!!! note "What changed vs the PHP contract"
-    PHP dispatch reflects a `public static` method on `class.{tool_name}.php` behind ten ordered gates (registry → per-user → path realpath → reflection → `API_ACTIONS` → declarative permission → execute). The TS engine keeps the same **order and semantics**, but the reflection-shaped gates (class-file resolve, public+static check, `(object $options)` signature check) are **structural**, not runtime checks: a tool's server module is discovered once by an allowlisted directory scan (`loader.ts`), and its actions are typed functions keyed in a plain object (`apiActions`), so "the method exists and is callable" is a `Map`/`Object.hasOwn` lookup. There is no PHP class, no autoloader, and no `extends tool_common`.
+A tool's server module is discovered once by an allowlisted directory scan (`loader.ts`), and its actions are typed functions keyed in a plain object (`apiActions`) — "the method exists and is callable" is a `Map`/`Object.hasOwn` lookup, not a reflection check. There is no base class and no autoloader: dispatch runs an ordered gate chain (registry → per-user authorization → loaded module → `apiActions` lookup → declarative permission → execute) entirely against typed data.
 
 ## The module
 
@@ -13,9 +12,9 @@ The TS-side contract every tool's server package must follow. Reference implemen
 ```ts
 interface ToolServerModule {
   name: string;                                // must equal the directory name, ^tool_[a-z0-9_]+$
-  apiActions: Record<string, ToolActionSpec>;   // the remote surface (PHP API_ACTIONS)
-  backgroundRunnable?: readonly string[];       // second allowlist for async (PHP BACKGROUND_RUNNABLE)
-  isAvailable?: (context) => boolean | Promise<boolean>;  // toolbar availability (PHP is_available)
+  apiActions: Record<string, ToolActionSpec>;   // the remote surface
+  backgroundRunnable?: readonly string[];       // second allowlist for async execution
+  isAvailable?: (context) => boolean | Promise<boolean>;  // toolbar availability
   onRegister?: () => Promise<void>;             // lifecycle hook — NEVER inside apiActions
   onRemove?: () => Promise<void>;               // lifecycle hook — NEVER inside apiActions
 }
@@ -36,11 +35,11 @@ interface ToolActionSpec {
 }
 ```
 
-`handler` receives `{ principal, userId, options, background }` and returns a `ToolResponse` (`{ result, msg, errors?, ...extra }`) that **replaces the API envelope wholesale** — the handler owns `result`/`msg`/`errors` and may add extra fields (e.g. a streaming body), exactly like a PHP tool method's return value becomes the response body.
+`handler` receives `{ principal, userId, options, background }` and returns a `ToolResponse` (`{ result, msg, errors?, ...extra }`) that **replaces the API envelope wholesale** — the handler owns `result`/`msg`/`errors` and may add extra fields (e.g. a streaming body).
 
 ### The request envelope
 
-The client sends this (built by the JS helper `this.tool_request()` — unchanged from the PHP era):
+The client sends this (built by the JS helper `this.tool_request()`):
 
 ``` json
 {
@@ -56,8 +55,8 @@ The client sends this (built by the JS helper `this.tool_request()` — unchange
 1. `options` must be an object (or absent);
 2. the tool name must match `^tool_[a-z0-9_]+$` — rejected before any lookup;
 3. + 4. the tool must be **ACTIVE** in dd1324 **and** authorized for the calling user (`getUserTools` in `registry.ts`: admins get every active tool; others the profile-granted dd1067 set + `always_active` dd1601 tools);
-5. the tool must have a **loaded server module** (`getLoadedTool` — the TS equivalent of PHP's class-file resolve);
-6. the method must be a key of the module's `apiActions` (`resolveAction` — the TS `API_ACTIONS` allowlist);
+5. the tool must have a **loaded server module** (`getLoadedTool`);
+6. the method must be a key of the module's `apiActions` (`resolveAction`, the allowlist lookup);
 7. the action's declarative permission gate must pass (`assertActionPermission`) — **before** any background fork;
 8. execute: directly, or (when `options.background_running === true`) via `scheduleBackground`, which additionally enforces the `backgroundRunnable` allowlist.
 
@@ -71,14 +70,14 @@ The client sends this (built by the JS helper `this.tool_request()` — unchange
 | `developer` | — | `principal.isDeveloper` |
 | `null` | — | always passes here — the handler gates imperatively (defense in depth), e.g. `tool_export`'s `get_export_grid` (which must additionally assert read on every SQO target the grid touches, something the declarative gate cannot express) |
 
-`minLevel` defaults to `2` (write) when omitted, mirroring the PHP default. A missing or ill-typed required option field (e.g. no `section_tipo` for a `tipo` gate) is a **fail-closed denial**, never a pass — the request never reaches the handler. All four handler-facing types (and their option-reading contract) are unchanged from the PHP `tool_security` gates; only the call site moved from an imperative `assert_*` inside the method body to a declarative spec the dispatcher enforces before the handler runs.
+`minLevel` defaults to `2` (write) when omitted. A missing or ill-typed required option field (e.g. no `section_tipo` for a `tipo` gate) is a **fail-closed denial**, never a pass — the request never reaches the handler. The dispatcher enforces the declarative spec before the handler runs; a handler needing a target shape none of the four kinds can express (e.g. an SQO-wide write with no single record) declares `permission: null` and gates itself imperatively as defense in depth.
 
 !!! warning "Never list lifecycle hooks"
     `isAvailable`, `onRegister` and `onRemove` are called by the framework, not remotely. `loader.ts` throws (refusing to load the tool) if any of them appears as a key of `apiActions`.
 
 ## Background execution
 
-Long-running actions can run detached: the client passes `options.background_running = true`. PHP forks a CLI child (`process_runner.php`) because a PHP request cannot keep working after the response is sent; Bun's server is a **persistent process**, so `scheduleBackground` (`src/core/tools/background.ts`) is a fire-and-forget promise plus an in-process job record instead — it returns `{ result: true, msg: 'OK. Background process started', background_job_id }` immediately and runs the handler afterwards, capturing the outcome on the job record (`getBackgroundJob(id)`).
+Long-running actions can run detached: the client passes `options.background_running = true`. Bun's server is a **persistent process**, so `scheduleBackground` (`src/core/tools/background.ts`) runs the handler as a fire-and-forget promise plus an in-process job record — it returns `{ result: true, msg: 'OK. Background process started', background_job_id }` immediately and runs the handler afterwards, capturing the outcome on the job record (`getBackgroundJob(id)`).
 
 The method must ALSO be listed in the module's `backgroundRunnable`:
 
@@ -89,11 +88,11 @@ backgroundRunnable: ['my_long_method'],
 The declarative permission gate already ran (step 7 above) **before** the background fork, so unauthorized callers are refused observably, not silently queued. The background executor does not re-run the per-action gate; keep imperative asserts inside long-running write handlers as defense in depth (see `tool_propagate_component_data`'s handler, which re-derives its own gate because the target is SQO-wide, not a single record).
 
 !!! note "Ledgered (engineering/TOOLS_SPEC.md)"
-    Background jobs die on server restart (a PHP CLI child survives an Apache/RoadRunner reload; the in-process job table does not survive a Bun restart), and a CPU-bound handler currently shares the event loop with every other request — a Bun `Worker`-based executor is a drop-in follow-up behind the same `scheduleBackground` signature.
+    Background jobs die on server restart — the in-process job table does not survive a Bun restart — and a CPU-bound handler currently shares the event loop with every other request. A Bun `Worker`-based executor is a drop-in follow-up behind the same `scheduleBackground` signature.
 
 ## Configuration (`src/core/tools/config.ts`)
 
-Same three storage points as PHP, one TS accessor set:
+Three storage points, one accessor set:
 
 | Where | What |
 | --- | --- |
@@ -122,10 +121,10 @@ Resolution helpers:
 `importTools({dryRun})` scans the roots, parses each `register.json`, detects its format, and validates it:
 
 - top-level `components` key → legacy v6 dump — **not supported this wave** (none of the 34 in-repo tools use it, so this has not blocked any real port);
-- top-level `name` key → the flat **authoring** format (`authoringRegisterSchema`, a Zod mirror of `src/core/tools/client/register.schema.json` and the PHP `validate_register` rules) — converted to the column-keyed shape;
+- top-level `name` key → the flat **authoring** format (`authoringRegisterSchema`, a Zod mirror of `src/core/tools/client/register.schema.json`) — converted to the column-keyed shape;
 - column-keyed (`data`/`string`/`relation`/…) → pass-through, validated as-is. **All 34 in-repo `register.json` files are this form** — they are seeded matrix-row dumps, not hand-authored files.
 
-**Shared-DB safety.** dd1324 is shared with the live PHP install. `importTools` defaults to **dry-run** (`config.tools.enableRegistryImport = false`): for every tool it reports whether the registry already reflects the declared identity (empty diff = no-op), writing nothing. The write path (`enableRegistryImport = true`) is gated behind the write-parity procedure in `engineering/TOOLS_SPEC.md` (a `test/parity/tools_register_differential.test.ts` no-op gate plus one manual scratch-DB write-parity run) before it may be documented as supported.
+**Write gating.** `importTools` defaults to **dry-run** (`config.tools.enableRegistryImport = false`): for every tool it reports whether the registry already reflects the declared identity (empty diff = no-op), writing nothing. The write path (`enableRegistryImport = true`) is gated behind the write-parity procedure in `engineering/TOOLS_SPEC.md` (a `test/parity/tools_register_differential.test.ts` no-op gate plus one manual scratch-DB write-parity run) before it may be documented as supported.
 
 A missing/invalid `apiActions` shape, a `tool.name` that does not match the directory, or a lifecycle hook listed inside `apiActions` all fail the loader's `validateModule` check (logged, tool absent from the registry) — there is no silent partial registration.
 
