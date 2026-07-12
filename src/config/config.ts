@@ -285,6 +285,19 @@ export interface MediaConfig {
 	readonly imagePrintDpi: number;
 	/** Retouched-image twin quality (PHP DEDALO_IMAGE_QUALITY_RETOUCHED, default 'modified'). */
 	readonly imageQualityRetouched: string;
+	/**
+	 * Rule-B public quality folders (PHP DEDALO_MEDIA_PUBLIC_QUALITIES): the folders an
+	 * ANONYMOUS user may read when the record is published. `null` = derive them from
+	 * this install's quality catalog (core/media/protection.ts getDefaultPublicQualities).
+	 * Whatever is configured, master/work qualities are refused — see getPublicQualities().
+	 */
+	readonly publicQualities: readonly string[] | null;
+	/**
+	 * Raw Apache rewrite directives appended to the generated media/.htaccess just before
+	 * the final deny (PHP MEDIA_HTACCESS_ADDONS, a JSON array of strings). The operator
+	 * owns their syntax; the generator only places them.
+	 */
+	readonly htaccessAddons: readonly string[];
 	readonly binaries: MediaBinariesConfig;
 	readonly upload: MediaUploadConfig;
 }
@@ -595,6 +608,40 @@ function readListEnv(key: string, fallback: readonly string[]): readonly string[
 }
 
 /**
+ * Like readListEnv, but distinguishes UNSET (null — "no opinion, derive a default")
+ * from an explicitly EMPTY list ([] — "deliberately nothing"). The media public-quality
+ * list needs that distinction: unset derives the install's delivery qualities, while an
+ * empty list means no folder is public at all.
+ */
+function readOptionalListEnv(key: string): readonly string[] | null {
+	const raw = readEnv(key);
+	if (raw === undefined || raw.trim() === '') return null;
+	return readListEnv(key, []);
+}
+
+/**
+ * Read a JSON-array env value. STRICTLY JSON — never a comma list.
+ *
+ * MEDIA_HTACCESS_ADDONS carries raw Apache directives, and a directive legitimately
+ * contains commas (`RewriteRule ^ - [R=404,L]`). Parsing it with readListEnv's comma
+ * fallback would silently shred one directive into two broken lines and emit them into
+ * the generated .htaccess. A malformed value logs and falls back — it never becomes junk
+ * rules in a live web-server config.
+ */
+function readJsonArrayEnv(key: string, fallback: readonly string[]): readonly string[] {
+	const raw = readEnv(key);
+	if (raw === undefined || raw.trim() === '') return Object.freeze([...fallback]);
+	try {
+		const parsed: unknown = JSON.parse(raw.trim());
+		if (Array.isArray(parsed)) return Object.freeze(parsed.map(String));
+	} catch {
+		/* fall through to the loud refusal below */
+	}
+	console.error(`[config] ${key} must be a JSON array of strings — ignoring the value.`);
+	return Object.freeze([...fallback]);
+}
+
+/**
  * The media catalog, built once from env with the PHP defaults (config domains
  * media_image.php / media_av.php / media_docs.php). engineering/MEDIA_SPEC.md §3.
  */
@@ -724,6 +771,11 @@ function buildMediaConfig(): MediaConfig {
 		}),
 		imagePrintDpi: readNumber('DEDALO_IMAGE_PRINT_DPI', 150),
 		imageQualityRetouched: readEnv('DEDALO_IMAGE_QUALITY_RETOUCHED', 'modified') as string,
+		// null (unset) is MEANINGFUL: it means "derive the defaults from this install's
+		// quality catalog", which is not the same as an explicitly EMPTY list (= no folder
+		// is public, so rule B allows nothing).
+		publicQualities: readOptionalListEnv('DEDALO_MEDIA_PUBLIC_QUALITIES'),
+		htaccessAddons: readListEnv('MEDIA_HTACCESS_ADDONS', []),
 		binaries: Object.freeze({
 			base: binaryBase,
 			magick: readEnv('DEDALO_MAGICK_PATH', `${binaryBase}/magick`) as string,

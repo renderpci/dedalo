@@ -136,6 +136,12 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// set/cleared by the marker-store tests around each case — never request
 	// identity (the production base is install-static config.media.rootPath).
 	'diffusion/targets/mediastore/media_index.ts:baseOverrideForTests',
+	// Media-protection test seam (Rule A port): the same guarded temp-dir-only shape as
+	// the marker-store seam above — it refuses any non-temp path, so a test can never
+	// point the auth-marker writer or the rule-file writer at a real media tree. Set and
+	// cleared around each case; never request identity (the production paths are
+	// install-static: config.media.rootPath and <private>/).
+	'core/media/protection.ts:pathOverridesForTests',
 ]);
 
 /**

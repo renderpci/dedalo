@@ -25,8 +25,12 @@ const ROOT = { userId: -1, isGlobalAdmin: true };
 // update_ownership_tripwire.test.ts ("denied handlers are pure refusals").
 // What remains below is the PURE engineDenied set: closed-by-design methods
 // whose surfaces this engine never took over.
+//
+// 2026-07-12: media_control.set_media_access_mode LEFT this boundary with its port. The
+// media access mode is now TS-native runtime state (ts_state.json) and the engine owns
+// BOTH generated web-server rule files — there is no PHP install config to write. See
+// src/core/media/protection.ts + engineering/MEDIA_PROTECTION.md (closes MEDIA-01).
 const DENIED: [string, string][] = [
-	['media_control', 'set_media_access_mode'],
 	['update_ontology', 'export_to_translate'],
 	['update_ontology', 'rebuild_lang_files'],
 	['export_hierarchy', 'export_hierarchy'],

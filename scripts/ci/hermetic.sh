@@ -76,6 +76,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/coex_tag_tripwire.test.ts
 	test/unit/descriptor_completeness_tripwire.test.ts
 	test/unit/import_scc_tripwire.test.ts
+	test/unit/media_protection_tripwire.test.ts
 	test/unit/mcp_write_scope_tripwire.test.ts
 	test/unit/matrix_copy_columns_tripwire.test.ts
 	test/unit/ws_a_tripwires.test.ts

@@ -73,6 +73,8 @@ const ENGINE_NATIVE: Record<string, string> = {
 	'unit_test.create_test_record': 'scratch test-record surface (matrix_test)',
 	'media_control.get_value': 'read-only media index status',
 	'media_control.rebuild_media_index': 'TS-owned media index rebuild',
+	'media_control.set_media_access_mode':
+		'TS-native runtime state (ts_state.json media_access_mode) + the TS-owned media rule files (.htaccess / nginx include) — no PHP-install surface exists to own',
 	'counters_status.get_value': 'read-only counters panel',
 	'counters_status.modify_counter':
 		'matrix_counter repair through the TS write path (PHP-parity action)',

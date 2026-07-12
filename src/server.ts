@@ -36,6 +36,7 @@ import { handleRawView } from './core/api/raw_view.ts';
 import { SECURITY_HEADERS, staticAssetResponse } from './core/api/static_asset.ts';
 import { CLIENT_LIB_URL_PREFIX, serveClientLibRequest } from './core/client_libs/serving.ts';
 import { handleTagRequest } from './core/components/component_text_area/tag_endpoint.ts';
+import { MEDIA_AUTH_COOKIE, writeRuleFiles } from './core/media/protection.ts';
 // S2-20 boot registration: loading the component registry registers the
 // ontology↔components model lookup (module-load side effect) BEFORE any request
 // resolves a component model. Keep this explicit even though other imports
@@ -159,6 +160,29 @@ function sessionCookieHeader(value: string, options: { clear?: boolean } = {}): 
 	if (SESSION_COOKIE_SECURE) attributes.push('Secure');
 	if (options.clear === true) attributes.push('Max-Age=0');
 	return `${SESSION_COOKIE}=${value}; ${attributes.join('; ')}`;
+}
+
+/**
+ * The media-auth Set-Cookie (Rule A — core/media/protection.ts; PHP
+ * login::init_cookie_auth). It carries the same security posture as the session cookie
+ * BY CONSTRUCTION: a Secure session cookie sitting next to a cleartext media cookie
+ * would leak an authorization value on a single plaintext hop.
+ *
+ *  HttpOnly     JS never reads it — but the browser still attaches it to <img>/<video>
+ *               subresource loads, which is the entire mechanism.
+ *  SameSite=Lax matches the session cookie. Consequence to know: media embedded
+ *               CROSS-SITE will not carry it (PHP set no SameSite and inherited the
+ *               browser default, so this is parity-or-stricter).
+ *  Path=/       PHP parity. A narrower Path=/dedalo/<mediaDir> would break on any
+ *               install that renamed DEDALO_MEDIA_DIR.
+ *  Max-Age      86400 — the value rotates daily anyway. Max-Age rather than Expires
+ *               sidesteps the Expires comma-formatting hazard inside a Set-Cookie.
+ */
+function mediaAuthCookieHeader(value: string, options: { clear?: boolean } = {}): string {
+	const attributes = ['HttpOnly', 'SameSite=Lax', 'Path=/'];
+	if (SESSION_COOKIE_SECURE) attributes.push('Secure');
+	attributes.push(options.clear === true ? 'Max-Age=0' : 'Max-Age=86400');
+	return `${MEDIA_AUTH_COOKIE}=${value}; ${attributes.join('; ')}`;
 }
 
 // SECURITY_HEADERS (L6, every response) now lives in core/api/static_asset.ts
@@ -590,26 +614,39 @@ export async function handleRequest(request: Request, context: RequestContext): 
 		};
 
 		const outcome = await dispatchRqo(parsedRqo.data, apiContext);
-		const headers: Record<string, string> = {
+		// A Headers OBJECT, not a Record<string,string>: a login must ship the session
+		// cookie AND the media-auth cookie, and an object key can hold exactly ONE
+		// Set-Cookie value — the second assignment would silently drop the first (either
+		// breaking login outright, or locking every editor out of media). Do NOT "fix"
+		// that by comma-joining: Set-Cookie is the one header that must never be folded
+		// (RFC 6265 §3), and the browser would mangle both.
+		const headers = new Headers({
 			'Content-Type': 'application/json',
 			...SECURITY_HEADERS,
-		};
+		});
 		// Authenticated API payloads may carry record data — never let a shared
 		// cache store them (L6).
 		if (apiContext.session !== null) {
-			headers['Cache-Control'] = 'no-store';
+			headers.set('Cache-Control', 'no-store');
 		}
 		if (outcome.setSessionToken !== undefined) {
 			// HttpOnly + SameSite=Lax + (default) Secure — see sessionCookieHeader.
-			headers['Set-Cookie'] = sessionCookieHeader(outcome.setSessionToken);
+			headers.append('Set-Cookie', sessionCookieHeader(outcome.setSessionToken));
 		} else if (outcome.clearSessionCookie === true) {
 			// Logout: expire the cookie so the browser drops it (Max-Age=0). Same
 			// attributes as issuance so the browser matches and overwrites it.
-			headers['Set-Cookie'] = sessionCookieHeader('', { clear: true });
+			headers.append('Set-Cookie', sessionCookieHeader('', { clear: true }));
+		}
+		if (outcome.setMediaAuthCookie !== undefined) {
+			headers.append('Set-Cookie', mediaAuthCookieHeader(outcome.setMediaAuthCookie));
+		} else if (outcome.clearMediaAuthCookie === true) {
+			headers.append('Set-Cookie', mediaAuthCookieHeader('', { clear: true }));
 		}
 		// Long-lived streaming responses (diffusion SSE): the handler passed the
 		// dispatch gates and returned a ReadableStream — hand it to the client
-		// raw with its own headers (text/event-stream + anti-buffering).
+		// raw with its own headers (text/event-stream + anti-buffering). SSE responses
+		// never carry cookies, so this branch keeps its own plain-object headers —
+		// do not "unify" it with the Headers above.
 		if (outcome.stream !== undefined) {
 			return new Response(outcome.stream, {
 				status: outcome.status,
@@ -667,16 +704,18 @@ function echoRuntimeVersion(): void {
 			`[runtime] Bun ${Bun.version} does NOT match the verified pin ${pinned} (.bun-version). Bun.sql/Bun.serve behavior is version-coupled (audit S2-36) — verify before relying on this runtime.`,
 		);
 	}
-	// MEDIA-01(A): the TS server has NO native media access control — protected
-	// media is enforced by the transitional PHP login (media auth cookie) + the
-	// PHP-generated web-server rules. The built-in dev media route applies NO
-	// per-record ACL. Refuse to be quiet about it if it is ever switched on.
+	// MEDIA-04: the dev media route applies NO per-record ACL — any authenticated session
+	// reads any file under the media root by path. Refuse to be quiet about it if it is
+	// ever switched on. (MEDIA-01 is CLOSED: media protection is now native — see
+	// core/media/protection.ts and engineering/MEDIA_PROTECTION.md — but it is enforced by
+	// the WEB SERVER reading the generated rules, and this route bypasses the web server
+	// entirely.)
 	if (isMediaDevRouteEnabled()) {
 		console.warn(
 			'[security] MEDIA_DEV_ROUTE_ENABLED=true — the dev media route serves files with NO ' +
-				'per-record/per-project access control. NEVER enable this in a shared or production ' +
-				'environment. Production media protection is owned by the PHP login cookie + web-server ' +
-				'rules (native TS media ACL is unported — foundation audit MEDIA-01 / docs security DECISIONS).',
+				'per-record/per-project access control, and it BYPASSES the generated web-server rules ' +
+				'that enforce media protection. NEVER enable this in a shared or production environment ' +
+				'(foundation audit MEDIA-04).',
 		);
 	}
 }
@@ -977,6 +1016,21 @@ export async function startServer() {
 				'[media_index] DEC-19: native media-index NOT registered — publication markers ' +
 					'will not be maintained (no fallback since the 2026-07-11 cutover). ' +
 					'Fix and restart. Cause:',
+				error,
+			);
+		}
+
+		// Media access control (Rule A): refresh the generated web-server rules at BOOT,
+		// not only at login. On a fresh deploy or a wiped media dir the rule files would
+		// otherwise be absent until the first user happened to log in — and an absent
+		// .htaccess means Apache serves the entire media tree to the world in the
+		// meantime. Config-hash guarded, so this is normally a no-op.
+		try {
+			writeRuleFiles();
+		} catch (error) {
+			console.error(
+				'[media_protection] could not write the media rule files at boot — the media ' +
+					'gate on disk may be stale or absent. Check write permissions on the media root. Cause:',
 				error,
 			);
 		}

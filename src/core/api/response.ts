@@ -15,6 +15,18 @@ export interface ApiResult {
 	/** Emit an expiring Set-Cookie that clears the session cookie (logout/quit). */
 	clearSessionCookie?: boolean;
 	/**
+	 * Media-auth cookie value for issuance at login (Rule A — core/media/protection.ts):
+	 * the 128-hex sha512 whose zero-byte marker under `.publication/auth/` the WEB SERVER
+	 * stat()s to authorize a media request. Absent when the access mode is false, which is
+	 * a total no-op: no cookie, no markers, no rule files.
+	 *
+	 * Handlers hand over a VALUE, never a header — server.ts owns the cookie policy
+	 * (Secure/HttpOnly/SameSite), exactly as it does for the session cookie.
+	 */
+	setMediaAuthCookie?: string;
+	/** Emit an expiring Set-Cookie that clears the media-auth cookie (logout/quit). */
+	clearMediaAuthCookie?: boolean;
+	/**
 	 * Long-lived streaming payload (diffusion SSE). When set, server.ts returns
 	 * the stream as the raw Response body with `streamHeaders` instead of
 	 * JSON-serializing `body` — the dispatch gates (auth/CSRF/allowlist) still
