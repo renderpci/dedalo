@@ -14,9 +14,9 @@ DB_USER=dedalo
 DB_PASSWORD=…
 ```
 
-Change a value, restart the server, done. There is **no `config.php`** and nothing
-to edit inside the served tree — if you are looking for the four PHP config files
-of v6, see [what changed in v7](whats_changed_v7.md).
+Change a value, restart the server, done. There is nothing to edit inside the
+served tree — if you are looking for the four config files of v6, see
+[what changed in v7](whats_changed_v7.md).
 
 A fresh install needs none of this by hand: the [install
 wizard](../install/index.md) writes the file for you.
@@ -30,7 +30,7 @@ wizard](../install/index.md) writes the file for you.
 | [How configuration works](administration.md) | Where values live, how they resolve, secrets, required keys, troubleshooting. **Start here.** |
 | [Settings reference](config.md) | Every setting, what it means, and its default. |
 | [What changed in v7](whats_changed_v7.md) | The v6 → v7 map: renamed, reshaped and removed settings. |
-| [Migrating your config from v6](migrating_from_v6.md) | The tool that converts an old PHP config into a v7 `.env`. |
+| [Migrating your config from v6](migrating_from_v6.md) | The tool that converts an old v6 config into a v7 `.env`. |
 | [Database connection](config_db.md) | PostgreSQL (the work database) and MariaDB (diffusion). |
 | [Areas](config_areas.md) | Allowing and denying areas. |
 | [Media protection](media_protection.md) | Web-server-enforced access control for media files. |

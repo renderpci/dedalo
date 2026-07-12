@@ -20,7 +20,7 @@
 Want to change a setting?  →  edit ../private/.env  →  restart.   That's it.
 ```
 
-There is **no `config.php`**, no PHP, and nothing to edit inside the web root.
+There is nothing to edit inside the web root.
 
 ---
 
@@ -63,13 +63,13 @@ process environment   →   ../private/.env   →   the engine's built-in defaul
 Highest wins. The real environment beats the file, so a systemd unit or a one-off
 `DEDALO_DEV_MODE=true bun run dev` overrides `.env` without editing it.
 
-For a number of keys the engine also accepts the **v6/PHP spelling** as a
+For a number of keys the engine also accepts the **v6 spelling** as a
 fallback, so a migrated `.env` works unchanged (`DEDALO_ENTITY` for `ENTITY`,
 `DEDALO_DATABASE_CONN` for `DB_NAME`, …). The v7 name wins when both are set.
 The full list is in [what changed](whats_changed_v7.md#renamed-but-the-v6-spelling-still-works).
 
-There is **no** per-host `.env.<host>`, **no** `config.local.php`, and **no**
-catalog/scope machinery. One file, one precedence chain.
+There is **no** per-host `.env.<host>` and **no** catalog/scope machinery. One
+file, one precedence chain.
 
 ### The file format
 
@@ -154,8 +154,8 @@ See [Installing Dédalo](../install/index.md).
 
 ## 9. Migrating a v6 install
 
-v6 kept its settings in PHP — ~200 `define()` statements in `config/`. v7 reads
-one `.env`. There is a tool for exactly this:
+v6 kept its settings in ~200 `define()` statements spread across `config/`. v7
+reads one `.env`. There is a tool for exactly this:
 
 ```bash
 bun run dedalo:migrate-config --config-dir=/path/to/dedalo_v6/config

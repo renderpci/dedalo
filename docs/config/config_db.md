@@ -8,8 +8,6 @@ Dédalo v7 connects to **two** databases, both configured in `../private/.env`:
 - **MariaDB / MySQL** — the diffusion (publication) target. Optional, and written
   only by the [diffusion engine](../diffusion/native_engine.md).
 
-There is no `config_db.php` in v7.
-
 ```bash
 # ../private/.env — PostgreSQL (the work system)
 DB_NAME=dedalo
@@ -37,10 +35,13 @@ The database of the work system is the internal and main source of the data. In 
 
 DEDALO_PG_BIN_PATH `string`
 
-This parameter defines the path to binaries of the database. It will use to do maintenance tasks or backups with the database tools. For postgreSQL the psql binaries is located at specific version.
+This parameter defines the directory holding the PostgreSQL client binaries
+(`psql`, `pg_dump`, `pg_restore`) used for maintenance tasks and backups. When
+unset, Dédalo probes common Homebrew install locations (newest version first)
+and falls back to resolving the binary name from `PATH`.
 
 ```bash
-DEDALO_PG_BIN_PATH="/usr/lib/postgresql/xx/bin/"
+DEDALO_PG_BIN_PATH="/usr/lib/postgresql/16/bin/"
 ```
 
 ---
@@ -51,7 +52,7 @@ DEDALO_PG_BIN_PATH="/usr/lib/postgresql/xx/bin/"
 
 DB_HOST `string`
 
-This parameter defines the hostname of the server that is running the database. By default Dédalo uses 'localhost' as hostname, because the database server and php / apache server run in the same machine, but is possible change this configuration to run postgreSQL in other server machine.
+This parameter defines the hostname of the server that is running the database. By default Dédalo uses `localhost`, because the database and the web server typically run on the same machine — but it is possible to point this at a separate database server.
 
 ```bash
 DB_HOST="localhost"
@@ -65,7 +66,7 @@ DB_HOST="localhost"
 
 DB_PORT `int`
 
-This parameter defines the host port of the server that is running the database. By default Dédalo uses the default postgreSQL '5432' port.
+This parameter defines the host port of the server that is running the database. By default Dédalo uses the default PostgreSQL `5432` port.
 
 ```bash
 DB_PORT=5432
@@ -121,7 +122,7 @@ DB_PASSWORD="my_password"
 
 DEDALO_SLOW_QUERY_MS `int`
 
-This parameter define the time limit to query calls, if the query done to database is higher that the value of this parameter, Dédalo will alert in php log and will try to index this query. By default this parameter is set to 1200 ms (1,2 seconds).
+This parameter defines the time limit for query calls: if a query takes longer than this value, Dédalo logs a warning line naming the slow statement. Set to `0` (the default) to disable slow-query logging.
 
 ```bash
 DEDALO_SLOW_QUERY_MS=1200
@@ -154,4 +155,4 @@ GRANT ALL PRIVILEGES ON `web_dedalo`.* TO 'username'@'localhost';
 
 See [the diffusion engine → Configuration](../diffusion/native_engine.md#configuration) for the full key set (resolve levels, output languages, runner concurrency).
 
-> The standalone **publication server** (`publication/server_api/`) is a separate deployable with its **own** read-only database config and still defines `MYSQL_DEDALO_*` in its `server_config_api.php` — see [server_config_api](../diffusion/publication_api/server_config_api.md). That is independent of this work install's database settings.
+> The standalone **publication server** (`publication/server_api/`) is a separate, legacy deployable with its **own** read-only database config, which still defines `MYSQL_DEDALO_*` constants — see [server_config_api](../diffusion/publication_api/server_config_api.md). That is independent of this work install's database settings.

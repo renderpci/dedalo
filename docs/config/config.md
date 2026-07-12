@@ -5,8 +5,8 @@
 Every setting Dédalo v7 reads, what it means, and its default.
 
 You set these in **`../private/.env`** — one `KEY=value` per line, outside the web
-root. There is no `config.php` in v7 and nothing to edit inside the served tree.
-After changing a value, **restart the server**.
+root, with nothing to edit inside the served tree. After changing a value,
+**restart the server**.
 
 ```bash
 # ../private/.env
@@ -21,9 +21,9 @@ carries the same catalogue in copy-paste form.
 
 !!! note "Coming from v6?"
     The settings below are the v7 names. Several were renamed, a few changed shape,
-    and many v6 constants no longer exist at all (paths the engine now derives, PHP
-    sessions, the logger…). [What changed in v7](whats_changed_v7.md) is the
-    complete map, and `bun run dedalo:migrate-config` converts an old config for you.
+    and many v6 constants no longer exist at all (paths the engine now derives, the
+    old session mechanism, the logger…). [What changed in v7](whats_changed_v7.md) is
+    the complete map, and `bun run dedalo:migrate-config` converts an old config for you.
 
 ## **Main variables:** Paths
 
@@ -33,10 +33,11 @@ carries the same catalogue in copy-paste form.
 
 DEDALO_HOST `string`
 
-This parameter holds the domain or IP of your installation. It reads the host header from the current request, if there is one, and stores the domain or IP of the call.
+This parameter holds the domain or IP of your installation. When unset, code that
+needs a host derives it from the current request's `Host` header instead.
 
 ```bash
-DEDALO_HOST=$_SERVER["HTTP_HOST"]
+DEDALO_HOST="dedalo.example.org"
 ```
 
 ---
@@ -47,10 +48,13 @@ DEDALO_HOST=$_SERVER["HTTP_HOST"]
 
 DEDALO_PROTOCOL `string`
 
-This parameter define the internet protocol used by the server to connect all system. It is recommended to use the HTTPS protocol for installation with SSL certification, it is not mandatory but it ensures that your server connection will be protected with encryption.
+This parameter defines the internet protocol used to build absolute URLs. It is
+recommended to use the HTTPS protocol for an installation with SSL certification —
+it is not mandatory, but it ensures the connection is protected with encryption.
+Defaults to `"http://"` when unset.
 
 ```bash
-DEDALO_PROTOCOL=(isset($_SERVER["HTTPS"]) && $_SERVER["HTTPS"]==="on") ? "https://" : "http://"
+DEDALO_PROTOCOL="https://"
 ```
 
 ---
@@ -69,11 +73,6 @@ Used to defines the time zone of the project. It could be different of the serve
 DEDALO_TIMEZONE="Europe/Madrid"
 ```
 
-> The time zone is set in the next code line:
->
->
-> It ensure that PHP has defined the time zone in the parameter.
-
 ---
 
 ### Defining locale encoding
@@ -82,18 +81,12 @@ DEDALO_TIMEZONE="Europe/Madrid"
 
 DEDALO_LOCALE `string`
 
-Defines the internal php locale will be use to encode text. By default Dédalo use UTF8 encoding for Spanish 'es_ES.utf8'.
-
-It is possible change it for specific languages, see the php documentation.
+Defines the UI locale used to format and encode text. By default Dédalo uses UTF-8
+encoding for Spanish (`es-ES`).
 
 ```bash
 DEDALO_LOCALE="es-ES"
 ```
-
-> The locale is set in the next code line:
->
->
-> It ensure that PHP has defined the time zone in the parameter.
 
 ---
 
@@ -142,15 +135,10 @@ DEDALO_ENTITY_LABEL `string`
 Defines the entity label, the real name of the entity. Due the entity definition is use to encrypt passwords or access to databases, sometimes you will need define the real name of the entity with characters such as 'ñ' or accents.
 
 ```bash
-DEDALO_ENTITY_LABEL=DEDALO_ENTITY
+DEDALO_ENTITY_LABEL="Museu de Prehistòria de València"
 ```
 
-> By default Dédalo use:
->
-> DEDALO_ENTITY
->
-> to define the real name of the entity as "Museu de Prehistòria de València"
->
+> When unset, `DEDALO_ENTITY_LABEL` defaults to the value of `ENTITY`.
 
 ---
 
@@ -190,10 +178,14 @@ DEDALO_BACKUP_TIME_RANGE=8
 
 DEDALO_BACKUP_PATH `string`
 
-This parameter defines the backups directory path. By default the backups directory will be out of httpdocs scope for security.
+This parameter defines the directory a code update stages the previous tree into
+before swapping in a new release, so a failed update can be rolled back. Keep it
+outside the served tree for security. Defaults to `<install>/../backups/code`.
+This is distinct from `DEDALO_BACKUP_DIR`, which sets the directory for database
+backups (see [Database connection](config_db.md)).
 
 ```bash
-DEDALO_BACKUP_PATH=dirname(dirname(DEDALO_ROOT_PATH)) . "/backups"
+DEDALO_BACKUP_PATH="/srv/dedalo/backups/code"
 ```
 
 ---
@@ -214,10 +206,11 @@ Defines the directory path to store the update log.
 
 The maintenance update process uses the update log to store the status of each update task. This log is useful to know what happens in the update process. If the update fails, you can consult the last status to restore the update process at this last point.
 
-Default directory for this file has set inside Dédalo config folder, take account that if you move to other location fix the permissions to be private as a directory outside httpdocs folder.
+Defaults to `update.log` inside `../private`. If you move it elsewhere, keep the
+directory private and outside the served tree.
 
 ```bash
-UPDATE_LOG_FILE=DEDALO_CONFIG_PATH . "/update.log"
+UPDATE_LOG_FILE="/srv/dedalo/private/update.log"
 ```
 
 ---
@@ -266,18 +259,14 @@ DEDALO_STRUCTURE_LANG="lg-spa"
 
 ../private/.env
 
-DEDALO_APPLICATION_LANGS `object` (php: serialized associative array)
+DEDALO_APPLICATION_LANGS `object` (a JSON map of `lg-*` code → label)
 
 This parameter defines the languages that Dédalo will use for the data and user interface. Dédalo is a true multi-language application, any text field can be defined as translatable and this configuration define the languages that the installation will use to store and translate text data. When the user select one of those languages Dédalo will change the data showed or the user interface, so it will render all data with this new language.
 
+**Required** — the server refuses to boot without a non-empty value.
+
 ```bash
-DEDALO_APPLICATION_LANGS=serialize([
-    'lg-spa' => 'Castellano',
-    'lg-cat' => 'Català',
-    'lg-eus' => 'Euskara',
-    'lg-eng' => 'English',
-    'lg-fra' => 'French'
-]));
+DEDALO_APPLICATION_LANGS={"lg-spa":"Castellano","lg-cat":"Català","lg-eus":"Euskara","lg-eng":"English","lg-fra":"French"}
 ```
 
 > See the Dédalo structure lang for see the languages definitions.
@@ -316,7 +305,8 @@ This is a dynamic parameter and it can be changed when the user login, or in app
 APPLICATION_LANG="lg-spa"
 ```
 
-> This parameter use the method 'fix_cascade_config_var' to calculate the value. The result of this function will be a string with the correct language value in string format. You can define it as fixed data value, but is recommended do not change the definition, if you want change the default language for the interface use the: DEDALO_APPLICATION_LANGS_DEFAULT.
+> You can set this as a fixed value, but it is recommended you do not — to change the
+> default interface language, use `DEDALO_APPLICATION_LANGS_DEFAULT` instead.
 
 ---
 
@@ -352,7 +342,9 @@ This is a dynamic parameter that can be changed by the user in any moment. Déda
 DATA_LANG="lg-spa"
 ```
 
-> This parameter use the method 'fix_cascade_config_var' to calculate the value. The result of this function will be a string with the correct language value in string format. You can define it as fixed data value, but is recommended do not change the definition, if you want change the default language for the data use the: [DEDALO_DATA_LANG_DEFAULT](#defining-default-data-language).
+> You can set this as a fixed value, but it is recommended you do not — to change the
+> default data language, use [DEDALO_DATA_LANG_DEFAULT](#defining-default-data-language)
+> instead.
 
 ---
 
@@ -557,17 +549,17 @@ DEDALO_DEFAULT_PROJECT=1
 
 ../private/.env
 
-DEDALO_FILTER_SECTION_TIPO_DEFAULT `int`
+DEDALO_FILTER_SECTION_TIPO_DEFAULT `string`
 
 This parameter defines the section that has the projects information inside the ontology.
 
-Dédalo will use this parameter to define the locator of the filter by projects to apply to any search of sections. By default Dédalo has a predefined section to store the projects that administrators users can enlarge. The default section_tipo is 'dd153' and it is located below 'Administration' area in the menu. Every project field target this section to define the specific project of the current record.
+Dédalo will use this parameter to define the locator of the filter by projects to apply to any search of sections. By default Dédalo has a predefined section to store the projects that administrators users can enlarge. The default section_tipo is `dd153` and it is located below 'Administration' area in the menu. Every project field target this section to define the specific project of the current record.
 
 ```bash
-DEDALO_FILTER_SECTION_TIPO_DEFAULT=DEDALO_SECTION_PROJECTS_TIPO
+DEDALO_FILTER_SECTION_TIPO_DEFAULT="dd153"
 ```
 
-> By default this definition get the section_tipo from the predefined constant DEDALO_SECTION_PROJECTS_TIPO inside 'dd_tipos.php' file. Target filter section (current 'dd153' - Projects section). Do not change this param.
+> Defaults to `dd153` (the Projects section). Do not change this param.
 
 ---
 
@@ -587,10 +579,10 @@ MEDIA_PATH `string`
 
 This parameter defines the root media directory in the directory tree.
 
-Normally this directory is located in the top Dédalo directory, but it can be define in other paths. remember that Dédalo will need access to this directory as owner with read / write permissions.
+Normally this directory sits alongside the install, but it can be set to any path. The server needs read/write access to this directory as its owner. Unset in dev leaves media handling disabled.
 
 ```bash
-MEDIA_PATH=DEDALO_ROOT_PATH . "/media"
+MEDIA_PATH="/srv/dedalo/media"
 ```
 
 ---
@@ -1085,12 +1077,12 @@ DEDALO_PDF_EXTENSION="pdf"
 
 ../private/.env
 
-DEDALO_PDF_EXTENSIONS_SUPPORTED `serialized array`
+DEDALO_PDF_EXTENSIONS_SUPPORTED `array`
 
-This parameter define the standards file type admitted for the pdf files. Dédalo will use this parameter to identify the file format of the original files uploaded by the users.
+This parameter define the standards file type admitted for the pdf files. Dédalo will use this parameter to identify the file format of the original files uploaded by the users. Defaults to `["pdf","doc","pages","odt","ods","rtf","ppt"]`.
 
 ```bash
-DEDALO_PDF_EXTENSIONS_SUPPORTED=serialize(["pdf"]
+DEDALO_PDF_EXTENSIONS_SUPPORTED=["pdf","doc","pages","odt","ods","rtf","ppt"]
 ```
 
 ---
@@ -1580,7 +1572,7 @@ DEDALO_AR_EXCLUDE_COMPONENTS=[]
 
 ## Diffusion variables
 
-Diffusion defines the configuration variables to be used by Dédalo to process data and resolve relations to get the version of data defined to be stored into MySQL
+Diffusion defines the configuration variables Dédalo uses to process data and resolve relations, producing the flattened version of the data stored in the diffusion database (MariaDB — see [Database connection](config_db.md)).
 
 ---
 
@@ -1686,41 +1678,16 @@ This parameter defines the ontology master servers to get the ontology updates. 
 - an external server for local Ontologies (private Ontologies of entities.)
 - local server, the current installation
 
-Configuration for the official dedalo.dev server:
+Each entry is a JSON object with `name`, `url` and `code`. Configuration for the official dedalo.dev server:
 
 ```bash
-ONTOLOGY_SERVERS=[
-    [
-        'name'  => 'Official Dédalo Ontology server',
-        'url'   => 'https://master.dedalo.dev/dedalo/install/import/ontology/',
-        'code'  => 'x3a0B4Y020Eg9w'
-    ]
-]);
+ONTOLOGY_SERVERS=[{"name":"Official Dédalo Ontology server","url":"https://master.dedalo.dev/dedalo/core/api/v1/json/","code":"x3a0B4Y020Eg9w"}]
 ```
 
-It will get the tld from [ACTIVE_ONTOLOGY_TLDS](#defining-prefix-tipos) definition.
+It gets the tld from the [ACTIVE_ONTOLOGY_TLDS](#defining-active-ontology-tlds) definition.
 
-**optional** : Configuration for external server to provide local ontologies
-
-```bash
-ONTOLOGY_SERVERS=[
-    [
-        'name'  => 'Optional external Dédalo Ontology server',
-        'url'   => 'https://my_ontology_server_domain.org/dedalo/install/import/ontology/',
-        'code'  => 'my_super_code'
-        'tld'   => ['mytld','anothertld','localtld']
-    ]
-]);
-```
-
-Introduced in version 6.4.
-Local ontologies can be provided by other installations in parallel adding new servers to this constant.
-Every Dédalo server can provide his own ontologies.
-
-Introduced in version 6.6.2
-`tld` property for define specific TLD in array of strings format.
-When unofficial servers is defined to provide local ontology definitions,
-`tld` property defines witch tld's will be provided by the master external server.
+Local ontologies can be provided by other installations in parallel by adding new
+entries to this list. Every Dédalo server can provide its own ontologies.
 
 ---
 
@@ -1730,10 +1697,10 @@ When unofficial servers is defined to provide local ontology definitions,
 
 ONTOLOGY_DATA_IO_DIR `string`
 
-This parameter defines the directory to input/ouput the ontology files in the server. Onology files can be created by master ontology servers or download it from external provided as official master Dédalo server.
+This parameter defines the directory to input/output the ontology files in the server. Ontology files can be created by master ontology servers or downloaded from an external provider such as the official master Dédalo server. Defaults to `install/import/ontology` inside the install tree.
 
 ```bash
-ONTOLOGY_DATA_IO_DIR=DEDALO_INSTALL_PATH . "/import/ontology"
+ONTOLOGY_DATA_IO_DIR="/srv/dedalo/import/ontology"
 ```
 
 ---
@@ -1744,8 +1711,7 @@ ONTOLOGY_DATA_IO_DIR=DEDALO_INSTALL_PATH . "/import/ontology"
 
 IS_A_CODE_SERVER `bool`
 
-This parameter defines id the server can provide code to other Dédalo servers. By default any Dédalo server doesn't provide code, but is possible create a mirror server to provide code versions.
-To enable process is necessary activate: `DEDALO_CODE_FILES_DIR` and `DEDALO_CODE_FILES_URL`
+This parameter defines if the server can provide code to other Dédalo servers. By default no Dédalo server provides code, but it is possible to set one up as a mirror server that provides code versions. To enable it, also set `DEDALO_CODE_FILES_DIR` — the URL other servers fetch from is derived automatically.
 
 ```bash
 IS_A_CODE_SERVER=false
@@ -1764,7 +1730,7 @@ Code files are organize in version directories with major / minor / version_deda
 `./dedalo/code/6/6.4/6.4.1_dedalo.zip`
 
 ```bash
-DEDALO_CODE_FILES_DIR=DEDALO_ROOT_PATH . "/code"
+DEDALO_CODE_FILES_DIR="/srv/dedalo/code"
 ```
 
 ---
@@ -1792,20 +1758,10 @@ DEDALO_CODE_SERVER_GIT_DIR="/my_dedalo_git_directory"
 
 CODE_SERVERS `array`
 
-This parameter defines code servers provides. By default the server defines the official Dédalo code server.
-But is possible includes other mirror servers adding new definition into the array.
-
-This parameter substitute the `DEDALO_SOURCE_VERSION_URL` in version >6.4
-
+This parameter defines the code servers this install offers releases from. By default the server defines the official Dédalo code server, but you can include other mirror servers by adding entries to the array. Each entry is a JSON object with `name`, `url` and `code`.
 
 ```bash
-CODE_SERVERS=[
-    [
-        'name'  => 'Official Dédalo code server',
-        'url'   => 'https://master.dedalo.dev/core/api/v1/json/',
-        'code'  => 'x3a0B4Y020Eg9w'
-    ]
-]);
+CODE_SERVERS=[{"name":"Official Dédalo code server","url":"https://master.dedalo.dev/core/api/v1/json/","code":"x3a0B4Y020Eg9w"}]
 ```
 
 ---
@@ -1819,7 +1775,7 @@ DEDALO_SOURCE_VERSION_LOCAL_DIR `string`
 This parameter defines the path to the local directory to save the new code downloaded from the master server repository.
 
 ```bash
-DEDALO_SOURCE_VERSION_LOCAL_DIR="/tmp/".DEDALO_ENTITY
+DEDALO_SOURCE_VERSION_LOCAL_DIR="/tmp/my_museum"
 ```
 
 ---
@@ -1835,11 +1791,7 @@ Defines the service to be used in section Activity to resolve source Country fro
 By default Dédalo use the ipapi.co service with free unsigned account. Is possible to configure other services with your specific account. If you want to use a http instead https you can use `ip-api.com`
 
 ```bash
-IP_API=[
-    'url'           => 'https://api.country.is/$ip', // https capable as free
-    'href'          => 'https://ip-api.com/#$ip', // page to jump on click
-    'country_code'  => 'country' // / property where look country code for flag
-]);
+IP_API={"url":"https://api.country.is/$ip","href":"https://ip-api.com/#$ip","country_code":"country"}
 ```
 
 !!! note "IP variable"

@@ -6,8 +6,7 @@ Areas are the top-level parts of the ontology (Thesaurus, Resources, Tools, …)
 Denying one removes it from the menu and puts it out of reach — **for every user,
 root included** — because the check happens before the security layer.
 
-In v7 this is two `.env` keys, both JSON arrays of tipos (there is no
-`config_areas.php`):
+In v7 this is two `.env` keys, both JSON arrays of tipos:
 
 ```bash
 # ../private/.env
