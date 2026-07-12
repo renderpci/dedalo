@@ -98,6 +98,64 @@ describe('persist_config (P2)', () => {
 		expect(parsed.DEDALO_DIFFUSION_DB_NAME).toBe('web_dedalo');
 	});
 
+	/**
+	 * The 2026-07-12 data loss, mechanically. The wizard invites a re-save (a page
+	 * reload walks the config steps again from an EMPTY cfg), and persist_config
+	 * rebuilds .env from the posted form — so on the second save every key the form
+	 * did not carry was DELETED. It ate all 8 DEDALO_DIFFUSION_* keys twice, taking
+	 * the generated DEDALO_DIFFUSION_INTERNAL_TOKEN (shown once, then unrecoverable)
+	 * with them, plus operator-appended keys, which is what ../private/.env is FOR
+	 * (append-only, documented keys).
+	 *
+	 * Omission is not consent: a key the form does not manage must survive verbatim.
+	 */
+	test('never deletes a key by omission — unmanaged keys survive a re-save verbatim', async () => {
+		const envPath = join(scratch, '.env');
+		// A configured install: diffusion set up, plus keys only an operator writes.
+		writeFileSync(
+			envPath,
+			[
+				'DEDALO_SALT_STRING=deadbeef',
+				'DEDALO_DIFFUSION_NATIVE=true',
+				'DEDALO_DIFFUSION_DB_USER=diffuser',
+				'DEDALO_DIFFUSION_DB_NAME=web_default',
+				'DEDALO_DIFFUSION_INTERNAL_TOKEN=tok_shown_once',
+				'MEDIA_DEV_ROUTE_ENABLED=true',
+				'DB_POOL_MAX=17',
+				'',
+			].join('\n'),
+		);
+
+		// Re-save from a FRESH wizard page: no diffusion fields, no operator keys.
+		const result = await persistConfig({ ...BASE_CFG });
+		expect(result.result).toBe(true);
+
+		const parsed = parseEnvFile(readFileSync(envPath, 'utf8'));
+
+		// The diffusion block survives — token included. This is the bug that bit.
+		expect(parsed.DEDALO_DIFFUSION_NATIVE).toBe('true');
+		expect(parsed.DEDALO_DIFFUSION_DB_USER).toBe('diffuser');
+		expect(parsed.DEDALO_DIFFUSION_DB_NAME).toBe('web_default');
+		expect(parsed.DEDALO_DIFFUSION_INTERNAL_TOKEN).toBe('tok_shown_once');
+
+		// Operator-appended keys survive too.
+		expect(parsed.MEDIA_DEV_ROUTE_ENABLED).toBe('true');
+		expect(parsed.DB_POOL_MAX).toBe('17');
+
+		// ...while the keys the form DOES own are still updated from the form,
+		// exactly once (a preserved copy must not shadow the new value).
+		expect(parsed.DEDALO_ENTITY).toBe('testent');
+		expect(parsed.DEDALO_DATABASE_CONN).toBe('dedalo_test_db');
+		expect(parsed.DEDALO_SALT_STRING).toBe('deadbeef'); // preserved, not regenerated
+		const body = readFileSync(envPath, 'utf8');
+		for (const key of ['DEDALO_ENTITY', 'DEDALO_SALT_STRING', 'DEDALO_DIFFUSION_DB_USER']) {
+			const assignments = body
+				.split('\n')
+				.filter((line) => line.trim().startsWith(`${key}=`)).length;
+			expect(assignments, `${key} must be assigned exactly once`).toBe(1);
+		}
+	});
+
 	test('check_directories creates + verifies the private tree', () => {
 		const r = checkDirectories({ create: true });
 		expect(r.result).toBe(true);

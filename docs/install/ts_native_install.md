@@ -124,15 +124,21 @@ bun run start
 
 !!! warning "The wizard restarts the server after 'Save config'"
     The server reads its configuration once at startup, so after `Save config`
-    writes `../private/.env` the process exits and a **supervisor restarts it**
-    into configured mode. In production this is
-    `deploy/dedalo-ts.service` (`Restart=always`). For local development without
-    systemd, either prefer the **CLI** (§2, no restart), or run the server under
-    a restart loop, e.g.:
+    writes `../private/.env` the process exits (code **75**) and a **supervisor
+    restarts it** into configured mode. In production this is
+    `deploy/dedalo-ts.service` (`Restart=always`).
+
+    For local development, run the server under one of the **supervised** scripts
+    — either is enough, and both are the normal way to run it:
 
     ```shell
-    while true; do bun run src/server.ts; done
+    bun run dev              # watch + supervised (the usual dev command)
+    bun run start:supervised # no watch, supervised
     ```
+
+    Plain `bun run start` is **not** supervised (systemd is its supervisor), so
+    the wizard would hang at this step: the server exits and nothing brings it
+    back. The **CLI** (§2) sidesteps the restart entirely.
 
     The wizard survives the restart: it keeps the page open across the reconnect
     (the **Verify** button retries), and even a full page **reload** during the
