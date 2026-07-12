@@ -346,6 +346,6 @@ shared media pattern that shows up.
 - Layout and general layers provide a rich set of tokens and mixins that components should lean on instead of redefining behavior.
 - Media components (`component_av`, `component_image`, `component_3d`, and related widgets like `media_icons`) share their common patterns through the `layout/functions.less` mixins (§7) rather than duplicating them.
 - Empty view modifiers, where they show up, should either be documented or pruned once confirmed unused — the ones this document used to flag have been pruned (§5.3).
-- This document is about the LESS/CSS layer only, which the TS rewrite copies **as-is** from the PHP-era client; nothing here changed for the server rewrite. See [themes](core/ui/themes.md) for the light/dark token layer and [ui/index](core/ui/index.md) for how this fits the rest of the client UI.
+- This document is about the LESS/CSS layer only; nothing here changed for the server rewrite. See [themes](core/ui/themes.md) for the light/dark token layer and [ui/index](core/ui/index.md) for how this fits the rest of the client UI.
 
 
