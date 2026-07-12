@@ -1,26 +1,26 @@
 # Add a section
 
-> **Goal:** create a new kind of record (a "table") in Dédalo by authoring ontology nodes — usually with **no PHP at all**.
+> **Goal:** create a new kind of record (a "table") in Dédalo by authoring ontology nodes — usually with **no code at all**.
 
 A section is the Dédalo equivalent of an SQL table, but it is **not** a physical
 table: it is an ontology node with `model: "section"` plus the generic
 section-read engine (`src/core/section/read.ts`, `readSection`) that reads,
-writes, relates and renders the records that belong to it. In the Bun/TS rewrite
-there is **no per-section class** — the horizontal engine handles every section
-by its ontology definition. Adding a section therefore means **authoring
-nodes**, not writing code.
+writes, relates and renders the records that belong to it. There is **no
+per-section module** — the horizontal engine handles every section by its
+ontology definition. Adding a section therefore means **authoring nodes**, not
+writing code.
 
 Before you start, read the concept and reference pages this guide builds on — it
 does not repeat them:
 
-- [Sections concept](../../core/sections/index.md) — the `matrix` table model, typed-JSONB storage, the `section` / `sections` / `section_record` class family.
-- [`section` class reference](../../core/sections/section.md) — `get_instance()`, modes, the relations bag, children resolution.
+- [Sections concept](../../core/sections/index.md) — the `matrix` table model, typed-JSONB storage, and the `section` / `sections` / `section_record` family.
+- [`section` reference](../../core/sections/section.md) — modes, the relations bag, children resolution.
 - [Ontology authoring](../../core/ontology/authoring.md) — the node shape, the `properties` grammar, the regenerate (compile) step that makes an edit live.
 - [request_config examples](../../core/request_config_examples.md) — copy-pasteable list and edit configs.
 
 ## When do you need this — ontology-only vs code
 
-| You want to… | What to author | Need PHP? |
+| You want to… | What to author | Need code? |
 | --- | --- | --- |
 | A new record type with standard fields, layout, search and lists | A `section` node + `component_*` children + grouper layout | **No** |
 | Group fields into panels/tabs | `section_group` / `section_tab` grouper nodes | **No** |
@@ -175,9 +175,7 @@ Edits live in the **editable** ontology layer; the runtime reads the compiled
 flat `dd_ontology` table. Nothing is live until you **regenerate** the TLD — see
 [Ontology authoring → How changes apply live](../../core/ontology/authoring.md#how-changes-apply-live).
 After regenerating, open the section: `readSection` resolves the model and builds
-the response from your nodes — no code deploy, no schema migration, and (unlike
-PHP) no per-worker cache to clear, since the single Bun process reads the
-recompiled ontology fresh.
+the response from your nodes — no code deploy and no schema migration.
 
 ## Worked example — a "People" section
 
@@ -215,15 +213,14 @@ section-read engine.
 
 ## When engine code is warranted
 
-Almost never. The Bun/TS rewrite has **no per-section class** — there is no
-`core/section_X/` autoloader convention to hook. The generic engine
+Almost never. There is **no per-section module** to hook. The generic engine
 (`src/core/section/read.ts`, `src/core/section/record/`) handles every section by
 its ontology definition, so a section that needs genuinely bespoke server
 behavior (a non-standard record-creation rule, a special save path, a bespoke
 relations policy) is expressed **in the engine**, keyed on the section tipo or
-model, not in a subclass. This is a deliberate structural change: behavior is
-horizontal, not class-per-model. Before reaching for engine code, exhaust the
-node-authoring options above — the vast majority of sections need none.
+model. Behavior is horizontal, never per-model. Before reaching for engine code,
+exhaust the node-authoring options above — the vast majority of sections need
+none.
 
 If you only need a *different storage shape per component*, that belongs in the
 component (its `descriptor.ts` `column`), not in the section engine — see
@@ -254,7 +251,7 @@ component (its `descriptor.ts` `column`), not in the section engine — see
 ## Related
 
 - [Sections concept](../../core/sections/index.md)
-- [`section` class reference](../../core/sections/section.md)
+- [`section` reference](../../core/sections/section.md)
 - [`section_record` reference](../../core/sections/section_record.md)
 - [section_group](../../core/sections/section_group.md) · [section_tab](../../core/sections/section_tab.md) · [section_list](../../core/sections/section_list.md)
 - [Ontology authoring](../../core/ontology/authoring.md)

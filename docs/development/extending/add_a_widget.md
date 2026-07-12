@@ -1,6 +1,6 @@
 # Add a widget
 
-> Goal: build a reusable, record-level **data-summarizing** widget — its client module in the copied client under `core/widgets/`, and its server-side compute in the horizontal info-widget engine — hosted and rendered by a [`component_info`](../../core/components/component_info.md) field.
+> Goal: build a reusable, record-level **data-summarizing** widget — its client module under `client/dedalo/core/widgets/`, and its server-side compute in the horizontal info-widget engine — hosted and rendered by a [`component_info`](../../core/components/component_info.md) field.
 
 This is a step-by-step **how-to**. For the conceptual model and the full surface, read the reference first and keep it open:
 
@@ -34,16 +34,15 @@ A `core/widgets/` widget exists to **compute** read-only data from other compone
 There is **no scaffolder** for widgets (unlike [tools](../tools/creating_tools.md)). You copy the reference client widget, rename, add a server compute case, and wire it into the ontology by hand.
 
 !!! note "Server compute is one descriptor module per widget"
-    In the PHP server each widget had a `class.<widget>.php` with a `get_data()`.
-    In the Bun/TS rewrite each widget is one module under
+    Each widget is one module under
     `src/core/components/component_info/widgets/<tld>/<name>.ts` exporting one
     `InfoWidgetDescriptor` (`{name, path, isAsync?, computeData, …}`), assembled
-    by `widgets/registry.ts` — dispatch is by `widget_name` through the registry
-    map, never by loading ontology-authored paths. Adding a server-computed
-    widget means adding a descriptor module + a registry entry — the client side
-    is copied vanilla JS, unchanged. The authoritative checklist lives in
-    `src/core/components/component_info/widgets/README.md`, mechanically
-    enforced by `test/unit/info_widget_registry_tripwire.test.ts`.
+    by `widgets/registry.ts`. Dispatch is by `widget_name` through the registry
+    map — **never** by loading an ontology-authored path, which would let a node
+    author choose which code the server executes. Adding a server-computed widget
+    means adding a descriptor module + a registry entry. The authoritative
+    checklist lives in `src/core/components/component_info/widgets/README.md`,
+    mechanically enforced by `test/unit/info_widget_registry_tripwire.test.ts`.
 
 ## How it fits together
 
@@ -58,7 +57,7 @@ flowchart TB
     DDO --> CL["client: component_info.js → your render_&lt;name&gt;.js"]
 ```
 
-On a section read the `component_info` emit path calls `computeInfoWidgets(componentTipo, context)`. That aggregate reads the component node's `properties.widgets`, and for each non-async widget looks its `widget_name` up in the registry and runs the descriptor's `computeData(ipo, context)`, concatenating every widget's output. An **unknown `widget_name` throws `WidgetNotRegisteredError`** (PHP fatals on its include too) and a registered-but-unported stub throws `WidgetUnportedError` — a widget never silently renders empty. The client `component_info.js::get_widgets()` then dynamically imports each widget's JS by its `path` and feeds it the matching value slice. The **`widget_name` (registry key) and the ontology `widget_name`/`path` (client import)** are the contract — the tripwire binds each descriptor's `path` to the client module.
+On a section read the `component_info` emit path calls `computeInfoWidgets(componentTipo, context)`. That aggregate reads the component node's `properties.widgets`, and for each non-async widget looks its `widget_name` up in the registry and runs the descriptor's `computeData(ipo, context)`, concatenating every widget's output. An **unknown `widget_name` throws `WidgetNotRegisteredError`**, and a registered-but-unimplemented stub throws `WidgetUnportedError` — a widget never silently renders empty. The client `component_info.js::get_widgets()` then dynamically imports each widget's JS by its `path` and feeds it the matching value slice. The **`widget_name` (registry key) and the ontology `widget_name`/`path` (client import)** are the contract — the tripwire binds each descriptor's `path` to the client module.
 
 ## Step-by-step
 
@@ -153,8 +152,8 @@ The key rules, verified against `test_info.ts` / `registry.ts`:
 - **No persistence.** A widget never reads or writes the matrix directly. Read inputs through the engine's own helpers — `readWidgetComponentData(sectionTipo, sectionId, componentTipo)` or `resolveComponentValue()` (both resolve the model and pull the stored data). The host `component_info` is a `use_db_data = false` compute path.
 - **`resolveCurrent(declared, fallback)`** maps the source's `'current'` / `undefined` `section_tipo` / `section_id` to this record's values.
 - **Emit both `widget_id` and `id`.** `component_info`'s grid/export builders match on `id`; the live-compute fallback historically emits `widget_id` too. `computeTestInfo` emits both — always include both.
-- **Async widgets are skipped at read.** Declare `isAsync: true` on the descriptor (PHP `is_async()`); the read aggregate skips it and the client fetches it via the `dd_component_info` `get_widget_data` action.
-- **Unknown names throw.** A `widget_name` with no registry entry throws `WidgetNotRegisteredError` on read — register your descriptor (or an `unported` stub + `rewrite/LEDGER.md` row) or the read fails loudly.
+- **Async widgets are skipped at read.** Declare `isAsync: true` on the descriptor; the read aggregate skips it and the client fetches it via the `dd_component_info` `get_widget_data` action.
+- **Unknown names throw.** A `widget_name` with no registry entry throws `WidgetNotRegisteredError` on read. Register your descriptor — or, if the compute is deliberately not implemented yet, register a stub carrying an explicit `unported.reason`, which throws `WidgetUnportedError` with that reason. There is no third option: a widget never fails quietly.
 
 !!! warning "Confined `process` logic (SEC-052)"
     Only the generic `calculation` widget runs an ontology-specified `process`
@@ -167,7 +166,7 @@ The key rules, verified against `test_info.ts` / `registry.ts`:
 
 ### 3. Implement the client class
 
-`js/my_widget.js` in the copied client imports `widget_common`, borrows its lifecycle prototypes, and assigns its own render views. This is `test_info.js` renamed:
+`js/my_widget.js` imports `widget_common`, borrows its lifecycle prototypes, and assigns its own render views. This is `test_info.js` renamed:
 
 ``` javascript
 import {widget_common}   from '../../../widget_common/js/widget_common.js'
@@ -272,7 +271,7 @@ After editing the ontology, regenerate and reload the record carrying that `comp
 
 ### 6. (Optional) Add a test
 
-Server compute is the natural test surface. Add a `bun:test` (a `*_differential.test.ts` diffs against the PHP oracle) that calls `computeInfoWidgets` for a `component_info` tipo whose node carries your widget, and asserts the emitted `{widget, key, widget_id, id, value}` shape. The existing info-widget gates live in `test/parity/info_widget_differential.test.ts` — extend that pattern. Run with `bun test`.
+Server compute is the natural test surface. Add a `bun:test` that calls `computeInfoWidgets` for a `component_info` tipo whose node carries your widget, and asserts the emitted `{widget, key, widget_id, id, value}` shape. The existing info-widget gates live in `test/parity/info_widget_differential.test.ts` — extend that pattern. Run with `bun test`.
 
 ## Worked example: a `word_count` widget
 
@@ -305,7 +304,7 @@ Summarize how many characters a record's main text component holds, shown in its
 - **Forgetting the registry entry.** A descriptor module not listed in `widgets/registry.ts` `INFO_WIDGETS` is dead code — the ontology name throws `WidgetNotRegisteredError`.
 - **Emitting only one of `id` / `widget_id`.** `component_info`'s grid/export match on `id`; the client widget renders match on `widget_id`. `test_info.ts` emits both — do the same.
 - **Reading the matrix directly.** Don't. Resolve inputs through `readWidgetComponentData()` / `resolveComponentValue()`; the host info component is intentionally `use_db_data = false`.
-- **Looking for a `class.<widget>.php`.** There is none in the TS server — one descriptor module per widget under `src/core/components/component_info/widgets/<tld>/`.
+- **Looking for a per-widget server class.** There is none — one descriptor module per widget under `src/core/components/component_info/widgets/<tld>/`.
 - **Confusing the two widget systems.** A folder under `core/area_maintenance/widgets/` is **not** a `component_info` widget, and vice-versa. Different bases, dispatchers and contracts.
 - **Wrong relative-import depth** in the client JS when your widget is (or isn't) inside a TLD subfolder — see the note in [step 3](#3-implement-the-client-class).
 - **Expecting persistence.** Widget output is recomputed on every load; there is no value to "save". If you need stored, typed data, you want a real component, not a widget.
@@ -318,4 +317,4 @@ Summarize how many characters a record's main text component holds, shown in its
 - [area_maintenance](../../core/areas/area_maintenance.md) — the *other*, unrelated widget family (admin/operational panels).
 - [UI / widgets overview](../../core/ui/index.md) · [themes & LESS](../../core/ui/themes.md) — client styling.
 - [Creating tools](../tools/creating_tools.md) — the *other* extension surface (has a scaffolder and `register.json`; widgets do not).
-- Source of truth: `src/core/components/component_info/widgets/` (README.md checklist, registry.ts dispatch, one descriptor module per widget), the copied client `core/widgets/`.
+- Source of truth: `src/core/components/component_info/widgets/` (README.md checklist, registry.ts dispatch, one descriptor module per widget) and the client's `core/widgets/` tree.

@@ -24,17 +24,17 @@ Pick the right abstraction first:
 !!! warning "A service is *not* an ontology node"
     Unlike a component, section or area, a service has **no ontology node, no `tipo`, no `properties`, no record data and no matrix column**. You do **not** create or edit an ontology node, and there is **no** component descriptor / registry entry. A service is pure code: it is instanced *by* a caller and acts on the caller's behalf. This is the opposite of the "ontology-only" path some extensions take — a service is "code-only".
 
-Services are **entirely client-side** — ES6 modules in the copied vanilla-JS client under `client/dedalo/core/services/<service>/js/`. The copied client is unchanged by the rewrite, so this is the same code the PHP-era client shipped. A service has **no server module** in the TS server: its server side is whatever *generic* API action it already calls, which is now a **TS dispatch handler** (`dd_utils_api`, `dd_core_api`, the read API in `src/core/api/dispatch.ts`), not a PHP class. Do not add a bespoke server endpoint for a service.
+Services are **entirely client-side** — ES6 modules under `client/dedalo/core/services/<service>/js/`. A service has **no server module of its own**: its server side is whatever *generic* API action it already calls, dispatched by `src/core/api/dispatch.ts` (`dd_utils_api`, `dd_core_api`, the read API). Do not add a bespoke server endpoint for a service.
 
 ## 1. Create the directory
 
-There is **no scaffolder** for services (the CLI generator, `scripts/create_tool.ts`, exists only for tools). In the copied client, copy an existing sibling that matches the shape you need and rename every `service_<old>` occurrence — directory, file names, the exported identifier, the CSS/LESS basename. Good starting points:
+There is **no scaffolder** for services (the CLI generator, `scripts/create_tool.ts`, exists only for tools). Copy an existing sibling that matches the shape you need and rename every `service_<old>` occurrence — directory, file names, the exported identifier, the CSS/LESS basename. Good starting points:
 
 - `core/services/service_upload/` — single-file upload, factory **and** standalone-function consumption, full `init`/`build`/`render` lifecycle.
 - `core/services/service_tmp_section/` — in-memory ephemeral section (`ddo_map` in, collected values out).
 - `core/services/service_time_machine/` — read-only list driven from the caller's record.
 
-The file nomenclature mirrors [components](../../core/components/index.md), and lives in the copied client tree:
+The file nomenclature mirrors [components](../../core/components/index.md), and lives in the client tree:
 
 ``` text
 client/dedalo/core/services/
@@ -94,7 +94,7 @@ service_myhelper.prototype.build = async function(autoload=false) {
 The service contract, in one sentence: **bind to a caller, reuse the `common` lifecycle, and call only generic server actions.** Concretely:
 
 - **Caller is mandatory.** Keep `self.caller` and operate on it (read `caller.context` / `caller.request_config`, call `caller.save_value()`, publish events the caller subscribes to). `service_upload` logs an error if no caller is set.
-- **No bespoke endpoint.** Call the existing generic actions — now TS dispatch handlers in `src/core/api/dispatch.ts`. `service_upload` uses `dd_utils_api.get_system_info` / `dd_utils_api.join_chunked_files_uploaded` (plus the multipart chunk-upload endpoint in `src/server.ts` → `handleMediaUpload`, the port of PHP `dd_utils_api::upload`); `service_dropzone` uses `dd_utils_api.list_uploaded_files`; `service_autocomplete` builds an SQO and runs the read API through the caller. Permission enforcement is the caller's and the API action's job — the multipart upload endpoint is session- and CSRF-guarded, and a tool that consumes the result re-checks write permission on its own action (step 5).
+- **No bespoke endpoint.** Call the existing generic actions, dispatched by `src/core/api/dispatch.ts`. `service_upload` uses `dd_utils_api.get_system_info` / `dd_utils_api.join_chunked_files_uploaded` (plus the multipart chunk-upload endpoint in `src/server.ts` → `handleMediaUpload`); `service_dropzone` uses `dd_utils_api.list_uploaded_files`; `service_autocomplete` builds an SQO and runs the read API through the caller. Permission enforcement is the caller's and the API action's job — the multipart upload endpoint is session- and CSRF-guarded, and a tool that consumes the result re-checks write permission on its own action (step 5).
 - **Reuse the lifecycle.** `init` → `build` → `render` → `destroy`, borrowed from `common`.
 
 !!! note "Two services skip `common.prototype.init`"
@@ -192,7 +192,7 @@ The temp file then lives at `DEDALO_UPLOAD_TMP_DIR/<user_id>/<key_dir>/<tmp_name
 - **Wrong directory shape.** The resolver hard-codes `core/services/<model>/js/<model>.js`. The folder, the JS file and the export all share one name.
 - **Forgetting the caller.** A service has no standalone identity. Always pass `caller`, and read/write through it (`caller.context`, `caller.save_value()`, `upload_file_done_<caller.id>`). `service_upload` logs an error with no caller.
 - **Adding an ontology node.** Don't. Services are not in the ontology — no `tipo`, no descriptor/registry entry, no permission row. If you find yourself wanting a node, you probably want a [component](../../core/components/index.md) or [tool](../tools/creating_tools.md) instead.
-- **Inventing a server endpoint.** Call the existing generic actions and let the caller / the action enforce permissions. A bespoke service endpoint is an anti-pattern; the TS server ships no per-service module (and the legacy PHP `service_subtitles` forwarder was already dead code — see the [reference warning](../../core/system/services.md#service_subtitles)).
+- **Inventing a server endpoint.** Call the existing generic actions and let the caller / the action enforce permissions. A bespoke service endpoint is an anti-pattern; the server ships no per-service module at all (see the [services reference](../../core/system/services.md)).
 - **Leaking instances.** Push factory-instanced services into the host's `ar_instances`, or they will not be torn down with the host.
 - **Instance-cache collisions.** When a host instances the same service more than once, pass a distinct `id_variant` so the factory cache key differs.
 
