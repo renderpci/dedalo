@@ -32,23 +32,23 @@ an OpenAPI 3.1 contract with offline Swagger UI + Scalar, and an MCP endpoint fo
 - [Deployment](v2/deployment.md) — running behind Apache/Nginx or standalone, `.env` configuration.
 - [Migration from v1](v2/migration_from_v1.md) — maps every v1 action to its v2 endpoint.
 
-## v1 — legacy
+## Legacy (v6-compatible) — v1
 
-The original PHP Publication API (`…/server_api/v1/json/{action}`). It is **retained in Dédalo v7 for
-backward compatibility** with existing published websites that depend on its action-verb URLs, shared
-`code` authentication, JSON-stringified responses and `combi` / `resolve_portals_custom` semantics.
-It is maintained in **read-only / maintenance mode** — no new features — and is **not recommended for
-new integrations**.
+The original v1 Publication API (`…/server_api/v1/json/{action}`). It is **retained in Dédalo v7 for
+backward compatibility** with existing v6-era published websites that depend on its action-verb URLs,
+shared `code` authentication, JSON-stringified responses and `combi` / `resolve_portals_custom`
+semantics. It is maintained in **read-only / maintenance mode** — no new features — and is **not
+recommended for new integrations**.
 
 - [Publication API (v1)](publication_api.md) — actions, parameters and response formats.
-- [Server config (v1)](server_config_api.md) — editing `server_config_api.php`.
+- [Server config (v1)](server_config_api.md) — editing the v1 server's configuration file.
 - [Public API configuration (v1)](public_api_configuration.md) — renaming and setting up config files.
 
 ## v1 vs v2 at a glance
 
 | | v1 (legacy) | v2 (current) |
 |---|---|---|
-| Language / runtime | PHP (monolithic, `switch`-dispatched actions) | TypeScript on Bun (per-resource services, connection pools) |
+| Language / runtime | Legacy monolithic server (`switch`-dispatched actions) | TypeScript on Bun (per-resource services, connection pools) |
 | URL style | One action verb + flat query params (`/json/records?table=…`) | Resource-oriented, multi-database (`/{db}/tables/{table}/records/{id}`) |
 | Filtering | Raw `sql_filter` strings (`=, >, LIKE, IN, IS NULL…`), `order=name ASC` | Bracketed `filter[field][op]=value` DSL (bound params), `sort=title,-section_id` |
 | Responses | Bare arrays/objects, every value JSON-stringified (double-parse) | `{ data, pagination, meta }` (parsed JSON) |
@@ -56,6 +56,6 @@ new integrations**.
 | Caching / pagination | None natively | Weak `ETag` / `304`, `Cache-Control`, RFC 8288 `Link` rel=next/prev, gzip |
 | Auth / security | Single shared `code` | Optional timing-safe `X-API-Key`, per-IP rate limiting, DoS bounds, timeouts |
 | Batch | `combi` (`ar_calls`) | `POST /batch` (≤20 parallel GETs, per-query status) |
-| Config | PHP `define()`s in `server_config_api.php` | `.env` (`DB_NAMES`, `API_KEYS`, rate limits, timeouts, deployment mode) |
+| Config | Legacy server constants in its configuration file | `.env` (`DB_NAMES`, `API_KEYS`, rate limits, timeouts, deployment mode) |
 | Docs | This section (`publication_api.md`, `server_config_api.md`, `public_api_configuration.md`) | OpenAPI 3.1 + Swagger UI + Scalar (`/docs`, `/openapi.yaml`) and the `v2/` pages |
 | Status | Read-only / maintenance — kept for web compatibility | Actively developed — recommended for all new integrations |

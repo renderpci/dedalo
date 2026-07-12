@@ -1,6 +1,6 @@
 # Migration from v1
 
-How to move a client from the legacy **v1** Publication API (PHP) to the current **v2** API (Bun + TypeScript): the endpoint-by-endpoint mapping, the behavioural differences that affect callers, and a step-by-step migration plan.
+How to move a client from the legacy **v1** Publication API to the current **v2** API (Bun + TypeScript): the endpoint-by-endpoint mapping, the behavioural differences that affect callers, and a step-by-step migration plan.
 
 The v1 and v2 Publication APIs are two independent services reading the **same** diffusion-published MariaDB. v1 is kept in Dédalo v7 for backward compatibility; v2 is the recommended API for all new work. You can run both side by side and migrate one client at a time.
 
@@ -9,7 +9,7 @@ The v1 and v2 Publication APIs are two independent services reading the **same**
 
 ## Why migrate
 
-v1 is a single PHP front controller (`json/index.php`) that `switch`es one `dedalo_get` action over the monolithic `class.web_data.php`, returns bare arrays/objects in which **every value is itself a JSON-stringified string** (callers must double-parse), and accepts raw `sql_filter` strings. v2 is a resource-oriented REST service with parsed JSON envelopes, a bracketed filter DSL where every value is a bound parameter, RFC 9457 Problem Details for errors, conditional caching and per-IP rate limiting.
+v1 is a single front controller that `switch`es one `dedalo_get` action over a monolithic handler, returns bare arrays/objects in which **every value is itself a JSON-stringified string** (callers must double-parse), and accepts raw `sql_filter` strings. v2 is a resource-oriented REST service with parsed JSON envelopes, a bracketed filter DSL where every value is a bound parameter, RFC 9457 Problem Details for errors, conditional caching and per-IP rate limiting.
 
 In short, v2 gives a client:
 
@@ -113,11 +113,11 @@ v1 expanded relations with `resolve_portal` (using the ontology `publication_sch
 
 Details and bounds (depth `3`, ≤50 ids per column) in [querying](querying.md#forward-relation-resolution).
 
-### Configuration: PHP `define()`s → `.env`
+### Configuration: legacy constants → `.env`
 
-v1 configuration lived in PHP constants and globals in `config_api/server_config_api.php` (DB connection, `API_WEB_USER_CODE`, `DEFAULT_LANG`, `DEFAULT_DDBB`, thesaurus maps, CORS, dozens of Oral-History field constants) plus `server_config_headers.php`. v2 configuration is environment variables validated by Zod at startup.
+v1 configuration lived in constants and globals in the legacy server's config file (DB connection, `API_WEB_USER_CODE`, `DEFAULT_LANG`, `DEFAULT_DDBB`, thesaurus maps, CORS, dozens of Oral-History field constants) plus a companion headers file. v2 configuration is environment variables validated by Zod at startup.
 
-| v1 (PHP constant) | v2 (env var) | Notes |
+| v1 (legacy constant) | v2 (env var) | Notes |
 | --- | --- | --- |
 | `MYSQL_DEDALO_DATABASE_CONN`, `…HOSTNAME` / `…USERNAME` / `…PASSWORD` / `…PORT` | `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_PORT` | Read-only DB user. |
 | `DEFAULT_DDBB` (single database) | `DB_NAMES` (comma-list) | Multi-database; each `{db}` segment must be in this allowlist. The name moves from config into the URL path. |
@@ -153,7 +153,7 @@ v1's `combi` action posted `ar_calls=[{ id, options: { dedalo_get, … } }]` and
 
 ### At-a-glance summary
 
-| Concern | v1 (PHP) | v2 (Bun/TS) |
+| Concern | v1 (legacy) | v2 (Bun/TS) |
 | --- | --- | --- |
 | URL shape | `/json/{action}?table=…&code=…` | `/{db}/tables/{table}/records/{id}` |
 | Method | `GET` (discovery) / `POST` (data) | `GET` (data) · `POST` only for `/batch`, `/mcp` |
@@ -167,7 +167,7 @@ v1's `combi` action posted `ar_calls=[{ id, options: { dedalo_get, … } }]` and
 | Auth | shared `?code=` (bypassable) | optional `X-API-Key` + per-IP rate limit |
 | Relations | `resolve_portal` / `resolve_portals_custom` | `resolve_relations` / `resolve_inverse_relations` |
 | Batch | `combi` (`ar_calls`) | `POST /batch` (`queries[]`, ≤20, parallel) |
-| Config | PHP `define()`s | `.env` (Zod-validated) |
+| Config | Legacy constants | `.env` (Zod-validated) |
 
 ## How to migrate a client
 
@@ -175,7 +175,7 @@ A practical, incremental path. Because both APIs read the same database, you can
 
 ### 1. Stand up v2 alongside v1
 
-Deploy the v2 service (it is independent of the v1 PHP service) and point it at the same publication MariaDB with a read-only user. List your published database(s) in `DB_NAMES`. Confirm it is up:
+Deploy the v2 service (it is independent of the v1 service) and point it at the same publication MariaDB with a read-only user. List your published database(s) in `DB_NAMES`. Confirm it is up:
 
 ```bash
 curl -i http://localhost:3100/publication/server_api/v2/health
@@ -228,7 +228,7 @@ Convert each `ar_calls` entry into a `queries[]` entry: keep the `id`, set `path
 
 ### 7. Verify, cut over, retire later
 
-Compare v2 output against v1 for the same records (allowing for the envelope and parsing changes), then switch the client's base URL to v2. Leave v1 running for any client you have not migrated yet — there is no need to decommission it. When **no** client depends on v1 any more, you can retire the PHP service; until then both coexist.
+Compare v2 output against v1 for the same records (allowing for the envelope and parsing changes), then switch the client's base URL to v2. Leave v1 running for any client you have not migrated yet — there is no need to decommission it. When **no** client depends on v1 any more, you can retire the legacy v1 service; until then both coexist.
 
 !!! tip "Explore before you rewrite"
     The v2 service ships its own interactive docs and machine-readable contract: `GET /docs` (Swagger UI + Scalar, offline) and `GET /openapi.yaml` (OpenAPI 3.1). Use them to confirm exact parameter names and response shapes while porting. For AI-driven clients, the `POST /mcp` endpoint exposes the same data as structured MCP tools.
@@ -239,4 +239,4 @@ Compare v2 output against v1 for the same records (allowing for the envelope and
 - [Endpoints](endpoints.md) — the full v2 route catalogue with parameters and response envelopes.
 - [Querying records](querying.md) — the filter DSL, sorting, pagination, `lang` and relation resolution in depth.
 - [HTTP semantics](http_semantics.md) — RFC 9457 errors, `ETag` / `304` caching, RFC 8288 `Link` pagination and auth.
-- [Publication API (v1)](../publication_api.md) — the legacy PHP API this guide migrates away from.
+- [Publication API (v1)](../publication_api.md) — the legacy v1 API this guide migrates away from.

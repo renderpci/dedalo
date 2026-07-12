@@ -12,8 +12,7 @@ Dédalo read [Diffusion (system overview)](../core/system/diffusion.md); for how
 you *decide* what gets published read
 [Diffusion data flow](diffusion_data_flow.md).
 
-Standing spec: `engineering/DIFFUSION_SPEC.md` · execution plan: `rewrite/DIFFUSION_PLAN.md`
-· phase ledger: `rewrite/STATUS.md` → *Diffusion rebuild*.
+Standing spec: `engineering/DIFFUSION_SPEC.md`.
 
 ---
 
@@ -26,12 +25,13 @@ Standing spec: `engineering/DIFFUSION_SPEC.md` · execution plan: `rewrite/DIFFU
 > plugins that consume it and know nothing about ontology or resolution.
 
 A little history: earlier Dédalo versions split publication across two runtimes
-— resolution in the PHP work server, parsing and MariaDB ownership in a separate
-external engine — because PHP could not sustain long publication runs. In this
-server resolution is native, so that seam (per-record HTTP hops, half-resolved
-wire payloads, a second public socket) is gone: what used to be a runtime
-side-channel (`merge_columns`, `global_table_maps`, `empty_to_string`, alias
-resolution, the virtual-tree walk itself) is now a *compile-time plan concept*.
+— resolution in the work server, parsing and MariaDB ownership in a separate
+external engine — because that runtime could not sustain long publication runs.
+In this server resolution is native, so that seam (per-record HTTP hops,
+half-resolved wire payloads, a second public socket) is gone: what used to be a
+runtime side-channel (`merge_columns`, `global_table_maps`, `empty_to_string`,
+alias resolution, the virtual-tree walk itself) is now a *compile-time plan
+concept*.
 
 ## Architecture
 
@@ -91,7 +91,7 @@ Two planes, one codebase:
 | --- | --- | --- |
 | **A → B Compile** | The dd1190 element subtree (flat virtual tree: aliases resolved in place, consumed branches suppressed, parents paths) compiles into an immutable, JSON-serializable `PublicationPlan`: per-section field plans, ddo-map trees with parent linkage, parser split, column typing, policies, lang + recursion policy. Cached per ontology revision; any dd_ontology write invalidates via the core cache-invalidation hub. | `src/diffusion/plan/{virtual_tree,compile,cache,types,identifier}.ts` |
 | **C Selection** | Keyset-batched cursor over the **sanitized** SQO (`WHERE section_id > cursor ORDER BY section_id LIMIT batch`; never OFFSET) + batched matrix reads (one `IN` query per batch). | `src/diffusion/resolve/selection.ts` |
-| **D Resolution** | Per record: publication gate first (fail-closed), then the recursive ddo-tree chain walk — the PHP `resolve_chain` twin: per-locator recursion, cross-section hops with batched term/typology prefetch, breadth-first frontier for linked-section publishing (levels budget + per-run dedup + cycle guard), rewriter semantics (`parents`, truncations, `merge_columns`, `publication_unix_timestamp`, …). Output: typed `RecordIR` with `status: publish | unpublish`. | `src/diffusion/resolve/{resolver,rewriters,default_value,record_ir}.ts` |
+| **D Resolution** | Per record: publication gate first (fail-closed), then the recursive ddo-tree chain walk — the previous engine's `resolve_chain` twin: per-locator recursion, cross-section hops with batched term/typology prefetch, breadth-first frontier for linked-section publishing (levels budget + per-run dedup + cycle guard), rewriter semantics (`parents`, truncations, `merge_columns`, `publication_unix_timestamp`, …). Output: typed `RecordIR` with `status: publish | unpublish`. | `src/diffusion/resolve/{resolver,rewriters,default_value,record_ir}.ts` |
 | **E Transform** | The surviving runtime parsers run as **pure functions** over typed atoms — an exact port of the old parser-chain state machine, fed the same per-lang grouping. Unknown parser fn = loud compile error, never a silent skip. | `src/diffusion/resolve/transform.ts`, `src/diffusion/parsers/` |
 | **F Projection** | The 5-rung language ladder (exact → nolan → main lang → any → null) collapses each field per output language; `empty_to_string` / `default_value` policies apply here, in exactly one place. Output: `ProjectedRow` per lang. | `src/diffusion/project/lang_ladder.ts` |
 | **G Write** | The format writer for `properties->diffusion->type` consumes rows/records behind a fixed session contract: `ensureSchema()` once per run (serialized, outside row transactions), idempotent `writeRows`/`removeRecords` per batch, `close()` finalizes (merge/zip/counts). | `src/diffusion/writers/`, `src/diffusion/targets/mariadb/` |
@@ -164,8 +164,8 @@ unknown parser fns, rewriter absorptions).
 | `csv` | `writers/csv.ts` | `<media>/csv/<db-or-service>/<table>.csv` | RFC 4180, streamed, header = plan column order |
 | `json` | `writers/json.ts` | `<media>/json/…/<table>.ndjson` + `.meta.json` sidecar | One JSON object per row line |
 | `markdown` | `writers/markdown.ts` | `<media>/markdown/<service>/<st>_<id>.md` (+ zip) | Same name grammar as the delete path, byte-pinned |
-| `rdf` | `writers/rdf.ts` | `<media>/rdf/<service>/<sanitized rdfName_st_id>.rdf` + merged + zip | EasyRdf envelope pinned against a real PHP-published file; `xml:lang` literals |
-| `xml` | `writers/xml.ts` | `<media>/xml/<service>/<st>_<id>.xml` + merged + zip | PHP `render_dom` shape; per-lang alpha-2 children |
+| `rdf` | `writers/rdf.ts` | `<media>/rdf/<service>/<sanitized rdfName_st_id>.rdf` + merged + zip | EasyRdf envelope pinned against a file published by the previous engine; `xml:lang` literals |
+| `xml` | `writers/xml.ts` | `<media>/xml/<service>/<st>_<id>.xml` + merged + zip | Matches the previous engine's `render_dom` output shape; per-lang alpha-2 children |
 
 Adding a community format = one ontology `type` string + one registered writer
 (`writers/registry.ts`); an unknown type throws a named error.
@@ -198,7 +198,7 @@ dd1758 remains the *user-facing* publication ledger).
 
 Measured throughput (dev hardware, real 62-column `coins` plan, publication
 gates + cross-section chains included): **≈226 records/s** single-runner —
-against the old architecture's floor of one full PHP API round-trip per record
+against the old architecture's floor of one full API round-trip per record
 (chunk size 1, ≤5 records/s).
 
 ## Security chokepoints
@@ -250,13 +250,13 @@ All keys live in `../private/.env` (see [config](../config/index.md)):
 | `DEDALO_DIFFUSION_NATIVE_ELEMENTS` | unset | **Cutover lever 2**: csv of element tipos (or `all`) allowed to publish natively; un-routed elements refuse loudly (never both engines on one element+section) |
 | `DEDALO_DIFFUSION_FILES_ROOT` | media path | File-writer root override (tests) |
 
-## Migrating from a Dédalo PHP installation
+## Migrating from an older Dédalo installation
 
-Coming from a PHP installation that published through the old external
-diffusion service? Migration is operational, not structural — the diffusion
-ontology, the client tool and the published artifacts are unchanged, and during
-the transition both publishers coexist safely on the same MariaDB **for
-different elements** (idempotent upserts, additive schema):
+Coming from an older Dédalo installation that published through the legacy
+external diffusion service? Migration is operational, not structural — the
+diffusion ontology, the client tool and the published artifacts are unchanged,
+and during the transition both publishers coexist safely on the same MariaDB
+**for different elements** (idempotent upserts, additive schema):
 
 1. Pilot: set `DEDALO_DIFFUSION_NATIVE_ELEMENTS` to a short list of element
    tipos; spot-check published rows.
@@ -299,7 +299,7 @@ the native delete executor and the plan-cache invalidation hook).
 | `diffusion_parsers` | 84 oracle-mined parser cases + classification completeness |
 | `diffusion_datum_replay` | **Frozen-fixture parity**: the old engine's golden datum → identical processed tables through the production transform+ladder |
 | `diffusion_resolver` | Real-DB end-to-end record resolution, gate variants, frontier levels, determinism |
-| `diffusion_mariadb` / `diffusion_file_writers` / `diffusion_rdfxml_writers` | Live-target writer behavior; file grammars byte-pinned against the delete path and real PHP-published files |
+| `diffusion_mariadb` / `diffusion_file_writers` / `diffusion_rdfxml_writers` | Live-target writer behavior; file grammars byte-pinned against the delete path and real files published by the previous engine |
 | `diffusion_publish_e2e` | The keystone: real plan → real matrix → scratch tables; oracle spot-check vs old-engine-published rows (53 matching cells / 8 differing, every diff hard-asserted); **interrupted-resume byte-equivalence** |
 
 ## Extending the engine: custom fns
@@ -354,7 +354,7 @@ security line); the registries are the single place to touch.
       resolver's atom-level entry point `resolveRecordAtoms`); the NDJSON
       grid protocol and projection stay export-specific and byte-identical
       (A/B keystone `test/unit/diffusion_export_unified.test.ts` + the live
-      PHP differential run through the unified route).
+      live differential run through the unified route).
       `DEDALO_EXPORT_UNIFIED=false` is the kill-switch back to the legacy
       in-tool walker, whose DELETION is ledgered until the tools refactor
       settles.
