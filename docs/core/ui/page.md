@@ -5,18 +5,19 @@
 > See also: [Architecture overview](../architecture_overview.md) · [CSS / LESS architecture](../../css-architecture.md) · [Sections](../sections/index.md) · [Components](../components/index.md)
 
 This page is the **developer reference** for the `page` subsystem under
-`core/page/`. Unlike `section` or a component, **`page` has no PHP class** — it
-is a purely **client** model (HTML + JS + the aggregated CSS bundle). The server
-contributes only the `start` API action that returns the page's *context*; the
-`page` JS instance turns that context into the rendered application.
+`client/dedalo/core/page/`. Unlike `section` or a component, **`page` has no
+server-side model** — it is a purely **client** model (HTML + JS + the
+aggregated CSS bundle). The server contributes only the `start` API action
+that returns the page's *context*; the `page` JS instance turns that context
+into the rendered application.
 
 ## Role
 
 `page` is the JavaScript model that owns the whole browser application after the
 HTML document loads. It is instanced exactly like any other client model —
 `get_instance({model:'page'})` dynamically imports
-`core/page/js/page.js` — but it sits *above* sections, areas, tools and the
-menu: those are the elements `page` builds *inside itself*.
+`client/dedalo/core/page/js/page.js` — but it sits *above* sections, areas,
+tools and the menu: those are the elements `page` builds *inside itself*.
 
 Where it sits relative to its neighbours:
 
@@ -26,23 +27,23 @@ Where it sits relative to its neighbours:
 | **`menu`** | A page element that normally stays mounted across navigations (it is `destroyable=false`). Publishes `user_navigation` events that `page` consumes. |
 | **`section` / `area_*` / `section_tool`** | The "main" page element — the record list/edit view, a thesaurus/graph/ontology area, or a tool-configured section. Built and destroyed by `page` on every navigation. |
 
-The server has no `page` model: the `start` action — the `dd_core_api.start`
-handler in `src/core/api/dispatch.ts` (PHP oracle: `dd_core_api::start()`) —
-assembles the page context (the login context when not logged, via
-`buildLoginContext()`; otherwise the `menu` element plus the section/area/tool
-resolved from the URL, via `buildStructureContext()`) and returns it as
-`result.context` along with an `environment` payload (`buildEnvironment()`,
-`src/core/resolve/environment.ts`). The `page` instance consumes both.
+The server has no `page` model: the `start` action handler in
+`src/core/api/handlers/dd_core_api.ts` assembles the page context (the login
+context when not logged, via `buildLoginContext()`; otherwise the `menu`
+element plus the section/area/tool resolved from the URL, via
+`buildStructureContext()`) and returns it as `result.context` along with an
+`environment` payload (`buildEnvironment()`, `src/core/resolve/environment.ts`).
+The `page` instance consumes both.
 
 !!! note "No inheritance from a server base"
-    `page` is **not** a `common`/`component_common` PHP subclass. On the client,
-    the `page` constructor borrows a few prototype methods from the shared client
-    `common` and from `render_page` (see [Instantiation & lifecycle](#instantiation--lifecycle)),
-    but there is no server-side class to extend.
+    On the client, the `page` constructor borrows a few prototype methods
+    from the shared client `common` and from `render_page` (see
+    [Instantiation & lifecycle](#instantiation--lifecycle)), but there is no
+    server-side class to extend — `page` has no server-side model at all.
 
 ## Responsibilities
 
-- **Bootstrap** — `core/page/index.html` is the application document; `js/index.js`
+- **Bootstrap** — `client/dedalo/core/page/index.html` is the application document; `js/index.js`
   is the entry module that sets `window.page_globals`, instances the `page`,
   calls `build(true)` (the `start` request) and `render()`, then swaps the
   result into `#main`.
@@ -104,7 +105,7 @@ The two systemic pieces around the context:
 ## Files & structure
 
 ```text
-core/page/
+client/dedalo/core/page/
 ├── index.html              # application document: #main, theme-init, importmap, main.css, index.js
 ├── js/
 │   ├── index.js            # bootstrap: page_globals, get_instance('page'), build(true), render(), mount #main
@@ -172,7 +173,7 @@ Theming is CSS-custom-property driven, not a separate stylesheet:
   avoid a flash of the wrong theme.
 - `js/theme.js` is the runtime API (`get_theme` / `set_theme` / `toggle_theme`),
   persists to `localStorage.dedalo_theme`, and publishes `theme_changed`. The
-  menu's theme switcher imports it (`core/menu/js/view_default_edit_menu.js`).
+  menu's theme switcher imports it (`client/dedalo/core/menu/js/view_default_edit_menu.js`).
 
 ## Instantiation & lifecycle
 
@@ -181,12 +182,12 @@ beyond the empty `page()` factory; state is set in `init()`. The bootstrap in
 `index.js` is the canonical lifecycle:
 
 ```js
-// core/page/js/index.js (essentials)
+// client/dedalo/core/page/js/index.js (essentials)
 import {get_instance} from '../../common/js/instances.js'
 
 window.page_globals = { api_errors:[], request_message:null, csrf_token:null }
 
-// 1. instance the page model (dynamically imports core/page/js/page.js → init())
+// 1. instance the page model (dynamically imports client/dedalo/core/page/js/page.js → init())
 const page_instance = await get_instance({ model:'page' })
 
 // 2. build: run the server `start` request and store result.context + environment
@@ -230,7 +231,7 @@ Lifecycle stages, in order:
 
 ## Public API / key methods
 
-Real, verified members of `core/page/js/page.js`, `render_page.js`, `css.js`
+Real, verified members of `client/dedalo/core/page/js/page.js`, `render_page.js`, `css.js`
 and `theme.js`, grouped by concern. None are static (these are client modules);
 the *exported?* column marks ES-module exports usable by other files.
 
@@ -288,10 +289,10 @@ inserts on `requestAnimationFrame`, and deduplicate by selector.
 ## How it fits with the rest of Dédalo
 
 - **Server `start` action** — `page.build()` calls the Dédalo API `start` action
-  (the `dd_core_api.start` handler in `src/core/api/dispatch.ts`; PHP oracle
-  `core/api/v1/common/class.dd_core_api.php::start()`), which returns the page
-  context (login context, or `menu` + the resolved section/area/tool) and the
-  `environment` payload. See the [Architecture overview › request lifecycle](../architecture_overview.md#the-request-lifecycle)
+  (the `start` handler in `src/core/api/handlers/dd_core_api.ts`), which
+  returns the page context (login context, or `menu` + the resolved
+  section/area/tool) and the `environment` payload. See the
+  [Architecture overview › request lifecycle](../architecture_overview.md#the-request-lifecycle)
   and [RQO](../rqo.md).
 - **Sections & areas** — the main page element is usually a
   [section](../sections/index.md) (or an `area_*`); `page` builds it through
@@ -356,13 +357,13 @@ get_theme()           // 'light' | 'dark'
 ```
 
 !!! note "Accuracy notes"
-    - `page` is **client-only**; there is no `core/page/class.page.php`. The
-      server side of the page is the `start` API action, not a class.
+    - `page` is **client-only**; it has no server-side model. The server side
+      of the page is the `start` API action, not a class.
     - `js/index.js` references `worker_cache.js` only indirectly — the worker is
-      launched on login (`core/login/js/login.js`) and by the update-code
+      launched on login (`client/dedalo/core/login/js/login.js`) and by the update-code
       maintenance widget, not by the page bootstrap.
     - `main.css` is a build artifact compiled from `main.less`; the repository
-      tooling that runs the LESS compilation is outside the `core/page/` tree and
+      tooling that runs the LESS compilation is outside the `client/dedalo/core/page/` tree and
       is not documented here.
 
 ## Related

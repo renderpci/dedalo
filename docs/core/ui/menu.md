@@ -10,40 +10,33 @@
 > [area](../areas/area.md) · [Ontology](../ontology/index.md) ·
 > [Tools](../../development/tools/creating_tools.md) · [dd_object](../dd_object.md)
 
-This page is the developer reference for the **menu** subsystem: on the TS
+This page is the developer reference for the **menu** subsystem: on the
 server it is a small, dependency-free resolver module
-(`src/core/resolve/menu.ts`, `getMenuTreeDatalist()`) called from the `menu`
-read action (`readMenu()` in `src/core/api/dispatch.ts`); the client is the
-same copied-as-is widget (`menu.js` + render/view files) that turns the
+(`src/core/api/handlers/menu.ts`, `getMenuTreeDatalist()`) called from the `menu`
+read action (`readMenu()` in `src/core/api/handlers/dd_core_api.ts`); the client is a
+widget (`menu.js` + render/view files) that turns the
 resulting datalist into the desktop dropdown tree, the mobile menu and the top
 utility bar. The menu is *not* a section: it stores nothing, owns no record,
 and exists only to route the user into areas/sections.
 
-!!! note "PHP reference"
-    The PHP oracle for this subsystem is `core/menu/class.menu.php`
-    (`class menu extends common`) plus its controller `menu_json.php`. The TS
-    port intentionally does not carry over the class/inheritance shape — see
-    below.
-
 ## Role
 
-`getMenuTreeDatalist()` (in `src/core/resolve/menu.ts`) is a plain async
+`getMenuTreeDatalist()` (in `src/core/api/handlers/menu.ts`) is a plain async
 function whose single job is to produce the **navigation datalist** — a flat
 array of `{tipo, model, parent, label, config?}` items describing the areas
 and sections the current user is authorised to open. The sibling
 `buildInfoData()` (in `src/core/resolve/environment.ts`) assembles the
-**info_data** object for the developer debug bar (the PHP
-`menu::get_info_data()` equivalent). Both are invoked by `readMenu()` in
-`src/core/api/dispatch.ts`, which also stamps the menu's `{context}` entry via
-the shared `buildStructureContext()` (fixed at permission level 2, matching
-PHP's `menu_json.php`).
+**info_data** object for the developer debug bar. Both are invoked by
+`readMenu()` in `src/core/api/handlers/dd_core_api.ts`, which also stamps the
+menu's `{context}` entry via the shared `buildStructureContext()`, fixed at
+permission level 2.
 
 It sits at the top of the back-office UI, between the ontology (the source of
 the area/section tree) and the page shell:
 
 | layer | role |
 | --- | --- |
-| **[area](../areas/area.md)** | The ontology areas (`area_root`, `area_resource`, `area_admin`, `area_thesaurus`, …) that are the *roots* of the menu tree. `getMenuTreeDatalist()` walks the ontology directly (no separate `area::get_areas()` call — the walk is inlined in `menu.ts`). |
+| **[area](../areas/area.md)** | The ontology areas (`area_root`, `area_resource`, `area_admin`, `area_thesaurus`, …) that are the *roots* of the menu tree. `getMenuTreeDatalist()` walks the ontology directly — the walk is inlined in `menu.ts`, not a separate call. |
 | **principal / security gates** | Resolves *who can see what*: the caller passes `{userId, isGlobalAdmin, isDeveloper}` (the request's `Principal`, see [security](../system/security.md)); `getMenuTreeDatalist()` filters the areas through these flags plus the per-user authorized-areas table. |
 | **`menu.ts` resolver** *(this subsystem, server side)* | Builds the permission-filtered, re-parented datalist; `readMenu()` packs it with `info_data`/`show_ontology`/`username` into the `{context, data}` datum. |
 | **`menu.js` (client)** | Consumes the datum and renders the desktop tree, the mobile menu and the top utility bar; publishes `user_navigation` events when an item is clicked. |
@@ -53,23 +46,20 @@ across section navigations (it is in `page.js`'s `base_models = ['menu']`, so it
 is never destroyed on page refresh) and only its `section_label` is updated as
 the user moves between records.
 
-!!! note "No class, no inheritance"
-    The PHP `menu` class extended `common` and inherited its magic accessors
-    and instance-cache machinery (see the PHP reference note above). The TS
-    port has no `menu` object at all — `getMenuTreeDatalist()` /
+!!! note "No `menu` object"
+    There is no `menu` object on the server — `getMenuTreeDatalist()` /
     `buildInfoData()` are stateless functions, and the menu's `{context}` is
     produced by the same generic `buildStructureContext()` every model
     (`section`, `area_*`, `menu`, …) goes through, at a hardcoded permission
-    level of `2` (matching the PHP override's behaviour, not its shape).
+    level of `2`.
 
-The menu is fixed to the same identity quintet the PHP class pinned in its
-constructor (`readMenu()` passes these into `buildStructureContext()` /
-`getMenuTreeDatalist()`):
+The menu is fixed to a stable identity quintet (`readMenu()` passes these
+into `buildStructureContext()` / `getMenuTreeDatalist()`):
 
 | field | value |
 | --- | --- |
 | `tipo` | `dd85` (the ontology node of the `menu` model) |
-| `section_tipo` | `dd1` (the ontology root, `DEDALO_ROOT_TIPO` in the PHP config) |
+| `section_tipo` | `dd1` (the ontology root) |
 | `mode` | `'list'` (the mode `readMenu()` requests for the context stamp) |
 | `lang` | the current application language (`currentApplicationLang()`, request-scoped and set by `change_lang`) |
 
@@ -104,9 +94,8 @@ constructor (`readMenu()` passes these into `buildStructureContext()` /
 ## Data model
 
 The menu does not persist anything. Its wire shape is the standard
-`{context, data}` datum: `readMenu()` (`src/core/api/dispatch.ts`) returns
-`{result: {context, data}, msg}` for the `menu` read action, unchanged from the
-PHP `common::get_json()` / `menu_json.php` shape.
+`{context, data}` datum: `readMenu()` (`src/core/api/handlers/dd_core_api.ts`) returns
+`{result: {context, data}, msg}` for the `menu` read action.
 
 ### `data` — the navigation datalist + info
 
@@ -141,9 +130,10 @@ A `tree_datalist` item (one per visible area/section):
     - **`section_tool` area** → `model` becomes `'section'`, `tipo` becomes the
       `properties->config->target_section_tipo`, and
       `config = properties->config` with an added `config.tool_context` (built
-      by `tool_common::create_tool_simple_context()`). This is how a tool-backed
-      menu entry opens the *real* target section but with tool behaviour layered
-      on. If the named tool is not in the user's tool set, the area is skipped.
+      by `buildSectionToolContext()`, `src/core/tools/section_tool_context.ts`).
+      This is how a tool-backed menu entry opens the *real* target section but
+      with tool behaviour layered on. If the named tool is not in the user's
+      tool set, the area is skipped.
     - **`DEDALO_THESAURUS_VIRTUALS_AREA_TIPO`** (`hierarchy56`) → `model`
       becomes `'area_thesaurus'`, `config = { swap_tipo: DEDALO_THESAURUS_TIPO }`
       (`dd100`). The client swaps `tipo` to `swap_tipo` on click.
@@ -172,7 +162,7 @@ unlike a section/component context.
 ## Files & structure
 
 ```text
-core/menu                              # client (copied as-is)
+client/dedalo/core/menu
 ├── css
 │   └── menu.less                      # styles (compiled into main.css)
 └── js
@@ -182,21 +172,18 @@ core/menu                              # client (copied as-is)
     ├── render_menu_tree.js            # desktop dropdown tree (hover/click/keyboard)
     └── render_menu_mobile.js          # collapsible mobile menu
 
-src/core/resolve/menu.ts               # server: getMenuTreeDatalist() (tree + re-parenting)
+src/core/api/handlers/menu.ts          # server: getMenuTreeDatalist() (tree + re-parenting)
 src/core/resolve/environment.ts        # server: buildInfoData() (debug-bar system info)
-src/core/api/dispatch.ts               # server: readMenu() (the menu read action)
+src/core/api/handlers/dd_core_api.ts   # server: readMenu() (the menu read action)
 ```
-
-The PHP `core/menu/class.menu.php` + `menu_json.php` pair is **not** carried
-over; the TS server has no `menu` class file to mirror.
 
 ### Server: dispatch (no instance, no constructor)
 
-There is no `menu` object on the TS server — `getMenuTreeDatalist()` is a
+There is no `menu` object on the server — `getMenuTreeDatalist()` is a
 plain, stateless async function, called directly from the `menu` read action:
 
 ```ts
-// src/core/api/dispatch.ts — readMenu()
+// src/core/api/handlers/dd_core_api.ts — readMenu()
 const menuContext = await buildStructureContext({
 	tipo: menuTipo, sectionTipo: source.section_tipo ?? menuTipo,
 	mode: 'list', lang, permissions: 2, addRequestConfig: false,
@@ -215,11 +202,9 @@ const dataItem = {
 ```
 
 !!! note "No instance cache to clear"
-    The PHP class kept no static instance cache and did not override
-    `common::clear()` either — it built its datalist fresh on every page
-    bootstrap. The TS function is the same: nothing is cached server-side. The
-    expensive output (the datalist) is cached on the **client** in local DB, not
-    on the server, exactly as before.
+    The datalist is built fresh on every page bootstrap — nothing is cached
+    server-side. The expensive output (the datalist) is cached on the
+    **client** in local DB instead.
 
 ### Client: lifecycle
 
@@ -240,21 +225,19 @@ const dataItem = {
 
 ## Public API / Key methods
 
-### Server (`src/core/resolve/menu.ts`, `environment.ts`, `dispatch.ts`)
+### Server (`src/core/api/handlers/menu.ts`, `src/core/resolve/environment.ts`, `src/core/api/handlers/dd_core_api.ts`)
 
 | function | module | purpose |
 | --- | --- | --- |
-| `getMenuTreeDatalist(viewer?)` | `resolve/menu.ts` | Build the permission-filtered, re-parented array of menu items (areas + sections), applying the `section_tool` and thesaurus special-case rewrites. `viewer` carries `{userId, isGlobalAdmin, isDeveloper}`; admins/developers get the walk unfiltered. |
-| `getVisibleParent(node, skipByTipo)` | `resolve/menu.ts` (private) | Recursively resolve an item's *visible* parent by hopping over any ancestor whose tipo is a configured skip tipo (`config.menu.skipTipos`, overridable at runtime via `getEffectiveMenuSkipTipos()`). |
+| `getMenuTreeDatalist(viewer?)` | `api/handlers/menu.ts` | Build the permission-filtered, re-parented array of menu items (areas + sections), applying the `section_tool` and thesaurus special-case rewrites. `viewer` carries `{userId, isGlobalAdmin, isDeveloper}`; admins/developers get the walk unfiltered. |
+| `getVisibleParent(node, skipByTipo)` | `api/handlers/menu.ts` (private) | Recursively resolve an item's *visible* parent by hopping over any ancestor whose tipo is a configured skip tipo (`config.menu.skipTipos`, overridable at runtime via `getEffectiveMenuSkipTipos()`). |
 | `buildInfoData()` | `resolve/environment.ts` | Assemble the system-info object (Dédalo/runtime/PostgreSQL versions, DB name, entity, server software/IP) for the developer debug bar. |
-| `readMenu(rqo, context, principal)` | `api/dispatch.ts` | The `menu` read action: stamps the context via the shared `buildStructureContext()` at a hardcoded permission level of `2`, then packs `tree_datalist` + `info_data` + `show_ontology` + `username` into the single data item. |
+| `readMenu(rqo, context, principal)` | `api/handlers/dd_core_api.ts` | The `menu` read action: stamps the context via the shared `buildStructureContext()` at a hardcoded permission level of `2`, then packs `tree_datalist` + `info_data` + `show_ontology` + `username` into the single data item. |
 
 !!! note "The context stamp is generic, not overridden"
-    PHP's `menu::get_structure_context()` was a bespoke override of
-    `common`'s cache-backed builder. The TS server has only **one**
-    context builder (`buildStructureContext()`, used by every model); `readMenu()`
-    simply calls it with `mode:'list'` and `permissions:2` — there is no
-    menu-specific context code path to override.
+    There is only **one** context builder (`buildStructureContext()`, used by
+    every model); `readMenu()` simply calls it with `mode:'list'` and
+    `permissions:2` — there is no menu-specific context code path.
 
 ### Client (`menu.js`)
 
@@ -312,7 +295,7 @@ const dataItem = {
 ### Server: build the navigation datalist
 
 ```ts
-// src/core/api/dispatch.ts — readMenu(), on every menu read request
+// src/core/api/handlers/dd_core_api.ts — readMenu(), on every menu read request
 const { tree_datalist } = await getMenuTreeDatalist({
 	userId: principal.userId,
 	isGlobalAdmin: principal.isGlobalAdmin,

@@ -5,10 +5,11 @@
 > See also: [Sections](../sections/index.md) · [Components](../components/index.md) · [dd_object](../dd_object.md) · [Events](../events.md)
 
 This page is the **subsystem reference** for the inspector. The inspector is a
-pure **client (JavaScript + LESS) subsystem** — there is *no* `class.inspector.php`.
-It lives in `core/inspector/` and is driven entirely by the data its caller
-section already holds (`context`, `data`, `tools`) plus a handful of small API
-calls. Everything it displays is resolved server-side by the
+pure **client (JavaScript + LESS) subsystem** — it has no server-side
+counterpart. It lives in `client/dedalo/core/inspector/` and is driven
+entirely by the data its caller section already holds (`context`, `data`,
+`tools`) plus a handful of small API calls. Everything it displays is
+resolved server-side by the
 [section](../sections/section.md) and [tool](../components/index.md#tools)
 machinery; the inspector only *renders* and *reacts*.
 
@@ -24,27 +25,26 @@ live activity feed; for the **currently focused component** it swaps that record
 view for component-level info (tipo, model, translatable flag, current value,
 per-component history).
 
-It is **not** a model class and does not extend a PHP base. On the client it is a
-plain constructor function (`inspector`) whose prototype is patched with a few
-methods borrowed from the shared client `common` (`render`, `refresh`) plus its
-own `edit`/`init`/`build`/`destroy`/`get_raw_record*`. It sits next to these
-neighbouring client subsystems:
+It is a plain constructor function (`inspector`) whose prototype is patched
+with a few methods borrowed from the shared client `common` (`render`,
+`refresh`) plus its own `edit`/`init`/`build`/`destroy`/`get_raw_record*`. It
+sits next to these neighbouring client subsystems:
 
 | subsystem | relationship |
 | --- | --- |
-| **section** (`core/section/js/section.js`) | The inspector's `caller`. The section constructs the inspector in `mode==='edit'` with permissions, owns its lifecycle, and is the source of all `context`/`data`/`tools`/`rqo` the inspector reads. |
-| **view_default_edit_section** (`core/section/js/view_default_edit_section.js`) | Builds `#inspector_container`, renders the inspector wrapper into it, attaches the resize handle, applies the persisted rail/width state, and moves the section paginator into the inspector. |
+| **section** (`client/dedalo/core/section/js/section.js`) | The inspector's `caller`. The section constructs the inspector in `mode==='edit'` with permissions, owns its lifecycle, and is the source of all `context`/`data`/`tools`/`rqo` the inspector reads. |
+| **view_default_edit_section** (`client/dedalo/core/section/js/view_default_edit_section.js`) | Builds `#inspector_container`, renders the inspector wrapper into it, attaches the resize handle, applies the persisted rail/width state, and moves the section paginator into the inspector. |
 | **service_time_machine** (Time Machine) | Instanced on demand by the inspector for the section "Latest changes" list and the per-component history. The inspector never reads `dd15` history itself; it delegates to the service. |
-| **tool_common** (`open_tool`) | Every tool button in the inspector calls `open_tool()`; the inspector only decides *which* tools to show (`show_in_inspector`) and renders their buttons. |
+| **open_tool** | Every tool button in the inspector calls `open_tool()`; the inspector only decides *which* tools to show (`show_in_inspector`) and renders their buttons. |
 | **relation_list** | Instanced on demand to render the "Relations" block. |
 
-!!! note "No PHP class — server contributions are indirect"
-    The inspector has no server counterpart. The data it shows is produced by
-    other server classes: `section`/`section_record` build the record metadata,
-    `tool_common` / `tools_register` build the tool contexts (including the
-    `show_in_inspector` flag), and `service_time_machine` answers the history
-    queries. The only inspector field with a server echo is the
-    section-level `section::$show_inspector` boolean (see [How it fits](#how-it-fits-with-the-rest-of-dédalo)).
+!!! note "No server counterpart"
+    The inspector itself has no server-side object. The data it shows is
+    produced by ordinary section/component reads, the tools registry
+    (including the `show_in_inspector` flag — see below), and the Time
+    Machine read path. The client creates the inspector whenever a section
+    renders in `mode==='edit'` with sufficient permissions — there is no
+    separate server-side toggle for it.
 
 ## Responsibilities
 
@@ -142,7 +142,7 @@ full-width.
 ## Files & structure
 
 ```text
-core/inspector/
+client/dedalo/core/inspector/
 ├── js/
 │   ├── inspector.js          # the instance: lifecycle, events, RQO helpers, ontology URLs
 │   └── render_inspector.js   # the DOM: edit() builder + every block renderer/loader
@@ -186,7 +186,7 @@ core/inspector/
 
 The inspector is **not** built through the `get_instance()` factory. The section
 instantiates it directly with `new inspector()` when it renders in edit mode and
-the user has permissions (`core/section/js/section.js`):
+the user has permissions (`client/dedalo/core/section/js/section.js`):
 
 ```js
 // in section build, mode 'edit' only
@@ -208,7 +208,7 @@ pointers (`paginator_container`, `element_info_container`,
 has a double-init guard (`is_init`) and tracks `self.status`
 (`initializing → initialized → building → built → destroyed`).
 
-Then the view builds and renders it (`core/section/js/view_default_edit_section.js`):
+Then the view builds and renders it (`client/dedalo/core/section/js/view_default_edit_section.js`):
 
 ```js
 const inspector_container = ui.create_dom_element({ id:'inspector_container', /* … */ })
@@ -306,7 +306,7 @@ event handlers and by the section view.
 | `open_ontology_window(self, url, docu_type, focus=false)` | export | Open/recycle the shared `window.docu_window` at the given ontology URL. |
 
 !!! warning "Verified surface only"
-    The tables above list the *real* functions present in `core/inspector/js/`.
+    The tables above list the *real* functions present in `client/dedalo/core/inspector/js/`.
     Module-internal helpers (`set_inspector_width`, `is_narrow_viewport`,
     `update_section_info`) are not exported and are listed only where they shape
     behaviour. No method names here are invented.
@@ -326,16 +326,12 @@ const inspector_tools = self.caller.context.tools.filter( el => el.show_in_inspe
 ```
 
 That `show_in_inspector` flag is a **server-resolved** property of every tool's
-context. On the TS server it is a plain boolean field on the resolved tool
-context (`src/core/tools/types.ts`), read off the tool's registration
+context: a plain boolean field on the resolved tool context
+(`src/core/tools/types.ts`), read off the tool's registration
 (`SHOW_IN_INSPECTOR` in `src/core/tools/ontology_map.ts`, resolved by
-`src/core/tools/registry.ts` / `register.ts`); the PHP oracle carried the same
-flag on [`dd_object`](../dd_object.md) (`get_show_in_inspector()` /
-`set_show_in_inspector()`, populated by `tool_common::get_structure_context()` /
-`create_tool_simple_context()` and mapped via `tool_ontology_map::SHOW_IN_INSPECTOR`
-in `tools_register`). A tool authored with `show_in_inspector: true` in its
-`register.json` therefore appears as an inspector button with no client change,
-on either engine.
+`src/core/tools/registry.ts` / `register.ts`). A tool authored with
+`show_in_inspector: true` in its `register.json` therefore appears as an
+inspector button with no client change.
 The companion flag `show_in_component` governs whether the same tool renders in a
 component's own toolbar instead. See the tool context example in
 [Components → Datum/context](../components/index.md#context) and the
@@ -367,16 +363,16 @@ so each historical change can carry a note.
   node, captured from the `render_component_filter_<section_tipo>` event, letting
   the curator change the record's project assignment from the panel.
 
-### Section coupling and `show_inspector`
+### Section coupling
 
-The only server echo of the inspector is the section-level boolean
-[`section::$show_inspector`](../sections/section.md) (default `true`). The
-section orchestrates the client inspector's whole lifecycle: it constructs it
-(edit mode + permissions), feeds it `context`/`data`/`tools`, and the section
-view moves the paginator into `inspector.paginator_container`. See
-[section](../sections/section.md) for the section instance the inspector treats
-as its source of truth, and [dd_object](../dd_object.md) for the
-`context`/`tools`/`show_in_inspector` shape it consumes.
+The section orchestrates the client inspector's whole lifecycle: it
+constructs the inspector whenever it renders in `mode==='edit'` with
+sufficient permissions, feeds it `context`/`data`/`tools`, and the section
+view moves the paginator into `inspector.paginator_container`. There is no
+separate server-side flag gating it — the mode + permission check is the
+whole gate. See [section](../sections/section.md) for the section instance
+the inspector treats as its source of truth, and [dd_object](../dd_object.md)
+for the `context`/`tools`/`show_in_inspector` shape it consumes.
 
 ## Examples
 

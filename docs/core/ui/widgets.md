@@ -10,14 +10,11 @@
 > [component_info cookbook](../components/component_info_cookbook.md) (recipes) ·
 > [Components](../components/index.md) · [Architecture overview](../architecture_overview.md)
 
-This is the **subsystem reference** for the widgets under `core/widgets/`
-(client, copied as-is) and, on the TS/Bun server, the framework under
-`src/core/components/component_info/widgets/`. On the PHP oracle this was a
-multi-file subsystem anchored by one thin base class (`widget_common`) with one
-`class.<name>.php` subclass per widget, loaded by `include`-from-ontology-path.
-The TS port replaces the class-per-widget shape with a **descriptor registry**:
-one module per widget exporting one `InfoWidgetDescriptor`, dispatched **by
-name** through `registry.ts` — never by loading the ontology-authored path. For
+This is the **subsystem reference** for the widgets under
+`client/dedalo/core/widgets/` (client) and, on the server, the framework under
+`src/core/components/component_info/widgets/`. Each widget is a **descriptor**:
+one module exporting one `InfoWidgetDescriptor`, dispatched **by name**
+through `registry.ts` — never by loading a path named in the ontology. For
 the *info* component that hosts these widgets read
 [component_info](../components/component_info.md) first.
 
@@ -38,10 +35,9 @@ the *info* component that hosts these widgets read
 
 ## Role
 
-A **widget** (PHP oracle: a subclass of `widget_common`; TS server: one
-`InfoWidgetDescriptor` module under
-`src/core/components/component_info/widgets/<tld>/<name>.ts`) is a reusable unit
-of *derived* data. Unlike a normal component it owns no database column: it
+A **widget** — one `InfoWidgetDescriptor` module under
+`src/core/components/component_info/widgets/<tld>/<name>.ts` — is a reusable
+unit of *derived* data. Unlike a normal component it owns no database column: it
 reads the values of one or more existing components, optionally runs them
 through a process function, and returns a flat array of
 `{widget, key, id, widget_id, value}` items for the client to render.
@@ -49,10 +45,10 @@ through a process function, and returns a flat array of
 Widgets never appear on their own in a section. They are always **hosted** by a
 [`component_info`](../components/component_info.md) field that lists them in its
 ontology `properties.widgets` and aggregates every widget's output into its own
-value. On the TS server the live compute is a **fallback**: the section read
-serves the component's **stored** misc value when the client save cycle already
-persisted one, and only computes live when the row is empty (mirroring PHP's
-`get_db_data`). The one other server entry point is the
+value. The live compute is a **fallback**: the section read serves the
+component's **stored** misc value when the client save cycle already
+persisted one, and only computes live when the row is empty. The one other
+server entry point is the
 [`dd_component_info` `get_widget_data`](#async-widgets-the-dd_component_info-api)
 API action, the delivery path for **async** widgets.
 
@@ -76,9 +72,9 @@ The framework home is `src/core/components/component_info/widgets/`:
 
 | file | role |
 |---|---|
-| `widget_common.ts` | The `InfoWidgetDescriptor` contract, `WidgetContext`, the shared IPO helpers (`readWidgetComponentData`, `resolveCurrent`, `findTyped`, `phpRound`), `normalizeWidgetEntryKeys` (WC-026), and the two loud errors. |
+| `widget_common.ts` | The `InfoWidgetDescriptor` contract, `WidgetContext`, the shared IPO helpers (`readWidgetComponentData`, `resolveCurrent`, `findTyped`, a half-up rounding helper), `normalizeWidgetEntryKeys` (WC-026), and the two loud errors. |
 | `registry.ts` | The **one dispatch home**: the `INFO_WIDGETS` map, `getInfoWidget` (fail-loud lookup), `computeInfoWidgets` (read aggregate), `computeInfoDataList` (edit datalist). |
-| `calculation/functions.ts` | The STATIC calculation process-fn registry (`CALCULATION_FUNCTIONS`) — the TS answer to PHP SEC-052 dynamic includes. |
+| `calculation/functions.ts` | The STATIC calculation process-fn registry (`CALCULATION_FUNCTIONS`) — a closed set, never resolved by name from ontology-supplied strings. |
 | `grid.ts` | dd_grid_cell_object builders (`buildPortalGridValue`, `resolveGridColumns`). |
 | `<tld>/<name>.ts` | One widget = one module exporting one `InfoWidgetDescriptor`. |
 
@@ -91,10 +87,10 @@ export type InfoWidgetDescriptor =
   | {
       name: string;                 // = ontology widget_name = client JS export
       path: string;                 // = ontology path; tripwire-bound to the client module
-      isAsync?: true;               // PHP is_async() — skipped by the read aggregate
+      isAsync?: true;               // skipped by the read aggregate; delivered via the API instead
       computeData(ipo: unknown[], context: WidgetContext): Promise<WidgetItem[]>;
-      computeDataParsed?(ipo, context): Promise<WidgetItem[]>;  // PHP get_data_parsed (grid/export)
-      computeDataList?(ipo, context): Promise<WidgetItem[]>;    // PHP get_data_list (edit datalist)
+      computeDataParsed?(ipo, context): Promise<WidgetItem[]>;  // grid/export facet
+      computeDataList?(ipo, context): Promise<WidgetItem[]>;    // edit-mode datalist facet
     }
   | { name: string; path: string; isAsync?: true; unported: { reason: string } };
 ```
@@ -104,11 +100,11 @@ export type InfoWidgetDescriptor =
 - **`path`** mirrors the ontology `path` and locates the CLIENT module
   (`client/dedalo/core/widgets<path>/js/<name>.js`). The registry tripwire binds
   it; **dispatch never uses it**.
-- **`computeData`** is the plain read path (PHP `get_data`); the optional
-  `computeDataParsed` / `computeDataList` facets and `isAsync` mirror the PHP
-  hooks `component_info` probed for with `method_exists()`.
-- An **`unported`** stub throws `WidgetUnportedError` from its compute (with a
-  required `rewrite/LEDGER.md` row) — never a silent `[]`.
+- **`computeData`** is the plain read path; the optional `computeDataParsed` /
+  `computeDataList` facets and `isAsync` are declared only when a widget needs
+  them.
+- An **`unported`** stub throws `WidgetUnportedError` from its compute — never
+  a silent `[]`.
 
 ### `WidgetContext` and the input helpers
 
@@ -122,12 +118,12 @@ export type InfoWidgetDescriptor =
 | `userId` / `isAdmin` | the request principal, for user-scoped tool availability (`media_icons`); absent → the superuser tool set |
 
 Every widget reads its inputs through `readWidgetComponentData(sectionTipo,
-sectionId, componentTipo)` — the full stored item array, **no** lang filtering
-(PHP `component_common::get_data`, not `get_data_lang`). It never touches the
-matrix directly. `resolveCurrent(declared, own)` maps the `'current'`/undefined
+sectionId, componentTipo)` — the full stored item array, **no** lang
+filtering. It never touches the matrix directly.
+`resolveCurrent(declared, own)` maps the `'current'`/undefined
 sentinels to this record's values; `findTyped(input, type)` scans an array-shape
-input for the last entry of a `type`; `phpRound(value, precision)` matches PHP
-`round()` byte-for-byte.
+input for the last entry of a `type`; the shared rounding helper applies
+half-up rounding to a fixed number of decimals.
 
 ### The registry — the one dispatch home
 
@@ -135,8 +131,8 @@ input for the last entry of a `type`; `phpRound(value, precision)` matches PHP
 `properties.widgets` and, for each declared widget, looks its `widget_name` up
 in `INFO_WIDGETS`, skips async ones (`isAsync`, delivered via the API), and
 concatenates every widget's `computeData` output. Returns `null` when the
-component declares no widgets (PHP `get_widgets → null → get_data → null`). An
-unknown `widget_name` throws `WidgetNotRegisteredError`.
+component declares no widgets. An unknown `widget_name` throws
+`WidgetNotRegisteredError`.
 
 The registry is the **single** dispatch home: the tripwire
 (`test/unit/info_widget_registry_tripwire.test.ts`) fails if any other `src/`
@@ -172,18 +168,17 @@ contract)*, `date_in`, `date_out`, `period`, `target_sections`,
 fields: `id`, `label`, `value` (a type hint like `int` / `float` / `text` /
 `link`), plus `process_section_tipo` (media_icons tool columns).
 
-!!! note "`id` vs `widget_id` — WC-026"
+!!! note "`id` vs `widget_id`"
     The item key that names the output differs by widget: `calculation` emits
     `id`, most others emit `widget_id`, `test_info` emits both. The **client**
     render matches on `widget_id`; the **grid/export** builders match on `id`.
     The emit hook dualises every top-level string key
     (`normalizeWidgetEntryKeys`) so both resolve — see
-    [component_info → WC-026](../components/component_info.md#dataentries--the-widget-outputs-wc-026)
-    and [engineering/WIRE_CONTRACT.md](../../../engineering/WIRE_CONTRACT.md).
+    [component_info → the widget outputs](../components/component_info.md#dataentries--the-widget-outputs-wc-026).
 
 ## The widgets that exist
 
-All **11** widgets of the PHP census are ported. See the
+All **11** widgets are ported. See the
 [full census table with facets](../components/component_info.md#the-widget-census)
 on the host page. In brief:
 
@@ -201,20 +196,15 @@ on the host page. In brief:
 | `tags` | `oh` | leads with raw text items |
 | `test_info` | `test` | reference stub; emits both keys |
 
-!!! note "Coverage state is ledgered (S2-45)"
-    Which widgets are byte-parity gated vs shape-gated (some have no ontology
-    instance to diff against) lives in
-    [rewrite/LEDGER.md](../../../rewrite/LEDGER.md), not here.
-
 ## Files & structure
 
-The client directory (copied as-is) is organised by **TLD / domain**
-sub-folders, mirroring the ontology. Each widget keeps the familiar component
-file layout: `js/<name>.js` + `js/render_<name>.js`, and `css/<name>.less`; some
-ship per-mode render variants (`render_edit_state.js` / `render_list_state.js`).
+The client directory is organised by **TLD / domain** sub-folders, mirroring
+the ontology. Each widget keeps the familiar component file layout:
+`js/<name>.js` + `js/render_<name>.js`, and `css/<name>.less`; some ship
+per-mode render variants (`render_edit_state.js` / `render_list_state.js`).
 
 ```text
-client/dedalo/core/widgets/                 # client (copied as-is)
+client/dedalo/core/widgets/
 ├── widget_common/js/widget_common.js       # JS base (init/build/render/destroy)
 ├── calculation/ · state/                    # no TLD folder
 ├── dd/user_activity/ · dmm/get_archive_states/
@@ -230,7 +220,7 @@ src/core/components/component_info/widgets/  # server (TS/Bun)
 ├── oh/{descriptors.ts,media_icons.ts,tags.ts} · test/test_info.ts
 ```
 
-The client import is unchanged from PHP:
+The client import is relative to the widget's own module:
 `../../../core/widgets<path>/js/<widget_name>.js`.
 
 ## Client (JS) instantiation
@@ -259,12 +249,11 @@ instances it, and feeds it the server-built value slice
 
 ## Async widgets: the dd_component_info API
 
-A widget whose descriptor sets `isAsync: true` (PHP `is_async() === true`) is
-**skipped** by the read-time aggregate (`computeInfoWidgets`); its client JS
-fetches the data itself through the `dd_component_info` API. The single allowed
-action is `get_widget_data`
-(`src/core/api/handlers/dd_component_info.ts`, `API_ACTIONS =
-['get_widget_data']`):
+A widget whose descriptor sets `isAsync: true` is **skipped** by the
+read-time aggregate (`computeInfoWidgets`); its client JS fetches the data
+itself through the `dd_component_info` API. The single allowed action is
+`get_widget_data` (`src/core/api/handlers/dd_component_info.ts`,
+`API_ACTIONS = ['get_widget_data']`):
 
 ```json
 {
@@ -278,29 +267,29 @@ action is `get_widget_data`
 The handler AUTHZ-01-gates the record, finds the matching `properties.widgets`
 entry by `widget_name`, runs `widgetComputeData(descriptor)(ipo, context)` (this
 channel computes async widgets — it is their only delivery), and returns the
-item array in `result`. Failures ride as HTTP 200 with the PHP error-envelope
-bytes. Full request/response shapes:
+item array in `result`. A failure still returns HTTP 200 with
+`{result: false, msg: [...], errors: [...]}`; success returns
+`{result: widgetData, msg: 'OK. Request done successfully', errors: []}`.
+Full request/response shapes:
 [component_info → get_widget_data](../components/component_info.md#the-get_widget_data-api-action).
 `user_activity` is the only ontology-declared async widget; its data comes from
 the pre-aggregated user-stats pipeline (`src/core/area_maintenance/user_stats.ts`).
 
-## Security SEC-052
+## Security: no dynamic code loading
 
-PHP `calculation`'s `process` step `include`s an ontology-specified PHP file and
-calls a named function — attacker-relevant because the ontology is
-admin/developer-writable. PHP `calculation::resolve_logic()` confines the
-include to inside `DEDALO_WIDGETS_PATH`, requires a bare-identifier function
-name, and re-checks with `ReflectionFunction` that the function was declared
-inside the widgets root, logging `SEC-052` and returning `null` on any failure.
+The `calculation` widget's `process` step is attacker-relevant because the
+ontology (which names the process function) is admin/developer-writable. A
+design that loaded a file or resolved a function by name from that
+ontology-supplied string would be a code-injection vector.
 
-!!! note "TS has nothing to confine"
+!!! note "Every process function is a static, closed registry entry"
     `computeCalculation` (`widgets/calculation/calculation.ts`) never loads a
     file or resolves a function by name. Every process function is a STATIC
     entry in `CALCULATION_FUNCTIONS` (`widgets/calculation/functions.ts`);
-    `summarize` / `to_euros` / `calculate_period` are the ported formulas, and
-    an unknown `process.fn` resolves to no output — the same effective refusal
-    SEC-052 enforces, without the confinement machinery. The `process.file` /
-    `engine` keys are ignored (verification data only). If a widget needs a
+    `summarize` / `to_euros` / `calculate_period` are the available formulas,
+    and an unknown `process.fn` resolves to no output rather than executing
+    anything. The `process.file` / `engine` keys are ignored (verification
+    data only). If a widget needs a
     configurable formula, add a STATIC entry there — never re-introduce a
     dynamic include of ontology-supplied code.
 
@@ -316,7 +305,7 @@ inside the widgets root, logging `SEC-052` and returning `null` on any failure.
 | `widgetComputeData(descriptor)` | The descriptor's compute fn, or a throw for an `unported` stub. |
 | `listInfoWidgets()` | All registered descriptors (tripwire + tooling surface). |
 | `readWidgetComponentData(sectionTipo, sectionId, componentTipo)` | The shared component-value reader every widget uses (full stored array, no lang filter). |
-| `phpRound(value, precision)` | PHP `round()`-compatible rounding. |
+| the shared rounding helper `(value, precision)` | Half-up rounding to a fixed number of decimals. |
 | `normalizeWidgetEntryKeys(items)` | WC-026 — dualise top-level `id`/`widget_id`. |
 
 ### Emit / API integration
@@ -347,4 +336,4 @@ inside the widgets root, logging `SEC-052` and returning `null` on any failure.
 - [Components](../components/index.md) · [Architecture overview](../architecture_overview.md).
 - Source of truth: `src/core/components/component_info/widgets/` (README.md
   checklist, registry.ts dispatch, one descriptor module per widget) and the
-  copied client `core/widgets/`.
+  client `client/dedalo/core/widgets/`.

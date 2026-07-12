@@ -9,11 +9,11 @@
 > [component_portal](../components/component_portal.md)
 
 This page is the **subsystem reference** for the paginator. The paginator is
-**client-only** — there is no `class.paginator.php`. It lives entirely under
-`core/paginator/js/` and is driven by a *caller* (a section list, a portal, a
-time-machine service, a dd_grid, …). The pagination *numbers* it displays come
-from the caller's [SQO](../sqo.md) (`limit` / `offset`) and from a server
-`count` action; the paginator itself never talks to the API.
+**client-only** — it has no server-side counterpart. It lives entirely under
+`client/dedalo/core/paginator/js/` and is driven by a *caller* (a section list,
+a portal, a time-machine service, a dd_grid, …). The pagination *numbers* it
+displays come from the caller's [SQO](../sqo.md) (`limit` / `offset`) and
+from a server `count` action; the paginator itself never talks to the API.
 
 ## Role
 
@@ -127,7 +127,7 @@ pending-promise guard so rapid re-renders coalesce into one request.
 ## Files & structure
 
 ```text
-core/paginator/
+client/dedalo/core/paginator/
 ├── css/
 │   └── paginator.less              # .paginator, .edit/.mini/.micro views, *_icon buttons
 └── js/
@@ -141,7 +141,7 @@ The constructor wires the render modules onto its prototype rather than
 extending a base class:
 
 ```js
-// core/paginator/js/paginator.js
+// client/dedalo/core/paginator/js/paginator.js
 paginator.prototype.edit         = render_paginator.prototype.edit
 paginator.prototype.edit_in_list = render_paginator.prototype.edit
 paginator.prototype.list         = render_paginator.prototype.edit // same as edit
