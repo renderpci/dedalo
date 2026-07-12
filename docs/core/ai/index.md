@@ -16,16 +16,29 @@ with the [core hub](../index.md) and the [Glossary](../glossary.md).
 Dédalo's AI is built in two layers — a **retrieval/generation engine** and the
 **surfaces** that consume it:
 
-```
-   ┌──────────────────────────── surfaces ────────────────────────────┐
-   │  In-app Assistant (chat)   ·   Agent loop   ·   MCP server        │
-   └───────────────────────────────┬──────────────────────────────────┘
-                                    │  (same ACL-gated handlers)
-   ┌────────────────────────────── engine ────────────────────────────┐
-   │  RAG:  semantic search · hybrid retrieval · grounded ask ·        │
-   │        object-image similarity & characterization                 │
-   │        (dd_rag_api, src/ai/rag/)                                   │
-   └───────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph SURF["surfaces"]
+        CHAT["In-app Assistant<br/>(chat UI)"]
+        AGENT["Agent loop<br/>(tool-calling)"]
+        MCP["MCP server<br/>(stdio / HTTP)"]
+        CHAT ~~~ AGENT ~~~ MCP
+    end
+
+    SURF -->|"same ACL-gated handlers<br/>resolveCaller · getPermissions"| ENG
+
+    subgraph ENG["engine — retrieval / generation"]
+        direction TB
+        SS["semantic search"]
+        HR["hybrid retrieval<br/>dense + lexical, RRF fusion"]
+        GA["grounded ask<br/>retrieval → LLM, cited"]
+        OI["object-image similarity<br/>& characterization"]
+        RAG["RAG<br/>dd_rag_api · src/ai/rag/"]
+        RAG --> SS
+        RAG --> HR
+        RAG --> GA  
+        RAG --> OI
+    end
 ```
 
 - **[RAG & Semantic Search](rag.md)** — the engine. *What* semantic search and
