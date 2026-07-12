@@ -14,7 +14,7 @@ Use it when: someone is producing or correcting subtitles/captions from an exist
 
 ## How it works (server + client)
 
-**Server.** `tools/tool_subtitles/` ships **no `server/` package** in the TS engine — confirmed client-only (the PHP oracle's `API_ACTIONS` is empty too; the TS loader finds no `server/index.ts`, so `dd_tools_api.tool_request` refuses any action named against this tool at dispatch gate 5, `tool has no server module`). There is no `backgroundRunnable`, no `isAvailable`/`onRegister`/`onRemove`, and no business logic on the server on either engine. `register.json` exists only to (a) carry the registry record (version, label, localized UI labels) and (b) declare the `affected_tipos` restriction. All behavior is client-side, and any data writes happen through the **components** the tool hosts (the text-area save, the json save), not through the tool.
+**Server.** `tools/tool_subtitles/` ships **no `server/` package** — confirmed: there is no `tools/tool_subtitles/server/` directory, so `dd_tools_api.tool_request` refuses any action named against this tool at dispatch gate 5, `tool has no server module`. There is no `backgroundRunnable`, no `isAvailable`/`onRegister`/`onRemove`, and no business logic on the server. `register.json` exists only to (a) carry the registry record (version, label, localized UI labels) and (b) declare the `affected_tipos` restriction. All behavior is client-side, and any data writes happen through the **components** the tool hosts (the text-area save, the json save), not through the tool.
 
 **Client (JS).** `tools/tool_subtitles/js/` holds the real behavior, following the standard `tool_common` lifecycle:
 
@@ -29,7 +29,7 @@ The tool reaches its sibling components purely through `tool_config.ddo_map` (re
 
 | `apiActions` | Form | Notes |
 | --- | --- | --- |
-| *(no server module)* | — | UI-only tool, confirmed on both engines. No action is dispatchable through `dd_tools_api`; a `tool_request` naming this tool is refused at dispatch gate 5. There is **no** `backgroundRunnable` and no lifecycle-hook override. |
+| *(no server module)* | — | UI-only tool. No action is dispatchable through `dd_tools_api`; a `tool_request` naming this tool is refused at dispatch gate 5. There is **no** `backgroundRunnable` and no lifecycle-hook override. |
 
 Because there are no server actions, the meaningful "options" are the **client** inputs the tool reads — the `ddo_map` roles that wire it to its components, and the user preferences it persists. Key client-side parameters:
 

@@ -14,10 +14,10 @@ Use it for any one-shot or recurring bulk ingest of bibliographic data already a
 
 ### Server
 
-`tools/tool_import_marc21/server/index.ts` (+ `src/core/tools/marc21.ts`) — per `rewrite/STATUS.md`, this is a **FULL DRIVE**: a from-scratch ISO 2709 parser (no 3rd-party library, matching the no-3rd-party-lib mandate) plus `applyMarcMap` → the shared import executor, scratch-twin verified (a synthetic MARC record + map produces the mapped record, then deleted — no orphans). The single remotely callable action is `import_files`.
+`tools/tool_import_marc21/server/index.ts` (+ `src/core/tools/marc21.ts`) implements a from-scratch ISO 2709 parser (no 3rd-party library) plus `applyMarcMap` → the shared import executor, scratch-twin verified (a synthetic MARC record + map produces the mapped record, then deleted — no orphans). The single remotely callable action is `import_files`.
 
-1. **WRITE gate.** Declaratively gated `permission: 'tipo', minLevel: 2` (a design difference from the PHP oracle's imperative `assert_section_permission` — same write requirement, enforced before the handler runs). A missing `section_tipo` or empty `files_data` returns an error response immediately.
-2. **Config shape — ⬜ diverges from the PHP oracle.** `readMarcMap` reads the marc21 map from `tool_config.config.main` as **one flat array** of `{name, value}` entries, treating the entry named `field_to_section_id` as the id anchor and every OTHER entry as a field-mapping rule. The PHP oracle instead splits this into two separate blocks, `config->main` (named anchors only: `code`, `section`, `field_to_section_id`, …) and `config->map` (the field rules). **A `tool_config` shaped like the PHP oracle's shipped `sample_config.json` (two top-level keys) will not map correctly on the TS engine as-is** — verify/reshape the config before relying on a production marc21_map here; this is not yet ledgered in `rewrite/STATUS.md` beyond "the map CONFIG itself is per-deployment ontology data".
+1. **WRITE gate.** Declaratively gated `permission: 'tipo', minLevel: 2`, enforced before the handler runs. A missing `section_tipo` or empty `files_data` returns an error response immediately.
+2. **Config shape.** `readMarcMap` reads the marc21 map from `tool_config.config.main` as **one flat array** of `{name, value}` entries: it treats the entry named `field_to_section_id` as the id anchor and every other entry as a field-mapping rule. `tool_config.config` must carry exactly that one `main` array — a config shaped with `main` and a separate `map` block will not map correctly, because `readMarcMap` never reads a `map` key. Build (or reshape) the config to the single flat-array shape before relying on a production marc21_map.
 3. **Per-file parse.** Each staged `.mrc` file (path-confined under the user's upload temp dir) is read and parsed with `parseMarc` (`src/core/tools/marc21.ts`), a from-scratch ISO 2709 reader.
 4. **Per-record mapping.** `applyMarcMap` extracts and transforms each mapped field (subfield/joined/control-field extraction, `field_to_section_id` resolution) into a `MappedRecord`.
 5. **Execute.** `importMappedRecords` (the shared executor, `src/core/tools/import_execute.ts`) resolves target vs. new records and writes through `createSectionRecord`/`saveComponentData` — the same executor the other import tools use.
@@ -27,7 +27,7 @@ Only `import_files` is dispatchable; the parser, mapper and executor are plain f
 
 ### Client
 
-`tools/tool_import_marc21/js/` wires the standard tool lifecycle (`init`/`build`/`edit`/`render` via `tool_common`). `init()` derives `key_dir = caller.tipo + '_' + caller.section_tipo`. `build()` skips the generic ddo_map autoload and instead builds two services: `service_dropzone` (file upload) and `service_tmp_section` (the manual "Values" inputs for ddo_map role `input_component`). `render_tool_import_marc21.js` draws the drop zone, the values block and an **IMPORT** button; clicking it gathers `service_tmp_section.get_components_data()`, builds the request via `create_source(self, 'import_files')` and calls `data_manager.request()` with a long timeout (3600 s, 1 retry). The tool opens as a separate window (`properties.open_as: "window"`). Styling lives in `css/tool_import_marc21.less` — none of this changed for the TS rewrite.
+`tools/tool_import_marc21/js/` wires the standard tool lifecycle (`init`/`build`/`edit`/`render` via `tool_common`). `init()` derives `key_dir = caller.tipo + '_' + caller.section_tipo`. `build()` skips the generic ddo_map autoload and instead builds two services: `service_dropzone` (file upload) and `service_tmp_section` (the manual "Values" inputs for ddo_map role `input_component`). `render_tool_import_marc21.js` draws the drop zone, the values block and an **IMPORT** button; clicking it gathers `service_tmp_section.get_components_data()`, builds the request via `create_source(self, 'import_files')` and calls `data_manager.request()` with a long timeout (3600 s, 1 retry). The tool opens as a separate window (`properties.open_as: "window"`). Styling lives in `css/tool_import_marc21.less`.
 
 ## Actions & options
 
@@ -45,14 +45,14 @@ The behaviour of the import is driven by the tool **configuration**, not by the 
 | --- | --- | --- |
 | `field` | MARC field tag, e.g. `"245"` | ✅ |
 | `subfield` | Specific subfield code (`"a"`); omit to concatenate all subfields | ✅ |
-| `component_tipo` (PHP: `tipo`) | Target Dédalo component tipo (the value is written here) | ✅ |
+| `component_tipo` | Target Dédalo component tipo (the value is written here) | ✅ |
 | `subfield_separator` | Separator when joining all subfields of a field | ✅ |
 | `marc21_conditional` | `{subfield, value}` — only extract when that sibling subfield equals `value` (e.g. 945 holdings where `$j == 193`) | ✅ |
 | `field_to_section_id` | `{field, subfield}` (e.g. 907 $a) used to identify a record for update vs. create | ✅ (read as the one `config.main` entry named `field_to_section_id`) |
 
-**Rule keys the PHP oracle supports that have NO implementation in `marc21.ts` today** — a config using any of these silently loses that transform on the TS engine (the field still extracts, but untransformed):
+**Rule keys with no implementation in `marc21.ts` today** — a config using any of these silently loses that transform (the field still extracts, but untransformed):
 
-| Key | PHP meaning | TS status |
+| Key | Intended meaning | TS status |
 | --- | --- | --- |
 | `field_multiple` + `row_separator` | Concatenate values across several fields with this separator (e.g. the 6xx indexation block) | ⬜ not implemented |
 | `partial_left_content` | Take the leftmost N chars, parsed as integer (e.g. a 4-digit year) | ⬜ not implemented |
@@ -61,7 +61,7 @@ The behaviour of the import is driven by the tool **configuration**, not by the 
 | `dd_action` | Companion components to set when the main value is populated (e.g. set the standard-number type when an ISBN is present) | ⬜ not implemented |
 | `skip_on_empty` | Do not store when the extracted value is empty | ⬜ not implemented (extraction already filters empty values, but the explicit flag/semantics aren't modeled) |
 
-Anchors (`code`, `section`, `project`, `pdf`, `identifying_image`, `transcription`, `transcription_review`, `field_standard_number`) that PHP's `main` block carries beyond `field_to_section_id` are consumed by PHP helpers (PDF/image/standard-number companion writes) that also have no confirmed TS equivalent — verify before relying on anything beyond the plain field→component mapping.
+Config anchors beyond `field_to_section_id` (`code`, `section`, `project`, `pdf`, `identifying_image`, `transcription`, `transcription_review`, `field_standard_number`) that would drive companion writes (PDF/image/standard-number handling) have no implementation in `marc21.ts` or the shared import executor — only the plain field→component mapping is applied.
 
 ## How it is registered & surfaced
 
@@ -72,7 +72,7 @@ Anchors (`code`, `section`, `project`, `pdf`, `identifying_image`, `transcriptio
 - **active** (dd1354 → dd64 section_id 1 = Yes): registered active.
 - **show_in_inspector** (dd1331 → dd64 section_id 2 = No): **not** flagged for the inspector panel in this register; the tool is surfaced through the section's tool config / ddo_map rather than an inspector button. `show_in_component` (dd1332) is absent → defaults false.
 - `properties` (dd1335): `{ "open_as": "window", "windowFeatures": null }` — opens in its own window.
-- `default_config` (dd1633): the full MARC `main` + `map` reference (mirrored in `sample_config.json`). Per the comment in the config, do not edit dd1633 directly — copy it into the Tools configuration section (dd996) and edit there.
+- `default_config` (dd1633): a MARC reference config carrying separate `main` and `map` blocks (mirrored in `sample_config.json`). **This is the two-block shape `readMarcMap` does not read** (see *Config shape* above) — do not use it as-is. Per the comment in the config, do not edit dd1633 directly either: copy it into the Tools configuration section (dd996), reshape it to the single flat `main` array, and edit there.
 - UI labels (dd1372): `file_processor`, `target_componet`, `quality`, retrieved client-side via `get_tool_label(...)`.
 
 Because surfacing is element-driven (`getElementTools`, `src/core/tools/registry.ts`), the tool appears on Publications-style sections (rsc205 in the reference config) once the user's profile is authorized for it and the section carries the tool in its config.

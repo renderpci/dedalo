@@ -35,7 +35,7 @@ The change log lives in the dd15 `matrix_time_machine` table, accessed server-si
 
 ## Actions & options
 
-`apiActions` is declared with a **declarative** gate per action — the framework enforces it before dispatch, matching the PHP oracle's map-form `API_ACTIONS`:
+`apiActions` is declared with a **declarative** gate per action — the framework enforces it before dispatch, before the handler ever runs:
 
 ```ts
 apiActions: {
@@ -46,8 +46,8 @@ apiActions: {
 
 | Action | Permission gate | Reads from `options` |
 | --- | --- | --- |
-| `apply_value` | declarative: `tipo` @ level 2 (write) on `(section_tipo, tipo)`. For a section restore `tipo === section_tipo`, so it is equivalent to the section gate. ⬜ **No per-record project-scope check** on TS (the PHP oracle additionally asserts `assert_record_in_user_scope`; the TS handler has no equivalent `getPermissions`/scope call beyond the declarative `tipo` gate — a non-admin's project-filter scoping is not enforced here on a TS-served install). | `section_tipo`, `section_id`, `tipo`, `lang`, `matrix_id`, `caller_dataframe` |
-| `bulk_revert_process` | declarative: `section` @ level 2 (write). Plus imperative **per-row** re-gate: `getPermissions(section_tipo, tipo) >= 2` for every record in the bulk set (rows the caller cannot write are skipped with a `permissions_denied:…` error, not aborting the whole run). ⬜ Same scope caveat as `apply_value` — the per-row re-gate checks the section/tipo permission level only, with no project-scope (`section_id`-in-scope) check found in the handler. | `section_tipo`, `section_id`, `tipo`, `lang`, `bulk_process_id`, `bulk_revert_process_label` |
+| `apply_value` | declarative: `tipo` @ level 2 (write) on `(section_tipo, tipo)`. For a section restore `tipo === section_tipo`, so it is equivalent to the section gate. ⬜ **No per-record project-scope check**: the `tipo` permission kind (`src/core/tools/security.ts`) checks the section/tipo write level only — it does not also confirm the target record is inside the caller's project filter, the way the `record` permission kind does via `isRecordInScope`. A non-admin's project-scope restriction is therefore not enforced on this action. | `section_tipo`, `section_id`, `tipo`, `lang`, `matrix_id`, `caller_dataframe` |
+| `bulk_revert_process` | declarative: `section` @ level 2 (write). Plus imperative **per-row** re-gate: `getPermissions(section_tipo, tipo) >= 2` for every record in the bulk set (rows the caller cannot write are skipped with a `permissions_denied:…` error, not aborting the whole run). ⬜ Same scope caveat as `apply_value` — neither the module-level `section` gate nor the per-row re-gate calls `isRecordInScope`; only the write level on `(section_tipo, tipo)` is checked, with no project-scope check anywhere in the handler. | `section_tipo`, `section_id`, `tipo`, `lang`, `bulk_process_id`, `bulk_revert_process_label` |
 
 Key option meanings:
 
@@ -81,7 +81,7 @@ isAvailable: (context) => context.callerModel !== 'component_relation_children',
 - `dd1335` properties = `{ "open_as": "window", "windowFeatures": null }` → the tool opens in its own window.
 - `dd1372` labels supply the localized UI strings used by the client: `apply_and_save`, `recover_section_alert`, `revert_bulk_process`, `info_revert_bulk_process`, `bulk_revert_confirm_msg` (with a `{0}` process-id placeholder), and `bulk_revert_process_label`.
 
-Surfacing (in `getElementTools`, `src/core/tools/registry.ts`): the tool attaches to **record elements** — both components and section records — and uses its `isAvailable` hook as the last word, hiding only on `component_relation_children`. (Note: this register.json does not carry an explicit `dd1330` affected_models relation; surfacing is element/availability-driven, and the bulk-revert UI is further restricted to global admins client-side via `page_globals.is_global_admin`.) ⬜ The PHP oracle's one related core policy — on the dd15 time-machine section only `tool_export` is allowed — has no confirmed TS equivalent (same gap noted on [tool_export](tool_export.md)'s page).
+Surfacing (in `getElementTools`, `src/core/tools/registry.ts`): the tool attaches to **record elements** — both components and section records — and uses its `isAvailable` hook as the last word, hiding only on `component_relation_children`. This register.json does not carry an explicit `dd1330` affected_models relation; surfacing is element/availability-driven, and the bulk-revert UI is further restricted to global admins client-side via `page_globals.is_global_admin`. There is no rule restricting the time-machine section (dd15) to `tool_export` alone — `registry.ts`'s `NO_TOOLS_MODELS` set only covers `component_section_id`/`component_info`, and no dd15-specific rule exists anywhere in the section/tool-filter path (see [tool_export](tool_export.md)).
 
 ## Examples
 

@@ -23,7 +23,7 @@ Concrete scenario: an `oh1` interview video is open. The operator scrubs to `00:
 
 **`create_identifying_image`** — the full capture-and-attach workflow (`tools/tool_posterframe/server/index.ts::createIdentifyingImage`):
 
-1. **Validate + gate.** The declarative `record`/1 gate covers **read** on the source AV (`options.section_tipo`/`section_id`) before the handler runs. The handler then asserts an **additional imperative write (level 2) gate on the target portal** (`item_value.section_tipo` + `item_value.component_portal`) — a second permission target the declarative single-gate form cannot express, matching the PHP oracle's two-target check (read on the AV source, write on the portal).
+1. **Validate + gate.** The declarative `record`/1 gate covers **read** on the source AV (`options.section_tipo`/`section_id`) before the handler runs. The handler then asserts an **additional imperative write (level 2) gate on the target portal** (`item_value.section_tipo` + `item_value.component_portal`) — a second permission target the declarative single-gate form cannot express: read on the AV source, write on the destination portal.
 2. **Create the destination record.** It resolves the portal's target section tipo and creates a new record through the portal via the standard `saveComponentData` path (`changedData: [{action:'add_new_element', ...}]`) — producing the new `section_id` that will hold the image.
 3. **Resolve the target image path** on that new record (media-path helpers, `original` quality).
 4. **Find the source AV file** via the shared media-tool-context resolver; refuses if the source component isn't `component_av`.
@@ -32,7 +32,7 @@ Concrete scenario: an `oh1` interview video is open. The operator scrubs to `00:
 
 **`get_ar_identifying_image`** — populates the selector (`getArIdentifyingImage`). It requires `section_tipo` + a positive `section_id` (covered by the declarative `record`/1 gate), walks the section's **inverse references** (`findInverseReferences`, `src/core/search/search_related.ts`), and for each referencing section resolves the first `component_portal` in its ontology subtree whose `properties.identifying_image` is set — packaging `{section_id, section_tipo, component_portal, component_image, label}`. Returns the array of all such matches, or `false` when none.
 
-The portal-tipos-in-section walk and the per-section descriptor resolution are internal helpers, not separately exposed actions — same non-exposure as the PHP oracle's private `get_identifying_image_from_section()`.
+The portal-tipos-in-section walk and the per-section descriptor resolution are internal helpers, not separately exposed actions.
 
 ### Client
 

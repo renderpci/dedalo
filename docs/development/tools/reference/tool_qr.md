@@ -3,7 +3,7 @@
 A base/build sample tool that renders the current section selection as a printable A4 sheet of QR codes — one per record, each linking back to its Dédalo page. Not for production use; ships as a reference implementation.
 
 !!! warning "Sample, not a production tool"
-    The PHP oracle's class header says it plainly: *"This tool is intended to be used as a base build for new tools. Do not use as a production tool."* The TS tree carries no equivalent server file (there is none), but the same disclaimer applies. Treat `tool_qr` as a worked example of a **UI-only** tool with a `ddo_map`-driven render, not as a supported feature — `tool_dev_template` is the actual production-shaped scaffold to copy (see [Creating new tools](../creating_tools.md)).
+    `tool_qr` is a worked example of a **UI-only** tool with a `ddo_map`-driven render, not a supported feature. It ships no `server/` package. `tool_dev_template` is the production-shaped scaffold to copy when building a real tool (see [Creating new tools](../creating_tools.md)).
 
 ## What it does / why & when to use it
 
@@ -15,7 +15,7 @@ Use it as: a starting skeleton when you need a tool that reads a section's selec
 
 ## How it works (server + client)
 
-**Server.** There is nothing on the server, on either engine. `tools/tool_qr/` ships **no `server/` package** in the TS engine — the PHP oracle's `API_ACTIONS = []` is empty and adds no methods, and the TS engine mirrors that by omitting a `server/index.ts` entirely (confirmed: no `tools/tool_qr/server/` directory). All behavior is client-side; the tool never calls `tool_request`.
+**Server.** `tools/tool_qr/` ships **no `server/` package** — confirmed: there is no `tools/tool_qr/server/` directory. All behavior is client-side; the tool never calls `tool_request`.
 
 **Client** (`tools/tool_qr/js/`):
 

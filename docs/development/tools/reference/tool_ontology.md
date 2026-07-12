@@ -16,14 +16,14 @@ Use it when: you have edited ontology records (single or in bulk) and need the `
 
 ## How it works (server + client)
 
-**Server.** `tools/tool_ontology/server/{index,tool_ontology}.ts` is a thin, privileged wrapper around the TS ontology write engine (`src/core/ontology/ontology_write.ts::setRecordsInDdOntology` — see the `dedalo-ontology-ts` skill). It declares a **declaratively-gated** `apiActions` entry, `set_records_in_dd_ontology: { permission: 'developer', handler: toolOntologySetRecords }` — a design difference from the PHP oracle, which lists the action in list form and asserts `assert_developer()` imperatively as the method's first statement (because the gate lives inside the method body there). The TS handler additionally re-checks `context.principal.isDeveloper` itself as defense-in-depth, so the developer requirement is enforced twice.
+**Server.** `tools/tool_ontology/server/{index,tool_ontology}.ts` is a thin, privileged wrapper around the ontology write engine (`src/core/ontology/ontology_write.ts::setRecordsInDdOntology` — see the `dedalo-ontology-ts` skill). It declares a **declaratively-gated** `apiActions` entry, `set_records_in_dd_ontology: { permission: 'developer', handler: toolOntologySetRecords }`. The handler additionally re-checks `context.principal.isDeveloper` itself as defense-in-depth, so the developer requirement is enforced twice.
 
 `toolOntologySetRecords` reads `section_tipo` (required — refuses with an error if missing) and `section_id` (optional), then processes records in one of two modes:
 
 - **Edit mode** (`section_id` present): a single-record scan — just that one `{section_tipo, section_id}` locator.
-- **List mode** (`section_id` absent): ⬜ **diverges from the PHP oracle here.** PHP reloads the user's session-stored list SQO for that `section_tipo` (`$_SESSION['dedalo']['config']['sqo'][...]`, cloned with order/limit/offset cleared) so it processes exactly the records the user's current list filter matches. The TS engine has no session-SQO store to reload (per `rewrite/STATUS.md` "sqo_session"), so list mode instead does a **full-section scan** — every record of `section_tipo`, unfiltered. This is ledgered in `ontology_write.ts`'s own comments; a filtered batch re-sync (the PHP "re-sync only what I'm currently looking at" behavior) is not currently reproducible on the TS engine.
+- **List mode** (`section_id` absent): does a **full-section scan** — it re-syncs every record of `section_tipo`, unfiltered, in ascending `section_id` order. There is no session-scoped list filter on this engine to narrow the batch to "just the records the current list view matches"; list mode always processes the whole section. This is documented in `ontology_write.ts`'s own comments.
 
-It then delegates the real work to `setRecordsInDdOntology`. That core function runs the same per-record logic as the PHP oracle: for a `matrix_ontology_main` (TLD root, `ontology35`) record it deletes the TLD's `dd_ontology` nodes when the TLD is inactive or upserts the root node when active; otherwise it upserts the node. It uses **partial-success** semantics (some-ok/some-failed → `result: true` with a "Partial success" message and the failing records enumerated in `errors`) and returns `{result, msg, errors, total, processed_count}`. ⬜ The PHP oracle's post-success session-cache clear (`$_SESSION['dedalo']['config']['active_elements']`, consumed by the tree children endpoint) has **no visible TS equivalent** — `toolOntologySetRecords`/`setRecordsInDdOntology` do not clear any cache after a successful sync. Whether this matters depends on whether the TS tree-children path caches per-session at all; verify against `rewrite/STATUS.md` / the `dedalo-tree-ts` skill before assuming a freshly-synced node appears immediately in the tree without a page reload.
+It then delegates the real work to `setRecordsInDdOntology`. That core function runs the per-record sync logic: for a `matrix_ontology_main` (TLD root, `ontology35`) record it deletes the TLD's `dd_ontology` nodes when the TLD is inactive or upserts the root node when active; otherwise it upserts the node. It uses **partial-success** semantics (some-ok/some-failed → `result: true` with a "Partial success" message and the failing records enumerated in `errors`) and returns `{result, msg, errors, total, processed_count}`. After a successful sync, every `dd_ontology` write (`upsertDdOntologyNode`/`deleteTldNodes`) fans out through the ontology cache-invalidation hub (`src/core/ontology/cache_invalidation.ts`), which drops every registered ontology-derived cache in one pass — the resolver, label, section_map and term-resolver caches, and the thesaurus/tree children-tipo cache (`src/core/area/tree.ts`) among others — so a freshly-synced node is visible on the next read, no page reload required.
 
 **Client (JS).** `tools/tool_ontology/js/` wires the standard `tool_common` lifecycle:
 
@@ -38,14 +38,14 @@ The tool opens **as a modal** and registers a `keyup` event so **Ctrl+S** trigge
 
 | `apiActions` (declarative) | Permission gate | Reads from `options` | Returns |
 | --- | --- | --- | --- |
-| `set_records_in_dd_ontology` | `permission: 'developer'` (dispatcher-enforced before the handler) **plus** an imperative `isDeveloper` re-check inside the handler (defense in depth) — a design difference from the PHP oracle, which lists the action in list form and gates entirely imperatively. | `section_tipo` (**required**); `section_id` (optional — its presence selects edit vs. list mode; list mode is a full-section scan on TS, not the PHP oracle's session-SQO filter — see above). `mode` is sent by the client but the server infers edit/list from `section_id`. | `{ result: bool, msg: string, errors: string[] }`. On success, `result`/`msg`/`errors` are forwarded from `setRecordsInDdOntology()` (which additionally carries `total` and `processed_count`, and may report *Partial success*). |
+| `set_records_in_dd_ontology` | `permission: 'developer'` (dispatcher-enforced before the handler) **plus** an imperative `isDeveloper` re-check inside the handler (defense in depth). | `section_tipo` (**required**); `section_id` (optional — its presence selects edit vs. list mode; list mode is a full-section scan — see above). `mode` is sent by the client but the server infers edit/list from `section_id`. | `{ result: bool, msg: string, errors: string[] }`. On success, `result`/`msg`/`errors` are forwarded from `setRecordsInDdOntology()` (which additionally carries `total` and `processed_count`, and may report *Partial success*). |
 
 Two operating modes of the single action:
 
 | Mode | Triggered when | SQO built | Effect |
 | --- | --- | --- | --- |
 | **Edit** | `section_id` is present | single-record SQO (`limit: 1`, `filter_by_locators: [{section_tipo, section_id}]`) | Re-syncs that one ontology record into `dd_ontology`. |
-| **List / batch** | `section_id` is absent | the session list SQO for `section_tipo`, cloned, with order/limit/offset cleared (whole result set) | Re-syncs every record the current list/filter matches; errors a record without losing the others (partial success). |
+| **List / batch** | `section_id` is absent | full-section scan: every `section_id` of `section_tipo`, ascending order | Re-syncs every record of the section; a failing record is skipped without losing the others (partial success). |
 
 > Lifecycle hooks: `tool_ontology`'s module does **not** declare `isAvailable`, `onRegister` or `onRemove` — surfacing is governed by `affected_models` / `affected_tipos` and the developer-only authorization, not by an availability hook. (As always, these hooks must never appear inside `apiActions`.)
 
@@ -89,11 +89,11 @@ const response = await data_manager.request({
 // response → { result:true, msg:"OK. Request completed … | 12 ms", errors:[] }
 ```
 
-**List / batch mode** is the same call with `section_id` omitted — the server then rebuilds the SQO from the user's session list selection for that `section_tipo` and processes the whole result set:
+**List / batch mode** is the same call with `section_id` omitted — the server then re-syncs every record of that `section_tipo` (a full scan, unfiltered) in one partial-success batch:
 
 ```js
 options : {
-    section_tipo : self.caller.section_tipo,   // list SQO is read from the session for this tipo
+    section_tipo : self.caller.section_tipo,   // every record of this section_tipo is re-synced (full scan)
     section_id   : null,                       // absent → list mode (batch)
     mode         : self.caller.mode
 }
@@ -112,4 +112,4 @@ A non-developer (or an unauthenticated caller) is refused before any work: the d
 - [Server contract](../server_contract.md) — the `ToolServerModule` contract, `apiActions` permission kinds, and the lifecycle-hook rule.
 - [Security](../security.md) — what the framework enforces; here the `developer` permission kind is dispatcher-enforced, with an imperative re-check inside the handler as defense in depth.
 - [Tools catalog](index.md) — index of all per-tool reference pages.
-- Ontology core docs: [Ontology class](../../../core/ontology/ontology_class.md), [Ontology engine](../../../core/ontology/ontology_engine.md), [Hierarchy](../../../core/ontology/hierarchy.md), [`ts_object` / thesaurus tree](../../../core/ontology/ts_object.md).
+- Ontology core docs: [ontology (build layer)](../../../core/ontology/ontology_write.md), [Ontology engine](../../../core/ontology/ontology_engine.md), [Hierarchy](../../../core/ontology/hierarchy.md), [`ts_object` / thesaurus tree](../../../core/ontology/ts_object.md).
