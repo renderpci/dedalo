@@ -1,9 +1,8 @@
 # The browser client
 
 > The Dédalo v7 **browser client**: a thin DOM builder over a server that is the
-> single source of truth. This is the index for the `rewrite/core/client/` domain —
-> the bootstrap, the instance registry, the render layer, the event bus and the
-> RQO transport.
+> single source of truth — the bootstrap, the instance registry, the render
+> layer, the event bus and the RQO transport.
 
 > See also: [Architecture overview](../architecture_overview.md) ·
 > [Components](../components/index.md) · [Sections](../sections/index.md) ·

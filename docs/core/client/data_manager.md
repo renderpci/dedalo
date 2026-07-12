@@ -182,7 +182,7 @@ cache — callers must guard for a falsy result.
 For payloads delivered incrementally:
 
 - **`request_stream`** opens an SSE connection. It force-patches `is_stream:true`
-  onto the body (the PHP endpoint then switches to
+  onto the body (the server endpoint then switches to
   `Content-Type: text/event-stream`) and resolves with the raw `response.body`
   `ReadableStream`.
 - **`request_fetch_stream`** is the generic NDJSON variant (used by
