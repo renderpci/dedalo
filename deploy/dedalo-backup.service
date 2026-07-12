@@ -2,12 +2,17 @@
 #
 # Dumps the matrix Postgres DB with the SAME naming the make_backup widget
 # uses, then snapshots the other three members of the backup set (see
-# docs/PRODUCTION.md §Backups): the RAG pgvector DB (if enabled), the media
-# originals, and ../private/ (.env secrets, session store, ts_state.json).
-# PGPASSWORD comes from the environment file — never on the argv.
+# engineering/PRODUCTION.md §Backups): the RAG pgvector DB (if enabled), the
+# media originals, and ../private/ (.env secrets, session store,
+# ts_state.json). PGPASSWORD comes from the environment file — never on the
+# argv.
 #
 # Enabled by dedalo-backup.timer. VERIFY RESTORES PERIODICALLY: a backup that
 # was never restored is a hypothesis, not a backup.
+#
+# Canonical host layout (engineering/PRODUCTION.md): /opt/dedalo/master_dedalo/
+# (the repo), /opt/dedalo/private/ (../private), user/group dedalo. Adjust the
+# example /opt/dedalo/... paths below to the real host layout if different.
 
 [Unit]
 Description=Dedalo nightly backup set (matrix DB + RAG DB + media + private)
@@ -15,12 +20,12 @@ Description=Dedalo nightly backup set (matrix DB + RAG DB + media + private)
 [Service]
 Type=oneshot
 User=DEDALO_USER
-EnvironmentFile=/PATH/TO/v7_ts/private/.env
+EnvironmentFile=/opt/dedalo/private/.env
 # 1. Matrix DB (custom format, blobs — restorable with pg_restore).
-ExecStart=/bin/sh -c 'PGPASSWORD="$DB_PASSWORD" pg_dump -F c -b -h "$DB_HOST" -p "${DB_PORT:-5432}" -U "$DB_USER" -f "/PATH/TO/v7_ts/private/backups/db/$(date +%%F_%%H%%M%%S).$DB_NAME.postgresql_timer.custom.backup" "$DB_NAME"'
+ExecStart=/bin/sh -c 'PGPASSWORD="$DB_PASSWORD" pg_dump -F c -b -h "$DB_HOST" -p "${DB_PORT:-5432}" -U "$DB_USER" -f "/opt/dedalo/private/backups/db/$(date +%%F_%%H%%M%%S).$DB_NAME.postgresql_timer.custom.backup" "$DB_NAME"'
 # 2. RAG pgvector DB (remove if DEDALO_RAG_ENABLED is off).
-#ExecStart=/bin/sh -c 'PGPASSWORD="$DEDALO_RAG_DB_PASSWORD" pg_dump -F c -h "$DEDALO_RAG_DB_HOST" -U "$DEDALO_RAG_DB_USER" -f "/PATH/TO/v7_ts/private/backups/rag/$(date +%%F).rag.custom.backup" "$DEDALO_RAG_DB_NAME"'
+#ExecStart=/bin/sh -c 'PGPASSWORD="$DEDALO_RAG_DB_PASSWORD" pg_dump -F c -h "$DEDALO_RAG_DB_HOST" -U "$DEDALO_RAG_DB_USER" -f "/opt/dedalo/private/backups/rag/$(date +%%F).rag.custom.backup" "$DEDALO_RAG_DB_NAME"'
 # 3. Media originals (incremental; MEDIA_PATH from the env file).
-ExecStart=/bin/sh -c 'rsync -a --delete "$MEDIA_PATH/" /PATH/TO/backups/media/'
+ExecStart=/bin/sh -c 'rsync -a --delete "$MEDIA_PATH/" /opt/dedalo/backups/media/'
 # 4. The private dir itself (secrets, sessions, state) — small, always.
-ExecStart=/bin/sh -c 'rsync -a /PATH/TO/v7_ts/private/ /PATH/TO/backups/private/ --exclude backups'
+ExecStart=/bin/sh -c 'rsync -a /opt/dedalo/private/ /opt/dedalo/backups/private/ --exclude backups'

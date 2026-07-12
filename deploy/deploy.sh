@@ -5,11 +5,11 @@
 #
 # ⚠ PARKED (2026-07-09): no staging/production server exists yet. This script
 # is wired and reviewed but has never run against a real host — exercise it
-# on the first staging box together with docs/STAGING_VALIDATION.md before
-# trusting it for production. Invoked by .github/workflows/deploy.yml once the
-# DEPLOY_HOST/DEPLOY_SSH_KEY secrets exist; equally runnable by hand.
+# on the first staging box together with engineering/STAGING_VALIDATION.md
+# before trusting it for production. Invoked by .github/workflows/deploy.yml
+# once the DEPLOY_HOST/DEPLOY_SSH_KEY secrets exist; equally runnable by hand.
 #
-# Model (docs/PRODUCTION.md):
+# Model (engineering/PRODUCTION.md):
 #   - the repo IS the artifact: deploy = fetch + checkout <ref> on the host
 #     (refs give a rollback identity; no rsync of build outputs)
 #   - bun is the PINNED binary path on the host (never floating `bun` — the
@@ -23,8 +23,8 @@
 #
 # Usage:
 #   deploy/deploy.sh --host user@host --ref <sha|tag|branch> \
-#     [--app-dir /srv/dedalo/v7_ts/master_dedalo] [--service dedalo-ts] \
-#     [--socket /tmp/dedalo_ts.sock] [--bun /home/<user>/.bun/bin/bun]
+#     [--app-dir /opt/dedalo/master_dedalo] [--service dedalo-ts] \
+#     [--socket /tmp/dedalo_ts.sock] [--bun /opt/dedalo/.bun/bin/bun]
 
 set -euo pipefail
 
@@ -41,7 +41,7 @@ while [ $# -gt 0 ]; do
 	esac
 done
 [ -n "$HOST" ] && [ -n "$REF" ] || { echo "Usage: deploy.sh --host user@host --ref <ref> [...]" >&2; exit 2; }
-APP_DIR="${APP_DIR:-/srv/dedalo/v7_ts/master_dedalo}"
+APP_DIR="${APP_DIR:-/opt/dedalo/master_dedalo}"
 REMOTE_BUN="${REMOTE_BUN:-\$HOME/.bun/bin/bun}"
 
 # The whole deploy runs as ONE remote script so a dropped connection can't
