@@ -9,10 +9,21 @@
 # scripts/verify.ts TRIPWIRES).
 #
 # Runs on a bare runner: no ../private/.env, no Postgres, no PHP oracle, no
-# sibling PHP tree. The four required config keys get harmless stubs (only
-# when absent) so the test preload's config load succeeds; nothing here ever
-# connects to a database — the tripwires below were empirically verified to
-# pass with DB_HOST pointing at a closed port (2026-07-09).
+# sibling PHP tree. EVERY required-no-default config key gets a harmless stub
+# (only when absent) so the test preload's config load succeeds; nothing here
+# ever connects to a database — the tripwires below were empirically verified
+# to pass with DB_HOST pointing at a closed port (2026-07-09).
+#
+# THE TRAP THIS SCRIPT WALKED INTO (2026-07-11, first real CI run): the stub list
+# said "the four required config keys" but the catalog requires EIGHT — the four
+# LANGUAGE keys were missing. Nobody noticed, because on a developer machine
+# ../private/.env sits right there and silently satisfies them: the script passed
+# locally and died on the runner with `Missing required config key
+# 'PROJECTS_DEFAULT_LANGS'` (plus three cascading "Cannot access 'config' before
+# initialization" TDZ errors — module-init fallout from the same throw, not four
+# separate bugs). The stub list is now pinned to the catalog by rule 6 of
+# test/unit/ci_workflow_tripwire.test.ts: add a required key to src/config/config.ts
+# without stubbing it here and the tripwire goes red BEFORE CI does.
 #
 # NOT in this list (self-hosted tier only, via scripts/verify.ts):
 #   sql_confinement_tripwire            — needs the live matrix Postgres
@@ -33,12 +44,28 @@ export PUPPETEER_SKIP_DOWNLOAD=1
 
 # Stub the required-no-default config keys so the config catalog loads.
 # Externally provided values always win (: "${VAR:=default}" keeps them).
+# This list must cover EVERY require*() key in src/config/config.ts — pinned by
+# ci_workflow_tripwire rule 6. Values are the install-wizard sentinels: they only
+# have to parse, since no hermetic gate reads project data.
 : "${ENTITY:=ci_hermetic}"
 : "${DB_NAME:=ci_hermetic_no_db}"
 : "${DB_HOST:=127.0.0.1}"
 : "${DB_PORT:=59999}" # deliberately closed: any accidental DB touch fails loudly
 : "${DB_USER:=ci_hermetic}"
+# LANGUAGE keys — install configuration, required from ../private/.env in a real
+# install (owner rule 2026-07-09), absent on a bare runner. JSON must parse.
+#
+# NOT `: "${VAR:=<json>}"`: a `}` inside the default TERMINATES the parameter
+# expansion, so a JSON object map arrives truncated and the catalog rejects it
+# ("must be a non-empty JSON object map"). Plain if-blocks with single quotes.
+: "${PROJECTS_DEFAULT_LANGS:=[\"lg-eng\"]}"
+if [ -z "${DEDALO_APPLICATION_LANGS:-}" ]; then
+	DEDALO_APPLICATION_LANGS='{"lg-eng":"English"}'
+fi
+: "${DEDALO_APPLICATION_LANGS_DEFAULT:=lg-eng}"
+: "${DEDALO_DATA_LANG_DEFAULT:=lg-eng}"
 export ENTITY DB_NAME DB_HOST DB_PORT DB_USER
+export PROJECTS_DEFAULT_LANGS DEDALO_APPLICATION_LANGS DEDALO_APPLICATION_LANGS_DEFAULT DEDALO_DATA_LANG_DEFAULT
 
 # Tripwires proven to run with no DB, no ../private, no sibling PHP tree.
 HERMETIC_TRIPWIRES=(

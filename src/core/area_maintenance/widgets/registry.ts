@@ -78,10 +78,17 @@ export interface MaintenanceWidget {
 }
 
 /**
- * The ordered catalog — one module per PHP get_ar_widgets block, same order.
- * Exported for update_ownership_tripwire (per-action ownership classification).
+ * Every widget module that EXISTS IN THE CODE, ungated — the total EXECUTE surface.
+ *
+ * This is what update_ownership_tripwire classifies. It must NOT be the config-gated
+ * catalog below: `error_reports` only joins that catalog when this installation
+ * participates in error reporting, so on a machine whose ../private/.env disables it
+ * (every bare CI runner) the widget disappears and its ENGINE_NATIVE exemption looks
+ * "rotted". The gate's verdict would then depend on the developer's .env rather than
+ * on the code — it passed locally and failed on the first real CI run (2026-07-11).
+ * Ownership is a property of the code, so classify the code.
  */
-export const WIDGET_MODULES: readonly WidgetModule[] = [
+const CORE_WIDGET_MODULES: readonly WidgetModule[] = [
 	make_backup,
 	check_config,
 	config_areas,
@@ -113,11 +120,24 @@ export const WIDGET_MODULES: readonly WidgetModule[] = [
 	dataframe_control,
 	php_info,
 	system_info,
-	// TS-only (WC-018): the catalog gains the error-report browser on any
-	// installation that PARTICIPATES in error reporting — a master (receiver
-	// enabled, browses stored reports) OR a sender (a master URL configured,
-	// shows the relay target). Installations that do neither keep a catalog
-	// byte-identical to the PHP oracle (widgets_differential filters the id).
+];
+
+/** The total surface: every module in the code, gated or not. Ownership classifies THIS. */
+export const ALL_WIDGET_MODULES: readonly WidgetModule[] = [...CORE_WIDGET_MODULES, error_reports];
+
+/**
+ * The ordered catalog THIS INSTALLATION serves — one module per PHP get_ar_widgets
+ * block, same order.
+ *
+ * TS-only (WC-018): the catalog gains the error-report browser on any installation
+ * that PARTICIPATES in error reporting — a master (receiver enabled, browses stored
+ * reports) OR a sender (a master URL configured, shows the relay target).
+ * Installations that do neither keep a catalog byte-identical to the PHP oracle
+ * (widgets_differential filters the id). Runtime behaviour is unchanged by the
+ * ALL_WIDGET_MODULES split above.
+ */
+export const WIDGET_MODULES: readonly WidgetModule[] = [
+	...CORE_WIDGET_MODULES,
 	...(config.errorReport.receiverEnabled || config.errorReport.masterApiUrl ? [error_reports] : []),
 ];
 
