@@ -1,227 +1,194 @@
-# Installation on RHEL-based systems
+# Installing on RHEL-based systems
 
-> See also: [Installation](index.md) · [Apache configuration](apache_configuration.md)
+> See also: [Production install](production.md) · [Reverse proxy and TLS](reverse_proxy.md) · [Troubleshooting](troubleshooting.md)
 
-Dédalo can be installed on various RHEL-based distributions, including:
-- Red Hat Enterprise Linux 9+
-- Rocky Linux 9
-- AlmaLinux 9
-- Fedora Workstation/Server
+This page is a **delta**, not a second manual. Follow the
+[production install](production.md) — the sixteen steps, the layout, the
+configuration, the verification — and substitute the commands below where they
+differ. Four things change: the package manager and package names, the PostgreSQL
+repository, SELinux, and firewalld.
 
-This guide provides distribution-specific installation instructions.
+Applies to **RHEL 9+, Rocky Linux 9, AlmaLinux 9 and Fedora**.
 
-## System requirements
+## What changes
 
-### OS
-- **Supported Distributions**: 
-  - RHEL 9.2+ (with CodeReady Builder repository)
-  - Rocky Linux 9.x
-  - AlmaLinux 9.x
-  - Fedora 38-40
-- **Note**: Some packages may require additional repositories on RHEL-based systems.
+| Step in [production](production.md) | On RHEL |
+| --- | --- |
+| 2 · base packages | `dnf`, and EPEL for some tools |
+| 3 · media toolchain | `ffmpeg` needs RPM Fusion; the package is `ImageMagick` |
+| 4 · PostgreSQL 18 | the PGDG **RPM** repository, and `dnf -qy module disable postgresql` |
+| 5 · pinned Bun | identical |
+| 6–9 · code, database, installer, `.env` | identical |
+| 10–11 · media gate, proxy | identical, **plus SELinux contexts** |
+| 12 · systemd | identical, **plus SELinux for the socket** |
+| everything else | identical |
 
-### Hardware
-- **Processor**: 8-core CPU with 3+ GHz
-- **RAM**: Minimum 16 GB / Recommended: 64 GB
-- **Storage**: 
-  - OS: 100+ GB (RAID 10 preferred)
-  - Data: 1 TB+ (RAID 10 for media files)
+## 1. Service user and directories (step 1)
 
-### Network
-- Stable IP address
-- 500 Mbps+ connection speed
-- SSL certificate installed
-
-## Installation steps
-
-### 1. System update and base packages
-
-```bash
-# Update system packages
-sudo dnf update -y
-
-# Install essential development tools
-sudo dnf groupinstall "Development Tools" -y
-sudo dnf install wget curl git unzip zip tar make zlib-devel bzip2-devel openssl-devel ncurses-devel sqlite-devel readline-devel xz-devel libffi-devel -y
+```shell
+useradd --system --home-dir /opt/dedalo --shell /sbin/nologin dedalo
+mkdir -p /opt/dedalo /srv/dedalo/media
+chown dedalo:dedalo /opt/dedalo /srv/dedalo/media
+chmod 0755 /opt/dedalo
 ```
 
-### 2. Web server and PHP installation
+## 2. Base packages (step 2)
 
-```bash
-# Install EPEL repository (for Rocky/Alma)
-sudo dnf install epel-release -y
-
-# Install Remi repository for newer PHP versions
-sudo dnf install https://rpms.remirepo.net/enterprise/remi-release-9.rpm -y
-sudo dnf module enable php:remi-8.4 -y
-
-# Install Apache and PHP
-sudo dnf install httpd mod_ssl php php-cli php-common php-pdo php-mysqlnd php-pgsql php-gd php-mbstring php-xml php-pspell php-tidy php-bcmath php-imap php-soap php-opcache php-fpm php-zip php-curl -y
-
-# Configure PHP for large file handling and sufficient memory
-sudo sed -i 's/;date.timezone =.*/date.timezone = UTC/' /etc/php.ini
-sudo sed -i 's/upload_max_filesize = 2M/upload_max_filesize = 16G/' /etc/php.ini
-sudo sed -i 's/post_max_size = 8M/post_max_size = 16G/' /etc/php.ini
-sudo sed -i 's/;memory_limit = .*/memory_limit = 4096M/' /etc/php.ini
-
-# Verify PHP configuration
-php -r "echo ini_get('upload_max_filesize') . PHP_EOL;"
-# Enable and start Apache
-sudo systemctl enable --now httpd
-sudo firewall-cmd --permanent --add-service=http
-sudo firewall-cmd --permanent --add-service=https
-sudo firewall-cmd --reload
+```shell
+dnf install -y epel-release
+dnf install -y git unzip gzip file ca-certificates curl tar
 ```
 
-### 3. Database installation
+## 3. Media toolchain (step 3)
 
-#### PostgreSQL
-```bash
-# Install PostgreSQL
-sudo dnf install postgresql-server postgresql-contrib -y
+`ffmpeg` is not in the base repositories — RPM Fusion carries it.
 
-# Initialize database with custom configuration
-sudo postgresql-setup --initdb --unit postgresql
+```shell
+# Rocky / AlmaLinux / RHEL 9
+dnf install -y \
+  https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-9.noarch.rpm \
+  https://mirrors.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-9.noarch.rpm
+crb enable          # CodeReady Builder (on RHEL: subscription-manager repos --enable …)
 
-# Configure memory settings (edit postgresql.conf)
-sudo sed -i 's/#shared_buffers =.*/shared_buffers = 4GB/' /var/lib/pgsql/data/postgresql.conf
-sudo sed -i 's/#work_mem =.*/work_mem = 128MB/' /var/lib/pgsql/data/postgresql.conf
-sudo sed -i 's/#maintenance_work_mem =.*/maintenance_work_mem = 512MB/' /var/lib/pgsql/data/postgresql.conf
-sudo sed -i 's/#effective_cache_size =.*/effective_cache_size = 8GB/' /var/lib/pgsql/data/postgresql.conf
+# Fedora
+# dnf install -y \
+#   https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
+#   https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
 
-# Enable and start service
-sudo systemctl enable --now postgresql
-# Secure installation
-sudo /usr/bin/postgresql-upgrade-15-to-16  # Adjust version as needed
+dnf install -y ffmpeg ImageMagick poppler-utils ocrmypdf
 ```
 
-#### MariaDB (Alternative)
+!!! warning "The package is `ImageMagick`, with capitals"
+    `dnf install imagemagick` fails. And the RHEL 9 package is **ImageMagick 6**:
+    it provides `convert` and `identify` but no `magick` binary. That is
+    supported — the engine probes for `magick` first and falls back
+    automatically. Nothing to configure.
 
-> **v7 note:** MariaDB is the *publication* target only — the work data lives in PostgreSQL. Install the MariaDB **server**, and configure the diffusion connection with the `DEDALO_DIFFUSION_DB_*` keys in `../private/.env` (see [The diffusion engine → Configuration](../diffusion/native_engine.md#configuration)). Target databases are pre-created by the administrator; the engine never creates them.
+Verify the binaries the engine will look for under `/usr/bin`:
 
-```bash
-# Install MariaDB repository
-sudo dnf install https://downloads.mariadb.com/MariaDB/mariadb_repo_setup -y
-sudo mariadb-repo-setup --mariadb-server-version=10.6
-
-# Install MariaDB server
-sudo dnf install mariadb-server -y
-
-# Start and enable service
-sudo systemctl enable --now mariadb
-
-# Secure installation
-sudo mysql_secure_installation
+```shell
+command -v ffmpeg ffprobe qt-faststart convert identify pdftotext ocrmypdf
 ```
 
-### 4. Media processing tools
+If `qt-faststart` is absent, set `DEDALO_AV_FASTSTART_PATH` in `.env` once you
+have it.
 
-```bash
-# Install RPM Fusion repository for multimedia codecs
-sudo dnf install https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm -y
-sudo dnf upgrade --refresh
+## 4. PostgreSQL 18 (step 4)
 
-# Install FFmpeg and codecs
-sudo dnf install ffmpeg ffmpeg-plugins-free ffmpeg-codecs -y
+The distribution ships an older PostgreSQL as a module, and it wins over PGDG
+unless you disable it.
 
-# Verify installation
-ffmpeg -version
-# Install ImageMagick for image manipulation
-sudo dnf install ImageMagick -y
+```shell
+dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+dnf -qy module disable postgresql
 
-# Install PDF tools
-sudo dnf install poppler-utils ocrmypdf -y
+dnf install -y postgresql18-server postgresql18
 
-# Optional: Additional languages for OCR
-sudo dnf install ocrmypdf-lang-* -y
+/usr/pgsql-18/bin/postgresql-18-setup initdb
+systemctl enable --now postgresql-18
 ```
 
-### 5. Download and configure Dédalo
+!!! warning "The client binaries are not on `$PATH`"
+    PGDG installs them under `/usr/pgsql-18/bin/`, which is not on the default
+    path — so the installer's pre-flight check reports **`psql` not found**, or,
+    worse, resolves an *older* client from elsewhere and fails mid-install.
 
-```bash
-# Download Dédalo
-wget https://github.com/renderpci/dedalo/archive/master.zip
-unzip master.zip
-mv dedalo-master dedalo
+    Declare them in `../private/.env`:
 
-# Set permissions
-sudo chown -R apache:apache /path/to/dedalo
-sudo chmod -R 755 /path/to/dedalo
+    ```dotenv
+    DEDALO_PG_BIN_PATH=/usr/pgsql-18/bin
+    ```
 
-# Create database (PostgreSQL example)
-sudo -u postgres psql <<EOF
-CREATE USER dedalo_user PASSWORD 'YourSecurePassword';
-CREATE DATABASE dedalo_production WITH ENCODING='UTF8' OWNER=dedalo_user;
-COMMENT ON DATABASE dedalo_production IS 'Dédalo: Cultural Heritage Management System';
-\q
-EOF
+    …and export the same value for the install command itself, since `.env` does
+    not exist yet at that point:
 
-# No .pgpass file is required: Dédalo authenticates the PostgreSQL command-line
-# tools via the PGPASSWORD env var taken from DEDALO_PASSWORD_CONN (set in the
-# config step below), which works for a local or remote database alike.
-# A ~/.pgpass file is still honored by libpq as a fallback if you prefer it:
-#   echo "*:*:*:dedalo_user:YourSecurePassword" > ~/.pgpass
-#   chmod 600 ~/.pgpass
+    ```shell
+    sudo -u dedalo \
+      DEDALO_PG_BIN_PATH=/usr/pgsql-18/bin \
+      DEDALO_INSTALL_ROOT_PASSWORD='the-root-password' \
+      MEDIA_PATH=/srv/dedalo/media \
+      /opt/dedalo/.bun/bin/bun run scripts/install.ts …
+    ```
+
+Create the empty database and role exactly as in
+[step 7](production.md#7-create-the-database-and-role-empty), using
+`sudo -u postgres /usr/pgsql-18/bin/psql`.
+
+## 5. Firewall (firewalld)
+
+```shell
+firewall-cmd --permanent --add-service=http
+firewall-cmd --permanent --add-service=https
+firewall-cmd --reload
 ```
 
-### 6. Configuration (v7)
+Do **not** open the database port, and do **not** open a port for the engine:
+production serving is over a unix socket, and the proxy is the only thing that
+should be reachable from outside.
 
-> **TS/Bun rewrite note:** this guide installs the classic **PHP** application. The coexisting TypeScript/Bun rewrite server (`src/server.ts`) now has its **own** install process — a browser wizard and a headless CLI that provision an empty PostgreSQL database (schema + core ontology from a bundled seed), set the `root` password, and write its own *separate* `../private/.env`. It no longer needs the PHP wizard. See **[Installing the TypeScript/Bun server](ts_native_install.md)** and [STATUS.md](../../rewrite/STATUS.md) for current TS coverage.
+## 6. SELinux
 
-**There are no config files to rename or edit.** In v7 the web-served `config/` directory holds only the loader `config/bootstrap.php`; all per-install values and secrets live outside the web root in `../private/`, and the browser **install wizard writes them for you** in the next step (auto-generating the secrets).
+SELinux is enforcing by default, and it is why a configuration that is correct on
+Ubuntu can still answer `502` and `403` here. Three things need attention.
 
-Just make sure the directory **one level above** the install root is writable by the PHP/web user — the installer creates `../private/` (`chmod 0700`) and writes `.env` / `state.php` there.
+### The web server must be allowed to connect out
 
-```bash
-# e.g. install at /var/www/html/dedalo  →  installer creates /var/www/html/private/
-# ensure the parent dir is writable by the web/PHP user (apache / nginx / php-fpm)
-sudo chown apache:apache /var/www/html        # adjust to your web user
+```shell
+setsebool -P httpd_can_network_connect 1
 ```
 
-> **Advanced:** instead of the wizard you can pre-author `../private/.env` by hand — run `php dev/gen_sample_env.php` (writes `../private/sample.env`), copy it to `../private/.env`, and edit. See the [Configuration Administrator Guide](../config/administration.md).
->
-> **MariaDB** is only for the optional **diffusion** subsystem — configured with the `DEDALO_DIFFUSION_DB_*` keys in `../private/.env`; the work server itself stores all work data in PostgreSQL.
+### The unix socket must be reachable by the web server
 
-### 7. Complete the installation
+Put the socket in a systemd `RuntimeDirectory` (as
+[step 12](production.md#12-supervision-with-systemd) does) and label it:
 
-```bash
-# Restart web server
-sudo systemctl restart httpd
+```shell
+semanage fcontext -a -t httpd_var_run_t '/run/dedalo(/.*)?'
+restorecon -Rv /run/dedalo
 ```
 
-Open a browser at your server's address. Because the install is not yet sealed, the **install wizard** starts automatically: it collects the configuration (PostgreSQL connection, entity, optional diffusion), writes `../private/.env` + `state.php`, installs the database schema and base hierarchies, and lets you set the `root` password — then seals the install. See the [Ubuntu install guide](index.md#23-manual-installation) for the full step-by-step list.
+The *permission* half of that step still applies too: `UMask=0007` in the unit,
+and the web-server user added to the `dedalo` group.
 
-After installation:
+### The media tree and the client tree must be readable by the web server
 
-1. Log in as `root`.
-2. Go to the Development Area, update the Ontology and register all tools.
-3. Create an admin user, then log out and log in as that admin.
-
-## Troubleshooting
-
-### Common issues
-
-**1. PHP modules not loading:**
-```bash
-php -m | grep pgsql
-ls /etc/php.d/*pgsql*.ini
+```shell
+semanage fcontext -a -t httpd_sys_content_t '/srv/dedalo/media(/.*)?'
+semanage fcontext -a -t httpd_sys_content_t '/opt/dedalo/master_dedalo/client(/.*)?'
+restorecon -Rv /srv/dedalo/media /opt/dedalo/master_dedalo/client
 ```
 
-**2. Database connection errors:**
-```bash
-psql -U dedalo_user -d dedalo_production
-tail -f /var/log/postgresql-*/*.log
+!!! note "The media tree is *written* by the engine and *read* by the web server"
+    The engine writes the generated rule files and the marker store into
+    `MEDIA_PATH`; the web server only ever reads them. `httpd_sys_content_t` is
+    therefore the right label — the engine writes as `dedalo`, unconstrained by
+    `httpd_*` policy.
+
+!!! tip "When something is denied and you cannot see why"
+    ```shell
+    ausearch -m AVC -ts recent
+    ```
+
+    Read the denial before reaching for `setenforce 0`. Turning SELinux off makes
+    the symptom disappear and leaves you with a server you cannot reproduce.
+
+## 7. The web server
+
+nginx is in EPEL. Apache's service is `httpd` (not `apache2`), its modules live
+in `/etc/httpd/conf.modules.d/` and its vhosts in `/etc/httpd/conf.d/`.
+Otherwise the [reverse proxy](reverse_proxy.md) page applies unchanged —
+including the generated media rule files, the root rule, and the timeouts.
+
+```shell
+dnf install -y nginx                 # or: dnf install -y httpd mod_ssl
+systemctl enable --now nginx
+
+dnf install -y certbot python3-certbot-nginx     # or python3-certbot-apache
+certbot --nginx -d dedalo.example.org
 ```
 
-**3. Permission issues:**
-```bash
-ls -ld /path/to/dedalo
-sudo chown -R apache:apache /path/to/dedalo
-```
+## Everything else
 
-## Notes
-
-- Fedora uses `dnf` package manager instead of `apt`
-- SELinux may need configuration for proper operation
-- Firewall settings are critical for web server access
-- Always use strong passwords for database and admin accounts
+Steps 5, 6, 8, 9, 10, 13, 14, 15 and 16 of the
+[production install](production.md) apply **verbatim**. The engine does not know
+which distribution it is running on.

@@ -1,90 +1,143 @@
-# Apache module to cut audiovisual files in real time
+# Serving audiovisual fragments (H.264 clipping)
 
-> See also: [Installation](index.md) · [Apache configuration](apache_configuration.md)
+> See also: [Installation hub](index.md) · [Reverse proxy and TLS](reverse_proxy.md) · [Media protection](../config/media_protection.md)
 
-This module adds to the Apache HTTP server the ability to cut audiovisual fragments by time. It uses the MPEG-4 Part 12 (ISO/IEC 14496-12:2022) definition to find the in and out positions and serve the fragment as a new audiovisual file.
+Dédalo publishes audiovisual **fragments**: an oral-history interview is one long
+recording, and a record points at a segment of it. Playing that segment without
+cutting a new file requires the **web server** to serve a time range of an MP4 on
+demand — it reads the MPEG-4 index (ISO/IEC 14496-12), finds the in and out
+positions, and streams just that span as a valid, standalone MP4.
 
-## To install
+This is a **media-serving** concern. It is entirely a web-server capability;
+Dédalo only produces the URLs.
 
-You can get the module in `/dedalo/install/http_modules/mod_h264_streaming-3.0.0` directory, get the correct version for your server platform, or compile it by your self.
+```text
+…/dedalo/media/av/404/<file>.mp4?start=812.4&end=948.0
+                                 ^^^^^^^^^^^^^^^^^^^^^
+                                 handled by the web server, never by the engine
+```
 
-### Ubuntu/Debian
+!!! note "You need this if you do oral history or audiovisual archives"
+    Without it, a fragment player has to download the whole file and seek — which
+    works, badly, for a 90-minute interview. With it, playback starts at the
+    in-point immediately.
 
-1. Copy *mod_dedalo_h264_streaming.so* to modules:
+## nginx: already built in
 
-    ```shell
-    cp mod_dedalo_h264_streaming.so /usr/lib/apache2/modules/
-    ```
+nginx ships the equivalent as `ngx_http_mp4_module`, and it is compiled into the
+official packages and images. **You do not install anything** — the generated
+media rules already emit the `mp4;` directive inside the media locations.
 
-2. Copy *dedalo_h264.load* to apache2 config
+Verify it is there:
 
-    ```shell
-    cp dedalo_h264.load /etc/apache2/mods-available/
-    ```
+```shell
+nginx -V 2>&1 | tr ' ' '\n' | grep http_mp4_module
+# --with-http_mp4_module
+```
 
-3. Activate it
+If it is missing, your nginx was built without it — install the distribution's
+standard package rather than a stripped one.
 
-    ```shell
-        a2enmod dedalo_h264
-    ```
+## Apache: an extra module
 
-4. reload Apache
+Apache needs the Dédalo H.264 streaming module,
+`mod_dedalo_h264_streaming`. It is distributed as a source tree and as
+prebuilt shared objects per platform.
 
-    ```shell
-        systemctl restart apache2
-    ```
+!!! warning "Where to get it"
+    The module is **not vendored in this repository**. Obtain it from your Dédalo
+    distribution, or build it from source (below). If you cannot find it, use
+    nginx — where the equivalent is built in and needs nothing.
 
-### Rocky/RedHat/Fedora
+### Install a prebuilt module
 
-1. Copy *mod_dedalo_h264_streaming.so* to modules:
+On Debian and Ubuntu:
 
-    ```shell
-    cp mod_dedalo_h264_streaming.so /usr/lib64/httpd/modules/
-    ```
+```shell
+cp mod_dedalo_h264_streaming.so /usr/lib/apache2/modules/
+cp dedalo_h264.load /etc/apache2/mods-available/
+a2enmod dedalo_h264
+systemctl restart apache2
+```
 
-2. Copy *00-dedaloh264.conf* to httpd config
+On RHEL, Rocky and Fedora:
 
-    ```shell
-    cp dedalo_h264.load /etc/httpd/conf.modules.d
-    ```
+```shell
+cp mod_dedalo_h264_streaming.so /usr/lib64/httpd/modules/
+cp dedalo_h264.load /etc/httpd/conf.modules.d/00-dedaloh264.conf
+systemctl restart httpd
+```
 
-3. Activate it
+### Build it from source
 
-    ```shell
-    systemctl restart httpd
-    ```
+Install the Apache development headers:
 
-## To compile
+```shell
+apt install apache2-dev                        # Debian / Ubuntu
 
-1. Install dependencies
+dnf groupinstall "Development Tools"           # RHEL / Rocky / Fedora
+dnf install httpd-devel
+```
 
-    *Ubuntu/Debian*
+```shell
+cd mod_h264_streaming-3.0.0
+./configure
+make
+sudo make install
+```
 
-    ```shell
-    apt install apache2-dev
-    ```
-
-    *Rocky/RedHat/Fedora*
-
-    ```shell
-    dnf groupinstall "Development Tools"
-    dnf install httpd-devel
-    ```
-
-2. Compile and install
-
-    ```shell
-    cd ~/mod_h264_streaming-3.0.0
-    ./configure
-    make
-    sudo make install
-    ```
-
-!!! Note
-    OSX: Apple removed the `apxs` support in 10.13+ and it's necessary to compile it with the brew or other as:
+??? tip "macOS"
+    Apple removed `apxs` in 10.13+, so point `configure` at Homebrew's copy:
 
     ```shell
     ./configure --with-apxs='/opt/homebrew/Cellar/httpd/2.4.57_1/bin/apxs'
     make
     sudo make install
     ```
+
+## It composes with the media access gate
+
+Clipping and access control operate on the same request, and they were designed
+not to interfere:
+
+- **The gate never rewrites the URL.** The generated rules test whether a marker
+  file exists and then get out of the way — the substitution is always a no-op
+  and **the query string is never touched**, so `?start=` and `?end=` reach the
+  clipping handler intact.
+- **The gate is a `stat()`, not a proxy.** No Dédalo process is ever in the media
+  byte path, so `sendfile`, HTTP `Range` and the clipping handler all keep
+  working on multi-gigabyte files.
+- **Authorisation still applies to a fragment.** A clipped range of an
+  unpublished record is denied exactly like the whole file — the gate runs first.
+
+## Requirements on the file itself
+
+The MP4 index must be at the **front** of the file, or the handler has to read to
+the end before it can serve anything. That is what `qt-faststart` does, and it is
+why the [media toolchain](production.md#3-media-toolchain) includes it. Check it:
+
+```shell
+command -v qt-faststart
+```
+
+If it lives somewhere unusual, declare it:
+
+```dotenv
+DEDALO_AV_FASTSTART_PATH=/usr/local/bin/qt-faststart
+```
+
+## Verify
+
+```shell
+# A published fragment: 200, and much smaller than the whole file.
+curl -sk -o /dev/null -w '%{size_download}\n' \
+  'https://dedalo.example.org/dedalo/media/av/404/<a-real-file>.mp4?start=10&end=20'
+
+# The same file whole, for comparison.
+curl -sk -o /dev/null -w '%{size_download}\n' \
+  'https://dedalo.example.org/dedalo/media/av/404/<a-real-file>.mp4'
+```
+
+If the two numbers are the same, the clipping handler is not active: the module
+is not loaded (Apache), or the `mp4;` directive is not in the media location
+(nginx — it is emitted by the generated rules, so check that they are included).
