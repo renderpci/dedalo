@@ -4,9 +4,9 @@
  * declared.
  *
  * Every lib is served at `/dedalo/lib/<id>/<subpath>` and resolves to exactly one
- * root below. There is no filesystem `client/dedalo/lib/` any more: the libs come
- * from the package manager (`bun install`), from the committed `vendor/` tree, or
- * from an upstream release fetched at install time (scripts/fetch_client_libs.ts).
+ * root below. There is no filesystem `client/dedalo/lib/` any more: a lib comes
+ * either from the package manager (`bun install` → node_modules/) or from the
+ * committed `vendor/` tree. Nothing is fetched at install time.
  *
  * SECURITY — this registry IS the chokepoint. `node_modules/` also holds the
  * SERVER's own dependencies (the Anthropic SDK, zod, the MCP SDK, Puppeteer…).
@@ -29,14 +29,22 @@
 import { resolve } from 'node:path';
 import { projectRoot, readEnv } from '../../config/env.ts';
 
-/** Where a lib's bytes come from. Drives the tripwire and the docs, not the routing. */
+/**
+ * Where a lib's bytes come from. Drives the tripwire and the docs, not the routing.
+ *
+ * TWO sources, two roots — and nothing else. There is no install-time fetch step, no
+ * postinstall hook, no download cache:
+ *   npm     → node_modules/…   installed by `bun install`, gitignored
+ *   vendor  → vendor/…         COMMITTED to git
+ *
+ * A `bun install` is the whole setup story, and a clone is self-contained: no network
+ * beyond the package registry, nothing to materialise, nothing that can be half-built.
+ */
 export type LibSource =
 	/** A pinned package.json dependency — Dependabot/CVE alerts apply. */
 	| 'npm'
-	/** Committed under vendor/. Cannot come from a package manager; needs a `reason`. */
-	| 'vendor'
-	/** Fetched from an upstream release at install time. Needs a `reason`. */
-	| 'fetched';
+	/** COMMITTED under vendor/. No installable package exists; needs a `reason`. */
+	| 'vendor';
 
 export interface ClientLib {
 	/** Filesystem root, relative to the repo root. */
@@ -113,7 +121,7 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 	mocha: { base: 'node_modules/mocha', source: 'npm', probe: 'mocha.js', devOnly: true },
 	chai: { base: 'node_modules/chai', source: 'npm', probe: 'chai.js', devOnly: true },
 
-	// --- committed under vendor/ (2.7 MB gzipped) --------------------------------
+	// --- COMMITTED under vendor/ (2.2 MB gzipped) --------------------------------
 	ckeditor: {
 		base: 'vendor/ckeditor',
 		source: 'vendor',
@@ -128,13 +136,12 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 		reason: 'pgrabovets/json-view is distributed via GitHub/jsDelivr only; never published to npm.',
 	},
 
-	// --- fetched from upstream at install time -----------------------------------
 	pdfjs: {
 		base: 'vendor/pdfjs',
-		source: 'fetched',
+		source: 'vendor',
 		probe: 'web/viewer.html',
 		reason:
-			"npm's pdfjs-dist ships the pdf.js COMPONENT library (web/pdf_viewer.mjs), not the standalone viewer app. component_pdf iframes web/viewer.html, which only exists in the pdfjs-<version>-dist.zip GitHub release — so it is fetched from Mozilla's own release by scripts/fetch_client_libs.ts and sha256-verified.",
+			"npm's pdfjs-dist ships the pdf.js COMPONENT library (web/pdf_viewer.mjs), not the standalone viewer app — and component_pdf iframes web/viewer.html, the whole Mozilla app. That exists only in the pdfjs-<version>-dist.zip GitHub release, which bun cannot install (it takes a tarball URL, as xlsx does with the SheetJS .tgz, but not a .zip). Committed from the sha256-verified 5.7.284 release (GitHub's published digest 6d1b8125… corroborates it), minus 9 MB of sourcemaps and the 1 MB demo PDF that view_default_edit_pdf.js:339 explicitly disables by clearing defaultUrl. 3.4 MB gzipped.",
 	},
 } as const;
 

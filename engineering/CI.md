@@ -101,10 +101,13 @@ divergence the `client_serving` byte-identity tripwire exists to catch.
 Override sources with `DEDALO_CI_PRIVATE_DIR` / `DEDALO_CI_PHP_ROOT`.
 
 **Client libraries are not a sibling path** (2026-07-12). They used to be a
-118 MB gitignored `client/dedalo/lib` symlinked out of the PHP tree; they now come
-from `bun install` (node_modules), the committed `vendor/` tree, and the
-`postinstall` hook `scripts/fetch_client_libs.ts`. So every tier gets them for
-free — but note `mocha`/`chai` are **devDependencies**: a runner that installs with
+118 MB gitignored `client/dedalo/lib` symlinked out of the PHP tree. They now come
+from just two places: `bun install` (node_modules) and the committed `vendor/` tree.
+There is **no install-time fetch step** — no postinstall hook, no network call beyond
+the package registry — so no CI tier depends on a third-party host being up. Every
+tier gets the libs for free.
+
+One wrinkle: `mocha`/`chai` are **devDependencies**, so a runner that installs with
 `--production` cannot serve the client test harness. Index of record:
 `src/core/client_libs/registry.ts`; gate: `test/unit/client_libs_tripwire.test.ts`.
 

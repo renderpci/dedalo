@@ -48,8 +48,8 @@
 			// client/ is the TS-OWNED primary client source (since the 2026-07-11 cutover):
 			// vanilla JS on an exact wire contract, formatted to its own conventions — never linted.
 			"client/**",
-			// Third-party client libraries: prebuilt bundles, not our source. vendor/ is
-			// committed (ckeditor/svgedit/json-view); vendor/pdfjs is fetched at install.
+			// Third-party client libraries committed to the repo (ckeditor, json-view,
+			// pdfjs): prebuilt bundles, not our source — never linted or formatted.
 			// Index of record: src/core/client_libs/registry.ts.
 			"vendor/**",
 			"test/parity/fixtures/*.response.json",

@@ -8,9 +8,8 @@
 #                                (test/unit/client_serving.test.ts byte-compares
 #                                against it; scripts/sync_client.sh reads it)
 #
-# NOT here any more (2026-07-12): client/dedalo/lib. The client libraries no longer
-# live on disk in the repo — they come from `bun install` (node_modules), the
-# committed vendor/ tree, and scripts/fetch_client_libs.ts. Symlinking them out of
+# NOT here any more (2026-07-12): client/dedalo/lib. The client libraries come from
+# `bun install` (node_modules) and the committed vendor/ tree. Symlinking them out of
 # the frozen PHP tree would resurrect exactly the dependency the cutover killed.
 # See src/core/client_libs/registry.ts.
 #

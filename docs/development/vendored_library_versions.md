@@ -19,13 +19,20 @@ This document is the human-facing companion; the registry is what the code reads
 ## How a lib reaches the browser
 
 Every lib is served at `/dedalo/lib/<id>/<subpath>`. There is no `lib/` directory in
-the repo any more. Three sources back that URL:
+the repo any more. **Two** sources back that URL, and that is the whole story:
 
-| Source | What | Where it comes from |
-|---|---|---|
-| **npm** (16) | Normal pinned deps | `bun install` → `node_modules/` |
-| **vendor** (2) | Cannot be packaged | committed under `vendor/` — ckeditor + json-view |
-| **fetched** (1) | pdf.js viewer app | `scripts/fetch_client_libs.ts` (postinstall), sha256-pinned |
+| Source | Count | Root | In git? |
+|---|---|---|---|
+| **npm** | 16 | `node_modules/` | no — `bun install` |
+| **vendor** | 3 | `vendor/` | **yes** — committed (ckeditor, json-view, pdfjs) |
+
+!!! note "No install-time fetch step, deliberately"
+    An earlier design downloaded pdf.js from its GitHub release via a `postinstall`
+    hook. That meant a hand-rolled zip extractor, a download cache, and — worse — a
+    hard dependency on GitHub being reachable **on the deploy path** (`deploy.sh`
+    runs `bun install`). All of that machinery existed for exactly one library. It
+    was cheaper to commit the 3.4 MB. A clone is now self-contained: `bun install`
+    is the entire setup, and nothing can be half-materialised.
 
 The lib **id** in the URL is deliberately decoupled from the package name, so
 swapping the underlying package never touches a client file (`jsoneditor` →
@@ -46,7 +53,7 @@ byte-identical** to what shipped before this migration.
 | id | Package | Version | Notes |
 |---|---|---|---|
 | three | `three` | 0.149.0 | r149. `examples/jsm/` reached via the client import map. |
-| pdfjs | *(fetched)* | 5.7.284 | See below. |
+| pdfjs | *(vendor)* | 5.7.284 | Committed, minus 9 MB of sourcemaps + the demo PDF. See below. |
 | ckeditor | *(vendor)* | CKEditor 5 42.0.1 | Custom build. See below. |
 | jsoneditor | `vanilla-jsoneditor` | 3.12.0 | |
 | leaflet | `leaflet` | 1.9.4 | |
@@ -102,10 +109,27 @@ Each carries its `reason` in the registry, next to the code, not only here.
   surviving copy of that plugin source**, which is why the map is committed too.
   ⚠️ This is a standing risk: the bundle cannot be patched or rebuilt, only replaced
   wholesale. Reconstructing the plugins as a maintained project is worth scheduling.
-- **pdfjs** — npm's `pdfjs-dist` ships the pdf.js *component library*
-  (`web/pdf_viewer.mjs`), **not** the standalone viewer app. `component_pdf` iframes
-  `web/viewer.html`, which exists only in the `pdfjs-<version>-dist.zip` GitHub
-  release — so it is fetched from Mozilla's own release and sha256-verified.
+- **pdfjs** — two things stack up. First, npm's `pdfjs-dist` ships the pdf.js
+  *component library* (`web/pdf_viewer.mjs`), **not** the standalone viewer app;
+  `component_pdf` iframes `web/viewer.html`, the whole Mozilla app. That exists only
+  in the `pdfjs-<version>-dist.zip` GitHub release. Second, **bun installs a tarball
+  URL but not a zip** — which is exactly why `xlsx` needs no special handling
+  (SheetJS publishes a `.tgz`) and pdf.js does (Mozilla publishes a `.zip`).
+
+    So it is committed, taken from the sha256-verified 5.7.284 release
+    (`6d1b8125…`, corroborated by GitHub's own published digest). Two prunes make
+    that affordable — 21 MB → **3.4 MB gzipped**:
+
+    - **9 MB of sourcemaps.** A browser never fetches a `.map` unless devtools is
+      open. Verified: loading the viewer issues zero requests for them.
+    - **1 MB demo PDF** (`compressed.tracemonkey-pldi-09.pdf`). The client sets
+      `defaultUrl` to `''` (`view_default_edit_pdf.js:339`) precisely to stop pdf.js
+      auto-loading it, so it can never be reached.
+
+    Verified in a real browser by reproducing `component_pdf`'s exact flow: iframe
+    `viewer.html` with no `?file=`, wait for `webviewerloaded`, clear `defaultUrl`,
+    then `PDFViewerApplication.open({url})`. The page renders and the text layer
+    extracts.
 - **highlightjs** — the `highlight.js` package's `es/` entry is a bundler stub that
   chains into a CommonJS `lib/`; it cannot load in a browser without a bundler.
   `@highlightjs/cdn-assets` ships the same release as browser-ready ESM.
@@ -126,9 +150,10 @@ Dependabot/advisory alert, bump the pin, run the gates.
 For the four above, the old manual ritual still applies once per release cycle:
 
 1. Check the upstream release feed for security advisories since the pinned version.
-2. If a fix applies: for `pdfjs`, bump the version + `sha256` + `bytes` in
-   `scripts/fetch_client_libs.ts`. For the vendored three, drop the new files into
-   `vendor/<name>/`.
+2. If a fix applies, drop the new files into `vendor/<name>/`. For **pdfjs**, take
+   the `pdfjs-<version>-dist.zip` GitHub release, check its sha256 against the digest
+   GitHub publishes in the release API, and unzip it **excluding `*.map` and
+   `compressed.tracemonkey-pldi-09.pdf`** (see above — they are 10 MB of dead weight).
 3. Update the version in the table above and reference the CVE in the commit.
 4. Run `bun test test/unit/client_libs_tripwire.test.ts` and `bun run test:client`,
    then smoke-test the component that uses the lib.
@@ -147,6 +172,5 @@ PHP repo if it is ever wanted back.
 
 - Registry / allowlist: `src/core/client_libs/registry.ts`
 - Gate: `test/unit/client_libs_tripwire.test.ts` (in `engineering/TRIPWIRES.md`)
-- Fetcher: `scripts/fetch_client_libs.ts`
 - Audit finding **SEC-103** (phase-2 master register); companion **SEC-097** (pdfjs
   CVE-2024-4367 — the pinned 5.7.284 is well past the 4.2.67 fix line).
