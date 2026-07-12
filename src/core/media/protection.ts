@@ -63,7 +63,7 @@ export const MEDIA_AUTH_COOKIE = 'dedalo_media_auth';
  * whose inputs are otherwise unchanged. Forget it and installs keep the old rules
  * forever.
  */
-export const TEMPLATE_VERSION = 1;
+export const TEMPLATE_VERSION = 2;
 
 /** The effective access mode. 'off' is a GENERATOR-only value — never returned here. */
 export type MediaAccessMode = 'private' | 'publication' | false;
@@ -564,7 +564,12 @@ export function buildNginxConf(mode: RuleMode, qualities: string[] = []): string
 		lines.push(
 			'# 2. Rule B: public quality folders. Allowed when the publication marker exists',
 			'#    OR the logged-in auth cookie is valid. The file name identifies the record.',
-			`location ~ ^${escapeRegexLiteral(url)}/(?:${alternation})/(?:.+/)?${nginxNamedGrammar()} {`,
+			// The regex MUST be double-quoted. nginx's CONFIG lexer (not its regex engine)
+			// treats `{` and `}` as block delimiters, so an unquoted pattern containing the
+			// grammar's `{2,12}` repetition quantifier is truncated mid-token and nginx
+			// REFUSES TO START ("pcre2_compile() failed: missing closing parenthesis").
+			// Verified against nginx 1.31.2 — publication mode was unusable without this.
+			`location ~ "^${escapeRegexLiteral(url)}/(?:${alternation})/(?:.+/)?${nginxNamedGrammar()}" {`,
 			'\tset $dd_pass 0;',
 			`\tif (-f ${root}/.publication/auth/$dedalo_auth_key) { set $dd_pass 1; }`,
 			`\tif (-f ${root}/.publication/pub/\${dd_s}_\${dd_i})   { set $dd_pass 1; }`,

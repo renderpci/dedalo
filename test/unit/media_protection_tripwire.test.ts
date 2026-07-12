@@ -61,11 +61,24 @@ function apachePattern(): RegExp {
 	return new RegExp(`^${match[1]}`);
 }
 
-/** Pull the rule-B pattern back out of the generated nginx text. */
+/**
+ * Pull the rule-B pattern back out of the generated nginx text.
+ *
+ * The pattern is DOUBLE-QUOTED in the generated conf, and must stay that way: nginx's
+ * config lexer treats `{`/`}` as block delimiters, so an unquoted regex carrying the
+ * grammar's `{2,12}` quantifier truncates mid-token and nginx refuses to start. That
+ * shipped as a real bug (publication mode was unusable on nginx), so the quotes are
+ * asserted below, not merely tolerated.
+ */
 function nginxPattern(): RegExp {
-	const line = NGINX.split('\n').find((l) => l.startsWith('location ~ ^/dedalo/'));
-	if (line === undefined) throw new Error('rule B not found in the generated nginx conf');
-	const match = /^location ~ (.+?) \{$/.exec(line);
+	const line = NGINX.split('\n').find((l) => l.startsWith('location ~ "^/dedalo/'));
+	if (line === undefined) {
+		throw new Error(
+			'rule B not found in the generated nginx conf — it must be `location ~ "<regex>" {`, ' +
+				'with the regex DOUBLE-QUOTED (an unquoted `{2,12}` makes nginx refuse to start)',
+		);
+	}
+	const match = /^location ~ "(.+)" \{$/.exec(line);
 	if (match?.[1] === undefined) throw new Error(`could not extract the nginx pattern: ${line}`);
 	return new RegExp(match[1]);
 }

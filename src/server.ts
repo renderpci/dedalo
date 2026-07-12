@@ -902,7 +902,7 @@ export async function startServer() {
 		console.warn(
 			'[boot] INSTALL MODE — no database configured yet (../private/.env absent). ' +
 				'Serving the install wizard at /dedalo/core/page/. Complete it (browser wizard ' +
-				'or `bun run install`); the server restarts into normal operation once configured.',
+				'or `bun run dedalo:install`); the server restarts into normal operation once configured.',
 		);
 	}
 

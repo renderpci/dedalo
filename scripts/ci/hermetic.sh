@@ -82,6 +82,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/ws_a_tripwires.test.ts
 	test/unit/update_ownership_tripwire.test.ts
 	test/unit/ci_workflow_tripwire.test.ts
+	test/unit/docs_current_engine_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"
