@@ -259,7 +259,14 @@ export interface MediaUploadConfig {
 
 /** The whole media catalog (engineering/MEDIA_SPEC.md §3). */
 export interface MediaConfig {
-	/** Absolute filesystem media root (PHP DEDALO_MEDIA_PATH; env MEDIA_PATH). null = unset (dev). */
+	/**
+	 * Absolute filesystem media root (PHP DEDALO_MEDIA_PATH; env MEDIA_PATH).
+	 * DERIVED — `<projectRoot>/media` — unless MEDIA_PATH overrides it, mirroring
+	 * the PHP constant, which is defined as DEDALO_ROOT_PATH + '/media' and which
+	 * private/sample.env documents as "auto-derived; uncomment only to override".
+	 * Null is therefore unreachable from env; the type keeps it only so a test can
+	 * construct an unconfigured catalog and prove requireMediaRoot still throws.
+	 */
 	readonly rootPath: string | null;
 	/** Absolute-URL prefix for export/relation cells (env DEDALO_MEDIA_BASE_URL). */
 	readonly baseUrl: string | undefined;
@@ -599,7 +606,17 @@ function readListEnv(key: string, fallback: readonly string[]): readonly string[
  * media_image.php / media_av.php / media_docs.php). engineering/MEDIA_SPEC.md §3.
  */
 function buildMediaConfig(): MediaConfig {
+	// MEDIA_PATH is a COMPUTED default in PHP, not an installer-written key: the
+	// DEDALO_MEDIA_PATH constant is defined as DEDALO_ROOT_PATH + '/media', and
+	// private/sample.env marks it "auto-derived; uncomment only to override" —
+	// which is why no installer step writes it. The port dropped that derivation
+	// and left rootPath null, so on EVERY fresh install the first read of a section
+	// holding a media component threw "MEDIA_PATH is not configured" — and the media
+	// test tier skips itself when the key is unset, so no gate ever saw it. The
+	// literal 'media' matches PHP: the folder NAME config (DEDALO_MEDIA_DIR) drives
+	// the URL, not this filesystem path.
 	const mediaPath = readEnv('MEDIA_PATH');
+	const mediaRoot = mediaPath !== undefined && mediaPath !== '' ? mediaPath : join(projectRoot, 'media');
 	const binaryBase = readEnv(
 		'DEDALO_BINARY_BASE',
 		process.platform === 'darwin' ? '/opt/homebrew/bin' : '/usr/bin',
@@ -607,7 +624,7 @@ function buildMediaConfig(): MediaConfig {
 	const bin = (key: string, name: string): string =>
 		readEnv(key, `${binaryBase}/${name}`) as string;
 	return Object.freeze({
-		rootPath: mediaPath !== undefined && mediaPath !== '' ? mediaPath : null,
+		rootPath: mediaRoot,
 		baseUrl: readEnv('DEDALO_MEDIA_BASE_URL'),
 		image: Object.freeze({
 			folder: readEnv('DEDALO_IMAGE_FOLDER', '/image') as string,

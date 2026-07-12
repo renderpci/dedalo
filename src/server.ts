@@ -49,10 +49,16 @@ import { serveToolCommonRequest, serveToolsRequest } from './core/tools/serving.
 const CLIENT_ROOT = resolve(import.meta.dir, '../client/dedalo');
 
 /**
- * Media directory (env MEDIA_PATH) served under /dedalo/<mediaDir>/ (the PHP
- * DEDALO_MEDIA_URL layout). In production the REVERSE PROXY serves media and
- * enforces the marker-based per-record access control (spec §7.9); this route is
- * a DEV-listener convenience only.
+ * Media directory served under /dedalo/<mediaDir>/ (the PHP DEDALO_MEDIA_URL
+ * layout). In production the REVERSE PROXY serves media and enforces the
+ * marker-based per-record access control (spec §7.9); this route is a
+ * DEV-listener convenience only.
+ *
+ * The root comes from the CATALOG (config.media.rootPath), which derives
+ * <projectRoot>/media unless MEDIA_PATH overrides it. It used to re-read
+ * MEDIA_PATH from env here — a shadow read of a key the catalog already owns —
+ * so this route stayed dead (MEDIA_ROOT null → 404) even once the catalog
+ * resolved the root, and every media URL 404'd on a fresh install.
  *
  * SECURITY (M5): this route checks for a valid session but applies NO per-record
  * / per-project ACL — any authenticated user can read any file under the media
@@ -61,8 +67,7 @@ const CLIENT_ROOT = resolve(import.meta.dir, '../client/dedalo');
  * explicitly enabled with MEDIA_DEV_ROUTE_ENABLED=true (never in production —
  * production is socket-only and lets the reverse proxy + marker store serve media).
  */
-const mediaPathValue = readEnv('MEDIA_PATH');
-const MEDIA_ROOT = mediaPathValue !== undefined ? resolve(mediaPathValue) : null;
+const MEDIA_ROOT = config.media.rootPath !== null ? resolve(config.media.rootPath) : null;
 const MEDIA_URL_PREFIX = `/dedalo/${config.mediaDir}/`;
 
 /** Whether the dev media route is enabled (read per-request so it stays togglable). */
