@@ -23,12 +23,11 @@ distinguishing fact about `misc` and the reason it needs its own page.
 
 !!! info "Where these columns sit"
     A `matrix` record is one row whose conceptual `data` payload is physically
-    split across typed JSONB columns. In PHP `section_record_data::$column_map`
-    maps each component model to its column, and `section_record_data::$ar_columns`
-    lists the canonical column set. The TS server resolves the same routing
-    through `getColumnNameByModel()` (`src/core/ontology/resolver.ts`), reading
-    each model's own `descriptor.column`, and declares the canonical column set
-    as `MATRIX_JSONB_COLUMNS` (`src/core/db/matrix.ts`). See
+    split across typed JSONB columns. Routing from a component model to its
+    column is resolved through `getColumnNameByModel()`
+    (`src/core/ontology/resolver.ts`), reading each model's own
+    `descriptor.column`, and the canonical column set is declared as
+    `MATRIX_JSONB_COLUMNS` (`src/core/db/matrix.ts`). See
     [Sections — the data column is split into typed JSONB columns](../sections/index.md#storage-detail-the-data-column-is-split-into-typed-jsonb-columns).
 
 ---
@@ -44,24 +43,11 @@ keyed by component tipo. `misc` is the place for components whose value does not
 fit either of those: an arbitrary blob of JSON, a computed summary, a
 permissions matrix, a set of resolved backlinks, a per-user record allowlist.
 
-Because the shapes differ wildly, in PHP `section_record_data::$column_map`
-flags every `misc` entry as a *direct object* — the column store does not
-interpret the value; **the component itself knows how to read and write its
-own shape**:
-
-```php
-// core/section_record/class.section_record_data.php — $column_map (excerpt)
-'component_filter_records'  => 'misc', // direct object
-'component_info'            => 'misc', // direct object
-'component_inverse'         => 'misc', // direct object
-'component_json'            => 'misc',
-'component_security_access' => 'misc', // direct object
-```
-
-Each of the five models declares the same `column: 'misc'` on its own TS
-descriptor (`src/core/components/component_json/descriptor.ts`,
-`component_info/`, `component_inverse/`, `component_filter_records/`,
-`component_security_access/`) instead of one shared map.
+Because the shapes differ wildly, the column store does not interpret the
+value — **the component itself knows how to read and write its own shape**.
+Each of the five models declares `column: 'misc'` on its own descriptor
+(`src/core/components/component_json/descriptor.ts`, `component_info/`,
+`component_inverse/`, `component_filter_records/`, `component_security_access/`).
 
 ### How it is keyed
 
@@ -93,20 +79,18 @@ jsonb_path_query_array(misc, '$.*[*].value')
 | `component_inverse` | no (`save()` is a no-op) | computed `[{from_section_tipo, from_section_id, from_component_tipo}]` | [component_inverse](../components/component_inverse.md) |
 | `component_filter_records` | yes | `[{"id", "tipo", "value": [section_id…]}]` | [component_filter_records](../components/component_filter_records.md) |
 
-All five extend `component_common` (no shared `misc` base class — the column is a
-storage role, not a class family).
+The five models share no common ancestor beyond the generic item lifecycle —
+`misc` is a storage role, not a class family.
 
 ### Client-side model
 
 On the client the stored array surfaces in the datum `data` layer under the
-**`entries`** property. The server's `component_common::get_data_item()` assigns
-the stored array to `$item->entries`; the TS equivalent is `buildDataItem()`
-(`src/core/resolve/component_data.ts`), which builds the same envelope with an
-`entries` field. The component JS reads it back exactly as before (it is
-copied as-is):
+**`entries`** property, built by `buildDataItem()`
+(`src/core/resolve/component_data.ts`), which assigns the stored array to the
+item's `entries` field. The component JS reads it back the same way:
 
 ```javascript
-// core/component_json/js/component_json.js
+// client/dedalo/core/component_json/js/component_json.js
 const entries  = data.entries || []
 const db_value = typeof entries[0]!=="undefined" ? entries[0] : null
 ```
@@ -138,12 +122,11 @@ nested to any depth. It is language-neutral (`lg-nolan`, non-translatable).
   and search views only build/read `entries[0]`.
 - **Import disambiguation:** a stored item `[{"value":1}]` is indistinguishable
   from a literal JSON value that happens to have a `value` property. The raw
-  export wraps the data as `{"dedalo_data":[{"value":<any JSON>,"id":1}]}`; on
-  import, `conform_import_data()` uses `import_data_is_wrapped` to detect the
-  wrapper — when present each item must be an object with a `value` property; when
-  absent the **entire** decoded value becomes the single monovalue
-  `[{"value": <data>}]`. `regenerate_component()` decodes string `value`s back
-  into real JSON.
+  export wraps the data as `{"dedalo_data":[{"value":<any JSON>,"id":1}]}`;
+  on import, `unwrapDedaloData()` (`src/core/tools/import_data.ts`) detects
+  the wrapper — it is recognized only when `dedalo_data` is the item's *sole*
+  property, so a legitimate `{"dedalo_data":1,"other":2}` value is not
+  mistaken for the wrapper.
 
 See [component_json](../components/component_json.md) and the
 [import data model](../importing_data.md).
@@ -154,13 +137,15 @@ See [component_json](../components/component_json.md) and the
 
 An **info / aggregation** component: a literal component whose value is computed
 dynamically from one or more *widgets* declared in its ontology `properties`,
-rather than typed by a cataloguer. It extends `component_common` directly.
+rather than typed by a cataloguer.
 
-Normally it stores **no own `misc` data**: it computes on every load
-(`use_db_data = false`) and rarely persists. `get_data()` aggregates the widget
-outputs, each widget contributing its own value list (an Input-Process-Output
-definition that reads from other components of the record). When a value *is*
-stored, it lands in `misc` like any direct-object component.
+Normally it stores **no own `misc` data**: the emit hook
+(`src/core/components/component_info/emit.ts`) prefers a stored `misc` value
+when present (the client save cycle can persist widget output as
+`{id, key, value, widget}` items), and falls back to computing the widgets
+live otherwise. Each widget contributes its own value list, reading from
+other components of the record. When a value *is* stored, it lands in `misc`
+like any direct-object component.
 
 ```json
 [
@@ -173,9 +158,10 @@ stored, it lands in `misc` like any direct-object component.
 ```
 
 !!! note "Per-widget tools, not component tools"
-    `component_info` overrides `get_tools()` to return `[]`. Any tools you see in
-    its output are emitted **per widget output item** inside `data` as
-    `tool_context` (attached by the widget, e.g. `media_icons`); they are
+    `component_info` itself carries no toolbar. Any tools you see in its
+    output are emitted **per widget output item** inside `data` as
+    `tool_context` (e.g. the `media_icons` widget,
+    `src/core/components/component_info/widgets/oh/media_icons.ts`); they are
     read-only context, not the component's own toolbar.
 
 See [component_info](../components/component_info.md).
@@ -210,11 +196,14 @@ rows; non-translatable (`lg-nolan`, a single map across all languages).
     means *no access*.
 
 !!! info "The tree (datalist) is derived, not stored"
-    In `edit` mode the controller also ships a `datalist`: the full ontology
-    hierarchy (areas → sections → elements) used to render the tree. It is
-    computed by `get_datalist()`, identical for all profiles, and — because it is
-    expensive (~3–6 s) — pre-calculated on login and cached **per application
-    language** as `cache_tree_<lang>.php`. It never lives in the `misc` column.
+    In `edit` mode the payload also ships a `datalist`: the full ontology
+    hierarchy (areas → sections → elements) used to render the tree, built by
+    `getSecurityAccessDatalist()` (`src/core/resolve/security_access_datalist.ts`).
+    It is identical for every profile — the client overlays per-profile
+    permission integers on top — and is served through the same per-request
+    ontology cache layer as other structural reads
+    (`createOntologyCache()`, `src/core/ontology/cache_factory.ts`). It never
+    lives in the `misc` column.
 
 See [component_security_access](../components/component_security_access.md).
 
@@ -267,20 +256,14 @@ empty array means *no restriction*.
 - `value` — array of integer `section_id`s the user may access in that section
   (validated client-side to positive, de-duplicated integers).
 
-!!! warning "Consumption shape ≠ storage shape"
-    The search consumer in `core/search/trait.where.php` reads the filter as a
-    **map keyed by section_tipo** (`$filter_user_records_by_id[$section_tipo]` →
-    array of ids), while `get_user_filter_records()` returns the raw stored
-    `entries` array (`[{id, tipo, value}, …]`). If you add a consumer, verify the
-    exact transformation expected at the point of use.
-
-!!! info "TS status"
-    This per-user, per-record ACL gate is not yet ported into the TS search
-    WHERE builder (`src/core/search/builders/`) — only the **project**-based
-    filter (`component_filter` / `component_filter_master`, a different
-    mechanism) is, in `src/core/relations/filter_projects.ts`. Do not assume
-    `DEDALO_FILTER_USER_RECORDS_BY_ID` narrowing applies to TS-served reads
-    until this lands; see `rewrite/STATUS.md`.
+!!! warning "This ACL gate is not yet applied to search"
+    This per-user, per-record restriction is **not yet enforced** by the TS
+    search WHERE builder (`src/core/search/builders/`) — a query is not
+    currently narrowed by a user's `component_filter_records` entries. Only
+    the **project**-based filter (`component_filter` / `component_filter_master`,
+    a different mechanism) is enforced, in
+    `src/core/relations/filter_projects.ts`. Do not assume
+    `DEDALO_FILTER_USER_RECORDS_BY_ID` narrowing applies to TS-served reads.
 
 See [component_filter_records](../components/component_filter_records.md).
 
@@ -293,17 +276,9 @@ See [component_filter_records](../components/component_filter_records.md).
 `meta` holds the **per-component id counters**. Multi-value components
 (`component_iri`, `component_json`, `component_date`, …) assign each stored item a
 unique, monotonically increasing `id` so the item can later be targeted by
-`update`/`remove` and paired across dataframes. The counter for each component
-lives in `meta`, written by `component_common::save()` alongside the component's
-data column (one entry in the `save_path`):
-
-```php
-// core/component_common/class.component_common.php — save()
-$counter = new stdClass();
-    $counter->column = 'meta';
-    $counter->key    = $tipo;
-$save_path[] = $counter;
-```
+`update`/`remove` and paired across dataframes. The counter for each
+component lives in `meta`, updated alongside the component's data column on
+every save.
 
 ### Canonical shape
 
@@ -328,35 +303,17 @@ FROM matrix WHERE section_tipo=$2 AND section_id=$3
 
 ### How ids are minted
 
-`section_record` owns the counter:
+Allocation is **atomic** and follows a never-lower, never-recycled counter
+law: `allocateComponentItemId()` (`src/core/db/matrix_write.ts`) does the
+increment as one atomic `UPDATE … SET meta = jsonb_set(…, count + 1)
+RETURNING`, relying on Postgres's own row-level lock to serialize concurrent
+callers against the same record — two allocations against the same row can
+never observe the same pre-increment count. Absorbing explicit ids from
+imports/migrations is `absorbComponentItemIds()`, which raises the counter to
+`GREATEST(persisted, incoming max)` and never lowers it.
 
-- `get_component_counter($tipo)` reads `meta[$tipo][0]->count` (defaulting `0`).
-- `set_component_counter($tipo, $value)` writes it back.
-- `allocate_component_ids($tipo, $count)` allocates the next `count` ids
-  **atomically**: it takes a PostgreSQL session advisory lock keyed by
-  `table_section-tipo_section-id_tipo`, re-reads the *persisted* counter (another
-  request may have allocated ids since this record loaded), takes
-  `max(persisted, in_memory)` as the base, persists `base + count` immediately so
-  concurrent processes see the allocation before this record saves, and returns
-  the new id range (e.g. `[8, 9, 10]`). If the DB connection is unavailable it
-  falls back to the non-atomic in-memory counter.
-
-This is why every `iri`/`json`/`date` item gets a stable, non-reused `id` even
-under concurrent edits in the persistent-worker model.
-
-!!! info "TS re-implementation, same guarantee"
-    The TS server keeps the same never-lower, never-recycled counter law but
-    without an explicit advisory lock: `allocateComponentItemId()`
-    (`src/core/db/matrix_write.ts`) does the increment as one atomic
-    `UPDATE … SET meta = jsonb_set(…, count+1) RETURNING`, relying on
-    Postgres's row-level lock to serialize concurrent callers against the same
-    record. Absorbing explicit ids from imports/migrations is
-    `absorbComponentItemIds()`, raising the counter to
-    `GREATEST(persisted, incoming max)` — PHP's `raise_component_counter()`
-    equivalent. There is no long-lived per-request worker to leak a stale
-    in-memory counter across requests in the first place (spec §4 — no
-    ambient request state), so the PHP in-memory fallback branch has no TS
-    counterpart.
+This is why every `iri`/`json`/`date` item gets a stable, non-reused `id`
+even under concurrent edits.
 
 ### Components that use it
 
@@ -392,16 +349,13 @@ tipo and relation type:
 ]
 ```
 
-It is built by `component_relation_common::get_relations_search_value()`, which
-walks `component_relation_parent::get_parents_recursive()` for every stored
-locator, sets `from_component_tipo` to the component's own tipo and `type` to its
-`relation_type`, and de-duplicates. The method returns `null` (writes nothing)
-for any other model.
-
-The TS server ports this same maintenance step at the save chokepoint:
-`maintainRelationSearchIndex()` (`src/core/section/record/save_component.ts`)
-runs only when the saved component's model is `component_autocomplete_hi`,
-matching the PHP legacy-model gate exactly.
+It is maintained at the save chokepoint by `maintainRelationSearchIndex()`
+(`src/core/relations/save.ts`), which walks each stored locator's ancestor
+chain, sets `from_component_tipo` to the component's own tipo and `type` to
+its relation type, and de-duplicates. It runs only when the saved
+component's model is `component_autocomplete_hi` (normalized to
+`component_portal` on read) — every other model writes nothing to
+`relation_search`.
 
 ### How search uses it
 
@@ -420,16 +374,14 @@ See the [search subsystem](../sqo.md) for the SQO → WHERE machinery.
 ## v7 consolidation / evolution
 
 - **`misc` is a role, not a type.** The five components that share it have no
-  common base beyond `component_common`; each owns its shape entirely. When
-  adding a direct-object component, register it as `'…' => 'misc'` in PHP
-  `section_record_data::$column_map` (in TS, declare `column: 'misc'` on the
-  new model's own `descriptor.ts`) and implement the read/write of its own
-  shape — do **not** add bespoke columns or tables (see *The Dédalo way:
-  standard schema*).
+  common base; each owns its shape entirely. When adding a direct-object
+  component, declare `column: 'misc'` on the new model's own `descriptor.ts`
+  and implement the read/write of its own shape — do **not** add bespoke
+  columns or tables (see *The Dédalo way: standard schema*).
 - **Computed vs stored.** `component_inverse` (always) and `component_info`
   (normally) compute their value at request time and persist nothing; their
-  `misc` map entries are routing placeholders only. Treat the presence of a
-  column-map entry as "may use this column", not "stores here".
+  descriptor's `column: 'misc'` is a routing declaration only. Treat it as
+  "may use this column", not "stores here".
 - **`meta` minting hardened.** The id counter moved from a non-atomic in-memory
   increment to the advisory-locked `allocate_component_ids()` so per-item ids stay
   unique under concurrent edits in persistent workers; the column shape

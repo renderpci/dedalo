@@ -35,10 +35,8 @@ Dédalo never stores a bare scalar. A component's value for one record is
 Why an array of self-describing items, even for a "single value" field?
 
 - **Multivalue by default.** A component may hold several values
-  (several names, several links). Even a *mono-value* component stores `[item]`
-  — an array of one — never the scalar itself. (The registry
-  `component_common::$components_monovalue` lists the models that keep an array
-  but only ever read `[0]`.)
+  (several names, several links). Even a conceptually single-valued component
+  stores `[item]` — an array of one — never the scalar itself.
 - **Multilingual.** A translatable component interleaves one item *per language*
   in the same flat array; the `lang` key tells them apart.
 - **Stable addressing.** The `id` gives every item a permanent identity, so
@@ -62,8 +60,10 @@ The consolidated v7 envelope is `{ id, lang?, <payload> }`. The shape of the
 
 ### Literal "value-property" items
 
-The models in `component_common::$components_using_value_property` carry their
-payload under an explicit **`value`** key:
+The eight models declaring `importValueProperty: true`
+(`src/core/components/types.ts`, checked through `usesImportValueProperty(model)`
+in `src/core/components/registry.ts`) carry their payload under an explicit
+**`value`** key:
 
 ```json
 { "id": 1, "lang": "lg-eng", "value": "Hello world" }
@@ -74,13 +74,6 @@ component_email · component_filter_records · component_info ·
 component_input_text · component_json · component_number ·
 component_password · component_text_area
 ```
-
-Source: `component_common::$components_using_value_property`
-(`core/component_common/class.component_common.php`). The TS server does not
-yet carry a direct port of this registry — see the "TS status" note in the
-[data model overview](index.md) for how callers there
-(`resolveComponentValue()`, `src/core/resolve/component_data.ts`) treat the
-shape today.
 
 For these models `value` is a **scalar** (string or number), except
 `component_json`, whose `value` is whatever JSON was stored.
@@ -140,14 +133,9 @@ no `value` key. The locator minimally is:
 ```
 
 A translatable relation also carries `lang`; an `id` is **optional** and is used
-for dataframe pairing and ordering.
-
-Source: `component_relation_common` class header
-(`core/component_relation_common/class.component_relation_common.php`):
-*"Each locator object minimally has `{ section_tipo, section_id, type,
-from_component_tipo }`. Translatable relation components also carry a `lang`
-key. `id` is an optional stable item id used for dataframe pairing and
-ordering."*
+for dataframe pairing and ordering. `section_tipo` and `section_id` are the
+mandatory core of every locator; everything else is optional and
+relation-flavour specific (`src/core/concepts/locator.ts`).
 
 ### Summary of the envelope
 
@@ -176,48 +164,21 @@ ordering."*
 
 ### Minting
 
-When `component_common::set_data($data)` runs, each item lacking a valid id is
-given one. "Valid id" is exactly:
-
-```php
-$has_id = property_exists($element, 'id') && $element->id !== null && $element->id !== '';
-```
-
-Items without one go through `set_data_item_counter()`, which calls
-`section_record::allocate_component_ids($tipo, 1)`. Allocation is **atomic**: a
-PostgreSQL session advisory lock keyed by
-`table_section-tipo_section-id_tipo` guards a re-read of the persisted counter
-in `meta->$tipo->0->count`, takes `max(persisted, in_memory)`, persists the new
-counter immediately, and returns the freshly allocated range. The counter lives
-in the [`meta` column](../sections/index.md).
-
-The TS server keeps the same counter law (never-recycled, raised to
-`max(persisted, incoming)`) but mints without an explicit advisory lock:
-`allocateComponentItemId()` (`src/core/db/matrix_write.ts`) does the increment
-as one `UPDATE … RETURNING`, relying on Postgres's row-level lock to serialize
-concurrent callers instead. See the "TS re-implementation" note in the
-[data model overview](index.md) for the full comparison.
+Whenever a component's data is saved, each item lacking a valid id (present,
+non-null, non-empty) is given one. Allocation is **atomic**:
+`allocateComponentItemId()` (`src/core/db/matrix_write.ts`) does the
+increment as one `UPDATE … SET meta = jsonb_set(…, count + 1) RETURNING`,
+relying on Postgres's own row-level lock to serialize concurrent callers —
+two allocations against the same row can never observe the same
+pre-increment count. The counter lives in the [`meta` column](../sections/index.md).
 
 ### Absorbing explicit ids (imports, migrations, restores)
 
 Items that already carry an `id` (from an import, a migration, or restored data)
-keep it. `set_data()` collects every incoming id and raises the counter to their
-maximum:
-
-```php
-if (!empty($ar_id)) {
-    $max_id = max($ar_id);
-    if ($this->get_counter() < $max_id) {
-        $section_record->raise_component_counter($this->tipo, $max_id);
-    }
-}
-```
-
-Because ids are never recycled, dataframe `id_key` pairings and Time Machine
-references stay valid across edits and reorderings. The TS equivalent is
-`absorbComponentItemIds()` (`src/core/db/matrix_write.ts`), which raises the
-`meta` counter to `GREATEST(persisted, incoming max)` — the same "never lower,
-only raise" rule.
+keep it. `absorbComponentItemIds()` (`src/core/db/matrix_write.ts`) collects
+every incoming id and raises the counter to `GREATEST(persisted, incoming max)`
+— **never lowers it**. Because ids are never recycled, dataframe `id_key`
+pairings and Time Machine references stay valid across edits and reorderings.
 
 ---
 
@@ -232,23 +193,15 @@ Translation is governed by the component flag
   (`DEDALO_DATA_NOLAN`). `component_date` and `component_geolocation`, for
   example, always store `lg-nolan`.
 - **Translatable**: the array holds one logical position **per language**, all
-  interleaved in the same flat array. `get_data_lang($lang)` filters by
-  `el->lang === $lang`:
+  interleaved in the same flat array. `filterItemsByLang(items, lang)`
+  (`src/core/resolve/component_data.ts`) narrows it to the items whose `lang`
+  matches.
 
-  ```php
-  return (isset($el->lang) && $el->lang === $safe_lang);
-  ```
-
-`get_id_from_key()` / `get_key_from_id()` bridge the flat
-`[{id,lang,value}]` array and the per-language array positions (grouping by
-`lang`, then indexing by key position) — this is how the same logical value
-shares one `id` across all its language variants.
-
-The TS server carries the same class-level/ontology split as
-`descriptor.classSupportsTranslation` on each model's descriptor (e.g.
-`component_input_text/descriptor.ts` sets `classSupportsTranslation: true`),
-consumed by `resolveComponentValue()` (`src/core/resolve/component_data.ts`,
-`filterItemsByLang()`) to decide whether to lang-filter a component's items.
+This split is driven by `descriptor.classSupportsTranslation` on each model's
+descriptor (e.g. `component_input_text/descriptor.ts` sets
+`classSupportsTranslation: true`), consumed by `resolveComponentValue()`
+(`src/core/resolve/component_data.ts`) to decide whether to lang-filter a
+component's items.
 
 ```json
 [
@@ -260,9 +213,8 @@ consumed by `resolveComponentValue()` (`src/core/resolve/component_data.ts`,
 
 !!! note "Same `id`, different `lang`"
     The three rows above are the *same* logical value in three languages, so
-    they share `id: 1`. Inserting a translation reuses the id resolved from the
-    other languages at the same key position
-    (`update_data_value` → `get_id_from_key`).
+    they share `id: 1`. Inserting a translation for an existing value reuses
+    that value's `id` — the update targets the existing item, not a new one.
 
 ---
 
@@ -270,11 +222,10 @@ consumed by `resolveComponentValue()` (`src/core/resolve/component_data.ts`,
 
 A value item never floats free: it lives inside a **typed JSONB column** of the
 record's `matrix` row, and inside that column it is one of an **array keyed by
-component tipo**. Which column depends on the component model, resolved in PHP
-through `section_record_data::$column_map` (`get_column_name($model)`), not
-hardcoded per component. The TS server resolves the same routing through
-`getColumnNameByModel(model)` (`src/core/ontology/resolver.ts`), which reads
-the `column` field off each model's descriptor in the component registry
+component tipo**. Which column a component writes into is not hardcoded per
+component — it is resolved through `getColumnNameByModel(model)`
+(`src/core/ontology/resolver.ts`), which reads the `column` field off each
+model's descriptor in the component registry
 (`src/core/components/registry.ts`). See
 [Sections — typed-column storage](../sections/index.md) for the full table.
 
@@ -347,50 +298,28 @@ depends on the component family:
 
 ---
 
-## 7. Raw `data` vs. resolved `value` (server class)
+## 7. Raw `data` vs. resolved `value`
 
-There is no single "value item" PHP class; the envelope is a plain `stdClass`.
-The relevant API lives on `component_common`
-(`core/component_common/class.component_common.php`). Two distinct notions:
+Two distinct notions:
 
-- **Raw stored data** — the array of value items exactly as persisted, returned
-  by `get_data()` (the component-level accessor over the section record's typed
-  column). `get_data_lang($lang)` filters that array by language. The unguarded
-  internal copy used for save-time diffing is `get_data_unchanged()`. Raw data
-  for a relation is the **locator** — it is *not* dereferenced.
+- **Raw stored data** — the array of value items exactly as persisted,
+  returned by `readComponentItems(record, tipo, model)`
+  (`src/core/resolve/component_data.ts`). `resolveComponentValue()` /
+  `filterItemsByLang()` narrow that array by language. Raw data for a relation
+  is the **locator** — it is *not* dereferenced.
 
-  ```php
-  $data = $component->get_data();        // [ {id, lang?, value|…|locator}, … ]
-  $data = $component->get_data_lang('lg-eng');
-  ```
+- **Resolved value** — the flattened display string, built by
+  `resolveCellValue()` (`src/core/resolve/relation_list.ts`), which dispatches
+  on each model's declared `flatValue` family (`getFlatValueFamily`,
+  `src/core/components/registry.ts`) — `string`, `datalist`, `date`, `iri`,
+  `media` or `section_id`. For relations this **dereferences** each locator
+  into its label; the raw item read never does. The export path
+  (`src/diffusion/export/atoms.ts`) builds the same flattened strings for
+  tabular export.
 
-- **Resolved value** — `get_value()` returns the **flattened display string**,
-  delegating to the atoms export contract:
-
-  ```php
-  public function get_value() : ?string {
-      return $this->get_export_value()->to_flat_string();
-  }
-  ```
-
-  For relations this **dereferences** each locator into its label; raw
-  `get_data()` never does. `get_grid_value()` is the client visual-cell adapter
-  over the same atoms.
-
-!!! note "On the v6 term *dato*"
-    Older (v6) code called the raw value *`dato`* and accessed it via
-    `get_dato()`. **v7 uses `data`** — the accessor is `get_data()`; there is no
-    `get_dato()` on `component_common`. A few class-header comments still read
-    "GET DATO" as legacy prose, but the live method is `get_data()`.
-
-!!! info "TS status"
-    The TS read pipeline's equivalent of raw `get_data()` /
-    `get_data_lang($lang)` is `readComponentItems()` /
-    `resolveComponentValue()` (`src/core/resolve/component_data.ts`) — same raw
-    array, relation items still un-dereferenced. The resolved-value / atoms
-    export contract (`get_value()`, `get_export_value()`) is not broadly
-    ported yet; see `rewrite/STATUS.md` and the exporting-data docs for its
-    current state.
+!!! note "Terminology: `data`"
+    v7 uses the term **`data`** throughout for the raw stored value — never the
+    older *`dato`* term.
 
 ---
 
@@ -420,9 +349,9 @@ two properties, `context` (the structure/ontology) and `data` (the value). See
 `datum.data.value` is the **array of value items** — the same `{id, lang?,
 value|locator}` envelopes the server stores. In the JS component instance this
 array becomes `self.data.entries`
-(`core/component_common/js/component_common.js`): `get_value()` returns
-`this.data.entries`, and `update_data_value()` resolves the item to edit by
-matching `entry.id === changed_id` — id-keyed, never index-keyed:
+(`client/dedalo/core/component_common/js/component_common.js`): the getter
+returns `this.data.entries`, and applying a change resolves the item to edit
+by matching `entry.id === changed_id` — id-keyed, never index-keyed:
 
 ```javascript
 const idx = self.data.entries?.findIndex(entry => entry?.id === changed_id)
@@ -435,9 +364,7 @@ const idx = self.data.entries?.findIndex(entry => entry?.id === changed_id)
 ## 9. The `changed_data` shape sent on save
 
 Edits travel back to the server as a **`changed_data`** array of change objects.
-Each object is processed by `component_common::update_data_value()`
-(`core/component_common/class.component_common.php`), dispatched on `action`.
-The TS server re-implements this same dispatch in
+Each object is dispatched on `action` by
 `src/core/section/record/save_component.ts` — `insert`, `update`, `remove`,
 `set_data`, `sort_data`, `sort_by_column` and `add_new_element` are ported
 (`applyUpdate()` / `applySortData()` / `applySortByColumn()` /

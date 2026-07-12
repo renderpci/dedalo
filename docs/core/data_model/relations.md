@@ -120,22 +120,12 @@ component tipo**, each value being that component's array of locators:
 
 This is why one record can carry many distinct relation components without
 collision: each component owns the array under its own tipo key. A component
-reads its slice through the section record:
-
-```php
-// core/section_record/class.section_record.php
-// get_component_data('oh25', 'relation') returns the array of locators
-// stored under key 'oh25' inside the 'relation' JSONB column.
-$locators = $section_record->get_component_data('oh24', 'relation'); // array under key "oh24"
-```
-
-The TS server reads the same slice via `readComponentItems(record, 'oh24',
-'component_select')` (`src/core/resolve/component_data.ts`), where the model's
-descriptor declares `column: 'relation'` (e.g.
-`component_select/descriptor.ts`) instead of a shared `$column_map`. The
+reads its slice via `readComponentItems(record, 'oh24', 'component_select')`
+(`src/core/resolve/component_data.ts`) — the array stored under key `oh24`
+inside the `relation` JSONB column — where the model's descriptor declares
+`column: 'relation'` (e.g. `component_select/descriptor.ts`). The
 relation-specific engines that consume it — expansion, inverse resolution,
-dataframe `id_key` pairing — live in `src/core/relations/`; see the
-`dedalo-relations-ts` skill and `engineering/RELATIONS_SPEC.md` for that layer.
+dataframe `id_key` pairing — live in `src/core/relations/`.
 
 A record-create / column-save payload addresses it the same way (column →
 component-tipo → value array):
@@ -155,53 +145,21 @@ component-tipo → value array):
 
 ---
 
-## 4. The section-owned `relations` array
+## 4. Relation writes go through the partitioned column directly
 
-Separately from the per-component `relation` column, each section carries **one
-flat `relations` container** inside its `datos`. It aggregates every locator of
-the record into a single shared bag, so the *section* (not each component) owns
-the relation list. The API lives on `section`
-(`core/section/class.section.php`):
+There is a single representation of a record's relation data: the
+partitioned **`relation` column**, keyed by component tipo (§3). There is no
+separate aggregated bag holding every locator of a record in one flat array —
+each write reads and writes its own component's slice directly.
 
-| method | what it does |
-| --- | --- |
-| `get_relations( $container = 'relations' )` | Returns the record's locator array. Empty when the record does not exist yet. |
-| `add_relation( $locator, $container )` | Appends a locator. Requires `$locator->type`; strips the transient `paginated_key`; de-dupes via `locator::in_array_locator()`. **Mutates in memory only** — the caller must `Save()`. |
-| `remove_relation( $locator, $container )` | Removes by comparing the identifying locator properties. |
-| `remove_relations_from_component_tipo( $options )` | Bulk-removes every locator originating from a given component tipo (dataframe matches via the unified `id_key` contract). |
-
-```php
-// core/section/class.section.php  (validation guards in add_relation)
-//  - $locator must be a non-empty object
-//  - $locator->type must be set (e.g. DEDALO_RELATION_TYPE_FILTER)
-//  - paginated_key is unset before storing (transient UI property)
-//  - duplicates rejected via locator::in_array_locator()
-//  - side effect: mutates $this->dato; does NOT call save()
-$section->add_relation( $loc );
-$section->Save(); // caller must persist
-```
-
-Related components delegate to these methods; that delegation is what keeps the
-single shared `relations` array authoritative. A component then *slices its own
-subset* out of the bag by matching `from_component_tipo` (and `section_tipo`).
-
-!!! info "Two views of the same data"
-    The per-component **`relation` column** (keyed by component tipo) and the
-    record-wide **`relations` array** are two representations of the same
-    relation data: the column is partitioned for storage/indexing, the array is
-    the single aggregated bag the section owns.
-
-!!! info "TS status"
-    The TS server does not carry a section-level `add_relation()` /
-    `remove_relation()` aggregation object; the relations engine
-    (`src/core/relations/`) and the save chokepoint
-    (`src/core/section/record/save_component.ts`) read/write each component's
-    own partitioned slice of the `relation` column directly via `MatrixRecord`.
-    The validation/dedup primitives PHP runs inside `add_relation()` — locator
-    shape, `paginated_key` stripping, membership dedup
-    (`locator::in_array_locator`) — are ported as standalone functions on the
-    locator value object in `src/core/concepts/locator.ts`, called at the
-    point of use instead of through a shared section API.
+The write chokepoint is `src/core/section/record/save_component.ts` /
+`src/core/relations/save.ts`, which every related component's insert/update/
+remove goes through. Insert-time validation and dedup — requiring a
+`type`, and rejecting a locator that already matches an existing one — are
+standalone functions over the locator value object
+(`src/core/concepts/locator.ts`, e.g. its comparison/dedup helpers) and
+`validateRelationInsert()` (`src/core/relations/save.ts`), called at the
+point of use rather than through a shared aggregation object.
 
 ---
 
@@ -209,31 +167,21 @@ subset* out of the bag by matching `from_component_tipo` (and `section_tipo`).
 
 Locators are stored only on the **pointing (forward)** side: the record that
 *points at* another holds the locator. The inverse question — *"who points at
-me?"* — is **computed**, not stored, on the work side:
+me?"* — is **computed**, not stored: `findInverseReferences()` /
+`findInverseReferenceLocators()` (`src/core/search/search_related.ts`) scan
+the matrix tables and return descriptors carrying `from_component_tipo`,
+`from_section_tipo`, `from_section_id` and the pairing key (`id_key`). This
+drives:
 
-```php
-// core/section_record/class.section_record.php
-$inverse = $section_record->get_inverse_references();
-//  → search_related::get_referenced_locators([ {section_tipo, section_id} ])
-```
-
-`search_related::get_referenced_locators()`
-(`core/search/class.search_related.php`) scans the matrix tables and returns
-descriptors carrying `from_component_tipo`, `from_section_tipo`,
-`from_section_id` and the pairing key (`id_key`). The TS server ports this scan
-as `findInverseReferences()` / `findInverseReferenceLocators()`
-(`src/core/search/search_related.ts`). This drives:
-
-- **Referential integrity on delete** — `remove_all_inverse_references()` removes
-  every forward locator that points at a record being deleted, so no stale
-  references remain (only `component_relation_common` subclasses and
-  `component_dataframe` are handled; dataframe pairing uses `id_key` only).
+- **Referential integrity on delete** — `removeAllInverseReferences()`
+  (`src/core/section/record/delete_record.ts`) removes every forward locator
+  that points at a record being deleted, so no stale references remain.
 - **The inverse view** — [`relation_list`](../ontology/relation_list.md) renders
   the backlinks as a grouped, paginated grid ("who points at this record").
 
 On the **diffusion** side this materialises as a published column,
-**`dd_relations`** (refactored from the v6 `jer_dd_relations` by
-`v6_to_v7::refactor_jer_dd_relations`). The publication API's
+**`dd_relations`** (refactored from the v6 `jer_dd_relations` column during
+the v6→v7 migration). The publication API's
 `resolve_inverse_relations` option resolves it; an unresolved entry looks like:
 
 ```json
@@ -256,30 +204,29 @@ for `resolve_inverse_relations`.
 
 ## 6. Relation `type` values
 
-The `type` field is a real ontology tipo (not a label). The constants live in
-`core/base/dd_tipos.php`:
+The `type` field is a real ontology tipo (not a label):
 
-| constant | tipo | meaning |
-| --- | --- | --- |
-| `DEDALO_RELATION_TYPE_LINK` | `dd151` | generic portal / select link |
-| `DEDALO_RELATION_TYPE_PARENT_TIPO` | `dd47` | hierarchy parent |
-| `DEDALO_RELATION_TYPE_CHILDREN_TIPO` | `dd48` | hierarchy child |
-| `DEDALO_RELATION_TYPE_RELATED_TIPO` | `dd89` | related record |
-| `DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO` | `dd620` | related, unidirectional |
-| `DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO` | `dd467` | related, bidirectional |
-| `DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO` | `dd621` | related, multidirectional |
-| `DEDALO_RELATION_TYPE_MODEL_TIPO` | `dd98` | model |
-| `DEDALO_RELATION_TYPE_INDEX_TIPO` | `dd96` | index / indexation |
-| `DEDALO_RELATION_TYPE_FILTER` | `dd675` | project / access filter |
-| `DEDALO_RELATION_TYPE_ONTOLOGY` | `dd77` | ontology |
-| `DEDALO_RELATION_TYPE_DATAFRAME` | `dd490` | positive marker of dataframe-pairing locators |
+| tipo | meaning |
+| --- | --- |
+| `dd151` | generic portal / select link |
+| `dd47` | hierarchy parent |
+| `dd48` | hierarchy child |
+| `dd89` | related record |
+| `dd620` | related, unidirectional |
+| `dd467` | related, bidirectional |
+| `dd621` | related, multidirectional |
+| `dd98` | model |
+| `dd96` | index / indexation |
+| `dd675` | project / access filter |
+| `dd77` | ontology |
+| `dd490` | positive marker of dataframe-pairing locators |
 
 Conceptually the locator type space is *link / external link / parent / child /
 related / model* (the "external link" is the external-source variant of a link).
-A component's effective `type` is initialised in
-`component_relation_common::__construct` from
-`properties->config_relation->relation_type`, falling back to each subclass's
-`default_relation_type`.
+A component's effective `type` comes from its own descriptor's
+`defaultRelationType` field (`src/core/components/types.ts`), overridden per
+tipo by `properties.config_relation.relation_type` when set
+(`getRelationTypeByTipo()`, `src/core/relations/save.ts`).
 
 ---
 
@@ -288,16 +235,12 @@ A component's effective `type` is initialised in
 Plain relation data only records the exact target a record points at. For
 **hierarchical / cross-parent search** that is not enough: searching for *Spain*
 should also match a record linked to *Madrid*. To make that work, the
-hierarchical-search component (legacy model `component_autocomplete_hi`)
-denormalizes its ancestor chain into the auxiliary **`relation_search`** JSONB
-column on save:
-
-```php
-// core/component_relation_common/class.component_relation_common.php
-// get_relations_search_value(): for each stored locator, walk
-// component_relation_parent::get_parents_recursive() and emit one locator per
-// ancestor, tagged with this component's tipo and relation_type.
-```
+hierarchical-search component (legacy model `component_autocomplete_hi`,
+normalized to `component_portal` on read) denormalizes its ancestor chain
+into the auxiliary **`relation_search`** JSONB column on save:
+`maintainRelationSearchIndex()` (`src/core/relations/save.ts`) walks each
+stored locator's ancestor chain and emits one entry per ancestor, tagged with
+this component's tipo and relation type.
 
 The emitted ancestor locators carry `section_tipo`, `section_id`,
 `from_component_tipo` (the searching component) and `type`, so a search that hits
@@ -327,38 +270,27 @@ Every related component reads and writes relation data; their differences are in
 | [`component_filter`](../components/component_filter.md) | filter locators (`dd675`) | project / access filtering |
 
 The selectable option list (datalist / autocomplete) for these components is a
-separate concern resolved through
-[`relation_list`](../ontology/relation_list.md) /
-`component_common::get_list_of_values()` — see
+separate concern, resolved through
+[`relation_list`](../ontology/relation_list.md) and `getDatalist()`
+(`src/core/relations/datalist.ts`) — see
 [Components → related components](../components/index.md#related-components).
 
 ---
 
-## 9. Server classes
+## 9. Where relation behaviour lives
 
-| class | file | role |
-| --- | --- | --- |
-| `locator` | `core/common/class.locator.php` | the value object (extends `stdClass`); validators, comparison/dedup helpers, flat form |
-| `section` | `core/section/class.section.php` | owns the `relations` array: `get_relations` / `add_relation` / `remove_relation` / `remove_relations_from_component_tipo` |
-| `section_record` | `core/section_record/class.section_record.php` | reads the `relation` column (`get_component_data($tipo,'relation')`); computes inverse refs; `remove_all_inverse_references()` |
-| `component_relation_common` | `core/component_relation_common/class.component_relation_common.php` | base of related components; initialises `type`; `get_relations_search_value()` for `relation_search` |
-| `search_related` | `core/search/class.search_related.php` | `get_referenced_locators()` — the inverse-reference engine |
-| `relation_list` | `core/relation_list/class.relation_list.php` | renders the inverse (backlink) grid; diffusion `dd_relations` adapter |
+Relation behaviour is a set of horizontal engine modules, not classes:
 
-The TS re-expression of this table (module, not class, per the horizontal-engine
-design — see [Components → data model](index.md)):
+| Module | Role |
+| --- | --- |
+| `src/core/concepts/locator.ts` | the locator value shape (zod schema) + dedup/comparison helpers |
+| `src/core/resolve/component_data.ts` | reads a component's slice of the `relation` column |
+| `src/core/relations/relation_core.ts` + the per-model resolvers in `src/core/relations/models/` (dispatched via `src/core/relations/registry.ts`, `descriptor.resolveData`) | shared relation-row-emission engine + per-model particularities |
+| `src/core/search/search_related.ts` | `findInverseReferences()` / `findInverseReferenceLocators()` — the inverse-reference engine |
+| `src/core/resolve/relation_list.ts` | the inverse (backlink) view |
+| `src/core/section/record/delete_record.ts` | `removeAllInverseReferences()` — referential integrity on delete |
 
-| PHP class | TS module | role |
-| --- | --- | --- |
-| `locator` | `src/core/concepts/locator.ts` | the locator value shape (zod schema) + `in_array_locator`-equivalent dedup/comparison helpers |
-| `section` (`add_relation`/`remove_relation`) | *(not ported as an object)* | validation/dedup folded into the locator helpers above, called at the point of use (relations engine, save chokepoint) |
-| `section_record` (`get_component_data`, inverse refs) | `src/core/resolve/component_data.ts` (reads) + `src/core/search/search_related.ts` (inverse) | same split, as pure functions over `MatrixRecord` |
-| `component_relation_common` | `src/core/relations/relation_core.ts` + the per-model resolvers in `src/core/relations/models/` (dispatched via `src/core/relations/registry.ts`, `descriptor.resolveData`) | shared relation-row-emission engine + per-model particularities |
-| `search_related` | `src/core/search/search_related.ts` | `findInverseReferences()` / `findInverseReferenceLocators()` |
-| `relation_list` | `src/core/resolve/relation_list.ts` | the inverse (backlink) view |
-
-See the `dedalo-relations-ts` skill and `engineering/RELATIONS_SPEC.md` for the full
-engine map.
+See the `dedalo-relations-ts` skill for the full engine map.
 
 ---
 
@@ -374,16 +306,16 @@ the values).
   entry carrying a transient `paginated_key`, accompanied by `parent_tipo`,
   `parent_section_id` and `pagination`.
 - In JavaScript the component instance holds it as **`self.data.entries`** — the
-  array of locator objects. `update_data_value()` / `change_value()`
-  (in `component_common.js`) mutate this array before save; on save the locator's
+  array of locator objects, mutated in place before save; on save the locator's
   `from_component_tipo` is forced to the owning component's own tipo.
 - The **displayed strings** of the linked records are *not* in the locator. They
-  arrive as **subdata**: the controller resolves each target via
-  `get_subdatum()` and appends the target components' datums, merging context
-  with `common::merge_unique_context()`.
+  arrive as **subdata**: the read pipeline (`readSection()`,
+  `src/core/section/read.ts`) resolves each target and appends the target
+  components' datums, deduplicating context entries by `context_key`
+  (tipo + section + mode, first occurrence wins).
 
 ```javascript
-// component_common.js (shape)
+// client/dedalo/core/component_common/js/component_common.js (shape)
 self.data.entries = [
     { section_tipo: "rsc197", section_id: "88", from_component_tipo: "oh24", type: "dd151" }
     // ...
@@ -406,37 +338,36 @@ To turn a locator into a displayed value:
    exact main-component item (`section_id_key` / `section_tipo_key` are retired —
    read only by the old-CSV import and v6→v7 update).
 
-Helpers on `locator` support resolution and dedup: `get_term_id_from_locator`
-(`{section_tipo}_{section_id}`, e.g. `es1_185`), `lang_to_locator`
-(lang code → languages-section locator), `compare_locators` /
-`in_array_locator` / `build_locator_lookup_key` (hash-key dedup), and
-`get_std_class` (strip class identity for JSON/cache). See
-[Locator → helpers](../locator.md) for the full list.
+Helper functions in `src/core/concepts/locator.ts` support resolution and
+dedup: `getTermIdFromLocator()` (`{section_tipo}_{section_id}`, e.g.
+`es1_185`), `compareLocators()`, `isLocatorInArray()` and
+`buildLocatorLookupKey()` (hash-key dedup). See [Locator → helpers](../locator.md)
+for the full list.
 
 ---
 
 ## 12. v7 consolidation / evolution
 
-- **One bag, owned by the section.** v7 makes the record-wide `relations` array
-  authoritative and routes every related component through `section`'s
-  `get_relations` / `add_relation` / `remove_relation`, instead of each component
-  keeping its own list. The per-component `relation` column is the partitioned
-  storage view of that single bag.
+- **One partitioned column, no separate bag.** Every related component's
+  locators live in its own slice of the `relation` column, keyed by component
+  tipo — there is no separate aggregated array of every relation on a record;
+  a caller that needs "all relations of this record" reads across the
+  column's keys.
 - **Unified dataframe pairing.** `id_key` is the single pairing contract for
-  dataframe locators (and the `dd490` `DEDALO_RELATION_TYPE_DATAFRAME` positive
-  marker) — including the relation sibling-order, which is itself an `id_key`
-  dataframe. The legacy `section_id_key` / `section_tipo_key` are **@deprecated**,
-  read only by the old-CSV import and v6→v7 update.
+  dataframe locators (and `dd490` is the positive marker of a
+  dataframe-pairing locator) — including the relation sibling-order, which is
+  itself an `id_key` dataframe. The legacy `section_id_key` / `section_tipo_key`
+  are retired, read only by old-CSV import and the v6→v7 update path.
 - **Source-side `from_*` over the v6 anchors.** `from_section_tipo` /
   `from_section_id` replace the deprecated `section_top_tipo` /
   `section_top_id` hierarchical anchors.
 - **`dd_relations` on the diffusion side** replaces the v6 `jer_dd_relations`
-  (migrated by `v6_to_v7::refactor_jer_dd_relations`) and is resolved on demand
-  by the publication API's `resolve_inverse_relations`.
-- **Inverse is computed, not stored** on the work side
-  (`search_related::get_referenced_locators`), so there is no inverse table to
-  keep in sync; `relation_search` is the only denormalized copy, and it is
-  rebuilt from the forward locators on save.
+  column (migrated during the v6→v7 upgrade) and is resolved on demand by
+  the publication API's `resolve_inverse_relations`.
+- **Inverse is computed, not stored.** `findInverseReferences()`
+  (`src/core/search/search_related.ts`) computes backlinks on demand, so
+  there is no inverse table to keep in sync; `relation_search` is the only
+  denormalized copy, and it is rebuilt from the forward locators on save.
 
 ---
 

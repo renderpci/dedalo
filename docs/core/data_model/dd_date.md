@@ -11,107 +11,90 @@ editing component (views, properties, import/export, search UI) see
 
 ## 1. What it is and why it exists
 
-The DATE value in Dédalo is modelled by **`dd_date`**
-(`core/common/class.dd_date.php`), a **locale-aware, timestamp-free value
-object**. It is the normalized representation of every calendar value the system
-stores.
+The DATE value stored in the `date` column is a **locale-aware,
+timestamp-free** object: the normalized representation of every calendar
+value the system stores.
 
-It exists because PHP's native `DateTime` and Unix timestamps **cannot**
-represent the dates a cultural-heritage / archaeological database routinely needs:
+It exists because an absolute epoch offset (a Unix timestamp) cannot
+represent the dates a cultural-heritage / archaeological database routinely
+needs:
 
 - **BCE dates** — a Unix timestamp has no notion of "44 BCE".
 - **Very large CE years** — beyond the representable integer range.
 - **Partial dates** — a bare year (`1930`), or year + month (`2022-04`), with no
   day, hour or finer field.
 
-Instead of an absolute epoch offset, `dd_date` stores **each calendar field as a
-plain nullable integer** and supplies its **own arithmetic** for sorting and
-serialization. Any field may be `null` (unspecified); nothing forces a complete
+Instead of an absolute epoch offset, a DATE value stores **each calendar
+field as a plain nullable integer**, plus its own ordinal `time` field for
+sorting. Any field may be absent (unspecified); nothing forces a complete
 date.
 
 !!! info "One data object, six date modes"
-    `dd_date` itself has **no** calendar/era field and **no** type/period field.
-    Whether a value is a single date, a range, a period (duration) or a clock
-    time is decided entirely by **which container key wraps the object**
-    (`start` / `end` / `period`) and by the producing component's `date_mode`
-    property — never by a flag on `dd_date`. See
+    The DATE object itself carries **no** calendar/era field and **no**
+    type/period field. Whether a value is a single date, a range, a period
+    (duration) or a clock time is decided entirely by **which container key
+    wraps the object** (`start` / `end` / `period`) and by the producing
+    component's `date_mode` property. See
     [§4 Components that produce it](#4-components-that-produce-it).
 
-!!! info "TS status"
-    There is no ported `dd_date` class in the TS server — this page documents
-    the PHP oracle the stored shape must stay byte-compatible with. The
-    virtual-calendar arithmetic (`year × 372 + month × 31 + day` days, in
-    seconds) is re-implemented ad hoc at each concrete use site that needs it
-    today: `virtualDateNow()` for the `dd197`/`dd201` audit stamps
+!!! warning "TS coverage today: partial"
+    The virtual-calendar arithmetic (`year × 372 + month × 31 + day` days, in
+    seconds) is implemented at the specific call sites that need it:
+    `virtualDateNow()` for the `dd197`/`dd201` audit stamps
     (`src/core/section/record/create_record.ts`), the Time Machine `dd559`
-    timestamp (`src/core/tm_record/tm_record.ts`,
-    `src/core/db/time_machine.ts`), and media `file_time`
-    (`src/core/media/files_info.ts`). The search side covers only numeric
-    `start.time` comparisons for the default `date` mode
-    (`src/core/search/builders/builder_date.ts`) — full `dd_date` parsing of
-    partial dates, ranges, `period`/`time` modes, and the save-time `time`
-    recompute (`add_time()`) for a general `component_date` field are **not**
-    yet ported; see `rewrite/STATUS.md` before relying on TS-side date search or
-    save validation beyond these call sites.
+    timestamp (`src/core/tm_record/tm_record.ts`, `src/core/db/time_machine.ts`),
+    media `file_time` (`src/core/media/files_info.ts`), and search
+    (`convertDateToSeconds()`, `src/core/search/builders/builder_date.ts`).
+    Search covers only numeric `start.time` comparisons for the default
+    `date` mode — the `range`/`period`/`time`/`time_range`/`date_time` modes
+    are not yet covered there. A general `component_date` field's `time` is
+    **not** recomputed server-side on save today (see the warning in
+    [§2](#2-canonical-json-shape)); it is stored exactly as the client sends
+    it. Full parsing of `dmy`/`mdy`/BCE-signed CSV input is likewise not yet
+    implemented server-side.
 
 ---
 
 ## 2. Canonical JSON shape
 
-`dd_date` implements `JsonSerializable`. `jsonSerialize()` calls
-`get_object_vars()`, **unsets `errors`**, then `array_filter`s out every `null`
-field. The result is a **sparse map of only the non-null fields**:
-
-```php
-public function jsonSerialize() : mixed {
-    $vars = get_object_vars($this);
-    unset($vars['errors']);              // internal validation artifact, never serialized
-    return array_filter($vars, fn($val) => $val !== null);
-}
-```
-
-So a year-only date serializes to exactly `{"year":1930}` — absent fields simply
-do not appear.
+Only the fields that carry a value are present — absent fields simply do not
+appear in the JSON. A year-only date is stored as exactly `{"year":1930}`.
 
 ### All fields
 
-These are the fields a `dd_date` can carry. **Public** fields serialize as
-plain keys; **private** fields are reached through getters/setters and only
-appear in JSON when they were set.
+These are the fields a DATE object can carry:
 
-| Key | Visibility | Type | Range | Notes |
-| --- | --- | --- | --- | --- |
-| `day` | public | `?int` | 1–31 | validated against month length / leap year by `check_day()` |
-| `month` | public | `?int` | 1–12 | |
-| `year` | public | `?int` | any integer | **negative = BCE** (e.g. `-44` = 44 BCE); no range constraint |
-| `hour` | public | `?int` | 0–23 | |
-| `minute` | public | `?int` | 0–59 | |
-| `second` | public | `?int` | 0–59 | |
-| `time` | public | `?int` | — | **monotonic sort value in seconds**, *not* a Unix timestamp (see [§ The `time` sort value](#the-time-sort-value)) |
-| `ms` | private | `?int` | 0–999 | milliseconds; serialized as the key `ms` when set (the component docs label this field "millisecond") |
-| `op` | private | `?string` | `>` `<` `>=` `<=` `=` | comparison operator, used **only during search**; absent on stored values |
-| `timestamp` | private | `?string` | — | raw round-trip string preserved verbatim (`set_timestamp()`); not derived |
-| `errors` | private | `array` | — | validation errors — **always stripped** from serialization |
+| Key | Type | Range | Notes |
+| --- | --- | --- | --- |
+| `day` | `?int` | 1–31 | |
+| `month` | `?int` | 1–12 | |
+| `year` | `?int` | any integer | **negative = BCE** (e.g. `-44` = 44 BCE); no range constraint |
+| `hour` | `?int` | 0–23 | |
+| `minute` | `?int` | 0–59 | |
+| `second` | `?int` | 0–59 | |
+| `time` | `?int` | — | **monotonic sort value in seconds**, *not* a Unix timestamp — the virtual-calendar ordinal (see [§ The `time` sort value](#the-time-sort-value)) |
+| `ms` | `?int` | 0–999 | milliseconds |
+| `op` | `?string` | `>` `<` `>=` `<=` `=` | comparison operator, used **only during search**; absent on stored values |
+| `timestamp` | `?string` | — | raw round-trip string, preserved verbatim, not derived |
 
-!!! warning "`time` is server-authoritative, never author it by hand"
-    `time` is the absolute-seconds ordinal produced by
-    `dd_date::convert_date_to_seconds()`. On every `component_date::save()` it is
-    recomputed and injected into each container (`add_time()` /
-    `build_dd_date_with_time()`); an incoming `time` that diverges from the
-    recalculated one is logged as a WARNING and the **calculated** value wins.
-    Supply only year/month/day/hour/minute/second.
+!!! warning "`time` is meant to be server-authoritative — currently only true at specific call sites"
+    `time` is the virtual-calendar ordinal (seconds), computed by
+    `virtualDateNow()` (`src/core/section/record/create_record.ts`) for the
+    audit-stamp fields it owns, and by the Time Machine / media call sites
+    listed in [§1](#1-what-it-is-and-why-it-exists). For a **general**
+    `component_date` field, the TS write path does not currently recompute
+    `time` on save — whatever the client sends is stored as-is. Do not rely
+    on server-side recomputation for a general date field today; supply a
+    correct `time` from the client if the stored value must be search-ordered
+    correctly.
 
-### Static configuration
+### Virtual-calendar constants
 
-`dd_date` carries class-level constants used by the formatters and the
-sort-seconds arithmetic (they are not part of any value):
-
-| Static | Value | Purpose |
-| --- | --- | --- |
-| `$separator` | `'/'` | date-component separator for formatted output |
-| `$time_separator` | `':'` | clock-component separator |
-| `$virtual_year_days` | `372` (= 31 × 12) | days per *virtual* year in the sort-seconds model |
-| `$virtual_month_days` | `31` | days per *virtual* month in the sort-seconds model |
+The sort-seconds arithmetic uses a **virtual** calendar: a year is 372 days
+(31 × 12), a month is 31 days. These constants are reused wherever the
+ordinal is computed — `virtualDateNow()`
+(`src/core/section/record/create_record.ts`) and `convertDateToSeconds()`
+(`src/core/search/builders/builder_date.ts`).
 
 ---
 
@@ -121,11 +104,10 @@ The DATE data object lives in the matrix **`date` typed JSONB column**.
 
 As described in [Sections — typed-column storage](../sections/index.md#storage-detail-the-data-column-is-split-into-typed-jsonb-columns),
 the single conceptual record `data` payload is physically split across typed
-JSONB columns so PostgreSQL can index each shape. In PHP,
-`section_record_data::$column_map` routes the `component_date` model to the
-`date` column; the TS server resolves the same routing through
-`getColumnNameByModel('component_date')` (`src/core/ontology/resolver.ts`),
-which reads `column: 'date'` off `component_date/descriptor.ts`.
+JSONB columns so PostgreSQL can index each shape. Routing to the `date`
+column is resolved through `getColumnNameByModel('component_date')`
+(`src/core/ontology/resolver.ts`), which reads `column: 'date'` off
+`component_date/descriptor.ts`.
 
 Inside that column, the value is **keyed by the component's ontology `tipo`**,
 and `component_date` is non-translatable, so the language key is always
@@ -146,23 +128,25 @@ and `component_date` is non-translatable, so the language key is always
 - the value is an **array** of *record items*; each item holds one or more
   containers (`start` / `end` / `period`) whose values are `dd_date` shapes.
 
-Ordering uses the `time` ordinal: `component_date::get_order_path()` sorts by the
-JSONB `start->time` path. The **only** exception is the Time Machine timestamp
-component (tipo `dd559`, `DEDALO_TIME_MACHINE_COLUMN_TIMESTAMP`), which is special
--cased to order by the literal `timestamp` SQL column instead of a JSONB path.
+Ordering is meant to use the `time` ordinal (the JSONB `start.time` path).
+The one exception is the Time Machine timestamp field (tipo `dd559`,
+`TM_COLUMN_TIMESTAMP`, `src/core/tm_record/tm_record.ts`): it is derived from
+the literal SQL `timestamp` column, not a JSONB path
+(`ddDateFromTimestamp()`).
 
 ---
 
 ## 4. Components that produce it
 
 The DATE data object is produced and consumed exclusively by
-**[component_date](../components/component_date.md)** (`core/component_date/class.component_date.php`),
-a literal-direct, non-translatable component.
+**[component_date](../components/component_date.md)**
+(`src/core/components/component_date/descriptor.ts`), a literal-direct,
+non-translatable component.
 
-`component_date` does **not** store a `dd_date` as the unit of data. It stores an
-**array of plain record objects**; the `start` / `end` / `period` values inside
-those records are what become `dd_date` instances (re-hydrated with
-`new dd_date($container)` wherever the component needs to format, sort or search).
+`component_date` does not store a single DATE value as the unit of data. It
+stores an **array of plain record objects**; the `start` / `end` / `period`
+keys inside those records each hold a DATE object of the shape documented
+above.
 
 The ontology property **`date_mode`** (default `'date'`) selects which containers
 and fields a record uses:
@@ -176,73 +160,29 @@ and fields a record uses:
 | `time_range` | `start`, `end` | clock fields only |
 | `date_time` | `start` | full year → second |
 
-Key integration points on `component_date`:
-
-- `save()` → `add_time()` injects/recomputes `time` per container (client `time`
-  is never trusted).
-- `data_item_to_value()`, `get_list_value()`, `get_export_value()` render a
-  record to text per `date_mode`.
-- `get_diffusion_value()` emits a MySQL-style `Y-m-d H:i:s` string.
-- `conform_import_data()` parses CSV/JSON into the array form (handling
-  `ymd`/`dmy`/`mdy` order, `<>` ranges, `|` multi-value and BCE signs).
-- `get_order_path()` orders by `start->time` (or the literal `timestamp` column
-  for `dd559`).
+Rendering a record to text, per `date_mode`, is covered for the `date` and
+`range` modes by `resolveCellValue()`'s `date` family
+(`src/core/resolve/relation_list.ts` — see [§7](#7-examples) for the exact
+output shapes); the `period`/`time`/`time_range`/`date_time` modes are not
+yet covered there.
 
 ---
 
-## 5. Server class
+## 5. The `time` sort value
 
-`dd_date` is the server class (`core/common/class.dd_date.php`) — a concrete,
-final value object (nothing extends it) that implements `JsonSerializable`.
-
-Construction hydrates from a plain object, dispatching each key to its
-`set_<key>()` method (the `format` key is skipped):
-
-```php
-$dd_date = new dd_date( (object)[ 'year' => -44, 'month' => 3, 'day' => 15 ] );
-echo json_encode($dd_date);          // {"day":15,"month":3,"year":-44}
-echo $dd_date->get_dd_timestamp();   // -0044-03-15 00:00:00
-```
-
-### Validation
-
-Setters log a **WARNING** on out-of-range values but still store them. With
-`$constrain = true` (strict parse mode) they instead push to `errors` and return
-`false`. After hydration the constructor runs `check_day()`, which validates the
-day against the month — including leap-year logic (`year % 4 / 100 / 400`), so
-`day = 30` in February or `day = 31` in April is rejected. Inspect
-`get_errors()` to learn whether an instance is valid.
-
-### The `time` sort value
-
-`convert_date_to_seconds()` builds an **ordinal** (in seconds) using *virtual*
-units — a year is 372 days (31 × 12), a month is 31 days — and decrements
-month/day by 1 so the epoch (year 0, month 1, day 1) maps to `0`. This makes
-"January 1 of year N" and "year N alone" sort **identically**, so partial dates
-order correctly beside full ones. It handles negative (BCE) years.
+`time` is an **ordinal**, in seconds, built from *virtual* calendar units — a
+year is 372 days (31 × 12), a month is 31 days — decrementing month/day by 1
+so the epoch (year 0, month 1, day 1) maps to `0`. This makes "January 1 of
+year N" and "year N alone" sort **identically**, so partial dates order
+correctly beside full ones, and it handles negative (BCE) years.
+`convertDateToSeconds()` (`src/core/search/builders/builder_date.ts`) and
+`virtualDateNow()` (`src/core/section/record/create_record.ts`) both build
+this ordinal.
 
 !!! danger "`time` is not reversible"
-    `time` is an ordinal *position*, **not** an absolute wall-clock time. It must
-    **never** be fed to PHP's `date()` / `DateTime`. For genuine in-range
-    interop, `get_unix_timestamp()` / `get_dd_date_from_unix_timestamp()` exist —
-    but those carry all the usual Unix-epoch limitations and break for BCE / very
-    large years. Use `convert_date_to_seconds()` for cross-era arithmetic.
-
-### BCE and partial-date formatting
-
-`get_dd_timestamp()` is Dédalo's own formatter: it performs a **plain string
-substitution** over the `Y m d H i s u` placeholders rather than calling PHP's
-`date()`, so negative years and out-of-Unix-range years format correctly. Bare
-years can be emitted unpadded (`get_dd_timestamp('Y', $padding=false)`).
-
-### Search range expansion
-
-`component_date::get_final_search_range_seconds()` widens a partial-date query
-into an inclusive upper bound: it advances the least-significant set field by one
-and subtracts 1 second (searching `2000` matches everything up to
-`start-of-2001 − 1s`); for clock time it fills finer fields to their maxima
-(`:59`, `:59:59`). The `op` field on `dd_date` carries the comparison operator
-during this search use. See the [search subsystem](../components/component_date.md#import-export-model).
+    `time` is an ordinal *position*, **not** an absolute wall-clock time. Do
+    not feed it to a standard date/time formatter — it is not a Unix
+    timestamp and will not decode as one.
 
 ---
 
@@ -262,24 +202,26 @@ the component is non-translatable, the data slot is keyed by `lg-nolan`:
 }
 ```
 
-The client model (`core/component_date/js/component_date.js`) treats a `dd_date`
-as a plain object carrying any subset of
+The client model (`client/dedalo/core/component_date/js/component_date.js`)
+treats a DATE value as a plain object carrying any subset of
 `{ year, month, day, hour, minute, second, millisecond, time }`, wrapped by the
 container that matches `date_mode`:
 
 ```javascript
 // shapes the client builds / consumes, per date_mode
-date / date_time   →  { start: dd_date }
-range              →  { start: dd_date, end: dd_date }
-time / time_range  →  { start: dd_date [, end: dd_date] }
+date / date_time   →  { start: date }
+range              →  { start: date, end: date }
+time / time_range  →  { start: date [, end: date] }
 period             →  { period: { year, month, day } }
 ```
 
-The client **never** authors `time` (it is recomputed server-side on save) and
-reads the display order (`dmy` / `ymd` / `mdy`) from the global
-`page_globals.dedalo_date_order`, not from a per-component property. Parsing,
-formatting and the flatpickr editor all live in the JS model; mismatched fields
-are flagged rather than silently coerced.
+The client's own date parsing/editing never sets `time` — it reads the
+display order (`dmy` / `ymd` / `mdy`) from the global
+`page_globals.dedalo_date_order`, not from a per-component property.
+Parsing, formatting and the flatpickr editor all live in the JS model;
+mismatched fields are flagged rather than silently coerced. See the warning
+in [§2](#2-canonical-json-shape) for who is currently responsible for
+supplying `time` on a general field.
 
 ---
 
@@ -299,8 +241,8 @@ stored in the `date` column.
 ]
 ```
 
-**Partial date (year + month only)** — `time` is server-computed on save, so a
-partial item simply omits the finer fields:
+**Partial date (year + month only)** — a partial item simply omits the finer
+fields:
 
 ```json
 [ { "start": { "month":4, "year":2022 } } ]
@@ -335,44 +277,41 @@ counts, not an absolute date):
 ]
 ```
 
-How these resolve to text (`data_item_to_value()`), per mode:
+How these resolve to a flat display string (`resolveCellValue()`'s `date`
+family, `src/core/resolve/relation_list.ts`) — currently covers the `date`
+and `range` modes only:
 
 ```text
-range        →  "2012/11/07 <> 2012/12/08"
-year+month   →  "2022/04"                    (Y/m, zero-padded)
-BCE year     →  "-205"                        (bare year, padding disabled)
-period       →  "3 years 2 months 15 days"   (localized labels)
-time         →  "17:33:49"
+full day+month+year  →  "07-11-2012"                 (d-m-Y)
+range                →  "07-11-2012 <> 08-12-2012"    (start <> end)
+year only, or
+year+month (no day)  →  "2012"                        (falls back to bare year)
+BCE year              →  "-205"
 ```
 
-!!! note "Graceful degradation of partial dates"
-    Rendering follows the fields that are present: `Y/m/d` → `Y/m` → `Y`
-    (padding disabled for bare years). A range is rendered `start <> end`; a
-    period as *"N years N months N days"* via localized labels.
+!!! info "Period and clock-time modes not yet covered"
+    `resolveCellValue()`'s `date` family reads only `year`/`month`/`day` on
+    `start`/`end`; the `period` and `time`/`time_range`/`date_time` modes are
+    not yet formatted through this path.
 
 ---
 
 ## 8. v7 consolidation / evolution
 
-- **Single source of truth for the type.** `dd_date` is the one normalized
-  representation of every calendar value; `component_date` builds on it rather
-  than re-implementing date logic, and other subsystems (search, export,
-  diffusion, Time Machine) reuse the same object.
-- **`JsonSerializable` sparse output.** Emitting only non-null fields keeps the
-  `date` column compact and makes partial dates first-class — there is no "empty
-  day = 0" noise to interpret on read.
-- **Server-authoritative `time`.** `time` is recomputed on every save and never
-  trusted from the client, so the range-search index stays consistent regardless
-  of what a client sent. Treat `time` as derived, not as input.
-- **Timestamp-free by design.** The deliberate break from PHP `DateTime` /
-  Unix timestamps is what lets Dédalo store BCE, far-future and partial dates
-  uniformly; the Unix-interop helpers remain only for in-range convenience and
-  carry explicit limitations.
+- **Single source of truth for the shape.** One normalized DATE object shape
+  is used everywhere a calendar value is stored — sections, Time Machine
+  timestamps, media file dates — instead of per-subsystem date formats.
+- **Sparse output.** Emitting only the fields that carry a value keeps the
+  `date` column compact and makes partial dates first-class — there is no
+  "empty day = 0" noise to interpret on read.
+- **Timestamp-free by design.** The deliberate break from Unix-timestamp
+  representations is what lets Dédalo store BCE, far-future and partial dates
+  uniformly.
 
 ---
 
 ## See also
 
-- [component_date](../components/component_date.md) — the component that edits, validates, imports/exports and searches this value.
+- [component_date](../components/component_date.md) — the component that edits and searches this value (see this page for what search and display coverage exists today).
 - [Sections — typed-column storage](../sections/index.md#storage-detail-the-data-column-is-split-into-typed-jsonb-columns) — where the `date` column sits among the typed JSONB columns.
 - [Components index](../components/index.md) — the component typology and the datum `context` / `data` layers.
