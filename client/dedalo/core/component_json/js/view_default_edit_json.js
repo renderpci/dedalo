@@ -195,7 +195,7 @@ const preload_editor_module = () => {
 	if (editor_module_cache || editor_module_loading) return;
 
 	editor_module_loading = true;
-	import('../../../lib/jsoneditor/dist/standalone.js')
+	import('../../../lib/jsoneditor/standalone.js')
 		.then(module => {
 			if (module && typeof module.createJSONEditor === 'function') {
 				editor_module_cache = module;
@@ -306,7 +306,7 @@ const get_content_value = (key, current_value, self) => {
 
 			try {
 				// Use cached module or load on demand
-				const module = editor_module_cache || await import('../../../lib/jsoneditor/dist/standalone.js');
+				const module = editor_module_cache || await import('../../../lib/jsoneditor/standalone.js');
 				if (!module || typeof module.createJSONEditor !== 'function') {
 					throw new Error('createJSONEditor not found in module');
 				}

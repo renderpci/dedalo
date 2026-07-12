@@ -10,7 +10,7 @@
 
 	// hljs
 	import hljs from '../../../../../lib/highlightjs/es/core.min.js';
-	import json from '../../../../../lib/highlightjs/es/languages/json.js';
+	import json from '../../../../../lib/highlightjs/es/languages/json.min.js';
 	hljs.registerLanguage('json', json);
 
 

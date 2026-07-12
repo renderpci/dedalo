@@ -16,7 +16,7 @@
 * - Supports reverse-relation discovery (records that *point to* the current
 *   record) through an optional `relation_list_tipo` configured on the section;
 *   batch-loaded in pages of INVERSE_BATCH via `fetch_inverse_relations`.
-* - Uses D3 v7 (UMD bundle at `lib/d3/d3-7.9.0`). The bundle populates
+* - Uses D3 v7 (UMD bundle at `lib/d3`). The bundle populates
 *   `globalThis.d3` rather than named ESM exports, so it is loaded via a
 *   dynamic `import()` and read from `globalThis.d3` immediately after.
 * - Provides a toolbar with a "back to form" button and a hint label.
@@ -388,7 +388,7 @@ const build_graph = async function(self, graph_canvas, node_detail) {
 		if (self.node) {
 			self.node.classList.add('loading')
 		}
-		await import('../../../lib/d3/d3-7.9.0/dist/d3.min.js')
+		await import('../../../lib/d3/dist/d3.min.js')
 		const d3 = globalThis.d3
 		if (self.node) {
 			self.node.classList.remove('loading')

@@ -28,7 +28,7 @@
 *     value: <canonical|flat-raw|null> }`.
 *  4. `build_totals_charts` renders the item whose `widget_id === 'totals'`.
 *
-* D3 is loaded lazily from `/lib/d3/d3-7.9.0/dist/d3.min.js` and cached on
+* D3 is loaded lazily from `/lib/d3/dist/d3.min.js` and cached on
 * `window.__dedalo_d3` so the bundle is not fetched more than once per page
 * session (shared with the area-dashboard chart).
 *
@@ -75,7 +75,7 @@ const load_d3 = async function() {
 	const base = (typeof DEDALO_ROOT_WEB !== 'undefined' && DEDALO_ROOT_WEB)
 		? DEDALO_ROOT_WEB
 		: ''
-	const url = base + '/lib/d3/d3-7.9.0/dist/d3.min.js'
+	const url = base + '/lib/d3/dist/d3.min.js'
 
 	try {
 		const mod = await import(url)

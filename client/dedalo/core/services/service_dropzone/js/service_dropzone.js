@@ -144,10 +144,10 @@ service_dropzone.prototype.init = async function(options) {
 		// resolves because it depends on the global `Dropzone` constructor.
 		const load_promises = []
 
-		const lib_js_file = DEDALO_ROOT_WEB + '/lib/dropzone/dropzone-min.js'
+		const lib_js_file = DEDALO_ROOT_WEB + '/lib/dropzone/dist/min/dropzone.min.js'
 		load_promises.push( load_script(lib_js_file) )
 
-		const lib_css_file = DEDALO_ROOT_WEB + '/lib/dropzone/dropzone.css'
+		const lib_css_file = DEDALO_ROOT_WEB + '/lib/dropzone/dist/min/dropzone.min.css'
 		load_promises.push( load_style(lib_css_file) )
 
 		await Promise.all(load_promises).then(async function(response){

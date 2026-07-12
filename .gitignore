@@ -6,7 +6,14 @@ node_modules/
 
 # Never commit secrets (config lives in ../private/, outside the repo)
 .env
-client/dedalo/lib/
+
+# Client libraries (src/core/client_libs/registry.ts is the index of record).
+# Most come from `bun install`; vendor/ IS committed (ckeditor/svgedit/json-view —
+# no package manager can supply them). These two are materialised at install time
+# by scripts/fetch_client_libs.ts (the postinstall hook) and must never be
+# committed: vendor/pdfjs is Mozilla's release, .cache/ is its download cache.
+vendor/pdfjs/
+.cache/
 
 # Agent tooling. `.agents/` is the real home (skills + workflows ARE versioned);
 # `.claude` is a committed symlink alias to it, so Claude Code keeps working.

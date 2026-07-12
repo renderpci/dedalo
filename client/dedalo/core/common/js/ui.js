@@ -17,7 +17,7 @@
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
-	import '../../../lib/codex-tooltip/tooltip.js';
+	import '../../../lib/codex-tooltip/dist/tooltip.js';
 
 
 

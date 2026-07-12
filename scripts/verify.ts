@@ -50,6 +50,7 @@ const TRIPWIRES = [
 	'test/unit/import_scc_tripwire.test.ts',
 	'test/unit/ws_a_tripwires.test.ts',
 	'test/unit/client_serving.test.ts',
+	'test/unit/client_libs_tripwire.test.ts',
 	'test/unit/mcp_write_scope_tripwire.test.ts',
 	'test/unit/agent_egress_tripwire.test.ts',
 	'test/unit/matrix_copy_columns_tripwire.test.ts',
