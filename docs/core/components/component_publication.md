@@ -51,19 +51,19 @@
 ```
 
 !!! note "Typology"
-    `component_publication` is a **related** component. It extends the abstract base `component_relation_common` (`core/component_relation_common/class.component_relation_common.php`), which extends `component_common`. It stores no literal value of its own: its data is an array of [locator](../locator.md) objects pointing at the shared yes/no section. It is **never translatable** — the constructor forces `lang = DEDALO_DATA_NOLAN` unconditionally, and the context is always emitted with `translatable: false`.
+    `component_publication` is a **related** component. Like every relation-column model, it is declared as a descriptor over the shared relations engine rather than a class in an inheritance tree. It stores no literal value of its own: its data is an array of [locator](../locator.md) objects pointing at the shared yes/no section. It is **never translatable** — its descriptor declares no `classSupportsTranslation`, so it is always instantiated with `lang = lg-nolan`, and the context is always emitted with `translatable: false`.
 
 !!! info "About `default_tools`"
-    The list above is what the model sample (`samples/context.json`) carries in `context.tools`: `tool_propagate_component_data` and `tool_time_machine`. Because the component is non-translatable, it never receives `tool_lang` / `tool_lang_multi`. The toolbar is assembled from the model + ontology; the component class does not hardcode it.
+    The list above is what the model sample (`samples/context.json`) carries in `context.tools`: `tool_propagate_component_data` and `tool_time_machine`. Because the component is non-translatable, it never receives `tool_lang` / `tool_lang_multi`. The toolbar is assembled from the model + ontology; it is not hardcoded in the descriptor.
 
-!!! info "TS server implementation"
-    The descriptor `src/core/components/component_publication/descriptor.ts` registers `resolveData: selectFamilyResolver` (`src/core/relations/models/select_family.ts`), the same resolver shared by `component_select` / `component_select_lang` / `component_radio_button` / `component_check_box` / `component_relation_model`. `list`/`edit`/`search` modes resolve the yes/no datalist and label through `src/core/relations/datalist.ts`; other modes take the shared portal engine. See the *dedalo-relations-ts* skill. **Gap:** the diffusion-side `is_publishable()` gate this component drives (`diffusion_utils::is_publishable()` in PHP) has no confirmed TS port in this checkout — verify against the *dedalo-diffusion* skill / `rewrite/STATUS.md` before relying on publication-gated diffusion behaviour.
+!!! info "Server implementation"
+    The descriptor `src/core/components/component_publication/descriptor.ts` registers `resolveData: selectFamilyResolver` (`src/core/relations/models/select_family.ts`), the same resolver shared by `component_select` / `component_select_lang` / `component_radio_button` / `component_check_box` / `component_relation_model`. `list`/`edit`/`search` modes resolve the yes/no datalist and label through `src/core/relations/datalist.ts`; other modes take the shared portal engine. The diffusion-side publication gate this component drives is implemented natively in `src/diffusion/resolve/resolver.ts` (its publication-gate logic: a section's `component_publication` locator must resolve to `dd64`/*yes*; a section with no `component_publication` is always publishable; the resolution priority is ontology `is_publishable` override, then inherited `publishable_overrides`, then this live locator check; any gate error fails closed to *unpublish*). See the *dedalo-relations-ts* skill.
 
 ## Definition
 
 `component_publication` is the **publication switch** of a record: a simple binary yes/no toggle that marks whether a record should be published to external systems. Instead of storing a literal boolean, it stores a [locator](../locator.md) pointing at the shared **yes/no section** (`DEDALO_SECTION_SI_NO_TIPO = 'dd64'`), where `section_id = 1` is *yes* (`NUMERICAL_MATRIX_VALUE_YES`) and `section_id = 2` is *no* (`NUMERICAL_MATRIX_VALUE_NO`). An empty value (no locator) is the undecided / default state.
 
-**Why it exists.** A cultural-heritage catalogue almost always distinguishes the *internal* working dataset from what is exposed to the public — a museum portal, an open-data endpoint, an RDF / SQL diffusion target. `component_publication` is the per-record gate for that distinction. The diffusion engine reads it directly: `diffusion_utils::is_publishable()` locates the section's `component_publication`, resolves its locator, and only treats the record as publishable when the locator points at *yes* in section `dd64`. A section with **no** `component_publication` is considered publishable (the switch is opt-out, not opt-in).
+**Why it exists.** A cultural-heritage catalogue almost always distinguishes the *internal* working dataset from what is exposed to the public — a museum portal, an open-data endpoint, an RDF / SQL diffusion target. `component_publication` is the per-record gate for that distinction. The diffusion engine's publication gate reads it directly: it locates the section's `component_publication`, resolves its locator, and only treats the record as publishable when the locator points at *yes* in section `dd64`. A section with **no** `component_publication` is considered publishable (the switch is opt-out, not opt-in).
 
 **When to use it.**
 
@@ -80,7 +80,7 @@
 
 **Data:** `array of locators`. The array is normally zero or one locator long (the switch is binary), but the storage shape is the standard related-component array.
 
-**Value:** `array of locators`, or `null`. Unlike literal components, the displayed value is not a local string; the *yes/no* label is resolved from the target section's `get_list_of_values()` (the datalist) and matched against the stored `section_id`.
+**Value:** `array of locators`, or `null`. Unlike literal components, the displayed value is not a local string; the *yes/no* label is resolved from the target section's option list (the datalist) and matched against the stored `section_id`.
 
 **Storage shape.** A component never touches the database; it reads and writes through its section, which persists related-component locators in its matrix **`relation`** column as a JSONB map keyed by component tipo. The section also aggregates every locator across the record into a global `relations` container; the component slices out its own subset by matching `from_component_tipo` against its own `tipo`.
 
@@ -120,16 +120,16 @@ Undecided / default — no locator stored at all:
 
 Locator fields:
 
-- `type` — the relation-type tipo. Defaults to `$default_relation_type = DEDALO_RELATION_TYPE_LINK = 'dd151'` (the generic link type), injected by `validate_data_element()`.
+- `type` — the relation-type tipo. Defaults to the descriptor's `defaultRelationType` (`dd151`, the generic link type), injected by the relations engine when a locator is normalised on save.
 - `section_tipo` — always the yes/no section `dd64` (`DEDALO_SECTION_SI_NO_TIPO`).
 - `section_id` — `"1"` for *yes*, `"2"` for *no*.
-- `from_component_tipo` — forced to the owning component's own `tipo` by `validate_data_element()` (it clones the locator first to protect observers). This is the property the section and `relation_list` use to slice this component's locators out of the global `relations` bag.
+- `from_component_tipo` — forced to the owning component's own `tipo` when the relations engine normalises the locator on save (it clones the locator first, so observers still see the value they were handed). This is the property the section and the relation-list resolution use to slice this component's locators out of the global `relations` bag.
 - `id` — the per-item counter id (paired with the changed-data entry on save).
 
 !!! note "Datum vs. API `entries`"
     The transmitted unit is a `{context, data}` datum (the JSON-API contract). In the API payload (`samples/api_data.json`) the locator items are surfaced under `data.entries`, alongside `from_component_tipo` and a `datalist` of the selectable yes/no options. `context` carries the description (`tipo`, `model`, `mode`, `lang`, `label`, `properties`, `permissions`, `tools`, `view`) and never the values. See the *dedalo-context-data-layers* skill for the full layering rules.
 
-Duplicate detection on save uses `$test_equal_properties = ['section_tipo','section_id','type','from_component_tipo']`: two locators agreeing on all four are de-duped.
+Duplicate detection on save compares locators on `['section_tipo','section_id','type','from_component_tipo']` (`compareLocators()`, `src/core/concepts/locator.ts`): two locators agreeing on all four are de-duped.
 
 ## Ontology instantiation
 
@@ -160,19 +160,19 @@ Realistic `properties` block. The component is typically used with empty `proper
 }
 ```
 
-`section_tipo` / `parent` tell the section which `relation` column owns this component's locators. On `save()` the component resolves `get_my_section_record()` and the section is the single writer to the database; the locator array is persisted into the section's `relation` column and aggregated into the global `relations` container.
+`section_tipo` / `parent` tell the section which `relation` column owns this component's locators. On save the component hands its locator array to the owning section record, which is the single writer to the database; the locators are persisted into the section's `relation` column and aggregated into the global `relations` container.
 
 !!! info "Target section is fixed"
-    Unlike a free [component_portal](component_portal.md), a publication switch always targets the yes/no section `dd64`. The selectable options (`yes` / `no`) come from that section's `get_list_of_values()`; the client renders them as a single on/off switch (edit) or as radio options (search).
+    Unlike a free [component_portal](component_portal.md), a publication switch always targets the yes/no section `dd64`. The selectable options (`yes` / `no`) are resolved from that section as the component's datalist; the client renders them as a single on/off switch (edit) or as radio options (search).
 
 ## Properties & options
 
-`component_publication` defines **no component-specific properties of its own** in the class. The class fixes its behaviour in code:
+`component_publication` defines **no component-specific properties of its own**. Its descriptor fixes its behaviour instead:
 
-- `$default_relation_type = DEDALO_RELATION_TYPE_LINK ('dd151')` — the relation type written into every locator. Not an ontology option.
-- `$test_equal_properties = ['section_tipo','section_id','type','from_component_tipo']` — duplicate-detection key. Not an ontology option.
-- `get_sortable()` returns `true` — the component can be used to sort records in list mode by publication status.
-- The constructor forces `lang = DEDALO_DATA_NOLAN`, so any translatability declared in the ontology is ignored.
+- `defaultRelationType: 'dd151'` — the relation type written into every locator. Not an ontology option.
+- A fixed duplicate-detection key (`section_tipo`, `section_id`, `type`, `from_component_tipo`). Not an ontology option.
+- The component can be used to sort records in list mode by publication status.
+- No `classSupportsTranslation` is declared, so any translatability declared in the ontology is ignored and the language is always `lg-nolan`.
 
 It still honours the generic context blocks carried into every component's `context` (these are **not** publication-specific):
 
@@ -184,10 +184,10 @@ It still honours the generic context blocks carried into every component's `cont
 ### request_config / source
 
 - **Values:** the standard related-component request-config object (`source.mode`, `request_config[].sqo`, `show`, `choose`, `ddo_map`).
-- **Effect:** drives `get_list_of_values()` — the resolution of the selectable yes/no options (the `datalist`) from the target section. In normal use this resolves to the two options of section `dd64`. Verify the exact shape in the ontology for any non-default deployment.
+- **Effect:** drives the datalist resolution (`getDatalist()`, `src/core/relations/datalist.ts`) — the selectable yes/no options fetched from the target section. In normal use this resolves to the two options of section `dd64`. Verify the exact shape in the ontology for any non-default deployment.
 
 !!! note "No bespoke flags"
-    There are no `mandatory`, `unique`, `with_lang_versions`, `dato_default` or similar publication-specific options in the class or controller. If a production ontology node carries any other key under `properties`, verify it in the ontology — it is generic context, not a `component_publication` feature.
+    There are no `mandatory`, `unique`, `with_lang_versions`, `dato_default` or similar publication-specific options. If a production ontology node carries any other key under `properties`, verify it in the ontology — it is generic context, not a `component_publication` feature.
 
 ## Render views & modes
 
@@ -204,16 +204,16 @@ Views are selected from `context.view` (default `default`) and dispatched by the
 Modes:
 
 - **edit** — interactive switch. Toggling the checkbox calls the unified `change_handler()`, which picks the *yes* (`section_id 1`) or *no* (`section_id 2`) locator from the `datalist`, builds a `changed_data` entry and **saves on every change** (`change_value({refresh:false})`); it then publishes `change_publication_value_<id_base>` on the event manager so dependent UI (for example a notes tag's state) can react. In read mode (`permissions===1`) the switch is replaced by the resolved label.
-- **list / tm** — read-only listing; the JS wires `tm` to the same renderer as `list`. The controller resolves the value via `get_list_value()`.
+- **list / tm** — read-only listing; the JS wires `tm` to the same renderer as `list`. The label shown in the cell comes from the shared relation-list value resolution (`getRelationListValue()`, `src/core/relations/datalist.ts`).
 - **search** — builds an SQO filter. Each yes/no option is a `radio` input; selecting one sets the filter locator (`from_component_tipo` injected = the component's own tipo), and **Alt-clicking** a selected option de-selects it (a "no value" filter, `action: 'remove'`). A `q_operator` text input is provided. Saves are blocked in search mode (the change handler publishes `change_search_element` instead of saving).
 
 DOM (edit / default): `wrapper_component component_publication <tipo> <mode>` -> `content_data.nowrap` -> one or more `content_value` -> `label.switcher_publication` -> `input[type=checkbox]` + `<i>` (the switch graphic).
 
 ## Import / export model
 
-`component_publication` inherits the related-component import/export contract from `component_relation_common`.
+`component_publication` follows the shared related-component import/export contract.
 
-**Import.** `conform_import_data()` (inherited) accepts the JSON locator format, the same as any related component. For a publication switch the meaningful locators point at `dd64` with `section_id` `1` (*yes*) or `2` (*no*):
+**Import.** The import conform step (`conformImportData()`, `src/core/tools/import_data.ts`) accepts the JSON locator format, the same as any related component. For a publication switch the meaningful locators point at `dd64` with `section_id` `1` (*yes*) or `2` (*no*):
 
 ```json
 [{"type":"dd151","section_id":"1","section_tipo":"dd64","from_component_tipo":"test92"}]
@@ -221,14 +221,14 @@ DOM (edit / default): `wrapper_component component_publication <tipo> <mode>` ->
 
 Because the target section is fixed to the yes/no section, the short numeric `section_id` sequence form (used by single-target [component_portal](component_portal.md)) can also apply — `1` selects *yes*, `2` selects *no*. See [importing data](../importing_data.md#related-data).
 
-**Export.** `get_export_value()` / `get_grid_value()` (inherited from `component_relation_common`) iterate the locators and resolve each against the target section per the `ddo_map`, emitting the resolved yes/no label. See [exporting data](../exporting_data.md).
+**Export.** The shared relation export path (the export atoms path, `src/diffusion/export/atoms.ts`) iterates the locators and resolves each against the target section per the `ddo_map`, emitting the resolved yes/no label. See [exporting data](../exporting_data.md).
 
 ## Notes
 
-- **Diffusion integration.** This is the component's primary consumer. `diffusion_utils::is_publishable($locator)` finds the section's `component_publication` (`section::get_ar_children_tipo_by_model_name_in_section(..., ['component_publication'], ...)`), instantiates it in `list` mode with `DEDALO_DATA_NOLAN`, and returns `true` only when the stored locator has `section_tipo === DEDALO_SECTION_SI_NO_TIPO ('dd64')` and `(int)section_id === NUMERICAL_MATRIX_VALUE_YES (1)`. A section **without** a `component_publication` is treated as publishable (early `true`, cached per record). See the *dedalo-diffusion* skill.
+- **Diffusion integration.** This is the component's primary consumer. The diffusion resolver's publication gate finds the section's `component_publication`, resolves its stored locator, and treats the record as publishable only when the locator's `section_tipo` is the yes/no section (`dd64`) and its `section_id` is *yes* (`1`). A section **without** a `component_publication` is treated as publishable.
 - **Observers / observables.** No subscriptions ship in the component JS. On every edit-mode change it publishes `change_publication_value_<id_base>` for any client listener; observer/observable wiring, when needed, is configured in the ontology `properties` like any other component (see the index page *Observers and observables* section).
-- **Sortable.** `get_sortable()` returns `true`, so records can be ordered by publication status in list views.
-- **Language-neutral.** The constructor hard-forces `lang = DEDALO_DATA_NOLAN`; the component is never translatable and never receives language tools.
+- **Sortable.** Records can be ordered by publication status in list views.
+- **Language-neutral.** The component is never translatable and never receives language tools.
 - **Default tools.** `tool_propagate_component_data` (propagate the same publication state to other records) and `tool_time_machine` (every switch toggle is a real save, recorded in Time Machine). Tools are read-only context.
-- **Permissions.** Resolved via `get_component_permissions()` (0 none / 1 read / 2 read+write / 3 admin). Read users (level 1) get the read-only label render; the interactive switch and saves require level >= 2.
+- **Permissions.** Resolved by the permissions engine (`getPermissions()`, `src/core/security/permissions.ts`; 0 none / 1 read / 2 read+write / 3 admin). Read users (level 1) get the read-only label render; the interactive switch and saves require level >= 2.
 - **Related components:** [component_radio_button](component_radio_button.md), [component_check_box](component_check_box.md), [component_select](component_select.md), [component_portal](component_portal.md), [component_relation_related](component_relation_related.md), [component_dataframe](component_dataframe.md).

@@ -1,14 +1,8 @@
 # Component model descriptors
 
-In the PHP server, every Dédalo component was a small concrete class that
-extended a shared base (`component_common` → `component_string_common` /
-`component_media_common` / `component_relation_common` → the concrete class); the
-bases held the logic and the concrete classes mostly added type-specific
-constants and a handful of overrides.
-
-The TS rewrite keeps the **concepts** but replaces the **mechanism**. There is no
-class-per-model inheritance tree anymore. Behaviour is now **horizontal**: it
-lives in shared engines (`src/core/resolve/`, `src/core/relations/`,
+Every component model is declared once, in one place. There is no
+class-per-model inheritance tree: behaviour is **horizontal**. It lives in
+shared engines (`src/core/resolve/`, `src/core/relations/`,
 `src/core/search/`, `src/core/section/`) that dispatch on the `model` string, and
 each model's per-model deltas live in one declarative **descriptor**. This
 document explains the descriptor, the engines that read it, the literal / media /
@@ -19,8 +13,7 @@ see the individual pages linked from the [components index](index.md).
 
 ## The resolution stack
 
-Where PHP had a four-layer class chain, the TS server has a descriptor read by a
-registry and consumed by horizontal engines:
+A descriptor is read by a registry and consumed by horizontal engines:
 
 ```text
 component_<model>/descriptor.ts     # what THIS model IS (small, declarative)
@@ -62,13 +55,12 @@ horizontal engines (dispatch on model)
 ```
 
 !!! note "Reading the diagram"
-    The old class layers survive only as **conventions in the descriptor**. A
-    string model sets `classSupportsTranslation: true`; a media model sets
-    `column: 'media'`; a related model sets `column: 'relation'` and names a
-    `resolveData` resolver. The two related models that in PHP extended a sibling
-    rather than the common base are just descriptors with their own resolver:
-    `component_filter_master` reuses the filter resolver and
-    `component_dataframe` reuses the portal resolver.
+    Each model family is a **convention in the descriptor**. A string model sets
+    `classSupportsTranslation: true`; a media model sets `column: 'media'`; a
+    related model sets `column: 'relation'` and names a `resolveData` resolver.
+    `component_filter_master` reuses the filter resolver and `component_dataframe`
+    reuses the portal resolver — each is just a descriptor pointing at its own
+    resolver.
 
 ---
 
@@ -78,7 +70,7 @@ horizontal engines (dispatch on model)
 **declarative**: it holds only the fields the engines actually read and links out
 (via file comments) to the modules that carry heavier behaviour. It must never
 grow inline logic, or it rots into a god-registry
-(`src/core/components/README.md`).
+(`src/core/components/README.md`, the per-model home layout and discipline).
 
 | Field | Meaning | Consumed by |
 | --- | --- | --- |
@@ -128,10 +120,9 @@ export const component_autocomplete: ComponentModel = {
 into `ALL_DESCRIPTORS` and builds a `model → descriptor` map. It runs a
 **load-time integrity check**: it throws at boot on a duplicate model, on an
 alias pointing at an unknown model, or on an alias whose target stores no data
-(no `column`). What used to be scattered runtime surprises is now a boot-time
-guarantee. `getComponentModel(model)` is the single accessor; equivalence against
-the old PHP lookup tables is pinned by
-`test/unit/component_registry.test.ts`.
+(no `column`). Coverage gaps surface as a boot-time failure instead of a runtime
+surprise. `getComponentModel(model)` is the single accessor; registry/table
+equivalence is pinned by `test/unit/component_registry.test.ts`.
 
 Adding a component model is: add its `component_<model>/descriptor.ts` and one
 array line here — **nothing else in the engines changes**.
@@ -140,8 +131,8 @@ array line here — **nothing else in the engines changes**.
 
 ## Layer 3 — the engines
 
-Three engine paths specialize the generic datum flow for the three families that
-in PHP had an intermediate base. They read the descriptor and dispatch; the
+Three engine paths specialize the generic datum flow for the three families —
+literal, media and relation. They read the descriptor and dispatch; the
 per-model particularities live in the linked-out modules, not in the descriptor.
 
 ### The literal / string path
@@ -153,20 +144,12 @@ item array stored under the component's `tipo`.
 The string family — `component_input_text`, `component_text_area`,
 `component_email`, `component_password` (all `column: 'string'`) and
 `component_iri` (`column: 'iri'`) — set `classSupportsTranslation: true`. That
-flag is the class gate: only these lang-filter their items on read (PHP
-`component_common::supports_translation`, deliberately independent of the ontology
-`translatable` flag). `resolveComponentValue()` implements the language **fallback
-chain** for them: requested lang → install main lang → `lg-nolan` → every other
-project lang, first non-empty wins (`component_iri` opts out of the fallback
-machinery and emits an empty array instead).
-
-!!! warning "String hardening / truncation not re-asserted in TS"
-    The PHP string base also carried stored-XSS `sanitize_text` (SEC-034) and the
-    `truncate_text` / `truncate_html` display helpers. The TS server's string
-    path currently ports the **language fallback** only; a dedicated stored-XSS
-    sanitize on the save path is not in evidence in `src/core/section/record/`.
-    Treat client-side rendering safety and truncation as not-yet-ported here
-    (verify against STATUS.md before relying on them server-side).
+flag is the class gate: only these lang-filter their items on read, deliberately
+independent of the ontology `translatable` flag. `resolveComponentValue()`
+implements the language **fallback chain** for them: requested lang → install
+main lang → `lg-nolan` → every other project lang, first non-empty wins
+(`component_iri` opts out of the fallback machinery and emits an empty array
+instead).
 
 Other literal models (`component_number` → `number`, `component_date` → `date`,
 `component_geolocation` → `geo`, `component_json` → `misc`,
@@ -185,9 +168,8 @@ live on disk. The media engine resolves them:
 - `resolve/media_list_value.ts` — `isMediaModel()` gates the media branch;
   `getMediaListValue()` projects the LIST-mode value (list qualities only).
 - `media/files_info.ts` `scanFilesInfo()` — live per-quality/extension file
-  discovery (PHP re-scanned the disk on every read; the stored copy is a cache,
-  which matters for `component_av`, whose derivatives finish transcoding
-  asynchronously).
+  discovery; the stored copy is a cache, which matters for `component_av`,
+  whose derivatives finish transcoding asynchronously.
 - `media/path.ts` — deterministic identifier/URL construction
   (`{component_tipo}_{section_tipo}_{section_id}` + quality bucket).
 - `section/read.ts` (`emitDdoData` media branch) attaches the mode-specific
@@ -195,10 +177,11 @@ live on disk. The media engine resolves them:
   `external_source` / `base_svg_url`, AV/3D carry `posterframe_url` (and AV its
   `subtitles` descriptor in edit mode).
 
-Access to the files is enforced fail-closed by the web server via
-`media_protection`; the auth-cookie and `.publication/` marker rules are
-maintained by the Bun `diffusion/api/v1/lib/media_index.ts` (see the
-media-protection skill / MEDIA_SPEC.md).
+Access to the files is enforced fail-closed by the web server through
+`src/core/media/protection.ts`: a fixed-name daily auth cookie plus a
+`.publication/` marker allowlist gate every media request, and
+`src/diffusion/targets/mediastore/media_index.ts` keeps the media index that
+protection reads in sync.
 
 ### The relation path
 
@@ -218,13 +201,14 @@ The resolvers live in `src/core/relations/models/`:
 | `relation_related.ts` | `component_relation_related` |
 
 The descriptor also carries the model's **search coverage**. Relation-column
-search dispatches through `relations/registry.ts`; a model whose PHP search is a
+search dispatches through `relations/registry.ts`; a model whose search is a
 dedicated, not-yet-ported pipeline is marked `search: { status: 'unported',
 reason }` and makes the search dispatcher **throw its ledgered reason** rather
 than silently mis-search. The most locator-relevant unported cases:
-`component_external` (`reason: 'remote external data is not searchable (no PHP
-trait)'`) and the relation_children search pipeline (see STATUS.md). The generic
-relation fragment builder is `search/builders/builder_relation.ts`.
+`component_external` (remote external data has no search implementation) and
+the `component_relation_children` search pipeline (multi-locator queries and
+the time-machine twin are both unported). The generic relation fragment
+builder is `search/builders/builder_relation.ts`.
 
 A relation resolver's distinctive logic is **not** in the descriptor — the
 descriptor points to it. `component_relation_parent` reuses `portalResolver` for
@@ -242,7 +226,7 @@ hierarchy/ancestor-walk/sibling-order behaviour lives in `relations/parent.ts` a
 - Saving flows through the section record
   (`src/core/section/record/save_component.ts`) — a component never touches the
   database directly; the section persists its column + counter. Server-side
-  observers recompute from `resolve/observers.ts` (partial, ledgered coverage).
+  observers recompute from `api/handlers/observers.ts` (partial, ledgered coverage).
 
 ---
 
@@ -271,8 +255,8 @@ Permission is an integer giving the access level for a component instance:
 | 2 | read and write |
 | 3 | read, write and admin |
 
-The per-element ACL derivation is not yet fully wired in the TS server (see
-[permissions in the index](index.md#permissions) and STATUS.md).
+The per-element ACL derivation is not yet fully wired: the current stamp is `3`
+for a global admin and `1` otherwise (see [permissions in the index](index.md#permissions)).
 
 ---
 

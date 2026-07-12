@@ -42,10 +42,10 @@
 ```
 
 !!! note "Typology"
-    `component_check_box` is a **related** component. It does not own literal data; it stores an array of [locator](../locator.md) objects pointing at records of a target *list-of-values* section. In server context it extends `component_relation_common` (`core/component_relation_common/class.component_relation_common.php`), which in turn extends `component_common`. It is **not translatable** (`lg-nolan`): the relation is language-independent and the displayed labels are resolved from the target term in the application language.
+    `component_check_box` is a **related** component. It does not own literal data; it stores an array of [locator](../locator.md) objects pointing at records of a target *list-of-values* section. It is **not translatable** (`lg-nolan`): the relation is language-independent and the displayed labels are resolved from the target term in the application language.
 
 !!! info "About `default_tools`"
-    The toolbar is assembled from the model + ontology, not hardcoded in the component class. The set above is what a typical related instance receives in `context.tools`. `component_check_box` is rendered with a fixed, closed option list, so it does not carry an autocomplete/search picker the way `component_portal` does; the inline reset/list buttons (see *Render views & modes*) are built by the render layer, not by tools.
+    The toolbar is assembled from the model + ontology, never hardcoded. The set above is what a typical related instance receives in `context.tools`. `component_check_box` is rendered with a fixed, closed option list, so it does not carry an autocomplete/search picker the way `component_portal` does; the inline reset/list buttons (see *Render views & modes*) are built by the render layer, not by tools.
 
 !!! info "TS server implementation"
     The descriptor `src/core/components/component_check_box/descriptor.ts` registers `resolveData: selectFamilyResolver` (`src/core/relations/models/select_family.ts`), shared with `component_select` / `component_select_lang` / `component_radio_button` / `component_publication` / `component_relation_model`. `list`/`edit`/`search` modes build the datalist / label strings through `src/core/relations/datalist.ts`; other modes fall through to the shared portal engine (`src/core/relations/models/portal.ts`). See the *dedalo-relations-ts* skill.
@@ -85,10 +85,10 @@
 }
 ```
 
-When the component is instantiated it gets its data from its section in `lg-nolan` (the relation has no language). On `validate_data_element()` (inherited), each incoming locator is normalized: `type` is injected from the component's relation type, `from_component_tipo` is forced to the component's own `tipo`, auto-references and malformed locators are rejected, and duplicates are de-duped using `$test_equal_properties = ['section_tipo','section_id','type','from_component_tipo']`.
+When the component is instantiated it gets its data from its section in `lg-nolan` (the relation has no language). On save, each incoming locator is normalized by the shared relation write engine (`src/core/relations/save.ts`): `type` is resolved from the component's relation type (`properties.config_relation.relation_type`, falling back to the descriptor's `defaultRelationType`), `from_component_tipo` is forced to the component's own `tipo`, auto-references and malformed locators are rejected, and duplicates are de-duped by equality on `section_tipo`, `section_id`, `type` and `from_component_tipo`.
 
 !!! note "Datum vs. API data"
-    The transmitted unit is a `{context, data}` datum. For this component `data` carries the selected locators as `entries`, the resolved option list as `datalist` (built by `get_datalist()`), plus `parent_tipo`, `parent_section_id`, `row_section_id` and, in search mode, `q_operator`. `context` carries the description (`tipo`, `model`, `mode`, `lang`, `label`, `properties`, `permissions`, `tools`, `view`, `fields_separator`, `target_sections`) and never the values. The `datalist` resolution is shared with `component_select` / `component_radio_button`; see the *dedalo-datalist-resolution* skill.
+    The transmitted unit is a `{context, data}` datum. For this component `data` carries the selected locators as `entries`, the resolved option list as `datalist` (built by `getDatalist()`, `src/core/relations/datalist.ts`), plus `parent_tipo`, `parent_section_id`, `row_section_id` and, in search mode, `q_operator`. `context` carries the description (`tipo`, `model`, `mode`, `lang`, `label`, `properties`, `permissions`, `tools`, `view`, `fields_separator`, `target_sections`) and never the values. The `datalist` resolution is shared with `component_select` / `component_radio_button`; see the *dedalo-datalist-resolution* skill.
 
 ## Ontology instantiation
 
@@ -135,16 +135,16 @@ Realistic `properties` block — a checkbox group that lists every term of a sma
 }
 ```
 
-`section_tipo` / `parent` tell the section which slice of the global `relations` bag belongs to this component; on `save()` the locators are written through `section_record` against the section's relations column (the section is the single writer to the database). The RQO under `source.request_config` is what `get_list_of_values()` runs to build the option list (`get_datalist()` wraps it), so the available checkboxes are entirely ontology-driven.
+`section_tipo` / `parent` tell the section which slice of the global `relations` bag belongs to this component; on save the locators are written through the section's record save path against the section's relations column (the section is the single writer to the database). The RQO under `source.request_config` is the query the datalist engine runs to build the option list, so the available checkboxes are entirely ontology-driven.
 
 ## Properties & options
 
-All properties are optional and live in the ontology node `properties` JSON. Verified names consumed by this component (and its base):
+All properties are optional and live in the ontology node `properties` JSON. Verified names consumed by this component:
 
 ### config_relation
 
 - **Values:** object with `relation_type` and (optionally) `relation_type_rel`.
-- **Effect:** sets the relation type written into every locator's `type`. Read in the `component_relation_common` constructor: `$this->relation_type = properties->config_relation->relation_type ?? $default_relation_type`. For `component_check_box` the subclass `$default_relation_type` is `DEDALO_RELATION_TYPE_LINK` = **`dd151`** (generic link). Override it to record a different semantic of the selection.
+- **Effect:** sets the relation type written into every locator's `type`. Resolved by the shared relation write engine (`src/core/relations/save.ts`) as `properties.config_relation.relation_type`, falling back to the component's descriptor default (`defaultRelationType`). For `component_check_box` the descriptor default is `DEDALO_RELATION_TYPE_LINK` = **`dd151`** (generic link). Override it to record a different semantic of the selection.
 
   | typology | tipo |
   |---|---|
@@ -166,12 +166,12 @@ All properties are optional and live in the ontology node `properties` JSON. Ver
 ### source / request_config
 
 - **Values:** an object (`source`) carrying a `request_config` (RQO), or a top-level `request_config`. `verify in ontology` for the exact shape per instance.
-- **Effect:** declares the **target list-of-values section** and how to resolve each option's label. `get_list_of_values()` runs this RQO to produce the option list; `get_datalist()` returns it as `{value:{section_id,section_tipo}, label, section_id}` items. This is the single source of the checkboxes the user sees, so the option set is changed by editing the RQO, not the component code.
+- **Effect:** declares the **target list-of-values section** and how to resolve each option's label. The shared select-family resolver (`src/core/relations/models/select_family.ts`) runs this RQO through `getDatalist()` (`src/core/relations/datalist.ts`) to produce the option list as `{value:{section_id,section_tipo}, label, section_id}` items. This is the single source of the checkboxes the user sees, so the option set is changed by editing the RQO, not by editing engine code.
 
 ### fields_separator
 
 - **Values:** string (default `", "` in the text/mini list views).
-- **Effect:** the character used **between the fields of the target record** when a locator is flattened to a label string (grid, list `text`/`mini` views, export, and when shown inside another component). Resolved with precedence `ddo->fields_separator` -> RQO `show.fields_separator` -> `properties->fields_separator`.
+- **Effect:** the character used **between the fields of the target record** when a locator is flattened to a label string (grid, list `text`/`mini` views, export, and when shown inside another component). Resolved with precedence: the ddo's own `fields_separator` -> RQO `show.fields_separator` -> `properties.fields_separator`.
 
   ```json
   { "fields_separator": ", " }
@@ -182,7 +182,7 @@ All properties are optional and live in the ontology node `properties` JSON. Ver
 ### records_separator
 
 - **Values:** string.
-- **Effect:** the character used **between locators (records)** when several selected values are flattened to one string for grid display / export. Resolved with the same `ddo` -> RQO `show.records_separator` -> `properties->records_separator` precedence.
+- **Effect:** the character used **between locators (records)** when several selected values are flattened to one string for grid display / export. Resolved with the same precedence: the ddo's own `records_separator` -> RQO `show.records_separator` -> `properties.records_separator`.
 
   ```json
   { "records_separator": " | " }
@@ -216,29 +216,34 @@ Search mode renders a single `content_data` with a `q_operator` text input plus 
 Modes:
 
 - **edit** — read/write. Every change is saved immediately (`change_handler` builds an `insert`/`remove` `changed_data_item` and calls `change_value`) so value keys stay recalculated; the reset button issues a bulk `remove`. Tabbing into a checkbox auto-activates the component.
-- **list / tm** — read-only listing (the `tm` Time Machine render reuses the list render). `get_list_value()` resolves each stored locator to its option label via `get_list_of_values()`.
+- **list / tm** — read-only listing (the `tm` Time Machine render reuses the list render). The displayed value is resolved from the option list: each stored locator becomes the label of the option it matches (`getRelationListValue()`, `src/core/relations/datalist.ts`).
 - **search** — builds an SQO relation filter; saves are blocked.
 
 DOM (edit / default): `wrapper_component component_check_box <tipo> <mode> view_default` -> `label`, `buttons_container`, `content_data` -> one or more `content_value` -> `label > input[type=checkbox]`.
 
 ## Import / export model
 
-**Import.** The default import format is a JSON array of [locators](../locator.md). `conform_import_data()` (inherited from `component_relation_common`) accepts:
+**Import.** The default import format is a JSON array of [locators](../locator.md), conformed by the generic import engine (`conformImportData()`, `src/core/tools/import_data.ts`):
 
 ```json
 [{"type":"dd151","section_id":"2","section_tipo":"rsc723","from_component_tipo":"tch191"}]
 ```
 
-It also accepts a plain `section_id` number / number sequence when the target section is unambiguous (a single `target_section_tipo`); when several target sections are possible the target must be disambiguated in the CSV column name as `<component_tipo>_<target_section_tipo>` (e.g. `tch191_rsc723`). An empty cell clears the existing relation. See [importing data](../importing_data.md#related-data).
+An empty cell clears the existing relation.
 
-**Export.** `get_export_value()` / `get_grid_value()` iterate the stored locators and, per the `ddo_map`, instantiate the target component(s) against each `locator->section_id`/`section_tipo` to resolve the label columns, joining fields with `fields_separator` and records with `records_separator`. See [exporting data](../exporting_data.md).
+!!! warning "Gap: bare section_id shorthand not ported"
+    A plain `section_id` number / number sequence (with the target section disambiguated via a `<component_tipo>_<target_section_tipo>` CSV column-name suffix when several targets are possible) is not handled by the generic import engine today — only the JSON locator array round-trips. Neither `conformImportData()` nor the CSV import driver (`src/core/tools/import_csv.ts`) contains this shorthand or column-name disambiguation logic.
+
+See [importing data](../importing_data.md#related-data).
+
+**Export.** Label resolution over the stored locators — iterating the `ddo_map`, resolving each target record's label columns and joining fields with `fields_separator` and records with `records_separator` — goes through the generic cell resolver `resolveCellValue()` (`src/core/resolve/relation_list.ts`), consumed by `tools/tool_export/server/tool_export.ts`. See [exporting data](../exporting_data.md).
 
 ## Notes
 
-- **Sortable.** `component_check_box` overrides `get_sortable()` to return `true` (the `component_relation_common` default is `false`), so its column can be used to order a list and it can appear as a sort target.
-- **Security-tools profiles (`dd1067`).** The security-tools profiles field is built as a `component_check_box` and rendered with the `tools` view. When the instance `tipo` is `DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO` (`dd1067`), `get_datalist()` calls `tool_common::hydrate_tools_info()` to enrich each option with its `tool_name` and `always_active` flag, which the `tools` view uses for the icon and to disable always-active tools.
-- **Inherited relation behaviour.** Locator normalization/validation, `add_locator_to_data` / `remove_locator_from_data` (with dataframe cascade), grid/export/diffusion resolution, the relation-table persistence flag `$save_to_database_relations` (`true`), JSON diffusion output, parent-reference cleanup on delete, and the shared search traits (`search_component_relation_common`) all come from the base class.
-- **Observers / observables.** Wiring, when needed, is configured in the ontology `properties` (see the index page *Observers and observables* section), not in the component code.
-- **Default tools.** Tools are read-only context, assembled from the model + ontology; the component class does not hardcode them.
-- **Permissions.** Resolved via `get_component_permissions()` (0 none / 1 read / 2 read+write / 3 admin). Read users (level 1) get read-only labels; selecting/saving requires level >= 2.
+- **Sortable.** Most relation-family descriptors declare `sortable: false` to opt their list column out of sort ordering (media, geolocation, info, security_access, `component_relation_index`/`component_relation_children`…). `component_check_box` does not set the flag, so it keeps the engine default (`resolveSortable()`, `src/core/resolve/structure_context.ts`, defaults to `true`) — its list column is sortable and can appear as a sort target (verified in the sample context, `sortable: true`).
+- **Security-tools profiles (`dd1067`).** The security-tools profiles field is built as a `component_check_box` and rendered with the `tools` view; a user's granted tools are resolved from this field's stored locators against the profile registry (`src/core/tools/registry.ts`, `PROFILE_TOOLS_COMPONENT = 'dd1067'`, `src/core/tools/ontology_map.ts`) plus tools flagged `always_active`. Whether the datalist option list itself is enriched with per-tool icon/`always_active` metadata for the `tools` view render has not been independently verified in this checkout.
+- **Relation write path.** Locator normalization/validation and dedup, the sibling-preserving dataframe removal cascade on item delete (`removeDataframeDataById()`, `src/core/relations/save.ts`), and locator deletion (`deletePortalLocator()`, same module) are all handled by the shared relation write engine, not by per-model code. Grid/export/diffusion label resolution goes through the shared datalist engine (`src/core/relations/datalist.ts`).
+- **Observers / observables.** Wiring, when needed, is configured in the ontology `properties` (see the index page *Observers and observables* section), not in component code.
+- **Default tools.** Tools are read-only context, assembled from the model + ontology; nothing is hardcoded per model.
+- **Permissions.** Resolved via `getPermissions()` (`src/core/security/permissions.ts`; 0 none / 1 read / 2 read+write / 3 admin). Read users (level 1) get read-only labels; selecting/saving requires level >= 2.
 - **Related components:** `component_radio_button`, `component_select` (single-choice variants of the same closed list), [component_portal](component_portal.md), [component_dataframe](component_dataframe.md).

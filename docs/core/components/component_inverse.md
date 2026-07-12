@@ -41,16 +41,16 @@
 ```
 
 !!! note "Typology"
-    `component_inverse` is an **info** component (the "literal-info" branch of the typology). Like every info component it extends `component_common` and behaves as a literal at read time — its resolved value is surfaced through its own section exactly like a direct component — but it owns no data of its own: the value is *calculated on the fly* from the relations that point **at** the current record. Its sibling info component is `component_info`. Contrast the related branch ([component_portal](component_portal.md), [component_select](component_select.md)) which stores and resolves outgoing [locators](../locator.md).
+    `component_inverse` is an **info** component (the "literal-info" branch of the typology). Like every info component it behaves as a literal at read time — its resolved value is surfaced through its own section exactly like a direct component — but it owns no data of its own: the value is *calculated on the fly* from the relations that point **at** the current record. Its sibling info component is `component_info`. Contrast the related branch ([component_portal](component_portal.md), [component_select](component_select.md)) which stores and resolves outgoing [locators](../locator.md).
 
 !!! info "About `default_tools`"
-    The sample model ships with an empty `tools` array (verified in `samples/context.json`). `component_inverse` is non-translatable and read-only, so the language and propagation tooling that translatable/writable components receive does not apply. As always the toolbar is assembled from the model + ontology; the component class does not hardcode it.
+    The sample model ships with an empty `tools` array (verified in `samples/context.json`). `component_inverse` is non-translatable and read-only, so the language and propagation tooling that translatable/writable components receive does not apply. As always the toolbar is assembled from the model + ontology; it is not hardcoded.
 
 ## Definition
 
 `component_inverse` displays the **backlinks** of a record: the list of other records, in other sections, that reference the current record through a relation field (a [component_portal](component_portal.md), a relation component, or a [component_dataframe](component_dataframe.md)). It answers the question *"who points at me?"* without storing that list anywhere.
 
-**Why it exists.** Relations in Dédalo are stored on one side only — the section that owns the [component_portal](component_portal.md) (or other relation component) writes the locator into its `relations` array. The pointed-at record holds nothing. Without `component_inverse` the inverse direction would be invisible to the cataloguer, or it would have to be duplicated and kept in sync by hand. `component_inverse` computes the inverse direction dynamically (`section_record::get_inverse_references()` → `search_related::get_referenced_locators()`), so the backlink list is always correct and never drifts from the authoritative outgoing relation.
+**Why it exists.** Relations in Dédalo are stored on one side only — the section that owns the [component_portal](component_portal.md) (or other relation component) writes the locator into its `relations` array. The pointed-at record holds nothing. Without `component_inverse` the inverse direction would be invisible to the cataloguer, or it would have to be duplicated and kept in sync by hand. `component_inverse` computes the inverse direction dynamically — via a `mode='related'` search over all matrix tables — so the backlink list is always correct and never drifts from the authoritative outgoing relation.
 
 **When to use it.**
 
@@ -60,7 +60,7 @@
 
 **When not to use it.**
 
-- You want to *create or edit* the relation — author it on the owning side with a [component_portal](component_portal.md), [component_select](component_select.md) or a relation component. `component_inverse` is strictly read-only; its `save()` is a logged no-op.
+- You want to *create or edit* the relation — author it on the owning side with a [component_portal](component_portal.md), [component_select](component_select.md) or a relation component. `component_inverse` is strictly read-only and persists nothing.
 - You want a value the cataloguer types or that belongs to this record — use a literal-direct component such as [component_input_text](component_input_text.md).
 - You need a stored, hand-orderable list — `component_inverse` has nothing to store and nothing to sort persistently; its content is recomputed on every load.
 
@@ -70,10 +70,10 @@
 
 **Value type:** `array` of caller `section_id` strings (the `from_section_id` of each inverse locator), or an empty array.
 
-**Storage shape.** This component has **no value to store**. In PHP, `get_data()` ignores any matrix value and instead resolves the inverse references live via `get_my_section_record()->get_inverse_references()`, which builds a minimal filter locator for the current `{section_tipo, section_id}` and runs a `mode='related'` search (`search_related::get_referenced_locators()`) over all matrix tables; each matching relation row is decoded and decorated with `from_section_tipo`, `from_section_id` (and it already carries `from_component_tipo`). If the section has no `section_id` yet (a brand-new, unsaved record), the result is an empty array.
+**Storage shape.** This component has **no value to store**. Its defining behavior is to ignore any matrix value and instead resolve the inverse references live: build a minimal filter locator for the current `{section_tipo, section_id}` and run a `mode='related'` search over all matrix tables; each matching relation row is decoded and decorated with `from_section_tipo`, `from_section_id` (and it already carries `from_component_tipo`). If the section has no `section_id` yet (a brand-new, unsaved record), the result is an empty array.
 
 !!! danger "Gap: the live-compute step is not wired to this model in TS yet"
-    The TS server **does** have the underlying engine — `findInverseReferences()` in `src/core/search/search_related.ts` is a faithful port of the `mode='related'` search (`get_referenced_locators`) — but it is currently only called from the separate "Referencias" panel pipeline (`src/core/resolve/relation_list.ts`, the `relation_list` ontology node type), not from the section read path for a `component_inverse` **model** node. `src/core/section/read.ts` has no `model === 'component_inverse'` branch that calls `findInverseReferences()`; the model falls through the generic literal path for column `misc` (its descriptor's declared column), which never holds stored data for this component. A `component_inverse` node therefore reads as **empty** on the TS server today, not as the live backlink list. (`component_inverse` does appear in a few housekeeping lists — the default component-exclude set in `src/core/resolve/section_elements_context.ts`, the delete-cascade skip list in `src/core/section/record/delete_record.ts`, and the `tool_propagate_component_data` skip list — but none of those compute its value.)
+    The TS server **does** have the underlying engine — `findInverseReferences()` in `src/core/search/search_related.ts` performs the `mode='related'` search — but it is currently only called from the separate "Referencias" panel pipeline (`src/core/resolve/relation_list.ts`, the `relation_list` ontology node type), not from the section read path for a `component_inverse` **model** node. `src/core/section/read.ts` has no `model === 'component_inverse'` branch that calls `findInverseReferences()`; the model falls through the generic literal path for column `misc` (its descriptor's declared column), which never holds stored data for this component. A `component_inverse` node therefore reads as **empty** on the TS server today, not as the live backlink list. (`component_inverse` does appear in a few housekeeping lists — the default component-exclude set in `src/core/resolve/section_elements_context.ts`, the delete-cascade skip list in `src/core/section/record/delete_record.ts`, and the `tool_propagate_component_data` skip list — but none of those compute its value.)
 
 Each computed inverse locator looks like this:
 
@@ -93,7 +93,7 @@ Each computed inverse locator looks like this:
 - `from_component_tipo` — the relation component on the caller side that authored the reference (e.g. the portal tipo `tch171`).
 
 !!! note "The ontology `misc` column"
-    The class header notes that any configuration this component may carry lives in the matrix `misc` column, not the data column — because the data column is never read or written for `component_inverse`. There is no value array to persist.
+    The descriptor notes that any configuration this component may carry lives in the matrix `misc` column, not the data column — because the data column is never read or written for `component_inverse`. There is no value array to persist.
 
 !!! note "Datum vs. API `entries`"
     The transmitted unit is the `{context, data}` datum (the JSON-API contract). In the API payload the computed inverse locators are surfaced under `data.entries` alongside `parent_tipo`, `row_section_id` and `changed_data` (always empty). `context` carries the description (`tipo`, `model`, `mode`, `lang`, `label`, `properties`, `css`, `permissions`, `view`) and never the values. See the *dedalo-context-data-layers* skill for the full layering rules. A representative payload (verified from `samples/api_data.json`):
@@ -159,10 +159,10 @@ Realistic `properties` block (this component reads only the two grid/flatten sep
 }
 ```
 
-`section_tipo` / `parent` tell the section which node this component belongs to, but on `save()` nothing is written — the section is never asked to persist component data for an inverse field. The inverse list is recomputed from the live relations every time the section is loaded.
+`section_tipo` / `parent` tell the section which node this component belongs to, but nothing is ever written for it — the section is never asked to persist component data for an inverse field. The inverse list is recomputed from the live relations every time the section is loaded.
 
 !!! warning "No defaults, no save"
-    `component_inverse` overrides `save()` to a logged no-op (it returns `true` after writing a WARNING). `properties->dato_default` is meaningless for it (there is nothing to seed), and Time Machine never records inverse data — the authoritative data is the outgoing relation on the other section, which has its own Time Machine history.
+    A save request against a `component_inverse` is a logged no-op by design: nothing is persisted. The `dato_default` property is meaningless for it (there is nothing to seed), and Time Machine never records inverse data — the authoritative data is the outgoing relation on the other section, which has its own Time Machine history.
 
 ## Properties & options
 
@@ -171,15 +171,15 @@ Realistic `properties` block (this component reads only the two grid/flatten sep
 ### fields_separator
 
 - **Values:** string (default `", "`).
-- **Effect:** the separator used **inside** a single caller-pair column when several callers of the same `(from_section_tipo, from_component_tipo)` pair are joined into one grid/export cell. Read in `get_grid_value()` and consumed by `get_export_value()` as the per-pair leaf separator.
+- **Effect:** the separator used **inside** a single caller-pair column when several callers of the same `(from_section_tipo, from_component_tipo)` pair are joined into one grid/export cell — the per-pair leaf separator for both the grid and the export atoms.
 
 ### records_separator
 
 - **Values:** string (default `" | "`).
-- **Effect:** the separator stamped on the grid row (`dd_grid_cell_object::set_records_separator()`) used to join the component's columns when the inverse component is flattened to a single grid string.
+- **Effect:** the separator stamped on the grid row (the grid cell's records-separator setting) used to join the component's columns when the inverse component is flattened to a single grid string.
 
 !!! note "Standard context properties"
-    Like every component, `component_inverse` honours the generic ontology context blocks carried into the datum `context`: `css` (style stamped on `.wrapper_component`), `view` (the render view) and `request_config` (RQO). These are not component-specific options. **No other property names are consumed by this component's class** — `mandatory`, `unique`, `validation`, `dato_default`, `has_dataframe`, etc. have no effect here. Any other key seen in production should be verified in the ontology.
+    Like every component, `component_inverse` honours the generic ontology context blocks carried into the datum `context`: `css` (style stamped on `.wrapper_component`), `view` (the render view) and `request_config` (RQO). These are not component-specific options. **No other property names are consumed by this component** — `mandatory`, `unique`, `validation`, `dato_default`, `has_dataframe`, etc. have no effect here. Any other key seen in production should be verified in the ontology.
 
 ## Render views & modes
 
@@ -196,15 +196,15 @@ Views are selected from `context.view` (default `default`) and dispatched by the
 Modes (`render_edit` serves `edit` and `search`; `render_list` serves `list` and `tm`):
 
 - **edit** — read-only display of the live inverse list. Buttons appear only for `permissions > 1`, but there is no writable input; the component renders one read-only `content_value` per backlink. Note `search` is wired to the **same** render as `edit` in the JS model (`component_inverse.prototype.search = render_edit_component_inverse.prototype.edit`), so there is no dedicated search-filter UI — `component_inverse` is not a meaningful search target.
-- **list / tm** — read-only listing; `tm` (Time Machine) reuses the list render verbatim (`prototype.tm = render_list_component_inverse.prototype.list`). The JSON controller calls `get_list_value()` for both.
+- **list / tm** — read-only listing; `tm` (Time Machine) reuses the list render verbatim (`prototype.tm = render_list_component_inverse.prototype.list`). Both are served the same flattened list value.
 
 DOM (edit / default): `wrapper_component component_inverse <tipo> <mode>` → `label`, `buttons`, `content_data` → one or more `content_value` → `span.inverse_show_section_id`.
 
 ## Import / export model
 
-**Import.** `component_inverse` has nothing to import. Its `save()` is a no-op, so any import value routed to an inverse column is silently ignored — the inverse list is derived from the *outgoing* relations on the other section. To populate backlinks, import the relation on the **owning** side (the [component_portal](component_portal.md) / relation component), not here. See [importing data](../importing_data.md).
+**Import.** `component_inverse` has nothing to import: the inverse list is derived from the *outgoing* relations on the other section, so an import value routed at an inverse column is meaningless (and see the write-path caveat under [Notes](#notes)). To populate backlinks, import the relation on the **owning** side (the [component_portal](component_portal.md) / relation component), not here. See [importing data](../importing_data.md).
 
-**Export.** `get_export_value()` follows the atoms contract (`component_common::get_export_value`): one atom per inverse locator. The `(from_section_tipo, from_component_tipo)` pair travels as a **sub-segment**, so each distinct calling pair becomes its own export column; multiple callers of the same pair join inside the cell using `fields_separator`. The exported atom value is the caller `from_section_id` (cast to int):
+**Export.** The intended contract follows the shared export atoms: one atom per inverse locator. The `(from_section_tipo, from_component_tipo)` pair travels as a **sub-segment**, so each distinct calling pair becomes its own export column; multiple callers of the same pair join inside the cell using `fields_separator`. The exported atom value is the caller `from_section_id` (cast to int):
 
 ```json
 [
@@ -213,13 +213,13 @@ DOM (edit / default): `wrapper_component component_inverse <tipo> <mode>` → `l
 ]
 ```
 
-For grid display `get_grid_value()` collapses the component to a **single row** (the current instance) with one column per `(section_tipo, from_section_tipo, tipo, from_component_tipo)` combination — the inverse data never produces grid rows, only columns. Since the underlying data is not yet computed on the TS server (see [Data model](#data-model)), the export/grid contract described here is not currently reachable through the TS export path either. See [exporting data](../exporting_data.md).
+For grid display the component collapses to a **single row** (the current instance) with one column per `(section_tipo, from_section_tipo, tipo, from_component_tipo)` combination — the inverse data never produces grid rows, only columns. Since the underlying data is not yet computed on the TS server (see [Data model](#data-model)), the export/grid contract described here is not currently reachable through the TS export path either. See [exporting data](../exporting_data.md).
 
 ## Notes
 
-- **No storage, computed live — TS gap, see above.** The defining PHP trait: `get_data()` ignores the matrix data column and computes the backlinks via `get_my_section_record()->get_inverse_references()` → `search_related::get_referenced_locators()` (a `mode='related'` search with `set_breakdown(true)` over all matrix tables). **This is not wired to the `component_inverse` model on the TS server** (see the danger note under [Data model](#data-model)); the equivalent engine exists (`findInverseReferences()`) but is only reachable from the "Referencias" relation-list panel today.
-- **Read-only by design — PHP; unenforced in TS.** In PHP, `save()` is overridden to log a WARNING and return `true` without persisting. **The generic TS save engine (`src/core/section/record/save_component.ts`) has no `component_inverse` guard**: nothing under `src/` special-cases this model to refuse a write, so a save request routed at a `component_inverse` tipo would actually persist into the `misc` column instead of being a no-op. In practice the copied client never issues such a save (there is no writable input for this component), but an API caller bypassing the client could. Empty `section_id` (unsaved record) yields an empty list in PHP. Time Machine does not track inverse data.
+- **No storage, computed live — TS gap, see above.** The defining trait: it ignores the matrix data column and computes the backlinks live — a minimal filter locator for the current record, then a `mode='related'` search (with breakdown) over all matrix tables. **This is not wired to the `component_inverse` model on the TS server** (see the danger note under [Data model](#data-model)); the equivalent engine exists (`findInverseReferences()`) but is only reachable from the "Referencias" relation-list panel today.
+- **Read-only by design — unenforced on the TS write path.** The intended contract is a read-only no-op save (log a warning and return without persisting). **The generic TS save engine (`src/core/section/record/save_component.ts`) has no `component_inverse` guard**: nothing under `src/` special-cases this model to refuse a write, so a save request routed at a `component_inverse` tipo would actually persist into the `misc` column instead of being a no-op. In practice the copied client never issues such a save (there is no writable input for this component), but an API caller bypassing the client could. An unsaved record (empty `section_id`) yields an empty list. Time Machine does not track inverse data.
 - **Observers / observables.** None ship for this component. As a purely derived read-only view it does not publish or observe data changes; its content simply re-resolves whenever the host record is reloaded.
 - **Default tools.** The sample model exposes no tools (`tools: []`). Tools, when added, are read-only context like any component.
-- **Permissions.** Resolved via `get_component_permissions()` (0 none / 1 read / 2 read+write / 3 admin). The JSON controller emits data only for `permissions > 0`. Even at level 2–3 the component stays read-only (no input element); buttons render only above level 1.
+- **Permissions.** Resolved via `getPermissions()` (`src/core/security/permissions.ts`; 0 none / 1 read / 2 read+write / 3 admin). Data is emitted only for `permissions > 0`. Even at level 2–3 the component stays read-only (no input element); buttons render only above level 1.
 - **Related components:** [component_portal](component_portal.md), [component_select](component_select.md), [component_check_box](component_check_box.md), [component_dataframe](component_dataframe.md), [component_input_text](component_input_text.md). The outgoing/authoritative side is always one of the relation components; `component_inverse` only reflects them back.

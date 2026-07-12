@@ -73,9 +73,9 @@
 
 ## Definition
 
-`component_date` is a **literal-direct** component (base class `component_common`) that manages dates and time values. Because dates are language-independent, the component is forced to be **non-translatable**: the constructor always sets `$this->lang = DEDALO_DATA_NOLAN`, and `lg-nolan` is the only language key in its stored data.
+`component_date` is a **literal-direct** component that manages dates and time values. Because dates are language-independent, the component is forced to be **non-translatable**: it always resolves under `lg-nolan`, the only language key in its stored data.
 
-Unlike free text, a date is structured: it is stored as a `dd_date` object (year / month / day / hour / minute / second / millisecond) rather than a string, so it can be sorted, searched with ranges, and rendered in different locale orders (`dmy`, `ymd`, `mdy`) without ambiguity. The component supports **partial** dates (a bare year, a year+month, etc.), **negative years** (BCE), and an absolute-seconds `time` value computed on save (via `add_time()`) so the database can range-query across the whole timeline.
+Unlike free text, a date is structured: it is stored as a `dd_date` object (year / month / day / hour / minute / second / millisecond) rather than a string, so it can be sorted, searched with ranges, and rendered in different locale orders (`dmy`, `ymd`, `mdy`) without ambiguity. The component supports **partial** dates (a bare year, a year+month, etc.), **negative years** (BCE), and an absolute-seconds `time` value meant to be computed on save so the database can range-query across the whole timeline (see the save-path gap under *Notes*).
 
 The behaviour of the component is driven by the ontology property `date_mode`:
 
@@ -139,10 +139,10 @@ Each container is a `dd_date` object whose properties are all individually optio
 | `minute` | number | 0–59 |
 | `second` | number | 0–59 |
 | `millisecond` | number | 0–999 |
-| `time` | number | absolute seconds; **computed on save** by `add_time()` / `convert_date_to_seconds()`, not entered by the user |
+| `time` | number | absolute seconds; **meant to be computed on save**, not entered by the user |
 
-!!! warning "`time` is server-computed"
-    On `save()` the component injects/recomputes the absolute-seconds `time` value for each container (`add_time()`); if an incoming `time` diverges from the recalculated one a WARNING is logged and the **calculated** value wins. Do not author `time` by hand — supply only year/month/day/hour/minute/second.
+!!! warning "`time` is meant to be server-computed"
+    On save, each container's absolute-seconds `time` value should be injected/recomputed server-side from year/month/day/hour/minute/second, so a diverging client-supplied `time` is never trusted. Do not author `time` by hand. See *Notes* below for the current save-path coverage of this contract.
 
 Examples:
 
@@ -203,9 +203,9 @@ Node definition (illustrative):
 }
 ```
 
-- `model` — `component_date` (force-corrected against the ontology model on instantiation).
-- `parent` / `section_tipo` — the section (or grouper) this date belongs to; `section_tipo` is mandatory at instantiation time.
-- `translatable` — must be `false`; the component additionally forces `lg-nolan` internally and logs an error in debug if the node is marked translatable.
+- `model` — `component_date`.
+- `parent` / `section_tipo` — the section (or grouper) this date belongs to; `section_tipo` is mandatory.
+- `translatable` — must be `false`; the component always resolves under `lg-nolan` regardless of this flag.
 
 A realistic `properties` block for a *creation date span* rendered as a range:
 
@@ -227,13 +227,13 @@ registry (`src/core/components/registry.ts`), and its data resolves through
 
 ## Properties & options
 
-Properties are read from the ontology node (`get_properties()`); the JS model reads the same object from `context.properties`.
+Properties are read from the ontology node and carried into the datum `context`; the client model reads the same object from `context.properties`.
 
 ### `date_mode`
 
 Options: `date` | `range` | `period` | `time` | `time_range` | `date_time`
 
-The kind of date the component manages and renders. Default is `date` (`component_date::$default_date_mode`). Read server-side by `get_date_mode()` / `get_date_mode_static()` and client-side by `get_date_mode()`; it drives both the rendered input widget and the text resolution (`data_item_to_value()`).
+The kind of date the component manages and renders. Default is `date`. It drives which input widget the client renders and how the value resolves to text.
 
 ```json
 { "date_mode": "range" }
@@ -278,7 +278,7 @@ Allows more than one date record in the same component (the stored value becomes
 
 Options: `true` | `false`
 
-Enables a paired [dataframe](component_dataframe.md) subdatum for the component (read by the JSON controller via `build_dataframe_subdatum()`).
+Enables a paired [dataframe](component_dataframe.md) subdatum for the component (built by the `has_dataframe` branch of the section read path, `src/core/section/read.ts`).
 
 Required for literal mains (relation mains activate the dataframe from the slot ddo alone). The control also renders in read-only contexts — Time Machine previews and read-only users. For the complete ontology setup including a coloured rating, see the [dataframe](component_dataframe.md) "Worked example — uncertainty rating on a literal".
 
@@ -297,7 +297,7 @@ Modes: `edit`, `list`, `tm` (Time Machine, read-only — `tm` reuses the `list` 
 | `print` | ✓ | — | edit renderer forced to read-only (`permissions = 1`), shares the `default` view markup |
 | `text` | — | ✓ | plain text list output |
 
-The rendered widget itself depends on `date_mode`: edit/search use dedicated input builders `render_input_element_date` / `_range` / `_period` / `_time` / `_time_range`. The `default` view applies the `date_mode` value as a CSS class on the `content_value` for per-mode styling (`core/component_date/css/component_date.less`).
+The rendered widget itself depends on `date_mode`: edit/search use dedicated input builders `render_input_element_date` / `_range` / `_period` / `_time` / `_time_range`. The `default` view applies the `date_mode` value as a CSS class on the `content_value` for per-mode styling (`client/dedalo/core/component_date/css/component_date.less`).
 
 ## Import / export model
 
@@ -307,7 +307,7 @@ The rendered widget itself depends on `date_mode`: edit/search use dedicated inp
 [{ "start": { "year": 1238, "month": 10, "day": 9 } }]
 ```
 
-`conform_import_data()` also accepts **flat-string** shorthands in the CSV cell:
+The import contract also defines **flat-string** shorthands in the CSV cell (see the gap below for what actually parses today):
 
 - A flat date: `-205/05/21`
 - A flat range with `<>`: `-205/05/21 <> 185/01/30`
@@ -316,7 +316,7 @@ The rendered widget itself depends on `date_mode`: edit/search use dedicated inp
 - Alternative separators `-` and `.`: `2012-12-22`, `2012.12.22`
 - Alternative field order via the column-header suffix: `rsc85_dmy` (`22/12/2023`), `rsc85_mdy` (`12/22/2023`); default is `ymd`.
 
-Negative (BCE) years are supported at either edge of the string (`-200/05/01` or `01/05/-200`). Malformed items are skipped and reported in `response->errors` rather than stored.
+Negative (BCE) years are supported at either edge of the string (`-200/05/01` or `01/05/-200`). Malformed items are skipped and reported in the import response's `errors` rather than stored.
 
 !!! danger "Gap: none of the flat-string import shorthands are ported"
     `component_date` is **not** a member of `VALUE_PROPERTY_MODELS` in the TS
@@ -329,15 +329,14 @@ Negative (BCE) years are supported at either edge of the string (`-200/05/01` or
 
 See the full date import definition [here](../importing_data.md#dates).
 
-**Export.** Flat display values run through the generic cell resolver `resolveCellValue()` (`src/core/resolve/relation_list.ts`) via `tools/tool_export/server/tool_export.ts`. The PHP per-mode formatting (`data_item_to_value()` rendering each `date_mode` shape, joined with `records_separator`) has not been independently verified for parity in the TS export path. See [exporting data](../exporting_data.md).
+**Export.** Flat display values run through the generic cell resolver `resolveCellValue()` (`src/core/resolve/relation_list.ts`) via `tools/tool_export/server/tool_export.ts`. Per-`date_mode` formatting (rendering each shape and joining multiple records with `records_separator`) has not been independently verified for parity in this export path. See [exporting data](../exporting_data.md).
 
 ## Notes
 
-- **Save override — gap.** In PHP, `save()` validates the data is an array and runs `add_time()` over every record to (re)compute the absolute-seconds `time` before persisting. **The generic TS save engine (`src/core/section/record/save_component.ts`) does not recompute `time`** — it writes whatever the caller sends. Since the search builder below matches on `start.time`, a date saved through a path that does not itself supply a correct `time` (e.g. a raw API write) will not be found by date-range search until this is ported. Empty data still saves an empty value (date deletion); saving is refused in `search`/`tm` modes.
-- **Search — partial coverage.** Server-side, `src/core/search/builders/builder_date.ts` (dispatched from `src/core/search/conform.ts`) is the TS re-expression of the PHP `search_component_date` trait. Per its own header it covers only the existence operators (`*`/`!*`) and numeric-time comparisons (`=`,`<`,`>`,`<=`,`>=`) for the default `date` mode's `start.time`; full `dd_date` parsing of partial dates (year-only widening via `get_final_search_range_seconds()`, and the `range`/`period`/`time`/`time_range`/`date_time` modes) is **not yet covered** and throws.
-- **Diffusion.** `get_diffusion_value()` overrides the common method to produce a MySQL-friendly `Y-m-d H:i:s` string per mode (ranges joined with `,`, periods rendered as *"N years N months N days"*). Only the first record is currently published when several exist.
-- **Helpers.** `get_date_now()` returns the current moment as a `dd_date`; `get_calculation_data()` exposes the value as a unix timestamp (or `dd_date`) for info/calculation components.
-- **Deprecated methods.** `get_stats_value_with_valor_arguments()` and `data_to_text()` are marked `@deprecated` — do not use them.
+- **Save path — gap.** The intended contract is that saving validates the data is an array and recomputes the absolute-seconds `time` for every record before persisting. **The generic save engine (`src/core/section/record/save_component.ts`) does not recompute `time`** — it writes whatever the caller sends. Since the search builder below matches on `start.time`, a date saved through a path that does not itself supply a correct `time` (e.g. a raw API write) will not be found by date-range search until this is ported. Empty data still saves an empty value (date deletion); saving is refused in `search`/`tm` modes.
+- **Search — partial coverage.** Server-side, `src/core/search/builders/builder_date.ts` (dispatched from `src/core/search/conform.ts`) covers only the existence operators (`*`/`!*`) and numeric-time comparisons (`=`,`<`,`>`,`<=`,`>=`) for the default `date` mode's `start.time`, per its own header. Full `dd_date` parsing of partial dates (year-only widening) and the `range`/`period`/`time`/`time_range`/`date_time` modes are **not yet covered** and throw.
+- **Diffusion.** Dates are published as a SQL-friendly `Y-m-d H:i:s` string per `date_mode` (ranges joined with `,`, periods rendered as *"N years N months N days"*). Only the first record is currently published when several exist.
+- **Calculation widget input.** The component's flat value (`flatValue: 'date'` on the descriptor) can be read by the [component_info](component_info.md) calculation widget (`src/core/components/component_info/widgets/calculation/`) as a computation input.
 - **Default tools.** `tool_time_machine`, `tool_replace_component_data`, `tool_add_component_data` (the component sample also exposes `tool_propagate_component_data`). There is no `tool_lang` because the component is non-translatable.
 - **Client editor.** The edit/search views lazy-load the bundled `flatpickr` calendar (`load_editor()`).
 

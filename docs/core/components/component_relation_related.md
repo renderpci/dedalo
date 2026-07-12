@@ -44,7 +44,7 @@
     The descriptor `src/core/components/component_relation_related/descriptor.ts` registers `resolveData: relationRelatedResolver` (`src/core/relations/models/relation_related.ts`). Non-`list` modes take the shared portal engine but always emit the component's own item — even when the stored data is empty (`entries: []`, so the client can add references) — and attach the computed back-references (`item.references`) via `getCalculatedReferences()` (`src/core/relations/related.ts`), except in `search` mode. `list` mode additionally emits a `component_section_id` item per related target (grid-cell contract) before the paginated relation item itself. The graph walk (unidirectional/bidirectional/multidirectional, `dd620`/`dd467`/`dd621`) lives in `src/core/relations/related.ts` (`getReferences`, the visited-cache-guarded recursive traversal). See the *dedalo-relations-ts* skill.
 
 !!! info "About `default_tools`"
-    The list above is what an instance receives in `context.tools` (verified from the model sample `samples/context.json`): `tool_propagate_component_data` and `tool_time_machine`. The component is non-translatable, so the language tools are not added. The toolbar is assembled from the model + ontology; the component class does not hardcode it. The controller forces `properties->show_interface->button_add = false` so the client does not draw the generic *add* button — references are managed through the thesaurus/relation UI.
+    The list above is what an instance receives in `context.tools` (verified from the model sample `samples/context.json`): `tool_propagate_component_data` and `tool_time_machine`. The component is non-translatable, so the language tools are not added. The toolbar is assembled from the model + ontology; nothing hardcodes it. The server forces `properties.show_interface.button_add` to `false` so the client does not draw the generic *add* button — references are managed through the thesaurus/relation UI.
 
 ## Definition
 
@@ -70,7 +70,7 @@
 
 **Value:** `array` of `strings`, or `null`. The value is **not stored**; it is resolved from the target term (its `component_input_text` thesaurus term, optionally with parents) when the component is read.
 
-**Storage shape.** A component never touches the database; it reads and writes through its section. A related component's own locators live in the section matrix `relation` column as a JSONB map `{component_tipo: [locators]}`, and the section also keeps a global `relations` bag (`section::get_relations('relations')`) aggregating every locator in the record. The component slices its own subset out of that global array by matching `from_component_tipo` (and `section_tipo`).
+**Storage shape.** A component never touches the database; it reads and writes through its section. A related component's own locators live in the section matrix `relation` column as a JSONB map `{component_tipo: [locators]}`, and the section also keeps a global `relations` bag aggregating every locator in the record. The component slices its own subset out of that global array by matching `from_component_tipo` (and `section_tipo`).
 
 The canonical locator for this component carries `type = dd89` (the related relation-type tipo) and `type_rel` (the directionality tipo, default `dd620`):
 
@@ -87,16 +87,16 @@ The canonical locator for this component carries `type = dd89` (the related rela
 ]
 ```
 
-- `type` — relation-type tipo, defaults to the subclass `$default_relation_type = DEDALO_RELATION_TYPE_RELATED_TIPO ('dd89')`. Injected/normalised by `validate_data_element()`.
-- `type_rel` — directionality tipo (`dd620` unidirectional / `dd467` bidirectional / `dd621` multidirectional), from `$relation_type_rel`.
+- `type` — relation-type tipo, defaults to the descriptor's `defaultRelationType` (`dd89`). Injected and normalised by the relations engine on save.
+- `type_rel` — directionality tipo (`dd620` unidirectional / `dd467` bidirectional / `dd621` multidirectional).
 - `section_tipo` / `section_id` — point at the *target* term record.
-- `from_component_tipo` — the owning component's own `tipo`; this is what lets the section-wide relations bag serve many distinct relation components. `validate_data_element()` forces it to `$this->tipo` (cloning the locator first to protect observers), rejects auto-references and malformed locators, and de-dupes via a lookup map.
+- `from_component_tipo` — the owning component's own `tipo`; this is what lets the section-wide relations bag serve many distinct relation components. The relations engine forces it to the component's own `tipo` (cloning the locator first), rejects auto-references and malformed locators, and de-dupes them.
 - `id` — per-item counter id.
 
 Because the component is non-translatable, it is instantiated with `lang = lg-nolan`; locators have no `lang` key.
 
 !!! note "Stored data vs. calculated references"
-    `get_data()` returns only the **stored** locators (relations authored on this record). `get_calculated_references()` resolves the **back-references** — locators on *other* records that point here — for bidirectional / multidirectional types. `get_data_with_references()` merges both. In the API payload the stored locators are surfaced under `data.entries`; the calculated references are attached to the item as `item.references` (skipped in `search` mode). See *Directionality*.
+    `readComponentItems()` (`src/core/resolve/component_data.ts`) returns only the **stored** locators (relations authored on this record). `getCalculatedReferences()` (`src/core/relations/related.ts`) resolves the **back-references** — locators on *other* records that point here — for bidirectional / multidirectional types; the read path merges both into the emitted datum. In the API payload the stored locators are surfaced under `data.entries`; the calculated references are attached to the item as `item.references` (skipped in `search` mode). See *Directionality*.
 
 !!! note "Datum vs. API `entries`"
     The transmitted unit is a `{context, data}` datum (the JSON-API contract). `data` carries the locators (`data.entries`) plus `parent_tipo`, `parent_section_id`, `pagination` and, when present, `references`; `context` carries the description (`tipo`, `model`, `mode`, `lang`, `label`, `properties`, `permissions`, `tools`, `view`, `request_config`, `fields_separator`) and never the resolved value strings, which are delivered as subdata of the target components. See the *dedalo-context-data-layers* skill for the layering rules.
@@ -161,13 +161,13 @@ Realistic `properties` block (verified shape, from `samples/context.json`) — a
 }
 ```
 
-`section_tipo` / `parent` tell the section which subset of the global `relations` bag this component owns; on `save()` the locator array is persisted through `section_record->save_component_data()` into the matrix `relation` column, and the relation-table persistence flag `$save_to_database_relations = true` (inherited) keeps the relations index in sync. The section is the single writer to the database.
+`section_tipo` / `parent` tell the section which subset of the global `relations` bag this component owns; on save the locator array is persisted through `saveComponentData()` (`src/core/section/record/save_component.ts`) into the matrix `relation` column, and the relations index is kept in sync. The section is the single writer to the database.
 
-The constructor (`component_relation_common::__construct()`) reads `properties->config_relation->relation_type` / `relation_type_rel` and falls back to the subclass defaults (`dd89` / `dd620`) when they are absent.
+The effective relation type comes from the node's `properties.config_relation.relation_type`, falling back to the descriptor's `defaultRelationType` (`dd89`) when it is absent.
 
 ## Properties & options
 
-All properties are optional and live in the ontology node `properties` JSON. Verified names consumed by this component / its base.
+All properties are optional and live in the ontology node `properties` JSON. Verified names consumed by this component and by the shared relations engine.
 
 ### config_relation
 
@@ -187,11 +187,11 @@ All properties are optional and live in the ontology node `properties` JSON. Ver
 ### show_interface
 
 - **Values:** an object of boolean / option flags controlling which buttons and behaviours the client renders (`button_link`, `button_delete`, `button_delete_link`, `button_delete_link_and_record`, `button_list`, `button_save`, `show_autocomplete`, `show_section_id`, `list_from_component_data`, `tools`, `label`, `button_edit_options`, ...).
-- **Effect:** UI toggles only. Note the controller **forces `show_interface->button_add = false`** at runtime, so even if the ontology sets it `true` the generic add button is suppressed for this component.
+- **Effect:** UI toggles only. Note the server **forces `show_interface.button_add` to `false`** at runtime, so even if the ontology sets it `true` the generic add button is suppressed for this component.
 
 ### sort_by_column
 
-- **Values:** `true` | array of column tipos. (Inherited from the portal/relation base; `get_sortable()` returns `true` for this component, so it participates in list sorting.)
+- **Values:** `true` | array of column tipos. (Shared with the portal; this component is sortable by default, so it participates in list sorting.)
 - **Effect:** persistently re-orders the stored locator array by the value of a target-section column, saving the new order as a real data change. See [component_portal](component_portal.md#sort_by_column) for the full semantics.
 
 !!! note "Standard context properties"
@@ -199,7 +199,7 @@ All properties are optional and live in the ontology node `properties` JSON. Ver
 
 ## Render views & modes
 
-On the client the component is an alias of [component_portal](component_portal.md), so it inherits the portal's `render_views`. Verified from `core/component_portal/js/component_portal.js`:
+On the client the component is an alias of [component_portal](component_portal.md), so it inherits the portal's `render_views`. Verified from `client/dedalo/core/component_portal/js/component_portal.js`:
 
 | View | edit | list / tm | search | Notes |
 | --- | :---: | :---: | :---: | --- |
@@ -215,16 +215,16 @@ On the client the component is an alias of [component_portal](component_portal.m
 Modes:
 
 - **edit** — read/write the related-term locators; add via the thesaurus/autocomplete picker, remove via the delete-link buttons. Calculated back-references are attached to the item (`item.references`) so bidirectional/multidirectional associations are visible.
-- **list / tm** — read-only listing of resolved term labels; `tm` (Time Machine) reuses the list render and, in the controller, injects `parent_tipo` / `parent_section_id` into each subdata item.
-- **search** — builds an SQO filter input. Reference calculation is **skipped** in search mode (`if ($mode!=='search')`).
+- **list / tm** — read-only listing of resolved term labels; `tm` (Time Machine) reuses the list render, with `parent_tipo` / `parent_section_id` injected into each subdata item.
+- **search** — builds an SQO filter input. Reference calculation is **skipped** in search mode.
 
 DOM follows the portal structure: `wrapper_component component_relation_related <tipo> <mode>` (the CSS hook is `.component_relation_related.view_default > .content_data`, defined in `css/component_relation_related.less`).
 
 ## Import / export model
 
-`component_relation_related` uses the shared related-data import/export model (inherited from `component_relation_common`).
+`component_relation_related` uses the shared related-data import/export model of the relations engine.
 
-**Import.** `conform_import_data()` accepts the same forms as [component_portal](component_portal.md):
+**Import.** The shared import engine (`conformImportData()`, `src/core/tools/import_data.ts`) accepts the same forms as [component_portal](component_portal.md):
 
 - The default **locator JSON** (the component's own data shape):
 
@@ -242,15 +242,15 @@ DOM follows the portal structure: `wrapper_component component_relation_related 
 
 See [importing data — Related data](../importing_data.md#related-data).
 
-**Export.** `get_export_value()` / `get_grid_value()` iterate the locators and, per the `show.ddo_map`, instantiate each named child component against the target `section_id` / `section_tipo` to resolve the sub-columns (term labels, optionally with parents). For diffusion, related components override the output format: `$diffusion_output_format = ['sql' => 'json']`, so the locator array is emitted as JSON in SQL targets. See [exporting data](../exporting_data.md).
+**Export.** The shared relation export path iterates the locators and, per the `show.ddo_map`, resolves each named child component against the target `section_id` / `section_tipo` to produce the sub-columns (term labels, optionally with parents). For diffusion, related components emit the locator array as JSON in SQL targets. See [exporting data](../exporting_data.md).
 
 ## Notes
 
 - **Directionality is the differentiator.** Unidirectional (`dd620`) stores the link only on the originating side and skips inverse resolution entirely. Bidirectional (`dd467`) computes one inverse hop; multidirectional (`dd621`) walks the full graph. TS: `getReferences()` (`src/core/relations/related.ts`) runs the inverse-containment query over the target section for locators pointing at the current `{section_tipo, section_id, from_component_tipo}`; the recursive multidirectional traversal guards against cycles with a visited cache keyed `section_tipo_section_id_lang`. This lets a *related* link be navigated from either term without writing two locators.
 - **Reference labels.** `getCalculatedReferences()` (`src/core/relations/related.ts`) resolves each back-reference to a `{value, label}` pair using the component's `request_config` show ddo(s) and `fields_separator` (default `" | "`), via `resolveCellValue()` (`src/core/resolve/relation_list.ts`) per show-ddo, empty parts skipped, survivors joined.
-- **Sorting.** `get_sortable()` is overridden to `true`; `get_order_path()` builds the column-order path as `[self component, thesaurus term component (DEDALO_THESAURUS_TERM_TIPO)]` so list ordering keys on the resolved term.
-- **Duplicate guard.** `public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo']` defines locator equality for the add/de-dupe path.
+- **Sorting.** The descriptor does not opt out of sorting, and `buildOrderPath()` (`src/core/search/order_path.ts`) builds the column-order path as `[self component, thesaurus term component (hierarchy25)]`, so list ordering keys on the resolved term.
+- **Duplicate guard.** Locator equality for the add/de-dupe path compares `['section_tipo','section_id','type','from_component_tipo']` (`compareLocators()`, `src/core/concepts/locator.ts`).
 - **Default tools.** A standard instance exposes `tool_propagate_component_data` and `tool_time_machine` in `context.tools` (read-only context).
-- **Observers / observables.** No component-specific subscriptions ship in the class; observer/observable wiring, when needed, is configured in the ontology `properties` like any other component (see the [index](index.md) *Observers and observables* section).
-- **Permissions.** Resolved via `get_component_permissions()` (0 none / 1 read / 2 read+write / 3 admin). The controller only resolves data when `permissions > 0`; saves require level >= 2 and are short-circuited when `save_to_database === false`.
+- **Observers / observables.** No component-specific subscriptions ship with this model; observer/observable wiring, when needed, is configured in the ontology `properties` like any other component (see the [index](index.md) *Observers and observables* section).
+- **Permissions.** Resolved via `getPermissions()` (`src/core/security/permissions.ts`): 0 none / 1 read / 2 read+write / 3 admin. Data is only resolved when `permissions > 0`; saves require level >= 2.
 - **Related components:** [component_portal](component_portal.md) (its client alias and generic-relation sibling), [component_select](component_select.md), [component_check_box](component_check_box.md), [component_radio_button](component_radio_button.md), [component_dataframe](component_dataframe.md), [component_input_text](component_input_text.md) (the typical target term component).

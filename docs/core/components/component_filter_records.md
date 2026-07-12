@@ -43,7 +43,7 @@
 !!! note "Classifier flags"
     `could_be_translatable`, `is_literal`, `is_related` and `is_media` are client-model
     classifiers derived from the component typology, not stored datum fields. As a
-    *literal-direct* component extending `component_common`, `component_filter_records`
+    *literal-direct* component, `component_filter_records`
     is literal (`is_literal: true`), it is not a relation locator (`is_related: false`),
     not media (`is_media: false`), and not translatable
     (`could_be_translatable: false`): its single static instance is loaded under
@@ -63,24 +63,20 @@ Dédalo already restricts access through **areas/projects** (see `component_filt
 within a section the user is otherwise authorized for, restrict visibility down to a specific
 set of record ids — regardless of project assignment.
 
-The feature is gated by the global flag `DEDALO_FILTER_USER_RECORDS_BY_ID` (default `false`;
-set in `../private/.env`, catalog `features.php`). In PHP, when enabled, the search engine reads the
-logged user's filter via the static `component_filter_records::get_user_filter_records($user_id)`
-and adds a `section_id IN (...)` restriction to the WHERE clause of the main section query
-(`core/search/trait.where.php`, `build_filter_by_user_records()`).
+The feature is gated by the global flag `DEDALO_FILTER_USER_RECORDS_BY_ID` (default `false`,
+set in `../private/.env`). When enabled, the search engine is meant to read the logged user's
+stored per-section id list and add a `section_id IN (...)` restriction to the section's search
+query.
 
-!!! danger "Gap: the enforcement gate is not ported — edit UI works, search does not filter"
-    The TS server ports the **edit-time datalist** (`getFilterRecordsDatalist()`,
+!!! danger "Gap: the enforcement gate is not implemented — edit UI works, search does not filter"
+    The TS server implements the **edit-time datalist** (`getFilterRecordsDatalist()`,
     `src/core/resolve/filter_records_datalist.ts` — the authorized-sections list a
-    profile can restrict, resolved the same way as PHP's `get_datalist()`), so the
-    component's edit/search views render and save correctly. But
-    `DEDALO_FILTER_USER_RECORDS_BY_ID` does not exist anywhere in the TS config
-    catalog (`src/config/`), and no module under `src/core/search/` reads a stored
-    filter or adds a `section_id IN (...)` restriction to a search query — there is
-    no TS equivalent of `build_filter_by_user_records()`. A profile's stored
-    per-section id list is therefore **not enforced** at search time on the TS
-    server today, even though it can be configured through the UI (see
-    `rewrite/STATUS.md`).
+    profile can restrict), so the component's edit/search views render and save
+    correctly. But `DEDALO_FILTER_USER_RECORDS_BY_ID` does not exist anywhere in the
+    TS config catalog (`src/config/`), and no module under `src/core/search/` reads
+    a stored filter or adds a `section_id IN (...)` restriction to a search query. A
+    profile's stored per-section id list is therefore **not enforced** at search
+    time on the TS server today, even though it can be configured through the UI.
 
 **When to use it**
 
@@ -104,10 +100,9 @@ and adds a `section_id IN (...)` restriction to the WHERE clause of the main sec
 
 **Value:** `array` of entry objects (same shape as `data`), or `null`.
 
-**Storage:** the component stores its data in the matrix **`misc`** column (mapped in
-`section_record_data::$column_map` as `'component_filter_records' => 'misc'`, a *direct
-object*). It is **not** translatable, so there is a single instance under `DEDALO_DATA_NOLAN`
-and no per-language rows.
+**Storage:** the component stores its data in the matrix **`misc`** column (a *direct
+object*, not a relation locator). It is **not** translatable, so there is a single instance
+under `DEDALO_DATA_NOLAN` and no per-language rows.
 
 Each entry pairs a target **section `tipo`** with the array of allowed **`section_id`s** for
 that section, plus the standard counter-assigned `id`:
@@ -120,24 +115,23 @@ that section, plus the standard counter-assigned `id`:
 ]
 ```
 
-- `id` — counter-assigned entry id, used to target `update`/`remove` operations
-  (see `component_common::update_data_value`).
+- `id` — counter-assigned entry id, used to target `update`/`remove` operations on the item
+  array.
 - `tipo` — the target section ontology tipo the restriction applies to.
 - `value` — array of integer `section_id`s the user may access in that section. Client-side
-  the input is validated to **positive, de-duplicated integers** (`validate_value()`); search
-  mode keeps the raw comma split until saved.
+  the input is validated to **positive, de-duplicated integers**; search mode keeps the raw
+  comma split until saved.
 
-In the JSON-API datum the array is delivered under the `data` item's **`entries`** property
-(`component_common::get_data_item` sets `$item->entries = $value`), and in `edit` mode the
-resolved list of authorized sections is attached as `datalist` (see below).
+In the JSON-API datum the array is delivered under the `data` item's **`entries`** property,
+and in `edit` mode the resolved list of authorized sections is attached as `datalist` (see
+below).
 
-!!! warning "Consumption shape vs storage shape (PHP) — no TS consumer exists yet"
-    In PHP, the search consumer in `core/search/trait.where.php` reads the filter as a **map keyed by
-    section_tipo** (`$filter_user_records_by_id[$section_tipo]` → array of ids), while
-    `get_user_filter_records()` returns the raw stored `entries` array
-    (`[{id, tipo, value}, ...]`). There is no equivalent TS search consumer at all (see the gap
-    noted above) — a future port must build that same map-keyed-by-`section_tipo` transformation
-    from the stored `entries` array; do not assume the two shapes are interchangeable when wiring it.
+!!! warning "Consumption shape vs storage shape — no TS search consumer exists yet"
+    No TS search consumer reads this stored filter today (see the gap noted above). The stored
+    shape is the raw `entries` array (`[{id, tipo, value}, ...]`); a search consumer needs the
+    data as a **map keyed by `section_tipo`** (`section_tipo` → array of ids) to apply it as a
+    `section_id IN (...)` restriction. Building that consumer means transforming the stored
+    `entries` array into that map — the two shapes are not interchangeable.
 
 ## Ontology instantiation
 
@@ -179,20 +173,18 @@ authorized-sections datalist is built by `getFilterRecordsDatalist(userId, lang)
 This component defines **no bespoke ontology properties**. Its `properties` block is normally
 empty (`{}`), as shown in the shipped sample context. Behaviour is driven by:
 
-- the **`datalist`**, computed server-side at render time by `get_datalist()` — *not* an
-  ontology property. It lists every section the logged user is authorized for
-  (`security::get_ar_authorized_areas_for_user()`), keeping only areas whose
-  `model === 'section'` and whose permission `value >= 2` (write or higher), resolving each
-  section label from the ontology and sorting alphabetically by label. Each datalist item is
-  `{ tipo, permissions, label }`. Ported to `getFilterRecordsDatalist()`
-  (`src/core/resolve/filter_records_datalist.ts`), built from the same
-  `getAuthorizedAreasForUser()` (`src/core/security/permissions.ts`).
+- the **`datalist`** — *not* an ontology property, computed server-side by
+  `getFilterRecordsDatalist()` (`src/core/resolve/filter_records_datalist.ts`, built from
+  `getAuthorizedAreasForUser()`, `src/core/security/permissions.ts`). It lists every section
+  the logged user is authorized for, keeping only areas whose `model === 'section'` and whose
+  permission `value >= 2` (write or higher), resolving each section label from the ontology and
+  sorting alphabetically by label. Each datalist item is `{ tipo, permissions, label }`.
 - the global config constant **`DEDALO_FILTER_USER_RECORDS_BY_ID`** (`true`/`false`,
-  default `false`) — enables/disables the whole feature at the search layer in PHP. **Not
+  default `false`) — meant to enable/disable the whole feature at the search layer. **Not
   present in the TS config catalog** (`src/config/`) — see the gap noted under
   [Definition](#definition).
 
-The standard `component_common` properties (e.g. `mandatory`, `css`, `request_config`) may be
+The standard generic component properties (e.g. `mandatory`, `css`, `request_config`) may be
 attached through the ontology node like any component; none are specific to or required by
 `component_filter_records`. If you need behaviour beyond the above, *verify in ontology*.
 
@@ -223,10 +215,9 @@ event.
 
 ## Import / export model
 
-`component_filter_records` does **not** override `conform_import_data`,
-`get_diffusion_value`, `get_dato`/`get_valor` or `get_data_lang`; it inherits the standard
-`component_common` behaviour. Its data is a plain JSON array of entries, so import/export use
-that array directly:
+`component_filter_records` defines no import, export or diffusion handling of its own — it
+goes through the shared engines like any other literal component. Its data is a plain JSON
+array of entries, so import/export use that array directly:
 
 ```json
 [
@@ -249,14 +240,14 @@ shared component contract (the `dedalo_data` wrapper, atoms, NDJSON flat-table p
 - **Default tools** (from the shipped `context.json`): `tool_propagate_component_data` and
   `tool_time_machine`. Saves are recorded in Time Machine like any component
   (`tm` mode is read-only).
-- **Server entry point — gap.** In PHP, the static `component_filter_records::get_user_filter_records(int $user_id): array`
-  is the single reader used by the search WHERE builder; it returns `[]` unless
-  `DEDALO_FILTER_USER_RECORDS_BY_ID === true`. **No TS equivalent exists** (see the gap under
-  [Definition](#definition)) — there is no reader wired into the TS search path at all yet.
+- **Server entry point — gap.** No TS module reads a user's stored filter-records list into the
+  search path (see the gap under [Definition](#definition)) — there is no reader wired into the
+  TS search path at all yet, so the stored list has no effect unless
+  `DEDALO_FILTER_USER_RECORDS_BY_ID` gains a TS implementation.
 - **Datalist source:** `getFilterRecordsDatalist()` (`src/core/resolve/filter_records_datalist.ts`)
   depends on the *logged user's* authorized areas, so the set of selectable sections in
   `edit`/`search` reflects current permissions, filtered to sections with write-or-higher access
-  (`value >= 2`) — matching PHP's `get_datalist()`.
+  (`value >= 2`).
 - **Observers/observables:** none configured for this component.
 - **Read path — datalist attachment split by pipeline.** The plain section read
   (`src/core/section/read.ts`, `emitDdoData`) only **stubs an empty `datalist: []`** on a

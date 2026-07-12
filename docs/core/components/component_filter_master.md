@@ -47,35 +47,35 @@
 !!! note "Typology"
     `component_filter_master` is a **related** component. It does not store literal text: its data is an array of [locators](../locator.md) pointing at *project* records. In client context `component_filter_master.js` is a thin alias: `export const component_filter_master = component_filter`, so it reuses the entire `component_filter` UI (the same checkbox tree, the same render/view files).
 
-!!! info "TS server implementation"
-    The descriptor `src/core/components/component_filter_master/descriptor.ts` registers `resolveData: filterResolver` (`src/core/relations/models/portal.ts`) — the same resolver as `component_filter`, sharing the authorized-projects datalist logic in `src/core/relations/filter_projects.ts` (`getUserAuthorizedProjects()`, `getFilterDatalist()`, `getFilterListValue()`). **Gap:** `getUserAuthorizedProjects()` currently returns *every* project record (global-admin-scoped read path) rather than a per-user membership set — the very thing this component is supposed to declare — pending principal-threading into the resolver context (`rewrite/STATUS.md`). The `save()` side effect this page documents next (cache invalidation on membership change) has no confirmed TS port either, since the underlying per-user cache/authorization layer isn't wired yet. See the *dedalo-relations-ts* skill.
+!!! info "Server implementation"
+    The descriptor `src/core/components/component_filter_master/descriptor.ts` registers `resolveData: 'filter'` (`src/core/relations/models/portal.ts`) — the same resolver as `component_filter`, sharing the authorized-projects datalist logic in `src/core/relations/filter_projects.ts` (`getUserAuthorizedProjects()`, `getFilterDatalist()`, `getFilterListValue()`). **Gap:** `getUserAuthorizedProjects()` currently returns *every* project record (a global-admin-scoped read path, keyed `'all'`) rather than a per-user membership set — the very thing this component is supposed to declare — pending principal-threading into the resolver context. The cache-invalidation-on-membership-change side effect this page documents next has no confirmed implementation either, since the underlying per-user cache/authorization layer isn't wired yet. See the *dedalo-relations-ts* skill.
 
 !!! info "About `default_tools`"
-    The toolbar is assembled from the model + ontology, not hardcoded by the class. The verified instance (User section `dd170`) exposes `tool_propagate_component_data` and `tool_time_machine` in `context.tools`. Because the component is **non-translatable** (`lang` is forced to `lg-nolan`), it never receives `tool_lang` / `tool_lang_multi`.
+    The toolbar is assembled from the model + ontology, never hardcoded. The verified instance (User section `dd170`) exposes `tool_propagate_component_data` and `tool_time_machine` in `context.tools`. Because the component is **non-translatable** (`lang` is forced to `lg-nolan`), it never receives `tool_lang` / `tool_lang_multi`.
 
 ## Definition
 
-`component_filter_master` is a specialized variant of [component_filter](component_filter.md) used **exclusively in the User section** (`dd128`, tipo `dd170`, label *Projects*) to declare which projects a user is assigned to. It is the master list of a user's project membership.
+`component_filter_master` is a sibling model of [component_filter](component_filter.md) — same shared resolver, different job — used **exclusively in the User section** (`dd128`, tipo `dd170`, label *Projects*) to declare which projects a user is assigned to. It is the master list of a user's project membership.
 
 The relationship between the two filter components is the heart of Dédalo's project-based access control:
 
 - **`component_filter`** lives on every catalogued record (a museum object, a person, a place) and assigns *that record* to one or more projects.
 - **`component_filter_master`** lives on the *user* and declares which projects *that user* may work in.
 
-When a record is loaded, the projects on its `component_filter` are matched against the projects on the logged user's `component_filter_master` to decide visibility and editability. `component_filter::get_datalist()` and `component_filter::get_list_value()` both call the static `component_filter_master::get_user_authorized_projects()` to restrict what a user sees and can assign — so `component_filter_master` is the authority that every `component_filter` instance consults.
+When a record is loaded, the projects on its `component_filter` are matched against the projects on the logged user's `component_filter_master` to decide visibility and editability. Both the datalist and list-value resolution of `component_filter` call `getUserAuthorizedProjects()` (`src/core/relations/filter_projects.ts`) to restrict what a user sees and can assign — so `component_filter_master` is the authority that every `component_filter` instance consults.
 
 **Why it exists.** A single Dédalo installation is multi-tenant: several research projects (e.g. *Stolen Motherhoods*, an archaeological excavation, a numismatics catalogue) share one ontology and one database, but their records must stay isolated per project and per user. `component_filter_master` is where an administrator records, per user, the set of projects that user belongs to. It is the input to the project permission model.
 
 **When to use it.** Effectively never as a free-standing field you add to an arbitrary section. It is a system component wired into the User section by the core ontology (`dd170`). You interact with it when:
 
 - Administering users: ticking the projects a user can access (the *Projects* field of a user record).
-- Reading membership programmatically via the static API `component_filter_master::get_user_projects($user_id)` / `get_user_authorized_projects($user_id, $from_component_tipo)`.
+- Reading membership programmatically via `getUserAuthorizedProjects()` (`src/core/relations/filter_projects.ts`).
 
 **When not to use it.**
 
 - To assign an ordinary *record* to projects -> use [component_filter](component_filter.md), not the master.
 - To relate a record to any other section in general -> use [component_portal](component_portal.md), [component_select](component_select.md) or a `component_relation_*`.
-- It is not a generic many-to-many picker; the target section is fixed to the Projects section (`DEDALO_SECTION_PROJECTS_TIPO`, `dd153`) by `component_filter::get_ar_target_section_tipo()`.
+- It is not a generic many-to-many picker; the target section is fixed to the Projects section (`DEDALO_SECTION_PROJECTS_TIPO`, `dd153`).
 
 ## Data model
 
@@ -103,14 +103,14 @@ When a record is loaded, the projects on its `component_filter` are matched agai
 ]
 ```
 
-The relation type defaults to `DEDALO_RELATION_TYPE_FILTER` (`dd675`), set on the base class as `$default_relation_type`. `validate_data_element()` (inherited from `component_relation_common`) normalizes each incoming locator, injecting `type` and forcing `from_component_tipo` to the component's own `tipo`, so an entry that arrives without an explicit `type` (see the second item above) is conformed to `dd675` on save. De-duplication uses `component_filter::$test_equal_properties = ['section_tipo','section_id','type','from_component_tipo']`.
+The relation type defaults to `DEDALO_RELATION_TYPE_FILTER` (`dd675`), the descriptor's `defaultRelationType`. The shared relation write engine (`src/core/relations/save.ts`) normalizes each incoming locator, injecting `type` and forcing `from_component_tipo` to the component's own `tipo`, so an entry that arrives without an explicit `type` (see the second item above) is conformed to `dd675` on save. De-duplication is by equality on `section_tipo`, `section_id`, `type` and `from_component_tipo`.
 
 !!! note "Datum vs. API `entries`"
     The transmitted unit is a `{context, data}` datum. For this component the locators are surfaced under `data.entries`, and the edit/search renders also receive a `data.datalist` — the list of *selectable* projects, already filtered to the projects the logged user is authorized for (see [Datalist](#datalist)). `context` carries `tipo`, `model`, `mode`, `lang`, `label`, `properties`, `permissions`, `tools`, `view` and the `target_sections` array (the Projects section, used to render the "open target section" button). See the *dedalo-context-data-layers* skill for the full layering rules.
 
 ### Datalist
 
-In `edit` (and `search`) the controller calls `component_filter::get_datalist()`, which builds the option list from `component_filter_master::get_user_authorized_projects(logged_user_id(), $this->tipo)` and sorts it by label. Each datalist entry is a project descriptor:
+In `edit` (and `search`) the option list is built by `getFilterDatalist()` (`src/core/relations/filter_projects.ts`), which calls `getUserAuthorizedProjects()` and sorts the result by label. Each datalist entry is a project descriptor:
 
 ```json
 {
@@ -125,7 +125,7 @@ In `edit` (and `search`) the controller calls `component_filter::get_datalist()`
 }
 ```
 
-The `parent` / `order` / `has_children` fields let the client render the projects as a collapsible **hierarchical tree of checkboxes** (`render_edit_component_filter.js → get_content_data()`), where a project can be nested under a parent project. `parent` is only populated when the parent project is itself an authorized project of the user (PHP `component_relation_parent::get_parents_recursive()`; TS: `getParentsRecursive()`, `src/core/relations/parent.ts`, consumed by `getUserAuthorizedProjects()` in `src/core/relations/filter_projects.ts`). **Note:** the TS `FilterDatalistItem` shape currently ships `{type, label, section_tipo, section_id, value, parent, order}` — no `has_children` field yet; verify against the live client contract before assuming byte-parity on that key.
+The `parent` / `order` / `has_children` fields let the client render the projects as a collapsible **hierarchical tree of checkboxes** (`render_edit_component_filter.js`), where a project can be nested under a parent project. `parent` is only populated when the parent project is itself an authorized project of the user (`getParentsRecursive()`, `src/core/relations/parent.ts`, consumed by `getUserAuthorizedProjects()` in `src/core/relations/filter_projects.ts`). **Note:** the `FilterDatalistItem` shape currently ships `{type, label, section_tipo, section_id, value, parent, order}` — no `has_children` field yet; verify against the live client contract before assuming byte-parity on that key.
 
 ## Ontology instantiation
 
@@ -157,7 +157,7 @@ Realistic `properties` block (the live instance ships an empty `properties` plus
 }
 ```
 
-`section_tipo` / `parent` wire the component into the User section; on save the section is the single writer. Because the component is forced to `lg-nolan` in its constructor, it is never instantiated per language. The set of *target* projects is not read from `properties` but from configuration constants resolved at construction:
+`section_tipo` / `parent` wire the component into the User section; on save the section is the single writer. Because the component's language is always forced to `lg-nolan`, it is never instantiated per language. The set of *target* projects is not read from `properties` but from configuration constants:
 
 - `DEDALO_SECTION_PROJECTS_TIPO` = `dd153` — the Projects section (the locator target).
 - `DEDALO_PROJECTS_NAME_TIPO` = `dd156` — the `component_input_text` that holds the project name (used to resolve `label`).
@@ -172,14 +172,14 @@ Realistic `properties` block (the live instance ships an empty `properties` plus
 - **`request_config`** — RQO context (null on the live instance; the target is resolved from constants, not from an RQO).
 - **`view`** — the render view to use (see [Render views & modes](#render-views--modes)).
 
-It also inherits the data-default machinery from [component_filter](component_filter.md) (`get_default_data_for_user()` can read an optional `properties->data_default` / `dato_default` block or the `/config/config_defaults.json` file), but in practice the master instance relies on the global-admin / first-authorized-project fallbacks rather than per-node defaults.
+[component_filter](component_filter.md) documents an optional per-node default-data mechanism (`properties.data_default`); that mechanism has no confirmed implementation in this checkout, and in practice the master instance relies on the global-admin / first-authorized-project fallbacks rather than per-node defaults.
 
 !!! warning "Verify in ontology before relying on a property"
     Any custom key seen on a `component_filter_master` node in a specific installation should be verified in the ontology — the core distribution defines none.
 
 ## Render views & modes
 
-Views are taken from `context.view` (default `default`) and dispatched by the inherited `component_filter` render files (the master is a client alias of `component_filter`). Verified from the source:
+Views are taken from `context.view` (default `default`) and dispatched by the shared `component_filter` render files (the master is a client alias of `component_filter`). Verified from the source:
 
 | View | edit | list / tm | search | Notes |
 | --- | :---: | :---: | :---: | --- |
@@ -193,33 +193,31 @@ Views are taken from `context.view` (default `default`) and dispatched by the in
 Modes:
 
 - **edit** — interactive checkbox tree. Each toggle goes through `change_handler()` -> `build_changed_data_item()` and **saves on every change** (no batch); at least one project must stay selected (`You must select at least one project`). The *reset* button removes all entries.
-- **list / tm** — read-only. `tm` (Time Machine) reuses the list render. `get_list_value()` returns only the labels of projects that are both in the stored data **and** in the user's authorized projects (others are discarded from the displayed value).
+- **list / tm** — read-only. `tm` (Time Machine) reuses the list render. The displayed value keeps only the labels of projects that are both in the stored data **and** in the user's authorized projects (`getFilterListValue()`, `src/core/relations/filter_projects.ts`); the rest are discarded.
 - **search** — same checkbox tree built by `get_content_data`, but each toggle publishes a `change_search_element` event and updates the instance data instead of saving (used to filter by project membership).
 
 ## Import / export model
 
-`component_filter_master` reuses the relation import/export contract of `component_relation_common`.
+`component_filter_master` uses the generic relation import/export contract (see [component_check_box](component_check_box.md) for the shared engine).
 
-**Import.** `conform_import_data()` accepts the JSON locator array, or — because the target section is a single fixed section (`dd153`) — a plain `section_id` (or comma-separated list of ids), which is conformed into locators with `type = dd675` and `from_component_tipo = dd170`:
+**Import.** `conformImportData()` (`src/core/tools/import_data.ts`) accepts the JSON locator array:
 
 ```json
 [{"type":"dd675","section_id":"1","section_tipo":"dd153","from_component_tipo":"dd170"}]
 ```
 
-```text
-1,5,8
-```
+!!! warning "Gap: bare section_id shorthand not implemented"
+    Because the target section is a single fixed section (`dd153`), a plain `section_id` (or comma-separated list of ids such as `1,5,8`) conformed into locators with `type = dd675` and `from_component_tipo = dd170` would be a natural shorthand — but the generic import engine has no such shorthand today; only the JSON locator array round-trips (see [component_check_box](component_check_box.md) for the same gap verified against the shared import engine).
 
 An empty cell clears the existing data (result `null`). See [importing data](../importing_data.md#related-data).
 
-**Export.** Inherited `get_export_value()` / `get_grid_value()` resolve each locator to the project name (via the target section's `dd156` name component) and join them with the configured separator. See [exporting data](../exporting_data.md).
+**Export.** Uses the generic relation export path: each locator resolves to the project name (via the target section's `dd156` name component) and the labels join with the configured separator. See [exporting data](../exporting_data.md).
 
 ## Notes
 
-- **Save side effects.** `component_filter_master::save()` calls `self::clean_cache(logged_user_id(), $this->tipo)` **before** delegating to `parent::save()`. This is critical: a user's project assignment is cached at three levels (the static `$user_projects_cache` and `$user_authorized_projects_cache` arrays, and a file cache `cache_ar_projects.php`), and changing membership must invalidate all of them so permission changes take effect immediately.
-- **Propagation disabled.** `propagate_filter()` is overridden to be a no-op (`return true`). Unlike `component_filter` — which can cascade a record's project assignment to child portals — changing a user's master membership must **not** propagate as a cascading data change.
-- **Security guard (inherited).** `component_filter::set_data()` prevents a non-global-admin user from removing projects they do not have access to: any current locator not in the user's own `get_user_projects()` is preserved on save. Global admins see/assign every project (`get_user_authorized_projects()` searches the whole Projects section with no limit for `security::is_global_admin()` users).
-- **Static API.** `get_user_projects(int $user_id)` returns the raw locator array (statically cached, cache bypassed when `SHOW_DEVELOPER`); `get_user_authorized_projects(int $user_id, string $from_component_tipo)` returns enriched `{label, locator, parent, order}` elements; `get_user_authorized_projects_cache_key()`, `get_projects_cache_name()` and `clean_cache()` manage the cache.
+- **Cache invalidation (intended vs. implemented).** The authorized-projects cache (`authorizedProjectsCache`, `src/core/relations/filter_projects.ts`) is cleared by the ontology-cache hub and by a data listener on writes to the Projects section (`dd153`) — `clearFilterProjectsCache()`, `registerSectionDataListener()`. A user's *membership* is edited on the User section (`dd128`), not on `dd153`, so saving `component_filter_master` does not itself trigger this invalidation; combined with the read path currently being global-admin-scoped for every caller (see the gap above), a membership-change-specific invalidation has no confirmed implementation.
+- **Propagation disabled.** Unlike `component_filter` — which can cascade a record's project assignment to child portals — changing a user's master membership must **not** propagate as a cascading data change.
+- **Security guard (design).** A non-global-admin user should not be able to remove projects they do not have access to: any current locator outside the user's own project set should be preserved on save. Global admins see/assign every project — `getUserAuthorizedProjects()` currently returns every `dd153` record for every caller (see the gap above), so this guard is not yet meaningfully exercised for non-admins.
 - **Default tools.** The live instance exposes `tool_propagate_component_data` and `tool_time_machine`; tools are read-only context.
-- **Permissions.** Resolved via `get_component_permissions()` (0 none / 1 read / 2 read+write / 3 admin); the live instance is set to `3`. Read users (level 1) get the read-only tree (`get_input_element_read`); toggling requires level >= 2.
+- **Permissions.** Resolved via `getPermissions()` (`src/core/security/permissions.ts`; 0 none / 1 read / 2 read+write / 3 admin); the live instance is set to `3`. Read users (level 1) get the read-only tree; toggling requires level >= 2.
 - **Related components:** [component_filter](component_filter.md), [component_portal](component_portal.md), [component_select](component_select.md), [component_check_box](component_check_box.md), [component_relation_parent](component_relation_parent.md), [component_input_text](component_input_text.md).

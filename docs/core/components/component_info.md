@@ -87,17 +87,17 @@ render module.
     `InfoWidgetDescriptor` contract + shared IPO helpers), `registry.ts` (the
     ONE dispatch home: `INFO_WIDGETS` map + `computeInfoWidgets`), one module
     per widget under `<tld>/<name>.ts`, `calculation/functions.ts` (the static
-    process-fn registry) and `grid.ts` (dd_grid builders). On the PHP oracle
-    each widget was a `class.<name>.php extends widget_common` loaded from the
-    ontology-authored path; the TS server dispatches by **name** through the
-    registry and never loads code from a path. The developer checklist lives in
+    process-fn registry) and `grid.ts` (dd_grid builders). The TS server
+    dispatches by **name** through a static registry and never loads code from
+    an ontology-authored path — the dynamic-include threat class does not exist
+    here by construction. The developer checklist lives in
     `src/core/components/component_info/widgets/README.md`; the framework
     invariants are gated by `test/unit/info_widget_registry_tripwire.test.ts`.
 
 ## The wire contract
 
-The datum is the standard `{context, data}` shape. The client
-`component_info.js::get_widgets()` reads **`context.properties.widgets`** and
+The datum is the standard `{context, data}` shape. The client's
+`component_info.js` `get_widgets()` reads **`context.properties.widgets`** and
 **`data.entries`**, so both are load-bearing.
 
 ### context.properties.widgets — a HARD client requirement
@@ -119,8 +119,8 @@ straight from the ontology node's `properties`. Each entry is:
 - **`widget_name`** — the dispatch key. The registry (`widgets/registry.ts`)
   switches on it; the client imports `core/widgets<path>/js/<widget_name>.js`.
   An ontology `widget_name` with no registry entry throws
-  `WidgetNotRegisteredError` on the server (PHP fatals on its include too) —
-  widgets never silently render empty (the never-narrow law).
+  `WidgetNotRegisteredError` on the server — widgets never silently render
+  empty (the never-narrow law).
 - **`path`** — the client import path (leading slash), also the folder under
   `core/widgets`. The server never uses it to load code; the registry tripwire
   only **verifies** each descriptor's `path` resolves to a real client module.
@@ -149,29 +149,30 @@ declaration order. Each item is widget-specific but uniform in its head:
     This is the motivating bug of the rebuild ("widgets are not working"). The
     byte-identical **client** widget renders match entries on **`widget_id`**
     (`render_get_archive_weights.js`, `render_calculation.js`, …), while the
-    **grid/export** builders match on **`id`**. PHP emits only *one* of the two
-    keys per widget class (live weights/state → `widget_id`, live calculation →
-    `id`) and **all stored misc values are `id`-keyed** — so the PHP client
-    renders every stored archive (17,087 numisdata records, verified live
-    2026-07-10) *and* every live calculation **blank**.
+    **grid/export** builders match on **`id`**. Historically each widget emitted
+    only *one* of the two keys: live weights/state emitted `widget_id` (fine for
+    the client, missing for grid/export); live calculation emitted `id` (fine
+    for grid/export, missing for the client); and **all stored misc values were
+    `id`-keyed only**. The result: stored archives (measured across 17,087
+    numisdata records) and live calculations both rendered client-side as
+    **blank**, because neither carried the `widget_id` the client matches on.
 
     The TS server satisfies the client's contract by emitting **both** keys at
     the emit boundary via `normalizeWidgetEntryKeys`
     (`widgets/widget_common.ts`). Only top-level string keys are dualised —
     `media_icons` row objects (whose `id` key holds a *cell* object), nested
     shapes (`state`'s `value.widget_id`) and the `tags` widget's leading raw
-    text items (no `widget` tag) pass through verbatim. Ledger:
-    [engineering/WIRE_CONTRACT.md → WC-026](../../../engineering/WIRE_CONTRACT.md).
+    text items (no `widget` tag) pass through verbatim. This is wire contract
+    WC-026.
 
 ### The stored-misc-wins / live-fallback rule
 
 The emit hook serves the **stored** misc value when the client save cycle has
 persisted one (`{id, key, value, widget}` items), and falls back to live widget
-compute only when the row holds nothing. This mirrors PHP's `get_db_data`
-(stored-first, live-compute-fallback). In practice **stored misc values are
-legacy** — current PHP never writes them (measured 2026-07-10), so the live
-compute path is the one that matters, and observer recomputes deliberately do
-**not** touch the live misc column either (see [Observers](#observers)).
+compute only when the row holds nothing. In practice **stored misc values are
+legacy** — nothing writes them today, so the live compute path is the one that
+matters, and observer recomputes deliberately do **not** touch the live misc
+column either (see [Observers](#observers)).
 
 ### Edit-mode datalist
 
@@ -180,7 +181,7 @@ item (`decorateItem`), the concatenation of every widget's `computeDataList`
 output. Only the `state` widget implements it today; its client render
 (`render_edit_state.js`) resolves option labels from `self.datalist` and
 **TypeErrors to blank without it**. The datalist is attached only in edit mode
-and only when non-empty (PHP `component_info_json.php` parity).
+and only when non-empty.
 
 ## The `get_widget_data` API action
 
@@ -202,7 +203,7 @@ it from the shared `widget_common.js` `build(autoload=true)` path.
 ```
 
 **Response** — success is the widget's raw item array in `result`; failures ride
-as HTTP 200 with the **PHP error-envelope bytes** preserved verbatim:
+as HTTP 200 with the exact error-envelope bytes preserved verbatim:
 
 ```jsonc
 // success
@@ -216,20 +217,21 @@ as HTTP 200 with the **PHP error-envelope bytes** preserved verbatim:
 { "result": false, "msg": [" Empty defined widgets for dd_component_info : <label> [<tipo>] "], "errors": [] }
 ```
 
-!!! note "TS is stronger on one axis (AUTHZ-01)"
+!!! note "AUTHZ-01"
     A widget computes **over a record**, so the handler gates the record with
     `principalCanAccessRecord(section_tipo, section_id, principal)` **before any
-    compute** — PHP computes for any coordinates a logged-in user names. A
-    forbidden record returns `{result:false, msg:[' Forbidden record'],
-    errors:['forbidden']}`. This is a permitted (stronger-only) divergence.
+    compute** — a logged-in user cannot trigger a compute over coordinates they
+    cannot access. A forbidden record returns `{result:false, msg:[' Forbidden
+    record'], errors:['forbidden']}`.
     This channel is the **only** delivery path for async widgets — it computes
     them (the read-time aggregate skips them).
 
 ## The widget census
 
-All **11** widgets of the PHP census are ported. Discipline TLD folders mirror
-PHP `core/widgets/<tld>/<name>/` and the byte-identical client
-`client/dedalo/core/widgets/<tld>/<name>/js/`.
+All **11** widgets of the census are ported. TLD folders keep a consistent
+naming discipline across the descriptor modules
+(`src/core/components/component_info/widgets/<tld>/<name>.ts`) and the
+byte-identical client (`client/dedalo/core/widgets/<tld>/<name>/js/`).
 
 | widget | TLD | descriptor `path` | purpose | facets |
 |---|---|---|---|---|
@@ -242,13 +244,13 @@ PHP `core/widgets/<tld>/<name>/` and the byte-identical client
 | `get_coins_by_period` | `numisdata` | `/numisdata/get_coins_by_period` | Count/group coins by chronological period (thesaurus-driven). | — |
 | `descriptors` | `oh` | `/oh/descriptors` | Oral-history indexation count + merged descriptor **term grid** for a record. | edit-only (`list` mode → `[]`) |
 | `media_icons` | `oh` | `/oh/media_icons` | One row per linked media record: id + tc value columns + one tool-launch column per declared tool. | row objects; user-scoped tools |
-| `tags` | `oh` | `/oh/tags` | Transcription tag statistics over the current record's transcription text. | leads with raw text items (PHP quirk) |
+| `tags` | `oh` | `/oh/tags` | Transcription tag statistics over the current record's transcription text. | leads with raw text items (a legacy quirk) |
 | `test_info` | `test` | `/test/test_info` | Minimal reference widget used by tests/samples; emits both `id` and `widget_id` natively. | reference stub |
 
-!!! note "Coverage state lives in the ledger, not here (S2-45)"
+!!! note "Coverage state lives in the internal ledger, not here (S2-45)"
     Which widgets are byte-parity gated vs shape-gated, and the open reconcile
-    rows, live in [rewrite/LEDGER.md](../../../rewrite/LEDGER.md). This page
-    describes behaviour; the ledger tracks state.
+    rows, are tracked in the project's internal coverage ledger, not in this
+    page. This page describes behaviour; the ledger tracks state.
 
 ## IPO — the widget config
 
@@ -318,7 +320,7 @@ covered (oracle-verified on scratch twins 2026-07-10):
 | shape | example | targets | what lands |
 |---|---|---|---|
 | **`filter:{SQO}`** | numisdata595 ← numisdata57 (observed lives on **another** section) | fill every clause's `q` with the saved record's locator (+ `from_component_tipo` from the clause's last path step) and search the observer's section for the referencing records | ONE `matrix_time_machine` row per target (lg-nolan, raw computed shape); live misc **untouched**; no response item (cross-section) |
-| **`filter:false`** | rsc19 ← rsc156 (same-record observer) | the saved record itself | TM row **plus** the recomputed item merged into the **save response** (PHP `observers_data`), so the actively-edited record's panel refreshes |
+| **`filter:false`** | rsc19 ← rsc156 (same-record observer) | the saved record itself | TM row **plus** the recomputed item merged into the **save response** (`observers_data`), so the actively-edited record's panel refreshes |
 
 Real shapes: numisdata57 (a `component_radio_button`) carries
 `observers: [{"info": "Coins. Property used for server side only",
@@ -328,9 +330,9 @@ component numisdata595 carries the matching `observe` block with a
 (`component_state`) carries eight `observe` entries with `server:{filter:false}`.
 
 !!! note "One TM row, never the live misc column"
-    Per target PHP writes exactly one `matrix_time_machine` row per save and —
-    measured, deliberate — does **not** write the live misc column (stored misc
-    values are legacy). TS matches this. Gated in
+    Per target the engine writes exactly one `matrix_time_machine` row per save
+    and — deliberate — does **not** write the live misc column (stored misc
+    values are legacy). Gated in
     `test/parity/info_observer_differential.test.ts`.
 
 ## Render views & modes (client)
@@ -354,35 +356,36 @@ widget → the widget's own `wrapper_widget` node. `content_data` uses
 
 ## Import / export
 
-**Import.** `component_info` owns no user-entered data and defines no
-`conform_import_data()` — there is nothing to import; the value is recomputed
-each load. See [importing data](../importing_data.md).
+**Import.** `component_info` owns no user-entered data and defines no import
+handling — there is nothing to import; the value is recomputed each load. See
+[importing data](../importing_data.md).
 
-**Export / grid.** The PHP contract is **one atom per widget IPO `output`
-entry**, built by walking each output `id`. On the TS side the grid/export
-consumer for widgets is partial — the shared dd_grid cell tree is built by
+**Export / grid.** The intended contract is **one atom per widget IPO `output`
+entry**, built by walking each output `id`. The current grid/export consumer
+for widgets is partial — the shared dd_grid cell tree is built by
 `widgets/grid.ts` (`buildPortalGridValue`, consumed by `descriptors`), and
 `sum_dates` ships a `computeDataParsed` humanizer as its grid/export face; the
 full one-column-per-`output` consumer is not universally wired. Check the code
 before relying on an exact column layout. See [exporting data](../exporting_data.md).
 
-## Honest notes on PHP-side defects
+## Honest notes on known limitations
 
-These are live **PHP-oracle** defects the TS twin documents factually (they are
-the "why" of some divergences):
+These notes document known limitations and historical context behind some of
+the engine's deliberate divergences:
 
-- **`calculation` `summarize` crashes PHP on non-empty input** — `array_sum()`
-  on the flat *string* `get_calculation_data` returns kills the whole request.
-  TS emits `[]` for that case instead (the effective outcome); with all inputs
-  empty both engines emit `total 0`. Pinned in
+- **`calculation` `summarize` does not sum non-empty input yet** — it emits
+  `[]` when any input is non-empty (a known limitation, not a real sum yet);
+  with all inputs empty it emits `total 0`. Pinned in
   `test/parity/info_widget_differential.test.ts` and the code comment in
   `widgets/calculation/functions.ts`.
-- **`user_activity`'s saved-stats tier never decodes on live PHP** — only
-  today/live-fallback tiers show, and its `who` dimension is dead. The TS
-  three-tier pipeline is faithful to the *intended* behaviour.
-- **PHP insert save double-fires** — an insert save runs twice, so PHP writes
-  two identical observer TM rows where TS writes one; the observer differential
-  compares TM **counts deduped** for this reason.
+- **`user_activity` implements the full three-tier design.** Earlier tooling
+  never fully exercised the saved-stats tier, and its `who` dimension never
+  worked. The TS pipeline is faithful to the *intended* three-tier behaviour,
+  not to that historical gap.
+- **An insert save used to double-fire before the cutover** — so historical,
+  frozen data can contain two identical observer TM rows where the current
+  engine writes one; the observer differential compares TM **counts deduped**
+  for this reason.
 
 ## Related
 
@@ -393,4 +396,3 @@ the "why" of some divergences):
 - [component_info cookbook](component_info_cookbook.md) — practical recipes
   (declare, extend, async, datalist, observers, test, debug).
 - [component_inverse](component_inverse.md) — the other *info* model.
-- [engineering/WIRE_CONTRACT.md](../../../engineering/WIRE_CONTRACT.md) — WC-026.

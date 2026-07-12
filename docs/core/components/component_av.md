@@ -70,7 +70,7 @@
 ```
 
 !!! note "Typology"
-    `component_av` is a **media** component. In the TS server it is a lightweight descriptor (`src/core/components/component_av/descriptor.ts` — `{ model: 'component_av', column: 'media' }`); there is no per-model class hierarchy. Like the other media components ([component_image](component_image.md), [component_3d](component_3d.md), [component_pdf](component_pdf.md), [component_svg](component_svg.md)) it does **not** store binary data in the matrix: the `media` column holds a thin JSON pointer (`original_normalized_name` / `modified_normalized_name`), and the live audio/video files live on disk under the configured media root (`config.media.rootPath`). Type-specific behavior (qualities, extensions, folder, FFmpeg-driven conversion/posterframe/subtitle logic) lives in the shared horizontal engine — `src/core/concepts/media.ts` (type catalog), `src/core/media/engine/ffmpeg.ts` + `ffmpeg_profiles.ts` (transcode/posterframe/probe), `src/core/media/processing.ts`, `src/core/media/ingest/process_uploaded_file.ts` (`submitAvTranscode`) — not a per-type class.
+    `component_av` is a **media** component. In the TS server it is a lightweight declarative descriptor (`src/core/components/component_av/descriptor.ts` — `{ model: 'component_av', column: 'media' }`) read by the shared horizontal engines; there is no per-model code tree. Like the other media components ([component_image](component_image.md), [component_3d](component_3d.md), [component_pdf](component_pdf.md), [component_svg](component_svg.md)) it does **not** store binary data in the matrix: the `media` column holds a thin JSON pointer (`original_normalized_name` / `modified_normalized_name`), and the live audio/video files live on disk under the configured media root (`config.media.rootPath`). Type-specific behavior (qualities, extensions, folder, FFmpeg-driven conversion/posterframe/subtitle logic) lives in the shared horizontal engine — `src/core/concepts/media.ts` (type catalog), `src/core/media/engine/ffmpeg.ts` + `ffmpeg_profiles.ts` (transcode/posterframe/probe), `src/core/media/processing.ts`, `src/core/media/ingest/process_uploaded_file.ts` (`submitAvTranscode`) — not a per-type class.
 
 !!! info "About `default_tools`"
     The set above is verified from an instance `context.tools` sample. AV instances ship a richer toolbar than the still-media components: `tool_upload` (binds files), `tool_media_versions` (rebuild qualities, `conform_headers`), `tool_posterframe` (set the preview frame), `tool_transcription` (open the timecoded transcription editor) and `tool_time_machine`. The toolbar is assembled from the model + ontology, not hardcoded; server-side each tool is a registered module (`tools/tool_upload/server/`, `tools/tool_media_versions/server/`, `tools/tool_posterframe/server/`, `tools/tool_transcription/server/`, `tools/tool_time_machine/server/`).
@@ -82,7 +82,7 @@
 
 `component_av` manages audio and video media in Dédalo: upload, on-disk storage, quality/version generation, poster-frame previews, subtitle tracks and timecode (TC) processing. It is the media component for any catalogue field that holds a recording rather than a still image.
 
-**Why it exists.** Cultural-heritage archives routinely catalogue moving image and sound: an oral-history interview, a recorded performance, an ethnographic field recording, a conservation video, a digitised reel. These assets need a normalised playable format, lighter derivative qualities for streaming, a poster frame for list previews, and — crucially for oral archives — the ability to anchor a transcription to exact timecodes. `component_av` provides all of that on top of the shared media base, using `media_engine` (`Ffmpeg`) to transcode uploads into Dédalo's standard MP4 format while preserving the original file untouched.
+**Why it exists.** Cultural-heritage archives routinely catalogue moving image and sound: an oral-history interview, a recorded performance, an ethnographic field recording, a conservation video, a digitised reel. These assets need a normalised playable format, lighter derivative qualities for streaming, a poster frame for list previews, and — crucially for oral archives — the ability to anchor a transcription to exact timecodes. `component_av` provides all of that on top of the shared media engine, driving FFmpeg (`src/core/media/engine/ffmpeg.ts`) to transcode uploads into Dédalo's standard MP4 format while preserving the original file untouched.
 
 **When to use it.**
 
@@ -119,7 +119,7 @@
 
 `original_normalized_name` (and, when an edited master exists, `modified_normalized_name`) is the deterministic filename of the source file kept under its own quality folder; derived qualities are generated from it. `original_file_name` keeps the human filename the user uploaded.
 
-At read time `scanFilesInfo()` (`src/core/media/files_info.ts`, PHP `get_files_info()`) rebuilds the live picture by scanning disk: for every configured quality and every allowed/alternative extension it calls `getQualityFileInfo()` and keeps the entries whose file exists. Each `files_info` object looks like:
+At read time `scanFilesInfo()` (`src/core/media/files_info.ts`) rebuilds the live picture by scanning disk: for every configured quality and every allowed/alternative extension it calls `getQualityFileInfo()` and keeps the entries whose file exists. Each `files_info` object looks like:
 
 ```json
 {
@@ -136,7 +136,7 @@ At read time `scanFilesInfo()` (`src/core/media/files_info.ts`, PHP `get_files_i
 When the media lives **outside** Dédalo (the `external_source` property points at a [component_iri](component_iri.md) holding the URL), `getQualityFileInfo()`/`scanFilesInfo()` return an entry flagged `"external": true` whose `file_path` is the external URL, and disk scanning is bypassed — the scanner already accepts an `externalSource` override for any media type. What the TS read path does **not yet** do is surface the resolved `external_source` value on the AV datum itself: `src/core/section/read.ts` only calls `resolveExternalSource()` for `component_image` today, so an AV component configured with `external_source` will scan correctly at the engine level but the API datum won't carry the `external_source` field the client's edit view expects. Ledgered gap.
 
 !!! note "Datum vs. API `entries`"
-    The transmitted unit is a `{context, data}` datum. In the API payload the data element is surfaced under `data.entries[0]`, and the controller appends `posterframe_url` and (in `edit`) a `subtitles` block (`subtitles_url`, `lang`, `lang_name`). `context` additionally carries a `features` block describing the instance media capabilities: `allowed_extensions`, `default_target_quality` (`original`), `ar_quality`, `default_quality` (`404`), the current `quality`, `key_dir` (`av`), `alternative_extensions` and `extension` (`mp4`) — built by `buildMediaFeatures()` (`src/core/section/media_features.ts`) and wired into the structure context by `structure_context.ts`. See the *dedalo-context-data-layers* skill for the full layering rules. **Gap:** the `subtitles` block and the VTT subtitle files it points at are not yet produced anywhere in the TS server — `src/core/media/tools/transcription.ts` builds the ephemeral `audio_tr` transcription WAV but no `build_subtitles_file`/VTT writer exists yet.
+    The transmitted unit is a `{context, data}` datum. In the API payload the data element is surfaced under `data.entries[0]`, and the controller appends `posterframe_url` and (in `edit`) a `subtitles` block (`subtitles_url`, `lang`, `lang_name`) — emitted by the media emit hook (`src/core/media/component_emit.ts`). `context` additionally carries a `features` block describing the instance media capabilities: `allowed_extensions`, `default_target_quality` (`original`), `ar_quality`, `default_quality` (`404`), the current `quality`, `key_dir` (`av`), `alternative_extensions` and `extension` (`mp4`) — built by `buildMediaFeatures()` (`src/core/section/media_features.ts`) and wired into the structure context by `structure_context.ts`. The VTT subtitle file the `subtitles_url` points at is built and written to disk by the `tool_transcription` action `build_subtitles_file` (`tools/tool_transcription/server/index.ts`), which calls the pure WEBVTT builder `buildSubtitlesText()` (`src/core/media/tools/subtitles.ts`) and writes the result through the shared subtitles path grammar (`subtitlesPath()`/`subtitlesUrl()`, `src/core/media/path.ts`).
 
 ### Qualities and the original model
 
@@ -152,7 +152,7 @@ When the media lives **outside** Dédalo (the `external_source` property points 
 The uploaded file is preserved under the `original` quality folder keeping its source extension (e.g. `.mov`); the playable `404` quality is transcoded from it by a **real two-pass libx264 ffmpeg pipeline** (`transcodeTwoPass()`, `src/core/media/engine/ffmpeg.ts`, argv-only — no shell — driven by the 39-profile table in `ffmpeg_profiles.ts`), run through the supervised job manager (`src/core/media/jobs.ts`) since AV transcodes are backgrounded. AV adds two media artefacts beyond the still-media components:
 
 - **Poster frame** — a JPG (`DEDALO_AV_POSTERFRAME_EXTENSION`) stored under `{folder}/posterframe{additional_path}/`. Created by `createAvPosterframe()` (`src/core/media/tools/posterframe.ts`, via `createPosterframe()` in `engine/ffmpeg.ts`, default capture at the requested timecode); `buildThumb()` (`engine/imagemagick.ts`) then rasterises it into the `thumb` quality.
-- **Subtitles** — one VTT (`DEDALO_AV_SUBTITLES_EXTENSION`) per language under `{folder}{DEDALO_SUBTITLES_FOLDER}/`, named `{id}_{lang}.vtt`. **Not yet ported**: no VTT/subtitles writer exists in `src/core/media/` today (see the gap note above).
+- **Subtitles** — one VTT (`DEDALO_AV_SUBTITLES_EXTENSION`) per language under `{folder}{DEDALO_SUBTITLES_FOLDER}/`, named `{id}_{lang}.vtt`. Built from a TC-tagged transcript by `buildSubtitlesText()` (`src/core/media/tools/subtitles.ts`) and written to disk by the `tool_transcription` `build_subtitles_file` action (see *Datum vs. API `entries`* above); the target subtitles directory must already exist — the action does not create it.
 
 ### Naming and storage paths
 
@@ -183,13 +183,12 @@ Node definition (shape):
 }
 ```
 
-Realistic `properties` block for an oral-history recording wired to a timecoded transcription, that also stores the uploaded filename and duration into sibling text fields and buckets files by 1000:
+Realistic `properties` block for an oral-history recording wired to a timecoded transcription, that also names a sibling text field for the uploaded filename and buckets files by 1000:
 
 ```json
 {
     "max_items_folder" : 1000,
     "target_filename"  : "rsc53",
-    "target_duration"  : "rsc54",
     "observe": [
         {
             "client": { "event": "click_tag_tc", "perform": { "function": "go_to_time" } },
@@ -207,7 +206,7 @@ Realistic `properties` block for an oral-history recording wired to a timecoded 
 }
 ```
 
-`section_tipo` / `parent` tell the section which column owns this component's data; on `save()` the section is the single writer to the database. The media files themselves are written to disk by the upload flow (below), and `save()` only refreshes the thin pointer element and triggers `valor`/list-value recomputation.
+`section_tipo` / `parent` tell the section which column owns this component's data; on save the data flows through the section's record save path, the single writer to the database. The media files themselves are written to disk by the upload flow (below); the save itself only refreshes the thin pointer element and triggers the list-value recomputation.
 
 ## Properties & options
 
@@ -216,22 +215,17 @@ All properties are optional and live in the ontology node `properties` JSON. Ver
 ### target_filename
 
 - **Values:** a component tipo (string) — normally a [component_input_text](component_input_text.md) in the same section.
-- **Effect:** in PHP, on upload of the `original` quality, `process_uploaded_file()` writes the human upload filename (e.g. `memoria_oral.mov`) into that sibling component and saves it. **Not yet wired in the TS ingest path**: `processUploadedFile()` (`src/core/media/ingest/process_uploaded_file.ts`) records the upload's original filename on the media item itself but does not write it back to a `target_filename` sibling component; that role is honoured today only by the bulk `tool_import_files` matcher (`src/core/tools/import_files_match.ts`). Ledgered gap for the interactive-upload path.
-
-### target_duration
-
-- **Values:** a component tipo (string) — normally a [component_input_text](component_input_text.md) (commonly `rsc54`).
-- **Effect:** in PHP, on upload the file duration is read from the media metadata, converted to a timecode string (e.g. `00:05:20:125`) and saved into that sibling component. **Not yet ported**: `submitAvTranscode()` (`src/core/media/ingest/process_uploaded_file.ts`) probes streams via `probeStreams()` (ffprobe) for the transcode itself but does not extract/write a duration timecode to a sibling component. Ledgered gap.
+- **Effect:** on upload of the `original` quality, this property is meant to name a sibling component that receives the human upload filename (e.g. `memoria_oral.mov`). **Not yet wired in the ingest path**: `processUploadedFile()` (`src/core/media/ingest/process_uploaded_file.ts`) records the upload's original filename on the media item itself but does not write it back to a `target_filename` sibling component; that role is honoured today only by the bulk `tool_import_files` matcher (`src/core/tools/import_files_match.ts`). Ledgered gap for the interactive-upload path.
 
 ### external_source
 
 - **Values:** a component tipo (string) pointing at a [component_iri](component_iri.md) in the same section.
-- **Effect:** when set, the playable source is read from that IRI instead of Dédalo's media tree. `scanFilesInfo()` (`src/core/media/files_info.ts`) already returns an `"external": true` entry when given an `externalSource` override. **Gap:** the read path only resolves and surfaces `external_source` on the API datum for `component_image` today (`resolveExternalSource()` in `src/core/section/read.ts`); AV items don't yet carry it on read, and `get_diffusion_value()`'s external-URL branch is not yet ported for AV.
+- **Effect:** when set, the playable source is read from that IRI instead of Dédalo's media tree. `scanFilesInfo()` (`src/core/media/files_info.ts`) already returns an `"external": true` entry when given an `externalSource` override. **Gap:** the media emit hook only resolves and surfaces `external_source` on the API datum for `component_image` today (`resolveExternalSource()` in `src/core/media/component_emit.ts`, called only when `model === 'component_image'`); AV items don't yet carry it on read, and the diffusion external-URL branch is not yet ported for AV.
 
 ### initial_media_path
 
 - **Values:** object keyed by component tipo -> path string (e.g. `{"rsc167": "/my_custom_name"}`), declared on the **section** node.
-- **Effect:** inserts a fixed path segment between `folder` and `quality`, letting an instance store its files in a custom sub-tree. Read by `resolveMediaPathOptions()` (`src/core/media/ontology_path.ts`) and applied by `buildMediaLocation()` (`src/core/media/path.ts`) — shared by all five media models, not a per-class inheritance.
+- **Effect:** inserts a fixed path segment between `folder` and `quality`, letting an instance store its files in a custom sub-tree. Read by `resolveMediaPathOptions()` (`src/core/media/ontology_path.ts`) and applied by `buildMediaLocation()` (`src/core/media/path.ts`) — one implementation shared by all five media models.
 
 ### max_items_folder
 
@@ -263,8 +257,8 @@ Views are selected from `context.view` (default `default`) and dispatched per mo
 Modes:
 
 - **edit** — read/write a real record: upload, generate/rebuild qualities, set the poster frame, manage subtitles, drive the player. The datum carries `posterframe_url` and a per-language `subtitles` block.
-- **list / tm** — read-only listing. `get_list_value()` returns only the `default_quality` (`404`) and `thumb` `files_info` entries; the value shown is the poster-frame URL. `tm` (Time Machine) reuses the list render and resolves the last deleted file under the `/deleted` folder.
-- **search** — one text input per filter feeding the SQO (via the `search_component_media_common` trait); saves are blocked.
+- **list / tm** — read-only listing. The list value keeps only the `default_quality` (`404`) and `thumb` `files_info` entries; the value shown is the poster-frame URL. `tm` (Time Machine) reuses the list render and resolves the last deleted file under the `/deleted` folder.
+- **search** — one text input per filter feeding the SQO through the shared search builders (`src/core/search/conform.ts`); saves are blocked.
 
 ## Import / export model
 
@@ -275,15 +269,15 @@ Upload flow (the real ingestion path), in order:
 1. Multipart/chunked receiver — the API dispatch's multipart branch (`src/server.ts`) hands off to `handleMediaUpload()` (`src/core/media/ingest/upload_endpoint.ts`): session + CSRF required, chunked join with a re-sniff of the assembled file, magic-byte MIME sniffing (`src/core/media/engine/mime.ts`) — never trusts the client-declared MIME type.
 2. `tool_upload.process_uploaded_file` (`tools/tool_upload/server/index.ts`) — permission-gated (write level ≥ 2), resolves the media context and calls the ingest orchestrator.
 3. `addFile()` (`src/core/media/ingest/add_file.ts`) — confines the staged source, validates the extension, backs up any existing target via `renameOldFiles()`, moves the file into the `original` quality tier.
-4. `processUploadedFile()` (`src/core/media/ingest/process_uploaded_file.ts`) — for AV, calls `submitAvTranscode()`: builds the default (`404`) quality via a real two-pass ffmpeg transcode and the `audio` quality (when an audio stream exists) through the job manager (`src/core/media/jobs.ts`), then re-scans `files_info`. **Not yet ported from PHP**: writing `original_file_name`/duration back to `target_filename`/`target_duration` sibling components (see *Properties & options*), and building the poster frame/thumb as part of this same flow (posterframe creation is currently a separate explicit action, see below).
+4. `processUploadedFile()` (`src/core/media/ingest/process_uploaded_file.ts`) — for AV, calls `submitAvTranscode()`: builds the default (`404`) quality via a real two-pass ffmpeg transcode and the `audio` quality (when an audio stream exists) through the job manager (`src/core/media/jobs.ts`), then re-scans `files_info`. **Not yet implemented**: writing the original filename back to a `target_filename` sibling component (see *Properties & options*), and building the poster frame/thumb as part of this same flow (posterframe creation is currently a separate explicit action, see below).
 
-**Export.** `get_export_value()` emits a single atom (`cell_type: 'img'`) whose value is the default-quality URL in `edit` mode, or the poster-frame URL otherwise; URL absoluteness comes from the `export_context`. `get_diffusion_value()` reduces to the default-quality URL (or `{id}.{extension}` when `DEDALO_PUBLICATION_CLEAN_URL` is on), or the `external_source` URL when the media is external. See [exporting data](../exporting_data.md). **Not yet ported:** clip download (`download_fragment` on `dd_component_av_api`) — the argv recipe exists (`buildFragmentArgv()`, `src/core/media/engine/ffmpeg.ts`) but no API action wraps it yet, so the client's fragment-download button has no server-side handler on the TS engine.
+**Export.** The export path (`src/diffusion/export/atoms.ts`) emits a single atom (`cell_type: 'img'`) whose value is the default-quality URL in `edit` mode, or the poster-frame URL otherwise; URL absoluteness comes from the `export_context`. In diffusion the value reduces to the default-quality URL (or `{id}.{extension}` when `DEDALO_PUBLICATION_CLEAN_URL` is on), or the `external_source` URL when the media is external. See [exporting data](../exporting_data.md). **Not yet ported:** clip download (`download_fragment` on `dd_component_av_api`) — the argv recipe exists (`buildFragmentArgv()`, `src/core/media/engine/ffmpeg.ts`) but no API action wraps it yet, so the client's fragment-download button has no server-side handler on the TS engine.
 
 ## Notes
 
-- **Observers / observables.** AV ships **no** `events_subscription.js`; all event wiring is declared in the ontology `properties->observe` (see above). The transcription editor publishes `click_tag_tc` / `key_up_esc` / `key_up_f2`; the AV player subscribes and runs `go_to_time` / `play_pause` / `get_data_tag`.
-- **Default tools.** A typical instance exposes `tool_upload`, `tool_media_versions`, `tool_posterframe`, `tool_transcription` and `tool_time_machine` in `context.tools` (read-only context). `create_posterframe`/`delete_posterframe` for AV are registered as `dd_component_av_api` actions in `src/core/api/dispatch.ts` (not through the tool registry) — the "Create/Delete posterframe" buttons call those directly, matching the PHP client's wiring; `get_media_streams` (ffprobe stream metadata for the player) is registered alongside them.
-- **Access control.** PHP guards files with `media_protection` (`DEDALO_MEDIA_ACCESS_MODE`: `false` / `private` / `publication`): a daily-rotated `dedalo_media_auth` cookie for logged-in users, `.publication/pub/{section_tipo}_{section_id}` markers for anonymous publication access, enforced fail-closed by the web server. The TS server serves media through a dev-only session-gated route instead (`src/server.ts`, any authenticated TS session, traversal-guarded, fail-closed 404) — production-grade marker/cookie media protection is a separate subsystem, out of scope for the media rebuild (see the *dedalo-media-protection* skill).
-- **Deletion / restore.** `moveToDeleted()` / `renameOldFiles()` (`src/core/media/file_ops.ts`) rename files into a `/deleted` folder rather than hard-deleting, matching PHP's two datestamp formats (`Y-m-d_Hi` for per-file moves, `Y-m-d_Gis` for the section-delete path, `src/core/section/record/delete_record.ts`). `listDeletedVersions()` (the natural-sort scan that would recover the newest deleted file for Time Machine) exists as a primitive but is **not yet wired** into the TM restore path or the read path's `tm`-mode URL resolution — a soft-deleted AV file is not automatically re-surfaced by either yet. Ledgered gap.
-- **DVD / VOB.** PHP's `move_zip_file()` (unpacks zipped `VIDEO_TS`/`AUDIO_TS` structures) and `get_video_size()` (VOB size summation) have no TS port; only the `zip` extension is in the allowed-extensions list.
+- **Observers / observables.** AV ships **no** `events_subscription.js`; all event wiring is declared in the ontology `properties.observe` (see above). The transcription editor publishes `click_tag_tc` / `key_up_esc` / `key_up_f2`; the AV player subscribes and runs `go_to_time` / `play_pause` / `get_data_tag`.
+- **Default tools.** A typical instance exposes `tool_upload`, `tool_media_versions`, `tool_posterframe`, `tool_transcription` and `tool_time_machine` in `context.tools` (read-only context). `create_posterframe`/`delete_posterframe` for AV are registered as `dd_component_av_api` actions in `src/core/api/dispatch.ts` (not through the tool registry) — the "Create/Delete posterframe" buttons call those directly; `get_media_streams` (ffprobe stream metadata for the player) is registered alongside them.
+- **Access control.** Media file access is enforced natively: `src/core/media/protection.ts` maintains a daily-rotated `dedalo_media_auth` auth-marker store for logged-in users (a cookie whose value must exist as a marker file under `<media>/.publication/auth/`) and consumes `.publication/pub/{section_tipo}_{section_id}` markers — written by the diffusion media index (`src/diffusion/targets/mediastore/media_index.ts`) — for anonymous publication reads. Both rules are enforced by the web server itself via generated Apache/nginx rule files (one `stat()` per request), never by the Bun process, and fail closed as 404. Separately, an optional dev-only session-gated fallback route exists for local development (`src/server.ts`, gated behind `MEDIA_DEV_ROUTE_ENABLED`); it applies no per-record ACL and must never be enabled in a shared or production environment.
+- **Deletion / restore.** `moveToDeleted()` / `renameOldFiles()` (`src/core/media/file_ops.ts`) rename files into a `/deleted` folder rather than hard-deleting, using two datestamp formats (`Y-m-d_Hi` for per-file moves, `Y-m-d_Gis` for the section-delete path, `src/core/section/record/delete_record.ts`). `listDeletedVersions()` (the natural-sort scan that would recover the newest deleted file for Time Machine) exists as a primitive but is **not yet wired** into the TM restore path or the read path's `tm`-mode URL resolution — a soft-deleted AV file is not automatically re-surfaced by either yet. Ledgered gap.
+- **DVD / VOB.** Unpacking zipped `VIDEO_TS`/`AUDIO_TS` disc structures and VOB size summation are not implemented; only the `zip` extension is in the allowed-extensions list.
 - **Related components:** [component_image](component_image.md), [component_3d](component_3d.md), [component_pdf](component_pdf.md), [component_svg](component_svg.md), [component_iri](component_iri.md), [component_text_area](component_text_area.md), [component_input_text](component_input_text.md).

@@ -50,7 +50,7 @@
 
 ## Definition
 
-`component_json` is a literal-direct component (extends `component_common`) that stores an **arbitrary, free-form JSON value** as a single monovalue. Unlike `component_input_text` (plain strings) or `component_number` (formatted numbers), it does not constrain the shape of its value: the payload can be a JSON object, array, string, number, boolean or `null`, nested to any depth.
+`component_json` is a literal-direct component that stores an **arbitrary, free-form JSON value** as a single monovalue. Unlike `component_input_text` (plain strings) or `component_number` (formatted numbers), it does not constrain the shape of its value: the payload can be a JSON object, array, string, number, boolean or `null`, nested to any depth.
 
 Its reason to exist is to act as a flexible container for structured data that does not map cleanly onto the regular field-by-field ontology — configuration blobs, third-party API responses, machine-generated metadata, import staging payloads, or any record-attached document whose schema is not known in advance or is owned by an external system.
 
@@ -204,7 +204,7 @@ The component implements the modes `edit`, `list`, `tm` (Time Machine, rendered 
 
 ## Import / export model
 
-`component_json` participates in the standard CSV import/export. Because **any JSON is a valid value**, a v7 envelope is ambiguous with a literal value of the same shape, so the component disambiguates via the `dedalo_data` wrapper (`conform_import_data`):
+`component_json` participates in the standard CSV import/export. Because **any JSON is a valid value**, a v7 envelope is ambiguous with a literal value of the same shape, so the import conform step disambiguates via the `dedalo_data` wrapper:
 
 - **Default (un-wrapped) cell** — the entire decoded cell becomes the single monovalue. A JSON object/array is stored as-is inside `value`; a scalar string like `42`/`true` is decoded to its JSON type, and any non-JSON text is kept as a raw string.
 
@@ -232,12 +232,12 @@ See [Importing data → JSON](../importing_data.md#json) and [Exporting data](..
 
 ## Notes
 
-- **Language-neutral.** The constructor forces `lang = DEDALO_DATA_NOLAN`; `translatable` is `false`. There is no per-language storage and no `tool_lang`.
-- **Default tools.** Per the ontology, the component exposes `tool_propagate_component_data`, `tool_time_machine` and `tool_upload`. The upload tool accepts only files with the `.json` extension (`get_allowed_extensions()` → `["json"]`, validated in `valid_file_extension()`); on upload the file content is JSON-decoded, set as the value and saved, then the temp file is removed (`add_file()` / `process_uploaded_file()`).
-- **File upload naming.** Uploaded files are normalised to `section_tipo_tipo_section_id.json` (`get_upload_file_name()`).
-- **Search — gap.** PHP's `search_component_json` / `_tm` traits build PostgreSQL JSONB **jsonpath** predicates over the `misc` column (`@?` / `like_regex`, with `q_split` AND-splitting of multi-word queries). **No TS search builder exists for `component_json` yet** — `src/core/search/conform.ts` has no `component_json` branch, so a search filter against this model throws `builder for model 'component_json' not implemented yet` (verified 2026-07-05; see `rewrite/STATUS.md`). Search saves are blocked like in any component (search/tm modes do not persist).
-- **Persistence.** Like all components it never touches the DB directly; `save()` delegates to the owning section record, writing the `misc` column. Time Machine rows are written after save.
-- **Regeneration.** `regenerate_component()` re-saves the value, decoding any stringified JSON back to native JSON; if a stored value fails to decode it aborts (returns `false`) so an admin can inspect the invalid data rather than silently dropping it.
+- **Language-neutral.** Its descriptor declares no `classSupportsTranslation`, so it is always instantiated with `lang = lg-nolan`; `translatable` is `false`. There is no per-language storage and no `tool_lang`.
+- **Default tools.** Per the ontology, the component exposes `tool_propagate_component_data`, `tool_time_machine` and `tool_upload`. The upload tool accepts only files with the `.json` extension — the `allowed_extensions` feature of the component context (`["json"]`), validated on upload; the file content is then JSON-decoded, set as the value and saved, and the temp file is removed.
+- **File upload naming.** Uploaded files are normalised to `section_tipo_tipo_section_id.json`.
+- **Search — gap.** No search builder exists for `component_json`: its descriptor declares no `searchBuilder` family, so a search filter against this model throws loudly in `src/core/search/conform.ts` (unsearchable, never silently narrowed) instead of resolving to SQL. Search saves are blocked like in any component (search/tm modes do not persist).
+- **Persistence.** Like all components it never touches the DB directly; the write goes through the owning section record, which is the single writer to the `misc` column. Time Machine rows are written after save.
+- **Regeneration.** Regeneration re-saves the value, decoding any stringified JSON back to native JSON; if a stored value fails to decode it aborts rather than silently dropping the invalid data, so an admin can inspect it.
 - **Editor performance.** The JSONEditor module is preloaded on idle and instantiated only when the component enters the viewport; its CSS is injected once across all instances.
 
 Related components:
