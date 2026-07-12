@@ -6,7 +6,7 @@ Dédalo is an open-source Cultural Heritage Management System. This page introdu
 
 ## What is Dédalo?
 
-Dédalo is an open-source project that builds a Cultural Heritage Management System. It has two main systems, the work system and the diffusion system, and both have a server side and a client side. The server side was built on PHP; the work system's server documented here has been rewritten in TypeScript, running on the Bun runtime (see [Architecture overview](architecture_overview.md)). The client side is built on standard HTML, CSS and JavaScript, copied over unchanged from the PHP-era client.
+Dédalo is an open-source project that builds a Cultural Heritage Management System. It has two main systems, the work system and the diffusion system, and both have a server side and a client side. The work system's server documented here is written in TypeScript, running on the Bun runtime (see [Architecture overview](architecture_overview.md)) — a full rewrite of the original server. The client side is built on standard HTML, CSS and JavaScript.
 
 Dédalo uses multiple abstraction layers, from the database schema to the data definition and the relations between data. The data structure and program behavior are defined and controlled by its ontology.
 
@@ -34,7 +34,7 @@ To assess data quality across projects (including Dédalo itself), Dédalo propo
 
 ## Dédalo ecosystem
 
-Since it began in 1998, the project has been built following Internet and web standards. Today Dédalo uses common free and open-source technologies such as httpd, JavaScript, TypeScript, CSS, HTML, PostgreSQL, Bun and PHP (the work system's server is a TypeScript/Bun rewrite; PHP remains part of the diffusion/publication side during the transition). The project is licensed under the AGPL (GNU Affero General Public License v3.0) and its code is updated every day.
+Since it began in 1998, the project has been built following Internet and web standards. Today Dédalo uses common free and open-source technologies such as httpd, JavaScript, TypeScript, CSS, HTML, PostgreSQL, Bun and MariaDB. The project is licensed under the AGPL (GNU Affero General Public License v3.0) and its code is updated every day.
 
 To run Dédalo you need an Internet server running GNU/Linux (Ubuntu, Debian, RedHat, etc.). For development you can also install it on macOS X and, of course, if you want to play in Ninja mode, you can try to install it on Windows (but at your own risk...).
 

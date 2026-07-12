@@ -12,10 +12,9 @@ The SQO was defined because early PostgreSQL JSON search definitions were expect
 
 ## Search Query Object - SQO definition
 
-> PHP oracle: `./core/common/class.search_query_object.php`
-> TS rewrite: `src/core/concepts/sqo.ts` (shape + `sanitizeClientSqo` security gate),
-> `src/core/search/` (the compile-to-SQL engine: `conform.ts`, `sql_assembler.ts`,
-> `count.ts`, `identifier_gate.ts`, `builders/*`, `search_related.ts`)
+`src/core/concepts/sqo.ts` defines the shape and the `sanitizeClientSqo` security gate;
+`src/core/search/` is the compile-to-SQL engine: `conform.ts`, `sql_assembler.ts`,
+`count.ts`, `identifier_gate.ts`, `builders/*`, `search_related.ts`.
 
 **search_query_object** `object`
 
@@ -23,51 +22,50 @@ The Search Query Object defines an object with normalized properties to create a
 
 ## Search flow
 
-The Search Query Object is sent as part of the Request Query Object to be processed by the server API. The Search Query Object is parsed by the Search class and processed by every component involved in the query. The parsed SQO is used to create the final SQL that is sent to the database. The final result is sent to the client in JSON format.
+The Search Query Object is sent as part of the Request Query Object to be processed by the server API. The parsed SQO is used to create the final SQL that is sent to the database. The final result is sent to the client in JSON format.
 
 ```mermaid
     graph TD
     A(["User  search
      {q='orange cat'}"]) -- RQO with SQO--> B
-    B(("API :: read()
+    B(("dispatch.ts
     action : search"))
-    B --SQO--> C(("search :: search()" ))
-    A2["API :: sanitize_client_sqo()
+    B --SQO--> C(("buildSearchSql()" ))
+    A2["sanitizeClientSqo()
     (strip server-only + ACL fields,
     clamp limit)"] -.client SQO only.-> B
-    C --is sent to parse--> D("search :: parse_sqo()" )
-    D-- result parsed -->C
-    D --is sent to--> E("search :: conform_filter()
+    C --is sent to--> E("conformFilter()
     (validate tipo/lang)" )
-    E-- result -->D
-    E --is sent to--> F("component_common :: get_search_query()" )
+    E-- result -->C
+    E --is sent to--> F("per-model search builders
+    (src/core/search/builders/*.ts)" )
     F-- result -->E
     F-- is sent to -->G
-    G("component :: resolve_query_object_sql()
+    G("builder :: resolve query fragment
       q='orange'")
     F-- is sent to -->H
-    H("component :: resolve_query_object_sql()
+    H("builder :: resolve query fragment
       q='cat' ")
     G-- result -->F
     H-- result -->F
-    C-- wait for parse_sqo--> I("search :: parse_sql_query()")
-    I--SQL--> J("matrix_db_manager :: exec_search()")
+    C-- assembled SQL --> I("sql_assembler.ts")
+    I--SQL--> J["Bun.sql (Postgres client)"]
     J--SQL-->Q[(matrix tables)]
-    Q --PgSql\Result--> K{{"result ::
-    {ar_records:[{'Raspa'}]}"}}
+    Q --rows--> K{{"result ::
+    {rows:[{'Raspa'}]}"}}
     K --Object--> B
     B --JSON--> A
 ```
 
 !!! note "About the SQL examples in this page"
-    The inline `SQL` blocks below now use the REAL v7 shape: every `matrix*` table stores component data across **typed JSONB columns** — `data`, `relation`, `string`, `date`, `iri`, `geo`, `number`, `media`, `misc`, `relation_search`, `meta` — keyed by component **tipo** inside each column (e.g. `string -> '{"rsc85":[{"lang":"lg-eng","value":"Ana"}]}'`), never a single legacy `datos` column. Matches queried through PostgreSQL `jsonpath` (`@?`, `jsonb_path_query`) with bound `$1..$n` parameters for every literal. This is unchanged between the PHP and TS servers — both share the same PostgreSQL schema (`src/core/db/matrix.ts` `MATRIX_JSONB_COLUMNS`). The blocks are still illustrative simplifications of the exact generated SQL (real fragments carry more existence-envelope boilerplate); the source of truth is the per-model fragment builders in `src/core/search/builders/*.ts` (PHP: the per-component search traits, `core/component_*/trait.search_component_*.php`) and the differential/unit gates in `test/parity/` and `test/unit/`.
+    The inline `SQL` blocks below use the REAL v7 shape: every `matrix*` table stores component data across **typed JSONB columns** — `data`, `relation`, `string`, `date`, `iri`, `geo`, `number`, `media`, `misc`, `relation_search`, `meta` — keyed by component **tipo** inside each column (e.g. `string -> '{"rsc85":[{"lang":"lg-eng","value":"Ana"}]}'`), never a single legacy `datos` column. Matches queried through PostgreSQL `jsonpath` (`@?`, `jsonb_path_query`) with bound `$1..$n` parameters for every literal (`src/core/db/matrix.ts` `MATRIX_JSONB_COLUMNS`). The blocks are still illustrative simplifications of the exact generated SQL (real fragments carry more existence-envelope boilerplate); the source of truth is the per-model fragment builders in `src/core/search/builders/*.ts` and the gates in `test/parity/` and `test/unit/`.
 
 ## Security and access control
 
 The SQO is the query language, but not every SQO is equally trusted. **A client-built SQO arriving from the HTTP API is untrusted; an SQO a server class builds and runs directly is trusted.** The full configuration (the `DEDALO_SEARCH_CLIENT_MAX_LIMIT` and `DEDALO_FILTER_USER_RECORDS_BY_ID` constants, and the project filter) is documented in [Search configuration and access control](../config/search.md). In short:
 
-- **Client boundary** — TS `sanitizeClientSqo()` (`src/core/concepts/sqo.ts`; PHP `search_query_object::sanitize_client_sqo()` at the API entry, `core/api/v1/json/index.php`) runs once for client SQOs only: recursively strips server-only SQL fields (`sentence`, `params`, `column_sql`, `table`, `table_alias`) and access-control flags (`skip_projects_filter`, `skip_duplicated`, `include_negative`), forces `parsed = false`, and clamps `limit` to `CLIENT_MAX_LIMIT` (1000, same value as PHP's `DEDALO_SEARCH_CLIENT_MAX_LIMIT`). Server-internal builders bypass this gate.
-- **Identifier / language validation** — for **every** SQO, the TS `conformFilter()` chokepoint (`src/core/search/conform.ts`; PHP `search::conform_filter()`) validates each path `section_tipo`/`component_tipo` (`assertValidTipo`/`assertValidTipoOrColumn`, `src/core/search/identifier_gate.ts`) and each filter `lang` (`assertValidLang`) before they are interpolated verbatim into JSONB keys / jsonpath. Malformed values throw (they cannot be parameterized).
+- **Client boundary** — `sanitizeClientSqo()` (`src/core/concepts/sqo.ts`) runs once for client SQOs only, at the API entry: recursively strips server-only SQL fields (`sentence`, `params`, `column_sql`, `table`, `table_alias`) and access-control flags (`skip_projects_filter`, `skip_duplicated`, `include_negative`), forces `parsed = false`, and clamps `limit` to `CLIENT_MAX_LIMIT` (1000). Server-internal builders bypass this gate.
+- **Identifier / language validation** — for **every** SQO, the `conformFilter()` chokepoint (`src/core/search/conform.ts`) validates each path `section_tipo`/`component_tipo` (`assertValidTipo`/`assertValidTipoOrColumn`, `src/core/search/identifier_gate.ts`) and each filter `lang` (`assertValidLang`) before they are interpolated verbatim into JSONB keys / jsonpath. Malformed values throw (they cannot be parameterized).
 - **Prepared parameters** — all literal `q` values reach SQL as bound `$n` parameters, never inlined.
 - **Project filter** — for non global-admin users a project-scope restriction is always added to `WHERE` (per section), and `skip_projects_filter` (which removes it) is not settable from a client SQO.
 
@@ -101,9 +99,9 @@ The SQO is the query language, but not every SQO is equally trusted. **A client-
 - **remove_distinct** : `bool` (true || false) remove duplicate records when the SQL query has a sub-select with multiple criteria that can return duplicate records. Default : false **optional**
 - **skip_projects_filter** : `bool` (true || false) remove the mandatory component_filter applied to all users except root and global admin users. Default : false **optional**
 - **breakdown** : `bool` (true || false) split the data of the matching section (a database row) into a row for every match. Used to locate specific locators and count the values that match the locator being searched. Applied in `related` mode to search the indexations that call specific interviews, persons, etc. Default false  **optional**
-- **tables** : `array` list of tables to search. Used in related searches to limit the tables to search. Overwrites the default value 'common::get_matrix_tables_with_relations()'. **optional**
+- **tables** : `array` list of tables to search. Used in related searches to limit the tables to search. Overwrites the default relation-capable table list (see [tables](#tables) below). **optional**
 - **parsed** : `bool` (true || false) state of the SQO; it indicates whether the filter was parsed by the components to add operators to q. It is used as an internal property, but it is possible to parse it manually and set this state. Default false  **optional**
-- **select** : `array of objects` array of ddo that defines the SELECT columns. In v7 it is used to return specific component columns instead of the whole set of typed JSONB columns; each item resolves its data column through the component model (`search::conform_select`). When omitted, the search returns `section_id`, `section_tipo` and every typed data column (`DEFAULT_SELECT_COLUMNS` in `src/core/search/sql_assembler.ts`: `data`, `relation`, `string`, `date`, `iri`, `geo`, `number`, `media`, `misc`, `meta`). **optional** — narrowing via an explicit `select` is not yet implemented in the TS engine (only the default full column set is projected today).
+- **select** : `array of objects` array of ddo that defines the SELECT columns. When omitted, the search returns `section_id`, `section_tipo` and every typed data column (`DEFAULT_SELECT_COLUMNS` in `src/core/search/sql_assembler.ts`: `data`, `relation`, `string`, `date`, `iri`, `geo`, `number`, `media`, `misc`, `meta`). **optional** — narrowing via an explicit `select` to specific component columns is not implemented; the engine always projects the default full column set.
 
 ### Summary
 
@@ -701,7 +699,7 @@ Functions implemented (installed by `db_pg_definitions`; vendored 1:1 as JSON at
 - `data_relations_flat_ty_st(relation)`
 - `f_unaccent`
 
-Each takes the record's `relation` JSONB column (not a legacy single-`datos` column) and returns the flattened key array; a functional GIN index on each expression (`{$table}_relation_flat_*_gin_idx`) is what makes the `@>` containment test fast. Note: `format: 'function'`/`use_function` as a generic SQO filter-leaf format is **not yet wired into the TS conform stage** (`src/core/search/conform.ts`) — these functions ARE used server-side today, just through the dedicated `mode: 'related'` inverse-reference engine (`src/core/search/search_related.ts`), not through this generic leaf format. Track `format: 'function'` support against `rewrite/STATUS.md` before relying on it against the TS server.
+Each takes the record's `relation` JSONB column and returns the flattened key array; a functional GIN index on each expression (`{$table}_relation_flat_*_gin_idx`) is what makes the `@>` containment test fast. `format: 'function'`/`use_function` as a generic SQO filter-leaf format is **not wired into `conformFilter()`** (`src/core/search/conform.ts`) — these functions are used server-side today only through the dedicated `mode: 'related'` inverse-reference engine (`src/core/search/search_related.ts`), not through this generic leaf format. Do not rely on `format: 'function'` as a client-sent generic filter leaf.
 
 ##### q_split
 
@@ -1752,7 +1750,7 @@ The result can be counted or paginated directly in a simple way.
 
 ### tables
 
-List of tables to search. Used in related searches to limit the tables to search. Overwrites the default relation-capable table list (PHP `common::get_matrix_tables_with_relations()`; TS `getRelationTables()` in `src/core/search/search_related.ts` — the ontology-enumerated `dd627` children with `properties.inverse_relations === true`, plus `matrix_test` in the development posture).
+List of tables to search. Used in related searches to limit the tables to search. Overwrites the default relation-capable table list (`getRelationTables()` in `src/core/search/search_related.ts` — the ontology-enumerated `dd627` children with `properties.inverse_relations === true`, plus `matrix_test` in the development posture).
 
 Definition: `array` list of tables to search. **optional**
 
