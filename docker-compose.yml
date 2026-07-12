@@ -1,0 +1,145 @@
+# Dédalo v7 — reference compose stack.
+#
+# Operator guide: docs/install/docker.md
+#
+#   1. export POSTGRES_PASSWORD=… POSTGRES_DB=dedalo_main POSTGRES_USER=dedalo_user
+#      (or keep them in a file and pass `docker compose --env-file <file> …`;
+#       do NOT create a `.env` at the repo root — the engine's own configuration
+#       loader would pick it up too)
+#   2. docker compose build
+#   3. docker compose up -d postgres
+#   4. docker compose run --rm \
+#        -e DEDALO_INSTALL_ROOT_PASSWORD='…' dedalo \
+#        bun run scripts/install.ts \
+#          --db-name "$POSTGRES_DB" --db-user "$POSTGRES_USER" \
+#          --db-password "$POSTGRES_PASSWORD" --db-host postgres \
+#          --entity mib --langs lg-spa,lg-eng
+#   5. docker compose up -d
+#
+# Optional subsystems are behind profiles:
+#   docker compose --profile diffusion up -d      # MariaDB publication target
+#   docker compose --profile rag up -d            # pgvector store
+
+name: dedalo
+
+services:
+  # --- PostgreSQL: the system of record --------------------------------------
+  # POSTGRES_DB/USER/PASSWORD create an EMPTY database owned by the role — which
+  # is exactly the installer's precondition (it restores INTO a database, refuses
+  # a non-empty one, and never creates one itself). The role owns the database,
+  # so it may CREATE EXTENSION, which the seed needs.
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dedalo_main}
+      POSTGRES_USER: ${POSTGRES_USER:-dedalo_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dedalo_user} -d ${POSTGRES_DB:-dedalo_main}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # Not published. Nothing outside this network needs it.
+
+  # --- The engine ------------------------------------------------------------
+  dedalo:
+    build: .
+    # The container equivalent of systemd's Restart=always — and what makes the
+    # browser wizard's "Save config" step work at all: the process exits after
+    # writing .env so that it can be restarted into the real configuration.
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Process env wins over /private/.env, so these are the ops overrides.
+      DEDALO_PRIVATE_DIR: /private
+      SERVER_UNIX_SOCKET: /run/dedalo/dedalo_ts.sock
+      MEDIA_PATH: /srv/dedalo/media
+      # Turn the media gate on. With no mode set, the engine writes no rule files
+      # and the proxy (which `include`s them) cannot start.
+      DEDALO_MEDIA_ACCESS_MODE: ${DEDALO_MEDIA_ACCESS_MODE:-publication}
+      DEDALO_ACCESS_LOG: "true"
+      DB_POOL_MAX: "10"
+      DB_POOL_ACQUIRE_TIMEOUT_MS: "30000"
+      DB_STATEMENT_TIMEOUT_MS: "60000"
+      TRUSTED_PROXY_HOPS: "1"
+      DEDALO_DEV_MODE: "false"
+      DEDALO_DEBUG_API_ERRORS: "false"
+      MEDIA_DEV_ROUTE_ENABLED: "false"
+      # SERVER_TCP_PORT is deliberately UNSET: production is socket-only, and the
+      # proxy reaches the engine over the shared socket volume. If you set it for
+      # debugging, do NOT add a `ports:` mapping for it.
+    volumes:
+      - private:/private          # .env, sessions, ts_state.json, backups — SECRETS
+      - media:/srv/dedalo/media   # written by the engine, READ by the proxy
+      - socket:/run/dedalo        # the unix socket, shared with the proxy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--unix-socket", "/run/dedalo/dedalo_ts.sock", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # --- The reverse proxy -----------------------------------------------------
+  # Owns TCP + TLS, serves the client statics, and ENFORCES media access control
+  # by including the two rule files the engine generates into the media volume.
+  # It therefore MUST share the media volume with the engine, and it will fail to
+  # start until the engine has written those files (restart: unless-stopped makes
+  # it retry).
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      - dedalo
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./client:/opt/dedalo/master_dedalo/client:ro
+      - media:/srv/dedalo/media:ro
+      - socket:/run/dedalo
+      # TLS. For a real deployment bind-mount your certbot tree here; for a local
+      # trial, drop a self-signed fullchain.pem + privkey.pem in deploy/certs/.
+      - ./deploy/certs:/etc/letsencrypt/live/dedalo.example.org:ro
+
+  # --- Optional: MariaDB diffusion (publication) target ----------------------
+  # The engine NEVER creates the target database — a missing one is a loud
+  # configuration error. MARIADB_DATABASE creates it here.
+  mariadb:
+    image: mariadb:11
+    profiles: ["diffusion"]
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DEDALO_DIFFUSION_DB_NAME:-web_dedalo}
+      MARIADB_USER: ${DEDALO_DIFFUSION_DB_USER:-dedalo_pub}
+      MARIADB_PASSWORD: ${DEDALO_DIFFUSION_DB_PASSWORD:-}
+      MARIADB_RANDOM_ROOT_PASSWORD: "yes"
+    volumes:
+      - mariadata:/var/lib/mysql
+
+  # --- Optional: pgvector store for RAG --------------------------------------
+  # NOTE: creating the database is NOT enough. No code creates the RAG schema —
+  # apply the DDL from docs/core/ai/rag_cookbook.md by hand, once.
+  pgvector:
+    image: pgvector/pgvector:pg18
+    profiles: ["rag"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DEDALO_RAG_DB_NAME:-dedalo_rag}
+      POSTGRES_USER: ${DEDALO_RAG_DB_USERNAME_CONN:-dedalo_rag}
+      POSTGRES_PASSWORD: ${DEDALO_RAG_DB_PASSWORD_CONN:-}
+    volumes:
+      - ragdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+  private:      # SECRETS — back this up
+  media:        # the originals are the source of truth — back this up
+  socket:
+  mariadata:
+  ragdata:

@@ -52,6 +52,9 @@
 			// pdfjs): prebuilt bundles, not our source — never linted or formatted.
 			// Index of record: src/core/client_libs/registry.ts.
 			"vendor/**",
+			// Generated documentation site (mkdocs.yml `site_dir`) — build OUTPUT, gitignored.
+			// The source is docs/; linting the rendered HTML/JS bundle is meaningless noise.
+			"docs_site/**",
 			"test/parity/fixtures/*.response.json",
 			// Captured API sample payloads (fixture data, 2.7 MiB — over Biome's maxSize).
 			"src/core/components/*/samples/*.json",
