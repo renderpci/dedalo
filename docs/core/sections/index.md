@@ -11,8 +11,8 @@ and replaced it with a single abstraction: the **section**.
 
 A section is the Dédalo equivalent of a table, but it is not a real database
 table. It is a **definition in the ontology** (a node with `model: "section"`)
-plus the PHP/JS logic that knows how to read, write, relate and render the
-records that belong to it. All sections — `People`, `Oral History interview`,
+plus the server and client logic that knows how to read, write, relate and
+render the records that belong to it. All sections — `People`, `Oral History interview`,
 `Coin`, the list of `Projects`, the `Users` section, even the internal
 `Activity` log — live side by side in **one** physical table called `matrix`.
 
@@ -78,19 +78,17 @@ and the section keeps one flat `relations` array listing every
 components, portals, parents/children, filters, etc.). Relation-bearing
 components read and write into this single shared array rather than each keeping
 their own; this is why the section, not the component, owns the relation list
-(see [`get_relations()` / `add_relation()` / `remove_relation()`](#relations-are-section-owned)).
+(see [Relations are section-owned](#relations-are-section-owned)).
 
 ### Storage detail: the data column is split into typed JSONB columns
 
 The single conceptual `data` payload is, at the physical level, **distributed
 across several typed JSONB columns** so PostgreSQL can index and query each data
-shape efficiently. This layout is preserved byte-for-byte by the TS rewrite: the
-column list is `MATRIX_JSONB_COLUMNS` (`src/core/db/matrix.ts`) and the
-model→column map is resolved by `getColumnNameByModel()`
-(`src/core/ontology/resolver.ts`, mirroring PHP's
-`section_record_data::$column_map` — component models resolve through the
-component registry's `descriptor.column`, the non-component `section` pseudo-model
-through a small local map):
+shape efficiently. The column list is `MATRIX_JSONB_COLUMNS`
+(`src/core/db/matrix.ts`) and the model→column map is resolved by
+`getColumnNameByModel()` (`src/core/ontology/resolver.ts`): component models
+resolve through the component registry's `descriptor.column`, and the
+non-component `section` pseudo-model through a small local map.
 
 | column | holds | example component models |
 | --- | --- | --- |
@@ -111,14 +109,11 @@ merge of these typed columns. The `relation` column, for instance, stores
 `{"oh25":[locators], "rsc197":[locators]}` keyed by the originating component
 tipo, and the section's global `relations` array is assembled from it.
 
-In PHP, decoding is **lazy**: raw JSON strings from each column are kept
-undecoded until the first access (`section_record_data::ensure_decoded()`),
-which keeps list mode cheap. The TS server does not need this trick — Bun's
-Postgres driver parses `jsonb` columns natively, so a `MatrixRecord`
-(`src/core/db/matrix.ts`) arrives already decoded; laziness is preserved at a
-coarser grain instead (read the row once, pass the decoded record down the call
-tree, never re-query). See [`section_record`](section_record.md) for the full
-read/write API.
+There is no per-column lazy-decode step: Bun's Postgres driver parses `jsonb`
+columns natively, so a `MatrixRecord` (`src/core/db/matrix.ts`) arrives already
+decoded. Efficiency comes from a coarser rule instead — read the row once, pass
+the decoded record down the call tree, never re-query. See
+[`section_record`](section_record.md) for the full read/write API.
 
 This page describes the typed columns from the *storage* side. For the **data
 formats those columns hold** — the consolidated v7 value-item envelope
@@ -156,22 +151,20 @@ row in `matrix`, identified by `(section_tipo, section_id)`. The payload the
 caller sees as a single `data` object is physically spread across typed JSONB
 columns (`data`, `relation`, `string`, `date`, `number`, `media`, `misc`,
 `geo`, `iri`, `meta`, `relation_search`). A component's model decides which
-column its value lands in via `section_record_data::$column_map`. The section is
-the only object that reads and writes these columns; components ask the section
-for their slice.
+column its value lands in, via `getColumnNameByModel()`. The section layer is
+the only one that reads and writes these columns; components get their slice
+from it.
 
 ---
 
 ## The module family
 
-The PHP world modelled the section abstraction as four classes plus a plural
-loader. The TS rewrite preserves every one of those *concepts and guarantees*
-but expresses them as a small set of modules rather than one stateful object
-per row — there is no `class.section.php`, no `section_record` middleware
-object, no per-request instance cache to purge. Knowing which module is which
-avoids a lot of confusion.
+The section abstraction is a small set of modules, not one stateful object per
+row: there is no section class, no per-record middleware object, and no
+per-request instance cache to purge. Knowing which module is which avoids a lot
+of confusion.
 
-| concept | model | TS home | role |
+| concept | model | module home | role |
 | --- | --- | --- | --- |
 | **section** | `section` | `src/core/concepts/section.ts` (pure contract) + `src/core/section/context.ts`, `buttons.ts`, `read.ts` (engine) | The *type* (the "table with logic"): instancing, record creation/duplication/deletion, the relations array, permissions, children resolution. |
 | **section_record** | — | `src/core/concepts/section_record.ts` (contract) + `src/core/section_record/` (write chokepoint, virtual-record substitution) + `src/core/section/record/` (create/duplicate/delete/save engine) | One record **row**, addressed by `(section_tipo, section_id)` — read/write/delete/duplicate. |
@@ -181,15 +174,15 @@ avoids a lot of confusion.
 !!! info "Per-page reference docs"
     This page is the conceptual overview. Each concept has its own reference:
 
-    - **[`section`](section.md)** — the table abstraction & orchestrator (instancing, record creation, relations, permissions, children, search).
-    - **[`section_record`](section_record.md)** — the physical per-record I/O (read/save/delete/duplicate, counters, metadata) and how the PHP middleware class was re-expressed.
+    - **[`section`](section.md)** — the table abstraction & orchestrator (context, record creation, relations, permissions, children, search).
+    - **[`section_record`](section_record.md)** — the physical per-record I/O (read/save/delete/duplicate, counters, metadata).
     - **[`sections`](sections.md)** — the plural collection helper over many records of one `section_tipo`.
     - **[`section_group`](section_group.md)** · **[`section_tab`](section_tab.md)** — the layout groupers (visual grouping and tabs inside a section's form; no data, no tools).
     - **[`section_list`](section_list.md)** — the client list view that renders many records of a `section_tipo`.
 
 ### section vs section_record — who owns the database
 
-The key separation between *type* and *row* survives the rewrite unchanged:
+The separation between *type* and *row* is load-bearing:
 
 - **section** is about the *type*: which components it has, what permissions
   the current user holds over it, how to create/duplicate/delete a record, and
@@ -198,14 +191,12 @@ The key separation between *type* and *row* survives the rewrite unchanged:
   and the read/write/delete/duplicate operations that issue the actual database
   operations against the matrix table.
 
-Components never call the database directly. In PHP a component asked the
-`section_record` object for its slice and wrote its slice back through it. In TS
-the same guarantee is expressed without a stateful per-row object: a component's
-value is read off a plain `MatrixRecord` struct (`src/core/db/matrix.ts`) that
-is threaded explicitly through the call tree, and it is persisted through the
-single write chokepoint in `src/core/section_record/record_write.ts`
-(`persistRecordKeys` / `persistRecordColumns`), which — like PHP's
-`save_component_data()` — merges the component's value with the record's
+Components never call the database directly, and there is no stateful per-row
+object in between. A component's value is read off a plain `MatrixRecord` struct
+(`src/core/db/matrix.ts`) that is threaded explicitly through the call tree, and
+it is persisted through the single write chokepoint in
+`src/core/section_record/record_write.ts` (`persistRecordKeys` /
+`persistRecordColumns`), which merges the component's value with the record's
 modified-audit stamp (`dd197`/`dd201`) into **one** database update:
 
 ```ts
@@ -221,26 +212,24 @@ await persistRecordKeys(
 );
 ```
 
-This is still the meaning of *"sections own database access; components read
+This is the meaning of *"sections own database access; components read
 and save through them."* The component knows its data shape; the write
-chokepoint knows where and how it is stored. What PHP achieved with instance
-caches purged in `section::clear()` (to stop state bleeding across
-long-lived RoadRunner workers), TS achieves structurally: each Bun request runs
-in its own `AsyncLocalStorage` scope with no shared mutable cache to leak
-between requests, so the whole class of "did I remember to clear the cache"
-bugs is gone by construction. See
-[`section_record`](section_record.md#concept-mapping-php-middleware-class--ts)
-for the full mapping.
+chokepoint knows where and how it is stored.
+
+One long-lived process serves every request, so there is deliberately **no
+shared mutable record cache** to leak between them: each request runs in its own
+`AsyncLocalStorage` scope, resolves what it needs, and discards it. The whole
+class of "did I remember to clear the cache" bugs is absent by construction. See
+[`section_record`](section_record.md) for the full API.
 
 ---
 
 ## Section lifecycle
 
 A section participates in a full record lifecycle. The verbs below are the ones
-you will see in the API and in the code — PHP's `section::get_instance()`
-per-tipo instance cache is gone (there is nothing to instance: each request
-resolves a section's ontology context on demand and reads/writes plain
-records), but every lifecycle guarantee it enforced is preserved.
+you will see in the API and in the code. There is nothing to instance: each
+request resolves a section's ontology context on demand and reads/writes plain
+records.
 
 ### Read a section — `readSection()`
 
@@ -252,14 +241,10 @@ const result = await readSection(rqo, principal); // rqo.mode: 'list' | 'edit' |
 
 `src/core/section/read.ts` is the single entry point for both a `list` read
 (many rows via `readSectionRows`) and an `edit` read (one record). There is no
-tipo-keyed instance cache to size-bound or purge (PHP's
-`section::$ar_section_instances`, capped at 1200 and trimmed by 400 to stop a
-long-lived worker leaking instances) — a Bun request runs to completion and its
-context is discarded, so that whole cache-hygiene concern is structurally
-absent. Time Machine (`sqo.mode === 'tm'`) is not a separate code path: dd15 is
-served through the same generic `readSection` (see
-[`section_list`](section_list.md) and `rewrite/STATUS.md` — "TM as a normal
-section").
+tipo-keyed instance cache to size-bound or purge — a request runs to completion
+and its context is discarded. Time Machine (`sqo.mode === 'tm'`) is not a
+separate code path: `dd15` is served through the same generic `readSection`
+(see [`section_list`](section_list.md)).
 
 ### New — `createSectionRecord()`
 
@@ -269,66 +254,60 @@ import { createSectionRecord } from '../section/record/create_record.ts';
 const sectionId = await createSectionRecord(sectionTipo, principal.userId);
 ```
 
-`src/core/section/record/create_record.ts` builds the same audit shape PHP did —
-the `data`-column metadata (`buildRecordMetadata`, mirroring
-`section_record::build_metadata()`), the created-by-user locator under `dd200`
-and the creation date under `dd199` (mirroring `build_modification_data()`
-mode `'new_record'`) — and inserts the row through the atomic counter allocator
-(`insertMatrixRecordWithCounter`, `src/core/db/matrix_write.ts`). The dispatch
-handler (`src/core/api/dispatch.ts` action `create`) is the gate PHP's
-"only `section` may call `section_record::create()`" assertion protected:
-`getPermissions(sectionTipo, sectionTipo) >= 2` before allocating. Because the
-`Activity` section is permission-capped at `1`
-(`ACTIVITY_SECTION_PERMISSION_CAP`, `src/core/concepts/section.ts`), that gate
-alone refuses creating a new Activity row without needing PHP's separate
-special case.
+`src/core/section/record/create_record.ts` builds a new record's audit shape —
+the `data`-column metadata (`buildRecordMetadata`), the created-by-user locator
+under `dd200` and the creation date under `dd199` — and inserts the row through
+the atomic counter allocator (`insertMatrixRecordWithCounter`,
+`src/core/db/matrix_write.ts`). The `create` action handler
+(`src/core/api/handlers/dd_core_api.ts`) is the gate: it requires
+`getSectionPermissions(principal, sectionTipo) >= 2` before allocating, and
+refuses a write to an area. Because the `Activity` section is permission-capped
+at `1` (`ACTIVITY_SECTION_PERMISSION_CAP`, `src/core/concepts/section.ts`), that
+one gate also refuses creating a new Activity row, with no special case needed.
 
-!!! note "Gap: default-project assignment"
-    PHP's `set_projects_to_new_section_record()` seeds a fresh record's
-    `component_filter` with the user's default project unless the caller
-    already supplied one. This is not yet ported to `createSectionRecord()` —
-    a gap to close before project-scoped visibility can be trusted for
-    records created through the TS path (see `rewrite/STATUS.md`).
+!!! warning "A new record gets no default project"
+    `createSectionRecord()` does **not** seed the new record's
+    `component_filter` with the creating user's default project. Until a project
+    is set on the record explicitly, project-scoped visibility cannot be relied
+    on for records created through the API.
 
 ### Save
 
 Saving goes through one chokepoint regardless of how many components changed:
 
 - `persistRecordColumns()` (`src/core/section_record/record_write.ts`) — the
-  whole-column write, closest to PHP `section_record::save_column()`.
+  whole-column write.
 - `persistRecordKeys()` — one or more `{column, key}` writes in a single
   database round trip, merged with the record's modified-audit stamp
-  (`buildModifiedAuditWrites`) exactly as PHP's `save_component_data()` merged
-  the component value with `modified_by_user`/`modified_date`. The underlying
-  `update_by_key` semantics — including PHP's "delete a key that becomes
-  empty" rule — are oracle-verified in `test/unit/save_roundtrip.test.ts`.
+  (`buildModifiedAuditWrites`) so the component value and
+  `modified_by_user`/`modified_date` land together. The key-removal rule ("a key
+  whose value becomes empty is deleted") is gated by
+  `test/unit/save_roundtrip.test.ts`.
 - `saveComponentData()` (`src/core/section/record/save_component.ts`) is the
-  per-component entry point equivalent to PHP's method of the same name.
+  per-component entry point.
 
 Each save fires `fireSaveEvent()` (`src/core/section_record/save_event.ts`),
-which invalidates the same special-section caches PHP did (request-config
-presets `dd1244`, tools register `dd1324`, tools configuration `dd996`,
-profiles `dd234`) — plus a RAG re-index hook PHP has no equivalent of (see
-`dedalo-rag` skill).
+which invalidates the dependent special-section caches (tools register `dd1324`,
+tools configuration `dd996`, profiles `dd234`, and the ontology) and fires the
+RAG re-index hook.
 
 ### Duplicate — `duplicateSectionRecord()`
 
 `src/core/section/record/duplicate_record.ts` clones the current record's full
 data into a brand-new `section_id`, re-saving every component so each one
 rebuilds its own state (media files regenerated for the new id, Time Machine
-entries created) — the same contract as PHP `section_record::duplicate()`.
+entries created).
 
 ### Delete — `deleteSectionRecord()`
 
 `src/core/section/record/delete_record.ts` (`deleteSectionRecord` /
-`deleteSectionData`) keeps PHP's delete order intact:
+`deleteSectionData`) runs a fixed, load-bearing order:
 
 1. A **Time Machine** snapshot is written first and verified against the live
-   data before proceeding — every delete is a recoverable point in time (the TS
-   verification uses a canonical-JSON compare, *stricter* than PHP's loose
-   `==`).
+   data (a canonical-JSON compare) before proceeding — every delete is a
+   recoverable point in time.
 2. The row is deleted (`delete_record` mode) or emptied in place
-   (`delete_data` mode, PHP's default).
+   (`delete_data` mode, the default).
 3. Inverse references held by other records are removed and media files are
    moved to the deleted folder (`removeSectionMediaFiles`).
 4. Diffusion unpublish is propagated per target (failures logged, never
@@ -353,19 +332,17 @@ flowchart LR
 ## Relations are section-owned
 
 Because relations are stored once per record (not per relating component), a
-record's locator array is a section-level concern, not a component-level one —
-this concept is unchanged by the rewrite. The write-side operations PHP exposed
-as `section::get_relations()` / `add_relation()` / `remove_relation()` /
-`remove_relations_from_component_tipo()` are re-expressed in the relation
-family's own module, `src/core/relations/save.ts` (`applyAddNewElement`,
-`applySortData`, `applySortByColumn`, `deletePortalLocator`,
-`maintainRelationSearchIndex`), which writes into the same `relation` typed
-column described above rather than through a `section` instance method. The
-full relation write/read machinery — portals, dataframes, indexation, the
-unified `id_key` pairing contract — is documented in `engineering/RELATIONS_SPEC.md`
-and the `dedalo-relations-ts` skill; this page only needs you to know that the
-shared `relations` array is where every relating component's locators land, and
-that no component keeps its own private copy.
+record's locator array is a section-level concern, not a component-level one.
+The write-side operations live in the relation family's own module,
+`src/core/relations/save.ts` (`applyAddNewElement`, `applySortData`,
+`applySortByColumn`, `deletePortalLocator`, `maintainRelationSearchIndex`),
+which writes into the same `relation` typed column described above.
+
+For this page you only need to know that the shared `relations` array is where
+every relating component's locators land, and that no component keeps its own
+private copy. The full relation machinery — portals, dataframes, indexation, the
+unified `id_key` pairing contract — is documented under
+[Components](../components/index.md).
 
 ---
 
@@ -413,8 +390,7 @@ sits directly under the section:
 ]
 ```
 
-At runtime the children-by-model walk (PHP
-`section::get_ar_children_tipo_by_model_name_in_section()`) is a recursive CTE
+At runtime the children-by-model walk is a recursive CTE
 over `dd_ontology` filtered by model, following the traversal law encoded in
 `traversalRecurses()` (`src/core/concepts/section.ts`): recurse through
 groupers whenever any requested model name contains `'component'`, or whenever
@@ -423,10 +399,9 @@ more than one model is requested; otherwise stay first-level. The
 **groupers** (`GROUPER_MODELS` / `isGrouperModel()`, same module) and are
 skipped when collecting data-bearing components.
 
-A node's **`properties`** (deep-cloned per call —
-`structuredClone()` in `src/core/resolve/structure_context.ts`, the TS
-equivalent of PHP's worker-safety clone in `ontology_node::get_properties()`)
-and its **`relations`** array flow through the structure-context build onto the
+A node's **`properties`** (deep-cloned per call with `structuredClone()` in
+`src/core/resolve/structure_context.ts`, so a caller can never mutate the shared
+ontology cache) and its **`relations`** array flow through the structure-context build onto the
 emitted `ddo` entry and from there into the context/subcontext the client
 renders. This is how per-instance layout (CSS, label overrides, view) reaches
 the browser without a code change. See the [request config](../request_config.md)
@@ -460,40 +435,35 @@ form.
 
 ### Modes
 
-A section read is driven by a **mode** that shapes what it does — carried on
-the request (`rqo.mode`) rather than baked into a cached PHP instance, since
-there is no per-tipo instance to key a cache on:
+A section read is driven by a **mode** that shapes what it does, carried on the
+request (`rqo.mode`):
 
 - `list` — iterate over many records matching the current filter (the default).
 - `edit` — work with a single record for editing/saving.
 - `search` — build search forms.
-- `update`, `tm` — PHP's uncached working modes; `tm` (Time Machine) is now
-  served as a normal section read rather than a separate code path (see
-  [`section_list`](section_list.md) and `rewrite/STATUS.md`).
+- `update`, `tm` — the working modes. `tm` (Time Machine) is served as a normal
+  section read rather than a separate code path (see
+  [`section_list`](section_list.md)).
 
-Because a Bun request has no shared instance cache to size or key, PHP's
-`tipo_mode` cache-key concern (and its dataframe-suffix variant) simply does
-not arise in TS — see [The module family](#the-module-family) above.
+Because there is no shared instance cache, a mode never has to be part of a
+cache key — see [The module family](#the-module-family) above.
 
 ### Permissions
 
-Access is enforced with the same integer ladder PHP used
-(`0` none, `1` read, `2` edit, higher for create/delete), resolved by
-`getPermissions()` (`src/core/security/permissions.ts`) against the pair
+Access is enforced with an integer ladder (`0` none, `1` read, `2` edit, higher
+for create/delete), resolved by `getPermissions()`
+(`src/core/security/permissions.ts`) against the pair
 `(sectionTipo, sectionTipo)`. The `Activity` section is clamped to
 `ACTIVITY_SECTION_PERMISSION_CAP = 1` (`src/core/concepts/section.ts`) so it
-can never be edited through the UI — the same guarantee as PHP's `≤ 1` clamp,
-now a named constant every caller can reference. Virtual sections (a section
-that keeps its own ontology definition but stores data under a *real* section)
-resolve their real tipo the same way PHP's
-`get_section_real_tipo_static()` did — see the ontology resolver's "VIRTUAL
-SECTION fallback" (`src/core/ontology/resolver.ts`).
+can never be edited through the UI. Virtual sections (a section that keeps its
+own ontology definition but stores data under a *real* section) resolve their
+real tipo through the ontology resolver's "VIRTUAL SECTION fallback"
+(`src/core/ontology/resolver.ts`).
 
-!!! note "Gap: temporary / session-backed sections"
-    PHP's `is_temp` / `save_handler = 'session'` switch — sections whose data
-    is held in the session and never persisted to the `matrix` table — has no
-    TS equivalent yet. Every TS-served section currently persists to the
-    database.
+!!! note "Every section persists to the database"
+    There is no session-backed or temporary section type: a section's data
+    always lands in the `matrix` table. If you need scratch state, it needs a
+    real section and a real record.
 
 ---
 
@@ -595,7 +565,7 @@ abstraction.
 
 ## See also
 
-- [`section` reference](section.md) · [`section_record` reference](section_record.md) · [`sections` reference](sections.md) — the TS module APIs (and how each maps to its PHP class ancestor).
+- [`section` reference](section.md) · [`section_record` reference](section_record.md) · [`sections` reference](sections.md) — the module APIs for the type, the row and the collection.
 - [`section_group`](section_group.md) · [`section_tab`](section_tab.md) — the layout groupers that organise a section's form.
 - [`section_list`](section_list.md) — the client list view for many records of a section.
 - [Components](../components/index.md) — the fields that live inside a section.

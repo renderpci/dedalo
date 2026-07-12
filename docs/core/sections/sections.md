@@ -7,15 +7,12 @@ section exist?"* — not the one that reads or writes a single record.
 
 > See also: [Sections concept](index.md) · [section](section.md) · [section_record](section_record.md) · [Components](../components/index.md)
 
-!!! note "PHP class → TS modules"
-    In PHP, `sections` (plural, `extends common`) was a stateful object you
-    instanced with `sections::get_instance(...)` and then queried. The TS
-    rewrite keeps the *contract* — the envelope shape, the SQO-normalization
-    rules — as a pure spec in `src/core/concepts/sections.ts`, and the actual
-    search → rows → per-record fan-out as plain async functions in
-    `src/core/section/read.ts` (`readSection`, `readSectionRows`,
-    `deriveSectionDdoMap`). There is no `sections` object to instance; a caller
-    just calls the function with an `Rqo`.
+There is **no `sections` object to instance**. The *contract* — the envelope
+shape and the SQO-normalization rules — is a pure spec in
+`src/core/concepts/sections.ts`; the actual search → rows → per-record fan-out
+is a set of plain async functions in `src/core/section/read.ts` (`readSection`,
+`readSectionRows`, `deriveSectionDdoMap`). A caller just calls the function with
+an `Rqo`.
 
 ## Role
 
@@ -28,7 +25,7 @@ record's data or its database I/O; it runs a search and hands back the result.
 Three sibling concepts share the "section" name and are easy to confuse. Keep
 the distinction crisp:
 
-| concept | scope | owns | typical job | TS home |
+| concept | scope | owns | typical job | module home |
 | --- | --- | --- | --- | --- |
 | **`section`** (singular) | one section *type* (one `section_tipo`) | the table abstraction: components, permissions, the shared `relations` array | build a section's context, resolve its children | `src/core/concepts/section.ts`, `src/core/section/context.ts` |
 | **`section_record`** | one record *row* `(section_tipo, section_id)` | the physical per-record I/O (read / save / delete / duplicate) | load, persist or delete a single row in `matrix` | `src/core/concepts/section_record.ts`, `src/core/section_record/`, `src/core/section/record/` |
@@ -41,23 +38,21 @@ reads to the [search / SQO](../sqo.md) machinery and per-record deletes to the
 
 ## The SQO-normalization contract
 
-`src/core/concepts/sections.ts` is the pure-contract home for the two rules PHP
-enforced in `sections::set_up()` and `sections_json.php`:
+`src/core/concepts/sections.ts` is the pure-contract home for two rules:
 
-- **SQO cloning + limit defaulting** (PHP `sections::set_up`, class.sections.php:167):
-  the caller's SQO is never mutated in place; `limit` defaults to
-  `SECTIONS_EDIT_LIMIT = 1` in edit mode, otherwise `SECTIONS_DEFAULT_LIMIT = 10`
-  unless the caller section's own request_config supplies one; `select` is
-  forced to `[]` so the search returns only `(section_tipo, section_id)` — every
-  value resolves later, per record, through the structure-context/subdatum
-  machinery. The engine applies this in `readSectionRows()`
-  (`src/core/section/read.ts`): see the `clientLimitMissing` handling there.
-- **Envelope shape** (PHP `sections_json.php` :136, `SECTIONS_ENVELOPE_TYPO =
-  'sections'`): the `data[]` array leads with one envelope item
-  `{typo:'sections', tipo, section_tipo:[], entries:[...]}`. Each entry is a
-  locator carrying `paginated_key = row_index + sqo.offset` (PHP :292). An
-  empty result still emits this envelope (context only, no crash) — the same
-  guarantee PHP's :94-127 empty-path gave.
+- **SQO cloning + limit defaulting.** The caller's SQO is never mutated in
+  place. `limit` defaults to `SECTIONS_EDIT_LIMIT = 1` in edit mode, otherwise
+  to `SECTIONS_DEFAULT_LIMIT = 10` unless the caller section's own
+  `request_config` supplies one. `select` is forced to `[]` so the search
+  returns only `(section_tipo, section_id)` — every value resolves later, per
+  record, through the structure-context/subdatum machinery. The engine applies
+  this in `readSectionRows()` (`src/core/section/read.ts`): see the
+  `clientLimitMissing` handling there.
+- **Envelope shape.** The `data[]` array leads with one envelope item
+  `{typo:'sections', tipo, section_tipo:[], entries:[...]}`
+  (`SECTIONS_ENVELOPE_TYPO = 'sections'`). Each entry is a locator carrying
+  `paginated_key = row_index + sqo.offset`. An empty result still emits this
+  envelope (context only, no crash).
 
 ```ts
 // src/core/concepts/sections.ts
@@ -70,32 +65,25 @@ export const SECTIONS_ENVELOPE_TYPO = 'sections';
 
 | function | purpose / returns |
 | --- | --- |
-| `readSection(rqo, principal?)` | The full read: `context[]` (deduplicated by `contextKey`, first occurrence wins — PHP `merge_unique_context`) plus `data[]` (the `sections` envelope followed by one item per resolved component ddo, record-major/ddo-minor). The single entry point for both `list` and `edit` reads. |
-| `readSectionRows(rqo, principal?)` | Runs the SQO through the search engine (`pickReadSource` → the matrix source or the Time Machine `tm` source), builds the envelope, and drives the per-row/per-ddo emission (`emitDdoData`). Equivalent to PHP `sections::get_data()` + `sections_json.php`'s row-to-entries/data build, fused into one call. |
-| `deriveSectionDdoMap(sectionTipo, ownerSectionTipo, mode)` | When the client sends no `show.ddo_map`, derive the section's default columns from its ontology `request_config` (the v5/v6 builders) — the TS equivalent of PHP falling back to the section's own `request_config` when no explicit columns are requested. |
+| `readSection(rqo, principal?)` | The full read: `context[]` (deduplicated by `contextKey`, first occurrence wins) plus `data[]` (the `sections` envelope followed by one item per resolved component ddo, record-major/ddo-minor). The single entry point for both `list` and `edit` reads. |
+| `readSectionRows(rqo, principal?)` | Runs the SQO through the search engine (`pickReadSource` → the matrix source or the Time Machine `tm` source), builds the envelope, and drives the per-row/per-ddo emission (`emitDdoData`). |
+| `deriveSectionDdoMap(sectionTipo, ownerSectionTipo, mode)` | When the client sends no `show.ddo_map`, derive the section's default columns from its ontology `request_config` (the v5/v6 builders). |
 
-There is no dedicated `get_ar_all_section_id()` twin yet: PHP's "ignore
-pagination, enumerate every matching `section_id`" idiom (limit `0`, offset
-`0`, `full_count = false`, `select = []`) is reproduced ad hoc by callers that
-need it — e.g. `tools/tool_update_cache` builds its own no-limit search over
-`buildSearchSql` (`src/core/search/sql_assembler.ts`) rather than going through
-a shared "all ids" helper. `get_ar_section_tipo()`'s `related`-mode
-`section_tipo === 'all'` case likewise has no standalone TS equivalent
-documented here — see `engineering/RELATIONS_SPEC.md` for the relation-family readers
-that resolve it.
+There is no shared "enumerate every matching `section_id`, ignoring pagination"
+helper. A caller that needs one (limit `0`, offset `0`, `full_count = false`,
+`select = []`) builds its own no-limit search over `buildSearchSql`
+(`src/core/search/sql_assembler.ts`) — `tools/tool_update_cache` is the worked
+example.
 
 ## Bulk delete — the `delete` API action
 
-PHP's chokepoint method, `sections::delete($options)`, is not a separate
-callable in TS — its guarantees are folded directly into the `delete` action
-handler in `src/core/api/dispatch.ts` (registered in the action dispatch
-table), which is the API's single delete entry point for both a single record
-and an SQO-matched set:
+The `delete` action handler (`src/core/api/handlers/dd_core_api.ts`) is the
+API's single delete entry point, for both one record and an SQO-matched set:
 
 ```ts
-// dispatch.ts action 'delete' (essence)
+// the 'delete' action (essence)
 const sectionTipo = source.section_tipo ?? source.tipo;
-const deleteMode = source.delete_mode ?? 'delete_data'; // PHP default
+const deleteMode = source.delete_mode ?? 'delete_data'; // the default
 // ... permission gate, area-write refusal ...
 const targets = source.section_id !== undefined
   ? [Number(source.section_id)]
@@ -107,30 +95,40 @@ for (const targetId of targets) {
 }
 ```
 
-Guarantees carried over from PHP's `sections::delete()`:
+Its guarantees, in the order they are enforced:
 
-- **Permissions:** requires `getPermissions(sectionTipo, sectionTipo) >= 2`
-  (PHP's `get_section_permissions() >= 2`); refused otherwise.
-- **Multiple-delete guard:** an SQO that matches more than one record requires
-  `principal.isGlobalAdmin` — the same escalation PHP required via
-  `security::is_global_admin`.
+- **Permissions.** Requires `getPermissions(sectionTipo, sectionTipo) >= 2`;
+  refused otherwise.
+- **Per-record scope gate.** A non-global-admin deleting an explicit
+  `section_id` must have that record inside their projects filter
+  (`isRecordInScope()`, `src/core/security/record_scope.ts`). Without this, a
+  level-2 user could delete a record they can never see — a cross-project IDOR.
+  Global admins are unscoped.
+- **Multiple-delete guard.** An SQO-based (rather than explicit-id) delete
+  requires `principal.isGlobalAdmin`, and fails closed.
+- **Cross-section leak guard.** When deleting from an SQO, matched rows are
+  filtered back down to the gated `sectionTipo` before any delete runs.
+- **Ontology cascade.** Deleting a `hierarchy1`/`ontology35` registry record
+  (`ONTOLOGY_MAIN_SECTIONS`, `src/core/ontology/ontology_delete.ts`) in
+  `delete_record` mode **uninstalls its whole TLD** — every `dd_ontology` node,
+  the main record, and every node record. Global-admin only, matching the blast
+  radius.
 - **`delete_mode`** chooses the per-record operation: `delete_record` calls
   `deleteSectionRecord()` (full removal, Time-Machine-backed — see
-  [`section_record`](section_record.md)); `delete_data` (PHP's default) calls
-  `deleteSectionData()` (clears data, keeps the row).
-- **Ontology coherence:** deleting an ontology-registry record
-  (`ONTOLOGY_MAIN_SECTIONS`, `src/core/resolve/ontology_delete.ts`) cascades to
-  purge the matching `dd_ontology` TLD, mirroring PHP's
-  `ontology::delete_main()` path — global-admin only.
-- **Cross-section leak guard:** when deleting from an SQO, matched rows are
-  filtered back down to the gated `sectionTipo` before any delete runs.
+  [`section_record`](section_record.md)); `delete_data` (the default) calls
+  `deleteSectionData()` (clears the data, keeps the row).
 
-!!! warning "Children guard is intentionally NOT enforced"
-    PHP's `delete_with_children` guard (skip records that still have
-    `component_relation_children`) is **inoperative on the live PHP oracle** —
-    child-bearing parents are deleted anyway. The TS engine converges with that
-    observed behavior rather than implementing the guard PHP's own code claims
-    to have; see `rewrite/STATUS.md` for the pinned defect.
+!!! warning "A parent with children is skipped, not orphaned"
+    A `delete_record` on a tree/thesaurus record that still has
+    `component_relation_children` is **refused for that record**: it is skipped
+    and its child ids are enumerated back in the response errors, so the subtree
+    is never orphaned. The check uses the *computed* inverse children lookup, not
+    a stored value.
+
+    Pass `options.delete_with_children` to bypass it deliberately. It never
+    applies in `delete_data` mode (which empties the row but keeps it, so nothing
+    can be orphaned), and it does not block the ontology cascade above — that
+    path legitimately tears down whole trees.
 
 ## When it is used
 
@@ -146,8 +144,9 @@ section_tipo**, not a single one:
   `section_id` (e.g. to loop and re-save each), build a no-limit search over
   `buildSearchSql` directly (see `tool_update_cache`) rather than paginating.
 - **Bulk delete.** The `delete` API action is the single chokepoint for
-  permission checks, the multiple-delete guard, and ontology coherence,
-  whether the caller passes one `section_id` or an SQO matching many.
+  permission checks, the scope and multiple-delete guards, the children
+  refusal, and ontology coherence — whether the caller passes one `section_id`
+  or an SQO matching many.
 
 Use the singular **[`section`](section.md)** instead when you need one section
 *type*'s context, permissions, or buttons, and
@@ -178,14 +177,14 @@ const result = await readSection(
 ### Bulk delete a set of records
 
 ```ts
-// via the API dispatch 'delete' action — sqo-matched deletes require a
-// global-admin principal; a single explicit section_id does not.
+// via the API 'delete' action — sqo-matched deletes require a global-admin
+// principal; a single explicit section_id does not.
 const rqo = {
   action: 'delete',
   source: { section_tipo: 'oh1', delete_mode: 'delete_record' },
   sqo: { section_tipo: ['oh1'], filter_by_locators: [{ section_tipo: 'oh1', section_id: '127' }] },
 };
-// dispatch.delete(rqo, context) → { result: ['127'], msg: 'OK. Request done' }
+// → { result: ['127'], msg: 'OK. Request done' }
 ```
 
 ## Related

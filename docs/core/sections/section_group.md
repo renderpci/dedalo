@@ -12,21 +12,15 @@ exist only to arrange a section's components for layout. For the conceptual
 model of a section and its component children, read [Sections](index.md)
 first.
 
-!!! note "PHP class → TS: no per-model class at all"
-    PHP gave `section_group` its own ~44-line class
-    (`core/section_group/class.section_group.php`, `class section_group
-    extends common`) whose only real job was overriding `get_tools()` to
-    return `[]`. The TS rewrite does not have — and does not need — a
-    `section_group` module. Being a grouper is a **model-level fact**, not an
-    object: `GROUPER_MODELS` / `isGrouperModel()`
-    (`src/core/concepts/section.ts`) name the four grouper models, and the
-    generic structure-context build
-    (`src/core/resolve/structure_context.ts`) stamps any node whose model is a
-    grouper with context `type: 'grouper'`. Because the section-only context
-    stamp (`stampSectionContext`, `src/core/section/context.ts`) only runs for
-    `model === 'section'`, a grouper never gets buttons or tools attached in
-    the first place — the empty `get_tools() → []` PHP had to code explicitly
-    falls out of the TS engine for free, by construction.
+There is **no `section_group` module**, and none is needed. Being a grouper is a
+**model-level fact**, not an object: `GROUPER_MODELS` / `isGrouperModel()`
+(`src/core/concepts/section.ts`) name the four grouper models, and the generic
+structure-context build (`src/core/resolve/structure_context.ts`) stamps any node
+whose model is a grouper with context `type: 'grouper'`. Because the section-only
+context stamp (`stampSectionContext`, `src/core/section/context.ts`) only runs
+for `model === 'section'`, a grouper never gets buttons or tools attached in the
+first place — the empty `tools` / `buttons` arrays fall out of the engine by
+construction.
 
 ## Role
 
@@ -49,13 +43,12 @@ It sits among the grouper family, all recognised by the same registry
 | model | role |
 | --- | --- |
 | **`section_group`** *(this page)* | A named, collapsible group of components inside a section. The default field-grouping container. |
-| **`section_group_div`** | A *legacy model* remapped to `section_group` at model-resolution time (`STRUCTURAL_MODEL_REPLACEMENT_MAP`, `src/core/ontology/resolver.ts`); rendered as an unlabelled `<div>` group by the client when `context.add_label === false`. |
+| **`section_group_div`** | A *legacy model* remapped to `section_group` at model-resolution time (`STRUCTURAL_MODEL_REPLACEMENT_MAP`, `src/core/ontology/resolver.ts`); intended to render as an unlabelled `<div>` group. See the note below. |
 | **`section_tab`** / **`tab`** | Tabbed groupers — the same "no data, layout only" contract, rendered as tab strips rather than collapsible boxes. See [section_tab](section_tab.md). |
 
 All four are recognised by `GROUPER_MODELS` and skipped by the children walk's
 traversal law (`traversalRecurses()`, same module) when collecting
-data-bearing components — the direct TS equivalent of PHP's
-`section::get_ar_grouper_models()`.
+data-bearing components.
 
 ## Responsibilities
 
@@ -68,32 +61,28 @@ data-bearing components — the direct TS equivalent of PHP's
   (`src/core/resolve/structure_context.ts`).
 - **Carry no tools.** Because `stampSectionContext()` only fires for
   `model === 'section'`, a grouper's context keeps the core's `tools: []` /
-  `buttons: []` — the same guarantee PHP's explicit `get_tools() → []`
-  override gave, reached here by never running the section-only stamp at all
-  rather than by a per-model override.
+  `buttons: []`.
 - **Stay out of the data path.** A grouper's emitted `data` is always `[]`; it
   never touches a `MatrixRecord` or the matrix table.
 
 ## Key concepts / data model
 
-`section_group` has **no data model** — there is nothing analogous to
-`get_data()` / `set_data()` to look for. Its context is built by the same
-generic path every ontology node goes through:
+`section_group` has **no data model** — there is no read or save path to look
+for. Its context is built by the same generic path every ontology node goes
+through:
 
 - In the **ontology**, a component declares the group as its `parent_grouper`
   (the *layout* parent; the component's `parent` may still be the section
   itself, per the containment rule the structure walk enforces).
 - On the **server**, `isGrouperModel(model)` is what the structure-context
   build (and the children-traversal law) checks to recognise a grouper node;
-  there is no separate constructor call for it — the same `buildCore()` /
-  entry-stamping path that resolves a component resolves a grouper, just
-  without the section-only stamp.
-- On the **client**, `render_section_group` (`client/dedalo/core/section_group/js/`,
-  copied as-is — the vanilla-JS client is unmodified by the rewrite) builds a
-  `wrapper_section_group` element whose `wrapper.content_data` pointer is the
-  placement target for child components, keyed by `parent_grouper`. The group
-  label is a collapsible toggle whose open/closed state persists in the local
-  DB under `section_group_<section_tipo>_<tipo>`.
+  the same `buildCore()` / entry-stamping path that resolves a component
+  resolves a grouper, just without the section-only stamp.
+- On the **client**, `render_section_group` (`client/dedalo/core/section_group/js/`)
+  builds a `wrapper_section_group` element whose `wrapper.content_data` pointer
+  is the placement target for child components, keyed by `parent_grouper`. The
+  group label is a collapsible toggle whose open/closed state persists in the
+  local DB under `section_group_<section_tipo>_<tipo>`.
 
 ```text
 section (rsc197)
@@ -132,19 +121,17 @@ resolves to `'section_group'` (or the legacy `section_group_div`, remapped by
 The `type: 'grouper'` marker (`elementTypeOf()`,
 `src/core/resolve/structure_context.ts`) is what the client keys its wrapper
 CSS and edit-mode nesting on — the edit view nests components into a grouper
-only when `parent_instance.type === 'grouper'`
-(`view_default_edit_section_record.js:218`, unchanged client code).
+only when `parent_instance.type === 'grouper'`.
 
-!!! warning "Gap: `context.add_label` (the section_group_div unlabelled variant)"
-    PHP's controller stamped `context->add_label = false` specifically for the
-    legacy `section_group_div` model, and the client
-    (`render_section_group.js`) branches on `self.context.add_label===false`
-    to render an unlabelled `<div>` instead of a collapsible labelled box. The
-    TS structure-context build does not stamp `add_label` at all yet — every
-    grouper (including a `section_group_div` node) currently renders with the
-    labelled-header path, since the client's `===false` check never matches an
-    absent field. This is a real client-visible gap for any ontology that uses
-    `section_group_div`, not yet closed in the TS engine.
+!!! warning "`section_group_div` currently renders with a label"
+    The client (`render_section_group.js`) selects its unlabelled `<div>`
+    variant on `self.context.add_label === false`. The server does **not** stamp
+    `add_label` on a grouper context at all, so that strict check never matches
+    and a `section_group_div` node renders through the labelled, collapsible
+    header path like any other `section_group`.
+
+    If your ontology uses `section_group_div` expecting an unlabelled block, this
+    is why you see a header.
 
 ## How it fits with the rest of Dédalo
 
@@ -160,8 +147,7 @@ only when `parent_instance.type === 'grouper'`
   remap.
 - Its children are ordinary [components](../components/index.md) that point at
   it through `parent_grouper`; the section's structure-context build assembles
-  their contexts and the (unmodified) client drops them into the grouper's
-  `content_data`.
+  their contexts and the client drops them into the grouper's `content_data`.
 
 ## Related
 
