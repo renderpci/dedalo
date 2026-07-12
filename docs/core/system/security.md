@@ -31,22 +31,20 @@ It sits at the bottom of the authorization stack:
 | **`getPermissionsTable(userId)`** *(private, in `permissions.ts`)* | `getPermissions()` | flatten the profile's `component_security_access` grants into the fast lookup map |
 | **`component_security_access`** (`dd774`) | the profile record in `matrix_profiles` | the stored per-profile permission matrix (the data) |
 
-!!! note "Not an ontology object"
-    Unlike PHP's `security` static class, `permissions.ts` carries no object
-    identity at all — it is a bag of exported functions. Request identity lives
-    in the `Principal` interface, passed as the first argument; it has no `tipo`,
-    `mode` or `dato`. The request-scoped design (spec §4) is what makes this
-    safe: no shared mutable authorization state exists between requests.
+!!! warning "There is no shared authorization state"
+    `permissions.ts` carries **no object identity** — it is a set of exported
+    functions. Request identity lives in the `Principal` interface, passed as the
+    first argument. No mutable authorization state is shared between requests,
+    which is what makes concurrent request handling safe here by construction.
 
-!!! note "PHP `common::get_permissions` and `security::get_security_permissions` are fused"
-    In PHP the wrapper (`common::get_permissions`, which adds the not-logged and
-    Time-Machine clamps) and the core resolver (`security::get_security_permissions`)
-    were two methods. The TS port folds both into a single `getPermissions()`:
-    the Time-Machine clamp and the empty-tipo `0` are the first rules, then the
-    core special-case order, then the matrix lookup — one function, one
-    first-match-wins decision list. The "not logged ⇒ 0" clamp is structural:
-    an unauthenticated request never reaches a handler that resolves permissions
-    (the dispatcher's auth gate rejects it first).
+!!! note "One function, one decision list"
+    `getPermissions()` is the single resolver. It is an ordered, first-match-wins
+    decision list: the Time-Machine clamp and the empty-tipo `0` come first, then
+    the special cases, then the matrix lookup.
+
+    The **"not logged in ⇒ 0"** rule is structural rather than a branch: an
+    unauthenticated request never reaches a handler that resolves permissions,
+    because the dispatcher's auth gate rejects it first.
 
 ## Responsibilities
 
@@ -99,11 +97,10 @@ subsystem:
    caller's project scope?"* — enforced by `buildProjectsFilter()`
    (`src/core/search/sql_assembler.ts`), which appends a `component_filter`
    ∩ user-projects `EXISTS (...)` clause to every list/search query for a
-   non-admin principal. The user's projects come from `getUserProjects(userId)`
-   (the TS analog of PHP `component_filter_master::get_user_projects`). Writes
-   that receive a caller-supplied `section_id` outside a search (duplicate,
-   sqo-less delete) re-run the same principal-scoped existence query to confirm
-   the record is visible before mutating it.
+   non-admin principal. The user's projects come from `getUserProjects(userId)`.
+   A write that receives a caller-supplied `section_id` outside a search — a
+   duplicate, or an SQO-less delete — re-runs the same principal-scoped existence
+   query to confirm the record is visible before mutating it.
 
 ```mermaid
 flowchart TD
@@ -140,43 +137,26 @@ active user's profile.
   resolved via `resolveProfileId()` (the user's profile-select component,
   `dd1725`), and the matrix is read from that profile record's `misc` column.
 
-### Request-scoped caches (no worker state-bleed)
+### The caches are keyed by user
 
 `getPermissionsTable()` caches its result, because resolving the whole matrix
 from the grants is expensive:
 
 1. **A module `Map` keyed by `userId`** — `permissionsTableCache`. Distinct users
-   map to distinct keys, so **there is no cross-request bleed possible** by
-   construction; a lookup for user A can never return user B's matrix.
-2. The grants read itself (the source of truth) only happens on a full miss.
+   map to distinct keys, so a lookup for user A can never return user B's matrix.
+2. The grants read — the source of truth — only happens on a full miss.
 
-`clearPermissionsCache(userId?)` drops the entry (or the whole map);
+`clearPermissionsCache(userId?)` drops one entry, or the whole map;
 `clearUserProjectsCache(userId?)` does the same for the projects cache. These are
-the hooks to call after any profile change.
+the hooks to call after a profile change.
 
-!!! note "The worker state-bleed hazard is structurally gone"
-    The PHP `security` class cached the matrix in a **per-process static**
-    (`$permissions_table_cache`) plus an on-disk file, both scoped to a *single*
-    user — under RoadRunner's persistent workers the statics MUST be reset
-    between requests or one user's matrix would leak to the next. The TS server
-    is a single long-lived Bun process, but the cache is a `Map` **keyed by
-    `userId`**, so leakage is impossible without an explicit key collision.
-    Manual reset is only needed for *correctness after a profile edit*
-    (`clearPermissionsCache`), never for *isolation between users*. This is the
-    request-scoped-context guarantee (spec §4) applied to authorization.
+!!! warning "The user id is what keeps the cache safe"
+    One long-lived process serves every user, so an authorization cache that is
+    not keyed by identity would leak one user's grants to the next. Keying by
+    `userId` is what makes that impossible. A manual reset is needed only for
+    *correctness after a profile edit* — never for *isolation between users*.
 
-### `read_only_scope` — not yet ported
-
-!!! warning "TS gap (see STATUS.md)"
-    PHP exposed a server-only `security::$read_only_scope` bool that granted a
-    fixed level `1` on any section (except Users/Profiles) so non-destructive
-    helpers (autocomplete label resolution, search) could read *target* sections
-    the user has no direct grant on. The TS `permissions.ts` has **no equivalent
-    flag**: label/relation resolution reads target data through the resolvers
-    directly rather than through a temporary permission grant. If a future
-    resolver needs the same "trusted server read of an ungranted section"
-    behaviour it must be added deliberately and reset in a `finally`, never
-    driven by client-supplied data (the PHP comment's hard rule stands).
+    If you add a cache to this module, key it by `userId` or do not add it.
 
 ## Principal & lifecycle
 
@@ -221,14 +201,14 @@ Grouped by concern. All functions listed below are exported from
 | --- | --- |
 | `getPermissionsTable(userId)` *(private)* | Build/return the flat `Map<"<section_tipo>_<tipo>", level>` for the current user, cached per `userId`. Reads the profile's `dd774` grants; empty map when the user has no profile. Listed for orientation; not exported. |
 | `clearPermissionsCache(userId?)` | Drop the per-user permission-table cache entry (or the whole map). Call after changing a profile's permissions or a user's profile assignment. |
-| `getAuthorizedAreaTipos(userId)` | The AREA tipos the profile authorizes: the SELF-KEYED (`X_X`) entries of the permission table, by **presence** (the menu filter, PHP `get_ar_authorized_areas_for_user`). Returns a `Set<string>`. |
+| `getAuthorizedAreaTipos(userId)` | The area tipos the profile authorizes: the SELF-KEYED (`X_X`) entries of the permission table, by **presence**. This is the menu filter. Returns a `Set<string>`. |
 | `getAuthorizedAreasForUser(userId)` | The same self-keyed entries **with their level** (`{tipo, value}[]`), for callers that need the level (e.g. `component_filter_records` keeping only `value >= 2`). |
 
 ### Per-record (project) scope — layer 2
 
 | function | purpose |
 | --- | --- |
-| `getUserProjects(userId)` | The user's authorized project `section_id`s (PHP `component_filter_master::get_user_projects`) — the `dd170` relation locators in their user record. Empty array = no projects (⇒ sees no project-gated records). Cached per `userId`. |
+| `getUserProjects(userId)` | The user's authorized project `section_id`s — the `dd170` relation locators in their user record. An empty array means no projects, and therefore no project-gated records are visible. Cached per `userId`. |
 | `clearUserProjectsCache(userId?)` | Drop the per-user projects cache. |
 
 The clause that *applies* these projects to a query lives next door in
@@ -242,8 +222,7 @@ gated records return empty — never leaked.
 
 The permission *level* is resolved in one place (`getPermissions()`), but it is
 **checked at several chokepoints**, all server-side, never trusting the client.
-Unlike PHP's throwing `assert_*` gates + `permission_exception`, the TS
-dispatcher gates **inline** and returns the uniform `denied()` envelope:
+Each handler gates **inline** and returns the uniform `denied()` envelope:
 
 1. **API entry (read).** `dd_core_api.read` resolves the read permission on the
    source `(section_tipo, tipo)` and on **every SQO target section**

@@ -2,7 +2,10 @@
 
 > See also: [security](security.md) · [component_password](../components/component_password.md) · [Architecture overview](../architecture_overview.md)
 
-The authentication subsystem is Dédalo's entry point: it validates credentials against the users section, and — replacing the PHP session mechanism entirely — issues a **new native TS server-side session** (Argon2id verification, rotating tokens, sliding-window throttle, per-session CSRF).
+The authentication subsystem is Dédalo's entry point: it validates credentials
+against the users section and issues a **server-side session** — Argon2id
+verification, rotating tokens, a sliding-window throttle and a per-session CSRF
+token.
 
 ## Role
 
@@ -23,14 +26,11 @@ the admin flag. The split is:
 | **`security/session_store.ts`** | **Sessions & throttle** — issue/rotate/expire tokens (bun:sqlite store), mint the per-session CSRF token, keep the sliding-window login-attempt counter. |
 | **`security/permissions.ts`** | **Authorization** — given a logged user, resolve the integer permission over any ontology element, the user's projects, and the `isGlobalAdmin` / `isDeveloper` flags. |
 
-!!! note "NOT PHP-session-compatible — by design"
-    This is a *new native* auth (project decision, spec §7.2), not a port of PHP
-    `class.login.php`. There is no `$_SESSION`, no PHP session cookie, no
-    `session_regenerate_id`. Sessions are rows in a **bun:sqlite** database in
-    the private config dir; the cookie (`dedalo_ts_session`) carries a raw
-    random token whose **SHA-256 only** is stored, so a leaked DB file cannot be
-    replayed. The *guarantees* of the PHP login are preserved; the *mechanism*
-    is replaced.
+!!! warning "The session store holds hashes, not tokens"
+    Sessions are rows in a **bun:sqlite** database in the private config
+    directory. The cookie (`dedalo_ts_session`) carries a raw random token, and
+    only that token's **SHA-256** is stored — so a leaked database file cannot be
+    replayed as a live session.
 
 ## Responsibilities
 
@@ -48,11 +48,11 @@ the admin flag. The split is:
 - **Log out** (`destroySession()`): delete the session row; the HTTP layer clears
   the cookie.
 - **Resolve the login-form context** consumed by the client
-  (`buildLoginContext()` in `src/core/resolve/login_context.ts`).
+  (`buildLoginContext()` in `src/core/api/handlers/login_context.ts`).
 
 ## Key concepts
 
-### The session row (replaces the `$_SESSION['auth']` block)
+### The session row
 
 A successful login writes a row in the sqlite `sessions` table; the dispatcher
 consumes it as a `Session` value:
@@ -102,19 +102,20 @@ value is bound as a parameter (`$3`), never interpolated.
     and `login()` grants `isGlobalAdmin` to `-1` in v0 — profile-based admins are
     Phase 5 continuation alongside the full permissions matrix).
 
-### Argon2id verification (SEC-001)
+### Argon2id verification
 
-Verification is native: `Bun.password.verify(password, hash)` — the same
-Argon2id algorithm PHP used, with no PHP runtime in the path. `auth.ts` refuses a
-stored hash that does **not** start with `$argon2`.
+Verification is `Bun.password.verify(password, hash)`. `auth.ts` refuses any
+stored value that does **not** start with `$argon2` — there is no fallback
+algorithm and no "try the old scheme" branch.
 
-!!! warning "Legacy pre-Argon2 hashes — uncovered scope (see STATUS.md)"
-    Accounts still holding a legacy base64 AES value (never migrated) cannot be
-    verified by the TS server — that requires the PHP-side legacy key material.
-    `auth.ts` **denies loudly** (a clear server-log line naming the account) and
-    ambiguously on the wire. Such an account must log into the PHP server once
-    (its lazy rehash upgrades the value to Argon2id) before the TS server will
-    accept it.
+!!! warning "A v6 account cannot log in until its password is migrated"
+    Very old installations stored passwords **reversibly encrypted** rather than
+    hashed. Such a value is refused: `auth.ts` denies loudly in the server log
+    (naming the account) and ambiguously on the wire.
+
+    These accounts do **not** need to choose a new password. Run
+    `scripts/migrate_v6_passwords.ts`, which decrypts each legacy value once,
+    re-hashes it with Argon2id, and writes the hash back.
 
 ### Brute-force throttle (SEC-019)
 
@@ -129,31 +130,29 @@ credential-guess signals feed the counter (wrong password, unknown user, empty
 stored password, legacy hash). A confirmed success clears the counter
 (`clearAttempts()`).
 
-!!! note "Shared across processes, unlike PHP's per-node files"
-    The throttle state is a single sqlite file, so all Bun workers on a node
-    share the counter. (Behind a multi-node load balancer the state is still per
-    node — the same documented limitation as PHP.)
+!!! note "Shared across processes, per node"
+    The throttle state is a single sqlite file, so every worker on a node shares
+    the counter. Behind a multi-node load balancer the state is still per node.
 
 ### Maintenance-mode gate
 
-`login()` blocks any non-superuser while the TS-native server state
-`maintenance_mode` is set (the analog of PHP's `DEDALO_MAINTENANCE_MODE_CUSTOM`
-override), returning a "under maintenance" message. Only `root` (`-1`) passes.
+`login()` blocks any non-superuser while the server state `maintenance_mode` is
+set, returning an "under maintenance" message. Only `root` (`-1`) passes.
 
-## Media protection: the auth cookie — not yet ported
+## The media-auth cookie
 
-!!! warning "TS gap (see STATUS.md)"
-    In PHP, a successful login also armed the `dedalo_media_auth` cookie and
-    synced the `.publication/auth/` marker files so the web server could
-    authorize protected-media reads with a single `stat()`. That media
-    access-control subsystem (marker store + cookie) is **not yet ported to the
-    TS server** — it is Phase-7-adjacent and owns its own subsystem boundary
-    (see `engineering/MEDIA_SPEC.md`, which names the boundary only, and STATUS.md's
-    Security list). The TS login therefore issues *only* the
-    `dedalo_ts_session` auth cookie; there is no media-auth cookie or marker sync
-    on the TS side yet. When it lands it must stay one of the enforcement
-    surfaces kept in lockstep with the generated `.htaccess` and the Bun
-    `diffusion/api/v1/lib/media_index.ts`.
+A successful login also arms the **media-auth cookie**. `login()` calls
+`initMediaAuthCookie()` (`src/core/media/protection.ts`), which returns the daily
+media cookie value, lays its marker file and refreshes the generated web-server
+rule files. `src/server.ts` sets it alongside the session cookie.
+
+This is what lets the web server authorize a protected-media read with a single
+`stat()`, without calling back into the application. The cookie is arranged
+**before** the session is issued, so a failure there cannot leave a logged-in user
+whose every media file 404s.
+
+See [Media protection](media_protection.md) for the marker store, the cookie
+grammar and the generated rule files.
 
 ## The session lifecycle
 
@@ -195,13 +194,13 @@ and verified against the source.
 | `getSession(rawToken)` | Resolve a raw cookie token to a live `Session` (touching `last_seen`); `null` if unknown or past the TTL (self-expiring). |
 | `destroySession(rawToken)` | Delete the session row (logout). |
 | `verifyCsrf(session, candidate)` | Constant-time CSRF comparison (`crypto.timingSafeEqual`); `false` on empty/length-mismatch. |
-| `setSessionLangs(rawToken, {applicationLang?, dataLang?})` | Persist the user's per-session language choice (the `change_lang` handler; the TS analog of PHP `$_SESSION['dedalo']['config']`). |
+| `setSessionLangs(rawToken, {applicationLang?, dataLang?})` | Persist the user's per-session language choice (the `change_lang` handler). |
 | `buildThrottleKey(namespace, username, ip)` | The `namespace|lower(username)|ip` throttle key (SEC-019 shape). |
 | `isThrottled(key)` / `recordFailedAttempt(key)` / `clearAttempts(key)` | The sliding-window throttle: test lockout, record a failure, clear on success. |
-| `pruneExpiredSessions()` | Delete sessions idle past the TTL (the TS analog of PHP session-file GC). |
-| `SESSION_COOKIE` | The cookie name constant, `dedalo_ts_session` (distinct from any PHP cookie). |
+| `pruneExpiredSessions()` | Delete sessions idle past the TTL. |
+| `SESSION_COOKIE` | The cookie name constant, `dedalo_ts_session`. |
 
-### Login-form context (`src/core/resolve/login_context.ts`)
+### Login-form context (`src/core/api/handlers/login_context.ts`)
 
 | function | purpose |
 | --- | --- |
@@ -222,9 +221,8 @@ and verified against the source.
   required unless the action is in `NO_LOGIN_ACTIONS` (`login`,
   `get_environment`, `start`, `get_login_context`); (3) CSRF is verified
   (`verifyCsrf`) for every authenticated, non-exempt action — read and count are
-  **not** exempt, matching PHP. A CSRF failure returns `errors:['csrf_failed']`
-  plus the session's current token so the client's single transparent retry can
-  succeed.
+  **not** exempt. A CSRF failure returns `errors:['csrf_failed']` plus the
+  session's current token, so the client's single transparent retry can succeed.
 - **Authorization.** `login()` stamps `isGlobalAdmin` into the session;
   [`permissions.ts`](security.md) then decides per-element access.
   `resolvePrincipal(userId)` reads the admin/developer flags back for the current
@@ -233,8 +231,8 @@ and verified against the source.
 - **Credentials.** Hashing and the credential lifecycle are owned by
   [`component_password`](../components/component_password.md); verification here
   is `Bun.password.verify` against the stored Argon2id hash.
-- **SAML.** Not ported (STATUS.md ⬜). The PHP `Login_SAML` / `core/login/saml/`
-  path has no TS equivalent yet.
+- **Media protection.** A successful login arms the media-auth cookie — see
+  [Media protection](media_protection.md).
 
 ```mermaid
 flowchart TB

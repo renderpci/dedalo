@@ -7,17 +7,14 @@ shapes** — both the visual grid cell (`dd_grid_cell_object`) and the per-compo
 **flat export value** contract — plus the client renderers under
 `client/dedalo/core/dd_grid/js/`.
 
-!!! warning "A concept realized functionally, not a class hierarchy"
-    In PHP, `dd_grid` was a small core subsystem of value-object classes
-    (`export_atom`, `export_path_segment`, `export_value`, `export_context`,
-    `dd_grid_cell_object`, `indexation_grid`). The TS rewrite keeps the
-    **concepts** but not the classes: the flat-value resolution lives in a few
-    functions (`resolveCellValue` in `src/core/resolve/relation_list.ts`, the
-    export tabulator in `tools/tool_export/server/tool_export.ts`), the visual
-    cell survives as a **wire shape** produced by the `ddGridCell()` serializer in
-    `src/core/components/component_info/widgets/grid.ts`, and the thesaurus **indexation grid** is
-    only partially ported (config yes, live drive is a gap — see below). This page
-    is adapted to that reality; do not expect the PHP classes in `src/`.
+!!! note "`dd_grid` is a concept, not a directory"
+    There is no `src/core/dd_grid/`. The subsystem is realized functionally: the
+    flat-value resolution lives in `resolveCellValue`
+    (`src/core/resolve/relation_list.ts`), the export tabulator in
+    `tools/tool_export/server/tool_export.ts`, the visual cell as a **wire shape**
+    produced by `ddGridCell()`
+    (`src/core/components/component_info/widgets/grid.ts`), and the thesaurus
+    indexation grid in `src/core/section/indexation_grid.ts`.
 
 ## Role
 
@@ -30,13 +27,13 @@ It sits between the component layer (which owns each value) and three consumers:
 
 | consumer | what it asks for | TS module |
 | --- | --- | --- |
-| **tool_export** | the flat NDJSON export table (meta + columns + one row of resolved values per record) | `tools/tool_export/server/tool_export.ts` (protocol) + `resolveCellValue`/`resolvePathValue` (values). See [Exporting data](../exporting_data.md). |
-| **thesaurus indexation grid** | a term's backlink grid | `src/core/section/list_definitions/indexation_list.ts` — **config only**; the live per-locator drive is a gap (below). |
-| **client grid widgets** | `dd_grid_cell_object` cells (time-machine matrix, descriptors widget, indexation view) | the wire cells emitted by `ddGridCell()` (`src/core/components/component_info/widgets/grid.ts`), rendered by the copied `client/dedalo/core/dd_grid/js/` views. |
+| **tool_export** | the flat NDJSON export table (meta + columns + one row of resolved values per record) | `tools/tool_export/server/tool_export.ts` (protocol) + `resolveCellValue` / `resolvePathValue` (values). See [Exporting data](../exporting_data.md). |
+| **thesaurus indexation grid** | a term's backlink grid | `src/core/section/indexation_grid.ts` (the drive) + `src/core/section/list_definitions/indexation_list.ts` (the config). |
+| **client grid widgets** | `dd_grid_cell_object` cells (time-machine matrix, descriptors widget, indexation view) | the wire cells emitted by `ddGridCell()` (`src/core/components/component_info/widgets/grid.ts`), rendered by the `client/dedalo/core/dd_grid/js/` views. |
 
-Unlike PHP, there is no loader-order/`include` dance and no per-component class:
-the resolvers are horizontal engines that resolve any component from the ontology
-descriptor + registry, with zero per-model knowledge in the tabulator.
+There is no per-component class: the resolvers are horizontal engines that resolve
+any component from its ontology descriptor, with zero per-model knowledge in the
+tabulator.
 
 ## Responsibilities
 
@@ -44,9 +41,8 @@ descriptor + registry, with zero per-model knowledge in the tabulator.
   component's flat display string on one record (the TS `get_value` facade);
   `resolvePathValue()` walks relation hops to a leaf for multi-hop export paths.
 - **Own the flat-join reference semantics** — the multi-item join rule (records
-  separator ` | ` at the first indexed level, fields separator `, ` deeper) is
-  the `itemSeparator` parameter threaded through `resolveCellValue`, replacing
-  PHP's `export_value::to_flat_string()`.
+  separator ` | ` at the first indexed level, fields separator `, ` deeper),
+  carried by the `itemSeparator` parameter threaded through `resolveCellValue`.
 - **Define the flat export table** — `toolExportGetExportGrid()` emits the
   tabulator protocol (`meta` / `col` / `row` lines; the `grid_value` per-locator
   atoms with resolved-target column keys) consumed by the export tool.
@@ -64,19 +60,22 @@ resolved shapes with zero per-model knowledge.
 
 ```text
 src/core/resolve/
-├── relation_list.ts       # resolveCellValue() (flat get_value) + buildRelationList() + the ' | '/', ' join rule
-├── info_widgets.ts        # ddGridCell() — the dd_grid_cell_object wire serializer (descriptors/media_icons/…)
-src/core/section/list_definitions/
-└── indexation_list.ts     # getIndexationListConfig() — the indexation grid CONFIG (head/row ddo_maps)
+└── relation_list.ts       # resolveCellValue() (the flat value) + buildRelationList() + the ' | ' / ', ' join rule
+src/core/components/component_info/widgets/
+└── grid.ts                # ddGridCell() — the dd_grid_cell_object wire serializer
+src/core/section/
+├── indexation_grid.ts     # buildIndexationGrid() — the live indexation grid drive
+└── list_definitions/
+    └── indexation_list.ts # getIndexationListConfig() — the indexation grid CONFIG (head/row ddo_maps)
 
 tools/tool_export/
 ├── server/tool_export.ts  # toolExportGetExportGrid() — the flat NDJSON export table (tabulator protocol)
 └── js/flat_table.js       # the export tool's OWN flat-table renderer (NOT the dd_grid JS model)
 
-client/dedalo/core/dd_grid/   # COPIED AS-IS from the PHP client (vanilla JS + LESS)
+client/dedalo/core/dd_grid/   # the client model + views (vanilla JS + LESS)
 ├── css/  (dd_grid.less, view_indexation*.less)
 └── js/
-    ├── dd_grid.js                  # client model (extends common); init/build/render
+    ├── dd_grid.js                  # client model; init/build/render
     ├── render_list_dd_grid.js      # view dispatcher (table | mini | indexation | descriptors | default)
     ├── view_default_dd_grid.js
     ├── view_table_dd_grid.js       # time-machine / generic matrix table
@@ -85,30 +84,21 @@ client/dedalo/core/dd_grid/   # COPIED AS-IS from the PHP client (vanilla JS + L
     └── view_descriptors_dd_grid.js # oral-history descriptors widget view
 ```
 
-!!! info "No loader order, no autoload"
-    The PHP classes were `include`d in a load-bearing order in `class.loader.php`
-    because `component_common` type-hinted the `export_*` value objects. In TS the
-    resolvers are ordinary ES modules resolved on import; there are no value-object
-    classes to sequence.
-
 ## Key concepts: the flat-value contract
 
-Where PHP returned an `export_value` (a flat list of `export_atom` objects, each
-carrying a structured `path`), the TS resolvers return **flat strings** (for the
-`value` export format and cell display) and **protocol rows** (for the tabulator).
-Everything a consumer needs — column identity, breakdown explosion, joining — is
-derived by the tabulator from the walked path, not from an atom object.
+The resolvers return **flat strings** — for the `value` export format and for cell
+display — and **protocol rows**, for the tabulator. Everything a consumer needs
+(column identity, breakdown explosion, joining) is derived by the tabulator from
+the walked path, not from a per-value object.
 
 ### resolveCellValue — the flat-string facade
 
 `resolveCellValue(sectionTipo, sectionId, componentTipo, lang, unresolved,
 itemSeparator?)` (`src/core/resolve/relation_list.ts`) reads the matrix record
-and returns the component's flat display string on that record — the TS
-re-expression of PHP `component_common::get_value()` /
-`export_value::to_flat_string()`:
+and returns the component's flat display string on that record:
 
 - string-family components join their multi-values with `itemSeparator`, skipping
-  empties (bug-for-bug with PHP's `empty()` drop);
+  empty ones;
 - `component_section_id` returns the record's own id as a string;
 - relation cells recurse into the component's own list-config children, joined by
   the export-atoms separator rule: **` | `** (records separator) at the first
@@ -120,8 +110,7 @@ handle (so the caller can flag gaps rather than silently drop).
 ### The export tabulator protocol
 
 `toolExportGetExportGrid()` (`tools/tool_export/server/tool_export.ts`) is the
-flat-table producer. It emits three line kinds (the same protocol
-`export_tabulator` used, now serialized directly to NDJSON):
+flat-table producer. It emits three line kinds, serialized directly to NDJSON:
 
 - `meta` — `{t:'meta', v:1, data_format, breakdown, section_tipo, total, …}`
 - `col`  — `{t:'col', i, key:'<st>_<ct>', group, label, cell_type, model, path}`
@@ -130,20 +119,18 @@ flat-table producer. It emits three line kinds (the same protocol
 `data_format 'value'` lays one flat row per record. `data_format 'grid_value'`
 explodes relation entries into per-locator **atoms** whose column key carries the
 **resolved target identity** (e.g. `numisdata6_numisdata20.terr1_hierarchy25`) —
-this is where the PHP `export_path_segment` column-identity concept survives, as
-a key string rather than a segment object. `data_format 'dedalo_raw'` ships the
-raw stored value per cell as a `dedalo_data`-wrapped JSON string. Columns register
-first-seen across records (ordinal = registration order). All three formats plus
-the three breakdown modes and NDJSON streaming are ported and differential-gated
-against the live PHP oracle (see [STATUS.md](../../../rewrite/STATUS.md)).
+column identity is a key string, not an object. `data_format 'dedalo_raw'` ships
+the raw stored value per cell as a `dedalo_data`-wrapped JSON string. Columns
+register first-seen across records, so the ordinal is the registration order. All
+three formats, the three breakdown modes and NDJSON streaming are gated.
 
 ## Data model: dd_grid_cell_object (the wire shape)
 
-`dd_grid_cell_object` survives as the **visual cell the client renders** — but as
-a plain object literal, not a PHP class. `ddGridCell(overrides)` in
-`src/core/components/component_info/widgets/grid.ts` builds it, serializing **every** property
-(nulls included) in the exact order the PHP `dd_grid_cell_object` serialized, so
-the copied client views see a byte-identical shape. Its load-bearing fields:
+`dd_grid_cell_object` is the **visual cell the client renders** — a plain object
+literal. `ddGridCell(overrides)`
+(`src/core/components/component_info/widgets/grid.ts`) builds it, serializing
+**every** property (nulls included) in a fixed order, because the client views
+depend on that exact shape. Its load-bearing fields:
 
 | property | meaning |
 | --- | --- |
@@ -158,32 +145,27 @@ the copied client views see a byte-identical shape. Its load-bearing fields:
 | `action` | button/link action config for interactive cells |
 | `class_list` / `id` | CSS + identity |
 
-In TS this wire cell is produced only for the **`component_info` read-time
-widgets** (the oral-history descriptors grid, `media_icons`, and the other info
-widgets — all in `info_widgets.ts`, byte-parity gated in
-`test/parity/info_widget_differential.test.ts`). The general per-component
-`get_grid_value()` path and the legacy `resolve_value()` recursive joiner have
-**no TS port**: production value resolution runs on `resolveCellValue()` (flat
-string) and the tabulator (export), so the visual-cell object is needed only where
-a widget actually ships one to the client.
+The wire cell is produced only for the **`component_info` read-time widgets** —
+the oral-history descriptors grid, `media_icons`, and the other info widgets, all
+under `src/core/components/component_info/widgets/`. Production value resolution
+runs on `resolveCellValue()` (flat string) and the tabulator (export), so the
+visual-cell object is built only where a widget actually ships one to the client.
 
 ## How components feed the grids
 
-There is no `component_common` contract of `get_export_value()` / `get_grid_value()`
-methods to override. Instead:
+There is no per-component method to override. Instead:
 
 - **Flat display value** — `resolveCellValue()` resolves any component from the
   ontology (`getModelByTipo` → column → matrix read), so string, number, iri,
   date, section_id and relation families all flow through the one function.
 - **Relation recursion** — a relation cell in `resolveCellValue()` reads the
   component's own list-config children, resolves each child at the traversed
-  locator's target, and joins them with the ` | ` / `, ` separator rule — the TS
-  equivalent of `component_relation_common::get_export_value()` descending and
-  merging child atoms. The traversed locator position becomes the index that the
-  tabulator uses to decide row-vs-column explosion.
+  locator's target, and joins them with the ` | ` / `, ` separator rule. The
+  traversed locator position becomes the index the tabulator uses to decide
+  row-vs-column explosion.
 - **Raw wire value** — the `dedalo_raw` export format ships the stored value
-  wrapped as `{"dedalo_data": <dato>}` (frame-carrying mains include their
-  dataframe), matching the PHP raw wire shape.
+  wrapped as `{"dedalo_data": <value>}`; a frame-carrying main includes its
+  dataframe.
 
 ```mermaid
 flowchart TD
@@ -195,33 +177,29 @@ flowchart TD
     IW -->|dd_grid_cell_object wire| JS["copied dd_grid JS views"]
 ```
 
-## The indexation grid (config ported, live drive is a gap)
+## The indexation grid
 
-`src/core/section/list_definitions/indexation_list.ts` ports the thesaurus
-indexation grid **configuration**: `getIndexationListConfig(sectionTipo)` finds
-the section's `indexation_list` node and reads its `head` / `row` `show.ddo_map`s
-plus `class_list` / `render_label` (the PHP `indexation_grid` node read). This
-config resolver is gated byte-parity against the ontology.
+The thesaurus "show indexations" grid answers: *which records tag this term?* It
+splits into a config resolver and a live drive.
 
-!!! warning "The live per-locator grid drive is NOT gated / the API action is not registered"
-    PHP's `indexation_grid::build_indexation_grid()` (resolve a term's backlink
-    locators → group by section → render one `dd_grid_cell_object` row per
-    indexing record) has **no live TS drive**, and the `get_indexation_grid`
-    `dd_core_api` action is **not** in the TS registry. This install's indexation
-    data is orphaned (the oral-history area is unused; the historic tag links'
-    `section_top` was deleted), so there is no record whose indexation grid
-    resolves to a non-empty result to gate against. The row-rendering machinery
-    would reuse the `relation_index` inverse engine; it is ledgered until a Dédalo
-    install that actually uses indexation is available (see STATUS.md and the
-    `tool_indexation` ledger in `indexation_list.ts`).
+- **Config** — `getIndexationListConfig(sectionTipo)`
+  (`src/core/section/list_definitions/indexation_list.ts`) finds the section's
+  `indexation_list` node and reads its `head` / `row` `show.ddo_map`s plus
+  `class_list` / `render_label`. Note it reads the node's **properties**, not its
+  `relations`.
+- **Drive** — `buildIndexationGrid(...)` (`src/core/section/indexation_grid.ts`)
+  resolves the term's backlink locators through the `relation_index` inverse
+  engine, groups them by section, and renders one row per indexing record. It is
+  served by the `get_indexation_grid` action on `dd_core_api`, which requires read
+  permission on the term's section.
 
 ## Client side
 
-The `dd_grid` JS model and its views are **copied as-is** from the PHP client
-into `client/dedalo/core/dd_grid/js/`. `dd_grid.js` extends the shared `common`
-prototype (`render`/`refresh`/`destroy`) and adds `init`/`build`/`list`; it is
-instantiated through the standard client factory `get_instance({ model:
-'dd_grid', ... })`. `render_list_dd_grid.js` dispatches on `self.view`:
+`client/dedalo/core/dd_grid/js/` holds the client model and its views.
+`dd_grid.js` adds `init` / `build` / `list` on top of the shared client prototype
+(`render` / `refresh` / `destroy`) and is instantiated through the standard client
+factory `get_instance({ model: 'dd_grid', … })`. `render_list_dd_grid.js`
+dispatches on `self.view`:
 
 | view | renderer | used by |
 | --- | --- | --- |

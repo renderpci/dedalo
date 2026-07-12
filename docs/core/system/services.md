@@ -10,14 +10,12 @@ It is a reusable helper instanced *by* a component, section or tool and wired to
 its **caller**. Read [Components](../components/index.md) first for the
 component/datum model these services plug into.
 
-!!! note "Services are copied client JS; the server side is the TS API"
-    Services are **almost entirely vanilla-JS client modules**, and the TS rewrite
-    **copies them as-is** into the client tree at `client/dedalo/core/services/`
-    (see `scripts/sync_client.sh`). Their *server* side is the generic API action
-    they call, now served by the TS dispatch (`src/core/api/dispatch.ts`) instead
-    of the PHP `dd_*_api` classes — this page maps each service to the TS action
-    where it matters. The paths written `core/services/<service>/…` below are the
-    client-relative paths the copied client uses.
+!!! note "Services are client modules; their server side is the generic API"
+    Services are **vanilla-JS client modules**, living at
+    `client/dedalo/core/services/`. Their *server* side is whatever generic API
+    action they call, served by the dispatch registry
+    (`src/core/api/dispatch.ts`) — there is no service-specific endpoint. The
+    paths written `core/services/<service>/…` below are client-relative.
 
 ## Role
 
@@ -29,15 +27,11 @@ the same upload machinery powers `component_3d`, `tool_upload` and
 `tool_import_dedalo_csv`; the same CKEditor wrapper powers `component_text_area`;
 the same autocomplete search powers every relational component.
 
-Services are **almost entirely client-side** (ES6 modules under
-`<service>/js/`). They are *not* ontology nodes and have **no server model class**
-of their own — their server side is whatever generic API action they call
-(`get_system_info`, `upload`, `join_chunked_files_uploaded`, the read API), now a
-handler in the TS dispatch registry (`src/core/api/dispatch.ts`). The copied
-client tree carries **no PHP class** for any service (the old
-`service_subtitles/class.service_subtitle.php` forwarder is not copied); the live
-subtitle-generation server path is **not yet ported** (see the note in
-[service_subtitles](#service_subtitles)).
+Services are **entirely client-side** (ES6 modules under `<service>/js/`). They are
+*not* ontology nodes and have **no server model** of their own: their server side
+is whatever generic API action they call — `get_system_info`, `upload`,
+`join_chunked_files_uploaded`, the read API — each a handler in the dispatch
+registry (`src/core/api/dispatch.ts`).
 
 A client service object reuses the shared `common` JS prototype the same way a
 component does — it borrows `common.prototype.render` / `destroy` / `refresh` /
@@ -68,16 +62,14 @@ model, **not** declared in the ontology:
   caller is set.
 - **Talk to a generic server action**, never to a service-specific endpoint:
   `service_upload` / `service_dropzone` call the `get_system_info`, `upload` and
-  `join_chunked_files_uploaded` actions (PHP `dd_utils_api`; now TS dispatch
-  handlers backed by `resolve/system_info.ts` and `media/ingest/upload.ts`);
-  `service_autocomplete` / `service_time_machine` build an RQO/SQO and call the
-  read API through the caller. Subtitle generation went through
-  `dd_core_api` → `subtitles::build_subtitles_text()` in PHP — **not yet ported**
-  to the TS server.
-- **Stay out of the ontology.** No node, no `tipo`, no permission row — the
-  *caller's* permissions and the server action's own permission checks govern
-  access (e.g. `dd_utils_api::upload` asserts write permission on the target
-  section when a `tipo` is supplied).
+  `join_chunked_files_uploaded` actions on `dd_utils_api` (backed by
+  `src/core/api/handlers/system_info.ts` and `src/core/media/ingest/upload.ts`);
+  `service_autocomplete` / `service_time_machine` build an RQO or SQO and call the
+  read API through the caller.
+- **Stay out of the ontology.** No node, no `tipo`, no permission row. The
+  *caller's* permissions and the server action's own checks govern access — the
+  `upload` handler, for instance, asserts write permission on the target section
+  when a `tipo` is supplied.
 - **Reuse the client lifecycle** (`init` → `build` → `render` → `destroy`) via
   the shared `common` prototype so the caller can hold them in its
   `ar_instances` and tear them down uniformly.
@@ -248,22 +240,14 @@ the import tools (e.g. `tool_import_marc21`) to stage parsed rows before commit.
 
 ### service_subtitles
 
-Generates subtitle text (SRT/VTT, line-wrapped, with timecodes) from a
-transcription. In PHP the **live** path was server-side:
-`dd_core_api` → `subtitles::build_subtitles_text()` (the shared class at
-`shared/class.subtitles.php`), used by `tool_transcription`, `tool_subtitles`
-and the publication subtitles endpoint. The copied JS `service_subtitles.js`
-provides the client lifecycle shell consumed by `tool_subtitles` and
+The client lifecycle shell for subtitle work, consumed by `tool_subtitles` and
 `tool_tr_print`.
 
-!!! warning "Server-side subtitle generation is NOT yet ported"
-    The TS server has **no** `subtitles::build_subtitles_text()` equivalent yet
-    (nothing in `src/` implements it — verified). The copied client tree also
-    carries no `service_subtitles/class.service_subtitle.php` (the PHP forwarder,
-    which was already vestigial/dead in PHP, is not copied). Until the shared
-    subtitle-builder is ported, the subtitle-generation server path is a **gap**
-    (see [STATUS.md](../../../rewrite/STATUS.md)); the client shell exists but its
-    server action does not answer.
+Subtitle **file** generation is a tool action, not a service endpoint:
+`build_subtitles_file` (`tools/tool_transcription/server/index.ts`) builds the
+WEBVTT file from a transcription's text and timecodes. See
+[Creating tools](../../development/tools/creating_tools.md) for how a tool action
+is registered and permission-gated.
 
 ## Public API / Key methods
 
@@ -348,9 +332,9 @@ service. *(All are instance methods on the JS prototype unless noted.)*
 
 ### service_subtitles — server side
 
-There is no server class in the TS build: `service_subtitles.js` is a client shell
-only, and its server action (`subtitles::build_subtitles_text()` in PHP) is **not
-yet ported** — see the warning above.
+`service_subtitles.js` is a client shell. The server work — building the WEBVTT
+file from a transcription — is the `build_subtitles_file` action of
+`tool_transcription`, not a service endpoint.
 
 ## How it fits with the rest of Dédalo
 
@@ -366,22 +350,19 @@ yet ported** — see the warning above.
   **tmp_section**; `tool_time_machine` consumes **time_machine**;
   `tool_subtitles` / `tool_transcription` consume **subtitles**. See
   [Creating tools](../../development/tools/creating_tools.md).
-- **The shared `common` JS object** — every client service borrows
-  `common.prototype.render` / `destroy` / `refresh` (and most borrow `init`),
-  so they live in the caller's `ar_instances` and tear down with it. See
-  [common](common.md).
-- **The instance factory** — `core/common/js/instances.js` resolves
-  `service_*` models to `core/services/<model>/js/<model>.js`; factory-instanced
-  services share the same caching/keying as components and tools.
+- **The shared client prototype** — every client service borrows `render` /
+  `destroy` / `refresh` (and most borrow `init`), so it lives in the caller's
+  `ar_instances` and tears down with it.
+- **The instance factory** — `core/common/js/instances.js` resolves `service_*`
+  models to `core/services/<model>/js/<model>.js`; factory-instanced services share
+  the same caching and keying as components and tools.
 - **The server API** — services never expose a bespoke endpoint; they call the
-  generic API actions, now TS dispatch handlers (`src/core/api/dispatch.ts`):
-  `get_system_info` (`resolve/system_info.ts`), the multipart `upload` +
-  `join_chunked_files_uploaded` / `list_uploaded_files` (`media/ingest/upload.ts`),
-  and the read API. The PHP subtitle action
-  (`dd_core_api` → `subtitles::build_subtitles_text()`) is **not yet ported**.
-  Permission enforcement is the caller's and the API action's responsibility (the
-  upload handler asserts write permission on the target section when a `tipo` is
-  supplied).
+  generic actions in the dispatch registry (`src/core/api/dispatch.ts`):
+  `get_system_info` (`src/core/api/handlers/system_info.ts`), the multipart
+  `upload` plus `join_chunked_files_uploaded` / `list_uploaded_files`
+  (`src/core/media/ingest/upload.ts`), and the read API. Permission enforcement is
+  the caller's and the API action's responsibility — the upload handler asserts
+  write permission on the target section when a `tipo` is supplied.
 - **Search** — `service_autocomplete` builds an SQO through the caller and runs
   it over the internal read API. See [SQO](../sqo.md) and [RQO](../rqo.md).
 

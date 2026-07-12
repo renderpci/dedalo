@@ -19,16 +19,14 @@ read that filters, counts or paginates records — list views, portals,
 autocompletes, the thesaurus tree, diffusion exports, server-internal lookups —
 funnels through it.
 
-Unlike the PHP original (one `class search` + six traits + two mode subclasses,
-reset per RoadRunner worker by `common::clear()`), the TS engine is **a set of
-pure functions across a handful of modules**, with no class instance, no static
-caches, and no per-worker reset. The compile step is idempotent and the process
-holds no cross-request search state:
+The engine is **a set of pure functions across a handful of modules** — no
+instance, no shared caches, nothing to reset. The compile step is idempotent and
+the process holds no cross-request search state:
 
 | module | responsibility |
 | --- | --- |
 | `conform.ts` | **Phase A** — walk the SQO filter tree, gate every identifier, resolve each leaf's model/column, dispatch to the per-model fragment builder. |
-| `builders/` | per-component SQL fragment builders (`builder_string`, `builder_number`, `builder_iri`, `builder_date`, `builder_section_id`, `builder_relation`) — the TS re-expression of the PHP `resolve_query_object_sql()` traits. |
+| `builders/` | the per-component SQL fragment builders (`builder_string`, `builder_number`, `builder_iri`, `builder_date`, `builder_section_id`, `builder_relation`). |
 | `identifier_gate.ts` | the injection chokepoint — `assertValidTipo` / `assertValidLang` / `assertValidDataColumn` / `assertValidTipoOrColumn`. |
 | `sql_assembler.ts` | **Phase B** — assemble SELECT / FROM / JOIN / WHERE / ORDER / LIMIT into the final `{sql, params}`; multi-section UNION; per-record projects ACL. |
 | `params.ts` | `ParamsCollector` — the positional `$1..$n` prepared-param list. |
@@ -91,13 +89,14 @@ flowchart TB
   `countSectionRecords()` and `countInverseReferences()` wrap it for their
   callers.
 
-!!! note "Worker hygiene is structurally gone"
-    PHP reset the per-user `filter_user_records_cache` via `common::clear()` on
-    every RoadRunner request to avoid cross-request state bleed. The TS server is
-    a single long-lived Bun process with **request-scoped** context
-    (AsyncLocalStorage): the compile functions are stateless and hold no per-user
-    cache, so there is nothing to reset. The whole class of static-cache bleed
-    hazards is gone.
+!!! warning "The compile functions must stay stateless"
+    One long-lived process serves every user. The compile functions hold **no
+    per-user cache** and no shared state, so there is nothing to reset between
+    requests and nothing that can bleed from one user's search into another's.
+
+    Add a module-level cache here keyed on anything user-specific and you
+    reintroduce that hazard. Request-scoped context belongs in
+    `AsyncLocalStorage`, not in a module variable.
 
 ## Key concepts
 
@@ -130,9 +129,8 @@ buildSearchSql(sqo, { principal })          entry (sql_assembler.ts)
 
 ### The working arrays
 
-Where PHP seeded a persistent `$sql_obj` object and imploded it into the final
-string, `buildSearchSql()` keeps **function-local arrays** (no shared state) that
-are joined into the query:
+`buildSearchSql()` keeps **function-local arrays** — no shared state — that are
+joined into the final query:
 
 ```ts
 const mainWhere: string[]                 // section_tipo = / IN (...)
@@ -198,17 +196,13 @@ interpolations are the gate-validated identifiers above.
 references one of the user's projects (`getUserProjects()`). A section that is
 not project-gated (`getComponentFilterTipo()` returns null) contributes nothing;
 a gated section queried by a user with **no** projects yields an impossible
-clause (empty result — fail closed). Project ids ride as bound params. Global
-admins and internal searches (no principal) skip the filter — matching the PHP
-`is_global_admin` bypass, so trusted server code must pass a `principal` only when
-it intends user-scoped results.
+clause (empty result — fail closed). Project ids ride as bound params.
 
-!!! warning "filter_by_user_records is not ported"
-    PHP's per-record allowlist filter (`build_filter_by_user_records`, active
-    under `DEDALO_FILTER_USER_RECORDS_BY_ID`) is **uncovered scope** in the TS
-    assembler — it throws loudly rather than silently narrowing. The per-user
-    *projects* ACL (`buildProjectsFilter`) is the shipped record-scoping
-    mechanism (see [STATUS.md](../../../rewrite/STATUS.md)).
+!!! warning "Passing no principal skips the record ACL"
+    Global admins and internal searches (no principal) skip the projects filter.
+    Trusted server code must therefore pass a `principal` **whenever it intends
+    user-scoped results** — omitting it is not a shortcut, it is a full-visibility
+    search.
 
 ### Multi-section UNION
 
@@ -309,10 +303,10 @@ noted.
 | symbol | purpose |
 | --- | --- |
 | `assertValidTipo(v, where)` | Throw unless `^[a-z]+[0-9]+$` — gate for tipos interpolated into JSONB keys. |
-| `assertValidTipoOrColumn(v, where)` | Throw unless a valid tipo **or** a bare data column (PHP allows both in `path.component_tipo`, e.g. ordering by `section_id`). |
+| `assertValidTipoOrColumn(v, where)` | Throw unless a valid tipo **or** a bare data column — `path.component_tipo` accepts both, e.g. ordering by `section_id`. |
 | `assertValidLang(v, where)` | Throw unless `^(lg-[a-z0-9_]+|all)$`. |
-| `assertValidDataColumn(v, where)` / `isValidDataColumn(v)` | The allowlist of real matrix columns + structural + TM columns. |
-| `VALID_DATA_COLUMNS` | The exported column allowlist (mirrors PHP `trait.utils.php $valid_columns`). |
+| `assertValidDataColumn(v, where)` / `isValidDataColumn(v)` | The allowlist of real matrix columns, plus the structural and Time Machine columns. |
+| `VALID_DATA_COLUMNS` | The exported column allowlist. |
 
 ### Per-component builders (`builders/`)
 
@@ -361,13 +355,11 @@ noted.
   source.
 - **[Components](../components/index.md)** — each component model's filter leaf is
   turned into `{sentence, tokenValues}` by a builder under
-  `src/core/search/builders/` (or, for the relation family, the relations
-  registry). This is the TS re-expression of PHP's per-component
-  `resolve_query_object_sql()` traits.
-- **[common](common.md)** — the TS engine depends on the ontology resolver
-  (`getMatrixTableFromTipo` / `getModelByTipo` / …) for table and model
-  resolution; unlike PHP it holds no static cache that a `common::clear()` must
-  reset.
+  `src/core/search/builders/`, or, for the relation family, by the relations
+  registry.
+- **[The engine layer](common.md)** — the search engine depends on the ontology
+  resolver (`getMatrixTableFromTipo`, `getModelByTipo`, …) for table and model
+  resolution. It holds no cache of its own.
 - **Time Machine** — the `matrix_time_machine` table (single `data` column
   instead of tipo-keyed JSONB; default `timestamp DESC`) is served by
   `read_tm.ts`, selected through `pickReadSource('tm')`, not by
@@ -417,22 +409,18 @@ exposes exactly this: it sanitizes the client SQO, calls `buildSearchSql()`,
 substitutes the `$N` placeholders back into a human-readable string for display,
 then executes the real bound query.
 
-!!! note "Test pattern: the differential harness"
-    The search tests are **`bun:test`**, not PHPUnit. Two flavours:
+!!! note "How the search engine is tested"
+    Two flavours, both `bun:test`:
 
     - **unit / SQL-string** — `test/unit/search_gates.test.ts`,
       `test/unit/relation_search_builders.test.ts`,
       `test/unit/search_related.test.ts`: build a `Sqo`, call `buildSearchSql()`
-      (or a builder), and assert on the generated SQL / `params`, or expect a
-      throw for a rejected injection payload / uncovered scope.
-    - **differential / oracle** — `test/parity/*_differential.test.ts` (e.g.
-      `multihop_search_differential`, `duplicated_operator_differential`,
-      `count_differential`, `related_count_differential`): run the same SQO
-      through the live PHP oracle and the TS engine and assert byte-parity on the
-      returned ids/rows.
+      (or one builder), and assert on the generated SQL and `params` — or expect a
+      throw for a rejected injection payload or an uncovered scope.
+    - **fixture replay** — `test/parity/`: replay the frozen fixture store and
+      assert the returned ids and rows still match.
 
-    Run with `bun test test/unit/search_gates.test.ts` (or a `test/parity/…`
-    path). See [parity debugging](../../../rewrite/STATUS.md) for the harness.
+    Run with `bun test test/unit/search_gates.test.ts`, or a `test/parity/…` path.
 
 ## Related
 
