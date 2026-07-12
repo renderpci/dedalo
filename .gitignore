@@ -7,6 +7,11 @@ node_modules/
 # Never commit secrets (config lives in ../private/, outside the repo)
 .env
 
+# Media root. DEDALO_MEDIA_PATH derives to <repo>/media (PHP parity:
+# DEDALO_ROOT_PATH . '/media'), so a running install writes user uploads HERE
+# unless MEDIA_PATH points elsewhere. It is data, never source.
+/media/
+
 # Client libraries: nothing to ignore, and that is the point. They come from
 # `bun install` (node_modules/, already ignored above) or they are COMMITTED under
 # vendor/ — ckeditor, json-view, pdfjs. There is no install-time fetch step and no
