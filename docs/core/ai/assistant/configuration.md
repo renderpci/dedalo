@@ -97,6 +97,6 @@ Accepted image types: JPEG, PNG, WebP, GIF.
 
 ## Precedence and the stand-alone MCP server (`DEDALO_MCP_*`) {#the-stand-alone-mcp-server-dedalo_mcp_}
 
-**Precedence.** The real process environment wins over `../private/.env`. Administrators migrating from the PHP server can keep existing `DEDALO_*` lines; where a TS-native name differs, the PHP spelling is honoured as a fallback (the sample.env marks the aliased pairs).
+**Precedence.** The real process environment wins over `../private/.env`. Administrators upgrading an existing installation can keep existing `DEDALO_*` lines; where a TS-native name differs, the legacy spelling is honoured as a fallback (the sample.env marks the aliased pairs).
 
 **Not to be confused:** the `DEDALO_MCP_*` keys (`DEDALO_MCP_USER_ID`, `DEDALO_MCP_ALLOW_WRITE`, `DEDALO_MCP_WRITE_SECTIONS`, `DEDALO_MCP_MEDIA_IMPORT_DIR`, `DEDALO_MCP_MEDIA_MAX_BYTES`) configure the **stand-alone MCP server** — a separate process (`bun run src/ai/mcp/server.ts`) that exposes the same tool registry to *external* MCP clients (Claude Desktop, Claude Code) over stdio, as one fixed service user. They have **nothing** to do with the in-app assistant, which always runs as the logged-in browser user via the `DEDALO_AGENT_*` keys above. Configuring one does not affect the other.

@@ -1,11 +1,11 @@
 # Installing & enabling the AI Assistant
 
-> Part of the [AI Assistant](index.md) section · Next: [Connecting models](connecting_models.md) · See also: [Configuration reference](configuration.md) · [TS-native install](../../../install/ts_native_install.md)
+> Part of the [AI Assistant](index.md) section · Next: [Connecting models](connecting_models.md) · See also: [Configuration reference](configuration.md) · [Installation](../../../install/production.md)
 
 The assistant ships with every Dédalo v7 installation — there is nothing to install. It is **off by default** and becomes available once you (1) turn on the server-side switch and (2) make at least one model reachable. This page walks the full first run.
 
 !!! info "Prerequisites"
-    - A running Dédalo v7 (TypeScript/Bun) server — see [TS-native install](../../../install/ts_native_install.md).
+    - A running Dédalo v7 (TypeScript/Bun) server — see [Installation](../../../install/production.md).
     - Write access to `../private/.env` (the private config directory, outside the web root).
     - **One** of: an Anthropic API key, **or** a local model endpoint that speaks the OpenAI chat-completions API with tool calling (Ollama, vLLM, LM Studio…). Connecting models is the next page; this page assumes you have picked one.
 
@@ -116,7 +116,7 @@ Same cause as above, seen from the browser: `agent_models` refused, so the clien
 Neither `DEDALO_AGENT_MODELS` nor `ANTHROPIC_API_KEY` is set (or the catalog JSON is malformed — a malformed catalog disables the assistant fail-closed). Validate the JSON and check the server log for a `DEDALO_AGENT_MODELS[...]` parse message. See [Connecting models](connecting_models.md#validation-and-fail-closed-rules).
 
 **`GET .../tool_assistant/js/ai_assistant.js 404` / "Failed to fetch dynamically imported module".**
-This is a static-asset serving problem, not a config one. The edit-menu panel imports `ai_assistant.js` (a small compatibility module) by name; if it 404s, the tool's client files are not being served. Confirm the server serves `/dedalo/tools/tool_assistant/js/` and that you are on a build that includes the assistant rewrite (see [WC-013](../../../../engineering/WIRE_CONTRACT.md)).
+This is a static-asset serving problem, not a config one. The edit-menu panel imports `ai_assistant.js` (a small compatibility module) by name; if it 404s, the tool's client files are not being served. Confirm the server serves `/dedalo/tools/tool_assistant/js/` and that you are on a build that includes it.
 
 **Answers stall or die after ~30 seconds behind a reverse proxy.**
-The chat is a long-lived Server-Sent Events stream. Your proxy must not buffer it and must allow a generous read timeout. The assistant already sends heartbeats and `X-Accel-Buffering: no`; the nginx recipe is in [PRODUCTION.md](../../../../engineering/PRODUCTION.md) (`proxy_buffering off` + `proxy_read_timeout 300s`).
+The chat is a long-lived Server-Sent Events stream. Your proxy must not buffer it and must allow a generous read timeout. The assistant already sends heartbeats and `X-Accel-Buffering: no`; on nginx, add `proxy_buffering off;` and a generous `proxy_read_timeout` (e.g. `300s`) to the proxied location.
