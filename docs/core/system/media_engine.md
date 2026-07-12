@@ -22,7 +22,7 @@ thin `async` runner functions — no classes, no instances.
 | module | file | binary it wraps | concern |
 | --- | --- | --- | --- |
 | **ffmpeg** | `src/core/media/engine/ffmpeg.ts` | `ffmpeg`, `ffprobe`, `qt-faststart` | audio / video transcoding, quality versions, poster frames, fragments/clips, faststart header conform, stream/format probing |
-| **ffmpeg_profiles** | `src/core/media/engine/ffmpeg_profiles.ts` | — (pure data) | the 37 A/V encode profiles (quality × standard × aspect), ported verbatim from the PHP settings files as one typed table |
+| **ffmpeg_profiles** | `src/core/media/engine/ffmpeg_profiles.ts` | — (pure data) | the 37 A/V encode profiles (quality × standard × aspect), as one typed table |
 | **imagemagick** | `src/core/media/engine/imagemagick.ts` | `magick` / `convert`, `identify` | raster conversion / resize, thumbnails, rotate, crop, colour-space handling, image probing |
 | **pdf** | `src/core/media/engine/pdf.ts` | `pdftotext`, `pdftohtml`, `pdfinfo`, `ocrmypdf` | text/HTML extraction, page count, OCR |
 | **spawn** | `src/core/media/engine/spawn.ts` | — (execution discipline) | the one place any media binary is actually invoked |
@@ -77,15 +77,10 @@ binary via `Bun.spawn` over an argv array — never a shell string. Data flows
 downward only — components decide *what file to make where*, the engine
 decides *which CLI command builds it*, and the OS does the work.
 
-!!! note "One consolidated engine directory, no PascalCase classes"
-    PHP kept `Ffmpeg`/`ImageMagick` as two `PascalCase` classes under
-    `core/media_engine/`, with PDF text extraction living inside
-    `component_pdf` itself (there was no third media-engine class for it).
-    The TS rewrite consolidates **all three** external-binary adapters —
-    image, A/V and PDF — as sibling modules under one directory,
-    `src/core/media/engine/`, each a plain `.ts` file of exported functions.
-    There is no `class.media_engine.php`/`class.Ffmpeg.php` equivalent to
-    look for; "media_engine" is the directory / subsystem, not a class.
+!!! note "`media_engine` is a directory, not an object"
+    All three external-binary adapters — image, A/V and PDF — are sibling modules
+    under one directory, `src/core/media/engine/`, each a plain `.ts` file of
+    exported functions. There is nothing to instantiate.
 
 ## Responsibilities
 
@@ -118,13 +113,11 @@ access control. Those belong to the media components (`src/core/media/path.ts`,
 
 A "quality" is a target resolution/profile such as `1080`, `720`, `576`, `404`,
 `240` or `audio` (`config.media.av.qualities`, the `DEDALO_AV_AR_QUALITY`
-ladder). Each concrete output is described by a **profile object** — one entry
-in the `PROFILE_LIST` typed table, the direct port of the 37 PHP settings
-files (`vb`, `s`, `g`, `vcodec`, `ar`, `ab`, `ac`, `force`, `targetPath`, …
-became `videoBitrate`, `scale`, `gop`, `videoCodec`, `audioRate`,
-`audioBitrate`, `audioChannels`, `force`, `targetPath`). `transcodeTwoPass()`
-looks the profile up by name and drives the two-pass encode from those
-fields — no runtime file loading.
+ladder). Each concrete output is described by a **profile object** — one entry in
+the `PROFILE_LIST` typed table, carrying `videoBitrate`, `scale`, `gop`,
+`videoCodec`, `audioRate`, `audioBitrate`, `audioChannels`, `force` and
+`targetPath`. `transcodeTwoPass()` looks the profile up by name and drives the
+two-pass encode from those fields. Nothing is loaded from disk at conversion time.
 
 The setting name is composed from `quality` + media standard + aspect ratio by
 `settingName()`:
@@ -132,9 +125,8 @@ The setting name is composed from `quality` + media standard + aspect ratio by
 - **Media standard** — `standardFromFps()` reads the video stream's
   `avg_frame_rate` (via `ffprobe`); `>= 29 fps ⇒ ntsc`, otherwise `pal`.
 - **Aspect ratio** — resolved by the caller (`process_uploaded_file.ts`'s
-  `pickAspect()`) from the stream's pixel dimensions, one of `16x9` or `4x3`
-  only — PHP's fuller `16x9`/`4x3`/`5x3`/`3x2`/`5x4` set is narrowed to this
-  binary split (a documented simplification, not a bug).
+  `pickAspect()`) from the stream's pixel dimensions. It is a binary split: `16x9`
+  or `4x3`.
 
 So `404` + `pal` + `16x9` → setting name `404_pal_16x9` → the
 `404_pal_16x9` entry in `PROFILE_LIST`.
@@ -150,24 +142,19 @@ videoProfile('404_pal_16x9', '1024k', '720x404', 25, 44100, '64k', 1, '404')
 //     audioCodec: 'libvo_aacenc', targetPath: '404' }
 ```
 
-!!! note "Data, not code, and reachability is narrower than the table"
-    Where PHP's setting directory `require`d arbitrary PHP files at
-    conversion time (executable, not data — see the PHP-era warning this page
-    used to carry), `PROFILE_LIST` is an inert TypeScript array: nothing here
-    executes at read time. Only the tiers in the standard ladder
-    (`1080`/`720`/`576`/`404`/`240`/`audio`) are ever selected by
-    `settingName()`; the extra entries (`288`, `480`, `1080i`, `1080p`) are
-    ported for fidelity to the PHP settings files but are unreachable from the
-    live quality ladder, exactly as in PHP.
+!!! note "Data, not code — and the table is wider than the ladder"
+    `PROFILE_LIST` is an inert TypeScript array: nothing in it executes at read
+    time. Only the tiers in the standard ladder
+    (`1080` / `720` / `576` / `404` / `240` / `audio`) are ever selected by
+    `settingName()`. The extra entries (`288`, `480`, `1080i`, `1080p`) exist in
+    the table but are unreachable from the live quality ladder.
 
 ### Audio-codec autodetection (`ffmpeg.ts`)
 
 `getAudioCodec()` runs `ffmpeg -buildconf` once and caches the result on a
-module-level variable: it prefers `libfdk_aac`, falls back to `libvo_aacenc`,
-and finally to the native `aac` encoder. There is no TS equivalent of PHP's
-`check_lib($name)`/`get_version()` reporting (used by the PHP `system_info`
-maintenance widget to show installed-binary versions/codecs to admins) — not
-yet ported; see the gap note in [Statelessness & execution](#statelessness--execution).
+module-level variable: it prefers `libfdk_aac`, falls back to `libvo_aacenc`, and
+finally to the native `aac` encoder. The cached value is a property of the host's
+`ffmpeg` build, so it is request-invariant and safe to hold at module level.
 
 ### Colour space and profiles (`imagemagick.ts`)
 
@@ -179,24 +166,20 @@ yet ported; see the gap note in [Statelessness & execution](#statelessness--exec
   ICC profile (`Generic_CMYK_Profile.icc`) and the output profile
   (`sRGB_Profile.icc`) from `src/core/media/engine/icc/`, then strips the
   source profile (`-strip`).
-- Opaque outputs get a white background and are flattened
-  (`-background '#ffffff' -flatten -auto-orient -quiet`) — PHP's transparent
-  branch (`-background none` + cloned-alpha layer) is not reproduced; every
-  TS conversion goes through the opaque path.
+- Outputs are opaque: they get a white background and are flattened
+  (`-background '#ffffff' -flatten -auto-orient -quiet`). Every conversion goes
+  through this path — there is no transparency-preserving branch.
 - Resize uses the pixel-area budget (`pixelAreaBudget()`,
   `src/core/concepts/media.ts`) as an ImageMagick area geometry (`@<area>>`,
-  shrink-only, never upscaling) rather than PHP's target-width/height pair.
+  **shrink-only** — a small source is never upscaled), rather than a
+  target-width/height pair.
 
-!!! warning "PHP's TIFF/PSD meta-channel and OS-specific handling are gaps"
-    PHP's `is_opaque()`/`has_meta_channel()` (meta/alpha channel detection on
-    `tif`/`tiff`/`psd`, `-channel-fx "meta0=>alpha"`) and the
-    `MAGICK_CONFIG.remove_layer_0` OS-sensitive flag are **not ported**. The
-    TS `buildConvertArgv()` docstring calls itself "a faithful subset of the
-    PHP builder covering the resize/colorspace path the derivative ladder
-    uses" and explicitly defers the exotic TIFF/PSD branches to a caller that
-    detects them and passes extra flags — no such caller exists yet. Treat
-    multi-layer TIFF/PSD conversion as an open gap (engineering/MEDIA_SPEC.md §4,
-    §9 "carry the platform flags into config").
+!!! warning "Multi-layer TIFF/PSD conversion is not covered"
+    `buildConvertArgv()` covers the resize and colour-space path the derivative
+    ladder uses. It has **no meta/alpha channel detection** for `tif` / `tiff` /
+    `psd`, and no layer-selection flag. Those branches are deliberately left to a
+    caller that detects them and passes extra flags — and no such caller exists.
+    Treat multi-layer TIFF/PSD conversion as uncovered.
 
 ### Thumbnails
 
@@ -209,31 +192,28 @@ media type ends up calling.
 
 ### Statelessness & execution
 
-There is no per-request lifecycle in the engine — every `build*Argv()` is a
-pure function, and every `run*`/probe function is a plain `async` call. The
-only mutable state is:
+There is no per-request lifecycle in the engine — every `build*Argv()` is a pure
+function, and every `run*` or probe function is a plain `async` call. The engine
+holds exactly **one** piece of mutable state:
 
 - `ffmpeg.ts`'s module-level `cachedAudioCodec` — the detected AAC encoder,
   computed once per process.
 
-Unlike PHP's static caches (`Ffmpeg::$ar_settings`, `Ffmpeg::$audio_codec`,
-`static $media_streams_cache`, `static $cache_aspect_ratio`), there is only
-this one cache in TS: `settingName()`/`standardFromFps()` recompute the
-standard/aspect on every call (no per-process memoization), and stream probes
-(`probeStreams`/`probeFormat`) are not cached at all. The **cross-request
-static-state bleed hazard PHP's RoadRunner workers carried is structurally
-gone** here regardless — the Bun process holds no per-request data in these
-caches, only immutable install facts (the detected codec), so there is no
-`common::clear()`-style reset to worry about.
+That is safe to cache because it is an immutable fact about the host's `ffmpeg`
+build, not about any request. `settingName()` / `standardFromFps()` recompute on
+every call, and the stream probes (`probeStreams` / `probeFormat`) are not cached
+at all.
 
-**Execution discipline (`spawn.ts`).** Every media binary invocation goes
-through `runBinary()`, which spawns an **argv array** via `Bun.spawn` — no
-shell, no string interpolation, no `escapeshellarg`. This is categorically
-stronger than PHP's `exec()`/`shell_exec()` string-building: there is nothing
-for a crafted filename to escape into. `nice -n 19` is preserved as a real
-argv prefix (shared-host courtesy). A 10-minute default timeout kills
-long-running children; callers write outputs to a temp path and rename
-atomically into place so a coexisting PHP reader never sees a partial file.
+!!! warning "Every binary runs as an argv array — never a shell string"
+    All media binaries are invoked through `runBinary()` (`spawn.ts`), which
+    spawns an **argv array** via `Bun.spawn`. There is no shell, no string
+    interpolation and no escaping to get right, so a crafted filename has nothing
+    to escape into. Build a command string and you reintroduce shell injection
+    into the one place that handles untrusted user uploads.
+
+    `nice -n 19` rides as a real argv prefix (shared-host courtesy). A 10-minute
+    default timeout kills a runaway child. Callers write outputs to a temp path and
+    rename **atomically** into place, so a reader never sees a partial file.
 
 ## Files & structure
 
@@ -267,9 +247,8 @@ still vendors, ported byte-for-byte from
 ### Configuration constants
 
 All binary paths and engine defaults come from the typed config catalog
-(`src/config/config.ts`'s `MediaConfig`/`MediaBinariesConfig`, `.env`
-overridable), under the **same PHP `DEDALO_*` key names** — the engine itself
-hard-codes nothing (engineering/MEDIA_SPEC.md's absolute config constraint).
+(`src/config/config.ts`'s `MediaConfig` / `MediaBinariesConfig`, overridable in
+`.env`). **The engine hard-codes nothing.**
 
 | constant | used by | meaning |
 | --- | --- | --- |
@@ -351,14 +330,13 @@ Grouped by concern. Names are verified against the source.
 | --- | --- |
 | `extractText(source, outFile, options)` | Run `pdftotext`/`pdftohtml`, then read and UTF-8-clean the result. |
 | `getPageCount(source)` | `pdfinfo` page count, or `null`. |
-| `cleanUtf8(text)` | Strip invalid/control bytes (PHP `utf8_clean` parity). |
+| `cleanUtf8(text)` | Strip invalid and control bytes from the extracted text. |
 
 ## How it fits with the rest of Dédalo
 
-Every media component's processing goes through `src/core/media/processing.ts`
-(the orchestration layer PHP folded into each `component_*::build_version`).
-On upload and on regenerate, `processing.ts` resolves source/target paths
-(`path.ts`) and calls the engine. The verified call map:
+Every media component's processing goes through `src/core/media/processing.ts` —
+the orchestration layer. On upload and on regenerate, `processing.ts` resolves
+source and target paths (`path.ts`) and calls the engine. The call map:
 
 | component path | calls into media_engine | for |
 | --- | --- | --- |
@@ -366,7 +344,7 @@ On upload and on regenerate, `processing.ts` resolves source/target paths
 | av (`ingest/process_uploaded_file.ts`, `tools/posterframe.ts`, `tools/versions.ts`) | `ffmpeg.transcodeTwoPass`, `extractAudio`, `conformHeader`, `createPosterframe`, `probeStreams`, `probeFormat` + `imagemagick.buildThumb` | quality versions, header conform, poster frame → thumbnail, probing |
 | pdf (`processing.ts` `regeneratePdf`/`buildPdfCover`, `tools/pdf_extract.ts`) | `imagemagick.convertImage` (page rasterize via `pdfDensity`), `imagemagick.buildThumb` + `pdf.extractText`/`getPageCount` | web copy, jpg cover, thumbnail; text/HTML extraction, page count |
 | 3d (`processing.ts` `regenerate3d`; `tools/posterframe.ts` `moveUploadedToMediaDir`) | none in `regenerate3d` (naive copy only); `imagemagick.buildThumb` in `moveUploadedToMediaDir` when the uploaded posterframe canvas snapshot is bound | web-quality copy; thumbnail of the client-rendered preview image |
-| svg (`processing.ts` `regenerateSvg`) | none — naive copy only | web-quality copy; PHP's `ImageMagick::convert` raster-thumbnail step for SVG has **no TS equivalent yet** (`regenerateSvg` never calls `imagemagick.ts`) |
+| svg (`processing.ts` `regenerateSvg`) | none — a plain copy | web-quality copy. An SVG gets **no raster thumbnail**: `regenerateSvg` never calls the image engine. |
 
 Other call sites:
 
@@ -378,10 +356,8 @@ Other call sites:
 - `src/core/media/tools/rotation.ts` and `tools/versions.ts` drive
   `imagemagick.rotateImage` / `ffmpeg.conformHeader` from the media-versions
   tool.
-- The PHP `system_info` maintenance widget's binary-version/codec report
-  (`Ffmpeg::get_version()`, `check_lib('libx264')`, `ImageMagick::get_version()`)
-  has **no TS equivalent yet** — an honest gap, not reproduced by any widget
-  in `src/core/resolve/`.
+- The engine exposes no binary-version or codec-availability report: there is no
+  `get_version()` / `check_lib()` surface, and no maintenance widget shows one.
 
 **Relationship to media protection.** The engine *produces* the per-quality
 files (e.g. `…/404/0/rsc35_rsc167_1.mp4`) whose **filenames** are later parsed by
