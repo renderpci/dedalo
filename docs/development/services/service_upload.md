@@ -104,7 +104,7 @@ Once file upload is finished, the file is ready in a server side temporal direct
 
 ### Server side handle
 
-The `dd_tools_api` `tool_request` dispatch routes `process_uploaded_file` to `tools/tool_upload/server/index.ts`, whose handler calls `processUploadedFile()` (`src/core/media/ingest/process_uploaded_file.ts`). That in turn calls `addFile()` (`src/core/media/ingest/add_file.ts`), which rebuilds the staged path server-side — never trusting a client-supplied path — the same way the old PHP snippet did:
+The `dd_tools_api` `tool_request` dispatch routes `process_uploaded_file` to `tools/tool_upload/server/index.ts`, whose handler calls `processUploadedFile()` (`src/core/media/ingest/process_uploaded_file.ts`). That in turn calls `addFile()` (`src/core/media/ingest/add_file.ts`), which **rebuilds the staged path server-side** and never trusts a client-supplied path:
 
 ``` ts
 // stagingDir() in src/core/media/ingest/add_file.ts — the staging root for a
