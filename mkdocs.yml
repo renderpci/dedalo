@@ -1,0 +1,100 @@
+##
+## Dédalo documentation site — MkDocs + Material.
+##
+## Build it:
+##   python3 -m venv .venv && .venv/bin/pip install -r docs/requirements.txt
+##   .venv/bin/mkdocs build --strict     # --strict: broken internal links FAIL
+##   .venv/bin/mkdocs serve              # live preview on :8000
+##
+## CI runs exactly `mkdocs build --strict` (.github/workflows/docs.yml). --strict is
+## load-bearing: it promotes MkDocs warnings to errors, so a renamed or deleted page
+## that leaves a dangling link turns the build red instead of shipping a 404.
+##
+## NO `nav:` BLOCK — deliberate. Navigation is auto-generated from the docs/ tree plus
+## each directory's index.md, which is the rule docs/development/documentation_style_guide.md
+## states. It means a deleted page disappears from the nav for free; a hand-written nav
+## would need its own gate to stop it rotting, and would contradict the style guide.
+##
+site_name: Dédalo Documentation
+site_dir: docs_site      # gitignored build output
+theme:
+  name: material
+  logo: assets/images/dedalo_logo_white.svg
+  favicon: assets/favicon.ico
+  font: false
+
+  features:
+    - navigation.tracking
+    - navigation.path
+    - navigation.top
+    - navigation.footer
+    - navigation.instant
+    - content.code.copy
+
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - attr_list
+  - md_in_html
+  - admonition
+  - pymdownx.details          # the `??? tip` collapsibles
+  - footnotes
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.inlinehilite
+  - pymdownx.highlight:
+      extend_pygments_lang:
+        - name: shell
+          lang: shell
+          options:
+            startinline: true
+
+extra:
+  generator: false
+
+plugins:
+  - search
+  - redirects:
+      # Published URLs that moved. Keep an entry for every page this repo has ever
+      # served at a public URL — dedalo.dev/docs/<path>/ is linked from the wild.
+      redirect_maps:
+        # The install set, rebuilt 2026-07-12.
+        install/ts_native_install.md: install/production.md
+        install/apache_configuration.md: install/reverse_proxy.md
+        install/install_fedora.md: install/install_rhel.md
+        install/install_help.md: install/troubleshooting.md
+        # Pages renamed away from a retired engine's class names.
+        api/classes/dd_manager.md: api/classes/dispatch.md
+        core/ontology/ontology_class.md: core/ontology/ontology_write.md
+        # Pages deleted because they documented something the engine does not have.
+        api/classes/dd_component_text_area_api.md: api/dedalo_api_v1.md
+        core/areas/area_common.md: core/areas/area.md
+        core/areas/area_graph.md: core/areas/index.md
+        development/OpcacheObjectManager.md: development/runtime_and_workers.md
+        development/naming_convention_json_php.md: development/extending/add_a_component.md
+        development/tools/architecture_audit.md: development/tools/creating_tools.md
+
+copyright: DÉDALO. MANAGING CULTURAL HERITAGE ARCHIVES - <a href="https://dedalo.dev">dedalo.dev</a>
+
+extra_css:
+  - additional_docs.css
+
+extra_javascript:
+  - additional_javascript.js
