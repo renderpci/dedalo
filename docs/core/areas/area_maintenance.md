@@ -1,444 +1,245 @@
 # area_maintenance
 
-> The system-administrator area (`dd88`, "Maintenance") — the back-office dashboard
-> that hosts the operational widgets a root/admin uses to back up, migrate,
-> reconcile, rebuild and inspect a Dédalo installation.
+> The system-administrator area (`dd88`, "Maintenance") — the back-office
+> dashboard that hosts the operational widgets an administrator uses to back up,
+> migrate, reconcile, rebuild and inspect a Dédalo installation.
 
-> See also: [Architecture overview](../architecture_overview.md) ·
-> [Sections](../sections/index.md) · [Ontology](../ontology/index.md)
+> See also: [area](area.md) · [Areas](index.md) ·
+> [dd_area_maintenance_api](../../api/classes/dd_area_maintenance_api.md) ·
+> [Architecture overview](../architecture_overview.md)
 
-This is the **subsystem reference** for the Maintenance area: the PHP class
-`area_maintenance`, its JSON controller, the client `area_maintenance.js`
-dashboard, the `dd_area_maintenance_api` dispatcher, and the ~28 self-contained
-**widgets** it hosts. It is a *multi-file/client subsystem* anchored by one PHP
-class, not a single class, so it follows the multi-file template.
-
-!!! note "TS rewrite status — already ported, out of the area rebuild's scope"
-    Of every area, `area_maintenance` was ported **first** and is the one
-    `engineering/AREA_SPEC.md` explicitly excludes from its phases (it only gives the
-    area family a clean module boundary around what already existed). The
-    catalog (`get_ar_widgets`/`widget_factory`) is `getMaintenanceWidgets()` in
-    `src/core/resolve/widgets.ts` — same ordered widget list, same category
-    tags, same label-resolution rules (including the `<mark>key</mark>`
-    missing-term fallback), differential-gated against live PHP
-    (`widgets_differential.test.ts`). The read (`data.datalist`) is dispatched
-    through the `'maintenance'` behavior branch of `dispatchAreaRead`
-    (`src/core/area/read.ts`), which calls `buildMaintenanceDataItem()`.
-    Per-widget **execution** — what this page calls `class_request` /
-    `widget_request` / `get_widget_value` — is implemented in
-    `src/core/resolve/widget_request.ts` (`dispatchGetWidgetValue`,
-    `dispatchWidgetRequest`, `dispatchLockComponentsActions`) and wired under
-    the `dd_area_maintenance_api` key in `src/core/api/dispatch.ts`; the
-    majority of the ~28 widgets below are ported with byte-parity gates
-    (`widget_request_differential.test.ts`) — see `rewrite/STATUS.md`'s
-    maintenance-widget ledger for the exhaustive per-widget state (a handful of
-    PHP-tree/migration-catalog operations — `update_code`, the
-    `update_data_version`/`move_*` EXECUTE transforms, the `register_tools`
-    IMPORT — are deliberately left unregistered: they mutate the PHP
-    install/source tree a coexisting TS server must not touch). There is no
-    per-widget TS *class* the way PHP has `widgets/<id>/class.<id>.php` — each
-    widget is a set of named async functions in `widget_request.ts`, gated by
-    the same per-widget `API_ACTIONS`-style allowlist logic, not a bare class
-    name.
-
-    Because this page documents ~30 widgets' PHP method surfaces in detail, the
-    tables below are kept as the **PHP reference** (still accurate — the TS
-    widgets are byte-parity ports of this exact behavior) rather than
-    re-annotated row-by-row; consult `rewrite/STATUS.md` for the authoritative
-    per-widget TS mapping and gate names.
+This is the **subsystem reference** for the Maintenance area: how the widget
+catalog is assembled, how a widget request is dispatched and gated, what each
+widget does, and how to add one.
 
 ## Role
 
-`area_maintenance` (in `core/area_maintenance/class.area_maintenance.php`,
-`class area_maintenance extends area_common`) is the concrete area for the
-top-level "Maintenance" menu node, ontology tipo **`dd88`**
-(`DEDALO_AREA_MAINTENANCE_TIPO`). Like every area it is an ontology node with no
-matrix table or records of its own (see the area base-class contract); what makes
-it special is its payload: instead of aggregating descendant sections into a
-dashboard, its JSON `data` carries a **`datalist` of widget descriptors**, and
-each widget is a small, mostly-static back-office operation rendered client-side.
+`area_maintenance` is the area model of the top-level "Maintenance" menu node,
+ontology tipo **`dd88`**. Like every [area](area.md) it is an ontology node with
+no matrix table and no records of its own. What makes it special is its payload:
+instead of aggregating descendant sections into a statistics dashboard, its
+`data` item carries a **`datalist` of widget descriptors**, and each widget is a
+self-contained back-office operation.
 
-It sits at the intersection of several subsystems rather than owning data:
+In the area behavior taxonomy (`src/core/concepts/area.ts`) it carries the
+`maintenance` behavior — its own branch, its own subsystem.
 
-| layer | file | role |
-| --- | --- | --- |
-| **Area class** | `class.area_maintenance.php` (`extends area_common`) | Declares the widget catalogue (`get_ar_widgets()`), hosts a set of class-level maintenance operations (ontology update, data-version update, config-core mutation, lang-file rebuild, DB extensions/maintenance) and the two security allowlists. |
-| **JSON controller** | `area_maintenance_json.php` | Emits the `{context, data}` envelope; the single `data` item carries `datalist = get_ar_widgets()`. |
-| **Client area** | `js/area_maintenance.js`, `js/render_area_maintenance.js` | Builds the dashboard (category chips + live search), lazy-loads each widget module, and provides the shared `build_form()` / `print_response()` helpers. |
-| **API dispatcher** | `core/api/v1/common/class.dd_area_maintenance_api.php` | Routes client requests to class- or widget-level static methods through the SEC-044 `API_ACTIONS` allowlists. |
-| **Widgets** | `widgets/<id>/` (PHP class + `js/<id>.js` + `js/render_<id>.js` [+ `css/`]) | One folder per operation; the unit of work. |
+!!! warning "Administrators only"
+    The whole area is a **global-admin surface** and fails closed. The read is
+    refused with `403` for a non-admin, and *every* widget dispatch re-checks
+    `principal.isGlobalAdmin` independently — the gate is not delegated to the
+    menu having hidden the area.
 
-!!! note "Inheritance"
-    `area_maintenance extends area_common extends common`. It overrides almost
-    nothing from `area_common` (no custom `__construct`, no `get_json` override —
-    it ships its own `area_maintenance_json.php` controller, which
-    `area_common::get_json()` defers to). What it adds is the widget catalogue and
-    a flat collection of **public-static maintenance operations** dispatched
-    through the API, not the menu/dashboard machinery of the heavier areas.
+## Where the engine lives
 
-## Responsibilities
+| module | role |
+| --- | --- |
+| `src/core/area/read.ts` | The `maintenance` behavior branch of `dispatchAreaRead`: admin gate, structure context, and the widget catalog as `data[0].datalist`. |
+| `src/core/area_maintenance/widgets/registry.ts` | The catalog assembly and the three dispatchers (`buildMaintenanceDataItem`, `dispatchWidgetRequest`, `dispatchGetWidgetValue`). |
+| `src/core/area_maintenance/widgets/support.ts` | The shared contract: `WidgetModule`, `WidgetSpec`, `WidgetHandler`, `WidgetResponse`. |
+| `src/core/area_maintenance/widgets/<widget_id>.ts` | One module per widget — the unit of work. |
+| `src/core/api/handlers/dd_area_maintenance_api.ts` | The three API actions, registered under the `dd_area_maintenance_api` key. |
+| `src/core/area_maintenance/backup.ts`, `user_stats.ts` | Heavier operations the widgets call into. |
 
-- **Widget catalogue** — `get_ar_widgets()` builds the ordered list of widget
-  descriptor objects (id, category, label, optional pre-loaded `value`, css
-  class) via `widget_factory()`; this list is the data payload of the area and
-  the **whitelist** the API validates widget requests against.
-- **Ontology maintenance** — `update_ontology()` (download remote ontology files,
-  import sections/private lists, rebuild `dd_ontology`, optimize tables, rewrite
-  lang JS files, delete caches, log activity) and `rebuild_lang_files()`.
-- **Data-version migration** — `update_data_version()` (root + maintenance-mode
-  gated, delegates to `update::update_version()`).
-- **Config-core mutation** — `set_config_core()` (the single write path for the
-  runtime overrides, into `../private/state.php`) and its typed front doors `set_maintenance_mode()`,
-  `set_recovery_mode()`, `set_media_access_mode()`, `set_notification()`.
-- **Database housekeeping** — `create_db_extensions()`, `exec_db_maintenance()`
-  (thin aliases of `db_tasks::*`).
-- **Recovery** — `build_recovery_version_file()` /
-  `restore_dd_ontology_recovery_from_file()` (aliases of `installer::*`).
-- **Test / diagnostics support** — `create_test_record()`,
-  `long_process_stream()` (event-stream/CLI long-process tester), tool
-  registration (`register_tools()`).
-- **Security gating** — declares the `BACKGROUND_RUNNABLE` (CLI allowlist) and
-  `API_ACTIONS` (remote-dispatch allowlist) constants that bound what is callable
-  from `process_runner.php` and `dd_area_maintenance_api`.
-- **Hosting widgets** — each widget owns its own operation; the area class only
-  enumerates them and provides shared fallbacks (`get_definitions_files()`,
-  `get_file_constants()`).
+## The widget model
 
-## Key concepts
+A widget is **one module file** exporting one `WidgetModule`:
 
-### The widget model
-
-A "widget" is a self-contained maintenance operation living under
-`core/area_maintenance/widgets/<id>/`. The contract is informal but consistent:
-
-- **Server (optional).** `widgets/<id>/class.<id>.php` defines `class <id>` (note:
-  **bare class name = widget id**, e.g. `class media_control`). It is *not* a
-  `common`/`area` subclass — it is a plain class exposing **public static
-  methods**. The conventional methods are:
-  - `get_value(): object` — returns the widget's current value/status (invoked
-    through `dd_area_maintenance_api::get_widget_value`, which hard-codes the
-    method name `get_value`).
-  - action methods (`run_check`, `run_fix`, `make_psql_backup`, `move_tld`, …) —
-    invoked through `dd_area_maintenance_api::widget_request`.
-  - `const API_ACTIONS = [...]` (SEC-044) — the per-widget allowlist of methods
-    `widget_request` is allowed to dispatch.
-  Some widgets are **JS-only** (no PHP class): `environment`, `php_user`,
-  `publication_api`, `lock_components`, `sequences_status` — their `value` is
-  pre-computed server-side in `get_ar_widgets()` and shipped in the descriptor.
-- **Client (always).** `widgets/<id>/js/<id>.js` exports a constructor named
-  exactly `<id>` (the dashboard does `new module[item.id]()`), plus
-  `render_<id>.js` and optional `css/<id>.less`.
-
-### Widget categories
-
-`get_ar_widgets()` tags every widget with a `category`; the client groups and
-filters by it. The categories (presentation order from
-`render_area_maintenance.js → get_category_defs()`):
-
-| category | client label (fallback) | widgets |
-| --- | --- | --- |
-| `data` | Backup & data | `make_backup`, `build_database_version`, `update_data_version`, `export_hierarchy`, `add_hierarchy` |
-| `migration` | Migration & transform | `move_tld`, `move_locator`, `move_to_portal`, `move_to_table`, `move_lang` |
-| `config` | Configuration & code | `check_config`, `update_ontology`, `register_tools`, `update_code` |
-| `integrity` | Integrity & monitoring | `lock_components`, `sequences_status`, `media_control`, `counters_status`, `dataframe_control` |
-| `system` | System & environment | `php_user`, `database_info`, `environment`, `php_info`, `system_info` |
-| `diffusion` | Diffusion | `publication_api` |
-| `dev` | Developer & testing | `dedalo_api_test_environment`, `sqo_test_environment`, `unit_test` |
-| `general` | Other | (fallback bucket) |
-
-### The two security allowlists (SEC-024 / SEC-044)
-
-Because every dispatchable method is `public static`, two layers bound what can be
-called:
-
-- `area_maintenance::API_ACTIONS` — methods `dd_area_maintenance_api::class_request`
-  may invoke on the **area class** itself (`create_test_record`,
-  `long_process_stream`, `rebuild_lang_files`). Without it the dispatcher would
-  fall back to "any public-static method", exposing helpers like
-  `get_file_constants` or `set_maintenance_mode` to anyone with maintenance-area
-  write.
-- `area_maintenance::BACKGROUND_RUNNABLE` — methods `process_runner.php` may run
-  in a CLI background process (`update_data_version`, `long_process_stream`),
-  reached when a widget passes `background_running:true`.
-- Each **widget class** carries its own `const API_ACTIONS` enforced the same way
-  in `widget_request`.
-
-!!! warning "Authorization vs. dispatchability"
-    `API_ACTIONS` answers *"is this method even dispatchable?"* — it is orthogonal
-    to authorization. Access to the whole area is still gated by maintenance-area
-    permissions in `dd_manager`, and several operations add their own checks:
-    `update_data_version` requires `DEDALO_SUPERUSER` **and**
-    `DEDALO_MAINTENANCE_MODE`; `set_config_core` (and everything routed through
-    it) requires the root user, with a narrow exception for `DEDALO_RECOVERY_MODE`.
-
-## Files & structure
-
-```text
-core/area_maintenance/
-├── class.area_maintenance.php      # the area class (extends area_common)
-├── area_maintenance_json.php       # JSON {context,data} controller; data.datalist = get_ar_widgets()
-├── test_data.json                  # fixture inserted by create_test_record() into matrix_test
-├── system_info.php                 # standalone page rendered in the system_info widget iframe
-├── css/
-│   └── area_maintenance.less       # dashboard chrome (toolbar, chips, group grid, cards)
-├── js/
-│   ├── area_maintenance.js         # client area instance (init/build/render/get_value)
-│   ├── render_area_maintenance.js  # dashboard layout + render_widget + build_form + print_response
-│   └── render_update_data_maintenance.js
-└── widgets/
-    ├── make_backup/                # class.make_backup.php + js/{make_backup,render_make_backup}.js
-    ├── update_ontology/
-    ├── update_data_version/
-    ├── media_control/
-    ├── dataframe_control/
-    ├── counters_status/
-    ├── …                           # one folder per widget (see catalogue below)
-    └── php_info/php_info.php        # standalone page rendered in the php_info widget iframe
-
-core/api/v1/common/class.dd_area_maintenance_api.php   # the API dispatcher (separate tree)
+```ts
+export const widget: WidgetModule = {
+    spec: {
+        id      : 'dataframe_control',   // the wire id the client sends
+        category: 'integrity',           // the dashboard group
+        label   : { kind: 'label', key: 'dataframe_control' },
+    },
+    apiActions: {                        // the EXPLICIT method registry
+        run_check: dataframeRunCheck,
+        run_fix  : dataframeRunFix,
+    },
+    getValue  : dataframeGetValue,       // the panel-open value load
+    eagerValue: dataframeEagerValue,     // optional: a value pre-computed into the catalog
+};
 ```
 
-### Server-side request flow
+- **`spec`** is the catalog entry: id, category, label rule and optional CSS
+  class. The `id` is what the client sends as `source.model`.
+- **`apiActions`** is the widget's method registry. **A method exists on the API
+  if and only if it is listed here** — there is no "any exported function is
+  callable" fallback. This is the security boundary, not a convenience.
+- **`getValue`** answers the panel-open value load. A widget without one returns
+  an explicit "unavailable" error rather than silently nothing.
+- **`eagerValue`** pre-computes a value into the catalog so the folded dashboard
+  card and the opened panel paint from identical data. It is fail-soft: a widget
+  whose value cannot be computed must never break the dashboard read.
+
+Every handler returns the same envelope: `{ result, msg, errors }`.
+
+Adding a widget is **one new module file plus one import line** in
+`registry.ts`. There is nothing else to register.
+
+## Dispatch and its four gates
+
+`dd_area_maintenance_api` exposes exactly three actions:
+
+| action | what it does |
+| --- | --- |
+| `widget_request` | Dispatch `source.action` to a method in the named widget's `apiActions`. |
+| `get_widget_value` | Call the named widget's `getValue`. The panel-load and dynamic-refresh path. |
+| `lock_components_actions` | The one area-level (non-widget) action: `get_active_users` / `force_unlock_all_components`. |
+
+`dispatchWidgetRequest` (`registry.ts`) applies four gates, in order:
+
+1. **Admin only** — a non-admin principal is refused outright.
+2. **Options must be an object** when present.
+3. **The widget id must be in the catalog** — checked against the static module
+   list, so an action never pays for the catalog's eager values.
+4. **The method must be registered** in that widget's `apiActions` — otherwise
+   `unauthorized_method`.
+
+`dispatchGetWidgetValue` applies the admin gate, validates the widget id against
+an identifier pattern, and calls the widget's `getValue`.
 
 ```mermaid
 flowchart TB
-    C["Client widget JS<br/>data_manager.request(dd_api: dd_area_maintenance_api)"]
-    C -->|"action: class_request"| CR["dd_area_maintenance_api::class_request"]
-    C -->|"action: widget_request"| WR["dd_area_maintenance_api::widget_request"]
-    C -->|"action: get_widget_value"| GV["dd_area_maintenance_api::get_widget_value"]
-    CR -->|"API_ACTIONS gate"| AM["area_maintenance::<static method>"]
-    WR -->|"whitelist + API_ACTIONS gate"| WC["widgets/&lt;id&gt;/class.&lt;id&gt;::<method>"]
-    GV -->|"hard-coded get_value"| WC
-    CR -. "background_running:true" .-> CLI["exec_::request_cli → process_runner.php<br/>(BACKGROUND_RUNNABLE gate)"]
-    WR -. "background_running:true" .-> CLI
+    C["Client widget JS<br/>rqo { dd_api: dd_area_maintenance_api }"]
+    C -->|"action: widget_request"| WR["dispatchWidgetRequest"]
+    C -->|"action: get_widget_value"| GV["dispatchGetWidgetValue"]
+    C -->|"action: lock_components_actions"| LC["dispatchLockComponentsActions"]
+    WR -->|"admin → options → catalog id → apiActions"| WM["widgets/&lt;id&gt;.ts — the registered handler"]
+    GV -->|"admin → id pattern → getValue"| WM
+    LC -->|"admin"| LCW["widgets/lock_components.ts"]
 ```
 
-**Prose:** A widget's client JS sends an RQO with `dd_api: 'dd_area_maintenance_api'`.
-`class_request` targets static methods on the **area class** (gated by
-`area_maintenance::API_ACTIONS`); `widget_request` targets methods on a **widget
-class** (gated by a widget-id whitelist derived from `get_ar_widgets()`, realpath
-confinement, and the widget's own `API_ACTIONS`); `get_widget_value` always calls
-the widget's hard-coded `get_value`. When `background_running:true` is set, both
-`class_request` and `widget_request` route through `exec_::request_cli` →
-`process_runner.php`, bounded by `BACKGROUND_RUNNABLE`.
+!!! warning "Dispatchability is not authorization"
+    `apiActions` answers *"is this method reachable at all?"*. It is orthogonal
+    to what the operation itself checks. Several widgets add their own
+    conditions on top — the data-version upgrade requires maintenance mode, and
+    the state-writing operations are root-only.
 
-## Public API
+## The catalog
 
-### `area_maintenance` (the area class)
-
-Grouped by concern. *static?* marks class-level (static) methods. Verified against
-`core/area_maintenance/class.area_maintenance.php`.
-
-#### Widget catalogue
-
-| method | static? | purpose |
-| --- | --- | --- |
-| `get_ar_widgets()` | | Build and return the ordered array of widget descriptor objects (the area's `data.datalist`). Also the whitelist the API validates `widget_request` against. |
-| `widget_factory($item)` | | Normalize one `stdClass` into a widget descriptor (`id`, `class`, `category`, `type`, `tipo`, `parent`, `label`, `info`, `body`, `run`, `trigger`, `value`). |
-
-#### Ontology / data / lang
-
-| method | static? | purpose |
-| --- | --- | --- |
-| `update_ontology($options)` | ✓ | Download remote ontology files, import sections/private lists, rebuild `dd_ontology`, optimize tables, purge session (except auth) and caches, rewrite lang JS files, log a `SAVE` activity entry, write the simple-schema-changes file. |
-| `update_data_version($options)` | ✓ | Run the data-version upgrade (`update::update_version()`). **Root + maintenance-mode gated.** Listed in `BACKGROUND_RUNNABLE`. |
-| `rebuild_lang_files($options)` | ✓ | Rewrite the per-language label JS files and drop the lang caches. In `API_ACTIONS`. |
-
-#### Config-core mutation
-
-| method | static? | purpose |
-| --- | --- | --- |
-| `set_config_core($options)` | ✓ (protected) | The single writer for the runtime override flags into `../private/state.php` (STATE scope, via `installer_config_persistor::render_state`). Validates the constant name against a switch (`DEDALO_MAINTENANCE_MODE_CUSTOM`, `DEDALO_RECOVERY_MODE`, `DEDALO_MEDIA_ACCESS_MODE_CUSTOM`, `DEDALO_NOTIFICATION_CUSTOM`), type-checks the value, and writes it by its `state.*` dot-path. **Root-user gated** (except `DEDALO_RECOVERY_MODE`). |
-| `set_maintenance_mode($options)` | ✓ | Toggle `DEDALO_MAINTENANCE_MODE_CUSTOM` (bool) via `set_config_core`. |
-| `set_recovery_mode($options)` | ✓ | Toggle `DEDALO_RECOVERY_MODE` (bool) and set the live `$_ENV` flag. |
-| `set_media_access_mode($options)` | ✓ | Set `DEDALO_MEDIA_ACCESS_MODE_CUSTOM` (`null` \| `false` \| `'private'` \| `'publication'`). Called by the `media_control` widget. |
-| `set_notification($options)` | ✓ | Write `DEDALO_NOTIFICATION_CUSTOM` (string\|bool) read by the lock-components state API. |
-
-#### Database / recovery / tools
-
-| method | static? | purpose |
-| --- | --- | --- |
-| `create_db_extensions()` | ✓ | Force-create the PostgreSQL extensions (`db_tasks::create_extensions()`). |
-| `exec_db_maintenance()` | ✓ | Run basic PostgreSQL maintenance/reindexing (`db_tasks::exec_maintenance()`). |
-| `register_tools()` | ✓ | Import/register the tool ontology nodes (`tools_register::import_tools()`), aggregating per-tool errors. |
-| `build_recovery_version_file()` | ✓ | Alias of `installer::build_recovery_version_file()` (writes `dd_ontology_recovery.sql`). |
-| `restore_dd_ontology_recovery_from_file()` | ✓ | Alias of `installer::restore_dd_ontology_recovery_from_file()`. |
-
-#### Diagnostics / helpers
-
-| method | static? | purpose |
-| --- | --- | --- |
-| `create_test_record()` | ✓ | Truncate `matrix_test`, reset its sequence, insert the `test_data.json` fixture (used by the unit-test area). In `API_ACTIONS`. |
-| `long_process_stream($options)` | ✓ | Long-process tester: in CLI prints an iteration count; over HTTP emits a `text/event-stream`. In both `API_ACTIONS` and `BACKGROUND_RUNNABLE`. |
-| `get_definitions_files($directory)` | ✓ | Read the JSON transform definitions under `core/base/transform_definition_files/<directory>` for a fixed allowlist (`move_tld`/`move_locator`/`move_to_portal`/`move_to_table`/`move_lang`), with realpath confinement (SEC-069). |
-| `get_file_constants($file)` | ✓ | Regex-extract `define(...)` constant names from a config file, confined to `DEDALO_CONFIG_PATH`/`DEDALO_CORE_PATH` (SEC-069). |
-
-### `dd_area_maintenance_api` (the dispatcher)
-
-`final class dd_area_maintenance_api` —
-`core/api/v1/common/class.dd_area_maintenance_api.php`. Every method takes the RQO
-and returns `{ result, msg, errors }`. Its own `API_ACTIONS` constant lists the
-dispatchable entry points.
-
-| method | purpose |
-| --- | --- |
-| `class_request($rqo)` | Dispatch `$rqo->source->action` to a **static method on `area_maintenance`**, gated by `area_maintenance::API_ACTIONS`. Honours `background_running`. |
-| `widget_request($rqo)` | Dispatch `$rqo->source->action` to a **static method on `widgets/<model>/class.<model>`**, gated by the live widget-id whitelist + realpath confinement + the widget's `API_ACTIONS`. Honours `background_running`. |
-| `get_widget_value($rqo)` | Call the hard-coded `get_value` on `widgets/<model>/class.<model>` (SEC-050 identifier + realpath confinement). The dynamic-refresh path. |
-| `lock_components_actions($rqo)` | `get_active_users` / `force_unlock_all_components` via `lock_components::*` (the `lock_components` widget). |
-| `modify_counter($rqo)` | Reset/fix a section counter (`counter::modify_counter` + `counter::check_counters`) — the `counters_status` widget. |
-| `get_simple_schema_changes_files()` | List the ontology simple-schema-changes files (`hierarchy::get_simple_schema_changes_files`). |
-| `parse_simple_schema_changes_files($rqo)` | Parse one changes file (`hierarchy::parse_simple_schema_changes_file`) — consumed by `component_security_access.js`. |
-
-### Widget catalogue (server-side operations)
-
-The data-bearing widgets and the public-static methods their classes expose
-(verified by reading the widget classes). JS-only widgets are noted.
-
-| widget (category) | class methods (beyond `get_value`) | what it does |
-| --- | --- | --- |
-| `make_backup` (data) | `make_psql_backup`, `make_mysql_backup`, `get_dedalo_backup_files` | PostgreSQL / MySQL dumps; list existing Dédalo backup files. |
-| `build_database_version` (data) | `build_install_version` | Build the installation/database version artifact. |
-| `update_data_version` (data) | `update_data_version` | Front door to the area-class data-version upgrade (background-runnable). |
-| `export_hierarchy` (data) | `export_hierarchy`, `sync_hierarchy_active_status` | Export a hierarchy; sync hierarchy active status. |
-| `add_hierarchy` (data) | *(get_value only)* | Install/add a hierarchy. |
-| `move_tld` (migration) | `move_tld` | Re-key map items from one TLD to another across all tables (uses `transform_definition_files/move_tld`). |
-| `move_locator` (migration) | `move_locator` | Move locator-defined items between sections, re-numbering `section_id`. |
-| `move_to_portal` (migration) | `move_to_portal` | Move data into a linked section and wire a portal relation. |
-| `move_to_table` (migration) | `move_to_table` | Move data between physical tables. |
-| `move_lang` (migration) | `move_lang` | Convert items between translatable / non-translatable storage. |
-| `check_config` (config) | *(get_value only)* | Report configuration state (drives maintenance/recovery toggles). |
-| `update_ontology` (config) | `update_ontology`, `export_to_translate` | Front door to the ontology update; export labels for translation. |
-| `register_tools` (config) | `register_tools` | Import/register the tools ontology. |
-| `update_code` (config) | `check_remote_server`, `update_code`, `update_incremental`, `update_clean`, `build_version_from_git_master`, `get_code_path`, `set_code_path`, `get_file_version`, `set_development_path`, `get_code_url`, `get_code_update_info` | Inspect and update the Dédalo source code (git/remote). |
-| `lock_components` (integrity) | *(JS-only; served via `lock_components_actions`)* | Show active component locks; force-unlock. |
-| `sequences_status` (integrity) | *(JS-only; value pre-computed `db_tasks::check_sequences()`)* | Report DB sequence state. |
-| `media_control` (integrity) | `set_media_access_mode`, `rebuild_media_index` | Report media-protection config/status; change access mode; rebuild the media publication index. |
-| `counters_status` (integrity) | *(value via `counter::check_counters`; mutate via `modify_counter` API)* | Report and reset/fix section record counters. |
-| `dataframe_control` (integrity) | `run_check`, `run_fix` | Scan dataframe pairing integrity; remove orphan frame locators. |
-| `database_info` (system) | `analyze_db`, `optimize_tables`, `recreate_db_assets`, `rebuild_db_indexes`, `rebuild_db_functions`, `rebuild_db_constraints`, `consolidate_tables`, `rebuild_user_stats` | Inspect and rebuild PostgreSQL assets. |
-| `system_info` / `php_info` (system) | *(standalone `.php` pages in an iframe)* | Show system / `phpinfo()` output. |
-| `php_user`, `environment` (system) | *(JS-only; value pre-computed)* | Show the PHP user / runtime environment. |
-| `publication_api` (diffusion) | *(JS-only; value = diffusion map via `diffusion_utils::get_diffusion_map`)* | Show the publication-server API config and connection status. |
-| `dedalo_api_test_environment`, `sqo_test_environment`, `unit_test` (dev) | *(JS-only test consoles)* | Interactive API / SQO test consoles; the unit-test runner. |
-
-!!! note "Exact method lists are widget-local"
-    The per-widget method names above were read directly from each
-    `widgets/<id>/class.<id>.php`. When extending a widget, add the new method to
-    that widget's own `const API_ACTIONS` — not to the area class — or
-    `widget_request` will reject it with an explicit `permissions error`.
-
-## How it fits with the rest of Dédalo
-
-- **Areas / menu** — `area_maintenance` is one of the major areas iterated by
-  `area::get_areas()` (model name `area_maintenance`), and is reachable in the
-  menu only when permitted by the `areas.deny`/`areas.allow` config, plus the
-  hard admin-or-developer gate (`class.security.php:259-265`). It inherits the
-  area scaffolding from `area_common`/`common`. TS: `src/core/resolve/menu.ts`
-  (see [Menu](../ui/menu.md)) and the `'maintenance'` behavior branch of
-  `dispatchAreaRead` (`src/core/area/read.ts`), which enforces the
-  global-admin gate before building the widget catalog. See the
-  [Architecture overview](../architecture_overview.md) for where areas sit in
-  the areas → sections → components hierarchy.
-- **Ontology** — `update_ontology()` rewrites `dd_ontology` (the active schema),
-  so it is the operational counterpart of the [Ontology](../ontology/index.md)
-  subsystem; `register_tools()` imports tool nodes.
-- **Media protection** — the `media_control` widget and
-  `set_media_access_mode()` write `DEDALO_MEDIA_ACCESS_MODE_CUSTOM` and trigger
-  `rebuild_media_index`; see [Media protection](../../config/media_protection.md).
-- **Diffusion** — the `publication_api` widget reads the diffusion map and the
-  `media_control` rebuild delegates to `dd_diffusion_api`; see
-  [The diffusion engine](../../diffusion/native_engine.md).
-- **Tools** — `register_tools()` is the import path for the
-  [tools subsystem](../../development/tools/creating_tools.md). The widgets are a
-  *different* extension surface (no `register.json`, no `tool_paths`).
-- **Search / SQO** — the `sqo_test_environment` widget and `update_ontology`'s use
-  of `search_query_object` connect to [SQO](../sqo.md).
-- **Dataframe** — `dataframe_control` exercises the dataframe pairing-integrity
-  check shared with the migration/CLI pipeline.
-
-## Examples
-
-### The JSON payload shape
-
-`area_maintenance_json.php` emits a standard `{context, data}` envelope; the single
-`data` item carries the widget list under `datalist`:
+`getMaintenanceWidgets()` builds the ordered descriptor list the client renders,
+resolving each label in the application language. `buildMaintenanceDataItem()`
+wraps it as the area's single `data` item:
 
 ```json
 {
-  "context": [ { "tipo": "dd88", "model": "area_maintenance", "label": "Maintenance", "...": "..." } ],
+  "context": [ { "tipo": "dd88", "model": "area_maintenance", "label": "Maintenance" } ],
   "data": [
     {
+      "section_id": null,
       "section_tipo": "dd88",
       "tipo": "dd88",
       "value": [],
       "datalist": [
-        { "id": "make_backup", "category": "data", "type": "widget", "tipo": "dd88", "label": "Make backup", "value": null },
-        { "id": "media_control", "category": "integrity", "type": "widget", "tipo": "dd88", "label": "Media access control", "value": null }
+        { "id": "make_backup", "category": "data", "type": "widget",
+          "tipo": "dd88", "parent": "dd88", "label": "Make backup", "value": null },
+        { "id": "media_control", "category": "integrity", "type": "widget",
+          "tipo": "dd88", "parent": "dd88", "label": "Media access control", "value": null }
       ]
     }
   ]
 }
 ```
 
-### Calling a widget action from the client
+### Categories
 
-A widget submits through the shared `build_form()` helper, which posts an RQO via
-`data_manager.request`:
+Every widget carries a `category`; the client groups and filters by it.
 
-```javascript
-// trigger object passed to build_form({ ..., trigger })
-const trigger = {
-    dd_api : 'dd_area_maintenance_api',
-    action : 'widget_request',
-    source : { type: 'widget', model: 'dataframe_control', action: 'run_fix' },
-    options: { /* merged with the collected form values */ }
-}
-```
+| category | what it holds |
+| --- | --- |
+| `data` | Backups, database version artifacts, the data-version upgrade, hierarchy import/export. |
+| `migration` | The bulk transforms — `move_tld`, `move_locator`, `move_to_portal`, `move_to_table`, `move_lang`. |
+| `config` | Configuration and code: `check_config`, `config_areas`, `menu_skip_tipos`, `update_ontology`, `register_tools`, `update_code`. |
+| `integrity` | `lock_components`, `sequences_status`, `media_control`, `counters_status`, `dataframe_control`. |
+| `system` | Environment, database info, system info, the runtime panel, error reports. |
+| `diffusion` | `publication_api`, `diffusion_server_control`. |
+| `dev` | The API and SQO test consoles, the unit-test runner. |
 
-Server-side this routes through `widget_request` → `dataframe_control::run_fix`
-(allowed because `run_fix` is in `dataframe_control::API_ACTIONS`).
+## The widgets
 
-### A class-level (non-widget) action
+The operations each widget registers. A widget with no `apiActions` is a
+read-only panel: it reports state through `getValue` or an eager catalog value.
 
-```javascript
-// toggle maintenance mode — dispatched to the AREA class, not a widget
-const api_response = await data_manager.request({
-    use_worker : true,
-    body : {
-        dd_api : 'dd_area_maintenance_api',
-        action : 'class_request',
-        source : { typo: 'source', action: 'set_maintenance_mode' },
-        options: { value: true }
-    }
-})
-```
+| widget | category | registered actions |
+| --- | --- | --- |
+| `make_backup` | data | `make_psql_backup`, `get_dedalo_backup_files` |
+| `build_database_version` | data | `build_recovery_version_file`, `restore_dd_ontology_recovery_from_file` |
+| `update_data_version` | data | `update_data_version` |
+| `export_hierarchy` | data | `sync_hierarchy_active_status` |
+| `add_hierarchy` | data | *(read-only panel)* |
+| `move_tld`, `move_locator`, `move_to_portal`, `move_to_table`, `move_lang` | migration | one transform action each, named after the widget |
+| `check_config` | config | `set_maintenance_mode`, `set_recovery_mode`, `set_notification` |
+| `config_areas` | config | `save_config_areas` |
+| `menu_skip_tipos` | config | `save_menu_skip_tipos` |
+| `update_ontology` | config | `update_ontology` |
+| `register_tools` | config | `register_tools` |
+| `update_code` | config | `update_code`, `build_version_from_git_master` |
+| `lock_components` | integrity | *(area-level action — see the dispatch table)* |
+| `sequences_status` | integrity | *(read-only panel)* |
+| `media_control` | integrity | `set_media_access_mode`, `rebuild_media_index` |
+| `counters_status` | integrity | `modify_counter` |
+| `dataframe_control` | integrity | `run_check`, `run_fix` |
+| `database_info` | system | `analyze_db`, `optimize_tables`, `consolidate_tables`, `recreate_db_assets`, `rebuild_db_indexes`, `rebuild_db_functions`, `rebuild_db_constraints`, `rebuild_user_stats` |
+| `environment`, `system_info` | system | *(read-only panels)* |
+| `error_reports` | system | `get_reports` |
+| `publication_api` | diffusion | *(read-only panel)* |
+| `diffusion_server_control` | diffusion | `cancel_process`, `requeue_job`, `purge_jobs`, `set_scheduler`, `retry_pending_deletions` |
+| `dedalo_api_test_environment`, `sqo_test_environment` | dev | *(interactive consoles)* |
+| `unit_test` | dev | `create_test_record` |
 
-!!! warning "`set_maintenance_mode` is not in `API_ACTIONS`"
-    As written, `area_maintenance::API_ACTIONS` lists only `create_test_record`,
-    `long_process_stream` and `rebuild_lang_files`. `set_maintenance_mode`,
-    `update_ontology` and `update_data_version` are **not** in it, so the example
-    above would be **rejected** by the SEC-044 gate in `class_request` unless those
-    methods are reached through a different path (e.g. the `check_config` /
-    `update_ontology` widgets dispatching their own widget-class methods, or
-    `dd_core_api->start` for recovery mode). Treat `API_ACTIONS` as authoritative
-    for what `class_request` will actually dispatch; this is documented here rather
-    than guessed.
+The `system` category also carries a **runtime panel** reporting the running
+engine's version, pid, memory and uptime, and offering real cache and session
+clears.
+
+!!! note "Some operations are closed by design"
+    A handful of registered methods refuse deliberately, with an explicit
+    `engine_denied` envelope naming the reason — they would write files outside
+    the engine's control. The refusal is loud and named; it is never a silent
+    no-op.
+
+!!! warning "Extend a widget in its own module"
+    When you add an operation to a widget, add it to **that widget's**
+    `apiActions` — nowhere else. If you do not, `dispatchWidgetRequest` rejects
+    it at gate 4 with `unauthorized_method`.
+
+### Runtime state the widgets write
+
+`check_config`, `config_areas`, `menu_skip_tipos` and `media_control` persist
+their changes to the **server-state store** (`../private/ts_state.json`, via
+`src/core/resolve/server_state.ts`) rather than to `../private/.env`, which is
+append-only and therefore cannot hold a UI-settable value. The store holds
+maintenance mode, recovery mode, the login notification, the area deny/allow
+lists, the menu skip tipos and the media-access override. A `null` entry means
+"no override" — the static configuration wins.
+
+## How it fits with the rest of Dédalo
+
+- **[area](area.md) / [Menu](../ui/menu.md)** — `area_maintenance` is one of the
+  root menu areas, reachable only by an administrator. It cannot be removed by
+  the `areas.deny` list: the `config_areas` widget is anti-lockout guarded.
+- **[Ontology](../ontology/index.md)** — `update_ontology` rewrites `dd_ontology`,
+  the active schema; `register_tools` imports the tool nodes.
+- **[Media protection](../../config/media_protection.md)** — the `media_control`
+  widget sets the media-access mode and rebuilds the media publication index.
+- **[The diffusion engine](../../diffusion/native_engine.md)** — what
+  `publication_api` and `diffusion_server_control` inspect and drive.
+- **[Creating tools](../../development/tools/creating_tools.md)** — the tools
+  subsystem `register_tools` imports into. Widgets are a *different* extension
+  surface: no register file, no tool paths — one module and one import line.
+- **[SQO](../sqo.md)** — the query format the SQO test console exercises.
 
 ## Related
 
-- [Architecture overview](../architecture_overview.md) — where areas sit in the
-  areas → sections → components hierarchy.
-- [Ontology](../ontology/index.md) — the active schema that `update_ontology()`
-  rewrites.
-- [Sections](../sections/index.md) · [Components](../components/index.md) — the
-  record-bearing nodes the maintenance operations act over.
-- [SQO](../sqo.md) — the query format exercised by the SQO test environment.
+- [area](area.md) — the area reference.
+- [Areas](index.md) — the family index.
 - [dd_area_maintenance_api](../../api/classes/dd_area_maintenance_api.md) — the
-  generated API-class reference.
-- [Media protection](../../config/media_protection.md) — the media access control
-  the `media_control` widget configures.
-- [The diffusion engine](../../diffusion/native_engine.md) — the
-  diffusion engine the `publication_api` widget and media-index rebuild talk to.
-- [Creating tools](../../development/tools/creating_tools.md) — the tools subsystem
-  `register_tools()` imports into.
+  API-class reference.
+- [Ontology](../ontology/index.md) — the active schema `update_ontology` rewrites.
+- [Media protection](../../config/media_protection.md) — configured by the
+  `media_control` widget.
+- [The diffusion engine](../../diffusion/native_engine.md) — driven by the
+  diffusion widgets.
+- [Creating tools](../../development/tools/creating_tools.md) — the tools subsystem.
+- [Architecture overview](../architecture_overview.md) — areas → sections →
+  components → data.

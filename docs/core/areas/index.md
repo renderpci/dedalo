@@ -1,7 +1,7 @@
 # Areas
 
 > The top-level groupings of the Dédalo back-office menu — Resources, Activity,
-> Admin, Thesaurus, Ontology, Maintenance, Graph, Development, Tools and Root.
+> Admin, Thesaurus, Ontology, Maintenance, Development, Tools and Root.
 > An *area* is an ontology node that *contains* sections and sub-areas; it holds
 > no records of its own, only structure, permission context and an aggregated
 > dashboard over its descendant sections.
@@ -11,139 +11,103 @@
 > [Ontology](../ontology/index.md)
 
 This page is the **index for the Areas domain**. It explains what an area is,
-the inheritance model every area shares, and lists every `area*` class under
-`core/` with a one-line purpose and a link to its full reference where one
-exists. For the wider picture of how areas, sections and components form the
-back-office, read the [Architecture overview](../architecture_overview.md)
-first.
-
-!!! note "TS rewrite status"
-    The area family has been rebuilt in the TypeScript/Bun server
-    (`engineering/AREA_SPEC.md`, phases A–E, all done): there is no per-model class —
-    a single **`concepts/area.ts`** contract module owns the canonical model
-    list, the dashboard/tree/maintenance behavior taxonomy and the walk-filter
-    sets, consumed by resolvers in `src/core/area/` (`read.ts` the read
-    dispatcher, `dashboard.ts` the statistics engine, `tree.ts` the thesaurus/
-    ontology boot payload, `color.ts` the deterministic per-tipo color) and by
-    `src/core/resolve/menu.ts` (the menu walk). All ten behavior-carrying
-    models below resolve through this module; **`area_graph` is the one
-    exception — dropped from the rewrite by user decision (2026-07-03) and its
-    reads are refused loudly**, though it still occupies its fixed slot in the
-    menu's root order for wire parity. `area_ontology` is additionally
-    **superuser-only, fail-closed** in TS — a deliberate strengthening beyond
-    PHP (see [area_ontology](area_ontology.md#ts-rewrite-status)).
-
----
+how the engine decides what each area model *does*, and lists every area model
+with a one-line purpose and a link to its full reference where one exists. For
+the wider picture of how areas, sections and components form the back-office,
+read the [Architecture overview](../architecture_overview.md) first.
 
 ## What an area is
 
-An *area* is a **top-level grouping** in the back-office menu — the major
-divisions of the application: Resources, Activity, Admin, Thesaurus, Ontology,
-Maintenance, Graph, Development, Tools and Root. Each area is an **ontology
-node** whose `model` is `area` (or a model-name variant such as `area_root`,
-`area_admin`, `area_thesaurus`).
+An area is a **top-level grouping** in the back-office menu — the major
+divisions of the application. Each area is an **ontology node** whose `model` is
+`area` or a model-name variant such as `area_root`, `area_admin` or
+`area_thesaurus`.
 
 Unlike a [section](../sections/section.md), an area is **not backed by a matrix
-table and owns no records of its own**. It is a structural / configuration node
-that *contains* sections and sub-areas as ontology children. Areas anchor three
-things:
+table and owns no records of its own**. It is a structural node that *contains*
+sections and sub-areas as ontology children. Areas anchor three things:
 
 - the **menu tree** — areas are the top-level nodes; sections and sub-areas are
   their children, resolved through the ontology parent/children graph rather
   than a fixed map (see [Menu](../ui/menu.md));
 - **permission scoping** — an area is a node over which permissions can be
   evaluated, even though it carries no record id;
-- the **dashboard** — the aggregated view of metrics over an area's descendant
+- the **dashboard** — the aggregated statistics view over an area's descendant
   sections.
 
-### The inheritance model: area → area_common → common
+Writes are refused: an area has no matrix row, so `save` / `create` / `delete` /
+`duplicate` aimed at an area tipo fails closed.
 
-Every area sits in a three-layer chain:
+## No per-model class — one contract, three resolvers
 
-| layer | role |
+There is no object per area model. A single contract module,
+`src/core/concepts/area.ts`, owns the canonical model list, the walk-filter sets,
+the menu root order and the area `tipo` constants; the resolvers in
+`src/core/area/` consume it:
+
+| module | what it owns |
 | --- | --- |
-| **`common`** | The universal element machinery: identity (`tipo`/`mode`/`lang`), `load_structure_data()`, `get_structure_context()`, permissions, ontology/matrix-table resolution, the `{context, data}` JSON helpers and the static caches. The same base serves [`section`](../sections/section.md) and `component_common`. |
-| **`area_common`** | The shared area layer specialising `common` for menu-grouping nodes: the `get_instance()` factory, the section-shaped identity shims (`get_section_tipo()` returns the area's own tipo, `get_section_id()` returns `null`), the generic `get_json()` fallback to `area_common_json.php`, the recursive dashboard structure-walk, and the permission-aware dashboard metrics. |
-| **`area`** | The concrete **top-level** class. Adds the menu / security assembly — `get_areas()` iterates all major root areas, recursively collects child areas/sections, and filters the result against the `areas.deny`/`areas.allow` config. The output feeds both the menu and `component_security_access`. |
+| `src/core/concepts/area.ts` | The contract — `AREA_MODELS`, `areaBehaviorOf()`, `isAreaModel()`, `MENU_ROOT_MODEL_ORDER`, the child include/exclude sets, the area tipo constants. |
+| `src/core/area/read.ts` | The read dispatcher and the write refusal. |
+| `src/core/area/dashboard.ts` | The statistics engine. |
+| `src/core/area/tree.ts` | The thesaurus/ontology tree boot payload. |
+| `src/core/area/color.ts` | The deterministic per-tipo dashboard color. |
+| `src/core/api/handlers/menu.ts` | The menu walk over the area graph. |
 
-`class area extends area_common`, and `class area_common extends common`. The
-concrete top-level areas (`area_admin`, `area_resource`, `area_thesaurus`, …)
-are thin model-named subclasses distinguished by their ontology node and an
-optional `<class>_json.php` controller; when a subclass ships no controller,
-`area_common::get_json()` falls back to the shared `area_common_json.php` so
-every area gets a generic dashboard payload without per-class boilerplate.
-Heavier areas (`area_thesaurus`, `area_ontology`) add their own JSON controllers
-and tree-building logic (the TS tree / `ts_object` stack) while still inheriting
-the structure-walk, metrics and permission scaffolding.
+Every area model resolves to exactly one of three **behaviors** —
+`dashboard`, `tree` or `maintenance` — and an area model with no behavior is
+refused loudly rather than silently dashboarded. See
+[area → the behavior taxonomy](area.md#the-behavior-taxonomy).
 
-The menu is built from `area::get_areas()`: areas are the menu's top-level
-nodes, sections (and sub-areas) are their children. Sections are the
-record-bearing leaves an area groups; an area itself holds no records — only
-structure, permission context and the aggregated dashboard.
+`area_ontology` is additionally **superuser-only and fail-closed** (see
+[area_ontology](area_ontology.md)).
 
----
+## The area models
 
-## All areas in `core/`
+### Documented areas
 
-Every `area*` directory under `core/`, with a one-line purpose and a link to its
-full reference where one exists.
-
-### Base classes & documented areas
-
-| area | model | purpose | doc |
+| area model | behavior | purpose | doc |
 | --- | --- | --- | --- |
-| `area_common` | (base) | The shared PHP base class every concrete area inherits — identity, the `get_json()` fallback, the dashboard structure-walk and the permission-aware metrics. | [area_common.md](area_common.md) |
-| `area` | `area` | The concrete top-level class adding the menu/security assembly (`get_areas()`, recursive children collection, `areas.deny`/`areas.allow` filtering). | [area.md](area.md) |
-| `area_admin` | `area_admin` | Administration area — users, profiles, projects, configuration and other system-administration sections. | [area_admin.md](area_admin.md) |
-| `area_thesaurus` | `area_thesaurus` | Thesaurus area — controlled vocabularies rendered as a hierarchical TS tree; ships its own JSON controller and tree-building logic. | [area_thesaurus.md](area_thesaurus.md) |
-| `area_ontology` | `area_ontology` | Ontology area — the in-app editor over the ontology nodes themselves; ships its own JSON controller and tree view. | [area_ontology.md](area_ontology.md) |
-| `area_maintenance` | `area_maintenance` | Maintenance area — operational widgets and tools (caches, indexing, media control, integrity checks) for keeping an installation healthy. | [area_maintenance.md](area_maintenance.md) |
-| `area_graph` | `area_graph` | Graph area — the visual graph/network view over records and their relations. | [area_graph.md](area_graph.md) |
+| `area` | dashboard | The plain grouper — the model most areas in an installation use, and the reference for the whole family. | [area.md](area.md) |
+| `area_admin` | dashboard | Administration — users, profiles, projects, configuration and other system-administration sections. | [area_admin.md](area_admin.md) |
+| `area_thesaurus` | tree | Thesaurus — controlled vocabularies rendered as a hierarchical tree. | [area_thesaurus.md](area_thesaurus.md) |
+| `area_ontology` | tree | Ontology — the in-app editor over the ontology nodes themselves. Superuser-only. | [area_ontology.md](area_ontology.md) |
+| `area_maintenance` | maintenance | Maintenance — operational widgets (backups, caches, indexing, media control, integrity checks). | [area_maintenance.md](area_maintenance.md) |
 
-### Thin areas (no full doc)
+### Grouping-only areas
 
-These are **empty model-named subclasses of `area_common`** (their PHP class
-body is empty and their JS is an alias of the base `area` widget). They exist to
-give a distinct ontology node — and therefore a distinct menu grouping,
-permission scope and dashboard — without adding behaviour. They inherit
-everything from `area_common`.
+These models add no behavior of their own. They exist to give a distinct
+ontology node — and therefore a distinct menu grouping, permission scope and
+dashboard — and they all resolve to the `dashboard` behavior.
 
-| area | model | one-line description |
-| --- | --- | --- |
-| `area_root` | `area_root` | The root grouping — the top of the area tree from which `get_areas()` begins the recursive walk. |
-| `area_resource` | `area_resource` | Resources area — the curatorial data sections (people, media, audiovisual, etc.); the primary working area, in the menu roster but with no full doc yet. |
-| `area_activity` | `area_activity` | Activity area — groups the activity-log / `matrix_activity` views that record who changed what and when. |
-| `area_tool` | `area_tool` | Tools area — the menu grouping under which the registered tools (import, export, diffusion, …) appear. |
-| `area_development` | `area_development` | Development area — developer-facing sections and scaffolding visible only in development contexts. |
-| `area_publication` | `area_publication` | Publication area — grouping for publication / diffusion-facing sections. |
-| `area_activities` | — | Orphan directory (no class file; not in the `get_areas()` roster); the live activity grouping is `area_activity`. |
+| area model | one-line description |
+| --- | --- |
+| `area_root` | The root grouping — the top of the area tree the menu walk starts from. |
+| `area_resource` | Resources — the curatorial data sections (people, media, audiovisual, …); the primary working area. |
+| `area_activity` | Activity — the activity-log views that record who changed what and when. |
+| `area_tool` | Tools — the grouping under which the registered tools (import, export, diffusion, …) appear. |
+| `area_development` | Development — developer-facing sections and scaffolding. |
+| `area_publication` | Publication — the grouping for publication / diffusion-facing sections. |
 
 !!! note "Menu roster"
-    `area::get_areas()` iterates ten major root areas in this order:
-    `area_root`, `area_activity`, `area_resource`, `area_tool`,
-    `area_thesaurus`, `area_graph`, `area_admin`, `area_maintenance`,
-    `area_development`, `area_ontology`. Each is resolved through
-    `ontology_utils::get_ar_tipo_by_model` (with graceful warnings/fallbacks
-    when an ontology node is missing), then its child areas/sections are
-    collected recursively and filtered against the `areas.deny`/`areas.allow` config.
+    The menu emits its root areas in a fixed order, `MENU_ROOT_MODEL_ORDER` in
+    `src/core/concepts/area.ts`: `area_root`, `area_activity`, `area_resource`,
+    `area_tool`, `area_thesaurus`, `area_graph`, `area_admin`,
+    `area_maintenance`, `area_development`, `area_ontology`. Each root is
+    resolved to its ontology node, its child areas/sections are collected
+    recursively, and the result is filtered against the `areas.deny` list.
 
-    The TS rewrite keeps the exact same root order as `MENU_ROOT_MODEL_ORDER`
-    in `src/core/concepts/area.ts`, consumed by `src/core/resolve/menu.ts` —
-    including `area_graph`'s slot, for menu wire parity, even though `area_graph`
-    is excluded as a *behavior* (§ below). The behavior-carrying model set is a
-    *different*, deliberately shorter list: `AREA_MODELS` in the same module
-    (ten models, `area_graph` absent).
-
----
+    That order is **not** the behavior-carrying set. `area_graph` holds a slot in
+    it for menu wire compatibility only; it carries no behavior and a read
+    addressed at it is refused. See
+    [area → the menu roster](area.md#the-menu-roster).
 
 ## See also
 
-- [area_common](area_common.md) — the shared base class reference (identity,
-  JSON fallback, dashboard structure-walk, permission-aware metrics).
-- [area](area.md) — the concrete top-level class reference (menu/security
-  assembly, `get_areas()`, `areas.deny`/`areas.allow` filtering).
+- [area](area.md) — the family reference: behavior taxonomy, the two walks, the
+  dashboard payload, the deny/allow config.
 - [Architecture overview](../architecture_overview.md) — where areas sit in the
   `areas → sections → components → data` hierarchy.
 - [Sections](../sections/index.md) — the record-bearing leaves an area groups.
-- [Menu](../ui/menu.md) — the navigation tree built from `area::get_areas()`.
+- [Menu](../ui/menu.md) — the navigation tree built from the area graph.
 - [Ontology](../ontology/index.md) — the active schema the area walk reads.
