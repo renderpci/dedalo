@@ -87,13 +87,20 @@ add the rest. Two of them are not optional on a laptop:
 cat >> ../private/.env <<'ENV'
 
 # --- Development only ----------------------------------------------------
-MEDIA_PATH=/Users/you/dev/dedalo/media
 SERVER_TCP_PORT=3600
 DEDALO_DEV_MODE=true
 SESSION_COOKIE_SECURE=false
 DEDALO_DEBUG_API_ERRORS=true
 ENV
 ```
+
+!!! tip "Media works with no configuration"
+    `MEDIA_PATH` **derives** to `<repo>/media` (`config.media.rootPath`), and the engine
+    serves media itself on the dev listener — session-gated — because there is no web
+    server in front of it here. Set `MEDIA_PATH` only to put the media tree somewhere
+    else. In production media is served by the web server from generated rule files, and
+    the engine's fallback is structurally unreachable (the socket never serves media):
+    see [media protection](../config/media_protection.md).
 
 !!! danger "`SESSION_COOKIE_SECURE` defaults to **true** — you cannot log in until you set it to `false`"
     A `Secure` cookie is dropped by the browser over plain `http://`. The login
