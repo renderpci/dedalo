@@ -109,18 +109,18 @@ Both, common and private, hierarchies has the same process to be created.
 
     ![Build the hierarchy](assets/20231008_212940_build_the_hierarchy.png)
 
-    !!! note "On the TS/Bun server"
+    !!! note "How this works"
         This "Generate" tool is `tool_hierarchy`'s `generate_virtual_section`
-        action, ported at `tools/tool_hierarchy/server/tool_hierarchy.ts`: it
+        action, at `tools/tool_hierarchy/server/tool_hierarchy.ts`: it
         provisions the `<tld>1`/`<tld>2` virtual sections and their
         `dd_ontology` nodes (via `generateVirtualSection()` in
         `src/core/ontology/hierarchy_provision.ts`) and seeds the two thesaurus
         portal roots so the tree shows the hierarchy immediately. The write
         gate (section permission ≥ 2) is enforced the same way as any other
         write. It also grants **your own profile** level `2` over the two new
-        sections and everything inside them (PHP's `set_section_permissions()`,
-        ported) — so the hierarchy is usable immediately. Other users still need
-        their permissions set in step 12 below.
+        sections and everything inside them (`setSectionPermissions()`) — so
+        the hierarchy is usable immediately. Other users still need their
+        permissions set in step 12 below.
 
 12. Check in Thesaurus that this hierarchy is ready and set the permissions to users as you need.
 
@@ -128,26 +128,13 @@ Both, common and private, hierarchies has the same process to be created.
 
 #### Toponyms or other standardized hierarchies
 
-!!! warning "TS gap: the toponymy import panel can't import on TS"
-    The `add_hierarchy` widget's *panel* is ported and renders cleanly
-    (`addHierarchyGetValue` in `src/core/resolve/widget_request.ts`), but its
-    importable-hierarchies list is always empty and the directory path is
-    `null` — the JSON definition files it imports from live in the PHP
-    install tree, which a coexisting TS server does not own and must not
-    read/mutate. The actual **import** action is unregistered (engine-denied
-    by design; see `rewrite/STATUS.md`). On a coexisting install, run this step
-    from the PHP server; a TS-only install must create the hierarchy through
-    the manual process above instead.
-
-To simplify creating and loading toponymy hierarchies, you can use the Maintenance panel to manage all toponym hierarchies.
-
-A Dédalo installation pre-configures all countries, but they are not active and their data is not loaded by default. Only the countries loaded during the install process are accessible to users. To activate a new one, follow these steps:
-
-1. Go to "Maintenance" panel in "System administration" menu.
-2. Locate the "Install hierarchies" block
-
-    ![Import toponymy control panel](assets/20231008_213848_import_toponymy.png)
-
-3. Check the country or the normalized hierarchy that you want to load. (Is possible check more than one)
-4. Click the "Import hierarchy" button and wait. (Some countries may have a large dataset)
-5. Check in Thesaurus view that this hierarchy is ready and set the permissions to users as you need.
+!!! warning "Gap: the toponymy import panel does not import yet"
+    The Maintenance panel has an "Install hierarchies" block intended to let
+    you check off pre-configured countries and normalized hierarchies and
+    import them in bulk. The panel itself renders
+    (`addHierarchyGetValue` in `src/core/area_maintenance/widgets/add_hierarchy.ts`),
+    but its importable-hierarchies list is always empty and the **import**
+    action itself is unregistered — the JSON definition files it would import
+    from are not yet wired to a location this engine owns. Until this ships,
+    create toponymy and other standardized hierarchies through the manual
+    process above instead.

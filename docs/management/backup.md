@@ -4,18 +4,15 @@
 
 Dédalo manages two databases. The main one is the work system, which holds the full dataset with the ontology and all the data. The second is the publishing system, a copy that holds only the public data. To create a backup, you must back up both systems.
 
-!!! note "On the TS/Bun server"
-    The work-system (PostgreSQL) backup below is ported and TS-native:
-    `src/core/resolve/backup.ts` spawns the server's own `pg_dump` (version-matched
-    against the running PostgreSQL server, probing versioned Homebrew installs)
-    into the TS tree's **own** `../private/backups/db` directory — never a PHP
-    install's configured backup path — behind the same "Make Backup"
-    maintenance panel (`make_backup` widget in
-    `src/core/resolve/widget_request.ts`). The publishing-system (MariaDB/MySQL)
-    backup is **out of scope by design**: MariaDB is the diffusion engine's
-    responsibility, not the TS server's, so the panel's MySQL file list is
-    always empty on the TS side. Use the manual `mysqldump` steps below for the
-    publishing system regardless of which engine runs the work system.
+The work-system (PostgreSQL) backup below is TS-native: `src/core/area_maintenance/backup.ts`
+spawns the server's own `pg_dump` (version-matched against the running
+PostgreSQL server, probing versioned Homebrew installs) into `../private/backups/db`,
+behind the "Make Backup" maintenance panel (`make_backup` widget in
+`src/core/area_maintenance/widgets/make_backup.ts`). The publishing-system
+(MariaDB/MySQL) backup is **out of scope by design**: MariaDB is the diffusion
+engine's responsibility, not the work server's, so the panel's MySQL file list
+is always empty. Use the manual `mysqldump` steps below for the publishing
+system.
 
 !!! note "Recreating a publication database with work data"
     Publishing system is a copy and is possible recreate it doing a publication in work system. But some times will be necessary a copy because the work system is not ready to publish his data.
@@ -28,16 +25,15 @@ You can perform a backup in different ways:
 
 ### Automatic backup
 
-By default Dédalo makes a backup automatically when users change data. You can change this backup configuration — directory, cadence and other parameters — in the config file by editing Dédalo's [backup](../config/config.md#backup-variables) variables.
+You can change the backup configuration — directory, cadence and other parameters — by editing Dédalo's [backup](../config/config.md#backup-variables) settings in `../private/.env`.
 
-!!! warning "TS gap: no automatic trigger on save"
-    The TS server's `initBackupSequence()` (`src/core/resolve/backup.ts`)
-    implements the throttle window (an 8-hour minimum between non-forced
-    dumps, matching PHP's `DEDALO_BACKUP_TIME_RANGE`) and a PHP-compatible
-    file-naming scheme, but nothing in the save/write path calls it
-    automatically yet — it only runs when the "Make backup" button (or its
-    API action) is invoked. Until this is wired in, treat backups on the TS
-    server as **manual/cron only** (see below).
+!!! warning "Gap: no automatic trigger on save"
+    `initBackupSequence()` (`src/core/area_maintenance/backup.ts`) implements
+    the throttle window (an 8-hour minimum between non-forced dumps, per
+    `DEDALO_BACKUP_TIME_RANGE`) and a stable file-naming scheme, but nothing in
+    the save/write path calls it automatically yet — it only runs when the
+    "Make backup" button (or its API action) is invoked. Until this is wired
+    in, treat backups as **manual/cron only** (see below).
 
 ### Manual backup
 
@@ -58,15 +54,13 @@ The panel will indicate the directory of the copy, it will be storage into bk di
 
 > 2023-09-09_205044.my_dedalo_db.postgresql_1_forced_dbv6-0-0.backup
 
-!!! note "On the TS/Bun server"
-    The file lands in the TS tree's own `../private/backups/db` directory
-    (`getBackupDir()` in `backup.ts`), not the PHP install's configured backup
-    path, and the name carries a `.custom.` infix before the extension (custom
-    `pg_dump -F c` format, e.g.
-    `2026-07-04_205044.my_dedalo_db.postgresql_-1_forced_dbv7-0-0.custom.backup`)
-    — otherwise the same `<date>.<db>.postgresql_<user>[_forced]_dbv<version>`
-    naming. The user-id segment is always `-1` (superuser) on the TS side, since
-    the maintenance panel is a global-admin/root-only surface.
+The file lands in `../private/backups/db` (`getBackupDir()` in
+`src/core/area_maintenance/backup.ts`), and the name carries a `.custom.`
+infix before the extension (custom `pg_dump -F c` format, e.g.
+`2026-07-04_205044.my_dedalo_db.postgresql_-1_forced_dbv7-0-0.custom.backup`)
+— otherwise the naming follows `<date>.<db>.postgresql_<user>[_forced]_dbv<version>`.
+The user-id segment is always `-1` (superuser), since the maintenance panel is
+a global-admin/root-only surface.
 
 ### Making a manual backup in the server shell
 
@@ -154,14 +148,14 @@ You can add more scripts to create a weekly or monthly backups in the same way.
 
 The publishing system uses the MariaDB/MySQL database. By backing up this database, you will create a copy of the data that was published, a copy of the public data.
 
-!!! warning "TS gap: no publishing-system backup button"
-    MariaDB is the diffusion **engine's** database, not the TS server's — the
-    TS maintenance panel's `get_dedalo_backup_files` action always reports an
+!!! warning "Gap: no publishing-system backup button"
+    MariaDB is the diffusion **engine's** database, not the work server's —
+    the maintenance panel's `get_dedalo_backup_files` action always reports an
     empty `mysql_backup_files` list, and there is no "Make a publishing backup"
-    action registered (`make_backup` in `src/core/resolve/widget_request.ts`
-    only implements `make_psql_backup`/`get_dedalo_backup_files`). Use the
-    manual `mysqldump` steps below regardless of which engine serves the work
-    system.
+    action registered (`make_backup` in
+    `src/core/area_maintenance/widgets/make_backup.ts` only implements
+    `make_psql_backup`/`get_dedalo_backup_files`). Use the manual `mysqldump`
+    steps below.
 
 ### Manual backup
 
@@ -199,7 +193,7 @@ tar zcf mysql_dump_my_publishing_database-$(date +%Y-%m-%d-%H.%M.%S).sql.tar.gz 
 
 ## Restore a backup of publishing system
 
-You can use phpmyadmin, adminer or other tools to import the file that you previously created, or restore the DB backup by running the following command:
+You can use Adminer or other database tools to import the file that you previously created, or restore the DB backup by running the following command:
 
 ```shell
 mysql -u publishing_bd_user_name -p -v  mysql_dump_my_publishing_database < mysql_dump_my_publishing_database.sql
@@ -224,12 +218,10 @@ For transfer the files to the backup server consider compress the files in this 
 tar cvfz dedalo_configuration.tar.gz ../dedalo/config
 ```
 
-!!! note "On the TS/Bun server"
-    The TS server keeps its per-install configuration and secrets outside the
-    code tree entirely, in `../private/` (a sibling of the TS tree, resolved
-    relative to the server's working directory — see
-    `src/core/resolve/widget_request.ts`'s `checkConfigGetValue`, which reports
-    these exact sources): `.env` (credentials/config), `ts_state.json`
-    (maintenance mode, recovery mode, notification and menu overrides — the TS
-    analog of PHP's `state.php`) and `sessions.sqlite` (active sessions).
-    Back these up the same way, e.g. `tar cvfz dedalo_ts_configuration.tar.gz ../private`.
+Dédalo keeps its per-install configuration and secrets outside the code tree
+entirely, in `../private/` (a sibling of the install tree — see the
+`check_config` widget's `computeCheckConfig`, in
+`src/core/area_maintenance/widgets/check_config.ts`, which reports these exact
+sources): `.env` (credentials/config), `ts_state.json` (maintenance mode,
+recovery mode, notification and menu overrides) and the sessions database.
+Back these up together, e.g. `tar cvfz dedalo_configuration.tar.gz ../private`.

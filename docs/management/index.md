@@ -30,24 +30,13 @@ Dédalo root user is identified with `section_id = -1` (it is the only `-1` sect
 !!! note "root account"
     Dédalo root user is independent of the GNU/Linux root account.
 
-When a user login with root account, Dédalo activate the debugger and all actions done will be logged into the php_error_log file, monitoring the php_error_log file is possible to detect errors. But this situation only is necessary when something was wrong, and only in few cases the full access to data is necessary, so do not use this account in normal administration. The most common daily administration tasks can be performed using a general administrator account.
+This situation is only necessary when something was wrong, and only in few cases the full access to data is necessary, so do not use this account in normal administration. The most common daily administration tasks can be performed using a general administrator account.
 
-To monitoring the php_error_log you can use the `tail` command in this way:
-
-```sh
-tail -f /var/log/php-fpm/php_error_log
-```
-
-And reproduce the failing task in the browser.
-
-!!! note "On the TS/Bun server"
-    The TS server (`src/server.ts`) is a single long-lived Bun process, not a
-    PHP-FPM pool — there is no `php_error_log` file. It writes to its own
-    process output (stdout/stderr), so monitor it through whatever runs the
-    process (e.g. `journalctl -u <service> -f`, your process manager's log
-    tail, or the terminal running `bun run`). The root-triggered debugger
-    described above is a PHP-specific behavior and has no TS equivalent yet —
-    the TS server logs the same way for every principal.
+The TS server (`src/server.ts`) is a single long-lived Bun process. It writes
+activity to its own process output (stdout/stderr) for every principal,
+including root — monitor it through whatever runs the process (e.g.
+`journalctl -u <service> -f`, your process manager's log tail, or the
+terminal running `bun run`).
 
 ##### Changing Root Password
 
@@ -76,7 +65,7 @@ See [Users, profiles and permissions](users_and_permissions.md) for:
 
 To administer a Dédalo installation you will need a user with administrative rights on the GNU/Linux server.
 
-You will need to install, update and perform management tasks. The Dédalo system depends on PostgreSQL, PHP, Apache, MariaDB (or MySQL) and others, so any Dédalo project will need a GNU/Linux expert.
+You will need to install, update and perform management tasks. The Dédalo system depends on PostgreSQL, the Bun runtime, a reverse proxy (Apache or nginx), optionally MariaDB (for diffusion) and others, so any Dédalo project will need a GNU/Linux expert.
 
 #### Maintenance panel
 
@@ -90,15 +79,13 @@ General administrators and developers also need a profile that grants access to 
 
 A normal user, even with a profile that grants access to the maintenance panel, cannot enter it or perform any maintenance task. To be allowed, the user must be a general administrator or a developer.
 
-!!! note "On the TS/Bun server"
-    The maintenance widget catalog and the admin-only gate are ported
-    (`src/core/resolve/widgets.ts`, `src/core/resolve/widget_request.ts`) with
-    byte-parity metadata for all 31 PHP widgets, but not every widget's
-    *methods* are implemented — some are TS-native reimplementations (backup,
-    server state), some are read-only, and a few are explicitly refused
-    because they would mutate the PHP install itself (code/ontology updates —
-    see [Updates](updates/index.md)). See `rewrite/STATUS.md` for the current
-    per-widget breakdown.
+The maintenance widget catalog is a fixed set of TS modules
+(`src/core/area_maintenance/widgets/`), each declaring its own dashboard
+metadata and gated actions. Most widgets are native TS implementations —
+backup, server state, ontology and code updates (see [Updates](updates/index.md))
+all run for real. A small number of widgets have no equivalent on the Bun
+engine and answer with a named, explicit error instead of silently doing
+nothing.
 
 #### Maintenance tasks
 

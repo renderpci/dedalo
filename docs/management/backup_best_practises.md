@@ -35,4 +35,4 @@ mandatory | Media files | daily (incremental) | keep daily, keep weekly, keep mo
 high | Publishing system database containing public data - MariaDB/MySQL  | monthly backup(full) | Keep for 30 days | see how to make a [full publishing system database backup](backup.md#backup-the-publishing-system)
 medium | All config Dédalo files | daily backup | Keep for 30 days | [Create an archive of Dédalo config](backup.md#backup-a-dédalo-config-files) files and copy to backup server
 low | Dédalo codebase | monthly backup | Keep for 1 month | create an archive of Dédalo site files and copy to backup server, it is not mandatory because Dédalo code is possible to install again
-medium | log files (Apache server access, PHP logs, postgreSQL logs, MySQL logs, etc.) | daily backup | Keep for 6-24 months | Copy any new log files to the backup server. Log files are listed in the Logging section.
+medium | log files (reverse proxy access logs, the Dédalo server's own process output, PostgreSQL logs, MariaDB/MySQL logs, etc.) | daily backup | Keep for 6-24 months | Copy any new log files to the backup server. Log files are listed in the Logging section.

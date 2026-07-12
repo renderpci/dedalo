@@ -17,14 +17,10 @@ are not repeated here at length — read them alongside this guide:
 - [component_security_access](../core/components/component_security_access.md) — the stored per-profile permission matrix.
 - [API gate](../core/system/api.md) — where the login check, CSRF and permission gates run at the request boundary.
 
-!!! note "On the TS/Bun server"
-    The mechanics below are ported to TS in `src/core/security/permissions.ts`
-    (the matrix + `getPermissions`), `src/core/security/auth.ts` (login,
-    Argon2id via `Bun.password`) and `src/core/security/session_store.ts`
-    (session issuance/rotation). The concepts — no bespoke tables, the four
-    levels, the two-tier resolution — carry over unchanged; only the
-    mechanism is native TS. See `rewrite/STATUS.md` ("permissions matrix") for
-    the current coverage.
+The mechanics below live in `src/core/security/permissions.ts` (the matrix +
+`getPermissions`), `src/core/security/auth.ts` (login, Argon2id via
+`Bun.password`) and `src/core/security/session_store.ts` (session
+issuance/rotation).
 
 !!! note "The Dédalo way: no bespoke tables"
     There is no `users` table and no `permissions` table. Users are ordinary
@@ -87,13 +83,12 @@ user record and read back from the session for the current user:
 - **Global admin** (`DEDALO_SECURITY_ADMINISTRATOR_TIPO`, `dd244`) — resolves the
   level to `3` everywhere and bypasses the per-record project scope. This is the
   "general admin" account described in the
-  [management index](index.md#general-admin). On the TS server this is the
-  `isGlobalAdmin` flag on the request's `Principal`, resolved by
-  `resolvePrincipal()` in `src/core/security/permissions.ts` (PHP
-  `security::is_global_admin()`).
+  [management index](index.md#general-admin). It is the `isGlobalAdmin` flag on
+  the request's `Principal`, resolved by `resolvePrincipal()` in
+  `src/core/security/permissions.ts`.
 - **Developer** (`DEDALO_USER_DEVELOPER_TIPO`, `dd515`) — grants access to
   development/structure surfaces; the `isDeveloper` flag on the same
-  `Principal` (PHP `security::is_developer()`).
+  `Principal`.
 
 Both, plus a profile that grants the maintenance area, are required to use the
 [Maintenance panel](index.md#maintenance-panel).
@@ -115,23 +110,18 @@ See [component_security_access](../core/components/component_security_access.md)
 for the tree shape, the structural exclusions (the Admin area and its children
 are never shown for permissioning), and the per-profile data format.
 
-!!! warning "TS gap: the permission-tree editor"
-    The TS server has a `component_security_access` descriptor
-    (`src/core/components/component_security_access/descriptor.ts`) and serves
-    the dd774 datum for read/authorization purposes (`getPermissionsTable()` in
-    `permissions.ts`, plus the datalist resolver in
-    `src/core/resolve/security_access_datalist.ts`). The specialized editor
-    that builds/derives the whole ontology tree with the four radio buttons —
-    steps 3–4 above — is **not yet ported**; profiles must currently be edited
-    on a PHP install sharing the same database (see `rewrite/STATUS.md`,
-    "permission-tree EDITOR is not ported to TS"). Once a level is stored, the
-    TS server enforces it identically regardless of which engine wrote it.
+The `component_security_access` descriptor
+(`src/core/components/component_security_access/descriptor.ts`) serves the
+dd774 datum for both the editor and read/authorization purposes
+(`getPermissionsTable()` in `permissions.ts`, plus the datalist resolver in
+`src/core/resolve/security_access_datalist.ts`). The tree editor itself —
+steps 3–4 above — lives in `client/dedalo/core/component_security_access/`.
 
 ## Workflow: create a user
 
 1. Go to the **Users** section.
-2. Create a new record and fill the login name (`dd132`) and password (`dd133` —
-   hashed with Argon2id on save by `component_password`; min length 8).
+2. Create a new record and fill the login name (`dd132`) and password (`dd133`;
+   min length 8 — see the gap noted below).
 3. Set **Active account** (`dd131`) to *Yes* — an inactive account is refused at
    login.
 4. Assign a **profile** (`DEDALO_USER_PROFILE_TIPO`). A user with no profile is
@@ -141,18 +131,17 @@ are never shown for permissioning), and the per-profile data format.
    only the records inside their projects (layer-2 scope, below).
 6. Optionally promote to global admin and/or developer (above).
 
-!!! warning "TS gap: password hashing on save is not ported"
-    Step 2's "hashed with Argon2id on save" is the PHP `component_password`
-    behavior. The TS `component_password` descriptor
+!!! warning "Gap: password hashing on save is not implemented"
+    The `component_password` descriptor
     (`src/core/components/component_password/descriptor.ts`) is currently a
-    plain string column with no save-time hashing hook — the TS server can
-    only **verify** an existing `$argon2id$…` hash at login
-    (`src/core/security/auth.ts`), it cannot **create** one through the
-    ordinary Users-section save path yet. Until this is ported, create/reset
-    user passwords from a PHP install sharing the same database (same
-    `matrix_users` row, same `dd133` component), or set the hash directly in
-    SQL the way [changing the root password](changing_root_password.md)
-    describes for root.
+    plain string column with no save-time hashing hook — the server can only
+    **verify** an existing `$argon2id$…` hash at login
+    (`src/core/security/auth.ts`); it cannot **create** one through the
+    ordinary Users-section save path yet. Until this is implemented, create or
+    reset a user's password by setting the hash directly in SQL, the way
+    [changing the root password](changing_root_password.md) describes for
+    root — the same `matrix_users` row, the same `dd133` component, keyed by
+    that user's `section_id`.
 
 !!! note "Who can create whom"
     Per the [management index](index.md), root creates the first general admin;
@@ -167,96 +156,62 @@ client. There are two independent tiers:
 
 1. **Type / schema permission (layer 1).** *"What may this profile do with this
    section or component type?"* — resolved from the flattened permission table.
-   In PHP: `security::get_security_permissions()`, reached through the
-   recommended entry point `common::get_permissions($parent_tipo, $tipo)`
-   (which adds the not-logged `0` clamp and Time-Machine clamps). `0` when not
-   logged. In TS: a single function reproduces the whole decision order —
+   A single function reproduces the whole decision order —
    `getPermissions(principal, parentTipo, tipo)` in
    `src/core/security/permissions.ts` — including the Time-Machine admin-only
    clamp, the superuser/tools-register/temp-preset shortcuts, the maintenance
-   area block, and the public list/dd/notes read fallback.
+   area block, and the public list/dd/notes read fallback. Resolves to `0` when
+   not logged in.
 2. **Per-record / project scope (layer 2).** *"Is this specific record inside the
-   user's project scope?"* — in PHP, `security::user_can_access_record()`
-   intersects the record's `component_filter` with the user's projects,
-   mirroring the `filter_by_projects` WHERE clause that `search` applies to
-   every list/search. In TS, `getUserProjects(userId)` (same file) resolves the
+   user's project scope?"* — `getUserProjects(userId)` (same file) resolves the
    user's `dd170` project locators, and `src/core/search/sql_assembler.ts`
-   folds them into the generated WHERE clause the same way.
+   folds them into the generated `WHERE` clause every list/search applies.
 
-The level is resolved in one place but **checked at several chokepoints**. TS
-does not centralize these behind named `assert_*` helpers the way PHP does;
-each dispatch entry point calls `getPermissions`/`getUserProjects` inline at
-its own gate — same shape, different call sites:
+The level is resolved in one place but **checked at several chokepoints**: each
+dispatch entry point calls `getPermissions`/`getUserProjects` inline at its own
+gate.
 
 - **Read** — `src/core/api/dispatch.ts` resolves a read permission (level ≥ 1)
-  per action before serving it (PHP `dd_core_api` resolves it per response
-  row).
+  per action before serving it.
 - **Create / save** — the save paths in `dispatch.ts` and
-  `src/core/relations/save.ts` refuse when `getPermissions(...) < 2` (PHP:
-  `common::get_permissions(section_tipo, section_tipo) < 2` plus
-  `component_common::save()`'s own write-level refusal).
+  `src/core/relations/save.ts` refuse when `getPermissions(...) < 2`.
 - **API gates** — tool actions gate inline in `src/core/tools/security.ts`
-  (project-scope check, PHP `assert_record_in_user_scope`) and
-  `dispatch.ts` (section-permission check, PHP `assert_section_permission`). A
-  failed gate returns the same uniform `{result:false, errors:[...]}` shape PHP's
-  `permission_exception` produces via `dd_manager` — there is no separate
-  exception type on the TS side, just an early `return`.
+  (project-scope check) and `dispatch.ts` (section-permission check). A failed
+  gate returns the same uniform `{result:false, errors:[...]}` shape from an
+  early `return` — there is no separate exception type.
 
 The full enforcement diagram and method list are in
 [security](../core/system/security.md#how-permissions-are-enforced).
 
 !!! warning "Invalidate the cache after editing permissions"
-    The permission table is cached three deep in PHP (per-process static →
-    per-user disk file → the component itself). On the TS server it is a
-    single per-`user_id` module `Map` (`permissionsTableCache` in
-    `permissions.ts`) — simpler, but still a cache: after editing a profile's
+    The permission table is cached in a single per-`user_id` module `Map`
+    (`permissionsTableCache` in `permissions.ts`) — after editing a profile's
     permissions, the next request must see the new matrix. Call
     `clearPermissionsCache(userId)` (or with no argument, to clear every user)
     after a profile's dd774 data or a user's profile assignment changes; the
     companion `clearUserProjectsCache()` does the same for layer-2 project
-    grants. Because the TS process is request-scoped via `AsyncLocalStorage`
-    (see `engineering/REWRITE_SPEC.md`), there is no cross-request identity bleed to
+    grants. The server is request-scoped via `AsyncLocalStorage` (see
+    `engineering/REWRITE_SPEC.md`), so there is no cross-request identity bleed to
     worry about — but these two caches are long-lived across requests by
-    design and still need explicit invalidation, exactly like PHP's per-user
-    disk cache.
+    design and still need explicit invalidation.
 
 ### The no-login allowlist
 
 Authentication is enforced at the [API gate](../core/system/api.md) for every
-action **except** a small allowlist of bootstrap actions that must run before a
-session exists. In PHP, `dd_manager` (`$no_login_needed_actions`) lists:
+action **except** a small allowlist of bootstrap and machine-to-machine
+actions that must run before a session exists. That list is
+`NO_LOGIN_ACTIONS` in `src/core/api/dispatch.ts`: `login`, `get_environment`,
+`start`, `get_login_context`, error-report intake from a remote install
+(`receive_report`), and the ontology-/code-master reachability and manifest
+actions (`get_server_ready_status`, `get_ontology_update_info`,
+`get_code_update_info`) — the last three fail closed unless this install is
+configured as an ontology or code server (see [Updates](updates/index.md)).
 
-`start`, `change_lang`, `login`, `get_login_context`, `install`,
-`get_install_context`, `get_environment`, `get_ontology_update_info`,
-`get_code_update_info`, `get_server_ready_status`.
-
-On the TS server the equivalent list is `NO_LOGIN_ACTIONS` in
-`src/core/api/dispatch.ts`, deliberately **trimmed to what is implemented**:
-
-`login`, `get_environment`, `start`, `get_login_context`.
-
-Two differences from PHP, both intentional: `install`/`get_install_context` and
-the `*_update_info` actions are absent because the [installer and code/ontology
-update flows are not ported](updates/index.md) — there is nothing to bootstrap
-without a session. And `change_lang` is **not** in the TS allowlist (unlike
-PHP), so on the TS server it requires a logged-in session; see
-[Request-scoped langs](../core/system/login.md) for why. Everything else
-requires a valid session, checked the same way conceptually (PHP
-`login::is_logged() === true`, TS `context.session !== null`); both compare the
-action name as a strict string so a non-string/hostile `action` cannot slip
-through type coercion (PHP's loose juggling; TS has no such coercion to begin
-with, since actions are looked up by exact string key in a `Record`).
-
-!!! danger "Server-only read grant"
-    `security::$read_only_scope` is a server-only flag that grants a fixed read
-    (`1`) to *target* sections (for label/autocomplete resolution), excluding the
-    Users and Profiles sections. It MUST be set only by trusted server code and
-    reset in a `finally` block — never derived from client input. See
-    [security › read_only_scope](../core/system/security.md#read_only_scope--the-server-only-read-grant)
-    for the PHP mechanics; this specific server-only escape hatch has not been
-    ported to `permissions.ts` yet — treat it as an open item if a TS resolver
-    needs to read a target section purely for label/autocomplete purposes
-    outside the caller's own grant.
+`change_lang` is deliberately **not** in the allowlist, so it requires a
+logged-in session; see [Request-scoped langs](../core/system/login.md) for
+why. Everything else requires a valid session
+(`context.session !== null`); the action name is compared as a strict string
+against the allowlist, looked up by exact key in a `Record`.
 
 ## Worked example: a read-only profile for one section
 
@@ -274,12 +229,10 @@ Goal: a profile that can **read** the *Archaeological objects* section (say
 4. *(Optional)* grant `1` on linked **Thesaurus** sections so the reader can see
    the controlled terms referenced by the records, but not edit the vocabulary.
 5. **Do not grant the `button_new`** of the section — without write (`2`) on the
-   section the create gate refuses new records anyway (PHP
-   `security::get_section_new_permissions()`; on the TS server the create/save
-   path in `src/core/api/dispatch.ts` refuses below level `2` the same way, and
-   the thesaurus tree's own button-level check is
+   section the create/save path in `src/core/api/dispatch.ts` refuses new
+   records anyway, and the thesaurus tree's own button-level check is
    `getPermissionsElement(sectionTipo, 'button_new', principal)` in
-   `src/core/ts_object/ts_object.ts`).
+   `src/core/ts_object/ts_object.ts`.
 6. **Save.** Only the non-zero rows persist, e.g.:
 
     ```json
@@ -298,8 +251,7 @@ Goal: a profile that can **read** the *Archaeological objects* section (say
 !!! note "Programmatic grant (dev)"
     To grant a profile read+write over a list of sections *and all their
     children* in code — e.g. when generating hierarchies — call
-    `setSectionPermissions()` (`src/core/security/section_permissions.ts`), the
-    port of PHP's `component_security_access::set_section_permissions()`.
+    `setSectionPermissions()` (`src/core/security/section_permissions.ts`).
     Default level `2`, `0` accepted; it merges into the existing matrix (an
     existing `(tipo, section_tipo)` pair is updated in place, never duplicated)
     and invalidates the permissions table.
@@ -308,7 +260,7 @@ Goal: a profile that can **read** the *Archaeological objects* section (say
     their profile-select (`dd1725`) — never on the user record. A user with no
     profile assigned cannot be granted anything: the call returns `ok:false`
     with an error rather than throwing, and callers decide whether that is
-    fatal (hierarchy provisioning treats it as non-fatal, like PHP).
+    fatal (hierarchy provisioning treats it as non-fatal).
 
     This is what makes a freshly provisioned hierarchy visible to the user who
     created it — see [install new hierarchies](install_new_hierarchies.md).
