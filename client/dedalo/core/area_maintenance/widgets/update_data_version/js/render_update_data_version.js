@@ -86,7 +86,7 @@
 
 	// hljs
 	import hljs from '../../../../../lib/highlightjs/es/core.min.js';
-	import php from '../../../../../lib/highlightjs/es/languages/php.js';
+	import php from '../../../../../lib/highlightjs/es/languages/php.min.js';
 	hljs.registerLanguage('php', php);
 
 

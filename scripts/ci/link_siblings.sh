@@ -2,14 +2,16 @@
 #
 # LINK SIBLINGS — plant the sibling paths a self-hosted CI checkout needs.
 #
-# The repo assumes three out-of-tree paths (all resolved relative to repo root):
+# The repo assumes two out-of-tree paths (all resolved relative to repo root):
 #   ../private                 — config/.env (src/config/env.ts privateDir)
 #   ../../v7/master_dedalo     — the READ-ONLY PHP oracle tree
 #                                (test/unit/client_serving.test.ts byte-compares
 #                                against it; scripts/sync_client.sh reads it)
-#   client/dedalo/lib          — 118 MB vendored client libs (gitignored; the
-#                                PHP tree's lib/ is the byte-identical source,
-#                                see scripts/sync_client.sh:103)
+#
+# NOT here any more (2026-07-12): client/dedalo/lib. The client libraries come from
+# `bun install` (node_modules) and the committed vendor/ tree. Symlinking them out of
+# the frozen PHP tree would resurrect exactly the dependency the cutover killed.
+# See src/core/client_libs/registry.ts.
 #
 # A GitHub Actions checkout lands in .../_work/<repo>/<repo>, so the siblings
 # resolve inside runner-owned space — this script plants idempotent symlinks
@@ -63,11 +65,4 @@ else
 	link "$PHP_SRC" "$REPO_ROOT/../../v7/master_dedalo"
 fi
 
-# client/dedalo/lib (gitignored; in the dev tree it is a real rsync'd dir)
-if [ -d "$REPO_ROOT/client/dedalo/lib" ] && [ ! -L "$REPO_ROOT/client/dedalo/lib" ]; then
-	echo "ok      client/dedalo/lib is a real directory (dev tree) — leaving it"
-else
-	link "$PHP_SRC/lib" "$REPO_ROOT/client/dedalo/lib"
-fi
-
-echo "== link_siblings: done"
+echo "== link_siblings: done (client libs are NOT linked — see the header)"

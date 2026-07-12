@@ -34,6 +34,7 @@ import { handleEnvironmentView } from './core/api/environment_view.ts';
 import { getProcessPoison } from './core/api/process_health.ts';
 import { handleRawView } from './core/api/raw_view.ts';
 import { SECURITY_HEADERS, staticAssetResponse } from './core/api/static_asset.ts';
+import { CLIENT_LIB_URL_PREFIX, serveClientLibRequest } from './core/client_libs/serving.ts';
 import { handleTagRequest } from './core/components/component_text_area/tag_endpoint.ts';
 // S2-20 boot registration: loading the component registry registers the
 // ontology↔components model lookup (module-load side effect) BEFORE any request
@@ -507,6 +508,15 @@ export async function handleRequest(request: Request, context: RequestContext): 
 	// MUST run before the generic /dedalo/ static handler (no client subtree).
 	if (request.method === 'GET' && url.pathname.startsWith('/dedalo/install/import/ontology/')) {
 		return serveOntologyIoFile(url.pathname);
+	}
+
+	// Third-party client libraries, resolved through the CLIENT_LIBS allowlist to
+	// node_modules/ or vendor/. MUST run before the generic client handler — there
+	// is no client/dedalo/lib/ directory any more, so this is the only way a lib
+	// resolves. See src/core/client_libs/registry.ts.
+	if (request.method === 'GET' && url.pathname.startsWith(CLIENT_LIB_URL_PREFIX)) {
+		const libResponse = await serveClientLibRequest(url.pathname, request);
+		if (libResponse !== null) return libResponse;
 	}
 
 	// Copied-client static assets (Phase 7 seam).

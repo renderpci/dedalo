@@ -53,7 +53,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
-	import {createJSONEditor} from '../../../../../lib/jsoneditor/dist/standalone.js'
+	import {createJSONEditor} from '../../../../../lib/jsoneditor/standalone.js'
 	import {print_response} from '../../../js/render_area_maintenance.js'
 
 

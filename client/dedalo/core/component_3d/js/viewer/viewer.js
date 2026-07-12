@@ -23,7 +23,7 @@
 *
 * The viewer depends on Three.js r≥152 and its add-on loaders/controls.
 * All Three.js symbols are resolved via an importmap that maps the bare
-* specifier 'three' to '/lib/threejs/jsm/' (defined in page/index.html).
+* specifier 'three' to '/lib/three/examples/jsm/' (defined in page/index.html).
 *
 * State object (`self.state`):
 *   All mutable viewer settings (environment, lighting, wireframe, etc.) live
@@ -36,7 +36,7 @@
 // imports
 	import {dd_request_idle_callback} from '../../../common/js/events.js'
 	// used a importmap define in page/index.html to resolve directories
-	// the main addons is /lib/threejs/jsm/ has to be mapped as three/
+	// the main addons is /lib/three/examples/jsm/ has to be mapped as three/
 	import {
 		AmbientLight,
 		AnimationMixer,
@@ -116,8 +116,8 @@ viewer.init = async function (options) {
 	// set main vars
 		self.DEFAULT_CAMERA	= default_camera;
 		self.MANAGER		= new LoadingManager();
-		self.DRACO_LOADER	= new DRACOLoader( self.MANAGER ).setDecoderPath( '../../lib/threejs/jsm/libs/draco/' );
-		self.KTX2_LOADER	= new KTX2Loader( self.MANAGER ).setTranscoderPath( '../../lib/threejs/jsm/libs/basis/' );
+		self.DRACO_LOADER	= new DRACOLoader( self.MANAGER ).setDecoderPath( '../../lib/three/examples/jsm/libs/draco/' );
+		self.KTX2_LOADER	= new KTX2Loader( self.MANAGER ).setTranscoderPath( '../../lib/three/examples/jsm/libs/basis/' );
 
 		Cache.enabled = cache;
 

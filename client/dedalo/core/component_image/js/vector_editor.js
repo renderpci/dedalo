@@ -5,7 +5,7 @@
 
 
 // imports
-	import SvgCanvas from '../../../lib/svgedit/svgcanvas.js'
+	import SvgCanvas from '../../../lib/svgedit/dist/svgcanvas.js'
 	import '../../../lib/iro/dist/iro.min.js';
 	import {ui} from '../../common/js/ui.js'
 	import {event_manager} from '../../common/js/event_manager.js'

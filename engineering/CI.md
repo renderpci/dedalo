@@ -91,15 +91,25 @@ client gate ran green on :3510 while the dev server served :3500.
 
 ## Sibling paths on the runner
 
-A GitHub checkout lands in `.../_work/<repo>/<repo>`, so the repo's three
+A GitHub checkout lands in `.../_work/<repo>/<repo>`, so the repo's two
 out-of-tree assumptions resolve inside runner-owned space.
 `scripts/ci/link_siblings.sh` (idempotent, first step of every self-hosted
-job) plants symlinks: `../private` → the real private dir,
-`../../v7/master_dedalo` → the real PHP tree, `client/dedalo/lib` → the PHP
-tree's `lib/` (byte-identical source per scripts/sync_client.sh). Deliberately
+job) plants symlinks: `../private` → the real private dir and
+`../../v7/master_dedalo` → the real PHP tree. Deliberately
 NOT `sync_client.sh`: rsyncing `core/` over checked-out files could mask a
 divergence the `client_serving` byte-identity tripwire exists to catch.
 Override sources with `DEDALO_CI_PRIVATE_DIR` / `DEDALO_CI_PHP_ROOT`.
+
+**Client libraries are not a sibling path** (2026-07-12). They used to be a
+118 MB gitignored `client/dedalo/lib` symlinked out of the PHP tree. They now come
+from just two places: `bun install` (node_modules) and the committed `vendor/` tree.
+There is **no install-time fetch step** — no postinstall hook, no network call beyond
+the package registry — so no CI tier depends on a third-party host being up. Every
+tier gets the libs for free.
+
+One wrinkle: `mocha`/`chai` are **devDependencies**, so a runner that installs with
+`--production` cannot serve the client test harness. Index of record:
+`src/core/client_libs/registry.ts`; gate: `test/unit/client_libs_tripwire.test.ts`.
 
 ## Deploy (PARKED)
 

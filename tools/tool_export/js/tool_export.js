@@ -548,7 +548,7 @@ tool_export.prototype.get_export_xsl = async function (options) {
 *
 * The library is **dynamically imported** on first call (lazy-load), so it is
 * only downloaded by the browser when the user actually requests an XLSX export.
-* The import path resolves to a local copy at `DEDALO_ROOT_WEB/lib/xlsx/build/xlsx.js`
+* The import path resolves to a local copy at `DEDALO_ROOT_WEB/lib/xlsx/xlsx.mjs`
 * (downloaded from https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs).
 *
 * The `{"raw":true}` option tells SheetJS to keep cell values as-is without
@@ -568,7 +568,7 @@ tool_export.prototype.export_table_with_xlsx_lib = async function( options ) {
 
 	// dynamically import the library when is fired this function with the event listener
 	// downloaded library from https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs
-  	const XLSX = await import( DEDALO_ROOT_WEB+"/lib/xlsx/build/xlsx.js" );
+  	const XLSX = await import( DEDALO_ROOT_WEB+"/lib/xlsx/xlsx.mjs" );
 
 	const table		= options.table
 	const filename	= options.filename

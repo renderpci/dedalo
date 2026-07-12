@@ -63,7 +63,7 @@
 *      stable non-zero dimensions (ResizeObserver or rAF fallback).
 *   4. Activity timeline — appended only when activity_30d is present.
 *
-* D3 (lib/d3/d3-7.9.0) is lazy-loaded; the dashboard renders KPI cards first
+* D3 (lib/d3) is lazy-loaded; the dashboard renders KPI cards first
 * and upgrades with charts once D3 is available, so it works without D3 too.
 *
 * Navigation contract: every chart element and card publishes 'user_navigation'
@@ -1871,7 +1871,7 @@ const render_activity_timeline = function(d3, host, dashboard_data) {
 
 /**
 * LOAD_D3
-* Lazy-imports the bundled D3 build from `DEDALO_ROOT_WEB/lib/d3/d3-7.9.0/dist/d3.min.js`.
+* Lazy-imports the bundled D3 build from `DEDALO_ROOT_WEB/lib/d3/dist/d3.min.js`.
 * The resolved namespace is cached on `window.__dedalo_d3` so multiple area page
 * loads within the same tab share a single import and avoid the module loading
 * overhead.
@@ -1895,7 +1895,7 @@ const load_d3 = async function() {
 	const base = (typeof DEDALO_ROOT_WEB !== 'undefined' && DEDALO_ROOT_WEB)
 		? DEDALO_ROOT_WEB
 		: ''
-	const url = base + '/lib/d3/d3-7.9.0/dist/d3.min.js'
+	const url = base + '/lib/d3/dist/d3.min.js'
 
 	try {
 		const mod = await import(url)

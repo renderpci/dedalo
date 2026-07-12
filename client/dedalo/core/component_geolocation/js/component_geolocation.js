@@ -360,10 +360,10 @@ component_geolocation.prototype.load_libs = async function () {
 
 	// geoman
 		load_style(
-			DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.css'
+			DEDALO_ROOT_WEB + '/lib/geoman/dist/leaflet-geoman.css'
 		)
 		await load_script(
-			DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.min.js',
+			DEDALO_ROOT_WEB + '/lib/geoman/dist/leaflet-geoman.min.js',
 			license
 		)
 
@@ -372,7 +372,7 @@ component_geolocation.prototype.load_libs = async function () {
 
 	// turf
 		await load_script(
-			DEDALO_ROOT_WEB + '/lib/leaflet/dist/turf/turf.min.js',
+			DEDALO_ROOT_WEB + '/lib/turf/turf.min.js',
 			license
 		)
 

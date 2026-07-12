@@ -6,7 +6,12 @@ node_modules/
 
 # Never commit secrets (config lives in ../private/, outside the repo)
 .env
-client/dedalo/lib/
+
+# Client libraries: nothing to ignore, and that is the point. They come from
+# `bun install` (node_modules/, already ignored above) or they are COMMITTED under
+# vendor/ — ckeditor, json-view, pdfjs. There is no install-time fetch step and no
+# generated lib directory, so a clone is self-contained.
+# Index of record: src/core/client_libs/registry.ts.
 
 # Agent tooling. `.agents/` is the real home (skills + workflows ARE versioned);
 # `.claude` is a committed symlink alias to it, so Claude Code keeps working.

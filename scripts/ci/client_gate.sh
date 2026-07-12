@@ -16,7 +16,11 @@
 #   DEDALO_DEV_MODE=true                  — serves /dedalo/test/client/
 #
 # Shared surfaces it still needs for real: ../private/.env (config + login
-# creds), the live matrix Postgres, client/dedalo/lib (link_siblings.sh).
+# creds) and the live matrix Postgres. The client libraries are NOT a shared
+# surface any more — they come from `bun install` (node_modules) and the committed
+# vendor/ tree (src/core/client_libs/registry.ts). Note mocha/chai are
+# devDependencies, so a runner that installed with --production cannot serve the
+# harness.
 #
 # Usage: bash scripts/ci/client_gate.sh
 # Exit code: the client runner's (0 iff zero failures and zero pending).
