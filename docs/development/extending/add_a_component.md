@@ -14,7 +14,7 @@ Most "new fields" do **not** need code. A component **model** (`component_input_
 
 Before writing code, confirm no existing model fits: scan the [components index](../../core/components/index.md) and the [base-class decision guide](../../core/components/base_classes.md#decision-guide-which-base-should-a-new-component-extend). New models are rare; a thin `properties` tweak on an existing model is almost always the answer.
 
-In the Bun/TS rewrite there is **no per-model server class, no `component_X_json.php`, and no autoloader**. Component behavior lives in **horizontal engines** that dispatch on the `model` string:
+There is **no per-model server class**. Component behavior lives in **horizontal engines** that dispatch on the `model` string:
 
 - `src/core/section/read.ts` (`emitDdoData`) — emits a component's `{context, data}` on a section read.
 - `src/core/relations/` — the relation family's row emission and search.
@@ -29,7 +29,7 @@ A model is **declared** by a small `descriptor.ts` collected in `src/core/compon
 
 ## Worked example
 
-Throughout, we add **`component_phone`**: a literal-direct phone-number string, sitting alongside `component_email`. It owns its own value (it is not a locator and not media) and is language-neutral, so it stores in the **`string`** matrix column — the same column as [`component_email`](../../core/components/component_email.md) and [`component_input_text`](../../core/components/component_input_text.md). The fastest, most accurate path is to **copy `component_email`'s descriptor** (server) and the copied client's `core/component_email/` directory (client), then rename every `email` token.
+Throughout, we add **`component_phone`**: a literal-direct phone-number string, sitting alongside `component_email`. It owns its own value (it is not a locator and not media) and is language-neutral, so it stores in the **`string`** matrix column — the same column as [`component_email`](../../core/components/component_email.md) and [`component_input_text`](../../core/components/component_input_text.md). The fastest, most accurate path is to **copy `component_email`'s descriptor** (server) and its `client/dedalo/core/component_email/` directory (client), then rename every `email` token.
 
 ---
 
@@ -110,7 +110,7 @@ const ALL_DESCRIPTORS: readonly ComponentModel[] = [
 
 That is the whole server-side registration. `buildRegistry()` runs a **load-time integrity check**: a duplicate model, or an `alias` pointing at a non-existent / column-less model, throws at boot — turning a stale registry into a startup failure instead of a runtime surprise. The equivalence is pinned by `test/unit/component_registry.test.ts`.
 
-This replaces the old PHP `section_record_data::$column_map` central edit: the column map is now **decentralised**, one `column` per descriptor, and `getColumnNameByModel(model)` reads `descriptor.column ?? null`.
+The model→column map is **decentralised** — one `column` per descriptor, no central table to keep in sync — and `getColumnNameByModel(model)` simply reads `descriptor.column ?? null`.
 
 !!! danger "Forget the `column` (or the registry line) and DB reads/writes silently break"
     `getColumnNameByModel('component_phone')` returns `null` if the descriptor has no `column` or the model was never registered. Callers that don't guard fail to persist or read the component's data. Our `component_phone` stores a string, so `column: 'string'`.
@@ -123,7 +123,7 @@ A plain literal needs **no** further server code — the generic literal branch 
 
 Add engine code only for genuinely new behavior:
 
-- **Server-side validation / normalisation** (e.g. reject a malformed phone number, strip spaces) goes on the **write path**, `src/core/section/record/save_component.ts` — the TS equivalent of PHP `set_data`/`save`. Add the check keyed on the model.
+- **Server-side validation / normalisation** (e.g. reject a malformed phone number, strip spaces) goes on the **write path**, `src/core/section/record/save_component.ts`. Add the check keyed on the model.
 - **A relation particularity** goes in `src/core/relations/` and is referenced from the descriptor's `resolveData`.
 - **A computed/read-only value** (an info-widget style calculation) goes in the `component_info` widget framework (`src/core/components/component_info/widgets/`, dispatched by `computeInfoWidgets`), which the `component_info` emit path calls. See [add a widget](add_a_widget.md).
 
@@ -133,7 +133,7 @@ Do **not** re-implement datum load/save, permissions, request_config or search i
 
 ## 5. Implement the client class
 
-The client is the **copied vanilla-JS client**, unchanged from PHP-era Dédalo. Copy `client/dedalo/core/component_email/` to `client/dedalo/core/component_phone/` and rename. The model is dynamically imported by `client/dedalo/core/common/js/instances.js` from `core/<model>/js/<model>.js` (the default branch; `service_*` and `tool_*` have their own branches). **The named export must match the model exactly.**
+The client is vanilla JS with an exact wire contract. Copy `client/dedalo/core/component_email/` to `client/dedalo/core/component_phone/` and rename. The model is dynamically imported by `client/dedalo/core/common/js/instances.js` from `core/<model>/js/<model>.js` (the default branch; `service_*` and `tool_*` have their own branches). **The named export must match the model exactly.**
 
 ``` js
 // imports
@@ -160,7 +160,7 @@ Then assign the lifecycle prototypes from `component_common` / `common` (`init`,
 
 ## 6. Implement render dispatchers and views
 
-Mirror the `component_email` set in the copied client (file nomenclature: `render_<mode>_component_<name>.js` and `<view>_<mode>_<name>.js` — see the [components index nomenclature](../../core/components/index.md#nomenclature-of-files)):
+Mirror the `component_email` set (file nomenclature: `render_<mode>_component_<name>.js` and `<view>_<mode>_<name>.js` — see the [components index nomenclature](../../core/components/index.md#nomenclature-of-files)):
 
 - **Per-mode dispatchers** — `js/render_edit_component_phone.js`, `js/render_list_component_phone.js`, `js/render_search_component_phone.js`. Each imports and routes to the right view by `context.view`.
 - **View builders** (the actual DOM) — copy email's set and rename: `js/view_default_edit_phone.js`, `js/view_line_edit_phone.js`, `js/view_mini_phone.js`, `js/view_default_list_phone.js`, `js/view_text_list_phone.js`.
@@ -197,8 +197,8 @@ The model now exists; instantiate it. Create an ontology node with `model: "comp
 
 ## 9. (Optional) samples and a test
 
-- **Samples** — drop `src/core/components/component_phone/samples/` (`data.json`, `context.json`, `api_data.json`) modelled on `component_email/samples/`. They mirror the copied client's `client/dedalo/core/component_*/samples/` tree — reference only, no runtime code reads them.
-- **Test** — the registry equivalence is already pinned by `test/unit/component_registry.test.ts` (it will assert your descriptor exists and is well-formed). For bespoke `set_data` normalisation / `save` validation, add a `bun:test` under `test/` (a `*_differential.test.ts` if you want to diff the emitted item against the PHP oracle). Run with `bun test`.
+- **Samples** — drop `src/core/components/component_phone/samples/` (`data.json`, `context.json`, `api_data.json`) modelled on `component_email/samples/`. They mirror the client's `client/dedalo/core/component_*/samples/` tree — reference only, no runtime code reads them.
+- **Test** — the registry equivalence is already pinned by `test/unit/component_registry.test.ts` (it will assert your descriptor exists and is well-formed). For bespoke save-path normalisation or validation, add a `bun:test` under `test/unit/` asserting the stored shape. Run with `bun test`.
 
 ---
 
@@ -215,7 +215,7 @@ src/core/components/component_phone/
 src/core/components/registry.ts            # step 3  (import + array entry — the ONE registry edit)
 src/core/section/record/save_component.ts  # step 4  (only if it needs server-side validation)
 
-# --- client (copied vanilla JS) ---
+# --- client (vanilla JS) ---
 client/dedalo/core/component_phone/
 ├── css/
 │   └── component_phone.less           # step 7
@@ -239,12 +239,12 @@ client/dedalo/core/component_phone/
 
 - **Missing `column` / registry line (steps 2–3).** The single non-convention edit. Without a `column` or without registering the descriptor, `getColumnNameByModel()` returns `null` and the component's data never persists/loads — silently. This is the most common omission.
 - **JS export name ≠ model.** `instances.js` instantiates the module's named export *matching the model*. `export const component_phone = …` must equal the directory/model name, or instantiation fails.
-- **Hunting for a PHP class or `_json.php`.** There is none in the TS server. The descriptor + registry entry is the whole server contract; the horizontal engines (`section/read.ts`, `relations/`, `resolve/`) emit the `{context, data}`.
+- **Hunting for a per-model server class.** There is none. The descriptor + registry entry is the whole server contract; the horizontal engines (`section/read.ts`, `relations/`, `resolve/`) emit the `{context, data}`.
 - **Putting logic in the descriptor.** A descriptor is declarative. Bespoke behavior goes in an engine module (`relations/`, `save_component.ts`, `info_widgets.ts`) and is *referenced* from the descriptor, never inlined.
 - **Adding `apiActions` to a component.** That belongs to [tools](../tools/creating_tools.md), not components.
 - **Picking the wrong column.** If you find yourself re-implementing datum load/save, permissions or search, you mismodelled the value. Re-read the [decision guide](../../core/components/base_classes.md#decision-guide-which-base-should-a-new-component-extend) and pick the column that matches.
 - **Forcing translatability the component should not have.** Set `classSupportsTranslation: true` only for models whose data items are lang-filtered; a language-neutral value (email, phone) omits it.
-- **No scaffolder.** Unlike tools (which have `tools/tool_dev_template/` and `scripts/create_tool.ts`), components have **no generator**. Copy an existing descriptor + the copied client sibling directory, rename every token, and add the registry line plus the ontology node.
+- **No scaffolder.** Unlike tools (which have `tools/tool_dev_template/` and `scripts/create_tool.ts`), components have **no generator**. Copy an existing descriptor + the sibling client directory, rename every token, and add the registry line plus the ontology node.
 
 ---
 

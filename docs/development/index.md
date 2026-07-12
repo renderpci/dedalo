@@ -1,6 +1,6 @@
 # Development
 
-> See also: [Documentation style guide](documentation_style_guide.md) · [Code documentation standard](code_documentation_standard.md) · [Extending Dédalo](extending/index.md) · [TS-native install engine](ts_install_internals.md) · [Diffusion API](../diffusion/diffusion_data_flow.md)
+> See also: [Documentation style guide](documentation_style_guide.md) · [Code documentation standard](code_documentation_standard.md) · [Extending Dédalo](extending/index.md) · [The install engine](ts_install_internals.md) · [Diffusion API](../diffusion/diffusion_data_flow.md)
 
 This is the developer guide for the Dédalo **work system** — how to add new functionality and how to start developing inside it. If instead you want to build a public website that reads from Dédalo, you call the [diffusion API](../diffusion/diffusion_data_flow.md), Dédalo's public REST API.
 
@@ -12,18 +12,18 @@ The Dédalo ecosystem has two systems: the **work system** and the **diffusion s
 
 The Dédalo work system is a client-server web application. The server is written in **TypeScript and runs on Bun** (a single long-lived process behind a reverse proxy); the client is written in JavaScript, which renders the data as HTML and styles it with CSS (the CSS is authored in LESS). Dédalo stores its data in a PostgreSQL database using a NoSQL model: the data lives in JSONB (binary JSON) columns. In production a reverse proxy (Apache/Nginx) owns TCP, serves static files and media, and forwards API traffic to the server over a unix socket.
 
-The server resolves each request through horizontal engines rather than a class-per-model hierarchy: a per-model **descriptor** (`src/core/components/component_X/descriptor.ts`, keyed in `registry.ts`) declares a component's behavior, and the resolve/relations/section engines (`src/core/resolve/`, `src/core/relations/`, `src/core/section/read.ts`) drive it. The JavaScript client — copied as-is from the PHP deployment — uses ES module imports for inheritance, relying on native prototypes rather than classes.
+The server resolves each request through horizontal engines rather than a class-per-model hierarchy: a per-model **descriptor** (`src/core/components/component_X/descriptor.ts`, keyed in `registry.ts`) declares a component's behavior, and the resolve/relations/section engines (`src/core/resolve/`, `src/core/relations/`, `src/core/section/read.ts`) drive it. The JavaScript client lives in `client/` and uses ES module imports for inheritance, relying on native prototypes rather than classes.
 
 ## Code style
 
-The **copied JavaScript client** uses snake case for the names of methods, functions, variables and every other definition (the section below documents that client style, unchanged). The **TypeScript server** follows idiomatic TS instead — camelCase symbols, formatted and linted by Biome (`biome.json`: tab indent, single quotes, `noVar`) — so `handleRequest`, `dispatchRqo` and `runWithRequestLangs` are the server-side norm.
+The two sides of the seam have different conventions. The **JavaScript client** uses snake case for the names of methods, functions, variables and every other definition (the section below documents that client style). The **TypeScript server** follows idiomatic TS instead — camelCase symbols, formatted and linted by Biome (`biome.json`: tab indent, single quotes, `noVar`) — so `handleRequest`, `dispatchRqo` and `runWithRequestLangs` are the server-side norm.
 
 Two house standards govern how Dédalo is documented:
 
 - [Code documentation standard](code_documentation_standard.md) — doc-blocks and inline comments inside the TS/JS **source**.
 - [Documentation style guide](documentation_style_guide.md) — the prose documentation under `docs/` (this site).
 
-### JavaScript (copied client)
+### JavaScript (the client)
 
 1. Variables
 
@@ -184,9 +184,9 @@ Two house standards govern how Dédalo is documented:
 Most "new" work in Dédalo is **ontology authoring**, not code — a new section, a new field, or a new menu area is usually just a node in the ontology. You write code only for a genuinely new component model, service or widget. The extending cookbooks explain the ontology-first principle and give a focused, step-by-step procedure per typology.
 
 - [Extending Dédalo (overview)](extending/index.md) — the ontology-first decision guide: when you need code at all, the file-layout conventions and the universal checklist
-- [Add a component](extending/add_a_component.md) — a new field model (a `descriptor.ts` + its `registry.ts` entry, plus the copied client JS + CSS)
+- [Add a component](extending/add_a_component.md) — a new field model (a `descriptor.ts` + its `registry.ts` entry, plus the client JS + CSS)
 - [Add a section](extending/add_a_section.md) — a new record type (mostly ontology)
-- [Add an area](extending/add_an_area.md) — a new back-office area (thin subclass + menu wiring)
+- [Add an area](extending/add_an_area.md) — a new back-office area (an ontology node + menu wiring)
 - [Add a service](extending/add_a_service.md) — a reusable client interaction hosted by a component
 - [Add a widget](extending/add_a_widget.md) — a computed, read-only display embedded in a host
 
@@ -302,15 +302,15 @@ For example:
 
 ## Testing
 
-Dédalo ships an automated test suite run by `bun test`, built around the principle that **the live PHP server is the oracle**: most tests are *differential* — an identical RQO replayed against PHP and TS and diffed. It splits into a differential parity layer (`test/parity/`), a unit/integration layer (`test/unit/`), and an out-of-band headless client browser harness (`bun run test:client`).
+Dédalo ships an automated test suite run by `bun test`. It splits into a read-path parity layer (`test/parity/`, which replays a **frozen fixture store** of recorded request/response pairs), a unit/integration layer (`test/unit/`) that carries the write-path contracts and the tripwires, and an out-of-band headless client browser harness (`bun run test:client`).
 
 See [testing.md](testing.md) for full documentation on:
 
-- The differential-parity idea and the `PhpApiClient` oracle
+- The frozen fixture store and how a parity replay runs credential-free
 - How to run the suite, the `bunfig.toml` discovery/timeout config
 - The `test/parity/` + `test/unit/` layout and minimal `normalize.ts` policy
 - Scratch-twin write hygiene (never mutate real records)
-- Writing a new differential or unit test
+- Writing a new parity or unit test
 
 ## Breaking change detection
 
@@ -326,15 +326,14 @@ See [breaking_change_detection.md](breaking_change_detection.md) for full docume
 
 ## Performance metrics
 
-Dédalo records lightweight per-subsystem performance metrics (search, ontology, DB reads/writes, tools, datalist, save, …) plus per-request monitoring, so developers can confirm the main processes run within reasonable timeframes and detect bottlenecks.
+Dédalo records lightweight, process-lifetime operational counters — request totals, error classes, latency (average and max), DB-pool saturation, and per-subsystem gauges (diffusion queue depths, media-job headroom, background tool jobs) — and serves them from an admin-only diagnostics endpoint, so developers can confirm the main processes run within reasonable timeframes and detect bottlenecks.
 
 See [metrics.md](metrics.md) for full documentation on:
 
-- The `metrics` aggregation class and the `performance_monitor` request monitor
-- Metric naming convention and the recording API (`add_metric`, `inc`, `add_time_ms`, `observe_max`, `set`)
-- What is measured per subsystem, including read/write split and tail latency (`*_max_time` / `*_slow_calls`)
-- Reading the debug-log breakdown and the monitor configuration
-- How to add a new metric
+- The counter registry (`src/core/api/counters.ts`) and the recording API (`incrementCounter`, `observeRequest`, `recordPoolWait`, `registerOpsGauge`)
+- The structured access log (`DEDALO_ACCESS_LOG`) and the slow-request warning threshold
+- `GET /api/v1/counters` — the admin-only aggregated payload and its fail-closed gate
+- How to add a new counter or gauge
 
 ## Tools
 
@@ -343,20 +342,21 @@ A Dédalo tool is an isolated block of code that extends a component, section or
 - [Tools catalog](tools/reference/index.md) — every tool shipped with Dédalo v7, grouped by purpose, with per-tool reference pages
 - [Creating new tools](tools/creating_tools.md) — end-to-end tutorial (scaffold → register → authorize)
 - [register.json reference](tools/register_json.md) — every field of the registration file
-- [Server contract](tools/server_contract.md) — PHP class, API actions, configuration, lifecycle hooks
+- [Server contract](tools/server_contract.md) — the server module, API actions, configuration, lifecycle hooks
 - [JS lifecycle](tools/js_lifecycle.md) — the client tool lifecycle and helpers
 - [Security](tools/security.md) — what the framework enforces and what you must do
-- [Architecture audit](tools/architecture_audit.md) — the subsystem internals and design decisions
+
+The subsystem's internals and design decisions are defined in `engineering/TOOLS_SPEC.md`.
 
 ## Runtime & request-scoped context
 
-The work-system server runs as a single long-lived Bun process. Every request gets its own `RequestContext`, threaded explicitly; the two genuinely ambient values (language and DB transaction) live in `AsyncLocalStorage` scopes opened once per request. Nothing request-dependent lives at module level, so the cross-request state-bleed hazard is structurally gone — no manual per-request reset is needed.
+The work-system server runs as a single long-lived Bun process. Every request gets its own request context, threaded explicitly; the genuinely ambient values (the caller's identity, the effective languages and the DB transaction handle) live in `AsyncLocalStorage` scopes opened once per request. Nothing request-dependent lives at module level, so no cross-request state can bleed between concurrent callers and no manual per-request reset is needed.
 
 See [runtime_and_workers.md](runtime_and_workers.md) for full documentation on:
 
 - The entry point and routing pipeline in `src/server.ts` (`handleRequest()`)
-- The per-request `RequestContext` and the request-scoped `AsyncLocalStorage` scopes (`request_lang.ts`, `postgres.ts`)
-- Why the PHP `worker/` + `cache_manager` + `common::clear()` machinery is unnecessary here
+- The per-request context and the three request-scoped `AsyncLocalStorage` scopes (`request_context.ts`, `request_lang.ts`, `postgres.ts`)
+- The contract for adding new ambient state, and which caches may legitimately outlive a request
 - Session handling, response building and NDJSON streaming
 
 ## Media pipeline

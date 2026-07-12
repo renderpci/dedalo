@@ -59,10 +59,10 @@ but for the non-translatable number it is the minimal `{id, value}` form — **n
   `null` for a preserved-but-empty position). The decimal point is `.`; there is
   no thousand separator.
 
-`component_number` is a member of the
-`component_common::$components_using_value_property` registry, which is why its
-item carries an explicit `value` property (relation components, by contrast,
-store a locator and have no `value`).
+`component_number` declares `importValueProperty: true`
+(`src/core/components/component_number/descriptor.ts`), which is why its item
+carries an explicit `value` property (relation components, by contrast, store
+a locator and have no `value`).
 
 !!! info "Legacy lang-keyed shape"
     Raw exports and ontology predating the v7 dataframe normalization may
@@ -72,9 +72,9 @@ store a locator and have no `value`).
     { "lg-nolan": [104, -75.35] }
     ```
 
-    `component_number::conform_import_data()` still accepts this form: for the
-    non-translatable number it extracts the first `lg-*` partition and
-    normalizes each entry into a v7 `{value}` item.
+    Import still accepts this form: `conformImportData()`
+    (`src/core/tools/import_data.ts`) detects a lang-keyed object and
+    normalizes each per-language array into v7 `{value}` items.
 
 ---
 
@@ -96,20 +96,14 @@ values are the per-tipo item arrays shown above:
 }
 ```
 
-The model→column routing is **not** hardcoded in the component; in PHP it is
-resolved through the static registry `section_record_data::$column_map`, which
-maps `component_number → 'number'`. The column itself is declared in
-`section_record_data::$columns_name`. Access is column-level
-(`get_column_data` / `set_column_data`) and key-level
-(`get_key_data` / `set_key_data`, where the *key* is the component tipo), with
-lazy JSON decoding (`ensure_decoded`) so that list mode stays cheap.
-
-The TS server resolves the same routing through `getColumnNameByModel(model)`
-(`src/core/ontology/resolver.ts`), reading the `column` field off the
-`component_number` descriptor (`src/core/components/component_number/descriptor.ts`
-declares `column: 'number'`) instead of a shared lookup table; the matrix's
-`number` column itself is declared in `MATRIX_JSONB_COLUMNS`
-(`src/core/db/matrix.ts`).
+The model→column routing is **not** hardcoded in the component. It is
+resolved through `getColumnNameByModel(model)` (`src/core/ontology/resolver.ts`),
+which reads the `column` field off the `component_number` descriptor
+(`src/core/components/component_number/descriptor.ts` declares
+`column: 'number'`). The matrix's `number` column itself is declared in
+`MATRIX_JSONB_COLUMNS` (`src/core/db/matrix.ts`). The passive `MatrixRecord`
+struct (`src/core/db/matrix.ts`) reads a matrix row's columns; component-level
+access goes through `readComponentItems()` (`src/core/resolve/component_data.ts`).
 
 For the full picture of the typed-column matrix model, see
 [Sections → the matrix table model](../sections/index.md#the-matrix-table-model).
@@ -131,38 +125,26 @@ uncertainty / qualifier / context record.
 
 ## 5. Server class and item-id minting
 
-There is no dedicated "number value" PHP class; the type is handled by
-`component_number` over the shared `component_common` / `section_record`
-machinery.
+There is no dedicated "number value" class; the type is a plain descriptor
+(`src/core/components/component_number/descriptor.ts`) over the shared item
+lifecycle.
 
-Two formatting hooks enforce the type/precision contract on **both read and
-write**, so the value a caller receives is consistent even if the `precision`
-property changed after the data was entered:
+!!! warning "Type/precision formatting: client-side only"
+    The `type` (`int`/`float`) and `precision` ontology properties are
+    currently enforced only in the **client**, on input
+    (`get_format_number()`, `client/dedalo/core/component_number/js/component_number.js`)
+    — a value the client submits already respects the configured precision.
+    The server does not re-apply the type/precision contract on read or on
+    write, so a value stored before a `precision` change is served as-stored,
+    not reformatted to the new precision.
 
-- **On read** — `component_number::get_data()` runs each item's `value` through
-  `set_format_form_type()`.
-- **On write** — `component_number::set_data()` validates and runs each value
-  through `set_format_form_type()` before persisting; invalid (non-numeric)
-  items are logged and dropped rather than overwritten with garbage.
-
-`set_format_form_type($value)` applies the ontology contract:
-
-```php
-// type "int"   → (int) cast, decimals discarded:           85.35  → 85
-// type "float" → round($value, $precision), default prec 2: 85.3568 → 85.36
-// (string with no separator is cast to int first, to avoid
-//  PHP float-precision artefacts when casting "42" → 42.0)
-```
-
-**Item id stability.** When `set_data()` runs, each item lacking a valid `id` is
-assigned one via `section_record::allocate_component_ids($tipo, 1)`. Allocation
-is atomic (a PostgreSQL advisory lock guards the per-component counter persisted
-in the `meta` column) and ids are **never recycled**, which is exactly what keeps
-the dataframe `id_key` pairing and Time Machine references valid across edits and
-reorderings. The TS server keeps the same never-recycled guarantee but mints
-via `allocateComponentItemId()` (`src/core/db/matrix_write.ts`), a single
-atomic `UPDATE … RETURNING` rather than an explicit advisory lock — see the
-[data model overview](index.md) for the full comparison.
+**Item id stability.** Each item lacking a valid `id` is assigned one when
+the component's data is saved. Allocation is atomic and the id is **never
+recycled**, which is exactly what keeps the dataframe `id_key` pairing and
+Time Machine references valid across edits and reorderings:
+`allocateComponentItemId()` (`src/core/db/matrix_write.ts`) does the
+increment as a single atomic `UPDATE … RETURNING`. See the
+[data model overview](index.md) for the full detail.
 
 ---
 
@@ -187,12 +169,12 @@ exposed as the `entries` array the JS views iterate:
 }
 ```
 
-In the JS model (`component_number.js`) the values live in `this.data.entries`,
-each entry a plain object `{ id: number|null, value: number|null }`. The client
-mirror of the server formatting hook is `get_format_number()`, applying the
-configured `type` / `precision`. Edits are sent back as a `changed_data` object
-processed by `update_data_value()`, targeting items by their stable **`id`**
-(never by array index), so edits survive reordering and pagination:
+In the JS model (`client/dedalo/core/component_number/js/component_number.js`)
+the values live in `this.data.entries`, each entry a plain object
+`{ id: number|null, value: number|null }`. `get_format_number()` applies the
+configured `type` / `precision` on input. Edits are sent back as a
+`changed_data` object, targeting items by their stable **`id`** (never by
+array index), so edits survive reordering and pagination:
 
 ```javascript
 // update one value by id
@@ -248,18 +230,17 @@ section_id;numisdata133
 
 ## 8. v7 consolidation / evolution
 
-- **Unified value envelope.** v7 collapses numbers onto the same
-  `{id, value}` item model used by all `$components_using_value_property`
-  components; the older v6-style bare-number arrays (`[104, -75.35]`) and
-  lang-keyed objects (`{"lg-nolan":[104]}`) are still *accepted* on import but
-  are normalized to the `{id, value}` form.
+- **Unified value envelope.** Numbers use the same `{id, value}` item model
+  used by every `importValueProperty` component; the older bare-number arrays
+  (`[104, -75.35]`) and lang-keyed objects (`{"lg-nolan":[104]}`) are still
+  *accepted* on import but are normalized to the `{id, value}` form.
 - **Server-minted, never-recycled `id`.** The per-item `id` is what makes
   [dataframe](../components/component_dataframe.md) pairing and Time Machine
   playback robust; client edits address items by `id`, not by array position.
-- **Format on read and on write.** Because the type/precision contract is
-  applied symmetrically, the stored literal and the served value stay consistent
-  even after a precision change — the storage form remains canonical (`.`
-  decimal, no thousand separator) and all locale formatting is render-only.
+- **Storage stays canonical.** The stored literal always uses `.` as the
+  decimal separator with no thousand separator; type/precision formatting is
+  currently applied on the client, on input (see the gap note in
+  [§5](#5-server-class-and-item-id-minting)).
 
 ---
 

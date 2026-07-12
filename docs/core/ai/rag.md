@@ -211,7 +211,15 @@ An excavation yields an object with no clear context. The researcher asks the co
 
 # Part V — For developers
 
-**RAG, the agent loop, and MCP are a greenfield TypeScript/Bun build** — per `engineering/REWRITE_SPEC.md` §8, these three subsystems were never in PHP production, so there is nothing to port; they are designed fresh on top of the stable typed core (`rewrite/STATUS.md`, "AI (Phase 8)"). Two pieces of pure algorithm math (the RRF fusion formula and the structural/semantic chunking pipeline) were validated against an earlier internal PHP prototype's frozen test vectors for confidence (`test/unit/rag_fusion_php_port.test.ts`, `test/unit/rag_chunker_php_port.test.ts`) — but the surrounding architecture (database choice, API wiring, ACL enforcement, egress policy, the ingestion queue, the agent/MCP layer) is original TS design, not a translation of a PHP class tree.
+**RAG, the agent loop, and MCP are a greenfield TypeScript/Bun build** — these
+three subsystems never existed as a shipped subsystem before, so they are
+designed fresh on top of the stable typed core. Two pieces of pure algorithm
+math (the RRF fusion formula and the structural/semantic chunking pipeline)
+were validated for confidence against an earlier internal prototype's frozen
+test vectors (two dedicated cross-check test files under `test/unit/`) — but
+the surrounding architecture (database choice, API wiring, ACL enforcement,
+egress policy, the ingestion queue, the agent/MCP layer) is original TS
+design from the ground up.
 
 The code lives in three trees:
 
@@ -403,21 +411,21 @@ Both are read-only by default and additive on top of `dd_rag_api` — the MCP/ag
 
 ## Configuration & tests
 
-Every `DEDALO_RAG_*` (and the shared `APPLICATION_LANGS`/`DATA_NOLAN`/`ANTHROPIC_API_KEY`/`AGENT_MODEL`/`DEDALO_MCP_*`) setting is read directly via `readEnv()` at the point of use (`src/config/env.ts`: real process env, then `../private/.env`) — there is **no** central config catalog module for RAG in this tree yet (unlike the PHP-era `core/base/config/catalog/domains/rag.php`); each module's own header comment documents the variables it reads. The full set actually referenced: `DEDALO_RAG_ENABLED`, `DEDALO_RAG_DB_NAME`/`RAG_DB_NAME`, `DEDALO_RAG_EMBEDDING_PROVIDER`/`_ENDPOINT`/`_MODEL`, `DEDALO_RAG_CONTEXT_TOKEN_BUDGET`, `DEDALO_RAG_ALLOW_EXTERNAL_PROVIDER_DEFAULT`, `DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS`, `DEDALO_RAG_LLM_ENDPOINT`/`_MODEL`/`_API_KEY`/`_TEMPERATURE`/`_TIMEOUT`/`_MAX_OUTPUT_TOKENS`/`_SYSTEM_PROMPT`, `DEDALO_RAG_MEDIA_ENABLED`, `DEDALO_RAG_MULTIMODAL_PROVIDER`/`_MODEL`/`_ENDPOINT`/`_API_KEY`, `DEDALO_RAG_IMAGE_MAX_PX`/`_HYBRID`, `DEDALO_RAG_NEAR_DUPLICATE_SIMILARITY`, `DEDALO_RAG_CHARACTERIZE_TOP_K`.
+Every `DEDALO_RAG_*` (and the shared `APPLICATION_LANGS`/`DATA_NOLAN`/`ANTHROPIC_API_KEY`/`AGENT_MODEL`/`DEDALO_MCP_*`) setting is read directly via `readEnv()` at the point of use (`src/config/env.ts`: real process env, then `../private/.env`) — there is **no** central config catalog module for RAG in this tree yet; each module's own header comment documents the variables it reads. The full set actually referenced: `DEDALO_RAG_ENABLED`, `DEDALO_RAG_DB_NAME`/`RAG_DB_NAME`, `DEDALO_RAG_EMBEDDING_PROVIDER`/`_ENDPOINT`/`_MODEL`, `DEDALO_RAG_CONTEXT_TOKEN_BUDGET`, `DEDALO_RAG_ALLOW_EXTERNAL_PROVIDER_DEFAULT`, `DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS`, `DEDALO_RAG_LLM_ENDPOINT`/`_MODEL`/`_API_KEY`/`_TEMPERATURE`/`_TIMEOUT`/`_MAX_OUTPUT_TOKENS`/`_SYSTEM_PROMPT`, `DEDALO_RAG_MEDIA_ENABLED`, `DEDALO_RAG_MULTIMODAL_PROVIDER`/`_MODEL`/`_ENDPOINT`/`_API_KEY`, `DEDALO_RAG_IMAGE_MAX_PX`/`_HYBRID`, `DEDALO_RAG_NEAR_DUPLICATE_SIMILARITY`, `DEDALO_RAG_CHARACTERIZE_TOP_K`.
 
 Tests live under `test/unit/` and run with `bun test`:
 
 ```bash
-bun test test/unit/rag_chunker.test.ts test/unit/rag_chunker_php_port.test.ts \
-  test/unit/rag_fusion.test.ts test/unit/rag_fusion_php_port.test.ts \
+bun test test/unit/rag_chunker.test.ts \
+  test/unit/rag_fusion.test.ts \
   test/unit/rag_config.test.ts test/unit/rag_indexer.test.ts test/unit/rag_queue.test.ts \
   test/unit/rag_ask.test.ts test/unit/rag_api.test.ts test/unit/rag_multimodal.test.ts \
   test/unit/mcp_tools.test.ts test/unit/mcp_write_tools.test.ts test/unit/agent_loop.test.ts
 ```
 
-Pure-logic tests (chunker structure/semantic boundaries, RRF fusion, config resolution, the `ask` grounding/refusal/egress gates, the multimodal joint-space math) run fully offline with no keys or network. The `_php_port` pair (`rag_chunker_php_port.test.ts`, `rag_fusion_php_port.test.ts`) asserts the TS chunking/RRF math against the *same frozen numeric test vectors* an earlier internal PHP prototype used, for algorithmic confidence — everything else in the doc above is fresh TS design. `test/unit/rag_store.test.ts`, `rag_queue_integration.test.ts`, and `rag_pipeline.test.ts` run end-to-end against the **real** `dedalo7_rag`/matrix databases (a disposable model/section per run, cleaned up in `afterAll`) — the DoD assertion in `rag_pipeline.test.ts` is that a denied principal gets nothing back from the same query a superuser gets real hits from. `mcp_tools.test.ts`/`mcp_write_tools.test.ts` assert the MCP handlers apply the exact same ACL/permission gates as the human API; `agent_loop.test.ts` drives the same scripted trajectory through a denied and an authorized principal and asserts the difference.
+Pure-logic tests (chunker structure/semantic boundaries, RRF fusion, config resolution, the `ask` grounding/refusal/egress gates, the multimodal joint-space math) run fully offline with no keys or network. Two further cross-check test files pin the chunking and RRF math against a frozen historical set of numeric test vectors, for algorithmic confidence — everything else in the doc above is fresh TS design. `test/unit/rag_store.test.ts`, `rag_queue_integration.test.ts`, and `rag_pipeline.test.ts` run end-to-end against the **real** `dedalo7_rag`/matrix databases (a disposable model/section per run, cleaned up in `afterAll`) — the DoD assertion in `rag_pipeline.test.ts` is that a denied principal gets nothing back from the same query a superuser gets real hits from. `mcp_tools.test.ts`/`mcp_write_tools.test.ts` assert the MCP handlers apply the exact same ACL/permission gates as the human API; `agent_loop.test.ts` drives the same scripted trajectory through a denied and an authorized principal and asserts the difference.
 
-**Testing it end-to-end (as a user).** With `DEDALO_RAG_ENABLED=true` and the default deterministic providers, no external services are required: index a couple of records (`indexComponentText()` or a real save once the hook is registered), then call `semantic_search`/`ask` through `dd_rag_api`. To drive it as an agent, run the MCP server (`DEDALO_MCP_USER_ID=<user id> bun run src/ai/mcp/server.ts`, add `DEDALO_MCP_ALLOW_WRITE=true` for the write tools) against any MCP client, or run the agent loop (`runAgent()`, `src/ai/agent/loop.ts`) with the production `AnthropicProvider` (requires `ANTHROPIC_API_KEY`; model `claude-opus-4-8` by default, override via `AGENT_MODEL`) — its tool surface (`AGENT_TOOLS`) mirrors the MCP read tools plus `dedalo_semantic_search`. There is no reference embedding/image sidecar, `rag_selftest`, or `rag_backfill` CLI in this tree (the old PHP-era equivalents do not exist here); the sidecar HTTP contracts above are the integration point for standing one up.
+**Testing it end-to-end (as a user).** With `DEDALO_RAG_ENABLED=true` and the default deterministic providers, no external services are required: index a couple of records (`indexComponentText()` or a real save once the hook is registered), then call `semantic_search`/`ask` through `dd_rag_api`. To drive it as an agent, run the MCP server (`DEDALO_MCP_USER_ID=<user id> bun run src/ai/mcp/server.ts`, add `DEDALO_MCP_ALLOW_WRITE=true` for the write tools) against any MCP client, or run the agent loop (`runAgent()`, `src/ai/agent/loop.ts`) with the production `AnthropicProvider` (requires `ANTHROPIC_API_KEY`; model `claude-opus-4-8` by default, override via `AGENT_MODEL`) — its tool surface (`AGENT_TOOLS`) mirrors the MCP read tools plus `dedalo_semantic_search`. There is no reference embedding/image sidecar, `rag_selftest`, or `rag_backfill` CLI in this tree; the sidecar HTTP contracts above are the integration point for standing one up.
 
 ---
 
@@ -448,8 +456,8 @@ Vectorizing heritage and memory carries responsibilities beyond the technical:
 - **Reranking by default** — a real cross-encoder behind the `Reranker` seam, in place of `PassThroughReranker`.
 - **Public semantic API** — a separate service over *published-only* data, for third parties, co-located with the diffusion engine.
 - **Retrieval-quality evaluation** — a golden-set harness (recall@k, citation-grounding) so model and parameter choices are measurable and regression-safe.
-- **Live-API smoke tests** — the `AnthropicProvider` agent path and a real embedding sidecar are wired but untested against live credentials in CI (`rewrite/STATUS.md`: "Open: real embedding-provider credentials + live-API agent smoke").
+- **Live-API smoke tests** — the `AnthropicProvider` agent path and a real embedding sidecar are wired but untested against live credentials in CI.
 
 ---
 
-*Subsystem code: `src/ai/rag/`, `src/ai/agent/`, `src/ai/mcp/` (see `rewrite/STATUS.md`, "AI (Phase 8)", and `engineering/REWRITE_SPEC.md` §8). Conceptual neighbours: [architecture overview](../architecture_overview.md), [SQO](../sqo.md), [exporting data](../exporting_data.md), [ontology](../ontology/index.md).*
+*Subsystem code: `src/ai/rag/`, `src/ai/agent/`, `src/ai/mcp/`. Conceptual neighbours: [architecture overview](../architecture_overview.md), [SQO](../sqo.md), [exporting data](../exporting_data.md), [ontology](../ontology/index.md).*

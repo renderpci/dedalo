@@ -1,0 +1,19 @@
+# Keep the build context small, and keep HOST artefacts out of the image.
+#
+# node_modules above all: the image installs its own (linux/arm64 or amd64
+# binaries). Copying the host's tree over it would overwrite the installed one
+# with binaries built for another platform.
+node_modules
+.git
+.github
+rewrite
+test
+docs/site
+site
+private
+*.log
+.DS_Store
+
+# The generated media rule files and any local media/private trees never belong
+# in an image — they are runtime state on a volume.
+media

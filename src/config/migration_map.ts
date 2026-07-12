@@ -119,6 +119,10 @@ const SAME_KEYS: readonly string[] = [
 	'DEDALO_THUMB_EXTENSION',
 	// media — access + upload
 	'DEDALO_PROTECT_MEDIA_FILES',
+	// Rule-B public quality folders + the raw .htaccess addon lines. Same names as the
+	// PHP install's (core/media_protection); read by core/media/protection.ts.
+	'DEDALO_MEDIA_PUBLIC_QUALITIES',
+	'MEDIA_HTACCESS_ADDONS',
 	'DEDALO_UPLOAD_SERVICE_CHUNK_FILES',
 	'DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT',
 	// ops / backup

@@ -22,11 +22,11 @@ identifies any node in the ontology.
 Dédalo is not one application but two, sharing one body of data.
 
 1. **The work system** — the back office where curators and researchers create,
-   edit and relate records. Its server was PHP and is now a **TypeScript
-   server on the Bun runtime** (`src/server.ts`, a single long-lived process —
-   see below); its client is the same HTML, CSS and JavaScript as before,
-   copied over unchanged. It talks to PostgreSQL, where all data lives as JSON
-   in the `matrix` tables. The work API is the **Dédalo API** (see [RQO](rqo.md)).
+   edit and relate records. Its server is a **TypeScript server on the Bun
+   runtime** (`src/server.ts`, a single long-lived process — see below); its
+   client is HTML, CSS and JavaScript. It talks to PostgreSQL, where all data
+   lives as JSON in the `matrix` tables. The work API is the **Dédalo API**
+   (see [RQO](rqo.md)).
 2. **The publication / diffusion system** — the read side that publishes the
    subset of work data marked for publication into a classical SQL database
    (MariaDB/MySQL by default) with one table-and-columns schema per section, so
@@ -34,9 +34,10 @@ Dédalo is not one application but two, sharing one body of data.
    **diffusion API**, and it speaks a flat, denormalized dialect rather than the
    abstract ontology dialect of the work system.
 
-Both systems have a server half and a client half (HTML/CSS/JS). The work
-system's server is TypeScript on Bun; the diffusion system's server is a mix of
-legacy PHP and a newer Bun/TypeScript publication engine (see
+Both systems have a server half and a client half (HTML/CSS/JS). Both servers
+run as native TypeScript on Bun — diffusion is a native subsystem of the same
+codebase (`src/diffusion/`), publishing via spawned job-runner processes under
+the main server's control (see
 [Diffusion](../diffusion/diffusion_data_flow.md)). This document is almost
 entirely about the **work system**, because that is where the ontology,
 sections, components and the request lifecycle live. Diffusion is the
@@ -53,7 +54,7 @@ flowchart LR
     end
     subgraph diff["Diffusion system (publication)"]
         DC["Client / portals / websites"]
-        DS["Server: PHP + Bun"]
+        DS["Server: TypeScript / Bun"]
         SQL[("MariaDB / MySQL<br/>classic columns")]
         DC <-->|"Diffusion API"| DS
         DS <--> SQL
@@ -69,8 +70,8 @@ left, the *work system* contains a client (HTML/CSS/JS) and a server
 (TypeScript on Bun) that exchange Request Query Objects over the Dédalo API;
 the server reads and writes PostgreSQL, where data lives as JSON in the
 `matrix` tables. On the right, the *diffusion system* contains portals/websites
-and a PHP+Bun server exchanging data over the diffusion API; that server reads
-and writes a classic SQL database with conventional columns. A dotted arrow
+and a TypeScript/Bun server exchanging data over the diffusion API; that server
+reads and writes a classic SQL database with conventional columns. A dotted arrow
 runs from the work server to the diffusion server labelled "publish marked
 data" — diffusion is downstream. Below everything, an "Ontology (active
 schema)" node sends dotted arrows to both servers: it drives the work system
@@ -100,12 +101,10 @@ the ontology and are resolved at runtime per language.
 > JSONB column named `datos`. The v7 `matrix` table instead splits that same
 > payload across several **typed** JSONB columns — `data`, `string`, `number`,
 > `relation`, `date`, `iri`, `geo`, `media`, `misc`, `relation_search`, `meta` —
-> assigning each component to one column by its model
-> (PHP `section_record_data::$column_map`; the TS server reads the same table
-> layout — the model→column mapping is `getColumnNameByModel()` in
-> `src/core/ontology/resolver.ts`, and the JSONB column set is
-> `MATRIX_JSONB_COLUMNS` in `src/core/db/matrix.ts`) so PostgreSQL can index
-> every data shape.
+> assigning each component to one column by its model. The model→column
+> mapping is `getColumnNameByModel()` in `src/core/ontology/resolver.ts`, and
+> the JSONB column set is `MATRIX_JSONB_COLUMNS` in `src/core/db/matrix.ts`, so
+> PostgreSQL can index every data shape.
 > [Sections](sections/index.md#storage-detail-the-data-column-is-split-into-typed-jsonb-columns)
 > documents the full column map. The rest of this page keeps the single-payload
 > mental model for clarity.
@@ -260,8 +259,7 @@ traverses JSON to get the value. The layers, top to bottom:
 1. **Ontology nodes** — the active definitions (areas/sections/components/tools).
 2. **Models** — on the server, the TS descriptors (`section`,
    `component_input_text`, `component_portal`, …) chosen by each node's
-   `model`; on the client, the same-named JS classes (copied over from PHP's
-   client, unchanged).
+   `model`; on the client, the same-named JS classes.
 3. **Instances** — runtime objects built per request, carrying a *context* and
    *data* (see [Components](components/index.md) and [dd_object](dd_object.md)).
 4. **The datum `{context, data}`** — the transport unit; `context` is the
@@ -326,21 +324,19 @@ The persisted and transmitted unit is `{context, data}`:
   `css`, `request_config`, permissions and tools — never the values.
 
 A component **never** touches the database directly; persistence is delegated to
-its section's write chokepoint. In PHP this was `get_data()`/`get_value()` reads
-and a `set_data()`/`save()` write path ending in
-`$section_record->save_component_data(...)`; the TS server keeps the same
-guarantee through explicit functions rather than instance methods — reads
-resolve through `src/core/section/read.ts` (`emitDdoData`) and the `relations/`
-engines, and writes go through `src/core/section/record/save_component.ts` and
+its section's write chokepoint through explicit functions rather than instance
+methods — reads resolve through `src/core/section/read.ts` (`emitDdoData`) and
+the `relations/` engines, and writes go through
+`src/core/section/record/save_component.ts` and
 `src/core/section_record/record_write.ts` (`persistRecordKeys`/
 `persistRecordColumns`), the single place that reads and writes the matrix.
-There is no `component_common::get_instance()` factory and no per-component
-class to instantiate: a model is looked up in the components registry
-(`src/core/components/registry.ts`) and dispatched to its descriptor and the
-shared resolve/save engines; `tipo` and `section_tipo` are mandatory and the
-`model` is force-corrected from the ontology, exactly as before. Modes are
-`edit` (read/write a real record), `list` (read-only listing), `search` (build
-SQO filters; saves blocked) and `tm` (Time Machine read; saves blocked).
+There is no factory and no per-component class to instantiate: a model is
+looked up in the components registry (`src/core/components/registry.ts`) and
+dispatched to its descriptor and the shared resolve/save engines; `tipo` and
+`section_tipo` are mandatory and the `model` is force-corrected from the
+ontology. Modes are `edit` (read/write a real record), `list` (read-only
+listing), `search` (build SQO filters; saves blocked) and `tm` (Time Machine
+read; saves blocked).
 
 ## How components compose into sections, and how portals link across them
 
@@ -361,9 +357,7 @@ reference). `type` is the relation-type tipo — for a portal it defaults to
 `dd151` (the generic link). `section_tipo`/`section_id` point at the target
 record; `from_component_tipo` records which component owns the locator. To show a
 value, the portal resolves each locator against the *target* section/component
-— in PHP via `ts_object::get_term_by_locator()` or by instantiating the named
-target components and collecting their `get_value()`; in the TS server via
-`expandPortal()` in `src/core/relations/relation_core.ts` (dispatched through
+via `expandPortal()` in `src/core/relations/relation_core.ts` (dispatched through
 `src/core/relations/registry.ts` and the per-model resolver in
 `src/core/relations/models/portal.ts`) — so the value is always live: edit
 the target record and every portal that links to it shows the change. A
@@ -426,8 +420,7 @@ calling: tipo, section_tipo, section_id, mode, lang), the `action` and `dd_api`
 (what to do), an optional `sqo` (which records), and `show`/`search`/`choose`
 layout maps (what to return). The server (`src/server.ts`) parses and
 zod-validates the RQO and dispatches it through `src/core/api/dispatch.ts`'s
-explicit action registry — no dynamic method lookup, unlike PHP's
-`dd_manager`/`dd_api::action` reflection fallback. The matched handler resolves
+explicit action registry — no dynamic method lookup or reflection. The matched handler resolves
 the section or component (`src/core/section/read.ts` for reads,
 `src/core/section/record/save_component.ts` for writes, the `relations/`
 engines for related components) against its ontology node (model, properties,
@@ -435,7 +428,7 @@ relations) and the record's stored data in PostgreSQL, resolving locators if it
 is a related component. It assembles a `context` (the description) and `data`
 (the values) into a `ddo` of shape `{context, data}`, which travels back
 through the API as a JSON response. Finally the client renders the DOM using
-the shared `ui.component` builders (unchanged from the PHP-era client). See
+the shared `ui.component` builders. See
 [RQO](rqo.md) for the request format and [dd_object](dd_object.md) for the ddo.
 
 ## The multilingual model

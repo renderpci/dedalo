@@ -7,28 +7,22 @@
 > See also: [section (reference)](section.md) · [sections (server collection concept)](sections.md) · [section_record](section_record.md) · [Components](../components/index.md) · [paginator](../ui/paginator.md)
 
 This page is the **subsystem reference** for *section list*. "section_list" is
-**not a class or module** — there is no `class.section_list.php` and no
-`src/core/section/section_list.ts`. It is the `list` **mode** of the client
-`section` instance (`core/section/js/section.js`, copied as-is — the
-vanilla-JS client is unmodified by the rewrite) and the family of
-`render_list` / `view_*_list` files that draw it. On the server the records it
-shows are produced by the TS read engine
-(`readSection` / `readSectionRows`, `src/core/section/read.ts`); the client
-`section` instance fetches that payload and renders it.
+**not a class or module** — there is no `src/core/section/section_list.ts`
+section class. It is the `list` **mode** of the client `section` instance
+(`client/dedalo/core/section/js/section.js`) and the family of `render_list` /
+`view_*_list` files that draw it. On the server the records it shows are
+produced by the read engine (`readSection` / `readSectionRows`,
+`src/core/section/read.ts`); the client `section` instance fetches that payload
+and renders it.
 
-!!! note "Three things called 'section', and one PHP file that no longer exists"
+!!! note "Three things called 'section'"
     Keep the distinction straight. The [`section`](section.md) concept is the
     *type*; [`section_record`](section_record.md) is one *row*;
     [`sections`](sections.md) (plural) is the *collection* concept that runs
     the search. On the client there is a single `section` constructor
     (`section.js`) whose **mode** (`list` / `edit` / `tm` / `solved`) decides
     whether it draws a list of many records or one editable record.
-    *section_list* is that client `section` running in `list` mode. PHP served
-    that data through a dedicated file, `core/sections/sections_json.php`; the
-    TS rewrite has no file at that path — the equivalent envelope-building
-    logic lives inline in `readSectionRows()`
-    (`src/core/section/read.ts`), fused with the row-acquisition step rather
-    than kept as a separate serialisation pass.
+    *section_list* is that client `section` running in `list` mode.
 
 ## Role
 
@@ -38,9 +32,9 @@ engine and the DOM:
 | layer | element | role |
 | --- | --- | --- |
 | server read engine | `readSection` / `readSectionRows` — `src/core/section/read.ts` | run the navigation [SQO](../sqo.md) (via `pickReadSource` → the search engine or the Time Machine source), return the matching `(section_tipo, section_id)` rows |
-| server envelope | built inline in `readSectionRows()` | turn the rows into one `entries` array of locators + a de-duplicated `context[]` (PHP's `sections_json.php` role, now fused into the read engine — see [`sections`](sections.md#the-sqo-normalization-contract)) |
-| client model | `section` instance in `list` mode (`section.js`, unchanged) | holds the `datum`, `rqo`/`sqo`, `columns_map`, `paginator` and `filter`; owns navigation/pagination/sort |
-| client render | `render_list_section.list` → `view_*_list_section` (unchanged) | builds the column grid: a header row + one rendered [`section_record`](section_record.md) per entry |
+| server envelope | built inline in `readSectionRows()` | turn the rows into one `entries` array of locators + a de-duplicated `context[]` (see [`sections`](sections.md#the-sqo-normalization-contract)) |
+| client model | `section` instance in `list` mode (`section.js`) | holds the `datum`, `rqo`/`sqo`, `columns_map`, `paginator` and `filter`; owns navigation/pagination/sort |
+| client render | `render_list_section.list` → `view_*_list_section` | builds the column grid: a header row + one rendered [`section_record`](section_record.md) per entry |
 
 A list view never reads the database and never resolves a single field itself.
 It asks the API for a page of locators, instantiates one client `section_record`
@@ -69,13 +63,12 @@ DOM:  wrapper_section > list_body > [ header_wrapper_list | content_data > rows 
 - **Fetch a page of records.** Build the `rqo`/`sqo` (limit / offset / filter /
   order), call the API `search` action through `build_autoload`, and store the
   resulting `entries` (locators) in `self.data`. Server-side, `readSectionRows()`
-  applies the same limit-defaulting rule PHP's `sections::set_up()` did: `edit`
-  → 1 record, `list` → 10 rows when the client sends no explicit limit (see
+  applies the limit-defaulting rule: `edit` → 1 record, `list` → 10 rows when the
+  client sends no explicit limit (see
   [`sections`](sections.md#the-sqo-normalization-contract)).
 - **Build the columns model.** Derive `self.columns_map` from the section's
-  `request_config` `show.ddo_map` (`common.get_columns_map`, client-side,
-  unchanged) and prepend the fixed `section_id` control column
-  (`rebuild_columns_map`).
+  `request_config` `show.ddo_map` (`common.get_columns_map`, client-side) and
+  prepend the fixed `section_id` control column (`rebuild_columns_map`).
 - **Render the grid.** Lay out a CSS-grid `list_body` whose
   `grid-template-columns` is computed from the columns' widths
   (`ui.flat_column_items`), draw the header (`ui.render_list_header`), and append
@@ -92,20 +85,17 @@ DOM:  wrapper_section > list_body > [ header_wrapper_list | content_data > rows 
   instance (`self.filter`) and the *Search* / *Show all* buttons.
 - **Record actions.** Wire *new* / *duplicate* / *delete* through the
   `new_section_` / `duplicate_section_` / `delete_section_` events and the
-  `create` / `duplicate` / `delete` API actions — the TS `dispatch.ts` handlers
-  documented on [`section`](section.md#new--createsectionrecord) and
+  `create` / `duplicate` / `delete` API actions — see
+  [`section`](section.md) and
   [`sections`](sections.md#bulk-delete--the-delete-api-action).
 - **Navigate into a record.** Turn a click on a row's id into a
   `user_navigation` event that opens that record in `edit` mode (or a new
   window).
 
-All of the above client-side behaviour is unmodified vanilla JS — the rewrite
-changes what serves the data, not how the list draws it.
-
 ## Key concepts / data model
 
 The list mode is driven by a handful of properties on the client `section`
-instance (declared in `section.js`, unchanged):
+instance (declared in `section.js`):
 
 | property | shape | meaning |
 | --- | --- | --- |
@@ -128,8 +118,7 @@ The read engine's envelope (`SECTIONS_ENVELOPE_TYPO = 'sections'`,
 `src/core/concepts/sections.ts`) is a single `data` item with `typo:
 'sections'` whose `entries` is the page of records. Each entry is a locator
 plus a `paginated_key` (its absolute position = `offset + row_index`, used to
-navigate straight to that record in edit mode) — built by `readSectionRows()`
-exactly as PHP's `sections_json.php` built it:
+navigate straight to that record in edit mode), built by `readSectionRows()`:
 
 ```json
 {
@@ -145,15 +134,14 @@ exactly as PHP's `sections_json.php` built it:
 
 In Time-Machine (`tm`) mode each entry also carries `matrix_id`, `timestamp`,
 `caller_section_tipo` / `caller_section_id`, `bulk_process_id` and `user_id` —
-dd15 is served as a normal section read through the same `readSectionRows()`
+`dd15` is served as a normal section read through the same `readSectionRows()`
 path, with the TM-specific extras added by the Time Machine read source
-(`pickReadSource`, `src/core/section/read_source.ts`; see `rewrite/STATUS.md`,
-"TM as a normal section").
+(`pickReadSource`, `src/core/section/read_source.ts`).
 
 ### The columns model
 
 A list row is a horizontal slice of one record across a **fixed set of
-columns**. The columns_map is built in two steps, both unchanged client logic:
+columns**. The columns_map is built in two steps, both client-side:
 
 1. **Component columns** — `common.get_columns_map({context, datum_context})`
    reads the section's `request_config` and walks the `show.ddo_map` (or
@@ -169,25 +157,21 @@ columns**. The columns_map is built in two steps, both unchanged client logic:
    var(--column_id_width))', callback: render_column_id }`) before the component
    columns, and marks `self.fixed_columns_map = true` so it is built once.
 
-The grid track widths come from `ui.flat_column_items(columns_map)` (unchanged
-client logic).
+The grid track widths come from `ui.flat_column_items(columns_map)`.
 
-!!! note "Server-side fix: the list gets the LIST child's CSS, not the section's own"
+!!! note "The list gets the LIST child's CSS, not the section's own"
     A section's `request_config`/CSS properties differ between its `edit` form
-    and its `list`/`tm` view — PHP resolved this with
-    `resolve_source_properties()` (`trait.request_config_utils.php:264-309`).
-    The TS structure-context build reproduces the same swap
-    (`resolveSourceProperties()`,
-    `src/core/resolve/structure_context.ts`): for a **section** in `list` /
-    `tm` / `list_thesaurus` mode, the properties used to build its context are
-    swapped for its `section_list` (or `section_list_thesaurus`) ontology
-    child's properties — found via `findSectionChildByModel()`
-    (`src/core/section/list_definitions/node_find.ts`) — **unless** the
-    section itself declares its own `source.request_config`, in which case it
-    keeps its own. This is what gives the list view the correct column CSS
-    (e.g. a `.column_<tipo>` width declared on the `section_list` child)
-    instead of the section's edit-form `.list_body` grid. Landed as the
-    "List column alignment" fix — see `rewrite/STATUS.md`.
+    and its `list`/`tm` view. The structure-context build handles the swap
+    (`resolveSourceProperties()`, `src/core/resolve/structure_context.ts`): for a
+    **section** in `list` / `tm` / `list_thesaurus` mode, the properties used to
+    build its context are swapped for its `section_list` (or
+    `section_list_thesaurus`) ontology child's properties — found via
+    `findSectionChildByModel()`
+    (`src/core/section/list_definitions/node_find.ts`) — **unless** the section
+    itself declares its own `source.request_config`, in which case it keeps its
+    own. This is what gives the list view the correct column CSS (e.g. a
+    `.column_<tipo>` width declared on the `section_list` child) instead of the
+    section's edit-form `.list_body` grid.
 
 !!! note "The columns are a *view*, not the record"
     The list deliberately does **not** instance every component of every record.
@@ -199,10 +183,9 @@ client logic).
 ### Relation-component list cells: which config a cell actually expands
 
 A relation-family component (e.g. a portal) rendered as one **list cell**
-inside a row does not always expand its own `request_config` — PHP resolved a
-component's *effective* list/TM config through
-`resolve_source_properties()` + `get_ar_request_config()`. The TS port of that
-substitution lives in `src/core/section/list_definitions/section_list.ts`:
+inside a row does not always expand its own `request_config`. The substitution
+that decides its *effective* list/TM config lives in
+`src/core/section/list_definitions/section_list.ts`:
 
 | function | purpose |
 | --- | --- |
@@ -219,10 +202,10 @@ entry can override it from the parent side.
 ## Files & structure
 
 There is no single "section_list" file; the list view is assembled from the
-(unchanged) section client module:
+section client module:
 
 ```text
-core/section/js/
+client/dedalo/core/section/js/
 ├── section.js                       # the section instance: init/build/render, navigate,
 │                                     #   update_pagination, get_total, create/duplicate/delete_section,
 │                                     #   get_section_records() (one section_record per entry)
@@ -237,8 +220,7 @@ core/section/js/
 └── render_solved_section.js         # 'solved' mode (read-only resolved view)
 ```
 
-Server side, the records are produced by the TS read engine — there is no
-`core/sections/` PHP-shaped directory in the TS tree:
+Server side, the records are produced by the read engine:
 
 ```text
 src/core/section/
@@ -254,8 +236,8 @@ src/core/section/
 
 ### How the view is chosen
 
-`section.prototype.list` (assigned from `render_list_section.list`, unchanged)
-switches on `self.context.view`:
+`section.prototype.list` (assigned from `render_list_section.list`) switches on
+`self.context.view`:
 
 | `context.view` | renders | used for |
 | --- | --- | --- |
@@ -280,57 +262,57 @@ matching module before falling back to `view_default_list_section`.
 ## Public API / key methods
 
 The list view has no dedicated class; its behaviour lives as methods on the
-client `section` instance (unchanged) and as functions in the TS read engine.
-The real, verified members, grouped by concern:
+client `section` instance and as functions in the server read engine.
 
-### `section` instance — list lifecycle & navigation (`section.js`, unchanged)
+### `section` instance — list lifecycle & navigation (`section.js`)
 
-| member | static? | purpose |
-| --- | --- | --- |
-| `init(options)` | no | Fix instance vars; `validate_mode()` defaults an unknown/empty mode to `'list'`. Subscribes the `new_section_` / `duplicate_section_` / `delete_section_` / `toggle_search_panel_` / `render_` events and seeds `render_views`. |
-| `build(autoload=false)` | no | Build the `rqo` from `request_config` (`build_rqo_show`), create the `search` filter (unless `tm`), load the page via `build_autoload`, set `self.datum` / `self.context` / `self.data`, restore/apply pagination from local DB, create the `paginator`, and compute `self.columns_map` via `get_columns_map`. |
-| `render(options)` | no | Delegate to `common.prototype.render`, which dispatches to the mode method (`list`). |
-| `list(options)` | no | (= `render_list_section.list`) The list-mode renderer/dispatcher. `options.render_level` is `'full'` (whole wrapper) or `'content'` (only `content_data`, for pagination refresh). |
-| `navigate(options)` | no | Refresh the list in place with a new SQO (used by pagination & sort); optionally push browser history; clears stale per-user record locks. |
-| `update_pagination(offset)` | no | Paginator-goto handler: write `rqo.sqo.offset`, persist it to local DB, then `navigate()`. |
-| `get_total(sqo?)` | no | Async record count for the paginator: clone the SQO, strip `limit`/`offset`/`select`/`order`/`generated_time`, call the `count` action (server: `dispatch.ts` action `count`); de-duplicated behind `_total_promise`; caches `self.total`. |
-| `create_section()` | no | `create` API action; returns the new `section_id` (server: `createSectionRecord()`, see [`section`](section.md)). |
-| `duplicate_section(section_id)` | no | `duplicate` API action; returns the new `section_id` (server: `duplicateSectionRecord()`, see [`section_record`](section_record.md)). |
-| `delete_section(options)` | no | `delete` API action over a `{ sqo, delete_mode }` (server: the `delete` dispatch handler, see [`sections`](sections.md#bulk-delete--the-delete-api-action)). |
-| `navigate_to_new_section(section_id)` | no | After create/duplicate, publish `user_navigation` to open the new record in `edit`. |
-| `goto_list()` | no | From `edit` back to `list`; publishes `user_navigation` with the restored list pagination. |
-| `change_mode(options)` | no | Swap this instance for a fresh one in another mode/view (e.g. list → edit) and replace the DOM node. |
-| `get_all_target_sections()` | no | Collect the unique target `section_tipo`s of the section's portal columns (from each portal's `rqo.sqo.section_tipo`). |
-| `focus_first_input()` | no | Activate the first component of the first row. |
-| `delete_cache()` | no | Drop the `section_cache_*` local-DB entries (on `quit` / `change_lang`). |
+| member | purpose |
+| --- | --- |
+| `init(options)` | Fix instance vars; `validate_mode()` defaults an unknown/empty mode to `'list'`. Subscribes the `new_section_` / `duplicate_section_` / `delete_section_` / `toggle_search_panel_` / `render_` events and seeds `render_views`. |
+| `build(autoload=false)` | Build the `rqo` from `request_config` (`build_rqo_show`), create the `search` filter (unless `tm`), load the page via `build_autoload`, set `self.datum` / `self.context` / `self.data`, restore/apply pagination from local DB, create the `paginator`, and compute `self.columns_map` via `get_columns_map`. |
+| `render(options)` | Delegate to `common.prototype.render`, which dispatches to the mode method (`list`). |
+| `list(options)` | (= `render_list_section.list`) The list-mode renderer/dispatcher. `options.render_level` is `'full'` (whole wrapper) or `'content'` (only `content_data`, for pagination refresh). |
+| `navigate(options)` | Refresh the list in place with a new SQO (used by pagination & sort); optionally push browser history; clears stale per-user record locks. |
+| `update_pagination(offset)` | Paginator-goto handler: write `rqo.sqo.offset`, persist it to local DB, then `navigate()`. |
+| `get_total(sqo?)` | Async record count for the paginator: clone the SQO, strip `limit`/`offset`/`select`/`order`/`generated_time`, call the `count` action; de-duplicated behind `_total_promise`; caches `self.total`. |
+| `create_section()` | `create` API action; returns the new `section_id` (server: `createSectionRecord()`, see [`section`](section.md)). |
+| `duplicate_section(section_id)` | `duplicate` API action; returns the new `section_id` (server: `duplicateSectionRecord()`, see [`section_record`](section_record.md)). |
+| `delete_section(options)` | `delete` API action over a `{ sqo, delete_mode }` (see [`sections`](sections.md#bulk-delete--the-delete-api-action)). |
+| `navigate_to_new_section(section_id)` | After create/duplicate, publish `user_navigation` to open the new record in `edit`. |
+| `goto_list()` | From `edit` back to `list`; publishes `user_navigation` with the restored list pagination. |
+| `change_mode(options)` | Swap this instance for a fresh one in another mode/view (e.g. list → edit) and replace the DOM node. |
+| `get_all_target_sections()` | Collect the unique target `section_tipo`s of the section's portal columns (from each portal's `rqo.sqo.section_tipo`). |
+| `focus_first_input()` | Activate the first component of the first row. |
+| `delete_cache()` | Drop the `section_cache_*` local-DB entries (on `quit` / `change_lang`). |
 
-### `get_section_records(options)` — rows factory (exported from `section.js`, unchanged)
+### `get_section_records(options)` — rows factory (exported from `section.js`)
 
-| member | static? | purpose |
-| --- | --- | --- |
-| `get_section_records(options)` | exported function | For each entry locator, `get_instance({model:'section_record', …})`, `build()` it, and return the array of built `section_record` instances (the rows). Filters out failed builds. `options.caller` is required; reads `entries` from `caller.data.entries`. |
+For each entry locator, `get_instance({model:'section_record', …})`, `build()`
+it, and return the array of built `section_record` instances (the rows). Filters
+out failed builds. `options.caller` is required; reads `entries` from
+`caller.data.entries`.
 
-### Default list view (`view_default_list_section.js`, unchanged)
+### Default list view (`view_default_list_section.js`)
 
-| member | static? | purpose |
-| --- | --- | --- |
-| `view_default_list_section.render(self, options)` | function | Build the full list: `rebuild_columns_map`, fetch rows via `get_section_records`, set the grid `grid-template-columns` (`ui.flat_column_items`), render header + `content_data`, mount buttons / search / paginator. Honours `render_level==='content'`. |
-| `get_content_data(self, ar_section_record)` | function | Render every row in parallel (`section_record.render({add_hilite_row:true})`) preserving order, or `no_records_node()` when empty; returns the `.content_data` element. |
-| `rebuild_columns_map(self)` | function | Prepend the synthetic `section_id` control column; idempotent via `self.fixed_columns_map`. |
-| `adapt_section_id_column(list_body_node, self)` | function | Set `--section_id_font_size` / `--column_id_width` CSS vars to fit the longest id on the page. |
+| member | purpose |
+| --- | --- |
+| `view_default_list_section.render(self, options)` | Build the full list: `rebuild_columns_map`, fetch rows via `get_section_records`, set the grid `grid-template-columns` (`ui.flat_column_items`), render header + `content_data`, mount buttons / search / paginator. Honours `render_level==='content'`. |
+| `get_content_data(self, ar_section_record)` | Render every row in parallel (`section_record.render({add_hilite_row:true})`) preserving order, or `no_records_node()` when empty; returns the `.content_data` element. |
+| `rebuild_columns_map(self)` | Prepend the synthetic `section_id` control column; idempotent via `self.fixed_columns_map`. |
+| `adapt_section_id_column(list_body_node, self)` | Set `--section_id_font_size` / `--column_id_width` CSS vars to fit the longest id on the page. |
 
-### Id-cell renderer (`render_list_section.js`, unchanged)
+### Id-cell renderer (`render_list_section.js`)
 
-| member | static? | purpose |
-| --- | --- | --- |
-| `render_column_id(options)` | exported function | Render the `section_id` cell per row. Branches by caller/permissions: a portal-initiator **link** button (iframe linking), a `section_tool` **edit** button, a plain id badge for `dd542`/`dd15`, a disabled badge for read-only (`permissions < 2`), or the standard **edit** (open record) + **delete** buttons. The edit button supports `navigate` (in-page `user_navigation`) and `open_window` actions chosen by `show_interface.button_edit_options`. |
+| member | purpose |
+| --- | --- |
+| `render_column_id(options)` | Render the `section_id` cell per row. Branches by caller/permissions: a portal-initiator **link** button (iframe linking), a `section_tool` **edit** button, a plain id badge for `dd542`/`dd15`, a disabled badge for read-only (`permissions < 2`), or the standard **edit** (open record) + **delete** buttons. The edit button supports `navigate` (in-page `user_navigation`) and `open_window` actions chosen by `show_interface.button_edit_options`. |
 
-### Shared / dispatcher (`render_list_section.js`, `render_common_section.js`, unchanged)
+### Shared / dispatcher
 
-| member | static? | purpose |
-| --- | --- | --- |
-| `render_list_section.list(options)` | function | View dispatcher (see [How the view is chosen](#how-the-view-is-chosen)). |
-| `no_records_node()` | exported function | The "no records found" row when `entries` is empty. |
+| member | purpose |
+| --- | --- |
+| `render_list_section.list(options)` | View dispatcher (see [How the view is chosen](#how-the-view-is-chosen)). |
+| `no_records_node()` | The "no records found" row when `entries` is empty. |
 
 ### Server-side companions
 
@@ -341,13 +323,12 @@ The real, verified members, grouped by concern:
 | `resolveListCellMap` / `resolveOwnConfigMap` (component-level cell config) | `src/core/section/list_definitions/section_list.ts` | resolve which config a relation component's LIST cell actually expands. |
 
 !!! warning "Never invent a `section_list` symbol"
-    There is no `section_list` constructor, class or method anywhere — neither
-    in the PHP tree nor in the TS tree. In code you will only see the client
-    `section` instance with `mode:'list'`, the `render_list_section` /
-    `view_*_list_section` modules, and the server-side `readSection` /
-    `readSectionRows` functions. Wire-ups use those names, not "section_list"
-    (the TS module named `section_list.ts` is the relation-cell config
-    resolver described above, not a section/list class).
+    There is no `section_list` constructor, class or method. In code you will
+    only see the client `section` instance with `mode:'list'`, the
+    `render_list_section` / `view_*_list_section` modules, and the server-side
+    `readSection` / `readSectionRows` functions. Wire-ups use those names, not
+    "section_list" — the module named `section_list.ts` is the relation-cell
+    config resolver described above, not a section/list class.
 
 ## How it fits with the rest of Dédalo
 
@@ -408,9 +389,8 @@ The real, verified members, grouped by concern:
 ```
 
 `section.build()` stores the `entries` item as `self.data` (matched by
-`tipo===self.tipo && typo==='sections'`) and the `oh1` context as `self.context`
-— unchanged client logic; the payload is now produced by `readSection()`
-instead of `sections_json.php`.
+`tipo===self.tipo && typo==='sections'`) and the `oh1` context as
+`self.context`.
 
 ### Building and rendering a list (the page pattern)
 

@@ -41,13 +41,13 @@
 ```
 
 !!! note "Typology"
-    `component_select` is a **related** component. It extends the abstract base [component_relation_common](../locator.md) (`core/component_relation_common/class.component_relation_common.php`), which extends `component_common`. It does not own a literal value: it stores an array of [locators](../locator.md) pointing at a target section and resolves the displayed value from that target. The class body is intentionally thin — almost all behaviour is inherited from the relation base.
+    `component_select` is a **related** component. It does not own a literal value: it stores an array of [locators](../locator.md) pointing at a target section and resolves the displayed value from that target. Its descriptor (`src/core/components/component_select/descriptor.ts`) is intentionally thin — almost all behaviour comes from the shared relation engines it links out to.
 
 !!! info "About `default_tools`"
-    The toolbar is assembled from the model + ontology; the component class does not hardcode it. The model sample (`core/component_select/samples/context.json`) ships `tool_propagate_component_data` and `tool_time_machine`. As a non-translatable component, `component_select` does **not** receive `tool_lang` / `tool_lang_multi`. Tools are read-only context. For language selection that needs translatable behaviour, use the sibling [component_select_lang](component_select_lang.md).
+    The toolbar is assembled from the model + ontology; the component class does not hardcode it. The model sample (`src/core/components/component_select/samples/context.json`) ships `tool_propagate_component_data` and `tool_time_machine`. As a non-translatable component, `component_select` does **not** receive `tool_lang` / `tool_lang_multi`. Tools are read-only context. For language selection that needs translatable behaviour, use the sibling [component_select_lang](component_select_lang.md).
 
 !!! info "TS server implementation"
-    The descriptor `src/core/components/component_select/descriptor.ts` registers `resolveData: selectFamilyResolver` (`src/core/relations/models/select_family.ts`), shared with `component_select_lang`, `component_radio_button`, `component_check_box`, `component_publication` and `component_relation_model`. In `list`/`edit`/`search` modes the resolver builds the option datalist and the label strings via `src/core/relations/datalist.ts` (`getDatalist` / `getRelationListValue`, including the faithful `strnatcmp` port); every other mode falls through to the shared portal engine (`src/core/relations/models/portal.ts`). See `engineering/RELATIONS_SPEC.md` and the *dedalo-relations-ts* skill.
+    The descriptor `src/core/components/component_select/descriptor.ts` registers `resolveData: selectFamilyResolver` (`src/core/relations/models/select_family.ts`), shared with `component_select_lang`, `component_radio_button`, `component_check_box`, `component_publication` and `component_relation_model`. In `list`/`edit`/`search` modes the resolver builds the option datalist and the label strings via `src/core/relations/datalist.ts` (`getDatalist` / `getRelationListValue`, including a faithful `strnatcmp` re-implementation); every other mode falls through to the shared portal engine (`src/core/relations/models/portal.ts`). See the *dedalo-relations-ts* skill.
 
 ## Definition
 
@@ -88,15 +88,15 @@
 ]
 ```
 
-- `type` is the relation-type tipo. It defaults to `DEDALO_RELATION_TYPE_LINK = "dd151"` (the generic link type), set from the constructor via `properties->config_relation->relation_type`.
+- `type` is the relation-type tipo. It defaults to `DEDALO_RELATION_TYPE_LINK = "dd151"` (the generic link type), and can be overridden from `properties.config_relation.relation_type`.
 - `section_tipo` / `section_id` point at the chosen record in the target section.
-- `from_component_tipo` is forced to this component's own `tipo` by `validate_data_element()` (it clones the incoming locator first to protect observers, rejects auto-references and malformed locators, and de-dupes via `test_equal_properties = ['section_tipo','section_id','type','from_component_tipo']`).
+- `from_component_tipo` is forced to this component's own `tipo` by the relations engine on save (it clones the incoming locator first to protect observers, rejects auto-references and malformed locators, and de-dupes by comparing `['section_tipo','section_id','type','from_component_tipo']` — `compareLocators()`, `src/core/concepts/locator.ts`).
 - `id` is the per-item counter id used to pair the value with a [component_dataframe](component_dataframe.md) row when one is attached.
 
 !!! note "Datum vs. API `entries`"
-    The transmitted unit is a `{context, data}` datum (the JSON-API contract). In the API payload the stored locators are surfaced under `data.entries`, and the selectable options under `data.datalist` (see `core/component_select/samples/api_data.json`). `context` carries the description (`tipo`, `model`, `mode`, `lang`, `label`, `properties`, `permissions`, `tools`, `view`, `request_config`, `target_sections`) and never the values. See the *dedalo-context-data-layers* and *dedalo-datalist-resolution* skills for the full layering rules.
+    The transmitted unit is a `{context, data}` datum (the JSON-API contract). In the API payload the stored locators are surfaced under `data.entries`, and the selectable options under `data.datalist` (see `src/core/components/component_select/samples/api_data.json`). `context` carries the description (`tipo`, `model`, `mode`, `lang`, `label`, `properties`, `permissions`, `tools`, `view`, `request_config`, `target_sections`) and never the values. See the *dedalo-context-data-layers* and *dedalo-datalist-resolution* skills for the full layering rules.
 
-The displayed `value` (`["Yes"]` in the sample) is resolved from the *target* section/component, not stored locally. `get_list_value()` walks `get_list_of_values()` and returns the labels of the options whose locator matches the stored data (compared by `section_id` + `section_tipo`).
+The displayed `value` (`["Yes"]` in the sample) is resolved from the *target* section/component, not stored locally. `getRelationListValue()` (`src/core/relations/datalist.ts`) walks the resolved option datalist and returns the labels of the options whose locator matches the stored data (compared by `section_id` + `section_tipo`).
 
 ## Ontology instantiation
 
@@ -162,12 +162,12 @@ All properties are optional and live in the ontology node `properties` JSON. `co
 ### source / request_config
 
 - **Values:** an object with `request_config` (an array of RQO blocks). The RQO declares `sqo.section_tipo` (the target section list) and `show.ddo_map` (which target component resolves each option label and how — `value_with_parents`, `fields_separator`, etc.).
-- **Effect:** this is what makes the dropdown work. `get_list_of_values()` runs the RQO against the target section(s) to build `data.datalist` (the `<option>` set); `target_sections` is derived from `sqo.section_tipo`. A select with no resolvable `request_config` logs an error and produces an empty option list. See the *dedalo-datalist-resolution* and *dedalo-request-config* skills.
+- **Effect:** this is what makes the dropdown work. `getDatalist()` (`src/core/relations/datalist.ts`) runs the RQO against the target section(s) to build `data.datalist` (the `<option>` set); `target_sections` is derived from `sqo.section_tipo`. A select with no resolvable `request_config` logs an error and produces an empty option list. See the *dedalo-datalist-resolution* and *dedalo-request-config* skills.
 
 ### config_relation
 
 - **Values:** an object `{relation_type, relation_type_rel}`.
-- **Effect:** overrides the relation tipo written into each locator. `relation_type` defaults to `DEDALO_RELATION_TYPE_LINK` (`dd151`) for `component_select`; set it to use a different relation type. `relation_type_rel` records directionality (uni/bi/multidirectional); for `component_select` `$default_relation_type_rel` is `null` (unidirectional link, stored only on the originating side). Read in the constructor.
+- **Effect:** overrides the relation tipo written into each locator. `relation_type` defaults to the descriptor's `defaultRelationType` (`dd151`) for `component_select`; set it to use a different relation type. `relation_type_rel` records directionality (uni/bi/multidirectional); `component_select` declares no default directionality, so the link is unidirectional, stored only on the originating side.
 
 ### css
 
@@ -177,13 +177,13 @@ All properties are optional and live in the ontology node `properties` JSON. `co
 ### has_dataframe
 
 - **Values:** `true` | `false` (default `false`).
-- **Effect:** marks the component as paired with a [component_dataframe](component_dataframe.md). When the RQO `show.ddo_map` contains a `component_dataframe` entry, the JSON controller builds the dataframe subdatum and the `default` edit view attaches a dataframe control to the selected value (pairing key is the value item `id`, never the target `section_id`). Changing the select value fires an explicit `delete_dataframe` unlink before the new value is saved. See the *dedalo-dataframe* skill.
+- **Effect:** marks the component as paired with a [component_dataframe](component_dataframe.md). When the RQO `show.ddo_map` contains a `component_dataframe` entry, the server builds the dataframe subdatum and the `default` edit view attaches a dataframe control to the selected value (pairing key is the value item `id`, never the target `section_id`). Changing the select value fires an explicit `delete_dataframe` unlink before the new value is saved. See the *dedalo-dataframe* skill.
 
 !!! note "Standard context properties"
     Like every component, `component_select` also honours the generic ontology context blocks carried into the datum `context`: `properties`, `request_config` (RQO) and `view` (the render view to use). Observer/observable wiring, when needed, is configured in `properties` like any other component (see the index page *Observers and observables* section). Any other custom key seen in production should be verified in the ontology.
 
 !!! warning "Single value enforced in the client"
-    The dropdown structurally allows only one choice. The client also enforces it on the *new* path: `add_new_element()` first removes any existing locator (a `remove` save) before creating and linking the new target record, so the select never accumulates more than one relation.
+    The dropdown structurally allows only one choice. The client also enforces it on the *new record* path: it first removes any existing locator (a `remove` save) before creating and linking the new target record, so the select never accumulates more than one relation.
 
 ## Render views & modes
 
@@ -202,14 +202,14 @@ The **search** render builds a filter input per entry: a `q_operator` text input
 Modes:
 
 - **edit** — read/write a real record; populates `datalist`, supports choosing/removing the single value, creating a new target record (*add*), opening the target record/list, and attaching a dataframe. The `+1` selection from the empty option clears the relation (`action: remove`); any other choice is an `action: update`.
-- **list / tm** — read-only listing; `tm` (Time Machine) reuses the list render. `get_value()` resolves the locator to its target label.
+- **list / tm** — read-only listing; `tm` (Time Machine) reuses the list render. The stored locator is resolved to its target label.
 - **search** — builds the SQO filter input; saves are refused.
 
 DOM (edit / default): `wrapper_component component_select <tipo> <mode> view_default` -> `label`, `buttons_container`, `content_data` -> `content_value` -> `select.select` (one `<option>` per datalist item, value = `JSON.stringify(locator)`).
 
 ## Import / export model
 
-**Import.** `component_select` inherits the shared related-component `conform_import_data()`. Two formats are accepted (see [importing data](../importing_data.md#related-data)):
+**Import.** `component_select` goes through the shared related-component import engine (`conformImportData()`, `src/core/tools/import_data.ts`). Two formats are accepted (see [importing data](../importing_data.md#related-data)):
 
 - **JSON locator array** (default round-trip format) — a one-element array since the component is single-valued:
 
@@ -217,20 +217,20 @@ DOM (edit / default): `wrapper_component component_select <tipo> <mode> view_def
 [{"type":"dd151","section_tipo":"dd64","section_id":"1","from_component_tipo":"test91"}]
 ```
 
-- **Plain `section_id`** when the target section is unambiguous (a single target in the RQO, or disambiguated by the CSS column header `tipo_targettipo`, e.g. `test91_dd64`). The importer builds the full locator from that id:
+- **Plain `section_id`** when the target section is unambiguous (a single target in the RQO, or disambiguated by the CSV column header `tipo_targettipo`, e.g. `test91_dd64`). The importer builds the full locator from that id:
 
 ```json
 1
 ```
 
-`from_component_tipo` is forced to this component's own `tipo`, `type` is injected from the resolved relation type, the `section_id` is validated (`safe_section_id`) and invalid / multi-target-without-clear-target rows are logged and ignored. An empty cell is valid and clears the existing relation.
+`from_component_tipo` is forced to this component's own `tipo`, `type` is injected from the resolved relation type, the `section_id` is validated, and invalid / multi-target-without-clear-target rows are logged and ignored. An empty cell is valid and clears the existing relation.
 
-**Export.** `get_export_value()` / `get_grid_value()` (inherited from the relation base) iterate the stored locator and, per the `ddo_map`, instantiate the target component against `locator->section_id` / `section_tipo` to resolve the displayed label / sub-columns. See [exporting data](../exporting_data.md) and the *dedalo-export* skill.
+**Export.** The shared relation export path iterates the stored locator and, per the `ddo_map`, resolves the target component against the locator's `section_id` / `section_tipo` to produce the displayed label / sub-columns; the indexation grid resolves the same way. See [exporting data](../exporting_data.md) and the *dedalo-export* skill.
 
 ## Notes
 
 - **Observers / observables.** No component-specific subscriptions are hardcoded. Observer/observable wiring is configured in the ontology `properties` like any other component (see the index page *Observers and observables* section).
 - **Default tools.** A standard instance exposes `tool_propagate_component_data` and `tool_time_machine` in `context.tools` (model sample). Being non-translatable, it does not receive `tool_lang` / `tool_lang_multi`.
-- **Sortable.** `get_sortable()` returns `true`, so a `component_select` column can be used to sort a list. (Note: when used as a *column inside* a [component_portal](component_portal.md), portal column sort excludes select-type columns — that is the portal's `get_sortable` policy for its own sub-columns, separate from this component's own sortability.)
-- **Single source of truth.** The chosen value lives only in the section `relations` bag; the component filters by `from_component_tipo`. Validation (`validate_data_element()`), locator normalisation, `add_locator_to_data` / `remove_locator_from_data` (with dataframe cascade), grid/export/diffusion resolution and the search traits (`search_component_relation_common(_tm)`) are all inherited from [component_relation_common](../locator.md).
+- **Sortable.** `resolveSortable()` (`src/core/resolve/structure_context.ts`) defaults every model to sortable and `component_select`'s descriptor does not opt out, so a `component_select` column can be used to sort a list. (Note: when used as a *column inside* a [component_portal](component_portal.md), portal column sort excludes select-type columns — that is the portal's policy for its own sub-columns, separate from this component's own sortability.)
+- **Shared relation behaviour.** The chosen value lives only in the section `relations` bag; the component filters by `from_component_tipo`. Locator normalisation and validation, adding/removing a locator (with the dataframe cascade), grid/export/diffusion resolution and search all come from the shared relations engine (`src/core/relations/`), not from anything this model declares itself.
 - **Related components:** [component_select_lang](component_select_lang.md), [component_radio_button](component_radio_button.md), [component_check_box](component_check_box.md), [component_portal](component_portal.md), [component_relation_model](component_relation_model.md), [component_dataframe](component_dataframe.md), [component_input_text](component_input_text.md).

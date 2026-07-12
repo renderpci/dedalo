@@ -38,7 +38,7 @@
 ```
 
 !!! note "About the flags"
-    `could_be_translatable`, `is_literal`, `is_related` and `is_media` are client-model classifiers consumed by the render layer (literal value vs relation locator vs media). For `component_number` they are fixed: it is a **literal-direct** component (extends `component_common`), it stores its own numeric value, and it is **never** translatable — the constructor forces `lang = DEDALO_DATA_NOLAN`.
+    `could_be_translatable`, `is_literal`, `is_related` and `is_media` are client-model classifiers consumed by the render layer (literal value vs relation locator vs media). For `component_number` they are fixed: it is a **literal-direct** component, it stores its own numeric value, and it is **never** translatable — its descriptor declares no `classSupportsTranslation`, so it is always instantiated with `lang = lg-nolan`.
 
 ## Definition
 
@@ -66,7 +66,7 @@
 **Types supported:** `int` | `float`
 **Default type:** `float`
 **Default precision:** `2`
-**Decimal separator (storage):** always `.` (the public `$decimal` property selects the *input* separator on import only; see below)
+**Decimal separator (storage):** always `.` (a different *input* separator is an import-time concern only; see below)
 
 ### Storage shape inside the matrix `data` column
 
@@ -94,7 +94,7 @@ When the component is instantiated it reads its data through its section and wor
     { "lg-nolan": [104, -75.35] }
     ```
 
-    `conform_import_data()` still accepts this form: for the non-translatable number it extracts the first `lg-*` partition and normalizes each entry into v7 `{value}` items.
+    Import still accepts this form: for the non-translatable number it extracts the first `lg-*` partition and normalizes each entry into v7 `{value}` items.
 
 ### Client data payload
 
@@ -115,12 +115,12 @@ On the wire the datum `data` carries the values as `entries` (the array the JS v
 
 ### Type / precision formatting
 
-`set_format_form_type()` (PHP) and `get_format_number()` (JS) apply the configured type on read and on save:
+The client JS model applies the configured type on input:
 
 - `type: "int"` → value cast to integer (`85.35` → `85`).
 - `type: "float"` (default) → value rounded to `precision` decimals (default `2`; `85.3568` with `precision: 2` → `85.36`).
 
-Unexpected/non-numeric values are logged and rejected (`set_data()` drops invalid items; the edit view flags the input and refuses to silently overwrite the entry with `null`).
+Unexpected/non-numeric values are rejected client-side: the edit view flags the input and refuses to silently overwrite the entry with `null`.
 
 ## Ontology instantiation
 
@@ -152,7 +152,7 @@ Realistic `properties` block for this component:
 }
 ```
 
-The `section_tipo` / `parent` wiring places the component as a column inside its section: on save, the TS generic engine (`src/core/section/record/save_component.ts`) writes the full updated item array back into the section's matrix row and appends the Time Machine audit row — the component never touches the database directly, in TS as in PHP.
+The `section_tipo` / `parent` wiring places the component as a column inside its section: on save, the generic engine (`src/core/section/record/save_component.ts`) writes the full updated item array back into the section's matrix row and appends the Time Machine audit row — the component never touches the database directly.
 
 ## Properties & options
 
@@ -164,22 +164,21 @@ The `section_tipo` / `parent` wiring places the component as a column inside its
 | `dato_default` | array of value items | (none) | Default value applied in `edit` mode for new records. **Not ported** — no module under `src/` reads `dato_default` yet (see [component_input_text](component_input_text.md#properties--options)). |
 | `css` | object | (none) | Per-instance CSS injected into the datum `context`. Generic, shared by every component. |
 
-!!! warning "Gap: `type`/`precision` casting is client-side only in TS"
-    PHP applies `type`/`precision` on **save** as well as on render
-    (`set_format_form_type()`), so the stored value is always the rounded/cast
-    number. The generic TS save path
+!!! warning "Gap: `type`/`precision` casting is client-side only"
+    Casting/rounding to `type`/`precision` happens only in the client (JS
+    model), never on the server: the generic save path
     (`src/core/section/record/save_component.ts`) is model-agnostic and does
     not read `type`/`precision` — it persists whatever numeric value the
-    client sends. The copied client still rounds/casts before sending, so
-    normal editing behaves the same in practice; a value written through any
-    other path (import, an API client bypassing the copied UI) will not be
-    cast or rounded server-side.
+    client sends. Normal editing behaves correctly in practice because the
+    client rounds/casts before sending; a value written through any other path
+    (import, an API client bypassing the standard UI) will not be cast or
+    rounded server-side.
 
 !!! warning "Legacy `type` object form — deprecated"
-    Ontology created **before 04/07/2024** used an object form like `"type": {"float": 2}`. This is incorrect/deprecated. Use the flat form `"type": "float"` + `"precision": 2`. Both the PHP class and the JS model carry explicit notes about this legacy shape.
+    Ontology created **before 04/07/2024** used an object form like `"type": {"float": 2}`. This is incorrect/deprecated. Use the flat form `"type": "float"` + `"precision": 2`.
 
 !!! note "Verify in ontology"
-    `type` and `precision` are the only numeric-specific properties read by the class (`get_properties()->type` / `->precision`). Any other property on a real node is a shared `component_common`/`request_config` property, not a `component_number` feature — verify it in the ontology before relying on it.
+    `type` and `precision` are the only numeric-specific properties this model reads. Any other property on a real node is a shared/`request_config` property, not a `component_number` feature — verify it in the ontology before relying on it.
 
 ## Render views & modes
 
@@ -202,7 +201,7 @@ Notes from the source:
 
 ### Search operators
 
-Server-side the filter is turned into SQL by `src/core/search/builders/builder_number.ts` (dispatched from `src/core/search/conform.ts`), the TS re-expression of the PHP `search_component_number` trait; it builds JSONB existence/comparison predicates over `<column>->'<tipo>'`. Supported operators (see `samples/search.md`):
+Server-side the filter is turned into SQL by `src/core/search/builders/builder_number.ts` (dispatched from `src/core/search/conform.ts`); it builds JSONB existence/comparison predicates over `<column>->'<tipo>'`. Supported operators:
 
 | Operator | Meaning |
 | --- | --- |
@@ -227,15 +226,15 @@ section_id;numisdata133
 1;"[{""value"":104},{""value"":-75.35}]"
 ```
 
-Alternative accepted formats, and PHP's handling of them:
+Alternative accepted formats:
 
-1. **Plain number** (simplest) — the whole cell is one number, e.g. `33.85`. PHP lets you choose the decimal separator (`.` or `,`) per number column and parses it to a real `int`/`float` via `string_to_number()`. The plain value **replaces** any previous data.
+1. **Plain number** (simplest) — the whole cell is one number, e.g. `33.85`. The plain value is meant to **replace** any previous data, parsed to a real `int`/`float` with a configurable decimal separator.
 2. **Array of bare numbers** (v6 form) — `[104,-75.35]`.
 3. **Lang-keyed object** (legacy raw export) — `{"lg-nolan":[104]}`; the first `lg-*` partition is extracted and normalized.
 
-The TS import engine (`conformImportData()`, `src/core/tools/import_data.ts`) handles (2) and (3) generically (the JSON array/lang-keyed branches wrap bare numbers into `{value}` items), but **not (1) faithfully**:
+The import engine (`conformImportData()`, `src/core/tools/import_data.ts`) handles (2) and (3) generically (the JSON array/lang-keyed branches wrap bare numbers into `{value}` items), but **not (1) faithfully**:
 
-!!! warning "Gap: plain-number cells are not parsed to a number in TS"
+!!! warning "Gap: plain-number cells are not parsed to a number"
     A bare non-JSON cell like `33.85` does not start with `[`/`{`, so it falls
     through to the generic value-property wrap (`component_number` is a
     `VALUE_PROPERTY_MODELS` member) and is stored as `{"value": "33.85"}` — the
@@ -248,7 +247,7 @@ See the full import definition in [importing_data.md → Numbers](../importing_d
 ## Notes
 
 - **Persistence path.** The generic TS save engine (`src/core/section/record/save_component.ts`) writes the component's item array to the section's matrix row; saves are refused in `search`/`tm` modes. Time Machine rows are written after a successful save.
-- **Sortable — gap.** PHP is sortable in lists (`sortable: true`) via a numeric `get_order_path()` on the matrix `number` column. In the TS structure context (`src/core/resolve/structure_context.ts`), `sortable` is currently hardcoded `false` for every component (list-column sort is UNCOVERED v0) — `component_number` is not an exception yet.
+- **Sortable.** Lists can be ordered by a `component_number` column. `resolveSortable()` (`src/core/resolve/structure_context.ts`) defaults every model to sortable and only a specific set of descriptors opt out (`component_number`'s descriptor is not one of them), so a list can order by the numeric value in the matrix `number` column.
 - **Default tools.** Toolbar tools are supplied as read-only `context` entries. Real instances commonly carry `tool_propagate_component_data` and `tool_time_machine` (see `samples/context.json`); no `tool_lang` (non-translatable).
 - **Observers / observables.** No number-specific observer logic; configured in ontology `properties` like any other component, and driven entirely by the copied client (no TS-server observer dispatch exists).
 - **Related components:** [component_input_text](component_input_text.md) (numeric-looking codes/identifiers), [component_date](component_date.md) (years and time), [component_select](component_select.md) / [component_radio_button](component_radio_button.md) (fixed numeric choices), [component_dataframe](component_dataframe.md) (uncertainty/qualifier framing of each value).

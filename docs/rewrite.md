@@ -97,8 +97,22 @@ A rewrite is only trustworthy if it can *prove* it matches the original. So the 
 
 ## Where we are (an honest status)
 
-This is a **rewrite in progress**, in beta. The core foundations — the data/matrix layer, the search engine, the context/data resolution, API dispatch, security, and a broad sweep of components, tools and areas — are in place and parity-gated against the PHP oracle. Some subsystems are not yet ported, and a few places diverge deliberately (for example, to *fix* a bug that exists in the original rather than faithfully reproduce it). The living record of what is done, what is pending, and what diverges lives in the migration ledger (`rewrite/STATUS.md`) and the per-page adaptation ledger for this documentation set. When a page here describes something
-the TypeScript server does not do yet, it says so plainly.
+**The rewrite is done, and the TypeScript engine is the only engine.** The cutover ran on
+2026-07-11: the PHP server was frozen, and TS became the single engine and the sole writer to the
+database. The whole system — the data/matrix layer, search, context/data resolution, API dispatch,
+security, the components, tools, areas, diffusion and media — runs on Bun.
+
+The engine is in **beta**: it is complete and gated, but it has not yet accumulated the years of
+production mileage the engine it replaces had. Treat it accordingly.
+
+A handful of wire shapes diverge from the original **on purpose** — usually to *fix* a bug rather
+than faithfully reproduce it. Each of those is recorded, with its reason, in the wire-contract
+ledger (`engineering/WIRE_CONTRACT.md`). Correctness is held by the tripwires and by a parity
+suite that replays a fixture store harvested from the old engine before it was retired — see
+[Testing](development/testing.md).
+
+The rest of this manual documents the engine as it is today. This page is the only place that
+looks backwards.
 
 ---
 

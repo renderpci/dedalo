@@ -16,28 +16,16 @@ a bespoke viewer (see [How it fits](#how-it-fits-with-the-rest-of-dédalo)).
 
 ## Role
 
-There is no `tm_record` class in the TS server — no ontology-model instance,
-no `extend common` equivalent, nothing `new`-ed. The PHP class-per-concern
-split is replaced by a handful of stateless modules, each owning one piece:
+Time Machine is a handful of stateless modules, each owning one piece. Nothing is
+instantiated and nothing is cached: one call is one function call.
 
 | module | role |
 | --- | --- |
-| **`src/core/tm_record/tm_record.ts`** | The row **materializer**: `buildTmSectionRecord()` turns the flat TM columns into a synthetic `dd15` [`section_record`](../sections/section_record.md)-shaped `MatrixRecord` that the normal component pipeline can render (PHP `tm_record::get_section_record`). Also owns the dd15 column-tipo constants, `ddDateFromTimestamp()` and `termByTipo()`. |
-| **`src/core/db/time_machine.ts`** | The **SQL layer** for `matrix_time_machine`: `recordTimeMachine()` (write one audit row), `readTimeMachineRow()` / `readTimeMachineHistory()` (read), `TimeMachineRow`/`TimeMachineEntry` types, `TM_EXCLUDED_SECTIONS`. The direct analogue of PHP `tm_db_manager` + the `tm_record::create()` write gate, merged into one file. |
-| **`src/core/resolve/read_tm.ts`** | The **read/list surface**: `tmReadSource` (a `SectionReadSource` plugged into the generic section-read pipeline), `buildTmWhere()`/`queryTmRows()` (the query PHP's `search_tm` used to own), `emitTmRow()` (per-row cell emission). |
-| **`tools/tool_time_machine/server/tool_time_machine.ts`** | `apply_value` — the restore action (PHP `tools/tool_time_machine::apply_value`). |
+| **`src/core/tm_record/tm_record.ts`** | The row **materializer**: `buildTmSectionRecord()` turns the flat Time Machine columns into a synthetic `dd15` [`section_record`](../sections/section_record.md)-shaped `MatrixRecord` that the normal component pipeline can render. It also owns the `dd15` column-tipo constants, `ddDateFromTimestamp()` and `termByTipo()`. |
+| **`src/core/db/time_machine.ts`** | The **SQL layer** for `matrix_time_machine`: `recordTimeMachine()` (write one audit row), `readTimeMachineRow()` / `readTimeMachineHistory()` (read), the `TimeMachineRow` / `TimeMachineEntry` types and `TM_EXCLUDED_SECTIONS`. |
+| **`src/core/resolve/read_tm.ts`** | The **read and list surface**: `tmReadSource` (a `SectionReadSource` plugged into the generic section-read pipeline), `buildTmWhere()` / `queryTmRows()`, and `emitTmRow()` (per-row cell emission). |
+| **`tools/tool_time_machine/server/tool_time_machine.ts`** | `apply_value` — the restore action. |
 | **`tools/tool_time_machine/server/bulk_revert.ts`** | `bulk_revert_process` — undo a whole `bulk_process_id` batch. |
-
-!!! note "No cached-instance layer, and that is fine"
-    PHP's `tm_record`/`tm_record_data` pair existed partly to give every TM row
-    a cached, `common`-shaped object with `get_instance()`/`__destruct()`
-    lifecycle bookkeeping. None of that is needed here: the TS server has no
-    cross-request static-state bleed hazard to guard against (one request-scoped
-    call is one function call — see the architecture-overview note on
-    `AsyncLocalStorage` request scoping), so `readTimeMachineRow()` and
-    `buildTmSectionRecord()` are plain, uncached, per-call functions. There is
-    no `tm_record_data`/`tm_db_manager` split to keep in sync — it is one file,
-    `time_machine.ts`.
 
 ## Responsibilities
 
@@ -54,43 +42,26 @@ split is replaced by a handful of stateless modules, each owning one piece:
   the flat columns (`section_id`, `timestamp`, `user_id`, `tipo`,
   `section_tipo`, `bulk_process_id`, `data`) into component-shaped data
   injected into a synthetic `dd15` `MatrixRecord`.
-- **Write guards** — `TM_EXCLUDED_SECTIONS` refuses to version `dd15` itself
-  and non-positive `section_id`s (see the narrower-exclusion-list gap noted
-  below).
-- **Row deletion** — none. There is no TS function that deletes a TM row; the
-  surface is append-only in this server (PHP's `tm_record::delete()`,
-  used when a deleted section is finally purged, has no port — see
-  [Public API](#public-api)).
+- **Write guards** — `TM_EXCLUDED_SECTIONS` refuses to version `dd15` itself, and
+  `recordTimeMachine()` skips non-positive `section_id`s.
+- **Row deletion** — none. The Time Machine surface is **append-only**: no
+  function deletes a row.
 
-!!! warning "TM_EXCLUDED_SECTIONS is narrower than PHP's exclusion list"
-    PHP's `tm_record::$excluded_section_tipos` skips THREE section tipos:
-    `DEDALO_TEMP_PRESET_SECTION_TIPO` (`dd655`), `DEDALO_TIME_MACHINE_SECTION_TIPO`
-    (`dd15`) and `USER_ACTIVITY_SECTION_TIPO` (`dd1521`). TS's
-    `TM_EXCLUDED_SECTIONS` (`src/core/db/time_machine.ts`) contains only
-    `dd15`. In practice `dd1521` never reaches `recordTimeMachine()` anyway —
-    `src/core/resolve/user_stats.ts` writes `matrix_stats` with a direct SQL
-    `UPDATE`, bypassing the component-save path entirely — but `dd655` (the
-    temp-preset working section) **does** go through the ordinary
-    `save_component.ts` path, so editing a temp preset in this TS server will
-    version it in `matrix_time_machine` where PHP would not. A narrow, honest
-    gap; add `'dd655'` to `TM_EXCLUDED_SECTIONS` to close it.
-
-!!! warning "No `$save_tm`-style kill-switch for bulk operations"
-    PHP's `tm_record::$save_tm = false` lets a bulk operation (e.g.
-    *portalize*) suppress versioning for its whole run, restoring it in a
-    `finally` block. There is no TS equivalent — every `save_component.ts`
-    call unconditionally calls `recordTimeMachine()`. A large bulk edit in
-    this server will flood `matrix_time_machine` with per-item audit rows
-    that PHP would have suppressed. Not yet ported.
+!!! warning "Every component save writes a Time Machine row"
+    `recordTimeMachine()` is called unconditionally from `save_component.ts`.
+    There is no suppression switch a bulk operation can flip, so a large bulk edit
+    writes one audit row per item. The bulk transforms that must *not* version
+    (record relocation, for instance) avoid it by writing with a direct `UPDATE`
+    rather than by going through the component-save path.
 
 ## Data model
 
 ### The `matrix_time_machine` table
 
-The TM table is **not** the typed-JSONB `matrix` shape used by normal
-sections. It is a **flat** table whose columns map 1:1 to ontology tipos under
-the `dd15` virtual section. `src/core/db/time_machine.ts`'s `TimeMachineRow`
-interface is the TS column allowlist (PHP: `tm_db_manager::$columns`):
+The TM table is **not** the typed-JSONB `matrix` shape used by normal sections. It
+is a **flat** table whose columns map 1:1 to ontology tipos under the `dd15`
+virtual section. `src/core/db/time_machine.ts`'s `TimeMachineRow` interface is the
+column allowlist:
 
 | Column | TM tipo constant | tipo | temporal model | meaning |
 | --- | --- | --- | --- | --- |
@@ -104,22 +75,20 @@ interface is the TS column allowlist (PHP: `tm_db_manager::$columns`):
 | `bulk_process_id` | `DEDALO_TIME_MACHINE_COLUMN_BULK_PROCESS_ID` | `dd1371` | `component_number` | bulk-operation id (or `null`) |
 | `data` | `DEDALO_TIME_MACHINE_COLUMN_DATA` | `dd1574` | `component_json` | the actual changed data (JSONB) |
 
-TS reads/writes `data` through the shared `json_codec.ts` (`$n::text::jsonb`
-binding on write, `data::text` twin selected alongside `data` on read for
-byte-compat parity diffing) rather than PHP's `$json_columns`/`$int_columns`/
-`$timestamp_columns` classification arrays — one codec, not three per-column
-lists. The tipo constants above still resolve through the shared ontology
-(`ontology_node`-equivalent: `src/core/ontology/resolver.ts`'s
-`getModelByTipo()`/`getColumnNameByModel()`).
+The `data` column is read and written through the shared `json_codec.ts` — a
+`$n::text::jsonb` binding on write, and a `data::text` twin selected alongside
+`data` on read. One codec, no per-column classification lists. The tipo constants
+above resolve through the ontology (`src/core/ontology/resolver.ts`).
 
 !!! warning "The `section_tipo` column does NOT hold `dd15`"
-    The most common Time Machine confusion, unchanged by the rewrite. In a TM
-    **row**, the `section_tipo` column stores the **source data section**
-    (e.g. `oh1`, `mdcat2949`), *not* the Time Machine section `dd15`. The
-    `dd15` tipo only appears in the **DDO / ontology paths** that describe the
-    TM columns. `src/core/resolve/read_tm.ts`'s `buildTmWhere()` never filters
-    by `section_tipo = 'dd15'` for exactly this reason — mirroring PHP
-    `search_tm::build_main_where()`'s deliberately empty body.
+    This is the most common Time Machine mistake. In a TM **row**, the
+    `section_tipo` column stores the **source data section** (`oh1`,
+    `mdcat2949`, …) — *not* the Time Machine section `dd15`. The `dd15` tipo
+    appears only in the ontology paths that describe the TM columns.
+
+    `buildTmWhere()` (`src/core/resolve/read_tm.ts`) therefore never filters by
+    `section_tipo = 'dd15'`. Add that filter "for correctness" and every Time
+    Machine list goes empty.
 
 ### `dd15` is a virtual section
 
@@ -153,19 +122,16 @@ const row = await readTimeMachineRow(4096);
 A TM row is written by the **callers**, after a successful save, through
 `recordTimeMachine()`:
 
-1. **`src/core/section/record/save_component.ts`** — after the component's
-   new data is persisted, it builds a `TimeMachineEntry` (`sectionTipo`,
-   `sectionId`, `componentTipo`, `lang`, `userId`, `data` — the *current-lang*
-   slice for translatable components, matching PHP's `get_data_lang()`
-   snapshot, not the full array) and calls `recordTimeMachine(entry,
-   nowDbTimestamp())`.
-2. **`src/core/section/record/delete_record.ts`** — before deleting a record
-   it snapshots the whole record's JSONB columns into one TM row
-   (`componentTipo === sectionTipo`, `lang: 'lg-nolan'`). Unlike PHP, it does
-   **not** re-read and assert byte-for-byte equality before proceeding with
-   the delete — a simplification, not a behavioral gap PHP callers depend on.
+1. **`src/core/section/record/save_component.ts`** — after the component's new
+   data is persisted, it builds a `TimeMachineEntry` (`sectionTipo`, `sectionId`,
+   `componentTipo`, `lang`, `userId`, `data`) and calls
+   `recordTimeMachine(entry, nowDbTimestamp())`. For a translatable component the
+   snapshot is the **current-lang slice**, not the whole value.
+2. **`src/core/section/record/delete_record.ts`** — before deleting a record it
+   snapshots the whole record's JSONB columns into one TM row
+   (`componentTipo === sectionTipo`, `lang: 'lg-nolan'`).
 3. **`src/core/section/record/duplicate_record.ts`** — the per-component
-   backfill-repair pair described below.
+   back-fill pair described below.
 
 ```typescript
 import { recordTimeMachine, nowDbTimestamp } from '../db/time_machine.ts';
@@ -183,18 +149,14 @@ await recordTimeMachine(
 );
 ```
 
-!!! note "The self-healing back-fill is per-caller, not a generic `create()` feature"
-    PHP's `tm_record::create($values, $previous_data)` centralizes a
-    "self-healing" back-fill: when given the pre-save data and no prior TM row
-    is found for the same `section_id`/`section_tipo`/`tipo`/`lang`, it first
-    writes a **second** row carrying that *previous* data one minute earlier,
-    so a record edited before TM ever ran still gets a baseline to revert to.
-    `recordTimeMachine()` itself has **no** such logic — it is a pure insert.
-    The back-fill instead lives in the two callers that need it,
-    `delete_record.ts` and `duplicate_record.ts`, which compute a
-    `backfillTimestamp` (`now - 60s`) and call `recordTimeMachine()` twice
-    themselves. `save_component.ts`'s ordinary per-save path does not
-    back-fill — only the delete/duplicate flows do.
+!!! note "The back-fill lives in the callers, not in recordTimeMachine()"
+    `recordTimeMachine()` is a **pure insert** — it holds no "self-healing" logic.
+
+    A record edited before Time Machine ever ran has no baseline to revert to, so
+    `delete_record.ts` and `duplicate_record.ts` compute a back-fill timestamp
+    (`now - 60s`) and call `recordTimeMachine()` **twice**: once for the previous
+    data, once for the new. The ordinary per-save path in `save_component.ts` does
+    not back-fill; only the delete and duplicate flows do.
 
 ### How a TM row becomes a renderable record
 
@@ -204,26 +166,19 @@ into a synthetic `dd15` `MatrixRecord` keyed by the TM row `id` (not the
 source `section_id`), using the shared substitution API
 (`src/core/section_record/virtual_record.ts`'s `makeVirtualRecord()` /
 `injectComponentData()` / `injectColumnData()`). The private helper
-`injectTmField()` resolves the column model via `getModelByTipo()` and the
-storage column via `getColumnNameByModel()`, mirroring PHP's
-`set_section_record_factory()`.
+`injectTmField()` resolves the column model via `getModelByTipo()` and the storage
+column via `getColumnNameByModel()`.
 
 It populates, in order:
 
 - **`dd1212` section_id** → a `{id, value}` number.
 - **`dd559` timestamp** → a `component_date` value via `ddDateFromTimestamp()`.
-- **`dd577` tipo** and **`dd1772` section_tipo** → the human term of the
-  tipo, resolved with `termByTipo()` (a `SELECT term FROM dd_ontology`
-  lookup; PHP's `[tipo]` debug-suffix bracket is not reproduced — TS always
-  emits the bare term).
-- **`dd578` user_id** → a `dd151` locator into `DEDALO_SECTION_USERS_TIPO`
-  (`dd128`); the same locator is also injected under
-  `DEDALO_SECTION_INFO_CREATED_BY_USER` (`dd200`) for metadata compatibility.
-- **`rsc329` annotation** → PHP's empty placeholder
-  (`[{parent_section_id: null}]`) is reproduced verbatim; the `rsc832`/`rsc835`
-  TM-notes lookup that fills real annotation text is **not ported** (no notes
-  fixture on the reference instance to gate it against — no live consumer
-  requests `rsc329` either).
+- **`dd577` tipo** and **`dd1772` section_tipo** → the human term of the tipo,
+  resolved with `termByTipo()` (a `SELECT term FROM dd_ontology` lookup).
+- **`dd578` user_id** → a `dd151` locator into the users section (`dd128`); the
+  same locator is also injected under `dd200` (created-by-user) for metadata
+  compatibility.
+- **`rsc329` annotation** → an empty placeholder (`[{parent_section_id: null}]`).
 - **`dd1371` bulk_process_id** → a `{id, value}` number.
 - **`data`** — split by the *source* tipo's model:
   - if the source is a **whole section** (delete snapshot), each component's
@@ -256,10 +211,10 @@ model, both still true of the TS pipeline:
   section's own component columns from it — without it there is nothing to
   read.
 
-`tm` mode is read-only in the sense that the TM read source never writes;
-there is no TS "save blocked in tm mode" guard analogous to PHP's because the
-generic write path is never reached from a TM read at all — the client's
-*Apply* button drives a **different**, explicit action
+`tm` mode is read-only in the sense that the TM read source never writes. There is
+no "save blocked in tm mode" guard, because the generic write path is never
+reached from a TM read at all — the client's *Apply* button drives a
+**different**, explicit action
 (`tool_time_machine.apply_value`, see [Restore](#restore-is-a-normal-save)),
 not a save through the `tm`-mode component.
 
@@ -281,14 +236,12 @@ not a save through the `tm`-mode component.
 | `readTimeMachineHistory(sourceSectionTipo, sourceSectionId, componentTipo, limit?)` | A component's change history on one source record, newest first (`ORDER BY timestamp DESC`). |
 | `recordTimeMachine(entry, timestamp)` | Insert one audit row. No-ops for `section_id <= 0` or an excluded section tipo. |
 | `nowDbTimestamp()` | The current time as a Postgres-style timestamp string. |
-| `TM_EXCLUDED_SECTIONS` | The (narrower-than-PHP) exclusion set — see the warning above. |
+| `TM_EXCLUDED_SECTIONS` | The section tipos never versioned — `dd15` itself. |
 
-There is **no** TS function analogous to PHP `tm_record::search()` (the
-direct, parameterised multi-row `SELECT` used internally by `create()` to
-detect a missing prior version) or `tm_record::delete()` (row deletion) — TM
-rows are never deleted by this server, and the missing-prior-version search
-is inlined per-caller (see the self-healing note above) rather than exposed
-as a reusable primitive.
+There is **no** row-deletion function: Time Machine rows are never deleted by this
+server. There is likewise no generic multi-row search here — the
+missing-prior-version lookup is inlined per caller (see the back-fill note above)
+rather than exposed as a reusable primitive.
 
 ### `src/core/resolve/read_tm.ts`
 
@@ -300,9 +253,9 @@ as a reusable primitive.
 
 ## How it fits with the rest of Dédalo
 
-Time Machine is a **cross-cutting audit/versioning layer**: it is fed by the
-normal save pipeline and consumed by a read-only viewer, but it never owns
-the live data — exactly as in PHP.
+Time Machine is a **cross-cutting audit and versioning layer**: it is fed by the
+normal save pipeline and consumed by a read-only viewer, and it never owns the
+live data.
 
 1. **It is written *by* the save pipeline, not by the UI.** A component save
    (`save_component.ts`) and a record delete (`delete_record.ts`) are the
@@ -320,31 +273,26 @@ the live data — exactly as in PHP.
    field mapping — it used to be duplicated between `read_tm.ts` and
    `tool_time_machine.ts` before being consolidated into `tm_record.ts`.
 
-3. **There is no dedicated `search_tm` class; the TM read owns its own SQL.**
-   `read_tm.ts`'s `buildTmWhere()`/`queryTmRows()` build the `WHERE`/`ORDER
-   BY`/pagination directly (two scoping surfaces: `filter_by_locators` for
-   per-component history, a `tipo` column filter for the record-snapshot
-   list, or no scope at all for the bare `dd15` list — matching PHP
-   `search_tm::build_main_where()`'s intentionally empty body, which returns
-   *every* row rather than an error or nothing). SQO-driven search **filters**
-   against `matrix_time_machine` from other entry points go through the `_tm`
-   twin branches inside the generic search builders instead
-   (`src/core/search/builders/builder_relation.ts`'s `matrix_time_machine`
-   branch; `builder_string.ts` throws for its `_tm` twin — uncovered scope).
+3. **The TM read owns its own SQL.** `buildTmWhere()` / `queryTmRows()` build the
+   `WHERE`, `ORDER BY` and pagination directly. There are three scoping surfaces:
+   `filter_by_locators` for a per-component history, a `tipo` column filter for the
+   record-snapshot list, and **no scope at all** for the bare `dd15` list — which
+   deliberately returns *every* row. SQO-driven **filters** against
+   `matrix_time_machine` from other entry points go through the `_tm` twin branches
+   inside the generic search builders instead
+   (`src/core/search/builders/builder_relation.ts`).
 
 4. **Restore is a normal save, wrapped in an explicit tool action.**
-   `tools/tool_time_machine/server/tool_time_machine.ts`'s `apply_value`
-   writes the historical snapshot back into the live record through the
-   normal write chokepoint (`persistRecordColumns`/`persistRecordKeys`,
-   stripping dataframe frame entries first) and then calls
-   `recordTimeMachine()` again — so the restore itself creates a fresh TM
-   version, exactly as PHP's "the new save immediately creates a fresh TM
-   entry." One documented divergence: PHP deletes the consumed TM row on a
-   section-branch restore; TS keeps it (harmless — the fresh audit row
-   supersedes it in the list). `bulk_revert.ts`'s `bulk_revert_process` is
-   the batch analogue: it walks a whole `bulk_process_id`'s history back to
-   its pre-batch state and re-applies it under a **new** `bulk_process_id`
-   (the revert is itself revertible).
+   `apply_value` (`tools/tool_time_machine/server/tool_time_machine.ts`) writes the
+   historical snapshot back into the live record through the normal write
+   chokepoint (`persistRecordColumns` / `persistRecordKeys`, stripping dataframe
+   frame entries first) and then calls `recordTimeMachine()` again — so the restore
+   itself creates a fresh version. The consumed TM row is **kept**: the fresh audit
+   row simply supersedes it in the list.
+
+   `bulk_revert_process` (`bulk_revert.ts`) is the batch analogue: it walks a whole
+   `bulk_process_id`'s history back to its pre-batch state and re-applies it under
+   a **new** `bulk_process_id`, so the revert is itself revertible.
 
 5. **Worker hygiene is a non-issue by construction.** There is no
    `tm_record_data::$instances`-style static cache to unset — see the "No

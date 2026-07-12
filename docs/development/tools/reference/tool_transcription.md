@@ -14,24 +14,25 @@ The same tool also surfaces on `component_pdf` (extract text from a scanned/born
 
 ### Server
 
-`tools/tool_transcription/server/index.ts` — per `rewrite/STATUS.md`, the **local half is fully done** (browser-Whisper flow works end-to-end) and `automatic_transcription` (the remote-ASR submit) is done as a **provider seam**; two PHP actions have **no TS route at all**:
+`tools/tool_transcription/server/index.ts` implements five actions:
 
-| Action | TS status |
+| Action | Status |
 | --- | --- |
-| `create_transcribable_audio_file` | ✅ ported |
-| `delete_transcribable_audio_file` | ✅ ported |
-| `automatic_transcription` | ✅ ported (submit-only; see below) |
-| `check_server_transcriber_status` | ⬜ **not registered** — absent from `apiActions`, so a `tool_request` for it is unroutable (dispatch gate 6, `tool method not allowed`) |
-| `build_subtitles_file` | ⬜ **not registered** — same gap |
-| `get_text_from_pdf` | not exposed on either engine (PHP removed it from `API_ACTIONS` for the same SEC-024 reason this page already documents; use [tool_pdf_extractor](index.md) instead) |
+| `create_transcribable_audio_file` | implemented |
+| `delete_transcribable_audio_file` | implemented |
+| `automatic_transcription` | implemented (remote-ASR submit) |
+| `check_server_transcriber_status` | implemented (remote-ASR status poll) |
+| `build_subtitles_file` | implemented (VTT generation) |
+| `get_text_from_pdf` | not implemented on this engine (SEC-024 record-scope concerns) — use [tool_pdf_extractor](index.md) instead |
 
-The three ported actions:
+The five implemented actions:
 
 - **Audio conversion** — `create_transcribable_audio_file`/`delete_transcribable_audio_file` (`src/core/media/tools/transcription.ts::ensureTranscribableAudio`/`deleteTranscribableAudio`) build/remove a temporary `audio_tr` quality (WAV/16 kHz/mono) via real ffmpeg, idempotently; the deleted file is hard-removed (not sent to trash/time machine).
-- **Remote ASR submit** — `automaticTranscription` ensures the audio quality, then submits the audio URL to the configured transcriber provider (`resolveTranscriberProvider`, `src/core/tools/transcription_asr.ts` — a provider-seam abstraction, verified with a **stub** provider) and returns the job PID. ⬜ **The async result poll is ledgered** — because `check_server_transcriber_status` has no route, there is no way for the client to learn when a submitted remote job finishes on a TS-served install; the browser-Whisper local path is the working alternative until this seam is closed.
-- **Subtitles** — `build_subtitles_file` has no TS route; generating a `.vtt` from a finished transcript is not available through this tool on the TS engine (verify whether [tool_subtitles](tool_subtitles.md) covers your use case instead, or track this gap against `rewrite/STATUS.md`).
+- **Remote ASR submit** — `automaticTranscription` ensures the audio quality, then submits the audio URL to the configured transcriber provider (`resolveTranscriberProvider`, `src/core/tools/transcription_asr.ts` — a provider-seam abstraction, verified with a **stub** provider) and returns the job PID. It also schedules a detached background poll (`backgroundTranscriberPoll`, allowlisted in `backgroundRunnable` as `check_background_transcriber_status`, not itself an `apiActions` entry) that writes the finished transcript back automatically once the remote job completes.
+- **Remote ASR status poll** — `checkServerTranscriberStatus` is the client-facing, read-gated poll of a running remote job: it rebuilds the same audio URL `automatic_transcription` submitted and asks the provider for status, without deleting the provider's stored result (`deleteResult: false`) so the detached background poll can still consume it.
+- **Subtitles** — `buildSubtitlesFile` reads the transcription text, resolves the paired `component_av`'s duration, and writes a WEBVTT file under the AV subtitles folder; the target subtitles directory must already exist (it is not created on demand), and the action returns the file's public URL on success.
 
-Permission gating: PHP asserts imperatively per method against the nested `media_ddo`/`transcription_ddo` locator (write level 2 + record-in-scope), not a top-level RQO field the declarative gate kinds can name directly — so on TS, `apiActions` declares `permission: null` for all three actions and each handler runs the identical `record`/2 gate (`assertActionPermission`) against the lifted locator itself, reproducing the exact PHP semantics via the same gate function the framework would otherwise call declaratively. Tool configuration (transcriber URIs/keys, quality list) is read through `getToolConfig('tool_transcription')`.
+Permission gating: the write/read target for each action is a nested `media_ddo`/`transcription_ddo` locator, not a top-level RQO field a declarative gate kind can name directly — so `apiActions` declares `permission: null` for every action, and each handler runs the equivalent `record` gate (`assertActionPermission`, level 2 for writes, level 1 for the read-only status poll) against the lifted locator itself. Tool configuration (transcriber URIs/keys, quality list) is read through `getToolConfig('tool_transcription')`.
 
 ### Client
 
@@ -40,27 +41,27 @@ Permission gating: PHP asserts imperatively per method against the nested `media
 Two transcription paths, chosen by the configured engine's `type`:
 
 - `type: "browser"` (default, e.g. the `local` engine) → `automatic_transcription()` (client) spins up `transcribers/browser_whisper/browser_whisper.js` as a Web Worker (Transformers.js Whisper), first calls the server `create_transcribable_audio_file` action to get the 16 kHz WAV URL, decodes it via `AudioContext`, posts the channel data + model + device (`webgpu`/`wasm`) to the worker, streams status/progress labels into the UI, and on `end` parses the worker output into Dédalo paragraph+timecode format and `set_value`s it into the text area (then fires `delete_transcribable_audio_file`). It checks `ua.check_transformers_webgpu()` and warns before running on a non-WebGPU browser.
-- `type: "server"` (e.g. Babel) → `automatic_transcription_server()` (client) sends the `automatic_transcription` action, stores the returned `pid` in the local status DB, and polls `check_server_transcriber_status` every ~4 s until the server reports done, then refreshes the text component. ⬜ **On TS this poll 400s** — `check_server_transcriber_status` has no route (see above); the submit call itself works, but the client never learns the result.
+- `type: "server"` (e.g. Babel) → `automatic_transcription_server()` (client) sends the `automatic_transcription` action, stores the returned `pid` in the local status DB, and polls `check_server_transcriber_status` every ~4 s until the server reports done, then refreshes the text component. The remote provider seam behind both actions has been verified with a **stub** provider only; a real Babel HTTP round-trip is not yet live-verified.
 
 Styling: `css/tool_transcription.less`.
 
 ## Actions & options
 
-`apiActions` declares three actions, each `permission: null` + an imperative `record`/2 gate on the nested locator (see above):
+`apiActions` declares five actions, each `permission: null` + an imperative gate on the nested locator (see above):
 
 | Action | Gate | Key options it reads |
 | --- | --- | --- |
 | `automatic_transcription` | `record`/2 on `transcription_ddo.section_tipo`/`section_id` | `source_lang` (`lg-…`), `transcription_ddo` `{component_tipo, section_id, section_tipo}` (where the text is written), `media_ddo` `{…}` (source AV), `transcriber_engine`, `transcriber_quality`, `config` (optional) |
 | `create_transcribable_audio_file` | `record`/2 on `media_ddo.section_tipo`/`section_id` | `media_ddo` `{component_tipo, section_id, section_tipo}` — builds the temporary `audio_tr` WAV/16 kHz/mono and returns its URL |
 | `delete_transcribable_audio_file` | `record`/2 on `media_ddo.section_tipo`/`section_id` | `media_ddo` `{…}` — hard-deletes the `audio_tr` file |
-| `check_server_transcriber_status` | — | ⬜ **not registered** (unroutable) |
-| `build_subtitles_file` | — | ⬜ **not registered** (unroutable) |
+| `check_server_transcriber_status` | `record`/1 on `media_ddo.section_tipo`/`section_id` (gated only when `media_ddo.section_tipo` is present) | `media_ddo`, `transcriber_engine`, `pid` — rebuilds the submitted audio URL and asks the provider for status |
+| `build_subtitles_file` | `tipo`/2 on `(section_tipo, component_tipo)`, plus a `record`/2 scope check on `section_id` when present | `component_tipo`, `section_tipo`, `section_id`, `lang`, `max_charline`, `key` — builds the WEBVTT file and returns its URL |
 
 Notes:
 
-- `get_text_from_pdf` is not exposed on either engine — use [tool_pdf_extractor](index.md).
-- None of the three ported actions is in `backgroundRunnable`; the remote-ASR submit returns immediately with a job PID (the polling that would normally follow is the ledgered gap), and the browser-Whisper path runs entirely in the user's browser.
-- Engine names and qualities come from the tool config (`getToolConfig('tool_transcription')` — same dd996/dd1633 resolution as every other tool): the shipped default ships `transcriber_engine` `[{name:"local", type:"browser", label:"Local transcriber"}]` (`client:true`) and a `transcriber_quality` list, default `large` (`client:true`). A server-type engine (e.g. Babel) needs its `uri`/`key` configured — the TS `resolveTranscriberProvider`/`resolveTranscriberConfig` (`src/core/tools/transcription_asr.ts`) has been verified with a **stub** provider only; a real Babel HTTP round-trip is not yet live-verified.
+- `get_text_from_pdf` is not implemented on this engine (SEC-024 record-scope concerns) — use [tool_pdf_extractor](index.md).
+- The internal completion poll (`check_background_transcriber_status`) is the only entry in `backgroundRunnable`; it is not itself callable from the client (absent from `apiActions`) and is scheduled only by `automatic_transcription` itself. None of the five client-facing actions run through the background executor: the remote-ASR submit returns immediately with a job PID and the completion poll runs detached, while the browser-Whisper path runs entirely in the user's browser.
+- Engine names and qualities come from the tool config (`getToolConfig('tool_transcription')` — same dd996/dd1633 resolution as every other tool): the shipped default ships `transcriber_engine` `[{name:"local", type:"browser", label:"Local transcriber"}]` (`client:true`) and a `transcriber_quality` list, default `large` (`client:true`). A server-type engine (e.g. Babel) needs its `uri`/`key` configured — `resolveTranscriberProvider`/`resolveTranscriberConfig` (`src/core/tools/transcription_asr.ts`) has been verified with a **stub** provider only; a real Babel HTTP round-trip is not yet live-verified.
 
 ## How it is registered & surfaced
 
@@ -96,12 +97,12 @@ const rqo = {
     }
 }
 data_manager.request({ body: rqo, retries: 1, timeout: 3600 * 1000 })
-// → response.result.pid on both engines; PHP then polls check_server_transcriber_status
-//   with that pid — on TS this poll has no route (⬜ ledgered), so the job's completion
-//   is currently unobservable from the client on a TS-served install
+// → response.result.pid; the client then polls check_server_transcriber_status with
+//   that pid every ~4s until the job completes, while a detached server-side poll
+//   writes the finished transcript back automatically
 ```
 
-`build_subtitles_file()` (PHP oracle only — **⬜ no TS route, unroutable on this engine**):
+`build_subtitles_file()` generates the VTT file once a transcript is ready:
 
 ``` js
 const rqo = {
@@ -117,11 +118,11 @@ const rqo = {
         key            : 0
     }
 }
-// PHP → { result:true, url:'…/media/av/subtitles/rsc35_rsc167_1_lg-spa.vtt', msg:'OK…' }
-// TS  → dispatch gate 6, 'tool method not allowed'
+data_manager.request({ body: rqo })
+// → { result:true, url:'…/media/av/subtitles/rsc35_rsc167_1_lg-spa.vtt', msg:'OK. Request done successfully' }
 ```
 
-The browser-Whisper path instead calls the `create_transcribable_audio_file` action (to get the 16 kHz WAV URL) and runs the model in a Web Worker client-side, writing the result straight into the text component with `set_value` — this path is **fully working on TS**, unaffected by the two gaps above.
+The browser-Whisper path instead calls the `create_transcribable_audio_file` action (to get the 16 kHz WAV URL) and runs the model in a Web Worker client-side, writing the result straight into the text component with `set_value`.
 
 ## Related
 

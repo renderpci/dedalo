@@ -85,9 +85,7 @@ short:
 
 ## Notes
 
-- The report tool and the browse widget exist only in the TypeScript engine
-  (no PHP twin). See `engineering/WIRE_CONTRACT.md` WC-017/018/019 and
-  `rewrite/COEXISTENCE.md`.
+- The report tool and the browse widget are a TypeScript-native feature. See
+  `engineering/WIRE_CONTRACT.md` WC-017/018/019.
 - Client assets (the error buffer, the global launcher, the widget) are TS-owned
-  and served by the TS server; a PHP-served client would show the launcher but
-  cannot run the tool.
+  and served by the TS server.

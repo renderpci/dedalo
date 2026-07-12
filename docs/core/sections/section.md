@@ -11,18 +11,13 @@ a section is*, the single `matrix` table, and the typed-JSONB storage layout —
 read [Sections](index.md) first; this document does not repeat that material
 at length.
 
-!!! note "PHP class → TS modules"
-    PHP's `section` (`core/section/class.section.php`, `class section extends
-    common`) was one stateful object you instanced per `(tipo, mode)` via
-    `section::get_instance()`. The TS rewrite keeps every *guarantee* that
-    class enforced but does not keep the object: the pure contract (grouper
-    registry, traversal law, audit tipos, the Activity special case) lives in
-    `src/core/concepts/section.ts`; the I/O-bearing engine (context stamping,
-    buttons, permissions, record lifecycle) lives in `src/core/section/`
-    (`context.ts`, `buttons.ts`, `read.ts`, `record/`). There is no
-    `section::get_instance()` call anywhere in the TS tree — a caller resolves
-    a section's context or reads its records by calling the relevant function
-    directly with a tipo, an `Rqo`, or a `Principal`.
+A section is **not an object you instantiate**. The concept is split in two:
+the pure contract (grouper registry, traversal law, audit tipos, the Activity
+special case) lives in `src/core/concepts/section.ts`; the I/O-bearing engine
+(context stamping, buttons, permissions, record lifecycle) lives in
+`src/core/section/` (`context.ts`, `buttons.ts`, `read.ts`, `record/`). A
+caller resolves a section's context or reads its records by calling the
+relevant function directly with a tipo, an `Rqo`, or a `Principal`.
 
 ## Role
 
@@ -43,9 +38,9 @@ through the write chokepoint in `src/core/section_record/record_write.ts`, and
 components read their value straight off the already-decoded `MatrixRecord`
 (`src/core/db/matrix.ts`) that the read engine hands down. The one payload the
 section concept is uniquely responsible for describing is the **relations
-array** (see [Relations](#relations-section-owned)) — though, as in PHP, the
-actual mutation is performed by the relating component's own write path, not by
-a generic "section" object.
+array** (see [Relations](#relations-section-owned)) — though the actual mutation
+is performed by the relating component's own write path, not by a generic
+"section" object.
 
 ## Responsibilities
 
@@ -63,16 +58,12 @@ a generic "section" object.
 - **Record lifecycle.** Create / duplicate / delete a record (delegated to
   `src/core/section/record/`, documented in full on
   [`section_record`](section_record.md)).
-- **Worker hygiene.** Structurally guaranteed rather than manually maintained —
-  see [The module family](index.md#the-module-family): a Bun request has
-  nothing static to purge.
 
 ## Resolving a section's context
 
-There is no `get_instance()` to call. A section's context is built as part of
-the generic structure-context walk (`src/core/resolve/structure_context.ts`),
-which stamps the section-only extras via `stampSectionContext` whenever the
-resolved model is `'section'`:
+A section's context is built as part of the generic structure-context walk
+(`src/core/resolve/structure_context.ts`), which stamps the section-only extras
+via `stampSectionContext` whenever the resolved model is `'section'`:
 
 ```ts
 // resolve/structure_context.ts (essence)
@@ -97,20 +88,18 @@ export async function stampSectionContext(
 }
 ```
 
-There is nothing analogous to PHP's size-bounded `section::$ar_section_instances`
-cache (capped at 1200, trimmed by 400) to reason about — a Bun request builds
-what it needs and discards it when the request ends.
+There is no per-tipo instance cache to reason about: a request builds what it
+needs and discards it when the request ends.
 
 ## What resolving a section gives you
 
 - **`section_tipo`** — the tipo passed to whichever function you called; there
-  is no held `$tipo` property to read back.
+  is no held property to read back.
 - **Component children** — resolved on demand by a recursive `dd_ontology` CTE
   walk, gated by the traversal law in `traversalRecurses()`
-  (`src/core/concepts/section.ts`, mirroring PHP's
-  `get_ar_children_tipo_by_model_name_in_section()`). Components are never held
-  as objects; each is resolved and its value read straight from the
-  `MatrixRecord` passed down the read pipeline.
+  (`src/core/concepts/section.ts`). Components are never held as objects; each
+  is resolved and its value read straight from the `MatrixRecord` passed down
+  the read pipeline.
 - **Permissions** — the integer permission over this section type, resolved by
   `getPermissions()` (`src/core/security/permissions.ts`) and clamped for the
   `Activity` section by `ACTIVITY_SECTION_PERMISSION_CAP`
@@ -121,82 +110,62 @@ what it needs and discards it when the request ends.
   (`src/core/concepts/section.ts`): `createdByUser` (`dd200`), `createdDate`
   (`dd199`), `modifiedByUser` (`dd197`), `modifiedDate` (`dd201`).
 - **Virtual-section state** — resolved by the ontology resolver's "VIRTUAL
-  SECTION fallback" (`src/core/ontology/resolver.ts`), the TS equivalent of
-  PHP's `get_section_real_tipo_static()`: a virtual section keeps its own
-  ontology definition while storing data under a *real* section's matrix table.
-
-!!! note "Gaps: no held-instance API, no session SQO, no display switches"
-    A few PHP `section` members have no TS equivalent yet, because the shape
-    they served (a stateful instance) no longer exists or hasn't been ported:
-
-    - `add_section_record()` / `remove_section_record()` — PHP held a
-      `section_records` array on the instance; TS threads `MatrixRecord`s
-      through the call explicitly instead, so there is nothing to register.
-    - `get_session_sqo()` / `set_session_sqo()` / `build_sqo_id()` — the
-      per-section navigation SQO PHP stored in `$_SESSION` has no TS
-      equivalent (`sqo_session` is ledgered open in `rewrite/STATUS.md`).
-    - `show_inspector`, `is_temp` / `save_handler = 'session'` — the
-      inspector-visibility switch and session-backed temporary sections are
-      not yet ported (see the [Sections concept](index.md#modes-and-permissions)
-      gap note).
-    - `get_diffusion_info()` / `add_diffusion_info_default()` /
-      `get_publication_date()` / `get_publication_user()` — a fresh record's
-      `diffusion_info` is seeded `null` (`buildRecordMetadata`,
-      `src/core/section/record/create_record.ts`), but the read-side
-      publication-date/user resolvers are not ported as section-level helpers.
-    - `get_ar_all_section_records_unfiltered()` — no dedicated "every
-      section_id, no ACL, no pagination" helper exists; callers that need this
-      build their own no-limit search (see [`sections`](sections.md#the-engine--srccoresectionreadts)).
+  SECTION fallback" (`src/core/ontology/resolver.ts`): a virtual section keeps
+  its own ontology definition while storing data under a *real* section's matrix
+  table.
 
 ## Public API
 
-Grouped by concern, with the real TS symbol for each PHP member that has one.
+Grouped by concern.
 
 ### Context & lifecycle
 
-| PHP member | TS equivalent | purpose |
+| function | module | purpose |
 | --- | --- | --- |
-| `section::get_instance()` | *(none — see note above)* | No per-tipo instance to build; call the function you need directly. |
 | `stampSectionContext(entry, params)` | `src/core/section/context.ts` | Stamp the section-only context extras onto a structure-context entry. |
-| `create_record($options)` | `createSectionRecord(sectionTipo, userId, now?, sectionId?)` — `src/core/section/record/create_record.ts` | Build audit metadata, insert a new row via the atomic counter allocator. Gated in `dispatch.ts`'s `create` action by `getPermissions() >= 2` (refuses the Activity section implicitly via its permission cap). |
-| `clear()` | *(none needed — see [module family](index.md#the-module-family))* | Nothing static to purge; each request is isolated. |
+| `createSectionRecord(sectionTipo, userId, now?, sectionId?)` | `src/core/section/record/create_record.ts` | Build audit metadata, insert a new row via the atomic counter allocator. Gated in `dispatch.ts`'s `create` action by `getPermissions() >= 2` (which refuses the Activity section implicitly, via its permission cap). |
 
 ### Relations (section-owned)
 
-| PHP member | TS equivalent | purpose |
+Relation-bearing components share **one** typed `relation` column per record.
+Reads are direct; writes go through the owning component family's save path.
+
+| operation | how | purpose |
 | --- | --- | --- |
-| `get_relations($container)` | read `record.columns.relation[tipo]` directly (`MatrixRecord`, `src/core/db/matrix.ts`) | The record's locator array for one component tipo. |
-| `add_relation($locator, $container)` | `src/core/relations/save.ts` (`applyAddNewElement`, per relating component) | Validate + append a locator. Not a generic section method — each relating component family (portal, dataframe, …) writes through its own save path into the same `relation` column; see `engineering/RELATIONS_SPEC.md`. |
-| `remove_relation($locator, $container)` | `deletePortalLocator()` — `src/core/relations/save.ts` | Remove a locator by its identifying properties. |
-| `remove_relations_from_component_tipo($options)` | *(distributed across the relation-family save paths; no single bulk-remove-by-tipo entry point documented here)* | Bulk removal is component-family-specific in the current engine. |
+| read a component's locators | `record.columns.relation[tipo]` (`MatrixRecord`, `src/core/db/matrix.ts`) | The record's locator array for one component tipo. |
+| append a locator | `applyAddNewElement()` — `src/core/relations/save.ts` | Validate + append. Not a generic section method: each relating component family (portal, dataframe, …) writes through its own save path into the same `relation` column. |
+| remove a locator | `deletePortalLocator()` — `src/core/relations/save.ts` | Remove a locator by its identifying properties. |
+
+Bulk removal of every locator originating from one component tipo is
+component-family-specific; there is no single generic entry point for it.
 
 ### Permissions
 
-| PHP member | TS equivalent | purpose |
+| function | module | purpose |
 | --- | --- | --- |
-| `get_section_permissions()` | `getPermissions(principal, sectionTipo, sectionTipo)` — `src/core/security/permissions.ts` | Resolve the integer permission, with the `Activity` clamp (`ACTIVITY_SECTION_PERMISSION_CAP`). |
+| `getPermissions(principal, sectionTipo, sectionTipo)` | `src/core/security/permissions.ts` | Resolve the integer permission, with the `Activity` clamp (`ACTIVITY_SECTION_PERMISSION_CAP`). |
 
 ### Ontology / children
 
-| PHP member | TS equivalent | purpose |
+| symbol | module | purpose |
 | --- | --- | --- |
-| `get_ar_children_tipo_by_model_name_in_section(...)` | recursive `dd_ontology` CTE walk, gated by `traversalRecurses()` — `src/core/concepts/section.ts` | Walk (recursively, per the traversal law) and filter children by model. |
-| `get_ar_grouper_models()` | `GROUPER_MODELS` / `isGrouperModel()` — `src/core/concepts/section.ts` | The layout-grouper models that carry no data: `section_group`, `section_group_div`, `section_tab`, `tab`. |
-| `get_section_real_tipo()` / `get_section_real_tipo_static()` | the "VIRTUAL SECTION fallback" in `src/core/ontology/resolver.ts` | Resolve a virtual section's real tipo. |
-| `get_section_buttons_tipo()` | `buildSectionButtons(sectionTipo, permissions, principal?)` — `src/core/section/buttons.ts` | Resolve the section's permission-gated `button_*` children. |
-| `get_section_map($section_tipo)` | `getSectionMap(sectionTipo)` — `src/core/ontology/section_map.ts` | The `section_map` child's properties (role→component-tipo map). |
+| `traversalRecurses()` | `src/core/concepts/section.ts` | The traversal law: which models the recursive `dd_ontology` children walk is allowed to descend through. |
+| `GROUPER_MODELS` / `isGrouperModel()` | `src/core/concepts/section.ts` | The layout-grouper models that carry no data: `section_group`, `section_group_div`, `section_tab`, `tab`. |
+| the "VIRTUAL SECTION fallback" | `src/core/ontology/resolver.ts` | Resolve a virtual section's real tipo. |
+| `buildSectionButtons(sectionTipo, permissions, principal?)` | `src/core/section/buttons.ts` | Resolve the section's permission-gated `button_*` children. |
+| `getSectionMap(sectionTipo)` | `src/core/ontology/section_map.ts` | The `section_map` child's properties (role→component-tipo map). |
 
 ### Search
 
-| PHP member | TS equivalent | purpose |
-| --- | --- | --- |
-| `get_search_query($query_object)` / `build_sqo_id()` / `get_session_sqo()` / `set_session_sqo()` | *(out of this page's scope — see `engineering/RELATIONS_SPEC.md` / the `dedalo-search` skill; session SQO is a ledgered gap)* | Query conforming lives in the search/relations subsystems, not a section-level helper. |
+Query conforming is not a section-level helper: it lives in the search and
+relations subsystems. See [SQO](../sqo.md) and
+[request_config](../request_config.md).
 
 ### Metadata
 
-| PHP member | TS equivalent | purpose |
+| symbol | module | purpose |
 | --- | --- | --- |
-| `get_metadata_definition()` / `get_metadata_definition_tipos()` | `AUDIT_TIPOS` — `src/core/concepts/section.ts` | The fixed created/modified audit tipos: `createdByUser` (`dd200`), `createdDate` (`dd199`), `modifiedByUser` (`dd197`), `modifiedDate` (`dd201`). |
+| `AUDIT_TIPOS` | `src/core/concepts/section.ts` | The fixed created/modified audit tipos: `createdByUser` (`dd200`), `createdDate` (`dd199`), `modifiedByUser` (`dd197`), `modifiedDate` (`dd201`). |
 
 ## How it fits with components and section_record
 
@@ -213,8 +182,6 @@ Grouped by concern, with the real TS symbol for each PHP member that has one.
    `relation` typed column through their own family's save path
    (`src/core/relations/save.ts` and friends), not through a generic "section"
    accessor.
-4. **Worker hygiene.** No static caches to purge — see the
-   [module family](index.md#the-module-family) note above.
 
 ```mermaid
 flowchart TB
@@ -270,12 +237,11 @@ const removed = await deletePortalLocator(
 // removed → { result: <removed count>, msg: [], errors: [] }
 ```
 
-!!! note "Mutations persist through the write chokepoint, not in-memory state"
-    PHP's `add_relation()` / `remove_relation()` mutated the section's `$dato`
-    in memory until the owning `section_record` was saved. TS has no
-    equivalent in-memory staging step — each relation-family save function
-    reads the current record, computes the new `relation` column value, and
-    persists it through `persistRecordKeys()` in the same call.
+!!! note "Mutations persist immediately — there is no in-memory staging step"
+    Each relation-family save function reads the current record, computes the
+    new `relation` column value, and persists it through `persistRecordKeys()`
+    in the same call. Nothing accumulates in memory waiting for a later "save
+    the record" call.
 
 ## Related
 

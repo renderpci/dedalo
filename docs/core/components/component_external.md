@@ -32,12 +32,12 @@
 !!! note "Live, read-only value"
     `component_external` is a literal-direct component, but it is special: its
     value is not authored by the user. The displayed value is fetched
-    on-demand from a configured external API every time the component loads
-    its data (`get_data()` calls `load_data_from_remote()`). There is no edit
+    on-demand from a configured external API every time the component's data is
+    read. There is no edit
     input — the `edit` view renders the resolved remote text read-only.
 
-!!! warning "TS gap: the remote fetch itself is not ported"
-    Only half of this component's server behaviour has a confirmed TS port. The **request_config plumbing** — attaching the target section's `api_config` to a non-`dedalo` (`api_engine`) config item so the client/engine know an external source is in play — is done: `resolveExternalConfig()` in `src/core/relations/request_config/external.ts` (PHP reference in its own header comment: `class.component_external.php:110 load_data_from_remote`), exercised in the corpus gate (`rewrite/STATUS.md`: "the component_external remote-fetch proxy (config attach done; the HTTP proxy is unused by the corpus install)"). The actual **read-time HTTP call to the remote API** (ZENON-style `load_data_from_remote()` / entity classes / SSRF guard) has no confirmed TS port in this checkout. Separately, `src/core/components/component_external/descriptor.ts` currently registers this model with `resolveData: portalResolver` and a `column: 'relation'` (i.e. it is dispatched through the relation-locator family), which does not match the PHP model documented on this page (a literal `misc`-column component with no stored locators) — treat that descriptor as a placeholder/coverage gap, not as the intended final TS shape, until the remote-proxy read path is implemented.
+!!! warning "Gap: the remote fetch itself is not implemented"
+    Only half of this component's behaviour described below has a confirmed implementation. The **request_config plumbing** — attaching the target section's `api_config` to a non-`dedalo` (`api_engine`) config item so the client/engine know an external source is in play — is done: `resolveExternalConfig()` in `src/core/relations/request_config/external.ts`. The actual **read-time HTTP call to the remote API** (entity-specific request building, response mapping, an SSRF guard on the constructed URL) has no confirmed implementation in this checkout. Separately, `src/core/components/component_external/descriptor.ts` currently registers this model with `resolveData: 'portal'` and a `column: 'relation'` (dispatched through the relation-locator family), which does not match the model described on this page (a literal `misc`-column value with no stored locators) — treat that descriptor as a placeholder/coverage gap, not as the intended final shape, until the remote-proxy read path is implemented.
 
 ## Definition
 
@@ -92,7 +92,7 @@ the ZENON identifier) lives elsewhere in the section, and the external value is
 derived live. As a literal-direct component it transmits its data through the
 standard `{context, data}` datum.
 
-Data item produced by `get_data_item()` (`mode: list`):
+Data item emitted to the client (`mode: list`):
 
 ```json
 {
@@ -109,28 +109,30 @@ Data item produced by `get_data_item()` (`mode: list`):
 ```
 
 The component is **non-translatable** (`translatable: false`); the lang is
-forced to `lg-nolan`. The requested remote language is derived from
-`DEDALO_DATA_LANG` and mapped to a two-letter code by the entity class (for
-ZENON, `lgn=en` etc.).
+forced to `lg-nolan`. The requested remote language is derived from the
+current data language and mapped to a two-letter code by the entity-specific
+mapping (for ZENON, `lgn=en` etc. — see the gap warning above for the current
+implementation status).
 
-`set_data(?array $data)` only sanitises: every entry is coerced to a string
-(`to_string()`) before delegating to `component_common::set_data()`. Because the
-value is normally re-derived from the API on load, persisting is rarely
-meaningful for this component.
+Saving is meant to only sanitise: every entry coerced to a string before
+storing. Because the value is normally re-derived from the API on load,
+persisting is rarely meaningful for this component; this checkout's descriptor
+does not wire it as a literal `misc`-column save at all (see the gap warning
+above), so this save behaviour has no confirmed implementation either.
 
-### How the value is resolved
+### How the value is designed to resolve
 
-1. `load_data_from_remote()` reads the **section** ontology node properties
-   (`section_properties->api_config`) for `entity`, `api_url` and
-   `response_map`.
-2. It collects the `remote` field names declared by sibling components
-   (`properties->fields_map` whose `local === 'dato'`).
-3. The entity class (`core/component_external/entities/class.<entity>.php`,
-   e.g. `class.zenon.php`) builds the per-record URL via the static
-   `build_row_request_url()`.
-4. The URL is validated by `is_safe_remote_url()` (SEC-075 SSRF confinement),
-   then fetched with `curl_request()` (4s timeout, no headers).
-5. `get_data()` extracts this component's own field from the row using its own
+This is the intended design the ontology configuration below targets; only the request_config attach step (1) has a confirmed implementation today (see the gap warning above) — steps 2-5 describe the read-time proxy that still needs to be built.
+
+1. Read the **section** ontology node properties (`api_config`) for `entity`,
+   `api_url` and `response_map`.
+2. Collect the `remote` field names declared by sibling components
+   (`properties.fields_map` entries whose `local` is `dato`).
+3. An entity-specific request builder constructs the per-record URL for the
+   configured `entity` (e.g. `zenon`).
+4. The URL is validated by an SSRF guard, then fetched with a short-timeout
+   HTTP request.
+5. Each component extracts its own field from the row using its own
    `fields_map` `dato` entry and applies the optional `format` transform.
 
 Sample remote row (ZENON `records[0]`) the component reads from:
@@ -196,7 +198,7 @@ An *Authors* field using a format transform:
 ```
 
 The owning **section** node (`section_tipo`, e.g. `zenon1`) carries the API
-connection in its own `properties->api_config`:
+connection in its own `properties.api_config`:
 
 ```json
 {
@@ -228,8 +230,8 @@ objects:
 
 - `local` — fixed marker. Use `"dato"` to designate the entry that supplies
   this component's value (it is the default `local` name; only `dato` entries
-  are consumed by `get_data()` and contribute to the section's requested
-  remote field list).
+  are read when the value is resolved, and only they contribute to the
+  section's requested remote field list).
 - `remote` — the key to read from the remote row object (e.g. `"title"`,
   `"authors"`, `"physicalDescriptions"`).
 - `format` *(optional)* — server-side transform applied to the remote value:
@@ -237,17 +239,15 @@ objects:
       stringified).
     - `zenon_authors` — flattens the ZENON `authors` object into
       `role: name - name | role: …`.
-    - *(any other / absent value)* — the raw remote value is used (stringified
-      via `to_string()` when a `format` is present but unrecognised).
+    - *(any other / absent value)* — the raw remote value is used (coerced to a
+      string when a `format` is present but unrecognised).
 
 ### `api_config` (section node, not the component node)
 
 Read from the **section** ontology node properties; drives the remote call for
 all external components in that section:
 
-- `entity` — entity class key. Selects
-  `core/component_external/entities/class.<entity>.php` and seeds the
-  per-entity availability flag in the session. Bundled entity: `zenon`.
+- `entity` — the entity key selecting which request-builder/response-mapping logic to use, and seeding the per-entity availability flag in the session (see *Notes*). Documented entity: `zenon`.
 - `api_url` — base record endpoint of the external API.
 - `response_map` — maps remote response keys to local roles. The entry with
   `local === "ar_records"` identifies the array of records in the response (the
@@ -275,9 +275,9 @@ DOM follows the shared structure: `wrapper_component component_external <tipo>
 
 ## Import / export model
 
-`component_external` does **not** override `conform_import_data`,
-`get_export_value` or `get_diffusion_value`; it inherits the literal defaults
-from [component_common](index.md). In practice there is little to import: the
+`component_external` has no per-model import/export override; it goes through
+the generic literal import/export path like any other component without one.
+In practice there is little to import: the
 value is owned by the remote system and resolved live, so the meaningful local
 datum is the **identifier** stored by the section (or by a neighbouring
 component such as a [component_portal](component_portal.md) /
@@ -290,29 +290,29 @@ For the generic literal import/export contract and CSV formats, see
 
 ## Notes
 
+The following describe the intended design for the remote-fetch proxy; the fetch itself has no confirmed implementation yet (see the gap warning near the top of this page).
+
 - **No default tools.** The shipped ontology context exposes `tools: []` for
   this component (no `tool_time_machine`/`tool_lang`/add/replace data tools),
   consistent with its read-only, remote nature.
-- **Entity availability circuit-breaker.** When the remote host is unreachable
-  or returns an empty/invalid response, the component sets
-  `$_SESSION['dedalo']['config'][<entity>_is_available] = false` and returns
+- **Entity availability circuit-breaker (intended).** When the remote host is
+  unreachable or returns an empty/invalid response, the component is meant to
+  flip a session-scoped per-entity availability flag to false and return
   `null` from then on, to avoid hammering the API request after request. The
-  flag is session-scoped: a fresh login (new session) lets Dédalo try again.
-- **Remote cache.** Resolved rows are memoised per request in the static
-  `component_external::$data_from_remote_cache`, keyed by
-  `section_tipo_section-id_lang`, so multiple external fields of the same
-  record trigger a single API call. As a persistent-worker static, this cache
-  is request-scoped state — it must be cleared between requests with the other
-  class statics (see the worker state-bleed audit).
-- **SSRF guard (SEC-075).** Even though the `api_url` is admin-owned ontology,
-  the fully constructed URL is re-checked with `is_safe_remote_url()` before
-  the cURL call to block cloud-metadata / internal-service reads; an unsafe URL
-  marks the entity unavailable.
-- **Adding a new entity.** Drop a `class.<entity>.php` into
-  `core/component_external/entities/` exposing a static
-  `build_row_request_url(object $options): string` (options:
-  `api_url`, `ar_fields`, `section_id`, `lang`) and reference it via
-  `api_config->entity`.
+  flag would be session-scoped: a fresh login (new session) lets it try again.
+- **Remote cache (intended).** Resolved rows are meant to be memoised per
+  request, keyed by `section_tipo_section-id_lang`, so multiple external
+  fields of the same record trigger a single API call. As request-scoped
+  state, such a cache must be cleared between requests, not held as a
+  persistent-worker global.
+- **SSRF guard (intended).** Even though the `api_url` is admin-owned
+  ontology, the fully constructed URL should be re-checked before the fetch
+  to block cloud-metadata / internal-service reads; an unsafe URL should mark
+  the entity unavailable.
+- **Adding a new entity (intended).** A new entity is meant to be added by
+  registering a request builder for it (constructs the per-record URL from
+  `api_url`, the requested fields, `section_id` and `lang`) and referencing
+  its key via `api_config.entity`.
 - **No observers/observables** are configured for this component.
 - Related component docs: [component_input_text](component_input_text.md)
   (editable literal alternative), [component_text_area](component_text_area.md),

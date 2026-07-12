@@ -78,7 +78,7 @@ It is a **literal-direct** component: it stores its own final data (the URL stri
 **Item schema (`dd_iri`).** Each object holds:
 
 - `id` (`int`) — per-item counter id, minted server-side. It is the **pairing key** for the title label dataframe (see [Notes](#notes)). Persisted rows always carry it.
-- `iri` (`string`, mandatory) — the URL, including the protocol (`http://` or `https://`). Validated with `parse_url()` (scheme + host required) on the server and with a strict regex / `URL` check on the client.
+- `iri` (`string`, mandatory) — the URL, including the protocol (`http://` or `https://`). A well-formed IRI needs a scheme and a host; that check runs on the client (strict regex / `URL` check) — see the shape note under [Notes](#notes) for the server side.
 - `title` (`string`, optional, *deprecated as stored data*) — a literal label. New labels are stored through the paired label dataframe; the literal `title` is kept readable for old data until the title-materialization migration runs.
 - `lang` (`string`, optional) — the language marker of the item. Present because `component_iri` keeps language versions (see below).
 
@@ -130,7 +130,7 @@ When instantiated, the component reads its data from the section and, by default
 
 ### Translatable / transliterated IRIs
 
-`component_iri` is **non-translatable by default** (`translatable = false`, fixed in the constructor) and stamps its data as `lg-nolan`. But it sets `with_lang_versions = true`, so it behaves like a transliterated component: the main value lives under `lg-nolan` and the user may add per-language variants with `tool_lang` / `tool_lang_multi`, paired across languages by the shared item `id`.
+`component_iri` is **non-translatable by default** (`translatable = false`) and stamps its data as `lg-nolan`. But it sets `with_lang_versions = true`, so it behaves like a transliterated component: the main value lives under `lg-nolan` and the user may add per-language variants with `tool_lang` / `tool_lang_multi`, paired across languages by the shared item `id`.
 
 !!! info "About translatable URIs"
     Dédalo applies no rule to decide whether a given URI *should* be translated. By default the user enters the URI as non-translatable; the language-version capability may be used or not (e.g. a per-language Wikipedia article).
@@ -151,8 +151,8 @@ Minimal node definition:
 }
 ```
 
-- `tipo` — the ontology id of this component node (mandatory; validated with `safe_tipo()`).
-- `model` — `component_iri` (the factory force-corrects it from the ontology model if it disagrees).
+- `tipo` — the ontology id of this component node (mandatory; validated as a safe tipo).
+- `model` — `component_iri`. The ontology node's model is authoritative.
 - `parent` / `section_tipo` — wire the component into its section; `section_tipo` is mandatory (no auto-resolution).
 
 Realistic `properties` block for this component:
@@ -167,10 +167,10 @@ Realistic `properties` block for this component:
 }
 ```
 
-When the section that owns `section_tipo` is instantiated, it builds this node through `component_common::get_instance('component_iri', 'rsc217', $section_id, $mode, $lang, 'rsc205')`. The component reads/saves its data through that section's record — it never touches the database directly.
+When the section that owns `section_tipo` is instantiated, it builds this component for the current `section_id`, `mode` and `lang`. The component reads/saves its data through that section's record — it never touches the database directly.
 
 !!! note "Injected title dataframe"
-    `component_iri` overrides `get_properties()` to **always inject a fixed title label dataframe** (slot tipo `dd560`, `DEDALO_COMPONENT_IRI_LABEL_DATAFRAME`) into `source.request_config`. You do not declare it in the node `properties`; every `component_iri` gets the structured-title dataframe automatically. See [component_dataframe](component_dataframe.md).
+    A fixed title label dataframe (slot tipo `dd560`, `DEDALO_COMPONENT_IRI_LABEL_DATAFRAME`) is **always injected** into every `component_iri`'s resolved `source.request_config`. You do not declare it in the node `properties`; every `component_iri` gets the structured-title dataframe automatically. See [component_dataframe](component_dataframe.md).
 
 ## Properties & options
 
@@ -184,7 +184,7 @@ When the section that owns `section_tipo` is instantiated, it builds this node t
 | `source` | object | injected | Holds `request_config`. `component_iri` **auto-injects** the title label dataframe into `source.request_config`; author-supplied `source.request_config` entries are preserved and appended to. Normally you do not set this by hand. |
 
 !!! warning "Deprecated: literal `title`"
-    Storing the human-readable label as a literal `title` string on the value is **deprecated** (since 6.8.0). Labels are now structured data held in the paired label dataframe (`dd560`) and resolved at read time via `resolve_title()`. The literal `title` is still read as a fallback for legacy rows. On import the old `title` property is accepted but ignored; use `label_id` instead (see below).
+    Storing the human-readable label as a literal `title` string on the value is **deprecated** (since 6.8.0). Labels are now structured data held in the paired label dataframe (`dd560`) and resolved at read time from that dataframe. The literal `title` is still read as a fallback for legacy rows. On import the old `title` property is accepted but ignored; use `label_id` instead (see below).
 
 !!! note "Unverified properties"
     Any property not listed above is not consumed by the `component_iri` source: verify in the ontology node before relying on it.
@@ -202,11 +202,11 @@ When the section that owns `section_tipo` is instantiated, it builds this node t
 | `text` | `list` | `view_text_list_iri.js` | Returns the value purely as a text node (dataframe label + title + URL joined with ` \| `, values joined with `, `); no clickable anchor. |
 | `search` | `search` | `render_search_component_iri.js` | Renders the search input plus the `q_operator` selector. |
 
-The client class (`js/component_iri.js`) maps `tm` to the list renderer and inherits lifecycle / save / change-data behaviour from `component_common`. The IRI input validates on `change` with `check_iri_value()` (strict `https?://` + hostname sanity), flags invalid input with an `error` class, and a per-value "Link" button opens the URL in a new window (`rel=noopener`, `opener=null` to prevent reverse tabnabbing).
+The client model (`js/component_iri.js`) maps `tm` to the list renderer and reuses the shared client-side lifecycle / save / change-data behaviour. The IRI input validates on `change` with `check_iri_value()` (strict `https?://` + hostname sanity), flags invalid input with an `error` class, and a per-value "Link" button opens the URL in a new window (`rel=noopener`, `opener=null` to prevent reverse tabnabbing).
 
 ### Search operators
 
-Server-side the filter is turned into SQL by `src/core/search/builders/builder_iri.ts` (dispatched from `src/core/search/conform.ts`), the TS re-expression of the PHP `search_component_iri` trait; it builds JSONB-path SQL over the `iri` column and supports:
+Server-side the filter is turned into SQL by `src/core/search/builders/builder_iri.ts` (dispatched from `src/core/search/conform.ts`); it builds JSONB-path SQL over the `iri` column and supports:
 
 | Operator | Meaning |
 | --- | --- |
@@ -244,13 +244,13 @@ Multilingual URIs (the language version capability) can be imported with the per
 }
 ```
 
-In PHP, `conform_import_data()` also accepts plain-text CSV strings:
+The import format is also intended to accept plain-text CSV strings:
 
 - A single URL: `https://dedalo.dev`
-- A label + URL using `fields_separator`: `dédalo, https://dedalo.dev`. The left side is treated as the **label**: a number is taken as the `label_id` (target section id of the title label dataframe); a string is matched in the dataframe value list and a new label record is created if missing (`save_label_dataframe_from_string()`).
+- A label + URL using `fields_separator`: `dédalo, https://dedalo.dev`. The left side is treated as the **label**: a number is taken as the `label_id` (target section id of the title label dataframe); a string is matched in the dataframe value list and a new label record is created if missing.
 - Several values joined with `records_separator`: `dédalo, https://dedalo.dev | nomisma, https://nomisma.org`.
 
-!!! danger "Gap: plain-text/label shorthands not ported; JSON array form still works"
+!!! danger "Gap: plain-text/label shorthands not implemented; JSON array form works"
     `component_iri` is **not** a `VALUE_PROPERTY_MODELS` member in the TS import
     engine (`src/core/tools/import_data.ts`), so none of the plain-text
     shorthands above (bare URL, `label, url`, pipe-joined multi-value,
@@ -260,20 +260,30 @@ In PHP, `conform_import_data()` also accepts plain-text CSV strings:
     (`[{"iri": "..."}]`) and the lang-keyed object form import correctly today.
 
 !!! warning "id and label_id on import"
-    For `component_iri`, the `id` property may be set explicitly on import because it pairs the value with its label dataframe (it is the documented exception to the "omit `id`" rule). `label_id` is a temporary import-only property used to point the title-label dataframe at a target section id; it is consumed by `import_save()` to create the dataframe locator and is **never stored** on the value. This mechanism is part of the same not-yet-ported plain-text import path noted above.
+    The `id` property may be set explicitly on import because it pairs the
+    value with its label dataframe (not independently verified against the
+    current TS import path). `label_id` is intended as a temporary import-only
+    property that points the title-label dataframe at a target section id,
+    never stored on the value itself — but this mechanism is part of the same
+    not-yet-implemented plain-text import path noted above, so it has no effect
+    on the TS server today.
 
 !!! note "Deprecated `title` on import"
-    The literal `title` property (pre-6.8.0) is still accepted but ignored on import; use `label_id` to preserve the label relationship.
+    The literal `title` property is still accepted but ignored on import.
+    Preserving the label relationship through `label_id` is part of the
+    plain-text import path that is not yet implemented (see the gap above); the
+    working JSON array form carries no label linkage of its own beyond the
+    shared item `id`.
 
-On export, flat display values are produced by the generic cell resolver `resolveCellValue()` (`src/core/resolve/relation_list.ts`) via `tools/tool_export/server/tool_export.ts`. PHP's per-atom `cell_type: "iri"` contract (joining `iri` + resolved title with `fields_separator`, `records_separator` between values) has not been independently verified for full parity in the TS export path.
+On export, flat display values are produced by the generic cell resolver `resolveCellValue()` (`src/core/resolve/relation_list.ts`) via `tools/tool_export/server/tool_export.ts`. The per-atom `cell_type: "iri"` contract (joining `iri` + resolved title with `fields_separator`, `records_separator` between values) has not been independently verified for full parity in the TS export path.
 
 See the full URI import definition [here](../importing_data.md#uri) and the export model [here](../exporting_data.md).
 
 ## Notes
 
-- **Title label dataframe (always injected — ported).** The PHP `get_properties()` injection of a fixed `component_dataframe` (slot tipo `dd560`, target section `dd1706` / component `dd1715`) into `source.request_config` for every `component_iri` **is ported**: `src/core/resolve/structure_context.ts` (the `model === 'component_iri'` branch) and `src/core/section/read.ts` (the `frameTipos = ['dd560']` / explicit `dd560` push in the list/text render) both reproduce it. Titles are paired to each IRI value by the shared item `id`. See [component_dataframe](component_dataframe.md).
+- **Title label dataframe (always injected).** Every `component_iri` node gets a fixed `component_dataframe` (slot tipo `dd560`, target section `dd1706` / component `dd1715`) injected into `source.request_config`: `src/core/resolve/structure_context.ts` (the `model === 'component_iri'` branch) and `src/core/section/read.ts` (the `frameTipos = ['dd560']` / explicit `dd560` push in the list/text render) both do this. Titles are paired to each IRI value by the shared item `id`. See [component_dataframe](component_dataframe.md).
 - **Default tools.** Per the ontology model the node typically carries `tool_lang`, `tool_lang_multi`, `tool_propagate_component_data` and `tool_time_machine`. `tool_lang` / `tool_lang_multi` manage the per-language variants; `tool_time_machine` exposes the value history (`tm` mode).
-- **Diffusion.** Not evaluated for this pass — verify against the TS diffusion engine (`diffusion/api/v1/`) before relying on title-resolved IRI diffusion output.
-- **`dd_iri` shape.** In PHP each value is a `dd_iri` DTO (`set_iri()` validates scheme+host, `set_id()`/`set_label_id()` cast to int, unknown properties rejected). The TS server has no equivalent validating DTO — values resolve as plain objects through the generic component-data engine; any `iri`-shape validation happens only client-side.
-- **`is_empty()`** — in PHP, considers only the `iri` and `title` properties when deciding whether a value is empty. Not independently verified for the TS read/save path.
+- **Diffusion.** Not evaluated for this pass — verify against the native diffusion subsystem (`src/diffusion/`) before relying on title-resolved IRI diffusion output.
+- **`dd_iri` shape.** Each value was once validated by a dedicated typed object (scheme+host check on the URL, `id`/`label_id` cast to int, unknown properties rejected). The TS server has no equivalent validator — values resolve as plain objects through the generic component-data engine (`src/core/resolve/component_data.ts`); any `iri`-shape validation happens only client-side.
+- **Emptiness check** — considers only the `iri` and `title` properties when deciding whether a value is empty. Not independently verified for the TS read/save path.
 - **Related component docs:** [component_input_text](component_input_text.md), [component_email](component_email.md), [component_dataframe](component_dataframe.md), [component_portal](component_portal.md).

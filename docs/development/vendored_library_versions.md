@@ -12,9 +12,9 @@ one against the CVE feeds each release. That gap is now mostly closed: 15 of the
 libs are pinned dependencies in `package.json`, so Dependabot and `bun audit` see
 them like any other dep.
 
-**The index of record is [`src/core/client_libs/registry.ts`](../../src/core/client_libs/registry.ts).**
-It maps each lib to its root, and it is the allowlist the serving route enforces.
-This document is the human-facing companion; the registry is what the code reads.
+**The index of record is `src/core/client_libs/registry.ts`.** It maps each lib to
+its root, and it is the allowlist the serving route enforces. This document is the
+human-facing companion; the registry is what the code reads.
 
 ## How a lib reaches the browser
 
@@ -162,11 +162,11 @@ For the four above, the old manual ritual still applies once per release cycle:
 
 The 2026-07-12 prune dropped ~39 MB of libs with **zero call sites**: `wkhtmltopdf`
 (a 17 MB *32-bit macOS* wkhtmltox binary — an architecture macOS has not executed
-since Catalina), `vexflow`, `nvd3`, `pdfkit`, an empty `lessphp` husk, a second
+since Catalina), `vexflow`, `nvd3`, `pdfkit`, an empty LESS-compiler husk, a second
 CKEditor build (`build_html_text/`), and a stale `d3-7.8.5` sitting beside 7.9.0.
 The `sublime-text/` and `visual-studio/` directories were never libraries at all —
-they are Dédalo's own editor snippets. All of it remains git-tracked in the frozen
-PHP repo if it is ever wanted back.
+they are Dédalo's own editor snippets. Everything removed remains recoverable from
+the repository history if it is ever wanted back.
 
 ## References
 

@@ -27,14 +27,14 @@ The tool is **element-driven and component-scoped**: it is wired onto a specific
 
 **Server** (`tools/tool_lang/server/index.ts`, delegating to the shared core `src/core/tools/translation.ts::runAutomaticTranslation`): the single action `automatic_translation`:
 
-1. Gates imperatively — `apiActions` declares `permission: null` (the shared core's own `assertActionPermission` call does the real gating, reusing the `record`/2 kind against `{section_tipo, section_id}`). ⬜ **Note a scope difference from the PHP oracle:** PHP's `assert_tipo_permission(section_tipo, component_tipo, 2)` checks the permission level on the specific **component** tipo; the TS `record` gate kind always checks `(section_tipo, section_tipo)` — the section-level permission, not the component-level one. A profile that grants section-level write but denies write specifically on this component (or vice versa) would be gated differently on the two engines. The record-in-scope half of the check is equivalent on both.
+1. Gates imperatively — `apiActions` declares `permission: null` (the shared core's own `assertActionPermission` call does the real gating, reusing the `record`/2 kind against `{section_tipo, section_id}`). Note the `record` gate's scope: it always checks the permission level on `(section_tipo, section_tipo)` — the section-level permission — not on the specific component tipo. A profile that grants section-level write but denies write specifically on this component (or vice versa) is not distinguished by this gate. The gate also asserts the record is in the caller's project scope.
 2. Loads the tool config (`getToolConfig('tool_lang')`) and finds the requested engine's entry by `name`; refuses if its `uri`/`key` is missing.
 3. Reads the component's source-lang value and translates it. `babel` (the default) is a SSRF-guarded HTTP call to the configured Apertium-based Babel service (`babelProvider`, direction mapping like `sp-en`); other server-side engines resolve through the same provider-seam contract (`resolveTranslationProvider`); `browser_transformer` is rejected on the server (client-only).
 4. Writes the translated value onto the target-lang instance of the same component; skips saving on empty results and surfaces a "Quota exceeded"-style message when the engine reports it.
 
 ## Actions & options
 
-`apiActions = { automatic_translation: { permission: null, handler: ... } }` — the gate lives inside the shared `runAutomaticTranslation` core, not the dispatcher's declarative layer (a design necessity, not a downgrade — see the note above). There is no `backgroundRunnable`; the request runs synchronously with a long client timeout. Copy-to-target and the in-browser engine are **client-only** and reach no server action.
+`apiActions = { automatic_translation: { permission: null, handler: ... } }` — the gate lives inside the shared `runAutomaticTranslation` core, not the dispatcher's declarative layer — see the note above. There is no `backgroundRunnable`; the request runs synchronously with a long client timeout. Copy-to-target and the in-browser engine are **client-only** and reach no server action.
 
 | Action | Permission gate | Background | Reads from `options` |
 | --- | --- | --- | --- |

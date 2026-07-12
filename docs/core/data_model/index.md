@@ -25,44 +25,21 @@ single matrix table, identified by the composite key
 **PostgreSQL `jsonb`**.
 
 A record row is therefore not a flat set of scalar fields. It is a small set of
-**typed JSONB columns**, and inside each column the payload is a `stdClass`
-object **keyed by component ontology tipo** (`dd25`, `oh1`, `rsc85`, …). A
-component never owns a database column of its own; it owns a *key* inside one of
-the shared typed columns.
+**typed JSONB columns** (`MATRIX_JSONB_COLUMNS`, `src/core/db/matrix.ts`), and
+inside each column the payload is an object **keyed by component ontology
+tipo** (`dd25`, `oh1`, `rsc85`, …). A component never owns a database column of
+its own; it owns a *key* inside one of the shared typed columns.
 
-In the PHP server the in-memory mirror of one such row is
-**`section_record_data`** (`core/section_record/class.section_record_data.php`).
-It decodes each column **lazily**: the raw JSON string from the database is
-parked in `$raw_data` and only promoted to a decoded object on first read
-(`ensure_decoded()`), which keeps list mode cheap. It then exposes two access
-levels:
-
-- **column level** — `get_column_data($column)` / `set_column_data($column, $obj)`
-- **key level** — `get_key_data($column, $key)` / `set_key_data($column, $key, $data)`,
-  where *key* is the **component tipo**
-
-```php
-// read one component's data from the right typed column
-$section_record->get_component_data( $tipo, $column );   // → array of value items
-
-// write it back (still in memory)
-$section_record->set_component_data( $tipo, $column, $data );
-
-// flush to the database (one transaction)
-$section_record->save_key_data( $save_path );
-```
-
-The TS server reads the same JSONB row through the passive `MatrixRecord`
-struct (`readMatrixRecord`, `src/core/db/matrix.ts`) — parsed columns plus
-their raw `::text` twins for byte-exact parity diffing — threaded explicitly
-through the read pipeline instead of living on a stateful per-request object.
-The column-level / key-level split above is re-expressed as pure functions over
-that struct: `readComponentItems(record, tipo, model)` and
-`filterItemsByLang(items, lang)` in `src/core/resolve/component_data.ts`
-(`resolveComponentValue()` is the language-fallback wrapper the read pipeline
-calls). Writes go through the chokepoint in `src/core/db/matrix_write.ts` /
-`src/core/section/record/save_component.ts` — see `engineering/SECTION_SPEC.md` for
-the write path.
+The server reads a matrix row through the passive `MatrixRecord` struct
+(`readMatrixRecord`, `src/core/db/matrix.ts`) — parsed columns plus their raw
+`::text` twins for byte-exact parity diffing — threaded explicitly through the
+read pipeline instead of living on a stateful per-request object. Column-level
+and key-level access are pure functions over that struct: `readComponentItems(record, tipo, model)`
+reads one component's array of value items from the right typed column, and
+`filterItemsByLang(items, lang)` narrows it by language (both in
+`src/core/resolve/component_data.ts`; `resolveComponentValue()` is the
+language-fallback wrapper the read pipeline calls). Writes go through the
+chokepoint in `src/core/db/matrix_write.ts` / `src/core/section/record/save_component.ts`.
 
 !!! info "Two layers, one model"
     The [Sections](../sections/index.md) page describes the `matrix` row and the
@@ -74,9 +51,9 @@ the write path.
 
 ## 2. The matrix typed columns
 
-The authoritative column set is declared in
-`section_record_data::$columns_name`. Each column decodes to a `stdClass`, and
-(except for `data`) the object is keyed by component tipo.
+The authoritative column set is `MATRIX_JSONB_COLUMNS` (`src/core/db/matrix.ts`).
+Each column decodes to an object, and (except for `data`) that object is keyed
+by component tipo.
 
 | Column | Decoded shape | Stores (keyed by component tipo) |
 | --- | --- | --- |
@@ -93,33 +70,13 @@ The authoritative column set is declared in
 | `meta` | `stdClass` | per-component id counters: `{"dd750":[{"count":3}], "dd201":[{"count":1}]}` |
 
 Which column a given component writes into is **not** hardcoded inside the
-component. In PHP it is resolved through the static registry
-`section_record_data::$column_map` via `get_column_name($model)`:
-
-```php
-section_record_data::$column_map = [
-    'component_input_text'  => 'string',
-    'component_select'      => 'relation',
-    'component_image'       => 'media',
-    'component_json'        => 'misc',
-    'component_date'        => 'date',
-    'component_iri'         => 'iri',
-    'component_number'      => 'number',
-    'component_section_id'  => 'section_id',   // virtual integer PK, not a JSONB column
-    'section'               => 'data',          // section metadata routing
-    // …
-];
-```
-
-Each PHP component instance caches its resolved column in `$data_column_name`.
-
-The TS server resolves the same routing through `getColumnNameByModel(model)`
+component. It is resolved through `getColumnNameByModel(model)`
 (`src/core/ontology/resolver.ts`), which reads the `column` field off each
 model's descriptor in the component registry (`src/core/components/registry.ts`,
-e.g. `component_input_text/descriptor.ts` declares `column: 'string'`) — the
-one central table has become one field per model's own file, plus a small
-`NON_COMPONENT_COLUMN_MAP` for the non-component `section → data` entry that
-has no descriptor of its own. Two entries are special:
+e.g. `component_input_text/descriptor.ts` declares `column: 'string'`) — one
+field per model's own file, plus a small `NON_COMPONENT_COLUMN_MAP` for the
+non-component `section → data` entry that has no descriptor of its own. Two
+entries are special:
 
 - **`component_section_id → 'section_id'`** is the integer primary-key column —
   *virtual*, not a JSONB column; callers handle it separately.
@@ -188,32 +145,15 @@ item envelope is:
 ### Which models carry an explicit `value`
 
 The set of models whose item carries an explicit `value` property — the
-`{id, value}` form — is the registry
-`component_common::$components_using_value_property`:
+`{id, value}` form — is the eight descriptors that declare
+`importValueProperty: true` (`src/core/components/types.ts`), checked through
+`usesImportValueProperty(model)` (`src/core/components/registry.ts`):
 
-```php
-$components_using_value_property = [
-    'component_email',
-    'component_filter_records',
-    'component_info',
-    'component_input_text',
-    'component_json',
-    'component_number',
-    'component_password',
-    'component_text_area'
-];
+```text
+component_email · component_filter_records · component_info ·
+component_input_text · component_json · component_number ·
+component_password · component_text_area
 ```
-
-!!! info "TS status"
-    The TS server does not yet carry an explicit port of
-    `$components_using_value_property` / `$components_monovalue` as registries;
-    the value-property vs. structural vs. locator split above is still
-    documented from the PHP source of truth. Callers that need it today read
-    the shape at the point of use (e.g. `resolveComponentValue()` in
-    `src/core/resolve/component_data.ts` treats every model uniformly except
-    for the translation gate, `descriptor.classSupportsTranslation`). Porting
-    these two registries onto the component descriptor (alongside `column` and
-    `classSupportsTranslation`) is open work — see `rewrite/STATUS.md`.
 
 **Relation components do not use `value`.** Their item *is* a
 [locator](../locator.md):
@@ -228,12 +168,11 @@ pairing / ordering), but the locator object itself is the value — there is no
 
 ### Mono-value vs multivalue
 
-`component_common::$components_monovalue` lists the models that store an array
-but use only `[0]` (e.g. the media components, `component_select`,
-`component_geolocation`, `component_json`, `component_password`,
-`component_text_area`). The storage shape is identical — an array — so a
-mono-value field can become multivalue (or gain languages) without any data
-rewrite.
+Some fields are conceptually single-valued (one geolocation, one JSON blob)
+while others hold many. The storage shape does not distinguish them: both are
+an array of value items, a single-valued field simply never grows past one
+element. Because the shape is identical, a field can become multivalue (or
+gain languages) later without any data rewrite.
 
 ```json
 // component_input_text "rsc85", translatable, two languages
@@ -261,39 +200,42 @@ throughout (not the v6 term `dato`).
 
     The array of value-item envelopes exactly as persisted in the JSONB column.
 
-    - Read via `section_record::get_component_data($tipo, $column)` →
-      `section_record_data::get_key_data($column, $key)`.
-    - The component-level accessor is **`get_data()`** (returns `data_resolved`
-      when already resolved, else reads the section_record; has a Time-Machine
-      branch when `data_source === 'tm'`).
-    - `get_data_unchanged()` exposes the unguarded internal property for
-      save-time comparison.
-    - `get_data()` on a relation component returns **locators**, never resolved
-      labels.
+    - Read via `readComponentItems(record, tipo, model)`
+      (`src/core/resolve/component_data.ts`) — the per-component array of
+      value items pulled from the record's typed column.
+    - A save reads this same current item array first, applies each change,
+      then writes the FULL updated array back — not a delta
+      (`src/core/section/record/save_component.ts`) — and appends a Time
+      Machine audit row with the new snapshot.
+    - Raw data for a relation component is the **locator array**, never
+      resolved labels.
 
 === "Resolved value"
 
     The flattened, human-readable representation for display.
 
-    - **`get_value()`** returns the flat string, delegating to the export atoms
-      contract: `get_export_value()->to_flat_string()`. For relations this
-      dereferences locators into labels.
-    - **`get_grid_value()`** is the client visual-cell adapter over the same
-      atoms.
+    - **`resolveCellValue()`** (`src/core/resolve/relation_list.ts`) returns the
+      flat string, dispatching on each model's declared `flatValue` family
+      (`getFlatValueFamily`, `src/core/components/registry.ts`) — `string`,
+      `datalist` (locators dereferenced to labels), `date`, `iri`, `media` or
+      `section_id`.
+    - The export path (`src/diffusion/export/atoms.ts`) builds the same
+      flattened strings for tabular export.
 
 === "datum.data layer"
 
     The server→client transport.
 
-    - `common::get_subdatum()` builds `$subdatum = {context, data}`, where `data`
-      (`$ar_subdata`) is the per-locator resolved data the client consumes,
+    - `emitDdoData` (`src/core/section/read.ts`) builds `{context, data}`,
+      where `data` is the per-locator resolved data the client consumes,
       paired with the structure `context`.
 
 !!! warning "Do not confuse the three"
-    `get_data()` is the raw envelope array (locators stay locators).
-    `get_value()` is the resolved display string. `datum.data` is the
-    client-facing transport object. Code that resolves labels belongs in the
-    value/atoms path, never in `get_data()`.
+    `readComponentItems()` returns the raw envelope array (locators stay
+    locators). `resolveCellValue()` returns the resolved display string.
+    `datum.data` is the client-facing transport object. Code that resolves
+    labels belongs in the flatValue/export-atoms path, never in the raw item
+    read.
 
 See the [context & data layers](../request_config.md) flow for how `context` and
 `data` are paired and delivered.
@@ -302,39 +244,20 @@ See the [context & data layers](../request_config.md) flow for how `context` and
 
 ## 5. Server-minted stable item ids
 
-Item ids are the backbone of v7's robustness. When `set_data($data)` runs, every
-item lacking a valid id (`property_exists($el,'id') && id !== null && id !== ''`)
-is passed to `set_data_item_counter()`, which calls
-`section_record::allocate_component_ids($tipo, 1)`.
+Item ids are the backbone of v7's robustness. Every item lacking a valid id
+(present, non-null, non-empty) is allocated one when the component's data is
+saved (`src/core/section/record/save_component.ts`).
 
-Allocation is **atomic**:
-
-1. A PostgreSQL **session advisory lock** keyed by
-   `table_section-tipo_section-id_tipo` guards the operation.
-2. The persisted counter is re-read from `meta->$tipo->0->count`.
-3. The new counter is `max(persisted, in_memory)`.
-4. It is persisted **immediately** via `jsonb_set` and the freshly allocated
-   range is returned.
-
-The counter lives in the **`meta`** column
-(`get_component_counter` / `set_component_counter`). Imports and migrations that
-carry explicit ids are absorbed by `raise_component_counter()`, and `set_data()`
-raises the counter to `max($ar_id)` — so original ids survive without future
-collision.
-
-!!! info "TS re-implementation, same guarantee"
-    The TS server keeps the identical **counter law** — never-recycled ids,
-    raised to `max(persisted, incoming)`, never lowered — but implements
-    allocation without an explicit advisory lock:
-    `allocateComponentItemId()` (`src/core/db/matrix_write.ts`) does the
-    increment as a single `UPDATE … SET meta = jsonb_set(…, count+1) RETURNING`,
-    relying on Postgres's own row-level lock to serialize concurrent callers
-    (two allocations against the same row can never observe the same
-    pre-increment count). Absorbing explicit ids from imports/migrations is a
-    separate function, `absorbComponentItemIds()`, which raises the counter to
-    `GREATEST(persisted, incoming max)` — the direct equivalent of
-    `raise_component_counter()`. See the counter-law note in
-    `src/core/concepts/section_record.ts`.
+Allocation is **atomic**: `allocateComponentItemId()`
+(`src/core/db/matrix_write.ts`) does the increment as a single `UPDATE … SET
+meta = jsonb_set(…, count + 1) RETURNING`, relying on Postgres's own
+row-level lock to serialize concurrent callers — two allocations against the
+same row can never observe the same pre-increment count. The counter lives in
+the **`meta`** column, e.g. `{"dd750":[{"count":3}]}`. Imports and migrations
+that carry explicit ids are absorbed by `absorbComponentItemIds()`, which
+raises the counter to `GREATEST(persisted, incoming max)` — **never lowers
+it** — so original ids survive without future collision. See the counter-law
+note in `src/core/concepts/section_record.ts`.
 
 !!! tip "Why ids matter — dataframes and Time Machine"
     Because ids are **never recycled**, the [dataframe](../components/component_dataframe.md)
@@ -348,34 +271,25 @@ collision.
 
 ## 6. The lang dimension
 
-Translation is governed by the component flag **`$supports_translation`**, which
-is *independent* of the ontology `$translatable` flag (a component may support
-translation while its node is configured non-translatable).
-
-- **When `false`** — language methods collapse to the full-data path and the
-  single item uses `lg-nolan`. `get_data_lang()` simply returns `get_data()`.
-- **When `true`** — the data array holds one logical position per language.
-  `set_data_lang($data_lang, $lang)` clones items, stamps `lang`, strips the old
-  slice for that lang, and merges. `get_data_lang($lang)` filters the flat array
-  by `el->lang === $lang`.
-
-```php
-// get_data_lang filters the interleaved flat array by language
-return (isset($el->lang) && $el->lang === $safe_lang);
-```
-
-`get_id_from_key` / `get_key_from_id` bridge the flat `[{id,lang,value}]` array
-and per-language array positions (grouping by `lang`, then indexing by key
-position). The flat array therefore interleaves every language, and the language
-view is derived on demand.
-
-The TS server carries the same class-level/ontology split as
-`descriptor.classSupportsTranslation` on each model's descriptor (e.g.
-`component_input_text/descriptor.ts` sets `classSupportsTranslation: true`),
-read by `resolveComponentValue()` (`src/core/resolve/component_data.ts`) to
-decide whether to lang-filter a component's items — independent of the
+Translation is governed by the component's CLASS-level `classSupportsTranslation`
+flag, declared on each model's descriptor (e.g. `component_input_text/descriptor.ts`
+sets `classSupportsTranslation: true`) — deliberately *independent* of the
 ontology's own `translatable` flag (`getTranslatableByTipo()`,
-`src/core/ontology/resolver.ts`), exactly mirroring the PHP split above.
+`src/core/ontology/resolver.ts`). A component may support translation while its
+ontology node is configured non-translatable.
+
+`resolveComponentValue()` (`src/core/resolve/component_data.ts`) reads
+`classSupportsTranslation` to decide whether to lang-filter a component's
+items:
+
+- **When `false`** — the full item array is returned unfiltered, and the
+  single item uses `lg-nolan`.
+- **When `true`** — the data array holds one logical position per language,
+  all interleaved in the same flat array. `filterItemsByLang(items, lang)`
+  narrows it to the items whose `lang` matches.
+
+The flat array interleaves every language; the per-language view is derived
+on demand rather than stored separately.
 
 ---
 

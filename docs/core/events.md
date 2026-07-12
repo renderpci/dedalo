@@ -5,7 +5,7 @@
 Dédalo implements an event manager used across all ontology definitions (areas, sections, components, tools, services, etc). The event manager is an observer/observable pattern, but the connection between instances is made with tokens. The event manager centralizes all events fired by observables and runs some functions or methods of the observers.
 
 !!! note "Client vs server"
-    Everything below through **Active events** documents the **client-side** `event_manager` — pure browser JavaScript (`core/common/js/event_manager.js`), copied over unchanged from the PHP-era client and served as-is by the TS server. It is unaffected by the server rewrite. The TS server additionally has its own, unrelated **server-side observer** mechanism — see [Server-side observers](#server-side-observers-ts) below.
+    Everything below through **Active events** documents the **client-side** `event_manager` — pure browser JavaScript (`core/common/js/event_manager.js`) served as-is by the TS server. The TS server additionally has its own, unrelated **server-side observer** mechanism — see [Server-side observers](#server-side-observers-ts) below.
 
 ## Event definition
 
@@ -101,30 +101,32 @@ The `properties.observe` ontology configuration above drives two different
 mechanisms, one per side:
 
 - **Client-side** (documented above): the browser `event_manager` fires the
-  observer component's callback live, in the open tab — pure UI reactivity,
-  unaffected by the server rewrite.
-- **Server-side**: PHP recomputes an observer component's stored value on save
-  (`component_common::propagate_to_observers` → `update_observer_data`), for
-  observer configs that declare a `server` block (most of the 66 `observe`
-  configs on this ontology are client-only and have no `server` key, so there
-  is nothing for the server to do). The TS port is
-  `propagateToObservers()` in `src/core/resolve/observers.ts`, called after a
-  component save completes.
+  observer component's callback live, in the open tab — pure UI reactivity.
+- **Server-side**: the server recomputes an observer component's stored
+  value on save, for observer configs that declare a `server` block (most of
+  the 66 `observe` configs on this ontology are client-only and have no
+  `server` key, so there is nothing for the server to do). This runs through
+  `propagateToObservers()` in `src/core/api/handlers/observers.ts`, called
+  after a component save completes.
 
   Coverage (measured against the live ontology): the dominant server shape —
   `{config: {use_observable_dato: true}, perform: {function: 'set_dato_external'}}`
-  (the `hierarchy93` ← `rsc387` family) — is ported: for every target the just-saved
-  data points at, the TS engine recomputes that target's observer component as
-  *every record that references the target* through
+  (the `hierarchy93` ← `rsc387` family) — recomputes, for every target the
+  just-saved data points at, that target's observer component as *every
+  record that references the target* through
   `properties.source.component_to_search` (scoped to
-  `properties.source.section_to_search`), preserving existing entries in stored
-  order and appending new ones with the next item id — verified byte-for-byte
-  against the PHP oracle. `server.filter === false` with no `perform` (PHP's
-  re-save-with-no-effective-change branch) is a verified no-op and is skipped
-  outright. Any other server shape (e.g. `server.filter` searches with a
-  default-save perform function) is **ledgered, not guessed** — it logs a
-  `console.error` and skips rather than writing an unverified value. See the
-  module's header comment for the exact coverage ledger.
+  `properties.source.section_to_search`), preserving existing entries in
+  stored order and appending new ones with the next item id. `component_info`
+  observers (including the state/calculation aliases) also recompute: for a
+  `server.filter` config the server resolves the filter against the
+  just-saved record's locator and recomputes the observer's widgets on every
+  matching record; for `server.filter === false` it recomputes the widgets on
+  the saved record itself. `server.filter === false` with no `perform`
+  function is a no-op and is skipped outright. Any other server shape (e.g. a
+  `server.filter` search paired with a non-default `perform` function) is
+  **ledgered, not guessed** — it logs a `console.error` and skips rather than
+  writing an unverified value. See the module's header comment for the exact
+  coverage ledger.
 
 ## Active events
 

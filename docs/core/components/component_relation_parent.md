@@ -44,10 +44,10 @@
     `component_relation_parent` is a **related** component. Like every related component it stores [locators](../locator.md) that point at other records rather than literal data, and resolves its displayed `value` from the *target* (parent) record.
 
 !!! info "Client is an alias of component_portal"
-    The client class is a thin alias: `core/component_relation_parent/js/component_relation_parent.js` exports `component_relation_parent = component_portal`. All client behaviour (render files, views, the edit/list/search UI) is therefore [component_portal](component_portal.md)'s, which is why the `render_views` above mirror the portal. The server side, however, is its own class with parent-specific tree semantics (cycle guard, child ordering, recursive ancestor walk).
+    The client class is a thin alias: `client/dedalo/core/component_relation_parent/js/component_relation_parent.js` exports `component_relation_parent = component_portal`. All client behaviour (render files, views, the edit/list/search UI) is therefore [component_portal](component_portal.md)'s, which is why the `render_views` above mirror the portal. The server side, however, has its own parent-specific tree semantics (cycle guard, child ordering, recursive ancestor walk).
 
 !!! info "About `default_tools`"
-    The tools above are what a typical instance receives in `context.tools` (verified from the component model sample): `tool_propagate_component_data` and `tool_time_machine`. The component is non-translatable, so the `tool_lang` family is not added. The toolbar is assembled from the model + ontology; the class does not hardcode it. The JSON controller additionally forces `properties->show_interface->button_add = false` so the client never offers a generic "add" button — parents are linked through the thesaurus / tree UI, not created inline.
+    The tools above are what a typical instance receives in `context.tools` (verified from the component model sample): `tool_propagate_component_data` and `tool_time_machine`. The component is non-translatable, so the `tool_lang` family is not added. The toolbar is assembled from the model + ontology; nothing hardcodes it. The server additionally forces `properties.show_interface.button_add` to `false` so the client never offers a generic "add" button — parents are linked through the thesaurus / tree UI, not created inline.
 
 !!! info "TS server implementation"
     Row emission reuses the shared portal engine: the descriptor `src/core/components/component_relation_parent/descriptor.ts` registers `resolveData: portalResolver` (`src/core/relations/models/portal.ts`) — a parent link renders like any other relation cell. This is a **read-projection equivalence only**; the distinctive hierarchy behaviour lives in dedicated modules: the ancestor walk (`getParents` / `getParentsRecursive` / `isAncestor`) and the mutation half (`addParent` / `removeParent`, cycle + auto-reference guards) are in `src/core/relations/parent.ts`; sibling ORDER (the `component_number` id_key dataframe) is in the same file (`setChildOrder` / `removeChildOrder` / `recalculateSiblingOrders` / `sortChildren`) built on the inline id_key API in `src/core/relations/dataframe.ts`. Search (the inverse-parent pipeline) is not yet ported. See the *dedalo-relations-ts* and *dedalo-tree-ts* skills.
@@ -91,22 +91,22 @@
 ]
 ```
 
-- `type` — the relation-type tipo. For parent relations this is `DEDALO_RELATION_TYPE_PARENT_TIPO = 'dd47'` (the value of `$default_relation_type`); children use `dd48`, related `dd89`. It is injected/normalised by `validate_data_element()` from `$relation_type`.
+- `type` — the relation-type tipo. For parent relations this is `dd47` (the descriptor's `defaultRelationType`); children use `dd48`, related `dd89`. The relations engine injects and normalises it on save.
 - `section_tipo` / `section_id` — point at the **parent** record.
-- `from_component_tipo` — the tipo of *this* component (the owner of the locator); this is what lets the single section-wide `relations` array serve many distinct relation components. `validate_data_element()` forces it to the owning component's own `tipo`.
+- `from_component_tipo` — the tipo of *this* component (the owner of the locator); this is what lets the single section-wide `relations` array serve many distinct relation components. The relations engine forces it to the owning component's own `tipo` on save.
 - `id` — the per-item counter id.
 
 This component is **not translatable** (`lang` is `lg-nolan`), so locators carry no `lang`. Auto-references (a record pointing at itself) and descendant cycles are rejected before storage (see *Notes*).
 
 !!! note "Section-wide `relations` bag"
-    Like all related components, the persisted locators live in the section's global `relations` container (`section::get_relations('relations')`); a record can therefore declare its parent and its children edges side by side, each disambiguated by `from_component_tipo`. The component's own matrix `relation` column holds the JSONB map `{component_tipo: [locators]}`; `relation_list` and other components slice the right subset out of the global bag.
+    Like all related components, the persisted locators live in the section's global `relations` container; a record can therefore declare its parent and its children edges side by side, each disambiguated by `from_component_tipo`. The component's own matrix `relation` column holds the JSONB map `{component_tipo: [locators]}`; `relation_list` and other components slice the right subset out of the global bag.
 
 !!! note "Datum vs. API `entries`"
-    The transmitted unit is a `{context, data}` datum. In the API payload the locators are surfaced under `data.entries` (each augmented with a `paginated_key`), accompanied by `parent_tipo`, `parent_section_id` and `pagination`. When the recursive ancestor walk detects a loop, the controller attaches `component_relation_parent::$errors` to the data item so the client can warn the user. See the *dedalo-context-data-layers* skill for the full layering rules.
+    The transmitted unit is a `{context, data}` datum. In the API payload the locators are surfaced under `data.entries` (each augmented with a `paginated_key`), accompanied by `parent_tipo`, `parent_section_id` and `pagination`. When the recursive ancestor walk detects a loop, the resulting errors are attached to the data item so the client can warn the user. See the *dedalo-context-data-layers* skill for the full layering rules.
 
 ## Ontology instantiation
 
-A `component_relation_parent` is created as an ontology node whose `model` is `component_relation_parent`. Its `parent` is the section (or grouper) it belongs to, and `section_tipo` wires it into that section. The relation type is read from the node `properties->config_relation->relation_type` in the constructor; when absent it falls back to `$default_relation_type` (`dd47`).
+A `component_relation_parent` is created as an ontology node whose `model` is `component_relation_parent`. Its `parent` is the section (or grouper) it belongs to, and `section_tipo` wires it into that section. The relation type is read from the node's `properties.config_relation.relation_type`; when absent it falls back to the descriptor's `defaultRelationType` (`dd47`).
 
 Node definition (shape):
 
@@ -163,12 +163,12 @@ Realistic `properties` block for a thesaurus *parent term* pointing at the same 
 
 ## Properties & options
 
-All properties are optional and live in the ontology node `properties` JSON. The names below are the real keys consumed by this component (mostly through the shared `component_relation_common` base, identical to those of [component_portal](component_portal.md)). If a key is not in this list, **verify in the ontology** before relying on it.
+All properties are optional and live in the ontology node `properties` JSON. The names below are the real keys consumed by this component (they come from the shared relations engine, so they are identical to those of [component_portal](component_portal.md)). If a key is not in this list, **verify in the ontology** before relying on it.
 
 ### config_relation
 
 - **Values:** an object, currently `{relation_type, relation_type_rel}`.
-- **Effect:** read in the constructor. `config_relation->relation_type` overrides the locator `type` written by this component (default `dd47`); `config_relation->relation_type_rel` sets the directionality (`relation_type_rel`) on the locator. For parent relations the default type `dd47` is normally left implicit.
+- **Effect:** `config_relation.relation_type` overrides the locator `type` written by this component (default `dd47`); `config_relation.relation_type_rel` sets the directionality (`type_rel`) on the locator. For parent relations the default type `dd47` is normally left implicit.
 
 ### source
 
@@ -178,7 +178,7 @@ All properties are optional and live in the ontology node `properties` JSON. The
 ### show_interface
 
 - **Values:** an object of boolean / sub-object flags (e.g. `button_add`, `button_link`, `button_delete`, `button_delete_link`, `button_delete_link_and_record`, `button_edit`, `button_list`, `button_tree`, `button_fullscreen`, `show_autocomplete`, `show_section_id`, `list_from_component_data`, `label`, `read_only`, `tools`, `value_buttons`, `button_edit_options`).
-- **Effect:** toggles the client buttons and chrome of the relation widget. **Note:** the JSON controller always overrides `show_interface->button_add = false` for `component_relation_parent`, so even if the ontology sets it true, the generic add button is suppressed (parents are linked via the tree/thesaurus, not created inline).
+- **Effect:** toggles the client buttons and chrome of the relation widget. **Note:** the server always overrides `show_interface.button_add` to `false` for `component_relation_parent`, so even if the ontology sets it true, the generic add button is suppressed (parents are linked via the tree/thesaurus, not created inline).
 
 ### css
 
@@ -189,11 +189,11 @@ All properties are optional and live in the ontology node `properties` JSON. The
     Like every component, `component_relation_parent` also honours the generic ontology context blocks carried into the datum `context`: `request_config` (RQO), `css` and `view` (the render view). These are not parent-specific options.
 
 !!! note "Ordering uses the section_map order component"
-    `component_relation_parent` does not declare an `order` property of its own. When it adds or removes a parent it reads the order component tipo from `section::get_section_map($section_tipo)->thesaurus->order` and writes the child's position there. The order is a **dataframe paired by `id_key`** to the child's parent-link locator (a `component_number` value `{value, id_key}`), so a child carries an independent order per parent. If the section_map defines no `order`, ordering is silently skipped. See *Notes*.
+    `component_relation_parent` does not declare an `order` property of its own. When it adds or removes a parent it reads the order component tipo from the section map (`getSectionMap()`, `src/core/ontology/section_map.ts`) under `thesaurus.order` and writes the child's position there. The order is a **dataframe paired by `id_key`** to the child's parent-link locator (a `component_number` value `{value, id_key}`), so a child carries an independent order per parent. If the section_map defines no `order`, ordering is silently skipped. See *Notes*.
 
 ## Render views & modes
 
-The client is an alias of [component_portal](component_portal.md), so the views and modes are the portal's. Verified from `core/component_portal/js/` and the parent sample `context.view` (`line`):
+The client is an alias of [component_portal](component_portal.md), so the views and modes are the portal's. Verified from `client/dedalo/core/component_portal/js/` and the parent sample `context.view` (`line`):
 
 | View | edit | list / tm | search | Notes |
 | --- | :---: | :---: | :---: | --- |
@@ -209,14 +209,14 @@ The client is an alias of [component_portal](component_portal.md), so the views 
 Modes:
 
 - **edit** — read/write the parent locators; add/remove parents, with auto-reference and descendant-cycle rejection, and automatic child-order maintenance.
-- **list / tm** — read-only listing; `tm` (Time Machine) reuses the list render and is fed by the JSON controller as subdata rows.
+- **list / tm** — read-only listing; `tm` (Time Machine) reuses the list render and is fed as subdata rows.
 - **search** — builds an SQO relation filter against the target section(s); saves are blocked in search mode.
 
-The server CSS for the parent itself is minimal (`core/component_relation_parent/css/component_relation_parent.less` only defines a `view_default` wrapper); the visual styling is inherited from the portal stylesheet.
+The server CSS for the parent itself is minimal (`client/dedalo/core/component_relation_parent/css/component_relation_parent.less` only defines a `view_default` wrapper); the visual styling is inherited from the portal stylesheet.
 
 ## Import / export model
 
-**Import.** Import uses the shared `component_relation_common::conform_import_data()`. It accepts:
+**Import.** Import uses the shared `conformImportData()` (`src/core/tools/import_data.ts`). It accepts:
 
 - The full JSON locator array (default, round-trips an export):
 
@@ -226,17 +226,17 @@ The server CSS for the parent itself is minimal (`core/component_relation_parent
 
 - A bare `section_id` sequence when the component has a single resolvable target section (the parent section), e.g. `2,5,8`. The CSV column header carries the target when needed, in the form `from_component_tipo` + delimiter + `target_section_tipo` (e.g. `test71_test3`); when only the component tipo is given the target is resolved from the RQO. An empty cell clears the existing data (result `null`).
 
-`conform_import_data()` always rewrites `from_component_tipo` to this component's own `tipo` and stamps the relation `type` from `get_relation_type()`. Multiple candidate target sections with no explicit target are rejected and logged as `IGNORED`. See [importing data](../importing_data.md#related-data).
+The import engine always rewrites `from_component_tipo` to this component's own `tipo` and stamps the locator `type` from the resolved relation type. Multiple candidate target sections with no explicit target are rejected and logged as `IGNORED`. See [importing data](../importing_data.md#related-data).
 
-**Export.** `get_export_value()` (base) iterates the locators and, per the `ddo_map`, instantiates each requested column component against the parent's `section_id` / `section_tipo` to resolve sub-columns; `get_grid_value()` does the equivalent for grid display. Diffusion uses `get_diffusion_data()`, which emits the locators in the JSON diffusion format. See [exporting data](../exporting_data.md).
+**Export.** The shared relation export path iterates the locators and, per the `ddo_map`, resolves each requested column component against the parent's `section_id` / `section_tipo` to produce the sub-columns; the indexation grid resolves the same way. In SQL diffusion targets the locators are emitted as JSON. See [exporting data](../exporting_data.md).
 
 ## Notes
 
-- **Hierarchy integrity (server-enforced).** Adding a parent goes through `add_parent()` (TS: `addParent`, `src/core/relations/parent.ts`), which rejects two illegal cases before any save: an **auto-reference** (a record pointing at itself) and a **descendant cycle** (the prospective parent is already a descendant — checked with `isAncestor()`, which walks the ancestor chain via `getParentsRecursive()`). Cycle rejections are returned as structured errors alongside the boolean result, surfaced to the client through the datum. The recursive walk is itself loop-guarded per path (a path-local `visited` set) and de-dupes ancestors by `section_tipo_section_id`.
+- **Hierarchy integrity (server-enforced).** Adding a parent goes through `addParent()` (`src/core/relations/parent.ts`), which rejects two illegal cases before any save: an **auto-reference** (a record pointing at itself) and a **descendant cycle** (the prospective parent is already a descendant — checked with `isAncestor()`, which walks the ancestor chain via `getParentsRecursive()`). Cycle rejections are returned as structured errors alongside the boolean result, surfaced to the client through the datum. The recursive walk is itself loop-guarded per path (a path-local `visited` set) and de-dupes ancestors by `section_tipo_section_id`.
 - **Child ordering.** `addParent()` calls `setChildOrder()` and `removeParent()` calls `removeChildOrder()` (`src/core/relations/parent.ts`); both read the order component tipo from the section map and write the child's position as an **`id_key` dataframe** of the parent-link locator (`{value, id_key}` on a `component_number`, via the inline id_key helpers in `src/core/relations/dataframe.ts`) so siblings keep a stable order. `addParent()` **pre-allocates** the parent locator's `id` before ordering so the order can pair before the save mints ids. `recalculateSiblingOrders()` renumbers a parent's children 1..n, resolving each child's `id_key` via `resolveParentLinkIdKey()` (`src/core/relations/children.ts`). The id_key contract is documented in [component_dataframe → Relation ordering](component_dataframe.md#relation-ordering-the-order-is-a-dataframe).
-- **Convenience API.** PHP's `make_me_your_parent()` / `remove_me_as_your_parent()` add/remove a parent edge from the child's side over `get_parents()` / `get_parents_recursive()`; TS exposes the same operations directly as `addParent()` / `removeParent()` / `getParents()` / `getParentsRecursive()` (`src/core/relations/parent.ts`). `get_possible_root_hierarchy()` (root-of-hierarchy detection, used for diffusion) has no confirmed TS port in this checkout.
+- **Convenience API.** Adding/removing a parent edge from the child's side is exposed directly as `addParent()` / `removeParent()` / `getParents()` / `getParentsRecursive()` (`src/core/relations/parent.ts`). Root-of-hierarchy detection (used for diffusion) has no confirmed implementation in this checkout.
 - **Default tools.** A typical instance exposes `tool_propagate_component_data` and `tool_time_machine` in `context.tools`. Tools are read-only context.
-- **Persistence flag.** Inherited `$save_to_database_relations = true` keeps the locators in the section relations table; the section is the single database writer.
-- **Sortable.** `get_sortable()` returns `true`, so this component may be used as a sort column in list contexts.
+- **Persistence.** The locators are also kept in the section relations index; the section is the single database writer.
+- **Sortable.** This component is sortable by default (its descriptor declares no `sortable: false` override), so it may be used as a sort column in list contexts.
 - **Observers / observables.** Not wired by default; observer/observable behaviour, when needed, is configured in the ontology `properties` like any other component (see the index page *Observers and observables* section).
 - **Related components:** [component_relation_children](component_relation_children.md) (the inverse downward view), [component_relation_related](component_relation_related.md), [component_relation_index](component_relation_index.md), [component_portal](component_portal.md) (client alias), [component_select](component_select.md), [component_autocomplete](component_portal.md), [component_dataframe](component_dataframe.md).

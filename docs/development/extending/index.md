@@ -21,19 +21,16 @@ In Dédalo **there is no schema file and no model registry to edit.** The
 data you author in the back office. A new record type, a new field on an
 existing section, a new menu area that reuses existing field models, a portal
 wired to a target section — all of these are created by adding or editing
-**ontology nodes**, never by writing PHP or SQL.
+**ontology nodes**, never by writing code or SQL.
 
-This works because the framework is **model-driven**. The runtime is the Bun/TS
-rewrite: component behavior no longer lives in a class-per-model tree resolved by
-a PHP autoloader — it lives in **horizontal engines** (`src/core/resolve/`,
-`src/core/relations/`, `src/core/section/read.ts`) that dispatch on the `model`
-string. What used to be *convention over a class tree* is now *dispatch over a
-descriptor registry*:
+This works because the framework is **model-driven**. Component behavior lives in
+**horizontal engines** (`src/core/resolve/`, `src/core/relations/`,
+`src/core/section/read.ts`) that dispatch on the `model` string — not in a
+class-per-model tree. Extension is therefore *dispatch over a descriptor registry*:
 
 - **Server resolution is the descriptor registry.** A component `model` maps to
   a small declarative `descriptor.ts` collected in
-  `src/core/components/registry.ts` (`getComponentModel(model)`). There is no
-  per-model class, no `component_X_json.php`, and no autoloader — the engines
+  `src/core/components/registry.ts` (`getComponentModel(model)`). The engines
   read the descriptor (which column it stores in, whether it is
   class-translatable, which relation resolver emits its rows) and do the work.
   Adding a model = add `component_<model>/descriptor.ts` + one line in the
@@ -41,11 +38,10 @@ descriptor registry*:
   malformed or dangling entry.
 - **The node carries the `model`.** Each ontology node stores a `model` value
   (`section`, `component_input_text`, `area_admin`, `tool_export`, …). The
-  runtime reads it via `getModelByTipo($tipo)`
+  runtime reads it via `getModelByTipo(tipo)`
   (`src/core/ontology/resolver.ts`) and surfaces it to the client as
   `options.model` / `self.model` in the emitted context.
-- **Client resolution is by prefix (copied client, unchanged).** The vanilla-JS
-  client is copied as-is; `client/dedalo/core/common/js/instances.js` still
+- **Client resolution is by prefix.** `client/dedalo/core/common/js/instances.js`
   dynamically imports the ES module for a model by prefix: `service_*` →
   `core/services/<model>/js/<model>.js`, `tool_*` → the tools root, default →
   `core/<model>/js/<model>.js`. The named export inside must equal the model
@@ -64,10 +60,10 @@ Decide with one question: **does an existing model already do what I need?**
 | Add a record type (a "table") | Yes — `section` | **Ontology only.** Author a `section` node + child component nodes. |
 | Add a field to a section (text, number, date, picker, image, …) | Yes — `component_*` | **Ontology only.** Author a `component_<type>` node under the section. |
 | Group/lay out fields (tabs, groups) | Yes — `section_tab`, `section_group`, … | **Ontology only.** Author grouper nodes (they store no data). |
-| Add a back-office area that reuses existing fields | Often — a thin `area_*` plus menu nodes | **Mostly ontology**, optionally a thin PHP subclass. |
+| Add a back-office area that reuses existing fields | Yes — the generic `area` model plus menu nodes | **Ontology only**, unless the area needs its own client JS/CSS. |
 | Add a *new field type* with its own value shape, render and validation | **No** | **Code:** new `component_<X>` (a `descriptor.ts` + registry entry + engine wiring + client JS/CSS) **and** an ontology node. |
-| Add a reusable client interaction (uploader, picker UI) hosted by a component | **No** | **Code:** new `service_<X>` (client-only JS in the copied client), consumed by a host component. |
-| Add a computed read-only display embedded in a host | **No** | **Code:** new widget — a client module under the copied client's `core/widgets/<X>/` plus its server-side compute descriptor under `src/core/components/component_info/widgets/<tld>/`, hosted by a `component_info`. |
+| Add a reusable client interaction (uploader, picker UI) hosted by a component | **No** | **Code:** new `service_<X>` (client-only JS), consumed by a host component. |
+| Add a computed read-only display embedded in a host | **No** | **Code:** new widget — a client module under `client/dedalo/core/widgets/<X>/` plus its server-side compute descriptor under `src/core/components/component_info/widgets/<tld>/`, hosted by a `component_info`. |
 | Add an isolated block of UI/logic attached to a section/component/area | **No** | A **tool** — see its own guide: [Creating new tools](../tools/creating_tools.md). |
 
 The rule of thumb: **new sections, fields, groupers and most areas are
@@ -83,21 +79,19 @@ ontology-only.** You write code only for a genuinely new **component model**,
 
 ## File-layout conventions
 
-The two sides of the seam have **different** shapes now, because the rewrite
-split server and client:
+The two sides of the seam have **different** shapes:
 
 - **Server (Bun/TS).** A new **component** model is a per-model *home* under
   `src/core/components/component_<model>/` — a declarative `descriptor.ts` (and,
   for most, a `samples/` reference set) registered in
   `src/core/components/registry.ts`. Its behavior is not in that folder; it is
   in the horizontal engines (`resolve/`, `relations/`, `section/read.ts`). New
-  **areas** and **sections** need no server class at all — they are served by
+  **areas** and **sections** need no server module at all — they are served by
   the generic engines (`src/core/area/`, `src/core/section/read.ts`). A new
   **tool** is a package under `tools/<tool>/` with a `register.json` and a
   `server/index.ts` exporting a `ToolServerModule`.
-- **Client (copied vanilla JS, unchanged).** Every model with a UI keeps its
-  directory in the copied client, resolved by directory name / prefix by
-  `instances.js`:
+- **Client (vanilla JS).** Every model with a UI keeps its directory in the
+  client tree, resolved by directory name / prefix by `instances.js`:
 
 ```text
 client/dedalo/core/<model>/              # or core/services/<model>/, core/widgets/<model>/, tools/<tool>/
@@ -113,9 +107,8 @@ The **one** server-side registry a new component must touch is its
 `descriptor.ts` (`column: 'string'|'relation'|'media'|'number'|'date'|'geo'|'iri'|'section_id'|'misc'`)
 and its one line in `registry.ts`. That `column` is what
 `getColumnNameByModel()` (`src/core/ontology/resolver.ts`) returns; omit it and
-the engines have no matrix column to read/write. This replaces the old PHP
-`section_record_data::$column_map` central edit — the map is now decentralised,
-one descriptor per model.
+the engines have no matrix column to read/write. The model→column map is
+**decentralised** — one `column` per descriptor, no central table to keep in sync.
 
 A real **scaffolder + template** exists **only for tools**
 (`tools/tool_dev_template/` + `scripts/create_tool.ts`). For components,
@@ -142,15 +135,14 @@ the specifics:
 3. **Create the home by copying a sibling.** For a component: copy an existing
    `component_<model>/descriptor.ts` and its `samples/`. For a tool: run
    `bun run scripts/create_tool.ts`. For a client-facing model, copy the
-   sibling directory in the copied client and rename the directory, the JS
+   sibling directory in the client tree and rename the directory, the JS
    named export, and `register.json` (tools). The engines find a component by
    its registry entry — no include edit.
 4. **Implement the halves.** Server side: the `descriptor.ts` + registry line
    (component), or the tool's `server/index.ts` `apiActions`; areas/sections
-   fall through to the generic engines. Then the client `js/` + `css/` in the
-   copied client. There is **no** `component_X_json.php` and **no** per-model
-   PHP class in the TS server — the horizontal engines emit the component's
-   `{context, data}`.
+   fall through to the generic engines. Then the client `js/` + `css/`. The
+   horizontal engines emit the component's `{context, data}` — you never write a
+   per-model server module for it.
 5. **Author the ontology node** with the right `model` value, `parent`,
    `term`/`lg-*` label, `order_number`, and any `properties` /`relations`. See
    [Ontology authoring](../../core/ontology/authoring.md).
@@ -159,10 +151,7 @@ the specifics:
    of their section; services/widgets are hosted (rendered inline) by a
    component rather than placed as a data node.
 7. **Regenerate so the edit goes live.** An ontology edit is not live until you
-   regenerate the compiled `dd_ontology` (`tools/tool_ontology_parser`). The old
-   PHP per-worker static-cache hazard is **structurally gone** — the Bun server
-   is one long-lived process with request-scoped context, so there is no
-   `common::clear()` to run. See
+   regenerate the compiled `dd_ontology` (`tools/tool_ontology_parser`). See
    [How changes apply live](../../core/ontology/authoring.md#how-changes-apply-live).
 8. **Add samples and a test** (optional but recommended): a `samples/` set
    beside the descriptor and a `bun:test` under `test/` (the descriptor
@@ -211,7 +200,7 @@ out to wikidata.org). No existing model validates that, so you create
    (`src/core/section/record/save_component.ts`); add the check there if the
    value must be rejected server-side.
 4. Client: copy `client/dedalo/core/component_email/` to
-   `.../component_qid/`, rename the directory, the JS named export
+   `client/dedalo/core/component_qid/`, rename the directory, the JS named export
    (`component_qid`), the render/view files and the `.less` basename.
 5. Author the ontology node with `model = component_qid` under the Objects
    section, then regenerate.
@@ -228,14 +217,13 @@ code.
 - **Mismatched client export name.** `instances.js` imports
   `core/<model>/js/<model>.js` and expects `export const <model> = …`. If the
   export name ≠ the model, the client import fails.
-- **Looking for a PHP class or `_json.php`.** There is none in the TS server.
-  Component `{context, data}` is emitted by the horizontal engines; a component
-  is declared by its `descriptor.ts`, not a class.
+- **Hunting for a per-model server class.** There is none. A component's
+  `{context, data}` is emitted by the horizontal engines; a component is
+  *declared* by its `descriptor.ts`, not implemented as a class.
 - **Skipping regenerate.** Editing the ontology record updates the *editable*
   layer only; the runtime reads the compiled `dd_ontology` table. Regenerate the
-  TLD to make the edit live. (Unlike PHP, there is **no** per-worker cache to
-  clear — the single Bun process resolves the ontology fresh; see
-  [How changes apply live](../../core/ontology/authoring.md#how-changes-apply-live).)
+  TLD to make the edit live — see
+  [How changes apply live](../../core/ontology/authoring.md#how-changes-apply-live).
 - **Picking the wrong storage column.** Re-implementing datum load/save,
   permissions or search means you mismodelled the value. Walk the
   [decision guide](../../core/components/base_classes.md#decision-guide-which-base-should-a-new-component-extend)

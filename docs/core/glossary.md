@@ -30,7 +30,7 @@ See: [Thesaurus and Ontology tree](thesaurus/index.md). Related: [hierarchy / th
 ### component
 *SQL equivalent: a column / field (with format and logic).*
 
-A field with managed data of a specific type, living inside a [section](#section). Because the `matrix` table has no real columns, components supply the column concept: each component resolves its value through the ontology and renders through client views (unchanged JS). Server-side, PHP's per-component class (`class.component_xxx.php`) + JSON controller (`component_xxx_json.php`) are replaced by a per-model **descriptor** (`src/core/components/component_xxx/descriptor.ts`), gathered by `src/core/components/registry.ts` and dispatched by the horizontal resolve/relations/save engines — there is no per-component class or `_json.php` file in the TS server.
+A field with managed data of a specific type, living inside a [section](#section). Because the `matrix` table has no real columns, components supply the column concept: each component resolves its value through the ontology and renders through client views. Server-side, a per-model **descriptor** (`src/core/components/component_xxx/descriptor.ts`) declares each component's behavior; descriptors are gathered by `src/core/components/registry.ts` and dispatched by the horizontal resolve/relations/save engines — there is no per-component class or controller file.
 See: [Components](components/index.md), [Introduction](index.md#definitions-of-dédalos-nomenclature). Related: [section](#section), [component_tipo](#component_tipo), [model](#model), [matrix (table)](#matrix-table).
 
 ### component_tipo
@@ -76,7 +76,7 @@ See: [component_dataframe](components/component_dataframe.md); skill *dedalo-dat
 ### dd151
 *SQL equivalent: a foreign-key relation flavor.*
 
-The ontology tipo for the **link** relation type (`DEDALO_RELATION_TYPE_LINK`), the default kind of pointer a [locator](#locator) carries in its `type`. It is one of the relation tipos stamped on the `relation` JSONB column. Siblings (all defined in PHP `core/base/dd_tipos.php`): `dd48` children (`DEDALO_RELATION_TYPE_CHILDREN_TIPO`), `dd47` parent (`..._PARENT_TIPO`), `dd96` index (`..._INDEX_TIPO`), `dd98` model (`..._MODEL_TIPO`), `dd675` filter, `dd490` dataframe, `dd89`/`dd620`/`dd467`/`dd621` related (uni-/bi-/multi-directional). The TS server re-declares these as needed, split across `src/core/ontology/ontology_tipos.ts` (`RELATION_TYPE_LINK`/`_PARENT`/`_CHILDREN`/`_INDEX`), `src/core/relations/related.ts` (`RELATED_UNIDIRECTIONAL`/`_BIDIRECTIONAL`/`_MULTIDIRECTIONAL`) and `src/core/concepts/subdatum.ts` (`DATAFRAME_RELATION_TYPE`) — there is no single central TS constants file.
+The ontology tipo for the **link** relation type (`DEDALO_RELATION_TYPE_LINK`), the default kind of pointer a [locator](#locator) carries in its `type`. It is one of the relation tipos stamped on the `relation` JSONB column. Siblings: `dd48` children (`DEDALO_RELATION_TYPE_CHILDREN_TIPO`), `dd47` parent (`..._PARENT_TIPO`), `dd96` index (`..._INDEX_TIPO`), `dd98` model (`..._MODEL_TIPO`), `dd675` filter, `dd490` dataframe, `dd89`/`dd620`/`dd467`/`dd621` related (uni-/bi-/multi-directional). These are declared where needed, split across `src/core/ontology/ontology_tipos.ts` (`RELATION_TYPE_LINK`/`_PARENT`/`_CHILDREN`/`_INDEX`), `src/core/relations/related.ts` (`RELATED_UNIDIRECTIONAL`/`_BIDIRECTIONAL`/`_MULTIDIRECTIONAL`) and `src/core/concepts/subdatum.ts` (`DATAFRAME_RELATION_TYPE`) — there is no single central constants file.
 See: [locator](locator.md#properties). Related: [locator](#locator), [relation](#relation-bidirectional--unidirectional), [relations array](#relations-array), [dataframe](#dataframe).
 
 ### dd_date
@@ -144,7 +144,7 @@ See: [Introduction](index.md#definitions-of-dédalos-nomenclature). Related: [se
 *SQL equivalent: a non-translatable / locale-neutral column value.*
 
 The reserved "no language" language code (`DEDALO_DATA_NOLAN`, value `lg-nolan`) used to store data that is **not** translatable — codes, technical literals, `root`, internal values — so the value lives outside any real language slot (`lg-eng`, `lg-spa`…).
-See: PHP `config/sample.config.php` (`DEDALO_DATA_NOLAN`); the TS server has no equivalent named config constant — `'lg-nolan'` is used directly as a literal (e.g. `src/core/section/read.ts`, `src/core/section/record/*.ts`). Related: [translatable / lg-nolan / transliterate](#translatable--lg-nolan--transliterate), [value](#value).
+There is no named config constant for it — `'lg-nolan'` is used directly as a literal (e.g. `src/core/section/read.ts`, `src/core/section/record/*.ts`). Related: [translatable / lg-nolan / transliterate](#translatable--lg-nolan--transliterate), [value](#value).
 
 ### locator
 *SQL equivalent: a foreign-key relation (a pointer between rows).*
@@ -229,8 +229,8 @@ See: [Locator](locator.md), [data model — relations](data_model/relations.md).
 ### relations array
 *SQL equivalent: a join/junction table for one record (inline).*
 
-The `relations` container of a section record (PHP `section::get_relations()`/`add_relation()`): a flat array of all the [locators](#locator) that record participates in. It is the section-level index of relationships, kept alongside the components' own data inside the `datos` JSONB. Distinct from the **`relation` typed column** (the per-component locator store keyed by component tipo, from which the section assembles this array). **TS gap:** the TS write path (`src/core/section/record/save_component.ts`, `src/core/relations/save.ts`) writes only the per-component `relation` typed column; it does not (yet) assemble or maintain this section-level aggregate — inverse/related lookups instead compute on demand via `src/core/search/search_related.ts` (`findInverseReferences`).
-See: [Locator](locator.md), [data model — relations](data_model/relations.md), PHP `core/section/class.section.php`. Related: [locator](#locator), [relation](#relation-bidirectional--unidirectional), [section](#section), [matrix (table)](#matrix-table).
+The `relations` container of a section record: a flat array of all the [locators](#locator) that record participates in. It is the section-level index of relationships, kept alongside the components' own data. Distinct from the **`relation` typed column** (the per-component locator store keyed by component tipo, from which a section-level index could be assembled). The write path (`src/core/section/record/save_component.ts`, `src/core/relations/save.ts`) writes only the per-component `relation` typed column; it does not maintain a section-level aggregate — inverse/related lookups instead compute on demand via `src/core/search/search_related.ts` (`findInverseReferences`).
+See: [Locator](locator.md), [data model — relations](data_model/relations.md). Related: [locator](#locator), [relation](#relation-bidirectional--unidirectional), [section](#section), [matrix (table)](#matrix-table).
 
 ### request_config
 *No direct SQL equivalent (a layout/retrieval configuration layer).*
@@ -316,12 +316,12 @@ See: [Creating tools](../development/tools/creating_tools.md), [Introduction](in
 *SQL equivalent: per-locale column variants / collation.*
 
 **Translatable** data is stored per language in keyed slots (`lg-eng`, `lg-spa`, `lg-cat`…), decoupling linguistic content from structure; the [DDO](#ddo-dd_object) `translatable` flag (default `true`) marks whether a node is. Non-translatable values use the reserved [lg-nolan](#lg-nolan) slot. **Transliterate** is the orthogonal idea that a value in one language *could be transliterated* to others (handled by `tool_lang`): components expose a `transliterate_value` to signal that a translation exists.
-See: [dd_object](dd_object.md), PHP `config/sample.config.php` and component controllers (`component_input_text_json.php`, `component_iri_json.php`); in the TS server the per-tipo `translatable` flag is resolved from the ontology in `src/core/ontology/resolver.ts` (`getTranslatableByTipo`, backed by node `is_translatable`), and a component model's OWN translation support is declared on its descriptor as `classSupportsTranslation` (e.g. `src/core/components/component_input_text/descriptor.ts`). Related: [lg-nolan](#lg-nolan), [value](#value), [Raspa score](#raspa-score).
+See: [dd_object](dd_object.md). The per-tipo `translatable` flag is resolved from the ontology in `src/core/ontology/resolver.ts` (`getTranslatableByTipo`, backed by node `is_translatable`), and a component model's OWN translation support is declared on its descriptor as `classSupportsTranslation` (e.g. `src/core/components/component_input_text/descriptor.ts`). Related: [lg-nolan](#lg-nolan), [value](#value), [Raspa score](#raspa-score).
 
 ### ts_object
 *No SQL equivalent.*
 
-A normalized Dédalo object representing thesaurus/ontology hierarchies — the server node builder (PHP `core/ts_object/class.ts_object.php`; TS port `src/core/ts_object/ts_object.ts`, `buildNodeData`) that turns a `ddo_map` into the JSON shape of one tree node consumed by the client tree widget (unchanged JS). Backed by `ts_node_repository` (batched reads; TS: `src/core/ts_object/node_repository.ts`) and `ts_term_resolver` (term cache; TS: `src/core/ts_object/term_resolver.ts`).
+A normalized Dédalo object representing thesaurus/ontology hierarchies — the server node builder (`src/core/ts_object/ts_object.ts`, `buildNodeData`) that turns a `ddo_map` into the JSON shape of one tree node consumed by the client tree widget. Backed by `ts_node_repository` (batched reads; `src/core/ts_object/node_repository.ts`) and `ts_term_resolver` (term cache; `src/core/ts_object/term_resolver.ts`).
 See: [Thesaurus and Ontology tree](thesaurus/index.md), [Introduction](index.md#definitions-of-dédalos-nomenclature); skill *dedalo-ts-tree*. Related: [hierarchy / thesaurus](#hierarchy--thesaurus), [area_thesaurus](#area_thesaurus), [node](#node), [DDO (dd_object)](#ddo-dd_object).
 
 ---

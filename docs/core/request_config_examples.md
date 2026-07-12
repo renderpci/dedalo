@@ -4,7 +4,7 @@ A cookbook of real Dédalo v7 ontology `request_config` JSON, organized by scena
 
 This document does **not** re-explain the architecture or the wire format — see the two companion docs:
 
-- **[request_config.md](request_config.md)** — the server-side config system that produces these configs: traits, V6/V5, self-resolution, the `section_tipo` source vocabulary, `request_config_object`/`dd_object` interfaces, pagination, caching, the 3-stage construction flow, validation and the error contract.
+- **[request_config.md](request_config.md)** — the server-side config system that produces these configs: explicit vs implicit configuration, self-resolution, the `section_tipo` source vocabulary, `request_config_object`/`dd_object` interfaces, pagination, caching, the construction flow and the error contract.
 - **[rqo.md](rqo.md)** — the wire message the client builds *from* these configs: the RQO envelope, `dd_api`/`action` whitelists, `source`/`sqo`/`show`/`search`/`choose`/`hide`, response shapes per action, and the **canonical `show.interface` reference table** ([rqo.md → show.interface](rqo.md#show-interface)).
 
 > Note on tipos: the examples use working-set conventions (`numisdata*`, `hierarchy*`, `rsc*`, `oh*`, `zenon1`, `dd15`). These are real tipos from the project ontology and test fixtures, not invented. The base `ontology.copy.gz` ships only core models (`rsc*`); project tipos come with the installed ontology.
@@ -96,7 +96,7 @@ This document does **not** re-explain the architecture or the wire format — se
 
 **Explanation**:
 - `api_engine: "dedalo"` — internal Dédalo backend (the default; external engines such as `zenon` are covered in [#6](#6-external-api-integration)).
-- `type: "main"` — the primary config object. V5 emits exactly this same `type:'main'` shape for un-migrated nodes, so callers never branch on the source.
+- `type: "main"` — the primary config object. The implicit builder emits exactly this same `type:'main'` shape for un-migrated nodes, so callers never branch on the source.
 - `sqo.section_tipo` — the target section, given as `{value, source}`. `source: "section"` means the literal tipos in `value` (TLD-active-checked). See the full source vocabulary in [request_config.md → sqo.section_tipo source vocabulary](request_config.md#sqosection_tipo-source-vocabulary).
 - `ddo_map` — the columns to display (publication, number, mint, date). Each entry is a DDO.
 - `section_tipo: "self"` / `parent: "self"` — placeholders resolved server-side: `self` section_tipo → the current section's tipo, `self` parent → the element's own tipo.
@@ -954,14 +954,16 @@ Response (`result` is the new `section_id` as a string, or `false` on failure):
 - `delete_diffusion_records: true` — also remove the published diffusion rows for these records.
 - `delete` is section-model only and requires write (≥ 2). Using `filter_by_locators` deletes several records in one call.
 
-!!! note "TS gap: delete options"
-    The TS dispatch (`src/core/api/dispatch.ts` `dd_core_api.delete`) accepts
-    both flags on the wire but does not yet branch on them: diffusion
-    unpublish runs unconditionally as part of every `delete_record` (there is
-    no opt-out), and an arbitrary section's hierarchy-children cascade is not
-    implemented (only the ontology/hierarchy *registry* sections cascade their
-    whole TLD on delete — see `rewrite/STATUS.md`). `delete_mode` and
-    `filter_by_locators`-based multi-delete are fully ported.
+!!! note "Delete option flags"
+    `options.delete_with_children` is read at the dispatch chokepoint: it lets
+    the caller explicitly accept subtree orphaning, bypassing the
+    children-exist refusal for the ontology/hierarchy registry cascade (only
+    those registry sections cascade their whole TLD on delete — an arbitrary
+    section's hierarchy-children are not recursively deleted). `options.delete_diffusion_records`
+    is accepted on the wire but not read anywhere: diffusion unpublish runs
+    unconditionally as a post-commit step of every `delete_record`, with no
+    opt-out. `delete_mode` and `filter_by_locators`-based multi-delete are
+    fully implemented.
 
 **Count** without blocking the session (forces `full_count`, merges the session filter, and returns `0` on permission denial — no leak):
 
@@ -1119,13 +1121,11 @@ Response (`result` is the new `section_id` as a string, or `false` on failure):
 - `get_element_context` / `get_section_elements_context` fetch *structure only* — pair them with the rendered list so columns can lazy-load their context without re-reading data. Both are registered in the TS `dd_core_api` action table (`src/core/api/dispatch.ts`).
 - `get_section_terms` is the graph-view label resolver; it caps at 1000 locators per call and is safe to run with `prevent_lock: true`.
 
-!!! note "TS gap: get_section_terms"
-    `get_section_terms` (and `get_indexation_grid` / `get_matrix_ontology_locator` /
-    `test`) are documented here as the PHP `dd_core_api` contract but are not
-    yet registered in the TS `ACTION_REGISTRY` — a graph/tree view driven
-    against the TS server cannot batch-resolve term labels this way today. See
-    [rqo.md → `dd_core_api` actions](rqo.md#action-string-mandatory) for the
-    up-to-date ported/gap split.
+!!! note "get_matrix_ontology_locator / test are not registered"
+    `get_section_terms` and `get_indexation_grid` are both registered in
+    `ACTION_REGISTRY['dd_core_api']`. `get_matrix_ontology_locator` and `test`
+    are not. See [rqo.md → `dd_core_api` actions](rqo.md#action-string-mandatory)
+    for the current action set.
 
 *See:* [rqo.md → dd_core_api actions](rqo.md#action-string-mandatory), [section_map resolution](request_config.md#get_ddo_map-dynamic-ddo_map).
 
@@ -1252,19 +1252,14 @@ The smallest valid config — one column, defaults for everything else:
 
 `full_count: false` skips the expensive total-count query — use it when the UI does not need an exact record count.
 
-### Caching anti-pattern: record-derived filters
+### `fixed_filter` and `filter_by_list` always read live data
 
-`fixed_filter` ([#10](#10-with-fixed-filter)) and `filter_by_list` ([#9](#9-with-pre-filters)) both read record/DB data that has **no cache-invalidation path**, so the server sets `use_cache=false` and rebuilds the config on *every* request. That is correct behavior, not a bug — but it means these configs forfeit the static cache. Avoid them on hot list/portal paths where a static layout would do; prefer them only where the filter genuinely depends on the current record's data. See [request_config.md → Caching](request_config.md#caching-and-the-cache-key).
+`fixed_filter` ([#10](#10-with-fixed-filter)) and `filter_by_list` ([#9](#9-with-pre-filters)) both read record/DB data. Since there is no config-level cache at all (see [request_config.md → Caching](request_config.md#caching-and-the-cache-key)), this is not a special case to opt out of — every build already re-reads this live data on every request.
 
 ---
 
 ## Testing your configuration
 
-1. **Validate structure offline** — the batch auditor (CI/cron friendly, exit code 1 on any error) is a PHP-only tool today; it has not been ported to the TS server:
-   ```bash
-   php core/ontology/audit_request_config.php [--errors-only]
-   ```
-   It scans every ontology node mentioning `request_config` and reports `{level, path, message}` issues. Since the same ontology (`dd_ontology`) is shared, running the PHP auditor still validates configs the TS server will also build from. See [request_config.md → Offline validation and the audit CLI](request_config.md#offline-validation-and-the-audit-cli) for the gap detail.
-2. **Read the warnings channel** — under `SHOW_DEBUG`, dropped/defaulted ddos surface in the element context as `config_warnings`, so an unexpectedly empty UI self-explains (invalid tipo, inactive TLD, no permission). See [request_config.md → Error contract](request_config.md#error-contract-warnings-and-audit).
-3. **Diagnose at the wire level** — for RQO/transport problems (empty result with no error, stale list, CSRF, empty `section_tipo`) use [rqo.md → Troubleshooting](rqo.md#troubleshooting).
-4. **Test with different user permissions** — buttons and dropped ddos are user-specific (they are baked into the cache key by `user_id`); verify with several access levels.
+1. **Read the error contract** — an invalid tipo, an unresolvable node, or a missing model simply drops the ddo from the `ddo_map` with no warnings field to inspect (see [request_config.md → Error contract](request_config.md#error-contract-and-warnings)); step through `buildRequestConfigForElement()`/`processSingleDdo()` directly when a `ddo_map` comes back unexpectedly empty.
+2. **Diagnose at the wire level** — for RQO/transport problems (empty result with no error, stale list, CSRF, empty `section_tipo`) use [rqo.md → Troubleshooting](rqo.md#troubleshooting).
+3. **Test with different user permissions** — per-ddo permission gating only applies to SECTION-owned explicit configs (see [request_config.md → Explicit vs implicit configuration](request_config.md#explicit-vs-implicit-configuration)); verify with several access levels.

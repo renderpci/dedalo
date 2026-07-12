@@ -39,7 +39,7 @@ component value. It does **not** store, set or modify any data of its own: the
 identifier it shows is the integer primary key already owned by the section row.
 
 It exists because the `section_id` lives in a dedicated `section_id` integer column of
-the matrix table (managed by the `section` class), not inside the
+the matrix table (managed by the section itself), not inside the
 JSONB `data` column where ordinary component values live. To let the rest of Dédalo
 treat the record id uniformly — display it next to other fields, filter records by id,
 sort by id, and export it as a spreadsheet column — the id is surfaced through this
@@ -56,8 +56,8 @@ Use it when you need to:
 
 Do **not** use it to hold editable data. Any value the user could type only matters in
 search mode (to build the filter); in edit/list/tm it is a read-only mirror of the row
-id. `set_data()` and `save()` are intentional no-ops — attempting to persist through
-this component is ignored and logged.
+id. Writing through this component is an intentional no-op — an attempt to persist is
+ignored and logged.
 
 !!! note "Virtual component"
     Because the id is owned by the section row, `component_section_id` is never the
@@ -117,12 +117,6 @@ The client datum carries the id inside `data.entries` (see the API data sample):
 }
 ```
 
-!!! warning "Time Machine id column"
-    A `component_section_id` instance whose `tipo` is `DEDALO_TIME_MACHINE_COLUMN_ID`
-    (`dd1573`) targets the matrix `id` column instead of `section_id`. This is resolved
-    in `get_order_path()`, where the column name is forced to `id` for that tipo and to
-    `section_id` for every other instance.
-
 ## Ontology instantiation
 
 Define the node like any other component, pointing `model` to `component_section_id`
@@ -167,7 +161,7 @@ properties:
 
 | Property | Accepted values | Default | Effect |
 | --- | --- | --- | --- |
-| *(none specific to this component)* | — | `{}` | No behavioral properties are read by the class. |
+| *(none specific to this component)* | — | `{}` | No behavioral properties are read for this model. |
 
 Generic component facilities still apply via the shared context layer:
 
@@ -176,9 +170,10 @@ Generic component facilities still apply via the shared context layer:
 
 !!! note "Column resolution is not a property"
     Whether the instance maps to the `section_id` column or the Time Machine `id`
-    column is decided by the instance `tipo` (`dd1573` → `id`), handled inside
-    `get_order_path()` — it is not a configurable ontology property. If you need to
-    confirm a specific deployment's node configuration, verify in the ontology.
+    column is decided by the instance `tipo` (`dd1573` → `id`), handled inside the
+    order-path builder (`buildOrderPath()`, `src/core/search/order_path.ts`) — it is not a
+    configurable ontology property. If you need to confirm a specific deployment's node
+    configuration, verify in the ontology.
 
 ## Render views & modes
 
@@ -196,31 +191,28 @@ CSS for these states lives in `css/component_section_id.less` (`.edit`, `.search
 
 ## Import / export model
 
-**Import:** `component_section_id` is **not importable** — it is read-only and does not
-override `conform_import_data`. The id is assigned by the section on record creation,
+**Import:** `component_section_id` is **not importable** — it is read-only and has no
+import handling of its own. The id is assigned by the section on record creation,
 never set from import data. (Note: in [import](../importing_data.md) flows, a column of
 section ids can still be *used* to target existing records; the component itself does
 not ingest a value.)
 
-**Export:** in PHP the component participates in the export atoms contract
-(`get_export_value`). It emits **one integer atom per data item** (normally a single
-item) carrying `cell_type: 'section_id'`, so the id is exported as a plain integer cell
-rather than a JSON array. The raw/`dedalo_raw` export path special-cases this model as
-well: the value is written as an `int` under `cell_type` `section_id` instead of being
-wrapped as a `json` array — so the exported cell is `1`, not `[1]`. The TS export path
+**Export:** the id is exported as a plain integer cell rather than a JSON array —
+**one integer atom per data item** (normally a single item), carrying
+`cell_type: 'section_id'`, so the exported cell is `1`, not `[1]`. The export path
 runs through the generic cell resolver `resolveCellValue()`
 (`src/core/resolve/relation_list.ts`, which already has an explicit
 `model === 'component_section_id'` branch reading the record's own id — see
 [Data model](#data-model)) via `tools/tool_export/server/tool_export.ts`; whether the
-exact `cell_type: 'section_id'` plain-int contract is reproduced has not been
-independently verified for this pass.
+exact `cell_type: 'section_id'` plain-int contract is reproduced end-to-end has not
+been independently verified for this pass.
 
 See the full export and import definitions in
 [exporting data](../exporting_data.md) and [importing data](../importing_data.md).
 
 ### Search operators
 
-Server-side the filter is turned into SQL by `src/core/search/builders/builder_section_id.ts` (dispatched from `src/core/search/conform.ts`), the TS re-expression of the PHP `search_component_section_id` trait; it resolves the query against the integer `section_id` column (cast to `integer`), supporting these operators:
+Server-side the filter is turned into SQL by `src/core/search/builders/builder_section_id.ts` (dispatched from `src/core/search/conform.ts`); it resolves the query against the integer `section_id` column (cast to `integer`), supporting these operators:
 
 | Input | Operator | Meaning | SQL shape |
 | --- | --- | --- | --- |
@@ -234,26 +226,27 @@ Server-side the filter is turned into SQL by `src/core/search/builders/builder_s
 | `<50` | `<` | id < 50 | `col::integer < _Q1_` |
 
 Non-numeric characters are stripped before binding. A locator passed as `q` is reduced
-to its `value` (or `section_id`) before resolution. Parsed-result samples are in
-`core/component_section_id/samples/search.md`.
+to its `value` (or `section_id`) before resolution.
 
 ## Notes
 
-- **Read-only by design.** `set_data()` returns `true` without storing anything, and
-  `save()` logs an ignored-save notice and returns `true`. There is no Time Machine
+- **Read-only by design.** A write through this component succeeds without storing
+  anything, and a save logs an ignored-save notice. There is no Time Machine
   write for this component; in `tm` mode it only *reads* the historical id.
-- **No tools.** `get_tools()` is overridden to return `[]`, so `default_tools` is empty
+- **No tools.** The model exposes no tools, so `default_tools` is empty
   and no tool sections are loaded for this component (it has no editable data to act on).
-- **Ordering — gap.** In PHP, `get_order_path()` sets the order column literally to `section_id`
-  (or `id` for the Time Machine `dd1573` instance) so that "order by id" sorts on the
-  real integer column rather than on a JSONB path, and `sortable` is `true` in the context.
-  The TS structure context (`src/core/resolve/structure_context.ts`) currently hardcodes
-  `sortable: false` for every component (list-column sortability is UNCOVERED v0), so
-  this component is not yet an exception on the TS server.
+- **Ordering.** A list column on this component sorts on the real integer `section_id`
+  matrix column rather than on a JSONB path: `buildOrderPath()`
+  (`src/core/search/order_path.ts`) special-cases `component_section_id`, forcing the
+  resolved order step's `column` to `section_id`. `resolveSortable()`
+  (`src/core/resolve/structure_context.ts`) returns `true` for this component by
+  default — its descriptor declares no `sortable: false` override — so "order by id"
+  is sortable like any other component, subject only to the one per-tipo exception
+  (the notes-text tipo `rsc329`, always non-sortable).
 - **No observers/observables.** This component does not participate in the
   observer/observable mechanism — it produces no data changes to broadcast.
-- **Client validation.** The JS model exposes `validate_input()` (strips everything but
-  digits) and `is_empty()` (used to hilite the search wrapper when it carries a value).
+- **Client validation.** The client model strips everything but digits from typed input,
+  and hilites the search wrapper when the field carries a value.
 
 ### Related components
 

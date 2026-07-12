@@ -8,7 +8,7 @@
 > it without an ontology instance, and debug a blank panel.
 >
 > See also: [Add a widget](../../development/extending/add_a_widget.md) (the
-> step-by-step how-to) · [engineering/WIRE_CONTRACT.md](../../../engineering/WIRE_CONTRACT.md) (WC-026)
+> step-by-step how-to) · [component_info](component_info.md#the-wire-contract) (WC-026, the dual `id`/`widget_id` wire contract)
 
 ---
 
@@ -32,7 +32,7 @@ A `component_info` node declares a list of widgets in `properties.widgets`. On a
 section read the emit hook (`src/core/components/component_info/emit.ts`) serves
 the **stored** misc value if one exists, else falls back to **live compute**:
 
-```
+```text
 component_info node ──▶ emit hook ──▶ stored misc value?  ──yes─▶ serve it (WC-026 normalized)
                                           │ no (the usual case)
                                           ▼
@@ -250,24 +250,23 @@ A `CalculationFn` receives `{dataMap, options}` where `dataMap` maps each input
         "section_id": "current",
         "components": [ { "tipo": "numisdata133", "var_name": "numero" }, { "tipo": "numisdata135", "var_name": "numero2" } ]
       },
-      "process": { "engine": "php", "file": "/mdcat/calculation/mdcat.php", "fn": "multiply", "options": { "type": "float", "precision": 2 } },
+      "process": { "fn": "multiply", "options": { "type": "float", "precision": 2 } },
       "output": [ { "id": "total", "value": "float" } ]
     }
   ]
 }
 ```
 
-!!! note "`process.file` / `engine` are ignored (verification data)"
-    TS dispatches only on `process.fn` through the static registry; the `file` /
-    `engine` keys are kept for PHP-oracle compatibility during coexistence but
-    never loaded. An unknown `fn` resolves to no output — the same effective
-    refusal PHP's `resolve_logic` enforces.
+!!! note "`process.file` / `engine` are legacy — ignored"
+    TS dispatches only on `process.fn` through the static registry. Older
+    ontology records may still carry `file` / `engine` keys from before the
+    cutover; they are read but never used to load code. An unknown `fn` resolves
+    to no output — a deliberate, honest refusal rather than a silent no-op.
 
-!!! warning "Live PHP `summarize`/`to_euros` crash on non-empty input"
-    PHP's `array_sum()` runs on the flat *string* value and crashes the request;
-    the ported fns emit `[]` for the non-empty case (see the pins in
-    `functions.ts`). When PHP fixes the type error, implement the real sum and
-    reconcile the gate.
+!!! warning "`summarize` / `to_euros` currently emit no output for non-empty input"
+    These process functions emit `[]` when any input is non-empty (see the pins
+    in `functions.ts`); with all inputs empty both emit `total 0`. Implementing
+    the real sum is open work — reconcile the gate in `functions.ts` when it lands.
 
 ---
 
@@ -286,7 +285,7 @@ export const user_activity: InfoWidgetDescriptor = {
 };
 ```
 
-`computeInfoWidgets` skips it (verified against live PHP). The client fetches it
+`computeInfoWidgets` skips it. The client fetches it
 from the shared `widget_common.js` autoload path. The RQO and its response
 envelope:
 
@@ -307,17 +306,17 @@ curl -s "$DEDALO/api/v1/json" \
 { "result": [ { "widget": "user_activity", "key": 0, "widget_id": "totals", "value": { "who": [], "what": [], "where": [], "when": [], "publish": [] } } ],
   "msg": "OK. Request done successfully", "errors": [] }
 
-// unknown widget_name (PHP error bytes preserved)
+// unknown widget_name (exact error bytes preserved as the wire contract)
 { "result": false, "msg": [" Empty widget_obj for widget user_activity"], "errors": [] }
 
-// forbidden record (TS-stronger AUTHZ-01 gate — PHP has no such check)
+// forbidden record (AUTHZ-01 gate)
 { "result": false, "msg": [" Forbidden record"], "errors": ["forbidden"] }
 ```
 
 !!! note "The handler AUTHZ-01-gates the record"
     `get_widget_data` calls `principalCanAccessRecord(section_tipo, section_id,
-    principal)` before any compute — a permitted stronger-only divergence from
-    PHP. See `src/core/api/handlers/dd_component_info.ts`.
+    principal)` before any compute — an access check enforced on this path. See
+    `src/core/api/handlers/dd_component_info.ts`.
 
 ---
 
@@ -357,7 +356,7 @@ export const state: InfoWidgetDescriptor = {
 
 The emit hook (`emit.ts` `decorateItem`) calls `computeInfoDataList` **only in
 edit mode** and attaches the result to the data item as `datalist` when
-non-empty (PHP `component_info_json.php` parity).
+non-empty.
 
 - The option list resolves through the canonical `getDatalist` — so it is
   exactly the set the leaf select/check_box would offer, **narrowed by that
@@ -434,9 +433,10 @@ response item carries WC-026 dual keys.
 !!! note "What lands where"
     Per target: exactly **one** TM row (never the live misc column — stored misc
     is legacy). Same-record targets additionally ride the save response. Gated in
-    `test/parity/info_observer_differential.test.ts`. PHP's insert save
-    double-fires, so PHP writes two identical rows where TS writes one — the gate
-    compares TM counts **deduped**.
+    `test/parity/info_observer_differential.test.ts`. An insert save used to
+    double-fire before the cutover, so the frozen fixture data can contain two
+    identical rows per insert — the gate compares TM counts **deduped** to stay
+    robust to that.
 
 ---
 
@@ -481,10 +481,10 @@ Key hygiene (from the test): **track every created row and delete it in
 !!! tip "Prefer a differential when an instance exists"
     If the widget IS declared by a real ontology node, add a
     `*_differential.test.ts` case that byte-compares `computeInfoWidgets` (or the
-    `get_widget_data` envelope) against the live PHP oracle
+    `get_widget_data` envelope) against the frozen fixture store
     (`test/parity/info_widget_differential.test.ts`). Read the **Oracle Trap**
-    note in `AGENTS.md` first — a green differential with no oracle proves
-    nothing.
+    note in `AGENTS.md` first — a green differential with no fixture coverage
+    proves nothing.
 
 ---
 
@@ -500,26 +500,23 @@ bottom — the first three are the usual culprits.
 | 3 | **Is `data.entries` an Array?** | The client reads `self.data.entries`. If the widget threw server-side, the entries never arrive. Check the server log for `WidgetNotRegisteredError` / `WidgetUnportedError`. |
 | 4 | **Edit datalist missing?** | For `state`-style widgets the edit render needs `data.datalist`; without it the render TypeErrors. Confirm `computeDataList` is implemented and you are in **edit** mode ([R5](#r5--give-a-widget-an-edit-datalist)). |
 | 5 | **`widget_name` mismatch across the three places?** | The descriptor `name`, the client `export const`/directory, and the ontology `widget_name` must all match; the `path` must point at the client folder. Run `bun test test/unit/info_widget_registry_tripwire.test.ts`. |
-| 6 | **:8080 vs :3500 confusion?** | The PHP client (`:8080`) renders **stored** archives and **live calculations blank** — that is the WC-026 defect the TS server fixes. Verify against the TS dev server (`:3500`), not PHP, or you are debugging the bug the rewrite exists to fix. |
-| 7 | **Async widget on a stored-only path?** | An `isAsync` widget is skipped by the read aggregate and delivered only via `get_widget_data`. If the client never issues that call (or the record is AUTHZ-01-forbidden), it stays blank. Check the `dd_component_info` request in the network tab ([R4](#r4--make-a-widget-async)). |
+| 6 | **Async widget on a stored-only path?** | An `isAsync` widget is skipped by the read aggregate and delivered only via `get_widget_data`. If the client never issues that call (or the record is AUTHZ-01-forbidden), it stays blank. Check the `dd_component_info` request in the network tab ([R4](#r4--make-a-widget-async)). |
 
-!!! note "Never patch the client"
-    `client/` is byte-identical to the PHP client and must not be edited
-    (AGENTS.md hard rule). If a widget renders blank, fix the **server payload**
-    — the missing key, the missing datalist, the un-normalized entry — not the
-    render. When a real client fix is needed it goes upstream to the PHP client
-    and is re-synced (DEC-16).
+!!! note "Fix the server payload first"
+    `client/` is the TS-owned primary client source — you may edit it directly.
+    But if a widget renders blank, the fix is almost always the **server
+    payload** — the missing key, the missing datalist, the un-normalized entry —
+    not the render. Check the payload before touching client code.
 
 ---
 
 ## Related
 
 - [component_info](component_info.md) — the component reference (wire contract,
-  census, observers, PHP defects).
+  census, observers, known limitations).
 - [widgets](../ui/widgets.md) — the framework reference (registry, descriptor
   contract, IPO fields, SEC-052).
 - [Add a widget](../../development/extending/add_a_widget.md) — the step-by-step
   how-to and the `word_count` worked example.
-- [engineering/WIRE_CONTRACT.md](../../../engineering/WIRE_CONTRACT.md) — WC-026.
 - Source of truth: `src/core/components/component_info/widgets/` (README.md
   checklist, registry.ts, one descriptor module per widget).

@@ -1,397 +1,367 @@
 # Media protection (media file access control)
 
-./dedalo/config/config.php
+> See also: [Configuration](config.md) · [Reverse proxy](../install/reverse_proxy.md) · [area_maintenance](../core/areas/area_maintenance.md) · [media_protection (internals)](../core/system/media_protection.md)
 
-> **TS/Bun rewrite status**: this page describes the PHP-generated `.htaccess`/Nginx marker-file mechanism, which is **not ported** — a coexisting TS server must not generate or rewrite the shared install's web-server config. The TS dev listener instead serves media **session-gated** (its own `dedalo_ts_session` cookie; no marker files, no Rule A/B distinction, no public quality carve-out) — a different, simpler mechanism suited to development, not a drop-in replacement for production Rule B. The **`media_control` maintenance widget** does have a TS port (`mediaControlGetValue` in `src/core/area_maintenance/widgets/media_control.ts`): it reports the shared `.publication` marker counts, `.htaccess` existence and a live `media_index_status` RPC to the publication marker service, byte-parity preserved, but reports its OWN mode/cookie as engine-native fields rather than the PHP config constants (which read back `null`) — see [STATUS.md](../../rewrite/STATUS.md), "media_control.get_value". Setting the mode (`media_control.set_media_access_mode`) stays PHP-only by design (it writes the PHP install's `DEDALO_MEDIA_ACCESS_MODE_CUSTOM` and regenerates `media/.htaccess`). The marker-writing side (Rule B) is today owned by the standalone publication marker service; absorbing it into [the diffusion engine](../diffusion/native_engine.md) (the media-index port) is a ledgered follow-up.
+Media protection controls who may read the files served from the media directory — images,
+audiovisual masters and web copies, PDFs, SVG, 3D and subtitles. This page is for the system
+administrator: what to configure, how to wire the web server, and how to verify that the gate
+is really closed before you expose media to the internet.
 
-Dédalo can control who is allowed to read the media files (image, audiovisual, PDF, SVG, 3D and subtitles) served from the media directory:
+> Example media URL: `https://mydomain.org/dedalo/media/av/404/rsc35_rsc167_2.mp4`
 
-> Example: <https://mydomain.org/dedalo/media/av/404/rsc35_rsc167_2.mp4>
+## The model: one tree, two audiences
 
-One single media tree serves two different audiences **at the same URLs, without duplicating any file**:
+One media tree serves two audiences at the same URLs, **with no file duplication**:
 
-* **Rule A — work system**: users logged into Dédalo have unrestricted access to all media files. Users who are not logged in have no access.
-* **Rule B — publication**: anonymous visitors of the publication websites can only access media that belongs to **published** records, and only in the configured web-delivery quality folders (never the `original` masters).
+* **Rule A — the work system.** A logged-in user carries the fixed-name cookie
+  `dedalo_media_auth`. Its daily-rotated value must exist as a zero-byte marker file in
+  `<media>/.publication/auth/{value}`. Rule A grants unrestricted media access: masters,
+  unpublished records, everything.
+* **Rule B — publication.** An anonymous visitor may read only the files of **published**
+  records, and only inside the configured public quality folders. The web server stats
+  `<media>/.publication/pub/{section_tipo}_{section_id}`, deriving the record identity from
+  the media **file name**. Those markers are written by the diffusion engine
+  (`src/diffusion/targets/mediastore/media_index.ts`) — never by the protection module.
 
-## Why
+Without this, every media file is world-readable by anyone who knows or guesses its URL,
+including unpublished masters and the `.vtt` subtitle files that carry unpublished
+transcriptions. The classic workaround — copying published media to a second public tree —
+doubles terabytes of storage and desynchronizes on every publish.
 
-Without protection, every media file is world-readable by anyone who knows (or guesses) its URL — including unpublished masters, working copies and **subtitle files that carry unpublished transcriptions**. The classic workaround, copying published media to a second public tree, doubles the storage (archives often hold terabytes of audiovisual masters) and desynchronizes the two copies on every publish/unpublish.
+### The web server enforces, not the application
 
-The media protection system solves this with hard requirements in mind:
+This is the point that justifies the whole design. Authorization is **one `stat()` call per
+request, performed by Apache or nginx itself**. Multi-GB files therefore keep native
+`sendfile` and HTTP `Range` delivery, and the real-time clip handlers (the Apache H.264
+streaming module, the nginx `mp4` module) still receive the request untouched — URL
+parameters like `?start=1&end=89` keep working exactly as before.
 
-* **No media duplication**. The same files are used for work and consultation.
-* **Very fast authorization**. The check must not become a bottleneck on busy publication servers: it is a single `stat()` call on a marker file, performed by the web server itself. No PHP, no database, no application process participates in serving a media file.
-* **Native file delivery preserved**. Files can be several GB. They keep being served by Apache/Nginx natively (`sendfile`, HTTP `Range` requests for seeking), and the real-time clip engines keep working: the Apache H.264 streaming module and the Nginx `mp4` module still receive the request untouched, so URL parameters like `?start=1&end=89` or `?vbegin=2013&vend=2033` work exactly as before.
-* **Subtitles are media**. Fixed `.vtt` files under `media/av/subtitles/` are gated like any other media file, because they contain the transcriptions. (The dynamic subtitle endpoint of the publication API performs its own publication-database check and is independent of this system.)
-* **Fail closed**. Every failure mode (missing marker, stale store, engine down) denies anonymous access to that file — it never exposes anything. Logged-in editors are never locked out by a publication-side failure.
+!!! success "No engine process is ever in the media byte path"
+    Dédalo only **maintains the artifacts the web server reads**: the marker files and the
+    generated rule files. It never proxies, streams or gates a media byte itself. The
+    consequence you can rely on: the gate can never break streaming, and it can never become
+    a bottleneck on a busy publication server.
 
-## How it works
+### Fail closed, and as 404
 
-### The marker store
+Every failure path — missing marker, malformed cookie, a file name that does not parse, an
+absent marker store — **denies**. The default deny answers **404, not 403**, so the existence
+of unpublished media is never disclosed.
 
-Authorization state lives in a directory of **zero-byte marker files** inside the media root:
+Rule A markers are engine-owned and completely independent of publication state, so a
+diffusion failure can never lock editors out of their own media.
+
+## The marker store
+
+Authorization state lives in a directory of zero-byte marker files inside the media root.
+Ownership is exclusive: crossing it is a bug.
 
 ```text
-DEDALO_MEDIA_PATH/.publication/
-    auth/{cookie_value}                     Rule A: valid auth cookie values
-                                            (today + yesterday), written by PHP at login
-    pub/{section_tipo}_{section_id}         Rule B: "this record is published in at
-                                            least one publication database" — the ONLY
-                                            thing the web server checks for anonymous users
-    dbs/{database}/{table}/{key}            ground truth per publication target,
-                                            maintained by the diffusion publication service
+<media>/.publication/
+    auth/{cookie_value}                 rule A — written by the engine at login, and only there
+    pub/{section_tipo}_{section_id}     rule B — "published in at least one target"; the ONLY
+                                        thing the web server stats for an anonymous request
+    dbs/{database}/{table}/{key}        per-target ground truth; pub/ is the derived union
 ```
 
-The web server answers every media request with at most two `stat()` calls (a few microseconds, served from the kernel dentry cache):
+`pub/{key}` exists exactly when the key exists in at least one `dbs/<db>/<table>/` directory.
+A record published on two sites stays public until the **last** one unpublishes. An unpublish
+takes effect on the very next HTTP request, including for the record's subtitle files.
 
-1. Does the request carry the auth cookie `dedalo_media_auth` whose value exists as a file in `auth/`? → logged-in user, serve anything.
-2. Otherwise: is the URL inside a public quality folder, **and** does `pub/{section_tipo}_{section_id}` exist for the record the file belongs to? → published, serve it.
-3. Otherwise: **404** (not 403 — the existence of unpublished media is not disclosed).
+The store itself is **never served, in any mode** — the file names under `auth/` are live
+credentials and the ones under `pub/` would enumerate every published record.
 
-The marker store itself (`/media/.publication/...`) is never served.
+### The file name grammar
 
-### Rule A: the auth cookie
-
-When `media_protection` is active, every successful login sets the cookie `dedalo_media_auth` (fixed name, defined in `media_protection::COOKIE_NAME`). Its value is a random sha512 hash **rotated daily**; today's and yesterday's values are valid simultaneously, so sessions never break at midnight. The login process mirrors the valid values as marker files in `auth/` and removes expired ones.
-
-Because the cookie *name* is fixed and only marker *files* change, the generated Apache `.htaccess` is static and Nginx needs no reload — ever. Logout deletes the cookie from the browser.
-
-### Rule B: publication markers and the file name grammar
-
-Publication state in Dédalo equals "the record has rows in a publication (MariaDB) database". The publication marker store mirrors every publish, unpublish and delete. Today the markers are maintained by the standalone diffusion publication service; absorbing the marker store into [the diffusion engine](../diffusion/native_engine.md) (the media-index port) is a ledgered follow-up — see `rewrite/STATUS.md`, *Diffusion rebuild*:
-
-* publish a record → marker created in `dbs/{db}/{table}/` and the union marker `pub/{key}` appears;
-* unpublish/delete → the per-table marker is removed; `pub/{key}` is removed only when **no** publication database holds the record anymore (a record published in several sites stays public until the last one unpublishes);
-* the change takes effect on the very next HTTP request — including cutting access to the record's subtitle files.
-
-The web server maps a URL to its record using the media **file name grammar**. Dédalo names every media file after the component and section it belongs to:
+The web server maps a URL to its record through the media file name:
 
 ```text
 {component_tipo}_{section_tipo}_{section_id}[_{lang}].{extension}
 
-rsc35_rsc167_2.mp4              → record rsc167-2  (av, quality folder)
+rsc35_rsc167_2.mp4              → record rsc167-2  (web quality video)
 rsc35_rsc167_2.jpg              → record rsc167-2  (posterframe)
 rsc35_rsc167_2_lg-spa.vtt       → record rsc167-2  (Spanish subtitles)
 rsc29_rsc170_3_lg-spa.jpg       → record rsc170-3  (translatable image)
-test94_test3_1.mp4              → record test3-1
 ```
 
-The gate extracts the **last two** underscore tokens (`section_tipo`, `section_id`) and stats `pub/rsc167_2`. One marker therefore covers every derived artifact of the record: all qualities, the posterframe, every subtitle language.
+The gate takes the **last two** underscore tokens (`section_tipo`, `section_id`) and stats
+`pub/rsc167_2`. One marker therefore covers every derived artifact of the record: all
+qualities, the posterframe, every subtitle language.
 
-> Note: media files renamed away from this grammar (e.g. images using `properties.image_id` or an external_source file name) cannot be mapped to a record. They simply stay login-only — fail closed, never exposed.
-
-## Access modes
-
-DEDALO_MEDIA_ACCESS_MODE `false | string`
-
-./dedalo/config/config.php
-
-```php
-define('DEDALO_MEDIA_ACCESS_MODE', false);
-```
-
-| Mode | Logged-in users | Anonymous users |
-|---|---|---|
-| `false` | everything | **everything** (no protection — media is world-readable) |
-| `'private'` | everything | nothing |
-| `'publication'` | everything | only published records, only in the public quality folders |
-
-* Use `'private'` for pure work systems with no public website.
-* Use `'publication'` when the same server (or a server sharing the media tree) also feeds public websites.
-* Back-compat: when `DEDALO_MEDIA_ACCESS_MODE` is not defined, the deprecated boolean `DEDALO_PROTECT_MEDIA_FILES===true` behaves as `'private'`.
-
----
+!!! note "Files that do not parse stay login-only — by design"
+    Media renamed away from this grammar (for example images renamed through
+    `properties.image_id`, or an external-source file name) cannot be mapped to a record, so
+    rule B never matches them and they remain readable only by logged-in users. That is
+    fail-closed behavior, not a defect. Never ask for the grammar to be "loosened" to fix
+    them: that would hand anonymous visitors every unparseable file in a public folder.
 
 ## Configuration
 
-### Public quality folders
+All keys live in `../private/.env`.
 
-DEDALO_MEDIA_PUBLIC_QUALITIES `array` (optional)
+### `DEDALO_MEDIA_ACCESS_MODE`
 
-./dedalo/config/config.php
+`private` | `publication` (unset = protection off)
 
-The quality folders (relative to the media root) that anonymous users may read in `'publication'` mode when the record is published. When undefined, the web-delivery defaults derived from the install constants are used:
-
-```php
-// default when undefined:
-// ['av/404','av/posterframe','av/subtitles','image/1.5MB','image/thumb','pdf/web','svg/web','3d/web']
-define('DEDALO_MEDIA_PUBLIC_QUALITIES', [
-	DEDALO_AV_FOLDER .'/'. DEDALO_AV_QUALITY_DEFAULT,	// 'av/404'
-	DEDALO_AV_FOLDER .'/posterframe',
-	DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER,			// 'av/subtitles'
-	DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_DEFAULT,
-	DEDALO_IMAGE_FOLDER .'/'. DEDALO_QUALITY_THUMB,
-	DEDALO_PDF_FOLDER .'/'. DEDALO_PDF_QUALITY_DEFAULT,
-	DEDALO_SVG_FOLDER .'/'. DEDALO_SVG_QUALITY_DEFAULT,
-	DEDALO_3D_FOLDER .'/'. DEDALO_3D_QUALITY_DEFAULT
-]);
-```
-
-`original` and `modified` folders are **always refused**, even if listed: master files are never public. Entries containing `..` or unexpected characters are ignored with an error log.
-
-> Example: to publish higher-quality video, add `'av/720'`. To keep thumbnails private, remove `'image/thumb'`.
-
----
-
-### Extra Apache rules
-
-MEDIA_HTACCESS_ADDONS `string` JSON (optional)
-
-./dedalo/config/config.php
-
-Raw `mod_rewrite` lines appended to the generated `media/.htaccess` just before the final deny rule. Replaces the legacy `INIT_COOKIE_AUTH_ADDONS` (whose lines targeted a `<RequireAny>` block that no longer exists).
-
-```php
-// example: allow an internal network unconditionally
-define('MEDIA_HTACCESS_ADDONS', '["RewriteCond %{REMOTE_ADDR} ^10\\\\.0\\\\.","RewriteRule ^ - [L]"]');
-```
-
----
-
-### Deprecated: DEDALO_PROTECT_MEDIA_FILES
-
-DEDALO_PROTECT_MEDIA_FILES `bool` (deprecated)
-
-Kept for back-compat only. `true` maps to `DEDALO_MEDIA_ACCESS_MODE='private'` when the new constant is not defined. New installs should use `DEDALO_MEDIA_ACCESS_MODE`.
-
----
-
-### Runtime override: DEDALO_MEDIA_ACCESS_MODE_CUSTOM
-
-DEDALO_MEDIA_ACCESS_MODE_CUSTOM `null | false | string`
-
-./dedalo/config/config_core.php
-
-Written automatically by the **media_control** maintenance widget (root user) — do not edit manually. When defined and not `null`, it overrides the config.php value (same convention as `DEDALO_MAINTENANCE_MODE_CUSTOM`). `null` means "no override, use the config file".
-
----
-
-### Diffusion engine: DEDALO_MEDIA_PATH
-
-DEDALO_MEDIA_PATH `string`
-
-./dedalo/diffusion/api/v1/.env
-
-The publication marker service must know where the media directory is. Set the **same absolute path** as the work server's media path and restart the service:
+| Mode | Logged-in users | Anonymous users |
+|---|---|---|
+| *unset / anything else* | everything | **everything** — media is world-readable |
+| `private` | everything | nothing |
+| `publication` | everything | published records only, and only in the public quality folders |
 
 ```ini
-# diffusion/api/v1/.env
-DEDALO_MEDIA_PATH=/var/www/html/dedalo/media
+# ../private/.env
+DEDALO_MEDIA_ACCESS_MODE=publication
 ```
 
-Leave it empty to disable marker maintenance (all marker operations become no-ops). Without it, `'publication'` mode denies all anonymous access — fail closed.
+Use `private` for a pure work system with no public website. Use `publication` when the same
+server — or a server sharing the media tree — also feeds public websites.
 
----
+**Precedence** (`resolveMediaAccessMode()`), highest first:
 
-## Web server configuration
+1. The runtime override in `<private>/ts_state.json` (`media_access_mode`), written by the
+   **media_control** maintenance widget. `null` or absent means "no override"; a stored
+   `false` means "explicitly off" and does **not** fall through to the `.env` value.
+2. `DEDALO_MEDIA_ACCESS_MODE` from `../private/.env`.
+3. The deprecated `DEDALO_PROTECT_MEDIA_FILES=true`, honored as `private`.
+4. Otherwise: off.
+
+Anything that is not exactly `private` or `publication` resolves to off. The override is
+re-read from disk on every request, so a mode change from the widget takes effect immediately,
+with no restart.
+
+!!! warning "A stale runtime override is the classic 'my config change did nothing'"
+    The widget's override **wins over `.env`**. If you edit `DEDALO_MEDIA_ACCESS_MODE` and
+    nothing changes, open the media_control widget: it reports the effective mode *and where
+    it came from*. Set the selector back to "Use config file value" to drop the override.
+
+### `MEDIA_PATH`
+
+The absolute filesystem media root. Everything in this subsystem hangs off it: the marker
+store, the generated rule files, the file the web server finally serves.
+
+If `MEDIA_PATH` is unset while a mode is configured, **login fails loudly** rather than
+serving media unprotected. If it is unset and no mode is configured, the whole subsystem is a
+no-op.
+
+### `DEDALO_MEDIA_PUBLIC_QUALITIES`
+
+The quality folders (relative to the media root) an anonymous user may read in `publication`
+mode when the record is published. When unset, they are **derived from this install's own
+quality catalog**, so an install that renamed a quality still gets rules that match its real
+folder names:
+
+```text
+av/404, av/posterframe, av/subtitles, image/1.5MB, image/thumb, pdf/web, svg/web, 3d/web
+```
+
+```ini
+# publish higher-quality video too, and keep thumbnails private
+DEDALO_MEDIA_PUBLIC_QUALITIES=["av/404","av/720","av/posterframe","av/subtitles","image/1.5MB","pdf/web"]
+```
+
+!!! danger "Master qualities can never be made public"
+    `filterPublicQualities()` refuses `original` and `modified`, **plus this install's
+    configured original quality for every media type and the retouched image twin**, whatever
+    you write in the list. It also refuses `..` and any character outside
+    `[A-Za-z0-9_./-]` — these strings are interpolated into a web-server regex. A refused
+    entry is dropped and logged; it never silently becomes public and never aborts the boot.
+
+### `MEDIA_HTACCESS_ADDONS`
+
+A JSON array of raw Apache rewrite directives, appended to the generated `.htaccess` just
+before the final deny rule. You own their syntax; Dédalo only places them.
+
+```ini
+# allow an internal network unconditionally
+MEDIA_HTACCESS_ADDONS=["RewriteCond %{REMOTE_ADDR} ^10\\.0\\.","RewriteRule ^ - [L]"]
+```
+
+### `MEDIA_DEV_ROUTE_ENABLED`
+
+Must stay `false` in production. The dev media route serves files from the application with
+**no per-record access control**, bypassing everything on this page. The server logs a loud
+warning when it is on.
+
+## The generated rule files
+
+This is the operator step nobody can guess. The engine **generates** its web-server rules into
+the media root; you have to make the web server read them.
+
+| Generated file | Web server | What you must do |
+|---|---|---|
+| `.htaccess` | Apache | Nothing — honored automatically, provided `AllowOverride` permits it. |
+| `dedalo_media_protection.nginx.conf` | nginx | `include` it in the media `server` / `location` block. |
+| `dedalo_media_protection_map.nginx.conf` | nginx | `include` it at **`http{}`** scope (a `map` cannot live inside `server{}`). |
+
+The exact wiring, with the surrounding proxy configuration, is in
+[reverse proxy](../install/reverse_proxy.md).
+
+The files are written at **boot**, at **every login**, and whenever the mode is changed from
+the media_control widget — so a fresh deploy or a wiped media directory heals itself without
+anyone noticing. Each file embeds a `# config-hash:` comment covering the mode, the public
+qualities, the addon lines, the media root and the template version, so a login normally
+compares two hashes and writes nothing.
+
+!!! note "`TEMPLATE_VERSION`"
+    The hash folds in a `TEMPLATE_VERSION` constant. Bumping it in code is the **only** thing
+    that makes an existing install regenerate rule files whose other inputs are unchanged.
+    Nothing you can set in `.env` does that.
 
 ### Apache
 
-Nothing to configure manually: Dédalo generates `DEDALO_MEDIA_PATH/.htaccess` automatically (at login, or immediately when the mode is changed from the media_control widget). The file is static — it is only rewritten when the configuration changes — and includes the SEC-088 script-execution hardening.
+Requirements: `mod_rewrite`, and `AllowOverride All` (or at least `FileInfo Options`) on the
+media directory. Apache re-reads `.htaccess` per request, so a mode change applies
+**immediately**.
 
-Requirements:
+The generated gate, in order: deny the marker store → rule A (cookie value exists as an `auth/`
+marker) → rule B (public quality folder **and** a `pub/` marker for the record the file name
+identifies) → your addon lines → default deny as 404. The rewrite substitution is always `-`
+and the query string is never touched, which is why `Range` requests and `?start=` clipping
+survive.
 
-* `mod_rewrite` enabled.
-* `AllowOverride All` (or at least `FileInfo Options`) on the media directory.
-* Optional: the Dédalo H.264 streaming module for `?start=` clipping keeps working unchanged — the gate never touches the query string and the request still reaches the module handler.
+### nginx
 
-Generated file (publication mode, abbreviated):
+nginx reads its include at **reload**, not per request.
 
-```apache
-# 0. The marker store itself is never served.
-RewriteRule (^|/)\.publication(/|$) - [R=404,L]
+!!! warning "nginx needs a reload after a mode change — Apache does not"
+    Flip the mode from `off` to `publication` and forget `nginx -t && nginx -s reload`, and
+    nginx keeps serving the **old** rules while the widget cheerfully reports the new mode.
+    The widget's success message says so, and it reports `rules.nginx.reload_required`.
 
-# 1. Rule A: logged-in Dédalo users.
-RewriteCond %{HTTP_COOKIE} (?:^|;\s*)dedalo_media_auth=([a-f0-9]{128}) [NC]
-RewriteCond "/var/www/html/dedalo/media/.publication/auth/%1" -f
-RewriteRule ^ - [L]
+    What does **not** need a reload: the **daily cookie rotation**. The cookie *name* is fixed
+    and the rules never mention a *value* — only the marker file whose name is the value. That
+    is the entire reason the name is fixed.
 
-# 2. Rule B: public quality + publication marker.
-RewriteCond "/var/www/html/dedalo/media/.publication/pub/$1_$2" -f
-RewriteRule ^(?:av\/404|av\/posterframe|av\/subtitles|image\/1\.5MB|...)/(?:.+/)?[^/]*_([a-z0-9]+)_([0-9]+)(?:_lg-[a-zA-Z0-9-]{2,12})?\.[A-Za-z0-9]+$ - [L]
+An `include` of a file that does not exist makes nginx refuse to start. That is fail-closed and
+intended. The tempting "fix" — commenting the include out — leaves your media world-open;
+generate the rules instead (boot the engine once).
 
-# 3. Default deny: 404 hides the existence of unpublished media.
-RewriteRule ^ - [R=404,L]
-```
+Operational notes, also written into the generated file:
 
-### Nginx
+* Do **not** enable `open_file_cache` on the media locations (or keep `open_file_cache_valid`
+  ≤ 2s): it caches `stat()` results and delays an unpublish taking effect.
+* On NFS or a shared-storage web farm the marker `stat()` honors the attribute cache, so an
+  unpublish can lag a few seconds across hosts.
+* Behind a CDN or caching proxy, **purge the record's media paths on unpublish** (especially
+  the `.vtt` subtitles): the origin denies immediately, downstream caches do not.
 
-Nginx cannot read `.htaccess`, so the equivalent rules are added to the site configuration. A complete, commented block ships in `config/nginx.conf.sample` ("Media access control" section). Summary:
+!!! note "Verification status"
+    The Apache rules have been exercised end-to-end against a live server, including the
+    `Range`/`206` check. The nginx rules are currently **pattern-verified only** (the tripwire
+    compiles them and pins the known traps) — run the verification matrix against a real nginx
+    before your first nginx deployment.
 
-```nginx
-# http context: sanitize the cookie value (hex-only) before filesystem use
-map $cookie_dedalo_media_auth $dedalo_auth_key {
-    "~^(?<h>[a-f0-9]{128})$"  $h;
-    default                   "_invalid_";
-}
+## Always-on hardening
 
-# server context:
-location ^~ /media/.publication/ { deny all; return 404; }
+Two things are emitted in **every** mode, including `off`, because neither is part of the
+access gate:
 
-# Rule B: public qualities — marker OR valid login cookie
-location ~ ^/media/(?:av/404|av/posterframe|av/subtitles|image/1\.5MB|image/thumb|pdf/web|svg/web|3d/web)/(?:.+/)?[^/]*_(?<dd_s>[a-z0-9]+)_(?<dd_i>[0-9]+)(?:_lg-[a-zA-Z0-9-]{2,12})?\.[A-Za-z0-9]+$ {
-    set $dd_pass 0;
-    if (-f $document_root/media/.publication/auth/$dedalo_auth_key) { set $dd_pass 1; }
-    if (-f $document_root/media/.publication/pub/${dd_s}_${dd_i})   { set $dd_pass 1; }
-    if ($dd_pass = 0) { return 404; }
-    mp4;   # native '?start='/'?end=' clipping
-}
+* **Script execution under the media root is denied.** The media root is full of user-uploaded
+  files, and the web server must never interpret one as code.
+* **The marker store is denied.** The names under `auth/` are working media credentials and the
+  ones under `pub/` enumerate every published record.
 
-# Rule A: everything else under /media is login-only
-# (plain prefix, NO ^~ : the rule-B regex above must be consulted first)
-location /media/ {
-    if (!-f $document_root/media/.publication/auth/$dedalo_auth_key) { return 404; }
-}
-```
+!!! danger "`off` disables the gate — it never deletes the rule file"
+    Turning protection off writes a **hardening-only** rule file. It must never unlink it: a
+    media directory with no rule file is one where an uploaded script becomes executable, and
+    where yesterday's credential file names were harvestable. "Protection is off today" must
+    not mean "the cookie that works tomorrow was readable yesterday".
 
-Operational notes (also in the sample file):
+## The auth cookie
 
-* Do **not** enable `open_file_cache` on the media locations (or keep `open_file_cache_valid` ≤ 2s): it caches `stat()` results and delays unpublish taking effect.
-* The quality alternation in the regex must match `DEDALO_MEDIA_PUBLIC_QUALITIES`.
-* NFS / shared-storage web farms: the marker `stat()` honors the NFS attribute cache, so unpublish can lag a few seconds across hosts.
-* CDN or proxy in front: purge the record's media paths on unpublish — the origin denies immediately, downstream caches do not.
+* **Fixed name**, `dedalo_media_auth`; rotating **value**, 128 hex characters.
+* Today's and yesterday's values are both valid, so sessions do not break at midnight and a
+  second login on the same day **recycles** the value instead of rotating every other editor
+  out.
+* Attributes: `HttpOnly; SameSite=Lax; Path=/`, `Max-Age=86400`, plus `Secure` when the session
+  cookie is configured secure. `HttpOnly` still lets the browser attach it to `<img>` and
+  `<video>` subresource loads — that is the whole mechanism.
+* Logout clears the cookie in the browser. It **must not** remove the marker: the value is
+  install-global, so unlinking it would lock out every other editor.
+* The persisted store, `<private>/media_auth.json` (mode `0600`), lives outside every served
+  tree by construction, and the engine refuses to write it under the media root. Its contents
+  are valid media credentials: a fetchable store would let any visitor set the cookie and read
+  the whole tree for up to 48 hours.
 
----
+A leaked value grants media read access until the next daily rotation. That is the price of a
+reload-free, zero-configuration web-server gate.
 
-## Cases and examples
+## The media_control widget
 
-The examples assume `'publication'` mode, default public qualities, and an audiovisual record `rsc167-2` whose files are:
+Area Maintenance carries the **Media access control** widget:
 
-```text
-media/av/404/rsc35_rsc167_2.mp4             web quality video
-media/av/original/rsc35_rsc167_2.mp4        master
-media/av/posterframe/rsc35_rsc167_2.jpg     posterframe
-media/av/subtitles/rsc35_rsc167_2_lg-spa.vtt subtitles (transcription!)
-```
+* it reports the effective mode **and where it came from** (runtime override, `.env`, or the
+  legacy flag), the public quality folders actually in force, the media path, the state of both
+  generated rule files (`exists` / `up_to_date`, and `reload_required` for nginx), the marker
+  counts, and whether the media index is live;
+* the **root user** can change the mode (`Use config file value` / `Off` / `Private` /
+  `Publication`). The change applies in the same request: the override is stored, both rule
+  files are regenerated with the new mode, and the auth markers are re-laid so users who
+  already hold a cookie keep access without re-authenticating. Everyone else receives the
+  cookie at their next login;
+* **Rebuild media index** (global admins) resyncs the publication markers from the publication
+  databases. It is safe to re-run at any time and never opens a deny-everything window.
 
-### Case 1 — anonymous visitor, record published
-
-The record was published (diffusion), so `pub/rsc167_2` exists:
-
-```shell
-curl -I https://mydomain.org/dedalo/media/av/404/rsc35_rsc167_2.mp4
-# HTTP/1.1 200 OK
-
-curl -I "https://mydomain.org/dedalo/media/av/404/rsc35_rsc167_2.mp4?start=1&end=89"
-# HTTP/1.1 200 OK            (clip engine receives ?start/?end untouched)
-
-curl -I -H "Range: bytes=0-1023" https://mydomain.org/dedalo/media/av/404/rsc35_rsc167_2.mp4
-# HTTP/1.1 206 Partial Content   (seeking works: native delivery)
-
-curl -I https://mydomain.org/dedalo/media/av/subtitles/rsc35_rsc167_2_lg-spa.vtt
-# HTTP/1.1 200 OK            (published transcription)
-
-curl -I https://mydomain.org/dedalo/media/av/original/rsc35_rsc167_2.mp4
-# HTTP/1.1 404 Not Found     (master quality is never public)
-```
-
-### Case 2 — anonymous visitor, record NOT published
-
-No `pub/rsc167_3` marker:
-
-```shell
-curl -I https://mydomain.org/dedalo/media/av/404/rsc35_rsc167_3.mp4
-# HTTP/1.1 404 Not Found
-
-curl -I https://mydomain.org/dedalo/media/av/subtitles/rsc35_rsc167_3_lg-spa.vtt
-# HTTP/1.1 404 Not Found     (unpublished transcription is protected)
-```
-
-### Case 3 — logged-in Dédalo user
-
-The browser holds the `dedalo_media_auth` cookie set at login:
-
-```shell
-curl -I -H "Cookie: dedalo_media_auth=<128-hex-value>" \
-    https://mydomain.org/dedalo/media/av/original/rsc35_rsc167_2.mp4
-# HTTP/1.1 200 OK            (everything, including masters and unpublished media)
-```
-
-A stale, expired or malformed cookie value behaves like an anonymous request (404 on non-public media).
-
-### Case 4 — unpublishing takes effect immediately
-
-```text
-1. Editor sets the record publication to 'no' and runs diffusion
-   (or deletes the record).
-2. The diffusion engine deletes the publication rows and removes
-   dbs/{db}/{table}/rsc167_2; if no other publication database still
-   holds the record, pub/rsc167_2 is removed too.
-3. The next HTTP request for ANY file of the record
-   (video, posterframe, every .vtt) answers 404.
-```
-
-If the record is published in two sites (`web_site_a` and `web_site_b`) and only `web_site_a` unpublishes, `pub/rsc167_2` survives and the media stays public — union semantics across all publication databases.
-
-### Case 5 — attempts that fail closed
-
-```shell
-# marker store is never served
-curl -I https://mydomain.org/dedalo/media/.publication/pub/rsc167_2          # 404
-
-# query string cannot bypass the gate
-curl -I "https://mydomain.org/dedalo/media/av/original/rsc35_rsc167_2.mp4?x=/av/404/"  # 404
-
-# encoded traversal
-curl -I "https://mydomain.org/dedalo/media/av/404/..%2Foriginal%2Frsc35_rsc167_2.mp4"  # 404
-
-# files that do not follow the naming grammar stay login-only
-curl -I https://mydomain.org/dedalo/media/av/404/freeform.mp4                # 404
-```
-
----
-
-## The media_control maintenance widget
-
-Area Maintenance includes the **Media access control** widget (`media_control`), which:
-
-* reports the current status: effective mode and where it comes from (config.php, legacy constant, or runtime override), public quality folders, generated `.htaccess` state, marker counts, and whether the diffusion engine is reachable and has `DEDALO_MEDIA_PATH` configured — every misconfiguration is highlighted;
-* lets the **root user** change the mode (`Use config file value / Off / Private / Publication`). The change is applied immediately: the override is persisted to `config_core.php`, the `.htaccess` is regenerated for the new mode, and the auth markers are restored so already-logged users keep access. Other users get the auth cookie at their next login;
-* provides the **Rebuild media index** button (global admins), a full resync of the publication markers from the publication databases.
+The mode switch is **root-only**, not merely admin-only: setting the mode to `off` opens the
+entire media tree to the world.
 
 ## Enabling on an existing installation
 
-1. Set the mode in `config.php` (or from the media_control widget):
-
-    ```php
-    define('DEDALO_MEDIA_ACCESS_MODE', 'publication');
-    ```
-
-2. Configure the diffusion engine and restart it:
+1. Set the mode:
 
     ```ini
-    # diffusion/api/v1/.env
-    DEDALO_MEDIA_PATH=/var/www/html/dedalo/media
+    # ../private/.env
+    DEDALO_MEDIA_ACCESS_MODE=publication
     ```
 
-3. If the instance already has published records, build the markers once — from the widget button, or from CLI:
+2. Restart the server. It writes the rule files into `MEDIA_PATH` at boot.
+3. **nginx only**: add the two `include` lines (see [reverse proxy](../install/reverse_proxy.md)),
+   then `nginx -t && nginx -s reload`. Apache needs nothing.
+4. If the instance already has published records, run **Rebuild media index** once from the
+   widget so the `pub/` markers exist.
+5. Ask editors to log out and back in once — the auth cookie is minted at login.
 
-    ```shell
-    php diffusion/migration/helpers/rebuild_media_index.php
-    ```
+## Verify before you expose anything
 
-    PHP resolves every SQL publication target from the diffusion ontology and the engine diff-syncs the marker store from `SELECT DISTINCT section_id` of each table (covering all publication databases). The rebuild never creates a deny-everything window and is safe to re-run at any time to repair drift.
+Take one published record and one unpublished record and check the three answers that matter:
 
-4. Nginx installs: enable the "Media access control" block from `config/nginx.conf.sample` and reload. Apache installs need nothing (the `.htaccess` is generated automatically).
+```shell
+# published record, public quality, no cookie → served
+curl -I https://mydomain.org/dedalo/media/av/404/rsc35_rsc167_2.mp4
+# HTTP/1.1 200 OK
 
-5. Ask users to log out and in once (the auth cookie is set at login).
+# unpublished record, same folder, no cookie → denied, and denied as 404
+curl -I https://mydomain.org/dedalo/media/av/404/rsc35_rsc167_3.mp4
+# HTTP/1.1 404 Not Found
 
-## Troubleshooting / failure modes
+# a master, no cookie → denied even though the record IS published
+curl -I https://mydomain.org/dedalo/media/av/original/rsc35_rsc167_2.mp4
+# HTTP/1.1 404 Not Found
+```
 
-| Symptom / failure | Effect | Recovery |
+The **full verification matrix** — subtitles, non-grammar file names, traversal and hostile
+cookie values, the marker store, `Range`/`206`, uploaded-script execution, and marker removal
+taking effect on the next request — is the definition of done for this subsystem and lives in
+`engineering/MEDIA_PROTECTION.md`. Run it against the **generated** rule files, never against
+hand-written ones.
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
 |---|---|---|
-| Diffusion engine down | markers frozen (no publish/unpublish is possible anyway); editors unaffected | restart the engine — it reconciles the marker union at boot |
-| Engine running but `DEDALO_MEDIA_PATH` unset in its `.env` | publishes succeed but markers are not maintained → published media stays 404 for anonymous users | set the env var, restart, run the rebuild (the widget flags this state) |
-| `.publication/` deleted or media tree restored from backup | anonymous 404 everywhere; editors fine | Rebuild media index (widget or CLI) |
-| Published record still 404 for anonymous users | marker missing (drift), file outside the public qualities, or file name does not follow the grammar | check the widget status; rebuild; review `DEDALO_MEDIA_PUBLIC_QUALITIES` |
-| Editors get 404 after enabling protection | they logged in before the protection was active (no cookie) | log out / log in |
-| Unpublished media still reachable through a CDN | downstream cache holds the copy | purge the record's media paths on unpublish |
-| Mode changed in config but behavior unchanged | a runtime override is set in `config_core.php` | check "Mode source" in the widget; set the selector back to "Use config file value" |
+| Published media still 404s for anonymous users | `pub/` marker missing, the file is outside the public qualities, or its name does not follow the grammar | check the widget status; **Rebuild media index**; review `DEDALO_MEDIA_PUBLIC_QUALITIES` |
+| Editors get 404 on everything after enabling | they logged in before protection was on, so they hold no cookie | log out, log in |
+| Mode changed but nothing happened (nginx) | nginx reads its include at reload | `nginx -t && nginx -s reload` |
+| Mode changed in `.env` but nothing happened (any server) | a runtime override from the widget wins over `.env` | check "mode source" in the widget; select "Use config file value" |
+| Publishes succeed but anonymous access stays 404 | `MEDIA_PATH` is unset, so no markers are maintained | set it, restart, rebuild the index — the widget flags this state |
+| `.publication/` deleted, or the media tree restored from a backup | markers gone | **Rebuild media index**; the auth markers are re-laid at the next login |
+| Unpublished media still reachable | a downstream CDN or proxy holds the copy | purge the record's media paths on unpublish |
+| nginx refuses to start: unknown `$dedalo_auth_key` | the `http{}` map include is missing | add it — never comment the includes out |
 
-## Security notes
+## Internals
 
-* Default deny answers **404**, not 403, so the existence of unpublished files is not disclosed.
-* The auth cookie is a bearer token for media access (HttpOnly, Secure on HTTPS, value rotated daily). Cookie values and URL captures are validated against strict patterns (`[a-f0-9]{128}`, `[a-z0-9]+_[0-9]+`) before they are ever used in a filesystem path — no traversal is possible.
-* The generated `.htaccess` always includes the script-execution hardening for the media root (SEC-088): user-uploaded files are never interpreted as code.
-* The persisted cookie file (`core/extras/media_protection/cookie/cookie_auth.php`) carries a `<?php exit();` guard line so it can never disclose its values over HTTP.
-* Marker files are zero-byte: even if a name leaked, it only reveals publication state, which is public by definition.
+The maintainer's view of the subsystem — the module map, the three enforcement surfaces kept in
+lockstep, the historical bugs the tripwire pins — is in
+[media_protection](../core/system/media_protection.md). The authoritative definition, including
+the curl verification matrix, is `engineering/MEDIA_PROTECTION.md`.

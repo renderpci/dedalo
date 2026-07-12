@@ -6,15 +6,16 @@ Its defining trait is an **active ontology**: the data schema, the relations bet
 
 Dédalo is two connected systems:
 
-- **Work system** — the private editing application (TypeScript/Bun server + JavaScript/HTML/CSS client, the client copied as-is from the prior PHP client) that manages the full catalog. Data is stored as JSONB in a PostgreSQL "matrix" table.
+- **Work system** — the private editing application (TypeScript/Bun server + JavaScript/HTML/CSS client) that manages the full catalog. Data is stored as JSONB in a PostgreSQL "matrix" table.
 - **Diffusion system** — a separate, public, flat copy of the data published to SQL/RDF/XML targets and served through a public API. Data flows one way only, work → diffusion.
 
 New to the vocabulary (section, component, tipo, locator, sqo, rqo, ddo)? Read the **[Introduction & core hub](core/index.md)** and the **[Glossary](core/glossary.md)** first.
 
-> **This is the new TypeScript version.** The Dédalo server has been rebuilt from PHP to
-> TypeScript on the Bun runtime. If you want the *why, what and the new foundation* — written
-> for developers and humanities readers alike — start with **[The v7 rewrite: from PHP to
-> TypeScript](rewrite.md)**.
+> **Where the engine came from.** Dédalo v7's server was rebuilt from scratch in TypeScript on
+> the Bun runtime, replacing the engine that served the project for two decades. If you want
+> the *why, what and the new foundation* — written for developers and humanities readers alike
+> — read **[The v7 rewrite](rewrite.md)**. You do not need it to use, install or extend
+> Dédalo: everything else in this manual documents the engine as it is today.
 
 ---
 
@@ -24,7 +25,7 @@ Pick the path that matches what you are trying to do. Each is a short, ordered l
 
 ### 1. New developer — understand the architecture
 
-1. [The v7 rewrite: from PHP to TypeScript](rewrite.md) — why the rewrite, what changes, what stays, and the new foundation
+1. [The v7 rewrite](rewrite.md) — where the engine came from and why it was rebuilt (background; skip it if you just want to build)
 2. [Introduction (core hub)](core/index.md) — what Dédalo is, the nomenclature, the active ontology
 2. [Architecture Overview](core/architecture_overview.md) — how it all fits together: two systems, the matrix data model, server build → client render
 3. [Data model](core/data_model/index.md) — how a value actually lives: the JSON/JSONB foundation, the typed `matrix` columns and the consolidated v7 value item, with a page per data type
@@ -57,19 +58,19 @@ Pick the path that matches what you are trying to do. Each is a short, ordered l
 8. [Client side](core/client/index.md) — instances, lifecycle, render and views, data/event managers
 9. [Tools](development/tools/creating_tools.md) — build a tool: [register.json](development/tools/register_json.md), [server contract](development/tools/server_contract.md), [JS lifecycle](development/tools/js_lifecycle.md), [security](development/tools/security.md), [tool catalog](development/tools/reference/index.md)
 10. [Media pipeline](development/media_pipeline.md) and [Internationalization](development/internationalization.md) — the media-file lifecycle and the two translation planes
-11. [Testing](development/testing.md) — the test layers (differential parity, unit/integration, client browser harness) run by `bun test`, with the live PHP server as oracle, and how to write a server test
+11. [Testing](development/testing.md) — the test layers run by `bun test` (unit gates, parity against the frozen fixture store, the client browser harness), the tripwires that enforce every invariant, and how to write a server test
 12. [Services](development/services/index.md) and [System & infrastructure](core/system/index.md) — shared services, persistence, caching, workers
 
 ### 4. System administrator — install, configure, operate
 
-1. [Installation](install/index.md) — server requirements and setup, plus [Apache](install/apache_configuration.md) and [Fedora](install/install_fedora.md) guides
+1. [Installation](install/index.md) — **start here**: server sizing, prerequisites, and your path — a [production server](install/production.md), [Docker](install/docker.md), or a [laptop in ten minutes](install/dev_quickstart.md). Then the [reverse proxy](install/reverse_proxy.md), the [installer reference](install/installer_reference.md), [upgrading](install/upgrading.md) and [troubleshooting](install/troubleshooting.md)
 2. [Configuration](config/index.md) — the one `.env` file: [how it works](config/administration.md), [every setting](config/config.md), [database](config/config_db.md), [areas](config/config_areas.md)
-3. [Media protection](config/media_protection.md) and [search config](config/search.md) — access control and search tuning
+3. [Media protection](config/media_protection.md) and [search config](config/search.md) — **before you expose media to the internet**: the two-rule access gate the web server enforces, and search tuning
 4. [Management & maintenance](management/index.md) — environments, root user, [maintenance status](management/maintenace_status.md), [recovery mode](management/recovery_mode.md)
 5. [Users, profiles & permissions](management/users_and_permissions.md) — creating users and profiles, the 0–3 permission levels, how access is computed and enforced
 6. [Backup](management/backup.md) + [best practices](management/backup_best_practises.md) — protecting the data
 7. [Updates](management/updates/index.md) — [updating code](management/updates/updating_code.md), [data](management/updates/updating_data.md), [ontology](management/updates/updating_ontology.md)
-8. [Runtime and workers](development/runtime_and_workers.md) — the persistent-worker model and operational concerns
+8. [Runtime](development/runtime_and_workers.md) — one long-lived process, per-request isolation, and what that means operationally
 9. [Diffusion setup](diffusion/publication_api/index.md) — configure the publication server: [v2 deployment](diffusion/publication_api/v2/deployment.md) (`.env`, Apache/Nginx/standalone) for new servers, or the legacy v1 [public API configuration](diffusion/publication_api/public_api_configuration.md) and [server config API](diffusion/publication_api/server_config_api.md)
 10. [RAG install & operations](core/ai/rag_cookbook.md) — provision the pgvector store, connect embedding/LLM sidecars, the full `DEDALO_RAG_*` config reference, and wire the index-drain cron
 11. [AI Assistant — install, connect a model, configure, secure](core/ai/assistant/index.md) — turn on the in-app assistant, connect a cloud or **local/private** model, and control what may reach an external provider with the **[egress gate](core/ai/assistant/privacy_and_security.md)**
@@ -94,7 +95,7 @@ Every documentation area, with a one-line description and an entry link. The **[
 
 | Area | Description | Entry |
 | ---- | ----------- | ----- |
-| **The rewrite** | Why Dédalo moved from PHP to TypeScript/Bun, what changes, what stays, the new foundation | [rewrite.md](rewrite.md) |
+| **The rewrite** | Where the v7 engine came from, and why it was rebuilt — background, not required reading | [rewrite.md](rewrite.md) |
 | **Core hub** | Introduction, nomenclature, active ontology and the index of all core documentation | [core/index.md](core/index.md) |
 | Architecture overview | How the two systems, the matrix data model and the active ontology fit together | [core/architecture_overview.md](core/architecture_overview.md) |
 | Data model | How a value lives: the JSONB foundation, typed `matrix` columns, the v7 value item, and a page per data type (string, number, date, IRI, geo, media, relations, misc) | [core/data_model/index.md](core/data_model/index.md) |
@@ -127,20 +128,33 @@ Every documentation area, with a one-line description and an entry link. The **[
 | Development | Ecosystem, code style, commit/test conventions, breaking-change detection | [development/index.md](development/index.md) |
 | Documentation standards | How Dédalo is documented: the code doc-block standard and the prose [style guide](development/documentation_style_guide.md) | [development/code_documentation_standard.md](development/code_documentation_standard.md) |
 | Extending Dédalo | The ontology-first cookbooks: add a component, section, area, service or widget | [development/extending/index.md](development/extending/index.md) |
-| Testing | The `bun test` layers (differential parity, unit/integration, client browser harness) against the PHP oracle | [development/testing.md](development/testing.md) |
+| Testing | The `bun test` layers (unit gates, parity against the frozen fixture store, client browser harness) and the tripwires | [development/testing.md](development/testing.md) |
 | Media pipeline | The end-to-end media-file lifecycle: upload → master → derivatives → publication | [development/media_pipeline.md](development/media_pipeline.md) |
 | Internationalization | The two translation planes (data vs interface) and the language model | [development/internationalization.md](development/internationalization.md) |
 | Tools | Building tools and the full per-tool catalog | [development/tools/reference/index.md](development/tools/reference/index.md) |
 | Services | Shared services (e.g. upload) used by components, sections and tools | [development/services/index.md](development/services/index.md) |
-| Runtime & workers | The persistent-worker model and runtime concerns | [development/runtime_and_workers.md](development/runtime_and_workers.md) |
+| Runtime | One long-lived process, per-request isolation, and the operational consequences | [development/runtime_and_workers.md](development/runtime_and_workers.md) |
 | Metrics | The performance metrics subsystem and per-request monitor | [development/metrics.md](development/metrics.md) |
 | Media components | Embedding Dédalo media components in third-party code | [development/using_media_components.md](development/using_media_components.md) |
 | CSS architecture | The LESS-based design system and styling structure | [css-architecture.md](css-architecture.md) |
-| Installation | Server requirements and install procedure (Apache, Fedora, H.264) | [install/index.md](install/index.md) |
+| Installation | Server sizing, the production guide, Docker, the dev quickstart, the reverse proxy, upgrading and troubleshooting | [install/index.md](install/index.md) |
 | Configuration | The one config file (`../private/.env`): settings, database, areas, media/search tuning | [config/index.md](config/index.md) |
 | Management | Environments, root user, maintenance status, recovery, hierarchies, updates | [management/index.md](management/index.md) |
 | Users & permissions | Users, profiles, the 0–3 permission levels and how access is enforced | [management/users_and_permissions.md](management/users_and_permissions.md) |
 | Backup | Backup procedure and best practices | [management/backup.md](management/backup.md) |
 | Updates | Updating code, data and ontology safely | [management/updates/index.md](management/updates/index.md) |
-| Migrating to v7 | What changed, and how to convert a v6 PHP config into a v7 `.env` | [config/whats_changed_v7.md](config/whats_changed_v7.md) · [config/migrating_from_v6.md](config/migrating_from_v6.md) |
 | Change log | Release history and notable changes | [change_log.md](change_log.md) |
+
+---
+
+## Upgrading from Dédalo v6
+
+These two pages exist only for operators who already run a **v6** install and are moving it to
+v7. They are the one place the previous engine's configuration files are named — because those
+files are the *input* you are converting. If you are installing Dédalo for the first time, you
+do not need them: go to [Installation](install/index.md).
+
+| Page | What |
+| ---- | ---- |
+| [What changed in v7](config/whats_changed_v7.md) | The v6 → v7 settings map: renamed, reshaped and removed |
+| [Migrating your config from v6](config/migrating_from_v6.md) | `bun run dedalo:migrate-config` — point it at your old config directory and it writes the v7 `.env` |

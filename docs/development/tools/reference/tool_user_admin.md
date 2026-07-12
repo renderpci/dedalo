@@ -6,7 +6,7 @@ Self-service account panel: lets the logged-in user view and edit their own basi
 
 `tool_user_admin` opens a small panel — launched by clicking the **username** in the main menu header — that renders a few components of the current user's own record from the Users section (`dd128`): the user's id, username and profile (read-only), plus their full name, password, email and avatar image (editable). It exists so any logged-in person can maintain their own credentials and profile picture even when their profile does **not** grant write (or any) access to the Users management section as a whole.
 
-The tool itself is **UI-only**: it ships no server module and has **no remotely callable actions of its own**. Every save it performs goes through the ordinary, already-gated component/section save pipeline against the user's own `dd128` record. The one piece of server machinery that makes it work is a targeted permission override in the PHP oracle's `section_record::get_permissions()` — **not yet ported to TS** (see below).
+The tool itself is **UI-only**: it ships no server module and has **no remotely callable actions of its own**. Every save it performs goes through the ordinary, already-gated component/section save pipeline against the user's own `dd128` record. **The permission engine has no special case letting a low-privilege user write their own Users record independently of their profile's general Users-section grant** — a real, verified gap on this engine (see below).
 
 Concrete heritage scenario: a documentalist at a museum is given a profile that lets them catalogue objects but explicitly **not** administer other users. They notice their displayed name is misspelled and they want to set a recognisable avatar and rotate their password after onboarding. They click their name in the top bar; the User admin panel opens showing their id / username / profile as read-only context, and editable fields for full name, password, email and a user image (with the standard upload tool enabled on the image). They fix the name, set a new password, upload a portrait, and close the panel — all without ever touching the Users section or seeing any other account.
 
@@ -14,9 +14,9 @@ Use it when: you want end users to self-manage their own account essentials from
 
 ## How it works (server + client)
 
-**Server.** `tools/tool_user_admin/` ships **no `server/` package** in the TS engine — confirmed client-only. In the PHP oracle the `API_ACTIONS` allowlist is empty specifically to keep inherited `tool_common` statics from being reachable under this tool name; the TS engine has no equivalent risk because there is no base *class* to inherit statics from — a tool with no `server/index.ts` simply has nothing loaded, so `dd_tools_api.tool_request` refuses any action named against it at dispatch gate 5 (`tool has no server module`). There is no `isAvailable`/`onRegister`/`onRemove` override.
+**Server.** `tools/tool_user_admin/` ships **no `server/` package** — confirmed: there is no `tools/tool_user_admin/server/` directory, so `dd_tools_api.tool_request` refuses any action named against it at dispatch gate 5 (`tool has no server module`). There is no `isAvailable`/`onRegister`/`onRemove` override.
 
-The behaviour that lets a low-privilege user edit their own data lives in core, not in the tool — but **this core override is not yet ported**. In the PHP oracle, `section_record::get_permissions()` forces the permission level to `1` when the section is the Users section (`dd128`) **and** the record being accessed is the logged user's own (`section_id == logged_user_id()`) — "to allow tool_user_admin access regardless of the general user-management permission level". The TS permissions engine (`src/core/security/permissions.ts::getPermissions`) has no equivalent own-record carve-out (confirmed by inspection — there is no `userId`-vs-`section_id` special case anywhere in the matrix resolution). Concretely: a user whose profile denies write on `dd128` would be refused writing their own record through this tool on the TS engine today, where PHP would allow it. Ledger this against `rewrite/STATUS.md` before relying on `tool_user_admin`'s self-service edit on a TS-served install.
+The behaviour that would let a low-privilege user edit their own data regardless of their profile's general Users-section grant lives in core, not in the tool — and **this engine does not have it**. `getPermissions` (`src/core/security/permissions.ts`) resolves every permission check through the caller's profile grants; there is no `userId`-vs-`section_id` special case anywhere in its resolution order (confirmed by inspection), so it never forces a level for the Users section (`dd128`) when the target record happens to be the caller's own. Concretely: a user whose profile denies write on `dd128` is refused writing their own record through this tool — the panel opens and shows the fields, but the save is refused by the ordinary component save gate. This is a real, safety-relevant gap: confirm a user's profile actually grants at least write (level 2) on `dd128` before relying on `tool_user_admin`'s self-service edit.
 
 **Client** (`tools/tool_user_admin/js/`). The instance is `tool_user_admin.js`; `render_tool_user_admin.js` builds the body; `index.js` re-exports the module. Notable points:
 
@@ -47,7 +47,7 @@ This tool declares **no** API actions of its own:
 | --- | --- |
 | `tool_user_admin` | *(no server module)* — UI-only, nothing dispatchable on this tool in either engine |
 
-There is therefore no `tool_request` envelope, no permission gate spec and no `backgroundRunnable` for this tool. Saves are issued by the rendered component instances through their normal save paths against the logged user's own `dd128` record; each is gated by the ordinary component permission checks — on the PHP oracle *with* the own-record override granting access; on the TS engine *without* it (see the gap noted above). The client-side inputs the tool effectively works with are not request options but fixed globals it reads:
+There is therefore no `tool_request` envelope, no permission gate spec and no `backgroundRunnable` for this tool. Saves are issued by the rendered component instances through their normal save paths against the logged user's own `dd128` record; each is gated by the ordinary component permission checks, with no own-record carve-out (see the gap noted above). The client-side inputs the tool effectively works with are not request options but fixed globals it reads:
 
 | Reads (client global) | Used for |
 | --- | --- |
@@ -103,19 +103,10 @@ const request_config = [{
 // section instance is built with filter=false, inspector=false
 ```
 
-The own-record access that makes this editable for any user, **in the PHP oracle** (core, not the tool — and NOT YET PORTED, see the gap above):
-
-```php
-// core/section_record/class.section_record.php :: get_permissions()
-if ($this->section_tipo===DEDALO_SECTION_USERS_TIPO && $this->section_id==logged_user_id()) {
-    $this->permissions = 1; // allow tool_user_admin to reach the user's own record
-}
-```
-
 ## Related
 
 - [Creating new tools](../creating_tools.md) · [Server contract](../server_contract.md) — the tool model, `apiActions` (incl. the no-server-module UI-only case), gates and lifecycle this page builds on.
 - [tool_indexation](tool_indexation.md), [tool_diffusion](tool_diffusion.md) — other UI-only tools with no server module (front-end orchestrators over existing component/section pipelines).
 - [tool_export](tool_export.md) — contrast: a section tool with a real dispatchable action and a permission-gated declarative `apiActions` map; see [Exporting data](../../../core/exporting_data.md).
-- Core glue (client, unchanged): `core/menu/js/menu.js` (`open_tool_user_admin_handler`), `core/menu/js/view_default_edit_menu.js` (username link handler). Server-side own-record override: PHP oracle `core/section_record/class.section_record.php::get_permissions()` — no TS equivalent yet (`src/core/security/permissions.ts`).
+- Core glue (client): `core/menu/js/menu.js` (`open_tool_user_admin_handler`), `core/menu/js/view_default_edit_menu.js` (username link handler). Server-side permission resolution: `src/core/security/permissions.ts::getPermissions` — no own-record carve-out for `dd128` (see the gap above).
 - Source: `tools/tool_user_admin/register.json` (no `server/` package), `tools/tool_user_admin/js/{tool_user_admin,render_tool_user_admin,index}.js`, `tools/tool_user_admin/css/tool_user_admin.less`.

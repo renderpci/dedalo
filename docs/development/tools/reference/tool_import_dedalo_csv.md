@@ -21,10 +21,10 @@ Key behaviours to know before importing:
 
 ### Server
 
-`tools/tool_import_dedalo_csv/server/index.ts` — per `rewrite/STATUS.md` ("R2 Import family"), this tool is **fully ported and DB-drive verified** (a scratch-twin CSV→DB round-trip is byte-parity gated, not merely a stub). The five declared actions:
+`tools/tool_import_dedalo_csv/server/index.ts` implements the full CSV→DB round-trip, DB-drive verified: a scratch-twin CSV→DB round-trip is byte-parity gated, not merely a stub. The five declared actions:
 
 1. **Staging.** Uploaded files land in a per-user directory that the module creates and confines; client-supplied paths are never trusted for listing/deletion (path-confined the same way `paths.ts`/`loader.ts` confine tool asset paths — see [Security](../security.md)).
-2. **Listing & validation.** `get_csv_files` (`permission: null`) parses every staged CSV (`parseCsv`, `src/core/tools/import_csv.ts`), builds the column map (resolving each header tipo to its ontology label + model), and returns per-file `n_records`/`n_columns`/`sample_data`/`sample_data_errors`. The exact response shape below was fixed after driving the real client via Chrome MCP (`rewrite/STATUS.md`): the client crashes on anything narrower.
+2. **Listing & validation.** `get_csv_files` (`permission: null`) parses every staged CSV (`parseCsv`, `src/core/tools/import_csv.ts`), builds the column map (resolving each header tipo to its ontology label + model), and returns per-file `n_records`/`n_columns`/`sample_data`/`sample_data_errors`. The exact response shape below was fixed after driving the real client end to end: the client crashes on anything narrower.
 3. **Import.** `import_files` (`permission: 'section', minLevel: 2`, `backgroundRunnable`) is the entry point. It plans the import (`planCsvImport`, column-map/section_id/conform resolution) and executes it through the shared import executor (`createSectionRecord` + `saveComponentData` — the same write path other import tools use, not a bespoke one).
 4. **Per-cell conforming.** `parseCsv`/`planCsvImport` + the shared `conformImportData`/`unwrapDedaloData` core (`src/core/tools/import_data.ts`) reproduce the **raw-export round-trip for every model** — value-property/relation/date/lang-keyed values, flat/clear/error semantics, and the `dedalo_data` wrapper (incl. its paired `dataframe`), unit-tested (13 tests) independent of any live DB.
 5. `process_uploaded_file` (`permission: 'section', minLevel: 2`) moves a staged upload into the import directory; `delete_csv_file` (`permission: null`) soft-deletes a staged file; `get_section_components_list` (`permission: 'section', minLevel: 1`) lists the target section's components for the column mapper.
@@ -51,7 +51,7 @@ Notes:
 
 - `time_machine_save` defaults to checked in the UI; when off, the batch is **not** reversible from the bulk-process record.
 - `ar_columns_map` items use `tipo` (the CSV header), `map_to` (the target component tipo), `checked` (whether to import the column), `model`, and optional `decimal` (for `component_number`). Unchecked columns, columns without `map_to`, and the `section_id` column are skipped.
-- Internal helpers (CSV parsing, column-map validation, staging-path resolution) are plain functions in `import_csv.ts`/`import_data.ts`, not exposed as actions — same non-exposure as the PHP oracle's private methods.
+- Internal helpers (CSV parsing, column-map validation, staging-path resolution) are plain functions in `import_csv.ts`/`import_data.ts`, not exposed as actions.
 
 ## How it is registered & surfaced
 

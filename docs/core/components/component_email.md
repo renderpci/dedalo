@@ -37,8 +37,8 @@
 }
 ```
 
-!!! note "Typology and base class"
-    `component_email` is a **literal-direct** component. The TS server has no class hierarchy: `component_email` shares the same string-family descriptor shape as [component_input_text](component_input_text.md) and [component_text_area](component_text_area.md) — `src/core/components/component_email/descriptor.ts` declares `column: 'string'`, `classSupportsTranslation: true` — and is resolved by the same generic engines (`src/core/resolve/component_data.ts`, `src/core/section/record/save_component.ts`). See [base classes](base_classes.md) for the PHP-era inheritance picture this replaces. The e-mail-specific validation, cleaning and mailto helpers described below are a PHP/client behaviour layer; see the gaps flagged in [Notes](#notes) for what the TS server currently enforces.
+!!! note "Typology"
+    `component_email` is a **literal-direct** component. It shares the same string-family descriptor shape as [component_input_text](component_input_text.md) and [component_text_area](component_text_area.md) — `src/core/components/component_email/descriptor.ts` declares `column: 'string'`, `classSupportsTranslation: true` — and is resolved by the same generic engines (`src/core/resolve/component_data.ts`, `src/core/section/record/save_component.ts`); there is no per-model code tree. See [base classes](base_classes.md) for the model/descriptor scheme. The e-mail-specific validation, cleaning and mailto helpers described below are a client-side behaviour layer; see the gaps flagged in [Notes](#notes) for what the server currently enforces.
 
 ## Definition
 
@@ -50,7 +50,7 @@ It exists so that addresses are not stored as free `component_input_text`, where
 - clean / normalize the raw string against header-injection payloads;
 - offer "write e-mail" affordances (single `mailto:` and a batch BCC `mailto:` over a whole list of records).
 
-E-mail addresses are inherently language-neutral, so the component is **non-translatable**: it always works under `DEDALO_DATA_NOLAN` (the constructor forces `lang = DEDALO_DATA_NOLAN`).
+E-mail addresses are inherently language-neutral, so the component is **non-translatable**: its language is always forced to `DEDALO_DATA_NOLAN` (`lg-nolan`), whatever the request's data language.
 
 **When to use it.** Any cultural-heritage record that needs a contact address: the e-mail of a museum or archive (institution section), the contact of a project's principal investigator, a donor's or a lender's address, the maintainer of a digital collection.
 
@@ -62,7 +62,7 @@ E-mail addresses are inherently language-neutral, so the component is **non-tran
 
 **Value:** `array` of `strings`, or `null`.
 
-Each data item is an object `{id, lang, value}` where `value` is the e-mail string, `lang` is always `lg-nolan`, and `id` is the per-item counter assigned by `component_common`. `set_data()` normalizes input: bare scalars are wrapped into `{value, lang:'lg-nolan'}`, every value is passed through `component_email::clean_email()`, and empty arrays/`[null]`/`['']` collapse to `null`.
+Each data item is an object `{id, lang, value}` where `value` is the e-mail string, `lang` is always `lg-nolan`, and `id` is the per-item counter assigned by the shared save engine. Bare scalars are wrapped into `{value, lang:'lg-nolan'}` and empty arrays/`[null]`/`['']` collapse to `null`; the address-cleaning step (stripping control characters and header-injection sequences) is the gap described under *Validation* below.
 
 **Storage shape** inside the matrix `data` column (language-keyed object, value as array of items):
 
@@ -81,10 +81,10 @@ Because the component is non-translatable, there is a single language group, `lg
 
 The string `value` must be a well-formed address: a *local-part*, the `@` symbol, and a *domain* with at least one dot before a top-level label.
 
-- **Server (PHP)**: `save()` rejects the write if any non-empty value fails `is_valid_email()`, which combines `filter_var($email, FILTER_VALIDATE_EMAIL)` with the extra `/@.+\./` check (the address must contain a dot in the domain). `clean_email()` strips control characters, quotes and CR/LF sequences (`\n`, `\r`, `%0A`, `%0D`, ...) and trims the rest, as a defence against header injection.
+- **Server-side (intended contract)**: a save should reject the write if any non-empty value is not a well-formed address (a format check plus a defence against header-injection payloads — control characters, quotes and CR/LF sequences such as `\n`, `\r`, `%0A`, `%0D`).
 
-    !!! warning "Gap: no server-side validation in TS yet"
-        The TS save path (`src/core/section/record/save_component.ts`) is model-agnostic and does not run any e-mail-format or header-injection check before persisting — no `is_valid_email()`/`clean_email()` equivalent exists under `src/`. The client `verify_email()` check below is, for now, the **only** validation; a malformed or malicious address typed through a means other than the standard form is not rejected server-side. Verify against `rewrite/STATUS.md` before relying on this being fixed.
+    !!! warning "Gap: no server-side validation implemented yet"
+        The save path (`src/core/section/record/save_component.ts`) is model-agnostic and does not run any e-mail-format or header-injection check before persisting — no such check exists under `src/`. The client `verify_email()` check below is, for now, the **only** validation; a malformed or malicious address typed through a means other than the standard form is not rejected server-side.
 - **Client** (`component_email.js` `verify_email()`): validates with the regex `/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i`. The `{2,}` TLD quantifier accepts long modern TLDs (`.museum`, `.travel`). When several addresses are present **all** must validate. An empty value is allowed (so the user can clear the field).
 
 !!! note "Local-part and domain rules"
@@ -115,7 +115,7 @@ A realistic `properties` block for this component (all keys optional):
 }
 ```
 
-Because the component is non-translatable, the instantiated `context` reports `"translatable": false` and `"lang": "lg-nolan"` regardless of the user interface language. A representative instantiation context (from `core/component_email/samples/context.json`):
+Because the component is non-translatable, the instantiated `context` reports `"translatable": false` and `"lang": "lg-nolan"` regardless of the user interface language. A representative instantiation context (from `src/core/components/component_email/samples/context.json`):
 
 ```json
 {
@@ -170,22 +170,22 @@ The canonical v7 import is an array of value objects (no language key, since the
 [{"value":"user@example.com"},{"value":"admin@example.com"}]
 ```
 
-`conformImportData()` (`src/core/tools/import_data.ts`, the model-agnostic re-expression of `conform_import_data`) accepts:
+The model-agnostic import engine `conformImportData()` (`src/core/tools/import_data.ts`) accepts:
 
 - **JSON array of value objects** (canonical) — `[{"value":"..."}]`; bare strings inside the array are auto-wrapped into `{"value":...}` (`component_email` is a `VALUE_PROPERTY_MODELS` member).
 - **Single value object** — `{"value":"user@example.com"}` (wrapped into an array).
 - **Plain string** — `user@example.com` (wrapped into `[{"value": "..."}]`).
 
-!!! warning "Gap: lang-keyed and pipe-separated import shapes"
-    The PHP-only **lang-keyed object** shape (`{"lg-nolan":["user@example.com"]}`) and the **pipe-separated string** shape (`user@example.com | admin@example.com` split into one item per address) are not handled by the generic TS import engine — a pipe-separated cell is stored verbatim as a single address string, not split. Only the JSON array / single object / plain-string shapes above are confirmed to round-trip correctly.
+!!! warning "Gap: pipe-separated import shape"
+    The **pipe-separated string** shape (`user@example.com | admin@example.com`, meant to split into one item per address) is not handled by the generic import engine — a pipe-separated cell is stored verbatim as a single address string, not split. The **lang-keyed object** shape (`{"lg-nolan":["user@example.com"]}`) is a plain JSON object whose first key starts with `lg-`, and the generic engine does handle that shape generically (`conformImportData()`, `src/core/tools/import_data.ts`), wrapping each bare string into `{"value":…}` for value-property models such as this one.
 
 See the dedicated import section [Email](../importing_data.md#email) and the general [importing data](../importing_data.md) reference. For export formats (value / grid_value / `dedalo_raw`) see [exporting data](../exporting_data.md); flat display values are produced by the generic cell resolver `resolveCellValue()` (`src/core/resolve/relation_list.ts`) via `tools/tool_export/server/tool_export.ts`.
 
 ## Notes
 
 - **Default tools.** `tool_time_machine`, `tool_replace_component_data`, `tool_add_component_data` (plus `tool_propagate_component_data` when configured). Tools and nested buttons arrive read-only in the `context` toolbar.
-- **Mailto helpers.** The single-address **email** button calls `send_email(value)` → `window.location.href = 'mailto:' + value`. The toolbar **email_multiple** button calls `get_ar_emails()`, which re-runs the builder's (section or portal) search restricted to this component to gather every address across the result set, joins them with `;`, and opens a BCC `mailto:?bcc=...`. These are client-side behaviours, copied as-is; the batch search they depend on runs through the same TS search stack as any other filter.
-- **Validation gotcha — server check missing in TS.** In PHP, a save with an invalid address is silently refused server-side (`save()` returns `false` after a `logger::ERROR`), and the docs call the server check "the authoritative backstop." **The TS server currently has no such backstop** (see the gap noted above under Data model → Validation): rely on the client `verify_email()` alone until server-side validation is ported.
+- **Mailto helpers.** The single-address **email** button sets `window.location.href = 'mailto:' + value`. The toolbar **email_multiple** button re-runs the builder's (section or portal) search restricted to this component to gather every address across the result set, joins them with `;`, and opens a BCC `mailto:?bcc=...`. These are client-side behaviours; the batch search they depend on runs through the same TS search stack as any other filter.
+- **Validation gotcha — server check missing.** The intended contract treats the server-side format check as the authoritative backstop, refusing a save with an invalid address regardless of what the client sent. **No such backstop currently exists** (see the gap noted above under Data model → Validation): rely on the client `verify_email()` alone until server-side validation is implemented.
 - **Non-translatable by design.** The component is always resolved under `lg-nolan` (non-translatable). This differs from [component_input_text](component_input_text.md), which can be translatable or transliterated.
 - **Related components.** [component_input_text](component_input_text.md) (sibling string component, free text), [component_text_area](component_text_area.md) (multi-line / rich text), [component_dataframe](component_dataframe.md) (frame records when `has_dataframe` is set). See the [components index](index.md) for the full literal/related typology.
 

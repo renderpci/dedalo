@@ -1,6 +1,6 @@
 # tool_print
 
-A visual **print-layout / report designer** for a section: arrange a record's components into a paginated document and print it (or, phase 2, render a server-side PDF). The layout is a reusable, per-section template saved in the ontology. UI-driven; the MVP has **no remotely callable server methods** (it prints from the browser).
+A visual **print-layout / report designer** for a section: arrange a record's components into a paginated document and print it. The layout is a reusable, per-section template saved in the ontology. UI-driven; it has **no remotely callable server methods** (it prints from the browser).
 
 ## What it does / why & when to use it
 
@@ -20,7 +20,7 @@ Concrete scenario: a numismatics catalogue. The editor opens *Cecas* record 2, p
 
 ## How it works (server + client)
 
-**Server.** `tools/tool_print/` ships **no `server/` package** in the TS engine — confirmed client-only. Per `rewrite/STATUS.md` and `rewrite/TOOLS_PORTING_PLAN.md`, the PHP oracle's `API_ACTIONS` is empty and its once-sketched `generate_pdf` method is **commented-out dead code** (not a live, gated phase-2 action) — an earlier version of the porting plan listed `generate_pdf` as a pending server action; that row was stale and has been corrected. All persistence rides the generic **core data API** (`dd_core_api.save`/`read` on sections `dd25`/`dd625`) — the same path `tool_export` presets use — so no bespoke tool endpoint and no bespoke table, on either engine.
+**Server.** `tools/tool_print/` ships **no `server/` package** — confirmed: there is no `tools/tool_print/server/` directory. All persistence rides the generic **core data API** (`dd_core_api.save`/`read` on sections `dd25`/`dd625`) — the same path `tool_export` presets use — so there is no bespoke tool endpoint, no bespoke table, and no PDF-generation server action on this engine.
 
 **Storage (ontology).** Templates are records of section **`dd25`**, with the whole layout blob stored in a **`dd625` `component_json`**. The blob *itself* carries the template metadata (`name`, `target_section_tipo`, `owner_user_id`, `visibility`) — the tool does **not** rely on separate name/user/public components (only `dd625` is required to be a child of `dd25`). The picker reads every `dd25` record's blob and filters client-side by target section + owner/public.
 
@@ -65,13 +65,13 @@ A full-width component (a long table or a transcription) is simply a **1-cell ro
 
 ## Actions & options
 
-`tool_print` exposes **no** API actions, confirmed on both engines:
+`tool_print` exposes **no** API actions:
 
 | `apiActions` | Form | Notes |
 | --- | --- | --- |
 | *(no server module)* | — | UI-only. Printing happens in the browser; saving/loading templates uses the generic core data API on `dd25`/`dd625`. |
 
-There is no live or planned `generate_pdf` action to port: it exists only as commented-out dead code in the PHP oracle. Server-side PDF generation is not on this tool's roadmap on either engine unless that PHP code is revived.
+There is no server-side PDF-generation action on this engine — printing happens entirely in the browser via `window.print()`.
 
 ## Usage notes & limitations
 

@@ -1,6 +1,6 @@
 # Ontology
 
-> See also: [Ontology authoring](authoring.md) · [`ontology` class (build layer)](ontology_class.md) · [`ontology_node` engine](ontology_engine.md) · [Architecture overview](../architecture_overview.md) · [Glossary](../glossary.md)
+> See also: [Ontology authoring](authoring.md) · [ontology (build layer)](ontology_write.md) · [Ontology engine](ontology_engine.md) · [Architecture overview](../architecture_overview.md) · [Glossary](../glossary.md)
 
 The ontology is the live, dynamic definition of Dédalo's structure and behaviour:
 it defines the sections, components, relations, tools, data formats and outputs of
@@ -190,15 +190,15 @@ is the name you gave in `Ontology main`. Then create the new node.
   *writing* the ontology: the shape of a node, creating sections / components /
   groups / tools, the `properties` descriptor grammar, and how an edit becomes
   live.
-- **[`ontology` class (build layer)](ontology_class.md)** — the static management
-  and build layer that owns the editable definitions and compiles them into the
-  flat runtime `dd_ontology` table.
-- **[`ontology_node` engine](ontology_engine.md)** — the runtime accessor every
+- **[ontology (build layer)](ontology_write.md)** — the write/compile layer that
+  owns the editable definitions and compiles them into the flat runtime
+  `dd_ontology` table.
+- **[Ontology engine](ontology_engine.md)** — the runtime accessor every
   request uses to read a node (model, label, parent, children, relations) from
   `dd_ontology`.
-- **[hierarchy](hierarchy.md)** — the `hierarchy` server class that manages the
-  `hierarchy` TLD: the master records describing each thesaurus tree, the virtual
-  term sections, and the configuration lookups the tree machinery depends on.
+- **[hierarchy](hierarchy.md)** — the `hierarchy` TLD: the master records
+  describing each thesaurus tree, the virtual term sections, and the
+  configuration lookups the tree machinery depends on.
 - **[`ts_object`](ts_object.md)** — the server node builder that turns a `ddo_map`
   into the JSON shape of one thesaurus/ontology tree node consumed by the client
   tree widget.

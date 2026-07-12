@@ -1,8 +1,12 @@
 # Dédalo TS server — reference systemd unit (audit S2-38, DEC-17 item 3).
 #
-# Adjust the three ALL-CAPS placeholders (USER, /PATH/TO). The private config
-# dir (../private relative to the repo) already holds .env; EnvironmentFile
-# lets systemd overrides win over it (readEnv precedence: process env first).
+# Adjust the ALL-CAPS/example placeholders below (DEDALO_USER, /opt/dedalo/…)
+# to the real host layout. The canonical layout (see engineering/PRODUCTION.md)
+# is:
+#   /opt/dedalo/master_dedalo/   the repo (WorkingDirectory)
+#   /opt/dedalo/private/         ../private (config, secrets, session store)
+#   /opt/dedalo/.bun/bin/bun     the PINNED runtime binary
+#   user/group: dedalo
 #
 #   sudo cp deploy/dedalo-ts.service /etc/systemd/system/
 #   sudo systemctl daemon-reload && sudo systemctl enable --now dedalo-ts
@@ -19,14 +23,28 @@ Wants=postgresql.service
 [Service]
 Type=simple
 User=DEDALO_USER
-WorkingDirectory=/PATH/TO/v7_ts/master_dedalo
+WorkingDirectory=/opt/dedalo/master_dedalo
 # The runtime is PINNED (.bun-version / package.json engines.bun) — point
 # ExecStart at the pinned binary, not a floating `bun` on PATH, so a stray
 # `bun upgrade` cannot change the production runtime (audit S2-36).
-ExecStart=/PATH/TO/.bun/bin/bun run src/server.ts
-# Secrets/config: ../private/.env is read by the server itself; this line is
-# for systemd-level OVERRIDES only (optional — remove the '-' file if unused).
-EnvironmentFile=-/PATH/TO/v7_ts/private/.env
+ExecStart=/opt/dedalo/.bun/bin/bun run src/server.ts
+
+# Socket permissions (the 502-on-every-request trap). The server creates
+# SERVER_UNIX_SOCKET under the process umask; the default 022 yields srwxr-xr-x, and
+# CONNECTING to a unix socket requires WRITE permission — so a reverse proxy running as
+# www-data/nginx gets EACCES and every request 502s, with nothing wrong in the app.
+# UMask=0007 makes it srwxrwx---; add the web-server user to the `dedalo` group:
+#     sudo usermod -aG dedalo www-data      # or: nginx
+UMask=0007
+# No EnvironmentFile here on purpose: the server reads ../private/.env
+# ITSELF (src/config/env.ts readEnv/parseEnvFile), so pointing systemd's
+# EnvironmentFile= at the same file is redundant — and actively harmful,
+# because systemd's EnvironmentFile parser quotes/escapes differently from
+# parseEnvFile and mangles raw-JSON values such as
+# DEDALO_APPLICATION_LANGS={"lg-spa":"Castellano"} (the embedded unescaped
+# quotes are not valid systemd env-file syntax). If a systemd-level override
+# is genuinely needed, use `systemctl edit dedalo-ts` to add a drop-in
+# Environment=/EnvironmentFile= instead of editing this unit.
 
 # Supervision (audit S2-38): any crash — OOM, native fault, unhandled error —
 # restarts the server after 3 s. The server's own SIGTERM handler drains

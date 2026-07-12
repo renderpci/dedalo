@@ -9,7 +9,6 @@ This page is the index of the **per-tool reference**. For the cross-cutting docu
 - [Server contract](../server_contract.md) — the `ToolServerModule` contract, API actions, configuration, lifecycle hooks
 - [JS lifecycle](../js_lifecycle.md) — the client tool lifecycle and helpers
 - [Security](../security.md) — what the framework enforces and what you must do
-- [Architecture audit](../architecture_audit.md) — the PHP-era design history that shaped the current model (historical; see the note at its top)
 - Back to the [development index](../../index.md)
 
 ## The tool model
@@ -17,7 +16,7 @@ This page is the index of the **per-tool reference**. For the cross-cutting docu
 A Dédalo tool is an **isolated block of code that extends a component, section or area** without that element knowing about it. Each tool lives in its own directory `tools/tool_<name>/` and has two halves:
 
 - a **server** package `server/index.ts` exporting a `ToolServerModule` (no per-tool class, no autoloader — a tool with no remote actions ships no `server/` directory at all), and
-- a **client** JS/CSS module under `js/` and `css/` (copied as-is from the PHP client tree, still vanilla constructor-function/prototype JS).
+- a **client** JS/CSS module under `js/` and `css/` — vanilla constructor-function/prototype JS, no build step.
 
 A `register.json` file describes the tool to the framework (label, version, which models it affects, where it surfaces, its configuration and UI hints). New tools use the hand-authorable [flat authoring format](../register_json.md); the 34 in-repo tools ship as column-keyed matrix-row dumps instead (pass-through, not hand-edited).
 
@@ -31,7 +30,7 @@ Every remotely callable server action is declared as a key of the module's **`ap
 Section-level tools surface on the section itself. A tool's own `isAvailable(context)` hook (when its module declares one) gives it the last word on whether to appear for a given element. Many tools are **UI-only** (all behavior is client-side, no remote API actions — 12 of the 34 in-repo tools ship no `server/` package at all); others dispatch server actions through `this.tool_request(...)`.
 
 !!! note "No base class"
-    There is no TS equivalent of a `tool_common` base *class* on the server — the shared machinery (registry, loader, dispatch, security, config, cache) lives in `src/core/tools/` and is invoked BY the framework around a tool's handlers, not inherited by them. On the **client**, `tool_common` is still a real JS prototype base (`src/core/tools/client/js/tool_common.js`, unchanged from the PHP era) that every tool wires into via `wire_tool`.
+    There is no `tool_common` base *class* on the server — the shared machinery (registry, loader, dispatch, security, config, cache) lives in `src/core/tools/` and is invoked BY the framework around a tool's handlers, not inherited by them. On the **client**, `tool_common` is a real JS prototype base (`src/core/tools/client/js/tool_common.js`) that every tool wires into via `wire_tool`.
 
 ## Catalog
 
@@ -43,7 +42,7 @@ Section-level tools surface on the section itself. A tool's own `isAvailable(con
 | `tool_import_files` | Ingests uploaded media files into media sections (EXIF/metadata extraction, multiple naming/match modes, custom processors) via ImageMagick/FFmpeg | [reference](tool_import_files.md) |
 | `tool_import_marc21` | Parses MARC21 binary (`.mrc`) files and maps fields/subfields to Dédalo components per ontology config, matching or creating records | [reference](tool_import_marc21.md) |
 | `tool_import_rdf` | Imports RDF/OWL graphs, mapping classes/properties to Dédalo components with resource matching/creation and special handling for iri/geolocation/date | [reference](tool_import_rdf.md) |
-| `tool_import_zotero` | Imports Zotero JSON bibliographic exports into Publications (rsc205), mapping fields and optionally uploading associated PDF files | [reference](tool_import_zotero.md) |
+| `tool_import_zotero` | Imports a Zotero RDF/XML bibliographic export into Publications (rsc205), mapping predicates to components | [reference](tool_import_zotero.md) |
 
 ### Export & publishing
 
@@ -115,4 +114,4 @@ Section-level tools surface on the section itself. A tool's own `isAvailable(con
 | `tool_qr` | Base/build sample tool (not for production use); UI-only | [reference](tool_qr.md) |
 
 !!! note "Counting the tools"
-    The directory `tools/` contains exactly 34 entries, all of them real tools — there is no `tool_common` directory in the TS tree (the shared machinery moved to `src/core/tools/`). 33 are listed in the tables above; `tool_dev_template` is the developer scaffold/reference implementation, listed under *Misc / internal*. Per `rewrite/STATUS.md` ("Tools rebuild"), 22 of the 34 ship a `server/index.ts` package (including `tool_dev_template`); the other 12 are confirmed client-only in both the PHP oracle and the TS engine (empty/absent server surface).
+    The directory `tools/` contains exactly 34 entries, all of them real tools — there is no `tool_common` directory (the shared machinery lives in `src/core/tools/`). 33 are listed in the tables above; `tool_dev_template` is the developer scaffold/reference implementation, listed under *Misc / internal*. 22 of the 34 ship a `server/index.ts` package (including `tool_dev_template`); the other 12 are client-only (no `server/` directory at all): `tool_assistant`, `tool_cataloging`, `tool_dd_label`, `tool_diffusion`, `tool_indexation`, `tool_numisdata_epigraphy`, `tool_numisdata_order_coins`, `tool_print`, `tool_qr`, `tool_subtitles`, `tool_tr_print`, `tool_user_admin`.

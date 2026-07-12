@@ -269,6 +269,9 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 				csrf_token: freshSession?.csrfToken,
 			},
 			setSessionToken: outcome.sessionToken,
+			// Media access control (Rule A). Undefined when the mode is false, so a
+			// protection-off install emits exactly ONE Set-Cookie, as before.
+			setMediaAuthCookie: outcome.mediaAuthCookieValue,
 		};
 	},
 	quit: async (_rqo, context) => {
@@ -287,6 +290,17 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			status: 200,
 			body: { result: true, msg: 'OK. Request done' },
 			clearSessionCookie: true,
+			// Clear the media-auth cookie too. UNCONDITIONAL, unlike PHP (which gated on
+			// the mode): clearing an absent cookie costs nothing, while the conditional's
+			// only real effect is to LEAVE a live authorization value in the browser of a
+			// user who logs out just after an operator switched protection off — a value
+			// that becomes valid again the moment it is switched back on.
+			//
+			// (!) This clears the BROWSER cookie only. It must NEVER unlink the auth
+			// marker: the cookie value is install-global (every logged-in editor shares
+			// today's value), so unlinking it on one user's logout would lock out all of
+			// them until their next login.
+			clearMediaAuthCookie: true,
 		};
 	},
 	convert_search_object_to_sql_query: async (rqo, context) => {

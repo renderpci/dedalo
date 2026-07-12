@@ -1,42 +1,8 @@
 # Thesaurus and Ontology tree
 
-> See also: [area_thesaurus](../areas/area_thesaurus.md) · [area_ontology](../areas/area_ontology.md) · [TS tree (ts_object)](../ontology/ts_object.md) · [Sections](../sections/index.md)
+> See also: [area_thesaurus](../areas/area_thesaurus.md) · [area_ontology](../areas/area_ontology.md) · [ts_object](../ontology/ts_object.md) · [Sections](../sections/index.md)
 
 Dédalo manages controlled vocabularies — toponymy, onomastic, thematic thesauri, material and technique taxonomies, typology catalogues — as **hierarchical trees of terms**. This page documents the data model, the server and client architecture of the tree, the mutation guarantees, and how to configure a new thesaurus section.
-
-!!! note "TS rewrite status"
-    The tree engine is ported to the TypeScript/Bun server in
-    `src/core/ts_object/` — a genuinely separate, self-contained port (shared
-    by `area_thesaurus`/`area_ontology`, but scoped out of `engineering/AREA_SPEC.md`,
-    which explicitly ledgers "dd_ts_api / ts_object tree mutations" as a
-    different subsystem):
-
-    | PHP | TS module | function(s) |
-    | --- | --- | --- |
-    | `dd_ts_api` (`class.dd_ts_api.php`) | `src/core/ts_object/ts_api.ts` | `getNodeData`, `getChildrenData`, `addChild`, `updateParentData`, `saveOrder` — wired under the `dd_ts_api` key in `src/core/api/dispatch.ts` |
-    | `ts_object` (node builder) | `src/core/ts_object/ts_object.ts` | `buildNodeData`, `parseChildData`, `getChildrenData`, `invalidateNode` |
-    | `ts_node_repository` | `src/core/ts_object/node_repository.ts` | `fetchNodeInfo`, `batchDescriptorFlags` |
-    | `ts_term_resolver` | `src/core/ts_object/term_resolver.ts` | `getTermByLocator`, `invalidateNode` |
-    | `area_thesaurus::search_thesaurus` / `get_hierarchy_terms_sqo` | `src/core/ts_object/search.ts` | `searchThesaurus`, `getHierarchyTermsSqo`, `getMainOrder` |
-
-    The five `dd_ts_api` actions keep the PHP envelope shape and verbatim `msg`
-    strings by design (asserted by the PHP tests, so a byte-diff catches drift);
-    reads gate at permission ≥1, writes at ≥2; every mutation runs inside one
-    `withTransaction` (`src/core/db/postgres.ts`) that acquires the same
-    PHP-identical `pg_advisory_xact_lock` node lock(s), validates everything
-    *before* any write, and defers cache invalidation to after commit — the
-    same ordering this page documents for PHP below. Search is
-    differential-gated against live PHP (`test/parity/ts_search_differential.test.ts`);
-    the read/mutation path has direct unit coverage
-    (`test/unit/ts_tree_semantics.test.ts`, `test/unit/ts_tree_db_semantics.test.ts`)
-    rather than a byte-parity differential harness of its own. The node-read
-    coverage ledger (`ts_object.ts`'s own doc comment) is honest about scope:
-    covered are the term/string family, `is_descriptor` relations,
-    `component_relation_index` counts (the "U" button, § below) and
-    `link_children` resolution; deferred are the `component_relation_related`
-    inverse-reference merge, `component_svg` URL/file-exists resolution (needs
-    the media machinery — see `engineering/MEDIA_SPEC.md`), and the full indexation
-    grid (counts only, per a scoped plan decision — no `dd_grid` render).
 
 ## Introduction
 
@@ -51,12 +17,12 @@ Two working areas render and edit these trees:
 
 | concept | meaning |
 | --- | --- |
-| **Hierarchy** | A record of section `hierarchy1` (`DEDALO_HIERARCHY_SECTION_TIPO`) describing one tree: its TLD, typology (thesaurus / typology / language…), active state and its **root terms** (a `hierarchy_children` portal, `hierarchy45`). |
+| **Hierarchy** | A record of section `hierarchy1` describing one tree: its TLD, typology (thesaurus / typology / language…), active state and its **root terms** (a `hierarchy_children` portal, `hierarchy45`). |
 | **Term** | A section record inside a thesaurus section (e.g. `es1_42`). Carries the term value, the descriptor and indexable flags, its parent relation and its order. |
 | **Descriptor / ND** | A *descriptor* is a preferred term and may have children; a *non-descriptor* (ND) is an alternative form (synonym, variant) attached to a descriptor. The si/no flag lives in the `is_descriptor` component. |
 | **Model** | Terms of the model section (`{tld}2`, e.g. `es2`) classify terms typologically. The ontology area shows model values with `Ctrl+M`. |
 | **Indexable** | Whether the term can be used as an indexation target (`is_indexable` flag). Root hierarchy records are never indexable. |
-| **Virtual sections** | Thesaurus sections (`es1`, `ts1`…) inherit their structure from a real section (`hierarchy20`, `DEDALO_THESAURUS_SECTION_TIPO`) — they have records of their own but resolve their ontology definition from the real section. |
+| **Virtual sections** | Thesaurus sections (`es1`, `ts1`…) inherit their structure from a real section (`hierarchy20`) — they have records of their own but resolve their ontology definition from the real section. |
 
 ## Data model
 
@@ -77,14 +43,14 @@ The single most important rule of the tree: **hierarchy is stored bottom-up**. E
 }
 ```
 
-- `type` is always `dd47` (`DEDALO_RELATION_TYPE_PARENT_TIPO`).
+- `type` is always `dd47` (`RELATION_TYPE_PARENT`).
 - `section_tipo` / `section_id` point at the **parent** term.
 
 `component_relation_children` stores nothing (`use_db_data = false`). The children of a node are **always calculated** by searching which records hold a parent locator pointing at it. This keeps the tree consistent by construction — there is exactly one source of truth per edge — at the cost of read-time queries, which the system mitigates with batching (see below).
 
 ### The section map
 
-Every thesaurus section declares which components play each role, read from the ontology and exposed as `section_map->thesaurus` (`section::get_section_map()`):
+Every thesaurus section declares which components play each role, read from the ontology and exposed as `section_map->thesaurus` (`getSectionMap()`, `src/core/ontology/section_map.ts`):
 
 ```json
 {
@@ -128,7 +94,7 @@ What a tree row *shows* is ontology data, not code. The `section_list_thesaurus`
 | `link_children` | the expand arrow (`component_relation_children` tipo) |
 
 !!! note "Virtual section fallback"
-    When a virtual section has no `section_list_thesaurus` of its own, the definition is resolved from its real section (`ts_object::get_ar_elements()`).
+    When a virtual section has no `section_list_thesaurus` of its own, the definition is resolved from its real section (`getArElements()`, `src/core/ts_object/ts_object.ts`).
 
 ## Architecture
 
@@ -139,19 +105,29 @@ flowchart LR
         TSJS --> V[view_default_edit_ts_object.js<br/>render_ts_line.js · render_ts_id_column.js · render_ts_dialogs.js]
     end
     subgraph server [Server]
-        API[dd_ts_api] --> TSPHP[ts_object.php<br/>node builder]
-        TSPHP --> REPO[ts_node_repository<br/>batched raw reads]
-        TSPHP --> TERM[ts_term_resolver<br/>term cache]
-        API --> CRP[component_relation_parent]
-        API --> CRC[component_relation_children]
+        API[ts_api.ts<br/>the dd_ts_api actions] --> TSMOD[ts_object.ts<br/>node builder]
+        TSMOD --> REPO[node_repository.ts<br/>batched raw reads]
+        TSMOD --> TERM[term_resolver.ts<br/>term cache]
+        API --> CRP[relations/parent.ts]
+        API --> CRC[relations/children.ts]
     end
     TSJS -- "get_node_data · get_children_data<br/>add_child · update_parent_data · save_order" --> API
 ```
 
 ### Server
 
-- **`dd_ts_api`** (`core/api/v1/common/class.dd_ts_api.php`) is the API surface. Read actions: `get_node_data`, `get_children_data`. Mutations: `add_child`, `update_parent_data` (move), `save_order`. Responses always carry `{result, msg, errors}`. TS: `src/core/ts_object/ts_api.ts`, wired under `dd_ts_api` in `src/core/api/dispatch.ts` (see the TS status note above).
-- **`ts_object`** (`core/ts_object/class.ts_object.php`) builds the JSON of one node: iterates the `ddo_map`, resolves each element's value through its component, and emits the node shape consumed by the client. TS: `buildNodeData` in `src/core/ts_object/ts_object.ts` — no per-component machinery (TS has none); it reads the mapped term/relation/number containers straight off the decoded `MatrixRecord` instead.
+The tree engine lives in `src/core/ts_object/` — a self-contained subsystem
+shared by `area_thesaurus` and `area_ontology`.
+
+- **`ts_api.ts`** is the API surface, wired under the `dd_ts_api` key in
+  `src/core/api/dispatch.ts`. Read actions: `get_node_data`,
+  `get_children_data`. Mutations: `add_child`, `update_parent_data` (move),
+  `save_order`. Responses always carry `{result, msg, errors}`. Reads gate at
+  permission ≥1, writes at ≥2.
+- **`ts_object.ts`** builds the JSON of one node (`buildNodeData`): it iterates
+  the `ddo_map`, resolves each element's value, and emits the node shape the
+  client consumes — reading the mapped term/relation/number containers straight
+  off the decoded `MatrixRecord`.
 
 ```json
 {
@@ -168,15 +144,42 @@ flowchart LR
 }
 ```
 
-- **`ts_node_repository`** (`core/ts_object/class.ts_node_repository.php`) removes the N+1 cost of wide nodes: it resolves order, `is_indexable` and `is_descriptor` for a whole children set with one SQL query per section group, reading the raw `number`/`relation` containers with exactly the same semantics as the component path (including `component_number` value formatting). **Contract:** if anything cannot be resolved it returns `null` and the caller runs the legacy per-component path — behavior never degrades, only performance. Output parity is enforced by `test/server/ts_object/ts_node_repository_Test.php`. TS: `fetchNodeInfo`/`batchDescriptorFlags` in `src/core/ts_object/node_repository.ts` — **batch-first, no legacy fallback** (a plan decision: TS has no per-component machinery to fall back to, and both PHP paths yield the same values anyway). PHP's partial-data semantics are folded in as explicit rules instead: a missing row resolves to `{order:null, is_indexable:false}`; an unresolvable section in `fetchNodeInfo` throws, while in `batchDescriptorFlags` it is skipped (not aborted) per tipo.
-- **`ts_term_resolver`** (`core/ts_object/class.ts_term_resolver.php`) resolves term strings from locators with a request-scope cache, used by the tree and by diffusion/export/portals (which call the stable `ts_object::get_term_by_locator()` delegates). The cache is invalidated per node on mutations and fully cleared between worker requests (`worker/class.cache_manager.php`). TS: `getTermByLocator`/`invalidateNode` in `src/core/ts_object/term_resolver.ts` — the cache is module-level, keyed only by content (`` `${section_tipo}_${section_id}_${scope}_${lang}` ``, never by user/session), bounded to 1000 entries with whole-cache eviction on overflow (PHP's O(1) eviction, not an LRU), and registered with the ontology invalidation hub so ontology writes drop it.
-- Pagination totals use `component_relation_children::count_children()` (a SQL count) instead of loading every child row. TS: `countChildrenOrNull` in `src/core/relations/children.ts`.
+- **`node_repository.ts`** removes the N+1 cost of wide nodes: `fetchNodeInfo`
+  and `batchDescriptorFlags` resolve order, `is_indexable` and `is_descriptor`
+  for a whole children set with one SQL query per section group, reading the raw
+  `number`/`relation` containers (including `component_number` value
+  formatting). It is **batch-first, with no per-component fallback**: a missing
+  row resolves to `{order: null, is_indexable: false}`; an unresolvable section
+  throws in `fetchNodeInfo`, and is skipped per-tipo (not aborted) in
+  `batchDescriptorFlags`.
+- **`term_resolver.ts`** resolves term strings from locators
+  (`getTermByLocator`), used by the tree and by diffusion/export/portals, which
+  import it directly. The cache is module-level and keyed **only by content**
+  (`` `${section_tipo}_${section_id}_${scope}_${lang}` ``, never by user or
+  session), bounded to 1000 entries with whole-cache eviction on overflow (an
+  O(1) drop, not an LRU). It is evicted per node on a mutation
+  (`invalidateNode`) and registered with the ontology invalidation hub, so any
+  ontology write drops it.
+- Pagination totals use `countChildrenOrNull` (`src/core/relations/children.ts`)
+  — a SQL count instead of loading every child row.
+
+!!! note "What a tree node does not resolve"
+    Node reads cover the term/string family, the `is_descriptor` relations, the
+    `component_relation_index` counts (the "U" button, below) and
+    `link_children` resolution. Two element behaviours are deliberately out of
+    scope: a `component_relation_related` element does not get its inverse
+    references merged in, and a `component_svg` element does not resolve to a
+    file URL. The indexation *grid* is a separate subsystem — the node builder
+    produces counts only (see [dd_grid](../system/dd_grid.md)).
 
 ### Client
 
-The client is copied as-is from the PHP tree (vanilla JS + LESS, unchanged by the rewrite) and talks to whichever server is running through the same wire contract described above.
-
-Each visible node is a **`ts_object` JS instance** (`core/ts_object/js/ts_object.js`), cached in the global instances map under a key built from `['section_tipo','section_id','children_tipo','target_section_tipo','thesaurus_mode','ts_parent']`. `ts_parent` is part of the key on purpose: one instance owns one DOM node, and the same term visible in two contexts must not steal nodes.
+Each visible node is a **`ts_object` JS instance**
+(`client/dedalo/core/ts_object/js/ts_object.js`), cached in the global instances
+map under a key built from
+`['section_tipo','section_id','children_tipo','target_section_tipo','thesaurus_mode','ts_parent']`.
+`ts_parent` is part of the key on purpose: one instance owns one DOM node, and
+the same term visible in two contexts must not steal nodes.
 
 Key behaviors:
 
@@ -188,44 +191,47 @@ Key behaviors:
 
 ## Tree mutations
 
-All mutations are **transactional**: they run inside `DBi::transaction()` holding a per-node advisory lock (`matrix_db_manager::acquire_node_lock()`) on every affected parent. A failure at any step rolls back every write — no orphan records, no half-moved nodes, no colliding sibling orders.
+All mutations are **transactional**: every one runs inside a single
+`withTransaction` (`src/core/db/postgres.ts`) holding a per-node advisory lock
+(`acquireNodeLock` → `pg_advisory_xact_lock(hashtext(...))` over the
+`` `${section_tipo}_${section_id}` `` key) on every affected parent. Everything
+is validated **before** any write, and cache invalidation is deferred until
+after commit. A failure at any step rolls back every write — no orphan records,
+no half-moved nodes, no colliding sibling orders.
 
-TS keeps the identical guarantee with `withTransaction`/`acquireNodeLock`
-(`src/core/db/postgres.ts`): the same `pg_advisory_xact_lock(hashtext(...))`
-call over the same `` `${section_tipo}_${section_id}` `` key, callable only
-from inside an open transaction (it throws otherwise — the lock would
-silently be ineffective outside one), and a nested `withTransaction` joins the
-ambient transaction rather than opening a second connection, so composed
-mutation helpers never fragment one logical operation.
+`acquireNodeLock` is callable only from inside an open transaction (it throws
+otherwise — outside one, the lock would silently be ineffective), and a nested
+`withTransaction` joins the ambient transaction rather than opening a second
+connection, so composed mutation helpers never fragment one logical operation.
 
 ```mermaid
 sequenceDiagram
     participant C as client (drag & drop)
-    participant A as dd_ts_api.update_parent_data
-    participant P as component_relation_parent
+    participant A as ts_api.updateParentData
+    participant P as relations/parent.ts
     C->>A: move node X: old parent O → new parent N
-    A->>P: is_ancestor(X, of N)?
+    A->>P: isAncestor(X, of N)?
     alt N is a descendant of X
         A-->>C: errors: ['cycle'] — nothing written
     else valid move
         A->>A: BEGIN + lock O and N (deterministic order)
-        A->>P: remove_parent(O) · add_parent(N) · save()
-        A->>P: recalculate_sibling_orders(O)
+        A->>P: removeParent(O) · addParent(N) · save
+        A->>P: recalculateSiblingOrders(O)
         A->>A: COMMIT + invalidate node caches
         A-->>C: result: true
     end
 ```
 
-- **`add_child`** validates everything (section map flags, parent component resolution) *before* creating the record; creation, default `is_descriptor`/`is_indexable` values, ontology TLD inheritance and the parent link are one atomic unit. The new child's order is assigned under the parent lock. TS: `addChild`, `src/core/ts_object/ts_api.ts` — same pre-write validation order, creating the record via `createSectionRecord` (`src/core/section/record/create_record.ts`).
-- **`update_parent_data`** rejects moving a node under itself or under its own descendant with a distinct `'cycle'` error. The guard (`component_relation_parent::is_ancestor()`) also runs inside `add_parent()` itself, so every entry point is covered. TS: `updateParentData`, same file — `isAncestor`/`addParent`/`removeParent` in `src/core/relations/parent.ts`, with the same double coverage (the standalone check plus the guard inside `addParent` itself).
-- **`save_order`** rewrites sibling order values per parent context in one transaction; unchanged values are skipped (no time-machine noise). Repeating the same order is a no-op. TS: `saveOrder`, same file — `sortChildren`/`recalculateSiblingOrders` in `src/core/relations/parent.ts`.
-- **Delete** is only allowed for terms without children (the delete dialog lists existing relations first); it removes the record, updates the parent's children data and destroys the client instance. Not part of the `dd_ts_api` five-action surface above (PHP routes term delete through the generic section-record delete path); ledgered against that path, not re-verified here.
+- **`add_child`** (`addChild`, `ts_api.ts`) validates everything (section map flags, parent component resolution) *before* creating the record; creation, default `is_descriptor`/`is_indexable` values, ontology TLD inheritance and the parent link are one atomic unit. The record is created via `createSectionRecord` (`src/core/section/record/create_record.ts`). The new child's order is assigned under the parent lock.
+- **`update_parent_data`** (`updateParentData`) rejects moving a node under itself or under its own descendant with a distinct `'cycle'` error. The guard (`isAncestor`, `src/core/relations/parent.ts`) runs both as a standalone pre-check *and* inside `addParent()` itself, so every entry point is covered.
+- **`save_order`** (`saveOrder`) rewrites sibling order values per parent context in one transaction; unchanged values are skipped (no time-machine noise). Repeating the same order is a no-op. Backed by `sortChildren`/`recalculateSiblingOrders` (`src/core/relations/parent.ts`).
+- **Delete** is only allowed for terms without children (the delete dialog lists existing relations first); it removes the record, updates the parent's children data and destroys the client instance. It is **not** one of the five tree actions — term delete goes through the generic section-record delete path, which enforces the same children-exist refusal (see [`sections`](../sections/sections.md#bulk-delete--the-delete-api-action)).
 
 ## Indexations (the "U" button)
 
-When a `ddo_map` icon's tipo is a `component_relation_index`, the server counts the records indexed against the term (`count_data_group_by`) and emits the element with `value: "U:37"` and a `count_result`. Elements with zero uses are omitted. TS: `countInverseReferences` (`src/core/search/search_related.ts`), called from `buildNodeData` — covered as *counts only* (a scoped plan decision); the indexation `dd_grid` render itself is not part of this port (the client renders it from the same count data on either engine, but the grid's own data source is a separate subsystem, see [dd_grid](../system/dd_grid.md)).
+When a `ddo_map` icon's tipo is a `component_relation_index`, the server counts the records indexed against the term (`getCountDataGroupBy` → `countInverseReferences`, `src/core/search/search_related.ts`) and emits the element with `value: "U:37"` and a `count_result`. Elements with zero uses are omitted.
 
-On click, the client does **not** open the component: it calls `ts_object.show_indexations()`, which renders a **`dd_grid` with view `indexation`** — the indexed records grouped by section, with a micro paginator — toggled inside the row's `indexations_container`. A second click hides it; the grid instance is cached per button.
+On click, the client does **not** open the component: it calls `ts_object.show_indexations()`, which renders a **`dd_grid` with view `indexation`** — the indexed records grouped by section, with a micro paginator — toggled inside the row's `indexations_container`. A second click hides it; the grid instance is cached per button. The grid's own data source is a separate subsystem, see [dd_grid](../system/dd_grid.md).
 
 The recursive variant — `ddo_map` entry with `"show_data": "children"` — renders a `⇣U:n` button that first collects all descendant terms and shows the indexations of the whole branch.
 
@@ -241,32 +247,17 @@ The recursive variant — `ddo_map` entry with `"show_data": "children"` — ren
 
 ## Testing
 
-Server-side coverage lives in `test/server`:
-
-```shell
-cd test/server
-../../vendor/bin/phpunit api/dd_ts_api_Test.php ts_object/ts_node_repository_Test.php \
-    components/component_relation_children_Test.php components/component_relation_parent_Test.php \
-    db/DBi_transaction_Test.php area/area_thesaurus_Test.php
-```
-
-- `dd_ts_api_Test` exercises the mutation guarantees end-to-end against the `ts1` fixture: child creation and linking, no-orphan on failed preconditions, moves, **cycle rejection**, and order idempotence.
-- `ts_node_repository_Test` is the parity gate: the batched raw reads must equal the legacy component reads value-for-value, *type included*.
-- `DBi_transaction_Test` covers commit/rollback/savepoint nesting and the node lock.
-
-The client widget has no unit tests; verify changes manually: expand/collapse with reload restore, rapid double-click (one network request), `Alt`-click force reload, drag-and-drop including a drop onto the node's own descendant (clean cycle error), search with deep matches, the U indexation grid toggle, and `Ctrl+M` model visibility persistence.
-
-TS coverage runs under `bun:test`:
-
 ```shell
 bun test test/unit/ts_tree_semantics.test.ts test/unit/ts_tree_db_semantics.test.ts \
     test/parity/ts_search_differential.test.ts
 ```
 
-- `ts_tree_semantics.test.ts` / `ts_tree_db_semantics.test.ts` unit-test the
+- `ts_tree_semantics.test.ts` / `ts_tree_db_semantics.test.ts` cover the
   read/mutation surface (`ts_object.ts`, `ts_api.ts`, `node_repository.ts`,
-  `term_resolver.ts`) — direct coverage, not a byte-parity differential
-  harness of its own.
+  `term_resolver.ts`): child creation and linking, no-orphan on failed
+  preconditions, moves, **cycle rejection**, order idempotence, and the
+  commit/rollback/node-lock behaviour.
 - `ts_search_differential.test.ts` is the byte-parity gate for
-  `searchThesaurus`/`getHierarchyTermsSqo` against live PHP, in the same
-  spirit as `ts_node_repository_Test` above.
+  `searchThesaurus` / `getHierarchyTermsSqo`.
+
+The client widget has no unit tests; verify changes manually: expand/collapse with reload restore, rapid double-click (one network request), `Alt`-click force reload, drag-and-drop including a drop onto the node's own descendant (clean cycle error), search with deep matches, the U indexation grid toggle, and `Ctrl+M` model visibility persistence.

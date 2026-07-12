@@ -14,7 +14,7 @@ Use it when: you are an administrator/ontology editor standing on a hierarchy-de
 
 ## How it works (server + client)
 
-**Server** (`tools/tool_hierarchy/server/{index,tool_hierarchy}.ts`). One API action, `generate_virtual_section`, declaratively gated `permission: 'section', minLevel: 2` — generating a new virtual section + thesaurus terms is a structural privilege, so the framework requires write level (≥2) on `section_tipo` **before** the handler runs (the PHP oracle asserts the same level imperatively inside the method; the gate moved to the declarative layer, the level is unchanged). The handler:
+**Server** (`tools/tool_hierarchy/server/{index,tool_hierarchy}.ts`). One API action, `generate_virtual_section`, declaratively gated `permission: 'section', minLevel: 2` — generating a new virtual section + thesaurus terms is a structural privilege, so the framework requires write level (≥2) on `section_tipo` **before** the handler runs. The handler:
 
 1. Reads `section_id`, `section_tipo` and `force_to_create` from `options`; refuses (returns `result:false` with an error) if `section_id` or `section_tipo` is missing.
 2. If `force_to_create === true`, deletes the previously generated hierarchy first (`deleteOntologyMain`, `src/core/resolve/ontology_delete.ts` — the TS `ontology::delete_main` equivalent), merging any delete errors into the response (non-fatal).
@@ -22,13 +22,13 @@ Use it when: you are an administrator/ontology editor standing on a hierarchy-de
 4. Creates the two thesaurus **general term** roots via `createThesaurusGeneralTerm` (same module) — `hierarchy45` "General term" and `hierarchy59` "General term model". Without these roots the thesaurus view would show no root nodes.
 5. Invalidates the ontology-derived caches (`clearOntologyDerivedCaches`, `src/core/ontology/cache_invalidation.ts`) so the menu picks up the new section.
 
-The response carries the standard `result` / `msg` / `errors` plus `created_general_term` and `created_general_term_model` (the booleans from the two general-term creations) — unchanged from the PHP oracle's response shape.
+The response carries the standard `result` / `msg` / `errors` plus `created_general_term` and `created_general_term_model` (the booleans from the two general-term creations).
 
 **Client** (`tools/tool_hierarchy/js/`). `tool_hierarchy.js` is the instance (standard `init`/`build` via `tool_common`); `render_tool_hierarchy.js` builds the body. The `edit` view renders six components of the **caller record** in `edit` mode so the user can complete the definition before generating: TLD (`hierarchy6`), name (`hierarchy5`), active (`hierarchy4`), typology (`hierarchy9`), language (`hierarchy8`) and the source real section tipo (`hierarchy109`). The **Generate** button validates that all six have valid values (active must equal Yes), then asks for confirmation **twice** (`Sure?` then the localized `absolute_sure`) before calling `self.generate_virtual_section({force_to_create: <checkbox>})`. That helper builds the `dd_tools_api` / `tool_request` RQO (with a 60 s timeout, one retry) using `self.caller.section_id` / `self.caller.section_tipo` as the options. On success it refreshes the caller section and the menu instance so the new hierarchy shows up. A **Force to create** checkbox next to the button maps to the `force_to_create` option.
 
 ## Actions & options
 
-`apiActions = { generate_virtual_section: { permission: 'section', minLevel: 2, handler: toolHierarchyGenerateVirtualSection } }` — a single, **declaratively** gated action (the PHP oracle lists it in list form and asserts the same write level imperatively inside the method — same level, different gate mechanism). There is no `backgroundRunnable` — the work runs synchronously within the request (the client allows up to 60 s).
+`apiActions = { generate_virtual_section: { permission: 'section', minLevel: 2, handler: toolHierarchyGenerateVirtualSection } }` — a single, **declaratively** gated action. There is no `backgroundRunnable` — the work runs synchronously within the request (the client allows up to 60 s).
 
 | Action | Permission gate | Background | Reads from `options` |
 | --- | --- | --- | --- |

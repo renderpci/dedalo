@@ -107,8 +107,8 @@ optional `lib_data` bag (used by `component_image`).
     `file_time` are `null`. The external URL is resolved through the component's
     `external_source` property, which names a sibling
     [`component_iri`](../components/component_iri.md) whose first `iri` value is
-    used as the source. See
-    `component_media_common::get_external_source()`.
+    used as the source — the `externalSource` field threaded through
+    `src/core/media/files_info.ts`'s builders.
 
 ---
 
@@ -121,39 +121,25 @@ identity**. The base name is the component's *flat-locator identifier*:
 {component_tipo}_{section_tipo}_{section_id}
 ```
 
-(e.g. `rsc29_rsc170_1`). The pieces are joined with the locator delimiter `_`
-(`locator::DELIMITER`); the identifier is built by
-`component_common::get_identifier()`
-(`tipo . DELIMITER . section_tipo . DELIMITER . section_id`) and returned for
-media by `component_media_common::get_id()` (aliased as `get_name()`). The TS
-server ports this exact grammar as `buildMediaIdentifier()`
-(`src/core/media/path.ts`). When the
-media model is **translatable** the data language is appended:
+(e.g. `rsc29_rsc170_1`), built by `buildMediaIdentifier()`
+(`src/core/media/path.ts`) by joining `component_tipo`, `section_tipo` and
+`section_id` with `_`. When the media model is **translatable** the data
+language is appended:
 
 ```text
 {component_tipo}_{section_tipo}_{section_id}_{lang}      // e.g. dd650_oh1_7_lg_eng
 ```
 
-The full on-disk path is then assembled by `get_media_path_dir()` /
-`get_media_url_dir()`:
+The full on-disk path is then assembled by `buildMediaLocation()` and its
+sibling helpers (`src/core/media/path.ts`):
 
 ```text
 DEDALO_MEDIA_PATH + /{folder}{initial_media_path}/{quality}{additional_path}/{id}.{extension}
 ```
 
-```php
-// component_media_common::get_media_path_dir()  (simplified)
-$folder      = $this->get_folder();          // e.g. '/image', '/svg', '/av', '/pdf', '/3d'
-$base_path   = $folder . $initial_media_path . '/' . $quality . $additional_path;
-$media_path  = DEDALO_MEDIA_PATH . $base_path;     // dir; filename = "{id}.{extension}"
-```
-
-The TS server ports the same grammar in `src/core/media/path.ts`
-(`buildMediaLocation()` and friends), with one added guarantee: every produced
-absolute path is checked against the configured media root via
-`assertInsideMediaRoot()` — a single traversal chokepoint, stronger than PHP's
-scattered `realpath()` calls. See `engineering/MEDIA_SPEC.md` and the
-`dedalo-media-protection` skill.
+Every produced absolute path is checked against the configured media root via
+`assertInsideMediaRoot()` — a single traversal chokepoint that every media
+path passes through before it is used.
 
 | segment | source | default / example |
 | --- | --- | --- |
@@ -166,20 +152,18 @@ scattered `realpath()` calls. See `engineering/MEDIA_SPEC.md` and the
 
 ### Folder bucketing (`additional_path`)
 
-`get_additional_path()` keeps directories from growing unbounded. If a section
-property `additional_path` names another component, its value is used verbatim;
-otherwise it **falls back to id-bucketing** from `max_items_folder` (normally
-`1000`):
+Directories are kept from growing unbounded by bucketing. If a section
+property `additional_path` names another component, its value is used
+verbatim; otherwise it **falls back to id-bucketing** from `max_items_folder`
+(normally `1000`) via `additionalPath(sectionId, maxItemsFolder)`
+(`src/core/media/path.ts`):
 
-```php
-// component_media_common::get_additional_path()  (fallback branch)
-$additional_path = '/' . $max_items_folder * (floor($int_section_id / $max_items_folder));
+```text
+additional_path = '/' + max_items_folder * floor(section_id / max_items_folder)
 ```
 
 So `section_id = 1` → `/0`, `section_id = 1500` → `/1000`, etc. This is why the
-sample paths read `/media/image/1.5MB/0/rsc29_rsc170_1.jpg`. The TS port is
-`additionalPath(sectionId, maxItemsFolder)` (`src/core/media/path.ts`), the
-same bucketing arithmetic.
+sample paths read `/media/image/1.5MB/0/rsc29_rsc170_1.jpg`.
 
 Putting it together for `rsc29_rsc170_1`, quality `1.5MB`, extension `jpg`:
 
@@ -209,23 +193,8 @@ See [Locator — flat form](../locator.md) for the general
 
 The `media` column belongs to the [typed-column storage model](../sections/index.md):
 the conceptual record `data` is split across typed JSONB columns so PostgreSQL
-can index each shape. In PHP `section_record_data::$column_map` routes all five
-media models to this column:
-
-```php
-// core/section_record/class.section_record_data.php  (excerpt)
-public static array $column_map = [
-    'component_3d'    => 'media',
-    'component_av'    => 'media',
-    'component_image' => 'media',
-    'component_pdf'   => 'media',
-    'component_svg'   => 'media',
-    // …
-];
-```
-
-The TS server routes the same five models to `media` via each one's own
-descriptor (`component_3d/descriptor.ts`, `component_av/descriptor.ts`,
+can index each shape. All five media models route to `media` via each one's
+own descriptor (`component_3d/descriptor.ts`, `component_av/descriptor.ts`,
 `component_image/descriptor.ts`, `component_pdf/descriptor.ts`,
 `component_svg/descriptor.ts` — all declare `column: 'media'`), resolved
 through `getColumnNameByModel()` (`src/core/ontology/resolver.ts`).
@@ -240,8 +209,6 @@ from the `matrix_activity` table.
 
 ## Components that produce / use it
 
-All extend `component_media_common` (`core/component_media_common/`):
-
 | component | files | folder |
 | --- | --- | --- |
 | [`component_image`](../components/component_image.md) | images (thumb/derived qualities, `lib_data`) | `/image` |
@@ -252,38 +219,21 @@ All extend `component_media_common` (`core/component_media_common/`):
 
 ---
 
-## Server class
+## Server-side handling
 
-`component_media_common` (`core/component_media_common/class.component_media_common.php`)
-is the abstract base for all five components. It owns the data type's behaviour:
+There is no shared base class; the data type's behaviour lives in a handful
+of focused modules under `src/core/media/`, shared by all five components:
 
-- **identity / paths** — `get_id()` / `get_name()` (the flat locator),
-  `get_identifier()`, `get_initial_media_path()`, `get_additional_path()`,
-  `get_media_path_dir()`, `get_media_url_dir()`, `get_media_filepath()`,
-  `get_url()`.
-- **descriptors** — `get_files_info()` rebuilds the `files_info` list from the
-  files actually present (adding `original`/`modified` from the normalized
-  names); `get_quality_file_info()` builds one entry; `quality_file_exist()`
-  tests presence.
-- **external source** — `get_external_source()` resolves the configured
-  `component_iri` to an external URL.
-
-It does **not** transcode/resize itself — that is delegated to the stateless
-[media_engine](../system/media_engine.md) wrappers (`Ffmpeg`, `ImageMagick`).
-
-The TS server splits this same behavior into a handful of focused modules
-under `src/core/media/` rather than one shared base class:
-
-| PHP (`component_media_common`) | TS module |
+| Behaviour | Module |
 | --- | --- |
-| `get_id()` / `get_identifier()` / `get_initial_media_path()` / `get_additional_path()` | `buildMediaIdentifier()`, `additionalPath()` (`src/core/media/path.ts`) |
-| `get_media_path_dir()` / `get_media_url_dir()` / `get_media_filepath()` / `get_url()` | `buildMediaLocation()`, `absoluteFromRelative()`, `assertInsideMediaRoot()` (`src/core/media/path.ts`) |
-| `get_files_info()` / `get_quality_file_info()` / `quality_file_exist()` | `scanFilesInfo()`, `getQualityFileInfo()`, `refreshStoredFilesInfo()` (`src/core/media/files_info.ts`) |
-| `get_external_source()` | the `externalSource` field threaded through `files_info.ts`'s builders |
+| identity / paths — the flat locator, initial media path, additional path | `buildMediaIdentifier()`, `additionalPath()` (`src/core/media/path.ts`) |
+| assembled path/URL, media-root containment | `buildMediaLocation()`, `absoluteFromRelative()`, `assertInsideMediaRoot()` (`src/core/media/path.ts`) |
+| descriptor rebuilding, per-quality entries, presence checks | `scanFilesInfo()`, `getQualityFileInfo()`, `refreshStoredFilesInfo()` (`src/core/media/files_info.ts`) |
+| external source resolution | the `externalSource` field threaded through `files_info.ts`'s builders |
 
-Transcoding/resizing stays delegated to the stateless engine wrappers, now TS:
-`src/core/media/engine/` (spawning `ffmpeg` / ImageMagick as before, per
-[media_engine](../system/media_engine.md)).
+Transcoding/resizing is delegated to the stateless
+[media_engine](../system/media_engine.md) wrappers under
+`src/core/media/engine/` (spawning `ffmpeg` / ImageMagick).
 
 ---
 
@@ -296,7 +246,7 @@ reads two keys:
 - `data.external_source` — the external URL when the media is remote.
 
 ```javascript
-// core/component_media_common/js/component_media_common.js (excerpt)
+// client/dedalo/core/component_media_common/js/component_media_common.js (excerpt)
 const data            = self.data || {}
 const entries         = data.entries || []   // entries is a files_info list
 const files_info      = entries
@@ -306,23 +256,9 @@ const external_source = data.external_source
 const file_exist = files_info.find(item => item.file_exist===true)
 ```
 
-The server also exposes a flattened, per-quality view via
-`get_datalist()`, normalising each entry for rendering — note how it composes
-the public URL from `file_path`:
-
-```php
-// component_media_common::get_datalist()  (excerpt)
-$external = $el->external ?? false;
-$file_url = $external===true
-    ? $el->file_path                       // external: file_path IS the URL
-    : (isset($el->file_exist) && $el->file_exist===true
-        ? DEDALO_MEDIA_URL . $el->file_path  // local: prepend the media URL root
-        : null);
-```
-
-So clients never store absolute paths: a local entry's `file_path` is always
-relative and is prefixed with `DEDALO_MEDIA_URL` at render time, while an
-external entry's `file_path` is used as-is.
+A local entry's `file_path` is always relative to the media root, prefixed at
+render time; an external entry's `file_path` is the absolute external URL and
+is used as-is. Clients never store absolute local paths.
 
 ---
 
@@ -382,21 +318,20 @@ DEDALO_MEDIA_PATH/pdf/original/0/dd650_oh1_7_lg_eng.pdf
 
 ## v7 consolidation / evolution
 
-- **Unified descriptor.** All media models converged on the single
-  `files_info` array of per-quality descriptors plus the
-  `original_normalized_name` / `modified_normalized_name` pair, replacing
-  per-model ad-hoc shapes. The base class `component_media_common` is the one
-  place that builds and reads this shape.
+- **Unified descriptor.** All five media models share the single `files_info`
+  array of per-quality descriptors plus the `original_normalized_name` /
+  `modified_normalized_name` pair, instead of per-model ad-hoc shapes. The
+  `src/core/media/` modules are the one place that builds and reads this
+  shape.
 - **Derived, not stored, paths.** Filenames are recomputed from the flat
   locator and ontology config (`folder` + `initial_media_path` + `quality` +
   `additional_path`). Nothing in the column hard-codes an absolute path, so the
   media root can move and folders can be re-bucketed without a data migration.
-- **Quality sanitisation.** `get_media_path_dir()` / `get_media_url_dir()` now
-  pass `quality` through `sanitize_quality()` (SEC-065 / MEDIA-04/05) so a raw
-  client value can never be reflected into a filesystem path — keeping path
-  building consistent with the
-  [media protection](../system/media_protection.md) layer that parses these
-  same filenames back into records.
+- **Quality sanitisation.** `buildMediaLocation()` runs `quality` through
+  `assertValidQuality()` (`src/core/concepts/media.ts`) so a raw client value
+  can never be reflected into a filesystem path — keeping path building
+  consistent with the [media protection](../system/media_protection.md) layer
+  that parses these same filenames back into records.
 
 ---
 

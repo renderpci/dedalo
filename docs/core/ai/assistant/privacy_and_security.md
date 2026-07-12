@@ -102,4 +102,4 @@ One related guard: a catalog entry's `api_key_env` (which *names* the env var ho
 | Secrets delivered to the browser | Secret-free `agent_models` projection; `api_key_env` suffix constraint |
 | Session hijack / cross-site | Normal Dédalo session + CSRF gates apply to every assistant action (none is exempt) |
 
-For the security review that produced these controls, and the tests that keep them honest, see the engineering ledger entry for the assistant rewrite ([WC-013](../../../../engineering/WIRE_CONTRACT.md)).
+Each of these controls is covered by a dedicated automated test, so a regression in any of them fails the test suite rather than shipping silently.

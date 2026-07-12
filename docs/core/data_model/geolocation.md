@@ -123,17 +123,7 @@ the same center).
 
 Geolocation values live in the typed **`geo`** JSONB column of the `matrix`
 table (one row per record; see [Sections — the matrix table model](../sections/index.md#the-matrix-table-model)).
-In PHP, `section_record_data::$column_map` maps the model to the column:
-
-```php
-public static array $column_map = [
-    // ...
-    'component_geolocation' => 'geo',
-];
-```
-
-The TS server resolves the same mapping through
-`getColumnNameByModel('component_geolocation')`
+The mapping is resolved through `getColumnNameByModel('component_geolocation')`
 (`src/core/ontology/resolver.ts`), which reads `column: 'geo'` off
 `component_geolocation/descriptor.ts`.
 
@@ -154,7 +144,7 @@ Because of this nesting, the GIN index and any search query reach the item
 properties with a wildcard path that crosses both the tipo key and the array:
 
 ```sql
--- GIN index sample (db_pg_definitions.php)
+-- GIN index sample (src/core/db/db_pg_definitions.json)
 SELECT * FROM matrix
 WHERE jsonb_path_query_array(geo, '$.*[*]') @> '[{"lat":"39.462571"}]'
 LIMIT 10;
@@ -171,64 +161,42 @@ independently of the rest of the record payload.
 | --- | --- | --- |
 | [`component_geolocation`](../components/component_geolocation.md) | the only producer — edits the position and shapes on a Leaflet map | no (`lg-nolan`) |
 
-It is a **literal-direct** component (extends `component_common`): it owns its
-data, with no relation locator, no media file and no language. The component
-never touches the database — its [section](../sections/index.md) reads and writes
-the `geo` column on its behalf (`save()` builds a `save_path` and delegates to
-the section record).
+It is a **literal-direct** component: it owns its data, with no relation
+locator, no media file and no language. The component never touches the
+database directly — the write path
+(`src/core/section/record/save_component.ts`) reads and writes the `geo`
+column on its behalf.
 
-## Server class
+## Server-side handling
 
-There is no dedicated "geo value" server class; the shape is produced and
-consumed entirely by `component_geolocation`
-(`core/component_geolocation/class.component_geolocation.php`). The relevant
-server-side accessors over the stored value are:
+There is no dedicated "geo value" class; the shape is produced and consumed
+entirely through the generic item pipeline. The read side is
+`readComponentItems()` / `resolveComponentValue()`
+(`src/core/resolve/component_data.ts`); the `geo` column itself is declared in
+`MATRIX_JSONB_COLUMNS` (`src/core/db/matrix.ts`) and the model→column entry
+resolves from `component_geolocation/descriptor.ts` (`column: 'geo'`).
 
-| method | returns |
-| --- | --- |
-| `get_data()` | the raw item array `[{lat, lon, zoom, alt, lib_data?}]` |
-| `get_latitude()` / `get_longitude()` | the center as `float`, or `null` for the default sentinel |
-| `get_diffusion_value_socrata()` | a GeoJSON `Point` object for Socrata (see below) |
-| `get_diffusion_value_as_geojson()` | an encoded layer-wrapped `FeatureCollection` (16-decimal `[lon, lat]`), or `null` for the sentinel |
-| `conform_import_data()` | normalizes an import cell into the canonical item array (see [Examples](#examples)) |
-| `regenerate_component()` | reloads then re-saves (used by `tool_update_cache`) |
+**The sentinel "no value" guard IS implemented**: `geojsonPointFallbackLayers()`
+(`src/diffusion/resolve/ddo_fns.ts`) recognises the exact Valencia center
+(`lat === '39.462571' && lon === '-0.376295'`, after normalizing comma
+decimals) and returns no layer for it, so an untouched map is never turned
+into a real-location point.
 
-The typed-column container is `section_record_data`
-(`core/section_record/class.section_record_data.php`), which declares `geo` in
-the column list and the `component_geolocation → geo` entry in `$column_map`.
-The TS server declares the same column in `MATRIX_JSONB_COLUMNS`
-(`src/core/db/matrix.ts`) and resolves the model→column entry from
-`component_geolocation/descriptor.ts` (`column: 'geo'`) instead of a shared
-map; the read side is `readComponentItems()` /
-`resolveComponentValue()` (`src/core/resolve/component_data.ts`). The
-diffusion helpers (`get_diffusion_value_socrata()` /
-`get_diffusion_value_as_geojson()`) and `conform_import_data()` are not yet
-ported — see `rewrite/STATUS.md`.
+That fallback-point builder is wired into one specific diffusion path today:
+a paired `component_text_area`'s `get_geojson_data` step
+(`src/diffusion/resolve/resolver.ts`) publishes the linked
+`component_geolocation`'s `lib_data` layers verbatim, falling back to a
+single-point `FeatureCollection` built from `lat`/`lon` when `lib_data` is
+empty (`buildGeojsonLayers()`, `src/diffusion/resolve/ddo_fns.ts`).
 
-### Diffusion shapes
-
-Both diffusion helpers preserve the GeoJSON `[lon, lat]` order:
-
-```json
-// get_diffusion_value_socrata() — a single GeoJSON Point
-{"type": "Point", "coordinates": [2.012151, 41.562363]}
-```
-
-```json
-// get_diffusion_value_as_geojson() — layer-wrapped FeatureCollection (16-decimal coords)
-[{
-  "layer_id": 1,
-  "text": "",
-  "layer_data": {
-    "type": "FeatureCollection",
-    "features": [{
-      "type": "Feature",
-      "properties": {},
-      "geometry": {"type": "Point", "coordinates": [2.0121514104520000, 41.5623634675270000]}
-    }]
-  }
-}]
-```
+!!! warning "Standalone diffusion reshaping and search: not yet implemented"
+    A **standalone** `component_geolocation` field (not paired with a
+    text-area geo tag) diffuses as a raw `'geo'` atom
+    (`src/diffusion/resolve/default_value.ts`) — it strips the item `id` but
+    does **not** reshape the value into a GeoJSON `Point` or a layer-wrapped
+    `FeatureCollection`; it carries the same `{lat, lon, zoom, alt, lib_data?}`
+    shape as storage. There is also no `geo`-family search builder yet —
+    geolocation values cannot currently be matched by a search query.
 
 ## Client-side model
 
@@ -239,8 +207,8 @@ the drawn shapes live in `entries[0].lib_data`.
 
 The component renders an interactive [Leaflet](https://leafletjs.com/) map with
 the [Leaflet-Geoman](https://geoman.io/) draw editor
-(`core/component_geolocation/js/component_geolocation.js`). The stored value maps
-onto Leaflet as follows:
+(`client/dedalo/core/component_geolocation/js/component_geolocation.js`). The
+stored value maps onto Leaflet as follows:
 
 ```javascript
 // the value item → Leaflet map state
@@ -307,39 +275,29 @@ Notes on the client model:
 }
 ```
 
-### Import shapes accepted by `conform_import_data`
+### Import shapes
 
-The import value is the bare data array (no lang keys). Four shapes are
-accepted:
+The import value is the bare data array (no lang keys). Two shapes round-trip
+correctly through the generic import path (`conformImportData()`,
+`src/core/tools/import_data.ts`), which is model-agnostic and does not carry
+a `component_geolocation`-specific override:
 
 ```json
-// 1. full v7 dato (array of items)
+// a full array of items — parses and passes through as-is
 [{"lat": 39.4625, "lon": -0.3762, "zoom": 16, "alt": 0}]
 ```
 
 ```json
-// 2. a single bare item (wrapped into a one-item array)
+// a single bare item — wrapped into a one-item array
 {"lat": 39.4625, "lon": -0.3762}
 ```
 
-```json
-// 3. a bare GeoJSON FeatureCollection
-//    (center taken from the first Point feature; stored as lib_data layer 1)
-{"type": "FeatureCollection", "features": [
-  {"type": "Feature", "properties": {}, "geometry": {"type": "Point", "coordinates": [-0.3762, 39.4625]}}
-]}
-```
-
-```text
-4. a flat string  "lat, lon[, zoom[, alt]]"  with dot decimals (latitude first)
-   39.4625, -0.3762, 16
-```
-
-Validation: `lat`/`lon` are mandatory and numeric; `lat ∈ [-90, 90]`,
-`lon ∈ [-180, 180]`; `zoom` defaults to `16`, `alt` to `0`; each `lib_data`
-layer must define `layer_id` and a `FeatureCollection`. An empty cell clears the
-value (`result = null`). A legacy lang-keyed export object (`{"lg-nolan":[…]}`)
-is accepted by extracting the first lang value.
+!!! warning "FeatureCollection extraction and flat-string import: TS gap"
+    Two further shapes are **not implemented**: importing a bare GeoJSON
+    `FeatureCollection` (extracting the center from its first Point feature)
+    and importing a flat text cell (`"lat, lon[, zoom[, alt]]"`) — neither is
+    converted into the canonical item shape today. There is also no
+    `lat`/`lon` range validation or `zoom`/`alt` defaulting on import.
 
 See the full import definition in
 [Importing data](../importing_data.md#geolocation) and the round-trip raw format
@@ -353,8 +311,9 @@ in [Exporting data](../exporting_data.md#raw-export-and-round-trip).
   without decoding the whole record. See
   [the typed-column storage model](../sections/index.md#storage-detail-the-data-column-is-split-into-typed-jsonb-columns).
 - **Standard GeoJSON inside.** Drawn shapes are stored as plain GeoJSON
-  `FeatureCollection`s under `lib_data`, so the value is portable to GIS targets
-  (Socrata `Point`, encoded GeoJSON) with no Dédalo-specific geometry format.
+  `FeatureCollection`s under `lib_data` — no Dédalo-specific geometry format —
+  which is what makes them reusable by the paired text-area geo-tag diffusion
+  path (see [Server-side handling](#server-side-handling)).
 - **Single-point-per-component model.** Although the value is an array, the
   editor manages one map (key `0`); multiple positions are expressed as multiple
   GeoJSON features inside `lib_data`, not as multiple array items.

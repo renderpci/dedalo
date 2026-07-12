@@ -12,7 +12,7 @@ Use it when: someone needs to index long-form text (transcriptions, interviews, 
 
 ## How it works (server + client)
 
-**Server.** `tools/tool_indexation/` ships **no `server/` package** in the TS engine — confirmed client-only (the PHP oracle declares an empty `API_ACTIONS = []`; the TS loader finds no `server/index.ts`, so `dd_tools_api.tool_request` refuses any action named against this tool at dispatch gate 5, `tool has no server module`). Every write the tool triggers is routed through other, already-gated endpoints (see *Actions & options*), each of which enforces its own permission gate. There is no `isAvailable`/`onRegister`/`onRemove` override.
+**Server.** `tools/tool_indexation/` ships **no `server/` package** — confirmed client-only: the tool loader finds no `server/index.ts` for this tool, so `dd_tools_api.tool_request` refuses any action named against this tool at dispatch gate 5, `tool has no server module`. Every write the tool triggers is routed through other, already-gated endpoints (see *Actions & options*), each of which enforces its own permission gate. There is no `isAvailable`/`onRegister`/`onRemove` override.
 
 **Client** (`tools/tool_indexation/js/`). The instance is `tool_indexation.js`; `render_tool_indexation.js` builds the UI; `tag_note.js` adds the per-tag info-note feature; `index.js` re-exports the module. The whole tool is driven by the element's `tool_config->ddo_map` — a list of role-tagged ddos resolved on `build()` into live instances:
 
@@ -42,11 +42,11 @@ The server-side work the client triggers goes through these **other** endpoints 
 
 | Endpoint · action | Reads (RQO `source` / `options`) | TS status |
 | --- | --- | --- |
-| `dd_component_text_area_api::delete_tag` | `source`: `section_tipo`, `section_id`, `tipo` (rsc36), `lang`; `options`: `tag_id`, `type` (`'index'`) | ⬜ **not ported** — `dd_component_text_area_api` is not registered in `src/core/api/dispatch.ts` at all (no `dd_component_text_area_api` entry exists next to `dd_component_portal_api`/`dd_component_av_api`). A TS client would 400 deleting an indexation tag today. |
-| `dd_component_text_area_api::get_tags_info` | `source`: text-component locator | ⬜ **not ported**, same gap as above. |
-| `dd_component_portal_api::delete_locator` | `source`: `section_tipo`, `section_id`, `tipo`; `options`: `locator` (e.g. `{tag_id, type:"dd96"}`), `ar_properties` (e.g. `['tag_id','type']`) | ✅ ported (`src/core/api/dispatch.ts`, `dd_component_portal_api.delete_locator` — bulk property-match locator removal, byte-parity gated per `rewrite/STATUS.md`). |
+| `dd_component_text_area_api::delete_tag` | `source`: `section_tipo`, `section_id`, `tipo` (rsc36), `lang`; `options`: `tag_id`, `type` (`'index'`) | ⬜ **not callable on this engine** — `dd_component_text_area_api` is not registered in `src/core/api/dispatch.ts` at all (no such entry exists next to `dd_component_portal_api`/`dd_component_av_api`). A client calling this today gets a dispatch-level refusal deleting an indexation tag. |
+| `dd_component_text_area_api::get_tags_info` | `source`: text-component locator | ⬜ **not callable on this engine**, same gap as above. |
+| `dd_component_portal_api::delete_locator` | `source`: `section_tipo`, `section_id`, `tipo`; `options`: `locator` (e.g. `{tag_id, type:"dd96"}`), `ar_properties` (e.g. `['tag_id','type']`) | ✅ implemented (`src/core/api/dispatch.ts`, `dd_component_portal_api.delete_locator` — bulk property-match locator removal). |
 
-Other client interactions are plain component / data_manager calls, not tool dispatches: `component_text_area.update_tag(...)` (tag state and note data), `data_manager.request({action:'create'|'read', ...})` (create the info-note record, load the "Approach" related-sections list), and the local `status` table for the persisted Approach/Viewer selections. The indexation **write** contract (the inline tag shape, stored via the generic component save path rather than a dedicated `delete_tag` action) is otherwise pinned from real stored data per `rewrite/STATUS.md` ("the indexation TAG-LINK contract is pinned from REAL stored data... type dd96... saved via the generic insert action").
+Other client interactions are plain component / data_manager calls, not tool dispatches: `component_text_area.update_tag(...)` (tag state and note data), `data_manager.request({action:'create'|'read', ...})` (create the info-note record, load the "Approach" related-sections list), and the local `status` table for the persisted Approach/Viewer selections. The indexation **write** contract — the inline tag shape (type `dd96`) — is otherwise saved via the generic component insert action rather than a dedicated `delete_tag`-style write action.
 
 ## How it is registered & surfaced
 
@@ -100,5 +100,5 @@ const api_response = await data_manager.request({ body: rqo })
 - [Creating new tools](../creating_tools.md) · [Server contract](../server_contract.md) — the tool model, `apiActions` (incl. the no-server-module UI-only case), gates and lifecycle this page builds on.
 - [tool_export](tool_export.md) — contrast: a section tool with a real dispatchable action; see [Exporting data](../../../core/exporting_data.md).
 - `tool_subtitles`, `tool_transcription`, `tool_tc`, `tool_tr_print` — sibling tools working over the same transcription / AV text components and their timecode/indexation tags (reference pages pending).
-- Server endpoints used by the client: `dd_component_text_area_api` (`delete_tag`, `get_tags_info` — ⬜ not registered in `src/core/api/dispatch.ts` yet), `dd_component_portal_api::delete_locator` (✅ `src/core/api/dispatch.ts`).
+- Server endpoints used by the client: `dd_component_text_area_api` (`delete_tag`, `get_tags_info` — ⬜ not callable on this engine, no such entry in `src/core/api/dispatch.ts`), `dd_component_portal_api::delete_locator` (✅ implemented, `src/core/api/dispatch.ts`).
 - Source: `tools/tool_indexation/register.json` (no `server/` package), `tools/tool_indexation/js/{tool_indexation,render_tool_indexation,tag_note,index}.js`, `tools/tool_indexation/css/tool_indexation.less`.

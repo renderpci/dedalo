@@ -257,4 +257,4 @@ The same filter/pagination knobs are available in a [batch](endpoints.md#post-ba
 - [Endpoints](endpoints.md) — the full route catalogue, single-record / search / fragment endpoints and batch.
 - [HTTP semantics](http_semantics.md) — envelopes, Problem Details errors, caching, rate limiting and security.
 - [Publication API v2](../index.md) — version landing page.
-- [Publication API overview](../publication_api.md) — diffusion context and the v1 (PHP) API.
+- [Publication API overview](../publication_api.md) — diffusion context and the legacy v1 API.

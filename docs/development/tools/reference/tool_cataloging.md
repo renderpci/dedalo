@@ -14,7 +14,7 @@ Use it when: someone needs to assemble records from one or more source sections 
 
 ## How it works (server + client)
 
-**Server.** `tools/tool_cataloging/` ships **no `server/` package** in the TS engine — confirmed client-only (the PHP oracle declares an empty `API_ACTIONS = []`; the TS loader simply finds no `server/index.ts`, so `dd_tools_api.tool_request` refuses any action named against this tool at dispatch gate 5, `tool has no server module`). There is no `isAvailable`/`onRegister`/`onRemove` override either. All persistence happens through other, already-gated endpoints (see *Actions & options*).
+**Server.** `tools/tool_cataloging/` ships **no `server/` package** — the tool is client-only: there is no `server/index.ts` to load, so `dd_tools_api.tool_request` refuses any action named against this tool at dispatch gate 5, `tool has no server module`. There is no `isAvailable`/`onRegister`/`onRemove` override either. All persistence happens through other, already-gated endpoints (see *Actions & options*).
 
 **Client** (`tools/tool_cataloging/js/`). Module entry `index.js` re-exports `tool_cataloging.js` (the instance), which uses `render_tool_cataloging.js` (window layout) and `view_tool_cataloging_mosaic.js` (a custom section view injected into the source section). The whole tool is driven by the element's `tool_config` — specifically `tool_config.ddo_map`, a list of role-tagged ddos resolved at `build()`:
 
@@ -44,7 +44,7 @@ This tool declares **no** API actions of its own:
 
 | `apiActions` | Value |
 | --- | --- |
-| `tool_cataloging` | *(no server module)* — UI-only, nothing dispatchable on this tool in either engine |
+| `tool_cataloging` | *(no server module)* — UI-only, nothing dispatchable on this tool |
 
 The server-side work the client triggers goes through these **other** endpoints (each enforces its own gate). They are listed for completeness — they are *not* methods of `tool_cataloging`:
 

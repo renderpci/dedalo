@@ -2,14 +2,15 @@
 
 > A developer/curator reference for **writing** the ontology: the shape of an ontology node, how to create and edit a section / component / group / tool through the Ontology area, the `properties` descriptor grammar, TLD creation and management, and how an edit becomes live.
 
-> See also: [Ontology concept](index.md) · [`ontology` class (build layer)](ontology_class.md) · [`ontology_node` engine](ontology_engine.md) · [area_ontology](../areas/area_ontology.md) · [request_config](../request_config.md) · [request_config examples](../request_config_examples.md) · [Sections](../sections/index.md) · [Components](../components/index.md)
+> See also: [Ontology concept](index.md) · [ontology (build layer)](ontology_write.md) · [Ontology engine](ontology_engine.md) · [area_ontology](../areas/area_ontology.md) · [request_config](../request_config.md) · [request_config examples](../request_config_examples.md) · [Sections](../sections/index.md) · [Components](../components/index.md)
 
 This page is the **authoring** reference. For *what the ontology is*
 (model/node correspondence, TLDs, shared vs local), read [Ontology](index.md)
-first. For the *runtime read* surface read [`ontology_node`](ontology_engine.md);
-for the *build/compile* surface read [`ontology`](ontology_class.md). This
-document does not repeat those at length — it focuses on the editing experience
-and the data you are actually editing.
+first. For the *runtime read* surface read
+[Ontology engine](ontology_engine.md); for the *build/compile* surface read
+[ontology (build layer)](ontology_write.md). This document does not repeat those
+at length — it focuses on the editing experience and the data you are actually
+editing.
 
 ## Role
 
@@ -19,9 +20,7 @@ component to it, grouping fields, attaching a tool, or wiring a portal to a
 target section are all done by creating and editing **ontology nodes** — never by
 writing server code or SQL. The runtime then builds the live resolved structures
 from those nodes on every request (see
-[Architecture overview](../architecture_overview.md)). This is unchanged by the
-TypeScript/Bun rewrite: the same `dd_ontology` schema and the same editable
-matrix records drive both engines during the coexistence period.
+[Architecture overview](../architecture_overview.md)).
 
 This reference covers the three things an author touches:
 
@@ -45,12 +44,12 @@ This reference covers the three things an author touches:
 
 | layer | where | who writes it | who reads it |
 | --- | --- | --- | --- |
-| **Editable** | `matrix_ontology_main` (`ontology35`) + per-TLD section `<tld>0` (e.g. `dd0`, `oh0`) | the curator, through the [Ontology area](../areas/area_ontology.md) | the compiler ([`ontology_write.ts`](ontology_class.md) + [`parser.ts`](ontology_class.md)) |
+| **Editable** | `matrix_ontology_main` (`ontology35`) + per-TLD section `<tld>0` (e.g. `dd0`, `oh0`) | the curator, through the [Ontology area](../areas/area_ontology.md) | the compiler ([`ontology_write.ts` + `parser.ts`](ontology_write.md)) |
 | **Compiled / runtime** | the flat `dd_ontology` table, one row per `tipo` | the compiler, via `upsertDdOntologyNode()` (`src/core/db/dd_ontology.ts`) | [`resolver.ts`](ontology_engine.md) on every request |
 
 The editable layer is just sections and components, so curators edit the
 ontology with the *same* UI they use for any other data. The compiler
-([`parseSectionRecordToOntologyNode()`](ontology_class.md#compile-editable-records--dd_ontology),
+([`parseSectionRecordToOntologyNode()`](ontology_write.md#compile-editable-records--dd_ontology),
 `src/core/ontology/parser.ts`) turns each editable record into one `dd_ontology`
 row.
 
@@ -72,12 +71,10 @@ flowchart LR
 ### `tipo` grammar
 
 Every node has a unique `tipo` = **TLD + sequential id** (`getTldFromTipo()` /
-`getSectionIdFromTipo()` in `src/core/ontology/tld.ts` — byte-for-byte ports of
-the PHP `shared/core_functions.php` helpers, unit-tested against the PHP edge
-cases):
+`getSectionIdFromTipo()` in `src/core/ontology/tld.ts`):
 
 - `oh1` → TLD `oh`, id `1`; `rsc197` → TLD `rsc`, id `197`.
-- `safeTipo()` (a local helper in `src/core/ts_object/node_repository.ts`)
+- A local `safeTipo()` helper (in `src/core/ts_object/node_repository.ts`)
   enforces the grammar `^[a-z]+[0-9]+$`; `safeTld()` (`tld.ts`) enforces
   `^[a-z]{2,}$`. Anything else is rejected before it reaches the database.
 - The **main / root** node of a TLD is `<tld>0` (`dd0`, `oh0`) and carries
@@ -86,15 +83,14 @@ cases):
 
 The editable record's `section_id` *is* the node's numeric id: a record with
 `section_id = 12` under section `oh0` compiles to node `oh12`
-(`` const tipo = `${tld}${sectionId}` ``, verified in
+(`` const tipo = `${tld}${sectionId}` ``, in
 `parseSectionRecordToOntologyNode()`, `src/core/ontology/parser.ts`).
 
 ## The ontology node JSON shape
 
 A `dd_ontology` row (the compiled node the runtime reads) is a flat object. The
 authoritative field list is the `DdOntologyRow` / `DdOntologyNode` interface in
-`src/core/db/dd_ontology.ts` — the same 13-column shape PHP's
-`dd_ontology_db_manager` writes. Example (a `section`):
+`src/core/db/dd_ontology.ts` — a 13-column shape. Example (a `section`):
 
 ```jsonc
 {
@@ -102,7 +98,7 @@ authoritative field list is the `DdOntologyRow` / `DdOntologyNode` interface in
     "parent":          "dd324",              // string|null — immediate container tipo
     "term":            { "lg-eng": "Oral History Interview",
                          "lg-spa": "Entrevista" }, // object|null — labels per language
-    "model":           "section",            // string|null — functional role / class name
+    "model":           "section",            // string|null — functional role
     "model_tipo":      "dd6",                // string|null — tipo of the model node (dd6 = section)
     "order_number":    5,                    // int|null — position among siblings
     "tld":             "oh",                 // string — namespace (Oral History)
@@ -115,24 +111,23 @@ authoritative field list is the `DdOntologyRow` / `DdOntologyNode` interface in
 }
 ```
 
-Reading a node has two TS surfaces, split by the engines' needs (there is no
-single OOP node object mirroring every PHP `ontology_node` getter):
+Reading a node has two surfaces, split by what the engines need:
 
-| field | TS surface | notes |
+| field | surface | notes |
 | --- | --- | --- |
 | `tipo` | the key you call `getNode(tipo)` / `readDdOntologyRow(tipo)` with | The node id. |
 | `parent` | `getNode(tipo).parent` (`resolver.ts`, cached) | The immediate container. `null` for `dd1`/`dd2` roots. |
 | `term` / `lg-*` | `getTermByTipo(tipo, lang)` (`resolver.ts`) or the raw `term` object off `getNode`/`readDdOntologyRow` | `term` is a `{lg-*: value}` object; `getTermByTipo()` falls back to the structure lang (`lg-spa`) then any non-empty term. |
 | `model` | `getModelByTipo(tipo)` (`resolver.ts`, cached) | Resolves the runtime model via forced/temporal tipo overrides (`FORCED_MODELS`), the stored `model` column, the component registry's `alias`, then the residual structural replacement map (e.g. `section_group_div` → `section_group`). |
-| `model_tipo` | `readDdOntologyRow(tipo).model_tipo` (`db/dd_ontology.ts`, uncached raw row) | The tipo of the *model node* whose term is the class name. |
+| `model_tipo` | `readDdOntologyRow(tipo).model_tipo` (`db/dd_ontology.ts`, uncached raw row) | The tipo of the *model node* whose term names the model. |
 | `order_number` | `readDdOntologyRow(tipo).order_number` | Sibling ordering. |
 | `tld` | `readDdOntologyRow(tipo).tld`, or `getTldFromTipo(tipo)` (`tld.ts`) from the string itself | The namespace. |
-| `relations` | `getNode(tipo).relations` (cached) — an array of `{tipo}` | Unidirectional links. There is no centralized `get_relation_nodes()`; each engine (relations, request_config, RAG, …) walks `relations`/`parent` itself. |
-| `properties` | `getNode(tipo).properties` (cached) | Plain read of the parsed JSONB object — no clone needed (request-scoped reads never mutate the cache in place). |
+| `relations` | `getNode(tipo).relations` (cached) — an array of `{tipo}` | Unidirectional links. Each engine (relations, request_config, RAG, …) filters the array for its own purpose; `relatedTipoByModel()` (`resolver.ts`) is the cached "first related node of model X" lookup. |
+| `properties` | `getNode(tipo).properties` (cached) | Plain read of the parsed JSONB object — treat it as read-only. |
 | `is_model` | `readDdOntologyRow(tipo).is_model` | Model nodes (the `section`, `component_*`, `tool_*`, `area_*` definitions) live under `dd2`. |
 | `is_translatable` | `getTranslatableByTipo(tipo)` (`resolver.ts`, cached) or `readDdOntologyRow(tipo).is_translatable` | Controls per-language storage. |
 | `is_main` | `readDdOntologyRow(tipo).is_main` | `<tld>0` roots. |
-| `propiedades` | `readDdOntologyRow(tipo).propiedades` | **Do not author** — v5/v6 carry-over, kept only for old imports; stored as pretty-printed JSON text via `phpPrettyJsonEncode()` (`parser.ts`) for byte parity with legacy readers. |
+| `propiedades` | `readDdOntologyRow(tipo).propiedades` | **Do not author** — v5/v6 carry-over, kept only for old imports; stored as pretty-printed JSON text so legacy readers see byte-identical output. |
 
 The **cached** registry (`resolver.ts`) only exposes the fields the horizontal
 engines actually consume (`model`, `parent`, `translatable`, `properties`,
@@ -145,15 +140,14 @@ current on-disk state rather than the process-wide cache.
     The node only stores **`parent`** (its structural container). The
     **`parent_grouper`** you see in a built context is *not* a separate ontology
     column — it is the node's `parent` stamped onto the structure-context
-    (`node.parent` → `parent_grouper` in `src/core/resolve/structure_context.ts`,
-    the TS successor of `build_structure_context_core()`; re-stamped per call for
-    nested portal/dataframe children). When authoring, you set `parent`; the
-    `parent_grouper` follows automatically.
+    (`node.parent` → `parent_grouper` in `src/core/resolve/structure_context.ts`;
+    re-stamped per call for nested portal/dataframe children). When authoring,
+    you set `parent`; the `parent_grouper` follows automatically.
 
 ### `model` — what kind of node you are creating
 
-The `model` decides which PHP class / JS module / CSS the runtime builds. The
-families an author creates:
+The `model` decides what the runtime builds for the node. The families an author
+creates:
 
 | `model` | role | `model_tipo` |
 | --- | --- | --- |
@@ -163,10 +157,10 @@ families an author creates:
 | `area_*` | a back-office area (menu grouping) | the area model node |
 | `tool_*` | a tool attached to a section/component | the tool model node |
 
-`get_model()` normalizes a few removed/renamed models (e.g.
+`getModelByTipo()` normalizes a few removed/renamed models (e.g.
 `component_autocomplete` → `component_portal`, `tab` → `section_tab`,
 `section_group_div` → `section_group`), so an old node still resolves to a live
-class.
+model.
 
 ### How a node is wired into the tree
 
@@ -177,25 +171,20 @@ class.
   menu/tree.
 - **`relations`** are unidirectional cross-links (`[{tipo}]`) used by e.g.
   portals/selects to reach related models, by the search-type list, and by
-  diffusion. In TS each caller reads `getNode(tipo).relations` directly (no
-  centralized flattening helper — the relations engines and RAG config each
-  filter it for their own purpose).
+  diffusion. Each caller reads `getNode(tipo).relations` directly and filters it
+  for its own purpose.
 - **`order_number`** orders siblings; for sections the ordered **children**
   locator list lives on the parent's `component_relation_children`
-  (`ontology14`) and is what actually drives display order (the PHP
-  `ontology::reorder_nodes_from_dd_ontology()` bootstrap helper — used only when
-  recreating an ontology from a parsed dump — has **no TS port**; regenerating
-  from a live ontology's own matrix records, the normal editing path, does not
-  need it).
+  (`ontology14`) and is what actually drives display order.
 
 ## Creating and editing a node via the Ontology area
 
 The Ontology area is the back-office editor for the ontology tree. It is the
 **same** tree editor as the Thesaurus area, retargeted at the ontology
-hierarchy — see [area_ontology](../areas/area_ontology.md) for the class detail.
-`area_ontology` overrides only `get_hierarchy_section_tipo()` (→ `ontology35`)
-and `get_main_table()` (→ `matrix_ontology_main`); everything else is inherited
-from `area_thesaurus`.
+hierarchy — see [area_ontology](../areas/area_ontology.md). The only difference
+is where it points: the ontology area's hierarchy section is `ontology35` and
+its main table is `matrix_ontology_main`; everything else is the shared
+thesaurus-tree behaviour.
 
 ### Where it lives in the menu
 
@@ -207,24 +196,23 @@ tree); you almost never touch `dd2` (the model definitions).
 ### The editing record (what the form fields map to)
 
 An editable node record carries one component per node field. The constants are
-defined in `src/core/ontology/ontology_tipos.ts` (verbatim ports of the PHP
-`DEDALO_*` defines from `core/base/dd_tipos.php`); the compiler reads exactly
+defined in `src/core/ontology/ontology_tipos.ts`; the compiler reads exactly
 these in `parseSectionRecordToOntologyNode()` (`src/core/ontology/parser.ts`):
 
 | node field | editing component (`tipo`) | constant | model |
 | --- | --- | --- | --- |
-| TLD (mandatory) | `ontology7` | `DEDALO_ONTOLOGY_TLD_TIPO` | `component_input_text` |
-| parent | `ontology15` | `DEDALO_ONTOLOGY_PARENT_TIPO` | relation (locator) |
-| model | `ontology6` | `DEDALO_ONTOLOGY_MODEL_TIPO` | `component_portal` |
-| order | `ontology41` | `DEDALO_ONTOLOGY_ORDER_TIPO` | `component_number` |
-| translatable (yes/no) | `ontology8` | `DEDALO_ONTOLOGY_TRANSLATABLE_TIPO` | `component_radio_button` |
-| is_model (yes/no) | `ontology30` | `DEDALO_ONTOLOGY_IS_MODEL_TIPO` | `component_radio_button` |
-| relations (connected-to) | `ontology10` | `DEDALO_ONTOLOGY_CONNECTED_TO_TIPO` | autocomplete/portal |
-| term (`lg-*`) | `ontology5` | `DEDALO_ONTOLOGY_TERM_TIPO` | `component_input_text` (multilingual) |
-| properties — general | `ontology18` | — | `component_json` |
-| properties — css | `ontology16` | — | `component_json` |
-| properties — source / request_config | `ontology17` | — | `component_json` |
-| propiedades — v5 (legacy) | `ontology19` | — | `component_json` |
+| TLD (mandatory) | `ontology7` | `ONTOLOGY_TLD` | `component_input_text` |
+| parent | `ontology15` | `ONTOLOGY_PARENT` | relation (locator) |
+| model | `ontology6` | `ONTOLOGY_MODEL` | `component_portal` |
+| order | `ontology41` | `ONTOLOGY_ORDER` | `component_number` |
+| translatable (yes/no) | `ontology8` | `ONTOLOGY_TRANSLATABLE` | `component_radio_button` |
+| is_model (yes/no) | `ontology30` | `ONTOLOGY_IS_MODEL` | `component_radio_button` |
+| relations (connected-to) | `ontology10` | `ONTOLOGY_CONNECTED_TO` | autocomplete/portal |
+| term (`lg-*`) | `ontology5` | `ONTOLOGY_TERM` | `component_input_text` (multilingual) |
+| properties — general | `ontology18` | `ONTOLOGY_PROPERTIES` | `component_json` |
+| properties — css | `ontology16` | `ONTOLOGY_CSS` | `component_json` |
+| properties — source / request_config | `ontology17` | `ONTOLOGY_SOURCE` | `component_json` |
+| propiedades — v5 (legacy) | `ontology19` | `ONTOLOGY_PROPIEDADES_V5` | `component_json` |
 
 So `properties` is authored across **three** components and recombined at
 compile time: the general blob (`ontology18`) plus the dedicated `css`
@@ -241,8 +229,8 @@ compile time: the general blob (`ontology18`) plus the dedicated `css`
    `<tld>0` section; its `section_id` becomes the node's numeric id.
 3. **Set `model`** (e.g. `section`, `component_input_text`, `section_tab`,
    `tool_export`). For groupers pick one of the layout-only models
-   (`section_group`, `section_group_div`, `section_tab`) — the TS engines
-   recognize them via the `INCLUDE_GROUPER_MODELS` set in
+   (`section_group`, `section_group_div`, `section_tab`) — they are recognized
+   via the `INCLUDE_GROUPER_MODELS` set in
    `src/core/resolve/section_elements_context.ts`; they store no data.
 4. **Set `parent`** to the container node (auto-set when you create under a node).
 5. **Set the term (`lg-*`)** — the label shown in the UI, per language.
@@ -253,19 +241,17 @@ compile time: the general blob (`ontology18`) plus the dedicated `css`
 8. **Regenerate** so the edit goes live (see
    [How changes apply live](#how-changes-apply-live)).
 
-!!! note "is_model is never overwritable locally; model is"
+!!! note "`is_model` is never overwritable locally; `model` is"
     A local-ontology override (`localontology0`) may override a shared node's
-    term, properties, translatable, relations **and model** — the TS parser
-    (`parseSectionRecordToOntologyNode()`, `src/core/ontology/parser.ts`) pins
-    this against the live PHP *code* (not its docblock, which claims `model` is
-    canonical-only too — the code disagrees): only **`is_model`** is always read
-    from the canonical node, never the override, because structural model-ness
-    must never change from a local override. `model`/`model_tipo` themselves ARE
-    overwrite-aware.
+    term, properties, translatable, relations **and model**. Only **`is_model`**
+    is always read from the canonical node, never from the override, because
+    structural model-ness must never change from a local override.
+    `model`/`model_tipo` themselves ARE overwrite-aware.
 
 ## The `properties` descriptor grammar
 
-`properties` is a free-form JSON object (`get_properties()`) that configures a
+`properties` is a free-form JSON object (read at runtime through
+`getNode(tipo).properties` / `getPropertiesByTipo(tipo)`) that configures a
 node's behaviour, options and layout. The keys an author uses most:
 
 ### `source` / `request_config`
@@ -284,31 +270,20 @@ and how to search/choose records. The full grammar is documented separately:
   overrides of the ontology default.
 
 Authoring touch-points (verified against
-`src/core/relations/request_config/{build,v5,v6,filters,external}.ts` — the TS
-rewrite of the PHP `trait.request_config_*.php` family):
+`src/core/relations/request_config/{build,v5,v6,filters,external}.ts`):
 
 - The server reads `properties->source->request_config` (the V6 explicit path,
   `request_config/v6.ts`). When absent, it falls back to the V5
   ontology-derived build (`request_config/v5.ts`) — V5 is the **default**
-  builder; this concept is unchanged, only the module layout moved.
+  builder.
 - The list columns come from `properties->source->columns_map`
-  (`getColumnsMap()`-equivalent logic in `request_config/build.ts`), or are
-  derived from the `ddo_map` when absent.
-
-!!! warning "request_config validation at compile time is NOT reproduced (gap)"
-    In PHP, regenerating runs `request_config_object::validate_config()` on
-    `properties->source->request_config` and logs any structural issues as
-    non-blocking **warnings**. The TS parser
-    (`parseSectionRecordToOntologyNode()`, `src/core/ontology/parser.ts`)
-    deliberately does **not** reproduce this — it only logs in PHP and never
-    changes the parsed node, so its absence changes no stored data, but a
-    malformed `request_config` will not surface a warning on the TS engine. See
-    [request_config](../request_config.md) for the full grammar.
+  (resolved in `request_config/build.ts`), or are derived from the `ddo_map`
+  when absent.
 
 ### `css`
 
 `properties.css` (authored in `ontology16`) is a map of **selector fragments →
-CSS-property objects**. The client (`core/page/js/css.js`,
+CSS-property objects**. The client (`client/dedalo/core/page/js/css.js`,
 `set_element_css()`) scopes each rule to the element's runtime key
 (`<section_tipo>_<tipo>`):
 
@@ -327,8 +302,7 @@ CSS-property objects**. The client (`core/page/js/css.js`,
   (`.${key} > ${selector}`).
 - In `list` mode the edit-only css is dropped unless the node has a
   `section_list` child carrying its own css (see
-  `src/core/resolve/structure_context.ts`, the TS successor of
-  `build_structure_context_core()`).
+  `src/core/resolve/structure_context.ts`).
 - A **virtual/section-level override** is possible: a `component_*` node's css can
   be set from the *section's* `properties.css->{component_tipo}` (used by virtual
   sections, e.g. `rsc170`).
@@ -342,11 +316,9 @@ CSS-property objects**. The client (`core/page/js/css.js`,
 ### `observers`
 
 `properties.observers` declares **server-side reactive fan-out**: after the
-observed component saves, Dédalo updates the listed observer components (PHP
-`component_common::propagate_to_observers()` → TS `src/core/resolve/observers.ts`
-— ported for the dominant `{config:{use_observable_dato}, perform:
-set_dato_external}` shape; other `perform` functions are ledgered as a
-logged skip, never guessed):
+observed component saves, Dédalo recomputes the listed observer components.
+`propagateToObservers()` (`src/core/api/handlers/observers.ts`) runs the
+post-save cascade, driven from `src/core/section/record/save_component.ts`:
 
 ```jsonc
 {
@@ -361,21 +333,26 @@ own `observe` config (also in its `properties`) decides which records to update
 and how. Only the actively-edited section's result is sent back to the client;
 the rest are saved silently.
 
+Most observer configs on a typical ontology are **client-only** (no `server`
+key), so nothing runs on the server for them. The server-side shapes that are
+implemented are the `{config: {use_observable_dato}, perform: set_dato_external}`
+family and the `component_info` observers (both `filter: {SQO}` and
+`filter: false` forms). Any other `server.filter` + `perform` shape is a logged
+skip — never guessed.
+
 ### Other common keys
 
 | key | used by | meaning |
 | --- | --- | --- |
-| `color` | sections / TLD roots | UI accent; read as `node.properties.color`, falling back to `#b9b9b9` at each call site (e.g. `src/core/relations/request_config/v6.ts`) rather than through a single centralized getter. |
+| `color` | sections / TLD roots | UI accent; read as `node.properties.color`, falling back to `#b9b9b9` at each call site (e.g. `src/core/relations/request_config/v6.ts`). |
 | `tool_config` | sections/components | per-tool config keyed by tool name, overlaid onto the tool's ontology properties. |
 | `main_tld` | `<tld>0` roots | the official TLD string for the namespace. |
 | `mode` | tools | restrict a tool to one mode (`edit`/`list`/…); tools whose `mode` ≠ the current mode are skipped. |
 | `dato_default`, `render`, `target`, `widgets` | various components | default value, render hints, relation target, widget wiring. |
 
-PHP can inject overrides at runtime (without editing the ontology) with
-`common::set_properties()`, which marks `properties_injected` and extends the
-structure-context cache key. **Not yet ported**: the TS structure-context
-builder (`src/core/resolve/structure_context.ts`) has no equivalent runtime
-property-injection hook (gap; see [STATUS.md](../../../rewrite/STATUS.md)).
+`properties` is authored in the ontology and nowhere else: there is no runtime
+property-injection hook. If a node needs different behaviour, edit its
+`properties` and regenerate.
 
 ## TLD creation and management
 
@@ -391,25 +368,22 @@ set the TLD code + name + main language + typology, ensure the *Real section
 tipo* is `ontology1`, then press **Create ontology** in the inspector. Use a
 unique institutional prefix (e.g. `mupreva`); never reuse a shared TLD.
 
-### What "Create ontology" does (verified)
+### What "Create ontology" does
 
-The lifecycle functions in `src/core/ontology/ontology_write.ts` — the TS port
-of the PHP `ontology` build-layer methods — run in sequence:
+The lifecycle functions in `src/core/ontology/ontology_write.ts` run in
+sequence:
 
-1. **`addMainSection(fileItem)`** (PHP `add_main_section()`) — create/update the
-   `matrix_ontology_main` record for the TLD: project filter, active flags,
-   main language (defaults to `lg-spa`), name/term, the TLD string, the
-   `target_section_tipo` (`<tld>0`), and typology. `active_in_thesaurus`
-   defaults to **yes only for `dd`**; other TLDs are off by default and the
-   admin turns them on manually.
-2. **`createParentGrouper(parentGroup, tld, typologyId)`** (PHP
-   `create_parent_grouper()`) — ensure the typology grouper exists in both
-   `dd_ontology` and the matrix so the TLD shows under its typology in the menu
-   (creating a missing parent on the fly during a partial bootstrap). Returns
-   the grouper tipo used as the new root's `parent`.
-3. **`createDdOntologyRootNode(fileItem)`** (PHP
-   `create_dd_ontology_ontology_section_node()`) — create/UPSERT the `<tld>0`
-   root node in `dd_ontology` via `upsertDdOntologyNode()`: `model = section`
+1. **`addMainSection(fileItem)`** — create/update the `matrix_ontology_main`
+   record for the TLD: project filter, active flags, main language (defaults to
+   `lg-spa`), name/term, the TLD string, the `target_section_tipo` (`<tld>0`),
+   and typology. `active_in_thesaurus` defaults to **yes only for `dd`**; other
+   TLDs are off by default and the admin turns them on manually.
+2. **`createParentGrouper(parentGroup, tld, typologyId)`** — ensure the typology
+   grouper exists in both `dd_ontology` and the matrix so the TLD shows under
+   its typology in the menu (creating a missing parent on the fly during a
+   partial bootstrap). Returns the grouper tipo used as the new root's `parent`.
+3. **`createDdOntologyRootNode(fileItem)`** — create/UPSERT the `<tld>0` root
+   node in `dd_ontology` via `upsertDdOntologyNode()`: `model = section`
    (`model_tipo = dd6` / `SECTION_MODEL_TIPO`), `is_model = false`,
    non-translatable, `is_main = true`, relations `[{ontology1},{dd1201}]`, and
    `properties.main_tld` + `properties.color`.
@@ -417,35 +391,15 @@ of the PHP `ontology` build-layer methods — run in sequence:
 After that the TLD's first node is created from
 `Ontology → Instances → <typology> → <Your ontology name>`.
 
-### Bootstrap / wiring helpers
-
-When recreating an ontology from a parsed dump (recovery / import), PHP builds
-the editable records first, then wires relations and order once all targets
-exist:
-
-- `create_ontology_records($rows)` / `add_section_record_from_dd_ontology($row)`
-  — build editable matrix records from `dd_ontology` rows.
-- `assign_relations_from_dd_ontology($tld)` — set each node's `relations`
-  (`ontology10`) as locators to the related matrix records.
-- `reorder_nodes_from_dd_ontology($tld)` — write the ordered children locator
-  list into each node's `component_relation_children` (`ontology14`).
-
-**None of these three bootstrap helpers are ported to TS** (gap) — they exist
-to recover/import an ontology from a `dd_ontology` dump, a path not exercised
-by normal editing/regeneration, which is fully covered.
-
 ### Delete a TLD
 
-PHP `ontology::delete_ontology($tld)` / `delete_main($options)` removes the
-`dd_ontology` nodes, the main section, every node record, resets the counter,
-and invalidates the diffusion section-map cache. The TS equivalent is
-**trigger-based, not a standalone call**: deleting a record of the
-`hierarchy1`/`ontology35` registry sections cascades through
-`deleteOntologyMain()` (`src/core/resolve/ontology_delete.ts`) — it purges every
-`dd_ontology` node of that TLD (parameterized on the validated `tld`, refusing
-on an empty/unsafe value), deletes the registry record itself, then every node
-record of the TLD's `<tld>0` section (through the normal per-record delete
-pipeline, Time Machine snapshots included). Global-admin gated.
+Deleting a TLD is **trigger-based, not a standalone call**: deleting a record of
+the `hierarchy1`/`ontology35` registry sections cascades through
+`deleteOntologyMain()` (`src/core/ontology/ontology_delete.ts`). It purges every
+`dd_ontology` node of that TLD (parameterized on the validated TLD, refusing on
+an empty/unsafe value), deletes the registry record itself, then every node
+record of the TLD's `<tld>0` section — through the normal per-record delete
+pipeline, Time Machine snapshots included. Global-admin gated.
 
 ## How changes apply live
 
@@ -467,36 +421,22 @@ flowchart TD
    (`src/core/ontology/ontology_write.ts`): backup → parse **every** matrix
    record of the TLDs in memory → delete the TLD's `dd_ontology` nodes → upsert
    all parsed nodes → refresh the main section + root node. The
-   `dd_ontology_bk` backup table **is** the rollback (not a transaction,
-   matching PHP and the two-server coexistence period) and is deliberately
-   **left behind on success** (PHP-pinned). Editing a single record and
-   compiling just it is `setRecordsInDdOntology({sectionTipo, sectionId})`
-   (`tools/tool_ontology`, PHP `set_records_in_dd_ontology()`); its **list
-   mode** (no `sectionId`) is a **full-section scan** in TS, where PHP filters
-   by the session's search-query-object — a documented divergence (TS keeps no
-   twin of that session-scoped filter).
-
-    !!! note "LLM map rebuild + diffusion cache invalidation — not reproduced"
-        PHP's regenerate also rebuilds an LLM map and invalidates the diffusion
-        section-map cache. Neither is reproduced by the TS write drivers (gap;
-        see the [diffusion data flow](../../diffusion/diffusion_data_flow.md)
-        and [RAG](../ai/rag.md) docs for their own cache-invalidation surfaces).
-
-3. **Compile a single node** without a full regenerate with
-   `insertDdOntologyRecord(sectionTipo, sectionId)` (PHP
-   `ontology::insert_dd_ontology_record()`).
-4. **Cache invalidation is now automatic, not a manual step.** PHP's
-   `ontology_node` keeps **static, per-worker** caches that survive across
-   requests in a persistent RoadRunner worker, so an author had to remember to
-   call `common::clear()` / `ontology::clear()` after any ontology change — a
-   forgotten call served a stale definition. In TS this hazard is
-   **structurally gone**: every `dd_ontology` write (`upsertDdOntologyNode`,
-   `updateDdOntologyColumns`, `deleteTldNodes`, `restoreFromBackupTable`) ends
-   by calling `clearOntologyDerivedCaches()` — the single chokepoint in
-   `src/core/ontology/cache_invalidation.ts` that every cache-owning module
-   (the resolver's node/matrix-table/filter caches, `section_map.ts`,
-   `term_resolver.ts`, the active-TLD set, …) registers with at load time. No
-   manual reset call exists or is needed.
+   `dd_ontology_bk` backup table **is** the rollback (not a transaction) and is
+   deliberately **left behind on success**. The same action then rebuilds the
+   LLM map (`exportLlmMap()`), merging any of its errors into the response.
+3. **Compile one section (or one record)** without a full regenerate with
+   `setRecordsInDdOntology({sectionTipo, sectionId})` (`tools/tool_ontology`).
+   With no `sectionId`, list mode is a **full-section scan**: every record of
+   the section is recompiled.
+4. **Compile a single node** with
+   `insertDdOntologyRecord(sectionTipo, sectionId)`.
+5. **Cache invalidation is automatic, not a manual step.** Every `dd_ontology`
+   write (`upsertDdOntologyNode`, `updateDdOntologyColumns`, `deleteTldNodes`,
+   `restoreFromBackupTable`) ends by calling `clearOntologyDerivedCaches()` —
+   the single chokepoint in `src/core/ontology/cache_invalidation.ts` that every
+   cache-owning module (the resolver's node/matrix-table/filter caches,
+   `section_map.ts`, `term_resolver.ts`, the active-TLD set, …) registers with at
+   load time. There is no reset call to remember.
 
 !!! warning "Regenerate is a heavy write-side operation"
     `regenerateRecordsInDdOntology()` / `setRecordsInDdOntology()` parse and
@@ -509,7 +449,7 @@ flowchart TD
 ### Read a node you just authored (runtime surface)
 
 ```ts
-import { getNode, getModelByTipo, getTermByTipo, getTranslatableByTipo } from
+import { getNode, getModelByTipo, getTermByTipo } from
   'src/core/ontology/resolver.ts';
 import { readDdOntologyRow } from 'src/core/db/dd_ontology.ts';
 
@@ -517,7 +457,7 @@ const node = await getNode('oh1');
 node.model;        // 'section'
 node.parent;        // 'dd324'
 node.relations;     // [{tipo:'tch7'}, {tipo:'rsc167'}]
-node.properties;    // object | null (plain read, no clone)
+node.properties;    // object | null (plain read, treat as read-only)
 node.translatable;  // false
 
 const label = await getTermByTipo('oh1', 'lg-eng'); // 'Oral History Interview'
@@ -532,6 +472,8 @@ row.order_number; // 5
 ### Compile one edited node into the runtime table
 
 ```ts
+import { insertDdOntologyRecord } from 'src/core/ontology/ontology_write.ts';
+
 // after editing the record oh0 / section_id 12 (node 'oh12')
 const tipo = await insertDdOntologyRecord('oh0', 12); // 'oh12' | null on failure
 
@@ -542,6 +484,8 @@ const tipo = await insertDdOntologyRecord('oh0', 12); // 'oh12' | null on failur
 ### Regenerate a whole TLD (the live-apply step)
 
 ```ts
+import { regenerateRecordsInDdOntology } from 'src/core/ontology/ontology_write.ts';
+
 const response = await regenerateRecordsInDdOntology(['oh']);
 // response: { result, msg, errors, total_insert }
 ```
@@ -564,18 +508,16 @@ const response = await regenerateRecordsInDdOntology(['oh']);
 
 - [Ontology concept](index.md) — what the ontology is, TLDs, model/node, shared
   vs local ontologies.
-- [`ontology` class (build layer)](ontology_class.md) — the compiler
+- [ontology (build layer)](ontology_write.md) — the compiler
   (`ontology_write.ts` + `parser.ts`) and TLD lifecycle functions referenced
   throughout this page.
-- [`ontology_node` engine](ontology_engine.md) — the runtime read surface
-  (`resolver.ts`) and the cache-invalidation hub that replaces per-worker cache
-  clearing.
+- [Ontology engine](ontology_engine.md) — the runtime read surface
+  (`resolver.ts`) and the cache-invalidation hub.
 - [area_ontology](../areas/area_ontology.md) — the back-office tree editor you
   author in.
 - [common](../system/common.md) — the structure-context build
   (`src/core/resolve/structure_context.ts`), css resolution and the
-  structure-context cache; the runtime property-injection hook
-  (`set_properties()`) has no TS port yet.
+  structure-context cache.
 - [request_config](../request_config.md) · [request_config examples](../request_config_examples.md)
   · [request_config presets](request_config_presets.md) — the `source` /
   `request_config` grammar inside `properties` and its per-role overrides.

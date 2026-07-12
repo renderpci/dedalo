@@ -109,8 +109,8 @@ side. They are different mechanisms that happen to share configuration:
 | Entry point | the observer's subscribed callback | `set_data_external()` |
 
 On the **server**, the observable's change drives `propagateToObservers()`
-(`src/core/resolve/observers.ts`, wired into the save path from
-`src/core/api/dispatch.ts`), which loads the observer component and runs the
+(`src/core/api/handlers/observers.ts`, wired into the save path from
+`src/core/api/handlers/dd_core_api.ts`), which loads the observer component and runs the
 configured `perform` function (dominantly `set_dato_external`) against the
 observable's data — persisting the recomputed external value. On the
 **client**, the same configuration's `client.event` / `client.perform` is

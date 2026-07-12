@@ -51,6 +51,7 @@ const TRIPWIRES = [
 	'test/unit/ws_a_tripwires.test.ts',
 	'test/unit/client_serving.test.ts',
 	'test/unit/client_libs_tripwire.test.ts',
+	'test/unit/media_protection_tripwire.test.ts',
 	'test/unit/mcp_write_scope_tripwire.test.ts',
 	'test/unit/agent_egress_tripwire.test.ts',
 	'test/unit/matrix_copy_columns_tripwire.test.ts',
@@ -61,6 +62,7 @@ const TRIPWIRES = [
 	'test/unit/info_widget_registry_tripwire.test.ts',
 	'test/unit/install_restart_supervisor_tripwire.test.ts',
 	'test/unit/ci_workflow_tripwire.test.ts',
+	'test/unit/docs_current_engine_tripwire.test.ts',
 	'test/parity/oracle_canary.test.ts',
 ];
 

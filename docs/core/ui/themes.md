@@ -1,8 +1,8 @@
 # themes
 
 > The Dédalo design-system / theming layer — the LESS sources under
-> `core/page/css/`, the `:root` design tokens (light + dark palettes), the
-> `data-theme="dark"` switch driven by `core/page/js/theme.js`, and the static
+> `client/dedalo/core/page/css/`, the `:root` design tokens (light + dark palettes), the
+> `data-theme="dark"` switch driven by `client/dedalo/core/page/js/theme.js`, and the static
 > `themes/default/` asset bundle (icons, fonts, logos) that the LESS references.
 
 > See also: [Architecture overview](../architecture_overview.md) ·
@@ -10,13 +10,13 @@
 > [menu](menu.md) · [Components](../components/index.md)
 
 This page is the developer reference for the **themes** subsystem. "Themes" in
-Dédalo v7 is not a PHP class and not a per-installation file set: it is the
-combination of (a) the LESS design system in `core/page/css/`, (b) a two-palette
+Dédalo v7 is not a per-installation file set: it is the
+combination of (a) the LESS design system in `client/dedalo/core/page/css/`, (b) a two-palette
 token model (light is the default; dark overrides the same custom properties),
-and (c) the `core/themes/default/` directory of static assets (SVG icons, fonts,
+and (c) the `client/dedalo/core/themes/default/` directory of static assets (SVG icons, fonts,
 logos) that the LESS and the client reference by relative URL. There is no LESS
-inside `core/themes/`; the design *logic* lives in `core/page/css/`, the design
-*assets* live in `core/themes/default/`.
+inside `client/dedalo/core/themes/`; the design *logic* lives in `client/dedalo/core/page/css/`, the design
+*assets* live in `client/dedalo/core/themes/default/`.
 
 ## Role
 
@@ -28,16 +28,16 @@ front-end infrastructure consumed by the work-system client.
 
 | layer | role |
 | --- | --- |
-| **`core/page/css/main.less`** | The single LESS entrypoint. `@import`s the layout core (reset, vars, theme_dark, functions, fonts, general, …) and then every service / area / section / component / widget LESS bundle, in that order. Compiles to `main.css`. |
-| **`core/page/css/layout/vars.less`** | The design tokens: the light `:root` palette, semantic surface/spacing/radius/elevation/motion tokens, component & modal tokens, and the `@color_*` LESS aliases that map onto the CSS custom properties. |
-| **`core/page/css/layout/theme_dark.less`** | The dark palette: the *same* custom properties re-declared under `:root[data-theme="dark"]`. |
-| **`core/page/js/theme.js` + `theme-init.js`** | The runtime theme switch: set/toggle `data-theme="dark"` on `<html>`, persisted in `localStorage.dedalo_theme`. |
-| **`core/themes/default/`** | Static assets: `icons/*.svg`, `fonts/`, logos, tag bases. Referenced from LESS by relative URL (`../../themes/default/icons/<name>.svg`). |
+| **`client/dedalo/core/page/css/main.less`** | The single LESS entrypoint. `@import`s the layout core (reset, vars, theme_dark, functions, fonts, general, …) and then every service / area / section / component / widget LESS bundle, in that order. Compiles to `main.css`. |
+| **`client/dedalo/core/page/css/layout/vars.less`** | The design tokens: the light `:root` palette, semantic surface/spacing/radius/elevation/motion tokens, component & modal tokens, and the `@color_*` LESS aliases that map onto the CSS custom properties. |
+| **`client/dedalo/core/page/css/layout/theme_dark.less`** | The dark palette: the *same* custom properties re-declared under `:root[data-theme="dark"]`. |
+| **`client/dedalo/core/page/js/theme.js` + `theme-init.js`** | The runtime theme switch: set/toggle `data-theme="dark"` on `<html>`, persisted in `localStorage.dedalo_theme`. |
+| **`client/dedalo/core/themes/default/`** | Static assets: `icons/*.svg`, `fonts/`, logos, tag bases. Referenced from LESS by relative URL (`../../themes/default/icons/<name>.svg`). |
 
-!!! note "Not a class — verify against `core/page/css/`, not `core/themes/`"
-    `core/themes/` contains only the `default/` asset bundle (icons, fonts,
+!!! note "Not a class — verify against `client/dedalo/core/page/css/`, not `client/dedalo/core/themes/`"
+    `client/dedalo/core/themes/` contains only the `default/` asset bundle (icons, fonts,
     images). The design tokens, mixins and the dark-mode mechanism are all in
-    `core/page/css/`. This doc documents both, because together they are what a
+    `client/dedalo/core/page/css/`. This doc documents both, because together they are what a
     developer means by "the theme".
 
 ## Responsibilities
@@ -57,11 +57,11 @@ front-end infrastructure consumed by the work-system client.
   page chrome.
 - **Provide the icon / button mixin system** — `buttons.less` (`.fn_add_mask`,
   `.fn_build_button`, `.fn_append_icon`) and `functions.less` (tag builders),
-  all keyed off the SVG assets in `core/themes/default/icons/`.
+  all keyed off the SVG assets in `client/dedalo/core/themes/default/icons/`.
 - **Switch theme at runtime** — `theme.js` toggles `data-theme` on `<html>` and
   persists the choice; `theme-init.js` applies it synchronously before paint to
   avoid a flash of the wrong theme.
-- **Host the static assets** — `core/themes/default/` is the single asset root
+- **Host the static assets** — `client/dedalo/core/themes/default/` is the single asset root
   every LESS `url()` and client icon reference points at.
 
 ## Key concepts
@@ -128,10 +128,10 @@ some tokens flip behaviour entirely — e.g. `--select_icon_url` points at
 - `toggle_theme()` → flips between the two.
 
 `theme-init.js` is a tiny IIFE loaded **synchronously in `<head>` before any
-module** (see `core/page/index.html`); it reads `localStorage.dedalo_theme` and
+module** (see `client/dedalo/core/page/index.html`); it reads `localStorage.dedalo_theme` and
 sets `data-theme` before first paint, preventing a flash of the light theme on a
 dark-mode reload. The user-facing trigger is the `.theme_toggle` button in the
-top utility bar, wired in `core/menu/js/view_default_edit_menu.js` (click and
+top utility bar, wired in `client/dedalo/core/menu/js/view_default_edit_menu.js` (click and
 Enter/Space call `toggle_theme()`).
 
 ```mermaid
@@ -148,7 +148,7 @@ flowchart LR
 ## Files & structure
 
 ```text
-core/page/css/
+client/dedalo/core/page/css/
 ├── main.less                     # the single LESS entrypoint
 ├── main.css                      # compiled, minified output loaded by the page
 └── layout/
@@ -165,11 +165,11 @@ core/page/css/
     ├── page.less
     └── list.less
 
-core/page/js/
+client/dedalo/core/page/js/
 ├── theme.js                      # get_theme / set_theme / toggle_theme (localStorage + event)
 └── theme-init.js                 # sync head IIFE: apply data-theme before paint
 
-core/themes/
+client/dedalo/core/themes/
 └── default/                      # STATIC ASSETS (no LESS here)
     ├── icons/*.svg               # UI icon set (edit, save, search, moon, sun, select_arrows, …)
     ├── fonts/                    # liberation, glyphicons, san_francisco
@@ -203,34 +203,29 @@ guarantees tokens and mixins exist before any consumer uses them:
 //       all component_* → widgets/*
 ```
 
-!!! note "`theme_tokens.less` — new in this checkout"
+!!! note "`theme_tokens.less` is a separate, newer token system"
     `layout/theme_tokens.less` (`--ut_*` custom properties: CSP-safe font
     stacks, a small size scale, its own light/dark palette) is a single source
     of truth shared by `main.less` **and** `test/client/css/unit_test.less` (the
-    Bun test-runner's own UI chrome). It postdates the PHP oracle's LESS bundle
-    — added so the installer/page shell and the test client can theme
-    themselves off one file — and is unrelated to the `@color_*` / `--color_*`
-    tokens `vars.less` defines; the two token systems currently coexist rather
-    than being unified.
+    Bun test-runner's own UI chrome) — added so the installer/page shell and
+    the test client can theme themselves off one file. It is unrelated to the
+    `@color_*` / `--color_*` tokens `vars.less` defines; the two token
+    systems currently coexist rather than being unified.
 
 !!! warning "Keep `main.less` the only entrypoint, and keep the order"
     Every component/area/widget LESS assumes `vars`, `functions`, `buttons` and
     `layout` are already imported (for `@color_*`, `@width_break_point_*`,
-    `.hilite_mixin`, `.fn_add_mask`). The page loads exactly one bundle:
-    `DEDALO_CORE_URL.'/page/css/main.css'`. On the PHP oracle,
-    `core/api/v1/common/class.dd_utils_api.php::get_dedalo_files()` injected
-    that path and explicitly **excluded** the `/themes/` directory from the
-    JS/CSS file walk (assets there are referenced by URL, never bundled). The TS
-    server has no equivalent walker at all: `src/server.ts` serves the entire
-    copied `client/dedalo/` tree (including `page/css/main.css` and
-    `themes/default/`) as plain static files at the same `/dedalo/*` paths PHP
-    used, so the same exclusion falls out naturally — there is no bundling step
-    to exclude `themes/` from. See [CSS / LESS architecture](../../css-architecture.md).
+    `.hilite_mixin`, `.fn_add_mask`). The page loads exactly one bundle, at
+    `/dedalo/core/page/css/main.css`. `src/server.ts` serves the entire
+    `client/dedalo/` tree (including `page/css/main.css` and
+    `themes/default/`) as plain static files under `/dedalo/*` — there is no
+    bundling step, so `themes/` assets stay URL-referenced rather than
+    inlined into `main.css`. See [CSS / LESS architecture](../../css-architecture.md).
 
 ### `main.css` is the compiled output
 
 `main.css` is the minified compile of `main.less` (reset + all imports). The
-page (`core/page/index.html`) loads it as a single `<link rel="stylesheet">`.
+page (`client/dedalo/core/page/index.html`) loads it as a single `<link rel="stylesheet">`.
 There is no runtime LESS compilation in the request path: the page consumes the
 pre-built `main.css`. (No build script ships in the repo root; `main.css` is the
 checked-in artifact, regenerated from `main.less` with a LESS compiler when the
@@ -285,8 +280,8 @@ shared mixins rather than redefine focus or media-wrapper layout.
 
 A node's `properties.css` (the per-node CSS object that ships in the
 [ddo](../dd_object.md) `context.css`) is applied **client-side**, not via LESS.
-`core/common/js/ui.js` reads `context.css` and calls
-`set_element_css(selector, css)` from `core/page/js/css.js`, which inserts the
+`client/dedalo/core/common/js/ui.js` reads `context.css` and calls
+`set_element_css(selector, css)` from `client/dedalo/core/page/js/css.js`, which inserts the
 rule into a runtime stylesheet scoped to the component wrapper. Because those
 rules can reference the same custom properties (e.g. an ontology override of
 `--component_width` or a colour `var(--color_*)`), ontology styling and the theme
@@ -314,13 +309,10 @@ not LESS variables — they must be overridable at runtime.
 - **[CSS / LESS architecture](../../css-architecture.md)** — the companion
   document on the import layering, the component-CSS contract and the conventions
   for adding new component/widget LESS.
-- **Asset bundling** — on the PHP oracle,
-  `core/api/v1/common/class.dd_utils_api.php::get_dedalo_files()` injects
-  `main.css` and walks core/tools JS but **skips** the `themes/` directory, since
-  those are URL-referenced assets. The TS server (`src/server.ts`) has no
-  equivalent file-walk step — it serves the whole copied `client/dedalo/` tree
-  (`main.css`, `themes/default/`, all core/tools JS) as static files at the
-  same paths, so there is nothing to bundle or exclude.
+- **Asset bundling** — `src/server.ts` serves the whole `client/dedalo/` tree
+  (`main.css`, `themes/default/`, all `core/tools` JS) as static files, with
+  no bundling or build step — `themes/` assets stay URL-referenced rather
+  than inlined.
 
 ## Examples
 

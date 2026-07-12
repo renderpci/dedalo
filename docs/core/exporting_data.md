@@ -217,22 +217,23 @@ travel alongside the data).
 
 ## For developers
 
-> The TS/Bun server re-implements this tool end to end in
-> `tools/tool_export/server/tool_export.ts`
-> (`toolExportGetExportGrid()`) — same request shape, same NDJSON wire
-> protocol, same client (`flat_table.js` and friends are copied as-is). The
-> vanilla-JS client and the wire contract are unchanged from the PHP server;
-> only the server-side implementation moved.
+> `tools/tool_export/server/tool_export.ts` (`toolExportGetExportGrid()`) is
+> a pure facade over the unified diffusion export engine
+> (`src/diffusion/export/`): record RESOLUTION rides the shared diffusion
+> engine (`compileExportPlan` turns `ar_ddo_to_export` into a
+> `PublicationPlan`; the diffusion resolver's atom entry point walks
+> relation hops and stored locators), and the tool handler delegates to it
+> in a single call. The client (`flat_table.js` and friends) is vanilla
+> JavaScript with an exact wire contract: one request shape, one NDJSON
+> protocol, three data formats and a fixed set of options.
 >
-> Since the export unification (diffusion P6), record RESOLUTION rides the
-> shared diffusion engine: the handler routes to `src/diffusion/export/`
-> (`compileExportPlan` turns `ar_ddo_to_export` into a `PublicationPlan`;
-> the diffusion resolver's atom entry point walks relation hops and stored
-> locators). The protocol, the three data formats and every option are
-> UNCHANGED — output is byte-identical to the previous build (A/B-gated by
-> `test/unit/diffusion_export_unified.test.ts` and the live-PHP
-> differential). `DEDALO_EXPORT_UNIFIED=false` falls back to the legacy
-> in-tool pipeline until its ledgered deletion.
+> The stream/buffered duality and the protocol shape (`meta` first, every
+> row cell referencing an already-emitted column ordinal, `end` last, its
+> columns array a permutation of the emitted ordinals) are pinned by
+> `test/unit/diffusion_export_unified.test.ts`; correctness of the resolved
+> values is pinned by the parity fixture replay
+> (`test/parity/tool_export_differential.test.ts` and
+> `test/parity/tool_export_breakdown_differential.test.ts`).
 
 ### The export pipeline
 
@@ -264,9 +265,11 @@ covers the whole search result rather than the client's clamped page limit.
 (`tools/tool_export/server/index.ts`) declares the action's own permission
 spec inline (`{ permission: 'section', minLevel: 1, handler: ... }`), enforced
 by the generic per-tool dispatcher `dispatchToolRequest()`
-(`src/core/tools/dispatch.ts`) — this replaced PHP's per-class `API_ACTIONS`
-allowlist + reflection with one explicit, typed dispatch table shared by
-every tool (see `engineering/TOOLS_SPEC.md`). Request fields:
+(`src/core/tools/dispatch.ts`) — one explicit, typed dispatch table, shared
+by every tool, that resolves the tool name, checks it is active and
+authorized for the calling user, loads its server module, looks up the
+action in that module's allowlist, and enforces the action's declarative
+permission gate before running it. Request fields:
 
 | Field | Meaning |
 | --- | --- |
@@ -298,21 +301,21 @@ user defined by dragging. `cell_type` (`text` \| `img` \| `av` \| `iri` \|
 
 ### The component contract
 
-The PHP server gives every component a `get_export_value(export_context) :
-export_value` override point (a flat list of `export_atom`
-`{path, value, cell_type}`), with relation components recursing
-component-driven via `export_context->descend()`. The TS server does not
-(yet) expose a per-component override hook: `tool_export.ts` resolves every
-cell through the SAME generic leaf-value walkers the relation_list panel uses
+Every component's export cell is resolved by ONE shared engine rather than a
+per-model override method: `tool_export.ts` resolves every cell through the
+SAME generic leaf-value walkers the relation_list panel uses
 (`resolvePathValue` / `resolveCellValue` in `src/core/resolve/relation_list.ts`),
-keyed on the export ddo's `path` — one shared engine instead of one override
-per component model. This is a deliberate architectural simplification for
-the models it covers (see `rewrite/STATUS.md` "tool_export" for the exact
-coverage: `value`, `grid_value` with all three breakdown modes, `dedalo_raw`,
-multi-hop paths, NDJSON streaming and media/image cells are all ported and
-differential-gated against the live PHP server); a genuinely new component
-shape that the shared resolver cannot express would need its own case added
-there rather than an override method.
+keyed on the export ddo's `path`. Per-model behavior is expressed
+declaratively instead — each component model's descriptor carries a
+`flatValue` facet that the shared walkers dispatch through, so relation
+components recurse component-driven (export-atom child recursion) without
+needing a bespoke override. Coverage is `value`, `grid_value` with all three
+breakdown modes, `dedalo_raw`, multi-hop paths, NDJSON streaming, and
+media/image cells — pinned by `test/parity/tool_export_differential.test.ts`,
+`test/parity/tool_export_breakdown_differential.test.ts` and
+`test/parity/tool_export_dataframe_differential.test.ts`. A genuinely new
+component shape that the shared resolver cannot express needs its own case
+added to the walkers rather than an override method.
 
 - The flat-join (`value` format) reference is `resolvePathValue()`.
 - `dedalo_raw` cells are the exact stored value JSON-encoded with the

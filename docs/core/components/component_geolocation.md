@@ -51,7 +51,7 @@
 
 ## Definition
 
-`component_geolocation` stores a geographic position and, optionally, the vector shapes drawn over it. It is a **literal-direct** component (it extends `component_common` and owns its data: there is no relation locator, no media file and no language). It renders an interactive [Leaflet](https://leafletjs.com/) map in `edit` mode where the curator can pan/zoom to set the map center and draw points, circles, polygons and polylines with the [Leaflet-Geoman](https://geoman.io/) editor.
+`component_geolocation` stores a geographic position and, optionally, the vector shapes drawn over it. It is a **literal-direct** component (it owns its data: there is no relation locator, no media file and no language). It renders an interactive [Leaflet](https://leafletjs.com/) map in `edit` mode where the curator can pan/zoom to set the map center and draw points, circles, polygons and polylines with the [Leaflet-Geoman](https://geoman.io/) editor.
 
 It exists because a single pair of coordinates is rarely enough for cultural-heritage description: an excavation site has an extent (a polygon), a findspot has a precise point, a survey transect is a polyline, a monument has a viewshed radius. The component captures both the **map state** (center + zoom + altitude) and the **GeoJSON geometry** drawn on it, in a format ready for mapping, spatial queries and diffusion to GIS targets.
 
@@ -68,7 +68,7 @@ It exists because a single pair of coordinates is rarely enough for cultural-her
 
 **Value:** `array` of objects `{lat, lon, zoom, alt, lib_data?}`, or `null`.
 
-**Storage:** the data is stored in the **`geo` column** of the matrix table. The component is **non‑translatable**: the constructor forces `lang = DEDALO_DATA_NOLAN`, so there are no per-language rows.
+**Storage:** the data is stored in the **`geo` column** of the matrix table. The component is **non‑translatable**: its language slot is always `DEDALO_DATA_NOLAN`, so there are no per-language rows.
 
 Each item carries:
 
@@ -118,7 +118,7 @@ A stored item with drawn shapes:
 
 ### Default value sentinel
 
-When the component has no real data, the client shows the default value `{lat:39.462571, lon:-0.376295, zoom:16, alt:0}` (Valencia, the project home). The server treats this exact pair as "empty": `get_latitude()` / `get_longitude()` return `null` for `39.462571 / -0.376295`, and `get_diffusion_value_as_geojson()` returns `null` for it, so an untouched map is never published as a real location.
+When the component has no real data, the client shows the default value `{lat:39.462571, lon:-0.376295, zoom:16, alt:0}` (Valencia, the project home). The server treats this exact pair as "empty": the resolved latitude/longitude and the GeoJSON diffusion value are all `null` for `39.462571 / -0.376295`, so an untouched map is never published as a real location.
 
 ## Ontology instantiation
 
@@ -163,7 +163,7 @@ Example `properties` block for this component (provider override + observers; se
 }
 ```
 
-`section_tipo`/`parent` wire the node into a section: instantiating the section resolves its element tree and builds the component for the current `section_id` in the requested mode. The component never reaches the database itself — its section reads/writes the `geo` column on its behalf (`save()` builds a `save_path` and delegates to the section record).
+`section_tipo`/`parent` wire the node into a section: instantiating the section resolves its element tree and builds the component for the current `section_id` in the requested mode. The component never reaches the database itself — its section is the single writer, and reads/writes the `geo` column on its behalf.
 
 ## Properties & options
 
@@ -173,7 +173,7 @@ options: `OSM` | `GOOGLE` | `ARCGIS` | `NUMISDATA` | `VARIOUS`
 
 default: the `DEDALO_GEO_PROVIDER` env var, read into the TS config catalog as `config.geoProvider` (`src/config/config.ts`, `readEnv('DEDALO_GEO_PROVIDER', 'VARIOUS')`).
 
-Selects the base tile layer(s) of the Leaflet map. The server stamps the resolved value into `context.features.geo_provider` (`properties.geo_provider ?? config.geoProvider`) and the client switches on it. This is TS-ported: `src/core/resolve/structure_context.ts` appends `entry.features = {geo_provider}` for `component_geolocation` in the FULL (non-`simple`) context, matching PHP's `component_geolocation_json.php` — without it the client's Leaflet widget cannot pick a tile backend and the map renders as an empty box (fixed 2026-07-04; gated by `component_geolocation_features_differential.test.ts`).
+Selects the base tile layer(s) of the Leaflet map. The server stamps the resolved value into `context.features.geo_provider` (`properties.geo_provider ?? config.geoProvider`) and the client switches on it: `src/core/resolve/structure_context.ts` appends `entry.features = {geo_provider}` for `component_geolocation` in the FULL (non-`simple`) context — without it the client's Leaflet widget cannot pick a tile backend and the map renders as an empty box (fixed 2026-07-04; gated by `component_geolocation_features_differential.test.ts`).
 
 - `OSM` — OpenStreetMap tiles, with automatic dark/light tile swap on theme change.
 - `GOOGLE` — Google `ROADMAP` layer (requires the Google plugin to be available).
@@ -209,14 +209,14 @@ The component is built by the shared `ui.component` builders; the view is read f
 | `mini` | yes | yes | minimal map view |
 | `text` | — | yes | textual list rendering |
 
-In `list`/`tm` modes the value comes from `get_list_value()`; in `edit` from `get_data_lang()`. The map disables scroll-wheel zoom by default and recenters via `panTo`/`setZoom` when the inputs change.
+The map disables scroll-wheel zoom by default and recenters via `panTo`/`setZoom` when the inputs change.
 
 !!! warning "Search mode under construction"
-    `search` mode is wired (`render_search_component_geolocation`) but the search view is not currently exposed in the search list (`UNDER CONSTRUCTION` in the source). Consistent with that, the TS search dispatcher (`src/core/search/conform.ts`) has no `component_geolocation` branch either — a filter against this model would throw `builder for model 'component_geolocation' not implemented yet`. The component also reports `get_sortable()` → `false` in PHP; the TS structure context (`src/core/resolve/structure_context.ts`) currently hardcodes `sortable: false` for every component, so this is not yet distinguishing behaviour.
+    `search` mode is wired (`render_search_component_geolocation`) but the search view is not currently exposed in the search list (`UNDER CONSTRUCTION` in the source). Consistent with that, the TS search dispatcher (`src/core/search/conform.ts`) has no `component_geolocation` branch either — a filter against this model would throw `builder for model 'component_geolocation' not implemented yet`. The component is also **not sortable**: its descriptor declares the `sortable: false` opt-out (sortability otherwise defaults to true — `resolveSortable()`, `src/core/resolve/structure_context.ts`), so a list cannot be ordered by it.
 
 ## Import / export model
 
-The component is non‑translatable, so the import value is the bare data array (no lang keys). `conform_import_data()` accepts four shapes:
+The component is non‑translatable, so the import value is the bare data array (no lang keys). Four import shapes are defined:
 
 1. Full v7 dato — JSON array of items:
 
@@ -238,7 +238,7 @@ The component is non‑translatable, so the import value is the bare data array 
 
 4. A flat string `lat, lon[, zoom[, alt]]` with dot decimals (latitude first):
 
-    ```
+    ```text
     39.4625, -0.3762, 16
     ```
 
@@ -251,9 +251,9 @@ See the full geolocation import definition in [Importing data](../importing_data
 
 ## Notes
 
-- **Storage column & language.** Data lives in the matrix `geo` column; the constructor pins `lang = DEDALO_DATA_NOLAN` (language‑neutral). The component reads/saves only through its section.
-- **PHP accessors.** `get_latitude()` / `get_longitude()` return the center as floats (or `null` for the default sentinel). `regenerate_component()` reloads then re-saves (used by `tool_update_cache`); no TS equivalent has been verified for this pass.
-- **Diffusion.** Two PHP diffusion helpers convert the stored item: `get_diffusion_value_socrata()` returns a GeoJSON `Point` object `{type, coordinates:[lon, lat]}` for Socrata; `get_diffusion_value_as_geojson()` returns an encoded `FeatureCollection` (layer wrapper, 16‑decimal `[lon, lat]` coordinates) and yields `null` for the default sentinel. Not evaluated against the TS diffusion engine (`diffusion/api/v1/`) for this pass — verify before relying on geolocation diffusion parity.
+- **Storage column & language.** Data lives in the matrix `geo` column, pinned to `DEDALO_DATA_NOLAN` (language‑neutral). The component reads/saves only through its section.
+- **Coordinate accessors.** The center is resolved as floats (or `null` for the default sentinel) from `lat`/`lon`; a cache-rebuild reload-then-resave path (used by cache-update tooling) has not been verified for this pass.
+- **Diffusion.** The stored item can convert to a GeoJSON `Point` object `{type, coordinates:[lon, lat]}` (Socrata-style) or to an encoded `FeatureCollection` (layer wrapper, 16‑decimal `[lon, lat]` coordinates), yielding `null` for the default sentinel. Not evaluated against the native diffusion subsystem (`src/diffusion/`) for this pass — verify before relying on geolocation diffusion parity.
 - **Observers / observables (client).** Configured via the `observe` property. The flagship pattern is `map_update_coordinates`: a related component (e.g. a toponymy portal) is the *observable*; on its `update_value` it fires the observer geolocation, which copies the coordinates of the referenced record (the geolocation identified by `role: "target_geolocation_tipo"` in the observable's `request_config` `hide`) and re-centers the map, recording the change like any save.
 - **Text-area integration.** `lib_data` layers pair with `geo` tags in a [component_text_area](component_text_area.md) transcription; inserting/removing a tag loads/unloads the matching layer (`layer_data_change`, `load_tag_into_geo_editor`, `get_data_tag`). See the `geo` tag in [Importing data](../importing_data.md#geo).
 - **Default tools.** `tool_leaflet_special_tools`, `tool_propagate_component_data`, `tool_time_machine`, `tool_dev_template` (per the ontology node; exact set is ontology-driven).

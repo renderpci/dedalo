@@ -41,16 +41,16 @@
 ```
 
 !!! note "Typology"
-    `component_portal` is a **related** component. It does not own a literal value: it stores an array of [locator](../locator.md) objects that point at records in other (or the same) section, and the displayed `value` is resolved on demand from the *target* records. In server context it extends the abstract base `component_relation_common` (the shared base for every relation component: `component_select`, `component_check_box`, `component_radio_button`, `component_relation_*`, `component_filter`, `component_publication`, `component_inverse`, `component_dataframe`), which in turn extends `component_common`.
+    `component_portal` is a **related** component. It does not own a literal value: it stores an array of [locator](../locator.md) objects that point at records in other (or the same) section, and the displayed `value` is resolved on demand from the *target* records. Like every relation-column model (`component_select`, `component_check_box`, `component_radio_button`, `component_relation_*`, `component_filter`, `component_publication`, `component_inverse`, `component_dataframe`), it is declared as a descriptor over the shared relations engine (`src/core/relations/`) rather than a class in an inheritance tree.
 
 !!! info "About `default_tools`"
-    The toolbar is assembled from the model + ontology; the component class does not hardcode it. The verified model sample (`samples/context.json`) ships `tool_propagate_component_data` and `tool_time_machine`. Because `component_portal` is **not** translatable, the language tooling (`tool_lang` / `tool_lang_multi`) is never added. Tools are read-only context.
+    The toolbar is assembled from the model + ontology; the descriptor does not hardcode it. The verified model sample (`samples/context.json`) ships `tool_propagate_component_data` and `tool_time_machine`. Because `component_portal` is **not** translatable, the language tooling (`tool_lang` / `tool_lang_multi`) is never added. Tools are read-only context.
 
 !!! note "Legacy models"
     `component_portal` absorbed the former `component_autocomplete` / `component_autocomplete_hi` (pre-v6) functionality; you may still see `legacy_model: "component_autocomplete_hi"` in older ontology nodes. New nodes use `component_portal`.
 
-!!! info "TS server implementation"
-    In the TypeScript/Bun rewrite, PHP's `component_relation_common`/`component_portal` classes are replaced by a shared engine + a per-model registry, not by a class hierarchy. The descriptor `src/core/components/component_portal/descriptor.ts` registers `resolveData: portalResolver` (`src/core/relations/models/portal.ts`), which resolves the child ddo map (client-supplied map, or the list-cell effective config, or the component's own v6 config via `buildRequestConfigForElement`, `src/core/relations/request_config/build.ts`) and delegates paging/expansion/re-stamping to the shared `expandPortal` engine (`src/core/relations/relation_core.ts`). The same resolver backs the legacy `component_autocomplete` / `component_autocomplete_hi` aliases and (until they get their own particularity) `component_relation_parent`, `component_dataframe` and `component_external`. Write-side particularities (`sort_data`, `sort_by_column`, `add_new_element`, `delete_locator`) live in `src/core/relations/save.ts`. See `engineering/RELATIONS_SPEC.md` and the *dedalo-relations-ts* skill.
+!!! info "Server implementation"
+    `component_portal` is implemented as a shared engine plus a per-model registry entry, not a class hierarchy. The descriptor `src/core/components/component_portal/descriptor.ts` registers `resolveData: portalResolver` (`src/core/relations/models/portal.ts`), which resolves the child ddo map (client-supplied map, or the list-cell effective config, or the component's own v6 config via `buildRequestConfigForElement`, `src/core/relations/request_config/build.ts`) and delegates paging/expansion/re-stamping to the shared `expandPortal` engine (`src/core/relations/relation_core.ts`). The same resolver backs the legacy `component_autocomplete` / `component_autocomplete_hi` aliases and (until they get their own particularity) `component_relation_parent`, `component_dataframe` and `component_external`. Write-side particularities (`sort_data`, `sort_by_column`, `add_new_element`, `delete_locator`) live in `src/core/relations/save.ts`. See the *dedalo-relations-ts* skill for the full relations-engine map.
 
 ## Definition
 
@@ -78,7 +78,7 @@
 
 **Value:** `array` of `strings`, or `null`. The value is **not** stored on the portal; it is resolved from the target record(s) at read time (see [Value resolution](#value-resolution)).
 
-**Storage shape.** A component never touches the database; it reads and writes through its section. Relation components do not store their items in the matrix `data` column — they store them in the matrix **`relation`** column as a JSONB map keyed by component tipo, and the section additionally aggregates every locator of the record into a single section-wide `relations` container (`section::get_relations('relations')`). A portal slices its own subset out of that bag by matching `from_component_tipo` (and `section_tipo`). That single shared relations bag is exactly what lets many distinct relation components live on one record without colliding.
+**Storage shape.** A component never touches the database; it reads and writes through its section. Relation components do not store their items in the matrix `data` column — they store them in the matrix **`relation`** column as a JSONB map keyed by component tipo, and the section additionally aggregates every locator of the record into a single section-wide `relations` container. A portal slices its own subset out of that bag by matching `from_component_tipo` (and `section_tipo`). That single shared relations bag is exactly what lets many distinct relation components live on one record without colliding.
 
 A portal's stored data is therefore an **array of locator objects**:
 
@@ -103,9 +103,9 @@ A portal's stored data is therefore an **array of locator objects**:
 
 Locator fields:
 
-- `type` — the relation-type tipo. Defaults to the portal's `$default_relation_type`, which for `component_portal` is `DEDALO_RELATION_TYPE_LINK` = **`dd151`** (the generic link type). Set in the constructor from `properties->config_relation->relation_type`.
+- `type` — the relation-type tipo. Defaults to the portal's `defaultRelationType`, which for `component_portal` is `DEDALO_RELATION_TYPE_LINK` = **`dd151`** (the generic link type). Set on instantiation from `properties.config_relation.relation_type`.
 - `section_tipo` / `section_id` — point at the target record.
-- `from_component_tipo` — names the component that owns the locator. `validate_data_element()` **forces** this to the owning portal's own `tipo` (cloning the incoming locator first to protect observers), which is how the section-wide relations bag is partitioned per component.
+- `from_component_tipo` — names the component that owns the locator. When the relations engine normalises a locator on save it **forces** this to the owning portal's own `tipo` (cloning the incoming locator first, so observers still see the value they were handed), which is how the section-wide relations bag is partitioned per component.
 - `id` — per-item counter id used for ordering and dataframe pairing.
 - `type_rel` *(optional)* — directionality (uni / bi / multidirectional); see [Directionality](#directionality).
 - `tag_id` *(optional)* — present for indexation locators.
@@ -113,15 +113,15 @@ Locator fields:
 `component_portal` is **non-translatable** (`could_be_translatable: false`), so its locators have no `lang`; an instance is built in `lg-nolan`. The *resolved value* is still shown in the application/data language because the target component is instantiated in that language at resolution time.
 
 !!! note "Datum vs. API `entries`"
-    The transmitted unit is a `{context, data}` datum (the JSON-API contract). In the API payload the locator array is surfaced under `data.entries` (each entry carrying a `paginated_key`), accompanied by `parent_tipo`, `parent_section_id` and `pagination`. The displayed strings of the linked records arrive as **subdata**: the controller resolves each target via `get_subdatum()` and appends the target components' datums, merging their context with `common::merge_unique_context()`. `context` carries the description (`tipo`, `model`, `mode`, `lang`, `label`, `properties`, `permissions`, `tools`, `request_config`, `view`) and never the values. See the *dedalo-context-data-layers* and *dedalo-datalist-resolution* skills for the full layering rules.
+    The transmitted unit is a `{context, data}` datum (the JSON-API contract). In the API payload the locator array is surfaced under `data.entries` (each entry carrying a `paginated_key`), accompanied by `parent_tipo`, `parent_section_id` and `pagination`. The displayed strings of the linked records arrive as **subdata**: each target record's datum is resolved and merged into the response alongside the portal's own. `context` carries the description (`tipo`, `model`, `mode`, `lang`, `label`, `properties`, `permissions`, `tools`, `request_config`, `view`) and never the values. See the *dedalo-context-data-layers* and *dedalo-datalist-resolution* skills for the full layering rules.
 
 ### Value resolution
 
 The displayed strings come from the *target* section/component, never from the portal:
 
-- `component_relation_common::get_locator_value($locator, $lang, $show_parents, $ar_components_related)` resolves one locator. By default it calls `ts_object::get_term_by_locator($locator, $lang, true)`. With `$ar_components_related` it instantiates each named target component in the target record and collects its `get_value()`; with `$show_parents` it prepends the term and walks `component_relation_parent::get_parents_recursive()` (ancestor chain).
-- For grid and export, `get_grid_value()` / `get_export_value()` iterate the locators and, driven by the `request_config` `show.ddo_map`, instantiate each child component against the locator's `section_id` / `section_tipo` to resolve sub-columns.
-- The selectable option list (datalist / autocomplete suggestions) comes from the target component's `get_list_of_values()`, served through `relation_list` (`core/relation_list/class.relation_list.php`).
+- Resolving one locator looks up the term of the target record; when the request asks for specific target columns it instead instantiates each named target component in the target record and collects its value, and when it asks for the ancestor chain it prepends the term and walks the parents recursively.
+- For grid and export, the resolution driven by the `request_config` `show.ddo_map` iterates the locators and instantiates each child component against the locator's `section_id` / `section_tipo` to resolve sub-columns.
+- The selectable option list (datalist / autocomplete suggestions) comes from the target component's option-list resolution, served through the relation-list resolver (`src/core/resolve/relation_list.ts`).
 
 ## Ontology instantiation
 
@@ -142,7 +142,7 @@ Node definition (shape):
 }
 ```
 
-The behaviour of a portal is driven almost entirely by its `properties->source` block, which carries the **request_config** that defines the target section(s) and the columns to `show` / `choose` / `search`. A realistic `properties` block for a "Birth town" portal pointing at one geographic section and showing the term with its ancestor chain:
+The behaviour of a portal is driven almost entirely by its `properties.source` block, which carries the **request_config** that defines the target section(s) and the columns to `show` / `choose` / `search`. A realistic `properties` block for a "Birth town" portal pointing at one geographic section and showing the term with its ancestor chain:
 
 ```json
 {
@@ -179,27 +179,27 @@ The behaviour of a portal is driven almost entirely by its `properties->source` 
 `section_tipo` / `parent` tell the section which relation slot owns this portal's locators; on save the section is the single writer to the database (the locators land in the `relation` column and the record-wide `relations` bag). The portal's `request_config` is parsed (TS: `buildRequestConfigForElement` in `src/core/relations/request_config/build.ts`, dispatching to the v6 or v5 builder) into a ready-to-use `request_config` array on the context (`api_engine: "dedalo"`, `type: "main"`), which the client uses to build the data/list/search RQO.
 
 !!! info "Relation table persistence"
-    Relation components carry `$save_to_database_relations = true`: on save they also propagate their locators to the relation table for fast querying. Set it to `false` only for special bulk paths (e.g. geonames imports) where relation-table writes are skipped.
+    On save, relation components also propagate their locators to the relations index for fast querying. Bulk paths (e.g. geonames imports) may skip that index write.
 
 ## Properties & options
 
-All properties are optional and live in the ontology node `properties` JSON. Verified names consumed by this component (server class + client JS):
+All properties are optional and live in the ontology node `properties` JSON. Verified names consumed by this component (server-side resolution + client JS):
 
 ### source
 
 - **Values:** an object `{mode, request_config}`.
-- **`source.mode`:** `"autocomplete"` (default behaviour — the user finds and links target records via the autocomplete service) or `"external"`. With **`external`** the portal data is *calculated*, not user-owned: in `edit` (non-pagination) requests the controller calls `set_data_external()` to recompute the locators (inverse / dependent relations), `regenerate_component()` does the same on cache rebuild, and the UI hides add/link/tree buttons and tools, showing only the external + list buttons.
+- **`source.mode`:** `"autocomplete"` (default behaviour — the user finds and links target records via the autocomplete service) or `"external"`. With **`external`** the portal data is *calculated*, not user-owned: in `edit` (non-pagination) requests the server recomputes the locators (inverse / dependent relations) instead of trusting the stored array, a cache rebuild does the same, and the UI hides add/link/tree buttons and tools, showing only the external + list buttons.
 - **`source.request_config`:** the per-portal RQO template: `sqo` (which target section(s), via `section_tipo` sources such as `section`, `hierarchy_types`, …), `show` (the `ddo_map` columns rendered for each linked record + `fields_separator`), `choose` (the columns offered in the autocomplete picker), and `search`. This is the heart of a portal's configuration — it defines both *what it links to* and *how each linked record is displayed*.
 
 ### config_relation
 
 - **Values:** an object `{relation_type, relation_type_rel}`.
-- **Effect:** read in the base constructor. `relation_type` overrides the locator `type` (default `dd151`); `relation_type_rel` sets directionality (locator `type_rel`). See [Directionality](#directionality). Also carries `tag_id` config for indexation portals.
+- **Effect:** read on instantiation. `relation_type` overrides the locator `type` (default `dd151`); `relation_type_rel` sets directionality (locator `type_rel`). See [Directionality](#directionality). Also carries `tag_id` config for indexation portals.
 
 ### sort_by_column
 
 - **Values:** `true` | array of column component tipos (e.g. `["oh28"]`). Default: unset (off).
-- **Effect:** lets the cataloguer persistently re-order **all** portal entries (the full stored locator array, across pagination) by the value of a column component in the target section, ascending or descending — e.g. order linked events by a `component_date` column. `true` shows sort buttons on every sortable column of the list header (default view, edit mode); the array form restricts which columns get them. Clicking a sort button resolves the new order on the server (a search over the target section restricted to the linked `section_id` list, ordered by the column value, `NULLS LAST`) and **saves the re-ordered locator array** — a real data change recorded in Time Machine. Unresolvable (deleted) targets fall to the end preserving relative order. Columns whose model is not sortable (`get_sortable()` false) never show buttons. `source.mode: external` portals are excluded (their data is not locally owned). Manual drag-and-drop re-ordering is always available regardless of this flag.
+- **Effect:** lets the cataloguer persistently re-order **all** portal entries (the full stored locator array, across pagination) by the value of a column component in the target section, ascending or descending — e.g. order linked events by a `component_date` column. `true` shows sort buttons on every sortable column of the list header (default view, edit mode); the array form restricts which columns get them. Clicking a sort button resolves the new order on the server (a search over the target section restricted to the linked `section_id` list, ordered by the column value, `NULLS LAST`) and **saves the re-ordered locator array** — a real data change recorded in Time Machine. Unresolvable (deleted) targets fall to the end preserving relative order. Columns whose model is not sortable never show buttons (sortability is resolved by `resolveSortable()`, `src/core/resolve/structure_context.ts`). `source.mode: external` portals are excluded (their data is not locally owned). Manual drag-and-drop re-ordering is always available regardless of this flag.
 
 ```json
 { "sort_by_column": true }
@@ -258,7 +258,7 @@ DOM (edit / default): `wrapper_component portal <tipo> <mode>` -> `label`, `butt
 
 ## Import / export model
 
-**Import.** Handled by the shared `component_relation_common::conform_import_data()`. The default format is the JSON locator array; convenience short forms are accepted because the column head already names the component and the component knows its own `type`:
+**Import.** Handled by the shared related-component import path. The default format is the JSON locator array; convenience short forms are accepted because the column head already names the component and the component knows its own `type`:
 
 Default (full or trimmed locators — `type` / `from_component_tipo` may be omitted, they are injected):
 
@@ -270,7 +270,7 @@ Default (full or trimmed locators — `type` / `from_component_tipo` may be omit
 [{"section_id":"2","section_tipo":"rsc197"}]
 ```
 
-A comma-separated list of target `section_id`s, valid when the portal has a single target section (the section_tipo is resolved from the portal's `ar_target_section_tipo`):
+A comma-separated list of target `section_id`s, valid when the portal has a single target section (the `section_tipo` is then resolved from that one configured target):
 
 ```text
 1,5,8
@@ -278,14 +278,14 @@ A comma-separated list of target `section_id`s, valid when the portal has a sing
 
 With multiple possible target sections, disambiguate by naming the target in the column head as `oh24_rsc197` (`oh24` = the portal tipo, `rsc197` = the target section); then the integer-sequence form is accepted. Importing an integer sequence without a clear single target is rejected and logged (`IGNORED: Trying to import multiple section_tipo without clear target`); invalid `section_id` / `section_tipo` and malformed locators are likewise rejected per row. An empty cell clears the component data. See [Related data](../importing_data.md#related-data).
 
-**Export.** `get_export_value()` (inherited from `component_relation_common`) emits one export atom per locator, resolving each via the `show.ddo_map` — instantiating the named target component(s) against the locator's `section_id` / `section_tipo` and collecting their value. The `ddo_map` drives the sub-columns, so a portal can export the target's term, its model, its parents (`value_with_parents`), etc., joined by the configured `fields_separator`. Relations export as JSON in SQL diffusion contexts (`$diffusion_output_format = ['sql' => 'json']`). See [exporting data](../exporting_data.md).
+**Export.** The shared relation export path emits one export atom per locator, resolving each via the `show.ddo_map` — resolving the named target component(s) against the locator's `section_id` / `section_tipo` and collecting their value. The `ddo_map` drives the sub-columns, so a portal can export the target's term, its model, its parents (`value_with_parents`), etc., joined by the configured `fields_separator`. Relations export as JSON in SQL diffusion contexts. See [exporting data](../exporting_data.md).
 
 ## Notes
 
-- **Directionality.** `config_relation->relation_type_rel` (locator `type_rel`) records uni / bi / multidirectional relations. Unidirectional stores the locator only on the originating side; bidirectional / multidirectional also write the inverse locator into the target record so the relation is queryable from both records. A plain link portal leaves `type_rel` unset.
-- **Remove semantics.** `remove_element()` takes `remove_mode`: `delete_link` (default — unlink only) or `delete_all`. `delete_all` hard-deletes the **target** section record and therefore requires write/delete permission on the *target* section itself (REL-06) — permission on the host record is not sufficient. TS: bulk partial-locator removal is `deletePortalLocator` (`src/core/relations/save.ts`, the `dd_component_portal_api.delete_locator` action); `delete_all`'s target-record hard-delete is not yet ported.
-- **Observers / observables.** Portals are a common observer target: e.g. a numismatic *coins* portal observes a *type* field and recomputes its own data with `set_data_external` on change. Wiring lives in the ontology `properties` (`observe` / `observers`), not in the component code — see the *Observers and observables* section of the [components index](index.md).
+- **Directionality.** `config_relation.relation_type_rel` (locator `type_rel`) records uni / bi / multidirectional relations. Unidirectional stores the locator only on the originating side; bidirectional / multidirectional also write the inverse locator into the target record so the relation is queryable from both records. A plain link portal leaves `type_rel` unset.
+- **Remove semantics.** The remove action takes a `remove_mode`: `delete_link` (default — unlink only) or `delete_all`. `delete_all` hard-deletes the **target** section record and therefore requires write/delete permission on the *target* section itself (REL-06) — permission on the host record is not sufficient. Bulk partial-locator removal is `deletePortalLocator` (`src/core/relations/save.ts`, the `dd_component_portal_api.delete_locator` action); `delete_all`'s target-record hard-delete is not yet ported.
+- **Observers / observables.** Portals are a common observer target: e.g. a numismatic *coins* portal observes a *type* field and recomputes its own data from its external source on change. Wiring lives in the ontology `properties` (`observe` / `observers`), not in the component — see the *Observers and observables* section of the [components index](index.md).
 - **Default tools.** The verified model sample exposes `tool_propagate_component_data` and `tool_time_machine`; the toolbar is assembled from the model + ontology, not hardcoded, and narrows further for `external` portals (tools off).
-- **Permissions.** Resolved via `get_component_permissions()` (0 none / 1 read / 2 read+write / 3 admin). Read users (level 1) get the read-only list; add / link / remove / re-order require level >= 2.
-- **Inherited behaviours.** From `component_relation_common`: locator normalization/validation (`validate_data_element`, de-dupe via `get_locator_properties_to_check()` and `test_equal_properties`), `add_locator_to_data` / `remove_locator_from_data` (with dataframe cascade), grid/export/diffusion resolution, parent-reference cleanup on delete (`remove_parent_references`), and the shared search traits (`search_component_relation_common` / `_tm`).
+- **Permissions.** Resolved by the permissions engine (`getPermissions()`, `src/core/security/permissions.ts`; 0 none / 1 read / 2 read+write / 3 admin). Read users (level 1) get the read-only list; add / link / remove / re-order require level >= 2.
+- **Behaviour that comes from the shared relations engine.** A portal owns almost none of its own machinery. Locator normalisation and validation on save, de-duplication (locators are compared on a fixed key set by `compareLocators()`, `src/core/concepts/locator.ts`), adding and removing a locator with the dataframe cascade (`src/core/relations/save.ts`), grid/export/diffusion resolution, parent-reference cleanup when a record is deleted, and the relation search builders all live in the shared engine under `src/core/relations/` and are used identically by every relation-column model.
 - **Related components:** [component_check_box](component_check_box.md), [component_dataframe](component_dataframe.md), [component_inverse](component_inverse.md), `component_select`, `component_radio_button`, `component_relation_parent`, `component_relation_children`, `component_relation_related`, `component_publication`, [component_input_text](component_input_text.md) (the literal counterpart for non-relational fields).

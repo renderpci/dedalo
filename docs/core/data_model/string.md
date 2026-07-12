@@ -42,10 +42,11 @@ consolidated v7 value envelope:
 | `lang` | string | `lg-xxx` (e.g. `lg-spa`, `lg-eng`) for translatable strings, or `lg-nolan` (`DEDALO_DATA_NOLAN`) for non-language values. The flat array interleaves all languages. |
 | `value` | string | The literal text payload (a scalar string). Empty values (`{"value":""}`) are **deliberately preserved**, not pruned, so multivalue positions and dataframe attachments survive. |
 
-String components belong to `component_common::$components_using_value_property`
-— the registry of models whose item carries an explicit `value` property — so
-the `{id, lang, value}` form is canonical for all of them (contrast relation
-components, whose item *is* a [locator](../locator.md), with no `value`).
+All four string components declare `importValueProperty: true`
+(`src/core/components/types.ts`) — the set of models whose item carries an
+explicit `value` property — so the `{id, lang, value}` form is canonical for
+all of them (contrast relation components, whose item *is* a
+[locator](../locator.md), with no `value`).
 
 A full column slice for one record, keyed by tipo:
 
@@ -82,48 +83,22 @@ matrix row (section_tipo = "rsc197", section_id = 1)
         └── "rsc86": [ {id,lang,value}, … ]   ← another input_text
 ```
 
-The routing is *not* hardcoded per component. In PHP it is resolved through the
-static registry `section_record_data::$column_map` via `get_column_name($model)`.
-All four string components map to `string`:
-
-```php
-section_record_data::$column_map = [
-    // …
-    'component_email'      => 'string',
-    'component_input_text' => 'string',
-    'component_password'   => 'string',
-    'component_text_area'  => 'string',
-    // …
-];
-```
-
-Each component instance caches the resolved column as `$data_column_name`. Reads
-and writes go through the section record, never directly to the database:
-
-```php
-// read one string component's data from the 'string' column
-$section_record->get_component_data( 'rsc85', 'string' );
-
-// write it back (in memory), then flush in one transaction
-$section_record->set_component_data( 'rsc85', 'string', $data );
-$section_record->save_key_data( $save_path );
-```
-
-The TS server resolves the same four-way routing through
+The routing is *not* hardcoded per component. It is resolved through
 `getColumnNameByModel(model)` (`src/core/ontology/resolver.ts`), which reads
 the `column` field off each model's own descriptor
 (`component_input_text/descriptor.ts`, `component_email/descriptor.ts`, …, each
-declaring `column: 'string'`) instead of one shared map, and reads the column
-itself via the passive `MatrixRecord` struct (`readComponentItems()`,
-`src/core/resolve/component_data.ts`).
+declaring `column: 'string'`). All four string components map to `string`. The
+column itself is read via the passive `MatrixRecord` struct
+(`readComponentItems()`, `src/core/resolve/component_data.ts`), and writes go
+through `src/core/db/matrix_write.ts` / `src/core/section/record/save_component.ts`
+— never directly to the database.
 
 The per-item `id` counter for each tipo lives in the sibling **`meta`** column
-(`{"rsc85":[{"count":3}]}`), minted atomically under a PostgreSQL advisory lock
-when `set_data()` encounters an item without a valid `id` — the TS equivalent
-(`allocateComponentItemId()`, `src/core/db/matrix_write.ts`) achieves the same
-never-recycled guarantee with a single atomic `UPDATE … RETURNING` instead of
-an explicit lock. See [Sections — typed-column storage](../sections/index.md)
-for the full column set and the matrix model.
+(`{"rsc85":[{"count":3}]}`), minted atomically by `allocateComponentItemId()`
+(`src/core/db/matrix_write.ts`) — a single atomic `UPDATE … RETURNING` — when a
+save encounters an item without a valid `id`, giving a never-recycled
+guarantee. See [Sections — typed-column storage](../sections/index.md) for the
+full column set and the matrix model.
 
 ---
 
@@ -132,36 +107,26 @@ for the full column set and the matrix model.
 | component | content | translatable | multivalue | notes |
 | --- | --- | --- | --- | --- |
 | [`component_input_text`](../components/component_input_text.md) | **plain text**, single line (no HTML) | yes (by default) | yes | The default literal building block. Stores `{id, lang, value}` items, one per language per logical value. |
-| [`component_text_area`](../components/component_text_area.md) | **formatted / rich** multi-paragraph text (may carry inline markup and annotation tags) | yes (by default) | **mono-value** — array stored, only `[0]` used | Listed in `$components_monovalue`; one text block per language. `get_value()` strips tags (`strip_tags`) for plain rendering/search. |
+| [`component_text_area`](../components/component_text_area.md) | **formatted / rich** multi-paragraph text (may carry inline markup and annotation tags) | yes (by default) | **mono-value** — array stored, only `[0]` used | One text block per language. Tags are stripped for plain rendering/search. |
 | [`component_email`](../components/component_email.md) | an e-mail address as a plain string | yes | yes | Same envelope as `input_text`, with e-mail format validation client- and server-side. |
 | [`component_password`](../components/component_password.md) | a **one-way Argon2id hash** of the user password | n/a — `lg-nolan` | mono-value | The `value` string is the *hash*, never the plaintext. See the security note below. |
 
-All four extend `component_string_common` → `component_common`. `input_text`,
-`text_area` and `email` are the "string components" branch; `component_password`
-extends `component_common` directly but still writes to the `string` column.
-
 !!! warning "Passwords are stored hashed"
-    `component_password` runs the submitted value through `hash_password()`
-    (Argon2id, one-way) in `set_data()` before persisting, so the `string`
-    column holds the **hash**, not the plaintext. The value is masked
-    (`fake_value`) on every user-facing path: `get_export_value()` and
-    `get_diffusion_value()` emit the fake placeholder, never the stored hash.
-    A value that is already a stored credential (legacy AES blob or a
-    `password_hash()` output) is persisted verbatim so re-saving a record does
-    not double-hash. Stored shape is identical to any other string item, e.g.
+    A submitted password value is hashed with Argon2id before it reaches the
+    `string` column (`hashPasswordChanges()` / `hashPasswordForStorage()`,
+    `src/core/security/password_hash.ts`, wired into the write path at
+    `src/core/section/record/save_component.ts`), so the column holds the
+    **hash**, never the plaintext. A value that already looks like an Argon2
+    hash is stored verbatim, so re-saving a record — or replaying an
+    already-hashed value through import — never double-hashes it. Stored
+    shape is identical to any other string item, e.g.
     `{"id":1,"lang":"lg-nolan","value":"$argon2id$v=19$..."}`.
 
-!!! info "TS status"
-    The TS server's own auth mechanism hashes/verifies credentials with
-    Argon2id via `Bun.password` (`src/core/security/auth.ts`) — the same
-    algorithm — but that is a separate, native TS session system (not
-    PHP-session-compatible; see `engineering/REWRITE_SPEC.md`), distinct from this
-    `component_password` **data field**. The `component_password` descriptor
-    (`src/core/components/component_password/descriptor.ts`) declares only its
-    column/translation routing so far; the `set_data()` hashing hook and the
-    `get_export_value()` / `get_diffusion_value()` `fake_value` masking
-    described above are not yet ported — see `rewrite/STATUS.md` before relying on
-    export/diffusion of a `component_password` field from the TS server.
+!!! warning "Export/diffusion masking not yet implemented"
+    Exporting or diffusing a record does not yet mask a `component_password`
+    value: a raw export of the field currently carries the stored Argon2id
+    hash string as-is, rather than a placeholder. Treat any export or
+    diffusion feed that includes a `component_password` field as sensitive.
 
 !!! note "plain vs formatted"
     `component_input_text` is the **plain-text** field — no HTML is expected in
@@ -175,32 +140,21 @@ extends `component_common` directly but still writes to the `string` column.
 ## Server class
 
 There is no dedicated "string value" class; the type *is* the item-envelope
-contract enforced by the component layer over the shared `string` column:
-
-- **`component_string_common`** — the base of `component_input_text`,
-  `component_text_area` and `component_email`; adds the string-specific data
-  handling on top of `component_common`.
-- **`component_common`** — owns the universal item lifecycle: `set_data()`
-  (normalizes scalar elements to `{value}` objects, mints missing ids via
-  `set_data_item_counter()`), `get_data()` / `get_data_unchanged()`,
-  `get_value()` (flattened display string via the
-  [export atoms contract](../exporting_data.md)), and the `$components_using_value_property`
-  / `$components_monovalue` registries.
-- **`section_record_data`** — the typed-column container that holds the `string`
-  column, resolves `component_*` → `string` through `$column_map`, and exposes
-  `get_key_data('string', $tipo)` / `set_key_data('string', $tipo, …)`.
-- **`component_password`** — overrides `set_data()` (Argon2id hashing) and the
-  value/export/diffusion getters (fake-value masking).
-
-In the TS server the equivalents are: the passive `MatrixRecord` struct plus
-`readComponentItems()` / `resolveComponentValue()`
-(`src/core/resolve/component_data.ts`) for the universal item lifecycle;
-`getColumnNameByModel()` (`src/core/ontology/resolver.ts`) reading each
-model's own `descriptor.column` instead of `section_record_data`; and the
-per-model descriptors in `src/core/components/component_input_text/`,
-`component_text_area/`, `component_email/`, `component_password/` (each a
-`descriptor.ts`, no per-model class). `component_password`'s hashing/masking
-overrides are not yet ported — see the "TS status" note above.
+contract enforced over the shared `string` column. The universal item
+lifecycle is the passive `MatrixRecord` struct plus `readComponentItems()` /
+`resolveComponentValue()` (`src/core/resolve/component_data.ts`), reading
+the flattened display string via `resolveCellValue()`
+(`src/core/resolve/relation_list.ts`, see the
+[exporting data](../exporting_data.md) atoms contract for the tabular-export
+path). Column routing goes through `getColumnNameByModel()`
+(`src/core/ontology/resolver.ts`), reading each model's own `descriptor.column`.
+Each of the four string components has its own descriptor —
+`src/core/components/component_input_text/`, `component_text_area/`,
+`component_email/`, `component_password/` — declaring only routing and
+translation data, not per-model logic. `component_password`'s write-time
+Argon2id hashing lives in `src/core/security/password_hash.ts`, wired into
+`src/core/section/record/save_component.ts` (see the gap note above for what
+is not yet covered).
 
 ---
 
@@ -212,7 +166,7 @@ stores. In the component JS the items are held in `this.data.entries`:
 
 ```javascript
 // this.data.entries — multi-value array of plain objects
-// (component_input_text.js)
+// (client/dedalo/core/component_input_text/js/component_input_text.js)
 [
     { id: 1, value: "Alicia", lang: "lg-spa" },
     { id: 1, value: "Alicia", lang: "lg-eng" }
@@ -225,10 +179,10 @@ stores. In the component JS the items are held in `this.data.entries`:
 Because the component is instantiated **in one language**, it manages only that
 language's slice of the data (a Català instance sees only the `lg-cat` entries).
 
-Edits are sent back to the server as a **`changed_data`** object processed by
-`update_data_value()` on save. Each change targets the stable item **`id`**
-(not the array index), which is what makes edits robust to reordering and
-pagination:
+Edits are sent back to the server as a **`changed_data`** object, applied on
+save by `src/core/section/record/save_component.ts`. Each change targets the
+stable item **`id`** (not the array index), which is what makes edits robust
+to reordering and pagination:
 
 ```json
 { "action": "insert", "id": null,  "value": { "value": "New", "lang": "lg-eng" } }
@@ -306,22 +260,22 @@ logical value (note the shared `id`):
 ## v7 consolidation / evolution
 
 - **One envelope for every string.** v7 unifies all text-like data on the single
-  `{id, lang, value}` item shared with the other "value-property" types
+  `{id, lang, value}` item shared with the other value-property types
   (`component_number`, `component_json`, …). String components are exactly the
-  subset of `$components_using_value_property` that route to the `string` column.
+  subset of `importValueProperty` models that route to the `string` column.
 - **Item `id` is now first-class.** The server-minted, never-recycled `id`
   replaces positional addressing: edits, [dataframe](../components/component_dataframe.md)
   pairing and Time Machine all key off the `id`, so reordering or paginating a
   multivalue string no longer breaks attachments.
 - **Empty values preserved.** v7 keeps `{"value":""}` items instead of pruning
   them, so multivalue slots and dataframe positions survive an empty edit.
-- **Passwords hardened.** Plaintext/reversible storage (legacy AES) gave way to
-  one-way Argon2id hashing plus systematic `fake_value` masking on export and
-  diffusion — the `string` item shape is unchanged, only the `value` contents
-  and the getters changed.
-- **`data`, not `dato`.** v7 drops the v6 term `dato`: the stored array is *data*,
-  read via `get_data()`; the flattened display string is the *value*, via
-  `get_value()`.
+- **Passwords hardened.** Plaintext/reversible storage gave way to one-way
+  Argon2id hashing on write — the `string` item shape is unchanged, only the
+  `value` contents changed. (Export/diffusion masking is not yet
+  implemented — see the gap note above.)
+- **`data`, not `dato`.** The stored array is *data*, read via
+  `readComponentItems()`; the flattened display string is the *resolved
+  value*, via `resolveCellValue()`.
 
 ---
 
@@ -335,6 +289,6 @@ logical value (note the shared `id`):
   [`component_password`](../components/component_password.md) — the producing components.
 - [Locator](../locator.md) — the contrasting item shape used by relation
   components (no `value`).
-- [Exporting data](../exporting_data.md) — the `get_export_value()` atoms
-  contract behind `get_value()`.
+- [Exporting data](../exporting_data.md) — the export atoms contract behind
+  the resolved value.
 - [Glossary](../glossary.md) — tipo, model, lang, datum, ddo.

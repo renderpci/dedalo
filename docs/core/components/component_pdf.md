@@ -92,9 +92,9 @@
 
 **Data:** `array`. A single-element array describing the stored file (its original/normalized names and the live per-quality `files_info`). Although the structure is an array, a PDF instance manages one document.
 
-**Value:** `string` (a URL), or `null`. `get_url()` reduces the data to the displayable URL of the default quality.
+**Value:** `string` (a URL), or `null` — the data reduced to the displayable URL of the default quality.
 
-**Storage shape.** A component never touches the database; it reads and writes through its section (`src/core/section/read.ts`, `src/core/section/record/save_component.ts`), which keeps the component's data in the matrix `media` column. The stored item is the thin JSON pointer — original/normalized file names — while `files_info` is reconstructed live by `scanFilesInfo()` (`src/core/media/files_info.ts`, PHP `get_files_info()`), scanning disk per quality and extension. Each `files_info` entry is `{quality, extension, file_name, file_path, file_size, file_time, file_exist}` (plus upload metadata at the item level).
+**Storage shape.** A component never touches the database; it reads and writes through its section (`src/core/section/read.ts`, `src/core/section/record/save_component.ts`), which keeps the component's data in the matrix `media` column. The stored item is the thin JSON pointer — original/normalized file names — while `files_info` is reconstructed live by `scanFilesInfo()` (`src/core/media/files_info.ts`), scanning disk per quality and extension. Each `files_info` entry is `{quality, extension, file_name, file_path, file_size, file_time, file_exist}` (plus upload metadata at the item level).
 
 Non-translatable variant (the common case — language slot `lg-nolan` is implicit, the on-disk name carries no `_lang` suffix):
 
@@ -127,7 +127,7 @@ Non-translatable variant (the common case — language slot `lg-nolan` is implic
 ]
 ```
 
-Translatable variant. `component_pdf` *can* be instantiated as translatable; when it is, `get_id()` appends `_'.DEDALO_DATA_LANG` to the deterministic file name, so each language version keeps its own file (e.g. `test85_test3_1_lg-eng.pdf` vs `test85_test3_1_lg-spa.pdf`). The component still resolves only the language it was instantiated with.
+Translatable variant. `component_pdf` *can* be instantiated as translatable; when it is, the deterministic file name gains the data-language suffix (`_lg-eng`, `_lg-spa`, …), so each language version keeps its own file (e.g. `test85_test3_1_lg-eng.pdf` vs `test85_test3_1_lg-spa.pdf`). The component still resolves only the language it was instantiated with.
 
 !!! note "Datum vs. API `entries`"
     The transmitted unit is a `{context, data}` datum (the JSON-API contract). In the API payload the data items are surfaced under `data.entries` (see `src/core/components/component_pdf/samples/api_data.json`), accompanied by `parent_tipo`, `parent_section_id` and the `from_component_tipo`. `context` carries the description (`tipo`, `model`, `mode`, `lang`, `label`, `properties`, `permissions`, `tools`, `view`) plus a media-specific `features` block (`allowed_extensions`, `default_target_quality`, `ar_quality`, `default_quality`, `quality`, `key_dir`, `alternative_extensions`, `extension`) built by `buildMediaFeatures()` (`src/core/section/media_features.ts`) and never the binary. See the *dedalo-context-data-layers* skill for the full layering rules.
@@ -138,7 +138,7 @@ Translatable variant. `component_pdf` *can* be instantiated as translatable; whe
 
 - `original` (`DEDALO_PDF_QUALITY_ORIGINAL`) — the exact uploaded file, preserved under its own quality folder keeping its source extension via `original_normalized_name`. Originals are never overwritten on re-upload without a backup (`renameOldFiles()`, `src/core/media/file_ops.ts`, short-circuits — no-ops — when nothing already exists at the target).
 - `web` (`DEDALO_PDF_QUALITY_DEFAULT`, the default quality) — a copy generated from the original by `regeneratePdf()` -> `copyToQuality()` (`src/core/media/processing.ts`); this is the file the viewer serves and the one OCR would rewrite in place.
-- `thumb` (`DEDALO_QUALITY_THUMB`, raster `jpg`) — a preview rendered from the **first page only** (`<pdf>[0]`) by `buildThumbVersion()` (`src/core/media/processing.ts`, via `src/core/media/engine/imagemagick.ts`, Ghostscript delegate). It uses the PDF-aware `convert` recipe (density/antialias/`pdf:use-cropbox=true`) fit to the thumb box — **not** the plain image `dd_thumb` recipe — mirroring PHP `create_thumb`'s `ar_layers=[0]`. The page selector is load-bearing: without it ImageMagick rasterizes *every* page of a multi-page PDF to `<stem>-0.jpg`/`<stem>-1.jpg`/… (no scene selector → per-page split) and never the single expected file, so the atomic-rename staging would `ENOENT`. Used in list / mini views.
+- `thumb` (`DEDALO_QUALITY_THUMB`, raster `jpg`) — a preview rendered from the **first page only** (`<pdf>[0]`) by `buildThumbVersion()` (`src/core/media/processing.ts`, via `src/core/media/engine/imagemagick.ts`, Ghostscript delegate). It uses the PDF-aware `convert` recipe (density/antialias/`pdf:use-cropbox=true`) fit to the thumb box — **not** the plain image `dd_thumb` recipe. The page selector is load-bearing: without it ImageMagick rasterizes *every* page of a multi-page PDF to `<stem>-0.jpg`/`<stem>-1.jpg`/… (no scene selector → per-page split) and never the single expected file, so the atomic-rename staging would `ENOENT`. Used in list / mini views.
 
 `qualities` -> `DEDALO_PDF_AR_QUALITY` (`["original","web"]`). Alternative versions (`DEDALO_PDF_ALTERNATIVE_EXTENSIONS`, default `["jpg"]`) are rendered per quality by `buildPdfCover()` (`src/core/media/processing.ts`, a page raster of the document via `engine/pdf.ts`/`imagemagick.ts`).
 
@@ -186,7 +186,7 @@ Realistic `properties` block for a PDF whose original filename is captured into 
 }
 ```
 
-`section_tipo` / `parent` tell the section which `media` column owns this component's data; the section is the single writer to the database (`src/core/section/record/save_component.ts`). The on-disk path is resolved from section + component properties: `DEDALO_MEDIA_PATH + folder ('/pdf') + initial_media_path + '/' + quality + additional_path`, computed by `buildMediaLocation()` (`src/core/media/path.ts`). `initial_media_path` comes from the *section* `properties->initial_media_path->{component_tipo}`, read by `resolveMediaPathOptions()` (`src/core/media/ontology_path.ts`); `additional_path` today is only the `max_items_folder` fallback bucketing — reading a sibling component's value into `additional_path` (as PHP does) is **not yet wired** (see *Properties & options*). Every resulting path is confined by `assertInsideMediaRoot()`, and the quality string is validated by `assertValidQuality()` (`src/core/concepts/media.ts`, SEC-065 strengthened) to keep client values out of the filesystem path.
+`section_tipo` / `parent` tell the section which `media` column owns this component's data; the section is the single writer to the database (`src/core/section/record/save_component.ts`). The on-disk path is resolved from section + component properties: `DEDALO_MEDIA_PATH + folder ('/pdf') + initial_media_path + '/' + quality + additional_path`, computed by `buildMediaLocation()` (`src/core/media/path.ts`). `initial_media_path` comes from the *section* `properties.initial_media_path`, keyed by the component `tipo`, and is read by `resolveMediaPathOptions()` (`src/core/media/ontology_path.ts`); `additional_path` today is only the `max_items_folder` fallback bucketing — reading a sibling component's value into `additional_path` is **not yet wired** (see *Properties & options*). Every resulting path is confined by `assertInsideMediaRoot()`, and the quality string is validated by `assertValidQuality()` (`src/core/concepts/media.ts`, SEC-065 strengthened) to keep client values out of the filesystem path.
 
 ## Properties & options
 
@@ -195,17 +195,17 @@ All properties are optional and live in the ontology node `properties` JSON. Ver
 ### target_filename
 
 - **Values:** an ontology `tipo` of a sibling `component_input_text` in the same section (e.g. `"test84"`). Default unset.
-- **Effect:** in PHP, on upload the document's `original_file_name` is written into that input component. **Not yet wired in the TS ingest path**: `processUploadedFile()` (`src/core/media/ingest/process_uploaded_file.ts`) stores the original filename on the media item itself but does not write it back to the sibling component; `target_filename` is honoured today only by the bulk `tool_import_files` matcher (`src/core/tools/import_files_match.ts`). Ledgered gap for the interactive-upload path.
+- **Effect:** intended to write the uploaded document's `original_file_name` into that input component on upload. **Not yet wired for interactive upload**: `processUploadedFile()` (`src/core/media/ingest/process_uploaded_file.ts`) stores the original filename on the media item itself but does not write it back to the sibling component; `target_filename` is honoured today only by the bulk `tool_import_files` matcher (`src/core/tools/import_files_match.ts`).
 
 ### max_items_folder
 
 - **Values:** integer (commonly `1000`). Default unset.
-- **Effect:** folder bucketing fallback when `additional_path` is not set. The on-disk `additional_path` becomes `'/' . max_items_folder * floor(section_id / max_items_folder)`, so files are spread across numbered subfolders. Ported as `additionalPath()` (`src/core/media/path.ts`), fed by `resolveMediaPathOptions()` (`src/core/media/ontology_path.ts`).
+- **Effect:** folder bucketing fallback when `additional_path` is not set. The on-disk `additional_path` becomes `/<max_items_folder × floor(section_id / max_items_folder)>`, so files are spread across numbered subfolders. Ported as `additionalPath()` (`src/core/media/path.ts`), fed by `resolveMediaPathOptions()` (`src/core/media/ontology_path.ts`).
 
 ### additional_path
 
 - **Values:** an ontology `tipo` of a component whose value supplies an extra path segment. Default unset.
-- **Effect:** in PHP, appends the resolved component value (slash-normalised) to the media path, overriding the `max_items_folder` bucketing. `buildMediaLocation()` (`src/core/media/path.ts`) already accepts a pre-resolved `additionalPathOverride`, but `resolveMediaPathOptions()` does **not yet** read a sibling component's value into it — today only `max_items_folder` is honoured for PDF. Ledgered gap.
+- **Effect:** intended to append the resolved component value (slash-normalised) to the media path, overriding the `max_items_folder` bucketing. `buildMediaLocation()` (`src/core/media/path.ts`) already accepts a pre-resolved `additionalPathOverride`, but `resolveMediaPathOptions()` does **not yet** read a sibling component's value into it — today only `max_items_folder` is honoured for PDF.
 
 ### initial_media_path *(section property)*
 
@@ -244,8 +244,8 @@ Views are selected from `context.view` (default `default`) and dispatched by the
 Modes (the standard component set `["edit","list","tm","search"]`):
 
 - **edit** — read/write a real record; upload (`tool_upload`), version management (`tool_media_versions`), text extraction (`tool_pdf_extractor`), transcription (`tool_transcription`), and the pdf.js viewer.
-- **list / tm** — read-only listing; `tm` (Time Machine) reuses the list render and resolves the last deleted file under `/deleted`. `get_list_value()` provides the reduced data (thumb quality).
-- **search** — builds an SQO filter input; one text input per filter (only one input is allowed). Saves are blocked in search mode. Search SQL is provided by the shared `search_component_media_common` trait.
+- **list / tm** — read-only listing; `tm` (Time Machine) reuses the list render and resolves the last deleted file under `/deleted`. The list cell shows the reduced (thumb-quality) data.
+- **search** — builds an SQO filter input; one text input per filter (only one input is allowed). Saves are blocked in search mode. **Gap:** the media models declare no `searchBuilder` family, so a search filter against `component_pdf` throws loudly in `src/core/search/conform.ts` instead of resolving to SQL.
 
 DOM (edit / default): `wrapper_component component_pdf <tipo> <mode>` -> `label`, `buttons`, `content_data` -> `content_value`.
 
@@ -264,10 +264,10 @@ See [importing data](../importing_data.md#related-data) for the broader import m
 
 ## Notes
 
-- **Text extraction & OCR.** `extractText()` (`src/core/media/engine/pdf.ts`, wrapping `pdftotext` via argv-only `Bun.spawn` — no shell, no `escapeshellarg` needed) is reachable through the read-only `tool_pdf_extractor.get_pdf_data` action (`tools/tool_pdf_extractor/server/index.ts` -> `extractPdfCore()`, `src/core/media/tools/pdf_extract.ts`). The OCR argv recipe (`buildOcrArgv()`, `ocrmypdf --force-ocr`) is ported but **not yet invoked anywhere** — no upload-time OCR pipeline exists on the TS engine yet.
-- **Thumbnails / alternative versions.** `buildThumbVersion()` and `buildPdfCover()` (`src/core/media/processing.ts`) rasterize the PDF through `src/core/media/engine/imagemagick.ts` (argv arrays, cropbox-enabled recipe carried over from PHP).
+- **Text extraction & OCR.** `extractText()` (`src/core/media/engine/pdf.ts`, wrapping `pdftotext` via argv-only `Bun.spawn` — no shell is involved, so no argument quoting is needed) is reachable through the read-only `tool_pdf_extractor.get_pdf_data` action (`tools/tool_pdf_extractor/server/index.ts` -> `extractPdfCore()`, `src/core/media/tools/pdf_extract.ts`). The OCR argv recipe (`buildOcrArgv()`, `ocrmypdf --force-ocr`) is ported but **not yet invoked anywhere** — no upload-time OCR pipeline exists on the TS engine yet.
+- **Thumbnails / alternative versions.** `buildThumbVersion()` and `buildPdfCover()` (`src/core/media/processing.ts`) rasterize the PDF through `src/core/media/engine/imagemagick.ts` (argv arrays, cropbox-enabled recipe).
 - **Observers / observables.** The model wires the pdf.js viewer to a sibling transcription text area: `click_tag_pdf` -> `go_to_page`, `key_up_f2` -> `get_data_tag`. Configured in the ontology `properties` — client-side wiring, unchanged (the client is copied as-is).
 - **Default tools.** A PDF instance exposes `tool_media_versions`, `tool_pdf_extractor`, `tool_time_machine`, `tool_transcription` and `tool_upload` in `context.tools`; tools are read-only context. Each is a registered server module under `tools/<name>/server/`.
-- **Media access control.** PHP guards files with `media_protection` (`DEDALO_MEDIA_ACCESS_MODE`: `false` / `private` / `publication`): a daily-rotated `dedalo_media_auth` cookie for logged-in users, `.publication/pub/{section_tipo}_{section_id}` markers for anonymous publication access, enforced fail-closed at the web server. The TS server serves media through a dev-only session-gated route instead (`src/server.ts`, any authenticated TS session, traversal-guarded, fail-closed 404) — production-grade marker/cookie media protection is a separate subsystem, out of scope for the media rebuild (see the *dedalo-media-protection* skill).
+- **Media access control.** Files are guarded by the native media-protection subsystem (`src/core/media/protection.ts`, `DEDALO_MEDIA_ACCESS_MODE`: `false` / `private` / `publication`): a daily-rotated `dedalo_media_auth` cookie for logged-in users, `.publication/pub/{section_tipo}_{section_id}` markers for anonymous publication access. It is enforced by the **web server** (the reverse proxy) reading the generated rule files (`writeRuleFiles()`), not by the Bun process itself. `src/server.ts` also exposes a dev-only media route gated only on having *any* authenticated session, with no per-record access control — it deliberately bypasses the generated web-server rules and must never be enabled outside local development (see the *dedalo-media-protection* skill).
 - **Permissions.** Resolved via `getPermissions()` (`src/core/security/permissions.ts`; 0 none / 1 read / 2 read+write / 3 admin). Read users (level 1) get read-only rendering; upload / save require level >= 2, enforced per-action by the tool registry's `minLevel` gate.
 - **Related components:** [component_image](component_image.md), [component_svg](component_svg.md), [component_text_area](component_text_area.md), [component_iri](component_iri.md), [component_input_text](component_input_text.md), [component_portal](component_portal.md).

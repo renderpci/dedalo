@@ -69,6 +69,12 @@ export interface LoginResult {
 	/** Raw session token (cookie value) on success. */
 	sessionToken?: string;
 	userId?: number;
+	/**
+	 * The 128-hex media-auth cookie value (Rule A — core/media/protection.ts). Present
+	 * only when media protection is enabled; absent means the mode is false and no media
+	 * cookie should be set.
+	 */
+	mediaAuthCookieValue?: string;
 }
 
 /** Find a user row by exact username (jsonb containment — indexed, parameterized). */
@@ -151,10 +157,34 @@ export async function login(
 		}
 	}
 
+	// MEDIA ACCESS CONTROL, Rule A (PHP login::init_cookie_auth). Mints/recycles the
+	// daily media-auth cookie, lays its marker, and refreshes the generated web-server
+	// rules. Returns null when the mode is false — then this is a TOTAL no-op.
+	//
+	// It lives HERE, beside createSession, and not in the login HANDLER, so that no
+	// future login door (SAML is a ledgered open item) can ship without it and leave its
+	// users 404ing on every media file.
+	//
+	// It runs BEFORE createSession deliberately: it throws on filesystem failure
+	// (CONVENTIONS §1 — a configured gate that cannot be written must not degrade into
+	// silently unprotected media), and doing it first means a throw leaves no orphan
+	// session behind. Divergence from PHP, recorded: PHP unlinked its cookie store on a
+	// rules-write failure — we do NOT. The markers are already laid, and deleting the
+	// store would rotate every other editor's cookie value out on the next login,
+	// revoking media access install-wide over a transient EPERM.
+	const { initMediaAuthCookie } = await import('../media/protection.ts');
+	const mediaAuthCookieValue = initMediaAuthCookie();
+
 	// PHP: superuser is user_id -1; global-admin flag also derives from the
 	// profile — v0 grants admin to the superuser only (profile-based admins
 	// are Phase 5 continuation alongside the permissions matrix).
 	const isGlobalAdmin = user.section_id === -1;
 	const sessionToken = createSession(user.section_id, username, isGlobalAdmin);
-	return { ok: true, message: 'ok', sessionToken, userId: user.section_id };
+	return {
+		ok: true,
+		message: 'ok',
+		sessionToken,
+		userId: user.section_id,
+		...(mediaAuthCookieValue !== null ? { mediaAuthCookieValue } : {}),
+	};
 }

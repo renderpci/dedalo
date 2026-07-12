@@ -10,7 +10,7 @@ The machine-readable source of truth for **hand-authored** files is the JSON Sch
 
 The same rules are enforced at registration by `importTools()`: an invalid authoring file is refused with explicit errors in the import report.
 
-## Two formats you will meet
+## Three formats you will meet
 
 `detectFormat()` (`register.ts`) recognizes three shapes:
 
@@ -63,8 +63,8 @@ Every field maps to a fixed ontology tipo (`TOOL_NAME`, `TOOL_VERSION`, `CONFIG`
 
 ## Where the data lands
 
-At registration the file is reconciled into a record of the "Registered Tools" section (dd1324, `matrix_tools`). `importTools()` defaults to **dry-run** (`config.tools.enableRegistryImport = false`, see [Server contract](server_contract.md)) because dd1324 is shared with the live PHP install: it reports, per tool, whether the registry already reflects the file's declared identity, without writing.
+At registration the file is reconciled into a record of the "Registered Tools" section (dd1324, `matrix_tools`). `importTools()` defaults to **dry-run** (`config.tools.enableRegistryImport = false`, see [Server contract](server_contract.md)): it reports, per tool, whether the registry already reflects the file's declared identity, without writing.
 
 ## Legacy v6 format
 
-Files with a top-level `components`/`relations` key (raw PHP v6 record dumps) are **not supported this wave** — `register.ts` detects the shape but does not convert it (unlike the PHP `tools_register::convert_register_v6_to_v7`). None of the 34 in-repo tools are in this shape, so no in-repo tool is affected; a genuinely legacy v6 file would need converting to the column-keyed or authoring format before it can be imported by the TS engine.
+Files with a top-level `components`/`relations` key (raw v6 record dumps) are **not supported this wave** — `register.ts` detects the shape but does not convert it. None of the 34 in-repo tools are in this shape, so no in-repo tool is affected; a genuinely legacy v6 file would need converting to the column-keyed or authoring format before it can be imported.

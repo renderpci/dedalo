@@ -5,12 +5,11 @@ Add a new top-level grouping to the back-office menu — a node that contains se
 This is a *how-to* guide. For the conceptual model and the reference, read first:
 
 - [Areas (index)](../../core/areas/index.md) — what an area is, the behavior taxonomy, and the roster of every shipped area
-- [area_common](../../core/areas/area_common.md) — the shared behavior (the JSON fallback, the dashboard structure-walk and metrics)
-- [area](../../core/areas/area.md) — the top-level menu and security roster (`get_areas` → the menu root order)
+- [area](../../core/areas/area.md) — the shared behavior (the dashboard structure-walk and its metrics) plus the top-level menu and security roster
 
 ## When do you need this
 
-In the Bun/TS rewrite an area is **almost always ontology-only**, and it needs **no server class at all**. There is no per-area class and no autoloader: areas are served by a single horizontal engine, `src/core/area/read.ts`, which dispatches by *behavior* (`dashboard` / `tree` / `maintenance`, resolved by `areaBehaviorOf(model)` in `src/core/concepts/area.ts`). A plain new grouping with the standard dashboard is just an ontology node reusing the generic `area` model.
+An area is **almost always ontology-only**, and it needs **no server module at all**. Areas are served by a single horizontal engine, `src/core/area/read.ts`, which dispatches by *behavior* (`dashboard` / `tree` / `maintenance`, resolved by `areaBehaviorOf(model)` in `src/core/concepts/area.ts`). A plain new grouping with the standard dashboard is just an ontology node reusing the generic `area` model.
 
 | You need | Then |
 | --- | --- |
@@ -20,18 +19,18 @@ In the Bun/TS rewrite an area is **almost always ontology-only**, and it needs *
 | A new per-section dashboard metric | Extend `src/core/area/dashboard.ts` — see the metric gap note in [step 5](#5-optional-client-assets-and-metrics). |
 
 !!! note "Why register a model at all, if you can reuse `area`?"
-    The copied client resolves a node's `model` to a JS module by directory
-    name: a node with `model: 'area_numisdata'` makes `instances.js` import
+    The client resolves a node's `model` to a JS module by directory name: a node
+    with `model: 'area_numisdata'` makes `instances.js` import
     `core/area_numisdata/js/area_numisdata.js`. So if you want per-area JS/CSS
     (or a name the UI can distinguish), the model must exist on **both** sides —
-    a client module in the copied client **and** an entry in the TS area-behavior
-    registry. If you do **not** need that, reuse `model: 'area'`, add only a
-    node, and skip step 1 entirely — `area_admin`, `area_resource`, `area_root`
-    and the other stubs all share the generic `dashboard` behavior.
+    a client module **and** an entry in the server's area-behavior registry. If
+    you do **not** need that, reuse `model: 'area'`, add only a node, and skip
+    step 1 entirely — `area_admin`, `area_resource`, `area_root` and the other
+    stubs all share the generic `dashboard` behavior.
 
 ## 1. (Only for a distinct model) Register the area model
 
-Skip this step if you are reusing `model: 'area'`. To introduce a distinct area model (`area_numisdata`) you register it in **two** places — there is no PHP subclass to write.
+Skip this step if you are reusing `model: 'area'`. To introduce a distinct area model (`area_numisdata`) you register it in **two** places.
 
 **Server (TS):** add it to the behavior map in `src/core/concepts/area.ts`. A standard grouping gets `dashboard` behavior:
 
@@ -49,7 +48,7 @@ const AREA_BEHAVIOR = new Map<string, AreaBehavior>([
 
 `isAreaModel()` already recognises any `area_*` name, so the model is treated as record-less automatically (see step 2). Registering it in `AREA_BEHAVIOR` is what tells `areaBehaviorOf()` which read path (`dashboard` / `tree` / `maintenance`) to serve.
 
-**Client (copied vanilla JS):** add `client/dedalo/core/area_numisdata/js/area_numisdata.js` with a named export equal to the model. The simplest form aliases the base area class, exactly like `core/area_admin/js/area_admin.js`:
+**Client (vanilla JS):** add `client/dedalo/core/area_numisdata/js/area_numisdata.js` with a named export equal to the model. The simplest form aliases the base area class, exactly like `core/area_admin/js/area_admin.js`:
 
 ``` js
 // imports
@@ -77,21 +76,21 @@ Create one ontology node for the area. Use `model: 'area'` for a plain grouping,
 - a **parent** in the ontology so it is reachable by the menu walk (step 3)
 - the sections it groups, attached as **ontology children** (step 4)
 
-The model value lives on the node and is read server-side via `getModelByTipo($tipo)` (`src/core/ontology/resolver.ts`) and client-side as `options.model`; the area-read engine (`src/core/area/read.ts`) resolves that model to a behavior and serves the corresponding payload.
+The model value lives on the node and is read server-side via `getModelByTipo(tipo)` (`src/core/ontology/resolver.ts`) and client-side as `options.model`; the area-read engine (`src/core/area/read.ts`) resolves that model to a behavior and serves the corresponding payload.
 
 ## 3. Wire it into the menu roster
 
-A node alone does not appear in the menu. The menu is built from a **fixed order of root-area models** — `MENU_ROOT_MODEL_ORDER` in `src/core/concepts/area.ts` (the port of PHP `get_ar_root_area_tipos`) — each of whose children is collected recursively (filtered by the `areas.deny` / `areas.allow` config). You have two ways to surface a new area:
+A node alone does not appear in the menu. The menu is built from a **fixed order of root-area models** — `MENU_ROOT_MODEL_ORDER` in `src/core/concepts/area.ts` — each of whose children is collected recursively (filtered by the resolved deny/allow lists). You have two ways to surface a new area:
 
 - **Sub-area (recommended):** attach your area node as an ontology **child of an existing root area** (e.g. under `area_resource` or `area_admin`). The menu walk descends children recursively, so it is picked up automatically — no code edit.
 - **New root area:** if it must sit at the top level beside Resources/Admin/…, add its model to `MENU_ROOT_MODEL_ORDER` in `src/core/concepts/area.ts`. This is the one code edit a root-level area requires.
 
 !!! warning "Allow/deny per installation"
-    The menu and security roster honour the resolved `areas.deny` / `areas.allow`
-    config (the `areas.php` catalog domain, overridable in `../private/.env` /
-    the local config). If an installation lists your area tipo in `areas.deny` it
-    is hidden even though the node and model are correct. Check there if a
-    correctly-wired area does not appear.
+    The menu and security roster honour a per-installation deny/allow list,
+    resolved by `src/core/resolve/server_state.ts` (the `AREAS_DENY` config key
+    supplies the default). If an installation lists your area tipo in the deny
+    list it is hidden even though the node and model are correct. Check there
+    first if a correctly-wired area does not appear.
 
 ## 4. Attach the sections it groups
 
@@ -99,20 +98,20 @@ An area is a container: it groups [sections](../../core/sections/index.md) (and 
 
 ## 5. (Optional) Client assets and metrics
 
-For a standard area you can stop at step 4 — the copied client falls through to the shared `core/area/js/area.js` + dashboard modules, and the server serves the generic dashboard payload from `src/core/area/dashboard.ts` (`getDashboardData`). There is **no** per-area `*_json.php` controller in the TS server; the area-read engine builds the payload horizontally.
+For a standard area you can stop at step 4 — the client falls through to the shared `core/area/js/area.js` + dashboard modules, and the server serves the generic dashboard payload from `src/core/area/dashboard.ts` (`getDashboardData`). There is no per-area controller; the area-read engine builds the payload horizontally.
 
 Add code only if you need bespoke behaviour:
 
 - **Client class** — a distinct `core/area_numisdata/js/area_numisdata.js` (step 1) with a named export matching the model, for area-specific JS/CSS.
 - **A distinct payload / tree view** — extend the area engine (`src/core/area/read.ts` routes tree behavior to `tree.ts`; `area_thesaurus` / `area_ontology` are the tree areas).
 
-!!! warning "Custom dashboard metrics are a gap"
-    The TS dashboard engine (`src/core/area/dashboard.ts`, `getDashboardData`)
-    dispatches the `properties.dashboard.metrics` names but currently implements
-    **only `total`** (record count) plus the built-in 30-day activity timeline.
-    PHP's open `metric_<name>()` convention is **not** ported — a genuinely new
-    per-section metric means adding it to the dashboard engine, not just listing
-    a name on the node. See [STATUS.md](../../../rewrite/STATUS.md).
+!!! warning "A custom dashboard metric needs engine code"
+    The dashboard engine (`src/core/area/dashboard.ts`, `getDashboardData`)
+    dispatches the `properties.dashboard.metrics` names, but the only per-section
+    metric it implements is **`total`** (the permission-aware record count),
+    alongside the built-in 30-day activity timeline (`metricActivity`). Listing
+    any other name on the node computes nothing: a genuinely new per-section
+    metric means adding it to the dashboard engine.
 
 ## Worked example: a "Numismatic data" resource area
 
@@ -129,19 +128,18 @@ If instead it had to be a **top-level** grouping beside Resources/Admin, step 3 
 
 ## Common pitfalls
 
-- **Registering a client model with no server behavior (or vice-versa).** A distinct `area_X` model must exist on **both** sides: a client module in the copied client **and** an `AREA_BEHAVIOR` entry in `src/core/concepts/area.ts`. Miss one and the node either has no JS module or resolves to an uncovered behavior.
+- **Registering a client model with no server behavior (or vice-versa).** A distinct `area_X` model must exist on **both** sides: a client module **and** an `AREA_BEHAVIOR` entry in `src/core/concepts/area.ts`. Miss one and the node either has no JS module or resolves to an uncovered behavior.
 - **Client export name ≠ directory name.** `core/area_numisdata/js/area_numisdata.js` must `export const area_numisdata = …`; the dynamic import in `instances.js` looks the export up by model name.
 - **Expecting a root area to appear automatically.** The menu iterates a **fixed roster** (`MENU_ROOT_MODEL_ORDER`). A brand-new *root* area must be added to that list; only **sub-areas** (children of an existing root) are picked up by the recursive walk for free.
 - **Hidden by `areas.deny`.** A correct area that never shows is often listed in the `areas.deny` config. Check there before debugging code.
 - **Giving the area a matrix table.** Areas hold no records; `getMatrixTableFromTipo()` returns `null` for `area*` models by design. Store data in the **sections** the area groups, not the area.
-- **Expecting a custom metric to work from ontology alone.** Only `total` is implemented in the TS dashboard engine; a new `metric_<name>` requires extending `src/core/area/dashboard.ts` (a ledgered gap), not just a `properties.dashboard.metrics` entry.
-- **Looking for `class.area_X.php` / `area_X_json.php`.** There are none in the TS server. Areas are horizontal: `src/core/area/read.ts` + `dashboard.ts` + `tree.ts` serve every area by its behavior.
+- **Expecting a custom metric to work from ontology alone.** Only `total` is implemented; a new metric name requires extending `src/core/area/dashboard.ts`, not just a `properties.dashboard.metrics` entry.
+- **Looking for a per-area server module.** There is none. Areas are horizontal: `src/core/area/read.ts` + `dashboard.ts` + `tree.ts` serve every area by its behavior.
 
 ## Related
 
 - [Areas (index)](../../core/areas/index.md) — concept, behavior taxonomy, roster of shipped areas
-- [area_common](../../core/areas/area_common.md) — shared behavior: JSON fallback, dashboard structure-walk, metric convention
-- [area](../../core/areas/area.md) — the menu root order (`MENU_ROOT_MODEL_ORDER`), `areas.deny`/`areas.allow`
+- [area](../../core/areas/area.md) — the shared dashboard behavior, the menu root order (`MENU_ROOT_MODEL_ORDER`) and the deny/allow lists
 - [Sections (index)](../../core/sections/index.md) — the record-bearing leaves an area groups
 - [Menu](../../core/ui/menu.md) — the navigation tree built from the root-area roster
 - [Ontology (index)](../../core/ontology/index.md) — the active schema the area walk reads

@@ -9,9 +9,9 @@ The PostgreSQL access layer (`src/core/db/`) holds the connection/transaction pr
 `src/core/db/` is the bottom layer of the work-system stack. Everything above it —
 [`section`](../sections/section.md), [`section_record`](../sections/section_record.md),
 components, search — resolves *what* to read or write; `src/core/db/` is *how* the
-bytes actually reach PostgreSQL. There is no god object here and no PHP-style
-class-per-record: this is plain infrastructure — a handful of modules exporting
-functions over Bun's built-in SQL client.
+bytes actually reach PostgreSQL. There is no object-per-record here: this is plain
+infrastructure — a handful of modules exporting functions over Bun's built-in SQL
+client.
 
 It sits directly below the section-record write pipeline:
 
@@ -37,18 +37,17 @@ PostgreSQL                      matrix tables (typed JSONB columns)
 !!! note "MariaDB is not here"
     This layer talks **only to PostgreSQL** (Bun's `SQL` Postgres client). The
     publication / diffusion database (MariaDB/MySQL) is owned **exclusively** by
-    the Bun diffusion engine (`diffusion/api/v1/`); the work server ships no
-    MariaDB connector at all. See the
+    the diffusion engine (`src/diffusion/`); the work server ships no MariaDB
+    connector at all. See the
     [architecture overview](../architecture_overview.md#the-two-systems) for the
     work-vs-diffusion split.
 
-!!! note "One long-lived process, not RoadRunner workers"
-    The PHP server ran on RoadRunner workers with a per-worker cached connection
-    that had to be invalidated by hand. The TS server is a single long-lived Bun
-    process holding **one shared connection pool** (`postgres.ts`), and request
-    identity never touches it — an in-flight transaction is pinned to a reserved
-    connection through `AsyncLocalStorage`, not through a global static. The
-    cross-request connection-state bleed hazard is structurally gone.
+!!! warning "One process, one pool, no global connection state"
+    The server is a single long-lived process holding **one shared connection
+    pool** (`postgres.ts`), and request identity never touches it. An in-flight
+    transaction is pinned to a reserved connection through `AsyncLocalStorage`,
+    never through a module-level variable. Store a connection — or a transaction —
+    at module level and you have just handed one request's transaction to another.
 
 ## Responsibilities
 
@@ -64,8 +63,8 @@ PostgreSQL                      matrix tables (typed JSONB columns)
   `updateMatrixKeyData` (surgical per-key `jsonb_set_lax`), the item-id
   allocators, the counter-driven and explicit-id inserts, and
   `deleteMatrixRecord` (`matrix_write.ts`).
-- **JSONB codec** — the single encode/decode chokepoint that keeps every write
-  byte-compatible with the PHP `json_handler` output (`json_codec.ts`).
+- **JSONB codec** — the single encode/decode chokepoint every write passes through
+  (`json_codec.ts`).
 - **Ontology I/O** — CRUD, whole-row upsert, filtered search and the backup-table
   protocol over the ontology table `dd_ontology` (`dd_ontology.ts`).
 - **Time Machine I/O** — read of `matrix_time_machine` snapshots and the audit
@@ -122,14 +121,11 @@ src/core/db/
 └── db_pg_definitions.json the canonical extension/function/constraint/index SQL
 ```
 
-There is **no `acc/` directory** and no `RecordObj_*` family. The PHP layer carried
-two record-object generations (the v7 `JSON_RecordObj_matrix` plus the legacy
-`RecordObj_dd` / `RecordObj_time_machine` / `search_v6`); the TS port has neither.
-Raw record data is fetched by the plain `readMatrixRecord()` function and resolved
-by the horizontal engines (`src/core/resolve/`, `src/core/section/read.ts`), not by
-a cached per-row object. There is likewise **no `object_cache` LRU**: the
-`section_record`/component instance caches existed to survive a persistent worker;
-with request-scoped resolution they are unnecessary.
+There is **no record-object family and no row cache**. Raw record data is fetched
+by the plain `readMatrixRecord()` function and resolved by the horizontal engines
+(`src/core/resolve/`, `src/core/section/read.ts`) — never by a cached per-row
+object. Resolution is request-scoped, so there is nothing to keep alive between
+requests and nothing to invalidate.
 
 ### How the write pipeline dispatches into this layer
 
@@ -143,14 +139,13 @@ ontology (`getMatrixTableFromTipo()`), never hardcoded.
 
 ### The single JSONB codec
 
-`json_codec.ts` is the one place matrix JSONB values are encoded for a write. Both
-servers write the same jsonb columns and must stay byte-compatible: PostgreSQL
-canonicalizes jsonb on parse, so byte-compat reduces to *semantic* equality of
-what each server sends. `encodeForJsonb()` walks the value and **rejects** what
-JSON cannot represent faithfully (`undefined`, `NaN`/`Infinity`, functions,
-symbols, dropped object properties) rather than let `JSON.stringify` silently lose
-data. Unmodified columns can be passed through untouched as the branded
-`RawJsonText` (their raw `::text` read) instead of re-encoding — the lossless path.
+`json_codec.ts` is the one place matrix JSONB values are encoded for a write.
+`encodeForJsonb()` walks the value and **rejects** what JSON cannot represent
+faithfully (`undefined`, `NaN`/`Infinity`, functions, symbols, dropped object
+properties) rather than let `JSON.stringify` silently lose data. An unmodified
+column can be passed through untouched as the branded `RawJsonText` — its raw
+`::text` read — instead of being re-encoded. That is the lossless path: a column
+nobody edited is written back byte-for-byte as it was read.
 
 !!! warning "Bind jsonb as `::text::jsonb`"
     Bun's SQL client JSON-encodes a parameter it infers to be jsonb, which would
@@ -169,17 +164,16 @@ abbreviated.
 | symbol | purpose |
 | --- | --- |
 | `sql` | The database handle used everywhere. A `Proxy` over the pool that, on every use, routes to the ambient transaction connection when one is active (see `withTransaction`) and to the pool otherwise. The tagged-template form ``sql`SELECT … ${value}` `` always binds values as parameters; `sql.unsafe(text, params)` is the positional-parameter form used when the query text is built from allowlisted identifiers. |
-| `withTransaction(work)` | Run `work` inside a single `BEGIN … COMMIT/ROLLBACK` on one reserved connection; every query issued through `sql` while `work` runs is pinned to it (in-tx reads see in-tx writes, like PHP's per-request connection). A throw rolls back. Nesting **joins** the ambient transaction — no nested `BEGIN`, no savepoint. |
+| `withTransaction(work)` | Run `work` inside a single `BEGIN … COMMIT/ROLLBACK` on one reserved connection; every query issued through `sql` while `work` runs is pinned to it, so in-transaction reads see in-transaction writes. A throw rolls back. Nesting **joins** the ambient transaction — no nested `BEGIN`, no savepoint. |
 | `isInTransaction()` | `true` when the current async context is inside a `withTransaction` block. |
-| `acquireNodeLock(sectionTipo, sectionId)` | `SELECT pg_advisory_xact_lock(hashtext('<tipo>_<id>'))` — a per-record transaction lock, hash-input byte-identical to PHP so the two servers are mutually exclusive on the same node during coexistence. Throws if called outside a transaction (the lock would release immediately). |
+| `acquireNodeLock(sectionTipo, sectionId)` | `SELECT pg_advisory_xact_lock(hashtext('<tipo>_<id>'))` — a per-record transaction lock. Throws if called outside a transaction, where the lock would release immediately. |
 | `closeDatabasePool()` | End the pool (tests and graceful shutdown). |
 
 !!! note "Transactions flatten, they do not nest with savepoints"
-    PHP's `DBi` maintained a transaction *depth* with SAVEPOINT-based nesting. The
-    TS `withTransaction` instead makes an inner call join the outer transaction:
-    the outer commit/rollback is authoritative. This keeps composed mutation
-    helpers (each defensively wrapping their own writes) from fragmenting one
-    logical operation into independent transactions.
+    An inner `withTransaction` **joins** the outer one: the outer commit or
+    rollback is authoritative. This is what stops composed mutation helpers — each
+    defensively wrapping its own writes — from fragmenting one logical operation
+    into several independent transactions.
 
 ### Matrix read (`matrix.ts`)
 
@@ -193,12 +187,12 @@ abbreviated.
 
 | symbol | purpose |
 | --- | --- |
-| `updateMatrixRecord(table, sectionTipo, sectionId, values, options?)` | Whole-column upsert: UPDATE the given columns, INSERT the same columns if 0 rows matched (the PHP `update()` upsert-by-update). `values` is `{column: value}`; each jsonb value goes through the codec (or passes through as `RawJsonText` with `rawTextPassthrough`). Returns `'updated' | 'inserted'`. |
+| `updateMatrixRecord(table, sectionTipo, sectionId, values, options?)` | Whole-column upsert: UPDATE the given columns, INSERT the same columns if 0 rows matched. `values` is `{column: value}`; each jsonb value goes through the codec, or passes through as `RawJsonText` with `rawTextPassthrough`. Returns `'updated' | 'inserted'`. |
 | `updateMatrixKeysData(table, sectionTipo, sectionId, writes)` | Surgical per-key update — one UPDATE covering every `{column, key, value}` pair. A non-null value upserts via `jsonb_set_lax` over `COALESCE(col,'{}')`; a `null` value **removes** the key with `#-` (a NULL column stays NULL; a column that loses its last key keeps `'{}'`). This is the call a component save resolves to. |
 | `updateMatrixKeyData(table, sectionTipo, sectionId, column, key, value)` | Single-pair convenience wrapper over `updateMatrixKeysData`. |
 | `allocateComponentItemId(table, sectionTipo, sectionId, componentTipo)` | Atomically allocate the next data-item id for a component (increment the per-component counter in the `meta` column via one `UPDATE … RETURNING`; row-level locking serializes concurrent allocations — no explicit advisory lock needed). |
-| `absorbComponentItemIds(table, sectionTipo, sectionId, componentTipo, items)` | Raise a component's item-id counter to at least the max explicit id in `items` (imports/migrations/restored data) so later allocations never reuse them; never lowers. PHP runs this on every `set_data`. |
-| `insertMatrixRecordWithCounter(table, sectionTipo, jsonbColumns)` | INSERT a new record, allocating `section_id` from the matrix counter under an advisory lock in one statement (the PHP `create()` contract). Returns the new `section_id`. |
+| `absorbComponentItemIds(table, sectionTipo, sectionId, componentTipo, items)` | Raise a component's item-id counter to at least the highest explicit id in `items` (imports, migrations, restored data) so a later allocation can never reuse one. It never lowers the counter. Run it on every write that carries explicit item ids. |
+| `insertMatrixRecordWithCounter(table, sectionTipo, jsonbColumns)` | INSERT a new record, allocating `section_id` from the matrix counter under an advisory lock, in one statement. Returns the new `section_id`. |
 | `insertMatrixRecordWithExplicitId(table, sectionTipo, sectionId, jsonbColumns)` | INSERT with a caller-chosen `section_id` (import / ontology-provisioning path), raising the counter to `GREATEST(value, section_id)`. Throws if the row already exists. |
 | `deleteMatrixRecord(table, sectionTipo, sectionId)` | `DELETE … WHERE section_tipo AND section_id RETURNING id`. Returns the number of rows removed (0 or 1). |
 
@@ -214,7 +208,7 @@ abbreviated.
 
 | symbol | purpose |
 | --- | --- |
-| `encodeForJsonb(value)` | Validate (reject `undefined`/`NaN`/`Infinity`/functions/symbols/`bigint`/dropped keys) and return compact JSON text (`RawJsonText`) to bind as a `::text::jsonb` parameter. The PHP counterpart is `json_handler::encode` with `JSON_UNESCAPED_UNICODE`. |
+| `encodeForJsonb(value)` | Validate — rejecting `undefined`, `NaN`/`Infinity`, functions, symbols, `bigint` and dropped keys — and return compact JSON text (`RawJsonText`) to bind as a `::text::jsonb` parameter. Unicode is left unescaped. |
 | `decodeFromJsonb(jsonText)` | Parse jsonb text back into a JS value (thin `JSON.parse` wrapper kept for auditability). |
 | `asRawJsonText(jsonText)` | Brand a string as already-encoded JSON so a write passes it through untouched (the lossless path for an unmodified column read via `rawText`). |
 
@@ -227,19 +221,17 @@ in `src/core/ontology/resolver.ts`.
 
 | symbol | purpose |
 | --- | --- |
-| `upsertDdOntologyNode(node)` | Whole-row `INSERT … ON CONFLICT(tipo) DO UPDATE` writing every allowlisted column, so a re-parse never leaves stale data behind (PHP `create()`). Returns the row id. |
+| `upsertDdOntologyNode(node)` | Whole-row `INSERT … ON CONFLICT(tipo) DO UPDATE` writing every allowlisted column, so a re-parse never leaves stale data behind. Returns the row id. |
 | `readDdOntologyRow(tipo)` | Read one raw node's columns by `tipo` (uncached probe for the parser). |
-| `updateDdOntologyColumns(tipo, values)` | Partial column update with INSERT fallback on 0 rows (the PHP `update()` upsert, the sync-order path). |
+| `updateDdOntologyColumns(tipo, values)` | Partial column update with an INSERT fallback on 0 rows — the sync-order path. |
 | `deleteDdOntologyNode(tipo)` | Delete one node. |
 | `searchDdOntology(values, order?, limit?)` | Filtered node search (scalar `=` or `{operator, value}` over an operator allowlist); returns matching tipos. |
 | `getActiveTlds()` / `deleteTldNodes(tld)` | The installed-TLD set and per-TLD delete (`safeTld`-gated). |
 | `createBackupTable(tlds)` / `restoreFromBackupTable(tlds)` / `dropBackupTable()` | The `dd_ontology_bk` backup protocol that is the rollback for a destructive regenerate. |
 
-Every write fans out `clearOntologyDerivedCaches()` (the single invalidation
-chokepoint in `src/core/ontology/cache_invalidation.ts`) so no reader observes a
-stale node. The term fuzzy/exact search primitives (`search_fuzzy_term` /
-`search_exact_term`) are **ledgered as not yet ported** — see the module header and
-[STATUS.md](../../../rewrite/STATUS.md).
+Every write fans out `clearOntologyDerivedCaches()` — the single invalidation
+chokepoint, in `src/core/ontology/cache_invalidation.ts` — so no reader observes a
+stale node.
 
 ### Time Machine I/O (`time_machine.ts`)
 
@@ -252,9 +244,9 @@ column holds the **source** section — never filter TM by `section_tipo='dd15'`
 | --- | --- |
 | `readTimeMachineRow(tmRowId)` | Read one TM row by its primary key (the dd15 `section_id`). |
 | `readTimeMachineHistory(sourceSectionTipo, sourceSectionId, componentTipo, limit?)` | Change history of one component on one source record, newest first. |
-| `recordTimeMachine(entry, timestamp)` | Append one audit row for a component data change (PHP `tm_record::create` → `tm_db_manager::create`); skipped for excluded sections and non-positive ids. Called by the save/delete pipeline. |
-| `TimeMachineWriteHook` / `TimeMachineEntry` | The hook contract the save pipeline honours so TM history cannot be silently dropped. |
-| `nowDbTimestamp()` | Postgres-style timestamp for TM rows (PHP `dd_date::get_timestamp_now_for_db`). |
+| `recordTimeMachine(entry, timestamp)` | Append one audit row for a component data change; skipped for excluded sections and non-positive ids. Called by the save/delete pipeline. |
+| `TimeMachineWriteHook` / `TimeMachineEntry` | The hook contract the save pipeline honours so Time Machine history cannot be silently dropped. |
+| `nowDbTimestamp()` | The Postgres-style timestamp stamped on a Time Machine row. |
 | `TIME_MACHINE_SECTION_TIPO` (`'dd15'`) / `TM_EXCLUDED_SECTIONS` | The virtual section tipo and the excluded-section set. |
 
 ### Schema assets (`db_assets.ts`)
@@ -268,10 +260,9 @@ column holds the **source** section — never filter TM by `section_tipo='dd15'`
 | `recreateDbAssets()` | The full sequence: extensions → constraints → functions → indexes → maintenance. |
 | `optimizeTables(tables)` | Per validated table, `REINDEX TABLE CONCURRENTLY` then `VACUUM ANALYZE`. |
 
-`db_pg_definitions.json` is the vendored 1:1 conversion of the PHP
-`db_pg_definitions.php` arrays (`ar_extensions`, `ar_function`, `ar_constraint`,
-`ar_index`, `ar_maintenance`); `db_assets.ts` consumes them so the schema extras
-are declared in one place shared conceptually with the PHP install.
+`db_pg_definitions.json` declares the extensions, functions, constraints, indexes
+and maintenance sentences; `db_assets.ts` consumes it, so every schema extra is
+declared in exactly one place.
 
 ## How it fits with the rest of Dédalo
 

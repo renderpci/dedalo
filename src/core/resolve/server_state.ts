@@ -22,6 +22,15 @@ export interface ServerState {
 	/** Runtime menu skip tipos; null = the static config defaults. */
 	menu_skip_tipos: string[] | null;
 	/**
+	 * Runtime media access mode override (the TS-native equivalent of PHP's
+	 * DEDALO_MEDIA_ACCESS_MODE_CUSTOM), written by the root-only media_control widget.
+	 * It lives HERE and not in `.env` because `../private/.env` is append-only, so a
+	 * UI-settable value cannot go there. `null` = no override → the .env value wins.
+	 * `false` = protection explicitly OFF, which is NOT the same as "no override".
+	 * Resolved by core/media/protection.ts `resolveMediaAccessMode()`.
+	 */
+	media_access_mode?: 'private' | 'publication' | false | null;
+	/**
 	 * TS-native install lifecycle (DEC-19; the TS equivalent of PHP's
 	 * state.install_status). Absent/'unconfigured' on a fresh machine →
 	 * 'configured' after persist_config writes .env → 'sealed' after
@@ -42,6 +51,7 @@ const DEFAULT_STATE: ServerState = {
 	areas_deny: null,
 	areas_allow: null,
 	menu_skip_tipos: null,
+	media_access_mode: null,
 };
 
 /** The EFFECTIVE deny list: runtime override, else the static config value. */

@@ -21,7 +21,7 @@ Key behaviours to know:
 
 ### Server
 
-`tools/tool_import_files/server/index.ts` — per `rewrite/STATUS.md`, this module handles **all name-modes** (default/enumerate/named/match) with "no deny-loudly remains" for the modes it implements; one piece is honestly ledgered (see below). The orchestrator is `import_files`; the rest are helpers it calls (some exposed as API actions, some internal).
+`tools/tool_import_files/server/index.ts` handles **all name-modes** (default/enumerate/named/match); one piece is honestly ledgered (see below). The orchestrator is `import_files`; the rest are helpers it calls (some exposed as API actions, some internal).
 
 `import_files` flow, per uploaded file:
 
@@ -36,7 +36,7 @@ Key behaviours to know:
 5. **Write the file + the data.** The media component is instantiated at the requested quality (`custom_target_quality` or original), the file is ingested through the shared upload pipeline (`processUploadedFile`, `src/core/media/ingest/process_uploaded_file.ts` — the same pipeline every media tool uses to build the standard qualities). The `ddo_map` roles are then applied: filename (`target_filename`, optionally `only_basename`), metadata date (`target_date`), and form inputs (`input_component`).
 6. **Report.** Returns `{result, msg, errors, time, memory}` with an imported-of-total count.
 
-`file_processor` is gated (SEC-053 equivalent) via `getFileProcessor` (`import_files_match.ts`) — an **allowlist of registered named processors**. ⬜ **Gap:** per the module's own header comment, "none ported yet" — the PHP oracle's shipped example (`script_files/numisdata/crop_50.php`, split an image at 50%) has no TS equivalent registered, so `file_processor` fails closed (deny-loudly) for every processor name today, not merely for unregistered ones.
+`file_processor` is gated via `getFileProcessor` (`import_files_match.ts`) — an **allowlist of registered named processors**, populated by calling `registerFileProcessor(name, fn)`. No processor is registered in production today (only a test registers one, for its own gate check), so `file_processor` fails closed — deny-loudly — for every processor name.
 
 The match helpers are also API actions:
 

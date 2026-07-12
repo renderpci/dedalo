@@ -93,10 +93,10 @@
 - `original_normalized_name` — the deterministic on-disk name of the original-quality file (keeps the source extension).
 - `original_upload_date` — a Dédalo date object (`dd_date`) recording when the original was bound.
 
-`component_svg` is **non-translatable** (`translatable:false`); the constructor forces `lang = lg-nolan` for every instance. (Among the media components only `component_pdf` can be translatable.)
+`component_svg` is **non-translatable** (`translatable:false`); every instance resolves to `lang = lg-nolan`. (Among the media components only `component_pdf` can be translatable.)
 
 !!! note "files_info is reconstructed, not stored"
-    The live picture of the renderable files is **not** kept in the descriptor — it is rebuilt on demand by `get_files_info()`, which scans the disk per quality and per allowed extension. Each resolved file is a `files_info` object:
+    The live picture of the renderable files is **not** kept in the descriptor — it is rebuilt on demand by `scanFilesInfo()` (`src/core/media/files_info.ts`), which scans the disk per quality and per allowed extension. Each resolved file is a `files_info` object:
 
     ```json
     {
@@ -112,7 +112,7 @@
 
     For an external link (`external_source`, see below) `scanFilesInfo()` returns a synthetic item with `external:true` and `file_path` set to the remote URL — the scanner already accepts an `externalSource` override for any media type. The `files_info` list is what travels to the client inside `data.entries[0].files_info`; the client picks the entry whose `quality` matches the instance quality.
 
-**Naming and storage (deterministic).** The on-disk filename is `id . '.' . extension`, where the id is the component identifier `{component_tipo}_{section_tipo}_{section_id}` (no `_lang` suffix because SVG is non-translatable) and the extension is `svg` (`DEDALO_SVG_EXTENSION`), built by `buildMediaIdentifier()` (`src/core/media/path.ts`). The directory is
+**Naming and storage (deterministic).** The on-disk filename is `<id>.<extension>`, where the id is the component identifier `{component_tipo}_{section_tipo}_{section_id}` (no `_lang` suffix because SVG is non-translatable) and the extension is `svg` (`DEDALO_SVG_EXTENSION`), built by `buildMediaIdentifier()` (`src/core/media/path.ts`). The directory is
 
 ```text
 DEDALO_MEDIA_PATH + folder + initial_media_path + '/' + quality + additional_path
@@ -122,7 +122,7 @@ computed by `buildMediaLocation()` (same module). `folder` is `DEDALO_SVG_FOLDER
 
 ## Ontology instantiation
 
-A `component_svg` is created as an ontology node whose `model` is `component_svg`. Its `parent` is the section (or grouper) it belongs to, and its `section_tipo` wires it into that section. Because it is non-translatable, the node sets `translatable: false`; the component reads the label and flags in `load_structure_data()` at construction and forces `lg-nolan`.
+A `component_svg` is created as an ontology node whose `model` is `component_svg`. Its `parent` is the section (or grouper) it belongs to, and its `section_tipo` wires it into that section. Because it is non-translatable, the node sets `translatable: false`; the label and flags are read from the ontology node and the working lang is forced to `lg-nolan`.
 
 Node definition (shape, taken from a real instance — `rsc855` *Vectorial* in section `rsc302`):
 
@@ -151,7 +151,7 @@ Realistic `properties` block (the one shipped with the sample instance), folding
 }
 ```
 
-`section_tipo` / `parent` tell the section which `media` column owns this component's data. The component is **not** the database writer: the file bytes are placed on disk by the upload flow, and the descriptor is persisted through `section_record->save_component_data()` when the section saves.
+`section_tipo` / `parent` tell the section which `media` column owns this component's data. The component is **not** the database writer: the file bytes are placed on disk by the upload flow, and the descriptor is persisted through `saveComponentData()` (`src/core/section/record/save_component.ts`) when the section saves.
 
 ## Properties & options
 
@@ -160,12 +160,12 @@ All properties are optional and live in the ontology node `properties` JSON (the
 ### additional_path
 
 - **Values:** a component `tipo` (string) whose resolved value is appended to the media path, e.g. `"rsc33"`.
-- **Effect:** in PHP, the referenced sibling component is instantiated, its value trimmed and slash-normalized, and the result appended after `quality` in both the filesystem path and the URL. `buildMediaLocation()` (`src/core/media/path.ts`) already accepts a pre-resolved `additionalPathOverride`, and `svgOverlayLocation()` (`src/core/media/svg_overlay.ts`) shows the intended call shape — but `resolveMediaPathOptions()` (`src/core/media/ontology_path.ts`) does **not yet** read a sibling component's value into it. Today the TS path builder for SVG only honours `max_items_folder`. Ledgered gap.
+- **Effect:** the intended behavior instantiates the referenced sibling component, trims and slash-normalizes its value, and appends the result after `quality` in both the filesystem path and the URL. `buildMediaLocation()` (`src/core/media/path.ts`) already accepts a pre-resolved `additionalPathOverride`, and `svgOverlayLocation()` (`src/core/media/svg_overlay.ts`) shows the intended call shape — but `resolveMediaPathOptions()` (`src/core/media/ontology_path.ts`) does **not yet** read a sibling component's value into it. Today the path builder for SVG only honours `max_items_folder`. Ledgered gap.
 
 ### max_items_folder
 
 - **Values:** integer (commonly `1000`).
-- **Effect:** the fallback used **when `additional_path` is not set**. Files are bucketed into numbered subfolders of at most `max_items_folder` items: `additional_path = '/' . max_items_folder * floor(section_id / max_items_folder)` (e.g. section 1 -> `/0`, section 1500 -> `/1000`). Ported as `additionalPath()` (`src/core/media/path.ts`), fed by `resolveMediaPathOptions()`.
+- **Effect:** the fallback used **when `additional_path` is not set**. Files are bucketed into numbered subfolders of at most `max_items_folder` items: the appended path is `/` followed by `max_items_folder * floor(section_id / max_items_folder)` (e.g. section 1 -> `/0`, section 1500 -> `/1000`). Built by `additionalPath()` (`src/core/media/path.ts`), fed by `resolveMediaPathOptions()`.
 
 ### initial_media_path *(section property)*
 
@@ -198,7 +198,7 @@ Views are selected from `context.view` (default `default`) and dispatched by the
 Modes:
 
 - **edit** — read/write a real record; shows the current default-quality SVG and the upload UI; an empty value renders the upload-trigger fallback image.
-- **list / tm** — read-only listing; `list` and `tm` share the same render. `get_list_value()` produces a reduced descriptor keeping only the default and thumb qualities; in `tm` (Time Machine) `get_url()` resolves the last deleted file under the `/deleted` directory.
+- **list / tm** — read-only listing; `list` and `tm` share the same render. The list value is a reduced descriptor keeping only the default and thumb qualities; in `tm` (Time Machine) the URL resolves the last deleted file under the `/deleted` directory.
 - **search** — emits an SQO filter input (plain text); no media is uploaded or rendered.
 
 DOM (edit / default): `wrapper_component component_svg <tipo> <mode> view_default media_wrapper` -> `label`, `buttons_container` (tools + optional full-screen button), `content_data media_content_data` -> `content_value media_content_value` -> `image_container` -> `img.image.svg_element`.
@@ -221,10 +221,10 @@ Importing the descriptor records the metadata; the actual `.svg` bytes must alre
 
 ## Notes
 
-- **Qualities / versions.** `mediaTypeOf('component_svg')` (`src/core/concepts/media.ts`, backed by `config.media.svg`) returns `qualities: ["original","web"]`, `defaultQuality: "web"`, `originalQuality: "original"`. **Behavioral gap vs PHP:** PHP's base always adds a raster `thumb` quality (a JPG rasterized from the default-quality SVG via ImageMagick, density 150, antialias) for list/mini views; in the TS server `mediaTypeOf('component_svg').hasThumb` is `false` and `regenerateSvg()` (`src/core/media/processing.ts`) only copies the `web` quality — **no thumb is built for SVG**. The client's list/mini rendering tolerates this by falling back to the default-quality SVG itself when no thumb exists, so the component still renders, but list views pay the cost of loading the (small, but not-raster) SVG instead of a pre-rasterized thumb. The original `.svg` is preserved byte-for-byte under the `original` folder; the `web` quality is normally the same SVG (`copyToQuality()`).
-- **Inline content.** `getFileContent()`-equivalent inline embedding (raw SVG XML for DOM manipulation rather than `<img>` reference) and `get_url_from_locator()` are not directly ported as named functions; `baseSvgUrl()` (`src/core/media/svg_overlay.ts`) resolves the client-facing overlay URL for the related `component_image` use case. The plain-SVG inline-content read path should be verified against `src/core/section/read.ts` before relying on it.
+- **Qualities / versions.** `mediaTypeOf('component_svg')` (`src/core/concepts/media.ts`, backed by `config.media.svg`) returns `qualities: ["original","web"]`, `defaultQuality: "web"`, `originalQuality: "original"`. **No raster thumbnail is built for SVG:** the other four media models always add a rasterized `thumb` quality (a JPG rasterized from the default-quality source, via ImageMagick, density 150, antialias) for list/mini views, but `mediaTypeOf('component_svg').hasThumb` is `false` and `regenerateSvg()` (`src/core/media/processing.ts`) only copies the `web` quality. The client's list/mini rendering tolerates this by falling back to the default-quality SVG itself when no thumb exists, so the component still renders, but list views pay the cost of loading the (small, but not-raster) SVG instead of a pre-rasterized thumb. The original `.svg` is preserved byte-for-byte under the `original` folder; the `web` quality is normally the same SVG (`copyToQuality()`).
+- **Inline content.** Inline embedding (returning the raw SVG XML for DOM manipulation rather than an `<img>` reference), and resolving a URL straight from a locator, have no named equivalents in this checkout; `baseSvgUrl()` (`src/core/media/svg_overlay.ts`) resolves the client-facing overlay URL for the related `component_image` use case. The plain-SVG inline-content read path should be verified against `src/core/section/read.ts` before relying on it.
 - **Upload flow.** The multipart branch of the API dispatch (`src/server.ts`) hands off to `handleMediaUpload()` (`src/core/media/ingest/upload_endpoint.ts`, session + CSRF, chunked join + re-sniff) -> `tool_upload.process_uploaded_file` (`tools/tool_upload/server/index.ts`, write permission ≥ 2) -> `addFile()` (`src/core/media/ingest/add_file.ts`, confines + validates + moves into the `original` tier) -> `processUploadedFile()` -> `regenerateSvg()` (`src/core/media/processing.ts`, builds the `web` copy only — see the thumb gap above).
-- **Access control.** PHP guards files with `media_protection` (modes via `DEDALO_MEDIA_ACCESS_MODE`: `false` / `private` / `publication`): a daily-rotated `dedalo_media_auth` cookie for logged-in users, `.publication/pub/{section_tipo}_{section_id}` markers for anonymous publication access, enforced fail-closed at the web server. The TS server serves media through a dev-only session-gated route instead (`src/server.ts`, any authenticated TS session, traversal-guarded, fail-closed 404) — production-grade marker/cookie media protection is a separate subsystem, out of scope for the media rebuild (see the *dedalo-media-protection* skill).
+- **Access control.** Media files are guarded by marker-based access control enforced by the web server itself (`src/core/media/protection.ts`): a daily-rotated `dedalo_media_auth` cookie grants a logged-in user unrestricted access via a zero-byte marker file, and an anonymous user may read only the published-quality files of published records via `.publication/pub/{section_tipo}_{section_id}` markers (written by the diffusion engine, `src/diffusion/targets/mediastore/media_index.ts`). Every failure path denies as a 404, never a 403, so the existence of unpublished media is never disclosed. A separate route in `src/server.ts` applies session-only gating with no per-record ACL — it exists purely as an opt-in development convenience (`MEDIA_DEV_ROUTE_ENABLED`, off by default) and must never be enabled in production. See the *dedalo-media-protection* skill.
 - **Observers / observables.** No client `events_subscription.js` ships for this component; observer/observable wiring, when needed, is configured in the ontology `properties` like any other component (see the index page *Observers and observables* section) — client-side, unchanged.
 - **Security.** `assertValidQuality()` (`src/core/concepts/media.ts`, SEC-065 strengthened — charset **and** ladder membership) confines the client-supplied quality before it reaches any filesystem path or URL, applied through the single `assertInsideMediaRoot()` chokepoint (`src/core/media/path.ts`).
 - **Related components:** [component_image](component_image.md), component_av, component_3d, component_pdf, [component_iri](component_iri.md) (external_source source), [component_portal](component_portal.md), [component_select](component_select.md).

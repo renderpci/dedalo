@@ -25,7 +25,7 @@ Dédalo version
   works with zero edits. 228 tests across 16 suites; oracle spot-check against
   old-engine-published rows. Documentation:
   [diffusion/native_engine.md](./diffusion/native_engine.md); spec
-  `engineering/DIFFUSION_SPEC.md`; ledger `rewrite/STATUS.md` → *Diffusion rebuild*.
+  `engineering/DIFFUSION_SPEC.md`.
 - **Staged cutover levers** — `DEDALO_DIFFUSION_NATIVE` (flips the
   byte-identical client from the old engine to the main API) and
   `DEDALO_DIFFUSION_NATIVE_ELEMENTS` (per-element routing); native in-process
@@ -33,7 +33,7 @@ Dédalo version
   fallback.
 
 ### Changed
-- The legacy PHP + external-engine diffusion documentation was **removed**: the
+- The legacy pre-rewrite + external-engine diffusion documentation was **removed**: the
   TS server is a new version built from scratch, and its docs describe only the
   native engine. Deleted pages: `diffusion/dd_diffusion_api_and_bun.md`,
   `diffusion/engine_internals.md`, `diffusion/diffusion_config_properties.md`,
@@ -60,18 +60,17 @@ Dédalo version
   - See `docs/development/breaking_change_detection.md` for full documentation
 
 ### CI/CD
-- New workflow steps in `.github/workflows/phpunit.yml`:
+- New workflow steps in a pre-rewrite CI workflow file:
   - Contract tests for API response stability
-  - Signature checking for PHP class/method changes
+  - Signature checking for class/method changes
   - Ontology checking for data model changes
 - Added `.github/pull_request_template.md` with breaking change checklist
 
-> **TS/Bun rewrite note.** The entry above describes the PHP-server-era CI
-> tooling (`dev/signature_tracker/`, `dev/ontology_tracker/`,
-> `.github/workflows/phpunit.yml`) and predates this repository's
-> TypeScript/Bun server. That tooling is not present here. The equivalent
-> breaking-change gate for the rewrite is the differential/unit test harness
-> under `test/parity/` and `test/unit/` (run via `bun test`), which diffs the
-> TS server's behavior against the live PHP server for every ported action —
-> see `rewrite/STATUS.md` for current coverage.
+> **TS/Bun rewrite note.** The entry above describes pre-rewrite-era CI
+> tooling (`dev/signature_tracker/`, `dev/ontology_tracker/`, and a legacy CI
+> workflow file) and predates this repository's TypeScript/Bun server. That
+> tooling is not present here. The equivalent breaking-change gate for the
+> rewrite is the frozen-fixture and unit test harness under `test/parity/`
+> and `test/unit/` (run via `bun test`) described in
+> `docs/development/breaking_change_detection.md`.
 

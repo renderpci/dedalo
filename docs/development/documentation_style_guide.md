@@ -26,6 +26,18 @@ consistent terminology, accurate examples, and clear, native English.
    code snippet, a tipo, or a small table.
 6. **Stable identifiers.** Code identifiers, ontology `tipo`s, class/method names, file paths,
    constants and config keys are reproduced **verbatim**. Never "correct" them.
+7. **Document the engine as it is.** This manual describes the *current* engine, and nothing else.
+   The v7 server was rebuilt from a previous engine, and that history has exactly two homes: the
+   [rewrite narrative](../rewrite.md), and the two v6-upgrade pages — where the old configuration
+   files are named because they are the *input* you are converting. Anywhere else, describe what
+   the code does today. A design is never justified by comparison to a system the reader has never
+   heard of; write the statement, not the contrast. **This is mechanically enforced** by
+   `test/unit/docs_current_engine_tripwire.test.ts`, which also fails on a link into the
+   gitignored internal-process directory, or any link that escapes `docs/`.
+8. **Never document a feature the engine does not have.** If you find a page describing something
+   that does not exist in `src/`, delete the section — a manual that promises an absent feature is
+   worse than silence. If you cannot tell, say so in your PR rather than writing a `TODO` into the
+   page.
 
 ## Toolchain
 
@@ -76,8 +88,8 @@ Rules:
 ## Voice and terminology
 
 Write in plain, native English. Common ESL fixes: *"is build on"* → *"is built on"*;
-*"Dédalo use"* → *"Dédalo uses"*; *"his data"* (for an object) → *"its data"*; *"develop with PHP"*
-→ *"developed in PHP"*; *"do a request"* → *"make a request"*.
+*"Dédalo use"* → *"Dédalo uses"*; *"his data"* (for an object) → *"its data"*; *"do a request"*
+→ *"make a request"*.
 
 Use the canonical spelling and casing for Dédalo terms — they are defined once in the
 [Glossary](../core/glossary.md), link there rather than re-defining:
@@ -110,7 +122,7 @@ the few intentionally narrative origin pages.
 
 ## Code, JSON and examples
 
-- Always tag the fence language: `json`, `ts`, `js`, `sql`, `shell`, `bash`, `mermaid` (`php` only when quoting the PHP oracle).
+- Always tag the fence language: `json`, `ts`, `js`, `sql`, `shell`, `bash`, `dotenv`, `nginx`, `mermaid`.
 - **Examples must be real and correct.** Verify snippets against the code. Copy a real shape from
   the codebase rather than hand-writing one. Watch for typos in example code itself — e.g.
   `{ a : 1 ]` instead of `{ a : 1 }` is a bug to fix.

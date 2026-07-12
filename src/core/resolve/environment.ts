@@ -18,6 +18,7 @@
 import { config } from '../../config/config.ts';
 import { readEnv } from '../../config/env.ts';
 import { sql } from '../db/postgres.ts';
+import { resolveMediaAccessMode } from '../media/protection.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import type { Principal } from '../security/permissions.ts';
@@ -215,8 +216,12 @@ export async function buildPageGlobals(
 		dedalo_av_quality_default: config.media.av.defaultQuality,
 		dedalo_quality_thumb: config.media.thumb.quality,
 		tag_id: null,
-		// PHP: media_protection::get_mode()!==false ? 1 : 0
-		dedalo_protect_media_files: config.features.mediaAccessMode !== false ? 1 : 0,
+		// PHP: media_protection::get_mode()!==false ? 1 : 0. Resolved through the media
+		// protection module, NOT read straight off the frozen catalog: the root user can
+		// change the mode at runtime from the media_control widget (ts_state.json), and
+		// this Bun process lives for weeks — the catalog value would stay stale until a
+		// restart and the client would advertise the wrong posture.
+		dedalo_protect_media_files: resolveMediaAccessMode() !== false ? 1 : 0,
 		DEDALO_NOTIFICATIONS: config.features.notifications ? 1 : 0,
 		ip_api: config.features.ipApi,
 		fallback_image: '/dedalo/core/themes/default/default.svg',

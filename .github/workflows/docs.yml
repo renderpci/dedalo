@@ -1,0 +1,64 @@
+# Documentation site gate — HOSTED TIER ONLY (engineering/CI.md).
+#
+# Builds the MkDocs site (mkdocs.yml) with --strict, which promotes MkDocs warnings to
+# ERRORS. That is the whole point: a renamed or deleted page that leaves a dangling link
+# turns the build RED here instead of shipping a 404 to dedalo.dev. The 2026-07-12 PHP
+# purge deleted and renamed ~10 pages across a 240-page manual; without this gate the
+# broken inbound links would have been found by readers, months later.
+#
+# PUBLIC-REPO POSTURE: renderpci/dedalo is PUBLIC, so no job in this directory may target
+# the self-hosted runner (a fork PR would be RCE on the data host). This job is
+# ubuntu-latest and needs no secrets, no database, and no runtime — it is pure Python.
+# Rule 5 of test/unit/ci_workflow_tripwire.test.ts enforces that.
+#
+# THIS JOB RUNS NO BUN STEP, DELIBERATELY. The docs CONTENT gate (no PHP, no dead
+# rewrite/ links, every internal link resolves) is test/unit/docs_current_engine_tripwire.test.ts,
+# which is DB-less and therefore rides in scripts/ci/hermetic.sh — already run by ci.yml.
+# Keeping this workflow pure-Python means it trips none of the runtime-pin rules.
+# (Do not name the Bun setup action in this file, even in a comment: the tripwire's
+# rule-1 check is a plain substring match on the whole file, so a mention reads as a use.
+# That over-match is FAIL-CLOSED and correct — work with it, don't weaken it.)
+#
+# Split of duties:
+#   docs.yml (here)  — does the site BUILD, and do all links RESOLVE?  (mkdocs --strict)
+#   hermetic.sh      — is the manual free of PHP and dead rewrite/ links? (bun test)
+name: docs
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - '.github/workflows/docs.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: docs/requirements.txt
+
+      # Pinned toolchain — the local build and this one cannot drift.
+      - name: Install the docs toolchain
+        run: pip install -r docs/requirements.txt
+
+      # --strict: warnings become errors. Broken internal links fail the build.
+      - name: Build the site (strict)
+        env:
+          DISABLE_MKDOCS_2_WARNING: 'true'
+        run: mkdocs build --strict

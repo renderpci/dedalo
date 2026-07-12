@@ -100,12 +100,11 @@ an alias that resolves to the same `component_text_area` descriptor
     `src/core/section/record/save_component.ts`). The **transcription-specific**
     behaviour described below — `tags_*` inline-tag resolution/repair, the
     `dd_component_text_area_api` actions, time-code → `component_av` sync,
-    `get_plain_text()`/`get_annotations()` — is **not ported**: no module under
+    plain-text extraction and annotation extraction — is **not ported**: no module under
     `src/` or `tools/` references `tags_index`, `tags_reference`, `tags_notes`,
     `tags_persons`, `tags_draw` or `fix_broken_index_tags` (verified by grep,
     2026-07-05). A plain description field works end-to-end; a transcription
-    node's inline-tag tooling does not yet. See `rewrite/STATUS.md` for the
-    current gap ledger.
+    node's inline-tag tooling does not yet.
 
 ## Data model
 
@@ -127,7 +126,7 @@ Translatable node (the common case):
 }
 ```
 
-Non-translatable node (`is_translatable() === false`) stores a single value under
+A non-translatable node (`translatable: false`) stores a single value under
 `lg-nolan`:
 
 ```json
@@ -161,7 +160,7 @@ Internally each item is the canonical `{id, value, lang}` shape of the
 
 !!! note "Empty values"
     Editor garbage such as `<p></p>`, `<p> </p>` and `<br data-mce-bogus="1">` is
-    treated as empty (`is_empty()`), so an "empty" editor never persists noise.
+    treated as empty, so an "empty" editor never persists noise.
 
 ## Ontology instantiation
 
@@ -220,15 +219,12 @@ transcription node:
 The special string `"self"` in a `tags_*` config means "resolve to the current
 record" (`section_id`/`section_tipo` of the live instance). Each `tags_*` config
 points at the **portal/relation component** (its `tipo`) that actually stores the
-locators for that tag family; `component_text_area` reads them through
-`get_component_tags_data($tag_type)`.
+locators for that tag family, and that is where the tag data is read from.
 
 To make the time-code → player jump and the indexation tooling work, the same
 section should also contain a related `component_av` and (for the
-"original language" selector) a related `component_select` of model
-`component_select_lang`; the component discovers them by ontology
-relation (`get_related_component_av_tipo()`,
-`get_related_component_select_lang()`).
+"original language" selector) a related `component_select_lang`; both are
+discovered through the ontology relation, not configured on this node.
 
 ## Properties & options
 
@@ -277,43 +273,41 @@ the tags. All accept an object with `tipo`, `section_id`, `section_tipo`
 `tags_index`
 
 Thesaurus **indexation** tags (`[index-…]`/`[/index-…]`). Points at the
-`component_portal` that stores the indexed term locators. Drives
-`fix_broken_index_tags()` (auto-repair of broken in/out pairs) and the diffusion
-"global search" term resolution.
+`component_portal` that stores the indexed term locators. Drives the auto-repair of
+broken in/out tag pairs and the diffusion "global search" term resolution.
 
 `tags_draw`
 
 Drawing / image-region indexation tags (`[draw-…]`). Same shape as `tags_index`;
-also repaired by `fix_broken_index_tags()`.
+covered by the same tag auto-repair.
 
 `tags_reference`
 
 Cross-record **reference** tags (`[reference-…]`/`[/reference-…]`). Points at the
-portal storing the reference locators; used by the v5/v6 references HTML diffusion
-parser (`get_diffusion_v5_references_html()`).
+portal storing the reference locators; used by the legacy references-HTML diffusion
+parser.
 
 `tags_notes`
 
 Inline editorial **note/annotation** tags (`[note-…]`). The value is an object
 keyed by the notes `section_tipo`; each entry is a `ddo_map` of
 `{ id, type, section_tipo, component_tipo }` describing the note fields to read
-(`type: "text" | "bool"`). Consumed by `get_annotations()` for diffusion search.
+(`type: "text" | "bool"`). Consumed when annotations are collected for diffusion search.
 
 `tags_persons`
 
 **Speaker / person** tags (`[person-…]`). The value is an object keyed by the
 people `section_tipo`; each entry lists `{ state, section_tipo, component_tipo,
 parent, section_id? }` describing which related person components become available
-as insertable speaker tags. Person labels are built from name/surname
-(`get_tag_person_label()`).
+as insertable speaker tags. Person labels are built from name/surname.
 
 !!! note "Geolocation tags are derived, not configured"
     `[geo-…]` tags exist in the text, but their geometry is **not** stored in the
     text dataset anymore: it lives in a related
     [component_geolocation](component_geolocation.md). The geo toolbar button
     appears automatically when a related `component_geolocation` exists (no
-    `tags_geo` property). `build_geolocation_data()` reconciles the text tags with
-    the geolocation layers.
+    `tags_geo` property), and the text tags are reconciled against the geolocation
+    layers.
 
 ### Observers / observables
 
@@ -357,8 +351,8 @@ export cell.
 - **edit** opens the WYSIWYG editor; the toolbar buttons present depend on the
   `tags_*` properties and on a related `component_av` / `component_geolocation`
   (`button_person`, `button_note`, `reference`, `button_draw`, `button_geo`).
-- **list** / **tm** render a truncated, image-resolved HTML preview (`get_list_value`,
-  `get_fallback_list_value`); `tm` reuses the list renderer.
+- **list** / **tm** render a truncated, image-resolved HTML preview (falling back to
+  another language's value when the current one is empty); `tm` reuses the list renderer.
 - **search** renders one (or more) plain `input[type=text]` fields plus, when the
   component is translatable, the "search in all langs" checkbox. The query is split
   (`q_split = true`). Saves are blocked in `search`/`tm` modes (shared contract).
@@ -388,11 +382,11 @@ with arrays of HTML strings.
 
 The v7 per-item shape is also accepted (`[{"value":"<p>Hello</p>"}]`), as is a
 single flat string (auto-wrapped into `{value}`; `component_text_area` is a
-`VALUE_PROPERTY_MODELS` member in `src/core/tools/import_data.ts`). The TS
+`VALUE_PROPERTY_MODELS` member in `src/core/tools/import_data.ts`). The
 `conformImportData()` normalizes all of these into the v7 `{value}` item shape, so
-a bare title imported into a text area still becomes a valid item — the
-PHP-specific `<p>…</p>` paragraph-wrapping and `\n`/`<br>` → paragraph-break
-normalization has not been independently verified in the TS path. A cell that
+a bare title imported into a text area still becomes a valid item — whether the
+`<p>…</p>` paragraph-wrapping and `\n`/`<br>` → paragraph-break
+normalization is reproduced has not been independently verified in this path. A cell that
 looks like JSON but fails to parse is rejected and reported as
 `IGNORED: JSON decode failed`.
 
@@ -410,41 +404,39 @@ See the full formatted-text import definition in
 Flat display values are produced by the generic cell resolver `resolveCellValue()`
 (`src/core/resolve/relation_list.ts`), consumed by
 `tools/tool_export/server/tool_export.ts`, the same path every literal component
-exports through. PHP's per-model export refinements — the atoms contract emitting
-one atom per non-empty item, on-the-fly inline image tag resolution
-(`TR::add_tag_img_on_the_fly`), the `is_fallback` flag — are not independently
-verified in the TS path; the `indexation_list` legacy grid mode has no TS
-equivalent (not ported).
+exports through. Finer-grained export refinements — an atoms contract emitting
+one atom per non-empty item, on-the-fly inline image tag resolution, an
+`is_fallback` flag — are not independently
+verified in this path; the legacy `indexation_list` grid mode has no
+equivalent here (not implemented).
 
 See [Exporting data](../exporting_data.md).
 
 ## Notes
 
-- **TS model.** There is no class hierarchy in the TS server: `component_text_area`
+- **Model.** There is no class hierarchy: `component_text_area`
   is a descriptor (`src/core/components/component_text_area/descriptor.ts`,
   `column: 'string'`, `classSupportsTranslation: true`) resolved by the same
   generic engines as [component_input_text](component_input_text.md) —
   `src/core/resolve/component_data.ts` (read),
   `src/core/section/record/save_component.ts` (save). See
-  [base classes](base_classes.md) for the PHP-era inheritance picture this
-  replaces.
-- **Save sanitization — gap.** PHP's `save()` runs `sanitize_text()` over every
-  value (SEC-034 stored-XSS hardening) before persisting. **Not ported**: no
-  equivalent sanitizer runs in the TS save path (verified by grep,
-  `rewrite/STATUS.md` gap).
-- **Tag repair — not ported.** `fix_broken_index_tags()`,
-  `delete_tag_from_all_langs()` and the whole `tags_*` reconciliation layer have
-  no TS equivalent yet.
-- **Plain text — not ported.** `get_plain_text()` (strip tags/HTML for
-  publication search) has no TS equivalent.
-- **API actions — not ported.** The PHP `dd_component_text_area_api`
-  (`delete_tag`, `get_tags_info`) is not registered in
+  [component model descriptors](base_classes.md) for the descriptor model.
+- **Save sanitization — gap.** No HTML sanitizer (the stored-XSS hardening step
+  tracked as SEC-034) runs over a value before it is persisted: no such sanitizer
+  runs in the save path (verified by grep).
+- **Tag repair — not ported.** Auto-repair of broken inline in/out tag pairs,
+  deleting a tag across every language, and the whole `tags_*` reconciliation layer
+  have no TS equivalent yet.
+- **Plain text — not ported.** Stripping tags/HTML down to a plain-text body for
+  publication search has no TS equivalent.
+- **API actions — not implemented.** The `dd_component_text_area_api` actions
+  (`delete_tag`, `get_tags_info`) are not registered in
   `src/core/api/dispatch.ts`.
 - **Default tools.** Indexation/transcription tooling (`tool_indexation`,
   `tool_subtitles`, `tool_tc`, `tool_tr_print`) plus the shared `tool_lang`,
   `tool_lang_multi`, `tool_propagate_component_data` and `tool_time_machine` are
   read-only ontology-driven context; whether the underlying tools themselves are
-  implemented server-side is tracked per-tool in `engineering/TOOLS_SPEC.md`, not here.
+  implemented server-side is tracked per-tool elsewhere, out of scope for this page.
 - **Observer example (AV sync) — not ported.** The `[TC_…]` time-code →
   `component_av` jump relies on the client-side observer wiring plus the
   transcription tag machinery above; since the tag layer is unported, this
@@ -461,7 +453,7 @@ See [Exporting data](../exporting_data.md).
   `[geo-…]` tags.
 - [component_portal](component_portal.md) — the relation component that stores
   the `tags_*` locators.
-- `component_html_text` — same class logic, wider HTML tag set.
-- `component_select` (model `component_select_lang`) — the related
+- `component_html_text` — same text-handling logic, wider HTML tag set.
+- [component_select_lang](component_select_lang.md) — the related
   original-language selector.
 - `component_av` — the audiovisual player synchronised via time-code tags.
