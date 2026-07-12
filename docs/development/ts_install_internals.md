@@ -1,10 +1,10 @@
-# The TS-native install engine (developer reference)
+# The install engine (developer reference)
 
-> See also: [Installing the TypeScript/Bun server (operator guide)](../install/ts_native_install.md) · [Development](index.md) · [Extending Dédalo](extending/index.md)
+> See also: [Installing Dédalo (operator guide)](../install/production.md) · [Development](index.md) · [Extending Dédalo](extending/index.md)
 
-This page documents how the TS-native install works internally (DEC-19). For the
+This page documents how the install engine works internally (DEC-19). For the
 step-by-step **operator** instructions, see the
-[install guide](../install/ts_native_install.md); this page is for developers
+[install guide](../install/production.md); this page is for developers
 working on `src/core/install/` and the install boot path.
 
 ## The engine
@@ -21,7 +21,7 @@ wizard step (`options.action`) to a pure engine function and returns the
 | diagnostics | `init_test.ts`, `server_info.ts` | `init_test.result` is the client progression gate; `server_info` is cosmetic (TS-meaningful facts only — WC-006) |
 | `test_db_connection` | `db_probe.ts` | psql `SELECT 1` on POSTED creds; falls back to the `postgres` DB to tell "missing DB" from "auth wrong" |
 | `test_diffusion_connection` | `db_probe.ts` → `diffusion/api/` facade | one-shot MariaDB probe (facade-only, boundary rule) |
-| `persist_config` | `config_persist.ts` | atomic `.env` write (PHP key names, 0600, backup-on-overwrite, preserve-or-generate secrets) + state |
+| `persist_config` | `config_persist.ts` | atomic `.env` write (0600, backup-on-overwrite, preserve-or-generate secrets) + state |
 | `verify_active_config` | `config_persist.ts` | confirms the RESTARTED process is on the new config |
 | `check_directories` | `directories.ts` | private/sessions/cache/media/backups, write+unlink probe |
 | `install_db_from_default_file` | `db_restore.ts` | empty-DB gate → gunzip → `psql -f` the seed |
@@ -57,8 +57,9 @@ process and needs no restart.
 (`gate.ts`): after `persist_config` the server has restarted OUT of install mode
 but is not yet sealed (`install_status='configured'`), so a mid-install **reload**
 must resume the wizard rather than drop to the login form. `installInProgress()`
-deliberately does NOT fire for `undefined`/`unconfigured` status, so an existing
-PHP-provisioned deployment (which never ran the TS installer) always gets login.
+deliberately does NOT fire for `undefined`/`unconfigured` status, so a deployment
+provisioned by some other route (one that never ran the installer) always gets the
+login form, never the wizard.
 
 ## Pre-auth window
 
@@ -98,8 +99,12 @@ restart crash-loops.
 
 ## Config / paths
 
-- The `.env` is written with **PHP key names** (`env.ts PHP_KEY_ALIASES` resolve
-  them); `DEDALO_SALT_STRING` is written for PHP coexistence but has no TS reader.
+- **Key spellings.** `env.ts` reads each config key by its canonical name and
+  accepts a documented legacy `DEDALO_*` spelling as a fallback, so an
+  administrator can carry an existing `.env` over unchanged; the canonical name
+  always wins when both are set. `DEDALO_SALT_STRING` is generated (or preserved)
+  on write for continuity, but nothing in the server reads it — it is not a
+  password salt and never was (see `src/core/security/password_hash.ts`).
 - `DEDALO_PRIVATE_DIR` relocates the whole private tree — both `env.ts` (read)
   and the installer (write) honor it. `installPrivateDir()` (`paths.ts`) adds a
   write-only test override `DEDALO_INSTALL_PRIVATE_DIR`.
@@ -110,8 +115,7 @@ restart crash-loops.
 
 ## Seed
 
-`install/db/dedalo_install.pgsql.gz` (byte-identical to the PHP
-`dedalo7_install.pgsql.gz`): full matrix/`dd_ontology` schema, extensions
+`install/db/dedalo_install.pgsql.gz`: full matrix/`dd_ontology` schema, extensions
 (`btree_gin`/`pg_trgm`/`unaccent`), functions/indexes, the populated core
 ontology (~3,500 `dd_ontology` rows), the root user (empty password), the default
 project and Admin/User profiles. Hierarchy import files are vendored under

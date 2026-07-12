@@ -1,12 +1,12 @@
 # Dédalo code documentation standard
 
 This document defines how to write doc-comments and inline comments in Dédalo's **own**
-TypeScript server code (`src/`, `tools/*/server/`, `diffusion/api/v1/`) and the copied
+TypeScript server code (`src/`, `tools/*/server/`, `diffusion/api/v1/`) and the
 JavaScript client (`client/dedalo/`). It codifies the house style that already exists in the
 best-documented files so that documentation is **uniform, accurate, and useful to developers**.
 
-> Scope: Dédalo source only. Do **not** apply this to `node_modules/`, `client/dedalo/lib/`, or
-> any bundled third-party library.
+> Scope: Dédalo source only. Do **not** apply this to third-party libraries — neither the
+> installed dependencies under `node_modules/` nor the committed ones under `vendor/`.
 
 ## Guiding principles
 
@@ -28,42 +28,47 @@ best-documented files so that documentation is **uniform, accurate, and useful t
 
 The strict compiler (`tsconfig.json`) already documents *what* a symbol is — the types are in the
 signature. A TS doc-comment therefore focuses almost entirely on *why*: intent, contract, edge
-cases, the security/parity note, and the file/line anchor into the PHP oracle it ports. Do **not**
-restate the type in a `@param` tag — the type annotation is the source of truth, and a `@param`
-that drifts from it is exactly the stale-doc failure principle 2 forbids. Formatting is enforced by
-Biome (`biome.json`); do not hand-format around it.
+cases, and the security/invariant note. Do **not** restate the type in a `@param` tag — the type
+annotation is the source of truth, and a `@param` that drifts from it is exactly the stale-doc
+failure principle 2 forbids. Formatting is enforced by Biome (`biome.json`); do not hand-format
+around it.
 
 ### Module header
 
 Every non-trivial module opens with a `/** … */` block:
 
-- One-line summary naming the module and, in parentheses, the **PHP symbol it ports** (e.g.
-  `PHP core/component_input_text`, `PHP class.common.php:3502`) so the oracle is one grep away.
+- One-line summary naming the module and what it is for.
 - Blank line, then the *why / responsibilities* — prose and/or bullet lists.
 - Where it matters, cite the governing spec section (`spec §4`) and any fault-code the behavior
-  defends (`SEC-016`, `WORKER-01`, `AUTH-05`) — these tie the code to the audit register.
+  defends (`SEC-016`, `AUTH-05`) — these tie the code to the audit register. If the module upholds
+  a **tripwired invariant**, say which one, so the next reader knows the gate exists before they
+  try to "simplify" the code that satisfies it.
+
+A short, declarative module says what it stores and how it behaves:
 
 ```ts
 /**
- * component_input_text — short single-line free text (PHP core/component_input_text).
- * Stores {id,value,lang} items in the `string` matrix column; CLASS-translatable
- * (its data items are lang-filtered on read).
+ * component_input_text — short single-line free text. Stores {id,value,lang}
+ * items in the `string` matrix column; CLASS-translatable (its data items are
+ * lang-filtered on read).
  */
 import type { ComponentModel } from '../types.ts';
 ```
 
-A longer engine module states the invariant it upholds and how it relates to its callers:
+A longer engine module states the invariant it upholds and how it relates to its callers. The
+`WHY THIS EXISTS` block is the house convention for a module whose shape is non-obvious:
 
 ```ts
 /**
- * Request-scoped effective languages (PHP DEDALO_APPLICATION_LANG /
- * DEDALO_DATA_LANG, which PHP defines as per-request constants seeded from the
- * user's session at bootstrap).
+ * Request-scoped effective languages (the current interface + data language).
  *
- * WHY THIS EXISTS (spec §4, plan risk A5.1): Bun is a long-lived process, so
- * the "current language" can NOT be a module-level value the way PHP's
- * per-request constants effectively were — that would bleed one user's language
- * choice into every concurrent request. …
+ * WHY THIS EXISTS (spec §4): Bun is a long-lived process, so the "current
+ * language" can NOT be a module-level value — that would bleed one user's
+ * language choice into every concurrent request. Instead the effective languages
+ * live in an AsyncLocalStorage scope opened once per RQO at the dispatch
+ * chokepoint (dispatchRqo) from the caller's session. Leaf resolvers read them
+ * through the accessors below; outside any scope (unit tests calling resolvers
+ * directly, background jobs) they fall back to the installation defaults. …
  */
 ```
 
@@ -71,7 +76,7 @@ A longer engine module states the invariant it upholds and how it relates to its
 
 - Short description of what the shape represents and when it is populated.
 - A trailing `// comment` on individual fields for the non-obvious ones — meaning, provenance
-  (which PHP field it maps to), and any gotcha.
+  (which matrix column or wire key it maps to), and any gotcha.
 
 ```ts
 /** Per-request state container. Passed explicitly — never stored globally. */
@@ -112,7 +117,7 @@ the TS signature exactly. Prefer prose-plus-signature over redundant tags.
 
 ---
 
-## JavaScript (copied client)
+## JavaScript (the client)
 
 Dédalo JS is browser-side ES modules (no framework). Two type-annotation styles existed in the
 codebase; **the standard is modern JSDoc with brace types**. Migrate legacy `@param type name`
@@ -147,7 +152,7 @@ Preserve and normalize, in this order:
 
 ### Function doc-block
 
-- First line: `FUNCTION_NAME` (UPPERCASE) — kept for grep-ability and parity with PHP.
+- First line: `FUNCTION_NAME` (UPPERCASE) — the established client convention, kept for grep-ability.
 - *What & why* prose.
 - `@param {Type} name - description` — **braces** around the type; hyphen before the description.
 - `@returns {Type} description` — use `@returns` (not `@return`).
@@ -249,6 +254,6 @@ self.tipo = options.tipo // structure tipo of the component, e.g. 'dd345'
 
 - [ ] Doc-only: stripping comments from before/after yields byte-identical code.
 - [ ] Any `@param`/`@returns` (JS) or optional TS JSDoc tag matches the real signature/type.
-- [ ] Copied-client JS keeps brace types, `@returns`, and the AGPL header.
+- [ ] Client JS keeps brace types, `@returns`, and the AGPL header.
 - [ ] `tsc` passes and `bun run lint` (Biome) is clean (TS); JS lints clean.
 - [ ] No new dead code, no Spanish comments.

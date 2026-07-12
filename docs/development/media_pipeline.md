@@ -23,23 +23,11 @@ component models share this machinery —
 [`component_av`](../core/components/component_av.md),
 [`component_pdf`](../core/components/component_pdf.md),
 [`component_3d`](../core/components/component_3d.md) and
-[`component_svg`](../core/components/component_svg.md) (in the PHP reference all
-extended the abstract `component_media_common` base). In the TS server the shared
-machinery lives in the horizontal media engine under `src/core/media/` rather than
-in a class hierarchy — the same code path serves every model, keyed by the type's
-config catalog.
-
-!!! note "Status: ported, with media protection ledgered as a boundary"
-    The TS media subsystem is a rebuild (`engineering/MEDIA_SPEC.md`, tracked in
-    `STATUS.md` "Media rebuild"): the config-driven engine, `files_info` scanner,
-    processing engines (real `ImageMagick`/`ffmpeg`/pdf binaries via `Bun.spawn`),
-    the upload endpoint + ingest and the media tools are all landed and
-    differential-gated. The one boundary that stays PHP / web-server-owned is
-    **media protection** (Stage 6): the marker store, the fixed-name auth cookie
-    and the `.htaccess`/nginx rewrite rules are its own subsystem (see
-    `dedalo-media-protection`); the TS server only *reports* it and serves media
-    behind a session gate on the dev listener. `STATUS.md`'s media-access-control
-    row stays open.
+[`component_svg`](../core/components/component_svg.md). The shared machinery lives
+in the horizontal media engine under `src/core/media/` rather than in a class
+hierarchy — the same code path serves every model, keyed by the type's config
+catalog. The subsystem is defined in `engineering/MEDIA_SPEC.md`, and Stage 6 in
+`engineering/MEDIA_PROTECTION.md`.
 
 The pipeline below is the same for every media type; only the engine called and
 the qualities produced differ. The media engine is the **orchestrator** at every
@@ -49,10 +37,10 @@ work, and [media protection](../core/system/media_protection.md) plus the diffus
 
 !!! info "Formats, qualities and paths are configuration"
     Every quality ladder, extension, folder name, thumbnail dimension and binary
-    path is **config**, not code — keyed under the PHP `DEDALO_*` names in
-    `src/config/config.ts` (`media` domain) and `../private/.env`, with the PHP
-    defaults. Modules never hardcode a quality/extension string; they read the
-    typed accessor (`src/core/concepts/media.ts`). See `engineering/MEDIA_SPEC.md` §3.
+    path is **config**, not code — keyed under the `DEDALO_*` names in
+    `src/config/config.ts` (`media` domain) and set in `../private/.env`. Modules
+    never hardcode a quality/extension string; they read the typed accessor
+    (`src/core/concepts/media.ts`). See `engineering/MEDIA_SPEC.md` §3.
 
 ## The pipeline at a glance
 
@@ -206,8 +194,8 @@ The per-type `regenerate*` / `buildImageVersion` / `buildPdfCover` functions in
 (`resolveOriginalSource`: modified > original > nearest higher quality), writing to
 a temp file and atomically renaming so the `original` is never mutated. The A/V
 quality model is profile-driven: a "quality" maps to one of the ~37 argv recipes
-in `src/core/media/engine/ffmpeg_profiles.ts` (the TS port of the PHP
-`lib/ffmpeg_settings/*.php` files — now data, not `require`d code).
+in `src/core/media/engine/ffmpeg_profiles.ts` — the recipes are **data**, not
+executable code, so a profile can never smuggle a command into the spawn.
 
 [`tool_media_versions`](./tools/reference/tool_media_versions.md) is the operator's
 hands-on view of this stage. It compares the qualities recorded in the record
@@ -263,13 +251,17 @@ is out of scope for the TS rebuild (external network service + credentials; see
 
 One media tree serves two audiences at the same URLs.
 [`media_protection`](../core/system/media_protection.md) (and its
-[configuration](../config/media_protection.md)) generates the web-server gate so
-authorization is a single `stat()` on a zero-byte marker — no application code in
-the file-serving path. **This stage stays PHP / web-server-owned** in the current
-rewrite (its own subsystem with three lockstep enforcement surfaces; the TS server
-only *reports* it and, on the dev listener, session-gates media itself — see the
-status note at the top). The effective mode comes from
-`DEDALO_MEDIA_ACCESS_MODE` (resolved by `get_mode()`):
+[configuration](../config/media_protection.md)) makes authorization a single
+`stat()` on a zero-byte marker, **performed by the web server itself** — Apache or
+Nginx, never a Bun process. That is the whole point of the design: no application
+code sits in the file-serving path, so multi-GB media keeps native `sendfile`,
+Range requests and the H.264 / nginx-mp4 `?start=` clipping handlers, and the gate
+can never break streaming.
+
+`src/core/media/protection.ts` **maintains the artifacts the web server reads**: it
+generates the rule files (`buildHtaccess()` / `buildNginxConf()`, written by
+`writeRuleFiles()`) and owns the `auth/` marker store. The effective mode comes from
+`DEDALO_MEDIA_ACCESS_MODE` (resolved by `resolveMediaAccessMode()`):
 
 | Mode | Logged-in users (rule A) | Anonymous (rule B) |
 | --- | --- | --- |
@@ -278,14 +270,23 @@ status note at the top). The effective mode comes from
 | `'publication'` | ✓ | ✓ — **public qualities only**, when published |
 
 - **Rule A** — logged-in users carry the fixed-name, daily-rotated
-  `dedalo_media_auth` cookie (set by `login::init_cookie_auth()`), matched against
-  a zero-byte marker in `.publication/auth/` (today + yesterday valid). This is
-  PHP-owned and independent of the diffusion engine, so publication failures never
-  lock out editors.
+  `dedalo_media_auth` cookie, minted at login by `initMediaAuthCookie()`
+  (`src/core/media/protection.ts`, called from `src/core/security/auth.ts` and set
+  as a second `Set-Cookie` in `src/server.ts`). Its value must exist as a zero-byte
+  marker in `.publication/auth/` (today + yesterday are valid, which is what makes
+  the rotation seamless). Rule A is engine-owned and independent of publication
+  state, so a diffusion failure can never lock editors out.
 - **Rule B** — anonymous publication access is limited to the allowlisted
-  **public qualities** (`get_public_qualities()`; `original`/`modified` masters are
+  **public qualities** (`getPublicQualities()`; `original`/`modified` masters are
   always refused) and only when a `.publication/pub/{section_tipo}_{section_id}`
   marker exists.
+
+!!! note "Marker-store ownership is exclusive"
+    Under `<media>/.publication/`, the `auth/` markers are written by
+    `protection.ts` **and nothing else**, and the `pub/` + `dbs/` markers by
+    `src/diffusion/targets/mediastore/media_index.ts` **and nothing else**. The two
+    rules never call each other; they stay coupled only through the filename
+    grammar below.
 
 !!! warning "The filename grammar is the contract between Stages 2 and 6"
     Rule B derives the publication key by parsing the **last two underscore tokens**

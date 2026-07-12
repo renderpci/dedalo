@@ -37,7 +37,7 @@ A Dédalo language is not a hard-coded enum — it is a thesaurus record. The la
 
 Throughout the codebase a language is referred to by its **Dédalo lang code**: the prefix `lg-` plus that alpha-3 code — `lg-eng`, `lg-spa`, `lg-cat`, `lg-fra`, `lg-por`, … These codes are the keys used everywhere data is stored or resolved per language.
 
-The TS server resolves between codes, records and names by reading the same `matrix_langs` matrix table (the port of PHP `core/common/class.lang.php`). The language-name and picker resolvers live in `src/core/resolve/lang_names.ts` and `src/core/relations/select_lang.ts`. Useful entry points:
+The server resolves between codes, records and names by reading the `matrix_langs` matrix table. The language-name and picker resolvers live in `src/core/resolve/lang_names.ts` and `src/core/relations/select_lang.ts`. Useful entry points:
 
 | Symbol | Module | Returns |
 | --- | --- | --- |
@@ -45,14 +45,14 @@ The TS server resolves between codes, records and names by reading the same `mat
 | `getAlpha2FromCode('lg-eng')` | `resolve/lang_names.ts` | the fixed ISO 639-1 code the HTML5 `<track>` element expects |
 | `selectLangDatalist(...)` | `relations/select_lang.ts` | the `component_select_lang` option list — one `lg1` record per project language, labeled + sorted |
 
-All of these read the `matrix_langs` table (with the `hierarchy25` term / `hierarchy41` code tipos), the same records the PHP resolver used.
+All of these read the `matrix_langs` table, resolving names through the `hierarchy25` term tipo and codes through the `hierarchy41` code tipo.
 
 !!! note "The `lg-nolan` sentinel"
     `lg-nolan` (`DEDALO_DATA_NOLAN`) is **not** a real `lg1` record — it is the reserved *no language* code for data that is not language-tagged (codes, technical literals, `root`, relations). The resolver returns `null` for it rather than attempting a lookup. See the [glossary](../core/glossary.md#lg-nolan).
 
 ## The language config constants
 
-All language behaviour is configured by the `lang` catalog domain (`core/base/config/catalog/domains/lang.php`); set values in `../private/.env`. The defining constants:
+All language behaviour is configured by the `lang` domain of the typed config catalog (`src/config/config.ts`); set the values in `../private/.env`. The defining keys:
 
 | Constant | Plane | Meaning |
 | --- | --- | --- |
@@ -73,17 +73,17 @@ All language behaviour is configured by the `lang` catalog domain (`core/base/co
 
 ### Request-scoped language resolution
 
-In PHP, `DEDALO_APPLICATION_LANG` and `DEDALO_DATA_LANG` were effectively **per-request constants**, seeded from the user's session at bootstrap. That is safe under a share-nothing process but a cross-user bleed vector in a persistent one. The TS server is a single long-lived Bun process, so the "current language" cannot be a module-level value — it lives in a request-scoped `AsyncLocalStorage` scope (`src/core/resolve/request_lang.ts`):
+The server is a single long-lived Bun process serving many concurrent users, so "the current language" can never be a module-level value — one caller's choice would bleed into every other request. `DEDALO_APPLICATION_LANG` and `DEDALO_DATA_LANG` therefore live in a **request-scoped `AsyncLocalStorage` scope** (`src/core/resolve/request_lang.ts`):
 
 - The dispatch chokepoint (`dispatchRqo`, `src/core/api/dispatch.ts`) opens the scope once per RQO with `runWithRequestLangs({ applicationLang, dataLang }, …)`, seeded from the caller's session row.
 - Leaf resolvers (label lookup, data reads, page globals) read the effective language through `currentApplicationLang()` / `currentDataLang()`.
 - Outside any scope (unit tests calling resolvers directly, background jobs) the accessors fall back to the installation defaults from `config` — so behavior is identical whenever no user override is in effect.
 
-The user's choice is persisted onto the session row by the `change_lang` action (`setSessionLangs()` in `src/core/security/session_store.ts`), the analogue of PHP `change_lang → $_SESSION`, and honors `DEDALO_DATA_LANG_SYNC` (couple the two when the install requests it). See [Runtime & request-scoped context](runtime_and_workers.md#request-scoped-ambient-state-asynclocalstorage) for the shared pattern.
+The user's choice is persisted onto the session row by the `change_lang` action (`setSessionLangs()` in `src/core/security/session_store.ts`), which honors `DEDALO_DATA_LANG_SYNC` (couple the two when the install requests it). See [Runtime & request-scoped context](runtime_and_workers.md#request-scoped-ambient-state-asynclocalstorage) for the shared pattern.
 
 ## Plane 1 — DATA: language lives on the value
 
-Every component is instantiated **with a language** (`get_instance(..., $lang, ...)`, see [Components → Instantiation](../core/components/index.md#instantiation)). What that language *means* depends on the component's `translatable` flag, declared in the ontology node and read at construction. There are three behaviours — they map one-to-one onto the [Components → Translatable property](../core/components/index.md#translatable-property) section.
+Every component is resolved **for a language** (see [Components → Instantiation](../core/components/index.md#instantiation)). What that language *means* depends on the component's `translatable` flag, declared in the ontology node and read when its data is resolved. There are three behaviours — they map one-to-one onto the [Components → Translatable property](../core/components/index.md#translatable-property) section.
 
 ### Translatable components
 
@@ -100,7 +100,7 @@ The default. The component stores **one value per project language**, keyed by `
 An instance in `lg-spa` sees only `El gato Raspa`. The available slots are exactly `DEDALO_PROJECTS_DEFAULT_LANGS`.
 
 !!! note "Fallback when a slot is empty"
-    If the requested language is empty, the string base walks a fallback hierarchy (`component_string_common::get_component_data_fallback()`): **main lang** (`DEDALO_DATA_LANG_DEFAULT`) → **`lg-nolan`** → **every other project language in order**. The first non-empty wins and the resolved items surface as `data.fallback_value` (flagged so the UI can show they are borrowed from another language), never silently overwriting the empty slot.
+    If the requested language is empty, the component data reader (`src/core/resolve/component_data.ts`) walks a fallback hierarchy: **main lang** (`DEDALO_DATA_LANG_DEFAULT`) → **`lg-nolan`** → **every other project language in order**. The first non-empty wins and the resolved items surface as `data.fallback_value` (flagged so the UI can show they are borrowed from another language), never silently overwriting the empty slot.
 
 ### Non-translatable components
 
@@ -164,13 +164,13 @@ Maintaining the parallel per-language values of the DATA plane is the job of two
 - **[`tool_lang`](tools/reference/tool_lang.md)** — side-by-side editing of **one text component of one record**. Left pane: the value in a *source* language (read-only). Right pane: the same component in a *target* language (editable). The cataloguer presses **Automatic translation** (through a configured engine) or **Copy to target** (verbatim). It is wired onto a component through that component's ontology `properties->tool_config->tool_lang`, and surfaces as an inline *Translation* button on the configured text component — only on translatable (or transliterate) components, never on non-translatable ones.
 - **`tool_lang_multi`** — translate one source component into **several target languages at once**, in a single run. Its `automatic_translation` delegates to `tool_lang::automatic_translation()` (with its own defense-in-depth permission gate) and shares the in-browser engine. Listed in the [tools catalog](tools/reference/index.md#language--i18n).
 
-Both expose two engine families: **server** engines (Babel, an Apertium-based service; "Google translator" is declared but not implemented) that run the single `automatic_translation` API action, and a **browser** engine ("Local AI translator", `browser_transformer`) that runs a translation model entirely in a Web Worker with no server round-trip. The server action reads the source language with `get_data_lang(source_lang)`, translates each value, and saves onto a target-language instance with `set_data_lang` + `save` — exactly the DATA-plane mechanism described above. Full details, options table and security gate: [`tool_lang` reference](tools/reference/tool_lang.md).
+Both expose two engine families: **server** engines (Babel, an Apertium-based service; "Google translator" is declared but not implemented) that run the single `automatic_translation` API action, and a **browser** engine ("Local AI translator", `browser_transformer`) that runs a translation model entirely in a Web Worker with no server round-trip. The server action reads the component's items in the **source** language, translates each value, and saves the result into the **target** language's slot, leaving every other slot untouched — exactly the DATA-plane mechanism described above. Full details, options table and security gate: [`tool_lang` reference](tools/reference/tool_lang.md).
 
 ## Worked example: a trilingual *Objects* catalogue
 
 A museum catalogues *Objects* in Spanish, English and Catalan, and wants to publish trilingually.
 
-**1 — Configure the project languages.** Set them in `../private/.env` as key/value entries (the TS server reads its config from there, keeping the PHP `DEDALO_*` concept names):
+**1 — Configure the project languages.** Set them in `../private/.env` as key/value entries (the server reads its config from there):
 
 ```shell
 # project content languages (the per-value slots + component_select_lang options)
@@ -182,8 +182,8 @@ APPLICATION_LANG=lg-eng     # default UI language (DEDALO_APPLICATION_LANG defau
 
 This single change makes the three per-value slots appear on every translatable component and the three choices appear in `component_select_lang` option lists. No table or schema change — languages are data and config.
 
-!!! note "Config surface still consolidating"
-    The TS config catalog (`src/config/config.ts`, `menu` domain) currently surfaces `PROJECTS_DEFAULT_LANGS`, `DATA_LANG`, `APPLICATION_LANG` and `DATA_LANG_SYNC`. The richer PHP lang domain (the `DEDALO_APPLICATION_LANGS` name map, the separate `*_DEFAULT` fallbacks) is the conceptual model; not every constant has a distinct TS env key yet.
+!!! warning "The language keys are mandatory once configured"
+    A configured install **refuses to boot** without `DEDALO_APPLICATION_LANGS` (the code→label map), `DEDALO_PROJECTS_DEFAULT_LANGS` (the code array), `DEDALO_APPLICATION_LANGS_DEFAULT` and `DEDALO_DATA_LANG_DEFAULT`. A missing or malformed value is an error, never a silent default — a server that guessed a language would quietly serve the wrong content. The installer writes all four; see [the install engine](ts_install_internals.md#languages-mandatory).
 
 **2 — Catalogue the Spanish original.** A curator sets the data-language selector to **Spanish** (`DEDALO_DATA_LANG = lg-spa`) and the interface selector to **English** (`DEDALO_APPLICATION_LANG = lg-eng`). They see the field labels in English (resolved from each node's `lg-eng` term key) and type the *Description* ([`component_text_area`](../core/components/component_text_area.md)) in Spanish. The stored value:
 
@@ -204,7 +204,7 @@ The English and Catalan slots are still empty.
 
 Switching the target to **Catalan** and repeating fills the third slot. (To do all targets in one pass, they would use `tool_lang_multi`.) Until a slot is filled, anyone reading that language sees the [fallback](#translatable-components) value (Spanish, then `lg-nolan`, then any other slot) flagged as borrowed.
 
-**4 — Tag the language of a media track.** The object has an audio guide *in Italian*. A `component_select_lang` field on the media record stores a locator into `lg1` for Italian. Because Italian is not in the project's three languages, the picker still shows it (marked `Italian *`) via `get_missing_lang()` so the existing value stays visible — see [`component_select_lang` → Missing / out-of-project languages](../core/components/component_select_lang.md#data-model). The diffusion layer reads `get_value_code()` (`lg-ita`) to set the published track's language.
+**4 — Tag the language of a media track.** The object has an audio guide *in Italian*. A `component_select_lang` field on the media record stores a locator into `lg1` for Italian. Because Italian is not in the project's three languages, the picker still shows it (marked `Italian *`) — the out-of-project guard in `src/core/relations/select_lang.ts` keeps a stored value visible instead of silently dropping it. See [`component_select_lang` → Missing / out-of-project languages](../core/components/component_select_lang.md#data-model). The diffusion layer reads the resolved alpha-3 code (`lg-ita`) to set the published track's language.
 
 **5 — Import/export round-trips preserve all slots.** A CSV re-import of the Description can carry all languages at once, either as a flat v7 array or a lang-keyed object — see [Importing data → Multiple languages](../core/importing_data.md#multiple-languages). Each present language replaces its slot; absent languages are preserved. Export emits one atom per value item in the current language (or the fallback items when empty); transliterables emit every language version — see [Exporting data](../core/exporting_data.md).
 
@@ -229,4 +229,4 @@ Adding a language is configuration plus (sometimes) one data step — never a sc
 - [Menu](../core/ui/menu.md) — the two language selectors (interface and data) in the top bar.
 - [Importing data → Multiple languages](../core/importing_data.md#multiple-languages) · [Exporting data](../core/exporting_data.md) — multi-language round-trips.
 - [Glossary](../core/glossary.md#translatable--lg-nolan--transliterate) — `translatable` / `lg-nolan` / `transliterate` and the [`lg` TLD](../core/glossary.md#tld).
-- Source: `src/config/config.ts` (`menu` lang domain), `src/core/resolve/request_lang.ts` (request-scoped langs), `src/core/resolve/lang_names.ts` + `src/core/relations/select_lang.ts` (the `matrix_langs` resolvers). PHP oracle: `core/base/config/catalog/domains/lang.php`, `core/common/class.lang.php`, `core/component_string_common/class.component_string_common.php`.
+- Source: `src/config/config.ts` (the `lang` config domain), `src/core/resolve/request_lang.ts` (the request-scoped langs), `src/core/resolve/lang_names.ts` + `src/core/relations/select_lang.ts` (the `matrix_langs` resolvers), `src/core/resolve/component_data.ts` (the per-value language filter and the empty-slot fallback chain).
