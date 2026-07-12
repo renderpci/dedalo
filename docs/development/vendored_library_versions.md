@@ -23,8 +23,8 @@ the repo any more. Three sources back that URL:
 
 | Source | What | Where it comes from |
 |---|---|---|
-| **npm** (15) | Normal pinned deps | `bun install` → `node_modules/` |
-| **vendor** (3) | Cannot be packaged | committed under `vendor/` (2.7 MB gzipped) |
+| **npm** (16) | Normal pinned deps | `bun install` → `node_modules/` |
+| **vendor** (2) | Cannot be packaged | committed under `vendor/` — ckeditor + json-view |
 | **fetched** (1) | pdf.js viewer app | `scripts/fetch_client_libs.ts` (postinstall), sha256-pinned |
 
 The lib **id** in the URL is deliberately decoupled from the package name, so
@@ -53,7 +53,7 @@ byte-identical** to what shipped before this migration.
 | geoman | `@geoman-io/leaflet-geoman-free` | 2.19.3 | Was bundled *inside* leaflet's `dist/`; now its own dep. |
 | turf | `@turf/turf` | 7.0.0 | Ditto. |
 | highlightjs | `@highlightjs/cdn-assets` | 11.9.0 | Not `highlight.js` — see below. |
-| svgedit | *(vendor)* | pre-package vintage | See below. |
+| svgedit | `@svgedit/svgcanvas` | 7.4.2 | **Upgraded 2026-07-12** from a vendored ~7.2.x build. See below. |
 | d3 | `d3` | 7.9.0 | The version no longer appears in the URL. |
 | xlsx | `xlsx` (SheetJS tarball URL) | 0.20.3 | See below. |
 | flatpickr | `flatpickr` | 4.6.3 | |
@@ -69,7 +69,30 @@ Two files are not byte-identical to the old copies, both benignly: `highlightjs`
 differs by the build hash in its banner (same 11.9.0 release), and the old `chai`
 was a CDN build where npm ships an equivalent UMD bundle — and it is test-only.
 
-## The four that cannot come from npm
+## svgedit — upgraded off the vendor tree (2026-07-12)
+
+It used to be a 2.0 MB hand-dropped `svgcanvas.js` matching **no published version**
+(2,089,802 bytes — between 7.2.3 and 7.2.4, so a build off an unreleased commit).
+It is now `@svgedit/svgcanvas@7.4.2`: on npm, maintained, 1.4 MB, and CVE-tracked.
+
+Verified as a drop-in in a **real browser**, not by inspection:
+
+- Same default export (`SvgCanvas` constructor), constructed with the exact config
+  `vector_editor.js` passes.
+- **All 29 methods and 3 properties** the editor uses exist on the live instance.
+  (An earlier count of "40 methods" was wrong — 11 of them appear only in
+  commented-out code, e.g. `stage.add()` and `stage.getSegType()`.)
+- Identical add → serialise → read-back round trip: same 467-byte SVG, same layer
+  structure, same child count.
+- **`xlink:href` survives.** This was the real risk: the 7.2.7 changelog says
+  *"prefer href to xlink href"*, and `vector_editor.js:1269` reads
+  `getAttribute('xlink:href')` while `getJsonFromSvgElements` produces the layer
+  JSON that gets **stored in the record**. 7.4.2 still reads back `xlink:href` and
+  still *saves* `xlink:href`, so existing records load unchanged.
+
+The import path moved from `lib/svgedit/svgcanvas.js` to `lib/svgedit/dist/svgcanvas.js`.
+
+## The three that cannot come from npm
 
 Each carries its `reason` in the registry, next to the code, not only here.
 
@@ -86,8 +109,8 @@ Each carries its `reason` in the registry, next to the code, not only here.
 - **highlightjs** — the `highlight.js` package's `es/` entry is a bundler stub that
   chains into a CommonJS `lib/`; it cannot load in a browser without a bundler.
   `@highlightjs/cdn-assets` ships the same release as browser-ready ESM.
-- **svgedit** / **json-view** — svgedit pre-dates the `@svgedit/svgcanvas` package;
-  `pgrabovets/json-view` was never published to npm. Both are small and committed.
+- **json-view** — `pgrabovets/json-view` is distributed via GitHub/jsDelivr only and
+  was never published to npm. It is 16 KB, so it is simply committed.
 
 **xlsx** deserves a note: SheetJS **left the npm registry** (npm's `xlsx` is
 abandoned at 0.18.5), so the dep is pinned to *their* tarball URL —

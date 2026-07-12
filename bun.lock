@@ -10,6 +10,7 @@
         "@highlightjs/cdn-assets": "11.9.0",
         "@jaames/iro": "5.5.2",
         "@modelcontextprotocol/sdk": "^1.29.0",
+        "@svgedit/svgcanvas": "7.4.2",
         "@turf/turf": "7.0.0",
         "codex-tooltip": "1.0.5",
         "d3": "7.9.0",
@@ -131,6 +132,8 @@
     "@stablelib/base64": ["@stablelib/base64@1.0.1", "", {}, "sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ=="],
 
     "@sveltejs/acorn-typescript": ["@sveltejs/acorn-typescript@1.0.11", "", { "peerDependencies": { "acorn": "^8.9.0" } }, "sha512-LFuZUkjJ9iF7JZye/aG5XM0SFcQ5VyL0oVX4WJ9dc0Va3R3s0OauX1BESVCb+YN/ol8TAfqGDDAQsTG627Y5kw=="],
+
+    "@svgedit/svgcanvas": ["@svgedit/svgcanvas@7.4.2", "", {}, "sha512-18PixrbaGstEsZfijYeF+y69LDOfP/c68aVKR+Hh8S/YckbhxT4VpKJFf5Ang/Zd/Vvy63jPuf9O4pEDc4Gv+A=="],
 
     "@turf/along": ["@turf/along@7.3.5", "", { "dependencies": { "@turf/bearing": "7.3.5", "@turf/destination": "7.3.5", "@turf/distance": "7.3.5", "@turf/helpers": "7.3.5", "@turf/invariant": "7.3.5", "@types/geojson": "^7946.0.10", "tslib": "^2.8.1" } }, "sha512-Ee4AHV9j2Bnlm/5nm4ChY7nkwpaaMffSez9nsJ9HcMbzG+GgTkt0F5pn9d02U7YvuWqckM5lfr3kBI+w2uTz+g=="],
 

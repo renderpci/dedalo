@@ -98,6 +98,16 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 		source: 'npm',
 		probe: 'xlsx.mjs',
 	},
+	svgedit: {
+		// Was a vendored ~7.2.x-era build (2.0 MB) with no upstream package. 7.4.2 is a
+		// verified drop-in: same default export, all 29 methods + 3 properties
+		// vector_editor.js uses, and an identical add→serialise→read-back round trip —
+		// including `xlink:href`, which the stored layer JSON depends on (the 7.2.7
+		// "prefer href to xlink href" change does NOT rewrite it).
+		base: 'node_modules/@svgedit/svgcanvas',
+		source: 'npm',
+		probe: 'dist/svgcanvas.js',
+	},
 
 	// --- dev-only (client test harness; devDependencies) -------------------------
 	mocha: { base: 'node_modules/mocha', source: 'npm', probe: 'mocha.js', devOnly: true },
@@ -110,13 +120,6 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 		probe: 'build/ckeditor.js',
 		reason:
 			'Custom Dédalo webpack build of CKEditor 5 42.0.1 (a bespoke ddEditor class plus the dedalo_image_tags and reference plugins). The build project no longer exists in any checkout — build/ckeditor.js.map is the only surviving copy of that plugin source, which is why the map is committed too. Not reproducible from npm.',
-	},
-	svgedit: {
-		base: 'vendor/svgedit',
-		source: 'vendor',
-		probe: 'svgcanvas.js',
-		reason:
-			'Pre-dates the @svgedit/svgcanvas npm package; the vendored svgcanvas.js has no upstream package equivalent at this vintage. The 2.7 MB sourcemap and demos/ were dropped — only svgcanvas.js is ever loaded.',
 	},
 	'json-view': {
 		base: 'vendor/json-view',
