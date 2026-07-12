@@ -7,11 +7,10 @@ Components are reusable objects instantiated from the ontology definition. They 
 ## File nomenclature
 
 Every component model has two homes: a **server** home and a **client** home. The
-client part is written in JavaScript and CSS and was **copied as-is** from the PHP
-client, so its file layout is unchanged. The server part was rewritten: there is
-no per-component PHP class and no `_json` controller anymore. Each model is
-described by a small declarative **descriptor** and resolved by shared,
-horizontal engines.
+client part is written in JavaScript and CSS, with an unchanged file layout.
+The server part has no per-component class and no `_json` controller: each
+model is described by a small declarative **descriptor** and resolved by
+shared, horizontal engines.
 
 The CSS is written in LESS. It is not compiled on its own; the final CSS is included as part of `page.css`.
 
@@ -30,11 +29,10 @@ The CSS is written in LESS. It is not compiled on its own; the final CSS is incl
     structure-context, and the emitted API item. No runtime code reads them; they
     mirror the copied client's `client/dedalo/core/component_xxx/samples/` trees.
 
-    There is **no** `class.component_xxx.php` and **no** `component_xxx_json.php`.
-    The behavior those files held now lives in the horizontal engines
-    (`src/core/resolve/`, `src/core/relations/`, `src/core/section/read.ts`),
-    which dispatch on the `model` string read from the descriptor via
-    `getComponentModel(model)` in `src/core/components/registry.ts`.
+    The behavior lives in the horizontal engines (`src/core/resolve/`,
+    `src/core/relations/`, `src/core/section/read.ts`), which dispatch on the
+    `model` string read from the descriptor via `getComponentModel(model)` in
+    `src/core/components/registry.ts`.
 
 2. **Client files** (copied as-is)
 
@@ -67,7 +65,7 @@ src/core/components/component_input_text/
         └── api_data.json    # emitted API item
 ```
 
-Client home of `component_input_text` (copied verbatim from the PHP client):
+Client home of `component_input_text`:
 
 ```text
 component_input_text
@@ -166,10 +164,7 @@ These are related models: their descriptor sets `column: 'relation'` and names a
 
 ## Model resolution
 
-In the PHP server, component behaviour was reached through a class-per-model
-inheritance tree (`component_common` → `component_string_common` /
-`component_media_common` / `component_relation_common` → the concrete class). In
-the TS rewrite that inheritance tree is **gone**. Behaviour is now **horizontal**:
+Component behaviour is **horizontal**, not a class-per-model inheritance tree:
 the engines (`src/core/resolve/`, `src/core/relations/`, `src/core/search/`,
 `src/core/section/read.ts`) dispatch on the `model` string, and each model's
 per-model deltas live in one declarative descriptor. The registry
@@ -199,14 +194,13 @@ load-time integrity check; `getComponentModel(model)` is the single accessor.
 ```
 
 !!! note "Reading the diagram"
-    The old class layers survive only as **conventions in the descriptor**:
-    a string-family model sets `classSupportsTranslation: true`; a media model
-    sets `column: 'media'`; a related model sets `column: 'relation'` and names a
-    `resolveData` resolver. Two related models that in PHP extended a sibling
-    rather than the common base — `component_filter_master` and
-    `component_dataframe` — are just descriptors with their own `resolveData`
-    (the filter and portal resolvers respectively). See [base classes](base_classes.md)
-    for what each engine layer contributes.
+    Each model family is a **convention in the descriptor**: a string-family
+    model sets `classSupportsTranslation: true`; a media model sets
+    `column: 'media'`; a related model sets `column: 'relation'` and names a
+    `resolveData` resolver. `component_filter_master` and `component_dataframe`
+    are just descriptors with their own `resolveData` (the filter and portal
+    resolvers respectively). See [base classes](base_classes.md) for what each
+    engine layer contributes.
 
 ## Resolution inputs
 
@@ -220,13 +214,13 @@ Components are read on behalf of a section: the section-read pipeline
 3. Its `section_tipo` (some components appear in different sections).
 4. The language to read and use.
 
-There is **no** `get_instance()` factory and **no** per-request component object:
-the engine looks up `getComponentModel(model)`, reads its descriptor, and runs the
-matching engine path. The persistent-worker static caches and the manual
-`common::clear()` they required are structurally gone — request state is
-request-scoped (AsyncLocalStorage), not shared across requests.
+On the server there is **no** component-instance factory and **no** per-request
+component object: the engine looks up `getComponentModel(model)`, reads its
+descriptor, and runs the matching engine path. Request state (language,
+principal, transaction) is request-scoped through AsyncLocalStorage, never
+shared across requests, so there are no long-lived caches to clear by hand.
 
-In the client, components are still instantiated (the client was copied as-is) through the `instances.js` class.
+In the client, components are instantiated through the `instances.js` class.
 
 ```javascript
 const component = get_instance({
@@ -555,7 +549,7 @@ Example of the data for *Birth town* [rsc91](https://dedalo.dev/ontology/rsc91),
 
 Components can read and save data. Permissions define whether the user can access, read, write or administer the component.
 
-In server context, permissions are the access level stamped onto every context entry by the structure-context builder (`src/core/resolve/structure_context.ts`) and are checked on every read and save. The full per-element ACL derivation (`component_security_access`) is not yet wired in the TS server: the current stamp is `3` for a global admin and `1` otherwise (see `src/core/section/read.ts` and STATUS.md).
+In server context, permissions are the access level stamped onto every context entry by the structure-context builder (`src/core/resolve/structure_context.ts`) and are checked on every read and save. The full per-element ACL derivation (`component_security_access`) is not yet wired: the current stamp is `3` for a global admin and `1` otherwise (see `src/core/section/read.ts`).
 
 In client context, permissions are set and checked on every API call; they control how the component is rendered and behaves.
 
@@ -580,7 +574,7 @@ This defines which tools the component instance can use. Tools add functionality
     of the preserved wire contract, but the TS structure-context builder does not
     yet populate them: `src/core/resolve/structure_context.ts` emits `tools: []`
     and defers the user-gated tool/button resolution (the reason its context cache
-    can key on `tipo_sectionTipo_mode` without a per-user key). See STATUS.md.
+    can key on `tipo_sectionTipo_mode` without a per-user key).
 
 ## Observers and observables
 
@@ -590,7 +584,7 @@ Dédalo uses two separate configurations to set up the observer/observable space
 
 ### Server context
 
-When a component is set as observable in server context, any change to its data is sent to the observer. The observer component can be configured to take actions such as updating values or changing its own data depending on the value of the observable component. In the TS server this runs in `src/core/resolve/observers.ts`, invoked from the save path (`src/core/section/record/save_component.ts`). Coverage is partial and honestly ledgered: the dominant server config (`use_observable_dato` → `set_dato_external`, the hierarchy `external` recompute) is ported; other `perform` functions are logged and skipped rather than guessed (see STATUS.md).
+When a component is set as observable in server context, any change to its data is sent to the observer. The observer component can be configured to take actions such as updating values or changing its own data depending on the value of the observable component. This runs in `src/core/api/handlers/observers.ts`, invoked from the save path (`src/core/section/record/save_component.ts`). Coverage is partial and honestly ledgered: the dominant server config (`use_observable_dato` → `set_dato_external`, the hierarchy `external` recompute) is ported; other `perform` functions are logged and skipped rather than guessed.
 
 ### Client context
 
