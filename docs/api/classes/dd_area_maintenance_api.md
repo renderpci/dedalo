@@ -1,10 +1,10 @@
 # dd_area_maintenance_api
 
-> See also: [JSON API v1](../dedalo_api_v1.md) · [dd_utils_api](dd_utils_api.md) · [dd_manager](dd_manager.md)
+> See also: [JSON API v1](../dedalo_api_v1.md) · [dd_utils_api](dd_utils_api.md) · [dispatch](dispatch.md)
 
 Maintenance and administrative operations: maintenance-widget execution, panel value loads, and component locking.
 
-Registered actions (`src/core/api/dispatch.ts`): `widget_request`, `get_widget_value`, `lock_components_actions`. Widget execution and the widget registry live in `src/core/resolve/widget_request.ts`.
+Registered actions (`src/core/api/dispatch.ts`): `widget_request`, `get_widget_value`, `lock_components_actions`. Widget dispatch and the widget registry live in `src/core/area_maintenance/widgets/registry.ts`; the widget modules sit alongside it in `src/core/area_maintenance/widgets/`.
 
 ## How to call
 
@@ -13,11 +13,7 @@ Registered actions (`src/core/api/dispatch.ts`): `widget_request`, `get_widget_v
 ## Notes
 
 - Most methods require admin or maintenance privileges (enforced inside the dispatcher).
-- The maintenance dashboard is a **widget** framework: each panel is one widget, run through `widget_request` (execute) / `get_widget_value` (load), not through a monolithic class dispatcher.
-
-## class_request — *not ported (gap)*
-
-The PHP `class_request` action is **not registered** in the TS action registry. Its role is subsumed by `widget_request` (below): maintenance operations are per-widget methods, not a generic class dispatcher.
+- The maintenance dashboard is a **widget** framework: each panel is one widget, run through `widget_request` (execute) / `get_widget_value` (load). There is no generic class dispatcher — a maintenance operation is always a method of a named widget, and only the methods in that widget's `API_ACTIONS` allowlist are reachable.
 
 ## lock_components_actions
 
@@ -74,14 +70,6 @@ Area-level lock administration: list active users holding component locks, or fo
 }
 ```
 
-## modify_counter — *not a top-level action (gap)*
-
-The PHP `modify_counter` action is **not registered** as its own action. It survives as a method of the `counters_status` widget, invoked through `widget_request` (`source.model: "counters_status"`, `source.action: "modify_counter"`).
-
-## parse_simple_schema_changes_files — *not ported (gap)*
-
-`parse_simple_schema_changes_files` (and `get_simple_schema_changes_files`) are **not registered** in the TS action registry.
-
 ## widget_request
 
 ### Purpose
@@ -97,7 +85,7 @@ Execute a maintenance widget's action.
 
 ### Returns
 
-The object returned by the widget method (conventionally `{ result, msg, errors }`). Unported panels deny loudly; per-widget `API_ACTIONS` are enforced.
+The object returned by the widget method (conventionally `{ result, msg, errors }`). The per-widget `API_ACTIONS` allowlist is enforced; a widget with no server implementation denies loudly rather than returning an empty success.
 
 ### Example Request
 
@@ -109,6 +97,8 @@ The object returned by the widget method (conventionally `{ result, msg, errors 
   "options": {}
 }
 ```
+
+Counter administration rides the same channel — it is a method of the `counters_status` widget (`source.model: "counters_status"`, `source.action: "modify_counter"`), not an action of its own.
 
 ## get_widget_value
 

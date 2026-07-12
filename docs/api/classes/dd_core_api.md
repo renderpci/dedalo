@@ -1,6 +1,6 @@
 # dd_core_api
 
-> See also: [JSON API v1](../dedalo_api_v1.md) · [RQO field mapping](../RQO_FIELD_MAPPING.md) · [dd_manager](dd_manager.md)
+> See also: [JSON API v1](../dedalo_api_v1.md) · [RQO field mapping](../RQO_FIELD_MAPPING.md) · [dispatch](dispatch.md)
 
 Core Dédalo API for the section/record lifecycle and page context. It is the API that front-end page builders and components use most.
 
@@ -505,6 +505,4 @@ Returns the "simple" structure-context set for a section — the edit-mode searc
 }
 ```
 
-## get_matrix_ontology_locator — *not ported (gap)*
-
-The PHP `dd_core_api::get_matrix_ontology_locator` action is **not registered** in the TS action registry (`src/core/api/dispatch.ts`). The ontology locator of a `tipo` is resolved internally through `src/core/ontology/resolver.ts` rather than exposed as a public API action. See `rewrite/STATUS.md`.
+> The ontology locator of a `tipo` is not exposed as an API action: it is resolved internally through the ontology resolver (`src/core/ontology/resolver.ts`).

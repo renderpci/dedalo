@@ -2,7 +2,7 @@
 
 > See also: [JSON API v1](../dedalo_api_v1.md) · [dd_component_3d_api](dd_component_3d_api.md)
 
-Audio/video component API: media-streaming helpers, posterframe creation and deletion, and fragment download.
+Audio/video component API: media-streaming helpers and posterframe creation and deletion.
 
 Registered actions (`src/core/api/dispatch.ts`): `create_posterframe`, `delete_posterframe`, `get_media_streams`. All three require section permission (posterframes: write, level 2; streams: read, level 1) and, being writes, `create_posterframe` / `delete_posterframe` are CSRF-gated. Media-context resolution lives in `src/core/media/tools/posterframe.ts`.
 
@@ -13,8 +13,6 @@ Registered actions (`src/core/api/dispatch.ts`): `create_posterframe`, `delete_p
 ## Common fields
 
 - `source` should include `tipo`, `section_tipo`, and a positive `section_id`; `options` carries the media parameters (quality, timestamp).
-
-> **Gap**: PHP `download_fragment` is **not registered** in the TS action registry.
 
 ## get_media_streams
 

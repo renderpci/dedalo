@@ -2,7 +2,7 @@
 
 > See also: [JSON API v1](dedalo_api_v1.md) · [Class reference](classes/dd_core_api.md) · [The diffusion engine](../diffusion/native_engine.md)
 
-This page documents the precise, method-specific RQO field usage for the actions the TypeScript/Bun server implements. Every action here is verified against the action registry in `src/core/api/dispatch.ts`. The RQO vocabulary is preserved from the PHP contract; where the PHP server exposed a method the TS server does not yet register, that method is marked as a **gap** and demoted rather than documented as working.
+This page documents the precise, method-specific RQO field usage for the actions the server implements. Every action here is verified against the action registry in `src/core/api/dispatch.ts` — if an action is not in that registry, it is not callable and it is not documented here.
 
 ## dd_core_api
 
@@ -297,7 +297,7 @@ Returns the array of deleted ids. Ontology-main sections cascade (uninstall the 
 
 ---
 
-> **Gap**: PHP `dd_core_api::get_matrix_ontology_locator` is **not registered** in the TS action registry. Callers that need the ontology locator of a `tipo` resolve it through the ontology resolver internally (`src/core/ontology/resolver.ts`), not through a public API action.
+> The ontology locator of a `tipo` is not exposed as an API action: it is resolved internally through the ontology resolver (`src/core/ontology/resolver.ts`).
 
 ---
 
@@ -319,7 +319,7 @@ Returns the array of deleted ids. Ontology-main sections cascade (uninstall the 
 }
 ```
 
-**Example response** (a session cookie is set on the HTTP response; there is no PHP-style `session_id` in the body — the client uses the fresh `csrf_token`):
+**Example response** (a session cookie is set on the HTTP response; the session token is never returned in the body — the client uses the fresh `csrf_token`):
 ```json
 {
   "result": true,
@@ -349,14 +349,14 @@ Returns the array of deleted ids. Ontology-main sections cascade (uninstall the 
 
 ### get_system_info()
 **Purpose**: The upload / import / media-edit init call — the client reads it before it can transfer a file.
-**RQO fields used**: none. The payload comes from the media/upload config catalog (there is no `php.ini`).
+**RQO fields used**: none. The payload comes from the media/upload config catalog; there is no runtime `.ini` to consult.
 
 **Example request**:
 ```json
 { "dd_api": "dd_utils_api", "action": "get_system_info" }
 ```
 
-**Example response** (shape from `src/core/resolve/system_info.ts`):
+**Example response** (shape from `src/core/api/handlers/system_info.ts`):
 ```json
 {
   "result": {
@@ -398,7 +398,7 @@ Returns the array of deleted ids. Ontology-main sections cascade (uninstall the 
 ---
 
 ### list_uploaded_files()
-**Purpose**: List the user's pending chunked uploads. Registered but currently returns an empty array (the common boot state; the full temp-dir scan is uncovered scope).
+**Purpose**: List the user's pending chunked uploads. The action is registered and honors the `[{url, name, size}]` shape, but currently always returns an empty array — the common boot state, where the user has no pending chunked upload.
 **RQO fields used**: none required.
 
 **Example response**:
@@ -408,13 +408,13 @@ Returns the array of deleted ids. Ontology-main sections cascade (uninstall the 
 
 ---
 
-> **Gap**: file `upload` is not a JSON-dispatched action in TS — multipart uploads are handled by the media ingest branch of the API path in `src/server.ts`. `join_chunked_files_uploaded` (JSON RQO) reassembles a completed chunked upload. PHP `install`, `delete_uploaded_file`, `get_dedalo_files`, `get_process_status`, `stop_process` are not registered.
+> **Uploads**: file `upload` is not a JSON-dispatched action — multipart uploads are handled by the media ingest branch of the API path in `src/server.ts`. `join_chunked_files_uploaded` (a JSON RQO) reassembles a completed chunked upload.
 
 ---
 
 ## dd_area_maintenance_api
 
-> **Gap**: PHP `class_request` and `modify_counter` are **not** top-level registered actions. Widget execution goes through `widget_request` / `get_widget_value` (the widget registry lives in `src/core/resolve/widget_request.ts`); `modify_counter` survives as a method of the `counters_status` widget, invoked through `widget_request`.
+> Maintenance operations are widget methods, not top-level actions. Execution goes through `widget_request` / `get_widget_value`; the widget registry and its per-widget `API_ACTIONS` allowlists live in `src/core/area_maintenance/widgets/registry.ts`. Counter administration, for example, is a `modify_counter` method of the `counters_status` widget, invoked through `widget_request`.
 
 ### lock_components_actions()
 **Purpose**: Area-level lock operations.
