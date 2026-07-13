@@ -120,6 +120,15 @@ Every request is metered by a **token bucket per client IP**. Each bucket starts
 RATE_LIMIT_RPM=100   # requests per minute per IP
 ```
 
+!!! note "A batch costs one token per sub-query"
+    `POST /batch` runs up to 20 queries in a single HTTP request, so it is charged for **all of
+    them**, not once: a 10-query batch spends 10 tokens. If the bucket cannot afford the whole
+    fan-out the batch is rejected as a unit with `429` and nothing is run — so batching is a way to
+    save round trips, never a way to multiply your quota.
+
+The client IP is taken from the forwarding headers when `TRUST_PROXY` is enabled, and otherwise from
+the connection's own peer address — so the limiter buckets per caller in `standalone` mode too.
+
 ```json
 {
   "type": "https://dedalo.dev/api/problems/rate-limit-exceeded",

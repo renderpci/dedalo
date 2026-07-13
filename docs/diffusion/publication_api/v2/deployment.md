@@ -44,17 +44,19 @@ Every variable below is read by `src/config.ts`. The **Default** column is the v
 
 | Variable | Type | Default | Description |
 | --- | --- | --- | --- |
-| `DB_HOST` | string | `localhost` | MariaDB host. |
+| `DB_SOCKET` | string | _(empty)_ | Unix socket path (e.g. `/tmp/mysql.sock`). When set it takes precedence over `DB_HOST`/`DB_PORT`. |
+| `DB_HOST` | string | `localhost` | MariaDB host (used when `DB_SOCKET` is empty). |
 | `DB_PORT` | int | `3306` | MariaDB port. |
 | `DB_USER` | string | `readonly_user` | Database user (should have only `SELECT`). |
 | `DB_PASSWORD` | string | _(empty)_ | Database password. |
 | `DB_NAMES` | string | `dedalo_web` | **Comma-separated allowlist** of public databases the API exposes. Every data route is scoped by a `{db}` path segment that must appear here; an unknown `{db}` returns `404`. At least one name is required — an empty list aborts startup. |
-| `DB_POOL_MIN` | int | `2` | Advisory minimum pool size (see note below). |
 | `DB_POOL_MAX` | int | `10` | Maximum connections **per database** pool. |
-| `DB_QUERY_TIMEOUT` | int (ms) | `5000` | Per-query timeout passed to each MariaDB query. |
 
 !!! note "One pool per database"
-    The API opens **one connection pool per entry in `DB_NAMES`** (`src/db/pool.ts`), because `mysql2` binds the `database` at connection time and schema queries rely on `DATABASE()`. The worst-case number of open connections is therefore `DB_NAMES.length × DB_POOL_MAX`. Size `DB_POOL_MAX` and your MariaDB `max_connections` accordingly. `DB_POOL_MIN` is read from the environment but the underlying `mysql2` pool grows lazily up to `connectionLimit` (`DB_POOL_MAX`); treat `DB_POOL_MIN` as advisory.
+    The API opens **one connection pool per entry in `DB_NAMES`** (`src/db/pool.ts`), because a MariaDB session binds the `database` at connect time and schema queries rely on `DATABASE()`. The worst-case number of open connections is therefore `DB_NAMES.length × DB_POOL_MAX`. Size `DB_POOL_MAX` and your MariaDB `max_connections` accordingly.
+
+!!! note "Driver"
+    The API talks to MariaDB through Bun's native `Bun.sql` (`mariadb` adapter) — the same driver the Dédalo engine uses for its diffusion targets. There is no third-party database client to install. A request is bounded end to end by `REQUEST_TIMEOUT_MS` (a slow query answers `504`), which is what caps a runaway statement.
 
 ### HTTP caching &amp; timeouts
 
@@ -77,6 +79,29 @@ Every variable below is read by `src/config.ts`. The **Default** column is the v
 | Variable | Type | Default | Description |
 | --- | --- | --- | --- |
 | `MEDIA_BASE_URL` | string | `/dedalo/media` | Prefix prepended to media paths in AV-fragment and indexation responses, e.g. `${MEDIA_BASE_URL}/<video>?vbegin=120&vend=180`. |
+
+### AV / indexation schema
+
+The AV endpoints (`/{db}/av-indexation-fragment` and `/{db}/tables/{table}/records/{id}/av-fragments`)
+join a specific published shape: a record, its media, its speakers, and the thesauri that index it.
+The rest of the API is schema-agnostic; these routes cannot be, because the join *is* the feature.
+
+The defaults are the Dédalo oral-history ontology, so a standard publication needs **no configuration
+here**. A project that published under other names points these at its own tables.
+
+| Variable | Type | Default | Description |
+| --- | --- | --- | --- |
+| `AV_TABLE` | string | `interview` | The record table the fragment belongs to. |
+| `AV_MEDIA_TABLE` | string | `audiovisual` | Table holding the media (video/image) for the record. |
+| `AV_SPEAKER_TABLE` | string | `informant` | Table holding the speakers. |
+| `AV_TRANSCRIPTION_COLUMN` | string | `rsc36` | Transcription column on `AV_TABLE`. |
+| `AV_VIDEO_COLUMN` | string | `rsc35` | Video column on `AV_MEDIA_TABLE`. |
+| `AV_THESAURUS_TABLES` | string | `ts_themes,ts_onomastic,ts_chronological` | Comma-separated thesaurus tables searched for the terms indexing a locator. |
+
+!!! warning "These are SQL identifiers"
+    A table name cannot be sent as a bound parameter, so these values are interpolated into the
+    query. Each is therefore validated **at boot** against `^[A-Za-z_][A-Za-z0-9_]*$` — a malformed
+    value aborts startup rather than reaching a statement.
 
 ### MCP (Model Context Protocol)
 
@@ -104,7 +129,9 @@ BASE_PATH=/publication/server_api/v2
 TRUST_PROXY=true
 NODE_ENV=production
 
-# MariaDB
+# MariaDB (the diffusion-published database — always a READ-ONLY user)
+# Transport: set DB_SOCKET for a unix socket; otherwise DB_HOST:DB_PORT is used.
+DB_SOCKET=
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=readonly_user
@@ -112,22 +139,32 @@ DB_PASSWORD=secret
 # Comma-separated allowlist of public databases exposed by the API.
 # Each database gets its own connection pool (max connections = N x DB_POOL_MAX).
 DB_NAMES=dedalo_web
-DB_POOL_MIN=2
 DB_POOL_MAX=10
-DB_QUERY_TIMEOUT=5000
 
 # HTTP caching and timeouts
 CACHE_MAX_AGE=60
+# Bounds a request end to end (a slow query answers 504 rather than hanging).
 REQUEST_TIMEOUT_MS=10000
 
 # Security
 API_KEYS=
+# Per-IP requests/minute. A /batch request costs one token per sub-query.
 RATE_LIMIT_RPM=100
 CORS_ORIGIN=*
 MAX_BODY_SIZE=65536
 
 # Media
 MEDIA_BASE_URL=/dedalo/media
+
+# AV / indexation endpoints. Defaults are the Dédalo oral-history ontology, so a
+# standard publication needs no configuration here. Values must be plain SQL
+# identifiers (validated at boot: they are interpolated into SQL, not bound).
+AV_TABLE=interview
+AV_MEDIA_TABLE=audiovisual
+AV_SPEAKER_TABLE=informant
+AV_TRANSCRIPTION_COLUMN=rsc36
+AV_VIDEO_COLUMN=rsc35
+AV_THESAURUS_TABLES=ts_themes,ts_onomastic,ts_chronological
 
 # MCP
 MCP_ENABLED=true
@@ -215,21 +252,16 @@ With `BASE_PATH=` the API is served at the root (`GET /`, `GET /databases`, …)
 !!! warning
     In standalone mode the Bun process is internet-facing. Prefer setting `API_KEYS`, a sensible `RATE_LIMIT_RPM`, and a non-wildcard `CORS_ORIGIN`, and terminate TLS in front of it (or run behind a load balancer) for production traffic.
 
-### Docker
+### The database is always a real publication
 
-A `docker-compose.yml`, `Dockerfile` and sample `init.sql` live under `publication/server_api/v2/docker/`. Compose brings up the API in **standalone** mode plus a MariaDB 11 container, wired together on a private bridge network.
+There is no bundled sample database, and that is deliberate. The API's input is **always** a database
+produced by the diffusion process: its tables are keyed by a composite `PRIMARY KEY (section_id, lang)`
+with no surrogate `id` column, and their columns and types come from the ontology. A hand-written
+sample schema would be a second, drifting copy of something the diffusion engine already owns — it
+would teach a shape that no real publication has.
 
-```bash
-cd publication/server_api/v2/docker
-docker-compose up -d
-```
-
-The API container is configured via `environment:` entries (mirroring the `.env` reference) — notably `DEPLOYMENT_MODE=standalone`, `HOST=0.0.0.0`, `BASE_PATH=` (root-mounted), `TRUST_PROXY=false`, and `DB_HOST=mariadb` to reach the database service by name. It publishes `3100:3100` and `restart: unless-stopped`, and waits for MariaDB's healthcheck (`condition: service_healthy`) before starting.
-
-The `Dockerfile` is a multi-stage `oven/bun:1` build: it installs dependencies with a frozen lockfile, runs `bun run typecheck`, copies `src/` into a production stage, drops to a non-root `dedalo` user, exposes `3100`, and ships a `HEALTHCHECK` that curls `/health`. The MariaDB service mounts `init.sql` into `/docker-entrypoint-initdb.d/`, which grants `SELECT` to `readonly_user` and seeds sample tables (`interview`, `audiovisual`, `informant`, `ts_themes`, `publications`) on first run.
-
-!!! note "Adjust the sample schema"
-    `docker/init.sql` is a demonstration schema with sample rows, not a production dataset. Point the API at your real published database (or replace `init.sql`) for anything beyond local testing.
+To try the API, run a diffusion publication to MariaDB and point `DB_NAMES` at the resulting database
+with a read-only user.
 
 ## Performance notes
 

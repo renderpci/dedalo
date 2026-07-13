@@ -207,7 +207,7 @@ publication/server_api/v2/
 │   ├── utils/          # query-param parsing (filters/sort), fragments, response/Link helpers
 │   ├── mcp/            # MCP server + tools
 │   └── docs/           # OpenAPI 3.1 spec (openapi.yaml) + offline Swagger/Scalar assets
-├── apache/  nginx/  docker/   # Deployment configs
+├── apache/  nginx/            # Deployment configs
 └── tests/                     # bun:test suite
 ```
 
