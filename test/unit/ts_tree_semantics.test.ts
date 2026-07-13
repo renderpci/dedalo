@@ -21,6 +21,7 @@ import {
 	pickOrderValueForParent,
 } from '../../src/core/ts_object/node_repository.ts';
 import { getHierarchyTermsSqo } from '../../src/core/ts_object/search.ts';
+import { isEmptyData } from '../../src/core/ts_object/ts_object.ts';
 
 describe('formatNumberValue (PHP component_number::set_format_form_type parity)', () => {
 	it('empty and not the integer 0 → null', () => {
@@ -165,5 +166,43 @@ describe('inline id_key dataframe algebra (backs remove-order masking + sort ski
 		// sort_children skips when (int)current === order; this read feeds that check.
 		expect(getInlineValueByIdKey(items, 5)).toBe(4);
 		expect(getInlineValueByIdKey(items, 99)).toBeNull();
+	});
+});
+
+describe('isEmptyData — the icon empty-skip test (PHP is_empty + WC-029)', () => {
+	// Verified against the PHP oracle (shared/core_functions.php is_empty):
+	// these are the cases PHP itself calls empty, so the icon is suppressed.
+	it('is PHP-faithful on scalars, pseudo-empty strings and nested arrays', () => {
+		expect(isEmptyData([])).toBe(true);
+		expect(isEmptyData([''])).toBe(true);
+		expect(isEmptyData(['   '])).toBe(true);
+		expect(isEmptyData(['<p></p>'])).toBe(true); // strip_tags + trim
+		expect(isEmptyData([0])).toBe(true);
+		expect(isEmptyData(['0'])).toBe(true);
+		expect(isEmptyData([null])).toBe(true);
+		expect(isEmptyData([[], {}])).toBe(true);
+
+		expect(isEmptyData(['x'])).toBe(false);
+		expect(isEmptyData([1])).toBe(false);
+		expect(isEmptyData(['<p>text</p>'])).toBe(false);
+	});
+
+	// WC-029: PHP calls ANY object with ANY property non-empty, so a cleared
+	// component keeps its {id, value:null} wrapper and its icon renders forever
+	// (empty 'properties' still showing the ontology-tree 'P'). A wrapper is
+	// judged by its VALUE; id/lang are pairing metadata, never content.
+	it('judges a {id, lang, value} data item by its value alone (divergence)', () => {
+		expect(isEmptyData([{ id: 1, value: null }])).toBe(true);
+		expect(isEmptyData([{ id: 1, value: '' }])).toBe(true);
+		expect(isEmptyData([{ id: 1, lang: 'lg-nolan', value: '  ' }])).toBe(true);
+		expect(isEmptyData([{ id: 1, value: {} }])).toBe(true);
+
+		expect(isEmptyData([{ id: 1, value: { css: 1 } }])).toBe(false);
+		expect(isEmptyData([{ id: 1, value: 'dd' }])).toBe(false);
+	});
+
+	it('keeps a locator (no `value` key) non-empty when any property has content', () => {
+		expect(isEmptyData([{ section_tipo: 'dd128', section_id: '-1', type: 'dd151' }])).toBe(false);
+		expect(isEmptyData([{ section_tipo: '', section_id: null }])).toBe(true);
 	});
 });

@@ -370,6 +370,7 @@ function readItemsFromRecord(
 /**
  * The component_data for one element tipo (PHP get_data_lang + format_component_data).
  * relation_children → child locators; relation_index → [] (counted separately);
+ * section_id → the record's own id (virtual component, no jsonb column);
  * portal/autocomplete_hi → locators resolved to term strings; translatable string
  * families → lang-filtered items; everything else → raw items.
  */
@@ -384,6 +385,17 @@ async function getComponentDataLang(
 	if (model === 'component_relation_index') return [];
 	if (model === 'component_relation_children') {
 		return getChildren(sectionId, sectionTipo, tipo);
+	}
+	if (model === 'component_section_id') {
+		// Virtual, read-only: its `column` is the section_id PK, not a jsonb bag,
+		// so it can never be read from the record (PHP component_section_id::get_data
+		// :63 → [(int)section_id], [null] when unset). The ontology ddo_map term is
+		// the 3-tipo array [term, tld, section_id], and the client PARSES that value
+		// back with /^(.*) ([a-z]{2,}) ([0-9]+)$/ (render_ts_line.js render_ontology_term)
+		// — drop the id and the regex fails, so the whole "Term dd" string renders as
+		// the label and the [tipo] badge falls back to section_tipo+section_id.
+		const id = Math.trunc(Number(sectionId));
+		return [Number.isFinite(id) && id !== 0 ? id : null];
 	}
 
 	let items = readItemsFromRecord(record, tipo, model);
@@ -424,6 +436,36 @@ function componentDataFallbackValue(items: Record<string, unknown>[]): string {
 		value = (any?.value as string | undefined) ?? '';
 	}
 	return value;
+}
+
+/**
+ * PHP is_empty (shared/core_functions.php :2987) — the "pseudo-empty" test behind
+ * the icon empty-skip: 0/''/[]/null are empty, a string is empty once trimmed and
+ * stripped of tags ('<p></p>'), an array is empty when every entry is.
+ *
+ * ONE DELIBERATE DIVERGENCE (WC-029): PHP's object branch returns "not empty" for
+ * an object with ANY property — and every stored data item is a `{id, lang?, value}`
+ * wrapper, so an item whose value was cleared (`{id:1, value:null}`) counts as
+ * non-empty forever. That is why an ontology term with EMPTY properties still renders
+ * its 'P' icon and opens an empty JSON editor. Here a data-item wrapper is judged by
+ * its `value` alone (id/lang are pairing metadata, never content); any other object
+ * (a locator) is empty only when every property is.
+ */
+export function isEmptyData(value: unknown): boolean {
+	// PHP empty(): null, false, 0, 0.0, '', '0', [].
+	if (value === null || value === undefined || value === false || value === '') return true;
+	if (typeof value === 'number' && value === 0) return true;
+	if (value === '0') return true;
+
+	if (Array.isArray(value)) return value.every(isEmptyData);
+	if (typeof value === 'object') {
+		const entries = value as Record<string, unknown>;
+		if ('value' in entries) return isEmptyData(entries.value);
+		return Object.values(entries).every(isEmptyData);
+	}
+	if (typeof value === 'string') return value.replace(/<[^>]*>/g, '').trim() === '';
+
+	return false;
 }
 
 /** to_string parity for a scalar element value. */
@@ -632,7 +674,10 @@ async function resolveElementValue(
 				if (count.total === 0) return false;
 				elementObj.value = `${current.icon}:${count.total}`;
 				elementObj.count_result = count;
-			} else if (componentData.length === 0) {
+			} else if (isEmptyData(componentData)) {
+				// PHP is_empty (:1565), not a length check: an icon whose component
+				// holds only pseudo-empty data ('', '<p></p>', a cleared {id,value:null}
+				// wrapper) is suppressed — see isEmptyData / WC-029.
 				return false;
 			}
 			return true;
