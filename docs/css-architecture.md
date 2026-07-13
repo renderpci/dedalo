@@ -2,6 +2,67 @@
 
 This document summarizes how styles flow from `core/page/css/main.less` through layout, components and widgets, and defines conventions to keep behavior predictable without changing the current visual design.
 
+> **Editing styles?** Start at [Building the CSS](#building-the-css) — the LESS is the source, the `.css` is a build artifact, and both are committed. If you edit a `.less` and do not rebuild, CI goes red.
+
+---
+
+## Building the CSS
+
+The `.less` files are the **source**. The `.css` and `.css.map` files next to them are **build output** — and they are **committed**, which surprises people, so it is worth saying why.
+
+### The three commands
+
+```shell
+bun run dev          # server + LESS watcher (the everyday loop — recompiles as you save)
+bun run css:build    # one-shot: compile every entrypoint
+bun run css:check    # compile to memory and fail if any committed output is stale (what CI runs)
+```
+
+`bun run dev` is the one you want. It runs the server and the stylesheet watcher together, so saving a `.less` recompiles the affected CSS in place; reload the browser and it is there. No server restart is needed — the server reads CSS from disk on every request.
+
+The watcher walks the `@import` graph and rebuilds **only what your change affects**: touch one tool's stylesheet and only that tool recompiles; touch `layout/vars.less` and the ~35 sheets that import it all rebuild. A LESS error prints `file:line` and the watcher keeps running.
+
+### Why the compiled CSS is committed
+
+Because nothing rebuilds it on the way to production:
+
+- deploying is a **checkout** — `deploy/deploy.sh` states *"the repo IS the artifact"*; there is no build step on the host;
+- a production install runs `bun install --frozen-lockfile --production`, which does not install the LESS compiler at all.
+
+So the bytes in git are the bytes the browser receives. That is a deliberate trade: a simple deploy, paid for by having to commit build output.
+
+### Entrypoints are derived, not listed
+
+An **entrypoint** is any `.less` that no other `.less` imports. Everything else is a **partial**, and partials are never compiled on their own — they rely on variables and mixins that `main.less` imports before them (compile `area_admin.less` alone and you get `.dd_console is undefined`).
+
+Nothing maintains a list of entrypoints; the build derives them from the import graph. Add a partial and it is picked up by whoever imports it. Add a new top-level stylesheet and it compiles with no configuration to update.
+
+### Source maps must stay relative
+
+Every `sources` entry in a `.css.map` is written **relative to the map itself**, so it resolves in any checkout. This is enforced, not merely intended — see the tripwire below.
+
+The rule exists because the previous toolchain violated it in every way it could. It baked **absolute paths** into every committed map, naming one developer's home directory (two, in fact — they had accumulated). Devtools resolved nothing, for anyone. It also hid three real bugs by silently prepending a global LESS file: 33 tool stylesheets imported a path that exists in no checkout, one stylesheet used `@color_white` while importing nothing at all, and a block of CSS had been hand-appended to the compiled `main.css` with no source anywhere in the repo.
+
+**Never hand-edit a `.css` or a `.css.map`.** They are generated; your change will be silently overwritten on the next build, and the tripwire will reject it before that.
+
+### The tripwire
+
+`test/unit/css_build_tripwire.test.ts` recompiles every entrypoint on each run and asserts:
+
+1. every committed `.css` / `.css.map` is byte-identical to a fresh compile of its `.less`;
+2. no source-map `sources` entry is an absolute path;
+3. every `sources` entry resolves to a real file.
+
+It runs in `bun run scripts/verify.ts` (so you catch it locally, before pushing) and in the DB-less CI tier. If it goes red, the fix is always the same:
+
+```shell
+bun run css:build   # then commit the result
+```
+
+### Merge conflicts in a generated `.css`
+
+Do not hand-resolve them. Take either side, run `bun run css:build`, and commit. The `.less` files are the merge that matters; the CSS is derived from them. `.gitattributes` marks the generated CSS so it does not swamp a pull-request diff.
+
 ---
 
 ## 1. Entry point and layering

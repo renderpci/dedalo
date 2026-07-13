@@ -32,6 +32,7 @@ import {
 	buildHtaccess,
 	buildNginxConf,
 	filterPublicQualities,
+	getAddonLines,
 	getConfigHash,
 	getDefaultPublicQualities,
 	getPublicQualities,
@@ -176,6 +177,32 @@ describe('the generated Apache rules', () => {
 		expect(text).not.toContain(MEDIA_AUTH_COOKIE);
 		expect(text).not.toContain('/.publication/pub/');
 		expect(text).not.toContain('RewriteRule ^ - [R=404,L]'); // no default deny
+	});
+
+	test('MEDIA_HTACCESS_ADDONS is JSON-only — a bad value must never reach the file', () => {
+		// These are RAW Apache directives, and a directive legitimately contains commas
+		// (`[R=404,L]`). A comma-list reader (readListEnv) falls back to comma-splitting the
+		// moment JSON.parse throws — which it does on the natural single-escaped regex
+		// `^10\.0\.` — shredding ONE directive into two garbage lines and writing them
+		// verbatim into a live .htaccess, which 500s the whole media directory.
+		// The reader must refuse and fall back to [] instead.
+		const { config } = require('../../src/config/config.ts');
+		expect(Array.isArray(config.media.htaccessAddons)).toBe(true);
+
+		// Whatever is configured, every emitted addon line must be a directive we were
+		// actually given — never a fragment carrying JSON punctuation.
+		for (const line of getAddonLines()) {
+			expect(line).not.toStartWith('[');
+			expect(line).not.toStartWith('"');
+			expect(line).not.toEndWith(']');
+		}
+	});
+
+	test('addon lines land verbatim, immediately before the default deny', () => {
+		const text = buildHtaccess('private', [], ['RewriteRule ^ - [R=404,L]']);
+		expect(text).toContain('# MEDIA_HTACCESS_ADDONS (from config)');
+		// the comma inside [R=404,L] survives intact — the whole point
+		expect(text).toContain('RewriteRule ^ - [R=404,L]');
 	});
 
 	test("mode 'private' gates on the auth cookie and denies everything else as 404", () => {

@@ -14,6 +14,28 @@ The Dédalo work system is a client-server web application. The server is writte
 
 The server resolves each request through horizontal engines rather than a class-per-model hierarchy: a per-model **descriptor** (`src/core/components/component_X/descriptor.ts`, keyed in `registry.ts`) declares a component's behavior, and the resolve/relations/section engines (`src/core/resolve/`, `src/core/relations/`, `src/core/section/read.ts`) drive it. The JavaScript client lives in `client/` and uses ES module imports for inheritance, relying on native prototypes rather than classes.
 
+## Running it while you work
+
+```shell
+bun install
+bun run dev          # the server + the LESS watcher, together
+```
+
+`bun run dev` is the everyday loop. It supervises the server (restarting it when the install wizard asks for a fresh process) **and** watches the LESS, recompiling the affected stylesheets as you save. Ctrl-C stops both.
+
+The CSS deserves one paragraph of warning, because it catches people out: **the `.less` is the source, the `.css` beside it is generated, and both are committed.** The compiled CSS is what ships — deploying is a checkout, and a production install never runs the LESS compiler — so a `.css` that has drifted from its `.less` means the browser gets bytes that no source in the repo produces. `test/unit/css_build_tripwire.test.ts` recompiles everything on each run and goes red if that happens; the fix is always `bun run css:build`, then commit. Never hand-edit a `.css` or a `.css.map`.
+
+The full account — the three commands, why the output is committed, how entrypoints are derived, why source maps must stay relative, and what to do about a merge conflict in a generated file — is in [CSS architecture → Building the CSS](../css-architecture.md#building-the-css).
+
+Other everyday commands:
+
+```shell
+bun test                       # the suite (see Testing)
+bun run scripts/verify.ts      # the pre-merge gate: typecheck, lint, all tripwires, neighbours
+bunx tsc --noEmit              # typecheck only
+bun run lint                   # Biome
+```
+
 ## Code style
 
 The two sides of the seam have different conventions. The **JavaScript client** uses snake case for the names of methods, functions, variables and every other definition (the section below documents that client style). The **TypeScript server** follows idiomatic TS instead — camelCase symbols, formatted and linted by Biome (`biome.json`: tab indent, single quotes, `noVar`) — so `handleRequest`, `dispatchRqo` and `runWithRequestLangs` are the server-side norm.

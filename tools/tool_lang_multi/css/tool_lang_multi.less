@@ -4,6 +4,11 @@
 * Loaded on tool init
 */
 
+// Shared design tokens (@color_white and friends). Every other tool imports this; this
+// file did not, and only compiled because the old GUI build auto-prepended a global LESS
+// file. The repo build (scripts/build_css.ts) resolves imports honestly, so state it here.
+@import (once) '../../../client/dedalo/core/page/css/layout/vars';
+
 // local vars
 :root {
 	--tool_lang_multi: #7859ae;

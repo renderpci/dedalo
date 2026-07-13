@@ -14692,6 +14692,132 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   max-height: 30rem;
   overflow: auto;
 }
+/* === error_reports widget (WC-018; source: area_maintenance/widgets/error_reports/css/error_reports.less) === */
+.error_reports_widget {
+  font-size: 0.85rem;
+  color: var(--fg_default);
+}
+.error_reports_widget .error_reports_summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.5rem;
+  align-items: baseline;
+  margin: 0 0 0.9rem 0;
+}
+.error_reports_widget .error_reports_total {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--fg_default);
+}
+.error_reports_widget .error_reports_meta {
+  color: var(--fg_muted);
+  font-size: 0.8rem;
+}
+.error_reports_widget .error_reports_target {
+  margin: 0 0 0.9rem 0;
+  font-size: 0.8rem;
+  color: var(--fg_muted);
+}
+.error_reports_widget .error_reports_target b {
+  color: var(--fg_default);
+}
+.error_reports_widget .error_reports_target code {
+  display: inline;
+  background-color: transparent;
+  padding: 0;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--fg_default);
+}
+.error_reports_widget .error_reports_table {
+  border: 1px solid var(--border_default);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--bg_surface);
+}
+.error_reports_widget .er_row {
+  display: grid;
+  grid-template-columns: 11.5rem 9rem 4.5rem 9rem minmax(0, 1fr);
+  align-items: center;
+  border-top: 1px solid var(--border_default);
+}
+.error_reports_widget .er_row:first-of-type {
+  border-top: 0;
+}
+.error_reports_widget .er_row > * {
+  padding: 0.44rem 0.85rem;
+  min-width: 0;
+}
+.error_reports_widget .er_row.header {
+  border-top: 0;
+  background-color: var(--bg_surface_alt);
+}
+.error_reports_widget .er_row.header > * {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg_muted);
+}
+.error_reports_widget .er_row.report {
+  cursor: pointer;
+}
+.error_reports_widget .er_row.report:hover,
+.error_reports_widget .er_row.report.open {
+  background-color: var(--bg_surface_alt);
+}
+.error_reports_widget .er_row .er_when {
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: var(--fg_muted);
+}
+.error_reports_widget .er_row .er_from {
+  font-weight: 600;
+  color: var(--fg_default);
+}
+.error_reports_widget .er_row .er_desc {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--fg_default);
+}
+.error_reports_widget .er_detail {
+  border-top: 1px solid var(--border_default);
+  padding: 0.6rem 0.85rem;
+  background-color: var(--bg_surface_alt);
+}
+.error_reports_widget .er_field {
+  margin: 0 0 0.35rem 0;
+  color: var(--fg_default);
+  word-break: break-word;
+}
+.error_reports_widget .er_field .er_label {
+  font-weight: 600;
+  color: var(--fg_muted);
+  margin-right: 0.4rem;
+}
+.error_reports_widget .er_pre {
+  margin: 0.3rem 0 0.6rem 0;
+  padding: 0.5rem;
+  background-color: var(--bg_surface);
+  border: 1px solid var(--border_default);
+  border-radius: 6px;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.78rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 16rem;
+  overflow: auto;
+  color: var(--fg_default);
+}
+.error_reports_widget .error_reports_footer {
+  margin: 0.9rem 0 0 0;
+}
+.error_reports_widget .error_reports_empty {
+  color: var(--fg_muted);
+  padding: 0.9rem;
+}
 /**
 * export_hierarchy
 *
@@ -21875,130 +22001,3 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   color: var(--color_grey_8);
 }
 /*# sourceMappingURL=main.css.map */
-
-/* === error_reports widget (WC-018; appended — source: area_maintenance/widgets/error_reports/css/error_reports.less) === */
-.error_reports_widget {
-  font-size: 0.85rem;
-  color: var(--fg_default);
-}
-.error_reports_widget .error_reports_summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 1.5rem;
-  align-items: baseline;
-  margin: 0 0 0.9rem 0;
-}
-.error_reports_widget .error_reports_total {
-  font-weight: 700;
-  font-size: 1rem;
-  color: var(--fg_default);
-}
-.error_reports_widget .error_reports_meta {
-  color: var(--fg_muted);
-  font-size: 0.8rem;
-}
-.error_reports_widget .error_reports_target {
-  margin: 0 0 0.9rem 0;
-  font-size: 0.8rem;
-  color: var(--fg_muted);
-}
-.error_reports_widget .error_reports_target b {
-  color: var(--fg_default);
-}
-.error_reports_widget .error_reports_target code {
-  display: inline;
-  background-color: transparent;
-  padding: 0;
-  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
-  font-size: 0.8rem;
-  font-weight: 400;
-  color: var(--fg_default);
-}
-.error_reports_widget .error_reports_table {
-  border: 1px solid var(--border_default);
-  border-radius: 8px;
-  overflow: hidden;
-  background-color: var(--bg_surface);
-}
-.error_reports_widget .er_row {
-  display: grid;
-  grid-template-columns: 11.5rem 9rem 4.5rem 9rem minmax(0, 1fr);
-  align-items: center;
-  border-top: 1px solid var(--border_default);
-}
-.error_reports_widget .er_row:first-of-type {
-  border-top: 0;
-}
-.error_reports_widget .er_row > * {
-  padding: 0.44rem 0.85rem;
-  min-width: 0;
-}
-.error_reports_widget .er_row.header {
-  border-top: 0;
-  background-color: var(--bg_surface_alt);
-}
-.error_reports_widget .er_row.header > * {
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--fg_muted);
-}
-.error_reports_widget .er_row.report {
-  cursor: pointer;
-}
-.error_reports_widget .er_row.report:hover,
-.error_reports_widget .er_row.report.open {
-  background-color: var(--bg_surface_alt);
-}
-.error_reports_widget .er_row .er_when {
-  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
-  font-size: 0.75rem;
-  color: var(--fg_muted);
-}
-.error_reports_widget .er_row .er_from {
-  font-weight: 600;
-  color: var(--fg_default);
-}
-.error_reports_widget .er_row .er_desc {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--fg_default);
-}
-.error_reports_widget .er_detail {
-  border-top: 1px solid var(--border_default);
-  padding: 0.6rem 0.85rem;
-  background-color: var(--bg_surface_alt);
-}
-.error_reports_widget .er_field {
-  margin: 0 0 0.35rem 0;
-  color: var(--fg_default);
-  word-break: break-word;
-}
-.error_reports_widget .er_field .er_label {
-  font-weight: 600;
-  color: var(--fg_muted);
-  margin-right: 0.4rem;
-}
-.error_reports_widget .er_pre {
-  margin: 0.3rem 0 0.6rem 0;
-  padding: 0.5rem;
-  background-color: var(--bg_surface);
-  border: 1px solid var(--border_default);
-  border-radius: 6px;
-  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
-  font-size: 0.78rem;
-  white-space: pre-wrap;
-  word-break: break-word;
-  max-height: 16rem;
-  overflow: auto;
-  color: var(--fg_default);
-}
-.error_reports_widget .error_reports_footer {
-  margin: 0.9rem 0 0 0;
-}
-.error_reports_widget .error_reports_empty {
-  color: var(--fg_muted);
-  padding: 0.9rem;
-}

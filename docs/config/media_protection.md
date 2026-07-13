@@ -177,6 +177,23 @@ before the final deny rule. You own their syntax; Dédalo only places them.
 MEDIA_HTACCESS_ADDONS=["RewriteCond %{REMOTE_ADDR} ^10\\.0\\.","RewriteRule ^ - [L]"]
 ```
 
+!!! warning "It is **JSON**, so every backslash must be doubled"
+    Note the `\\.` above. A regex is written `^10\.0\.` in Apache, but inside a JSON string
+    each backslash must be escaped again — so the value carries `\\.`. Write it the natural
+    way (`^10\.0\.`) and the value is no longer valid JSON.
+
+    When that happens the key is **refused, loudly, and ignored**:
+
+    ```text
+    [config] MEDIA_HTACCESS_ADDONS must be a JSON array of strings — ignoring the value.
+    ```
+
+    Your addon lines simply do not appear in the `.htaccess` — the gate itself is unaffected
+    and stays closed. Fix the escaping and restart. (The reader is deliberately JSON-only: a
+    directive legitimately contains commas — `[R=404,L]` — so a comma-separated list would
+    tear one directive into two invalid ones and Apache would then reject the whole media
+    directory.)
+
 ### `MEDIA_DEV_ROUTE_ENABLED`
 
 **You normally leave this unset.** The engine can serve media itself, with **no per-record

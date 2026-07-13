@@ -11548,7 +11548,7 @@
 											"dir": "<home>",
 											"shell": "/bin/zsh"
 										},
-										"php_error_log_path": "/opt/homebrew/var/log/php-error.log",
+										"php_error_log_path": "<log_dir>/php-error.log",
 										"php_session_path": "v7/sessions",
 										"environment": {
 											"php_version": "8.5.4",

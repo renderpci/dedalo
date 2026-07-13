@@ -49,18 +49,42 @@ describe('install restart supervisor contract', () => {
 	});
 
 	for (const name of SUPERVISED_SCRIPTS) {
-		test(`package.json '${name}' exists and respawns on exactly ${RESTART_EXIT_CODE}`, () => {
+		test(`package.json '${name}' exists and respawns on exactly ${RESTART_EXIT_CODE}`, async () => {
 			const script = pkg.scripts[name];
 			// The failure this whole file exists to prevent: the code names a
 			// supervisor script that nobody ever wrote.
 			expect(script).toBeString();
 
-			// It must key on the SAME code the server exits with — not a stale copy.
-			expect(script).toContain(String(RESTART_EXIT_CODE));
+			// A supervisor may be written two ways, and BOTH must satisfy the same contract:
+			//
+			//   (a) INLINE in package.json — a shell `while` loop (start:supervised);
+			//   (b) DELEGATED to a TS file — `bun run scripts/<x>.ts` (dev, which also runs the
+			//       CSS watcher, so it outgrew a one-line shell script).
+			//
+			// Resolve (b) to the file that actually holds the loop, then apply the SAME two
+			// assertions to whichever source really implements it. Checking only the
+			// package.json string would let a delegated supervisor drop the contract silently.
+			const delegated = /bun run (scripts\/[\w./-]+\.ts)/.exec(script ?? '');
+			const source =
+				delegated?.[1] === undefined
+					? (script as string)
+					: await Bun.file(new URL(`../../${delegated[1]}`, import.meta.url)).text();
 
-			// ...and it must propagate any OTHER code instead of looping on it, so
-			// ^C (exit 0) quits and a crash stops rather than spinning.
-			expect(script).toContain('exit $code');
+			// It must key on the SAME code the server exits with — not a stale copy. A TS
+			// supervisor proves that by IMPORTING the constant; a shell one has no imports, so
+			// it may only spell the number.
+			if (delegated?.[1] === undefined) {
+				expect(source).toContain(String(RESTART_EXIT_CODE));
+				// ...and it must propagate any OTHER code instead of looping on it, so
+				// ^C (exit 0) quits and a crash stops rather than spinning.
+				expect(source).toContain('exit $code');
+			} else {
+				expect(source).toContain('RESTART_EXIT_CODE');
+				expect(source).toContain('install/restart.ts');
+				// Same rule, TS spelling: anything that is NOT the restart code is propagated.
+				expect(source).toContain('code !== RESTART_EXIT_CODE');
+				expect(source).toContain('process.exit(code)');
+			}
 		});
 	}
 

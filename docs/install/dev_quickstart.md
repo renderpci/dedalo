@@ -128,6 +128,8 @@ The other keys:
 bun run dev          # watch mode; `bun run start` for a plain run
 ```
 
+`bun run dev` runs two watchers together: the server (reloading on TypeScript changes, and restarting itself if the install wizard asks for a fresh process) and the stylesheet compiler (recompiling the affected CSS whenever you save a `.less`). Ctrl-C stops both. If you are editing styles, read [Building the CSS](../css-architecture.md#building-the-css) first — the compiled `.css` is committed, and it must not be hand-edited.
+
 ```text
 Dédalo TS server listening on unix socket /tmp/dedalo_ts.sock (entity: dev)
 Dédalo TS dev listener on http://localhost:3600/dedalo/core/page/
@@ -171,11 +173,13 @@ production install you would delete it; here, keep it.
 
 | Command | What |
 | --- | --- |
-| `bun run dev` | the server, in watch mode |
+| `bun run dev` | the server in watch mode **and** the LESS watcher, together |
+| `bun run css:build` | compile the LESS once (needed if you edited a `.less` without `dev` running) |
 | `bun test test/unit/…` | targeted unit gates (the whole suite takes minutes) |
 | `bun run test:client` | the browser client suite against a `DEDALO_DEV_MODE=true` server |
 | `bunx tsc --noEmit` | type check |
 | `bun run lint` | the linter |
+| `bun run scripts/verify.ts` | the pre-merge gate: typecheck, lint, all tripwires, neighbours |
 
 ## When something does not work
 

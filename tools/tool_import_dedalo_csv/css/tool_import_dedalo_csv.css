@@ -436,7 +436,7 @@
   color: var(--color_danger);
   font-weight: 500;
   line-height: 1.1rem;
-  --icon-path: url('../../../core/themes/default/icons/warning.svg');
+  --icon-path: url('../../../client/dedalo/core/themes/default/icons/warning.svg');
 }
 .wrapper_tool.tool_import_dedalo_csv > .content_data > .files_list > .file_item .result_container > .dedalo_last_error_container:before {
   background-color: var(--color_danger);
