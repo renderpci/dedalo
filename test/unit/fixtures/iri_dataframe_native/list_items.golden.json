@@ -1,7 +1,9 @@
 {
 	"_provenance": {
 		"captured": "2026-07-10",
-		"method": "scratchpad capture_dec14b_p1.ts — scratch test3/900312 (test140 iri + paired dd560 dd490 entry); TS dispatchRqo vs live PHP oracle, comparable projection verified deep-equal before freezing"
+		"method": "scratchpad capture_dec14b_p1.ts — scratch test3/900312 (test140 iri + paired dd560 dd490 entry); TS dispatchRqo vs live PHP oracle, comparable projection verified deep-equal before freezing",
+		"identifier_rename": "2026-07-13: the frame's TARGET record moved from dd1706/121 (a row of the shared dev DB, absent from the shipped install seed, so this gate could never pass on a fresh install) to dd1706/900122, which the gate now CREATES and deletes itself. Identifier-only substitution: 'Zenon', the entries and the projection shape are byte-identical to the PHP capture — NOT recaptured, NOT regenerated from TS output.",
+		"READ THIS FIRST — the target id below is EPHEMERAL, not shipped ontology": "dd1706/900122 exists in NO install: test/unit/iri_dataframe_native.test.ts CREATES that record, reads through it, and DELETES it in afterAll. It refuses to start if the coordinate is already taken, so it can never overwrite or delete a record it did not make. (The frame node dd560 and the iri component test140 DO ship in the ontology — only the target record is gate-owned.)"
 	},
 	"items": [
 		{
@@ -16,7 +18,7 @@
 					"id": 1,
 					"type": "dd490",
 					"id_key": 1,
-					"section_id": "121",
+					"section_id": "900122",
 					"section_tipo": "dd1706",
 					"from_component_tipo": "dd560",
 					"main_component_tipo": "test140",
@@ -35,7 +37,7 @@
 		{
 			"tipo": "dd1715",
 			"section_tipo": "dd1706",
-			"section_id": "121",
+			"section_id": "900122",
 			"mode": "list",
 			"lang": "lg-nolan",
 			"from_component_tipo": "dd560",

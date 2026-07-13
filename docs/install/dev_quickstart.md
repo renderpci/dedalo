@@ -136,6 +136,30 @@ Dédalo TS dev listener on http://localhost:3600/dedalo/core/page/
 Open **`http://localhost:3600/dedalo/core/page/`** and log in as `root` with the
 password you set in step 4.
 
+## 7. Run the tests
+
+The suite has its **own database** — it never reads or writes the one your app uses:
+
+```shell
+bun run test:db:setup   # once (and after a schema/seed change)
+bun test                # picks it up automatically
+```
+
+`test:db:setup` builds `<your_db>_test` from files vendored in this repo — the install
+seed, the hierarchies, the registered tools, plus a **numisdata test ontology**
+(definitions only, no records) that ~46 gates need to resolve against. Nothing is copied
+from your install.
+
+!!! info "Why a separate database"
+    Running the suite against the application's database made the tests depend on that
+    install's data — on a fresh install 183 of 2039 unit tests failed — and let them WRITE
+    to it: one gate provisioned a scratch ontology node and **deleted a real one** on its
+    way out. Tests get their own database; the app's is not theirs to touch.
+
+    If the test DB is missing, `bun test` says so and falls back to the configured
+    database (the old behaviour). `DEDALO_TEST_DB_DISABLE=true` forces that fallback;
+    `DEDALO_TEST_DATABASE` overrides the name.
+
 ## What you get
 
 A fresh install ships the canonical **`test3` playground section** — sample
