@@ -9,6 +9,12 @@ node_modules/
 docs_site/
 .cache/
 
+# Throwaway parity/debug probes. They live at the repo ROOT on purpose — that is what
+# lets them import `./src/...` with RELATIVE specifiers (a probe in an out-of-tree
+# scratchpad cannot, which is how absolute machine paths crept into the skill docs).
+# See .agents/skills/dedalo-parity-debugging/SKILL.md.
+probe_*.ts
+
 # Never commit secrets (config lives in ../private/, outside the repo)
 .env
 
