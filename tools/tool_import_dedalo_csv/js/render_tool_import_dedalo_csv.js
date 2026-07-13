@@ -8,7 +8,6 @@
 	import {validate_tipo} from '../../../core/common/js/common.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	import {render_stream} from '../../../core/common/js/render_common.js'
 
 
 
@@ -30,9 +29,10 @@
 * - get_content_data         – builds the main tool body (file list + submit controls)
 * - render_file_info         – renders one CSV file card with column mapper
 * - render_columns_mapper    – async; fetches component list and renders column-mapping UI
-* - render_final_report      – renders per-file import outcome (created / updated / failed rows)
-* - update_process_status    – polls the background process via SSE and streams progress
-* - check_process_data       – resumes an in-progress import on page reload via IndexedDB
+* - follow_import_job        – subscribes to the job's PUSH event stream (get_job_events)
+* - render_progress_node     – the live panel: progress bar + record/component + counters
+* - render_final_report      – renders each file's ImportFileReport (created / updated / failed / warnings)
+* - check_process_data       – re-attaches to a running (or just-finished) import after a reload
 *
 * Data shapes consumed by this module:
 *
@@ -55,11 +55,13 @@
 *
 * import_files API response (api_response inside fn_import .then):
 * {
-*   result : boolean | Array  – true when the background job was queued successfully;
-*                               Array of per-file results when the job is complete
-*   pid    : string           – process ID used to poll status via dd_utils_api::get_process_status
-*   pfile  : string           – path to the process status file
+*   result : boolean  – true when the background job was queued successfully
+*   job_id : string   – THE handle: dd_utils_api::get_job_events subscribes to it and
+*                       pushes every state change (progress frames, then the report).
 * }
+*
+* The progress/report wire is typed in src/core/tools/import_wire.ts —
+* ImportProgressFrame while it runs, ImportBatchReport on the terminal frame.
 */
 export const render_tool_import_dedalo_csv = function() {
 
@@ -277,12 +279,12 @@ const get_content_data = async function(self) {
 					if(SHOW_DEBUG===true) {
 						console.log(')) import_files api_response:', api_response)
 					}
-					if(api_response.result===true){
-						// fire update_process_status
-						update_process_status({
+					if(api_response.result===true && api_response.job_id){
+						// The job runs in the server process we are talking to, so its id is
+						// the whole handle: subscribe and every state change is PUSHED to us.
+						follow_import_job({
 							self					: self,
-							pid						: api_response.pid,
-							pfile					: api_response.pfile,
+							job_id					: api_response.job_id,
 							button_submit			: import_button,
 							process_info_container	: process_info_container
 						})
@@ -317,7 +319,7 @@ const get_content_data = async function(self) {
 		checkbox_label.prepend(checkbox_time_machine_save)
 
 	// process_info_container
-		// Hidden until import_files returns a running pid; shown by update_process_status.
+		// Hidden until import_files returns a job_id; shown by follow_import_job.
 		const process_info_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'process_info_container hide',
@@ -1079,632 +1081,508 @@ render_tool_import_dedalo_csv.prototype.upload_done = async function (options) {
 
 
 /**
-* RENDER_FINAL_REPORT
-* Called on import process has finished to render the final report
+* THE IMPORT PANEL — progress while it runs, then the report.
 *
-* Iterates api_response.result in reverse order (newest file first) and, for
-* each result entry, locates the matching result_container set on the item by
-* render_file_info. Inside it renders:
-*   - An OK/Error alert badge
-*   - A human-readable message from the server
-*   - (debug only) dedalo_last_error if the server logged PHP errors
-*   - Sections for failed_rows, warning_rows, created_rows, and updated_rows,
-*     each with "Copy as comma separated" and "Copy as column" clipboard buttons.
+* Both halves are written against the TYPED WIRE (src/core/tools/import_wire.ts):
+*   - every progress tick is an ImportProgressFrame;
+*   - the terminal frame's data is an ImportBatchReport, whose per-file entries are
+*     ImportFileReport ({ok, created[], updated[], failed[], warnings[], errors[],
+*     rows_total, ms}).
 *
-* Failed rows contain: { section_id, component_tipo, msg, data }
-* Warning rows contain: { section_id, component_tipo, msg, data }
-* Created rows: section_id[] (plain integers)
-* Updated rows: section_id[] (plain integers)
-*
-* (!) navigator.clipboard is only available in secure contexts (HTTPS); the
-* updated_rows copy buttons guard for this via !navigator.clipboard. Earlier
-* copy buttons in failed/created row blocks do NOT guard for this, which may
-* cause silent failures on HTTP deployments.
-*
-* @param {Object} options
-* @param {Object} options.self - tool_import_dedalo_csv instance
-* @param {Object} options.api_response - final process data:
-*   {
-*     result              : Array of per-file result objects,
-*     dedalo_last_error   : string|null
-*   }
-*   Each per-file result object:
-*   {
-*     result        : boolean,
-*     file          : string,
-*     section_tipo  : string,
-*     msg           : string,
-*     failed_rows   : { section_id, component_tipo, msg, data }[],
-*     warning_rows  : { section_id, component_tipo, msg, data }[],
-*     created_rows  : number[],
-*     updated_rows  : number[]
-*   }
-* @param {HTMLElement} options.process_info_container - the SSE progress container
-* @returns {void}
+* Note `created` / `updated` are ARRAYS OF SECTION_IDS, not counts — that is what
+* lets the panel list them and offer "copy as column". (A count has no .length, so
+* an earlier server that sent one made this whole block render nothing at all.)
 */
-const render_final_report = function(options){
-
-	const self						= options.self
-	const api_response				= options.api_response
-	const process_info_container	= options.process_info_container
-
-	if (!api_response || !api_response.result) {
-		console.error('Invalid API response result:', api_response);
-		return
-	}
-
-	const selected_files = self.csv_files_list //.filter(el => el.checked===true)
-	const result_len = api_response.result.length
-	for (let i = result_len - 1; i >= 0; i--) {
-
-		const current_response	= api_response.result[i]
-		const current_file		= selected_files.find(el =>
-			el.name === current_response.file && el.section_tipo === current_response.section_tipo
-		)
-
-		const result_container = current_file?.result_container || null
-		if(result_container) {
-
-			// clean container
-				while (result_container.firstChild) {
-					result_container.removeChild(result_container.firstChild)
-				}
-
-			// response_msg. OK/Error message
-				const message_class	= current_response.result ? 'success' : 'danger'
-				const message_label	= current_response.result
-					? self.get_tool_label('ok') || 'OK'
-					: self.get_tool_label('error') || 'Error'
-				const response_msg = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'response_msg alert ' + message_class,
-					inner_html		: message_label,
-					parent			: result_container
-				})
-
-			// msg_container
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'user_msg_container',
-					inner_html		: current_response.msg,
-					parent			: result_container
-				})
-
-			// dedalo_last_error. server errors (debug only)
-				if (api_response.dedalo_last_error) {
-					const dedalo_last_error_container = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'dedalo_last_error_container',
-						inner_html		: 'Imported with errors:',
-						parent			: result_container
-					})
-					ui.create_dom_element({
-						element_type	: 'pre',
-						class_name		: 'error_pre',
-						inner_html		: api_response.dedalo_last_error,
-						parent			: dedalo_last_error_container
-					})
-					if (response_msg.classList.contains('success')) {
-						response_msg.classList.add('warning_text')
-						response_msg.insertAdjacentHTML('beforeend', ' - Warning ')
-					}
-				}
-
-			// result_info_container
-				const result_info_container = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'result_info_container',
-					parent			: result_container
-				})
-
-
-			if(current_response.result) {
-
-				// failed_rows info
-					if(current_response.failed_rows.length>0) {
-
-						const failed_rows = current_response.failed_rows
-
-						const header = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'header',
-							parent			: result_info_container
-						})
-
-						const created_label = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'label',
-							inner_html		: self.get_tool_label('failed') || 'Failed' + ':',
-							parent			: header
-						})
-
-						// copy_to_find_button
-							const copy_to_find_button = ui.create_dom_element({
-								element_type	: 'button',
-								class_name		: 'warning copy_button copy',
-								inner_html		: self.get_tool_label('copy_to_find') || 'Copy as comma separated',
-								parent			: header
-							})
-							copy_to_find_button.addEventListener( 'click', (e) => {
-								e.stopPropagation()
-
-								const failed_section_id = current_response.failed_rows.map(el => el.section_id)
-
-								if(!navigator.clipboard){
-									const insecure_label = self.get_tool_label('insecure_context') || 'Insecure context, used only in https'
-									alert(insecure_label);
-								}else{
-									navigator.clipboard.writeText(failed_section_id.join(','))
-									.then(() => {
-										const text_copied = self.get_tool_label('text_copied') || 'Text copied to clipboard'
-										alert(text_copied);
-									})
-									.catch(err => {
-										const error_coping_text = self.get_tool_label('error_coping_text') || 'Error in copying text: '
-										alert(error_coping_text, err);
-									});
-								}
-							})
-
-						// copy_as_column_button
-							const copy_as_column_button = ui.create_dom_element({
-								element_type	: 'button',
-								class_name		: 'warning copy_button copy',
-								inner_html		: self.get_tool_label('copy_as_column') || 'Copy as column',
-								parent			: header
-							})
-							copy_as_column_button.addEventListener( 'click', (e) => {
-								e.stopPropagation()
-
-								const failed_section_id = current_response.failed_rows.map(el => el.section_id)
-								if(!navigator.clipboard){
-									const insecure_label = self.get_tool_label('insecure_context') || 'Insecure context, used only in https'
-									alert(insecure_label);
-								}else{
-									navigator.clipboard.writeText(failed_section_id.join('\n'))
-									.then(() => {
-										const text_copied = self.get_tool_label('text_copied') || 'Text copied to clipboard'
-										alert(text_copied);
-									})
-									.catch(err => {
-										const error_coping_text = self.get_tool_label('error_coping_text') || 'Error in copying text: '
-										alert(error_coping_text, err);
-									});
-								}
-							})
-
-						const failed_rows_len = failed_rows.length
-						for (let g = 0; g < failed_rows_len; g++) {
-
-							const failed = failed_rows[g]
-
-							const failed_id = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'failed_container error',
-								inner_html		: failed.section_id +' | '+failed.component_tipo + ' | ' +failed.msg,
-								parent			: result_info_container
-							})
-
-							const failed_data = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'failed_data_container error',
-								inner_html		: JSON.stringify( failed.data ),
-								parent			: result_info_container
-							})
-						}
-					}//end if(current_response.failed_rows.length>0)
-
-				// warning_rows info. Non fatal: data was imported but needs user attention
-					const warning_rows = current_response.warning_rows || []
-					if(warning_rows.length>0) {
-
-						const header = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'header',
-							parent			: result_info_container
-						})
-
-						ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'label',
-							inner_html		: self.get_tool_label('warnings') || 'Warnings' + ':',
-							parent			: header
-						})
-
-						const warning_rows_len = warning_rows.length
-						for (let g = 0; g < warning_rows_len; g++) {
-
-							const warning = warning_rows[g]
-
-							ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'failed_container warning',
-								inner_html		: warning.section_id +' | '+warning.component_tipo + ' | ' +warning.msg,
-								parent			: result_info_container
-							})
-
-							ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'failed_data_container warning',
-								inner_html		: JSON.stringify( warning.data ),
-								parent			: result_info_container
-							})
-						}
-					}//end if(warning_rows.length>0)
-
-				// created_rows info
-					if(current_response.created_rows.length>0) {
-
-						// header
-							const header = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'header',
-								parent			: result_info_container
-							})
-
-						// created_label
-							const created_label = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'label',
-								inner_html		: self.get_tool_label('created') || 'Created' + ':',
-								parent			: header
-							})
-
-						// copy_to_find_button
-							const copy_to_find_button = ui.create_dom_element({
-								element_type	: 'button',
-								class_name		: 'warning copy_button copy',
-								inner_html		: self.get_tool_label('copy_to_find') || 'Copy as comma separated',
-								parent			: header
-							})
-							copy_to_find_button.addEventListener('click', (e) => {
-								e.stopPropagation()
-
-								if(!navigator.clipboard){
-									const insecure_label = self.get_tool_label('insecure_context') || 'Insecure context, used only in https'
-									alert(insecure_label);
-								}else{
-									navigator.clipboard.writeText(current_response.created_rows.join(','))
-									.then(() => {
-										const text_copied = self.get_tool_label('text_copied') || 'Text copied to clipboard'
-										alert(text_copied);
-									})
-									.catch(err => {
-										const error_coping_text = self.get_tool_label('error_coping_text') || 'Error in copying text: '
-										alert(error_coping_text, err);
-									});
-								}
-							})
-
-						// copy_as_column_button
-							const copy_as_column_button = ui.create_dom_element({
-								element_type	: 'button',
-								class_name		: 'warning copy_button copy',
-								inner_html		: self.get_tool_label('copy_as_column') || 'Copy as column',
-								parent			: header
-							})
-							copy_as_column_button.addEventListener( 'click', (e) => {
-								e.stopPropagation()
-
-								if(!navigator.clipboard){
-									const insecure_label = self.get_tool_label('insecure_context') || 'Insecure context, used only in https'
-									alert(insecure_label);
-								}else{
-									navigator.clipboard.writeText(current_response.created_rows.join('\n'))
-									.then(() => {
-										const text_copied = self.get_tool_label('text_copied') || 'Text copied to clipboard'
-										alert(text_copied);
-									})
-									.catch(err => {
-										const error_coping_text = self.get_tool_label('error_coping_text') || 'Error in copying text: '
-										alert(error_coping_text, err);
-									});
-								}
-							})
-
-						// created_rows
-							const created_rows = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'section_id_container',
-								inner_html		: current_response.created_rows.join('<br>'),
-								parent			: result_info_container
-							})
-					}//end if(current_response.created_rows.length>0)
-
-				// updated_rows info
-					if(current_response.updated_rows.length>0) {
-
-						// header
-							const header = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'header',
-								parent			: result_info_container
-							})
-
-						// updated_label
-							const updated_label = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'label',
-								inner_html		: self.get_tool_label('updated') || 'Updated' + ':',
-								parent			: header
-							})
-
-						// copy_to_find_button
-							const copy_to_find_button = ui.create_dom_element({
-								element_type	: 'button',
-								class_name		: 'warning copy_button copy',
-								inner_html		: self.get_tool_label('copy_to_find') || 'Copy as comma separated',
-								parent			: header
-							})
-							copy_to_find_button.addEventListener('click', (e) => {
-								e.stopPropagation()
-
-								const clipboard_data = current_response.updated_rows.join(',')
-								if(!navigator.clipboard){
-									const insecure_label = self.get_tool_label('insecure_context') || 'Insecure context, used only in https'
-									alert(insecure_label);
-								}else{
-
-									navigator.clipboard.writeText(clipboard_data)
-									.then(() => {
-										const text_copied = self.get_tool_label('text_copied') || 'Text copied to clipboard'
-										alert(text_copied);
-									})
-									.catch(err => {
-										const error_coping_text = self.get_tool_label('error_coping_text') || 'Error in copying text: '
-										alert(error_coping_text, err);
-									});
-								}
-							})
-
-						// copy_as_column_button
-							const copy_as_column_button = ui.create_dom_element({
-								element_type	: 'button',
-								class_name		: 'warning copy_button copy',
-								inner_html		: self.get_tool_label('copy_as_column') || 'Copy as column',
-								parent			: header
-							})
-							copy_as_column_button.addEventListener('click', (e) => {
-								e.stopPropagation()
-
-								if(!navigator.clipboard){
-									const insecure_label = self.get_tool_label('insecure_context') || 'Insecure context, used only in https'
-									alert(insecure_label);
-								}else{
-									const clipboard_data = current_response.updated_rows.join('\n')
-									navigator.clipboard.writeText(clipboard_data)
-									.then(() => {
-										const text_copied = self.get_tool_label('text_copied') || 'Text copied to clipboard'
-										alert(text_copied);
-									})
-									.catch(err => {
-										const error_coping_text = self.get_tool_label('error_coping_text') || 'Error in copying text: '
-										alert(error_coping_text, err);
-									});
-								}
-							})
-
-						// updated_rows
-							const updated_rows = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'section_id_container',
-								inner_html		: current_response.updated_rows.join('<br>'),
-								parent			: result_info_container
-							})
-					}//end if(current_response.updated_rows.length>0)
-			}//end if(current_response.result)
-		}//end if(result_container)
-	}//end for (let i = result_len - 1; i >= 0; i--)
-}//end render_final_report
-
 
 
 /**
-* UPDATE_PROCESS_STATUS
-* Opens an SSE stream to dd_utils_api::get_process_status and streams live
-* progress into process_info_container until the background import finishes.
+* FOLLOW_IMPORT_JOB
+* Subscribes to the import job's event stream and renders it.
 *
-* Flow:
-*   1. Locks the submit button (adds 'loading' class) and reveals process_info_container.
-*   2. Calls data_manager.request_stream() with the pid/pfile pair from the
-*      import_files API response to start the SSE feed.
-*   3. For each SSE chunk (on_read): builds/updates a msg_node inside info_node
-*      showing current file, section_id, component label, and elapsed time.
-*      When is_running===false the final chunk carries the complete per-file
-*      results, which are handed to render_final_report().
-*   4. When the stream closes (on_done): unlocks the submit button.
-*
-* The PID and pfile are also persisted in IndexedDB (by render_stream /
-* data_manager.set_local_db_data) so that check_process_data can resume
-* polling after a page reload.
-*
-* (!) get_label is used directly (not self.get_tool_label) for 'proceso_completado'
-* — this is the global page label map, not the tool label map. Ensure the key
-* exists in the active locale.
+* The stream is a PUSH: dd_utils_api::get_job_events (core/api/job_stream.ts)
+* subscribes to the in-process job and emits a frame the instant the job changes
+* state — there is no {pid, pfile} handle and no polling timer. The stream ends on
+* the first frame with is_running:false, and THAT frame carries the report.
 *
 * @param {Object} options
-* @param {Object} options.self - tool_import_dedalo_csv instance
-* @param {string} options.pid - process ID from the import_files API response
-* @param {string} options.pfile - process file path from the import_files API response
-* @param {HTMLElement} options.button_submit - the import button (locked during processing)
-* @param {HTMLElement} options.process_info_container - SSE progress display node
+* @param {Object} options.self - tool instance
+* @param {string} options.job_id - the handle returned by import_files
+* @param {HTMLElement} options.button_submit - locked while the job runs
+* @param {HTMLElement} options.process_info_container - where the panel is drawn
 * @returns {void}
 */
-const update_process_status = (options) => {
+const follow_import_job = (options) => {
 
-	// options
-		const self						= options.self
-		const pid						= options.pid
-		const pfile						= options.pfile
-		const button_submit				= options.button_submit
-		const process_info_container	= options.process_info_container
+	const self						= options.self
+	const job_id					= options.job_id
+	const button_submit				= options.button_submit
+	const process_info_container	= options.process_info_container
 
-	// button_submit. locks the submit button
+	// lock the submit button and reveal the panel
 		button_submit.classList.add('loading')
-		if (process_info_container.classList.contains('hide')) {
-			process_info_container.classList.remove('hide')
-		}
+		process_info_container.classList.remove('hide')
 
-	// get_process_status from API and returns a SEE stream
+	const progress_node = render_progress_node(self, process_info_container)
+
 	data_manager.request_stream({
 		body : {
-			dd_api		: 'dd_utils_api',
-			action		: 'get_process_status',
-			update_rate	: 1000, // int milliseconds
-			options		: {
-				pid		: pid,
-				pfile	: pfile
+			dd_api	: 'dd_utils_api',
+			action	: 'get_job_events',
+			options	: {
+				job_id : job_id
 			}
 		}
 	})
 	.then(function(stream){
 
-		// render base nodes and set functions to manage
-		// the stream reader events
-		const render_response = render_stream({
-			container				: process_info_container,
-			id						: 'process_import_dedalo_csv',
-			pid						: pid,
-			pfile					: pfile,
-			delete_local_db_data	: false
-		})
-
-		// on_read event (called on every chunk from stream reader)
 		const on_read = (sse_response) => {
-			// fire update_info_node (in render response function in render_common) on every reader read chunk
-			render_response.update_info_node(sse_response, (info_node) =>{
 
-				const data = sse_response.data || {}
+			const data = sse_response.data || {}
 
-				// build msg_node once and attach it to the info_node container
-					if(!info_node.msg_node) {
-						info_node.msg_node = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'msg_node',
-							parent			: info_node
-						})
-					}
+			// The job is over: this frame's data IS the report.
+			if (sse_response.is_running===false) {
 
-				// finished process case
-				if(sse_response.is_running===false){
+				progress_node.finish(
+					(get_label.proceso_completado || 'Process completed') + ' ' + (sse_response.total_time || '') + ' ms'
+				)
 
-					const msg_end = [(get_label.proceso_completado || 'Process completed') + ' ' + sse_response.total_time]
-
-					// update text content only
-					ui.update_node_content(info_node.msg_node, msg_end)
-
-					// errors
-					const errors = data.errors && data.errors.length
-						? data.errors
-						: null
-					// errors found case
-					if(errors){
-						// add errors. Note that on running == false, the last message is not printed
-						const msg_error = (get_label.error || 'Error') +': '+ errors.join(' | ') +'<br>'+ data.msg
-						ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'error',
-							inner_html		: msg_error,
-							parent			: info_node.msg_node
-						})
-					}
-
-					// print final_report into process_info_container
-					render_final_report({
-						self					: self,
-						api_response			: data,
-						process_info_container	: process_info_container
-					})
-
-					// activate button_submit
-					button_submit.classList.remove('loading')
-
-					// stop execution here
-					return
+				// A job that died (server shutdown, an unhandled throw) reports here.
+				const errors = (sse_response.errors && sse_response.errors.length)
+					? sse_response.errors
+					: null
+				if (errors) {
+					progress_node.error(
+						(get_label.error || 'Error') + ': ' + errors.join(' | ')
+					)
 				}
 
-				// msg
-					// Assemble a pipe-separated progress line from whatever the server included
-					// in this chunk. Not all fields are present on every tick.
-					const ar_msg = []
+				render_final_report({
+					self					: self,
+					batch_report			: data,
+					process_info_container	: process_info_container
+				})
 
-					if(data.current_file && data.current_file.length){
-						ar_msg.push(`${data.msg}: ${data.current_file}`)
-					}else{
-						ar_msg.push(data.msg)
-					}
-					if(data.section_id)	ar_msg.push(`id: ${data.section_id}`)
-					if(data.compomnent_label) ar_msg.push(data.compomnent_label)
-					if(sse_response.time) ar_msg.push(sse_response.total_time)
+				button_submit.classList.remove('loading')
 
-					const msg = ar_msg.join(' | ')
+				return
+			}
 
-					// update text content only
-					ui.update_node_content(info_node.msg_node, msg)
-			})
+			progress_node.update(data)
 		}
 
-		// on_done event (called once at finish or cancel the stream read)
 		const on_done = () => {
-			// is triggered at the reader's closing
-			render_response.done()
-			// unlocks the button submit
 			button_submit.classList.remove('loading')
 		}
 
-		// read stream. Creates ReadableStream that fire
-		// 'on_read' function on each stream chunk at update_rate
-		// (1 second default) until stream is done (PID is no longer running)
 		data_manager.read_stream(stream, on_read, on_done)
 	})
-}//end update_process_status
+}//end follow_import_job
+
+
+
+/**
+* RENDER_PROGRESS_NODE
+* The live panel: a real progress BAR (rows done / rows total — the server sends
+* rows_total, which PHP never knew), the current file and record, and the running
+* created/updated/failed/warning counts.
+*
+* @param {Object} self - tool instance
+* @param {HTMLElement} container
+* @returns {Object} { update(frame), finish(msg), error(msg) }
+*/
+const render_progress_node = (self, container) => {
+
+	// clean the container
+		while (container.firstChild) {
+			container.removeChild(container.firstChild)
+		}
+
+	const panel = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'import_progress_panel',
+		parent			: container
+	})
+
+	// headline: what the engine is doing right now
+		const headline = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'import_progress_headline',
+			inner_html		: self.get_tool_label('preparing') || 'Preparing…',
+			parent			: panel
+		})
+
+	// the bar
+		const bar_track = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'import_progress_track',
+			parent			: panel
+		})
+		const bar_fill = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'import_progress_fill',
+			parent			: bar_track
+		})
+
+	// the detail line (record + component being written)
+		const detail = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'import_progress_detail',
+			parent			: panel
+		})
+
+	// the live counters
+		const counters = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'import_progress_counters',
+			parent			: panel
+		})
+
+	const label_of = (key, fallback) => self.get_tool_label(key) || fallback
+
+	return {
+		update : (frame) => {
+
+			// 'reading' has no row count yet; 'importing' does.
+			const rows_total	= frame.rows_total || 0
+			const row			= frame.row || 0
+			const percent		= rows_total > 0
+				? Math.min(100, Math.round((row / rows_total) * 100))
+				: 0
+
+			bar_fill.style.width = percent + '%'
+			bar_track.classList.toggle('indeterminate', rows_total === 0)
+
+			const phase_label = frame.phase === 'reading'
+				? label_of('reading', 'Reading')
+				: label_of('importing', 'Importing')
+
+			const position = (frame.files_total > 1)
+				? ' (' + frame.file_index + '/' + frame.files_total + ')'
+				: ''
+
+			ui.update_node_content(headline, [
+				phase_label + ': ' + (frame.file || '') + position +
+				(rows_total > 0 ? ' — ' + row + '/' + rows_total + ' (' + percent + '%)' : '')
+			])
+
+			const ar_detail = []
+			if (frame.section_id) ar_detail.push('id: ' + frame.section_id)
+			if (frame.component_label) ar_detail.push(frame.component_label)
+			ui.update_node_content(detail, [ar_detail.join(' | ')])
+
+			ui.update_node_content(counters, [
+				label_of('created', 'Created') + ': ' + (frame.created || 0) + '  ·  ' +
+				label_of('updated', 'Updated') + ': ' + (frame.updated || 0) + '  ·  ' +
+				label_of('failed', 'Failed') + ': ' + (frame.failed || 0) + '  ·  ' +
+				label_of('warnings', 'Warnings') + ': ' + (frame.warnings || 0)
+			])
+		},
+		finish : (msg) => {
+			bar_track.classList.remove('indeterminate')
+			bar_fill.style.width = '100%'
+			panel.classList.add('done')
+			ui.update_node_content(headline, [msg])
+			ui.update_node_content(detail, [''])
+		},
+		error : (msg) => {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'error',
+				inner_html		: msg,
+				parent			: panel
+			})
+		}
+	}
+}//end render_progress_node
+
+
+
+/**
+* COPY_BUTTON
+* One "copy these ids" button. Both variants (comma-separated / one per line)
+* differ only in their join, so they are built by the same function.
+*
+* @param {Object} self - tool instance
+* @param {HTMLElement} parent
+* @param {string} label_key
+* @param {string} fallback_label
+* @param {Function} get_text - () => the text to put on the clipboard
+* @returns {HTMLElement}
+*/
+const copy_button = (self, parent, label_key, fallback_label, get_text) => {
+
+	const button = ui.create_dom_element({
+		element_type	: 'button',
+		class_name		: 'warning copy_button copy',
+		inner_html		: self.get_tool_label(label_key) || fallback_label,
+		parent			: parent
+	})
+	button.addEventListener('click', (e) => {
+		e.stopPropagation()
+
+		// navigator.clipboard is undefined outside a secure context (plain HTTP).
+		if (!navigator.clipboard) {
+			alert(self.get_tool_label('insecure_context') || 'Insecure context, used only in https')
+			return
+		}
+		navigator.clipboard.writeText(get_text())
+		.then(() => {
+			alert(self.get_tool_label('text_copied') || 'Text copied to clipboard')
+		})
+		.catch(err => {
+			alert((self.get_tool_label('error_coping_text') || 'Error in copying text: ') + err)
+		})
+	})
+	return button
+}//end copy_button
+
+
+
+/**
+* RENDER_ID_BLOCK
+* A titled list of section_ids with its two copy buttons (the block the user
+* actually came for: "which records did this import touch?").
+*
+* @returns {void}
+*/
+const render_id_block = (self, parent, label_key, fallback_label, ids) => {
+
+	if (!ids || ids.length < 1) return
+
+	const header = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'header',
+		parent			: parent
+	})
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'label',
+		inner_html		: (self.get_tool_label(label_key) || fallback_label) + ' (' + ids.length + ')',
+		parent			: header
+	})
+
+	copy_button(self, header, 'copy_to_find', 'Copy as comma separated', () => ids.join(','))
+	copy_button(self, header, 'copy_as_column', 'Copy as column', () => ids.join('\n'))
+
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'section_id_container',
+		inner_html		: ids.join('<br>'),
+		parent			: parent
+	})
+}//end render_id_block
+
+
+
+/**
+* RENDER_ISSUE_BLOCK
+* The failed / warning rows. A failed cell was NOT written (the record kept its
+* previous value); a warning cell WAS written but needs a human look.
+*
+* @returns {void}
+*/
+const render_issue_block = (self, parent, label_key, fallback_label, issues, css_class) => {
+
+	if (!issues || issues.length < 1) return
+
+	const header = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'header',
+		parent			: parent
+	})
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'label',
+		inner_html		: (self.get_tool_label(label_key) || fallback_label) + ' (' + issues.length + ')',
+		parent			: header
+	})
+
+	// The ids are what the user pastes into a search to go look at the damage.
+	copy_button(self, header, 'copy_to_find', 'Copy as comma separated',
+		() => issues.map(el => el.section_id).join(',')
+	)
+	copy_button(self, header, 'copy_as_column', 'Copy as column',
+		() => issues.map(el => el.section_id).join('\n')
+	)
+
+	const issues_len = issues.length
+	for (let i = 0; i < issues_len; i++) {
+
+		const issue = issues[i]
+
+		const row_label = issue.row ? ('row ' + issue.row + ' | ') : ''
+
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'failed_container ' + css_class,
+			inner_html		: row_label + issue.section_id + ' | ' + issue.component_tipo + ' | ' + issue.msg,
+			parent			: parent
+		})
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'failed_data_container ' + css_class,
+			inner_html		: JSON.stringify( issue.data ),
+			parent			: parent
+		})
+	}
+}//end render_issue_block
+
+
+
+/**
+* RENDER_FINAL_REPORT
+* Draws each file's ImportFileReport into that file's own result container.
+*
+* @param {Object} options
+* @param {Object} options.self - tool instance
+* @param {Object} options.batch_report - ImportBatchReport {result: ImportFileReport[], msg, errors}
+* @param {HTMLElement} options.process_info_container
+* @returns {void}
+*/
+const render_final_report = function(options){
+
+	const self			= options.self
+	const batch_report	= options.batch_report
+
+	if (!batch_report || !Array.isArray(batch_report.result)) {
+		console.error('Invalid import report:', batch_report)
+		return
+	}
+
+	const selected_files	= self.csv_files_list
+	const files				= batch_report.result
+
+	for (let i = files.length - 1; i >= 0; i--) {
+
+		const report = files[i]
+
+		const current_file = selected_files.find(el =>
+			el.name === report.file && el.section_tipo === report.section_tipo
+		)
+		const result_container = current_file ? current_file.result_container : null
+		if (!result_container) continue
+
+		// clean container
+			while (result_container.firstChild) {
+				result_container.removeChild(result_container.firstChild)
+			}
+
+		// OK / Error headline. A file is 'ok' when it RAN — it may still hold failed
+		// rows, which is why the counts below matter more than this badge.
+			const has_failures	= (report.failed && report.failed.length > 0)
+			const message_class	= report.ok
+				? (has_failures ? 'warning_text' : 'success')
+				: 'danger'
+			const message_label	= report.ok
+				? (self.get_tool_label('ok') || 'OK')
+				: (self.get_tool_label('error') || 'Error')
+
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'response_msg alert ' + message_class,
+				inner_html		: message_label,
+				parent			: result_container
+			})
+
+		// the summary line, built from the numbers (never parsed out of a message)
+			const summary = [
+				(self.get_tool_label('created') || 'Created') + ': ' + report.created.length,
+				(self.get_tool_label('updated') || 'Updated') + ': ' + report.updated.length,
+				(self.get_tool_label('failed') || 'Failed') + ': ' + report.failed.length,
+				(self.get_tool_label('warnings') || 'Warnings') + ': ' + report.warnings.length
+			].join(' · ')
+
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'user_msg_container',
+				inner_html		: report.section_tipo + ' — ' + summary +
+					(report.ms ? ' (' + report.ms + ' ms)' : ''),
+				parent			: result_container
+			})
+
+		// file-level errors (unreadable CSV, no mapped column, a skipped row…)
+			if (report.errors && report.errors.length > 0) {
+				const errors_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'dedalo_last_error_container',
+					parent			: result_container
+				})
+				ui.create_dom_element({
+					element_type	: 'pre',
+					class_name		: 'error_pre',
+					inner_html		: report.errors.join('\n'),
+					parent			: errors_container
+				})
+			}
+
+		const result_info_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'result_info_container',
+			parent			: result_container
+		})
+
+		render_issue_block(self, result_info_container, 'failed', 'Failed', report.failed, 'error')
+		render_issue_block(self, result_info_container, 'warnings', 'Warnings', report.warnings, 'warning')
+		render_id_block(self, result_info_container, 'created', 'Created', report.created)
+		render_id_block(self, result_info_container, 'updated', 'Updated', report.updated)
+	}
+}//end render_final_report
 
 
 
 /**
 * CHECK_PROCESS_DATA
-* Checks IndexedDB for a previously-started import process and resumes
-* status polling if one is found.
+* Re-attaches to an import that is still running, after a page reload.
 *
-* Called once during get_content_data() construction. If a 'status' record
-* exists under 'process_import_dedalo_csv' in the local DB (written by
-* render_stream when the previous import was started), update_process_status
-* is called with the stored pid and pfile so the user sees live progress
-* without having to manually re-trigger the import.
+* It ASKS THE SERVER (tool_request → get_background_jobs), which is the only thing
+* that actually knows: the job runs inside the server process and its registry
+* already records the tool, the action and the owner. The client therefore keeps
+* NO state of its own.
 *
-* This handles the common case of a page reload while an import is running
-* in the background — the background process continues on the server, and
-* the UI reconnects to its SSE feed transparently.
+* This used to be an IndexedDB lookup, because PHP forked a detached CLI child the
+* web layer had no memory of — so the client had to remember {pid, pfile} or lose
+* the job. Persisting it here duplicated a fact the server owns, and did so badly:
+* the record was per-browser (a second tab saw no running import), it went stale
+* whenever the server restarted and the in-process job died with it, and writing it
+* to the wrong object store threw NotFoundError from inside a promise.
+*
+* Re-attaching to a FINISHED job is fine and deliberate: get_job_events answers a
+* terminal job with one frame carrying the report (retained ~1h), so a reload right
+* after the run still renders the outcome.
 *
 * @param {Object} options
-* @param {Object} options.self - tool_import_dedalo_csv instance
-* @param {HTMLElement} options.button_submit - import button (will be locked while polling)
-* @param {HTMLElement} options.process_info_container - SSE progress display node
+* @param {Object} options.self - tool instance
+* @param {HTMLElement} options.button_submit
+* @param {HTMLElement} options.process_info_container
 * @returns {void}
 */
 const check_process_data = (options) => {
 
-	// options
-		const self						= options.self
-		const process_info_container	= options.process_info_container
-		const button_submit				= options.button_submit
+	const self						= options.self
+	const process_info_container	= options.process_info_container
+	const button_submit				= options.button_submit
 
+	self.get_background_jobs('import_files')
+	.then(function(api_response){
 
-	data_manager.get_local_db_data(
-		'process_import_dedalo_csv',
-		'status'
-	)
-	.then(function(local_data){
-		if (local_data && local_data.value) {
-			update_process_status({
-				pid						: local_data.value.pid,
-				pfile					: local_data.value.pfile,
-				process_info_container	: process_info_container,
-				button_submit			: button_submit,
-				self 					: self
+		const jobs = (api_response && Array.isArray(api_response.result))
+			? api_response.result
+			: []
 
-			})
+		// Newest first (the server sorts). Re-attach only to a run still going —
+		// a finished one would otherwise re-render its report every time the tool
+		// is opened, for as long as the server retains the record.
+		const running = jobs.find(el => el.status === 'running')
+		if (!running) {
+			return
 		}
+
+		follow_import_job({
+			self					: self,
+			job_id					: running.id,
+			process_info_container	: process_info_container,
+			button_submit			: button_submit
+		})
 	})
 }//end check_process_data
 

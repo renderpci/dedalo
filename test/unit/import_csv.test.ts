@@ -93,39 +93,47 @@ describe('analyzeCsv (get_csv_files summary, off-loop)', () => {
 
 describe('planCsvImport', () => {
 	const columns: (CsvColumn | null)[] = [
-		{ tipo: 'test102', model: 'component_section_id', columnName: 'test102' },
-		{ tipo: 'test52', model: 'component_input_text', columnName: 'test52' },
-		{ tipo: 'test88', model: 'component_relation_related', columnName: 'test88' },
+		{ tipo: 'test102', model: 'component_section_id', columnName: 'test102', lang: 'lg-nolan' },
+		{ tipo: 'test52', model: 'component_input_text', columnName: 'test52', lang: 'lg-nolan' },
+		{ tipo: 'test88', model: 'component_relation_related', columnName: 'test88', lang: 'lg-nolan' },
 	];
 
-	test('resolves section_id, conforms other cells, round-trips wrapped datos', () => {
+	test('resolves section_id, conforms other cells, round-trips wrapped datos', async () => {
 		const wrappedText = JSON.stringify({ dedalo_data: [{ value: 'hi', lang: 'lg-eng', id: 1 }] });
 		const wrappedRel = JSON.stringify({ dedalo_data: [{ section_tipo: 'rsc197', section_id: 9 }] });
-		const plan = planCsvImport([['7', wrappedText, wrappedRel]], columns);
+		const plan = await planCsvImport([['7', wrappedText, wrappedRel]], columns, 'test3');
 		expect(plan).toHaveLength(1);
 		expect(plan[0]?.sectionId).toBe(7);
 		// section_id is NOT emitted as a conformed column (used for matching only).
 		expect(plan[0]?.columns.map((c) => c.tipo)).toEqual(['test52', 'test88']);
 		expect(plan[0]?.columns[0]?.conform.result).toEqual([{ value: 'hi', lang: 'lg-eng', id: 1 }]);
+		// A locator that arrives without its relation `type` / `from_component_tipo`
+		// gets them filled from the component's ontology — an incomplete locator is
+		// unusable, and PHP's conform completes it the same way.
 		expect(plan[0]?.columns[1]?.conform.result).toEqual([
-			{ section_tipo: 'rsc197', section_id: 9 },
+			{
+				section_tipo: 'rsc197',
+				section_id: 9,
+				type: 'dd151',
+				from_component_tipo: 'test88',
+			},
 		]);
 	});
 
-	test('empty section_id cell → new record (null)', () => {
-		const plan = planCsvImport([['', 'hello', '']], columns);
+	test('empty section_id cell → new record (null)', async () => {
+		const plan = await planCsvImport([['', 'hello', '']], columns, 'test3');
 		expect(plan[0]?.sectionId).toBeNull();
 		// flat scalar → {value}; empty relation cell → clear (null)
 		expect(plan[0]?.columns[0]?.conform.result).toEqual([{ value: 'hello' }]);
 		expect(plan[0]?.columns[1]?.conform.result).toBeNull();
 	});
 
-	test('unmatched columns (null) are skipped', () => {
+	test('unmatched columns (null) are skipped', async () => {
 		const cols: (CsvColumn | null)[] = [
 			null,
-			{ tipo: 'test52', model: 'component_input_text', columnName: 'test52' },
+			{ tipo: 'test52', model: 'component_input_text', columnName: 'test52', lang: 'lg-nolan' },
 		];
-		const plan = planCsvImport([['ignored', 'kept']], cols);
+		const plan = await planCsvImport([['ignored', 'kept']], cols, 'test3');
 		expect(plan[0]?.columns).toHaveLength(1);
 		expect(plan[0]?.columns[0]?.conform.result).toEqual([{ value: 'kept' }]);
 	});

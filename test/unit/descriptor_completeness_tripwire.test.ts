@@ -31,6 +31,7 @@ import {
 	getSearchBuilderFamily,
 	relationDataModels,
 } from '../../src/core/components/registry.ts';
+import { IMPORT_CONFORM } from '../../src/core/tools/import_conform.ts';
 import { VALUE_PROPERTY_MODELS } from '../../src/core/tools/import_data.ts';
 import { COMPONENTS_WITH_RELATIONS } from '../../tools/tool_propagate_component_data/server/propagate.ts';
 
@@ -239,6 +240,38 @@ describe('descriptor completeness (S2-26 tripwire)', () => {
 
 	test('derived CSV value-property set equals the PHP oracle list', () => {
 		expect([...VALUE_PROPERTY_MODELS].sort()).toEqual(PHP_VALUE_PROPERTY_MODELS);
+	});
+
+	test('every importConform facet names a real parser', () => {
+		// The facet is DATA (an id), so a typo would otherwise fail at import time on
+		// one unlucky cell — in the middle of a 10k-row run — rather than at boot.
+		for (const descriptor of descriptors) {
+			if (descriptor.importConform === undefined) continue;
+			expect(
+				Object.hasOwn(IMPORT_CONFORM, descriptor.importConform),
+				`${descriptor.model} names an import parser that does not exist: '${descriptor.importConform}'`,
+			).toBe(true);
+		}
+	});
+
+	test('every relation-column model declares an import parser', () => {
+		// PHP gives EVERY relation component conform_import_data by class inheritance
+		// (component_relation_common). A relation model without the facet would refuse
+		// every flat section_id list ('273,418') — a silent capability hole, which is
+		// exactly the class of bug this tripwire family exists to prevent.
+		const missing = descriptors
+			.filter((d) => d.alias === undefined && d.column === 'relation')
+			.filter((d) => d.importConform === undefined)
+			.map((d) => d.model);
+		expect(missing).toEqual([]);
+	});
+
+	test('no parser in IMPORT_CONFORM is dead (every id is claimed by a descriptor)', () => {
+		const claimed = new Set(
+			descriptors.map((d) => d.importConform).filter((id) => id !== undefined),
+		);
+		const dead = Object.keys(IMPORT_CONFORM).filter((id) => !claimed.has(id as never));
+		expect(dead).toEqual([]);
 	});
 
 	test('derived propagate relation set equals the PHP oracle list', () => {

@@ -110,8 +110,16 @@ const data_manager = {
 /**
  * @vars
  */
-// string cache_name. Used to identify current cache. Normally 'dedalo_files'
-const cache_name = 'dedalo_files'
+// string cache_name. The cache is keyed by the SERVED CODE, not by a fixed name:
+// the API's `dedalo_version` carries the engine version plus a signature of the
+// client bytes on disk (see core/api/dedalo_files.ts). Edit or deploy a client
+// file and the key moves, so the old cache is dropped and the files are re-fetched.
+// A FIXED name (the previous 'dedalo_files') meant an edited file stayed cached
+// forever and only a fresh login ever refreshed it — a logged-in user kept running
+// the old JS against the new server.
+// Resolved by load_files_list(); null until the manifest has been read.
+const cache_prefix = 'dedalo_files'
+let cache_name = null
 // array files_list. Filled with the list of Dédalo main javascript files
 let files_list
 // Set files_set. For O(1) lookup in fetch handler
@@ -150,6 +158,8 @@ const load_files_list = async () => {
 		files_list = api_response.result.map(el => el.url)
 		// build a Set with absolute URLs for fast lookups in the fetch handler
 		files_set = new Set(files_list.map(url => new URL(url, self.location.origin).href))
+		// the cache is named after the served code (see cache_name above)
+		cache_name = cache_prefix + '_' + (api_response.dedalo_version || 'unknown')
 
 
 	return files_list
@@ -225,6 +235,13 @@ const add_resources_to_cache = async (options) => {
 		})
 	}
 	await Promise.all(ar_promises)
+
+	// Drop every SUPERSEDED cache. The current one is keyed by the served code, so
+	// any other key is a previous version of the client and must not linger: it
+	// would keep occupying storage and, if it were ever consulted, answer with the
+	// old file. (delete_old_caches existed but nothing ever called it — which is
+	// why every client version a browser had ever seen stayed on disk.)
+	await delete_old_caches( cache_name )
 }//end add_resources_to_cache
 
 
@@ -270,8 +287,12 @@ const delete_old_caches = async (keep_name) => {
  */
 const cache_first = async (request) => {
 	// only check cache for files we actually cached
-	if (files_set && files_set.has(request.url)) {
-		const responseFromCache = await caches.match(request);
+	if (cache_name && files_set && files_set.has(request.url)) {
+		// Scoped to the CURRENT cache on purpose: caches.match() searches every
+		// cache in the origin, so a superseded one would keep answering with the
+		// stale file even after the key moved.
+		const cache = await caches.open(cache_name);
+		const responseFromCache = await cache.match(request);
 		if (responseFromCache) {
 			return responseFromCache;
 		}

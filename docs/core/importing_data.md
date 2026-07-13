@@ -1274,6 +1274,12 @@ The table to import
 
     The string value is checked during the import process. If the string value exists in the value list, it is set with its own id (section_id); if it does not exist, a new value is created in the list.
 
+    !!! warning "Not available yet — use the label's id instead"
+
+        This form is **not supported by the current import engine**: resolving a text label requires a lookup-or-create in the label section, which is not implemented. Such a cell is **refused** — reported in the run's `failed` rows with an explanatory message — rather than imported without its label.
+
+        Use form 3 above instead, giving the label's **id** (`8, https://dedalo.dev`). A plain URI with no label (forms 1, 2 and 5) imports normally.
+
 5. String of multiple values
 
     To import multiple values of the URI, use the ` | ` separator in this way:

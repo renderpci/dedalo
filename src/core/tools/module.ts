@@ -34,12 +34,19 @@ export interface ToolResponse {
  * (already type-checked as an object) method arguments from the RQO; `principal`
  * and `userId` identify the authenticated caller; `background` is true when the
  * action is running under the background executor (PHP process_runner path).
+ *
+ * `publishProgress` is the live-progress wire (PHP print_cli($process_info) →
+ * the process file the client's SSE reader polls). It is present ONLY under the
+ * background executor — a foreground call has no job record to publish into — so
+ * a handler must treat it as optional. The payload becomes the job frame's
+ * `data`, which is what render_common's status machinery renders on every tick.
  */
 export interface ToolActionContext {
 	principal: Principal;
 	userId: number;
 	options: Record<string, unknown>;
 	background: boolean;
+	publishProgress?: (data: object) => void;
 }
 
 /**

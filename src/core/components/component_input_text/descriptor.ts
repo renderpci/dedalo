@@ -12,4 +12,5 @@ export const component_input_text: ComponentModel = {
 	searchBuilder: 'string',
 	flatValue: 'string',
 	importValueProperty: true,
+	importConform: 'input_text',
 };

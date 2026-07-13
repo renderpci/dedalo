@@ -12,4 +12,5 @@ export const component_radio_button: ComponentModel = {
 	resolveData: 'select_family',
 	flatValue: 'datalist',
 	search: { status: 'ported' },
+	importConform: 'relation',
 };

@@ -29,11 +29,24 @@
 
 import { mediaJobs } from '../media/jobs.ts';
 import type { Principal } from '../security/permissions.ts';
-import { getBackgroundJob } from './background.ts';
+import { getBackgroundJob, listBackgroundJobs } from './background.ts';
 import type { ToolActionContext, ToolActionSpec, ToolResponse } from './module.ts';
 
 /** The reserved framework action name the dispatcher intercepts for every tool. */
 export const BACKGROUND_JOB_STATUS_ACTION = 'get_background_job_status';
+
+/**
+ * The other reserved framework action: LIST the caller's jobs for this tool.
+ *
+ * `get_background_job_status` answers "how is job X doing?" — which presupposes
+ * the caller still HAS the id. After a page reload it does not, and the PHP-era
+ * answer was to make the client persist the id itself (IndexedDB). That is client
+ * state duplicating something the server is authoritative about: it is per-browser
+ * (invisible in another tab), it goes stale when the server restarts and the
+ * in-process job dies with it, and getting the store/key pair wrong is a silent
+ * runtime throw. So the client asks instead, and keeps nothing.
+ */
+export const BACKGROUND_JOBS_ACTION = 'get_background_jobs';
 
 function notFound(msg: string): ToolResponse {
 	return { result: false, msg: `Error. Request failed. ${msg}`, errors: ['job_not_found'] };
@@ -130,5 +143,41 @@ export function backgroundJobStatusResponse(
 			// after an error) — the caller's window onto "did my import succeed".
 			response: job.status === 'done' ? (job.result ?? null) : null,
 		},
+	};
+}
+
+/**
+ * List the caller's jobs for `toolName` (BACKGROUND_JOBS_ACTION), newest first —
+ * the wire a reloading client uses to find the run it lost the id for.
+ *
+ * Scope is the same as the status wire: own jobs only, unless the caller is a
+ * global admin. Deliberately NO `response` payload here — a list is a directory,
+ * not a bulk export of every recent import's report; the caller subscribes to the
+ * job it cares about (get_job_events) and gets the report on the terminal frame.
+ *
+ * `options.action` optionally narrows to one action ('import_files'), so a tool
+ * with several background actions can ask about just the one it renders.
+ */
+export function backgroundJobsResponse(
+	toolName: string,
+	principal: Principal,
+	userId: number,
+	options: Record<string, unknown>,
+): ToolResponse {
+	const action = typeof options.action === 'string' ? options.action : null;
+	const jobs = listBackgroundJobs(toolName, userId, principal.isGlobalAdmin).filter(
+		(job) => action === null || job.action === action,
+	);
+	return {
+		result: jobs.map((job) => ({
+			id: job.id,
+			tool: job.tool,
+			action: job.action,
+			status: job.status,
+			error: job.error ?? null,
+			started_at: job.startedAt ?? null,
+		})),
+		msg: 'ok',
+		errors: [],
 	};
 }

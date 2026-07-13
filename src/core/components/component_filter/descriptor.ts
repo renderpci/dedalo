@@ -12,4 +12,5 @@ export const component_filter: ComponentModel = {
 	defaultRelationType: 'dd675',
 	resolveData: 'filter',
 	search: { status: 'ported' },
+	importConform: 'relation',
 };

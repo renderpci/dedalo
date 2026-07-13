@@ -13,4 +13,5 @@ export const component_dataframe: ComponentModel = {
 	defaultRelationType: 'dd151',
 	resolveData: 'portal',
 	search: { status: 'ported' },
+	importConform: 'relation',
 };

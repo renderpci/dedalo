@@ -87,6 +87,17 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			body: buildDedaloFilesResponse() as unknown as Record<string, unknown>,
 		};
 	},
+	get_job_events: async (rqo, context) => {
+		// The NATIVE job status wire (core/api/job_stream.ts): the caller subscribes
+		// to an in-process job by `job_id` and every state change is PUSHED as it
+		// happens — no {pid, pfile} handle, no re-reading a file on a timer. The
+		// stream ends on the terminal frame, whose `data` is the job's return value
+		// (for an import, the full report). get_process_status below is the legacy
+		// poll wire, kept for the AV transcode + backup consumers.
+		const principal = requirePrincipal(context);
+		const { getJobEvents } = await import('../job_stream.ts');
+		return getJobEvents(rqo, principal);
+	},
 	get_process_status: async (rqo, context) => {
 		// Background-process status SSE stream (PHP dd_utils_api::
 		// get_process_status; audit S2-15/DEC-22a + S2-35): the copied client's

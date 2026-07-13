@@ -60,6 +60,24 @@ export type EmitHookId =
 	| 'security_access';
 
 /**
+ * The import-parser IDs a descriptor may name in `importConform`. Adding one =
+ * add the ID here + its implementation entry in tools/import_conform.ts
+ * IMPORT_CONFORM. (Declared here rather than imported from tools/ so that
+ * components/ never depends on tools/ — the dependency runs the other way.)
+ */
+export type ImportConformId =
+	| 'date'
+	| 'email'
+	| 'geolocation'
+	| 'input_text'
+	| 'iri'
+	| 'json'
+	| 'number'
+	| 'relation'
+	| 'select_lang'
+	| 'text_area';
+
+/**
  * The search face of a relation model (mirrors the old SEARCH_UNCOVERED
  * ledger). Only relation-column models carry this; a model whose PHP search is
  * a dedicated, not-yet-ported pipeline is marked 'unported' with its reason and
@@ -162,6 +180,19 @@ export interface ComponentModel {
 	 * kept as-is.
 	 */
 	readonly importValueProperty?: true;
+	/**
+	 * The model's IMPORT parser, named as DATA (the `emitHook` / `resolveData`
+	 * shape): the ID resolves to its implementation in tools/import_conform.ts
+	 * IMPORT_CONFORM, so a descriptor imports no engine module. It owns the
+	 * HUMAN-authored cell — '12-03-1998', '1.234,56', '41.38, 2.17', '273,418' —
+	 * and the model's JSON particularities (PHP's conform_import_data override).
+	 *
+	 * OMITTED = the model has no flat-value form: a JSON cell still round-trips
+	 * (that path is model-agnostic), but a flat cell is REFUSED rather than
+	 * written as a silent clear. That is the correct default for the media models.
+	 * Pinned by descriptor_completeness_tripwire.
+	 */
+	readonly importConform?: ImportConformId;
 	/**
 	 * Emit-time particularity (audit S2-24): names this model's emit hook as
 	 * DATA — the ID is resolved to its implementation by

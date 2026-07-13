@@ -1,75 +1,101 @@
 /**
- * Import engine gate: conformImportData + unwrapDedaloData (PHP component_common).
- * The CRITICAL invariant is the raw-export round-trip — a dato wrapped as
+ * Import engine gate: conformImportData + unwrapDedaloData (the GENERIC half —
+ * the per-model parsers have their own gate in import_conform.test.ts).
+ *
+ * The CRITICAL invariant is the raw-export round-trip: a dato wrapped as
  * {"dedalo_data":<dato>}, unwrapped, then conformed, must reproduce the exact
- * dato for EVERY model. Plus the flat-string / clear / lang-keyed / error cases.
+ * dato for EVERY model. Plus: PHP's decode-verified is_json, the clear case, and
+ * the LOUD REFUSAL of a flat cell for a model with no flat form (which must never
+ * silently clear the record's existing value).
  */
 
 import { describe, expect, test } from 'bun:test';
-import { conformImportData, unwrapDedaloData } from '../../src/core/tools/import_data.ts';
+import { conformImportData, isJson, unwrapDedaloData } from '../../src/core/tools/import_data.ts';
 
-function conform(model: string, importValue: string) {
+function conform(model: string, importValue: string, componentTipo = 't1') {
 	return conformImportData({
 		model,
 		importValue,
-		columnName: model,
+		columnName: componentTipo,
+		sectionTipo: 'test3',
 		sectionId: 1,
-		componentTipo: 't1',
+		componentTipo,
 	});
 }
 
 /** Simulate a raw-export cell for a dato, then the tool's unwrap → conform. */
-function roundTrip(model: string, dato: unknown) {
+async function roundTrip(model: string, dato: unknown) {
 	const cell = JSON.stringify({ dedalo_data: dato });
 	const unwrapped = unwrapDedaloData(cell);
 	expect(unwrapped.wrapped).toBe(true);
-	return conform(model, unwrapped.value).result;
+	const out = await conformImportData({
+		model,
+		importValue: unwrapped.value,
+		columnName: 't1',
+		sectionTipo: 'test3',
+		sectionId: 1,
+		componentTipo: 't1',
+		wrapped: unwrapped.wrapped,
+	});
+	return out.result;
 }
 
 describe('raw-export round-trip (the invariant)', () => {
-	test('value-property (input_text): items reproduced exactly', () => {
+	test('value-property (input_text): items reproduced exactly', async () => {
 		const dato = [{ value: 'hello', lang: 'lg-eng', id: 1 }];
-		expect(roundTrip('component_input_text', dato)).toEqual(dato);
+		expect(await roundTrip('component_input_text', dato)).toEqual(dato);
 	});
-	test('relation (non-value-property): locators pass through unchanged', () => {
-		const dato = [
-			{ section_tipo: 'rsc197', section_id: 5, type: 'dd66', from_component_tipo: 'x' },
-		];
-		expect(roundTrip('component_relation_related', dato)).toEqual(dato);
-	});
-	test('date: nested item objects reproduced', () => {
+	test('date: nested item objects reproduced', async () => {
 		const dato = [
 			{ start: { day: 1, month: 2, year: 2020 }, end: { day: 1, month: 2, year: 2020 }, id: 1 },
 		];
-		expect(roundTrip('component_date', dato)).toEqual(dato);
+		expect(await roundTrip('component_date', dato)).toEqual(dato);
 	});
-	test('lang-keyed multi-language object reproduced', () => {
+	test('lang-keyed multi-language object reproduced', async () => {
 		const dato = { 'lg-eng': [{ value: 'cat' }], 'lg-spa': [{ value: 'gato' }] };
-		expect(roundTrip('component_input_text', dato)).toEqual(dato);
+		expect(await roundTrip('component_input_text', dato)).toEqual(dato);
+	});
+	test('a model with NO importConform facet still round-trips its json dato', async () => {
+		// component_image has no flat form (media is imported by tool_import_files),
+		// but its stored dato must survive an export→import cycle untouched.
+		const dato = [{ id: 1, value: 42 }];
+		expect(await roundTrip('component_image', dato)).toEqual(dato);
 	});
 });
 
-describe('conform flat-string / clear / error', () => {
-	test('value-property bare scalar → {value}', () => {
-		expect(conform('component_input_text', 'hello').result).toEqual([{ value: 'hello' }]);
+describe('is_json is DECODE-verified (PHP json_handler::is_json)', () => {
+	test('only arrays and objects are json', () => {
+		expect(isJson('[{"a":1}]')).toBe(true);
+		expect(isJson('{"a":1}')).toBe(true);
+		// Bare scalars are NOT json — this is why the string branch ever sees a number.
+		expect(isJson('5')).toBe(false);
+		expect(isJson('true')).toBe(false);
+		expect(isJson('null')).toBe(false);
 	});
-	test("'0' is a legitimate value (not cleared)", () => {
-		expect(conform('component_number', '0').result).toEqual([{ value: '0' }]);
+	test("'[Ac]' looks bracketed but is not json — it is literal text, not an error", async () => {
+		expect(isJson('[Ac]')).toBe(false);
+		const out = await conform('component_input_text', '[Ac]');
+		expect(out.errors).toHaveLength(0);
+		expect(out.result).toEqual([{ value: '[Ac]' }]);
 	});
-	test('empty cell → null (clear)', () => {
-		expect(conform('component_input_text', '').result).toBeNull();
+});
+
+describe('the generic path (models with no importConform facet)', () => {
+	test('empty cell → null (clear)', async () => {
+		expect((await conform('component_image', '')).result).toBeNull();
 	});
-	test('invalid JSON → failed row, no result', () => {
-		const out = conform('component_input_text', '[bad json');
+	test('a flat cell for a model with no flat form is REFUSED, never written', async () => {
+		const out = await conform('component_image', 'photo.jpg');
 		expect(out.result).toBeNull();
 		expect(out.errors).toHaveLength(1);
-		expect(out.errors[0]?.msg).toContain('JSON decode failed');
+		expect(out.errors[0]?.msg).toContain('no flat-value import form');
+		// The point of the refusal: the record keeps whatever it already had.
+		expect(out.errors[0]?.msg).toContain('left untouched');
 	});
-	test('bare JSON array of scalars normalizes to {value} for value-property', () => {
-		expect(conform('component_input_text', '["a","b"]').result).toEqual([
-			{ value: 'a' },
-			{ value: 'b' },
-		]);
+	test('json cell round-trips through the generic normalizer', async () => {
+		const out = await conform('component_image', '[{"id":1,"value":7}]');
+		expect(out.errors).toHaveLength(0);
+		expect(out.result).toEqual([{ id: 1, value: 7 }]);
 	});
 });
 
@@ -81,7 +107,7 @@ describe('unwrapDedaloData', () => {
 	});
 	test('null inner → empty value, not wrapped (behaves as empty cell)', () => {
 		const out = unwrapDedaloData('{"dedalo_data":null}');
-		expect(out).toEqual({ value: '', wrapped: false, dataframe: null });
+		expect(out).toEqual({ value: '', wrapped: false, dataframe: null, hasDato: true });
 	});
 	test('{dato, dataframe} envelope splits out the dataframe', () => {
 		const out = unwrapDedaloData(
@@ -90,12 +116,21 @@ describe('unwrapDedaloData', () => {
 		expect(out.wrapped).toBe(true);
 		expect(JSON.parse(out.value)).toEqual([{ value: 'x' }]);
 		expect(out.dataframe).toEqual([{ id_key: 0 }]);
+		expect(out.hasDato).toBe(true);
+	});
+	test('a dataframe-ONLY envelope reports hasDato:false (do not touch the data)', () => {
+		// The distinction that matters: this must NOT be read as "clear the component".
+		const out = unwrapDedaloData('{"dedalo_data":{"dataframe":[{"id_key":0}]}}');
+		expect(out.hasDato).toBe(false);
+		expect(out.dataframe).toEqual([{ id_key: 0 }]);
+		expect(out.value).toBe('');
 	});
 	test('non-JSON cell passes through untouched', () => {
 		expect(unwrapDedaloData('plain text')).toEqual({
 			value: 'plain text',
 			wrapped: false,
 			dataframe: null,
+			hasDato: true,
 		});
 	});
 });

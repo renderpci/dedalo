@@ -48,12 +48,14 @@ describe('CSV import drive (scratch-twin, real DB)', () => {
 		});
 		const unwrapped = unwrapDedaloData(cell);
 		expect(unwrapped.wrapped).toBe(true);
-		const conform = conformImportData({
+		const conform = await conformImportData({
 			model: 'component_input_text',
 			importValue: unwrapped.value,
 			columnName: INPUT_TEXT,
+			sectionTipo: SECTION,
 			sectionId: scratchId,
 			componentTipo: INPUT_TEXT,
+			wrapped: unwrapped.wrapped,
 		});
 		const items = conform.result as unknown[];
 
@@ -77,10 +79,11 @@ describe('CSV import drive (scratch-twin, real DB)', () => {
 
 	test('empty cell clears the component (import "clear" semantics)', async () => {
 		if (scratchId === null) return;
-		const conform = conformImportData({
+		const conform = await conformImportData({
 			model: 'component_input_text',
 			importValue: '',
 			columnName: INPUT_TEXT,
+			sectionTipo: SECTION,
 			sectionId: scratchId,
 			componentTipo: INPUT_TEXT,
 		});

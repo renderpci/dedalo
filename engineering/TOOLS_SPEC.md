@@ -89,16 +89,31 @@ kinds + a null-spec action, `backgroundRunnable`, `isAvailable`, lifecycle hooks
 ## Background execution (`src/core/tools/background.ts`)
 
 A `background_running` request runs the handler inside the **process-job registry**
-(`media/jobs.ts` — the same one the AV transcodes and the backup widget use, and the
-only one `dd_utils_api::get_process_status` can stream), and answers immediately with
-`{background_job_id, pid, pfile}`:
+(`media/jobs.ts` — the same one the AV transcodes and the backup widget use), and
+answers immediately with `{job_id, background_job_id, pid, pfile}`.
 
-- **`pid` + `pfile`** are the wire the copied client's `update_process_status` speaks
-  (`pfile` is a BASENAME — the status endpoint refuses any separator). Without them
-  the client's progress panel polls a job that does not exist and never renders the
-  tool's report. `pid` is the SERVER process (the job is in-process; PHP returned a
-  detached CLI child's pid — ledgered divergence).
-- **The handler's `ToolResponse` becomes the job's final payload**, i.e. the last SSE
+**Two status wires exist. New consumers use the first.**
+
+- **PUSH (native) — `dd_utils_api::get_job_events`** (`core/api/job_stream.ts`).
+  The job runs in the process serving the stream, so a consumer SUBSCRIBES to the
+  job record (`mediaJobs.subscribe`) and every state change is pushed the instant it
+  happens: no `{pid, pfile}` handle, no re-reading a file on a timer, no 0–1000 ms
+  lag. The handle is `job_id` alone. The stream ends on the first `is_running:false`
+  frame, and THAT frame's `data` is the handler's return value.
+- **POLL (legacy) — `dd_utils_api::get_process_status`**. A faithful port of a PHP
+  workaround: PHP forked a detached CLI child that could not talk to the web request,
+  so it wrote a JSON "process file" and the web layer TAILED it. `pid` + `pfile` are
+  that wire (`pfile` is a BASENAME — the endpoint refuses any separator). Still spoken
+  by the AV transcodes and the area_maintenance widgets; kept for them, not extended.
+
+Progress: a handler receives `ctx.publishProgress` under the background executor
+(absent in a foreground call). Each payload it publishes replaces the job frame's
+`data` and wakes every subscriber — handlers THROTTLE their own rate, because each
+publish also rewrites the pfile mirror. `tool_import_dedalo_csv` publishes a typed
+`ImportProgressFrame` (`core/tools/import_wire.ts`) carrying `rows_total`, which is
+what lets its panel show a real progress BAR rather than a scrolling text line.
+
+- **The handler's `ToolResponse` becomes the job's final payload**, i.e. the terminal
   frame's `data` — which is where the client reads its report from.
 - **Ownership.** Job ids are derived (`kind_pid_counter`), so they are guessable: the
   job record carries its `user_id` and the status stream answers only the owner (or a
@@ -107,6 +122,40 @@ only one `dd_utils_api::get_process_status` can stream), and answers immediately
   shape only) keep their historical behavior.
 - Jobs are IN-PROCESS: they die on server restart (a PHP CLI child survived an Apache
   reload), and they share the registry's concurrency cap with media work.
+
+### THE RULE: the SERVER owns job state, the client keeps none
+
+The job runs inside the process that is serving the request, and the registry
+already records its **tool, action, owner and status**. So a client must never keep
+its own copy of that — no `job_id` in `localStorage`, none in IndexedDB, none in a
+page global that a reload throws away.
+
+This is the one place the PHP shape actively misleads. PHP forked a **detached CLI
+child** the web layer had no memory of: the only handle was the `{pid, pfile}` pair
+handed back at launch, so the client HAD to persist it or lose the job. Porting that
+habit gives you client state duplicating a fact the server owns, and it is wrong in
+three ways at once — it is **per-browser** (a second tab sees no running import), it
+goes **stale** the moment the server restarts and the in-process job dies with it,
+and persisting it is a silent runtime throw away (`db.transaction()` on an object
+store that does not exist rejects from inside a promise). `tool_import_dedalo_csv`
+shipped all three before this rule existed.
+
+Two RESERVED framework actions serve every `backgroundRunnable` tool — the dispatcher
+answers them itself, after the active+authorized gates and before the module lookup,
+so no module registers anything:
+
+| Action | Answers |
+|---|---|
+| `get_background_job_status` | "how is job X doing?" — needs an id you still hold |
+| `get_background_jobs` | "**do I have one running?**" — the LIST, newest first, optionally narrowed by `options.action`. This is what a reloading client uses to find the run whose id it no longer has |
+
+Both are scoped identically: own jobs only, unless the caller is a global admin. The
+LIST deliberately carries **no `response` payload** — it is a directory, not a bulk
+export of every recent run's report; the caller subscribes to the one job it cares
+about (`get_job_events`) and gets the report on the terminal frame.
+
+So reload-recovery is: *ask which of my jobs is running → subscribe to it.* Enforced
+by `test/unit/local_db_stores_tripwire.test.ts`.
 
 ## Loading (`src/core/tools/loader.ts`)
 

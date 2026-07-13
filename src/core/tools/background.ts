@@ -45,6 +45,36 @@ export function getBackgroundJob(id: string): BackgroundJob | undefined {
 	return jobs.get(id);
 }
 
+/**
+ * The caller's jobs for one tool, newest first.
+ *
+ * This is what makes CLIENT-SIDE job bookkeeping unnecessary. PHP forked a
+ * DETACHED CLI child that the web layer had no memory of, so the only handle was
+ * the {pid, pfile} pair handed back at launch — and the client had to persist it
+ * (IndexedDB) or lose the job on the next page load. Here the job runs inside this
+ * process and the registry already knows its tool and its owner, so a reloading
+ * client can simply ASK: "do I have an import running?" The server is the single
+ * source of truth, and the answer is correct in any tab, on any machine.
+ *
+ * `all` (global admins only) lifts the owner filter, matching the status wire.
+ */
+export function listBackgroundJobs(
+	tool: string,
+	userId: number,
+	all = false,
+): readonly BackgroundJob[] {
+	const found: BackgroundJob[] = [];
+	for (const job of jobs.values()) {
+		if (job.tool !== tool) continue;
+		if (!all && job.userId !== userId) continue;
+		found.push(job);
+	}
+	// Newest first: a client re-attaching wants the run it just started, not the
+	// one from an hour ago still inside the terminal-retention window.
+	found.sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0));
+	return found;
+}
+
 /** Clear the job table (tests). */
 export function resetBackgroundJobs(): void {
 	jobs.clear();
@@ -143,7 +173,17 @@ export function scheduleBackground(
 			// frame.data.msg on every tick, and a null data renders "undefined".
 			onData({ msg: `Running ${loaded.module.name}::${method}`, is_running: true });
 			try {
-				const result = await spec.handler({ principal, userId, options, background: true });
+				const result = await spec.handler({
+					principal,
+					userId,
+					options,
+					background: true,
+					// The live-progress wire (PHP print_cli): every payload the handler
+					// publishes replaces the job frame's `data`, which the client's SSE
+					// reader renders on its next tick. Handlers throttle their own rate —
+					// each call rewrites the pfile.
+					publishProgress: (data: object) => onData(data),
+				});
 				job.status = 'done';
 				job.result = result;
 				logTerminalState(job);
@@ -169,11 +209,15 @@ export function scheduleBackground(
 		result: true,
 		msg: 'OK. Background process started',
 		errors: [],
+		// THE handle. A job runs in THIS process, so its id is all a consumer needs:
+		// dd_utils_api::get_job_events subscribes to it and pushes every state change
+		// (core/api/job_stream.ts), and get_background_job_status polls it.
+		job_id: record.id,
 		background_job_id: record.id,
-		// The copied client's update_process_status wire: it feeds these straight
-		// back into dd_utils_api::get_process_status. pid is the SERVER process (the
-		// job is in-process; PHP returned the detached CLI child's pid — ledgered
-		// divergence), and pfile is the BASENAME the status endpoint accepts.
+		// LEGACY handle, kept for the clients that still speak the pfile poll wire
+		// (the area_maintenance widgets, the AV transcodes). pid is the SERVER
+		// process — PHP returned a detached CLI child's pid — and pfile is the
+		// BASENAME get_process_status accepts. New consumers use job_id.
 		pid: process.pid,
 		pfile: `${record.id}.json`,
 	};

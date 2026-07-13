@@ -10,4 +10,5 @@ export const component_number: ComponentModel = {
 	searchBuilder: 'number',
 	flatValue: 'string',
 	importValueProperty: true,
+	importConform: 'number',
 };

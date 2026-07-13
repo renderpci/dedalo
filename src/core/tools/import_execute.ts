@@ -72,10 +72,11 @@ export async function importMappedRecords(
 			}
 			const items: unknown[] = [];
 			for (const value of field.values) {
-				const conform = conformImportData({
+				const conform = await conformImportData({
 					model,
 					importValue: value,
 					columnName: field.component_tipo,
+					sectionTipo,
 					sectionId,
 					componentTipo: field.component_tipo,
 				});

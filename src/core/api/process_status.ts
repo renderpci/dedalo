@@ -30,45 +30,14 @@
 import type { Rqo } from '../concepts/rqo.ts';
 import { type JobStatusFrame, mediaJobs } from '../media/jobs.ts';
 import type { Principal } from '../security/permissions.ts';
+import {
+	JOB_ID_PATTERN,
+	SSE_HEADERS,
+	encodeSseChunk,
+	mayStreamJob,
+	terminalStream,
+} from './job_stream.ts';
 import type { ApiResult } from './response.ts';
-
-/** Old-engine SSE framing: pad to keep intermediary proxies flushing eagerly. */
-const SSE_PAD_LENGTH = 16384;
-const encoder = new TextEncoder();
-
-function encodeSseChunk(frame: Record<string, unknown>): Uint8Array {
-	let payload = `data:\n${JSON.stringify(frame)}`;
-	if (payload.length < SSE_PAD_LENGTH) {
-		payload += ' '.repeat(SSE_PAD_LENGTH - payload.length);
-	}
-	return encoder.encode(`${payload}\n\n`);
-}
-
-const SSE_HEADERS: Record<string, string> = {
-	'Content-Type': 'text/event-stream',
-	'Cache-Control': 'no-cache, must-revalidate',
-	Connection: 'keep-alive',
-	'X-Accel-Buffering': 'no',
-};
-
-/** A single-frame terminal stream (invalid input / unknown job — PHP parity:
- * errors ride as an SSE frame, never a JSON envelope the stream reader can't parse). */
-function terminalStream(frame: Record<string, unknown>): ApiResult {
-	return {
-		status: 200,
-		body: {},
-		stream: new ReadableStream<Uint8Array>({
-			start(controller) {
-				controller.enqueue(encodeSseChunk(frame));
-				controller.close();
-			},
-		}),
-		streamHeaders: { ...SSE_HEADERS },
-	};
-}
-
-/** Job id chars as minted by MediaJobManager/backup.ts — nothing path-like. */
-const JOB_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/;
 
 /**
  * Reduce the client-supplied pfile (PHP: a filename relative to the process
@@ -99,21 +68,6 @@ function frameFor(id: string, pfile: string): JobStatusFrame | Record<string, un
 		errors: ['process file not found'],
 		total_time: 0,
 	};
-}
-
-/**
- * May this caller stream this job? Job ids are DERIVED (kind_pid_counter), so a
- * logged-in user can guess another user's id — and a tool job's frames carry that
- * user's payload (an import report: section ids, values, error rows). So an OWNED
- * job answers only its owner (a global admin sees every job, as in the maintenance
- * area). An unowned job (AV transcode, backup: operational shape only, no record
- * data) keeps the historical behavior — this closes the new surface without
- * silently changing the old one. PHP had a per-user process check; this is its twin.
- */
-function mayStream(record: { user_id?: number | null }, principal: Principal): boolean {
-	const owner = record.user_id ?? null;
-	if (owner === null) return true;
-	return principal.isGlobalAdmin || owner === principal.userId;
 }
 
 /**
@@ -150,7 +104,7 @@ export function getUtilsProcessStatus(rqo: Rqo, principal: Principal): ApiResult
 	// Ownership (fail-closed): refuse BEFORE the first frame, and answer exactly as
 	// a missing job would — no existence oracle for another user's job id.
 	const record = mediaJobs.status(id);
-	if (record !== null && !mayStream(record, principal)) {
+	if (record !== null && !mayStreamJob(record, principal)) {
 		return terminalStream({
 			pid: null,
 			pfile,
