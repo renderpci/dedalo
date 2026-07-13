@@ -9794,14 +9794,14 @@
 			"status": 200,
 			"body": {
 				"result": false,
-				"msg": "Throwable Exception when calling Dédalo API: \n  locator::set_section_id(): Argument #1 ($value) must be of type string|int, null given, called in /Users/render/Desktop/trabajos/dedalo/v7_php_frozen/master_dedalo/core/component_relation_index/class.component_relation_index.php on line 878",
+				"msg": "Throwable Exception when calling Dédalo API: \n  locator::set_section_id(): Argument #1 ($value) must be of type string|int, null given, called in v7_php_frozen/master_dedalo/core/component_relation_index/class.component_relation_index.php on line 878",
 				"errors": [
 					"An unexpected error occurred"
 				],
 				"debug": {
-					"exception": "locator::set_section_id(): Argument #1 ($value) must be of type string|int, null given, called in /Users/render/Desktop/trabajos/dedalo/v7_php_frozen/master_dedalo/core/component_relation_index/class.component_relation_index.php on line 878",
-					"trace": "#0 /Users/render/Desktop/trabajos/dedalo/v7_php_frozen/master_dedalo/core/component_relation_index/class.component_relation_index.php(878): locator->set_section_id(NULL)\n#1 /Users/render/Desktop/trabajos/dedalo/v7_php_frozen/master_dedalo/core/component_relation_index/class.component_relation_index.php(214): component_relation_index->get_filter_locator()\n#2 /Users/render/Desktop/trabajos/dedalo/v7_php_frozen/master_dedalo/core/component_relation_index/component_relation_index_json.php(121): component_relation_index->get_data_paginated()\n#3 /Users/render/Desktop/trabajos/dedalo/v7_php_frozen/master_dedalo/core/common/class.common.php(1554): include('/Users/render/D...')\n#4 /Users/render/Desktop/trabajos/dedalo/v7_php_frozen/master_dedalo/core/api/v1/common/class.dd_core_api.php(1862): common->get_json(Object(stdClass))\n#5 /Users/render/Desktop/trabajos/dedalo/v7_php_frozen/master_dedalo/core/api/v1/common/class.dd_manager.php(457): dd_core_api::get_element_context(Object(stdClass))\n#6 /Users/render/Desktop/trabajos/dedalo/v7_php_frozen/master_dedalo/core/api/v1/json/index.php(326): dd_manager->manage_request(Object(stdClass))\n#7 {main}",
-					"file": "/Users/render/Desktop/trabajos/dedalo/v7_php_frozen/master_dedalo/core/common/class.locator.php",
+					"exception": "locator::set_section_id(): Argument #1 ($value) must be of type string|int, null given, called in v7_php_frozen/master_dedalo/core/component_relation_index/class.component_relation_index.php on line 878",
+					"trace": "#0 v7_php_frozen/master_dedalo/core/component_relation_index/class.component_relation_index.php(878): locator->set_section_id(NULL)\n#1 v7_php_frozen/master_dedalo/core/component_relation_index/class.component_relation_index.php(214): component_relation_index->get_filter_locator()\n#2 v7_php_frozen/master_dedalo/core/component_relation_index/component_relation_index_json.php(121): component_relation_index->get_data_paginated()\n#3 v7_php_frozen/master_dedalo/core/common/class.common.php(1554): include('<home>/D...')\n#4 v7_php_frozen/master_dedalo/core/api/v1/common/class.dd_core_api.php(1862): common->get_json(Object(stdClass))\n#5 v7_php_frozen/master_dedalo/core/api/v1/common/class.dd_manager.php(457): dd_core_api::get_element_context(Object(stdClass))\n#6 v7_php_frozen/master_dedalo/core/api/v1/json/index.php(326): dd_manager->manage_request(Object(stdClass))\n#7 {main}",
+					"file": "v7_php_frozen/master_dedalo/core/common/class.locator.php",
 					"line": 329
 				}
 			}

@@ -1250,7 +1250,7 @@
 							"pg_version": "18.4 (Homebrew)",
 							"php_version": "8.5.4",
 							"php_memory": "8G",
-							"dedalo_root_path": "/Users/render/Desktop/trabajos/dedalo/v7_php_frozen/master_dedalo"
+							"dedalo_root_path": "v7_php_frozen/master_dedalo"
 						},
 						"plain_vars": {
 							"DEDALO_ENVIRONMENT": true,
@@ -2422,7 +2422,7 @@
 							"pg_version": "18.4 (Homebrew)",
 							"php_version": "8.5.4",
 							"php_memory": "8G",
-							"dedalo_root_path": "/Users/render/Desktop/trabajos/dedalo/v7_php_frozen/master_dedalo"
+							"dedalo_root_path": "v7_php_frozen/master_dedalo"
 						},
 						"plain_vars": {
 							"DEDALO_ENVIRONMENT": true,
@@ -3354,7 +3354,7 @@
 							"pg_version": "18.4 (Homebrew)",
 							"php_version": "8.5.4",
 							"php_memory": "8G",
-							"dedalo_root_path": "/Users/render/Desktop/trabajos/dedalo/v7_php_frozen/master_dedalo"
+							"dedalo_root_path": "v7_php_frozen/master_dedalo"
 						},
 						"plain_vars": {
 							"DEDALO_ENVIRONMENT": true,
@@ -3938,8 +3938,8 @@
 				],
 				"debug": {
 					"exception": "Call to a member function set_lang() on false",
-					"trace": "#0 /Users/render/Desktop/trabajos/dedalo/v7_php_frozen/master_dedalo/core/api/v1/common/class.dd_manager.php(457): dd_core_api::start(Object(stdClass))\n#1 /Users/render/Desktop/trabajos/dedalo/v7_php_frozen/master_dedalo/core/api/v1/json/index.php(326): dd_manager->manage_request(Object(stdClass))\n#2 {main}",
-					"file": "/Users/render/Desktop/trabajos/dedalo/v7_php_frozen/master_dedalo/core/api/v1/common/class.dd_core_api.php",
+					"trace": "#0 v7_php_frozen/master_dedalo/core/api/v1/common/class.dd_manager.php(457): dd_core_api::start(Object(stdClass))\n#1 v7_php_frozen/master_dedalo/core/api/v1/json/index.php(326): dd_manager->manage_request(Object(stdClass))\n#2 {main}",
+					"file": "v7_php_frozen/master_dedalo/core/api/v1/common/class.dd_core_api.php",
 					"line": 432
 				}
 			}

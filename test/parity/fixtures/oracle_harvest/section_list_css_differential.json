@@ -2104,8 +2104,8 @@
 				],
 				"debug": {
 					"exception": "Call to a member function get_json() on false",
-					"trace": "#0 /Users/render/Desktop/trabajos/dedalo/v7_php_frozen/master_dedalo/core/api/v1/common/class.dd_manager.php(457): dd_core_api::get_element_context(Object(stdClass))\n#1 /Users/render/Desktop/trabajos/dedalo/v7_php_frozen/master_dedalo/core/api/v1/json/index.php(326): dd_manager->manage_request(Object(stdClass))\n#2 {main}",
-					"file": "/Users/render/Desktop/trabajos/dedalo/v7_php_frozen/master_dedalo/core/api/v1/common/class.dd_core_api.php",
+					"trace": "#0 v7_php_frozen/master_dedalo/core/api/v1/common/class.dd_manager.php(457): dd_core_api::get_element_context(Object(stdClass))\n#1 v7_php_frozen/master_dedalo/core/api/v1/json/index.php(326): dd_manager->manage_request(Object(stdClass))\n#2 {main}",
+					"file": "v7_php_frozen/master_dedalo/core/api/v1/common/class.dd_core_api.php",
 					"line": 1862
 				}
 			}
