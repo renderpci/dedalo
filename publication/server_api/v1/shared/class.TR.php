@@ -1,0 +1,769 @@
+<?php declare(strict_types=1);
+/**
+ * CLASS TR
+ * Provides transcription tag management services for Dédalo's component_text_area and public implementations.
+ *
+ * This abstract utility class manages special markup tags used in transcriptions and text annotations,
+ * including timecodes, index markers, references, SVG/draw annotations, geolocation tags, and more.
+ * It provides regex patterns for matching tags, tag generation, extraction, and conversion utilities.
+ *
+ * Features:
+ * - Unified pattern generation for all supported tag types (tc, index, reference, svg, draw, geo, page, person, note, lang)
+ * - Tag-to-HTML conversion for client-side rendering with editable attributes
+ * - Babel/translation tag preservation with apertium-notrans wrapping
+ * - Text cleaning and normalization with configurable mark removal
+ * - Character and word counting utilities
+ * - Tag extraction and parsing from text
+ *
+ * Generic class design:
+ * This class is generic and self-contained. When used outside of Dédalo, copy this file as-is.
+ * To benefit from improvements and bug fixes from Dédalo's development, maintain version control
+ * and periodically pull updates from the main repository.
+ *
+ * @package Dedalo
+ * @subpackage Shared
+ * @version 2.0.0
+ */
+abstract class TR {
+
+
+
+	// Version. Important!
+	static $version = "2.0.0"; // 07-07-2022
+
+	// html_tags_allowed (note that now is not used to save data)
+	static $html_tags_allowed = '<strong><em><p><img><p>'; // <strong><em><br><img><p><h5><h6><ul><ol><li>
+
+	// Acepted tag types
+	static $tag_types = [
+		'tc',
+		'index',
+		'reference',
+		'svg',
+		'draw',
+		'geo',
+		'page',
+		'person',
+		'note',
+		'lang'
+	];
+
+	/**
+	* GET_MARK_PATTERN
+	* Get unified patterns for marks
+	* @param string $mark
+	* @param bool $standalone=true
+	* @param string|int|false $id = false
+	* @param string|false $data=false
+	* @param string|false $state=false
+	* @return string $string
+	*/
+	public static function get_mark_pattern(string $mark, bool $standalone=true, $id=false, $data=false, $state=false) : string {
+
+		switch($mark) {
+
+			// TC . Select timecode from tag like '00:01:25.627'
+			case 'tc' :
+				$string = "(\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}(\.[0-9]{1,3})?)_TC\])";
+				break;
+
+			// TC_FULL . Select complete tag like '[TC_00:01:25.627_TC]'
+			case 'tc_full' :
+				$string = "(\[TC_[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}\.[0-9]{1,3}_TC\])";
+				break;
+
+			// TC_VALUE . Select elements from value tc like '00:01:25.627'. Used by OptimizeTC
+			case 'tc_value' :
+				$string = "([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2})(\.([0-9]{1,3}))?";
+				break;
+
+			// INDEX
+			case 'index' :
+				if ($id!==false) {
+					$string = "\[\/{0,1}index-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\]";
+				}elseif ($state!==false) {
+					$string = "\[\/{0,1}(index)-{$state}-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]";
+				}else{
+					$string = "\[\/{0,1}(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]";
+				}
+				break;
+
+			case 'indexIn' :
+				if ($id) {
+					$string = "(\[index-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+					// $string = "(\[index\-[a-z]\-{$id}(\-[^-]{0,22}\-data:.*?:data)?\])";
+				}else{
+					$string = "(\[(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
+					// $string = "(\[(index)\-([a-z])\-([0-9]{1,6})(\-([^-]{0,22})\-data:(.*?):data)?\])";
+				}
+				break;
+
+			case 'indexOut':
+				if ($id) {
+					$string = "(\[\/index-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+					// $string = "(\[\/index\-[a-z]\-{$id}(\-[^-]{0,22}\-data:.*?:data)?\])";
+				}else{
+					$string = "(\[\/(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
+					// $string = "(\[\/(index)\-([a-z])\-([0-9]{1,6})(\-([^-]{0,22})\-data:(.*?):data)?\])";
+				}
+				break;
+
+			// REFERENCE
+			case 'reference' :
+				if ($id) {
+					$string = "\[\/{0,1}reference-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\]";
+				}else{
+					$string = "\[\/{0,1}(reference)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]";
+				}
+				break;
+
+			case 'referenceIn' :
+				if ($id) {
+					$string = "(\[reference-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+				}else{
+					$string = "(\[(reference)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
+				}
+				break;
+
+			case 'referenceOut' :
+				if ($id) {
+					$string = "(\[\/reference-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+				}else{
+					$string = "(\[\/(reference)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
+				}
+				break;
+
+			// SVG (From now 18-05-2018 v4.9.0, will be used to manage tags from the component component_svg)
+			case 'svg' :
+				if ($id) {
+					$string = "(\[svg-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+				}else{
+					$string = "(\[(svg)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
+				}
+				break;
+			case 'svg_full_text' :
+				$string = "\[svg-[a-z]-[0-9]{1,6}-[^-]{0,22}?-data:.*?:data\]";
+				break;
+
+			// DRAW (Old svg renamed 18-05-2018. Pre 4.9.0 . Now manage images over draws js paper data)
+			case 'draw' :
+				if ($id) {
+					$string = "(\[draw-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+				}else{
+					$string = "(\[(draw)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
+				}
+				break;
+
+			// GEO
+			case 'geo' :
+				if ($id) {
+					$string = "(\[geo-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+				}else{
+					$string = "(\[(geo)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
+				}
+				break;
+			// GEO_FULL . Select complete tag
+			case 'geo_full' :
+				$string = "(\[geo-[a-z]-[0-9]{1,6}(-[^-]{0,22})?-data:(.*?):data\])";
+				break;
+
+			// PAGE (pdf) [page-n-3]
+			case 'page' :
+				if ($id) {
+					$string = "\[page-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\]";
+				}else{
+					$string = "(\[(page)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
+				}
+				break;
+
+			// PERSON (transcription spoken person) like [person-a-number-data:{"section_tipo":"dd15","section_id":"5"}:data]
+			case 'person' :
+				if ($id) { // id is pseudo locator as dd35_oh1_52 (section_tipo section_id)
+					$string = "(\[person-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+				}else{
+					$string = "(\[(person)-([a-z])-([0-9]{0,6})-([^-]{0,22})-data:(.*?):data\])";
+				}
+				break;
+
+			// NOTE (transcription annotations) like [note-n-number-data:{"section_tipo":"dd15","section_id":"5"}:data]
+			case 'note' :
+				if ($id) { // id is pseudo locator as dd35_oh1_52 (section_tipo section_id)
+					$string = "(\[note-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+				}else if($state!==false){
+					$string = "(\[(note)-($state)-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
+					}else{
+						$string = "(\[(note)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
+					}
+				break;
+
+			// LANG (transcription annotations) like [lang-n-number-data:"lg-spa":data]
+			case 'lang' :
+				if ($id) { // id is pseudo locator as dd35_oh1_52 (section_tipo section_id)
+					$string = "(\[lang-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+				}else if($state!==false){
+					$string = "(\[(lang)-($state)-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
+					}else{
+						$string = "(\[(lang)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
+					}
+				break;
+
+			// OTHERS
+			case 'br' :
+					$string = '\<br>';
+					break;
+
+			case 'p' :
+				$string = '(\<\/?p\>)';
+				break;
+
+			case 'strong' :
+				#$string = '(\<strong\>|\<\/strong\>)';
+				$string = '(\<\/?strong\>)';
+				break;
+
+			case 'em' :
+				#$string = '(\<em\>|\<\/em\>)';
+				$string = '(\<\/?em\>)';
+				break;
+
+			case 'apertium-notrans' :
+				$string = '(\<apertium-notrans\>|\<\/apertium-notrans\>)';
+				break;
+
+			default :
+				trigger_error("Error Processing Request. Error: mark: '$mark' is not valid !");
+				throw new Exception("Error Processing Request. Error: mark: '$mark' is not valid !", 1);
+		}
+
+		// default mark have in and out slash (pattern standalone)
+		if($standalone) $string = '/'.$string.'/';
+
+
+		return $string;
+	}//end get_mark_pattern
+
+
+
+	/**
+	* ADD_TAG_IMG_ON_THE_FLY
+	* Convert Dédalo tags like index, tc, etc. to images
+	* @param string $text
+	* @param object|null $request_options = null
+	* @return string $text
+	*/
+	public static function add_tag_img_on_the_fly( string $text, ?object $request_options=null ) : string {
+
+		// $hilite=false, $indexEditable=false, $tcEditable=true, $svgEditable=true, $geoEditable=true, $pageEditable=true,  $personEditable=true
+
+		// Temporal (for catch old calls only)
+			if (is_bool($request_options)) {
+				throw new Exception("Error. Only a object is valid for add_tag_img_on_the_fly options. Update your call to new format please", 1);
+			}
+
+		// options
+			$options = new stdClass();
+				$options->hilite			= false;
+				$options->indexEditable		= false;
+				$options->tcEditable		= false;
+				$options->svgEditable		= false;
+				$options->geoEditable		= false;
+				$options->pageEditable		= false;
+				$options->personEditable	= false;
+				$options->noteEditable		= false;
+				$options->tag_url			= '../component_text_area/tag';
+				$options->force_tr_tags_cdn	= false;
+				if(!empty($request_options)) {
+					foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+			}
+
+		// hilite
+			// $codeHiliteIn = ($options->hilite===true)
+			// 	? '<span class="hilite">'
+			// 	: '';
+			// $codeHiliteOut = ($options->hilite===true)
+			// 	? '</span>'
+			// 	: '';
+
+		// tag_URL. url path to php script that render image
+			$tag_url = (defined('TR_TAGS_CDN') && $options->force_tr_tags_cdn!==false)
+				? TR_TAGS_CDN . '/?id='
+				: $options->tag_url . '/?id='; //'?'
+
+		// SEC-028: capture groups (label `[^-]{0,22}`, data `(.*?)`) can carry attribute-breaking
+		// characters (`"`, `<`, `>`, `&`, `'`) from CKEditor content or direct API writes.
+		// All capture groups are HTML-attribute-escaped before interpolation to prevent
+		// stored XSS via attribute injection (e.g. `[index-n-1-x" onerror="alert(1)" x-data:foo:data]`).
+		$esc = static function($v) : string {
+			return htmlspecialchars((string)($v ?? ''), ENT_QUOTES, 'UTF-8');
+		};
+
+		// INDEX IN
+		$pattern 	= TR::get_mark_pattern('indexIn'); // id,state,label,data
+		$text		= preg_replace_callback($pattern, static function($m) use ($tag_url, $esc) {
+			$g2=$esc($m[2]??''); $g3=$esc($m[3]??''); $g4=$esc($m[4]??''); $g6=$esc($m[6]??''); $g7=$esc($m[7]??'');
+			$id = "[$g2-$g3-$g4-$g6]";
+			return "<img id=\"$id\" src=\"{$tag_url}$id\" class=\"index\" data-type=\"indexIn\" data-tag_id=\"$g4\" data-state=\"$g3\" data-label=\"$g6\" data-data=\"$g7\">";
+		}, $text);
+
+		// INDEX OUT
+		$pattern 	= TR::get_mark_pattern('indexOut');
+		$text		= preg_replace_callback($pattern, static function($m) use ($tag_url, $esc) {
+			$g2=$esc($m[2]??''); $g3=$esc($m[3]??''); $g4=$esc($m[4]??''); $g6=$esc($m[6]??''); $g7=$esc($m[7]??'');
+			$id = "[/$g2-$g3-$g4-$g6]";
+			return "<img id=\"$id\" src=\"{$tag_url}$id\" class=\"index\" data-type=\"indexOut\" data-tag_id=\"$g4\" data-state=\"$g3\" data-label=\"$g6\" data-data=\"$g7\">";
+		}, $text);
+
+		// REFERENCE IN
+		$pattern 	= TR::get_mark_pattern('referenceIn');
+		// <reference class="reference" id="reference_2" data-state="n" data-label="" data-data="{'section_tipo':'rsc370','section_id':'3'}">
+		$text		= preg_replace_callback($pattern, static function($m) use ($esc) {
+			$g3=$esc($m[3]??''); $g4=$esc($m[4]??''); $g6=$esc($m[6]??''); $g7=$esc($m[7]??'');
+			return "<reference id=\"reference_$g4\" class=\"reference\" data-type=\"reference\" data-tag_id=\"$g4\" data-state=\"$g3\" data-label=\"$g6\" data-data=\"$g7\">";
+		}, $text);
+
+		// REFERENCE OUT
+		$pattern 	= TR::get_mark_pattern('referenceOut');
+		$text		= preg_replace($pattern, "</reference>", $text);
+
+		// TC. Capture groups are constrained to digits/colons by the regex; still escape defensively.
+		$pattern 	= TR::get_mark_pattern('tc'); //[TC_00:00:25.091_TC]
+		$text		= preg_replace_callback($pattern, static function($m) use ($tag_url, $esc) {
+			$g1=$esc($m[1]??''); $g2=$esc($m[2]??'');
+			return "<img id=\"$g1\" src=\"{$tag_url}$g1\" class=\"tc\" data-type=\"tc\" data-tag_id=\"$g1\" data-state=\"n\" data-label=\"$g2\" data-data=\"$g2\">";
+		}, $text);
+		/*$text		= preg_replace_callback(
+			$pattern,
+			function($matches) {
+				#dump($matches, ' matches ++ '.to_string());
+				$_1 = $matches[1];
+				$_2 = $matches[2];
+				$id = 'tc_'.str_replace(array(':','.'),'_', $_2);
+				$a = "<img id=\"$id\" src=\"\" class=\"tc\" data-type=\"tc\" data-tag_id=\"$_1\" data-state=\"n\" data-label=\"$_2\" data-data=\"$_2\">";
+				return $a;
+			},
+			$text);*/
+
+		// SVG
+		$pattern 	= TR::get_mark_pattern('svg');
+		preg_match($pattern, $text, $matches);
+		if (!empty($matches)) {
+			$text = preg_replace_callback(
+				$pattern,
+				static function ($matches) use ($esc) {
+
+					$new_text = null;
+
+					$_2 = $matches[2];
+					$_3 = $matches[3];
+					$_4 = $matches[4];
+					$_6 = $matches[6];
+					$_7 = $matches[7];
+
+					// data is a locator encoded as text
+					// Restore double quotes from saved safe locator string
+					$locator_text = str_replace('\'','"',$_7);
+					if($locator = json_decode($locator_text) ) {
+
+						$url  = component_svg::get_url_from_locator($locator);
+
+						// Replace double quotes for safe management in text editor
+						$data = str_replace('"','\'',$_7);
+
+						// SEC-028: escape capture groups before attribute interpolation.
+						$g2 = $esc($_2); $g3 = $esc($_3); $g4 = $esc($_4); $g6 = $esc($_6);
+						$g_data = $esc($data);
+						$g_url  = $esc($url);
+						$new_text = '<img id="['.$g2.'-'.$g3.'-'.$g4.'-'.$g6.']" src="'.$g_url.'" class="svg" data-type="svg" data-tag_id="'.$g4.'" data-state="'.$g3.'" data-label="'.$g6.'" data-data="'.$g_data.'">';
+
+					}
+					return $new_text;
+				},
+				$text
+			);
+		}
+
+		// DRAW
+		$pattern	= TR::get_mark_pattern('draw');
+		$text		= preg_replace_callback($pattern, static function($m) use ($tag_url, $esc) {
+			$g2=$esc($m[2]??''); $g3=$esc($m[3]??''); $g4=$esc($m[4]??''); $g6=$esc($m[6]??''); $g7=$esc($m[7]??'');
+			$id = "[$g2-$g3-$g4-$g6]";
+			return "<img id=\"$id\" src=\"{$tag_url}$id\" class=\"draw\" data-type=\"draw\" data-tag_id=\"$g4\" data-state=\"$g3\" data-label=\"$g6\" data-data=\"$g7\">";
+		}, $text);
+
+		// GEO
+		$pattern	= TR::get_mark_pattern('geo');
+		$text		= preg_replace_callback($pattern, static function($m) use ($tag_url, $esc) {
+			$g2=$esc($m[2]??''); $g3=$esc($m[3]??''); $g4=$esc($m[4]??''); $g6=$esc($m[6]??''); $g7=$esc($m[7]??'');
+			$id = "[$g2-$g3-$g4-$g6]";
+			return "<img id=\"$id\" src=\"{$tag_url}$id\" class=\"geo\" data-type=\"geo\" data-tag_id=\"$g4\" data-state=\"$g3\" data-label=\"$g6\" data-data=\"$g7\">";
+		}, $text);
+
+		// PAGE
+		$pattern	= TR::get_mark_pattern('page');
+		$text		= preg_replace_callback($pattern, static function($m) use ($tag_url, $esc) {
+			$g2=$esc($m[2]??''); $g3=$esc($m[3]??''); $g4=$esc($m[4]??''); $g6=$esc($m[6]??''); $g7=$esc($m[7]??'');
+			$id = "[$g2-$g3-$g4-$g6]";
+			return "<img id=\"$id\" src=\"{$tag_url}$id\" class=\"page\" data-type=\"page\" data-tag_id=\"$g4\" data-state=\"$g3\" data-label=\"$g6\" data-data=\"$g7\">";
+		}, $text);
+
+		// PERSON. captures: 1=full, 2=type, 3=state, 4=tag_id, 5=label, 6=data
+		$pattern	= TR::get_mark_pattern('person');
+		$text		= preg_replace_callback($pattern, static function($m) use ($tag_url, $esc) {
+			$g2=$esc($m[2]??''); $g3=$esc($m[3]??''); $g4=$esc($m[4]??''); $g5=$esc($m[5]??''); $g6=$esc($m[6]??'');
+			$id = "[$g2-$g3-$g4-$g5]";
+			return "<img id=\"$id\" src=\"{$tag_url}$id\" class=\"person\" data-type=\"person\" data-tag_id=\"$g4\" data-state=\"$g3\" data-label=\"$g5\" data-data=\"$g6\">";
+		}, $text);
+
+		// NOTE
+		$pattern	= TR::get_mark_pattern('note');
+		$text		= preg_replace_callback($pattern, static function($m) use ($tag_url, $esc) {
+			$g2=$esc($m[2]??''); $g3=$esc($m[3]??''); $g4=$esc($m[4]??''); $g6=$esc($m[6]??''); $g7=$esc($m[7]??'');
+			$id = "[$g2-$g3-$g4-$g6]";
+			return "<img id=\"$id\" src=\"{$tag_url}$id\" class=\"note\" data-type=\"note\" data-tag_id=\"$g4\" data-state=\"$g3\" data-label=\"$g6\" data-data=\"$g7\">";
+		}, $text);
+
+		// LANG
+		$pattern	= TR::get_mark_pattern('lang');
+		$text		= preg_replace_callback($pattern, static function($m) use ($tag_url, $esc) {
+			$g2=$esc($m[2]??''); $g3=$esc($m[3]??''); $g4=$esc($m[4]??''); $g6=$esc($m[6]??''); $g7=$esc($m[7]??'');
+			$id = "[$g2-$g3-$g4-$g6]";
+			return "<img id=\"$id\" src=\"{$tag_url}$id\" class=\"lang\" data-type=\"lang\" data-tag_id=\"$g4\" data-state=\"$g3\" data-label=\"$g6\" data-data=\"$g7\">";
+		}, $text);
+
+
+		return $text;
+	}//end add_tag_img_on_the_fly
+
+
+
+	/**
+	* ADDBABELTAGSONTHEFLY
+	* Set an array of tags to preserve in translation and wrap it into appertium notrans tags
+	* @param string $text
+	* @return string $text
+	*/
+	public static function addBabelTagsOnTheFly(string $text) : string {
+
+		$ar_tags = [
+			'indexIn',
+			'indexOut',
+			'tc',
+			'svg',
+			'geo',
+			'page',
+			'person',
+			'note',
+			'reference'
+			//'strong','em',
+		];
+		foreach ($ar_tags as $tag) {
+			$pattern	= TR::get_mark_pattern($tag);
+			$text		= preg_replace($pattern, "<apertium-notrans>$0</apertium-notrans>", $text);
+			#if ($tag=='reference') {
+			#	dump($text, ' text ++ pattern: '.to_string($pattern));
+			#}
+		}
+
+
+		return $text;
+	}//end addBabelTagsOnTheFly
+
+
+
+	/**
+	* DELETEMARKS
+	* clean text to translate/subtitles
+	* @param string $string
+	* @param object|null $options
+	* @return string $string
+	*/
+	public static function deleteMarks( string $string, ?object $options=null ) : string {
+
+		// options
+			$deleteTC			= $options->deleteTC ?? true;
+			$deleteIndex		= $options->deleteIndex ?? true;
+			$deleteSvg			= $options->deleteSvg ?? true;
+			$deleteDraw			= $options->deleteDraw ?? true;
+			$deleteGeo			= $options->deleteGeo ?? true;
+			$delete_page		= $options->delete_page ?? true;
+			$delete_person		= $options->delete_person ?? true;
+			$delete_note		= $options->delete_note ?? true;
+			$delete_reference	= $options->delete_reference ?? true;
+			$delete_lang		= $options->delete_lang ?? true;
+
+		// TC clear
+		if($deleteTC===true) {
+			$pattern = TR::get_mark_pattern('tc');
+			$string = preg_replace($pattern, '', $string);	// delete TC tag
+		}
+
+		// Index clear
+		if($deleteIndex===true) {
+			$pattern	= TR::get_mark_pattern('index');
+			$string		= preg_replace($pattern, '', $string);
+		}
+
+		// Svg clear
+		if($deleteSvg===true) {
+			$pattern	= TR::get_mark_pattern('svg');
+			$string		= preg_replace($pattern, '', $string);
+		}
+
+		// Draw clear
+		if($deleteDraw===true) {
+			$pattern	= TR::get_mark_pattern('draw');
+			$string		= preg_replace($pattern, '', $string);
+		}
+
+		// Geo clear
+		if($deleteGeo===true) {
+			$pattern	= TR::get_mark_pattern('geo');
+			$string		= preg_replace($pattern, '', $string);
+		}
+
+		// Page clear
+		if($delete_page===true) {
+			$pattern	= TR::get_mark_pattern('page');
+			$string		= preg_replace($pattern, '', $string);
+		}
+
+		// Person clear
+		if($delete_person===true) {
+			$pattern	= TR::get_mark_pattern('person');
+			$string		= preg_replace($pattern, '', $string);
+		}
+
+		// Note clear
+		if($delete_note===true) {
+			$pattern	= TR::get_mark_pattern('note');
+			$string		= preg_replace($pattern, '', $string);
+		}
+
+		// references clear
+		if($delete_reference===true) {
+			$pattern	= TR::get_mark_pattern('reference');
+			$string		= preg_replace($pattern, '', $string);
+		}
+
+		// lang clear
+		if($delete_lang===true) {
+			$pattern	= TR::get_mark_pattern('lang');
+			$string		= preg_replace($pattern, '', $string);
+		}
+
+
+		return $string;
+	}//end deleteMarks
+
+
+
+	/**
+	* BUILD_TAG
+	* Create a normalized tag (only index tags are defined now) from params
+	* @see component_text_area::change_tag_state()
+	* @param string $type
+	* @param string $state
+	* @param string|int $id
+	* @param string $label
+	* @param string $data
+	* @return string $tag
+	*/
+	public static function build_tag(string $type, string $state, $id, string $label, string $data) : string {
+
+		# Safe data for JSON
+		$data = str_replace('"', "'", $data);
+
+		switch ($type) {
+			case 'indexIn':
+				$tag = '[index-'.$state.'-'.$id.'-'.$label.'-data:'.$data.':data]';
+				break;
+			case 'indexOut':
+				$tag = '[/index-'.$state.'-'.$id.'-'.$label.'-data:'.$data.':data]';
+				break;
+			case 'person':
+				$tag = '[person-'.$state.'-'.$id.'-'.$label.'-data:'.$data.':data]';
+				break;
+			case 'draw':
+				$tag = '[draw-'.$state.'-'.$id.'-'.$label.'-data:'.$data.':data]';
+				break;
+			default:
+				// throw new Exception("Error Processing Request. Unimplemented build_tag of type: ".to_string($type), 1);
+				debug_log(__METHOD__
+					. " Error Processing Request. Unimplemented build_tag of type " . PHP_EOL
+					. ' type: ' . to_string($type)
+					, logger::ERROR
+				);
+				$tag = '';
+				break;
+		}
+
+
+		return $tag;
+	}//end build_tag
+
+
+
+	/**
+	* MATCH_PATTERN_INDEX_FROM_TAG
+	* Using pattern like: \[\/{0,1}(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]
+	* @param string $tag
+	* @param string $type='index'
+	* @return array|null
+	*/
+	public static function match_pattern_index_from_tag(string $tag, string $type='index') : ?array {
+
+		$pattern = TR::get_mark_pattern($type, false);
+		if(preg_match_all("/$pattern/", $tag, $matches, PREG_PATTERN_ORDER)) {
+			return $matches;
+		}
+
+		return null;
+	}//end match_pattern_index_from_tag
+
+
+
+	/**
+	* GET_TAG_ID
+	* Extract the id from the tag
+	* @param string $tag [index-n-1]
+	* @return int|null $value
+	*/
+	public static function get_tag_id(string $tag) : ?int {
+
+		$match_pattern	= TR::match_pattern_index_from_tag($tag);
+		$id = isset($match_pattern[3][0])
+			? (int)$match_pattern[3][0]
+			: null;
+
+
+		return $id;
+	}//end get_tag_id
+
+
+	/**
+	 * TRUNCATE_TEXT
+	 * Truncates a string to a specified length, breaking on word boundaries
+	 *
+	 * Safely truncates a text string without cutting words in the middle. Attempts to break
+	 * at the nearest word boundary (specified by $break parameter) if the string exceeds the limit.
+	 * Returns the original string unchanged if it is shorter than the limit.
+	 *
+	 * @param string $string The text string to truncate
+	 * @param int|float $limit Maximum length of the returned string
+	 * @param string $break Character or string used as word boundary (default: single space)
+	 * @param string $pad Suffix to append to truncated string (default: "...")
+	 * @return string Truncated string with padding appended if truncation occurred
+	 *
+	 * @package Dedalo
+	 * @subpackage Shared
+	 */
+	public static function truncate_text(string $string, $limit, $break=" ", $pad="...") : string {
+
+	  // return with no change if string is shorter than $limit
+	  if(strlen($string) <= $limit) {
+	  	return $string;
+	  }
+
+	  $string = substr($string, 0, $limit);
+	  if( false !== ($breakpoint = strrpos($string, $break)) ) {
+		$string = substr($string, 0, $breakpoint);
+	  }
+
+	  return $string . $pad;
+	}//end truncate_text
+
+
+
+	/**
+	 * GET_CHARS_INFO
+	 * Calculate comprehensive character statistics from raw text content
+	 *
+	 * Analyzes a text string and returns detailed character count information. Performs cleaning
+	 * of Dédalo markup tags, HTML tags, and special characters before counting to provide
+	 * accurate statistics. Also counts characters excluding whitespace for alternative metrics.
+	 * Supports UTF-8 multi-byte character counting.
+	 *
+	 * @param string $raw_text The input text string to analyze (may contain Dédalo tags and HTML)
+	 * @return object Returns stdClass with properties:
+	 *         - total_chars (int): Total character count including spaces
+	 *         - total_chars_no_spaces (int): Character count excluding whitespace
+	 *
+	 * @package Dedalo
+	 * @subpackage Shared
+	 */
+	public static function get_chars_info(string $raw_text) : object {
+
+		$chars_info = new stdClass();
+
+		// CLEAN TEXT
+		$text_clean = $raw_text;
+
+		// clean text
+		$text_clean = trim($text_clean);
+
+		// Remove Dédalo marks
+		$text_clean = TR::deleteMarks($text_clean);
+
+		// Remove html tags like strong, br, etc.
+		$text_clean = strip_tags($text_clean);
+
+		// Decode special html chars
+		$text_clean = htmlspecialchars_decode($text_clean);
+		$text_clean = str_replace(array("&nbsp;")," ",$text_clean);
+
+		// Count total characters
+		$chars_info->total_chars = mb_strlen($text_clean,'UTF-8');
+
+		// Remove spaces and breaks
+		$text_clean = str_replace(array("&nbsp;"," ","\n"),"",$text_clean);
+
+		// count total of characters with no spaces
+		$chars_info->total_chars_no_spaces = mb_strlen($text_clean,'UTF-8'); #dump($total_chars_no_spaces, ' $total_chars_no_spaces ++ '.to_string());
+
+
+		return (object)$chars_info;
+	}//end get_chars_info
+
+
+
+	/**
+	 * GET_TAGS_OF_TYPE_IN_TEXT
+	 * Extract and index all tags of specified types from text content
+	 *
+	 * Searches through the provided text for all occurrences of tags matching the given types.
+	 * Returns a structured array of tag objects containing both the tag type and the full tag text.
+	 * Supports all standard Dédalo tag types (index, tc, person, note, reference, svg, draw, geo, page, lang).
+	 *
+	 * @param string $raw_text The input text to search for tags
+	 * @param array $ar_tag_types Array of tag type identifiers to search for (e.g., ['index', 'tc', 'person'])
+	 * @return array Array of stdClass objects with properties:
+	 *         - type (string): The tag type identifier
+	 *         - tag (string): The complete matched tag text
+	 *
+	 * @package Dedalo
+	 * @subpackage Shared
+	 */
+	public static function get_tags_of_type_in_text(string $raw_text, array $ar_tag_types) : array {
+
+		$ar_tags_of_type = array();
+
+		foreach ($ar_tag_types as $type) {
+
+			$tag_pattern = TR::get_mark_pattern($type);
+			preg_match_all($tag_pattern,  $raw_text,  $matches, PREG_PATTERN_ORDER);
+			foreach ($matches[0] as $tag) {
+
+				$ar_tags_of_type[] = (object)[
+					'type'	=> $type,
+					'tag'	=> $tag
+				];
+			}
+		}
+
+
+		return $ar_tags_of_type;
+	}//end get_tags_of_type_in_text
+
+
+
+}//end class tr
