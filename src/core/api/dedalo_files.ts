@@ -21,7 +21,7 @@
  * sensitivity quirks and the tools-branch entries all being typed 'js').
  */
 
-import { readdirSync } from 'node:fs';
+import { readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { TOOLS_URL_BASE, TOOL_COMMON_CLIENT_DIR, getRoots } from '../tools/paths.ts';
 import { DEDALO_ENGINE_VERSION } from '../update/version.ts';
@@ -152,9 +152,58 @@ export function buildDedaloFilesResponse(): {
 
 	return {
 		result: files,
-		// dedalo_version: used to set the cache version in the worker (PHP
-		// DEDALO_VERSION).
-		dedalo_version: DEDALO_ENGINE_VERSION,
+		// dedalo_version: THE SERVICE-WORKER CACHE KEY (sw.js names its cache after
+		// it and purges every other one). PHP sent DEDALO_VERSION, which only moves
+		// on a release — so a client file edited between releases stayed cached
+		// FOREVER: the browser kept running the old JS against the new server, and
+		// the only thing that ever refreshed it was a fresh login. That is how a
+		// deploy leaves a logged-in user on a stale bundle.
+		//
+		// So the key is the version PLUS a signature of the bytes actually served
+		// (newest mtime + file count over the manifested trees). Edit a client file
+		// — in dev or by deploying one — and the key changes, the SW drops the old
+		// cache and re-fetches. No flag to remember, no login required.
+		dedalo_version: `${DEDALO_ENGINE_VERSION}-${clientAssetsSignature(files)}`,
 		msg: 'OK. Request done successfully',
 	};
+}
+
+/**
+ * A cheap content signature of the manifested client assets: the newest mtime
+ * across them, plus how many there are (so a pure delete also moves the key).
+ * Cheap because the manifest walk already stat'd these directories.
+ *
+ * mtime, not a content hash: hashing every client file on each manifest request
+ * would cost far more than it buys — an edited file always moves its mtime, and
+ * a deploy rewrites them. A file restored to an OLDER mtime with the same count
+ * is the one case this misses; a login still fixes that.
+ */
+function clientAssetsSignature(files: readonly DedaloFileEntry[]): string {
+	let newest = 0;
+	for (const file of files) {
+		const path = assetDiskPath(file.url);
+		if (path === null) continue;
+		try {
+			const { mtimeMs } = statSync(path);
+			if (mtimeMs > newest) newest = mtimeMs;
+		} catch {
+			// A vanished file just does not contribute; the count below still moves.
+		}
+	}
+	return `${Math.round(newest)}.${files.length}`;
+}
+
+/** Map a manifest URL back to the file on disk (the inverse of the url builders). */
+function assetDiskPath(url: string): string | null {
+	if (url.startsWith(TOOLS_COMMON_URL)) {
+		return TOOL_COMMON_CLIENT_DIR + url.slice(TOOLS_COMMON_URL.length);
+	}
+	if (url.startsWith(TOOLS_URL_BASE)) {
+		const root = getRoots()[0]?.path;
+		return root === undefined ? null : root + url.slice(TOOLS_URL_BASE.length);
+	}
+	if (url.startsWith(CORE_URL)) {
+		return CLIENT_CORE_ROOT + url.slice(CORE_URL.length);
+	}
+	return null;
 }
