@@ -20,7 +20,8 @@
  * files directly, and `client_serving.test.ts` asserts served bytes == disk bytes.
  *
  *   bun run css:build          # compile every entrypoint
- *   bun run css:build --check  # compile to memory; fail if any output is stale (CI)
+ *   bun run css:watch          # rebuild on save — only the entrypoints that import the file
+ *   bun run css:check          # compile to memory; fail if any output is stale (CI)
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -33,6 +34,7 @@ const REPO_ROOT = resolve(import.meta.dir, '..');
 const SEARCH_DIRS = ['client', 'tools', 'src'];
 
 const checkOnly = Bun.argv.includes('--check');
+const watch = Bun.argv.includes('--watch');
 
 /** Every .less in the repo (excluding vendored/third-party trees). */
 function allLessFiles(): string[] {
@@ -117,6 +119,102 @@ function relativizeSources(mapJson: string, cssDir: string): string {
 	return JSON.stringify(map);
 }
 
+/** Compile one entrypoint and write its .css + .css.map. Returns false if it was a no-op. */
+async function writeOne(lessPath: string): Promise<boolean> {
+	const cssPath = lessPath.replace(/\.less$/, '.css');
+	const mapPath = `${cssPath}.map`;
+	const { css, map } = await buildOne(lessPath);
+	writeFileSync(join(REPO_ROOT, cssPath), css);
+	if (map !== '') writeFileSync(join(REPO_ROOT, mapPath), map);
+	return true;
+}
+
+/**
+ * Which entrypoints does `changed` affect? An entrypoint is affected if it IS the changed
+ * file, or if the changed file appears anywhere in its transitive `@import` graph.
+ *
+ * Editing `layout/vars.less` (imported by nearly everything) correctly rebuilds nearly
+ * everything; editing one tool's stylesheet rebuilds only that tool. That is the whole point
+ * of walking the graph instead of rebuilding all 41 on every keystroke.
+ */
+function affectedBy(changed: string, targets: string[]): string[] {
+	const out: string[] = [];
+	for (const entry of targets) {
+		if (entry === changed) {
+			out.push(entry);
+			continue;
+		}
+		const seen = new Set<string>();
+		const stack = [entry];
+		while (stack.length > 0) {
+			const f = stack.pop();
+			if (f === undefined || seen.has(f)) continue;
+			seen.add(f);
+			for (const dep of importedBy(f)) stack.push(dep);
+		}
+		if (seen.has(changed)) out.push(entry);
+	}
+	return out;
+}
+
+// ---------------------------------------------------------------------------
+// WATCH — rebuild on save. `bun run css:watch`
+// ---------------------------------------------------------------------------
+if (watch) {
+	const { watch: fsWatch } = await import('node:fs');
+	let targets = entrypoints();
+	console.log(`css: watching ${SEARCH_DIRS.join(', ')} for *.less — ${targets.length} entrypoints`);
+	console.log('css: Ctrl-C to stop\n');
+
+	// Debounce: editors write a file in several syscalls, and one save must not trigger
+	// several compiles of the same sheet.
+	const pending = new Set<string>();
+	let timer: ReturnType<typeof setTimeout> | null = null;
+
+	const flush = async (): Promise<void> => {
+		const changed = [...pending];
+		pending.clear();
+		// A new/renamed .less can change the entrypoint set, so re-derive it.
+		targets = entrypoints();
+		const toBuild = new Set<string>();
+		for (const c of changed) for (const e of affectedBy(c, targets)) toBuild.add(e);
+
+		for (const c of changed) console.log(`css: changed ${c}`);
+		if (toBuild.size === 0) {
+			console.log('css:   (no entrypoint depends on it)\n');
+			return;
+		}
+		const started = Bun.nanoseconds();
+		for (const entry of toBuild) {
+			try {
+				await writeOne(entry);
+				console.log(`css:   → ${entry.replace(/\.less$/, '.css')}`);
+			} catch (error) {
+				// A LESS error must NOT kill the watcher — print it and keep watching, so a
+				// typo does not force you to restart the process.
+				const e = error as { message?: string; filename?: string; line?: number };
+				console.error(`css:   ✗ ${entry}: ${e.message ?? String(error)}`);
+				if (e.filename !== undefined) console.error(`css:     ${e.filename}:${e.line ?? '?'}`);
+			}
+		}
+		const ms = Math.round((Bun.nanoseconds() - started) / 1e6);
+		console.log(`css: rebuilt ${toBuild.size} in ${ms}ms\n`);
+	};
+
+	for (const dir of SEARCH_DIRS) {
+		fsWatch(join(REPO_ROOT, dir), { recursive: true }, (_event, filename) => {
+			if (filename === null || !filename.endsWith('.less')) return;
+			const rel = join(dir, filename);
+			if (rel.includes('/lib/') || rel.includes('node_modules')) return;
+			pending.add(rel);
+			if (timer !== null) clearTimeout(timer);
+			timer = setTimeout(() => void flush(), 80);
+		});
+	}
+	// Hold the process open.
+	await new Promise(() => {});
+}
+
 const targets = entrypoints();
 console.log(`css: ${targets.length} entrypoints (derived: a .less nobody imports)`);
 
@@ -126,9 +224,9 @@ const stale: string[] = [];
 for (const lessPath of targets) {
 	const cssPath = lessPath.replace(/\.less$/, '.css');
 	const mapPath = `${cssPath}.map`;
-	const { css, map } = await buildOne(lessPath);
 
 	if (checkOnly) {
+		const { css, map } = await buildOne(lessPath);
 		const cssOld = existsSync(join(REPO_ROOT, cssPath))
 			? readFileSync(join(REPO_ROOT, cssPath), 'utf8')
 			: null;
@@ -139,8 +237,7 @@ for (const lessPath of targets) {
 		continue;
 	}
 
-	writeFileSync(join(REPO_ROOT, cssPath), css);
-	if (map !== '') writeFileSync(join(REPO_ROOT, mapPath), map);
+	await writeOne(lessPath);
 	written++;
 }
 
