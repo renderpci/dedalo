@@ -22,7 +22,10 @@
  * server and leave an orphan holding the LESS tree.
  */
 
-export {}; // makes this a module, so the top-level `await` below is legal (TS1375)
+// IMPORTED, never re-typed. The supervisor must key on the SAME exit code the server
+// actually uses to ask for a restart; a hand-copied `75` here is precisely the stale-copy
+// drift that `install_restart_supervisor_tripwire.test.ts` exists to catch.
+import { RESTART_EXIT_CODE } from '../src/core/install/restart.ts';
 
 const cssWatcher = Bun.spawn(['bun', 'run', 'scripts/build_css.ts', '--watch'], {
 	stdio: ['ignore', 'inherit', 'inherit'],
@@ -52,9 +55,6 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 	});
 }
 
-/** Exit code the server uses to ask for a clean reboot into freshly-written config. */
-const RESTART_REQUESTED = 75;
-
 try {
 	while (!shuttingDown) {
 		server = Bun.spawn(['bun', 'run', '--watch', 'src/server.ts'], {
@@ -63,11 +63,15 @@ try {
 		const code = await server.exited;
 		server = null;
 
-		if (code !== RESTART_REQUESTED) {
+		// RESPAWN on exactly RESTART_EXIT_CODE, and on nothing else: a graceful ^C exits 0 and
+		// must QUIT, a crash exits non-zero and must NOT hot-loop (it would hide the crash).
+		if (code !== RESTART_EXIT_CODE) {
 			stopChildren();
 			process.exit(code);
 		}
-		console.log('[supervisor] restart requested (exit 75) — rebooting into the persisted config');
+		console.log(
+			`[supervisor] restart requested (exit ${RESTART_EXIT_CODE}) — rebooting into the persisted config`,
+		);
 	}
 } finally {
 	stopChildren();

@@ -77,14 +77,16 @@ function importedBy(file: string): string[] {
  * missing its `vars` import and nobody noticed. This build resolves imports honestly, so a
  * partial that does not declare what it needs fails loudly instead of compiling by accident.
  */
-function entrypoints(): string[] {
+export function entrypoints(): string[] {
 	const all = allLessFiles();
 	const imported = new Set<string>();
 	for (const f of all) for (const i of importedBy(f)) imported.add(i);
 	return all.filter((f) => !imported.has(f));
 }
 
-async function buildOne(lessPath: string): Promise<{ css: string; map: string }> {
+/** Compile one entrypoint IN MEMORY. Exported so the tripwire compares against the SAME
+ *  code the build runs — a gate with its own copy of the build would drift from it. */
+export async function buildOne(lessPath: string): Promise<{ css: string; map: string }> {
 	const dir = dirname(lessPath);
 	const cssPath = lessPath.replace(/\.less$/, '.css');
 	const mapName = `${basename(cssPath)}.map`;
@@ -158,9 +160,12 @@ function affectedBy(changed: string, targets: string[]): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// WATCH — rebuild on save. `bun run css:watch`
+// CLI. Everything below runs ONLY when this file is executed directly — importing it
+// (the css_build tripwire does) must never compile or write anything.
 // ---------------------------------------------------------------------------
-if (watch) {
+if (!import.meta.main) {
+	// Imported as a module: expose the functions above, do no work.
+} else if (watch) {
 	const { watch: fsWatch } = await import('node:fs');
 	let targets = entrypoints();
 	console.log(`css: watching ${SEARCH_DIRS.join(', ')} for *.less — ${targets.length} entrypoints`);
@@ -213,52 +218,54 @@ if (watch) {
 	}
 	// Hold the process open.
 	await new Promise(() => {});
-}
+} else {
+	const targets = entrypoints();
+	console.log(`css: ${targets.length} entrypoints (derived: a .less nobody imports)`);
 
-const targets = entrypoints();
-console.log(`css: ${targets.length} entrypoints (derived: a .less nobody imports)`);
+	let written = 0;
+	const stale: string[] = [];
 
-let written = 0;
-const stale: string[] = [];
+	for (const lessPath of targets) {
+		const cssPath = lessPath.replace(/\.less$/, '.css');
+		const mapPath = `${cssPath}.map`;
 
-for (const lessPath of targets) {
-	const cssPath = lessPath.replace(/\.less$/, '.css');
-	const mapPath = `${cssPath}.map`;
+		if (checkOnly) {
+			const { css, map } = await buildOne(lessPath);
+			const cssOld = existsSync(join(REPO_ROOT, cssPath))
+				? readFileSync(join(REPO_ROOT, cssPath), 'utf8')
+				: null;
+			const mapOld = existsSync(join(REPO_ROOT, mapPath))
+				? readFileSync(join(REPO_ROOT, mapPath), 'utf8')
+				: null;
+			if (cssOld !== css || mapOld !== map) stale.push(cssPath);
+			continue;
+		}
+
+		await writeOne(lessPath);
+		written++;
+	}
 
 	if (checkOnly) {
-		const { css, map } = await buildOne(lessPath);
-		const cssOld = existsSync(join(REPO_ROOT, cssPath))
-			? readFileSync(join(REPO_ROOT, cssPath), 'utf8')
-			: null;
-		const mapOld = existsSync(join(REPO_ROOT, mapPath))
-			? readFileSync(join(REPO_ROOT, mapPath), 'utf8')
-			: null;
-		if (cssOld !== css || mapOld !== map) stale.push(cssPath);
-		continue;
-	}
-
-	await writeOne(lessPath);
-	written++;
-}
-
-if (checkOnly) {
-	if (stale.length > 0) {
-		console.error(`\ncss: ${stale.length} output(s) STALE — run \`bun run css:build\` and commit:`);
-		for (const f of stale) console.error(`  ${f}`);
-		process.exit(1);
-	}
-	console.log('css: all outputs up to date');
-} else {
-	console.log(`css: wrote ${written} .css (+ .css.map, sources relative to each map)`);
-	// A guard against the regression this build exists to fix.
-	for (const lessPath of targets) {
-		const mapPath = join(REPO_ROOT, lessPath.replace(/\.less$/, '.css.map'));
-		if (!existsSync(mapPath)) continue;
-		const sources: string[] = JSON.parse(readFileSync(mapPath, 'utf8')).sources ?? [];
-		const absolute = sources.filter((s) => s.startsWith('/'));
-		if (absolute.length > 0) {
-			console.error(`css: ABSOLUTE source in ${relative(REPO_ROOT, mapPath)}: ${absolute[0]}`);
+		if (stale.length > 0) {
+			console.error(
+				`\ncss: ${stale.length} output(s) STALE — run \`bun run css:build\` and commit:`,
+			);
+			for (const f of stale) console.error(`  ${f}`);
 			process.exit(1);
+		}
+		console.log('css: all outputs up to date');
+	} else {
+		console.log(`css: wrote ${written} .css (+ .css.map, sources relative to each map)`);
+		// A guard against the regression this build exists to fix.
+		for (const lessPath of targets) {
+			const mapPath = join(REPO_ROOT, lessPath.replace(/\.less$/, '.css.map'));
+			if (!existsSync(mapPath)) continue;
+			const sources: string[] = JSON.parse(readFileSync(mapPath, 'utf8')).sources ?? [];
+			const absolute = sources.filter((s) => s.startsWith('/'));
+			if (absolute.length > 0) {
+				console.error(`css: ABSOLUTE source in ${relative(REPO_ROOT, mapPath)}: ${absolute[0]}`);
+				process.exit(1);
+			}
 		}
 	}
 }

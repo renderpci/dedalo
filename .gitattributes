@@ -1,0 +1,28 @@
+# ---------------------------------------------------------------------------
+# Generated CSS. The SOURCE is the .less; these are build OUTPUT (scripts/build_css.ts),
+# committed because the deploy model is a checkout — `deploy/deploy.sh`: "the repo IS the
+# artifact" — and production installs `--production`, so the LESS compiler never reaches
+# the host. Nothing rebuilds CSS on the way out, so the bytes in git are the bytes the
+# browser gets. `test/unit/css_build_tripwire.test.ts` keeps them honest.
+#
+# linguist-generated: collapses them in GitHub diffs and excludes them from language stats.
+# They are still committed, still diffable locally, still reviewed by the tripwire — this
+# only stops a one-line token change in layout/vars.less (which rebuilds 35 entrypoints,
+# thousands of lines) from burying the actual change in a pull request.
+#
+# ON A MERGE CONFLICT in one of these files: do not hand-resolve it. Take either side, then
+#   bun run css:build
+# and commit the result. The .less files are the merge that matters; the CSS is derived.
+# ---------------------------------------------------------------------------
+client/dedalo/**/*.css      linguist-generated=true
+client/dedalo/**/*.css.map  linguist-generated=true
+tools/**/*.css              linguist-generated=true
+tools/**/*.css.map          linguist-generated=true
+src/core/tools/client/**/*.css      linguist-generated=true
+src/core/tools/client/**/*.css.map  linguist-generated=true
+
+# Third-party bundles we vendor verbatim — not our source, never reviewed as ours.
+vendor/**  linguist-vendored=true
+
+# The .less files ARE source: always diff them normally, never collapse.
+*.less  linguist-generated=false
