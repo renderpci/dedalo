@@ -121,7 +121,7 @@ describe.skipIf(mediaRoot === null)('engine media fallback ↔ listener binding'
 	 * access to the entire media tree. `upload/`: other users' in-flight staged files.
 	 */
 	for (const [label, rel] of [
-		['the auth marker store', '.publication/auth/' + 'a'.repeat(128)],
+		['the auth marker store', `.publication/auth/${'a'.repeat(128)}`],
 		['the pub marker store', '.publication/pub/test3_1'],
 		['staged uploads', 'upload/someone_elses_in_flight_file.jpg'],
 	] as const) {

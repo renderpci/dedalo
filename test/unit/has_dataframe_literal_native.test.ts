@@ -129,16 +129,10 @@ async function provisionFixture(): Promise<void> {
 	// quietly did nothing and the revert then deleted someone else's component. A scratch
 	// tipo that is no longer free is a fixture bug, and it must STOP the run rather than
 	// mutate real ontology.
-	const squatted = await sql.unsafe('SELECT model FROM dd_ontology WHERE tipo = $1', [
-		FRAME_TIPO,
-	]);
+	const squatted = await sql.unsafe('SELECT model FROM dd_ontology WHERE tipo = $1', [FRAME_TIPO]);
 	if (squatted.length > 0) {
 		throw new Error(
-			`has_dataframe gate: '${FRAME_TIPO}' is a REAL ontology node (model ` +
-				`'${(squatted[0] as { model: string }).model}') — this gate provisions and then DELETES ` +
-				`that tipo, so running it would destroy shipped ontology. Move FRAME_TIPO to a free ` +
-				`scratch tipo (and rename it in fixtures/has_dataframe_native/list_items.golden.json, ` +
-				`where it appears only as an identifier). This is exactly how test218 was eaten.`,
+			`has_dataframe gate: '${FRAME_TIPO}' is a REAL ontology node (model '${(squatted[0] as { model: string }).model}') — this gate provisions and then DELETES that tipo, so running it would destroy shipped ontology. Move FRAME_TIPO to a free scratch tipo (and rename it in fixtures/has_dataframe_native/list_items.golden.json, where it appears only as an identifier). This is exactly how test218 was eaten.`,
 		);
 	}
 
@@ -159,10 +153,7 @@ async function provisionFixture(): Promise<void> {
 	);
 	if (occupied.length > 0) {
 		throw new Error(
-			`has_dataframe gate: ${TARGET_SECTION_TIPO}/${TARGET_ID} already exists — this gate ` +
-				'creates and then DELETES that record, so it will not touch one it did not make. Move ' +
-				'TARGET_ID to a free reserved-high id (and rename it in the golden, where it appears ' +
-				'only as an identifier).',
+			`has_dataframe gate: ${TARGET_SECTION_TIPO}/${TARGET_ID} already exists — this gate creates and then DELETES that record, so it will not touch one it did not make. Move TARGET_ID to a free reserved-high id (and rename it in the golden, where it appears only as an identifier).`,
 		);
 	}
 	// The target row: dd1715 is a non-translatable component_input_text, so its value lives
@@ -246,10 +237,10 @@ async function revertFixture(): Promise<void> {
 	// The target record we minted (only ours: provisionFixture proved the coordinate was
 	// free before creating it, and refuses to run otherwise).
 	if (targetCreated && targetTable !== '') {
-		await sql.unsafe(
-			`DELETE FROM ${targetTable} WHERE section_tipo = $1 AND section_id = $2`,
-			[TARGET_SECTION_TIPO, TARGET_ID],
-		);
+		await sql.unsafe(`DELETE FROM ${targetTable} WHERE section_tipo = $1 AND section_id = $2`, [
+			TARGET_SECTION_TIPO,
+			TARGET_ID,
+		]);
 		targetCreated = false;
 	}
 	if (frameCreated) {

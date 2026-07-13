@@ -40,10 +40,7 @@ if (process.env.DEDALO_TEST_SKIP_CANONICAL_RESTORE !== 'true') {
 		console.log(`[test-preload] canonical test3 playground restored (${restored} records)`);
 	} catch (error) {
 		console.warn(
-			'[test-preload] could NOT restore the canonical test3 playground — the DB-backed gates ' +
-				'will run against whatever the database currently holds, so a stale or edited record ' +
-				'can fail them. Harmless on the hermetic (DB-less) tier. Cause: ' +
-				`${(error as Error).message}`,
+			`[test-preload] could NOT restore the canonical test3 playground — the DB-backed gates will run against whatever the database currently holds, so a stale or edited record can fail them. Harmless on the hermetic (DB-less) tier. Cause: ${(error as Error).message}`,
 		);
 	}
 }

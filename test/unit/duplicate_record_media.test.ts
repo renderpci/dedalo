@@ -24,13 +24,13 @@ import { config } from '../../src/config/config.ts';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import { readMatrixRecord } from '../../src/core/db/matrix.ts';
 import { scanFilesInfo } from '../../src/core/media/files_info.ts';
-import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { resolveMediaPathOptions } from '../../src/core/media/ontology_path.ts';
 import {
 	type MediaIdentity,
 	type MediaPathOptions,
 	buildMediaLocation,
 } from '../../src/core/media/path.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { duplicateSectionRecord } from '../../src/core/section/record/duplicate_record.ts';
 import { cleanScratchRecord, createScratchRecord } from '../helpers/test_data.ts';
 

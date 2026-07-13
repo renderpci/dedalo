@@ -104,9 +104,7 @@ beforeAll(async () => {
 	);
 	if (occupied.length > 0) {
 		throw new Error(
-			`iri gate: ${TARGET_SECTION_TIPO}/${TARGET_ID} already exists — this gate creates and ` +
-				'then DELETES that record, so it will not touch one it did not make. Move TARGET_ID to ' +
-				'a free reserved-high id (and rename it in the golden, where it is only an identifier).',
+			`iri gate: ${TARGET_SECTION_TIPO}/${TARGET_ID} already exists — this gate creates and then DELETES that record, so it will not touch one it did not make. Move TARGET_ID to a free reserved-high id (and rename it in the golden, where it is only an identifier).`,
 		);
 	}
 	await sql.unsafe(

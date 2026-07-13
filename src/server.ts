@@ -36,7 +36,11 @@ import { handleRawView } from './core/api/raw_view.ts';
 import { SECURITY_HEADERS, staticAssetResponse } from './core/api/static_asset.ts';
 import { CLIENT_LIB_URL_PREFIX, serveClientLibRequest } from './core/client_libs/serving.ts';
 import { handleTagRequest } from './core/components/component_text_area/tag_endpoint.ts';
-import { MEDIA_AUTH_COOKIE, resolveMediaAccessMode, writeRuleFiles } from './core/media/protection.ts';
+import {
+	MEDIA_AUTH_COOKIE,
+	resolveMediaAccessMode,
+	writeRuleFiles,
+} from './core/media/protection.ts';
 // S2-20 boot registration: loading the component registry registers the
 // ontology↔components model lookup (module-load side effect) BEFORE any request
 // resolves a component model. Keep this explicit even though other imports

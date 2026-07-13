@@ -23,8 +23,6 @@
 
 import { testDatabaseName } from '../helpers/test_database.ts';
 
-export {};
-
 if (process.env.DEDALO_TEST_DB_DISABLE !== 'true') {
 	const testDb = testDatabaseName();
 	const appDb = process.env.DB_NAME ?? process.env.DEDALO_DATABASE_CONN;
@@ -32,8 +30,7 @@ if (process.env.DEDALO_TEST_DB_DISABLE !== 'true') {
 	// Never let the "test" DB resolve to the app DB — that is the whole point of the file.
 	if (testDb === appDb) {
 		console.warn(
-			`[test-preload] DEDALO_TEST_DATABASE resolves to the APPLICATION database (${testDb}). ` +
-				'Refusing to redirect: the suite would write to your app. Set DEDALO_TEST_DATABASE.',
+			`[test-preload] DEDALO_TEST_DATABASE resolves to the APPLICATION database (${testDb}). Refusing to redirect: the suite would write to your app. Set DEDALO_TEST_DATABASE.`,
 		);
 	} else {
 		const exists = await databaseExists(testDb);
@@ -45,10 +42,7 @@ if (process.env.DEDALO_TEST_DB_DISABLE !== 'true') {
 			console.log(`[test-preload] suite database: ${testDb} (the app DB is untouched)`);
 		} else {
 			console.warn(
-				`[test-preload] the test database '${testDb}' does not exist — falling back to the ` +
-					'CONFIGURED database, so these tests read (and write) your application data, and ' +
-					'the gates needing the numisdata test ontology will fail. Build it with:\n' +
-					'    bun run test:db:setup',
+				`[test-preload] the test database '${testDb}' does not exist — falling back to the CONFIGURED database, so these tests read (and write) your application data, and the gates needing the numisdata test ontology will fail. Build it with:\n    bun run test:db:setup`,
 			);
 		}
 	}
