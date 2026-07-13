@@ -1222,7 +1222,7 @@
 				},
 				"action": "read",
 				"csrf_token": "__FIXTURE_CSRF__",
-				"dedalo_last_error": "{\"type\":2,\"message\":\"Undefined property: stdClass::$action\",\"file\":\"\\/Users\\/render\\/Desktop\\/trabajos\\/dedalo\\/v7\\/master_dedalo\\/core\\/api\\/v1\\/common\\/class.dd_core_api.php\",\"line\":756}"
+				"dedalo_last_error": "{\"type\":2,\"message\":\"Undefined property: stdClass::$action\",\"file\":\"v7\\/master_dedalo\\/core\\/api\\/v1\\/common\\/class.dd_core_api.php\",\"line\":756}"
 			}
 		}
 	}

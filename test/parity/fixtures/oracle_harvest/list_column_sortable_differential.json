@@ -15070,7 +15070,7 @@
 				},
 				"action": "read",
 				"csrf_token": "__FIXTURE_CSRF__",
-				"dedalo_last_error": "{\"type\":2,\"message\":\"foreach() argument must be of type array|object, null given\",\"file\":\"\\/Users\\/render\\/Desktop\\/trabajos\\/dedalo\\/v7_php_frozen\\/master_dedalo\\/core\\/widgets\\/oh\\/media_icons\\/class.media_icons.php\",\"line\":179}"
+				"dedalo_last_error": "{\"type\":2,\"message\":\"foreach() argument must be of type array|object, null given\",\"file\":\"v7_php_frozen\\/master_dedalo\\/core\\/widgets\\/oh\\/media_icons\\/class.media_icons.php\",\"line\":179}"
 			}
 		}
 	}
