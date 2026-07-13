@@ -38,7 +38,7 @@ exit 1
 
 set -e
 
-# Resolve the two trees relative to this script (v7_ts/master_dedalo/scripts/).
+# Resolve the two trees relative to this script (v7/master_dedalo/scripts/).
 TS_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PHP_ROOT="$(cd "$TS_ROOT/../../v7_php_frozen/master_dedalo" && pwd)"
 CLIENT_ROOT="$TS_ROOT/client/dedalo"

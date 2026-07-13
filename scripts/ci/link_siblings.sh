@@ -4,7 +4,7 @@
 #
 # The repo assumes two out-of-tree paths (all resolved relative to repo root):
 #   ../private                 — config/.env (src/config/env.ts privateDir)
-#   ../../v7/master_dedalo     — the READ-ONLY PHP oracle tree
+#   ../../v7_php_frozen/master_dedalo     — the READ-ONLY PHP oracle tree
 #                                (test/unit/client_serving.test.ts byte-compares
 #                                against it; scripts/sync_client.sh reads it)
 #
@@ -29,8 +29,8 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-PRIVATE_SRC="${DEDALO_CI_PRIVATE_DIR:-$HOME/Desktop/trabajos/dedalo/v7_ts/private}"
-PHP_SRC="${DEDALO_CI_PHP_ROOT:-$HOME/Desktop/trabajos/dedalo/v7/master_dedalo}"
+PRIVATE_SRC="${DEDALO_CI_PRIVATE_DIR:-$HOME/Desktop/trabajos/dedalo/v7/private}"
+PHP_SRC="${DEDALO_CI_PHP_ROOT:-$HOME/Desktop/trabajos/dedalo/v7_php_frozen/master_dedalo}"
 
 [ -r "$PRIVATE_SRC/.env" ] || { echo "ERROR: no readable .env at $PRIVATE_SRC" >&2; exit 1; }
 [ -d "$PHP_SRC/core/page" ] || { echo "ERROR: PHP tree not found at $PHP_SRC" >&2; exit 1; }
@@ -59,10 +59,10 @@ else
 fi
 
 # ../../v7/master_dedalo (same guard: the dev layout already has the real tree)
-if [ -d "$REPO_ROOT/../../v7/master_dedalo/core/page" ] && [ ! -L "$REPO_ROOT/../../v7/master_dedalo" ]; then
-	echo "ok      $REPO_ROOT/../../v7/master_dedalo is the real PHP tree — leaving it"
+if [ -d "$REPO_ROOT/../../v7_php_frozen/master_dedalo/core/page" ] && [ ! -L "$REPO_ROOT/../../v7_php_frozen/master_dedalo" ]; then
+	echo "ok      $REPO_ROOT/../../v7_php_frozen/master_dedalo is the real PHP tree — leaving it"
 else
-	link "$PHP_SRC" "$REPO_ROOT/../../v7/master_dedalo"
+	link "$PHP_SRC" "$REPO_ROOT/../../v7_php_frozen/master_dedalo"
 fi
 
 echo "== link_siblings: done (client libs are NOT linked — see the header)"
