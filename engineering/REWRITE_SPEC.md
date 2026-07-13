@@ -1,7 +1,7 @@
 # Dédalo → TypeScript/Bun Greenfield Rewrite — Master Spec
 
 > Standing specification for the TS/Bun rewrite. Authored 2026-07-01 with the project owner.
-> PHP reference tree: `../../v7/master_dedalo/` (READ-ONLY). This tree: the rewrite workspace.
+> PHP reference tree: `../../v7_php_frozen/master_dedalo/` (READ-ONLY). This tree: the rewrite workspace.
 
 ## Context
 
@@ -21,7 +21,7 @@ Rebuild the Dédalo **server** as a modern, native TypeScript application on the
 
 ## 2. Absolute constraints (non-negotiable)
 
-1. **Do not modify the PHP project** at `v7/master_dedalo/`. It is the source of truth and functional reference — read it, never write it.
+1. **Do not modify the PHP project** at `v7_php_frozen/master_dedalo/`. It is the source of truth and functional reference — read it, never write it.
 2. **Preserve the database schema and data model exactly.** The PostgreSQL JSONB **matrix** tables (`matrix`, `matrix_default`, `matrix_list`, `matrix_hierarchy`, `matrix_hierarchy_main`, `matrix_langs`, `matrix_tools`, `matrix_time_machine`, etc.) and the **per-component `data` JSON structures** stored inside them must be read and written byte-compatibly with the PHP version. Both servers must be able to run against the same database without corrupting each other's data.
 3. **At least as secure as PHP.** Every security chokepoint in §7 must have an equal-or-stronger equivalent. Never ship a regression in the security posture.
 4. **Independent projects.** The TS tree has its own directory architecture, its own config system, and its own runtime. The PHP and TS developer versions must each run standalone — including independent config definitions (no shared runtime config files, no shared sessions).

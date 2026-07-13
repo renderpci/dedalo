@@ -1,6 +1,6 @@
 # Rebuild the Dédalo relation-component family in native TypeScript
 
-Standing spec for the relation family, companion to `engineering/REWRITE_SPEC.md` (whose constraints — §2 absolute constraints, §2b code style, §7 security — apply here unchanged). PHP reference tree: `v7/master_dedalo` (read-only). All `file:line` anchors below point into that tree and have been verified against it.
+Standing spec for the relation family, companion to `engineering/REWRITE_SPEC.md` (whose constraints — §2 absolute constraints, §2b code style, §7 security — apply here unchanged). PHP reference tree: `v7_php_frozen/master_dedalo` (read-only). All `file:line` anchors below point into that tree and have been verified against it.
 
 ---
 
@@ -52,7 +52,7 @@ All relation components must work the same way through a **shared relation core*
 
 PHP shared core: `core/component_relation_common/class.component_relation_common.php:61` (abstract base of the family). Key methods: `add_locator_to_data` `:1223` (append with dedup, `type` mandatory), `remove_locator_from_data` `:1306` (default match on `['section_tipo','section_id','from_component_tipo','type']`), `validate_data_element` `:1058`, `get_locator_value` `:1412`, `get_filter_list_data` `:2375` (datalist attach at `:2404`), `sort_data_by_column` `:3310`, `add_new_element` `:3770`.
 
-**Model inventory** (base class in parentheses; all under `v7/master_dedalo/core/`):
+**Model inventory** (base class in parentheses; all under `v7_php_frozen/master_dedalo/core/`):
 
 | Model | Base | Role |
 |---|---|---|

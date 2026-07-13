@@ -67,7 +67,7 @@
 			"tools/*/register.json",
 			"src/core/tools/client/**",
 			// Byte-identical copies of PHP-master browser assets (vendored qrcode lib,
-			// transformers.js bundle + worker shims) — verified identical to ../../v7/master_dedalo.
+			// transformers.js bundle + worker shims) — verified identical to ../../v7_php_frozen/master_dedalo.
 			"tools/tool_qr/lib/**",
 			"tools/tool_lang/translators/browser_transformer/**",
 			"tools/tool_transcription/transcribers/browser_whisper/**",
