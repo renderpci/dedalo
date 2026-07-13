@@ -15,7 +15,7 @@
  * av-format corpus in indexation_grid_media_av_differential.test.ts — live
  * rsc29 thumb URLs and a seeded oh1/rsc167 av chain, captured 2026-07-10).
  *
- * PHP anchors (v7/master_dedalo):
+ * PHP anchors (v7_php_frozen/master_dedalo):
  * - class.indexation_grid.php build_indexation_grid/get_grid_value/
  *   process_ddo_map/get_ar_section_top_tipo/get_ar_locators
  * - class.component_relation_common.php get_grid_value :311 (recursion,

@@ -1,6 +1,6 @@
 /**
  * Native media_index marker store (S2-31 port — oracle:
- * v7/master_dedalo/diffusion/api/v1/lib/media_index.ts + its
+ * v7_php_frozen/master_dedalo/diffusion/api/v1/lib/media_index.ts + its
  * test/media_index.test.ts). The .publication/ filesystem allowlist the web
  * server stats to authorize anonymous media access:
  *
