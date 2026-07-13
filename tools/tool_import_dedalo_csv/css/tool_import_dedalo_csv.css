@@ -535,11 +535,6 @@
 .tool_header.tool_import_dedalo_csv {
   background-color: var(--tool_import_dedalo_csv);
 }
-/*# sourceMappingURL=tool_import_dedalo_csv.css.map */
-
-/* IMPORT PROGRESS PANEL — fed by the job's PUSH event stream (get_job_events).
-   The bar is driven by rows_done/rows_total from each ImportProgressFrame; while
-   the file is still being READ there is no total yet, hence .indeterminate. */
 .import_progress_panel {
   display: flex;
   flex-direction: column;

@@ -253,7 +253,7 @@ describe('import_files writes the mapped columns (scratch record, cleaned up)', 
 	});
 
 	test('an unchecked column is not imported, and a row without section_id is skipped', async () => {
-		writeFileSync(resolve(userDir, CSV), `section_id;test52\n;skipped row\n`);
+		writeFileSync(resolve(userDir, CSV), 'section_id;test52\n;skipped row\n');
 		const loaded = await getLoadedTool('tool_import_dedalo_csv');
 		const res = await mustGet(loaded!.module.apiActions.import_files, 'import_files').handler({
 			principal: await resolvePrincipal(-1),
