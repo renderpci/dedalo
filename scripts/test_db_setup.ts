@@ -58,9 +58,7 @@ const testDb = testDatabaseName();
 // The one guard that matters: never operate on the application's database.
 if (testDb === appDb || testDb === '') {
 	console.error(
-		`REFUSING: the test database name (${testDb || '<empty>'}) is not distinct from the ` +
-			`application database (${appDb}). This script DROPS the database it builds. Set ` +
-			'DEDALO_TEST_DATABASE.',
+		`REFUSING: the test database name (${testDb || '<empty>'}) is not distinct from the application database (${appDb}). This script DROPS the database it builds. Set DEDALO_TEST_DATABASE.`,
 	);
 	process.exit(1);
 }
@@ -134,15 +132,17 @@ try {
 
 // 4. Hierarchies + tools, through the INSTALLER'S OWN code paths, from repo-vendored data —
 // the tools/tree/virtual-section gates need a complete install, not a bare seed.
-const tlds = [...new Set(
-	(await Array.fromAsync(new Bun.Glob('*1.copy.gz').scan({ cwd: HIERARCHY_DIR })))
-		.map((file) => file.replace(/1\.copy\.gz$/, '')),
-)].sort();
+const tlds = [
+	...new Set(
+		(await Array.fromAsync(new Bun.Glob('*1.copy.gz').scan({ cwd: HIERARCHY_DIR }))).map((file) =>
+			file.replace(/1\.copy\.gz$/, ''),
+		),
+	),
+].sort();
 const { installHierarchies } = await import('../src/core/install/hierarchy_import.ts');
 const hierarchies = await installHierarchies(tlds);
 console.log(
-	`[test-db] hierarchies imported: ${tlds.length} TLDs` +
-		(hierarchies.result === true ? '' : ` (WITH ERRORS: ${JSON.stringify(hierarchies.errors)})`),
+	`[test-db] hierarchies imported: ${tlds.length} TLDs${hierarchies.result === true ? '' : ` (WITH ERRORS: ${JSON.stringify(hierarchies.errors)})`}`,
 );
 
 const { registerInstallTools } = await import('../src/core/install/register_tools.ts');
