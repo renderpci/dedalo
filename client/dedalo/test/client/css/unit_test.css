@@ -125,8 +125,8 @@
   --color_tag_indexation_removed: #2f8fff;
   --color_tag_indexation_to_review: #fc461a;
   --color_php: #777bb3;
-  --bg_app: var(--color_white);
-  --bg_surface: var(--color_grey_16);
+  --bg_app: var(--color_grey_14);
+  --bg_surface: var(--color_white);
   --bg_surface_alt: var(--color_grey_15);
   --bg_elevated: var(--color_white);
   --bg_input: var(--color_white);
@@ -859,7 +859,7 @@ body::after {
 }
 .test_card_status.deferred {
   box-shadow: inset 0 0 0 1.5px var(--ut_pending);
-  opacity: .5;
+  opacity: 0.5;
 }
 .test_card_status.deferred::after {
   content: "\2013";
@@ -867,7 +867,7 @@ body::after {
   font-weight: 700;
 }
 .test_card_deferred {
-  opacity: .62;
+  opacity: 0.62;
 }
 .test_card_deferred .test_card_name::after {
   content: "deferred";
@@ -875,7 +875,7 @@ body::after {
   padding: 1px 5px;
   border-radius: 5px;
   font-size: 11px;
-  font-family: var(--font_mono, monospace);
+  font-family: 'SF Mono', 'JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
   color: var(--ut_pending);
   box-shadow: inset 0 0 0 1px var(--ut_pending);
 }
