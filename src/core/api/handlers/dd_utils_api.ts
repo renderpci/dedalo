@@ -93,9 +93,11 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// update_process_status polls media transcode / backup pfiles through
 		// this. Session-gated; the pfile is reduced to a job-id basename inside
 		// the processes dir (see core/api/process_status.ts).
-		requirePrincipal(context);
+		const principal = requirePrincipal(context);
 		const { getUtilsProcessStatus } = await import('../process_status.ts');
-		return getUtilsProcessStatus(rqo);
+		// The principal authorizes the poll: a job that carries user data (a tool's
+		// background run) streams only to its owner — the ids are guessable.
+		return getUtilsProcessStatus(rqo, principal);
 	},
 	get_system_info: async (_rqo, _context) => {
 		// Upload/import/media-edit init call (PHP dd_utils_api::get_system_info).

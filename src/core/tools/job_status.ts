@@ -18,10 +18,13 @@
  *
  * Security posture: both reads run behind dispatch gates 1-4 (authenticated
  * caller, valid tool name, tool ACTIVE in dd1324, tool authorized for the
- * user). Job ids are unguessable (UUID / pid+counter). A background job is
- * additionally scoped to the tool that started it AND to the requesting user
- * (global admins may read any user's jobs); a miss on any axis returns the
- * same 'job_not_found' so the surface is not an existence oracle.
+ * user). Job ids are DERIVED, not secret (kind_pid_counter — a background job now
+ * runs in the same process-job registry as the media jobs, so that its pfile can
+ * be streamed by dd_utils_api::get_process_status). Obscurity is therefore NOT the
+ * boundary: a background job is scoped to the tool that started it AND to the
+ * requesting user (global admins may read any user's jobs), and the SSE stream
+ * enforces the same ownership from the job record (api/process_status.ts). A miss
+ * on any axis returns the same 'job_not_found' — no existence oracle.
  */
 
 import { mediaJobs } from '../media/jobs.ts';

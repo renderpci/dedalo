@@ -28,6 +28,44 @@ function existingEnv(): Record<string, string> {
 	}
 }
 
+/**
+ * The existing .env's assignment lines, VERBATIM and in file order.
+ *
+ * Kept raw (not re-quoted from the parsed value) so a preserved key round-trips
+ * byte-for-byte: parseEnvFile strips surrounding quotes without unescaping inner
+ * ones, so re-emitting a parsed value through envQuote could corrupt it — the
+ * same trap the JSON lang keys below already document.
+ */
+function existingEnvAssignments(): { key: string; line: string }[] {
+	const path = join(installPrivateDir(), '.env');
+	if (!existsSync(path)) return [];
+	try {
+		const assignments: { key: string; line: string }[] = [];
+		for (const rawLine of readFileSync(path, 'utf8').split('\n')) {
+			const line = rawLine.trim();
+			if (line.length === 0 || line.startsWith('#')) continue;
+			const eq = line.indexOf('=');
+			if (eq <= 0) continue;
+			assignments.push({ key: line.slice(0, eq), line });
+		}
+		return assignments;
+	} catch {
+		return [];
+	}
+}
+
+/** The keys an emitted body assigns — i.e. the ones this run OWNS. */
+function assignedKeys(lines: readonly string[]): Set<string> {
+	const keys = new Set<string>();
+	for (const line of lines) {
+		const eq = line.indexOf('=');
+		if (eq > 0 && /^[A-Za-z_][A-Za-z0-9_]*$/.test(line.slice(0, eq))) {
+			keys.add(line.slice(0, eq));
+		}
+	}
+	return keys;
+}
+
 /** Quote a value for the .env file when it needs it (spaces/quotes/empty). */
 function envQuote(value: string): string {
 	if (value === '') return '""';
@@ -127,6 +165,31 @@ export async function persistConfig(o: Record<string, unknown>): Promise<Persist
 			`DEDALO_DIFFUSION_INTERNAL_TOKEN=${envQuote(diffusionToken ?? '')}`,
 		);
 	}
+	// NEVER DELETE BY OMISSION. This writer rebuilds .env from the posted form, so
+	// every key the form does not carry used to vanish on save — and the wizard
+	// INVITES a re-save (reload the page and it walks the config steps again from
+	// an empty cfg). Observed twice on 2026-07-12: re-saving with the optional
+	// Diffusion step untouched silently deleted all 8 DEDALO_DIFFUSION_* keys,
+	// including the generated DEDALO_DIFFUSION_INTERNAL_TOKEN — a secret shown
+	// once and then unrecoverable. Operator-appended keys (../private/.env is
+	// append-only by project rule: MEDIA_DEV_ROUTE_ENABLED, DEDALO_SESSION_DB_PATH,
+	// DB_POOL_MAX, …) died the same way.
+	//
+	// So: this run OWNS the keys it assigns; every other key already in the file is
+	// carried over verbatim. Turning Diffusion OFF therefore no longer erases its
+	// credentials — disabling it is an explicit .env edit (DEDALO_DIFFUSION_NATIVE),
+	// never a side effect of not re-typing the form. Gate:
+	// test/unit/install_persist_config.test.ts ('never deletes a key by omission').
+	const owned = assignedKeys(lines);
+	const preserved = existingEnvAssignments().filter((entry) => !owned.has(entry.key));
+	if (preserved.length > 0) {
+		lines.push(
+			'',
+			'# --- Preserved from the previous .env (not managed by the wizard form) ---',
+			...preserved.map((entry) => entry.line),
+		);
+	}
+
 	const body = `${lines.join('\n')}\n`;
 
 	// Atomic two-phase commit: private dir 0700, stage .tmp (0600), back up an

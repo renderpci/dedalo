@@ -81,6 +81,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/matrix_copy_columns_tripwire.test.ts
 	test/unit/ws_a_tripwires.test.ts
 	test/unit/update_ownership_tripwire.test.ts
+	test/unit/install_restart_supervisor_tripwire.test.ts
 	test/unit/ci_workflow_tripwire.test.ts
 	test/unit/docs_current_engine_tripwire.test.ts
 )

@@ -87,6 +87,7 @@ export function sniffBytes(bytes: Uint8Array): SniffResult | null {
 
 	// --- Documents ---
 	if (asciiAt(bytes, 0, '%PDF-')) return { kind: 'pdf', extensions: ['pdf'] };
+	if (asciiAt(bytes, 0, '{\\rtf')) return { kind: 'rtf', extensions: ['rtf'] };
 	// OLE compound file (legacy .doc/.ppt)
 	if (matchAt(bytes, 0, [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]))
 		return { kind: 'ole', extensions: ['doc', 'ppt'] };
@@ -99,9 +100,77 @@ export function sniffBytes(bytes: Uint8Array): SniffResult | null {
 
 	// --- SVG / text-based (XML) ---
 	if (looksLikeSvg(bytes)) return { kind: 'svg', extensions: ['svg'] };
-	if (looksLikeGltfJson(bytes)) return { kind: 'gltf', extensions: ['gltf'] };
+	if (looksLikeGltfJson(bytes)) return { kind: 'gltf', extensions: ['gltf', 'json'] };
+
+	// --- Plain text (csv / txt / json / xml …) ---
+	// These have NO magic bytes in PHP either: finfo classifies them by content
+	// class (text/plain → txt|glsl|csv, text/csv, application/json,
+	// application/xml, text/css — get_known_mime_types :3035) and the upload
+	// cross-checks the declared extension against that entry. The import tools
+	// (tool_import_dedalo_csv, …) ride the same upload endpoint, so without this
+	// branch every CSV upload dies in the SEC-066 re-sniff on join.
+	if (looksLikeText(bytes)) {
+		// MEDIA-01: HTML is not an allowed upload under ANY extension (a stored-XSS
+		// vector with no legitimate media use). PHP rejects it the same way — finfo
+		// reports text/html, which is absent from the allowlist. An empty extension
+		// list means "recognized content, never accepted".
+		if (looksLikeHtml(bytes)) return { kind: 'html', extensions: [] };
+		return { kind: 'text', extensions: TEXT_EXTENSIONS };
+	}
 
 	return null;
+}
+
+/**
+ * Extensions whose content class is plain text. The text-based 3D formats belong
+ * here too: an ASCII .obj/.dae is text, and it must not fail the branch that a
+ * binary .fbx (unknown signature → the TEXT_3D_EXTENSIONS fallback) passes.
+ */
+const TEXT_EXTENSIONS: readonly string[] = [
+	'txt',
+	'csv',
+	'glsl',
+	'css',
+	'json',
+	'xml',
+	'geojson',
+	'kml',
+	'obj',
+	'dae',
+	'fbx',
+];
+
+/**
+ * Text = no NUL and no binary control bytes in the sampled prefix. Deliberately
+ * charset-agnostic (a latin-1 CSV out of Excel is text just like a UTF-8 one),
+ * matching finfo's ASCII/ISO-8859/UTF-8 text classes. Empty input is NOT text —
+ * finfo calls it application/x-empty, which the allowlist rejects.
+ */
+function looksLikeText(bytes: Uint8Array): boolean {
+	if (bytes.length === 0) return false;
+	const sample = bytes.subarray(0, 8192);
+	for (const byte of sample) {
+		// The whitespace controls a text file legitimately carries.
+		if (byte === 0x09 || byte === 0x0a || byte === 0x0b || byte === 0x0c || byte === 0x0d) continue;
+		if (byte < 0x20 || byte === 0x7f) return false;
+	}
+	return true;
+}
+
+/** An HTML document (MEDIA-01: rejected whatever extension it is declared under). */
+function looksLikeHtml(bytes: Uint8Array): boolean {
+	const head = new TextDecoder('utf-8', { fatal: false })
+		.decode(bytes.slice(0, 512))
+		.replace(/^﻿/, '')
+		.trimStart()
+		.toLowerCase();
+	return (
+		head.startsWith('<!doctype html') ||
+		head.startsWith('<html') ||
+		head.startsWith('<head') ||
+		head.startsWith('<body') ||
+		head.startsWith('<script')
+	);
 }
 
 /** SVG = XML text whose first significant tag is <svg (allowing BOM / <?xml / comments). */
@@ -137,6 +206,12 @@ export function sniffAndValidate(bytes: Uint8Array, declaredExtension: string): 
 		// only when the bytes are not a recognized binary of another family.
 		if (TEXT_3D_EXTENSIONS.has(ext)) return ext;
 		throw new Error(`Unrecognized file signature (declared '.${ext}') — rejected`);
+	}
+	if (result.extensions.length === 0) {
+		// A content class that is recognized but never accepted (html — MEDIA-01).
+		throw new Error(
+			`File content is ${result.kind}, which is not an allowed upload type — rejected`,
+		);
 	}
 	if (!result.extensions.includes(ext)) {
 		// The bytes ARE a known type but not the declared extension.

@@ -1,6 +1,6 @@
 {
 	"name": "dedalo-server-ts",
-	"description": "Dédalo server — greenfield native TypeScript rewrite on Bun. Spec: engineering/REWRITE_SPEC.md",
+	"description": "D\u00e9dalo server \u2014 greenfield native TypeScript rewrite on Bun. Spec: engineering/REWRITE_SPEC.md",
 	"version": "0.0.1",
 	"module": "src/server.ts",
 	"type": "module",
@@ -10,11 +10,13 @@
 	},
 	"scripts": {
 		"start": "bun run src/server.ts",
-		"dev": "bun run --watch src/server.ts",
+		"start:supervised": "while true; do bun run src/server.ts; code=$?; [ $code -eq 75 ] || exit $code; echo '[supervisor] restart requested (exit 75) \u2014 rebooting into the persisted config'; done",
+		"dev": "while true; do bun run --watch src/server.ts; code=$?; [ $code -eq 75 ] || exit $code; echo '[supervisor] restart requested (exit 75) \u2014 rebooting into the persisted config'; done",
 		"dedalo:install": "bun run scripts/install.ts",
 		"dedalo:migrate-config": "bun run scripts/migrate_v6_config.ts",
 		"dedalo:migrate-passwords": "bun run scripts/migrate_v6_passwords.ts",
 		"test": "bun test",
+		"test:db:setup": "bun run scripts/test_db_setup.ts",
 		"test:client": "bun run scripts/client_test_runner.ts",
 		"lint": "biome check .",
 		"format": "biome format --write ."

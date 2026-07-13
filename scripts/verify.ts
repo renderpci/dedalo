@@ -60,6 +60,7 @@ const TRIPWIRES = [
 	'test/unit/test3_canonical_fixture.test.ts',
 	'test/unit/update_ownership_tripwire.test.ts',
 	'test/unit/info_widget_registry_tripwire.test.ts',
+	'test/unit/install_restart_supervisor_tripwire.test.ts',
 	'test/unit/ci_workflow_tripwire.test.ts',
 	'test/unit/docs_current_engine_tripwire.test.ts',
 	'test/parity/oracle_canary.test.ts',

@@ -1,11 +1,17 @@
 {
 	"_provenance": {
 		"captured": "2026-07-10",
-		"method": "scratchpad capture_dec14b_p1.ts — provisioned test218/test52 fixture + scratch test3/900311; TS dispatchRqo vs live PHP oracle (WC-001 adopted on the PHP side), comparable projection verified deep-equal before freezing"
+		"method": "scratchpad capture_dec14b_p1.ts — TS dispatchRqo vs the live PHP oracle (WC-001 adopted on the PHP side); the comparable projection was verified deep-equal before freezing",
+
+		"READ THIS FIRST — the ids below are EPHEMERAL, not shipped ontology": "test900 and dd1706/900121 exist in NO install and in no ontology dump: test/unit/has_dataframe_literal_native.test.ts CREATES them (a component_dataframe node under test52, and its target record), reads through them, and DELETES them in afterAll. Finding that test900 'does not exist' is the CORRECT steady state, not a bug — the gate owns them for the length of one run. It refuses to start if either coordinate is already taken, so it can never write over, or delete, something it did not make.",
+
+		"why these ids and not the originals": "The gate used to provision test218 and read dd1706/121. Both broke. (1) The shipped seed later defined a REAL test218 (component_date, date_mode:period), and this gate's revert DELETED it from the database — a full `bun test` on a fresh install destroyed shipped ontology. (2) dd1706/121 ('Zenon') was a row of the old shared dev DB; the seed ships the dd1706 ontology but no dd1706 records, so the gate could never pass on a fresh install. Note that test900 still lives in the SAME growable series (the test TLD reaches 219 today), so the precondition — not the number — is what keeps this safe.",
+
+		"what changed in the golden, and what did not": "2026-07-12 renamed the frame tipo test218 -> test900; 2026-07-13 moved the target record dd1706/121 -> dd1706/900121. Both are IDENTIFIER-ONLY substitutions, applied consistently to the seeds and to this file. Nothing was recaptured and nothing was regenerated from TS output — which the retired PHP oracle forbids. Every oracle-verified value ('Zenon', the entries, the pagination/counter/mode semantics) and the projection shape are byte-identical to the 2026-07-10 capture."
 	},
 	"items": [
 		{
-			"tipo": "test218",
+			"tipo": "test900",
 			"section_tipo": "test3",
 			"section_id": 900311,
 			"mode": "list",
@@ -16,9 +22,9 @@
 					"id": 1,
 					"type": "dd490",
 					"id_key": 1,
-					"section_id": "121",
+					"section_id": "900121",
 					"section_tipo": "dd1706",
-					"from_component_tipo": "test218",
+					"from_component_tipo": "test900",
 					"main_component_tipo": "test52",
 					"paginated_key": 0
 				}
@@ -35,10 +41,10 @@
 		{
 			"tipo": "dd1715",
 			"section_tipo": "dd1706",
-			"section_id": "121",
+			"section_id": "900121",
 			"mode": "list",
 			"lang": "lg-nolan",
-			"from_component_tipo": "test218",
+			"from_component_tipo": "test900",
 			"entries": [
 				{
 					"id": 1,

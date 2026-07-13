@@ -231,15 +231,29 @@ no dump surface exists (DIFFUSION_SPEC §8.6). Restore-test quarterly.
 A server booted with none of `ENTITY`/`DB_NAME`/`DB_HOST`/`DB_USER` set enters
 **install mode** (`config.installMode`): it skips all DB-dependent boot steps,
 `/health` reports `db:down`, and it serves ONLY the install wizard. The browser
-`persist_config` step writes `../private/.env` and then **exits the process**;
-the supervisor (`deploy/dedalo-ts.service` `Restart=always`) restarts it into
-configured mode. The wizard's separate manual `verify_active_config` click +
-the client's request retries bridge the gap. The pre-auth install surface is
-gated: reachable only while UNSEALED and only from `DEDALO_INSTALL_ALLOWED_IPS`
-(unset = open, dev default); once `install_finish` seals the instance the
-surface returns 404. The CLI needs no restart (it sets the env before importing
-config). Dev without systemd: prefer the CLI, or run the server under a restart
-loop to exercise the browser wizard.
+`persist_config` step writes `../private/.env` and then **exits the process**
+with `RESTART_EXIT_CODE` (75 — `src/core/install/restart.ts`); the supervisor
+restarts it into configured mode. The wizard's separate manual
+`verify_active_config` click + the client's request retries bridge the gap. The
+pre-auth install surface is gated: reachable only while UNSEALED and only from
+`DEDALO_INSTALL_ALLOWED_IPS` (unset = open, dev default); once `install_finish`
+seals the instance the surface returns 404. The CLI needs no restart (it sets
+the env before importing config).
+
+The supervisor is:
+
+| Where | What restarts it |
+|---|---|
+| Production | `deploy/dedalo-ts.service` — `Restart=always` (+ `SuccessExitStatus=75`, so the planned exit is not booked as a crash). |
+| Dev | `bun run dev` or `bun run start:supervised` — both loop on exit 75 ONLY. |
+
+Exit 75 is a *distinct* code on purpose: a graceful ^C also exits 0, so a
+supervisor keying on 0 could never be stopped, and one keying on "any exit"
+would hot-loop a crash. `bun run start` is deliberately NOT supervised — systemd
+is its supervisor. The contract is gated by
+`test/unit/install_restart_supervisor_tripwire.test.ts` (it exists because this
+mechanism once named a `start:supervised` script that was never written, which
+hung the browser wizard at "Save configuration" for every dev).
 
 ## 8. Diffusion scheduler placement
 

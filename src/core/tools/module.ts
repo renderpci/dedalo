@@ -45,17 +45,28 @@ export interface ToolActionContext {
 /**
  * One entry in a tool's apiActions map (PHP tool_security map form). `permission`
  * selects the declarative gate the framework runs BEFORE the handler:
- *  - 'section'    → read/write level `minLevel` on options.section_tipo;
- *  - 'tipo'       → level `minLevel` on options.section_tipo + options.tipo;
- *  - 'record'     → section level + the record (numeric options.section_id) must
- *                   be inside the caller's project scope;
- *  - 'developer'  → caller must be a developer (no section target asserted);
- *  - null         → listed but ungated here (the handler gates imperatively).
+ *  - 'section'      → read/write level `minLevel` on options.section_tipo;
+ *  - 'section_list' → the same level on EVERY target `sectionTipos` pulls out of
+ *                     the options (a batch action whose targets ride inside the
+ *                     payload — PHP's per-file assert_section_permission loop);
+ *  - 'tipo'         → level `minLevel` on options.section_tipo + options.tipo;
+ *  - 'record'       → section level + the record (numeric options.section_id) must
+ *                     be inside the caller's project scope;
+ *  - 'developer'    → caller must be a developer (no section target asserted);
+ *  - null           → listed but ungated here (the handler gates imperatively).
  */
 export interface ToolActionSpec {
-	permission: 'section' | 'tipo' | 'record' | 'developer' | null;
+	permission: 'section' | 'section_list' | 'tipo' | 'record' | 'developer' | null;
 	/** dd774 level required on the target (1=read, 2=write, 3=admin). Default 2. */
 	minLevel?: number;
+	/**
+	 * REQUIRED for 'section_list': extract the batch's section targets from the
+	 * request options. Every returned value is gated at `minLevel`; an empty list
+	 * or any invalid entry is a denial (fail-closed). It lives on the spec — not
+	 * inside the handler — so the gate still runs BEFORE the background fork,
+	 * where a denial is still observable to the caller.
+	 */
+	sectionTipos?: (options: Record<string, unknown>) => unknown[];
 	handler: (context: ToolActionContext) => Promise<ToolResponse>;
 }
 

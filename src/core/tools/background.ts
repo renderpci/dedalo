@@ -15,6 +15,7 @@
  * Bun Worker executor is a drop-in follow-up behind this same signature.
  */
 
+import { mediaJobs } from '../media/jobs.ts';
 import type { Principal } from '../security/permissions.ts';
 import type { LoadedTool } from './loader.ts';
 import type { ToolActionSpec, ToolResponse } from './module.ts';
@@ -117,37 +118,63 @@ export function scheduleBackground(
 		};
 	}
 
-	const id = crypto.randomUUID();
 	const job: BackgroundJob = {
-		id,
+		id: '',
 		tool: loaded.module.name,
 		action: method,
 		status: 'running',
 		userId,
 		startedAt: Date.now(),
 	};
-	jobs.set(id, job);
 
-	// Fire-and-forget: the handler runs after we return. Errors are captured on
-	// the job record, never thrown into the void — and every terminal transition
-	// is journaled (audit S2-16: a failed 10k-row import must not be invisible).
-	void spec
-		.handler({ principal, userId, options, background: true })
-		.then((result) => {
-			job.status = 'done';
-			job.result = result;
-			logTerminalState(job);
-		})
-		.catch((error: unknown) => {
-			job.status = 'error';
-			job.error = error instanceof Error ? error.message : String(error);
-			logTerminalState(job);
-		});
+	// The work runs INSIDE the process-job registry (the same one the AV transcodes
+	// and the backup widget use, and the only one dd_utils_api::get_process_status
+	// can stream). That registry is what mints the pfile — without it the copied
+	// client's progress panel polls a job that does not exist and never renders the
+	// tool's report. Precedent: area_maintenance/widgets/update_data_version.ts.
+	//
+	// Errors are captured on the job record, never thrown into the void, and every
+	// terminal transition is journaled (audit S2-16: a failed 10k-row import must
+	// not be invisible).
+	const record = mediaJobs.submit(
+		`${loaded.module.name}_${method}`,
+		async ({ onData }) => {
+			// Publish a truthful first payload: the client's progress line reads
+			// frame.data.msg on every tick, and a null data renders "undefined".
+			onData({ msg: `Running ${loaded.module.name}::${method}`, is_running: true });
+			try {
+				const result = await spec.handler({ principal, userId, options, background: true });
+				job.status = 'done';
+				job.result = result;
+				logTerminalState(job);
+				// The RETURN VALUE becomes the final SSE frame's `data` — which is where
+				// the client reads the per-file import report from (render_final_report).
+				return result;
+			} catch (error) {
+				job.status = 'error';
+				job.error = error instanceof Error ? error.message : String(error);
+				logTerminalState(job);
+				throw error;
+			}
+		},
+		// The owner: these ids are derived (guessable), so the status stream must be
+		// able to refuse a poll from another user (api/process_status.ts).
+		{ userId },
+	);
+
+	job.id = record.id;
+	jobs.set(record.id, job);
 
 	return {
 		result: true,
 		msg: 'OK. Background process started',
 		errors: [],
-		background_job_id: id,
+		background_job_id: record.id,
+		// The copied client's update_process_status wire: it feeds these straight
+		// back into dd_utils_api::get_process_status. pid is the SERVER process (the
+		// job is in-process; PHP returned the detached CLI child's pid — ledgered
+		// divergence), and pfile is the BASENAME the status endpoint accepts.
+		pid: process.pid,
+		pfile: `${record.id}.json`,
 	};
 }

@@ -34,8 +34,11 @@ flowchart LR
     by the web server itself, which is why `sendfile`, HTTP `Range` and the
     H.264 `?start=` clipping keep working. Put the engine in the byte path and
     you break streaming, seeking and memory headroom in one move. (There *is* a
-    media route inside the engine — `MEDIA_DEV_ROUTE_ENABLED`. It applies **no
-    per-record access control**. Leave it `false`.)
+    media route inside the engine, for developers with no web server in front. It
+    applies **no per-record access control**, and it answers only on the TCP dev
+    listener while protection is unconfigured — so behind this proxy, on the unix
+    socket, it never runs. Leave `MEDIA_DEV_ROUTE_ENABLED` unset; setting it to
+    `true` would force the engine into the byte path on *every* listener.)
 
 ## The three generated rule files
 

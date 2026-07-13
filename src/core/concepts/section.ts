@@ -109,6 +109,21 @@ export const ACTIVITY_SECTION_PERMISSION_CAP = 1;
 export const TIME_MACHINE_SECTION_TIPO = 'dd15';
 
 /**
+ * The BULK PROCESS section (dd800) and its two descriptive components (PHP
+ * dd_tipos.php DEDALO_BULK_PROCESS_*). One record per bulk run (a CSV import,
+ * a component propagation); every TM row the run writes carries its section_id
+ * in matrix_time_machine.bulk_process_id, which is what lets the Time Machine
+ * revert a whole import as ONE operation instead of row by row.
+ */
+export const BULK_PROCESS_TIPOS = {
+	section: 'dd800',
+	/** Human label of the run (component_input_text). */
+	label: 'dd796',
+	/** Source file name of the run (component_input_text). */
+	file: 'dd797',
+} as const;
+
+/**
  * CONSULTATION-ONLY (read-only) sections — records a user may READ but NEVER
  * modify: the system logs (Activity dd542, Time Machine dd15) and any future
  * section that must be strictly read-only. This is the SINGLE source of truth;

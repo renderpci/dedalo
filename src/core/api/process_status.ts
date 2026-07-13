@@ -29,6 +29,7 @@
 
 import type { Rqo } from '../concepts/rqo.ts';
 import { type JobStatusFrame, mediaJobs } from '../media/jobs.ts';
+import type { Principal } from '../security/permissions.ts';
 import type { ApiResult } from './response.ts';
 
 /** Old-engine SSE framing: pad to keep intermediary proxies flushing eagerly. */
@@ -101,11 +102,26 @@ function frameFor(id: string, pfile: string): JobStatusFrame | Record<string, un
 }
 
 /**
+ * May this caller stream this job? Job ids are DERIVED (kind_pid_counter), so a
+ * logged-in user can guess another user's id — and a tool job's frames carry that
+ * user's payload (an import report: section ids, values, error rows). So an OWNED
+ * job answers only its owner (a global admin sees every job, as in the maintenance
+ * area). An unowned job (AV transcode, backup: operational shape only, no record
+ * data) keeps the historical behavior — this closes the new surface without
+ * silently changing the old one. PHP had a per-user process check; this is its twin.
+ */
+function mayStream(record: { user_id?: number | null }, principal: Principal): boolean {
+	const owner = record.user_id ?? null;
+	if (owner === null) return true;
+	return principal.isGlobalAdmin || owner === principal.userId;
+}
+
+/**
  * The dispatch handler body (auth/CSRF already enforced by dispatchRqo).
  * Emits one frame immediately, then every `update_rate` ms until the job is
  * terminal or the client disconnects (stream cancel).
  */
-export function getUtilsProcessStatus(rqo: Rqo): ApiResult {
+export function getUtilsProcessStatus(rqo: Rqo, principal: Principal): ApiResult {
 	const body = rqo as unknown as { update_rate?: unknown };
 	const options = (rqo.options ?? {}) as { pid?: unknown; pfile?: unknown };
 	const pfile = typeof options.pfile === 'string' ? options.pfile : '';
@@ -128,6 +144,19 @@ export function getUtilsProcessStatus(rqo: Rqo): ApiResult {
 			is_running: false,
 			data: { msg: 'Error: invalid pfile' },
 			errors: ['invalid pfile'],
+			total_time: 0,
+		});
+	}
+	// Ownership (fail-closed): refuse BEFORE the first frame, and answer exactly as
+	// a missing job would — no existence oracle for another user's job id.
+	const record = mediaJobs.status(id);
+	if (record !== null && !mayStream(record, principal)) {
+		return terminalStream({
+			pid: null,
+			pfile,
+			is_running: false,
+			data: { msg: `Error: process '${pfile}' not found` },
+			errors: ['process file not found'],
 			total_time: 0,
 		});
 	}

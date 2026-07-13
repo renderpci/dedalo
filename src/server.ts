@@ -36,7 +36,7 @@ import { handleRawView } from './core/api/raw_view.ts';
 import { SECURITY_HEADERS, staticAssetResponse } from './core/api/static_asset.ts';
 import { CLIENT_LIB_URL_PREFIX, serveClientLibRequest } from './core/client_libs/serving.ts';
 import { handleTagRequest } from './core/components/component_text_area/tag_endpoint.ts';
-import { MEDIA_AUTH_COOKIE, writeRuleFiles } from './core/media/protection.ts';
+import { MEDIA_AUTH_COOKIE, resolveMediaAccessMode, writeRuleFiles } from './core/media/protection.ts';
 // S2-20 boot registration: loading the component registry registers the
 // ontology↔components model lookup (module-load side effect) BEFORE any request
 // resolves a component model. Keep this explicit even though other imports
@@ -50,10 +50,16 @@ import { serveToolCommonRequest, serveToolsRequest } from './core/tools/serving.
 const CLIENT_ROOT = resolve(import.meta.dir, '../client/dedalo');
 
 /**
- * Media directory (env MEDIA_PATH) served under /dedalo/<mediaDir>/ (the PHP
- * DEDALO_MEDIA_URL layout). In production the REVERSE PROXY serves media and
- * enforces the marker-based per-record access control (spec §7.9); this route is
- * a DEV-listener convenience only.
+ * Media directory served under /dedalo/<mediaDir>/ (the PHP DEDALO_MEDIA_URL
+ * layout). In production the REVERSE PROXY serves media and enforces the
+ * marker-based per-record access control (spec §7.9); this route is a
+ * DEV-listener convenience only.
+ *
+ * The root comes from the CATALOG (config.media.rootPath), which derives
+ * <projectRoot>/media unless MEDIA_PATH overrides it. It used to re-read
+ * MEDIA_PATH from env here — a shadow read of a key the catalog already owns —
+ * so this route stayed dead (MEDIA_ROOT null → 404) even once the catalog
+ * resolved the root, and every media URL 404'd on a fresh install.
  *
  * SECURITY (M5): this route checks for a valid session but applies NO per-record
  * / per-project ACL — any authenticated user can read any file under the media
@@ -62,13 +68,50 @@ const CLIENT_ROOT = resolve(import.meta.dir, '../client/dedalo');
  * explicitly enabled with MEDIA_DEV_ROUTE_ENABLED=true (never in production —
  * production is socket-only and lets the reverse proxy + marker store serve media).
  */
-const mediaPathValue = readEnv('MEDIA_PATH');
-const MEDIA_ROOT = mediaPathValue !== undefined ? resolve(mediaPathValue) : null;
+const MEDIA_ROOT = config.media.rootPath !== null ? resolve(config.media.rootPath) : null;
 const MEDIA_URL_PREFIX = `/dedalo/${config.mediaDir}/`;
 
-/** Whether the dev media route is enabled (read per-request so it stays togglable). */
-function isMediaDevRouteEnabled(): boolean {
-	return readEnv('MEDIA_DEV_ROUTE_ENABLED', 'false') === 'true';
+/**
+ * Whether THIS request may be answered by the engine's media fallback.
+ *
+ * Media is served by the WEB SERVER (src/core/media/protection.ts generates the
+ * Apache/nginx rules; one stat() per request, sendfile + Range intact). This route
+ * is the fallback for the one case where no web server is in the path at all: a
+ * developer hitting the TCP dev listener directly. Without it a fresh install
+ * following docs/install/dev_quickstart.md 404s every image, video and PDF — which
+ * is what happened, because the flag below is off by default and the quickstart
+ * never mentions it.
+ *
+ * Rather than a flag an operator must remember, the fallback is bound to conditions
+ * that CANNOT hold in production, so MEDIA-04 ("never in production") is structural:
+ *
+ *  1. PROTECTION WINS, ALWAYS — and no flag can override this. Once an admin sets
+ *     private/publication the generated web-server rules are authoritative: the engine
+ *     must never serve the same bytes with weaker checks (session-only, no per-record
+ *     ACL). Letting MEDIA_DEV_ROUTE_ENABLED=true punch through would (a) hand a logged-in
+ *     session every master file the markers were gating and (b) BREAK rule B, because an
+ *     anonymous visitor of a published record carries no session and would get a 404 from
+ *     here instead of the file the marker says is public. A stale `true` copied between
+ *     .env files must not be able to do that.
+ *  2. Dev TCP listener only. Production is socket-only (SERVER_TCP_PORT is unset there —
+ *     docs/install/production.md), so the fallback does not exist for it.
+ *
+ * MEDIA_DEV_ROUTE_ENABLED therefore only moves the needle while protection is UNCONFIGURED:
+ * 'true' forces the fallback on for every listener (loud boot warning — it reaches the
+ * socket), 'false' forces it off even in dev. With protection configured it is inert.
+ */
+function mediaFallbackAllowed(context: RequestContext): boolean {
+	// (1) A configured gate is never bypassable — check it before the flag, so the flag
+	// cannot re-open what an admin closed. Cheap on the hot path: the mode read only
+	// happens for requests actually addressed to the media prefix (see the call site).
+	if (resolveMediaAccessMode() !== false) return false;
+
+	const explicit = readEnv('MEDIA_DEV_ROUTE_ENABLED');
+	if (explicit === 'true') return true; // force-on, unprotected installs only
+	if (explicit === 'false') return false;
+
+	// (2) Default: the one listener a browser can reach with no web server in front.
+	return context.devListener === true;
 }
 
 /**
@@ -86,13 +129,21 @@ export interface RequestContext {
 	readonly requestId: string;
 	/** Wall-clock start, for latency metrics. */
 	readonly startedAt: number;
+	/**
+	 * True only for requests that arrived on the TCP DEV listener (SERVER_TCP_PORT).
+	 * Production is socket-only, so this is permanently false there — which is what
+	 * lets the media fallback (mediaFallbackAllowed) be safe by construction rather
+	 * than by an operator remembering a flag. Transport fact, not identity.
+	 */
+	readonly devListener?: boolean;
 }
 
 /** Exported for tests that call `handleRequest` directly (no socket). */
-export function createRequestContext(): RequestContext {
+export function createRequestContext(options: { devListener?: boolean } = {}): RequestContext {
 	return {
 		requestId: crypto.randomUUID(),
 		startedAt: performance.now(),
+		devListener: options.devListener === true,
 	};
 }
 
@@ -371,13 +422,18 @@ export async function handleRequest(request: Request, context: RequestContext): 
 		return handleCountersRequest(request);
 	}
 
-	// Media files (dev listener; see MEDIA_ROOT note). OFF unless explicitly
-	// enabled (M5); when on, still requires a valid session. When off the request
-	// falls through and 404s — production never serves media here.
+	// Media files — the ENGINE FALLBACK for a dev listener with no web server in
+	// front (see mediaFallbackAllowed). Still session-gated; when not allowed the
+	// request falls through and 404s. Production serves media from the web server
+	// via the generated rules, never from here.
+	// Prefix FIRST: mediaFallbackAllowed() reads the protection mode, which re-reads
+	// ts_state.json from disk per call (so a widget mode change takes effect with no
+	// restart). Evaluating it before the cheap path test would put a file read on EVERY
+	// GET in the server.
 	if (
 		request.method === 'GET' &&
-		isMediaDevRouteEnabled() &&
-		url.pathname.startsWith(MEDIA_URL_PREFIX)
+		url.pathname.startsWith(MEDIA_URL_PREFIX) &&
+		mediaFallbackAllowed(context)
 	) {
 		if (MEDIA_ROOT === null) {
 			return jsonResponse({ result: false, msg: 'Not found' }, 404);
@@ -704,18 +760,39 @@ function echoRuntimeVersion(): void {
 			`[runtime] Bun ${Bun.version} does NOT match the verified pin ${pinned} (.bun-version). Bun.sql/Bun.serve behavior is version-coupled (audit S2-36) — verify before relying on this runtime.`,
 		);
 	}
-	// MEDIA-04: the dev media route applies NO per-record ACL — any authenticated session
-	// reads any file under the media root by path. Refuse to be quiet about it if it is
-	// ever switched on. (MEDIA-01 is CLOSED: media protection is now native — see
-	// core/media/protection.ts and engineering/MEDIA_PROTECTION.md — but it is enforced by
-	// the WEB SERVER reading the generated rules, and this route bypasses the web server
-	// entirely.)
-	if (isMediaDevRouteEnabled()) {
+	// MEDIA-04: the engine media fallback applies NO per-record ACL — any authenticated
+	// session reads any file under the media root by path. Never be quiet about it.
+	// (MEDIA-01 is CLOSED: media protection is now native — see core/media/protection.ts
+	// and engineering/MEDIA_PROTECTION.md — but it is enforced by the WEB SERVER reading
+	// the generated rules, and this route bypasses the web server entirely.)
+	//
+	// Report the fallback's ACTUAL state, never its configured intent — a warning that
+	// shouts about a setting which is in fact inert teaches operators to ignore warnings.
+	const mediaFlag = readEnv('MEDIA_DEV_ROUTE_ENABLED');
+	const protectionOn = resolveMediaAccessMode() !== false;
+	if (protectionOn) {
+		// Protection outranks the flag. Say so when someone set it, so a stale `true`
+		// carried between .env files is visible rather than silently ignored.
+		if (mediaFlag === 'true') {
+			console.log(
+				'[media] MEDIA_DEV_ROUTE_ENABLED=true is IGNORED: media protection is configured, so ' +
+					'the web server enforces the generated rules and the engine never serves media. ' +
+					'Remove the key.',
+			);
+		}
+	} else if (mediaFlag === 'true') {
 		console.warn(
-			'[security] MEDIA_DEV_ROUTE_ENABLED=true — the dev media route serves files with NO ' +
-				'per-record/per-project access control, and it BYPASSES the generated web-server rules ' +
-				'that enforce media protection. NEVER enable this in a shared or production environment ' +
-				'(foundation audit MEDIA-04).',
+			'[security] MEDIA_DEV_ROUTE_ENABLED=true — the engine media fallback is FORCED ON for ' +
+				'every listener, the production unix socket included. It serves files with NO ' +
+				'per-record/per-project access control. NEVER force this on in a shared or production ' +
+				'environment (foundation audit MEDIA-04) — unset it and let the dev listener decide.',
+		);
+	} else if (mediaFlag !== 'false' && (readEnv('SERVER_TCP_PORT') ?? '') !== '') {
+		console.log(
+			'[media] serving media from the engine on the DEV listener only (session-gated, no ' +
+				'per-record ACL) — media protection is not configured and no web server is in the ' +
+				'path. The unix socket never serves media. Configure DEDALO_MEDIA_ACCESS_MODE + a ' +
+				'web server (engineering/MEDIA_PROTECTION.md) for anything shared.',
 		);
 	}
 }
@@ -1122,7 +1199,10 @@ export async function startServer() {
 				maxRequestBodySize: MAX_REQUEST_BODY_BYTES,
 				idleTimeout: config.ops.idleTimeoutSeconds,
 				fetch(request) {
-					return handleRequest(request, createRequestContext());
+					// devListener: THIS listener is the only one a browser can reach without a
+					// web server in front, so it is the only one that may answer media from the
+					// engine (mediaFallbackAllowed). The socket listener never sets it.
+					return handleRequest(request, createRequestContext({ devListener: true }));
 				},
 			}),
 		);

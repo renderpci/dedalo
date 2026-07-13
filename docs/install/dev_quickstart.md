@@ -87,13 +87,20 @@ add the rest. Two of them are not optional on a laptop:
 cat >> ../private/.env <<'ENV'
 
 # --- Development only ----------------------------------------------------
-MEDIA_PATH=/Users/you/dev/dedalo/media
 SERVER_TCP_PORT=3600
 DEDALO_DEV_MODE=true
 SESSION_COOKIE_SECURE=false
 DEDALO_DEBUG_API_ERRORS=true
 ENV
 ```
+
+!!! tip "Media works with no configuration"
+    `MEDIA_PATH` **derives** to `<repo>/media` (`config.media.rootPath`), and the engine
+    serves media itself on the dev listener — session-gated — because there is no web
+    server in front of it here. Set `MEDIA_PATH` only to put the media tree somewhere
+    else. In production media is served by the web server from generated rule files, and
+    the engine's fallback is structurally unreachable (the socket never serves media):
+    see [media protection](../config/media_protection.md).
 
 !!! danger "`SESSION_COOKIE_SECURE` defaults to **true** — you cannot log in until you set it to `false`"
     A `Secure` cookie is dropped by the browser over plain `http://`. The login
@@ -128,6 +135,30 @@ Dédalo TS dev listener on http://localhost:3600/dedalo/core/page/
 
 Open **`http://localhost:3600/dedalo/core/page/`** and log in as `root` with the
 password you set in step 4.
+
+## 7. Run the tests
+
+The suite has its **own database** — it never reads or writes the one your app uses:
+
+```shell
+bun run test:db:setup   # once (and after a schema/seed change)
+bun test                # picks it up automatically
+```
+
+`test:db:setup` builds `<your_db>_test` from files vendored in this repo — the install
+seed, the hierarchies, the registered tools, plus a **numisdata test ontology**
+(definitions only, no records) that ~46 gates need to resolve against. Nothing is copied
+from your install.
+
+!!! info "Why a separate database"
+    Running the suite against the application's database made the tests depend on that
+    install's data — on a fresh install 183 of 2039 unit tests failed — and let them WRITE
+    to it: one gate provisioned a scratch ontology node and **deleted a real one** on its
+    way out. Tests get their own database; the app's is not theirs to touch.
+
+    If the test DB is missing, `bun test` says so and falls back to the configured
+    database (the old behaviour). `DEDALO_TEST_DB_DISABLE=true` forces that fallback;
+    `DEDALO_TEST_DATABASE` overrides the name.
 
 ## What you get
 

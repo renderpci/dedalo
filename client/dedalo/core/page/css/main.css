@@ -7197,6 +7197,39 @@ dd-modal .footer.distribute {
   border-color: var(--ut_green) !important;
   box-shadow: 0 0 0 3px var(--ut_green_soft);
 }
+.installer.wrapper .installer_field select.installer_field_input {
+  opacity: 1;
+  background-image: var(--select_icon_url);
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 0.8rem;
+  padding-right: 2.25rem;
+}
+.installer.wrapper .installer_field .installer_langs_checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.4rem 0.75rem;
+  max-width: 28rem;
+  padding: 0.7rem 0.85rem;
+  background: var(--ut_bg_input);
+  border: 1px solid var(--ut_border);
+  border-radius: 9px;
+}
+.installer.wrapper .installer_field .installer_langs_checks .installer_lang_check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--ut_text_primary);
+}
+.installer.wrapper .installer_field .installer_langs_checks .installer_lang_check > input[type='checkbox'] {
+  accent-color: var(--ut_accent);
+  height: 1.05rem;
+  width: 1.05rem;
+  margin: 0;
+  flex: 0 0 auto;
+}
 .installer.wrapper .installer_field .installer_field_help {
   font-size: 0.78rem;
   color: var(--ut_text_muted);
@@ -13665,62 +13698,81 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 * Included from area_maintenance.less file.
 * The status readout, severity chips/pills, eyebrows, notes and action buttons all
 * come from the shared widget_kit (.dd_readout / .dd_badge / .dd_eyebrow / .dd_note).
-* Only this widget's section layout (lifecycle, processes, pending, config) lives here.
+* Only this widget's section layout (scheduler, job queue, pending, config) lives here.
 */
 .wrapper_widget.diffusion_server_control .diffusion_server_control_content {
   display: flex;
   flex-direction: column;
 }
-.wrapper_widget.diffusion_server_control .diffusion_server_control_lifecycle,
-.wrapper_widget.diffusion_server_control .diffusion_server_control_processes,
+.wrapper_widget.diffusion_server_control .diffusion_server_control_scheduler,
+.wrapper_widget.diffusion_server_control .diffusion_server_control_jobs,
 .wrapper_widget.diffusion_server_control .diffusion_server_control_pending,
 .wrapper_widget.diffusion_server_control .diffusion_server_control_config,
 .wrapper_widget.diffusion_server_control .diffusion_server_control_footer {
   margin-top: 0.9rem;
 }
-.wrapper_widget.diffusion_server_control .diffusion_server_control_processes,
+.wrapper_widget.diffusion_server_control .diffusion_server_control_scheduler,
+.wrapper_widget.diffusion_server_control .diffusion_server_control_jobs,
 .wrapper_widget.diffusion_server_control .diffusion_server_control_config,
 .wrapper_widget.diffusion_server_control .diffusion_server_control_footer {
   padding-top: 0.9rem;
   border-top: 1px solid var(--border_default);
 }
-.wrapper_widget.diffusion_server_control .diffusion_server_control_processes > .dd_eyebrow,
+.wrapper_widget.diffusion_server_control .diffusion_server_control_scheduler > .dd_eyebrow,
+.wrapper_widget.diffusion_server_control .diffusion_server_control_jobs > .dd_eyebrow,
 .wrapper_widget.diffusion_server_control .diffusion_server_control_config > .dd_eyebrow {
   margin-bottom: 0.5rem;
 }
-.wrapper_widget.diffusion_server_control .diffusion_server_control_lifecycle {
+.wrapper_widget.diffusion_server_control .diffusion_server_control_scheduler {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 0.6rem;
-  flex-wrap: wrap;
 }
-.wrapper_widget.diffusion_server_control .diffusion_server_control_processes {
+.wrapper_widget.diffusion_server_control .diffusion_server_control_scheduler .button_scheduler {
+  align-self: flex-start;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_jobs {
   display: flex;
   flex-direction: column;
 }
-.wrapper_widget.diffusion_server_control .diffusion_server_control_process_list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table th,
+.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table td {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--border_default);
+  vertical-align: middle;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table th {
+  font-weight: 600;
+  color: var(--text_muted, inherit);
+  white-space: nowrap;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table td:first-child,
+.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table td:nth-child(2) {
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  word-break: break-word;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table .job_actions {
   display: flex;
-  flex-direction: column;
   gap: 0.4rem;
+  flex-wrap: wrap;
+  white-space: nowrap;
 }
-.wrapper_widget.diffusion_server_control .diffusion_server_control_process {
+.wrapper_widget.diffusion_server_control .diffusion_server_control_purge {
   display: flex;
   align-items: center;
-  gap: 0.66rem;
-  justify-content: space-between;
+  gap: 0.5rem;
   flex-wrap: wrap;
-  padding: 0.45rem 0.7rem;
-  background-color: var(--bg_surface_alt);
-  border: 1px solid var(--border_default);
-  border-radius: 6px;
+  margin-top: 0.7rem;
 }
-.wrapper_widget.diffusion_server_control .diffusion_server_control_process_desc {
-  word-break: break-word;
-  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
-  font-size: 0.82rem;
+.wrapper_widget.diffusion_server_control .diffusion_server_control_purge .purge_hours {
+  width: 5rem;
 }
 .wrapper_widget.diffusion_server_control .diffusion_server_control_pending {
   display: flex;

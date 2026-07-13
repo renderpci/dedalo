@@ -17,7 +17,14 @@ import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 registerSessionCleanup();
 
 const context = { requestId: 'media-test', startedAt: 0 };
-const mediaRoot = readEnv('MEDIA_PATH');
+/**
+ * The CATALOG root (config.media.rootPath), not a raw readEnv('MEDIA_PATH').
+ * MEDIA_PATH is a derived key — nothing sets it in the environment — so reading
+ * env here made findSampleFile() return null and SKIPPED every route test on
+ * every machine. That is why a dead media route (server.ts had the same shadow
+ * read, so MEDIA_ROOT was null and all media 404'd) shipped unnoticed.
+ */
+const mediaRoot = config.media.rootPath ?? undefined;
 
 // The dev media route is opt-in (M5). Enable it for these route tests; it is read
 // per-request, so setting the env here takes effect without a reimport.
