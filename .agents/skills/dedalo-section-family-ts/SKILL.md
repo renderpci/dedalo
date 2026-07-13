@@ -1,11 +1,11 @@
 ---
 name: dedalo-section-family-ts
-description: The Dédalo v7 TypeScript/Bun rewrite of the SECTION family (src/core/section/) and the vanilla-JS CLIENT RENDERING CONTRACT that the section structure-context must satisfy or the client silently crashes. Use when working in v7_ts/master_dedalo on section reads/edits, structure-context (resolve/structure_context.ts), the section module (section/context.ts, buttons.ts, read.ts, record/, list_definitions/), virtual sections, the section_list/list-mode css, groupers, buttons, section_map, or when the copied client renders a blank/broken edit or list view. Covers the exact context fields the client requires (type='grouper', features, target_sections, css swap), how each missing field crashes which client file, virtual-section resolution, and the Chrome-MCP debugging + stale-server-restart workflow.
+description: The Dédalo v7 TypeScript/Bun rewrite of the SECTION family (src/core/section/) and the vanilla-JS CLIENT RENDERING CONTRACT that the section structure-context must satisfy or the client silently crashes. Use when working in v7/master_dedalo on section reads/edits, structure-context (resolve/structure_context.ts), the section module (section/context.ts, buttons.ts, read.ts, record/, list_definitions/), virtual sections, the section_list/list-mode css, groupers, buttons, section_map, or when the copied client renders a blank/broken edit or list view. Covers the exact context fields the client requires (type='grouper', features, target_sections, css swap), how each missing field crashes which client file, virtual-section resolution, and the Chrome-MCP debugging + stale-server-restart workflow.
 ---
 
 # Dédalo TS Section Family & Client Rendering Contract
 
-Covers the TypeScript/Bun rewrite (`v7_ts/master_dedalo`) of Dédalo's **section family** and — critically — the **rendering contract** the copied vanilla-JS client demands from the section structure-context. Most "the edit/list view is blank" bugs are NOT missing data: they are a **single missing context field** that makes a client component's render throw, which cascades and zeroes the whole form.
+Covers the TypeScript/Bun rewrite (`v7/master_dedalo`) of Dédalo's **section family** and — critically — the **rendering contract** the copied vanilla-JS client demands from the section structure-context. Most "the edit/list view is blank" bugs are NOT missing data: they are a **single missing context field** that makes a client component's render throw, which cascades and zeroes the whole form.
 
 Standing spec: `engineering/SECTION_SPEC.md`. PHP reference (read-only): `v7/master_dedalo`. Every claim below is anchored to PHP `file:line` and/or a client `file:line`.
 

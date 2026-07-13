@@ -28,7 +28,7 @@ locked in:
 ## 1. Mission
 
 Build the Dédalo **diffusion engine** as a native subsystem of the TS server in
-`v7_ts/master_dedalo`: ontology-driven publication of work records (Postgres
+`v7/master_dedalo`: ontology-driven publication of work records (Postgres
 JSONB matrix) to external targets — MariaDB SQL tables, RDF, XML, Markdown,
 CSV, JSON (new first-class), Socrata (stub). Design it as **one engine with two
 schema sources** (the dd1190 diffusion ontology; tool_export's user-defined

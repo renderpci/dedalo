@@ -3,7 +3,7 @@
  *
  * The byte-identical tool_diffusion client speaks EXACTLY these shapes; the
  * new engine must serve them verbatim from the main API. Every field below is
- * pinned from the old Bun engine source (v7/master_dedalo/diffusion/api/v1):
+ * pinned from the old Bun engine source (v7_php_frozen/master_dedalo/diffusion/api/v1):
  *
  * - progress_data / engine_response ......... lib/types.ts:221-247, :182-191
  * - SSE chunk encoding ...................... index.ts encode_sse_chunk (:56-75):

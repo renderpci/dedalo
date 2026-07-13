@@ -11545,11 +11545,11 @@
 											"uid": 501,
 											"gid": 20,
 											"gecos": "Render Comunicacion S.L.",
-											"dir": "/Users/render",
+											"dir": "<home>",
 											"shell": "/bin/zsh"
 										},
 										"php_error_log_path": "/opt/homebrew/var/log/php-error.log",
-										"php_session_path": "/Users/render/Desktop/trabajos/dedalo/v7/sessions",
+										"php_session_path": "v7/sessions",
 										"environment": {
 											"php_version": "8.5.4",
 											"sapi": "fpm-fcgi",
@@ -11583,16 +11583,16 @@
 										},
 										"directories": {
 											"cache": {
-												"path": "/Users/render/Desktop/trabajos/dedalo/v7/cache",
+												"path": "v7/cache",
 												"writable": true
 											},
 											"sessions": {
-												"path": "/Users/render/Desktop/trabajos/dedalo/v7/sessions",
+												"path": "v7/sessions",
 												"writable": true,
 												"handler": "files"
 											},
 											"backup": {
-												"path": "/Users/render/Desktop/trabajos/dedalo/backups",
+												"path": "backups",
 												"writable": true
 											},
 											"disk_free_mb": 63903

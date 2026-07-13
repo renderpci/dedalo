@@ -1,6 +1,6 @@
 /**
  * MEDIA_INDEX — native port of the old engine's publication-marker store
- * (oracle: v7/master_dedalo/diffusion/api/v1/lib/media_index.ts; S2-31/DEC-19
+ * (oracle: v7_php_frozen/master_dedalo/diffusion/api/v1/lib/media_index.ts; S2-31/DEC-19
  * cutover blocker — record-delete propagation and media-index rebuild must
  * not depend on the decommission-bound old-engine socket).
  *
