@@ -12,7 +12,7 @@
  * endpoint (tag_endpoint.ts) consume.
  *
  * The authority for the syntax is the PHP endpoint's per-type dispatch in
- * v7/master_dedalo/core/component_text_area/tag/index.php and the client twin
+ * v7_php_frozen/master_dedalo/core/component_text_area/tag/index.php and the client twin
  * tr.js `get_mark_pattern`. Our regexes accept BOTH the short form (what the
  * endpoint receives) and the full in-text form (optional `-data:…:data`) so the
  * same parser can be tested directly against the stored-markup corpus.
