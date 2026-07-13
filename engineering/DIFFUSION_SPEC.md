@@ -1,6 +1,6 @@
 # DIFFUSION_SPEC — Rebuild Dédalo Diffusion as a first-class TS/Bun engine
 
-Standing master prompt for the diffusion rebuild (the diffusion counterpart of
+Standing master specification for the diffusion rebuild (the diffusion counterpart of
 `engineering/REWRITE_SPEC.md`). Produced 2026-07-05 from three exploration passes (PHP
 diffusion engine + dd1190 ontology mechanics; the production Bun engine at
 `v7/master_dedalo/diffusion/api/v1/`; the export subsystem + TS tree state) and

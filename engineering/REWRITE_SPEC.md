@@ -7,11 +7,11 @@
 
 Dédalo is a large, mature, **ontology-driven** content/collections platform currently written in PHP (~3,663 PHP files) with a framework-free vanilla-JS client (~2,606 JS files), a LESS design system, and a PostgreSQL JSONB "matrix" data model. Everything in the app — menus, areas, sections, components, tools, buttons, widgets — is *generated from the ontology*, not hard-coded. A small amount of TypeScript/Bun already exists in production only for the **diffusion** engine (`diffusion/api/v1/`, MariaDB) and the MCP server.
 
-This document is the **standing master prompt** for the effort that re-implements the Dédalo **server** as a native TypeScript application running on **Bun**, from scratch, in this tree, while the PHP tree remains the untouched functional reference. This is a *greenfield* — freed from PHP's file/class organization and its sequential execution model — but it must preserve 100% of current functionality, the database schema and per-component data structures, and the conceptual API contract, and it must be **at least as secure** as the PHP version. Per explicit direction: the wire contract may be **modernized freely** (the client's server-call layer may be adapted at the seam; CSS and view JS are copied as the base), auth is a **new native TS design** (not PHP-session-compatible).
+This document is the **standing master specification** for the effort that re-implements the Dédalo **server** as a native TypeScript application running on **Bun**, from scratch, in this tree, while the PHP tree remains the untouched functional reference. This is a *greenfield* — freed from PHP's file/class organization and its sequential execution model — but it must preserve 100% of current functionality, the database schema and per-component data structures, and the conceptual API contract, and it must be **at least as secure** as the PHP version. Per explicit direction: the wire contract may be **modernized freely** (the client's server-call layer may be adapted at the seam; CSS and view JS are copied as the base), auth is a **new native TS design** (not PHP-session-compatible).
 
 ---
 
-# PROMPT: Re-implement the Dédalo server in native TypeScript on Bun
+# Re-implement the Dédalo server in native TypeScript on Bun
 
 ## 1. Mission
 
