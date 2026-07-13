@@ -11,7 +11,8 @@
 	"scripts": {
 		"start": "bun run src/server.ts",
 		"start:supervised": "while true; do bun run src/server.ts; code=$?; [ $code -eq 75 ] || exit $code; echo '[supervisor] restart requested (exit 75) — rebooting into the persisted config'; done",
-		"dev": "while true; do bun run --watch src/server.ts; code=$?; [ $code -eq 75 ] || exit $code; echo '[supervisor] restart requested (exit 75) — rebooting into the persisted config'; done",
+		"dev": "bun run scripts/dev.ts",
+		"dev:server": "while true; do bun run --watch src/server.ts; code=$?; [ $code -eq 75 ] || exit $code; echo '[supervisor] restart requested (exit 75) — rebooting into the persisted config'; done",
 		"css:build": "bun run scripts/build_css.ts",
 		"css:watch": "bun run scripts/build_css.ts --watch",
 		"css:check": "bun run scripts/build_css.ts --check",
