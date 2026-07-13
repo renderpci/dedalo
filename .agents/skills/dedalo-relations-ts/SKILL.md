@@ -5,7 +5,7 @@ description: The Dédalo v7 TypeScript/Bun rewrite of the RELATION component fam
 
 # Dédalo v7 relations (TypeScript rewrite)
 
-The relation family is being rewritten from the PHP monolith (`v7/master_dedalo`, read-only oracle) into `src/core/relations/`. PHP is the oracle: every behavior is verified differentially against the live PHP server (`dedalo-parity-debugging` skill). Never silently narrow scope — throw loudly + ledger the gap in `rewrite/STATUS.md`.
+The relation family is being rewritten from the PHP monolith (`v7_php_frozen/master_dedalo`, read-only oracle) into `src/core/relations/`. PHP is the oracle: every behavior is verified differentially against the live PHP server (`dedalo-parity-debugging` skill). Never silently narrow scope — throw loudly + ledger the gap in `rewrite/STATUS.md`.
 
 **One law:** sections (`section_tipo` + `section_id`) connect ONLY via locators. Every relation component declares target section(s) + a `request_config`, resolves data from the target(s), and represents part of it inside the host section. All models share ONE engine; each adds a small particularity.
 

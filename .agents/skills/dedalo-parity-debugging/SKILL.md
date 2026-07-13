@@ -5,11 +5,20 @@ description: The reusable workflow for the Dédalo PHP→TypeScript/Bun rewrite 
 
 # Dédalo TS rewrite — PHP-oracle parity debugging
 
-The rewrite lives in `/Users/render/Desktop/trabajos/dedalo/v7_ts/master_dedalo`. The PHP reference (`v7/master_dedalo`) is READ-ONLY and is the ORACLE: when TS and PHP disagree, PHP is right unless it is a pinned live defect. Master spec `engineering/REWRITE_SPEC.md`; per-subsystem specs in `docs/*_SPEC.md`; running ledger `rewrite/STATUS.md` (house style: ✅ rows cite their gate test; open items carry a blocking reason; NEVER silently narrow scope — throw loudly + ledger).
+**Every path in this skill is RELATIVE to the repo root** — the directory holding `package.json`, `src/` and `test/`. Never hard-code an absolute path: other developers check this repo out somewhere else entirely, and a machine-specific path makes the whole workflow unrunnable for them. Run the commands below from the repo root.
+
+The PHP reference (`../../v7_php_frozen/master_dedalo`, resolved from the repo root) is READ-ONLY and was the ORACLE: when TS and PHP disagreed, PHP was right unless it was a pinned live defect. Master spec `engineering/REWRITE_SPEC.md`; per-subsystem specs in `engineering/*_SPEC.md`.
 
 ## Environment
 
-- **Live PHP + shared Postgres**: differential tests need `PHP_API_BASE_URL` / `PHP_API_USERNAME` / `PHP_API_PASSWORD` from `../private/.env` (creds `root` / `123123aS`). Shared DB `dedalo_mib_v7` via `/opt/homebrew/bin/psql -h /tmp -U render`. Both engines read the SAME database — reads are safe, writes are NOT (see scratch twins).
+- **Live PHP + shared Postgres**: differential tests read `PHP_API_BASE_URL` / `PHP_API_USERNAME` / `PHP_API_PASSWORD` from `../private/.env`. **Never write a credential into this file, a probe, or a test** — read them from the environment. Both engines read the SAME database — reads are safe, writes are NOT (see scratch twins).
+  ```shell
+  # psql against the same DB the engine uses; values come from ../private/.env,
+  # never from a hard-coded host/user/db (those differ on every machine).
+  set -a; . ../private/.env; set +a
+  psql -h "${DB_HOST:-/tmp}" -U "$DB_USER" "$DB_NAME"
+  ```
+  If `psql` is not on `PATH`, set `DEDALO_PG_BIN_PATH` to the client `bin/` directory rather than hard-coding an installation path.
 - **TS dev server** (needs `dangerouslyDisableSandbox`):
   ```
   SCRATCH=<session scratchpad>
@@ -22,11 +31,16 @@ The rewrite lives in `/Users/render/Desktop/trabajos/dedalo/v7_ts/master_dedalo`
 ## Three verification layers (use in order)
 
 ### 1. In-process probe script (fastest TS-vs-PHP diff)
-Write to the session scratchpad, import BOTH the TS resolver and the `PhpApiClient` with ABSOLUTE paths, call the same RQO through each, diff the projections. Skeleton:
+Import BOTH the TS resolver and the `PhpApiClient`, call the same RQO through each, diff the projections.
+
+**Put the probe INSIDE the repo, at the repo root** (`probe_<name>.ts` — gitignored). That is what lets every import be **relative**: a probe written to an out-of-tree scratchpad cannot reach `src/` with a relative specifier, which is why this skill once carried absolute paths. Do not reintroduce them.
+
 ```ts
-import { config } from '/Users/render/.../master_dedalo/src/config/config.ts';
-import { PhpApiClient } from '/Users/render/.../master_dedalo/test/parity/php_client.ts';
-import { readSection } from '/Users/render/.../master_dedalo/src/core/section/read.ts'; // (was resolve/read_rows.ts — deleted in the section rebuild)
+// probe_portal.ts — at the repo root. All specifiers relative; no machine paths.
+import { config } from './src/config/config.ts';
+import { PhpApiClient } from './test/parity/php_client.ts';
+import { readSection } from './src/core/section/read.ts'; // (was resolve/read_rows.ts — deleted in the section rebuild)
+
 const client = new PhpApiClient();
 await client.login(config.phpReference.username as string, config.phpReference.password as string);
 const { body } = await client.call(structuredClone(rqo) as Record<string, unknown>);
@@ -34,7 +48,12 @@ const phpData = (body.result as any).data;
 const tsData = (await readSection(rqo)).data; // readSection returns {context, data}
 // diff by a STABLE key: locator string, item id, tipo|section_tipo|section_id
 ```
-Diff on SET membership by a stable key first (`missing in TS` / `extra in TS`), not deep-equal — ordering/duplicate mismatches are often separate (PHP-side) issues to isolate last. Run with `cd $SCRATCH && bun probe_x.ts` (dangerouslyDisableSandbox). Keep probes around — they are the cheapest regression check while iterating.
+
+Run it from the repo root: `bun probe_portal.ts` (needs `dangerouslyDisableSandbox`). Credentials come from `../private/.env` via `config` — never inline them.
+
+Diff on SET membership by a stable key first (`missing in TS` / `extra in TS`), not deep-equal — ordering/duplicate mismatches are often separate (PHP-side) issues to isolate last. Keep probes around while iterating; they are the cheapest regression check.
+
+> If a probe must live in the session scratchpad instead, import via a path computed from the repo root rather than a literal — e.g. `const REPO = new URL('../', import.meta.url)` — but the repo-root probe is simpler and is the recommended form.
 
 ### 2. Differential gate (`test/parity/*_differential.test.ts`)
 The durable form of a probe. Pattern (exemplar: `portal_edit_writes_differential.test.ts`):
