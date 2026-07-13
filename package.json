@@ -1,6 +1,6 @@
 {
 	"name": "dedalo-server-ts",
-	"description": "Dédalo server — greenfield native TypeScript rewrite on Bun. Spec: engineering/REWRITE_SPEC.md",
+	"description": "D\u00e9dalo server \u2014 greenfield native TypeScript rewrite on Bun. Spec: engineering/REWRITE_SPEC.md",
 	"version": "0.0.1",
 	"module": "src/server.ts",
 	"type": "module",

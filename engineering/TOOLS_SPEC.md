@@ -43,11 +43,21 @@ interface ToolServerModule {
   onRemove?: () => Promise<void>;
 }
 interface ToolActionSpec {
-  permission: 'section' | 'tipo' | 'record' | 'developer' | null;  // declarative gate
+  permission: 'section' | 'section_list' | 'tipo' | 'record' | 'developer' | null;  // declarative gate
   minLevel?: number;                            // dd774 level (1 read / 2 write / 3 admin), default 2
+  sectionTipos?: (options) => unknown[];        // REQUIRED for 'section_list': the batch's targets
   handler: (context: ToolActionContext) => Promise<ToolResponse>;
 }
 ```
+
+**`section_list`** is for a BATCH action whose section targets ride *inside* the
+payload rather than at the top level — `tool_import_dedalo_csv::import_files` posts
+`files[]`, one `section_tipo` per file. `sectionTipos(options)` pulls them out and
+`minLevel` is asserted on every one; an empty list or any invalid entry is a denial.
+It exists so the check stays DECLARATIVE and therefore still runs **before the
+background fork** (gate 7), where a denial is still observable to the caller — an
+in-handler loop would be invisible to a `background_running` request. PHP's twin is
+the `assert_section_permission` loop at the top of `import_files` (SEC-024 §9.2).
 
 A handler's returned `ToolResponse` **replaces the API envelope wholesale** — the
 tool owns its `result` / `msg` / `errors` (and any extra fields, e.g. a streaming
@@ -75,6 +85,28 @@ kinds + a null-spec action, `backgroundRunnable`, `isAvailable`, lifecycle hooks
    background executor, which additionally enforces `backgroundRunnable`.
 
 `dd_tools_api.user_tools` returns the caller's authorized toolbar contexts.
+
+## Background execution (`src/core/tools/background.ts`)
+
+A `background_running` request runs the handler inside the **process-job registry**
+(`media/jobs.ts` — the same one the AV transcodes and the backup widget use, and the
+only one `dd_utils_api::get_process_status` can stream), and answers immediately with
+`{background_job_id, pid, pfile}`:
+
+- **`pid` + `pfile`** are the wire the copied client's `update_process_status` speaks
+  (`pfile` is a BASENAME — the status endpoint refuses any separator). Without them
+  the client's progress panel polls a job that does not exist and never renders the
+  tool's report. `pid` is the SERVER process (the job is in-process; PHP returned a
+  detached CLI child's pid — ledgered divergence).
+- **The handler's `ToolResponse` becomes the job's final payload**, i.e. the last SSE
+  frame's `data` — which is where the client reads its report from.
+- **Ownership.** Job ids are derived (`kind_pid_counter`), so they are guessable: the
+  job record carries its `user_id` and the status stream answers only the owner (or a
+  global admin). A poll from anyone else gets the same terminal frame a non-existent
+  job gets — no existence oracle, no payload. Unowned jobs (AV, backup: operational
+  shape only) keep their historical behavior.
+- Jobs are IN-PROCESS: they die on server restart (a PHP CLI child survived an Apache
+  reload), and they share the registry's concurrency cap with media work.
 
 ## Loading (`src/core/tools/loader.ts`)
 

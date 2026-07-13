@@ -41,6 +41,14 @@ export interface JobRecord {
 	/** The SERVER process that owns this in-process job (reconcile identity,
 	 * audit S2-15). Optional: pfiles written before stamping lack it. */
 	owner_pid?: number;
+	/**
+	 * The USER who started the job. Job ids are derived (kind_pid_counter), i.e.
+	 * guessable, so any job whose payload is user data must carry its owner — the
+	 * status stream refuses a poll from anyone else (see api/process_status.ts).
+	 * Absent = unowned (the AV/backup records, whose frames expose only
+	 * operational shape); a job that returns record data MUST set it.
+	 */
+	user_id?: number | null;
 	status: JobStatus;
 	/** 0..100 progress when the worker reports it, else null. */
 	progress: number | null;
@@ -61,9 +69,16 @@ export interface JobStatusFrame {
 	total_time: number;
 }
 
-/** A worker: does the job, may report progress, returns a result payload. */
+/**
+ * A worker: does the job, may report progress, returns a result payload.
+ * `onData` publishes an INTERMEDIATE payload into the record (and its pfile), so
+ * a poller sees something truthful before the job ends — the final return value
+ * still overwrites it. Without it a long job streams `data:null` frames and the
+ * client's progress line renders "undefined" until completion.
+ */
 export type JobWorker = (ctx: {
 	onProgress: (percent: number) => void;
+	onData: (data: unknown) => void;
 	signal: AbortSignal;
 }) => Promise<unknown>;
 
@@ -216,8 +231,10 @@ export class MediaJobManager {
 	/**
 	 * Submit a job. Returns the record immediately (status 'queued'); the worker
 	 * runs under the concurrency cap. Poll `status(id)` for progress/completion.
+	 * `meta.userId` stamps the owner — REQUIRED for any job whose payload is user
+	 * data, because the status stream authorizes the poll against it.
 	 */
-	submit(kind: string, worker: JobWorker): JobRecord {
+	submit(kind: string, worker: JobWorker, meta: { userId?: number } = {}): JobRecord {
 		const id = this.nextId(kind);
 		const now = this.clock();
 		const record: JobRecord = {
@@ -225,6 +242,7 @@ export class MediaJobManager {
 			kind,
 			pid: null,
 			owner_pid: process.pid,
+			user_id: meta.userId ?? null,
 			status: 'queued',
 			progress: null,
 			data: null,
@@ -259,6 +277,11 @@ export class MediaJobManager {
 			const result = await worker({
 				onProgress: (percent: number) => {
 					record.progress = Math.max(0, Math.min(100, Math.round(percent)));
+					record.updatedAt = this.clock();
+					this.persist(record);
+				},
+				onData: (data: unknown) => {
+					record.data = data;
 					record.updatedAt = this.clock();
 					this.persist(record);
 				},

@@ -61,6 +61,25 @@ export async function assertActionPermission(
 				: fail('insufficient permissions on target', ['unauthorized']);
 		}
 
+		case 'section_list': {
+			// Batch action whose targets ride INSIDE the payload, one per item (PHP
+			// tool_import_dedalo_csv::import_files — SEC-024 §9.2: assert write on
+			// every file's section_tipo before importing any of them). Gating here
+			// rather than in the handler keeps the PHP invariant that the check runs
+			// before the background fork, where its denial is still observable.
+			const targets = spec.sectionTipos?.(options) ?? [];
+			if (targets.length === 0) return fail('invalid section target', ['invalid_request']);
+			for (const target of targets) {
+				const sectionTipo = validTipo(target);
+				if (sectionTipo === null) return fail('invalid section target', ['invalid_request']);
+				const level = await getPermissions(principal, sectionTipo, sectionTipo);
+				if (level < minLevel) {
+					return fail('insufficient permissions on target', ['unauthorized']);
+				}
+			}
+			return { ok: true };
+		}
+
 		case 'tipo': {
 			const sectionTipo = validTipo(options.section_tipo);
 			const tipo = validTipo(options.tipo);

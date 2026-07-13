@@ -92,4 +92,45 @@ describe('assertActionPermission', () => {
 		);
 		expect(result.ok).toBe(false);
 	});
+
+	// 'section_list' — a batch whose targets ride inside the payload (the CSV
+	// import posts files[], one section per file). Every target is gated.
+	const batchSpec = spec({
+		permission: 'section_list',
+		minLevel: 2,
+		sectionTipos: (options) =>
+			(Array.isArray(options.files) ? (options.files as { section_tipo?: unknown }[]) : []).map(
+				(file) => file?.section_tipo,
+			),
+	});
+
+	test('section_list: passes for superuser on every target', async () => {
+		const result = await assertActionPermission(
+			batchSpec,
+			{ files: [{ section_tipo: 'test3' }, { section_tipo: 'test3' }] },
+			SUPERUSER,
+		);
+		expect(result.ok).toBe(true);
+	});
+
+	test('section_list: fail-closed on an empty batch or an invalid target', async () => {
+		for (const options of [
+			{}, // no files at all
+			{ files: [] }, // nothing to gate → nothing to authorize
+			{ files: [{ section_tipo: 'test3' }, {}] }, // one entry has no target
+			{ files: [{ section_tipo: 'not-a-tipo' }] },
+		]) {
+			const result = await assertActionPermission(batchSpec, options, SUPERUSER);
+			expect(result.ok).toBe(false);
+		}
+	});
+
+	test('section_list: denies when a plain user lacks the grant on ONE of the targets', async () => {
+		const result = await assertActionPermission(
+			batchSpec,
+			{ files: [{ section_tipo: 'test3' }] },
+			PLAIN_USER,
+		);
+		expect(result.ok).toBe(false);
+	});
 });
