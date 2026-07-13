@@ -12,4 +12,5 @@ export const component_relation_related: ComponentModel = {
 	defaultRelationType: 'dd89',
 	resolveData: 'relation_related',
 	search: { status: 'ported' },
+	importConform: 'relation',
 };

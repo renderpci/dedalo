@@ -99,6 +99,18 @@ export function jobFilePath(id: string): string {
 	return join(processesDir(), `${id}.json`);
 }
 
+/** The client status frame for an already-resolved record (no reconcile read). */
+function frameOf(record: JobRecord): JobStatusFrame {
+	return {
+		pid: record.pid,
+		pfile: jobFilePath(record.id),
+		is_running: record.status === 'queued' || record.status === 'running',
+		data: record.data,
+		errors: record.errors,
+		total_time: record.updatedAt - record.startedAt,
+	};
+}
+
 /** True when a pid answers signal 0 (still running, same host). */
 function pidIsAlive(pid: number): boolean {
 	try {
@@ -186,6 +198,8 @@ export class MediaJobManager {
 	private active = 0;
 	private readonly queue: (() => void)[] = [];
 	private counter = 0;
+	/** Live push consumers per job id (see subscribe) — empty sets are dropped. */
+	private readonly subscribers = new Map<string, Set<(frame: JobStatusFrame) => void>>();
 	/** A monotonic clock injected for determinism in tests (default Date.now via performance origin). */
 	private readonly clock: () => number;
 
@@ -207,6 +221,48 @@ export class MediaJobManager {
 		} catch {
 			/* pfile is a best-effort mirror; the in-memory registry is authoritative */
 		}
+	}
+
+	/**
+	 * Commit one state change: mirror it to the pfile AND wake every live
+	 * subscriber. Every mutation goes through here, so a PUSH consumer can never
+	 * miss a transition the pfile mirror recorded.
+	 */
+	private commit(record: JobRecord): void {
+		this.persist(record);
+		const listeners = this.subscribers.get(record.id);
+		if (listeners === undefined) return;
+		const frame = frameOf(record);
+		for (const listener of listeners) {
+			try {
+				listener(frame);
+			} catch {
+				/* a broken consumer must never take down the job */
+			}
+		}
+	}
+
+	/**
+	 * Subscribe to a job's frames (PUSH). Returns the unsubscribe function.
+	 *
+	 * This is the native transport: the job runs IN THIS PROCESS, so a consumer
+	 * can be woken on the state change itself instead of re-reading a file on a
+	 * timer. `get_process_status` keeps its poll loop for the pfile-shaped
+	 * consumers (AV transcodes, the backup widget); anything new should subscribe.
+	 */
+	subscribe(id: string, listener: (frame: JobStatusFrame) => void): () => void {
+		let listeners = this.subscribers.get(id);
+		if (listeners === undefined) {
+			listeners = new Set();
+			this.subscribers.set(id, listeners);
+		}
+		listeners.add(listener);
+		return () => {
+			const live = this.subscribers.get(id);
+			if (live === undefined) return;
+			live.delete(listener);
+			if (live.size === 0) this.subscribers.delete(id);
+		};
 	}
 
 	/** Acquire a concurrency slot (resolves when a lane is free). */
@@ -253,7 +309,7 @@ export class MediaJobManager {
 		this.registry.set(id, record);
 		const controller = new AbortController();
 		this.controllers.set(id, controller);
-		this.persist(record);
+		this.commit(record);
 
 		void this.run(record, worker, controller);
 		return record;
@@ -272,18 +328,18 @@ export class MediaJobManager {
 		}
 		record.status = 'running';
 		record.updatedAt = this.clock();
-		this.persist(record);
+		this.commit(record);
 		try {
 			const result = await worker({
 				onProgress: (percent: number) => {
 					record.progress = Math.max(0, Math.min(100, Math.round(percent)));
 					record.updatedAt = this.clock();
-					this.persist(record);
+					this.commit(record);
 				},
 				onData: (data: unknown) => {
 					record.data = data;
 					record.updatedAt = this.clock();
-					this.persist(record);
+					this.commit(record);
 				},
 				signal: controller.signal,
 			});
@@ -301,7 +357,10 @@ export class MediaJobManager {
 		record.status = status;
 		record.progress = status === 'done' ? 100 : record.progress;
 		record.updatedAt = this.clock();
-		this.persist(record);
+		// The TERMINAL frame: subscribers see is_running:false and close their
+		// stream. Committed before the subscriber set is dropped below.
+		this.commit(record);
+		this.subscribers.delete(record.id);
 		this.controllers.delete(record.id);
 		// Terminal visibility (audit S2-15/DEC-22 mandatory logging): a failed or
 		// interrupted job must never be memory-only news nobody polls.
@@ -361,7 +420,8 @@ export class MediaJobManager {
 			record.status = 'interrupted';
 			record.errors.push(`interrupted: ${reason}`);
 			record.updatedAt = this.clock();
-			this.persist(record);
+			this.commit(record);
+			this.subscribers.delete(record.id);
 			this.controllers.delete(record.id);
 			interrupted.push(record.id);
 		}
@@ -372,14 +432,7 @@ export class MediaJobManager {
 	frame(id: string): JobStatusFrame | null {
 		const record = this.status(id);
 		if (record === null) return null;
-		return {
-			pid: record.pid,
-			pfile: jobFilePath(id),
-			is_running: record.status === 'queued' || record.status === 'running',
-			data: record.data,
-			errors: record.errors,
-			total_time: record.updatedAt - record.startedAt,
-		};
+		return frameOf(record);
 	}
 
 	/** Request cancellation. Returns true when the job was live. */

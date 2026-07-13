@@ -89,16 +89,31 @@ kinds + a null-spec action, `backgroundRunnable`, `isAvailable`, lifecycle hooks
 ## Background execution (`src/core/tools/background.ts`)
 
 A `background_running` request runs the handler inside the **process-job registry**
-(`media/jobs.ts` — the same one the AV transcodes and the backup widget use, and the
-only one `dd_utils_api::get_process_status` can stream), and answers immediately with
-`{background_job_id, pid, pfile}`:
+(`media/jobs.ts` — the same one the AV transcodes and the backup widget use), and
+answers immediately with `{job_id, background_job_id, pid, pfile}`.
 
-- **`pid` + `pfile`** are the wire the copied client's `update_process_status` speaks
-  (`pfile` is a BASENAME — the status endpoint refuses any separator). Without them
-  the client's progress panel polls a job that does not exist and never renders the
-  tool's report. `pid` is the SERVER process (the job is in-process; PHP returned a
-  detached CLI child's pid — ledgered divergence).
-- **The handler's `ToolResponse` becomes the job's final payload**, i.e. the last SSE
+**Two status wires exist. New consumers use the first.**
+
+- **PUSH (native) — `dd_utils_api::get_job_events`** (`core/api/job_stream.ts`).
+  The job runs in the process serving the stream, so a consumer SUBSCRIBES to the
+  job record (`mediaJobs.subscribe`) and every state change is pushed the instant it
+  happens: no `{pid, pfile}` handle, no re-reading a file on a timer, no 0–1000 ms
+  lag. The handle is `job_id` alone. The stream ends on the first `is_running:false`
+  frame, and THAT frame's `data` is the handler's return value.
+- **POLL (legacy) — `dd_utils_api::get_process_status`**. A faithful port of a PHP
+  workaround: PHP forked a detached CLI child that could not talk to the web request,
+  so it wrote a JSON "process file" and the web layer TAILED it. `pid` + `pfile` are
+  that wire (`pfile` is a BASENAME — the endpoint refuses any separator). Still spoken
+  by the AV transcodes and the area_maintenance widgets; kept for them, not extended.
+
+Progress: a handler receives `ctx.publishProgress` under the background executor
+(absent in a foreground call). Each payload it publishes replaces the job frame's
+`data` and wakes every subscriber — handlers THROTTLE their own rate, because each
+publish also rewrites the pfile mirror. `tool_import_dedalo_csv` publishes a typed
+`ImportProgressFrame` (`core/tools/import_wire.ts`) carrying `rows_total`, which is
+what lets its panel show a real progress BAR rather than a scrolling text line.
+
+- **The handler's `ToolResponse` becomes the job's final payload**, i.e. the terminal
   frame's `data` — which is where the client reads its report from.
 - **Ownership.** Job ids are derived (`kind_pid_counter`), so they are guessable: the
   job record carries its `user_id` and the status stream answers only the owner (or a

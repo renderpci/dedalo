@@ -55,6 +55,27 @@ registerSectionDataListener((sectionTipo) => {
 });
 
 /**
+ * PHP lang::get_section_id_from_code — the lg1 record id for a lang code,
+ * WHATEVER the project's language list says. The import needs exactly this
+ * distinction: a code that resolves but is not a project lang is importable
+ * (with a warning), while a code that resolves to nothing is a hard error.
+ * Returns null when no lg1 record carries the code.
+ */
+export async function getLangSectionIdByCode(code: string): Promise<number | null> {
+	const bare = code.startsWith('lg-') ? code.slice(3) : code;
+	// CODE_TIPO is a fixed ontology constant (tipo-grammar safe); the code is bound.
+	const rows = (await sql.unsafe(
+		`SELECT section_id
+		   FROM "${LANGS_TABLE}"
+		  WHERE section_tipo = $1
+		    AND "string"->'${CODE_TIPO}'->0->>'value' = $2
+		  LIMIT 1`,
+		[LANGS_SECTION_TIPO, bare],
+	)) as { section_id: number }[];
+	return rows[0]?.section_id ?? null;
+}
+
+/**
  * PHP lang::resolve_multiple(DEDALO_PROJECTS_DEFAULT_LANGS): the lg1 records of
  * the project languages, with their names map and tld code.
  */

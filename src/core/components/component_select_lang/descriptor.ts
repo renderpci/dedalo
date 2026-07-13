@@ -11,4 +11,5 @@ export const component_select_lang: ComponentModel = {
 	defaultRelationType: 'dd151',
 	resolveData: 'select_family',
 	search: { status: 'ported' },
+	importConform: 'select_lang',
 };

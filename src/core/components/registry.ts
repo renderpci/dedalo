@@ -196,6 +196,15 @@ export function usesImportValueProperty(model: string): boolean {
 }
 
 /**
+ * The model's import parser id (tools/import_conform.ts IMPORT_CONFORM), or
+ * undefined when the model has no flat-value form. Alias models import as their
+ * canonical target (component_autocomplete → component_portal → 'relation').
+ */
+export function getImportConformId(model: string): ComponentModel['importConform'] {
+	return resolveCanonical(model)?.importConform;
+}
+
+/**
  * Every registered model name whose DATA ITEMS are locators — the models that
  * store in the 'relation' matrix column, including legacy alias names whose
  * canonical target does (autocomplete/autocomplete_hi → portal). This is the

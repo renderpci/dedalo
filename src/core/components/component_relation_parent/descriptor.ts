@@ -21,4 +21,5 @@ export const component_relation_parent: ComponentModel = {
 	defaultRelationType: 'dd47',
 	resolveData: 'portal',
 	search: { status: 'ported' },
+	importConform: 'relation',
 };

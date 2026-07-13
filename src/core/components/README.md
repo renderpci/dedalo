@@ -61,6 +61,15 @@ bottom; the descriptor-facet steps are enforced by
 6. CSV-importable scalar model? Declare `importValueProperty: true`
    (PHP `$components_using_value_property`) — without it, bare cells import
    as raw strings instead of `{value:…}` items.
+6b. Does the model have a HUMAN-authored CSV form ('21-05-1998', '1.234,56',
+   '41.38, 2.17', '273,418')? Declare `importConform` (an `ImportConformId`)
+   and add its parser to `tools/import_conform.ts` IMPORT_CONFORM (PHP's
+   per-class `conform_import_data()` override). Omitted = the model has no
+   flat form: a JSON cell still round-trips (that path is model-agnostic), but
+   a flat cell is REFUSED rather than written as a silent clear — which is the
+   correct default for the media models. Every relation-column model MUST
+   declare it (`'relation'`); `descriptor_completeness_tripwire` enforces that,
+   because a relation without a parser silently refuses every section-id list.
 7. Flat display string in grids? Declare `flatValue` (`'string'` |
    `'datalist'`).
 8. Emit-time particularity? Declare `emitHook` (an `EmitHookId`) and add its

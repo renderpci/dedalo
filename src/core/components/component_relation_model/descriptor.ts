@@ -12,4 +12,5 @@ export const component_relation_model: ComponentModel = {
 	resolveData: 'select_family',
 	flatValue: 'datalist',
 	search: { status: 'ported' },
+	importConform: 'relation',
 };

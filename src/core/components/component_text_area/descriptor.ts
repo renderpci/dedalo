@@ -13,4 +13,5 @@ export const component_text_area: ComponentModel = {
 	flatValue: 'string',
 	importValueProperty: true,
 	emitHook: 'text_area',
+	importConform: 'text_area',
 };

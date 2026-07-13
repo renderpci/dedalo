@@ -11,4 +11,5 @@ export const component_email: ComponentModel = {
 	searchBuilder: 'string',
 	flatValue: 'string',
 	importValueProperty: true,
+	importConform: 'email',
 };

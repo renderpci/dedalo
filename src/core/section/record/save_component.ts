@@ -100,6 +100,17 @@ export interface SaveRequest {
 	 */
 	bulkProcessId?: number | null;
 	saveTm?: boolean;
+	/**
+	 * Suppress this record's dd197/dd201 modified-audit stamp for THIS save (PHP
+	 * section::$save_modified = false).
+	 *
+	 * The importer sets it when the CSV itself carries modified_by_user (dd197) /
+	 * modified_date (dd201): stamping "now, by the importing user" would overwrite
+	 * the very values being imported, one column later in the same row. Any caller
+	 * that OWNS the modified metadata it is writing may use it; nobody else should
+	 * — an unstamped interactive save is an unauditable one.
+	 */
+	skipModifiedStamp?: boolean;
 }
 
 export interface SaveResult {
@@ -639,6 +650,11 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 	// modified-audit stamps (dd197/dd201) into the SAME update as the value —
 	// the PHP save_component_data contract — and prunes empty columns.
 	const writeTarget = { table, sectionTipo, sectionId };
+	// The modified stamp rides in the SAME update as the value (the PHP
+	// save_component_data contract) — unless the caller owns that metadata itself
+	// (the CSV import writing dd197/dd201 from the file); see skipModifiedStamp.
+	const auditStamp: { userId: number } | false =
+		request.skipModifiedStamp === true ? false : { userId };
 
 	// PHP set_data invariant (class.component_common.php:988-990): EVERY persisted
 	// data item carries an id — any id-less object is stamped with a fresh
@@ -680,16 +696,20 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			callerDataframe,
 			componentTipo,
 		);
-		await persistRecordKeys(writeTarget, [{ column, key: componentTipo, value: merged }], {
-			userId,
-		});
+		await persistRecordKeys(
+			writeTarget,
+			[{ column, key: componentTipo, value: merged }],
+			auditStamp,
+		);
 		items = merged ?? [];
 	} else if (hasUpdates) {
 		// Per-KEY write (PHP update_by_key / jsonb_set): only this component's
 		// tipo key changes — sibling components untouched.
-		await persistRecordKeys(writeTarget, [{ column, key: componentTipo, value: items }], {
-			userId,
-		});
+		await persistRecordKeys(
+			writeTarget,
+			[{ column, key: componentTipo, value: items }],
+			auditStamp,
+		);
 	} else if (atomicInserts.length > 0) {
 		// Pure inserts: atomic concatenation — concurrent inserts both survive.
 		// (Deliberate divergence from the read-modify-write chokepoint shape;
@@ -705,7 +725,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			 WHERE section_tipo = $1 AND section_id = $2`,
 			[sectionTipo, sectionId, encodeForJsonb(atomicInserts)],
 		);
-		await persistModifiedStamp(writeTarget, { userId });
+		if (auditStamp !== false) await persistModifiedStamp(writeTarget, auditStamp);
 	}
 
 	// Post-write absorb (PHP raises the counter at EVERY set_data): explicit

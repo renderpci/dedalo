@@ -12,4 +12,5 @@ export const component_check_box: ComponentModel = {
 	resolveData: 'select_family',
 	flatValue: 'datalist',
 	search: { status: 'ported' },
+	importConform: 'relation',
 };

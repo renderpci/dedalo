@@ -1,5 +1,5 @@
 /**
- * R2 gate: tool_import_dedalo_csv. Module loads with its 5 actions (import_files
+ * R2 gate: tool_import_dedalo_csv. Module loads with its 6 actions (import_files
  * backgroundRunnable). get_section_components_list is DB-verified (reuses the
  * verified get_section_elements_context). The conform/plan core is tested in
  * import_data / import_csv; the CSV→DB execute drive is exercised here against a
@@ -12,13 +12,14 @@ import { resolve } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
+import type { ImportFileReport, ImportProgressFrame } from '../../src/core/tools/import_wire.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import { mustGet } from '../helpers/assert.ts';
 
 const SECTION = 'numisdata4';
 
 describe('tool_import_dedalo_csv module', () => {
-	test('loads with the 5 actions + import_files backgroundRunnable', async () => {
+	test('loads with the 6 actions + import_files backgroundRunnable', async () => {
 		const loaded = await getLoadedTool('tool_import_dedalo_csv');
 		expect(loaded).not.toBeNull();
 		const actions = loaded!.module.apiActions;
@@ -28,6 +29,7 @@ describe('tool_import_dedalo_csv module', () => {
 			'get_section_components_list',
 			'import_files',
 			'process_uploaded_file',
+			'validate_import',
 		]);
 		expect(loaded!.module.backgroundRunnable).toEqual(['import_files']);
 		// The batch's targets ride inside options.files[] (one section per file), so
@@ -175,10 +177,16 @@ describe('import_files writes the mapped columns (scratch record, cleaned up)', 
 			},
 		});
 
-		const report = (res.result as Record<string, unknown>[])[0] as Record<string, unknown>;
-		expect(report?.result).toBe(true);
-		expect(report.created_rows).toBe(1);
-		expect(report.failed_rows).toEqual([]);
+		const report = (res.result as ImportFileReport[])[0] as ImportFileReport;
+		expect(report.ok).toBe(true);
+		// THE CONTRACT: created/updated are the section_ids, not counts. The client
+		// lists them and offers "copy as column"; a number has no .length and the
+		// whole panel silently renders nothing (the bug this replaced).
+		expect(report.created).toEqual([SCRATCH_ID]);
+		expect(report.updated).toEqual([]);
+		expect(report.failed).toEqual([]);
+		expect(report.warnings).toEqual([]);
+		expect(report.rows_total).toBe(1);
 		bulkProcessIds.push(report.bulk_process_id as number);
 
 		// The record exists at the id the CSV asked for — not at a counter-issued one —
@@ -202,10 +210,10 @@ describe('import_files writes the mapped columns (scratch record, cleaned up)', 
 		expect(tm[0]?.bulk_process_id).toBe(report.bulk_process_id as number);
 	});
 
-	test('a flat value no per-model conform handles is REFUSED, never written as a clear', async () => {
-		// test145 is component_date. Its flat DMY parser is not ported (import_data.ts
-		// covers the JSON/raw-export path), so the conform yields the raw string. That
-		// must FAIL the column — flattening it would write [] and wipe the field.
+	test('a flat human-authored DMY date IMPORTS (the capability the port was missing)', async () => {
+		// test145 is component_date. '26/10/2023' in a column named test145_dmy is
+		// exactly what a curator's spreadsheet contains — and until the importConform
+		// facets landed, every such cell was refused and the column stayed empty.
 		writeFileSync(resolve(userDir, CSV), `section_id;test145_dmy\n${SCRATCH_ID};26/10/2023\n`);
 		const loaded = await getLoadedTool('tool_import_dedalo_csv');
 		const res = await mustGet(loaded!.module.apiActions.import_files, 'import_files').handler({
@@ -230,18 +238,18 @@ describe('import_files writes the mapped columns (scratch record, cleaned up)', 
 				],
 			},
 		});
-		const report = (res.result as Record<string, unknown>[])[0] as Record<string, unknown>;
+		const report = (res.result as ImportFileReport[])[0] as ImportFileReport;
 		bulkProcessIds.push(report.bulk_process_id as number);
-		const failed = report.failed_rows as { msg: string }[];
-		expect(failed.length).toBe(1);
-		expect(failed[0]?.msg).toContain('cannot import a flat');
-		// Nothing was written to the date column.
+		expect(report.failed).toEqual([]);
+
+		// The suffix chose the field order: 26 is the DAY, not the month.
 		const rows = (await sql.unsafe(
 			`SELECT date -> 'test145' AS items
 			   FROM matrix_test WHERE section_tipo = 'test3' AND section_id = $1`,
 			[SCRATCH_ID],
-		)) as { items: unknown }[];
-		expect(rows[0]?.items ?? null).toBeNull();
+		)) as { items: { start?: Record<string, number> }[] }[];
+		const stored = rows[0]?.items ?? [];
+		expect(stored[0]?.start).toEqual({ day: 26, month: 10, year: 2023 });
 	});
 
 	test('an unchecked column is not imported, and a row without section_id is skipped', async () => {
@@ -264,11 +272,44 @@ describe('import_files writes the mapped columns (scratch record, cleaned up)', 
 				],
 			},
 		});
-		const report = (res.result as Record<string, unknown>[])[0] as Record<string, unknown>;
+		const report = (res.result as ImportFileReport[])[0] as ImportFileReport;
 		bulkProcessIds.push(report.bulk_process_id as number);
-		expect(report.created_rows).toBe(0);
-		expect(report.updated_rows).toBe(0);
-		expect(String((report.errors as string[])[0])).toContain('section_id');
+		expect(report.created).toEqual([]);
+		expect(report.updated).toEqual([]);
+		expect(String(report.errors[0])).toContain('section_id');
+	});
+
+	test('publishes live progress frames while it runs (the panel is fed, not static)', async () => {
+		writeFileSync(resolve(userDir, CSV), `section_id;test52\n${SCRATCH_ID};progress row\n`);
+		const frames: ImportProgressFrame[] = [];
+		const loaded = await getLoadedTool('tool_import_dedalo_csv');
+		const res = await mustGet(loaded!.module.apiActions.import_files, 'import_files').handler({
+			principal: await resolvePrincipal(-1),
+			userId: SCRATCH_USER,
+			background: true,
+			publishProgress: (data: object) => frames.push(data as ImportProgressFrame),
+			options: {
+				files: [
+					{
+						file: CSV,
+						section_tipo: 'test3',
+						ar_columns_map: [
+							{ tipo: 'section_id', model: 'section_id' },
+							{ tipo: 'test52', model: 'component_input_text', checked: true, map_to: 'test52' },
+						],
+					},
+				],
+			},
+		});
+		bulkProcessIds.push((res.result as ImportFileReport[])[0]?.bulk_process_id as number);
+		// At minimum the 'reading' phase frame — and it carries the file identity and
+		// the batch position the progress bar needs.
+		expect(frames.length).toBeGreaterThan(0);
+		const first = frames[0] as ImportProgressFrame;
+		expect(first.phase).toBe('reading');
+		expect(first.file).toBe(CSV);
+		expect(first.file_index).toBe(1);
+		expect(first.files_total).toBe(1);
 	});
 });
 

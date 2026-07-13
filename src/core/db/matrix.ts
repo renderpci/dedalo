@@ -108,6 +108,32 @@ export function assertMatrixTable(tableName: string): void {
  * Read one record by (section_tipo, section_id) from a matrix table.
  * Returns null when the record does not exist.
  */
+/**
+ * Which of `sectionIds` already exist in the section — ONE query for the whole
+ * set. A bulk import must decide create-or-update per row; asking the DB once
+ * per row turns a 10k-row CSV into 10k round-trips for a question a single
+ * `= ANY()` answers.
+ */
+export async function readExistingSectionIds(
+	tableName: string,
+	sectionTipo: string,
+	sectionIds: readonly number[],
+): Promise<Set<number>> {
+	assertMatrixTable(tableName);
+	if (sectionIds.length === 0) return new Set();
+	// The table identifier is allowlist-validated; both values are bound. The id set
+	// rides as a comma string through string_to_array (the driver does not bind a JS
+	// array to ANY($n::int[]) — same pattern as relations/select_lang.ts).
+	const rows = (await sql.unsafe(
+		`SELECT section_id
+		   FROM "${tableName}"
+		  WHERE section_tipo = $1
+		    AND section_id = ANY(string_to_array($2, ',')::int[])`,
+		[sectionTipo, [...new Set(sectionIds)].join(',')],
+	)) as { section_id: number }[];
+	return new Set(rows.map((row) => row.section_id));
+}
+
 export async function readMatrixRecord(
 	tableName: string,
 	sectionTipo: string,

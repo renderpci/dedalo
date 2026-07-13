@@ -18,4 +18,5 @@ export const component_external: ComponentModel = {
 		reason:
 			'not searchable — PHP has no trait and fatals (component_common::get_search_query calls an undefined resolve_query_object_sql); the throw IS the faithful port',
 	},
+	importConform: 'relation',
 };

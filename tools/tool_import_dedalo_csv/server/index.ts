@@ -1,20 +1,21 @@
 /**
  * tool_import_dedalo_csv server module (PHP tool_import_dedalo_csv).
  *
- * get_section_components_list: the section's components as {label,value,model}[]
- *   + a top-level `label` (section term) — the exact shape the client column-mapper
- *   reads (response.result → list, response.label, response.msg).
- * get_csv_files: per-file column analysis (name/dir, n_records/n_columns,
- *   file_info header, ar_columns_map {tipo,label,model}, sample_data,
- *   sample_data_errors) — the shape render_file_info / render_columns_mapper need.
- * delete_csv_file: soft-delete a CSV in the per-user import dir, path-confined.
- * process_uploaded_file: move a staged upload into the import dir.
- * import_files (backgroundRunnable): parse the CSV, resolve the column map, plan
- *   the per-record conform (import_csv.ts / import_data.ts — the round-trip
- *   invariant), and execute (createSectionRecord + saveComponentData).
+ * The tool is the API SURFACE; the import engine lives in core:
+ *   - src/core/tools/import_csv.ts      — parse + plan (per-cell conform)
+ *   - src/core/tools/import_conform.ts  — the per-model parsers (importConform facet)
+ *   - src/core/tools/import_csv_execute.ts — apply the plan (one tx per row)
+ *   - src/core/tools/import_wire.ts     — the typed report + progress contract
  *
- * The conform/plan CORE is unit-tested (round-trip + edge cases); the live CSV→DB
- * execute drive is ledgered (needs scratch-twin fixtures).
+ * Actions:
+ *   get_section_components_list — the section's components for the column mapper.
+ *   get_csv_files              — per-file column analysis + sample rows.
+ *   delete_csv_file            — soft-delete a CSV in the per-user import dir.
+ *   process_uploaded_file      — move a staged upload into the import dir.
+ *   validate_import            — PREFLIGHT: check the column map + dry-run the
+ *                                conform over a sample, before anything is written.
+ *   import_files (background)  — the run. Publishes ImportProgressFrame ticks and
+ *                                returns an ImportBatchReport.
  */
 
 import { existsSync, mkdirSync, readdirSync, renameSync, statSync } from 'node:fs';
@@ -23,16 +24,20 @@ import { config } from '../../../src/config/config.ts';
 import { BULK_PROCESS_TIPOS } from '../../../src/core/concepts/section.ts';
 import { sanitizeSegment } from '../../../src/core/media/ingest/add_file.ts';
 import { termByTipo } from '../../../src/core/ontology/labels.ts';
-import { getModelByTipo } from '../../../src/core/ontology/resolver.ts';
-import { getTranslatableByTipo } from '../../../src/core/ontology/resolver.ts';
+import { getModelByTipo, getTranslatableByTipo } from '../../../src/core/ontology/resolver.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
 import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
 import {
 	type CsvAnalysis,
 	type CsvColumn,
-	type PlannedRecord,
 	planCsvImport,
 } from '../../../src/core/tools/import_csv.ts';
+import { executeCsvImport } from '../../../src/core/tools/import_csv_execute.ts';
+import type {
+	ImportBatchReport,
+	ImportFileReport,
+	ImportProgressFrame,
+} from '../../../src/core/tools/import_wire.ts';
 import type {
 	ToolActionContext,
 	ToolResponse,
@@ -275,31 +280,12 @@ async function processUploadedFile(ctx: ToolActionContext): Promise<ToolResponse
 	}
 }
 
-/** Flatten a conform result into a flat items array (lang-keyed objects → stamped items). */
-function flattenConform(result: unknown): unknown[] {
-	if (result === null) return [];
-	if (Array.isArray(result)) return result;
-	if (typeof result === 'object') {
-		const out: unknown[] = [];
-		for (const [lang, items] of Object.entries(result as Record<string, unknown>)) {
-			for (const item of (Array.isArray(items) ? items : [items]) as unknown[]) {
-				out.push(
-					item !== null && typeof item === 'object' ? { ...item, lang } : { value: item, lang },
-				);
-			}
-		}
-		return out;
-	}
-	return [];
-}
-
 /**
  * One entry of the client's `ar_columns_map` — INDEX-ALIGNED with the CSV header
- * (render_tool_import_dedalo_csv builds one per header cell). `tipo` is the header
- * cell it was built for; `map_to` is the component the user chose as the target
- * (usually the same, but the mapper lets them re-point a column); `checked` is the
- * per-column import switch. PHP reads exactly these names (import_dedalo_csv_file
- * :846-895) — note it is `map_to`, not the `mapped_to` some doc-blocks claim.
+ * (the mapper builds one per header cell). `tipo` is the header cell it was built
+ * for; `map_to` is the component the user chose as the target (usually the same,
+ * but the mapper lets them re-point a column); `checked` is the per-column import
+ * switch; `decimal` is the number column's separator choice.
  */
 interface CsvColumnMapEntry {
 	tipo?: unknown;
@@ -325,9 +311,8 @@ function batchSectionTipos(options: Record<string, unknown>): unknown[] {
 
 /**
  * Resolve the user's column map against the CSV header into the plan's column
- * array (PHP import_dedalo_csv_file column-exclusion filters, :855-895). A null
- * entry means "skip this column". The filters, in PHP's order:
- *   - the section_id column is a record KEY, never written as a component;
+ * array. A null entry means "skip this column". The filters, in PHP's order:
+ *   - the section_id column is the record KEY, never written as a component;
  *   - unchecked / unmapped columns were deselected in the UI;
  *   - a map entry whose `tipo` no longer equals the header cell at its index was
  *     built for a DIFFERENT csv layout — skip rather than write to the wrong
@@ -346,9 +331,14 @@ async function resolveMappedColumns(
 			columns.push(null);
 			continue;
 		}
-		// The record key: planCsvImport reads it to match/create, never saves it.
+		// The record key: the planner reads it to match/create, never saves it.
 		if (entry.model === 'section_id' || entry.model === 'component_section_id') {
-			columns.push({ tipo: 'section_id', model: 'component_section_id', columnName: headerCell });
+			columns.push({
+				tipo: 'section_id',
+				model: 'component_section_id',
+				columnName: headerCell,
+				lang: 'lg-nolan',
+			});
 			continue;
 		}
 		const mapTo = typeof entry.map_to === 'string' ? entry.map_to : '';
@@ -369,19 +359,26 @@ async function resolveMappedColumns(
 			columns.push(null);
 			continue;
 		}
-		// columnName keeps the FULL header cell: the conform engine reads its
-		// suffix (tipo_dmy / tipo_<section_tipo>) to pick the date order / relation
-		// target. tipo is the TARGET (map_to), which may differ from the header.
-		columns.push({ tipo: mapTo, model, columnName: headerCell });
+		// columnName keeps the FULL header cell: the conform facets read its suffix
+		// (tipo_dmy → the date order; tipo_<section_tipo> → the relation target).
+		// tipo is the TARGET (map_to), which may differ from the header.
+		const translatable = await getTranslatableByTipo(mapTo);
+		columns.push({
+			tipo: mapTo,
+			model,
+			columnName: headerCell,
+			lang: translatable ? config.menu.dataLang : 'lg-nolan',
+			decimal: typeof entry.decimal === 'string' ? entry.decimal : undefined,
+		});
 	}
 	return columns;
 }
 
 /**
- * The dd800 record that owns this import run (PHP import_dedalo_csv_file :758-790).
- * Every TM row the run writes is stamped with its id, so the whole import can be
- * reverted as one operation. Created BEFORE any data row is touched — as in PHP, a
- * failure here fails the file rather than importing unattributably.
+ * The dd800 record that owns this import run. Every TM row the run writes is
+ * stamped with its id, so the whole import can be reverted as ONE operation.
+ * Created BEFORE any data row is touched — a failure here fails the file rather
+ * than importing unattributably.
  */
 async function createBulkProcessRecord(
 	fileName: string,
@@ -405,128 +402,172 @@ async function createBulkProcessRecord(
 	return bulkProcessId;
 }
 
-/**
- * Execute one file's plan. Record identity is the CSV's own section_id column
- * (PHP :815-836): a row whose section_id is empty is SKIPPED (never silently
- * created under a fresh counter id), and an id that is not in the DB yet is
- * inserted with THAT id — preserving the source system's ids and relations.
- * createSectionRecord raises the counter past an explicit id, which is PHP's
- * separate consolidate_counter step.
- */
-async function executePlan(
-	plan: PlannedRecord[],
-	sectionTipo: string,
-	userId: number,
-	audit: { bulkProcessId: number; saveTm: boolean },
-): Promise<{ created: number; updated: number; failed: unknown[]; errors: string[] }> {
-	let created = 0;
-	let updated = 0;
-	const failed: unknown[] = [];
-	const errors: string[] = [];
-	for (const [index, record] of plan.entries()) {
-		const sectionId = record.sectionId;
-		if (sectionId === null || sectionId <= 0) {
-			errors.push(`Row ${index + 1}: SKIPPED — mandatory section_id is missing or invalid`);
-			continue;
-		}
-		// conflictTolerant: the id may already exist (an update row) — then the
-		// insert is a no-op and we go straight to saving its components.
-		const before = await sectionRecordExists(sectionTipo, sectionId);
-		if (!before) {
-			await createSectionRecord(sectionTipo, userId, new Date(), sectionId, {
-				conflictTolerant: true,
-			});
-			created += 1;
-		} else {
-			updated += 1;
-		}
-		for (const column of record.columns) {
-			if (column.conform.errors.length > 0) {
-				failed.push(...column.conform.errors);
-				continue;
-			}
-			// A conform result that is still a raw STRING means no per-model handler
-			// claimed this flat cell (import_data.ts implements the JSON/raw-export path
-			// + the value-property models; the per-model flat-string parsers — date
-			// DMY/MDY/YMD, number decimal separator, geo "lat,lon", relation id lists —
-			// are NOT ported yet). Saving it would flatten to [] and CLEAR the
-			// component, i.e. silently DESTROY the record's existing value. Fail the
-			// column loudly instead; the row shows up in failed_rows.
-			if (typeof column.conform.result === 'string') {
-				failed.push({
-					section_id: sectionId,
-					data: column.conform.result,
-					component_tipo: column.tipo,
-					msg: `IGNORED: '${column.model}' cannot import a flat (non-JSON) value yet — the cell was NOT written, and the existing value was left untouched`,
-				});
-				continue;
-			}
-			const items = flattenConform(column.conform.result);
-			const translatable = await getTranslatableByTipo(column.tipo);
-			await saveComponentData({
-				componentTipo: column.tipo,
-				sectionTipo,
-				sectionId,
-				lang: translatable ? config.menu.dataLang : 'lg-nolan',
-				changedData: [{ action: 'set_data', id: null, value: items }],
-				userId,
-				bulkProcessId: audit.bulkProcessId,
-				saveTm: audit.saveTm,
-			});
-		}
+/** Read + parse one staged CSV, or throw with a caller-facing message. */
+async function readCsvRows(userId: number, fileName: string): Promise<string[][]> {
+	const target = safeImportFile(importDir(userId), fileName);
+	if (!existsSync(target)) throw new Error(`File not found: ${fileName}`);
+	const rows = await parseCsvOffLoop(await Bun.file(target).text());
+	if (rows[0] === undefined || rows.length < 2) throw new Error('CSV has no data rows');
+	return rows;
+}
+
+/** The component labels a progress tick may need, resolved ONCE per file. */
+async function resolveColumnLabels(
+	columns: readonly (CsvColumn | null)[],
+): Promise<Map<string, string>> {
+	const labels = new Map<string, string>();
+	for (const column of columns) {
+		if (column === null || column.model === 'component_section_id') continue;
+		if (labels.has(column.tipo)) continue;
+		labels.set(column.tipo, await termByTipo(column.tipo, config.menu.applicationLang));
 	}
-	return { created, updated, failed, errors };
-}
-
-/** Does the record already exist? (PHP section_record::exists_in_the_database.) */
-async function sectionRecordExists(sectionTipo: string, sectionId: number): Promise<boolean> {
-	const { getMatrixTableFromTipo } = await import('../../../src/core/ontology/resolver.ts');
-	const { sql } = await import('../../../src/core/db/postgres.ts');
-	const table = await getMatrixTableFromTipo(sectionTipo);
-	if (table === null) throw new Error(`no matrix table for section '${sectionTipo}'`);
-	// The table name comes from the ontology (never the request) — SQL confinement.
-	const rows = (await sql.unsafe(
-		`SELECT 1 FROM ${table} WHERE section_id = $1 AND section_tipo = $2 LIMIT 1`,
-		[sectionId, sectionTipo],
-	)) as unknown[];
-	return rows.length > 0;
+	return labels;
 }
 
 /**
- * import_files: the client posts a BATCH — options.files[] = {file, section_tipo,
- * ar_columns_map, bulk_process_label} + time_machine_save (PHP import_files :509).
- * Each file carries its own section target and column map, so the write gate is
- * per file; it has already run in the dispatcher ('section_list' spec below), i.e.
- * before the background fork. The response is the per-file report array PHP returns.
+ * validate_import — the PREFLIGHT (PHP verify_csv_map, widened).
+ *
+ * PHP validated the column map only, and only at import time, throwing the file
+ * away on the first bad tipo. This runs BEFORE any write and answers the two
+ * questions the user actually has: is my mapping valid, and will my VALUES parse?
+ * The conform is dry-run over a bounded sample of rows, so a 10k-row file with a
+ * date column in the wrong order is caught in milliseconds instead of after a
+ * 10k-row failed run.
  */
-async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
+const VALIDATE_SAMPLE_ROWS = 20;
+
+async function validateImport(ctx: ToolActionContext): Promise<ToolResponse> {
 	const files = Array.isArray(ctx.options.files) ? (ctx.options.files as CsvImportFile[]) : [];
 	if (files.length === 0) return fail('Missing files');
-	// PHP defaults an absent flag to NO time machine; we default to KEEPING the
-	// audit trail — losing the history of a 10k-row write is not a safe default for
-	// a caller that simply forgot the flag. The client always sends the checkbox,
-	// so no client-observable divergence.
-	const saveTm = ctx.options.time_machine_save !== false;
 
-	const report: Record<string, unknown>[] = [];
+	const result: Record<string, unknown>[] = [];
 	for (const current of files) {
 		const fileName = String(current.file ?? '');
 		const sectionTipo = String(current.section_tipo ?? '');
 		try {
 			if (fileName === '' || sectionTipo === '') throw new Error('Missing file or section_tipo');
-			const target = safeImportFile(importDir(ctx.userId), fileName);
-			if (!existsSync(target)) throw new Error(`File not found: ${fileName}`);
-
-			const rows = await parseCsvOffLoop(await Bun.file(target).text());
-			const header = rows[0];
-			if (header === undefined || rows.length < 2) throw new Error('CSV has no data rows');
+			const rows = await readCsvRows(ctx.userId, fileName);
+			const header = rows[0] as string[];
 
 			const errors: string[] = [];
 			const columnsMap = Array.isArray(current.ar_columns_map)
 				? (current.ar_columns_map as (CsvColumnMapEntry | null)[])
 				: [];
 			const columns = await resolveMappedColumns(header, columnsMap, errors);
-			if (columns.every((column) => column === null || column.tipo === 'section_id')) {
+
+			// Every mapped target must be a component of THIS section (PHP verify_csv_map).
+			const sectionTipos = new Set((await sectionComponentTipos(sectionTipo)).map((c) => c.tipo));
+			for (const column of columns) {
+				if (column === null || column.model === 'component_section_id') continue;
+				if (!sectionTipos.has(column.tipo)) {
+					errors.push(
+						`Column '${column.columnName}' maps to '${column.tipo}', which is not a component of section '${sectionTipo}'`,
+					);
+				}
+			}
+
+			const mapped = columns.filter(
+				(column) => column !== null && column.model !== 'component_section_id',
+			);
+			if (mapped.length === 0) errors.push('No column is mapped for import');
+			if (!columns.some((column) => column?.model === 'component_section_id')) {
+				errors.push('The CSV has no section_id column — rows cannot be matched to records');
+			}
+
+			// Dry-run the conform over a sample: this is what catches a wrong date order
+			// or a decimal separator, which no map check can see.
+			const sample = rows.slice(1, 1 + VALIDATE_SAMPLE_ROWS);
+			const plan = await planCsvImport(sample, columns, sectionTipo);
+			const issues = plan.flatMap((record) =>
+				record.columns.flatMap((column) =>
+					column.conform.errors.map((error) => ({ ...error, row: record.row })),
+				),
+			);
+			const sampleWarnings = plan.flatMap((record) =>
+				record.columns.flatMap((column) =>
+					column.conform.warnings.map((warning) => ({ ...warning, row: record.row })),
+				),
+			);
+
+			result.push({
+				ok: errors.length === 0 && issues.length === 0,
+				file: fileName,
+				section_tipo: sectionTipo,
+				rows_total: rows.length - 1,
+				rows_sampled: sample.length,
+				errors,
+				failed: issues,
+				warnings: sampleWarnings,
+			});
+		} catch (error) {
+			result.push({
+				ok: false,
+				file: fileName,
+				section_tipo: sectionTipo,
+				errors: [(error as Error).message],
+				failed: [],
+				warnings: [],
+			});
+		}
+	}
+	const ok = result.every((file) => file.ok === true);
+	return {
+		result,
+		msg: ok ? 'OK. The import is ready to run' : 'The import has problems — see the report',
+		errors: [],
+	};
+}
+
+/**
+ * import_files: the client posts a BATCH — options.files[] = {file, section_tipo,
+ * ar_columns_map, bulk_process_label} + time_machine_save. Each file carries its
+ * own section target and column map, so the write gate is per file; it has already
+ * run in the dispatcher ('section_list' spec below), i.e. BEFORE the background
+ * fork, where a denial is still observable to the caller.
+ *
+ * Returns an ImportBatchReport and publishes ImportProgressFrame ticks while it
+ * runs (ctx.publishProgress → the job's subscribers → the client's panel).
+ */
+async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
+	const files = Array.isArray(ctx.options.files) ? (ctx.options.files as CsvImportFile[]) : [];
+	if (files.length === 0) return fail('Missing files');
+	// PHP defaults an absent flag to NO time machine; we default to KEEPING the
+	// audit trail — losing the history of a 10k-row write is not a safe default for
+	// a caller that simply forgot the flag. The client always sends the checkbox.
+	const saveTm = ctx.options.time_machine_save !== false;
+	const publish = ctx.publishProgress ?? ((): void => {});
+
+	const report: ImportFileReport[] = [];
+	for (const [index, current] of files.entries()) {
+		const fileName = String(current.file ?? '');
+		const sectionTipo = String(current.section_tipo ?? '');
+		try {
+			if (fileName === '' || sectionTipo === '') throw new Error('Missing file or section_tipo');
+
+			publish({
+				phase: 'reading',
+				file: fileName,
+				file_index: index + 1,
+				files_total: files.length,
+				row: 0,
+				rows_total: 0,
+				section_id: null,
+				component_label: null,
+				created: 0,
+				updated: 0,
+				failed: 0,
+				warnings: 0,
+			} satisfies ImportProgressFrame);
+
+			const rows = await readCsvRows(ctx.userId, fileName);
+			const header = rows[0] as string[];
+
+			const errors: string[] = [];
+			const columnsMap = Array.isArray(current.ar_columns_map)
+				? (current.ar_columns_map as (CsvColumnMapEntry | null)[])
+				: [];
+			const columns = await resolveMappedColumns(header, columnsMap, errors);
+			if (!columns.some((column) => column !== null && column.model !== 'component_section_id')) {
 				throw new Error('No column is mapped for import');
 			}
 
@@ -535,30 +576,50 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				String(current.bulk_process_label ?? fileName),
 				ctx.userId,
 			);
-			const plan = planCsvImport(rows.slice(1), columns);
-			const outcome = await executePlan(plan, sectionTipo, ctx.userId, { bulkProcessId, saveTm });
-			report.push({
-				result: true,
-				file: fileName,
-				section_tipo: sectionTipo,
-				bulk_process_id: bulkProcessId,
-				msg: `Section: ${sectionTipo}. Created ${outcome.created}, updated ${outcome.updated}, failed ${outcome.failed.length}.`,
-				created_rows: outcome.created,
-				updated_rows: outcome.updated,
-				failed_rows: outcome.failed,
-				errors: [...errors, ...outcome.errors],
-			});
+			const plan = await planCsvImport(rows.slice(1), columns, sectionTipo);
+			report.push(
+				await executeCsvImport({
+					plan,
+					sectionTipo,
+					userId: ctx.userId,
+					bulkProcessId,
+					saveTm,
+					errors,
+					progress: {
+						file: fileName,
+						fileIndex: index + 1,
+						filesTotal: files.length,
+						labels: await resolveColumnLabels(columns),
+						publish,
+					},
+				}),
+			);
 		} catch (error) {
 			report.push({
-				result: false,
+				ok: false,
 				file: fileName,
 				section_tipo: sectionTipo,
-				msg: `Error. ${(error as Error).message}`,
+				bulk_process_id: null,
+				created: [],
+				updated: [],
+				failed: [],
+				warnings: [],
 				errors: [(error as Error).message],
+				rows_total: 0,
+				ms: 0,
 			});
 		}
 	}
-	return { result: report, msg: 'Request done', errors: [] };
+
+	const created = report.reduce((sum, file) => sum + file.created.length, 0);
+	const updated = report.reduce((sum, file) => sum + file.updated.length, 0);
+	const failed = report.reduce((sum, file) => sum + file.failed.length, 0);
+	const batch: ImportBatchReport = {
+		result: report,
+		msg: `Import done. Created ${created}, updated ${updated}, failed ${failed}.`,
+		errors: [],
+	};
+	return batch as unknown as ToolResponse;
 }
 
 export const tool: ToolServerModule = {
@@ -572,14 +633,21 @@ export const tool: ToolServerModule = {
 		get_csv_files: { permission: null, handler: getCsvFiles },
 		delete_csv_file: { permission: null, handler: deleteCsvFile },
 		// permission: null — there is no section target to gate on: the client posts
-		// only {file_data} (PHP's API_ACTIONS is the list form here, i.e. no
-		// declarative gate either). The action is user-scoped by construction — both
-		// the staged source and the import destination are REBUILT from ctx.userId —
-		// and it writes no record. The write gate lives on import_files, where the
-		// section targets actually exist.
+		// only {file_data}. The action is user-scoped by construction (both the staged
+		// source and the import destination are REBUILT from ctx.userId) and writes no
+		// record. The write gate lives on import_files, where the targets exist.
 		process_uploaded_file: { permission: null, handler: processUploadedFile },
+		// The preflight READS the same targets the import writes, so it is gated at
+		// READ level on every one of them — it must never become a way to probe a
+		// section the caller cannot see.
+		validate_import: {
+			permission: 'section_list',
+			minLevel: 1,
+			sectionTipos: batchSectionTipos,
+			handler: validateImport,
+		},
 		// The batch's targets ride inside options.files[], one section per file, so
-		// the gate asserts write on EVERY one before the fork (PHP SEC-024 §9.2).
+		// the gate asserts WRITE on every one before the fork (SEC-024 §9.2).
 		import_files: {
 			permission: 'section_list',
 			minLevel: 2,

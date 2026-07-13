@@ -13,4 +13,5 @@ export const component_portal: ComponentModel = {
 	resolveData: 'portal',
 	flatValue: 'datalist',
 	search: { status: 'ported' },
+	importConform: 'relation',
 };

@@ -10,4 +10,5 @@ export const component_publication: ComponentModel = {
 	defaultRelationType: 'dd151',
 	resolveData: 'select_family',
 	search: { status: 'ported' },
+	importConform: 'relation',
 };
