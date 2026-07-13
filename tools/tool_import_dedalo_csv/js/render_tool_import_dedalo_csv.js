@@ -1122,12 +1122,6 @@ const follow_import_job = (options) => {
 		button_submit.classList.add('loading')
 		process_info_container.classList.remove('hide')
 
-	// Remember the job so a page reload can re-attach to it (check_process_data).
-		data_manager.set_local_db_data(
-			{ id: 'status', value: { job_id: job_id } },
-			'process_import_dedalo_csv'
-		)
-
 	const progress_node = render_progress_node(self, process_info_container)
 
 	data_manager.request_stream({
@@ -1170,11 +1164,6 @@ const follow_import_job = (options) => {
 
 				button_submit.classList.remove('loading')
 
-				// The job is finished: nothing to re-attach to on the next page load.
-				data_manager.set_local_db_data(
-					{ id: 'status', value: null },
-					'process_import_dedalo_csv'
-				)
 				return
 			}
 
@@ -1543,11 +1532,23 @@ const render_final_report = function(options){
 
 /**
 * CHECK_PROCESS_DATA
-* Re-attaches to an import that is still running after a page reload.
+* Re-attaches to an import that is still running, after a page reload.
 *
-* The job id is all that is needed: get_job_events answers a FINISHED job with one
-* terminal frame carrying the report (the server keeps the record for an hour), so
-* the same subscription both resumes a live run and recovers a completed one.
+* It ASKS THE SERVER (tool_request → get_background_jobs), which is the only thing
+* that actually knows: the job runs inside the server process and its registry
+* already records the tool, the action and the owner. The client therefore keeps
+* NO state of its own.
+*
+* This used to be an IndexedDB lookup, because PHP forked a detached CLI child the
+* web layer had no memory of — so the client had to remember {pid, pfile} or lose
+* the job. Persisting it here duplicated a fact the server owns, and did so badly:
+* the record was per-browser (a second tab saw no running import), it went stale
+* whenever the server restarted and the in-process job died with it, and writing it
+* to the wrong object store threw NotFoundError from inside a promise.
+*
+* Re-attaching to a FINISHED job is fine and deliberate: get_job_events answers a
+* terminal job with one frame carrying the report (retained ~1h), so a reload right
+* after the run still renders the outcome.
 *
 * @param {Object} options
 * @param {Object} options.self - tool instance
@@ -1561,19 +1562,27 @@ const check_process_data = (options) => {
 	const process_info_container	= options.process_info_container
 	const button_submit				= options.button_submit
 
-	data_manager.get_local_db_data(
-		'process_import_dedalo_csv',
-		'status'
-	)
-	.then(function(local_data){
-		if (local_data && local_data.value && local_data.value.job_id) {
-			follow_import_job({
-				self					: self,
-				job_id					: local_data.value.job_id,
-				process_info_container	: process_info_container,
-				button_submit			: button_submit
-			})
+	self.get_background_jobs('import_files')
+	.then(function(api_response){
+
+		const jobs = (api_response && Array.isArray(api_response.result))
+			? api_response.result
+			: []
+
+		// Newest first (the server sorts). Re-attach only to a run still going —
+		// a finished one would otherwise re-render its report every time the tool
+		// is opened, for as long as the server retains the record.
+		const running = jobs.find(el => el.status === 'running')
+		if (!running) {
+			return
 		}
+
+		follow_import_job({
+			self					: self,
+			job_id					: running.id,
+			process_info_container	: process_info_container,
+			button_submit			: button_submit
+		})
 	})
 }//end check_process_data
 

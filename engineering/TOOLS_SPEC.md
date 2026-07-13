@@ -123,6 +123,40 @@ what lets its panel show a real progress BAR rather than a scrolling text line.
 - Jobs are IN-PROCESS: they die on server restart (a PHP CLI child survived an Apache
   reload), and they share the registry's concurrency cap with media work.
 
+### THE RULE: the SERVER owns job state, the client keeps none
+
+The job runs inside the process that is serving the request, and the registry
+already records its **tool, action, owner and status**. So a client must never keep
+its own copy of that — no `job_id` in `localStorage`, none in IndexedDB, none in a
+page global that a reload throws away.
+
+This is the one place the PHP shape actively misleads. PHP forked a **detached CLI
+child** the web layer had no memory of: the only handle was the `{pid, pfile}` pair
+handed back at launch, so the client HAD to persist it or lose the job. Porting that
+habit gives you client state duplicating a fact the server owns, and it is wrong in
+three ways at once — it is **per-browser** (a second tab sees no running import), it
+goes **stale** the moment the server restarts and the in-process job dies with it,
+and persisting it is a silent runtime throw away (`db.transaction()` on an object
+store that does not exist rejects from inside a promise). `tool_import_dedalo_csv`
+shipped all three before this rule existed.
+
+Two RESERVED framework actions serve every `backgroundRunnable` tool — the dispatcher
+answers them itself, after the active+authorized gates and before the module lookup,
+so no module registers anything:
+
+| Action | Answers |
+|---|---|
+| `get_background_job_status` | "how is job X doing?" — needs an id you still hold |
+| `get_background_jobs` | "**do I have one running?**" — the LIST, newest first, optionally narrowed by `options.action`. This is what a reloading client uses to find the run whose id it no longer has |
+
+Both are scoped identically: own jobs only, unless the caller is a global admin. The
+LIST deliberately carries **no `response` payload** — it is a directory, not a bulk
+export of every recent run's report; the caller subscribes to the one job it cares
+about (`get_job_events`) and gets the report on the terminal frame.
+
+So reload-recovery is: *ask which of my jobs is running → subscribe to it.* Enforced
+by `test/unit/local_db_stores_tripwire.test.ts`.
+
 ## Loading (`src/core/tools/loader.ts`)
 
 At first use, the loader scans the roots in priority order, and for every dir

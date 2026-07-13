@@ -376,6 +376,51 @@ tool_import_dedalo_csv.prototype.import_files = function(files, time_machine_sav
 
 
 /**
+* GET_BACKGROUND_JOBS
+* The caller's background jobs for THIS tool, newest first (framework action
+* 'get_background_jobs', served by the tool dispatcher for every tool).
+*
+* This is how the tool re-attaches to an import after a page reload: the job runs
+* inside the server process and its registry already records the tool, the action
+* and the owner — so the client asks, and keeps no state of its own. (It used to
+* park the job_id in IndexedDB, which was per-browser, went stale across a server
+* restart, and duplicated a fact the server owns.)
+*
+* @param {string} [action] - narrow to one action, e.g. 'import_files'
+* @returns {Promise<Object>} api_response; `result` is
+*   [{id, tool, action, status, error, started_at}] (newest first)
+*/
+tool_import_dedalo_csv.prototype.get_background_jobs = function(action) {
+
+	const self = this
+
+	const rqo = {
+		dd_api	: 'dd_tools_api',
+		action	: 'tool_request',
+		source	: create_source(self, 'get_background_jobs'),
+		options	: {
+			action : action
+		}
+	}
+
+	return new Promise(function(resolve){
+
+		data_manager.request({
+			use_worker	: true,
+			body		: rqo
+		})
+		.then(function(response){
+			if(SHOW_DEVELOPER===true) {
+				dd_console("-> get_background_jobs API response:",'DEBUG',response);
+			}
+			resolve(response)
+		})
+	})
+}//end get_background_jobs
+
+
+
+/**
 * GET_SECTION_COMPONENTS_LIST
 * Retrieves the list of importable components for a given section tipo and caches
 * the result on this instance so repeated calls for the same section_tipo skip the

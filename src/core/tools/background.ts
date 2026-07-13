@@ -45,6 +45,36 @@ export function getBackgroundJob(id: string): BackgroundJob | undefined {
 	return jobs.get(id);
 }
 
+/**
+ * The caller's jobs for one tool, newest first.
+ *
+ * This is what makes CLIENT-SIDE job bookkeeping unnecessary. PHP forked a
+ * DETACHED CLI child that the web layer had no memory of, so the only handle was
+ * the {pid, pfile} pair handed back at launch — and the client had to persist it
+ * (IndexedDB) or lose the job on the next page load. Here the job runs inside this
+ * process and the registry already knows its tool and its owner, so a reloading
+ * client can simply ASK: "do I have an import running?" The server is the single
+ * source of truth, and the answer is correct in any tab, on any machine.
+ *
+ * `all` (global admins only) lifts the owner filter, matching the status wire.
+ */
+export function listBackgroundJobs(
+	tool: string,
+	userId: number,
+	all = false,
+): readonly BackgroundJob[] {
+	const found: BackgroundJob[] = [];
+	for (const job of jobs.values()) {
+		if (job.tool !== tool) continue;
+		if (!all && job.userId !== userId) continue;
+		found.push(job);
+	}
+	// Newest first: a client re-attaching wants the run it just started, not the
+	// one from an hour ago still inside the terminal-retention window.
+	found.sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0));
+	return found;
+}
+
 /** Clear the job table (tests). */
 export function resetBackgroundJobs(): void {
 	jobs.clear();
