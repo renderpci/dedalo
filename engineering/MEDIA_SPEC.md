@@ -1,4 +1,4 @@
-# PROMPT: Rebuild the Dédalo media subsystem in native TypeScript
+# Rebuild the Dédalo media subsystem in native TypeScript
 
 Standing spec for the media family, companion to `engineering/REWRITE_SPEC.md` (whose constraints — §2 absolute constraints, §2b code style, §4 concurrency/persistent-runtime, §7 security — apply here unchanged), `engineering/SECTION_SPEC.md` (media components live inside sections; the delete/duplicate/save record lifecycle is shared), and `engineering/RELATIONS_SPEC.md`. PHP reference tree: `/Users/render/Desktop/trabajos/dedalo/v7/master_dedalo` (read-only). All `file:line` anchors below point into that tree and have been verified against it (2026-07-03). Live-ontology corpus from `dedalo_mib_v7`.
 
