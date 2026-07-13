@@ -171,7 +171,7 @@ violated in practice; every tripwired boundary held. Hence the codebase's load-b
 law — **invariants are tripwired or deleted**.
 
 A tripwire is an ordinary test in `test/unit/` that greps the tree or asserts a boundary,
-and reddens the moment a stated rule is broken. There are **23**, and they are what make
+and reddens the moment a stated rule is broken. There are **26**, and they are what make
 rules like *"no `process.env.` outside `src/config/`"* or *"no cross-request module state"*
 mechanical instead of aspirational. A representative sample:
 
@@ -184,6 +184,7 @@ mechanical instead of aspirational. A representative sample:
 | `test/unit/import_scc_tripwire.test.ts` | No static value-import cycle of size > 1. |
 | `test/unit/descriptor_completeness_tripwire.test.ts` | Component descriptors declare their required facets. |
 | `test/unit/client_serving.test.ts` | The client serving contract: assets serve byte-identical to the `client/` tree on disk. |
+| `test/unit/css_build_tripwire.test.ts` | The committed CSS still matches the LESS it came from. The compiled CSS *is* the shipped artifact (deploy is a checkout), so a stale `.css` means the browser gets bytes no source produces. See [CSS architecture](../css-architecture.md#building-the-css). |
 | `test/unit/ci_workflow_tripwire.test.ts` | The CI wiring itself, including the two rules below. |
 | `test/parity/oracle_canary.test.ts` | Oracle absence is loud, never a silent green. |
 
@@ -215,7 +216,7 @@ bun run scripts/verify.ts --changed      # print the changed-file set and exit
 ```
 
 Four stages, in cost order — typecheck (`bunx tsc --noEmit`), lint (`bunx biome check .`),
-**all 23 tripwires**, then **neighbours**: the unit and parity test files that import any
+**all 26 tripwires**, then **neighbours**: the unit and parity test files that import any
 `src/` file you touched, discovered from the git diff. Exit 0 only if every enabled stage
 is green.
 
@@ -227,7 +228,7 @@ both the GitHub workflow and the GitLab mirror invoke this one script, so the tw
 cannot drift.
 
 It runs `bun install --frozen-lockfile`, `bunx tsc --noEmit`, `bun run lint`, and the
-**13** tripwires empirically proven to pass with no database (`DB_PORT` points at a
+**16** tripwires empirically proven to pass with no database (`DB_PORT` points at a
 deliberately closed port, so an accidental DB touch fails loudly rather than silently
 connecting). The 10 remaining tripwires — the ones needing the live Postgres, the client
 tree or the fixture store — run in the self-hosted tier via `scripts/verify.ts`.

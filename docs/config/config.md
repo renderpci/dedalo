@@ -1538,6 +1538,44 @@ The legacy boolean is kept for back-compat: `true` behaves as `DEDALO_MEDIA_ACCE
 DEDALO_PROTECT_MEDIA_FILES=false
 ```
 
+!!! note "The mode can also be set at runtime"
+    The root user can change the mode from the **media_control** maintenance widget. That
+    override is stored in `<private>/ts_state.json` and **wins over this key**, taking effect
+    with no restart. If editing `.env` appears to do nothing, the widget reports the effective
+    mode and where it came from.
+
+DEDALO_MEDIA_PUBLIC_QUALITIES `string[]` (optional)
+
+The quality folders an **anonymous** visitor may read when the record is published (rule B).
+A JSON array, or a comma-separated list. Leave it unset to derive the delivery-grade folders
+from this installation's own quality catalog — `av/404`, `av/posterframe`, `av/subtitles`,
+`image/1.5MB`, `image/thumb`, `pdf/web`, `svg/web`, `3d/web`.
+
+Master and working qualities (`original`, `modified`) are **always refused, even if you list
+them**: they are the source files, they are the large ones, and they are never public. A
+refused entry is dropped and logged; it never silently becomes public and never aborts the boot.
+
+```bash
+# publish the larger image derivative too, and keep thumbnails private
+DEDALO_MEDIA_PUBLIC_QUALITIES=["image/1.5MB","av/404","av/subtitles"]
+```
+
+MEDIA_HTACCESS_ADDONS `string[]` (optional, Apache only)
+
+Raw Apache rewrite directives appended to the generated `.htaccess` immediately before the
+final deny rule. You own their syntax; Dédalo only places them.
+
+The value is **JSON only** — a directive legitimately contains commas (`[R=404,L]`), so a
+comma-separated list would tear one directive into two invalid ones. That means **every
+backslash must be doubled** for JSON. A malformed value is refused and logged
+(`[config] MEDIA_HTACCESS_ADDONS must be a JSON array of strings — ignoring the value.`);
+your lines are dropped, and the access gate itself is unaffected and stays closed.
+
+```bash
+# allow an internal network unconditionally (note the doubled backslashes)
+MEDIA_HTACCESS_ADDONS=["RewriteCond %{REMOTE_ADDR} ^10\\.0\\.","RewriteRule ^ - [L]"]
+```
+
 ---
 
 ### Defining lock components notifications

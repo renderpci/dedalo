@@ -663,7 +663,8 @@ function buildMediaConfig(): MediaConfig {
 	// literal 'media' matches PHP: the folder NAME config (DEDALO_MEDIA_DIR) drives
 	// the URL, not this filesystem path.
 	const mediaPath = readEnv('MEDIA_PATH');
-	const mediaRoot = mediaPath !== undefined && mediaPath !== '' ? mediaPath : join(projectRoot, 'media');
+	const mediaRoot =
+		mediaPath !== undefined && mediaPath !== '' ? mediaPath : join(projectRoot, 'media');
 	const binaryBase = readEnv(
 		'DEDALO_BINARY_BASE',
 		process.platform === 'darwin' ? '/opt/homebrew/bin' : '/usr/bin',
@@ -792,7 +793,13 @@ function buildMediaConfig(): MediaConfig {
 		// quality catalog", which is not the same as an explicitly EMPTY list (= no folder
 		// is public, so rule B allows nothing).
 		publicQualities: readOptionalListEnv('DEDALO_MEDIA_PUBLIC_QUALITIES'),
-		htaccessAddons: readListEnv('MEDIA_HTACCESS_ADDONS', []),
+		// JSON-ONLY (never readListEnv): these are raw Apache directives, and a directive
+		// legitimately contains commas — `RewriteRule ^ - [R=404,L]`. readListEnv falls back
+		// to comma-splitting whenever JSON.parse throws, which it does on the natural
+		// single-escaped regex (`^10\.0\.`), so a typo would shred one directive into two
+		// garbage lines and write them verbatim into a LIVE .htaccess — 500-ing the whole
+		// media directory. readJsonArrayEnv refuses and logs instead.
+		htaccessAddons: readJsonArrayEnv('MEDIA_HTACCESS_ADDONS', []),
 		binaries: Object.freeze({
 			base: binaryBase,
 			magick: readEnv('DEDALO_MAGICK_PATH', `${binaryBase}/magick`) as string,
