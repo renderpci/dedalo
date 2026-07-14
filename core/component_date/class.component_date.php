@@ -823,26 +823,50 @@ class component_date extends component_common {
 				break;
 
 			case 'period':
-				/* En proceso ...
-				$q_clean  = isset($q_object->time) ? $q_object->time : 0;
-				$operator = isset($q_object->op) ? $q_object->op : '=';
+				// Period mode stores data as {period: {year, month, day, time}}.
+				// Existence checks (* / !*) use the shared closures.
+				// Value-based checks compare each provided period field
+				// (year, month, day) against the array element's period.
+				switch ($operator) {
+					case '!*': // empty case
+						$final_query_object = $is_empty( $query_object );
+						break;
 
-				$query1 = new stdClass();
-					$query1->component_path 	= ['period','time'];
-					$query1->operator 			= $operator;
-					$query1->q_parsed 					= '\''.$q_clean.'\'';
-					$query1->type 				= 'jsonb';
+					case '*': // not empty case
+						$final_query_object = $is_not_empty( $query_object );
+						break;
 
-				$group_op_name = '$or';
-				$group_array_elements = new stdClass();
-					$group_array_elements->{$group_op_name} = [$query1];
+					default:
+						// Value-based search: compare each provided period field
+						// against the array element's period sub-object.
+						$period = $q_object->period ?? null;
+						if (is_object($period) || is_array($period)) {
+							$queries = [];
+							foreach ($period as $field => $value) {
+								$query = new stdClass();
+									$query->component_path	= ['period', $field];
+									$query->operator		= $operator;
+									$query->q_parsed		= '\''.$value.'\'';
+									$query->type			= 'jsonb';
+								$queries[] = $query;
+							}
+							if (!empty($queries)) {
+								$group_op_name = '$and';
+								$group_array_elements = new stdClass();
+									$group_array_elements->{$group_op_name} = $queries;
 
-				# query_object config
-				$query_object->q_parsed				= null;
-				$query_object->format 			= 'array_elements';
-				$query_object->array_elements 	= $group_array_elements;
+								// query_object config
+								$query_object->q_info			= '';
+								$query_object->q_parsed			= null;
+								$query_object->format			= 'array_elements';
+								$query_object->array_elements	= $group_array_elements;
 
-				$final_query_object = $query_object;*/
+								// set final_query_object
+								$final_query_object = $query_object;
+							}
+						}
+						break;
+				}
 				break;
 
 			case 'time':
