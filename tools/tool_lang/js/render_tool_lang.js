@@ -252,6 +252,12 @@ const get_content_data_edit = async function(self) {
 						console.log("--> copy_to_target target_value:", clone(self.target_component.data.value));
 					}
 
+				// guard: source_value must be an array
+					if (!Array.isArray(source_value)) {
+						console.error('copy_to_target: source_value is not an array', source_value);
+						return;
+					}
+
 				// copy value
 					self.target_component.data.value = source_value
 
@@ -373,7 +379,7 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 	// status container
 		const status_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'status_container',
+			class_name		: 'status_container hide',
 			parent			: automatic_translation_container
 		})
 
@@ -385,7 +391,64 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 			parent			: automatic_translation_container
 		})
 
-		button_automatic_translation.addEventListener('click', () => {
+		// ON_UNCERTAIN
+		// Called by the browser engine when it cannot prove the translated value kept every
+		// Dédalo mark intact — a mark was dropped and had to be re-inserted by hand, the
+		// model invented a marker, or a mark went missing altogether.
+		//
+		// Nothing has been written to the target component at this point. The translated
+		// text is on screen in the streaming overlay, so the user is judging something they
+		// can actually see, and the save only happens if they accept it.
+		// @return promise<boolean> - true to save anyway
+			const on_uncertain = function(report) {
+
+				return new Promise(function(resolve){
+
+					// the run is over — stop the spinner while the user decides
+					components_container.classList.remove('loading')
+					button_automatic_translation.classList.remove('button_spinner')
+					status_container.classList.remove('loading_status')
+					status_container.innerHTML = ''
+
+					const warn_label = self.get_tool_label('translation_review_needed')
+						|| 'marks could not be placed reliably. Review before saving.'
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'warning',
+						inner_html		: `${report.uncertain_count}/${report.total_marks} ${warn_label}`,
+						parent			: status_container
+					})
+
+					const review_buttons = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'review_buttons',
+						parent			: status_container
+					})
+					const accept_button = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'warning accept_translation',
+						inner_html		: self.get_tool_label('accept') || 'Accept',
+						parent			: review_buttons
+					})
+					const discard_button = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'secondary discard_translation',
+						inner_html		: self.get_tool_label('discard') || 'Discard',
+						parent			: review_buttons
+					})
+
+					const decide = function(e, accepted) {
+						e.stopPropagation()
+						review_buttons.remove()
+						resolve(accepted)
+					}
+					accept_button.addEventListener('click', (e) => decide(e, true))
+					discard_button.addEventListener('click', (e) => decide(e, false))
+				})
+			}
+
+		button_automatic_translation.addEventListener('click', (e) => {
+			e.stopPropagation()
 
 			components_container.classList.add('loading')
 			button_automatic_translation.classList.add('button_spinner')
@@ -405,20 +468,31 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 					source_lang		: source_lang,
 					target_lang		: target_lang,
 					device			: device,
-					status_container: status_container
+					status_container: status_container,
+					on_uncertain	: on_uncertain
 				})
 				.then(()=>{
+					// the engine owns the status text: it is the only layer that knows whether
+					// the result was saved clean, saved with warnings, discarded or cancelled
 					components_container.classList.remove('loading')
 					button_automatic_translation.classList.remove('button_spinner')
-					const msg = self.get_tool_label('translation_completed') || 'Translation completed.'
 					status_container.classList.remove('loading_status')
-					status_container.innerHTML = `<span class="success_text">${msg}</span>`
+				})
+				.catch((error)=>{
+					components_container.classList.remove('loading')
+					button_automatic_translation.classList.remove('button_spinner')
+					console.error('automatic_translation_browser error:', error)
 				})
 			}else{
 				self.automatic_translation_server(translator_name, source_lang, target_lang, automatic_translation_container)
 				.then(()=>{
 					components_container.classList.remove('loading')
 					button_automatic_translation.classList.remove('button_spinner')
+				})
+				.catch((error)=>{
+					components_container.classList.remove('loading')
+					button_automatic_translation.classList.remove('button_spinner')
+					console.error('automatic_translation_server error:', error)
 				})
 			}
 		})

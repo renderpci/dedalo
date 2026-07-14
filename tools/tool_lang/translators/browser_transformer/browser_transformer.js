@@ -5,7 +5,7 @@
  * Browser Translation Worker (Web Worker)
  *
  * Runs TranslateGemma (4B-it) locally in the browser via HuggingFace Transformers
- * and ONNX runtime. Receives HTML blocks from the main thread, translates each
+ * and ONNX runtime. Receives Markdown blocks from the main thread, translates each
  * block sequentially, and streams results back as they complete.
  *
  * Communication protocol (postMessage):
@@ -13,21 +13,42 @@
  *     { options: { blocks[], sourceLangCode, targetLangCode, device } }  – start translation
  *     { cancel: true }                                                  – abort in-progress translation
  *   Worker → Main:
- *     { status: 'init',           data: { progress, status, device, file } }           – model loading
- *     { status: 'on_chunk',       data: { accumulated_text, remaining } }              – progress stream
+ *     { status: 'init',           data: { progress, status, device, file } }            – model loading
+ *     { status: 'on_chunk',       data: { accumulated_text, remaining } }               – progress stream
  *     { status: 'on_block_error', data: { message, block, total, accumulated_text, remaining } } – non-fatal block error
- *     { status: 'end',            data: { accumulated_text } }                        – done
- *     { status: 'error',          data: { message, name?, stack? } }                  – fatal error
- *     { status: 'cancelled',      data: { accumulated_text, remaining } }              – cancelled
+ *     { status: 'end',            data: { accumulated_text, remaining, repair_stats } } – done
+ *     { status: 'error',          data: { message, name?, stack? } }                    – fatal error
+ *     { status: 'cancelled',      data: { accumulated_text, remaining } }               – cancelled
  *
- * HTML preservation:
- *   The prompt explicitly instructs the model to keep all tags intact.
- *   The system instruction is embedded inside the single user message
- *   (not as a separate system role) because TranslateGemma requires the
- *   conversation to start with a user turn.
+ * A block is:
+ *   {
+ *     text         : '…[[[1]]]término[[[2]]]…',            // Markdown, tokens local to this block
+ *     placeholders : [{ token, kind:'open'|'close'|'atom', pair }],
+ *     restore_map  : { '[[[1]]]' : '[[[7]]]' }              // local token → document-wide token
+ *   }
+ *
+ * Tokens are renumbered per block by the main thread so the model only ever has to copy
+ * short ids. This worker translates and repairs entirely in that local numbering, then
+ * maps back through restore_map before returning, so the main thread always sees one
+ * consistent document-wide namespace.
+ *
+ * Placeholder preservation:
+ *   The model is asked to copy every [[[n]]] marker verbatim. When it does not, we
+ *   escalate: ask it to fix its own output, then — failing that — re-insert the tokens
+ *   ourselves via repair_placeholders() and report exactly which ones we had to place,
+ *   so the main thread can put the result in front of the user rather than saving it.
+ *
+ *   The system instruction is embedded inside the single user message (not as a separate
+ *   system role) because TranslateGemma requires the conversation to start with a user turn.
  */
 
 import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0';
+import {
+	placeholder_re,
+	extract_placeholders,
+	normalize_placeholders,
+	repair_placeholders
+} from '../../js/placeholders.js';
 
 /**
  * ONNX-optimised 4B instruction-tuned translation model.
@@ -37,7 +58,7 @@ const MODEL_ID			= 'onnx-community/translategemma-text-4b-it-ONNX';
 
 /**
  * Maximum tokens the model may generate per call.
- * Blocks are pre-chunked to ~2000 chars on the main thread,
+ * Blocks are pre-chunked to ~1000 chars on the main thread,
  * so 1024 tokens is typically sufficient for a single block.
  */
 const MAX_NEW_TOKENS	= 1024;
@@ -47,6 +68,48 @@ const MAX_NEW_TOKENS	= 1024;
  * If a single block translation exceeds this duration it is treated as a failure.
  */
 const BLOCK_TIMEOUT_MS	= 120_000;
+
+/**
+ * Repetition penalty for the FIRST attempt.
+ *
+ * Deliberately 1.0 — i.e. off.
+ *
+ * A [[[12]]] marker is a run of bracket and digit tokens. A repetition penalty divides
+ * the logits of tokens the model has already emitted, so as soon as it copies the first
+ * marker the bracket tokens are suppressed for the rest of the generation and every
+ * subsequent marker becomes less likely than the one before it. The penalty was, in
+ * other words, taxing exactly the tokens we most need repeated.
+ *
+ * Degeneration is instead caught after the fact by detect_repetition(), which retries
+ * the affected block with a real penalty. That keeps the guarantee without paying for
+ * it on every block.
+ */
+const REPETITION_PENALTY_FIRST = 1.0;
+
+/**
+ * Penalty applied when the first attempt actually degenerated into repetition.
+ * >1 discourages the model from repeating the same token; 1.2 is moderate enough to
+ * allow legitimate repetition (citations, markers).
+ */
+const REPETITION_PENALTY = 1.2;
+
+/**
+ * Higher penalty used when the moderate one still degenerates.
+ * 1.5 is aggressive enough to break most repetition loops.
+ */
+const REPETITION_PENALTY_RETRY = 1.5;
+
+/**
+ * How many times to ask the model to reinsert markers it dropped before falling back
+ * to repair_placeholders(). Each round is a full generation pass on a 4B in-browser
+ * model, so this is deliberately small.
+ */
+const MAX_PLACEHOLDER_RETRIES = 2;
+
+/**
+ * Verbose per-block tracing. Off by default; flip while debugging placeholder loss.
+ */
+const DEBUG = false;
 
 /**
  * Cached pipeline instance — reused across multiple translation requests
@@ -65,367 +128,72 @@ let cancelled = false;
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 /**
- * Extract all [[n]] placeholders from a string.
- * @param {string} text
- * @returns {string[]} Array of placeholder strings found
+ * Strip the <<< / >>> fencing (and any conversational preamble) from a model response.
+ *
+ * The model is asked to emit only the translation between the fences, but it variously
+ * echoes the fences, omits them, or prefixes the answer with "Here is the translation:".
+ * Take what is inside the fences when they are there; otherwise clean up what we got.
+ *
+ * @param {string} text - Raw model response.
+ * @returns {string}
  */
-function extract_placeholders(text) {
-	const re = /\[\[\d+\]\]/g;
-	const matches = [];
-	let m;
-	while ((m = re.exec(text)) !== null) {
-		matches.push(m[0]);
+function strip_fences(text) {
+
+	if (!text) return '';
+
+	const fenced = text.match(/<<<\s*([\s\S]*?)\s*>>>/);
+	if (fenced) {
+		return fenced[1].trim();
 	}
-	return matches;
+
+	return text
+		.trim()
+		.replace(/^(?:here (?:is|'s)[^\n:]{0,40}:|translation:|traducci[oó]n:)\s*/i, '')
+		.replace(/^<<<\s*/, '')
+		.replace(/\s*>>>$/, '')
+		.trim();
 }
 
+
 /**
- * Detect missing placeholders in the translated output.
+ * Detect which of a block's markers the model failed to reproduce.
  *
- * Compares placeholders in the input text against those in the output
- * and returns the list of missing ones, without performing any restoration.
- *
- * @param {string} input_text    - Original text sent to the model (with placeholders)
- * @param {string} output_text   - Model's translated text (may have lost placeholders)
+ * @param {string} input_text  - Block as sent to the model.
+ * @param {string} output_text - Model output, already normalised.
  * @returns {{ missing: string[], has_missing: boolean }}
- *   - missing: array of placeholder strings absent from the output
- *   - has_missing: true if any placeholder is missing
  */
 function detect_missing_placeholders(input_text, output_text) {
-	const input_ph  = extract_placeholders(input_text);
-	const output_ph = extract_placeholders(output_text);
 
-	if (input_ph.length === 0) return { missing: [], has_missing: false };
+	const input_ph = extract_placeholders(input_text);
+	if (input_ph.length === 0) {
+		return { missing: [], has_missing: false };
+	}
 
-	const output_set = new Set(output_ph);
-	const missing    = input_ph.filter(p => !output_set.has(p));
+	const output_set = new Set(extract_placeholders(output_text));
+	const missing    = input_ph.filter(ph => !output_set.has(ph));
 
 	return { missing, has_missing: missing.length > 0 };
 }
 
-/**
- * Restore missing placeholders in the translated output using
- * heuristic offset-based positioning.
- *
- * This is the fallback when the LLM retry also fails to preserve
- * all placeholders. It applies two strategies:
- *
- *   Strategy 1 — Anchor + relative-gap positioning (preferred):
- *     For each missing placeholder, find the nearest present neighbor
- *     in the input (preceding or following). Measure the text gap
- *     between them in the input, then position the missing one at the
- *     same relative distance from the anchor in the output:
- *       - Gap = 0 (adjacent, e.g. [[34]][[25]]) → insert right next to anchor
- *       - Gap > 0 (separated by text) → scale gap by output/input ratio,
- *         snap to word boundary, and insert there
- *
- *   Strategy 2 — Absolute offset positioning (fallback):
- *     When no anchor exists, use the missing placeholder's character
- *     offset from the text start, proportionally scaled.
- *
- *   Placeholders are inserted in reverse offset order so earlier
- *   insertions don't shift the positions of later ones.
- *
- * @param {string}   input_text  - Original text sent to the model (with placeholders)
- * @param {string}   output_text - Model's translated text (may have lost placeholders)
- * @param {string[]} missing    - Array of missing placeholder strings to restore
- * @returns {string}             - Output text with placeholders restored (or unchanged)
- */
-function restore_missing_placeholders(input_text, output_text, missing) {
-
-	if (!missing || missing.length === 0) return output_text;
-
-	console.warn(
-		`[browser_transformer] Placeholders missing from translation: ${missing.join(', ')}. ` +
-		`Applying heuristic restoration.`
-	);
-
-	const input_ph = extract_placeholders(input_text);
-	const output_ph = extract_placeholders(output_text);
-	const output_set = new Set(output_ph);
-
-	// Build ordered list of all input placeholders with their offsets
-	// so we can find neighbors and calculate relative gaps
-	const input_ordered = [];
-	for (const ph of input_ph) {
-		const idx = input_text.indexOf(ph);
-		if (idx !== -1) {
-			input_ordered.push({ placeholder: ph, input_offset: idx });
-		}
-	}
-	input_ordered.sort((a, b) => a.input_offset - b.input_offset);
-
-	// Build list of missing placeholders with their input offsets
-	const to_insert = [];
-	for (const ph of missing) {
-		const idx = input_text.indexOf(ph);
-		if (idx === -1) continue;
-		to_insert.push({ placeholder: ph, input_offset: idx });
-	}
-
-	// Sort by offset descending so we insert from right to left
-	// and don't shift earlier positions
-	to_insert.sort((a, b) => b.input_offset - a.input_offset);
-
-	const input_len = input_text.length;
-	let result = output_text;
-
-	for (const { placeholder, input_offset } of to_insert) {
-
-		// ── Strategy 1: Anchor + relative-gap positioning ──────────────
-		const insert_pos = find_anchor_gap_position(
-			placeholder, input_offset, input_ordered,
-			input_text, input_len, output_set, result
-		);
-
-		if (insert_pos !== -1) {
-			result = result.slice(0, insert_pos) + placeholder + result.slice(insert_pos);
-			continue;
-		}
-
-		// ── Strategy 2: Absolute offset positioning (fallback) ────────
-		const output_len = result.length;
-		const length_diff_ratio = Math.abs(output_len - input_len) / input_len;
-
-		const target_offset = length_diff_ratio < 0.3
-			? input_offset
-			: Math.round((input_offset / input_len) * output_len);
-
-		let snap = find_nearest_boundary(result, target_offset, 10);
-		snap = avoid_placeholder_overlap(result, snap);
-
-		result = result.slice(0, snap) + placeholder + result.slice(snap);
-	}
-
-	return result;
-}
 
 /**
- * Find the insertion position for a missing placeholder using its
- * nearest present neighbor as an anchor, plus the relative text gap
- * between them in the input.
+ * Map a block's local tokens back to the document-wide tokens the main thread uses.
  *
- * Instead of always placing the missing placeholder adjacent to its
- * anchor, this function measures how much text separates them in the
- * input and applies that gap proportionally in the output:
+ * A token with no entry in the map is one the model invented; it is left as-is so the
+ * main thread can spot it and strip it, rather than being silently rewritten to a real
+ * marker it was never meant to be.
  *
- *   - Gap = 0  → placeholders were adjacent → insert right after/before anchor
- *   - Gap > 0  → there was text between them → insert at proportional distance
- *
- * This handles both clustered placeholders (e.g. [[34]][[25]]) and
- * spaced-out ones (e.g. [[25]] next text[[35]]) accurately.
- *
- * @param {string} placeholder     - The missing placeholder (e.g. '[[35]]')
- * @param {number} input_offset    - Character offset of the missing placeholder in the input
- * @param {Array}  input_ordered   - All input placeholders sorted by offset: [{ placeholder, input_offset }]
- * @param {string} input_text      - Full input text
- * @param {number} input_len       - Length of input text
- * @param {Set}    output_set      - Set of placeholders present in the output
- * @param {string} result          - Current output text
- * @returns {number}               - Insertion offset, or -1 if no anchor found
- *
- * @example
- *   // Adjacent placeholders (gap = 0)
- *   // Input:  "text[[34]][[25]]more"
- *   // Output: "text[[34]]more"  ([[25]] missing)
- *   // Anchor: [[34]], gap from [[34]] end to [[25]] start = 0
- *   // → insert right after [[34]] → "text[[34]][[25]]more"
- *
- * @example
- *   // Separated placeholders (gap > 0)
- *   // Input:  "my text[[34]][[25]] next text[[35]] other"
- *   // Output: "mi texto[[25]] siguiente texto otros"  ([[34]] and [[35]] missing)
- *   // For [[34]]: anchor [[25]], gap from [[25]] start back to [[34]] start = 6
- *   //   → insert 6 chars before [[25]] in output → "mi texto[[34]][[25]]..."
- *   // For [[35]]: anchor [[25]], gap from [[25]] end to [[35]] start = 12
- *   //   → insert 12 scaled chars after [[25]] in output → "...[[25]] siguiente[[35]] texto..."
+ * @param {string} text
+ * @param {Object} restore_map - local token → global token
+ * @returns {string}
  */
-function find_anchor_gap_position(placeholder, input_offset, input_ordered,
-                                   input_text, input_len, output_set, result) {
-	const my_idx = input_ordered.findIndex(p => p.placeholder === placeholder);
-	if (my_idx === -1) return -1;
+function to_global_tokens(text, restore_map) {
 
-	// Search backwards for the nearest preceding anchor present in output
-	let prev_anchor = null;
-	let prev_anchor_offset = -1;
-	for (let i = my_idx - 1; i >= 0; i--) {
-		if (output_set.has(input_ordered[i].placeholder)) {
-			prev_anchor = input_ordered[i].placeholder;
-			prev_anchor_offset = input_ordered[i].input_offset;
-			break;
-		}
-	}
+	if (!text || !restore_map) return text;
 
-	// Search forwards for the nearest following anchor present in output
-	let next_anchor = null;
-	let next_anchor_offset = -1;
-	for (let i = my_idx + 1; i < input_ordered.length; i++) {
-		if (output_set.has(input_ordered[i].placeholder)) {
-			next_anchor = input_ordered[i].placeholder;
-			next_anchor_offset = input_ordered[i].input_offset;
-			break;
-		}
-	}
-
-	const output_len = result.length;
-
-	// Try preceding anchor: measure gap from its END to the missing placeholder's START
-	if (prev_anchor) {
-		const prev_end_in_input = prev_anchor_offset + prev_anchor.length;
-		const gap_in_input = input_offset - prev_end_in_input; // chars of text between them
-
-		const prev_pos_in_output = result.indexOf(prev_anchor);
-		if (prev_pos_in_output !== -1) {
-			const anchor_output_end = prev_pos_in_output + prev_anchor.length;
-
-			if (gap_in_input <= 1) {
-				// Adjacent or overlapping → insert right after the anchor
-				return anchor_output_end;
-			}
-
-			// Scale the gap proportionally (input → output text ratio)
-			const scale = output_len / input_len;
-			const gap_in_output = Math.round(gap_in_input * scale);
-			let target = anchor_output_end + gap_in_output;
-
-			// Clamp and snap to word boundary
-			target = Math.min(target, output_len);
-			target = find_nearest_boundary(result, target, 10);
-			target = avoid_placeholder_overlap(result, target);
-
-			// If we have a following anchor too, make sure we don't overshoot it
-			if (next_anchor) {
-				const next_pos_in_output = result.indexOf(next_anchor);
-				if (next_pos_in_output !== -1 && target > next_pos_in_output) {
-					target = next_pos_in_output;
-				}
-			}
-
-			return target;
-		}
-	}
-
-	// Try following anchor: measure gap from missing placeholder's END to its START
-	if (next_anchor) {
-		const my_end_in_input = input_offset + placeholder.length;
-		const gap_in_input = next_anchor_offset - my_end_in_input;
-
-		const next_pos_in_output = result.indexOf(next_anchor);
-		if (next_pos_in_output !== -1) {
-
-			if (gap_in_input <= 1) {
-				// Adjacent → insert right before the anchor
-				return next_pos_in_output;
-			}
-
-			// Scale the gap proportionally
-			const scale = output_len / input_len;
-			const gap_in_output = Math.round(gap_in_input * scale);
-			let target = next_pos_in_output - gap_in_output;
-
-			// Clamp and snap
-			target = Math.max(target, 0);
-			target = find_nearest_boundary(result, target, 10);
-			target = avoid_placeholder_overlap(result, target);
-
-			return target;
-		}
-	}
-
-	// No anchors found
-	return -1;
+	return text.replace(placeholder_re(), (match) => restore_map[match] || match);
 }
 
-/**
- * Avoid inserting a placeholder inside an existing [[…]] placeholder.
- *
- * If the given offset falls between a `[[` and its matching `]]` of an
- * existing placeholder, move the insertion point to just after the `]]`.
- *
- * @param {string} text   - The text to check
- * @param {number} offset - Proposed insertion offset
- * @returns {number}      - Adjusted offset (or original if no overlap)
- *
- * @example
- *   // offset 12 falls inside [[786]]
- *   // text: "some text [[786]] more"
- *   //              0123456789012345678
- *   // offset 12 is at '7' inside [[786]]
- *   // → returns 16 (just after ']]')
- */
-function avoid_placeholder_overlap(text, offset) {
-	const len = text.length;
-	if (offset < 0 || offset > len) return offset;
-
-	// Scan backwards from offset to find the nearest unopened '[['
-	let open_pos = -1;
-	let depth = 0;
-	for (let i = offset - 1; i >= 1; i--) {
-		if (text[i - 1] === ']' && text[i] === ']') depth++;
-		if (text[i - 1] === '[' && text[i] === '[') {
-			if (depth > 0) {
-				depth--;
-				i--; // skip the second '[' so we don't re-match it
-			} else {
-				open_pos = i - 1;
-				break;
-			}
-		}
-	}
-
-	// If we found an unmatched '[[' before offset, check if it starts a [[…]] pattern
-	if (open_pos !== -1) {
-		const rest = text.slice(open_pos);
-		const match = rest.match(/^\[\[\d+\]\]/);
-		if (match) {
-			// offset is inside this placeholder — move to just after its closing ']]'
-			return open_pos + match[0].length;
-		}
-	}
-
-	return offset;
-}
-
-/**
- * Find the nearest word-boundary character (space, '<', or '>') to a
- * target offset, searching outward within a maximum radius.
- *
- * This avoids inserting a placeholder in the middle of a word or
- * inside an HTML tag name.
- *
- * @param {string} text          - The text to search within
- * @param {number} target        - Desired character offset
- * @param {number} max_radius    - Maximum distance to search (default 10)
- * @returns {number}             - Snapped offset (clamped to text length)
- */
-function find_nearest_boundary(text, target, max_radius = 10) {
-	const len = text.length;
-	const clamped = Math.min(Math.max(target, 0), len);
-
-	// If already at a boundary, use it
-	if (clamped === 0 || clamped === len) return clamped;
-	const ch = text[clamped];
-	if (ch === ' ' || ch === '<' || ch === '>') return clamped;
-
-	// Search outward: ±1, ±2, … up to max_radius
-	for (let d = 1; d <= max_radius; d++) {
-		// Check left first (prefer inserting before a word rather than after)
-		const left = clamped - d;
-		if (left >= 0) {
-			const lc = text[left];
-			if (lc === ' ' || lc === '<' || lc === '>') return left + 1;
-		}
-		// Then check right
-		const right = clamped + d;
-		if (right < len) {
-			const rc = text[right];
-			if (rc === ' ' || rc === '<' || rc === '>') return right;
-		}
-	}
-
-	// No boundary found within radius — use raw offset
-	return clamped;
-}
 
 /**
  * Wrap a promise with a timeout.
@@ -439,6 +207,144 @@ function with_timeout(promise, ms, label) {
 		setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms)
 	);
 	return Promise.race([promise, timer]);
+}
+
+
+/**
+ * Detect repetition degeneration in translated text.
+ *
+ * Checks whether any single word appears consecutively more than `threshold` times.
+ * This catches the common failure mode where greedy decoding (do_sample: false) gets
+ * stuck repeating a token.
+ *
+ * @param {string} text      - Translated text to check
+ * @param {number} threshold - Max allowed consecutive repeats (default 5)
+ * @returns {boolean}        - true if repetition degeneration is detected
+ */
+function detect_repetition(text, threshold = 5) {
+	if (!text || text.length < 50) return false;
+	const words = text.split(/\s+/);
+	if (words.length < threshold) return false;
+	let consecutive = 1;
+	for (let i = 1; i < words.length; i++) {
+		if (words[i] === words[i - 1]) {
+			consecutive++;
+			if (consecutive >= threshold) {
+				return true;
+			}
+		} else {
+			consecutive = 1;
+		}
+	}
+	return false;
+}
+
+
+// ── Block processing ───────────────────────────────────────────────────────
+
+/**
+ * Translate one block and guarantee that every marker it carried comes back.
+ *
+ * The escalation, cheapest first:
+ *   1. Translate. If the output degenerated into repetition, retry with a penalty
+ *      (see REPETITION_PENALTY_FIRST for why the penalty is not on by default).
+ *   2. If markers are missing, ask the model to reinsert them into its own output —
+ *      up to MAX_PLACEHOLDER_RETRIES times. A retry is only kept when it recovers
+ *      ground, so a worse retry can never make things worse.
+ *   3. Whatever is still missing is placed by repair_placeholders() and reported.
+ *
+ * @param {Function} translator
+ * @param {Object}   block            - { text, placeholders, restore_map }
+ * @param {string}   source_lang_code
+ * @param {string}   target_lang_code
+ * @param {string}   label            - Human label used in timeout messages, e.g. 'Block 2/5'
+ * @returns {Promise<{text:string, repaired:string[], unrepairable:string[]}>} in LOCAL tokens.
+ */
+async function process_block(translator, block, source_lang_code, target_lang_code, label) {
+
+	// ── 1. translate ────────────────────────────────────────────────────
+	const raw = await with_timeout(
+		translate_text(translator, block.text, source_lang_code, target_lang_code, null, {
+			repetition_penalty : REPETITION_PENALTY_FIRST
+		}),
+		BLOCK_TIMEOUT_MS,
+		label
+	);
+
+	let text = normalize_placeholders(strip_fences(raw));
+
+	// ── 1b. repetition degeneration → escalate the penalty ──────────────
+	if (detect_repetition(text)) {
+
+		for (const penalty of [REPETITION_PENALTY, REPETITION_PENALTY_RETRY]) {
+
+			const retry_raw = await with_timeout(
+				translate_text(translator, block.text, source_lang_code, target_lang_code, null, {
+					repetition_penalty : penalty
+				}),
+				BLOCK_TIMEOUT_MS,
+				`${label} (repetition retry, penalty ${penalty})`
+			);
+
+			// NOTE the normalise: the repetition retry used to bypass placeholder
+			// handling entirely, so a block that degenerated came back unprotected.
+			text = normalize_placeholders(strip_fences(retry_raw));
+
+			if (!detect_repetition(text)) {
+				break;
+			}
+		}
+
+		if (detect_repetition(text)) {
+			throw new Error(`${label}: excessive repetition even with penalty ${REPETITION_PENALTY_RETRY}`);
+		}
+	}
+
+	// ── 2. ask the model to reinsert the markers it dropped ─────────────
+	const failed_attempts = [];
+
+	for (let attempt = 1; attempt <= MAX_PLACEHOLDER_RETRIES; attempt++) {
+
+		const detection = detect_missing_placeholders(block.text, text);
+		if (!detection.has_missing || cancelled) {
+			break;
+		}
+
+		failed_attempts.push({ text, missing: detection.missing });
+
+		if (DEBUG) {
+			console.warn(`[browser_transformer] ${label}: missing ${detection.missing.join(', ')} — corrective retry ${attempt}/${MAX_PLACEHOLDER_RETRIES}`);
+		}
+
+		let retry_text;
+		try {
+			const retry_raw = await with_timeout(
+				translate_text(translator, block.text, source_lang_code, target_lang_code, { failed_attempts }),
+				BLOCK_TIMEOUT_MS,
+				`${label} (placeholder retry ${attempt}/${MAX_PLACEHOLDER_RETRIES})`
+			);
+			retry_text = normalize_placeholders(strip_fences(retry_raw));
+		} catch (retry_error) {
+			// the retry timed out or errored — fall through to deterministic repair
+			if (DEBUG) {
+				console.warn(`[browser_transformer] ${label}: corrective retry failed (${retry_error?.message || retry_error})`);
+			}
+			break;
+		}
+
+		const retry_detection = detect_missing_placeholders(block.text, retry_text);
+
+		// only keep a retry that recovered ground; never let it lose more
+		if (retry_detection.missing.length < detection.missing.length) {
+			text = retry_text;
+		}
+		if (!retry_detection.has_missing) {
+			break;
+		}
+	}
+
+	// ── 3. place whatever the model would not ───────────────────────────
+	return repair_placeholders(block.text, text, block.placeholders);
 }
 
 
@@ -458,6 +364,13 @@ self.onmessage = async (e) => {
 		self.postMessage({
 			status : 'error',
 			data   : { message: 'Invalid or missing options.blocks' }
+		});
+		return;
+	}
+	if (typeof options.blocks[0]?.text !== 'string') {
+		self.postMessage({
+			status : 'error',
+			data   : { message: 'options.blocks must be objects: { text, placeholders, restore_map }' }
 		});
 		return;
 	}
@@ -488,11 +401,24 @@ self.onmessage = async (e) => {
 			});
 		}
 
-		const blocks        = options.blocks;
-		const total_blocks  = blocks.length;
-		const result        = {
+		const blocks       = options.blocks;
+		const total_blocks = blocks.length;
+
+		// translated blocks, in order. Joined with the paragraph separator they were
+		// split on — concatenating them bare would weld the last paragraph of one block
+		// onto the first paragraph of the next when the main thread re-parses the Markdown.
+		const parts = [];
+
+		// every marker WE placed rather than the model, in document-wide tokens
+		const repair_stats = {
+			repaired     : [],
+			unrepairable : []
+		};
+
+		const result = {
 			accumulated_text : '',
-			remaining        : total_blocks
+			remaining        : total_blocks,
+			repair_stats     : repair_stats
 		};
 
 		// ── 2. Translate each block sequentially ─────────────────────────
@@ -510,120 +436,65 @@ self.onmessage = async (e) => {
 				return;
 			}
 
+			const block = blocks[i];
+			const label = `Block ${i + 1}/${total_blocks}`;
+
+			let block_error = null;
+
 			try {
 
-				const translated = await with_timeout(
-					translate_text(
-						cached_translator,
-						blocks[i],
-						source_lang_code,
-						target_lang_code
-					),
-					BLOCK_TIMEOUT_MS,
-					`Block ${i + 1}/${total_blocks}`
+				const outcome = await process_block(
+					cached_translator,
+					block,
+					source_lang_code,
+					target_lang_code,
+					label
 				);
 
-				// Post-validation: detect missing placeholders and retry up to 3 times
-				let   final_text = translated;
-				const detection  = detect_missing_placeholders(blocks[i], translated);
+				parts.push(to_global_tokens(outcome.text, block.restore_map));
 
-				if (detection.has_missing) {
-
-					const MAX_RETRIES = 3;
-
-					// Accumulate every failed attempt so each retry sees the full
-					// mistake history and avoids repeating the same errors
-					const failed_attempts = [{ text: translated, missing: detection.missing }];
-
-					console.warn(
-						`[browser_transformer] Block ${i + 1}: placeholders missing (${detection.missing.join(', ')}). ` +
-						`Retrying up to ${MAX_RETRIES} times with corrective prompt.`
-					);
-
-					for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-
-						if (cancelled) break;
-
-						try {
-							const retry_translated = await with_timeout(
-								translate_text(
-									cached_translator,
-									blocks[i],
-									source_lang_code,
-									target_lang_code,
-									{ failed_attempts }
-								),
-								BLOCK_TIMEOUT_MS,
-								`Block ${i + 1}/${total_blocks} (retry ${attempt}/${MAX_RETRIES})`
-							);
-
-							const retry_detection = detect_missing_placeholders(blocks[i], retry_translated);
-
-							if (!retry_detection.has_missing) {
-								// Retry succeeded — all placeholders present
-								console.log(`[browser_transformer] Block ${i + 1}: retry ${attempt} succeeded, all placeholders preserved.`);
-								final_text = retry_translated;
-								break;
-							}
-
-							// Still missing — record this attempt and try again
-							failed_attempts.push({ text: retry_translated, missing: retry_detection.missing });
-
-							if (attempt < MAX_RETRIES) {
-								console.warn(
-									`[browser_transformer] Block ${i + 1}: retry ${attempt} still missing placeholders (${retry_detection.missing.join(', ')}). ` +
-									`Retrying again.`
-								);
-							} else {
-								// All retries exhausted — fall back to heuristic restoration
-								console.warn(
-									`[browser_transformer] Block ${i + 1}: all ${MAX_RETRIES} retries exhausted, still missing placeholders (${retry_detection.missing.join(', ')}). ` +
-									`Falling back to heuristic restoration.`
-								);
-								final_text = restore_missing_placeholders(blocks[i], retry_translated, retry_detection.missing);
-							}
-
-						} catch (retry_err) {
-							// Retry itself failed (timeout/error) — fall back to heuristic on last attempt
-							const last = failed_attempts[failed_attempts.length - 1];
-							console.warn(
-								`[browser_transformer] Block ${i + 1}: retry ${attempt} failed (${retry_err?.message || retry_err}). ` +
-								`Falling back to heuristic restoration.`
-							);
-							final_text = restore_missing_placeholders(blocks[i], last.text, last.missing);
-							break;
-						}
-					}
+				for (const token of outcome.repaired) {
+					repair_stats.repaired.push(block.restore_map?.[token] || token);
+				}
+				for (const token of outcome.unrepairable) {
+					repair_stats.unrepairable.push(block.restore_map?.[token] || token);
 				}
 
-				result.accumulated_text += final_text;
-				result.remaining = total_blocks - (i + 1);
+				if (DEBUG && (outcome.repaired.length || outcome.unrepairable.length)) {
+					console.warn(`[browser_transformer] ${label}: repaired ${outcome.repaired.length}, unrepairable ${outcome.unrepairable.length}`);
+				}
 
-				// ── 3. Stream partial result to the main thread ────────
-				// The UI layer uses `remaining` to show progress like "3 of 8 blocks done"
+			} catch (err) {
+
+				// Non-fatal per-block error. Emit the block's SOURCE text untranslated
+				// rather than dropping it: losing a paragraph of the record outright is a
+				// far worse outcome than leaving one paragraph in the source language.
+				parts.push(to_global_tokens(block.text, block.restore_map));
+				block_error = err;
+				console.warn(`[browser_transformer] ${label} failed, keeping source text: ${err?.message || err}`);
+			}
+
+			result.accumulated_text = parts.join('\n\n');
+			result.remaining        = total_blocks - (i + 1);
+
+			// ── 3. Stream partial result to the main thread ────────
+			// The UI layer uses `remaining` to show progress like "3 of 8 blocks done"
+			if (block_error) {
+				self.postMessage({
+					status : 'on_block_error',
+					data   : {
+						message          : block_error?.message || String(block_error),
+						block            : i + 1,
+						total            : total_blocks,
+						accumulated_text : result.accumulated_text,
+						remaining        : result.remaining
+					}
+				});
+			} else {
 				self.postMessage({
 					status : 'on_chunk',
 					data   : result
 				});
-
-			} catch (err) {
-
-				// Non-fatal per-block error — report and continue with remaining blocks
-				console.warn(`[browser_transformer] Block ${i + 1} failed: ${err?.message || err}`);
-
-				self.postMessage({
-					status : 'on_block_error',
-					data   : {
-						message          : err?.message || String(err),
-						block            : i + 1,
-						total            : total_blocks,
-						accumulated_text : result.accumulated_text,
-						remaining        : total_blocks - (i + 1)
-					}
-				});
-
-				// Skip this block — accumulated_text stays unchanged
-				result.remaining = total_blocks - (i + 1);
 			}
 		}
 
@@ -649,126 +520,108 @@ self.onmessage = async (e) => {
  * Translate a single text block using the loaded model pipeline.
  *
  * @param {Function} translator       - The loaded HuggingFace text-generation pipeline
- * @param {string}   text             - HTML block to translate (may contain <p>, <em>, etc.)
+ * @param {string}   text             - Markdown block to translate, carrying [[[n]]] markers
  * @param {string}   sourceLangCode   - Source language locale code (e.g. 'en')
  * @param {string}   targetLangCode   - Target language locale code (e.g. 'es')
- * @param {Object|null} retryContext  - When non-null, sends a corrective retry prompt
- *   built from the full history of failed attempts:
- *   { failed_attempts: Array<{ text: string, missing: string[] }> }
- * @returns {string}                  - Model response with translated text
+ * @param {Object|null} retryContext  - When non-null, sends a corrective retry prompt built
+ *   from the history of failed attempts: { failed_attempts: Array<{ text, missing }> }
+ * @param {Object}   overrides        - { repetition_penalty }
+ * @returns {Promise<string>} The model's response text
  *
  * Implementation notes:
  *
  *   System instruction:
- *     TranslateGemma's chat template does not accept a separate 'system' role —
- *     the conversation must start with 'user'. Therefore the preservation
- *     instruction is prepended to the user text content with a blank-line
- *     separator so the model treats it as a task description.
- *
- *   HTML preservation:
- *     The prompt explicitly tells the model to keep every tag intact.
- *     See also: tool_lang.js → splitHtmlByParagraph which wraps bare text
- *     nodes in <p> blocks for consistency.
+ *     TranslateGemma's chat template does not accept a separate 'system' role — the
+ *     conversation must start with 'user'. The preservation instruction is therefore
+ *     prepended to the user content so the model reads it as a task description.
  *
  *   Deterministic output:
- *     `do_sample: false` disables temperature sampling, making the model
- *     behave greedily — the same input always produces the same output.
- *     This avoids random tag mutations across runs.
+ *     `do_sample: false` disables temperature sampling, making the model behave greedily,
+ *     so the same input always produces the same output.
  */
-async function translate_text(translator, text, sourceLangCode, targetLangCode, retryContext=null) {
+async function translate_text(translator, text, sourceLangCode, targetLangCode, retryContext=null, overrides={}) {
 
 	let prompt;
 
 	if (retryContext) {
-		// ── Retry prompt: include the full history of failed attempts ──
-		const { failed_attempts } = retryContext;
-		const latest_missing = failed_attempts[failed_attempts.length - 1].missing;
 
-		const history_lines = [];
-		failed_attempts.forEach((att, idx) => {
-			history_lines.push(`Attempt ${idx + 1} (incorrect) — missing: ${att.missing.join(', ')}`);
-			history_lines.push(att.text);
-			history_lines.push(``);
+		// ── Retry prompt: fix the previous output, don't retranslate ──
+		// The previous output is a good translation that happens to be missing markers.
+		// Ask for those markers to be inserted into it, rather than starting over — a
+		// fresh translation would be just as likely to drop them again.
+		const { failed_attempts } = retryContext;
+		const last_attempt = failed_attempts[failed_attempts.length - 1];
+
+		const source_ph  = extract_placeholders(text);
+		const present    = new Set(extract_placeholders(last_attempt.text));
+
+		// For each missing marker, name the neighbours it sits between in the source, so
+		// the model has an anchor it can actually see in its own output.
+		const hints = last_attempt.missing.map(function(missing_ph){
+
+			const position = source_ph.indexOf(missing_ph);
+
+			const before = source_ph.slice(0, position).reverse().find(ph => present.has(ph));
+			const after  = source_ph.slice(position + 1).find(ph => present.has(ph));
+
+			if (before && after) return `${missing_ph} — between ${before} and ${after}`;
+			if (before)          return `${missing_ph} — after ${before}`;
+			if (after)           return `${missing_ph} — before ${after}`;
+			return missing_ph;
 		});
 
 		prompt = [
-			`Translate from ${sourceLangCode} to ${targetLangCode}.`,
-			`CORRECTION REQUEST: Your previous translation(s) were incorrect.`,
-			`The following placeholders are STILL MISSING from your output: ${latest_missing.join(', ')}`,
-			`You MUST include every single one of them EXACTLY as shown.`,
+			`Your translation is missing some markers. Insert them; do not retranslate.`,
 			``,
-			`Your previous (incorrect) translation attempts:`,
-			...history_lines,
-			`RULES:`,
-			`1. Keep all HTML tags unchanged.`,
-			`2. Keep ALL placeholders like [[18]], [[1]], [[5]], [[424]], etc. EXACTLY as-is — never modify, translate, or remove them.`,
-			`3. The missing placeholders ${latest_missing.join(', ')} MUST appear in your output.`,
-			`4. Do not use markdown.`,
-			`5. Verify every placeholder [[…]] from the input appears IDENTICALLY in your output.`,
+			`Rules:`,
+			`1. Keep the existing translation text exactly as it is.`,
+			`2. Insert each missing marker where it belongs, matching its position in the source.`,
+			`3. Do not remove, renumber or alter the markers that are already there.`,
+			`4. Output the complete corrected text, and nothing else.`,
 			``,
-			`Text to translate:`,
-			text
+			`Source (shows where each marker belongs):`,
+			text,
+			``,
+			`Markers to insert:`,
+			hints.join('\n'),
+			``,
+			`Your previous translation (fix this):`,
+			`<<<`,
+			last_attempt.text,
+			`>>>`
 		].join('\n');
+
 	} else {
+
 		// ── First-attempt prompt ──────────────────────────────────────────
+		// Short and direct: TranslateGemma 4B follows brief instructions better than
+		// elaborate ones. Stating the marker count gives the model something concrete
+		// to check its own output against.
+		const tokens = [...new Set(extract_placeholders(text))];
+
+		const marker_rules = tokens.length > 0
+			? [
+				`Copy every marker exactly as written: ${tokens.join(' ')}`,
+				`They are reference ids, not words. Never translate, renumber or drop them.`,
+				`Your output must contain all ${tokens.length} of them.`,
+				``,
+				`Example:`,
+				`Hello[[[1]]] how are you[[[2]]]? → Hola[[[1]]] ¿cómo estás[[[2]]]?`,
+				``
+			]
+			: [];
+
 		prompt = [
 			`Translate from ${sourceLangCode} to ${targetLangCode}.`,
-			`RULES:`,
-			`1. Keep all HTML tags unchanged.`,
-			`2. Keep all placeholders like [[18]], [[1]], [[5]], [[424]], etc. EXACTLY as-is — never modify, translate, or remove them.`,
-			`3. Do not use markdown.`,
-			`4. Verify every placeholder [[…]] from the input appears IDENTICALLY in your output.`,
+			`Preserve the Markdown formatting.`,
 			``,
-			`Examples:`,
-			`Input:  "<p>Hola[[5]] ¿como estás[[2]][[3]]?</p>"`,
-			`Correct output: "<p>Hello[[5]] how are you[[2]][[3]]?</p>"`,
-			`Wrong output: "<p>Hello[[9]] how are you[[2]]?</p>"`,
-			``,
-			`Input:  "<p>[[1]][[2]]Gracias por tu[[3]] \"tiempo[[18]]\"[[4]].[[68]][[108]]</p>[[10]]<p>Saludos</p>"`,
-			`Correct output: "<p>[[1]][[2]]Thank for your[[3]] \"time[[18]]\"[[4]].[[68]][[108]]</p>[[10]]<p>Regards</p>"`,
-			`Wrong output: "<p>[[1]]Thank for your[[2]][[3]] \"time[[18 ]]\".[ [68]]</p>[[10]]<p>Regards/p>"`,
-			``,
-			`Input: "<p> </p><p>Hello[[1]], welcome!</p><p> </p>"`,
-			`Correct output: "<p> </p><p>Hola[[1]], ¡bienvenido!</p><p> </p>"`,
-			`Wrong output: "<p>Hola, ¡bienvenido!</p>"`,
-			``,
-			`Input: "<p>[[1]]Hello, [[2]]welcome! new [[8]]eeerew[[35]]</p><p>[[62]]More[[29]] [[84]]text[[438]] [[3]]in[[45]] [[99]]English[[24]]</p>"`,
-			`Correct output: "<p>Hola[[1]], [[2]]¡bienvenido! nuevo [[8]]eeerew[[35]]</p><p>[[62]]Mas[[29]] [[84]]texto[[438]] [[3]]en[[45]] [[99]]inglés[[24]]</p>"`,
-			`Wrong output: "<p>Hola, [[2]]¡bienvenido! nuevo texto</p><p>[[62]]Mas [[29]]texto[[438]] en [[99]]inglés</p>"`,
-			``,
-			`Input: "<p>[[5]]Her directives</p>"`,
-			`Correct output: "<p>[[5]]Οι οδηγίες του</p>"`,
-			`Wrong output: "<p><p>Οι [[5]]οδηγίες του</p>"`,
-			``,
-			`Input: "Si fue desde los años setenta hasta cuándo...? Hasta que pasó[[893]] en [[894]]la Universidad.[[895]] </p><p> </p>"`,
-			`Correct output: "Was it from the seventies until when...? Until it moved[[893]] to [[894]]the University [[895]] </p><p> </p>"`,
-			`Wrong output: "Was it from the seventies until when...? Until it moved to [[893]]the University [[894]]?</p>"`,
-			``,
-			`Input: "<p> </p><p> </p>"`,
-			`Correct output: "<p> </p><p> </p>"`,
-			`Wrong output: "<p></p>"`,
-			``,
-			`Input: "[[36]] Hola [[37]] [[105]]¿como estás? [[52]]"`,
-			`Correct output: "[[36]] नमस्ते [[37]] [[105]]तिमीलाई कस्तो छ? [[52]]"`,
-			`Wrong output: "[[36] नमस्ते [37]] [[105तिमीलाई कस्तो छ? 52]]"`,
-			``,
-			`Text to translate:`,
-			text
+			...marker_rules,
+			`Translate the text between <<< and >>>. Output only the translation.`,
+			`<<<`,
+			text,
+			`>>>`
 		].join('\n');
 	}
-
-	// const prompt = [
-	// 	`Translate the following text into **[${targetLangCode}]**.`,
-	// 	'**CRITICAL CONSTRAINTS:**',
-	// 	'1. The text contains placeholders in the format `[[1]]`, `[[88]]`, etc. These are non-translatable constants.',
-	// 	'2. **DO NOT** translate, modify, or remove the placeholders.',
-	// 	'3. **DO NOT** change the numbers inside the placeholders.',
-	// 	'5. **Output ONLY** the translated text without any explanations or introductory remarks.',
-	// 	'6. Keep all HTML tags unchanged.',
-
-	// 	`**Text to translate:**`,
-	// 	`${text}`
-	// ].join('\n');
 
 	const messages = [
 		{
@@ -785,8 +638,9 @@ async function translate_text(translator, text, sourceLangCode, targetLangCode, 
 	];
 
 	const output = await translator(messages, {
-		max_new_tokens : MAX_NEW_TOKENS,
-		do_sample      : false
+		max_new_tokens     : MAX_NEW_TOKENS,
+		do_sample          : false,
+		repetition_penalty : overrides.repetition_penalty || REPETITION_PENALTY_FIRST
 	});
 
 	// The model returns the full conversation so far;
