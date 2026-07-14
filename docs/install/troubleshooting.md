@@ -16,6 +16,7 @@ curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
 | `Database is not empty … restore refused` | [Installing](#installing) |
 | The server refuses to boot | [Booting](#booting) |
 | The server serves the install wizard instead of the app | [Booting](#booting) |
+| The wizard resumes on an install that is already finished | [Booting](#booting) |
 | The wizard is a `404`, or refuses your address | [Booting](#booting) |
 | `502` from the proxy | [Serving](#serving) |
 | nginx will not start | [Serving](#serving) |
@@ -101,6 +102,38 @@ wherever `DEDALO_PRIVATE_DIR` points. Confirm:
 sudo -u dedalo cat /opt/dedalo/private/.env | head -5
 journalctl -u dedalo-ts | grep 'INSTALL MODE'
 ```
+
+If the four keys **are** set and being read, this is not install mode — see the
+next entry.
+
+### The wizard resumes on an install that is already finished
+
+**Cause.** The install was never **sealed**. `install_finish` is what writes
+`install_status: 'sealed'`; until it runs the status stays `configured`, and a
+`configured` instance deliberately re-mounts the wizard on every reload rather
+than dropping to a login form (that is what lets a mid-install reload resume
+instead of stranding you on a login with no schema and no root user). Abandon the
+wizard one step before the end — close the tab, restart the server — and it
+resumes forever, even though the database is fully built.
+
+Recognise it by the state file **plus** a configured `.env`:
+
+```shell
+grep install_status ../private/ts_state.json     # "configured", not "sealed"
+```
+
+**Fix.** Reopen the wizard and let it run to **Finish**, which calls
+`install_finish`. It refuses to seal unless the root user exists with a password
+set, so it will tell you if a step really is outstanding. To seal from the shell
+instead — same guard, same result — run from the repo root:
+
+```shell
+bun -e "import {installFinish} from './src/core/install/finish.ts'; console.log(await installFinish())"
+```
+
+The seal applies immediately (the state file is read fresh on every request; no
+restart), but **reload the browser page**: the wizard is already mounted in the
+open page's JavaScript and only goes away when the client calls `start` again.
 
 ### `Config key 'DEDALO_PREFIX_TIPOS' is RETIRED`
 
