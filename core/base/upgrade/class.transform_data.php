@@ -88,7 +88,7 @@ class transform_data {
 			$tld				= $options->tld; // string like 'numisdata'
 			$original			= $options->original ?? []; // array of object
 			$new				= $options->new ?? []; // array of objects
-			$delete_old_data	= $options->delete_old_data; // bool true by default
+			$delete_old_data	= $options->delete_old_data ?? true; // bool true by default
 
 		// check Ontology
 			// TLD guard: the migration only applies to installations that carry this prefix.
@@ -121,29 +121,61 @@ class transform_data {
 			// code uses readable variable names rather than repeated array_find calls.
 
 			// original (source section)
-				$original_section_tipo = array_find($original, function($el){
+				$original_section = array_find($original, function($el){
 					return isset($el->role) && $el->role==='section';
-				})->tipo;
-				$original_component_portal_tipo = array_find($original, function($el){
+				});
+				$original_component_portal = array_find($original, function($el){
 					return isset($el->role) && $el->role==='source_portal';
-				})->tipo;
-				$original_component_portal_ds_tipo = array_find($original, function($el){
+				});
+				$original_component_portal_ds = array_find($original, function($el){
 					return isset($el->role) && $el->role==='ds';
-				})->tipo;
-				$original_component_portal_target_tipo = array_find($original, function($el){
+				});
+				$original_component_portal_target = array_find($original, function($el){
 					return isset($el->role) && $el->role==='target_portal';
-				})->tipo;
+				});
+
+				// null guard: every role must be present in the declarative config
+					$missing_roles = [];
+					$original_section               === null and $missing_roles[] = 'section (original)';
+					$original_component_portal      === null and $missing_roles[] = 'source_portal (original)';
+					$original_component_portal_ds   === null and $missing_roles[] = 'ds (original)';
+					$original_component_portal_target === null and $missing_roles[] = 'target_portal (original)';
+					if (!empty($missing_roles)) {
+						$response->msg = 'Missing required role(s) in original config: ' . implode(', ', $missing_roles);
+						debug_log(__METHOD__ . " $response->msg " . PHP_EOL . ' original: ' . to_string($original), logger::ERROR);
+						return $response;
+					}
+
+				$original_section_tipo				= $original_section->tipo;
+				$original_component_portal_tipo		= $original_component_portal->tipo;
+				$original_component_portal_ds_tipo	= $original_component_portal_ds->tipo;
+				$original_component_portal_target_tipo = $original_component_portal_target->tipo;
 
 			// new (target section)
-				$new_section_tipo = array_find($new, function($el){
+				$new_section = array_find($new, function($el){
 					return $el->model==='section';
-				})->tipo;
-				$new_component_portal_tipo = array_find($new, function($el){
+				});
+				$new_component_portal = array_find($new, function($el){
 					return isset($el->role) && $el->role==='target_portal';
-				})->tipo;
-				$new_component_portal_ds_tipo = array_find($new, function($el){
+				});
+				$new_component_portal_ds = array_find($new, function($el){
 					return isset($el->role) && $el->role==='ds';
-				})->tipo;
+				});
+
+				// null guard: every role must be present in the declarative config
+					$missing_roles = [];
+					$new_section             === null and $missing_roles[] = 'section (new)';
+					$new_component_portal    === null and $missing_roles[] = 'target_portal (new)';
+					$new_component_portal_ds === null and $missing_roles[] = 'ds (new)';
+					if (!empty($missing_roles)) {
+						$response->msg = 'Missing required role(s) in new config: ' . implode(', ', $missing_roles);
+						debug_log(__METHOD__ . " $response->msg " . PHP_EOL . ' new: ' . to_string($new), logger::ERROR);
+						return $response;
+					}
+
+				$new_section_tipo			= $new_section->tipo;
+				$new_component_portal_tipo	= $new_component_portal->tipo;
+				$new_component_portal_ds_tipo = $new_component_portal_ds->tipo;
 
 			$table = common::get_matrix_table_from_tipo($original_section_tipo);
 			if (empty($table)) {
@@ -157,6 +189,11 @@ class transform_data {
 			}
 
 			$created_records = 0;
+
+		// cache model lookups before the iteration loop to avoid repeated ontology queries
+			$original_component_portal_target_model = ontology_node::get_model_by_tipo($original_component_portal_target_tipo, true);
+			$new_component_portal_model				= ontology_node::get_model_by_tipo($new_component_portal_tipo, true);
+			$new_component_portal_ds_model			= ontology_node::get_model_by_tipo($new_component_portal_ds_tipo, true);
 
 		// section records
 			// Fetch all rows for the source section ordered by section_id so the
@@ -198,6 +235,16 @@ class transform_data {
 						return $el->from_component_tipo === $original_component_portal_ds_tipo;
 					});
 
+				// instantiate the target portal once per source record (not per locator)
+					$original_component_portal_target = component_common::get_instance(
+						$original_component_portal_target_model, // string model (cached)
+						$original_component_portal_target_tipo, // string tipo
+						$section_id, // string section_id
+						'list', // string mode
+						DEDALO_DATA_NOLAN, // string lang
+						$original_section_tipo // string section_tipo
+					);
+
 				// iterate original_locators
 					// For each old source locator, create one new intermediate section,
 					// link the original target into it, and copy the corresponding DS locators.
@@ -205,7 +252,6 @@ class transform_data {
 
 						// create new record on target section
 							$new_section = section::get_instance(
-								null, // string|null section_id
 								$new_section_tipo // string section_tipo
 							);
 							$new_section_id = $new_section->Save();
@@ -216,29 +262,18 @@ class transform_data {
 						// append new locator to new portal. sample: add created locator to portal 'Creators'
 							// Attach the newly created reference section_id to the source record's
 							// target portal, so the source now points at the intermediate section.
-							$original_component_portal_target = component_common::get_instance(
-								ontology_node::get_model_by_tipo($original_component_portal_target_tipo,true), // string model
-								$original_component_portal_target_tipo, // string tipo
-								$section_id, // string section_id
-								'list', // string mode
-								DEDALO_DATA_NOLAN, // string lang
-								$original_section_tipo // string section_tipo
-							);
-
 							$new_locator = new locator();
 								$new_locator->set_section_tipo($new_section_tipo);
 								$new_locator->set_section_id($new_section_id);
 								$new_locator->set_type(DEDALO_RELATION_TYPE_LINK);
 
 							$original_component_portal_target->add_locator_to_data($new_locator);
-							// save component
-							$original_component_portal_target->Save();
 
 						// target section : add elements. sample: add current emperor to portal 'People' in the new section
 							// Within the new intermediate section, store the original target entity
 							// (e.g. the person/entity record) in the new target portal.
 							$new_component_portal = component_common::get_instance(
-								ontology_node::get_model_by_tipo($new_component_portal_tipo,true), // string model
+								$new_component_portal_model, // string model (cached)
 								$new_component_portal_tipo, // string tipo
 								$new_section_id, // string section_id
 								'list', // string mode
@@ -269,7 +304,7 @@ class transform_data {
 
 								// new_component_portal_ds. sample: add role 'Series arrangement' to portal 'Role' in the new section
 								$new_component_portal_ds = component_common::get_instance(
-									ontology_node::get_model_by_tipo($new_component_portal_ds_tipo,true), // string model
+									$new_component_portal_ds_model, // string model (cached)
 									$new_component_portal_ds_tipo, // string tipo
 									$new_section_id, // string section_id
 									'list', // string mode
@@ -288,6 +323,9 @@ class transform_data {
 							}
 
 					}//end foreach ($original_locators as $current_locator)
+
+					// save the target portal once per source record (all locators accumulated above)
+						$original_component_portal_target->Save();
 
 				// delete_old_data (default is true). Remove previous portal locators and DS locators
 					// Cleanup runs per source record, after all new records are committed for it,
@@ -352,7 +390,8 @@ class transform_data {
 		";
 		$current_result = matrix_db_manager::exec_search($sql, [$section_tipo, $section_id]);
 
-		while($row = pg_fetch_assoc($current_result)) {
+		// a single row is expected (section_tipo + section_id is unique); use if instead of while
+		if ($row = pg_fetch_assoc($current_result)) {
 
 			$id		= $row['id'];
 			$datos	= json_handler::decode( $row['datos'] );
@@ -363,7 +402,7 @@ class transform_data {
 				// When $datos is null or false the second operand triggers a PHP warning for
 				// property access on null. The guard should be '||' (OR).
 				if (empty($datos) && empty($datos->relations)) {
-					continue;
+					return false;
 				}
 
 			$clean_relations = [];
@@ -384,7 +423,7 @@ class transform_data {
 					." Ignored delete action because nothing is changed. id: $id ($section_tipo-$section_id)"
 					, logger::ERROR
 				);
-				continue;
+				return false;
 			}
 
 			// overwrite relations
@@ -496,7 +535,7 @@ class transform_data {
 	public static function fix_dataframe_action(?object $datos) : ?object {
 
 		// empty relations cases
-			if (empty($datos->relations)) {
+			if (empty($datos) || empty($datos->relations)) {
 				return null;
 			}
 
@@ -520,7 +559,6 @@ class transform_data {
 						// Called once per v5 locator that must be promoted.
 						$create_new_rating_section = function() use ($target_section_tipo){
 							$section = section::get_instance(
-								null, // string|null section_id
 								$target_section_tipo // string section_tipo
 							);
 							$new_target_section_id = $section->Save();
@@ -626,7 +664,7 @@ class transform_data {
 	*
 	* @param int $matrix_id - Primary key of the matrix_time_machine row to update
 	* @param array $data - New dato payload; will be JSON-encoded before writing
-	* @return bool - true always (DB failure is only logged, not propagated)
+	* @return bool - true on success, false on DB failure
 	*/
 	public static function set_tm_data( int $matrix_id, array $data) : bool {
 
@@ -644,6 +682,7 @@ class transform_data {
 					.' strQuery: ' . $query
 					, logger::ERROR
 				);
+				return false;
 			}
 
 		return true;
@@ -703,7 +742,7 @@ class transform_data {
 
 		// filter section_tipo
 			// Fast-skip: this callback only applies to rsc170 rows; ignore everything else.
-			if ($datos->section_tipo!==$section_tipo) {
+			if (empty($datos) || $datos->section_tipo!==$section_tipo) {
 				return null;
 			}
 
@@ -911,13 +950,13 @@ class transform_data {
 
 				$contents = file_get_contents($path.$current_json_file);
 				if ($contents === false) {
-					debug_log(__METHOD__ . " ERROR: Failed to read JSON file: " . $path, logger::ERROR);
+					debug_log(__METHOD__ . " ERROR: Failed to read JSON file: " . $path.$current_json_file, logger::ERROR);
 					continue; // Skip to next file
 				}
 
 				$transform_map = json_decode($contents);
-				if (json_last_error() !== JSON_ERROR_NONE || !is_array($transform_map) && !is_object($transform_map)) {
-					debug_log(__METHOD__ . " ERROR: Failed to decode JSON from file: " . $path . ". Error: " . json_last_error_msg(), logger::ERROR);
+				if (json_last_error() !== JSON_ERROR_NONE || (!is_array($transform_map) && !is_object($transform_map))) {
+					debug_log(__METHOD__ . " ERROR: Failed to decode JSON from file: " . $path.$current_json_file . ". Error: " . json_last_error_msg(), logger::ERROR);
 					continue; // Skip to next file
 				}
 
@@ -926,7 +965,7 @@ class transform_data {
 					if (is_object($transform_object) && isset($transform_object->old)) {
 						$ar_transform_map[$transform_object->old] = $transform_object;
 					} else {
-						debug_log(__METHOD__ . " WARNING: Ignored Invalid transform object found in " . $path . ": " . json_encode($transform_object), logger::ERROR);
+						debug_log(__METHOD__ . " WARNING: Ignored Invalid transform object found in " . $path.$current_json_file . ": " . json_encode($transform_object), logger::ERROR);
 					}
 				}
 			}
@@ -1177,7 +1216,7 @@ class transform_data {
 						}
 					}//end foreach ($datos as $datos_key => $datos_value)
 
-					$section_data_encoded = json_encode($datos);
+					$section_data_encoded = json_handler::encode($datos);
 
 					$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
 					$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
@@ -1450,7 +1489,7 @@ class transform_data {
 							}
 						}//end foreach ($datos as $datos_key => $datos_value)
 
-						$section_data_encoded = json_encode($datos);
+						$section_data_encoded = json_handler::encode($datos);
 
 						$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
 						$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
@@ -1549,9 +1588,13 @@ class transform_data {
 	*/
 	public static function changes_in_locators(array $ar_tables, array $json_files) : bool {
 
+		// save previous state of static flag to restore it on any exit path
+			$prev_enable_log = logger_backend_activity::$enable_log;
+
 		// disable activity log
 			logger_backend_activity::$enable_log = false;
 
+		try {
 
 		debug_log(__METHOD__ . PHP_EOL
 			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
@@ -1577,8 +1620,17 @@ class transform_data {
 			//	}
 			$ar_transform_map = [];
 			foreach ($json_files as $current_json_file) {
-				$contents			= file_get_contents($path.$current_json_file);
+				$file_path		= $path.$current_json_file;
+				$contents		= file_get_contents($file_path);
+				if ($contents === false) {
+					debug_log(__METHOD__ . " ERROR: Failed to read JSON file: " . $file_path, logger::ERROR);
+					continue;
+				}
 				$transform_map		= json_decode($contents);
+				if (json_last_error() !== JSON_ERROR_NONE || !is_array($transform_map)) {
+					debug_log(__METHOD__ . " ERROR: Failed to decode JSON from file: " . $file_path . ". Error: " . json_last_error_msg(), logger::ERROR);
+					continue;
+				}
 				foreach ($transform_map as $transform_object) {
 					$ar_transform_map[$transform_object->old] = $transform_object;
 				}
@@ -1913,6 +1965,11 @@ class transform_data {
 
 
 		return true;
+
+		} finally {
+			// restore static flag regardless of success or failure
+			logger_backend_activity::$enable_log = $prev_enable_log;
+		}
 	}//end changes_in_locators
 
 
@@ -2160,6 +2217,11 @@ class transform_data {
 			$current_locator = str_replace('\'', '"', $pseudo_locator);
 			$current_locator = json_decode($current_locator);
 
+			// track whether any property of this locator was rewritten so we only
+			// run str_replace once per pseudo_locator (mutating in-loop would make
+			// subsequent property updates miss the already-replaced text).
+			$changed = false;
+
 			foreach ($current_locator as $loc_key => $loc_value) {
 
 				if (!is_string($loc_value) && !is_int($loc_value)) {
@@ -2180,13 +2242,17 @@ class transform_data {
 					$current_locator->{$loc_key}	= $ar_transform_map[$loc_value]->new;
 					$new_section_id					= (int)$ar_transform_map[$loc_value]->base_counter + (int)$current_locator->section_id;
 					$current_locator->section_id	= (string)$new_section_id;
-
-					//to replace, stringify the locator and change the double quotes to single
-					$new_pseudo_locator	= json_encode($current_locator);
-					$new_pseudo_locator	= str_replace( '"', '\'', $new_pseudo_locator);
-					// replace all occurrences in the string.
-					$string	= str_replace( $pseudo_locator, $new_pseudo_locator, $string);
+					$changed = true;
 				}
+			}
+
+			// apply the str_replace once, after all property mutations are done
+			if ($changed === true) {
+				//to replace, stringify the locator and change the double quotes to single
+				$new_pseudo_locator	= json_encode($current_locator);
+				$new_pseudo_locator	= str_replace( '"', '\'', $new_pseudo_locator);
+				// replace all occurrences in the string.
+				$string	= str_replace( $pseudo_locator, $new_pseudo_locator, $string);
 			}
 		}
 
@@ -2412,8 +2478,15 @@ class transform_data {
 	*/
 	public static function portalize_data( array $json_files) : bool {
 
-		// disable activity log
-			logger_backend_activity::$enable_log = false;
+		// save previous state of static flags to restore them on any exit path
+			$prev_save_tm		= tm_record::$save_tm;
+			$prev_enable_log	= logger_backend_activity::$enable_log;
+
+		// disable activity log and time machine for the duration of the migration
+			logger_backend_activity::$enable_log	= false;
+			tm_record::$save_tm						= false;
+
+		try {
 
 		debug_log(__METHOD__ . PHP_EOL
 			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
@@ -2438,8 +2511,17 @@ class transform_data {
 			//	}
 			$ar_transform_map = [];
 			foreach ($json_files as $current_json_file) {
-				$contents			= file_get_contents($path.$current_json_file);
+				$file_path		= $path.$current_json_file;
+				$contents		= file_get_contents($file_path);
+				if ($contents === false) {
+					debug_log(__METHOD__ . " ERROR: Failed to read JSON file: " . $file_path, logger::ERROR);
+					continue;
+				}
 				$transform_map		= json_decode($contents);
+				if (json_last_error() !== JSON_ERROR_NONE || !is_array($transform_map)) {
+					debug_log(__METHOD__ . " ERROR: Failed to decode JSON from file: " . $file_path . ". Error: " . json_last_error_msg(), logger::ERROR);
+					continue;
+				}
 				foreach ($transform_map as $transform_object) {
 					$ar_transform_map[] = $transform_object;
 				}
@@ -2524,7 +2606,6 @@ class transform_data {
 				// Create new target section
 				// if any component has data, create new target section and set all moved component data into.
 					$new_section = section::get_instance(
-						null, // string|null section_id
 						$target_section // string section_tipo
 					);
 
@@ -2601,8 +2682,7 @@ class transform_data {
 
 				// remove the old component data and
 				// change time machine data
-					// disable time machine
-					tm_record::$save_tm = false;
+					// time machine is disabled for the whole migration (set once before the loop)
 
 					foreach ($components as $component_item) {
 
@@ -2665,18 +2745,17 @@ class transform_data {
 								}
 							}
 					}
-
-					// active time machine
-					tm_record::$save_tm = true;
 			}
 		}//end foreach ($ar_transform_map as $item)
 
 
-		// re-enable activity log
-			logger_backend_activity::$enable_log = true;
-
-
 		return true;
+
+		} finally {
+			// restore static flags regardless of success or failure
+			tm_record::$save_tm				= $prev_save_tm;
+			logger_backend_activity::$enable_log	= $prev_enable_log;
+		}
 	}//end portalize_data
 
 
@@ -2768,10 +2847,13 @@ class transform_data {
 			$source_table	= $item->source_table;
 			$target_table	= $item->target_table;
 
-			$conn = DBi::_getConnection();
+			// validate table names to prevent SQL injection via interpolated identifiers
+				if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $source_table) || !preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $target_table)) {
+					debug_log(__METHOD__ . " Invalid table name in transform object. source_table: '$source_table', target_table: '$target_table'", logger::ERROR);
+					return false;
+				}
 
-			// safe section_tipo
-			$section_tipo = pg_escape_string($conn, $section_tipo);
+			$conn = DBi::_getConnection();
 
 			// Start transaction
 			if (!pg_query($conn, "BEGIN")) {
@@ -2781,16 +2863,17 @@ class transform_data {
 
 			// Move rows between tables
 				// select only section_id, section_tipo and datos, id columns could exist in the target_table and the constrain would fail.
+				// section_tipo is passed as a parameter to prevent SQL injection.
 				$str_query = PHP_EOL.sanitize_query("
 					INSERT INTO $target_table(\"section_id\", \"section_tipo\", \"datos\")
 					(
 						SELECT \"section_id\", \"section_tipo\", \"datos\"
 						FROM $source_table
-						WHERE \"section_tipo\" = '$section_tipo'
+						WHERE \"section_tipo\" = \$1
 					);
 				");
 
-				$result = pg_query($conn, $str_query);
+				$result = pg_query_params($conn, $str_query, array($section_tipo));
 				if($result===false) {
 					pg_query($conn, "ROLLBACK"); // Rollback on error
 					// error case
@@ -2806,10 +2889,10 @@ class transform_data {
 			// Delete the origin data
 				$delete_str_query = PHP_EOL.sanitize_query("
 					DELETE FROM $source_table
-					WHERE \"section_tipo\" = '$section_tipo';
+					WHERE \"section_tipo\" = \$1;
 				");
 
-				$result = pg_query($conn, $delete_str_query);
+				$result = pg_query_params($conn, $delete_str_query, array($section_tipo));
 				if($result===false) {
 					 pg_query($conn, "ROLLBACK"); // Rollback on error
 					// error case
@@ -2824,6 +2907,7 @@ class transform_data {
 
 			// Commit transaction if both successful
 			if (!pg_query($conn, "COMMIT")) {
+				pg_query($conn, "ROLLBACK"); // Rollback on commit failure
 				debug_log(__METHOD__ . " Commit failed: ".pg_last_error($conn), logger::ERROR);
 				return false;
 			}
@@ -2924,13 +3008,17 @@ class transform_data {
 	* Note: the return type is absent (untyped); the method returns void implicitly.
 	*
 	* @param array $json_files - File names relative to move_lang/ directory
-	* @return void
+	* @return bool - true on success; false if any pg_query_params() call fails
 	*/
-	public static function change_data_lang( array $json_files ) {
+	public static function change_data_lang( array $json_files ) : bool {
 
+		// save previous state of static flag to restore it on any exit path
+			$prev_enable_log = logger_backend_activity::$enable_log;
 
 		// disable activity log
 			logger_backend_activity::$enable_log = false;
+
+		try {
 
 
 		debug_log(__METHOD__ . PHP_EOL
@@ -3060,7 +3148,7 @@ class transform_data {
 						}
 					}//end foreach ($datos as $datos_key => $datos_value)
 
-					$section_data_encoded = json_encode($datos);
+					$section_data_encoded = json_handler::encode($datos);
 
 					$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
 					$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
@@ -3128,6 +3216,12 @@ class transform_data {
 		// re-enable activity log
 			logger_backend_activity::$enable_log = true;
 
+		return true;
+
+		} finally {
+			// restore static flag regardless of success or failure
+			logger_backend_activity::$enable_log = $prev_enable_log;
+		}
 	}//end change_data_lang
 
 
@@ -3162,6 +3256,12 @@ class transform_data {
 		$lang		= DEDALO_DATA_LANG_DEFAULT;
 		$nolan		= DEDALO_DATA_NOLAN;
 		$all_langs	= common::get_ar_all_langs();
+
+		// guard: if the literal_value has no dato property, copy it unchanged
+		if (!isset($literal_value->dato) || !is_object($literal_value->dato)) {
+			$new_components->{$transform_object->tipo} = $literal_value;
+			return;
+		}
 
 		// check if the default lang exist in data
 		if( !empty($literal_value->dato->$lang) ){
