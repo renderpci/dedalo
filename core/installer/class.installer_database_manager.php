@@ -892,7 +892,10 @@ final class installer_database_manager {
 	* Counter tables affected:
 	* - `matrix_counter`       — section-ID counters for project data
 	* - `matrix_counter_dd`    — section-ID counters for Dédalo ontology data
-	* Both are TRUNCATED and their auto-increment sequences are reset to 1.
+	* Both are TRUNCATED. Their v6-era auto-increment sequences are reset to 1 only
+	* if they still exist: the v7 schema keys both tables by "tipo" (PRIMARY KEY) and
+	* has no "id" serial column, so on a database that has run the v6→v7 update there
+	* is no sequence to reset (hence the ALTER SEQUENCE IF EXISTS guards below).
 	* The counters are regenerated automatically the next time a new section is
 	* saved, so re-seeding from 1 is always safe on a freshly cloned install DB.
 	*
@@ -922,11 +925,19 @@ final class installer_database_manager {
 			$exec				= true;
 
 		// truncate all. They will be re-created from higher value when needed
+			// (!) The sequence resets MUST be guarded with IF EXISTS (same pattern as clean_tables).
+			// The v6→v7 update rebuilds matrix_counter / matrix_counter_dd keyed by "tipo"
+			// (PRIMARY KEY) with NO "id" serial column, so the v6-era owned sequences
+			// matrix_counter_id_seq / matrix_counter_dd_id_seq are dropped along with the old
+			// tables. An unguarded ALTER SEQUENCE then aborts the whole batch on any migrated v7
+			// database ('relation "matrix_counter_id_seq" does not exist') and the TRUNCATEs never
+			// commit. TRUNCATE alone is sufficient for the v7 schema; the guarded resets are kept
+			// only so a pre-v7 install DB that still has the serial columns is also handled.
 			$sql = '
 				TRUNCATE "matrix_counter";
-				ALTER SEQUENCE "matrix_counter_id_seq" RESTART WITH 1;
 				TRUNCATE "matrix_counter_dd";
-				ALTER SEQUENCE "matrix_counter_dd_id_seq" RESTART WITH 1;
+				ALTER SEQUENCE IF EXISTS "matrix_counter_id_seq" RESTART WITH 1;
+				ALTER SEQUENCE IF EXISTS "matrix_counter_dd_id_seq" RESTART WITH 1;
 			';
 			debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
 			if ($exec) {
