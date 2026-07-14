@@ -7,10 +7,11 @@
  */
 
 import { readEnv } from '../../config/env.ts';
+import { readString } from '../../config/readers.ts';
 
 /** True only when DEDALO_RAG_ENABLED is 'true' or '1'. */
 export function isRagEnabled(): boolean {
-	const value = String(readEnv('DEDALO_RAG_ENABLED', '') ?? '')
+	const value = String(readString('DEDALO_RAG_ENABLED') ?? '')
 		.trim()
 		.toLowerCase();
 	return value === 'true' || value === '1';

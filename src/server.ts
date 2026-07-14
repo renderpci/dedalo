@@ -46,6 +46,7 @@ import {
 // resolves a component model. Keep this explicit even though other imports
 // reach it transitively — the seam must not depend on incidental import paths.
 import './core/components/registry.ts';
+import { readString } from './config/readers.ts';
 import { rqoSchema } from './core/concepts/rqo.ts';
 import { SESSION_COOKIE, getSession } from './core/security/session_store.ts';
 import { serveToolCommonRequest, serveToolsRequest } from './core/tools/serving.ts';
@@ -159,7 +160,7 @@ export function createRequestContext(options: { devListener?: boolean } = {}): R
  * nginx/Apache in front). The reverse proxy must append (not replace-with-client)
  * XFF for this to hold — the production default.
  */
-const TRUSTED_PROXY_HOPS = Math.max(1, Number(readEnv('TRUSTED_PROXY_HOPS', '1')) || 1);
+const TRUSTED_PROXY_HOPS = Math.max(1, Number(readString('TRUSTED_PROXY_HOPS')) || 1);
 
 /**
  * The client IP for throttle/audit — resolved from the TRUSTED hop of
@@ -194,7 +195,7 @@ export function parseContentLength(header: string | null): number | undefined {
  * token. Set SESSION_COOKIE_SECURE=false ONLY for a plaintext-localhost dev
  * listener (the browser drops a Secure cookie over http://).
  */
-const SESSION_COOKIE_SECURE = readEnv('SESSION_COOKIE_SECURE', 'true') !== 'false';
+const SESSION_COOKIE_SECURE = readString('SESSION_COOKIE_SECURE') !== 'false';
 
 /**
  * Explicit per-request body cap (M6) — replaces reliance on Bun's silent default.
@@ -206,7 +207,7 @@ const SESSION_COOKIE_SECURE = readEnv('SESSION_COOKIE_SECURE', 'true') !== 'fals
  */
 const MAX_REQUEST_BODY_BYTES = Math.max(
 	1,
-	Number(readEnv('SERVER_MAX_BODY_BYTES', String(256 * 1024 * 1024))) || 256 * 1024 * 1024,
+	Number(readString('SERVER_MAX_BODY_BYTES')) || 256 * 1024 * 1024,
 );
 
 /** Assemble the session Set-Cookie header with consistent attributes. */
@@ -1039,7 +1040,7 @@ export async function startServer() {
 		// cadences (deployments that run the scheduler elsewhere, and the ops smoke
 		// tests — an ephemeral instance must never claim the live queue's jobs);
 		// the delete-propagation executor registers either way.
-		const schedulerEnabled = readEnv('DEDALO_DIFFUSION_SCHEDULER_ENABLED', 'true') !== 'false';
+		const schedulerEnabled = readString('DEDALO_DIFFUSION_SCHEDULER_ENABLED') !== 'false';
 
 		// Native in-process SQL delete propagation (DIFFUSION_SPEC §4.2):
 		// registration seam — core never imports src/diffusion statically. AWAITED

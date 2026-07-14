@@ -112,7 +112,7 @@ describe('fail-closed security suite (Phase 5 gate)', () => {
 		// servers (S1-19). It follows DEDALO_DEV_MODE alone — dev-vs-prod
 		// posture only, no debug data. On a production install it is false.
 		expect(result.plain_vars.DEVELOPMENT_SERVER).toBe(
-			readEnv('DEDALO_DEV_MODE', 'false') === 'true',
+			(readEnv('DEDALO_DEV_MODE') ?? 'false') === 'true',
 		);
 	});
 

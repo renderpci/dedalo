@@ -16,6 +16,8 @@
 		"css:build": "bun run scripts/build_css.ts",
 		"css:watch": "bun run scripts/build_css.ts --watch",
 		"css:check": "bun run scripts/build_css.ts --check",
+		"config:gen": "bun run scripts/gen_config_docs.ts",
+		"config:check": "bun run scripts/gen_config_docs.ts --check",
 		"dedalo:install": "bun run scripts/install.ts",
 		"dedalo:migrate-config": "bun run scripts/migrate_v6_config.ts",
 		"dedalo:migrate-passwords": "bun run scripts/migrate_v6_passwords.ts",

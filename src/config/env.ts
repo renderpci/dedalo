@@ -115,9 +115,25 @@ export const RETIRED_ENV_KEYS: Readonly<Record<string, string>> = Object.freeze(
 /**
  * Read one env value with the documented precedence (process env > private .env),
  * then the same chain under the key's PHP-catalog alias name, if it has one.
- * Returns `fallback` (default: undefined) when the key is set nowhere.
+ * Returns undefined when the key is set nowhere.
+ *
+ * THERE IS NO `fallback` PARAMETER, AND THAT IS THE POINT.
+ *
+ * It used to take one, and ~160 call sites passed a literal — so a key's default lived
+ * wherever its reader happened to be called. `DEDALO_HOST` ended up with two different
+ * defaults depending on which file you landed in, `APPLICATION_LANGS` was hardcoded to
+ * `lg-spa,lg-cat,lg-eng` in three of them, and a generated census could only ever document
+ * whichever one it happened to read. Defaults now live in `src/config/catalog/` — one per
+ * key, next to the prose that describes it — and are resolved by `readers.ts`
+ * (`readString`, `readNumber`, `readBool`, `readList`, …), which take a key and nothing
+ * else.
+ *
+ * Deleting this parameter is what turns that rule from a convention into a GATE: passing a
+ * default here is now a compile error (TS2554), not a code-review opinion. Use the typed
+ * readers. Use bare `readEnv(key)` only where ABSENCE is itself meaningful and the consumer
+ * derives its own behavior from it.
  */
-export function readEnv(key: string, fallback?: string): string | undefined {
+export function readEnv(key: string): string | undefined {
 	const direct = process.env[key] ?? privateFileValues[key];
 	if (direct !== undefined) return direct;
 	const alias = PHP_KEY_ALIASES[key];
@@ -125,7 +141,7 @@ export function readEnv(key: string, fallback?: string): string | undefined {
 		const aliased = process.env[alias] ?? privateFileValues[alias];
 		if (aliased !== undefined) return aliased;
 	}
-	return fallback;
+	return undefined;
 }
 
 /**

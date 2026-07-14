@@ -35,7 +35,7 @@ const WITH_ASSETS = args.get('no-assets') !== 'true';
 const HEAVY_SECTION = args.get('heavy') ?? 'numisdata6';
 const LANG = args.get('lang') ?? 'lg-spa';
 
-const TS_PORT = readEnv('SERVER_TCP_PORT', '3500') as string;
+const TS_PORT = (readEnv('SERVER_TCP_PORT') ?? '3500') as string;
 const TS_ORIGIN = `http://localhost:${TS_PORT}`;
 const TS_API_URL = `${TS_ORIGIN}/dedalo/core/api/v1/json/`;
 

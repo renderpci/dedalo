@@ -29,6 +29,7 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import { privateDir, readEnv } from '../../config/env.ts';
+import { readString } from '../../config/readers.ts';
 
 /** A job's lifecycle status. */
 export type JobStatus = 'queued' | 'running' | 'done' | 'error' | 'interrupted' | 'stopped';
@@ -453,5 +454,5 @@ export class MediaJobManager {
 export const mediaJobs = new MediaJobManager(
 	// readEnv, NOT process.env: keeps ../private/.env — the documented config
 	// home — working for this key (audit S2-21; the runtime-reproduced trap).
-	Number(readEnv('DEDALO_MEDIA_JOB_CONCURRENCY', '3')) || 3,
+	Number(readString('DEDALO_MEDIA_JOB_CONCURRENCY')) || 3,
 );

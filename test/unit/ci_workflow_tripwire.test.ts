@@ -35,6 +35,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
 
 const repoRoot = join(import.meta.dir, '..', '..');
 const read = (rel: string) => readFileSync(join(repoRoot, rel), 'utf8');
@@ -134,18 +135,19 @@ describe('CI workflow tripwire', () => {
 	 * hermetic script that reads a file it swears it does not read is not hermetic —
 	 * and only CI could tell us. Now the stub list cannot drift from the catalog.
 	 */
-	test('scripts/ci/hermetic.sh stubs every required-no-default key in src/config/config.ts', () => {
-		const configSrc = read('src/config/config.ts');
+	test('scripts/ci/hermetic.sh stubs every required-no-default config key', () => {
+		// Read the required set from the CATALOG, not by regex-scraping config.ts. That scrape
+		// broke the moment defaults moved into src/config/catalog/ — and a gate that silently
+		// parses zero keys would have passed vacuously forever. `required: true` is now data,
+		// so this cannot go stale again.
 		const required = new Set(
-			[
-				...configSrc.matchAll(
-					/(?:requireEnv|requireOrInstallSentinel|requireJsonArrayOrInstallSentinel|requireJsonMapOrInstallSentinel)\(\s*'([A-Z0-9_]+)'/g,
-				),
-			].map((m) => m[1] as string),
+			Object.entries(CONFIG_CATALOG)
+				.filter(([, entry]) => entry.required === true)
+				.map(([key]) => key),
 		);
 		expect(
 			required.size,
-			'no required config keys parsed — the regex or config.ts moved',
+			'no required config keys in the catalog — src/config/catalog/ moved or lost its `required` flags',
 		).toBeGreaterThan(0);
 
 		const hermetic = read('scripts/ci/hermetic.sh');

@@ -27,21 +27,22 @@ import { Database } from 'bun:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { privateDir, readEnv } from '../../config/env.ts';
+import { readString } from '../../config/readers.ts';
 
 /** Session cookie name — TS-native, distinct from any PHP cookie. */
 export const SESSION_COOKIE = 'dedalo_ts_session';
 
-const SESSION_TTL_SECONDS = Number(readEnv('SESSION_TTL_SECONDS', '43200')); // 12h
+const SESSION_TTL_SECONDS = Number(readString('SESSION_TTL_SECONDS')); // 12h
 /**
  * Absolute session lifetime (L3): a session is rejected once it is older than
  * this since CREATION, regardless of activity — an idle-only TTL let a session
  * used at least once per window live forever, so a stolen token never aged out.
  * Default 30 days; set 0 to disable the absolute cap (idle-only).
  */
-const SESSION_ABSOLUTE_TTL_SECONDS = Number(readEnv('SESSION_ABSOLUTE_TTL_SECONDS', '2592000'));
-export const LOGIN_MAX_ATTEMPTS = Number(readEnv('LOGIN_MAX_ATTEMPTS', '10'));
-export const LOGIN_ATTEMPT_WINDOW_SECONDS = Number(readEnv('LOGIN_ATTEMPT_WINDOW', '900'));
-export const LOGIN_LOCKOUT_SECONDS = Number(readEnv('LOGIN_LOCKOUT_SECONDS', '900'));
+const SESSION_ABSOLUTE_TTL_SECONDS = Number(readString('SESSION_ABSOLUTE_TTL_SECONDS'));
+export const LOGIN_MAX_ATTEMPTS = Number(readString('LOGIN_MAX_ATTEMPTS'));
+export const LOGIN_ATTEMPT_WINDOW_SECONDS = Number(readString('LOGIN_ATTEMPT_WINDOW'));
+export const LOGIN_LOCKOUT_SECONDS = Number(readString('LOGIN_LOCKOUT_SECONDS'));
 /**
  * Account-global lockout threshold (per-username, IP-independent). A DEFENSE against
  * IP-rotation brute force that the per-IP bucket alone cannot stop. Deliberately
@@ -49,7 +50,7 @@ export const LOGIN_LOCKOUT_SECONDS = Number(readEnv('LOGIN_LOCKOUT_SECONDS', '90
  * account with a burst of bad passwords (a self-inflicted DoS). Set it very high
  * to effectively disable the account dimension.
  */
-export const LOGIN_ACCOUNT_MAX_ATTEMPTS = Number(readEnv('LOGIN_ACCOUNT_MAX_ATTEMPTS', '50'));
+export const LOGIN_ACCOUNT_MAX_ATTEMPTS = Number(readString('LOGIN_ACCOUNT_MAX_ATTEMPTS'));
 
 /** One authenticated session as the dispatch layer consumes it. */
 export interface Session {

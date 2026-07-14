@@ -21,6 +21,7 @@
 
 import crypto from 'node:crypto';
 import { readEnv } from '../../config/env.ts';
+import { readString } from '../../config/readers.ts';
 
 /** The (class:action) pairs that make up the pre-auth intake surface. */
 export const ERROR_REPORT_ACTION_KEYS: ReadonlySet<string> = new Set([
@@ -29,7 +30,7 @@ export const ERROR_REPORT_ACTION_KEYS: ReadonlySet<string> = new Set([
 
 /** True when THIS server exposes the intake (only the designated master). */
 export function receiverEnabled(): boolean {
-	return readEnv('DEDALO_ERROR_REPORT_RECEIVER', 'false') === 'true';
+	return readString('DEDALO_ERROR_REPORT_RECEIVER') === 'true';
 }
 
 /**

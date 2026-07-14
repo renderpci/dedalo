@@ -35,6 +35,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { config } from '../../config/config.ts';
 import { envSnapshot, readEnv } from '../../config/env.ts';
+import { readString } from '../../config/readers.ts';
 import { type Locator, compareLocators } from '../concepts/locator.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
 import { MATRIX_COPY_COLUMNS } from '../db/matrix_write.ts';
@@ -297,7 +298,7 @@ export async function updateOntologyInfo(userId: number): Promise<boolean> {
 		entity_label: config.identity.entityLabel,
 		// PHP DEDALO_HOST (public hostname). Call-time shadow key, PHP key name
 		// (same posture as the sessions/diffusion readers — no config.* field yet).
-		host: readEnv('DEDALO_HOST', '') as string,
+		host: readString('DEDALO_HOST'),
 		active_ontologies: activeOntologies,
 	};
 

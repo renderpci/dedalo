@@ -17,6 +17,7 @@
 
 import { config } from '../../config/config.ts';
 import { readEnv } from '../../config/env.ts';
+import { readString } from '../../config/readers.ts';
 import { sql } from '../db/postgres.ts';
 import { resolveMediaAccessMode } from '../media/protection.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
@@ -34,7 +35,7 @@ import { getServerState } from './server_state.ts';
  * set DEDALO_DEV_MODE=true on a development deployment. Still gated by isLogged so
  * anonymous callers never learn the posture.
  */
-const DEV_MODE = readEnv('DEDALO_DEV_MODE', 'false') === 'true';
+const DEV_MODE = readString('DEDALO_DEV_MODE') === 'true';
 
 /** Structure/fallback lang for label terms (PHP DEDALO_STRUCTURE_LANG). */
 const STRUCTURE_LANG = config.lang.structureLang;
@@ -209,7 +210,7 @@ export async function buildPageGlobals(
 		dedalo_data_lang: currentDataLang(),
 		dedalo_data_lang_selector: config.lang.dataLangSelector,
 		dedalo_data_lang_sync: config.menu.dataLangSync,
-		dedalo_data_nolan: readEnv('DATA_NOLAN', 'lg-nolan'),
+		dedalo_data_nolan: readString('DATA_NOLAN'),
 		dedalo_application_langs: APPLICATION_LANGS,
 		dedalo_projects_default_langs: projectsDefaultLangs,
 		dedalo_image_quality_default: config.media.image.defaultQuality,

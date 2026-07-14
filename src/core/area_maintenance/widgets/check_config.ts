@@ -61,15 +61,36 @@ async function computeCheckConfig(): Promise<{
 	const entityKey = readEnv('ENTITY') ?? '';
 	const entityLabel = readEnv('DEDALO_ENTITY_LABEL') ?? entityKey;
 
-	// Credential placeholder checks — sample.env ships the exact placeholders PHP
-	// rejects ('dedalo_mydatabase' / 'myusername' / 'my_entity_name'). GAP-3: an
-	// EMPTY password is legitimate under peer/trust auth, so only the literal
-	// sample 'mypassword' fails here; real auth is decided by the connection probe.
-	const configDbNameCheck = dbName !== '' && dbName !== 'dedalo_mydatabase';
-	const configUserNameCheck = dbUser !== '' && dbUser !== 'myusername';
-	const configPwCheck = dbPassword !== 'mypassword';
-	const configInformationCheck = entityLabel !== '' && entityLabel !== 'Dédalo install version';
-	const configInfoKeyCheck = entityKey !== '' && entityKey !== 'my_entity_name';
+	// Credential placeholder checks. "Is this install still on the sample values?" is only
+	// an honest question if the shipped template literally CARRIES those values — so both
+	// sides read ONE list, the catalog's `placeholder` fields, and the template that the
+	// installer drops at ../private/sample.env is rendered from the same source. Before
+	// this, these were five literals hardcoded here, next to a comment claiming a
+	// sample.env that did not exist shipped them: an unfalsifiable claim.
+	//
+	// GAP-3 survives as `emptyIsValid` on DB_PASSWORD: an EMPTY password is legitimate
+	// under peer/trust auth, so only the literal sample value fails; real auth is decided
+	// by the connection probe below.
+	const { CATALOG_PLACEHOLDERS } = await import('../../../config/catalog/index.ts');
+	const live: Record<string, string> = {
+		DB_NAME: dbName,
+		DB_USER: dbUser,
+		DB_PASSWORD: dbPassword,
+		ENTITY: entityKey,
+		DEDALO_ENTITY_LABEL: entityLabel,
+	};
+	const stillOnSample = (key: string): boolean => {
+		const rule = CATALOG_PLACEHOLDERS.find((entry) => entry.key === key);
+		if (rule === undefined) return false;
+		const value = live[key] ?? '';
+		if (value === rule.value) return true;
+		return value === '' && !rule.emptyIsValid;
+	};
+	const configDbNameCheck = !stillOnSample('DB_NAME');
+	const configUserNameCheck = !stillOnSample('DB_USER');
+	const configPwCheck = !stillOnSample('DB_PASSWORD');
+	const configInformationCheck = !stillOnSample('DEDALO_ENTITY_LABEL');
+	const configInfoKeyCheck = !stillOnSample('ENTITY');
 	const configCheck =
 		configDbNameCheck &&
 		configUserNameCheck &&

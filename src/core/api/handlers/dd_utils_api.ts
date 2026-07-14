@@ -4,6 +4,8 @@
  */
 
 import { config } from '../../../config/config.ts';
+import { readString } from '../../../config/readers.ts';
+import { publicOrigin } from '../../resolve/public_origin.ts';
 import { login } from '../../security/auth.ts';
 import { getPermissions } from '../../security/permissions.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
@@ -432,10 +434,7 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		if (ioPath === false) {
 			return fail('Error. Invalid version number. This version does not contain ontology files. ');
 		}
-		const { readEnv } = await import('../../../config/env.ts');
-		const protocol = (readEnv('DEDALO_PROTOCOL', 'http://') as string) ?? 'http://';
-		const host = (readEnv('DEDALO_HOST', 'localhost') as string) ?? 'localhost';
-		const publicBaseUrl = `${protocol}${host}/dedalo/install/import/ontology/${major}.${minor}`;
+		const publicBaseUrl = `${publicOrigin()}/dedalo/install/import/ontology/${major}.${minor}`;
 		return { status: 200, body: buildOntologyUpdateInfo(ioPath, publicBaseUrl) };
 	},
 	get_code_update_info: async (rqo) => {
@@ -463,19 +462,18 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			return fail('Error. Invalid code');
 		}
 		const { buildCodeUpdateInfo } = await import('../../update/code_manifest.ts');
-		const { readEnv } = await import('../../../config/env.ts');
-		const protocol = (readEnv('DEDALO_PROTOCOL', 'http://') as string) ?? 'http://';
-		const host = (readEnv('DEDALO_HOST', 'localhost') as string) ?? 'localhost';
 		const info = buildCodeUpdateInfo({
 			clientVersion,
 			serverVersion: DEDALO_VERSION_TRIPLE,
 			codeFilesDir: config.update.codeFilesDir,
-			publicBaseUrl: `${protocol}${host}/dedalo/install/code`,
+			publicBaseUrl: `${publicOrigin()}/dedalo/install/code`,
 			info: {
 				date: new Date().toISOString(),
 				entity_id: config.identity.entityId,
 				entity: config.entity,
-				host: (readEnv('DEDALO_HOST', '') as string) ?? '',
+				// This REPORTS our hostname rather than building a URL, so an unconfigured
+				// install honestly says "unknown" ('') instead of claiming to be localhost.
+				host: readString('DEDALO_HOST'),
 			},
 		});
 		return { status: 200, body: { result: info, msg: 'OK. request done', errors: [] } };

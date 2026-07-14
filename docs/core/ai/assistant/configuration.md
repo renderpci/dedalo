@@ -5,7 +5,7 @@
 Every assistant setting lives in `../private/.env` and is read once at boot. All settings are **fail-closed**: unset means the safest behaviour (disabled, read-only, no external egress). This page is the complete reference — one row per key, plus the request limits that are fixed in code.
 
 !!! info "How config is read"
-    Settings are read through the typed config layer (`readEnv`), never `process.env` directly (a [tripwire](../../../development/index.md) enforces this). `../private/.env` is **append-only, documented keys only**. The full census with inline comments is `../private/sample.env` §12; this page is the narrative version.
+    Settings are read through the typed config layer (`readEnv`), never `process.env` directly (a [tripwire](../../../development/index.md) enforces this). `../private/.env` is **append-only, documented keys only**. The full census with inline comments is `install/sample.env` (the installer drops a copy at `../private/sample.env`); see the [settings reference](../../../config/config.md#ai). This page is the narrative version.
 
 ---
 

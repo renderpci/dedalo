@@ -21,6 +21,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { readEnv } from '../../config/env.ts';
+import { readString } from '../../config/readers.ts';
 import type {
 	AgentAssistantTurn,
 	AgentLlmProvider,
@@ -59,7 +60,7 @@ export class AnthropicProvider implements AgentLlmProvider {
 			);
 		}
 		this.client = new Anthropic({ apiKey });
-		this.model = options.model ?? (readEnv('AGENT_MODEL', DEFAULT_MODEL) as string);
+		this.model = options.model ?? readString('AGENT_MODEL');
 		this.maxTokens = options.maxTokens ?? defaultMaxTokens();
 	}
 

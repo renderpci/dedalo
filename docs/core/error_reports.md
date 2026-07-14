@@ -27,7 +27,7 @@ report is relayed by your own server to the configured master installation.
 ## Configuration
 
 All keys are `DEDALO_ERROR_REPORT_*` in `../private/.env` (read once at boot —
-restart to apply). See the census in `../private/sample.env` (§14).
+restart to apply). See the [settings reference](../config/config.md#error_report).
 
 ### Sender side (any installation that reports)
 

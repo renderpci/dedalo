@@ -16,6 +16,7 @@
  */
 
 import { readEnv } from '../../config/env.ts';
+import { readString } from '../../config/readers.ts';
 import {
 	getModelByTipo,
 	getNode,
@@ -73,7 +74,7 @@ export interface OntologyPort {
 /** Models whose components are candidates for text embedding
  * (PHP DEDALO_RAG_EMBEDDABLE_MODELS; comma list or JSON array). */
 export const DEFAULT_EMBEDDABLE_MODELS: readonly string[] = (() => {
-	const raw = (readEnv('DEDALO_RAG_EMBEDDABLE_MODELS', '') as string).trim();
+	const raw = readString('DEDALO_RAG_EMBEDDABLE_MODELS').trim();
 	const fallback = ['component_text_area', 'component_input_text', 'component_text'];
 	if (raw === '') return fallback;
 	if (raw.startsWith('[')) {
