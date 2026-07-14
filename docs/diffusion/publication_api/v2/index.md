@@ -50,10 +50,10 @@ Requests pass through a middleware chain (defined in `src/index.ts`) before reac
 compression → timing → request-id → http-cache → CORS / timeout → router
 ```
 
-- **Runtime:** [Bun](https://bun.sh/) (`Bun.serve`), TypeScript, MariaDB driver (`mysql2`).
+- **Runtime:** [Bun](https://bun.sh/) (`Bun.serve`), TypeScript, MariaDB via Bun's native `Bun.sql` (`mariadb` adapter) — no third-party database client.
 - **Routing:** a path-parameter router (`src/router.ts`). Static routes are registered first, so a
   database name in the `{db}` segment can never shadow `/databases`, `/health`, `/docs`, etc.
-- **Connection pooling:** one connection pool per database (`DB_POOL_MIN` / `DB_POOL_MAX` each).
+- **Connection pooling:** one connection pool per database (`DB_POOL_MAX` each).
 - **Caching:** schema introspection is cached (~30 s); `COUNT` queries only run when `count=true`;
   HTTP `ETag` / `304` lets clients and proxies skip transfers entirely.
 - **Validation:** environment config and every request are validated with Zod schemas.
@@ -90,8 +90,7 @@ Edit `.env`. The most important variables (all read from the process environment
 | `DB_USER` | `readonly_user` | Read-only DB user |
 | `DB_PASSWORD` | _(empty)_ | DB password |
 | `DB_NAMES` | `dedalo_web` | Comma-separated allowlist of public databases (must list at least one) |
-| `DB_POOL_MIN` / `DB_POOL_MAX` | `2` / `10` | Connection pool size, per database |
-| `DB_QUERY_TIMEOUT` | `5000` | Per-query DB timeout (ms) |
+| `DB_POOL_MAX` | `10` | Connection pool size, per database |
 | `DEPLOYMENT_MODE` | `apache` | `apache` \| `nginx` \| `standalone` |
 | `PORT` | `3100` | Listen port |
 | `HOST` | `127.0.0.1` | Listen host |

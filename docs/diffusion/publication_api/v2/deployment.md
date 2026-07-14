@@ -272,7 +272,7 @@ The API is designed so that most repeat traffic never touches MariaDB.
 - **COUNT only on demand.** Record listing and search skip the extra `COUNT(*)` query unless `count=true` is passed. `pagination.total` is present only when counted; use `limit=0&count=true` for a count-only request.
 - **ETag / 304.** Cacheable JSON responses carry `Cache-Control: public, max-age=N` (from `CACHE_MAX_AGE`; `0` → `no-cache`) and a weak `ETag`. A matching `If-None-Match` short-circuits to `304 Not Modified` before compression, so unchanged data costs no body transfer. The `meta.response_time_ms` timing value is excluded from the ETag, so it never disturbs `304` validation.
 - **Gzip ≥ 1 KB.** Responses of at least **1024 bytes** are gzip-compressed when the client sends `Accept-Encoding: gzip` (`src/middleware/compress.ts`). The ETag is computed on the uncompressed body.
-- **Per-query and per-request timeouts.** `DB_QUERY_TIMEOUT` bounds each MariaDB query; `REQUEST_TIMEOUT_MS` bounds the whole request (returning `504` on overrun).
+- **Request timeout.** `REQUEST_TIMEOUT_MS` bounds the whole request, returning `504` on overrun. Every query runs inside a request, so this is what caps a runaway statement.
 
 Verify caching from the command line:
 
