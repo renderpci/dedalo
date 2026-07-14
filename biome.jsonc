@@ -67,7 +67,7 @@
 			"tools/*/register.json",
 			"src/core/tools/client/**",
 			// Byte-identical copies of PHP-master browser assets (vendored qrcode lib,
-			// transformers.js bundle + worker shims) — verified identical to ../../v7/master_dedalo.
+			// transformers.js bundle + worker shims) — verified identical to ../../v7_php_frozen/master_dedalo.
 			"tools/tool_qr/lib/**",
 			"tools/tool_lang/translators/browser_transformer/**",
 			"tools/tool_transcription/transcribers/browser_whisper/**",
@@ -76,6 +76,13 @@
 			"docs/**",
 			// Harvested oracle fixture store (frozen PHP responses — data, not source).
 			"test/parity/fixtures/oracle_harvest/**",
+			// The Publication API — a TOTALLY ISOLATED, read-only subsystem over the
+			// diffusion-published MariaDB (it never imports engine code and may be deployed on
+			// a different host entirely). v1 is vendored legacy PHP + a committed Swagger bundle
+			// whose JSON must never be reformatted; v2 is a standalone Bun app with its OWN
+			// package.json, tsconfig, biome-free conventions and its own test/coverage gates
+			// (`bun run test:publication`). Neither belongs to the engine's lint universe.
+			"publication/**",
 			// WC-020 migration pre-image (the restore point the --execute run wrote;
 			// gitignored data artifact, owner deletes it once satisfied).
 			".claude_migration_component_alias_preimage.json"

@@ -697,6 +697,47 @@
 				box-shadow: 0 0 0 3px var(--ut_green_soft);
 			}
 		}
+		// The global `select` rule (layout/general) draws the chevron with a
+		// `background` shorthand and dims to 0.7; the background above wins on
+		// specificity and wipes the icon. Repaint it and undo the dim, or the
+		// lang selects read as flat text inputs.
+		select.installer_field_input {
+			opacity: 1;
+			background-image: var(--select_icon_url);
+			background-repeat: no-repeat;
+			background-position: right 0.75rem center;
+			background-size: 0.8rem;
+			padding-right: 2.25rem;
+		}
+		// Working languages: a checkbox set, not a run of inline labels. Shares the
+		// input surface so the mandatory lang set reads as one control.
+		.installer_langs_checks {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+			gap: 0.4rem 0.75rem;
+			max-width: 28rem;
+			padding: 0.7rem 0.85rem;
+			background: var(--ut_bg_input);
+			border: 1px solid var(--ut_border);
+			border-radius: 9px;
+
+			.installer_lang_check {
+				display: flex;
+				align-items: center;
+				gap: 0.45rem;
+				cursor: pointer;
+				font-size: 0.9rem;
+				color: var(--ut_text_primary);
+
+				>input[type='checkbox'] {
+					accent-color: var(--ut_accent);
+					height: 1.05rem;
+					width: 1.05rem;
+					margin: 0;
+					flex: 0 0 auto;
+				}
+			}
+		}
 		.installer_field_help {
 			font-size: 0.78rem;
 			color: var(--ut_text_muted);

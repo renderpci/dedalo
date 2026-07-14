@@ -52,7 +52,8 @@
  * + CSRF gates apply normally (none of these actions is login- or
  * CSRF-exempt).
  *
- * Config (all fail-closed, ../private/sample.env §12):
+ * Config (all fail-closed; see docs/config/config.md#ai — the section anchor is a NAME,
+ * never a number: the old "§12" pointed at a numbering the file never had):
  *   DEDALO_AGENT_HTTP_ENABLED=true   enables this API class's actions at all;
  *   DEDALO_AGENT_ALLOW_WRITE=true    exposes write tools + change plans;
  *   DEDALO_AGENT_WRITE_SECTIONS=a,b  narrows writable sections;

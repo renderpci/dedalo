@@ -13,6 +13,8 @@
  * (every declared instance — rsc19 / oh28 / test180 — is single-hop).
  */
 
+import { config } from '../../../../../config/config.ts';
+import { readString } from '../../../../../config/readers.ts';
 import { getModelByTipo, getNode } from '../../../../ontology/resolver.ts';
 import {
 	type InfoWidgetDescriptor,
@@ -42,10 +44,9 @@ async function getRelatedSection(tipo: string): Promise<string | null> {
 }
 
 async function computeState(ipo: unknown[], context: WidgetContext): Promise<WidgetItem[]> {
-	const { readEnv } = await import('../../../../../config/env.ts');
-	const projectLangCount = String(readEnv('APPLICATION_LANGS', 'lg-spa,lg-cat,lg-eng')).split(
-		',',
-	).length;
+	// See the note in ai/rag/indexer.ts: 'APPLICATION_LANGS' is not a real key, so this
+	// always counted the 3 languages of a hardcoded literal instead of the install's own.
+	const projectLangCount = config.menu.projectsDefaultLangs.length;
 	const { getTranslatableByTipo } = await import('../../../../ontology/resolver.ts');
 	const data: WidgetItem[] = [];
 

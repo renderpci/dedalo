@@ -1,2 +1,8 @@
-.widget_item.test_info .label{font-weight:700;margin-right:.5rem}.widget_item.test_info .value{font-family:monospace}
+.widget_item.test_info .label {
+  font-weight: bold;
+  margin-right: 0.5rem;
+}
+.widget_item.test_info .value {
+  font-family: monospace;
+}
 /*# sourceMappingURL=test_info.css.map */

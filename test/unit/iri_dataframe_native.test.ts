@@ -24,12 +24,15 @@
  * range, clear of the canonical ids (1/2/27) and of the sibling gates'
  * 900311/900313 twins. Direct INSERT (no counter bump) so the golden pins
  * section_id byte-stable. NO ontology mutation: dd560/test140 ship in the
- * ontology (unlike the has_dataframe gate's provisioned test218).
+ * ontology (unlike the has_dataframe gate, which provisions its own frame node —
+ * test900 since 2026-07-12, when the seeded ontology grew into its old test218).
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
+import { assertMatrixTable } from '../../src/core/db/matrix.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
 import golden from './fixtures/iri_dataframe_native/list_items.golden.json';
@@ -37,7 +40,25 @@ import golden from './fixtures/iri_dataframe_native/list_items.golden.json';
 const SECTION = 'test3';
 const RECORD_ID = 900312;
 
+/**
+ * The frame's TARGET record — this gate CREATES it (2026-07-13).
+ *
+ * It used to read dd1706/121 'Zenon', a row of the old shared dev DB. dd1706/dd1715/dd490
+ * are ONTOLOGY and ship in the install seed; the RECORD does not, so on a fresh install the
+ * frame resolved to nothing and the deep-equal failed with an unreadable diff. The gate now
+ * mints its own row at a reserved-high id and deletes it after — no dependency on any record
+ * the installation happens to hold. Same fixture the has_dataframe gate builds; the two use
+ * DIFFERENT target ids so they never collide when the suite runs them in parallel.
+ */
+const TARGET_SECTION_TIPO = 'dd1706';
+const TARGET_ID = 900122; // has_dataframe uses 900121
+const TARGET_LABEL_TIPO = 'dd1715';
+const TARGET_LABEL_VALUE = 'Zenon'; // the value the oracle capture resolved — keep verbatim
+
 let tsItems: Record<string, unknown>[] = [];
+/** Resolved (never hardcoded) matrix table for dd1706, and whether WE made the row. */
+let targetTable = '';
+let targetCreated = false;
 
 /** The differential's exact comparable projection — the live-verified contract. */
 function comparable(item: Record<string, unknown>): Record<string, unknown> {
@@ -70,14 +91,42 @@ async function sweepRecord(): Promise<number> {
 
 beforeAll(async () => {
 	await sweepRecord(); // pre-clean a crashed prior run
+
+	// Mint the frame's target record. PRECONDITION: the coordinate must be free — never
+	// write over, and never delete, a record this gate did not create.
+	const table = await getMatrixTableFromTipo(TARGET_SECTION_TIPO);
+	if (table === null) throw new Error(`iri gate: no matrix table for '${TARGET_SECTION_TIPO}'`);
+	assertMatrixTable(table); // identifier allowlist (spec §7.6)
+	targetTable = table;
+	const occupied = await sql.unsafe(
+		`SELECT section_id FROM ${targetTable} WHERE section_tipo = $1 AND section_id = $2`,
+		[TARGET_SECTION_TIPO, TARGET_ID],
+	);
+	if (occupied.length > 0) {
+		throw new Error(
+			`iri gate: ${TARGET_SECTION_TIPO}/${TARGET_ID} already exists — this gate creates and then DELETES that record, so it will not touch one it did not make. Move TARGET_ID to a free reserved-high id (and rename it in the golden, where it is only an identifier).`,
+		);
+	}
+	await sql.unsafe(
+		`INSERT INTO ${targetTable} (section_id, section_tipo, string)
+		 VALUES ($1, $2, jsonb_build_object($3::text, $4::text::jsonb))`,
+		[
+			TARGET_ID,
+			TARGET_SECTION_TIPO,
+			TARGET_LABEL_TIPO,
+			JSON.stringify([{ id: 1, lang: 'lg-nolan', value: TARGET_LABEL_VALUE }]),
+		],
+	);
+	targetCreated = true;
+
 	const iriValue = [{ id: 1, iri: 'https://example.org/frame-native', lang: 'lg-nolan' }];
 	const frameBag = [
 		{
 			id: 1,
 			type: 'dd490',
 			id_key: 1,
-			section_id: '121',
-			section_tipo: 'dd1706',
+			section_id: String(TARGET_ID),
+			section_tipo: TARGET_SECTION_TIPO,
 			from_component_tipo: 'dd560',
 			main_component_tipo: 'test140',
 		},
@@ -135,6 +184,15 @@ beforeAll(async () => {
 }, 60000);
 
 afterAll(async () => {
+	// Undo the target record ONLY if we created it: if the precondition refused a coordinate
+	// that was already taken, that row belongs to someone else and must survive untouched.
+	if (targetCreated && targetTable !== '') {
+		await sql.unsafe(`DELETE FROM ${targetTable} WHERE section_tipo = $1 AND section_id = $2`, [
+			TARGET_SECTION_TIPO,
+			TARGET_ID,
+		]);
+		targetCreated = false;
+	}
 	// A seeded scratch row that deletes NOTHING means the fixed id collided or
 	// something swept it mid-run — fail loudly rather than mask it.
 	if ((await sweepRecord()) === 0) {

@@ -51,7 +51,7 @@ import {
 // runtime (S3-67: no machine-specific fallback paths).
 // ---------------------------------------------------------------------------
 
-const RESOLVED_SOCKET = readEnv('DEDALO_DIFFUSION_DB_SOCKET', '/tmp/mysql.sock') as string;
+const RESOLVED_SOCKET = (readEnv('DEDALO_DIFFUSION_DB_SOCKET') ?? '/tmp/mysql.sock') as string;
 const HAVE_DB =
 	readEnv('DEDALO_DIFFUSION_DB_USER') !== undefined &&
 	(readEnv('DEDALO_DIFFUSION_DB_HOST') !== undefined || existsSync(RESOLVED_SOCKET));

@@ -165,9 +165,18 @@ Note what does **not** need a reload: the daily cookie rotation.
   they re-login (the widget restores markers for existing cookie holders, not the cookies
   themselves). Existing publications need one `rebuild_media_index` run.
 - **The #1 misconfiguration** is an unset `MEDIA_PATH`: publishes succeed but anonymous
-  access stays 404. The widget surfaces it.
-- `MEDIA_DEV_ROUTE_ENABLED` must stay `false` in production — that route serves media from
-  Bun with no per-record ACL and bypasses these rules entirely (MEDIA-04).
+  access stays 404. The widget surfaces it. (`MEDIA_PATH` now DERIVES to `<projectRoot>/media`
+  — `config.media.rootPath` — so this bites only when an install overrides it wrongly.)
+- The **engine media fallback** (Bun serving media itself: session-gated, no per-record ACL,
+  bypasses these rules — MEDIA-04) is bound to conditions production cannot meet, so it needs
+  no flag and cannot leak into a real deployment: it answers **only** on the TCP dev listener
+  (production is socket-only) and **only** while protection is unconfigured. Setting a mode
+  stands the engine down — the generated rules become authoritative, and the engine must never
+  serve the same bytes with weaker checks. `MEDIA_DEV_ROUTE_ENABLED=true` overrides that and
+  forces the fallback on for EVERY listener, socket included: never do it on a shared host.
+  It exists because the dev listener has no web server in front, so without it a fresh install
+  set up exactly per `docs/install/dev_quickstart.md` 404s every image, video and PDF.
+  Gate: `test/unit/media_fallback_listener.test.ts`.
 
 ## 9. Definition of done — the curl matrix
 

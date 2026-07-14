@@ -2,7 +2,7 @@
 
 Native TS/Bun Dédalo server. **CUTOVER EXECUTED 2026-07-11**
 (`rewrite/CUTOVER_RUNBOOK.md`): the PHP engine is decommissioned,
-unmaintained DEAD CODE (`../../v7/master_dedalo` — historical reference
+unmaintained DEAD CODE (`../../v7_php_frozen/master_dedalo` — historical reference
 only); TS is the single engine and sole writer, and `client/` is the
 PRIMARY, TS-OWNED client source.
 

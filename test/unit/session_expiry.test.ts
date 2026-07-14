@@ -35,8 +35,8 @@ const raw = new Database(SESSION_DB_PATH, { readwrite: true });
 raw.exec('PRAGMA busy_timeout = 5000');
 
 /** Same TTL defaults as session_store.ts — override-aware via readEnv. */
-const IDLE_TTL_S = Number(readEnv('SESSION_TTL_SECONDS', '43200'));
-const ABSOLUTE_TTL_S = Number(readEnv('SESSION_ABSOLUTE_TTL_SECONDS', '2592000'));
+const IDLE_TTL_S = Number((readEnv('SESSION_TTL_SECONDS') ?? '43200'));
+const ABSOLUTE_TTL_S = Number((readEnv('SESSION_ABSOLUTE_TTL_SECONDS') ?? '2592000'));
 
 function sha256Hex(value: string): string {
 	return new Bun.CryptoHasher('sha256').update(value).digest('hex');

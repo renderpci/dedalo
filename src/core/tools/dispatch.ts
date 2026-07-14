@@ -27,7 +27,12 @@
 
 import type { Principal } from '../security/permissions.ts';
 import { scheduleBackground } from './background.ts';
-import { BACKGROUND_JOB_STATUS_ACTION, backgroundJobStatusResponse } from './job_status.ts';
+import {
+	BACKGROUND_JOBS_ACTION,
+	BACKGROUND_JOB_STATUS_ACTION,
+	backgroundJobStatusResponse,
+	backgroundJobsResponse,
+} from './job_status.ts';
 import { getLoadedTool } from './loader.ts';
 import type { ToolResponse } from './module.ts';
 import { getUserTools } from './registry.ts';
@@ -77,6 +82,19 @@ export async function dispatchToolRequest(
 	// per-module registration. The name is RESERVED (see job_status.ts).
 	if (toolMethod === BACKGROUND_JOB_STATUS_ACTION) {
 		return backgroundJobStatusResponse(
+			toolName,
+			principal,
+			userId,
+			(options ?? {}) as Record<string, unknown>,
+		);
+	}
+
+	// The companion framework action: LIST the caller's jobs for this tool. It is
+	// what lets a reloading client re-attach to a running job WITHOUT having
+	// persisted its id (see job_status.ts BACKGROUND_JOBS_ACTION). Same reserved
+	// name + same gates as the status action above.
+	if (toolMethod === BACKGROUND_JOBS_ACTION) {
+		return backgroundJobsResponse(
 			toolName,
 			principal,
 			userId,

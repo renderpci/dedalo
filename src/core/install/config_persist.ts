@@ -7,13 +7,21 @@
  * came up with the new config.
  */
 
-import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import {
+	chmodSync,
+	copyFileSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	renameSync,
+	writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { config } from '../../config/config.ts';
 import { parseEnvFile } from '../../config/env.ts';
 import { setServerState } from '../resolve/server_state.ts';
 import { deriveLangConfig } from './lang_catalog.ts';
-import { installPrivateDir } from './paths.ts';
+import { SAMPLE_ENV_PATH, installPrivateDir } from './paths.ts';
 import { connFromConfig, psqlSelect1 } from './pg_exec.ts';
 import { generateSecret } from './secret.ts';
 
@@ -26,6 +34,44 @@ function existingEnv(): Record<string, string> {
 	} catch {
 		return {};
 	}
+}
+
+/**
+ * The existing .env's assignment lines, VERBATIM and in file order.
+ *
+ * Kept raw (not re-quoted from the parsed value) so a preserved key round-trips
+ * byte-for-byte: parseEnvFile strips surrounding quotes without unescaping inner
+ * ones, so re-emitting a parsed value through envQuote could corrupt it — the
+ * same trap the JSON lang keys below already document.
+ */
+function existingEnvAssignments(): { key: string; line: string }[] {
+	const path = join(installPrivateDir(), '.env');
+	if (!existsSync(path)) return [];
+	try {
+		const assignments: { key: string; line: string }[] = [];
+		for (const rawLine of readFileSync(path, 'utf8').split('\n')) {
+			const line = rawLine.trim();
+			if (line.length === 0 || line.startsWith('#')) continue;
+			const eq = line.indexOf('=');
+			if (eq <= 0) continue;
+			assignments.push({ key: line.slice(0, eq), line });
+		}
+		return assignments;
+	} catch {
+		return [];
+	}
+}
+
+/** The keys an emitted body assigns — i.e. the ones this run OWNS. */
+function assignedKeys(lines: readonly string[]): Set<string> {
+	const keys = new Set<string>();
+	for (const line of lines) {
+		const eq = line.indexOf('=');
+		if (eq > 0 && /^[A-Za-z_][A-Za-z0-9_]*$/.test(line.slice(0, eq))) {
+			keys.add(line.slice(0, eq));
+		}
+	}
+	return keys;
 }
 
 /** Quote a value for the .env file when it needs it (spaces/quotes/empty). */
@@ -127,6 +173,31 @@ export async function persistConfig(o: Record<string, unknown>): Promise<Persist
 			`DEDALO_DIFFUSION_INTERNAL_TOKEN=${envQuote(diffusionToken ?? '')}`,
 		);
 	}
+	// NEVER DELETE BY OMISSION. This writer rebuilds .env from the posted form, so
+	// every key the form does not carry used to vanish on save — and the wizard
+	// INVITES a re-save (reload the page and it walks the config steps again from
+	// an empty cfg). Observed twice on 2026-07-12: re-saving with the optional
+	// Diffusion step untouched silently deleted all 8 DEDALO_DIFFUSION_* keys,
+	// including the generated DEDALO_DIFFUSION_INTERNAL_TOKEN — a secret shown
+	// once and then unrecoverable. Operator-appended keys (../private/.env is
+	// append-only by project rule: MEDIA_DEV_ROUTE_ENABLED, DEDALO_SESSION_DB_PATH,
+	// DB_POOL_MAX, …) died the same way.
+	//
+	// So: this run OWNS the keys it assigns; every other key already in the file is
+	// carried over verbatim. Turning Diffusion OFF therefore no longer erases its
+	// credentials — disabling it is an explicit .env edit (DEDALO_DIFFUSION_NATIVE),
+	// never a side effect of not re-typing the form. Gate:
+	// test/unit/install_persist_config.test.ts ('never deletes a key by omission').
+	const owned = assignedKeys(lines);
+	const preserved = existingEnvAssignments().filter((entry) => !owned.has(entry.key));
+	if (preserved.length > 0) {
+		lines.push(
+			'',
+			'# --- Preserved from the previous .env (not managed by the wizard form) ---',
+			...preserved.map((entry) => entry.line),
+		);
+	}
+
 	const body = `${lines.join('\n')}\n`;
 
 	// Atomic two-phase commit: private dir 0700, stage .tmp (0600), back up an
@@ -149,6 +220,33 @@ export async function persistConfig(o: Record<string, unknown>): Promise<Persist
 			msg: `Failed to write ../private/.env: ${(error as Error).message}`,
 			generated: {},
 		};
+	}
+
+	// Drop the key census next to the .env the operator just wrote. Before this, every
+	// "see ../private/sample.env" in the docs and in four runtime error messages pointed
+	// at a file that DID NOT EXIST — the renderer was PHP machinery that was never ported.
+	//
+	// Four deliberate properties:
+	//   0644, not 0600  — it is a documented template with no secrets in it (only
+	//                     placeholders). The private dir is 0700, so it is still not
+	//                     world-reachable.
+	//   copy, not render — the artifact is generated at commit time and gated byte-for-byte
+	//                     by config_docs_tripwire. Rendering here would drag the catalog
+	//                     into the install path and give a render bug a way to touch an
+	//                     install.
+	//   tmp + rename    — same atomicity as the .env: a half-written census is impossible.
+	//   FAIL-SOFT       — a missing or unreadable template must NEVER block an install.
+	//                     This is the one place we deliberately swallow an error, so it is
+	//                     stated rather than left as a bare catch.
+	try {
+		const dir = installPrivateDir();
+		const target = join(dir, 'sample.env');
+		const tmp = join(dir, `sample.env.tmp.${process.pid}`);
+		copyFileSync(SAMPLE_ENV_PATH, tmp);
+		chmodSync(tmp, 0o644);
+		renameSync(tmp, target);
+	} catch (error) {
+		console.warn(`[install] sample.env census not written: ${(error as Error).message}`);
 	}
 
 	setServerState({

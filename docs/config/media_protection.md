@@ -177,11 +177,40 @@ before the final deny rule. You own their syntax; Dédalo only places them.
 MEDIA_HTACCESS_ADDONS=["RewriteCond %{REMOTE_ADDR} ^10\\.0\\.","RewriteRule ^ - [L]"]
 ```
 
+!!! warning "It is **JSON**, so every backslash must be doubled"
+    Note the `\\.` above. A regex is written `^10\.0\.` in Apache, but inside a JSON string
+    each backslash must be escaped again — so the value carries `\\.`. Write it the natural
+    way (`^10\.0\.`) and the value is no longer valid JSON.
+
+    When that happens the key is **refused, loudly, and ignored**:
+
+    ```text
+    [config] MEDIA_HTACCESS_ADDONS must be a JSON array of strings — ignoring the value.
+    ```
+
+    Your addon lines simply do not appear in the `.htaccess` — the gate itself is unaffected
+    and stays closed. Fix the escaping and restart. (The reader is deliberately JSON-only: a
+    directive legitimately contains commas — `[R=404,L]` — so a comma-separated list would
+    tear one directive into two invalid ones and Apache would then reject the whole media
+    directory.)
+
 ### `MEDIA_DEV_ROUTE_ENABLED`
 
-Must stay `false` in production. The dev media route serves files from the application with
-**no per-record access control**, bypassing everything on this page. The server logs a loud
-warning when it is on.
+**You normally leave this unset.** The engine can serve media itself, with **no per-record
+access control**, bypassing everything on this page. That fallback exists for the one setup
+with no web server in the request path: a developer on the TCP dev listener. It is bound to
+conditions production cannot meet, so it needs no flag and cannot leak:
+
+| Situation | Engine serves media? |
+|---|---|
+| TCP dev listener (`SERVER_TCP_PORT`) **and** no `DEDALO_MEDIA_ACCESS_MODE` | **yes** — session-gated, no per-record ACL |
+| Unix socket (production is socket-only) | **no**, always |
+| Any listener, once protection is `private`/`publication` | **no** — the generated rules are authoritative and the engine must not undercut them |
+
+Set the key only to override: `true` forces the fallback on for **every** listener, the
+production socket included (the server logs a loud warning — do not do this on a shared
+host); `false` forces it off even in development. Gate:
+`test/unit/media_fallback_listener.test.ts`.
 
 ## The generated rule files
 

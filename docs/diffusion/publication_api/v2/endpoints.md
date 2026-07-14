@@ -97,6 +97,11 @@ Lists the tables of a database with row and column counts.
 }
 ```
 
+!!! note "`row_count` here is an estimate"
+    In the table **list**, `row_count` is InnoDB's own estimate (read from `INFORMATION_SCHEMA`), not
+    an exact count — counting every row of every table on each listing would be a needless full scan
+    per request. The single-table endpoint below returns an exact `COUNT(*)`.
+
 **Example**
 
 ```bash

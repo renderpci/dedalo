@@ -12,4 +12,19 @@ root = "test"
 # S2-20: component_registry.ts registers the ontology↔components model lookup
 # (the same module-load side effect production boot performs — see
 # src/core/ontology/resolver.ts seam note).
-preload = ["./test/preload/session_db.ts", "./test/preload/component_registry.ts"]
+# ORDER MATTERS.
+# 1. test_database  — repoints DB_NAME at the dedicated test DB. MUST be first: it has to
+#    rewrite process.env before any module imports src/config/config.ts, which freezes the
+#    connection at import. Everything below then talks to the test DB, never the app's.
+# 2. session_db     — per-run scratch sqlite / ts_state / diffusion tables (S1-18).
+# 3. component_registry — the model lookup production boot performs (S2-20).
+# 4. canonical_test3 — re-seeds the test3 playground FROM CODE, so a developer's edit to a
+#    playground record cannot break the gates whose goldens pin its values.
+# The DB-touching preloads warn (never throw) when there is no Postgres — the hermetic tier
+# runs on a bare runner, and a throw here would take down all ~2000 tests.
+preload = [
+	"./test/preload/test_database.ts",
+	"./test/preload/session_db.ts",
+	"./test/preload/component_registry.ts",
+	"./test/preload/canonical_test3.ts",
+]

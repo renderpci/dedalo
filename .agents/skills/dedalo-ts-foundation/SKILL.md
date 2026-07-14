@@ -5,7 +5,7 @@ description: Master orientation for the Dédalo v7 TypeScript/Bun rewrite — RE
 
 # Dédalo v7 foundation (TypeScript/Bun rewrite)
 
-**Read this first for any `src/` work.** Dédalo v7 TS is a from-scratch rewrite of the PHP monolith (`v7/master_dedalo`) on Bun 1.3.9 + strict TypeScript. During coexistence the **PHP server is a READ-ONLY oracle running on the SAME Postgres** — every TS behavior is verified differentially against it, and PHP can re-parse any row TS writes. Authoritative overview: `engineering/REWRITE_SPEC.md`. **Live measured state (where we are right now): `rewrite/LEDGER.md`.** Historical narrative (how we got here): `rewrite/STATUS.md`.
+**Read this first for any `src/` work.** Dédalo v7 TS is a from-scratch rewrite of the PHP monolith (`v7_php_frozen/master_dedalo`) on Bun 1.3.9 + strict TypeScript. During coexistence the **PHP server is a READ-ONLY oracle running on the SAME Postgres** — every TS behavior is verified differentially against it, and PHP can re-parse any row TS writes. Authoritative overview: `engineering/REWRITE_SPEC.md`. **Live measured state (where we are right now): `rewrite/LEDGER.md`.** Historical narrative (how we got here): `rewrite/STATUS.md`.
 
 Do not read this skill as a spec copy — it POINTS. Specs and the ledger hold the content; this teaches how to work without breaking the rails.
 

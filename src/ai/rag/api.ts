@@ -19,7 +19,9 @@
  * with the registry that mounts these handlers.
  */
 
+import { config } from '../../config/config.ts';
 import { readEnv } from '../../config/env.ts';
+import { readString } from '../../config/readers.ts';
 import type { ApiResult } from '../../core/api/response.ts';
 import type { Rqo } from '../../core/concepts/rqo.ts';
 import { type Principal, resolvePrincipal } from '../../core/security/permissions.ts';
@@ -302,8 +304,16 @@ async function characterizeObjectAction(rqo: Rqo, context: RagApiContext): Promi
 	if (seed === null)
 		return badRequest('Missing or invalid seed (section_tipo, section_id)', 'missing_seed');
 
-	const langs = (readEnv('APPLICATION_LANGS', 'lg-spa,lg-cat,lg-eng') as string).split(',');
-	const nolan = readEnv('DATA_NOLAN', 'lg-nolan') as string;
+	// The SAME bug the rsc92 picker fix killed in core/resolve/component_data.ts (2026-07-09):
+	// 'APPLICATION_LANGS' is not a key this engine has — nothing sets it, the installer never
+	// writes it, and it is absent from every .env. The real UI-language key is
+	// DEDALO_APPLICATION_LANGS and it is a JSON MAP, so a CSV split of it produces garbage.
+	// The read therefore ALWAYS fell through to a hardcoded 'lg-spa,lg-cat,lg-eng' literal —
+	// i.e. any install whose languages are not Spanish/Catalan/English was silently indexed
+	// and searched in the wrong ones. These are DATA languages (they pair with DATA_NOLAN), so
+	// they come from config, like every other language list (owner rule, 2026-07-09).
+	const langs = config.menu.projectsDefaultLangs;
+	const nolan = readString('DATA_NOLAN');
 	const characterizer = new RagCharacterizer({
 		config: new RagConfig(defaultOntologyPort()),
 		objectRetrieval: stack.objectRetrieval,

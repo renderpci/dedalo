@@ -1080,7 +1080,7 @@
 							"pg_version": "18.4 (Homebrew)",
 							"php_version": "8.5.4",
 							"php_memory": "8G",
-							"dedalo_root_path": "/Users/render/Desktop/trabajos/dedalo/v7/master_dedalo"
+							"dedalo_root_path": "v7_php_frozen/master_dedalo"
 						},
 						"plain_vars": {
 							"DEDALO_ENVIRONMENT": true,

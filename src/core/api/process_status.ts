@@ -29,45 +29,15 @@
 
 import type { Rqo } from '../concepts/rqo.ts';
 import { type JobStatusFrame, mediaJobs } from '../media/jobs.ts';
+import type { Principal } from '../security/permissions.ts';
+import {
+	JOB_ID_PATTERN,
+	SSE_HEADERS,
+	encodeSseChunk,
+	mayStreamJob,
+	terminalStream,
+} from './job_stream.ts';
 import type { ApiResult } from './response.ts';
-
-/** Old-engine SSE framing: pad to keep intermediary proxies flushing eagerly. */
-const SSE_PAD_LENGTH = 16384;
-const encoder = new TextEncoder();
-
-function encodeSseChunk(frame: Record<string, unknown>): Uint8Array {
-	let payload = `data:\n${JSON.stringify(frame)}`;
-	if (payload.length < SSE_PAD_LENGTH) {
-		payload += ' '.repeat(SSE_PAD_LENGTH - payload.length);
-	}
-	return encoder.encode(`${payload}\n\n`);
-}
-
-const SSE_HEADERS: Record<string, string> = {
-	'Content-Type': 'text/event-stream',
-	'Cache-Control': 'no-cache, must-revalidate',
-	Connection: 'keep-alive',
-	'X-Accel-Buffering': 'no',
-};
-
-/** A single-frame terminal stream (invalid input / unknown job — PHP parity:
- * errors ride as an SSE frame, never a JSON envelope the stream reader can't parse). */
-function terminalStream(frame: Record<string, unknown>): ApiResult {
-	return {
-		status: 200,
-		body: {},
-		stream: new ReadableStream<Uint8Array>({
-			start(controller) {
-				controller.enqueue(encodeSseChunk(frame));
-				controller.close();
-			},
-		}),
-		streamHeaders: { ...SSE_HEADERS },
-	};
-}
-
-/** Job id chars as minted by MediaJobManager/backup.ts — nothing path-like. */
-const JOB_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/;
 
 /**
  * Reduce the client-supplied pfile (PHP: a filename relative to the process
@@ -105,7 +75,7 @@ function frameFor(id: string, pfile: string): JobStatusFrame | Record<string, un
  * Emits one frame immediately, then every `update_rate` ms until the job is
  * terminal or the client disconnects (stream cancel).
  */
-export function getUtilsProcessStatus(rqo: Rqo): ApiResult {
+export function getUtilsProcessStatus(rqo: Rqo, principal: Principal): ApiResult {
 	const body = rqo as unknown as { update_rate?: unknown };
 	const options = (rqo.options ?? {}) as { pid?: unknown; pfile?: unknown };
 	const pfile = typeof options.pfile === 'string' ? options.pfile : '';
@@ -128,6 +98,19 @@ export function getUtilsProcessStatus(rqo: Rqo): ApiResult {
 			is_running: false,
 			data: { msg: 'Error: invalid pfile' },
 			errors: ['invalid pfile'],
+			total_time: 0,
+		});
+	}
+	// Ownership (fail-closed): refuse BEFORE the first frame, and answer exactly as
+	// a missing job would — no existence oracle for another user's job id.
+	const record = mediaJobs.status(id);
+	if (record !== null && !mayStreamJob(record, principal)) {
+		return terminalStream({
+			pid: null,
+			pfile,
+			is_running: false,
+			data: { msg: `Error: process '${pfile}' not found` },
+			errors: ['process file not found'],
 			total_time: 0,
 		});
 	}

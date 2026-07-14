@@ -231,15 +231,29 @@ no dump surface exists (DIFFUSION_SPEC §8.6). Restore-test quarterly.
 A server booted with none of `ENTITY`/`DB_NAME`/`DB_HOST`/`DB_USER` set enters
 **install mode** (`config.installMode`): it skips all DB-dependent boot steps,
 `/health` reports `db:down`, and it serves ONLY the install wizard. The browser
-`persist_config` step writes `../private/.env` and then **exits the process**;
-the supervisor (`deploy/dedalo-ts.service` `Restart=always`) restarts it into
-configured mode. The wizard's separate manual `verify_active_config` click +
-the client's request retries bridge the gap. The pre-auth install surface is
-gated: reachable only while UNSEALED and only from `DEDALO_INSTALL_ALLOWED_IPS`
-(unset = open, dev default); once `install_finish` seals the instance the
-surface returns 404. The CLI needs no restart (it sets the env before importing
-config). Dev without systemd: prefer the CLI, or run the server under a restart
-loop to exercise the browser wizard.
+`persist_config` step writes `../private/.env` and then **exits the process**
+with `RESTART_EXIT_CODE` (75 — `src/core/install/restart.ts`); the supervisor
+restarts it into configured mode. The wizard's separate manual
+`verify_active_config` click + the client's request retries bridge the gap. The
+pre-auth install surface is gated: reachable only while UNSEALED and only from
+`DEDALO_INSTALL_ALLOWED_IPS` (unset = open, dev default); once `install_finish`
+seals the instance the surface returns 404. The CLI needs no restart (it sets
+the env before importing config).
+
+The supervisor is:
+
+| Where | What restarts it |
+|---|---|
+| Production | `deploy/dedalo-ts.service` — `Restart=always` (+ `SuccessExitStatus=75`, so the planned exit is not booked as a crash). |
+| Dev | `bun run dev` or `bun run start:supervised` — both loop on exit 75 ONLY. |
+
+Exit 75 is a *distinct* code on purpose: a graceful ^C also exits 0, so a
+supervisor keying on 0 could never be stopped, and one keying on "any exit"
+would hot-loop a crash. `bun run start` is deliberately NOT supervised — systemd
+is its supervisor. The contract is gated by
+`test/unit/install_restart_supervisor_tripwire.test.ts` (it exists because this
+mechanism once named a `start:supervised` script that was never written, which
+hung the browser wizard at "Save configuration" for every dev).
 
 ## 8. Diffusion scheduler placement
 
@@ -255,3 +269,25 @@ in-memory job registries evict terminal records after 1 h (pfile mirror
 remains); `login_attempts` rows GC'd past the throttle window; terminal
 diffusion job rows purged after 7 days (daily, sweeper cadence); the dd1758
 ledger keeps the durable publication audit trail.
+
+## 10. Publication API (the isolated public surface)
+
+The Publication API is **not part of this server** and is not started by it. It is a
+separate, read-only front for the diffusion-published MariaDB, deployable on the web
+server's host (or any host that can reach the published DB) — it never touches the
+matrix Postgres, imports no engine code, and holds no engine credentials. Both versions
+can run side by side against the same published databases.
+
+| | Path | Runtime | How it runs |
+|---|---|---|---|
+| **v1** (legacy) | `publication/server_api/v1` | PHP 8 + Apache | Copy the folder to the vhost. Its PHP deps travel with it (`v1/shared/`), so it is self-contained. Create `config_api/server_config_api.php` from `sample.server_config_api.php` (DB creds + the shared `code`); the file is gitignored and denied by `config_api/.htaccess`. Kept **as-is** for existing v4/v5/v6 websites — no new features. |
+| **v2** (current) | `publication/server_api/v2` | Bun + TypeScript | `bun run publication:install` once, then `bun run start:publication` (or a systemd unit modeled on `deploy/dedalo-ts.service`, pointing `WorkingDirectory` at the v2 folder). Config is v2's **own `.env`** — never `../private/.env`. |
+
+Both take a **read-only MariaDB user**. That is the real security boundary: the API's
+`DB_NAMES` allowlist scopes which published databases are reachable, and nothing in
+either version issues a write. v2 additionally offers `API_KEYS`, per-IP rate limiting
+and request timeouts (`engineering`-adjacent detail lives in `docs/diffusion/publication_api/`).
+
+Gates: `bun run test:publication` (v2's own suite + typecheck) and
+`test/integration/publication_api_v2_smoke.test.ts` (boots v2 as a subprocess against a
+real published DB; skips loudly without `DEDALO_DIFFUSION_DB_*`).

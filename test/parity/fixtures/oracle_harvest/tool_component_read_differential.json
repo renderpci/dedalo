@@ -6558,7 +6558,7 @@
 				},
 				"action": "read",
 				"csrf_token": "__FIXTURE_CSRF__",
-				"dedalo_last_error": "{\"type\":2,\"message\":\"Undefined property: stdClass::$section_tipo\",\"file\":\"\\/Users\\/render\\/Desktop\\/trabajos\\/dedalo\\/v7\\/master_dedalo\\/core\\/common\\/class.common.php\",\"line\":3064}"
+				"dedalo_last_error": "{\"type\":2,\"message\":\"Undefined property: stdClass::$section_tipo\",\"file\":\"v7_php_frozen\\/master_dedalo\\/core\\/common\\/class.common.php\",\"line\":3064}"
 			}
 		},
 		"0c5e48c51643d8789a1c1d5d": {

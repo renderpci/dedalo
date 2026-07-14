@@ -27,9 +27,12 @@ const { dispatchToolRequest } = await import('../../src/core/tools/dispatch.ts')
 const { scheduleBackground, resetBackgroundJobs } = await import(
 	'../../src/core/tools/background.ts'
 );
-const { backgroundJobStatusResponse, BACKGROUND_JOB_STATUS_ACTION } = await import(
-	'../../src/core/tools/job_status.ts'
-);
+const {
+	backgroundJobStatusResponse,
+	backgroundJobsResponse,
+	BACKGROUND_JOB_STATUS_ACTION,
+	BACKGROUND_JOBS_ACTION,
+} = await import('../../src/core/tools/job_status.ts');
 
 import type { Principal } from '../../src/core/security/permissions.ts';
 import type { LoadedTool } from '../../src/core/tools/loader.ts';
@@ -214,5 +217,73 @@ describe('background tool-job status through the tool dispatch (S2-16)', () => {
 		);
 		expect(unknown.result).toBe(false);
 		expect(unknown.errors).toContain('job_not_found');
+	});
+});
+
+/**
+ * get_background_jobs — the LIST wire. It exists so a reloading client can find
+ * the run whose id it no longer has, WITHOUT keeping a copy of that id itself:
+ * the server runs the job and its registry already records tool, action and owner.
+ * (The tool used to park the id in IndexedDB — per-browser, stale after a server
+ * restart, and a runtime throw if the store/key pair was wrong.)
+ */
+describe('background job LIST through the tool dispatch', () => {
+	test('a reloading client finds its running job with no id in hand', async () => {
+		const loaded = makeLoaded('tool_time_machine', { imported: 1 });
+		const spec = loaded.module.apiActions.long_job;
+		if (spec === undefined) throw new Error('spec missing');
+		resetBackgroundJobs(); // the registry is process-wide; isolate this case
+		const started = scheduleBackground(loaded, 'long_job', spec, {}, SUPERUSER, -1);
+		await new Promise((resolve) => setTimeout(resolve, 20));
+
+		const response = await dispatchToolRequest(
+			SUPERUSER,
+			-1,
+			{ model: 'tool_time_machine', action: BACKGROUND_JOBS_ACTION },
+			{ action: 'long_job' },
+		);
+		const jobs = response.result as Record<string, unknown>[];
+		expect(jobs).toHaveLength(1);
+		// Exactly what the client needs to re-attach: the id it lost.
+		expect(jobs[0]?.id).toBe(started.job_id as string);
+		expect(jobs[0]?.tool).toBe('tool_time_machine');
+		expect(jobs[0]?.action).toBe('long_job');
+		// A list is a directory, not a bulk export of every report.
+		expect(jobs[0]?.response).toBeUndefined();
+	});
+
+	test("a user never sees another user's jobs; a global admin sees them", () => {
+		const loaded = makeLoaded('tool_time_machine', true);
+		const spec = loaded.module.apiActions.long_job;
+		if (spec === undefined) throw new Error('spec missing');
+		resetBackgroundJobs();
+		scheduleBackground(loaded, 'long_job', spec, {}, SUPERUSER, 7);
+
+		const stranger: Principal = { userId: 8, isGlobalAdmin: false, isDeveloper: false };
+		expect(backgroundJobsResponse('tool_time_machine', stranger, 8, {}).result).toEqual([]);
+
+		const owner: Principal = { userId: 7, isGlobalAdmin: false, isDeveloper: false };
+		expect(
+			(backgroundJobsResponse('tool_time_machine', owner, 7, {}).result as unknown[]).length,
+		).toBe(1);
+		expect(
+			(backgroundJobsResponse('tool_time_machine', SUPERUSER, -1, {}).result as unknown[]).length,
+		).toBe(1);
+	});
+
+	test('jobs are scoped to their own tool, and narrowed by action', () => {
+		const loaded = makeLoaded('tool_time_machine', true);
+		const spec = loaded.module.apiActions.long_job;
+		if (spec === undefined) throw new Error('spec missing');
+		const owner: Principal = { userId: 7, isGlobalAdmin: false, isDeveloper: false };
+		resetBackgroundJobs();
+		scheduleBackground(loaded, 'long_job', spec, {}, owner, 7);
+
+		// A different tool never sees it.
+		expect(backgroundJobsResponse('tool_export', owner, 7, {}).result).toEqual([]);
+		// A different action of the same tool never sees it.
+		expect(
+			backgroundJobsResponse('tool_time_machine', owner, 7, { action: 'other_job' }).result,
+		).toEqual([]);
 	});
 });

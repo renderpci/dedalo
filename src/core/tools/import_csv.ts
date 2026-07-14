@@ -1,10 +1,11 @@
 /**
- * CSV import planner (PHP tool_import_dedalo_csv::import_dedalo_csv_file). Parses
- * a CSV and, against a resolved column map, produces a per-record PLAN of conformed
- * component datos — pure (no DB), so the row→column→conform mapping is testable in
- * isolation. The tool module executes the plan (createSectionRecord +
- * saveComponentData). The conform engine (import_data.ts) guarantees the raw-export
- * round-trip.
+ * CSV import PLANNER (PHP tool_import_dedalo_csv::import_dedalo_csv_file, the
+ * read half). Parses a CSV and, against a resolved column map, produces a
+ * per-record PLAN of conformed component datos.
+ *
+ * The plan is DB-free apart from the conform facets' own ontology lookups, so
+ * the row→column→conform mapping is testable without a write, and the executor
+ * (import_csv_execute.ts) is a pure "apply the plan" step.
  */
 
 import { type ConformResult, conformImportData, unwrapDedaloData } from './import_data.ts';
@@ -126,53 +127,87 @@ export interface CsvColumn {
 	model: string;
 	/** The raw header string (may carry a suffix like tipo_dmy / tipo_sectiontipo). */
 	columnName: string;
+	/** The component's save lang, resolved from the ontology `translatable` flag. */
+	lang: string;
+	/** The column map's decimal separator (component_number). */
+	decimal?: string;
 }
 
 export interface PlannedColumn {
 	tipo: string;
 	model: string;
+	/** The component's save lang ('lg-nolan' when not translatable). */
+	lang: string;
 	conform: ConformResult;
+	/** Frames from the {dato, dataframe} envelope — written after the component data. */
+	dataframe: unknown[] | null;
+	/** False when the envelope carried ONLY frames: do not touch the component's data. */
+	hasDato: boolean;
 }
 
 export interface PlannedRecord {
-	/** section_id from the section_id column (match/update), or null (create new). */
+	/** section_id from the section_id column (match/update), or null (skip the row). */
 	sectionId: number | null;
+	/** 1-based CSV row number (the header is row 1) — for "go look at line N". */
+	row: number;
 	columns: PlannedColumn[];
 }
 
 /**
  * Build the import plan from data rows + a column map aligned to the columns.
- * The section_id column (model component_section_id) is used for matching, NOT
- * conformed (PHP keeps it a plain int). Every other cell is unwrapped + conformed.
+ * The section_id column is the record KEY: it is used for matching and never
+ * conformed or written (PHP keeps it a plain int).
  */
-export function planCsvImport(
+export async function planCsvImport(
 	dataRows: readonly string[][],
 	columns: readonly (CsvColumn | null)[],
-): PlannedRecord[] {
+	/** The section being imported INTO (relation columns resolve their targets against it). */
+	sectionTipo: string,
+	/** The CSV row number of dataRows[0] (the header is 1, so data starts at 2). */
+	firstRowNumber = 2,
+): Promise<PlannedRecord[]> {
 	const plan: PlannedRecord[] = [];
-	for (const row of dataRows) {
+	for (const [rowIndex, row] of dataRows.entries()) {
 		let sectionId: number | null = null;
 		const plannedColumns: PlannedColumn[] = [];
+
+		// The key column first: every conform reports issues against this section_id,
+		// so it must be known before any cell of the row is conformed.
 		for (let c = 0; c < columns.length; c++) {
 			const column = columns[c];
-			if (column == null) continue;
-			const cell = row[c] ?? '';
-			if (column.model === 'component_section_id') {
-				const parsed = Number.parseInt(cell, 10);
-				sectionId = Number.isFinite(parsed) ? parsed : null;
-				continue;
-			}
+			if (column?.model !== 'component_section_id') continue;
+			const parsed = Number.parseInt(row[c] ?? '', 10);
+			sectionId = Number.isFinite(parsed) ? parsed : null;
+			break;
+		}
+
+		for (let c = 0; c < columns.length; c++) {
+			const column = columns[c];
+			if (column == null || column.model === 'component_section_id') continue;
+			// The cell: PHP trims and un-escapes the ';' placeholder before anything else.
+			const cell = unescapeCell((row[c] ?? '').trim());
 			const unwrapped = unwrapDedaloData(cell);
-			const conform = conformImportData({
+			const conform = await conformImportData({
 				model: column.model,
 				importValue: unwrapped.value,
 				columnName: column.columnName,
+				sectionTipo,
 				sectionId: sectionId ?? 0,
 				componentTipo: column.tipo,
+				lang: column.lang,
+				wrapped: unwrapped.wrapped,
+				decimal: column.decimal,
 			});
-			plannedColumns.push({ tipo: column.tipo, model: column.model, conform });
+			plannedColumns.push({
+				tipo: column.tipo,
+				model: column.model,
+				lang: column.lang,
+				conform,
+				dataframe: unwrapped.dataframe,
+				hasDato: unwrapped.hasDato,
+			});
 		}
-		plan.push({ sectionId, columns: plannedColumns });
+		plan.push({ sectionId, row: firstRowNumber + rowIndex, columns: plannedColumns });
 	}
 	return plan;
 }

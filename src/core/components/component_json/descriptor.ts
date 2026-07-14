@@ -8,4 +8,5 @@ export const component_json: ComponentModel = {
 	model: 'component_json',
 	column: 'misc',
 	importValueProperty: true,
+	importConform: 'json',
 };

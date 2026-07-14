@@ -7197,6 +7197,39 @@ dd-modal .footer.distribute {
   border-color: var(--ut_green) !important;
   box-shadow: 0 0 0 3px var(--ut_green_soft);
 }
+.installer.wrapper .installer_field select.installer_field_input {
+  opacity: 1;
+  background-image: var(--select_icon_url);
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 0.8rem;
+  padding-right: 2.25rem;
+}
+.installer.wrapper .installer_field .installer_langs_checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.4rem 0.75rem;
+  max-width: 28rem;
+  padding: 0.7rem 0.85rem;
+  background: var(--ut_bg_input);
+  border: 1px solid var(--ut_border);
+  border-radius: 9px;
+}
+.installer.wrapper .installer_field .installer_langs_checks .installer_lang_check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--ut_text_primary);
+}
+.installer.wrapper .installer_field .installer_langs_checks .installer_lang_check > input[type='checkbox'] {
+  accent-color: var(--ut_accent);
+  height: 1.05rem;
+  width: 1.05rem;
+  margin: 0;
+  flex: 0 0 auto;
+}
 .installer.wrapper .installer_field .installer_field_help {
   font-size: 0.78rem;
   color: var(--ut_text_muted);
@@ -14659,6 +14692,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   max-height: 30rem;
   overflow: auto;
 }
+/* === error_reports widget (WC-018; source: area_maintenance/widgets/error_reports/css/error_reports.less) === */
 .error_reports_widget {
   font-size: 0.85rem;
   color: var(--fg_default);

@@ -28,6 +28,7 @@ import { readEnv } from '../config/env.ts';
 // registry so the ontology↔components model lookup is registered before plan
 // resolution touches component models (see core/ontology/resolver.ts seam note).
 import '../core/components/registry.ts';
+import { readString } from '../config/readers.ts';
 import { closeDatabasePool } from '../core/db/postgres.ts';
 import { logDiffusionActivity } from '../core/diffusion_bridge/diffusion_delete.ts';
 import {
@@ -54,7 +55,7 @@ const MAX_PERSISTED_ERRORS = 50;
 
 // readEnv (not process.env): keeps the ../private/.env half of the config
 // precedence chain working in runner processes too (audit S2-21).
-const STUB_BATCH_DELAY_MS = Number(readEnv('DIFFUSION_RUNNER_STUB_DELAY_MS', '200'));
+const STUB_BATCH_DELAY_MS = Number(readString('DIFFUSION_RUNNER_STUB_DELAY_MS'));
 
 /** The P0 lifecycle stub (see module header). */
 async function runStubJob(job: DiffusionJobRow): Promise<void> {

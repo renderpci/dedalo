@@ -1,0 +1,1 @@
+tipo,parent,term,model,order_number,relations,tld,properties,model_tipo,is_model,is_translatable,propiedades,is_main

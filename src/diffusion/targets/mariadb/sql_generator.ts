@@ -3,7 +3,7 @@
  *
  * Every function here is PURE — {sql, params} out, no I/O — so the statement
  * shapes are unit-testable without a database. Semantics ported from the old
- * engine's proven lib/sql_generator.ts (v7/master_dedalo/diffusion/api/v1)
+ * engine's proven lib/sql_generator.ts (v7_php_frozen/master_dedalo/diffusion/api/v1)
  * with the deliberate spec §4.3 improvements:
  * - TRUE multi-row batched upserts (~200 rows per statement, byte-budget
  *   aware) instead of one INSERT per record;

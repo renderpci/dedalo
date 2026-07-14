@@ -254,7 +254,7 @@ semantic quality.
 
 Every key is read at the point of use via `readEnv()` (real process env, then
 `../private/.env`). Defaults are the effective code defaults. A commented
-template ships in `../private/sample.env` §11–12.
+template ships in `install/sample.env`; see the [settings reference](../../config/config.md#ai).
 
 ### Master switches
 

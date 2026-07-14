@@ -9,8 +9,19 @@ node_modules/
 docs_site/
 .cache/
 
+# Throwaway parity/debug probes. They live at the repo ROOT on purpose — that is what
+# lets them import `./src/...` with RELATIVE specifiers (a probe in an out-of-tree
+# scratchpad cannot, which is how absolute machine paths crept into the skill docs).
+# See .agents/skills/dedalo-parity-debugging/SKILL.md.
+probe_*.ts
+
 # Never commit secrets (config lives in ../private/, outside the repo)
 .env
+
+# Media root. DEDALO_MEDIA_PATH derives to <repo>/media (PHP parity:
+# DEDALO_ROOT_PATH . '/media'), so a running install writes user uploads HERE
+# unless MEDIA_PATH points elsewhere. It is data, never source.
+/media/
 
 # Client libraries: nothing to ignore, and that is the point. They come from
 # `bun install` (node_modules/, already ignored above) or they are COMMITTED under
@@ -29,3 +40,10 @@ docs_site/
 audits/
 .claude_migration_component_alias_preimage.json
 rewrite/
+
+# Publication API (the isolated read-only subsystem under publication/).
+# v1: the deployer copies config_api/sample.server_config_api.php to this name and
+# fills in the published-DB credentials + the shared `code` — real secrets, never committed.
+server_config_api.php
+# v2: TypeScript incremental-build artifact (its tsconfig sets `incremental: true`).
+*.tsbuildinfo

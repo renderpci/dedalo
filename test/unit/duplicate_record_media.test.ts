@@ -30,13 +30,26 @@ import {
 	type MediaPathOptions,
 	buildMediaLocation,
 } from '../../src/core/media/path.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { duplicateSectionRecord } from '../../src/core/section/record/duplicate_record.ts';
 import { cleanScratchRecord, createScratchRecord } from '../helpers/test_data.ts';
 
 const TABLE = 'matrix_test';
-/** Scratch test-TLD section on matrix_test with a component_image (test175). */
-const SECTION_TIPO = 'test2';
-const MEDIA_TIPO = 'test175';
+/**
+ * The CANONICAL playground coordinate (src/core/test_data/manifest.ts): section
+ * test3 (which the ontology resolves to matrix_test) carrying component_image
+ * test99 — "component_image playground media" in REQUIRED_SHAPES.
+ *
+ * It used to say test2/test175, which resolve to NOTHING here: the ontology puts
+ * test2 in matrix_hierarchy and test175 under section test158. The gate seeded
+ * matrix_test and the engine read matrix_hierarchy, so the source row was never
+ * found. Nobody noticed because the whole describe was skipped — MEDIA_PATH had
+ * no derived default, so `hasRoot` was false on every machine (fixed 2026-07-12
+ * in src/config/config.ts). beforeAll now asserts TABLE against the ontology, so
+ * a coordinate that drifts again fails LOUDLY instead of skipping into the dark.
+ */
+const SECTION_TIPO = 'test3';
+const MEDIA_TIPO = 'test99';
 /** Reserved scratch coordinate — collides with nothing real. */
 const SOURCE_ID = 999101;
 const USER_ID = 1;
@@ -84,6 +97,11 @@ function cleanupFiles(): void {
 
 describe.skipIf(!hasRoot)('duplicate-with-media persists refreshed files_info (S1-04)', () => {
 	beforeAll(async () => {
+		// The fixture must address the table the ENGINE will read, or the gate seeds
+		// into the void and "source record not found" masquerades as a product bug.
+		const engineTable = await getMatrixTableFromTipo(SECTION_TIPO);
+		expect(engineTable).toBe(TABLE);
+
 		pathOpts = await resolveMediaPathOptions(MEDIA_TIPO, SECTION_TIPO);
 		await cleanupRows();
 		// Seed real physical files at the SOURCE identity paths.

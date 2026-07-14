@@ -14,4 +14,5 @@ export const component_iri: ComponentModel = {
 	// PHP component_iri_json ALWAYS pairs with its dd560 label dataframe
 	// (hardcoded DEDALO_COMPONENT_IRI_LABEL_DATAFRAME).
 	fixedDataframeTipos: ['dd560'],
+	importConform: 'iri',
 };

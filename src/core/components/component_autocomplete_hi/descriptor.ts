@@ -12,4 +12,5 @@ export const component_autocomplete_hi: ComponentModel = {
 	model: 'component_autocomplete_hi',
 	column: 'relation',
 	alias: 'component_portal',
+	importConform: 'relation',
 };

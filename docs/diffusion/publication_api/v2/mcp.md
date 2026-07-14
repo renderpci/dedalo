@@ -27,7 +27,10 @@ The endpoint is `POST {BASE_PATH}{MCP_PATH}` — with the defaults, `POST /publi
 
     Sources: `src/router.ts`, `src/config.ts`, `src/middleware/http-cache.ts`, `src/middleware/timeout.ts`.
 
-The transport is an HTTP streamable transport with a generated session id; point your MCP client's HTTP transport at the URL above.
+The transport is an HTTP streamable transport, served **statelessly**: every request gets its own
+server instance and no session id is issued. All tools are independent reads against the published
+database, so there is no session state to keep — concurrent clients never share a transport. Point
+your MCP client's HTTP transport at the URL above.
 
 ## Conventions shared by all tools
 

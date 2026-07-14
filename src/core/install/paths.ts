@@ -22,3 +22,14 @@ export const SEED_DUMP_PATH: string = join(projectRoot, 'install/db/dedalo_insta
 
 /** Directory holding the vendored hierarchy import files + metadata JSONs. */
 export const HIERARCHY_IMPORT_DIR: string = join(projectRoot, 'install/import/hierarchy');
+
+/**
+ * The generated key census the installer drops next to the operator's `.env`.
+ *
+ * GENERATED from `src/config/catalog/` (`bun run config:gen`) and gated byte-for-byte by
+ * `config_docs_tripwire` — so the copy an administrator finds in ../private/ can never
+ * describe a key this engine does not read. It is a shipped artifact, exactly like
+ * SEED_DUMP_PATH above; it is NOT rendered at install time (a render bug must not be able
+ * to touch an install).
+ */
+export const SAMPLE_ENV_PATH: string = join(projectRoot, 'install/sample.env');

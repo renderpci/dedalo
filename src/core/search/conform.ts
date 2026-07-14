@@ -20,6 +20,7 @@
  */
 
 import { readEnv } from '../../config/env.ts';
+import { readString } from '../../config/readers.ts';
 import { getSearchBuilderFamily } from '../components/registry.ts';
 import type { SqoFilterLeaf, SqoFilterNode } from '../concepts/sqo.ts';
 import {
@@ -37,7 +38,7 @@ import { fragment as fragmentResult } from './builders/types.ts';
 import { assertValidLang, assertValidTipo, assertValidTipoOrColumn } from './identifier_gate.ts';
 
 /** Default data language of the installation (PHP DEDALO_DATA_LANG). */
-const DEFAULT_DATA_LANG = readEnv('DATA_LANG', 'lg-spa') as string;
+const DEFAULT_DATA_LANG = readString('DATA_LANG');
 
 /**
  * NON-relation fragment builders, keyed by the descriptor's `searchBuilder`

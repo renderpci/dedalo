@@ -4,6 +4,8 @@
  */
 
 import { config } from '../../../config/config.ts';
+import { readString } from '../../../config/readers.ts';
+import { publicOrigin } from '../../resolve/public_origin.ts';
 import { login } from '../../security/auth.ts';
 import { getPermissions } from '../../security/permissions.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
@@ -87,15 +89,28 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			body: buildDedaloFilesResponse() as unknown as Record<string, unknown>,
 		};
 	},
+	get_job_events: async (rqo, context) => {
+		// The NATIVE job status wire (core/api/job_stream.ts): the caller subscribes
+		// to an in-process job by `job_id` and every state change is PUSHED as it
+		// happens — no {pid, pfile} handle, no re-reading a file on a timer. The
+		// stream ends on the terminal frame, whose `data` is the job's return value
+		// (for an import, the full report). get_process_status below is the legacy
+		// poll wire, kept for the AV transcode + backup consumers.
+		const principal = requirePrincipal(context);
+		const { getJobEvents } = await import('../job_stream.ts');
+		return getJobEvents(rqo, principal);
+	},
 	get_process_status: async (rqo, context) => {
 		// Background-process status SSE stream (PHP dd_utils_api::
 		// get_process_status; audit S2-15/DEC-22a + S2-35): the copied client's
 		// update_process_status polls media transcode / backup pfiles through
 		// this. Session-gated; the pfile is reduced to a job-id basename inside
 		// the processes dir (see core/api/process_status.ts).
-		requirePrincipal(context);
+		const principal = requirePrincipal(context);
 		const { getUtilsProcessStatus } = await import('../process_status.ts');
-		return getUtilsProcessStatus(rqo);
+		// The principal authorizes the poll: a job that carries user data (a tool's
+		// background run) streams only to its owner — the ids are guessable.
+		return getUtilsProcessStatus(rqo, principal);
 	},
 	get_system_info: async (_rqo, _context) => {
 		// Upload/import/media-edit init call (PHP dd_utils_api::get_system_info).
@@ -419,10 +434,7 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		if (ioPath === false) {
 			return fail('Error. Invalid version number. This version does not contain ontology files. ');
 		}
-		const { readEnv } = await import('../../../config/env.ts');
-		const protocol = (readEnv('DEDALO_PROTOCOL', 'http://') as string) ?? 'http://';
-		const host = (readEnv('DEDALO_HOST', 'localhost') as string) ?? 'localhost';
-		const publicBaseUrl = `${protocol}${host}/dedalo/install/import/ontology/${major}.${minor}`;
+		const publicBaseUrl = `${publicOrigin()}/dedalo/install/import/ontology/${major}.${minor}`;
 		return { status: 200, body: buildOntologyUpdateInfo(ioPath, publicBaseUrl) };
 	},
 	get_code_update_info: async (rqo) => {
@@ -450,19 +462,18 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			return fail('Error. Invalid code');
 		}
 		const { buildCodeUpdateInfo } = await import('../../update/code_manifest.ts');
-		const { readEnv } = await import('../../../config/env.ts');
-		const protocol = (readEnv('DEDALO_PROTOCOL', 'http://') as string) ?? 'http://';
-		const host = (readEnv('DEDALO_HOST', 'localhost') as string) ?? 'localhost';
 		const info = buildCodeUpdateInfo({
 			clientVersion,
 			serverVersion: DEDALO_VERSION_TRIPLE,
 			codeFilesDir: config.update.codeFilesDir,
-			publicBaseUrl: `${protocol}${host}/dedalo/install/code`,
+			publicBaseUrl: `${publicOrigin()}/dedalo/install/code`,
 			info: {
 				date: new Date().toISOString(),
 				entity_id: config.identity.entityId,
 				entity: config.entity,
-				host: (readEnv('DEDALO_HOST', '') as string) ?? '',
+				// This REPORTS our hostname rather than building a URL, so an unconfigured
+				// install honestly says "unknown" ('') instead of claiming to be localhost.
+				host: readString('DEDALO_HOST'),
 			},
 		});
 		return { status: 200, body: { result: info, msg: 'OK. request done', errors: [] } };

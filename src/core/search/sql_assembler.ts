@@ -26,6 +26,7 @@
 
 import { config } from '../../config/config.ts';
 import { readEnv } from '../../config/env.ts';
+import { readString } from '../../config/readers.ts';
 import type { Sqo } from '../concepts/sqo.ts';
 import { getSectionTipos } from '../concepts/sqo.ts';
 import { assertMatrixTable } from '../db/matrix.ts';
@@ -48,7 +49,7 @@ import {
 } from './identifier_gate.ts';
 import { ParamsCollector } from './params.ts';
 
-const DEFAULT_DATA_LANG = readEnv('DATA_LANG', 'lg-spa') as string;
+const DEFAULT_DATA_LANG = readString('DATA_LANG');
 
 /** Default SELECT data columns (PHP trait.select.php:122 — relation_search excluded). */
 const DEFAULT_SELECT_COLUMNS = [

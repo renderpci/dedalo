@@ -99,6 +99,46 @@ describe('buildNodeData — descriptor node with term + link_children', () => {
 	});
 });
 
+describe('buildNodeData — the ontology term is the client-parsable "label tld id"', () => {
+	// The ontology ddo_map term is a 3-tipo array [term, tld, section_id] whose
+	// concatenated value the CLIENT parses back with this exact regex
+	// (client/dedalo/core/ts_object/js/render_ts_line.js render_ontology_term):
+	// group 1 = the label it renders, groups 2+3 = the [dd242] badge. A missing
+	// trailing id (component_section_id is virtual — it owns no jsonb column, so
+	// it can only come from the record's own id) fails the match and the client
+	// silently falls back to rendering the RAW value, i.e. "Catalogue dd".
+	const ONTOLOGY_TERM_GRAMMAR = /^(.*) ([a-z]{2,}) ([0-9]+)$/;
+
+	it('ends the term value with the tld and the section_id', async () => {
+		const node = await buildNodeData('dd0', 242, {}, 'root', SUPERUSER);
+		const term = node.ar_elements.find((element) => element.type === 'term');
+		const parts = ONTOLOGY_TERM_GRAMMAR.exec(term?.value as string);
+		expect(parts).not.toBeNull();
+		expect(parts?.[1]).not.toBe('');
+		expect(parts?.[2]).toBe('dd'); // tld
+		expect(parts?.[3]).toBe('242'); // section_id
+	});
+});
+
+describe('buildNodeData — an icon whose component is empty is not rendered', () => {
+	// dd0_1772 has a CLEARED properties component (misc.ontology18 = [{id:4, value:null}]:
+	// the wrapper item survives a clear), dd0_1 (the Dédalo root) has real properties.
+	// PHP is_empty calls any object with any property non-empty, so PHP renders the 'P'
+	// for both and the empty one opens an empty JSON editor — WC-029 diverges.
+	const iconTipos = (node: Awaited<ReturnType<typeof buildNodeData>>) =>
+		node.ar_elements.filter((element) => element.type === 'icon').map((element) => element.tipo);
+
+	it('suppresses the P icon of a cleared properties component', async () => {
+		expect(iconTipos(await buildNodeData('dd0', 1772, {}, 'root', SUPERUSER))).not.toContain(
+			'ontology18',
+		);
+	});
+
+	it('still renders the P icon when the properties component has content', async () => {
+		expect(iconTipos(await buildNodeData('dd0', 1, {}, 'root', SUPERUSER))).toContain('ontology18');
+	});
+});
+
 describe('getChildrenOfType — descriptor filter', () => {
 	it('returns the descriptor children of a parent', async () => {
 		const descriptors = await getChildrenOfType(620, 'tchi1', 'descriptor');

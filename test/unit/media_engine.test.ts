@@ -190,6 +190,28 @@ describe('mime sniffer (magic bytes, no library)', () => {
 		expect(sniffBytes(new TextEncoder().encode('glTF'))?.kind).toBe('glb');
 	});
 
+	test('plain text: csv/txt/json/xml accepted, html rejected under any extension', () => {
+		const enc = (s: string) => new TextEncoder().encode(s);
+		// The import tools upload CSV through the same endpoint as media (the bug:
+		// a CSV has no magic bytes, so the closed-world sniffer failed it closed).
+		expect(sniffAndValidate(enc('id,name\n1,"Ana"\n'), 'csv')).toBe('csv');
+		// A latin-1 CSV out of Excel is text too — the sniff is charset-agnostic.
+		expect(sniffAndValidate(new Uint8Array([0x61, 0x2c, 0xe1, 0x0a]), 'csv')).toBe('csv');
+		expect(sniffAndValidate(enc('{"a":1}'), 'json')).toBe('json');
+		expect(sniffAndValidate(enc('<?xml version="1.0"?><root/>'), 'xml')).toBe('xml');
+		expect(sniffAndValidate(enc('plain\n'), 'txt')).toBe('txt');
+		// MEDIA-01: an HTML document is refused whatever it is named.
+		expect(() => sniffAndValidate(enc('<!DOCTYPE html><html><body>x'), 'csv')).toThrow(
+			/not an allowed upload type/,
+		);
+		// Still fail-closed: text is not a free pass for a media extension.
+		expect(() => sniffAndValidate(enc('id,name\n'), 'jpg')).toThrow();
+		// An empty file is not text (PHP: application/x-empty → not allowlisted).
+		expect(() => sniffAndValidate(new Uint8Array(0), 'csv')).toThrow();
+		// Binary declared as csv → rejected.
+		expect(() => sniffAndValidate(bytesOf(0xff, 0xd8, 0xff), 'csv')).toThrow();
+	});
+
 	test('sniffAndValidate: matches, mismatches fail closed', () => {
 		expect(sniffAndValidate(new TextEncoder().encode('%PDF-1.4'), 'pdf')).toBe('pdf');
 		expect(sniffAndValidate(bytesOf(0xff, 0xd8, 0xff), 'jpg')).toBe('jpg');

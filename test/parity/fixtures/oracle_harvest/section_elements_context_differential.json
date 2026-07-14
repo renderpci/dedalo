@@ -2955,7 +2955,7 @@
 					"rqo_string": "{\n    \"dd_api\": \"dd_core_api\",\n    \"action\": \"get_section_elements_context\",\n    \"options\": {\n        \"ar_section_tipo\": [\n            \"numisdata6\"\n        ]\n    }\n}",
 					"real_execution_time": "362.91775 ms"
 				},
-				"dedalo_last_error": "{\"type\":2,\"message\":\"Undefined property: stdClass::$context_type\",\"file\":\"\\/Users\\/render\\/Desktop\\/trabajos\\/dedalo\\/v7\\/master_dedalo\\/core\\/api\\/v1\\/common\\/class.dd_core_api.php\",\"line\":1936}"
+				"dedalo_last_error": "{\"type\":2,\"message\":\"Undefined property: stdClass::$context_type\",\"file\":\"v7_php_frozen\\/master_dedalo\\/core\\/api\\/v1\\/common\\/class.dd_core_api.php\",\"line\":1936}"
 			}
 		},
 		"abb49e81097fcb711fface31": {
@@ -7494,7 +7494,7 @@
 					"rqo_string": "{\n    \"dd_api\": \"dd_core_api\",\n    \"action\": \"get_section_elements_context\",\n    \"options\": {\n        \"ar_section_tipo\": [\n            \"numisdata5\"\n        ]\n    }\n}",
 					"real_execution_time": "207.811 ms"
 				},
-				"dedalo_last_error": "{\"type\":2,\"message\":\"Undefined property: stdClass::$context_type\",\"file\":\"\\/Users\\/render\\/Desktop\\/trabajos\\/dedalo\\/v7\\/master_dedalo\\/core\\/api\\/v1\\/common\\/class.dd_core_api.php\",\"line\":1936}"
+				"dedalo_last_error": "{\"type\":2,\"message\":\"Undefined property: stdClass::$context_type\",\"file\":\"v7_php_frozen\\/master_dedalo\\/core\\/api\\/v1\\/common\\/class.dd_core_api.php\",\"line\":1936}"
 			}
 		},
 		"86fd9e0846d39973fc0321d6": {
@@ -12748,7 +12748,7 @@
 					"rqo_string": "{\n    \"dd_api\": \"dd_core_api\",\n    \"action\": \"get_section_elements_context\",\n    \"options\": {\n        \"ar_section_tipo\": [\n            \"numisdata3\"\n        ]\n    }\n}",
 					"real_execution_time": "85.578 ms"
 				},
-				"dedalo_last_error": "{\"type\":2,\"message\":\"Undefined property: stdClass::$context_type\",\"file\":\"\\/Users\\/render\\/Desktop\\/trabajos\\/dedalo\\/v7\\/master_dedalo\\/core\\/api\\/v1\\/common\\/class.dd_core_api.php\",\"line\":1936}"
+				"dedalo_last_error": "{\"type\":2,\"message\":\"Undefined property: stdClass::$context_type\",\"file\":\"v7_php_frozen\\/master_dedalo\\/core\\/api\\/v1\\/common\\/class.dd_core_api.php\",\"line\":1936}"
 			}
 		},
 		"a0b0be1a602f0a2a52831273": {
@@ -18288,7 +18288,7 @@
 					"rqo_string": "{\n    \"dd_api\": \"dd_core_api\",\n    \"action\": \"get_section_elements_context\",\n    \"options\": {\n        \"ar_section_tipo\": [\n            \"rsc167\"\n        ]\n    }\n}",
 					"real_execution_time": "173.774792 ms"
 				},
-				"dedalo_last_error": "{\"type\":2,\"message\":\"Undefined property: stdClass::$context_type\",\"file\":\"\\/Users\\/render\\/Desktop\\/trabajos\\/dedalo\\/v7\\/master_dedalo\\/core\\/api\\/v1\\/common\\/class.dd_core_api.php\",\"line\":1936}"
+				"dedalo_last_error": "{\"type\":2,\"message\":\"Undefined property: stdClass::$context_type\",\"file\":\"v7_php_frozen\\/master_dedalo\\/core\\/api\\/v1\\/common\\/class.dd_core_api.php\",\"line\":1936}"
 			}
 		},
 		"eef64f5215d30fed3b36d5e0": {
@@ -21594,7 +21594,7 @@
 					"rqo_string": "{\n    \"dd_api\": \"dd_core_api\",\n    \"action\": \"get_section_elements_context\",\n    \"options\": {\n        \"ar_section_tipo\": [\n            \"oh1\"\n        ]\n    }\n}",
 					"real_execution_time": "187.904667 ms"
 				},
-				"dedalo_last_error": "{\"type\":2,\"message\":\"Undefined property: stdClass::$context_type\",\"file\":\"\\/Users\\/render\\/Desktop\\/trabajos\\/dedalo\\/v7\\/master_dedalo\\/core\\/api\\/v1\\/common\\/class.dd_core_api.php\",\"line\":1936}"
+				"dedalo_last_error": "{\"type\":2,\"message\":\"Undefined property: stdClass::$context_type\",\"file\":\"v7_php_frozen\\/master_dedalo\\/core\\/api\\/v1\\/common\\/class.dd_core_api.php\",\"line\":1936}"
 			}
 		},
 		"ac76432647b917abf7fc918d": {
@@ -22707,7 +22707,7 @@
 					"rqo_string": "{\n    \"dd_api\": \"dd_core_api\",\n    \"action\": \"get_section_elements_context\",\n    \"options\": {\n        \"ar_section_tipo\": [\n            \"dd128\"\n        ]\n    }\n}",
 					"real_execution_time": "11.993709 ms"
 				},
-				"dedalo_last_error": "{\"type\":2,\"message\":\"Undefined property: stdClass::$context_type\",\"file\":\"\\/Users\\/render\\/Desktop\\/trabajos\\/dedalo\\/v7\\/master_dedalo\\/core\\/api\\/v1\\/common\\/class.dd_core_api.php\",\"line\":1936}"
+				"dedalo_last_error": "{\"type\":2,\"message\":\"Undefined property: stdClass::$context_type\",\"file\":\"v7_php_frozen\\/master_dedalo\\/core\\/api\\/v1\\/common\\/class.dd_core_api.php\",\"line\":1936}"
 			}
 		},
 		"240e297aa5575acaf863e10a": {
@@ -24878,7 +24878,7 @@
 					"rqo_string": "{\n    \"dd_api\": \"dd_core_api\",\n    \"action\": \"get_section_elements_context\",\n    \"options\": {\n        \"ar_section_tipo\": [\n            \"ontology1\"\n        ]\n    }\n}",
 					"real_execution_time": "229.957166 ms"
 				},
-				"dedalo_last_error": "{\"type\":2,\"message\":\"Undefined property: stdClass::$context_type\",\"file\":\"\\/Users\\/render\\/Desktop\\/trabajos\\/dedalo\\/v7\\/master_dedalo\\/core\\/api\\/v1\\/common\\/class.dd_core_api.php\",\"line\":1936}"
+				"dedalo_last_error": "{\"type\":2,\"message\":\"Undefined property: stdClass::$context_type\",\"file\":\"v7_php_frozen\\/master_dedalo\\/core\\/api\\/v1\\/common\\/class.dd_core_api.php\",\"line\":1936}"
 			}
 		},
 		"2bf011ca530e03dd70e30545": {
@@ -26250,7 +26250,7 @@
 					"rqo_string": "{\n    \"dd_api\": \"dd_core_api\",\n    \"action\": \"get_section_elements_context\",\n    \"options\": {\n        \"ar_section_tipo\": [\n            \"hierarchy1\"\n        ]\n    }\n}",
 					"real_execution_time": "143.867083 ms"
 				},
-				"dedalo_last_error": "{\"type\":2,\"message\":\"Undefined property: stdClass::$context_type\",\"file\":\"\\/Users\\/render\\/Desktop\\/trabajos\\/dedalo\\/v7\\/master_dedalo\\/core\\/api\\/v1\\/common\\/class.dd_core_api.php\",\"line\":1936}"
+				"dedalo_last_error": "{\"type\":2,\"message\":\"Undefined property: stdClass::$context_type\",\"file\":\"v7_php_frozen\\/master_dedalo\\/core\\/api\\/v1\\/common\\/class.dd_core_api.php\",\"line\":1936}"
 			}
 		}
 	}

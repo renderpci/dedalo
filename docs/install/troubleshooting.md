@@ -23,6 +23,8 @@ curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
 | Uploads fail with `413` | [Serving](#serving) |
 | Nobody can log in, and there is no error | [Using it](#using-it) |
 | Media `404`s | [Media](#media) |
+| Media is served to everyone | [Media](#media) |
+| `MEDIA_HTACCESS_ADDONS` rules do not appear | [Media](#media) |
 | Uploads produce no thumbnail | [Media](#media) |
 
 ## Installing
@@ -346,6 +348,30 @@ With the canonical layout it is `root /srv;`.
 **Fix.** The media directory needs `AllowOverride All` (or at least
 `FileInfo Options`) and `mod_rewrite` enabled. This one line is the entire gate
 on Apache.
+
+### My `MEDIA_HTACCESS_ADDONS` rules are not in the generated `.htaccess`
+
+**Cause.** The value is not valid JSON, so it was refused. The boot log says so:
+
+```text
+[config] MEDIA_HTACCESS_ADDONS must be a JSON array of strings — ignoring the value.
+```
+
+Almost always this is **backslash escaping**. The key holds a JSON array, so every
+backslash in an Apache regex has to be doubled:
+
+```ini
+# wrong — natural Apache syntax, but invalid JSON
+MEDIA_HTACCESS_ADDONS=["RewriteCond %{REMOTE_ADDR} ^10\.0\.","RewriteRule ^ - [L]"]
+
+# right — backslashes doubled for JSON
+MEDIA_HTACCESS_ADDONS=["RewriteCond %{REMOTE_ADDR} ^10\\.0\\.","RewriteRule ^ - [L]"]
+```
+
+**Fix.** Correct the escaping and restart. Only your addon lines were dropped — the
+access gate itself is unaffected and stayed closed, which is the intended failure
+direction: a malformed addon must never become half a directive inside a live
+`.htaccess` (that would make Apache reject the whole media directory).
 
 ### An uploaded image produces no derivative and no thumbnail
 

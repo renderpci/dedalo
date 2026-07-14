@@ -15,9 +15,10 @@
 
 import { hostname } from 'node:os';
 import { readEnv } from '../../config/env.ts';
+import { readString } from '../../config/readers.ts';
 import { claimNextQueuedJob, purgeTerminalJobs, recordRunnerPid, sweepStaleJobs } from './queue.ts';
 
-const MAX_RUNNERS = Math.max(1, Number(readEnv('DEDALO_DIFFUSION_MAX_RUNNERS', '2')) || 2);
+const MAX_RUNNERS = Math.max(1, Number(readString('DEDALO_DIFFUSION_MAX_RUNNERS')) || 2);
 
 /** The configured runner concurrency limit — read-only surface for the admin widget. */
 export function getMaxRunners(): number {

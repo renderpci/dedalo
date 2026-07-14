@@ -1,9 +1,10 @@
 import { readEnv } from '../../config/env.ts';
+import { readString } from '../../config/readers.ts';
 import type { Candidate } from './types.ts';
 
 /** RRF constant k (PHP DEDALO_RAG_RRF_K, default 60). */
 const RRF_K = (() => {
-	const parsed = Number(readEnv('DEDALO_RAG_RRF_K', ''));
+	const parsed = Number(readString('DEDALO_RAG_RRF_K'));
 	return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : 60;
 })();
 

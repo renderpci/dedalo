@@ -7,6 +7,17 @@
     (Bun/TypeScript): resource-oriented REST, RFC 9457 errors, `ETag` / `Link` caching, a bracketed
     filter DSL, batch queries and MCP support.
 
+!!! info "Where it lives, and what it depends on"
+    v1 ships in the repository at `publication/server_api/v1` as a **self-contained folder**: its PHP
+    dependencies (`shared/`) travel with it, so a project deploys it by copying that one directory to
+    any Apache + PHP host. It reads the published MariaDB **and nothing else** — it never calls the
+    Dédalo engine, which is why an unchanged v6-era website keeps working against a v7 install.
+
+    It is preserved **as-is**, with the v7 security hardening applied to it (constant-time `code`
+    comparison, stricter validation of `table` / `db_name` / `ar_fields` / `sql_filter`, a locked-down
+    `config_api/.htaccess`). The one functional repair: `web_data::get_text_fragment` — which the
+    `text_fragment` action calls and which had been lost — is restored from the v6 source.
+
 The Dédalo Publication API connects your archive data with the web.
 
 ## Introduction

@@ -2,6 +2,14 @@
 // Styled to match the system_info readout language (bordered card, tinted
 // uppercase header, hairline grid rows, monospace values, theme-aware colours).
 // Scoped under .error_reports_widget (the content_data class in the render JS).
+//
+// The block comment below is DELIBERATE and load-bearing: `client_serving.test.ts`
+// asserts main.css carries this marker exactly once (it is how the gate proves the
+// WC-018 widget's CSS never silently drops out of the build). It used to be appended
+// by hand to the compiled main.css; it now lives here, in the source it describes, so
+// `bun run css:build` reproduces it. `//` comments are stripped by LESS — this one must
+// stay a `/* */` block, or the gate goes red.
+/* === error_reports widget (WC-018; source: area_maintenance/widgets/error_reports/css/error_reports.less) === */
 .error_reports_widget {
 
 	@er_mono: Menlo, Monaco, Consolas, 'Courier New', monospace;

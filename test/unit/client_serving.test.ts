@@ -66,6 +66,29 @@ describe('copied client serving (Phase 7 gate, first slice)', () => {
 		expect(cssResponse.headers.get('content-type')).toContain('css');
 	});
 
+	test('entry points redirect to the app instead of 404ing', async () => {
+		// The client tree has no index.html above core/page/: a user who types the
+		// mount point must be carried into the app, as the PHP index.php shims did.
+		for (const entry of ['/', '/dedalo', '/dedalo/', '/dedalo/core', '/dedalo/core/']) {
+			const response = await handleRequest(requestFor(entry), context);
+			expect(response.status).toBe(302);
+			expect(response.headers.get('location')).toBe('/dedalo/core/page/');
+		}
+	});
+
+	test('a directory URL without its trailing slash redirects (relative assets)', async () => {
+		// index.html asks for "js/index.js" RELATIVELY — served at /dedalo/core/page
+		// that resolves to /dedalo/core/js/index.js and the client boots blank.
+		const response = await handleRequest(requestFor('/dedalo/core/page/js'), context);
+		expect(response.status).toBe(302);
+		expect(response.headers.get('location')).toBe('/dedalo/core/page/js/');
+
+		// The query string survives the normalization.
+		const withQuery = await handleRequest(requestFor('/dedalo/core/page?tipo=x'), context);
+		expect(withQuery.status).toBe(302);
+		expect(withQuery.headers.get('location')).toBe('/dedalo/core/page/?tipo=x');
+	});
+
 	test('path traversal outside the client root fails closed (404)', async () => {
 		for (const attempt of [
 			'/dedalo/../private/.env',
