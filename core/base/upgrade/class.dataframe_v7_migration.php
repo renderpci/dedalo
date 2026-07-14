@@ -157,7 +157,14 @@ class dataframe_v7_migration {
 				  AND table_name NOT IN ('matrix_time_machine')
 				ORDER BY table_name
 			");
-			while ($result!==false && ($row = pg_fetch_assoc($result))) {
+			if ($result===false) {
+				$response->result	= false;
+				$response->msg		= 'Error. Table discovery query failed';
+				$response->errors[]	= 'Discovery query failed (information_schema.columns for relation): '
+					. (pg_last_error($conn) ?: 'unknown error');
+				return $response;
+			}
+			while ($row = pg_fetch_assoc($result)) {
 				$ar_tables[] = $row['table_name'];
 			}
 		}
@@ -384,7 +391,14 @@ class dataframe_v7_migration {
 			SELECT column_name FROM information_schema.columns
 			WHERE table_name = '$table' AND data_type = 'jsonb'
 		");
-		while ($result!==false && ($row = pg_fetch_assoc($result))) {
+		if ($result===false) {
+			$response->result	= false;
+			$response->msg		= 'Error. Column discovery query failed';
+			$response->errors[]	= 'Column discovery query failed (information_schema.columns for '
+				. $table . '): ' . (pg_last_error($conn) ?: 'unknown error');
+			return $response;
+		}
+		while ($row = pg_fetch_assoc($result)) {
 			$jsonb_columns[] = $row['column_name'];
 		}
 		if (empty($jsonb_columns)) {
@@ -498,7 +512,14 @@ class dataframe_v7_migration {
 				  AND table_name NOT IN ('matrix_time_machine')
 				ORDER BY table_name
 			");
-			while ($result!==false && ($row = pg_fetch_assoc($result))) {
+			if ($result===false) {
+				$response->result	= false;
+				$response->msg		= 'Error. Table discovery query failed';
+				$response->errors[]	= 'Discovery query failed (information_schema.columns for number): '
+					. (pg_last_error($conn) ?: 'unknown error');
+				return $response;
+			}
+			while ($row = pg_fetch_assoc($result)) {
 				$ar_tables[] = $row['table_name'];
 			}
 		}
@@ -704,7 +725,10 @@ class dataframe_v7_migration {
 	*        null triggers auto-discovery via information_schema.columns
 	* @param bool $fix [= false] - false = report only; true = remove orphan locators
 	* @return object $response - new_step_response() shape plus frames_checked,
-	*         legacy_unmigrated, orphans_fixed counters
+	*         legacy_unmigrated, orphans_fixed, rows_with_orphans counters.
+	*         rows_with_orphans counts rows containing orphans regardless of $fix,
+	*         so dry-runs report the scope of damage; rows_changed counts actually
+	*         fixed rows (only incremented when $fix=true).
 	*/
 	public static function integrity_check( ?array $ar_tables=null, bool $fix=false ) : object {
 
@@ -712,6 +736,7 @@ class dataframe_v7_migration {
 		$response->frames_checked		= 0;
 		$response->legacy_unmigrated	= 0;
 		$response->orphans_fixed		= 0;
+		$response->rows_with_orphans	= 0;
 
 		$conn = DBi::_getConnection();
 		if ($conn===false) {
@@ -730,7 +755,14 @@ class dataframe_v7_migration {
 				  AND table_name NOT IN ('matrix_time_machine')
 				ORDER BY table_name
 			");
-			while ($result!==false && ($row = pg_fetch_assoc($result))) {
+			if ($result===false) {
+				$response->result	= false;
+				$response->msg		= 'Error. Table discovery query failed';
+				$response->errors[]	= 'Discovery query failed (information_schema.columns for relation): '
+					. (pg_last_error($conn) ?: 'unknown error');
+				return $response;
+			}
+			while ($row = pg_fetch_assoc($result)) {
 				$ar_tables[] = $row['table_name'];
 			}
 		}
@@ -745,7 +777,13 @@ class dataframe_v7_migration {
 			$result = pg_query_params($conn,
 				"SELECT column_name FROM information_schema.columns
 				 WHERE table_name = $1 AND data_type = 'jsonb'", [$table]);
-			while ($result!==false && ($row = pg_fetch_assoc($result))) {
+			if ($result===false) {
+				$response->result	= false;
+				$response->errors[]	= 'Column discovery query failed for table '.$table.': '
+					. (pg_last_error($conn) ?: 'unknown error');
+				continue;
+			}
+			while ($row = pg_fetch_assoc($result)) {
 				if (in_array($row['column_name'], $data_columns, true)) {
 					$table_columns[] = $row['column_name'];
 				}
@@ -813,6 +851,7 @@ class dataframe_v7_migration {
 
 					$context_ref = $table.' '.$row['section_tipo'].'_'.$row['section_id'];
 					$row_changed = false;
+					$row_has_orphans = false;
 
 					foreach ($relation as $component_tipo => $entries) {
 						if (!is_array($entries)) {
@@ -873,6 +912,7 @@ class dataframe_v7_migration {
 									. ' (slot ' . $el->from_component_tipo . ', target '
 									. ($el->section_tipo ?? '?') . '_' . ($el->section_id ?? '?') . ')'
 								);
+								$row_has_orphans = true;
 								if ($fix) {
 									$response->orphans_fixed++;
 									$entries_changed = true;
@@ -887,6 +927,10 @@ class dataframe_v7_migration {
 							$relation->{$component_tipo} = $clean_entries;
 							$row_changed = true;
 						}
+					}
+
+					if ($row_has_orphans) {
+						$response->rows_with_orphans++;
 					}
 
 					if ($row_changed && $fix) {
@@ -964,7 +1008,14 @@ class dataframe_v7_migration {
 			  AND table_name NOT IN ('matrix_time_machine')
 			ORDER BY table_name
 		");
-		while ($result!==false && ($row = pg_fetch_assoc($result))) {
+		if ($result===false) {
+			$response->result	= false;
+			$response->msg		= 'Error. Table discovery query failed';
+			$response->errors[]	= 'Discovery query failed (information_schema.columns for iri): '
+				. (pg_last_error($conn) ?: 'unknown error');
+			return $response;
+		}
+		while ($row = pg_fetch_assoc($result)) {
 			$ar_tables[] = $row['table_name'];
 		}
 
@@ -1053,19 +1104,49 @@ class dataframe_v7_migration {
 								// already exists in dd1706 with the same text, it returns its id.
 								// save_label_dataframe() writes the pairing locator into the
 								// relation column of the section record (not into the iri column).
-								$target_section_id = component_iri::save_label_dataframe_from_string((string)$item->title);
-								if (empty($target_section_id)) {
+								//
+								// (!) Wrapped in try/catch so one bad item does not abort the
+								// whole batch. On failure the item is reported as unresolved and
+								// its literal title is left intact (dual-read still works).
+								try {
+									$target_section_id = component_iri::save_label_dataframe_from_string((string)$item->title);
+									if (empty($target_section_id)) {
+										self::report($response, 'unresolved', $context_ref
+											. ' | unable to create label record for title: '.to_string($item->title));
+										continue;
+									}
+									component_iri::save_label_dataframe((object)[
+										'section_tipo'		=> $row['section_tipo'],
+										'section_id'		=> $row['section_id'],
+										'component_tipo'	=> $component_tipo,
+										'id_key'			=> (int)$item->id, // main data item id
+										'target_section_id'=> $target_section_id
+									]);
+
+									// #4: keep the in-memory $relation in sync with the new frame
+									// written by save_label_dataframe, so subsequent items in the
+									// same row see it in the has_frame check and we avoid redundant
+									// label-record creation round-trips.
+									if (!is_object($relation)) {
+										$relation = new stdClass();
+									}
+									if (!isset($relation->{$frame_slot_tipo}) || !is_array($relation->{$frame_slot_tipo})) {
+										$relation->{$frame_slot_tipo} = [];
+									}
+									$relation->{$frame_slot_tipo}[] = (object)[
+										'type'					=> DEDALO_RELATION_TYPE_DATAFRAME,
+										'section_tipo'			=> component_iri::$label_target_section_tipo,
+										'section_id'			=> (string)$target_section_id,
+										'from_component_tipo'	=> $frame_slot_tipo,
+										'main_component_tipo'	=> $component_tipo,
+										'id_key'				=> (int)$item->id
+									];
+								} catch (Throwable $e) {
 									self::report($response, 'unresolved', $context_ref
-										. ' | unable to create label record for title: '.to_string($item->title));
-									continue;
+										. ' | exception while materializing iri title (left intact): '
+										. $e->getMessage());
+									continue; // leave title intact, skip to next item
 								}
-								component_iri::save_label_dataframe((object)[
-									'section_tipo'		=> $row['section_tipo'],
-									'section_id'		=> $row['section_id'],
-									'component_tipo'	=> $component_tipo,
-									'id_key'			=> (int)$item->id, // main data item id
-									'target_section_id'=> $target_section_id
-								]);
 							}
 
 							// strip the deprecated literal title
@@ -1125,6 +1206,9 @@ class dataframe_v7_migration {
 	* 4. If none remain: report 'unresolved' and skip (leave legacy, dual-read
 	*    handles it). If more than one remain: report 'ambiguous' and use the
 	*    first (same-target-linked-twice corner case; recorded for inspection).
+	*    If section_tipo_key is missing on a relation-main frame, report
+	*    'ambiguous' as a warning (matching by section_id only risks cross-tipo
+	*    mis-pairing) even before counting candidates.
 	* 5. Cast the chosen item's id to int and write it as id_key.
 	*
 	* The method mutates $entries objects in-place (PHP passes objects by
@@ -1170,6 +1254,21 @@ class dataframe_v7_migration {
 
 				// relation main: resolve the main locator item pointing at
 				// (section_tipo_key, section_id_key) and take its item id
+
+				// (!) Warn when section_tipo_key is missing: matching falls back to
+				// section_id only, which can mis-pair across different section tipos
+				// that happen to share the same numeric section_id. Reported as
+				// 'ambiguous' so the entry is flagged for manual review even when
+				// only one candidate matches.
+				if (!isset($el->section_tipo_key)) {
+					self::report($response, 'ambiguous', $context_ref
+						. ' | from: ' . $el->from_component_tipo
+						. ' | main: ' . $el->main_component_tipo
+						. ' | section_id_key: ' . to_string($el->section_id_key)
+						. ' | WARNING: missing section_tipo_key, matching by section_id only (cross-tipo mis-pair risk)'
+					);
+				}
+
 				$candidates = array_values(array_filter($resolver($el), function($item) use ($el) {
 					return is_object($item)
 						&& !isset($item->section_id_key) && !isset($item->id_key) // exclude frame entries
