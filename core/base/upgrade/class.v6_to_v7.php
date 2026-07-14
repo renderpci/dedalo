@@ -280,7 +280,7 @@ class v6_to_v7 {
 			$string_relation_object = json_handler::encode($new_relation);
 
 			$strQuery = "UPDATE \"" . static::$table_jer_dd . "\" SET relations = $1 WHERE id = $2 ";
-			$result   = matrix_db_manager::exec_search($strQuery, [$string_relation_object, $id], false);
+			$result   = pg_query_params(DBi::_getConnection(), $strQuery, [$string_relation_object, $id]);
 			if($result===false) {
 				$msg = "Failed to update relations in section_data (jer_dd) for ID $id";
 				debug_log(__METHOD__
@@ -290,6 +290,9 @@ class v6_to_v7 {
 				return false;
 			}
 		}
+
+		pg_free_result($jer_dd_result);
+
 		return true;
 	}//end refactor_jer_dd_relations
 
@@ -385,26 +388,31 @@ class v6_to_v7 {
 	*
 	* @return object Keyed by model name, values are DEDALO_VALUE_TYPE_* string constants.
 	*/
+	private static ?object $value_type_map_cache = null;
+
 	public static function get_value_type_map() : object {
 
-		return (object)[
-			'component_input_text'		=>	DEDALO_VALUE_TYPE_STRING,
-			'component_text_area'		=>	DEDALO_VALUE_TYPE_STRING,
-			'component_email'			=>	DEDALO_VALUE_TYPE_STRING,
-			'component_password'		=>	DEDALO_VALUE_TYPE_STRING,
-			'component_number'			=>	DEDALO_VALUE_TYPE_NUMBER,
-			'component_date'			=>	DEDALO_VALUE_TYPE_DATE,
-			'component_3d'				=>	DEDALO_VALUE_TYPE_MEDIA,
-			'component_av'				=>	DEDALO_VALUE_TYPE_MEDIA,
-			'component_image'			=>	DEDALO_VALUE_TYPE_MEDIA,
-			'component_pdf'				=>	DEDALO_VALUE_TYPE_MEDIA,
-			'component_svg'				=>	DEDALO_VALUE_TYPE_MEDIA,
-			'component_iri'				=>	DEDALO_VALUE_TYPE_IRI,
-			'component_geolocation'		=>	DEDALO_VALUE_TYPE_GEO,
-			'component_json'			=>	DEDALO_VALUE_TYPE_MISC,
-			'component_filter_records'	=>	DEDALO_VALUE_TYPE_MISC,
-			'component_security_access'	=>	DEDALO_VALUE_TYPE_MISC
-		];
+		if (self::$value_type_map_cache === null) {
+			self::$value_type_map_cache = (object)[
+				'component_input_text'		=>	DEDALO_VALUE_TYPE_STRING,
+				'component_text_area'		=>	DEDALO_VALUE_TYPE_STRING,
+				'component_email'			=>	DEDALO_VALUE_TYPE_STRING,
+				'component_password'		=>	DEDALO_VALUE_TYPE_STRING,
+				'component_number'			=>	DEDALO_VALUE_TYPE_NUMBER,
+				'component_date'			=>	DEDALO_VALUE_TYPE_DATE,
+				'component_3d'				=>	DEDALO_VALUE_TYPE_MEDIA,
+				'component_av'				=>	DEDALO_VALUE_TYPE_MEDIA,
+				'component_image'			=>	DEDALO_VALUE_TYPE_MEDIA,
+				'component_pdf'				=>	DEDALO_VALUE_TYPE_MEDIA,
+				'component_svg'				=>	DEDALO_VALUE_TYPE_MEDIA,
+				'component_iri'				=>	DEDALO_VALUE_TYPE_IRI,
+				'component_geolocation'		=>	DEDALO_VALUE_TYPE_GEO,
+				'component_json'			=>	DEDALO_VALUE_TYPE_MISC,
+				'component_filter_records'	=>	DEDALO_VALUE_TYPE_MISC,
+				'component_security_access'	=>	DEDALO_VALUE_TYPE_MISC
+			];
+		}
+		return self::$value_type_map_cache;
 	}//end get_value_type_map
 
 
@@ -726,7 +734,8 @@ class v6_to_v7 {
 								$lang,
 								$section_tipo,
 								$section_id,
-								$value_key
+								$value_key,
+								$model
 							);
 
 							if ($migrate_component_data_response->result === false) {
@@ -922,11 +931,12 @@ class v6_to_v7 {
 		}
 
 		$conn = DBi::_getConnection();
+		$ar_escaped_tables = [];
 
 		// iterate tables
 		update::tables_rows_iterator(
 			$ar_tables,
-			function($row, $table, $max) use ($response, $save, $conn, $value_type_map) {
+			function($row, $table, $max) use ($response, $save, $conn, $value_type_map, &$ar_escaped_tables) {
 
 				$id				= $row['id'];
 				$section_tipo	= $row['section_tipo'] ?? null;
@@ -1043,7 +1053,10 @@ class v6_to_v7 {
 					$id
 				];
 
-				$escaped_table = pg_escape_identifier($conn, $table);
+				if (!isset($ar_escaped_tables[$table])) {
+					$ar_escaped_tables[$table] = pg_escape_identifier($conn, $table);
+				}
+				$escaped_table = $ar_escaped_tables[$table];
 
 				$strQuery = 'UPDATE ' . $escaped_table . ' SET data = $1 WHERE id = $2';
 
@@ -1053,8 +1066,8 @@ class v6_to_v7 {
 					// Debug
 					debug_log(__METHOD__
 						. ' Time machine re format data: ID ' . $id . PHP_EOL
-						. ' data: ' . json_encode($data, JSON_PRETTY_PRINT) . PHP_EOL
-						. ' final_data: ' . json_encode($migrated_data_response->result, JSON_PRETTY_PRINT)
+						. ' data: ' . json_handler::encode($data, JSON_PRETTY_PRINT) . PHP_EOL
+						. ' final_data: ' . json_handler::encode($migrated_data_response->result, JSON_PRETTY_PRINT)
 					    , logger::DEBUG
 					);
 
@@ -1100,6 +1113,7 @@ class v6_to_v7 {
 	 * @param string|null $section_tipo The section type (e.g., 'oh1').
 	 * @param mixed $section_id The section id (e.g., 123).
 	 * @param int $value_key The key of the value to migrate. Defaults to 0.
+	 * @param string|null $model Pre-resolved model name to skip redundant ontology lookups.
 	 * @return stdClass Response object with 'errors' (array) and 'result' (array|false).
 	 *                  'result' contains the migrated data array or false if no changes were needed.
 	 */
@@ -1109,7 +1123,8 @@ class v6_to_v7 {
 			string $lang,
 			?string $section_tipo = null,
 			mixed $section_id = null,
-			int $value_key = 0
+			int $value_key = 0,
+			?string $model = null
 		) : stdClass {
 
 		$response = new stdClass();
@@ -1123,7 +1138,10 @@ class v6_to_v7 {
 			return $response;
 		}
 
-		$model = ontology_node::get_model_by_tipo($tipo);
+		// Use provided model or resolve from ontology
+		if( empty($model) ) {
+			$model = ontology_node::get_model_by_tipo($tipo);
+		}
 		if( empty($model) ) {
 			$response->errors[] = "Ignored empty model. Tipo: $tipo";
 			$response->result = false;
@@ -1134,7 +1152,10 @@ class v6_to_v7 {
 		// Relation data (locators) in the TM table was already migrated by the
 		// relations branch of process_matrix_row_data(); re-processing it here would
 		// double-wrap the locators and corrupt the data.
-		$components_with_relations = component_relation_common::get_components_with_relations();
+		static $components_with_relations = null;
+		if ($components_with_relations === null) {
+			$components_with_relations = component_relation_common::get_components_with_relations();
+		}
 		if(in_array($model, $components_with_relations)) {
 			$response->result = false;
 			return $response;
@@ -1335,7 +1356,7 @@ class v6_to_v7 {
 		// Section snapshots in the TM table were historically stored as a single-element
 		// array [{ … section data … }]. Unwrap it so process_matrix_row_data() receives
 		// a plain object, which is what it expects.
-		$section_data_object = is_array($section_data) ? $section_data[0] : $section_data;
+		$section_data_object = (is_array($section_data) && !empty($section_data)) ? $section_data[0] : $section_data;
 
 		$result = self::process_matrix_row_data(
 			$section_data_object,
@@ -1667,6 +1688,10 @@ class v6_to_v7 {
 				if (($task_response->result ?? false) !== false) {
 					$response->success++;
 				}
+			} else {
+				$msg = "Skipped task '$process_name': method db_tasks::$method does not exist";
+				debug_log(__METHOD__ . " WARNING: $msg", logger::WARNING);
+				$response->errors[] = $msg;
 			}
 		}
 
@@ -1981,7 +2006,17 @@ class v6_to_v7 {
 	*/
 	public static function create_matrix_activity_diffusion_table() : bool {
 
-		$sql_query = file_get_contents(DEDALO_ROOT_PATH . '/install/db/matrix_activity_diffusion.sql');
+		$sql_file = DEDALO_ROOT_PATH . '/install/db/matrix_activity_diffusion.sql';
+		$sql_query = file_get_contents($sql_file);
+
+		if ($sql_query === false) {
+			$msg = "Failed to read SQL file: $sql_file";
+			debug_log(__METHOD__
+				." ERROR: $msg "
+				, logger::ERROR
+			);
+			return false;
+		}
 
 		$result = matrix_db_manager::exec_sql($sql_query);
 
@@ -2023,6 +2058,7 @@ class v6_to_v7 {
 			}
 
 			$escaped_table = pg_escape_identifier($conn, $table);
+			$escaped_table_name = pg_escape_string($conn, $table);
 
 			$sql_query = sanitize_query("
 				DO $$
@@ -2030,7 +2066,7 @@ class v6_to_v7 {
 					IF EXISTS (
 						SELECT 1
 						FROM information_schema.columns
-						WHERE table_name = '$table'
+						WHERE table_name = '$escaped_table_name'
 						AND column_name = 'datos'
 					) THEN
 						ALTER TABLE $escaped_table DROP COLUMN \"datos\";
