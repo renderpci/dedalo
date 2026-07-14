@@ -49,6 +49,7 @@ import {
 	normalize_placeholders,
 	repair_placeholders
 } from '../../js/placeholders.js';
+import { conform_emphasis } from '../../js/markdown_utils.js';
 
 /**
  * ONNX-optimised 4B instruction-tuned translation model.
@@ -57,11 +58,22 @@ import {
 const MODEL_ID			= 'onnx-community/translategemma-text-4b-it-ONNX';
 
 /**
- * Maximum tokens the model may generate per call.
- * Blocks are pre-chunked to ~1000 chars on the main thread,
- * so 1024 tokens is typically sufficient for a single block.
+ * Hard ceiling on generated tokens. The real limit is computed per block from the input
+ * length (see max_new_tokens_for) — this is only a backstop.
  */
 const MAX_NEW_TOKENS	= 1024;
+
+/**
+ * A translation is roughly as long as its source. Allow this multiple of the input's
+ * token count, plus a small constant for scripts that tokenise less efficiently than the
+ * source (Devanagari, Arabic).
+ *
+ * This is what bounds the blast radius: a loop on a 40-token sentence can now run for
+ * ~110 tokens, not 1024. The reported failure generated ~900 tokens of 'सामान्य भन्दा'
+ * because every call was allowed the full budget regardless of how little it was given.
+ */
+const NEW_TOKENS_RATIO	= 2.0;
+const NEW_TOKENS_MARGIN	= 32;
 
 /**
  * Per-block timeout in milliseconds.
@@ -72,32 +84,33 @@ const BLOCK_TIMEOUT_MS	= 120_000;
 /**
  * Repetition penalty for the FIRST attempt.
  *
- * Deliberately 1.0 — i.e. off.
+ * A penalty divides the logits of tokens already emitted, which is exactly what a
+ * [[[12]]] marker does NOT want — its bracket tokens have to repeat once per marker.
+ * That is why this was previously turned off entirely (1.0), and turning it off is what
+ * let greedy decoding fall into the repetition loop that started this.
  *
- * A [[[12]]] marker is a run of bracket and digit tokens. A repetition penalty divides
- * the logits of tokens the model has already emitted, so as soon as it copies the first
- * marker the bracket tokens are suppressed for the rest of the generation and every
- * subsequent marker becomes less likely than the one before it. The penalty was, in
- * other words, taxing exactly the tokens we most need repeated.
- *
- * Degeneration is instead caught after the fact by detect_repetition(), which retries
- * the affected block with a real penalty. That keeps the guarantee without paying for
- * it on every block.
+ * It is back, mildly, because the tension is now largely gone: boundary markers are
+ * hoisted out of the model input on the main thread, so most blocks reach the model
+ * carrying no markers at all and pay nothing for the penalty.
  */
-const REPETITION_PENALTY_FIRST = 1.0;
+const REPETITION_PENALTY_FIRST = 1.1;
 
 /**
- * Penalty applied when the first attempt actually degenerated into repetition.
- * >1 discourages the model from repeating the same token; 1.2 is moderate enough to
- * allow legitimate repetition (citations, markers).
+ * Penalty used when the first attempt degenerated anyway.
  */
 const REPETITION_PENALTY = 1.2;
 
 /**
- * Higher penalty used when the moderate one still degenerates.
- * 1.5 is aggressive enough to break most repetition loops.
+ * Sampling settings for the degeneration retry.
+ *
+ * A stiffer penalty alone often does not break a loop — greedy decoding is *itself* what
+ * falls into the attractor, and a deterministic decoder walks back into it. Introducing a
+ * little randomness is what actually escapes. Low temperature keeps the translation
+ * faithful; this path is a fallback, so giving up bit-for-bit reproducibility here (and
+ * only here) is the right trade.
  */
-const REPETITION_PENALTY_RETRY = 1.5;
+const RETRY_TEMPERATURE	= 0.3;
+const RETRY_TOP_P		= 0.9;
 
 /**
  * How many times to ask the model to reinsert markers it dropped before falling back
@@ -119,6 +132,14 @@ const DEBUG = false;
 let cached_translator = null;
 
 /**
+ * The (device, dtype) the cached pipeline was built with. When the user changes either,
+ * the cache must be thrown away — silently reusing a q4 pipeline after the user asked
+ * for q8 would look like the setting does nothing.
+ * @type {string|null}
+ */
+let cached_signature = null;
+
+/**
  * Flag set by the main thread to cancel an in-progress translation.
  * @type {boolean}
  */
@@ -128,11 +149,13 @@ let cancelled = false;
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 /**
- * Strip the <<< / >>> fencing (and any conversational preamble) from a model response.
+ * Strip fencing and any conversational preamble from a model response.
  *
- * The model is asked to emit only the translation between the fences, but it variously
- * echoes the fences, omits them, or prefixes the answer with "Here is the translation:".
- * Take what is inside the fences when they are there; otherwise clean up what we got.
+ * The first-attempt prompt no longer uses <<< / >>> fences (the model was imitating them,
+ * wrapping its answer in 《…》), but the corrective retry prompt still does, and a model
+ * given no fence at all will sometimes invent one. So this handles all of it: take what is
+ * inside the fence when there is one, and otherwise clean up whatever wrapper the model
+ * decided to add.
  *
  * @param {string} text - Raw model response.
  * @returns {string}
@@ -146,11 +169,20 @@ function strip_fences(text) {
 		return fenced[1].trim();
 	}
 
+	// the model's own invented wrappers: 《…》 (imitating the fences), or CJK/guillemet
+	// quotes around the whole answer
+	const quoted = text.trim().match(/^[《「『]\s*([\s\S]*?)\s*[》」』]$/);
+	if (quoted) {
+		return quoted[1].trim();
+	}
+
 	return text
 		.trim()
 		.replace(/^(?:here (?:is|'s)[^\n:]{0,40}:|translation:|traducci[oó]n:)\s*/i, '')
 		.replace(/^<<<\s*/, '')
 		.replace(/\s*>>>$/, '')
+		.replace(/^[《「『]\s*/, '')
+		.replace(/\s*[》」』]$/, '')
 		.trim();
 }
 
@@ -196,6 +228,46 @@ function to_global_tokens(text, restore_map) {
 
 
 /**
+ * MAX_NEW_TOKENS_FOR
+ * How many tokens this block is allowed to generate.
+ *
+ * A translation is roughly as long as its source, so the budget is derived from the input
+ * rather than being a flat 1024 for every call. That flat budget is what let the reported
+ * failure emit ~900 tokens of 'सामान्य भन्दा' from a single paragraph: a loop will happily
+ * fill whatever room it is given. Bounding the room bounds the damage — and the truncated
+ * output still trips detect_repetition, so the block is caught rather than saved.
+ *
+ * Falls back to a character estimate if the tokenizer is not reachable through the
+ * pipeline, which keeps this a hardening measure rather than a new failure mode.
+ *
+ * @param {Function} translator - The loaded pipeline (carries .tokenizer).
+ * @param {string}   text       - The block being translated.
+ * @returns {number} Token budget, clamped to MAX_NEW_TOKENS.
+ */
+function max_new_tokens_for(translator, text) {
+
+	let input_tokens;
+
+	try {
+		const encoded = translator.tokenizer(text);
+		// transformers.js Tensor: dims is [batch, seq_len]
+		input_tokens = encoded?.input_ids?.dims?.[1];
+	} catch (error) {
+		input_tokens = null;
+	}
+
+	if (!input_tokens || !Number.isFinite(input_tokens)) {
+		// ~4 chars per token is a serviceable average; it only has to be the right order
+		input_tokens = Math.ceil(text.length / 4);
+	}
+
+	const budget = Math.ceil(input_tokens * NEW_TOKENS_RATIO) + NEW_TOKENS_MARGIN;
+
+	return Math.min(budget, MAX_NEW_TOKENS);
+}
+
+
+/**
  * Wrap a promise with a timeout.
  * @param {Promise} promise
  * @param {number}  ms    - Timeout in milliseconds
@@ -211,31 +283,94 @@ function with_timeout(promise, ms, label) {
 
 
 /**
- * Detect repetition degeneration in translated text.
- *
- * Checks whether any single word appears consecutively more than `threshold` times.
- * This catches the common failure mode where greedy decoding (do_sample: false) gets
- * stuck repeating a token.
- *
- * @param {string} text      - Translated text to check
- * @param {number} threshold - Max allowed consecutive repeats (default 5)
- * @returns {boolean}        - true if repetition degeneration is detected
+ * Longest repeating cycle to look for, in words. A greedy-decode loop is almost always
+ * a short phrase; beyond ~6 words it is far more likely to be legitimate repetition.
  */
-function detect_repetition(text, threshold = 5) {
+const MAX_CYCLE_WORDS = 6;
+
+/**
+ * How many times a multi-word cycle must repeat back-to-back before we call it
+ * degeneration. Three is unambiguous while still letting a phrase appear twice.
+ */
+const MIN_CYCLE_REPEATS = 3;
+
+/**
+ * A single word needs a higher bar — 'no, no, no' is ordinary speech, especially in the
+ * transcriptions this tool translates.
+ */
+const MIN_UNIGRAM_REPEATS = 5;
+
+/**
+ * A translation is roughly as long as its source. Anything past this multiple is not a
+ * translation any more, whatever the n-gram scan says.
+ */
+const MAX_LENGTH_RATIO = 2.5;
+
+
+/**
+ * DETECT_REPETITION
+ * Detect that greedy decoding fell into a loop.
+ *
+ * The previous version only checked whether a word equalled the word BEFORE it — an
+ * adjacent, unigram repeat. Real degeneration is usually an n-gram *cycle*:
+ *
+ *   सामान्य भन्दा सामान्य भन्दा सामान्य भन्दा …
+ *
+ * No two adjacent words there are ever equal, so the old check returned false and ~900
+ * tokens of garbage were written to the record. This scans for a repeating cycle of any
+ * length up to MAX_CYCLE_WORDS, which subsumes the unigram case (n=1).
+ *
+ * The scan runs over the WHOLE text, not just its tail. Anchoring at the tail looks
+ * tempting — that is where a loop ends up — but it is brittle: the reported output ended
+ * '…सामान्य।' with the sentence-final danda glued on, so the last word never repeated
+ * and the cycle was invisible from the end. A loop anywhere is a loop.
+ *
+ * @param {string} text          - Translated text to check.
+ * @param {string} [source_text] - The text it was translated FROM. When given, a wildly
+ *   longer output is treated as degenerate regardless of the n-gram scan.
+ * @returns {boolean} true if the output is degenerate.
+ */
+function detect_repetition(text, source_text) {
+
 	if (!text || text.length < 50) return false;
-	const words = text.split(/\s+/);
-	if (words.length < threshold) return false;
-	let consecutive = 1;
-	for (let i = 1; i < words.length; i++) {
-		if (words[i] === words[i - 1]) {
-			consecutive++;
-			if (consecutive >= threshold) {
+
+	// a translation that ballooned is degenerate whatever shape it has
+	if (source_text && source_text.length > 0 && text.length > source_text.length * MAX_LENGTH_RATIO) {
+		return true;
+	}
+
+	const words = text.trim().split(/\s+/);
+
+	for (let size = 1; size <= MAX_CYCLE_WORDS; size++) {
+
+		const min_repeats = (size===1) ? MIN_UNIGRAM_REPEATS : MIN_CYCLE_REPEATS;
+		if (words.length < size * min_repeats) break;
+
+		for (let start = 0; start + (size * min_repeats) <= words.length; start++) {
+
+			// how many times does the cycle at `start` repeat back-to-back?
+			let repeats = 1;
+			let next    = start + size;
+
+			while (next + size <= words.length) {
+				let same = true;
+				for (let i = 0; i < size; i++) {
+					if (words[next + i] !== words[start + i]) {
+						same = false;
+						break;
+					}
+				}
+				if (!same) break;
+				repeats++;
+				next += size;
+			}
+
+			if (repeats >= min_repeats) {
 				return true;
 			}
-		} else {
-			consecutive = 1;
 		}
 	}
+
 	return false;
 }
 
@@ -247,20 +382,33 @@ function detect_repetition(text, threshold = 5) {
  *
  * The escalation, cheapest first:
  *   1. Translate. If the output degenerated into repetition, retry with a penalty
- *      (see REPETITION_PENALTY_FIRST for why the penalty is not on by default).
+ *      first with a stiffer penalty, then with SAMPLING — greedy decoding is itself what
+ *      falls into the loop, and a deterministic decoder walks straight back into it.
  *   2. If markers are missing, ask the model to reinsert them into its own output —
  *      up to MAX_PLACEHOLDER_RETRIES times. A retry is only kept when it recovers
  *      ground, so a worse retry can never make things worse.
  *   3. Whatever is still missing is placed by repair_placeholders() and reported.
  *
+ * Throws when the block degenerates and cannot be recovered. The caller keeps the SOURCE
+ * text for that block and records it in failed_blocks, which fires the review gate — a
+ * looping block must never be silently written to the record.
+ *
  * @param {Function} translator
- * @param {Object}   block            - { text, placeholders, restore_map }
+ * @param {Object}   block            - { text, placeholders, restore_map, prefix, suffix }
  * @param {string}   source_lang_code
  * @param {string}   target_lang_code
  * @param {string}   label            - Human label used in timeout messages, e.g. 'Block 2/5'
  * @returns {Promise<{text:string, repaired:string[], unrepairable:string[]}>} in LOCAL tokens.
  */
 async function process_block(translator, block, source_lang_code, target_lang_code, label) {
+
+	// Everything the model hands back goes through here: unwrap whatever it wrapped its
+	// answer in, repair mangled markers, and delete any emphasis it invented. conform_emphasis
+	// is the one that matters most — a source containing only <i> came back littered with
+	// <strong> and <u>, because the model was copying the formatting examples out of the prompt.
+	const clean_output = function(raw) {
+		return conform_emphasis(block.text, normalize_placeholders(strip_fences(raw)));
+	};
 
 	// ── 1. translate ────────────────────────────────────────────────────
 	const raw = await with_timeout(
@@ -271,32 +419,40 @@ async function process_block(translator, block, source_lang_code, target_lang_co
 		label
 	);
 
-	let text = normalize_placeholders(strip_fences(raw));
+	let text = clean_output(raw);
 
-	// ── 1b. repetition degeneration → escalate the penalty ──────────────
-	if (detect_repetition(text)) {
+	// ── 1b. repetition degeneration ─────────────────────────────────────
+	// block.text is passed as the source so a ballooned output is caught even when it has
+	// no clean n-gram cycle.
+	if (detect_repetition(text, block.text)) {
 
-		for (const penalty of [REPETITION_PENALTY, REPETITION_PENALTY_RETRY]) {
+		// escalate: a stiffer penalty first (cheap, still deterministic), then sampling
+		const escalations = [
+			{ repetition_penalty : REPETITION_PENALTY },
+			{ repetition_penalty : REPETITION_PENALTY, do_sample : true, temperature : RETRY_TEMPERATURE, top_p : RETRY_TOP_P }
+		];
+
+		for (const overrides of escalations) {
+
+			if (cancelled) break;
 
 			const retry_raw = await with_timeout(
-				translate_text(translator, block.text, source_lang_code, target_lang_code, null, {
-					repetition_penalty : penalty
-				}),
+				translate_text(translator, block.text, source_lang_code, target_lang_code, null, overrides),
 				BLOCK_TIMEOUT_MS,
-				`${label} (repetition retry, penalty ${penalty})`
+				`${label} (repetition retry${overrides.do_sample ? ', sampling' : `, penalty ${overrides.repetition_penalty}`})`
 			);
 
-			// NOTE the normalise: the repetition retry used to bypass placeholder
+			// NOTE the clean_output: the repetition retry used to bypass placeholder
 			// handling entirely, so a block that degenerated came back unprotected.
-			text = normalize_placeholders(strip_fences(retry_raw));
+			text = clean_output(retry_raw);
 
-			if (!detect_repetition(text)) {
+			if (!detect_repetition(text, block.text)) {
 				break;
 			}
 		}
 
-		if (detect_repetition(text)) {
-			throw new Error(`${label}: excessive repetition even with penalty ${REPETITION_PENALTY_RETRY}`);
+		if (detect_repetition(text, block.text)) {
+			throw new Error(`${label}: the model looped and could not be recovered (repetition degeneration)`);
 		}
 	}
 
@@ -323,7 +479,7 @@ async function process_block(translator, block, source_lang_code, target_lang_co
 				BLOCK_TIMEOUT_MS,
 				`${label} (placeholder retry ${attempt}/${MAX_PLACEHOLDER_RETRIES})`
 			);
-			retry_text = normalize_placeholders(strip_fences(retry_raw));
+			retry_text = clean_output(retry_raw);
 		} catch (retry_error) {
 			// the retry timed out or errored — fall through to deterministic repair
 			if (DEBUG) {
@@ -344,7 +500,17 @@ async function process_block(translator, block, source_lang_code, target_lang_co
 	}
 
 	// ── 3. place whatever the model would not ───────────────────────────
-	return repair_placeholders(block.text, text, block.placeholders);
+	// ── 3. place whatever the model would not ───────────────────────────
+	const repaired = repair_placeholders(block.text, text, block.placeholders);
+
+	// ── 4. put back the markers that never went to the model ────────────
+	// Markers sitting at the very start or end of a block were hoisted out on the main
+	// thread precisely so the model never had to copy them. Re-attach them verbatim: at
+	// this granularity most blocks are entirely made of these, so most blocks come back
+	// with their markers guaranteed intact rather than merely probably intact.
+	repaired.text = (block.prefix || '') + repaired.text + (block.suffix || '');
+
+	return repaired;
 }
 
 
@@ -378,6 +544,7 @@ self.onmessage = async (e) => {
 	const source_lang_code = options.sourceLangCode || 'en';
 	const target_lang_code = options.targetLangCode || 'es';
 	const device           = options.device || 'webgpu';
+	const dtype            = options.dtype || 'q4';
 
 	// Reset cancel flag for this run
 	cancelled = false;
@@ -385,12 +552,23 @@ self.onmessage = async (e) => {
 	try {
 
 		// ── 1. Load / reuse the model pipeline ───────────────────────────
-		// The pipeline is cached after the first call; subsequent calls reuse it.
-		// Quantised to q4 to fit within browser memory limits (~2 GB for GPU).
+		// The pipeline is cached after the first call; subsequent calls reuse it — but
+		// only when device AND dtype still match. Reusing a q4 pipeline after the user
+		// asked for q8 would make the setting look inert.
+		//
+		// q4 (~2.5 GB) is the default because it is what makes in-browser inference
+		// viable at all; it also costs real translation quality, which is one of the
+		// reasons long, low-resource translations degenerate. q8 trades memory for that.
+		const signature = `${device}:${dtype}`;
+		if (cached_translator && cached_signature!==signature) {
+			cached_translator = null;
+			cached_signature  = null;
+		}
+
 		if (!cached_translator) {
 			cached_translator = await pipeline('text-generation', MODEL_ID, {
 				device : device,
-				dtype  : 'q4',
+				dtype  : dtype,
 				progress_callback: ({ progress, status, file }) => {
 					// Relay download/compile progress to the UI thread
 					self.postMessage({
@@ -399,14 +577,19 @@ self.onmessage = async (e) => {
 					});
 				}
 			});
+			cached_signature = signature;
 		}
 
 		const blocks       = options.blocks;
 		const total_blocks = blocks.length;
 
-		// translated blocks, in order. Joined with the paragraph separator they were
-		// split on — concatenating them bare would weld the last paragraph of one block
-		// onto the first paragraph of the next when the main thread re-parses the Markdown.
+		// translated blocks, in order. Rejoined with each block's OWN separator — the
+		// literal text that stood before it in the source ('\n\n' between paragraphs, '\n'
+		// for a <br>, ' ' between sentences).
+		//
+		// This used to be a hardcoded '\n\n', which was right only while blocks were whole
+		// paragraphs. Once segmentation started cutting inside paragraphs, every seam became
+		// a paragraph break and a record of one <p> with four <br> came back as ~25 <p>.
 		const parts = [];
 
 		// every marker WE placed rather than the model, in document-wide tokens
@@ -415,10 +598,17 @@ self.onmessage = async (e) => {
 			unrepairable : []
 		};
 
+		// blocks that failed and were emitted in the source language. These carry all their
+		// marks intact, so the mark-count check downstream would happily pass them — the
+		// main thread needs to be told explicitly, or it would report a partially
+		// untranslated result as a complete success.
+		const failed_blocks = [];
+
 		const result = {
 			accumulated_text : '',
 			remaining        : total_blocks,
-			repair_stats     : repair_stats
+			repair_stats     : repair_stats,
+			failed_blocks    : failed_blocks
 		};
 
 		// ── 2. Translate each block sequentially ─────────────────────────
@@ -471,10 +661,22 @@ self.onmessage = async (e) => {
 				// far worse outcome than leaving one paragraph in the source language.
 				parts.push(to_global_tokens(block.text, block.restore_map));
 				block_error = err;
+
+				failed_blocks.push({
+					block   : i + 1,
+					total   : total_blocks,
+					message : err?.message || String(err)
+				});
+
 				console.warn(`[browser_transformer] ${label} failed, keeping source text: ${err?.message || err}`);
 			}
 
-			result.accumulated_text = parts.join('\n\n');
+			// parts[k] is the translation of blocks[k], so each one is prefixed with the
+			// separator that preceded that block in the source. blocks[0].sep is '' by
+			// construction, so the result never starts with stray whitespace.
+			result.accumulated_text = parts
+				.map((part, k) => (blocks[k].sep || '') + part)
+				.join('');
 			result.remaining        = total_blocks - (i + 1);
 
 			// ── 3. Stream partial result to the main thread ────────
@@ -611,15 +813,28 @@ async function translate_text(translator, text, sourceLangCode, targetLangCode, 
 			]
 			: [];
 
+		// Two things this prompt deliberately does NOT do.
+		//
+		// It does not fence the text in <<< / >>>. The model imitated the fence, wrapping
+		// its answers in 《…》. Segments are sentence-sized now; the boundary is clear without
+		// a delimiter for it to copy.
+		//
+		// It does not spell out '**bold**, *italic*, __underline__'. Naming the markers
+		// taught the model to USE them: a source containing nothing but <i> came back
+		// littered with <strong> and <u>. The instruction now only says to leave the
+		// formatting alone, and says it only when there is formatting to leave alone.
+		// conform_emphasis is the guarantee; this is just the nudge.
+		const emphasis_rule = /[*_]/.test(text)
+			? `Keep the formatting markers exactly where they are. Do not add any new ones.`
+			: `Do not add any formatting markers.`;
+
 		prompt = [
 			`Translate from ${sourceLangCode} to ${targetLangCode}.`,
-			`Preserve the Markdown formatting.`,
+			emphasis_rule,
+			`Output only the translation, nothing else. No HTML tags.`,
 			``,
 			...marker_rules,
-			`Translate the text between <<< and >>>. Output only the translation.`,
-			`<<<`,
-			text,
-			`>>>`
+			text
 		].join('\n');
 	}
 
@@ -637,11 +852,20 @@ async function translate_text(translator, text, sourceLangCode, targetLangCode, 
 		}
 	];
 
-	const output = await translator(messages, {
-		max_new_tokens     : MAX_NEW_TOKENS,
-		do_sample          : false,
+	const generation = {
+		max_new_tokens     : max_new_tokens_for(translator, text),
+		do_sample          : overrides.do_sample===true,
 		repetition_penalty : overrides.repetition_penalty || REPETITION_PENALTY_FIRST
-	});
+	};
+
+	// temperature/top_p are only meaningful when sampling; passing them with
+	// do_sample:false makes the config look like it does something it does not
+	if (generation.do_sample) {
+		generation.temperature = overrides.temperature ?? RETRY_TEMPERATURE;
+		generation.top_p       = overrides.top_p ?? RETRY_TOP_P;
+	}
+
+	const output = await translator(messages, generation);
 
 	// The model returns the full conversation so far;
 	// grab the assistant's last (newly generated) message.

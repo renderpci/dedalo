@@ -220,6 +220,7 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 			source_lang					: options.source_lang,
 			target_lang					: options.target_lang,
 			device						: options.device || 'webgpu',
+			dtype						: options.dtype || 'q4',
 			status_container			: options.status_container,
 			streaming_overlay			: self.streaming_overlay,
 			streaming_overlay_content	: self.streaming_overlay_content,

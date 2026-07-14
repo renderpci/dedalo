@@ -52,7 +52,7 @@
 // imports
 	import {get_json_langs} from '../../../core/common/js/utils/index.js'
 	import {tr} from '../../../core/common/js/tr.js'
-	import {html_to_markdown, markdown_to_html, group_markdown_into_chunks} from './markdown_utils.js'
+	import {html_to_markdown, markdown_to_html, segment_markdown} from './markdown_utils.js'
 	import {make_placeholder, placeholder_re, extract_placeholders} from './placeholders.js'
 
 
@@ -81,6 +81,28 @@ const DEDALO_MARKS = [
 	'reference',
 	'lang'
 ]
+
+
+
+/**
+* Target size of one segment sent to the model, in characters.
+*
+* Deliberately small: TranslateGemma is a sentence-level translation model, and feeding it
+* long multi-sentence blocks is what drives greedy decoding into repetition loops.
+* @type {number}
+*/
+const SEGMENT_MAX_CHARS = 250
+
+
+
+/**
+* A translation is roughly as long as its source. Beyond this multiple the output is not a
+* translation any more — it is a degenerate loop — and must not be saved without review.
+* Mirrors the worker's own guard, deliberately: this one is the last line of defence and
+* does not depend on any heuristic upstream having worked.
+* @type {number}
+*/
+const MAX_LENGTH_RATIO = 2.5
 
 
 
@@ -351,6 +373,128 @@ export const replace_dedalo_marks_with_placeholders = function(source_text) {
 
 
 /**
+* Paired Markdown emphasis delimiters, longest first so that '**' is matched before '*'.
+* @type {string[]}
+*/
+const MD_DELIMITERS = ['**', '__', '*']
+
+
+
+/**
+* BALANCE_MARKDOWN_CHUNKS
+* Make every chunk self-contained: close any emphasis run left open at the end of a
+* chunk, and reopen it at the start of the next.
+*
+* A chunk is a whole prompt. Handing the model '**Line one' — an opening delimiter with
+* no partner — is handing it broken Markdown and then blaming it for the result. That is
+* what was happening whenever a split landed inside an emphasis run.
+*
+* segment_markdown prefers paragraph and line boundaries, so this rarely triggers. It
+* still can when a paragraph has to be cut at a sentence (or, for a pathological sentence,
+* at a word), and it guards any future cut point we have not thought of.
+*
+*   in :  ['**Line one', 'Line two**']
+*   out:  ['**Line one**', '**Line two**']
+*
+* The spans rejoin correctly once the translated chunks are concatenated, because each
+* one is independently well-formed.
+*
+* @param {string[]} chunks - Markdown chunks, in document order.
+* @returns {string[]} The same chunks, each individually balanced.
+*/
+const balance_markdown_chunks = function(chunks) {
+
+	// delimiters left open when the previous chunk ended, innermost last
+	let carried = []
+
+	return chunks.map(function(chunk){
+
+		let text = carried.join('') + chunk
+
+		// walk the chunk, tracking which delimiters are open at the end of it
+		const open = []
+		for (let i = 0; i < text.length; i++) {
+
+			// html_to_markdown escapes literal asterisks and underscores as '\*' / '\_';
+			// those are text, not delimiters, and counting them would corrupt the tally
+			if (text[i]==='\\') {
+				i++
+				continue
+			}
+
+			const delimiter = MD_DELIMITERS.find(item => text.startsWith(item, i))
+			if (!delimiter) {
+				continue
+			}
+
+			const position = open.lastIndexOf(delimiter)
+			if (position===-1) {
+				open.push(delimiter)
+			} else {
+				open.splice(position, 1)
+			}
+			i += delimiter.length - 1
+		}
+
+		// close what is still open, innermost first, and carry it into the next chunk
+		text	+= open.slice().reverse().join('')
+		carried	= open.slice()
+
+		return text
+	})
+}//end balance_markdown_chunks
+
+
+
+/**
+* HOIST_EDGE_PLACEHOLDERS
+* Pull the markers off the front and back of a chunk so the model never sees them.
+*
+* The most reliable way to stop the model corrupting a marker is not to show it one. At
+* sentence granularity that is achievable for most of them: a Dédalo mark overwhelmingly
+* sits at a segment edge — a timecode opening a segment, an index close ending one — and
+* an edge marker's position in the translation is not in question. It goes back exactly
+* where it was.
+*
+* Only markers genuinely embedded mid-sentence still have to ride through the model as
+* [[[n]]], and the repair ladder already handles those.
+*
+* This is also what makes the repetition penalty affordable again: a penalty suppresses
+* tokens that have already been emitted, which is ruinous for markers built out of
+* repeated brackets — but costs nothing when the block contains no markers at all.
+*
+* Whitespace between the edge markers and the body is kept with the marker, so
+* prefix + body + suffix reproduces the chunk exactly.
+*
+* @param {string} chunk - Markdown chunk carrying document-wide [[[n]]] tokens.
+* @returns {{prefix:string, body:string, suffix:string}}
+*/
+const hoist_edge_placeholders = function(chunk) {
+
+	// leading run of markers (and the whitespace that follows them)
+	const leading	= chunk.match(/^(?:\s*\[\[\[\d+\]\]\])+\s*/)
+	const prefix	= leading ? leading[0] : ''
+
+	let body = chunk.slice(prefix.length)
+
+	// trailing run of markers (and the whitespace that precedes them)
+	const trailing	= body.match(/\s*(?:\[\[\[\d+\]\]\]\s*)+$/)
+	const suffix	= trailing ? trailing[0] : ''
+
+	body = body.slice(0, body.length - suffix.length)
+
+	// a chunk made ENTIRELY of markers has no body to translate; leave it whole rather
+	// than emit an empty prompt, and let the (marker-only) text pass through untouched
+	if (body.trim().length===0) {
+		return { prefix : '', body : chunk, suffix : '' }
+	}
+
+	return { prefix, body, suffix }
+}//end hoist_edge_placeholders
+
+
+
+/**
 * BUILD_BLOCKS
 * Turn the chunked Markdown into the block payload the worker consumes.
 *
@@ -361,19 +505,34 @@ export const replace_dedalo_marks_with_placeholders = function(source_text) {
 * to the document-wide tokens via restore_map before returning, so everything downstream
 * (streaming preview, mark restoration) keeps working in one namespace.
 *
-* @param {string[]} chunks      - Markdown chunks, still carrying document-wide tokens.
+* Chunks are balanced first, so no chunk ever reaches the model with a dangling emphasis
+* delimiter. Markers sitting at the very start or end of a chunk are then HOISTED out of
+* the model input entirely — see hoist_edge_placeholders.
+*
+* Each block also carries the `sep` of the segment it came from — the literal text that
+* separated it from the previous one in the source. The worker rejoins with it. Rejoining
+* with a hardcoded '\n\n' instead is what turned a record of one <p> with four <br> into
+* twenty-five <p>: every seam, whatever it had actually been, became a paragraph break.
+*
+* @param {Array}    segments    - [{text, sep}] from segment_markdown, carrying document-wide tokens.
 * @param {Array}    descriptors - Document-wide descriptors from replace_dedalo_marks_with_placeholders.
-* @returns {Array<{text:string, placeholders:Array, restore_map:Object}>}
+* @returns {Array<{text:string, placeholders:Array, restore_map:Object, prefix:string, suffix:string, sep:string}>}
 */
-export const build_blocks = function(chunks, descriptors) {
+export const build_blocks = function(segments, descriptors) {
 
 	const by_token = new Map(descriptors.map(item => [item.token, item]))
 
-	return chunks.map(function(chunk){
+	const balanced = balance_markdown_chunks(segments.map(item => item.text))
 
-		// global token → local token, in order of appearance within this chunk
+	return balanced.map(function(chunk, index){
+
+		// markers at the edges never need to be copied by the model — pull them off first,
+		// so the local numbering only covers what actually gets translated
+		const hoisted = hoist_edge_placeholders(chunk)
+
+		// global token → local token, in order of appearance within the remaining body
 		const local_of = new Map()
-		const tokens = extract_placeholders(chunk)
+		const tokens = extract_placeholders(hoisted.body)
 		for (let i = 0; i < tokens.length; i++) {
 			if (!local_of.has(tokens[i])) {
 				local_of.set(tokens[i], make_placeholder(local_of.size + 1))
@@ -381,7 +540,7 @@ export const build_blocks = function(chunks, descriptors) {
 		}
 
 		// single pass, so a rewritten token can never be rewritten again
-		const text = chunk.replace(placeholder_re(), (match) => local_of.get(match) || match)
+		const text = hoisted.body.replace(placeholder_re(), (match) => local_of.get(match) || match)
 
 		const block_placeholders	= []
 		const restore_map			= {}
@@ -390,8 +549,8 @@ export const build_blocks = function(chunks, descriptors) {
 			restore_map[local_token] = global_token
 
 			const descriptor = by_token.get(global_token)
-			// the other half of a pair may have landed in a different chunk; within this
-			// block it has no anchor, so it behaves as an atom
+			// the other half of a pair may have landed in a different chunk, or been hoisted
+			// out of this one; either way it has no anchor here, so it behaves as an atom
 			const pair_local = (descriptor && descriptor.pair)
 				? local_of.get(descriptor.pair)
 				: null
@@ -406,7 +565,14 @@ export const build_blocks = function(chunks, descriptors) {
 		return {
 			text			: text,
 			placeholders	: block_placeholders,
-			restore_map		: restore_map
+			restore_map		: restore_map,
+			// document-wide tokens: the worker re-attaches these verbatim after translating,
+			// so they bypass local renumbering entirely
+			prefix			: hoisted.prefix,
+			suffix			: hoisted.suffix,
+			// what stood between this segment and the previous one in the source: '\n\n' for a
+			// paragraph, '\n' for a <br>, ' ' between sentences. The worker rejoins with it.
+			sep				: segments[index].sep
 		}
 	})
 }//end build_blocks
@@ -463,6 +629,69 @@ export const restore_placeholders = function(translated_text, placeholders) {
 
 
 /**
+* COUNT_EMPHASIS_LOST
+* How many inline formatting spans the translation dropped.
+*
+* Counts opening tags only — the output is balanced by markdown_to_html, so openers and
+* closers always agree. A negative delta (the model added emphasis) is not interesting
+* and is reported as zero.
+*
+* @param {string} source_text
+* @param {string} restored_text
+* @returns {number} Spans present in the source but absent from the translation.
+*/
+const count_emphasis_lost = function(source_text, restored_text) {
+
+	const pattern = /<(strong|b|em|i|u)\b[^>]*>/gi
+
+	const source_count	= (source_text.match(pattern) || []).length
+	const result_count	= (restored_text.match(pattern) || []).length
+
+	return Math.max(0, source_count - result_count)
+}//end count_emphasis_lost
+
+
+
+/**
+* IS_DEGENERATE
+* Has the model produced a repetition loop rather than a translation?
+*
+* This is the last line of defence, and the only one that does not depend on a heuristic
+* having fired upstream. The worker's detect_repetition is a good detector, but it IS a
+* detector — it can be wrong. This is arithmetic: a translation is roughly as long as its
+* source, so a result several times longer is not a translation, whatever produced it.
+*
+* Compares plain-text length so that markup and restored marks (which can be long, e.g.
+* an index mark carrying a JSON locator) do not distort the ratio.
+*
+* The reported failure — ~900 tokens of 'सामान्य भन्दा' from one paragraph — is caught here
+* even with every other guard in this file removed.
+*
+* @param {string} source_text   - The original HTML value.
+* @param {string} restored_text - The translated HTML value.
+* @returns {boolean}
+*/
+const is_degenerate = function(source_text, restored_text) {
+
+	const plain = (html) => html
+		.replace(/<[^>]*>/g, ' ')				// markup
+		.replace(/\[[^\]]*\]/g, ' ')			// Dédalo marks
+		.replace(/\s+/g, ' ')
+		.trim()
+
+	const source_length = plain(source_text).length
+	const result_length = plain(restored_text).length
+
+	if (source_length < 20) {
+		return false
+	}
+
+	return result_length > source_length * MAX_LENGTH_RATIO
+}//end is_degenerate
+
+
+
+/**
 * VALIDATE_TRANSLATION
 * Decide whether the translated value is safe to persist without asking the user.
 *
@@ -474,10 +703,15 @@ export const restore_placeholders = function(translated_text, placeholders) {
 * Anything the *model* did not place — a token it dropped that we had to re-insert — is
 * reported as uncertain too. We may have put it in the right place, but we guessed.
 *
+* So are blocks that failed and came back in the source language. The mark check cannot
+* catch those — an untranslated block still carries every one of its marks — so without
+* counting them explicitly a partially untranslated result would be reported to the user
+* as a clean success.
+*
 * @param {string} source_text   - The original HTML value (marks intact).
 * @param {string} restored_text - The translated HTML value after restore_placeholders().
-* @param {Object} extra         - { duplicated, residual, repaired, unrepairable }
-* @returns {Object} report; `ok` is true only when every list is empty.
+* @param {Object} extra         - { duplicated, residual, repaired, unrepairable, failed_blocks }
+* @returns {Object} report; `ok` is true only when nothing at all is in doubt.
 */
 export const validate_translation = function(source_text, restored_text, extra) {
 
@@ -510,9 +744,13 @@ export const validate_translation = function(source_text, restored_text, extra) 
 		residual		: extra.residual || [],
 		repaired		: extra.repaired || [],
 		unrepairable	: extra.unrepairable || [],
+		failed_blocks	: extra.failed_blocks || [],
+		emphasis_lost	: count_emphasis_lost(source_text, restored_text),
+		degenerate		: is_degenerate(source_text, restored_text),
 		total_marks		: source_marks.length
 	}
 
+	// marks whose position in the translation we chose, rather than the model
 	report.uncertain_count =
 		report.missing.length +
 		report.added.length +
@@ -521,7 +759,17 @@ export const validate_translation = function(source_text, restored_text, extra) 
 		report.repaired.length +
 		report.unrepairable.length
 
-	report.ok = report.uncertain_count===0
+	// emphasis_lost is REPORTED but deliberately does not gate the save. Losing an <em> is a
+	// cosmetic downgrade; losing an [index-…] mark silently breaks a thesaurus link. Treating
+	// them alike would fire the review prompt on nearly every translation and train the user
+	// to click through it — which would cost us the one case that actually matters.
+	//
+	// `degenerate` DOES gate it. A repetition loop is not a degraded translation, it is
+	// garbage, and it must never be written to a record unseen.
+	report.ok =
+		report.uncertain_count===0 &&
+		report.failed_blocks.length===0 &&
+		report.degenerate===false
 
 	return report
 }//end validate_translation
@@ -599,6 +847,7 @@ export const translate_component_browser = async function(options) {
 		const source_lang				= options.source_lang
 		const target_lang				= options.target_lang
 		const device					= options.device || 'webgpu'
+		const dtype						= options.dtype || 'q4'
 		const status_container			= options.status_container
 		const streaming_overlay			= options.streaming_overlay || null
 		const streaming_overlay_content	= options.streaming_overlay_content || null
@@ -608,6 +857,22 @@ export const translate_component_browser = async function(options) {
 		const on_uncertain				= typeof options.on_uncertain==='function'
 			? options.on_uncertain
 			: () => Promise.resolve(false)
+
+	// mode guard.
+	// Only in 'edit' mode does component_text_area expose the raw bracket marks that this
+	// whole pipeline reads and writes. In 'list'/'tm' mode data.value is rendered <img> HTML
+	// TRUNCATED to 130 chars (get_list_value, class.component_text_area.php) — the mark
+	// regexes would find nothing, and saving that truncated string back would destroy the
+	// record. Refuse rather than corrupt.
+		for (const component of [source_component, target_component]) {
+			const mode = component?.mode || component?.context?.mode
+			if (mode && mode!=='edit') {
+				return Promise.reject(
+					`Translation requires components in 'edit' mode; got '${mode}'. `
+					+ `In list/tm mode data.value is truncated HTML, not the raw marks.`
+				)
+			}
+		}
 
 	// source text
 		const { source_text } = get_source_text(source_component)
@@ -633,10 +898,16 @@ export const translate_component_browser = async function(options) {
 		const md_source_text = html_to_markdown(safe_source_text)
 
 	// parse markdown into chunks, then renumber each chunk's tokens locally
-	// The worker translates one chunk at a time; the 1000-char limit keeps each
-	// block well within the model's MAX_NEW_TOKENS budget.
-		const chunks = group_markdown_into_chunks(md_source_text, 1000)
-		const blocks = build_blocks(chunks, descriptors)
+	//
+	// SEGMENT_MAX_CHARS is small on purpose. TranslateGemma is a *sentence-level*
+	// translation model; handing it 1000-char multi-sentence blocks is off-distribution and
+	// is the dominant cause of the repetition loops seen on long, low-resource translations.
+	// Short segments are what it was trained on. They also mean nearly every Dédalo mark
+	// ends up at a segment edge, where build_blocks can hoist it out of the model's way.
+	//
+	// The cost is more model calls per record. That is the trade being bought.
+		const segments = segment_markdown(md_source_text, SEGMENT_MAX_CHARS)
+		const blocks   = build_blocks(segments, descriptors)
 
 		if(SHOW_DEBUG===true) {
 			console.log('--> translate_component_browser marks:', descriptors.length, 'blocks:', blocks.length)
@@ -763,7 +1034,8 @@ export const translate_component_browser = async function(options) {
 						duplicated		: restored.duplicated,
 						residual		: restored.residual,
 						repaired		: repair_stats.repaired,
-						unrepairable	: repair_stats.unrepairable
+						unrepairable	: repair_stats.unrepairable,
+						failed_blocks	: data.failed_blocks || []
 					})
 
 					if(SHOW_DEBUG===true) {
@@ -884,7 +1156,8 @@ export const translate_component_browser = async function(options) {
 				blocks			: blocks,
 				sourceLangCode	: source_lang_code,
 				targetLangCode	: target_lang_code,
-				device			: device
+				device			: device,
+				dtype			: dtype
 			}
 		})
 	})

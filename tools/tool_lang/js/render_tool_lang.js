@@ -391,10 +391,77 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 			parent			: automatic_translation_container
 		})
 
+		// BUILD_REVIEW_DETAIL
+		// Turn a validation report into the specific sentences a user can act on.
+		//
+		// A bare count ("3 problems") tells them nothing about whether a thesaurus link
+		// moved, a marker was thrown away, or a whole paragraph came back untranslated —
+		// which are very different things to have to check.
+		// @return array of strings, most consequential first
+			const build_review_detail = function(report) {
+
+				const detail = []
+
+				// the model looped instead of translating. Listed first because it makes
+				// every other line irrelevant — the text itself is garbage.
+				if (report.degenerate===true) {
+					detail.push(
+						self.get_tool_label('translation_degenerate')
+						|| 'The model repeated itself instead of translating. Do not save this.'
+					)
+				}
+
+				// marks that are simply gone, or that we could not find a home for
+				const unplaced = report.missing.length + report.unrepairable.length
+				if (unplaced>0) {
+					detail.push(
+						self.get_tool_label('marks_unplaced', unplaced)
+						|| `${unplaced} marks could not be placed`
+					)
+				}
+
+				// marks we re-inserted ourselves: present, but WE chose the position
+				if (report.repaired.length>0) {
+					detail.push(
+						self.get_tool_label('marks_repositioned', report.repaired.length, report.total_marks)
+						|| `${report.repaired.length} of ${report.total_marks} marks were repositioned automatically`
+					)
+				}
+
+				// markers the model invented or duplicated, dropped before saving
+				const invalid = report.residual.length + report.added.length + report.duplicated.length
+				if (invalid>0) {
+					detail.push(
+						self.get_tool_label('marks_removed_invalid', invalid)
+						|| `${invalid} invalid markers were removed`
+					)
+				}
+
+				// blocks the model could not translate at all, kept in the source language
+				if (report.failed_blocks.length>0) {
+					detail.push(
+						self.get_tool_label('blocks_untranslated', report.failed_blocks.length)
+						|| `${report.failed_blocks.length} blocks were kept in the source language`
+					)
+				}
+
+				// bold/italic/underline the model dropped. Never the reason the gate fired —
+				// it does not count toward uncertain_count — but worth listing once we are
+				// showing this panel anyway.
+				if (report.emphasis_lost>0) {
+					detail.push(
+						self.get_tool_label('emphasis_lost', report.emphasis_lost)
+						|| `${report.emphasis_lost} text styles (bold, italic) were lost`
+					)
+				}
+
+				return detail
+			}
+
 		// ON_UNCERTAIN
-		// Called by the browser engine when it cannot prove the translated value kept every
-		// Dédalo mark intact — a mark was dropped and had to be re-inserted by hand, the
-		// model invented a marker, or a mark went missing altogether.
+		// Called by the browser engine when it cannot prove the translated value is sound —
+		// a mark was dropped and had to be re-inserted by hand, the model invented a marker,
+		// a mark went missing altogether, or a block came back untranslated.
 		//
 		// Nothing has been written to the target component at this point. The translated
 		// text is on screen in the streaming overlay, so the user is judging something they
@@ -410,14 +477,34 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 					status_container.classList.remove('loading_status')
 					status_container.innerHTML = ''
 
-					const warn_label = self.get_tool_label('translation_review_needed')
-						|| 'marks could not be placed reliably. Review before saving.'
-					ui.create_dom_element({
+					const review_container = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'warning',
-						inner_html		: `${report.uncertain_count}/${report.total_marks} ${warn_label}`,
+						class_name		: 'warning translation_review',
 						parent			: status_container
 					})
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'translation_review_header',
+						inner_html		: self.get_tool_label('translation_review_needed')
+											|| 'Translation needs review before saving',
+						parent			: review_container
+					})
+
+					const detail = build_review_detail(report)
+					if (detail.length>0) {
+						const detail_list = ui.create_dom_element({
+							element_type	: 'ul',
+							class_name		: 'translation_review_detail',
+							parent			: review_container
+						})
+						for (let i = 0; i < detail.length; i++) {
+							ui.create_dom_element({
+								element_type	: 'li',
+								inner_html		: detail[i],
+								parent			: detail_list
+							})
+						}
+					}
 
 					const review_buttons = ui.create_dom_element({
 						element_type	: 'div',
@@ -464,10 +551,15 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 					? 'wasm'
 					: 'webgpu'
 
+				const dtype = self.translator_dtype_select
+					? self.translator_dtype_select.value
+					: 'q4'
+
 				self.automatic_translation_browser({
 					source_lang		: source_lang,
 					target_lang		: target_lang,
 					device			: device,
+					dtype			: dtype,
 					status_container: status_container,
 					on_uncertain	: on_uncertain
 				})
@@ -585,6 +677,59 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 		).then(function( device_saved ){
 			if(device_saved){
 				translator_device_checkbox.checked = device_saved.value
+			}
+		})
+
+		// model quality (quantisation).
+		// q4 is what makes a 4B model fit in a browser at all, and it is also a real
+		// contributor to the repetition loops seen on long, low-resource translations.
+		// q8 buys quality back at roughly double the download and VRAM — which will simply
+		// fail to allocate on smaller machines, so it stays opt-in.
+		const quality_container = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'quality_container',
+			parent 			: configuration_container
+		})
+
+		ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: self.get_tool_label('model_quality') || 'Model quality',
+			parent			: quality_container
+		})
+
+		const translator_dtype_select = ui.create_dom_element({
+			element_type	: 'select',
+			parent			: quality_container
+		})
+		const dtype_options = [
+			{ value : 'q4', label : self.get_tool_label('model_quality_q4') || 'Standard (faster, ~2.5 GB)' },
+			{ value : 'q8', label : self.get_tool_label('model_quality_q8') || 'High (better, ~4.5 GB, may not fit)' }
+		]
+		for (let i = 0; i < dtype_options.length; i++) {
+			ui.create_dom_element({
+				element_type	: 'option',
+				value			: dtype_options[i].value,
+				inner_html		: dtype_options[i].label,
+				parent			: translator_dtype_select
+			})
+		}
+
+		self.translator_dtype_select = translator_dtype_select
+
+		const dtype_id = 'translator_dtype_select'
+		translator_dtype_select.addEventListener('change', function(){
+			data_manager.set_local_db_data({
+				id		: dtype_id,
+				value	: translator_dtype_select.value
+			}, 'status')
+		})
+
+		data_manager.get_local_db_data(
+			dtype_id,
+			'status'
+		).then(function( dtype_saved ){
+			if(dtype_saved && dtype_saved.value){
+				translator_dtype_select.value = dtype_saved.value
 			}
 		})
 
