@@ -71,13 +71,11 @@ Several independent caps keep a single request (or a flood of them) from monopol
 | Fragment excerpt length | `max_characters` 10–5000, default `320` | request param |
 | Fragment occurrences | `max_occurrences` 1–10, default `1` | request param |
 | Batch size | `20` queries (`MAX_BATCH_QUERIES`) | — |
-| Per-query DB timeout | `DB_QUERY_TIMEOUT` ms, default `5000` | env var |
 | Request timeout | `REQUEST_TIMEOUT_MS`, default `10000` | env var |
 
-The two timeouts are layered. The per-query timeout (`DB_QUERY_TIMEOUT`) bounds a single runaway statement at the database driver. The request timeout (`REQUEST_TIMEOUT_MS`) races the whole handler: if a request is still running after the deadline it returns `504`. Setting `REQUEST_TIMEOUT_MS=0` disables the request race (the MCP streaming endpoint is always exempt so long-lived agent sessions are not cut off).
+`REQUEST_TIMEOUT_MS` races the whole handler: if a request is still running after the deadline it returns `504`. Every query runs inside a request, so this is the bound that caps a slow statement's blast radius. Setting `REQUEST_TIMEOUT_MS=0` disables the race (the MCP streaming endpoint is always exempt so long-lived agent sessions are not cut off).
 
 ```env
-DB_QUERY_TIMEOUT=5000      # ms, bounds one SQL statement
 REQUEST_TIMEOUT_MS=10000   # ms, bounds the whole request; 0 = disabled
 ```
 
@@ -119,6 +117,15 @@ Every request is metered by a **token bucket per client IP**. Each bucket starts
 ```env
 RATE_LIMIT_RPM=100   # requests per minute per IP
 ```
+
+!!! note "A batch costs one token per sub-query"
+    `POST /batch` runs up to 20 queries in a single HTTP request, so it is charged for **all of
+    them**, not once: a 10-query batch spends 10 tokens. If the bucket cannot afford the whole
+    fan-out the batch is rejected as a unit with `429` and nothing is run — so batching is a way to
+    save round trips, never a way to multiply your quota.
+
+The client IP is taken from the forwarding headers when `TRUST_PROXY` is enabled, and otherwise from
+the connection's own peer address — so the limiter buckets per caller in `standalone` mode too.
 
 ```json
 {
@@ -207,7 +214,7 @@ Access-Control-Max-Age: 86400
 A reasonable production posture for a public deployment:
 
 - Use a `SELECT`-only MariaDB user (`DB_USER`) scoped to exactly the databases in `DB_NAMES`.
-- Keep `REQUEST_TIMEOUT_MS` and `DB_QUERY_TIMEOUT` at sane non-zero values.
+- Keep `REQUEST_TIMEOUT_MS` at a sane non-zero value.
 - Tune `RATE_LIMIT_RPM` to your traffic; set `TRUST_PROXY` to match your topology.
 - Set `API_KEYS` if the data must be gated, and pin `CORS_ORIGIN` to your front-end origin if you rely on credentialed/keyed browser requests.
 - Terminate TLS at the reverse proxy (see the Apache/Nginx deployment modes).

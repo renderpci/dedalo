@@ -1,0 +1,23 @@
+# SEC-090: Dédalo runs on PHP 8+; the Apache module is `mod_php`, not
+# `mod_php5`. The old guard silently did nothing on modern installs. We now
+# cover both legacy and current module names, and add `mod_authz_core`
+# `Require all denied` for Apache 2.4.
+Require all denied
+
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
+</IfModule>
+
+Options None
+Options +FollowSymLinks
+
+<IfModule mod_php.c>
+  php_flag engine off
+</IfModule>
+<IfModule mod_php5.c>
+  php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+  php_flag engine off
+</IfModule>

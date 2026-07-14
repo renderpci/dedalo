@@ -269,3 +269,25 @@ in-memory job registries evict terminal records after 1 h (pfile mirror
 remains); `login_attempts` rows GC'd past the throttle window; terminal
 diffusion job rows purged after 7 days (daily, sweeper cadence); the dd1758
 ledger keeps the durable publication audit trail.
+
+## 10. Publication API (the isolated public surface)
+
+The Publication API is **not part of this server** and is not started by it. It is a
+separate, read-only front for the diffusion-published MariaDB, deployable on the web
+server's host (or any host that can reach the published DB) — it never touches the
+matrix Postgres, imports no engine code, and holds no engine credentials. Both versions
+can run side by side against the same published databases.
+
+| | Path | Runtime | How it runs |
+|---|---|---|---|
+| **v1** (legacy) | `publication/server_api/v1` | PHP 8 + Apache | Copy the folder to the vhost. Its PHP deps travel with it (`v1/shared/`), so it is self-contained. Create `config_api/server_config_api.php` from `sample.server_config_api.php` (DB creds + the shared `code`); the file is gitignored and denied by `config_api/.htaccess`. Kept **as-is** for existing v4/v5/v6 websites — no new features. |
+| **v2** (current) | `publication/server_api/v2` | Bun + TypeScript | `bun run publication:install` once, then `bun run start:publication` (or a systemd unit modeled on `deploy/dedalo-ts.service`, pointing `WorkingDirectory` at the v2 folder). Config is v2's **own `.env`** — never `../private/.env`. |
+
+Both take a **read-only MariaDB user**. That is the real security boundary: the API's
+`DB_NAMES` allowlist scopes which published databases are reachable, and nothing in
+either version issues a write. v2 additionally offers `API_KEYS`, per-IP rate limiting
+and request timeouts (`engineering`-adjacent detail lives in `docs/diffusion/publication_api/`).
+
+Gates: `bun run test:publication` (v2's own suite + typecheck) and
+`test/integration/publication_api_v2_smoke.test.ts` (boots v2 as a subprocess against a
+real published DB; skips loudly without `DEDALO_DIFFUSION_DB_*`).

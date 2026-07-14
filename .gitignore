@@ -40,3 +40,10 @@ probe_*.ts
 audits/
 .claude_migration_component_alias_preimage.json
 rewrite/
+
+# Publication API (the isolated read-only subsystem under publication/).
+# v1: the deployer copies config_api/sample.server_config_api.php to this name and
+# fills in the published-DB credentials + the shared `code` — real secrets, never committed.
+server_config_api.php
+# v2: TypeScript incremental-build artifact (its tsconfig sets `incremental: true`).
+*.tsbuildinfo

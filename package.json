@@ -24,6 +24,9 @@
 		"test": "bun test",
 		"test:db:setup": "bun run scripts/test_db_setup.ts",
 		"test:client": "bun run scripts/client_test_runner.ts",
+		"publication:install": "cd publication/server_api/v2 && bun install",
+		"start:publication": "cd publication/server_api/v2 && bun run start",
+		"test:publication": "cd publication/server_api/v2 && bunx tsc --noEmit && bun test",
 		"lint": "biome check .",
 		"format": "biome format --write ."
 	},

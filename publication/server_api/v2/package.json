@@ -1,0 +1,22 @@
+{
+  "name": "dedalo-publication-api-v2",
+  "version": "2.1.0",
+  "description": "Dédalo Publication API v2 - Read-only REST API for published cultural heritage data",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@scalar/api-reference": "^1.25.0",
+    "swagger-ui-dist": "^5.11.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.0",
+    "typescript": "^5.6.0"
+  }
+}
