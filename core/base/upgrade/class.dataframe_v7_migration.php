@@ -127,8 +127,10 @@ class dataframe_v7_migration {
 	* Uses keyset pagination (WHERE id > $last_id ORDER BY id LIMIT batch_size)
 	* to avoid full-table scans and keep memory footprint bounded.
 	*
-	* The LIKE '%section_id_key%' pre-filter is applied at the SQL level to skip
-	* already-migrated rows cheaply before deserializing JSON.
+	* The @? JSONPath pre-filter (relation @? '$.**."section_id_key"') is applied
+	* at the SQL level to skip already-migrated rows cheaply before deserializing
+	* JSON. It checks for the legacy key at any nesting level without a text cast
+	* and is GIN-indexable.
 	*
 	* @param array|null $ar_tables [= null] - explicit list of tables to migrate;
 	*        null triggers auto-discovery via information_schema.columns
@@ -175,12 +177,13 @@ class dataframe_v7_migration {
 			$last_id = 0;
 			while (true) {
 
-				// cast::text avoids a JSONB-to-text round-trip in PHP; the LIKE
-				// pre-filter discards already-migrated rows before JSON decode
+				// The @? JSONPath pre-filter checks for the legacy "section_id_key"
+				// key at any nesting level without a text cast, discarding
+				// already-migrated rows before JSON decode. GIN-indexable.
 				$result = pg_query_params($conn,
 					'SELECT id, section_tipo, section_id, relation::text AS relation
 					 FROM "'.$table.'"
-					 WHERE id > $1 AND relation::text LIKE \'%section_id_key%\'
+					 WHERE id > $1 AND relation @? \'$.**."section_id_key"\'
 					 ORDER BY id ASC LIMIT '.self::$batch_size,
 					[$last_id]
 				);
@@ -290,7 +293,7 @@ class dataframe_v7_migration {
 			$result = pg_query_params($conn,
 				'SELECT id, section_tipo, section_id, tipo, data::text AS data
 				 FROM "'.$table.'"
-				 WHERE id > $1 AND data::text LIKE \'%section_id_key%\'
+				 WHERE id > $1 AND data @? \'$.**."section_id_key"\'
 				 ORDER BY id ASC LIMIT '.self::$batch_size,
 				[$last_id]
 			);
@@ -413,7 +416,7 @@ class dataframe_v7_migration {
 				$result = pg_query_params($conn,
 					'SELECT id, "'.$column.'"::text AS payload
 					 FROM "'.$table.'"
-					 WHERE id > $1 AND "'.$column.'"::text LIKE \'%section_id_key%\'
+					 WHERE id > $1 AND "'.$column.'" @? \'$.**."section_id_key"\'
 					 ORDER BY id ASC LIMIT '.self::$batch_size,
 					[$last_id]
 				);
@@ -479,9 +482,10 @@ class dataframe_v7_migration {
 	* id) is found and its id becomes the value's id_key; section_*_key are stripped.
 	*
 	* Idempotent (values already carrying id_key are skipped), batched via keyset
-	* pagination, dry-run capable ($save=false). The SQL LIKE '%section_id_key%'
-	* pre-filter skips already-migrated rows cheaply. Unresolvable values (no parent
-	* locator with an id) are left as-is and reported under 'unresolved'.
+	* pagination, dry-run capable ($save=false). The @? JSONPath pre-filter
+	* (number @? '$.**."section_id_key"') skips already-migrated rows cheaply.
+	* Unresolvable values (no parent locator with an id) are left as-is and
+	* reported under 'unresolved'.
 	*
 	* (!) NOT yet wired into migrate_all — call explicitly (or add to migrate_all)
 	* once verified against a real database. See the v7 dataframe cutover notes.
@@ -532,7 +536,7 @@ class dataframe_v7_migration {
 				$result = pg_query_params($conn,
 					'SELECT id, section_tipo, section_id, number::text AS number, relation::text AS relation
 					 FROM "'.$table.'"
-					 WHERE id > $1 AND number::text LIKE \'%section_id_key%\'
+					 WHERE id > $1 AND number @? \'$.**."section_id_key"\'
 					 ORDER BY id ASC LIMIT '.self::$batch_size,
 					[$last_id]
 				);
@@ -806,7 +810,7 @@ class dataframe_v7_migration {
 				$result = pg_query_params($conn,
 					'SELECT id, section_tipo, section_id, '.$select_cols.'
 					 FROM "'.$table.'"
-					 WHERE id > $1 AND (relation::text LIKE \'%id_key%\')
+					 WHERE id > $1 AND (relation @? \'$.**."id_key"\' OR relation @? \'$.**."section_id_key"\')
 					 ORDER BY id ASC LIMIT '.self::$batch_size,
 					[$last_id]
 				);
@@ -1035,7 +1039,7 @@ class dataframe_v7_migration {
 				$result = pg_query_params($conn,
 					'SELECT id, section_tipo, section_id, iri::text AS iri, relation::text AS relation
 					 FROM "'.$table.'"
-					 WHERE id > $1 AND iri::text LIKE \'%"title"%\'
+					 WHERE id > $1 AND iri @? \'$.**."title"\'
 					 ORDER BY id ASC LIMIT '.self::$batch_size,
 					[$last_id]
 				);
