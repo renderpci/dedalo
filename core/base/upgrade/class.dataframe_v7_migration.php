@@ -1206,9 +1206,11 @@ class dataframe_v7_migration {
 									);
 									$component_df->set_caller_dataframe($caller_dataframe);
 
+									$label_target_section_tipo = component_iri::get_label_target_section_tipo();
+
 									$new_locator = new locator();
 										$new_locator->set_type( DEDALO_RELATION_TYPE_DATAFRAME );
-										$new_locator->set_section_tipo( component_iri::$label_target_section_tipo );
+										$new_locator->set_section_tipo( $label_target_section_tipo );
 										$new_locator->set_section_id( (string)$target_section_id );
 										$new_locator->set_id_key( (int)$item->id );
 										$new_locator->set_main_component_tipo( $component_tipo );
@@ -1228,7 +1230,7 @@ class dataframe_v7_migration {
 									}
 									$relation->{$frame_slot_tipo}[] = (object)[
 										'type'					=> DEDALO_RELATION_TYPE_DATAFRAME,
-										'section_tipo'			=> component_iri::$label_target_section_tipo,
+										'section_tipo'			=> $label_target_section_tipo,
 										'section_id'			=> (string)$target_section_id,
 										'from_component_tipo'	=> $frame_slot_tipo,
 										'main_component_tipo'	=> $component_tipo,
@@ -1269,6 +1271,19 @@ class dataframe_v7_migration {
 				}
 			}//end while batches
 		}//end foreach tables
+
+		// total-failure guard.
+		// report() only increments counters, so a step in which EVERY candidate item
+		// failed would otherwise still return the result=true set by new_step_response()
+		// — the update runner would log 'script executed: true', carry on, and stamp the
+		// new data version while nothing had actually been migrated. A save run that
+		// found work to do (unresolved>0) but materialized nothing is never a success.
+		if ($save===true && $response->unresolved>0 && $response->locators_migrated===0) {
+			$response->result	= false;
+			$response->msg		= 'Error. materialize_iri_titles resolved no iri title at all';
+			$response->errors[]	= 'materialize_iri_titles: all '.$response->unresolved
+				.' candidate items were left unresolved (0 materialized). See unresolved_items for the cause.';
+		}
 
 		return $response;
 	}//end materialize_iri_titles
