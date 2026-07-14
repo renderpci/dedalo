@@ -18,10 +18,13 @@
  *   page URL (data_manager fallback '../api/v1/json/');
  * - GET /dedalo/* — the copied client static assets (Phase 7 seam), served
  *   from client/dedalo/ at the SAME paths the PHP deployment uses so the
- *   client's relative references need no edits.
+ *   client's relative references need no edits;
+ * - GET /, /dedalo[/], /dedalo/core[/] — 302 to the app entry point
+ *   (ENTRY_REDIRECT_PATHS; the PHP index.php shims).
  */
 
 import { existsSync, readFileSync, unlinkSync } from 'node:fs';
+import { stat } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 import { Glob } from 'bun';
 import { runBootMigrations } from '../install/db/migrate.ts';
@@ -253,6 +256,40 @@ function jsonResponse(body: unknown, status = 200): Response {
 	});
 }
 
+/** The application entry point — the only client directory with an index.html. */
+const APP_ENTRY_PATH = '/dedalo/core/page/';
+
+/**
+ * Entry-point redirects. The client tree has NO index.html above core/page/, so a
+ * user who types the mount point ("/dedalo/") rather than the full page path used
+ * to get a bare 404 — the engine's static branch looked for an index.html that
+ * cannot exist. The PHP deployment answered these with 301 shims (index.php →
+ * core/page/, core/index.php → page/); those files are gone with the engine, so
+ * the redirects live here, where they hold for EVERY topology (dev TCP listener,
+ * unix socket, whatever proxy is in front) instead of only where a proxy config
+ * happens to repeat them. deploy/nginx.conf repeats the two /dedalo paths only
+ * because nginx serves the client tree from an alias and they never reach us.
+ *
+ * 302, not PHP's 301: a permanent redirect is cached by the browser until the
+ * user clears it, which pins the mount point of an install that may later move.
+ * Matches the `location = /` line already in deploy/nginx.conf.
+ */
+const ENTRY_REDIRECT_PATHS: ReadonlySet<string> = new Set([
+	'/',
+	'/dedalo',
+	'/dedalo/',
+	'/dedalo/core',
+	'/dedalo/core/',
+]);
+
+/** 302 to `location`, carrying the baseline security headers like every other response. */
+function redirectResponse(location: string): Response {
+	return new Response(null, {
+		status: 302,
+		headers: { Location: location, 'Cache-Control': 'no-store', ...SECURITY_HEADERS },
+	});
+}
+
 /**
  * Serve one copied-client asset (GET /dedalo/*). Fail-closed: decoded paths are
  * resolved and must stay inside CLIENT_ROOT (traversal guard); anything missing
@@ -271,6 +308,18 @@ async function serveClientAsset(pathname: string, request: Request): Promise<Res
 	let fullPath = resolve(CLIENT_ROOT, relativePath);
 	if (fullPath !== CLIENT_ROOT && !fullPath.startsWith(CLIENT_ROOT + sep)) {
 		return jsonResponse({ result: false, msg: 'Not found' }, 404); // traversal attempt
+	}
+	const isDirectory = await stat(fullPath)
+		.then((entry) => entry.isDirectory())
+		.catch(() => false);
+	// A directory URL must carry its trailing slash before we serve its index.html:
+	// the client references its assets RELATIVELY (core/page/index.html asks for
+	// "js/index.js"), so serving the shell at /dedalo/core/page would resolve every
+	// one of them against /dedalo/core/ and boot a blank page. Apache (DirectorySlash)
+	// and nginx both redirect here; the engine has to, since in dev nothing is in front
+	// of it. Redirect the RAW pathname — decodedPath would double-encode on the way out.
+	if (isDirectory && !decodedPath.endsWith('/')) {
+		return redirectResponse(`${pathname}/${new URL(request.url).search}`);
 	}
 	// Directory (trailing slash or bare dir) → its index.html.
 	if (decodedPath.endsWith('/') || !fullPath.split(sep).pop()?.includes('.')) {
@@ -602,6 +651,13 @@ export async function handleRequest(request: Request, context: RequestContext): 
 	if (request.method === 'GET' && url.pathname.startsWith(CLIENT_LIB_URL_PREFIX)) {
 		const libResponse = await serveClientLibRequest(url.pathname, request);
 		if (libResponse !== null) return libResponse;
+	}
+
+	// Entry points → the app (PHP's index.php / core/index.php redirect shims).
+	// Must precede the static branch: '/dedalo/core/' would otherwise look for an
+	// index.html that the client tree does not have, and 404 on the user.
+	if (request.method === 'GET' && ENTRY_REDIRECT_PATHS.has(url.pathname)) {
+		return redirectResponse(APP_ENTRY_PATH);
 	}
 
 	// Copied-client static assets (Phase 7 seam).
