@@ -21,6 +21,7 @@
 import { SQL } from 'bun';
 import { config } from '../../config/config.ts';
 import { readEnv } from '../../config/env.ts';
+import { readString } from '../../config/readers.ts';
 import type { Candidate, EmbeddingRow, RecordLocator } from './types.ts';
 
 /**
@@ -30,11 +31,10 @@ import type { Candidate, EmbeddingRow, RecordLocator } from './types.ts';
  * override them when the pgvector database lives on a DIFFERENT server.
  */
 function buildRagSqlOptions(): ConstructorParameters<typeof SQL>[0] {
-	const database = (readEnv('DEDALO_RAG_DB_NAME') ??
-		readEnv('RAG_DB_NAME', 'dedalo7_rag')) as string;
-	const socket = readEnv('DEDALO_RAG_DB_SOCKET_CONN', '') as string;
+	const database = (readEnv('DEDALO_RAG_DB_NAME') ?? readString('RAG_DB_NAME')) as string;
+	const socket = readString('DEDALO_RAG_DB_SOCKET_CONN');
 	const host = (readEnv('DEDALO_RAG_DB_HOSTNAME_CONN') ?? config.db.host) as string;
-	const portRaw = Number(readEnv('DEDALO_RAG_DB_PORT_CONN', ''));
+	const portRaw = Number(readString('DEDALO_RAG_DB_PORT_CONN'));
 	const port = Number.isFinite(portRaw) && portRaw > 0 ? Math.trunc(portRaw) : config.db.port;
 	const user = (readEnv('DEDALO_RAG_DB_USERNAME_CONN') ?? config.db.user) as string;
 	const password = (readEnv('DEDALO_RAG_DB_PASSWORD_CONN') ?? config.db.password) as string;

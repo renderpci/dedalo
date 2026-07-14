@@ -55,7 +55,7 @@ function getArg(flag: string, envVar: string, defaultValue?: string): string | u
 
 /** Default runner URL: the local TCP dev listener the browser can reach. */
 function defaultRunnerUrl(): string {
-	const port = readEnv('SERVER_TCP_PORT', '3500') as string;
+	const port = (readEnv('SERVER_TCP_PORT') ?? '3500') as string;
 	return `http://localhost:${port}/dedalo/test/client/index.html`;
 }
 

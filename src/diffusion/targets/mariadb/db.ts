@@ -31,6 +31,7 @@
 
 import { SQL } from 'bun';
 import { readEnv } from '../../../config/env.ts';
+import { readString } from '../../../config/readers.ts';
 
 /** Rows/mutation results from `.unsafe()` carry MySQL metadata on the array. */
 export interface MariadbExecResult {
@@ -99,8 +100,8 @@ function buildTargetOptions(database: string): ConstructorParameters<typeof SQL>
 	const host = readEnv('DEDALO_DIFFUSION_DB_HOST');
 	const commonOptions = {
 		adapter: 'mariadb' as const,
-		username: readEnv('DEDALO_DIFFUSION_DB_USER', ''),
-		password: readEnv('DEDALO_DIFFUSION_DB_PASSWORD', ''),
+		username: readString('DEDALO_DIFFUSION_DB_USER'),
+		password: readString('DEDALO_DIFFUSION_DB_PASSWORD'),
 		// ALWAYS an explicit database (spike: database-less sessions fail weirdly).
 		database,
 		// Modest per-target pool: the writer runs batches sequentially; deletes
@@ -113,7 +114,7 @@ function buildTargetOptions(database: string): ConstructorParameters<typeof SQL>
 		return { ...commonOptions, path: socket };
 	}
 	if (host !== undefined && host !== '') {
-		const port = Number(readEnv('DEDALO_DIFFUSION_DB_PORT', '3306')) || 3306;
+		const port = Number(readString('DEDALO_DIFFUSION_DB_PORT')) || 3306;
 		return { ...commonOptions, hostname: host, port };
 	}
 	return { ...commonOptions, path: '/tmp/mysql.sock' };

@@ -20,6 +20,7 @@
  */
 
 import { readEnv } from '../../config/env.ts';
+import { readString } from '../../config/readers.ts';
 import { isConsultationOnlySection } from '../concepts/section.ts';
 import { sql } from '../db/postgres.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
@@ -32,7 +33,7 @@ import { getMatrixTableFromTipo, getModelByTipo } from '../ontology/resolver.ts'
  * another worker process, whose Map this process cannot reach) can linger.
  * PERMISSIONS_CACHE_TTL_SECONDS=0 disables the TTL (invalidation-only).
  */
-const CACHE_TTL_MS = Math.max(0, Number(readEnv('PERMISSIONS_CACHE_TTL_SECONDS', '300'))) * 1000;
+const CACHE_TTL_MS = Math.max(0, Number(readString('PERMISSIONS_CACHE_TTL_SECONDS'))) * 1000;
 
 interface CacheEntry<V> {
 	value: V;

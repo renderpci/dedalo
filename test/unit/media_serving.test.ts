@@ -136,7 +136,7 @@ describe('media serving (dev listener, fail-closed)', () => {
 			// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
 			delete process.env.MEDIA_DEV_ROUTE_ENABLED;
 			try {
-				const fileOrDefault = readEnv('MEDIA_DEV_ROUTE_ENABLED', 'false');
+				const fileOrDefault = (readEnv('MEDIA_DEV_ROUTE_ENABLED') ?? 'false');
 				const response = await handleRequest(mediaRequest(path, token), context);
 				expect(response.status).toBe(fileOrDefault === 'true' ? 200 : 404);
 			} finally {

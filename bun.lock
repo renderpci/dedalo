@@ -27,9 +27,9 @@
       "devDependencies": {
         "@biomejs/biome": "^1.9.4",
         "@types/bun": "latest",
-        "@types/less": "^3.0.8",
+        "@types/less": "3.0.8",
         "chai": "4.3.8",
-        "less": "^4.6.7",
+        "less": "4.6.7",
         "mocha": "11.1.0",
         "puppeteer": "^25.3.0",
       },

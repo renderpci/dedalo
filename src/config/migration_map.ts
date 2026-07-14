@@ -493,7 +493,12 @@ export const NEW_IN_V7: readonly string[] = [
 	'PERMISSIONS_CACHE_TTL_SECONDS',
 	// menu / areas / defaults
 	'AREAS_DENY',
-	'APPLICATION_LANGS',
+	// 'APPLICATION_LANGS' was DELETED here (2026-07-13). It was never a real key: nothing
+	// set it, the installer never wrote it, and it appeared in no .env. Three call sites read
+	// it and CSV-split it — which, since the actual UI-language key (DEDALO_APPLICATION_LANGS)
+	// is a JSON map, always produced garbage and fell through to a hardcoded
+	// 'lg-spa,lg-cat,lg-eng' literal. Same defect as the rsc92 picker bug (see
+	// core/resolve/component_data.ts). They now read config.menu.projectsDefaultLangs.
 	'DEDALO_SECTION_USERS_TIPO',
 	'DEDALO_SEARCH_CLIENT_MAX_LIMIT',
 	// media (v7-native knobs)

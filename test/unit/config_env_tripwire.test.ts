@@ -123,7 +123,10 @@ describe('readEnv / envSnapshot precedence contract', () => {
 		}
 		// envSnapshot is per-call, not a boot snapshot: the deletion is visible.
 		expect(envSnapshot()[PROBE_KEY]).toBeUndefined();
-		expect(readEnv(PROBE_KEY, 'fallback')).toBe('fallback');
+		// readEnv has NO fallback parameter any more: defaults live in src/config/catalog/
+		// and a literal passed here is a compile error (that is the gate). An unset key
+		// simply reads as undefined; the catalog-backed readers supply the default.
+		expect(readEnv(PROBE_KEY)).toBeUndefined();
 	});
 
 	test('../private/.env values reach readEnv AND envSnapshot when not shadowed', () => {

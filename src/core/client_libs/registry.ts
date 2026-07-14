@@ -28,6 +28,7 @@
 
 import { resolve } from 'node:path';
 import { projectRoot, readEnv } from '../../config/env.ts';
+import { readString } from '../../config/readers.ts';
 
 /**
  * Where a lib's bytes come from. Drives the tripwire and the docs, not the routing.
@@ -150,7 +151,7 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
  * per-call, not memoized at module load, so a test can flip DEDALO_DEV_MODE.
  */
 export function isDevMode(): boolean {
-	return readEnv('DEDALO_DEV_MODE', 'false') === 'true';
+	return readString('DEDALO_DEV_MODE') === 'true';
 }
 
 /** Absolute filesystem root for a lib id, or null when the id is not registered. */

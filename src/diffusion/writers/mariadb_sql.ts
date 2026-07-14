@@ -29,6 +29,7 @@
  */
 
 import { readEnv } from '../../config/env.ts';
+import { readString } from '../../config/readers.ts';
 import type { PublicationPlan, SectionPlan } from '../plan/types.ts';
 import type { ProjectedRow } from '../project/lang_ladder.ts';
 import {
@@ -68,7 +69,7 @@ interface TableCounters {
 
 /** Row cap per upsert statement (plan D1: DEDALO_DIFFUSION_BATCH_ROWS, default 200). */
 function upsertBatchRows(): number {
-	const configured = Number(readEnv('DEDALO_DIFFUSION_BATCH_ROWS', ''));
+	const configured = Number(readString('DEDALO_DIFFUSION_BATCH_ROWS'));
 	return Number.isFinite(configured) && configured > 0
 		? Math.floor(configured)
 		: DEFAULT_UPSERT_BATCH_ROWS;

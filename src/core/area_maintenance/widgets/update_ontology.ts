@@ -14,6 +14,8 @@
 
 import { config } from '../../../config/config.ts';
 import { readEnv } from '../../../config/env.ts';
+import { readString } from '../../../config/readers.ts';
+import { publicOrigin } from '../../resolve/public_origin.ts';
 import type { Principal } from '../../security/permissions.ts';
 import { type WidgetModule, type WidgetResponse, engineDenied, gated } from './support.ts';
 
@@ -31,11 +33,9 @@ async function updateOntologyGetValue(): Promise<WidgetResponse> {
 		...server,
 	}));
 	if (config.ontologyIo.isOntologyServer === true) {
-		const protocol = (readEnv('DEDALO_PROTOCOL', 'http://') as string) ?? 'http://';
-		const host = (readEnv('DEDALO_HOST', 'localhost') as string) ?? 'localhost';
 		servers.push({
 			name: 'Local files',
-			url: `${protocol}${host}/dedalo/core/api/v1/json/`,
+			url: `${publicOrigin()}/dedalo/core/api/v1/json/`,
 			code: 'localhost',
 		});
 	}

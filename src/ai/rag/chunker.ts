@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { readEnv } from '../../config/env.ts';
+import { readNumber, readString } from '../../config/readers.ts';
 
 /**
  * Structure-aware SEMANTIC chunking — faithful port of PHP rag_chunker
@@ -79,21 +80,13 @@ interface StructuralUnit {
  */
 export const CHUNKER_VERSION = 'v1';
 
-/** Numeric env knob with a PHP-catalog default (absence/NaN → default). */
-function envNumber(key: string, fallback: number): number {
-	const parsed = Number(readEnv(key, ''));
-	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
-
 // Install-level chunking knobs (PHP rag catalog keys; per-component ontology
 // properties.rag config still overrides via ChunkOpts).
-const DEFAULT_MAX_TOKENS = envNumber('DEDALO_RAG_CHUNK_TOKENS', 450);
-const DEFAULT_MIN_TOKENS = envNumber('DEDALO_RAG_CHUNK_MIN_TOKENS', 120);
-const DEFAULT_BREAKPOINT = envNumber('DEDALO_RAG_SEMANTIC_BREAKPOINT_THRESHOLD', 0.92);
+const DEFAULT_MAX_TOKENS = readNumber('DEDALO_RAG_CHUNK_TOKENS');
+const DEFAULT_MIN_TOKENS = readNumber('DEDALO_RAG_CHUNK_MIN_TOKENS');
+const DEFAULT_BREAKPOINT = readNumber('DEDALO_RAG_SEMANTIC_BREAKPOINT_THRESHOLD');
 const DEFAULT_STRATEGY: ChunkStrategy =
-	readEnv('DEDALO_RAG_CHUNK_STRATEGY', 'structural_semantic') === 'structural'
-		? 'structural'
-		: 'structural_semantic';
+	readString('DEDALO_RAG_CHUNK_STRATEGY') === 'structural' ? 'structural' : 'structural_semantic';
 
 const TC_DETECT = /\[TC_\d{1,2}:\d{1,2}:\d{1,2}(?:\.\d{1,3})?_TC\]/;
 

@@ -19,6 +19,7 @@
  */
 
 import { readEnv } from '../../config/env.ts';
+import { readString } from '../../config/readers.ts';
 import { buildVirtualDiffusionTree, termLabelOf } from '../plan/virtual_tree.ts';
 import type { VirtualTreeNode } from '../plan/virtual_tree.ts';
 import { WRITER_REGISTRY } from '../writers/registry.ts';
@@ -64,7 +65,7 @@ export async function buildDiffusionInfo(sectionTipo: string): Promise<{
 	section_diffusion_nodes: SectionDiffusionNode[];
 	resolve_levels: number;
 }> {
-	const resolveLevels = Math.max(0, Number(readEnv('DEDALO_DIFFUSION_RESOLVE_LEVELS', '2')) || 2);
+	const resolveLevels = Math.max(0, Number(readString('DEDALO_DIFFUSION_RESOLVE_LEVELS')) || 2);
 	const tree = await buildVirtualDiffusionTree();
 	if (tree === null) {
 		return { section_diffusion_nodes: [], resolve_levels: resolveLevels };

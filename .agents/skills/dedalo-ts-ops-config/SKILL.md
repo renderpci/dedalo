@@ -25,16 +25,27 @@ so a value set in `../private/.env` silently does nothing, and the read is untes
   boot into a frozen object. Pool/observability/timeout/backup keys live under
   **`config.ops`** (`config.ts:700`); the socket path under `config.server.unixSocketPath`
   (`SERVER_UNIX_SOCKET`, `config.ts:622`).
-- Precedence, scopes, `../private/.env` / `.env.<host>` / `sample.env` key census:
-  cross-link the **dedalo-config** skill. `../private/sample.env` is the GENERATED key
-  census — regenerate it when you add a key.
+- Key census: **`src/config/catalog/`** is the single source of truth (type, default, scope,
+  prose — one entry per key). It GENERATES `install/sample.env` (the copy-paste template the
+  installer drops at `../private/sample.env`) and the generated regions of
+  `docs/config/{config,config_db}.md`. `config_docs_tripwire` re-renders and demands byte
+  identity, so hand-editing any of the three is a red gate — change the catalog and run
+  `bun run config:gen`.
+- Precedence is exactly `process.env` > `../private/.env` > default. There is **no**
+  per-host `.env.<host>` overlay (`env.ts` implements none) and no `dedalo-config` skill —
+  both were claimed here and neither exists.
 
 **Tripwire: `test/unit/config_env_tripwire.test.ts`** — statically bans `process.env`
 in `src/` and `tools/` outside `src/config/`. It carries a small **subprocess-passthrough
 allowlist** (each entry cites a reason: pg_dump / media binaries / runner child get the
 whole env). Lowering the count is free; raising it needs a justified allowlist entry.
-A new key is: add to `config.ts` (read via `readEnv`), regenerate `sample.env`, done —
-never sprinkle `readEnv` calls if a `config.*` field will do.
+A new key is: (1) declare it in **`src/config/catalog/<domain>.ts`** — type, default, scope
+and the operator prose, all in one entry; (2) read it (a `config.*` field if it is
+boot-stable — never sprinkle raw reads if a `config.*` field will do); (3) classify it in
+`migration_map.ts`; (4) `bun run config:gen`. Steps 1, 3 and 4 are NOT optional:
+`config_docs_tripwire` fails on (1) and (4), `config_census_tripwire` on (3). The catalog
+prose must be **PHP-free** — it renders straight into `docs/config/config.md`, where
+`docs_current_engine_tripwire` bans the substring.
 
 ## Coexistence config (retires at cutover)
 

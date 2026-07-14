@@ -9,6 +9,7 @@
  */
 
 import { readEnv } from '../../config/env.ts';
+import { readString } from '../../config/readers.ts';
 
 /** The provider contract: embed a batch of texts into fixed-dimension vectors. */
 export interface EmbeddingProvider {
@@ -146,17 +147,17 @@ export class SidecarEmbeddingProvider implements EmbeddingProvider {
  * embedding sidecar in production — a one-env change, no code edits.
  */
 export function getEmbeddingProvider(): EmbeddingProvider {
-	const provider = String(readEnv('DEDALO_RAG_EMBEDDING_PROVIDER', '') ?? '')
+	const provider = String(readString('DEDALO_RAG_EMBEDDING_PROVIDER') ?? '')
 		.trim()
 		.toLowerCase();
 	if (provider === 'sidecar') {
-		const endpoint = String(readEnv('DEDALO_RAG_EMBEDDING_ENDPOINT', '') ?? '').trim();
+		const endpoint = String(readString('DEDALO_RAG_EMBEDDING_ENDPOINT') ?? '').trim();
 		if (endpoint !== '') {
-			const model = String(readEnv('DEDALO_RAG_EMBEDDING_MODEL', '') ?? '').trim() || undefined;
+			const model = String(readString('DEDALO_RAG_EMBEDDING_MODEL') ?? '').trim() || undefined;
 			// Install-level tuning (PHP rag catalog): batch size and provider
 			// timeout (PHP value is SECONDS; the ctor takes ms).
-			const batch = Number(readEnv('DEDALO_RAG_BATCH_SIZE', ''));
-			const timeoutSeconds = Number(readEnv('DEDALO_RAG_PROVIDER_TIMEOUT', ''));
+			const batch = Number(readString('DEDALO_RAG_BATCH_SIZE'));
+			const timeoutSeconds = Number(readString('DEDALO_RAG_PROVIDER_TIMEOUT'));
 			return new SidecarEmbeddingProvider({
 				endpoint,
 				model,
