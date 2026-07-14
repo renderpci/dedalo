@@ -1,3 +1,26 @@
+/**
+ * The nine MCP tools — the same read-only API, shaped for an AI agent instead of a URL.
+ *
+ * Every tool is a thin adapter over the SAME services the REST routes call. Nothing here
+ * queries a database: the security model (DB_NAMES allowlist, identifier validation, bound
+ * parameters) and the DoS bounds (limit caps, resolution caps) hold because this layer
+ * cannot bypass the layer that enforces them. There is no write tool, and there is no
+ * place to add one.
+ *
+ * What changes for an agent is the SHAPE of a request. The REST surface is a URL DSL —
+ * `filter[code][like]=OH-%`, brackets, percent-encoding, pipe-separated `in` lists — which
+ * a model must assemble as a string and can silently get wrong. The tools take structured
+ * arguments instead: `filters` is an array of `{field, op, value}` objects that a schema
+ * can describe and a client can validate before the call is ever made. `toConditions`
+ * translates that back into the internal filter model, which is the same one the URL parser
+ * produces — so both surfaces meet at `FilterCondition` and cannot drift apart.
+ *
+ * The `describe()` text on every parameter is not decoration: it is the ONLY documentation
+ * the agent gets. Defaults, valid operators and the accepted `lang` form are spelled out
+ * there because the JSON Schema derived from these zod shapes is literally what the model
+ * reads before choosing arguments.
+ */
+
 import { z } from 'zod';
 import { dbNames } from '../config';
 import { assertKnownDb } from '../db/pool';
@@ -10,6 +33,17 @@ import type { FilterCondition } from '../utils/query-params';
 import { ValidationError } from '../errors';
 import { DEFAULT_TABLE, DEFAULT_COLUMN, DEFAULT_LIMIT, DEFAULT_MAX_CHARACTERS, DEFAULT_MAX_OCCURRENCES, VALID_OPERATORS_HINT } from '../constants';
 
+/**
+ * A tool as this module defines it, before the MCP SDK sees it.
+ *
+ * `inputSchema` is a RAW SHAPE (a map of zod validators), not a `z.object` — that is what
+ * `McpServer.registerTool` expects, and it derives the JSON Schema advertised to the client
+ * from it. `handler` takes loose `Record<string, unknown>` args because MCP arguments
+ * arrive as JSON-RPC params: each handler narrows them itself, and anything it gets wrong
+ * is caught by the service-level validation underneath.
+ *
+ * The `description` and the per-field `describe()` calls are the agent-facing contract.
+ */
 export interface ToolDefinition {
   name: string;
   description: string;
@@ -17,10 +51,17 @@ export interface ToolDefinition {
   handler: (args: Record<string, unknown>) => Promise<{ content: Array<{ type: 'text'; text: string }> }>;
 }
 
+// MCP answers in CONTENT BLOCKS, not JSON bodies, so a result is a JSON string inside a
+// text block — pretty-printed because a model reads it. Note what this costs: the REST
+// envelope's `pagination` and `meta` are not here, only the service payload.
 function textContent(data: unknown): { content: Array<{ type: 'text'; text: string }> } {
   return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
 }
 
+// A failed tool call must come back as a READABLE RESULT, not a protocol error: an agent
+// that is told "Unknown column: titel" can fix its own call and retry, whereas a transport
+// exception just ends the conversation. This is why there is no RFC 9457 problem body on
+// this surface — a model does not need a machine-readable error type, it needs a sentence.
 function errorContent(error: unknown): { content: Array<{ type: 'text'; text: string }> } {
   return { content: [{ type: 'text', text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}` }] };
 }
@@ -33,13 +74,32 @@ const filtersParam = z.array(z.object({
   value: z.string().optional().describe('Comparison value. For in/not_in: pipe-separated values (e.g. "1|2|3"). Omit for is_null/is_not_null.'),
 })).optional().describe('Filter conditions, combined with AND');
 
+/**
+ * `db` is optional on every tool: an agent should be able to ask a useful question without
+ * first discovering that databases exist, so it defaults to the first configured one. It is
+ * still put through `assertKnownDb`, so the DB_NAMES allowlist governs MCP exactly as it
+ * governs HTTP — an unknown name is a 404-shaped error, never an attempted connection.
+ */
 function resolveDb(args: Record<string, unknown>): string {
   const db = (args.db as string | undefined) ?? dbNames[0];
   return assertKnownDb(db);
 }
 
+/**
+ * The structured-filter counterpart of the URL parser (utils/query-params
+ * `parseFilterParams`), producing the identical `FilterCondition[]`. Same three cases,
+ * because they are properties of the operators and not of the syntax: `is_null` /
+ * `is_not_null` take NO value, `in` / `not_in` take a pipe-separated list, everything else
+ * takes exactly one.
+ *
+ * The operator is not validated here — an unknown one is rejected downstream by
+ * `buildWhere`'s switch, which is the single place that decides what SQL an operator maps
+ * to, and therefore the only place that can honestly say which operators exist.
+ */
 function toConditions(filters: unknown): FilterCondition[] {
   if (!filters) return [];
+  // A model that has ignored the schema and sent the REST string DSL lands here; say so,
+  // rather than letting `.map` fail on a string.
   if (!Array.isArray(filters)) {
     throw new ValidationError('filters must be an array of {field, op?, value?} objects');
   }
@@ -65,12 +125,25 @@ function toConditions(filters: unknown): FilterCondition[] {
   });
 }
 
+// `fields` stays the REST comma-separated string rather than becoming an array: it is the
+// one place the tools mirror the URL form deliberately, so that a `fields` value copied
+// from a URL, a batch `params` object or a tool call means the same thing everywhere.
 function parseFieldList(fields: unknown): string[] | undefined {
   if (typeof fields !== 'string' || !fields) return undefined;
   const list = fields.split(',').map(f => f.trim()).filter(Boolean);
   return list.length > 0 ? list : undefined;
 }
 
+/**
+ * The nine tools, in the order an agent naturally needs them: discover the databases,
+ * introspect a schema, then query — structured (`search_records`, `get_record`,
+ * `count_records`), by relevance (`fulltext_search`), or down to a passage
+ * (`get_text_fragment`, `get_av_fragment`, `get_av_indexation_fragment`).
+ *
+ * Each handler's job is only to map loose JSON-RPC arguments onto a service call and apply
+ * the documented defaults. Keep it that way: logic that lives here is logic the REST
+ * surface does not get, and the two surfaces are meant to answer identically.
+ */
 export const tools: ToolDefinition[] = [
   {
     name: 'list_databases',
@@ -159,6 +232,10 @@ export const tools: ToolDefinition[] = [
       q: z.string().optional().describe('Fulltext search query to count matching rows instead of filters'),
       column: z.string().optional().describe(`Column for fulltext count (default: ${DEFAULT_COLUMN})`),
     },
+    // Counting is not a third query path: it is the ordinary search with `limit: 0`, which
+    // both services read as "skip the data query, run only the COUNT". `q` and `filters`
+    // are alternatives, not combinable — a fulltext count wins, and any filters passed
+    // alongside it are silently ignored (`fulltextSearch` has no filter model).
     handler: async (args) => {
       const db = resolveDb(args);
       if (args.q) {
@@ -246,6 +323,8 @@ export const tools: ToolDefinition[] = [
       max_characters: z.number().optional().describe(`Maximum characters per fragment (default: ${DEFAULT_MAX_CHARACTERS})`),
       max_occurrences: z.number().optional().describe(`Maximum fragments per term (default: ${DEFAULT_MAX_OCCURRENCES})`),
     },
+    // The only tool with a default TABLE: the AV path is tied to the interview shape
+    // anyway (see the AV_* config), so making an agent name the table would be ceremony.
     handler: async (args) => {
       const db = resolveDb(args);
       const fragments = await avFragments(db, (args.table as string) || DEFAULT_TABLE, args.section_id as number, {

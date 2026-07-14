@@ -1,3 +1,23 @@
+/**
+ * Per-IP token bucket — the API's defense against one caller monopolizing the published
+ * database. Each client starts with `RATE_LIMIT_RPM` tokens, spends one per request, and gets
+ * a full refill each 60-second window; an empty bucket answers `429`.
+ *
+ * Work is charged where it is DONE, not where it is requested: `POST /batch` runs up to 20
+ * queries behind a single HTTP request, so it pays for all of them (chargeRateLimit) rather
+ * than one. Otherwise batching would be a 20× amplifier on the database, and the limit would
+ * mean nothing to anyone willing to wrap their reads in it.
+ *
+ * Identity comes from security/client-ip.ts, which is the only thing that knows whether the
+ * forwarding headers may be believed. Getting THAT wrong silently degrades this whole module
+ * into one global bucket — see the note in that file.
+ *
+ * State is process-local and in-memory: a restart forgives everyone, and a horizontally scaled
+ * deployment limits per instance. Both are acceptable for a read-only public API whose
+ * expensive resource (the DB) is bounded anyway; a shared store would be the fix if that
+ * changes.
+ */
+
 import { config } from '../config';
 import { RateLimitError } from '../errors';
 import { clientIp } from './client-ip';
@@ -70,6 +90,14 @@ export function chargeRateLimit(req: Request, count: number): void {
 
 let cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
+/**
+ * Drop buckets no one has touched for ten windows. Without this the Map grows one entry per
+ * distinct IP ever seen — an unbounded memory leak on a public endpoint, and one an attacker
+ * could drive deliberately by rotating source addresses.
+ *
+ * Evicting an idle bucket is free of consequence: it had refilled to full long ago, so the
+ * caller's next request rebuilds an identical one.
+ */
 export function cleanupStaleBuckets(): void {
   const now = Date.now();
   for (const [ip, bucket] of buckets.entries()) {
@@ -79,9 +107,12 @@ export function cleanupStaleBuckets(): void {
   }
 }
 
+/** Idempotent: a second call is a no-op rather than a second, orphaned timer. */
 export function startRateLimitCleanup(): void {
   if (cleanupInterval) return;
   cleanupInterval = setInterval(cleanupStaleBuckets, 60000);
+  // Unref'd so this timer alone never holds the process open — the sweep is housekeeping,
+  // not a reason to keep a shutting-down server alive.
   cleanupInterval.unref?.();
 }
 

@@ -1,3 +1,23 @@
+/**
+ * The three search surfaces, all read-only:
+ *
+ *   - `fulltextSearch`  — find records: MariaDB `MATCH … AGAINST` over a FULLTEXT-indexed
+ *                         column, ranked by relevance.
+ *   - `textFragments`   — find passages inside ONE known record (books, theses), with page
+ *                         references from Dédalo's `[page-n-N]` markers.
+ *   - `avFragments`     — the same, for an audiovisual record: passages carry the
+ *                         `[tc-in-out]` timecode window, so the answer is a video clip.
+ *
+ * The division of labour matters: the DATABASE decides which records match (that is what
+ * the FULLTEXT index is for), and JAVASCRIPT cuts the excerpts (utils/fragments) — the
+ * index can rank a document but cannot hand back a windowed, `<mark>`-highlighted
+ * passage. So the fragment functions never search; they fetch one row and scan it, which
+ * is why they take a `section_id` rather than a query.
+ *
+ * Every entry point asserts the table (and, where it interpolates one, the column) exists
+ * before composing SQL — see schema.service for why that ordering is the security story.
+ */
+
 import { validateColumnName } from '../db/query-builder';
 import { dbExecute } from '../db/pool';
 import { avSchema, config } from '../config';
@@ -20,6 +40,11 @@ export interface FulltextOptions {
   resolve_inverse_relations?: string;
 }
 
+// `column` is client-supplied and gets back-tick interpolated (MATCH cannot bind an
+// identifier), so it must both match the identifier grammar and be proven to exist
+// before it reaches a statement. Existence is only half the story — the column also
+// needs a FULLTEXT index, and INFORMATION_SCHEMA.COLUMNS cannot tell us that; MariaDB
+// answers it, which is what mapFulltextError below is for.
 async function assertSearchableColumn(db: string, table: string, column: string): Promise<void> {
   validateColumnName(column);
   if (!(await tableHasColumn(db, table, column))) {
@@ -41,6 +66,17 @@ function mapFulltextError(error: unknown, column: string): never {
   throw error;
 }
 
+/**
+ * FULLTEXT search over one column, in BOOLEAN MODE — so the user's `q` is not just a bag
+ * of words but a small query language of its own (`+must -not "exact phrase"`), passed
+ * through to MariaDB verbatim. It is a bound parameter, so there is nothing to escape;
+ * a malformed operator sequence is MariaDB's to reject, not ours to parse.
+ *
+ * `relevance` is the MATCH score aliased into the projection so callers can see the
+ * ranking they were given, and ORDER BY relies on it. Repeating MATCH in SELECT and
+ * WHERE is the idiomatic form: MariaDB recognises the identical expression and does not
+ * score the row twice.
+ */
 export async function fulltextSearch(
   db: string,
   table: string,
@@ -53,6 +89,8 @@ export async function fulltextSearch(
 
   const escapedCol = `\`${column}\``;
 
+  // limit=0 is the count-only request (the `count_records` MCP tool takes this path):
+  // skip the search entirely and fall through to the COUNT below.
   let rows: Record<string, unknown>[] = [];
   if (limit > 0) {
     const sql = `
@@ -65,6 +103,11 @@ export async function fulltextSearch(
     const result = await dbExecute<DbRow[]>(db, sql, [q, q, limit, offset])
       .catch(error => mapFulltextError(error, column));
 
+    // Each hit is decorated with the passages that produced it. The excerpt window (320
+    // chars, up to 3 per term) is fixed here rather than exposed: these are result
+    // previews, not the fragment endpoints, which do take caller-supplied bounds.
+    // Note the boolean-mode operators in `q` are matched literally by the JS scan, so a
+    // term written `+guerra` simply finds nothing to highlight — the row is still returned.
     rows = parseJsonStrings(result as Record<string, unknown>[]).map(row => {
       const text = (row[column] as string) || '';
       const fragments = extractFragments(text, q, 320, 3);
@@ -81,6 +124,8 @@ export async function fulltextSearch(
     }
   }
 
+  // A second statement, not a window function: the count must ignore LIMIT/OFFSET, and
+  // it is only paid for when the caller asks (`count=true`).
   let total: number | undefined;
   if (withTotal) {
     const countSql = `
@@ -104,6 +149,14 @@ export interface FragmentOptions {
   max_occurrences: number;
 }
 
+/**
+ * Fetch the ONE row a fragment request scans.
+ *
+ * A section_id can name several rows (one per language), but a fragment is cut from a
+ * single text, so this deliberately collapses to `LIMIT 1`. Without an explicit `lang`
+ * that means the first variant in `lang` order — the ORDER BY is what makes "first"
+ * deterministic instead of whatever the engine returns.
+ */
 async function fetchRecordText(
   db: string,
   table: string,
@@ -111,6 +164,8 @@ async function fetchRecordText(
   columns: string[],
   lang?: string,
 ): Promise<Record<string, unknown>> {
+  // A `lang` on a table that has no such column is ignored here rather than rejected —
+  // the filter is simply not applied (contrast getRecord, which 400s).
   const hasLang = await tableHasColumn(db, table, COLUMNS.LANG);
 
   const selectCols = columns.map(col => `\`${col}\``).join(', ');
@@ -136,6 +191,18 @@ async function fetchRecordText(
   return rows[0] as Record<string, unknown>;
 }
 
+/**
+ * Passages from a long text, with the page they fall on.
+ *
+ * `page` comes from Dédalo's inline `[page-n-N]` markers, so it is the page of the
+ * ORIGINAL document, not a computed offset — and it is optional, because a text that was
+ * never paginated carries no markers. `position` is the character offset of the match in
+ * the (scan-capped) text: the stable handle a client can use to ask for more context.
+ *
+ * No FULLTEXT index is involved: the scan is a literal, regex-escaped substring search
+ * done in JS, so this works on any text column — matching inside words, and matching the
+ * short words a fulltext index would not have. `column` need only exist.
+ */
 export async function textFragments(
   db: string,
   table: string,
@@ -157,6 +224,19 @@ export async function textFragments(
   }));
 }
 
+/**
+ * Passages from an audiovisual record's transcription, each turned into a playable clip.
+ *
+ * This is `textFragments` with the timeline attached: the transcription is annotated with
+ * `[tc-in-out]` markers, so the character position of a match maps back to a moment in
+ * the video, and the fragment is returned as a media URL carrying that window. The record
+ * row and its media row are joined here because the text and the video file that the text
+ * transcribes live in different published tables.
+ *
+ * The join is LEFT: a record whose media is missing still yields its passages, with empty
+ * URLs. `speakers` is always `[]` on this path — the diarisation the shape allows for is
+ * only populated by the indexation service.
+ */
 export async function avFragments(
   db: string,
   table: string,
@@ -196,10 +276,15 @@ export async function avFragments(
   }
 
   const row = parseJsonStrings(rows[0] as Record<string, unknown>);
+  // The transcription may be published under a friendly name or under its raw component
+  // tipo (AV_TRANSCRIPTION_COLUMN, e.g. `rsc36`), depending on how the table was written;
+  // accept either rather than force a configuration choice on every publication.
   const transcription =
     (row.transcription as string) || (row[avSchema.transcriptionColumn] as string) || '';
 
   return extractFragments(transcription, terms, max_characters, max_occurrences).map(fragment => {
+    // The timecode of a match is the window OPEN at that character: markers precede the
+    // speech they time, so the covering window is the last one before the match position.
     const { tcIn, tcOut } = timecodesAtPosition(transcription, fragment.position);
     return {
       transcription: fragment.text,
@@ -209,6 +294,14 @@ export async function avFragments(
   });
 }
 
+/**
+ * The clip URL is where the timecode window becomes usable: `?vbegin=&vend=` is the
+ * contract a Dédalo media player reads to seek and stop, so a "fragment" of an interview
+ * is delivered as a URL, not as bytes — this API never touches media files. Missing media
+ * yields '' rather than a broken URL, so a client can test the field directly.
+ * MEDIA_BASE_URL is where the published files are actually served from (another host, in
+ * general), which is why it is configuration and not a route of this API.
+ */
 export function buildMediaInfo(row: Record<string, unknown>, tcIn: number, tcOut: number): MediaInfo {
   const video = row.video as string | undefined;
   const image = row.image as string | undefined;

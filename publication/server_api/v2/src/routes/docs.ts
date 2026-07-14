@@ -1,8 +1,41 @@
+/**
+ * The documentation surface: a landing page, two OpenAPI renderers (Swagger UI
+ * and Scalar) and the spec itself.
+ *
+ * THE STRATEGY IS "OFFLINE". Every byte these pages load — the renderer JS, its
+ * CSS, the logo, the spec — is served from THIS process: the JS/CSS out of the
+ * installed node_modules packages, the logo inlined as a base64 data: URI, the
+ * spec off disk. Not one CDN URL. A published Dédalo may sit on an isolated
+ * network or behind a strict CSP, and docs that only render with internet
+ * access are docs that do not render.
+ *
+ * That is why the asset plumbing below exists at all: `import.meta.resolve`
+ * locates the installed package, and `/docs/swagger/…` + `/docs/scalar/…` re-
+ * serve files out of it. Those two prefixes are matched in router.ts BEFORE the
+ * route table (they are the only wildcard-tail paths in the API).
+ *
+ * PATH TRAVERSAL is the obvious hazard in "serve a file the URL names", and it
+ * is closed in two places, independently:
+ *   - `extractAssetFilename` reduces the URL tail to a single FLAT filename: any
+ *     `..` or `/` is rejected outright, so nothing outside the package root is
+ *     even expressible;
+ *   - `serveStaticFile` re-checks `..` on the name it is handed, because its
+ *     callers prepend their own known subdirectories.
+ * Neither guard trusts the other, and the filename never reaches the filesystem
+ * with a separator in it.
+ *
+ * Note these handlers RETURN error responses (plain JSON) rather than throwing
+ * ApiErrors, so — unlike the data routes — they do not produce RFC 9457
+ * problem+json. Documentation assets are not part of the data wire contract.
+ */
+
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { config } from '../config';
 import { html, yaml, binary, json } from '../utils/response';
 
+/** Extension → Content-Type for the renderer bundles. Unknown types fall back to
+ *  octet-stream: a served asset never guesses a type it cannot vouch for. */
 function getMimeType(filename: string): string {
   const ext = filename.split('.').pop()?.toLowerCase();
   const mimeTypes: Record<string, string> = {
@@ -19,6 +52,17 @@ function getMimeType(filename: string): string {
   return mimeTypes[ext || ''] || 'application/octet-stream';
 }
 
+/**
+ * Locate an installed package's ROOT directory on disk.
+ *
+ * There is no path to node_modules to hardcode — it depends on where the app is
+ * installed and how the package manager hoisted it — so the entry point is
+ * resolved instead and walked back: drop the entry FILE, and drop a trailing
+ * `dist/` if the entry lives in one. The result is the package root, which is
+ * what every caller below addresses files relative to (hence Scalar's explicit
+ * `dist/…` prefixes). A missing package can only mean dependencies were never
+ * installed, so say so.
+ */
 function getPackagePath(packageName: string): string {
   try {
     const resolved = import.meta.resolve(packageName);
@@ -34,7 +78,17 @@ function getPackagePath(packageName: string): string {
   }
 }
 
+/**
+ * Read one file out of an installed package and serve it.
+ *
+ * @param filename package-root-relative; callers may prepend a KNOWN
+ *   subdirectory (e.g. `dist/browser/`), but no segment of it may come
+ *   unfiltered from the URL.
+ */
 function serveStaticFile(packageName: string, filename: string): Response {
+  // Second, independent traversal guard. extractAssetFilename already refused
+  // `..` from the URL, but callers compose onto its result, so this function
+  // does not assume the string it was handed is the one the URL produced.
   if (filename.includes('..')) {
     return json({ error: 'Invalid asset path', status: 400 }, 400);
   }
@@ -49,12 +103,27 @@ function serveStaticFile(packageName: string, filename: string): Response {
 
     const content = readFileSync(filePath);
     const mimeType = getMimeType(filename);
+    // binary() marks assets no-cache; they are also not a cacheable Content-Type
+    // for the ETag layer, so a `bun install` upgrade cannot serve a stale bundle.
     return binary(content, mimeType);
   } catch (error) {
     return json({ error: 'Failed to load asset', file: filename, status: 500 }, 500);
   }
 }
 
+/**
+ * URL tail → the ONE asset filename it may name.
+ *
+ * Strips the deployment's BASE_PATH and the route prefix, then rejects anything
+ * still containing `..` OR `/`. That leaves a flat filename with no directory
+ * component at all: not "traversal is filtered out" but "a path is not
+ * expressible in the first place". It reads the raw `url.pathname`, which is
+ * never percent-decoded on this route — so an encoded separator stays encoded
+ * all the way to the filesystem, where it is just a character in a name that
+ * does not exist (a 404), never a directory step.
+ *
+ * Throws rather than returning a Response so callers cannot forget to handle it.
+ */
 function extractAssetFilename(pathname: string, basePath: string, prefix: string): string {
   let path = pathname;
   if (basePath && path.startsWith(basePath)) {
@@ -69,11 +138,20 @@ function extractAssetFilename(pathname: string, basePath: string, prefix: string
   return path;
 }
 
+/**
+ * `GET /docs` — the landing page that offers the two renderers.
+ *
+ * Self-contained by construction: the CSS is inline and the logo is read off
+ * disk and embedded as a base64 data: URI, so the page needs no asset route of
+ * its own and survives with no network. A missing/unreadable logo degrades to
+ * no logo — documentation is still worth serving without its picture.
+ */
 export async function handleDocs(req: Request): Promise<Response> {
   const basePath = config.BASE_PATH || '';
   
   let logoBase64 = '';
   try {
+    // NOTE: the directory really is spelled "asests" on disk.
     const logoPath = join(import.meta.dir, 'asests', 'dd_coding.png');
     if (existsSync(logoPath)) {
       logoBase64 = readFileSync(logoPath).toString('base64');
@@ -339,8 +417,20 @@ export async function handleDocs(req: Request): Promise<Response> {
 </html>`);
 }
 
+/**
+ * `GET /docs/swagger` — the Swagger UI shell page.
+ *
+ * The page is a stub: it loads the bundle from `/docs/swagger/…` (this server,
+ * not a CDN) and points it at `/openapi.yaml` (this server too). The spec is
+ * fetched by the BROWSER, so every URL in here must be one the browser can
+ * reach — i.e. prefixed with the path the API is actually mounted at.
+ */
 export async function handleSwaggerUI(req: Request): Promise<Response> {
   const url = new URL(req.url);
+  // The mount prefix is recovered from the request path itself rather than read
+  // from config.BASE_PATH (which is what the other two pages do). Under a normal
+  // deployment the two agree, since this handler only runs at BASE_PATH + the
+  // suffix being stripped here.
   const basePath = url.pathname.replace(/\/docs\/swagger$/, '');
 
   return html(`<!DOCTYPE html>
@@ -379,6 +469,14 @@ export async function handleSwaggerUI(req: Request): Promise<Response> {
 </html>`);
 }
 
+/**
+ * `GET /docs/scalar` — the Scalar shell page.
+ *
+ * Same offline shape as Swagger's. The inline `try/catch` is not decoration:
+ * when node_modules is not installed the asset routes 404, `Scalar` is simply
+ * never defined, and the page would otherwise render as a silent blank — so it
+ * detects the missing global and tells the reader to run `bun install`.
+ */
 export async function handleScalarUI(_req: Request): Promise<Response> {
   const basePath = config.BASE_PATH || '';
 
@@ -415,6 +513,12 @@ export async function handleScalarUI(_req: Request): Promise<Response> {
 </html>`);
 }
 
+/**
+ * `GET /docs/swagger/*` — Swagger UI's own bundle, out of `swagger-ui-dist`.
+ *
+ * The package ships its files AT its root, so the flat filename the URL names
+ * maps straight onto the package root with nothing to prepend.
+ */
 export async function handleSwaggerAssets(req: Request): Promise<Response> {
   const url = new URL(req.url);
   try {
@@ -425,6 +529,18 @@ export async function handleSwaggerAssets(req: Request): Promise<Response> {
   }
 }
 
+/**
+ * `GET /docs/scalar/*` — Scalar's bundle, out of `@scalar/api-reference`.
+ *
+ * Unlike Swagger's, this package's published files live under `dist/`, and not
+ * all in the same place: the stylesheet sits in `dist/`, the browser bundle in
+ * `dist/browser/`. The two files the shell page actually loads are therefore
+ * mapped by name; anything else is looked for in `dist/browser/`.
+ *
+ * Only the SERVER supplies those `dist…` prefixes — `extractAssetFilename` has
+ * already guaranteed the client's half contains no separator, so composing them
+ * cannot climb out of the package.
+ */
 export async function handleScalarAssets(req: Request): Promise<Response> {
   const url = new URL(req.url);
   try {
@@ -443,6 +559,13 @@ export async function handleScalarAssets(req: Request): Promise<Response> {
   }
 }
 
+/**
+ * `GET /openapi.yaml` — the spec both renderers (and any client codegen) read.
+ *
+ * Served from the source tree next to this module, not from node_modules: it is
+ * OUR artifact. It is the machine-readable half of the wire contract, so it is
+ * exposed as a first-class route rather than hidden behind /docs.
+ */
 export async function handleOpenApiSpec(_req: Request): Promise<Response> {
   try {
     const specPath = join(import.meta.dir, '..', 'docs', 'openapi.yaml');

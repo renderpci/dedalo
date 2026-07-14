@@ -1,3 +1,19 @@
+/**
+ * The one decode step between the driver and the API's JSON: it turns Dédalo's
+ * JSON-in-TEXT columns back into structure, so the wire carries real objects and
+ * arrays rather than strings containing JSON.
+ *
+ * Every read path runs through it — db/query-builder.executeQuery, and the
+ * hand-built fetches in resolve.service and search.service — because the decision
+ * cannot be made per column: nothing in the published schema marks which TEXT
+ * columns are JSON. So the shape of the VALUE is the only evidence available, and
+ * this module is that heuristic, kept in one place and applied uniformly.
+ *
+ * Unwrapping is ONE level deep per string: a parsed value is not re-scanned, so JSON
+ * nested inside a JSON string stays a string. The recursion below walks the row
+ * structure, not the results of parsing.
+ */
+
 // Recursively parses JSON-string columns (Dédalo stores JSON in TEXT columns, which
 // the driver hands back as strings) into real objects/arrays. Rows are freshly
 // fetched and owned by the caller, so this mutates them in place to avoid

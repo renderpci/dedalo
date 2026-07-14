@@ -1,3 +1,24 @@
+/**
+ * Resolving an INDEXATION LOCATOR to a playable audiovisual fragment.
+ *
+ * This is the endpoint a thesaurus-driven front end lives on. In Dédalo, indexing an
+ * interview means tagging a stretch of its transcription with a thesaurus term; what the
+ * publication stores is a locator — `{section_id, section_tipo, component_tipo, tag_id,
+ * tc_in, tc_out}` — that pins one term to one timed passage of one record. A client
+ * browsing the thesaurus holds locators and nothing else, and asks this service to turn
+ * one into something a user can watch and read.
+ *
+ * Assembling the answer means reaching across the published schema: the interview row
+ * carries the transcription, the media row carries the video file, the speaker row carries
+ * who is talking, and the thesaurus tables carry the terms indexed at that same tag. Hence
+ * a three-table LEFT JOIN plus a separate terms lookup — LEFT because a fragment is still
+ * worth serving when the media or the speaker was not published.
+ *
+ * Contrast search.service's `avFragments`, which SEARCHES a record's transcription for
+ * words. Here nothing is searched: the locator already says which passage, and the work is
+ * cutting it out (extractTranscriptionFragment) and dressing it with terms and media URLs.
+ */
+
 import { dbExecute } from '../db/pool';
 import { avSchema, config } from '../config';
 import { NotFoundError } from '../errors';
@@ -63,34 +84,72 @@ export async function getAvIndexationFragment(db: string, locator: Locator): Pro
   };
 }
 
+/**
+ * Cut the words spoken during a timecode window out of a whole transcription.
+ *
+ * A Dédalo transcription is one long text carrying INLINE MARKERS: `[tc-in-out]` opens a
+ * timed segment (so a marker PRECEDES the speech it times), and `[page-n-N]` marks page
+ * breaks. Nothing in the database indexes those positions — the timeline exists only as
+ * text — so mapping a `tc_in`/`tc_out` window onto characters means walking the markers,
+ * which is what the scan below does: find the segment whose range covers `tc_in`, keep
+ * scanning until a segment reaches `tc_out`, and slice between the two.
+ *
+ * The markers are then STRIPPED, along with the whitespace their removal leaves behind:
+ * the caller asked for a passage to display next to a video, not for Dédalo's annotation
+ * syntax. (The `tc_in`/`tc_out` the caller already holds are echoed back in `media`, so
+ * nothing is lost by removing them from the prose.)
+ *
+ * Degradation is toward "everything" rather than "nothing": an unannotated transcription, or
+ * a locator that carries no window at all, yields the whole text — a usable answer either way.
+ *
+ * THIS WAS BROKEN, and the endpoint looked healthy while it was — worth knowing, because the
+ * failure was silent rather than loud. The old scan closed the window only `if (fragmentStart
+ * > 0)`, so a window opening at the first marker (index 0 — where a transcription that starts
+ * with a timecode puts it, and where the default `tc_in = 0` lands) never closed, and the
+ * entire remaining transcription came back. For any later window it was worse: the marker that
+ * opened the segment was also the one that closed it, so the slice contained nothing but the
+ * marker itself, which the strip then removed — and the caller got an EMPTY STRING.
+ */
 function extractTranscriptionFragment(transcription: string, tcIn: number, tcOut: number): string {
   if (!transcription) return '';
 
+  // No window asked for (a locator carrying no timecodes): the whole transcription is the answer.
+  if (!(tcOut > tcIn)) return stripMarkers(transcription);
+
   const tcPattern = /\[tc-(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\]/g;
+  const segments: Array<{ start: number; tcIn: number; tcOut: number }> = [];
+
   let match: RegExpExecArray | null;
-  let fragmentStart = 0;
-  let fragmentEnd = transcription.length;
-
   while ((match = tcPattern.exec(transcription)) !== null) {
-    const currentTcIn = parseFloat(match[1]);
-    const currentTcOut = parseFloat(match[2]);
+    segments.push({ start: match.index, tcIn: parseFloat(match[1]), tcOut: parseFloat(match[2]) });
+  }
 
-    if (currentTcIn <= tcIn && currentTcOut >= tcIn) {
-      fragmentStart = match.index;
-    }
+  // An unannotated transcription has no timeline to cut against — serve it whole.
+  if (segments.length === 0) return stripMarkers(transcription);
 
-    if (currentTcOut >= tcOut && fragmentStart > 0) {
-      fragmentEnd = match.index + match[0].length;
-      break;
+  const selected: string[] = [];
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i];
+    // A segment's words run from its own marker to the next marker (or to the end of the text).
+    const end = segments[i + 1]?.start ?? transcription.length;
+
+    // OVERLAP, not containment: a caller asking for 12s–18s of a segment timed 10–20 wants that
+    // segment's words, even though the window neither contains it nor aligns with it.
+    if (segment.tcIn < tcOut && segment.tcOut > tcIn) {
+      selected.push(transcription.slice(segment.start, end));
     }
   }
 
-  let fragment = transcription.slice(fragmentStart, fragmentEnd);
-  fragment = fragment.replace(/\[tc-[^\]]+\]/g, '');
-  fragment = fragment.replace(/\[page-n-\d+\]/g, '');
-  fragment = fragment.replace(/\s+/g, ' ').trim();
+  return stripMarkers(selected.join(' '));
+}
 
-  return fragment;
+/** Strip Dédalo's inline annotation syntax, and the whitespace its removal leaves behind. */
+function stripMarkers(text: string): string {
+  return text
+    .replace(/\[tc-[^\]]+\]/g, '')
+    .replace(/\[page-n-\d+\]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 async function getTermsForLocator(

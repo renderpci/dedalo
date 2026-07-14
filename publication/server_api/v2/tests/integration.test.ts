@@ -1,6 +1,7 @@
 import { describe, test, expect, mock } from 'bun:test';
 import { NotFoundError } from '../src/errors';
 import { dbNames } from '../src/config';
+import { MAX_RESOLVE_ROWS } from '../src/constants';
 
 // ---------------------------------------------------------------------------
 // Mocked database layer: pattern-matches the SQL the services produce.
@@ -53,10 +54,40 @@ function columnsResult(table: string, withTableName: boolean): Record<string, st
   }));
 }
 
+/**
+ * A real database rejects a column it does not have. This mock used to answer 200 for any
+ * column name at all, which is precisely why a typo in sort/fields/filter could reach
+ * production as a 500 with a green test suite: the fixture was more forgiving than MariaDB.
+ * Anything back-tick-quoted in the statement must therefore be a column the fixture declares.
+ */
+function assertMockColumnsExist(s: string): void {
+  const known = new Set([
+    ...INTERVIEW_COLUMNS,
+    ...THEMES_COLUMNS,
+    // The AV join's own columns (AV_VIDEO_COLUMN / AV_TRANSCRIPTION_COLUMN defaults) plus the
+    // aliases the services introduce.
+    'rsc35',
+    'rsc36',
+    'relevance',
+    'total',
+    'video',
+    'data',
+  ]);
+  // Table names are back-ticked too; skip the one right after FROM/JOIN/INTO.
+  const tableNames = new Set(['interview', 'ts_themes', 'audiovisual', 'informant', 'publication_schema']);
+
+  for (const [, identifier] of s.matchAll(/`([A-Za-z_][A-Za-z0-9_]*)`/g)) {
+    if (tableNames.has(identifier) || known.has(identifier)) continue;
+    throw new Error(`Unknown column '${identifier}' in 'field list'`);
+  }
+}
+
 async function mockDbExecute(db: string, sql: string, params: unknown[] = []): Promise<unknown[]> {
   if (!ALLOWED_DBS.has(db)) throw new NotFoundError(`Unknown database: ${db}`);
   sqlLog.push({ sql, params });
   const s = sql.replace(/\s+/g, ' ').trim();
+
+  if (!s.includes('INFORMATION_SCHEMA')) assertMockColumnsExist(s);
 
   if (s.includes('INFORMATION_SCHEMA.TABLES')) {
     return [
@@ -331,6 +362,44 @@ describe('API integration (mocked DB)', () => {
     expect(res.status).toBe(200);
     expect(body.data.media.video_url).toContain('vbegin=10');
     expect(body.data.speakers[0].name).toBe('María García');
+    // The point of the endpoint: the words spoken in THIS window, not the whole transcription.
+    // Asserting only the status and the media URL is how the extraction bug below stayed hidden.
+    expect(body.data.transcription).toBe('guerra talk here');
+  });
+
+  // Regression. The transcription is '[tc-0-10] hello [tc-10-20] guerra talk here [tc-20-30] tail'.
+  // The old scan closed its window only when the start marker was not at index 0, so:
+  //   - the 0–10 window never closed and returned the ENTIRE transcription;
+  //   - every later window used one marker as both start and end, so the slice held nothing but
+  //     the marker, and the caller got an EMPTY STRING back.
+  // Each case below fails against that code.
+  test.each([
+    [0, 10, 'hello'],
+    [10, 20, 'guerra talk here'],
+    [20, 30, 'tail'],
+  ])('av-indexation-fragment cuts the %i-%i window to exactly its passage', async (tcIn, tcOut, expected) => {
+    const { res, body } = await get(
+      `/${MOCK_DB}/av-indexation-fragment?section_id=1&tc_in=${tcIn}&tc_out=${tcOut}`,
+    );
+
+    expect(res.status).toBe(200);
+    expect(body.data.transcription).toBe(expected);
+  });
+
+  test('av-indexation-fragment spans every segment the window overlaps', async () => {
+    // A window straddling two segments must return both — overlap, not containment.
+    const { res, body } = await get(`/${MOCK_DB}/av-indexation-fragment?section_id=1&tc_in=5&tc_out=15`);
+
+    expect(res.status).toBe(200);
+    expect(body.data.transcription).toBe('hello guerra talk here');
+  });
+
+  test('av-indexation-fragment serves the whole transcription when the locator carries no window', async () => {
+    // tc_in/tc_out default to 0: there is no window to cut, so "everything" is the usable answer.
+    const { res, body } = await get(`/${MOCK_DB}/av-indexation-fragment?section_id=1`);
+
+    expect(res.status).toBe(200);
+    expect(body.data.transcription).toBe('hello guerra talk here tail');
   });
 
   test('av-indexation-fragment returns the indexed terms for a tagged locator', async () => {
@@ -575,5 +644,73 @@ describe('MCP tools (mocked DB)', () => {
 
     const badDb = await handleToolCall('get_schema', { db: 'nope' });
     expect(text(badDb)).toContain('Unknown database');
+  });
+});
+
+describe('inverse relation resolution (bounds and malformed data)', () => {
+  // The file's stated contract is that resolution is DECORATION: a cell it cannot resolve is
+  // left as-is and the request still succeeds. One JSON.parse sat outside that guard, so a
+  // single unparseable element in a dd_relations array threw out of the whole REQUEST (500) —
+  // the one thing the contract promises never to happen. Needs malformed published data to hit.
+  test('a malformed locator is skipped, not fatal to the request', async () => {
+    const rows = [
+      {
+        section_id: 9,
+        dd_relations: '["{{{ not json at all", {"section_tipo":"rsc170","section_id":2}]',
+      },
+    ] as Record<string, unknown>[];
+
+    const resolved = await resolveInverseRelations(MOCK_DB, rows, true);
+
+    // It survived, AND the well-formed locator beside the broken one still resolved.
+    const ddRelations = resolved[0].dd_relations as Array<Record<string, unknown>>;
+    expect(Array.isArray(ddRelations)).toBe(true);
+    expect(ddRelations.length).toBe(1);
+    expect(ddRelations[0].section_id).toBe(2);
+  });
+
+  test('fan-out is capped at MAX_RESOLVE_ROWS per cell', async () => {
+    // One query per locator, for every row on the page. Uncapped, a heavily cross-referenced
+    // record turns a single listing into an unbounded number of queries — the forward path
+    // has always bounded this; the inverse path did not.
+    const locators = Array.from({ length: MAX_RESOLVE_ROWS + 25 }, () => ({
+      section_tipo: 'rsc170',
+      section_id: 2,
+    }));
+    const rows = [{ section_id: 9, dd_relations: JSON.stringify(locators) }] as Record<string, unknown>[];
+
+    const resolved = await resolveInverseRelations(MOCK_DB, rows, true);
+
+    const ddRelations = resolved[0].dd_relations as unknown[];
+    expect(ddRelations.length).toBeLessThanOrEqual(MAX_RESOLVE_ROWS);
+  });
+});
+
+describe('unknown columns are a client error (400), not a server error (500)', () => {
+  // A typo in sort/fields/filter used to reach MariaDB, come back as an "unknown column"
+  // driver error, and be served as 500 Internal Server Error — the server blaming itself for
+  // the client's typo. http_semantics.md has always documented these as 400 validation errors.
+  // Verified against the real published DB before the fix: all three answered 500.
+  test.each([
+    ['sort', '?sort=does_not_exist'],
+    ['fields', '?fields=does_not_exist'],
+    ['filter', '?filter[does_not_exist][eq]=1'],
+  ])('an unknown %s column is rejected with 400 and names the column', async (_kind, query) => {
+    const { res, body } = await get(`/${MOCK_DB}/tables/interview/records${query}`);
+
+    expect(res.status).toBe(400);
+    expect(body.detail).toContain('does_not_exist');
+  });
+
+  test('an unknown fields column on a single record is also 400', async () => {
+    const { res, body } = await get(`/${MOCK_DB}/tables/interview/records/1?fields=does_not_exist`);
+
+    expect(res.status).toBe(400);
+    expect(body.detail).toContain('does_not_exist');
+  });
+
+  test('real columns still pass', async () => {
+    const { res } = await get(`/${MOCK_DB}/tables/interview/records?sort=-section_id&fields=section_id,title`);
+    expect(res.status).toBe(200);
   });
 });
