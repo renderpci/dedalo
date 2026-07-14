@@ -4,6 +4,9 @@ node_modules/
 # OS noise
 .DS_Store
 
+# special hidden
+acc/
+
 # Documentation site build output (mkdocs.yml `site_dir`) + Material's asset cache.
 # The SOURCE is docs/; the built site is never committed.
 docs_site/
