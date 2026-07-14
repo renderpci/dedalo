@@ -32,20 +32,25 @@
  * maps back through restore_map before returning, so the main thread always sees one
  * consistent document-wide namespace.
  *
- * Placeholder preservation:
- *   The model is asked to copy every [[[n]]] marker verbatim. When it does not, we
- *   escalate: ask it to fix its own output, then — failing that — re-insert the tokens
- *   ourselves via repair_placeholders() and report exactly which ones we had to place,
- *   so the main thread can put the result in front of the user rather than saving it.
+ * THE MODEL CANNOT BE INSTRUCTED. TranslateGemma is a translation model, not a chat model:
+ * its chat template builds the instruction from source_lang_code/target_lang_code, and the
+ * `text` field is the source text to translate. Anything you put there — a rule, an
+ * example, a fence — is translated and handed back as content. See translate_text for the
+ * full account of how that corrupted a live record.
  *
- *   The system instruction is embedded inside the single user message (not as a separate
- *   system role) because TranslateGemma requires the conversation to start with a user turn.
+ * Placeholder preservation therefore rests entirely on mechanisms that do not require the
+ * model's cooperation:
+ *   - hoisting: markers at a segment's edges are stripped on the main thread and
+ *     re-attached here, so the model never sees them (on a transcription, that is most);
+ *   - copying: interior markers ride through as [[[n]]], which translation models generally
+ *     copy as unknown tokens — when they do, we get the exact position for free;
+ *   - repair_placeholders(): places whatever was dropped, and reports every one it placed
+ *     so the main thread can put the result in front of the user rather than saving it.
  */
 
 import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0';
 import {
 	placeholder_re,
-	extract_placeholders,
 	normalize_placeholders,
 	repair_placeholders
 } from '../../js/placeholders.js';
@@ -113,13 +118,6 @@ const RETRY_TEMPERATURE	= 0.3;
 const RETRY_TOP_P		= 0.9;
 
 /**
- * How many times to ask the model to reinsert markers it dropped before falling back
- * to repair_placeholders(). Each round is a full generation pass on a 4B in-browser
- * model, so this is deliberately small.
- */
-const MAX_PLACEHOLDER_RETRIES = 2;
-
-/**
  * Verbose per-block tracing. Off by default; flip while debugging placeholder loss.
  */
 const DEBUG = false;
@@ -184,27 +182,6 @@ function strip_fences(text) {
 		.replace(/^[《「『]\s*/, '')
 		.replace(/\s*[》」』]$/, '')
 		.trim();
-}
-
-
-/**
- * Detect which of a block's markers the model failed to reproduce.
- *
- * @param {string} input_text  - Block as sent to the model.
- * @param {string} output_text - Model output, already normalised.
- * @returns {{ missing: string[], has_missing: boolean }}
- */
-function detect_missing_placeholders(input_text, output_text) {
-
-	const input_ph = extract_placeholders(input_text);
-	if (input_ph.length === 0) {
-		return { missing: [], has_missing: false };
-	}
-
-	const output_set = new Set(extract_placeholders(output_text));
-	const missing    = input_ph.filter(ph => !output_set.has(ph));
-
-	return { missing, has_missing: missing.length > 0 };
 }
 
 
@@ -378,16 +355,17 @@ function detect_repetition(text, source_text) {
 // ── Block processing ───────────────────────────────────────────────────────
 
 /**
- * Translate one block and guarantee that every marker it carried comes back.
+ * Translate one block and get every marker it carried back.
  *
- * The escalation, cheapest first:
- *   1. Translate. If the output degenerated into repetition, retry with a penalty
- *      first with a stiffer penalty, then with SAMPLING — greedy decoding is itself what
- *      falls into the loop, and a deterministic decoder walks straight back into it.
- *   2. If markers are missing, ask the model to reinsert them into its own output —
- *      up to MAX_PLACEHOLDER_RETRIES times. A retry is only kept when it recovers
- *      ground, so a worse retry can never make things worse.
- *   3. Whatever is still missing is placed by repair_placeholders() and reported.
+ *   1. Translate the segment. Nothing but the segment goes to the model — see translate_text.
+ *   2. If the output degenerated into a repetition loop, retry with a stiffer penalty and
+ *      then with SAMPLING: greedy decoding is itself what falls into the loop, and a
+ *      deterministic decoder just walks straight back into it.
+ *   3. Whatever markers the model dropped are placed by repair_placeholders() and reported
+ *      as uncertain, and the hoisted edge markers are re-attached verbatim.
+ *
+ * There is no step that ASKS the model to fix anything. It cannot be asked — it translates
+ * whatever it is given, instructions included.
  *
  * Throws when the block degenerates and cannot be recovered. The caller keeps the SOURCE
  * text for that block and records it in failed_blocks, which fires the review gate — a
@@ -403,16 +381,14 @@ function detect_repetition(text, source_text) {
 async function process_block(translator, block, source_lang_code, target_lang_code, label) {
 
 	// Everything the model hands back goes through here: unwrap whatever it wrapped its
-	// answer in, repair mangled markers, and delete any emphasis it invented. conform_emphasis
-	// is the one that matters most — a source containing only <i> came back littered with
-	// <strong> and <u>, because the model was copying the formatting examples out of the prompt.
+	// answer in, repair mangled markers, and delete any emphasis it invented.
 	const clean_output = function(raw) {
 		return conform_emphasis(block.text, normalize_placeholders(strip_fences(raw)));
 	};
 
 	// ── 1. translate ────────────────────────────────────────────────────
 	const raw = await with_timeout(
-		translate_text(translator, block.text, source_lang_code, target_lang_code, null, {
+		translate_text(translator, block.text, source_lang_code, target_lang_code, {
 			repetition_penalty : REPETITION_PENALTY_FIRST
 		}),
 		BLOCK_TIMEOUT_MS,
@@ -421,7 +397,7 @@ async function process_block(translator, block, source_lang_code, target_lang_co
 
 	let text = clean_output(raw);
 
-	// ── 1b. repetition degeneration ─────────────────────────────────────
+	// ── 2. repetition degeneration ──────────────────────────────────────
 	// block.text is passed as the source so a ballooned output is caught even when it has
 	// no clean n-gram cycle.
 	if (detect_repetition(text, block.text)) {
@@ -437,13 +413,11 @@ async function process_block(translator, block, source_lang_code, target_lang_co
 			if (cancelled) break;
 
 			const retry_raw = await with_timeout(
-				translate_text(translator, block.text, source_lang_code, target_lang_code, null, overrides),
+				translate_text(translator, block.text, source_lang_code, target_lang_code, overrides),
 				BLOCK_TIMEOUT_MS,
 				`${label} (repetition retry${overrides.do_sample ? ', sampling' : `, penalty ${overrides.repetition_penalty}`})`
 			);
 
-			// NOTE the clean_output: the repetition retry used to bypass placeholder
-			// handling entirely, so a block that degenerated came back unprotected.
 			text = clean_output(retry_raw);
 
 			if (!detect_repetition(text, block.text)) {
@@ -456,48 +430,16 @@ async function process_block(translator, block, source_lang_code, target_lang_co
 		}
 	}
 
-	// ── 2. ask the model to reinsert the markers it dropped ─────────────
-	const failed_attempts = [];
-
-	for (let attempt = 1; attempt <= MAX_PLACEHOLDER_RETRIES; attempt++) {
-
-		const detection = detect_missing_placeholders(block.text, text);
-		if (!detection.has_missing || cancelled) {
-			break;
-		}
-
-		failed_attempts.push({ text, missing: detection.missing });
-
-		if (DEBUG) {
-			console.warn(`[browser_transformer] ${label}: missing ${detection.missing.join(', ')} — corrective retry ${attempt}/${MAX_PLACEHOLDER_RETRIES}`);
-		}
-
-		let retry_text;
-		try {
-			const retry_raw = await with_timeout(
-				translate_text(translator, block.text, source_lang_code, target_lang_code, { failed_attempts }),
-				BLOCK_TIMEOUT_MS,
-				`${label} (placeholder retry ${attempt}/${MAX_PLACEHOLDER_RETRIES})`
-			);
-			retry_text = clean_output(retry_raw);
-		} catch (retry_error) {
-			// the retry timed out or errored — fall through to deterministic repair
-			if (DEBUG) {
-				console.warn(`[browser_transformer] ${label}: corrective retry failed (${retry_error?.message || retry_error})`);
-			}
-			break;
-		}
-
-		const retry_detection = detect_missing_placeholders(block.text, retry_text);
-
-		// only keep a retry that recovered ground; never let it lose more
-		if (retry_detection.missing.length < detection.missing.length) {
-			text = retry_text;
-		}
-		if (!retry_detection.has_missing) {
-			break;
-		}
-	}
+	// There is deliberately NO "you dropped some markers, put them back" retry here.
+	//
+	// TranslateGemma translates whatever is in the text field — it cannot be instructed. A
+	// corrective prompt would simply come back TRANSLATED, which is exactly how our own
+	// instructions ended up written into a record as Nepali prose. Two wasted generations
+	// per block to produce something the guard then threw away.
+	//
+	// Markers survive by three mechanisms that actually work: hoisting (edge markers never
+	// reach the model), the model copying interior markers as unknown tokens, and
+	// repair_placeholders below for whatever it drops — all of it reported to the save gate.
 
 	// ── 3. place whatever the model would not ───────────────────────────
 	// ── 3. place whatever the model would not ───────────────────────────
@@ -721,122 +663,41 @@ self.onmessage = async (e) => {
 /**
  * Translate a single text block using the loaded model pipeline.
  *
- * @param {Function} translator       - The loaded HuggingFace text-generation pipeline
- * @param {string}   text             - Markdown block to translate, carrying [[[n]]] markers
- * @param {string}   sourceLangCode   - Source language locale code (e.g. 'en')
- * @param {string}   targetLangCode   - Target language locale code (e.g. 'es')
- * @param {Object|null} retryContext  - When non-null, sends a corrective retry prompt built
- *   from the history of failed attempts: { failed_attempts: Array<{ text, missing }> }
- * @param {Object}   overrides        - { repetition_penalty }
+ * ─────────────────────────────────────────────────────────────────────────────
+ * DO NOT PUT INSTRUCTIONS IN `text`. TranslateGemma WILL TRANSLATE THEM.
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * This is not a chat model that happens to translate; it is a translation model. Its chat
+ * template builds the instruction itself from source_lang_code/target_lang_code, and the
+ * `text` field is the SOURCE TEXT TO TRANSLATE — the model card says so in as many words:
+ * "The text field is not meant for free-form prompts with instructions."
+ *
+ * We learned this the hard way. `text` used to carry a whole prompt — a task description,
+ * a list of the markers to preserve, a worked example, <<< >>> fences — and the model
+ * faithfully translated all of it into the target language and wrote it into the record. A
+ * user's oral-history transcript opened with two paragraphs of our own instructions
+ * rendered in Nepali, and the `[[[1]]]`/`[[[2]]]` from the worked example were mapped back
+ * through restore_map into REAL Dédalo index tags that had never been in the source.
+ *
+ * It had appeared to work only because strip_fences was extracting the <<<…>>> span from
+ * the output and silently discarding the translated instructions wrapped around it.
+ *
+ * The same fault produced the 《…》 quoting (it translated the fences) and the phantom
+ * <strong>/<u> in a source that contained only <i> (it translated the line that said
+ * "Keep the Markdown formatting (**bold**, *italic*, __underline__)" — markers included).
+ *
+ * So: the segment, and nothing but the segment. The model cannot be told anything, which is
+ * why marker survival rests on hoisting, on the model copying unknown tokens, and on
+ * repair_placeholders — never on asking nicely.
+ *
+ * @param {Function} translator     - The loaded HuggingFace text-generation pipeline
+ * @param {string}   text           - The segment to translate, carrying [[[n]]] markers
+ * @param {string}   sourceLangCode - Source language code (e.g. 'es')
+ * @param {string}   targetLangCode - Target language code (e.g. 'ne')
+ * @param {Object}   overrides      - { repetition_penalty, do_sample, temperature, top_p }
  * @returns {Promise<string>} The model's response text
- *
- * Implementation notes:
- *
- *   System instruction:
- *     TranslateGemma's chat template does not accept a separate 'system' role — the
- *     conversation must start with 'user'. The preservation instruction is therefore
- *     prepended to the user content so the model reads it as a task description.
- *
- *   Deterministic output:
- *     `do_sample: false` disables temperature sampling, making the model behave greedily,
- *     so the same input always produces the same output.
  */
-async function translate_text(translator, text, sourceLangCode, targetLangCode, retryContext=null, overrides={}) {
-
-	let prompt;
-
-	if (retryContext) {
-
-		// ── Retry prompt: fix the previous output, don't retranslate ──
-		// The previous output is a good translation that happens to be missing markers.
-		// Ask for those markers to be inserted into it, rather than starting over — a
-		// fresh translation would be just as likely to drop them again.
-		const { failed_attempts } = retryContext;
-		const last_attempt = failed_attempts[failed_attempts.length - 1];
-
-		const source_ph  = extract_placeholders(text);
-		const present    = new Set(extract_placeholders(last_attempt.text));
-
-		// For each missing marker, name the neighbours it sits between in the source, so
-		// the model has an anchor it can actually see in its own output.
-		const hints = last_attempt.missing.map(function(missing_ph){
-
-			const position = source_ph.indexOf(missing_ph);
-
-			const before = source_ph.slice(0, position).reverse().find(ph => present.has(ph));
-			const after  = source_ph.slice(position + 1).find(ph => present.has(ph));
-
-			if (before && after) return `${missing_ph} — between ${before} and ${after}`;
-			if (before)          return `${missing_ph} — after ${before}`;
-			if (after)           return `${missing_ph} — before ${after}`;
-			return missing_ph;
-		});
-
-		prompt = [
-			`Your translation is missing some markers. Insert them; do not retranslate.`,
-			``,
-			`Rules:`,
-			`1. Keep the existing translation text exactly as it is.`,
-			`2. Insert each missing marker where it belongs, matching its position in the source.`,
-			`3. Do not remove, renumber or alter the markers that are already there.`,
-			`4. Output the complete corrected text, and nothing else.`,
-			``,
-			`Source (shows where each marker belongs):`,
-			text,
-			``,
-			`Markers to insert:`,
-			hints.join('\n'),
-			``,
-			`Your previous translation (fix this):`,
-			`<<<`,
-			last_attempt.text,
-			`>>>`
-		].join('\n');
-
-	} else {
-
-		// ── First-attempt prompt ──────────────────────────────────────────
-		// Short and direct: TranslateGemma 4B follows brief instructions better than
-		// elaborate ones. Stating the marker count gives the model something concrete
-		// to check its own output against.
-		const tokens = [...new Set(extract_placeholders(text))];
-
-		const marker_rules = tokens.length > 0
-			? [
-				`Copy every marker exactly as written: ${tokens.join(' ')}`,
-				`They are reference ids, not words. Never translate, renumber or drop them.`,
-				`Your output must contain all ${tokens.length} of them.`,
-				``,
-				`Example:`,
-				`Hello[[[1]]] how are you[[[2]]]? → Hola[[[1]]] ¿cómo estás[[[2]]]?`,
-				``
-			]
-			: [];
-
-		// Two things this prompt deliberately does NOT do.
-		//
-		// It does not fence the text in <<< / >>>. The model imitated the fence, wrapping
-		// its answers in 《…》. Segments are sentence-sized now; the boundary is clear without
-		// a delimiter for it to copy.
-		//
-		// It does not spell out '**bold**, *italic*, __underline__'. Naming the markers
-		// taught the model to USE them: a source containing nothing but <i> came back
-		// littered with <strong> and <u>. The instruction now only says to leave the
-		// formatting alone, and says it only when there is formatting to leave alone.
-		// conform_emphasis is the guarantee; this is just the nudge.
-		const emphasis_rule = /[*_]/.test(text)
-			? `Keep the formatting markers exactly where they are. Do not add any new ones.`
-			: `Do not add any formatting markers.`;
-
-		prompt = [
-			`Translate from ${sourceLangCode} to ${targetLangCode}.`,
-			emphasis_rule,
-			`Output only the translation, nothing else. No HTML tags.`,
-			``,
-			...marker_rules,
-			text
-		].join('\n');
-	}
+async function translate_text(translator, text, sourceLangCode, targetLangCode, overrides={}) {
 
 	const messages = [
 		{
@@ -846,7 +707,7 @@ async function translate_text(translator, text, sourceLangCode, targetLangCode, 
 					type             : 'text',
 					source_lang_code : sourceLangCode,
 					target_lang_code : targetLangCode,
-					text             : prompt
+					text             : text
 				}
 			]
 		}
