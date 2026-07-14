@@ -132,6 +132,7 @@ final class installer_config_manager {
 			'localontology',// Dédalo local ontology
 			'lg',			// Dédalo langs
 			'oh',			// Oral History
+			'test',			// Test
 		];
 
 		// to_clean_tables. The records of this list will be removed from the install DB except for some exceptions like 'matrix_ontology'
