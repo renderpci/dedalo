@@ -617,7 +617,7 @@ const build_list_view = async function(self, widgets) {
 		{ id:'pg',		title:'PostgreSQL',		x:12, y:66,
 			tools:['database_info','counters_status','sequences_status','dataframe_control','move_to_table','build_database_version','make_backup'] },
 		{ id:'bak',		title:'Backups',		x:31, y:66, tools:['make_backup','build_database_version'] },
-		{ id:'pub',		title:'Publication',	x:50, y:66, tools:['diffusion_server_control','publication_api'] },
+		{ id:'pub',		title:'Publication',	x:50, y:66, tools:['diffusion_server_control','publication_api','site_builder_status'] },
 		{ id:'media',	title:'Media store',	x:69, y:66, tools:['media_control'] },
 		{ id:'onto',	title:'Ontology',		x:88, y:66,
 			tools:['update_ontology','move_tld','move_locator','move_to_portal','move_lang','export_hierarchy','add_hierarchy'] }
@@ -657,6 +657,7 @@ const build_list_view = async function(self, widgets) {
 		make_backup:				'Creates a compressed PostgreSQL dump in the backup directory.',
 		diffusion_server_control:	'Native publication engine: status, job queue and scheduler.',
 		publication_api:			'Diffusion API endpoint status and network probe.',
+		site_builder_status:		'Agent-built public websites: daemon status and a launcher for the site builder.',
 		media_control:				'Sets the media access-protection mode and rebuilds the gate rules.',
 		update_ontology:			'Restores a remote ontology snapshot over the live one. Irreversible.',
 		move_tld:					'Rewrites the ontology tipo across every matrix table. Irreversible.',
