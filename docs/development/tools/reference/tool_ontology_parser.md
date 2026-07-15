@@ -37,7 +37,7 @@ The comparison is by **meaning, not bytes**: jsonb key order is normalized, `{}`
 | `inspect_ontologies` | **read (drift)** | `inspectOntology` per selected TLD — the status panel |
 | `reconcile_ontologies` | **write, default** | `ensureOntology` — incremental, non-destructive |
 | `regenerate_ontologies` | write, nuclear | `rebuildOntology` — **transactional** wipe-and-rebuild |
-| `export_ontologies` | write (files) | the strictly-ordered export pipeline (info → `ontology.json` → per-TLD COPY dumps → private lists → LLM map) |
+| `export_ontologies` | write (files) | the ordered export pipeline (info → `ontology.json` → per-TLD COPY dumps → private lists → LLM map); the per-TLD dumps run **bounded-parallel** (≤ `EXPORT_CONCURRENCY`), the surrounding steps stay sequential |
 
 Both writes run the LLM-map post-step (its errors are merged in; the write's result/msg stay). The rebuild wraps the delete + reinsert in **one transaction per TLD**, so a failure rolls back with no empty window and no leftover backup table — replacing the retired `regenerateRecordsInDdOntology`, whose `dd_ontology_bk` table was its only, untested, rollback.
 

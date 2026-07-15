@@ -194,6 +194,42 @@ describe('runExportOntologies ordering/abort semantics (PHP :301-409)', () => {
 		]);
 	});
 
+	test('per-TLD exports run BOUNDED-PARALLEL yet ar_msg stays in input order', async () => {
+		const calls: string[] = [];
+		// More TLDs than EXPORT_CONCURRENCY so the pool must cap the fan-out.
+		const tlds = ['ta', 'tb', 'tc', 'td', 'te', 'tf', 'tg', 'th', 'ti'];
+		let inFlight = 0;
+		let maxInFlight = 0;
+		const response = await runExportOntologies(
+			makeContext({ selected_ontologies: tlds }),
+			makeIo(calls, {
+				exportToFile: async (tld) => {
+					inFlight++;
+					maxInFlight = Math.max(maxInFlight, inFlight);
+					// Resolve earlier-input TLDs LATER, so completion order is the
+					// REVERSE of input order — this proves ar_msg is ordered by input
+					// position, not by which psql subprocess finished first.
+					const position = tlds.indexOf(tld);
+					await new Promise((resolve) => setTimeout(resolve, (tlds.length - position) * 2));
+					inFlight--;
+					return ok(`OK. Request done: ${tld}0`);
+				},
+			}),
+		);
+		// Concurrency actually happened (>1 at once) but was BOUNDED — never all
+		// nine at once (the pool caps it below the input size). Constant-agnostic:
+		// unbounded would reach tlds.length, strictly sequential would stay at 1.
+		expect(maxInFlight).toBeGreaterThan(1);
+		expect(maxInFlight).toBeLessThan(tlds.length);
+		expect(response.result).toBe(true);
+		// done counts every success.
+		expect(response.msg).toContain(`Exported ${tlds.length} ontologies to `);
+		// ar_msg per-TLD lines are in INPUT order despite the reversed completion.
+		expect((response.ar_msg as string[]).slice(0, tlds.length)).toEqual(
+			tlds.map((tld) => `OK. Request done: ${tld}0`),
+		);
+	});
+
 	test('updateOntologyInfo failure HARD-aborts before any file is written', async () => {
 		const calls: string[] = [];
 		const response = await runExportOntologies(

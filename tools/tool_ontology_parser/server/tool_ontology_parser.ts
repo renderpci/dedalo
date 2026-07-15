@@ -15,10 +15,12 @@
  *  - regenerate_ontologies (WRITE, nuclear): TRANSACTIONAL wipe-and-rebuild
  *    (rebuildOntology) for structural corruption the incremental path cannot fix.
  *  - both writes run the LLM-map post-step (PHP: export_llm_map errors merged in).
- *  - export_ontologies: the strictly-ordered export pipeline (PHP :301-409):
+ *  - export_ontologies: the ordered export pipeline (PHP :301-409):
  *    update_ontology_info → export_ontology_info (both hard-abort) → per-TLD
- *    export_to_file (fail-and-continue) → export_private_lists_to_file → export_llm_map;
- *    result=true only when zero errors accumulated.
+ *    export_to_file (fail-and-continue, run BOUNDED-PARALLEL — see
+ *    EXPORT_CONCURRENCY) → export_private_lists_to_file → export_llm_map;
+ *    result=true only when zero errors accumulated. Only the per-TLD step
+ *    parallelizes; the four surrounding steps stay strictly sequential.
  */
 
 import {
@@ -175,13 +177,23 @@ const PRODUCTION_IO: OntologyExportIo = {
 };
 
 /**
- * PHP export_ontologies (:301-409) — the strictly-ordered pipeline with PHP's
+ * Max per-TLD exports in flight at once. Each io.exportToFile forks its own
+ * psql subprocess (\copy … TO PROGRAM 'gzip …'); with 100+ ontologies a fully
+ * unbounded fan-out would spawn 100+ processes — this caps it.
+ */
+const EXPORT_CONCURRENCY = 6;
+
+/**
+ * PHP export_ontologies (:301-409) — the ordered pipeline with PHP's
  * abort/continue semantics:
  *   1. updateOntologyInfo    — HARD ABORT on failure (nothing written);
  *   2. exportOntologyInfo    — HARD ABORT on failure;
- *   3. per-TLD exportToFile  — soft-fail per TLD (errors recorded, loop
- *      continues); a THROWN error (file-not-created) aborts everything via
- *      the outer catch — PHP parity;
+ *   3. per-TLD exportToFile  — BOUNDED-PARALLEL (≤ EXPORT_CONCURRENCY in
+ *      flight): soft-fail per TLD (errors recorded, the others continue);
+ *      a THROWN error (file-not-created) aborts everything via the outer
+ *      catch — PHP parity. Steps 1,2,4,5 stay strictly sequential; only
+ *      this one parallelizes (the per-TLD dumps are independent — each
+ *      forks its own psql writing its own <tld>.copy.gz, no shared state);
  *   4. exportPrivateListsToFile — always runs regardless of per-TLD errors;
  *   5. exportLlmMap          — always runs; errors merged.
  * result=true only when the errors array is still empty after the full run.
@@ -229,11 +241,37 @@ export async function runExportOntologies(
 			return response;
 		}
 
-		// 3. Per-TLD loop — individual failures recorded, loop continues.
+		// 3. Per-TLD exports — BOUNDED-PARALLEL. Each exportToFile forks an
+		// independent psql writing its own <tld>.copy.gz with no shared state,
+		// so the exports are safe to overlap; we run at most EXPORT_CONCURRENCY
+		// at a time (chunked allSettled) instead of the old strict sequence.
+		// Steps 1,2,4,5 above/below stay sequential — only this step parallelizes.
 		let done = 0;
 		const arMsg: string[] = [];
-		for (const tld of tlds) {
-			const ontologyResponse = await io.exportToFile(tld);
+		const settled: PromiseSettledResult<OntologyIoResponse>[] = [];
+		for (let i = 0; i < tlds.length; i += EXPORT_CONCURRENCY) {
+			const chunk = tlds.slice(i, i + EXPORT_CONCURRENCY);
+			// allSettled preserves input order within a chunk; chunks are pushed
+			// in order — so `settled` stays in the original tld order regardless
+			// of which subprocess finished first.
+			settled.push(...(await Promise.allSettled(chunk.map((tld) => io.exportToFile(tld)))));
+		}
+
+		// A THROWN export (COPY output file not created) aborts everything —
+		// re-throw the first (input-order) rejection so the outer catch reports
+		// it exactly as the old sequential loop did (PHP parity). Other in-flight
+		// exports may already have run; that is acceptable — the overall result
+		// still becomes a failure.
+		const firstRejected = settled.find((result) => result.status === 'rejected');
+		if (firstRejected?.status === 'rejected') {
+			throw firstRejected.reason;
+		}
+
+		// Soft-fail per TLD: record errors, count only successes, keep going.
+		// arMsg is emitted in input tld order (settled is order-preserving).
+		for (const result of settled) {
+			if (result.status !== 'fulfilled') continue; // unreachable: rejects thrown above
+			const ontologyResponse = result.value;
 			arMsg.push(ontologyResponse.msg);
 			if (ontologyResponse.result === false) {
 				response.errors.push(...(ontologyResponse.errors ?? []));

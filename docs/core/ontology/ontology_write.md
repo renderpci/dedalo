@@ -218,7 +218,7 @@ module, `src/core/ontology/ontology_state.ts`. Nothing else wipe-and-rebuilds a 
 | function | module | purpose |
 | --- | --- | --- |
 | `getActiveOntologies(...)` | `ontology/data_io.ts` | The active-ontologies census: every `matrix_ontology_main` record with its UI metadata. Backs the `get_ontologies` action of `tool_ontology_parser`. |
-| `exportToFile(tld)` | `ontology/data_io.ts` | Export one TLD's ontology to a file. Driven by the `export_ontologies` pipeline (`tools/tool_ontology_parser/server/`), which also refreshes the ontology info, the private lists and the LLM map. |
+| `exportToFile(tld)` | `ontology/data_io.ts` | Export one TLD's ontology to a file (forks its own `psql \copy … TO PROGRAM 'gzip'`). Driven by the `export_ontologies` pipeline (`tools/tool_ontology_parser/server/`), which also refreshes the ontology info, the private lists and the LLM map. The per-TLD exports are independent, so the pipeline runs them **bounded-parallel** (≤ `EXPORT_CONCURRENCY`) rather than one at a time. |
 | `exportPrivateListsToFile()` · `exportLlmMap()` · `exportOntologyInfo()` | `ontology/data_io.ts` | The three companion exports of the same pipeline. |
 | `importOntologyFile(...)` · `importPrivateListsFile(...)` | `ontology/data_io_import.ts` | Import a downloaded ontology / private-lists file. Enforces hard caps (max file size, max decompressed size, decompression ratio, manifest file count) and a confined destination path. |
 | `checkRemoteServer(server)` · `downloadRemoteOntologyFile(...)` | `ontology/data_io_import.ts` | Preflight and fetch an ontology file from a shared-ontology master. TLS verification is asserted on. |

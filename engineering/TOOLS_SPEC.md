@@ -323,7 +323,7 @@ consistent lives in `src/core/ontology/ontology_state.ts`, the single reconcile 
 | `inspect_ontologies` | `developer` | `inspectOntology` — per-TLD drift (missing/stale/orphaned); the status panel |
 | `reconcile_ontologies` | `developer` | `ensureOntology` — incremental, non-destructive (the default) |
 | `regenerate_ontologies` | `developer` | `rebuildOntology` — transactional wipe-and-rebuild |
-| `export_ontologies` | `developer` | the `data_io.ts` export pipeline (unchanged) |
+| `export_ontologies` | `developer` | the `data_io.ts` export pipeline; the per-TLD `exportToFile` dumps run bounded-parallel (≤ `EXPORT_CONCURRENCY`), the info/private-lists/LLM-map steps stay sequential |
 
 The retired `regenerateRecordsInDdOntology` wiped a TLD with a leftover `dd_ontology_bk` table
 as its only, untested, rollback — the same shape as the hierarchy defect: a destructive write
