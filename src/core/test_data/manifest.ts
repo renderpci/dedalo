@@ -43,6 +43,7 @@ export const SUITE_ISOLATION_RECORDS: Readonly<Record<number, string>> = {
 	10: 'test_components_data_changes — the all-component save SWEEP (clears+inserts every element); off record 1 so its random values never poison a read suite',
 	11: 'test_component_date — run-order-flaky date read suite (client_tests.md); its own record removes the shared-test3/1 date pollution that stalled its render',
 	12: 'test_component_iri — iri read/label-dataframe suite; own record hardens it against the save sweep (defensive, matches date)',
+	13: 'test_component_publication — write-heavy add/remove/update relation-locator suite; several of its cases add a stray test92 locator without cleanup or remove by index instead of by locator, permanently growing whatever record they target. Own record isolates that accumulation from the shared record 1 the generic component sweeps (test_component_full et al.) render, whose contract is zero-or-one value.',
 };
 
 /** The per-suite clone ids, ascending. */
