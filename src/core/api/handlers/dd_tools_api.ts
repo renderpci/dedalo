@@ -6,6 +6,16 @@
 import type { Session } from '../../security/session_store.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
 
+/** True for a plain object whose every value is a string (a header map). */
+function isStringRecord(value: unknown): value is Record<string, string> {
+	return (
+		typeof value === 'object' &&
+		value !== null &&
+		!Array.isArray(value) &&
+		Object.values(value).every((entry) => typeof entry === 'string')
+	);
+}
+
 /** dd_tools_api action handlers, keyed by action (registered in dispatch.ts). */
 export const toolsApiActions: Record<string, ActionHandler> = {
 	user_tools: async (rqo, context) => {
@@ -39,6 +49,13 @@ export const toolsApiActions: Record<string, ActionHandler> = {
 		// bytes reach the proxy AS PRODUCED instead of one buffered string.
 		if (body.stream instanceof ReadableStream) {
 			const { stream, ...rest } = body;
+			// A tool may supply extra response headers alongside its stream — e.g.
+			// `X-Accel-Buffering: no` for an SSE pass-through, which nginx needs to
+			// stop buffering the event stream (PRODUCTION.md §3.1, matching the
+			// dd_mcp_api agent_chat_stream contract). Content-Type stays the tool's
+			// declared streamContentType (or the ndjson default), and the tool's own
+			// streamHeaders are merged over it.
+			const extraHeaders = isStringRecord(body.streamHeaders) ? body.streamHeaders : {};
 			return {
 				status: 200,
 				body: rest,
@@ -48,6 +65,7 @@ export const toolsApiActions: Record<string, ActionHandler> = {
 						typeof body.streamContentType === 'string'
 							? body.streamContentType
 							: 'application/x-ndjson; charset=utf-8',
+					...extraHeaders,
 				},
 			};
 		}
