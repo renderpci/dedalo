@@ -5,6 +5,9 @@ data — maps, charts, interactive analysis, anything — by talking to a coding
 publish them to production when they are happy. It is an optional add-on: until you
 configure it, it does not appear anywhere in Dédalo.
 
+> For copy-paste configuration blocks, the day-to-day workflow, and a library of example
+> prompts, see the [site builder cookbook](site_builder_cookbook.md).
+
 ## How it fits together
 
 There are two pieces:
@@ -36,15 +39,18 @@ bytes that were previewed, so what goes live is always what was approved.
    DEDALO_SITE_BUILDER_TOKEN="…the daemon's service token…"
    ```
 
-   Both are documented in the [settings reference](../config/config.md#site-builder). With
+   Both are documented in the [settings reference](../config/config.md#sitebuilder). With
    the URL unset the feature stays completely hidden.
 3. **Restart the engine** and **register the tool** with the *Register tools* maintenance
    widget, so `tool_sitebuilder` becomes an active tool.
 4. **Grant the tool** to the users who should build sites, through their profile — the same
    way you grant any tool. Administrators have it automatically.
 
-Once configured, a **Site builder** button appears in the edit menu for every user who has
-the tool. Opening it launches the workspace in its own window.
+Once configured, the launcher appears in **Area maintenance**, under the **Publication**
+subsystem, as the **Site builder** panel — click **Open site builder** to launch the
+workspace in its own window. Because Area maintenance is gated to administrators and
+developers, that is who reaches the launcher; the tool grant and the publish gate still
+apply on top.
 
 ## Who can do what
 
