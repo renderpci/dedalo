@@ -1790,6 +1790,391 @@
             },
             {
               "lang": "lg-eng",
+              "name": "translation_model",
+              "value": "Model"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "translation_model",
+              "value": "Modelo"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "translation_model",
+              "value": "Modèle"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "translation_model",
+              "value": "Modello"
+            },
+            {
+              "lang": "lg-por",
+              "name": "translation_model",
+              "value": "Modelo"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "translation_model",
+              "value": "Model"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "translation_model",
+              "value": "Modell"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "translation_model",
+              "value": "मोडेल"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "translation_model",
+              "value": "النموذج"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "translation_model",
+              "value": "Μοντέλο"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "translation_model",
+              "value": "Eredua"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "engine_translategemma",
+              "value": "TranslateGemma 4B — all languages, ~2.5 GB"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "engine_translategemma",
+              "value": "TranslateGemma 4B — todos los idiomas, ~2,5 GB"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "engine_translategemma",
+              "value": "TranslateGemma 4B — toutes les langues, ~2,5 Go"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "engine_translategemma",
+              "value": "TranslateGemma 4B — tutte le lingue, ~2,5 GB"
+            },
+            {
+              "lang": "lg-por",
+              "name": "engine_translategemma",
+              "value": "TranslateGemma 4B — todos os idiomas, ~2,5 GB"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "engine_translategemma",
+              "value": "TranslateGemma 4B — totes les llengües, ~2,5 GB"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "engine_translategemma",
+              "value": "TranslateGemma 4B — alle Sprachen, ~2,5 GB"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "engine_translategemma",
+              "value": "TranslateGemma 4B — सबै भाषा, ~2.5 GB"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "engine_translategemma",
+              "value": "TranslateGemma 4B — جميع اللغات، ‏2.5 غيغابايت"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "engine_translategemma",
+              "value": "TranslateGemma 4B — όλες οι γλώσσες, ~2,5 GB"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "engine_translategemma",
+              "value": "TranslateGemma 4B — hizkuntza guztiak, ~2,5 GB"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "engine_nllb",
+              "value": "NLLB-200 600M — all languages, ~700 MB (non-commercial licence)"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "engine_nllb",
+              "value": "NLLB-200 600M — todos los idiomas, ~700 MB (licencia no comercial)"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "engine_nllb",
+              "value": "NLLB-200 600M — toutes les langues, ~700 Mo (licence non commerciale)"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "engine_nllb",
+              "value": "NLLB-200 600M — tutte le lingue, ~700 MB (licenza non commerciale)"
+            },
+            {
+              "lang": "lg-por",
+              "name": "engine_nllb",
+              "value": "NLLB-200 600M — todos os idiomas, ~700 MB (licença não comercial)"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "engine_nllb",
+              "value": "NLLB-200 600M — totes les llengües, ~700 MB (llicència no comercial)"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "engine_nllb",
+              "value": "NLLB-200 600M — alle Sprachen, ~700 MB (nicht-kommerzielle Lizenz)"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "engine_nllb",
+              "value": "NLLB-200 600M — सबै भाषा, ~700 MB (गैर-व्यावसायिक इजाजतपत्र)"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "engine_nllb",
+              "value": "NLLB-200 600M — جميع اللغات، ‏700 ميغابايت (ترخيص غير تجاري)"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "engine_nllb",
+              "value": "NLLB-200 600M — όλες οι γλώσσες, ~700 MB (μη εμπορική άδεια)"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "engine_nllb",
+              "value": "NLLB-200 600M — hizkuntza guztiak, ~700 MB (lizentzia ez-komertziala)"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "engine_madlad",
+              "value": "MADLAD-400 3B — all languages, ~3 GB (Apache licence)"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "engine_madlad",
+              "value": "MADLAD-400 3B — todos los idiomas, ~3 GB (licencia Apache)"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "engine_madlad",
+              "value": "MADLAD-400 3B — toutes les langues, ~3 Go (licence Apache)"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "engine_madlad",
+              "value": "MADLAD-400 3B — tutte le lingue, ~3 GB (licenza Apache)"
+            },
+            {
+              "lang": "lg-por",
+              "name": "engine_madlad",
+              "value": "MADLAD-400 3B — todos os idiomas, ~3 GB (licença Apache)"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "engine_madlad",
+              "value": "MADLAD-400 3B — totes les llengües, ~3 GB (llicència Apache)"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "engine_madlad",
+              "value": "MADLAD-400 3B — alle Sprachen, ~3 GB (Apache-Lizenz)"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "engine_madlad",
+              "value": "MADLAD-400 3B — सबै भाषा, ~3 GB (Apache इजाजतपत्र)"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "engine_madlad",
+              "value": "MADLAD-400 3B — جميع اللغات، ‏3 غيغابايت (ترخيص Apache)"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "engine_madlad",
+              "value": "MADLAD-400 3B — όλες οι γλώσσες, ~3 GB (άδεια Apache)"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "engine_madlad",
+              "value": "MADLAD-400 3B — hizkuntza guztiak, ~3 GB (Apache lizentzia)"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "engine_qwen",
+              "value": "Qwen3 4B — instruction model, all languages, ~2.5 GB (Apache licence)"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "engine_qwen",
+              "value": "Qwen3 4B — modelo de instrucciones, todos los idiomas, ~2,5 GB (licencia Apache)"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "engine_qwen",
+              "value": "Qwen3 4B — modèle instruct, toutes les langues, ~2,5 Go (licence Apache)"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "engine_qwen",
+              "value": "Qwen3 4B — modello instruct, tutte le lingue, ~2,5 GB (licenza Apache)"
+            },
+            {
+              "lang": "lg-por",
+              "name": "engine_qwen",
+              "value": "Qwen3 4B — modelo de instruções, todos os idiomas, ~2,5 GB (licença Apache)"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "engine_qwen",
+              "value": "Qwen3 4B — model d’instruccions, totes les llengües, ~2,5 GB (llicència Apache)"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "engine_qwen",
+              "value": "Qwen3 4B — Instruct-Modell, alle Sprachen, ~2,5 GB (Apache-Lizenz)"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "engine_qwen",
+              "value": "Qwen3 4B — निर्देश मोडेल, सबै भाषा, ~2.5 GB (Apache इजाजतपत्र)"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "engine_qwen",
+              "value": "Qwen3 4B — نموذج تعليمات، جميع اللغات، ‏2.5 غيغابايت (ترخيص Apache)"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "engine_qwen",
+              "value": "Qwen3 4B — μοντέλο οδηγιών, όλες οι γλώσσες, ~2,5 GB (άδεια Apache)"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "engine_qwen",
+              "value": "Qwen3 4B — instrukzio-eredua, hizkuntza guztiak, ~2,5 GB (Apache lizentzia)"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "requires_webgpu_hint",
+              "value": "This model runs on the GPU only"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "requires_webgpu_hint",
+              "value": "Este modelo solo funciona con GPU"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "requires_webgpu_hint",
+              "value": "Ce modèle fonctionne uniquement sur GPU"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "requires_webgpu_hint",
+              "value": "Questo modello funziona solo su GPU"
+            },
+            {
+              "lang": "lg-por",
+              "name": "requires_webgpu_hint",
+              "value": "Este modelo só funciona com GPU"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "requires_webgpu_hint",
+              "value": "Aquest model només funciona amb GPU"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "requires_webgpu_hint",
+              "value": "Dieses Modell läuft nur auf der GPU"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "requires_webgpu_hint",
+              "value": "यो मोडेल GPU मा मात्र चल्छ"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "requires_webgpu_hint",
+              "value": "يعمل هذا النموذج على وحدة معالجة الرسوميات فقط"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "requires_webgpu_hint",
+              "value": "Αυτό το μοντέλο τρέχει μόνο σε GPU"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "requires_webgpu_hint",
+              "value": "Eredu hau GPUan soilik dabil"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "engine_opus",
+              "value": "Opus-MT — ~75 MB, fast, limited language pairs"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "engine_opus",
+              "value": "Opus-MT — ~75 MB, rápido, pares de idiomas limitados"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "engine_opus",
+              "value": "Opus-MT — ~75 Mo, rapide, paires de langues limitées"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "engine_opus",
+              "value": "Opus-MT — ~75 MB, veloce, coppie di lingue limitate"
+            },
+            {
+              "lang": "lg-por",
+              "name": "engine_opus",
+              "value": "Opus-MT — ~75 MB, rápido, pares de idiomas limitados"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "engine_opus",
+              "value": "Opus-MT — ~75 MB, ràpid, parells de llengües limitats"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "engine_opus",
+              "value": "Opus-MT — ~75 MB, schnell, begrenzte Sprachpaare"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "engine_opus",
+              "value": "Opus-MT — ~75 MB, छिटो, सीमित भाषा जोडी"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "engine_opus",
+              "value": "Opus-MT — ‏75 ميغابايت، سريع، أزواج لغات محدودة"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "engine_opus",
+              "value": "Opus-MT — ~75 MB, γρήγορο, περιορισμένα ζεύγη γλωσσών"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "engine_opus",
+              "value": "Opus-MT — ~75 MB, azkarra, hizkuntza-bikote mugatuak"
+            },
+            {
+              "lang": "lg-eng",
               "name": "new_only",
               "value": "New only"
             },

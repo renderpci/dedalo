@@ -847,7 +847,8 @@ export const translate_component_browser = async function(options) {
 		const source_lang				= options.source_lang
 		const target_lang				= options.target_lang
 		const device					= options.device || 'webgpu'
-		const dtype						= options.dtype || 'q4'
+		const dtype						= options.dtype || null
+		const engine					= options.engine || 'translategemma'
 		const status_container			= options.status_container
 		const streaming_overlay			= options.streaming_overlay || null
 		const streaming_overlay_content	= options.streaming_overlay_content || null
@@ -1116,8 +1117,25 @@ export const translate_component_browser = async function(options) {
 					break;
 				}
 
-				// fatal worker error; dispose worker and reject
+				// error from the worker
 				case 'error': {
+
+					// Soft errors are the user's problem to fix (wrong model for this pair, a
+					// model that needs a GPU they do not have), NOT a crash. Show a plain
+					// notice, keep the still-fine worker, and RESOLVE rather than reject so they
+					// do not surface as red console errors.
+					const soft_codes = ['unsupported_pair', 'needs_webgpu']
+					if (soft_codes.includes(data.code)) {
+						hide_overlay()
+						if (status_container) {
+							status_container.classList.remove('loading_status')
+							status_container.innerHTML = `<div class="warning">${data.message}</div>`
+						}
+						resolve({result: false, msg: data.message})
+						break;
+					}
+
+					// genuine fatal error — dispose the broken worker and reject
 					dispose_browser_worker()
 					hide_overlay()
 					if (status_container) {
@@ -1157,7 +1175,8 @@ export const translate_component_browser = async function(options) {
 				sourceLangCode	: source_lang_code,
 				targetLangCode	: target_lang_code,
 				device			: device,
-				dtype			: dtype
+				dtype			: dtype,
+				engine			: engine
 			}
 		})
 	})

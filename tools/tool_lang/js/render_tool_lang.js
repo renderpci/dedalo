@@ -551,15 +551,22 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 					? 'wasm'
 					: 'webgpu'
 
-				const dtype = self.translator_dtype_select
+				const engine = self.translator_engine_model_select
+					? self.translator_engine_model_select.value
+					: 'translategemma'
+
+				// the q4/q8 choice is TranslateGemma's; the seq2seq engines ship one
+				// quantisation and forcing q4 on them would just fail to load
+				const dtype = (engine==='translategemma' && self.translator_dtype_select)
 					? self.translator_dtype_select.value
-					: 'q4'
+					: null
 
 				self.automatic_translation_browser({
 					source_lang		: source_lang,
 					target_lang		: target_lang,
 					device			: device,
 					dtype			: dtype,
+					engine			: engine,
 					status_container: status_container,
 					on_uncertain	: on_uncertain
 				})
@@ -680,6 +687,71 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 			}
 		})
 
+		// translation model.
+		//
+		// These are here to be COMPARED. The models differ in shape, not just size, and that
+		// turns out to matter more: TranslateGemma is a chat model whose template treats its
+		// input as a prompt, while NLLB and opus-mt are real seq2seq MT models that just take
+		// a sentence and return a sentence.
+		//
+		// NLLB is the only browser-viable model that covers Basque and Nepali — and it is
+		// CC-BY-NC, which the label has to say out loud, because whether that is acceptable is
+		// a licensing decision for the deployment and not one this tool can make.
+		const model_container = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'model_container',
+			parent 			: configuration_container
+		})
+
+		ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: self.get_tool_label('translation_model') || 'Model',
+			parent			: model_container
+		})
+
+		const translator_engine_model_select = ui.create_dom_element({
+			element_type	: 'select',
+			parent			: model_container
+		})
+		const engine_options = [
+			{ value : 'translategemma',	label : self.get_tool_label('engine_translategemma')	|| 'TranslateGemma 4B — all languages, ~2.5 GB' },
+			{ value : 'nllb',			label : self.get_tool_label('engine_nllb')			|| 'NLLB-200 600M — all languages, ~700 MB (non-commercial licence)' },
+			{ value : 'madlad',			label : self.get_tool_label('engine_madlad')		|| 'MADLAD-400 3B — all languages, ~3 GB (Apache licence)' },
+			{ value : 'qwen',			label : self.get_tool_label('engine_qwen')			|| 'Qwen3 4B — instruction model, all languages, ~2.5 GB (Apache licence)' },
+			{ value : 'opus',			label : self.get_tool_label('engine_opus')			|| 'Opus-MT — ~75 MB, fast, limited language pairs' }
+		]
+		for (let i = 0; i < engine_options.length; i++) {
+			ui.create_dom_element({
+				element_type	: 'option',
+				value			: engine_options[i].value,
+				inner_html		: engine_options[i].label,
+				parent			: translator_engine_model_select
+			})
+		}
+
+		self.translator_engine_model_select = translator_engine_model_select
+
+		const engine_id = 'translator_engine_model_select'
+		translator_engine_model_select.addEventListener('change', function(){
+			data_manager.set_local_db_data({
+				id		: engine_id,
+				value	: translator_engine_model_select.value
+			}, 'status')
+		})
+
+		data_manager.get_local_db_data(
+			engine_id,
+			'status'
+		).then(function( engine_saved ){
+			if(engine_saved && engine_saved.value){
+				translator_engine_model_select.value = engine_saved.value
+				// the controls were synced against the default; realign them to the restored engine
+				if (typeof sync_engine_controls==='function') {
+					sync_engine_controls()
+				}
+			}
+		})
+
 		// model quality (quantisation).
 		// q4 is what makes a 4B model fit in a browser at all, and it is also a real
 		// contributor to the repetition loops seen on long, low-resource translations.
@@ -732,6 +804,34 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 				translator_dtype_select.value = dtype_saved.value
 			}
 		})
+
+		// Engines that only run on WebGPU. A multi-gigabyte model cannot fit in the WASM/CPU
+		// backend (4 GB address-space limit), so offering the "CPU" toggle for them just leads
+		// to a crash. This set must stay in step with `requires_webgpu` in the worker's ENGINES.
+		const WEBGPU_ONLY = ['translategemma', 'qwen', 'madlad']
+
+		const sync_engine_controls = function() {
+
+			const engine = translator_engine_model_select.value
+
+			// q4/q8 is a TranslateGemma choice — the other engines ship a single quantisation,
+			// so a control that does nothing is worse than not showing it.
+			quality_container.classList.toggle('hide', engine!=='translategemma')
+
+			// the CPU fallback is meaningless for a WebGPU-only model — force GPU and disable
+			// the toggle, with a hint, rather than letting the user pick a setting that crashes
+			if (WEBGPU_ONLY.includes(engine)) {
+				translator_device_checkbox.checked  = false
+				translator_device_checkbox.disabled = true
+				translator_device_checkbox.title    = self.get_tool_label('requires_webgpu_hint')
+					|| 'This model runs on the GPU only'
+			} else {
+				translator_device_checkbox.disabled = false
+				translator_device_checkbox.title    = ''
+			}
+		}
+		translator_engine_model_select.addEventListener('change', sync_engine_controls)
+		sync_engine_controls()
 
 		// initial visibility: show config if the default engine is browser type
 		const initial_engine = translator_engine.find(el => el.name===self.target_translator)
