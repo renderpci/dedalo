@@ -1,0 +1,4 @@
+{
+  "label": "Basic (Vite + vanilla TS)",
+  "description": "A framework-agnostic Vite starter with typed fetch helpers pre-pointed at the Publication API and example records-table, Leaflet map and Chart.js pages. The agent swaps in any framework the user asks for."
+}

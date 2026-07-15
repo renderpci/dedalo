@@ -1,0 +1,56 @@
+# Dédalo Site Builder — reference systemd unit.
+#
+# Modeled on deploy/dedalo-ts.service. This daemon is INDEPENDENT of the engine: it runs
+# as its own user, reads its own .env, and touches only the three site roots. It must NOT
+# be able to read the engine's ../private/ (that is the whole point of the separate user).
+#
+# Adjust the ALL-CAPS/example placeholders to the host layout, then:
+#   sudo cp deploy/dedalo-site-builder.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now dedalo-site-builder
+#
+# install.sh does the above plus user/dir creation.
+
+[Unit]
+Description=Dedalo Site Builder (Bun)
+After=network.target
+
+[Service]
+Type=simple
+# A DEDICATED user, not the engine's `dedalo`. It runs the daemon and every agent/build
+# child; it has no access to the engine's secrets. Add the web-server user to this group
+# so nginx/apache can read the served release trees:
+#     sudo usermod -aG dedalo-sites www-data     # or: nginx
+User=dedalo-sites
+Group=dedalo-sites
+WorkingDirectory=/opt/dedalo/master_dedalo/publication/site_builder
+# Point at the PINNED bun binary, not a floating `bun` on PATH.
+ExecStart=/opt/dedalo/.bun/bin/bun run src/index.ts
+
+# The daemon reads its own .env itself; no EnvironmentFile (same reasoning as the engine
+# unit — systemd's env parser mangles values, and the .env holds provider keys).
+
+# Hardening: the daemon runs untrusted agent-generated build scripts, so confine it.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+# Only these paths are writable — the three roots plus the daemon dir (logs, .builder).
+ReadWritePaths=/var/lib/dedalo_sites /var/www/dedalo_sites
+# The agent/build children must not create world-readable files with secrets.
+UMask=0027
+
+# Supervision: restart on any crash.
+Restart=always
+RestartSec=3
+# Let in-flight agent turns and SSE streams drain (server.stop(false) on SIGTERM).
+TimeoutStopSec=30
+KillSignal=SIGTERM
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dedalo-site-builder
+
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
