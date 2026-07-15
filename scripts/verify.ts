@@ -67,6 +67,7 @@ const TRIPWIRES = [
 	'test/unit/docs_current_engine_tripwire.test.ts',
 	'test/unit/css_build_tripwire.test.ts',
 	'test/unit/hierarchy_single_writer_tripwire.test.ts',
+	'test/unit/ontology_single_writer_tripwire.test.ts',
 	'test/parity/oracle_canary.test.ts',
 ];
 

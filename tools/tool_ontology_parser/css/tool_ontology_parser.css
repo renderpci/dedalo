@@ -265,18 +265,97 @@
   padding-top: 0.5rem;
   padding-bottom: 1.2rem;
 }
+.wrapper_tool.tool_ontology_parser > .content_data > .status_container {
+  margin: 0 0 1rem 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--color_grey_13);
+  border-left-width: 4px;
+  border-radius: 3px;
+  background-color: var(--color_grey_15);
+  font-size: 1rem;
+  line-height: 1.4rem;
+  min-height: 3.5rem;
+  box-sizing: border-box;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .status_container.ok {
+  border-left-color: var(--color_success);
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .status_container.incomplete {
+  border-left-color: var(--tool_ontology_parser);
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .status_container > .status_headline {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--color_grey_4);
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .status_container > .status_headline.loading_status {
+  color: var(--color_grey_8);
+  font-weight: 400;
+  font-style: italic;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .status_container > .status_checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .status_container > .status_checks > .check {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.15rem 0;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .status_container > .status_checks > .check > .check_label {
+  flex: 0 0 6rem;
+  font-weight: 600;
+  color: var(--color_grey_4);
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .status_container > .status_checks > .check > .check_detail {
+  color: var(--color_grey_8);
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .status_container > .status_checks > .check:before {
+  flex: 0 0 1rem;
+  font-weight: 700;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .status_container > .status_checks > .check.ok:before {
+  content: '✓';
+  color: var(--color_success);
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .status_container > .status_checks > .check.failed:before {
+  content: '✗';
+  color: var(--tool_ontology_parser);
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .status_container > .status_checks > .check.failed > .check_detail {
+  color: var(--tool_ontology_parser);
+  font-weight: 600;
+}
 .wrapper_tool.tool_ontology_parser > .content_data > .buttons_container {
   padding: 2rem;
   padding-left: 0px;
   padding-bottom: 1rem;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  gap: 1rem;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .buttons_container .button_group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 12rem;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .buttons_container .button_group button {
+  width: 100%;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .buttons_container .button_group > .button_desc {
+  margin-top: 0.4rem;
+  font-size: 0.82rem;
+  line-height: 1.05rem;
+  color: var(--color_grey_8);
+  text-align: center;
 }
 .wrapper_tool.tool_ontology_parser > .content_data > .buttons_container button.gear {
   background-color: var(--tool_ontology_parser);
   border-color: var(--tool_ontology_parser);
-  margin-right: 1rem;
 }
 .wrapper_tool.tool_ontology_parser > .content_data > .buttons_container .checkbox-label {
   padding-left: 1rem;

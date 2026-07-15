@@ -2,19 +2,23 @@
  * tool_ontology_parser handler — PHP
  * tools/tool_ontology_parser/class.tool_ontology_parser.php.
  *
- * Developer-only. Three registered actions:
- *  - get_ontologies: read every matrix_ontology_main record and resolve the four
- *    UI metadata fields ({target_section_tipo, tld, name, typology_id,
- *    typology_name}); skip records missing target/tld (non-fatal, ledger errors).
- *    The census walk itself is SHARED (core/ontology/data_io.ts
- *    getActiveOntologies) with update_ontology_info's active-only subset.
- *  - regenerate_ontologies: full dd_ontology rebuild for the selected TLDs (→
- *    ontology_write.regenerateRecordsInDdOntology) + the LLM-map post-step
- *    (PHP: export_llm_map errors merged into the regenerate response).
+ * Developer-only. The dd_ontology writes are OWNED by core/ontology/ontology_state.ts
+ * (inspect/ensure/rebuild — the single reconcile authority); this tool is a gated door onto
+ * it, matching the tool_hierarchy → hierarchy_state pattern. Registered actions:
+ *  - get_ontologies: the census — every matrix_ontology_main record's UI metadata
+ *    ({target_section_tipo, tld, name, typology_id, typology_name}); skips records missing
+ *    target/tld (non-fatal). Shared with update_ontology_info (data_io.ts getActiveOntologies).
+ *  - inspect_ontologies (READ): the drift of each selected TLD (which dd_ontology nodes are
+ *    missing, stale or orphaned vs the matrix source). The client's status panel.
+ *  - reconcile_ontologies (WRITE, default): INCREMENTAL — apply only the delta
+ *    (ensureOntology). Non-destructive; a TLD in sync is a no-op.
+ *  - regenerate_ontologies (WRITE, nuclear): TRANSACTIONAL wipe-and-rebuild
+ *    (rebuildOntology) for structural corruption the incremental path cannot fix.
+ *  - both writes run the LLM-map post-step (PHP: export_llm_map errors merged in).
  *  - export_ontologies: the strictly-ordered export pipeline (PHP :301-409):
  *    update_ontology_info → export_ontology_info (both hard-abort) → per-TLD
- *    export_to_file (fail-and-continue) → export_private_lists_to_file →
- *    export_llm_map; result=true only when zero errors accumulated.
+ *    export_to_file (fail-and-continue) → export_private_lists_to_file → export_llm_map;
+ *    result=true only when zero errors accumulated.
  */
 
 import {
@@ -26,8 +30,44 @@ import {
 	updateOntologyInfo,
 } from '../../../src/core/ontology/data_io.ts';
 import type { OntologyIoResponse } from '../../../src/core/ontology/data_io.ts';
-import { regenerateRecordsInDdOntology } from '../../../src/core/ontology/ontology_write.ts';
+import {
+	type EnsureOntologyResult,
+	ensureOntologies,
+	inspectOntology,
+	rebuildOntologies,
+} from '../../../src/core/ontology/ontology_state.ts';
 import type { ToolActionContext, ToolResponse } from '../../../src/core/tools/module.ts';
+
+/** The selected TLDs from options, coerced to a clean string list. */
+function selectedTlds(context: ToolActionContext): string[] {
+	const selected = context.options.selected_ontologies;
+	return Array.isArray(selected) ? selected.map((tld) => String(tld)) : [];
+}
+
+/** Roll a per-TLD reconcile/rebuild batch into one tool response. */
+function summarize(outcomes: EnsureOntologyResult[], tlds: string[], verb: string): ToolResponse {
+	const errors: string[] = [];
+	const ar_msg: string[] = [];
+	let applied = 0;
+	outcomes.forEach((outcome, index) => {
+		const tld = tlds[index] ?? outcome.state.tld ?? '?';
+		if (!outcome.result) errors.push(`${tld}: ${outcome.msg}`);
+		errors.push(...outcome.errors.map((error) => `${tld}: ${error}`));
+		applied += outcome.applied.length;
+		ar_msg.push(
+			`${tld}: ${outcome.msg}${outcome.applied.length ? ` (${outcome.applied.join('; ')})` : ''}`,
+		);
+	});
+	const ok = errors.length === 0;
+	return {
+		result: ok,
+		msg: ok
+			? `${verb} ${outcomes.length} ontolog${outcomes.length === 1 ? 'y' : 'ies'} — ${applied} change(s)`
+			: `${verb} completed with errors`,
+		errors,
+		ar_msg,
+	};
+}
 
 export async function toolOntologyParserGetOntologies(
 	context: ToolActionContext,
@@ -50,35 +90,68 @@ export async function toolOntologyParserGetOntologies(
 	return { result: ontologies, msg: 'OK. Request done', errors: census.errors };
 }
 
+/**
+ * READ: the drift of each selected TLD (core/ontology/ontology_state.ts inspectOntology).
+ * The client renders this as a per-TLD status panel — which nodes are missing, stale or
+ * orphaned — so an operator SEES why an ontology is out of sync before touching anything.
+ */
+export async function toolOntologyParserInspect(context: ToolActionContext): Promise<ToolResponse> {
+	if (!context.principal.isDeveloper) {
+		return { result: false, msg: 'Error. developer privileges required', errors: ['unauthorized'] };
+	}
+	const tlds = selectedTlds(context);
+	const states = [];
+	for (const tld of tlds) states.push(await inspectOntology(tld));
+	return { result: true, msg: 'OK. Request done', errors: [], states };
+}
+
+/**
+ * WRITE (default): INCREMENTAL reconcile — bring each selected TLD's dd_ontology in line
+ * with its matrix source by applying only the delta (ensureOntology). Non-destructive: the
+ * runtime ontology is never momentarily empty, and a TLD already in sync is a no-op.
+ */
+export async function toolOntologyParserReconcile(
+	context: ToolActionContext,
+): Promise<ToolResponse> {
+	if (!context.principal.isDeveloper) {
+		return { result: false, msg: 'Error. developer privileges required', errors: ['unauthorized'] };
+	}
+	const tlds = selectedTlds(context);
+	const outcomes = await ensureOntologies(tlds, context.userId);
+	return withLlmMap(summarize(outcomes, tlds, 'Reconciled'));
+}
+
+/**
+ * WRITE (nuclear): TRANSACTIONAL rebuild — wipe and re-derive each selected TLD's
+ * dd_ontology from scratch (rebuildOntology). For structural corruption the incremental
+ * reconcile cannot converge. The delete + reinsert run in one transaction per TLD, so a
+ * failure rolls back with no empty window and no leftover backup table.
+ */
 export async function toolOntologyParserRegenerate(
 	context: ToolActionContext,
 ): Promise<ToolResponse> {
 	if (!context.principal.isDeveloper) {
 		return { result: false, msg: 'Error. developer privileges required', errors: ['unauthorized'] };
 	}
-	const selected = context.options.selected_ontologies;
-	const tlds = Array.isArray(selected) ? selected.map((tld) => String(tld)) : [];
-	const response = await regenerateRecordsInDdOntology(tlds, context.userId);
+	const tlds = selectedTlds(context);
+	const outcomes = await rebuildOntologies(tlds, context.userId);
+	return withLlmMap(summarize(outcomes, tlds, 'Rebuilt'));
+}
 
-	// PHP regenerate_ontologies post-step: rebuild the LLM map even when the
-	// regeneration partially failed (partial rows are still mappable); its
-	// errors are MERGED into the response — result/msg stay the delegate's.
-	const errors = [...response.errors];
+/**
+ * PHP regenerate_ontologies post-step: rebuild the LLM map after a dd_ontology write, even
+ * when it partially failed (partial rows are still mappable). Its errors are MERGED in;
+ * result/msg stay the write's.
+ */
+async function withLlmMap(response: ToolResponse): Promise<ToolResponse> {
+	const errors = [...((response.errors as string[]) ?? [])];
 	try {
 		const llmMapResponse = await exportLlmMap();
-		if (!llmMapResponse.result) {
-			errors.push(...llmMapResponse.errors);
-		}
+		if (!llmMapResponse.result) errors.push(...llmMapResponse.errors);
 	} catch (error) {
 		errors.push((error as Error).message);
 	}
-
-	return {
-		result: response.result,
-		msg: response.msg,
-		errors,
-		total_insert: response.total_insert,
-	};
+	return { ...response, errors };
 }
 
 /**
@@ -184,8 +257,11 @@ export async function runExportOntologies(
 		}
 
 		response.result = response.errors.length === 0;
+		// The per-file ar_msg lines carry each file's path (relative to the I/O dir) + size;
+		// name the target directory once here so the operator knows where to find them.
+		const { config } = await import('../../../src/config/config.ts');
 		response.msg = response.result
-			? `OK. Export of ontologies completed successfully. Done: ${done}`
+			? `OK. Exported ${done} ontolog${done === 1 ? 'y' : 'ies'} to ${config.ops.ontologyDataIoDir}`
 			: 'Errors found. Export Ontologies request failed.';
 		response.ar_msg = arMsg;
 	} catch (error) {

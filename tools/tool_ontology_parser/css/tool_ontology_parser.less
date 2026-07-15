@@ -98,18 +98,98 @@
 			}
 		}
 
+		// status_container — the per-TLD drift panel (inspect_ontologies).
+		// (!) The grey scale is INVERTED: @color_grey_1 is near-black. Light surfaces are at
+		// the TOP of the scale (@color_grey_15). Same lesson as tool_hierarchy's panel.
+		>.status_container {
+			margin: 0 0 1rem 0;
+			padding: 1rem 1.25rem;
+			border: 1px solid @color_grey_13;
+			border-left-width: 4px;
+			border-radius: 3px;
+			background-color: @color_grey_15;
+			font-size: 1rem;
+			line-height: 1.4rem;
+			// a floor so the panel does not collapse/grow sharply between its states
+			// (empty → "Checking status…" → results) — smoother, less jumpy.
+			min-height: 3.5rem;
+			box-sizing: border-box;
+
+			&.ok         { border-left-color: @color_success; }
+			&.incomplete { border-left-color: @tool_color; }
+
+			>.status_headline {
+				font-weight: 600;
+				margin-bottom: .5rem;
+				color: @color_grey_4;
+
+				// the transient "Checking status…" line while inspect_ontologies is in flight
+				&.loading_status {
+					color: @color_grey_8;
+					font-weight: 400;
+					font-style: italic;
+				}
+			}
+
+			>.status_checks {
+				list-style: none;
+				margin: 0;
+				padding: 0;
+
+				>.check {
+					display: flex;
+					align-items: baseline;
+					gap: .5rem;
+					padding: .15rem 0;
+
+					>.check_label {
+						flex: 0 0 6rem;
+						font-weight: 600;
+						color: @color_grey_4;
+					}
+					>.check_detail { color: @color_grey_8; }
+
+					// The mark carries the state; colour alone never does (a11y).
+					&:before { flex: 0 0 1rem; font-weight: 700; }
+					&.ok:before     { content: '✓'; color: @color_success; }
+					&.failed:before { content: '✗'; color: @tool_color; }
+					&.failed >.check_detail { color: @tool_color; font-weight: 600; }
+				}
+			}
+		}
+
 		>.buttons_container {
 			padding: 2rem;
 			padding-left: 0px;
 			padding-bottom: 1rem;
 			display: flex;
-			align-items: center;
+			align-items: flex-start;
 			justify-content: center;
+			gap: 1rem;
+
+			// each action = button + caption description, stacked and centered.
+			.button_group {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				max-width: 12rem;
+
+				button {
+					width: 100%;
+				}
+
+				>.button_desc {
+					margin-top: .4rem;
+					font-size: .82rem;
+					line-height: 1.05rem;
+					color: @color_grey_8;
+					text-align: center;
+				}
+			}
 
 			button.gear {
 				background-color: @tool_color;
 				border-color: @tool_color;
-				margin-right: 1rem;
 			}
 
 			.checkbox-label {

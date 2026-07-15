@@ -1,9 +1,6 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
+/*global get_label, page_globals, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
-// (!) FLAG: SHOW_DEVELOPER is used at lines 170, 228, and 275 but is absent from
-//     the /*global*/ declaration above. This will trigger an eslint no-undef error.
-//     Add SHOW_DEVELOPER to the global list to match the tool_common.js declaration.
 
 
 
@@ -305,112 +302,98 @@ tool_ontology_parser.prototype.get_ontologies = async function() {
 *   { result: boolean, msg: string, errors: Array<string>, ar_msg: Array<string> }
 *   or `false` when the selection is empty.
 */
-tool_ontology_parser.prototype.export_ontologies = async function () {
-
-	const self = this
-
-	// check self.selected_ontologies
-		if (self.selected_ontologies.length===0) {
-			console.error('Ignored empty selected ontologies:', self.selected_ontologies);
-			return false
-		}
-
-	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(options)
-		const source = create_source(self, 'export_ontologies')
-
-	// rqo
-		const rqo = {
-			dd_api	: 'dd_tools_api',
-			action	: 'tool_request',
-			source	: source,
-			options	: {
-				selected_ontologies : self.selected_ontologies
-			}
-		}
-
-	// call to the API, fetch data and get response
-		const api_response = await data_manager.request({
-			body : rqo,
-			retries : 1, // one try only
-			timeout : 180 * 1000 // 180 secs waiting response
-		})
-
-		// debug
-		if(SHOW_DEVELOPER===true) {
-			dd_console("-> export_ontologies API api_response:",'DEBUG', api_response);
-		}
-
-
-	return api_response
+tool_ontology_parser.prototype.export_ontologies = function () {
+	return this.send_action('export_ontologies')
 }//end export_ontologies
 
+
+/**
+* INSPECT_ONTOLOGIES
+* READ. Fetches the drift of each selected TLD from the server
+* (tool_ontology_parser::inspect_hierarchy → core/ontology/ontology_state.ts inspectOntology):
+* which dd_ontology nodes are missing, stale or orphaned vs the matrix source. The render
+* layer paints this as a per-TLD status panel, so the operator SEES why an ontology is out of
+* sync before pressing anything. Writes nothing.
+*
+* @returns {Promise<Object|false>} { result, msg, errors, states:[{tld, drift, inSync, …}] } or false when empty.
+*/
+tool_ontology_parser.prototype.inspect_ontologies = function () {
+	return this.send_action('inspect_ontologies', { allow_empty: true })
+}//end inspect_ontologies
+
+
+/**
+* RECONCILE_ONTOLOGIES
+* WRITE (default). INCREMENTAL reconcile — bring each selected TLD's dd_ontology in line with
+* its matrix source by applying only the delta (server ensureOntology). Non-destructive: the
+* runtime ontology is never momentarily empty, and a TLD already in sync is a no-op. This is
+* the everyday action; `regenerate` is the destructive fallback.
+*
+* @returns {Promise<Object|false>} { result, msg, errors, ar_msg } or false when empty.
+*/
+tool_ontology_parser.prototype.reconcile_ontologies = function () {
+	return this.send_action('reconcile_ontologies')
+}//end reconcile_ontologies
 
 
 /**
 * REGENERATE_ONTOLOGIES
-* Sends the user's current TLD selection to the server to rebuild `dd_ontology` rows.
+* WRITE (nuclear). TRANSACTIONAL wipe-and-rebuild of each selected TLD's dd_ontology from its
+* matrix source (server rebuildOntology). For structural corruption the incremental reconcile
+* cannot converge. The delete + reinsert run in one transaction per TLD — a failure rolls back
+* with no empty window and no leftover backup table. Prefer `reconcile` unless a rebuild is
+* genuinely needed.
 *
-* Unlike `export_ontologies` (which writes JSON files for distribution), this action
-* rebuilds the internal `dd_ontology` database table entries for the specified TLDs.
-* The server delegates to `ontology::regenerate_records_in_dd_ontology($selected_ontologies)`
-* and then also rebuilds the LLM ontology map via `ontology_data_io::export_llm_map`.
-*
-* Useful after correcting ontology records in the main_ontology section or after an
-* import from another Dédalo installation has altered the structure.
-*
-* The request uses `retries: 1` and a 180-second timeout for the same reasons as
-* `export_ontologies` — batch regeneration over many TLDs can take significant time.
-*
-* (!) FLAG: The doc-block copied from `export_ontologies` states "export the user
-*     selected ontologies" — this is stale/misleading; the action is regeneration, not
-*     export. The description above is the corrected documentation.
-*
-* Early return: returns `false` without making a network request if the selection is empty.
-*
-* @returns {Promise<Object|false>} Resolves to the API response object:
-*   { result: boolean, msg: string, errors: Array<string>, ar_msg: Array<string> }
-*   or `false` when the selection is empty.
+* @returns {Promise<Object|false>} { result, msg, errors, ar_msg } or false when empty.
 */
-tool_ontology_parser.prototype.regenerate_ontologies = async function () {
+tool_ontology_parser.prototype.regenerate_ontologies = function () {
+	return this.send_action('regenerate_ontologies')
+}//end regenerate_ontologies
+
+
+/**
+* SEND_ACTION
+* The ONE request path for every tool action (was duplicated per method). Posts the current
+* TLD selection to `dd_tools_api::tool_request` for the named server action.
+*
+* @param {string} action - server action: 'inspect_ontologies' | 'reconcile_ontologies' | 'regenerate_ontologies' | 'export_ontologies'
+* @param {Object} [opts]
+* @param {boolean} [opts.allow_empty=false] - when true, an empty selection still sends (inspect wants "nothing selected → empty panel")
+* @returns {Promise<Object|false>} the API response, or false when the selection is empty and allow_empty is not set.
+*/
+tool_ontology_parser.prototype.send_action = async function (action, opts) {
 
 	const self = this
+	const allow_empty = (opts && opts.allow_empty===true)
 
-	// check self.selected_ontologies
-		if (self.selected_ontologies.length===0) {
-			console.error('Ignored empty selected ontologies:', self.selected_ontologies);
+	// empty selection: a write on nothing is a no-op; only inspect may proceed empty.
+		if (self.selected_ontologies.length===0 && !allow_empty) {
+			console.error('Ignored empty selected ontologies for action:', action);
 			return false
 		}
 
-	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(options)
-		const source = create_source(self, 'regenerate_ontologies')
-
-	// rqo
-		const rqo = {
-			dd_api	: 'dd_tools_api',
-			action	: 'tool_request',
-			source	: source,
-			options	: {
-				selected_ontologies : self.selected_ontologies
-			}
+	const rqo = {
+		dd_api	: 'dd_tools_api',
+		action	: 'tool_request',
+		source	: create_source(self, action),
+		options	: {
+			selected_ontologies : self.selected_ontologies
 		}
+	}
 
-	// call to the API, fetch data and get response
-		const api_response = await data_manager.request({
-			body : rqo,
-			retries : 1, // one try only
-			timeout : 180 * 1000 // 180 secs waiting response
-		})
+	// inspect is a light read; the writes can take minutes over many TLDs.
+	const api_response = await data_manager.request({
+		body	: rqo,
+		retries	: 1,
+		timeout	: (action==='inspect_ontologies' ? 30 : 180) * 1000
+	})
 
-		// debug
-		if(SHOW_DEVELOPER===true) {
-			dd_console("-> regenerate_ontologies API api_response:",'DEBUG', api_response);
-		}
-
+	if(SHOW_DEVELOPER===true) {
+		dd_console('-> ' + action + ' API api_response:', 'DEBUG', api_response);
+	}
 
 	return api_response
-}//end regenerate_ontologies
+}//end send_action
 
 
 

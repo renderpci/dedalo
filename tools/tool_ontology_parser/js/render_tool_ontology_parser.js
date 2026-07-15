@@ -57,6 +57,108 @@ const _render_msg_lines = (target, lines) => {
 }
 
 
+/**
+* PAINT_STATUS
+* Fetches the DRIFT of the current selection (inspect_ontologies) and renders it as a per-TLD
+* checklist: in sync (green) or the counts of missing / stale / orphaned nodes. Pure read — safe
+* on open, after a write, or on demand. An empty selection clears the panel; a failed fetch
+* leaves a readable note instead of an empty box.
+*
+* @param {Object} self - the tool instance
+* @param {HTMLElement} container
+* @returns {Promise<void>}
+*/
+const paint_status = async function(self, container) {
+
+	container.replaceChildren()
+	container.classList.remove('ok', 'incomplete')
+
+	if (!self.selected_ontologies || self.selected_ontologies.length===0) {
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'status_headline',
+			inner_html		: self.get_tool_label('status_none') || 'Select ontologies to see their status.',
+			parent			: container
+		})
+		return
+	}
+
+	// loading feedback — inspect_ontologies is a round-trip; show it while we wait so the
+	// panel is never blank after a Refresh (or an auto-repaint on open / after a write).
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'status_headline loading_status',
+		inner_html		: self.get_tool_label('status_checking') || 'Checking status…',
+		parent			: container
+	})
+
+	let states
+	try {
+		const api_response = await self.inspect_ontologies()
+		states = api_response && Array.isArray(api_response.states) ? api_response.states : null
+		if (!states) throw new Error(api_response && api_response.msg ? api_response.msg : 'no states')
+	} catch (err) {
+		container.replaceChildren() // clear the loading line before the error
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'status_headline',
+			inner_html		: (self.get_tool_label('status_unavailable') || 'Status unavailable') + ': ' + (err?.message || err),
+			parent			: container
+		})
+		return
+	}
+
+	container.replaceChildren() // clear the loading line before the results
+	const all_in_sync = states.every(s => s.inSync===true)
+	container.classList.add(all_in_sync ? 'ok' : 'incomplete')
+
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'status_headline',
+		inner_html		: all_in_sync
+			? (self.get_tool_label('status_all_in_sync') || 'All selected ontologies are in sync')
+			: (self.get_tool_label('status_drift') || 'Some ontologies have drifted from their source'),
+		parent			: container
+	})
+
+	const list = ui.create_dom_element({
+		element_type	: 'ul',
+		class_name		: 'status_checks',
+		parent			: container
+	})
+	states.forEach(state => {
+		const counts = { missing:0, stale:0, orphaned:0 }
+		;(state.drift || []).forEach(d => { counts[d.kind] = (counts[d.kind]||0)+1 })
+		const detail = state.inSync
+			? 'in sync (' + state.matrixNodes + ' node' + (state.matrixNodes===1?'':'s') + ')'
+			: [
+				counts.missing  ? counts.missing  + ' missing'  : '',
+				counts.stale    ? counts.stale    + ' stale'    : '',
+				counts.orphaned ? counts.orphaned + ' orphaned' : '',
+				state.mainNodeOk ? '' : 'no main node'
+			].filter(Boolean).join(', ')
+
+		const item = ui.create_dom_element({
+			element_type	: 'li',
+			class_name		: state.inSync ? 'check ok' : 'check failed',
+			parent			: list
+		})
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'check_label',
+			inner_html		: String(state.tld ?? '?'),
+			parent			: item
+		})
+		const detail_node = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'check_detail',
+			parent			: item
+		})
+		detail_node.appendChild(document.createTextNode(detail)) // SEC-031: text node, no innerHTML
+	})
+}
+
+
 
 /**
 * RENDER_TOOL_ONTOLOGY_PARSER
@@ -166,6 +268,85 @@ const get_content_data = async function(self) {
 		const ontologies_list = render_ontologies_list(self)
 		ontologies_list_container.appendChild(ontologies_list)
 
+	// status_container (declared here, RENDERED below the buttons — see get_content_data DOM
+	// order note). The per-TLD DRIFT the server reports (inspect_ontologies ->
+	// ontology_state.inspectOntology): which dd_ontology nodes are missing, stale or orphaned
+	// vs the matrix source. Painted on open and repainted after every write. It sits BELOW the
+	// buttons so its height changing on repaint does not shove the buttons around (the panel
+	// used to be above them, which made the buttons jump). Empty until a selection exists.
+		const status_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'status_container'
+		})
+
+	// spinner - ONE definition shared by every action (was duplicated per handler, and its
+	// early-returns left the spinner stuck on a falsy response; set_loading(false) now runs in a
+	// finally, so the tool never hangs in .loading).
+		let spinner = null
+		const set_loading = (set) => {
+			if (set===true) {
+				content_data.classList.add('loading')
+				messages_container.replaceChildren()
+				spinner = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'spinner inside',
+					parent			: content_data.parentNode
+				})
+			}else{
+				content_data.classList.remove('loading')
+				if (spinner) { spinner.remove(); spinner = null }
+			}
+		}
+
+	// run_action - the ONE action path (was ~90 lines duplicated per button). Confirms, runs,
+	// renders the messages, repaints the status panel, and ALWAYS clears BOTH spinners: the
+	// tool-wide overlay AND the clicked button's own `button_spinner` add-on (the shared class
+	// buttons.less styles, used across the tools) — so every action gives feedback on the button
+	// it was launched from, and the tool never hangs.
+		const run_action = async (button, fn, confirm_msg) => {
+			if (self.selected_ontologies.length===0) {
+				alert(self.get_tool_label('select_one') || 'Select at least one ontology.')
+				return
+			}
+			if (confirm_msg && !confirm(confirm_msg)) {
+				return
+			}
+			messages_container.classList.remove('error')
+			set_loading(true)
+			if (button) button.classList.add('button_spinner')
+			try {
+				const api_response = await fn()
+				if (!api_response) {
+					_render_msg_lines(messages_container, 'No response')
+					return
+				}
+				_render_msg_lines(messages_container, api_response.msg ?? 'Unknown error')
+				messages_container.classList.toggle('error', api_response.result===false)
+
+				if (api_response.errors?.length) {
+					_render_msg_lines(process_error_container, api_response.errors)
+					process_error_container.classList.remove('hidden')
+				} else {
+					process_error_container.replaceChildren()
+					process_error_container.classList.add('hidden')
+				}
+				if (api_response.ar_msg?.length) {
+					_render_msg_lines(process_messages_container, api_response.ar_msg)
+					process_messages_container.classList.remove('hidden')
+				} else {
+					process_messages_container.replaceChildren()
+					process_messages_container.classList.add('hidden')
+				}
+				await paint_status(self, status_container)
+			} catch (err) {
+				_render_msg_lines(messages_container, 'Unexpected error: ' + (err?.message || err))
+				messages_container.classList.add('error')
+			} finally {
+				set_loading(false)
+				if (button) button.classList.remove('button_spinner')
+			}
+		}
+
 	// buttons container
 		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -173,183 +354,94 @@ const get_content_data = async function(self) {
 			parent			: fragment
 		})
 
-		// button_export
-			const button_export = ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'warning gear',
-				inner_html		: self.get_tool_label('export') || 'Export',
-				parent			: buttons_container
-			})
-			// click event
-			const click_export_handler = async (e) => {
-				e.stopPropagation();
-
-				// Guard: require explicit user confirmation before a potentially
-				// long-running, filesystem-writing server operation.
-				if (!confirm(get_label.sure || 'Sure?')) {
-					return
-				}
-
-				// Guard: at least one ontology TLD must be selected.
-				if (self.selected_ontologies.length===0) {
-					alert("Error: empty selection");
-					return
-				}
-
-				// messages clean
-					[
-						messages_container
-					]
-					.forEach(el => el.classList.remove('error'))
-
-				// spinner
-					let spinner
-					const set_loading = ( set ) => {
-
-						if (set===true) {
-
-							content_data.classList.add('loading')
-							messages_container.replaceChildren()
-
-							// spinner
-							spinner = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'spinner inside',
-								parent			: content_data.parentNode
-							})
-
-						}else{
-
-							content_data.classList.remove('loading')
-							spinner.remove()
-						}
-					}
-					set_loading(true)
-
-				// call API
-					const api_response = await self.export_ontologies()
-					if(SHOW_DEBUG===true) {
-						console.log('export_ontologies api_response', api_response)
-					}
-
-					if (!api_response) {
-						console.error('Error getting API response: export_ontologies');
-						return
-					}
-
-				// user messages (SEC-031)
-					_render_msg_lines(messages_container, api_response.msg ?? 'Unknown error')
-
-				// process errors (SEC-031)
-					if (api_response.errors?.length) {
-						_render_msg_lines(process_error_container, api_response.errors)
-						process_error_container.classList.remove('hidden')
-					}else{
-						process_error_container.replaceChildren()
-						process_error_container.classList.add('hidden')
-					}
-
-				// process messages (SEC-031)
-					if (api_response.ar_msg?.length) {
-						_render_msg_lines(process_messages_container, api_response.ar_msg)
-						process_messages_container.classList.remove('hidden')
-					}else{
-						process_messages_container.replaceChildren()
-						process_messages_container.classList.add('hidden')
-					}
-
-				set_loading(false)
+		// make_action - ONE builder for every action: a button + a short caption DESCRIPTION
+		// (so the operator understands what each does before pressing) + a hover title, all
+		// wired to run_action with the button's own `button_spinner`.
+			const make_action = ({ label, cls, desc, run }) => {
+				const group = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'button_group',
+					parent			: buttons_container
+				})
+				const button = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: cls,
+					inner_html		: label,
+					parent			: group
+				})
+				button.title = desc // native tooltip in addition to the visible caption
+				const caption = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'button_desc',
+					parent			: group
+				})
+				caption.appendChild(document.createTextNode(desc)) // SEC-031: text node
+				button.addEventListener('click', (e) => { e.stopPropagation(); run(button) })
+				return button
 			}
-			button_export.addEventListener('click', click_export_handler)
 
-		// button_regenerate
-			const button_regenerate = ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'warning repair',
-				inner_html		: self.get_tool_label('regenerate') || 'Regenerate',
-				parent			: buttons_container
+		// Reconcile - the DEFAULT: incremental, non-destructive. Only what drifted.
+			make_action({
+				label	: self.get_tool_label('reconcile') || 'Reconcile',
+				cls		: 'warning repair',
+				desc	: self.get_tool_label('reconcile_desc')
+					|| 'Update only what drifted. Non-destructive.',
+				run		: (button) => run_action(button,
+					() => self.reconcile_ontologies(),
+					self.get_tool_label('confirm_reconcile')
+						|| 'Reconcile the selected ontologies?\n\nOnly missing, changed or orphaned nodes are updated. Nothing is wiped.'
+				)
 			})
-			// click event
-			const click_regenerate_handler = async (e) => {
-				e.stopPropagation();
 
-				// Guard: require explicit user confirmation before regenerating
-				// all dd_ontology rows (a destructive, potentially slow operation).
-				if (!confirm(get_label.sure || 'Sure?')) {
-					return
+		// Rebuild - the NUCLEAR option: transactional wipe-and-rebuild.
+			make_action({
+				label	: self.get_tool_label('regenerate') || 'Rebuild',
+				cls		: 'warning gear',
+				desc	: self.get_tool_label('regenerate_desc')
+					|| 'Wipe & re-derive from source. Use only if Reconcile can’t fix it.',
+				run		: (button) => run_action(button,
+					() => self.regenerate_ontologies(),
+					self.get_tool_label('confirm_rebuild')
+						|| 'REBUILD wipes and re-derives dd_ontology for the selected TLD(s) from the matrix source.\n\nEach TLD rebuilds in one transaction (safe rollback). Use only when Reconcile cannot fix it.\n\nContinue?'
+				)
+			})
+
+		// Export - write the ontology definition files.
+			make_action({
+				label	: self.get_tool_label('export') || 'Export',
+				cls		: 'warning gear',
+				desc	: self.get_tool_label('export_desc')
+					|| 'Write the ontology definition files for dissemination.',
+				run		: (button) => run_action(button,
+					() => self.export_ontologies(),
+					self.get_tool_label('confirm_export')
+						|| 'Export the selected ontologies to their definition files?'
+				)
+			})
+
+		// Refresh status - re-read the drift without writing anything (own button_spinner).
+			make_action({
+				label	: self.get_tool_label('refresh_status') || 'Refresh status',
+				cls		: 'refresh reload',
+				desc	: self.get_tool_label('refresh_status_desc')
+					|| 'Re-check the selected ontologies. Reads only.',
+				run		: async (button) => {
+					button.classList.add('button_spinner')
+					try {
+						await paint_status(self, status_container)
+					} finally {
+						button.classList.remove('button_spinner')
+					}
 				}
+			})
 
-				// Guard: at least one ontology TLD must be selected.
-				if (self.selected_ontologies.length===0) {
-					alert("Error: empty selection");
-					return
-				}
+		// status_container goes HERE — below the buttons — so a repaint (its height changes with
+		// the drift results) never pushes the buttons around.
+			fragment.appendChild(status_container)
 
-				// messages clean
-					[
-						messages_container
-					]
-					.forEach(el => el.classList.remove('error'))
+		// paint the drift once the body exists (fire-and-forget; empty selection -> empty panel).
+			dd_request_idle_callback(() => { paint_status(self, status_container) })
 
-				// spinner
-					let spinner
-					const set_loading = ( set ) => {
-
-						if (set===true) {
-
-							content_data.classList.add('loading')
-							messages_container.replaceChildren()
-
-							// spinner
-							spinner = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'spinner inside',
-								parent			: content_data.parentNode
-							})
-
-						}else{
-
-							content_data.classList.remove('loading')
-							spinner.remove()
-						}
-					}
-					set_loading(true)
-
-				// call API
-					const api_response = await self.regenerate_ontologies()
-					if(SHOW_DEBUG===true) {
-						console.log('regenerate_ontologies api_response', api_response)
-					}
-
-					if (!api_response) {
-						console.error('Error getting API response: regenerate_ontologies');
-						return
-					}
-
-				// user messages (SEC-031)
-					_render_msg_lines(messages_container, api_response.msg ?? 'Unknown error')
-
-				// process errors (SEC-031)
-					if (api_response.errors?.length) {
-						_render_msg_lines(process_error_container, api_response.errors)
-						process_error_container.classList.remove('hidden')
-					}else{
-						process_error_container.replaceChildren()
-						process_error_container.classList.add('hidden')
-					}
-
-				// process messages (SEC-031)
-					if (api_response.ar_msg?.length) {
-						_render_msg_lines(process_messages_container, api_response.ar_msg)
-						process_messages_container.classList.remove('hidden')
-					}else{
-						process_messages_container.replaceChildren()
-						process_messages_container.classList.add('hidden')
-					}
-
-				set_loading(false)
-			}
-			button_regenerate.addEventListener('click', click_regenerate_handler)
 
 	// messages_container
 		const messages_container = ui.create_dom_element({

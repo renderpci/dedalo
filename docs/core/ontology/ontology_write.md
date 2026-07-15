@@ -71,8 +71,8 @@ flowchart LR
 - **Compile editable records → `dd_ontology`.** Parse one section record into a
   `DdOntologyNode` (`parseSectionRecordToOntologyNode()`) and upsert it
   (`insertDdOntologyRecord()`); do it in bulk for a section
-  (`setRecordsInDdOntology()`) or for whole TLDs
-  (`regenerateRecordsInDdOntology()`). Bulk "list mode" is a **full-section
+  (`setRecordsInDdOntology()`) or reconcile whole TLDs
+  (`ensureOntology()` — incremental — or `rebuildOntology()`). Bulk "list mode" is a **full-section
   scan** — every record of the section is recompiled, not a filtered subset.
 - **Resolve node fields from the editable side.** Read each definition
   component (tld, parent, model, order, translatable, relations, term,
@@ -163,8 +163,20 @@ taken from the TypeScript signatures.
 | `parseSectionRecordToOntologyNode(sectionTipo, sectionId)` | `ontology/parser.ts` | Build a `DdOntologyNode` from one editable matrix record: resolve tld/parent/model/order/translatable/relations/term/properties (overwrite-favoured). Returns the node, or `null` if the mandatory TLD value is empty. |
 | `insertDdOntologyRecord(sectionTipo, sectionId)` | `ontology/ontology_write.ts` | Parse one record (above) then `upsertDdOntologyNode()` it into `dd_ontology`. Returns the resulting `tipo`, or `null` on failure. |
 | `setRecordsInDdOntology(target)` | `ontology/ontology_write.ts` | Bulk compile: edit mode (`sectionId` given) processes one record; list mode processes **every** record of the section. Main-section records take the TLD path (delete nodes when the TLD is inactive, else (re)create the `<tld>0` node via `createDdOntologyRootNode()`). Returns `{result, msg, errors, total, processed_count}`. |
-| `regenerateRecordsInDdOntology(tlds, userId?)` | `ontology/ontology_write.ts` | Full rebuild for the given TLDs: backup table → parse ALL matrix records in memory → delete tld nodes → upsert all → refresh main section + root node. The `dd_ontology_bk` backup table **is** the rollback (not a transaction) and is **left behind on success**. Returns `{result, msg, errors, total_insert}`. |
 | `syncOrderToDdOntology(...)` | `ontology/ontology_write.ts` | Write the sibling display order back into `dd_ontology` after a tree reorder. Called by the `save_order` tree action (`src/core/ts_object/ts_api.ts`). |
+
+### Reconcile / rebuild a TLD — the single authority
+
+`dd_ontology` is a projection of `matrix_ontology`; keeping the two consistent lives in **one**
+module, `src/core/ontology/ontology_state.ts`. Nothing else wipe-and-rebuilds a TLD (guarded by
+`test/unit/ontology_single_writer_tripwire.test.ts`). This replaced the retired
+`regenerateRecordsInDdOntology`, whose only rollback was a leftover `dd_ontology_bk` table.
+
+| function | module | purpose |
+| --- | --- | --- |
+| `inspectOntology(tld)` | `ontology/ontology_state.ts` | **Pure read.** The drift of one TLD: nodes `missing` / `stale` / `orphaned` vs the parsed source, plus `mainNodeOk` and `inSync`. Compared by meaning (jsonb key order normalized, empty ≡ null, `propiedades` parsed) so formatting is not false drift. |
+| `ensureOntology(tld, userId?)` | `ontology/ontology_state.ts` | **Idempotent incremental reconcile.** Upsert the missing/stale nodes, delete the orphaned ones, bootstrap the main node if absent — apply only the delta, never wipe. A TLD in sync is a no-op (`applied: []`). |
+| `rebuildOntology(tld, userId?)` | `ontology/ontology_state.ts` | **Transactional wipe-and-rebuild** for structural corruption the reconcile cannot fix. The delete + reinsert run in one `withTransaction`; a failure rolls back with no empty window and no backup table. |
 
 ### Node-field resolution helpers
 
@@ -192,7 +204,7 @@ taken from the TypeScript signatures.
 | `getMainNameData(tld)` | `ontology/ontology_write.ts` | The TLD's full name/term data (all language translations), or `null`. |
 | tree-boot active elements | `area/tree.ts` | The active-hierarchies/ontologies projection consumed by the thesaurus/ontology tree areas. |
 
-### Ontology lifecycle (create / regenerate / delete a TLD)
+### Ontology lifecycle (create / reconcile / delete a TLD)
 
 | function | module | purpose |
 | --- | --- | --- |
@@ -241,8 +253,8 @@ the read half, `resolver.ts`:
   rollback.
 - **Import/export** moves *shared* ontologies between installations as files
   (`data_io.ts` / `data_io_import.ts`), driven by the developer-only
-  `tool_ontology_parser` (actions `get_ontologies`, `regenerate_ontologies`,
-  `export_ontologies`).
+  `tool_ontology_parser` (actions `get_ontologies`, `inspect_ontologies`,
+  `reconcile_ontologies`, `regenerate_ontologies`, `export_ontologies`).
 - **Sections & components** — the editable ontology is just ordinary records,
   so it is created/read/deleted through the same section/matrix machinery as
   any other data (`src/core/section/record/create_record.ts`, the section read
@@ -288,7 +300,7 @@ const outcome = await deleteOntologyMain('ontology35', mainSectionId, deleteReco
 ```
 
 !!! warning "Compilation is a heavy, write-side operation"
-    `setRecordsInDdOntology()` / `regenerateRecordsInDdOntology()` rebuild
+    `setRecordsInDdOntology()` / `rebuildOntology()` rebuild
     `dd_ontology` rows by re-reading every definition field of every matched
     record. They are part of the ontology *update/rebuild* flow, not something
     to call in a normal request. Normal reads go through `resolver.ts`.

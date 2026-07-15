@@ -83,8 +83,8 @@ at process start, so there is no autoloader step and no warm-up.
   for name→tipo resolution.
 - **TLD-level concerns** (`db/dd_ontology.ts`) — the active/installed TLD list
   (`getActiveTlds()`, module-cached, cleared via the invalidation hub) and the
-  destructive TLD-node delete plus backup/restore-table operations used during
-  `regenerateRecordsInDdOntology()`.
+  destructive TLD-node delete used during `rebuildOntology()`
+  (`src/core/ontology/ontology_state.ts`, transactional).
 - **Node-level structural writes** — `upsertDdOntologyNode()` /
   `deleteDdOntologyNode()` / `updateDdOntologyColumns()` (`db/dd_ontology.ts`)
   are called by the write/compile layer and by ontology maintenance tooling,
@@ -225,7 +225,7 @@ Grouped by concern, naming the real export and its module.
 | `searchDdOntology(filters, ...)` | `db/dd_ontology.ts` | A generic allowlisted column/operator search: "every tipo of this model", "every tipo of this model_tipo", and so on, as one parameterized primitive. |
 | `getActiveTlds()` | `db/dd_ontology.ts` | The installed-TLD list, module-cached. |
 | `deleteTldNodes(tld)` | `db/dd_ontology.ts` | Destructive: delete every `dd_ontology` row of a TLD (TLD-validated, refuses on a mismatch). |
-| `createBackupTable(tlds)` / `dropBackupTable()` / `restoreFromBackupTable(tlds)` | `db/dd_ontology.ts` | The `dd_ontology_bk` snapshot/restore protocol `regenerateRecordsInDdOntology()` uses as its rollback. |
+| `createBackupTable(tlds)` / `dropBackupTable()` / `restoreFromBackupTable(tlds)` | `db/dd_ontology.ts` | The legacy `dd_ontology_bk` snapshot/restore helpers. The retired `regenerateRecordsInDdOntology()` used them as its rollback; `rebuildOntology()` (`ontology_state.ts`) now uses a transaction instead. |
 
 ## How it fits with the rest of Dédalo
 
