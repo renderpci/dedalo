@@ -53,6 +53,13 @@ export async function listSlugs(): Promise<string[]> {
   return slugs.sort();
 }
 
+/**
+ * Creates a site: validate the slug/name, refuse a duplicate or an over-cap instance,
+ * confirm the template exists, then scaffold → write manifest → write AGENTS.md → init git
+ * in that order (git init last so the first commit captures the fully-scaffolded tree). Any
+ * failure past the mkdir rolls the whole directory back (see the catch), so a failed create
+ * leaves nothing behind and is retryable with the same slug.
+ */
 export async function createSite(input: CreateSiteInput): Promise<SiteManifest> {
   if (!isValidSlug(input.slug)) {
     throw new ValidationError(
@@ -122,7 +129,12 @@ export async function deleteSite(slug: string, purgeProd: boolean): Promise<void
   }
 }
 
-/** Disk usage of a workspace in megabytes (recursive). Used for the quota gate. */
+/**
+ * Disk usage of a workspace in megabytes (recursive). Used for the quota gate. Symlinks are
+ * skipped rather than followed, so the walk cannot escape the workspace or double-count a
+ * release the workspace happens to link to — the measured number is the workspace's own
+ * footprint.
+ */
 export async function workspaceSizeMb(slug: string): Promise<number> {
   const dir = workspaceDir(slug);
   let bytes = 0;

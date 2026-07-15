@@ -144,6 +144,12 @@ sitebuilder_controller.prototype.render_sites = function() {
 
 
 
+/**
+ * CREATE_SITE
+ * Create a site (create_site action), then reload the list and select the new one so the
+ * user lands straight in its workspace. Slug and name are both required client-side; the
+ * server validates them again.
+ */
 sitebuilder_controller.prototype.create_site = async function(slug, name) {
 
 	const self = this
@@ -156,6 +162,12 @@ sitebuilder_controller.prototype.create_site = async function(slug, name) {
 
 
 
+/**
+ * SELECT_SITE
+ * Switch the workspace to a site. Clears the previous session and tears down any live
+ * stream first (a leftover stream would keep writing into the new site's chat log), then
+ * repaints the three panes and loads the site's preview + session history.
+ */
 sitebuilder_controller.prototype.select_site = async function(slug) {
 
 	const self = this
@@ -170,6 +182,11 @@ sitebuilder_controller.prototype.select_site = async function(slug) {
 
 
 
+/**
+ * DELETE_SITE
+ * Delete the selected site (delete_site action) after a blocking confirm. On success the
+ * selection is cleared and the chat/preview panes are emptied — the site no longer exists.
+ */
 sitebuilder_controller.prototype.delete_site = async function() {
 
 	const self = this
@@ -237,6 +254,12 @@ sitebuilder_controller.prototype.render_chat_shell = function() {
 
 
 
+/**
+ * LOAD_HISTORY
+ * Fetch the site's past sessions (session_history) and note how many exist. It does NOT
+ * replay their events — the live stream only opens for a session the user starts or
+ * continues; a full past-session browser is a later refinement.
+ */
 sitebuilder_controller.prototype.load_history = async function() {
 
 	const self = this
@@ -309,6 +332,13 @@ sitebuilder_controller.prototype.open_stream = function() {
 
 
 
+/**
+ * RENDER_EVENT
+ * Turn one daemon StoredEvent body into a chat-log line. Each `body.type` maps to a styled
+ * line; `text` is the exception — it is accumulated into a grouped agent block by
+ * append_agent_text. An unknown type is ignored so a newer daemon can add event kinds
+ * without breaking an older client.
+ */
 sitebuilder_controller.prototype.render_event = function(body) {
 
 	const self = this
@@ -339,6 +369,12 @@ sitebuilder_controller.prototype.render_event = function(body) {
 
 
 
+/**
+ * STOP
+ * Interrupt the running turn: ask the daemon to stop (session_stop), then tear down the
+ * local stream and re-enable the composer. Best-effort — we do not wait to confirm the
+ * daemon actually halted before releasing the UI.
+ */
 sitebuilder_controller.prototype.stop = async function() {
 
 	const self = this
@@ -350,6 +386,11 @@ sitebuilder_controller.prototype.stop = async function() {
 
 
 
+/**
+ * RUN_BUILD
+ * Trigger a build (build action) and start polling its outcome. The `building` flag guards
+ * against a second concurrent build while one is in flight.
+ */
 sitebuilder_controller.prototype.run_build = async function() {
 
 	const self = this
@@ -364,6 +405,13 @@ sitebuilder_controller.prototype.run_build = async function() {
 
 
 
+/**
+ * POLL_BUILD
+ * Poll get_build every 1.5s until the outcome is no longer 'running'. On success it reloads
+ * the preview cache-busted so the freshly built output is shown; on failure it writes the
+ * error into the chat log. Self-rescheduling via setTimeout — there is no separate timer to
+ * clear because each tick either reschedules itself or stops.
+ */
 sitebuilder_controller.prototype.poll_build = async function(build_id) {
 
 	const self = this
@@ -431,6 +479,12 @@ sitebuilder_controller.prototype.load_preview = async function(bust) {
 
 
 
+/**
+ * PUBLISH
+ * Push the site live (publish action) after a blocking confirm that shows the public URL.
+ * The button only exists when can_publish is true, but the server re-checks the publisher
+ * gate and the confirm flag regardless — this dialog is UX, not the security boundary.
+ */
 sitebuilder_controller.prototype.publish = async function(url) {
 
 	const self = this
@@ -446,6 +500,7 @@ sitebuilder_controller.prototype.publish = async function(url) {
 
 // --- small helpers ---
 
+/** Toggle the Stop button: enabled only while a turn is streaming. */
 sitebuilder_controller.prototype.set_running = function(running) {
 
 	const self = this
@@ -454,6 +509,11 @@ sitebuilder_controller.prototype.set_running = function(running) {
 
 
 
+/**
+ * Tear down the live SSE stream if one is open. Aborting the AbortController closes the
+ * fetch, which the engine's pass-through cancel() propagates upstream to the daemon leg.
+ * Idempotent — safe to call when no stream is running.
+ */
 sitebuilder_controller.prototype.abort_stream = function() {
 
 	const self = this
@@ -462,6 +522,11 @@ sitebuilder_controller.prototype.abort_stream = function() {
 
 
 
+/**
+ * Append one styled line to the chat log and scroll to it. Uses textContent (not innerHTML)
+ * — these lines carry daemon-supplied text (tool summaries, file names, errors) and must
+ * never be interpreted as markup. append_agent_text is the only path that renders HTML.
+ */
 sitebuilder_controller.prototype.append_line = function(cls, text) {
 
 	const self = this
@@ -475,6 +540,7 @@ sitebuilder_controller.prototype.append_line = function(cls, text) {
 
 
 
+/** Echo the user's own prompt into the log immediately, before the daemon answers. */
 sitebuilder_controller.prototype.append_user = function(text) {
 
 	const self = this
@@ -488,6 +554,14 @@ sitebuilder_controller.prototype.append_user = function(text) {
 
 
 
+/**
+ * APPEND_AGENT_TEXT
+ * Stream agent prose into the log. The daemon emits `text` in many small deltas; rather
+ * than a line per delta, consecutive deltas are accumulated onto one block (its raw source
+ * stashed in dataset.raw) and re-rendered as markdown on each arrival. The `:last-child`
+ * selector is what breaks the grouping: once any other event appends a line the agent block
+ * is no longer the last child, so the next text run opens a fresh block.
+ */
 sitebuilder_controller.prototype.append_agent_text = function(text) {
 
 	const self = this
@@ -507,6 +581,12 @@ sitebuilder_controller.prototype.append_agent_text = function(text) {
 
 
 
+/**
+ * RENDER_EMPTY_STATE
+ * Replace the whole workspace with a single explanatory message when there is nothing to
+ * build against (daemon unconfigured, unreachable, or rejecting our token). Maps the stable
+ * error code to human prose, falling back to a generic notice for an unrecognised code.
+ */
 sitebuilder_controller.prototype.render_empty_state = function(code) {
 
 	const self = this
@@ -524,6 +604,12 @@ sitebuilder_controller.prototype.render_empty_state = function(code) {
 
 
 
+/**
+ * MESSAGE_FOR
+ * Turn a ToolResponse `errors[]` into a user-facing string. Prefers a known code's mapped
+ * message, then the caller-supplied fallback (usually the server's `msg`, which for a
+ * site_builder_rejected carries the daemon's own capped detail), then a generic default.
+ */
 sitebuilder_controller.prototype.message_for = function(errors, fallback) {
 
 	const messages = {
@@ -547,6 +633,7 @@ sitebuilder_controller.prototype.toast = function(text) {
 
 
 
+/** Resolve a localized tool label by name, falling back to the given literal when absent. */
 sitebuilder_controller.prototype.label = function(name, fallback) {
 
 	const self = this

@@ -69,6 +69,12 @@ export function activeTurnCount(): number {
   return activeTurns;
 }
 
+/**
+ * Whether the given session has a turn actively running right now. Resolves session → slug
+ * → live state; a session this process never saw (pre-restart) is not running by
+ * definition. The SSE handler uses this to decide whether to keep tailing or close after
+ * draining the backlog.
+ */
 export function isTurnRunning(sessionId: string): boolean {
   const slug = slugBySession.get(sessionId);
   return slug !== undefined && liveByslug.get(slug)?.state === 'running';
@@ -76,6 +82,12 @@ export function isTurnRunning(sessionId: string): boolean {
 
 // --- live subscription (SSE) ---
 
+/**
+ * Registers a live-event listener for a session and returns its unsubscribe closure. Every
+ * persisted event is fanned to all current listeners (see `fan`). The SSE handler
+ * subscribes BEFORE replaying the durable backlog so no event that lands mid-replay is
+ * lost; it dedupes the overlap by seq.
+ */
 export function subscribe(sessionId: string, fn: (event: StoredEvent) => void): () => void {
   let set = subscribers.get(sessionId);
   if (!set) {

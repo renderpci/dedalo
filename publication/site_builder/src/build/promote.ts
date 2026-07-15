@@ -96,6 +96,13 @@ export async function currentRelease(root: string, slug: string): Promise<string
   }
 }
 
+/**
+ * Repoint <root>/<slug> at `release` without ever exposing a dangling or half-written
+ * link: create a uniquely-named temp symlink alongside the target, then rename it over the
+ * target. rename(2) is atomic on the same filesystem, so a concurrent web-server request
+ * sees either the old release or the new one, never nothing. The temp name embeds the
+ * release so two swaps cannot collide on the same tmp path.
+ */
 async function swapSymlink(root: string, slug: string, release: string): Promise<void> {
   const link = confinedPath(root, slug);
   const tmp = link + '.tmp-' + release;
@@ -106,6 +113,13 @@ async function swapSymlink(root: string, slug: string, release: string): Promise
   await rename(tmp, link); // atomic on the same filesystem
 }
 
+/**
+ * Trims a surface's release store to RELEASES_RETAINED, deleting the oldest beyond the
+ * cap. The currently-served release is explicitly excluded from deletion even if it has
+ * aged past the cap (e.g. after a rollback to an old release), so pruning can never unlink
+ * the bytes the web server is serving. Deletions are best-effort — a failed rm is skipped,
+ * not fatal to the promotion that triggered it.
+ */
 async function pruneReleases(root: string, slug: string): Promise<void> {
   const releases = await listReleases(root, slug); // newest first
   const keep = config.RELEASES_RETAINED;

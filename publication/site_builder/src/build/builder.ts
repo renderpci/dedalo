@@ -83,6 +83,14 @@ export async function startBuild(slug: string): Promise<{ build_id: string }> {
   return { build_id: id };
 }
 
+/**
+ * The detached build pipeline: install → build → verify the output directory exists →
+ * promote a fresh preprod release. Each stage short-circuits to a 'failed' record with a
+ * one-line reason (the log holds the detail); it never throws out — the catch-all funnels
+ * any unexpected error into the same terminal record so `finally` in startBuild always
+ * clears the per-slug lock. A missing output directory is a failure, not a crash: a build
+ * command can exit 0 yet produce nothing.
+ */
 async function executeBuild(slug: string, id: string, record: BuildStatus): Promise<void> {
   const workspace = confinedPath(config.SITES_ROOT, slug);
   const manifest = await readManifest(slug);
@@ -119,6 +127,12 @@ async function executeBuild(slug: string, id: string, record: BuildStatus): Prom
   }
 }
 
+/**
+ * Runs one manifest command as an argv (split on whitespace — safe because the command
+ * comes from the daemon-owned manifest, never the agent; see the module header). Both
+ * stdout and stderr are streamed to the same sink so the build log interleaves them the
+ * way a terminal would. Never throws; the caller inspects exitCode/timedOut.
+ */
 function runStep(
   command: string,
   cwd: string,
@@ -130,6 +144,11 @@ function runStep(
   return runBinary(argv, { cwd, env, timeoutMs, onStdout: onOutput, onStderr: onOutput });
 }
 
+/**
+ * Stamps the terminal outcome onto the build record and persists it. Returned (not just
+ * called) at each exit of executeBuild so the record write is awaited before the pipeline
+ * unwinds and the lock is released.
+ */
 async function finish(
   slug: string,
   record: BuildStatus,

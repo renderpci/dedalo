@@ -33,6 +33,11 @@ class EventQueue implements AsyncIterable<AgentEvent> {
   private resolvers: Array<(r: IteratorResult<AgentEvent>) => void> = [];
   private closed = false;
 
+  /**
+   * Deliver an event. If a consumer is already parked in `next()`, hand it over
+   * directly; otherwise buffer it for the next `next()` call. A push after close is
+   * dropped — the terminal result/error has already been emitted.
+   */
   push(event: AgentEvent): void {
     if (this.closed) return;
     const resolve = this.resolvers.shift();
@@ -40,6 +45,11 @@ class EventQueue implements AsyncIterable<AgentEvent> {
     else this.buffer.push(event);
   }
 
+  /**
+   * Signal end-of-stream. Idempotent (only the first call takes effect), so the spawn
+   * flow can close in its `finally` without guarding against a double close. Any parked
+   * consumers are resolved `done`; buffered events already handed out stay drainable.
+   */
   close(): void {
     if (this.closed) return;
     this.closed = true;
@@ -47,6 +57,12 @@ class EventQueue implements AsyncIterable<AgentEvent> {
     this.resolvers = [];
   }
 
+  /**
+   * The single-consumer async iterator. Serves a buffered event immediately, ends if the
+   * queue is already closed and drained, otherwise parks a resolver until the next push
+   * or close. Buffered events are always drained before `done` is reported, so no event
+   * emitted before close is lost.
+   */
   [Symbol.asyncIterator](): AsyncIterator<AgentEvent> {
     return {
       next: (): Promise<IteratorResult<AgentEvent>> => {
@@ -60,6 +76,16 @@ class EventQueue implements AsyncIterable<AgentEvent> {
   }
 }
 
+/**
+ * Spawn one agent turn and expose it as an AgentProcess. `setup` is the per-driver thunk
+ * that (possibly after writing an MCP config) returns the argv and line parser; running it
+ * inside the async body means a setup failure surfaces as a normalized `error` event, not a
+ * throw the manager cannot see. The supervisor guarantees the stream always terminates with
+ * exactly one result or error: a non-zero exit with no result seen becomes an `error`
+ * (retriable when killed by signal/timeout, i.e. exitCode === null), and a clean exit that
+ * emitted no terminal frame gets a synthesized `result` — so the manager's `for await` never
+ * hangs waiting for a terminal event the driver forgot to print.
+ */
 export function spawnAgentProcess(
   opts: SessionStartOptions,
   setup: () => Promise<TurnPlan>,
@@ -170,6 +196,7 @@ async function readLines(stream: ReadableStream<Uint8Array>, onLine: (line: stri
   if (buffer.length > 0) onLine(buffer);
 }
 
+/** Reads a byte stream to exhaustion, decoding each chunk (used to capture stderr). */
 async function readAll(stream: ReadableStream<Uint8Array>, onChunk: (chunk: string) => void): Promise<void> {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
