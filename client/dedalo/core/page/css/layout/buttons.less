@@ -654,19 +654,21 @@ button.button_spinner {
 	&::before {
 		content: " ";
 		display: inline-block;
-		// background-color: unset !important;
-		background-color: currentColor !important;
-		// background-color: transparent !important;
+		// A RING, not a filled disc. Filling with `currentColor` painted an opaque dot on
+		// any coloured or light button (white blob on warning/tool buttons, black blob on
+		// `.light`), hiding the rotation — which is why per-context patches kept appearing
+		// (area_maintenance `.light`, the ontology tools). A transparent centre + a
+		// `currentColor` arc with a rotating gap works on EVERY button, because currentColor
+		// is the button's own text colour and therefore always contrasts.
+		background-color: transparent !important;
 		height: 1em;
 		width: 1em;
 		margin-right: 0.33em;
 		vertical-align: text-bottom;
 
-		// Create a curve at the top
 		border-radius: 50%;
-		// border: 1.45px solid var(--color_white);
-		border: 1.45px solid var(--color_grey_11);
-		border-top-color: var(--button-bg-color, --color_orange_dedalo);
+		border: 1.45px solid currentColor;
+		border-top-color: transparent; // the gap that rotates → reads as a spinner
 
 		animation: run_spinner 800ms linear infinite;
 	}
