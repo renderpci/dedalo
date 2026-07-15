@@ -12,6 +12,25 @@
 
 
 /**
+* FALLBACK_MODELS
+* Minimal browser-model list used ONLY when the tool config predates the register.json
+* `models` array (a stale stored override). It needs just enough to render the dropdown and
+* gate the CPU toggle — `name` (label comes from the engine_<name> tool label) and
+* `requires_webgpu`. The worker fills the rest of each definition from its own DEFAULT_MODELS
+* when only a name is passed. register.json ships the full catalogue, so this is a safety net.
+* @type {Array<{name:string, requires_webgpu:boolean}>}
+*/
+const FALLBACK_MODELS = [
+	{ name : 'qwen',           requires_webgpu : true },
+	{ name : 'translategemma', requires_webgpu : true },
+	{ name : 'nllb',           requires_webgpu : false },
+	{ name : 'madlad',         requires_webgpu : true },
+	{ name : 'opus',           requires_webgpu : false }
+]
+
+
+
+/**
 * RENDER_TOOL_LANG
 * Manages the component's logic and appearance in client side
 */
@@ -252,6 +271,12 @@ const get_content_data_edit = async function(self) {
 						console.log("--> copy_to_target target_value:", clone(self.target_component.data.value));
 					}
 
+				// guard: source_value must be an array
+					if (!Array.isArray(source_value)) {
+						console.error('copy_to_target: source_value is not an array', source_value);
+						return;
+					}
+
 				// copy value
 					self.target_component.data.value = source_value
 
@@ -373,7 +398,7 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 	// status container
 		const status_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'status_container',
+			class_name		: 'status_container hide',
 			parent			: automatic_translation_container
 		})
 
@@ -385,7 +410,159 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 			parent			: automatic_translation_container
 		})
 
-		button_automatic_translation.addEventListener('click', () => {
+		// BUILD_REVIEW_DETAIL
+		// Turn a validation report into the specific sentences a user can act on.
+		//
+		// A bare count ("3 problems") tells them nothing about whether a thesaurus link
+		// moved, a marker was thrown away, or a whole paragraph came back untranslated —
+		// which are very different things to have to check.
+		// @return array of strings, most consequential first
+			const build_review_detail = function(report) {
+
+				const detail = []
+
+				// the model looped instead of translating. Listed first because it makes
+				// every other line irrelevant — the text itself is garbage.
+				if (report.degenerate===true) {
+					detail.push(
+						self.get_tool_label('translation_degenerate')
+						|| 'The model repeated itself instead of translating. Do not save this.'
+					)
+				}
+
+				// marks that are simply gone, or that we could not find a home for
+				const unplaced = report.missing.length + report.unrepairable.length
+				if (unplaced>0) {
+					detail.push(
+						self.get_tool_label('marks_unplaced', unplaced)
+						|| `${unplaced} marks could not be placed`
+					)
+				}
+
+				// marks we re-inserted ourselves: present, but WE chose the position
+				if (report.repaired.length>0) {
+					detail.push(
+						self.get_tool_label('marks_repositioned', report.repaired.length, report.total_marks)
+						|| `${report.repaired.length} of ${report.total_marks} marks were repositioned automatically`
+					)
+				}
+
+				// paired marks the translation reversed, which we put back in open→close order
+				if (report.reordered && report.reordered.length>0) {
+					detail.push(
+						self.get_tool_label('marks_reordered', report.reordered.length)
+						|| `${report.reordered.length} linked marks were reversed by the translation and reordered`
+					)
+				}
+
+				// markers the model invented or duplicated, dropped before saving
+				const invalid = report.residual.length + report.added.length + report.duplicated.length
+				if (invalid>0) {
+					detail.push(
+						self.get_tool_label('marks_removed_invalid', invalid)
+						|| `${invalid} invalid markers were removed`
+					)
+				}
+
+				// blocks the model could not translate at all, kept in the source language
+				if (report.failed_blocks.length>0) {
+					detail.push(
+						self.get_tool_label('blocks_untranslated', report.failed_blocks.length)
+						|| `${report.failed_blocks.length} blocks were kept in the source language`
+					)
+				}
+
+				// bold/italic/underline the model dropped. Never the reason the gate fired —
+				// it does not count toward uncertain_count — but worth listing once we are
+				// showing this panel anyway.
+				if (report.emphasis_lost>0) {
+					detail.push(
+						self.get_tool_label('emphasis_lost', report.emphasis_lost)
+						|| `${report.emphasis_lost} text styles (bold, italic) were lost`
+					)
+				}
+
+				return detail
+			}
+
+		// ON_UNCERTAIN
+		// Called by the browser engine when it cannot prove the translated value is sound —
+		// a mark was dropped and had to be re-inserted by hand, the model invented a marker,
+		// a mark went missing altogether, or a block came back untranslated.
+		//
+		// Nothing has been written to the target component at this point. The translated
+		// text is on screen in the streaming overlay, so the user is judging something they
+		// can actually see, and the save only happens if they accept it.
+		// @return promise<boolean> - true to save anyway
+			const on_uncertain = function(report) {
+
+				return new Promise(function(resolve){
+
+					// the run is over — stop the spinner while the user decides
+					components_container.classList.remove('loading')
+					button_automatic_translation.classList.remove('button_spinner')
+					status_container.classList.remove('loading_status')
+					status_container.innerHTML = ''
+
+					const review_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'translation_review',
+						parent			: status_container
+					})
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'translation_review_header',
+						inner_html		: self.get_tool_label('translation_review_needed')
+											|| 'Translation needs review before saving',
+						parent			: review_container
+					})
+
+					const detail = build_review_detail(report)
+					if (detail.length>0) {
+						const detail_list = ui.create_dom_element({
+							element_type	: 'ul',
+							class_name		: 'translation_review_detail',
+							parent			: review_container
+						})
+						for (let i = 0; i < detail.length; i++) {
+							ui.create_dom_element({
+								element_type	: 'li',
+								inner_html		: detail[i],
+								parent			: detail_list
+							})
+						}
+					}
+
+					const review_buttons = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'review_buttons',
+						parent			: status_container
+					})
+					const accept_button = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'warning accept_translation',
+						inner_html		: self.get_tool_label('accept') || 'Accept',
+						parent			: review_buttons
+					})
+					const discard_button = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'secondary discard_translation',
+						inner_html		: self.get_tool_label('discard') || 'Discard',
+						parent			: review_buttons
+					})
+
+					const decide = function(e, accepted) {
+						e.stopPropagation()
+						review_buttons.remove()
+						resolve(accepted)
+					}
+					accept_button.addEventListener('click', (e) => decide(e, true))
+					discard_button.addEventListener('click', (e) => decide(e, false))
+				})
+			}
+
+		button_automatic_translation.addEventListener('click', (e) => {
+			e.stopPropagation()
 
 			components_container.classList.add('loading')
 			button_automatic_translation.classList.add('button_spinner')
@@ -401,24 +578,54 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 					? 'wasm'
 					: 'webgpu'
 
+				const model_name = self.translator_engine_model_select
+					? self.translator_engine_model_select.value
+					: 'translategemma'
+
+				// the full model definition from register.json (undefined only for a stale
+				// config with no models array — the worker then falls back to it by name)
+				const model_def = self.translator_models
+					? self.translator_models.find(m => m.name===model_name)
+					: undefined
+
+				// the q4/q8 choice is TranslateGemma's; the seq2seq models ship one
+				// quantisation and forcing q4 on them would just fail to load
+				const dtype = (model_name==='translategemma' && self.translator_dtype_select)
+					? self.translator_dtype_select.value
+					: null
+
 				self.automatic_translation_browser({
 					source_lang		: source_lang,
 					target_lang		: target_lang,
 					device			: device,
-					status_container: status_container
+					dtype			: dtype,
+					engine			: model_name,
+					model			: model_def,
+					status_container: status_container,
+					on_uncertain	: on_uncertain
 				})
 				.then(()=>{
+					// the engine owns the status text: it is the only layer that knows whether
+					// the result was saved clean, saved with warnings, discarded or cancelled
 					components_container.classList.remove('loading')
 					button_automatic_translation.classList.remove('button_spinner')
-					const msg = self.get_tool_label('translation_completed') || 'Translation completed.'
 					status_container.classList.remove('loading_status')
-					status_container.innerHTML = `<span class="success_text">${msg}</span>`
+				})
+				.catch((error)=>{
+					components_container.classList.remove('loading')
+					button_automatic_translation.classList.remove('button_spinner')
+					console.error('automatic_translation_browser error:', error)
 				})
 			}else{
 				self.automatic_translation_server(translator_name, source_lang, target_lang, automatic_translation_container)
 				.then(()=>{
 					components_container.classList.remove('loading')
 					button_automatic_translation.classList.remove('button_spinner')
+				})
+				.catch((error)=>{
+					components_container.classList.remove('loading')
+					button_automatic_translation.classList.remove('button_spinner')
+					console.error('automatic_translation_server error:', error)
 				})
 			}
 		})
@@ -513,6 +720,161 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 				translator_device_checkbox.checked = device_saved.value
 			}
 		})
+
+		// translation model.
+		//
+		// These are here to be COMPARED. The models differ in shape, not just size, and that
+		// turns out to matter more: TranslateGemma is a chat model whose template treats its
+		// input as a prompt, while NLLB and opus-mt are real seq2seq MT models that just take
+		// a sentence and return a sentence.
+		//
+		// NLLB is the only browser-viable model that covers Basque and Nepali — and it is
+		// CC-BY-NC, which the label has to say out loud, because whether that is acceptable is
+		// a licensing decision for the deployment and not one this tool can make.
+		const model_container = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'model_container',
+			parent 			: configuration_container
+		})
+
+		ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: self.get_tool_label('translation_model') || 'Model',
+			parent			: model_container
+		})
+
+		const translator_engine_model_select = ui.create_dom_element({
+			element_type	: 'select',
+			parent			: model_container
+		})
+
+		// The model catalogue is CONFIG, not code — it lives in register.json (dd999 →
+		// browser_transformer.models) and reaches us on the engine definition. FALLBACK_MODELS
+		// only covers a site whose stored config predates the models array; register.json ships
+		// them, so the fallback is rarely used. Each option's LABEL is the existing
+		// engine_<name> tool label, so it stays multilingual.
+		const browser_engine_def = translator_engine.find(el => el.name==='browser_transformer')
+		const config_models = (browser_engine_def && Array.isArray(browser_engine_def.models) && browser_engine_def.models.length)
+			? browser_engine_def.models
+			: null
+		const models = config_models || FALLBACK_MODELS
+
+		// remembered so the click handler can pass the SELECTED model's full definition to the worker
+		self.translator_models = config_models
+
+		for (let i = 0; i < models.length; i++) {
+			ui.create_dom_element({
+				element_type	: 'option',
+				value			: models[i].name,
+				inner_html		: self.get_tool_label('engine_' + models[i].name) || models[i].name,
+				parent			: translator_engine_model_select
+			})
+		}
+
+		self.translator_engine_model_select = translator_engine_model_select
+
+		const engine_id = 'translator_engine_model_select'
+		translator_engine_model_select.addEventListener('change', function(){
+			data_manager.set_local_db_data({
+				id		: engine_id,
+				value	: translator_engine_model_select.value
+			}, 'status')
+		})
+
+		data_manager.get_local_db_data(
+			engine_id,
+			'status'
+		).then(function( engine_saved ){
+			if(engine_saved && engine_saved.value){
+				translator_engine_model_select.value = engine_saved.value
+				// the controls were synced against the default; realign them to the restored engine
+				if (typeof sync_engine_controls==='function') {
+					sync_engine_controls()
+				}
+			}
+		})
+
+		// model quality (quantisation).
+		// q4 is what makes a 4B model fit in a browser at all, and it is also a real
+		// contributor to the repetition loops seen on long, low-resource translations.
+		// q8 buys quality back at roughly double the download and VRAM — which will simply
+		// fail to allocate on smaller machines, so it stays opt-in.
+		const quality_container = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'quality_container',
+			parent 			: configuration_container
+		})
+
+		ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: self.get_tool_label('model_quality') || 'Model quality',
+			parent			: quality_container
+		})
+
+		const translator_dtype_select = ui.create_dom_element({
+			element_type	: 'select',
+			parent			: quality_container
+		})
+		const dtype_options = [
+			{ value : 'q4', label : self.get_tool_label('model_quality_q4') || 'Standard (faster, ~2.5 GB)' },
+			{ value : 'q8', label : self.get_tool_label('model_quality_q8') || 'High (better, ~4.5 GB, may not fit)' }
+		]
+		for (let i = 0; i < dtype_options.length; i++) {
+			ui.create_dom_element({
+				element_type	: 'option',
+				value			: dtype_options[i].value,
+				inner_html		: dtype_options[i].label,
+				parent			: translator_dtype_select
+			})
+		}
+
+		self.translator_dtype_select = translator_dtype_select
+
+		const dtype_id = 'translator_dtype_select'
+		translator_dtype_select.addEventListener('change', function(){
+			data_manager.set_local_db_data({
+				id		: dtype_id,
+				value	: translator_dtype_select.value
+			}, 'status')
+		})
+
+		data_manager.get_local_db_data(
+			dtype_id,
+			'status'
+		).then(function( dtype_saved ){
+			if(dtype_saved && dtype_saved.value){
+				translator_dtype_select.value = dtype_saved.value
+			}
+		})
+
+		// Models that only run on WebGPU. A multi-gigabyte model cannot fit in the WASM/CPU
+		// backend (4 GB address-space limit), so offering the "CPU" toggle for them just leads
+		// to a crash. DERIVED from the same config the dropdown was built from — there is no
+		// hand-maintained list to drift out of step with the worker any more.
+		const WEBGPU_ONLY = models.filter(m => m.requires_webgpu).map(m => m.name)
+
+		const sync_engine_controls = function() {
+
+			const engine = translator_engine_model_select.value
+
+			// q4/q8 is a TranslateGemma choice — the other engines ship a single quantisation,
+			// so a control that does nothing is worse than not showing it.
+			quality_container.classList.toggle('hide', engine!=='translategemma')
+
+			// the CPU fallback is meaningless for a WebGPU-only model — force GPU and disable
+			// the toggle, with a hint, rather than letting the user pick a setting that crashes
+			if (WEBGPU_ONLY.includes(engine)) {
+				translator_device_checkbox.checked  = false
+				translator_device_checkbox.disabled = true
+				translator_device_checkbox.title    = self.get_tool_label('requires_webgpu_hint')
+					|| 'This model runs on the GPU only'
+			} else {
+				translator_device_checkbox.disabled = false
+				translator_device_checkbox.title    = ''
+			}
+		}
+		translator_engine_model_select.addEventListener('change', sync_engine_controls)
+		sync_engine_controls()
 
 		// initial visibility: show config if the default engine is browser type
 		const initial_engine = translator_engine.find(el => el.name===self.target_translator)

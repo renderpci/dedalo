@@ -5,7 +5,7 @@
  * Browser Translation Worker (Web Worker)
  *
  * Runs TranslateGemma (4B-it) locally in the browser via HuggingFace Transformers
- * and ONNX runtime. Receives HTML blocks from the main thread, translates each
+ * and ONNX runtime. Receives Markdown blocks from the main thread, translates each
  * block sequentially, and streams results back as they complete.
  *
  * Communication protocol (postMessage):
@@ -13,34 +13,323 @@
  *     { options: { blocks[], sourceLangCode, targetLangCode, device } }  – start translation
  *     { cancel: true }                                                  – abort in-progress translation
  *   Worker → Main:
- *     { status: 'init',           data: { progress, status, device, file } }           – model loading
- *     { status: 'on_chunk',       data: { accumulated_text, remaining } }              – progress stream
+ *     { status: 'init',           data: { progress, status, device, file } }            – model loading
+ *     { status: 'on_chunk',       data: { accumulated_text, remaining } }               – progress stream
  *     { status: 'on_block_error', data: { message, block, total, accumulated_text, remaining } } – non-fatal block error
- *     { status: 'end',            data: { accumulated_text } }                        – done
- *     { status: 'error',          data: { message, name?, stack? } }                  – fatal error
- *     { status: 'cancelled',      data: { accumulated_text, remaining } }              – cancelled
+ *     { status: 'end',            data: { accumulated_text, remaining, repair_stats } } – done
+ *     { status: 'error',          data: { message, name?, stack? } }                    – fatal error
+ *     { status: 'cancelled',      data: { accumulated_text, remaining } }               – cancelled
  *
- * HTML preservation:
- *   The prompt explicitly instructs the model to keep all tags intact.
- *   The system instruction is embedded inside the single user message
- *   (not as a separate system role) because TranslateGemma requires the
- *   conversation to start with a user turn.
+ * A block is:
+ *   {
+ *     text         : '…[[[1]]]término[[[2]]]…',            // Markdown, tokens local to this block
+ *     placeholders : [{ token, kind:'open'|'close'|'atom', pair }],
+ *     restore_map  : { '[[[1]]]' : '[[[7]]]' }              // local token → document-wide token
+ *   }
+ *
+ * Tokens are renumbered per block by the main thread so the model only ever has to copy
+ * short ids. This worker translates and repairs entirely in that local numbering, then
+ * maps back through restore_map before returning, so the main thread always sees one
+ * consistent document-wide namespace.
+ *
+ * THE MODEL CANNOT BE INSTRUCTED. TranslateGemma is a translation model, not a chat model:
+ * its chat template builds the instruction from source_lang_code/target_lang_code, and the
+ * `text` field is the source text to translate. Anything you put there — a rule, an
+ * example, a fence — is translated and handed back as content. See translate_text for the
+ * full account of how that corrupted a live record.
+ *
+ * Placeholder preservation therefore rests entirely on mechanisms that do not require the
+ * model's cooperation:
+ *   - hoisting: markers at a segment's edges are stripped on the main thread and
+ *     re-attached here, so the model never sees them (on a transcription, that is most);
+ *   - copying: interior markers ride through as [[[n]]], which translation models generally
+ *     copy as unknown tokens — when they do, we get the exact position for free;
+ *   - repair_placeholders(): places whatever was dropped, and reports every one it placed
+ *     so the main thread can put the result in front of the user rather than saving it.
  */
 
 import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0';
+import {
+	placeholder_re,
+	normalize_placeholders,
+	repair_placeholders
+} from '../../js/placeholders.js';
+import { conform_emphasis, restore_wrapping_emphasis } from '../../js/markdown_utils.js';
 
 /**
- * ONNX-optimised 4B instruction-tuned translation model.
- * Uses q4 quantisation for memory-efficient local inference.
+ * NLLB / FLORES-200 language codes, keyed by the ISO 639-1 code dedalo_to_locale emits.
+ * Covers every language Dédalo ships labels for.
+ * @type {Object<string,string>}
  */
-const MODEL_ID			= 'onnx-community/translategemma-text-4b-it-ONNX';
+const NLLB_LANGS = {
+	en : 'eng_Latn',
+	es : 'spa_Latn',
+	fr : 'fra_Latn',
+	it : 'ita_Latn',
+	pt : 'por_Latn',
+	ca : 'cat_Latn',
+	de : 'deu_Latn',
+	ne : 'npi_Deva',
+	ar : 'arb_Arab',
+	el : 'ell_Grek',
+	eu : 'eus_Latn'
+};
 
 /**
- * Maximum tokens the model may generate per call.
- * Blocks are pre-chunked to ~2000 chars on the main thread,
- * so 1024 tokens is typically sufficient for a single block.
+ * English language names, keyed by the ISO 639-1 code dedalo_to_locale emits. A general
+ * instruction LLM is not a lang-code model — 'Spanish → Basque' is far clearer to it than
+ * 'es → eu'. Falls back to the raw code for anything unlisted.
+ * @type {Object<string,string>}
  */
-const MAX_NEW_TOKENS	= 1024;
+const LANG_NAMES = {
+	en : 'English', es : 'Spanish', fr : 'French', it : 'Italian', pt : 'Portuguese',
+	ca : 'Catalan', de : 'German', ne : 'Nepali', ar : 'Arabic', el : 'Greek', eu : 'Basque'
+};
+
+/**
+ * QWEN_SYSTEM_PROMPT
+ * The instruction turn for a general instruct model (Qwen3). Unlike TranslateGemma, Qwen has
+ * a real `system` role that it treats as instructions rather than as text to translate — so
+ * the rules live here, and the segment goes in the user turn untouched.
+ *
+ * The marker rule is stated IN WORDS, with no worked example. The [[[1]]] example that used to
+ * sit in the TranslateGemma prompt is exactly what got copied into the output and mapped back
+ * to a real Dédalo tag. Describing the rule preserves it without ever showing a live token.
+ *
+ * @param {string} src - source ISO code
+ * @param {string} tgt - target ISO code
+ * @returns {string}
+ */
+function qwen_system_prompt(src, tgt) {
+
+	const source = LANG_NAMES[src] || src;
+	const target = LANG_NAMES[tgt] || tgt;
+
+	return [
+		`You are a professional translator. Translate the user's text from ${source} to ${target}.`,
+		`Output only the translation — no preamble, no notes, no explanation, no quotation marks.`,
+		`Preserve the meaning, tone and register; this is transcribed speech and archival text, not to be summarised.`,
+		`Some text contains placeholders written as triple square brackets around a number, for example three open brackets, a number, three close brackets. Keep every placeholder exactly as written and in place: never translate, renumber, add or remove one.`,
+		`Keep Markdown emphasis (*, **, __) exactly as in the source; do not add any that is not there.`
+	].join('\n');
+}
+
+
+/**
+ * MADLAD target-language codes, keyed by the ISO 639-1 code dedalo_to_locale emits.
+ * MADLAD encodes only the TARGET (source is auto-detected), as a <2xx> prefix on the input.
+ * Every value here was verified present in the model's tokenizer vocabulary.
+ * @type {Object<string,string>}
+ */
+const MADLAD_TARGETS = {
+	en : '<2en>', es : '<2es>', fr : '<2fr>', it : '<2it>', pt : '<2pt>', ca : '<2ca>',
+	de : '<2de>', ne : '<2ne>', ar : '<2ar>', el : '<2el>', eu : '<2eu>'
+};
+
+
+/**
+ * SHAPE_HANDLERS
+ * How each KIND of model is fed its input and read back — the one part of a model that is
+ * code, not config, and therefore cannot live in register.json.
+ *
+ * A model definition (from register.json, arriving in the worker message) names a `shape`;
+ * this table maps that shape to the function that builds the model's input. Everything else
+ * about a model — its id, task, dtype, coverage, licence note — is data on the definition.
+ *
+ * Adding a model that fits an existing shape is a register.json edit alone. Only a genuinely
+ * new input convention needs a new handler here.
+ *
+ *   chat          — a general instruct model (Qwen). Rules go in a SYSTEM turn it obeys; the
+ *                   segment goes in the USER turn, unwrapped.
+ *   chat_gemma    — TranslateGemma. Same 'text-generation' task, but its content object is
+ *                   {source_lang_code, target_lang_code, text} and the text IS the source —
+ *                   never a prompt (a prompt gets translated into the record).
+ *   seq2seq_lang  — NLLB: raw text with src_lang/tgt_lang (FLORES codes).
+ *   seq2seq_prefix— MADLAD: a <2xx> target token prepended to the text; source auto-detected.
+ *   seq2seq_pair  — Marian/opus-mt: the model IS the language pair, no lang arguments.
+ *
+ * Signature: (translator, text, src, tgt, generation) => Promise<string>
+ */
+const SHAPE_HANDLERS = {
+
+	chat : async function(translator, text, src, tgt, generation) {
+		const messages = [
+			{ role : 'system', content : qwen_system_prompt(src, tgt) },
+			{ role : 'user',   content : text }
+		];
+		const output = await translator(messages, generation);
+		const generated_text = output[0].generated_text;
+		return generated_text[generated_text.length - 1].content;
+	},
+
+	chat_gemma : async function(translator, text, src, tgt, generation) {
+		// the text field is the SOURCE TEXT, not a prompt — see translate_text's note
+		const messages = [{
+			role    : 'user',
+			content : [{ type : 'text', source_lang_code : src, target_lang_code : tgt, text : text }]
+		}];
+		const output = await translator(messages, generation);
+		const generated_text = output[0].generated_text;
+		return generated_text[generated_text.length - 1].content;
+	},
+
+	seq2seq_lang : async function(translator, text, src, tgt, generation) {
+		const output = await translator(text, { ...generation, src_lang : NLLB_LANGS[src], tgt_lang : NLLB_LANGS[tgt] });
+		return output[0].translation_text;
+	},
+
+	seq2seq_prefix : async function(translator, text, src, tgt, generation) {
+		const output = await translator(`${MADLAD_TARGETS[tgt]} ${text}`, generation);
+		return output[0].generated_text;
+	},
+
+	seq2seq_pair : async function(translator, text, src, tgt, generation) {
+		// the model IS the pair — no lang arguments
+		const output = await translator(text, generation);
+		return output[0].translation_text;
+	}
+};
+
+
+/**
+ * SUPPORTS_LANGS
+ * Does a model cover this pair, judged from its `langs` config value alone?
+ *
+ * Replaces the per-engine `supports` closures. Coverage is now data:
+ *   'all'   — every language Dédalo emits (the multilingual models).
+ *   'pairs' — Marian: any distinct pair of known languages is PLAUSIBLE; whether the
+ *             specific model exists is settled by the load (a 404 → 'unsupported_pair').
+ *   Array   — an explicit ISO allow-list, for a future model that needs one.
+ *
+ * @param {'all'|'pairs'|string[]} langs
+ * @param {string} src
+ * @param {string} tgt
+ * @returns {boolean}
+ */
+function supports_langs(langs, src, tgt) {
+
+	if (langs==='all') {
+		return KNOWN_LANGS.has(src) && KNOWN_LANGS.has(tgt);
+	}
+	if (langs==='pairs') {
+		return src!==tgt && KNOWN_LANGS.has(src) && KNOWN_LANGS.has(tgt);
+	}
+	if (Array.isArray(langs)) {
+		return langs.includes(src) && langs.includes(tgt);
+	}
+	return false;
+}
+
+
+/**
+ * RESOLVE_MODEL_ID
+ * Fill {src}/{tgt} placeholders in a model id (Marian is one model per pair).
+ * @param {string} template
+ * @param {string} src
+ * @param {string} tgt
+ * @returns {string}
+ */
+function resolve_model_id(template, src, tgt) {
+	return String(template).replace('{src}', src).replace('{tgt}', tgt);
+}
+
+
+/**
+ * DEFAULT_MODELS
+ * The catalogue shipped in register.json (dd999 → browser_transformer.models). Kept here ONLY
+ * as a fallback for a site whose stored tool-config predates the `models` array, so the tool
+ * still works. register.json is the source of truth; this must mirror it.
+ * @type {Array<Object>}
+ */
+const DEFAULT_MODELS = [
+	{ name : 'qwen',           model_id : 'onnx-community/Qwen3-4B-Instruct-2507-ONNX',  task : 'text-generation',      shape : 'chat',           dtype : 'q4f16', requires_webgpu : true,  note : 'apache',         langs : 'all' },
+	{ name : 'translategemma', model_id : 'onnx-community/translategemma-text-4b-it-ONNX', task : 'text-generation',     shape : 'chat_gemma',     dtype : 'q4',    requires_webgpu : true,                           langs : 'all' },
+	{ name : 'nllb',           model_id : 'Xenova/nllb-200-distilled-600M',              task : 'translation',          shape : 'seq2seq_lang',   dtype : 'q8',    requires_webgpu : false, note : 'non_commercial', langs : 'all' },
+	{ name : 'madlad',         model_id : 'Kutalia/madlad400-3b-mt-onnx',                task : 'text2text-generation', shape : 'seq2seq_prefix', dtype : 'q8',    requires_webgpu : true,  note : 'large_download', langs : 'all' },
+	{ name : 'opus',           model_id : 'Xenova/opus-mt-{src}-{tgt}',                  task : 'translation',          shape : 'seq2seq_pair',   dtype : 'q8',    requires_webgpu : false,                           langs : 'pairs' }
+];
+
+
+/**
+ * ISO 639-1 codes Dédalo can emit (the keys of NLLB_LANGS). Used by opus to reject
+ * obviously-bogus pairs cheaply without claiming to know which specific Marian models exist.
+ * @type {Set<string>}
+ */
+const KNOWN_LANGS = new Set(Object.keys(NLLB_LANGS));
+
+
+/**
+ * IS_MODEL_NOT_FOUND
+ * Did a pipeline() load fail because the model simply does not exist (vs. a network drop,
+ * an out-of-memory, a corrupt file)? A missing model is expected — opus is one model per
+ * pair — and must be reported as an unsupported pair, not as a fatal worker crash.
+ *
+ * transformers.js surfaces a Hub 404 as an error whose message names the file it could not
+ * fetch; there is no typed error class to key on, so we match the message.
+ *
+ * @param {Error} error
+ * @returns {boolean}
+ */
+function is_model_not_found(error) {
+
+	const message = String(error && error.message || error).toLowerCase();
+
+	return message.includes('could not locate')
+		|| message.includes('not found')
+		|| message.includes('404')
+		|| message.includes('unauthorized')	// private/removed repos answer 401
+		|| message.includes('failed to fetch');
+}
+
+
+/**
+ * IS_ALLOCATION_FAILURE
+ * Did a pipeline() load fail because the model does not fit in memory? This is expected for a
+ * model that is simply too big for the machine — MADLAD-400 3B, for instance, has a single
+ * ~1.87 GB decoder buffer that exceeds most GPUs' per-buffer limit — and must be reported as
+ * "too large", not as a fatal worker crash.
+ *
+ * ORT-web phrases this as failing to create a session or to allocate a buffer; the numbers
+ * vary, so match the wording.
+ *
+ * @param {Error} error
+ * @returns {boolean}
+ */
+function is_allocation_failure(error) {
+
+	const message = String(error && error.message || error).toLowerCase();
+
+	return message.includes('failed to allocate')
+		|| message.includes("can't create a session")
+		|| message.includes('cannot create a session')
+		|| message.includes('out of memory')
+		|| message.includes('buffer of size')
+		|| message.includes('oom');
+}
+
+/**
+ * Hard ceiling on generated tokens. A backstop for pathological long sentences — the real
+ * per-segment limit is computed from the source length (see max_new_tokens_for). Note this
+ * is a CEILING, not a target: the model stops at its end-of-text token well before this for
+ * a normal segment, so a generous ceiling costs nothing on the common path.
+ */
+const MAX_NEW_TOKENS	= 2048;
+
+/**
+ * Output token budget = source CHARACTER count × this, plus a margin.
+ *
+ * Deliberately based on characters, NOT on the source token count. A Spanish sentence of 70
+ * tokens becomes 300-500 tokens in Nepali (Devanagari) or Arabic, because those scripts
+ * tokenise far less efficiently. Budgeting from source *tokens* — which are compact for the
+ * Latin source — truncated every Devanagari translation mid-sentence: the model hit the cap
+ * before finishing. Source character count tracks output length across scripts; source token
+ * count does not.
+ *
+ * 4 tokens per source character is generous enough for the worst expanding target while
+ * still bounding a repetition loop's blast radius to the (small) segment size.
+ */
+const OUTPUT_TOKENS_PER_SOURCE_CHAR	= 4.0;
+const NEW_TOKENS_MARGIN				= 64;
 
 /**
  * Per-block timeout in milliseconds.
@@ -49,11 +338,55 @@ const MAX_NEW_TOKENS	= 1024;
 const BLOCK_TIMEOUT_MS	= 120_000;
 
 /**
+ * Repetition penalty for the FIRST attempt.
+ *
+ * A penalty divides the logits of tokens already emitted, which is exactly what a
+ * [[[12]]] marker does NOT want — its bracket tokens have to repeat once per marker.
+ * That is why this was previously turned off entirely (1.0), and turning it off is what
+ * let greedy decoding fall into the repetition loop that started this.
+ *
+ * It is back, mildly, because the tension is now largely gone: boundary markers are
+ * hoisted out of the model input on the main thread, so most blocks reach the model
+ * carrying no markers at all and pay nothing for the penalty.
+ */
+const REPETITION_PENALTY_FIRST = 1.1;
+
+/**
+ * Penalty used when the first attempt degenerated anyway.
+ */
+const REPETITION_PENALTY = 1.2;
+
+/**
+ * Sampling settings for the degeneration retry.
+ *
+ * A stiffer penalty alone often does not break a loop — greedy decoding is *itself* what
+ * falls into the attractor, and a deterministic decoder walks back into it. Introducing a
+ * little randomness is what actually escapes. Low temperature keeps the translation
+ * faithful; this path is a fallback, so giving up bit-for-bit reproducibility here (and
+ * only here) is the right trade.
+ */
+const RETRY_TEMPERATURE	= 0.3;
+const RETRY_TOP_P		= 0.9;
+
+/**
+ * Verbose per-block tracing. Off by default; flip while debugging placeholder loss.
+ */
+const DEBUG = false;
+
+/**
  * Cached pipeline instance — reused across multiple translation requests
  * without re-downloading or re-compiling the model.
  * @type {Function|null}
  */
 let cached_translator = null;
+
+/**
+ * The (device, dtype) the cached pipeline was built with. When the user changes either,
+ * the cache must be thrown away — silently reusing a q4 pipeline after the user asked
+ * for q8 would look like the setting does nothing.
+ * @type {string|null}
+ */
+let cached_signature = null;
 
 /**
  * Flag set by the main thread to cancel an in-progress translation.
@@ -65,367 +398,88 @@ let cancelled = false;
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 /**
- * Extract all [[n]] placeholders from a string.
+ * Strip fencing and any conversational preamble from a model response.
+ *
+ * The first-attempt prompt no longer uses <<< / >>> fences (the model was imitating them,
+ * wrapping its answer in 《…》), but the corrective retry prompt still does, and a model
+ * given no fence at all will sometimes invent one. So this handles all of it: take what is
+ * inside the fence when there is one, and otherwise clean up whatever wrapper the model
+ * decided to add.
+ *
+ * @param {string} text - Raw model response.
+ * @returns {string}
+ */
+function strip_fences(text) {
+
+	if (!text) return '';
+
+	const fenced = text.match(/<<<\s*([\s\S]*?)\s*>>>/);
+	if (fenced) {
+		return fenced[1].trim();
+	}
+
+	// the model's own invented wrappers: 《…》 (imitating the fences), or CJK/guillemet
+	// quotes around the whole answer
+	const quoted = text.trim().match(/^[《「『]\s*([\s\S]*?)\s*[》」』]$/);
+	if (quoted) {
+		return quoted[1].trim();
+	}
+
+	return text
+		.trim()
+		.replace(/^(?:here (?:is|'s)[^\n:]{0,40}:|translation:|traducci[oó]n:)\s*/i, '')
+		.replace(/^<<<\s*/, '')
+		.replace(/\s*>>>$/, '')
+		.replace(/^[《「『]\s*/, '')
+		.replace(/\s*[》」』]$/, '')
+		.trim();
+}
+
+
+/**
+ * Map a block's local tokens back to the document-wide tokens the main thread uses.
+ *
+ * A token with no entry in the map is one the model invented; it is left as-is so the
+ * main thread can spot it and strip it, rather than being silently rewritten to a real
+ * marker it was never meant to be.
+ *
  * @param {string} text
- * @returns {string[]} Array of placeholder strings found
+ * @param {Object} restore_map - local token → global token
+ * @returns {string}
  */
-function extract_placeholders(text) {
-	const re = /\[\[\d+\]\]/g;
-	const matches = [];
-	let m;
-	while ((m = re.exec(text)) !== null) {
-		matches.push(m[0]);
-	}
-	return matches;
+function to_global_tokens(text, restore_map) {
+
+	if (!text || !restore_map) return text;
+
+	return text.replace(placeholder_re(), (match) => restore_map[match] || match);
 }
+
 
 /**
- * Detect missing placeholders in the translated output.
+ * MAX_NEW_TOKENS_FOR
+ * How many tokens this segment is allowed to generate.
  *
- * Compares placeholders in the input text against those in the output
- * and returns the list of missing ones, without performing any restoration.
+ * Derived from the source CHARACTER count, not its token count — see
+ * OUTPUT_TOKENS_PER_SOURCE_CHAR for why. Budgeting from source tokens truncated every
+ * Devanagari/Arabic translation mid-sentence, because the compact Latin source under-counts
+ * the tokens the expanded target needs.
  *
- * @param {string} input_text    - Original text sent to the model (with placeholders)
- * @param {string} output_text   - Model's translated text (may have lost placeholders)
- * @returns {{ missing: string[], has_missing: boolean }}
- *   - missing: array of placeholder strings absent from the output
- *   - has_missing: true if any placeholder is missing
+ * This is still what bounds a repetition loop: segments are small (≤ SEGMENT_MAX_CHARS), so
+ * the budget is small, so a loop cannot run away — and the output is caught by
+ * detect_repetition regardless. It no longer needs the tokenizer at all, which removes a
+ * fragile per-engine dependency.
+ *
+ * @param {Function} translator - unused; kept for signature stability with the callers.
+ * @param {string}   text       - The segment being translated.
+ * @returns {number} Token budget, clamped to MAX_NEW_TOKENS.
  */
-function detect_missing_placeholders(input_text, output_text) {
-	const input_ph  = extract_placeholders(input_text);
-	const output_ph = extract_placeholders(output_text);
+function max_new_tokens_for(translator, text) {
 
-	if (input_ph.length === 0) return { missing: [], has_missing: false };
+	const budget = Math.ceil(text.length * OUTPUT_TOKENS_PER_SOURCE_CHAR) + NEW_TOKENS_MARGIN;
 
-	const output_set = new Set(output_ph);
-	const missing    = input_ph.filter(p => !output_set.has(p));
-
-	return { missing, has_missing: missing.length > 0 };
+	return Math.min(budget, MAX_NEW_TOKENS);
 }
 
-/**
- * Restore missing placeholders in the translated output using
- * heuristic offset-based positioning.
- *
- * This is the fallback when the LLM retry also fails to preserve
- * all placeholders. It applies two strategies:
- *
- *   Strategy 1 — Anchor + relative-gap positioning (preferred):
- *     For each missing placeholder, find the nearest present neighbor
- *     in the input (preceding or following). Measure the text gap
- *     between them in the input, then position the missing one at the
- *     same relative distance from the anchor in the output:
- *       - Gap = 0 (adjacent, e.g. [[34]][[25]]) → insert right next to anchor
- *       - Gap > 0 (separated by text) → scale gap by output/input ratio,
- *         snap to word boundary, and insert there
- *
- *   Strategy 2 — Absolute offset positioning (fallback):
- *     When no anchor exists, use the missing placeholder's character
- *     offset from the text start, proportionally scaled.
- *
- *   Placeholders are inserted in reverse offset order so earlier
- *   insertions don't shift the positions of later ones.
- *
- * @param {string}   input_text  - Original text sent to the model (with placeholders)
- * @param {string}   output_text - Model's translated text (may have lost placeholders)
- * @param {string[]} missing    - Array of missing placeholder strings to restore
- * @returns {string}             - Output text with placeholders restored (or unchanged)
- */
-function restore_missing_placeholders(input_text, output_text, missing) {
-
-	if (!missing || missing.length === 0) return output_text;
-
-	console.warn(
-		`[browser_transformer] Placeholders missing from translation: ${missing.join(', ')}. ` +
-		`Applying heuristic restoration.`
-	);
-
-	const input_ph = extract_placeholders(input_text);
-	const output_ph = extract_placeholders(output_text);
-	const output_set = new Set(output_ph);
-
-	// Build ordered list of all input placeholders with their offsets
-	// so we can find neighbors and calculate relative gaps
-	const input_ordered = [];
-	for (const ph of input_ph) {
-		const idx = input_text.indexOf(ph);
-		if (idx !== -1) {
-			input_ordered.push({ placeholder: ph, input_offset: idx });
-		}
-	}
-	input_ordered.sort((a, b) => a.input_offset - b.input_offset);
-
-	// Build list of missing placeholders with their input offsets
-	const to_insert = [];
-	for (const ph of missing) {
-		const idx = input_text.indexOf(ph);
-		if (idx === -1) continue;
-		to_insert.push({ placeholder: ph, input_offset: idx });
-	}
-
-	// Sort by offset descending so we insert from right to left
-	// and don't shift earlier positions
-	to_insert.sort((a, b) => b.input_offset - a.input_offset);
-
-	const input_len = input_text.length;
-	let result = output_text;
-
-	for (const { placeholder, input_offset } of to_insert) {
-
-		// ── Strategy 1: Anchor + relative-gap positioning ──────────────
-		const insert_pos = find_anchor_gap_position(
-			placeholder, input_offset, input_ordered,
-			input_text, input_len, output_set, result
-		);
-
-		if (insert_pos !== -1) {
-			result = result.slice(0, insert_pos) + placeholder + result.slice(insert_pos);
-			continue;
-		}
-
-		// ── Strategy 2: Absolute offset positioning (fallback) ────────
-		const output_len = result.length;
-		const length_diff_ratio = Math.abs(output_len - input_len) / input_len;
-
-		const target_offset = length_diff_ratio < 0.3
-			? input_offset
-			: Math.round((input_offset / input_len) * output_len);
-
-		let snap = find_nearest_boundary(result, target_offset, 10);
-		snap = avoid_placeholder_overlap(result, snap);
-
-		result = result.slice(0, snap) + placeholder + result.slice(snap);
-	}
-
-	return result;
-}
-
-/**
- * Find the insertion position for a missing placeholder using its
- * nearest present neighbor as an anchor, plus the relative text gap
- * between them in the input.
- *
- * Instead of always placing the missing placeholder adjacent to its
- * anchor, this function measures how much text separates them in the
- * input and applies that gap proportionally in the output:
- *
- *   - Gap = 0  → placeholders were adjacent → insert right after/before anchor
- *   - Gap > 0  → there was text between them → insert at proportional distance
- *
- * This handles both clustered placeholders (e.g. [[34]][[25]]) and
- * spaced-out ones (e.g. [[25]] next text[[35]]) accurately.
- *
- * @param {string} placeholder     - The missing placeholder (e.g. '[[35]]')
- * @param {number} input_offset    - Character offset of the missing placeholder in the input
- * @param {Array}  input_ordered   - All input placeholders sorted by offset: [{ placeholder, input_offset }]
- * @param {string} input_text      - Full input text
- * @param {number} input_len       - Length of input text
- * @param {Set}    output_set      - Set of placeholders present in the output
- * @param {string} result          - Current output text
- * @returns {number}               - Insertion offset, or -1 if no anchor found
- *
- * @example
- *   // Adjacent placeholders (gap = 0)
- *   // Input:  "text[[34]][[25]]more"
- *   // Output: "text[[34]]more"  ([[25]] missing)
- *   // Anchor: [[34]], gap from [[34]] end to [[25]] start = 0
- *   // → insert right after [[34]] → "text[[34]][[25]]more"
- *
- * @example
- *   // Separated placeholders (gap > 0)
- *   // Input:  "my text[[34]][[25]] next text[[35]] other"
- *   // Output: "mi texto[[25]] siguiente texto otros"  ([[34]] and [[35]] missing)
- *   // For [[34]]: anchor [[25]], gap from [[25]] start back to [[34]] start = 6
- *   //   → insert 6 chars before [[25]] in output → "mi texto[[34]][[25]]..."
- *   // For [[35]]: anchor [[25]], gap from [[25]] end to [[35]] start = 12
- *   //   → insert 12 scaled chars after [[25]] in output → "...[[25]] siguiente[[35]] texto..."
- */
-function find_anchor_gap_position(placeholder, input_offset, input_ordered,
-                                   input_text, input_len, output_set, result) {
-	const my_idx = input_ordered.findIndex(p => p.placeholder === placeholder);
-	if (my_idx === -1) return -1;
-
-	// Search backwards for the nearest preceding anchor present in output
-	let prev_anchor = null;
-	let prev_anchor_offset = -1;
-	for (let i = my_idx - 1; i >= 0; i--) {
-		if (output_set.has(input_ordered[i].placeholder)) {
-			prev_anchor = input_ordered[i].placeholder;
-			prev_anchor_offset = input_ordered[i].input_offset;
-			break;
-		}
-	}
-
-	// Search forwards for the nearest following anchor present in output
-	let next_anchor = null;
-	let next_anchor_offset = -1;
-	for (let i = my_idx + 1; i < input_ordered.length; i++) {
-		if (output_set.has(input_ordered[i].placeholder)) {
-			next_anchor = input_ordered[i].placeholder;
-			next_anchor_offset = input_ordered[i].input_offset;
-			break;
-		}
-	}
-
-	const output_len = result.length;
-
-	// Try preceding anchor: measure gap from its END to the missing placeholder's START
-	if (prev_anchor) {
-		const prev_end_in_input = prev_anchor_offset + prev_anchor.length;
-		const gap_in_input = input_offset - prev_end_in_input; // chars of text between them
-
-		const prev_pos_in_output = result.indexOf(prev_anchor);
-		if (prev_pos_in_output !== -1) {
-			const anchor_output_end = prev_pos_in_output + prev_anchor.length;
-
-			if (gap_in_input <= 1) {
-				// Adjacent or overlapping → insert right after the anchor
-				return anchor_output_end;
-			}
-
-			// Scale the gap proportionally (input → output text ratio)
-			const scale = output_len / input_len;
-			const gap_in_output = Math.round(gap_in_input * scale);
-			let target = anchor_output_end + gap_in_output;
-
-			// Clamp and snap to word boundary
-			target = Math.min(target, output_len);
-			target = find_nearest_boundary(result, target, 10);
-			target = avoid_placeholder_overlap(result, target);
-
-			// If we have a following anchor too, make sure we don't overshoot it
-			if (next_anchor) {
-				const next_pos_in_output = result.indexOf(next_anchor);
-				if (next_pos_in_output !== -1 && target > next_pos_in_output) {
-					target = next_pos_in_output;
-				}
-			}
-
-			return target;
-		}
-	}
-
-	// Try following anchor: measure gap from missing placeholder's END to its START
-	if (next_anchor) {
-		const my_end_in_input = input_offset + placeholder.length;
-		const gap_in_input = next_anchor_offset - my_end_in_input;
-
-		const next_pos_in_output = result.indexOf(next_anchor);
-		if (next_pos_in_output !== -1) {
-
-			if (gap_in_input <= 1) {
-				// Adjacent → insert right before the anchor
-				return next_pos_in_output;
-			}
-
-			// Scale the gap proportionally
-			const scale = output_len / input_len;
-			const gap_in_output = Math.round(gap_in_input * scale);
-			let target = next_pos_in_output - gap_in_output;
-
-			// Clamp and snap
-			target = Math.max(target, 0);
-			target = find_nearest_boundary(result, target, 10);
-			target = avoid_placeholder_overlap(result, target);
-
-			return target;
-		}
-	}
-
-	// No anchors found
-	return -1;
-}
-
-/**
- * Avoid inserting a placeholder inside an existing [[…]] placeholder.
- *
- * If the given offset falls between a `[[` and its matching `]]` of an
- * existing placeholder, move the insertion point to just after the `]]`.
- *
- * @param {string} text   - The text to check
- * @param {number} offset - Proposed insertion offset
- * @returns {number}      - Adjusted offset (or original if no overlap)
- *
- * @example
- *   // offset 12 falls inside [[786]]
- *   // text: "some text [[786]] more"
- *   //              0123456789012345678
- *   // offset 12 is at '7' inside [[786]]
- *   // → returns 16 (just after ']]')
- */
-function avoid_placeholder_overlap(text, offset) {
-	const len = text.length;
-	if (offset < 0 || offset > len) return offset;
-
-	// Scan backwards from offset to find the nearest unopened '[['
-	let open_pos = -1;
-	let depth = 0;
-	for (let i = offset - 1; i >= 1; i--) {
-		if (text[i - 1] === ']' && text[i] === ']') depth++;
-		if (text[i - 1] === '[' && text[i] === '[') {
-			if (depth > 0) {
-				depth--;
-				i--; // skip the second '[' so we don't re-match it
-			} else {
-				open_pos = i - 1;
-				break;
-			}
-		}
-	}
-
-	// If we found an unmatched '[[' before offset, check if it starts a [[…]] pattern
-	if (open_pos !== -1) {
-		const rest = text.slice(open_pos);
-		const match = rest.match(/^\[\[\d+\]\]/);
-		if (match) {
-			// offset is inside this placeholder — move to just after its closing ']]'
-			return open_pos + match[0].length;
-		}
-	}
-
-	return offset;
-}
-
-/**
- * Find the nearest word-boundary character (space, '<', or '>') to a
- * target offset, searching outward within a maximum radius.
- *
- * This avoids inserting a placeholder in the middle of a word or
- * inside an HTML tag name.
- *
- * @param {string} text          - The text to search within
- * @param {number} target        - Desired character offset
- * @param {number} max_radius    - Maximum distance to search (default 10)
- * @returns {number}             - Snapped offset (clamped to text length)
- */
-function find_nearest_boundary(text, target, max_radius = 10) {
-	const len = text.length;
-	const clamped = Math.min(Math.max(target, 0), len);
-
-	// If already at a boundary, use it
-	if (clamped === 0 || clamped === len) return clamped;
-	const ch = text[clamped];
-	if (ch === ' ' || ch === '<' || ch === '>') return clamped;
-
-	// Search outward: ±1, ±2, … up to max_radius
-	for (let d = 1; d <= max_radius; d++) {
-		// Check left first (prefer inserting before a word rather than after)
-		const left = clamped - d;
-		if (left >= 0) {
-			const lc = text[left];
-			if (lc === ' ' || lc === '<' || lc === '>') return left + 1;
-		}
-		// Then check right
-		const right = clamped + d;
-		if (right < len) {
-			const rc = text[right];
-			if (rc === ' ' || rc === '<' || rc === '>') return right;
-		}
-	}
-
-	// No boundary found within radius — use raw offset
-	return clamped;
-}
 
 /**
  * Wrap a promise with a timeout.
@@ -439,6 +493,204 @@ function with_timeout(promise, ms, label) {
 		setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms)
 	);
 	return Promise.race([promise, timer]);
+}
+
+
+/**
+ * Longest repeating cycle to look for, in words. A greedy-decode loop is almost always
+ * a short phrase; beyond ~6 words it is far more likely to be legitimate repetition.
+ */
+const MAX_CYCLE_WORDS = 6;
+
+/**
+ * How many times a multi-word cycle must repeat back-to-back before we call it
+ * degeneration. Three is unambiguous while still letting a phrase appear twice.
+ */
+const MIN_CYCLE_REPEATS = 3;
+
+/**
+ * A single word needs a higher bar — 'no, no, no' is ordinary speech, especially in the
+ * transcriptions this tool translates.
+ */
+const MIN_UNIGRAM_REPEATS = 5;
+
+/**
+ * A translation is roughly as long as its source. Anything past this multiple is not a
+ * translation any more, whatever the n-gram scan says.
+ */
+const MAX_LENGTH_RATIO = 2.5;
+
+
+/**
+ * DETECT_REPETITION
+ * Detect that greedy decoding fell into a loop.
+ *
+ * The previous version only checked whether a word equalled the word BEFORE it — an
+ * adjacent, unigram repeat. Real degeneration is usually an n-gram *cycle*:
+ *
+ *   सामान्य भन्दा सामान्य भन्दा सामान्य भन्दा …
+ *
+ * No two adjacent words there are ever equal, so the old check returned false and ~900
+ * tokens of garbage were written to the record. This scans for a repeating cycle of any
+ * length up to MAX_CYCLE_WORDS, which subsumes the unigram case (n=1).
+ *
+ * The scan runs over the WHOLE text, not just its tail. Anchoring at the tail looks
+ * tempting — that is where a loop ends up — but it is brittle: the reported output ended
+ * '…सामान्य।' with the sentence-final danda glued on, so the last word never repeated
+ * and the cycle was invisible from the end. A loop anywhere is a loop.
+ *
+ * @param {string} text          - Translated text to check.
+ * @param {string} [source_text] - The text it was translated FROM. When given, a wildly
+ *   longer output is treated as degenerate regardless of the n-gram scan.
+ * @returns {boolean} true if the output is degenerate.
+ */
+function detect_repetition(text, source_text) {
+
+	if (!text || text.length < 50) return false;
+
+	// a translation that ballooned is degenerate whatever shape it has
+	if (source_text && source_text.length > 0 && text.length > source_text.length * MAX_LENGTH_RATIO) {
+		return true;
+	}
+
+	const words = text.trim().split(/\s+/);
+
+	for (let size = 1; size <= MAX_CYCLE_WORDS; size++) {
+
+		const min_repeats = (size===1) ? MIN_UNIGRAM_REPEATS : MIN_CYCLE_REPEATS;
+		if (words.length < size * min_repeats) break;
+
+		for (let start = 0; start + (size * min_repeats) <= words.length; start++) {
+
+			// how many times does the cycle at `start` repeat back-to-back?
+			let repeats = 1;
+			let next    = start + size;
+
+			while (next + size <= words.length) {
+				let same = true;
+				for (let i = 0; i < size; i++) {
+					if (words[next + i] !== words[start + i]) {
+						same = false;
+						break;
+					}
+				}
+				if (!same) break;
+				repeats++;
+				next += size;
+			}
+
+			if (repeats >= min_repeats) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+
+// ── Block processing ───────────────────────────────────────────────────────
+
+/**
+ * Translate one block and get every marker it carried back.
+ *
+ *   1. Translate the segment. Nothing but the segment goes to the model — see translate_text.
+ *   2. If the output degenerated into a repetition loop, retry with a stiffer penalty and
+ *      then with SAMPLING: greedy decoding is itself what falls into the loop, and a
+ *      deterministic decoder just walks straight back into it.
+ *   3. Whatever markers the model dropped are placed by repair_placeholders() and reported
+ *      as uncertain, and the hoisted edge markers are re-attached verbatim.
+ *
+ * There is no step that ASKS the model to fix anything. It cannot be asked — it translates
+ * whatever it is given, instructions included.
+ *
+ * Throws when the block degenerates and cannot be recovered. The caller keeps the SOURCE
+ * text for that block and records it in failed_blocks, which fires the review gate — a
+ * looping block must never be silently written to the record.
+ *
+ * @param {Function} translator
+ * @param {Object}   block            - { text, placeholders, restore_map, prefix, suffix }
+ * @param {string}   source_lang_code
+ * @param {string}   target_lang_code
+ * @param {string}   label            - Human label used in timeout messages, e.g. 'Block 2/5'
+ * @returns {Promise<{text:string, repaired:string[], unrepairable:string[]}>} in LOCAL tokens.
+ */
+async function process_block(handler, translator, block, source_lang_code, target_lang_code, label) {
+
+	// Everything the model hands back goes through here: unwrap whatever it wrapped its
+	// answer in, repair mangled markers, delete any emphasis it invented, and restore
+	// emphasis it dropped from a wholly-emphasised segment (an all-bold question).
+	const clean_output = function(raw) {
+		const text = conform_emphasis(block.text, normalize_placeholders(strip_fences(raw)));
+		return restore_wrapping_emphasis(block.text, text);
+	};
+
+	// ── 1. translate ────────────────────────────────────────────────────
+	const raw = await with_timeout(
+		translate_text(handler, translator, block.text, source_lang_code, target_lang_code, {
+			repetition_penalty : REPETITION_PENALTY_FIRST
+		}),
+		BLOCK_TIMEOUT_MS,
+		label
+	);
+
+	let text = clean_output(raw);
+
+	// ── 2. repetition degeneration ──────────────────────────────────────
+	// block.text is passed as the source so a ballooned output is caught even when it has
+	// no clean n-gram cycle.
+	if (detect_repetition(text, block.text)) {
+
+		// escalate: a stiffer penalty first (cheap, still deterministic), then sampling
+		const escalations = [
+			{ repetition_penalty : REPETITION_PENALTY },
+			{ repetition_penalty : REPETITION_PENALTY, do_sample : true, temperature : RETRY_TEMPERATURE, top_p : RETRY_TOP_P }
+		];
+
+		for (const overrides of escalations) {
+
+			if (cancelled) break;
+
+			const retry_raw = await with_timeout(
+				translate_text(handler, translator, block.text, source_lang_code, target_lang_code, overrides),
+				BLOCK_TIMEOUT_MS,
+				`${label} (repetition retry${overrides.do_sample ? ', sampling' : `, penalty ${overrides.repetition_penalty}`})`
+			);
+
+			text = clean_output(retry_raw);
+
+			if (!detect_repetition(text, block.text)) {
+				break;
+			}
+		}
+
+		if (detect_repetition(text, block.text)) {
+			throw new Error(`${label}: the model looped and could not be recovered (repetition degeneration)`);
+		}
+	}
+
+	// There is deliberately NO "you dropped some markers, put them back" retry here.
+	//
+	// TranslateGemma translates whatever is in the text field — it cannot be instructed. A
+	// corrective prompt would simply come back TRANSLATED, which is exactly how our own
+	// instructions ended up written into a record as Nepali prose. Two wasted generations
+	// per block to produce something the guard then threw away.
+	//
+	// Markers survive by three mechanisms that actually work: hoisting (edge markers never
+	// reach the model), the model copying interior markers as unknown tokens, and
+	// repair_placeholders below for whatever it drops — all of it reported to the save gate.
+
+	// ── 3. place whatever the model would not ───────────────────────────
+	const repaired = repair_placeholders(block.text, text, block.placeholders);
+
+	// ── 4. put back the markers that never went to the model ────────────
+	// Markers sitting at the very start or end of a block were hoisted out on the main
+	// thread precisely so the model never had to copy them. Re-attach them verbatim: at
+	// this granularity most blocks are entirely made of these, so most blocks come back
+	// with their markers guaranteed intact rather than merely probably intact.
+	repaired.text = (block.prefix || '') + repaired.text + (block.suffix || '');
+
+	return repaired;
 }
 
 
@@ -461,10 +713,73 @@ self.onmessage = async (e) => {
 		});
 		return;
 	}
+	if (typeof options.blocks[0]?.text !== 'string') {
+		self.postMessage({
+			status : 'error',
+			data   : { message: 'options.blocks must be objects: { text, placeholders, restore_map }' }
+		});
+		return;
+	}
 
 	const source_lang_code = options.sourceLangCode || 'en';
 	const target_lang_code = options.targetLangCode || 'es';
 	const device           = options.device || 'webgpu';
+
+	// The model DEFINITION now comes from register.json via the main thread. Fall back to the
+	// shipped catalogue by name when only a name arrives (older callers / stored config).
+	const model = options.model
+		|| DEFAULT_MODELS.find(item => item.name===options.engine)
+		|| DEFAULT_MODELS[0];
+	const engine_name = model.name;
+
+	const handler = SHAPE_HANDLERS[model.shape];
+	if (!handler) {
+		self.postMessage({
+			status : 'error',
+			data   : { message: `Model '${engine_name}' has an unknown shape '${model.shape}'. Known: ${Object.keys(SHAPE_HANDLERS).join(', ')}` }
+		});
+		return;
+	}
+
+	// Refuse a pair the model KNOWS it cannot do, before touching the network. For the
+	// multilingual models this is authoritative; for opus ('pairs') it is only a sanity check —
+	// Marian is one model per pair and there are dozens on the Hub, far too many to enumerate.
+	// So opus says "plausible" for any real pair and lets the load be the real test: a missing
+	// model 404s on its tiny config and comes back as 'unsupported_pair'.
+	if (!supports_langs(model.langs, source_lang_code, target_lang_code)) {
+		self.postMessage({
+			status : 'error',
+			data   : {
+				message : `The '${engine_name}' model does not support ${source_lang_code} → ${target_lang_code}.`,
+				code    : 'unsupported_pair'
+			}
+		});
+		return;
+	}
+
+	// A multi-gigabyte model cannot run on the WASM (CPU) backend — wasm32 caps the address
+	// space at 4 GB, and a 4B model plus its KV cache overruns it ('memory access out of
+	// bounds'). Refuse before loading, with a message the user can act on, rather than letting
+	// it crash mid-generation. Small MT models (NLLB, opus) have no such flag and run on CPU.
+	if (model.requires_webgpu) {
+		const webgpu_available = (typeof navigator!=='undefined') && !!navigator.gpu;
+		if (device!=='webgpu' || !webgpu_available) {
+			self.postMessage({
+				status : 'error',
+				data   : {
+					message : `The '${engine_name}' model needs WebGPU (GPU). `
+						+ (webgpu_available
+							? `Turn off the "more compatible / CPU" option to use it.`
+							: `This browser has no WebGPU available, so this model cannot run here — try a smaller model (Opus-MT or NLLB).`),
+					code    : 'needs_webgpu'
+				}
+			});
+			return;
+		}
+	}
+
+	const dtype    = options.dtype || model.dtype;
+	const model_id = resolve_model_id(model.model_id, source_lang_code, target_lang_code);
 
 	// Reset cancel flag for this run
 	cancelled = false;
@@ -472,27 +787,94 @@ self.onmessage = async (e) => {
 	try {
 
 		// ── 1. Load / reuse the model pipeline ───────────────────────────
-		// The pipeline is cached after the first call; subsequent calls reuse it.
-		// Quantised to q4 to fit within browser memory limits (~2 GB for GPU).
-		if (!cached_translator) {
-			cached_translator = await pipeline('text-generation', MODEL_ID, {
-				device : device,
-				dtype  : 'q4',
-				progress_callback: ({ progress, status, file }) => {
-					// Relay download/compile progress to the UI thread
-					self.postMessage({
-						status : 'init',
-						data   : { progress, status, device, file }
-					});
-				}
-			});
+		// Cached after the first call, but only reused when the engine, the model, the
+		// device AND the dtype all still match — otherwise switching engine in the UI would
+		// silently keep translating with the previous model and look like it did nothing.
+		const signature = `${engine_name}:${model_id}:${device}:${dtype}`;
+		if (cached_translator && cached_signature!==signature) {
+			cached_translator = null;
+			cached_signature  = null;
 		}
 
-		const blocks        = options.blocks;
-		const total_blocks  = blocks.length;
-		const result        = {
+		if (!cached_translator) {
+			try {
+				cached_translator = await pipeline(model.task, model_id, {
+					device : device,
+					dtype  : dtype,
+					progress_callback: ({ progress, status, file }) => {
+						// Relay download/compile progress to the UI thread
+						self.postMessage({
+							status : 'init',
+							data   : { progress, status, device, file, engine : engine_name }
+						});
+					}
+				});
+				cached_signature = signature;
+			} catch (load_error) {
+
+				// A missing model is not a fatal worker error — it means this engine has no
+				// model for this pair (the common case for opus, which is per-pair). Report it
+				// as the same clean "unsupported pair" the pre-check uses, and do NOT dispose
+				// the worker: the next attempt with a different engine or pair must still work.
+				if (is_model_not_found(load_error)) {
+					self.postMessage({
+						status : 'error',
+						data   : {
+							message : `No '${engine_name}' model is available for ${source_lang_code} → ${target_lang_code}.`,
+							code    : 'unsupported_pair'
+						}
+					});
+					return;
+				}
+
+				// A model that will not fit in memory is a limitation of the machine, not a
+				// crash. Report it clearly and keep the worker alive so another (smaller) model
+				// still works. MADLAD-400 3B hits this on most GPUs — its decoder is one buffer
+				// larger than the GPU allows.
+				if (is_allocation_failure(load_error)) {
+					self.postMessage({
+						status : 'error',
+						data   : {
+							message : `The '${engine_name}' model is too large to load on this device. Try a smaller model (Qwen3, NLLB or Opus-MT).`,
+							code    : 'model_too_large'
+						}
+					});
+					return;
+				}
+
+				throw load_error;
+			}
+		}
+
+		const blocks       = options.blocks;
+		const total_blocks = blocks.length;
+
+		// translated blocks, in order. Rejoined with each block's OWN separator — the
+		// literal text that stood before it in the source ('\n\n' between paragraphs, '\n'
+		// for a <br>, ' ' between sentences).
+		//
+		// This used to be a hardcoded '\n\n', which was right only while blocks were whole
+		// paragraphs. Once segmentation started cutting inside paragraphs, every seam became
+		// a paragraph break and a record of one <p> with four <br> came back as ~25 <p>.
+		const parts = [];
+
+		// every marker WE placed rather than the model, in document-wide tokens
+		const repair_stats = {
+			repaired     : [],
+			unrepairable : []
+		};
+
+		// blocks that failed and were emitted in the source language. These carry all their
+		// marks intact, so the mark-count check downstream would happily pass them — the
+		// main thread needs to be told explicitly, or it would report a partially
+		// untranslated result as a complete success.
+		const failed_blocks = [];
+
+		const result = {
 			accumulated_text : '',
-			remaining        : total_blocks
+			remaining        : total_blocks,
+			repair_stats     : repair_stats,
+			failed_blocks    : failed_blocks
 		};
 
 		// ── 2. Translate each block sequentially ─────────────────────────
@@ -510,120 +892,78 @@ self.onmessage = async (e) => {
 				return;
 			}
 
+			const block = blocks[i];
+			const label = `Block ${i + 1}/${total_blocks}`;
+
+			let block_error = null;
+
 			try {
 
-				const translated = await with_timeout(
-					translate_text(
-						cached_translator,
-						blocks[i],
-						source_lang_code,
-						target_lang_code
-					),
-					BLOCK_TIMEOUT_MS,
-					`Block ${i + 1}/${total_blocks}`
+				const outcome = await process_block(
+					handler,
+					cached_translator,
+					block,
+					source_lang_code,
+					target_lang_code,
+					label
 				);
 
-				// Post-validation: detect missing placeholders and retry up to 3 times
-				let   final_text = translated;
-				const detection  = detect_missing_placeholders(blocks[i], translated);
+				parts.push(to_global_tokens(outcome.text, block.restore_map));
 
-				if (detection.has_missing) {
-
-					const MAX_RETRIES = 3;
-
-					// Accumulate every failed attempt so each retry sees the full
-					// mistake history and avoids repeating the same errors
-					const failed_attempts = [{ text: translated, missing: detection.missing }];
-
-					console.warn(
-						`[browser_transformer] Block ${i + 1}: placeholders missing (${detection.missing.join(', ')}). ` +
-						`Retrying up to ${MAX_RETRIES} times with corrective prompt.`
-					);
-
-					for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-
-						if (cancelled) break;
-
-						try {
-							const retry_translated = await with_timeout(
-								translate_text(
-									cached_translator,
-									blocks[i],
-									source_lang_code,
-									target_lang_code,
-									{ failed_attempts }
-								),
-								BLOCK_TIMEOUT_MS,
-								`Block ${i + 1}/${total_blocks} (retry ${attempt}/${MAX_RETRIES})`
-							);
-
-							const retry_detection = detect_missing_placeholders(blocks[i], retry_translated);
-
-							if (!retry_detection.has_missing) {
-								// Retry succeeded — all placeholders present
-								console.log(`[browser_transformer] Block ${i + 1}: retry ${attempt} succeeded, all placeholders preserved.`);
-								final_text = retry_translated;
-								break;
-							}
-
-							// Still missing — record this attempt and try again
-							failed_attempts.push({ text: retry_translated, missing: retry_detection.missing });
-
-							if (attempt < MAX_RETRIES) {
-								console.warn(
-									`[browser_transformer] Block ${i + 1}: retry ${attempt} still missing placeholders (${retry_detection.missing.join(', ')}). ` +
-									`Retrying again.`
-								);
-							} else {
-								// All retries exhausted — fall back to heuristic restoration
-								console.warn(
-									`[browser_transformer] Block ${i + 1}: all ${MAX_RETRIES} retries exhausted, still missing placeholders (${retry_detection.missing.join(', ')}). ` +
-									`Falling back to heuristic restoration.`
-								);
-								final_text = restore_missing_placeholders(blocks[i], retry_translated, retry_detection.missing);
-							}
-
-						} catch (retry_err) {
-							// Retry itself failed (timeout/error) — fall back to heuristic on last attempt
-							const last = failed_attempts[failed_attempts.length - 1];
-							console.warn(
-								`[browser_transformer] Block ${i + 1}: retry ${attempt} failed (${retry_err?.message || retry_err}). ` +
-								`Falling back to heuristic restoration.`
-							);
-							final_text = restore_missing_placeholders(blocks[i], last.text, last.missing);
-							break;
-						}
-					}
+				for (const token of outcome.repaired) {
+					repair_stats.repaired.push(block.restore_map?.[token] || token);
+				}
+				for (const token of outcome.unrepairable) {
+					repair_stats.unrepairable.push(block.restore_map?.[token] || token);
 				}
 
-				result.accumulated_text += final_text;
-				result.remaining = total_blocks - (i + 1);
+				if (DEBUG && (outcome.repaired.length || outcome.unrepairable.length)) {
+					console.warn(`[browser_transformer] ${label}: repaired ${outcome.repaired.length}, unrepairable ${outcome.unrepairable.length}`);
+				}
 
-				// ── 3. Stream partial result to the main thread ────────
-				// The UI layer uses `remaining` to show progress like "3 of 8 blocks done"
+			} catch (err) {
+
+				// Non-fatal per-block error. Emit the block's SOURCE text untranslated
+				// rather than dropping it: losing a paragraph of the record outright is a
+				// far worse outcome than leaving one paragraph in the source language.
+				parts.push(to_global_tokens(block.text, block.restore_map));
+				block_error = err;
+
+				failed_blocks.push({
+					block   : i + 1,
+					total   : total_blocks,
+					message : err?.message || String(err)
+				});
+
+				console.warn(`[browser_transformer] ${label} failed, keeping source text: ${err?.message || err}`);
+			}
+
+			// parts[k] is the translation of blocks[k], so each one is prefixed with the
+			// separator that preceded that block in the source. blocks[0].sep is '' by
+			// construction, so the result never starts with stray whitespace.
+			result.accumulated_text = parts
+				.map((part, k) => (blocks[k].sep || '') + part)
+				.join('');
+			result.remaining        = total_blocks - (i + 1);
+
+			// ── 3. Stream partial result to the main thread ────────
+			// The UI layer uses `remaining` to show progress like "3 of 8 blocks done"
+			if (block_error) {
+				self.postMessage({
+					status : 'on_block_error',
+					data   : {
+						message          : block_error?.message || String(block_error),
+						block            : i + 1,
+						total            : total_blocks,
+						accumulated_text : result.accumulated_text,
+						remaining        : result.remaining
+					}
+				});
+			} else {
 				self.postMessage({
 					status : 'on_chunk',
 					data   : result
 				});
-
-			} catch (err) {
-
-				// Non-fatal per-block error — report and continue with remaining blocks
-				console.warn(`[browser_transformer] Block ${i + 1} failed: ${err?.message || err}`);
-
-				self.postMessage({
-					status : 'on_block_error',
-					data   : {
-						message          : err?.message || String(err),
-						block            : i + 1,
-						total            : total_blocks,
-						accumulated_text : result.accumulated_text,
-						remaining        : total_blocks - (i + 1)
-					}
-				});
-
-				// Skip this block — accumulated_text stays unchanged
-				result.remaining = total_blocks - (i + 1);
 			}
 		}
 
@@ -648,153 +988,60 @@ self.onmessage = async (e) => {
 /**
  * Translate a single text block using the loaded model pipeline.
  *
- * @param {Function} translator       - The loaded HuggingFace text-generation pipeline
- * @param {string}   text             - HTML block to translate (may contain <p>, <em>, etc.)
- * @param {string}   sourceLangCode   - Source language locale code (e.g. 'en')
- * @param {string}   targetLangCode   - Target language locale code (e.g. 'es')
- * @param {Object|null} retryContext  - When non-null, sends a corrective retry prompt
- *   built from the full history of failed attempts:
- *   { failed_attempts: Array<{ text: string, missing: string[] }> }
- * @returns {string}                  - Model response with translated text
+ * ─────────────────────────────────────────────────────────────────────────────
+ * DO NOT PUT INSTRUCTIONS IN `text`. TranslateGemma WILL TRANSLATE THEM.
+ * ─────────────────────────────────────────────────────────────────────────────
  *
- * Implementation notes:
+ * This is not a chat model that happens to translate; it is a translation model. Its chat
+ * template builds the instruction itself from source_lang_code/target_lang_code, and the
+ * `text` field is the SOURCE TEXT TO TRANSLATE — the model card says so in as many words:
+ * "The text field is not meant for free-form prompts with instructions."
  *
- *   System instruction:
- *     TranslateGemma's chat template does not accept a separate 'system' role —
- *     the conversation must start with 'user'. Therefore the preservation
- *     instruction is prepended to the user text content with a blank-line
- *     separator so the model treats it as a task description.
+ * We learned this the hard way. `text` used to carry a whole prompt — a task description,
+ * a list of the markers to preserve, a worked example, <<< >>> fences — and the model
+ * faithfully translated all of it into the target language and wrote it into the record. A
+ * user's oral-history transcript opened with two paragraphs of our own instructions
+ * rendered in Nepali, and the `[[[1]]]`/`[[[2]]]` from the worked example were mapped back
+ * through restore_map into REAL Dédalo index tags that had never been in the source.
  *
- *   HTML preservation:
- *     The prompt explicitly tells the model to keep every tag intact.
- *     See also: tool_lang.js → splitHtmlByParagraph which wraps bare text
- *     nodes in <p> blocks for consistency.
+ * It had appeared to work only because strip_fences was extracting the <<<…>>> span from
+ * the output and silently discarding the translated instructions wrapped around it.
  *
- *   Deterministic output:
- *     `do_sample: false` disables temperature sampling, making the model
- *     behave greedily — the same input always produces the same output.
- *     This avoids random tag mutations across runs.
+ * The same fault produced the 《…》 quoting (it translated the fences) and the phantom
+ * <strong>/<u> in a source that contained only <i> (it translated the line that said
+ * "Keep the Markdown formatting (**bold**, *italic*, __underline__)" — markers included).
+ *
+ * So: the segment, and nothing but the segment. The model cannot be told anything, which is
+ * why marker survival rests on hoisting, on the model copying unknown tokens, and on
+ * repair_placeholders — never on asking nicely.
+ *
+ * @param {Function} handler        - The SHAPE_HANDLERS function that builds this model's input
+ * @param {Function} translator     - The loaded HuggingFace pipeline
+ * @param {string}   text           - The segment to translate, carrying [[[n]]] markers
+ * @param {string}   sourceLangCode - Source language code (e.g. 'es')
+ * @param {string}   targetLangCode - Target language code (e.g. 'ne')
+ * @param {Object}   overrides      - { repetition_penalty, do_sample, temperature, top_p }
+ * @returns {Promise<string>} The model's response text
  */
-async function translate_text(translator, text, sourceLangCode, targetLangCode, retryContext=null) {
+async function translate_text(handler, translator, text, sourceLangCode, targetLangCode, overrides={}) {
 
-	let prompt;
+	// Generation settings are shared across shapes — a seq2seq MT model takes
+	// max_new_tokens / do_sample / repetition_penalty just as a causal LM does. What differs
+	// (the chat message vs. src_lang/tgt_lang vs. a <2xx> prefix) is the SHAPE_HANDLERS function.
+	const generation = {
+		max_new_tokens     : max_new_tokens_for(translator, text),
+		do_sample          : overrides.do_sample===true,
+		repetition_penalty : overrides.repetition_penalty || REPETITION_PENALTY_FIRST
+	};
 
-	if (retryContext) {
-		// ── Retry prompt: include the full history of failed attempts ──
-		const { failed_attempts } = retryContext;
-		const latest_missing = failed_attempts[failed_attempts.length - 1].missing;
-
-		const history_lines = [];
-		failed_attempts.forEach((att, idx) => {
-			history_lines.push(`Attempt ${idx + 1} (incorrect) — missing: ${att.missing.join(', ')}`);
-			history_lines.push(att.text);
-			history_lines.push(``);
-		});
-
-		prompt = [
-			`Translate from ${sourceLangCode} to ${targetLangCode}.`,
-			`CORRECTION REQUEST: Your previous translation(s) were incorrect.`,
-			`The following placeholders are STILL MISSING from your output: ${latest_missing.join(', ')}`,
-			`You MUST include every single one of them EXACTLY as shown.`,
-			``,
-			`Your previous (incorrect) translation attempts:`,
-			...history_lines,
-			`RULES:`,
-			`1. Keep all HTML tags unchanged.`,
-			`2. Keep ALL placeholders like [[18]], [[1]], [[5]], [[424]], etc. EXACTLY as-is — never modify, translate, or remove them.`,
-			`3. The missing placeholders ${latest_missing.join(', ')} MUST appear in your output.`,
-			`4. Do not use markdown.`,
-			`5. Verify every placeholder [[…]] from the input appears IDENTICALLY in your output.`,
-			``,
-			`Text to translate:`,
-			text
-		].join('\n');
-	} else {
-		// ── First-attempt prompt ──────────────────────────────────────────
-		prompt = [
-			`Translate from ${sourceLangCode} to ${targetLangCode}.`,
-			`RULES:`,
-			`1. Keep all HTML tags unchanged.`,
-			`2. Keep all placeholders like [[18]], [[1]], [[5]], [[424]], etc. EXACTLY as-is — never modify, translate, or remove them.`,
-			`3. Do not use markdown.`,
-			`4. Verify every placeholder [[…]] from the input appears IDENTICALLY in your output.`,
-			``,
-			`Examples:`,
-			`Input:  "<p>Hola[[5]] ¿como estás[[2]][[3]]?</p>"`,
-			`Correct output: "<p>Hello[[5]] how are you[[2]][[3]]?</p>"`,
-			`Wrong output: "<p>Hello[[9]] how are you[[2]]?</p>"`,
-			``,
-			`Input:  "<p>[[1]][[2]]Gracias por tu[[3]] \"tiempo[[18]]\"[[4]].[[68]][[108]]</p>[[10]]<p>Saludos</p>"`,
-			`Correct output: "<p>[[1]][[2]]Thank for your[[3]] \"time[[18]]\"[[4]].[[68]][[108]]</p>[[10]]<p>Regards</p>"`,
-			`Wrong output: "<p>[[1]]Thank for your[[2]][[3]] \"time[[18 ]]\".[ [68]]</p>[[10]]<p>Regards/p>"`,
-			``,
-			`Input: "<p> </p><p>Hello[[1]], welcome!</p><p> </p>"`,
-			`Correct output: "<p> </p><p>Hola[[1]], ¡bienvenido!</p><p> </p>"`,
-			`Wrong output: "<p>Hola, ¡bienvenido!</p>"`,
-			``,
-			`Input: "<p>[[1]]Hello, [[2]]welcome! new [[8]]eeerew[[35]]</p><p>[[62]]More[[29]] [[84]]text[[438]] [[3]]in[[45]] [[99]]English[[24]]</p>"`,
-			`Correct output: "<p>Hola[[1]], [[2]]¡bienvenido! nuevo [[8]]eeerew[[35]]</p><p>[[62]]Mas[[29]] [[84]]texto[[438]] [[3]]en[[45]] [[99]]inglés[[24]]</p>"`,
-			`Wrong output: "<p>Hola, [[2]]¡bienvenido! nuevo texto</p><p>[[62]]Mas [[29]]texto[[438]] en [[99]]inglés</p>"`,
-			``,
-			`Input: "<p>[[5]]Her directives</p>"`,
-			`Correct output: "<p>[[5]]Οι οδηγίες του</p>"`,
-			`Wrong output: "<p><p>Οι [[5]]οδηγίες του</p>"`,
-			``,
-			`Input: "Si fue desde los años setenta hasta cuándo...? Hasta que pasó[[893]] en [[894]]la Universidad.[[895]] </p><p> </p>"`,
-			`Correct output: "Was it from the seventies until when...? Until it moved[[893]] to [[894]]the University [[895]] </p><p> </p>"`,
-			`Wrong output: "Was it from the seventies until when...? Until it moved to [[893]]the University [[894]]?</p>"`,
-			``,
-			`Input: "<p> </p><p> </p>"`,
-			`Correct output: "<p> </p><p> </p>"`,
-			`Wrong output: "<p></p>"`,
-			``,
-			`Input: "[[36]] Hola [[37]] [[105]]¿como estás? [[52]]"`,
-			`Correct output: "[[36]] नमस्ते [[37]] [[105]]तिमीलाई कस्तो छ? [[52]]"`,
-			`Wrong output: "[[36] नमस्ते [37]] [[105तिमीलाई कस्तो छ? 52]]"`,
-			``,
-			`Text to translate:`,
-			text
-		].join('\n');
+	// temperature/top_p are only meaningful when sampling; passing them with
+	// do_sample:false makes the config look like it does something it does not
+	if (generation.do_sample) {
+		generation.temperature = overrides.temperature ?? RETRY_TEMPERATURE;
+		generation.top_p       = overrides.top_p ?? RETRY_TOP_P;
 	}
 
-	// const prompt = [
-	// 	`Translate the following text into **[${targetLangCode}]**.`,
-	// 	'**CRITICAL CONSTRAINTS:**',
-	// 	'1. The text contains placeholders in the format `[[1]]`, `[[88]]`, etc. These are non-translatable constants.',
-	// 	'2. **DO NOT** translate, modify, or remove the placeholders.',
-	// 	'3. **DO NOT** change the numbers inside the placeholders.',
-	// 	'5. **Output ONLY** the translated text without any explanations or introductory remarks.',
-	// 	'6. Keep all HTML tags unchanged.',
-
-	// 	`**Text to translate:**`,
-	// 	`${text}`
-	// ].join('\n');
-
-	const messages = [
-		{
-			role    : 'user',
-			content : [
-				{
-					type             : 'text',
-					source_lang_code : sourceLangCode,
-					target_lang_code : targetLangCode,
-					text             : prompt
-				}
-			]
-		}
-	];
-
-	const output = await translator(messages, {
-		max_new_tokens : MAX_NEW_TOKENS,
-		do_sample      : false
-	});
-
-	// The model returns the full conversation so far;
-	// grab the assistant's last (newly generated) message.
-	const generated_text = output[0].generated_text;
-	const last_message   = generated_text[generated_text.length - 1];
-
-	return last_message.content;
+	return handler(translator, text, sourceLangCode, targetLangCode, generation);
 }
 
 

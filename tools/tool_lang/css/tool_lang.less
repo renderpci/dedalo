@@ -245,8 +245,11 @@
 					font-weight: 200;
 					border-radius: 8px;
 					padding: 0.5rem;
-					height: 1.6em;
-					overflow: hidden;
+					// min-height (not a fixed height) with visible overflow: a one-line status
+					// still looks the same, but the review panel — detail list + Accept/Discard
+					// buttons — is no longer clipped to 1.6em and hidden.
+					min-height: 1.6em;
+					overflow: visible;
 					margin-bottom: 0.5rem;
 					line-height: 1rem;
 
@@ -260,6 +263,51 @@
 					}
 					.error {
 						color: @color_danger;
+					}
+					// single-line notices (block error, "needs WebGPU", "saved with warnings").
+					// div-scoped so it never recolours the .warning ACCEPT button.
+					div.warning {
+						color: #8a6d00;
+					}
+
+					// the review panel shown when a translation cannot be verified intact
+					.translation_review {
+						text-align: left;
+						font-size: 0.95rem;
+						font-weight: 400;
+						line-height: 1.4;
+						padding: 0.5rem 0.75rem;
+						margin-bottom: 0.5rem;
+						border: 1px solid #e0c15a;
+						border-radius: 6px;
+						background-color: #fff8e1;
+						color: #6b5300;
+
+						>.translation_review_header {
+							font-weight: 600;
+							margin-bottom: 0.25rem;
+						}
+						>.translation_review_detail {
+							margin: 0;
+							padding-left: 1.1rem;
+
+							>li {
+								margin: 0.1rem 0;
+							}
+						}
+					}
+
+					// the Accept / Discard buttons
+					.review_buttons {
+						display: flex;
+						gap: 0.5rem;
+						justify-content: center;
+						margin-top: 0.25rem;
+
+						>button {
+							min-height: 2rem;
+							margin: 0;
+						}
 					}
 				}
 
