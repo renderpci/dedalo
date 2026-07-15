@@ -43,6 +43,7 @@ import {
 	readMediaAccessMode,
 	readNumber,
 	readOptionalList,
+	readOptionalString,
 	readServerList,
 	readString,
 	readToolRoots,
@@ -139,6 +140,17 @@ export interface ToolsConfig {
 	 * write paths still call invalidateAllToolCaches() for immediate freshness.
 	 */
 	readonly registryCacheTtlMs: number;
+}
+
+/**
+ * The engine's link to the standalone Site Builder daemon (publication/site_builder).
+ * `url`/`token` are undefined when the feature is not configured — the tool_sitebuilder
+ * tool reads that to hide itself and refuse.
+ */
+export interface SiteBuilderConfig {
+	readonly url: string | undefined;
+	readonly token: string | undefined;
+	readonly timeoutMs: number;
 }
 
 /** One configured code master (PHP CODE_SERVERS entry). */
@@ -505,6 +517,7 @@ export interface DedaloConfig {
 	readonly lang: LangConfig;
 	readonly features: FeaturesConfig;
 	readonly tools: ToolsConfig;
+	readonly siteBuilder: SiteBuilderConfig;
 	readonly update: UpdateConfig;
 	readonly ontologyIo: OntologyIoConfig;
 	readonly media: MediaConfig;
@@ -713,6 +726,11 @@ export const config: DedaloConfig = Object.freeze({
 		additionalRoots: Object.freeze(readToolRoots('DEDALO_ADDITIONAL_TOOLS')),
 		enableRegistryImport: readString('TOOLS_ENABLE_REGISTRY_IMPORT') === 'true',
 		registryCacheTtlMs: Number(readString('TOOLS_REGISTRY_CACHE_TTL_MS')),
+	}),
+	siteBuilder: Object.freeze({
+		url: readOptionalString('DEDALO_SITE_BUILDER_URL'),
+		token: readOptionalString('DEDALO_SITE_BUILDER_TOKEN'),
+		timeoutMs: readNumber('DEDALO_SITE_BUILDER_TIMEOUT_MS'),
 	}),
 	update: Object.freeze({
 		codeServers: readServerList('CODE_SERVERS'),

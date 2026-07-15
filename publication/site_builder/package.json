@@ -1,0 +1,19 @@
+{
+  "name": "dedalo-site-builder",
+  "version": "0.1.0",
+  "description": "Dédalo Site Builder - agent-built public websites over the Publication API v2",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.0",
+    "typescript": "^5.6.0"
+  }
+}

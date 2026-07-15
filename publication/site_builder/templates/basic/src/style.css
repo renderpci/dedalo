@@ -1,0 +1,53 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+body {
+  margin: 0;
+  padding: 0 1.5rem 3rem;
+  max-width: 1100px;
+  margin-inline: auto;
+}
+
+header {
+  padding: 2rem 0 1rem;
+}
+
+h1 {
+  margin: 0 0 0.25rem;
+}
+
+nav {
+  display: flex;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-block: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  margin-bottom: 1.5rem;
+}
+
+nav a {
+  text-decoration: none;
+  font-weight: 600;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  vertical-align: top;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background: Canvas;
+}

@@ -527,6 +527,10 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_ADDITIONAL_TOOLS',
 	'TOOLS_ENABLE_REGISTRY_IMPORT',
 	'TOOLS_REGISTRY_CACHE_TTL_MS',
+	// site builder (the standalone publication/site_builder daemon)
+	'DEDALO_SITE_BUILDER_URL',
+	'DEDALO_SITE_BUILDER_TOKEN',
+	'DEDALO_SITE_BUILDER_TIMEOUT_MS',
 	// install
 	'DEDALO_INSTALL_ALLOWED_IPS',
 	'DEDALO_INSTALL_NO_RESTART',

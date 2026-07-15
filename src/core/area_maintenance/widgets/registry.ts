@@ -49,6 +49,7 @@ import { widget as publication_api } from './publication_api.ts';
 import { widget as register_tools } from './register_tools.ts';
 import { widget as runtime_info } from './runtime_info.ts';
 import { widget as sequences_status } from './sequences_status.ts';
+import { widget as site_builder_status } from './site_builder_status.ts';
 import { widget as sqo_test_environment } from './sqo_test_environment.ts';
 import { type LabelRule, type WidgetModule, type WidgetResponse, failed } from './support.ts';
 import { widget as system_info } from './system_info.ts';
@@ -118,6 +119,7 @@ const CORE_WIDGET_MODULES: readonly WidgetModule[] = [
 	dataframe_control,
 	runtime_info,
 	system_info,
+	site_builder_status,
 ];
 
 /** The total surface: every module in the code, gated or not. Ownership classifies THIS. */
