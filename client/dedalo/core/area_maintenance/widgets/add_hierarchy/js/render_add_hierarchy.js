@@ -26,10 +26,10 @@
 *     this single render method serves both render modes.
 *   - Widget data is fetched by `area_maintenance.prototype.get_value` (shared),
 *     which calls the `dd_area_maintenance_api` / `get_widget_value` action and
-*     returns the PHP `add_hierarchy::get_value()` payload:
+*     returns the `add_hierarchy::get_value()` payload:
 *       {
 *         hierarchies              : Array   – available hierarchy file descriptors
-*         active_hierarchies       : Array   – currently installed hierarchies (each has a `tld` property)
+*         installed_hierarchies    : Array   – hierarchies whose term data is imported (each has a `tld` property)
 *         hierarchy_files_dir_path : string  – server-side path shown for reference
 *         hierarchy_typologies     : Array   – grouping categories for the hierarchy list
 *       }
@@ -92,7 +92,7 @@ render_add_hierarchy.prototype.list = async function(options) {
 * Responsibilities:
 *   1. Reads the widget's current value (populated by `add_hierarchy.get_value`
 *      via the shared `area_maintenance.prototype.get_value` method).
-*   2. Flattens the `active_hierarchies` array into a plain lowercase-TLD array
+*   2. Flattens the `installed_hierarchies` array into a plain lowercase-TLD array
 *      so that `render_hierarchies_import_block` can mark already-installed
 *      hierarchies without performing a deep object comparison.
 *   3. Defines a post-import callback (`fn_callback`) that appends a "Reload"
@@ -106,7 +106,7 @@ render_add_hierarchy.prototype.list = async function(options) {
 * Data shape expected in `self.value`:
 *   {
 *     hierarchies              : Array<{label:string, tld:string, typology:string, type:string}>
-*     active_hierarchies       : Array<{tld:string, ...}>
+*     installed_hierarchies    : Array<{tld:string, ...}>  // <tld>1 term data present
 *     hierarchy_files_dir_path : string
 *     hierarchy_typologies     : Array<{label:string, typology:string}>
 *   }
@@ -142,19 +142,19 @@ const get_content_data_edit = async function(self) {
 		const hierarchies				= value.hierarchies
 		const hierarchy_files_dir_path	= value.hierarchy_files_dir_path
 		const hierarchy_typologies		= value.hierarchy_typologies
-		const active_hierarchies		= []
-		const active_hierarchies_length	= value.active_hierarchies?.length
-		// Flatten active_hierarchies objects to lowercase TLD strings.
-		// render_hierarchies_import_block uses Array.includes() for active-state detection,
+		const installed_hierarchies			= []
+		const installed_hierarchies_length	= value.installed_hierarchies?.length
+		// Flatten installed_hierarchies objects to lowercase TLD strings.
+		// render_hierarchies_import_block uses Array.includes() for installed-state detection,
 		// so a plain string array is required (not the full server objects).
-		for (let i = 0; i < active_hierarchies_length; i++) {
-			const item = value.active_hierarchies[i]
+		for (let i = 0; i < installed_hierarchies_length; i++) {
+			const item = value.installed_hierarchies[i]
 			if (item.tld) {
-				active_hierarchies.push( item.tld.toLowerCase() )
+				installed_hierarchies.push( item.tld.toLowerCase() )
 			}else{
 				// Guard: items without a tld property are skipped to avoid pushing
 				// undefined into the array, which would break the includes() check.
-				console.error('Ignored empty tld item from active_hierarchies:', item);
+				console.error('Ignored empty tld item from installed_hierarchies:', item);
 			}
 		}
 
@@ -184,12 +184,12 @@ const get_content_data_edit = async function(self) {
 		}
 
 	// hierarchies_import_node. It built from render_installer because is the same rendered.
-		// Passes the flattened active_hierarchies array and the post-import callback.
+		// Passes the flattened installed_hierarchies array and the post-import callback.
 		// default_checked is empty ([]) so no hierarchies are pre-selected on open —
 		// the operator must explicitly choose which ones to import.
 		const hierarchies_import_options = {
 			hierarchies					: hierarchies,
-			active_hierarchies			: active_hierarchies,
+			installed_hierarchies		: installed_hierarchies,
 			hierarchy_files_dir_path	: hierarchy_files_dir_path,
 			hierarchy_typologies 		: hierarchy_typologies,
 			default_checked				: [],

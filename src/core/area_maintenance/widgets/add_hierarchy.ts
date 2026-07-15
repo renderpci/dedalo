@@ -11,8 +11,8 @@
  * (dd_utils_api:install) is install-window-gated and 404s once sealed, so a
  * configured server MUST reach the importer through this widget action.
  *
- * get_value shape (PHP add_hierarchy::get_value parity): {hierarchies,
- * active_hierarchies (each {tld}), hierarchy_files_dir_path, hierarchy_typologies}.
+ * get_value shape: {hierarchies, installed_hierarchies (each {tld}),
+ * hierarchy_files_dir_path, hierarchy_typologies}.
  */
 
 import { sql } from '../../db/postgres.ts';
@@ -22,23 +22,27 @@ import type { Principal } from '../../security/permissions.ts';
 import type { WidgetModule, WidgetResponse } from './support.ts';
 
 /**
- * The hierarchies already present in this install, as unique {tld} objects — the
- * client lowercases each .tld to mark already-installed rows in the picker
- * (render_add_hierarchy.js). ONE read of the tld literal (hierarchy6, string col)
- * across all hierarchy1 records. Fail-soft: a read error must not break the panel.
+ * The hierarchies actually INSTALLED, as unique {tld} objects — a tld is installed
+ * when its `<tld>1` term section has rows in matrix_hierarchy. This is the SAME signal
+ * the importer keys on (hierarchy_import.ts hierarchyRowsPresent), so the client marker
+ * agrees with skip/reset behaviour.
+ *
+ * (Earlier this read the hierarchy1 REGISTRY instead — but a seed declares a registry
+ * record for ~every country whether its terms were imported or not, so it marked all
+ * ~269 declared hierarchies "installed" when only ~14 actually were.) Fail-soft: a read
+ * error must not break the panel.
  */
-async function activeHierarchies(): Promise<{ tld: string }[]> {
+async function installedHierarchies(): Promise<{ tld: string }[]> {
 	try {
 		const rows = (await sql.unsafe(
-			`SELECT DISTINCT lower(trim(string->'hierarchy6'->0->>'value')) AS tld
-			 FROM matrix_hierarchy_main
-			 WHERE section_tipo = 'hierarchy1'
-			   AND nullif(trim(string->'hierarchy6'->0->>'value'), '') IS NOT NULL`,
+			`SELECT DISTINCT substring(section_tipo from '^([a-z]+)1$') AS tld
+			 FROM matrix_hierarchy
+			 WHERE section_tipo ~ '^[a-z]+1$'`,
 			[],
 		)) as { tld: string | null }[];
 		return rows.filter((row) => row.tld).map((row) => ({ tld: row.tld as string }));
 	} catch (error) {
-		console.error('add_hierarchy: active_hierarchies read failed:', error);
+		console.error('add_hierarchy: installed_hierarchies read failed:', error);
 		return [];
 	}
 }
@@ -47,7 +51,7 @@ async function addHierarchyGetValue(): Promise<WidgetResponse> {
 	return {
 		result: {
 			hierarchies: offeredHierarchies(),
-			active_hierarchies: await activeHierarchies(),
+			installed_hierarchies: await installedHierarchies(),
 			hierarchy_typologies: readHierarchyJson('hierarchies_typologies.json', []),
 			hierarchy_files_dir_path: HIERARCHY_IMPORT_DIR,
 		},

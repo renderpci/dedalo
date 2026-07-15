@@ -2353,7 +2353,7 @@ const render_login_block = async function(self) {
 * @param {Object} options - Configuration object
 * @param {Array}  options.hierarchies              - All available hierarchy descriptors
 * @param {Array}  [options.default_checked=[]]     - TLD strings pre-checked by default
-* @param {Array}  [options.active_hierarchies=[]]  - TLD strings already active in the DB
+* @param {Array}  [options.installed_hierarchies=[]] - lowercase TLDs already imported (marked "installed"; reset-eligible)
 * @param {string} [options.hierarchy_files_dir_path=''] - Server path shown for informational purposes
 * @param {Function} [options.callback]             - Called with api_response on successful import
 * @param {Array}  [options.hierarchy_typologies=[]] - Typology group descriptors ({label, typology})
@@ -2366,7 +2366,9 @@ export const render_hierarchies_import_block = function(options) {
 	// options
 		const hierarchies				= options.hierarchies || []
 		const default_checked			= options.default_checked || []
-		const active_hierarchies		= options.active_hierarchies || []
+		// lowercase TLDs whose term data is already imported (marked "installed" + eligible
+		// for reset). Empty for the install wizard, which does not pass it.
+		const installed_hierarchies		= options.installed_hierarchies || []
 		const hierarchy_files_dir_path	= options.hierarchy_files_dir_path || ''
 		const callback					= options.callback
 		const hierarchy_typologies		= options.hierarchy_typologies || []
@@ -2504,11 +2506,11 @@ export const render_hierarchies_import_block = function(options) {
 						inner_html		: current_hierarchy.label + ' [' + current_hierarchy.tld + ']',
 						parent			: hierarchy_li
 					})
-					if (active_hierarchies.includes( current_hierarchy.tld.toLowerCase() )) {
+					if (installed_hierarchies.includes( current_hierarchy.tld.toLowerCase() )) {
 						ui.create_dom_element({
 							element_type	: 'span',
-							class_name		: 'active_hierarchy',
-							inner_html		: ' [active]',
+							class_name		: 'installed_hierarchy',
+							inner_html		: get_label.installed || 'installed',
 							parent			: hierarchy_label
 						})
 					}
@@ -2688,7 +2690,7 @@ export const render_hierarchies_import_block = function(options) {
 			async function fn_reset_hierarchies(){
 
 				// only ticked hierarchies that are ALREADY installed can be reset
-					const to_reset = hierarchies_to_install.filter(tld => active_hierarchies.includes(tld.toLowerCase()))
+					const to_reset = hierarchies_to_install.filter(tld => installed_hierarchies.includes(tld.toLowerCase()))
 					if (to_reset.length<1) {
 						alert( get_label.reset_pick_installed || 'Tick one or more already-installed hierarchies to reset.' )
 						return

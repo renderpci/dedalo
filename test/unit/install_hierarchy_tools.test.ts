@@ -14,6 +14,12 @@
  * contract itself is covered against the engine's own database by
  * install_hierarchy_activate_native.test.ts, and the invariant it converges to by
  * hierarchy_state_native.test.ts.
+ *
+ * IDEMPOTENCY — the `\copy` is insert-only, so a raw re-import of an already-present tld
+ * violates the (section_id, section_tipo) PK. The importer guards it: a re-import is
+ * SKIPPED by default (non-destructive), and `{replace:true}` DELETEs the tld's rows first
+ * then re-copies (the explicit "reset to seed"). Both are pinned below so the reported
+ * duplicate-key error can never come back.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -90,6 +96,45 @@ describe('hierarchy import + register_tools (P4)', () => {
 			 WHERE c.tipo = '${TLD}1'`,
 		]);
 		expect(counter.stdout.trim()).toBe('t');
+	}, 60000);
+
+	test('re-importing an already-installed tld is SKIPPED, not a duplicate-key error', async () => {
+		if (!available) return;
+		// es was imported by the previous test → its es1 rows are present. A second import
+		// must skip it (the raw \copy would otherwise throw on the PK) and stay error-free.
+		const result = await installHierarchies([TLD], scratch);
+
+		const response = result.responses.find((r) => r.tld === TLD);
+		expect(response?.skipped).toBe(true);
+		expect(response?.result).toBe(true);
+		expect(result.result).toBe(true); // a skip is not a failure
+		expect(result.msg).toContain('skipped');
+		// the exact regression: no Postgres unique-constraint error leaks through
+		expect(result.errors.join(' ')).not.toContain('duplicate key');
+	}, 60000);
+
+	test('reset (replace:true) deletes then re-imports without duplication', async () => {
+		if (!available) return;
+		const count = async () =>
+			Number(
+				(
+					await runPsql(scratch, [
+						'-tAc',
+						`SELECT count(*) FROM matrix_hierarchy WHERE section_tipo = '${TLD}1'`,
+					])
+				).stdout.trim(),
+			);
+		const before = await count();
+		expect(before).toBeGreaterThan(0);
+
+		const result = await installHierarchies([TLD], scratch, -1, { replace: true });
+
+		// The delete+recopy half must succeed with no dup-key error (activation is still
+		// refused on the scratch DB — that half is the pre-existing scratch contract).
+		expect(result.errors.join(' ')).not.toContain('duplicate key');
+		// Idempotent re-seed: the row count is unchanged, never doubled.
+		const after = await count();
+		expect(after).toBe(before);
 	}, 60000);
 
 	test('an unknown TLD reports an error (no data file)', async () => {

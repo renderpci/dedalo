@@ -13730,11 +13730,18 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   margin: 0 0.5rem 0 -1.5rem;
   cursor: pointer;
 }
-.wrapper_widget.add_hierarchy .hierarchy_label > .active_hierarchy {
-  margin-left: 0.15rem;
+.wrapper_widget.add_hierarchy .hierarchy_label > .installed_hierarchy {
+  margin-left: 0.4rem;
+  padding: 0.02rem 0.45rem;
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
   color: var(--color_success);
-  font-weight: 700;
-  font-size: 0.82rem;
+  background-color: color-mix(in srgb, var(--color_success) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color_success) 35%, transparent);
+  border-radius: 999px;
 }
 .wrapper_widget.add_hierarchy .hierarchy_no_matches {
   padding: 1rem 0 0.3rem;
