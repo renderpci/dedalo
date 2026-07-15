@@ -1185,6 +1185,61 @@
             },
             {
               "lang": "lg-eng",
+              "name": "marks_reordered",
+              "value": "%s linked marks were reversed by the translation and reordered"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "marks_reordered",
+              "value": "%s marcas enlazadas se invirtieron en la traducción y se reordenaron"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "marks_reordered",
+              "value": "%s marques liées ont été inversées par la traduction et réordonnées"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "marks_reordered",
+              "value": "%s marcatori collegati sono stati invertiti dalla traduzione e riordinati"
+            },
+            {
+              "lang": "lg-por",
+              "name": "marks_reordered",
+              "value": "%s marcas ligadas foram invertidas pela tradução e reordenadas"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "marks_reordered",
+              "value": "%s marques enllaçades s’han invertit en la traducció i s’han reordenat"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "marks_reordered",
+              "value": "%s verknüpfte Markierungen wurden von der Übersetzung vertauscht und neu geordnet"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "marks_reordered",
+              "value": "%s जोडिएका चिन्ह अनुवादले उल्टाएका थिए र पुनः क्रमबद्ध गरिए"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "marks_reordered",
+              "value": "تم عكس %s علامة مرتبطة أثناء الترجمة وأُعيد ترتيبها"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "marks_reordered",
+              "value": "%s συνδεδεμένες σημάνσεις αντιστράφηκαν από τη μετάφραση και αναδιατάχθηκαν"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "marks_reordered",
+              "value": "Lotutako %s marka itzulpenak alderantzikatu ditu eta berrantolatu dira"
+            },
+            {
+              "lang": "lg-eng",
               "name": "marks_removed_invalid",
               "value": "%s invalid markers were removed"
             },

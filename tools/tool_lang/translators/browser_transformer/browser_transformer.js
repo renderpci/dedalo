@@ -54,7 +54,7 @@ import {
 	normalize_placeholders,
 	repair_placeholders
 } from '../../js/placeholders.js';
-import { conform_emphasis } from '../../js/markdown_utils.js';
+import { conform_emphasis, restore_wrapping_emphasis } from '../../js/markdown_utils.js';
 
 /**
  * NLLB / FLORES-200 language codes, keyed by the ISO 639-1 code dedalo_to_locale emits.
@@ -635,9 +635,11 @@ function detect_repetition(text, source_text) {
 async function process_block(engine, translator, block, source_lang_code, target_lang_code, label) {
 
 	// Everything the model hands back goes through here: unwrap whatever it wrapped its
-	// answer in, repair mangled markers, and delete any emphasis it invented.
+	// answer in, repair mangled markers, delete any emphasis it invented, and restore
+	// emphasis it dropped from a wholly-emphasised segment (an all-bold question).
 	const clean_output = function(raw) {
-		return conform_emphasis(block.text, normalize_placeholders(strip_fences(raw)));
+		const text = conform_emphasis(block.text, normalize_placeholders(strip_fences(raw)));
+		return restore_wrapping_emphasis(block.text, text);
 	};
 
 	// ── 1. translate ────────────────────────────────────────────────────

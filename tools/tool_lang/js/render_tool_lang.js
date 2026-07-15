@@ -428,6 +428,14 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 					)
 				}
 
+				// paired marks the translation reversed, which we put back in open→close order
+				if (report.reordered && report.reordered.length>0) {
+					detail.push(
+						self.get_tool_label('marks_reordered', report.reordered.length)
+						|| `${report.reordered.length} linked marks were reversed by the translation and reordered`
+					)
+				}
+
 				// markers the model invented or duplicated, dropped before saving
 				const invalid = report.residual.length + report.added.length + report.duplicated.length
 				if (invalid>0) {

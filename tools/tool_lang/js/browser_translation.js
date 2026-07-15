@@ -298,6 +298,72 @@ const classify_mark = function(mark) {
 
 
 /**
+* REORDER_INVERTED_PAIRS
+* Put a paired mark back in order when translation reversed it.
+*
+* index and reference marks come in an open/close pair sharing an id. Translation reorders
+* words — a Spanish '[open]pasaba[/close]' becomes Nepali where the verb moves — and the
+* model can emit the close before the open, producing invalid markup ('[/index-105]…[index-105]').
+* The mark multiset is intact, so validate_translation's count check does not notice.
+*
+* The correct order is knowable from the mark itself (the '/' says which is the close), so
+* this is a deterministic fix, not a guess: for any id whose close sits before its open, swap
+* the two token strings. Whatever text lies between them is then wrapped by a well-formed pair
+* — approximately the right span, and always valid markup, which invalid ordering is not.
+*
+* Every reordered pair is returned so the caller can flag it: we changed what the model
+* produced, and the user should see that we did.
+*
+* @param {string} text - Restored HTML, marks already back in place.
+* @returns {{text:string, reordered:string[]}} reordered lists the open mark of each swapped pair.
+*/
+export const reorder_inverted_pairs = function(text) {
+
+	const marks = extract_dedalo_marks(text)
+
+	// group open/close by shared id
+	const groups = new Map()
+	for (const item of marks) {
+		const classification = classify_mark(item.mark)
+		if (!classification.pair_key) {
+			continue
+		}
+		if (!groups.has(classification.pair_key)) {
+			groups.set(classification.pair_key, {})
+		}
+		groups.get(classification.pair_key)[classification.kind] = item
+	}
+
+	// an edit swaps the two token strings at their original offsets
+	const edits		= []
+	const reordered	= []
+	for (const group of groups.values()) {
+		if (group.open && group.close && group.close.start < group.open.start) {
+			// the close currently sits earlier — put the open string there, and vice versa
+			edits.push({ start : group.close.start, end : group.close.end, replacement : group.open.mark })
+			edits.push({ start : group.open.start,  end : group.open.end,  replacement : group.close.mark })
+			reordered.push(group.open.mark)
+		}
+	}
+
+	if (edits.length===0) {
+		return { text, reordered }
+	}
+
+	// apply right-to-left so earlier offsets stay valid as lengths change
+	edits.sort((a, b) => b.start - a.start)
+
+	let out = text
+	for (const edit of edits) {
+		out = out.slice(0, edit.start) + edit.replacement + out.slice(edit.end)
+	}
+
+	return { text : out, reordered }
+}//end reorder_inverted_pairs
+
+
+
+/**
 * REPLACE_DEDALO_MARKS_WITH_PLACEHOLDERS
 * Substitute Dédalo inline marks with numbered [[[n]]] tokens so the LLM never sees
 * (and thus cannot corrupt) them.
@@ -744,20 +810,23 @@ export const validate_translation = function(source_text, restored_text, extra) 
 		residual		: extra.residual || [],
 		repaired		: extra.repaired || [],
 		unrepairable	: extra.unrepairable || [],
+		reordered		: extra.reordered || [],
 		failed_blocks	: extra.failed_blocks || [],
 		emphasis_lost	: count_emphasis_lost(source_text, restored_text),
 		degenerate		: is_degenerate(source_text, restored_text),
 		total_marks		: source_marks.length
 	}
 
-	// marks whose position in the translation we chose, rather than the model
+	// marks whose position in the translation we chose, rather than the model — including
+	// paired marks the model inverted, which we put back in order (see reorder_inverted_pairs)
 	report.uncertain_count =
 		report.missing.length +
 		report.added.length +
 		report.duplicated.length +
 		report.residual.length +
 		report.repaired.length +
-		report.unrepairable.length
+		report.unrepairable.length +
+		report.reordered.length
 
 	// emphasis_lost is REPORTED but deliberately does not gate the save. Losing an <em> is a
 	// cosmetic downgrade; losing an [index-…] mark silently breaks a thesaurus link. Treating
@@ -1031,11 +1100,16 @@ export const translate_component_browser = async function(options) {
 					const restored		= restore_placeholders(translated_html, placeholders)
 					const repair_stats	= data.repair_stats || { repaired : [], unrepairable : [] }
 
-					const report = validate_translation(clean_source_text, restored.text, {
+					// translation can reverse a paired mark (close before open) — put it back in
+					// order before validating and saving, and count it as uncertain
+					const ordered		= reorder_inverted_pairs(restored.text)
+
+					const report = validate_translation(clean_source_text, ordered.text, {
 						duplicated		: restored.duplicated,
 						residual		: restored.residual,
 						repaired		: repair_stats.repaired,
 						unrepairable	: repair_stats.unrepairable,
+						reordered		: ordered.reordered,
 						failed_blocks	: data.failed_blocks || []
 					})
 
@@ -1050,7 +1124,7 @@ export const translate_component_browser = async function(options) {
 						}
 						hide_overlay()
 
-						apply_and_save(restored.text)
+						apply_and_save(ordered.text)
 						.then(function(){
 							resolve({result: true, msg: 'OK. Translation completed'})
 						})
@@ -1081,7 +1155,7 @@ export const translate_component_browser = async function(options) {
 							status_container.innerHTML = `<div class="warning">${warn}</div>`
 						}
 
-						return apply_and_save(restored.text).then(function(){
+						return apply_and_save(ordered.text).then(function(){
 							resolve({result: true, msg: 'OK. Translation saved with warnings'})
 						})
 					})
