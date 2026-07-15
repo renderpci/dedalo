@@ -506,7 +506,7 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 
 					const review_container = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'warning translation_review',
+						class_name		: 'translation_review',
 						parent			: status_container
 					})
 					ui.create_dom_element({
