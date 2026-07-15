@@ -1,8 +1,13 @@
 /**
- * php_runtime widget — TS-NATIVE runtime panel: this panel slot reports the
- * RUNNING ENGINE's runtime (Bun version, pid, memory, uptime) instead of the
- * PHP interpreter the widget id names, plus REAL cache/session clears.
- * opcache/realpath resets have no TS equivalent and stay unregistered.
+ * runtime_info widget — TS-NATIVE runtime panel: reports the RUNNING ENGINE's
+ * runtime (Bun version, pid, memory, uptime), plus REAL cache/session clears.
+ *
+ * Merged from two PHP-oracle-era slots (2026-07-15, WC-030): `php_info` (a
+ * phpinfo() iframe with no Bun equivalent — always engine_denied) and
+ * `php_runtime` (already TS-native). Since neither had a working phpinfo()
+ * twin on this engine, the surviving widget is the native one, carrying the
+ * `runtime_info` id/label. opcache/realpath resets have no TS equivalent and
+ * stay unregistered.
  */
 
 import type { WidgetModule, WidgetResponse } from './support.ts';
@@ -10,7 +15,7 @@ import type { WidgetModule, WidgetResponse } from './support.ts';
 /** The moment the server module loaded (uptime baseline). */
 const RUNTIME_STARTED_AT = Date.now();
 
-async function phpRuntimeGetValue(): Promise<WidgetResponse> {
+async function runtimeInfoGetValue(): Promise<WidgetResponse> {
 	const memory = process.memoryUsage();
 	return {
 		result: {
@@ -35,7 +40,7 @@ async function phpRuntimeGetValue(): Promise<WidgetResponse> {
  * of PHP's dd_cache file purge): ontology nodes/models, tools registry and
  * the datalist cache.
  */
-async function phpRuntimeClearCaches(): Promise<WidgetResponse> {
+async function runtimeInfoClearCaches(): Promise<WidgetResponse> {
 	const cleared: string[] = [];
 	const { clearOntologyCaches } = await import('../../ontology/resolver.ts');
 	clearOntologyCaches();
@@ -63,7 +68,7 @@ async function phpRuntimeClearCaches(): Promise<WidgetResponse> {
 }
 
 /** clear_session_files — prune EXPIRED sessions from the TS session store. */
-async function phpRuntimeClearSessions(): Promise<WidgetResponse> {
+async function runtimeInfoClearSessions(): Promise<WidgetResponse> {
 	const { pruneExpiredSessions } = await import('../../security/session_store.ts');
 	const pruned = pruneExpiredSessions();
 	return {
@@ -74,10 +79,14 @@ async function phpRuntimeClearSessions(): Promise<WidgetResponse> {
 }
 
 export const widget: WidgetModule = {
-	spec: { id: 'php_runtime', category: 'system', label: { kind: 'literal', text: 'PHP RUNTIME' } },
-	apiActions: {
-		clear_cache_files: phpRuntimeClearCaches,
-		clear_session_files: phpRuntimeClearSessions,
+	spec: {
+		id: 'runtime_info',
+		category: 'system',
+		label: { kind: 'literal', text: 'RUNTIME INFO' },
 	},
-	getValue: phpRuntimeGetValue,
+	apiActions: {
+		clear_cache_files: runtimeInfoClearCaches,
+		clear_session_files: runtimeInfoClearSessions,
+	},
+	getValue: runtimeInfoGetValue,
 };

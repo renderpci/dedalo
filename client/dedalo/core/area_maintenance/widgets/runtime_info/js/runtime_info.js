@@ -8,7 +8,7 @@
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {area_maintenance} from '../../../../area_maintenance/js/area_maintenance.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
-	import {render_php_runtime} from './render_php_runtime.js'
+	import {render_runtime_info} from './render_runtime_info.js'
 
 
 
@@ -16,7 +16,7 @@
 * WIDGET_REQUEST
 * Shared helper for the widget's API calls.
 * @param string action
-* 	Backend action, e.g. 'reset_opcache'
+* 	Backend action, one of 'clear_cache_files' | 'clear_session_files'.
 * @param object options = {}
 * @param int timeout = 30 * 1000
 * 	Per-attempt timeout in ms.
@@ -32,7 +32,7 @@ const widget_request = (action, options={}, timeout=30*1000) => {
 			prevent_lock	: true,
 			source			: {
 				type	: 'widget',
-				model	: 'php_runtime',
+				model	: 'runtime_info',
 				action	: action
 			},
 			options			: options
@@ -45,9 +45,9 @@ const widget_request = (action, options={}, timeout=30*1000) => {
 
 
 /**
-* PHP_RUNTIME
+* RUNTIME_INFO
 */
-export const php_runtime = function() {
+export const runtime_info = function() {
 
 	this.id
 
@@ -64,7 +64,7 @@ export const php_runtime = function() {
 	this.ar_instances	= []
 
 	this.status
-}//end php_runtime
+}//end runtime_info
 
 
 
@@ -74,14 +74,14 @@ export const php_runtime = function() {
 */
 // prototypes assign
 	// // lifecycle
-	php_runtime.prototype.init		= widget_common.prototype.init
-	php_runtime.prototype.build		= widget_common.prototype.build
-	php_runtime.prototype.render	= widget_common.prototype.render
-	php_runtime.prototype.destroy	= widget_common.prototype.destroy
-	php_runtime.prototype.get_value	= area_maintenance.prototype.get_value
+	runtime_info.prototype.init		= widget_common.prototype.init
+	runtime_info.prototype.build		= widget_common.prototype.build
+	runtime_info.prototype.render	= widget_common.prototype.render
+	runtime_info.prototype.destroy	= widget_common.prototype.destroy
+	runtime_info.prototype.get_value	= area_maintenance.prototype.get_value
 	// // render
-	php_runtime.prototype.edit		= render_php_runtime.prototype.list
-	php_runtime.prototype.list		= render_php_runtime.prototype.list
+	runtime_info.prototype.edit		= render_runtime_info.prototype.list
+	runtime_info.prototype.list		= render_runtime_info.prototype.list
 
 
 
@@ -90,7 +90,7 @@ export const php_runtime = function() {
 * Removes old files from the Dédalo cache directory.
 * @return promise - api_response
 */
-php_runtime.prototype.clear_cache_files = async function() {
+runtime_info.prototype.clear_cache_files = async function() {
 
 	const api_response = await widget_request('clear_cache_files')
 
@@ -104,7 +104,7 @@ php_runtime.prototype.clear_cache_files = async function() {
 * Removes expired file-based session files.
 * @return promise - api_response
 */
-php_runtime.prototype.clear_session_files = async function() {
+runtime_info.prototype.clear_session_files = async function() {
 
 	const api_response = await widget_request('clear_session_files')
 
