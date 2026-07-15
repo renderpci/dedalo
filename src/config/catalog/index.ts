@@ -25,6 +25,7 @@ import { OPS_KEYS } from './ops.ts';
 import { PATHS_KEYS } from './paths.ts';
 import { SECURITY_KEYS } from './security.ts';
 import { SERVER_KEYS } from './server.ts';
+import { SITEBUILDER_KEYS } from './sitebuilder.ts';
 import { TOOLS_KEYS } from './tools.ts';
 
 /** Section metadata. `id` is the STABLE anchor — never a number, which would shift. */
@@ -58,6 +59,7 @@ export const DOMAINS: readonly ConfigDomain[] = [
 	{ id: 'error_report', page: 'config', title: 'Error reporting', intro: '' },
 	{ id: 'ai', page: 'config', title: 'AI assistant, agent and semantic search', intro: '' },
 	{ id: 'tools', page: 'config', title: 'Tools', intro: '' },
+	{ id: 'sitebuilder', page: 'config', title: 'Site builder', intro: '' },
 	{ id: 'install', page: 'config', title: 'Install', intro: '' },
 	{ id: 'maintenance', page: 'config', title: 'Maintenance variables', intro: '' },
 	{ id: 'diffusion', page: 'config', title: 'Diffusion variables', intro: '' },
@@ -119,6 +121,7 @@ const DOMAIN_KEYS: Record<string, Record<string, CatalogEntry>> = {
 	error_report: ERROR_REPORT_KEYS,
 	ai: AI_KEYS,
 	tools: TOOLS_KEYS,
+	sitebuilder: SITEBUILDER_KEYS,
 	install: INSTALL_KEYS,
 	maintenance: MAINTENANCE_KEYS,
 	diffusion: pick(DIFFUSION_KEYS, (key) => !isDiffusionDbKey(key)),
