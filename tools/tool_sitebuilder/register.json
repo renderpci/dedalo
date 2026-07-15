@@ -1,0 +1,25 @@
+{
+	"$schema": "../../src/core/tools/client/register.schema.json",
+	"name": "tool_sitebuilder",
+	"version": "1.0.0",
+	"label": { "lg-eng": "Site builder", "lg-spa": "Constructor de sitios" },
+	"description": {
+		"lg-eng": "Build public websites over the published data by talking to a coding agent, preview them, and publish to production.",
+		"lg-spa": "Construye sitios web públicos sobre los datos publicados conversando con un agente de código, previsualízalos y publícalos en producción."
+	},
+	"developer": "Dédalo team",
+	"affected_models": [],
+	"show_in_component": false,
+	"active": true,
+	"properties": { "open_as": "window", "windowFeatures": null },
+	"labels": [
+		{ "lang": "lg-eng", "name": "sitebuilder_title", "value": "Site builder" },
+		{ "lang": "lg-spa", "name": "sitebuilder_title", "value": "Constructor de sitios" },
+		{ "lang": "lg-eng", "name": "sitebuilder_new_site", "value": "New site" },
+		{ "lang": "lg-spa", "name": "sitebuilder_new_site", "value": "Nuevo sitio" },
+		{ "lang": "lg-eng", "name": "sitebuilder_build", "value": "Build" },
+		{ "lang": "lg-spa", "name": "sitebuilder_build", "value": "Construir" },
+		{ "lang": "lg-eng", "name": "sitebuilder_publish", "value": "Publish" },
+		{ "lang": "lg-spa", "name": "sitebuilder_publish", "value": "Publicar" }
+	]
+}
