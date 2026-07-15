@@ -1,0 +1,11 @@
+# Machine-local config and secrets — never versioned.
+.env
+
+# Bun / node
+node_modules/
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Test scratch roots (created and cleaned by the suite)
+.test-tmp/
