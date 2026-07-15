@@ -128,169 +128,126 @@ const MADLAD_TARGETS = {
 
 
 /**
- * ENGINES
- * The translation back-ends, and everything that differs between them.
+ * SHAPE_HANDLERS
+ * How each KIND of model is fed its input and read back — the one part of a model that is
+ * code, not config, and therefore cannot live in register.json.
  *
- * ADDING A MODEL IS ONE ENTRY IN THIS TABLE. Nothing else in the pipeline — segmentation,
- * marker hoisting, repair, the save gate, the UI — knows or cares which engine ran.
+ * A model definition (from register.json, arriving in the worker message) names a `shape`;
+ * this table maps that shape to the function that builds the model's input. Everything else
+ * about a model — its id, task, dtype, coverage, licence note — is data on the definition.
  *
- * The two shapes differ in a way that matters:
+ * Adding a model that fits an existing shape is a register.json edit alone. Only a genuinely
+ * new input convention needs a new handler here.
  *
- *   'text-generation' — an instruction-tuned CHAT model. Its chat template turns whatever
- *     you give it into a prompt. TranslateGemma is one, and that is the source of most of
- *     the grief in this file's history: it translated our instructions into the record.
+ *   chat          — a general instruct model (Qwen). Rules go in a SYSTEM turn it obeys; the
+ *                   segment goes in the USER turn, unwrapped.
+ *   chat_gemma    — TranslateGemma. Same 'text-generation' task, but its content object is
+ *                   {source_lang_code, target_lang_code, text} and the text IS the source —
+ *                   never a prompt (a prompt gets translated into the record).
+ *   seq2seq_lang  — NLLB: raw text with src_lang/tgt_lang (FLORES codes).
+ *   seq2seq_prefix— MADLAD: a <2xx> target token prepended to the text; source auto-detected.
+ *   seq2seq_pair  — Marian/opus-mt: the model IS the language pair, no lang arguments.
  *
- *   'translation' — a real seq2seq MT model (NLLB, Marian/opus-mt). No chat template, no
- *     prompt, no instructions to leak. Takes a sentence, returns a sentence — which is
- *     exactly the shape this pipeline already feeds it.
- *
- * Per engine:
- *   task           — the transformers.js pipeline task
- *   model_id       — (src, tgt) => Hub id. Marian is per-pair, hence the arguments.
- *   default_dtype  — quantisation when the caller does not force one
- *   supports       — (src, tgt) => boolean. Checked BEFORE loading, so an unsupported pair
- *                    fails with a sentence instead of a 404 on a 600 MB download.
- *   translate      — (translator, text, src, tgt, generation) => Promise<string>
- *   note           — surfaced to the caller; used for the licence warning
+ * Signature: (translator, text, src, tgt, generation) => Promise<string>
  */
-const ENGINES = {
+const SHAPE_HANDLERS = {
 
-	// The current default. 4B, chat-shaped, ~3 GB at q4. Covers every language, but
-	// quality on low-resource targets (eu, ne) is poor and it is prone to repetition loops.
-	translategemma : {
-		task			: 'text-generation',
-		model_id		: () => 'onnx-community/translategemma-text-4b-it-ONNX',
-		default_dtype	: 'q4',
-		requires_webgpu	: true,
-		supports		: () => true,
-		translate		: async function(translator, text, src, tgt, generation) {
-
-			// The text field is the SOURCE TEXT. Not a prompt. See the long note on
-			// translate_text — putting instructions here gets them translated into the record.
-			const messages = [{
-				role    : 'user',
-				content : [{
-					type             : 'text',
-					source_lang_code : src,
-					target_lang_code : tgt,
-					text             : text
-				}]
-			}];
-
-			const output         = await translator(messages, generation);
-			const generated_text = output[0].generated_text;
-
-			return generated_text[generated_text.length - 1].content;
-		}
+	chat : async function(translator, text, src, tgt, generation) {
+		const messages = [
+			{ role : 'system', content : qwen_system_prompt(src, tgt) },
+			{ role : 'user',   content : text }
+		];
+		const output = await translator(messages, generation);
+		const generated_text = output[0].generated_text;
+		return generated_text[generated_text.length - 1].content;
 	},
 
-	// A general instruction LLM, ~2.5-3 GB at q4. NOT a translation model — its draw is that
-	// it can be INSTRUCTED, which no other engine here can. The rules (keep the markers, output
-	// only the translation) go in a real system turn that the model treats as instructions, not
-	// as content — the exact thing TranslateGemma lacked. On low-resource targets (eu, ne) and
-	// domain text a strong instruct model is often more fluent than a literal MT model.
-	//
-	// The -Instruct-2507 variant is non-thinking (no <think> traces). Apache-2.0.
-	qwen : {
-		task			: 'text-generation',
-		model_id		: () => 'onnx-community/Qwen3-4B-Instruct-2507-ONNX',
-		// q4f16, NOT q4. Qwen3-4B at q4 is ~4 GB of weights and overruns the WASM 4 GB
-		// address space the moment the KV cache is allocated ('memory access out of bounds').
-		// q4f16 is ~2.9 GB — comparable to TranslateGemma — and faster. It needs fp16, i.e.
-		// WebGPU, which is required here anyway (see requires_webgpu).
-		default_dtype	: 'q4f16',
-		requires_webgpu	: true,
-		supports		: () => true,
-		note			: 'apache',
-		translate		: async function(translator, text, src, tgt, generation) {
-
-			// the segment goes in the USER turn, unwrapped; the SYSTEM turn carries the rules
-			const messages = [
-				{ role : 'system', content : qwen_system_prompt(src, tgt) },
-				{ role : 'user',   content : text }
-			];
-
-			const output         = await translator(messages, generation);
-			const generated_text = output[0].generated_text;
-
-			return generated_text[generated_text.length - 1].content;
-		}
+	chat_gemma : async function(translator, text, src, tgt, generation) {
+		// the text field is the SOURCE TEXT, not a prompt — see translate_text's note
+		const messages = [{
+			role    : 'user',
+			content : [{ type : 'text', source_lang_code : src, target_lang_code : tgt, text : text }]
+		}];
+		const output = await translator(messages, generation);
+		const generated_text = output[0].generated_text;
+		return generated_text[generated_text.length - 1].content;
 	},
 
-	// Purpose-built multilingual MT, 600M — a quarter the size of TranslateGemma and the
-	// only browser-viable model that covers Basque AND Nepali.
-	//
-	// LICENCE: CC-BY-NC-4.0. Non-commercial. That is a decision for the deployment, not for
-	// this file, so the engine is offered and the restriction is stated plainly in the UI.
-	nllb : {
-		task			: 'translation',
-		model_id		: () => 'Xenova/nllb-200-distilled-600M',
-		default_dtype	: 'q8',
-		supports		: (src, tgt) => !!(NLLB_LANGS[src] && NLLB_LANGS[tgt]),
-		note			: 'non_commercial',
-		translate		: async function(translator, text, src, tgt, generation) {
-
-			const output = await translator(text, {
-				...generation,
-				src_lang : NLLB_LANGS[src],
-				tgt_lang : NLLB_LANGS[tgt]
-			});
-
-			return output[0].translation_text;
-		}
+	seq2seq_lang : async function(translator, text, src, tgt, generation) {
+		const output = await translator(text, { ...generation, src_lang : NLLB_LANGS[src], tgt_lang : NLLB_LANGS[tgt] });
+		return output[0].translation_text;
 	},
 
-	// Marian, ~75 MB per pair. Fast enough on CPU, which matters for the users who cannot
-	// use WebGPU at all.
-	//
-	// Coverage is per-pair and there are dozens of these on the Hub — so `supports` does NOT
-	// try to enumerate them (an earlier hardcoded list wrongly rejected es→de, which exists).
-	// It only rejects a pair that cannot exist — same language both sides, or a code Dédalo
-	// never emits. Whether the SPECIFIC model exists is settled by trying to load it: a 404
-	// on the tiny config comes back as 'unsupported_pair'. Basque, Nepali and most non-en
-	// pairs simply have no model and fail that way, cleanly.
-	opus : {
-		task			: 'translation',
-		model_id		: (src, tgt) => `Xenova/opus-mt-${src}-${tgt}`,
-		default_dtype	: 'q8',
-		supports		: (src, tgt) => src!==tgt && KNOWN_LANGS.has(src) && KNOWN_LANGS.has(tgt),
-		translate		: async function(translator, text, src, tgt, generation) {
-
-			// the model IS the language pair — there are no lang arguments
-			const output = await translator(text, generation);
-
-			return output[0].translation_text;
-		}
+	seq2seq_prefix : async function(translator, text, src, tgt, generation) {
+		const output = await translator(`${MADLAD_TARGETS[tgt]} ${text}`, generation);
+		return output[0].generated_text;
 	},
 
-	// MADLAD-400 3B — a T5 seq2seq covering 400+ languages, including every one Dédalo
-	// ships. ~3 GB at int8 (the only published quantisation), so it is the LARGEST option —
-	// bigger even than TranslateGemma. Its draw is the licence: Apache-2.0, i.e. commercial
-	// use is fine, which NLLB (the other model that reaches Basque/Nepali) does not allow.
-	//
-	// Unlike NLLB it is not instructed with src_lang/tgt_lang: the target language is a
-	// <2xx> token PREPENDED to the source text, and the source language is auto-detected. So
-	// only the target has to be known, and the prefix is added here in the engine.
-	madlad : {
-		task			: 'text2text-generation',
-		model_id		: () => 'Kutalia/madlad400-3b-mt-onnx',
-		default_dtype	: 'q8',
-		requires_webgpu	: true,
-		supports		: (src, tgt) => !!MADLAD_TARGETS[tgt],
-		note			: 'large_download',
-		translate		: async function(translator, text, src, tgt, generation) {
-
-			const output = await translator(`${MADLAD_TARGETS[tgt]} ${text}`, generation);
-
-			return output[0].generated_text;
-		}
+	seq2seq_pair : async function(translator, text, src, tgt, generation) {
+		// the model IS the pair — no lang arguments
+		const output = await translator(text, generation);
+		return output[0].translation_text;
 	}
 };
 
+
 /**
- * Engine used when the caller does not name one.
+ * SUPPORTS_LANGS
+ * Does a model cover this pair, judged from its `langs` config value alone?
+ *
+ * Replaces the per-engine `supports` closures. Coverage is now data:
+ *   'all'   — every language Dédalo emits (the multilingual models).
+ *   'pairs' — Marian: any distinct pair of known languages is PLAUSIBLE; whether the
+ *             specific model exists is settled by the load (a 404 → 'unsupported_pair').
+ *   Array   — an explicit ISO allow-list, for a future model that needs one.
+ *
+ * @param {'all'|'pairs'|string[]} langs
+ * @param {string} src
+ * @param {string} tgt
+ * @returns {boolean}
  */
-const DEFAULT_ENGINE = 'translategemma';
+function supports_langs(langs, src, tgt) {
+
+	if (langs==='all') {
+		return KNOWN_LANGS.has(src) && KNOWN_LANGS.has(tgt);
+	}
+	if (langs==='pairs') {
+		return src!==tgt && KNOWN_LANGS.has(src) && KNOWN_LANGS.has(tgt);
+	}
+	if (Array.isArray(langs)) {
+		return langs.includes(src) && langs.includes(tgt);
+	}
+	return false;
+}
+
+
+/**
+ * RESOLVE_MODEL_ID
+ * Fill {src}/{tgt} placeholders in a model id (Marian is one model per pair).
+ * @param {string} template
+ * @param {string} src
+ * @param {string} tgt
+ * @returns {string}
+ */
+function resolve_model_id(template, src, tgt) {
+	return String(template).replace('{src}', src).replace('{tgt}', tgt);
+}
+
+
+/**
+ * DEFAULT_MODELS
+ * The catalogue shipped in register.json (dd999 → browser_transformer.models). Kept here ONLY
+ * as a fallback for a site whose stored tool-config predates the `models` array, so the tool
+ * still works. register.json is the source of truth; this must mirror it.
+ * @type {Array<Object>}
+ */
+const DEFAULT_MODELS = [
+	{ name : 'qwen',           model_id : 'onnx-community/Qwen3-4B-Instruct-2507-ONNX',  task : 'text-generation',      shape : 'chat',           dtype : 'q4f16', requires_webgpu : true,  note : 'apache',         langs : 'all' },
+	{ name : 'translategemma', model_id : 'onnx-community/translategemma-text-4b-it-ONNX', task : 'text-generation',     shape : 'chat_gemma',     dtype : 'q4',    requires_webgpu : true,                           langs : 'all' },
+	{ name : 'nllb',           model_id : 'Xenova/nllb-200-distilled-600M',              task : 'translation',          shape : 'seq2seq_lang',   dtype : 'q8',    requires_webgpu : false, note : 'non_commercial', langs : 'all' },
+	{ name : 'madlad',         model_id : 'Kutalia/madlad400-3b-mt-onnx',                task : 'text2text-generation', shape : 'seq2seq_prefix', dtype : 'q8',    requires_webgpu : true,  note : 'large_download', langs : 'all' },
+	{ name : 'opus',           model_id : 'Xenova/opus-mt-{src}-{tgt}',                  task : 'translation',          shape : 'seq2seq_pair',   dtype : 'q8',    requires_webgpu : false,                           langs : 'pairs' }
+];
 
 
 /**
@@ -322,6 +279,32 @@ function is_model_not_found(error) {
 		|| message.includes('404')
 		|| message.includes('unauthorized')	// private/removed repos answer 401
 		|| message.includes('failed to fetch');
+}
+
+
+/**
+ * IS_ALLOCATION_FAILURE
+ * Did a pipeline() load fail because the model does not fit in memory? This is expected for a
+ * model that is simply too big for the machine — MADLAD-400 3B, for instance, has a single
+ * ~1.87 GB decoder buffer that exceeds most GPUs' per-buffer limit — and must be reported as
+ * "too large", not as a fatal worker crash.
+ *
+ * ORT-web phrases this as failing to create a session or to allocate a buffer; the numbers
+ * vary, so match the wording.
+ *
+ * @param {Error} error
+ * @returns {boolean}
+ */
+function is_allocation_failure(error) {
+
+	const message = String(error && error.message || error).toLowerCase();
+
+	return message.includes('failed to allocate')
+		|| message.includes("can't create a session")
+		|| message.includes('cannot create a session')
+		|| message.includes('out of memory')
+		|| message.includes('buffer of size')
+		|| message.includes('oom');
 }
 
 /**
@@ -632,7 +615,7 @@ function detect_repetition(text, source_text) {
  * @param {string}   label            - Human label used in timeout messages, e.g. 'Block 2/5'
  * @returns {Promise<{text:string, repaired:string[], unrepairable:string[]}>} in LOCAL tokens.
  */
-async function process_block(engine, translator, block, source_lang_code, target_lang_code, label) {
+async function process_block(handler, translator, block, source_lang_code, target_lang_code, label) {
 
 	// Everything the model hands back goes through here: unwrap whatever it wrapped its
 	// answer in, repair mangled markers, delete any emphasis it invented, and restore
@@ -644,7 +627,7 @@ async function process_block(engine, translator, block, source_lang_code, target
 
 	// ── 1. translate ────────────────────────────────────────────────────
 	const raw = await with_timeout(
-		translate_text(engine, translator, block.text, source_lang_code, target_lang_code, {
+		translate_text(handler, translator, block.text, source_lang_code, target_lang_code, {
 			repetition_penalty : REPETITION_PENALTY_FIRST
 		}),
 		BLOCK_TIMEOUT_MS,
@@ -669,7 +652,7 @@ async function process_block(engine, translator, block, source_lang_code, target
 			if (cancelled) break;
 
 			const retry_raw = await with_timeout(
-				translate_text(engine, translator, block.text, source_lang_code, target_lang_code, overrides),
+				translate_text(handler, translator, block.text, source_lang_code, target_lang_code, overrides),
 				BLOCK_TIMEOUT_MS,
 				`${label} (repetition retry${overrides.do_sample ? ', sampling' : `, penalty ${overrides.repetition_penalty}`})`
 			);
@@ -741,29 +724,33 @@ self.onmessage = async (e) => {
 	const source_lang_code = options.sourceLangCode || 'en';
 	const target_lang_code = options.targetLangCode || 'es';
 	const device           = options.device || 'webgpu';
-	const engine_name      = options.engine || DEFAULT_ENGINE;
 
-	const engine = ENGINES[engine_name];
-	if (!engine) {
+	// The model DEFINITION now comes from register.json via the main thread. Fall back to the
+	// shipped catalogue by name when only a name arrives (older callers / stored config).
+	const model = options.model
+		|| DEFAULT_MODELS.find(item => item.name===options.engine)
+		|| DEFAULT_MODELS[0];
+	const engine_name = model.name;
+
+	const handler = SHAPE_HANDLERS[model.shape];
+	if (!handler) {
 		self.postMessage({
 			status : 'error',
-			data   : { message: `Unknown translation engine '${engine_name}'. Known: ${Object.keys(ENGINES).join(', ')}` }
+			data   : { message: `Model '${engine_name}' has an unknown shape '${model.shape}'. Known: ${Object.keys(SHAPE_HANDLERS).join(', ')}` }
 		});
 		return;
 	}
 
-	// Refuse a pair the engine KNOWS it cannot do, before touching the network. For NLLB and
-	// MADLAD this is authoritative (their coverage is a fixed table). For opus it is only a
-	// sanity check — Marian is one model per pair and there are dozens on the Hub, far too
-	// many to mirror in a list here without getting it wrong. So opus says "plausible" for
-	// any real pair and lets the load below be the real test: if the specific model does not
-	// exist, the pipeline() fetch 404s on its (tiny) config and we report it cleanly, rather
-	// than pretending to know the Hub's inventory.
-	if (!engine.supports(source_lang_code, target_lang_code)) {
+	// Refuse a pair the model KNOWS it cannot do, before touching the network. For the
+	// multilingual models this is authoritative; for opus ('pairs') it is only a sanity check —
+	// Marian is one model per pair and there are dozens on the Hub, far too many to enumerate.
+	// So opus says "plausible" for any real pair and lets the load be the real test: a missing
+	// model 404s on its tiny config and comes back as 'unsupported_pair'.
+	if (!supports_langs(model.langs, source_lang_code, target_lang_code)) {
 		self.postMessage({
 			status : 'error',
 			data   : {
-				message : `The '${engine_name}' engine does not support ${source_lang_code} → ${target_lang_code}.`,
+				message : `The '${engine_name}' model does not support ${source_lang_code} → ${target_lang_code}.`,
 				code    : 'unsupported_pair'
 			}
 		});
@@ -774,7 +761,7 @@ self.onmessage = async (e) => {
 	// space at 4 GB, and a 4B model plus its KV cache overruns it ('memory access out of
 	// bounds'). Refuse before loading, with a message the user can act on, rather than letting
 	// it crash mid-generation. Small MT models (NLLB, opus) have no such flag and run on CPU.
-	if (engine.requires_webgpu) {
+	if (model.requires_webgpu) {
 		const webgpu_available = (typeof navigator!=='undefined') && !!navigator.gpu;
 		if (device!=='webgpu' || !webgpu_available) {
 			self.postMessage({
@@ -791,8 +778,8 @@ self.onmessage = async (e) => {
 		}
 	}
 
-	const dtype    = options.dtype || engine.default_dtype;
-	const model_id = engine.model_id(source_lang_code, target_lang_code);
+	const dtype    = options.dtype || model.dtype;
+	const model_id = resolve_model_id(model.model_id, source_lang_code, target_lang_code);
 
 	// Reset cancel flag for this run
 	cancelled = false;
@@ -811,7 +798,7 @@ self.onmessage = async (e) => {
 
 		if (!cached_translator) {
 			try {
-				cached_translator = await pipeline(engine.task, model_id, {
+				cached_translator = await pipeline(model.task, model_id, {
 					device : device,
 					dtype  : dtype,
 					progress_callback: ({ progress, status, file }) => {
@@ -835,6 +822,21 @@ self.onmessage = async (e) => {
 						data   : {
 							message : `No '${engine_name}' model is available for ${source_lang_code} → ${target_lang_code}.`,
 							code    : 'unsupported_pair'
+						}
+					});
+					return;
+				}
+
+				// A model that will not fit in memory is a limitation of the machine, not a
+				// crash. Report it clearly and keep the worker alive so another (smaller) model
+				// still works. MADLAD-400 3B hits this on most GPUs — its decoder is one buffer
+				// larger than the GPU allows.
+				if (is_allocation_failure(load_error)) {
+					self.postMessage({
+						status : 'error',
+						data   : {
+							message : `The '${engine_name}' model is too large to load on this device. Try a smaller model (Qwen3, NLLB or Opus-MT).`,
+							code    : 'model_too_large'
 						}
 					});
 					return;
@@ -898,7 +900,7 @@ self.onmessage = async (e) => {
 			try {
 
 				const outcome = await process_block(
-					engine,
+					handler,
 					cached_translator,
 					block,
 					source_lang_code,
@@ -1013,18 +1015,19 @@ self.onmessage = async (e) => {
  * why marker survival rests on hoisting, on the model copying unknown tokens, and on
  * repair_placeholders — never on asking nicely.
  *
- * @param {Function} translator     - The loaded HuggingFace text-generation pipeline
+ * @param {Function} handler        - The SHAPE_HANDLERS function that builds this model's input
+ * @param {Function} translator     - The loaded HuggingFace pipeline
  * @param {string}   text           - The segment to translate, carrying [[[n]]] markers
  * @param {string}   sourceLangCode - Source language code (e.g. 'es')
  * @param {string}   targetLangCode - Target language code (e.g. 'ne')
  * @param {Object}   overrides      - { repetition_penalty, do_sample, temperature, top_p }
  * @returns {Promise<string>} The model's response text
  */
-async function translate_text(engine, translator, text, sourceLangCode, targetLangCode, overrides={}) {
+async function translate_text(handler, translator, text, sourceLangCode, targetLangCode, overrides={}) {
 
-	// Generation settings are shared across engines — a seq2seq MT model takes
+	// Generation settings are shared across shapes — a seq2seq MT model takes
 	// max_new_tokens / do_sample / repetition_penalty just as a causal LM does. What differs
-	// (the chat message vs. src_lang/tgt_lang vs. nothing at all) lives in ENGINES.translate.
+	// (the chat message vs. src_lang/tgt_lang vs. a <2xx> prefix) is the SHAPE_HANDLERS function.
 	const generation = {
 		max_new_tokens     : max_new_tokens_for(translator, text),
 		do_sample          : overrides.do_sample===true,
@@ -1038,7 +1041,7 @@ async function translate_text(engine, translator, text, sourceLangCode, targetLa
 		generation.top_p       = overrides.top_p ?? RETRY_TOP_P;
 	}
 
-	return engine.translate(translator, text, sourceLangCode, targetLangCode, generation);
+	return handler(translator, text, sourceLangCode, targetLangCode, generation);
 }
 
 

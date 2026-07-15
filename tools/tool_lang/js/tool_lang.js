@@ -222,6 +222,7 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 			device						: options.device || 'webgpu',
 			dtype						: options.dtype || null,
 			engine						: options.engine || 'translategemma',
+			model						: options.model || null,
 			status_container			: options.status_container,
 			streaming_overlay			: self.streaming_overlay,
 			streaming_overlay_content	: self.streaming_overlay_content,

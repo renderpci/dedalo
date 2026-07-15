@@ -918,6 +918,7 @@ export const translate_component_browser = async function(options) {
 		const device					= options.device || 'webgpu'
 		const dtype						= options.dtype || null
 		const engine					= options.engine || 'translategemma'
+		const model						= options.model || null
 		const status_container			= options.status_container
 		const streaming_overlay			= options.streaming_overlay || null
 		const streaming_overlay_content	= options.streaming_overlay_content || null
@@ -1198,7 +1199,7 @@ export const translate_component_browser = async function(options) {
 					// model that needs a GPU they do not have), NOT a crash. Show a plain
 					// notice, keep the still-fine worker, and RESOLVE rather than reject so they
 					// do not surface as red console errors.
-					const soft_codes = ['unsupported_pair', 'needs_webgpu']
+					const soft_codes = ['unsupported_pair', 'needs_webgpu', 'model_too_large']
 					if (soft_codes.includes(data.code)) {
 						hide_overlay()
 						if (status_container) {
@@ -1250,7 +1251,8 @@ export const translate_component_browser = async function(options) {
 				targetLangCode	: target_lang_code,
 				device			: device,
 				dtype			: dtype,
-				engine			: engine
+				engine			: engine,
+				model			: model
 			}
 		})
 	})

@@ -198,7 +198,57 @@
                 {
                   "name": "browser_transformer",
                   "type": "browser",
-                  "label": "Local AI translator"
+                  "label": "Local AI translator",
+                  "models": [
+                    {
+                      "name": "qwen",
+                      "model_id": "onnx-community/Qwen3-4B-Instruct-2507-ONNX",
+                      "task": "text-generation",
+                      "shape": "chat",
+                      "dtype": "q4f16",
+                      "requires_webgpu": true,
+                      "note": "apache",
+                      "langs": "all"
+                    },
+                    {
+                      "name": "translategemma",
+                      "model_id": "onnx-community/translategemma-text-4b-it-ONNX",
+                      "task": "text-generation",
+                      "shape": "chat_gemma",
+                      "dtype": "q4",
+                      "requires_webgpu": true,
+                      "langs": "all"
+                    },
+                    {
+                      "name": "nllb",
+                      "model_id": "Xenova/nllb-200-distilled-600M",
+                      "task": "translation",
+                      "shape": "seq2seq_lang",
+                      "dtype": "q8",
+                      "requires_webgpu": false,
+                      "note": "non_commercial",
+                      "langs": "all"
+                    },
+                    {
+                      "name": "madlad",
+                      "model_id": "Kutalia/madlad400-3b-mt-onnx",
+                      "task": "text2text-generation",
+                      "shape": "seq2seq_prefix",
+                      "dtype": "q8",
+                      "requires_webgpu": true,
+                      "note": "large_download",
+                      "langs": "all"
+                    },
+                    {
+                      "name": "opus",
+                      "model_id": "Xenova/opus-mt-{src}-{tgt}",
+                      "task": "translation",
+                      "shape": "seq2seq_pair",
+                      "dtype": "q8",
+                      "requires_webgpu": false,
+                      "langs": "pairs"
+                    }
+                  ]
                 }
               ],
               "client": true,
@@ -2370,7 +2420,57 @@
                 {
                   "name": "browser_transformer",
                   "type": "browser",
-                  "label": "Local AI translator"
+                  "label": "Local AI translator",
+                  "models": [
+                    {
+                      "name": "qwen",
+                      "model_id": "onnx-community/Qwen3-4B-Instruct-2507-ONNX",
+                      "task": "text-generation",
+                      "shape": "chat",
+                      "dtype": "q4f16",
+                      "requires_webgpu": true,
+                      "note": "apache",
+                      "langs": "all"
+                    },
+                    {
+                      "name": "translategemma",
+                      "model_id": "onnx-community/translategemma-text-4b-it-ONNX",
+                      "task": "text-generation",
+                      "shape": "chat_gemma",
+                      "dtype": "q4",
+                      "requires_webgpu": true,
+                      "langs": "all"
+                    },
+                    {
+                      "name": "nllb",
+                      "model_id": "Xenova/nllb-200-distilled-600M",
+                      "task": "translation",
+                      "shape": "seq2seq_lang",
+                      "dtype": "q8",
+                      "requires_webgpu": false,
+                      "note": "non_commercial",
+                      "langs": "all"
+                    },
+                    {
+                      "name": "madlad",
+                      "model_id": "Kutalia/madlad400-3b-mt-onnx",
+                      "task": "text2text-generation",
+                      "shape": "seq2seq_prefix",
+                      "dtype": "q8",
+                      "requires_webgpu": true,
+                      "note": "large_download",
+                      "langs": "all"
+                    },
+                    {
+                      "name": "opus",
+                      "model_id": "Xenova/opus-mt-{src}-{tgt}",
+                      "task": "translation",
+                      "shape": "seq2seq_pair",
+                      "dtype": "q8",
+                      "requires_webgpu": false,
+                      "langs": "pairs"
+                    }
+                  ]
                 }
               ],
               "client": true,

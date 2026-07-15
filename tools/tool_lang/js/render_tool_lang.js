@@ -12,6 +12,25 @@
 
 
 /**
+* FALLBACK_MODELS
+* Minimal browser-model list used ONLY when the tool config predates the register.json
+* `models` array (a stale stored override). It needs just enough to render the dropdown and
+* gate the CPU toggle — `name` (label comes from the engine_<name> tool label) and
+* `requires_webgpu`. The worker fills the rest of each definition from its own DEFAULT_MODELS
+* when only a name is passed. register.json ships the full catalogue, so this is a safety net.
+* @type {Array<{name:string, requires_webgpu:boolean}>}
+*/
+const FALLBACK_MODELS = [
+	{ name : 'qwen',           requires_webgpu : true },
+	{ name : 'translategemma', requires_webgpu : true },
+	{ name : 'nllb',           requires_webgpu : false },
+	{ name : 'madlad',         requires_webgpu : true },
+	{ name : 'opus',           requires_webgpu : false }
+]
+
+
+
+/**
 * RENDER_TOOL_LANG
 * Manages the component's logic and appearance in client side
 */
@@ -559,13 +578,19 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 					? 'wasm'
 					: 'webgpu'
 
-				const engine = self.translator_engine_model_select
+				const model_name = self.translator_engine_model_select
 					? self.translator_engine_model_select.value
 					: 'translategemma'
 
-				// the q4/q8 choice is TranslateGemma's; the seq2seq engines ship one
+				// the full model definition from register.json (undefined only for a stale
+				// config with no models array — the worker then falls back to it by name)
+				const model_def = self.translator_models
+					? self.translator_models.find(m => m.name===model_name)
+					: undefined
+
+				// the q4/q8 choice is TranslateGemma's; the seq2seq models ship one
 				// quantisation and forcing q4 on them would just fail to load
-				const dtype = (engine==='translategemma' && self.translator_dtype_select)
+				const dtype = (model_name==='translategemma' && self.translator_dtype_select)
 					? self.translator_dtype_select.value
 					: null
 
@@ -574,7 +599,8 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 					target_lang		: target_lang,
 					device			: device,
 					dtype			: dtype,
-					engine			: engine,
+					engine			: model_name,
+					model			: model_def,
 					status_container: status_container,
 					on_uncertain	: on_uncertain
 				})
@@ -721,18 +747,26 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 			element_type	: 'select',
 			parent			: model_container
 		})
-		const engine_options = [
-			{ value : 'translategemma',	label : self.get_tool_label('engine_translategemma')	|| 'TranslateGemma 4B — all languages, ~2.5 GB' },
-			{ value : 'nllb',			label : self.get_tool_label('engine_nllb')			|| 'NLLB-200 600M — all languages, ~700 MB (non-commercial licence)' },
-			{ value : 'madlad',			label : self.get_tool_label('engine_madlad')		|| 'MADLAD-400 3B — all languages, ~3 GB (Apache licence)' },
-			{ value : 'qwen',			label : self.get_tool_label('engine_qwen')			|| 'Qwen3 4B — instruction model, all languages, ~2.5 GB (Apache licence)' },
-			{ value : 'opus',			label : self.get_tool_label('engine_opus')			|| 'Opus-MT — ~75 MB, fast, limited language pairs' }
-		]
-		for (let i = 0; i < engine_options.length; i++) {
+
+		// The model catalogue is CONFIG, not code — it lives in register.json (dd999 →
+		// browser_transformer.models) and reaches us on the engine definition. FALLBACK_MODELS
+		// only covers a site whose stored config predates the models array; register.json ships
+		// them, so the fallback is rarely used. Each option's LABEL is the existing
+		// engine_<name> tool label, so it stays multilingual.
+		const browser_engine_def = translator_engine.find(el => el.name==='browser_transformer')
+		const config_models = (browser_engine_def && Array.isArray(browser_engine_def.models) && browser_engine_def.models.length)
+			? browser_engine_def.models
+			: null
+		const models = config_models || FALLBACK_MODELS
+
+		// remembered so the click handler can pass the SELECTED model's full definition to the worker
+		self.translator_models = config_models
+
+		for (let i = 0; i < models.length; i++) {
 			ui.create_dom_element({
 				element_type	: 'option',
-				value			: engine_options[i].value,
-				inner_html		: engine_options[i].label,
+				value			: models[i].name,
+				inner_html		: self.get_tool_label('engine_' + models[i].name) || models[i].name,
 				parent			: translator_engine_model_select
 			})
 		}
@@ -813,10 +847,11 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 			}
 		})
 
-		// Engines that only run on WebGPU. A multi-gigabyte model cannot fit in the WASM/CPU
+		// Models that only run on WebGPU. A multi-gigabyte model cannot fit in the WASM/CPU
 		// backend (4 GB address-space limit), so offering the "CPU" toggle for them just leads
-		// to a crash. This set must stay in step with `requires_webgpu` in the worker's ENGINES.
-		const WEBGPU_ONLY = ['translategemma', 'qwen', 'madlad']
+		// to a crash. DERIVED from the same config the dropdown was built from — there is no
+		// hand-maintained list to drift out of step with the worker any more.
+		const WEBGPU_ONLY = models.filter(m => m.requires_webgpu).map(m => m.name)
 
 		const sync_engine_controls = function() {
 
