@@ -224,6 +224,66 @@
   padding-left: 2rem;
   padding-right: 2rem;
 }
+.wrapper_tool.tool_hierarchy > .content_data > .status_container {
+  margin: 1rem 2rem 0 2rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--color_grey_13);
+  border-left-width: 4px;
+  border-radius: 3px;
+  background-color: var(--color_grey_15);
+  font-size: 1rem;
+  line-height: 1.4rem;
+}
+.wrapper_tool.tool_hierarchy > .content_data > .status_container.ok {
+  border-left-color: var(--color_success);
+}
+.wrapper_tool.tool_hierarchy > .content_data > .status_container.incomplete {
+  border-left-color: var(--tool_hierarchy);
+}
+.wrapper_tool.tool_hierarchy > .content_data > .status_container > .status_headline {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--color_grey_4);
+}
+.wrapper_tool.tool_hierarchy > .content_data > .status_container > .status_checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.wrapper_tool.tool_hierarchy > .content_data > .status_container > .status_checks > .check {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.15rem 0;
+}
+.wrapper_tool.tool_hierarchy > .content_data > .status_container > .status_checks > .check > .check_label {
+  flex: 0 0 12rem;
+  color: var(--color_grey_8);
+}
+.wrapper_tool.tool_hierarchy > .content_data > .status_container > .status_checks > .check > .check_detail {
+  color: var(--color_grey_4);
+}
+.wrapper_tool.tool_hierarchy > .content_data > .status_container > .status_checks > .check:before {
+  flex: 0 0 1rem;
+  font-weight: 700;
+}
+.wrapper_tool.tool_hierarchy > .content_data > .status_container > .status_checks > .check.ok:before {
+  content: '✓';
+  color: var(--color_success);
+}
+.wrapper_tool.tool_hierarchy > .content_data > .status_container > .status_checks > .check.failed:before {
+  content: '✗';
+  color: var(--tool_hierarchy);
+}
+.wrapper_tool.tool_hierarchy > .content_data > .status_container > .status_checks > .check.failed > .check_detail {
+  color: var(--tool_hierarchy);
+  font-weight: 600;
+}
+.wrapper_tool.tool_hierarchy > .content_data > .messages_container > .applied {
+  margin: 0.5rem 0 0 0;
+  padding-left: 1.25rem;
+  color: var(--color_grey_6);
+}
 .wrapper_tool.tool_hierarchy > .content_data > .buttons_container {
   padding: 2rem;
   padding-bottom: 1rem;
@@ -251,6 +311,10 @@
 .wrapper_tool.tool_hierarchy > .content_data > .messages_container.error {
   background-color: transparent !important;
   color: var(--color_danger);
+}
+.wrapper_tool.tool_hierarchy > .content_data > .messages_container .error {
+  padding: 0.5rem;
+  border-radius: 4px;
 }
 .tool_header.tool_hierarchy {
   background-color: var(--tool_hierarchy);

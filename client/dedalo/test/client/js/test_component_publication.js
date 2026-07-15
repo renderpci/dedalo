@@ -15,7 +15,11 @@ import {clone, pause} from '../../../core/common/js/utils/util.js'
 const publication_model		= 'component_publication'
 const publication_tipo		= 'test92'
 const publication_section	= 'test3'
-const publication_section_id	= 1
+// Isolation record (manifest.ts SUITE_ISOLATION_RECORDS[13]) — this suite's add/
+// remove/update cases mutate the record's test92 locator directly, several
+// without cleanup; record 1 is the shared canonical record other suites (the
+// generic component sweeps) render and expect a single zero-or-one value.
+const publication_section_id	= 13
 const publication_lang		= page_globals?.dedalo_data_nolan ?? 'lg-nolan'
 
 // modes and views to test
@@ -80,6 +84,41 @@ function make_locator(section_id, section_tipo) {
 		type					: DD_TIPOS?.DEDALO_RELATION_TYPE_LINK ?? 'dd151'
 	}
 }//end make_locator
+
+
+
+/**
+* CLEANUP_PUBLICATION_RECORD
+* Removes every test92 locator from the working record.
+* component_publication is a BINARY switch (one locator max: section_id "1"=yes,
+* "2"=no). The add/change/remove cases below insert DISTINCT synthetic locators
+* (9001…9060) via change_value and their conditional removes frequently no-op,
+* so without this teardown the record accumulates one stray toggle per run
+* (see manifest.ts SUITE_ISOLATION_RECORDS[13]). Called from `after` hooks to
+* keep record 13 at its zero-value baseline.
+* @param {number|string} [section_id=publication_section_id] - Target record
+* @return {Promise<void>}
+*/
+async function cleanup_publication_record(section_id) {
+
+	const instance = await get_publication_instance('edit', 'default', section_id ?? publication_section_id)
+
+	// instance.data is the array of current test92 locators (each with an .id)
+	const entries = Array.isArray(instance.data) ? instance.data : []
+	if (entries.length > 0) {
+		const changed_data = entries.map(el => Object.freeze({
+			action	: 'remove',
+			id		: el.id,
+			value	: null
+		}))
+		await instance.change_value({
+			changed_data	: changed_data,
+			refresh		: false
+		})
+	}
+
+	await instance.destroy(true, true, true)
+}//end cleanup_publication_record
 
 
 
@@ -309,6 +348,14 @@ describe(`COMPONENT_PUBLICATION LIFECYCLE`, async function() {
 describe(`COMPONENT_PUBLICATION DATA OPERATIONS`, async function() {
 
 	this.timeout(30000)
+
+	// Teardown: the add/remove/update cases below insert stray test92 locators
+	// (9001…9030) whose conditional removes frequently no-op; clear the record
+	// so the binary publication switch never accumulates extra toggles.
+	after(async function() {
+		this.timeout(30000)
+		await cleanup_publication_record()
+	})
 
 
 
@@ -659,6 +706,13 @@ describe(`COMPONENT_PUBLICATION SPECIFIC METHODS`, async function() {
 describe(`COMPONENT_PUBLICATION FULL LIFECYCLE`, async function() {
 
 	this.timeout(60000)
+
+	// Teardown: the complete-lifecycle case inserts locator 9060 and its
+	// conditional remove can no-op; clear the record to its zero-value baseline.
+	after(async function() {
+		this.timeout(30000)
+		await cleanup_publication_record()
+	})
 
 	it(`${publication_model} complete lifecycle: init → build → render → add → change → remove → destroy`, async function() {
 

@@ -1,8 +1,9 @@
 /**
  * Unit gate: the TS-NATIVE server state (check_config widget flags +
  * ts_state.json) and its enforcement — maintenance mode refuses non-superuser
- * logins in the TS auth flow — plus the TS-native php_runtime panel (Bun
- * runtime info, in-memory cache clears, expired-session pruning).
+ * logins in the TS auth flow — plus the TS-native runtime_info panel (Bun
+ * runtime info, in-memory cache clears, expired-session pruning; merged from
+ * php_runtime — WC-030).
  * These surfaces are ENGINE-NATIVE by design: the PHP widgets write the PHP
  * install's config_core.php, which a coexisting TS server must not touch.
  */
@@ -51,7 +52,7 @@ afterAll(() => {
 	});
 });
 
-describe('TS-native server state (check_config) + runtime panel (php_runtime)', () => {
+describe('TS-native server state (check_config) + runtime panel (runtime_info)', () => {
 	test('scratch seam: state writes land in the DEDALO_TS_STATE_PATH scratch file', () => {
 		// Guard equivalent of session_store_reset_guard.test.ts (S1-18): the
 		// preload plumbed the override BEFORE server_state.ts could touch the
@@ -197,9 +198,9 @@ describe('TS-native server state (check_config) + runtime panel (php_runtime)', 
 		}
 	});
 
-	test('php_runtime panel reports the Bun runtime; cache + session clears run', async () => {
+	test('runtime_info panel reports the Bun runtime; cache + session clears run', async () => {
 		const body = (await dispatchGetWidgetValue(ADMIN, {
-			model: 'php_runtime',
+			model: 'runtime_info',
 		})) as unknown as Record<string, unknown>;
 		const info = (body.result as { info?: Record<string, unknown> }).info as Record<
 			string,
@@ -209,7 +210,7 @@ describe('TS-native server state (check_config) + runtime panel (php_runtime)', 
 		expect(String(info.version)).toBe(Bun.version);
 		expect(Number(info.memory_rss)).toBeGreaterThan(0);
 
-		const caches = await call('php_runtime', 'clear_cache_files');
+		const caches = await call('runtime_info', 'clear_cache_files');
 		expect((caches.result as { cleared: string[] }).cleared).toEqual([
 			'ontology',
 			'tools',
@@ -219,7 +220,7 @@ describe('TS-native server state (check_config) + runtime panel (php_runtime)', 
 			'structure_context',
 		]);
 
-		const sessions = await call('php_runtime', 'clear_session_files');
+		const sessions = await call('runtime_info', 'clear_session_files');
 		expect(typeof (sessions.result as { pruned: number }).pruned).toBe('number');
 	});
 

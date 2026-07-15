@@ -2,19 +2,25 @@
  * tool_ontology_parser handler — PHP
  * tools/tool_ontology_parser/class.tool_ontology_parser.php.
  *
- * Developer-only. Three registered actions:
- *  - get_ontologies: read every matrix_ontology_main record and resolve the four
- *    UI metadata fields ({target_section_tipo, tld, name, typology_id,
- *    typology_name}); skip records missing target/tld (non-fatal, ledger errors).
- *    The census walk itself is SHARED (core/ontology/data_io.ts
- *    getActiveOntologies) with update_ontology_info's active-only subset.
- *  - regenerate_ontologies: full dd_ontology rebuild for the selected TLDs (→
- *    ontology_write.regenerateRecordsInDdOntology) + the LLM-map post-step
- *    (PHP: export_llm_map errors merged into the regenerate response).
- *  - export_ontologies: the strictly-ordered export pipeline (PHP :301-409):
+ * Developer-only. The dd_ontology writes are OWNED by core/ontology/ontology_state.ts
+ * (inspect/ensure/rebuild — the single reconcile authority); this tool is a gated door onto
+ * it, matching the tool_hierarchy → hierarchy_state pattern. Registered actions:
+ *  - get_ontologies: the census — every matrix_ontology_main record's UI metadata
+ *    ({target_section_tipo, tld, name, typology_id, typology_name}); skips records missing
+ *    target/tld (non-fatal). Shared with update_ontology_info (data_io.ts getActiveOntologies).
+ *  - inspect_ontologies (READ): the drift of each selected TLD (which dd_ontology nodes are
+ *    missing, stale or orphaned vs the matrix source). The client's status panel.
+ *  - reconcile_ontologies (WRITE, default): INCREMENTAL — apply only the delta
+ *    (ensureOntology). Non-destructive; a TLD in sync is a no-op.
+ *  - regenerate_ontologies (WRITE, nuclear): TRANSACTIONAL wipe-and-rebuild
+ *    (rebuildOntology) for structural corruption the incremental path cannot fix.
+ *  - both writes run the LLM-map post-step (PHP: export_llm_map errors merged in).
+ *  - export_ontologies: the ordered export pipeline (PHP :301-409):
  *    update_ontology_info → export_ontology_info (both hard-abort) → per-TLD
- *    export_to_file (fail-and-continue) → export_private_lists_to_file →
- *    export_llm_map; result=true only when zero errors accumulated.
+ *    export_to_file (fail-and-continue, run BOUNDED-PARALLEL — see
+ *    EXPORT_CONCURRENCY) → export_private_lists_to_file → export_llm_map;
+ *    result=true only when zero errors accumulated. Only the per-TLD step
+ *    parallelizes; the four surrounding steps stay strictly sequential.
  */
 
 import {
@@ -26,8 +32,44 @@ import {
 	updateOntologyInfo,
 } from '../../../src/core/ontology/data_io.ts';
 import type { OntologyIoResponse } from '../../../src/core/ontology/data_io.ts';
-import { regenerateRecordsInDdOntology } from '../../../src/core/ontology/ontology_write.ts';
+import {
+	type EnsureOntologyResult,
+	ensureOntologies,
+	inspectOntology,
+	rebuildOntologies,
+} from '../../../src/core/ontology/ontology_state.ts';
 import type { ToolActionContext, ToolResponse } from '../../../src/core/tools/module.ts';
+
+/** The selected TLDs from options, coerced to a clean string list. */
+function selectedTlds(context: ToolActionContext): string[] {
+	const selected = context.options.selected_ontologies;
+	return Array.isArray(selected) ? selected.map((tld) => String(tld)) : [];
+}
+
+/** Roll a per-TLD reconcile/rebuild batch into one tool response. */
+function summarize(outcomes: EnsureOntologyResult[], tlds: string[], verb: string): ToolResponse {
+	const errors: string[] = [];
+	const ar_msg: string[] = [];
+	let applied = 0;
+	outcomes.forEach((outcome, index) => {
+		const tld = tlds[index] ?? outcome.state.tld ?? '?';
+		if (!outcome.result) errors.push(`${tld}: ${outcome.msg}`);
+		errors.push(...outcome.errors.map((error) => `${tld}: ${error}`));
+		applied += outcome.applied.length;
+		ar_msg.push(
+			`${tld}: ${outcome.msg}${outcome.applied.length ? ` (${outcome.applied.join('; ')})` : ''}`,
+		);
+	});
+	const ok = errors.length === 0;
+	return {
+		result: ok,
+		msg: ok
+			? `${verb} ${outcomes.length} ontolog${outcomes.length === 1 ? 'y' : 'ies'} — ${applied} change(s)`
+			: `${verb} completed with errors`,
+		errors,
+		ar_msg,
+	};
+}
 
 export async function toolOntologyParserGetOntologies(
 	context: ToolActionContext,
@@ -50,35 +92,68 @@ export async function toolOntologyParserGetOntologies(
 	return { result: ontologies, msg: 'OK. Request done', errors: census.errors };
 }
 
+/**
+ * READ: the drift of each selected TLD (core/ontology/ontology_state.ts inspectOntology).
+ * The client renders this as a per-TLD status panel — which nodes are missing, stale or
+ * orphaned — so an operator SEES why an ontology is out of sync before touching anything.
+ */
+export async function toolOntologyParserInspect(context: ToolActionContext): Promise<ToolResponse> {
+	if (!context.principal.isDeveloper) {
+		return { result: false, msg: 'Error. developer privileges required', errors: ['unauthorized'] };
+	}
+	const tlds = selectedTlds(context);
+	const states = [];
+	for (const tld of tlds) states.push(await inspectOntology(tld));
+	return { result: true, msg: 'OK. Request done', errors: [], states };
+}
+
+/**
+ * WRITE (default): INCREMENTAL reconcile — bring each selected TLD's dd_ontology in line
+ * with its matrix source by applying only the delta (ensureOntology). Non-destructive: the
+ * runtime ontology is never momentarily empty, and a TLD already in sync is a no-op.
+ */
+export async function toolOntologyParserReconcile(
+	context: ToolActionContext,
+): Promise<ToolResponse> {
+	if (!context.principal.isDeveloper) {
+		return { result: false, msg: 'Error. developer privileges required', errors: ['unauthorized'] };
+	}
+	const tlds = selectedTlds(context);
+	const outcomes = await ensureOntologies(tlds, context.userId);
+	return withLlmMap(summarize(outcomes, tlds, 'Reconciled'));
+}
+
+/**
+ * WRITE (nuclear): TRANSACTIONAL rebuild — wipe and re-derive each selected TLD's
+ * dd_ontology from scratch (rebuildOntology). For structural corruption the incremental
+ * reconcile cannot converge. The delete + reinsert run in one transaction per TLD, so a
+ * failure rolls back with no empty window and no leftover backup table.
+ */
 export async function toolOntologyParserRegenerate(
 	context: ToolActionContext,
 ): Promise<ToolResponse> {
 	if (!context.principal.isDeveloper) {
 		return { result: false, msg: 'Error. developer privileges required', errors: ['unauthorized'] };
 	}
-	const selected = context.options.selected_ontologies;
-	const tlds = Array.isArray(selected) ? selected.map((tld) => String(tld)) : [];
-	const response = await regenerateRecordsInDdOntology(tlds, context.userId);
+	const tlds = selectedTlds(context);
+	const outcomes = await rebuildOntologies(tlds, context.userId);
+	return withLlmMap(summarize(outcomes, tlds, 'Rebuilt'));
+}
 
-	// PHP regenerate_ontologies post-step: rebuild the LLM map even when the
-	// regeneration partially failed (partial rows are still mappable); its
-	// errors are MERGED into the response — result/msg stay the delegate's.
-	const errors = [...response.errors];
+/**
+ * PHP regenerate_ontologies post-step: rebuild the LLM map after a dd_ontology write, even
+ * when it partially failed (partial rows are still mappable). Its errors are MERGED in;
+ * result/msg stay the write's.
+ */
+async function withLlmMap(response: ToolResponse): Promise<ToolResponse> {
+	const errors = [...((response.errors as string[]) ?? [])];
 	try {
 		const llmMapResponse = await exportLlmMap();
-		if (!llmMapResponse.result) {
-			errors.push(...llmMapResponse.errors);
-		}
+		if (!llmMapResponse.result) errors.push(...llmMapResponse.errors);
 	} catch (error) {
 		errors.push((error as Error).message);
 	}
-
-	return {
-		result: response.result,
-		msg: response.msg,
-		errors,
-		total_insert: response.total_insert,
-	};
+	return { ...response, errors };
 }
 
 /**
@@ -102,13 +177,23 @@ const PRODUCTION_IO: OntologyExportIo = {
 };
 
 /**
- * PHP export_ontologies (:301-409) — the strictly-ordered pipeline with PHP's
+ * Max per-TLD exports in flight at once. Each io.exportToFile forks its own
+ * psql subprocess (\copy … TO PROGRAM 'gzip …'); with 100+ ontologies a fully
+ * unbounded fan-out would spawn 100+ processes — this caps it.
+ */
+const EXPORT_CONCURRENCY = 6;
+
+/**
+ * PHP export_ontologies (:301-409) — the ordered pipeline with PHP's
  * abort/continue semantics:
  *   1. updateOntologyInfo    — HARD ABORT on failure (nothing written);
  *   2. exportOntologyInfo    — HARD ABORT on failure;
- *   3. per-TLD exportToFile  — soft-fail per TLD (errors recorded, loop
- *      continues); a THROWN error (file-not-created) aborts everything via
- *      the outer catch — PHP parity;
+ *   3. per-TLD exportToFile  — BOUNDED-PARALLEL (≤ EXPORT_CONCURRENCY in
+ *      flight): soft-fail per TLD (errors recorded, the others continue);
+ *      a THROWN error (file-not-created) aborts everything via the outer
+ *      catch — PHP parity. Steps 1,2,4,5 stay strictly sequential; only
+ *      this one parallelizes (the per-TLD dumps are independent — each
+ *      forks its own psql writing its own <tld>.copy.gz, no shared state);
  *   4. exportPrivateListsToFile — always runs regardless of per-TLD errors;
  *   5. exportLlmMap          — always runs; errors merged.
  * result=true only when the errors array is still empty after the full run.
@@ -156,11 +241,37 @@ export async function runExportOntologies(
 			return response;
 		}
 
-		// 3. Per-TLD loop — individual failures recorded, loop continues.
+		// 3. Per-TLD exports — BOUNDED-PARALLEL. Each exportToFile forks an
+		// independent psql writing its own <tld>.copy.gz with no shared state,
+		// so the exports are safe to overlap; we run at most EXPORT_CONCURRENCY
+		// at a time (chunked allSettled) instead of the old strict sequence.
+		// Steps 1,2,4,5 above/below stay sequential — only this step parallelizes.
 		let done = 0;
 		const arMsg: string[] = [];
-		for (const tld of tlds) {
-			const ontologyResponse = await io.exportToFile(tld);
+		const settled: PromiseSettledResult<OntologyIoResponse>[] = [];
+		for (let i = 0; i < tlds.length; i += EXPORT_CONCURRENCY) {
+			const chunk = tlds.slice(i, i + EXPORT_CONCURRENCY);
+			// allSettled preserves input order within a chunk; chunks are pushed
+			// in order — so `settled` stays in the original tld order regardless
+			// of which subprocess finished first.
+			settled.push(...(await Promise.allSettled(chunk.map((tld) => io.exportToFile(tld)))));
+		}
+
+		// A THROWN export (COPY output file not created) aborts everything —
+		// re-throw the first (input-order) rejection so the outer catch reports
+		// it exactly as the old sequential loop did (PHP parity). Other in-flight
+		// exports may already have run; that is acceptable — the overall result
+		// still becomes a failure.
+		const firstRejected = settled.find((result) => result.status === 'rejected');
+		if (firstRejected?.status === 'rejected') {
+			throw firstRejected.reason;
+		}
+
+		// Soft-fail per TLD: record errors, count only successes, keep going.
+		// arMsg is emitted in input tld order (settled is order-preserving).
+		for (const result of settled) {
+			if (result.status !== 'fulfilled') continue; // unreachable: rejects thrown above
+			const ontologyResponse = result.value;
 			arMsg.push(ontologyResponse.msg);
 			if (ontologyResponse.result === false) {
 				response.errors.push(...(ontologyResponse.errors ?? []));
@@ -184,8 +295,11 @@ export async function runExportOntologies(
 		}
 
 		response.result = response.errors.length === 0;
+		// The per-file ar_msg lines carry each file's path (relative to the I/O dir) + size;
+		// name the target directory once here so the operator knows where to find them.
+		const { config } = await import('../../../src/config/config.ts');
 		response.msg = response.result
-			? `OK. Export of ontologies completed successfully. Done: ${done}`
+			? `OK. Exported ${done} ontolog${done === 1 ? 'y' : 'ies'} to ${config.ops.ontologyDataIoDir}`
 			: 'Errors found. Export Ontologies request failed.';
 		response.ar_msg = arMsg;
 	} catch (error) {

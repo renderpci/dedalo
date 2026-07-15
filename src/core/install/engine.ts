@@ -96,7 +96,9 @@ export async function runInstallStep(rqo: Rqo, context: ApiRequestContext): Prom
 			}
 			const { installHierarchies } = await import('./hierarchy_import.ts');
 			const tlds = Array.isArray(options.hierarchies) ? (options.hierarchies as string[]) : [];
-			return ok({ ...(await installHierarchies(tlds)) });
+			// The in-wizard root session owns the activation writes (registry flags,
+			// the provisioned ontology records) — audited to a real actor, not to -1.
+			return ok({ ...(await installHierarchies(tlds, undefined, context.session.userId)) });
 		}
 
 		case 'register_tools': {

@@ -511,7 +511,42 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 
 		if (change.action === 'set_data') {
 			// PHP: bulk-replace the WHOLE data array, no key checks.
-			items = Array.isArray(change.value) ? (change.value as unknown[]) : [];
+			const rawItems = Array.isArray(change.value) ? (change.value as unknown[]) : [];
+			// RELATION elements are NORMALIZED here, not stored raw. PHP's bulk-replace
+			// is not a raw assignment either: component_common::set_data (:997) runs
+			// validate_data_element over EVERY element, which is the same normalizer the
+			// insert path uses — `type` filled, `from_component_tipo` FORCED, section_id
+			// stringified, paginated_key stripped, duplicates dropped.
+			// Storing the client's raw locator instead persisted a BARE
+			// {id, section_tipo, section_id} with no from_component_tipo, and every jsonb
+			// @> containment that names it then missed the record — e.g. the hierarchy4
+			// "active" filter behind a portal's target_sections (a saved-active hierarchy
+			// resolved to zero targets: "Invalid target section tipo (empty)").
+			// Dedup scope is the NEW array only: PHP resets its locator lookup map on the
+			// first element of the call (:1150-53), so an element is compared against the
+			// ones already accepted in THIS set_data, never against the stored data.
+			if (column === 'relation' && !isDataframeSave) {
+				const { validateRelationInsert } = await import('../../relations/save.ts');
+				const validatedItems: unknown[] = [];
+				for (const element of rawItems) {
+					if (element === null || typeof element !== 'object') {
+						continue; // PHP wraps a scalar into {value}, which then fails the locator law
+					}
+					const safeElement = await validateRelationInsert(element as Record<string, unknown>, {
+						componentTipo,
+						model,
+						hostSectionTipo: sectionTipo,
+						hostSectionId: sectionId,
+						translatable,
+						lang: effectiveLang,
+						existingItems: validatedItems,
+					});
+					if (safeElement !== null) validatedItems.push(safeElement);
+				}
+				items = validatedItems;
+			} else {
+				items = rawItems;
+			}
 			hasRemovals = true; // force the full-array write path
 			continue;
 		}
@@ -641,7 +676,49 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			items = [...items, value]; // reflected in the returned data + TM snapshot
 			continue;
 		}
-		items = applyUpdate(items, change, langSliced ? effectiveLang : null);
+
+		// UPDATE of a relation element — normalized exactly like an insert.
+		// In PHP there is no such thing as an unnormalized write: every action ends in
+		// component_common::set_data, which runs validate_data_element over the array
+		// (:997). TS splits the actions into branches, so each branch that carries a
+		// VALUE must normalize it itself, or the client's raw locator is persisted.
+		// This is the branch a component_radio_button uses (build_changed_data_item
+		// emits action:'update'), and it is how a bare, from_component_tipo-less
+		// hierarchy4 "active" locator reached the DB — invisible to the jsonb @>
+		// containment behind a portal's target_sections.
+		// The dup guard compares against the OTHER items only: an update re-writing an
+		// item must not be rejected as a duplicate of ITSELF (PHP rebuilds its lookup
+		// map per set_data call, so the element under validation is never in it yet).
+		let effectiveChange = change;
+		if (
+			column === 'relation' &&
+			!isDataframeSave &&
+			change.value !== null &&
+			typeof change.value === 'object'
+		) {
+			const { validateRelationInsert } = await import('../../relations/save.ts');
+			const targetId = (change.value as { id?: unknown }).id ?? change.id ?? null;
+			const otherItems = (items as unknown[]).filter((item) => {
+				const itemId = (item as { id?: unknown } | null)?.id;
+				return (
+					targetId === null || itemId === undefined || String(itemId) !== String(targetId)
+				);
+			});
+			const validated = await validateRelationInsert(change.value as Record<string, unknown>, {
+				componentTipo,
+				model,
+				hostSectionTipo: sectionTipo,
+				hostSectionId: sectionId,
+				translatable,
+				lang: effectiveLang,
+				existingItems: otherItems,
+			});
+			// PHP drops the element when validate_data_element returns false; we leave
+			// the stored item untouched rather than persist a bad-formed locator.
+			if (validated === null) continue;
+			effectiveChange = { ...change, value: validated };
+		}
+		items = applyUpdate(items, effectiveChange, langSliced ? effectiveLang : null);
 	}
 
 	const hasUpdates =

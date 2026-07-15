@@ -303,9 +303,14 @@ component_input_text.prototype.find_equal = async function(value) {
 		const data = api_response.result.data || []
 
 	// record data results from search
+	// The 'sections' envelope is ALWAYS emitted (one item, tipo = the caller tipo,
+	// which for this component-sourced search IS self.tipo), and its entries are
+	// the MATCHED ROWS — so a no-duplicate result is a PRESENT item with an EMPTY
+	// entries array, not a missing item. entries[0] must never be assumed.
 		const record = data.find(item => item.tipo===self.tipo)
-		if (record) {
-			const section_id = record.entries[0].section_id || null
+		const duplicate = record?.entries?.[0]
+		if (duplicate) {
+			const section_id = duplicate.section_id || null
 			// cache the result
 			self.find_equal_cache.set(cache_key, section_id)
 			return section_id

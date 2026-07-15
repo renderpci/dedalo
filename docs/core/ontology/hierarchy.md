@@ -161,11 +161,35 @@ so a node edit does not wait for an ontology write.
 
 ## Public API
 
-### Virtual section generation
+### Hierarchy state — the one entry point
+
+A usable hierarchy has to satisfy ten conditions at once (record, tld, typology, source
+section, the two flags, the ontology, the target sections and the two general-term roots).
+`ontology/hierarchy_state.ts` owns that invariant: it is the **single source of truth for
+whether a hierarchy works, and the single writer that makes it so**. Everything else —
+the install-time activation, the `tool_hierarchy` button, a repair script — goes through it.
 
 | function | module | purpose |
 | --- | --- | --- |
-| `generateVirtualSection(options)` | `ontology/hierarchy_provision.ts` | Validates the master record (active / tld / source-section / typology / name, in that order), then — inside **one transaction** — provisions the descriptor + model virtual sections, their `dd_ontology` nodes, parent groupers, and writes the master record's target-section pointers back. Grants the creating user's profile level `2` over both new sections (`setSectionPermissions()`); a failed grant is non-fatal. |
+| `inspectHierarchy(sectionId)` | `ontology/hierarchy_state.ts` | **Pure read.** Returns `{tld, typology, usable, checks:[{id, label, ok, detail}]}` — every condition with a pass/fail and *what is actually there* (`DANGLING → al1/1 does not exist`). Safe to call on every render; `tool_hierarchy` paints its status panel from it. |
+| `ensureHierarchy(sectionId, userId, options?)` | `ontology/hierarchy_state.ts` | **Idempotent converge.** Creates only what is missing and returns the post-write state plus `applied[]` (empty on a healthy record → *"Already consistent — nothing to do"*). Never deletes. `options.activate` (default `true`) flags the hierarchy; `options.activeInThesaurus` sets `hierarchy125`. |
+| `rebuildHierarchy(sectionId, userId, deleteRecord, options?)` | `ontology/hierarchy_state.ts` | Ontology teardown (`deleteOntologyByTld`) **+ ensure**. The `<tld>1` **terms are never touched** — only the `dd_ontology` nodes, the ontology-main row and the `<tld>0` node records — so the surviving root is re-linked afterwards. |
+| `inspectAllHierarchies()` | `ontology/hierarchy_state.ts` | Every `hierarchy1` record's state — the maintenance overview ("which of my hierarchies are broken, and why"). |
+
+!!! danger "One writer, on purpose"
+    `generateVirtualSection` may only be called from `hierarchy_state.ts`, and a
+    general-term locator may only be **written** there. This is enforced by
+    `test/unit/hierarchy_single_writer_tripwire.test.ts`. The rule exists because the
+    previous design had three writers — the tool, the installer and the ontology-main
+    writer — each establishing a *different subset* of the same invariant and none of them
+    checking the end state, which is how a hierarchy ended up with an ontology, an active
+    flag, and a general-term locator pointing at a record that was never created.
+
+### Virtual section generation (internal to the above)
+
+| function | module | purpose |
+| --- | --- | --- |
+| `generateVirtualSection(options)` | `ontology/hierarchy_provision.ts` | Validates the master record (active / tld / source-section / typology / name, in that order), then — inside **one transaction** — provisions the descriptor + model virtual sections, their `dd_ontology` nodes, parent groupers, and writes the master record's target-section pointers back. Grants the creating user's profile level `2` over both new sections (`setSectionPermissions()`); a failed grant is non-fatal. Refuses an already-provisioned tld (*"already generated"*), so a second run cannot collide on `matrix_ontology`'s unique key. Call it through `ensureHierarchy`, not directly. |
 | *(inline)* `` `${tld}1` `` / `` `${tld}2` `` | `ontology/hierarchy_provision.ts` | The descriptor / model section tipos are pure string concatenation from the TLD — not exposed as named helpers. |
 
 ### Configuration lookups (the hot path)
@@ -178,9 +202,29 @@ so a node edit does not wait for an ontology write.
 
 ### Root terms
 
-| function | module | purpose |
-| --- | --- | --- |
-| `createThesaurusGeneralTerm(sectionTipo, sectionId, generalTermTipo)` | `ontology/hierarchy_provision.ts` | Seeds the "General term"/"General term model" portal root — only when not already present; resolves the target section from `hierarchy53`/`hierarchy58`, appends the link locator via the shared `applyAddNewElement()` relations helper. Returns `true` when it created an element. |
+The root term (`hierarchy45`, and `hierarchy59` for models) is the node every other term in
+the hierarchy descends from. Without it the tree has nothing to hang children on and the
+hierarchy is unusable — so `ensureHierarchy` maintains it, following two rules:
+
+**Ask whether the target EXISTS, never whether the locator is SET.** A definition record can
+carry a general-term locator pointing at a record that was never created — the seed ships
+exactly that on most hierarchy records, pointing at `<tld>1`/1, which does not exist until
+that TLD's thesaurus is imported. A locator whose target is missing is treated as **absent**,
+and the root is created.
+
+**Resolve or create; never assume an id.** If the locator's target exists it is kept (and
+re-stamped to the canonical shape). Otherwise, if the section already holds terms — an
+imported thesaurus — its existing root is linked. Only when the section is *empty* is a root
+created, and it takes whatever id the counter allocates.
+
+A created root is **named after the hierarchy** (`hierarchy5`, every language item it holds),
+because an unnamed root renders as an empty row at the top of the tree. The term component is
+read from the target section's `section_map` — `hierarchy52` declares
+`{thesaurus: {term: 'hierarchy25', model: 'hierarchy27', …}}` — and **never hard-coded**: a
+hierarchy built on a real section other than `hierarchy20` names a different component, and
+`getSectionMap()` already resolves a virtual section to its real one. Naming is **fill-only**:
+an existing term (imported, or edited by a curator) is never overwritten, which is also what
+makes it safe to run on every `ensureHierarchy` and lets it backfill roots created earlier.
 
 ### Schema diffing (ontology updates)
 
@@ -250,26 +294,47 @@ import { getSectionMapValue } from 'src/core/ontology/section_map.ts';
 const termTipo = await getSectionMapValue('es1', 'thesaurus', 'term'); // e.g. 'es16'
 ```
 
-### Generate the virtual sections for an active hierarchy
+### Ask why a hierarchy is broken (read-only)
 
 ```ts
-import { generateVirtualSection } from 'src/core/ontology/hierarchy_provision.ts';
+import { inspectHierarchy } from 'src/core/ontology/hierarchy_state.ts';
 
-// options point at the master (hierarchy1) record
-const response = await generateVirtualSection({ section_id: 3, section_tipo: 'hierarchy1' });
-// response.result is false (with response.errors) if the master record is
-// not active, or is missing its tld / source real section / typology / name.
-// On success it has created e.g. es1 and es2 plus their dd_ontology nodes —
-// all inside one transaction: any failure mid-sequence rolls the whole thing
-// back.
+const state = await inspectHierarchy(3); // the master (hierarchy1) record id
+// state.usable === false
+// state.checks:
+//   ✓ Active            Yes
+//   ✓ Ontology          al0, al1, al2 + 2 node record(s)
+//   ✗ General term      DANGLING → al1/1 does not exist
 ```
 
-!!! warning "generateVirtualSection() is a heavy, ordered mutation"
-    It creates ontology nodes, two section records and parent groupers, and
-    writes `dd_ontology` — all inside one transaction. Treat it as a one-shot
-    activation action (it is what the *create hierarchy* button triggers),
-    not a per-request helper. It validates the whole master record **before**
-    writing anything.
+### Make it usable
+
+```ts
+import { ensureHierarchy } from 'src/core/ontology/hierarchy_state.ts';
+
+const outcome = await ensureHierarchy(3, userId);
+// outcome.result  → true
+// outcome.msg     → "Hierarchy 'al' is ready"
+// outcome.applied → [
+//   "provisioned the ontology (al0, al1, al2)",
+//   "hierarchy45: created the root al1/1",
+//   "hierarchy45: named the root al1/1 after the hierarchy"
+// ]
+// outcome.state   → the post-write checklist (all ✓)
+
+// Idempotent: running it again reports "Already consistent — nothing to do",
+// with applied === [].
+```
+
+!!! warning "ensureHierarchy() is a heavy, ordered mutation — but it never deletes"
+    It may create ontology nodes, two section records, parent groupers and a root term,
+    and it writes `dd_ontology`. Provisioning runs inside one transaction: any failure
+    mid-sequence rolls the whole thing back. Treat it as an activation/repair action (it is
+    what the *hierarchy tool* button triggers), not a per-request helper. It validates the
+    master record **before** writing anything, and refuses rather than papering over an
+    operator error — a `hierarchy109` naming a section that does not exist is reported, not
+    silently rewritten. To *rebuild* a broken ontology, use `rebuildHierarchy()`; that is
+    the only path that deletes anything, and even then the thesaurus terms survive.
 
 ## Related
 

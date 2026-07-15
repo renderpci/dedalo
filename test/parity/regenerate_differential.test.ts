@@ -1,16 +1,16 @@
 /**
- * Workstream B gate: regenerateRecordsInDdOntology (PHP
- * ontology::regenerate_records_in_dd_ontology) — the destructive
- * backup→parse→delete→reinsert cycle whose rollback IS the dd_ontology_bk table.
+ * rebuildOntology (core/ontology/ontology_state.ts) — the TRANSACTIONAL wipe-and-rebuild
+ * that replaced the retired `regenerateRecordsInDdOntology`. Complements
+ * `test/unit/ontology_state_native.test.ts` (hand-seeded scratch records) by exercising the
+ * rebuild against a REAL ontology provisioned through the hierarchy machinery.
  *
- * A scratch hierarchy (TLD 'zzr') is provisioned, then regenerated. Pins:
- *  - the tld's nodes are rebuilt identically (same tipo set) after regenerate;
- *  - dd_ontology_bk is LEFT BEHIND on success (PHP-pinned behavior);
- *  - a failure path (empty tld list) is refused with an error.
- * Everything (including the bk table) is torn down in afterAll.
- *
- * Runs TS-only (no PHP dependency for the protocol invariants) but is gated on DB
- * reachability via the same credential probe.
+ * A scratch hierarchy (TLD 'zzr') is provisioned via generateVirtualSection, then rebuilt.
+ * Pins:
+ *  - the tld's nodes are rebuilt identically (same tipo set) after rebuild;
+ *  - NO dd_ontology_bk table is left behind — the rebuild is transactional, not the old
+ *    backup-table protocol;
+ *  - an unsafe tld is refused with an error and writes nothing.
+ * Everything is torn down in afterAll. Runs TS-only, gated on DB reachability.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -19,7 +19,7 @@ import { updateMatrixKeyData } from '../../src/core/db/matrix_write.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
 import { generateVirtualSection } from '../../src/core/ontology/hierarchy_provision.ts';
-import { regenerateRecordsInDdOntology } from '../../src/core/ontology/ontology_write.ts';
+import { rebuildOntology } from '../../src/core/ontology/ontology_state.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { hasPhpCredentials } from './php_client.ts';
 
@@ -77,12 +77,12 @@ beforeAll(async () => {
 
 	captured.before = await tldTipos();
 
-	// Empty-list refusal (backup can't be made → early error).
-	const empty = await regenerateRecordsInDdOntology([]);
-	captured.emptyRefused = empty.result === false && empty.errors.length > 0;
+	// Unsafe-tld refusal (writes nothing, returns an error).
+	const bad = await rebuildOntology('bad tld!');
+	captured.emptyRefused = bad.result === false && bad.errors.length > 0;
 
-	// Regenerate the scratch tld.
-	const response = await regenerateRecordsInDdOntology([TLD]);
+	// Rebuild the scratch tld.
+	const response = await rebuildOntology(TLD);
 	captured.after = await tldTipos();
 	captured.bkLeft = await bkTableExists();
 	// keep 'response' referenced for clarity
@@ -111,19 +111,19 @@ afterAll(async () => {
 	await clearOntologyDerivedCaches();
 });
 
-describe.if(hasPhpCredentials())('regenerate differential (backup-table protocol)', () => {
-	test('the tld nodes are rebuilt identically after regenerate', () => {
+describe.if(hasPhpCredentials())('rebuildOntology (transactional wipe-and-rebuild)', () => {
+	test('the tld nodes are rebuilt identically after rebuild', () => {
 		if (!hasPhpCredentials()) return;
 		expect(captured.after).toEqual(captured.before);
 		expect(captured.after.length).toBeGreaterThan(0);
 	});
 
-	test('dd_ontology_bk is LEFT BEHIND on success (PHP-pinned)', () => {
+	test('NO dd_ontology_bk table is left behind (transactional, not the backup protocol)', () => {
 		if (!hasPhpCredentials()) return;
-		expect(captured.bkLeft).toBe(true);
+		expect(captured.bkLeft).toBe(false);
 	});
 
-	test('an empty tld list is refused', () => {
+	test('an unsafe tld is refused', () => {
 		if (!hasPhpCredentials()) return;
 		expect(captured.emptyRefused).toBe(true);
 	});

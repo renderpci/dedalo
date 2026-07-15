@@ -53,14 +53,18 @@ const ENGINE_NATIVE: Record<string, string> = {
 	'menu_skip_tipos.save_menu_skip_tipos': 'TS-native runtime state (ts_state.json menu skip list)',
 	'export_hierarchy.sync_hierarchy_active_status':
 		'hierarchy active-status sync through the TS write path',
+	'add_hierarchy.install_hierarchies':
+		'imports + activates vendored hierarchy files into the engine-owned (configured) database — the wizard EXECUTE path, reachable post-seal only through this widget',
+	'add_hierarchy.reset_hierarchies':
+		'DESTRUCTIVE delete-then-reimport of a hierarchy into the engine-owned (configured) database — explicit confirmed "Reset to seed" (PHP replace parity)',
 	'diffusion_server_control.get_value': 'read-only diffusion engine status',
 	'diffusion_server_control.cancel_process': 'TS-owned diffusion engine control (Bun owns MariaDB)',
 	'diffusion_server_control.requeue_job': 'TS-owned diffusion engine control',
 	'diffusion_server_control.purge_jobs': 'TS-owned diffusion engine control',
 	'diffusion_server_control.set_scheduler': 'TS-owned diffusion engine control',
 	'diffusion_server_control.retry_pending_deletions': 'TS-owned diffusion engine control',
-	'php_runtime.clear_cache_files': 'TS in-process caches only',
-	'php_runtime.clear_session_files': 'TS-owned session store pruning',
+	'runtime_info.clear_cache_files': 'TS in-process caches only',
+	'runtime_info.clear_session_files': 'TS-owned session store pruning',
 	'database_info.analyze_db':
 		'shared-DB maintenance through the TS db_assets path (PHP-parity action, no PHP-tree surface)',
 	'database_info.consolidate_tables': 'shared-DB maintenance through the TS db_assets path',

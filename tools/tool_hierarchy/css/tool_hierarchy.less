@@ -50,6 +50,84 @@
 			}
 		}
 
+		// status_container
+		// The invariant checklist the server returns (hierarchy_state.ts). Reads as a
+		// front panel: one line per condition, the failing ones carrying the reason.
+		// Deliberately NOT a global .warning bar — the state is local to this hierarchy,
+		// and a red slab across the tool would say "something is wrong" without saying what.
+		//
+		// (!) THE GREY SCALE IS INVERTED from the intuition: `@color_grey_1` is #212529 —
+		// nearly BLACK ("buttons text default") — and the LIGHT surfaces are at the top of
+		// the scale (`@color_grey_15` #f6f6f6, `@color_grey_16` #fcfcfc). Using grey_1 as a
+		// background painted this panel as a black slab in the light theme. Stay on the
+		// documented roles: grey_15 surface, grey_13 hairline, grey_4 text, grey_8 labels.
+		// They are re-declared by theme_dark.less, so the panel follows the theme for free.
+		>.status_container {
+			margin: 1rem 2rem 0 2rem;
+			padding: 1rem 1.25rem;
+			border: 1px solid @color_grey_13;
+			border-left-width: 4px;
+			border-radius: 3px;
+			background-color: @color_grey_15;
+			font-size: 1rem;
+			line-height: 1.4rem;
+
+			&.ok         { border-left-color: @color_success; }
+			&.incomplete { border-left-color: @tool_color; }
+
+			>.status_headline {
+				font-weight: 600;
+				margin-bottom: .5rem;
+				color: @color_grey_4;
+			}
+
+			>.status_checks {
+				list-style: none;
+				margin: 0;
+				padding: 0;
+
+				>.check {
+					display: flex;
+					align-items: baseline;
+					gap: .5rem;
+					padding: .15rem 0;
+
+					>.check_label {
+						flex: 0 0 12rem;
+						color: @color_grey_8;
+					}
+					>.check_detail {
+						color: @color_grey_4;
+					}
+
+					// The mark carries the state; colour alone never does (a11y).
+					&:before {
+						flex: 0 0 1rem;
+						font-weight: 700;
+					}
+					&.ok:before {
+						content: '✓';
+						color: @color_success;
+					}
+					&.failed:before {
+						content: '✗';
+						color: @tool_color;
+					}
+					&.failed >.check_detail {
+						color: @tool_color;
+						font-weight: 600;
+					}
+				}
+			}
+		}
+
+		// applied: what ensure actually changed (empty when it was already consistent)
+		>.messages_container >.applied {
+			margin: .5rem 0 0 0;
+			padding-left: 1.25rem;
+			color: @color_grey_6;
+		}
+
 		>.buttons_container {
 			padding: 2rem;
 			padding-bottom: 1rem;
@@ -81,6 +159,11 @@
 			&.error {
 				background-color: transparent !important;
 				color: @color_danger;
+			}
+
+			.error {
+				padding: 0.5rem;
+				border-radius: 4px;
 			}
 		}
 	}//end content_data

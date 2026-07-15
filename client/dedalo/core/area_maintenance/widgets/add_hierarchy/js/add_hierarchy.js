@@ -56,7 +56,7 @@
 *   @var {string}        id             - Unique widget instance identifier (set by init)
 *   @var {Object}        value          - Resolved server payload containing `hierarchies`,
 *                                        `hierarchy_files_dir_path`, `hierarchy_typologies`,
-*                                        and `active_hierarchies` (set by get_value / build)
+*                                        and `installed_hierarchies` (set by get_value / build)
 *   @var {HTMLElement}   node           - Root DOM node created by render (set by render)
 *   @var {Array}         events_tokens  - Event subscription tokens for cleanup in destroy()
 *   @var {Array}         ar_instances   - Child widget/component instances managed by this widget

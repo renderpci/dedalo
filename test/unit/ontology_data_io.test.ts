@@ -164,16 +164,26 @@ describe('runExportOntologies ordering/abort semantics (PHP :301-409)', () => {
 			makeContext({ selected_ontologies: ['aa', 'bb'] }),
 			makeIo(calls),
 		);
-		expect(calls).toEqual([
-			'update_ontology_info:77',
-			'export_ontology_info',
-			'export_to_file:aa',
-			'export_to_file:bb',
-			'export_private_lists_to_file',
-			'export_llm_map',
-		]);
+		// The per-TLD exports (step 3) now run BOUNDED-PARALLEL, so their
+		// relative order is not guaranteed — assert only that both happen,
+		// AFTER export_ontology_info and BEFORE export_private_lists_to_file.
+		expect(calls).toContain('export_to_file:aa');
+		expect(calls).toContain('export_to_file:bb');
+		const infoIndex = calls.indexOf('export_ontology_info');
+		const privateIndex = calls.indexOf('export_private_lists_to_file');
+		for (const tld of ['aa', 'bb']) {
+			const tldIndex = calls.indexOf(`export_to_file:${tld}`);
+			expect(tldIndex).toBeGreaterThan(infoIndex);
+			expect(tldIndex).toBeLessThan(privateIndex);
+		}
+		// The sequential steps keep their strict order around the parallel block.
+		expect(calls[0]).toBe('update_ontology_info:77');
+		expect(calls[1]).toBe('export_ontology_info');
+		expect(calls[calls.length - 2]).toBe('export_private_lists_to_file');
+		expect(calls[calls.length - 1]).toBe('export_llm_map');
 		expect(response.result).toBe(true);
-		expect(response.msg).toBe('OK. Export of ontologies completed successfully. Done: 2');
+		// Summary names the count + the target I/O directory (absolute, env-derived).
+		expect(response.msg).toContain('Exported 2 ontologies to ');
 		expect(response.errors).toEqual([]);
 		// ar_msg: one line per TLD + private lists + llm map
 		expect(response.ar_msg).toEqual([
@@ -182,6 +192,42 @@ describe('runExportOntologies ordering/abort semantics (PHP :301-409)', () => {
 			'OK. Request done',
 			'OK. LLM map exported: 2 sections',
 		]);
+	});
+
+	test('per-TLD exports run BOUNDED-PARALLEL yet ar_msg stays in input order', async () => {
+		const calls: string[] = [];
+		// More TLDs than EXPORT_CONCURRENCY so the pool must cap the fan-out.
+		const tlds = ['ta', 'tb', 'tc', 'td', 'te', 'tf', 'tg', 'th', 'ti'];
+		let inFlight = 0;
+		let maxInFlight = 0;
+		const response = await runExportOntologies(
+			makeContext({ selected_ontologies: tlds }),
+			makeIo(calls, {
+				exportToFile: async (tld) => {
+					inFlight++;
+					maxInFlight = Math.max(maxInFlight, inFlight);
+					// Resolve earlier-input TLDs LATER, so completion order is the
+					// REVERSE of input order — this proves ar_msg is ordered by input
+					// position, not by which psql subprocess finished first.
+					const position = tlds.indexOf(tld);
+					await new Promise((resolve) => setTimeout(resolve, (tlds.length - position) * 2));
+					inFlight--;
+					return ok(`OK. Request done: ${tld}0`);
+				},
+			}),
+		);
+		// Concurrency actually happened (>1 at once) but was BOUNDED — never all
+		// nine at once (the pool caps it below the input size). Constant-agnostic:
+		// unbounded would reach tlds.length, strictly sequential would stay at 1.
+		expect(maxInFlight).toBeGreaterThan(1);
+		expect(maxInFlight).toBeLessThan(tlds.length);
+		expect(response.result).toBe(true);
+		// done counts every success.
+		expect(response.msg).toContain(`Exported ${tlds.length} ontologies to `);
+		// ar_msg per-TLD lines are in INPUT order despite the reversed completion.
+		expect((response.ar_msg as string[]).slice(0, tlds.length)).toEqual(
+			tlds.map((tld) => `OK. Request done: ${tld}0`),
+		);
 	});
 
 	test('updateOntologyInfo failure HARD-aborts before any file is written', async () => {
@@ -263,8 +309,13 @@ describe('runExportOntologies ordering/abort semantics (PHP :301-409)', () => {
 				},
 			}),
 		);
-		// The first throw stops the loop AND the remaining steps.
-		expect(calls).toEqual(['update_ontology_info:77', 'export_ontology_info', 'export_to_file:aa']);
+		// Under bounded-parallel step 3 the in-flight exports (aa AND bb) may both
+		// launch, but a thrown export still aborts: the remaining sequential steps
+		// (private lists, llm map) never run, and the FIRST (input-order) rejection
+		// is re-thrown to the outer catch — so msg/errors carry aa's message alone.
+		expect(calls).toContain('export_to_file:aa');
+		expect(calls).not.toContain('export_private_lists_to_file');
+		expect(calls).not.toContain('export_llm_map');
 		expect(response.result).toBe(false);
 		expect(response.msg).toBe('Error. Error Processing Request. File /io/aa.copy.gz not created!');
 		expect(response.errors).toEqual(['Error Processing Request. File /io/aa.copy.gz not created!']);

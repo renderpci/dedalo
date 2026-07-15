@@ -70,10 +70,12 @@
 * server widget catalog so the catalog stays byte-identical to the PHP oracle
 * (the differential parity gate compares every catalog entry).
 *
-* - php_info: a phpinfo() iframe with no equivalent on the Bun/TS engine. The
-*   server also returns an explicit engine_denied envelope for it as a fallback.
+* Empty since 2026-07-15 (WC-030): the last entry, php_info (a phpinfo()
+* iframe with no Bun equivalent), was merged into the TS-native runtime_info
+* widget (formerly php_runtime) rather than kept as a denied stub — there is
+* no PHP-only widget left to hide.
 */
-	const ENGINE_DISABLED_WIDGETS = new Set(['php_info'])
+	const ENGINE_DISABLED_WIDGETS = new Set([])
 
 
 
@@ -247,6 +249,117 @@ const get_content_data = async function(self) {
 			widget => !ENGINE_DISABLED_WIDGETS.has(widget.id)
 		)
 
+	// content_data (host for both views: System Map + classic List accordion)
+		const content_data = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_data maintenance_v2 ' + (self.type || '')
+		})
+
+	// persisted view choice ('map' | 'list'). Map is the default.
+		const view_key = 'maintenance_view_' + (self.tipo || 'area_maintenance')
+		let active_view = 'map'
+		try {
+			const saved = await data_manager.get_local_db_data(view_key, 'status', true)
+			if (saved && (saved.value==='map' || saved.value==='list')) {
+				active_view = saved.value
+			}
+		} catch (err) {
+			console.warn('[area_maintenance] could not restore view selection', err)
+		}
+
+	// restore the last map selection (node|tool), so a reload / navigation returns
+	// the user to the subsystem + tool they were on
+		const sel_key = 'maintenance_map_sel_' + (self.tipo || 'area_maintenance')
+		let saved_sel = null
+		try {
+			const s = await data_manager.get_local_db_data(sel_key, 'status', true)
+			if (s && typeof s.value==='string' && s.value) {
+				const [node, tool] = s.value.split('|')
+				saved_sel = { node: node || null, tool: tool || null }
+			}
+		} catch (err) {
+			console.warn('[area_maintenance] could not restore map selection', err)
+		}
+
+	// view switch (Map | List) + ⌘K launcher
+		const view_switch = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'map_view_switch',
+			parent			: content_data
+		})
+		const switch_group = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'map_switch',
+			parent			: view_switch
+		})
+		const btn_map = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'map_switch_btn',
+			inner_html		: get_label.maintenance_view_map || 'Map',
+			parent			: switch_group
+		})
+		const btn_list = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'map_switch_btn',
+			inner_html		: get_label.maintenance_view_list || 'List',
+			parent			: switch_group
+		})
+		const kbar = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'map_kbar',
+			inner_html		: (get_label.maintenance_find_tool || 'Find a tool') + ' <kbd>⌘K</kbd>',
+			parent			: view_switch
+		})
+
+	// the two views
+		const list_wrap = await build_list_view(self, widgets)
+		content_data.appendChild(list_wrap)
+		const map_ctl = build_map_view(self, widgets, { sel_key, saved_sel })
+		content_data.appendChild(map_ctl.node)
+
+	// apply + persist the active view
+		const set_view = (view, persist) => {
+			active_view = view
+			content_data.classList.toggle('view_map', view==='map')
+			content_data.classList.toggle('view_list', view==='list')
+			btn_map.classList.toggle('active', view==='map')
+			btn_list.classList.toggle('active', view==='list')
+			kbar.style.display = (view==='map') ? '' : 'none'
+			if (view==='map') {
+				map_ctl.on_show()
+			}
+			if (persist) {
+				try {
+					data_manager.set_local_db_data({ id: view_key, value: view }, 'status')
+				} catch (err) {
+					console.warn('[area_maintenance] could not persist view selection', err)
+				}
+			}
+		}
+		btn_map.addEventListener('click', (e) => { e.preventDefault(); set_view('map', true) })
+		btn_list.addEventListener('click', (e) => { e.preventDefault(); set_view('list', true) })
+		kbar.addEventListener('click', (e) => { e.preventDefault(); map_ctl.open_palette() })
+		set_view(active_view, false)
+
+
+	return content_data
+}//end get_content_data
+
+
+
+/**
+* BUILD_LIST_VIEW
+* Builds the classic accordion dashboard (sticky toolbar with live search +
+* category chips over category-grouped collapsible widget cards). This is the
+* original `get_content_data` body, unchanged in behaviour, reparented under a
+* `.list_view_wrap` node so it can coexist with the System Map view.
+*
+* @param {Object} self - The area_maintenance instance
+* @param {Array}  widgets - The engine-served widget descriptors (already filtered)
+* @returns {Promise<HTMLElement>} The `.list_view_wrap` node
+*/
+const build_list_view = async function(self, widgets) {
+
 	// bucket widgets by category, preserving definition order within each bucket
 		const buckets = {}
 		for (let i = 0; i < widgets.length; i++) {
@@ -258,10 +371,10 @@ const get_content_data = async function(self) {
 			buckets[cat].push(widget)
 		}
 
-	// content_data
-		const content_data = ui.create_dom_element({
+	// wrapper
+		const list_wrap = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'content_data maintenance_v2 ' + (self.type || '')
+			class_name		: 'list_view_wrap'
 		})
 
 	// persistence key for the last selected group chip (IndexedDB 'status' table)
@@ -286,7 +399,7 @@ const get_content_data = async function(self) {
 		const toolbar = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'maintenance_toolbar',
-			parent			: content_data
+			parent			: list_wrap
 		})
 		const search_wrap = ui.create_dom_element({
 			element_type	: 'div',
@@ -310,7 +423,7 @@ const get_content_data = async function(self) {
 		const groups = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'maintenance_groups',
-			parent			: content_data
+			parent			: list_wrap
 		})
 
 	// filter chips ('All' + one per non-empty category)
@@ -479,8 +592,664 @@ const get_content_data = async function(self) {
 		}
 
 
-	return content_data
-}//end content_data
+	return list_wrap
+}//end build_list_view
+
+
+
+/**
+* SYSTEM MAP — architecture model
+* --------------------------------
+* The map regroups the maintenance tools by WHAT THEY TOUCH (a subsystem node)
+* rather than by the implementation taxonomy the List view uses. Each node lists
+* the widget ids that act on it; a widget may appear under more than one node
+* (e.g. make_backup touches both PostgreSQL and Backups). Positions are percent
+* coordinates on the stage. Nothing here is load-bearing for correctness: every
+* served widget is ALSO reachable from the ⌘K palette, so a mis-scoped or newly
+* added id is never hidden — it simply also shows in the palette.
+*/
+	const MAP_NODES = [
+		{ id:'clients',	title:'Clients',		x:9,  y:14, tools:['lock_components'] },
+		{ id:'web',		title:'Web server',		x:31, y:14, tools:['system_info','runtime_info','environment'] },
+		{ id:'core',	title:'Dédalo core',	x:53, y:14, kind:'core',
+			tools:['check_config','register_tools','config_areas','menu_skip_tipos','update_code','update_data_version','unit_test','dedalo_api_test_environment','sqo_test_environment','error_reports'] },
+		{ id:'pg',		title:'PostgreSQL',		x:12, y:66,
+			tools:['database_info','counters_status','sequences_status','dataframe_control','move_to_table','build_database_version','make_backup'] },
+		{ id:'bak',		title:'Backups',		x:31, y:66, tools:['make_backup','build_database_version'] },
+		{ id:'pub',		title:'Publication',	x:50, y:66, tools:['diffusion_server_control','publication_api'] },
+		{ id:'media',	title:'Media store',	x:69, y:66, tools:['media_control'] },
+		{ id:'onto',	title:'Ontology',		x:88, y:66,
+			tools:['update_ontology','move_tld','move_locator','move_to_portal','move_lang','export_hierarchy','add_hierarchy'] }
+	]
+	const MAP_EDGES = [
+		['clients','web'], ['web','core'], ['core','pg'], ['core','bak'],
+		['core','pub'], ['core','media'], ['core','onto'],
+		['pg','bak','dim'], ['pub','media','dim']
+	]
+	// irreversible / destructive tools — flagged red in the map (chips + palette)
+	const MAP_DANGER_IDS = new Set([
+		'update_ontology','update_code','update_data_version',
+		'move_tld','move_locator','move_to_portal','move_lang','move_to_table'
+	])
+	// one-line "what this does" leads, shown above the mounted tool in the panel
+	// body (the mockup's .lead). Purely descriptive — no data, so always honest.
+	const MAP_TOOL_DESC = {
+		system_info:				'Full server snapshot — OS, CPU, RAM, disk, uptime and prerequisites.',
+		check_config:				'Audits the live install config: database status and private sources.',
+		runtime_info:				'Bun engine runtime — version, pid, memory, uptime — plus cache and session pruning.',
+		environment:				'Server environment snapshot.',
+		register_tools:				'Imports tool register.json metadata into the ontology.',
+		config_areas:				'Runtime allow / deny editor for areas.',
+		menu_skip_tipos:			'Runtime override for menu grouping tipos.',
+		unit_test:					'Provisions a known-state matrix_test row from a fixture.',
+		dedalo_api_test_environment:'API endpoint testing sandbox.',
+		sqo_test_environment:		'Search-query-object testing sandbox.',
+		update_code:				'Downloads, verifies and installs a new code release. Irreversible.',
+		update_data_version:		'Runs pending data-version migrations against live data.',
+		lock_components:			'Active user sessions and component-lock tracking.',
+		database_info:				'Live PostgreSQL catalog snapshot and maintenance actions.',
+		build_database_version:		'Builds a clean-slate database snapshot. Heavy but additive.',
+		counters_status:			'Audit of the matrix_counter section-id counters.',
+		sequences_status:			'PostgreSQL sequence-counter audit.',
+		dataframe_control:			'Audit and repair dataframe locator pairing.',
+		move_to_table:				'Migrates section records between matrix tables. Irreversible.',
+		make_backup:				'Creates a compressed PostgreSQL dump in the backup directory.',
+		diffusion_server_control:	'Native publication engine: status, job queue and scheduler.',
+		publication_api:			'Diffusion API endpoint status and network probe.',
+		media_control:				'Sets the media access-protection mode and rebuilds the gate rules.',
+		update_ontology:			'Restores a remote ontology snapshot over the live one. Irreversible.',
+		move_tld:					'Rewrites the ontology tipo across every matrix table. Irreversible.',
+		move_locator:				'Bulk-moves locators from a source section to a target. Irreversible.',
+		move_to_portal:				'Portalizes component data into a portal-linked sub-section.',
+		move_lang:					'Migrates component data between translatable and non-translatable.',
+		export_hierarchy:			'Exports thesaurus tables to gzipped COPY files.',
+		add_hierarchy:				'Installs additional hierarchy packages.',
+		error_reports:				'Browse and manage stored error reports.'
+	}
+
+
+
+/**
+* BUILD_MAP_VIEW
+* Builds the System Map view: a health-coloured topology of the running system.
+* Clicking a subsystem node reveals its status and the tools scoped to it; the
+* selected tool mounts the real widget module (same lifecycle as the List view)
+* in the context panel. A ⌘K palette launches any served tool by name.
+*
+* Node health is honest, never faked:
+*   - PostgreSQL and Publication are probed once at idle via the existing
+*     get_widget_value API (cheap, read-only) and light up on load.
+*   - Any node lights up when opened, mirroring the mounted widget's own health
+*     verdict (the `danger`/`success` class it sets on its card).
+*   - Every other node stays neutral until touched.
+*
+* @param {Object} self - The area_maintenance instance
+* @param {Array}  widgets - The engine-served widget descriptors (already filtered)
+* @returns {{node:HTMLElement, on_show:Function, open_palette:Function}}
+*/
+const build_map_view = function(self, widgets, opts={}) {
+
+	// persist the current selection (node|tool) for restore on reload/navigation
+		const persist_sel = (node, tool) => {
+			if (!opts || !opts.sel_key) { return }
+			try {
+				data_manager.set_local_db_data({ id: opts.sel_key, value: (node||'') + '|' + (tool||'') }, 'status')
+			} catch (err) {
+				console.warn('[area_maintenance] could not persist map selection', err)
+			}
+		}
+
+	// id → served descriptor, and the set of served ids
+		const by_id = {}
+		for (let i = 0; i < widgets.length; i++) {
+			by_id[widgets[i].id] = widgets[i]
+		}
+		const strip = (html) => (html || '').replace(/<[^>]*>/g, '').trim()
+		// "move_to_table" → "Move to table". Used when a widget has no dictionary
+		// term: the server returns `<mark>key</mark>` for a missing label, which would
+		// otherwise strip down to the raw id.
+		const humanize = (id) => {
+			const s = String(id || '').replace(/_/g, ' ').trim()
+			return s ? (s.charAt(0).toUpperCase() + s.slice(1)) : String(id || '')
+		}
+		const tool_label = (id) => {
+			const raw = by_id[id] ? by_id[id].label : ''
+			if (!raw || raw.includes('<mark')) { return humanize(id) } // missing term
+			const s = strip(raw)
+			return (!s || s===id) ? humanize(id) : s
+		}
+
+	// base node readouts — real values known client-side up front (page_globals),
+	// so every node carries useful info on first paint (probes below refine the
+	// live-changing ones). Nothing invented: unknown fields fall back to a plain
+	// descriptor, never a fake value.
+		const G = (typeof page_globals!=='undefined' && page_globals) ? page_globals : {}
+		const truthy	= (v) => v===true || v===1 || v==='1'
+		const pg_ver	= String(G.pg_version || '').replace(/\s*\(.*\)\s*/, '').trim()
+		const runtime	= String(G.php_version || '').trim()
+		const user		= String(G.username || G.full_username || '').trim()
+		const entity	= String(G.dedalo_entity || G.dedalo_db_name || '').trim()
+		const code_ver	= String(G.dedalo_version || '').trim()
+		const maint		= truthy(G.maintenance_mode)
+		const recov		= truthy(G.recovery_mode)
+		const MAP_BASE = {
+			clients:{ status:'ok',   state:'Connected',                    sub: user ? ('@'+user) : 'sessions' },
+			web:	{ status:'ok',   state: runtime || 'Web server',       sub: (typeof location!=='undefined' && location.host) || 'http' },
+			core:	{ status:(maint||recov) ? 'warn' : 'ok',
+					  state: maint ? 'Maintenance mode' : recov ? 'Recovery mode' : (code_ver ? ('v'+code_ver) : 'Dédalo core'),
+					  sub: entity || 'engine' },
+			pg:		{ status:'ok',   state:'Online',                       sub: pg_ver ? ('PostgreSQL '+pg_ver) : 'database' },
+			bak:	{ status:'idle', state:'Backups',                     sub:'snapshots' },
+			pub:	{ status:'idle', state:'Publication',                 sub:'diffusion engine' },
+			media:	{ status:'idle', state:'Media store',                 sub:'protected assets' },
+			onto:	{ status:'idle', state:'Ontology',                    sub:'definition model' }
+		}
+
+	// live status per node id: 'idle' (neutral) | 'ok' | 'warn' | 'bad'
+		const status_by_id = {}
+		const state_by_id = {}
+		const sub_by_id = {}
+		MAP_NODES.forEach(n => {
+			const b = MAP_BASE[n.id] || { status:'idle', state:n.title, sub:'' }
+			status_by_id[n.id]	= b.status
+			state_by_id[n.id]	= b.state
+			sub_by_id[n.id]		= b.sub
+		})
+
+	// ---- root ----
+		const root = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'maintenance_map'
+		})
+
+	// summary + hint
+		const summary = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'map_summary',
+			parent			: root
+		})
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'map_hint',
+			inner_html		: (get_label.maintenance_map_hint
+				|| 'Click a subsystem to see its status and the tools that act on it.')
+				+ ' Tools in <span class="danger_key">red</span> are destructive or irreversible.',
+			parent			: root
+		})
+
+	// stage + edges svg
+		const stage_wrap = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'map_stage_wrap',
+			parent			: root
+		})
+		const stage = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'map_stage',
+			parent			: stage_wrap
+		})
+		const SVG_NS = 'http://www.w3.org/2000/svg'
+		const edges_svg = document.createElementNS(SVG_NS, 'svg')
+		edges_svg.setAttribute('class', 'map_edges')
+		edges_svg.setAttribute('preserveAspectRatio', 'none')
+		stage.appendChild(edges_svg)
+
+	// context panel
+		const context = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'map_context',
+			parent			: root
+		})
+
+	// ---- nodes ----
+		let selected = null
+		const node_els = {}
+		MAP_NODES.forEach(n => {
+			const el = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'map_node' + (n.kind ? (' kind_' + n.kind) : ''),
+				parent			: stage
+			})
+			el.style.left	= n.x + '%'
+			el.style.top	= n.y + '%'
+			el.innerHTML =
+				'<div class="n_top"><span class="map_dot"></span>' +
+				'<span class="n_title"></span></div>' +
+				'<div class="n_state"></div><div class="n_sub"></div>'
+			el.querySelector('.n_title').textContent = n.title
+			el.addEventListener('click', () => select_node(n.id))
+			node_els[n.id] = el
+		})
+		// paint node visuals from current status maps
+		const paint_node = (id) => {
+			const el	= node_els[id]
+			const st	= status_by_id[id]
+			if (!el) { return }
+			el.classList.remove('warn', 'bad')
+			if (st==='warn') { el.classList.add('warn') }
+			if (st==='bad')  { el.classList.add('bad') }
+			el.querySelector('.map_dot').className = 'map_dot ' + (st==='idle' ? '' : st)
+			el.querySelector('.n_state').textContent	= state_by_id[id] || ''
+			el.querySelector('.n_sub').textContent		= sub_by_id[id] || ''
+			// warn/bad badge
+			let badge = el.querySelector('.n_badge')
+			if (st==='warn' || st==='bad') {
+				if (!badge) {
+					badge = document.createElement('span')
+					badge.className = 'n_badge'
+					badge.textContent = '!'
+					el.appendChild(badge)
+				}
+			} else if (badge) {
+				badge.remove()
+			}
+		}
+		MAP_NODES.forEach(n => paint_node(n.id))
+
+	// ---- summary line ----
+		const paint_summary = () => {
+			const warn_nodes = MAP_NODES.filter(n => status_by_id[n.id]==='warn' || status_by_id[n.id]==='bad')
+			const known = MAP_NODES.filter(n => status_by_id[n.id]!=='idle')
+			const healthy = known.length - warn_nodes.length
+			let html = '<span class="s_seg"><span class="map_dot ok"></span><b>' + healthy + '</b>&nbsp;healthy</span>'
+			if (warn_nodes.length) {
+				html += '<span class="s_seg warn"><span class="map_dot warn"></span><b>' + warn_nodes.length +
+					'</b>&nbsp;need attention — ' + warn_nodes.map(n => n.title).join(', ') + '</span>'
+			}
+			summary.innerHTML = html
+			const warn_seg = summary.querySelector('.s_seg.warn')
+			if (warn_seg && warn_nodes.length) {
+				warn_seg.addEventListener('click', () => select_node(warn_nodes[0].id))
+			}
+		}
+		paint_summary()
+
+	// ---- edges ----
+		const center = (id) => {
+			const s = stage.getBoundingClientRect()
+			const r = node_els[id].getBoundingClientRect()
+			return { x: r.left + r.width/2 - s.left, y: r.top + r.height/2 - s.top }
+		}
+		const draw_edges = () => {
+			const s = stage.getBoundingClientRect()
+			if (s.width===0 || s.height===0) { return } // hidden view: no layout yet
+			edges_svg.setAttribute('viewBox', '0 0 ' + s.width + ' ' + s.height)
+			while (edges_svg.firstChild) { edges_svg.removeChild(edges_svg.firstChild) }
+			MAP_EDGES.forEach(([a, b, mod]) => {
+				const A = center(a), B = center(b)
+				const mid = (A.y + B.y) / 2
+				const d = 'M ' + A.x + ' ' + A.y + ' C ' + A.x + ' ' + mid + ', ' + B.x + ' ' + mid + ', ' + B.x + ' ' + B.y
+				const p = document.createElementNS(SVG_NS, 'path')
+				p.setAttribute('d', d)
+				let cls = 'flow'
+				if (mod==='dim') { cls = 'dim' }
+				if (selected && (a===selected || b===selected)) {
+					const warn = status_by_id[a]!=='ok' && status_by_id[a]!=='idle'
+						|| status_by_id[b]!=='ok' && status_by_id[b]!=='idle'
+					cls = 'act' + (warn ? ' warn' : '')
+				}
+				p.setAttribute('class', cls)
+				edges_svg.appendChild(p)
+			})
+		}
+		if (window.ResizeObserver) {
+			new ResizeObserver(() => draw_edges()).observe(stage)
+		}
+		window.addEventListener('resize', draw_edges)
+
+	// apply a status update to a node (and refresh dependents)
+		const set_node_status = (id, status, state, sub) => {
+			if (!(id in status_by_id)) { return }
+			status_by_id[id]	= status
+			if (state!==undefined) { state_by_id[id] = state }
+			if (sub!==undefined)   { sub_by_id[id] = sub }
+			paint_node(id)
+			paint_summary()
+			draw_edges()
+			// if this node's panel is open, keep its header in sync (a probe may
+			// land after the panel was already rendered from the base value)
+			if (id===selected) {
+				const head = context.querySelector('.ctx_head')
+				if (head) {
+					const dot = head.querySelector('.map_dot')
+					if (dot) { dot.className = 'map_dot ' + (status_by_id[id]==='idle' ? '' : status_by_id[id]) }
+					const st = head.querySelector('.ctx_state')
+					if (st) { st.textContent = state_by_id[id] || '' }
+					const sb = head.querySelector('.ctx_sub')
+					if (sb) { sb.textContent = sub_by_id[id] || '' }
+				}
+			}
+		}
+
+	// ---- context panel ----
+		let mount_token = 0
+		const select_node = (id, preferred_tool) => {
+			selected = id
+			const n = MAP_NODES.find(x => x.id===id)
+			Object.keys(node_els).forEach(k => node_els[k].classList.toggle('sel', k===id))
+
+			// available tools for this node (served ids only), preserving order
+			const tools = n.tools.filter(tid => by_id[tid])
+
+			context.innerHTML =
+				'<div class="ctx_head">' +
+					'<span class="map_dot ' + (status_by_id[id]==='idle' ? '' : status_by_id[id]) + '"></span>' +
+					'<span class="ctx_title"></span>' +
+					'<span class="ctx_state"></span>' +
+					'<span class="ctx_sub"></span>' +
+				'</div>' +
+				'<div class="ctx_tools"></div>' +
+				'<div class="ctx_body"></div>'
+			context.querySelector('.ctx_title').textContent = n.title
+			context.querySelector('.ctx_state').textContent = state_by_id[id] || ''
+			context.querySelector('.ctx_sub').textContent = sub_by_id[id] || ''
+
+			const tools_wrap = context.querySelector('.ctx_tools')
+			if (!tools.length) {
+				tools_wrap.innerHTML = '<span class="map_ctx_lead">No tools served for this subsystem on this engine.</span>'
+			}
+			tools.forEach(tid => {
+				const chip = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'tool_chip' + (MAP_DANGER_IDS.has(tid) ? ' danger' : ''),
+					parent			: tools_wrap
+				})
+				chip.innerHTML = '<span class="tc_dot"></span>'
+				chip.appendChild(document.createTextNode(tool_label(tid)))
+				chip.dataset.id = tid
+				if (MAP_DANGER_IDS.has(tid)) {
+					chip.title = 'Destructive / irreversible operation'
+				}
+				chip.addEventListener('click', () => select_tool(id, tid))
+			})
+
+			draw_edges()
+			if (tools.length) {
+				const pick = (preferred_tool && tools.includes(preferred_tool)) ? preferred_tool : tools[0]
+				select_tool(id, pick)
+			} else {
+				persist_sel(id, '')
+			}
+		}
+
+		const select_tool = async (node_id, tid) => {
+			const token = ++mount_token
+			const body = context.querySelector('.ctx_body')
+			if (!body) { return }
+			context.querySelectorAll('.tool_chip').forEach(c => c.classList.toggle('sel', c.dataset.id===tid))
+			persist_sel(node_id, tid)
+			body.innerHTML = ''
+
+			const descriptor = by_id[tid]
+			if (!descriptor) { return }
+
+			// lead: one-line "what this does" above the tool (the mockup's .lead)
+			if (MAP_TOOL_DESC[tid]) {
+				ui.create_dom_element({
+					element_type	: 'p',
+					class_name		: 'map_ctx_lead',
+					inner_html		: MAP_TOOL_DESC[tid],
+					parent			: body
+				})
+			}
+
+			// host card — same structure the List view uses, minus a duplicate DOM id.
+			// The widget's own accordion label is hidden by CSS so its body renders
+			// integrated directly under the panel header.
+			const container = ui.create_dom_element({
+				element_type	: 'div',
+				dataset			: { category: descriptor.category || 'general' },
+				class_name		: 'widget_container ' + (descriptor.class || ''),
+				parent			: body
+			})
+
+			const fragment = await render_widget(descriptor, self)
+			// a newer selection landed while awaiting — drop this one. (Do NOT gate on
+			// body.isConnected: the very first selection is mounted while the whole area
+			// is still detached, before the wrapper is inserted into the document.)
+			if (token!==mount_token) {
+				return
+			}
+			container.appendChild(fragment)
+			container.classList.add('loaded')
+
+			// auto-open the accordion so the tool is usable immediately
+			const label = container.querySelector('.widget_label')
+			requestAnimationFrame(() => {
+				const wbody = container.querySelector('.widget_body')
+				if (label && wbody && wbody.classList.contains('hide')) {
+					label.click()
+				}
+			})
+
+			// mirror the widget's own health verdict onto the node (progressive truth):
+			// widgets that self-report add 'danger'/'success' to their .widget_container.
+			const reflect = () => {
+				if (container.classList.contains('danger')) {
+					set_node_status(node_id, 'bad')
+				} else if (container.classList.contains('success') && status_by_id[node_id]==='idle') {
+					set_node_status(node_id, 'ok')
+				}
+			}
+			if (window.MutationObserver) {
+				const obs = new MutationObserver(reflect)
+				obs.observe(container, { attributes:true, attributeFilter:['class'] })
+				// stop watching after a short settle window to avoid a lingering observer
+				setTimeout(() => obs.disconnect(), 20000)
+			}
+		}
+
+	// ---- idle health probes ----
+	// Read-only, cheap, and each defensive: any missing/oddly-shaped payload leaves
+	// the node on its page_globals base — a probe never invents a value.
+		const probe_value = async (id) => {
+			try {
+				const api_response = await data_manager.request({
+					use_worker	: true,
+					body		: {
+						dd_api			: 'dd_area_maintenance_api',
+						action			: 'get_widget_value',
+						prevent_lock	: true,
+						source			: { type:'widget', model:id }
+					},
+					retries	: 1,
+					timeout	: 60 * 1000
+				})
+				return api_response ? api_response.result : null
+			} catch (err) {
+				console.warn('[area_maintenance] map health probe failed:', id, err)
+				return null
+			}
+		}
+		const probe_action = async (model, action, options={}) => {
+			try {
+				const api_response = await data_manager.request({
+					use_worker	: true,
+					body		: {
+						dd_api			: 'dd_area_maintenance_api',
+						action			: 'widget_request',
+						prevent_lock	: true,
+						source			: { type:'widget', model, action },
+						options
+					},
+					retries	: 1,
+					timeout	: 60 * 1000
+				})
+				return api_response ? api_response.result : null
+			} catch (err) {
+				console.warn('[area_maintenance] map action probe failed:', model, action, err)
+				return null
+			}
+		}
+		const cap = (s) => s ? (s.charAt(0).toUpperCase() + s.slice(1)) : s
+		let probed = false
+		const run_probes = () => {
+			if (probed) { return }
+			probed = true
+
+			// PostgreSQL — read-only catalog snapshot
+			dd_request_idle_callback(async () => {
+				if (!by_id['database_info']) { return }
+				const r = await probe_value('database_info')
+				if (r && Array.isArray(r.tables)) {
+					set_node_status('pg', 'ok', 'Online', r.tables.length + ' tables')
+				}
+			})
+
+			// Publication — native diffusion engine status
+			dd_request_idle_callback(async () => {
+				if (!by_id['diffusion_server_control']) { return }
+				const r = await probe_value('diffusion_server_control')
+				if (r && r.scheduler) {
+					const paused	= r.scheduler.paused===true
+					const pending	= Number(r.pending || 0)
+					const running	= Number(r.scheduler.running || 0)
+					const queued	= Number(r.scheduler.queued || 0)
+					const warn		= paused || pending>0
+					const sub		= running + ' running · ' + queued + ' queued' + (pending ? ' · ' + pending + ' pending' : '')
+					set_node_status('pub', warn ? 'warn' : 'ok', paused ? 'Paused' : 'Running', sub)
+				}
+			})
+
+			// Media store — access-protection mode
+			dd_request_idle_callback(async () => {
+				if (!by_id['media_control']) { return }
+				const r = await probe_value('media_control')
+				if (r && ('mode' in r)) {
+					const mode = r.mode===false ? 'off' : String(r.mode || '')
+					if (mode) {
+						set_node_status('media', 'ok',
+							mode==='private' ? 'Protected' : cap(mode),
+							'mode: ' + mode)
+					}
+				}
+			})
+
+			// Ontology — installed snapshot version
+			dd_request_idle_callback(async () => {
+				if (!by_id['update_ontology']) { return }
+				const r = await probe_value('update_ontology')
+				const ver = r && r.current_ontology ? r.current_ontology.version : null
+				if (ver) {
+					set_node_status('onto', 'ok', 'v' + ver, 'installed model')
+				}
+			})
+
+			// Backups — age of the most recent dump (warn when stale)
+			dd_request_idle_callback(async () => {
+				if (!by_id['make_backup']) { return }
+				const r = await probe_action('make_backup', 'get_dedalo_backup_files', { max_files: 1 })
+				const files = r && Array.isArray(r.psql_backup_files) ? r.psql_backup_files : null
+				if (!files) { return }
+				if (!files.length) {
+					set_node_status('bak', 'warn', 'No backups', 'none yet')
+					return
+				}
+				const m = String(files[0].name || '').match(/^(\d{4})-(\d{2})-(\d{2})/)
+				if (!m) {
+					set_node_status('bak', 'ok', files.length + ' backups', '')
+					return
+				}
+				const days = Math.floor((Date.now() - new Date(+m[1], +m[2]-1, +m[3]).getTime()) / 86400000)
+				const label = days<=0 ? 'Today' : days===1 ? '1 day old' : days + ' days old'
+				set_node_status('bak', days>14 ? 'warn' : 'ok', label, m[0])
+			})
+		}
+
+	// ---- command palette (⌘K) ----
+		const palette_backdrop = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'map_palette_backdrop',
+			parent			: root
+		})
+		palette_backdrop.innerHTML =
+			'<div class="map_palette">' +
+				'<div class="map_palette_in"><input type="text" autocomplete="off" placeholder="Type a tool name…"></div>' +
+				'<div class="map_palette_list"></div>' +
+			'</div>'
+		const palette_input = palette_backdrop.querySelector('input')
+		const palette_list = palette_backdrop.querySelector('.map_palette_list')
+		// node title for each served id (first node that lists it), for the palette hint column
+		const node_of = (id) => {
+			const n = MAP_NODES.find(x => x.tools.includes(id))
+			return n ? n.title : '—'
+		}
+		widgets.forEach(w => {
+			const item = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'p_item',
+				parent			: palette_list
+			})
+			item.dataset.id		= w.id
+			item.dataset.search	= strip(w.label).toLowerCase() + ' ' + w.id
+			item.innerHTML =
+				'<span class="map_dot ' + (MAP_DANGER_IDS.has(w.id) ? 'bad' : '') + '"></span>' +
+				'<span class="p_name"></span><span class="p_zone"></span>'
+			item.querySelector('.p_name').textContent = tool_label(w.id)
+			item.querySelector('.p_zone').textContent = node_of(w.id)
+			item.addEventListener('click', () => open_tool(w.id))
+		})
+		const filter_palette = () => {
+			const q = palette_input.value.trim().toLowerCase()
+			let first = null
+			palette_list.querySelectorAll('.p_item').forEach(it => {
+				const show = !q || it.dataset.search.includes(q)
+				it.classList.toggle('hide', !show)
+				it.classList.remove('sel')
+				if (show && !first) { first = it }
+			})
+			if (first) { first.classList.add('sel') }
+		}
+		const open_palette = () => {
+			palette_backdrop.classList.add('open')
+			palette_input.value = ''
+			filter_palette()
+			palette_input.focus()
+		}
+		const close_palette = () => palette_backdrop.classList.remove('open')
+		const open_tool = (id) => {
+			const n = MAP_NODES.find(x => x.tools.includes(id))
+			if (n) {
+				select_node(n.id)
+				select_tool(n.id, id)
+				context.scrollIntoView({ behavior:'smooth', block:'center' })
+			}
+			close_palette()
+		}
+		palette_input.addEventListener('input', filter_palette)
+		palette_backdrop.addEventListener('click', (e) => { if (e.target===palette_backdrop) { close_palette() } })
+		// global ⌘K / Esc — guarded so it only acts while this map is in the live DOM
+		document.addEventListener('keydown', (e) => {
+			if (!document.body.contains(root)) { return }
+			if ((e.metaKey || e.ctrlKey) && (e.key==='k' || e.key==='K')) {
+				e.preventDefault()
+				palette_backdrop.classList.contains('open') ? close_palette() : open_palette()
+			} else if (e.key==='Escape' && palette_backdrop.classList.contains('open')) {
+				close_palette()
+			} else if (palette_backdrop.classList.contains('open') && e.key==='Enter') {
+				const sel = palette_list.querySelector('.p_item.sel:not(.hide)')
+				if (sel) { open_tool(sel.dataset.id) }
+			}
+		})
+
+	// on_show — called when the map view becomes visible; draw edges (which need
+	// layout) and kick off the idle health probes the first time.
+		const on_show = () => {
+			requestAnimationFrame(() => {
+				draw_edges()
+				run_probes()
+			})
+		}
+
+	// initial selection: the persisted node+tool if still valid, else PostgreSQL
+		const saved = opts && opts.saved_sel
+		const init_node = (saved && MAP_NODES.some(n => n.id===saved.node)) ? saved.node : 'pg'
+		const init_tool = (saved && saved.tool && by_id[saved.tool]) ? saved.tool : null
+		select_node(init_node, init_tool)
+
+
+	return { node: root, on_show, open_palette }
+}//end build_map_view
 
 
 

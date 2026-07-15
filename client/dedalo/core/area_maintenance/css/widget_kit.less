@@ -258,6 +258,15 @@
 }
 
 // ---- mixins -------------------------------------------------------------
+// the shared bordered "card" surface — the single rounded panel every readout,
+// table and picker list sits on, so they all read as one component family.
+.dd_surface() {
+	border: 1px solid var(--border_default);
+	border-radius: 8px;
+	overflow: hidden;
+	background-color: var(--bg_surface);
+}
+
 // monospace output / log block (apply to a widget's <pre>/response container)
 .dd_console() {
 	padding: 0.7rem 0.85rem;
@@ -322,6 +331,114 @@
 		}
 		&:before {
 			background: none !important;
+		}
+	}
+}
+
+// action-result / log panel. Apply to a widget's `.body_response` so every
+// "what happened" area speaks one language: monospace console log blocks, and
+// calm-by-default status lines that only tint when a state needs attention
+// (the on_submit handlers emit bare .ok / .error / .warning / h3.warning nodes,
+// which were otherwise near-unstyled). Scoped under .body_response so the generic
+// .warning / .error class names never leak onto unrelated widget chrome.
+.dd_response_states() {
+
+	// inline status lines (divs / headings) emitted by init_form on_submit
+	.ok {
+		display: block;
+		padding: 0.06rem 0 0.06rem 0.6rem;
+		border-left: 3px solid var(--color_success);
+		color: var(--fg_default);
+		font-weight: 500;
+	}
+	.error {
+		display: block;
+		margin: 0.4rem 0;
+		padding: 0.55rem 0.7rem;
+		color: var(--fg_default);
+		font-weight: 500;
+		line-height: 1.4;
+		background-color: color-mix(in srgb, var(--color_danger) 11%, transparent);
+		border-left: 3px solid var(--color_danger);
+		border-radius: 0 6px 6px 0;
+	}
+	.warning,
+	h3.warning {
+		display: block;
+		margin: 0.4rem 0;
+		padding: 0.55rem 0.7rem;
+		color: var(--fg_default);
+		font-weight: 500;
+		line-height: 1.4;
+		background-color: color-mix(in srgb, var(--color_warning) 12%, transparent);
+		border-left: 3px solid var(--color_warning);
+		border-radius: 0 6px 6px 0;
+	}
+
+	// monospace log / result blocks — always the console surface; a severity
+	// pre keeps the console look and adds a matching accent rail. (pre.error /
+	// pre.warning are more specific than the .error/.warning notes above, so
+	// they win and never lose their monospace framing.)
+	pre {
+		.dd_console();
+
+		&.error {
+			border-left: 3px solid var(--color_danger);
+			background-color: color-mix(in srgb, var(--color_danger) 8%, var(--bg_surface_alt));
+		}
+		&.warning {
+			border-left: 3px solid var(--color_warning);
+			background-color: color-mix(in srgb, var(--color_warning) 8%, var(--bg_surface_alt));
+		}
+	}
+}
+
+// shared file-picker list (the move_* family). A checkbox row + collapsible
+// JSON preview list, sitting on the kit surface so it reads as the same
+// component as every other readout/table. One definition, five widgets.
+.dd_move_picker() {
+
+	.files_list {
+		.dd_surface();
+		margin-top: 0.6rem;
+	}
+	.file_container {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.15rem 0.7rem;
+		border-top: 1px solid var(--border_default);
+
+		&:first-child {
+			border-top: 0;
+		}
+
+		> .label {
+			display: flex;
+			align-items: center;
+			gap: 0.4rem;
+			height: 2rem;
+			cursor: pointer;
+			color: var(--fg_default);
+
+			&.selected {
+				font-weight: 600;
+			}
+			> input {
+				cursor: pointer;
+			}
+		}
+
+		// collapse arrow
+		> .show_file_content {
+			cursor: pointer;
+			padding-right: 0.8rem;
+		}
+
+		> .file_content_container {
+			width: 100%;
+			z-index: 0;
 		}
 	}
 }

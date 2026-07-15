@@ -370,6 +370,23 @@ describe(`COMPONENT_INPUT_TEXT DATA OPERATIONS`, function() {
 
 
 
+	// REGRESSION: a search that matches NOTHING still returns the 'sections'
+	// envelope for the caller tipo, with an EMPTY entries array. find_equal used to
+	// read entries[0].section_id unguarded and threw
+	// "Cannot read properties of undefined (reading 'section_id')", which killed the
+	// edit render of every section carrying a `unique` input_text (e.g. hierarchy1).
+	// The NO-duplicate case is the COMMON case, so this is the path that must not throw.
+	it(`find_equal resolves null when no duplicate exists`, async function() {
+
+		const unique_value = 'zz_no_such_value_' + Date.now()
+
+		const result = await instance.find_equal(unique_value)
+
+		assert.equal(result, null, 'find_equal expected null when nothing matches')
+	});
+
+
+
 	it(`destroy after data operations`, async function() {
 
 		if (instance) {

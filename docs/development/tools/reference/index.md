@@ -69,7 +69,7 @@ Section-level tools surface on the section itself. A tool's own `isAvailable(con
 | `tool_hierarchy` | Generates custom ontologies / virtual sections from existing real sections, creating hierarchy elements and thesaurus general terms | [reference](tool_hierarchy.md) |
 | `tool_cataloging` | Drag-and-drop grouping/hierarchization of records from source sections into a target hierarchy; UI-only | [reference](tool_cataloging.md) |
 | `tool_ontology` | Developer-only parsing/sync of ontology section records into the `dd_ontology` runtime table from single-edit and batch modes | [reference](tool_ontology.md) |
-| `tool_ontology_parser` | Developer-only retrieval/export of ontology records to JSON and regeneration of `dd_ontology` | — |
+| `tool_ontology_parser` | Developer-only reconcile/rebuild of `dd_ontology` against its `matrix_ontology` source (inspect drift → reconcile delta → transactional rebuild) + export to JSON | [reference](tool_ontology_parser.md) |
 
 ### Transcription & indexation
 

@@ -1,31 +1,37 @@
 /**
- * install_hierarchies (PHP installer_hierarchy_manager). For each selected TLD,
- * import its vendored `<tld>1.copy.gz` (thesaurus terms) and optional
- * `<tld>2.copy.gz` (models) into matrix_hierarchy, re-consolidate the counter,
- * then provision the virtual ontology sections via the already-ported
- * generateVirtualSection.
+ * install_hierarchies — the wizard's hierarchy step. For each selected TLD: import its
+ * vendored `<tld>1.copy.gz` (thesaurus terms) and optional `<tld>2.copy.gz` (models) into
+ * matrix_hierarchy, re-consolidate the counter, then ACTIVATE it (./hierarchy_activate.ts).
  *
- * The import forces the target table to `matrix_hierarchy` regardless of the
- * file's own section_tipo (PHP parity — avoids the lg1→matrix_langs mis-route),
- * using `\copy … FROM STDIN` through psql (the sanctioned subprocess pattern).
+ * The import forces the target table to `matrix_hierarchy` regardless of the file's own
+ * section_tipo — avoiding the lg1→matrix_langs mis-route, where `lg1` is ALSO a core
+ * section whose own table is matrix_langs, so resolving the table from the tipo would COPY
+ * the rows somewhere the activated hierarchy never reads (they would import "successfully"
+ * into an empty-looking hierarchy). Uses `\copy … FROM STDIN` through psql (the sanctioned
+ * subprocess pattern).
  *
- * Login-gated (the router checks the session): a fresh install reaches this only
- * after the in-wizard root login. Selecting no hierarchies is valid (the seed
- * already carries the core ontology).
+ * Login-gated (the router checks the session): a fresh install reaches this only after the
+ * in-wizard root login. Selecting no hierarchies is valid (the seed already carries the
+ * core ontology).
  *
- * SCOPE (ledgered): this imports the hierarchy DATA (term/model records) and
- * realigns the counters. Full THESAURUS ACTIVATION — registering the hierarchy
- * in the hierarchy1 master and provisioning the virtual ontology sections via
- * hierarchy_provision.generateVirtualSection so the tree is browsable in the UI
- * — is a documented follow-up (docs/install/ts_native_install.md). The core
- * install is complete without it; activation runs post-install via the thesaurus.
+ * IMPORT IS HALF THE JOB. The `.copy.gz` only lands term rows; on their own they are
+ * unreachable — `<tld>1` is not a section the engine knows until its ONTOLOGY exists, and
+ * the hierarchy1 registry record is not flagged ACTIVE, so the thesaurus tree is empty and
+ * every portal that resolves its targets from the active hierarchies gets nothing. That was
+ * the shipped behaviour until 2026-07-14: 69,889 `es1` terms in the database and not one
+ * of them reachable. An import that succeeds but whose activation fails is now reported as
+ * a FAILURE for that tld — a hierarchy the operator ticked but cannot use is not an install
+ * that worked.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
+import { config } from '../../config/config.ts';
 import { MATRIX_COPY_COLUMNS } from '../db/matrix_write.ts';
 import { safeTld } from '../ontology/data_io.ts';
+import { activateHierarchy } from './hierarchy_activate.ts';
+import { hierarchyMetaByTld } from './hierarchy_meta.ts';
 import { HIERARCHY_IMPORT_DIR } from './paths.ts';
 import { type DbConnDescriptor, connFromConfig, runPsql } from './pg_exec.ts';
 
@@ -35,6 +41,8 @@ export interface HierarchyImportResponse {
 	tld: string;
 	result: boolean;
 	msg: string;
+	/** True when the tld was already installed and left untouched (skip mode). */
+	skipped?: boolean;
 }
 
 export interface InstallHierarchiesResult {
@@ -42,6 +50,18 @@ export interface InstallHierarchiesResult {
 	msg: string;
 	errors: string[];
 	responses: HierarchyImportResponse[];
+}
+
+/** How to treat a tld whose rows are already in matrix_hierarchy. */
+export interface InstallHierarchiesOptions {
+	/**
+	 * false (default): an already-installed tld is SKIPPED (non-destructive — the raw
+	 * `\copy` is insert-only and would violate the PK). true: DELETE the tld's existing
+	 * rows first, then re-copy from the vendored seed — the PHP replace behavior. This is
+	 * destructive (discards any operator edits/additions to that hierarchy's terms) and is
+	 * only reached through the explicit, confirmed "Reset to seed" widget action.
+	 */
+	replace?: boolean;
 }
 
 /** Load one `<name>.copy.gz` into matrix_hierarchy via \copy FROM STDIN. */
@@ -80,14 +100,61 @@ async function consolidateHierarchyCounter(conn: DbConnDescriptor, tld: string):
 	await runPsql(conn, ['-v', 'ON_ERROR_STOP=1', '-c', sql]).catch(() => {});
 }
 
-/** Import + provision the selected hierarchies. `conn` defaults to config.db. */
+/**
+ * Is this tld already imported? True when the `<tld>1` term section has any row in
+ * matrix_hierarchy. `tld` is safeTld-validated before this runs, so the quoted literal
+ * is safe. A probe failure (e.g. connection issue) returns false → the caller falls
+ * through to the normal copy, whose own error is reported honestly.
+ */
+async function hierarchyRowsPresent(conn: DbConnDescriptor, tld: string): Promise<boolean> {
+	const res = await runPsql(conn, [
+		'-tAc',
+		`SELECT 1 FROM ${HIERARCHY_TABLE} WHERE section_tipo = '${tld}1' LIMIT 1`,
+	]).catch(() => null);
+	return res !== null && res.exitCode === 0 && res.stdout === '1';
+}
+
+/**
+ * DELETE every `<tld>N` section (es1 terms, es2 models…) from matrix_hierarchy before a
+ * REPLACE re-import — the PHP scoped pre-delete (backup::import_from_copy_file). Anchored
+ * regex on the safeTld-validated tld. Destructive by design (the caller confirmed it).
+ */
+async function deleteHierarchyRows(
+	conn: DbConnDescriptor,
+	tld: string,
+): Promise<{ ok: boolean; msg: string }> {
+	const res = await runPsql(conn, [
+		'-v',
+		'ON_ERROR_STOP=1',
+		'-c',
+		`DELETE FROM ${HIERARCHY_TABLE} WHERE section_tipo ~ '^${tld}[0-9]+$'`,
+	]);
+	if (res.exitCode !== 0) return { ok: false, msg: res.stderr || 'delete failed' };
+	return { ok: true, msg: 'deleted' };
+}
+
+/**
+ * Import + ACTIVATE the selected hierarchies. `conn` defaults to config.db.
+ *
+ * TWO WRITE CHANNELS, ONE DATABASE. The import is a `\copy` through psql into `conn`;
+ * the activation writes through the ENGINE (its connection pool), which is bound to the
+ * CONFIGURED database and cannot be pointed elsewhere. They agree only while `conn` names
+ * that same database — which the wizard always does (it passes no conn at all). A caller
+ * that hands us a DIFFERENT database (a scratch DB in a test) would import there and
+ * activate HERE: half the work in each. That is not a scenario we can serve, so we refuse
+ * to activate and say so, rather than silently writing a hierarchy into the wrong database.
+ */
 export async function installHierarchies(
 	tlds: string[],
 	conn?: DbConnDescriptor,
+	userId = -1,
+	options: InstallHierarchiesOptions = {},
 ): Promise<InstallHierarchiesResult> {
 	const connection = conn ?? connFromConfig();
+	const replace = options.replace === true;
 	const responses: HierarchyImportResponse[] = [];
 	const errors: string[] = [];
+	const engineOwnsTarget = connection.database === config.db.database;
 
 	for (const tld of tlds) {
 		if (!safeTld(tld)) {
@@ -95,6 +162,24 @@ export async function installHierarchies(
 			errors.push(`${tld}: invalid tld`);
 			continue;
 		}
+
+		// Already installed? Skip (default) or DELETE-then-recopy (explicit reset). The
+		// raw `\copy` is insert-only, so without this an already-present tld throws a PK
+		// violation instead of doing something sensible.
+		const present = await hierarchyRowsPresent(connection, tld);
+		if (present && !replace) {
+			responses.push({ tld, result: true, msg: 'already installed — skipped', skipped: true });
+			continue;
+		}
+		if (present && replace) {
+			const del = await deleteHierarchyRows(connection, tld);
+			if (!del.ok) {
+				responses.push({ tld, result: false, msg: `reset failed: ${del.msg}` });
+				errors.push(`${tld}: ${del.msg}`);
+				continue;
+			}
+		}
+
 		// Terms file is required; the model file is optional.
 		const terms = await importCopyFile(connection, `${tld}1.copy.gz`);
 		if (!terms.ok) {
@@ -106,15 +191,57 @@ export async function installHierarchies(
 			await importCopyFile(connection, `${tld}2.copy.gz`); // best-effort model import
 		}
 		await consolidateHierarchyCounter(connection, tld);
-		responses.push({ tld, result: true, msg: 'imported' });
+
+		// The engine's writes land in the CONFIGURED database. When the import target is a
+		// different one, activating would write into the wrong DB — refuse, loudly.
+		if (!engineOwnsTarget) {
+			responses.push({
+				tld,
+				result: false,
+				msg: `imported into '${connection.database}', NOT activated: the engine writes to '${config.db.database}'`,
+			});
+			errors.push(
+				`${tld}: activation skipped — the import target '${connection.database}' is not the engine's database ('${config.db.database}')`,
+			);
+			continue;
+		}
+
+		// ACTIVATION (installer_hierarchy_manager::activate_hierarchy): flag the hierarchy
+		// active and provision its ontology, so it is usable at the first login.
+		// The descriptor drives it; an unregistered tld has no typology to provision with.
+		const meta = hierarchyMetaByTld(tld);
+		if (meta === null) {
+			responses.push({
+				tld,
+				result: false,
+				msg: 'imported, but not registered in hierarchies.json — not activated',
+			});
+			errors.push(`${tld}: not registered in hierarchies.json; activation skipped`);
+			continue;
+		}
+		const activation = await activateHierarchy(meta, userId);
+		if (!activation.result) {
+			responses.push({
+				tld,
+				result: false,
+				msg: `imported, activation failed: ${activation.errors.join('; ')}`,
+			});
+			errors.push(...activation.errors.map((error) => `${tld}: ${error}`));
+			continue;
+		}
+		responses.push({ tld, result: true, msg: replace ? 'reset and activated' : 'imported and activated' });
 	}
+
+	const imported = responses.filter((r) => r.result && !r.skipped).length;
+	const skipped = responses.filter((r) => r.skipped).length;
+	const verb = replace ? 'Reset' : 'Imported';
+	let msg = `${verb} ${imported} hierarchy(ies)`;
+	if (skipped > 0) msg += `, skipped ${skipped} already installed`;
+	if (errors.length > 0) msg = `${errors.length} hierarchy(ies) failed`;
 
 	return {
 		result: errors.length === 0,
-		msg:
-			errors.length === 0
-				? `Imported ${responses.filter((r) => r.result).length} hierarchy(ies)`
-				: `${errors.length} hierarchy(ies) failed`,
+		msg,
 		errors,
 		responses,
 	};

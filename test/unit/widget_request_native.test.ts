@@ -604,3 +604,70 @@ describe('database_info.rebuild_user_stats (dd1521 aggregate anatomy)', () => {
 		}
 	});
 });
+
+describe('add_hierarchy (panel value + import/reset routing)', () => {
+	test('get_widget_value: real panel shape; installed marker = term data, not the registry', async () => {
+		const body = await tsCall({
+			action: 'get_widget_value',
+			dd_api: 'dd_area_maintenance_api',
+			prevent_lock: true,
+			options: {},
+			source: { typo: 'source', model: 'add_hierarchy' },
+		});
+		const result = body.result as {
+			hierarchies?: { tld: string }[];
+			installed_hierarchies?: { tld: string }[];
+			hierarchy_typologies?: unknown[];
+			hierarchy_files_dir_path?: string;
+		};
+
+		// The widget no longer returns the empty coexistence stub: the offered list is
+		// the vendored files, and the dir path is real.
+		expect(Array.isArray(result.hierarchies)).toBe(true);
+		expect((result.hierarchies?.length ?? 0) > 0).toBe(true);
+		expect(Array.isArray(result.hierarchy_typologies)).toBe(true);
+		expect(String(result.hierarchy_files_dir_path ?? '').replaceAll('\\', '/')).toContain(
+			'install/import/hierarchy',
+		);
+
+		// The marker is renamed AND re-sourced: no stale active_hierarchies key, and the
+		// installed set EQUALS the tlds with actual `<tld>1` term rows in matrix_hierarchy
+		// (the reported bug marked ~all declared hierarchies because it read the registry).
+		expect('active_hierarchies' in result).toBe(false);
+		expect(Array.isArray(result.installed_hierarchies)).toBe(true);
+		const widgetTlds = (result.installed_hierarchies ?? []).map((h) => h.tld).sort();
+		const dbTlds = (
+			(await sql.unsafe(
+				`SELECT DISTINCT substring(section_tipo from '^([a-z]+)1$') AS tld
+				 FROM matrix_hierarchy WHERE section_tipo ~ '^[a-z]+1$'`,
+				[],
+			)) as { tld: string | null }[]
+		)
+			.map((r) => r.tld)
+			.filter((tld): tld is string => Boolean(tld))
+			.sort();
+		expect(widgetTlds).toEqual(dbTlds);
+	}, 60000);
+
+	test('install_hierarchies routes and is a no-op for an empty selection', async () => {
+		const body = await tsCall({
+			...WIDGET_RQO,
+			options: { hierarchies: [] },
+			source: { typo: 'source', model: 'add_hierarchy', action: 'install_hierarchies' },
+		});
+		expect(body.result).toBe(true);
+		expect(String(body.msg)).toContain('Imported 0');
+		expect(body.errors).toEqual([]);
+	});
+
+	test('reset_hierarchies routes (replace verb) and is a no-op for an empty selection', async () => {
+		const body = await tsCall({
+			...WIDGET_RQO,
+			options: { hierarchies: [] },
+			source: { typo: 'source', model: 'add_hierarchy', action: 'reset_hierarchies' },
+		});
+		expect(body.result).toBe(true);
+		expect(String(body.msg)).toContain('Reset 0');
+		expect(body.errors).toEqual([]);
+	});
+});

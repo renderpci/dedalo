@@ -31,8 +31,8 @@
  * pipeline orchestrator is ontology_update.ts, WC-023).
  */
 
-import { existsSync, mkdirSync } from 'node:fs';
-import { join, resolve, sep } from 'node:path';
+import { existsSync, mkdirSync, statSync } from 'node:fs';
+import { join, relative, resolve, sep } from 'node:path';
 import { config } from '../../config/config.ts';
 import { envSnapshot, readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
@@ -80,6 +80,30 @@ export interface OntologyIoResponse {
  * cannot be created (PHP create_directory failure), never throws.
  * `baseDir` is a test seam; production callers use the config catalog key.
  */
+/** Human-readable byte size (1 decimal for KB/MB). */
+function humanSize(bytes: number): string {
+	if (bytes < 1024) return `${bytes} B`;
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/**
+ * Describe a written export file for the operator: its path RELATIVE to the configured
+ * `ONTOLOGY_DATA_IO_DIR` base (so it reads e.g. `7.0/es.copy.gz` regardless of where the
+ * base lives) and its on-disk size. `knownBytes` short-circuits the stat when the caller
+ * already has the byte count (Bun.write returns it); the psql/gzip files are stat'd.
+ * Returns `{ path, bytes, note }` where `note` is the ` (path, size)` message suffix.
+ */
+function describeWrittenFile(
+	absPath: string,
+	knownBytes?: number,
+): { path: string; bytes: number; note: string } {
+	const bytes =
+		knownBytes !== undefined ? knownBytes : existsSync(absPath) ? statSync(absPath).size : 0;
+	const path = relative(config.ops.ontologyDataIoDir, absPath) || absPath;
+	return { path, bytes, note: ` → ${path} (${humanSize(bytes)})` };
+}
+
 export function setOntologyIoPath(baseDir: string = config.ops.ontologyDataIoDir): string | false {
 	// Only major.minor feed the IO path (patch releases share one dir, PHP parity).
 	const ioPath = join(baseDir, DEDALO_VERSION_MAJOR_MINOR);
@@ -377,8 +401,11 @@ export async function exportOntologyInfo(): Promise<OntologyIoResponse> {
 		return response;
 	}
 
+	const written = describeWrittenFile(pathFile, saved);
 	response.result = true;
-	response.msg = 'OK. Request done';
+	response.msg = `OK. Ontology info${written.note}`;
+	response.path = written.path;
+	response.size = written.bytes;
 	// debug (PHP parity fields)
 	response.data = data;
 	response.path_file = pathFile;
@@ -520,8 +547,11 @@ export async function exportToFile(tld: string): Promise<OntologyIoResponse> {
 		);
 	}
 
+	const written = describeWrittenFile(filePath);
 	response.result = true;
-	response.msg = `OK. Request done: ${sectionTipo}`;
+	response.msg = `OK. Exported ${sectionTipo}${written.note}`;
+	response.path = written.path;
+	response.size = written.bytes;
 	response.command_result = stderr === '' ? null : stderr;
 	response.debug = { file_path: filePath };
 	return response;
@@ -561,8 +591,11 @@ export async function exportPrivateListsToFile(): Promise<OntologyIoResponse> {
 		);
 	}
 
+	const written = describeWrittenFile(filePath);
 	response.result = true;
-	response.msg = 'OK. Request done';
+	response.msg = `OK. Private lists (matrix_dd)${written.note}`;
+	response.path = written.path;
+	response.size = written.bytes;
 	response.command_result = stderr === '' ? null : stderr;
 	response.debug = { file_path: filePath };
 	return response;
@@ -617,10 +650,13 @@ export async function exportLlmMap(): Promise<OntologyIoResponse> {
 		return response;
 	}
 
+	const written = describeWrittenFile(pathFile, saved);
 	response.result = true;
-	response.msg = `OK. LLM map exported: ${map.length} sections${
+	response.msg = `OK. LLM map: ${map.length} sections${
 		skipped.length === 0 ? '' : ` (${skipped.length} skipped)`
-	}`;
+	}${written.note}`;
+	response.path = written.path;
+	response.size = written.bytes;
 	response.path_file = pathFile;
 	response.saved = saved;
 	response.section_count = map.length;

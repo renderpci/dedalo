@@ -277,4 +277,48 @@ tool_hierarchy.prototype.generate_virtual_section = async function(options) {
 
 
 
+/**
+* INSPECT_HIERARCHY
+* Reads the hierarchy's INVARIANT CHECKLIST from the server (no writes).
+*
+* The tool used to offer a single blind "Generate" button: you pressed it, and either
+* the hierarchy worked or it silently did not — the classic failure was a General Term
+* locator pointing at a record that was never created, which left the thesaurus tree
+* empty with no visible cause. The server now owns one answer to "is this hierarchy
+* usable?" (core/ontology/hierarchy_state.ts inspectHierarchy), and this call fetches it
+* so the panel can SHOW the operator which condition failed, and why.
+*
+* @return {Promise<object>} api_response with .state = {usable, tld, checks:[{id,label,ok,detail}]}
+*/
+tool_hierarchy.prototype.inspect_hierarchy = async function() {
+
+	const self = this
+
+	const source = create_source(self, 'inspect_hierarchy')
+
+	const rqo = {
+		dd_api	: 'dd_tools_api',
+		action	: 'tool_request',
+		source	: source,
+		options	: {
+			section_id		: self.caller.section_id,
+			section_tipo	: self.caller.section_tipo
+		}
+	}
+
+	const response = await data_manager.request({
+		body	: rqo,
+		retries	: 1,
+		timeout	: 30 * 1000
+	})
+
+	if(SHOW_DEVELOPER===true) {
+		dd_console("-> inspect_hierarchy API response:",'DEBUG',response);
+	}
+
+	return response
+}//end inspect_hierarchy
+
+
+
 // @license-end

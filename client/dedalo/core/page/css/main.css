@@ -4686,14 +4686,14 @@ button.button_spinner {
 button.button_spinner::before {
   content: " ";
   display: inline-block;
-  background-color: currentColor !important;
+  background-color: transparent !important;
   height: 1em;
   width: 1em;
   margin-right: 0.33em;
   vertical-align: text-bottom;
   border-radius: 50%;
-  border: 1.45px solid var(--color_grey_11);
-  border-top-color: var(--button-bg-color, --color_orange_dedalo);
+  border: 1.45px solid currentColor;
+  border-top-color: transparent;
   animation: run_spinner 800ms linear infinite;
 }
 button.button_spinner.success::before {
@@ -12500,9 +12500,6 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .area_maintenance > .content_data button.light.button_apply:before {
   background: none !important;
 }
-.area_maintenance > .content_data button.light.button_spinner::before {
-  background: none !important;
-}
 .area_maintenance > .content_data pre {
   margin-top: 0.5rem;
   border-radius: 0.25rem;
@@ -12547,7 +12544,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .area_maintenance > .content_data .form_container select {
   margin-bottom: 0.5rem;
 }
-.area_maintenance > .content_data > .maintenance_toolbar {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_toolbar {
   position: sticky;
   top: 0;
   z-index: 3;
@@ -12560,14 +12557,14 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   border-bottom: 1px solid var(--border_default);
   border-radius: 8px;
 }
-.area_maintenance > .content_data > .maintenance_toolbar .maintenance_search_wrap {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_toolbar .maintenance_search_wrap {
   position: relative;
   display: flex;
   align-items: center;
   flex: 1 1 16rem;
   min-width: 12rem;
 }
-.area_maintenance > .content_data > .maintenance_toolbar .maintenance_search_wrap:before {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_toolbar .maintenance_search_wrap:before {
   content: ' ';
   display: inline-block;
   flex: 0 0 auto;
@@ -12588,18 +12585,18 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   background-color: var(--fg_muted);
   pointer-events: none;
 }
-.area_maintenance > .content_data > .maintenance_toolbar .maintenance_search_wrap .maintenance_search {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_toolbar .maintenance_search_wrap .maintenance_search {
   width: 100%;
   height: 2.25rem;
   margin: 0;
   padding-left: 2.1rem;
 }
-.area_maintenance > .content_data > .maintenance_toolbar .maintenance_filters {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_toolbar .maintenance_filters {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
 }
-.area_maintenance > .content_data > .maintenance_toolbar .maintenance_filters .maintenance_chip {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_toolbar .maintenance_filters .maintenance_chip {
   cursor: pointer;
   padding: 0.32rem 0.85rem;
   font-size: 0.85em;
@@ -12612,27 +12609,27 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   margin-bottom: 0;
   transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
 }
-.area_maintenance > .content_data > .maintenance_toolbar .maintenance_filters .maintenance_chip:hover {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_toolbar .maintenance_filters .maintenance_chip:hover {
   border-color: var(--border_strong);
 }
-.area_maintenance > .content_data > .maintenance_toolbar .maintenance_filters .maintenance_chip.active {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_toolbar .maintenance_filters .maintenance_chip.active {
   color: var(--fg_inverse);
   background-color: var(--color_primary);
   border-color: var(--color_primary);
 }
-.area_maintenance > .content_data > .maintenance_groups {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_groups {
   padding: 1rem;
   width: 100%;
 }
-.area_maintenance > .content_data > .maintenance_groups .maintenance_empty {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_groups .maintenance_empty {
   padding: 2rem 1rem;
   text-align: center;
   color: var(--fg_muted);
 }
-.area_maintenance > .content_data > .maintenance_groups .maintenance_group {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_groups .maintenance_group {
   margin-bottom: 1.5rem;
 }
-.area_maintenance > .content_data > .maintenance_groups .maintenance_group > .group_header {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_groups .maintenance_group > .group_header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -12641,10 +12638,10 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   font-weight: 600;
   color: var(--fg_default);
 }
-.area_maintenance > .content_data > .maintenance_groups .maintenance_group > .group_header .group_icon {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_groups .maintenance_group > .group_header .group_icon {
   background-color: var(--fg_muted);
 }
-.area_maintenance > .content_data > .maintenance_groups .maintenance_group > .group_header .group_count {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_groups .maintenance_group > .group_header .group_count {
   margin-left: 0.25rem;
   padding: 0.05rem 0.5rem;
   font-size: 0.75em;
@@ -12654,7 +12651,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   border: 1px solid var(--border_default);
   border-radius: 999px;
 }
-.area_maintenance > .content_data > .maintenance_groups .maintenance_group[data-category="data"] > .group_header .group_icon {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_groups .maintenance_group[data-category="data"] > .group_header .group_icon {
   content: ' ';
   display: inline-block;
   flex: 0 0 auto;
@@ -12669,7 +12666,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   -webkit-mask-position: center;
   mask-position: center;
 }
-.area_maintenance > .content_data > .maintenance_groups .maintenance_group[data-category="migration"] > .group_header .group_icon {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_groups .maintenance_group[data-category="migration"] > .group_header .group_icon {
   content: ' ';
   display: inline-block;
   flex: 0 0 auto;
@@ -12684,7 +12681,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   -webkit-mask-position: center;
   mask-position: center;
 }
-.area_maintenance > .content_data > .maintenance_groups .maintenance_group[data-category="config"] > .group_header .group_icon {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_groups .maintenance_group[data-category="config"] > .group_header .group_icon {
   content: ' ';
   display: inline-block;
   flex: 0 0 auto;
@@ -12699,7 +12696,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   -webkit-mask-position: center;
   mask-position: center;
 }
-.area_maintenance > .content_data > .maintenance_groups .maintenance_group[data-category="integrity"] > .group_header .group_icon {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_groups .maintenance_group[data-category="integrity"] > .group_header .group_icon {
   content: ' ';
   display: inline-block;
   flex: 0 0 auto;
@@ -12714,7 +12711,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   -webkit-mask-position: center;
   mask-position: center;
 }
-.area_maintenance > .content_data > .maintenance_groups .maintenance_group[data-category="system"] > .group_header .group_icon {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_groups .maintenance_group[data-category="system"] > .group_header .group_icon {
   content: ' ';
   display: inline-block;
   flex: 0 0 auto;
@@ -12729,7 +12726,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   -webkit-mask-position: center;
   mask-position: center;
 }
-.area_maintenance > .content_data > .maintenance_groups .maintenance_group[data-category="diffusion"] > .group_header .group_icon {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_groups .maintenance_group[data-category="diffusion"] > .group_header .group_icon {
   content: ' ';
   display: inline-block;
   flex: 0 0 auto;
@@ -12744,7 +12741,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   -webkit-mask-position: center;
   mask-position: center;
 }
-.area_maintenance > .content_data > .maintenance_groups .maintenance_group[data-category="dev"] > .group_header .group_icon {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_groups .maintenance_group[data-category="dev"] > .group_header .group_icon {
   content: ' ';
   display: inline-block;
   flex: 0 0 auto;
@@ -12759,7 +12756,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   -webkit-mask-position: center;
   mask-position: center;
 }
-.area_maintenance > .content_data > .maintenance_groups .maintenance_group[data-category="general"] > .group_header .group_icon {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_groups .maintenance_group[data-category="general"] > .group_header .group_icon {
   content: ' ';
   display: inline-block;
   flex: 0 0 auto;
@@ -12774,13 +12771,13 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   -webkit-mask-position: center;
   mask-position: center;
 }
-.area_maintenance > .content_data > .maintenance_groups .maintenance_group > .group_grid {
+.area_maintenance > .content_data .list_view_wrap > .maintenance_groups .maintenance_group > .group_grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(32.9%, 1fr));
   gap: 0.75rem;
 }
 @media screen and (max-width: 1024px) {
-  .area_maintenance > .content_data > .maintenance_groups .maintenance_group > .group_grid {
+  .area_maintenance > .content_data .list_view_wrap > .maintenance_groups .maintenance_group > .group_grid {
     grid-template-columns: 1fr;
   }
 }
@@ -13122,6 +13119,56 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   max-width: 100%;
   word-break: break-word;
 }
+.area_maintenance > .content_data .widget_container > .widget_body .body_response .ok {
+  display: block;
+  padding: 0.06rem 0 0.06rem 0.6rem;
+  border-left: 3px solid var(--color_success);
+  color: var(--fg_default);
+  font-weight: 500;
+}
+.area_maintenance > .content_data .widget_container > .widget_body .body_response .error {
+  display: block;
+  margin: 0.4rem 0;
+  padding: 0.55rem 0.7rem;
+  color: var(--fg_default);
+  font-weight: 500;
+  line-height: 1.4;
+  background-color: color-mix(in srgb, var(--color_danger) 11%, transparent);
+  border-left: 3px solid var(--color_danger);
+  border-radius: 0 6px 6px 0;
+}
+.area_maintenance > .content_data .widget_container > .widget_body .body_response .warning,
+.area_maintenance > .content_data .widget_container > .widget_body .body_response h3.warning {
+  display: block;
+  margin: 0.4rem 0;
+  padding: 0.55rem 0.7rem;
+  color: var(--fg_default);
+  font-weight: 500;
+  line-height: 1.4;
+  background-color: color-mix(in srgb, var(--color_warning) 12%, transparent);
+  border-left: 3px solid var(--color_warning);
+  border-radius: 0 6px 6px 0;
+}
+.area_maintenance > .content_data .widget_container > .widget_body .body_response pre {
+  padding: 0.7rem 0.85rem;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--fg_default);
+  white-space: pre-wrap;
+  word-break: break-word;
+  background-color: var(--bg_surface_alt);
+  border: 1px solid var(--border_default);
+  border-radius: 6px;
+}
+.area_maintenance > .content_data .widget_container > .widget_body .body_response pre.error {
+  border-left: 3px solid var(--color_danger);
+  background-color: color-mix(in srgb, var(--color_danger) 8%, var(--bg_surface_alt));
+}
+.area_maintenance > .content_data .widget_container > .widget_body .body_response pre.warning {
+  border-left: 3px solid var(--color_warning);
+  background-color: color-mix(in srgb, var(--color_warning) 8%, var(--bg_surface_alt));
+}
 .area_maintenance > .content_data .widget_container > .widget_body .body_response > * {
   padding: 0.5em;
 }
@@ -13154,14 +13201,6 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   margin-top: 1rem;
   margin-bottom: 1rem;
 }
-.area_maintenance > .content_data .widget_container > .widget_body .body_response .error {
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
-  border-radius: 4px;
-  padding: 1rem;
-  line-height: 1.3rem;
-  font-size: 1rem;
-}
 .area_maintenance > .content_data .widget_container > .widget_body .body_response .eraser {
   position: absolute;
   right: 1rem;
@@ -13189,34 +13228,523 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   }
 }
 /**
+* ============================================================================
+*  SYSTEM MAP view
+* ----------------------------------------------------------------------------
+*  Alternate dashboard view (toggled against the classic accordion "List").
+*  A live topology of the running system: health-coloured subsystem nodes on a
+*  blueprint grid, SVG connector edges, a context panel that hosts the real
+*  widget modules for the selected node, and a ⌘K command palette.
+*  All colour routes through the semantic --tokens, so light + dark are free.
+* ============================================================================
+*/
+.area_maintenance > .content_data.maintenance_v2 {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.area_maintenance > .content_data.maintenance_v2 > .map_view_switch,
+.area_maintenance > .content_data.maintenance_v2 > .list_view_wrap,
+.area_maintenance > .content_data.maintenance_v2 > .maintenance_map {
+  width: 100%;
+}
+.area_maintenance > .content_data.maintenance_v2 .map_view_switch {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem 0;
+}
+.area_maintenance > .content_data.maintenance_v2 .map_view_switch .map_switch {
+  display: inline-flex;
+  padding: 0.2rem;
+  background-color: var(--bg_surface);
+  border: 1px solid var(--border_default);
+  border-radius: 999px;
+}
+.area_maintenance > .content_data.maintenance_v2 .map_view_switch .map_switch > button {
+  cursor: pointer;
+  margin: 0;
+  padding: 0.3rem 0.9rem;
+  font-size: 0.85em;
+  line-height: 1;
+  color: var(--fg_muted);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+.area_maintenance > .content_data.maintenance_v2 .map_view_switch .map_switch > button.active {
+  color: #2a1c05;
+  background-color: var(--color_orange_dedalo);
+}
+.area_maintenance > .content_data.maintenance_v2 .map_view_switch .map_kbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  height: 2.1rem;
+  padding: 0 0.7rem;
+  font-size: 0.82em;
+  color: var(--fg_muted);
+  background-color: var(--bg_surface);
+  border: 1px solid var(--border_default);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.area_maintenance > .content_data.maintenance_v2 .map_view_switch .map_kbar:hover {
+  border-color: var(--border_strong);
+}
+.area_maintenance > .content_data.maintenance_v2 .map_view_switch .map_kbar kbd {
+  font-family: Menlo, Monaco, Consolas, monospace;
+  font-size: 0.72rem;
+  padding: 0.05rem 0.3rem;
+  color: var(--fg_default);
+  background-color: var(--bg_surface_alt);
+  border: 1px solid var(--border_default);
+  border-radius: 4px;
+}
+.area_maintenance > .content_data.maintenance_v2.view_map .list_view_wrap {
+  display: none;
+}
+.area_maintenance > .content_data.maintenance_v2.view_list .maintenance_map {
+  display: none;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.1rem;
+  padding: 0.6rem 1.2rem 0.2rem;
+  font-size: 13.5px;
+  color: var(--fg_muted);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_summary b {
+  color: var(--fg_default);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_summary .s_seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_summary .s_seg.warn {
+  color: var(--color_warning);
+  cursor: pointer;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_hint {
+  padding: 0 1.2rem 0.4rem;
+  font-size: 12px;
+  color: var(--fg_muted);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_hint .danger_key {
+  color: var(--color_danger);
+  font-weight: 600;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background-color: var(--border_strong);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_dot.ok {
+  background-color: var(--color_success);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_dot.warn {
+  background-color: var(--color_warning);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_dot.bad {
+  background-color: var(--color_danger);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_stage_wrap {
+  padding: 0.4rem 1.15rem 0;
+  overflow-x: auto;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_stage {
+  position: relative;
+  height: 440px;
+  min-width: 940px;
+  border: 1px solid var(--border_default);
+  border-radius: 14px;
+  box-shadow: 0 1px 3px var(--shadow_default);
+  overflow: hidden;
+  background-color: var(--bg_surface);
+  background-image: linear-gradient(var(--map_grid_line) 1px, transparent 1px), linear-gradient(90deg, var(--map_grid_line) 1px, transparent 1px);
+  background-size: 26px 26px, 26px 26px;
+  background-position: 0 0, 0 0;
+  --map_grid_line: color-mix(in srgb, var(--fg_muted) 12%, transparent);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_edges {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  display: block;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_edges path {
+  fill: none;
+  stroke: var(--border_strong);
+  stroke-width: 1.6;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_edges path.flow {
+  stroke-dasharray: 5 6;
+  animation: map_march 1.4s linear infinite;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_edges path.dim {
+  stroke-dasharray: 2 6;
+  opacity: 0.6;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_edges path.act {
+  stroke: var(--color_orange_dedalo);
+  stroke-width: 2.1;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_edges path.warn {
+  stroke: var(--color_warning);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_node {
+  position: absolute;
+  z-index: 2;
+  width: 176px;
+  padding: 11px 13px;
+  transform: translate(-50%, -50%);
+  background-color: var(--bg_elevated);
+  border: 1px solid var(--border_default);
+  border-radius: 11px;
+  box-shadow: 0 1px 3px var(--shadow_default);
+  cursor: pointer;
+  transition: box-shadow 160ms ease, border-color 160ms ease, transform 120ms ease;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_node:hover {
+  transform: translate(-50%, calc(-50% - 2px));
+  box-shadow: 0 8px 20px var(--shadow_default);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_node .n_top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_node .n_title {
+  flex: 1 1 auto;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_node .n_state {
+  margin-top: 6px;
+  font-size: 13.5px;
+  line-height: 1.25;
+  color: var(--fg_default);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_node .n_sub {
+  margin-top: 2px;
+  font-family: Menlo, Monaco, Consolas, monospace;
+  font-size: 11.5px;
+  line-height: 1.3;
+  color: var(--fg_muted);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_node.warn {
+  border-color: color-mix(in srgb, var(--color_warning) 45%, var(--border_default));
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_node.bad {
+  border-color: color-mix(in srgb, var(--color_danger) 45%, var(--border_default));
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_node.sel {
+  border-color: var(--color_orange_dedalo);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color_orange_dedalo) 22%, transparent), 0 8px 20px var(--shadow_default);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_node .n_badge {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 1.1rem;
+  height: 1.1rem;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background-color: var(--color_warning);
+  border-radius: 50%;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_node.kind_core {
+  width: 196px;
+  border-width: 1.5px;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_node.kind_core .n_title {
+  font-size: 16px;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context {
+  margin: 1rem 1.15rem 0;
+  background-color: var(--bg_surface);
+  border: 1px solid var(--border_default);
+  border-radius: 13px;
+  box-shadow: 0 1px 3px var(--shadow_default);
+  overflow: visible;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .ctx_head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1.05rem;
+  background-color: var(--bg_surface_alt);
+  border-bottom: 1px solid var(--border_default);
+  border-radius: 13px 13px 0 0;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .ctx_head .ctx_title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--fg_default);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .ctx_head .ctx_state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 13.5px;
+  color: var(--fg_muted);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .ctx_head .ctx_sub {
+  margin-left: auto;
+  font-family: Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  color: var(--fg_muted);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .ctx_tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding: 0.75rem 1.05rem;
+  border-bottom: 1px solid var(--border_default);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .tool_chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.42rem 0.8rem;
+  font-size: 13px;
+  color: var(--fg_default);
+  background-color: var(--bg_surface);
+  border: 1px solid var(--border_default);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .tool_chip:hover {
+  border-color: var(--border_strong);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .tool_chip .tc_dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background-color: var(--border_strong);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .tool_chip.danger {
+  color: var(--color_danger);
+  border-color: color-mix(in srgb, var(--color_danger) 30%, var(--border_default));
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .tool_chip.danger .tc_dot {
+  background-color: var(--color_danger);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .tool_chip.sel {
+  font-weight: 600;
+  border-color: var(--color_orange_dedalo);
+  background-color: color-mix(in srgb, var(--color_orange_dedalo) 14%, transparent);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .tool_chip.danger.sel {
+  color: var(--color_danger);
+  border-color: var(--color_danger);
+  background-color: color-mix(in srgb, var(--color_danger) 12%, transparent);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .ctx_body {
+  padding: 0.9rem 1.15rem 1.2rem;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .ctx_body .map_ctx_lead {
+  max-width: 64ch;
+  margin: 0 0 0.9rem;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--fg_muted);
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .ctx_body > .widget_container {
+  background-color: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .ctx_body > .widget_container:hover {
+  box-shadow: none;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .ctx_body > .widget_container > .widget_label {
+  display: none;
+}
+.area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .ctx_body > .widget_container > .widget_body {
+  padding: 0;
+  min-height: 0;
+  background-color: transparent;
+  resize: none;
+  overflow: visible;
+  contain: none;
+  flex-grow: 0;
+  width: 100%;
+}
+.area_maintenance > .content_data.maintenance_v2 .map_palette_backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  background-color: color-mix(in srgb, #000 45%, transparent);
+}
+.area_maintenance > .content_data.maintenance_v2 .map_palette_backdrop.open {
+  display: flex;
+}
+.area_maintenance > .content_data.maintenance_v2 .map_palette_backdrop .map_palette {
+  width: min(620px, 92vw);
+  background-color: var(--bg_elevated);
+  border: 1px solid var(--border_default);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+.area_maintenance > .content_data.maintenance_v2 .map_palette_backdrop .map_palette_in {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border_default);
+}
+.area_maintenance > .content_data.maintenance_v2 .map_palette_backdrop .map_palette_in input {
+  flex: 1 1 auto;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  font-size: 1rem;
+  color: var(--fg_default);
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+.area_maintenance > .content_data.maintenance_v2 .map_palette_backdrop .map_palette_list {
+  max-height: 46vh;
+  overflow: auto;
+  padding: 0.4rem;
+}
+.area_maintenance > .content_data.maintenance_v2 .map_palette_backdrop .map_palette_list .p_item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+.area_maintenance > .content_data.maintenance_v2 .map_palette_backdrop .map_palette_list .p_item .p_zone {
+  margin-left: auto;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--fg_muted);
+}
+.area_maintenance > .content_data.maintenance_v2 .map_palette_backdrop .map_palette_list .p_item.hide {
+  display: none;
+}
+.area_maintenance > .content_data.maintenance_v2 .map_palette_backdrop .map_palette_list .p_item.sel,
+.area_maintenance > .content_data.maintenance_v2 .map_palette_backdrop .map_palette_list .p_item:hover {
+  background-color: color-mix(in srgb, var(--color_orange_dedalo) 14%, transparent);
+}
+@keyframes map_march {
+  to {
+    stroke-dashoffset: -22;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .area_maintenance .maintenance_map .map_edges path.flow {
+    animation: none;
+  }
+}
+/**
 * add_hierarchy
 *
 * Included from area_maintenance.less file.
-* Checkbox grid of importable hierarchies, aligned to the kit (eyebrow section
-* heading, semantic tokens, success colour for already-installed hierarchies).
+* Aligned to the shared widget_kit (.dd_eyebrow heading, .dd_note descriptions,
+* .dd_badge chips, .dd_console response) so the panel reads like the rest of the
+* maintenance widgets (esp. diffusion_server_control). Only this widget's own
+* bits live here: the filter bar, the typology checkbox grid, and the
+* already-installed marker.
 */
+.wrapper_widget.add_hierarchy .add_hierarchy_content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
 .wrapper_widget.add_hierarchy .description {
-  padding-bottom: 0.5rem;
+  margin: 0;
   color: var(--fg_muted);
+  font-size: 0.85rem;
   line-height: 1.4;
 }
+.wrapper_widget.add_hierarchy .description.source_files {
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.8rem;
+  word-break: break-word;
+}
+.wrapper_widget.add_hierarchy .hierarchy_filter {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.wrapper_widget.add_hierarchy .hierarchy_filter_input {
+  flex: 1 1 16rem;
+  max-width: 24rem;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.9rem;
+  color: var(--fg_default);
+  background-color: var(--bg_surface);
+  border: 1px solid var(--border_default);
+  border-radius: 6px;
+}
+.wrapper_widget.add_hierarchy .hierarchy_filter_input:focus {
+  outline: none;
+  border-color: var(--color_primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color_primary) 22%, transparent);
+}
+.wrapper_widget.add_hierarchy .hierarchy_filter_count {
+  flex: 0 0 auto;
+  color: var(--fg_muted);
+}
 .wrapper_widget.add_hierarchy .hierarchy_container {
-  padding: 1rem 0;
+  padding: 0.3rem 0.9rem 0.9rem;
+  border: 1px solid var(--border_default);
+  border-radius: 8px;
+  background-color: var(--bg_surface);
 }
 .wrapper_widget.add_hierarchy .typology_label {
-  padding: 0 0 0.4rem;
-  font-size: 0.72rem;
+  display: block;
+  padding: 0.9rem 0 0.4rem;
+  font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--fg_muted);
   border-bottom: 1px solid var(--border_default);
 }
+.wrapper_widget.add_hierarchy .typology_label[hidden] {
+  display: none;
+}
 .wrapper_widget.add_hierarchy .hierarchy_ul {
-  padding: 1rem 0 1rem 1.5rem;
+  padding: 0.8rem 0 0.4rem 1.5rem;
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 0.25rem;
+  gap: 0.15rem 0.25rem;
+}
+.wrapper_widget.add_hierarchy .hierarchy_ul[hidden] {
+  display: none;
 }
 @media screen and (max-width: 960px) {
   .wrapper_widget.add_hierarchy .hierarchy_ul {
@@ -13228,6 +13756,9 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
     grid-template-columns: repeat(8, 1fr);
   }
 }
+.wrapper_widget.add_hierarchy li[hidden] {
+  display: none;
+}
 .wrapper_widget.add_hierarchy .hierarchy_label {
   display: inline-block;
   cursor: pointer;
@@ -13235,29 +13766,69 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   margin-bottom: 2px;
   padding-right: 0.75rem;
   color: var(--fg_default);
+  border-radius: 4px;
 }
 .wrapper_widget.add_hierarchy .hierarchy_label:hover {
-  box-shadow: 0 1px 0 var(--border_strong);
+  color: var(--color_primary);
 }
 .wrapper_widget.add_hierarchy .hierarchy_label > .hierarchy_checkbox {
   vertical-align: text-bottom;
   height: 1rem;
   width: 1rem;
   margin: 0 0.5rem 0 -1.5rem;
+  cursor: pointer;
 }
-.wrapper_widget.add_hierarchy .hierarchy_label > .active_hierarchy {
+.wrapper_widget.add_hierarchy .hierarchy_label > .installed_hierarchy {
+  margin-left: 0.4rem;
+  padding: 0.02rem 0.45rem;
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
   color: var(--color_success);
-  font-weight: 700;
+  background-color: color-mix(in srgb, var(--color_success) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color_success) 35%, transparent);
+  border-radius: 999px;
+}
+.wrapper_widget.add_hierarchy .hierarchy_no_matches {
+  padding: 1rem 0 0.3rem;
+}
+.wrapper_widget.add_hierarchy .hierarchy_no_matches[hidden] {
+  display: none;
+}
+.wrapper_widget.add_hierarchy .import_hierarchies_button {
+  margin-top: 0.9rem;
+}
+.wrapper_widget.add_hierarchy .reset_hierarchies_button {
+  margin: 0.9rem 0 0 0.5rem;
+}
+.wrapper_widget.add_hierarchy .button_refresh {
+  float: right;
+  margin-top: 0.4rem;
 }
 .wrapper_widget.add_hierarchy .msg {
   position: relative;
-  padding: 2rem;
+  padding: 1rem 0;
 }
 .wrapper_widget.add_hierarchy .msg .spinner {
   top: 0;
 }
-.wrapper_widget.add_hierarchy .button_refresh {
-  float: right;
+.wrapper_widget.add_hierarchy .body_response {
+  padding: 0.7rem 0.85rem;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--fg_default);
+  white-space: pre-wrap;
+  word-break: break-word;
+  background-color: var(--bg_surface_alt);
+  border: 1px solid var(--border_default);
+  border-radius: 6px;
+  margin-top: 0.6rem;
+}
+.wrapper_widget.add_hierarchy .body_response:empty {
+  display: none;
 }
 /**
 * build_database_version
@@ -14016,15 +14587,27 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 * move_tld
 *
 * Included from area_maintenance.less file.
-* Shared file-picker list look (checkbox row + collapsible JSON preview).
+* The file-picker list (checkbox row + collapsible JSON preview) is the shared kit
+* `.dd_move_picker()` — one definition for the whole move_* family, so they stay
+* identical and read as the same component as every other readout/table.
 */
+.wrapper_widget.move_tld .files_list {
+  border: 1px solid var(--border_default);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--bg_surface);
+  margin-top: 0.6rem;
+}
 .wrapper_widget.move_tld .file_container {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  padding: 0.15rem 0;
-  border-bottom: 1px solid var(--border_default);
+  padding: 0.15rem 0.7rem;
+  border-top: 1px solid var(--border_default);
+}
+.wrapper_widget.move_tld .file_container:first-child {
+  border-top: 0;
 }
 .wrapper_widget.move_tld .file_container > .label {
   display: flex;
@@ -14042,7 +14625,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .wrapper_widget.move_tld .file_container > .show_file_content {
   cursor: pointer;
-  padding-right: 1.5rem;
+  padding-right: 0.8rem;
 }
 .wrapper_widget.move_tld .file_container > .file_content_container {
   width: 100%;
@@ -14052,15 +14635,27 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 * move_to_portal
 *
 * Included from area_maintenance.less file.
-* Shared file-picker list look (checkbox row + collapsible JSON preview).
+* The file-picker list (checkbox row + collapsible JSON preview) is the shared kit
+* `.dd_move_picker()` — one definition for the whole move_* family, so they stay
+* identical and read as the same component as every other readout/table.
 */
+.wrapper_widget.move_to_portal .files_list {
+  border: 1px solid var(--border_default);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--bg_surface);
+  margin-top: 0.6rem;
+}
 .wrapper_widget.move_to_portal .file_container {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  padding: 0.15rem 0;
-  border-bottom: 1px solid var(--border_default);
+  padding: 0.15rem 0.7rem;
+  border-top: 1px solid var(--border_default);
+}
+.wrapper_widget.move_to_portal .file_container:first-child {
+  border-top: 0;
 }
 .wrapper_widget.move_to_portal .file_container > .label {
   display: flex;
@@ -14078,7 +14673,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .wrapper_widget.move_to_portal .file_container > .show_file_content {
   cursor: pointer;
-  padding-right: 1.5rem;
+  padding-right: 0.8rem;
 }
 .wrapper_widget.move_to_portal .file_container > .file_content_container {
   width: 100%;
@@ -14088,15 +14683,27 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 * move_to_table
 *
 * Included from area_maintenance.less file.
-* Shared file-picker list look (checkbox row + collapsible JSON preview).
+* The file-picker list (checkbox row + collapsible JSON preview) is the shared kit
+* `.dd_move_picker()` — one definition for the whole move_* family, so they stay
+* identical and read as the same component as every other readout/table.
 */
+.wrapper_widget.move_to_table .files_list {
+  border: 1px solid var(--border_default);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--bg_surface);
+  margin-top: 0.6rem;
+}
 .wrapper_widget.move_to_table .file_container {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  padding: 0.15rem 0;
-  border-bottom: 1px solid var(--border_default);
+  padding: 0.15rem 0.7rem;
+  border-top: 1px solid var(--border_default);
+}
+.wrapper_widget.move_to_table .file_container:first-child {
+  border-top: 0;
 }
 .wrapper_widget.move_to_table .file_container > .label {
   display: flex;
@@ -14114,7 +14721,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .wrapper_widget.move_to_table .file_container > .show_file_content {
   cursor: pointer;
-  padding-right: 1.5rem;
+  padding-right: 0.8rem;
 }
 .wrapper_widget.move_to_table .file_container > .file_content_container {
   width: 100%;
@@ -14124,15 +14731,27 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 * move_locator
 *
 * Included from area_maintenance.less file.
-* Shared file-picker list look (checkbox row + collapsible JSON preview).
+* The file-picker list (checkbox row + collapsible JSON preview) is the shared kit
+* `.dd_move_picker()` — one definition for the whole move_* family, so they stay
+* identical and read as the same component as every other readout/table.
 */
+.wrapper_widget.move_locator .files_list {
+  border: 1px solid var(--border_default);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--bg_surface);
+  margin-top: 0.6rem;
+}
 .wrapper_widget.move_locator .file_container {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  padding: 0.15rem 0;
-  border-bottom: 1px solid var(--border_default);
+  padding: 0.15rem 0.7rem;
+  border-top: 1px solid var(--border_default);
+}
+.wrapper_widget.move_locator .file_container:first-child {
+  border-top: 0;
 }
 .wrapper_widget.move_locator .file_container > .label {
   display: flex;
@@ -14150,7 +14769,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .wrapper_widget.move_locator .file_container > .show_file_content {
   cursor: pointer;
-  padding-right: 1.5rem;
+  padding-right: 0.8rem;
 }
 .wrapper_widget.move_locator .file_container > .file_content_container {
   width: 100%;
@@ -14160,15 +14779,27 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 * move_lang
 *
 * Included from area_maintenance.less file.
-* Shared file-picker list look (checkbox row + collapsible JSON preview).
+* The file-picker list (checkbox row + collapsible JSON preview) is the shared kit
+* `.dd_move_picker()` — one definition for the whole move_* family, so they stay
+* identical and read as the same component as every other readout/table.
 */
+.wrapper_widget.move_lang .files_list {
+  border: 1px solid var(--border_default);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--bg_surface);
+  margin-top: 0.6rem;
+}
 .wrapper_widget.move_lang .file_container {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  padding: 0.15rem 0;
-  border-bottom: 1px solid var(--border_default);
+  padding: 0.15rem 0.7rem;
+  border-top: 1px solid var(--border_default);
+}
+.wrapper_widget.move_lang .file_container:first-child {
+  border-top: 0;
 }
 .wrapper_widget.move_lang .file_container > .label {
   display: flex;
@@ -14186,25 +14817,66 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .wrapper_widget.move_lang .file_container > .show_file_content {
   cursor: pointer;
-  padding-right: 1.5rem;
+  padding-right: 0.8rem;
 }
 .wrapper_widget.move_lang .file_container > .file_content_container {
   width: 100%;
   z-index: 0;
 }
 /**
-* php_info
+* runtime_info
 *
-* Included from area_maintenance.less file
+* Included from area_maintenance.less file.
+* Bun engine runtime readout: section labels, a one-line runtime summary,
+* console output blocks and the caches & sessions maintenance controls.
 */
-.wrapper_widget.php_info {
-  background-color: var(--color_php);
+.wrapper_widget.runtime_info .runtime_label {
+  margin-top: 1rem;
+  font-weight: 700;
+  color: var(--fg_default);
 }
-.wrapper_widget.php_info > iframe.php_info_iframe {
-  margin: 0px;
-  padding: 0px;
-  width: 100%;
-  min-height: 100vh;
+.wrapper_widget.runtime_info .runtime_label:first-child {
+  margin-top: 0;
+}
+.wrapper_widget.runtime_info .runtime_summary {
+  margin-top: 0.35rem;
+  color: var(--fg_muted);
+  font-size: 0.95rem;
+}
+.wrapper_widget.runtime_info .runtime_actions {
+  margin-top: 1rem;
+}
+.wrapper_widget.runtime_info .runtime_actions .runtime_label {
+  margin-bottom: 0.5rem;
+}
+.wrapper_widget.runtime_info .runtime_actions .button_submit {
+  margin-right: 0.5rem;
+}
+.wrapper_widget.runtime_info .body_response {
+  padding: 0.5rem !important;
+}
+.wrapper_widget.runtime_info pre {
+  padding: 0.7rem 0.85rem;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--fg_default);
+  white-space: pre-wrap;
+  word-break: break-word;
+  background-color: var(--bg_surface_alt);
+  border: 1px solid var(--border_default);
+  border-radius: 6px;
+  margin-top: 0.5rem;
+  max-height: 28rem;
+  overflow: auto;
+}
+.wrapper_widget.runtime_info .ok {
+  color: var(--color_success);
+  font-weight: 600;
+}
+.wrapper_widget.runtime_info .error {
+  color: var(--color_danger);
+  font-weight: 600;
 }
 /**
 * register_tools
@@ -14432,9 +15104,18 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 * Included from area_maintenance.less file
 */
 .wrapper_widget.update_ontology > .content_data > .pre_clean {
-  background-color: transparent;
-  opacity: 0.8;
-  margin: 0px;
+  padding: 0.7rem 0.85rem;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--fg_default);
+  white-space: pre-wrap;
+  word-break: break-word;
+  background-color: var(--bg_surface_alt);
+  border: 1px solid var(--border_default);
+  border-radius: 6px;
+  margin: 0.5rem 0 0;
+  opacity: 0.9;
 }
 .wrapper_widget.update_ontology > .content_data .config_grid {
   grid-template-columns: 3fr 5fr;
@@ -14624,9 +15305,20 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   vertical-align: bottom;
 }
 .widget_update_code_modal .footer pre {
+  padding: 0.7rem 0.85rem;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--fg_default);
+  white-space: pre-wrap;
+  word-break: break-word;
+  background-color: var(--bg_surface_alt);
+  border: 1px solid var(--border_default);
+  border-radius: 6px;
   text-align: left;
-  margin: 2rem;
-  display: inline-flex;
+  margin: 1.5rem 0;
+  max-height: 20rem;
+  overflow: auto;
 }
 .widget_update_code_modal .footer > .response {
   padding-bottom: 6rem;
@@ -14853,39 +15545,6 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   background-color: color-mix(in srgb, var(--color_danger) 11%, transparent);
   border-left: 3px solid var(--color_danger);
   border-radius: 0 6px 6px 0;
-}
-/**
-* php_runtime
-*
-* Included from area_maintenance.less file.
-* PHP runtime / opcache diagnostics: console output blocks, semantic status text.
-*/
-.wrapper_widget.php_runtime .directories_container,
-.wrapper_widget.php_runtime .opcache_container {
-  margin-bottom: 1rem;
-}
-.wrapper_widget.php_runtime pre {
-  padding: 0.7rem 0.85rem;
-  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
-  font-size: 0.8rem;
-  line-height: 1.45;
-  color: var(--fg_default);
-  white-space: pre-wrap;
-  word-break: break-word;
-  background-color: var(--bg_surface_alt);
-  border: 1px solid var(--border_default);
-  border-radius: 6px;
-  margin-top: 0.5rem;
-  max-height: 28rem;
-  overflow: auto;
-}
-.wrapper_widget.php_runtime .ok {
-  color: var(--color_success);
-  font-weight: 600;
-}
-.wrapper_widget.php_runtime .error {
-  color: var(--color_danger);
-  font-weight: 600;
 }
 /**
 * publication_api

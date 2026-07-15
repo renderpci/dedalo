@@ -1,0 +1,56 @@
+/**
+* runtime_info
+*
+* Included from area_maintenance.less file.
+* Bun engine runtime readout: section labels, a one-line runtime summary,
+* console output blocks and the caches & sessions maintenance controls.
+*/
+.wrapper_widget.runtime_info {
+
+	.runtime_label {
+		margin-top: 1rem;
+		font-weight: 700;
+		color: var(--fg_default);
+	}
+	.runtime_label:first-child {
+		margin-top: 0;
+	}
+
+	.runtime_summary {
+		margin-top: 0.35rem;
+		color: var(--fg_muted);
+		font-size: 0.95rem;
+	}
+
+	.runtime_actions {
+		margin-top: 1rem;
+
+		.runtime_label {
+			margin-bottom: 0.5rem;
+		}
+
+		.button_submit {
+			margin-right: 0.5rem;
+		}
+	}
+
+	.body_response {
+		padding: 0.5rem !important;
+	}
+
+	pre {
+		.dd_console();
+		margin-top: 0.5rem;
+		max-height: 28rem;
+		overflow: auto;
+	}
+
+	.ok {
+		color: var(--color_success);
+		font-weight: 600;
+	}
+	.error {
+		color: var(--color_danger);
+		font-weight: 600;
+	}
+}//end runtime_info

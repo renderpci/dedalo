@@ -29,38 +29,16 @@ import {get_instance, get_all_instances} from '../../../core/common/js/instances
 				lang	: lang
 			})
 
-		// installer
-			// const install_context = await (async function(){
-			// 	const rqo = {
-			// 		action	: 'get_element_context',
-			// 		source	: {model : 'installer'}
-			// 	}
-			// 	const install_api_response = await data_manager.request({
-			// 		body : rqo
-			// 	})
-			// 	return install_api_response.result
-			// 		? install_api_response.result.find(el => el.model==='installer')
-			// 		: {}
-			// })()
-			elements.push({
-				model	: 'installer',
-				tipo	: 'dd1590',
-				mode	: 'install',
-				lang	: lang,
-				// context	: async function(){
-				// 	const rqo = {
-				// 		action	: 'get_element_context',
-				// 		source	: {model : 'installer'}
-				// 	}
-				// 	const install_api_response = await data_manager.request({
-				// 		body : rqo
-				// 	})
-				// 	console.log('install_api_response:', install_api_response);
-				// 	return install_api_response.result
-				// 		? install_api_response.result.find(el => el.model==='installer')
-				// 		: {}
-				// }
-			})
+		// installer — DEFERRED, not swept here. BUILD(autoload=true) calls
+			// get_install_context, which the server denies with 404 once
+			// install_status is 'sealed' (src/core/install/gate.ts — terminal
+			// state, permanent on any post-cutover dev/prod box). The denial
+			// records a page_globals.api_errors entry (data_manager.js) that
+			// common.prototype.render's own guard (common.js:404) then bails
+			// on before ever setting self.status='rendered' — so RENDER can
+			// never pass here. Exercising the installer wizard needs a fresh,
+			// unsealed instance (see test_registry.js generic_suites_deferred
+			// for the sibling 'test_diffusion' deferral pattern).
 
 		// menu
 			elements.push({
@@ -107,10 +85,9 @@ import {get_instance, get_all_instances} from '../../../core/common/js/instances
 			'make_backup',
 			'move_locator',
 			'move_tld',
-			'php_info',
-			'php_runtime',
 			'publication_api',
 			'register_tools',
+			'runtime_info',
 			'sequences_status',
 			'sqo_test_environment',
 			'system_info',

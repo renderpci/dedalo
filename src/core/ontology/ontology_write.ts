@@ -682,99 +682,12 @@ export async function setRecordsInDdOntology(
 	return response;
 }
 
-// --- regenerate (PHP regenerate_records_in_dd_ontology) ----------------------
-
-/**
- * Full rebuild of dd_ontology for the given TLDs (PHP
- * regenerate_records_in_dd_ontology): backup → parse ALL matrix records in
- * memory → delete tld nodes → upsert all → refresh main section + root node.
- * The dd_ontology_bk backup table IS the rollback (NOT a transaction). LEAVES the
- * backup table behind on success (PHP-pinned).
- */
-export async function regenerateRecordsInDdOntology(
-	tlds: readonly string[],
-	userId = -1,
-): Promise<OntologyWriteResponse> {
-	const response: OntologyWriteResponse = {
-		result: false,
-		msg: 'Error. Request failed',
-		errors: [],
-		total_insert: 0,
-	};
-
-	const backupOk = await createBackupTable(tlds);
-	if (!backupOk) {
-		response.errors.push(
-			`Impossible to create the dd_ontology backup previous to regenerate the TLDs: ${tlds.join(',')}`,
-		);
-		return response;
-	}
-
-	// 1+2. Parse ALL matrix records of every <tld>0 into nodes (any null → abort).
-	const nodes: DdOntologyNode[] = [];
-	for (const tld of tlds) {
-		const sectionTipo = mapTldToTargetSectionTipo(tld);
-		const table = await getMatrixTableFromTipo(sectionTipo);
-		if (table === null) continue;
-		const rows = (await sql.unsafe(
-			`SELECT section_id FROM "${table}" WHERE section_tipo = $1 ORDER BY section_id ASC`,
-			[sectionTipo],
-		)) as { section_id: number }[];
-		for (const row of rows) {
-			const node = await parseSectionRecordToOntologyNode(sectionTipo, Number(row.section_id));
-			if (node === null) {
-				await dropBackupTable();
-				response.errors.push(
-					`Failed regenerate dd_ontology node for section_tipo: ${sectionTipo}, section_id: ${row.section_id}`,
-				);
-				return response;
-			}
-			nodes.push(node);
-		}
-	}
-
-	// 3. Delete all tld nodes.
-	for (const tld of tlds) {
-		await deleteTldNodes(tld);
-	}
-
-	// 4. Insert all parsed nodes (any failure → restore + drop + abort).
-	let totalInsert = 0;
-	for (const node of nodes) {
-		try {
-			await upsertDdOntologyNode(node);
-		} catch (error) {
-			await restoreFromBackupTable(tlds);
-			await dropBackupTable();
-			response.errors.push(
-				`Failed inserting dd_ontology. Restored previous data from backup. (${String(error)})`,
-			);
-			return response;
-		}
-		totalInsert++;
-	}
-
-	// 5. Refresh main section + root node per tld.
-	for (const tld of tlds) {
-		const typologyId = await getMainTypologyId(tld);
-		const nameData = await getMainNameData(tld);
-		const fileItem: FileItem = { tld, typology_id: typologyId, name_data: nameData };
-		const addResult = await addMainSection(fileItem, userId);
-		if (addResult === null || addResult === undefined) {
-			await restoreFromBackupTable(tlds);
-			await dropBackupTable();
-			response.errors.push(`Failed add_main_section for tld: ${tld}`);
-			return response;
-		}
-		await createDdOntologyRootNode(fileItem, userId);
-	}
-
-	response.result = true;
-	response.msg = 'OK. The regenerate records request has been completed successfully.';
-	response.total_insert = totalInsert;
-	// NOTE: dd_ontology_bk is intentionally LEFT behind on success (PHP behavior).
-	return response;
-}
+// --- regenerate — RETIRED 2026-07-15 -----------------------------------------
+// The destructive dd_ontology rebuild moved to core/ontology/ontology_state.ts
+// `rebuildOntology` (transactional; no leftover backup table) alongside the
+// non-destructive `ensureOntology` reconcile. `regenerateRecordsInDdOntology` — the
+// backup-table-based version — is gone; nothing may wipe-and-rebuild a tld outside
+// ontology_state.ts (ontology_single_writer_tripwire).
 
 // --- order sync (PHP sync_order_to_dd_ontology) — CONSUMED BY THE TREE (A5) ---
 

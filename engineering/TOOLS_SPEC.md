@@ -294,6 +294,44 @@ writes those sections without notifying us.
 no server module yet (a warning at registration, `unauthorized_method` at
 dispatch) — each is a drop-in `server/index.ts` away.
 
+### tool_hierarchy — a tool that OWNS no logic (2026-07-14)
+
+`tool_hierarchy` is the reference for a tool whose handler sequences **nothing**. Its two
+actions are a read and a write over an invariant that lives in the core:
+
+| action | gate | core |
+| --- | --- | --- |
+| `inspect_hierarchy` | `section`, minLevel 1 | `inspectHierarchy` — the checklist the client renders as its status panel |
+| `generate_virtual_section` | `section`, minLevel 2 | `ensureHierarchy` (idempotent converge); `force_to_create` → `rebuildHierarchy` |
+
+Both live in `src/core/ontology/hierarchy_state.ts`, which is the **single writer** for
+hierarchy consistency (`test/unit/hierarchy_single_writer_tripwire.test.ts`). The tool used
+to sequence provisioning + root seeding itself, and that is precisely how it broke: three
+call sites (this tool, the installer's activation, `ontology_write`) each established a
+different subset of the same invariant and none checked the end state. **A tool is a gated
+door onto a core operation — when a handler starts ordering steps, the invariant it is
+building has no owner.**
+
+### tool_ontology_parser — the same pattern for `dd_ontology` (2026-07-15)
+
+The runtime ontology (`dd_ontology`) is a projection of `matrix_ontology`; keeping them
+consistent lives in `src/core/ontology/ontology_state.ts`, the single reconcile authority
+(`test/unit/ontology_single_writer_tripwire.test.ts`). The tool gates and surfaces it:
+
+| action | gate | core |
+| --- | --- | --- |
+| `inspect_ontologies` | `developer` | `inspectOntology` — per-TLD drift (missing/stale/orphaned); the status panel |
+| `reconcile_ontologies` | `developer` | `ensureOntology` — incremental, non-destructive (the default) |
+| `regenerate_ontologies` | `developer` | `rebuildOntology` — transactional wipe-and-rebuild |
+| `export_ontologies` | `developer` | the `data_io.ts` export pipeline; the per-TLD `exportToFile` dumps run bounded-parallel (≤ `EXPORT_CONCURRENCY`), the info/private-lists/LLM-map steps stay sequential |
+
+The retired `regenerateRecordsInDdOntology` wiped a TLD with a leftover `dd_ontology_bk` table
+as its only, untested, rollback — the same shape as the hierarchy defect: a destructive write
+that no invariant owned. Note the two design axes together: `tool_hierarchy`'s invariant is a
+FIXED checklist (ten conditions), while `tool_ontology_parser`'s is a RECONCILIATION (a diff
+against a source) — so its `ensure` applies only the delta and is FAST on the common case,
+where the hierarchy `ensure` converges a fixed shape.
+
 ## Files
 
 - Machinery: `src/core/tools/{module,types,ontology_map,registry,paths,loader,security,dispatch,config,cache,background,register,register_schema}.ts` + `client/`.

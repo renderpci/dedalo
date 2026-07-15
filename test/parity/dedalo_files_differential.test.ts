@@ -76,6 +76,21 @@ function isTsOnlyEntry(entry: ManifestEntry): boolean {
 	);
 }
 
+/** php_info and php_runtime were merged into ONE TS-native runtime_info widget
+ * (WC-030): php_info (a phpinfo() iframe with no Bun equivalent) is gone, and
+ * php_runtime's real Bun-runtime panel took over the runtime_info slot under
+ * new file names. The frozen PHP oracle still serves BOTH old php_info/ and
+ * php_runtime/ files (as two separate widgets); the TS census now serves only
+ * runtime_info/. Filtered from BOTH sides of the set compare, like the WC-013
+ * pattern. */
+function isRuntimeInfoRenameEntry(entry: ManifestEntry): boolean {
+	return (
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/php_info/') ||
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/php_runtime/') ||
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/runtime_info/')
+	);
+}
+
 describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', () => {
 	let phpBody: ManifestBody;
 	let tsBody: ManifestBody;
@@ -142,14 +157,10 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 
 	test('file set matches the oracle exactly (order + tool_common + WC-013 normalized)', () => {
 		if (!hasPhpCredentials()) return;
-		const phpSet = phpBody.result
-			.filter((entry) => !isToolAssistantEntry(entry) && !isTsOnlyEntry(entry))
-			.map(comparableLine)
-			.sort();
-		const tsSet = tsBody.result
-			.filter((entry) => !isToolAssistantEntry(entry) && !isTsOnlyEntry(entry))
-			.map(comparableLine)
-			.sort();
+		const keep = (entry: ManifestEntry) =>
+			!isToolAssistantEntry(entry) && !isTsOnlyEntry(entry) && !isRuntimeInfoRenameEntry(entry);
+		const phpSet = phpBody.result.filter(keep).map(comparableLine).sort();
+		const tsSet = tsBody.result.filter(keep).map(comparableLine).sort();
 		expect(tsSet).toEqual(phpSet);
 	});
 
