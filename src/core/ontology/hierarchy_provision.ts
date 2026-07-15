@@ -78,7 +78,7 @@ import {
 	insertDdOntologyRecord,
 } from './ontology_write.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from './resolver.ts';
-import { getSectionIdFromTipo, getTldFromTipo } from './tld.ts';
+import { getSectionIdFromTipo, getTldFromTipo, mapTldToTargetSectionTipo } from './tld.ts';
 
 const MATRIX_ONTOLOGY = 'matrix_ontology';
 
@@ -191,6 +191,26 @@ export async function generateVirtualSection(
 	if (typologyId < 1) {
 		response.msg += 'Error on get typology. Empty value (typology is mandatory)';
 		response.errors.push('Invalid typology');
+		return response;
+	}
+
+	// 4b. NOT ALREADY PROVISIONED. The virtual sections are created with FIXED
+	// record ids (<tld>0/1 descriptor, <tld>0/2 model), so a second Generate on
+	// the same tld collides on matrix_ontology's (section_id, section_tipo) unique
+	// key — the raw PostgresError used to reach the operator's screen. Refuse
+	// before the write phase and name the way forward: the teardown is what
+	// `force_to_create` runs (tool_hierarchy → deleteOntologyByTld), so once it
+	// has swept the tld this check passes and the rebuild proceeds.
+	const nodesSection = mapTldToTargetSectionTipo(tld2);
+	const existingNodes = (await sql.unsafe(
+		`SELECT section_id FROM "${MATRIX_ONTOLOGY}" WHERE section_tipo = $1 LIMIT 1`,
+		[nodesSection],
+	)) as { section_id: number }[];
+	if (existingNodes.length > 0) {
+		response.msg = `Error. Hierarchy '${tld2}' is already generated`;
+		response.errors.push(
+			`virtual section '${nodesSection}' already exists — use 'Force to create' to rebuild it`,
+		);
 		return response;
 	}
 
@@ -449,62 +469,4 @@ async function provisionVirtualSections(args: ProvisionArgs): Promise<void> {
 		HIERARCHY_TARGET_SECTION_MODEL,
 		[{ id: 1, lang: DATA_NOLAN, value: `${tld2}2` }],
 	);
-}
-
-/**
- * Seed a thesaurus General Term / General Term Model portal root
- * (PHP create_thesaurus_general_term). Skips when the portal already has data;
- * resolves the target section from hierarchy53 (term) / hierarchy58 (model), then
- * delegates to applyAddNewElement and persists the appended link locator.
- * Returns true when it created an element, false when skipped/unresolvable.
- */
-export async function createThesaurusGeneralTerm(
-	sectionTipo: string,
-	sectionId: number,
-	generalTermTipo: 'hierarchy45' | 'hierarchy59',
-): Promise<boolean> {
-	if (generalTermTipo !== 'hierarchy45' && generalTermTipo !== 'hierarchy59') {
-		return false;
-	}
-	const table = await getMatrixTableFromTipo(sectionTipo);
-	if (table === null) return false;
-	const record = await readMatrixRecord(table, sectionTipo, sectionId);
-	const currentItems = (record?.columns.relation as Record<string, unknown[]> | null)?.[
-		generalTermTipo
-	] as unknown[] | undefined;
-	if (currentItems !== undefined && currentItems.length > 0) {
-		return false; // already seeded
-	}
-
-	// target section from hierarchy53 (term) / hierarchy58 (model)
-	const targetTipo =
-		generalTermTipo === 'hierarchy59' ? HIERARCHY_TARGET_SECTION_MODEL : HIERARCHY_TARGET_SECTION;
-	const targetValue = (record?.columns.string as Record<string, unknown[]> | null)?.[targetTipo] as
-		| { value?: unknown }[]
-		| undefined;
-	const targetSectionTipo = targetValue?.[0]?.value ? String(targetValue[0].value) : '';
-	if (targetSectionTipo === '') {
-		return false;
-	}
-
-	const existing = (currentItems ?? []) as unknown[];
-	const outcome = await applyAddNewElement(
-		existing,
-		targetSectionTipo,
-		generalTermTipo,
-		sectionTipo,
-		sectionId,
-	);
-	if (outcome === null) {
-		return false;
-	}
-	await updateMatrixKeyData(
-		table,
-		sectionTipo,
-		sectionId,
-		'relation',
-		generalTermTipo,
-		outcome.items,
-	);
-	return true;
 }

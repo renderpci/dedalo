@@ -1,10 +1,19 @@
 /**
- * P4 gate — hierarchy import + register_tools against a REAL scratch DB.
+ * P4 gate — hierarchy import against a REAL scratch DB.
  *
- * Restores the seed into a throwaway DB, imports one small hierarchy TLD (its
- * `<tld>1.copy.gz` rows land in matrix_hierarchy and the counter is
- * consolidated), and registers the tools (matrix_tools populated). Explicit
- * connection throughout; scratch DB dropped after.
+ * Restores the seed into a throwaway DB and imports one small hierarchy TLD: its
+ * `<tld>1.copy.gz` rows land in matrix_hierarchy and the counter is consolidated.
+ * Explicit connection throughout; scratch DB dropped after.
+ *
+ * SCOPE — WHY THIS TEST STOPS AT THE IMPORT. installHierarchies now also ACTIVATES each
+ * tld (flags it, provisions its ontology, roots its tree). Activation writes through the
+ * ENGINE, whose pool is bound to the CONFIGURED database and cannot be pointed at this
+ * scratch DB — so importing HERE and activating THERE would put half the work in each.
+ * installHierarchies refuses that split explicitly, and this gate pins the refusal: the
+ * import still lands, activation is skipped, and the response SAYS SO. The activation
+ * contract itself is covered against the engine's own database by
+ * install_hierarchy_activate_native.test.ts, and the invariant it converges to by
+ * hierarchy_state_native.test.ts.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -56,8 +65,16 @@ describe('hierarchy import + register_tools (P4)', () => {
 			return;
 		}
 		const result = await installHierarchies([TLD], scratch);
-		expect(result.result).toBe(true);
-		expect(result.responses.find((r) => r.tld === TLD)?.result).toBe(true);
+
+		// The IMPORT half succeeds; the ACTIVATION half is refused, because this scratch DB
+		// is not the database the engine writes to. The refusal is the contract — silently
+		// activating would flag the tld and provision its ontology in the CONFIGURED
+		// database while its terms sit here.
+		expect(result.result).toBe(false);
+		const response = result.responses.find((r) => r.tld === TLD);
+		expect(response?.result).toBe(false);
+		expect(response?.msg).toContain('NOT activated');
+		expect(result.errors.join(' ')).toContain('not the engine');
 
 		const rows = await runPsql(scratch, [
 			'-tAc',

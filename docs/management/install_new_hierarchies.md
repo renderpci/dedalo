@@ -97,7 +97,8 @@ Both, common and private, hierarchies has the same process to be created.
 6. **Mandatory** Set the Typology of the new hierarchy
 7. **Mandatory** Set the real section tipo (usually hierarchy20)
 8. **Mandatory** Add the name of the hierarchy
-9. Change the state of the field "Active" to "Yes"
+9. You do **not** need to set "Active" yourself — the tool does it. (Setting it to "Yes"
+   first is harmless.)
 
     ![Fill the fields into the new hierarchy](assets/20231008_212127_new_hierarchy.png)
 
@@ -105,22 +106,31 @@ Both, common and private, hierarchies has the same process to be created.
 
     ![Click the tool button to build](assets/20231008_212327_create_new_hierarchy.png)
 
-11. Build it clicking in the "Generate" button.
+11. Read the **status panel**, then press **Activate / repair**.
 
     ![Build the hierarchy](assets/20231008_212940_build_the_hierarchy.png)
 
+    The panel lists the ten conditions a usable hierarchy must meet and marks each ✓ or ✗,
+    so you can see what is missing *before* you press anything — and afterwards, exactly
+    what changed.
+
     !!! note "How this works"
-        This "Generate" tool is `tool_hierarchy`'s `generate_virtual_section`
-        action, at `tools/tool_hierarchy/server/tool_hierarchy.ts`: it
-        provisions the `<tld>1`/`<tld>2` virtual sections and their
-        `dd_ontology` nodes (via `generateVirtualSection()` in
-        `src/core/ontology/hierarchy_provision.ts`) and seeds the two thesaurus
-        portal roots so the tree shows the hierarchy immediately. The write
-        gate (section permission ≥ 2) is enforced the same way as any other
-        write. It also grants **your own profile** level `2` over the two new
-        sections and everything inside them (`setSectionPermissions()`) — so
-        the hierarchy is usable immediately. Other users still need their
-        permissions set in step 12 below.
+        The button is `tool_hierarchy`'s `generate_virtual_section` action
+        (`tools/tool_hierarchy/server/tool_hierarchy.ts`), which converges the record to
+        that invariant via `ensureHierarchy()` in
+        `src/core/ontology/hierarchy_state.ts`: it provisions the `<tld>1`/`<tld>2` virtual
+        sections and their `dd_ontology` nodes, flags the hierarchy active, and roots the
+        tree at a general term **named after the hierarchy**. The write gate (section
+        permission ≥ 2) is enforced the same way as any other write. It also grants **your
+        own profile** level `2` over the two new sections and everything inside them, so
+        the hierarchy is usable immediately; other users still need their permissions set
+        in step 12.
+
+        The action is **idempotent and non-destructive**: it creates only what is missing.
+        Pressing it on a healthy hierarchy reports *"Already consistent — nothing to do"*,
+        so it is also the way to **repair** a hierarchy that is half-built — read the panel
+        for the reason. The **Rebuild the ontology** checkbox is the destructive variant: it
+        deletes the TLD's ontology and re-creates it, and your thesaurus **terms are kept**.
 
 12. Check in Thesaurus that this hierarchy is ready and set the permissions to users as you need.
 

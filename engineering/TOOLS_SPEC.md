@@ -294,6 +294,24 @@ writes those sections without notifying us.
 no server module yet (a warning at registration, `unauthorized_method` at
 dispatch) — each is a drop-in `server/index.ts` away.
 
+### tool_hierarchy — a tool that OWNS no logic (2026-07-14)
+
+`tool_hierarchy` is the reference for a tool whose handler sequences **nothing**. Its two
+actions are a read and a write over an invariant that lives in the core:
+
+| action | gate | core |
+| --- | --- | --- |
+| `inspect_hierarchy` | `section`, minLevel 1 | `inspectHierarchy` — the checklist the client renders as its status panel |
+| `generate_virtual_section` | `section`, minLevel 2 | `ensureHierarchy` (idempotent converge); `force_to_create` → `rebuildHierarchy` |
+
+Both live in `src/core/ontology/hierarchy_state.ts`, which is the **single writer** for
+hierarchy consistency (`test/unit/hierarchy_single_writer_tripwire.test.ts`). The tool used
+to sequence provisioning + root seeding itself, and that is precisely how it broke: three
+call sites (this tool, the installer's activation, `ontology_write`) each established a
+different subset of the same invariant and none checked the end state. **A tool is a gated
+door onto a core operation — when a handler starts ordering steps, the invariant it is
+building has no owner.**
+
 ## Files
 
 - Machinery: `src/core/tools/{module,types,ontology_map,registry,paths,loader,security,dispatch,config,cache,background,register,register_schema}.ts` + `client/`.

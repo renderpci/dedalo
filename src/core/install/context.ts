@@ -13,13 +13,13 @@
  * `hierarchies`/`hierarchy_typologies`/`install_checked_default`.
  */
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { currentApplicationLang } from '../resolve/request_lang.ts';
 import { DEDALO_VERSION } from '../update/version.ts';
+import { availableHierarchyTlds, offeredHierarchies, readHierarchyJson } from './hierarchy_meta.ts';
 import { runInitTest } from './init_test.ts';
 import { INSTALL_LANG_CATALOG, INSTALL_LANG_CODES } from './lang_catalog.ts';
-import { HIERARCHY_IMPORT_DIR, SEED_DUMP_PATH } from './paths.ts';
+import { SEED_DUMP_PATH } from './paths.ts';
 import { buildInstallServerInfo } from './server_info.ts';
 
 /** The installer element tipo (dd1590 in the ontology; pinned by the client). */
@@ -27,46 +27,6 @@ export const INSTALLER_TIPO = 'dd1590';
 
 /** Default-checked hierarchies (PHP install_checked_default). */
 const INSTALL_CHECKED_DEFAULT = ['es', 'fr', 'lg', 'ts', 'utoponymy'];
-
-interface HierarchyMeta {
-	tld: string;
-	label: string;
-	typology: number;
-	active_in_thesaurus: boolean;
-}
-
-/** Read a JSON file from the vendored hierarchy dir, or a fallback on absence. */
-function readHierarchyJson<T>(fileName: string, fallback: T): T {
-	try {
-		const path = join(HIERARCHY_IMPORT_DIR, fileName);
-		if (!existsSync(path)) return fallback;
-		return JSON.parse(readFileSync(path, 'utf8')) as T;
-	} catch {
-		return fallback;
-	}
-}
-
-/** The tlds we can actually install = the vendored `<tld>1.copy.gz` data files. */
-function availableHierarchyTlds(): Set<string> {
-	try {
-		if (!existsSync(HIERARCHY_IMPORT_DIR)) return new Set();
-		return new Set(
-			readdirSync(HIERARCHY_IMPORT_DIR)
-				.filter((name) => /^[a-z]+1\.copy\.gz$/.test(name))
-				.map((name) => name.replace(/1\.copy\.gz$/, '')),
-		);
-	} catch {
-		return new Set();
-	}
-}
-
-/** The hierarchies the wizard should offer: metadata ∩ vendored data files. */
-function offeredHierarchies(): HierarchyMeta[] {
-	const meta = readHierarchyJson<HierarchyMeta[]>('hierarchies.json', []);
-	const available = availableHierarchyTlds();
-	if (available.size === 0) return []; // no data files vendored → nothing to offer
-	return meta.filter((entry) => available.has(entry.tld));
-}
 
 /** Pre-checked defaults, restricted to what is actually installable. */
 function effectiveDefaults(): string[] {

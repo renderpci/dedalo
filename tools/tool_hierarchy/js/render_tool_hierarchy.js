@@ -197,6 +197,20 @@ const get_content_data = async function(self) {
 		components_container.appendChild(real_st_component_instance.node)
 		components_instances.push(real_st_component_instance)
 
+	// status panel
+	// The SERVER owns the answer to "is this hierarchy usable?" (one invariant, one
+	// checker: core/ontology/hierarchy_state.ts inspectHierarchy). We render its
+	// checklist rather than guessing client-side. Before this panel existed the tool
+	// was a blind button: you pressed Generate and the hierarchy either worked or
+	// silently did not — a General Term locator pointing at a record that was never
+	// created left the thesaurus tree empty with nothing on screen to explain why.
+		const status_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'status_container',
+			parent			: fragment
+		})
+		render_status_panel(self, status_container) // async; paints when the state arrives
+
 	// buttons container
 		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -204,7 +218,8 @@ const get_content_data = async function(self) {
 			parent			: fragment
 		})
 
-		// button_generate
+		// button_generate — "Activate / repair": converge to the invariant (ensureHierarchy).
+		// Idempotent and non-destructive, so it is safe to press on a healthy hierarchy.
 			const button_generate = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'warning gear',
@@ -271,35 +286,38 @@ const get_content_data = async function(self) {
 					}
 
 				// check value
-				// Each field has its own predicate:
-				//   tld / name / real_section_tipo — entries[0].value must be a non-empty string
-				//   active                         — entries[0].section_id must equal 1 (true term)
-				//   typology / lang                — entries[0].section_id must be truthy (any term selected)
+				// Only the fields the OPERATOR must supply — the ones the server cannot
+				// derive: tld, name, typology, lang.
+				//   tld / name       — entries[0].value must be a non-empty string
+				//   typology / lang  — entries[0].section_id must be truthy (a term is selected)
+				// `active` (hierarchy4) and `real_section_tipo` (hierarchy109) are NO LONGER
+				// preconditions: ensureHierarchy SETS them — activating the hierarchy is the
+				// job, so refusing to start because it is not yet active was circular, and it
+				// is what forced operators to hand-toggle the radio before pressing the button.
 				// Validation short-circuits: the first failing field stops the check and
 				// focuses that component. Returns false to abort submission.
 					if (
 						is_invalid(tld_component_instance, val => val?.[0]?.value?.length) ||
 						is_invalid(name_component_instance, val => val?.[0]?.value?.length) ||
-						is_invalid(active_component_instance, val => val?.[0]?.section_id == 1) ||
 						is_invalid(typology_component_instance, val => val?.[0]?.section_id) ||
-						is_invalid(lang_component_instance, val => val?.[0]?.section_id) ||
-						is_invalid(real_st_component_instance, val => val?.[0]?.value?.length)
+						is_invalid(lang_component_instance, val => val?.[0]?.section_id)
 					) return false
 
-				// confirm twice
-				// The generate action is destructive (it may overwrite existing ontology
-				// data) so it requires two sequential confirmations. A 1 s pause between
-				// them ensures the user cannot accidentally dismiss both dialogs by
-				// double-clicking. The second dialog shows the 'absolute_sure' label
-				// (e.g. "Are you absolutely sure?").
-					if (!confirm(get_label.sure || 'Sure?')) {
-						return false
-					}
-					content_data.classList.add('loading')
-					await pause(1000)
-					const warning = self.get_tool_label('absolute_sure')
-					if (!confirm(warning)) {
-						content_data.classList.remove('loading')
+				// confirm — and say WHAT will happen, per action.
+				// The two actions have genuinely different blast radii, and the old UI hid
+				// that behind one generic "Sure?": the plain action is now idempotent and
+				// non-destructive (it only ADDS what is missing), while REBUILD deletes the
+				// tld's ontology before re-provisioning it. The terms are safe in both cases —
+				// the teardown removes the dd_ontology nodes and the '<tld>0' node records,
+				// never the '<tld>1' thesaurus records — so that is spelled out too, because
+				// an operator who fears for 69,000 terms will never press the button.
+					const rebuild = check_force_to_create.checked
+					const confirm_msg = rebuild
+						? (self.get_tool_label('confirm_rebuild')
+							|| 'REBUILD: the ontology of this hierarchy will be deleted and re-created.\n\nThe thesaurus TERMS are NOT deleted.\n\nContinue?')
+						: (self.get_tool_label('confirm_activate')
+							|| 'Activate / repair this hierarchy?\n\nOnly what is missing will be created. Nothing is deleted.')
+					if (!confirm(confirm_msg)) {
 						return false
 					}
 
@@ -342,7 +360,7 @@ const get_content_data = async function(self) {
 
 				// errors
 				// api_response.errors is an array of string error messages accumulated by
-				// the PHP handler; render each error below the main message.
+				// the server handler; render each error below the main message.
 					if (api_response.errors?.length) {
 						ui.create_dom_element({
 							element_type	: 'div',
@@ -350,6 +368,28 @@ const get_content_data = async function(self) {
 							inner_html		: api_response.errors.join('<br>'),
 							parent			: messages_container
 						})
+					}
+
+				// applied
+				// What ensureHierarchy actually CHANGED (empty on a healthy hierarchy —
+				// the action is idempotent, and saying "nothing to do" out loud is the
+				// point: it tells the operator the button worked AND that the hierarchy
+				// was already sound, two things the old UI could not distinguish).
+					if (api_response.applied?.length) {
+						ui.create_dom_element({
+							element_type	: 'ul',
+							class_name		: 'applied',
+							inner_html		: api_response.applied.map(line => '<li>' + line + '</li>').join(''),
+							parent			: messages_container
+						})
+					}
+
+				// status panel
+				// Repaint the checklist from the state the SERVER returned with the write —
+				// no second round-trip, and no chance of the panel disagreeing with what
+				// just happened.
+					if (api_response.state) {
+						paint_status(self, status_container, api_response.state)
 					}
 
 				// reload section (caller)
@@ -385,14 +425,17 @@ const get_content_data = async function(self) {
 				}
 			)
 
-		// check box force to create
-		// When checked, the PHP handler calls hierarchy::delete_main first, removing any
-		// previously generated virtual section before rebuilding it from scratch.
-		// (!) This is a destructive option: existing thesaurus data may be lost.
+		// check box: REBUILD (the destructive variant of the same button)
+		// Checked → the server tears the tld's ONTOLOGY down (dd_ontology nodes, the
+		// ontology_main row, the '<tld>0' node records) and re-provisions it. The
+		// thesaurus TERMS in '<tld>1' are NOT touched — the old label ("existing
+		// thesaurus data may be lost") was wrong about that, and being wrong in the
+		// scary direction meant nobody dared use the one control that fixes a broken
+		// ontology.
 			const label_field_check_box = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'checkbox-label',
-				inner_html		: self.get_tool_label('force_to_create') || 'Force to create',
+				inner_html		: self.get_tool_label('force_to_create') || 'Rebuild the ontology (terms are kept)',
 				parent			: buttons_container
 			})
 			const check_force_to_create = ui.create_dom_element({
@@ -417,6 +460,105 @@ const get_content_data = async function(self) {
 
 	return content_data
 }//end get_content_data
+
+
+
+/**
+* PAINT_STATUS
+* Renders the hierarchy's invariant checklist into `container`.
+*
+* Every line is one condition the SERVER checked (hierarchy_state.ts inspectHierarchy):
+* the record, the tld, the typology, the source section, the two flags, the ontology,
+* the target sections, and the two general-term ROOTS. A failing line shows what is
+* actually there — "DANGLING → al1/1 does not exist" is the message that would have
+* explained Albania in one glance instead of an afternoon.
+*
+* Pure DOM: takes the state, paints it. No fetching, so it can be reused by both the
+* initial load and the post-write repaint (which reuses the state the write returned).
+*
+* @param {Object} self - the tool instance (for labels)
+* @param {HTMLElement} container
+* @param {Object} state - {usable, tld, checks:[{id,label,ok,detail}]}
+* @return {void}
+*/
+export const paint_status = function(self, container, state) {
+
+	container.innerHTML = ''
+	if (!state || !Array.isArray(state.checks)) {
+		return
+	}
+
+	container.classList.toggle('ok', state.usable===true)
+	container.classList.toggle('incomplete', state.usable!==true)
+
+	// headline: the one thing an operator wants to know before reading anything else
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'status_headline',
+			inner_html		: state.usable
+				? (self.get_tool_label('status_ready') || 'This hierarchy is ready')
+				: (self.get_tool_label('status_incomplete') || 'This hierarchy is incomplete'),
+			parent			: container
+		})
+
+	// the checklist
+		const list = ui.create_dom_element({
+			element_type	: 'ul',
+			class_name		: 'status_checks',
+			parent			: container
+		})
+		for (const check of state.checks) {
+			const item = ui.create_dom_element({
+				element_type	: 'li',
+				class_name		: check.ok ? 'check ok' : 'check failed',
+				parent			: list
+			})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'check_label',
+				inner_html		: check.label,
+				parent			: item
+			})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'check_detail',
+				inner_html		: check.detail,
+				parent			: item
+			})
+		}
+}//end paint_status
+
+
+
+/**
+* RENDER_STATUS_PANEL
+* Fetches the hierarchy state and paints it. Fire-and-forget from the render path: the
+* panel appears as soon as the server answers, and a failure to fetch leaves a readable
+* note instead of an empty box (the tool must still be usable when inspect is unavailable).
+*
+* @param {Object} self - the tool instance
+* @param {HTMLElement} container
+* @return {Promise<void>}
+*/
+export const render_status_panel = async function(self, container) {
+
+	try {
+		const api_response = await self.inspect_hierarchy()
+		if (api_response?.state) {
+			paint_status(self, container, api_response.state)
+			return
+		}
+		throw new Error(api_response?.msg || 'no state in response')
+	} catch (error) {
+		container.innerHTML = ''
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'status_headline',
+			inner_html		: (self.get_tool_label('status_unavailable') || 'Hierarchy status unavailable') + ': ' + error.message,
+			parent			: container
+		})
+	}
+}//end render_status_panel
 
 
 

@@ -100,7 +100,13 @@ bun run scripts/install.ts \
    reading permission bits — a network mount can lie about the bits.
 5. **Restore the database from the seed** — refused unless the database is empty.
 6. **Set the root password** — hashed with Argon2id.
-7. **Import hierarchies** (if any were selected).
+7. **Import and activate hierarchies** (if any were selected). Each selected TLD has its
+   vendored term data copied in, **and is then activated**: the hierarchy is flagged active,
+   its virtual ontology sections (`<tld>0`/`<tld>1`/`<tld>2`) are provisioned, and its
+   thesaurus tree is rooted — so the hierarchies you ticked are browseable at the first
+   login. Importing without activating leaves the terms in the database but unreachable
+   (the section does not exist for the engine until its ontology does), so a TLD whose
+   activation fails is reported as a **failed** hierarchy, not a successful import.
 8. **Register tools** (unless `--skip-tools`).
 9. **Seal the install** — refused unless a root user with a password actually
    exists. A forged *finish* can never seal a half-built instance.

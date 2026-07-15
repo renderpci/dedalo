@@ -1,101 +1,130 @@
 # tool_hierarchy
 
-Generates a custom ontology / virtual section from a hierarchy-definition record, building the hierarchy elements and thesaurus general terms needed to make a new browseable, hierarchical section appear in the menu.
+Makes a hierarchy **usable**: it inspects a hierarchy-definition record against the ten conditions a browseable hierarchy must satisfy, shows you which ones fail, and converges the record to all of them — provisioning the virtual sections, flagging the hierarchy active, and rooting its thesaurus tree.
 
 ## What it does / why & when to use it
 
-`tool_hierarchy` is the v7 replacement for the old v5/v6 *Create structure* buttons. Given a **hierarchy-definition record** (a row in the *Hierarchies* authoring section, tipo `hierarchy1`) that points at an existing real section, it materializes a new **virtual section** on top of that real one: it creates the runtime ontology elements (`ontology`, `dd_ontology`, …) and the thesaurus **general term** root nodes so the new hierarchy is immediately navigable as a thesaurus and visible in the menu.
+Given a **hierarchy-definition record** (a row of the *Hierarchies* section, tipo `hierarchy1`) that names a TLD, a typology and a source real section, `tool_hierarchy` materializes the **virtual sections** on top of that real one — the runtime ontology nodes (`<tld>0`, `<tld>1`, `<tld>2`) and their node records — flags the hierarchy active, and creates the **general term** roots the thesaurus tree hangs its children on.
 
-In plain terms: the user describes the hierarchy they want (a name, a TLD, the source real section, language, typology, active = yes) by filling in a few components, then presses **Generate**. The tool turns that description into a live, hierarchical section.
+Concrete heritage scenario: a numismatics team keeps a flat *Coin types* list (a real section) but wants to organize those types **within the mints that struck them** — a "Mints → types" tree cataloguers can browse and file records into. A curator creates a definition record (name "Mints", a TLD, source real section = *Coin types*, typology), opens `tool_hierarchy` on it, and presses **Activate / repair**. The tool builds the virtual sections, roots the tree at a term named "Mints", and the hierarchy appears as a thesaurus the team can populate. ([tool_cataloging](tool_cataloging.md) is then used to drag real records into the tree.)
 
-Concrete heritage scenario: a numismatics team keeps a flat *Coin types* list (a real section) but wants to organize those types **within the mints that struck them** — a "Mints → types" tree the cataloguers can browse and into which they can file records. A curator opens the *Hierarchies* section, creates a definition record (name "Mints", TLD, source real section = *Coin types*, active = yes), opens `tool_hierarchy` on that record, fills the few required fields, and presses **Generate**. The tool builds the virtual section and its general-term roots; after the menu refreshes, the new "Mints" hierarchy appears as a thesaurus the team can populate and browse. (The companion [tool_cataloging](tool_cataloging.md) is then used to drag real records into the tree.)
+Use it when you are standing on a hierarchy-definition record and want that hierarchy to work — whether it has never been generated, or it is **half-built** and you want to know why. It is not for everyday record editing.
 
-Use it when: you are an administrator/ontology editor standing on a hierarchy-definition record and you want to (re)generate the virtual section it describes. Do not use it for everyday record editing — it is a one-shot structural generator, and re-running it with **Force to create** ticked deletes the previously generated hierarchy first.
+!!! tip "It is a repair tool, not just a generator"
+    Pressing **Activate / repair** on a healthy hierarchy is safe and does nothing (it reports *"Already consistent — nothing to do"*). It only creates what is missing. That is what makes the status panel worth reading before you press anything.
+
+## The invariant it converges to
+
+The server owns one answer to *"is this hierarchy usable?"* — `inspectHierarchy` in `src/core/ontology/hierarchy_state.ts` — and the tool renders it as a checklist:
+
+| Check | What must be true |
+| --- | --- |
+| Hierarchy record | the `hierarchy1` record exists |
+| TLD | `hierarchy6` is a safe TLD (`[a-z]{2,}`) |
+| Typology | `hierarchy9` names a typology — provisioning refuses without one |
+| Source section | `hierarchy109` names a **real section**. Defaulted to `hierarchy20` (the thesaurus template) when unset, and **never overwritten**: it is your "Real section tipo", and a hierarchy built on another section is legitimate |
+| Active | `hierarchy4` → *Yes*, as a **full locator**. A bare one (no `from_component_tipo`) is invisible to the containment query behind every portal's `target_sections` — the hierarchy exists, but no portal can see it |
+| Active in thesaurus | `hierarchy125` is set |
+| Ontology | `dd_ontology` holds `<tld>0`, `<tld>1`, `<tld>2`, and `matrix_ontology` holds the two `<tld>0` node records |
+| Target sections | `hierarchy53` = `<tld>1`, `hierarchy58` = `<tld>2` |
+| General term | `hierarchy45` points at a record that **exists** in `<tld>1` |
+| General term model | `hierarchy59` points at a record that **exists** in `<tld>2` |
+
+The last two are the ones that used to break silently. **A locator being *set* is not the same as its target *existing*.** A definition record can carry a general-term locator pointing at `<tld>1`/1 while that record has never been created — the tree then has no root to hang children on, and the hierarchy cannot be used at all. `inspectHierarchy` reports such a locator as `DANGLING → al1/1 does not exist`, and `ensureHierarchy` treats it as absent and creates the root.
+
+Root terms are **resolved or created, never assumed at a fixed id**: if the locator's target exists it is kept; else if the section already holds terms (an imported thesaurus) its root is linked; else a root is created. A created root is **named after the hierarchy** (`hierarchy5`, every language it holds), and the term component is read from the target section's `section_map` (`hierarchy52` → `{thesaurus: {term: 'hierarchy25', …}}`), never hard-coded — a hierarchy on a non-`hierarchy20` section names a different component. An existing name is never overwritten.
 
 ## How it works (server + client)
 
-**Server** (`tools/tool_hierarchy/server/{index,tool_hierarchy}.ts`). One API action, `generate_virtual_section`, declaratively gated `permission: 'section', minLevel: 2` — generating a new virtual section + thesaurus terms is a structural privilege, so the framework requires write level (≥2) on `section_tipo` **before** the handler runs. The handler:
+**Server** (`tools/tool_hierarchy/server/{index,tool_hierarchy}.ts`). Two API actions:
 
-1. Reads `section_id`, `section_tipo` and `force_to_create` from `options`; refuses (returns `result:false` with an error) if `section_id` or `section_tipo` is missing.
-2. If `force_to_create === true`, deletes the previously generated hierarchy first (`deleteOntologyMain`, `src/core/resolve/ontology_delete.ts` — the TS `ontology::delete_main` equivalent), merging any delete errors into the response (non-fatal).
-3. Delegates the real work to `generateVirtualSection` (`src/core/resolve/hierarchy_provision.ts`). That core validates the definition record (the *active* flag must be Yes, the TLD and the source real section tipo are mandatory) and builds the new hierarchy's ontology elements (`<tld>1` descriptors, `<tld>2` models, dd_ontology nodes).
-4. Creates the two thesaurus **general term** roots via `createThesaurusGeneralTerm` (same module) — `hierarchy45` "General term" and `hierarchy59` "General term model". Without these roots the thesaurus view would show no root nodes.
-5. Invalidates the ontology-derived caches (`clearOntologyDerivedCaches`, `src/core/ontology/cache_invalidation.ts`) so the menu picks up the new section.
+- `inspect_hierarchy` — **read**, `permission: 'section', minLevel: 1`. Returns the checklist. The client calls it when the tool opens.
+- `generate_virtual_section` — **write**, `permission: 'section', minLevel: 2`. Converges the record (`ensureHierarchy`); with `force_to_create`, tears the TLD's ontology down first and rebuilds it (`rebuildHierarchy`). The action name is kept because it is wire contract; the semantics are "make this hierarchy consistent", which is what pressing the button always meant.
 
-The response carries the standard `result` / `msg` / `errors` plus `created_general_term` and `created_general_term_model` (the booleans from the two general-term creations).
+The handler sequences nothing itself. The invariant, and every write that establishes it, lives in `src/core/ontology/hierarchy_state.ts` — one writer, guarded by `test/unit/hierarchy_single_writer_tripwire.test.ts`. Afterwards the ontology-derived caches are invalidated (`clearOntologyDerivedCaches`) so the menu and the tree pick the hierarchy up.
 
-**Client** (`tools/tool_hierarchy/js/`). `tool_hierarchy.js` is the instance (standard `init`/`build` via `tool_common`); `render_tool_hierarchy.js` builds the body. The `edit` view renders six components of the **caller record** in `edit` mode so the user can complete the definition before generating: TLD (`hierarchy6`), name (`hierarchy5`), active (`hierarchy4`), typology (`hierarchy9`), language (`hierarchy8`) and the source real section tipo (`hierarchy109`). The **Generate** button validates that all six have valid values (active must equal Yes), then asks for confirmation **twice** (`Sure?` then the localized `absolute_sure`) before calling `self.generate_virtual_section({force_to_create: <checkbox>})`. That helper builds the `dd_tools_api` / `tool_request` RQO (with a 60 s timeout, one retry) using `self.caller.section_id` / `self.caller.section_tipo` as the options. On success it refreshes the caller section and the menu instance so the new hierarchy shows up. A **Force to create** checkbox next to the button maps to the `force_to_create` option.
+**Client** (`tools/tool_hierarchy/js/`). `render_tool_hierarchy.js` renders the definition components of the caller record in `edit` mode — TLD (`hierarchy6`), name (`hierarchy5`), active (`hierarchy4`), typology (`hierarchy9`), language (`hierarchy8`), source real section (`hierarchy109`) — plus the **status panel** (`paint_status`, fed by `inspect_hierarchy`) and the buttons. Only the fields the server cannot derive are validated before submitting: TLD, name, typology and language. *Active* is **not** a precondition — activating the hierarchy is the job, so refusing to start because it is not yet active was circular.
+
+The write response carries the fresh `state`, so the panel repaints from what actually happened rather than a second round-trip, and `applied` — the list of what changed (empty on a healthy record).
 
 ## Actions & options
 
-`apiActions = { generate_virtual_section: { permission: 'section', minLevel: 2, handler: toolHierarchyGenerateVirtualSection } }` — a single, **declaratively** gated action. There is no `backgroundRunnable` — the work runs synchronously within the request (the client allows up to 60 s).
-
 | Action | Permission gate | Background | Reads from `options` |
 | --- | --- | --- | --- |
+| `inspect_hierarchy` | declarative: `permission: 'section', minLevel: 1` | no | `section_id`, `section_tipo` |
 | `generate_virtual_section` | declarative: `permission: 'section', minLevel: 2` | no | `section_id`, `section_tipo`, `force_to_create` |
-
-Options read by `generate_virtual_section`:
 
 | Option | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `section_id` | int | yes | ID of the hierarchy-definition record to generate from (the caller record). Missing → error response. |
-| `section_tipo` | string | yes | Tipo of that record's section (the hierarchies authoring section, `hierarchy1`). Missing → error response; also the section the write gate is asserted on. |
-| `force_to_create` | bool | no (default `false`) | When `true`, first deletes the previously generated hierarchy (`deleteOntologyMain`) before regenerating. Use to rebuild a hierarchy from scratch. |
+| `section_id` | int | yes | the hierarchy-definition record (the caller record) |
+| `section_tipo` | string | yes | that record's section (`hierarchy1`); also the section the write gate is asserted on |
+| `force_to_create` | bool | no (default `false`) | **Rebuild**: tear the TLD's ontology down (its `dd_ontology` nodes, its ontology-main row and its `<tld>0` node records) and re-provision. The `<tld>1` **terms are not touched** |
 
-Response: `{ result: bool, msg: string, errors: string[], created_general_term: bool, created_general_term_model: bool }`.
+Response: `{ result, msg, errors[], state, applied[] }`, where `state` is `{section_id, tld, typology, usable, checks: [{id, label, ok, detail}]}`.
+
+!!! warning "Rebuild deletes the ontology, not the terms"
+    The old label ("existing thesaurus data may be lost") was wrong, and being wrong in the scary direction meant nobody used the one control that fixes a broken ontology. A rebuild removes the TLD's ontology nodes and node records and re-creates them; the thesaurus records in `<tld>1` survive, and the root is re-linked to them afterwards.
 
 ## How it is registered & surfaced
 
-`tools/tool_hierarchy/register.json` is a **column-keyed dump** (`string`/`relation`/`misc`/… keyed by component tipo — a seeded matrix-row snapshot, not a hand-authored file); `importTools()` passes it through as-is (see [register.json reference](../register_json.md)). The essentials it carries:
+`tools/tool_hierarchy/register.json` is a column-keyed dump (a seeded matrix-row snapshot, not a hand-authored file); `importTools()` passes it through as-is (see [register.json reference](../register_json.md)). The essentials:
 
-- `dd1326` name = `tool_hierarchy`; `dd1327` version (`1.0.3`); `dd1328` minimum Dédalo version (`6.0.0`); `dd1644` developer ("Dédalo team"); `dd799` label ("Hierarchy tool").
-- `dd1350` affected_tipos = `["hierarchy1"]` → the tool only attaches to the **hierarchies authoring section** (`hierarchy1`), i.e. the records where a hierarchy is defined.
-- `dd1335` properties = `{ "mode": "edit" }` → the tool opens in **edit** mode (the user edits the definition components inline before generating). No `open_as` is set, so it uses the default modal presentation.
-- `dd1372` labels supply the localized UI strings across project languages: `generate`, `force_to_create`, `user_info`, `absolute_sure`, `all_fields_mandatory`, `insert_value`.
+- `dd1326` name = `tool_hierarchy`; `dd799` label ("Hierarchy tool").
+- `dd1350` affected_tipos = `["hierarchy1"]` → the tool attaches **only** to hierarchy-definition records.
+- `dd1335` properties = `{ "mode": "edit" }` → it opens in edit mode, so the definition can be completed inline before converging.
+- `dd1372` labels supply the localized strings. The panel and the confirmations fall back to English when a label is absent, so the tool works before the labels are translated: `status_ready`, `status_incomplete`, `status_unavailable`, `confirm_activate`, `confirm_rebuild`, `generate`, `force_to_create`.
 
-Surfacing (in `getElementTools`, `src/core/tools/registry.ts`): because the tool is restricted by `affected_tipos` to `hierarchy1`, the **Generate** button appears only on hierarchy-definition records — when an administrator is editing a row of the *Hierarchies* section. It is not an inspector- or component-toolbar tool for ordinary data sections.
+Surfacing (`getElementTools`, `src/core/tools/registry.ts`): restricted by `affected_tipos` to `hierarchy1`, the tool appears only on hierarchy-definition records.
 
 ## Examples
 
-Client-side `tool_request` (built by `tool_hierarchy.js::generate_virtual_section`, sent through `dd_tools_api`):
+The write call (built by `tool_hierarchy.js::generate_virtual_section`):
 
 ```js
-const source = create_source(self, 'generate_virtual_section') // → tool_hierarchy::generate_virtual_section
 const rqo = {
     dd_api : 'dd_tools_api',
     action : 'tool_request',
-    source : source,
+    source : create_source(self, 'generate_virtual_section'),
     options : {
         section_id      : self.caller.section_id,   // the hierarchy-definition record
-        section_tipo    : self.caller.section_tipo,  // 'hierarchy1'
-        force_to_create : false                      // true → delete + rebuild
+        section_tipo    : self.caller.section_tipo, // 'hierarchy1'
+        force_to_create : false                     // true → rebuild the ontology
     }
 }
-const response = await data_manager.request({
-    body    : rqo,
-    retries : 1,
-    timeout : 60 * 1000 // 60 s
-})
 ```
 
-Successful response shape:
+A response on a record that needed repairing:
 
 ```json
 {
     "result": true,
-    "msg": "Ok",
+    "msg": "Hierarchy 'al' is ready",
     "errors": [],
-    "created_general_term": true,
-    "created_general_term_model": true
+    "applied": [
+        "flagged active",
+        "provisioned the ontology (al0, al1, al2)",
+        "hierarchy45: created the root al1/1",
+        "hierarchy45: named the root al1/1 after the hierarchy"
+    ],
+    "state": { "tld": "al", "usable": true, "checks": [] }
 }
 ```
 
-A failure (e.g. the definition's *active* flag is not Yes, or the TLD / source real section is empty) comes back with `result:false`, a localized `msg` and the specific cause in `errors` — the client renders `errors` under the form and re-activates the offending component.
+A refusal — the tool does **not** paper over an operator error:
+
+```json
+{
+    "result": false,
+    "msg": "the source section 'actv1' (hierarchy109) is not a section — fix \"Real section tipo\" first",
+    "applied": [],
+    "state": { "usable": false, "checks": [] }
+}
+```
 
 ## Related
 
-- [tool_cataloging](tool_cataloging.md) — the natural follow-up: drag real records into the hierarchy this tool generates.
-- [tool_ontology](tool_ontology.md) (and its sibling `tool_ontology_parser`) — developer tools that parse/sync ontology records into the `dd_ontology` runtime table that this tool writes into.
-- [Creating new tools](../creating_tools.md) · [Server contract](../server_contract.md) — the tool model, `apiActions`, gates and lifecycle this page builds on.
-- [Exporting data](../../../core/exporting_data.md) — once a hierarchy holds data, [tool_export](tool_export.md) flattens its records (with ancestor chains) to a spreadsheet.
-- Source: `tools/tool_hierarchy/server/{index,tool_hierarchy}.ts`, `tools/tool_hierarchy/register.json`, `tools/tool_hierarchy/js/{tool_hierarchy,render_tool_hierarchy}.js`; core: `src/core/resolve/hierarchy_provision.ts` (`generateVirtualSection`, `createThesaurusGeneralTerm`), `src/core/resolve/ontology_delete.ts` (`deleteOntologyMain`).
+- [Hierarchies](../../../core/ontology/hierarchy.md) — the model this tool operates on, and the same invariant from the ontology side.
+- [Installing new hierarchies](../../../management/install_new_hierarchies.md) — the wizard imports **and activates** the hierarchies you tick; this tool is how you activate one afterwards.
+- [tool_cataloging](tool_cataloging.md) — the natural follow-up: drag real records into the hierarchy this tool builds.
+- [Creating new tools](../creating_tools.md) · [Server contract](../server_contract.md).
+- Source: `tools/tool_hierarchy/server/{index,tool_hierarchy}.ts`, `tools/tool_hierarchy/js/{tool_hierarchy,render_tool_hierarchy}.js`; core: `src/core/ontology/hierarchy_state.ts` (`inspectHierarchy`, `ensureHierarchy`, `rebuildHierarchy`), `src/core/ontology/hierarchy_provision.ts` (`generateVirtualSection`), `src/core/ontology/ontology_delete.ts` (`deleteOntologyByTld`).
