@@ -11,6 +11,9 @@ copy: `CLAUDE.md` is a symlink to it, so Claude Code and any tool following the
 `AGENTS.md` convention read the same bytes and cannot drift. Never fork the two
 (the "link, never duplicate" law applies to this file first).
 
+## Interactions
+- In all interactions and commit messages, be extremely concise and precise and sacrifice grammar for the sake of concision.
+
 ## ⚠️ THE VERIFICATION STORY (read this first — post-oracle)
 
 The live-oracle era is over. The baselines of record are FROZEN:
