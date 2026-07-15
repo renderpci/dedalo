@@ -2,37 +2,89 @@
 * add_hierarchy
 *
 * Included from area_maintenance.less file.
-* Checkbox grid of importable hierarchies, aligned to the kit (eyebrow section
-* heading, semantic tokens, success colour for already-installed hierarchies).
+* Aligned to the shared widget_kit (.dd_eyebrow heading, .dd_note descriptions,
+* .dd_badge chips, .dd_console response) so the panel reads like the rest of the
+* maintenance widgets (esp. diffusion_server_control). Only this widget's own
+* bits live here: the filter bar, the typology checkbox grid, and the
+* already-installed marker.
 */
 .wrapper_widget.add_hierarchy {
 
-	.description {
-		padding-bottom: 0.5rem;
-		color: var(--fg_muted);
-		line-height: 1.4;
+	.add_hierarchy_content {
+		display: flex;
+		flex-direction: column;
+		gap: 0.9rem;
 	}
 
+	// shared-block intro lines → muted kit notes
+	.description {
+		margin: 0;
+		color: var(--fg_muted);
+		font-size: 0.85rem;
+		line-height: 1.4;
+	}
+	.description.source_files {
+		font-family: @dd_mono;
+		font-size: 0.8rem;
+		word-break: break-word;
+	}
+
+	// ---- filter bar ----------------------------------------------------
+	.hierarchy_filter {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		flex-wrap: wrap;
+	}
+	.hierarchy_filter_input {
+		flex: 1 1 16rem;
+		max-width: 24rem;
+		padding: 0.4rem 0.7rem;
+		font-size: 0.9rem;
+		color: var(--fg_default);
+		background-color: var(--bg_surface);
+		border: 1px solid var(--border_default);
+		border-radius: 6px;
+
+		&:focus {
+			outline: none;
+			border-color: var(--color_primary);
+			box-shadow: 0 0 0 2px color-mix(in srgb, var(--color_primary) 22%, transparent);
+		}
+	}
+	.hierarchy_filter_count {
+		flex: 0 0 auto;
+		color: var(--fg_muted);
+	}
+
+	// ---- list surface --------------------------------------------------
 	.hierarchy_container {
-		padding: 1rem 0;
+		padding: 0.3rem 0.9rem 0.9rem;
+		border: 1px solid var(--border_default);
+		border-radius: 8px;
+		background-color: var(--bg_surface);
 	}
 
 	.typology_label {
-		padding: 0 0 0.4rem;
-		font-size: 0.72rem;
+		display: block;
+		padding: 0.9rem 0 0.4rem;
+		font-size: 0.68rem;
 		font-weight: 600;
 		letter-spacing: 0.04em;
 		text-transform: uppercase;
 		color: var(--fg_muted);
 		border-bottom: 1px solid var(--border_default);
+
+		&[hidden] { display: none; }
 	}
 
-	// hierarchies_import_block
 	.hierarchy_ul {
-		padding: 1rem 0 1rem 1.5rem;
+		padding: 0.8rem 0 0.4rem 1.5rem;
 		display: grid;
 		grid-template-columns: repeat(6, 1fr);
-		gap: 0.25rem;
+		gap: 0.15rem 0.25rem;
+
+		&[hidden] { display: none; }
 
 		@media screen and (max-width: @width_break_point_1) {
 			grid-template-columns: repeat(4, 1fr);
@@ -42,6 +94,8 @@
 		}
 	}
 
+	li[hidden] { display: none; }
+
 	.hierarchy_label {
 		display: inline-block;
 		cursor: pointer;
@@ -49,35 +103,64 @@
 		margin-bottom: 2px;
 		padding-right: 0.75rem;
 		color: var(--fg_default);
+		border-radius: 4px;
 
 		&:hover {
-			box-shadow: 0 1px 0 var(--border_strong);
+			color: var(--color_primary);
 		}
 
-		>.hierarchy_checkbox {
+		> .hierarchy_checkbox {
 			vertical-align: text-bottom;
 			height: 1rem;
 			width: 1rem;
 			margin: 0 0.5rem 0 -1.5rem;
+			cursor: pointer;
 		}
 
-		// hierarchy already installed
-		>.active_hierarchy {
+		// already installed → quiet success marker
+		> .active_hierarchy {
+			margin-left: 0.15rem;
 			color: var(--color_success);
 			font-weight: 700;
+			font-size: 0.82rem;
 		}
+	}
+
+	.hierarchy_no_matches {
+		padding: 1rem 0 0.3rem;
+
+		&[hidden] { display: none; }
+	}
+
+	// ---- actions + response --------------------------------------------
+	.import_hierarchies_button {
+		margin-top: 0.9rem;
+	}
+	.reset_hierarchies_button {
+		margin: 0.9rem 0 0 0.5rem;
+	}
+
+	.button_refresh {
+		float: right;
+		margin-top: 0.4rem;
 	}
 
 	.msg {
 		position: relative;
-		padding: 2rem;
+		padding: 1rem 0;
 
 		.spinner {
 			top: 0;
 		}
 	}
 
-	.button_refresh {
-		float: right;
+	// post-import feedback, as a console block (kit)
+	.body_response {
+		.dd_console();
+		margin-top: 0.6rem;
+
+		&:empty {
+			display: none;
+		}
 	}
 }//end add_hierarchy

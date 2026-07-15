@@ -127,15 +127,14 @@ const get_content_data_edit = async function(self) {
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'content_data'
+			class_name		: 'content_data add_hierarchy_content'
 		})
 
-	// info
-		const text = `Hierarchy files from install dir`
-		const info = ui.create_dom_element({
-			element_type	: 'div',
-			inner_html		: text,
-			class_name		: 'info_text',
+	// section heading (kit eyebrow — matches the other maintenance widgets)
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'dd_eyebrow',
+			inner_html		: get_label.instalar_jerarquias || 'Import hierarchies',
 			parent			: content_data
 		})
 
@@ -194,7 +193,32 @@ const get_content_data_edit = async function(self) {
 			hierarchy_files_dir_path	: hierarchy_files_dir_path,
 			hierarchy_typologies 		: hierarchy_typologies,
 			default_checked				: [],
-			callback					: fn_callback
+			callback					: fn_callback,
+			// live name/TLD filter — admins locate a hierarchy in the long list fast
+			show_filter					: true,
+			// Route the import through the maintenance widget action (widget_request →
+			// add_hierarchy::install_hierarchies), NOT the install-wizard surface
+			// (dd_utils_api:install), which 404s once the instance is sealed.
+			import_request				: {
+				dd_api	: 'dd_area_maintenance_api',
+				action	: 'widget_request',
+				source	: {
+					type	: 'widget',
+					model	: 'add_hierarchy',
+					action	: 'install_hierarchies'
+				}
+			},
+			// Destructive "Reset to seed" for already-installed hierarchies (import skips
+			// those; this re-seeds them). Routes to add_hierarchy::reset_hierarchies.
+			reset_request				: {
+				dd_api	: 'dd_area_maintenance_api',
+				action	: 'widget_request',
+				source	: {
+					type	: 'widget',
+					model	: 'add_hierarchy',
+					action	: 'reset_hierarchies'
+				}
+			}
 		}
 		const hierarchies_import_node = render_hierarchies_import_block(hierarchies_import_options)
 		content_data.appendChild(hierarchies_import_node)

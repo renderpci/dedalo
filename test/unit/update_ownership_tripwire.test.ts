@@ -53,6 +53,10 @@ const ENGINE_NATIVE: Record<string, string> = {
 	'menu_skip_tipos.save_menu_skip_tipos': 'TS-native runtime state (ts_state.json menu skip list)',
 	'export_hierarchy.sync_hierarchy_active_status':
 		'hierarchy active-status sync through the TS write path',
+	'add_hierarchy.install_hierarchies':
+		'imports + activates vendored hierarchy files into the engine-owned (configured) database — the wizard EXECUTE path, reachable post-seal only through this widget',
+	'add_hierarchy.reset_hierarchies':
+		'DESTRUCTIVE delete-then-reimport of a hierarchy into the engine-owned (configured) database — explicit confirmed "Reset to seed" (PHP replace parity)',
 	'diffusion_server_control.get_value': 'read-only diffusion engine status',
 	'diffusion_server_control.cancel_process': 'TS-owned diffusion engine control (Bun owns MariaDB)',
 	'diffusion_server_control.requeue_job': 'TS-owned diffusion engine control',

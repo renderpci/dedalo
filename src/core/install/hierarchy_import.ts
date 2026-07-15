@@ -41,6 +41,8 @@ export interface HierarchyImportResponse {
 	tld: string;
 	result: boolean;
 	msg: string;
+	/** True when the tld was already installed and left untouched (skip mode). */
+	skipped?: boolean;
 }
 
 export interface InstallHierarchiesResult {
@@ -48,6 +50,18 @@ export interface InstallHierarchiesResult {
 	msg: string;
 	errors: string[];
 	responses: HierarchyImportResponse[];
+}
+
+/** How to treat a tld whose rows are already in matrix_hierarchy. */
+export interface InstallHierarchiesOptions {
+	/**
+	 * false (default): an already-installed tld is SKIPPED (non-destructive — the raw
+	 * `\copy` is insert-only and would violate the PK). true: DELETE the tld's existing
+	 * rows first, then re-copy from the vendored seed — the PHP replace behavior. This is
+	 * destructive (discards any operator edits/additions to that hierarchy's terms) and is
+	 * only reached through the explicit, confirmed "Reset to seed" widget action.
+	 */
+	replace?: boolean;
 }
 
 /** Load one `<name>.copy.gz` into matrix_hierarchy via \copy FROM STDIN. */
@@ -87,6 +101,39 @@ async function consolidateHierarchyCounter(conn: DbConnDescriptor, tld: string):
 }
 
 /**
+ * Is this tld already imported? True when the `<tld>1` term section has any row in
+ * matrix_hierarchy. `tld` is safeTld-validated before this runs, so the quoted literal
+ * is safe. A probe failure (e.g. connection issue) returns false → the caller falls
+ * through to the normal copy, whose own error is reported honestly.
+ */
+async function hierarchyRowsPresent(conn: DbConnDescriptor, tld: string): Promise<boolean> {
+	const res = await runPsql(conn, [
+		'-tAc',
+		`SELECT 1 FROM ${HIERARCHY_TABLE} WHERE section_tipo = '${tld}1' LIMIT 1`,
+	]).catch(() => null);
+	return res !== null && res.exitCode === 0 && res.stdout === '1';
+}
+
+/**
+ * DELETE every `<tld>N` section (es1 terms, es2 models…) from matrix_hierarchy before a
+ * REPLACE re-import — the PHP scoped pre-delete (backup::import_from_copy_file). Anchored
+ * regex on the safeTld-validated tld. Destructive by design (the caller confirmed it).
+ */
+async function deleteHierarchyRows(
+	conn: DbConnDescriptor,
+	tld: string,
+): Promise<{ ok: boolean; msg: string }> {
+	const res = await runPsql(conn, [
+		'-v',
+		'ON_ERROR_STOP=1',
+		'-c',
+		`DELETE FROM ${HIERARCHY_TABLE} WHERE section_tipo ~ '^${tld}[0-9]+$'`,
+	]);
+	if (res.exitCode !== 0) return { ok: false, msg: res.stderr || 'delete failed' };
+	return { ok: true, msg: 'deleted' };
+}
+
+/**
  * Import + ACTIVATE the selected hierarchies. `conn` defaults to config.db.
  *
  * TWO WRITE CHANNELS, ONE DATABASE. The import is a `\copy` through psql into `conn`;
@@ -101,8 +148,10 @@ export async function installHierarchies(
 	tlds: string[],
 	conn?: DbConnDescriptor,
 	userId = -1,
+	options: InstallHierarchiesOptions = {},
 ): Promise<InstallHierarchiesResult> {
 	const connection = conn ?? connFromConfig();
+	const replace = options.replace === true;
 	const responses: HierarchyImportResponse[] = [];
 	const errors: string[] = [];
 	const engineOwnsTarget = connection.database === config.db.database;
@@ -113,6 +162,24 @@ export async function installHierarchies(
 			errors.push(`${tld}: invalid tld`);
 			continue;
 		}
+
+		// Already installed? Skip (default) or DELETE-then-recopy (explicit reset). The
+		// raw `\copy` is insert-only, so without this an already-present tld throws a PK
+		// violation instead of doing something sensible.
+		const present = await hierarchyRowsPresent(connection, tld);
+		if (present && !replace) {
+			responses.push({ tld, result: true, msg: 'already installed — skipped', skipped: true });
+			continue;
+		}
+		if (present && replace) {
+			const del = await deleteHierarchyRows(connection, tld);
+			if (!del.ok) {
+				responses.push({ tld, result: false, msg: `reset failed: ${del.msg}` });
+				errors.push(`${tld}: ${del.msg}`);
+				continue;
+			}
+		}
+
 		// Terms file is required; the model file is optional.
 		const terms = await importCopyFile(connection, `${tld}1.copy.gz`);
 		if (!terms.ok) {
@@ -162,15 +229,19 @@ export async function installHierarchies(
 			errors.push(...activation.errors.map((error) => `${tld}: ${error}`));
 			continue;
 		}
-		responses.push({ tld, result: true, msg: 'imported and activated' });
+		responses.push({ tld, result: true, msg: replace ? 'reset and activated' : 'imported and activated' });
 	}
+
+	const imported = responses.filter((r) => r.result && !r.skipped).length;
+	const skipped = responses.filter((r) => r.skipped).length;
+	const verb = replace ? 'Reset' : 'Imported';
+	let msg = `${verb} ${imported} hierarchy(ies)`;
+	if (skipped > 0) msg += `, skipped ${skipped} already installed`;
+	if (errors.length > 0) msg = `${errors.length} hierarchy(ies) failed`;
 
 	return {
 		result: errors.length === 0,
-		msg:
-			errors.length === 0
-				? `Imported ${responses.filter((r) => r.result).length} hierarchy(ies)`
-				: `${errors.length} hierarchy(ies) failed`,
+		msg,
 		errors,
 		responses,
 	};

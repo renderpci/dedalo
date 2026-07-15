@@ -242,15 +242,18 @@ const api_call_with_spinner = async function(options) {
 		: null
 
 	// API call
+	// options.body, when supplied, is used verbatim (e.g. a widget_request envelope);
+	// otherwise the install-surface envelope is assembled from action/dd_api/body_options.
+	const request_body = options.body || {
+		action	: dd_action,
+		dd_api	: dd_api,
+		options	: {
+			action	: action,
+			...body_options
+		}
+	}
 	const api_response = await data_manager.request({
-		body : {
-			action	: dd_action,
-			dd_api	: dd_api,
-			options	: {
-				action	: action,
-				...body_options
-			}
-		},
+		body	: request_body,
 		retries	: retries,
 		timeout	: timeout
 	})
@@ -2354,7 +2357,9 @@ const render_login_block = async function(self) {
 * @param {string} [options.hierarchy_files_dir_path=''] - Server path shown for informational purposes
 * @param {Function} [options.callback]             - Called with api_response on successful import
 * @param {Array}  [options.hierarchy_typologies=[]] - Typology group descriptors ({label, typology})
-* @returns {DocumentFragment} Fragment with description, grouped hierarchy checkboxes, import button, and status div
+* @param {boolean} [options.show_filter=false]     - Render a live name/TLD text filter above the list
+* @param {Object} [options.reset_request]          - Endpoint ({dd_api, action, source}) for a destructive "Reset to seed" button (maintenance widget only)
+* @returns {DocumentFragment} Fragment with description, optional filter, grouped hierarchy checkboxes, import button, optional reset button, and status div
 */
 export const render_hierarchies_import_block = function(options) {
 
@@ -2365,6 +2370,16 @@ export const render_hierarchies_import_block = function(options) {
 		const hierarchy_files_dir_path	= options.hierarchy_files_dir_path || ''
 		const callback					= options.callback
 		const hierarchy_typologies		= options.hierarchy_typologies || []
+		// Alternate import endpoint ({dd_api, action, source}); when set the import routes
+		// through it instead of the sealed-off install surface (dd_utils_api:install).
+		const import_request			= options.import_request || null
+		// When true, render a live text filter above the list (name / TLD). Opt-in so
+		// the install wizard keeps its plain list; the maintenance widget enables it.
+		const show_filter				= options.show_filter===true
+		// Endpoint for the DESTRUCTIVE "Reset to seed" action ({dd_api, action, source}).
+		// When set (maintenance widget) a danger button re-seeds already-installed ticked
+		// hierarchies; absent (install wizard) → no reset button at all.
+		const reset_request				= options.reset_request || null
 
 	// DocumentFragment
 		const fragment = new DocumentFragment();
@@ -2390,6 +2405,32 @@ export const render_hierarchies_import_block = function(options) {
 			parent			: fragment
 		})
 
+	// filter bar (opt-in). A live text box that shows/hides list rows by name or TLD;
+	// wired below once the list (and its total) exists. Placed above the container so it
+	// reads as the list's control.
+		let filter_input	= null
+		let filter_count	= null
+		if (show_filter) {
+			const filter_bar = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'hierarchy_filter',
+				parent			: fragment
+			})
+			filter_input = ui.create_dom_element({
+				element_type	: 'input',
+				class_name		: 'hierarchy_filter_input',
+				parent			: filter_bar
+			})
+			filter_input.type			= 'search'
+			filter_input.placeholder	= get_label.filter || 'Filter by name or TLD…'
+			filter_input.setAttribute('aria-label', get_label.filter || 'Filter by name or TLD')
+			filter_count = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'hierarchy_filter_count dd_badge mono',
+				parent			: filter_bar
+			})
+		}
+
 	// hierarchies
 		const hierarchy_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -2401,6 +2442,8 @@ export const render_hierarchies_import_block = function(options) {
 		// Pre-populated with default_checked items during the initial loop, then kept
 		// in sync by checkbox change handlers (push on check, splice on uncheck).
 		const hierarchies_to_install = []
+		// Count of importable rows actually rendered — the filter's "of N" denominator.
+		let total_hierarchies = 0
 		const hierarchy_typologies_length = hierarchy_typologies.length
 		for (let i = hierarchy_typologies_length - 1; i >= 0; i--) {
 
@@ -2447,6 +2490,10 @@ export const render_hierarchies_import_block = function(options) {
 						element_type	: 'li',
 						parent			: hierarchy_ul
 					})
+					// searchable key for the filter (name + tld), lowercased once here so
+					// the input handler stays a cheap substring test.
+					hierarchy_li.dataset.search = (current_hierarchy.label + ' ' + current_hierarchy.tld).toLowerCase()
+					total_hierarchies++
 
 				// label
 				// The label text includes the TLD in brackets for disambiguation when
@@ -2490,6 +2537,44 @@ export const render_hierarchies_import_block = function(options) {
 						hierarchies_to_install.push(current_hierarchy.tld)
 					}
 			}
+		}
+
+	// filter wiring (opt-in). Substring-matches each row's data-search (name + tld);
+	// hides non-matching rows and any typology group left empty, updates the "X of N"
+	// count, and toggles a "no matches" note. No filter → all rows visible.
+		if (show_filter && filter_input) {
+			const no_matches = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'hierarchy_no_matches dd_note',
+				inner_html		: get_label.no_results || 'No hierarchies match the filter.',
+				parent			: hierarchy_container
+			})
+			no_matches.hidden = true
+
+			const apply_filter = function(raw) {
+				const query = (raw || '').trim().toLowerCase()
+				let visible = 0
+				const groups = hierarchy_container.querySelectorAll('.hierarchy_ul')
+				groups.forEach(group => {
+					let group_visible = 0
+					group.querySelectorAll('li').forEach(li => {
+						const match = query==='' || (li.dataset.search || '').indexOf(query) !== -1
+						li.hidden = !match
+						if (match) { visible++; group_visible++ }
+					})
+					// hide an emptied group together with its typology heading (prev sibling)
+					group.hidden = group_visible===0
+					const heading = group.previousElementSibling
+					if (heading && heading.classList.contains('typology_label')) {
+						heading.hidden = group_visible===0
+					}
+				})
+				filter_count.textContent = query==='' ? String(total_hierarchies) : (visible + ' / ' + total_hierarchies)
+				no_matches.hidden = visible!==0
+			}
+
+			filter_input.addEventListener('input', () => apply_filter(filter_input.value))
+			apply_filter('') // seed the count
 		}
 
 	// import_hierarchies_status msg
@@ -2536,13 +2621,27 @@ export const render_hierarchies_import_block = function(options) {
 				hierarchy_container.classList.add('loading')
 
 			// API call with spinner
-				const api_response = await api_call_with_spinner({
-					action			: 'install_hierarchies',
-					body_options	: { hierarchies: hierarchies_to_install },
-					status_node		: import_hierarchies_status,
-					button_node		: import_hierarchies_button,
-					timeout			: 600 * 1000 // hierarchy imports can take minutes
-				})
+				// import_request set (maintenance widget) → route through the given endpoint
+				// (widget_request) with the TLDs in options.hierarchies; otherwise the
+				// install-wizard default (dd_utils_api:install / install_hierarchies).
+				const call_options = {
+					status_node	: import_hierarchies_status,
+					button_node	: import_hierarchies_button,
+					timeout		: 600 * 1000 // hierarchy imports can take minutes
+				}
+				if (import_request) {
+					call_options.body = {
+						dd_api			: import_request.dd_api,
+						action			: import_request.action,
+						prevent_lock	: true,
+						source			: import_request.source,
+						options			: { hierarchies: hierarchies_to_install }
+					}
+				} else {
+					call_options.action			= 'install_hierarchies'
+					call_options.body_options	= { hierarchies: hierarchies_to_install }
+				}
+				const api_response = await api_call_with_spinner(call_options)
 				console.log('install_hierarchies response: ', api_response);
 
 			// manage result
@@ -2565,6 +2664,80 @@ export const render_hierarchies_import_block = function(options) {
 			// unlock container
 				import_hierarchies_button.classList.remove('loading')
 				hierarchy_container.classList.remove('loading')
+		}
+
+	// reset button (opt-in, maintenance widget only). DESTRUCTIVE: re-seeds the ticked
+	// hierarchies that are ALREADY installed, discarding local edits. Import skips those
+	// same rows; reset is the explicit way to force them back to the vendored seed.
+		if (reset_request) {
+			const reset_hierarchies_button = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'danger reset_hierarchies_button',
+				inner_html		: get_label.reset_to_seed || 'Reset to seed',
+				parent			: hierarchy_container
+			})
+			reset_hierarchies_button.addEventListener('mouseup', fn_reset_hierarchies)
+
+			/**
+			* FN_RESET_HIERARCHIES
+			* Re-seed the ticked hierarchies that are already installed. Only installed tlds
+			* are eligible (a non-installed tick is a plain import, not a reset). Requires a
+			* strong confirmation because it deletes and re-copies the terms, discarding edits.
+			* @returns {Promise<void>}
+			*/
+			async function fn_reset_hierarchies(){
+
+				// only ticked hierarchies that are ALREADY installed can be reset
+					const to_reset = hierarchies_to_install.filter(tld => active_hierarchies.includes(tld.toLowerCase()))
+					if (to_reset.length<1) {
+						alert( get_label.reset_pick_installed || 'Tick one or more already-installed hierarchies to reset.' )
+						return
+					}
+
+				// destructive confirmation (lists the tlds and warns about data loss)
+					const warn = (get_label.reset_warning || 'This DELETES and re-imports from the seed, discarding any local edits')
+						+ ':\n\n' + to_reset.join(', ') + '\n\n' + (get_label.sure || 'Are you sure?')
+					if (!confirm(warn)) {
+						return false
+					}
+
+				// lock container
+					reset_hierarchies_button.classList.add('loading')
+					hierarchy_container.classList.add('loading')
+
+				// API call with spinner (reset endpoint; TLDs in options.hierarchies)
+					const api_response = await api_call_with_spinner({
+						status_node	: import_hierarchies_status,
+						button_node	: reset_hierarchies_button,
+						timeout		: 600 * 1000,
+						body		: {
+							dd_api			: reset_request.dd_api,
+							action			: reset_request.action,
+							prevent_lock	: true,
+							source			: reset_request.source,
+							options			: { hierarchies: to_reset }
+						}
+					})
+					console.log('reset_hierarchies response: ', api_response);
+
+				// manage result (same contract as import)
+					const ar_errors = Array.isArray(api_response.errors) ? api_response.errors : []
+					if (api_response.result===true && ar_errors.length===0) {
+						import_hierarchies_status.classList.add('ok')
+						import_hierarchies_status.textContent = api_response.msg
+						if (typeof callback==='function') {
+							callback(api_response)
+						}
+					}else{
+						console.error('reset_hierarchies errors:', ar_errors, api_response);
+						import_hierarchies_status.classList.add('error')
+						import_hierarchies_status.textContent = ar_errors.length>0 ? ar_errors[0] : (api_response.msg || 'Hierarchy reset failed')
+					}
+
+				// unlock container
+					reset_hierarchies_button.classList.remove('loading')
+					hierarchy_container.classList.remove('loading')
+			}
 		}
 
 

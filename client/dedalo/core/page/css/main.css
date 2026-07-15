@@ -13745,6 +13745,9 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .wrapper_widget.add_hierarchy .import_hierarchies_button {
   margin-top: 0.9rem;
 }
+.wrapper_widget.add_hierarchy .reset_hierarchies_button {
+  margin: 0.9rem 0 0 0.5rem;
+}
 .wrapper_widget.add_hierarchy .button_refresh {
   float: right;
   margin-top: 0.4rem;
