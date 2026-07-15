@@ -241,6 +241,12 @@ installer.prototype.build = async function(autoload=false) {
 					console.log('----> install build api_response', api_response);
 				}
 
+				if (!Array.isArray(api_response.result)) {
+					console.error('Error on get install context. api_response:', api_response);
+					self.status = 'built'
+					return true
+				}
+
 			// set context and data to current instance
 				self.context	= api_response.result.find(element => element.model===self.model);
 				self.data		= {}
