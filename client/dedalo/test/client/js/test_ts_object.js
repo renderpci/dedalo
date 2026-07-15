@@ -1,8 +1,9 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global it, describe, assert */
+/*global it, describe, before, after, assert */
 /*eslint no-undef: 'error'*/
 import {ts_object,key_instances_builder} from '../../../core/ts_object/js/ts_object.js'
 import {ui} from '../../../core/common/js/ui.js'
+import {data_manager} from '../../../core/common/js/data_manager.js'
 
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -27,6 +28,12 @@ describe('TS_OBJECT : ', function() {
 		parent			: container
 	})
 
+	// Fixture node identities. These are deliberately DECOUPLED from live DB
+	// records: this is a unit test of the ts_object build/render/destroy pipeline,
+	// not an integration test of the thesaurus data. Earlier revisions hardcoded
+	// real records (e.g. 'ts1/1') which vanished when the install changed, making
+	// the suite fail for reasons unrelated to ts_object. The node data is now
+	// supplied by the mock below (see before()), so any identity is stable.
 	const items = [
 		{
 			section_tipo : 'ts1',
@@ -41,6 +48,64 @@ describe('TS_OBJECT : ', function() {
 			section_id : '8131'
 		}
 	]
+
+	// Mock data_manager.request so build()/get_node_data resolve against
+	// deterministic fixtures instead of the live server. Keyed by
+	// `${action}_${section_tipo}_${section_id}` (same convention as
+	// test_ts_object_extended.js). Restored in after().
+	const original_request = data_manager.request
+
+	before(function() {
+
+		// Build one get_node_data fixture per item
+		const responses = new Map()
+		items.forEach(el => {
+			const key = `get_node_data_${el.section_tipo}_${el.section_id}`
+			responses.set(key, {
+				result : {
+					ts_id						: `${el.section_tipo}_${el.section_id}`,
+					ts_parent					: null,
+					section_tipo				: el.section_tipo,
+					section_id					: el.section_id,
+					order						: 1,
+					is_descriptor				: true,
+					is_indexable				: true,
+					has_descriptor_children		: false,
+					permissions_button_new		: 3,
+					permissions_button_delete	: 3,
+					permissions_indexation		: 3,
+					ar_elements					: [
+						{
+							type	: 'term',
+							tipo	: `${el.section_tipo}_term`,
+							value	: `Term ${el.section_tipo} ${el.section_id}`,
+							model	: 'component_input_text'
+						}
+					]
+				}
+			})
+		})
+
+		data_manager.request = async (options) => {
+			const body		= options.body
+			const action	= body?.action
+			const source	= body?.source || {}
+			const key		= `${action}_${source.section_tipo || ''}_${source.section_id || ''}`
+
+			if (responses.has(key)) {
+				return responses.get(key)
+			}
+
+			// Node with no children fixtures: the test never expands, so
+			// get_children_data is not expected. Any other call gets a benign
+			// success so an unrelated stray request cannot break the pipeline.
+			return { result : true }
+		}
+	})
+
+	after(function() {
+		data_manager.request = original_request
+	})
 
 	items.forEach(el => {
 
