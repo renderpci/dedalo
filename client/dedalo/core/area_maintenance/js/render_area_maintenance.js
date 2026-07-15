@@ -190,6 +190,7 @@ const get_category_defs = function() {
 		{ key:'integrity',	label: get_label.maintenance_cat_integrity	|| 'Integrity & monitoring' },
 		{ key:'system',		label: get_label.maintenance_cat_system		|| 'System & environment' },
 		{ key:'diffusion',	label: get_label.maintenance_cat_diffusion	|| 'Diffusion' },
+		{ key:'publication',label: get_label.maintenance_cat_publication	|| 'Publication' },
 		{ key:'dev',		label: get_label.maintenance_cat_dev		|| 'Developer & testing' },
 		{ key:'general',	label: get_label.others						|| 'Other' }
 	]
