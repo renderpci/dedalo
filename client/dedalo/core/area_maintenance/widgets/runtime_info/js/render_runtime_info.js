@@ -283,8 +283,7 @@ const render_maintenance_section = function(self, container, info_pre) {
 	// body_response (messages)
 		const body_response = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'body_response',
-			parent			: container
+			class_name		: 'body_response'
 		})
 
 	// refresh helper: re-fetch the runtime facts and repaint the info <pre> so
@@ -313,6 +312,9 @@ const render_maintenance_section = function(self, container, info_pre) {
 			run				: () => self.clear_session_files(),
 			on_success		: refresh
 		})
+
+	// container
+		container.appendChild(body_response)
 }//end render_maintenance_section
 
 

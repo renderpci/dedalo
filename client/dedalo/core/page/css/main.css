@@ -14846,8 +14846,14 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .wrapper_widget.runtime_info .runtime_actions {
   margin-top: 1rem;
 }
+.wrapper_widget.runtime_info .runtime_actions .runtime_label {
+  margin-bottom: 0.5rem;
+}
 .wrapper_widget.runtime_info .runtime_actions .button_submit {
   margin-right: 0.5rem;
+}
+.wrapper_widget.runtime_info .body_response {
+  padding: 0.5rem !important;
 }
 .wrapper_widget.runtime_info pre {
   padding: 0.7rem 0.85rem;
