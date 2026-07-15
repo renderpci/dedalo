@@ -487,6 +487,10 @@
 					max-width: 100%;
 					word-break: break-word;
 
+					// unify every widget's action-result area: console log blocks +
+					// calm severity status lines (from the shared kit)
+					.dd_response_states();
+
 					>* {
 						padding: 0.5em;
 					}
@@ -527,14 +531,8 @@
 						margin-bottom: 1rem;
 					}
 
-					.error {
-						margin-top: 0.5rem;
-						margin-bottom: 0.5rem;
-						border-radius: 4px;
-						padding: 1rem;
-						line-height: 1.3rem;
-						font-size: 1rem;
-					}
+					// .error / .warning / .ok status lines + console <pre> blocks are
+					// unified by .dd_response_states() (called at the top of this block).
 
 					// button eraser
 					.eraser {
@@ -854,7 +852,11 @@
 			border: 1px solid var(--border_default);
 			border-radius: 13px;
 			box-shadow: 0 1px 3px var(--shadow_default);
-			overflow: hidden;
+			// visible (not hidden): a mounted widget may raise an absolutely
+			// positioned popup (e.g. config_areas' typeahead) that must not be
+			// clipped by the panel. The header rounds its own top corners below so
+			// the panel radius still reads clean.
+			overflow: visible;
 
 			.ctx_head {
 				display: flex;
@@ -863,6 +865,7 @@
 				padding: 0.85rem 1.05rem;
 				background-color: var(--bg_surface_alt);
 				border-bottom: 1px solid var(--border_default);
+				border-radius: 13px 13px 0 0;
 
 				.ctx_title { font-size: 17px; font-weight: 700; color: var(--fg_default); }
 				.ctx_state { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 13.5px; color: var(--fg_muted); }
@@ -946,6 +949,15 @@
 						padding: 0;
 						min-height: 0;
 						background-color: transparent;
+						// integrated in the panel — drop the standalone-card affordances
+						// (List cards use resize:vertical + overflow:auto + contain, which
+						// otherwise leak in here as a stray resize grip and double
+						// scrollbars). Let the panel size to the widget content instead.
+						resize: none;
+						overflow: visible;
+						contain: none;
+						flex-grow: 0;
+						width: 100%;
 					}
 				}
 			}
