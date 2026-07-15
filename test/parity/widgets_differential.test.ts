@@ -71,11 +71,17 @@ beforeAll(async () => {
 });
 
 describe.if(hasPhpCredentials())('maintenance widget catalog differential', () => {
-	test('the widget catalog METADATA matches PHP byte-for-byte (all 31)', () => {
+	test('the widget catalog METADATA matches PHP byte-for-byte (all 30, WC-030 merge normalized)', () => {
 		if (!hasPhpCredentials()) return;
 		expect(phpItem).not.toBeNull();
 		expect(tsItem).not.toBeNull();
-		const phpList = (phpItem as { datalist?: Record<string, unknown>[] }).datalist ?? [];
+		// php_runtime (WC-030) is PHP-ONLY now: it was merged into runtime_info
+		// (the former php_info slot) rather than kept as a separate TS twin —
+		// normalize it out of the PHP side before the byte-compare, the mirror
+		// image of the error_reports (WC-018) TS-only normalization below.
+		const phpList = ((phpItem as { datalist?: Record<string, unknown>[] }).datalist ?? []).filter(
+			(item) => (item as { id?: unknown }).id !== 'php_runtime',
+		);
 		// error_reports (WC-018) is TS-ONLY: it joins the catalog only where the
 		// error-report intake flag is on (master installations) and has no PHP
 		// twin — normalize it out before the byte-compare.
@@ -95,7 +101,16 @@ describe.if(hasPhpCredentials())('maintenance widget catalog differential', () =
 			// matches, so the catalog stays aligned everywhere it should.
 			const isDiffusionControl =
 				(tsList[index] as { id?: unknown }).id === 'diffusion_server_control';
-			const omit = isDiffusionControl ? ['value', 'label'] : ['value'];
+			// `id` and `label` are ALSO excluded at PHP's php_info slot (WC-030): the
+			// TS engine merged php_info AND php_runtime into ONE native runtime_info
+			// widget at this position — id/label deliberately diverge from the
+			// frozen PHP oracle term, and every other metadata field still matches.
+			const isRuntimeInfo = (phpList[index] as { id?: unknown }).id === 'php_info';
+			const omit = isDiffusionControl
+				? ['value', 'label']
+				: isRuntimeInfo
+					? ['value', 'id', 'label']
+					: ['value'];
 			const strip = (item: Record<string, unknown>): Record<string, unknown> =>
 				Object.fromEntries(Object.entries(item).filter(([key]) => !omit.includes(key)));
 			const phpMeta = strip(phpList[index] as Record<string, unknown>);

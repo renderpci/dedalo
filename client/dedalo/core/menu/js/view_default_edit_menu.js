@@ -753,7 +753,7 @@ const render_debug_info_bar = (self) => {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'php_version',
-			text_content	: 'PHP v. ' + php_version,
+			text_content	: 'Runtime ' + php_version,
 			parent			: debug_info_bar
 		})
 

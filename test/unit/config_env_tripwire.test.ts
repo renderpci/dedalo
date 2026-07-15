@@ -55,10 +55,11 @@ const PROCESS_ENV_ALLOWLIST: Record<string, { maxLines: number; reason: string }
 		maxLines: 1,
 		reason: 'subprocess passthrough: runner child gets the whole env (+ job vars)',
 	},
-	'src/core/area_maintenance/widgets/php_runtime.ts': {
+	'src/core/area_maintenance/widgets/runtime_info.ts': {
 		maxLines: 1,
 		reason:
-			'DEFERRED (S2-21): NODE_ENV read (moved verbatim in the S2-23 split); convert to readEnv',
+			'DEFERRED (S2-21): NODE_ENV read (moved verbatim in the S2-23 split, then again in the ' +
+			'WC-030 php_runtime merge); convert to readEnv',
 	},
 	// media/jobs.ts and ai/mcp/server.ts: converted to readEnv (debris
 	// workstream, 2026-07-07) — allowlist entries removed.

@@ -70,10 +70,12 @@
 * server widget catalog so the catalog stays byte-identical to the PHP oracle
 * (the differential parity gate compares every catalog entry).
 *
-* - php_info: a phpinfo() iframe with no equivalent on the Bun/TS engine. The
-*   server also returns an explicit engine_denied envelope for it as a fallback.
+* Empty since 2026-07-15 (WC-030): the last entry, php_info (a phpinfo()
+* iframe with no Bun equivalent), was merged into the TS-native runtime_info
+* widget (formerly php_runtime) rather than kept as a denied stub — there is
+* no PHP-only widget left to hide.
 */
-	const ENGINE_DISABLED_WIDGETS = new Set(['php_info'])
+	const ENGINE_DISABLED_WIDGETS = new Set([])
 
 
 
@@ -608,7 +610,7 @@ const build_list_view = async function(self, widgets) {
 */
 	const MAP_NODES = [
 		{ id:'clients',	title:'Clients',		x:9,  y:14, tools:['lock_components'] },
-		{ id:'web',		title:'Web server',		x:31, y:14, tools:['system_info','php_runtime','environment'] },
+		{ id:'web',		title:'Web server',		x:31, y:14, tools:['system_info','runtime_info','environment'] },
 		{ id:'core',	title:'Dédalo core',	x:53, y:14, kind:'core',
 			tools:['check_config','register_tools','config_areas','menu_skip_tipos','update_code','update_data_version','unit_test','dedalo_api_test_environment','sqo_test_environment','error_reports'] },
 		{ id:'pg',		title:'PostgreSQL',		x:12, y:66,
@@ -634,7 +636,7 @@ const build_list_view = async function(self, widgets) {
 	const MAP_TOOL_DESC = {
 		system_info:				'Full server snapshot — OS, CPU, RAM, disk, uptime and prerequisites.',
 		check_config:				'Audits the live install config: database status and private sources.',
-		php_runtime:				'Runtime user, error log, session path, OPcache, directories and env vars.',
+		runtime_info:				'Bun engine runtime — version, pid, memory, uptime — plus cache and session pruning.',
 		environment:				'Server environment snapshot.',
 		register_tools:				'Imports tool register.json metadata into the ontology.',
 		config_areas:				'Runtime allow / deny editor for areas.',

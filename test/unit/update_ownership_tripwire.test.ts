@@ -63,8 +63,8 @@ const ENGINE_NATIVE: Record<string, string> = {
 	'diffusion_server_control.purge_jobs': 'TS-owned diffusion engine control',
 	'diffusion_server_control.set_scheduler': 'TS-owned diffusion engine control',
 	'diffusion_server_control.retry_pending_deletions': 'TS-owned diffusion engine control',
-	'php_runtime.clear_cache_files': 'TS in-process caches only',
-	'php_runtime.clear_session_files': 'TS-owned session store pruning',
+	'runtime_info.clear_cache_files': 'TS in-process caches only',
+	'runtime_info.clear_session_files': 'TS-owned session store pruning',
 	'database_info.analyze_db':
 		'shared-DB maintenance through the TS db_assets path (PHP-parity action, no PHP-tree surface)',
 	'database_info.consolidate_tables': 'shared-DB maintenance through the TS db_assets path',

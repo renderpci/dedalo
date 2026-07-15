@@ -80,17 +80,19 @@ ASSET_INCLUDES=(
 #    the PHP tree must not have; render_area_maintenance.js carries the
 #    ENGINE_DISABLED_WIDGETS client-side gate (hides widgets THIS engine cannot
 #    serve while the server catalog stays byte-identical to PHP).
-#  - php_runtime widget js (2 files): TS renders the panel READ-ONLY (no
-#    reset_opcache / in-place refresh — Bun has no PHP opcache); the PHP tree
-#    keeps its mutating panel. Port upstream renderer changes by hand.
+#  - runtime_info widget js (2 files, WC-030): merged from php_info (phpinfo()
+#    iframe, no Bun equivalent) and php_runtime (already TS-native, READ-ONLY —
+#    no reset_opcache / in-place refresh, Bun has no PHP opcache); the PHP
+#    tree still has BOTH php_info and its mutating php_runtime panel, under
+#    their old names. Port upstream renderer changes by hand.
 TS_OWNED_EXCLUDES=(
 	--exclude='area_maintenance/widgets/diffusion_server_control/**'
 	--exclude='area_maintenance/widgets/error_reports/**'
 	--exclude='area_maintenance/widgets/check_config/js/render_check_config.js'
 	--exclude='area_maintenance/css/area_maintenance.less'
 	--exclude='area_maintenance/js/render_area_maintenance.js'
-	--exclude='area_maintenance/widgets/php_runtime/js/php_runtime.js'
-	--exclude='area_maintenance/widgets/php_runtime/js/render_php_runtime.js'
+	--exclude='area_maintenance/widgets/runtime_info/js/runtime_info.js'
+	--exclude='area_maintenance/widgets/runtime_info/js/render_runtime_info.js'
 	--exclude='installer/**'
 )
 

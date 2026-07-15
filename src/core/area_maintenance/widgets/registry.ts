@@ -45,10 +45,9 @@ import { widget as move_locator } from './move_locator.ts';
 import { widget as move_tld } from './move_tld.ts';
 import { widget as move_to_portal } from './move_to_portal.ts';
 import { widget as move_to_table } from './move_to_table.ts';
-import { widget as php_info } from './php_info.ts';
-import { widget as php_runtime } from './php_runtime.ts';
 import { widget as publication_api } from './publication_api.ts';
 import { widget as register_tools } from './register_tools.ts';
+import { widget as runtime_info } from './runtime_info.ts';
 import { widget as sequences_status } from './sequences_status.ts';
 import { widget as sqo_test_environment } from './sqo_test_environment.ts';
 import { type LabelRule, type WidgetModule, type WidgetResponse, failed } from './support.ts';
@@ -110,7 +109,6 @@ const CORE_WIDGET_MODULES: readonly WidgetModule[] = [
 	dedalo_api_test_environment,
 	sqo_test_environment,
 	lock_components,
-	php_runtime,
 	database_info,
 	environment,
 	unit_test,
@@ -118,7 +116,7 @@ const CORE_WIDGET_MODULES: readonly WidgetModule[] = [
 	media_control,
 	counters_status,
 	dataframe_control,
-	php_info,
+	runtime_info,
 	system_info,
 ];
 
