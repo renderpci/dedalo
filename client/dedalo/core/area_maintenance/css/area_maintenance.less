@@ -116,7 +116,10 @@
 		}
 
 		// ---- toolbar (sticky) ----
-		>.maintenance_toolbar {
+		// reached through .list_view_wrap: the List view is wrapped so the Map/List
+		// toggle can be its sibling (keep the wrapper in the selector or the toolbar
+		// loses all its padding/sticky/margins).
+		.list_view_wrap > .maintenance_toolbar {
 			position: sticky;
 			top: 0;
 			z-index: 3;
@@ -185,8 +188,8 @@
 			}
 		}//end .maintenance_toolbar
 
-		// ---- groups ----
-		>.maintenance_groups {
+		// ---- groups ---- (also reached through .list_view_wrap, see toolbar note)
+		.list_view_wrap > .maintenance_groups {
 			padding: 1rem;
 			width: 100%;
 
@@ -572,6 +575,461 @@
 		opacity: 1;
 		transform: translateY(0);
 	}
+}
+
+
+/**
+* ============================================================================
+*  SYSTEM MAP view
+* ----------------------------------------------------------------------------
+*  Alternate dashboard view (toggled against the classic accordion "List").
+*  A live topology of the running system: health-coloured subsystem nodes on a
+*  blueprint grid, SVG connector edges, a context panel that hosts the real
+*  widget modules for the selected node, and a ⌘K command palette.
+*  All colour routes through the semantic --tokens, so light + dark are free.
+* ============================================================================
+*/
+.area_maintenance > .content_data.maintenance_v2 {
+
+	// the shared area layer sets .content_data to flex-row; the dashboard stacks
+	// its view rows (switch → map/list) vertically and full-width.
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+
+	> .map_view_switch,
+	> .list_view_wrap,
+	> .maintenance_map {
+		width: 100%;
+	}
+
+	// local: readable text on the brand-orange fill (never white — ~6.8:1)
+	@map_orange_text: #2a1c05;
+
+	// ---- view toggle (Map | List) ----
+	.map_view_switch {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.75rem 1rem 0;
+
+		.map_switch {
+			display: inline-flex;
+			padding: 0.2rem;
+			background-color: var(--bg_surface);
+			border: 1px solid var(--border_default);
+			border-radius: 999px;
+
+			> button {
+				cursor: pointer;
+				margin: 0;
+				padding: 0.3rem 0.9rem;
+				font-size: 0.85em;
+				line-height: 1;
+				color: var(--fg_muted);
+				background: transparent;
+				border: 0;
+				border-radius: 999px;
+				transition: background-color 140ms ease, color 140ms ease;
+
+				&.active {
+					color: @map_orange_text;
+					background-color: var(--color_orange_dedalo);
+				}
+			}
+		}
+
+		.map_kbar {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.5rem;
+			margin-left: auto;
+			height: 2.1rem;
+			padding: 0 0.7rem;
+			font-size: 0.82em;
+			color: var(--fg_muted);
+			background-color: var(--bg_surface);
+			border: 1px solid var(--border_default);
+			border-radius: 8px;
+			cursor: pointer;
+
+			&:hover { border-color: var(--border_strong); }
+
+			kbd {
+				font-family: Menlo, Monaco, Consolas, monospace;
+				font-size: 0.72rem;
+				padding: 0.05rem 0.3rem;
+				color: var(--fg_default);
+				background-color: var(--bg_surface_alt);
+				border: 1px solid var(--border_default);
+				border-radius: 4px;
+			}
+		}
+	}
+
+	// ---- view visibility (class on content_data drives which view shows) ----
+	&.view_map  .list_view_wrap { display: none; }
+	&.view_list .maintenance_map { display: none; }
+
+	// ---- map wrapper ----
+	.maintenance_map {
+
+		// health summary line
+		.map_summary {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 1.1rem;
+			padding: 0.6rem 1.2rem 0.2rem;
+			font-size: 13px;
+			color: var(--fg_muted);
+
+			b { color: var(--fg_default); }
+
+			.s_seg {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.4rem;
+
+				&.warn { color: var(--color_warning); cursor: pointer; }
+			}
+		}
+
+		.map_hint {
+			padding: 0 1.2rem 0.4rem;
+			font-size: 12px;
+			color: var(--fg_muted);
+
+			.danger_key {
+				color: var(--color_danger);
+				font-weight: 600;
+			}
+		}
+
+		// status dot
+		.map_dot {
+			width: 0.6rem;
+			height: 0.6rem;
+			border-radius: 50%;
+			flex: 0 0 auto;
+			background-color: var(--border_strong);
+
+			&.ok   { background-color: var(--color_success); }
+			&.warn { background-color: var(--color_warning); }
+			&.bad  { background-color: var(--color_danger); }
+		}
+
+		// ---- stage ----
+		.map_stage_wrap {
+			padding: 0.4rem 1.15rem 0;
+			overflow-x: auto;
+		}
+
+		.map_stage {
+			position: relative;
+			height: 440px;
+			min-width: 940px;
+			border: 1px solid var(--border_default);
+			border-radius: 14px;
+			box-shadow: 0 1px 3px var(--shadow_default);
+			overflow: hidden;
+			background-color: var(--bg_surface);
+			background-image:
+				linear-gradient(var(--map_grid_line) 1px, transparent 1px),
+				linear-gradient(90deg, var(--map_grid_line) 1px, transparent 1px);
+			background-size: 26px 26px, 26px 26px;
+			background-position: 0 0, 0 0;
+			// faint blueprint grid, derived from fg so it works both themes
+			--map_grid_line: color-mix(in srgb, var(--fg_muted) 12%, transparent);
+		}
+
+		// ---- edges ----
+		.map_edges {
+			position: absolute;
+			inset: 0;
+			z-index: 1;
+			pointer-events: none;
+			display: block;
+
+			path {
+				fill: none;
+				stroke: var(--border_strong);
+				stroke-width: 1.6;
+
+				&.flow {
+					stroke-dasharray: 5 6;
+					animation: map_march 1.4s linear infinite;
+				}
+				&.dim { stroke-dasharray: 2 6; opacity: 0.6; }
+				&.act { stroke: var(--color_orange_dedalo); stroke-width: 2.1; }
+				&.warn { stroke: var(--color_warning); }
+			}
+		}
+
+		// ---- node ----
+		.map_node {
+			position: absolute;
+			z-index: 2;
+			width: 176px;
+			// px type/padding on purpose: the app root font is 13px (not the mockup's
+			// 16px), so rem here would render ~20% small and muddy. px keeps the graph
+			// crisp and legible regardless of the host root size.
+			padding: 11px 13px;
+			transform: translate(-50%, -50%);
+			background-color: var(--bg_elevated);
+			border: 1px solid var(--border_default);
+			border-radius: 11px;
+			box-shadow: 0 1px 3px var(--shadow_default);
+			cursor: pointer;
+			transition: box-shadow 160ms ease, border-color 160ms ease, transform 120ms ease;
+
+			&:hover {
+				transform: translate(-50%, calc(-50% - 2px));
+				box-shadow: 0 8px 20px var(--shadow_default);
+			}
+
+			.n_top {
+				display: flex;
+				align-items: center;
+				gap: 7px;
+			}
+			.n_title {
+				flex: 1 1 auto;
+				font-weight: 700;
+				font-size: 14px;
+				line-height: 1.2;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+			.n_state {
+				margin-top: 6px;
+				font-size: 13px;
+				line-height: 1.25;
+				color: var(--fg_default);
+			}
+			.n_sub {
+				margin-top: 2px;
+				font-family: Menlo, Monaco, Consolas, monospace;
+				font-size: 11px;
+				line-height: 1.3;
+				color: var(--fg_muted);
+			}
+
+			&.warn { border-color: color-mix(in srgb, var(--color_warning) 45%, var(--border_default)); }
+			&.bad  { border-color: color-mix(in srgb, var(--color_danger) 45%, var(--border_default)); }
+			&.sel {
+				border-color: var(--color_orange_dedalo);
+				box-shadow:
+					0 0 0 3px color-mix(in srgb, var(--color_orange_dedalo) 22%, transparent),
+					0 8px 20px var(--shadow_default);
+			}
+
+			.n_badge {
+				position: absolute;
+				top: -7px;
+				right: -7px;
+				width: 1.1rem;
+				height: 1.1rem;
+				display: grid;
+				place-items: center;
+				color: #fff;
+				background-color: var(--color_warning);
+				border-radius: 50%;
+				font-size: 0.62rem;
+				font-weight: 700;
+			}
+
+			&.kind_core {
+				width: 192px;
+				border-width: 1.5px;
+				.n_title { font-size: 15px; }
+			}
+		}
+
+		// ---- context panel ----
+		.map_context {
+			margin: 1rem 1.15rem 0;
+			background-color: var(--bg_surface);
+			border: 1px solid var(--border_default);
+			border-radius: 13px;
+			box-shadow: 0 1px 3px var(--shadow_default);
+			overflow: hidden;
+
+			.ctx_head {
+				display: flex;
+				align-items: center;
+				gap: 0.6rem;
+				padding: 0.85rem 1.05rem;
+				background-color: var(--bg_surface_alt);
+				border-bottom: 1px solid var(--border_default);
+
+				.ctx_title { font-size: 1.05rem; font-weight: 700; color: var(--fg_default); }
+				.ctx_state { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--fg_muted); }
+				.ctx_sub {
+					margin-left: auto;
+					font-family: Menlo, Monaco, Consolas, monospace;
+					font-size: 0.74rem;
+					color: var(--fg_muted);
+				}
+			}
+
+			.ctx_tools {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.45rem;
+				padding: 0.75rem 1.05rem;
+				border-bottom: 1px solid var(--border_default);
+			}
+
+			.tool_chip {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.4rem;
+				margin: 0;
+				padding: 0.4rem 0.75rem;
+				font-size: 12.5px;
+				color: var(--fg_default);
+				background-color: var(--bg_surface);
+				border: 1px solid var(--border_default);
+				border-radius: 999px;
+				cursor: pointer;
+
+				&:hover { border-color: var(--border_strong); }
+
+				.tc_dot { width: 0.45rem; height: 0.45rem; border-radius: 50%; background-color: var(--border_strong); }
+
+				&.danger {
+					color: var(--color_danger);
+					border-color: color-mix(in srgb, var(--color_danger) 30%, var(--border_default));
+					.tc_dot { background-color: var(--color_danger); }
+				}
+				&.sel {
+					font-weight: 600;
+					border-color: var(--color_orange_dedalo);
+					background-color: color-mix(in srgb, var(--color_orange_dedalo) 14%, transparent);
+				}
+				&.danger.sel {
+					color: var(--color_danger);
+					border-color: var(--color_danger);
+					background-color: color-mix(in srgb, var(--color_danger) 12%, transparent);
+				}
+			}
+
+			// the mounted widget lives here; it renders integrated (no card chrome,
+			// no accordion bar) so its body reads as part of the panel
+			.ctx_body {
+				padding: 0.9rem 1.15rem 1.2rem;
+
+				.map_ctx_lead {
+					max-width: 64ch;
+					margin: 0 0 0.9rem;
+					font-size: 13px;
+					line-height: 1.55;
+					color: var(--fg_muted);
+				}
+
+				// host card stripped to just its body: drop the border/shadow/radius
+				// and hide the widget's own accordion label so it doesn't double up
+				// on the panel header.
+				> .widget_container {
+					background-color: transparent;
+					border: 0;
+					border-radius: 0;
+					box-shadow: none;
+					overflow: visible;
+					&:hover { box-shadow: none; }
+
+					> .widget_label { display: none; }
+
+					> .widget_body {
+						padding: 0;
+						min-height: 0;
+						background-color: transparent;
+					}
+				}
+			}
+		}
+	}//end .maintenance_map
+
+	// ---- command palette (⌘K) ----
+	.map_palette_backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 50;
+		display: none;
+		align-items: flex-start;
+		justify-content: center;
+		padding-top: 12vh;
+		background-color: color-mix(in srgb, #000 45%, transparent);
+
+		&.open { display: flex; }
+
+		.map_palette {
+			width: min(620px, 92vw);
+			background-color: var(--bg_elevated);
+			border: 1px solid var(--border_default);
+			border-radius: 14px;
+			box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+			overflow: hidden;
+		}
+
+		.map_palette_in {
+			display: flex;
+			align-items: center;
+			gap: 0.6rem;
+			padding: 0.85rem 1rem;
+			border-bottom: 1px solid var(--border_default);
+
+			input {
+				flex: 1 1 auto;
+				width: auto;
+				height: auto;
+				margin: 0;
+				padding: 0;
+				font-size: 1rem;
+				color: var(--fg_default);
+				background: transparent;
+				border: 0;
+				outline: 0;
+			}
+		}
+
+		.map_palette_list {
+			max-height: 46vh;
+			overflow: auto;
+			padding: 0.4rem;
+
+			.p_item {
+				display: flex;
+				align-items: center;
+				gap: 0.6rem;
+				padding: 0.5rem 0.7rem;
+				border-radius: 8px;
+				font-size: 0.9em;
+				cursor: pointer;
+
+				.p_zone {
+					margin-left: auto;
+					font-size: 0.68rem;
+					text-transform: uppercase;
+					letter-spacing: 0.03em;
+					color: var(--fg_muted);
+				}
+
+				&.hide { display: none; }
+				&.sel, &:hover { background-color: color-mix(in srgb, var(--color_orange_dedalo) 14%, transparent); }
+			}
+		}
+	}
+}
+
+// edge flow animation (respects reduced-motion)
+@keyframes map_march {
+	to { stroke-dashoffset: -22; }
+}
+@media (prefers-reduced-motion: reduce) {
+	.area_maintenance .maintenance_map .map_edges path.flow { animation: none; }
 }
 
 
