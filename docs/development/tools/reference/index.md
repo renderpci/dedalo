@@ -27,7 +27,7 @@ Every remotely callable server action is declared as a key of the module's **`ap
 - `show_in_inspector` — button in the section **inspector** panel
 - `show_in_component` — button inline on the matching **component**
 
-Section-level tools surface on the section itself. A tool's own `isAvailable(context)` hook (when its module declares one) gives it the last word on whether to appear for a given element. Many tools are **UI-only** (all behavior is client-side, no remote API actions — 12 of the 34 in-repo tools ship no `server/` package at all); others dispatch server actions through `this.tool_request(...)`.
+Section-level tools surface on the section itself. A tool's own `isAvailable(context)` hook (when its module declares one) gives it the last word on whether to appear for a given element. Many tools are **UI-only** (all behavior is client-side, no remote API actions — 12 of the 36 in-repo tools ship no `server/` package at all); others dispatch server actions through `this.tool_request(...)`.
 
 !!! note "No base class"
     There is no `tool_common` base *class* on the server — the shared machinery (registry, loader, dispatch, security, config, cache) lives in `src/core/tools/` and is invoked BY the framework around a tool's handlers, not inherited by them. On the **client**, `tool_common` is a real JS prototype base (`src/core/tools/client/js/tool_common.js`) that every tool wires into via `wire_tool`.
@@ -51,7 +51,8 @@ Section-level tools surface on the section itself. A tool's own `isAvailable(con
 | `tool_export` | Atoms-based data export of section records to a flat table (CSV/TSV/preview) via the export_tabulator NDJSON protocol, with value/grid_value/dedalo_raw formats and breakdown modes | [reference](tool_export.md) |
 | `tool_print` | Visual print-layout / report designer: arranges a section's components into a paginated document-flow grid (rows of cells) that reflows and splits long tables/text across pages; reusable per-section templates saved in dd25/dd625; browser print (server PDF planned) | [reference](tool_print.md) |
 | `tool_diffusion` | Inspects/resolves diffusion configurations and section→target mappings from the ontology; UI-only, available only on sections with a diffusion definition | [reference](tool_diffusion.md) |
-| `tool_pdf_extractor` | Extracts text from PDF files via an external `pdftotext` daemon (optional page numbering) for indexing and publication search | — |
+| `tool_pdf_extractor` | Extracts text from PDF files via an external `pdftotext` daemon (optional page numbering) for indexing and publication search | [reference](tool_pdf_extractor.md) |
+| `tool_sitebuilder` | Builds an agent-generated public website over the published diffusion data; engine-side proxy to the standalone site_builder daemon | [reference](tool_sitebuilder.md) |
 
 ### Media
 
@@ -59,8 +60,8 @@ Section-level tools surface on the section itself. A tool's own `isAvailable(con
 | --- | --- | --- |
 | `tool_media_versions` | Manages media file qualities/versions: get info, delete quality/version, build versions, conform headers, rotate, and sync component file metadata | [reference](tool_media_versions.md) |
 | `tool_posterframe` | Extracts a posterframe/thumbnail from AV files (FFmpeg) at a timecode and attaches it as an identifying image to target portal records | [reference](tool_posterframe.md) |
-| `tool_image_rotation` | Applies rotation and proportional crop transformations to image-component files across all quality levels | — |
-| `tool_upload` | Post-upload processing: moves uploaded files from temp to final storage and triggers component-specific file processing | — |
+| `tool_image_rotation` | Applies rotation and proportional crop transformations to image-component files across all quality levels | [reference](tool_image_rotation.md) |
+| `tool_upload` | Post-upload processing: moves uploaded files from temp to final storage and triggers component-specific file processing | [reference](tool_upload.md) |
 
 ### Thesaurus & ontology
 
@@ -78,9 +79,9 @@ Section-level tools surface on the section itself. A tool's own `isAvailable(con
 | `tool_transcription` | PDF text extraction and automatic audio transcription (Whisper/Babel), audio format conversion, remote-process monitoring, and subtitle generation | [reference](tool_transcription.md) |
 | `tool_subtitles` | CKEditor-based subtitle editing/generation tied to AV media transcription text; UI-only | [reference](tool_subtitles.md) |
 | `tool_indexation` | UI entry point for component indexation against thesaurus terms (actual actions run through `dd_component_*_api`), restricted by `affected_tipos`; UI-only | [reference](tool_indexation.md) |
-| `tool_tc` | Applies an offset adjustment to all timecode tags (`[TC_..._TC]`) in transcription text, clamping negatives to zero | — |
-| `tool_tr_print` | Generates printable/formatted versions of interview transcripts and VTT subtitles, handling embedded timecode/descriptor/indexation tags; no remote API actions | — |
-| `tool_numisdata_epigraphy` | Specialized transcription of coin legends/countermarks/epigraphic elements using epigraphy thesaurus glyph sets into Unicode text components; UI-only | — |
+| `tool_tc` | Applies an offset adjustment to all timecode tags (`[TC_..._TC]`) in transcription text, clamping negatives to zero | [reference](tool_tc.md) |
+| `tool_tr_print` | Generates printable/formatted versions of interview transcripts, handling embedded timecode/descriptor/indexation tags; UI-only | [reference](tool_tr_print.md) |
+| `tool_numisdata_epigraphy` | Specialized transcription of coin legends/countermarks/epigraphic elements using epigraphy thesaurus glyph sets into Unicode text components; UI-only | [reference](tool_numisdata_epigraphy.md) |
 
 ### Data operations
 
@@ -88,16 +89,16 @@ Section-level tools surface on the section itself. A tool's own `isAvailable(con
 | --- | --- | --- |
 | `tool_propagate_component_data` | Batch replace/add/delete of component data across records matched by an SQO, with bulk-process audit and time-machine reversion; CLI-runnable | [reference](tool_propagate_component_data.md) |
 | `tool_time_machine` | Audit/history view and reversion of record and component changes over time | [reference](tool_time_machine.md) |
-| `tool_update_cache` | Bulk cache regeneration/clean for components, chunked with progress tracking and background execution | — |
-| `tool_numisdata_order_coins` | Groups and sorts numismatic objects (coins) by criteria such as weight, diameter and type for visual collection/lot management; UI-only | — |
+| `tool_update_cache` | Bulk cache regeneration/clean for components, chunked with progress tracking and background execution | [reference](tool_update_cache.md) |
+| `tool_numisdata_order_coins` | Groups and sorts numismatic objects (coins) by criteria such as weight, diameter and type for visual collection/lot management; UI-only | [reference](tool_numisdata_order_coins.md) |
 
 ### Language / i18n
 
 | Tool | Purpose | Reference |
 | --- | --- | --- |
 | `tool_lang` | Automatic translation of a component's data from a source to a target language using configured external services (Babel/Google) | [reference](tool_lang.md) |
-| `tool_lang_multi` | Translates a source component into multiple target languages at once, delegating to tool_lang's translation logic with its own defense-in-depth gate | — |
-| `tool_dd_label` | Helper for authoring multi-language tool UI labels across all project languages, generating the component_json (dd1372) labels payload; UI-only | — |
+| `tool_lang_multi` | Translates a source component into multiple target languages at once, delegating to tool_lang's translation logic with its own defense-in-depth gate | [reference](tool_lang_multi.md) |
+| `tool_dd_label` | Helper for authoring multi-language tool UI labels across all project languages, generating the component_json (dd1372) labels payload; UI-only | [reference](tool_dd_label.md) |
 
 ### Admin & system
 
@@ -105,13 +106,14 @@ Section-level tools surface on the section itself. A tool's own `isAvailable(con
 | --- | --- | --- |
 | `tool_user_admin` | User self-administration panel launched from the username menu, providing administrative actions for the logged-in user; UI-only | [reference](tool_user_admin.md) |
 | `tool_assistant` | In-app AI chat assistant — a thin client over a server-side agent for natural-language search/navigation, ontology queries and confirmed (propose→apply) record create/edit; model selectable per conversation (cloud or local/private) | [AI Assistant section](../../../core/ai/assistant/index.md) |
+| `tool_error_report` | Captures and reports application errors from the client for administrators/developers to inspect | [reference](tool_error_report.md) |
 
 ### Misc / internal
 
 | Tool | Purpose | Reference |
 | --- | --- | --- |
-| `tool_dev_template` | Production-shaped scaffold/reference for creating new tools (all four permission kinds, `backgroundRunnable` demo, `isAvailable`/`onRegister`/`onRemove` hooks) | — |
+| `tool_dev_template` | Production-shaped scaffold/reference for creating new tools (all four permission kinds, `backgroundRunnable` demo, `isAvailable`/`onRegister`/`onRemove` hooks) | [reference](tool_dev_template.md) |
 | `tool_qr` | Base/build sample tool (not for production use); UI-only | [reference](tool_qr.md) |
 
 !!! note "Counting the tools"
-    The directory `tools/` contains exactly 34 entries, all of them real tools — there is no `tool_common` directory (the shared machinery lives in `src/core/tools/`). 33 are listed in the tables above; `tool_dev_template` is the developer scaffold/reference implementation, listed under *Misc / internal*. 22 of the 34 ship a `server/index.ts` package (including `tool_dev_template`); the other 12 are client-only (no `server/` directory at all): `tool_assistant`, `tool_cataloging`, `tool_dd_label`, `tool_diffusion`, `tool_indexation`, `tool_numisdata_epigraphy`, `tool_numisdata_order_coins`, `tool_print`, `tool_qr`, `tool_subtitles`, `tool_tr_print`, `tool_user_admin`.
+    The directory `tools/` contains exactly 36 entries, all of them real tools — there is no `tool_common` directory (the shared machinery lives in `src/core/tools/`). All 36 are listed in the tables above; `tool_dev_template` is the developer scaffold/reference implementation, listed under *Misc / internal*. 24 of the 36 ship a `server/index.ts` package (including `tool_dev_template`); the other 12 are client-only (no `server/` directory at all): `tool_assistant`, `tool_cataloging`, `tool_dd_label`, `tool_diffusion`, `tool_indexation`, `tool_numisdata_epigraphy`, `tool_numisdata_order_coins`, `tool_print`, `tool_qr`, `tool_subtitles`, `tool_tr_print`, `tool_user_admin`.
