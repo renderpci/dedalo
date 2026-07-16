@@ -98,7 +98,13 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 	test('page_globals: same key set; same values outside engine-specific facts', () => {
 		if (!hasPhpCredentials()) return;
 		const phpGlobals = phpEnv.page_globals ?? {};
-		const tsGlobals = tsEnv.page_globals ?? {};
+		const tsGlobals = { ...(tsEnv.page_globals ?? {}) };
+		// WIRE_CONTRACT.md WC-031: `is_ontology_server` is a TS-ONLY page_globals key
+		// (PHP get_page_globals has no twin) driving the ontology-master client skin.
+		// Assert the divergence explicitly, then compare the rest of the key set exactly.
+		expect('is_ontology_server' in tsGlobals).toBe(true);
+		expect('is_ontology_server' in phpGlobals).toBe(false);
+		delete tsGlobals.is_ontology_server;
 		expect(Object.keys(tsGlobals).sort()).toEqual(Object.keys(phpGlobals).sort());
 		for (const key of Object.keys(phpGlobals)) {
 			if (ENGINE_SPECIFIC_KEYS.has(key)) continue;
