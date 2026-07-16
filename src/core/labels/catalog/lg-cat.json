@@ -148,7 +148,7 @@
 	"import": "Importar",
 	"import_hierarchies": "Importar jerarquies",
 	"import_hierarchies_button": " Importar jerarquies ",
-	"import_hierarchies_description": "Es mostrarà al tesaurus. Tingueu en compte que els països grans poden consumir molts recursos. No\\",
+	"import_hierarchies_description": "Es mostrarà al tesaurus. Tingueu en compte que els països grans poden consumir molts recursos. No carregueu països innecessaris. Sempre podeu carregar més països més tard",
 	"import_hierarchies_directory_description": "Directori de fitxers d'origen: ",
 	"import_hierarchies_label": "Instal·lar jerarquies",
 	"incremental": "Incremental",

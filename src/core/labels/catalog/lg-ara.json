@@ -148,7 +148,7 @@
 	"import": "استيراد",
 	"import_hierarchies": "استيراد التسلسلات الهرمية",
 	"import_hierarchies_button": " استيراد التسلسلات الهرمية ",
-	"import_hierarchies_description": "سيُعرض في المكنز. ضع في اعتبارك أن البلدان الكبيرة قد تستهلك الكثير من الموارد. No\\",
+	"import_hierarchies_description": "سيُعرض في المكنز. ضع في اعتبارك أن البلدان الكبيرة قد تستهلك الكثير من الموارد. لا تحمّل بلدانًا غير ضرورية. يمكنك دائمًا تحميل المزيد من البلدان لاحقًا",
 	"import_hierarchies_directory_description": "دليل الملفات المصدرية: ",
 	"import_hierarchies_label": "تثبيت التسلسلات الهرمية",
 	"incremental": "تزايدي",

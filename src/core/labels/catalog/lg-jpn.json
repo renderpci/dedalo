@@ -148,7 +148,7 @@
 	"import": "インポート",
 	"import_hierarchies": "階層をインポート",
 	"import_hierarchies_button": " 階層をインポート ",
-	"import_hierarchies_description": "シソーラスに表示されます。大きな国は多くのリソースを消費する可能性があることに注意してください。No\\",
+	"import_hierarchies_description": "シソーラスに表示されます。大きな国は多くのリソースを消費する可能性があることに注意してください。不要な国は読み込まないでください。後でいつでも国を追加で読み込めます",
 	"import_hierarchies_directory_description": "ソースファイルのディレクトリ：",
 	"import_hierarchies_label": "階層をインストール",
 	"incremental": "増分",

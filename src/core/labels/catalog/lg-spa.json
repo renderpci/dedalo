@@ -148,7 +148,7 @@
 	"import": "Importar",
 	"import_hierarchies": "Importar jerarquías",
 	"import_hierarchies_button": " Importar jerarquías ",
-	"import_hierarchies_description": "Se mostrará en el tesauro. Tenga en cuenta que los países grandes pueden consumir muchos recursos. No\\",
+	"import_hierarchies_description": "Se mostrará en el tesauro. Tenga en cuenta que los países grandes pueden consumir muchos recursos. No cargue países innecesarios. Siempre puede cargar más países más tarde",
 	"import_hierarchies_directory_description": "Directorio de ficheros de origen: ",
 	"import_hierarchies_label": "Instalar jerarquías",
 	"incremental": "Incremental",

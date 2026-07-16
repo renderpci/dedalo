@@ -148,7 +148,7 @@
 	"import": "Inportatu",
 	"import_hierarchies": "Inportatu hierarkiak",
 	"import_hierarchies_button": " Inportatu hierarkiak ",
-	"import_hierarchies_description": "Tesauroan erakutsiko da. Kontuan izan herrialde handiek baliabide asko kontsumi ditzaketela. No\\",
+	"import_hierarchies_description": "Tesauroan erakutsiko da. Kontuan izan herrialde handiek baliabide asko kontsumi ditzaketela. Ez kargatu beharrezkoak ez diren herrialdeak. Beti karga ditzakezu herrialde gehiago geroago",
 	"import_hierarchies_directory_description": "Iturburu-fitxategien direktorioa: ",
 	"import_hierarchies_label": "Instalatu hierarkiak",
 	"incremental": "Inkrementala",
