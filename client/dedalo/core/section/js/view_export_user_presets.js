@@ -508,7 +508,7 @@ export const render_preset_modal = function (options) {
 
 	// modal attach to document
 		ui.attach_to_modal({
-			header		: get_label.presets_de_exportacion || 'User export preset',
+			header		: get_label.export_presets || 'User export preset',
 			body		: body,
 			footer		: null,
 			size		: 'small',

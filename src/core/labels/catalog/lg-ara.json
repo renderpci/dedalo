@@ -3,7 +3,6 @@
 	"component_history": "تاريخ المكونات",
 	"data": "بيانات",
 	"find": "يجد",
-	"indexings": "الفهارس",
 	"latest_changes": "أحدث التغييرات",
 	"of": "ل",
 	"open_relationships_of_field": "فتح علاقات {0} من السجل الحالي (1) أم من جميع السجلات الموجودة ({1})؟",
@@ -11,7 +10,5 @@
 	"relations": "علاقات",
 	"show_buttons": "إظهار الأزرار",
 	"sure_delete_entry_all_langs": "سيتم حذف هذا المدخل من جميع اللغات.",
-	"tool_indexation": "الفهرسة",
-	"tool_relation": "علاقات",
-	"tool_time_machine": "آلة الزمن"
+	"tool_indexation": "الفهرسة"
 }

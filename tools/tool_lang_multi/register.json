@@ -249,6 +249,56 @@
             "lang": "lg-eus",
             "name": "automatic_translation",
             "value": "Itzulpen automatikoa"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "are_you_sure_to_overwrite_text",
+            "value": "Are you sure of overwrite the text?"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "are_you_sure_to_overwrite_text",
+            "value": "¿Está seguro de sobrescribir el texto?"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "are_you_sure_to_overwrite_text",
+            "value": "Sei sicuro di sovrascrivere il testo"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "are_you_sure_to_overwrite_text",
+            "value": "Ziur zaude testua gainidatzi nahi duzula?"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "are_you_sure_to_overwrite_text",
+            "value": "Είστε σίγουροι ότι αντικαταστήσετε το κείμενο;"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "are_you_sure_to_overwrite_text",
+            "value": "Sind Sie sicher, dass Sie diesen Text überschreiben wollen?"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "are_you_sure_to_overwrite_text",
+            "value": "Êtes-vous sûr de vouloir remplacer le texte ?"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "are_you_sure_to_overwrite_text",
+            "value": "के तपाइँ पाठ अधिलेखन गर्न निश्चित हुनुहुन्छ?"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "are_you_sure_to_overwrite_text",
+            "value": "Està segur que vol sobre escriure el text?"
+          },
+          {
+            "lang": "lg-por",
+            "name": "are_you_sure_to_overwrite_text",
+            "value": "Tem a certeza que deseja substituir o texto?"
           }
         ]
       }

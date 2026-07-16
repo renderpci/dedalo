@@ -867,6 +867,56 @@
             "lang": "lg-ita",
             "name": "bulk_process_title",
             "value": "Titolo del processo:"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "process_completed",
+            "value": "Process completed"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "process_completed",
+            "value": "Proceso completado"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "process_completed",
+            "value": "Processo completato"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "process_completed",
+            "value": "Prozesua amaitu da"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "process_completed",
+            "value": "Η διαδικασία ολοκληρώθηκε"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "process_completed",
+            "value": "Prozess abgeschlossen"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "process_completed",
+            "value": "Processus terminé"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "process_completed",
+            "value": "प्रक्रिया पूरा भयो"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "process_completed",
+            "value": "Procés completat"
+          },
+          {
+            "lang": "lg-por",
+            "name": "process_completed",
+            "value": "Processo concluído"
           }
         ]
       }

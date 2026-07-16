@@ -1199,7 +1199,7 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			inner_html		: (get_label.publicado || 'Published') + ' (first/last)',
+			inner_html		: (get_label.published || 'Published') + ' (first/last)',
 			parent			: fragment
 		})
 		// value
@@ -1213,7 +1213,7 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			inner_html		: pub_data.length > 0 ? pub_data.join('<br>') : (get_label.nunca || 'Never'),
+			inner_html		: pub_data.length > 0 ? pub_data.join('<br>') : (get_label.never || 'Never'),
 			parent			: fragment
 		})
 
@@ -1502,7 +1502,7 @@ const render_element_info = function(self) {
 			class_name		: 'element_info_head label icon_arrow up',
 			parent			: element_info_wrap
 		})
-		decorate_block_header(element_info_head, 'info', get_label.informacion || "Info")
+		decorate_block_header(element_info_head, 'info', get_label.information || "Info")
 
 	// element_info_container (body)
 		const element_info_body = ui.create_dom_element({

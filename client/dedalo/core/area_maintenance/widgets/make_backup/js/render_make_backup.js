@@ -295,7 +295,7 @@ const get_content_data = async function(self) {
 				return
 			}
 
-			if (!confirm(get_label.seguro || 'Sure?')) {
+			if (!confirm(get_label.sure || 'Sure?')) {
 				return
 			}
 

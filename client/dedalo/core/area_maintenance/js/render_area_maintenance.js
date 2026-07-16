@@ -410,7 +410,7 @@ const build_list_view = async function(self, widgets) {
 			element_type	: 'input',
 			type			: 'search',
 			class_name		: 'maintenance_search dd_input',
-			placeholder		: (get_label.buscar || 'Search') + '…',
+			placeholder		: (get_label.search || 'Search') + '…',
 			parent			: search_wrap
 		})
 		const filters = ui.create_dom_element({
@@ -454,7 +454,7 @@ const build_list_view = async function(self, widgets) {
 			})
 			chips.push(chip)
 		}
-		make_chip('', get_label.todos || 'All')
+		make_chip('', get_label.all || 'All')
 
 	// build one section per non-empty category, in defined order
 		const category_defs	= get_category_defs()
@@ -545,7 +545,7 @@ const build_list_view = async function(self, widgets) {
 		const empty_state = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'maintenance_empty hide',
-			inner_html		: get_label.sin_resultados || 'No tools match your search',
+			inner_html		: get_label.no_tools_match || 'No tools match your search',
 			parent			: groups
 		})
 

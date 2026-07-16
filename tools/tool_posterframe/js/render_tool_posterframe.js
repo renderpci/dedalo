@@ -246,7 +246,7 @@ const get_buttons = function(self) {
 				const button_create_identifying_image = ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: 'light create_identifying_image',
-					inner_html		: get_label.create_identify_image || 'Create identifying image',
+					inner_html		: self.get_tool_label('create_identify_image') || 'Create identifying image',
 					parent			: identifying_image_block
 				})
 				button_create_identifying_image.addEventListener('click', async function(){

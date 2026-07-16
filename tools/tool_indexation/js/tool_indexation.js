@@ -246,11 +246,11 @@ tool_indexation.prototype.init = async function(options) {
 	// label_states
 		self.label_states = [
 			{
-				label	: get_label.label_normal || 'Normal',
+				label	: self.get_tool_label('label_normal') || 'Normal',
 				value	: 'n'
 			},
 			{
-				label	: get_label.label_deleted || 'Deleted',
+				label	: self.get_tool_label('label_deleted') || 'Deleted',
 				value	: 'd'
 			},
 			{

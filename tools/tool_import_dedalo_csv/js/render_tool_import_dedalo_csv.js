@@ -1143,7 +1143,7 @@ const follow_import_job = (options) => {
 			if (sse_response.is_running===false) {
 
 				progress_node.finish(
-					(get_label.proceso_completado || 'Process completed') + ' ' + (sse_response.total_time || '') + ' ms'
+					(self.get_tool_label('process_completed') || 'Process completed') + ' ' + (sse_response.total_time || '') + ' ms'
 				)
 
 				// A job that died (server shutdown, an unhandled throw) reports here.

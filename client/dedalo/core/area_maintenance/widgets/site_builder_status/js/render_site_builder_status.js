@@ -104,7 +104,7 @@ const get_content_data = async function(self) {
 		const button_open = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'light',
-			inner_html		: get_label.tool_sitebuilder || 'Open site builder',
+			inner_html		: get_label.open_site_builder || 'Open site builder',
 			parent			: content_data
 		})
 		if (!reachable) {

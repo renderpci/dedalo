@@ -20,7 +20,7 @@
 * Social Security contribution rules encoded as literal constants; no external
 * configuration is read.
 *
-* (!) `get_label` is consumed via bracket notation (e.g. `get_label["anyo"]`)
+* (!) `get_label` is consumed via bracket notation (e.g. `get_label['year']`)
 * but is neither imported nor declared in a `/*global*\/` directive at the top
 * of this file. It is a page-level browser global initialised by
 * core/page/js/index.js (`window.get_label = {}`). This creates an implicit
@@ -85,13 +85,13 @@ var expressos = new function() {
 
 
 		if(years > 0 && options.years === true){
-			const year_label = years == 1 ? get_label["anyo"] : get_label["anyos"]
+			const year_label = years == 1 ? get_label['year'] : get_label['years']
 			const year_value = (options.label===true) ? years + ' ' + year_label : years
 			period.push(year_value)
 		}
 
 		if(months > 0 && options.months === true){
-			const months_label = months == 1 ? get_label["mes"] : get_label["meses"]
+			const months_label = months == 1 ? get_label['month'] : get_label['months']
 			let months_value = ""
 			if(options.total === true){
 				// Use cumulative total months across the whole period (ignores year boundary).
@@ -104,7 +104,7 @@ var expressos = new function() {
 		}
 
 		if(days > 0 && options.days === true){
-			const days_label = days == 1 ? get_label["dia"] : get_label["dias"]
+			const days_label = days == 1 ? get_label['day'] : get_label['days']
 			let days_value = ""
 			if(options.total === true){
 				// Use the raw total_days rather than the within-month remainder.

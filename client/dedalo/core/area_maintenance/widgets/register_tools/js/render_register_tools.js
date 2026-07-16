@@ -200,7 +200,7 @@ const render_content_data = async function(self) {
 				element_type	: 'div',
 				class_name		: 'dd_th',
 				// (!) label key is 'informacion' (Spanish legacy key); displays as 'Info'
-				inner_html		: get_label.informacion || 'Info',
+				inner_html		: get_label.information || 'Info',
 				parent			: tool_item
 			})
 
@@ -240,7 +240,7 @@ const render_content_data = async function(self) {
 		// `tools_register::import_tools()` to write or update all tool records.
 		if (self.caller?.init_form) {
 			self.caller.init_form({
-				submit_label	: get_label.registrar_herramientas || self.name,
+				submit_label	: get_label.register_tools || self.name,
 				confirm_text	: get_label.sure || 'Sure?',
 				body_info		: content_data,
 				body_response	: body_response,

@@ -853,7 +853,7 @@ export const render_error = function (error) {
 	const title = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'wrapper_error_title',
-		inner_html		: (get_label.erors_found || 'Errors found'),
+		inner_html		: (get_label.errors_found || 'Errors found'),
 		parent			: wrapper
 	})
 	ui.create_dom_element({

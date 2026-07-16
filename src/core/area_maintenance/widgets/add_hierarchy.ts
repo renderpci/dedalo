@@ -98,7 +98,7 @@ export const widget: WidgetModule = {
 		id: 'add_hierarchy',
 		category: 'data',
 		class: 'success width_100',
-		label: { kind: 'label_concat', keys: ['instalar', 'jerarquias'] },
+		label: { kind: 'label_concat', keys: ['install', 'hierarchies'] },
 	},
 	getValue: addHierarchyGetValue,
 	apiActions: {

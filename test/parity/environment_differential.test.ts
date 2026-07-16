@@ -16,6 +16,8 @@
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { readEnv } from '../../src/config/env.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
@@ -82,26 +84,39 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 			.environment.result;
 	});
 
-	test('get_label: the oracle dictionary is contained in the catalog-served one (WC-033)', () => {
+	test('get_label: every oracle key is served, renamed, or ledger-removed (WC-033/WC-034)', () => {
 		if (!hasPhpCredentials()) return;
 		const phpLabels = phpEnv.get_label as Record<string, string>;
 		const tsLabels = tsEnv.get_label as Record<string, string>;
 		expect(Object.keys(tsLabels).length).toBeGreaterThan(400);
-		// WC-033: the repo catalogs deliberately FIX two values the oracle
-		// dictionary inherited from dd_ontology duplicate-name collisions
-		// (PHP's generator let the later row win): no_hay_etiqueta_seleccionada
-		// showed dd1664's 'User code does not exist' on the index-without-tag
-		// confirm, and tool_watermark showed dd1548's 'Notes'. Ledgered in
-		// WIRE_CONTRACT.md WC-033 + rewrite/LABELS_RECONCILE.md.
-		const WC033_VALUE_FIXES = new Set(['no_hay_etiqueta_seleccionada', 'tool_watermark']);
-		const mismatched = Object.entries(phpLabels).filter(
-			([key, value]) => !WC033_VALUE_FIXES.has(key) && tsLabels[key] !== value,
-		);
-		expect(mismatched).toEqual([]);
-		for (const key of WC033_VALUE_FIXES) {
-			expect(tsLabels[key]).toBeDefined();
-			expect(tsLabels[key]).not.toBe(phpLabels[key]);
+		// WC-034 label cleanup: the repo catalogs renamed non-conforming keys,
+		// migrated tool-specific keys into their tools' register.json labels,
+		// and removed unused keys — all ledgered in the machine-readable map.
+		// The two WC-033 dup-name value fixes ride the same map:
+		// no_hay_etiqueta_seleccionada → no_tag_selected (value deliberately
+		// differs) and tool_watermark (removed — unreferenced).
+		const wc034 = JSON.parse(
+			readFileSync(resolve(import.meta.dir, 'wc034_label_cleanup.json'), 'utf8'),
+		) as {
+			renames: Record<string, string>;
+			tool_migrations: Record<string, unknown>;
+			removals: string[];
+		};
+		const removed = new Set([...wc034.removals, ...Object.keys(wc034.tool_migrations)]);
+		const unaccounted: string[] = [];
+		for (const [key, value] of Object.entries(phpLabels)) {
+			const renamed = wc034.renames[key];
+			if (renamed !== undefined) {
+				// Renamed: the new key must serve (value may legitimately differ —
+				// e.g. the WC-033 dup-name fix, or a merge into an existing key).
+				if (tsLabels[renamed] === undefined) unaccounted.push(`${key} → ${renamed} (missing)`);
+			} else if (removed.has(key)) {
+				if (tsLabels[key] !== undefined) unaccounted.push(`${key} (ledger-removed but served)`);
+			} else if (tsLabels[key] !== value) {
+				unaccounted.push(`${key} (value mismatch or missing)`);
+			}
 		}
+		expect(unaccounted).toEqual([]);
 	});
 
 	test('plain_vars: urls, flags and DD_TIPOS match exactly', () => {

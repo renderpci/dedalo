@@ -731,7 +731,7 @@ const render_rebuild_constraints = (self, body_response) => {
 	ui.create_dom_element({
 		element_type	: 'h3',
 		class_name		: 'group_label',
-		inner_html		: get_label.rebuild_constraits || 'Rebuild constraints',
+		inner_html		: get_label.rebuild_constraints || 'Rebuild constraints',
 		parent			: rebuild_constraits_container
 	})
 

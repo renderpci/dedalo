@@ -236,6 +236,233 @@
           "rsc36"
         ]
       }
+    ],
+    "dd1372": [
+      {
+        "id": 1,
+        "value": [
+          {
+            "lang": "lg-eng",
+            "name": "auto_rewind",
+            "value": "Auto-rewind"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "auto_rewind",
+            "value": "Auto-rebobinado"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "auto_rewind",
+            "value": "Auto-riavvolto"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "auto_rewind",
+            "value": "Auto-birbobinatua"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "auto_rewind",
+            "value": "Αυτόματη επαναφορά"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "auto_rewind",
+            "value": "Auto-Reverse"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "auto_rewind",
+            "value": "Rembobinage automatique"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "auto_rewind",
+            "value": "Auto-rebobinat"
+          },
+          {
+            "lang": "lg-por",
+            "name": "auto_rewind",
+            "value": "Auto-rebobinar"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "build_subtitles",
+            "value": "Build subtitles"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "build_subtitles",
+            "value": "Crear subtítulos"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "build_subtitles",
+            "value": "Creare sottotitoli"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "build_subtitles",
+            "value": "Azpitituluak sortu"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "build_subtitles",
+            "value": "Δημιουργία υπότιτλους"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "build_subtitles",
+            "value": "Untertitel erstellen"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "build_subtitles",
+            "value": "Créer des sous-titres "
+          },
+          {
+            "lang": "lg-cat",
+            "name": "build_subtitles",
+            "value": "Crear subtítols"
+          },
+          {
+            "lang": "lg-por",
+            "name": "build_subtitles",
+            "value": "Criar legendas"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "play_pause_key",
+            "value": "Play/pause key"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "play_pause_key",
+            "value": "Play/pause tecla"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "play_pause_key",
+            "value": "Play / pause tasto"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "play_pause_key",
+            "value": "Play/pause tekla"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "play_pause_key",
+            "value": "Play κουμπί / παύσης"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "play_pause_key",
+            "value": "Play / Pause Taste"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "play_pause_key",
+            "value": "Touche de lecture/pause"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "play_pause_key",
+            "value": "Play/pause tecla"
+          },
+          {
+            "lang": "lg-por",
+            "name": "play_pause_key",
+            "value": "Botão play/pause"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "play_speed",
+            "value": "Play speed"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "play_speed",
+            "value": "Velocidad de reproducción"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "play_speed",
+            "value": "Velocità di riproduzione"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "play_speed",
+            "value": "Erreprodukzio-abiadura"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "play_speed",
+            "value": "Ταχύτητα αναπαραγωγής"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "play_speed",
+            "value": "Wiedergabegeschwindigkeit"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "play_speed",
+            "value": "Vitesse de lecture"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "play_speed",
+            "value": "Velocitat de reproducció"
+          },
+          {
+            "lang": "lg-por",
+            "name": "play_speed",
+            "value": "Velocidade de reprodução"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "seconds_abbr",
+            "value": "Sec."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "seconds_abbr",
+            "value": "Seg."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "seconds_abbr",
+            "value": "Sec."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "seconds_abbr",
+            "value": "Seg."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "seconds_abbr",
+            "value": "Sek."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "seconds_abbr",
+            "value": "Sec."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "seconds_abbr",
+            "value": "Seg."
+          },
+          {
+            "lang": "lg-por",
+            "name": "seconds_abbr",
+            "value": "Seg"
+          }
+        ]
+      }
     ]
   },
   "relation_search": null,

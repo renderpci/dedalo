@@ -197,7 +197,7 @@ const add_action_button = function(o) {
 	const fn_submit = async (e) => {
 		e.stopPropagation()
 
-		if (!confirm(get_label.seguro || 'Sure?')) {
+		if (!confirm(get_label.sure || 'Sure?')) {
 			return
 		}
 

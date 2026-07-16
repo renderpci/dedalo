@@ -252,6 +252,53 @@
           "numisdata310"
         ]
       }
+    ],
+    "dd1372": [
+      {
+        "id": 1,
+        "value": [
+          {
+            "lang": "lg-eng",
+            "name": "default_lang_of_file_to_import",
+            "value": "Default language of the file to import. Data without specified language will be imported in:"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "default_lang_of_file_to_import",
+            "value": "Idioma por defecto del archivo a importar. Datos sin idioma especificado serán importados en:"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "default_lang_of_file_to_import",
+            "value": "Lingua predefinita del file da importare. I dati senza la lingua specificata verranno importati in:"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "default_lang_of_file_to_import",
+            "value": "Inportatu beharreko fitxategiaren hizkuntza lehenetsia. Hizkuntza zehatzik gabeko datuak honetara inportatuko dira:"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "default_lang_of_file_to_import",
+            "value": "Standardsprache der zu importierenden Datei. Daten ohne festgelegte Sprache werden importiert in:"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "default_lang_of_file_to_import",
+            "value": "Langue par défaut du fichier à importer. Les données dont la langue n'est pas spécifiée seront importées dans cette langue :"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "default_lang_of_file_to_import",
+            "value": "Idioma per defecte del fitxer a importar. Dades sense idioma especificat seran importades a:"
+          },
+          {
+            "lang": "lg-por",
+            "name": "default_lang_of_file_to_import",
+            "value": "Idioma padrão do ficheiro a carregar. Dados sem idioma especificado serão importados em:"
+          }
+        ]
+      }
     ]
   },
   "relation_search": null,

@@ -250,7 +250,7 @@ const get_content_data_edit = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'h1',
 			class_name		: 'list_title',
-			inner_html		: get_label.active_elements || 'Active elements',
+			inner_html		: self.get_tool_label('active_elements') || 'Active elements',
 			parent			: selection_list_contaniner
 		})
 		// user_selection_list
@@ -414,7 +414,7 @@ const get_content_data_edit = async function(self) {
 				// select_option_breakdown
 				ui.create_dom_element({
 					element_type	: 'option',
-					inner_html		: get_label.breakdown || 'Breakdown',
+					inner_html		: self.get_tool_label('breakdown') || 'Breakdown',
 					value			: 'grid_value',
 					parent			: select_data_format_export
 				})
@@ -439,7 +439,7 @@ const get_content_data_edit = async function(self) {
 			const breakdown_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'data_format breakdown_mode',
-				inner_html		: (get_label.breakdown || 'Breakdown'),
+				inner_html		: (self.get_tool_label('breakdown') || 'Breakdown'),
 				parent			: export_buttons_config
 			})
 			const select_breakdown_export = ui.create_dom_element({
@@ -560,7 +560,7 @@ const get_content_data_edit = async function(self) {
 			const button_export = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'button_export table success',
-				inner_html		: get_label.tool_export || 'Export',
+				inner_html		: self.get_tool_label('tool_export') || 'Export',
 				parent			: export_buttons_config
 			})
 			button_export.addEventListener('click', async function(e) {
@@ -671,7 +671,7 @@ const get_content_data_edit = async function(self) {
 			const activate_all_columns = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'activation light activate_all_columns',
-				inner_html		: get_label.activate_all_columns || 'Activate all columns',
+				inner_html		: self.get_tool_label('activate_all_columns') || 'Activate all columns',
 				parent			: export_buttons_config
 			})
 			activate_all_columns.addEventListener('click', function(e) {
@@ -728,7 +728,7 @@ const get_content_data_edit = async function(self) {
 			const deactivate_all_columns = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'activation light deactivate_all_columns',
-				inner_html		: get_label.disable_all_columns || 'Disable all columns',
+				inner_html		: self.get_tool_label('disable_all_columns') || 'Disable all columns',
 				parent			: export_buttons_config
 			})
 			deactivate_all_columns.addEventListener('click', function(e) {
@@ -979,7 +979,7 @@ const render_presets_ui = function(self, parent) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'export_presets_title',
-			inner_html		: get_label.presets_de_exportacion || 'Export presets',
+			inner_html		: get_label.export_presets || 'Export presets',
 			parent			: presets_header
 		})
 		// button_new_preset

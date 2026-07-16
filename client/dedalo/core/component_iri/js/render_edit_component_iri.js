@@ -504,7 +504,7 @@ const get_content_value = (i, current_value, self) => {
 			// button link
 				const button_link = ui.create_dom_element({
 					element_type	: 'span',
-					title			: get_label.vincular_recurso || 'Link resource',
+					title			: get_label.link_resource || 'Link resource',
 					class_name		: 'button link hidden_button '+ active_check_class,
 					parent			: content_value
 				})

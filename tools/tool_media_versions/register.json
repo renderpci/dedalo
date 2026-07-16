@@ -510,6 +510,56 @@
             "lang": "lg-nep",
             "name": "regenerate",
             "value": "फाइलहरू पुन: उत्पन्न गर्नुहोस्"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "view",
+            "value": "View"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "view",
+            "value": "Visualizar"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "view",
+            "value": "Visualizzare"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "view",
+            "value": "Bistaratu"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "view",
+            "value": "φαντάζομαι"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "view",
+            "value": "Visualisieren"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "view",
+            "value": "Affichage"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "view",
+            "value": "हेर्नुहोस्"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "view",
+            "value": "Visualitzarlizar"
+          },
+          {
+            "lang": "lg-por",
+            "name": "view",
+            "value": "Visualizar"
           }
         ]
       }
