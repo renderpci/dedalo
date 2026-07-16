@@ -80,6 +80,7 @@ Reach for the specialist when you cross into its area:
 - **`dedalo-ts-testing`** — differential gates, `hasPhpCredentials` (`test/parity/php_client.ts`), `ORACLE_MODE=fixtures` (`test/parity/oracle_fixtures.ts`), scratch-write hygiene. Fixture mode: `engineering/ORACLE_HARVEST.md`.
 - **`dedalo-ts-extension`** — adding component models / descriptors / facets.
 - **`dedalo-ts-ops-config`** — env/config catalog, pool/observability, running & supervising the server.
+- **`dedalo-labels-ts`** — repo-owned UI-label catalogs (WC-033/034): `master.json` (source of definitions) + `catalog/lg-<code>.json` (translations), `getLabels` fallback chain (`src/core/labels/catalog.ts`), `labels_tripwire`, `scripts/labels_fill.ts`. Labels ship with code, never ontology updates.
 
 ## Subsystem skills (the deep dives)
 
