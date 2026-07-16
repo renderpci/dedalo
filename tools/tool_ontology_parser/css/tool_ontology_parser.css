@@ -3,9 +3,6 @@
 *
 * Loaded on tool init
 */
-:root {
-  --tool_ontology_parser: #276f67;
-}
 /**
  * vars
  *
@@ -199,6 +196,9 @@
   --color_grey_4_light: #3a3a3a;
   --menu_bg_active_border: #fa8500;
   --service_bg_dark: #c56607;
+}
+:root {
+  --tool_ontology_parser: var(--color_green_ontology);
 }
 .wrapper_tool.tool_ontology_parser {
   position: relative;

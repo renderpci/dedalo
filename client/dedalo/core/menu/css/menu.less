@@ -370,10 +370,15 @@
 
 		// Ontology link
 		>.ontology {
-			color: @color_grey_11;
+			color: @color_grey_14;
 			margin-left: 0.5rem;
 			margin-right: 0.5rem;
 			cursor: pointer;
+			// ontology identifier: a teal underline (the shared --color_green_ontology)
+			// marks this as an Ontology element without hurting legibility on the dark
+			// menu bar (teal text would fail contrast there).
+			border-bottom: 2px solid @color_green_ontology;
+			padding-bottom: 1px;
 
 			&.top_item {
 				@media screen and (max-width: @width_break_point_3) {
