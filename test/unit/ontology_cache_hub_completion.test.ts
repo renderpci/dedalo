@@ -19,6 +19,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { clearAreaWalkCache, collectAreaRows } from '../../src/core/api/handlers/menu.ts';
 import { clearChildrenTipoCache } from '../../src/core/area/tree.ts';
 import { deleteTldNodes, upsertDdOntologyNode } from '../../src/core/db/dd_ontology.ts';
+import { clearLabelsCache, getLabels } from '../../src/core/labels/catalog.ts';
 import { clearAliasCaches } from '../../src/core/ontology/alias.ts';
 import {
 	clearOntologyDerivedCaches,
@@ -45,7 +46,6 @@ import {
 	resolveOntologySections,
 } from '../../src/core/relations/request_config/explicit.ts';
 import { clearDdInfoCache } from '../../src/core/resolve/dd_info.ts';
-import { clearEnvironmentCache, getLabels } from '../../src/core/resolve/environment.ts';
 import {
 	clearRelatedListCache,
 	getRelatedListChildTipos,
@@ -73,7 +73,7 @@ const REGISTERED_CLEARERS: [string, () => void][] = [
 	['section_map clearSectionMapCache', clearSectionMapCache],
 	['section_id_component clearSectionIdComponentCache', clearSectionIdComponentCache],
 	['structure_context clearStructureContextCache', clearStructureContextCache],
-	['environment clearEnvironmentCache', clearEnvironmentCache],
+	['labels/catalog clearLabelsCache', clearLabelsCache],
 	['dd_info clearDdInfoCache', clearDdInfoCache],
 	['relation_index clearRelatedListCache', clearRelatedListCache],
 	['relation_list clearFieldsSeparatorCache', clearFieldsSeparatorCache],
@@ -111,7 +111,7 @@ const IDENTITY_CASES: [string, () => Promise<object | null>][] = [
 	['section_list resolveOwnConfigMap', () => resolveOwnConfigMap('numisdata16')],
 	['section_list getDataframeChildTipos', () => getDataframeChildTipos('numisdata16')],
 	['relation_index getRelatedListChildTipos', () => getRelatedListChildTipos('numisdata6')],
-	['environment getLabels', () => getLabels('lg-eng')],
+	['labels/catalog getLabels', () => getLabels('lg-eng')],
 	['search_related getRelationTables', () => getRelationTables()],
 	['section_map getSectionMap', () => getSectionMap('oh1')],
 	['filter_projects getUserAuthorizedProjects', () => getUserAuthorizedProjects()],

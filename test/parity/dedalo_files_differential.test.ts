@@ -91,6 +91,16 @@ function isRuntimeInfoRenameEntry(entry: ManifestEntry): boolean {
 	);
 }
 
+/** The generated JS lang files are GONE from the TS client tree (WC-033):
+ * UI labels are repo catalogs under src/core/labels/catalog/, served only
+ * through get_environment's `get_label` — the client never fetched these
+ * files directly, so the SW pre-caching them was dead weight. The frozen PHP
+ * oracle still lists its generated core/common/js/lang/*.js; filtered from
+ * BOTH sides of the set compare, like the WC-013 pattern. */
+function isLangFileEntry(entry: ManifestEntry): boolean {
+	return entry.url.startsWith('/dedalo/core/common/js/lang/');
+}
+
 describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', () => {
 	let phpBody: ManifestBody;
 	let tsBody: ManifestBody;
@@ -158,7 +168,10 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 	test('file set matches the oracle exactly (order + tool_common + WC-013 normalized)', () => {
 		if (!hasPhpCredentials()) return;
 		const keep = (entry: ManifestEntry) =>
-			!isToolAssistantEntry(entry) && !isTsOnlyEntry(entry) && !isRuntimeInfoRenameEntry(entry);
+			!isToolAssistantEntry(entry) &&
+			!isTsOnlyEntry(entry) &&
+			!isRuntimeInfoRenameEntry(entry) &&
+			!isLangFileEntry(entry);
 		const phpSet = phpBody.result.filter(keep).map(comparableLine).sort();
 		const tsSet = tsBody.result.filter(keep).map(comparableLine).sort();
 		expect(tsSet).toEqual(phpSet);

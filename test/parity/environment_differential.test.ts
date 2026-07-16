@@ -5,7 +5,10 @@
  * copied client boot against the TS server (rewrite/client_seam.md seam item 1).
  *
  * Compared:
- * - get_label: EXACT equality (all ~505 localized labels, DB-derived);
+ * - get_label: CONTAINMENT since WC-033 (labels are repo catalogs — the served
+ *   dictionary is a SUPERSET of the frozen oracle one: every oracle key must
+ *   be present with the oracle's value, except the two ledgered dup-name
+ *   collision fixes; TS-only keys are the catalog additions);
  * - plain_vars: exact equality (urls/flags/DD_TIPOS mirror the install);
  * - page_globals: exact KEY SET + exact values except the engine-specific
  *   debug facts (pg/php version, memory, root path — PHP engine values by
@@ -54,6 +57,16 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 
 		const token = createSession(-1, 'root', true);
 		const session = getSession(token);
+		// get_label and dedalo_application_lang are LANGUAGE-SCOPED: compare the
+		// TS payload under the SAME application lang the frozen oracle session was
+		// captured with — this install's DEDALO_APPLICATION_LANGS_DEFAULT may
+		// differ, and since WC-033 the served dictionary honors the request lang
+		// (no unconditional structure-lang overlay to mask a lang mismatch here).
+		const oracleAppLang = (phpEnv.page_globals as Record<string, unknown>)
+			.dedalo_application_lang as string;
+		if (session !== null && typeof oracleAppLang === 'string') {
+			session.applicationLang = oracleAppLang;
+		}
 		const principal = await resolvePrincipal(-1);
 		const tsResult = await dispatchRqo(
 			{ action: 'start', dd_api: 'dd_core_api', prevent_lock: true, source: {} } as unknown as Rqo,
@@ -69,12 +82,26 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 			.environment.result;
 	});
 
-	test('get_label: the full localized dictionary is byte-equal', () => {
+	test('get_label: the oracle dictionary is contained in the catalog-served one (WC-033)', () => {
 		if (!hasPhpCredentials()) return;
 		const phpLabels = phpEnv.get_label as Record<string, string>;
 		const tsLabels = tsEnv.get_label as Record<string, string>;
 		expect(Object.keys(tsLabels).length).toBeGreaterThan(400);
-		expect(tsLabels).toEqual(phpLabels);
+		// WC-033: the repo catalogs deliberately FIX two values the oracle
+		// dictionary inherited from dd_ontology duplicate-name collisions
+		// (PHP's generator let the later row win): no_hay_etiqueta_seleccionada
+		// showed dd1664's 'User code does not exist' on the index-without-tag
+		// confirm, and tool_watermark showed dd1548's 'Notes'. Ledgered in
+		// WIRE_CONTRACT.md WC-033 + rewrite/LABELS_RECONCILE.md.
+		const WC033_VALUE_FIXES = new Set(['no_hay_etiqueta_seleccionada', 'tool_watermark']);
+		const mismatched = Object.entries(phpLabels).filter(
+			([key, value]) => !WC033_VALUE_FIXES.has(key) && tsLabels[key] !== value,
+		);
+		expect(mismatched).toEqual([]);
+		for (const key of WC033_VALUE_FIXES) {
+			expect(tsLabels[key]).toBeDefined();
+			expect(tsLabels[key]).not.toBe(phpLabels[key]);
+		}
 	});
 
 	test('plain_vars: urls, flags and DD_TIPOS match exactly', () => {

@@ -120,7 +120,8 @@ const DD_ONTOLOGY_DIRECT_READ_RATCHET = new Set<string>([
 	// enforces this pruning mechanically).
 	'src/core/diffusion_bridge/diffusion_delete.ts',
 	'src/core/diffusion_bridge/diffusion_map.ts',
-	'src/core/resolve/environment.ts',
+	// environment.ts: its model='label' dd_ontology rebuild died with the
+	// labels-to-repo-catalog migration (WC-033) — entry retired 2026-07-16.
 	'src/core/api/handlers/login_context.ts',
 	'src/core/api/handlers/menu.ts',
 	// ontology_delete.ts re-homed into src/core/ontology/ (WS-C S2-22) — that

@@ -7,9 +7,8 @@
  *   media defaults, feature flags);
  * - get_label    → the localized UI label dictionary.
  *
- * Labels are DB-derived (every dd_ontology node with model 'label': key =
- * properties.name, value = term in the requested lang with the PHP fallback) —
- * exact parity with PHP. The scalar values mirror the install configuration;
+ * Labels are repo-catalog-derived (src/core/labels/catalog.ts, WC-033) — the
+ * dictionary wire shape is unchanged. The scalar values mirror the install configuration;
  * anything marked [install] is configuration the PHP side reads from its
  * config files — mirrored here (env-overridable where it varies per deploy)
  * and kept honest by the differential gate.
@@ -19,9 +18,8 @@ import { config } from '../../config/config.ts';
 import { readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 import { sql } from '../db/postgres.ts';
+import { getLabels } from '../labels/catalog.ts';
 import { resolveMediaAccessMode } from '../media/protection.ts';
-import { createOntologyCache } from '../ontology/cache_factory.ts';
-import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import type { Principal } from '../security/permissions.ts';
 import type { Session } from '../security/session_store.ts';
 import { getAdditionalToolsUrlMap } from '../tools/paths.ts';
@@ -36,9 +34,6 @@ import { getServerState } from './server_state.ts';
  * anonymous callers never learn the posture.
  */
 const DEV_MODE = readString('DEDALO_DEV_MODE') === 'true';
-
-/** Structure/fallback lang for label terms (PHP DEDALO_STRUCTURE_LANG). */
-const STRUCTURE_LANG = config.lang.structureLang;
 
 // Engine version strings come from the ONE source (core/update/version.ts) so
 // page_globals/plain_vars and other consumers (the error-report relay stamps
@@ -55,64 +50,6 @@ const DD_TIPOS: Readonly<Record<string, string>> = {
 	DEDALO_SECTION_RESOURCES_IMAGE_TIPO: 'rsc170',
 	DEDALO_COMPONENT_RESOURCES_IMAGE_TIPO: 'rsc29',
 };
-
-/** Label dictionary cache per lang (labels change only with ontology updates). */
-const labelsCache = createOntologyCache<string, Record<string, string>>();
-
-export function clearEnvironmentCache(): void {
-	labelsCache.clear();
-}
-registerOntologyCacheClearer(clearEnvironmentCache);
-
-/**
- * The localized UI label dictionary. PHP get_lang_labels serves the
- * PRE-GENERATED file core/common/js/lang/<lang>.js (written by
- * backup::write_lang_file from the ontology label terms) — our client sync
- * copies that file, so reading it gives parity by construction, including
- * labels newer than this DB's ontology snapshot. Fallback when the file is
- * absent: rebuild from the DB (every dd_ontology node with model 'label' →
- * {properties.name: term[lang]}, PHP term fallback requested → structure →
- * first non-empty).
- */
-export async function getLabels(lang: string): Promise<Record<string, string>> {
-	const cached = labelsCache.get(lang);
-	if (cached !== undefined) return cached;
-
-	// 1. The generated lang file from the copied client (PHP-served source).
-	const langFile = Bun.file(
-		new URL(`../../../client/dedalo/core/common/js/lang/${lang}.js`, import.meta.url).pathname,
-	);
-	if (await langFile.exists()) {
-		try {
-			const labels = (await langFile.json()) as Record<string, string>;
-			labelsCache.set(lang, labels);
-			return labels;
-		} catch {
-			// malformed file — fall through to the DB rebuild
-		}
-	}
-
-	// 2. DB rebuild (PHP write_lang_file semantics).
-	const rows = (await sql`
-		SELECT properties->>'name' AS name, term
-		FROM dd_ontology
-		WHERE model = 'label'
-	`) as { name: string | null; term: Record<string, string> | null }[];
-
-	const labels: Record<string, string> = {};
-	for (const row of rows) {
-		// PHP skips misconfigured label terms (no properties.name) with a log.
-		if (row.name === null || row.name === '' || row.term === null) continue;
-		const value =
-			row.term[lang] ||
-			row.term[STRUCTURE_LANG] ||
-			Object.values(row.term).find((candidate) => candidate !== '') ||
-			null;
-		if (value !== null) labels[row.name] = value;
-	}
-	labelsCache.set(lang, labels);
-	return labels;
-}
 
 /**
  * JS plain globals (PHP get_js_plain_vars). URL layout matches the PHP deploy.
