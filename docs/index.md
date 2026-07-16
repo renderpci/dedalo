@@ -81,11 +81,12 @@ Pick the path that matches what you are trying to do. Each is a short, ordered l
 2. [Areas](core/areas/index.md) and [Sections](core/sections/index.md) — how records are organised and edited
 3. [Talk to your catalogue — the AI Assistant](core/ai/assistant/use_cases.md) — search by meaning, understand a record, and (with confirmation) propose edits in plain language
 4. [Thesaurus & ontology tree](core/ontology/ts_object.md) — managing hierarchies, descriptors and related terms
-5. [Importing data](core/importing_data.md) and [Exporting data](core/exporting_data.md) — getting data in and out
-6. [Media pipeline](development/media_pipeline.md) — how uploaded files become masters, derivatives, thumbnails and published media
-7. [Diffusion data flow](diffusion/diffusion_data_flow.md) — deciding what is published and how; [the native engine](diffusion/native_engine.md) is what runs the publish
-8. [Raspa Data Quality Score](core/raspa_score.md) — assessing the quality of your catalog
-9. [Backup](management/backup.md) and [installing new hierarchies](management/install_new_hierarchies.md) — day-to-day stewardship
+5. [Tools user guide](tools/index.md) — the day-to-day toolbox: import, export, print, media, transcription, translation, batch edits and record history, tool by tool
+6. [Importing data](core/importing_data.md) and [Exporting data](core/exporting_data.md) — the import/export model behind those tools
+7. [Media pipeline](development/media_pipeline.md) — how uploaded files become masters, derivatives, thumbnails and published media
+8. [Diffusion data flow](diffusion/diffusion_data_flow.md) — deciding what is published and how; [the native engine](diffusion/native_engine.md) is what runs the publish
+9. [Raspa Data Quality Score](core/raspa_score.md) — assessing the quality of your catalog
+10. [Backup](management/backup.md) and [installing new hierarchies](management/install_new_hierarchies.md) — day-to-day stewardship
 
 ---
 
@@ -116,6 +117,7 @@ Every documentation area, with a one-line description and an entry link. The **[
 | Events | The server-side event system | [core/events.md](core/events.md) |
 | Importing data | CSV/RDF/Dédalo import model and per-component conform contract | [core/importing_data.md](core/importing_data.md) |
 | Exporting data | The export atoms contract and flat-table export protocol | [core/exporting_data.md](core/exporting_data.md) |
+| **Tools user guide** | Using every shipped tool in day-to-day work: import, export, print, media, transcription, translation, batch edits and record history | [tools/index.md](tools/index.md) |
 | **AI** | The AI hub: RAG & semantic search (concept + [operational cookbook](core/ai/rag_cookbook.md)) and the in-app AI Assistant (install, connect a cloud or local/private model, egress privacy gate, use cases, HTTP/SSE integration cookbook) | [core/ai/index.md](core/ai/index.md) |
 | Raspa score | The data-quality evaluation metric | [core/raspa_score.md](core/raspa_score.md) |
 | Work API (v1) | The JSON API entry point, RQO format and request handling | [api/dedalo_api_v1.md](api/dedalo_api_v1.md) |
@@ -131,7 +133,7 @@ Every documentation area, with a one-line description and an entry link. The **[
 | Testing | The `bun test` layers (unit gates, parity against the frozen fixture store, client browser harness) and the tripwires | [development/testing.md](development/testing.md) |
 | Media pipeline | The end-to-end media-file lifecycle: upload → master → derivatives → publication | [development/media_pipeline.md](development/media_pipeline.md) |
 | Internationalization | The two translation planes (data vs interface) and the language model | [development/internationalization.md](development/internationalization.md) |
-| Tools | Building tools and the full per-tool catalog | [development/tools/reference/index.md](development/tools/reference/index.md) |
+| Tools (developer) | Building tools and the full per-tool developer reference | [development/tools/reference/index.md](development/tools/reference/index.md) |
 | Services | Shared services (e.g. upload) used by components, sections and tools | [development/services/index.md](development/services/index.md) |
 | Runtime | One long-lived process, per-request isolation, and the operational consequences | [development/runtime_and_workers.md](development/runtime_and_workers.md) |
 | Metrics | The performance metrics subsystem and per-request monitor | [development/metrics.md](development/metrics.md) |
