@@ -33,7 +33,7 @@ import { MATRIX_COPY_COLUMNS } from '../db/matrix_write.ts';
 import { type DbConnDescriptor, connFromConfig, runPsql } from '../install/pg_exec.ts';
 import { engineOwnsInstall } from '../update/ownership.ts';
 import { clearOntologyDerivedCaches } from './cache_invalidation.ts';
-import { setOntologyIoPath } from './data_io.ts';
+import { isSafeSectionTipo, setOntologyIoPath } from './data_io.ts';
 import {
 	MAX_MANIFEST_FILES,
 	type OntologyIoResponse,
@@ -148,19 +148,21 @@ export function saveSimpleSchemaFile(
 }
 
 /** Snapshot one table's rows (whole or tipo-scoped) to a plain `.copy` file. */
-async function snapshotTableRows(
+export async function snapshotTableRows(
 	table: 'matrix_ontology' | 'matrix_dd',
 	sectionTipo: string | null,
 	outFile: string,
 	conn: DbConnDescriptor,
 ): Promise<boolean> {
+	// psql performs NO variable interpolation inside \copy arguments (documented,
+	// all versions), so the tipo is validated and inlined directly — mirroring
+	// data_io.ts exportToFile. A `:'tipo'` here reaches the server literally and
+	// fails with "syntax error at or near :".
+	if (sectionTipo !== null && !isSafeSectionTipo(sectionTipo)) return false;
 	const columns = MATRIX_COPY_COLUMNS.map((column) => `"${column}"`).join(',');
-	const where = sectionTipo === null ? '' : ` WHERE section_tipo = :'tipo'`;
+	const where = sectionTipo === null ? '' : ` WHERE section_tipo = '${sectionTipo}'`;
 	const copy = `\\copy (SELECT ${columns} FROM "${table}"${where} ORDER BY section_id ASC) TO '${outFile}'`;
-	const args = ['-v', 'ON_ERROR_STOP=1'];
-	if (sectionTipo !== null) args.push('-v', `tipo=${sectionTipo}`);
-	args.push('-c', copy);
-	const run = await runPsql(conn, args);
+	const run = await runPsql(conn, ['-v', 'ON_ERROR_STOP=1', '-c', copy]);
 	return run.exitCode === 0;
 }
 

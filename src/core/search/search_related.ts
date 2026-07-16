@@ -148,9 +148,16 @@ export async function findInverseReferences(
 		const allowed = new Set(tables);
 		tables = options.tables.filter((table) => allowed.has(table));
 		if (tables.length === 0) {
-			throw new Error(
-				`search_related: none of the requested tables [${options.tables.join(', ')}] are relation-capable`,
+			// PHP parity (search_related::parse_sql_query): when the caller's
+			// requested tables don't intersect the relation-capable set, the query
+			// degrades to `SELECT NULL WHERE false;` — an empty result, not a fault.
+			// This is the normal shape for a section whose own matrix table isn't
+			// inverse-relations-enabled (e.g. matrix_projects, inverse_relations=false):
+			// its children search simply finds nothing rather than killing the request.
+			console.warn(
+				`[search_related] no relation-capable table in requested [${options.tables.join(', ')}] — returning empty`,
 			);
+			return [];
 		}
 	}
 

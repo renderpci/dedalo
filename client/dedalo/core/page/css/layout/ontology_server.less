@@ -1,0 +1,87 @@
+/**
+* ontology_server
+*
+* Ontology MASTER server skin. Applied when the install is an ontology master
+* (IS_AN_ONTOLOGY_SERVER=true): the server emits page_globals.is_ontology_server
+* (WC-031) and page.js set_custom_css() adds `body.is_ontology_server`.
+*
+* Purpose: make this installation unmistakable at a glance so admins working
+* with many installations at once don't confuse it with a regular one. The
+* signal reuses the app's existing ontology colour (--color_green_ontology,
+* #276f67) so it reads as "ontology", not as an error/warning. Works in both
+* light and dark themes (the teal carries white text on both).
+*
+* All markers are position:fixed pseudo-elements with pointer-events:none, so
+* they never intercept clicks and need no extra DOM. Included from main.less.
+*/
+
+@import (once) './vars';
+
+body.is_ontology_server {
+
+	// signal colour (the app's ontology teal) + a readable foreground.
+	--ontology_server_bg: var(--color_green_ontology); // #276f67
+	--ontology_server_fg: #ffffff;
+
+	// top edge band — always visible, screenshot-recognizable. Sits above the
+	// sticky menu (z-index 4) as a thin accent stripe; pointer-events:none so it
+	// never blocks the menu underneath.
+	&:before {
+		content: '';
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 4px;
+		background-color: var(--ontology_server_bg);
+		background-image: linear-gradient(90deg, var(--ontology_server_bg), var(--color_green_ontology_hover) 50%, var(--ontology_server_bg));
+		z-index: 10000;
+		pointer-events: none;
+	}
+
+	// persistent corner badge — bottom-left, out of the way of the top chrome.
+	&:after {
+		content: 'ONTOLOGY SERVER';
+		position: fixed;
+		bottom: 0.6rem;
+		left: 0.6rem;
+		padding: 0.55rem 1rem 0.55rem 2.5rem;
+		background-color: var(--ontology_server_bg);
+		// connected-nodes graph glyph (white), inline so it needs no theme file
+		// and always contrasts the teal. Left-aligned, text follows via padding.
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1.7' stroke-linecap='round'%3E%3Cpath d='M6.5 7.5 17 8.5M6.5 7.5 11.5 17M17 8.5 11.5 17'/%3E%3C/g%3E%3Cg fill='%23fff'%3E%3Ccircle cx='6.5' cy='7.5' r='2.7'/%3E%3Ccircle cx='17' cy='8.5' r='2.7'/%3E%3Ccircle cx='11.5' cy='17' r='2.7'/%3E%3C/g%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: 0.85rem center;
+		background-size: 1.15em 1.15em;
+		color: var(--ontology_server_fg);
+		font-family: 'SF Mono', 'JetBrains Mono', 'Menlo', 'Monaco', monospace;
+		font-size: 0.9rem;
+		font-weight: 600;
+		letter-spacing: 0.12em;
+		line-height: 1;
+		border-radius: 4px;
+		box-shadow: var(--shadow-2);
+		opacity: 0.92;
+		z-index: 10000;
+		pointer-events: none;
+		white-space: nowrap;
+		// entrance: slide in from off the left edge, smoothly decelerating into
+		// place with NO overshoot/bounce (easeOutQuint). `both` holds the start
+		// state through the delay and the end state after. general.less's
+		// reduced-motion block collapses the duration → it just appears in place.
+		animation: ontology_badge_in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
+	}
+
+	// menu bar tint — activates the dormant `.menu > .content_data.master`
+	// intent (teal ontology bar) via the body class, without touching menu JS.
+	// The per-role left line (green/orange/red) still shows over the tint.
+	.menu > .content_data {
+		background-color: var(--ontology_server_bg);
+	}
+}
+
+// badge entrance — off the left edge → resting position (see &:after above).
+@keyframes ontology_badge_in {
+	from { opacity: 0;    transform: translateX(-150%); }
+	to   { opacity: 0.92; transform: translateX(0); }
+}

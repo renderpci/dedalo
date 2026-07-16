@@ -562,6 +562,15 @@ page.prototype.build = async function(autoload=false) {
 				// fix API environment vars to window (page_globals, plain_vars, get_label)
 				set_environment(api_response.environment.result)
 
+				// ontology master server. Mark the body once the environment is known
+				// (page_globals.is_ontology_server, from IS_AN_ONTOLOGY_SERVER — WC-031)
+				// so ontology_server.less can skin the whole app. Done HERE, not in
+				// set_custom_css(), because init() (and its set_custom_css call) runs
+				// before build() populates page_globals. @see page/css/layout/ontology_server.less
+				if (page_globals.is_ontology_server===true) {
+					document.body.classList.add('is_ontology_server')
+				}
+
 				// check environment (var DEDALO_ENVIRONMENT is set from API environment result plain_vars. Expected bool true)
 				if (typeof DEDALO_ENVIRONMENT==='undefined') {
 					// environment vars are not set correctly

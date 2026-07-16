@@ -4,14 +4,17 @@
 * Loaded on tool init
 */
 
-// local vars
-:root {
-	--tool_ontology_parser: #276f67;
-}
-@tool_color: var(--tool_ontology_parser);
-
 // imports
 @import (once) '../../../client/dedalo/core/page/css/layout/vars';
+
+// local vars
+// Reference the shared ontology identifier colour (NOT a hardcoded hex) so every
+// ontology-concept surface stays homogeneous — same source as tool_ontology and
+// area_ontology (--color_green_ontology, #276f67).
+:root {
+	--tool_ontology_parser: var(--color_green_ontology);
+}
+@tool_color: var(--tool_ontology_parser);
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions

@@ -134,10 +134,15 @@ export async function checkRemoteServer(server: OntologyServer): Promise<{
 		options: { check: 'ontology_server' },
 	};
 	try {
+		// JSON body, not PHP's `rqo=`-form-encoded: the TS API endpoint parses the
+		// request body as JSON (server.ts request.json()) and 400s on a form body,
+		// exactly like the vendored client's data_manager.request. A form-encoded
+		// probe made every TS ontology/code master read back "Invalid JSON body"
+		// and the update panel disabled its radio (render_update_ontology.js).
 		const response = await fetch(server.url, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-			body: `rqo=${encodeURIComponent(JSON.stringify(rqo))}`,
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(rqo),
 			redirect: 'error',
 			signal: AbortSignal.timeout(CHECK_TIMEOUT_MS),
 		});
@@ -564,17 +569,13 @@ export async function consolidateSectionCounter(
 ): Promise<boolean> {
 	if (!isSafeSectionTipo(sectionTipo) || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(matrixTable))
 		return false;
+	// psql performs NO variable interpolation with -c (only via -f or interactively),
+	// so the already-validated tipo is inlined directly rather than passed as :'tipo'
+	// (which would reach the server literally and fail with "syntax error at or near :").
 	const sql = `INSERT INTO matrix_counter (tipo, value)
-SELECT section_tipo, MAX(section_id) FROM "${matrixTable}" WHERE section_tipo = :'tipo' GROUP BY section_tipo
+SELECT section_tipo, MAX(section_id) FROM "${matrixTable}" WHERE section_tipo = '${sectionTipo}' GROUP BY section_tipo
 ON CONFLICT (tipo) DO UPDATE SET value = GREATEST(matrix_counter.value, EXCLUDED.value);`;
-	const run = await runPsql(conn, [
-		'-v',
-		'ON_ERROR_STOP=1',
-		'-v',
-		`tipo=${sectionTipo}`,
-		'-c',
-		sql,
-	]);
+	const run = await runPsql(conn, ['-v', 'ON_ERROR_STOP=1', '-c', sql]);
 	return run.exitCode === 0;
 }
 

@@ -19,14 +19,20 @@ import type { DbConnDescriptor } from '../../src/core/install/pg_exec.ts';
 import { runPsql } from '../../src/core/install/pg_exec.ts';
 import {
 	buildOntologyUpdateInfo,
+	checkRemoteServer,
 	confinedPath,
+	consolidateSectionCounter,
 	copySanityCheck,
 	downloadRemoteOntologyFile,
 	getOntologyIoPath,
 	gunzipWithCaps,
 	importFromCopyFile,
 } from '../../src/core/ontology/data_io_import.ts';
-import { saveSimpleSchemaFile, updateOntology } from '../../src/core/ontology/ontology_update.ts';
+import {
+	saveSimpleSchemaFile,
+	snapshotTableRows,
+	updateOntology,
+} from '../../src/core/ontology/ontology_update.ts';
 
 const SCRATCH_ROOT = join(
 	process.env.TMPDIR ?? '/tmp',
@@ -288,6 +294,54 @@ describe('updateOntology refusals', () => {
 });
 
 // ---------------------------------------------------------------------------
+// checkRemoteServer must speak the TS API wire (JSON body), not PHP's
+// `rqo=`-form-encoded. The TS endpoint parses request.json() and 400s on a form
+// body, so a form-encoded probe made EVERY TS ontology/code master read back
+// "Invalid JSON body" — and the update panel disabled that server's radio
+// (render_update_ontology.js: check only on HTTP 200 + result.result===true).
+// ---------------------------------------------------------------------------
+
+describe('checkRemoteServer posts a JSON body (TS API wire)', () => {
+	// A fixture that behaves like the real TS API: JSON body -> ready; anything
+	// else (a form body) -> 400 "Invalid JSON body", exactly like server.ts.
+	async function withJsonOnlyApi(
+		run: (origin: string) => Promise<void>,
+	): Promise<{ contentType: string | null }> {
+		let contentType: string | null = null;
+		const server = Bun.serve({
+			port: 0,
+			async fetch(req) {
+				contentType = req.headers.get('content-type');
+				try {
+					if (!(contentType ?? '').includes('application/json')) throw new Error('not json');
+					const body = (await req.json()) as { action?: string };
+					if (body.action !== 'get_server_ready_status') throw new Error('unexpected action');
+				} catch {
+					return Response.json({ result: false, msg: 'Invalid JSON body' }, { status: 400 });
+				}
+				return Response.json({ result: true, msg: 'OK. Ontology server is ready', errors: [] });
+			},
+		});
+		try {
+			await run(`http://localhost:${server.port}`);
+		} finally {
+			server.stop(true);
+		}
+		return { contentType };
+	}
+
+	test('a JSON-only master answers ready (was 400 with the form body)', async () => {
+		let probe: Awaited<ReturnType<typeof checkRemoteServer>> | undefined;
+		const { contentType } = await withJsonOnlyApi(async (origin) => {
+			probe = await checkRemoteServer({ name: 'm', url: `${origin}/`, code: 'demo' });
+		});
+		expect(contentType).toContain('application/json');
+		expect(probe?.code).toBe(200);
+		expect((probe?.result as { result?: unknown })?.result).toBe(true);
+	});
+});
+
+// ---------------------------------------------------------------------------
 // DESTRUCTIVE copy-file import — throwaway scratch DATABASE only
 // ---------------------------------------------------------------------------
 
@@ -414,5 +468,70 @@ describe('importFromCopyFile on the scratch database', () => {
 		});
 		expect(out.result).toBe(true);
 		expect(await scratchCount('matrix_dd')).toBeGreaterThan(0);
+	}, 60000);
+});
+
+// ---------------------------------------------------------------------------
+// Recovery-snapshot + counter — the psql :'var' interpolation regression.
+//
+// Two same-root-cause defects the full updateOntology happy path never
+// exercised (the suite only covered importFromCopyFile + the refusal paths):
+// psql performs :'var' interpolation ONLY via -f / interactively — NEVER inside
+// \copy arguments (snapshotTableRows, Phase-B recovery) and NEVER with -c
+// (consolidateSectionCounter). Both reached the server literally and failed
+// with "syntax error at or near :". The fix inlines the already-validated tipo,
+// mirroring data_io.ts exportToFile.
+// ---------------------------------------------------------------------------
+
+describe("recovery snapshot + counter (psql :'var' interpolation)", () => {
+	test('tipo-scoped \\copy snapshot writes exactly the section rows', async () => {
+		if (!scratchAvailable) {
+			console.warn('[UNCOVERED] no admin Postgres connection — snapshot/counter regression skipped');
+			return;
+		}
+		// guarantee dd0 rows regardless of test order (idempotent load)
+		const gz = join(SCRATCH_ROOT, 'snap_dd.copy.gz');
+		writeFileSync(gz, readFileSync(join(VENDORED, 'dd.copy.gz')));
+		await importFromCopyFile({
+			sectionTipo: 'dd0',
+			filePath: gz,
+			matrixTable: 'matrix_ontology',
+			conn: scratch,
+		});
+		const rows = await scratchCount('matrix_ontology', ` WHERE section_tipo = 'dd0'`);
+		expect(rows).toBeGreaterThan(0);
+
+		const snapFile = join(SCRATCH_ROOT, 'dd0.copy');
+		// was false pre-fix: :'tipo' inside \copy → "syntax error at or near :"
+		const ok = await snapshotTableRows('matrix_ontology', 'dd0', snapFile, scratch);
+		expect(ok).toBe(true);
+		const lines = readFileSync(snapFile, 'utf8')
+			.split('\n')
+			.filter((line) => line !== '').length;
+		expect(lines).toBe(rows);
+	}, 120000);
+
+	test('whole-table (null tipo) snapshot still works', async () => {
+		if (!scratchAvailable) return;
+		const snapFile = join(SCRATCH_ROOT, 'matrix_dd.copy');
+		const ok = await snapshotTableRows('matrix_dd', null, snapFile, scratch);
+		expect(ok).toBe(true);
+	});
+
+	test('consolidateSectionCounter sets matrix_counter to MAX(section_id)', async () => {
+		if (!scratchAvailable) return;
+		await runPsql(scratch, ['-c', `DELETE FROM matrix_counter WHERE tipo = 'dd0'`]);
+		// was false pre-fix: :'tipo' with -c is not interpolated
+		const ok = await consolidateSectionCounter('dd0', 'matrix_ontology', scratch);
+		expect(ok).toBe(true);
+		const maxOut = await runPsql(scratch, [
+			'-tAc',
+			`SELECT MAX(section_id) FROM matrix_ontology WHERE section_tipo = 'dd0'`,
+		]);
+		const counterOut = await runPsql(scratch, [
+			'-tAc',
+			`SELECT value FROM matrix_counter WHERE tipo = 'dd0'`,
+		]);
+		expect(counterOut.stdout.trim()).toBe(maxOut.stdout.trim());
 	}, 60000);
 });

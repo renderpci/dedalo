@@ -1064,7 +1064,67 @@ transforms the PHP/fixture response before diffing — the WC-001 pattern).
   from both sides of the file-set compare (the WC-013 pattern) — the
   every-TS-url-resolves test still validates the new files serve.
 
-## WC-031 — the site-builder subsystem: `tool_sitebuilder` + `site_builder_status` are TS-ONLY surfaces (no PHP twin)
+## WC-031 — `is_ontology_server` page_globals key (TS-only) drives the ontology-master client skin
+
+- **Date:** 2026-07-16.
+- **Shape:** `buildPageGlobals` (`src/core/resolve/environment.ts`) emits a new
+  boolean `is_ontology_server` (from `config.ontologyIo.isOntologyServer`,
+  i.e. the `IS_AN_ONTOLOGY_SERVER` install flag). PHP `get_page_globals` has
+  NO twin — the flag was server-only in the oracle (fail-closed manifest gates,
+  never surfaced to the UI). Emitted UNCONDITIONALLY (like `maintenance_mode`
+  and the `DEVELOPMENT_SERVER` plain_var), so the pre-auth login form is marked
+  too; it is not reconnaissance-sensitive (reveals only "this install is an
+  ontology master", not DB name / engine version).
+- **Client effect:** `page.js` `set_custom_css()` adds `body.is_ontology_server`
+  when the flag is truthy; `page/css/layout/ontology_server.less` (imported by
+  `main.less`) then skins the whole app in the existing ontology teal
+  (`--color_green_ontology`, `#276f67`): a fixed top edge band, a persistent
+  `ONTOLOGY SERVER` corner badge, and a tinted menu bar (activating the
+  dormant `.menu > .content_data.master` intent that never had a JS wire). No
+  server HTML change — the index.html shell stays byte-static (client_serving).
+- **Gate reconciliation:** `test/parity/environment_differential.test.ts`
+  (page_globals key-set test) asserts the key is present TS-side / absent
+  PHP-side, then deletes it from the TS copy before the exact key-set compare —
+  the WC-003 (`DEDALO_DIFFUSION_API_URL`) pattern.
+
+## WC-032 — `update_ontology` panel redesign: drop `structure_from_server`, fold the dead client surfaces, JSON-body probe
+
+- **Date:** 2026-07-16 (post-cutover; PHP is decommissioned dead code).
+- **Why:** the panel had accreted dead weight. `STRUCTURE_FROM_SERVER` is a
+  legacy config flag nothing reads; two sub-panels (`rebuild_lang_files`,
+  `export_to_translate`) are `engineDenied` in v7 (no generated JS lang files —
+  labels are DB-derived; the CSV workflow is unported); and the response area
+  dumped the whole envelope twice.
+- **Shape after (TS):** the `update_ontology` `get_value` envelope DROPS the
+  `structure_from_server` key. Remaining keys: `servers` (probed),
+  `current_ontology`, `active_ontology_tlds`, `body`, `confirm_text`. This
+  SUPERSEDES the `structure_from_server` entry in the WC-023 / WC-028 byte
+  lists. No frozen parity fixture ever carried `structure_from_server`, so the
+  pinned oracle-harvest store is untouched.
+- **Probe/manifest transport:** `checkRemoteServer` now POSTs a JSON body (the
+  TS API parses `request.json()` and 400s a form body, matching the vendored
+  client's `data_manager.request`). PHP's `check_remote_server` posted
+  `rqo=`-form-encoded because the PHP server read `$_POST['rqo']`; against a TS
+  master that made the readiness probe read back "Invalid JSON body", so the
+  panel disabled every TS master's radio. This is a deliberate divergence from
+  the PHP form encoding.
+- **Client (TS-owned, same commit):** `render_update_ontology.js` rebuilt around
+  the one working action (master pull → overwrite), on the shared `widget_kit`
+  vocabulary. It no longer renders the `STRUCTURE_FROM_SERVER` /
+  `ACTIVE_ONTOLOGY_TLDS` "Config" grid (WC-028's config-grid row is GONE; the
+  active-TLDs value survives only as the form input's default), the raw
+  current-ontology JSON dump, the duplicated response, or the always-open JSON
+  envelope, and it drops the `rebuild_lang_files` / `export_to_translate`
+  panels. Those two REMAIN `engineDenied` server actions — the wire is
+  unchanged, only the UI stopped surfacing dead buttons.
+- **Gates:** `test/unit/ontology_ingest.test.ts` (the JSON-body probe
+  regression + the recovery-snapshot / counter `\copy`/`-c` interpolation
+  regressions); `test/unit/engine_denied_boundary.test.ts` (the two folded
+  actions stay denied server-side). The panel `get_value` shape has no automated
+  fixture (no live oracle post-cutover); the drop is verified by absence — no
+  test or fixture asserts `structure_from_server`.
+
+## WC-033 — the site-builder subsystem: `tool_sitebuilder` + `site_builder_status` are TS-ONLY surfaces (no PHP twin)
 
 - **Date:** 2026-07-16 (subsystem built 2026-07-15).
 - **Shape:** a wholly TS-native addition with no PHP-oracle counterpart. The

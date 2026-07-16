@@ -197,6 +197,12 @@ export async function buildPageGlobals(
 		full_username: isLogged ? '' : null, // root has no full name on this install
 		dedalo_entity: config.entity, // DEDALO_ENTITY
 		dedalo_entity_id: config.identity.entityId, // DEDALO_ENTITY_ID
+		// WC-031: TS-ONLY page_globals key (PHP get_page_globals has no twin). Lets the
+		// client skin the whole app when this install is an ontology MASTER server so
+		// admins juggling many installations recognize it at a glance. Emitted
+		// UNCONDITIONALLY (like maintenance_mode / DEVELOPMENT_SERVER) so the login form
+		// is marked too; it is not reconnaissance-sensitive (no DB name / version leak).
+		is_ontology_server: config.ontologyIo.isOntologyServer,
 		// API-03: version strings only for authenticated callers.
 		dedalo_version: isLogged ? DEDALO_ENGINE_VERSION : null,
 		dedalo_build: isLogged ? '2026-03-14T13:52:19+02:00' : null, // [install]

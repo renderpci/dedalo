@@ -6555,6 +6555,76 @@ dd-modal .footer.distribute {
   background-color: var(--color_white);
 }
 /**
+* ontology_server
+*
+* Ontology MASTER server skin. Applied when the install is an ontology master
+* (IS_AN_ONTOLOGY_SERVER=true): the server emits page_globals.is_ontology_server
+* (WC-031) and page.js set_custom_css() adds `body.is_ontology_server`.
+*
+* Purpose: make this installation unmistakable at a glance so admins working
+* with many installations at once don't confuse it with a regular one. The
+* signal reuses the app's existing ontology colour (--color_green_ontology,
+* #276f67) so it reads as "ontology", not as an error/warning. Works in both
+* light and dark themes (the teal carries white text on both).
+*
+* All markers are position:fixed pseudo-elements with pointer-events:none, so
+* they never intercept clicks and need no extra DOM. Included from main.less.
+*/
+body.is_ontology_server {
+  --ontology_server_bg: var(--color_green_ontology);
+  --ontology_server_fg: #ffffff;
+}
+body.is_ontology_server:before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background-color: var(--ontology_server_bg);
+  background-image: linear-gradient(90deg, var(--ontology_server_bg), var(--color_green_ontology_hover) 50%, var(--ontology_server_bg));
+  z-index: 10000;
+  pointer-events: none;
+}
+body.is_ontology_server:after {
+  content: 'ONTOLOGY SERVER';
+  position: fixed;
+  bottom: 0.6rem;
+  left: 0.6rem;
+  padding: 0.55rem 1rem 0.55rem 2.5rem;
+  background-color: var(--ontology_server_bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1.7' stroke-linecap='round'%3E%3Cpath d='M6.5 7.5 17 8.5M6.5 7.5 11.5 17M17 8.5 11.5 17'/%3E%3C/g%3E%3Cg fill='%23fff'%3E%3Ccircle cx='6.5' cy='7.5' r='2.7'/%3E%3Ccircle cx='17' cy='8.5' r='2.7'/%3E%3Ccircle cx='11.5' cy='17' r='2.7'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 0.85rem center;
+  background-size: 1.15em 1.15em;
+  color: var(--ontology_server_fg);
+  font-family: 'SF Mono', 'JetBrains Mono', 'Menlo', 'Monaco', monospace;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  border-radius: 4px;
+  box-shadow: var(--shadow-2);
+  opacity: 0.92;
+  z-index: 10000;
+  pointer-events: none;
+  white-space: nowrap;
+  animation: ontology_badge_in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
+}
+body.is_ontology_server .menu > .content_data {
+  background-color: var(--ontology_server_bg);
+}
+@keyframes ontology_badge_in {
+  from {
+    opacity: 0;
+    transform: translateX(-150%);
+  }
+  to {
+    opacity: 0.92;
+    transform: translateX(0);
+  }
+}
+/**
 * installer
 *
 * Installer wizard UI, aligned with the unit-test client's "dev-dashboard / IDE"
@@ -9029,10 +9099,12 @@ dd-modal .footer.distribute {
   padding-left: 1rem;
 }
 .menu > .content_data > .ontology {
-  color: var(--color_grey_11);
+  color: var(--color_grey_14);
   margin-left: 0.5rem;
   margin-right: 0.5rem;
   cursor: pointer;
+  border-bottom: 2px solid var(--color_green_ontology);
+  padding-bottom: 1px;
 }
 @media screen and (max-width: 1185px) {
   .menu > .content_data > .ontology.top_item {
@@ -15101,71 +15173,186 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 /**
 * update_ontology
 *
-* Included from area_maintenance.less file
+* One focused flow: pull an ontology snapshot from a master and overwrite the
+* local one. Built on the shared widget_kit vocabulary (.dd_readout / .dd_note /
+* .dd_badge pills / .dd_eyebrow) so it reads as the same component family as
+* media_control and diffusion_server_control. Response states + console blocks
+* come from .dd_response_states() (applied to .body_response in area_maintenance.less).
+*
+* Scoping note: the widget's content node is CLASSLESS, so styles hang off the
+* JS-assigned `.update_ontology_content` class and the widget-specific element
+* classes — never a `.content_data` class (which does not exist here).
+*
+* Included from area_maintenance.less.
 */
-.wrapper_widget.update_ontology > .content_data > .pre_clean {
-  padding: 0.7rem 0.85rem;
-  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
-  font-size: 0.8rem;
-  line-height: 1.45;
-  color: var(--fg_default);
-  white-space: pre-wrap;
-  word-break: break-word;
-  background-color: var(--bg_surface_alt);
-  border: 1px solid var(--border_default);
-  border-radius: 6px;
-  margin: 0.5rem 0 0;
-  opacity: 0.9;
-}
-.wrapper_widget.update_ontology > .content_data .config_grid {
-  grid-template-columns: 3fr 5fr;
-  gap: 0.25rem;
-}
-.wrapper_widget.update_ontology > .content_data .config_grid .label {
+.wrapper_widget.update_ontology .update_ontology_content {
   display: flex;
-  align-items: flex-start;
-  flex-wrap: nowrap;
+  flex-direction: column;
+  gap: 1.25rem;
 }
-.wrapper_widget.update_ontology > .content_data .config_grid .label.bold {
-  padding-bottom: 0.5rem !important;
+.wrapper_widget.update_ontology .overwrite_note {
+  margin: 0;
 }
-.wrapper_widget.update_ontology > .content_data .config_grid.servers_grid .label {
-  display: block;
-  cursor: pointer;
-  padding-bottom: 0px;
-  padding-top: 0.2rem;
+.wrapper_widget.update_ontology .section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.wrapper_widget.update_ontology .server_picker {
+  border: 1px solid var(--border_default);
+  border-radius: 8px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  background-color: var(--bg_surface);
 }
-.wrapper_widget.update_ontology > .content_data .config_grid.servers_grid .label input[type="radio"] {
+.wrapper_widget.update_ontology .server_picker .server_row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.85rem;
+  border-top: 1px solid var(--border_default);
   cursor: pointer;
+}
+.wrapper_widget.update_ontology .server_picker .server_row:first-child {
+  border-top: 0;
+}
+.wrapper_widget.update_ontology .server_picker .server_row.on {
+  background-color: color-mix(in srgb, var(--color_primary) 6%, transparent);
+}
+.wrapper_widget.update_ontology .server_picker .server_row.off {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.wrapper_widget.update_ontology .server_picker .server_row input[type="radio"] {
   width: unset;
   height: unset;
+  min-height: 0;
+  margin: 0;
   padding: 0;
-  margin: 0 0.5em 0.5em 0;
-  vertical-align: text-top;
+  flex: 0 0 auto;
+  accent-color: var(--color_primary);
+  cursor: pointer;
 }
-.wrapper_widget.update_ontology > .content_data .config_grid.servers_grid .value {
-  padding: 0.5rem;
-  padding-bottom: 0px;
-  padding-top: 0.2rem;
+.wrapper_widget.update_ontology .server_picker .server_row .meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
 }
-.wrapper_widget.update_ontology > .content_data .config_grid.servers_grid .value .icon {
-  margin-left: 0.5rem;
+.wrapper_widget.update_ontology .server_picker .server_row .meta .nm {
+  font-weight: 600;
+  color: var(--fg_default);
 }
-.wrapper_widget.update_ontology > .content_data .config_grid.servers_grid .active {
-  color: var(--color_black);
-  font-weight: 500;
+.wrapper_widget.update_ontology .server_picker .server_row .meta .url {
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.78rem;
+  color: var(--fg_muted);
+  word-break: break-all;
 }
-.wrapper_widget.update_ontology > .content_data .form_container {
-  padding-top: 0px;
+.wrapper_widget.update_ontology .server_picker .server_row .dd_badge {
+  flex: 0 0 auto;
 }
-.wrapper_widget.update_ontology > .content_data > .container {
-  padding-top: 1.5rem;
+.wrapper_widget.update_ontology .version_change {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0.7rem;
+  align-items: stretch;
+  margin-bottom: 0.6rem;
 }
-.wrapper_widget.update_ontology > .content_data > .container > .info_text {
-  padding-bottom: 0.5rem;
+.wrapper_widget.update_ontology .version_change .vcard {
+  border: 1px solid var(--border_default);
+  border-radius: 8px;
+  padding: 0.65rem 0.8rem;
+  background-color: var(--bg_surface_alt);
+}
+.wrapper_widget.update_ontology .version_change .vcard.incoming {
+  border-color: color-mix(in srgb, var(--color_danger) 40%, var(--border_default));
+  background-color: color-mix(in srgb, var(--color_danger) 6%, var(--bg_surface_alt));
+}
+.wrapper_widget.update_ontology .version_change .vcard .lbl {
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fg_muted);
+}
+.wrapper_widget.update_ontology .version_change .vcard .num {
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 1.2rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  margin: 0.15rem 0 0.1rem;
+  color: var(--fg_default);
+}
+.wrapper_widget.update_ontology .version_change .vcard .src {
+  font-size: 0.78rem;
+  color: var(--fg_muted);
+  word-break: break-word;
+}
+.wrapper_widget.update_ontology .version_change .arrow {
+  align-self: center;
+  color: var(--color_danger);
+  font-size: 1.35rem;
+  line-height: 1;
+}
+@media (max-width: 520px) {
+  .wrapper_widget.update_ontology .version_change {
+    grid-template-columns: 1fr;
+  }
+  .wrapper_widget.update_ontology .version_change .arrow {
+    justify-self: center;
+    transform: rotate(90deg);
+  }
+}
+.wrapper_widget.update_ontology .form_container {
+  padding-top: 0;
+}
+.wrapper_widget.update_ontology .form_container .button_submit {
+  color: var(--color_danger);
+  border: 1px solid color-mix(in srgb, var(--color_danger) 45%, transparent);
+  background-color: color-mix(in srgb, var(--color_danger) 10%, transparent);
+  font-weight: 600;
+}
+.wrapper_widget.update_ontology .form_container .button_submit:hover {
+  background-color: color-mix(in srgb, var(--color_danger) 18%, transparent);
+}
+.wrapper_widget.update_ontology .body_response .response_detail {
+  border: 1px solid var(--border_default);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--bg_surface);
+  margin-top: 0.5rem;
+}
+.wrapper_widget.update_ontology .body_response .response_detail > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--fg_default);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.wrapper_widget.update_ontology .body_response .response_detail > summary::-webkit-details-marker {
+  display: none;
+}
+.wrapper_widget.update_ontology .body_response .response_detail > summary:before {
+  content: '▸';
+  color: var(--fg_muted);
+  font-size: 0.8rem;
+  transition: transform 0.12s ease;
+}
+.wrapper_widget.update_ontology .body_response .response_detail[open] > summary:before {
+  transform: rotate(90deg);
+}
+.wrapper_widget.update_ontology .body_response .response_detail > pre {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--border_default);
+  border-radius: 0;
+  max-height: 260px;
+  overflow: auto;
 }
 /**
 * update_code
