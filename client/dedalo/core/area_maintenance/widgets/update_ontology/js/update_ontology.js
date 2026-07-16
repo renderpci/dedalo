@@ -15,8 +15,8 @@
 *      entries need updating.
 *   2. Submit the selected file list to the local server (`update_ontology`
 *      action on `dd_area_maintenance_api`) which downloads, imports, and
-*      reindexes the ontology tables, regenerates JS lang files, and flushes
-*      the hierarchy cache.
+*      reindexes the ontology tables and purges the ontology-derived caches.
+*      (v7 has no generated JS lang files — labels are DB-derived.)
 *
 * Additionally the module exposes:
 *   - `supported_code_version` — version-range guard used after import to
@@ -58,9 +58,9 @@
 * @property {string}  mode          - Render mode: 'edit' | 'list'.
 * @property {*}       value         - Hydrated widget value object fetched from
 *                                     `get_value`; shape defined by the server-side
-*                                     `update_ontology::get_value()` PHP method:
+*                                     `update_ontology.ts` getValue:
 *                                     { servers, current_ontology, active_ontology_tlds,
-*                                       structure_from_server, confirm_text }.
+*                                       body, confirm_text }.
 * @property {HTMLElement} node      - Root DOM node of this widget after render.
 * @property {Array}   events_tokens - Subscriptions registered via event_manager;
 *                                     drained on destroy to avoid listener leaks.
@@ -163,9 +163,9 @@ update_ontology.prototype.supported_code_version = (required_version) => {
 * this action (see `API_ACTIONS` allowlist in the PHP class).
 *
 * The request runs inside a web worker (`use_worker: true`) and uses a 1-hour
-* timeout because the server pipeline (download + pg_restore + dd_ontology
-* rebuild + lang-file generation + hierarchy cache flush) can legitimately
-* take tens of minutes on large deployments.
+* timeout because the server pipeline (staged download + `\copy` import +
+* dd_ontology rebuild + cache purge) can legitimately take tens of minutes on
+* large deployments.
 *
 * `retries: 1` means exactly one attempt — retrying an ontology import
 * automatically could leave tables in a partially-imported state.
