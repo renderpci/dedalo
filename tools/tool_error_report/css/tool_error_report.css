@@ -248,11 +248,17 @@
   box-sizing: border-box;
   resize: vertical;
   margin: 0 0 1em 0;
+  padding: 1rem;
+  min-height: 7rem;
 }
 .tool_error_report .error_report_footer {
   display: flex;
   align-items: center;
   gap: 1em;
+}
+.tool_error_report .error_report_response {
+  padding: 0.5rem;
+  border-radius: 4px;
 }
 .tool_error_report .error_report_response.error {
   color: #b00020;
