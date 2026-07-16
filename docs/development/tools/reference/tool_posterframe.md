@@ -128,7 +128,7 @@ i.e. "frames captured for records reached through this portal are stored in imag
 ## Related
 
 - [tool_media_versions](tool_media_versions.md) — manage the qualities/versions the posterframe and identifying image produce (build, rotate, delete, conform headers).
-- [tool_import_files](tool_import_files.md) — bulk-ingest media files (incl. AV) and the records that wrap them; `tool_image_rotation` rotates/crops the resulting image files (see the [tools catalog](index.md)).
+- [tool_import_files](tool_import_files.md) — bulk-ingest media files (incl. AV) and the records that wrap them; [tool_image_rotation](tool_image_rotation.md) rotates/crops the resulting image files.
 - [tool_subtitles](tool_subtitles.md), [tool_transcription](tool_transcription.md) — the other AV-centric tools that also host a media player and act on the same `component_av`.
 - `component_av` `create_posterframe` / `delete_posterframe` (`dd_component_av_api`, registered in `src/core/api/dispatch.ts`) — the component-level posterframe actions this tool surfaces buttons for (these do **not** go through `tool_posterframe`; TS-ported).
 - [Exporting data](../../../core/exporting_data.md) — the export side ([tool_export](tool_export.md)), for context on the wider tools catalog.

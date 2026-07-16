@@ -126,8 +126,8 @@ const response = await data_manager.request({ body: rqo, retries: 1, timeout: 36
 
 ## Related
 
-- [tool_image_rotation](index.md) — applies rotation + proportional crop to image-component files across all qualities (the standalone rotation tool); `tool_media_versions` exposes rotation inline as a per-quality `specific_action`.
+- [tool_image_rotation](tool_image_rotation.md) — applies rotation + proportional crop to image-component files across all qualities (the standalone rotation tool); `tool_media_versions` exposes rotation inline as a per-quality `specific_action`.
 - [tool_posterframe](tool_posterframe.md) — extracts a posterframe/thumbnail from an AV file; complements the AV quality/header management here.
-- [tool_upload](index.md) · [tool_import_files](tool_import_files.md) — get the master file *into* a media component; `tool_media_versions` then manages the derived qualities of that master.
+- [tool_upload](tool_upload.md) · [tool_import_files](tool_import_files.md) — get the master file *into* a media component; `tool_media_versions` then manages the derived qualities of that master.
 - [Creating new tools](../creating_tools.md) · [Server contract](../server_contract.md) — the tool model, `apiActions`, permission gates and lifecycle this page builds on.
 - Source: `tools/tool_media_versions/server/{index,media_versions}.ts`, `tools/tool_media_versions/register.json`, `tools/tool_media_versions/js/{tool_media_versions,render_tool_media_versions}.js`, `tools/tool_media_versions/css/tool_media_versions.less`. The underlying media engines live under `src/core/media/` (see the `dedalo-media-protection` skill).
