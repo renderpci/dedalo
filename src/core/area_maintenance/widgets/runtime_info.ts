@@ -82,7 +82,7 @@ export const widget: WidgetModule = {
 	spec: {
 		id: 'runtime_info',
 		category: 'system',
-		label: { kind: 'literal', text: 'RUNTIME INFO' },
+		label: { kind: 'literal', text: 'Runtime info' },
 	},
 	apiActions: {
 		clear_cache_files: runtimeInfoClearCaches,

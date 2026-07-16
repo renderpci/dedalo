@@ -349,15 +349,10 @@ const handle_submit = async (body_response, target_lock, api_call) => {
 		body_response.removeChild(body_response.firstChild);
 	}
 
-	// loading add
-	target_lock.classList.add('lock')
-	const spinner = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'spinner'
-	})
-	body_response.prepend(spinner)
-
 	// API worker call
+	// (!) No form `lock` and no body_response spinner here: build_form already puts a
+	// button_spinner on the submit button for the whole request, so both were redundant.
+	// `target_lock` is kept in the signature for call-site compatibility but unused.
 	const api_response = await api_call();
 
 	// response_node pre JSON response
@@ -376,10 +371,6 @@ const handle_submit = async (body_response, target_lock, api_call) => {
 			parent			: body_response
 		})
 	}
-
-	// loading remove
-	spinner.remove()
-	target_lock.classList.remove('lock')
 }//end handle_submit
 
 

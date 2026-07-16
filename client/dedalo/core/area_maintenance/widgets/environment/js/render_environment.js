@@ -135,7 +135,10 @@ const get_content_data_edit = async function(self) {
 			e.stopPropagation()
 
 			// url
-			const url = `../common/js/environment.js.php`
+			// The PHP engine served this at core/common/js/environment.js.php; the TS
+			// engine can't run PHP, so that path 404s. The environment payload is now a
+			// session-gated GET route (src/core/api/environment_view.ts).
+			const url = `${DEDALO_CORE_URL}/api/v1/environment`
 
 			window.open(url)
 		})

@@ -7,6 +7,6 @@ export const widget: WidgetModule = {
 		id: 'dedalo_api_test_environment',
 		category: 'dev',
 		class: 'green fit width_100',
-		label: { kind: 'literal', text: 'DÉDALO API TEST ENVIRONMENT' },
+		label: { kind: 'literal', text: 'Dédalo API test environment' },
 	},
 };

@@ -204,39 +204,46 @@ const add_action_button = function(o) {
 		// blur button
 		document.activeElement.blur()
 
-		const api_response = await o.run()
+		// locks the button submit
+		button.classList.add('button_spinner')
 
-		// SUCCESS is a truthy `result` (the TS widget_request returns
-		// result:{cleared:[…]} / {pruned:N} on success and result:false on
-		// failure — NOT the boolean `true` the PHP-era check assumed).
-		const ok = !!(api_response && api_response.result)
+		try {
+			const api_response = await o.run()
 
-		// run the success refresh FIRST (it only updates the data panel, leaving
-		// body_response untouched) so the message printed below survives.
-		if (ok && typeof o.on_success==='function') {
-			await o.on_success()
-		}
+			// SUCCESS is a truthy `result` (the TS widget_request returns
+			// result:{cleared:[…]} / {pruned:N} on success and result:false on
+			// failure — NOT the boolean `true` the PHP-era check assumed).
+			const ok = !!(api_response && api_response.result)
 
-		// clear any previous message so repeated clicks don't stack
-		ui.update_node_content(o.body_response, '')
+			// run the success refresh FIRST (it only updates the data panel, leaving
+			// body_response untouched) so the message printed below survives.
+			if (ok && typeof o.on_success==='function') {
+				await o.on_success()
+			}
 
-		if (!ok) {
+			// clear any previous message so repeated clicks don't stack
+			ui.update_node_content(o.body_response, '')
+
+			if (!ok) {
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'error',
+					inner_html		: (api_response && api_response.msg) || ('Error: failed ' + o.label),
+					parent			: o.body_response
+				})
+				return
+			}
+
+			// message OK
 			ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'error',
-				inner_html		: (api_response && api_response.msg) || ('Error: failed ' + o.label),
+				class_name		: 'ok',
+				inner_html		: api_response.msg || ('OK. ' + o.label),
 				parent			: o.body_response
 			})
-			return
+		} finally {
+			button.classList.remove('button_spinner')
 		}
-
-		// message OK
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'ok',
-			inner_html		: api_response.msg || ('OK. ' + o.label),
-			parent			: o.body_response
-		})
 	}//end fn_submit
 
 	const button = ui.create_dom_element({

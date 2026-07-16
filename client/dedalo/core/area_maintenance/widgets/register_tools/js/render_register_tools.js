@@ -157,11 +157,23 @@ const render_content_data = async function(self) {
 		})
 
 	// datalist
+		// datalist_container holds the header row + the live tool rows; render_datalist
+		// populates the rows and can replace them on subsequent calls (e.g. after
+		// registration) while preserving the header (its first child).
+			const datalist_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'datalist_container dd_table',
+				parent			: content_data
+			})
+
 		// header
+		// (!) must live INSIDE datalist_container (the .dd_table grid) so its cells
+		// align to the same columns as the data rows; .dd_tr is display:contents, so a
+		// header placed outside the grid collapses into a vertical stack.
 			const tool_item = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'dd_tr header',
-				parent			: content_data
+				parent			: datalist_container
 			})
 			// name
 			ui.create_dom_element({
@@ -180,7 +192,7 @@ const render_content_data = async function(self) {
 			})
 
 			// installed_version
-			const installed_version_node = ui.create_dom_element({
+			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'dd_th num',
 				inner_html		: get_label.installed || 'Installed',
@@ -204,13 +216,7 @@ const render_content_data = async function(self) {
 				parent			: tool_item
 			})
 
-		// datalist_container holds the live tool rows; render_datalist populates it
-		// and can replace its contents on subsequent calls (e.g. after registration)
-			const datalist_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'datalist_container dd_table',
-				parent			: content_data
-			})
+		// datalist rows
 			render_datalist(self, datalist_container)
 
 	// info errors

@@ -253,29 +253,29 @@ const get_content_data_edit = async function(self) {
 							return false
 						}
 
-						// loading
+						// loading — dim content + a self-contained spinner ON the button
 						content_data.classList.add('loading')
+						button_submit.classList.add('button_spinner')
 
-						// data_manager
-						// Send the RQO directly to the Dédalo worker.
-						// retries:1 means a single attempt only (no auto-retry on failure).
-						// timeout is intentionally set to 1 hour to accommodate long-running
-						// admin operations (e.g. rebuilds, migrations) that may take minutes.
-						// (!) `body_response` referenced here is declared below this closure.
-						//     The click handler captures it via closure — this is intentional.
-						const api_response = await data_manager.request({
-							body : rqo,
-							retries : 1, // one try only
-							timeout : 3600 * 1000 // 1 hour waiting response
-						})
-						if(SHOW_DEBUG===true) {
-							// console.log("/// json_editor_api api_response:",api_response);
+						try {
+							// data_manager
+							// Send the RQO directly to the Dédalo worker.
+							// retries:1 means a single attempt only (no auto-retry on failure).
+							// timeout is intentionally set to 1 hour to accommodate long-running
+							// admin operations (e.g. rebuilds, migrations) that may take minutes.
+							// (!) `body_response` referenced here is declared below this closure.
+							//     The click handler captures it via closure — this is intentional.
+							const api_response = await data_manager.request({
+								body : rqo,
+								retries : 1, // one try only
+								timeout : 3600 * 1000 // 1 hour waiting response
+							})
+
+							print_response(body_response, api_response)
+						} finally {
+							content_data.classList.remove('loading')
+							button_submit.classList.remove('button_spinner')
 						}
-
-						// loading
-						content_data.classList.remove('loading')
-
-						print_response(body_response, api_response)
 					}
 					button_submit.addEventListener('click', click_handler)
 

@@ -270,27 +270,14 @@ export const render_export_hierarchy_node = function (options) {
 				const input			= values.find(el => el.name==='section_tipo')
 				const section_tipo	= input?.value // string like '*'
 
-				const form_container = e.target
-
 				// clean
 				while (body_response.firstChild) {
 					body_response.removeChild(body_response.firstChild);
 				}
 
-				// spinner
-				const spinner = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'spinner'
-				})
-				body_response.prepend(spinner)
-				form_container.classList.add('lock')
-
 				// API process fire
 				self.exec_export_hierarchy(section_tipo)
 				.then(function(response){
-
-					form_container.classList.remove('lock')
-					spinner.remove()
 
 					render_export_response(response, body_response)
 				})
@@ -468,27 +455,14 @@ export const render_sync_hierarchy_active_status_node = function (options) {
 			inputs			: [],
 			on_submit		: (e, values) => {
 
-				const form_container = e.target
-
 				// clean
 					while (body_response.firstChild) {
 						body_response.removeChild(body_response.firstChild);
 					}
 
-				// spinner
-					const spinner = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'spinner'
-					})
-					body_response.prepend(spinner)
-					form_container.classList.add('lock')
-
 				// API process fire
 				self.sync_hierarchy_active_status()
 				.then(function(response){
-
-					form_container.classList.remove('lock')
-					spinner.remove()
 
 					const json_node = ui.create_dom_element({
 						element_type	: 'pre',

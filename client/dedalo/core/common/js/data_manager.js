@@ -104,14 +104,18 @@ Object.defineProperty(data_manager, 'url', {
 
 /**
 * HEALTH_URL
-* Derived URL of the lightweight health-check endpoint (`<url>health/`).
-* Called by `check_server_health` to determine whether a slow main request
-* is still being processed or the server is truly unreachable.
+* URL of the engine's lightweight liveness endpoint. The TS/Bun engine serves it
+* at the ORIGIN ROOT `/health` (src/server.ts: `url.pathname === '/health'`), NOT
+* under the API path — the legacy PHP `<api>/health/` path 404s on the TS engine
+* (that stale path is why the system_info widget reported `false`). Kept as an
+* absolute, origin-relative path so it resolves the same from any page depth; the
+* reverse proxy must forward `/health` to the engine (see deploy/nginx.conf).
+* Called by `check_server_health` to tell a slow-but-alive server from a dead one.
 * @type {string}
 */
 Object.defineProperty(data_manager, 'health_url', {
 	get: function() {
-		return this.url + 'health/'
+		return '/health'
 	}
 });
 

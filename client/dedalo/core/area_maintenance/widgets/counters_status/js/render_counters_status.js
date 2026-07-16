@@ -300,26 +300,19 @@ const get_content_data_edit = async function(self) {
 									return false;
 								}
 
-							// lock
-								content_data.classList.add('lock')
+							// button_spinner
+								button_fix.classList.add('button_spinner')
 
-							// spinner
-								const spinner = ui.create_dom_element({
-									element_type	: 'div',
-									class_name		: 'spinner'
-								})
-								body_response.prepend(spinner)
-
-							// modify_counter
-								await self.modify_counter({
-									counter_action	: 'fix',
-									section_tipo	: item.section_tipo,
-									body_response	: body_response
-								})
-
-							// lock
-								content_data.classList.remove('lock')
-								spinner.remove()
+							try {
+								// modify_counter
+									await self.modify_counter({
+										counter_action	: 'fix',
+										section_tipo	: item.section_tipo,
+										body_response	: body_response
+									})
+							} finally {
+									button_fix.classList.remove('button_spinner')
+							}
 						}//end fn_fix_counter
 					}
 
@@ -359,26 +352,19 @@ const get_content_data_edit = async function(self) {
 									return false;
 								}
 
-							// lock
-								content_data.classList.add('lock')
+							// button_spinner
+								button_reset_counter.classList.add('button_spinner')
 
-							// spinner
-								const spinner = ui.create_dom_element({
-									element_type	: 'div',
-									class_name		: 'spinner'
-								})
-								body_response.prepend(spinner)
-
-							// modify_counter
-								await self.modify_counter({
-									counter_action	: 'reset',
-									section_tipo	: item.section_tipo,
-									body_response	: body_response
-								})
-
-							// lock
-								content_data.classList.remove('lock')
-								spinner.remove()
+							try {
+								// modify_counter
+									await self.modify_counter({
+										counter_action	: 'reset',
+										section_tipo	: item.section_tipo,
+										body_response	: body_response
+									})
+							} finally {
+									button_reset_counter.classList.remove('button_spinner')
+							}
 						}//end fn_reset_counter
 					}
 

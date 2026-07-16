@@ -156,7 +156,12 @@ const get_content_data_edit = async function(self) {
 		})
 		button_refresh.addEventListener('click', async (e) => {
 			e.stopPropagation()
-			await reload_widget(self, content_data)
+			button_refresh.classList.add('button_spinner')
+			try {
+				await reload_widget(self, content_data)
+			} finally {
+				button_refresh.classList.remove('button_spinner')
+			}
 		})
 
 	// body_response (action results)
@@ -334,7 +339,12 @@ const build_scheduler_block = function(self, value, parent) {
 			if (!confirm((get_label.sure || 'Sure?') + '\n' + next + ' the diffusion scheduler?')) {
 				return
 			}
-			await run_action(self, parent, scheduler_block, () => self.set_scheduler(next))
+			button_toggle.classList.add('button_spinner')
+			try {
+				await run_action(self, parent, scheduler_block, () => self.set_scheduler(next))
+			} finally {
+				button_toggle.classList.remove('button_spinner')
+			}
 		})
 	}
 
@@ -467,7 +477,12 @@ const build_jobs_block = function(self, value, parent) {
 					if (!confirm((get_label.sure || 'Sure?') + '\nCancel ' + (job.process_id || '') + '?')) {
 						return
 					}
-					await run_action(self, parent, jobs_block, () => self.cancel_process(job.process_id))
+					button_cancel.classList.add('button_spinner')
+					try {
+						await run_action(self, parent, jobs_block, () => self.cancel_process(job.process_id))
+					} finally {
+						button_cancel.classList.remove('button_spinner')
+					}
 				})
 			}
 			if (is_admin && REQUEUEABLE.includes(state)) {
@@ -482,7 +497,12 @@ const build_jobs_block = function(self, value, parent) {
 					if (!confirm((get_label.sure || 'Sure?') + '\nRequeue ' + (job.process_id || job.job_id || '') + '?')) {
 						return
 					}
-					await run_action(self, parent, jobs_block, () => self.requeue_job(job.job_id))
+					button_requeue.classList.add('button_spinner')
+					try {
+						await run_action(self, parent, jobs_block, () => self.requeue_job(job.job_id))
+					} finally {
+						button_requeue.classList.remove('button_spinner')
+					}
 				})
 			}
 		}
@@ -522,7 +542,12 @@ const build_jobs_block = function(self, value, parent) {
 			if (!confirm((get_label.sure || 'Sure?') + '\nPurge terminal jobs older than ' + older_than_hours + 'h?')) {
 				return
 			}
-			await run_action(self, parent, purge_bar, () => self.purge_jobs(older_than_hours))
+			button_purge.classList.add('button_spinner')
+			try {
+				await run_action(self, parent, purge_bar, () => self.purge_jobs(older_than_hours))
+			} finally {
+				button_purge.classList.remove('button_spinner')
+			}
 		})
 	}
 
@@ -581,7 +606,12 @@ const build_pending_block = function(self, value, parent) {
 		})
 		button_retry.addEventListener('click', async (e) => {
 			e.stopPropagation()
-			await run_action(self, parent, pending_block, () => self.retry_pending_deletions())
+			button_retry.classList.add('button_spinner')
+			try {
+				await run_action(self, parent, pending_block, () => self.retry_pending_deletions())
+			} finally {
+				button_retry.classList.remove('button_spinner')
+			}
 		})
 	}
 
@@ -693,11 +723,6 @@ const run_action = async function(self, content_data, anchor, api_call) {
 
 	const body_response = content_data.querySelector('.body_response')
 	content_data.classList.add('lock')
-	const spinner = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'spinner'
-	})
-	anchor.appendChild(spinner)
 
 	let api_response
 	try {
@@ -707,7 +732,6 @@ const run_action = async function(self, content_data, anchor, api_call) {
 		api_response = { result: false, msg: (error && error.message) || 'Unknown error' }
 	}
 
-	spinner.remove()
 	content_data.classList.remove('lock')
 
 	// SEC-XSS: textContent prevents any HTML parsing of server strings

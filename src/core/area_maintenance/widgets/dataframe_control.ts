@@ -245,7 +245,7 @@ export const widget: WidgetModule = {
 		id: 'dataframe_control',
 		category: 'integrity',
 		class: 'width_100',
-		label: { kind: 'literal', text: 'DATAFRAME PAIRING INTEGRITY' },
+		label: { kind: 'literal', text: 'Dataframe pairing integrity' },
 	},
 	apiActions: {
 		get_value: dataframeControlGetValue,

@@ -1656,46 +1656,48 @@ export const build_form = function(widget_object) {
 						}
 					}
 
-				// on_submit. Overwrites default submit action
-					if (on_submit) {
-						return on_submit(e, values)
-					}
+				// button_spinner: self-contained ring spinner ON the submit button for
+				// the whole request lifecycle. Unlike an absolutely-positioned overlay
+				// spinner it can never escape the widget card. The finally clause guarantees
+				// it is cleared on every exit path (success, error, or custom on_submit).
+					button_submit.classList.add('button_spinner')
 
-				// submit data
-					form_container.classList.add('lock')
-
-					// spinner
-					const spinner = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'spinner'
-					})
-					body_response.prepend(spinner)
-
-					const options = (trigger.options)
-						? Object.assign(trigger.options, values)
-						: values
-
-					// data_manager
-						const api_response = await data_manager.request({
-							use_worker	: true,
-							body		: {
-								dd_api			: trigger.dd_api,
-								action			: trigger.action,
-								prevent_lock	: true,
-								source			: trigger.source || null,
-								options			: options
-							},
-							retries : 1, // one try only
-							timeout : 3600 * 1000 // 1 hour waiting response
-						})
-						print_response(body_response, api_response)
-						form_container.classList.remove('lock')
-						spinner.remove()
-
-					// on_done. Execute function after request
-						if (on_done) {
-							return on_done(api_response)
+				try {
+					// on_submit. Overwrites default submit action
+						if (on_submit) {
+							return await on_submit(e, values)
 						}
+
+					// submit data
+						// NOTE: no form `lock` and no body_response spinner here — the
+						// button_spinner above is the single loading indicator now (both
+						// were redundant once the button shows its own spinner).
+						const options = (trigger.options)
+							? Object.assign(trigger.options, values)
+							: values
+
+						// data_manager
+							const api_response = await data_manager.request({
+								use_worker	: true,
+								body		: {
+									dd_api			: trigger.dd_api,
+									action			: trigger.action,
+									prevent_lock	: true,
+									source			: trigger.source || null,
+									options			: options
+								},
+								retries : 1, // one try only
+								timeout : 3600 * 1000 // 1 hour waiting response
+							})
+							print_response(body_response, api_response)
+
+						// on_done. Execute function after request
+							if (on_done) {
+								return on_done(api_response)
+							}
+				} finally {
+					button_submit.classList.remove('button_spinner')
+				}
 			}
 		})
 

@@ -12347,7 +12347,13 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   padding: 0.4rem 0.7rem;
   border-top: 1px solid var(--border_default);
   line-height: 1.35;
+}
+.dd_table .dd_td {
   word-break: break-word;
+}
+.dd_table .dd_th {
+  word-break: normal;
+  overflow-wrap: normal;
 }
 .dd_table .dd_tr:first-child .dd_th,
 .dd_table .dd_tr:first-child .dd_td {
@@ -13119,6 +13125,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   background-color: transparent !important;
 }
 .area_maintenance > .content_data .widget_container > .widget_body .body_info {
+  position: relative;
   font-size: 0.9em;
   color: var(--fg_muted);
 }
@@ -13639,6 +13646,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   color: var(--fg_muted);
 }
 .area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .ctx_body > .widget_container {
+  position: relative;
   background-color: transparent;
   border: 0;
   border-radius: 0;
@@ -13652,6 +13660,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   display: none;
 }
 .area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_context .ctx_body > .widget_container > .widget_body {
+  position: relative;
   padding: 0;
   min-height: 0;
   background-color: transparent;
@@ -14958,7 +14967,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 * banner and the response block are widget-specific.
 */
 .wrapper_widget.register_tools .dd_table {
-  grid-template-columns: minmax(6rem, 1.3fr) minmax(5rem, 1fr) 5rem 5rem minmax(7rem, 1.4fr);
+  grid-template-columns: minmax(6rem, 1.3fr) minmax(5rem, 1fr) 6rem 5.5rem minmax(7rem, 1.4fr);
 }
 .wrapper_widget.register_tools .info_text.error {
   margin-top: 0.75rem;

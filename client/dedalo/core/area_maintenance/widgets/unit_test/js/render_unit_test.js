@@ -262,34 +262,44 @@ const render_long_process = function() {
 	// button so it is visually locked while waiting for the initial handshake.
 		const long_process_stream = async (iterations) => {
 
-			// locks the button submit
-			button_run_long_process.classList.add('loading')
+			// on-button spinner while the background job is being launched
+			button_run_long_process.classList.add('button_spinner')
 
 			// update_rate
 			const update_rate = input_update_rate.value
 				? parseInt(input_update_rate.value)
 				: 1000
 
-			// counter long process fire
-			const response  = await data_manager.request({
-				body		: {
-					dd_api			: 'dd_area_maintenance_api',
-					action			: 'class_request',
-					prevent_lock	: true,
-					source	: {
-						action : 'long_process_stream',
+			try {
+				// counter long process fire
+				// Routed through widget_request → unit_test::long_process_stream (the TS
+				// engine has no dd_area_maintenance_api::class_request; the PHP one forked
+				// a CLI child). The TS action submits an in-process mediaJobs tick job and
+				// returns the {pid, pfile} handle update_process_status streams.
+				const response  = await data_manager.request({
+					body		: {
+						dd_api			: 'dd_area_maintenance_api',
+						action			: 'widget_request',
+						prevent_lock	: true,
+						source	: {
+							type	: 'widget',
+							model	: 'unit_test',
+							action	: 'long_process_stream',
+						},
+						options : {
+							background_running	: true, // run as a background job
+							iterations			: iterations,
+							update_rate			: update_rate // milliseconds
+						}
 					},
-					options : {
-						background_running	: true, // set run in background CLI
-						iterations			: iterations,
-						update_rate			: update_rate // milliseconds
-					}
-				},
-				retries : 1, // one try only
-				timeout : 3600 * 1000 // 1 hour waiting response
-			})
+					retries : 1, // one try only
+					timeout : 3600 * 1000 // 1 hour waiting response
+				})
 
-			return response
+				return response
+			} finally {
+				button_run_long_process.classList.remove('button_spinner')
+			}
 		}//end long_process_stream
 
 		// check process status always

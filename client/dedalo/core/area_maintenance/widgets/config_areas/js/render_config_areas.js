@@ -254,7 +254,7 @@ const get_content_data = function(self) {
 	button_save.disabled = (writable===false)
 	button_save.addEventListener('click', async (e) => {
 		e.stopPropagation()
-		button_save.classList.add('lock')
+		button_save.classList.add('button_spinner')
 		ui.update_node_content(body_response, '')
 		try {
 			const api_response = await self.save(deny_list.slice(), areas_allow)
@@ -281,7 +281,7 @@ const get_content_data = function(self) {
 				parent			: body_response
 			})
 		} finally {
-			button_save.classList.remove('lock')
+			button_save.classList.remove('button_spinner')
 		}
 	})
 

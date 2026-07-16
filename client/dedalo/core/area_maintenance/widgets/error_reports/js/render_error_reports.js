@@ -178,6 +178,7 @@ const render_content_data = function(self) {
 
 		load_button.addEventListener('click', async function() {
 			load_button.disabled = true
+			load_button.classList.add('button_spinner')
 			try {
 				const api_response = await data_manager.request({
 					body : {
@@ -220,6 +221,8 @@ const render_content_data = function(self) {
 			} catch (error) {
 				console.error(error)
 				load_button.disabled = false
+			} finally {
+				load_button.classList.remove('button_spinner')
 			}
 		})
 

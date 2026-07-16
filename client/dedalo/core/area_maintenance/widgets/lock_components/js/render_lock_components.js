@@ -200,38 +200,32 @@ const get_content_data_edit = async function(self) {
 		async function fn_refresh(e) {
 			e.stopPropagation()
 
-			// lock
-				content_data.classList.add('lock')
+			// button_spinner
+				button_refresh.classList.add('button_spinner')
 
-			// spinner
-				const spinner = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'spinner'
-				})
-				info_node.prepend(spinner)
+			try {
+				// request
+					const api_response = await data_manager.request({
+						use_worker	: true,
+						body		: {
+							dd_api			: 'dd_area_maintenance_api',
+							action			: 'lock_components_actions',
+							prevent_lock	: true,
+							options			: {
+								fn_action : 'get_active_users'
+							}
+						},
+						retries : 1, // one try only
+						timeout : 3600 * 1000 // 1 hour waiting response
+					})
 
-			// request
-				const api_response = await data_manager.request({
-					use_worker	: true,
-					body		: {
-						dd_api			: 'dd_area_maintenance_api',
-						action			: 'lock_components_actions',
-						prevent_lock	: true,
-						options			: {
-							fn_action : 'get_active_users'
-						}
-					},
-					retries : 1, // one try only
-					timeout : 3600 * 1000 // 1 hour waiting response
-				})
-
-				if (api_response.result) {
-					print_active_users(api_response)
-				}
-
-			// lock
-				content_data.classList.remove('lock')
-				// spinner.remove()
+					if (api_response.result) {
+						print_active_users(api_response)
+					}
+			} finally {
+					// spinner.remove()
+					button_refresh.classList.remove('button_spinner')
+			}
 		}//end fn_refresh
 		// force first load
 		// Programmatically trigger Refresh so the lock list is populated immediately
@@ -320,43 +314,36 @@ const get_content_data_edit = async function(self) {
 					return
 				}
 
-			// lock
-				content_data.classList.add('lock')
+			// button_spinner
+				button_force_unlock_all_components.classList.add('button_spinner')
 
-			// spinner
-				const spinner = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'spinner'
-				})
-				info_node.prepend(spinner)
+			try {
+				// request
+					const api_response = await data_manager.request({
+						use_worker	: true,
+						body		: {
+							dd_api			: 'dd_area_maintenance_api',
+							action			: 'lock_components_actions',
+							prevent_lock	: true,
+							options			: {
+								fn_action	: 'force_unlock_all_components',
+								user_id		: user_id || null
+							}
+						},
+						retries : 1, // one try only
+						timeout : 3600 * 1000 // 1 hour waiting response
+					})
 
-			// request
-				const api_response = await data_manager.request({
-					use_worker	: true,
-					body		: {
-						dd_api			: 'dd_area_maintenance_api',
-						action			: 'lock_components_actions',
-						prevent_lock	: true,
-						options			: {
-							fn_action	: 'force_unlock_all_components',
-							user_id		: user_id || null
-						}
-					},
-					retries : 1, // one try only
-					timeout : 3600 * 1000 // 1 hour waiting response
-				})
-
-				// SEC-XSS-008: textContent prevents any HTML parsing of api_response.msg
-				// embedded inside the JSON string.
-				info_node.textContent = JSON.stringify({
-					action	: 'force_unlock_all_components',
-					result	: api_response.result,
-					msg		: api_response.msg
-				}, null, 2)
-
-			// lock
-				content_data.classList.remove('lock')
-				spinner.remove()
+					// SEC-XSS-008: textContent prevents any HTML parsing of api_response.msg
+					// embedded inside the JSON string.
+					info_node.textContent = JSON.stringify({
+						action	: 'force_unlock_all_components',
+						result	: api_response.result,
+						msg		: api_response.msg
+					}, null, 2)
+			} finally {
+					button_force_unlock_all_components.classList.remove('button_spinner')
+			}
 		}//end fn_unlock
 
 

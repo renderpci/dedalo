@@ -227,32 +227,28 @@ const get_content_data_edit = async function(self) {
 							options	: sqo
 						}
 
-						// loading
+						// loading — dim content + a self-contained spinner ON the button
 						content_data.classList.add('loading')
+						button_submit.classList.add('button_spinner')
 
-						// data_manager — single retry, long timeout because a complex SQO
-						// can trigger a slow full-table scan in the DB
-						const api_response = await data_manager.request({
-							body : rqo,
-							retries : 1, // one try only
-							timeout : 3600 * 1000 // 1 hour waiting response
-						})
-						if(SHOW_DEBUG===true) {
-							// console.log("/// json_editor_api api_response:",api_response);
+						try {
+							// data_manager — single retry, long timeout because a complex SQO
+							// can trigger a slow full-table scan in the DB
+							const api_response = await data_manager.request({
+								body : rqo,
+								retries : 1, // one try only
+								timeout : 3600 * 1000 // 1 hour waiting response
+							})
+
+							// (!) `body_response` is declared further down in the same callback
+							// scope.  The call is safe because click events can only fire after
+							// the full DocumentFragment has been committed to the DOM; at that
+							// point `body_response` is already in scope and assigned.
+							print_response(body_response, api_response)
+						} finally {
+							content_data.classList.remove('loading')
+							button_submit.classList.remove('button_spinner')
 						}
-
-						// loading
-						content_data.classList.remove('loading')
-
-						// (!) `body_response` is declared further down in the same callback
-						// scope.  The call is safe because click events can only fire after
-						// the full DocumentFragment has been committed to the DOM; at that
-						// point `body_response` is already in scope and assigned.
-						// FLAG: `body_response` is used here before its `const` declaration
-						// in the source text — relies on closure/TDZ not being hit at
-						// runtime (safe, but confusing; would benefit from hoisting the
-						// declaration, which is a code change and cannot be made here).
-						print_response(body_response, api_response)
 					}
 					button_submit.addEventListener('click', click_handler)
 

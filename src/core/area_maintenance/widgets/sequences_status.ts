@@ -100,7 +100,7 @@ export const widget: WidgetModule = {
 		id: 'sequences_status',
 		category: 'integrity',
 		class: 'width_100',
-		label: { kind: 'literal', text: 'DB SEQUENCES STATUS' },
+		label: { kind: 'literal', text: 'DB sequences status' },
 	},
 	eagerValue: checkSequences,
 };

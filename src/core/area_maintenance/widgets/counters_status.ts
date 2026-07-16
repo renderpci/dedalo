@@ -126,7 +126,7 @@ export const widget: WidgetModule = {
 		id: 'counters_status',
 		category: 'integrity',
 		class: 'width_100',
-		label: { kind: 'literal', text: 'DEDALO COUNTERS STATUS' },
+		label: { kind: 'literal', text: 'Dédalo counters status' },
 	},
 	apiActions: {
 		get_value: countersStatusGetValue,
