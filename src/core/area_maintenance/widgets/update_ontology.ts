@@ -79,7 +79,6 @@ async function updateOntologyGetValue(): Promise<WidgetResponse> {
 			servers,
 			current_ontology: currentOntology,
 			active_ontology_tlds: activeOntologyTlds,
-			structure_from_server: config.ontologyIo.structureFromServer,
 			body: `${labels.update_ontology ?? 'Update ontology'} is disabled for ${config.entity}`,
 			confirm_text:
 				'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n' +
