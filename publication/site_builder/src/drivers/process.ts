@@ -95,6 +95,10 @@ export function spawnAgentProcess(
   let child: ReturnType<typeof Bun.spawn> | null = null;
   let sawResult = false;
   let killTimer: ReturnType<typeof setTimeout> | null = null;
+  // An interrupt can land BEFORE Bun.spawn has run (setup — writing the MCP config — is
+  // async). Record the request so the spawn path can honor it immediately; otherwise a
+  // stop in that window would be silently lost and the agent would run to completion.
+  let interruptRequested = false;
 
   // Kicked off immediately; the returned AgentProcess exposes the live queue.
   const running = (async () => {
@@ -103,6 +107,13 @@ export function spawnAgentProcess(
       plan = await setup();
     } catch (error) {
       queue.push({ type: 'error', message: `setup failed: ${errText(error)}`, retriable: false });
+      queue.close();
+      return;
+    }
+
+    // Interrupted while setup ran: do not spawn at all.
+    if (interruptRequested) {
+      queue.push({ type: 'error', message: 'interrupted before start', retriable: true });
       queue.close();
       return;
     }
@@ -164,10 +175,14 @@ export function spawnAgentProcess(
     },
     events: queue,
     async interrupt(): Promise<void> {
-      if (!child) return;
-      child.kill('SIGINT');
-      // Escalate if it does not exit on its own.
-      killTimer = setTimeout(() => child?.kill(9), INTERRUPT_GRACE_MS);
+      interruptRequested = true;
+      if (child) {
+        child.kill('SIGINT');
+        // Escalate if it does not exit on its own.
+        killTimer = setTimeout(() => child?.kill(9), INTERRUPT_GRACE_MS);
+      }
+      // No child yet: the flag above stops the spawn path before it starts. Either way,
+      // wait for the run to settle so the caller observes a terminated turn.
       await running;
     },
   };

@@ -16,7 +16,7 @@
  * a published site — the release store outlives it.
  */
 
-import { cp, mkdir, readdir, rename, rm, symlink } from 'node:fs/promises';
+import { cp, mkdir, readdir, readlink, rename, rm, symlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { confinedPath } from '../util/paths';
@@ -89,7 +89,7 @@ export async function currentRelease(root: string, slug: string): Promise<string
   const link = confinedPath(root, slug);
   if (!existsSync(link)) return null;
   try {
-    const target = await (await import('node:fs/promises')).readlink(link);
+    const target = await readlink(link);
     return target.split('/').filter(Boolean).pop() ?? null;
   } catch {
     return null;

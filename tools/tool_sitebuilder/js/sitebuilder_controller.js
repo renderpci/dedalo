@@ -566,9 +566,10 @@ sitebuilder_controller.prototype.append_agent_text = function(text) {
 
 	const self = this
 	if (!self.chat_log) return
-	// Group consecutive agent text into one rendered block.
+	// Group consecutive agent text into one rendered block (see the docblock: the
+	// :last-child selector is the grouping break).
 	let block = self.chat_log.querySelector('.sb_agent:last-child')
-	if (!block || block.dataset.closed === 'true') {
+	if (!block) {
 		block = document.createElement('div')
 		block.className = 'sb_line sb_agent'
 		block.dataset.raw = ''

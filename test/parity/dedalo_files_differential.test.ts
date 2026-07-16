@@ -67,12 +67,17 @@ function isToolAssistantEntry(entry: ManifestEntry): boolean {
 /** TS-ONLY packages with no PHP twin (the WC-013 normalization pattern):
  *  - tool_error_report (WC-019) — TS-only tool in the TS-owned tools/ tree;
  *  - error_reports maintenance widget (WC-018) — TS-owned client files,
- *    excluded from sync_client.sh like diffusion_server_control.
+ *    excluded from sync_client.sh like diffusion_server_control;
+ *  - tool_sitebuilder + site_builder_status widget (WC-031) — the site-builder
+ *    subsystem, a TS-native addition (proxy tool + ops widget for the
+ *    standalone publication/site_builder daemon).
  * Their files exist only in the TS census; filtered from BOTH sides. */
 function isTsOnlyEntry(entry: ManifestEntry): boolean {
 	return (
 		entry.url.startsWith('/dedalo/tools/tool_error_report/') ||
-		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/error_reports/')
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/error_reports/') ||
+		entry.url.startsWith('/dedalo/tools/tool_sitebuilder/') ||
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/site_builder_status/')
 	);
 }
 

@@ -25,18 +25,20 @@ const HEARTBEAT_MS = 15_000;
 export function sessionEventStream(slug: string, sessionId: string, afterSeq: number): Response {
   const encoder = new TextEncoder();
 
+  // Teardown is hoisted so BOTH exits run it: close() from inside (turn_end, replay
+  // failure) and cancel() from outside (the consumer dropped the connection — a closed
+  // browser tab, or the engine pass-through aborting its upstream leg). Without a cancel
+  // handler a dropped connection would leak the heartbeat interval and the subscription,
+  // and the next heartbeat enqueue would throw inside a timer callback with no catch
+  // above it — a daemon-killing failure mode, not a cosmetic one.
+  let teardown: (() => void) | null = null;
+
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       let closed = false;
       let lastSeq = afterSeq;
       const buffered: StoredEvent[] = [];
       let replaying = true;
-
-      const send = (event: StoredEvent): void => {
-        if (closed) return;
-        controller.enqueue(encoder.encode(`id: ${event.seq}\ndata: ${JSON.stringify(event)}\n\n`));
-        lastSeq = event.seq;
-      };
 
       const close = (): void => {
         if (closed) return;
@@ -46,7 +48,21 @@ export function sessionEventStream(slug: string, sessionId: string, afterSeq: nu
         try {
           controller.close();
         } catch {
-          // already closed
+          // already closed/canceled
+        }
+      };
+      teardown = close;
+
+      // Every enqueue is guarded: the consumer can cancel between our `closed` check and
+      // the enqueue itself, and an enqueue on a canceled stream throws. Any such throw
+      // means the connection is gone — tear down instead of propagating.
+      const send = (event: StoredEvent): void => {
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(`id: ${event.seq}\ndata: ${JSON.stringify(event)}\n\n`));
+          lastSeq = event.seq;
+        } catch {
+          close();
         }
       };
 
@@ -62,22 +78,24 @@ export function sessionEventStream(slug: string, sessionId: string, afterSeq: nu
       });
 
       const heartbeat = setInterval(() => {
-        if (!closed) controller.enqueue(encoder.encode(': ping\n\n'));
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(': ping\n\n'));
+        } catch {
+          close();
+        }
       }, HEARTBEAT_MS);
 
       // Replay the durable backlog, then flush buffered live events, then tail.
       void (async () => {
         try {
+          // The whole backlog is drained even past a turn_end marker: a multi-turn
+          // session's history contains one terminal marker per turn, and a re-reader
+          // wants all of it. Whether to close afterwards is decided below by
+          // isTurnRunning, not by the markers.
           const backlog = await replayEvents(slug, sessionId, afterSeq);
           for (const event of backlog) {
             send(event);
-            if (event.body.type === 'turn_end') {
-              // History already contains a terminal marker and no turn is running now:
-              // this is a completed session being re-read. Close after draining backlog.
-              if (!isTurnRunning(sessionId)) {
-                // keep draining remaining backlog, then close below
-              }
-            }
           }
           replaying = false;
 
@@ -93,17 +111,27 @@ export function sessionEventStream(slug: string, sessionId: string, afterSeq: nu
           // If no turn is running, there is nothing more to tail — close.
           if (!isTurnRunning(sessionId)) close();
         } catch (error) {
-          controller.enqueue(
-            encoder.encode(
-              `event: error\ndata: ${JSON.stringify({
-                code: 'replay_failed',
-                message: error instanceof Error ? error.message : String(error),
-              })}\n\n`,
-            ),
-          );
+          if (!closed) {
+            try {
+              controller.enqueue(
+                encoder.encode(
+                  `event: error\ndata: ${JSON.stringify({
+                    code: 'replay_failed',
+                    message: error instanceof Error ? error.message : String(error),
+                  })}\n\n`,
+                ),
+              );
+            } catch {
+              // connection already gone — nothing to tell it
+            }
+          }
           close();
         }
       })();
+    },
+    cancel() {
+      // Consumer-side cancellation (disconnect). Same cleanup as an internal close.
+      teardown?.();
     },
   });
 

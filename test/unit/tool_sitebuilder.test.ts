@@ -12,10 +12,16 @@
  * and unconfigured paths.
  */
 
-import { describe, test, expect, beforeAll, afterAll, mock } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 import * as realConfigModule from '../../src/config/config.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import type { ToolActionContext, ToolServerModule } from '../../src/core/tools/module.ts';
+
+// SNAPSHOT the real exports by spread BEFORE any mock.module runs (the code_update.test.ts
+// convention). The namespace object itself is a LIVE view: once the module is mocked it
+// reflects the mock, so re-installing the bare namespace in afterAll would re-install the
+// mock and leak it into every later test file in a full-suite run.
+const REAL_CONFIG_MODULE = { ...realConfigModule };
 
 interface RecordedRequest {
 	method: string;
@@ -72,7 +78,10 @@ beforeAll(async () => {
 				return Response.json({ data: [{ manifest: { slug: 'demo' } }] });
 			}
 			if (url.pathname === '/v1/sites' && req.method === 'POST') {
-				return Response.json({ manifest: { slug: (body as { slug: string }).slug } }, { status: 201 });
+				return Response.json(
+					{ manifest: { slug: (body as { slug: string }).slug } },
+					{ status: 201 },
+				);
 			}
 			if (url.pathname === '/v1/sites/demo/publish') {
 				return Response.json({ release: 'r1', url: 'http://prod/demo/' });
@@ -87,7 +96,8 @@ beforeAll(async () => {
 				return Response.json({ detail: 'A session is already running' }, { status: 409 });
 			}
 			if (url.pathname.endsWith('/events')) {
-				const sse = 'id: 0\ndata: {"seq":0,"body":{"type":"turn_start"}}\n\nid: 1\ndata: {"seq":1,"body":{"type":"turn_end","state":"idle"}}\n\n';
+				const sse =
+					'id: 0\ndata: {"seq":0,"body":{"type":"turn_start"}}\n\nid: 1\ndata: {"seq":1,"body":{"type":"turn_end","state":"idle"}}\n\n';
 				return new Response(sse, { headers: { 'Content-Type': 'text/event-stream' } });
 			}
 			return Response.json({ detail: 'not found' }, { status: 404 });
@@ -96,8 +106,8 @@ beforeAll(async () => {
 	siteBuilder.url = `http://127.0.0.1:${server.port}`;
 
 	mock.module('../../src/config/config.ts', () => ({
-		...realConfigModule,
-		config: { ...realConfigModule.config, siteBuilder },
+		...REAL_CONFIG_MODULE,
+		config: { ...REAL_CONFIG_MODULE.config, siteBuilder },
 	}));
 
 	// Import AFTER the mock so daemon_client/index bind to the mocked config.
@@ -106,7 +116,7 @@ beforeAll(async () => {
 
 afterAll(() => {
 	server.stop(true);
-	mock.module('../../src/config/config.ts', () => realConfigModule);
+	mock.module('../../src/config/config.ts', () => REAL_CONFIG_MODULE);
 	mock.restore();
 });
 
@@ -116,7 +126,15 @@ function lastRequest(): RecordedRequest {
 
 describe('tool_sitebuilder proxy', () => {
 	test('isAvailable reflects configuration', () => {
-		expect(tool.isAvailable?.({ callerModel: 'section', tipo: '', sectionTipo: '', isComponent: false, mode: 'list' })).toBe(true);
+		expect(
+			tool.isAvailable?.({
+				callerModel: 'section',
+				tipo: '',
+				sectionTipo: '',
+				isComponent: false,
+				mode: 'list',
+			}),
+		).toBe(true);
 	});
 
 	test('list_sites forwards with bearer token and acting-user headers', async () => {
@@ -134,18 +152,28 @@ describe('tool_sitebuilder proxy', () => {
 	});
 
 	test('create_site validates the slug before proxying and sends the actor in the body', async () => {
-		const bad = await tool.apiActions.create_site!.handler(ctx(DEV, { slug: 'Bad Slug', name: 'x' }));
+		const bad = await tool.apiActions.create_site!.handler(
+			ctx(DEV, { slug: 'Bad Slug', name: 'x' }),
+		);
 		expect(bad.result).toBe(false);
 		expect(bad.errors).toContain('site_builder_rejected');
 
-		const good = await tool.apiActions.create_site!.handler(ctx(DEV, { slug: 'demo', name: 'Demo' }));
+		const good = await tool.apiActions.create_site!.handler(
+			ctx(DEV, { slug: 'demo', name: 'Demo' }),
+		);
 		expect(good.result).toEqual({ manifest: { slug: 'demo' } });
 		const req = lastRequest();
-		expect(req.body).toMatchObject({ slug: 'demo', name: 'Demo', actor: { user_id: 7, username: 'user_7' } });
+		expect(req.body).toMatchObject({
+			slug: 'demo',
+			name: 'Demo',
+			actor: { user_id: 7, username: 'user_7' },
+		});
 	});
 
 	test('publish is denied to a plain user, allowed to a developer and a global admin', async () => {
-		const denied = await tool.apiActions.publish!.handler(ctx(PLAIN, { slug: 'demo', confirm: true }));
+		const denied = await tool.apiActions.publish!.handler(
+			ctx(PLAIN, { slug: 'demo', confirm: true }),
+		);
 		expect(denied.result).toBe(false);
 		expect(denied.errors).toContain('site_builder_rejected');
 
@@ -156,7 +184,9 @@ describe('tool_sitebuilder proxy', () => {
 		const dev = await tool.apiActions.publish!.handler(ctx(DEV, { slug: 'demo', confirm: true }));
 		expect(dev.result).toMatchObject({ release: 'r1' });
 
-		const admin = await tool.apiActions.publish!.handler(ctx(ADMIN, { slug: 'demo', confirm: true }));
+		const admin = await tool.apiActions.publish!.handler(
+			ctx(ADMIN, { slug: 'demo', confirm: true }),
+		);
 		expect(admin.result).toMatchObject({ release: 'r1' });
 	});
 
@@ -168,7 +198,9 @@ describe('tool_sitebuilder proxy', () => {
 	});
 
 	test('a daemon 4xx with a reason maps to site_builder_rejected with the detail', async () => {
-		const res = await tool.apiActions.session_start!.handler(ctx(DEV, { slug: 'rejectme', prompt: 'go' }));
+		const res = await tool.apiActions.session_start!.handler(
+			ctx(DEV, { slug: 'rejectme', prompt: 'go' }),
+		);
 		expect(res.result).toBe(false);
 		expect(res.errors).toContain('site_builder_rejected');
 		expect(res.msg).toContain('already running');
@@ -188,14 +220,24 @@ describe('tool_sitebuilder proxy', () => {
 	test('unconfigured install: every action fails closed and isAvailable is false', async () => {
 		const savedUrl = siteBuilder.url;
 		siteBuilder.url = undefined;
-		expect(tool.isAvailable?.({ callerModel: 'section', tipo: '', sectionTipo: '', isComponent: false, mode: 'list' })).toBe(false);
+		expect(
+			tool.isAvailable?.({
+				callerModel: 'section',
+				tipo: '',
+				sectionTipo: '',
+				isComponent: false,
+				mode: 'list',
+			}),
+		).toBe(false);
 		const res = await tool.apiActions.list_sites!.handler(ctx(DEV, {}));
 		expect(res.errors).toContain('site_builder_unconfigured');
 		siteBuilder.url = savedUrl;
 	});
 
 	test('session_stream forwards the SSE bytes and sets the anti-buffering header', async () => {
-		const res = await tool.apiActions.session_stream!.handler(ctx(DEV, { session_id: 'abc', after: -1 }));
+		const res = await tool.apiActions.session_stream!.handler(
+			ctx(DEV, { session_id: 'abc', after: -1 }),
+		);
 		expect(res.result).toBe(true);
 		expect(res.streamContentType).toContain('text/event-stream');
 		expect((res.streamHeaders as Record<string, string>)['X-Accel-Buffering']).toBe('no');
