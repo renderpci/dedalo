@@ -10,12 +10,30 @@
 		>.list_body {
 			position: relative;
 			display: grid;
-			grid-template-rows: 1.65rem auto;
+			// header row is `auto` (was a fixed 1.65rem): the head_column's own
+			// 0.5rem padding + the .name margins overflowed that height, so the
+			// name was flex-crushed to ~2px and clipped — the column titles
+			// vanished. Sizing the row to its content keeps it compact and shown.
+			grid-template-rows: auto auto;
 			height: fit-content;
 			min-height: var(--content_data_min_height);
 
 			.column_section_id {
 				padding: unset;
+			}
+
+			// column-title header: trim the shared head_column vertical padding
+			// and the .name margins so the label fits the compact row, centred.
+			// (sub_header columns keep their own block layout — leave them be.)
+			>.header_wrapper_list >.head_column:not(.with_sub_header) {
+				padding-top: 0.25rem;
+				padding-bottom: 0.25rem;
+				align-items: center;
+
+				>.name {
+					margin-top: 0px;
+					margin-bottom: 0px;
+				}
 			}
 
 			.button_edit {
