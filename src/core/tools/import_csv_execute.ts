@@ -29,6 +29,7 @@ import { createSectionRecord } from '../section/record/create_record.ts';
 import { setRecordMetadata } from '../section/record/record_metadata.ts';
 import { saveComponentData } from '../section/record/save_component.ts';
 import type { PlannedColumn, PlannedRecord } from './import_csv.ts';
+import { groupItemsByLang } from './import_data.ts';
 import type { ImportFileReport, ImportProgressFrame, ImportRowIssue } from './import_wire.ts';
 
 /** The dataframe relation type (PHP DEDALO_RELATION_TYPE_DATAFRAME). */
@@ -60,48 +61,6 @@ const PROGRESS_THROTTLE_MS = 200;
 
 function isObject(value: unknown): value is Record<string, unknown> {
 	return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-/**
- * The items to save, keyed by the lang they belong to.
- *
- * Three shapes arrive from conform, and only the first is obvious:
- *   - a lang-keyed OBJECT ({"lg-eng":[…], "lg-spa":[…]}) — a translatable export;
- *   - a FLAT array whose items each carry their own `lang` — the v7 stored shape
- *     (the raw export emits exactly this). Grouping it by item lang is what keeps
- *     every translation: a single set_data would force them all to the import lang;
- *   - a flat array with no langs — one group, at the component's own lang.
- */
-function groupItemsByLang(result: unknown, componentLang: string): Map<string, unknown[]> {
-	const groups = new Map<string, unknown[]>();
-	if (result === null || result === undefined) return groups;
-
-	if (isObject(result)) {
-		for (const [lang, value] of Object.entries(result)) {
-			if (!lang.startsWith('lg-')) continue;
-			groups.set(lang, Array.isArray(value) ? value : [value]);
-		}
-		if (groups.size > 0) return groups;
-	}
-
-	const items = Array.isArray(result) ? result : [result];
-	const hasItemLangs = items.some(
-		(item) => isObject(item) && typeof item.lang === 'string' && item.lang !== '',
-	);
-	if (!hasItemLangs) {
-		groups.set(componentLang, items);
-		return groups;
-	}
-	for (const item of items) {
-		const lang =
-			isObject(item) && typeof item.lang === 'string' && item.lang !== ''
-				? item.lang
-				: componentLang;
-		const group = groups.get(lang);
-		if (group === undefined) groups.set(lang, [item]);
-		else group.push(item);
-	}
-	return groups;
 }
 
 /** A dd_date {year, month, day} → the 'YYYY-MM-DD HH:MM:SS' the `data` column stores. */

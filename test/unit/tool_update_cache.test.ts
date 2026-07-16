@@ -87,7 +87,9 @@ describe('tool_update_cache module', () => {
 			return; // DB unavailable
 		}
 		scratchIds.push(scratchId);
-		// Seed a value, then regenerate the whole section for that component.
+		// Seed TWO languages, then regenerate the whole section for that component.
+		// The regenerate must preserve BOTH translations, un-duplicated (set_data is
+		// lang-sliced: a flat full-array re-save would re-stamp/duplicate them).
 		await saveComponentData({
 			componentTipo: SCRATCH_INPUT_TEXT,
 			sectionTipo: SCRATCH_SECTION,
@@ -95,6 +97,20 @@ describe('tool_update_cache module', () => {
 			lang: 'lg-eng',
 			changedData: [
 				{ action: 'set_data', id: null, value: [{ value: 'cache seed', lang: 'lg-eng', id: 1 }] },
+			],
+			userId: -1,
+		});
+		await saveComponentData({
+			componentTipo: SCRATCH_INPUT_TEXT,
+			sectionTipo: SCRATCH_SECTION,
+			sectionId: scratchId,
+			lang: 'lg-spa',
+			changedData: [
+				{
+					action: 'set_data',
+					id: null,
+					value: [{ value: 'semilla cache', lang: 'lg-spa', id: 1 }],
+				},
 			],
 			userId: -1,
 		});
@@ -121,6 +137,11 @@ describe('tool_update_cache module', () => {
 				SCRATCH_INPUT_TEXT,
 				'component_input_text',
 			) ?? [];
-		expect(stored).toContainEqual(expect.objectContaining({ value: 'cache seed' }));
+		expect(stored).toContainEqual(expect.objectContaining({ value: 'cache seed', lang: 'lg-eng' }));
+		expect(stored).toContainEqual(
+			expect.objectContaining({ value: 'semilla cache', lang: 'lg-spa' }),
+		);
+		// Un-duplicated: one item per language, nothing re-stamped onto another lang.
+		expect(stored).toHaveLength(2);
 	});
 });

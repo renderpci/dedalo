@@ -252,6 +252,92 @@ describe('import_files writes the mapped columns (scratch record, cleaned up)', 
 		expect(stored[0]?.start).toEqual({ day: 26, month: 10, year: 2023 });
 	});
 
+	test('a v6 multi-language export cell imports EVERY language (set_data_lang parity)', async () => {
+		// The v6 raw-export shape for a translatable input_text: a lang-keyed object
+		// of BARE strings, no dedalo_data wrapper (export_Ontologies_main_*.csv).
+		// Each language must be persisted as its own lang-stamped slice — the bug
+		// this pins: per-lang set_data was a full-array replace, so only the LAST
+		// language survived, without a lang stamp.
+		const cell =
+			'{""lg-cat"":[""Dédalo cat | dd""],""lg-eng"":[""Dedalo eng | dd""],""lg-spa"":[""Dédalo spa | dd""]}';
+		writeFileSync(resolve(userDir, CSV), `section_id;test52\n${SCRATCH_ID};"${cell}"\n`);
+		const loaded = await getLoadedTool('tool_import_dedalo_csv');
+		const res = await mustGet(loaded!.module.apiActions.import_files, 'import_files').handler({
+			principal: await resolvePrincipal(-1),
+			userId: SCRATCH_USER,
+			background: false,
+			options: {
+				files: [
+					{
+						file: CSV,
+						section_tipo: 'test3',
+						ar_columns_map: [
+							{ tipo: 'section_id', model: 'section_id' },
+							{ tipo: 'test52', model: 'component_input_text', checked: true, map_to: 'test52' },
+						],
+					},
+				],
+			},
+		});
+		const report = (res.result as ImportFileReport[])[0] as ImportFileReport;
+		bulkProcessIds.push(report.bulk_process_id as number);
+		expect(report.failed).toEqual([]);
+
+		const rows = (await sql.unsafe(
+			`SELECT string -> 'test52' AS items
+			   FROM matrix_test WHERE section_tipo = 'test3' AND section_id = $1`,
+			[SCRATCH_ID],
+		)) as { items: { value?: string; lang?: string; id?: number }[] }[];
+		const stored = rows[0]?.items ?? [];
+		const byLang = new Map(stored.map((item) => [item.lang, item]));
+		// All three languages present, each stamped and id-carrying.
+		expect([...byLang.keys()].sort()).toEqual(['lg-cat', 'lg-eng', 'lg-spa']);
+		expect(byLang.get('lg-cat')?.value).toBe('Dédalo cat | dd');
+		expect(byLang.get('lg-eng')?.value).toBe('Dedalo eng | dd');
+		expect(byLang.get('lg-spa')?.value).toBe('Dédalo spa | dd');
+		for (const item of stored) expect(typeof item.id).toBe('number');
+
+		// A follow-up FLAT import replaces ONLY the import lang's slice (PHP
+		// set_data_lang), never the sibling translations.
+		writeFileSync(resolve(userDir, CSV), `section_id;test52\n${SCRATCH_ID};replaced flat\n`);
+		const res2 = await mustGet(loaded!.module.apiActions.import_files, 'import_files').handler({
+			principal: await resolvePrincipal(-1),
+			userId: SCRATCH_USER,
+			background: false,
+			options: {
+				files: [
+					{
+						file: CSV,
+						section_tipo: 'test3',
+						ar_columns_map: [
+							{ tipo: 'section_id', model: 'section_id' },
+							{ tipo: 'test52', model: 'component_input_text', checked: true, map_to: 'test52' },
+						],
+					},
+				],
+			},
+		});
+		const report2 = (res2.result as ImportFileReport[])[0] as ImportFileReport;
+		bulkProcessIds.push(report2.bulk_process_id as number);
+		expect(report2.failed).toEqual([]);
+
+		const rows2 = (await sql.unsafe(
+			`SELECT string -> 'test52' AS items
+			   FROM matrix_test WHERE section_tipo = 'test3' AND section_id = $1`,
+			[SCRATCH_ID],
+		)) as { items: { value?: string; lang?: string }[] }[];
+		const stored2 = rows2[0]?.items ?? [];
+		const importLang = config.menu.dataLang;
+		const replaced = stored2.filter((item) => item.lang === importLang);
+		expect(replaced).toHaveLength(1);
+		expect(replaced[0]?.value).toBe('replaced flat');
+		// The OTHER languages survived the flat save.
+		const others = stored2.filter((item) => item.lang !== importLang).map((item) => item.lang);
+		expect(others.sort()).toEqual(
+			['lg-cat', 'lg-eng', 'lg-spa'].filter((code) => code !== importLang),
+		);
+	});
+
 	test('an unchecked column is not imported, and a row without section_id is skipped', async () => {
 		writeFileSync(resolve(userDir, CSV), 'section_id;test52\n;skipped row\n');
 		const loaded = await getLoadedTool('tool_import_dedalo_csv');

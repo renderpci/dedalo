@@ -510,7 +510,12 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 		}
 
 		if (change.action === 'set_data') {
-			// PHP: bulk-replace the WHOLE data array, no key checks.
+			// PHP: bulk-replace the data array, no key checks — but NOT across
+			// languages: update_data_value 'set_data' (:4380) routes through
+			// set_data_lang, so for the translation-supporting literal classes the
+			// replace is LANG-SLICED (see below). A raw full replace here was the
+			// import multi-language bug: the CSV executor saves one language at a
+			// time, and each save wiped the previous language's items.
 			const rawItems = Array.isArray(change.value) ? (change.value as unknown[]) : [];
 			// RELATION elements are NORMALIZED here, not stored raw. PHP's bulk-replace
 			// is not a raw assignment either: component_common::set_data (:997) runs
@@ -544,6 +549,23 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 					if (safeElement !== null) validatedItems.push(safeElement);
 				}
 				items = validatedItems;
+			} else if (langSliced) {
+				// PHP set_data_lang (:1052-1128): replace ONLY the effective-lang
+				// slice. Other-lang stored items are kept untouched; stored items
+				// WITHOUT a lang are dropped (PHP logs and skips lang orphans); every
+				// new item is persisted as a CLONE stamped with the slice lang
+				// (non-objects are skipped — PHP set_data_lang accepts only objects).
+				const otherLangs = items.filter((item) => {
+					if (item === null || typeof item !== 'object') return false;
+					const itemLang = (item as { lang?: string }).lang;
+					return typeof itemLang === 'string' && itemLang !== '' && itemLang !== effectiveLang;
+				});
+				const stamped = rawItems
+					.filter(
+						(item): item is Record<string, unknown> => item !== null && typeof item === 'object',
+					)
+					.map((item) => ({ ...item, lang: effectiveLang }));
+				items = [...otherLangs, ...stamped];
 			} else {
 				items = rawItems;
 			}

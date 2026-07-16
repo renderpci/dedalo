@@ -66,6 +66,15 @@ Record-lifecycle homes (the callers): `src/core/section/record/{create,save,dele
 - **Dataframe cascade on all three removal paths** (S1-05): removing a locator/item strips its paired frame entries (`delete_record.ts` per-removed-locator cascade; `save_component.ts` `remove` cascade).
 - **Duplicate refreshes media `files_info`** (S1-04): every copied media item re-scans against the new paths and persists the refreshed `files_info` onto the new row (per-key write, no TM). See `record/duplicate_record.ts`.
 
+## 7. `set_data` is LANG-SLICED for translatable literals
+
+`saveComponentData` `set_data` is **not** a whole-array replace on the translation-supporting literal models (`classSupportsTranslation`: input_text, text_area, email, iri, password). It mirrors PHP `set_data_lang` (`component_common.php:4380` routes `update_data_value('set_data')` through it): only the **effective-lang slice** is replaced; other-lang stored items are preserved; lang-orphan stored items are dropped; every new item is clone-stamped with the slice lang. Relations and non-literal models keep the flat replace.
+
+Consequences for callers:
+- **Saving a multi-language dato = one `set_data` call PER LANG.** Group with `groupItemsByLang` (`src/core/tools/import_data.ts`) — a flat merged save re-stamps every translation onto one lang (the pre-2026-07-16 import bug: each lang save wiped the previous one).
+- An empty `set_data` (`value: []`) clears ONLY that lang's slice for these models.
+- Gates: `test/unit/tool_import_dedalo_csv.test.ts` (v6 multi-lang cell import + flat-save slice preservation), `test/unit/tool_update_cache.test.ts` (regenerate preserves both langs un-duplicated), `test/unit/save_multilang_siblings.test.ts` (the sibling-preservation twin for `update`).
+
 ## Caches & request state (why writes never leak across requests)
 
 The write path's transaction ALS is one of **three AsyncLocalStorage stores** that thread request/principal/lang state — the tx client (`postgres.ts`, §3) plus request-lang (`currentApplicationLang`/`currentDataLang`, seeds TM/data stamps and lang-scoped writes) and request-context (`currentPrincipal`, seeds the audit actor). A write that reads the wrong principal or lang stamps the wrong row. **Never hand-roll a module-level `Map`/`Set`/`let` carrying request/principal/lang state** — that is cross-request bleed; use `createOntologyCache`/`createDataCache` (`src/core/ontology/cache_factory.ts`) for request-derived caches. Guarded by `test/unit/module_state_tripwire.test.ts`.

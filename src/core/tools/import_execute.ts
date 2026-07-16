@@ -12,7 +12,7 @@ import { config } from '../../config/config.ts';
 import { getModelByTipo, getTranslatableByTipo } from '../ontology/resolver.ts';
 import { createSectionRecord } from '../section/record/create_record.ts';
 import { saveComponentData } from '../section/record/save_component.ts';
-import { type ConformFailure, conformImportData } from './import_data.ts';
+import { type ConformFailure, conformImportData, groupItemsByLang } from './import_data.ts';
 
 export interface MappedField {
 	component_tipo: string;
@@ -70,7 +70,14 @@ export async function importMappedRecords(
 				});
 				continue;
 			}
-			const items: unknown[] = [];
+			const translatable = await getTranslatableByTipo(field.component_tipo);
+			const componentLang = translatable ? config.menu.dataLang : 'lg-nolan';
+			// Group by lang across ALL of the field's values: a lang-keyed conform
+			// result (a translatable export) or v7 raw items carrying their own lang
+			// must be saved ONE LANG AT A TIME — set_data is lang-sliced (PHP
+			// set_data_lang), and a flat merged save would lose translations (the
+			// old code even pushed a lang-keyed OBJECT as a single item).
+			const groups = new Map<string, unknown[]>();
 			for (const value of field.values) {
 				const conform = await conformImportData({
 					model,
@@ -79,23 +86,29 @@ export async function importMappedRecords(
 					sectionTipo,
 					sectionId,
 					componentTipo: field.component_tipo,
+					lang: componentLang,
 				});
 				if (conform.errors.length > 0) {
 					failed.push(...conform.errors);
 					continue;
 				}
-				if (Array.isArray(conform.result)) items.push(...conform.result);
-				else if (conform.result !== null) items.push(conform.result);
+				for (const [lang, items] of groupItemsByLang(conform.result, componentLang)) {
+					const group = groups.get(lang);
+					if (group === undefined) groups.set(lang, [...items]);
+					else group.push(...items);
+				}
 			}
-			const translatable = await getTranslatableByTipo(field.component_tipo);
-			await saveComponentData({
-				componentTipo: field.component_tipo,
-				sectionTipo,
-				sectionId,
-				lang: translatable ? config.menu.dataLang : 'lg-nolan',
-				changedData: [{ action: 'set_data', id: null, value: items }],
-				userId,
-			});
+			if (groups.size === 0) groups.set(componentLang, []);
+			for (const [lang, items] of groups) {
+				await saveComponentData({
+					componentTipo: field.component_tipo,
+					sectionTipo,
+					sectionId,
+					lang,
+					changedData: [{ action: 'set_data', id: null, value: items }],
+					userId,
+				});
+			}
 		}
 	}
 	return { created, updated, failed, createdIds };

@@ -83,6 +83,7 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	);
 	const { saveComponentData } = await import('../../../src/core/section/record/save_component.ts');
 	const { config } = await import('../../../src/config/config.ts');
+	const { groupItemsByLang } = await import('../../../src/core/tools/import_data.ts');
 
 	// Matched records: the client SQO (no limit) or the whole section.
 	const sqoRaw = (ctx.options.sqo as Record<string, unknown> | undefined) ?? {
@@ -113,14 +114,23 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 			}
 			const items = readComponentItems(record, tipo, model) ?? [];
 			const translatable = await getTranslatableByTipo(tipo);
-			await saveComponentData({
-				componentTipo: tipo,
-				sectionTipo: row.section_tipo,
-				sectionId: row.section_id,
-				lang: translatable ? config.menu.dataLang : 'lg-nolan',
-				changedData: [{ action: 'set_data', id: null, value: items }],
-				userId: ctx.userId,
-			});
+			const componentLang = translatable ? config.menu.dataLang : 'lg-nolan';
+			// The stored array carries EVERY language; set_data is lang-sliced
+			// (PHP set_data_lang), so a translatable literal must be re-saved one
+			// lang group at a time — a single flat save would re-stamp every
+			// translation onto componentLang.
+			const groups = groupItemsByLang(items, componentLang);
+			if (groups.size === 0) groups.set(componentLang, []);
+			for (const [lang, group] of groups) {
+				await saveComponentData({
+					componentTipo: tipo,
+					sectionTipo: row.section_tipo,
+					sectionId: row.section_id,
+					lang,
+					changedData: [{ action: 'set_data', id: null, value: group }],
+					userId: ctx.userId,
+				});
+			}
 			regenerated += 1;
 		}
 	}

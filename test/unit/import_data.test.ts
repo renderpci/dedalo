@@ -10,7 +10,12 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { conformImportData, isJson, unwrapDedaloData } from '../../src/core/tools/import_data.ts';
+import {
+	conformImportData,
+	groupItemsByLang,
+	isJson,
+	unwrapDedaloData,
+} from '../../src/core/tools/import_data.ts';
 
 function conform(model: string, importValue: string, componentTipo = 't1') {
 	return conformImportData({
@@ -60,6 +65,62 @@ describe('raw-export round-trip (the invariant)', () => {
 		// but its stored dato must survive an export→import cycle untouched.
 		const dato = [{ id: 1, value: 42 }];
 		expect(await roundTrip('component_image', dato)).toEqual(dato);
+	});
+});
+
+describe('v6 raw-export cells (NO dedalo_data wrapper, lang-keyed BARE strings)', () => {
+	// The exact shapes a Dédalo v6 export emits (export_Ontologies_main_*.csv):
+	// a lang-keyed object whose groups are bare strings, unwrapped by nothing.
+	test('multi-language bare-string cell → lang-keyed {value} items (input_text)', async () => {
+		const cell = '{"lg-cat":["Dédalo | dd"],"lg-eng":["Dedalo | dd"],"lg-spa":["Dédalo | dd"]}';
+		const out = await conform('component_input_text', cell);
+		expect(out.errors).toEqual([]);
+		expect(out.result).toEqual({
+			'lg-cat': [{ value: 'Dédalo | dd' }],
+			'lg-eng': [{ value: 'Dedalo | dd' }],
+			'lg-spa': [{ value: 'Dédalo | dd' }],
+		});
+	});
+	test('lg-nolan bare-string cell (non-translatable component)', async () => {
+		const out = await conform('component_input_text', '{"lg-nolan":["ontology1"]}');
+		expect(out.errors).toEqual([]);
+		expect(out.result).toEqual({ 'lg-nolan': [{ value: 'ontology1' }] });
+	});
+	test('text_area bare strings are paragraph-wrapped per lang', async () => {
+		const out = await conform('component_text_area', '{"lg-eng":["line"],"lg-spa":["línea"]}');
+		expect(out.errors).toEqual([]);
+		expect(out.result).toEqual({
+			'lg-eng': [{ value: '<p>line</p>' }],
+			'lg-spa': [{ value: '<p>línea</p>' }],
+		});
+	});
+});
+
+describe('groupItemsByLang (the executor grouping every import save goes through)', () => {
+	test('lang-keyed object → one group per lg-* key', () => {
+		const groups = groupItemsByLang(
+			{ 'lg-eng': [{ value: 'cat' }], 'lg-spa': [{ value: 'gato' }] },
+			'lg-eng',
+		);
+		expect([...groups.keys()].sort()).toEqual(['lg-eng', 'lg-spa']);
+		expect(groups.get('lg-spa')).toEqual([{ value: 'gato' }]);
+	});
+	test('flat v7 items carrying their own lang → grouped by item lang', () => {
+		const groups = groupItemsByLang(
+			[
+				{ value: 'cat', lang: 'lg-eng', id: 1 },
+				{ value: 'gato', lang: 'lg-spa', id: 1 },
+			],
+			'lg-eng',
+		);
+		expect([...groups.keys()].sort()).toEqual(['lg-eng', 'lg-spa']);
+	});
+	test('flat items with no langs → ONE group at the component lang', () => {
+		const groups = groupItemsByLang([{ value: 'x' }], 'lg-spa');
+		expect([...groups.entries()]).toEqual([['lg-spa', [{ value: 'x' }]]]);
+	});
+	test('null (clear) → no groups', () => {
+		expect(groupItemsByLang(null, 'lg-spa').size).toBe(0);
 	});
 });
 
