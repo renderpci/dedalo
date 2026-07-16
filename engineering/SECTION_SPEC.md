@@ -159,6 +159,28 @@ Not every component appears in list view. The `section_list` child node's `relat
 > `section_list_css_differential`, the `css` field in `context_differential`,
 > `test/unit/structure_context_css.test.ts`.
 
+> **ADDENDUM 2026-07-17 — the VIRTUAL fallback of the list-column resolution
+> landed (was missing).** `resolve_ar_related_list_section`'s virtual fallback
+> (the "with virtual fallback" above, PHP `trait.request_config_v5.php`) had no
+> TS counterpart: `relations/request_config/build.ts` looked for a `section_list`
+> child only under the section's OWN tipo (`findSectionListChild`, a plain
+> `WHERE parent = tipo` — correct, non-virtual, matching Site-B
+> `resolve_source_properties`), and for a SECTION in list mode with none it
+> returned `[]`. This is the exact section_list analog of the §9 buttons bug: a
+> virtual section whose only children are `section_list`/`exclude_elements`/
+> buttons resolves fine, but a **hierarchy/thesaurus-instance section with ZERO
+> ontology children** (`es1` "Spain" → real section `hierarchy20` → `section_list`
+> `hierarchy37` → 11 columns) got an empty ddo_map — its list view rendered only
+> the built-in `Id` column. Fix: when the own-tipo lookup misses AND the owner is
+> a section, resolve the real tipo via `getSectionRealTipo`
+> (`resolve/security_access_datalist.ts`, mirror of
+> `section::get_section_real_tipo_static`) and retry there; the resolved child
+> then flows through the SAME explicit/implicit builder as a real section's own
+> `section_list` (no new column logic, no `exclude_elements` subtraction — PHP's
+> list fallback inherits the columns verbatim, unlike the edit walk). Gate:
+> `test/unit/virtual_section_list_columns.test.ts` (DB unit, oracle-free —
+> columns derived from the real section, never hard-coded).
+
 ### 7.2 relation_list — inverse relations ("who calls me?")
 Two distinct consumptions:
 - **Grid columns** for the inverse-references view: `relation_list::get_relation_list_obj` (`core/relation_list/class.relation_list.php:261-339`) — prefers `section_map::get_scope(tipo,'relation_list', strict)` (`:292-304`), falls back to the legacy `relation_list` node's `relations` (`:311-322`).
