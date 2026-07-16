@@ -134,10 +134,15 @@ export async function checkRemoteServer(server: OntologyServer): Promise<{
 		options: { check: 'ontology_server' },
 	};
 	try {
+		// JSON body, not PHP's `rqo=`-form-encoded: the TS API endpoint parses the
+		// request body as JSON (server.ts request.json()) and 400s on a form body,
+		// exactly like the vendored client's data_manager.request. A form-encoded
+		// probe made every TS ontology/code master read back "Invalid JSON body"
+		// and the update panel disabled its radio (render_update_ontology.js).
 		const response = await fetch(server.url, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-			body: `rqo=${encodeURIComponent(JSON.stringify(rqo))}`,
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(rqo),
 			redirect: 'error',
 			signal: AbortSignal.timeout(CHECK_TIMEOUT_MS),
 		});

@@ -19,6 +19,7 @@ import type { DbConnDescriptor } from '../../src/core/install/pg_exec.ts';
 import { runPsql } from '../../src/core/install/pg_exec.ts';
 import {
 	buildOntologyUpdateInfo,
+	checkRemoteServer,
 	confinedPath,
 	consolidateSectionCounter,
 	copySanityCheck,
@@ -289,6 +290,54 @@ describe('updateOntology refusals', () => {
 		);
 		expect(out.result).toBe(false);
 		expect(out.errors).toContain('unknown ontology server code: zz');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// checkRemoteServer must speak the TS API wire (JSON body), not PHP's
+// `rqo=`-form-encoded. The TS endpoint parses request.json() and 400s on a form
+// body, so a form-encoded probe made EVERY TS ontology/code master read back
+// "Invalid JSON body" — and the update panel disabled that server's radio
+// (render_update_ontology.js: check only on HTTP 200 + result.result===true).
+// ---------------------------------------------------------------------------
+
+describe('checkRemoteServer posts a JSON body (TS API wire)', () => {
+	// A fixture that behaves like the real TS API: JSON body -> ready; anything
+	// else (a form body) -> 400 "Invalid JSON body", exactly like server.ts.
+	async function withJsonOnlyApi(
+		run: (origin: string) => Promise<void>,
+	): Promise<{ contentType: string | null }> {
+		let contentType: string | null = null;
+		const server = Bun.serve({
+			port: 0,
+			async fetch(req) {
+				contentType = req.headers.get('content-type');
+				try {
+					if (!(contentType ?? '').includes('application/json')) throw new Error('not json');
+					const body = (await req.json()) as { action?: string };
+					if (body.action !== 'get_server_ready_status') throw new Error('unexpected action');
+				} catch {
+					return Response.json({ result: false, msg: 'Invalid JSON body' }, { status: 400 });
+				}
+				return Response.json({ result: true, msg: 'OK. Ontology server is ready', errors: [] });
+			},
+		});
+		try {
+			await run(`http://localhost:${server.port}`);
+		} finally {
+			server.stop(true);
+		}
+		return { contentType };
+	}
+
+	test('a JSON-only master answers ready (was 400 with the form body)', async () => {
+		let probe: Awaited<ReturnType<typeof checkRemoteServer>> | undefined;
+		const { contentType } = await withJsonOnlyApi(async (origin) => {
+			probe = await checkRemoteServer({ name: 'm', url: `${origin}/`, code: 'demo' });
+		});
+		expect(contentType).toContain('application/json');
+		expect(probe?.code).toBe(200);
+		expect((probe?.result as { result?: unknown })?.result).toBe(true);
 	});
 });
 
