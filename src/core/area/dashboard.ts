@@ -232,6 +232,28 @@ export async function metricActivity(
 	};
 }
 
+/**
+ * Allowed activity windows (days) — mirrors the `available_ranges` the dashboard
+ * serves (client dashboard.js `ranges`). Bounds the matrix_activity scan so an
+ * on-demand fetch can only ask for a range the UI actually offers, never an
+ * unbounded window against the 1.8M-row audit log.
+ */
+export const ACTIVITY_RANGE_DAYS: ReadonlySet<number> = new Set([30, 90, 180, 365]);
+
+/**
+ * On-demand activity dataset for one area over `rangeDays` (dd_core_api
+ * get_activity_metric — the dashboard timeline range switch to 3m/6m/1y). Same
+ * aggregation as the activity_30d served inline with the dashboard, over a wider
+ * window. Returns null when the area has no sections (metricActivity contract).
+ */
+export async function getAreaActivityMetric(
+	areaTipo: string,
+	rangeDays: number,
+): Promise<ActivityPayload | null> {
+	const childSections = await getDashboardChildSections(areaTipo);
+	return metricActivity(childSections, rangeDays);
+}
+
 /** The full dashboard payload for an area (PHP get_dashboard_data). */
 export async function getDashboardData(
 	principal: Principal,

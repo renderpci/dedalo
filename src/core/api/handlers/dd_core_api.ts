@@ -57,7 +57,10 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// through to the generic path exactly as before (engineering/AREA_SPEC.md §2).
 		if (isAreaModel(rqo.source?.model ?? '')) {
 			const areaResult = await dispatchAreaRead(rqo, principal);
-			if (areaResult !== null) return areaResult;
+			if (areaResult !== null) {
+				await logReadActivity(rqo, principal, context, areaResult);
+				return areaResult;
+			}
 		}
 
 		// Gate A: source (section_tipo, tipo).
@@ -80,7 +83,15 @@ export const coreApiActions: Record<string, ActionHandler> = {
 
 		// Sub-action routing + the generic section read live in the section
 		// facade (S2-25) — everything below the gates is section semantics.
-		return routeSectionRead(rqo, principal);
+		const readResult = await routeSectionRead(rqo, principal);
+		// LOAD activity (PHP dd_core_api::read :771 → log_activity): every
+		// section/area page load appends a 'LOAD EDIT'/'LOAD LIST' audit row keyed
+		// by the SECTION tipo. This is the stream the dashboard timeline aggregates
+		// (metricActivity filters WHERE ∈ child sections) — without it the activity
+		// card is permanently empty (only component-keyed SAVE rows exist, which
+		// the section filter correctly ignores).
+		await logReadActivity(rqo, principal, context, readResult);
+		return readResult;
 	},
 	save: async (rqo, context) => {
 		// State-changing action: CSRF is enforced by the dispatch gate
@@ -1099,6 +1110,34 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			body: { result: grid, msg: 'OK. Request done successfully', errors: [] },
 		};
 	},
+	get_activity_metric: async (rqo, context) => {
+		// On-demand activity dataset for the area dashboard's timeline range
+		// switch (client dashboard.js fetch_range → 3m/6m/1y). The dashboard READ
+		// serves only activity_30d inline; wider ranges are fetched here so the
+		// initial payload stays small. Gated IDENTICALLY to the dashboard read
+		// (area/read.ts readDashboardArea): read permission > 0 on the area.
+		const principal = requirePrincipal(context);
+		const options = (rqo.options ?? {}) as { area_tipo?: unknown; range_days?: unknown };
+		const areaTipo = options.area_tipo;
+		if (typeof areaTipo !== 'string' || !SAFE_TIPO.test(areaTipo)) {
+			return denied(400, 'get_activity_metric: invalid area_tipo');
+		}
+		const { getModelByTipo } = await import('../../ontology/resolver.ts');
+		if (!isAreaModel((await getModelByTipo(areaTipo)) ?? '')) {
+			return denied(400, 'get_activity_metric: not an area');
+		}
+		const rangeDays = Number(options.range_days);
+		const { ACTIVITY_RANGE_DAYS, getAreaActivityMetric } = await import('../../area/dashboard.ts');
+		if (!ACTIVITY_RANGE_DAYS.has(rangeDays)) {
+			return denied(400, 'get_activity_metric: unsupported range_days');
+		}
+		// SEC: same permission boundary as the dashboard payload it extends.
+		if ((await getPermissions(principal, areaTipo, areaTipo)) < 1) {
+			return denied(403, 'Insufficient permissions to read');
+		}
+		const data = await getAreaActivityMetric(areaTipo, rangeDays);
+		return { status: 200, body: { result: true, data, msg: 'OK. Request done' } };
+	},
 	get_environment: async (_rqo, context) => {
 		// The full client environment (PHP get_environment): page_globals +
 		// plain_vars + get_label — the payload set_environment() injects.
@@ -1109,6 +1148,79 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		return { status: 200, body: environment };
 	},
 };
+
+/** Preset sections excluded from LOAD activity (PHP DEDALO_TEMP_PRESET_SECTION_TIPO
+ * dd655 / DEDALO_SEARCH_PRESET_SECTION_TIPO dd623 — user list/search presets are
+ * not real navigation and must not pollute the activity timeline). */
+const ACTIVITY_EXCLUDED_PRESET_TIPOS: ReadonlySet<string> = new Set(['dd655', 'dd623']);
+
+/**
+ * LOAD activity for a section/area read (PHP dd_core_api::log_activity :3603).
+ * Appends a 'LOAD EDIT'/'LOAD LIST' audit row keyed by the read's SECTION/AREA
+ * tipo — the stream the dashboard timeline aggregates. Fire-and-swallow: an
+ * audit write must never fail the read (logActivity already swallows its own
+ * errors; this wrapper guards the model/preset lookups too).
+ *
+ * PHP exclusions mirrored: skip mode 'search'/'tm', skip the Activity section and
+ * its own components (self-log loop guard — ACTIVITY_SECTION_TIPO dd542), skip
+ * temp/search preset sections, and log ONLY section + area models (never a bare
+ * component read, e.g. an autocomplete's get_data — dd_core_api :3628-3633).
+ */
+async function logReadActivity(
+	rqo: Rqo,
+	principal: Principal,
+	context: ApiRequestContext,
+	result: ApiResult,
+): Promise<void> {
+	try {
+		const source = rqo.source ?? {};
+		const tipo = source.tipo ?? '';
+		const mode = source.mode ?? '';
+		if (tipo === '' || mode === 'search' || mode === 'tm') return;
+		// Self-log loop guard: the Activity section (dd542) is the log's own home.
+		const { ACTIVITY_SECTION_TIPO } = await import('../../concepts/section.ts');
+		if (tipo === ACTIVITY_SECTION_TIPO) return;
+		if (ACTIVITY_EXCLUDED_PRESET_TIPOS.has(tipo)) return;
+
+		const { getModelByTipo } = await import('../../ontology/resolver.ts');
+		const model = (await getModelByTipo(tipo)) ?? '';
+		// Only sections and areas generate activity (PHP :3631) — a bare component
+		// read (autocomplete get_data, resolve_data) leaves no footprint.
+		if (model !== 'section' && !model.startsWith('area')) return;
+
+		const modeToActivity = mode === 'list' ? 'list' : 'edit';
+		const datos: Record<string, unknown> = {
+			msg: `HTML Page is loaded in mode: ${modeToActivity} [${mode}]`,
+			tipo,
+		};
+		// section_id echoed only for a section EDIT load (PHP :3647), read from the
+		// response's first entry, falling back to the request source.
+		if (model === 'section' && mode === 'edit') {
+			const body = result.body as
+				| { result?: { data?: { section_id?: unknown; entries?: { section_id?: unknown }[] }[] } }
+				| undefined;
+			const firstItem = body?.result?.data?.[0];
+			const sectionId =
+				firstItem?.entries?.[0]?.section_id ?? firstItem?.section_id ?? source.section_id ?? null;
+			if (sectionId !== null && sectionId !== undefined) datos.id = sectionId;
+		}
+
+		const host =
+			context.clientIp === '127.0.0.1' || context.clientIp === '::1'
+				? 'localhost'
+				: (context.clientIp ?? 'unknown');
+		const { logActivity } = await import('./activity_log.ts');
+		await logActivity({
+			what: `LOAD ${modeToActivity.toUpperCase()}`, // 'LOAD EDIT' | 'LOAD LIST'
+			tipo,
+			userId: principal.userId,
+			host,
+			datos, // PHP data_activity: {msg, tipo, id?} — nothing more
+		});
+	} catch (error) {
+		console.error('LOAD activity log failed (swallowed):', error);
+	}
+}
 
 /**
  * Menu read (PHP menu::get_json → menu_json.php). Returns the menu's structure

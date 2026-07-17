@@ -18,12 +18,18 @@
 import { sql } from '../../db/postgres.ts';
 import { virtualDateNow } from '../../section/record/create_record.ts';
 
-/** PHP WHAT → dd42 code (observed live: login/delete/save/page-load). */
+/**
+ * PHP WHAT message → dd42 code (logger_backend_activity::$what). Keys are the
+ * EXACT PHP message strings — 'LOAD EDIT'/'LOAD LIST' are distinct codes (6/7),
+ * NOT a single 'LOAD'. Unmapped messages are skipped, never guessed.
+ */
 const WHAT_CODES: Record<string, string> = {
-	LOGIN: '1',
+	'LOG IN': '1',
+	NEW: '3',
 	DELETE: '4',
 	SAVE: '5',
-	LOAD: '7',
+	'LOAD EDIT': '6',
+	'LOAD LIST': '7',
 };
 
 export interface ActivityEntry {
