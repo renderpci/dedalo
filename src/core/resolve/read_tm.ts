@@ -27,12 +27,14 @@
  * wrapper rule when addressed directly.
  */
 
+import { config } from '../../config/config.ts';
 import type { Ddo } from '../concepts/ddo.ts';
 import type { Rqo } from '../concepts/rqo.ts';
 import type { Sqo } from '../concepts/sqo.ts';
 import type { MatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
 import type { TimeMachineRow } from '../db/time_machine.ts';
+import { createDataCache } from '../ontology/cache_factory.ts';
 import { termByTipo } from '../ontology/labels.ts';
 import {
 	getColumnNameByModel,
@@ -75,6 +77,15 @@ function tipoColumnFilter(sqo: Record<string, unknown>): string | null {
 
 /** TM virtual section + the users section (the rest come from tm_record.ts). */
 const TM_SECTION_TIPO = 'dd15';
+
+/**
+ * Bare-browse COUNT(*) cache (see tmReadSource.count). Data-event wired: ANY
+ * record save/delete may append TM rows, so any section write clears it; the
+ * TTL stamp bounds staleness against out-of-band (non-engine) inserts.
+ */
+const tmBareCountCache = createDataCache<string, { value: number; at: number }>((cache) =>
+	cache.clear(),
+);
 const USERS_SECTION_TIPO = 'dd128';
 
 /**
@@ -227,6 +238,27 @@ async function queryTmRows(
 	const limit = Number(sqo.limit ?? 10);
 	const offset = Number(sqo.offset ?? 0);
 	const params = [...scopeParams, limit, offset];
+
+	// Late row lookup for DEEP pages on the id-ordered surfaces (bare browse +
+	// record-snapshot list, both PK/(tipo,id)-index-served): find the page of
+	// ids first (narrow index scan), then join back for the wide data column —
+	// a plain OFFSET reads and discards every skipped row's snapshot jsonb.
+	// The section_id order path keeps the plain query: its sort key has ties,
+	// and page membership under ties must not be perturbed (byte-gated reads).
+	const lateThreshold = config.ops.searchLateRowLookupOffset;
+	if (lateThreshold >= 0 && offset >= lateThreshold && orderColumn === 'id') {
+		const rows = (await sql.unsafe(
+			`SELECT tm.id, tm.section_id, tm.section_tipo, tm.tipo, tm.lang, tm.timestamp::text AS timestamp, tm.user_id, tm.bulk_process_id, tm.data
+			 FROM matrix_time_machine tm
+			 JOIN (SELECT id FROM matrix_time_machine
+			       WHERE ${whereSql}
+			       ORDER BY id ${direction}
+			       LIMIT $${params.length - 1} OFFSET $${params.length}) page ON page.id = tm.id
+			 ORDER BY tm.id ${direction}`,
+			params,
+		)) as TmRow[];
+		return { rows, isRecordList };
+	}
 
 	const rows = (await sql.unsafe(
 		`SELECT id, section_id, section_tipo, tipo, lang, timestamp::text AS timestamp, user_id, bulk_process_id, data
@@ -472,11 +504,27 @@ export const tmReadSource: SectionReadSource = {
 
 	async count(sqo: Sqo): Promise<number> {
 		const where = buildTmWhere(sqo as Record<string, unknown>);
+		// The BARE browse (no scope, whereSql 'true') is a full-table COUNT(*) on
+		// the append-only TM table — the only expensive count surface (the scoped
+		// ones are index-served). Serve it from the data-event cache: every save
+		// this engine performs clears it (saves are exactly when TM grows), with
+		// TM_COUNT_CACHE_TTL_MS as the freshness backstop for out-of-band inserts.
+		// 0 disables (exact every time — the parity-environment setting).
+		const ttl = config.ops.tmCountCacheTtlMs;
+		const bare = where.whereSql === 'true';
+		if (bare && ttl > 0) {
+			const hit = tmBareCountCache.get('bare');
+			if (hit !== undefined && Date.now() - hit.at < ttl) return hit.value;
+		}
 		const rows = (await sql.unsafe(
 			`SELECT COUNT(*)::int AS c FROM matrix_time_machine WHERE ${where.whereSql}`,
 			where.params,
 		)) as { c: number }[];
-		return Number(rows[0]?.c ?? 0);
+		const value = Number(rows[0]?.c ?? 0);
+		if (bare && ttl > 0) {
+			tmBareCountCache.set('bare', { value, at: Date.now() });
+		}
+		return value;
 	},
 
 	async emitRow(context: EmitRowContext): Promise<void> {

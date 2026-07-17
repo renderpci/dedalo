@@ -24,9 +24,11 @@
  * used as a relation_list column (ich126 under rsc197's ich96).
  */
 
+import { readEnv } from '../../config/env.ts';
 import { getFlatValueFamily } from '../components/registry.ts';
 import { mediaTypeOf } from '../concepts/media.ts';
-import { readMatrixRecord } from '../db/matrix.ts';
+import { dataframeEntryMatches } from '../concepts/subdatum.ts';
+import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
@@ -37,8 +39,10 @@ import {
 	getModelByTipo,
 	getNode,
 } from '../ontology/resolver.ts';
+import { getSectionMap } from '../ontology/section_map.ts';
 import { resolveLocatorLabels } from '../relations/datalist.ts';
 import { findInverseReferences } from '../search/search_related.ts';
+import { resolveOwnConfigMap } from '../section/list_definitions/section_list.ts';
 import { resolveComponentValue } from './component_data.ts';
 import { currentDataLang } from './request_lang.ts';
 
@@ -57,7 +61,6 @@ async function getRelationListColumns(sectionTipo: string): Promise<string[]> {
 	// section_map 'relation_list' scope (strict — the scope key is read
 	// directly, no SCOPE_FALLBACK walk), resolved through the canonical
 	// virtual-aware cached accessor (S2-27).
-	const { getSectionMap } = await import('../ontology/section_map.ts');
 	const sectionMap = (await getSectionMap(sectionTipo)) as {
 		relation_list?: { term?: string | string[] };
 	} | null;
@@ -75,6 +78,22 @@ async function getRelationListColumns(sectionTipo: string): Promise<string[]> {
 	return (legacyRows[0]?.relations ?? [])
 		.map((link) => link.tipo)
 		.filter((tipo): tipo is string => typeof tipo === 'string');
+}
+
+/**
+ * Optional per-run seams for the cell-value resolvers. `loadRecord` replaces
+ * the default uncached `readMatrixRecord` — the export run passes a loader
+ * backed by its per-run record cache, collapsing the per-row/per-target
+ * single-record SELECTs (the classic N+1) to one read per distinct record.
+ * A loader function (not a bare Map) keeps eviction policy on the caller's
+ * side and this module free of any diffusion import.
+ */
+export interface CellValueResolveOptions {
+	loadRecord?: (
+		tableName: string,
+		sectionTipo: string,
+		sectionId: number,
+	) => Promise<MatrixRecord | null>;
 }
 
 /** One resolved relation target: its RAW stored position + flat value parts. */
@@ -104,12 +123,15 @@ export async function resolveRelationTargetValues(
 	componentTipo: string,
 	lang: string,
 	unresolved: string[],
+	opts?: CellValueResolveOptions,
 ): Promise<RelationTargetValue[]> {
 	const model = await getModelByTipo(componentTipo);
 	if (model === null) return [];
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (table === null) return [];
-	const record = await readMatrixRecord(table, sectionTipo, sectionId);
+	// The loader seam consults AFTER the null-table early-return (parity
+	// keystone: a cached loader must never resolve what the default can't).
+	const record = await (opts?.loadRecord ?? readMatrixRecord)(table, sectionTipo, sectionId);
 	if (record === null) return [];
 
 	const column = getColumnNameByModel(model) ?? 'relation';
@@ -125,7 +147,6 @@ export async function resolveRelationTargetValues(
 	}[];
 	if (locators.length === 0) return [];
 
-	const { resolveOwnConfigMap } = await import('../section/list_definitions/section_list.ts');
 	const cell = await resolveOwnConfigMap(componentTipo);
 	// Map-ordered children, dataframe children FLAGGED (they resolve as frame
 	// fields folded into the flat cell — PHP field-dimension order = ddo order).
@@ -169,6 +190,7 @@ export async function resolveRelationTargetValues(
 						locator?.id,
 						lang,
 						unresolved,
+						opts,
 					);
 					if (frameFlat !== null && frameFlat !== '') fieldParts.push(frameFlat);
 					continue;
@@ -180,6 +202,7 @@ export async function resolveRelationTargetValues(
 					lang,
 					unresolved,
 					await componentFieldsSeparator(child.tipo),
+					opts,
 				);
 				if (childValue !== null && childValue !== '') fieldParts.push(childValue);
 			}
@@ -224,9 +247,9 @@ async function resolveDataframeFlatValue(
 	pairId: number | string | undefined,
 	lang: string,
 	unresolved: string[],
+	opts?: CellValueResolveOptions,
 ): Promise<string | null> {
 	if (pairId === undefined || pairId === null) return null;
-	const { dataframeEntryMatches } = await import('../concepts/subdatum.ts');
 	const slot = ((record.columns.relation as Record<string, unknown[]> | null)?.[frameTipo] ??
 		[]) as Record<string, unknown>[];
 	const paired = slot.filter((entry) =>
@@ -234,7 +257,6 @@ async function resolveDataframeFlatValue(
 	);
 	if (paired.length === 0) return null;
 
-	const { resolveOwnConfigMap } = await import('../section/list_definitions/section_list.ts');
 	const frameCell = await resolveOwnConfigMap(frameTipo);
 	const frameChildTipos: string[] = [];
 	for (const child of frameCell.rawDdos ?? []) {
@@ -266,6 +288,7 @@ async function resolveDataframeFlatValue(
 				lang,
 				unresolved,
 				frameSeparator,
+				opts,
 			);
 			if (value !== null && value !== '') fields.push(value);
 		}
@@ -284,13 +307,16 @@ export async function resolveCellValue(
 	/** Multi-item join for DEFAULT-separator levels — the export-atoms rule
 	 * flips ' | ' (first indexed level) to ', ' (deeper levels). */
 	itemSeparator: string = RECORDS_SEPARATOR,
+	opts?: CellValueResolveOptions,
 ): Promise<string | null> {
 	const model = await getModelByTipo(componentTipo);
 	if (model === null) return null;
 
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (table === null) return null;
-	const record = await readMatrixRecord(table, sectionTipo, sectionId);
+	// The loader seam consults AFTER the null-table early-return (parity
+	// keystone: a cached loader must never resolve what the default can't).
+	const record = await (opts?.loadRecord ?? readMatrixRecord)(table, sectionTipo, sectionId);
 	if (record === null) return null;
 
 	// Per-model dispatch by the DESCRIPTOR's flatValue family (WS-B facet
@@ -372,6 +398,8 @@ export async function resolveCellValue(
 					'dd1715', // DEDALO label component of the dd1706 frame target
 					lang,
 					unresolved,
+					RECORDS_SEPARATOR,
+					opts,
 				);
 				if (label !== null && label !== '') fields.push(label);
 			}
@@ -387,6 +415,7 @@ export async function resolveCellValue(
 			componentTipo,
 			lang,
 			unresolved,
+			opts,
 		);
 		const parts = targets.flatMap((target) => target.parts);
 		return parts.length > 0 ? parts.join(itemSeparator) : null;
@@ -398,7 +427,6 @@ export async function resolveCellValue(
 	// quality comes from the media CONTRACT (mediaTypeOf → DEDALO_*_QUALITY_
 	// DEFAULT), never a hardcoded table.
 	if (family === 'media') {
-		const { readEnv } = await import('../../config/env.ts');
 		const mediaBase = readEnv('DEDALO_MEDIA_BASE_URL');
 		const defaultQuality = mediaTypeOf(model)?.defaultQuality;
 		if (mediaBase === undefined || mediaBase === '' || defaultQuality === undefined) {

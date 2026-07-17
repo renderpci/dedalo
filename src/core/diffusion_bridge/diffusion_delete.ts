@@ -396,7 +396,7 @@ export async function retryPendingDiffusion(
 		        relation->'dd1763'->0->>'section_id' AS target_id
 		 FROM "${DIFFUSION_ACTIVITY_TABLE}"
 		 WHERE section_tipo = 'dd1758'
-		   AND relation->'dd1767' @> '[{"section_id":"3","section_tipo":"dd1774"}]'
+		   AND relation @> '{"dd1767":[{"section_id":"3","section_tipo":"dd1774"}]}'::jsonb
 		 ORDER BY section_id ASC LIMIT ${Math.max(1, Math.floor(limit))}`,
 	)) as { section_id: number; target_section: string | null; target_id: string | null }[];
 	const outcome = { total: rows.length, retried: 0, remaining: 0 };
