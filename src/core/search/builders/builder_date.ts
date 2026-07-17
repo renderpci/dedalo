@@ -52,11 +52,18 @@ const TIME_MACHINE_TABLES: ReadonlySet<string> = new Set([
 ]);
 
 /** A normalized date value: op prefix + coarse Y/M/D precision (0 = absent). */
-interface NormalizedDate {
+export interface NormalizedDate {
 	op: string;
 	year: number;
 	month: number; // 0 when absent
 	day: number; // 0 when absent (only set when month is set)
+}
+
+/** One half-open boundary comparison against a date column (`col cmp bound`). */
+export interface DateBoundary {
+	cmp: '>=' | '<';
+	/** A `YYYY-MM-DD` date string (cast to ::date by the caller). */
+	bound: string;
 }
 
 /**
@@ -119,7 +126,7 @@ function parseObjectDate(q: Record<string, unknown>): NormalizedDate | null {
  * unwrap a single-element array, then dispatch on object vs plain-text. Returns
  * null when q is absent or not date-shaped (the caller then drops the clause).
  */
-function normalizeDateQ(rawQ: unknown): NormalizedDate | null {
+export function normalizeDateQ(rawQ: unknown): NormalizedDate | null {
 	let value = rawQ;
 	if (Array.isArray(value)) value = value[0];
 	if (value === undefined || value === null) return null;
@@ -181,44 +188,81 @@ function nextDay(year: number, month: number, day: number): string {
  * format:'function' allowlist). Bounds travel as bound params (a plain column
  * comparison, not jsonpath). Existence operators are handled by the caller.
  */
+/**
+ * The `[lower, upper)` date boundaries the typed value covers — a whole year,
+ * month, or single day (PHP resolve_date_mode_date_sql_tm builds exactly these).
+ */
+function periodBounds(date: NormalizedDate): { lower: string; upper: string } {
+	if (date.month === 0) {
+		// Year only: [YYYY-01-01, (YYYY+1)-01-01)
+		return { lower: `${date.year}-01-01`, upper: `${date.year + 1}-01-01` };
+	}
+	if (date.day === 0) {
+		// Year+month: [YYYY-MM-01, next-month-01)
+		return {
+			lower: `${date.year}-${pad2(date.month)}-01`,
+			upper:
+				date.month === 12 ? `${date.year + 1}-01-01` : `${date.year}-${pad2(date.month + 1)}-01`,
+		};
+	}
+	// Full date: [YYYY-MM-DD, +1 day)
+	return {
+		lower: `${date.year}-${pad2(date.month)}-${pad2(date.day)}`,
+		upper: nextDay(date.year, date.month, date.day),
+	};
+}
+
+/**
+ * The SARGable `timestamp`-column comparison(s) a `(date, operator)` implies —
+ * the SINGLE source of truth shared by the standard date builder (matrix_activity
+ * / matrix_time_machine, `_Q_`-token fragments) and the Time Machine read path
+ * (resolve/read_tm.ts, `$N` params). A partial date compares as a WHOLE span:
+ *
+ *   '=' / ''  →  >= lower AND < upper   (inside the period)
+ *   '>'       →  >= upper               (strictly after the whole period)
+ *   '>='      →  >= lower               (at or after the period start)
+ *   '<'       →  <  lower               (before the period starts)
+ *   '<='      →  <  upper               (at or before the period end)
+ *
+ * FUNCTIONALITY-OVER-PARITY (2026-07-17): PHP's `_tm` handler left directional
+ * operators unimplemented — its switch collapsed every operator to the '=' range,
+ * so `>`/`<` silently behaved like `=`. We implement them (WC-036).
+ */
+export function timeMachineDatePredicates(date: NormalizedDate, operator: string): DateBoundary[] {
+	const { lower, upper } = periodBounds(date);
+	switch (operator) {
+		case '>':
+			return [{ cmp: '>=', bound: upper }];
+		case '>=':
+			return [{ cmp: '>=', bound: lower }];
+		case '<':
+			return [{ cmp: '<', bound: lower }];
+		case '<=':
+			return [{ cmp: '<', bound: upper }];
+		default:
+			// '=' / '' — inside the period.
+			return [
+				{ cmp: '>=', bound: lower },
+				{ cmp: '<', bound: upper },
+			];
+	}
+}
+
 function buildTimeMachineDateFragment(
 	date: NormalizedDate,
 	operator: string,
 	context: BuilderContext,
 ): BuilderResult {
 	const column = `${context.alias}."timestamp"`;
-	let lower: string;
-	let upper: string;
-	if (date.month === 0) {
-		// Year only: [YYYY-01-01, (YYYY+1)-01-01)
-		lower = `${date.year}-01-01`;
-		upper = `${date.year + 1}-01-01`;
-	} else if (date.day === 0) {
-		// Year+month: [YYYY-MM-01, next-month-01)
-		lower = `${date.year}-${pad2(date.month)}-01`;
-		upper =
-			date.month === 12 ? `${date.year + 1}-01-01` : `${date.year}-${pad2(date.month + 1)}-01`;
-	} else {
-		// Full date: [YYYY-MM-DD, +1 day)
-		lower = `${date.year}-${pad2(date.month)}-${pad2(date.day)}`;
-		upper = nextDay(date.year, date.month, date.day);
-	}
-	switch (operator) {
-		case '>':
-			return fragment(`${column} >= _Q1_::date`, { _Q1_: upper });
-		case '>=':
-			return fragment(`${column} >= _Q1_::date`, { _Q1_: lower });
-		case '<':
-			return fragment(`${column} < _Q1_::date`, { _Q1_: lower });
-		case '<=':
-			return fragment(`${column} < _Q1_::date`, { _Q1_: upper });
-		default:
-			// '=' / '' — inside the period.
-			return fragment(`(${column} >= _Q1_::date AND ${column} < _Q2_::date)`, {
-				_Q1_: lower,
-				_Q2_: upper,
-			});
-	}
+	const predicates = timeMachineDatePredicates(date, operator);
+	const tokens: Record<string, unknown> = {};
+	const parts = predicates.map((predicate, index) => {
+		const token = `_Q${index + 1}_`;
+		tokens[token] = predicate.bound;
+		return `${column} ${predicate.cmp} ${token}::date`;
+	});
+	const sentence = parts.length > 1 ? `(${parts.join(' AND ')})` : (parts[0] as string);
+	return fragment(sentence, tokens);
 }
 
 export function buildDateFragment(

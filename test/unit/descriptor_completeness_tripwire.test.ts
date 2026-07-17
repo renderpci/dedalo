@@ -42,6 +42,7 @@ const FAMILY_COLUMN: Record<string, string> = {
 	date: 'date',
 	iri: 'iri',
 	section_id: 'section_id',
+	json: 'misc', // component_json stores in the shared `misc` column
 };
 
 /**
@@ -57,7 +58,6 @@ const LEDGERED_UNSEARCHABLE: ReadonlySet<string> = new Set([
 	'component_pdf', // media
 	'component_svg', // media
 	'component_geolocation', // dedicated geo search unported (rewrite/STATUS.md)
-	'component_json', // no PHP search trait
 	'component_info', // computed display, no stored searchable value
 	'component_password', // never searchable (PHP posture)
 	'component_filter_records', // row-ACL editor, dedicated semantics

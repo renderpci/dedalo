@@ -30,6 +30,7 @@ import {
 } from '../ontology/resolver.ts';
 import { buildDateFragment } from './builders/builder_date.ts';
 import { buildIriFragment } from './builders/builder_iri.ts';
+import { buildJsonFragment } from './builders/builder_json.ts';
 import { buildNumberFragment } from './builders/builder_number.ts';
 import { buildSectionIdFragment } from './builders/builder_section_id.ts';
 import { buildStringFragment } from './builders/builder_string.ts';
@@ -57,6 +58,7 @@ const FAMILY_BUILDERS: Record<
 	number: (q, qOperator, _qSplit, context) => buildNumberFragment(q, qOperator, context),
 	date: (q, qOperator, _qSplit, context) => buildDateFragment(q, qOperator, context),
 	iri: (q, qOperator, _qSplit, context) => buildIriFragment(q, qOperator, context),
+	json: (q, qOperator, _qSplit, context) => buildJsonFragment(q, qOperator, context),
 	section_id: (q, qOperator, _qSplit, context) => buildSectionIdFragment(q, qOperator, context),
 };
 

@@ -99,7 +99,7 @@ export interface ComponentSearch {
  * their search face is `search` + the relations registry, derived from
  * column === 'relation'.
  */
-export type SearchBuilderFamily = 'string' | 'number' | 'date' | 'iri' | 'section_id';
+export type SearchBuilderFamily = 'string' | 'number' | 'date' | 'iri' | 'section_id' | 'json';
 
 /**
  * Flat display-value family (S2-26): how a component renders as a plain

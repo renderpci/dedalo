@@ -62,6 +62,7 @@ import {
 import { EmissionContext, filterItemsByLang, readComponentItems } from './component_data.ts';
 import { currentDataLang } from './request_lang.ts';
 import type { StructureContextEntry } from './structure_context.ts';
+import { conformTmFilter } from './tm_filter.ts';
 
 /**
  * The section-record TM list filters by a `tipo` COLUMN filter whose value is the
@@ -173,6 +174,13 @@ function buildTmWhere(sqo: Record<string, unknown>): {
 	if (tipoFilter !== null) {
 		params.push(tipoFilter);
 		return { whereSql: `tipo = $${params.length}`, params, isRecordList: true };
+	}
+	// The standalone dd15 list search: conform component clauses to the flat
+	// matrix_time_machine columns (PHP search_tm + the _tm traits). Absent this,
+	// every component filter was silently ignored (the whole list came back).
+	const componentSql = conformTmFilter(sqo.filter, { params });
+	if (componentSql !== null && componentSql !== '') {
+		return { whereSql: componentSql, params, isRecordList: false };
 	}
 	// No scope → the bare dd15 list: ALL TM rows (PHP search_tm empty where).
 	return { whereSql: 'true', params, isRecordList: false };

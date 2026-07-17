@@ -7,6 +7,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_json: ComponentModel = {
 	model: 'component_json',
 	column: 'misc',
+	searchBuilder: 'json',
 	importValueProperty: true,
 	importConform: 'json',
 };
