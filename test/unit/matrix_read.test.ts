@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readMatrixRecord } from '../../src/core/db/matrix.ts';
+import { readMatrixRecord, readMatrixRecordBatch } from '../../src/core/db/matrix.ts';
 
 const KNOWN_SECTION_TIPO = 'numisdata6';
 const KNOWN_SECTION_ID = 1;
@@ -43,6 +43,31 @@ describe('matrix read (real DB)', () => {
 	test('refuses tables outside the allowlist (identifier gate §7.6)', async () => {
 		await expect(
 			readMatrixRecord('matrix; DROP TABLE matrix;--', KNOWN_SECTION_TIPO, 1),
+		).rejects.toThrow(/allowlist/);
+	});
+});
+
+describe('matrix batch read (the list-page N+1 killer)', () => {
+	test('batch records are BYTE-IDENTICAL to single reads (rawText included)', async () => {
+		const wanted = [KNOWN_SECTION_ID, 2, 99999999]; // one guaranteed miss
+		const batch = await readMatrixRecordBatch('matrix', KNOWN_SECTION_TIPO, wanted);
+
+		expect(batch.has(99999999)).toBe(false);
+		expect(batch.size).toBeGreaterThan(0);
+		for (const [sectionId, record] of batch) {
+			const single = await readMatrixRecord('matrix', KNOWN_SECTION_TIPO, sectionId);
+			expect(JSON.stringify(record)).toBe(JSON.stringify(single));
+		}
+	});
+
+	test('empty id set → empty map, no query', async () => {
+		const batch = await readMatrixRecordBatch('matrix', KNOWN_SECTION_TIPO, []);
+		expect(batch.size).toBe(0);
+	});
+
+	test('refuses tables outside the allowlist (identifier gate §7.6)', async () => {
+		await expect(
+			readMatrixRecordBatch('matrix; DROP TABLE matrix;--', KNOWN_SECTION_TIPO, [1]),
 		).rejects.toThrow(/allowlist/);
 	});
 });
