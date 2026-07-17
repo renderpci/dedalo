@@ -5,6 +5,7 @@
 
 
 // imports
+	import { when_in_viewport } from '../../../core/common/js/events.js'
 	import {ui} from '../../../core/common/js/ui.js'
 
 
@@ -182,6 +183,11 @@ const get_content_data = function(self) {
 		description_input.setAttribute('maxlength', '8000')
 		description_input.setAttribute('rows', '6')
 		description_input.setAttribute('placeholder', 'What were you doing, and what went wrong?')
+		when_in_viewport(description_input, () => {
+			setTimeout(() => {
+				description_input.focus()
+			}, 100)
+		})
 
 	// 4. send + response line
 		const footer = ui.create_dom_element({
