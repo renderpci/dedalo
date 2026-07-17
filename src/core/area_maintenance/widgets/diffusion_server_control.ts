@@ -11,10 +11,13 @@ import type { WidgetModule, WidgetResponse } from './support.ts';
 
 /** Pending unpublish rows (dd1758 whose dd1767 action is unpublish_pending). */
 export async function countPendingDiffusion(): Promise<number> {
+	// Whole-column containment (not relation->'dd1767' @> ...) so the existing
+	// relation GIN index serves the predicate — the arrow form seq-scans the
+	// multi-million-row table.
 	const rows = (await sql.unsafe(
 		`SELECT COUNT(*) AS n FROM matrix_activity_diffusion
 		 WHERE section_tipo = 'dd1758'
-		   AND relation->'dd1767' @> '[{"section_id":"3","section_tipo":"dd1774"}]'`,
+		   AND relation @> '{"dd1767":[{"section_id":"3","section_tipo":"dd1774"}]}'::jsonb`,
 		[],
 	)) as { n: number | string }[];
 	return Number(rows[0]?.n ?? 0);

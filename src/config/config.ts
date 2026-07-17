@@ -400,6 +400,12 @@ export interface OpsConfig {
 	/** Server-side statement_timeout ms, 0 = off (DB_STATEMENT_TIMEOUT_MS).
 	 * PRODUCTION.md recommends a non-zero value in production. */
 	readonly dbStatementTimeoutMs: number;
+	/** List offset from which default-ordered searches use the late-row-lookup
+	 * rewrite, -1 = never (SEARCH_LATE_ROW_LOOKUP_OFFSET). */
+	readonly searchLateRowLookupOffset: number;
+	/** Bare time-machine COUNT(*) cache TTL backstop ms, 0 = no cache/exact
+	 * (TM_COUNT_CACHE_TTL_MS). */
+	readonly tmCountCacheTtlMs: number;
 	/** Bun.serve idleTimeout SECONDS for both listeners (SERVER_IDLE_TIMEOUT_S).
 	 * Bun's default 10 s killed any slow request on the TCP listener (S2-33);
 	 * 255 is Bun's maximum. */
@@ -756,6 +762,8 @@ export const config: DedaloConfig = Object.freeze({
 		dbPoolMax: Math.max(1, readNumber('DB_POOL_MAX')),
 		dbAcquireTimeoutMs: Math.max(0, readNumber('DB_POOL_ACQUIRE_TIMEOUT_MS')),
 		dbStatementTimeoutMs: Math.max(0, readNumber('DB_STATEMENT_TIMEOUT_MS')),
+		searchLateRowLookupOffset: Math.max(-1, readNumber('SEARCH_LATE_ROW_LOOKUP_OFFSET')),
+		tmCountCacheTtlMs: Math.max(0, readNumber('TM_COUNT_CACHE_TTL_MS')),
 		idleTimeoutSeconds: Math.min(255, Math.max(1, readNumber('SERVER_IDLE_TIMEOUT_S'))),
 		shutdownGraceMs: Math.max(0, readNumber('SERVER_SHUTDOWN_GRACE_MS')),
 		backupDir: readEnv('DEDALO_BACKUP_DIR'),
