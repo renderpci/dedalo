@@ -20621,6 +20621,7 @@ body.inspector_resizing {
 }
 .wrapper_component.edit.view_line.portal > .content_data > .section_record.view_line > .column.column_section_id .button.tree {
   margin: 0px;
+  margin-left: 0.25rem;
 }
 .wrapper_component.edit.view_line.portal > .content_data > .section_record.view_line > .column:not(.column_section_id):not(.column_remove):not(.column_component_dataframe) {
   flex: 1 1 auto;

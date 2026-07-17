@@ -489,7 +489,7 @@ view_line_edit_portal.render_column_id = function(options) {
 			// button_tree
 			const button_tree = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'button tree',
+				class_name		: 'button tree grey',
 				title			: pen_title,
 				parent			: fragment
 			})

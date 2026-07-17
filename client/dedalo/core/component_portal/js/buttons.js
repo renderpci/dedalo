@@ -586,7 +586,7 @@ buttons.render_button_tree_selector = (self) => {
 
 	const button_tree_selector = ui.create_dom_element({
 		element_type	: 'span',
-		class_name		: 'button tree',
+		class_name		: 'button tree grey',
 		title			: get_label.link_resource || 'Link resource'
 	})
 
