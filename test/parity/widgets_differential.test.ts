@@ -85,7 +85,7 @@ describe.if(hasPhpCredentials())('maintenance widget catalog differential', () =
 		// error_reports (WC-018) is TS-ONLY: it joins the catalog only where the
 		// error-report intake flag is on (master installations) and has no PHP
 		// twin — normalize it out before the byte-compare.
-		// site_builder_status (WC-033) is likewise TS-ONLY: the Site Builder subsystem
+		// site_builder_status (WC-035) is likewise TS-ONLY: the Site Builder subsystem
 		// is a native TS addition with no PHP oracle twin (see TS_ONLY_TOOLS for its
 		// tool counterpart) — normalize it out the same way. Its own shape is asserted
 		// natively by test/unit/site_builder_status_widget.test.ts.
