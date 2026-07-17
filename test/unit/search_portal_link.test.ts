@@ -21,7 +21,8 @@ import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 const ACTIVITY = 'dd542'; // consultation-only
 const WHO_PORTAL = 'dd543'; // component_portal → matrix_activity.relation
 const USERS = 'dd128';
-const ROOT_USER_ID = 1;
+const USERNAME = 'dd132'; // the target's display component (resolved chip label)
+const ROOT_USER_ID = -1; // the only user present in the scratch test DB (username 'root')
 
 let ctx: ApiRequestContext;
 
@@ -92,6 +93,15 @@ describe('search-mode portal link on a read-only section (Activity dd542)', () =
 		expect(mainItem).toBeDefined();
 		expect(mainItem?.pagination?.total).toBe(1);
 		expect(Array.isArray(mainItem?.entries)).toBe(true);
+
+		// The RESOLVED subdatum (dd132 Username) must be present so the chip renders
+		// the label — dd543's target display is section/relation-defined, not on its
+		// own properties (reported 2026-07-17: the "Who" chip showed no username).
+		const usernameItem = data.find((item) => item.tipo === USERNAME) as
+			| { entries?: { value?: unknown }[] }
+			| undefined;
+		expect(usernameItem).toBeDefined();
+		expect(usernameItem?.entries?.[0]?.value).toBe('root');
 	});
 
 	test('unlink (delete-only) echoes an empty set without writing', async () => {

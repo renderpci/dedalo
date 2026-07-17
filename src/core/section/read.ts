@@ -763,13 +763,22 @@ export async function resolveSearchData(rqo: Rqo, principal?: Principal): Promis
 		'../ontology/resolver.ts'
 	);
 	const { getEffectivePropertiesByTipo: effectivePropsOf } = await import('../ontology/alias.ts');
-	const rawRcs =
-		(
-			(await effectivePropsOf(tipo)) as {
-				source?: { request_config?: { show?: { ddo_map?: Record<string, unknown>[] } }[] };
-			} | null
-		)?.source?.request_config ?? [];
-	const allDdos = rawRcs.flatMap((rc) => rc?.show?.ddo_map ?? []) as {
+	// The child ddos (the target's DISPLAY components — e.g. dd132 Username for the
+	// dd543 Who portal) come from the RELATIONS-driven request_config builder, the
+	// same one buildGetDataContext uses for the edit-mode child tree. Reading the
+	// component's OWN `source.request_config` misses them for a section component
+	// whose target display is section/relation-defined (dd543 carries only
+	// `show_interface`), so the picked chip resolved NO subdatum and rendered blank
+	// (reported 2026-07-17: Activity "Who" search chip had no username).
+	const { buildRequestConfigForElement } = await import('../relations/request_config/build.ts');
+	const searchConfig = await buildRequestConfigForElement((await effectivePropsOf(tipo)) ?? null, {
+		ownerTipo: tipo,
+		ownerSectionTipo: sectionTipo,
+		mode: 'search',
+		ownerIsSection: false,
+		lang,
+	});
+	const allDdos = searchConfig.flatMap((rc) => rc?.show?.ddo_map ?? []) as {
 		tipo: string;
 		parent?: string;
 		section_tipo?: string | string[];
