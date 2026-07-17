@@ -22,7 +22,7 @@ import { importTools } from '../../src/core/tools/register.ts';
 /** TS-only tool packages with no PHP twin (each cites its WC ledger line). */
 const TS_ONLY_TOOLS: ReadonlySet<string> = new Set([
 	'tool_error_report', // WC-019
-	'tool_sitebuilder', // TS-native: proxies the standalone Site Builder daemon; no PHP oracle
+	'tool_sitebuilder', // WC-035— TS-native: proxies the standalone Site Builder daemon; no PHP oracle
 ]);
 
 describe('tools_register dry-run parity (no-op vs the PHP-imported dd1324)', () => {

@@ -33,6 +33,12 @@ async function detect(): Promise<DriverInfo | null> {
   return { id: 'opencode', binPath: bin, version: match[0] };
 }
 
+/**
+ * Writes the opencode.json that wires the publication API as a `remote` MCP server.
+ * OpenCode discovers this file by name in the working directory, so unlike the Claude Code
+ * driver it must live at the workspace root (not under .builder/); the agent is instructed
+ * to leave it alone.
+ */
 async function writeMcpConfig(opts: SessionStartOptions): Promise<void> {
   const path = join(opts.workspace, 'opencode.json');
   const server: Record<string, unknown> = { type: 'remote', url: opts.mcp.url };
@@ -51,6 +57,12 @@ function startTurn(opts: SessionStartOptions): AgentProcess {
   });
 }
 
+/**
+ * Maps one line of OpenCode's `--format json` output to zero or more AgentEvents. The
+ * stream is coarser and more version-variable than Claude Code's, so this reads each field
+ * defensively and surfaces only text, tool and the terminal session (→ resumeToken) frames;
+ * file changes are left to the git backstop (drivers/process.ts).
+ */
 function parseJsonLine(line: string): AgentEvent[] {
   const trimmed = line.trim();
   if (!trimmed) return [];

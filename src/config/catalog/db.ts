@@ -152,6 +152,42 @@ and falls back to resolving the binary name from \`PATH\`.
 DEDALO_PG_BIN_PATH="/usr/lib/postgresql/16/bin/"
 \`\`\``,
 	},
+	SEARCH_LATE_ROW_LOOKUP_OFFSET: {
+		type: 'number',
+		scope: 'operator',
+		default: 1000,
+		heading: 'Deep pagination rewrite threshold',
+		typeLabel: 'int',
+		doc: `From this list offset on, default-ordered section searches are rewritten to a
+"late row lookup": the wanted page of record ids is found on an index-only scan first,
+and only those rows' full data is fetched. Same rows, same order — measured ~70×
+faster at offset 300000 on a 438k-record section, because a plain \`OFFSET\` makes
+PostgreSQL read and discard every skipped row's data columns.
+
+Shallow pages keep the plain query (the rewrite would gain nothing there). Set \`-1\`
+to disable the rewrite entirely.
+
+\`\`\`bash
+SEARCH_LATE_ROW_LOOKUP_OFFSET=1000
+\`\`\``,
+	},
+	TM_COUNT_CACHE_TTL_MS: {
+		type: 'number',
+		scope: 'operator',
+		default: 30000,
+		heading: 'Time machine total cache lifetime',
+		typeLabel: 'int',
+		doc: `The unfiltered time-machine browse shows a total that costs a full count of the
+(typically huge, append-only) \`matrix_time_machine\` table. That total is cached and
+invalidated on every save this engine performs; this key is the freshness backstop
+(in milliseconds) for rows inserted by anything else. Default \`30000\` (30 s). Set
+\`0\` to disable the cache and count exactly on every request — the right setting for
+parity test environments.
+
+\`\`\`bash
+TM_COUNT_CACHE_TTL_MS=30000
+\`\`\``,
+	},
 	DEDALO_SLOW_QUERY_MS: {
 		type: 'number',
 		scope: 'operator',

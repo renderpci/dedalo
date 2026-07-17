@@ -480,6 +480,9 @@ export const NEW_IN_V7: readonly string[] = [
 	'DB_POOL_MAX',
 	'DB_POOL_ACQUIRE_TIMEOUT_MS',
 	'DB_STATEMENT_TIMEOUT_MS',
+	// query performance
+	'SEARCH_LATE_ROW_LOOKUP_OFFSET',
+	'TM_COUNT_CACHE_TTL_MS',
 	// sessions / login / permissions (the TS-native auth stack)
 	'SESSION_TTL_SECONDS',
 	'SESSION_ABSOLUTE_TTL_SECONDS',

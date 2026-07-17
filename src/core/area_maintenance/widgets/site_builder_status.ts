@@ -79,7 +79,7 @@ async function fetchJson(
 export const widget: WidgetModule = {
 	spec: {
 		id: 'site_builder_status',
-		category: 'diffusion',
+		category: 'publication',
 		label: { kind: 'literal', text: 'Site builder' },
 	},
 	eagerValue: buildSiteBuilderStatus,

@@ -206,6 +206,27 @@ if (runTests) {
 	// Do not re-run a tripwire as a "neighbour".
 	const only = neighbours.filter((f) => !TRIPWIRES.includes(f));
 	await runTestFiles('neighbours', only);
+
+	// The site-builder daemon is its own package (publication/site_builder) — outside the
+	// src/+test/ trees the neighbour scan covers — so its suite runs as a targeted stage
+	// whenever the change touches it. Hermetic (no DB, no oracle); CI runs it always via
+	// scripts/ci/hermetic.sh.
+	if (changed.some((f) => f.startsWith('publication/site_builder/'))) {
+		banner('site_builder (tsc + bun test in publication/site_builder)');
+		const r = await $`bash -c "cd publication/site_builder && bunx tsc --noEmit && bun test 2>&1"`
+			.quiet()
+			.nothrow();
+		const text = r.stdout.toString() + r.stderr.toString();
+		console.log(text.split('\n').slice(-6).join('\n'));
+		const passM = text.match(/(\d+) pass/);
+		const failM = text.match(/(\d+) fail/);
+		const ok = r.exitCode === 0 && failM?.[1] === '0';
+		results.push({
+			name: 'site_builder',
+			ok,
+			detail: `${passM?.[1] ?? '?'} pass / ${failM?.[1] ?? '?'} fail`,
+		});
+	}
 } else {
 	console.log('\n(--no-tests: skipping tripwires + neighbours)');
 }

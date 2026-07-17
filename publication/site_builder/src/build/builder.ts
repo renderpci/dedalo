@@ -17,7 +17,7 @@
  */
 
 import { existsSync } from 'node:fs';
-import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { confinedPath } from '../util/paths';
 import { config } from '../config';
@@ -25,7 +25,7 @@ import { ConflictError, NotFoundError } from '../errors';
 import { runBinary } from '../util/spawn';
 import { readManifest, type BuildSpec } from '../sites/manifest';
 import { siteExists } from '../sites/workspace';
-import { isSiteBusy } from '../sessions/manager';
+import { busyReason, endBuild, tryBeginBuild } from '../workspace_activity';
 import { promoteRelease, newReleaseId } from './promote';
 
 export type BuildOutcome = 'running' | 'success' | 'failed';
@@ -41,8 +41,6 @@ export interface BuildStatus {
   error: string | null;
 }
 
-const buildingSlugs = new Set<string>();
-
 function buildsDir(slug: string): string {
   return confinedPath(config.SITES_ROOT, slug, '.builder', 'builds');
 }
@@ -55,34 +53,59 @@ function logPath(slug: string, id: string): string {
   return join(buildsDir(slug), `${id}.log`);
 }
 
-export function isBuilding(slug: string): boolean {
-  return buildingSlugs.has(slug);
-}
-
 /** Kicks off a build, returning its id. The work runs detached; poll getBuild. */
 export async function startBuild(slug: string): Promise<{ build_id: string }> {
   if (!siteExists(slug)) throw new NotFoundError(`No site named '${slug}'`);
-  if (isSiteBusy(slug)) throw new ConflictError('Cannot build while a session is running', 'session_running');
-  if (buildingSlugs.has(slug)) throw new ConflictError('A build is already running', 'build_running');
 
-  const id = newReleaseId();
-  await mkdir(buildsDir(slug), { recursive: true });
-  const record: BuildStatus = {
-    id,
-    outcome: 'running',
-    started_at: new Date().toISOString(),
-    finished_at: null,
-    release: null,
-    error: null,
-  };
-  await writeRecord(slug, record);
-  await writeFile(logPath(slug, id), '', 'utf8');
+  // Reserve the workspace synchronously — one check-and-mark, cross-exclusive with agent
+  // turns (workspace_activity.ts), so a build can never start while an agent edits the
+  // tree, even if the requests land in the same tick.
+  if (!tryBeginBuild(slug)) {
+    const reason = busyReason(slug) ?? 'build_running';
+    throw new ConflictError(
+      reason === 'session_running'
+        ? 'Cannot build while a session is running'
+        : 'A build is already running',
+      reason,
+    );
+  }
 
-  buildingSlugs.add(slug);
-  void executeBuild(slug, id, record).finally(() => buildingSlugs.delete(slug));
-  return { build_id: id };
+  try {
+    const id = newReleaseId();
+    await mkdir(buildsDir(slug), { recursive: true });
+    const record: BuildStatus = {
+      id,
+      outcome: 'running',
+      started_at: new Date().toISOString(),
+      finished_at: null,
+      release: null,
+      error: null,
+    };
+    await writeRecord(slug, record);
+    await writeFile(logPath(slug, id), '', 'utf8');
+
+    // Detached: the reservation is released when the build settles. executeBuild funnels
+    // every failure into its terminal record, but its own failure handling can still
+    // reject (an unwritable log), so the .catch is load-bearing — without it that becomes
+    // an unhandled rejection.
+    void executeBuild(slug, id, record)
+      .catch(error => console.error(`[build] detached build '${id}' for '${slug}' failed unexpectedly:`, error))
+      .finally(() => endBuild(slug));
+    return { build_id: id };
+  } catch (error) {
+    endBuild(slug);
+    throw error;
+  }
 }
 
+/**
+ * The detached build pipeline: install → build → verify the output directory exists →
+ * promote a fresh preprod release. Each stage short-circuits to a 'failed' record with a
+ * one-line reason (the log holds the detail); it never throws out — the catch-all funnels
+ * any unexpected error into the same terminal record so `finally` in startBuild always
+ * clears the per-slug lock. A missing output directory is a failure, not a crash: a build
+ * command can exit 0 yet produce nothing.
+ */
 async function executeBuild(slug: string, id: string, record: BuildStatus): Promise<void> {
   const workspace = confinedPath(config.SITES_ROOT, slug);
   const manifest = await readManifest(slug);
@@ -119,6 +142,12 @@ async function executeBuild(slug: string, id: string, record: BuildStatus): Prom
   }
 }
 
+/**
+ * Runs one manifest command as an argv (split on whitespace — safe because the command
+ * comes from the daemon-owned manifest, never the agent; see the module header). Both
+ * stdout and stderr are streamed to the same sink so the build log interleaves them the
+ * way a terminal would. Never throws; the caller inspects exitCode/timedOut.
+ */
 function runStep(
   command: string,
   cwd: string,
@@ -130,6 +159,11 @@ function runStep(
   return runBinary(argv, { cwd, env, timeoutMs, onStdout: onOutput, onStderr: onOutput });
 }
 
+/**
+ * Stamps the terminal outcome onto the build record and persists it. Returned (not just
+ * called) at each exit of executeBuild so the record write is awaited before the pipeline
+ * unwinds and the lock is released.
+ */
 async function finish(
   slug: string,
   record: BuildStatus,
@@ -152,7 +186,7 @@ async function writeRecord(slug: string, record: BuildStatus): Promise<void> {
 }
 
 async function appendLog(slug: string, id: string, text: string): Promise<void> {
-  await (await import('node:fs/promises')).appendFile(logPath(slug, id), text, 'utf8');
+  await appendFile(logPath(slug, id), text, 'utf8');
 }
 
 /** A specific build's status record. */

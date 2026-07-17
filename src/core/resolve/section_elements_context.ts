@@ -154,7 +154,13 @@ export async function buildSectionElementsContext(
 		: options.ar_section_tipo
 			? [options.ar_section_tipo]
 			: [];
-	const exclude = new Set<string>([...DEFAULT_EXCLUDE, ...(options.ar_components_exclude ?? [])]);
+	// PHP `$options->ar_components_exclude ?? [default]` — a client-SENT list
+	// REPLACES the default (even an empty [] — tool_update_cache sends [] to get
+	// every component); the default applies only when the option is absent. Do
+	// not merge: tool_export sends ['component_password'] and PHP-era exports
+	// offered the media components (image/av/pdf/…) as columns.
+	// component_password stays hard-skipped below regardless of this list.
+	const exclude = new Set<string>(options.ar_components_exclude ?? DEFAULT_EXCLUDE);
 	const lang = currentDataLang();
 	const contexts: Record<string, unknown>[] = [];
 

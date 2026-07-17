@@ -99,4 +99,12 @@ bun run lint
 echo "== hermetic: static tripwires (${#HERMETIC_TRIPWIRES[@]})"
 bun test "${HERMETIC_TRIPWIRES[@]}"
 
+# The site-builder daemon (publication/site_builder) is its own package with a fully
+# hermetic suite: no DB, no oracle, no ../private — its tests run against a repo-local
+# .env.test and scratch directories. Without this block NOTHING mechanical runs it
+# (verify.ts neighbours only scan src/ + test/), so its invariants (bearer auth, promote
+# atomicity, session single-flight) could rot silently.
+echo "== hermetic: site builder daemon (publication/site_builder)"
+(cd publication/site_builder && bun install --frozen-lockfile && bunx tsc --noEmit && bun test)
+
 echo "== hermetic: GREEN"

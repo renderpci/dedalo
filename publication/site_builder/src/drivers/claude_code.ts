@@ -48,6 +48,12 @@ async function detect(): Promise<DriverInfo | null> {
   return { id: 'claude_code', binPath: bin, version: match[0] };
 }
 
+/**
+ * Writes the per-turn MCP config that points Claude Code at the publication API's /mcp
+ * endpoint, and returns its path for `--mcp-config`. It lives under the daemon-owned
+ * .builder/ dir (the agent is told not to touch it) rather than the workspace root, so it
+ * never lands in the site's committed source. Returns the path for the argv.
+ */
 async function writeMcpConfig(opts: SessionStartOptions): Promise<string> {
   const path = join(opts.workspace, '.builder', 'mcp.json');
   const server: Record<string, unknown> = { type: 'http', url: opts.mcp.url };

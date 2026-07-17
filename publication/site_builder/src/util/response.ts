@@ -7,6 +7,11 @@
 import { ApiError, MethodNotAllowedError, ServiceError } from '../errors';
 import { isProduction } from '../config';
 
+/**
+ * A JSON response. `no-store` by default — every response here is live daemon state (site
+ * status, build progress, audit), never cacheable; a caller that needs otherwise passes an
+ * explicit Cache-Control in `headers`.
+ */
 export function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
     status,

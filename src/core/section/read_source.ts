@@ -22,7 +22,7 @@ import type { Ddo } from '../concepts/ddo.ts';
 import { SELF_SENTINEL } from '../concepts/ddo.ts';
 import type { Rqo } from '../concepts/rqo.ts';
 import type { Sqo } from '../concepts/sqo.ts';
-import { readMatrixRecord } from '../db/matrix.ts';
+import { readMatrixRecord, readMatrixRecordBatch } from '../db/matrix.ts';
 import type { MatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
 import { getMatrixTableFromTipo } from '../ontology/resolver.ts';
@@ -99,8 +99,29 @@ export interface SectionReadSource {
  */
 export const matrixReadSource: SectionReadSource = {
 	async getRows(sqo, principal) {
-		const { sql: builtSql, params } = await buildSearchSql(sqo, { principal });
-		return (await sql.unsafe(builtSql, params as (string | number | null)[])) as SectionRow[];
+		// idsOnly: the page's records are batch-hydrated below with the FULL
+		// projection (::text twins included, which the search SELECT lacks), so
+		// fetching the ten wide jsonb columns here would be paid twice.
+		const { sql: builtSql, params } = await buildSearchSql(sqo, { principal, idsOnly: true });
+		const rows = (await sql.unsafe(builtSql, params as (string | number | null)[])) as SectionRow[];
+
+		// ONE record read per page per section instead of one per row (the old
+		// per-emitRow readMatrixRecord N+1): batch-load and ride each record on
+		// row.raw — envelope building never serializes raw, emitRow consumes it.
+		const idsBySection = new Map<string, number[]>();
+		for (const row of rows) {
+			const ids = idsBySection.get(row.section_tipo);
+			if (ids === undefined) idsBySection.set(row.section_tipo, [row.section_id]);
+			else ids.push(row.section_id);
+		}
+		for (const [sectionTipo, ids] of idsBySection) {
+			const table = (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix';
+			const records = await readMatrixRecordBatch(table, sectionTipo, ids);
+			for (const row of rows) {
+				if (row.section_tipo === sectionTipo) row.raw = records.get(row.section_id) ?? null;
+			}
+		}
+		return rows;
 	},
 
 	async count(sqo, principal) {
@@ -114,13 +135,16 @@ export const matrixReadSource: SectionReadSource = {
 	},
 
 	async emitRow({ row, ddoMap, mode, lang, callerTipo, emission, emitDdo }) {
-		// One matrix read per row for value extraction (Phase 4: reuse the search
-		// SELECT's jsonb columns once column projection is plumbed).
-		const record = await readMatrixRecord(
-			(await getMatrixTableFromTipo(row.section_tipo)) ?? 'matrix',
-			row.section_tipo,
-			row.section_id,
-		);
+		// The page's records ride in from getRows' batch hydration (row.raw);
+		// the single read remains as the fallback for rows emitted outside it.
+		const record =
+			row.raw !== undefined
+				? (row.raw as MatrixRecord | null)
+				: await readMatrixRecord(
+						(await getMatrixTableFromTipo(row.section_tipo)) ?? 'matrix',
+						row.section_tipo,
+						row.section_id,
+					);
 		if (record === null) return;
 		for (const ddo of ddoMap) {
 			const parentRef = ddo.parent ?? SELF_SENTINEL;

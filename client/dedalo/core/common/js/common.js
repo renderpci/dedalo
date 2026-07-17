@@ -2323,10 +2323,20 @@ common.prototype.get_section_elements_context = async function(options) {
 					}
 
 					// cache_handler. Cache section elements API response for speed.
+					// The id carries an options fingerprint: callers request different
+					// ar_components_exclude lists (search excludes media models,
+					// tool_export only component_password, tool_update_cache none) and
+					// use_real_sections values, and the server answers each differently —
+					// without the fingerprint whichever caller cached first would poison
+					// the entry for every other caller of the same section+lang.
+					const options_fingerprint = (Array.isArray(ar_components_exclude)
+						? [...ar_components_exclude].sort().join(',')
+						: 'default')
+						+ (use_real_sections===true ? '_real' : '')
 					const cache_handler = (section_tipo)
 						? {
 							handler	: 'localdb',
-							id		: 'section_cache_elements_context_' + section_tipo + '_' + window.page_globals?.dedalo_application_lang
+							id		: 'section_cache_elements_context_' + section_tipo + '_' + window.page_globals?.dedalo_application_lang + '_' + options_fingerprint
 						  }
 						  : null;
 

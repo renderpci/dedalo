@@ -393,6 +393,21 @@ See [media_pipeline.md](media_pipeline.md) for the end-to-end stages:
 - Thumbnails, poster frames and per-language VTT subtitles
 - Web-server-enforced access control (`media_protection`) and publication to the diffusion media index
 
+## Site builder
+
+An optional subsystem that lets users build public websites over the published data by
+talking to a coding agent, preview them, and publish to production. It is two independent
+processes — a standalone daemon (`publication/site_builder`) that runs the agent and owns the
+site workspaces, and a thin engine-side tool (`tools/tool_sitebuilder`) that proxies to it —
+joined only by an HTTP contract and a shared token.
+
+See [site_builder_internals.md](site_builder_internals.md) for full documentation on:
+
+- The two processes, the request/trust model (the engine authorizes, the daemon executes and records), and why the daemon never touches engine code or the work-system Postgres
+- The daemon internals: config, workspaces + git, the session/turn model, the pluggable `AgentDriver` seam, the durable event log + SSE, and atomic build/promote/publish
+- The engine tool: the proxy layer, the apiActions and permission gates, the SSE pass-through (and the one `dd_tools_api` core edit), the workspace client, and the maintenance-widget launcher
+- Extension points (add a driver, a template, a proxied action), the security model, and testing
+
 ## Internationalization (i18n)
 
 Dédalo is multilingual to the core: the same record can hold a value per language, the interface can be shown in any configured language, and content can be tagged with the language it is in. The i18n doc ties together the two independent translation planes (data vs interface).

@@ -40,6 +40,11 @@ export async function siteStatus(slug: string): Promise<SiteStatus> {
   };
 }
 
+/**
+ * The status of every site, for the list view. One site whose status cannot be assembled
+ * (a corrupt manifest, a half-deleted workspace) is dropped rather than failing the whole
+ * listing — a single broken site must not blank the operator's entire dashboard.
+ */
 export async function allSiteStatuses(): Promise<SiteStatus[]> {
   const slugs = await listSlugs();
   const statuses = await Promise.all(slugs.map(slug => siteStatus(slug).catch(() => null)));

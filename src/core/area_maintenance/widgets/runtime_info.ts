@@ -82,7 +82,10 @@ export const widget: WidgetModule = {
 	spec: {
 		id: 'runtime_info',
 		category: 'system',
-		label: { kind: 'literal', text: 'Runtime info' },
+		// Deliberately NO `class` override (WC-030): this widget keeps php_runtime's plain
+		// layout, not the frozen oracle's php_info iframe styling — the differential omits
+		// `class` at this slot alongside id/label.
+		label: { kind: 'literal', text: 'RUNTIME INFO' },
 	},
 	apiActions: {
 		clear_cache_files: runtimeInfoClearCaches,

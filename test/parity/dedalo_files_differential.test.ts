@@ -67,12 +67,17 @@ function isToolAssistantEntry(entry: ManifestEntry): boolean {
 /** TS-ONLY packages with no PHP twin (the WC-013 normalization pattern):
  *  - tool_error_report (WC-019) — TS-only tool in the TS-owned tools/ tree;
  *  - error_reports maintenance widget (WC-018) — TS-owned client files,
- *    excluded from sync_client.sh like diffusion_server_control.
+ *    excluded from sync_client.sh like diffusion_server_control;
+ *  - tool_sitebuilder + site_builder_status widget (WC-035) — the site-builder
+ *    subsystem, a TS-native addition (proxy tool + ops widget for the
+ *    standalone publication/site_builder daemon).
  * Their files exist only in the TS census; filtered from BOTH sides. */
 function isTsOnlyEntry(entry: ManifestEntry): boolean {
 	return (
 		entry.url.startsWith('/dedalo/tools/tool_error_report/') ||
-		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/error_reports/')
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/error_reports/') ||
+		entry.url.startsWith('/dedalo/tools/tool_sitebuilder/') ||
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/site_builder_status/')
 	);
 }
 
@@ -91,7 +96,7 @@ function isRuntimeInfoRenameEntry(entry: ManifestEntry): boolean {
 	);
 }
 
-/** The generated JS lang files are GONE from the TS client tree (WC-033):
+/** The generated JS lang files are GONE from the TS client tree (WC-035):
  * UI labels are repo catalogs under src/core/labels/catalog/, served only
  * through get_environment's `get_label` — the client never fetched these
  * files directly, so the SW pre-caching them was dead weight. The frozen PHP

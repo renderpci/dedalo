@@ -8,6 +8,8 @@ import { __setTestDriver } from '../src/drivers/registry';
 import { startSession, sendMessage, stopSession, getSessionState } from '../src/sessions/manager';
 import { sessionEventStream } from '../src/sessions/sse';
 import { readMeta, listSessions } from '../src/sessions/store';
+import { startBuild, getBuild } from '../src/build/builder';
+import { readManifest, writeManifest } from '../src/sites/manifest';
 import type { AgentDriver, AgentEvent, AgentProcess, SessionStartOptions } from '../src/drivers/types';
 import type { StoredEvent } from '../src/sessions/events';
 
@@ -201,5 +203,44 @@ describe('session flow', () => {
     const events = await collectStream(sessionEventStream('replay', session_id, -1));
     expect(events.some(e => e.body.type === 'turn_start')).toBe(true);
     expect(events.at(-1)?.body.type).toBe('turn_end');
+  });
+});
+
+describe('workspace mutual exclusion (turns vs builds)', () => {
+  test('a build is refused while an agent turn is running', async () => {
+    await createSite({ slug: 'excl-a', name: 'Excl A', actor: ACTOR });
+    __setTestDriver('claude_code', fakeDriver([{ type: 'text', text: 'working…' }], { hang: true }));
+
+    const { session_id } = await startSession('excl-a', 'go');
+    await waitFor(() => getSessionState('excl-a').state === 'running');
+
+    await expect(startBuild('excl-a')).rejects.toThrow(/session is running/);
+
+    await stopSession(session_id);
+    await waitFor(() => getSessionState('excl-a').state !== 'running');
+  });
+
+  test('an agent turn is refused while a build is running, and allowed after it settles', async () => {
+    await createSite({ slug: 'excl-b', name: 'Excl B', actor: ACTOR });
+    // A build slow enough to hold the reservation while we try to start a session.
+    const manifest = await readManifest('excl-b');
+    manifest.build = { install: 'sleep 1', build: 'true', output: 'src' };
+    await writeManifest(manifest);
+
+    const { build_id } = await startBuild('excl-b');
+    await expect(startSession('excl-b', 'while building')).rejects.toThrow(/build is running/);
+
+    // Once the build settles the reservation is released and a session may start.
+    const start = Date.now();
+    for (;;) {
+      const record = await getBuild('excl-b', build_id);
+      if (record && record.outcome !== 'running') break;
+      if (Date.now() - start > 8000) throw new Error('build never settled');
+      await new Promise(r => setTimeout(r, 25));
+    }
+    __setTestDriver('claude_code', fakeDriver([{ type: 'result', ok: true, durationMs: 1 }]));
+    const { session_id } = await startSession('excl-b', 'after build');
+    expect(session_id).toBeTruthy();
+    await collectStream(sessionEventStream('excl-b', session_id, -1));
   });
 });

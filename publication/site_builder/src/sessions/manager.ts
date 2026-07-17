@@ -24,6 +24,7 @@ import type { AgentProcess, DriverId, SessionStartOptions } from '../drivers/typ
 import { readManifest } from '../sites/manifest';
 import { commitAll, changedFiles } from '../sites/git';
 import { siteExists, workspaceSizeMb } from '../sites/workspace';
+import { busyReason, endTurn, tryBeginTurn } from '../workspace_activity';
 import type { SessionEventBody, SessionMeta, StoredEvent } from './events';
 import {
   appendEvent,
@@ -61,14 +62,12 @@ export function getSessionState(slug: string): { state: SessionState; session_id
   return { state: live.state, session_id: live.session_id };
 }
 
-export function isSiteBusy(slug: string): boolean {
-  return liveByslug.get(slug)?.state === 'running';
-}
-
-export function activeTurnCount(): number {
-  return activeTurns;
-}
-
+/**
+ * Whether the given session has a turn actively running right now. Resolves session → slug
+ * → live state; a session this process never saw (pre-restart) is not running by
+ * definition. The SSE handler uses this to decide whether to keep tailing or close after
+ * draining the backlog.
+ */
 export function isTurnRunning(sessionId: string): boolean {
   const slug = slugBySession.get(sessionId);
   return slug !== undefined && liveByslug.get(slug)?.state === 'running';
@@ -76,6 +75,12 @@ export function isTurnRunning(sessionId: string): boolean {
 
 // --- live subscription (SSE) ---
 
+/**
+ * Registers a live-event listener for a session and returns its unsubscribe closure. Every
+ * persisted event is fanned to all current listeners (see `fan`). The SSE handler
+ * subscribes BEFORE replaying the durable backlog so no event that lands mid-replay is
+ * lost; it dedupes the overlap by seq.
+ */
 export function subscribe(sessionId: string, fn: (event: StoredEvent) => void): () => void {
   let set = subscribers.get(sessionId);
   if (!set) {
@@ -108,35 +113,61 @@ export interface StartResult {
 export async function startSession(slug: string, prompt: string, driverOverride?: DriverId): Promise<StartResult> {
   validatePrompt(prompt);
   if (!siteExists(slug)) throw new NotFoundError(`No site named '${slug}'`);
-  if (isSiteBusy(slug)) throw new ConflictError(`A session is already running for '${slug}'`, 'session_running');
 
-  const manifest = await readManifest(slug);
-  const driver = driverOverride ?? manifest.driver;
+  // Reserve the workspace SYNCHRONOUSLY — check-and-mark with no await in between, and
+  // cross-exclusive with builds (workspace_activity.ts). From here every failure path
+  // before runTurn takes ownership must endTurn; runTurn's finally owns it afterwards.
+  if (!tryBeginTurn(slug)) {
+    const reason = busyReason(slug) ?? 'session_running';
+    throw new ConflictError(
+      reason === 'build_running'
+        ? `A build is running for '${slug}'`
+        : `A session is already running for '${slug}'`,
+      reason,
+    );
+  }
 
-  await enforceQuota(slug);
-  acquireGlobalSlot();
+  try {
+    const manifest = await readManifest(slug);
+    const driver = driverOverride ?? manifest.driver;
 
-  const sessionId = randomUUID();
-  const meta: SessionMeta = {
-    session_id: sessionId,
-    slug,
-    driver,
-    started_at: new Date().toISOString(),
-    turns: 0,
-    state: 'running',
-    resume_token: null,
-  };
-  await writeMeta(meta);
+    await enforceQuota(slug);
+    acquireGlobalSlot();
 
-  slugBySession.set(sessionId, slug);
-  liveByslug.set(slug, { slug, session_id: sessionId, state: 'running', proc: null, interrupted: false });
+    // Everything between acquiring the slot and handing off to runTurn (whose finally owns
+    // the release from then on) must release it on failure — a leaked increment here would
+    // permanently shrink the instance's concurrency budget.
+    try {
+      const sessionId = randomUUID();
+      const meta: SessionMeta = {
+        session_id: sessionId,
+        slug,
+        driver,
+        started_at: new Date().toISOString(),
+        turns: 0,
+        state: 'running',
+        resume_token: null,
+      };
+      await writeMeta(meta);
 
-  // Fire the turn detached; the caller streams via SSE.
-  void runTurn(meta, prompt).catch(() => {
-    /* runTurn contains its own error handling; this guards against an unexpected throw */
-  });
+      slugBySession.set(sessionId, slug);
+      liveByslug.set(slug, { slug, session_id: sessionId, state: 'running', proc: null, interrupted: false });
 
-  return { session_id: sessionId };
+      // Fire the turn detached; the caller streams via SSE. Ownership of the workspace
+      // reservation and the global slot transfers to runTurn's finally here.
+      void runTurn(meta, prompt).catch(() => {
+        /* runTurn contains its own error handling; this guards against an unexpected throw */
+      });
+
+      return { session_id: sessionId };
+    } catch (error) {
+      releaseGlobalSlot();
+      throw error;
+    }
+  } catch (error) {
+    endTurn(slug);
+    throw error;
+  }
 }
 
 /** Continues an existing session with a follow-up message (a new turn, resumed). */
@@ -144,19 +175,41 @@ export async function sendMessage(sessionId: string, message: string): Promise<v
   validatePrompt(message);
   const slug = slugBySession.get(sessionId) ?? (await resolveSlugFromDisk(sessionId));
   if (!slug) throw new NotFoundError(`No session '${sessionId}'`);
-  if (isSiteBusy(slug)) throw new ConflictError(`A turn is already running for '${slug}'`, 'session_running');
 
-  const meta = await readMeta(slug, sessionId);
-  if (!meta) throw new NotFoundError(`No session '${sessionId}'`);
+  // Same synchronous reservation as startSession (cross-exclusive with builds).
+  if (!tryBeginTurn(slug)) {
+    const reason = busyReason(slug) ?? 'session_running';
+    throw new ConflictError(
+      reason === 'build_running'
+        ? `A build is running for '${slug}'`
+        : `A turn is already running for '${slug}'`,
+      reason,
+    );
+  }
 
-  await enforceQuota(slug);
-  acquireGlobalSlot();
+  try {
+    const meta = await readMeta(slug, sessionId);
+    if (!meta) throw new NotFoundError(`No session '${sessionId}'`);
 
-  meta.state = 'running';
-  await writeMeta(meta);
-  liveByslug.set(slug, { slug, session_id: sessionId, state: 'running', proc: null, interrupted: false });
+    await enforceQuota(slug);
+    acquireGlobalSlot();
 
-  void runTurn(meta, message).catch(() => {});
+    // Same slot-release guard as startSession: runTurn's finally owns the release only once
+    // the turn is actually fired.
+    try {
+      meta.state = 'running';
+      await writeMeta(meta);
+      liveByslug.set(slug, { slug, session_id: sessionId, state: 'running', proc: null, interrupted: false });
+
+      void runTurn(meta, message).catch(() => {});
+    } catch (error) {
+      releaseGlobalSlot();
+      throw error;
+    }
+  } catch (error) {
+    endTurn(slug);
+    throw error;
+  }
 }
 
 /** Interrupts the running turn of a session (SIGINT → SIGKILL), if any. */
@@ -224,28 +277,33 @@ async function runTurn(meta: SessionMeta, prompt: string): Promise<void> {
       type: 'error',
       message: error instanceof Error ? error.message : String(error),
       retriable: true,
+    }).catch(() => {
+      // the persistence layer itself is failing; the finally below still runs
     });
   } finally {
-    meta.turns = turn;
-    meta.state = finalState;
-    meta.resume_token = resumeToken ?? null;
-    await writeMeta(meta);
+    // The persistence writes can themselves fail (disk full, workspace deleted mid-turn).
+    // They are wrapped so the state/slot releases BELOW run unconditionally — a throw here
+    // escaping into the callers' `void runTurn().catch(() => {})` would permanently leak a
+    // global concurrency slot and leave the site marked running forever.
+    try {
+      meta.turns = turn;
+      meta.state = finalState;
+      meta.resume_token = resumeToken ?? null;
+      await writeMeta(meta);
 
-    await persist(slug, sessionId, { type: 'turn_end', state: finalState, resumeToken });
+      await persist(slug, sessionId, { type: 'turn_end', state: finalState, resumeToken });
+    } catch (error) {
+      console.error(`[sessions] failed to persist turn end for '${slug}' — state may be stale on disk:`, error);
+    }
 
     const live = liveByslug.get(slug);
     if (live) {
       live.state = finalState;
       live.proc = null;
     }
+    endTurn(slug);
     releaseGlobalSlot();
   }
-}
-
-/** Marks a turn as interrupted from the outside (used by stop + boot sweep bookkeeping). */
-export function markInterrupted(slug: string): void {
-  const live = liveByslug.get(slug);
-  if (live) live.state = 'interrupted';
 }
 
 async function persist(slug: string, sessionId: string, body: SessionEventBody): Promise<void> {

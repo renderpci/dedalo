@@ -105,6 +105,9 @@ Previous task is common in multiple scenarios.
 
 - [Installing new hierarchies](install_new_hierarchies.md)
 
+- [Site builder](site_builder.md) — agent-built public websites over the published data
+    - [Site builder cookbook](site_builder_cookbook.md) — configuration and prompt examples
+
 - DDBB maintenance
     - Vacuum
     - reindexes

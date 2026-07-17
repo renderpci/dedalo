@@ -29,6 +29,11 @@ import { SiteBuilderError } from './wire.ts';
 const SLUG_PATTERN = /^[a-z][a-z0-9-]{1,39}$/;
 const MESSAGE_MAX = 32 * 1024;
 
+/**
+ * Build the daemon's `actor` from the authenticated principal. The engine is the trusted
+ * identity injector: the browser never reaches the daemon, so whatever we stamp here is
+ * what the daemon records as "who did this".
+ */
 function actorFor(context: { principal: Principal }): Actor {
 	// The numeric id is the authoritative identity; the username is cosmetic for the audit
 	// trail. A real display name is a documented later refinement.
@@ -60,6 +65,11 @@ async function proxy(fn: () => Promise<ToolResponse>): Promise<ToolResponse> {
 	}
 }
 
+/**
+ * Validate the `slug` option against SLUG_PATTERN before it is interpolated into a daemon
+ * path. Rejecting here keeps a malformed or hostile slug out of the URL entirely rather
+ * than letting the daemon 404/500 on it.
+ */
 function requireSlug(options: Record<string, unknown>): string {
 	const slug = String(options.slug ?? '');
 	if (!SLUG_PATTERN.test(slug)) {
@@ -68,6 +78,11 @@ function requireSlug(options: Record<string, unknown>): string {
 	return slug;
 }
 
+/**
+ * Validate an id-shaped option (session_id, build_id) before it becomes a path segment:
+ * bounded length, path-safe characters only. Same purpose as requireSlug — no untrusted
+ * value reaches the daemon URL.
+ */
 function requireId(options: Record<string, unknown>, key: string): string {
 	const id = String(options[key] ?? '');
 	if (id.length === 0 || id.length > 200 || /[^A-Za-z0-9._-]/.test(id)) {
@@ -76,6 +91,12 @@ function requireId(options: Record<string, unknown>, key: string): string {
 	return id;
 }
 
+/**
+ * The imperative publish gate. Building a site needs only the tool grant, but pushing it
+ * live (publish, and reading the publish audit) additionally requires a developer or
+ * global admin — enforced here because dispatch's permission check is `null` for these
+ * actions (the finer rule cannot be expressed as a static permission).
+ */
 function assertPublisher(principal: Principal): void {
 	if (!principal.isDeveloper && !principal.isGlobalAdmin) {
 		throw new SiteBuilderError(
@@ -87,6 +108,12 @@ function assertPublisher(principal: Principal): void {
 
 // --- handlers ---
 
+/**
+ * Probe the daemon's /health and report configured/reachable plus whether this user may
+ * publish. Unlike the other handlers this one does NOT go through proxy(): it answers even
+ * when the daemon is unconfigured or down, because the client uses the answer to decide
+ * what to render (workspace vs empty state).
+ */
 async function getStatus(context: ToolActionContext): Promise<ToolResponse> {
 	const canPublish = context.principal.isDeveloper || context.principal.isGlobalAdmin;
 	if (!isConfigured()) {
@@ -107,10 +134,17 @@ async function getStatus(context: ToolActionContext): Promise<ToolResponse> {
 	}
 }
 
+/** GET /v1/sites — the full (collaborative) site list; no per-site ownership filter. */
 async function listSites(context: ToolActionContext): Promise<ToolResponse> {
 	return proxy(async () => ok(await daemonJson('GET', '/v1/sites', actorFor(context))));
 }
 
+/**
+ * POST /v1/sites — create a site. Validates the slug and a bounded name here; template and
+ * driver are optional and only forwarded when they are of the expected shape (the driver
+ * is allow-listed to the three known agents, so an unknown value is silently dropped
+ * rather than passed to the daemon).
+ */
 async function createSite(context: ToolActionContext): Promise<ToolResponse> {
 	return proxy(async () => {
 		const o = context.options;
@@ -127,6 +161,11 @@ async function createSite(context: ToolActionContext): Promise<ToolResponse> {
 	});
 }
 
+/**
+ * DELETE /v1/sites/:slug — remove a site. `purge_prod` is opt-in and only appended when
+ * strictly true, so an absent or falsy value never accidentally tears down the published
+ * copy.
+ */
 async function deleteSite(context: ToolActionContext): Promise<ToolResponse> {
 	return proxy(async () => {
 		const slug = requireSlug(context.options);
@@ -135,6 +174,10 @@ async function deleteSite(context: ToolActionContext): Promise<ToolResponse> {
 	});
 }
 
+/**
+ * POST /v1/sites/:slug/sessions — open a new agent session with the first prompt. The
+ * prompt is required and capped at MESSAGE_MAX (32 KiB) before it leaves the engine.
+ */
 async function sessionStart(context: ToolActionContext): Promise<ToolResponse> {
 	return proxy(async () => {
 		const slug = requireSlug(context.options);
@@ -148,6 +191,10 @@ async function sessionStart(context: ToolActionContext): Promise<ToolResponse> {
 	});
 }
 
+/**
+ * POST /v1/sessions/:id/messages — send a follow-up message into an existing session. Same
+ * required + 32 KiB-capped rule as sessionStart, keyed by session_id instead of slug.
+ */
 async function sessionMessage(context: ToolActionContext): Promise<ToolResponse> {
 	return proxy(async () => {
 		const id = requireId(context.options, 'session_id');
@@ -161,6 +208,7 @@ async function sessionMessage(context: ToolActionContext): Promise<ToolResponse>
 	});
 }
 
+/** POST /v1/sessions/:id/stop — ask the daemon to interrupt the running agent turn. */
 async function sessionStop(context: ToolActionContext): Promise<ToolResponse> {
 	return proxy(async () => {
 		const id = requireId(context.options, 'session_id');
@@ -168,6 +216,7 @@ async function sessionStop(context: ToolActionContext): Promise<ToolResponse> {
 	});
 }
 
+/** GET /v1/sites/:slug/sessions — the past sessions for a site (history list, not events). */
 async function sessionHistory(context: ToolActionContext): Promise<ToolResponse> {
 	return proxy(async () => {
 		const slug = requireSlug(context.options);
@@ -175,6 +224,7 @@ async function sessionHistory(context: ToolActionContext): Promise<ToolResponse>
 	});
 }
 
+/** POST /v1/sites/:slug/build — kick off a build; returns a build_id the client polls. */
 async function build(context: ToolActionContext): Promise<ToolResponse> {
 	return proxy(async () => {
 		const slug = requireSlug(context.options);
@@ -182,6 +232,7 @@ async function build(context: ToolActionContext): Promise<ToolResponse> {
 	});
 }
 
+/** GET /v1/sites/:slug/builds/:id — the outcome of a single build (running/success/failed). */
 async function getBuild(context: ToolActionContext): Promise<ToolResponse> {
 	return proxy(async () => {
 		const slug = requireSlug(context.options);
@@ -190,6 +241,7 @@ async function getBuild(context: ToolActionContext): Promise<ToolResponse> {
 	});
 }
 
+/** GET /v1/sites/:slug/preview — the preprod URL the client loads into its preview iframe. */
 async function preview(context: ToolActionContext): Promise<ToolResponse> {
 	return proxy(async () => {
 		const slug = requireSlug(context.options);
@@ -197,6 +249,11 @@ async function preview(context: ToolActionContext): Promise<ToolResponse> {
 	});
 }
 
+/**
+ * POST /v1/sites/:slug/publish — push the built site to production. Double-gated: the
+ * publisher check (developer/admin) AND an explicit confirm flag, so neither an
+ * under-privileged user nor an accidental unconfirmed call can take a site live.
+ */
 async function publish(context: ToolActionContext): Promise<ToolResponse> {
 	return proxy(async () => {
 		assertPublisher(context.principal);
@@ -211,6 +268,11 @@ async function publish(context: ToolActionContext): Promise<ToolResponse> {
 	});
 }
 
+/**
+ * GET /v1/audit — the publish audit trail, optionally filtered to one site. Publisher-gated
+ * like publish itself (the trail is who-took-what-live, so it is developer/admin only). An
+ * absent slug reads the whole trail; a present one is validated before it becomes a query.
+ */
 async function getAudit(context: ToolActionContext): Promise<ToolResponse> {
 	return proxy(async () => {
 		assertPublisher(context.principal);

@@ -177,3 +177,52 @@ export async function readMatrixRecord(
 		rawText,
 	};
 }
+
+/**
+ * Read MANY records of one section by id — ONE `= ANY()` query for the whole
+ * set, the batch twin of readMatrixRecord (identical projection, ::text twins
+ * included). A section-list page resolving each row's record one query at a
+ * time turns a 30-row page into 30 round-trips for a question a single ANY()
+ * answers. Missing ids are simply absent from the returned map.
+ */
+export async function readMatrixRecordBatch(
+	tableName: string,
+	sectionTipo: string,
+	sectionIds: readonly number[],
+): Promise<Map<number, MatrixRecord>> {
+	assertMatrixTable(tableName);
+	const byId = new Map<number, MatrixRecord>();
+	if (sectionIds.length === 0) return byId;
+
+	const jsonbProjection = MATRIX_JSONB_COLUMNS.map(
+		(column) => `"${column}", "${column}"::text AS "${column}__text"`,
+	).join(', ');
+
+	// Identifiers are allowlist-validated constants; values are bound. The id
+	// set rides as a comma string through string_to_array (the driver does not
+	// bind a JS array to ANY($n::int[]) — same pattern as readExistingSectionIds).
+	const rows = (await sql.unsafe(
+		`SELECT id, section_id, section_tipo, ${jsonbProjection}
+		 FROM "${tableName}"
+		 WHERE section_tipo = $1
+		   AND section_id = ANY(string_to_array($2, ',')::int[])`,
+		[sectionTipo, [...new Set(sectionIds)].join(',')],
+	)) as Record<string, unknown>[];
+
+	for (const row of rows) {
+		const columns: MatrixRecord['columns'] = {};
+		const rawText: MatrixRecord['rawText'] = {};
+		for (const column of MATRIX_JSONB_COLUMNS) {
+			columns[column] = row[column];
+			rawText[column] = row[`${column}__text`] as string | null;
+		}
+		byId.set(row.section_id as number, {
+			id: row.id as number,
+			section_id: row.section_id as number,
+			section_tipo: row.section_tipo as string,
+			columns,
+			rawText,
+		});
+	}
+	return byId;
+}

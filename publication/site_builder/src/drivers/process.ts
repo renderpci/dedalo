@@ -33,6 +33,11 @@ class EventQueue implements AsyncIterable<AgentEvent> {
   private resolvers: Array<(r: IteratorResult<AgentEvent>) => void> = [];
   private closed = false;
 
+  /**
+   * Deliver an event. If a consumer is already parked in `next()`, hand it over
+   * directly; otherwise buffer it for the next `next()` call. A push after close is
+   * dropped — the terminal result/error has already been emitted.
+   */
   push(event: AgentEvent): void {
     if (this.closed) return;
     const resolve = this.resolvers.shift();
@@ -40,6 +45,11 @@ class EventQueue implements AsyncIterable<AgentEvent> {
     else this.buffer.push(event);
   }
 
+  /**
+   * Signal end-of-stream. Idempotent (only the first call takes effect), so the spawn
+   * flow can close in its `finally` without guarding against a double close. Any parked
+   * consumers are resolved `done`; buffered events already handed out stay drainable.
+   */
   close(): void {
     if (this.closed) return;
     this.closed = true;
@@ -47,6 +57,12 @@ class EventQueue implements AsyncIterable<AgentEvent> {
     this.resolvers = [];
   }
 
+  /**
+   * The single-consumer async iterator. Serves a buffered event immediately, ends if the
+   * queue is already closed and drained, otherwise parks a resolver until the next push
+   * or close. Buffered events are always drained before `done` is reported, so no event
+   * emitted before close is lost.
+   */
   [Symbol.asyncIterator](): AsyncIterator<AgentEvent> {
     return {
       next: (): Promise<IteratorResult<AgentEvent>> => {
@@ -60,6 +76,16 @@ class EventQueue implements AsyncIterable<AgentEvent> {
   }
 }
 
+/**
+ * Spawn one agent turn and expose it as an AgentProcess. `setup` is the per-driver thunk
+ * that (possibly after writing an MCP config) returns the argv and line parser; running it
+ * inside the async body means a setup failure surfaces as a normalized `error` event, not a
+ * throw the manager cannot see. The supervisor guarantees the stream always terminates with
+ * exactly one result or error: a non-zero exit with no result seen becomes an `error`
+ * (retriable when killed by signal/timeout, i.e. exitCode === null), and a clean exit that
+ * emitted no terminal frame gets a synthesized `result` — so the manager's `for await` never
+ * hangs waiting for a terminal event the driver forgot to print.
+ */
 export function spawnAgentProcess(
   opts: SessionStartOptions,
   setup: () => Promise<TurnPlan>,
@@ -69,6 +95,10 @@ export function spawnAgentProcess(
   let child: ReturnType<typeof Bun.spawn> | null = null;
   let sawResult = false;
   let killTimer: ReturnType<typeof setTimeout> | null = null;
+  // An interrupt can land BEFORE Bun.spawn has run (setup — writing the MCP config — is
+  // async). Record the request so the spawn path can honor it immediately; otherwise a
+  // stop in that window would be silently lost and the agent would run to completion.
+  let interruptRequested = false;
 
   // Kicked off immediately; the returned AgentProcess exposes the live queue.
   const running = (async () => {
@@ -77,6 +107,13 @@ export function spawnAgentProcess(
       plan = await setup();
     } catch (error) {
       queue.push({ type: 'error', message: `setup failed: ${errText(error)}`, retriable: false });
+      queue.close();
+      return;
+    }
+
+    // Interrupted while setup ran: do not spawn at all.
+    if (interruptRequested) {
+      queue.push({ type: 'error', message: 'interrupted before start', retriable: true });
       queue.close();
       return;
     }
@@ -138,10 +175,14 @@ export function spawnAgentProcess(
     },
     events: queue,
     async interrupt(): Promise<void> {
-      if (!child) return;
-      child.kill('SIGINT');
-      // Escalate if it does not exit on its own.
-      killTimer = setTimeout(() => child?.kill(9), INTERRUPT_GRACE_MS);
+      interruptRequested = true;
+      if (child) {
+        child.kill('SIGINT');
+        // Escalate if it does not exit on its own.
+        killTimer = setTimeout(() => child?.kill(9), INTERRUPT_GRACE_MS);
+      }
+      // No child yet: the flag above stops the spawn path before it starts. Either way,
+      // wait for the run to settle so the caller observes a terminated turn.
       await running;
     },
   };
@@ -170,6 +211,7 @@ async function readLines(stream: ReadableStream<Uint8Array>, onLine: (line: stri
   if (buffer.length > 0) onLine(buffer);
 }
 
+/** Reads a byte stream to exhaustion, decoding each chunk (used to capture stderr). */
 async function readAll(stream: ReadableStream<Uint8Array>, onChunk: (chunk: string) => void): Promise<void> {
   const reader = stream.getReader();
   const decoder = new TextDecoder();

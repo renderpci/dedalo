@@ -6,9 +6,17 @@
  * not of any real tool.
  */
 
-import { describe, test, expect, afterAll, mock } from 'bun:test';
+import { afterAll, describe, expect, mock, test } from 'bun:test';
 import type { ApiRequestContext } from '../../src/core/api/handler_context.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+// Imported BEFORE any mock.module, then SNAPSHOT by spread (the code_update.test.ts
+// convention): the namespace object is a LIVE view that reflects the mock once installed,
+// so afterAll must re-install the snapshot, not the namespace. mock.restore() alone does
+// NOT revert module mocks (the dedalo-ts-testing rule) — without the re-install every
+// later test file in a full-suite run would receive this file's fake dispatchToolRequest.
+import * as realDispatchModule from '../../src/core/tools/dispatch.ts';
+
+const REAL_DISPATCH_MODULE = { ...realDispatchModule };
 
 const PRINCIPAL: Principal = { userId: 7, isGlobalAdmin: false, isDeveloper: true };
 
@@ -20,6 +28,7 @@ function contextWith(): ApiRequestContext {
 }
 
 afterAll(() => {
+	mock.module('../../src/core/tools/dispatch.ts', () => REAL_DISPATCH_MODULE);
 	mock.restore();
 });
 
