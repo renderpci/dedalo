@@ -293,6 +293,13 @@ export interface SearchOptions {
 	 * principal only when it intends user-scoped results.
 	 */
 	principal?: Principal;
+	/**
+	 * Selection-identity projection: SELECT only section_id + section_tipo
+	 * (plus any sort aliases), skipping the ten wide jsonb data columns. For
+	 * callers that materialize the whole selection but read only the identity
+	 * (the export's record list). WHERE/ORDER/UNION logic is untouched.
+	 */
+	idsOnly?: boolean;
 }
 
 /**
@@ -462,7 +469,16 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 	// --- SELECT ----------------------------------------------------------------
 	const select: string[] = [];
 	if (sqo.full_count === true) {
-		select.push(`count(DISTINCT ${alias}.section_id) as full_count`);
+		// UNIQUE (section_id, section_tipo) + a single section_tipo predicate
+		// (section_id NOT NULL as a unique-key member) means section_id is unique
+		// across the scanned rows unless a multi-hop join chain multiplies them —
+		// DISTINCT is only needed then, and for multi-section, where PHP's
+		// cross-tipo collapse semantics must be preserved. count(*) unlocks a
+		// parallel index-only scan on the big tables.
+		const plainCount = !multiSection && joinFragments.size === 0;
+		select.push(
+			plainCount ? 'count(*) as full_count' : `count(DISTINCT ${alias}.section_id) as full_count`,
+		);
 	} else {
 		select.push(
 			removeDistinct
@@ -470,8 +486,10 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 				: `DISTINCT ON (${alias}.section_id) ${alias}.section_id`,
 		);
 		select.push(`${alias}.section_tipo`);
-		for (const column of DEFAULT_SELECT_COLUMNS) {
-			select.push(`${alias}.${column}`);
+		if (options.idsOnly !== true) {
+			for (const column of DEFAULT_SELECT_COLUMNS) {
+				select.push(`${alias}.${column}`);
+			}
 		}
 		select.push(...selectExtra);
 	}
@@ -516,6 +534,33 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 
 	const useWindow = orderClauses.length > 0;
 	if (!useWindow) {
+		// Late row lookup for DEEP pages: a plain OFFSET makes Postgres read and
+		// discard every skipped row's wide jsonb columns. From the configured
+		// offset on, find the wanted page of section_ids on an index-only scan
+		// first ((section_tipo, section_id) composite), then join back for the
+		// data columns. Identical rows/order/columns — guarded to the
+		// single-section, no-join, default-order shape where section_id is
+		// unique, so the join back on (section_tipo, section_id) is 1:1.
+		const lateThreshold = config.ops.searchLateRowLookupOffset;
+		const lateLookup =
+			lateThreshold >= 0 &&
+			!multiSection &&
+			joinFragments.size === 0 &&
+			limitSql !== '' &&
+			offsetSql !== '' &&
+			Number(sqo.offset) >= lateThreshold;
+		if (lateLookup) {
+			const pageWhere = whereAll.length > 0 ? `\nWHERE ${whereAll.join('\n AND ')}` : '';
+			const pageQuery = `SELECT ${alias}.section_id\nFROM ${fromClause}${pageWhere}\nORDER BY ${innerOrder}${limitSql}${offsetSql}`;
+			const lateSql =
+				`SELECT ${select.join(',\n')}\nFROM ${fromClause}\n` +
+				`JOIN (\n${pageQuery}\n) page ON page.section_id = ${alias}.section_id\n` +
+				// mainWhere re-pins section_tipo (same $n — ParamsCollector dedups):
+				// other tipos in the same table may reuse a section_id.
+				`WHERE ${mainWhere.join('\n AND ')}\n` +
+				`ORDER BY ${innerOrder};`;
+			return { sql: lateSql, params: params.toArray() };
+		}
 		return { sql: `${queryInside}${limitSql}${offsetSql};`, params: params.toArray() };
 	}
 

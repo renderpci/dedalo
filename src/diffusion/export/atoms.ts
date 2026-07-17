@@ -38,12 +38,24 @@
  *   module state).
  */
 
-import { getModelByTipo } from '../../core/ontology/resolver.ts';
-import { componentFieldsSeparator, resolveCellValue } from '../../core/resolve/relation_list.ts';
+import { dataframeEntryMatches } from '../../core/concepts/subdatum.ts';
+import { getColumnNameByModel, getModelByTipo, getNode } from '../../core/ontology/resolver.ts';
+import type { CellValueResolveOptions } from '../../core/resolve/relation_list.ts';
+import {
+	componentFieldsSeparator,
+	resolveCellValue,
+	resolveRelationTargetValues,
+} from '../../core/resolve/relation_list.ts';
 import type { RawConfigDdo } from '../../core/section/list_definitions/section_list.ts';
+import { resolveOwnConfigMap } from '../../core/section/list_definitions/section_list.ts';
 import type { FieldPlan } from '../plan/types.ts';
 import type { ExportAtomRun, ExportLeafAtom } from '../resolve/resolver.ts';
-import { createExportAtomRun, loadExportRecord, resolveRecordAtoms } from '../resolve/resolver.ts';
+import {
+	createExportAtomRun,
+	loadExportRecord,
+	loadExportRecordFromTable,
+	resolveRecordAtoms,
+} from '../resolve/resolver.ts';
 
 /** PHP export_value records_separator (join_atoms depth-0 default). */
 const RECORDS_SEPARATOR = ' | ';
@@ -56,11 +68,22 @@ export interface ExportRun {
 	atoms: ExportAtomRun;
 	/** relation component tipo → its OWN request_config child ddos. */
 	ownChildren: Map<string, RawConfigDdo[]>;
+	/** Threads the run's record cache into the shared flat-value resolvers —
+	 * without it every relation-target label re-reads its record per row (N+1). */
+	cellOpts: CellValueResolveOptions;
 }
 
 /** Fresh per-request run (never module-scoped — request isolation). */
 export function createExportRun(): ExportRun {
-	return { atoms: createExportAtomRun(), ownChildren: new Map() };
+	const atoms = createExportAtomRun();
+	return {
+		atoms,
+		ownChildren: new Map(),
+		cellOpts: {
+			loadRecord: (tableName, sectionTipo, sectionId) =>
+				loadExportRecordFromTable(atoms, tableName, sectionTipo, sectionId),
+		},
+	};
 }
 
 /** One PHP-shaped export path segment (wire shape of the col line's path). */
@@ -120,9 +143,6 @@ type RawPathStep = Record<string, unknown>;
 async function ownChildrenOf(run: ExportRun, componentTipo: string): Promise<RawConfigDdo[]> {
 	const cached = run.ownChildren.get(componentTipo);
 	if (cached !== undefined) return cached;
-	const { resolveOwnConfigMap } = await import(
-		'../../core/section/list_definitions/section_list.ts'
-	);
 	const map = await resolveOwnConfigMap(componentTipo);
 	let children: RawConfigDdo[];
 	if (map.rawDdos !== null) {
@@ -215,6 +235,7 @@ export async function resolveValueCell(
 				lang,
 				unresolved,
 				separators[hops],
+				run.cellOpts,
 			);
 		}
 		// Group by this hop's locator position (first-seen order = DFS order).
@@ -288,18 +309,15 @@ export async function collectGridAtoms(
 			// columns stay available by dragging the expanded child components
 			// (multi-step declared paths, PHP-parity fan-out below).
 			if (path.length === 1) {
-				const { getNode } = await import('../../core/ontology/resolver.ts');
 				const storedModel = (await getNode(event.step.tipo))?.model ?? null;
 				if (storedModel === 'component_portal') {
-					const { resolveRelationTargetValues } = await import(
-						'../../core/resolve/relation_list.ts'
-					);
 					const targets = await resolveRelationTargetValues(
 						event.ownerSectionTipo,
 						Number(event.ownerSectionId),
 						event.step.tipo,
 						lang,
 						unresolved,
+						run.cellOpts,
 					);
 					const leafSegment = segments[0] as ExportSegment;
 					for (const target of targets) {
@@ -347,6 +365,8 @@ export async function collectGridAtoms(
 			event.step.tipo,
 			lang,
 			unresolved,
+			RECORDS_SEPARATOR,
+			run.cellOpts,
 		);
 		if (value === null || value === '') continue;
 		atoms.push({
@@ -433,7 +453,6 @@ async function fanOutRelation(
 				// section + MAIN locator position/target id (verified vs live PHP,
 				// numisdata3 §15657).
 				if (locator.id === undefined || locator.id === null) continue;
-				const { dataframeEntryMatches } = await import('../../core/concepts/subdatum.ts');
 				const owner = await loadExportRecord(run.atoms, ownerSectionTipo, ownerSectionId);
 				const slot = ((owner?.columns.relation as Record<string, unknown[]> | null)?.[child.tipo] ??
 					[]) as Record<string, unknown>[];
@@ -498,7 +517,6 @@ async function fanOutRelation(
 			const segments = [...baseSegments, childSegment];
 
 			// Relation-model child: recurse into ITS stored locators.
-			const { getColumnNameByModel } = await import('../../core/ontology/resolver.ts');
 			if (getColumnNameByModel(childModel) === 'relation') {
 				const target = await loadExportRecord(run.atoms, locator.sectionTipo, locator.sectionId);
 				const bag =
@@ -548,6 +566,8 @@ async function fanOutRelation(
 				child.tipo,
 				lang,
 				unresolved,
+				RECORDS_SEPARATOR,
+				run.cellOpts,
 			);
 			if (value === null || value === '') continue;
 			atoms.push({
