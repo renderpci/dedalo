@@ -1595,20 +1595,62 @@ export async function loadExportRecord(
 	sectionTipo: string,
 	sectionId: number | string,
 ): Promise<MatrixRecord | null> {
-	const key = RECORD_KEY(sectionTipo, sectionId);
-	const cached = run.recordCache.get(key);
-	if (cached !== undefined) return cached;
 	const numeric = Number(sectionId);
 	if (!Number.isInteger(numeric)) {
-		run.recordCache.set(key, null);
+		run.recordCache.set(RECORD_KEY(sectionTipo, sectionId), null);
 		return null;
 	}
 	const table = (await matrixTableOf(run, sectionTipo)) ?? 'matrix';
+	return loadExportRecordFromTable(run, table, sectionTipo, numeric);
+}
+
+/**
+ * The cache/eviction core of loadExportRecord with the table already resolved.
+ * Also the export run's CellValueResolveOptions.loadRecord seam (the flat-value
+ * resolvers resolve their own table and must never hit the `?? 'matrix'`
+ * fallback — they early-return on a null table before consulting this). Both
+ * callers key by (sectionTipo, sectionId) and derive the identical table for
+ * every tipo the resolvers accept, so the shared map can never cross-poison.
+ */
+export async function loadExportRecordFromTable(
+	run: ExportAtomRun,
+	tableName: string,
+	sectionTipo: string,
+	sectionId: number,
+): Promise<MatrixRecord | null> {
+	const key = RECORD_KEY(sectionTipo, sectionId);
+	const cached = run.recordCache.get(key);
+	if (cached !== undefined) return cached;
 	if (run.recordCache.size > RECORD_CACHE_LIMIT) run.recordCache.clear();
-	const loaded = await readMatrixRecords(table, sectionTipo, [numeric]);
+	const loaded = await readMatrixRecords(tableName, sectionTipo, [sectionId]);
 	const record = loaded[0] ?? null;
 	run.recordCache.set(key, record);
 	return record;
+}
+
+/**
+ * Bulk-hydrate the run's record cache for one section's id batch — ONE
+ * `= ANY(int[])` query instead of one lazy single-row read per exported
+ * record. Ids absent from the table seed null (a definitive miss, so the
+ * lazy loader does not re-query them one by one).
+ */
+export async function prefetchExportRecords(
+	run: ExportAtomRun,
+	sectionTipo: string,
+	sectionIds: (number | string)[],
+): Promise<void> {
+	const wanted = sectionIds
+		.map((id) => Number(id))
+		.filter((id) => Number.isInteger(id) && !run.recordCache.has(RECORD_KEY(sectionTipo, id)));
+	if (wanted.length === 0) return;
+	const table = (await matrixTableOf(run, sectionTipo)) ?? 'matrix';
+	// Evict BEFORE seeding so a whole freshly-read chunk is never dropped.
+	if (run.recordCache.size > RECORD_CACHE_LIMIT) run.recordCache.clear();
+	const loaded = await readMatrixRecords(table, sectionTipo, wanted);
+	const bySectionId = new Map(loaded.map((record) => [Number(record.section_id), record]));
+	for (const id of wanted) {
+		run.recordCache.set(RECORD_KEY(sectionTipo, id), bySectionId.get(id) ?? null);
+	}
 }
 
 /** The raw stored 'relation' slice of one component (legacy hop contract). */
