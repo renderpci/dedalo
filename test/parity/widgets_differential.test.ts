@@ -85,9 +85,10 @@ describe.if(hasPhpCredentials())('maintenance widget catalog differential', () =
 		// error_reports (WC-018) is TS-ONLY: it joins the catalog only where the
 		// error-report intake flag is on (master installations) and has no PHP
 		// twin — normalize it out before the byte-compare.
-		// site_builder_status is likewise TS-ONLY: the Site Builder subsystem is a
-		// native TS addition with no PHP oracle twin (see TS_ONLY_TOOLS for its tool
-		// counterpart) — normalize it out the same way.
+		// site_builder_status (WC-031) is likewise TS-ONLY: the Site Builder subsystem
+		// is a native TS addition with no PHP oracle twin (see TS_ONLY_TOOLS for its
+		// tool counterpart) — normalize it out the same way. Its own shape is asserted
+		// natively by test/unit/site_builder_status_widget.test.ts.
 		const TS_ONLY_WIDGET_IDS = new Set(['error_reports', 'site_builder_status']);
 		const tsList = ((tsItem as { datalist?: Record<string, unknown>[] }).datalist ?? []).filter(
 			(item) => !TS_ONLY_WIDGET_IDS.has((item as { id?: string }).id ?? ''),
@@ -105,15 +106,17 @@ describe.if(hasPhpCredentials())('maintenance widget catalog differential', () =
 			// matches, so the catalog stays aligned everywhere it should.
 			const isDiffusionControl =
 				(tsList[index] as { id?: unknown }).id === 'diffusion_server_control';
-			// `id` and `label` are ALSO excluded at PHP's php_info slot (WC-030): the
-			// TS engine merged php_info AND php_runtime into ONE native runtime_info
-			// widget at this position — id/label deliberately diverge from the
-			// frozen PHP oracle term, and every other metadata field still matches.
+			// `id`, `label` AND `class` are ALSO excluded at PHP's php_info slot (WC-030):
+			// the TS engine merged php_info AND php_runtime into ONE native runtime_info
+			// widget at this position — id/label deliberately diverge from the frozen PHP
+			// oracle term, and the widget keeps php_runtime's plain layout (no `class`)
+			// rather than php_info's 'violet fit width_100' iframe styling. Every other
+			// metadata field still matches.
 			const isRuntimeInfo = (phpList[index] as { id?: unknown }).id === 'php_info';
 			const omit = isDiffusionControl
 				? ['value', 'label']
 				: isRuntimeInfo
-					? ['value', 'id', 'label']
+					? ['value', 'id', 'label', 'class']
 					: ['value'];
 			const strip = (item: Record<string, unknown>): Record<string, unknown> =>
 				Object.fromEntries(Object.entries(item).filter(([key]) => !omit.includes(key)));
