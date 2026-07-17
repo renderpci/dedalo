@@ -39,7 +39,6 @@ import {
 	readBool,
 	readJsonArray,
 	readList,
-	readMap,
 	readMediaAccessMode,
 	readNumber,
 	readOptionalList,
@@ -364,8 +363,6 @@ export interface FeaturesConfig {
 	readonly searchClientMaxLimit: number;
 	/** Component tipos excluded from the security-access datalist (PHP DEDALO_AR_EXCLUDE_COMPONENTS). */
 	readonly arExcludeComponents: readonly string[];
-	/** IP geolocation API descriptor: {url, href, country_code}, $ip substituted (PHP IP_API). */
-	readonly ipApi: Readonly<Record<string, string>>;
 	/**
 	 * Media file access control (PHP DEDALO_MEDIA_ACCESS_MODE resolved through
 	 * media_protection::get_mode()): false | 'private' | 'publication'. The
@@ -378,6 +375,25 @@ export interface FeaturesConfig {
 	readonly defaultProject: number;
 	/** Projects filter section tipo (PHP DEDALO_FILTER_SECTION_TIPO_DEFAULT; dd153 = Projects). */
 	readonly filterSectionTipo: string;
+}
+
+/**
+ * Local IP→country resolution (section Activity dd542). Replaces the former
+ * per-visitor browser fetch to a third-party service: the server resolves
+ * country codes offline from an openly-licensed database (DB-IP IP-to-Country
+ * Lite, CC-BY-4.0) via src/core/geoip/. Free, open, and reliable — no runtime
+ * third-party dependency. Every field degrades soft (disabled/absent DB → no
+ * country flag, never an error).
+ */
+export interface GeoipConfig {
+	/** Master switch (DEDALO_GEOIP_ENABLED, default true). */
+	readonly enabled: boolean;
+	/** Cache dir for the .mmdb file (DEDALO_GEOIP_DIR, default <privateDir>/geoip). */
+	readonly dir: string;
+	/** Download + monthly refresh the DB (DEDALO_GEOIP_AUTO_UPDATE, default true). */
+	readonly autoUpdate: boolean;
+	/** Optional download URL override (DEDALO_GEOIP_DB_URL); undefined = DB-IP monthly URL. */
+	readonly dbUrl: string | undefined;
 }
 
 /**
@@ -522,6 +538,7 @@ export interface DedaloConfig {
 	readonly identity: IdentityConfig;
 	readonly lang: LangConfig;
 	readonly features: FeaturesConfig;
+	readonly geoip: GeoipConfig;
 	readonly tools: ToolsConfig;
 	readonly siteBuilder: SiteBuilderConfig;
 	readonly update: UpdateConfig;
@@ -722,11 +739,16 @@ export const config: DedaloConfig = Object.freeze({
 		notifications: readString('DEDALO_NOTIFICATIONS') === 'true',
 		searchClientMaxLimit: Math.max(1, readNumber('DEDALO_SEARCH_CLIENT_MAX_LIMIT')),
 		arExcludeComponents: readList('DEDALO_AR_EXCLUDE_COMPONENTS'),
-		ipApi: readMap('IP_API'),
 		mediaAccessMode: readMediaAccessMode(),
 		maxRowsPerPage: Math.max(1, readNumber('DEDALO_MAX_ROWS_PER_PAGE')),
 		defaultProject: readNumber('DEDALO_DEFAULT_PROJECT'),
 		filterSectionTipo: readString('DEDALO_FILTER_SECTION_TIPO_DEFAULT'),
+	}),
+	geoip: Object.freeze({
+		enabled: readBool('DEDALO_GEOIP_ENABLED'),
+		dir: readString('DEDALO_GEOIP_DIR'),
+		autoUpdate: readBool('DEDALO_GEOIP_AUTO_UPDATE'),
+		dbUrl: readOptionalString('DEDALO_GEOIP_DB_URL'),
 	}),
 	tools: Object.freeze({
 		additionalRoots: Object.freeze(readToolRoots('DEDALO_ADDITIONAL_TOOLS')),

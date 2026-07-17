@@ -97,6 +97,12 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	'core/ontology/resolver.ts:componentModelFieldsLookup',
 	'core/search/search_related.ts:relationTablesCache',
 	'core/db/dd_ontology.ts:activeTldsCache',
+	// GeoIP country reader (section Activity dd542 IP→country). A boot-stable,
+	// request-INDEPENDENT in-memory database loaded once from a static .mmdb file
+	// (mmdb-lib Reader) and shared read-only across requests — derives from a
+	// downloaded file, never from ontology/records/session/lang/principal. Same
+	// lifecycle as the static-asset gzip cache; not a cache-factory resource.
+	'core/geoip/reader.ts:reader',
 	'core/media/engine/ffmpeg.ts:cachedAudioCodec',
 	// Diffusion job service (DIFFUSION_SPEC §4.2) — all request-INDEPENDENT
 	// process state: a table-bootstrap memo plus the scheduler's process-wide

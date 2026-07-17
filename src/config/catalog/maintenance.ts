@@ -6,7 +6,7 @@
 
 import { join } from 'node:path';
 import type { CatalogEntry } from '../catalog_types.ts';
-import { projectRoot } from '../env.ts';
+import { privateDir, projectRoot } from '../env.ts';
 
 export const MAINTENANCE_KEYS = {
 	CODE_SERVERS: {
@@ -61,29 +61,6 @@ DEDALO_CODE_SERVER_GIT_DIR="/my_dedalo_git_directory"
 \`\`\`bash
 DEDALO_SOURCE_VERSION_LOCAL_DIR="/tmp/my_museum"
 \`\`\``,
-	},
-	IP_API: {
-		type: 'string_map',
-		scope: 'operator',
-		default: {
-			url: 'https://api.country.is/$ip',
-			href: 'https://ip-api.com/#$ip',
-			country_code: 'country',
-		},
-		heading: 'Defining ip api service',
-		typeLabel: 'array',
-		doc: `Defines the service to be used in section Activity to resolve source Country from IP address.
-
-By default Dédalo use the ipapi.co service with free unsigned account. Is possible to configure other services with your specific account. If you want to use a http instead https you can use \`ip-api.com\`
-
-\`\`\`bash
-IP_API={"url":"https://api.country.is/$ip","href":"https://ip-api.com/#$ip","country_code":"country"}
-\`\`\`
-
-!!! note "IP variable"
-    \`$ip\` string will be replaced by the real IP value in resolution and 'country_code' value property is used to generate the icon flag.
-
-    The URL must be in the format that the provider requires.`,
 	},
 	IS_A_CODE_SERVER: {
 		type: 'boolean',
@@ -169,6 +146,57 @@ entries to this list. Every Dédalo server can provide its own ontologies.`,
 
 \`\`\`bash
 STRUCTURE_FROM_SERVER=true
+\`\`\``,
+	},
+	DEDALO_GEOIP_ENABLED: {
+		type: 'boolean',
+		scope: 'operator',
+		default: true,
+		heading: 'Enable local IP to Country resolution',
+		typeLabel: 'bool',
+		doc: `Enables the built-in, self-hosted IP to Country resolution used in section Activity to show the source country flag from an IP address.
+
+Resolution runs on the server against a local, openly-licensed country database (DB-IP IP to Country Lite, CC-BY-4.0) — no third-party request is made from the browser. When disabled, IP addresses are shown without a country flag.
+
+\`\`\`bash
+DEDALO_GEOIP_ENABLED=true
+\`\`\``,
+	},
+	DEDALO_GEOIP_DIR: {
+		type: 'string',
+		scope: 'operator',
+		default: () => join(privateDir, 'geoip'),
+		defaultDoc: '`<private dir>/geoip`',
+		heading: 'IP to Country database directory',
+		typeLabel: 'string',
+		doc: `Directory where the local IP to Country database file is downloaded and cached. Defaults to \`geoip\` inside the private directory (outside the web root).
+
+\`\`\`bash
+DEDALO_GEOIP_DIR="/srv/dedalo/geoip"
+\`\`\``,
+	},
+	DEDALO_GEOIP_AUTO_UPDATE: {
+		type: 'boolean',
+		scope: 'operator',
+		default: true,
+		heading: 'Auto-download and refresh the IP to Country database',
+		typeLabel: 'bool',
+		doc: `When enabled, the server downloads the IP to Country database on first use and refreshes it monthly. Disable it to use only a database file placed manually in \`DEDALO_GEOIP_DIR\` (e.g. air-gapped installs).
+
+\`\`\`bash
+DEDALO_GEOIP_AUTO_UPDATE=true
+\`\`\``,
+	},
+	DEDALO_GEOIP_DB_URL: {
+		type: 'string',
+		scope: 'operator',
+		default: undefined,
+		heading: 'IP to Country database download URL override',
+		typeLabel: 'string',
+		doc: `Overrides the default monthly DB-IP download URL. Use it to point at a mirror or a pinned month. The default is \`https://download.db-ip.com/free/dbip-country-lite-YYYY-MM.mmdb.gz\` (the current month, with a fallback to the previous month), computed automatically.
+
+\`\`\`bash
+DEDALO_GEOIP_DB_URL="https://mirror.example.org/dbip-country-lite-2026-07.mmdb.gz"
 \`\`\``,
 	},
 } as const satisfies Record<string, CatalogEntry>;

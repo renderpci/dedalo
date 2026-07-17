@@ -122,6 +122,67 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		) {
 			return denied(403, `Illegal save to read-only section '${source.section_tipo}'`);
 		}
+		// SEARCH-MODE relation link (portal/relation link_record + unlink_record):
+		// the picker lands on a CLIENT-MINTED synthetic id ('search_<n>', search.js
+		// get_section_id) that is NOT a matrix row. The picked locator is a search
+		// FILTER (client entries → preset JSON → RQO q), never a persisted relation —
+		// so RESOLVE it for the chip and ECHO it WITHOUT writing. The write path would
+		// materialize the host record (createSectionRecord), which fails on the NaN id
+		// and THROWS a 500 on read-only sections (Activity dd542 / Time Machine dd15).
+		// Mirrors the resolve_data action; a read grant (>= 1) is enough — nothing is
+		// written, and resolveSearchData applies its own per-target projects ACL.
+		if (String(source.section_id).startsWith('search_')) {
+			if (!Array.isArray(dataPayload.changed_data)) {
+				return denied(400, 'save: data.changed_data must be an array');
+			}
+			const { getColumnNameByModel: columnOf, getModelByTipo: modelOf } = await import(
+				'../../ontology/resolver.ts'
+			);
+			const searchModel = await modelOf(source.tipo);
+			if (searchModel !== null && columnOf(searchModel) === 'relation') {
+				const searchLevel = await getPermissions(principal, source.section_tipo, source.tipo);
+				if (searchLevel < 1) {
+					return denied(403, "You don't have enough permissions to search this component");
+				}
+				// The resulting picked set: apply the insert deltas (unlink sends only
+				// deletes → empty set, which the client reconciles against its own state).
+				const picked = dataPayload.changed_data
+					.filter((change) => change.action === 'insert' && change.value != null)
+					.map((change) => change.value as Record<string, unknown>);
+				const resolveRqo = {
+					...rqo,
+					source: { ...source, action: 'resolve_data', value: picked },
+				} as typeof rqo;
+				const { resolveSearchData, buildGetDataContext } = await import('../../section/read.ts');
+				const { buildDataItem } = await import('../../resolve/component_data.ts');
+				const resolved = await resolveSearchData(resolveRqo, principal);
+				let mainItem = resolved.find(
+					(item) =>
+						(item as { tipo?: string }).tipo === source.tipo &&
+						String((item as { section_id?: unknown }).section_id) === String(source.section_id),
+				);
+				if (mainItem === undefined) {
+					mainItem = buildDataItem(
+						source.tipo,
+						source.section_tipo,
+						source.section_id,
+						'search',
+						source.lang ?? 'lg-nolan',
+						picked,
+					);
+					resolved.unshift(mainItem);
+				}
+				// The client's link_record duplicate-check reads pagination.total and
+				// requires it to exceed the pre-insert count (component_portal.js:1063).
+				(mainItem as { pagination?: unknown }).pagination = {
+					total: picked.length,
+					limit: picked.length,
+					offset: 0,
+				};
+				const context = await buildGetDataContext(resolveRqo, resolved as never);
+				return { status: 200, body: { result: { context, data: resolved }, msg: 'OK' } };
+			}
+		}
 		const level = await getPermissions(principal, source.section_tipo, source.tipo);
 		if (level < 2) {
 			return denied(403, "You don't have enough permissions to edit this component");
@@ -1137,6 +1198,30 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		}
 		const data = await getAreaActivityMetric(areaTipo, rangeDays);
 		return { status: 200, body: { result: true, data, msg: 'OK. Request done' } };
+	},
+	get_ip_country: async (rqo, context) => {
+		// Server-side IP→country resolution for the Activity (dd542) IP list view.
+		// Replaces the former per-visitor browser fetch to a third-party service:
+		// resolution is LOCAL and OFFLINE against the openly-licensed DB-IP
+		// Country Lite database (src/core/geoip). Authenticated (dispatch gate) +
+		// CSRF. Returns country_code:null for private/reserved/unresolved IPs (and
+		// when the database is not loaded) so the client simply shows no flag.
+		requirePrincipal(context);
+		const options = (rqo.options ?? {}) as { ip?: unknown };
+		const ip = options.ip;
+		if (typeof ip !== 'string' || ip.length === 0 || ip.length > 64) {
+			return denied(400, 'get_ip_country: invalid ip');
+		}
+		const { resolveCountry } = await import('../../geoip/reader.ts');
+		const resolved = resolveCountry(ip);
+		return {
+			status: 200,
+			body: {
+				result: true,
+				data: { country_code: resolved?.country_code ?? null },
+				msg: 'OK. Request done',
+			},
+		};
 	},
 	get_environment: async (_rqo, context) => {
 		// The full client environment (PHP get_environment): page_globals +

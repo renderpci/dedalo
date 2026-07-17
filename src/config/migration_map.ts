@@ -67,7 +67,6 @@ const SAME_KEYS: readonly string[] = [
 	'DEDALO_NOTIFICATIONS',
 	'DEDALO_AR_EXCLUDE_COMPONENTS',
 	'DEDALO_GEO_PROVIDER',
-	'IP_API',
 	// media — image
 	'DEDALO_IMAGE_FOLDER',
 	'DEDALO_IMAGE_EXTENSION',
@@ -325,6 +324,14 @@ const DROPPED: Readonly<Record<string, MigrationRule>> = {
 		'derived: v7 resolves the media type from the file extension',
 	),
 
+	// Superseded by the native offline GeoIP subsystem (src/core/geoip): IP→country
+	// for section Activity dd542 now resolves server-side against the DB-IP Country
+	// Lite database (DEDALO_GEOIP_*), not a per-visitor third-party API descriptor.
+	...dropped(
+		['IP_API'],
+		'superseded: IP→country resolves server-side via the native GeoIP subsystem (src/core/geoip), not a client-side API descriptor',
+	),
+
 	// Machine-written runtime state — never config.
 	...dropped(
 		[
@@ -526,6 +533,11 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_BACKUP_DIR',
 	'DEDALO_TRANSFORM_DEFINITIONS_DIR',
 	'DEDALO_TS_STATE_PATH',
+	// geoip (native, offline IP→country for section Activity dd542)
+	'DEDALO_GEOIP_ENABLED',
+	'DEDALO_GEOIP_DIR',
+	'DEDALO_GEOIP_AUTO_UPDATE',
+	'DEDALO_GEOIP_DB_URL',
 	// tools
 	'DEDALO_ADDITIONAL_TOOLS',
 	'TOOLS_ENABLE_REGISTRY_IMPORT',

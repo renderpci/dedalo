@@ -1088,6 +1088,16 @@ export async function startServer() {
 			}
 		})();
 
+		// GeoIP country database (section Activity dd542 IP→country resolution).
+		// Fire-and-forget and NON-FATAL: the server-side download of the
+		// openly-licensed DB-IP Country Lite database (or its monthly refresh)
+		// must never block boot. Until the reader loads, IP addresses render
+		// without a country flag — no error, no third-party browser fetch.
+		void (async () => {
+			const { ensureGeoipDb } = await import('./core/geoip/ensure.ts');
+			await ensureGeoipDb();
+		})().catch((error) => console.warn('[geoip] boot init skipped:', error));
+
 		// Diffusion control plane (engineering/DIFFUSION_SPEC.md §4.2): ensure the durable
 		// job tables, heal interrupted runs from the previous process life
 		// (sweeper), then start claiming queued jobs. Fire-and-forget: a DB hiccup

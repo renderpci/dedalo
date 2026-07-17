@@ -203,7 +203,7 @@ Views are selected from `context.view` (default `default`) and dispatched by the
 | `mini` | yes | yes | — | Minimal `<span class="component_input_text_mini">`, used by service autocomplete. |
 | `colorpicker` | yes | — | — | Pairs the text input with a native `<input type="color">`; the swatch and field stay in sync. |
 | `print` | yes | — | — | Reuses the `default` view but forces read-only rendering (`permissions=1`) and tags the wrapper with `view_print`. |
-| `ip` | — | yes | — | Renders the value as an IP and asynchronously resolves a country-flag link (uses the `IP_API` config). |
+| `ip` | — | yes | — | Renders the value as an IP and asynchronously resolves a country-flag link. Resolution is server-side and offline via the native GeoIP subsystem (`src/core/geoip`, the same-origin `dd_core_api::get_ip_country` action) against the openly-licensed DB-IP Country Lite database — no third-party browser request. Configured by `DEDALO_GEOIP_*`. |
 
 Modes:
 

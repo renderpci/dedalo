@@ -135,7 +135,7 @@ DEDALO_APPLICATION_LANGS={"lg-eng":"English","lg-spa":"Castellano"}
 ```
 
 Simple lists also accept a comma list (`dd,rsc,oh`), which is easier to read. Maps
-and lists-of-objects (`ONTOLOGY_SERVERS`, `IP_API`, `MENU_SKIP_TIPOS`) must be JSON.
+and lists-of-objects (`ONTOLOGY_SERVERS`, `MENU_SKIP_TIPOS`) must be JSON.
 
 ---
 
@@ -174,6 +174,15 @@ The front-end CDN/library URLs (`USE_CDN`, `JQUERY_*`, `BOOTSTRAP_*`, `D3_URL_JS
 (`PHP_BIN_PATH`, `DEDALO_DB_TYPE`, `DEDALO_DB_MANAGEMENT`). Plus
 `ENCRYPTION_MODE`, `MAGICK_CONFIG`, `DEDALO_AV_FFMPEG_SETTINGS`,
 `DEDALO_PROFILE_DEFAULT`, `API_WEB_USER_CODE_MULTIPLE` and the glTF converters.
+
+**Superseded by a native subsystem**
+
+`IP_API` — section Activity (dd542) still resolves a source country from the
+visitor IP, but v7 does it server-side and offline against the openly-licensed
+DB-IP Country Lite database (`src/core/geoip`) instead of pointing each browser
+at a third-party API. Configure it with the `DEDALO_GEOIP_*` keys
+(`DEDALO_GEOIP_ENABLED`, `DEDALO_GEOIP_DIR`, `DEDALO_GEOIP_AUTO_UPDATE`,
+`DEDALO_GEOIP_DB_URL`).
 
 **It is runtime state, not config** — it lives in `../private/ts_state.json`,
 written by the maintenance area, never by you

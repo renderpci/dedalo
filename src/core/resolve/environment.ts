@@ -167,7 +167,10 @@ export async function buildPageGlobals(
 		// restart and the client would advertise the wrong posture.
 		dedalo_protect_media_files: resolveMediaAccessMode() !== false ? 1 : 0,
 		DEDALO_NOTIFICATIONS: config.features.notifications ? 1 : 0,
-		ip_api: config.features.ipApi,
+		// WC-038: `ip_api` REMOVED from page_globals — IP→country resolution moved
+		// server-side/offline (src/core/geoip); the client no longer reads it. The
+		// frozen PHP oracle still carries it, so environment_differential strips it
+		// PHP-side before the key-set compare.
 		fallback_image: '/dedalo/core/themes/default/default.svg',
 		locale: config.identity.locale, // DEDALO_LOCALE
 		dedalo_date_order: config.identity.dateOrder, // DEDALO_DATE_ORDER

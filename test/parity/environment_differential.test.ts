@@ -139,7 +139,7 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 
 	test('page_globals: same key set; same values outside engine-specific facts', () => {
 		if (!hasPhpCredentials()) return;
-		const phpGlobals = phpEnv.page_globals ?? {};
+		const phpGlobals = { ...(phpEnv.page_globals ?? {}) };
 		const tsGlobals = { ...(tsEnv.page_globals ?? {}) };
 		// WIRE_CONTRACT.md WC-031: `is_ontology_server` is a TS-ONLY page_globals key
 		// (PHP get_page_globals has no twin) driving the ontology-master client skin.
@@ -147,6 +147,13 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 		expect('is_ontology_server' in tsGlobals).toBe(true);
 		expect('is_ontology_server' in phpGlobals).toBe(false);
 		delete tsGlobals.is_ontology_server;
+		// WIRE_CONTRACT.md WC-038: `ip_api` REMOVED from page_globals — IP→country
+		// resolution moved server-side/offline (src/core/geoip). The frozen PHP
+		// oracle still carries it; strip it PHP-side (the mirror of the WC-031
+		// TS-only handling above) before the exact key-set compare.
+		expect('ip_api' in phpGlobals).toBe(true);
+		expect('ip_api' in tsGlobals).toBe(false);
+		delete phpGlobals.ip_api;
 		expect(Object.keys(tsGlobals).sort()).toEqual(Object.keys(phpGlobals).sort());
 		for (const key of Object.keys(phpGlobals)) {
 			if (ENGINE_SPECIFIC_KEYS.has(key)) continue;

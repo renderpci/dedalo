@@ -3472,27 +3472,6 @@ DEDALO_SOURCE_VERSION_LOCAL_DIR="/tmp/my_museum"
 
 ---
 
-### Defining ip api service
-
-IP_API `array`
-
-Defines the service to be used in section Activity to resolve source Country from IP address.
-
-By default Dédalo use the ipapi.co service with free unsigned account. Is possible to configure other services with your specific account. If you want to use a http instead https you can use `ip-api.com`
-
-```bash
-IP_API={"url":"https://api.country.is/$ip","href":"https://ip-api.com/#$ip","country_code":"country"}
-```
-
-!!! note "IP variable"
-    `$ip` string will be replaced by the real IP value in resolution and 'country_code' value property is used to generate the icon flag.
-
-    The URL must be in the format that the provider requires.
-
-*Default: {"url":"https://api.country.is/$ip","href":"https://ip-api.com/#$ip","country_code":"country"}*
-
----
-
 ### Defining is a code server
 
 IS_A_CODE_SERVER `bool`
@@ -3584,6 +3563,64 @@ This parameter defines if the installation will be updated his ontology using th
 
 ```bash
 STRUCTURE_FROM_SERVER=true
+```
+
+*Default: (unset)*
+
+---
+
+### Enable local IP to Country resolution
+
+DEDALO_GEOIP_ENABLED `bool`
+
+Enables the built-in, self-hosted IP to Country resolution used in section Activity to show the source country flag from an IP address.
+
+Resolution runs on the server against a local, openly-licensed country database (DB-IP IP to Country Lite, CC-BY-4.0) — no third-party request is made from the browser. When disabled, IP addresses are shown without a country flag.
+
+```bash
+DEDALO_GEOIP_ENABLED=true
+```
+
+*Default: true*
+
+---
+
+### IP to Country database directory
+
+DEDALO_GEOIP_DIR `string`
+
+Directory where the local IP to Country database file is downloaded and cached. Defaults to `geoip` inside the private directory (outside the web root).
+
+```bash
+DEDALO_GEOIP_DIR="/srv/dedalo/geoip"
+```
+
+*Default: `<private dir>/geoip`*
+
+---
+
+### Auto-download and refresh the IP to Country database
+
+DEDALO_GEOIP_AUTO_UPDATE `bool`
+
+When enabled, the server downloads the IP to Country database on first use and refreshes it monthly. Disable it to use only a database file placed manually in `DEDALO_GEOIP_DIR` (e.g. air-gapped installs).
+
+```bash
+DEDALO_GEOIP_AUTO_UPDATE=true
+```
+
+*Default: true*
+
+---
+
+### IP to Country database download URL override
+
+DEDALO_GEOIP_DB_URL `string`
+
+Overrides the default monthly DB-IP download URL. Use it to point at a mirror or a pinned month. The default is `https://download.db-ip.com/free/dbip-country-lite-YYYY-MM.mmdb.gz` (the current month, with a fallback to the previous month), computed automatically.
+
+```bash
+DEDALO_GEOIP_DB_URL="https://mirror.example.org/dbip-country-lite-2026-07.mmdb.gz"
 ```
 
 *Default: (unset)*

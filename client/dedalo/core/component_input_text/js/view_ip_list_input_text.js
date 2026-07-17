@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -8,6 +8,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {get_fallback_value} from '../../common/js/common.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 
 
 
@@ -17,37 +18,35 @@
 *
 * This module renders a stored IP address string in list mode and, for non-private
 * IPs, asynchronously enriches the wrapper with a clickable country-flag link by
-* querying the configured external geolocation API (`page_globals.ip_api`).
+* asking the SAME-ORIGIN server action `dd_core_api::get_ip_country` to resolve
+* the country.
 *
 * Responsibilities:
 *   - Build the synchronous wrapper via `ui.component.build_wrapper_list` so the
 *     list row is never blocked by a network call.
-*   - Skip resolution entirely for private / loopback / RFC-1918 addresses — those
-*     cannot be geolocated and should not generate outbound requests.
-*   - Defer the network fetch to an idle callback (`dd_request_idle_callback`) so
-*     the browser remains responsive during heavy list renders.
+*   - Skip resolution entirely for private / loopback / reserved addresses (IPv4
+*     and IPv6) — those cannot be geolocated and should not generate a round-trip.
+*   - Defer the resolution to an idle callback (`dd_request_idle_callback`) so the
+*     browser remains responsive during heavy list renders.
 *   - Maintain a module-level LRU-style cache (`window.resolved_ip_data`, a Map)
 *     capped at 300 entries to avoid resolving the same IP more than once per
 *     page load without unbounded memory growth.
 *   - On resolution, inject an `<a>` link carrying the country-flag emoji label
 *     into the already-rendered wrapper via `requestAnimationFrame`.
 *
-* Configuration:
-*   `page_globals.ip_api` is populated server-side from the `IP_API` PHP constant
-*   (core/api/v1/common/class.dd_core_api.php). It must be an object with:
-*     - `url`          {string} — fetch endpoint with the literal `$ip` placeholder
-*     - `href`         {string} — user-facing link target with the `$ip` placeholder
-*     - `country_code` {string} — property name to read from the API JSON response
-*
-*   If `page_globals.ip_api` is absent (not configured), geolocation is silently
-*   skipped and the wrapper shows only the raw IP text.
+* Resolution (server-side, free/open/reliable):
+*   Country lookup runs on the server (src/core/geoip) against the openly-licensed
+*   DB-IP IP-to-Country Lite database (CC-BY-4.0), loaded once at boot. The browser
+*   makes NO third-party request — only a same-origin call via `data_manager`. The
+*   server returns `country_code: null` for private/reserved/unresolved IPs and
+*   when GeoIP is disabled, in which case the row shows only the raw IP text.
 *
 * Exports: view_ip_list_input_text (namespace), render_link (utility)
 *
 * @see render_list_component_input_text — dispatcher that selects this module for
 *      view = 'ip'
 * @see view_default_list_input_text    — default list view (no geolocation)
-* @see config/sample.config.php        — IP_API constant documentation and examples
+* @see src/core/geoip/                  — server-side resolution subsystem
 */
 export const view_ip_list_input_text = function() {
 
@@ -143,8 +142,13 @@ view_ip_list_input_text.render = async function(self, options) {
 							// Helper function to render and append link
 							// Wraps the two-step pattern (build node → rAF-insert) so
 							// both the cache-hit and cache-miss paths share the same
-							// DOM mutation logic.
+							// DOM mutation logic. A null label means the IP resolved to
+							// no country (private/reserved/unknown, or GeoIP disabled) —
+							// nothing to append, the row keeps just the IP text.
 							const render_and_append_link = (ip_data) => {
+								if (!ip_data || !ip_data.label) {
+									return;
+								}
 								const link_node = render_link(ip_data.href, ip_data.label);
 								// Use requestAnimationFrame to batch the DOM write into
 								// the next paint cycle, avoiding forced reflows.
@@ -164,18 +168,20 @@ view_ip_list_input_text.render = async function(self, options) {
 							}
 
 							// Resolve new IP data
-							// Fetch geolocation from the external API. The promise is
-							// not awaited with a top-level await here so that the idle
-							// callback returns quickly; resolution continues in .then().
+							// Ask the server (same-origin) to resolve the country. The
+							// promise is not awaited with a top-level await here so that
+							// the idle callback returns quickly; resolution continues in
+							// .then(). A null result means the request failed — degrade
+							// silently (the row keeps just the IP text).
 							resolve_ip_data(ip)
 							.then(function(ip_data){
 
 								if (!ip_data) {
-									console.warn(`Failed to resolve IP data for: ${ip}`);
 									return
 								}
 
-								// Cache the result and render
+								// Cache the result (even when it resolved to no country,
+								// so the same IP is not queried again) and render.
 								window.resolved_ip_data.set(ip, ip_data);
 								render_and_append_link(ip_data);
 							})
@@ -231,34 +237,37 @@ export const render_link = function (href, label) {
 
 /**
 * RESOLVE_IP_DATA
-* Fetch geolocation information for an IP address from the configured external API
-* and return a normalized result object ready for `render_link`.
+* Resolve the country for an IP address via the SAME-ORIGIN server action
+* `dd_core_api::get_ip_country` and return a normalized object ready for
+* `render_link`.
 *
-* Configuration is read from `page_globals.ip_api`, which is populated server-side
-* from the `IP_API` PHP constant. If the constant is not defined, `ip_api` is null
-* and this function returns null immediately (geolocation is optional).
+* Resolution is done server-side and OFFLINE against the openly-licensed DB-IP
+* IP-to-Country Lite database (src/core/geoip) — the browser no longer calls any
+* third-party geolocation service, so there is no CORS, no rate limit, and no
+* per-visitor dependency on an external API being reachable. `data_manager.request`
+* posts to `../api/v1/json/` (same origin) and attaches the CSRF token.
 *
-* The `$ip` placeholder in both `url` and `href` template strings is replaced with
-* the actual IP value at call time.
+* The server returns `country_code: null` for private/reserved/unresolved IPs and
+* when GeoIP is disabled or its database is not loaded; in that case `label` is
+* null and no flag link is appended (the row keeps just the IP text).
 *
-* Country code extraction uses optional chaining (`parsed_data?.[key]`) to tolerate
-* API responses that omit the property. When absent, `label` falls back to the
-* literal string `'unknown'`.
+* The click-through `href` points at the DB-IP page for the IP
+* (`https://db-ip.com/<ip>`) — this both gives the user a details view AND
+* discharges the CC-BY-4.0 attribution obligation (a link back to DB-IP.com on
+* pages that display results from the database).
 *
-* The function returns null (rather than throwing) in all error conditions so that
-* callers can safely ignore failures without crashing the list render.
+* Returns null (rather than throwing) on any request error so the list render is
+* never blocked.
 *
 * @param {string} ip - The IP address string to resolve (IPv4 or IPv6)
-* @returns {Promise<Object|null>} Resolves to an ip_data object on success:
+* @returns {Promise<Object|null>} On a successful request:
 *   ```
 *   {
-*     url   : string,  // the API endpoint that was fetched
-*     href  : string,  // user-facing geolocation page URL (for <a href>)
-*     label : string   // country-flag emoji (e.g. "🇪🇸") or "unknown"
+*     href  : string,        // DB-IP page for the IP (for <a href>, also attribution)
+*     label : string|null    // country-flag emoji (e.g. "🇪🇸"), or null when unresolved
 *   }
 *   ```
-*   Returns null when: `ip` is invalid, `page_globals.ip_api` is not configured,
-*   the fetch response is not OK, or an exception is caught.
+*   Returns null only when the request itself fails or `ip` is invalid.
 */
 const resolve_ip_data = async function(ip) {
 
@@ -267,51 +276,37 @@ const resolve_ip_data = async function(ip) {
         return null;
     }
 
-	// Check config end_point. From config IP_API
-	// page_globals.ip_api is null when the PHP constant IP_API is not defined;
-	// geolocation is optional so we fail silently here.
-	if (!page_globals.ip_api) {
-		return null
-	}
-
 	try {
 
-		// Replace the `$ip` token in both the API URL and the destination href.
-		// The regex captures `$ip` in a group — the replace target is the whole
-		// match, so the result is equivalent to a simple string replace.
-		const url	= page_globals.ip_api.url.replace(/(\$ip)/, ip);
-		const href	= page_globals.ip_api.href.replace(/(\$ip)/, ip);
+		// Same-origin resolution. data_manager.request handles CSRF + JSON.
+		const api_response = await data_manager.request({
+			body : {
+				dd_api	: 'dd_core_api',
+				action	: 'get_ip_country',
+				options	: { ip : ip }
+			}
+		})
 
-		// fetch data
-		const response = await fetch(url);
+		// ISO 3166-1 alpha-2 code (e.g. 'ES') or null when unresolved / disabled.
+		const country_code = api_response?.data?.country_code ?? null;
 
-		if (!response.ok) {
-            console.error(`API request failed: ${response.status}`);
-            return null;
-        }
+		// DB-IP details page for this IP. Doubles as the required CC-BY-4.0
+		// attribution link back to DB-IP.com.
+		const href = `https://db-ip.com/${encodeURIComponent(ip)}`;
 
-		const parsed_data = await response.json();
-
-		// Safely get country code. like 'AQ'
-		// `country_code` is a dynamic property name from config (e.g. 'countryCode'
-		// for ip-api.com, 'country_code' for ipapi.co, 'country' for api.country.is).
-		const country_code = parsed_data?.[page_globals.ip_api.country_code];
-
-		// Convert the two-letter ISO 3166-1 alpha-2 code to a regional-indicator
-		// emoji sequence; fall back to the string 'unknown' if absent.
+		// Flag emoji when a country resolved; null means "no flag to show".
 		const label = country_code
 			? get_flag_emoji(country_code)
-			: 'unknown'
+			: null
 
 		// result object
 		return {
-			url		: url, // api url
-			href	: href, // website to go on user click
-			label	: label // text to show (emoji flag)
+			href	: href,  // website to go on user click (+ attribution)
+			label	: label  // text to show (emoji flag) or null
 		}
 
 	} catch (error) {
-        console.error('Error resolving IP data:', error);
+        console.warn('Error resolving IP data:', error);
         return null;
     }
 }//end resolve_ip_data
@@ -348,35 +343,69 @@ const get_flag_emoji = function(country_code) {
 
 /**
 * IS_PRIVATE_IP
-* Return true when the given IP string represents a non-routable or loopback
-* address that cannot be sent to an external geolocation service.
+* Return true when the given IP string is a non-routable / reserved / local
+* address that cannot be geolocated. Used here only as a cheap CLIENT-SIDE
+* pre-filter to skip a needless round-trip — the server (src/core/geoip) applies
+* the authoritative check and also returns no country for these.
 *
-* Recognized private ranges:
-*   - 'localhost'       — the loopback hostname
-*   - '127.0.0.1'      — IPv4 loopback (RFC 5735)
-*   - 'unknown'        — sentinel value used when the IP could not be captured
-*   - 10.0.0.0/8       — RFC-1918 Class A private range
-*   - 172.16.0.0/12    — RFC-1918 Class B private range (172.16.x.x – 172.31.x.x)
-*   - 192.168.0.0/16   — RFC-1918 Class C private range
+* Recognized (IPv4 AND IPv6, mirroring src/core/geoip/ip_ranges.ts):
+*   - sentinels: '' , 'local', 'localhost', 'unknown'
+*   - IPv4: 10/8, 127/8, 169.254/16, 172.16-31/12, 192.168/16
+*   - IPv6: ::1 (loopback), :: (unspecified), fe80::/10 (link-local),
+*           fc00::/7 (unique-local), and IPv4-mapped ::ffff:<v4> (unwrapped)
 *
-* (!) IPv6 private ranges (::1, fc00::/7, fe80::/10, etc.) are NOT checked. An
-* IPv6 loopback or link-local address passes through to the resolution path and
-* will fail at the API call. This is a known gap in the current implementation.
-*
-* (!) The function splits on '.' and compares string segments, so a malformed
-* or empty `ip` will yield `parts[0] === '10'` as false without throwing.
+* `'local'` is the value the server stores for a request with no X-Forwarded-For
+* header; `::1` is the IPv6 loopback seen in local/dev — both previously slipped
+* through the IPv4-only check and caused a failed lookup.
 *
 * @param {string} ip - IP address or hostname string to test
 * @returns {boolean} true if the address is private / non-routable; false otherwise
 */
 const is_private_ip = function(ip) {
 
-	if (ip==='localhost' || ip==='127.0.0.1' || ip==='unknown') {
+	if (!ip || typeof ip !== 'string') {
 		return true
 	}
 
-	const parts = ip.split('.');
+	// Normalize: trim, lowercase, drop an IPv6 zone id, strip brackets.
+	let s = ip.trim().toLowerCase()
+	const zone = s.indexOf('%')
+	if (zone !== -1) {
+		s = s.slice(0, zone)
+	}
+	if (s.startsWith('[') && s.endsWith(']')) {
+		s = s.slice(1, -1)
+	}
+
+	if (s==='' || s==='local' || s==='localhost' || s==='unknown') {
+		return true
+	}
+
+	// IPv4-mapped IPv6 in dotted form (::ffff:127.0.0.1) → unwrap and re-test.
+	if (s.startsWith('::ffff:') && s.includes('.')) {
+		return is_private_ip(s.slice('::ffff:'.length))
+	}
+
+	// IPv6
+	if (s.includes(':')) {
+		if (s==='::' || s==='::1') {
+			return true
+		}
+		const first = s.split(':')[0]
+		if (first.startsWith('fc') || first.startsWith('fd')) {
+			return true // unique-local fc00::/7
+		}
+		if (first.length >= 3 && first.startsWith('fe') && '89ab'.includes(first[2])) {
+			return true // link-local fe80::/10
+		}
+		return false
+	}
+
+	// IPv4
+	const parts = s.split('.');
 	return parts[0] === '10' ||
+		parts[0] === '127' ||
+		(parts[0] === '169' && parts[1] === '254') ||
 		(parts[0] === '172' && (parseInt(parts[1], 10) >= 16 && parseInt(parts[1], 10) <= 31)) ||
 		(parts[0] === '192' && parts[1] === '168');
 }//end is_private_ip
