@@ -477,18 +477,30 @@ export async function componentFieldsSeparator(componentTipo: string): Promise<s
 
 /**
  * Build the full relation-list grid for one host record (PHP
- * get_relation_list_obj). `limit` caps the referencing RECORDS.
+ * get_relation_list_obj). `limit` caps the referencing RECORDS;
+ * `sectionTipos` narrows the OWNING sections (the client sqo's section_tipo
+ * axis — PHP feeds the sqo straight to sections::get_instance; 'all' = every
+ * section, the panel's default).
  */
 export async function buildRelationList(
 	hostSectionTipo: string,
 	hostSectionId: number | string,
-	options: { limit?: number | false; offset?: number; lang?: string } = {},
+	options: {
+		limit?: number | false;
+		offset?: number;
+		lang?: string;
+		sectionTipos?: string[] | 'all';
+	} = {},
 ): Promise<RelationListResult> {
 	// Request-scoped data lang backstop (S2-28), never a hardcoded lg-spa.
 	const lang = options.lang ?? currentDataLang();
 	const hits = await findInverseReferences(
 		[{ section_tipo: hostSectionTipo, section_id: String(hostSectionId) }],
-		{ sectionTipos: 'all', limit: options.limit ?? false, offset: options.offset },
+		{
+			sectionTipos: options.sectionTipos ?? 'all',
+			limit: options.limit ?? false,
+			offset: options.offset,
+		},
 	);
 
 	const context: Record<string, unknown>[] = [];

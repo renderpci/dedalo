@@ -16,7 +16,7 @@ import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
-import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { createSession, getSession, setSessionSqo } from '../../src/core/security/session_store.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 
 registerSessionCleanup();
@@ -105,6 +105,91 @@ describe('sqo_session store + context stamp', () => {
 		await dispatchWith(tokenA, readRqo(undefined));
 		expect(getSession(tokenA)?.sqoSession?.[SECTION]).toBeDefined();
 		expect(getSession(tokenB)?.sqoSession?.[SECTION]).toBeUndefined();
+	});
+
+	// Read-back merge (PHP dd_core_api :2159-2199 "received case"): the
+	// client's open_records_in_window stores a section_id filter via a dummy
+	// build, then opens a PLAIN url — the new window's filter-less first read
+	// must inherit that filter from the session or it shows the FULL section
+	// (the relation_list_header / open-with-direct-relations bug).
+	test('a stored session filter is applied to a filter-less read (secondary-window open)', async () => {
+		if (!dbReady) return;
+		const token = createSession(-1, 'root', true);
+		// Discover real ids to filter on.
+		const { dispatched: probe } = await dispatchWith(token, readRqo(undefined));
+		const probeData = (
+			probe.body as { result: { data: Record<string, unknown>[] } }
+		).result.data.find((el) => el.typo === 'sections' && el.tipo === SECTION);
+		const probeEntries = (probeData?.entries ?? []) as { section_id: unknown }[];
+		expect(probeEntries.length).toBeGreaterThan(1);
+		const targetIds = probeEntries.slice(0, 2).map((entry) => String(entry.section_id));
+		// Seed the session exactly as the opener's dummy build would (the
+		// client util.js open_records_in_window filter shape, csv id list).
+		const session = getSession(token);
+		setSessionSqo(session as NonNullable<typeof session>, SECTION, {
+			section_tipo: [SECTION],
+			limit: 1,
+			offset: 0,
+			filter: {
+				$and: [
+					{
+						q: [targetIds.join(',')],
+						path: [
+							{
+								section_tipo: SECTION,
+								component_tipo: 'section_id',
+								model: 'component_section_id',
+								name: 'Id',
+							},
+						],
+					},
+				],
+			},
+		});
+		// The new window's first load: sqo present but NO filter property.
+		const { dispatched } = await dispatchWith(token, readRqo(undefined));
+		expect(dispatched.status).toBe(200);
+		const body = dispatched.body as {
+			result: { context: Record<string, unknown>[]; data: Record<string, unknown>[] };
+		};
+		const data = body.result.data.find((el) => el.typo === 'sections' && el.tipo === SECTION);
+		const entries = (data?.entries ?? []) as { section_id: unknown }[];
+		expect(entries.map((entry) => String(entry.section_id)).sort()).toEqual(targetIds.sort());
+		// The same response's context echoes the MERGED sqo (client resyncs on it).
+		const sectionEntry = body.result.context.find(
+			(entry) => entry.tipo === SECTION && entry.model === 'section',
+		);
+		expect((sectionEntry?.sqo_session as { filter?: unknown } | null)?.filter).toBeDefined();
+	});
+
+	test('session_save=false never inherits the stored filter (search-exact contract)', async () => {
+		if (!dbReady) return;
+		const token = createSession(-1, 'root', true);
+		const session = getSession(token);
+		setSessionSqo(session as NonNullable<typeof session>, SECTION, {
+			section_tipo: [SECTION],
+			filter: {
+				$and: [
+					{
+						q: ['999999999'],
+						path: [
+							{
+								section_tipo: SECTION,
+								component_tipo: 'section_id',
+								model: 'component_section_id',
+								name: 'Id',
+							},
+						],
+					},
+				],
+			},
+		});
+		const { dispatched } = await dispatchWith(token, readRqo(false));
+		const body = dispatched.body as { result: { data: Record<string, unknown>[] } };
+		const data = body.result.data.find((el) => el.typo === 'sections' && el.tipo === SECTION);
+		const entries = (data?.entries ?? []) as unknown[];
+		// The impossible-id filter was NOT merged: the read returns rows.
+		expect(entries.length).toBeGreaterThan(0);
 	});
 
 	test('a section context WITHOUT a stored sqo stamps sqo_session: null (PHP shape)', async () => {

@@ -46,11 +46,30 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 			return { status: 200, body: { result: { context: [], data: [] }, msg: 'OK' } };
 		}
 		const { buildRelationList } = await import('../resolve/relation_list.ts');
-		const sqoOptions = (rqo.sqo ?? {}) as { limit?: number | false; offset?: number };
+		const sqoOptions = (rqo.sqo ?? {}) as {
+			limit?: number | false;
+			offset?: number;
+			section_tipo?: unknown;
+		};
+		// PHP runs the CLIENT sqo straight through sections::get_instance
+		// (class.relation_list.php get_inverse_references): the sqo's
+		// section_tipo axis narrows the OWNING sections ('all' = no narrowing —
+		// the panel sends ["all"], the header open sends the one target section)
+		// and set_limit(0) means ALL records (the header open sends limit 0).
+		const rawSectionTipos = Array.isArray(sqoOptions.section_tipo)
+			? sqoOptions.section_tipo.filter((tipo): tipo is string => typeof tipo === 'string')
+			: typeof sqoOptions.section_tipo === 'string'
+				? [sqoOptions.section_tipo]
+				: [];
+		const sectionTipos =
+			rawSectionTipos.length === 0 || rawSectionTipos.includes('all')
+				? ('all' as const)
+				: rawSectionTipos;
 		const relationList = await buildRelationList(hostSectionTipo, hostSectionId, {
-			limit: sqoOptions.limit ?? false,
+			limit: sqoOptions.limit === 0 ? false : (sqoOptions.limit ?? false),
 			offset: sqoOptions.offset,
 			lang: source.lang,
+			sectionTipos,
 		});
 		const body: Record<string, unknown> = {
 			result: { context: relationList.context, data: relationList.data },
