@@ -49,6 +49,9 @@ export const tool_error_report = function () {
 	this.type			= null
 	this.caller			= null
 	this.lang			= null
+	// optional admin-attached screenshot as a compressed data URL (set by the
+	// render layer's capture UI); null until the admin attaches one.
+	this.screenshot		= null
 }//end tool_error_report
 
 
@@ -221,13 +224,21 @@ tool_error_report.prototype.collect_report_data = function() {
 			data_lang			: typeof page_globals.dedalo_data_lang==='string' ? page_globals.dedalo_data_lang : null
 		}
 
+	// optional screenshot: a compressed image/jpeg data URL the admin attached
+	// via the capture UI. Only a well-formed image data URL is forwarded; any
+	// other value is dropped (the server's strict schema would reject it anyway).
+		const screenshot = (typeof self.screenshot==='string' && /^data:image\/(?:png|jpeg|webp);base64,/.test(self.screenshot))
+			? self.screenshot
+			: null
+
 	return {
 		page_url		: page_url,
 		section_tipo	: section_tipo,
 		section_id		: section_id,
 		user_agent		: typeof navigator!=='undefined' ? String(navigator.userAgent).slice(0, 512) : null,
 		js_errors		: js_errors,
-		client_globals	: client_globals
+		client_globals	: client_globals,
+		screenshot		: screenshot
 	}
 }//end collect_report_data
 

@@ -157,6 +157,33 @@ describe('error-report intake (WC-017)', () => {
 		expect((rows[0]?.context as { report_version?: unknown }).report_version).toBe(1);
 	});
 
+	test('screenshot: a valid image data URL is accepted and stored in context', async () => {
+		// 1x1 transparent PNG — a well-formed data:image/png;base64 URL.
+		const dataUrl =
+			'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC';
+		const result = await post(validWirePayload({ screenshot: dataUrl }), anon('198.51.100.8'));
+		expect(result.status).toBe(200);
+		const reportId = result.body.report_id as number;
+		const rows = (await sql.unsafe(
+			'SELECT context FROM dedalo_ts_error_reports WHERE id = $1',
+			[reportId],
+		)) as Record<string, unknown>[];
+		expect((rows[0]?.context as { screenshot?: unknown }).screenshot).toBe(dataUrl);
+	});
+
+	test('screenshot: a non-data URL (http) is refused — no fetchable-URL smuggling', async () => {
+		const result = await post(validWirePayload({ screenshot: 'http://evil.example/x.png' }));
+		expect(result.status).toBe(400);
+		expect(result.body.msg).toBe('Invalid error report');
+	});
+
+	test('screenshot: omitted entirely still validates (optional, cross-version wire)', async () => {
+		const payload = validWirePayload();
+		expect('screenshot' in payload).toBe(false);
+		const result = await post(payload, anon('198.51.100.11'));
+		expect(result.status).toBe(200);
+	});
+
 	test('strict schema: an unknown field is REJECTED with a terse generic envelope', async () => {
 		const result = await post(validWirePayload({ smuggled: 'field' }));
 		expect(result.status).toBe(400);

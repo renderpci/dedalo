@@ -614,6 +614,20 @@ transforms the PHP/fixture response before diffing — the WC-001 pattern).
   `isTsOnlyEntry`. All four verified GREEN against the live oracle
   post-registration. TS ground truth pinned in
   `test/unit/tool_error_report.test.ts`.
+- **Screenshot field (2026-07-17):** the submission/wire payload gains ONE
+  optional field `screenshot` — an INLINE `data:image/(png|jpeg|webp);base64,…`
+  data URL, never a fetchable URL (no SSRF surface; the `.regex()` in
+  `src/core/error_report/schema.ts` rejects any other shape). It is
+  `.optional()` on top of `.nullable()` so a report from an older client that
+  omits the key still validates at the master (cross-version wire). The admin
+  attaches it in the tool UI (file-pick / drag / clipboard-paste); the browser
+  re-encodes it to a compact `image/jpeg` under a ~150 KiB budget before it is
+  ever sent, and the existing 256 KiB whole-payload cap
+  (`REPORT_MAX_SERIALIZED_BYTES`) still bounds the total. Stored inside the
+  report's `context` jsonb (`screenshot`), NOT a new column — no migration. The
+  `error_reports` widget renders it as an `<img src="data:…">` (inert as
+  markup; still never `inner_html`) and elides the base64 blob from the raw
+  Context dump. Purely additive; PHP has no twin and never reads this endpoint.
 
 ## WC-020 — `component_alias`: first-class tipo-level aliasing (TS-native; PHP emits the raw model and cannot serve alias reads/saves)
 
