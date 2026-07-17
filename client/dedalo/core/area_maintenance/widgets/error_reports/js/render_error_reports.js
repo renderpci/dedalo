@@ -178,6 +178,7 @@ const render_content_data = function(self) {
 
 		load_button.addEventListener('click', async function() {
 			load_button.disabled = true
+			load_button.classList.add('button_spinner')
 			try {
 				const api_response = await data_manager.request({
 					body : {
@@ -220,6 +221,8 @@ const render_content_data = function(self) {
 			} catch (error) {
 				console.error(error)
 				load_button.disabled = false
+			} finally {
+				load_button.classList.remove('button_spinner')
 			}
 		})
 
@@ -320,12 +323,39 @@ const build_detail = function(report, detail) {
 			}
 		}
 
-	// raw context — pretty JSON, textContent
+	// screenshot — an inline data URL the reporter attached. Rendered as an
+	// <img> (a data: URL as img.src is inert markup-wise; still never innerHTML).
+	// Only a well-formed image data URL is shown; anything else is ignored.
+		const screenshot = report.context && typeof report.context.screenshot==='string'
+			? report.context.screenshot
+			: null
+		const screenshot_ok = typeof screenshot==='string' && /^data:image\/(?:png|jpeg|webp);base64,/.test(screenshot)
+		if (screenshot_ok) {
+			ui.create_dom_element({ element_type: 'div', class_name: 'er_field er_label', text_content: 'Screenshot', parent: detail })
+			const link = ui.create_dom_element({ element_type: 'a', class_name: 'er_screenshot_link', parent: detail })
+			link.setAttribute('href', screenshot)
+			link.setAttribute('target', '_blank')
+			link.setAttribute('rel', 'noopener noreferrer')
+			const img = ui.create_dom_element({ element_type: 'img', class_name: 'er_screenshot', parent: link })
+			img.setAttribute('src', screenshot)
+			img.setAttribute('alt', 'Reported screenshot')
+		}
+
+	// raw context — pretty JSON, textContent. The screenshot blob is rendered
+	// above; strip it here so the dump stays readable.
 		if (report.context) {
+			const context_view = {}
+			for (const key in report.context) {
+				if (Object.prototype.hasOwnProperty.call(report.context, key)) {
+					context_view[key] = key==='screenshot'
+						? (screenshot_ok ? '[see Screenshot above]' : report.context[key])
+						: report.context[key]
+				}
+			}
 			ui.create_dom_element({ element_type: 'div', class_name: 'er_field er_label', text_content: 'Context', parent: detail })
 			const pre = document.createElement('pre')
 			pre.className	= 'er_pre'
-			pre.textContent	= JSON.stringify(report.context, null, 2)
+			pre.textContent	= JSON.stringify(context_view, null, 2)
 			detail.appendChild(pre)
 		}
 }//end build_detail

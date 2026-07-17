@@ -116,7 +116,7 @@ export const widget: WidgetModule = {
 		category: 'system',
 		class: 'width_100',
 		background: true,
-		label: { kind: 'literal', text: 'SYSTEM INFO' },
+		label: { kind: 'literal', text: 'System info' },
 	},
 	getValue: systemInfoGetValue,
 };

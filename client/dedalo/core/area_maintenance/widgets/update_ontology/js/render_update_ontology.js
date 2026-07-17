@@ -322,14 +322,6 @@ const get_content_data_edit = async function(self) {
 							body_response.removeChild(body_response.firstChild)
 						}
 
-					// lock + spinner
-						e.target.classList.add('lock')
-						const spinner = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'spinner'
-						})
-						body_response.prepend(spinner)
-
 					// Phase 1: discover available files + version info on the master
 						const server_ontology_api_response = await data_manager.request({
 							url		: server.url,
@@ -352,8 +344,6 @@ const get_content_data_edit = async function(self) {
 
 						const result = server_ontology_api_response?.result
 						if(!result){
-							e.target.classList.remove('lock')
-							spinner.remove()
 							ui.create_dom_element({
 								element_type	: 'div',
 								class_name		: 'error',
@@ -388,9 +378,6 @@ const get_content_data_edit = async function(self) {
 							files	: selected_files,
 							info	: result.info
 						})
-
-						spinner.remove()
-						e.target.classList.remove('lock')
 
 					// fail case
 						if(!api_response?.result){

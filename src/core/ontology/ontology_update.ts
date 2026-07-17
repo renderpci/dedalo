@@ -19,8 +19,9 @@
  * (result:true with errors) is replaced by all-or-nothing semantics.
  * TS-N/A steps (PHP session wipe, static JS lang-file regen, backend
  * activity row): the TS engine has no static session caches or generated
- * lang files — labels are DB-derived and in-process caches are purged via
- * clearOntologyDerivedCaches; the activity row is not ported (ledgered).
+ * lang files — UI labels are repo catalogs (WC-033) and in-process caches
+ * are purged via clearOntologyDerivedCaches; the activity row is not
+ * ported (ledgered).
  */
 
 import { cpSync, mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -394,7 +395,8 @@ export async function updateOntology(
 		response.errors.push(...optimizeErrors);
 
 		// TS analog of the PHP session wipe + dd_cache purge: the in-process
-		// ontology-derived caches (labels are DB-derived — no lang files).
+		// ontology-derived caches. (UI labels are repo catalogs since WC-033 —
+		// the imported model='label' rows are inert for the TS engine.)
 		await clearOntologyDerivedCaches();
 
 		// schema-changes file — the ONE hard-fail tail step (PHP parity)

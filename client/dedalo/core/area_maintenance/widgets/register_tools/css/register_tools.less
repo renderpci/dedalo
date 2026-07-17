@@ -8,8 +8,10 @@
 .wrapper_widget.register_tools {
 
 	// name · developer · installed · version · info
+	// installed/version columns are sized to fit their uppercase headers
+	// ("INSTALLED"/"VERSION") on one line (the kit already prevents mid-word breaks).
 	.dd_table {
-		grid-template-columns: minmax(6rem, 1.3fr) minmax(5rem, 1fr) 5rem 5rem minmax(7rem, 1.4fr);
+		grid-template-columns: minmax(6rem, 1.3fr) minmax(5rem, 1fr) 6rem 5.5rem minmax(7rem, 1.4fr);
 	}
 
 	// fatal-error banner (outdated ontology, etc.) as a contained danger note

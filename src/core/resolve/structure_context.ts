@@ -979,7 +979,7 @@ export async function buildStructureContext(options: {
 		const { searchOperatorsInfoWire, buildSearchOptionsTitle } = await import(
 			'../search/search_operators.ts'
 		);
-		const { getLabels } = await import('./environment.ts');
+		const { getLabels } = await import('../labels/catalog.ts');
 		const labels = await getLabels(currentApplicationLang());
 		entry.search_operators_info = searchOperatorsInfoWire(core.model);
 		entry.search_options_title = buildSearchOptionsTitle(core.model, labels);

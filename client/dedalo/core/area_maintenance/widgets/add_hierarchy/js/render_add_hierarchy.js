@@ -134,7 +134,7 @@ const get_content_data_edit = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'dd_eyebrow',
-			inner_html		: get_label.instalar_jerarquias || 'Import hierarchies',
+			inner_html		: get_label.import_hierarchies || 'Import hierarchies',
 			parent			: content_data
 		})
 

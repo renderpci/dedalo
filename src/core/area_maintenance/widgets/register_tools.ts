@@ -119,7 +119,7 @@ export const widget: WidgetModule = {
 	spec: {
 		id: 'register_tools',
 		category: 'config',
-		label: { kind: 'label', key: 'registrar_herramientas' },
+		label: { kind: 'label', key: 'register_tools' },
 	},
 	apiActions: {
 		// Ownership-gated (UPDATE_PROCESS Phase 1). Closed (coexisting): reconcile

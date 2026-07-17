@@ -256,23 +256,25 @@ const render_build_install_version = function (self, value) {
 			// locks the button submit
 			button_process.classList.add('button_spinner')
 
-			// build_install_version
-			const api_response = await self.build_install_version()
+			try {
+				// build_install_version
+				const api_response = await self.build_install_version()
 
-			// debug
-			if (SHOW_DEBUG) {
-				console.log('----> build_install_version api_response', api_response);
+				// debug
+				if (SHOW_DEBUG) {
+					console.log('----> build_install_version api_response', api_response);
+				}
+
+				process_response.replaceChildren()
+				ui.create_dom_element({
+					element_type	: 'pre',
+					class_name		: '',
+					inner_html		: JSON.stringify(api_response, null, 2),
+					parent			: process_response
+				})
+			} finally {
+				button_process.classList.remove('button_spinner')
 			}
-
-			button_process.classList.remove('button_spinner')
-
-			process_response.replaceChildren()
-			ui.create_dom_element({
-				element_type	: 'pre',
-				class_name		: '',
-				inner_html		: JSON.stringify(api_response, null, 2),
-				parent			: process_response
-			})
 
 			// background process version
 			// update_process_status(
@@ -357,27 +359,31 @@ const render_build_recovery_version_file = function (self, value) {
 
 			// locks the button submit
 			button_process.classList.add('loading')
+			button_process.classList.add('button_spinner')
 
-			// build_recovery_version
-			const api_response = await self.build_recovery_version_file()
+			try {
+				// build_recovery_version
+				const api_response = await self.build_recovery_version_file()
 
-			if(SHOW_DEBUG===true) {
-				console.log('**** render_build_recovery_version_file api_response:', api_response);
+				if(SHOW_DEBUG===true) {
+					console.log('**** render_build_recovery_version_file api_response:', api_response);
+				}
+
+				// process_response print
+				while (process_response.firstChild) {
+					process_response.removeChild(process_response.firstChild);
+				}
+				ui.create_dom_element({
+					element_type	: 'pre',
+					class_name		: 'response',
+					inner_html		: JSON.stringify(api_response, null, 2),
+					parent			: process_response
+				})
+			} finally {
+				// unlocks the button submit
+				button_process.classList.remove('loading')
+				button_process.classList.remove('button_spinner')
 			}
-
-			// locks the button submit
-			button_process.classList.remove('loading')
-
-			// process_response print
-			while (process_response.firstChild) {
-				process_response.removeChild(process_response.firstChild);
-			}
-			ui.create_dom_element({
-				element_type	: 'pre',
-				class_name		: 'response',
-				inner_html		: JSON.stringify(api_response, null, 2),
-				parent			: process_response
-			})
 		}
 		button_process.addEventListener('click', click_handler)
 
@@ -454,25 +460,29 @@ const render_restore_dd_ontology_recovery_from_file = function (self, value) {
 
 			// locks the button submit
 			button_process.classList.add('loading')
+			button_process.classList.add('button_spinner')
 
-			// restore_dd_ontology_recovery_from_file
-			const api_response = await self.restore_dd_ontology_recovery_from_file()
+			try {
+				// restore_dd_ontology_recovery_from_file
+				const api_response = await self.restore_dd_ontology_recovery_from_file()
 
-			console.log('**** render_restore_dd_ontology_recovery_from_file api_response:', api_response);
+				console.log('**** render_restore_dd_ontology_recovery_from_file api_response:', api_response);
 
-			// locks the button submit
-			button_process.classList.remove('loading')
-
-			// process_response print
-			while (process_response.firstChild) {
-				process_response.removeChild(process_response.firstChild);
+				// process_response print
+				while (process_response.firstChild) {
+					process_response.removeChild(process_response.firstChild);
+				}
+				ui.create_dom_element({
+					element_type	: 'pre',
+					class_name		: 'response',
+					inner_html		: JSON.stringify(api_response, null, 2),
+					parent			: process_response
+				})
+			} finally {
+				// unlocks the button submit
+				button_process.classList.remove('loading')
+				button_process.classList.remove('button_spinner')
 			}
-			ui.create_dom_element({
-				element_type	: 'pre',
-				class_name		: 'response',
-				inner_html		: JSON.stringify(api_response, null, 2),
-				parent			: process_response
-			})
 		}
 		button_process.addEventListener('click', click_handler)
 
@@ -529,27 +539,31 @@ const render_build_matrix_hierarchy_main_sql = function (self, value) {
 
 			// locks the button submit
 			button_process.classList.add('loading')
+			button_process.classList.add('button_spinner')
 
-			// build_matrix_hierarchy_main_sql
-			const api_response = await self.build_matrix_hierarchy_main_sql()
+			try {
+				// build_matrix_hierarchy_main_sql
+				const api_response = await self.build_matrix_hierarchy_main_sql()
 
-			if(SHOW_DEBUG===true) {
-				console.log('**** render_build_matrix_hierarchy_main_sql api_response:', api_response);
+				if(SHOW_DEBUG===true) {
+					console.log('**** render_build_matrix_hierarchy_main_sql api_response:', api_response);
+				}
+
+				// process_response print
+				while (process_response.firstChild) {
+					process_response.removeChild(process_response.firstChild);
+				}
+				ui.create_dom_element({
+					element_type	: 'pre',
+					class_name		: 'response',
+					inner_html		: JSON.stringify(api_response, null, 2),
+					parent			: process_response
+				})
+			} finally {
+				// unlocks the button submit
+				button_process.classList.remove('loading')
+				button_process.classList.remove('button_spinner')
 			}
-
-			// unlocks the button submit
-			button_process.classList.remove('loading')
-
-			// process_response print
-			while (process_response.firstChild) {
-				process_response.removeChild(process_response.firstChild);
-			}
-			ui.create_dom_element({
-				element_type	: 'pre',
-				class_name		: 'response',
-				inner_html		: JSON.stringify(api_response, null, 2),
-				parent			: process_response
-			})
 		}
 		button_process.addEventListener('click', click_handler)
 

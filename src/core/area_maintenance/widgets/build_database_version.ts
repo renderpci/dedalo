@@ -20,12 +20,37 @@ async function restoreRecoveryOwned(): Promise<WidgetResponse> {
 	return (await restoreDdOntologyRecoveryFromFile()) as unknown as WidgetResponse;
 }
 
+/**
+ * get_widget_value panel load. Mirrors the PHP oracle
+ * (build_database_version::get_value): the live DB name, the ephemeral install DB
+ * name, and where the compressed dump lands. Without this the client rendered the
+ * info line with `undefined` for all three. build_install_version itself stays
+ * engineDenied (it writes into the PHP tree) — these values are informational.
+ */
+async function buildDatabaseVersionGetValue(): Promise<WidgetResponse> {
+	const { readEnv } = await import('../../../config/env.ts');
+	const sourceDb = readEnv('DB_NAME') ?? '';
+	// PHP installer::$db_install_name — the ephemeral clone target the install
+	// dump is built from (hard-coded there; kept in parity here).
+	const targetDb = 'dedalo7_install';
+	return {
+		result: {
+			source_db: sourceDb,
+			target_db: targetDb,
+			target_file: `/install/db/${targetDb}.pgsql.gz`,
+		},
+		msg: 'ok',
+		errors: [],
+	};
+}
+
 export const widget: WidgetModule = {
 	spec: {
 		id: 'build_database_version',
 		category: 'data',
 		label: { kind: 'label', key: 'build_database_version' },
 	},
+	getValue: buildDatabaseVersionGetValue,
 	apiActions: {
 		build_install_version: engineDenied(
 			'build_database_version.build_install_version',

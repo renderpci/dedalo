@@ -1324,7 +1324,7 @@ export const render_configuration_options = function (self, options_container, c
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'checkbox-label',
-			inner_html		: get_label.name_to_field || 'Suffix indicates field',
+			inner_html		: self.get_tool_label('name_to_field') || 'Suffix indicates field',
 			parent			: name_control_field
 		})
 
@@ -1405,10 +1405,10 @@ export const render_configuration_options = function (self, options_container, c
 		})
 		// label_section_id_check_box
 		// Label differs between modes: resource mode uses 'Name indicates id';
-		// section mode uses get_label.name_to_record_id ('Prefix indicates id').
+		// section mode uses self.get_tool_label('name_to_record_id') ('Prefix indicates id').
 		const current_label = import_mode==='section_resource'
 			? self.get_tool_label('name_indicates_id') || 'Name indicates id'
-			: get_label.name_to_record_id || 'Prefix indicates id'
+			: self.get_tool_label('name_to_record_id') || 'Prefix indicates id'
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'checkbox-label',
@@ -1479,7 +1479,7 @@ export const render_configuration_options = function (self, options_container, c
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'checkbox-label',
-			inner_html		: get_label.same_name_same_record || 'Same name same record. Create new ID',
+			inner_html		: self.get_tool_label('same_name_same_record') || 'Same name same record. Create new ID',
 			parent			: same_name_same_section
 		})
 

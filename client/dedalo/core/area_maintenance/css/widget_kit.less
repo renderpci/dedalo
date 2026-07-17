@@ -99,7 +99,15 @@
 	padding: 0.4rem 0.7rem;
 	border-top: 1px solid var(--border_default);
 	line-height: 1.35;
+}
+// data cells break long values (index defs, locators) anywhere they must
+.dd_table .dd_td {
 	word-break: break-word;
+}
+// header labels wrap on spaces only — never mid-word (no "COUNTE R" / "SECTION_I D")
+.dd_table .dd_th {
+	word-break: normal;
+	overflow-wrap: normal;
 }
 .dd_table .dd_tr:first-child .dd_th,
 .dd_table .dd_tr:first-child .dd_td {

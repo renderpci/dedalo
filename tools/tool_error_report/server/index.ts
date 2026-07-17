@@ -76,6 +76,7 @@ const defaultDeps: SendReportDeps = {
 				user_agent: report.user_agent,
 				client_globals: report.client_globals,
 				report_version: report.report_version,
+				screenshot: report.screenshot ?? null,
 			},
 		});
 	},

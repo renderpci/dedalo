@@ -254,7 +254,7 @@ async function computeSumDatesParsed(
 	context: WidgetContext,
 ): Promise<WidgetItem[]> {
 	const raw = await computeSumDates(ipo, context);
-	const { getLabels } = await import('../../../../resolve/environment.ts');
+	const { getLabels } = await import('../../../../labels/catalog.ts');
 	const { currentApplicationLang } = await import('../../../../resolve/request_lang.ts');
 	const labels = await getLabels(currentApplicationLang());
 

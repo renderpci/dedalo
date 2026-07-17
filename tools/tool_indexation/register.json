@@ -380,6 +380,146 @@
             "lang": "lg-cat",
             "name": "warning_delete_tag",
             "value": "Esborrarà l'etiqueta seleccionada en tots els idiomes i totes les relacions i indexació associades a ella"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "approach",
+            "value": "Approach"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "approach",
+            "value": "Enfoque"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "approach",
+            "value": "Impostazione"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "approach",
+            "value": "Ikuspegia"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "approach",
+            "value": "Fokus"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "approach",
+            "value": "Approche"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "approach",
+            "value": "Enfocament"
+          },
+          {
+            "lang": "lg-por",
+            "name": "approach",
+            "value": "Foco"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "label_deleted",
+            "value": "Deleted"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "label_deleted",
+            "value": "Borrada"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "label_deleted",
+            "value": "Cancellata"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "label_deleted",
+            "value": "Ezabatua"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "label_deleted",
+            "value": "διαγράφεται"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "label_deleted",
+            "value": "Gelöscht"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "label_deleted",
+            "value": "Supprimé"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "label_deleted",
+            "value": "मेटाइयो"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "label_deleted",
+            "value": "Esborrada"
+          },
+          {
+            "lang": "lg-por",
+            "name": "label_deleted",
+            "value": "Eliminada"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "label_normal",
+            "value": "Normal"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "label_normal",
+            "value": "Normal"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "label_normal",
+            "value": "Normale"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "label_normal",
+            "value": "Normala"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "label_normal",
+            "value": "κανονικόςNormal"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "label_normal",
+            "value": "Normal"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "label_normal",
+            "value": "Normal"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "label_normal",
+            "value": "सामान्य"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "label_normal",
+            "value": "Normal"
+          },
+          {
+            "lang": "lg-por",
+            "name": "label_normal",
+            "value": "Normal"
           }
         ]
       }

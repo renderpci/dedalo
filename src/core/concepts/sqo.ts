@@ -119,31 +119,31 @@ export const sqoLocatorPinSchema = z
 export const sqoSchema = z
 	.object({
 		/** Optional identifier, e.g. 'oh1_list'. */
-		id: z.string().optional(),
+		id: z.string().nullish(),
 		/** MANDATORY target section(s). Single string accepted, normalized to array. */
 		section_tipo: z.union([z.string(), z.array(z.string())]),
 		/** Which matrix table model to target: edit | list | tm | related. */
-		mode: z.string().optional(),
+		mode: z.string().nullish(),
 		filter: sqoFilterNodeSchema.optional().nullable(),
-		select: z.array(sqoPathStepSchema).optional(),
+		select: z.array(sqoPathStepSchema).nullish(),
 		// The REAL client sends explicit nulls for unset limit/offset (verified in
 		// the browser E2E); accept + treat as absent ('all' allowed server-side only).
 		limit: z.union([z.number(), z.string()]).nullish(),
 		offset: z.number().nullish(),
 		total: z.number().nullable().optional(),
-		full_count: z.boolean().optional(),
-		order: z.union([z.array(sqoOrderSchema), z.literal(false)]).optional(),
+		full_count: z.boolean().nullish(),
+		order: z.union([z.array(sqoOrderSchema), z.literal(false)]).nullish(),
 		// The REAL client sends explicit null when no locator pin is set (verified
 		// in the browser E2E); accept + treat as absent (sql_assembler guards with
 		// Array.isArray before use).
 		filter_by_locators: z.array(sqoLocatorPinSchema).nullish(),
-		filter_by_locators_op: z.enum(['OR', 'AND']).optional(),
-		allow_sub_select_by_id: z.boolean().optional(),
-		children_recursive: z.boolean().optional(),
-		remove_distinct: z.boolean().optional(),
-		breakdown: z.boolean().optional(),
+		filter_by_locators_op: z.enum(['OR', 'AND']).nullish(),
+		allow_sub_select_by_id: z.boolean().nullish(),
+		children_recursive: z.boolean().nullish(),
+		remove_distinct: z.boolean().nullish(),
+		breakdown: z.boolean().nullish(),
 		/** Lifecycle flag: whether the conform pipeline has run. Forced false at the gate. */
-		parsed: z.boolean().optional(),
+		parsed: z.boolean().nullish(),
 	})
 	.passthrough();
 

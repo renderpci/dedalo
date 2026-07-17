@@ -206,7 +206,7 @@ export const widget: WidgetModule = {
 	spec: {
 		id: 'database_info',
 		category: 'system',
-		label: { kind: 'literal', text: 'DATABASE INFO' },
+		label: { kind: 'literal', text: 'Database info' },
 	},
 	apiActions: {
 		analyze_db: databaseInfoAnalyzeDb,

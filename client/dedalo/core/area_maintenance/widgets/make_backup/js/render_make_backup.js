@@ -132,14 +132,6 @@ const handle_submit = async (body_response, target_lock, api_call) => {
 		body_response.removeChild(body_response.firstChild);
 	}
 
-	// loading add
-	target_lock.classList.add('lock')
-	const spinner = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'spinner'
-	})
-	body_response.prepend(spinner)
-
 	try {
 		// API worker call
 		const api_response = await api_call();
@@ -168,10 +160,6 @@ const handle_submit = async (body_response, target_lock, api_call) => {
 			inner_html		: 'Unknown error calling API',
 			parent			: body_response
 		})
-	} finally {
-		// loading remove
-		spinner.remove()
-		target_lock.classList.remove('lock')
 	}
 }//end handle_submit
 
@@ -295,7 +283,7 @@ const get_content_data = async function(self) {
 				return
 			}
 
-			if (!confirm(get_label.seguro || 'Sure?')) {
+			if (!confirm(get_label.sure || 'Sure?')) {
 				return
 			}
 

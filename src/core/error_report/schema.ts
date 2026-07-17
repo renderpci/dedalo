@@ -32,6 +32,23 @@ export const REPORT_MAX_SERIALIZED_BYTES = 256 * 1024;
 /** Max captured-error entries per report (matches the client buffer bound). */
 export const REPORT_MAX_JS_ERRORS = 50;
 
+/**
+ * Max length of the optional screenshot data URL (bytes ≈ chars, ASCII). The
+ * client compresses to a ~150 KiB base64 budget; this is the hard ceiling a
+ * single field may reach before the whole-payload cap (REPORT_MAX_SERIALIZED_
+ * BYTES) even applies. Kept below the payload cap so description + a few errors
+ * always fit alongside it.
+ */
+export const REPORT_MAX_SCREENSHOT_CHARS = 200 * 1024;
+
+/**
+ * The screenshot is an INLINE base64 data URL only — a raster image the browser
+ * re-encoded from the admin's chosen file. It is NEVER a fetchable URL: the
+ * `data:image/...;base64,` shape is enforced here so no field can smuggle an
+ * http(s)/file reference the server might resolve (no SSRF surface).
+ */
+const SCREENSHOT_DATA_URL = /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+
 /** One captured entry of the client buffer (window.dedalo_js_errors). */
 const jsErrorSchema = z
 	.object({
@@ -69,6 +86,15 @@ export const reportSubmissionSchema = z
 		user_agent: z.string().max(512).nullable(),
 		js_errors: z.array(jsErrorSchema).max(REPORT_MAX_JS_ERRORS),
 		client_globals: clientGlobalsSchema.nullable(),
+		// Optional admin-attached screenshot (inline data URL; see the pattern).
+		// `.optional()` too: a sender on an older client omits the key entirely,
+		// and the master must still accept its report (cross-version wire).
+		screenshot: z
+			.string()
+			.max(REPORT_MAX_SCREENSHOT_CHARS)
+			.regex(SCREENSHOT_DATA_URL)
+			.nullable()
+			.optional(),
 	})
 	.strict();
 

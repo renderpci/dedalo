@@ -614,6 +614,20 @@ transforms the PHP/fixture response before diffing — the WC-001 pattern).
   `isTsOnlyEntry`. All four verified GREEN against the live oracle
   post-registration. TS ground truth pinned in
   `test/unit/tool_error_report.test.ts`.
+- **Screenshot field (2026-07-17):** the submission/wire payload gains ONE
+  optional field `screenshot` — an INLINE `data:image/(png|jpeg|webp);base64,…`
+  data URL, never a fetchable URL (no SSRF surface; the `.regex()` in
+  `src/core/error_report/schema.ts` rejects any other shape). It is
+  `.optional()` on top of `.nullable()` so a report from an older client that
+  omits the key still validates at the master (cross-version wire). The admin
+  attaches it in the tool UI (file-pick / drag / clipboard-paste); the browser
+  re-encodes it to a compact `image/jpeg` under a ~150 KiB budget before it is
+  ever sent, and the existing 256 KiB whole-payload cap
+  (`REPORT_MAX_SERIALIZED_BYTES`) still bounds the total. Stored inside the
+  report's `context` jsonb (`screenshot`), NOT a new column — no migration. The
+  `error_reports` widget renders it as an `<img src="data:…">` (inert as
+  markup; still never `inner_html`) and elides the base64 blob from the raw
+  Context dump. Purely additive; PHP has no twin and never reads this endpoint.
 
 ## WC-020 — `component_alias`: first-class tipo-level aliasing (TS-native; PHP emits the raw model and cannot serve alias reads/saves)
 
@@ -1124,7 +1138,122 @@ transforms the PHP/fixture response before diffing — the WC-001 pattern).
   fixture (no live oracle post-cutover); the drop is verified by absence — no
   test or fixture asserts `structure_from_server`.
 
-## WC-033 — the site-builder subsystem: `tool_sitebuilder` + `site_builder_status` are TS-ONLY surfaces (no PHP twin)
+## WC-033 — UI labels are repo catalogs: `get_label` is catalog-derived, the generated JS lang files are gone
+
+- **Date:** 2026-07-16 (post-cutover; PHP is decommissioned dead code).
+- **Why:** the inherited model had THREE simultaneous truths and none worked.
+  `getLabels` PREFERRED the committed `client/…/js/lang/lg-*.js` files (frozen
+  at the cutover — nothing regenerates them, `rebuild_lang_files` is denied),
+  silently falling back to a dd_ontology rebuild — so a WC-023 ontology update
+  changed label rows but the UI kept serving cutover-day strings; the ledger
+  ("labels are DB-derived") contradicted the code; and the files had ALREADY
+  become the de-facto authoring surface (26 TS-era keys — the login-recovery
+  set — existed ONLY there, 0 DB rows). Program strings are coupled to CODE,
+  not to the data model: a key exists because a line of client/widget code
+  references it, so labels now ship in the same commit as that code.
+- **Shape after (TS):** repo label files with TWO deliberately separated
+  ROLES (amended same day — no language is privileged at runtime):
+  `src/core/labels/master.json` is the SOURCE OF DEFINITIONS — the complete
+  key set with its source strings, tripwired complete; it is *authored in*
+  `MASTER_SOURCE_LANG` (currently lg-eng — a fact about who writes the
+  strings, gettext-msgid style). `src/core/labels/catalog/lg-<code>.json`
+  (sorted keys, sparse allowed) are per-lang TRANSLATIONS, all equal — EVERY
+  application lang has one, including the master-source lang, whose file is
+  a sparse display-text OVERRIDE of the master (starts empty; the tripwire
+  fails entries byte-equal to the master, so it can never silently become a
+  duplicate). Requesting the master-source lang applies only that override —
+  no other lang may shadow a master the requester already reads natively.
+  `getLabels` (`src/core/labels/catalog.ts`) serves the merged dictionary by
+  the fallback criteria: master ← the INSTALL's default application lang
+  (`DEDALO_APPLICATION_LANGS_DEFAULT` — the operator's choice) ← declared
+  linguistic alias (lg-vlca→lg-cat, the aliasing PHP baked into its generated
+  file) ← requested lang. (The first cut hardcoded eng-as-reference plus a
+  structure-lang overlay; both were language priorities the engine had no
+  business asserting — structure lang is an ontology-authoring concept.) So
+  `get_label` now always carries the FULL key set (pre-migration, a lang file
+  missing a key served `undefined` to the client). The dd_ontology
+  `model='label'` rows (dd383 children) are INERT for the TS engine: a WC-023
+  ontology update still imports them (v6 consumers may read them) but they
+  drive nothing. The environment `get_label` WIRE SHAPE is unchanged (a
+  lang-keyed string map); only its provenance moved. The eng catalog also
+  absorbed 181 keys that previously resolved ONLY through scattered client
+  `|| 'literal'` fallbacks or rendered `undefined` (the literals ARE the
+  catalog values — bytes preserved).
+- **Client file census:** `client/dedalo/core/common/js/lang/lg-*.js` is
+  DELETED (the client never fetched it — labels arrive via get_environment;
+  the files were server-read only). `get_dedalo_files` (the SW pre-cache
+  manifest) therefore lists no lang files; the frozen PHP fixture still does —
+  `dedalo_files_differential` filters `/dedalo/core/common/js/lang/` from
+  BOTH sides (the WC-013 normalization pattern).
+- **Sync story:** labels ride CODE updates (git/`update_code`), never
+  `update_ontology`. `rebuild_lang_files` / `export_to_translate` stay
+  `engineDenied` (the CSV translation workflow is superseded by
+  `scripts/labels_fill.ts` — per-lang missing-key backlog vs lg-eng).
+- **Two deliberate VALUE divergences from the oracle dictionary** (dd_ontology
+  duplicate-`properties.name` collisions where PHP's generator let the later
+  row win): `no_hay_etiqueta_seleccionada` now says 'No tag selected…' (dd1640
+  — the string component_portal.js actually shows on the index-without-tag
+  confirm; the oracle served dd1664's 'User code does not exist' there) and
+  `tool_watermark` now says 'Watermark' (dd1547; the oracle served dd1548's
+  'Notes').
+- **Gate reconciliation:** `environment_differential` `get_label` moves from
+  byte-equality to CONTAINMENT — every oracle key present with the oracle's
+  value except the two fixes above (asserted present AND changed); TS-only
+  keys are the catalog additions. `dedalo_files_differential` filters the lang
+  path (above). `labels_tripwire` (catalog integrity, reference completeness,
+  the shrink-only uncataloged ratchet) is the new invariant gate. The one-time
+  DB↔file reconcile (dup-name rows, the 22 mojibake-corrupted DB Italian
+  values, baked-fallback removal) is recorded in rewrite/LABELS_RECONCILE.md.
+
+## WC-034 — label catalog cleanup: renames to English keys, tool-local migration, unused removal
+
+- **Date:** 2026-07-16 (follows WC-033 the same day; the catalogs are repo-owned,
+  so this is a catalog content edit, not a serving-shape change).
+- **Why:** the key list had grown organically for years: Spanish-named keys
+  (`buscar`, `seccion`), typos (`erors_found`, `invalid_componet`,
+  `rebuild_constraits`, `are_you_sure_to_delete_refrence`), singular/plural
+  twins under two spellings (`anyo`/`year`), tool-specific strings parked in
+  the global namespace, and a large dead tail (~35 `tool_*` display names
+  duplicating the tools' own register labels, retired feature strings).
+- **Shape after (TS):** master went 686 → 413 keys. THE MAP IS MACHINE-READABLE:
+  `test/parity/wc034_label_cleanup.json` — 28 renames (references updated across
+  client/src/tools/install; merges into existing English keys keep the target's
+  translations and adopt the source's for missing langs), 21 tool-local
+  migrations, 240 removals. The `get_label` wire SHAPE is unchanged; only the
+  key census. The client mdcat widget now uses the same `year/years/month/...`
+  keys as its server twin (`sum_dates.ts`), which already expected them.
+- **Removal safety (how "unused" was proven):** a key was removed only if it had
+  (1) no static reference anywhere in client/src/tools/install (`get_label.x`,
+  `get_label['x']`, widget label rules, server `labels.x`); (2) no reachability
+  from any of the 14 dynamic `get_label[expr]` sites — each was enumerated
+  (tool_assistant `t()` literals, media_versions action names, tool_diffusion
+  `add_button` keys, search `$and/$or`), and the two data-driven sites (state
+  and calculation widgets) plus `search_operators.ts`'s wire {operator →
+  label-key} map were covered by a full-DB scan (every matrix table +
+  dd_ontology minus the inert `model='label'` rows themselves) — 22 DB-hit keys
+  kept conservatively; (3) no other repo occurrence except confirmed word
+  coincidences. Both data-driven sites degrade gracefully on foreign installs
+  (`get_label[x] || x`).
+- **Tool-local migration (21 keys, 9 tools):** keys used by exactly ONE tool and
+  tool-specific in meaning (export column toggles, subtitles player controls,
+  import-files naming modes, …) moved into that tool's `register.json`
+  `misc.dd1372` labels (translations carried from the catalogs) and the tool JS
+  switched `get_label.x` → `self.get_tool_label('x')`; every site keeps its
+  English `|| 'literal'` fallback, so the change is safe even BEFORE an install
+  re-runs the *Register tools* maintenance widget (required for the DB
+  `matrix_tools` rows to pick the new labels up). Genuinely generic vocabulary
+  used by one tool today (`error`, `print`, `upload`, `now`, …) stays global,
+  as do `conform_headers`/`rotate` (reached via the media_versions dynamic
+  action lookup on the GLOBAL dictionary).
+- **Gate reconciliation:** `environment_differential` get_label asserts every
+  ORACLE key is served with the oracle value, OR renamed per the map (new key
+  asserted present), OR ledger-removed (and asserts a removed key is NOT
+  served). The WC-033 dup-name fixes ride the same map
+  (`no_hay_etiqueta_seleccionada` → `no_tag_selected`; `tool_watermark`
+  removed). `labels_tripwire` unchanged and green — it enforces the cleaned
+  census going forward.
+
+## WC-035 — the site-builder subsystem: `tool_sitebuilder` + `site_builder_status` are TS-ONLY surfaces (no PHP twin)
 
 - **Date:** 2026-07-16 (subsystem built 2026-07-15).
 - **Shape:** a wholly TS-native addition with no PHP-oracle counterpart. The

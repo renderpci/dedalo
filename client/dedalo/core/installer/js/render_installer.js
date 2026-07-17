@@ -1484,7 +1484,7 @@ const render_entity_block = function(self) {
 	// keep references to the inputs so failed verification can highlight them (not just the status msg)
 	const entity_input		= create_field({ parent:fragment, cfg, name:'entity', label:get_label.entity_name || 'Entity name', value:entity_val, placeholder:'my_institution', help:'Short machine name for this installation.' })
 	create_field({ parent:fragment, cfg, name:'entity_label', label:get_label.entity_label || 'Entity label', value:'', placeholder:'My Institution', help:'Human-readable name (defaults to the entity name).' })
-	const information_input	= create_field({ parent:fragment, cfg, name:'information', label:get_label.information || 'Install information', value:'', placeholder:'My Institution archive', help:'Fixed install fingerprint. Do not change after install.' })
+	const information_input	= create_field({ parent:fragment, cfg, name:'information', label:get_label.install_information || 'Install information', value:'', placeholder:'My Institution archive', help:'Fixed install fingerprint. Do not change after install.' })
 	const info_key_input	= create_field({ parent:fragment, cfg, name:'info_key', label:get_label.info_key || 'Install info key', value:'', placeholder:'my_institution_key', help:'Fixed install fingerprint. Do not change after install.' })
 	create_field({ parent:fragment, cfg, name:'timezone', label:get_label.timezone || 'Timezone', value:'Europe/Madrid', placeholder:'Europe/Madrid' })
 	create_field({ parent:fragment, cfg, name:'locale', label:get_label.locale || 'Locale', value:'es-ES', placeholder:'es-ES' })
@@ -2614,7 +2614,7 @@ export const render_hierarchies_import_block = function(options) {
 				}
 
 			// confirm action
-				if (!confirm( hierarchies_to_install.length + ' ' + get_label.jerarquias +'. '+ get_label.sure )) {
+				if (!confirm( hierarchies_to_install.length + ' ' + get_label.hierarchies +'. '+ get_label.sure )) {
 					return false
 				}
 

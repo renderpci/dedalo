@@ -700,6 +700,141 @@
             "lang": "lg-nep",
             "name": "name_indicates_id",
             "value": "नामले पहिचान जनाउँछ"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "name_to_field",
+            "value": "Suffix indicates field"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "name_to_field",
+            "value": "Sufijo indica campo"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "name_to_field",
+            "value": "Il suffisso indica il campo"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "name_to_field",
+            "value": "Izenak eremua adierazten du"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "name_to_field",
+            "value": "Η κατάληξη υποδηλώνει το πεδίο"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "name_to_field",
+            "value": "Suffix gibt Feld an"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "name_to_field",
+            "value": "Le suffixe indique le champ"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "name_to_field",
+            "value": "Sufix indica camp"
+          },
+          {
+            "lang": "lg-por",
+            "name": "name_to_field",
+            "value": "Sufixo indica campo"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "name_to_record_id",
+            "value": "Prefix indicates id"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "name_to_record_id",
+            "value": "Prefijo indica ID"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "name_to_record_id",
+            "value": "Il prefisso indica l'ID"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "name_to_record_id",
+            "value": "Izena da id"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "name_to_record_id",
+            "value": "Το πρόθεμα υποδηλώνει ID"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "name_to_record_id",
+            "value": "Präfix zeigt ID an"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "name_to_record_id",
+            "value": "Le préfixe indique l'ID"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "name_to_record_id",
+            "value": "Prefix indica ID"
+          },
+          {
+            "lang": "lg-por",
+            "name": "name_to_record_id",
+            "value": "Prefixo indica ID"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "same_name_same_record",
+            "value": "Same name same record. Create new ID"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "same_name_same_record",
+            "value": "Mismo nombre mismo registro. Crea nuevo ID"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "same_name_same_record",
+            "value": "Stesso nome stesso record. Creare un nuovo ID"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "same_name_same_record",
+            "value": "Izen bera, erregistro bera"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "same_name_same_record",
+            "value": "Ίδιο όνομα, ίδιος δίσκος. Δημιουργία νέας ταυτότητας"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "same_name_same_record",
+            "value": "Gleicher Name gleicher Datensatz. Neue ID erstellen"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "same_name_same_record",
+            "value": "Même nombre même registre. Créer un nouvel identifiant"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "same_name_same_record",
+            "value": "Mateix nom mateix registre. Crea nou id"
+          },
+          {
+            "lang": "lg-por",
+            "name": "same_name_same_record",
+            "value": "Mesmo nome, mesmo registo. Criar novo ID"
           }
         ]
       }

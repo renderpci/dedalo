@@ -126,6 +126,54 @@ export function unwrapDedaloData(importValue: string): UnwrapResult {
 	return result;
 }
 
+/**
+ * The items to save, keyed by the lang they belong to.
+ *
+ * Three shapes arrive from conform, and only the first is obvious:
+ *   - a lang-keyed OBJECT ({"lg-eng":[…], "lg-spa":[…]}) — a translatable export;
+ *   - a FLAT array whose items each carry their own `lang` — the v7 stored shape
+ *     (the raw export emits exactly this). Grouping it by item lang is what keeps
+ *     every translation: a single set_data would force them all to the import lang;
+ *   - a flat array with no langs — one group, at the component's own lang.
+ *
+ * Every executor that saves a conform result MUST group through here and save
+ * one lang at a time (the save engine's set_data is lang-sliced, PHP
+ * set_data_lang) — a flat merged save loses translations.
+ */
+export function groupItemsByLang(result: unknown, componentLang: string): Map<string, unknown[]> {
+	const isObject = (value: unknown): value is Record<string, unknown> =>
+		value !== null && typeof value === 'object' && !Array.isArray(value);
+	const groups = new Map<string, unknown[]>();
+	if (result === null || result === undefined) return groups;
+
+	if (isObject(result)) {
+		for (const [lang, value] of Object.entries(result)) {
+			if (!lang.startsWith('lg-')) continue;
+			groups.set(lang, Array.isArray(value) ? value : [value]);
+		}
+		if (groups.size > 0) return groups;
+	}
+
+	const items = Array.isArray(result) ? result : [result];
+	const hasItemLangs = items.some(
+		(item) => isObject(item) && typeof item.lang === 'string' && item.lang !== '',
+	);
+	if (!hasItemLangs) {
+		groups.set(componentLang, items);
+		return groups;
+	}
+	for (const item of items) {
+		const lang =
+			isObject(item) && typeof item.lang === 'string' && item.lang !== ''
+				? item.lang
+				: componentLang;
+		const group = groups.get(lang);
+		if (group === undefined) groups.set(lang, [item]);
+		else group.push(item);
+	}
+	return groups;
+}
+
 /** A failed/warning report object (the report's ImportRowIssue is built from it). */
 export interface ConformFailure {
 	section_id: number;

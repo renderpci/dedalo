@@ -8,8 +8,9 @@
  * engine_denied envelope; open runs the staged/validated/recoverable import
  * pipeline (core/ontology/ontology_update.ts, WC-023).
  * export_to_translate / rebuild_lang_files stay closed-by-design: the TS
- * engine has no generated JS lang files (labels are DB-derived) and the
- * translation-export CSV workflow is unported.
+ * engine has no generated JS lang files (labels are repo catalogs, WC-033 —
+ * they ride code deploys) and the translation-export CSV workflow is
+ * superseded by the per-lang catalog diff (scripts/labels_fill.ts).
  */
 
 import { config } from '../../../config/config.ts';
@@ -27,7 +28,7 @@ import { type WidgetModule, type WidgetResponse, engineDenied, gated } from './s
 async function updateOntologyGetValue(): Promise<WidgetResponse> {
 	const { checkRemoteServer } = await import('../../ontology/data_io_import.ts');
 	const { readDdOntologyRow } = await import('../../db/dd_ontology.ts');
-	const { getLabels } = await import('../../resolve/environment.ts');
+	const { getLabels } = await import('../../labels/catalog.ts');
 
 	const servers: Record<string, unknown>[] = config.ontologyIo.servers.map((server) => ({
 		...server,

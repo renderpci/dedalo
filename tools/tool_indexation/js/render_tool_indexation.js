@@ -702,7 +702,7 @@ const render_related_list = function(self){
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'container_label',
-			inner_html		: (get_label.approach || 'Approach'),
+			inner_html		: (self.get_tool_label('approach') || 'Approach'),
 			parent			: related_list_container
 		})
 

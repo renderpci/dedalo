@@ -924,7 +924,7 @@ render_search.prototype.build_search_component = async function(options) {
 				: ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: "invalid_component error",
-					inner_html 		: get_label.invalid_componet || 'Invalid component',
+					inner_html 		: get_label.invalid_component || 'Invalid component',
 				})
 
 		// add component node

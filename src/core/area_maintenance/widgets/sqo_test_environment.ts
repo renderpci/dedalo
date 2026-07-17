@@ -7,6 +7,6 @@ export const widget: WidgetModule = {
 		id: 'sqo_test_environment',
 		category: 'dev',
 		class: 'blue fit width_100',
-		label: { kind: 'literal', text: 'SEARCH QUERY OBJECT TEST ENVIRONMENT' },
+		label: { kind: 'literal', text: 'Search query object test environment' },
 	},
 };

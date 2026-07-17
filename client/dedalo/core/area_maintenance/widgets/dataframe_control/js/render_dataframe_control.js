@@ -111,55 +111,100 @@ render_dataframe_control.prototype.list = async function(options) {
 */
 const get_content_data = function(self) {
 
-	// short vars. self.value comes from dataframe_control::get_value (run_check report)
-		const report = self.value || {}
-
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type : 'div'
 		})
 
-	// summary
-		const summary = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'summary',
-			parent			: content_data
-		})
-		render_report(summary, report)
+	// Claim the lazy load synchronously so the framework's widget_common.load()
+	// (fired on accordion open) becomes a no-op. This widget fetches its OWN report
+	// INSIDE the placeholder below, so the "Loading…" spinner covers the real
+	// network wait — instead of the framework rendering a "-" report first and then
+	// tacking a second spinner underneath it while it fetches.
+		const needs_fetch = typeof self.get_value === 'function' && self._load_state !== 'loaded'
+		if (needs_fetch) {
+			self._load_state = 'loading'
+		}
 
-	// button check
-		const button_check = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'primary',
-			text_content	: get_label.check || 'Check',
-			parent			: content_data
-		})
-		button_check.addEventListener('click', async function(e) {
-			e.stopPropagation()
-			content_data.classList.add('loading')
-			const api_response = await self.run_action({action: 'run_check'})
-			content_data.classList.remove('loading')
-			render_report(summary, api_response?.result || {}, api_response?.msg)
-		})
+	// load gracefully: the placeholder shows while fetching, then the report with fresh data
+		ui.load_item_with_spinner({
+			container			: content_data,
+			preserve_content	: false,
+			label				: self.name,
+			callback			: async () => {
 
-	// button fix (removes orphan frame locators; frame target records are never deleted)
-		const button_fix = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'warning',
-			text_content	: get_label.delete ? (get_label.delete + ' orphans') : 'Remove orphans',
-			parent			: content_data
-		})
-		button_fix.addEventListener('click', async function(e) {
-			e.stopPropagation()
-			// double user confirmation: this writes data
-			if (!confirm(get_label.sure || 'Sure?')) {
-				return
+				// fetch the integrity report first (the placeholder covers the wait)
+					if (needs_fetch) {
+						try {
+							self.value = await self.get_value()
+						} catch (error) {
+							self.error = error
+						}
+						self._load_state = 'loaded'
+					}
+					// self.value comes from dataframe_control::get_value (run_check report)
+					const report = self.value || {}
+
+				// container
+					const container = new DocumentFragment()
+
+				// summary
+					const summary = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'summary',
+						parent			: container
+					})
+					render_report(summary, report)
+
+				// button check
+					const button_check = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'primary',
+						text_content	: get_label.check || 'Check',
+						parent			: container
+					})
+					button_check.addEventListener('click', async function(e) {
+						e.stopPropagation()
+						summary.classList.add('loading')
+						// button_spinner: self-contained on-button spinner (never escapes the card)
+						button_check.classList.add('button_spinner')
+						try {
+							const api_response = await self.run_action({action: 'run_check'})
+							render_report(summary, api_response?.result || {}, api_response?.msg)
+						} finally {
+							summary.classList.remove('loading')
+							button_check.classList.remove('button_spinner')
+						}
+					})
+
+				// button fix (removes orphan frame locators; frame target records are never deleted)
+					const button_fix = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'warning',
+						text_content	: get_label.delete ? (get_label.delete + ' orphans') : 'Remove orphans',
+						parent			: container
+					})
+					button_fix.addEventListener('click', async function(e) {
+						e.stopPropagation()
+						// double user confirmation: this writes data
+						if (!confirm(get_label.sure || 'Sure?')) {
+							return
+						}
+						content_data.classList.add('loading')
+						// button_spinner: self-contained on-button spinner (never escapes the card)
+						button_fix.classList.add('button_spinner')
+						try {
+							const api_response = await self.run_action({action: 'run_fix'})
+							render_report(summary, api_response?.result || {}, api_response?.msg)
+						} finally {
+							content_data.classList.remove('loading')
+							button_fix.classList.remove('button_spinner')
+						}
+					})
+
+				return container
 			}
-			content_data.classList.add('loading')
-			const api_response = await self.run_action({action: 'run_fix'})
-			content_data.classList.remove('loading')
-			render_report(summary, api_response?.result || {}, api_response?.msg)
-		})
+		})//end ui.load_item_with_spinner
 
 
 	return content_data

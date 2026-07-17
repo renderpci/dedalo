@@ -308,7 +308,7 @@ export const create_target_component = (lang, self) => {
 
 								// non empty value cases generates a confirm dialog
 									if (is_component_empty(component)===false) {
-										if(!confirm(get_label.are_you_sure_to_overwrite_text || 'Are you sure to overwrite the current value?')) {
+										if(!confirm(self.get_tool_label('are_you_sure_to_overwrite_text') || 'Are you sure to overwrite the current value?')) {
 											return
 										}
 									}

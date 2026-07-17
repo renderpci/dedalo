@@ -331,7 +331,7 @@ component_portal.prototype.init = async function(options) {
 							}else{
 								// No tag is selected yet; confirm whether to index the whole record
 								// (i.e. tag the relation at record level rather than at an inline tag).
-								if (!confirm(get_label.no_hay_etiqueta_seleccionada ||
+								if (!confirm(get_label.no_tag_selected ||
 									'No tag selected. If you continue, the entire record will be indexed.')) {
 									return
 								}

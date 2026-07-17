@@ -196,6 +196,58 @@
         "id": 1,
         "value": {}
       }
+    ],
+    "dd1372": [
+      {
+        "id": 1,
+        "value": [
+          {
+            "lang": "lg-eng",
+            "name": "create_identify_image",
+            "value": "Create identifying image"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "create_identify_image",
+            "value": "Crear imagen identificativa"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "create_identify_image",
+            "value": "Creare immagine identificativa"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "create_identify_image",
+            "value": "Identifikazio-irudia sortzea"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "create_identify_image",
+            "value": "Δημιουργήστε τον εντοπισμό εικόνα"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "create_identify_image",
+            "value": "Indentifikationsbild erstellen"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "create_identify_image",
+            "value": "Créer une image d'identification"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "create_identify_image",
+            "value": "Crear imatge identificativa"
+          },
+          {
+            "lang": "lg-por",
+            "name": "create_identify_image",
+            "value": "Criar imagem identificativa"
+          }
+        ]
+      }
     ]
   },
   "relation_search": null,

@@ -20,6 +20,7 @@
 import { selectRequestConfigStrategy } from '../../concepts/request_config.ts';
 import { sql } from '../../db/postgres.ts';
 import { getNode } from '../../ontology/resolver.ts';
+import { getSectionRealTipo } from '../../resolve/security_access_datalist.ts';
 import {
 	type ParsedRequestConfigItem,
 	type RequestConfigContext,
@@ -99,7 +100,22 @@ export async function buildRequestConfigForElement(
 	const sectionKeepsOwn = context.ownerIsSection && ownConfig !== undefined && ownConfig !== null;
 	if (listLikeMode && !sectionKeepsOwn) {
 		const listModel = context.mode === 'list_thesaurus' ? 'section_list_thesaurus' : 'section_list';
-		const sectionListTipo = await findSectionListChild(context.ownerTipo, listModel);
+		let sectionListTipo = await findSectionListChild(context.ownerTipo, listModel);
+		// VIRTUAL SECTION fallback (PHP resolve_ar_related_list_section step 2,
+		// trait.request_config_v5.php): a virtual section with NO section_list
+		// child of its own inherits its REAL section's — resolve the real tipo
+		// (section::get_section_real_tipo_static) and retry there. Load-bearing
+		// for hierarchy/thesaurus-instance sections (es1 → hierarchy20 →
+		// section_list hierarchy37 → 11 columns), which have zero ontology
+		// children; without it their list view emits an empty ddo_map (only the
+		// built-in Id column renders). Section-only: components resolve virtual
+		// through their own relation graph, not this alias hop.
+		if (sectionListTipo === null && context.ownerIsSection) {
+			const realTipo = await getSectionRealTipo(context.ownerTipo);
+			if (realTipo !== context.ownerTipo) {
+				sectionListTipo = await findSectionListChild(realTipo, listModel);
+			}
+		}
 		if (sectionListTipo !== null) {
 			const childNode = await getNode(sectionListTipo);
 			const childProperties = childNode?.properties ?? null;

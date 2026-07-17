@@ -403,6 +403,7 @@
 				}
 
 				.body_info {
+					position: relative;
 					font-size: 0.9em;
 					color: var(--fg_muted);
 
@@ -721,11 +722,13 @@
 		.map_stage_wrap {
 			padding: 0.4rem 1.15rem 0;
 			overflow-x: auto;
+			height: 366px;
 		}
 
 		.map_stage {
 			position: relative;
-			height: 440px;
+			// height: 440px;
+			height: 100%;
 			min-width: 940px;
 			border: 1px solid var(--border_default);
 			border-radius: 14px;
@@ -780,6 +783,7 @@
 			box-shadow: 0 1px 3px var(--shadow_default);
 			cursor: pointer;
 			transition: box-shadow 160ms ease, border-color 160ms ease, transform 120ms ease;
+			margin-top: 2rem;
 
 			&:hover {
 				transform: translate(-50%, calc(-50% - 2px));
@@ -936,6 +940,7 @@
 				// and hide the widget's own accordion label so it doesn't double up
 				// on the panel header.
 				> .widget_container {
+					position: relative;
 					background-color: transparent;
 					border: 0;
 					border-radius: 0;
@@ -946,6 +951,7 @@
 					> .widget_label { display: none; }
 
 					> .widget_body {
+						position: relative;
 						padding: 0;
 						min-height: 0;
 						background-color: transparent;

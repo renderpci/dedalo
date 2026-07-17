@@ -13,15 +13,14 @@
  * tools/loader.ts pattern; static imports are fine — mirrors the client's
  * per-widget directory layout).
  *
- * Labels resolve from the same generated dictionary the client loads
- * (core/common/js/lang/<lang>.js — parity with PHP label::get_label by
- * construction), falling back to PHP's exact behaviors: `<mark>key</mark>`
- * for a missing term, the mark-detection literal fallback for
- * config_areas/menu_skip_tipos.
+ * Labels resolve from the same dictionary the client is served as
+ * `get_label` (src/core/labels/catalog.ts repo catalogs, WC-033), falling
+ * back to PHP's exact behaviors: `<mark>key</mark>` for a missing term, the
+ * mark-detection literal fallback for config_areas/menu_skip_tipos.
  */
 
 import { config } from '../../../config/config.ts';
-import { getLabels } from '../../resolve/environment.ts';
+import { getLabels } from '../../labels/catalog.ts';
 import { currentApplicationLang } from '../../resolve/request_lang.ts';
 import type { Principal } from '../../security/permissions.ts';
 import { widget as add_hierarchy } from './add_hierarchy.ts';

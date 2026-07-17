@@ -104,7 +104,7 @@ const get_content_data = async function(self) {
 		const button_open = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'light',
-			inner_html		: get_label.tool_sitebuilder || 'Open site builder',
+			inner_html		: get_label.open_site_builder || 'Open site builder',
 			parent			: content_data
 		})
 		if (!reachable) {
@@ -112,12 +112,15 @@ const get_content_data = async function(self) {
 		} else {
 			const click_handler = async (e) => {
 				e.stopPropagation()
+				button_open.classList.add('button_spinner')
 				try {
 					// Dynamic import: only pull tool_common in when the admin actually launches.
 					const { open_tool } = await import('../../../../tools_common/js/tool_common.js')
 					await open_tool({ tool_context : 'tool_sitebuilder', open_as : 'window' })
 				} catch (err) {
 					console.error('[site_builder_status] open failed', err)
+				} finally {
+					button_open.classList.remove('button_spinner')
 				}
 			}
 			button_open.addEventListener('click', click_handler)

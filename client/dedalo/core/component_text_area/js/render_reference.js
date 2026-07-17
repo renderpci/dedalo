@@ -343,7 +343,7 @@ export const render_reference = async function(options) {
 			button_remove.addEventListener("click", function(e){
 				e.stopPropagation()
 				// ask to user if really want delete the note
-				const delete_label = get_label.are_you_sure_to_delete_refrence || 'Are you sure you want to delete this reference?'
+				const delete_label = get_label.are_you_sure_to_delete_reference || 'Are you sure you want to delete this reference?'
 				// if yes, delete the note section in the server
 				if(window.confirm(delete_label)) {
 

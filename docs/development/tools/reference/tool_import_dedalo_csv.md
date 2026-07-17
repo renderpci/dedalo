@@ -14,6 +14,7 @@ Key behaviours to know before importing:
 
 - The first column must resolve to `section_id` — it is the record key. A row with an empty/invalid `section_id` is skipped and reported.
 - An **empty cell clears** the existing component data for that record (and that data language, when translatable). Omit a column entirely to leave a component untouched.
+- A **multi-language cell** (lang-keyed object or flat items carrying `lang` — both v6 and v7 raw exports) imports **every language it carries**; each language is saved as its own slice, and languages not present in the cell are preserved. See [Multiple languages](../../../core/importing_data.md#multiple-languages).
 - A CSV header must match its mapped column name **exactly** (including suffixes like `tch56_dmy` or `tch191_rsc723`); mismatched columns are silently skipped.
 - Two report channels: **`failed`** (the cell was rejected and NOT written — the record keeps its previous value) and **`warnings`** (the cell WAS written but needs attention, e.g. a `select_lang` code that resolves but is not one of the project languages).
 - A component with no flat-value form (media, for instance) **refuses** a flat cell rather than writing it: a refused cell leaves the existing value intact, where a "conform to nothing and save" would silently clear it.

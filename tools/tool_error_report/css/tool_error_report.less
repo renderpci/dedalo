@@ -69,6 +69,83 @@
 		box-sizing	: border-box;
 		resize		: vertical;
 		margin		: 0 0 1em 0;
+		padding		: 1rem;
+		min-height	: 7rem;
+	}
+
+	.error_report_screenshot_label {
+		display		: block;
+		font-weight	: bold;
+		margin		: 0 0 0.3em 0;
+	}
+
+	.error_report_screenshot {
+		margin : 0 0 1em 0;
+	}
+
+	.error_report_dropzone {
+		display			: flex;
+		flex-direction	: column;
+		align-items		: center;
+		justify-content	: center;
+		gap				: 0.4em;
+		padding			: 1.4em 1em;
+		border			: 2px dashed var(--border_strong, #cccccc);
+		border-radius	: 6px;
+		background		: rgba(0, 0, 0, 0.02);
+		text-align		: center;
+		cursor			: pointer;
+		transition		: border-color 0.15s, background 0.15s;
+
+		&:hover,
+		&:focus {
+			border-color	: @tool_color;
+			background		: var(--tool_error_report_lighten_40);
+			outline			: none;
+		}
+		&.dragover {
+			border-color	: @tool_color;
+			background		: var(--tool_error_report_lighten_40);
+		}
+	}
+	.error_report_dropzone_icon {
+		font-size	: 1.8em;
+		line-height	: 1;
+	}
+	.error_report_dropzone_hint {
+		color		: var(--fg_muted, #777777);
+		font-size	: 0.9em;
+		line-height	: 1.3;
+	}
+
+	.error_report_screenshot_preview {
+		display			: flex;
+		align-items		: center;
+		gap				: 0.8em;
+		padding			: 0.6em;
+		border			: 1px solid var(--border_default, #e6e6e6);
+		border-radius	: 6px;
+		background		: rgba(0, 0, 0, 0.02);
+	}
+	.error_report_screenshot_thumb {
+		max-width		: 160px;
+		max-height		: 120px;
+		border			: 1px solid var(--border_default, #e6e6e6);
+		border-radius	: 4px;
+		object-fit		: contain;
+	}
+	.error_report_screenshot_caption {
+		flex		: 1 1 auto;
+		color		: #1b7d2c;
+		font-size	: 0.9em;
+	}
+	.error_report_screenshot_remove {
+		flex : 0 0 auto;
+	}
+	.error_report_screenshot_error {
+		color		: #b00020;
+		font-size	: 0.9em;
+		margin-top	: 0.4em;
 	}
 
 	.error_report_footer {
@@ -80,6 +157,8 @@
 	.error_report_response {
 		&.error   { color : #b00020; }
 		&.success { color : #1b7d2c; }
+		padding : 0.5rem;
+		border-radius : 4px;
 	}
 
 	.error_report_note {

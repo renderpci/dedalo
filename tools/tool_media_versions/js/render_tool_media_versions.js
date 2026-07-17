@@ -591,7 +591,7 @@ const render_file = function(quality, self) {
 				const button_file_av = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button media',
-					title			: get_label.visualizar || 'View',
+					title			: self.get_tool_label('view') || 'View',
 					parent			: file_info_node
 				})
 				button_file_av.addEventListener('click', async function(e) {

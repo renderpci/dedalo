@@ -82,7 +82,7 @@ export const render_section_label = function(self) {
 	const section_label = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'section_label top_item inactive',
-		title			: get_label.seccion || 'Section'
+		title			: get_label.section || 'Section'
 	})
 
 	return section_label

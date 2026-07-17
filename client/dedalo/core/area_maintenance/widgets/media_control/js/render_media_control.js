@@ -155,20 +155,24 @@ const get_content_data_edit = async function(self) {
 		})
 		button_refresh.addEventListener('click', async (e) => {
 			e.stopPropagation()
-			content_data.classList.add('lock')
+			button_refresh.classList.add('button_spinner')
 			try {
-				self.value = await self.get_value()
-			} catch (error) {
-				console.error(error)
-			}
-			dd_request_idle_callback(
-				() => {
-					self.refresh({
-						build_autoload	: false, // value is already updated
-						destroy			: true
-					})
+				try {
+					self.value = await self.get_value()
+				} catch (error) {
+					console.error(error)
 				}
-			)
+				dd_request_idle_callback(
+					() => {
+						self.refresh({
+							build_autoload	: false, // value is already updated
+							destroy			: true
+						})
+					}
+				)
+			} finally {
+				button_refresh.classList.remove('button_spinner')
+			}
 		})
 
 	// body_response (action results)
@@ -428,42 +432,38 @@ const build_mode_selector = function(self, value, parent) {
 			return
 		}
 
-		const body_response = parent.querySelector('.body_response')
-		parent.classList.add('lock')
-		const spinner = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'spinner'
-		})
-		selector_block.appendChild(spinner)
+		button_apply.classList.add('button_spinner')
+		try {
+			const body_response = parent.querySelector('.body_response')
 
-		const api_response = await self.set_media_access_mode(new_value)
+			const api_response = await self.set_media_access_mode(new_value)
 
-		spinner.remove()
-		parent.classList.remove('lock')
-
-		// SEC-XSS: textContent prevents any HTML parsing of api_response.msg
-		if (body_response) {
-			body_response.textContent = api_response.msg || (api_response.result ? 'Done' : 'Unknown error')
-		}
-
-		if (api_response.result===true) {
-			// reload value and re-render the widget body
-			try {
-				self.value = await self.get_value()
-			} catch (error) {
-				console.error(error)
+			// SEC-XSS: textContent prevents any HTML parsing of api_response.msg
+			if (body_response) {
+				body_response.textContent = api_response.msg || (api_response.result ? 'Done' : 'Unknown error')
 			}
-			dd_request_idle_callback(
-				() => {
-					self.refresh({
-						build_autoload	: false,
-						destroy			: true
-					})
+
+			if (api_response.result===true) {
+				// reload value and re-render the widget body
+				try {
+					self.value = await self.get_value()
+				} catch (error) {
+					console.error(error)
 				}
-			)
-			alert(api_response.msg)
-		}else{
-			alert('Error! \n' + (api_response.msg || 'Unknown error'))
+				dd_request_idle_callback(
+					() => {
+						self.refresh({
+							build_autoload	: false,
+							destroy			: true
+						})
+					}
+				)
+				alert(api_response.msg)
+			}else{
+				alert('Error! \n' + (api_response.msg || 'Unknown error'))
+			}
+		} finally {
+			button_apply.classList.remove('button_spinner')
 		}
 	})
 
@@ -531,48 +531,44 @@ const build_rebuild_block = function(self, value, parent) {
 			return
 		}
 
-		const body_response = parent.querySelector('.body_response')
-		parent.classList.add('lock')
-		const spinner = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'spinner'
-		})
-		rebuild_block.appendChild(spinner)
+		button_rebuild.classList.add('button_spinner')
+		try {
+			const body_response = parent.querySelector('.body_response')
 
-		const api_response = await self.rebuild_media_index()
+			const api_response = await self.rebuild_media_index()
 
-		spinner.remove()
-		parent.classList.remove('lock')
-
-		// SEC-XSS: textContent prevents any HTML parsing of server strings
-		if (body_response) {
-			const summary = {
-				result	: api_response.result===true,
-				msg		: api_response.msg || null,
-				markers	: api_response.markers ?? null,
-				targets	: api_response.targets ?? null,
-				errors	: api_response.errors || []
-			}
-			body_response.textContent = JSON.stringify(summary, null, 2)
-		}
-
-		if (api_response.result===true) {
-			// reload value (marker counts changed)
-			try {
-				self.value = await self.get_value()
-			} catch (error) {
-				console.error(error)
-			}
-			dd_request_idle_callback(
-				() => {
-					self.refresh({
-						build_autoload	: false,
-						destroy			: true
-					})
+			// SEC-XSS: textContent prevents any HTML parsing of server strings
+			if (body_response) {
+				const summary = {
+					result	: api_response.result===true,
+					msg		: api_response.msg || null,
+					markers	: api_response.markers ?? null,
+					targets	: api_response.targets ?? null,
+					errors	: api_response.errors || []
 				}
-			)
-		}else{
-			alert('Error! \n' + (api_response.msg || 'Unknown error'))
+				body_response.textContent = JSON.stringify(summary, null, 2)
+			}
+
+			if (api_response.result===true) {
+				// reload value (marker counts changed)
+				try {
+					self.value = await self.get_value()
+				} catch (error) {
+					console.error(error)
+				}
+				dd_request_idle_callback(
+					() => {
+						self.refresh({
+							build_autoload	: false,
+							destroy			: true
+						})
+					}
+				)
+			}else{
+				alert('Error! \n' + (api_response.msg || 'Unknown error'))
+			}
+		} finally {
+			button_rebuild.classList.remove('button_spinner')
 		}
 	})
 

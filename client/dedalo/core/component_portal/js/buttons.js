@@ -273,7 +273,7 @@ buttons.render_button_link = (self) => {
 	const button_link = ui.create_dom_element({
 		element_type	: 'span',
 		class_name		: 'button link',
-		title			: get_label.vincular_recurso || 'Link resource'
+		title			: get_label.link_resource || 'Link resource'
 	})
 	// event mousedown
 	const mousedown_handler = async function(e) {
@@ -586,8 +586,8 @@ buttons.render_button_tree_selector = (self) => {
 
 	const button_tree_selector = ui.create_dom_element({
 		element_type	: 'span',
-		class_name		: 'button tree',
-		title			: get_label.vincular_recurso || 'Link resource'
+		class_name		: 'button tree grey',
+		title			: get_label.link_resource || 'Link resource'
 	})
 
 	// event mousedown. Add listener to the button

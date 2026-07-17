@@ -679,7 +679,7 @@ const render_template = async function(self) {
 				const row_button_submit_files = ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: 'primary start',
-					inner_html		: get_label.submit || 'Start upload',
+					inner_html		: get_label.start_upload || 'Start upload',
 					parent			: row_buttons
 				})
 

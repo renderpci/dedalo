@@ -132,7 +132,7 @@ const get_content_data_edit = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'default_lang',
-			inner_html		: get_label.default_lang_of_file_to_import || 'Default language of the file to import. Data without specified language will be imported in:',
+			inner_html		: self.get_tool_label('default_lang_of_file_to_import') || 'Default language of the file to import. Data without specified language will be imported in:',
 			parent			: components_container
 		})
 		// page_globals.dedalo_projects_default_langs — Array of lang codes for the

@@ -36,6 +36,7 @@ import { mediaTypeOf } from '../concepts/media.ts';
 import { getActiveTlds } from '../db/dd_ontology.ts';
 import { MATRIX_JSONB_COLUMNS, readMatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
+import { getLabels } from '../labels/catalog.ts';
 import { additionalPath as mediaBucketPath } from '../media/path.ts';
 import { termByTipo } from '../ontology/labels.ts';
 import {
@@ -47,7 +48,6 @@ import {
 } from '../ontology/resolver.ts';
 import { getTldFromTipo } from '../ontology/tld.ts';
 import { buildRequestConfigForElement } from '../relations/request_config/build.ts';
-import { getLabels } from '../resolve/environment.ts';
 import { currentApplicationLang, currentDataLang } from '../resolve/request_lang.ts';
 import { truncateHtml } from '../resolve/truncate_html.ts';
 import { findInverseReferenceLocators } from '../search/search_related.ts';

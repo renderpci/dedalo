@@ -321,6 +321,246 @@
             "lang": "lg-deu",
             "name": "show_tipo_in_label",
             "value": "Ontologie anzeigen tipo"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "activate_all_columns",
+            "value": "Activate all columns"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "activate_all_columns",
+            "value": "Activar todas las columnas"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "activate_all_columns",
+            "value": "Attiva tutte le colonne"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "activate_all_columns",
+            "value": "Zutabe guztiak aktibatu"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "activate_all_columns",
+            "value": "Ενεργοποιήστε όλες τις στήλες"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "activate_all_columns",
+            "value": "Alle Spalten aktivieren"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "activate_all_columns",
+            "value": "Activer toutes les colonnes"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "activate_all_columns",
+            "value": "सबै स्तम्भहरू सक्रिय गर्नुहोस्"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "activate_all_columns",
+            "value": "Activa totes les columnes"
+          },
+          {
+            "lang": "lg-por",
+            "name": "activate_all_columns",
+            "value": "Ativar todas as colunas"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "disable_all_columns",
+            "value": "Disable all columns"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "disable_all_columns",
+            "value": "Desactivar todas las columnas"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "disable_all_columns",
+            "value": "Disabilita tutte le colonne"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "disable_all_columns",
+            "value": "Zutabe guztiak desaktibatu"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "disable_all_columns",
+            "value": "Απενεργοποιήστε όλες τις στήλες"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "disable_all_columns",
+            "value": "Alle Spalten deaktivieren"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "disable_all_columns",
+            "value": "Désactiver toutes les colonnes"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "disable_all_columns",
+            "value": "सबै स्तम्भहरू असक्षम गर्नुहोस्"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "disable_all_columns",
+            "value": "Desactivar totes les columnes"
+          },
+          {
+            "lang": "lg-por",
+            "name": "disable_all_columns",
+            "value": "Desativar todas as colunas"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "active_elements",
+            "value": "active elements"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "active_elements",
+            "value": "elementos activos"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "active_elements",
+            "value": "Elementi attivi"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "active_elements",
+            "value": "elementu aktiboak"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "active_elements",
+            "value": "ενεργά στοιχεία"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "active_elements",
+            "value": "Aktive Elemente"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "active_elements",
+            "value": "éléments actifs"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "active_elements",
+            "value": "elements actius"
+          },
+          {
+            "lang": "lg-por",
+            "name": "active_elements",
+            "value": "Elementos ativos"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "breakdown",
+            "value": "Break down"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "breakdown",
+            "value": "Desglose"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "breakdown",
+            "value": "Desglose"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "breakdown",
+            "value": "Banakapena"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "breakdown",
+            "value": "Επαθε βλάβη"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "breakdown",
+            "value": "Aufschlüsselung"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "breakdown",
+            "value": "Décomposition"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "breakdown",
+            "value": "तोड्नुहोस्"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "breakdown",
+            "value": "Desglossament"
+          },
+          {
+            "lang": "lg-por",
+            "name": "breakdown",
+            "value": "Separar"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "tool_export",
+            "value": "Export"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "tool_export",
+            "value": "Exportar"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "tool_export",
+            "value": "Esportare"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "tool_export",
+            "value": "Esportatu"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "tool_export",
+            "value": "εξαγωγή"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "tool_export",
+            "value": "Exportieren"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "tool_export",
+            "value": "Exporter"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "tool_export",
+            "value": "Exportar"
+          },
+          {
+            "lang": "lg-por",
+            "name": "tool_export",
+            "value": "Exportar"
           }
         ]
       }
