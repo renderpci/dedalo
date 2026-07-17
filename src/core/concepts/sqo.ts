@@ -251,6 +251,47 @@ export function sanitizeClientSqo(untrustedSqo: Record<string, unknown>): Sqo {
 	return sqoSchema.parse(stripped);
 }
 
+/**
+ * Session-SQO navigation merge (PHP dd_core_api :2159-2199, "received case").
+ * Fills each navigation property the client did NOT send from the session's
+ * stored SQO for the section. This is the read-back half of the session
+ * navigation contract (readSectionRows persists, section context echoes as
+ * `sqo_session`): it is how a secondary window opened plain (page/?tipo=X)
+ * inherits the filter a dummy build stored (client open_records_in_window),
+ * and how tools re-enter the user's navigation.
+ *
+ * PHP semantics mirrored exactly: `!property_exists(client)` — an explicit
+ * null FROM THE CLIENT keeps the property and blocks the merge (that is why a
+ * first-load `limit: null` still resolves the config default, not the stored
+ * one) — and `isset(session)` — a null IN THE SESSION is skipped. Values are
+ * deep-cloned so the caller can never mutate the session store through the
+ * merged SQO. Mutates and returns `clientSqo`.
+ */
+const SESSION_SQO_MERGE_KEYS = [
+	'filter',
+	'order',
+	'limit',
+	'offset',
+	'filter_by_locators',
+	'children_recursive',
+] as const;
+
+export function mergeSessionSqo(
+	clientSqo: Record<string, unknown>,
+	storedSqo: unknown,
+): Record<string, unknown> {
+	if (storedSqo === null || typeof storedSqo !== 'object' || Array.isArray(storedSqo)) {
+		return clientSqo;
+	}
+	const stored = storedSqo as Record<string, unknown>;
+	for (const key of SESSION_SQO_MERGE_KEYS) {
+		if (!Object.hasOwn(clientSqo, key) && stored[key] !== undefined && stored[key] !== null) {
+			clientSqo[key] = structuredClone(stored[key]);
+		}
+	}
+	return clientSqo;
+}
+
 /** Normalize section_tipo to the array form the engine works with. */
 export function getSectionTipos(sqo: Sqo): string[] {
 	return Array.isArray(sqo.section_tipo) ? sqo.section_tipo : [sqo.section_tipo];

@@ -31,7 +31,7 @@ import { getComponentModel } from '../components/registry.ts';
 import type { Ddo } from '../concepts/ddo.ts';
 import type { Rqo } from '../concepts/rqo.ts';
 import { isConsultationOnlySection } from '../concepts/section.ts';
-import { sanitizeClientSqo } from '../concepts/sqo.ts';
+import { mergeSessionSqo, sanitizeClientSqo } from '../concepts/sqo.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
 import {
 	getColumnNameByModel,
@@ -973,7 +973,25 @@ export async function readSectionRows(
 		ddoMap = authorized;
 	}
 	if (rqo.sqo === undefined) {
-		throw new Error('readSectionRows: rqo.sqo is required in v0 (session SQO reuse uncovered)');
+		throw new Error(
+			'readSectionRows: rqo.sqo is required (PHP "non received case" dd_core_api :2201-2251 uncovered)',
+		);
+	}
+
+	// Session navigation read-back (PHP dd_core_api :2159-2199): with session
+	// navigation on, navigation properties the client did NOT send are filled
+	// from the session's stored SQO for this section — a plain secondary
+	// window (page/?tipo=X) inherits the filter its opener stored, tools
+	// re-enter the user's navigation. Runs BEFORE the limit/order capture
+	// below so a merged session value counts as client-sent (PHP passes the
+	// merged sqo straight to sections). ALS session read at call time.
+	const sessionSave = (source as { session_save?: boolean }).session_save ?? true;
+	if (sessionSave) {
+		const { currentRequestContext } = await import('../security/request_context.ts');
+		const storedSqo = currentRequestContext()?.session?.sqoSession?.[callerTipo];
+		if (storedSqo !== undefined) {
+			mergeSessionSqo(rqo.sqo as Record<string, unknown>, storedSqo);
+		}
 	}
 
 	// --- run the search (Phase 3 engine) -----------------------------------
@@ -1037,7 +1055,6 @@ export async function readSectionRows(
 	// (tool_export record preservation, section_tool navigation) and the section
 	// context stamps it back as `sqo_session`. The ALS session is read at call
 	// time; requests without one (harnesses, background) skip.
-	const sessionSave = (source as { session_save?: boolean }).session_save ?? true;
 	if (sessionSave && (mode === 'list' || mode === 'edit')) {
 		const callerModel = source.model ?? (await getModelByTipo(callerTipo));
 		if (callerModel === 'section') {
