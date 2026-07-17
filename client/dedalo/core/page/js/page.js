@@ -562,6 +562,29 @@ page.prototype.build = async function(autoload=false) {
 				// fix API environment vars to window (page_globals, plain_vars, get_label)
 				set_environment(api_response.environment.result)
 
+				// engine-build cache guard. The 'section_cache_*' / 'page_cache_*'
+				// IndexedDB entries are otherwise only cleared on logout or language
+				// change, so a logged-in browser keeps serving a PREVIOUS engine
+				// build's cached API payloads forever (hard reload does not touch
+				// IndexedDB). Compare the build stamp the server just sent against
+				// the one stored at the last purge and drop both prefixes on any
+				// change. Fire-and-forget: the purge only needs to land before the
+				// next cacheable request, never blocks the boot paint.
+				const current_build = page_globals.dedalo_build || page_globals.dedalo_version || null
+				if (current_build) {
+					data_manager.get_local_db_data('client_cache_build', 'status')
+					.then(async function(stored){
+						if (stored?.value !== current_build) {
+							await data_manager.delete_local_db_data_by_prefix('data', 'section_cache_')
+							await data_manager.delete_local_db_data_by_prefix('data', 'page_cache_')
+							data_manager.set_local_db_data(
+								{ id: 'client_cache_build', value: current_build },
+								'status'
+							)
+						}
+					})
+				}
+
 				// ontology master server. Mark the body once the environment is known
 				// (page_globals.is_ontology_server, from IS_AN_ONTOLOGY_SERVER — WC-031)
 				// so ontology_server.less can skin the whole app. Done HERE, not in
