@@ -48,8 +48,9 @@ import { sql } from '../../core/db/postgres.ts';
 import { termByTipo } from '../../core/ontology/labels.ts';
 import { getColumnNameByModel, getModelByTipo } from '../../core/ontology/resolver.ts';
 import { buildSearchSql } from '../../core/search/sql_assembler.ts';
+import { getDataframeChildTipos } from '../../core/section/list_definitions/section_list.ts';
 import type { ToolActionContext, ToolResponse } from '../../core/tools/module.ts';
-import { loadExportRecord } from '../resolve/resolver.ts';
+import { loadExportRecord, prefetchExportRecords } from '../resolve/resolver.ts';
 import type { ExportRun, ExportSegment, GridAtom } from './atoms.ts';
 import {
 	cellTypeOfModel,
@@ -61,6 +62,9 @@ import {
 import type { ExportDdoInput } from './compile_columns.ts';
 import { compileExportPlan } from './compile_columns.ts';
 import { ndjsonStream } from './ndjson_stream.ts';
+
+/** Records bulk-hydrated per chunk (matches the diffusion selection default). */
+const HYDRATE_BATCH = 500;
 
 /** One raw declared path step (verbatim client shape). */
 type RawPathStep = {
@@ -545,6 +549,9 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 	sqo.offset = 0;
 	const { sql: builtSql, params } = await buildSearchSql(sqo, {
 		principal: context.principal.isGlobalAdmin ? undefined : context.principal,
+		// The export reads only the selection identity here (per-record data
+		// loads ride the run cache) — skip the ten wide jsonb columns.
+		idsOnly: true,
 	});
 	const records = (await sql.unsafe(builtSql, params as (string | number | null)[])) as {
 		section_id: number;
@@ -674,12 +681,32 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 	 */
 	async function* protocolLines(): AsyncGenerator<Record<string, unknown>> {
 		yield meta;
-		for (const record of records) {
-			const entries = await buildEntries(record);
-			for (const line of await tabulator.recordLines(entries, String(record.section_id))) {
-				if (line.t === 'col') columns.push(line);
-				else rows.push(line);
-				yield line;
+		for (let chunkStart = 0; chunkStart < records.length; chunkStart += HYDRATE_BATCH) {
+			const chunk = records.slice(chunkStart, chunkStart + HYDRATE_BATCH);
+			// Bulk-hydrate the chunk's OWN records (one ANY(int[]) query per
+			// section per chunk) so the per-record walk below hits the run cache
+			// instead of lazy-loading each exported row one SELECT at a time.
+			// Emission order is untouched — this is hydration, not selection.
+			const idsBySection = new Map<string, (number | string)[]>();
+			for (const record of chunk) {
+				const ids = idsBySection.get(record.section_tipo);
+				if (ids === undefined) idsBySection.set(record.section_tipo, [record.section_id]);
+				else ids.push(record.section_id);
+			}
+			for (const [chunkSectionTipo, ids] of idsBySection) {
+				await prefetchExportRecords(run.atoms, chunkSectionTipo, ids);
+			}
+			for (const record of chunk) {
+				const entries = await buildEntries(record);
+				for (const line of await tabulator.recordLines(entries, String(record.section_id))) {
+					// columns/rows feed ONLY the buffered response; streaming must not
+					// retain every emitted line or a large export grows the heap with it.
+					if (!wantStream) {
+						if (line.t === 'col') columns.push(line);
+						else rows.push(line);
+					}
+					yield line;
+				}
 			}
 		}
 		endLineOut = tabulator.endLine();
@@ -742,9 +769,6 @@ async function buildRawCell(
 	if (raw === undefined || raw === null) return { raw: null, cellType: 'json' };
 	// Dataframe slots of this main: relation entries paired by
 	// main_component_tipo, ALL item ids (the raw-export contract).
-	const { getDataframeChildTipos } = await import(
-		'../../core/section/list_definitions/section_list.ts'
-	);
 	const frames: unknown[] = [];
 	for (const frameTipo of await getDataframeChildTipos(componentTipo)) {
 		const bag =
