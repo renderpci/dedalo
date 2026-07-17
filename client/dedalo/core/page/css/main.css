@@ -19215,11 +19215,18 @@ body.inspector_resizing {
   width: 100%;
   padding-bottom: 0.5rem;
 }
+.component_input_text.view_ip {
+  display: flex !important;
+  align-items: center;
+}
 .component_input_text.view_ip .link {
   text-decoration: none;
   color: var(--color_orange_dedalo);
   margin-left: 0.25rem;
   font-size: 1.25rem;
+}
+.component_input_text.view_ip .link.raspa_flag {
+  filter: invert(0.3);
 }
 /**
 * view_default_input_text

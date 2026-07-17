@@ -25,7 +25,8 @@
 *   - Build the synchronous wrapper via `ui.component.build_wrapper_list` so the
 *     list row is never blocked by a network call.
 *   - Skip resolution entirely for private / loopback / reserved addresses (IPv4
-*     and IPv6) — those cannot be geolocated and should not generate a round-trip.
+*     and IPv6) — those cannot be geolocated and should not generate a round-trip;
+*     they get the 'Raspa' flag (a cat-paw emoji) instead of a country flag.
 *   - Defer the resolution to an idle callback (`dd_request_idle_callback`) so the
 *     browser remains responsive during heavy list renders.
 *   - Maintain a module-level LRU-style cache (`window.resolved_ip_data`, a Map)
@@ -116,9 +117,13 @@ view_ip_list_input_text.render = async function(self, options) {
 		const ip = value_string
 		switch (true) {
 			case is_private_ip(ip):
-				// Private / loopback / RFC-1918 addresses cannot be geolocated.
-				// Nothing to append — leave the wrapper with just the IP text.
-				// nothing to do here
+				// Private / loopback / RFC-1918 addresses cannot be geolocated,
+				// so there is no country flag for them. Mark them instead with the
+				// 'Raspa' flag — a cat-paw emoji rendered inside the same
+				// `<a class="link">` used for country flags, so it matches the
+				// country flags in size and style. Appended synchronously (no
+				// network round-trip is needed for a local address).
+				wrapper.appendChild( render_raspa_flag() )
 				break;
 
 			default:
@@ -232,6 +237,41 @@ export const render_link = function (href, label) {
 
 	return link_node
 }//end render_link
+
+
+
+/**
+* RASPA_FLAG
+* The 'Raspa' country flag: a cat-paw emoji (U+1F43E) used as the flag for
+* local / private-network addresses, which have no real country flag. It is a
+* single emoji, so it renders at the same size and style as the two-code-point
+* regional-indicator country flags produced by `get_flag_emoji`.
+*/
+const RASPA_FLAG = '\u{1F43E}' // 🐾
+
+
+
+/**
+* RENDER_RASPA_FLAG
+* Build the `<a class="link">` node carrying the 'Raspa' flag for a local IP.
+* It reuses the exact same anchor markup and CSS class as the country-flag
+* links (`render_link`) so it lines up with them visually, but it is a no-op
+* anchor (no geolocation page to open) carrying a descriptive tooltip.
+*
+* @returns {HTMLElement} the constructed `<a>` DOM node (not yet in the document)
+*/
+const render_raspa_flag = function () {
+
+	const link_node = ui.create_dom_element({
+		element_type	: 'a',
+		class_name		: 'link raspa_flag',
+		title			: 'Raspa — local network',
+		inner_html		: RASPA_FLAG
+	})
+
+
+	return link_node
+}//end render_raspa_flag
 
 
 
