@@ -1,5 +1,5 @@
 /**
- * site_builder_status — the native twin gate for a TS-only widget (WC-031).
+ * site_builder_status — the native twin gate for a TS-only widget (WC-033).
  *
  * The widget is normalized OUT of the widgets differential (no PHP oracle twin), so
  * without this file nothing would assert its catalog shape or its fail-soft probe. This
@@ -14,7 +14,7 @@ import { config } from '../../src/config/config.ts';
 import { ALL_WIDGET_MODULES } from '../../src/core/area_maintenance/widgets/registry.ts';
 import { widget } from '../../src/core/area_maintenance/widgets/site_builder_status.ts';
 
-describe('site_builder_status widget (TS-only, WC-031)', () => {
+describe('site_builder_status widget (TS-only, WC-033)', () => {
 	test('is registered in the widget catalog with the publication category', () => {
 		const registered = ALL_WIDGET_MODULES.find((m) => m.spec.id === 'site_builder_status');
 		expect(registered).toBe(widget);

@@ -68,7 +68,7 @@ function isToolAssistantEntry(entry: ManifestEntry): boolean {
  *  - tool_error_report (WC-019) — TS-only tool in the TS-owned tools/ tree;
  *  - error_reports maintenance widget (WC-018) — TS-owned client files,
  *    excluded from sync_client.sh like diffusion_server_control;
- *  - tool_sitebuilder + site_builder_status widget (WC-031) — the site-builder
+ *  - tool_sitebuilder + site_builder_status widget (WC-033) — the site-builder
  *    subsystem, a TS-native addition (proxy tool + ops widget for the
  *    standalone publication/site_builder daemon).
  * Their files exist only in the TS census; filtered from BOTH sides. */
