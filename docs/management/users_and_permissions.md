@@ -80,11 +80,15 @@ the web interface (see [root user](index.md#root-user) and
 Two flags promote a user beyond their profile's grants. They are stored on the
 user record and read back from the session for the current user:
 
-- **Global admin** (`DEDALO_SECURITY_ADMINISTRATOR_TIPO`, `dd244`) — resolves the
-  level to `3` everywhere and bypasses the per-record project scope. This is the
-  "general admin" account described in the
-  [management index](index.md#general-admin). It is the `isGlobalAdmin` flag on
-  the request's `Principal`, resolved by `resolvePrincipal()` in
+- **Global admin** (`DEDALO_SECURITY_ADMINISTRATOR_TIPO`, `dd244`) — bypasses
+  the per-record project scope and unlocks the admin-only surfaces (the
+  Maintenance area, Time Machine reads, structural operations). It does **not**
+  bypass the per-element permission matrix: an admin-flagged user still resolves
+  each element through their profile's grants — only the superuser `root`
+  resolves level `3` everywhere. Give an admin's profile the grants you expect
+  them to have. This is the "general admin" account described
+  in the [management index](index.md#general-admin). It is the `isGlobalAdmin`
+  flag on the request's `Principal`, resolved by `resolvePrincipal()` in
   `src/core/security/permissions.ts`.
 - **Developer** (`DEDALO_USER_DEVELOPER_TIPO`, `dd515`) — grants access to
   development/structure surfaces; the `isDeveloper` flag on the same
@@ -172,7 +176,13 @@ dispatch entry point calls `getPermissions`/`getUserProjects` inline at its own
 gate.
 
 - **Read** — `src/core/api/dispatch.ts` resolves a read permission (level ≥ 1)
-  per action before serving it.
+  per action before serving it. Inside the section read
+  (`src/core/section/read.ts`), each element the user holds level `0` on is
+  dropped from the response entirely (context and data — its value never leaves
+  the server), and every served element's context carries its **real** level.
+  The client renders from that stamp: `1` draws the component read-only, `≥ 2`
+  editable — so a user without a write grant never gets an editable field that
+  would only fail at save time.
 - **Create / save** — the save paths in `dispatch.ts` and
   `src/core/relations/save.ts` refuse when `getPermissions(...) < 2`.
 - **API gates** — tool actions gate inline in `src/core/tools/security.ts`
@@ -244,9 +254,12 @@ Goal: a profile that can **read** the *Archaeological objects* section (say
 
 7. **Assign the profile** to a user (Users section → user → profile = *Objects
    reader*), with a project so layer-2 scope is satisfied.
-8. **Verify.** Log in as that user: the *Archaeological objects* records appear
-   read-only, save buttons are refused (`< 2`), and other sections do not appear
-   at all (`0`). The user only sees records inside their assigned projects.
+8. **Verify.** Log in as that user: the *Archaeological objects* records render
+   read-only (the served context stamps level `1`, so the client draws values
+   without inputs or tool buttons), any write is refused server-side (`< 2`),
+   and other sections and ungranted components do not appear at all (`0` —
+   dropped from the response, values included). The user only sees records
+   inside their assigned projects.
 
 !!! note "Programmatic grant (dev)"
     To grant a profile read+write over a list of sections *and all their

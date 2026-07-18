@@ -192,7 +192,11 @@ Grouped by concern. All functions listed below are exported from
 
 | function | purpose |
 | --- | --- |
-| `getPermissions(principal, parentTipo, tipo)` | Resolve the 0–3 level for a `(parent_tipo, tipo)` pair. First-match order: time machine (`dd15`) → admin-only (`1`/`0`); empty tipo → `0`; superuser → `3`; tools register (`dd1324`) → `1`; temp-preset (`dd655`) → `2`; inverse relations (`dd1596`) or `'all'` → `1`; maintenance area (`dd88`) → `0` for non-admin/non-dev; then the `"<parent>_<tipo>"` matrix lookup (absent → `0`), with a fallback to `1` for public list tables (`matrix_list` / `matrix_dd` / `matrix_notes`). |
+| `getPermissions(principal, parentTipo, tipo)` | Resolve the 0–3 level for a `(parent_tipo, tipo)` pair. First-match order: time machine (`dd15`) → admin-only (`1`/`0`); empty tipo → `0`; superuser → `3`; tools register (`dd1324`) → `1`; temp-preset (`dd655`) → `2`; inverse relations (`dd1596`) or `'all'` → `1` (only under a *concrete* parent section tipo — the wildcard can never grant on `'all'` itself); maintenance area (`dd88`) → `0` for non-admin/non-dev; a `component_alias` resolves to its **target** tipo's rights; then the `"<parent>_<tipo>"` matrix lookup (absent → `0`), with a fallback to `1` for public list tables (`matrix_list` / `matrix_dd` / `matrix_notes`). A global-admin flag grants **no** level here — admins resolve through their matrix like everyone; only the superuser short-circuits. |
+| `getSectionPermissions(principal, sectionTipo)` | The section-level ACL: `getPermissions(sectionTipo, sectionTipo)`, capped at read (`1`) for consultation-only sections (Activity, Time Machine) — the value the section's own context entry carries. |
+| `ddoIsAuthorized(principal, sectionTipo, componentTipo)` | The per-component READ gate: `true` when the level is ≥ 1. An `undefined` principal (internal resolutions, harnesses) applies no filter; there is **no global-admin bypass**. Used to drop denied elements from the read response — context *and* data. |
+| `inheritSubdatumPermission(childLevel, callerLevel)` | Subdatum inheritance for children expanded *through* an authorized component (portal/autocomplete targets): a child below read is **floored to `1`** (the caller must see the resolved values), and a writable child under a read-only caller is **capped at `1`**. Applies only to derived children — top-level elements at `0` are dropped, never floored. |
+| `resolveComponentContextPermission(principal, sectionTipo, tipo, sectionId, mode)` | The context-stamp level for one component (the `get_data`/`resolve_data` paths). In `search` mode, grants `2` to every logged user on the thesaurus template section, the metadata components (`dd197`/`dd199`/`dd200`/`dd201`) and synthetic `search_<n>` ids; otherwise resolves the matrix. |
 | `resolvePrincipal(userId)` | Build the `Principal`: superuser is always admin+developer; otherwise reads the `dd244` (admin) and `dd515` (developer) flag components (first locator target `section_id === 1` ⇒ yes). |
 
 ### Permission table
@@ -229,16 +233,30 @@ Each handler gates **inline** and returns the uniform `denied()` envelope:
    (self-keyed) *before* any search/DB work. Anything `< 1` short-circuits to
    `denied(403, 'Insufficient permissions to read')`.
 
-2. **API entry (create / write).** `create`, `save`, `duplicate` and `delete`
+2. **Per-element read filtering + honest context stamps.** Inside the section
+   read (`src/core/section/read.ts`), every element the caller holds level `0`
+   on is **dropped from the response** — from the context list *and* from the
+   emitted data (`ddoIsAuthorized`), client-sent `show.ddo_map`s included, so
+   the value never leaves the server. Every surviving context entry is stamped
+   with its **real per-element level** (`getPermissions` per component,
+   `getSectionPermissions` for the section entry, `inheritSubdatumPermission`
+   for portal-expanded children, `resolveComponentContextPermission` on the
+   `get_data`/`resolve_data`/save-echo paths). The client renders exactly from
+   this stamp — `< 1` hidden, `1` read-only, `> 1` editable — so a user without
+   a write grant is blocked from *opening* an editor, not just from saving.
+   There is **no global-admin bypass** anywhere in this filtering: admin-flagged
+   users see exactly their matrix (only the superuser resolves `3` everywhere).
+
+3. **API entry (create / write).** `create`, `save`, `duplicate` and `delete`
    check `getPermissions(principal, section_tipo, …) < 2` and refuse with a
    `denied(403, …)` "not enough permissions" message.
 
-3. **Per-record scope on writes.** `duplicate` and sqo-less `delete` re-run a
+4. **Per-record scope on writes.** `duplicate` and sqo-less `delete` re-run a
    principal-scoped existence search (the same `buildProjectsFilter` clause) and
    refuse a record outside the caller's project scope. Multi-record sqo deletes
    are a global-admin-only operation (fail closed).
 
-4. **Cross-section / structural operations.** Actions with a section-wide blast
+5. **Cross-section / structural operations.** Actions with a section-wide blast
    radius (`rebuild_media_index`, ontology-main cascade delete, sqo multi-delete)
    require `principal.isGlobalAdmin` outright.
 
@@ -269,10 +287,10 @@ reads.
   the *data* side: the per-profile permission matrix `permissions.ts` flattens
   into its table. Editing that component (and calling `clearPermissionsCache()`)
   is how permissions change.
-- **[login](login.md)** authenticates and opens the session: it stamps the
-  `is_global_admin` flag into the session row, which `resolvePrincipal` reads
-  back for the current user; per-element access is then decided by
-  `getPermissions()`.
+- **[login](login.md)** authenticates and opens the session. Per-request
+  identity is then resolved by `resolvePrincipal(userId)` — which reads the
+  admin/developer flag components from the user record, not the session row —
+  and per-element access is decided by `getPermissions()`.
 - **[Sections](../sections/index.md)** and **[Components](../components/index.md#permissions)**
   are read at the levels `getPermissions()` returns; the dispatch read gate drops
   any element resolving to `< 1`.

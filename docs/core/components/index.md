@@ -549,9 +549,9 @@ Example of the data for *Birth town* [rsc91](https://dedalo.dev/ontology/rsc91),
 
 Components can read and save data. Permissions define whether the user can access, read, write or administer the component.
 
-In server context, permissions are the access level stamped onto every context entry by the structure-context builder (`src/core/resolve/structure_context.ts`) and are checked on every read and save. The full per-element ACL derivation (`component_security_access`) is not yet wired: the current stamp is `3` for a global admin and `1` otherwise (see `src/core/section/read.ts`).
+In server context, permissions are the access level stamped onto every context entry by the structure-context builder (`src/core/resolve/structure_context.ts`) and are checked on every read and save. The stamp is the **real per-element level** resolved from the caller's profile matrix (`component_security_access`): the section read (`src/core/section/read.ts`) stamps `getPermissions(principal, section_tipo, tipo)` on each element's entry, and a level-`0` element is dropped from the response entirely — context *and* data, so its value never leaves the server. Only the superuser (`user_id -1`) bypasses the matrix; a global-admin flag does not. Subdatum children expanded through an authorized portal/autocomplete are floored to read (`1`) even without a grant on the target section, and capped at read under a read-only caller (`inheritSubdatumPermission`, `src/core/security/permissions.ts`).
 
-In client context, permissions are set and checked on every API call; they control how the component is rendered and behaves.
+In client context, permissions are set and checked on every API call; they control how the component is rendered and behaves: `< 1` renders a `no_access` placeholder, `1` renders read-only (no inputs, no tool buttons), `> 1` renders editable.
 
 !!! warning "Unauthorized changes in permissions"
     To prevent unauthorized permission changes, every load and save call is checked in server context before it runs.

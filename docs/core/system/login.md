@@ -98,9 +98,14 @@ value is bound as a parameter (`$3`), never interpolated.
 !!! note "root user (`-1`) special cases"
     The super-user (`root`, `section_id = -1`) carries an `$argon2id$` hash, is
     the only account allowed while maintenance mode is set, and is always treated
-    as global admin (`resolvePrincipal` short-circuits it to admin+developer,
-    and `login()` grants `isGlobalAdmin` to `-1` in v0 — profile-based admins are
-    Phase 5 continuation alongside the full permissions matrix).
+    as global admin (`resolvePrincipal` short-circuits it to admin+developer).
+    The **session row's** `isGlobalAdmin` field is stamped `true` only for `-1`;
+    it is informational — per-request authorization identity is resolved fresh
+    by `resolvePrincipal(userId)`, which reads the `dd244` admin flag from the
+    user record, so flag-based admins are fully recognized regardless of the
+    session stamp. Note that root is also the only identity that bypasses the
+    permissions matrix; a `dd244` admin resolves per-element levels through
+    their profile like any other user (see [security](security.md)).
 
 ### Argon2id verification
 
