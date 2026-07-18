@@ -95,6 +95,9 @@ export interface StructureContextEntry extends StructureContextCore {
 	parent: string | null;
 	lang: string;
 	view: string | null;
+	/** View imposed on the section_record children this element builds (PHP
+	 * get_children_view) — null when the element imposes none. */
+	children_view: string | null;
 	/** Parsed request_config items — ABSENT when addRequestConfig=false (PHP omits). */
 	request_config?: unknown[] | null;
 	/** component_filter only: the projects target descriptors (PHP
@@ -204,6 +207,29 @@ export function resolveDefaultView(model: string, legacyModel: string | null): s
 			return 'line';
 		case 'component_html_text':
 			return 'html_text';
+		default:
+			return null;
+	}
+}
+
+/**
+ * PHP get_children_view legacy-model defaults (class.common.php:5286-5316).
+ * The view a component imposes on the section_record children it builds — the
+ * relation family renders its children as a joined PHRASE (`view_text`), not as
+ * the grid the child's own view would give. The client reads it in
+ * `view_line_edit_portal.js:146` (`context.children_view || context.view`), so
+ * a missing value silently degrades to the parent's own view.
+ */
+function resolveDefaultChildrenView(model: string, legacyModel: string | null): string | null {
+	const effective = legacyModel ?? model;
+	switch (effective) {
+		case 'component_relation_children':
+		case 'component_relation_parent':
+		case 'component_relation_index':
+		case 'component_relation_related':
+		case 'component_autocomplete':
+		case 'component_autocomplete_hi':
+			return 'text';
 		default:
 			return null;
 	}
@@ -493,6 +519,12 @@ export async function buildStructureContext(options: {
 	/** View injected from the ddo_map (top precedence, PHP get_view). */
 	view?: string | null;
 	/**
+	 * children_view injected from the ddo_map (top precedence, PHP
+	 * get_children_view :5289 — the `isset($this->children_view)` branch, set
+	 * when the ddo_map carries one).
+	 */
+	childrenView?: string | null;
+	/**
 	 * The element's descendants from the CLIENT rqo ddo_map (already parent-
 	 * resolved). When non-empty, they NARROW the explicit show.ddo_map (the PHP
 	 * get_subdatum children-injection, class.common.php :2598-2681) — the
@@ -582,6 +614,16 @@ export async function buildStructureContext(options: {
 		// section_list child preference, then the element's OWN properties.view —
 		// NOT the Site-A swapped object's) → model default.
 		view: options.view ?? structuralView ?? resolveDefaultView(core.model, core.legacy_model),
+		// PHP get_children_view (:5286): ddo_map-injected → the element's OWN
+		// properties.children_view → the relation-family legacy default. Without
+		// it the client falls back to the parent's own view and a relation cell
+		// renders as a column grid instead of a `fields_separator`-joined phrase.
+		children_view:
+			options.childrenView ??
+			(typeof (core.properties as { children_view?: unknown }).children_view === 'string'
+				? (core.properties as { children_view: string }).children_view
+				: null) ??
+			resolveDefaultChildrenView(core.model, core.legacy_model),
 	};
 
 	// RQO properties override (PHP $element->set_properties, dd_core_api read

@@ -205,6 +205,7 @@ export async function readSection(rqo: Rqo, principal?: Principal): Promise<Read
 			permissions: await elementPermissions(ddoSectionTipo, ddo.tipo),
 			parent: resolvedParent,
 			view: ddo.view ?? null,
+			childrenView: (ddo as { children_view?: string | null }).children_view ?? null,
 			rqoChildrenDdos: rqoChildren as unknown as Record<string, unknown>[],
 			orderPathFrom,
 		});
