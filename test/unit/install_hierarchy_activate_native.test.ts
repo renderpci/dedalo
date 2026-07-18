@@ -50,7 +50,10 @@ const META = {
 
 let sectionId: number | null = null;
 
-async function registryRow(): Promise<{ relation: Record<string, unknown[]>; string: Record<string, unknown[]> } | null> {
+async function registryRow(): Promise<{
+	relation: Record<string, unknown[]>;
+	string: Record<string, unknown[]>;
+} | null> {
 	if (sectionId === null) return null;
 	const rows = (await sql.unsafe(
 		`SELECT relation, string FROM "${HIERARCHY_TABLE}" WHERE section_tipo = $1 AND section_id = $2`,

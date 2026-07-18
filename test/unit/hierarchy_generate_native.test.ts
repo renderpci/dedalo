@@ -77,7 +77,7 @@ async function sweep(): Promise<void> {
 	// ('<tld>1' descriptors + '<tld>2' models, in matrix_hierarchy) via
 	// createThesaurusGeneralTerm. deleteOntologyByTld only sweeps the '<tld>0' NODE
 	// records, so without this the twins accumulate in matrix_hierarchy on every run.
-	await sql.unsafe(`DELETE FROM matrix_hierarchy WHERE section_tipo IN ($1, $2)`, [
+	await sql.unsafe('DELETE FROM matrix_hierarchy WHERE section_tipo IN ($1, $2)', [
 		`${TLD}1`,
 		`${TLD}2`,
 	]);

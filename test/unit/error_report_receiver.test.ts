@@ -164,10 +164,9 @@ describe('error-report intake (WC-017)', () => {
 		const result = await post(validWirePayload({ screenshot: dataUrl }), anon('198.51.100.8'));
 		expect(result.status).toBe(200);
 		const reportId = result.body.report_id as number;
-		const rows = (await sql.unsafe(
-			'SELECT context FROM dedalo_ts_error_reports WHERE id = $1',
-			[reportId],
-		)) as Record<string, unknown>[];
+		const rows = (await sql.unsafe('SELECT context FROM dedalo_ts_error_reports WHERE id = $1', [
+			reportId,
+		])) as Record<string, unknown>[];
 		expect((rows[0]?.context as { screenshot?: unknown }).screenshot).toBe(dataUrl);
 	});
 

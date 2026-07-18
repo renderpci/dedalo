@@ -79,7 +79,13 @@ async function seedRegistry(presetRoot: boolean): Promise<void> {
 	if (presetRoot) {
 		// EXACTLY what the seed ships: a Link locator at <tld>1/1, whose target does not exist.
 		relation.hierarchy45 = [
-			{ id: 1, type: 'dd151', section_id: '1', section_tipo: `${TLD}1`, from_component_tipo: 'hierarchy45' },
+			{
+				id: 1,
+				type: 'dd151',
+				section_id: '1',
+				section_tipo: `${TLD}1`,
+				from_component_tipo: 'hierarchy45',
+			},
 		];
 	}
 	await sql.unsafe(

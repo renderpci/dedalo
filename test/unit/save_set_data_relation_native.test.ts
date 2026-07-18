@@ -71,7 +71,9 @@ describe('set_data on a relation component', () => {
 			sectionId: SECTION_ID,
 			lang: 'lg-nolan',
 			userId: USER_ID,
-			changedData: [{ action: 'set_data', value: [{ id: 1, section_tipo: 'dd64', section_id: 1 }] }],
+			changedData: [
+				{ action: 'set_data', value: [{ id: 1, section_tipo: 'dd64', section_id: 1 }] },
+			],
 		});
 		expect(result.ok).toBe(true);
 
