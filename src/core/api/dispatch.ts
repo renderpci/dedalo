@@ -137,6 +137,19 @@ const ACTION_REGISTRY: Record<string, Record<string, ActionHandler>> = {
  */
 export async function dispatchRqo(rqo: Rqo, context: ApiRequestContext): Promise<ApiResult> {
 	const startedAt = context.startedAt ?? performance.now();
+	// TEMP DEBUG (dd543 who-search) — REMOVE: capture activity-related RQOs.
+	try {
+		const rqoText = JSON.stringify(rqo);
+		if (rqoText.includes('dd542') || rqoText.includes('dd543')) {
+			const { appendFileSync } = await import('node:fs');
+			appendFileSync(
+				'/private/tmp/claude-501/-Users-render-Desktop-trabajos-dedalo-v7-master-dedalo/7a750838-f4aa-4fef-8c6b-1cb80b7249ec/scratchpad/rqo_capture.jsonl',
+				`${new Date().toISOString()} ${rqoText}\n`,
+			);
+		}
+	} catch {
+		/* debug-only, never break dispatch */
+	}
 	const result = await executeRqo(rqo, context);
 	logApiAccess({
 		requestId: context.requestId,

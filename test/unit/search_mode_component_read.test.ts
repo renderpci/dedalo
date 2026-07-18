@@ -29,6 +29,15 @@
  *    locator, undoing fix 2 on the only path the client uses. Fixed by
  *    matching on tipo+section_tipo and re-stamping the synthetic id.
  *
+ * 4. The save branch echoed ONLY the changed_data inserts, but the client
+ *    reuses the echo as its whole next state (refresh tmp_api_response) — a
+ *    second pick silently dropped the first chip and an unlink cleared ALL
+ *    chips. Fixed by reconciling the client's ridden-along current entries
+ *    with the insert/remove deltas server-side. NOTE: a multi-chip filter
+ *    still ANDs its locators in ONE @> containment — PHP-parity
+ *    (extract_normalized_relation_q strips the array brackets into a single
+ *    {"tipo":[loc1,loc2]} wrapper); OR semantics would be a WC divergence.
+ *
  * Scratch twins (a fake user + two activity rows) are SQL-seeded and deleted
  * in afterAll — root is hidden from user searches by design
  * (root_user_hidden_tripwire), so a non-root twin is required for a positive
@@ -51,6 +60,8 @@ const USERNAME = 'dd132'; // the target's display component (resolved chip label
 
 const TWIN_USER_ID = 999901;
 const TWIN_USERNAME = 'zz_search_twin';
+const TWIN_USER_ID_2 = 999902; // second picker target (multi-chip reconcile test)
+const TWIN_USERNAME_2 = 'zz_search_twin_2';
 const TWIN_ACTIVITY_IDS = [999901, 999902];
 
 let ctx: ApiRequestContext;
@@ -60,24 +71,25 @@ async function deleteTwins(): Promise<void> {
 		`DELETE FROM matrix_activity WHERE section_tipo = $1 AND section_id IN (${TWIN_ACTIVITY_IDS.join(',')})`,
 		[ACTIVITY],
 	);
-	await sql.unsafe(`DELETE FROM matrix_users WHERE section_tipo = $1 AND section_id = $2`, [
-		USERS,
-		TWIN_USER_ID,
-	]);
+	await sql.unsafe(
+		`DELETE FROM matrix_users WHERE section_tipo = $1 AND section_id IN ($2, $3)`,
+		[USERS, TWIN_USER_ID, TWIN_USER_ID_2],
+	);
 }
 
 async function seedTwins(): Promise<void> {
 	// Idempotent: clear any leftover from a crashed run first.
 	await deleteTwins();
-	await sql.unsafe(
-		`INSERT INTO matrix_users (section_id, section_tipo, string, relation)
-		 VALUES ($1, $2, $3::text::jsonb, '{}'::jsonb)`,
-		[
-			TWIN_USER_ID,
-			USERS,
-			JSON.stringify({ [USERNAME]: [{ lang: 'lg-nolan', value: TWIN_USERNAME }] }),
-		],
-	);
+	for (const [userId, username] of [
+		[TWIN_USER_ID, TWIN_USERNAME],
+		[TWIN_USER_ID_2, TWIN_USERNAME_2],
+	] as const) {
+		await sql.unsafe(
+			`INSERT INTO matrix_users (section_id, section_tipo, string, relation)
+			 VALUES ($1, $2, $3::text::jsonb, '{}'::jsonb)`,
+			[userId, USERS, JSON.stringify({ [USERNAME]: [{ lang: 'lg-nolan', value: username }] })],
+		);
+	}
 	for (const activityId of TWIN_ACTIVITY_IDS) {
 		await sql.unsafe(
 			`INSERT INTO matrix_activity (section_id, section_tipo, relation, string)
@@ -215,7 +227,10 @@ function echoRqo(injectedSectionId: number | string): Rqo {
  * .js:672). The response is reused verbatim via refresh({tmp_api_response}) —
  * whatever entries it carries become the search q.
  */
-function pickSaveRqo(pickedSectionId: number | string): Rqo {
+function pickSaveRqo(
+	changedData: Record<string, unknown>[],
+	existingEntries: Record<string, unknown>[] = [],
+): Rqo {
 	return {
 		action: 'save',
 		dd_api: 'dd_core_api',
@@ -231,21 +246,26 @@ function pickSaveRqo(pickedSectionId: number | string): Rqo {
 			lang: 'lg-eng',
 			action: 'save',
 		},
+		// clone(self.data): the portal's CURRENT chips ride along in entries.
 		data: {
-			changed_data: [
-				{
-					action: 'insert',
-					id: null,
-					value: {
-						type: 'dd151',
-						section_tipo: USERS,
-						section_id: pickedSectionId,
-						from_component_tipo: WHO_PORTAL,
-					},
-				},
-			],
+			entries: existingEntries,
+			changed_data: changedData,
 		},
 	} as unknown as Rqo;
+}
+
+/** link_record's single-insert delta (the NUMERIC datalist locator). */
+function insertChange(pickedSectionId: number | string): Record<string, unknown> {
+	return {
+		action: 'insert',
+		id: null,
+		value: {
+			type: 'dd151',
+			section_tipo: USERS,
+			section_id: pickedSectionId,
+			from_component_tipo: WHO_PORTAL,
+		},
+	};
 }
 
 describe('search-mode component read (Activity dd542 Who picker)', () => {
@@ -288,7 +308,7 @@ describe('search-mode component read (Activity dd542 Who picker)', () => {
 	});
 
 	test("save on the 'search_1' host echoes string entries under the synthetic id", async () => {
-		const { body } = await dispatchRqo(pickSaveRqo(TWIN_USER_ID), ctx);
+		const { body } = await dispatchRqo(pickSaveRqo([insertChange(TWIN_USER_ID)]), ctx);
 		const result = (body as { result?: { data?: Record<string, unknown>[] } }).result;
 		expect(result).toBeDefined();
 
@@ -319,10 +339,60 @@ describe('search-mode component read (Activity dd542 Who picker)', () => {
 		expect(usernameItem?.entries?.[0]?.value).toBe(TWIN_USERNAME);
 	});
 
+	test('second pick keeps the first chip; unlink removes only its target', async () => {
+		// Helper: run a pick/unlink save and return the echoed main-item entries.
+		const saveEntries = async (
+			changedData: Record<string, unknown>[],
+			existing: Record<string, unknown>[],
+		): Promise<Record<string, unknown>[]> => {
+			const { body } = await dispatchRqo(pickSaveRqo(changedData, existing), ctx);
+			const data = (body as { result?: { data?: Record<string, unknown>[] } }).result?.data ?? [];
+			const mainItem = data.find(
+				(item) => item.tipo === WHO_PORTAL && String(item.section_id) === 'search_1',
+			) as { entries?: Record<string, unknown>[] } | undefined;
+			expect(mainItem).toBeDefined();
+			return mainItem?.entries ?? [];
+		};
+
+		// Pick twin 1 on an empty filter, then twin 2 with twin 1 already chipped
+		// (the client sends clone(self.data) — the reconcile must KEEP chip 1).
+		const afterFirst = await saveEntries([insertChange(TWIN_USER_ID)], []);
+		expect(afterFirst.map((entry) => String(entry.section_id))).toEqual([String(TWIN_USER_ID)]);
+
+		const afterSecond = await saveEntries([insertChange(TWIN_USER_ID_2)], afterFirst);
+		expect(afterSecond.map((entry) => String(entry.section_id))).toEqual([
+			String(TWIN_USER_ID),
+			String(TWIN_USER_ID_2),
+		]);
+		// Re-stamped ids 1..n, every section_id echoed as string.
+		expect(afterSecond.map((entry) => entry.id)).toEqual([1, 2]);
+		for (const entry of afterSecond) {
+			expect(typeof entry.section_id).toBe('string');
+		}
+
+		// Duplicate pick: the reconcile drops it, the set is unchanged.
+		const afterDuplicate = await saveEntries([insertChange(TWIN_USER_ID)], afterSecond);
+		expect(afterDuplicate.map((entry) => String(entry.section_id))).toEqual([
+			String(TWIN_USER_ID),
+			String(TWIN_USER_ID_2),
+		]);
+
+		// Unlink chip 1 (unlink_record sends 'remove' by the entry id stamp):
+		// only its target drops — previously EVERY chip was cleared.
+		const afterUnlink = await saveEntries(
+			[{ action: 'remove', id: afterSecond[0]?.id ?? 1, value: null }],
+			afterSecond,
+		);
+		expect(afterUnlink.map((entry) => String(entry.section_id))).toEqual([
+			String(TWIN_USER_ID_2),
+		]);
+		expect(afterUnlink[0]?.id).toBe(1); // re-stamped from 1 again
+	});
+
 	test('end-to-end: the picked entries drive a section filter that finds the rows', async () => {
 		// 1. The real pick: SAVE on the 'search_1' host (link_record). The response
 		// is what lands in the component's data.entries (refresh tmp_api_response).
-		const { body: echoBody } = await dispatchRqo(pickSaveRqo(TWIN_USER_ID), ctx);
+		const { body: echoBody } = await dispatchRqo(pickSaveRqo([insertChange(TWIN_USER_ID)]), ctx);
 		const echoData =
 			((echoBody as { result?: { data?: Record<string, unknown>[] } }).result?.data ?? []);
 		const echoMain = echoData.find(
