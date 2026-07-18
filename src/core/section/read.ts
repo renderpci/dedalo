@@ -78,7 +78,9 @@ export async function readSection(rqo: Rqo, principal?: Principal): Promise<Read
 	const data = await readSectionRows(rqo, principal);
 	const source = rqo.source ?? {};
 	const callerTipo = source.tipo as string;
-	const mode = source.mode ?? 'list';
+	// Same 'search'→'list' normalization as readSectionRows (the context half
+	// must match the data half for the search-panel picker read).
+	const mode = source.mode === 'search' ? 'list' : (source.mode ?? 'list');
 	// Request-scoped data lang, never a hardcoded install default (S2-28): an
 	// RQO that omits lang resolves the session's active data language.
 	const lang = source.lang ?? currentDataLang();
@@ -756,6 +758,21 @@ export async function resolveSearchData(rqo: Rqo, principal?: Principal): Promis
 		injected = scoped;
 	}
 
+	// PHP locator parity (class.locator.php set_section_id :338): the echoed
+	// locators carry section_id AS STRING. The client feeds these entries back
+	// verbatim as the search q (component_portal get_search_value), and the
+	// stored relation column's locators hold string section_id — a verbatim
+	// NUMERIC echo (the datalist publishes the envelope's numeric section_id)
+	// silently misses the @> containment and the search returns 0 rows.
+	injected = injected.map((locator) =>
+		locator !== null &&
+			typeof locator === 'object' &&
+			locator.section_id !== undefined &&
+			locator.section_id !== null
+			? { ...locator, section_id: String(locator.section_id) }
+			: locator,
+	);
+
 	// The component's child ddos — the RAW config entries so section_tipo
 	// stays AS DECLARED ('self' = match-all in the per-locator grouping).
 	// component_alias (WC-020): the effective accessor merges an alias's config.
@@ -948,7 +965,14 @@ export async function readSectionRows(
 	if (callerTipo === undefined) {
 		throw new Error('readSectionRows: rqo.source.tipo is required');
 	}
-	const mode = source.mode ?? 'list';
+	// A search-panel component read (the service_autocomplete picker, the
+	// input_text find_equal probe) stamps the COMPONENT's own mode ('search')
+	// on the source (client create_source). PHP serves it as a plain read
+	// regardless (dd_core_api.php:2256 case 'search' → sections::get_instance
+	// with the given mode; row acquisition is mode-agnostic there). Normalize
+	// to 'list': 'search' is a UI mode, not a row-read mode — the emission
+	// path is the frozen BUG-0 picker contract (autocomplete_search_differential).
+	const mode = source.mode === 'search' ? 'list' : (source.mode ?? 'list');
 	// Request-scoped data lang, never a hardcoded install default (S2-28): an
 	// RQO that omits lang resolves the session's active data language.
 	const lang = source.lang ?? currentDataLang();
