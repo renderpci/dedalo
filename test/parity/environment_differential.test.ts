@@ -146,6 +146,9 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 		// Assert the divergence explicitly, then compare the rest of the key set exactly.
 		expect('is_ontology_server' in tsGlobals).toBe(true);
 		expect('is_ontology_server' in phpGlobals).toBe(false);
+		// The key must LEAVE the object: the exact key-set compare below reads Object.keys(),
+		// which still lists a key assigned undefined. Local literal, so perf is moot.
+		// biome-ignore lint/performance/noDelete: an undefined assignment would fail the key-set compare
 		delete tsGlobals.is_ontology_server;
 		// WIRE_CONTRACT.md WC-038: `ip_api` REMOVED from page_globals — IP→country
 		// resolution moved server-side/offline (src/core/geoip). The frozen PHP
@@ -153,6 +156,7 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 		// TS-only handling above) before the exact key-set compare.
 		expect('ip_api' in phpGlobals).toBe(true);
 		expect('ip_api' in tsGlobals).toBe(false);
+		// biome-ignore lint/performance/noDelete: same as the WC-031 strip above — undefined would keep 'ip_api' in Object.keys()
 		delete phpGlobals.ip_api;
 		expect(Object.keys(tsGlobals).sort()).toEqual(Object.keys(phpGlobals).sort());
 		for (const key of Object.keys(phpGlobals)) {

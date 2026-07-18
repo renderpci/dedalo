@@ -104,6 +104,16 @@ bun test "${HERMETIC_TRIPWIRES[@]}"
 # .env.test and scratch directories. Without this block NOTHING mechanical runs it
 # (verify.ts neighbours only scan src/ + test/), so its invariants (bearer auth, promote
 # atomicity, session single-flight) could rot silently.
+#
+# Its workspace tests shell out to the REAL `git` binary (per-site rollback substrate,
+# src/sites/git.ts). GitHub's ubuntu runner ships git; GitLab runs this same script
+# inside oven/bun (debian-slim, NO git) — every workspace-creating test dies on the
+# spawn while the git-free ones pass (the 28-pass/22-fail signature, 2026-07-18).
+# Install it when absent so the two platforms cannot drift on this gate.
+if ! command -v git >/dev/null 2>&1; then
+  echo "== hermetic: installing git (absent on this runner)"
+  apt-get update -qq && apt-get install -y -qq git >/dev/null
+fi
 echo "== hermetic: site builder daemon (publication/site_builder)"
 (cd publication/site_builder && bun install --frozen-lockfile && bunx tsc --noEmit && bun test)
 

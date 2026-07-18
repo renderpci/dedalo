@@ -486,7 +486,9 @@ describe('importFromCopyFile on the scratch database', () => {
 describe("recovery snapshot + counter (psql :'var' interpolation)", () => {
 	test('tipo-scoped \\copy snapshot writes exactly the section rows', async () => {
 		if (!scratchAvailable) {
-			console.warn('[UNCOVERED] no admin Postgres connection — snapshot/counter regression skipped');
+			console.warn(
+				'[UNCOVERED] no admin Postgres connection — snapshot/counter regression skipped',
+			);
 			return;
 		}
 		// guarantee dd0 rows regardless of test order (idempotent load)

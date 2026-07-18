@@ -1,0 +1,95 @@
+# git-cliff ~ changelog generation
+# https://git-cliff.org/docs/configuration
+#
+# Derived from `git cliff --init` defaults. TWO deliberate deltas from stock,
+# both in [git] and both marked DELTA below:
+#
+#   1. filter_unconventional = false — the repo's history is NOT uniformly
+#      conventional ("add probe_*.ts to gitignore for debug probes", the initial
+#      rewrite commit). Stock drops those BEFORE commit_parsers run, so the
+#      catch-all "Other" parser never sees them and real work vanishes from the
+#      changelog. Off = every commit reaches the parsers.
+#   2. A `^Merge ` skip parser — with (1) off, nothing else excludes merge bubbles,
+#      and this branch carries dozens of "Merge remote-tracking branch
+#      'refs/remotes/gitdedalo/v7'". They are integration noise, never content.
+#      A message regex is used because git-cliff 2.13.1 has NO structural
+#      (parent-count) equivalent: `skip_merge_commits` is silently ACCEPTED and
+#      silently IGNORED — verified, 21 bubbles still rendered. Do not "improve"
+#      this to that key without re-checking, and note the regex is safe against
+#      the real commit "feat(area_maintenance): Merge php_info into runtime_info"
+#      only because it is anchored: a conventional subject starts with its type.
+#
+# The pairing is the point: (1) without (2) trades one wrong changelog for another.
+#
+# The template's `split(pat="\n") | first` is load-bearing for (1): for a CONVENTIONAL
+# commit `commit.message` is the parsed description alone, but for an unconventional one
+# it is the WHOLE message — body, file lists and Co-authored-by trailers included, which
+# dumps paragraphs into what should be a one-line bullet. Harmless no-op for the former.
+
+[changelog]
+# A Tera template to be rendered for each release in the changelog.
+# See https://keats.github.io/tera/docs/#introduction
+body = """
+{% if version %}\
+    ## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}\
+    ## [unreleased]
+{% endif %}\
+{% for group, commits in commits | group_by(attribute="group") %}
+    ### {{ group | striptags | trim | upper_first }}
+    {% for commit in commits %}
+        - {% if commit.scope %}*({{ commit.scope }})* {% endif %}\
+            {% if commit.breaking %}[**breaking**] {% endif %}\
+            {{ commit.message | split(pat="\n") | first | trim | upper_first }}\
+    {% endfor %}
+{% endfor %}
+"""
+# Remove leading and trailing whitespaces from the changelog's body.
+trim = true
+# Render body even when there are no releases to process.
+render_always = true
+postprocessors = []
+
+[git]
+# Parse commits according to the conventional commits specification.
+conventional_commits = true
+# DELTA (1): keep unconventional commits — they land in "💼 Other" via the
+# catch-all parser instead of being silently dropped.
+filter_unconventional = false
+# Require all commits to be conventional. Takes precedence over filter_unconventional.
+require_conventional = false
+split_commits = false
+commit_preprocessors = []
+# Prevent commits that are breaking from being excluded by commit parsers.
+protect_breaking_commits = false
+# Regex parsers assigning commits to groups, in order — FIRST match wins, so the
+# skips must precede the catch-all or everything lands in "Other".
+commit_parsers = [
+    # DELTA (2): merge bubbles are integration noise, not content.
+    { message = "^Merge ", skip = true },
+    { message = "^feat", group = "<!-- 0 -->🚀 Features" },
+    { message = "^fix", group = "<!-- 1 -->🐛 Bug Fixes" },
+    { message = "^doc", group = "<!-- 3 -->📚 Documentation" },
+    { message = "^perf", group = "<!-- 4 -->⚡ Performance" },
+    { message = "^refactor", group = "<!-- 2 -->🚜 Refactor" },
+    { message = "^style", group = "<!-- 5 -->🎨 Styling" },
+    { message = "^test", group = "<!-- 6 -->🧪 Testing" },
+    { message = "^chore\\(release\\): prepare for", skip = true },
+    { message = "^chore\\(deps.*\\)", skip = true },
+    { message = "^chore\\(pr\\)", skip = true },
+    { message = "^chore\\(pull\\)", skip = true },
+    { message = "^chore|^ci", group = "<!-- 7 -->⚙️ Miscellaneous Tasks" },
+    { body = ".*security", group = "<!-- 8 -->🛡️ Security" },
+    { message = "^revert", group = "<!-- 9 -->◀️ Revert" },
+    { message = ".*", group = "<!-- 10 -->💼 Other" },
+]
+# Exclude commits that are not matched by any commit parser.
+filter_commits = false
+# Fail on a commit that is not matched by any commit parser.
+fail_on_unmatched_commit = false
+link_parsers = []
+use_branch_tags = false
+topo_order = false
+topo_order_commits = true
+sort_commits = "oldest"
+recurse_submodules = false

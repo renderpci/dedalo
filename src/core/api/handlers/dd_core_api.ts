@@ -225,7 +225,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 					limit: picked.length,
 					offset: 0,
 				};
-				const context = await buildGetDataContext(resolveRqo, resolved as never);
+				const context = await buildGetDataContext(resolveRqo, resolved as never, principal);
 				return { status: 200, body: { result: { context, data: resolved }, msg: 'OK' } };
 			}
 		}
@@ -390,7 +390,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 					// bare echo fallback — the save itself is already durable
 				}
 				const { buildGetDataContext } = await import('../../section/read.ts');
-				savedContext = await buildGetDataContext(rqo, savedData as never);
+				savedContext = await buildGetDataContext(rqo, savedData as never, principal);
 			}
 		}
 		// PHP observers_data merge (:1503): the same-record recomputed observer

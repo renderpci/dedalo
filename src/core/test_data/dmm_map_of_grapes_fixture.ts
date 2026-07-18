@@ -23,8 +23,8 @@
  * on whatever demo data a given installation happens to carry.
  */
 
-import { deleteMatrixRecord, insertMatrixRecordWithExplicitId } from '../db/matrix_write.ts';
 import { upsertDdOntologyNode } from '../db/dd_ontology.ts';
+import { deleteMatrixRecord, insertMatrixRecordWithExplicitId } from '../db/matrix_write.ts';
 import { withTransaction } from '../db/postgres.ts';
 import { fireSaveEvent } from '../section_record/save_event.ts';
 

@@ -81,6 +81,7 @@ describe('search-mode portal link on a read-only section (Activity dd542)', () =
 		// The old bug returned result:false with a Throwable; the fix returns an
 		// echo envelope (context + data), never touching the read-only matrix.
 		expect(result).not.toBe(false);
+		// biome-ignore lint/complexity/useOptionalChain: result is `false | {context?}`; `?.` only short-circuits null/undefined, so result?.context is a TYPE ERROR on the false arm. The && is doing narrowing, not just guarding.
 		expect(Array.isArray(result && result.context)).toBe(true);
 		expect((result as { context: unknown[] }).context.length).toBeGreaterThan(0);
 

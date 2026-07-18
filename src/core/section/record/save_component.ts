@@ -722,9 +722,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			const targetId = (change.value as { id?: unknown }).id ?? change.id ?? null;
 			const otherItems = (items as unknown[]).filter((item) => {
 				const itemId = (item as { id?: unknown } | null)?.id;
-				return (
-					targetId === null || itemId === undefined || String(itemId) !== String(targetId)
-				);
+				return targetId === null || itemId === undefined || String(itemId) !== String(targetId);
 			});
 			const validated = await validateRelationInsert(change.value as Record<string, unknown>, {
 				componentTipo,

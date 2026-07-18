@@ -140,7 +140,7 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 		// "component without context", leaving status stuck at 'building').
 		// Emit the component's structure context (buildGetDataContext), same as
 		// the get_data path, so the search filter builds + renders.
-		const context = await buildGetDataContext(rqo, resolved);
+		const context = await buildGetDataContext(rqo, resolved, principal);
 		return { status: 200, body: { result: { context, data: resolved }, msg: 'OK' } };
 	}
 
@@ -210,7 +210,7 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 				}
 			}
 		}
-		const componentContext = await buildGetDataContext(rqo, componentData);
+		const componentContext = await buildGetDataContext(rqo, componentData, principal);
 		return {
 			status: 200,
 			body: { result: { context: componentContext, data: componentData }, msg: 'OK' },

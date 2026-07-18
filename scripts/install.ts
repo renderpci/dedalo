@@ -14,6 +14,7 @@
  *   bun run scripts/install.ts --db-name dedalo_x --db-user u --entity mib \
  *       --root-password '...' [--db-host /tmp] [--db-port 5432] \
  *       [--db-password ...] [--hierarchies es,fr] [--diffusion --mysql-* ...] \
+ *       [--mailer --smtp-host smtp.example.org --smtp-user ... --smtp-password ...] \
  *       [--skip-tools] [--yes]
  *
  * Secrets: --root-password or DEDALO_INSTALL_ROOT_PASSWORD (never echoed).
@@ -75,7 +76,21 @@ const cfg = {
 	mysql_database: envOr('mysql-name'),
 	mysql_username: envOr('mysql-user'),
 	mysql_password: envOr('mysql-password'),
+	// Outbound email (SMTP relay — password recovery); same keys the wizard's
+	// optional step posts, persisted as DEDALO_SMTP_* by persistConfig.
+	mailer: has('mailer'),
+	smtp_host: envOr('smtp-host'),
+	smtp_port: envOr('smtp-port', '587'),
+	smtp_secure: envOr('smtp-secure', 'tls'),
+	smtp_user: envOr('smtp-user'),
+	smtp_pass: envOr('smtp-password'),
+	smtp_from: envOr('smtp-from'),
+	smtp_from_name: envOr('smtp-from-name'),
 };
+if (cfg.mailer && cfg.smtp_host === '') {
+	// An empty host would persist a DISABLED mailer — refuse the contradiction.
+	fail('--mailer requires --smtp-host');
+}
 const rootPassword = flag('root-password') ?? process.env.DEDALO_INSTALL_ROOT_PASSWORD;
 if (!rootPassword) fail('--root-password (or DEDALO_INSTALL_ROOT_PASSWORD) is required');
 const hierarchies = (flag('hierarchies') ?? '')
@@ -129,6 +144,16 @@ async function main(): Promise<void> {
 	if (!probe.can_connect && !probe.db_exists) fail(probe.msg);
 	if (!probe.db_exists)
 		fail(`database '${cfg.db_database}' must exist (empty) first — ${probe.msg}`);
+
+	if (cfg.mailer) {
+		// Verify the relay like the wizard does (connection + auth, no email
+		// sent) — but WARN instead of failing: an unattended install may
+		// legitimately configure a relay the build host cannot reach yet.
+		const { testMailerConnection } = await import('../src/core/install/mailer_probe.ts');
+		step('SMTP connection');
+		const smtp = await testMailerConnection(cfg);
+		if (!smtp.result) console.warn(`  ⚠ ${smtp.msg} — writing the SMTP config anyway`);
+	}
 
 	const { persistConfig } = await import('../src/core/install/config_persist.ts');
 	step('write ../private/.env');

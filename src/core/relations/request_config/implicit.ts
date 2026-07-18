@@ -57,7 +57,8 @@ const DEPRECATED_SECURITY_AREAS_TIPO = 'dd249';
  * level ≥ 1 on — checked against the resolved TARGET section — survive the
  * implicit map. The principal is read from the request-context ALS at CALL
  * TIME (never module-hoisted); absent principal (internal resolutions,
- * harnesses) or admin = no filter. Returns the surviving subset.
+ * harnesses) = no filter. Admin-flagged users go through the matrix like PHP
+ * (no bypass); the superuser passes via getPermissions' own short-circuit.
  */
 async function filterAuthorizedRelated(
 	componentTipos: string[],
@@ -65,7 +66,7 @@ async function filterAuthorizedRelated(
 ): Promise<Set<string>> {
 	const { currentPrincipal } = await import('../../security/request_context.ts');
 	const principal = currentPrincipal();
-	if (principal === undefined || principal.isGlobalAdmin) return new Set(componentTipos);
+	if (principal === undefined) return new Set(componentTipos);
 	const { ddoIsAuthorized } = await import('../../security/permissions.ts');
 	const kept = new Set<string>();
 	for (const tipo of componentTipos) {

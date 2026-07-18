@@ -14,8 +14,8 @@
 
 import { describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
-import { getSectionRealTipo } from '../../src/core/resolve/security_access_datalist.ts';
 import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
+import { getSectionRealTipo } from '../../src/core/resolve/security_access_datalist.ts';
 import { deriveSectionDdoMap } from '../../src/core/section/read.ts';
 
 // DB reachability probe: only a genuinely unreachable DB downgrades to SKIP.

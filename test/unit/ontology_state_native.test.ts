@@ -173,7 +173,7 @@ describe('ensureOntology', () => {
 		expect(outcome.applied).toEqual(['~ zzo1 (term)']);
 	});
 
-	test("does NOT delete the bootstrap main node as an orphan", async () => {
+	test('does NOT delete the bootstrap main node as an orphan', async () => {
 		const outcome = await ensureOntology(TLD, USER_ID);
 		// zzo0 is created by the bootstrap, not parsed from a matrix record — it must
 		// survive every reconcile, or the tld loses its runtime root.

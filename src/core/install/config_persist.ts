@@ -94,6 +94,7 @@ export async function persistConfig(o: Record<string, unknown>): Promise<Persist
 		return value === undefined || value === null ? dflt : String(value);
 	};
 	const diffusion = o.diffusion === true;
+	const mailer = o.mailer === true;
 	const prior = existingEnv();
 	const generated: Record<string, string> = {};
 
@@ -171,6 +172,19 @@ export async function persistConfig(o: Record<string, unknown>): Promise<Persist
 			`DEDALO_DIFFUSION_DB_PASSWORD=${envQuote(str('mysql_password'))}`,
 			`DEDALO_DIFFUSION_DB_NAME=${envQuote(str('mysql_database'))}`,
 			`DEDALO_DIFFUSION_INTERNAL_TOKEN=${envQuote(diffusionToken ?? '')}`,
+		);
+	}
+	if (mailer) {
+		lines.push(
+			'',
+			'# --- Outbound email (SMTP relay — password recovery) ---',
+			`DEDALO_SMTP_HOST=${envQuote(str('smtp_host'))}`,
+			`DEDALO_SMTP_PORT=${envQuote(str('smtp_port', '587'))}`,
+			`DEDALO_SMTP_SECURE=${envQuote(str('smtp_secure', 'tls'))}`,
+			`DEDALO_SMTP_USER=${envQuote(str('smtp_user'))}`,
+			`DEDALO_SMTP_PASS=${envQuote(str('smtp_pass'))}`,
+			`DEDALO_SMTP_FROM=${envQuote(str('smtp_from'))}`,
+			`DEDALO_SMTP_FROM_NAME=${envQuote(str('smtp_from_name'))}`,
 		);
 	}
 	// NEVER DELETE BY OMISSION. This writer rebuilds .env from the posted form, so

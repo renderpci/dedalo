@@ -71,10 +71,11 @@ async function deleteTwins(): Promise<void> {
 		`DELETE FROM matrix_activity WHERE section_tipo = $1 AND section_id IN (${TWIN_ACTIVITY_IDS.join(',')})`,
 		[ACTIVITY],
 	);
-	await sql.unsafe(
-		`DELETE FROM matrix_users WHERE section_tipo = $1 AND section_id IN ($2, $3)`,
-		[USERS, TWIN_USER_ID, TWIN_USER_ID_2],
-	);
+	await sql.unsafe('DELETE FROM matrix_users WHERE section_tipo = $1 AND section_id IN ($2, $3)', [
+		USERS,
+		TWIN_USER_ID,
+		TWIN_USER_ID_2,
+	]);
 }
 
 async function seedTwins(): Promise<void> {
@@ -383,9 +384,7 @@ describe('search-mode component read (Activity dd542 Who picker)', () => {
 			[{ action: 'remove', id: afterSecond[0]?.id ?? 1, value: null }],
 			afterSecond,
 		);
-		expect(afterUnlink.map((entry) => String(entry.section_id))).toEqual([
-			String(TWIN_USER_ID_2),
-		]);
+		expect(afterUnlink.map((entry) => String(entry.section_id))).toEqual([String(TWIN_USER_ID_2)]);
 		expect(afterUnlink[0]?.id).toBe(1); // re-stamped from 1 again
 	});
 
@@ -443,7 +442,7 @@ describe('search-mode component read (Activity dd542 Who picker)', () => {
 		// is what lands in the component's data.entries (refresh tmp_api_response).
 		const { body: echoBody } = await dispatchRqo(pickSaveRqo([insertChange(TWIN_USER_ID)]), ctx);
 		const echoData =
-			((echoBody as { result?: { data?: Record<string, unknown>[] } }).result?.data ?? []);
+			(echoBody as { result?: { data?: Record<string, unknown>[] } }).result?.data ?? [];
 		const echoMain = echoData.find(
 			(item) => item.tipo === WHO_PORTAL && String(item.section_id) === 'search_1',
 		) as {
@@ -493,8 +492,7 @@ describe('search-mode component read (Activity dd542 Who picker)', () => {
 			},
 		} as unknown as Rqo;
 		const { body } = await dispatchRqo(searchRqo, ctx);
-		const data =
-			((body as { result?: { data?: Record<string, unknown>[] } }).result?.data ?? []);
+		const data = (body as { result?: { data?: Record<string, unknown>[] } }).result?.data ?? [];
 		const rows = data
 			.filter((item) => item.tipo === WHO_PORTAL)
 			.map((item) => Number(item.row_section_id))

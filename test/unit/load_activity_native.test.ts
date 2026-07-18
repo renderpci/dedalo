@@ -20,6 +20,15 @@ import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 
 const SECTION = 'test3';
 
+// coreApiActions is a Record<string, ActionHandler>, so under noUncheckedIndexedAccess
+// every lookup is possibly-undefined. Resolve the handler ONCE and fail loudly if the
+// action is not registered — an unregistered 'read' is a real regression, and letting
+// each call site assert it away would hide that behind three identical crashes.
+const readAction = coreApiActions.read;
+if (!readAction) {
+	throw new Error("load_activity: dd_core_api has no 'read' action registered");
+}
+
 const admin = await resolvePrincipal(-1);
 const ctx = {
 	principal: admin,
@@ -49,7 +58,7 @@ afterEach(async () => {
 
 test("list-mode section read writes a section-keyed 'LOAD LIST' (code 7) row", async () => {
 	mark = await watermark();
-	const result = await coreApiActions.read(
+	const result = await readAction(
 		{
 			action: 'read',
 			dd_api: 'dd_core_api',
@@ -68,7 +77,7 @@ test("list-mode section read writes a section-keyed 'LOAD LIST' (code 7) row", a
 
 test("edit-mode section read writes a 'LOAD EDIT' (code 6) row", async () => {
 	mark = await watermark();
-	await coreApiActions.read(
+	await readAction(
 		{
 			action: 'read',
 			dd_api: 'dd_core_api',
@@ -89,7 +98,7 @@ test('search-mode read leaves NO activity footprint (PHP exclusion)', async () =
 	// 'search' mode is not a served read path (readSectionRows throws in v0); the
 	// point is that NO activity row leaks — the exclusion holds even on that path.
 	try {
-		await coreApiActions.read(
+		await readAction(
 			{
 				action: 'read',
 				dd_api: 'dd_core_api',

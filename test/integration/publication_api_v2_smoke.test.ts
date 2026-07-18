@@ -27,7 +27,13 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { readEnv } from '../../src/config/env.ts';
 
-const RESOLVED_SOCKET = readEnv('DEDALO_DIFFUSION_DB_SOCKET', '/tmp/mysql.sock') as string;
+// `?? literal`, not a catalog reader: these are TEST-PROBE fallbacks (where to look for a
+// local dev MariaDB, what to hand the spawned server), not engine defaults. The catalog
+// deliberately declares no default for SOCKET/HOST — the engine demands them explicitly —
+// so readString() here would resolve to undefined and break the skip gate below.
+// Equivalent to the deleted `readEnv(k, 'x')` form, empty-string fidelity included:
+// a key set to '' is not undefined, so `??` keeps '' exactly as the 2-arg form did.
+const RESOLVED_SOCKET = readEnv('DEDALO_DIFFUSION_DB_SOCKET') ?? '/tmp/mysql.sock';
 const HAVE_DB =
 	readEnv('DEDALO_DIFFUSION_DB_USER') !== undefined &&
 	(readEnv('DEDALO_DIFFUSION_DB_HOST') !== undefined || existsSync(RESOLVED_SOCKET));
@@ -58,11 +64,11 @@ async function startApi(): Promise<void> {
 			BASE_PATH: '',
 			DEPLOYMENT_MODE: 'standalone',
 			TRUST_PROXY: 'false',
-			DB_SOCKET: readEnv('DEDALO_DIFFUSION_DB_SOCKET', '') as string,
-			DB_HOST: readEnv('DEDALO_DIFFUSION_DB_HOST', 'localhost') as string,
-			DB_PORT: readEnv('DEDALO_DIFFUSION_DB_PORT', '3306') as string,
-			DB_USER: readEnv('DEDALO_DIFFUSION_DB_USER', '') as string,
-			DB_PASSWORD: readEnv('DEDALO_DIFFUSION_DB_PASSWORD', '') as string,
+			DB_SOCKET: readEnv('DEDALO_DIFFUSION_DB_SOCKET') ?? '',
+			DB_HOST: readEnv('DEDALO_DIFFUSION_DB_HOST') ?? 'localhost',
+			DB_PORT: readEnv('DEDALO_DIFFUSION_DB_PORT') ?? '3306',
+			DB_USER: readEnv('DEDALO_DIFFUSION_DB_USER') ?? '',
+			DB_PASSWORD: readEnv('DEDALO_DIFFUSION_DB_PASSWORD') ?? '',
 			DB_NAMES: TARGET_DATABASE,
 			// No key: this run asserts the public surface. Rate limiting stays on.
 			API_KEYS: '',

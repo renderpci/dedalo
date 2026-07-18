@@ -53,6 +53,12 @@ export async function runInstallStep(rqo: Rqo, context: ApiRequestContext): Prom
 			return ok({ ...r });
 		}
 
+		case 'test_mailer_connection': {
+			const { testMailerConnection } = await import('./mailer_probe.ts');
+			const r = await testMailerConnection(options);
+			return ok({ ...r });
+		}
+
 		case 'check_directories': {
 			const { checkDirectories } = await import('./directories.ts');
 			const r = checkDirectories({ create: options.create === true });

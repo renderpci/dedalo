@@ -98,6 +98,65 @@ describe('persist_config (P2)', () => {
 		expect(parsed.DEDALO_DIFFUSION_DB_NAME).toBe('web_dedalo');
 	});
 
+	test('mailer enabled → the DEDALO_SMTP_* keys are written from the posted form', async () => {
+		const result = await persistConfig({
+			...BASE_CFG,
+			mailer: true,
+			smtp_host: 'smtp.example.org',
+			smtp_port: '465',
+			smtp_secure: 'ssl',
+			smtp_user: 'dedalo@example.org',
+			smtp_pass: 'mail pw',
+			smtp_from: 'noreply@example.org',
+			smtp_from_name: 'Dédalo',
+		});
+		expect(result.result).toBe(true);
+		const parsed = parseEnvFile(readFileSync(join(scratch, '.env'), 'utf8'));
+		expect(parsed.DEDALO_SMTP_HOST).toBe('smtp.example.org');
+		expect(parsed.DEDALO_SMTP_PORT).toBe('465');
+		expect(parsed.DEDALO_SMTP_SECURE).toBe('ssl');
+		expect(parsed.DEDALO_SMTP_USER).toBe('dedalo@example.org');
+		expect(parsed.DEDALO_SMTP_PASS).toBe('mail pw');
+		expect(parsed.DEDALO_SMTP_FROM).toBe('noreply@example.org');
+		expect(parsed.DEDALO_SMTP_FROM_NAME).toBe('Dédalo');
+	});
+
+	test('mailer disabled/absent → no SMTP keys written', async () => {
+		// Own scratch: the shared one may already carry SMTP keys from the enabled
+		// test, and the never-delete invariant would (correctly) preserve them.
+		const scratch2 = mkdtempSync(join(tmpdir(), 'dedalo_install_p2_mailoff_'));
+		process.env.DEDALO_INSTALL_PRIVATE_DIR = scratch2;
+		try {
+			const result = await persistConfig({ ...BASE_CFG, smtp_host: 'smtp.example.org' });
+			expect(result.result).toBe(true);
+			const parsed = parseEnvFile(readFileSync(join(scratch2, '.env'), 'utf8'));
+			// The smtp_* form fields are ignored without the explicit mailer:true flag.
+			expect(parsed.DEDALO_SMTP_HOST).toBeUndefined();
+			expect(parsed.DEDALO_SMTP_PORT).toBeUndefined();
+		} finally {
+			process.env.DEDALO_INSTALL_PRIVATE_DIR = scratch;
+			rmSync(scratch2, { recursive: true, force: true });
+		}
+	});
+
+	test('previously-written SMTP keys survive a mailer-less re-save (never-delete)', async () => {
+		const envPath = join(scratch, '.env');
+		writeFileSync(
+			envPath,
+			[
+				'DEDALO_SALT_STRING=deadbeef',
+				'DEDALO_SMTP_HOST=smtp.old.org',
+				'DEDALO_SMTP_USER=old',
+				'',
+			].join('\n'),
+		);
+		const result = await persistConfig({ ...BASE_CFG });
+		expect(result.result).toBe(true);
+		const parsed = parseEnvFile(readFileSync(envPath, 'utf8'));
+		expect(parsed.DEDALO_SMTP_HOST).toBe('smtp.old.org');
+		expect(parsed.DEDALO_SMTP_USER).toBe('old');
+	});
+
 	/**
 	 * The 2026-07-12 data loss, mechanically. The wizard invites a re-save (a page
 	 * reload walks the config steps again from an EMPTY cfg), and persist_config

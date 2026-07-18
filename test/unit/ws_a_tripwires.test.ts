@@ -129,6 +129,14 @@ const INLINE_SECTION_ID_MATCH_RATCHET = new Set<string>([
 	'src/core/components/component_info/widgets/oh/media_icons.ts',
 	'src/core/components/component_info/widgets/state/state.ts',
 	'src/core/search/builders/builder_string.ts',
+	// Documented NON-LOCATOR use (2026-07-18): builder_json.ts's ONLY section_id
+	// occurrence is `AND m2.section_id != ${context.alias}.section_id` — SQL text
+	// inside a template literal, a Postgres column-to-column comparison in the
+	// generated dedup subquery. It is not a JS locator match, so compareLocators is
+	// inapplicable (there is no locator quad, and no JS value is being compared at
+	// all). The regex scans raw file text and cannot tell SQL from JS.
+	// NOT an upward extension of the inline-matcher debt.
+	'src/core/search/builders/builder_json.ts',
 	'src/core/section/locks.ts', // lock-triple key equality (documented non-locator use)
 	// Documented NON-LOCATOR use (2026-07-11, first green hermetic run): seed.ts's
 	// `record.section_id === CLONE_SOURCE_ID` matches a CanonicalRecord inside the
