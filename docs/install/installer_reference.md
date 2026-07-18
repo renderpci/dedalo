@@ -53,6 +53,7 @@ bun run scripts/install.ts \
   [--langs lg-spa,lg-eng] [--app-lang lg-spa] [--data-lang lg-spa] \
   [--hierarchies es,lg] \
   [--diffusion --mysql-name web_dedalo --mysql-user d --mysql-password '…'] \
+  [--mailer --smtp-host smtp.example.org --smtp-user dedalo@example.org --smtp-password '…'] \
   [--skip-tools]
 ```
 
@@ -74,6 +75,7 @@ bun run scripts/install.ts \
 | `--data-lang` | no | first of `--langs` | the default data language |
 | `--hierarchies` | no | none | comma list of hierarchy codes, e.g. `es,lg,ts` |
 | `--diffusion` | no | off | writes the MariaDB keys; pair with `--mysql-host/-port/-socket/-name/-user/-password` |
+| `--mailer` | no | off | writes the outbound-email (SMTP) keys, enabling [password recovery](../management/password_recovery.md); requires `--smtp-host`, pair with `--smtp-port` (587), `--smtp-secure` (`tls`\|`ssl`\|`none`), `--smtp-user`, `--smtp-password`, `--smtp-from`, `--smtp-from-name`. The relay is probed (connection + auth, no email sent); a failure warns but does not stop the install |
 | `--skip-tools` | no | off | skips tool registration (register them later from the Development Area) |
 | `--information`, `--info-key` | no | `ts-install`, `ts` | free-text install provenance, recorded in the state file |
 
@@ -149,7 +151,7 @@ success to clean up after.
 | Languages | `DEDALO_APPLICATION_LANGS`, `DEDALO_PROJECTS_DEFAULT_LANGS`, `DEDALO_APPLICATION_LANGS_DEFAULT`, `DEDALO_DATA_LANG_DEFAULT`, `DEDALO_APPLICATION_LANG`, `DEDALO_DATA_LANG`, `DEDALO_STRUCTURE_LANG` |
 | Secret | one generated secret, printed once |
 | Diffusion *(only with `--diffusion`)* | `DEDALO_DIFFUSION_NATIVE`, `DEDALO_DIFFUSION_DB_*`, `DEDALO_DIFFUSION_INTERNAL_TOKEN` |
-| Outbound email *(browser wizard only, when its optional step is enabled)* | `DEDALO_SMTP_HOST`, `DEDALO_SMTP_PORT`, `DEDALO_SMTP_SECURE`, `DEDALO_SMTP_USER`, `DEDALO_SMTP_PASS`, `DEDALO_SMTP_FROM`, `DEDALO_SMTP_FROM_NAME` |
+| Outbound email *(only with `--mailer`, or the wizard's optional step)* | `DEDALO_SMTP_HOST`, `DEDALO_SMTP_PORT`, `DEDALO_SMTP_SECURE`, `DEDALO_SMTP_USER`, `DEDALO_SMTP_PASS`, `DEDALO_SMTP_FROM`, `DEDALO_SMTP_FROM_NAME` |
 
 !!! danger "Everything else is yours to append — afterwards"
     **`MEDIA_PATH`, `SERVER_UNIX_SOCKET`, the pool settings, the timeouts, the
