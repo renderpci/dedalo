@@ -332,6 +332,18 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 	// RQO that omits lang resolves the session's active data language.
 	const lang = source.lang ?? currentDataLang();
 
+	// A synthetic search-filter id ('search_<n>', search.js get_section_id)
+	// addresses NO matrix record — its Number() is NaN. Resolve it to a null
+	// record WITHOUT touching the DB, so the search branches below build a
+	// record-independent widget (PHP get_data serves the datalist/empty item).
+	// This also spares VIRTUAL sections whose matrix "table" is not a readable
+	// record store: dd15 Time Machine → matrix_time_machine, which readMatrixRecord
+	// rejects via the identifier allowlist. Without this guard, dragging any dd15
+	// field into the search panel threw and every filter rendered "Invalid
+	// component". A real numeric id (incl. 0 and root -1) still reads normally.
+	const numericSectionId = Number(sectionId);
+	const hasRecordId = !Number.isNaN(numericSectionId);
+
 	// Time Machine preview override (PHP component_common::get_data data_source
 	// ='tm' branch, dd_core_api :2372-2383): the tool_time_machine preview pane
 	// loads this component's value from a SPECIFIC matrix_time_machine row
@@ -356,7 +368,9 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 	// through the generic emission path against the target record.
 	if (getColumnNameByModel(model) !== 'relation') {
 		const literalTable = (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix';
-		let literalRecord = await readMatrixRecord(literalTable, sectionTipo, Number(sectionId));
+		let literalRecord = hasRecordId
+			? await readMatrixRecord(literalTable, sectionTipo, numericSectionId)
+			: null;
 		if (literalRecord === null) {
 			// TM preview of a component whose live record is gone (restored-from-
 			// deletion history): PHP still plays back the snapshot, so materialize an
@@ -457,7 +471,7 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 		model === 'component_filter_master';
 
 	const table = (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix';
-	let record = await readMatrixRecord(table, sectionTipo, Number(sectionId));
+	let record = hasRecordId ? await readMatrixRecord(table, sectionTipo, numericSectionId) : null;
 	if (record === null && tmOverride !== null) {
 		// TM preview of a component whose live record is gone: play back the
 		// snapshot against an empty virtual record (PHP get_data still renders it).
