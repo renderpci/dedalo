@@ -180,9 +180,26 @@ export async function buildImplicitComponentListConfig(
 		});
 	}
 	// section_list nodes may omit the target section — fall back to the
-	// component's main related section (PHP :454-473).
-	if (targetSectionTipo === null && sourceTipo !== context.ownerTipo) {
+	// COMPONENT's main related section (PHP resolve_ar_related_list_component
+	// :454-473). SECTION owners are excluded: PHP branches on the caller model
+	// (resolve_ar_related_list :354) and resolve_ar_related_list_section returns
+	// the section_list relation nodes VERBATIM — it never prepends a main
+	// related section. A section's columns belong to the section itself, so the
+	// target stays context.ownerSectionTipo (PHP clean_and_extract_related's
+	// $section_tipo default). Stamping the section's *related* section here
+	// keyed every dd774 permission lookup to the wrong section, so every column
+	// was dropped for non-superusers (root passes via getPermissions' -1
+	// short-circuit, which is why this only showed up for real users).
+	if (targetSectionTipo === null && !context.ownerIsSection && sourceTipo !== context.ownerTipo) {
 		targetSectionTipo = await getMainRelatedSectionTipo(context.ownerTipo);
+	}
+	// PHP clean_and_extract_related :508 is handed the CALLER's section_tipo as
+	// the default target and only overwrites it when a section node is found —
+	// so a section whose section_list carries no section node targets ITSELF.
+	// This is what puts the section back on the sqo (and on every ddo below);
+	// component owners keep the null → empty-sqo behaviour they had.
+	if (targetSectionTipo === null && context.ownerIsSection) {
+		targetSectionTipo = context.ownerSectionTipo;
 	}
 	// Fix section_tipo for ddos read before the section node appeared.
 	if (targetSectionTipo !== null) {
