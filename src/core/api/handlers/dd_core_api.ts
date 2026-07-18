@@ -156,19 +156,35 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				const { resolveSearchData, buildGetDataContext } = await import('../../section/read.ts');
 				const { buildDataItem } = await import('../../resolve/component_data.ts');
 				const resolved = await resolveSearchData(resolveRqo, principal);
+				// resolveSearchData emits the main item with a NULL record identity
+				// (synthetic record — read.ts expandPortal stamp), so match by tipo
+				// only and RE-STAMP the client's synthetic id: the client picks its
+				// item by String(el.section_id)===String(self.section_id)
+				// ('search_1', component_common.js:400). The resolved entries are the
+				// string-cast locators the JSONB @> containment needs — rebuilding
+				// from the raw numeric `picked` here would echo a numeric section_id
+				// that misses every string-stored relation locator (0 rows).
 				let mainItem = resolved.find(
 					(item) =>
 						(item as { tipo?: string }).tipo === source.tipo &&
-						String((item as { section_id?: unknown }).section_id) === String(source.section_id),
+						(item as { section_tipo?: string }).section_tipo === source.section_tipo,
 				);
-				if (mainItem === undefined) {
+				if (mainItem !== undefined) {
+					(mainItem as { section_id?: unknown }).section_id = source.section_id;
+				} else {
 					mainItem = buildDataItem(
 						source.tipo,
 						source.section_tipo,
 						source.section_id,
 						'search',
 						source.lang ?? 'lg-nolan',
-						picked,
+						// Same string cast as resolveSearchData's echo (PHP locator
+						// parity, class.locator.php set_section_id).
+						picked.map((locator) =>
+							locator.section_id !== undefined && locator.section_id !== null
+								? { ...locator, section_id: String(locator.section_id) }
+								: locator,
+						),
 					);
 					resolved.unshift(mainItem);
 				}
