@@ -61,6 +61,11 @@ export const NO_LOGIN_ACTIONS: ReadonlySet<string> = new Set([
 	'dd_core_api:get_environment',
 	'dd_core_api:start',
 	'dd_utils_api:get_login_context',
+	// Forgot-password recovery (PHP dd_manager pre-auth whitelist): the user is
+	// locked out by definition. Anti-enumeration/throttling live in
+	// security/password_reset.ts.
+	'dd_utils_api:request_password_reset',
+	'dd_utils_api:confirm_password_reset',
 	// Machine-to-machine intake from remote installations' servers (WC-017);
 	// Gate 1c (flag + IP) runs first, the handler owns throttle/token/schema.
 	'dd_error_report_api:receive_report',
@@ -86,6 +91,11 @@ export const CSRF_EXEMPT_ACTIONS: ReadonlySet<string> = new Set([
 	'dd_core_api:get_environment',
 	'dd_core_api:start',
 	'dd_utils_api:get_login_context',
+	// Forgot-password recovery (PHP CSRF_EXEMPT_ACTIONS parity): pre-auth by
+	// design — the login page holds no token; there is no session authority for
+	// a cross-site request to ride.
+	'dd_utils_api:request_password_reset',
+	'dd_utils_api:confirm_password_reset',
 	// PHP CSRF_EXEMPT_ACTIONS: the service worker fires it from its own
 	// context, outside the page that holds the token. Read-only; still
 	// AUTHENTICATED (deliberately NOT in NO_LOGIN_ACTIONS, matching PHP).
@@ -137,6 +147,19 @@ const ACTION_REGISTRY: Record<string, Record<string, ActionHandler>> = {
  */
 export async function dispatchRqo(rqo: Rqo, context: ApiRequestContext): Promise<ApiResult> {
 	const startedAt = context.startedAt ?? performance.now();
+	// TEMP DEBUG (dd543 who-search) — REMOVE: capture activity-related RQOs.
+	try {
+		const rqoText = JSON.stringify(rqo);
+		if (rqoText.includes('dd542') || rqoText.includes('dd543')) {
+			const { appendFileSync } = await import('node:fs');
+			appendFileSync(
+				'/private/tmp/claude-501/-Users-render-Desktop-trabajos-dedalo-v7-master-dedalo/7a750838-f4aa-4fef-8c6b-1cb80b7249ec/scratchpad/rqo_capture.jsonl',
+				`${new Date().toISOString()} ${rqoText}\n`,
+			);
+		}
+	} catch {
+		/* debug-only, never break dispatch */
+	}
 	const result = await executeRqo(rqo, context);
 	logApiAccess({
 		requestId: context.requestId,

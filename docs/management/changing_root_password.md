@@ -1,6 +1,6 @@
 # Changing root password
 
-> See also: [Management and maintenance](index.md) · [Users, profiles and permissions](users_and_permissions.md)
+> See also: [Management and maintenance](index.md) · [Users, profiles and permissions](users_and_permissions.md) · [Password recovery (forgot password)](password_recovery.md)
 
 ## Introduction
 
@@ -10,9 +10,9 @@ The root user password is established during the initial installation process an
 
 ## Procedure: root password reset
 
-For security reasons, the root user is not accessible via the Dédalo web interface, and changing it is not (yet) exposed through the maintenance panel: nothing in the ordinary component-save path hashes a new password on write (`component_password`'s descriptor, `src/core/components/component_password/descriptor.ts`, is a plain string column with no save-time hashing hook). The server can only **verify** Argon2id hashes on login (`src/core/security/auth.ts`, via `Bun.password.verify`).
+Ordinary users do not need this procedure: an administrator sets a new password by editing the user record in the Users section (the write engine hashes it with Argon2id on save — `src/core/section/record/save_component.ts` via `src/core/security/password_hash.ts`), and users can recover a forgotten password themselves from the login screen — see [Password recovery](password_recovery.md).
 
-Until a write-side hashing hook ships, resetting root's (or any user's) password is a manual database task, requiring:
+The root user is different. For security reasons it is not accessible via the Dédalo web interface, it is excluded from the self-service recovery flow, and changing its password is not exposed through the maintenance panel. Resetting root's password is therefore a manual database task, requiring:
 
 1. Server access using the GNU/Linux account created for the Dédalo installation.
 2. Privileged access to the Dédalo PostgreSQL database.

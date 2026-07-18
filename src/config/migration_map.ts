@@ -501,6 +501,16 @@ export const NEW_IN_V7: readonly string[] = [
 	'LOGIN_LOCKOUT_SECONDS',
 	'LOGIN_ACCOUNT_MAX_ATTEMPTS',
 	'PERMISSIONS_CACHE_TTL_SECONDS',
+	// mailer + password recovery (no v6 mailer existed)
+	'DEDALO_SMTP_HOST',
+	'DEDALO_SMTP_PORT',
+	'DEDALO_SMTP_SECURE',
+	'DEDALO_SMTP_USER',
+	'DEDALO_SMTP_PASS',
+	'DEDALO_SMTP_FROM',
+	'DEDALO_SMTP_FROM_NAME',
+	'DEDALO_PWRESET_CODE_TTL',
+	'DEDALO_PWRESET_MAX_ATTEMPTS',
 	// menu / areas / defaults
 	'AREAS_DENY',
 	// 'APPLICATION_LANGS' was DELETED here (2026-07-13). It was never a real key: nothing

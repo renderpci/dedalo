@@ -2216,6 +2216,151 @@ TRUSTED_PROXY_HOPS=1
 
 ---
 
+## Outbound email and password recovery {#mailer}
+
+Dédalo relays outbound email (password-recovery codes) through an existing mailbox over SMTP — it never runs its own mail server. Leaving `DEDALO_SMTP_HOST` empty disables sending entirely, which also disables the login screen's password-recovery emails.
+
+### Defining the SMTP server
+
+DEDALO_SMTP_HOST `string`
+
+The hostname of the SMTP server Dédalo relays outbound email through (recovery
+codes, notifications). Leaving it empty **disables the mailer entirely** — features
+that need email (the login screen's password recovery) will silently skip sending.
+
+```bash
+DEDALO_SMTP_HOST="smtp.example.org"
+```
+
+*Default: (empty)*
+
+---
+
+### Defining the SMTP port
+
+DEDALO_SMTP_PORT `int`
+
+The TCP port of the SMTP server. The default `587` is the submission port used
+with STARTTLS; use `465` with `DEDALO_SMTP_SECURE='ssl'` for implicit TLS.
+
+```bash
+DEDALO_SMTP_PORT=587
+```
+
+*Default: 587*
+
+---
+
+### Defining the SMTP encryption mode
+
+DEDALO_SMTP_SECURE `string`
+
+How the SMTP connection is encrypted:
+
+* `'tls'` : STARTTLS on a plain connection (default, pairs with port 587)
+* `'ssl'` : implicit TLS from the first byte (pairs with port 465)
+* `'none'` : no encryption — only ever acceptable for a relay on localhost
+
+```bash
+DEDALO_SMTP_SECURE=tls
+```
+
+*Default: tls*
+
+---
+
+### Defining the SMTP credentials
+
+DEDALO_SMTP_USER `string`
+
+The SMTP AUTH username (usually the mailbox login). Leave it empty for a relay
+that accepts unauthenticated mail (e.g. a local MTA).
+
+```bash
+DEDALO_SMTP_USER="dedalo@example.org"
+```
+
+*Default: (empty)*
+
+---
+
+### Defining the SMTP credentials
+
+DEDALO_SMTP_PASS `string`
+
+The SMTP AUTH password for `DEDALO_SMTP_USER`. Ignored when the user is empty.
+
+```bash
+DEDALO_SMTP_PASS="my_smtp_password"
+```
+
+*Default: (empty)*
+
+---
+
+### Defining the From address
+
+DEDALO_SMTP_FROM `string`
+
+The envelope/header From address of outbound mail. It must be an address the
+relay is allowed to send as (most providers refuse arbitrary senders). When empty,
+`DEDALO_SMTP_USER` is used; if both are empty the mailer refuses to send.
+
+```bash
+DEDALO_SMTP_FROM="dedalo@example.org"
+```
+
+*Default: (empty)*
+
+---
+
+### Defining the From address
+
+DEDALO_SMTP_FROM_NAME `string` (optional)
+
+An optional display name shown next to the From address.
+
+```bash
+DEDALO_SMTP_FROM_NAME="Dédalo"
+```
+
+*Default: (empty)*
+
+---
+
+### Defining the password recovery code lifetime
+
+DEDALO_PWRESET_CODE_TTL `int`
+
+How long, **in seconds**, an emailed password-recovery code stays valid. The code
+is single-use and its short life is part of what makes the 8-digit space safe, so
+keep this small. Default `600` (10 minutes).
+
+```bash
+DEDALO_PWRESET_CODE_TTL=600
+```
+
+*Default: 600*
+
+---
+
+### Defining the password recovery attempt cap
+
+DEDALO_PWRESET_MAX_ATTEMPTS `int`
+
+How many wrong guesses are allowed against a single issued recovery code before
+it is invalidated and the user must request a new one. Together with the short
+`DEDALO_PWRESET_CODE_TTL` this caps brute-force odds against the 8-digit code at
+a few in a hundred million. Default `5`.
+
+```bash
+DEDALO_PWRESET_MAX_ATTEMPTS=5
+```
+
+*Default: 5*
+
+---
+
 ## Logs, backups and diagnostics {#ops}
 
 ### Defining the access log

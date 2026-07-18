@@ -128,6 +128,13 @@ database.exec(`
 		attempted_at INTEGER NOT NULL
 	);
 	CREATE INDEX IF NOT EXISTS idx_attempts_key ON login_attempts(attempt_key, attempted_at);
+	CREATE TABLE IF NOT EXISTS password_resets (
+		reset_key TEXT PRIMARY KEY,
+		user_id INTEGER NOT NULL,
+		code_hash TEXT NOT NULL,
+		expires INTEGER NOT NULL,
+		attempts INTEGER NOT NULL DEFAULT 0
+	);
 `);
 
 // Migration: the per-session language columns were added after the sessions
@@ -355,6 +362,71 @@ export function clearAttempts(attemptKey: string): void {
 	database.query('DELETE FROM login_attempts WHERE attempt_key = ?').run(attemptKey);
 }
 
+// ---------------------------------------------------------------------------
+// Password-recovery entries (security/password_reset.ts) — the TS analog of
+// PHP's DEDALO_CACHE/dd_password_reset/<sha1(reset_id)>.json file store. The
+// row key is sha256(reset_id), never the raw id, so a leaked DB file cannot be
+// replayed against confirm(); code_hash is an Argon2id digest of the 8-digit
+// code — the plaintext code exists only in the recovery email.
+// ---------------------------------------------------------------------------
+
+export interface PasswordResetEntry {
+	userId: number;
+	codeHash: string;
+	expires: number;
+	attempts: number;
+}
+
+/** Persist a pending reset (replacing any prior entry for the same reset_id). */
+export function storePasswordReset(
+	resetId: string,
+	userId: number,
+	codeHash: string,
+	ttlSeconds: number,
+): void {
+	database
+		.query(
+			`INSERT OR REPLACE INTO password_resets (reset_key, user_id, code_hash, expires, attempts)
+			 VALUES (?, ?, ?, ?, 0)`,
+		)
+		.run(sha256Hex(resetId), userId, codeHash, nowSeconds() + ttlSeconds);
+	// Opportunistic GC (same pattern as recordFailedAttempt): expired entries can
+	// never verify again, so drop them here rather than with a background timer.
+	database.query('DELETE FROM password_resets WHERE expires < ?').run(nowSeconds());
+}
+
+export function loadPasswordReset(resetId: string): PasswordResetEntry | null {
+	const row = database
+		.query('SELECT user_id, code_hash, expires, attempts FROM password_resets WHERE reset_key = ?')
+		.get(sha256Hex(resetId)) as {
+		user_id: number;
+		code_hash: string;
+		expires: number;
+		attempts: number;
+	} | null;
+	if (row === null) return null;
+	return {
+		userId: row.user_id,
+		codeHash: row.code_hash,
+		expires: row.expires,
+		attempts: row.attempts,
+	};
+}
+
+/** Bump the wrong-guess counter; returns the new count (0 when the entry vanished). */
+export function incrementPasswordResetAttempts(resetId: string): number {
+	const key = sha256Hex(resetId);
+	database.query('UPDATE password_resets SET attempts = attempts + 1 WHERE reset_key = ?').run(key);
+	const row = database
+		.query('SELECT attempts FROM password_resets WHERE reset_key = ?')
+		.get(key) as { attempts: number } | null;
+	return row?.attempts ?? 0;
+}
+
+export function deletePasswordReset(resetId: string): void {
+	database.query('DELETE FROM password_resets WHERE reset_key = ?').run(sha256Hex(resetId));
+}
+
 /** Test hook: wipe volatile state (sessions + attempts). */
 export function resetSessionStoreForTests(): void {
 	// S1-18 guard: this wipes both tables, and the open store may be the LIVE
@@ -371,7 +443,7 @@ export function resetSessionStoreForTests(): void {
 			`resetSessionStoreForTests refused: the open session store ('${sessionDbPath}') is not the DEDALO_SESSION_DB_PATH test override — wiping it would destroy live sessions (S1-18). Run under the bunfig [test] preload.`,
 		);
 	}
-	database.exec('DELETE FROM sessions; DELETE FROM login_attempts;');
+	database.exec('DELETE FROM sessions; DELETE FROM login_attempts; DELETE FROM password_resets;');
 }
 
 /** Prune sessions idle past the TTL (the TS analog of PHP session-file GC). */

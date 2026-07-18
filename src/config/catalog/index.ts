@@ -18,6 +18,7 @@ import { ERROR_REPORT_KEYS } from './error_report.ts';
 import { INSTALL_KEYS } from './install.ts';
 import { LANGS_KEYS } from './langs.ts';
 import { LOCALE_KEYS } from './locale.ts';
+import { MAILER_KEYS } from './mailer.ts';
 import { MAINTENANCE_KEYS } from './maintenance.ts';
 import { MEDIA_KEYS } from './media.ts';
 import { MENU_KEYS } from './menu.ts';
@@ -55,6 +56,12 @@ export const DOMAINS: readonly ConfigDomain[] = [
 	{ id: 'menu', page: 'config', title: 'Menu variables', intro: '' },
 	{ id: 'security', page: 'config', title: 'Security variables', intro: '' },
 	{ id: 'server', page: 'config', title: 'Server and runtime', intro: '' },
+	{
+		id: 'mailer',
+		page: 'config',
+		title: 'Outbound email and password recovery',
+		intro: 'Dédalo relays outbound email (password-recovery codes) through an existing mailbox over SMTP — it never runs its own mail server. Leaving `DEDALO_SMTP_HOST` empty disables sending entirely, which also disables the login screen\'s password-recovery emails.',
+	},
 	{ id: 'ops', page: 'config', title: 'Logs, backups and diagnostics', intro: '' },
 	{ id: 'error_report', page: 'config', title: 'Error reporting', intro: '' },
 	{ id: 'ai', page: 'config', title: 'AI assistant, agent and semantic search', intro: '' },
@@ -117,6 +124,7 @@ const DOMAIN_KEYS: Record<string, Record<string, CatalogEntry>> = {
 	menu: MENU_KEYS,
 	security: SECURITY_KEYS,
 	server: SERVER_KEYS,
+	mailer: MAILER_KEYS,
 	ops: OPS_KEYS,
 	error_report: ERROR_REPORT_KEYS,
 	ai: AI_KEYS,

@@ -54,8 +54,10 @@ function decoyHash(): Promise<string> {
 	}
 	return decoyHashPromise;
 }
-/** Spend one Argon2id verify against the decoy to normalize failure-path timing. */
-async function normalizeTiming(password: string): Promise<void> {
+/** Spend one Argon2id verify against the decoy to normalize failure-path timing.
+ * Exported for security/password_reset.ts, which applies the same AUTHZ-03
+ * posture to its anti-enumeration no-op paths (in place of PHP's sleep(2)). */
+export async function normalizeTiming(password: string): Promise<void> {
 	try {
 		await Bun.password.verify(password, await decoyHash());
 	} catch {

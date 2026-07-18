@@ -144,11 +144,41 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				if (searchLevel < 1) {
 					return denied(403, "You don't have enough permissions to search this component");
 				}
-				// The resulting picked set: apply the insert deltas (unlink sends only
-				// deletes → empty set, which the client reconciles against its own state).
-				const picked = dataPayload.changed_data
-					.filter((change) => change.action === 'insert' && change.value != null)
-					.map((change) => change.value as Record<string, unknown>);
+				// The resulting picked set: the client sends clone(self.data) — its
+				// CURRENT chips (entries) — plus the DELTA changed_data (link_record
+				// one 'insert'; unlink_record one 'remove' by entry id). Reconcile
+				// here: the echo is the client's next self.data verbatim (refresh
+				// tmp_api_response), so inserts-only would drop every prior chip on
+				// a second pick and clear ALL chips on an unlink. Insert duplicates
+				// are dropped (the client's own duplicate check is page-local).
+				const searchPayload = (rqo.data ?? {}) as { entries?: unknown; value?: unknown };
+				const currentChips = (
+					Array.isArray(searchPayload.entries)
+						? (searchPayload.entries as Record<string, unknown>[])
+						: Array.isArray(searchPayload.value)
+							? (searchPayload.value as Record<string, unknown>[])
+							: []
+				).filter((chip) => chip !== null && typeof chip === 'object');
+				const removedIds = new Set(
+					dataPayload.changed_data
+						.filter((change) => change.action === 'remove' && change.id != null)
+						.map((change) => String(change.id)),
+				);
+				const merged = currentChips.filter((chip) => !removedIds.has(String(chip.id)));
+				for (const change of dataPayload.changed_data) {
+					if (change.action !== 'insert' || change.value == null) continue;
+					const locator = change.value as Record<string, unknown>;
+					const exists = merged.some(
+						(chip) =>
+							chip.section_tipo === locator.section_tipo &&
+							String(chip.section_id) === String(locator.section_id),
+					);
+					if (!exists) merged.push(locator);
+				}
+				// Strip the echo-only stamps — resolveSearchData re-stamps id 1..n.
+				const picked = merged.map(
+					({ id: _id, paginated_key: _paginatedKey, ...locator }) => locator,
+				);
 				const resolveRqo = {
 					...rqo,
 					source: { ...source, action: 'resolve_data', value: picked },
@@ -156,19 +186,35 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				const { resolveSearchData, buildGetDataContext } = await import('../../section/read.ts');
 				const { buildDataItem } = await import('../../resolve/component_data.ts');
 				const resolved = await resolveSearchData(resolveRqo, principal);
+				// resolveSearchData emits the main item with a NULL record identity
+				// (synthetic record — read.ts expandPortal stamp), so match by tipo
+				// only and RE-STAMP the client's synthetic id: the client picks its
+				// item by String(el.section_id)===String(self.section_id)
+				// ('search_1', component_common.js:400). The resolved entries are the
+				// string-cast locators the JSONB @> containment needs — rebuilding
+				// from the raw numeric `picked` here would echo a numeric section_id
+				// that misses every string-stored relation locator (0 rows).
 				let mainItem = resolved.find(
 					(item) =>
 						(item as { tipo?: string }).tipo === source.tipo &&
-						String((item as { section_id?: unknown }).section_id) === String(source.section_id),
+						(item as { section_tipo?: string }).section_tipo === source.section_tipo,
 				);
-				if (mainItem === undefined) {
+				if (mainItem !== undefined) {
+					(mainItem as { section_id?: unknown }).section_id = source.section_id;
+				} else {
 					mainItem = buildDataItem(
 						source.tipo,
 						source.section_tipo,
 						source.section_id,
 						'search',
 						source.lang ?? 'lg-nolan',
-						picked,
+						// Same string cast as resolveSearchData's echo (PHP locator
+						// parity, class.locator.php set_section_id).
+						picked.map((locator) =>
+							locator.section_id !== undefined && locator.section_id !== null
+								? { ...locator, section_id: String(locator.section_id) }
+								: locator,
+						),
 					);
 					resolved.unshift(mainItem);
 				}
