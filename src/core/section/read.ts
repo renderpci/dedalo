@@ -52,7 +52,14 @@ import {
 	buildStructureContext,
 	contextKey,
 } from '../resolve/structure_context.ts';
-import { type Principal, ddoIsAuthorized } from '../security/permissions.ts';
+import {
+	type Principal,
+	ddoIsAuthorized,
+	getPermissions,
+	getSectionPermissions,
+	inheritSubdatumPermission,
+	resolveComponentContextPermission,
+} from '../security/permissions.ts';
 import { pickReadSource } from './read_source.ts';
 
 /**
@@ -84,19 +91,26 @@ export async function readSection(rqo: Rqo, principal?: Principal): Promise<Read
 	// Request-scoped data lang, never a hardcoded install default (S2-28): an
 	// RQO that omits lang resolves the session's active data language.
 	const lang = source.lang ?? currentDataLang();
-	// v0 permissions stamp: 3 for admins, 1 otherwise (the exact per-element
-	// cap propagation is Phase 4 continuation).
+	// PER-ELEMENT permissions stamp (PHP build_json_rows: each element's context
+	// carries get_permissions(section, tipo) — the client renders <1 hidden,
+	// ===1 read-only, >1 editable from exactly this field). An undefined
+	// principal (internal calls, parity fixture replays) stamps 3; everyone
+	// else — global admins included, PHP has no admin bypass — resolves through
+	// the matrix (the superuser short-circuits to 3 inside getPermissions).
 	// CONSULTATION-ONLY read: when the READ TARGET is a read-only section
 	// (Activity dd542, Time Machine dd15, …) cap the whole emitted tree at read
 	// (1) AT THE SOURCE — not just the section's own columns (buildStructureContext
 	// handles those by section_tipo), but also the cross-section subdatum children
 	// a portal pulls in (e.g. the 'Who' column's username dd132, whose own
-	// section_tipo is dd128/Users and would otherwise inherit the admin-3 stamp
-	// and render editable). appendDerivedItemContexts threads this same value.
+	// section_tipo is dd128/Users and would otherwise escape the cap and render
+	// editable). appendDerivedItemContexts threads the same cap.
 	const readTargetSection = source.section_tipo ?? callerTipo;
-	const basePermissions = principal === undefined || principal.isGlobalAdmin ? 3 : 1;
-	const permissions =
-		basePermissions > 1 && isConsultationOnlySection(readTargetSection) ? 1 : basePermissions;
+	const capForReadTarget = (level: number): number =>
+		level > 1 && isConsultationOnlySection(readTargetSection) ? 1 : level;
+	const elementPermissions = async (elementSection: string, elementTipo: string): Promise<number> =>
+		capForReadTarget(
+			principal === undefined ? 3 : await getPermissions(principal, elementSection, elementTipo),
+		);
 
 	// Sources may OWN the structure-context (the dd15 TM source does — its columns
 	// are client-driven, not ontology-derived). When present, skip the generic
@@ -119,7 +133,7 @@ export async function readSection(rqo: Rqo, principal?: Principal): Promise<Read
 			ownContext,
 			ownSeen,
 			data.filter((item): item is DataItem => (item as { typo?: string }).typo !== 'sections'),
-			{ sectionTipo: source.section_tipo ?? callerTipo, lang, permissions },
+			{ sectionTipo: source.section_tipo ?? callerTipo, lang, principal, capForReadTarget },
 		);
 		return { context: ownContext, data };
 	}
@@ -131,7 +145,12 @@ export async function readSection(rqo: Rqo, principal?: Principal): Promise<Read
 		sectionTipo: source.section_tipo ?? callerTipo,
 		mode,
 		lang,
-		permissions,
+		// Section-level ACL (PHP section::get_section_permissions — includes the
+		// consultation-only cap); the handler's Gate A/B guarantee ≥ 1 here.
+		permissions:
+			principal === undefined
+				? capForReadTarget(3)
+				: capForReadTarget(await getSectionPermissions(principal, readTargetSection)),
 		// Thread the principal so the section button context uses the real
 		// per-button ACL (SECTION_SPEC §9) instead of the caller-permission cap.
 		principal,
@@ -181,7 +200,9 @@ export async function readSection(rqo: Rqo, principal?: Principal): Promise<Read
 			sectionTipo: ddoSectionTipo,
 			mode: ddo.mode ?? mode,
 			lang: ddo.lang ?? lang,
-			permissions,
+			// Per-element matrix level (the ddoIsAuthorized drop above guarantees
+			// ≥ 1 for defined principals — the client renders 1 read-only, ≥2 edit).
+			permissions: await elementPermissions(ddoSectionTipo, ddo.tipo),
 			parent: resolvedParent,
 			view: ddo.view ?? null,
 			rqoChildrenDdos: rqoChildren as unknown as Record<string, unknown>[],
@@ -202,7 +223,7 @@ export async function readSection(rqo: Rqo, principal?: Principal): Promise<Read
 		context,
 		seen,
 		data.filter((item): item is DataItem => (item as { typo?: string }).typo !== 'sections'),
-		{ sectionTipo: source.section_tipo ?? callerTipo, lang, permissions },
+		{ sectionTipo: source.section_tipo ?? callerTipo, lang, principal, capForReadTarget },
 	);
 	return { context, data };
 }
@@ -239,7 +260,12 @@ async function appendDerivedItemContexts(
 	entries: StructureContextEntry[],
 	seen: Set<string>,
 	items: DataItem[],
-	defaults: { sectionTipo: string; lang: string; permissions: number },
+	defaults: {
+		sectionTipo: string;
+		lang: string;
+		principal?: Principal;
+		capForReadTarget: (level: number) => number;
+	},
 ): Promise<void> {
 	// per-parent ddo-view lookup: a child's context `view` comes from the
 	// GENERATING component's config ddo (e.g. numisdata158 declares 'line' in
@@ -282,15 +308,28 @@ async function appendDerivedItemContexts(
 		// get_order_path from_component/from_section prepend): the parent portal's
 		// own section is where it hangs (already-built context entry), else the
 		// listed section for a direct child.
-		const parentSection =
-			entries.find((existing) => existing.tipo === parentTipo)?.section_tipo ??
-			defaults.sectionTipo;
+		const parentEntry = entries.find((existing) => existing.tipo === parentTipo);
+		const parentSection = parentEntry?.section_tipo ?? defaults.sectionTipo;
+		// Subdatum permission inheritance (PHP get_subdatum, class.common.php
+		// :2567-2575): the child's own matrix level, floored to read through the
+		// authorized generating component (portal targets stay visible without a
+		// target-section grant) and capped at read under a read-only caller —
+		// then the read-target consultation-only cap.
+		const permissions =
+			defaults.principal === undefined
+				? defaults.capForReadTarget(3)
+				: defaults.capForReadTarget(
+						inheritSubdatumPermission(
+							await getPermissions(defaults.principal, String(item.section_tipo), itemTipo),
+							parentEntry?.permissions ?? 3,
+						),
+					);
 		const entry = await buildStructureContext({
 			tipo: itemTipo,
 			sectionTipo: String(item.section_tipo),
 			mode: String(item.mode),
 			lang: String(item.lang),
-			permissions: defaults.permissions,
+			permissions,
 			parent: parentTipo,
 			view: await ddoViewOf(parentTipo, itemTipo),
 			orderPathFrom: { componentTipo: parentTipo, sectionTipo: parentSection },
@@ -993,8 +1032,9 @@ export async function readSectionRows(
 	// Per-component READ gate on the DATA side (PHP check_ddo_permissions +
 	// STEP 5 filter_authorized_related): a component the actor holds level 0 on
 	// never reaches emitDdoData — client-sent maps included (the config-build
-	// gates only shape the server-derived default map).
-	if (principal !== undefined && !principal.isGlobalAdmin) {
+	// gates only shape the server-derived default map). Admin-flagged users go
+	// through the matrix too (PHP parity); superuser passes via getPermissions.
+	if (principal !== undefined) {
 		const authorized: Ddo[] = [];
 		for (const ddo of ddoMap) {
 			const gateSection =
@@ -1386,6 +1426,7 @@ export async function emitDdoData(
 export async function buildGetDataContext(
 	rqo: Rqo,
 	items: DataItem[],
+	principal?: Principal,
 ): Promise<StructureContextEntry[]> {
 	const source = rqo.source ?? {};
 	const tipo = String(source.tipo ?? '');
@@ -1425,6 +1466,21 @@ export async function buildGetDataContext(
 		return views.get(childTipo) ?? null;
 	};
 
+	// MAIN element permission: the matrix level with PHP's search-mode special
+	// grants (thesaurus / metadata tipos / synthetic 'search_<n>' ids → 2). An
+	// undefined principal (internal calls, harnesses) stamps 3. The handler's
+	// Gate A already denied level 0 for the non-search path.
+	const mainLevel =
+		principal === undefined
+			? 3
+			: await resolveComponentContextPermission(
+					principal,
+					sectionTipo,
+					tipo,
+					source.section_id as number | string | null | undefined,
+					String(mode),
+				);
+
 	const entries: StructureContextEntry[] = [];
 	const seen = new Set<string>();
 	const push = async (entry: {
@@ -1432,6 +1488,7 @@ export async function buildGetDataContext(
 		sectionTipo: string;
 		mode: string;
 		lang: string;
+		permissions: number;
 		parent: string | null;
 		view: string | null;
 		propertiesOverride?: Record<string, unknown>;
@@ -1441,7 +1498,7 @@ export async function buildGetDataContext(
 			sectionTipo: entry.sectionTipo,
 			mode: entry.mode,
 			lang: entry.lang,
-			permissions: 3,
+			permissions: entry.permissions,
 			parent: entry.parent,
 			view: entry.view,
 			propertiesOverride: entry.propertiesOverride,
@@ -1469,6 +1526,7 @@ export async function buildGetDataContext(
 		sectionTipo,
 		mode,
 		lang,
+		permissions: mainLevel,
 		parent: sectionTipo,
 		view: requestedView,
 		propertiesOverride: source.properties ?? undefined,
@@ -1502,7 +1560,17 @@ export async function buildGetDataContext(
 	// mirroring the request_config slot synthesized in buildStructureContext (PHP
 	// class.component_iri::get_properties dd560 injection).
 	if ((await getModelByTipo(tipo)) === 'component_iri') {
-		await push({ tipo: 'dd560', sectionTipo, mode: 'edit', lang, parent: tipo, view: 'line' });
+		// The dd560 label frame is system-managed and always writable through its
+		// IRI (PHP component_iri injection carries the caller's edit rights).
+		await push({
+			tipo: 'dd560',
+			sectionTipo,
+			mode: 'edit',
+			lang,
+			permissions: Math.max(mainLevel, 2),
+			parent: tipo,
+			view: 'line',
+		});
 	}
 	for (const item of items) {
 		if (item.tipo === tipo && String(item.section_id) === String(source.section_id ?? '')) {
@@ -1518,6 +1586,16 @@ export async function buildGetDataContext(
 			sectionTipo: String(item.section_tipo),
 			mode: String(item.mode),
 			lang: String(item.lang),
+			// Subdatum inheritance off the MAIN element (PHP get_subdatum
+			// :2567-2575): floor-1 through the authorized caller, cap-1 under a
+			// read-only caller.
+			permissions:
+				principal === undefined
+					? 3
+					: inheritSubdatumPermission(
+							await getPermissions(principal, String(item.section_tipo), itemTipo),
+							mainLevel,
+						),
 			parent: parentTipo,
 			view: await ddoViewOf(parentTipo, itemTipo),
 		});

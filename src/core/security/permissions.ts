@@ -5,8 +5,9 @@
  * Levels: 0 none, 1 read, 2 read/write, 3 admin. A user's per-(section,
  * component) grants come from the component_security_access (dd774) datum in
  * their PROFILE record (section dd234), resolved via the user's profile-select
- * (dd1725). Global admins bypass the matrix; the superuser (user_id -1) is
- * always level 3.
+ * (dd1725). Only the superuser (user_id -1) bypasses the matrix (always level
+ * 3); global-admin-flagged users resolve through their profile matrix like
+ * everyone else (PHP get_security_permissions has no admin bypass).
  *
  * PHP references: class.security.php get_security_permissions (:199),
  * get_permissions_table (:326), get_user_profile (:471); common
@@ -21,9 +22,10 @@
 
 import { readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
-import { isConsultationOnlySection } from '../concepts/section.ts';
+import { AUDIT_TIPOS, isConsultationOnlySection } from '../concepts/section.ts';
 import { sql } from '../db/postgres.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
+import { THESAURUS_SECTION } from '../ontology/ontology_tipos.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../ontology/resolver.ts';
 
 /**
@@ -410,13 +412,17 @@ export async function getPermissions(
  * filter — production requests always carry a seeded principal, and PHP's
  * not-logged-in→0 posture would empty those internal resolutions. The array
  * section form checks the FIRST target (PHP reset(), check_ddo_permissions:384).
+ *
+ * NO global-admin bypass (PHP parity, 2026-07-18): admin-flagged users resolve
+ * through their profile matrix like everyone — only the superuser (-1) passes
+ * unconditionally, via getPermissions' own short-circuit.
  */
 export async function ddoIsAuthorized(
 	principal: Principal | undefined,
 	sectionTipo: string | string[] | undefined,
 	componentTipo: string,
 ): Promise<boolean> {
-	if (principal === undefined || principal.isGlobalAdmin) return true;
+	if (principal === undefined) return true;
 	const checkSection = Array.isArray(sectionTipo) ? sectionTipo[0] : sectionTipo;
 	if (checkSection === undefined || checkSection === '') return true;
 	return (await getPermissions(principal, checkSection, componentTipo)) >= 1;
@@ -443,4 +449,56 @@ export async function getSectionPermissions(
 	const level = await getPermissions(principal, sectionTipo, sectionTipo);
 	if (level > 1 && isConsultationOnlySection(sectionTipo)) return 1;
 	return level;
+}
+
+/**
+ * Subdatum permission inheritance (PHP get_subdatum component-caller branch,
+ * class.common.php:2567-2575): a child element reached THROUGH a component the
+ * actor is authorized on (portal/autocomplete target components) is floored to
+ * read (1) even when the actor holds 0 on the target — the actor must see the
+ * portal's resolved values and pick with the autocomplete. A read-only caller
+ * (level 1) caps its children at read so a stray target write grant can't leak
+ * an editable child into a read-only portal. Applies ONLY to derived/expanded
+ * children — top-level ddo_map entries at level 0 are DROPPED, never floored.
+ */
+export function inheritSubdatumPermission(childLevel: number, callerLevel: number): number {
+	if (childLevel < 1) return 1;
+	if (callerLevel === 1 && childLevel > 1) return 1;
+	return childLevel;
+}
+
+/** The metadata/section-info component tipos (PHP get_metadata_definition_tipos). */
+const METADATA_TIPOS: ReadonlySet<string> = new Set(Object.values(AUDIT_TIPOS));
+
+/**
+ * Context-stamp permission for ONE component element (PHP component_common::
+ * resolve_component_read_permission, class.component_common.php:3512-3540).
+ * SEARCH mode grants every logged user level 2 on: the thesaurus template
+ * section (all users may search the thesaurus), the metadata/section-info
+ * components, and a SYNTHETIC section_id (the search panel's client-minted
+ * 'search_<n>' ids — PHP (int)-casts them to 0). Everything else — and every
+ * non-search mode — resolves through the matrix.
+ *
+ * NOT PORTED (ledgered gap): PHP's non-search DOWNGRADES on the actor's own
+ * dd128 user record (security-administrator forced read, self-elevation guards
+ * on profile/developer/username) — TS stamps the plain matrix level there.
+ */
+export async function resolveComponentContextPermission(
+	principal: Principal,
+	sectionTipo: string,
+	tipo: string,
+	sectionId: number | string | null | undefined,
+	mode: string,
+): Promise<number> {
+	if (mode === 'search') {
+		if (sectionTipo === THESAURUS_SECTION) return 2;
+		if (METADATA_TIPOS.has(tipo)) return 2;
+		// PHP (int)$section_id === 0: a synthetic 'search_<n>' id (NaN here) or a
+		// literal 0 grants 2; an absent id falls through to the matrix.
+		if (sectionId !== null && sectionId !== undefined) {
+			const numericId = Number(sectionId);
+			if (Number.isNaN(numericId) || numericId === 0) return 2;
+		}
+	}
+	return getPermissions(principal, sectionTipo, tipo);
 }
