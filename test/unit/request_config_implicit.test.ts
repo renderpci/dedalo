@@ -103,6 +103,41 @@ describe('buildImplicitComponentListConfig — graph-walk target + ddo derivatio
 		]);
 	});
 
+	// PHP resolve_ar_related_list :354 branches on the caller model: a SECTION
+	// owner goes to resolve_ar_related_list_section, which returns the
+	// section_list relation nodes VERBATIM — only the COMPONENT branch
+	// (resolve_ar_related_list_component :454-473) prepends a main related
+	// section. TS once ran the component fallback for section owners too, so
+	// numisdata5's columns were stamped with numisdata276 (its related
+	// "Location" section). Every dd774 lookup then keyed
+	// numisdata276_<column> instead of numisdata5_<column>, missed, resolved 0
+	// and filterAuthorizedRelated dropped EVERY column — the list rendered with
+	// no components for real users while root sailed through getPermissions'
+	// superuser short-circuit.
+	test('a SECTION owner keeps itself as target — the related section never wins', async () => {
+		const config = await buildImplicitComponentListConfig('numisdata278', {
+			ownerTipo: 'numisdata5',
+			ownerSectionTipo: 'numisdata5',
+			mode: 'list',
+			ownerIsSection: true,
+		});
+		expect(extractSqoSectionTipos(config[0])).toEqual(['numisdata5']);
+		const ddoMap = config[0]?.show?.ddo_map ?? [];
+		expect(ddoMap.map((ddo) => ddo.tipo)).toEqual([
+			'numisdata500',
+			'numisdata211',
+			'numisdata219',
+			'numisdata212',
+			'numisdata215',
+			'numisdata260',
+			'numisdata1100',
+		]);
+		// The permission key every column is checked under.
+		for (const ddo of ddoMap) {
+			expect(ddo.section_tipo).toBe('numisdata5');
+		}
+	});
+
 	test('api_engine/type wrap matches the explicit shape (single dedalo main item)', async () => {
 		const config = await buildImplicitComponentListConfig(
 			'numisdata967',
