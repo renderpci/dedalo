@@ -50,3 +50,7 @@ rewrite/
 server_config_api.php
 # v2: TypeScript incremental-build artifact (its tsconfig sets `incremental: true`).
 *.tsbuildinfo
+
+# Logs and changelog
+*.log
+CHANGELOG.md
