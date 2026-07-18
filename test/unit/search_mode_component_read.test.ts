@@ -21,6 +21,14 @@
  *    casts set_section_id to string (class.locator.php:338). Fixed by
  *    echoing section_id as string.
  *
+ * 3. The REAL client pick lands on the SAVE action (link_record → change_value,
+ *    host id 'search_1'), not resolve_data — and the dd_core_api search_ save
+ *    branch looked the resolved main item up by section_id 'search_1', which
+ *    resolveSearchData never stamps (synthetic record ⇒ null identity). The
+ *    always-firing fallback rebuilt the chip from the RAW numeric picked
+ *    locator, undoing fix 2 on the only path the client uses. Fixed by
+ *    matching on tipo+section_tipo and re-stamping the synthetic id.
+ *
  * Scratch twins (a fake user + two activity rows) are SQL-seeded and deleted
  * in afterAll — root is hidden from user searches by design
  * (root_user_hidden_tripwire), so a non-root twin is required for a positive
@@ -201,6 +209,45 @@ function echoRqo(injectedSectionId: number | string): Rqo {
 	} as unknown as Rqo;
 }
 
+/**
+ * The exact client PICK contract: link_record → change_value → action 'save' on
+ * the client-minted 'search_1' host (component_portal.js:982 → component_common
+ * .js:672). The response is reused verbatim via refresh({tmp_api_response}) —
+ * whatever entries it carries become the search q.
+ */
+function pickSaveRqo(pickedSectionId: number | string): Rqo {
+	return {
+		action: 'save',
+		dd_api: 'dd_core_api',
+		prevent_lock: true,
+		source: {
+			typo: 'source',
+			type: 'component',
+			model: 'component_portal',
+			tipo: WHO_PORTAL,
+			section_tipo: ACTIVITY,
+			section_id: 'search_1',
+			mode: 'search',
+			lang: 'lg-eng',
+			action: 'save',
+		},
+		data: {
+			changed_data: [
+				{
+					action: 'insert',
+					id: null,
+					value: {
+						type: 'dd151',
+						section_tipo: USERS,
+						section_id: pickedSectionId,
+						from_component_tipo: WHO_PORTAL,
+					},
+				},
+			],
+		},
+	} as unknown as Rqo;
+}
+
 describe('search-mode component read (Activity dd542 Who picker)', () => {
 	test('typeahead (source.mode search) resolves users instead of throwing', async () => {
 		const { body } = await dispatchRqo(typeaheadRqo(TWIN_USERNAME), ctx);
@@ -240,12 +287,47 @@ describe('search-mode component read (Activity dd542 Who picker)', () => {
 		expect(usernameItem?.entries?.[0]?.value).toBe(TWIN_USERNAME);
 	});
 
-	test('end-to-end: the echoed entries drive a section filter that finds the rows', async () => {
-		// 1. Echo (what lands in the component's data.entries after the pick).
-		const { body: echoBody } = await dispatchRqo(echoRqo(TWIN_USER_ID), ctx);
+	test("save on the 'search_1' host echoes string entries under the synthetic id", async () => {
+		const { body } = await dispatchRqo(pickSaveRqo(TWIN_USER_ID), ctx);
+		const result = (body as { result?: { data?: Record<string, unknown>[] } }).result;
+		expect(result).toBeDefined();
+
+		const data = result?.data ?? [];
+		// The client picks its item by tipo + section_tipo + synthetic section_id
+		// (component_common.js:400) — a null/absent section_id loses the chip.
+		const mainItem = data.find(
+			(item) =>
+				item.tipo === WHO_PORTAL &&
+				item.section_tipo === ACTIVITY &&
+				String(item.section_id) === 'search_1',
+		) as { entries?: Record<string, unknown>[]; pagination?: { total?: number } } | undefined;
+		expect(mainItem).toBeDefined();
+
+		// The echoed chip carries the STRING section_id the containment needs.
+		const entry = mainItem?.entries?.[0];
+		expect(typeof entry?.section_id).toBe('string');
+		expect(String(entry?.section_id)).toBe(String(TWIN_USER_ID));
+
+		// link_record's server-authoritative duplicate check reads pagination.total
+		// and requires it to exceed the pre-insert count (component_portal.js:1063).
+		expect(mainItem?.pagination?.total).toBe(1);
+
+		// The chip label resolves (the picked user's username subdatum).
+		const usernameItem = data.find((item) => item.tipo === USERNAME) as
+			| { entries?: { value?: unknown }[] }
+			| undefined;
+		expect(usernameItem?.entries?.[0]?.value).toBe(TWIN_USERNAME);
+	});
+
+	test('end-to-end: the picked entries drive a section filter that finds the rows', async () => {
+		// 1. The real pick: SAVE on the 'search_1' host (link_record). The response
+		// is what lands in the component's data.entries (refresh tmp_api_response).
+		const { body: echoBody } = await dispatchRqo(pickSaveRqo(TWIN_USER_ID), ctx);
 		const echoData =
 			((echoBody as { result?: { data?: Record<string, unknown>[] } }).result?.data ?? []);
-		const echoMain = echoData.find((item) => item.tipo === WHO_PORTAL) as {
+		const echoMain = echoData.find(
+			(item) => item.tipo === WHO_PORTAL && String(item.section_id) === 'search_1',
+		) as {
 			entries: Record<string, unknown>[];
 		};
 		// 2. The client's get_search_value + serialize_filter_model (id stamped to 1).
