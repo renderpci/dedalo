@@ -13,7 +13,7 @@
 
 import { cp, readdir, readFile, writeFile, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join, extname } from 'node:path';
+import { join, extname, basename } from 'node:path';
 import { confinedPath } from '../util/paths';
 import { config } from '../config';
 
@@ -24,6 +24,9 @@ const SUBSTITUTE_EXTENSIONS = new Set([
   '.html', '.htm', '.js', '.ts', '.jsx', '.tsx', '.mjs', '.cjs',
   '.css', '.less', '.scss', '.json', '.md', '.txt', '.svg', '.xml',
 ]);
+
+/** Local build state that may exist in a template dir but is never site content. */
+const EXCLUDED_FROM_SCAFFOLD = new Set(['node_modules', '.git']);
 
 export interface TemplateInfo {
   id: string;
@@ -73,7 +76,16 @@ export async function scaffold(slug: string, templateId: string): Promise<void> 
 
   await cp(src, dest, {
     recursive: true,
-    filter: source => !source.endsWith(`${templateId}/template.json`),
+    filter: source => {
+      if (source.endsWith(`${templateId}/template.json`)) return false;
+      // A template directory is a source tree, but nothing stops a developer from
+      // running `bun install` inside it (refreshing its lockfile does exactly that).
+      // Both of these are local build state, never site content, and copying them
+      // would clone a whole node_modules into every scaffolded site. Returning false
+      // for a directory prunes the subtree, so this costs one check per entry.
+      // substituteTree() skips the same two names.
+      return !EXCLUDED_FROM_SCAFFOLD.has(basename(source));
+    },
   });
 
   await substituteTree(dest);
