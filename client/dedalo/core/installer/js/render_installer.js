@@ -109,7 +109,7 @@ const create_status_msg = function(parent) {
 * keeps the shared config object (`cfg`) in sync with the input value on every keystroke.
 * Used by the modernized "collect configuration" wizard steps so the administrator never edits
 * a config file by hand.
-* @param object options { parent, cfg, name, label, type, value, placeholder, help, nullable, on_change }
+* @param object options { parent, cfg, name, label, type, value, placeholder, help, nullable, on_change, select }
 * @return HTMLElement input
 */
 const create_field = function(options) {
@@ -124,6 +124,7 @@ const create_field = function(options) {
 	const help			= options.help || ''
 	const nullable		= options.nullable === true
 	const on_change		= options.on_change
+	const select		= Array.isArray(options.select) ? options.select : null
 
 	const field = ui.create_dom_element({
 		element_type	: 'div',
@@ -138,14 +139,34 @@ const create_field = function(options) {
 		parent			: field
 	})
 
-	const input = ui.create_dom_element({
-		element_type	: 'input',
-		type			: type,
-		class_name		: 'installer_field_input',
-		value			: value,
-		placeholder		: placeholder,
-		parent			: field
-	})
+	// `select` renders a fixed-choice <select> instead of a free-text input
+	// (same cfg-sync contract) — used where a typo would silently degrade
+	// (e.g. the SMTP encryption mode).
+	const input = select
+		? ui.create_dom_element({
+			element_type	: 'select',
+			class_name		: 'installer_field_input',
+			parent			: field
+		})
+		: ui.create_dom_element({
+			element_type	: 'input',
+			type			: type,
+			class_name		: 'installer_field_input',
+			value			: value,
+			placeholder		: placeholder,
+			parent			: field
+		})
+	if (select) {
+		for (const option_value of select) {
+			ui.create_dom_element({
+				element_type	: 'option',
+				value			: option_value,
+				inner_html		: option_value,
+				parent			: input
+			})
+		}
+		input.value = value
+	}
 	if (type === 'password') {
 		input.autocomplete = 'new-password'
 	}
@@ -554,6 +575,7 @@ const get_content_data = function(self) {
 				get_label.db_name || 'Database',
 				get_label.entity_name || 'Entity',
 				get_label.enable_diffusion || 'Diffusion',
+				get_label.installation_mailer || 'Email',
 				get_label.save_configuration || 'Save config',
 				get_label.check_directories || 'Directories',
 				get_label.install_db_label || 'Install Dédalo DDBB',
@@ -647,6 +669,16 @@ const get_content_data = function(self) {
 				content_data	: content_data
 			})
 			diffusion.content_div.appendChild(render_diffusion_block(self))
+
+		// OUTBOUND EMAIL / MAILER (optional — password recovery)
+			const mailer = create_section_block({
+				label			: get_label.installation_mailer || 'Outbound email (optional)',
+				class_name		: 'mailer_block',
+				hidden			: true,
+				parent			: content_data,
+				content_data	: content_data
+			})
+			mailer.content_div.appendChild(render_mailer_block(self))
 
 		// PERSIST + VERIFY
 			const persist = create_section_block({
@@ -751,7 +783,7 @@ const get_content_data = function(self) {
 			// On a successful import, reveal the Register tools step.
 			callback		: function() {
 				reveal_section(self.node.content_data.register_tools_block)
-				update_step_indicator(self.node.content_data.step_indicator, needs_config ? 11 : 7)
+				update_step_indicator(self.node.content_data.step_indicator, needs_config ? 12 : 7)
 			}
 		}
 		hierarchies.content_div.appendChild(
@@ -1681,12 +1713,102 @@ const render_diffusion_block = function(self) {
 			status.textContent = get_label.test_diffusion_first || 'Test the diffusion connection successfully before continuing (or disable it).'
 			return
 		}
-		reveal_section(self.node.content_data.persist_block)
+		reveal_section(self.node.content_data.mailer_block)
 		update_step_indicator(self.node.content_data.step_indicator, 5)
 	})
 
 	return fragment
 }//end render_diffusion_block
+
+
+
+/**
+* RENDER_MAILER_BLOCK
+* Optional step: outbound email (SMTP relay). The engine relays through an existing
+* mailbox; these settings become the DEDALO_SMTP_* keys and enable the login screen's
+* password recovery emails. Mirrors the diffusion block: toggle, fieldset, a verify
+* probe (connection + auth, no email sent) that must pass before continuing when enabled.
+* @param {Object} self
+* @returns {DocumentFragment}
+*/
+const render_mailer_block = function(self) {
+
+	const fragment	= new DocumentFragment()
+	const cfg		= self._cfg
+	cfg.mailer		= false
+	let tested_ok	= false
+
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'description',
+		inner_html		: get_label.installation_mailer_help || 'Optional: outbound email lets users recover a forgotten password from the login screen (an 8-digit code is emailed to them). Dédalo relays through an existing SMTP mailbox — it never runs its own mail server. You can configure it later in ../private/.env.',
+		parent			: fragment
+	})
+
+	// enable toggle
+		const toggle_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'installer_toggle_label',
+			inner_html		: get_label.enable_mailer || 'Enable outbound email (password recovery)',
+			parent			: fragment
+		})
+		const toggle = ui.create_dom_element({ element_type:'input', type:'checkbox', class_name:'installer_toggle' })
+		toggle_label.prepend(toggle)
+
+	// fieldset (hidden until enabled)
+		const fields = ui.create_dom_element({ element_type:'div', class_name:'mailer_fields hide', parent:fragment })
+		create_field({ parent:fields, cfg, name:'smtp_host', label:get_label.hostname || 'Host', value:'', placeholder:'smtp.example.org' })
+		create_field({ parent:fields, cfg, name:'smtp_port', label:get_label.port || 'Port', value:'587', placeholder:'587' })
+		create_field({ parent:fields, cfg, name:'smtp_secure', label:get_label.encryption || 'Encryption', value:'tls', select:['tls','ssl','none'], help:get_label.smtp_secure_help || 'tls = STARTTLS (port 587) · ssl = implicit TLS (port 465) · none = unencrypted (localhost relays only)' })
+		create_field({ parent:fields, cfg, name:'smtp_user', label:get_label.username || 'Username', value:'', nullable:true, placeholder:'dedalo@example.org' })
+		create_field({ parent:fields, cfg, name:'smtp_pass', label:get_label.password || 'Password', type:'password', value:'', nullable:true })
+		create_field({ parent:fields, cfg, name:'smtp_from', label:get_label.from_address || 'From address', value:'', nullable:true, placeholder:'dedalo@example.org', help:get_label.smtp_from_help || 'The sender address of outbound mail. When empty, the username is used.' })
+		create_field({ parent:fields, cfg, name:'smtp_from_name', label:get_label.from_name || 'From name (optional)', value:'', nullable:true, placeholder:'Dédalo' })
+
+	const status = create_status_msg(fragment)
+
+	const test_button = ui.create_dom_element({ element_type:'button', class_name:'primary mailer_test_button hide', inner_html:get_label.test_connection || 'Test connection', parent:fragment })
+	const continue_button = ui.create_dom_element({ element_type:'button', class_name:'primary mailer_continue_button', inner_html:get_label.continue_label || 'Continue', parent:fragment })
+
+	toggle.addEventListener('change', function() {
+		cfg.mailer = toggle.checked
+		tested_ok = false
+		fields.classList.toggle('hide', !toggle.checked)
+		test_button.classList.toggle('hide', !toggle.checked)
+		continue_button.textContent = toggle.checked ? (get_label.continue_label || 'Continue') : (get_label.skip_mailer || 'Skip outbound email')
+	})
+	continue_button.textContent = get_label.skip_mailer || 'Skip outbound email'
+
+	test_button.addEventListener('mouseup', async function() {
+		const api_response = await api_call_with_spinner({
+			action		: 'test_mailer_connection',
+			body_options: {
+				smtp_host	: cfg.smtp_host,
+				smtp_port	: cfg.smtp_port,
+				smtp_secure	: cfg.smtp_secure,
+				smtp_user	: cfg.smtp_user,
+				smtp_pass	: cfg.smtp_pass
+			},
+			status_node	: status,
+			button_node	: test_button,
+			timeout		: 20*1000
+		})
+		set_status_result(status, api_response)
+		tested_ok = (api_response.result===true)
+	})
+
+	continue_button.addEventListener('mouseup', function() {
+		if (cfg.mailer===true && tested_ok!==true) {
+			status.classList.remove('ok'); status.classList.add('error')
+			status.textContent = get_label.test_mailer_first || 'Test the SMTP connection successfully before continuing (or disable outbound email).'
+			return
+		}
+		reveal_section(self.node.content_data.persist_block)
+		update_step_indicator(self.node.content_data.step_indicator, 6)
+	})
+
+	return fragment
+}//end render_mailer_block
 
 
 
@@ -1720,7 +1842,7 @@ const render_persist_block = function(self) {
 	save_button.addEventListener('mouseup', async function() {
 		const api_response = await api_call_with_spinner({
 			action		: 'persist_config',
-			body_options: { ...cfg, diffusion: cfg.diffusion===true },
+			body_options: { ...cfg, diffusion: cfg.diffusion===true, mailer: cfg.mailer===true },
 			status_node	: status,
 			button_node	: save_button,
 			timeout		: 20*1000
@@ -1757,7 +1879,7 @@ const render_persist_block = function(self) {
 		if (api_response.result===true) {
 			verify_button.remove()
 			reveal_section(self.node.content_data.directories_block)
-			update_step_indicator(self.node.content_data.step_indicator, 6)
+			update_step_indicator(self.node.content_data.step_indicator, 7)
 		}
 		// if not active: status shows the reload guidance; the button stays for a re-check
 	})
@@ -1813,7 +1935,7 @@ const render_directories_block = function(self) {
 		if (api_response.result===true) {
 			create_button.classList.add('hide')
 			reveal_section(self.node.content_data.installer_db_block)
-			update_step_indicator(self.node.content_data.step_indicator, 7)
+			update_step_indicator(self.node.content_data.step_indicator, 8)
 		} else {
 			create_button.classList.remove('hide')
 		}
@@ -1942,7 +2064,7 @@ const render_installer_db_block = function(self) {
 					reveal_section(self.node.content_data.set_root_password_block)
 					// step indicator: "Set root password" is step 8 in the needs_config (11-step) flow
 					// and step 4 in the legacy (7-step) flow. Branch like the password/login blocks do.
-					update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 8 : 4)
+					update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 9 : 4)
 					installer_db_button.remove();
 				}else{
 					console.error(api_response.msg);
@@ -2199,7 +2321,7 @@ const render_set_root_password_block = function(self) {
 					change_root_pw_button.remove();
 					// show next block: login (root logs in inside the installer)
 					reveal_section(self.node.content_data.login_block)
-					update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 9 : 5)
+					update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 10 : 5)
 				}else{
 					console.error(api_response.msg);
 					set_status_result(set_pw_status, api_response)
@@ -2281,7 +2403,7 @@ const render_login_block = async function(self) {
 
 						// login done → reveal the MANDATORY hierarchies import (now authenticated)
 							reveal_section(self.node.content_data.hierarchies_import_block)
-							update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 10 : 6)
+							update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 11 : 6)
 
 					}else{
 
@@ -2881,7 +3003,7 @@ const render_register_tools_block = function(self) {
 			}
 
 			reveal_section(self.node.content_data.installer_finish_block)
-			update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 12 : 8)
+			update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 13 : 8)
 	})
 
 
