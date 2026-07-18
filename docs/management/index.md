@@ -105,6 +105,8 @@ Previous task is common in multiple scenarios.
 
 - [Installing new hierarchies](install_new_hierarchies.md)
 
+- [Password recovery (forgot password)](password_recovery.md) — the self-service login-screen flow, its email (SMTP) requirement, and its security model
+
 - [Site builder](site_builder.md) — agent-built public websites over the published data
     - [Site builder cookbook](site_builder_cookbook.md) — configuration and prompt examples
 
