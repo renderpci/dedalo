@@ -41,6 +41,13 @@ export interface DatalistItem {
 	section_id: string;
 	/** ddo_map hide config per option (empty in v0 — no hide rules on these lists). */
 	hide: string[];
+	/**
+	 * security-tools (dd1067) `view_tools` enrichment ONLY (PHP
+	 * tool_common::hydrate_tools_info): internal tool name (icon URL + label
+	 * segment) and its always_active flag. Absent on every other datalist.
+	 */
+	tool_name?: string;
+	always_active?: boolean;
 }
 
 /**
@@ -281,6 +288,25 @@ export async function getDatalist(
 	} else {
 		items.sort((a, b) => strnatcmp(a.label, b.label));
 	}
+
+	// security-tools enrichment: the dd1067 profile-tools component renders in the
+	// client `view_tools` layout, which needs a per-option tool_name (icon URL +
+	// label segment) and always_active flag NOT stored in the dd1324 option
+	// section. Stamp them from the active-tools registry, keyed by section_id
+	// (PHP component_check_box::get_datalist → tool_common::hydrate_tools_info,
+	// guarded on DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO === dd1067).
+	const { PROFILE_TOOLS_COMPONENT } = await import('../tools/ontology_map.ts');
+	if (componentTipo === PROFILE_TOOLS_COMPONENT) {
+		const { getActiveToolMetaBySectionId } = await import('../tools/registry.ts');
+		const toolsBySectionId = await getActiveToolMetaBySectionId();
+		for (const item of items) {
+			const meta = toolsBySectionId.get(Number(item.section_id));
+			// Unknown/unregistered tools mirror PHP's 'Unknown'/false fallback.
+			item.tool_name = meta?.name ?? 'Unknown';
+			item.always_active = meta?.always_active ?? false;
+		}
+	}
+
 	// Store + index in ONE synchronous block (no await in between): an eviction
 	// event landing mid-populate must never leave a cached list the section
 	// index cannot reach (see datalistKeysBySection).

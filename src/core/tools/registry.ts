@@ -154,6 +154,35 @@ async function fetchActiveToolRows(): Promise<(ToolRow & { section_id: number })
 	`) as (ToolRow & { section_id: number })[];
 }
 
+/** Per-tool metadata the `view_tools` datalist hydration needs. */
+export interface ToolDatalistMeta {
+	/** Internal tool name (e.g. 'tool_lang') — the icon-URL and label segment. */
+	name: string;
+	/** Whether the tool cannot be deactivated for a profile (dd1601 radio). */
+	always_active: boolean;
+}
+
+/**
+ * section_id → {name, always_active} over the ACTIVE tools registry, for the
+ * dd1067 security-tools datalist hydration (PHP tool_common::hydrate_tools_info,
+ * which builds its map from get_all_registered_tools → get_active_tools). A
+ * malformed row (no name) is skipped; the caller falls back to 'Unknown'/false,
+ * matching the PHP `$tools_map[$section_id] ?? null` branch.
+ */
+export async function getActiveToolMetaBySectionId(): Promise<Map<number, ToolDatalistMeta>> {
+	const rows = await fetchActiveToolRows();
+	const map = new Map<number, ToolDatalistMeta>();
+	for (const row of rows) {
+		const name = row.string?.[TIPO.NAME]?.[0]?.value;
+		if (name === undefined || name === '') continue;
+		map.set(row.section_id, {
+			name,
+			always_active: radioIsYes(row.relation, TIPO.ALWAYS_ACTIVE),
+		});
+	}
+	return map;
+}
+
 /** One registry row → the simple-context DDO (null for a malformed record). */
 function buildToolSimpleContext(row: ToolRow): ToolSimpleContext | null {
 	const name = row.string?.[TIPO.NAME]?.[0]?.value;
