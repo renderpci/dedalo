@@ -41,7 +41,10 @@ async function unitTestLongProcessStream(
 	const record = mediaJobs.submit(
 		'unit_test_long_process',
 		async ({ onData, signal }) => {
-			onData({ msg: `Long process started: ${iterations} iterations @ ${updateRate} ms`, is_running: true });
+			onData({
+				msg: `Long process started: ${iterations} iterations @ ${updateRate} ms`,
+				is_running: true,
+			});
 			for (let i = 1; i <= iterations; i++) {
 				if (signal.aborted) {
 					return { result: false, msg: `Stopped at iteration ${i}/${iterations}`, errors: [] };
@@ -54,7 +57,11 @@ async function unitTestLongProcessStream(
 					is_running: i < iterations,
 				});
 			}
-			return { result: true, msg: `OK. Long process finished (${iterations} iterations)`, errors: [] };
+			return {
+				result: true,
+				msg: `OK. Long process finished (${iterations} iterations)`,
+				errors: [],
+			};
 		},
 		{ userId: principal.userId },
 	);

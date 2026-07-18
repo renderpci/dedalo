@@ -805,9 +805,9 @@ export async function resolveSearchData(rqo: Rqo, principal?: Principal): Promis
 	// silently misses the @> containment and the search returns 0 rows.
 	injected = injected.map((locator) =>
 		locator !== null &&
-			typeof locator === 'object' &&
-			locator.section_id !== undefined &&
-			locator.section_id !== null
+		typeof locator === 'object' &&
+		locator.section_id !== undefined &&
+		locator.section_id !== null
 			? { ...locator, section_id: String(locator.section_id) }
 			: locator,
 	);

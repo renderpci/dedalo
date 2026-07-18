@@ -60,7 +60,8 @@ export const DOMAINS: readonly ConfigDomain[] = [
 		id: 'mailer',
 		page: 'config',
 		title: 'Outbound email and password recovery',
-		intro: 'Dédalo relays outbound email (password-recovery codes) through an existing mailbox over SMTP — it never runs its own mail server. Leaving `DEDALO_SMTP_HOST` empty disables sending entirely, which also disables the login screen\'s password-recovery emails.',
+		intro:
+			"Dédalo relays outbound email (password-recovery codes) through an existing mailbox over SMTP — it never runs its own mail server. Leaving `DEDALO_SMTP_HOST` empty disables sending entirely, which also disables the login screen's password-recovery emails.",
 	},
 	{ id: 'ops', page: 'config', title: 'Logs, backups and diagnostics', intro: '' },
 	{ id: 'error_report', page: 'config', title: 'Error reporting', intro: '' },

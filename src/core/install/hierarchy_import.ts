@@ -229,7 +229,11 @@ export async function installHierarchies(
 			errors.push(...activation.errors.map((error) => `${tld}: ${error}`));
 			continue;
 		}
-		responses.push({ tld, result: true, msg: replace ? 'reset and activated' : 'imported and activated' });
+		responses.push({
+			tld,
+			result: true,
+			msg: replace ? 'reset and activated' : 'imported and activated',
+		});
 	}
 
 	const imported = responses.filter((r) => r.result && !r.skipped).length;
