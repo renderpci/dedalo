@@ -289,6 +289,32 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			setMediaAuthCookie: outcome.mediaAuthCookieValue,
 		};
 	},
+	request_password_reset: async (rqo, context) => {
+		// Forgot-password step 1 (pre-auth by design — NO_LOGIN + CSRF-exempt in
+		// dispatch.ts, PHP dd_manager whitelist parity). Anti-enumeration and
+		// throttling live in security/password_reset.ts; the response is always
+		// the same generic shape.
+		const options = (rqo.options ?? {}) as { identifier?: unknown };
+		const { requestPasswordReset } = await import('../../security/password_reset.ts');
+		const body = await requestPasswordReset(String(options.identifier ?? ''), context.clientIp);
+		return { status: 200, body: { ...body } };
+	},
+	confirm_password_reset: async (rqo, context) => {
+		// Forgot-password step 2 (pre-auth by design, see request_password_reset).
+		const options = (rqo.options ?? {}) as {
+			reset_id?: unknown;
+			code?: unknown;
+			new_password?: unknown;
+		};
+		const { confirmPasswordReset } = await import('../../security/password_reset.ts');
+		const body = await confirmPasswordReset(
+			String(options.reset_id ?? ''),
+			String(options.code ?? ''),
+			String(options.new_password ?? ''),
+			context.clientIp,
+		);
+		return { status: 200, body: { ...body } };
+	},
 	quit: async (_rqo, context) => {
 		// Log out (PHP dd_utils_api::quit → session teardown). The client's
 		// menu quit button posts here; on result===true it purges its local

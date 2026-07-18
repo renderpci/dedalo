@@ -61,6 +61,11 @@ export const NO_LOGIN_ACTIONS: ReadonlySet<string> = new Set([
 	'dd_core_api:get_environment',
 	'dd_core_api:start',
 	'dd_utils_api:get_login_context',
+	// Forgot-password recovery (PHP dd_manager pre-auth whitelist): the user is
+	// locked out by definition. Anti-enumeration/throttling live in
+	// security/password_reset.ts.
+	'dd_utils_api:request_password_reset',
+	'dd_utils_api:confirm_password_reset',
 	// Machine-to-machine intake from remote installations' servers (WC-017);
 	// Gate 1c (flag + IP) runs first, the handler owns throttle/token/schema.
 	'dd_error_report_api:receive_report',
@@ -86,6 +91,11 @@ export const CSRF_EXEMPT_ACTIONS: ReadonlySet<string> = new Set([
 	'dd_core_api:get_environment',
 	'dd_core_api:start',
 	'dd_utils_api:get_login_context',
+	// Forgot-password recovery (PHP CSRF_EXEMPT_ACTIONS parity): pre-auth by
+	// design — the login page holds no token; there is no session authority for
+	// a cross-site request to ride.
+	'dd_utils_api:request_password_reset',
+	'dd_utils_api:confirm_password_reset',
 	// PHP CSRF_EXEMPT_ACTIONS: the service worker fires it from its own
 	// context, outside the page that holds the token. Read-only; still
 	// AUTHENTICATED (deliberately NOT in NO_LOGIN_ACTIONS, matching PHP).
