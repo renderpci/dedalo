@@ -23,12 +23,18 @@
 
 import { beforeAll, describe, expect, test } from 'bun:test';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
+import { isConsultationOnlySection } from '../../src/core/concepts/section.ts';
 import { sql } from '../../src/core/db/postgres.ts';
-import { deriveSectionDdoMap, readSection } from '../../src/core/section/read.ts';
+import {
+	buildGetDataContext,
+	deriveSectionDdoMap,
+	readSection,
+} from '../../src/core/section/read.ts';
 import {
 	type Principal,
 	ddoIsAuthorized,
 	getPermissions,
+	getSectionPermissions,
 	resolvePrincipal,
 } from '../../src/core/security/permissions.ts';
 import { runWithRequestContext } from '../../src/core/security/request_context.ts';
@@ -176,5 +182,110 @@ describe('per-component permission gates (AUTHZ, 2026-07-10)', () => {
 		const contextTipos = result.context.map((entry) => (entry as { tipo?: string }).tipo);
 		expect(contextTipos).toContain(deniedTipo as string);
 		expect(contextTipos).toContain(grantedTipo as string);
+	});
+
+	// ---- per-element permission STAMPS (2026-07-18: the client renders <1
+	// ---- hidden / 1 read-only / >1 editable from exactly this field, so a
+	// ---- coarse stamp let users open editors that 403 on save).
+
+	/** The read-target consultation-only cap readSection applies to its stamps. */
+	function capped(level: number, section: string): number {
+		return level > 1 && isConsultationOnlySection(section) ? 1 : level;
+	}
+
+	test('context stamps the EXACT matrix level per element (no coarse 3/1 stamp)', async () => {
+		if (!dbReady || sectionTipo === null) return;
+		const section = sectionTipo as string;
+		const result = await asUser16(() => readSection(readRqo(section), nonAdmin));
+		// the granted component carries ITS OWN matrix level — a level-2 grant
+		// must stamp 2 (editable), a level-1 grant must stamp 1 (read-only)
+		const grantedLevel = await getPermissions(nonAdmin, section, grantedTipo as string);
+		const grantedEntry = result.context.find(
+			(entry) => (entry as { tipo?: string }).tipo === grantedTipo,
+		) as { permissions?: number } | undefined;
+		expect(grantedEntry).toBeDefined();
+		expect(grantedEntry?.permissions).toBe(capped(grantedLevel, section));
+		// the section's own entry carries the section-level ACL
+		const sectionEntry = result.context.find(
+			(entry) => (entry as { tipo?: string }).tipo === section,
+		) as { permissions?: number } | undefined;
+		expect(sectionEntry?.permissions).toBe(
+			capped(await getSectionPermissions(nonAdmin, section), section),
+		);
+	});
+
+	test('global-admin FLAG grants no bypass: matrix levels + level-0 drop (PHP parity)', async () => {
+		if (!dbReady || sectionTipo === null) return;
+		const section = sectionTipo as string;
+		const flaggedAdmin: Principal = {
+			userId: NON_ADMIN_USER,
+			isGlobalAdmin: true,
+			isDeveloper: false,
+		};
+		// the drop gate follows the matrix, not the flag
+		expect(await ddoIsAuthorized(flaggedAdmin, section, deniedTipo as string)).toBe(false);
+		const result = await runWithRequestContext(
+			{
+				principal: flaggedAdmin,
+				session: null,
+				requestId: 'perm_gate_test_admin',
+				clientIp: '127.0.0.1',
+			},
+			() => readSection(readRqo(section), flaggedAdmin),
+		);
+		const contextTipos = result.context.map((entry) => (entry as { tipo?: string }).tipo);
+		expect(contextTipos).not.toContain(deniedTipo as string);
+		expect(contextTipos).toContain(grantedTipo as string);
+		const dataTipos = result.data.map((item) => (item as { tipo?: string }).tipo);
+		expect(dataTipos).not.toContain(deniedTipo as string);
+		// the surviving entry is matrix-stamped, not flat 3
+		const grantedEntry = result.context.find(
+			(entry) => (entry as { tipo?: string }).tipo === grantedTipo,
+		) as { permissions?: number } | undefined;
+		expect(grantedEntry?.permissions).toBe(
+			capped(await getPermissions(flaggedAdmin, section, grantedTipo as string), section),
+		);
+	});
+
+	test('get_data context: matrix level on the MAIN entry, denied child floored to read', async () => {
+		if (!dbReady || sectionTipo === null) return;
+		const section = sectionTipo as string;
+		const mainLevel = await getPermissions(nonAdmin, section, grantedTipo as string);
+		const getDataRqo = {
+			id: 'perm_gate_gd',
+			action: 'read',
+			dd_api: 'dd_core_api',
+			prevent_lock: true,
+			options: {},
+			source: {
+				typo: 'source',
+				type: 'element',
+				action: 'get_data',
+				tipo: grantedTipo,
+				section_tipo: section,
+				section_id: 1,
+				mode: 'edit',
+				lang: 'lg-spa',
+			},
+		} as unknown as Rqo;
+		// a subdatum item whose OWN grant is 0, expanded through the granted
+		// component: PHP get_subdatum floors it to read (1), never hides it
+		const deniedChildItem = {
+			typo: 'dd',
+			tipo: deniedTipo,
+			section_tipo: section,
+			section_id: '1',
+			mode: 'edit',
+			lang: 'lg-spa',
+			from_component_tipo: grantedTipo,
+			value: [],
+		} as never;
+		const context = await asUser16(() =>
+			buildGetDataContext(getDataRqo, [deniedChildItem], nonAdmin),
+		);
+		const mainEntry = context.find((entry) => entry.tipo === grantedTipo);
+		expect(mainEntry?.permissions).toBe(mainLevel);
+		const childEntry = context.find((entry) => entry.tipo === deniedTipo);
+		expect(childEntry?.permissions).toBe(1);
 	});
 });
