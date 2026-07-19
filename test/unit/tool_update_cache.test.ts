@@ -24,10 +24,19 @@ const SECTION = 'numisdata4';
 const SCRATCH_SECTION = 'ich135';
 const SCRATCH_INPUT_TEXT = 'ich137';
 const scratchIds: number[] = [];
+/** dd800 bulk-process records the runs mint — scratch hygiene. */
+const bulkIds: number[] = [];
 afterAll(async () => {
 	for (const id of scratchIds) {
 		try {
 			await deleteSectionRecord(SCRATCH_SECTION, id, -1);
+		} catch {
+			/* best-effort */
+		}
+	}
+	for (const id of bulkIds) {
+		try {
+			await deleteSectionRecord('dd800', id, -1);
 		} catch {
 			/* best-effort */
 		}
@@ -145,6 +154,7 @@ describe('tool_update_cache module', () => {
 			},
 		});
 		if (res.result === false) return; // DB unavailable
+		if (typeof res.bulk_process_id === 'number') bulkIds.push(res.bulk_process_id);
 		expect(res.stopped).toBe(true);
 		expect(res.processed).toBe(0);
 		expect(res.regenerated).toBe(0);
@@ -187,6 +197,16 @@ describe('tool_update_cache module', () => {
 			],
 			userId: -1,
 		});
+		// TM parity (v6 :45-47): a regenerate re-save writes NO Time Machine rows.
+		const { sql } = await import('../../src/core/db/postgres.ts');
+		const tmCount = async (): Promise<number> => {
+			const rows = (await sql.unsafe(
+				'SELECT count(*)::int AS n FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2',
+				[SCRATCH_SECTION, scratchId],
+			)) as { n: number }[];
+			return rows[0]?.n ?? -1;
+		};
+		const tmBefore = await tmCount();
 		const frames: Record<string, unknown>[] = [];
 		const res = await mustGet(loaded!.module.apiActions.update_cache, 'update_cache').handler({
 			principal,
@@ -203,10 +223,14 @@ describe('tool_update_cache module', () => {
 			},
 		});
 		expect(res.result).toBe(true);
+		if (typeof res.bulk_process_id === 'number') bulkIds.push(res.bulk_process_id);
 		expect(res.regenerated as number).toBeGreaterThanOrEqual(1);
 		// The sqo scoped the run to EXACTLY the one filtered record (WC-043).
 		expect(res.records).toBe(1);
 		expect(res.processed).toBe(1);
+		// v6 parity: the run minted a dd800 bulk-process record and wrote no TM rows.
+		expect(typeof res.bulk_process_id).toBe('number');
+		expect(await tmCount()).toBe(tmBefore);
 		// Progress frames: the client-rendered contract (counter/total), final
 		// frame terminal with counter === total.
 		expect(frames.length).toBeGreaterThanOrEqual(2);
@@ -338,6 +362,7 @@ describe('tool_update_cache module', () => {
 				},
 			});
 			expect(res.result).toBe(true);
+			if (typeof res.bulk_process_id === 'number') bulkIds.push(res.bulk_process_id);
 			expect(res.regenerated as number).toBeGreaterThanOrEqual(1);
 
 			const repaired = readComponentItems(
