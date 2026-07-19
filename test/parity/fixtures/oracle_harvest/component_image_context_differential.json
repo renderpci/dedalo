@@ -15923,37 +15923,37 @@
 									"files_info": [
 										{
 											"quality": "original",
-											"extension": "png",
-											"file_name": "rsc29_rsc170_1.png",
-											"file_path": "/image/original/0/rsc29_rsc170_1.png",
-											"file_size": 2645252,
+											"extension": "jpg",
+											"file_name": "rsc29_rsc170_1.jpg",
+											"file_path": "/image/original/0/rsc29_rsc170_1.jpg",
+											"file_size": 129842,
 											"file_time": {
-												"day": 10,
-												"hour": 0,
-												"time": 65134112312,
-												"year": 2026,
-												"month": 7,
-												"minute": 58,
-												"second": 32,
-												"timestamp": "2026-07-10 00:58:32"
+												"day": 28,
+												"hour": 7,
+												"time": 65098195026,
+												"year": 2025,
+												"month": 5,
+												"minute": 57,
+												"second": 6,
+												"timestamp": "2025-05-28 07:57:06"
 											},
 											"file_exist": true
 										},
 										{
 											"quality": "original",
-											"extension": "tiff",
-											"file_name": "rsc29_rsc170_1.tiff",
-											"file_path": "/image/original/0/rsc29_rsc170_1.tiff",
-											"file_size": 30027102,
+											"extension": "avif",
+											"file_name": "rsc29_rsc170_1.avif",
+											"file_path": "/image/original/0/rsc29_rsc170_1.avif",
+											"file_size": 101195,
 											"file_time": {
-												"day": 4,
-												"hour": 13,
-												"time": 65133639866,
-												"year": 2026,
+												"day": 29,
+												"hour": 22,
+												"time": 65103689926,
+												"year": 2025,
 												"month": 7,
-												"minute": 44,
-												"second": 26,
-												"timestamp": "2026-07-04 13:44:26"
+												"minute": 18,
+												"second": 46,
+												"timestamp": "2025-07-29 22:18:46"
 											},
 											"file_exist": true
 										},
@@ -15962,16 +15962,34 @@
 											"extension": "jpg",
 											"file_name": "rsc29_rsc170_1.jpg",
 											"file_path": "/image/1.5MB/0/rsc29_rsc170_1.jpg",
-											"file_size": 128959,
+											"file_size": 74126,
 											"file_time": {
-												"day": 10,
-												"hour": 0,
-												"time": 65134112313,
-												"year": 2026,
+												"day": 29,
+												"hour": 22,
+												"time": 65103692356,
+												"year": 2025,
 												"month": 7,
-												"minute": 58,
-												"second": 33,
-												"timestamp": "2026-07-10 00:58:33"
+												"minute": 59,
+												"second": 16,
+												"timestamp": "2025-07-29 22:59:16"
+											},
+											"file_exist": true
+										},
+										{
+											"quality": "1.5MB",
+											"extension": "avif",
+											"file_name": "rsc29_rsc170_1.avif",
+											"file_path": "/image/1.5MB/0/rsc29_rsc170_1.avif",
+											"file_size": 81423,
+											"file_time": {
+												"day": 29,
+												"hour": 22,
+												"time": 65103689926,
+												"year": 2025,
+												"month": 7,
+												"minute": 18,
+												"second": 46,
+												"timestamp": "2025-07-29 22:18:46"
 											},
 											"file_exist": true
 										},

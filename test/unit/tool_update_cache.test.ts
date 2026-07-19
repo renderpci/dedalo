@@ -6,7 +6,11 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
+import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import { readMatrixRecord } from '../../src/core/db/matrix.ts';
+import { updateMatrixKeyData } from '../../src/core/db/matrix_write.ts';
+import { resolveMediaPathOptions } from '../../src/core/media/ontology_path.ts';
+import { resolveOriginalSource } from '../../src/core/media/processing.ts';
 import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { readComponentItems } from '../../src/core/resolve/component_data.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
@@ -143,5 +147,89 @@ describe('tool_update_cache module', () => {
 		);
 		// Un-duplicated: one item per language, nothing re-stamped onto another lang.
 		expect(stored).toHaveLength(2);
+	});
+
+	test('update_cache REPAIRS media: stale files_info is rebuilt from disk (scratch surface)', async () => {
+		// test3 (matrix_test) is the scratch surface; test99 is its component_image.
+		// Runs only where the record's original file is on this box — the media
+		// repair is honest about file-less boxes (regenerate no-ops, scan rules).
+		const MEDIA_SECTION = 'test3';
+		const MEDIA_COMPONENT = 'test99';
+		const MEDIA_ID = 1;
+		const spec = mediaTypeOf('component_image');
+		expect(spec).not.toBeNull();
+		let table: string | null;
+		try {
+			table = await getMatrixTableFromTipo(MEDIA_SECTION);
+		} catch {
+			return; // DB unavailable
+		}
+		if (table === null) return;
+		const record = await readMatrixRecord(table, MEDIA_SECTION, MEDIA_ID);
+		if (record === null) return;
+		const originalItems = readComponentItems(record, MEDIA_COMPONENT, 'component_image');
+		if (!Array.isArray(originalItems) || originalItems.length === 0) return;
+		const pathOpts = await resolveMediaPathOptions(MEDIA_COMPONENT, MEDIA_SECTION);
+		const source = resolveOriginalSource(
+			spec!,
+			{
+				componentTipo: MEDIA_COMPONENT,
+				sectionTipo: MEDIA_SECTION,
+				sectionId: MEDIA_ID,
+				lang: null,
+			},
+			pathOpts,
+		);
+		if (source === null) return; // media files not on this box — nothing to assert
+
+		try {
+			// Corrupt the stored index the way the wrong-MEDIA_PATH bug did: empty it.
+			const wiped = originalItems.map((item) => ({
+				...(item as Record<string, unknown>),
+				files_info: [],
+			}));
+			await updateMatrixKeyData(table, MEDIA_SECTION, MEDIA_ID, 'media', MEDIA_COMPONENT, wiped);
+
+			const loaded = await getLoadedTool('tool_update_cache');
+			const principal = await resolvePrincipal(-1);
+			const res = await mustGet(loaded!.module.apiActions.update_cache, 'update_cache').handler({
+				principal,
+				userId: -1,
+				background: true,
+				options: {
+					section_tipo: MEDIA_SECTION,
+					components_selection: [{ tipo: MEDIA_COMPONENT }],
+					sqo: {
+						section_tipo: [MEDIA_SECTION],
+						filter_by_locators: [{ section_tipo: MEDIA_SECTION, section_id: String(MEDIA_ID) }],
+					},
+				},
+			});
+			expect(res.result).toBe(true);
+			expect(res.regenerated as number).toBeGreaterThanOrEqual(1);
+
+			const repaired = readComponentItems(
+				(await readMatrixRecord(table, MEDIA_SECTION, MEDIA_ID))!,
+				MEDIA_COMPONENT,
+				'component_image',
+			) as Record<string, unknown>[];
+			const filesInfo = repaired[0]?.files_info as Record<string, unknown>[];
+			expect(Array.isArray(filesInfo)).toBe(true);
+			expect(filesInfo.some((entry) => entry.file_exist === true)).toBe(true);
+			// Sibling keys survive the repair (refreshStoredFilesInfo spread).
+			expect(repaired[0]?.original_normalized_name).toBe(
+				(originalItems[0] as Record<string, unknown>).original_normalized_name,
+			);
+		} finally {
+			// Restore the record's stored media exactly as found (scratch hygiene).
+			await updateMatrixKeyData(
+				table,
+				MEDIA_SECTION,
+				MEDIA_ID,
+				'media',
+				MEDIA_COMPONENT,
+				originalItems,
+			);
+		}
 	});
 });

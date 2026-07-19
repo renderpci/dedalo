@@ -63,24 +63,39 @@ async function get(devListener: boolean): Promise<number> {
 }
 
 describe.skipIf(mediaRoot === null)('engine media fallback ↔ listener binding', () => {
+	// These tests assert the UNCONFIGURED-install behavior, so each pins its
+	// premises instead of inheriting the developer's ../private/.env (which may
+	// legitimately set a protection mode and/or MEDIA_DEV_ROUTE_ENABLED):
+	// - state override `false` = protection explicitly off (resolveMediaAccessMode
+	//   honors it before the .env mode);
+	// - process.env MEDIA_DEV_ROUTE_ENABLED='' shadows the file value with a
+	//   string that is neither 'true' nor 'false' → the flag reads as unset.
+	const pinUnconfigured = () => {
+		setServerState({ media_access_mode: false });
+		process.env.MEDIA_DEV_ROUTE_ENABLED = '';
+	};
+
 	test('DEV listener + protection unconfigured → served, with NO config at all', async () => {
 		// The fresh-install case: dev_quickstart, no MEDIA_DEV_ROUTE_ENABLED anywhere.
-		expect(process.env.MEDIA_DEV_ROUTE_ENABLED).toBeUndefined();
+		pinUnconfigured();
 		expect(await get(true)).toBe(200);
 	});
 
 	test('the unix SOCKET path never serves media, even with a valid session', async () => {
 		// Production is socket-only. This is what makes MEDIA-04 structural rather than a
 		// rule someone has to remember: there is no listener there that can answer.
+		pinUnconfigured();
 		expect(await get(false)).toBe(404);
 	});
 
 	test('MEDIA_DEV_ROUTE_ENABLED=false forces it off even on the dev listener', async () => {
+		setServerState({ media_access_mode: false });
 		process.env.MEDIA_DEV_ROUTE_ENABLED = 'false';
 		expect(await get(true)).toBe(404);
 	});
 
 	test('MEDIA_DEV_ROUTE_ENABLED=true still forces it on (back-compat escape hatch)', async () => {
+		setServerState({ media_access_mode: false });
 		process.env.MEDIA_DEV_ROUTE_ENABLED = 'true';
 		expect(await get(false)).toBe(200); // forced: applies to every listener — hence the boot warning
 	});

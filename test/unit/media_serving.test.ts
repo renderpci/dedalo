@@ -10,6 +10,7 @@ import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { readEnv } from '../../src/config/env.ts';
+import { setServerState } from '../../src/core/resolve/server_state.ts';
 import { createSession } from '../../src/core/security/session_store.ts';
 import { handleRequest } from '../../src/server.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
@@ -27,13 +28,19 @@ const context = { requestId: 'media-test', startedAt: 0 };
 const mediaRoot = config.media.rootPath ?? undefined;
 
 // The dev media route is opt-in (M5). Enable it for these route tests; it is read
-// per-request, so setting the env here takes effect without a reimport.
+// per-request, so setting the env here takes effect without a reimport. The
+// protection mode is pinned OFF via the state override too: a developer's
+// ../private/.env may set DEDALO_MEDIA_ACCESS_MODE, and a configured mode
+// outranks the flag (protection-wins, MEDIA-04) — these tests assert the
+// unprotected dev-route behavior, so they must not inherit that env.
 beforeAll(() => {
 	process.env.MEDIA_DEV_ROUTE_ENABLED = 'true';
+	setServerState({ media_access_mode: false });
 });
 afterAll(() => {
 	// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
 	delete process.env.MEDIA_DEV_ROUTE_ENABLED;
+	setServerState({ media_access_mode: null });
 });
 
 /** Find one real media file (relative path) to serve in the test. */
