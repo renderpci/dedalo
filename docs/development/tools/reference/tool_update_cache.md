@@ -22,7 +22,7 @@ Use it when: a component's *stored* value must be regenerated across many record
 `update_cache` does the regeneration:
 
 1. Requires `section_tipo` and a non-empty `components_selection`; otherwise it fails closed with `invalid_request`.
-2. Sanitises the client SQO (`sanitizeClientSqo`) and forces `limit = null` / `offset = 0`, so the **whole** matched set is processed — the client SQO, or the whole section when none is supplied.
+2. **Requires** the client SQO (WC-043 — there is deliberately NO whole-section fallback: an absent sqo once silently swept a 438k-record section the client displayed as "Records: 1"; missing/malformed sqo fails closed with `invalid_request`). Sanitises it (`sanitizeClientSqo`) and forces `limit = null` / `offset = 0`, so the **whole matched set** — not just the visible page — is processed. The client sends a deep clone of the caller list's live sqo, so scope == what the list shows; an unfiltered list explicitly matches the whole section.
 3. Assembles and runs the search (`buildSearchSql`) to get the matched `(section_tipo, section_id)` rows.
 4. Iterates the rows. For each selected component tipo it resolves the model and branches:
    - **non-media** — reads the component's current items (`readComponentItems`) and re-saves them with a single `set_data` change through `saveComponentData` (`src/core/section/record/save_component.ts`), which re-runs the save path's derivation. Each such write increments `regenerated`.
@@ -60,11 +60,13 @@ Key options read by `update_cache`:
 | --- | --- | --- |
 | `section_tipo` | string (req.) | Target section. Required; missing it fails with `invalid_request`. |
 | `components_selection` | array (req.) | The components to regenerate, `[{ tipo, regenerate_options }, …]`. Non-empty required. Only `tipo` is read. |
-| `sqo` | object (opt.) | The selection to act on. Server forces the full result set (`limit=null`, `offset=0`); defaults to the whole section when absent. |
+| `sqo` | object (req.) | The selection to act on — REQUIRED (WC-043, no whole-section default; absent ⇒ `invalid_request`). Server forces the full result set (`limit=null`, `offset=0`). The client sends the caller list's live sqo (cloned). |
 | `lang` | string | Application language; used for the translatable-component write language (non-translatable components write `lg-nolan`). |
 | `background_running` | bool | Set `true` by the client to run detached (`scheduleBackground`). |
 
-Response: `{ result, msg, errors, regenerated, records, media_errors, media_held }` — `regenerated` is the number of component writes (media and non-media), `records` the number of matched records, `media_errors` the count of media derivative rebuilds that failed (each detailed in `errors`; the files_info refresh still landed for them), `media_held` the count of stored media indexes kept because the rescan found fewer files than stored (shrink guard).
+Response: `{ result, msg, errors, regenerated, records, processed, stopped, media_errors, media_held }` — `regenerated` is the number of component writes (media and non-media), `records` the number of matched records, `processed` how many were fully processed (`< records` only after a stop), `stopped` whether the run ended by cooperative cancellation, `media_errors` the count of media derivative rebuilds that failed (each detailed in `errors`; the files_info refresh still landed for them), `media_held` the count of stored media indexes kept because the rescan found fewer files than stored (shrink guard).
+
+**Progress & stop (WC-043):** the handler publishes throttled per-record frames through `ctx.publishProgress` — `{msg, is_running, counter, total, current:{section_id}, n_components}`, exactly the fields the client's stream renderer formats — and checks `ctx.signal?.aborted` at each record boundary. The generic Stop button posts `dd_utils_api::stop_process {pid, pfile}` (registered since WC-043; `src/core/api/process_status.ts stopUtilsProcess` — owner-gated, aborts the job's controller), so a run stops cooperatively after the current record and returns the partial summary.
 
 ## How it is registered & surfaced
 

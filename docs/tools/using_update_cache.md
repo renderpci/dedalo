@@ -27,8 +27,9 @@ Update cache is a **section-level** tool: you open it on a section, and it lists
 
 1. **Open update cache** on the section you want to maintain. The tool fetches the section's component list and shows it as a checkbox tree; media components and any components an administrator has flagged for easy location are highlighted.
 2. **Tick the components** whose stored data you want to regenerate. (Automatic system fields cannot be selected.)
-3. Optionally narrow the scope with a **section filter** before opening the tool — the run then covers only the matched records. With no filter, it covers the whole section.
-4. Press **Update records** (the button shows the record count in scope). Confirm when prompted.
+3. Optionally narrow the scope with a **section filter** before opening the tool — the run covers **exactly the records the list matches** (all pages of it, not just the visible one). With no filter, it covers the whole section. The scope the run uses is always the scope the list shows.
+4. Press **Update records** (the button shows the record count in scope). The confirmation dialog repeats the record and component counts — what you confirm is what runs.
+5. While it runs, the progress line ticks `N of total` with the current record id. The **Stop** button ends the run cooperatively: the record being processed finishes, the rest are left untouched, and the summary reports how far it got.
 5. The run executes in the **background** and shows **live progress** — a running counter of records processed — then a final summary of components and records updated. If you close and reopen the panel while a run is still going, the progress view re-attaches to it.
 
 ## Options
