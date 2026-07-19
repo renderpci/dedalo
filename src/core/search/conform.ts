@@ -37,6 +37,7 @@ import { buildStringFragment } from './builders/builder_string.ts';
 import type { BuilderContext, BuilderResult } from './builders/types.ts';
 import { fragment as fragmentResult } from './builders/types.ts';
 import { assertValidLang, assertValidTipo, assertValidTipoOrColumn } from './identifier_gate.ts';
+import { searchStoreCovers } from './search_store.ts';
 
 /** Default data language of the installation (PHP DEDALO_DATA_LANG). */
 const DEFAULT_DATA_LANG = readString('DATA_LANG');
@@ -270,6 +271,9 @@ async function conformLeaf(
 		lang,
 		translatable,
 		model,
+		// string leaves: let builder_string prepend its search-store pre-filter
+		// when the table's sync trigger exists (cached catalog check).
+		searchStoreCovered: column === 'string' ? await searchStoreCovers(leafTable) : false,
 	};
 
 	// Builder dispatch by descriptor facet (S2-26): relation-column models go

@@ -37,6 +37,14 @@ export interface BuilderContext {
 	translatable: boolean;
 	/** The component model (dispatch key). */
 	model: string;
+	/**
+	 * string-column leaves only: the physical table is COVERED by the
+	 * matrix_search_values per-value store (its sync trigger exists — see
+	 * search_store.ts), so builder_string may prepend its trigram-served
+	 * contains pre-filter. Absent/false → the builder emits its exact classic
+	 * SQL (byte-identical, store-less behavior).
+	 */
+	searchStoreCovered?: boolean;
 }
 
 /** A resolved SQL fragment: sentence with _Q1_-style tokens + their values. */

@@ -220,10 +220,19 @@ export const widget: WidgetModule = {
 		rebuild_db_indexes: async (options) => {
 			const { rebuildIndexes } = await import('../../db/db_assets.ts');
 			const tables = Array.isArray(options.tables) ? (options.tables as string[]) : [];
-			return rebuildIndexes(tables) as Promise<WidgetResponse>;
+			const response = await rebuildIndexes(tables);
+			// A rebuilt search-store trigger set must be picked up by the search
+			// builders without a server restart.
+			const { clearSearchStoreCache } = await import('../../search/search_store.ts');
+			clearSearchStoreCache();
+			return response as WidgetResponse;
 		},
-		recreate_db_assets: async () =>
-			(await import('../../db/db_assets.ts')).recreateDbAssets() as unknown as WidgetResponse,
+		recreate_db_assets: async () => {
+			const response = await (await import('../../db/db_assets.ts')).recreateDbAssets();
+			const { clearSearchStoreCache } = await import('../../search/search_store.ts');
+			clearSearchStoreCache();
+			return response as unknown as WidgetResponse;
+		},
 	},
 	getValue: databaseInfoGetValue,
 };

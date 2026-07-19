@@ -3,11 +3,52 @@
 		"CREATE EXTENSION IF NOT EXISTS pg_trgm;",
 		"CREATE EXTENSION IF NOT EXISTS unaccent;"
 	],
+	"ar_table": [
+		{
+			"add": "\n\t\tCREATE TABLE IF NOT EXISTS matrix_search_values (\n\t\t\tsection_tipo character varying(64) NOT NULL,\n\t\t\tsection_id integer NOT NULL,\n\t\t\ttv text NOT NULL\n\t\t);\n\t",
+			"drop": "",
+			"sample": "SELECT DISTINCT section_id FROM matrix_search_values WHERE tv LIKE 'rsc140:%sarde%' LIMIT 10",
+			"name": "matrix_search_values",
+			"info": "Per-value text-search store: one row per component value of every string column, tv = '<component_tipo>:' || lower(f_unaccent(value)). The trigram index over tv serves the search builders' accent/case-insensitive contains pre-filter with the component tipo baked into the LIKE prefix (scoped searches ~5ms vs seconds; see builder_string.ts). Maintained by the matrix_search_values_sync triggers; DERIVED data — safe to truncate and re-backfill: INSERT INTO matrix_search_values SELECT m.section_tipo, m.section_id, kv.key || ':' || lower(f_unaccent(e->>'value')) FROM <each triggered table> m, jsonb_each(m.string) kv, jsonb_array_elements(kv.value) e WHERE jsonb_typeof(kv.value)='array' AND e->>'value' IS NOT NULL AND e->>'value' <> ''. drop is EMPTY on purpose: recreate runs must never wipe the store."
+		}
+	],
+	"ar_trigger": [
+		{
+			"tables": [
+				"matrix",
+				"matrix_activities",
+				"matrix_dataframe",
+				"matrix_dd",
+				"matrix_hierarchy",
+				"matrix_hierarchy_main",
+				"matrix_indexations",
+				"matrix_langs",
+				"matrix_layout",
+				"matrix_layout_dd",
+				"matrix_list",
+				"matrix_nexus",
+				"matrix_nexus_main",
+				"matrix_notes",
+				"matrix_ontology",
+				"matrix_ontology_main",
+				"matrix_profiles",
+				"matrix_projects",
+				"matrix_test",
+				"matrix_tools",
+				"matrix_users"
+			],
+			"add": "CREATE TRIGGER {$table}_search_values_sync AFTER INSERT OR DELETE OR UPDATE OF string, section_id, section_tipo ON {$table} FOR EACH ROW EXECUTE FUNCTION matrix_search_values_sync();",
+			"drop": "DROP TRIGGER IF EXISTS {$table}_search_values_sync ON {$table}",
+			"sample": "UPDATE matrix_test SET string = string WHERE section_id = 1",
+			"name": "all_matrix_search_values_sync",
+			"info": "Keeps matrix_search_values in sync on every write path (engine, scripts, manual SQL). Table list = the string-searchable tables (all_matrix_string_gin_idx MINUS the log tables matrix_activity / matrix_activity_diffusion / matrix_stats). The search builders gate their pre-filter on THIS trigger's presence per table (search_store.ts) — a table without the trigger keeps the classic scan, so enabling a new table = add it here, rebuild, then backfill its rows."
+		}
+	],
 	"ar_function": [
 		{
-			"add": "\n\t\tCREATE OR REPLACE FUNCTION f_unaccent(text)\n\t\tRETURNS text LANGUAGE 'sql' COST 100 IMMUTABLE PARALLEL UNSAFE\n\t\tAS $BODY$ SELECT unaccent('unaccent', $1) $BODY$;\n\t",
+			"add": "\n\t\tCREATE OR REPLACE FUNCTION f_unaccent(text)\n\t\tRETURNS text LANGUAGE 'sql' COST 100 IMMUTABLE PARALLEL UNSAFE\n\t\tAS $BODY$ SELECT public.unaccent('public.unaccent', $1) $BODY$;\n\t",
 			"drop": "DROP FUNCTION IF EXISTS f_unaccent",
-			"sample": "SELECT * FROM matrix WHERE f_unaccent(jsonb_path_query_array(string, '$.*[*]')->>value) = f_unaccent('Ripolles') ORDER BY section_id ASC LIMIT 10",
+			"sample": "SELECT section_id FROM matrix WHERE section_tipo = 'rsc205' AND EXISTS (SELECT 1 FROM jsonb_path_query(string, '$.rsc140[*]') AS elem WHERE f_unaccent(elem->>'value') ~* f_unaccent('Ripolles')) ORDER BY section_id ASC LIMIT 10",
 			"name": "f_unaccent",
 			"info": "Used to remove accents from a text string. Useful for case-insensitive and accent-insensitive searches."
 		},
@@ -52,6 +93,13 @@
 			"sample": "SELECT tipo, term, jsonb_values_as_text(term) AS values_text FROM dd_ontology WHERE term IS NOT NULL LIMIT 5",
 			"name": "jsonb_values_as_text",
 			"info": "Aggregates all JSONB leaf values of the term column into a single searchable text string. Used by the ontology fuzzy search (similarity + trigram) to match human-readable text across all language keys."
+		},
+		{
+			"add": "\n\t\tCREATE OR REPLACE FUNCTION matrix_search_values_sync()\n\t\tRETURNS trigger LANGUAGE plpgsql AS $BODY$\n\t\tBEGIN\n\t\t\tIF TG_OP <> 'INSERT' THEN\n\t\t\t\tDELETE FROM matrix_search_values WHERE section_tipo = OLD.section_tipo AND section_id = OLD.section_id;\n\t\t\tEND IF;\n\t\t\tIF TG_OP <> 'DELETE' AND NEW.string IS NOT NULL THEN\n\t\t\t\tINSERT INTO matrix_search_values (section_tipo, section_id, tv)\n\t\t\t\tSELECT NEW.section_tipo, NEW.section_id, kv.key || ':' || lower(public.f_unaccent(e->>'value'))\n\t\t\t\tFROM jsonb_each(NEW.string) AS kv, jsonb_array_elements(kv.value) AS e\n\t\t\t\tWHERE jsonb_typeof(kv.value) = 'array' AND e->>'value' IS NOT NULL AND e->>'value' <> '';\n\t\t\tEND IF;\n\t\t\tRETURN NULL;\n\t\tEND $BODY$;\n\t",
+			"drop": "DROP FUNCTION IF EXISTS matrix_search_values_sync CASCADE",
+			"sample": "UPDATE matrix_test SET string = string WHERE section_id = 1",
+			"name": "matrix_search_values_sync",
+			"info": "Row trigger body for the all_matrix_search_values_sync triggers: replaces the record's matrix_search_values rows on every insert/update/delete (delete-then-reinsert keyed by section_tipo+section_id). The drop CASCADE removes the triggers too — recreate_db_assets rebuilds them right after (functions before triggers)."
 		}
 	],
 	"ar_constraint": [
@@ -102,7 +150,7 @@
 			"tables": ["dd_ontology"],
 			"add": "CREATE INDEX IF NOT EXISTS {$table}_is_model_idx ON {$table} USING btree (is_model ASC NULLS LAST);",
 			"drop": "DROP INDEX IF EXISTS {$table}_is_model_idx",
-			"sample": "SELECT * FROM dd_ontology WHERE is_model = 1 LIMIT 1",
+			"sample": "SELECT * FROM dd_ontology WHERE is_model = true LIMIT 1",
 			"name": "dd_ontology_is_model_idx",
 			"info": "Used to search if the term is a descriptor or not, possible values: 1|2. 1 = yes, 2 = no"
 		},
@@ -150,7 +198,7 @@
 			"tables": ["dd_ontology"],
 			"add": "CREATE INDEX IF NOT EXISTS {$table}_relations_idx ON {$table} USING gin (relations);",
 			"drop": "DROP INDEX IF EXISTS {$table}_relations_idx",
-			"sample": "SELECT * FROM dd_ontology WHERE relations @> ARRAY['tch'] LIMIT 1",
+			"sample": "SELECT * FROM dd_ontology WHERE relations @> '[{\"tipo\":\"tch1\"}]'::jsonb LIMIT 1",
 			"name": "dd_ontology_relations_idx",
 			"info": "Used to search for descriptor relations"
 		},
@@ -324,6 +372,22 @@
 			"sample": "SELECT * FROM matrix WHERE string @> '{\"rsc85\":[{\"value\":\"Pere\"}]}' LIMIT 10",
 			"name": "all_matrix_string_gin_idx",
 			"info": "Used to search string literals as full components data"
+		},
+		{
+			"tables": ["matrix_search_values"],
+			"add": "CREATE INDEX IF NOT EXISTS {$table}_tv_trgm_idx ON {$table} USING gin (tv gin_trgm_ops);",
+			"drop": "DROP INDEX IF EXISTS {$table}_tv_trgm_idx",
+			"sample": "SELECT DISTINCT section_id FROM matrix_search_values WHERE tv LIKE 'rsc140:%sarde%' LIMIT 10",
+			"name": "matrix_search_values_tv_trgm_idx",
+			"info": "Trigram GIN over the per-value search store. A component-scoped LIKE ('<tipo>:%<q>%') puts both the tipo prefix and the term into one trigram lookup, and the recheck runs on ONE short value — the reason this store beats every whole-record expression-index variant (measured 2026-07-19)."
+		},
+		{
+			"tables": ["matrix_search_values"],
+			"add": "CREATE INDEX IF NOT EXISTS {$table}_record_idx ON {$table} USING btree (section_tipo, section_id);",
+			"drop": "DROP INDEX IF EXISTS {$table}_record_idx",
+			"sample": "SELECT tv FROM matrix_search_values WHERE section_tipo = 'rsc205' AND section_id = 1",
+			"name": "matrix_search_values_record_idx",
+			"info": "Record-keyed access for the sync trigger's delete-then-reinsert and for per-record resyncs."
 		},
 		{
 			"tables": [
@@ -821,7 +885,7 @@
 			"tables": ["matrix_time_machine"],
 			"add": "CREATE INDEX IF NOT EXISTS {$table}_user_id_idx ON {$table} USING btree (\"user_id\" ASC NULLS LAST);",
 			"drop": "DROP INDEX IF EXISTS {$table}_user_id_idx",
-			"sample": "SELECT * FROM matrix_time_machine WHERE user_id = 2 LIMIT 1",
+			"sample": "SELECT * FROM matrix_time_machine WHERE user_id = '2' LIMIT 1",
 			"name": "matrix_time_machine_user_id_idx",
 			"info": "Used to search by user_id."
 		},

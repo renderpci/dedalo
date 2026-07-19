@@ -13,7 +13,7 @@
  * matrix_time_machine (_tm) builder twin. It throws.
  */
 
-import type { BuilderContext, BuilderResult } from './types.ts';
+import type { BuilderContext, BuilderResult, Fragment } from './types.ts';
 import { compound, extractNormalizedQ, fragment, isLiteralQ, splitSearchTerms } from './types.ts';
 
 /** The lang-scoped jsonpath used by @? existence envelopes. */
@@ -30,6 +30,67 @@ function existsEnvelope(context: BuilderContext, matchLogic: string): string {
 		`(${context.alias}.${context.column} @? '${jsonPath}') AND EXISTS (` +
 		`SELECT 1 FROM jsonb_path_query(${context.alias}.${context.column}, '${jsonPath}') AS elem ` +
 		`WHERE ${matchLogic})`
+	);
+}
+
+/**
+ * Regex metacharacters that make a q NOT literally LIKE-matchable: the exact
+ * predicate treats q as a POSIX regex, so a q carrying any of these could
+ * match values the literal-substring pre-filter would reject (false
+ * negative). Plain words — the overwhelmingly normal case — pass.
+ */
+const REGEX_META = /[.*+?[\]{}()|\\^$]/;
+
+/**
+ * SEARCH-STORE PRE-FILTER for POSITIVE match shapes (contains / begins /
+ * ends / equal / literal): the matrix_search_values per-value store queried
+ * as `section_id = ANY (ARRAY(SELECT … WHERE sv.tv LIKE '<tipo>:%<q>%'))` —
+ * the component tipo rides in the LIKE prefix, so the trigram index narrows
+ * to THIS component's matching values and the recheck runs on one short
+ * value (rsc205 'sarde': 1.4s classic scan → ~50ms; whole-record expression
+ * indexes were measured counterproductive, 2026-07-19 — TOASTed
+ * re-flattening per recheck row).
+ *
+ * SHAPE MATTERS: the subquery is deliberately UNCORRELATED so it plans as a
+ * one-shot InitPlan and the main table is ENTERED by section_id — the
+ * correlated-EXISTS variant let the planner semi-join from the matrix side
+ * (jsonb-selectivity misestimates) and re-run the slow exact predicate on
+ * every row (measured 1.4s vs 48ms). No section_tipo condition inside: a
+ * shared component tipo may span sections and the multi-section UNION
+ * replicates this WHERE verbatim into every branch — cross-section ids only
+ * WIDEN the superset (the outer section_tipo pin + the exact predicate still
+ * decide), never narrow it.
+ *
+ * The clause is a strict SUPERSET of every positive per-value match (store
+ * rows are lower(f_unaccent(value)) of the same values, all langs), so the
+ * exact EXISTS predicate that follows still decides membership.
+ *
+ * Emitted ONLY when:
+ * - the table is store-covered (context.searchStoreCovered — the sync
+ *   trigger exists; see search_store.ts: against an unmaintained table the
+ *   empty store would wrongly EXCLUDE rows, so the gate is correctness);
+ * - q is regex-plain (no REGEX_META): the exact predicate is regex-semantic,
+ *   the pre-filter is literal-substring — they only agree on plain text.
+ *   LIKE's own wildcards (% _) are then escaped into literals.
+ * Never emitted for negations ('!*', '!=', '-', '!!') or bare '*'.
+ */
+function withStorePrefilter(
+	context: BuilderContext,
+	sentence: string,
+	tokenValues: Record<string, unknown>,
+	q: string,
+): Fragment {
+	if (context.searchStoreCovered !== true || q === '' || REGEX_META.test(q)) {
+		return fragment(sentence, tokenValues);
+	}
+	// % and _ are literal characters in the regex-exact predicate — escape
+	// them so LIKE treats them literally too (backslash is excluded by the
+	// regex-plain guard, so it cannot collide with the escape character).
+	const likeQ = q.replaceAll('%', '\\%').replaceAll('_', '\\_');
+	return fragment(
+		`${context.alias}.section_id = ANY (ARRAY(SELECT sv.section_id FROM matrix_search_values sv ` +
+			`WHERE sv.tv LIKE '${context.tipo}:%' || lower(f_unaccent(_Q0_)) || '%')) AND ${sentence}`,
+		{ _Q0_: likeQ, ...tokenValues },
 	);
 }
 
@@ -132,9 +193,12 @@ export function buildStringFragment(
 	// '==' — exactly equal (accent/case-insensitive)
 	if (effective.startsWith('==')) {
 		const qClean = effective.slice(2);
-		return fragment(existsEnvelope(context, `f_unaccent(elem->>'value') = f_unaccent(_Q1_)`), {
-			_Q1_: qClean,
-		});
+		return withStorePrefilter(
+			context,
+			existsEnvelope(context, `f_unaccent(elem->>'value') = f_unaccent(_Q1_)`),
+			{ _Q1_: qClean },
+			qClean,
+		);
 	}
 
 	// '=' — exactly equal, the single-char twin of '==' (TS-BEYOND-PHP,
@@ -147,9 +211,12 @@ export function buildStringFragment(
 	if (effective.startsWith('=')) {
 		const qClean = effective.slice(1).replaceAll("'", '');
 		if (qClean === '') return false;
-		return fragment(existsEnvelope(context, `f_unaccent(elem->>'value') = f_unaccent(_Q1_)`), {
-			_Q1_: qClean,
-		});
+		return withStorePrefilter(
+			context,
+			existsEnvelope(context, `f_unaccent(elem->>'value') = f_unaccent(_Q1_)`),
+			{ _Q1_: qClean },
+			qClean,
+		);
 	}
 
 	// '-' — not contain (lang as bound param _Q2_, no lang in path)
@@ -168,9 +235,12 @@ export function buildStringFragment(
 	// Literal 'text' — exact equality, quotes stripped, no wildcard handling.
 	if (isLiteralQ(effective)) {
 		const qClean = effective.slice(1, -1);
-		return fragment(existsEnvelope(context, `f_unaccent(elem->>'value') = f_unaccent(_Q1_)`), {
-			_Q1_: qClean,
-		});
+		return withStorePrefilter(
+			context,
+			existsEnvelope(context, `f_unaccent(elem->>'value') = f_unaccent(_Q1_)`),
+			{ _Q1_: qClean },
+			qClean,
+		);
 	}
 
 	// Wildcard anchoring: leading '*' = ends-with, trailing '*' = begins-with.
@@ -184,7 +254,14 @@ export function buildStringFragment(
 				: hasLead
 					? `f_unaccent(elem->>'value') ~* (f_unaccent(_Q1_) || '$')`
 					: `f_unaccent(elem->>'value') ~* ('^' || f_unaccent(_Q1_))`;
-		return fragment(existsEnvelope(context, matchLogic), { _Q1_: qClean });
+		// Anchored variants still pre-filter on the plain (unanchored) q —
+		// a value matching '^q'/'q$' contains q, so the superset holds.
+		return withStorePrefilter(
+			context,
+			existsEnvelope(context, matchLogic),
+			{ _Q1_: qClean },
+			qClean,
+		);
 	}
 
 	// Default: contains (regex, accent/case-insensitive). Strip '+ * ='.
@@ -192,7 +269,10 @@ export function buildStringFragment(
 	if (qClean === '') {
 		return false;
 	}
-	return fragment(existsEnvelope(context, `f_unaccent(elem->>'value') ~* f_unaccent(_Q1_)`), {
-		_Q1_: qClean,
-	});
+	return withStorePrefilter(
+		context,
+		existsEnvelope(context, `f_unaccent(elem->>'value') ~* f_unaccent(_Q1_)`),
+		{ _Q1_: qClean },
+		qClean,
+	);
 }

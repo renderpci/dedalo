@@ -88,6 +88,35 @@ export async function createExtensions(): Promise<AssetResponse> {
 	return finishResponse(response);
 }
 
+/**
+ * CREATE the declared tables (matrix_search_values etc.). ADD-ONLY by design:
+ * table entries carry an empty `drop` — these are derived stores whose wipe
+ * would silently lose backfilled data on every recreate run; their `add` is
+ * IF NOT EXISTS so re-runs are no-ops. Runs BEFORE functions/triggers so the
+ * trigger bodies have their target relation.
+ */
+export async function rebuildTables(): Promise<AssetResponse> {
+	const response = newResponse();
+	const entries = definitions.ar_table as AssetEntry[];
+	for (const entry of entries) {
+		const drop = cleanSql(entry.drop);
+		if (drop !== '' && !(await execSql(drop, response.errors))) continue;
+		const add = cleanSql(entry.add);
+		if (add !== '' && !(await execSql(add, response.errors))) continue;
+		response.success++;
+	}
+	return finishResponse(response);
+}
+
+/**
+ * Drop + recreate the declared per-table triggers (the matrix_search_values
+ * sync). Runs AFTER functions: the function rebuild's DROP … CASCADE removes
+ * dependent triggers, so this pass restores them.
+ */
+export function rebuildTriggers(): Promise<AssetResponse> {
+	return rebuildTemplated(definitions.ar_trigger as AssetEntry[]);
+}
+
 /** Drop + recreate the declared SQL functions (f_unaccent etc.). */
 export async function rebuildFunctions(): Promise<AssetResponse> {
 	const response = newResponse();
@@ -145,7 +174,12 @@ export async function execMaintenance(): Promise<AssetResponse> {
 	return finishResponse(response);
 }
 
-/** PHP recreate_db_assets: extensions → constraints → functions → indexes → maintenance. */
+/**
+ * PHP recreate_db_assets order, extended with the TS-side additions:
+ * extensions → tables → constraints → functions → triggers → indexes →
+ * maintenance. Tables precede functions (trigger bodies reference the store);
+ * triggers follow functions (the function DROP CASCADE removed them).
+ */
 export async function recreateDbAssets(): Promise<{
 	result: Record<string, unknown>;
 	msg: string;
@@ -155,10 +189,14 @@ export async function recreateDbAssets(): Promise<{
 	const errors: unknown[] = [];
 	const extensions = await createExtensions();
 	errors.push(...extensions.errors);
+	const tables = await rebuildTables();
+	errors.push(...tables.errors);
 	const constraints = await rebuildConstraints();
 	errors.push(...constraints.errors);
 	const functions = await rebuildFunctions();
 	errors.push(...functions.errors);
+	const triggers = await rebuildTriggers();
+	errors.push(...triggers.errors);
 	const indexes = await rebuildIndexes();
 	errors.push(...indexes.errors);
 	const maintenance = await execMaintenance();
@@ -166,8 +204,10 @@ export async function recreateDbAssets(): Promise<{
 	return {
 		result: {
 			extensions: extensions.result,
+			tables: tables.result,
 			constraints: constraints.result,
 			functions: functions.result,
+			triggers: triggers.result,
 			indexes: indexes.result,
 			maintenance: maintenance.result,
 		},
