@@ -31,6 +31,7 @@ the process holds no cross-request search state:
 | `sql_assembler.ts` | **Phase B** — assemble SELECT / FROM / JOIN / WHERE / ORDER / LIMIT into the final `{sql, params}`; multi-section UNION; per-record projects ACL. |
 | `params.ts` | `ParamsCollector` — the positional `$1..$n` prepared-param list. |
 | `search_related.ts` | the inverse-reference / relation-breakdown engine over the flat-GIN `data_relations_flat_*` functions. |
+| `search_store.ts` | presence gate for the `matrix_string_search` per-value store backing the string contains pre-filter (see [The string-search store](#the-string-search-store-matrix_string_search)). |
 | `count.ts` | `countSectionRecords()` — the `full_count` variant for one section. |
 
 It sits at the boundary between the request layer and the database:
@@ -203,6 +204,73 @@ clause (empty result — fail closed). Project ids ride as bound params.
     Trusted server code must therefore pass a `principal` **whenever it intends
     user-scoped results** — omitting it is not a shortcut, it is a full-visibility
     search.
+
+### The string-search store (`matrix_string_search`)
+
+Accent/case-insensitive **contains** searches on string components compile to a
+per-row predicate (`EXISTS(jsonb_path_query(string, …) WHERE f_unaccent(value)
+~* f_unaccent(q))`) that no JSONB index can serve — on a 21k-record section that
+is ~1.4 s per search, for admins and regular users alike. The engine therefore
+maintains a derived **per-value search store**:
+
+```text
+matrix_string_search (
+    section_tipo    varchar(64),   -- the record's section
+    section_id      integer,       -- the record
+    component_tipo  varchar(64),   -- WHICH component the value belongs to
+    string          text           -- lower(f_unaccent(value)) — one row per value
+)
+```
+
+The `string` column is named after its **source**: only components stored in the
+matrix `string` column are included (dates, numbers, relations etc. have their
+own typed columns and their own search shapes). One composite
+[`btree_gin`](db.md#schema-assets-db_assetsts) index —
+`gin (component_tipo, string gin_trgm_ops)` — resolves the component scoping
+**and** the trigram containment in a single index scan, so a component-scoped
+contains is served in ~1 ms with no reliance on the planner combining separate
+indexes.
+
+`builder_string` prepends the store lookup as a **pre-filter** in front of the
+exact predicate (which always remains and decides membership — results are
+byte-identical with or without the store):
+
+```sql
+mix.section_id = ANY (ARRAY(
+    SELECT sv.section_id FROM matrix_string_search sv
+    WHERE sv.component_tipo = $t
+      AND sv.string LIKE '%' || lower(f_unaccent($q)) || '%'))
+AND ( …the exact jsonb predicate, unchanged… )
+```
+
+The shape is deliberate, and each choice is load-bearing:
+
+| choice | why |
+| --- | --- |
+| uncorrelated `ANY(ARRAY(…))`, not a correlated `EXISTS` | plans as a one-shot InitPlan so the main table is **entered by `section_id`**; the correlated form let jsonb selectivity misestimates invert the plan back to the per-row scan. |
+| no `section_tipo` condition inside the subquery | the multi-section UNION replicates the WHERE verbatim into every branch; a section pin would fail-close other branches — cross-section ids only **widen** the superset, the outer `section_tipo` pin and the exact predicate still decide. |
+| emitted for **positive** shapes only (contains / begins / ends / `==` / `=` / quoted literal) with a **regex-plain** `q` | the exact predicate is regex-semantic, the store `LIKE` is literal-substring — they only agree on plain text; `%`/`_` are escaped. Negations (`!*`, `!=`, `-`, `!!`) and bare `*` never carry it. |
+| emitted for **non-joined leaves** only (path length 1) | on a hop-joined alias the join already bounds the per-row work, and the pre-filter's tiny cardinality estimate flips the join order into an unindexed filter join (measured 4× slower). `conform.ts` gates on the leaf's join chain. |
+| gated on the table's **sync trigger presence** (`search_store.ts`, cached; the maintenance rebuild actions clear the cache) | against an unmaintained table the empty store would wrongly *exclude* rows — the gate is correctness, not just performance. Uncovered tables (e.g. `matrix_time_machine`) keep the classic SQL byte-identically. |
+
+The store is **derived data** kept in sync by `AFTER INSERT OR DELETE OR UPDATE
+OF string` row triggers (`{table}_string_search_sync` → the plpgsql
+`matrix_string_search_sync()`, delete-then-reinsert per record) on every
+string-searchable matrix table — engine writes, scripts and manual SQL all stay
+consistent, in the same transaction as the write. Enabling it on an instance (or
+adding a table to it) is: declare/rebuild the assets (the `database_info`
+maintenance widget), then **backfill** that table's rows — the `INSERT … SELECT`
+lives in the store's `ar_table` entry in `db_pg_definitions.json`. Until both
+steps ran, the presence gate keeps searches on the classic scan.
+
+!!! note "Why a side table and not an in-record column"
+    Trigram (`pg_trgm`) indexes plain text only, so an in-record column (the
+    `relation_search` pattern) forces one concatenated text per record — and
+    lossy GIN-trigram rechecks then re-read that whole (often TOASTed) text per
+    candidate row, which **measured slower than the un-indexed scan**. One row
+    per value is what makes the recheck a short string and the component scoping
+    index-resolvable; `relation_search` works as a column because its `@>`
+    semantics are exact-match, which jsonb GIN serves per-element.
 
 ### Multi-section UNION
 

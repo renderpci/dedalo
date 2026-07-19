@@ -29,7 +29,7 @@ src/core/db/                    ← this subsystem
   ├── time_machine.ts    matrix_time_machine read + the audit-write function
   ├── dd_ontology.ts     the ontology (dd_ontology) table I/O
   ├── db_assets.ts       schema extensions/functions/constraints/indexes rebuild
-  └── db_pg_definitions.json   the canonical extension/function/index/constraint SQL
+  └── db_pg_definitions.json   the canonical extension/table/trigger/function/index/constraint SQL
         │
 PostgreSQL                      matrix tables (typed JSONB columns)
 ```
@@ -69,8 +69,8 @@ PostgreSQL                      matrix tables (typed JSONB columns)
   protocol over the ontology table `dd_ontology` (`dd_ontology.ts`).
 - **Time Machine I/O** — read of `matrix_time_machine` snapshots and the audit
   `recordTimeMachine` write appended by the save pipeline (`time_machine.ts`).
-- **Schema maintenance** — (re)apply the declared extensions/functions/
-  constraints/indexes and the `REINDEX`/`VACUUM` maintenance sentences
+- **Schema maintenance** — (re)apply the declared extensions/tables/functions/
+  triggers/constraints/indexes and the `REINDEX`/`VACUUM` maintenance sentences
   (`db_assets.ts` over `db_pg_definitions.json`).
 - **Injection boundary** — table and column names are identifiers (they cannot
   be bound as parameters) and are validated against fixed allowlists before
@@ -118,7 +118,7 @@ src/core/db/
 ├── time_machine.ts        matrix_time_machine read + recordTimeMachine audit write
 ├── dd_ontology.ts         dd_ontology CRUD/upsert/search + backup-table protocol
 ├── db_assets.ts           schema-asset (re)build over the vendored definitions
-└── db_pg_definitions.json the canonical extension/function/constraint/index SQL
+└── db_pg_definitions.json the canonical extension/table/trigger/function/constraint/index SQL
 ```
 
 There is **no record-object family and no row cache**. Raw record data is fetched
@@ -253,16 +253,32 @@ column holds the **source** section — never filter TM by `section_tipo='dd15'`
 
 | symbol | purpose |
 | --- | --- |
-| `createExtensions()` | Run the `CREATE EXTENSION` sentences (pg_trgm/unaccent-backed indexes need them). |
-| `rebuildFunctions()` | Drop + recreate the declared SQL functions (`f_unaccent` etc.). |
+| `createExtensions()` | Run the `CREATE EXTENSION` sentences (`pg_trgm` / `unaccent` / `btree_gin` — the trigram- and composite-indexes need them). |
+| `rebuildTables()` | Create the declared derived-store tables (`matrix_string_search`) — **add-only** (see below). |
+| `rebuildFunctions()` | Recreate the declared SQL functions (`f_unaccent`, `data_relations_flat_*`, `matrix_string_search_sync` …) via their `CREATE OR REPLACE` adds — **add-only** (see below). |
+| `rebuildTriggers()` | Per-declared-table drop + recreate of the row triggers (`{table}_string_search_sync`). |
 | `rebuildConstraints()` / `rebuildIndexes(tables?)` | Per-entry, per-declared-table drop + add of constraints / indexes. |
 | `execMaintenance()` | Run the `ar_maintenance` sentences (`REINDEX TABLE …` etc.). |
-| `recreateDbAssets()` | The full sequence: extensions → constraints → functions → indexes → maintenance. |
+| `recreateDbAssets()` | The full sequence: extensions → tables → constraints → functions → triggers → indexes → maintenance. |
 | `optimizeTables(tables)` | Per validated table, `REINDEX TABLE CONCURRENTLY` then `VACUUM ANALYZE`. |
 
-`db_pg_definitions.json` declares the extensions, functions, constraints, indexes
-and maintenance sentences; `db_assets.ts` consumes it, so every schema extra is
-declared in exactly one place.
+`db_pg_definitions.json` declares the extensions, tables, triggers, functions,
+constraints, indexes and maintenance sentences; `db_assets.ts` consumes it, so
+every schema extra is declared in exactly one place.
+
+!!! warning "Function/table rebuilds are add-only — the recorded `drop` is a definition, not a routine step"
+    Every function/table entry keeps its `drop` DDL **recorded** (it is the
+    deliberate-teardown definition), but `rebuildFunctions()` /
+    `rebuildTables()` execute only the idempotent `add` (`CREATE OR REPLACE` /
+    `IF NOT EXISTS`); the `drop` runs solely for pure-cleanup entries whose
+    `add` is empty. Executing `DROP FUNCTION … CASCADE` on a routine rebuild
+    silently destroys every dependent object — measured in the wild
+    (2026-07-19): one standalone function rebuild cascade-dropped all 96
+    `data_relations_flat_*` functional GIN indexes and turned record edit
+    views into 18 s loads until they were rebuilt. A function **signature**
+    change makes the add fail loudly — that is a deliberate migration: run the
+    recorded drop by hand and rebuild the dependents explicitly. The contract
+    is pinned by `test/unit/db_assets_definitions.test.ts`.
 
 ## How it fits with the rest of Dédalo
 
