@@ -296,7 +296,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				tipo: source.tipo,
 				userId: principal.userId,
 				host,
-				datos: {
+				data: {
 					msg: 'Saved component data',
 					lang: source.lang ?? 'lg-nolan',
 					tipo: source.tipo,
@@ -670,7 +670,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 					tipo: sectionTipo,
 					userId: principal.userId,
 					host: activityHost,
-					datos: {
+					data: {
 						msg:
 							deleteMode === 'delete_record'
 								? 'DEBUG INFO section_record::delete Deleted section record and its own references. Full deleted record'
@@ -1320,7 +1320,7 @@ async function logReadActivity(
 		if (model !== 'section' && !model.startsWith('area')) return;
 
 		const modeToActivity = mode === 'list' ? 'list' : 'edit';
-		const datos: Record<string, unknown> = {
+		const data: Record<string, unknown> = {
 			msg: `HTML Page is loaded in mode: ${modeToActivity} [${mode}]`,
 			tipo,
 		};
@@ -1333,7 +1333,7 @@ async function logReadActivity(
 			const firstItem = body?.result?.data?.[0];
 			const sectionId =
 				firstItem?.entries?.[0]?.section_id ?? firstItem?.section_id ?? source.section_id ?? null;
-			if (sectionId !== null && sectionId !== undefined) datos.id = sectionId;
+			if (sectionId !== null && sectionId !== undefined) data.id = sectionId;
 		}
 
 		const host =
@@ -1346,7 +1346,7 @@ async function logReadActivity(
 			tipo,
 			userId: principal.userId,
 			host,
-			datos, // PHP data_activity: {msg, tipo, id?} — nothing more
+			data, // PHP data_activity: {msg, tipo, id?} — nothing more
 		});
 	} catch (error) {
 		console.error('LOAD activity log failed (swallowed):', error);

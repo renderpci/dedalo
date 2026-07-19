@@ -40,7 +40,7 @@ export interface ActivityEntry {
 	/** Client host (PHP stores the resolved host, e.g. 'localhost'). */
 	host: string;
 	/** The dd551 payload (msg + action-specific fields). */
-	datos: Record<string, unknown>;
+	data: Record<string, unknown>;
 }
 
 /** Append one activity row. Never throws (audit must not break the action). */
@@ -67,7 +67,7 @@ export async function logActivity(entry: ActivityEntry, now: Date = new Date()):
 			dd546: [{ lang: 'lg-nolan', value: entry.tipo }],
 		};
 		const dateColumn = { dd547: [{ start: virtualDateNow(now) }] };
-		const miscColumn = { dd551: [{ lang: 'lg-nolan', value: entry.datos }] };
+		const miscColumn = { dd551: [{ lang: 'lg-nolan', value: entry.data }] };
 		await sql.unsafe(
 			`INSERT INTO matrix_activity (section_tipo, relation, string, date, misc)
 			 VALUES ('dd542', $1::text::jsonb, $2::text::jsonb, $3::text::jsonb, $4::text::jsonb)`,
