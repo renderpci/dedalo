@@ -1599,3 +1599,48 @@ as "Records: 1" swept the whole 438k-record section):
 + progress frames; aborted-signal cancellation) +
 `test/unit/stop_process.test.ts` (registry, pfile grammar, no-oracle answers,
 live-job stop → status `stopped`).
+
+### WC-043 addendum — v6 `regenerate_component` parity (2026-07-19, same day)
+
+Review against the v6 oracle (`tools/tool_update_cache/class.tool_update_cache.php`
++ `component_media_common::regenerate_component :2614`) found five divergences in
+the first TS port; all are now aligned:
+
+- **Media regenerate builds only what is MISSING.** v6 rebuilds the default
+  quality only when its file is absent, re-creates the thumb ALWAYS, and
+  creates/path-fixes the SVG envelope; the TS port re-encoded everything
+  unconditionally (the runaway's file-churn). Kernel:
+  `core/media/repair.ts regenerateMissingDerivatives`.
+- **`regenerate_options` honored + correct wire shape.** get_component_list now
+  returns the v6 descriptor ARRAY (`[{name,type,default}]`) the copied client
+  iterates (the previous `{regenerable:true}` object rendered a silently empty
+  options panel), and update_cache applies `delete_normalized_files` (move to
+  `deleted/<bulk id>/`; guarded — our deliberate divergence — on a locally
+  present original).
+- **Time Machine suppressed** for the run's generic re-saves (`saveTm:false`;
+  v6 hard-disabled TM + activity for the whole run — activity already does not
+  fire on direct component saves in TS).
+- **dd800 bulk-process record** minted per run (label
+  `Update cache | <section> | <components>`), id in the response
+  (`bulk_process_id`) and in the deleted-files path.
+- **`original_file_name` restoration** from the media component's
+  `properties.target_filename` sibling (v6 :2670) when the stored item lost it.
+
+Ledgered gap: v6 also conditionally builds ALTERNATE-extension versions; the TS
+processing layer has no alternate-extension builder yet.
+
+Gate: `test/unit/tool_update_cache.test.ts` (TM-count unchanged across a run,
+dd800 minted, exact scope, progress frames).
+
+### WC-043 correction — thumb builds from the DEFAULT-QUALITY file (2026-07-19)
+
+v6 `component_image::create_thumb` (:393) reads `get_media_filepath(default_quality)`
+and never touches the original. The first parity pass still gated BOTH the tool
+regenerate and `build_version('thumb')` on `resolveOriginalSource`, so on a
+partial-media box (default files present, originals not) the thumb build silently
+no-oped / threw 'original not found'. Now: the kernel's thumb + envelope steps key
+on the DEFAULT file's presence (original needed only for the default-quality build
+and delete_normalized); `buildVersionCore('thumb')` sources the default file,
+falls back to the original, and errors clearly only when neither exists.
+Gate: `test/unit/media_regenerate_thumb.test.ts` (scratch media root with the
+default file only).
