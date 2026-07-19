@@ -2001,6 +2001,143 @@ class v6_to_v7 {
 
 
 	/**
+	 * CREATE_STRING_SEARCH_STORE
+	 *
+	 * Creates the v7 per-value text-search store `matrix_string_search`
+	 * (extension btree_gin, table, sync trigger function, composite trigram
+	 * index — DDL in install/db/matrix_string_search.sql, all idempotent),
+	 * installs the `{table}_string_search_sync` row trigger on every existing
+	 * string-searchable matrix table, and BACKFILLS the store from the
+	 * migrated data (TRUNCATE + INSERT..SELECT — safe to re-run).
+	 *
+	 * (!) Must run at the END of the pipeline:
+	 *  - after recreate_db_assets (needs f_unaccent and pg_trgm), and
+	 *  - after every data migration that writes string values (the backfill
+	 *    must read the FINAL v7 data; later writes stay in sync via the
+	 *    triggers themselves).
+	 * The TS engine gates its search pre-filter on the trigger presence per
+	 * table: a trigger without backfilled rows would wrongly EXCLUDE records
+	 * from searches, so the backfill is correctness, not an optimization.
+	 *
+	 * @return bool True when the store, triggers and backfill completed.
+	 */
+	public static function create_string_search_store() : bool {
+
+		// DDL: extension + table + trigger function + indexes (idempotent)
+			$sql_query = file_get_contents(DEDALO_ROOT_PATH . '/install/db/matrix_string_search.sql');
+			$result = matrix_db_manager::exec_sql($sql_query);
+			if($result===false) {
+				debug_log(__METHOD__
+					." ERROR: Failed to create matrix_string_search store (DDL) "
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// The string-searchable matrix tables (the all_matrix_string_gin_idx
+		// list minus the log tables matrix_activity / matrix_activity_diffusion
+		// / matrix_stats — mirror of the TS ar_trigger declaration). Tables
+		// absent on this installation are skipped.
+			$ar_tables = [
+				'matrix',
+				'matrix_activities',
+				'matrix_dataframe',
+				'matrix_dd',
+				'matrix_hierarchy',
+				'matrix_hierarchy_main',
+				'matrix_indexations',
+				'matrix_langs',
+				'matrix_layout',
+				'matrix_layout_dd',
+				'matrix_list',
+				'matrix_nexus',
+				'matrix_nexus_main',
+				'matrix_notes',
+				'matrix_ontology',
+				'matrix_ontology_main',
+				'matrix_profiles',
+				'matrix_projects',
+				'matrix_test',
+				'matrix_tools',
+				'matrix_users'
+			];
+
+		// Backfill is TRUNCATE + re-insert so a re-run never duplicates rows.
+			$result = matrix_db_manager::exec_sql('TRUNCATE public.matrix_string_search;');
+			if($result===false) {
+				debug_log(__METHOD__
+					." ERROR: Failed to truncate matrix_string_search before backfill "
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		$conn = DBi::_getConnection();
+		foreach ($ar_tables as $table) {
+
+			// skip tables not present on this installation
+				$exists_result = pg_query_params(
+					$conn,
+					"SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' AND table_name = $1",
+					[$table]
+				);
+				if ($exists_result===false || pg_num_rows($exists_result)===0) {
+					continue;
+				}
+
+			// CLI feedback
+				if (running_in_cli()) {
+					if (!isset(common::$pdata)) {
+						common::$pdata = new stdClass();
+					}
+					common::$pdata->msg = " Creating string search trigger + backfill for table: $table";
+					print_cli(common::$pdata);
+				}
+
+			$escaped_table = pg_escape_identifier($conn, $table);
+
+			// trigger (drop + create = idempotent re-run)
+				$sql_query = sanitize_query('
+					DROP TRIGGER IF EXISTS "'.$table.'_string_search_sync" ON '.$escaped_table.';
+					CREATE TRIGGER "'.$table.'_string_search_sync"
+					AFTER INSERT OR DELETE OR UPDATE OF string, section_id, section_tipo ON '.$escaped_table.'
+					FOR EACH ROW EXECUTE FUNCTION public.matrix_string_search_sync();
+				');
+				$result = matrix_db_manager::exec_sql($sql_query);
+				if($result===false) {
+					debug_log(__METHOD__
+						." ERROR: Failed to create string search trigger on table '$table' "
+						, logger::ERROR
+					);
+					return false;
+				}
+
+			// backfill this table's values
+				$sql_query = sanitize_query('
+					INSERT INTO public.matrix_string_search (section_tipo, section_id, component_tipo, string)
+					SELECT m.section_tipo, m.section_id, kv.key, lower(public.f_unaccent(e->>\'value\'))
+					FROM '.$escaped_table.' m, jsonb_each(m.string) kv, jsonb_array_elements(kv.value) e
+					WHERE m.string IS NOT NULL
+					  AND jsonb_typeof(kv.value) = \'array\'
+					  AND e->>\'value\' IS NOT NULL
+					  AND e->>\'value\' <> \'\';
+				');
+				$result = matrix_db_manager::exec_sql($sql_query);
+				if($result===false) {
+					debug_log(__METHOD__
+						." ERROR: Failed to backfill matrix_string_search from table '$table' "
+						, logger::ERROR
+					);
+					return false;
+				}
+		}
+
+		return true;
+	}//end create_string_search_store
+
+
+
+	/**
 	 * DROP_LEGACY_DATOS_COLUMN
 	 *
 	 * Removes the legacy 'datos' column from the specified tables after successful data migration.

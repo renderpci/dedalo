@@ -614,3 +614,22 @@ $updates->$v = new stdClass();
 				true // save option. On false, only data review is made. Not save
 			] // Note that only ONE argument encoded is sent
 		];
+
+	// STRING SEARCH STORE : Create the v7 per-value text-search store
+	// (matrix_string_search: btree_gin extension, table, sync triggers on every
+	// string-searchable matrix table, composite trigram index) and BACKFILL it
+	// from the migrated data. (!) Deliberately the LAST step: it needs
+	// recreate_db_assets (f_unaccent, pg_trgm) and must read the FINAL v7
+	// string data (all prior migrations done) — later writes stay in sync via
+	// the triggers. The TS engine gates its search pre-filter on trigger
+	// presence, so triggers without the backfill would wrongly EXCLUDE records
+	// from searches (stop_on_error=true). Idempotent: DDL is IF NOT EXISTS /
+	// OR REPLACE, backfill is TRUNCATE + re-insert.
+		$updates->$v->run_scripts[] = (object)[
+			'info'			=> 'Create the v7 text-search store (matrix_string_search): table, sync triggers and trigram index, backfilled from the migrated data',
+			'script_class'	=> 'v6_to_v7',
+			'script_method'	=> 'create_string_search_store',
+			'stop_on_error'	=> true,
+			'script_vars'	=> [
+			] // Note that only ONE argument encoded is sent
+		];
