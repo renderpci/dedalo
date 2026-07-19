@@ -257,11 +257,14 @@ The store is **derived data** kept in sync by `AFTER INSERT OR DELETE OR UPDATE
 OF string` row triggers (`{table}_string_search_sync` → the plpgsql
 `matrix_string_search_sync()`, delete-then-reinsert per record) on every
 string-searchable matrix table — engine writes, scripts and manual SQL all stay
-consistent, in the same transaction as the write. Enabling it on an instance (or
-adding a table to it) is: declare/rebuild the assets (the `database_info`
-maintenance widget), then **backfill** that table's rows — the `INSERT … SELECT`
-lives in the store's `ar_table` entry in `db_pg_definitions.json`. Until both
-steps ran, the presence gate keeps searches on the classic scan.
+consistent, in the same transaction as the write. **Fresh installs are born with
+the store**: the seed dump (`install/db/dedalo_install.pgsql.gz`) creates the
+table, function, triggers and indexes and backfills the seed rows at restore
+time. Enabling it on a pre-existing instance (or adding a table to it) is:
+declare/rebuild the assets (the `database_info` maintenance widget), then
+**backfill** that table's rows — the `INSERT … SELECT` lives in the store's
+`ar_table` entry in `db_pg_definitions.json`. Until both steps ran, the
+presence gate keeps searches on the classic scan.
 
 !!! note "Why a side table and not an in-record column"
     Trigram (`pg_trgm`) indexes plain text only, so an in-record column (the
