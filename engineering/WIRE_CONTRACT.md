@@ -1559,3 +1559,43 @@ already pinned; NEW and the LOG IN allow/deny pair are added here.
 `test/unit/media_web_base.test.ts` (default shape, builder rooting, fresh-import
 override + trailing-slash strip) + the pinned relative shape across the existing
 media gates and parity fixtures.
+
+## WC-043 — tool_update_cache scope honesty + the background-job stop wire
+
+Three coupled changes born of the 2026-07-19 runaway (a run the client displayed
+as "Records: 1" swept the whole 438k-record section):
+
+- **`update_cache` REQUIRES `options.sqo`.** The silent whole-section fallback
+  (`?? {section_tipo:[…]}`) is REMOVED: absent/malformed sqo fails closed with
+  `invalid_request`. The v7 client now sends a deep clone of the caller list's
+  LIVE sqo (`tools/tool_update_cache/js/tool_update_cache.js` — it previously
+  sent none at all, which is what armed the fallback), so the run's scope is by
+  construction the scope the list displays; an unfiltered list matches the whole
+  section EXPLICITLY. Scripted callers pass `{section_tipo:['…']}` themselves.
+  The confirm dialog now carries the record + component counts. Response gains
+  `processed` and `stopped`.
+- **Per-record progress.** The handler publishes throttled frames via
+  `ctx.publishProgress` — `{msg, is_running, counter, total,
+  current:{section_id}, n_components}`, the exact fields the copied client's
+  stream renderer has always formatted (`render_tool_update_cache.js`
+  compound_msg). Before this the pfile froze on the initial frame for the whole
+  run.
+- **`dd_utils_api::stop_process` EXISTS now.** The copied client's generic Stop
+  button has always posted this action; no handler was registered, so every
+  Stop click surfaced "Not retry-able HTTP error 400". Registered in
+  `utilsApiActions` → `stopUtilsProcess` (core/api/process_status.ts):
+  `options {pid, pfile}`, job id = validated pfile basename, owner-gated with
+  the status stream's rule (no existence oracle for foreign ids), aborts the
+  job's controller. The abort reaches handlers as the NEW
+  `ToolActionContext.signal` (background executor forwards the job manager's
+  per-job AbortSignal — `core/tools/background.ts`); `update_cache` checks it
+  per record and returns a partial summary. The client stop branch
+  (`client/dedalo/core/common/js/render_common.js`) now sends `pfile` alongside
+  the legacy `pid` — fixing Stop for every tool on the legacy branch.
+
+### Gate
+
+`test/unit/tool_update_cache.test.ts` (sqo fail-closed; scoped run `records===1`
++ progress frames; aborted-signal cancellation) +
+`test/unit/stop_process.test.ts` (registry, pfile grammar, no-oracle answers,
+live-job stop → status `stopped`).
