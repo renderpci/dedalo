@@ -15,8 +15,9 @@
  * SCOPE NOTES (header re-dated 2026-07-07, S2-45 — the old UNCOVERED list
  * was stale; coverage-state lists live in rewrite/LEDGER.md, never here): the
  * projects-filter ACL IS built here (buildProjectsFilter +
- * buildMultiSectionProjectsFilter below — single-section byte-parity with
- * PHP, multi-section per-section predicates per WC-011, replacing the Phase
+ * buildMultiSectionProjectsFilter below — row-set parity with PHP but the
+ * GIN-indexable v6 `@>` SQL shape, NOT the frozen-PHP EXISTS scan;
+ * multi-section per-section predicates per WC-011, replacing the Phase
  * 5c fail-closed throw 2026-07-09; principal-scoped, skippable only via the
  * server-only sqo flag); multi-hop ORDER paths ride the conform join chain;
  * group_by/related counting live in search_related.ts (their own PHP-parity
@@ -307,6 +308,15 @@ export interface SearchOptions {
  * records whose component_filter relation references one of the user's
  * projects. Returns '' when the section is not project-gated. A gated section
  * with a projects-less user yields an impossible clause (empty result).
+ *
+ * SQL shape: whole-column `relation @> '{"<filterTipo>":[{"section_id":…}]}'`
+ * containments OR'd per project — the v6 idiom, served by the
+ * `{table}_relation_gin_idx` (gin jsonb_path_ops) index. The frozen-PHP-beta
+ * `EXISTS(jsonb_array_elements(…))` shape scanned every candidate row and made
+ * every non-admin list/count seconds-slow; never reintroduce it. Each project
+ * id is matched in BOTH string and number form: locators store section_id as a
+ * string, but legacy/imported rows may carry numbers, and `@>` containment is
+ * type-strict where the old `::int` cast was not.
  */
 async function buildProjectsFilter(
 	sectionTipo: string,
@@ -321,11 +331,11 @@ async function buildProjectsFilter(
 		// PHP: impossible clause — a user with no projects sees no gated records.
 		return `${alias}.relation ? 'IMPOSSIBLE VALUE (User without projects)'`;
 	}
-	const placeholders = projects.map((projectId) => params.getPlaceholder(projectId));
-	return (
-		`EXISTS ( SELECT 1 FROM jsonb_array_elements(${alias}.relation::jsonb->'${filterTipo}') AS item ` +
-		`WHERE (item->>'section_id')::int IN (${placeholders.join(',')}) )`
-	);
+	const clauses = projects.flatMap((projectId) => [
+		`${alias}.relation @> ${params.getPlaceholder(`{"${filterTipo}":[{"section_id":"${projectId}"}]}`)}::text::jsonb`,
+		`${alias}.relation @> ${params.getPlaceholder(`{"${filterTipo}":[{"section_id":${projectId}}]}`)}::text::jsonb`,
+	]);
+	return `(${clauses.join(' OR ')})`;
 }
 
 /**

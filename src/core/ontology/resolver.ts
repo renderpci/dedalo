@@ -473,8 +473,9 @@ export async function getPropertiesByTipo(tipo: string): Promise<unknown> {
  * `virtualFallback` (default true): when the walk finds nothing, resolve a
  * VIRTUAL section through its real section (relations[0].tipo) and walk that
  * — the shared fallback every migrated caller implemented separately. Pass
- * false to preserve strict own-subtree semantics (component_filter,
- * component_section_id).
+ * false to preserve strict own-subtree semantics (component_section_id).
+ * component_filter MUST use the fallback: a virtual section's records are
+ * gated by the real section's filter (see getComponentFilterTipo).
  *
  * Cached per (root, model, fallback); registered with the invalidation hub.
  */
@@ -523,9 +524,18 @@ export async function findFirstDescendantTipoByModel(
 
 /**
  * The component_filter child tipo of a section (PHP
- * section::get_ar_children_tipo_by_model_name_in_section(...,['component_filter'])),
- * or null when the section is NOT project-gated. Strict own-subtree semantics
- * (no virtual fallback — a virtual section is not project-gated by proxy).
+ * section::get_ar_children_tipo_by_model_name_in_section(...,['component_filter'],
+ * …, resolve_virtual=TRUE — trait.where.php build_sql_projects_filter)), or
+ * null when the section is NOT project-gated.
+ *
+ * VIRTUAL SECTIONS MUST FALL THROUGH to their real section: records of a
+ * virtual section (e.g. rsc170 images) are stored under the VIRTUAL tipo but
+ * gated by the REAL section's component_filter (rsc2 → rsc28). The previous
+ * strict own-subtree lookup returned null for them, which silently DISABLED
+ * the projects ACL — every non-admin saw all 438k images (fail-open,
+ * 2026-07-19). PHP resolves virtual→real before walking; the shared helper's
+ * own-subtree-then-real fallback is equivalent because virtual sections carry
+ * only list/config children, never components.
  */
 const componentFilterTipoCache = createOntologyCache<string, string | null>();
 
@@ -533,7 +543,7 @@ export async function getComponentFilterTipo(sectionTipo: string): Promise<strin
 	const cached = componentFilterTipoCache.get(sectionTipo);
 	if (cached !== undefined) return cached;
 	const filterTipo = await findFirstDescendantTipoByModel(sectionTipo, 'component_filter', {
-		virtualFallback: false,
+		virtualFallback: true,
 	});
 	cacheWrite(componentFilterTipoCache, sectionTipo, filterTipo);
 	return filterTipo;
