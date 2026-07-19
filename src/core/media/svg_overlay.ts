@@ -66,8 +66,10 @@ export function buildDefaultSvgString(width: number, height: number, rasterUrl: 
 	return `<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0,0,${width},${height}"><g id="raster"><image width="${width}" height="${height}" xlink:href="${rasterUrl}"/></g></svg>`;
 }
 
-/** The default-quality raster URL used as the SVG's xlink:href (DEDALO_MEDIA_URL + relative path). */
-function defaultRasterUrl(
+/** The default-quality raster URL used as the SVG's xlink:href (DEDALO_MEDIA_URL + relative path).
+ * Exported for the regenerate drift-fix (media/repair.ts): the PERSISTED envelope must embed
+ * exactly this relative URL — v6 regenerate_component rewrites it when it drifted. */
+export function defaultRasterUrl(
 	spec: MediaTypeSpec,
 	identity: MediaIdentity,
 	pathOpts: MediaPathOptions,

@@ -30,13 +30,15 @@ import type {
 	ToolServerModule,
 } from '../../../src/core/tools/module.ts';
 
-/** Regenerate options a model exposes (PHP get_regenerate_options); only media so far. */
-function regenerateOptionsFor(model: string): Record<string, unknown> | null {
+/**
+ * Regenerate options a model exposes (v6 component_media_common::
+ * get_regenerate_options :3300). The copied client ITERATES this as a
+ * descriptor array and switches on `type` (render_regenerate_options) —
+ * returning any other shape renders a silently empty options panel.
+ */
+function regenerateOptionsFor(model: string): Record<string, unknown>[] | null {
 	if (isMediaModel(model)) {
-		// Media models rebuild derivatives; the exact per-model option set (e.g.
-		// delete_normalized_files) is ledgered — the flag presence is what the
-		// client keys the "regenerate" affordance on.
-		return { regenerable: true };
+		return [{ name: 'delete_normalized_files', type: 'boolean', default: false }];
 	}
 	return null;
 }
@@ -72,7 +74,10 @@ async function getComponentList(ctx: ToolActionContext): Promise<ToolResponse> {
  */
 async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	const sectionTipo = String(ctx.options.section_tipo ?? '');
-	const selection = (ctx.options.components_selection ?? []) as { tipo?: string }[];
+	const selection = (ctx.options.components_selection ?? []) as {
+		tipo?: string;
+		regenerate_options?: unknown;
+	}[];
 	if (sectionTipo === '' || !Array.isArray(selection) || selection.length === 0) {
 		return {
 			result: false,
@@ -118,6 +123,41 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 		section_id: number;
 	}[];
 
+	// Bulk-process record (v6 :64-92): one dd800 record per run, labeled
+	// 'Update cache | <section> | <components>'. Its id tags any files the
+	// delete_normalized_files option moves to deleted/<id>/ — created BEFORE any
+	// record is touched.
+	const { createSectionRecord } = await import('../../../src/core/section/record/create_record.ts');
+	const { BULK_PROCESS_TIPOS } = await import('../../../src/core/concepts/section.ts');
+	const { getTermByTipo } = await import('../../../src/core/ontology/resolver.ts');
+	const labelLang = typeof ctx.options.lang === 'string' ? ctx.options.lang : 'lg-eng';
+	const componentNames = await Promise.all(
+		selection.map(async (sel) => {
+			const tipo = String(sel.tipo ?? '');
+			return `${(await getTermByTipo(tipo, labelLang)) ?? tipo}[${tipo}]`;
+		}),
+	);
+	const sectionName = (await getTermByTipo(sectionTipo, labelLang)) ?? sectionTipo;
+	const bulkProcessId = await createSectionRecord(BULK_PROCESS_TIPOS.section, ctx.userId);
+	await saveComponentData({
+		componentTipo: BULK_PROCESS_TIPOS.label,
+		sectionTipo: BULK_PROCESS_TIPOS.section,
+		sectionId: bulkProcessId,
+		lang: 'lg-nolan',
+		changedData: [
+			{
+				action: 'set_data',
+				id: null,
+				value: [
+					{
+						value: `Update cache | ${sectionName}[${sectionTipo}] | ${componentNames.join(', ')}`,
+					},
+				],
+			},
+		],
+		userId: ctx.userId,
+	});
+
 	// Progress: the pfile frame the client's stream renderer already formats
 	// (data.counter / data.total / data.current.section_id / data.n_components —
 	// render_tool_update_cache.js compound_msg). Throttled: every publish is a
@@ -159,13 +199,17 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 			const model = tipo !== '' ? await getModelByTipo(tipo) : null;
 			if (model === null) continue;
 			if (isMediaModel(model)) {
-				// MEDIA repair: the shared kernel (core/media/repair.ts) rebuilds
-				// derivatives from the original where it is on this box and re-scans
-				// files_info per item. The persist here is the established files_info
-				// write-back (per-key jsonb, NO Time Machine entry — files_info is a
-				// filesystem cache; media/tools/files_info_persist.ts discipline).
+				// MEDIA repair: the shared kernel (core/media/repair.ts) builds only the
+				// MISSING derivatives (v6 regenerate_component parity — an existing file
+				// is never re-encoded; image thumb always; envelope create-or-fix) and
+				// re-scans files_info per item. The persist here is the established
+				// files_info write-back (per-key jsonb, NO Time Machine entry —
+				// files_info is a filesystem cache; media/tools/files_info_persist.ts).
 				const storedItems = (readComponentItems(record, tipo, model) ?? []) as unknown[];
 				if (storedItems.length === 0) continue;
+				const regenerateOptions = (sel.regenerate_options ?? null) as {
+					delete_normalized_files?: unknown;
+				} | null;
 				const { refreshedItems, errors, heldShrinks } = await refreshMediaItems({
 					componentTipo: tipo,
 					sectionTipo: row.section_tipo,
@@ -173,6 +217,11 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 					model,
 					items: storedItems,
 					regenerate: true,
+					// v6 delete_normalized_files (the client's per-component regenerate
+					// checkbox): move the normalized default-quality files to
+					// deleted/<bulk id>/ before the rebuild.
+					deleteNormalized: regenerateOptions?.delete_normalized_files === true,
+					bulkProcessId,
 					// NEVER shrink from a tool sweep: on a partial-media box the rescan
 					// would wipe the valid index of every record whose files are not
 					// local (the 2026-07-19 incident). Shrinks need the ops script's
@@ -181,6 +230,11 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 				});
 				mediaErrors.push(...errors.map((message) => `${tipo}#${row.section_id}: ${message}`));
 				mediaHeld += heldShrinks;
+				// v6 media_common regenerate (:2670-2705): restore a missing
+				// original_file_name from the section's target_filename component
+				// (properties.target_filename, e.g. rsc398 'Original file name'),
+				// deriving original_normalized_name from it.
+				await restoreOriginalNames(refreshedItems, tipo, record, row.section_tipo);
 				await updateMatrixKeyData(
 					table,
 					row.section_tipo,
@@ -209,6 +263,12 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 					lang,
 					changedData: [{ action: 'set_data', id: null, value: group }],
 					userId: ctx.userId,
+					// v6 tool_update_cache (:45-47): Time Machine is DISABLED for the
+					// whole run — a regenerate re-saves the same value, so per-row TM
+					// versions would be pure bloat on a bulk sweep. The run stays
+					// attributable through its dd800 record.
+					saveTm: false,
+					bulkProcessId,
 				});
 			}
 			regenerated += 1;
@@ -237,9 +297,59 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 		records: rows.length,
 		processed,
 		stopped,
+		bulk_process_id: bulkProcessId,
 		media_errors: mediaErrors.length,
 		media_held: mediaHeld,
 	};
+}
+
+/**
+ * v6 component_media_common::regenerate_component (:2670-2705): a media item
+ * that lost its `original_file_name` recovers it from the section's
+ * target-filename component (the component tipo named by the media component's
+ * `properties.target_filename`, e.g. rsc398 'Original file name'), and derives
+ * `original_normalized_name` (`<identifier>.<ext of the recovered name>`) when
+ * that is missing too. Mutates the (already-cloned) refreshed items in place.
+ */
+async function restoreOriginalNames(
+	refreshedItems: unknown[],
+	componentTipo: string,
+	record: { columns: Record<string, unknown> },
+	sectionTipo: string,
+): Promise<void> {
+	const first = refreshedItems[0] as Record<string, unknown> | undefined;
+	if (first === undefined || first === null || typeof first !== 'object') return;
+	if (typeof first.original_file_name === 'string' && first.original_file_name !== '') return;
+
+	const { getPropertiesByTipo, getModelByTipo: modelByTipo } = await import(
+		'../../../src/core/ontology/resolver.ts'
+	);
+	const { readComponentItems: readItems } = await import(
+		'../../../src/core/resolve/component_data.ts'
+	);
+	const properties = (await getPropertiesByTipo(componentTipo)) as {
+		target_filename?: unknown;
+	} | null;
+	const targetTipo =
+		typeof properties?.target_filename === 'string' ? properties.target_filename : null;
+	if (targetTipo === null) return;
+	const targetModel = await modelByTipo(targetTipo);
+	if (targetModel === null) return;
+	const targetItems = (readItems(record as never, targetTipo, targetModel) ?? []) as {
+		value?: unknown;
+	}[];
+	const fileName = targetItems.find((item) => typeof item?.value === 'string' && item.value !== '')
+		?.value as string | undefined;
+	if (fileName === undefined) return;
+
+	first.original_file_name = fileName;
+	if (typeof first.original_normalized_name !== 'string' || first.original_normalized_name === '') {
+		const extension = fileName.includes('.') ? (fileName.split('.').pop() ?? '') : '';
+		const sectionId = (record as { columns: unknown } & { section_id?: unknown }).section_id;
+		if (extension !== '' && sectionId !== undefined) {
+			first.original_normalized_name = `${componentTipo}_${sectionTipo}_${sectionId}.${extension}`;
+		}
+	}
 }
 
 /** The section targets of a component-list request — the 'section_list' gate reads

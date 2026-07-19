@@ -66,12 +66,33 @@ export async function buildVersionCore(
 		};
 	}
 
+	// THUMB builds from the DEFAULT-QUALITY file, not the original (v6
+	// component_image::create_thumb :393 — get_media_filepath(default_quality)).
+	// On a partial-media box the default file is usually present while the
+	// original is not; requiring the original here made the thumb gear fail with
+	// 'original not found' for exactly those records.
+	if (quality === thumbQuality) {
+		const defaultLocation = buildMediaLocation(
+			spec,
+			identity,
+			spec.defaultQuality,
+			spec.defaultExtension,
+			pathOpts,
+		);
+		const thumbSource = existsSync(defaultLocation.absolutePath)
+			? defaultLocation.absolutePath
+			: resolveOriginalSource(spec, identity, pathOpts, rawExtension);
+		if (thumbSource === null) {
+			throw new Error(
+				`build_version: no ${spec.defaultQuality} file and no original to build the thumb from`,
+			);
+		}
+		return { built: [await buildThumbVersion(spec, identity, thumbSource, pathOpts)], jobId: null };
+	}
+
 	const source = resolveOriginalSource(spec, identity, pathOpts, rawExtension);
 	if (source === null) throw new Error('build_version: original not found');
 
-	if (quality === thumbQuality) {
-		return { built: [await buildThumbVersion(spec, identity, source, pathOpts)], jobId: null };
-	}
 	if (spec.model === 'component_image') {
 		return {
 			built: [await buildImageVersion(spec, identity, quality, source, pathOpts)],
