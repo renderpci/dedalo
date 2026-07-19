@@ -48,6 +48,14 @@ export interface ToolActionContext {
 	background: boolean;
 	publishProgress?: (data: object) => void;
 	/**
+	 * Cooperative-cancellation signal, present ONLY under the background executor
+	 * (the job manager's per-job AbortController; dd_utils_api::stop_process
+	 * aborts it). A long-running handler checks `signal?.aborted` at its loop
+	 * boundaries and returns a partial summary — the executor never kills work
+	 * mid-write.
+	 */
+	signal?: AbortSignal;
+	/**
 	 * The proxy-validated client address, for tool actions that append an
 	 * activity row (dd544 IP). Optional: a handler that logs nothing ignores it,
 	 * and the background executor carries the value captured at SUBMIT time —

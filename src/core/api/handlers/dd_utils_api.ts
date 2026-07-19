@@ -112,6 +112,14 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// background run) streams only to its owner — the ids are guessable.
 		return getUtilsProcessStatus(rqo, principal);
 	},
+	stop_process: async (rqo, context) => {
+		// Stop a background job (PHP dd_utils_api::stop_process): the generic Stop
+		// button's wire. Session-gated + owner-gated; aborts the job's controller
+		// so the handler winds down cooperatively (core/api/process_status.ts).
+		const principal = requirePrincipal(context);
+		const { stopUtilsProcess } = await import('../process_status.ts');
+		return stopUtilsProcess(rqo, principal);
+	},
 	get_system_info: async (_rqo, _context) => {
 		// Upload/import/media-edit init call (PHP dd_utils_api::get_system_info).
 		// Authenticated read (the router's session+CSRF gate already ran); returns

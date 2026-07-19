@@ -94,10 +94,21 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	const { refreshMediaItems } = await import('../../../src/core/media/repair.ts');
 	const { updateMatrixKeyData } = await import('../../../src/core/db/matrix_write.ts');
 
-	// Matched records: the client SQO (no limit) or the whole section.
-	const sqoRaw = (ctx.options.sqo as Record<string, unknown> | undefined) ?? {
-		section_tipo: [sectionTipo],
-	};
+	// Matched records: the client SQO, REQUIRED (no limit; pagination stripped so
+	// the whole matched set — not just the visible page — is processed). There is
+	// deliberately NO whole-section fallback: an absent sqo once silently swept an
+	// entire 438k-record section that the client displayed as "Records: 1"
+	// (2026-07-19 incident, WC-043). The client always sends its live list sqo —
+	// an unfiltered list matches the whole section EXPLICITLY; scripted callers
+	// pass { section_tipo: ['…'] } themselves.
+	const sqoRaw = ctx.options.sqo as Record<string, unknown> | undefined;
+	if (sqoRaw === null || typeof sqoRaw !== 'object' || Array.isArray(sqoRaw)) {
+		return {
+			result: false,
+			msg: 'Error. sqo is required (the scope to act on — no whole-section default; WC-043)',
+			errors: ['invalid_request'],
+		};
+	}
 	const sqo = sanitizeClientSqo(structuredClone(sqoRaw));
 	(sqo as { limit?: unknown; offset?: unknown }).limit = null;
 	(sqo as { limit?: unknown; offset?: unknown }).offset = 0;
@@ -107,10 +118,39 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 		section_id: number;
 	}[];
 
+	// Progress: the pfile frame the client's stream renderer already formats
+	// (data.counter / data.total / data.current.section_id / data.n_components —
+	// render_tool_update_cache.js compound_msg). Throttled: every publish is a
+	// pfile write, so tick at most every PROGRESS_MS (the final row always ticks).
+	const publish = ctx.publishProgress ?? (() => {});
+	const PROGRESS_MS = 250;
+	let lastPublish = 0;
+	let counter = 0;
+
 	let regenerated = 0;
 	let mediaHeld = 0;
+	let stopped = false;
 	const mediaErrors: string[] = [];
 	for (const row of rows) {
+		// Cooperative cancellation (dd_utils_api::stop_process → mediaJobs.stop →
+		// the executor's AbortSignal): finish the current record, never mid-write.
+		if (ctx.signal?.aborted === true) {
+			stopped = true;
+			break;
+		}
+		counter++;
+		const now = Date.now();
+		if (counter === rows.length || now - lastPublish >= PROGRESS_MS) {
+			lastPublish = now;
+			publish({
+				msg: 'Running tool_update_cache::update_cache',
+				is_running: true,
+				counter,
+				total: rows.length,
+				current: { section_id: row.section_id },
+				n_components: selection.length,
+			});
+		}
 		const table = (await getMatrixTableFromTipo(row.section_tipo)) ?? 'matrix';
 		const record = await readMatrixRecord(table, row.section_tipo, row.section_id);
 		if (record === null) continue;
@@ -174,12 +214,29 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 			regenerated += 1;
 		}
 	}
+	// The abort check runs BEFORE the counter increment, so `counter` always equals
+	// the number of FULLY processed records — stopped or not.
+	const processed = counter;
+	const summaryMsg = stopped
+		? `Stopped. update_cache regenerated ${regenerated} component(s) across ${processed} of ${rows.length} matched record(s) before the stop.`
+		: `OK. update_cache regenerated ${regenerated} component(s) across ${rows.length} record(s).`;
+	const msg = `${summaryMsg}${mediaErrors.length > 0 ? ` ${mediaErrors.length} media derivative rebuild(s) failed (files_info still refreshed).` : ''}${mediaHeld > 0 ? ` ${mediaHeld} stored media index(es) kept (files not on this server — shrink held).` : ''}`;
+	// Final frame: the client renders the summary from the last pfile data.
+	publish({
+		msg,
+		is_running: false,
+		counter: processed,
+		total: rows.length,
+		n_components: selection.length,
+	});
 	return {
 		result: true,
-		msg: `OK. update_cache regenerated ${regenerated} component(s) across ${rows.length} record(s).${mediaErrors.length > 0 ? ` ${mediaErrors.length} media derivative rebuild(s) failed (files_info still refreshed).` : ''}${mediaHeld > 0 ? ` ${mediaHeld} stored media index(es) kept (files not on this server — shrink held).` : ''}`,
+		msg,
 		errors: mediaErrors,
 		regenerated,
 		records: rows.length,
+		processed,
+		stopped,
 		media_errors: mediaErrors.length,
 		media_held: mediaHeld,
 	};

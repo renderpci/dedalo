@@ -170,7 +170,7 @@ export function scheduleBackground(
 	// not be invisible).
 	const record = mediaJobs.submit(
 		`${loaded.module.name}_${method}`,
-		async ({ onData }) => {
+		async ({ onData, signal }) => {
 			// Publish a truthful first payload: the client's progress line reads
 			// frame.data.msg on every tick, and a null data renders "undefined".
 			onData({ msg: `Running ${loaded.module.name}::${method}`, is_running: true });
@@ -186,6 +186,10 @@ export function scheduleBackground(
 					// reader renders on its next tick. Handlers throttle their own rate —
 					// each call rewrites the pfile.
 					publishProgress: (data: object) => onData(data),
+					// Cooperative cancellation: the job manager's per-job controller
+					// (stop_process / graceful shutdown abort it). Handlers check it at
+					// loop boundaries and return a partial summary.
+					signal,
 				});
 				job.status = 'done';
 				job.result = result;

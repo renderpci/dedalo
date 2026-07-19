@@ -140,3 +140,40 @@ export function getUtilsProcessStatus(rqo: Rqo, principal: Principal): ApiResult
 	});
 	return { status: 200, body: {}, stream, streamHeaders: { ...SSE_HEADERS } };
 }
+
+/**
+ * Stop a background job (PHP dd_utils_api::stop_process — the wire the copied
+ * client's generic Stop button has ALWAYS posted; it 400'd until this handler
+ * existed, WC-043). `options: {pid, pfile}` — the same handle pair the status
+ * stream uses; the job id is the pfile basename. Aborts the job's controller
+ * (MediaJobManager.stop): the handler observes `signal.aborted` at its next
+ * loop boundary and returns a partial summary — never a mid-write kill.
+ *
+ * Fail-closed and oracle-free: an unknown, terminal, or FOREIGN job answers the
+ * same "not running" envelope — a guessable job id must not reveal existence.
+ */
+export function stopUtilsProcess(rqo: Rqo, principal: Principal): ApiResult {
+	const options = (rqo.options ?? {}) as { pid?: unknown; pfile?: unknown };
+	const pfile = typeof options.pfile === 'string' ? options.pfile : '';
+	const id = pfile !== '' ? jobIdFromPfile(pfile) : null;
+	if (id === null) {
+		return {
+			status: 200,
+			body: {
+				result: false,
+				msg: 'Error: a valid pfile is mandatory',
+				errors: ['invalid_request'],
+			},
+		};
+	}
+	const notRunning = {
+		status: 200 as const,
+		body: { result: false, msg: `Error: process '${pfile}' is not running`, errors: [] },
+	};
+	const record = mediaJobs.status(id);
+	if (record === null) return notRunning;
+	if (!mayStreamJob(record, principal)) return notRunning; // same shape — no existence oracle
+	if (record.status !== 'running' && record.status !== 'queued') return notRunning;
+	mediaJobs.stop(id);
+	return { status: 200, body: { result: true, msg: 'OK. Stop requested', errors: [] } };
+}
