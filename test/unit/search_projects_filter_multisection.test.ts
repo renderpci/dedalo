@@ -15,7 +15,10 @@
  * Fixtures (monedaiberica ontology, same as the differential):
  *   numisdata267 gated by component_filter numisdata21
  *   numisdata6   gated by component_filter numisdata127
- *   numisdata5   ungated
+ *   dmm480       ungated (no component_filter, empty relations — the ONLY
+ *                genuinely ungated data section; every virtual section in this
+ *                ontology resolves to a GATED real section, e.g. numisdata5 →
+ *                numisdata276 → numisdata221, rsc170 → rsc2 → rsc28)
  *   user 16 → project 7; user 999999 → no projects
  */
 
@@ -29,7 +32,7 @@ const GATED_A = 'numisdata267'; // filter tipo numisdata21
 const GATED_A_FILTER = 'numisdata21';
 const GATED_B = 'numisdata6'; // filter tipo numisdata127
 const GATED_B_FILTER = 'numisdata127';
-const UNGATED = 'numisdata5';
+const UNGATED = 'dmm480';
 
 const NON_ADMIN: Principal = { userId: 16, isGlobalAdmin: false, isDeveloper: false };
 const ADMIN: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
@@ -59,35 +62,59 @@ describe('multi-section projects filter (non-admin, per-section ACL)', () => {
 
 	test('mixed gated/ungated: no throw; gated section guarded by its OWN filter, ungated survives bare', async () => {
 		if (!dbReady) return;
-		const { sql } = await buildSearchSql(sqoOver([GATED_A, UNGATED]), { principal: NON_ADMIN });
-		// One EXISTS, keyed to the gated section's own filter tipo.
-		expect(sql).toContain(`relation::jsonb->'${GATED_A_FILTER}'`);
+		const { sql, params } = await buildSearchSql(sqoOver([GATED_A, UNGATED]), {
+			principal: NON_ADMIN,
+		});
+		// GIN-indexable whole-column containment (never the frozen-PHP EXISTS
+		// scan), keyed to the gated section's own filter tipo via a bound param.
+		expect(sql).toMatch(/mix\.relation @> \$\d+::text::jsonb/);
+		expect(sql).not.toContain('jsonb_array_elements');
+		expect(params).toContain(`{"${GATED_A_FILTER}":[{"section_id":"7"}]}`);
 		// The predicate is a disjunction of section_tipo-guarded branches:
-		// (mix.section_tipo = $a AND EXISTS(…)) OR (mix.section_tipo = $b)
-		expect(sql).toMatch(/\(mix\.section_tipo = \$\d+::text AND EXISTS /);
+		// (mix.section_tipo = $a AND (mix.relation @> …)) OR (mix.section_tipo = $b)
+		expect(sql).toMatch(/\(mix\.section_tipo = \$\d+::text AND \(mix\.relation @> /);
 		expect(sql).toMatch(/ OR \(mix\.section_tipo = \$\d+::text\)\)/);
 	});
 
 	test('two gated sections with DIFFERENT filter tipos each get their own predicate (anti main-only)', async () => {
 		if (!dbReady) return;
-		const { sql } = await buildSearchSql(sqoOver([GATED_A, GATED_B]), { principal: NON_ADMIN });
-		expect(sql).toContain(`relation::jsonb->'${GATED_A_FILTER}'`);
-		expect(sql).toContain(`relation::jsonb->'${GATED_B_FILTER}'`);
+		const { params } = await buildSearchSql(sqoOver([GATED_A, GATED_B]), {
+			principal: NON_ADMIN,
+		});
+		expect(params).toContain(`{"${GATED_A_FILTER}":[{"section_id":"7"}]}`);
+		expect(params).toContain(`{"${GATED_B_FILTER}":[{"section_id":"7"}]}`);
 	});
 
 	test('ungated-FIRST ordering still filters the gated section (the PHP fail-open case)', async () => {
 		if (!dbReady) return;
 		// PHP keys the filter off the FIRST section only: ungated-first emits NO
 		// filter and leaks every gated record. TS must filter regardless of order.
-		const { sql } = await buildSearchSql(sqoOver([UNGATED, GATED_A]), { principal: NON_ADMIN });
-		expect(sql).toContain(`relation::jsonb->'${GATED_A_FILTER}'`);
+		const { params } = await buildSearchSql(sqoOver([UNGATED, GATED_A]), {
+			principal: NON_ADMIN,
+		});
+		expect(params).toContain(`{"${GATED_A_FILTER}":[{"section_id":"7"}]}`);
 	});
 
 	test('global admin bypasses the filter entirely', async () => {
 		if (!dbReady) return;
-		const { sql } = await buildSearchSql(sqoOver([GATED_A, UNGATED]), { principal: ADMIN });
-		expect(sql).not.toContain('jsonb_array_elements');
+		const { sql, params } = await buildSearchSql(sqoOver([GATED_A, UNGATED]), {
+			principal: ADMIN,
+		});
+		expect(sql).not.toContain('relation @>');
 		expect(sql).not.toContain(GATED_A_FILTER);
+		expect(params.join('|')).not.toContain(GATED_A_FILTER);
+	});
+
+	test('VIRTUAL section resolves the REAL section filter tipo (rsc170 → rsc2 → rsc28; fail-open regression 2026-07-19)', async () => {
+		if (!dbReady) return;
+		// rsc170 (images) is virtual: records are STORED under rsc170 but gated
+		// by real section rsc2's component_filter rsc28. The strict own-subtree
+		// lookup returned null here, silently disabling the projects ACL for
+		// every virtual section — non-admins saw the whole table.
+		expect(await getComponentFilterTipo('rsc170')).toBe('rsc28');
+		const { sql, params } = await buildSearchSql(sqoOver(['rsc170']), { principal: NON_ADMIN });
+		expect(sql).toMatch(/relation @> \$\d+::text::jsonb/);
+		expect(params).toContain('{"rsc28":[{"section_id":"7"}]}');
 	});
 
 	test('projects-less non-admin gets the impossible clause on gated sections only', async () => {

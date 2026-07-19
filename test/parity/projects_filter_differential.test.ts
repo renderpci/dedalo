@@ -94,15 +94,45 @@ describe('projects filter differential (Phase 5c gate)', () => {
 	});
 
 	test('non-gated section is unaffected by the projects filter', async () => {
-		// numisdata5 has NO component_filter anywhere in its subtree → non-admin
-		// sees the full page. (numisdata6, by contrast, IS gated by the nested
-		// component_filter numisdata127 — a good reminder that gating can live
-		// deep under a section_group, not just as a direct child.)
+		// dmm480 has NO component_filter anywhere (own subtree AND no real-section
+		// fallback: relations is empty) → non-admin sees its full record set. It is
+		// the only genuinely ungated data section in this ontology — see the
+		// VIRTUAL test below for why numisdata5 no longer qualifies.
+		const ids = await runSearchIds({ section_tipo: ['dmm480'], limit: 5, offset: 0 }, nonAdmin(16));
+		const total = (await sql`
+			SELECT count(DISTINCT section_id)::int AS n FROM matrix WHERE section_tipo = 'dmm480'
+		`) as { n: number }[];
+		expect(ids.size).toBe(total[0]?.n as number);
+		expect(ids.size).toBeGreaterThan(0);
+	});
+
+	test('VIRTUAL section is gated through its REAL section (numisdata5 → numisdata276 → numisdata221)', async () => {
+		// Records of a virtual section are STORED under the virtual tipo but gated
+		// by the real section's component_filter — PHP resolve_virtual=true
+		// (trait.where.php build_sql_projects_filter). Until 2026-07-19 the TS
+		// lookup was strict own-subtree and FAILED OPEN here (non-admins saw all
+		// 441 numisdata5 records / all 438k rsc170 images).
+		const truth = (await sql`
+			SELECT DISTINCT section_id FROM matrix
+			WHERE section_tipo = 'numisdata5'
+			  AND EXISTS (
+				SELECT 1 FROM jsonb_array_elements(relation->'numisdata221') e
+				WHERE e->>'section_id' = ${String(PROJECT_ID)}
+			)
+		`) as { section_id: number }[];
+		const truthIds = new Set(truth.map((r) => Number(r.section_id)));
 		const ids = await runSearchIds(
-			{ section_tipo: ['numisdata5'], limit: 5, offset: 0 },
+			{ section_tipo: ['numisdata5'], limit: 500, offset: 0 },
 			nonAdmin(16),
 		);
-		expect(ids.size).toBe(5);
+		expect(ids.size).toBe(truthIds.size);
+		for (const id of ids) expect(truthIds.has(id)).toBe(true);
+		// Fixture guard: the section is genuinely gated — the full set (441) must
+		// NOT be visible, or this test would vacuously pass on a fail-open build.
+		const all = (await sql`
+			SELECT count(DISTINCT section_id)::int AS n FROM matrix WHERE section_tipo = 'numisdata5'
+		`) as { n: number }[];
+		expect(ids.size).toBeLessThan(all[0]?.n as number);
 	});
 
 	test('gated section deep under a section_group is still filtered (numisdata6/numisdata127)', async () => {
@@ -132,9 +162,12 @@ describe('projects filter differential (Phase 5c gate)', () => {
  * ground-truth sets, NOT PHP equality — running them against PHP would (and
  * should) diverge on the fail-open case.
  *
- * Fixture census (probed 2026-07-09): numisdata5 = 441 records (ids 1-441,
- * ungated); numisdata267 = 15,114 records, of which 103 reference project 7
- * (ids 4223-14752). user 16 → project 7; both fit one 1000-row page.
+ * Fixture census (probed 2026-07-09, re-probed 2026-07-19): numisdata267 =
+ * 15,114 records, of which 103 reference project 7 (ids 4223-14752).
+ * numisdata5 = 441 records — VIRTUAL over gated numisdata276 (filter
+ * numisdata221) since the 2026-07-19 virtual-resolution fix, so a non-admin
+ * sees only its project-scoped subset, computed live below. user 16 →
+ * project 7; everything fits one 1000-row page.
  */
 describe('multi-section projects filter (per-section ACL, WC-011)', () => {
 	/** Keyed runner: section_ids collide across sections, so key by tipo/id. */
@@ -151,43 +184,49 @@ describe('multi-section projects filter (per-section ACL, WC-011)', () => {
 		return new Set(rows.map((row) => `${row.section_tipo}/${row.section_id}`));
 	}
 
-	async function project7GatedTruth(): Promise<Set<string>> {
+	async function gatedTruth(sectionTipo: string, filterTipo: string): Promise<Set<string>> {
 		const truth = (await sql`
 			SELECT DISTINCT section_id FROM matrix
-			WHERE section_tipo = ${GATED_SECTION}
+			WHERE section_tipo = ${sectionTipo}
 			  AND EXISTS (
-				SELECT 1 FROM jsonb_array_elements(relation->'numisdata21') e
+				SELECT 1 FROM jsonb_array_elements(relation -> ${filterTipo}) e
 				WHERE e->>'section_id' = ${String(PROJECT_ID)}
 			)
 		`) as { section_id: number }[];
-		return new Set(truth.map((r) => `${GATED_SECTION}/${Number(r.section_id)}`));
+		return new Set(truth.map((r) => `${sectionTipo}/${Number(r.section_id)}`));
 	}
+
+	const project7GatedTruth = () => gatedTruth(GATED_SECTION, 'numisdata21');
+	// numisdata5 is VIRTUAL over gated numisdata276 → filter numisdata221.
+	const project7VirtualTruth = () => gatedTruth('numisdata5', 'numisdata221');
 
 	const countBy = (keys: Set<string>, tipo: string) =>
 		[...keys].filter((key) => key.startsWith(`${tipo}/`)).length;
 
-	test('mixed gated/ungated: gated scoped by its OWN filter, ungated fully visible', async () => {
+	test('mixed sections: each scoped by its OWN filter (incl. the virtual one)', async () => {
 		const truthGated = await project7GatedTruth();
+		const truthVirtual = await project7VirtualTruth();
 		expect(truthGated.size).toBeGreaterThan(0); // fixture guard
 
 		const keys = await runSearchKeys(
 			{ section_tipo: [GATED_SECTION, 'numisdata5'], limit: 1000, offset: 0 },
 			nonAdmin(16),
 		);
-		// No over-return: every gated key is in the project-7 truth set…
+		// No over-return: every key is in its section's project-7 truth set…
 		for (const key of keys) {
 			if (key.startsWith(`${GATED_SECTION}/`)) expect(truthGated.has(key)).toBe(true);
+			if (key.startsWith('numisdata5/')) expect(truthVirtual.has(key)).toBe(true);
 		}
-		// …no under-return: the whole in-scope gated set and the whole ungated
-		// section fit the 1000-row page (441 + 103 = 544).
+		// …no under-return: both scoped sets fit the 1000-row page.
 		expect(countBy(keys, GATED_SECTION)).toBe(truthGated.size);
-		expect(countBy(keys, 'numisdata5')).toBe(441);
+		expect(countBy(keys, 'numisdata5')).toBe(truthVirtual.size);
 	});
 
-	test('ungated section FIRST still filters the gated one (the PHP fail-open case)', async () => {
-		// PHP keys the projects filter off the FIRST section: this ordering emits
-		// NO filter there and leaks all 15k numisdata267 records. TS must return
-		// the identical set regardless of section_tipo order.
+	test('other section FIRST still filters the gated one (the PHP fail-open case)', async () => {
+		// PHP keys the projects filter off the FIRST section's filter tipo: with a
+		// differently-gated section first, numisdata267 would be scoped by the
+		// WRONG tipo (or leak). TS must return the identical set regardless of
+		// section_tipo order.
 		const truthGated = await project7GatedTruth();
 		const keys = await runSearchKeys(
 			{ section_tipo: ['numisdata5', GATED_SECTION], limit: 1000, offset: 0 },
@@ -219,22 +258,23 @@ describe('multi-section projects filter (per-section ACL, WC-011)', () => {
 		expect(keys.size).toBe(1000); // 15,114 + 441 records → page filled, unfiltered
 	});
 
-	test('projects-less non-admin: gated section empty, ungated still visible', async () => {
+	test('projects-less non-admin: both gated sections empty (virtual gates too)', async () => {
 		const keys = await runSearchKeys(
 			{ section_tipo: [GATED_SECTION, 'numisdata5'], limit: 1000, offset: 0 },
 			nonAdmin(999999),
 		);
 		expect(countBy(keys, GATED_SECTION)).toBe(0);
-		expect(countBy(keys, 'numisdata5')).toBe(441);
+		expect(countBy(keys, 'numisdata5')).toBe(0);
 	});
 
 	test('multi-section count: no throw, total = per-section scoped sum', async () => {
 		// The count engine shares buildSearchSql (and shared the removed throw).
 		const truthGated = await project7GatedTruth();
+		const truthVirtual = await project7VirtualTruth();
 		const sqo = sanitizeClientSqo(
 			structuredClone({ section_tipo: [GATED_SECTION, 'numisdata5'], limit: 10, offset: 0 }),
 		);
 		const total = await matrixReadSource.count(sqo, nonAdmin(16));
-		expect(total).toBe(truthGated.size + 441);
+		expect(total).toBe(truthGated.size + truthVirtual.size);
 	});
 });
