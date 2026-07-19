@@ -274,7 +274,7 @@ export async function getMediaInfo(
 					info.file_exist === true && filePath !== null
 						? info.external === true
 							? filePath
-							: `/dedalo/${config.mediaDir}${filePath}`
+							: `${config.media.webBase}${filePath}`
 						: null,
 			});
 		}

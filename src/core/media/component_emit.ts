@@ -115,7 +115,7 @@ export const mediaEmitHook: ComponentEmitHook = {
 					});
 					const pathOpts = await resolveMediaPathOptions(ddo.tipo, row.section_tipo);
 					const bucket = additionalPath(Number(row.section_id), pathOpts.maxItemsFolder);
-					const base = `/dedalo/${cfg.mediaDir}${spec.folder}`;
+					const base = `${cfg.media.webBase}${spec.folder}`;
 					// Posterframe extension is the AV posterframe ext for both types (PHP
 					// component_3d uses DEDALO_AV_POSTERFRAME_EXTENSION too).
 					item.posterframe_url = `${base}${pathOpts.initialMediaPath}/posterframe${bucket}/${identifier}.${cfg.media.avExtras.posterframeExtension}`;

@@ -73,7 +73,10 @@ export function buildPlainVars(isLogged: boolean): Record<string, unknown> {
 		...(nativeDiffusion ? {} : { DEDALO_DIFFUSION_API_URL: '/dedalo/diffusion/api/v1/' }),
 		DEDALO_CORE_URL: '/dedalo/core',
 		DEDALO_ROOT_WEB: '/dedalo',
-		DEDALO_MEDIA_URL: `/dedalo/${config.mediaDir}`, // PHP: DEDALO_ROOT_WEB . '/' . DEDALO_MEDIA_DIR
+		// PHP: DEDALO_ROOT_WEB . '/' . DEDALO_MEDIA_DIR — configurable-origin in PHP
+		// too (the root was a config constant). webBase = DEDALO_MEDIA_WEB_BASE or
+		// the same-origin relative default; every client media fetch builds on this.
+		DEDALO_MEDIA_URL: config.media.webBase,
 		DEDALO_TOOLS_URL: '/dedalo/tools',
 		// Additional-root tools only (name → base URL); primary-root tools are
 		// absent and fall back to /dedalo/tools/<name> in the client (instances.js).

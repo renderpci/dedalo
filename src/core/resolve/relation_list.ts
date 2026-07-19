@@ -24,7 +24,7 @@
  * used as a relation_list column (ich126 under rsc197's ich96).
  */
 
-import { readEnv } from '../../config/env.ts';
+import { config } from '../../config/config.ts';
 import { getFlatValueFamily } from '../components/registry.ts';
 import { mediaTypeOf } from '../concepts/media.ts';
 import { dataframeEntryMatches } from '../concepts/subdatum.ts';
@@ -427,7 +427,9 @@ export async function resolveCellValue(
 	// quality comes from the media CONTRACT (mediaTypeOf → DEDALO_*_QUALITY_
 	// DEFAULT), never a hardcoded table.
 	if (family === 'media') {
-		const mediaBase = readEnv('DEDALO_MEDIA_BASE_URL');
+		// config.media.baseUrl (DEDALO_MEDIA_BASE_URL) — the EXPORT base, distinct
+		// from webBase: unset means the cell is reported unresolved, never guessed.
+		const mediaBase = config.media.baseUrl;
 		const defaultQuality = mediaTypeOf(model)?.defaultQuality;
 		if (mediaBase === undefined || mediaBase === '' || defaultQuality === undefined) {
 			if (!unresolved.includes(model)) unresolved.push(model);

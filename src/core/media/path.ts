@@ -199,9 +199,9 @@ export function subtitlesPath(identity: MediaIdentity, lang: string, mediaRoot?:
 
 /**
  * Public subtitles URL (PHP get_subtitles_url — DEDALO_MEDIA_URL root):
- * `/dedalo/<mediaDir>` + the relative path. Matches the shape the AV player's
+ * the media web base + the relative path. Matches the shape the AV player's
  * <track> consumes (component_emit.ts item.subtitles.subtitles_url).
  */
 export function subtitlesUrl(identity: MediaIdentity, lang: string): string {
-	return `/dedalo/${config.mediaDir}${subtitlesRelativePath(identity, lang)}`;
+	return `${config.media.webBase}${subtitlesRelativePath(identity, lang)}`;
 }

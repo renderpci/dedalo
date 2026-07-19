@@ -524,6 +524,7 @@ export const NEW_IN_V7: readonly string[] = [
 	// media (v7-native knobs)
 	'DEDALO_MEDIA_DIR',
 	'DEDALO_MEDIA_BASE_URL',
+	'DEDALO_MEDIA_WEB_BASE',
 	'DEDALO_MEDIA_ACCESS_MODE',
 	'DEDALO_BINARY_BASE',
 	'DEDALO_IDENTIFY_PATH',

@@ -126,5 +126,10 @@ export function baseSvgUrl(
 	if (spec.model !== 'component_image') return null;
 	const location = svgOverlayLocation(spec, identity, pathOpts);
 	if (!existsSync(location.absolutePath)) return null;
-	return `/dedalo/${config.mediaDir}${location.relativePath}`;
+	// Media web base (NOT the relative literal): the envelope is fetched by the
+	// BROWSER, so it must point at wherever media is actually served. The href
+	// EMBEDDED in the envelope file (defaultRasterUrl) stays relative on purpose
+	// — it resolves against the envelope's own fetch origin, keeping the
+	// persisted file host-portable.
+	return `${config.media.webBase}${location.relativePath}`;
 }

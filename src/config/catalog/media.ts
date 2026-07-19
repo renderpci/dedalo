@@ -611,6 +611,25 @@ By default Dédalo writes them to \`processes/\` inside the private directory, w
 DEDALO_MEDIA_PROCESSES_DIR="/var/lib/dedalo/processes"
 \`\`\``,
 	},
+	DEDALO_MEDIA_WEB_BASE: {
+		type: 'string',
+		scope: 'operator',
+		default: undefined,
+		heading: 'Defining the media web base for the client',
+		typeLabel: 'string',
+		typeSuffix: '*optional — unset serves media same-origin*',
+		doc: `This parameter defines the base every media URL served to the CLIENT is built on — the address the browser fetches images, video, PDFs and their derivatives from.
+
+Unset (the default, and the right value whenever the web server that serves media also fronts the application), media URLs are RELATIVE: \`/dedalo/<DEDALO_MEDIA_DIR>/\` plus the file path, resolved by the browser against the page's own origin. Set it to an ABSOLUTE URL, without a trailing slash, when media is served from a DIFFERENT origin than the application — the typical case is development, with the application on the engine's TCP port and the media on the local web server that enforces the generated access rules:
+
+\`\`\`bash
+DEDALO_MEDIA_WEB_BASE="http://localhost:8080/dedalo/media"
+\`\`\`
+
+In a production topology (one virtual host fronting both the application and \`/dedalo/media\`) leave it unset.
+
+Do not confuse it with DEDALO_MEDIA_BASE_URL, which only resolves media cells in EXPORTS — content that leaves the application and cannot use a relative URL. That key stays deliberately unset-means-unresolved; this one always has an effective value (the relative default).`,
+	},
 	DEDALO_PDF_ALTERNATIVE_EXTENSIONS: {
 		type: 'string_list',
 		scope: 'operator',

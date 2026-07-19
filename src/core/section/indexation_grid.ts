@@ -553,7 +553,7 @@ async function mediaCellUrl(
 		bucket = mediaBucketPath(Number(sectionId), maxItemsFolder);
 	}
 
-	const mediaUrlBase = `/dedalo/${config.mediaDir}`;
+	const mediaUrlBase = config.media.webBase;
 
 	// av/3d: posterframe grammar (no initial_media_path, no '//' cleanup)
 	if (model === 'component_av' || model === 'component_3d') {

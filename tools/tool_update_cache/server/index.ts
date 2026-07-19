@@ -108,6 +108,7 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	}[];
 
 	let regenerated = 0;
+	let mediaHeld = 0;
 	const mediaErrors: string[] = [];
 	for (const row of rows) {
 		const table = (await getMatrixTableFromTipo(row.section_tipo)) ?? 'matrix';
@@ -125,15 +126,21 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 				// filesystem cache; media/tools/files_info_persist.ts discipline).
 				const storedItems = (readComponentItems(record, tipo, model) ?? []) as unknown[];
 				if (storedItems.length === 0) continue;
-				const { refreshedItems, errors } = await refreshMediaItems({
+				const { refreshedItems, errors, heldShrinks } = await refreshMediaItems({
 					componentTipo: tipo,
 					sectionTipo: row.section_tipo,
 					sectionId: row.section_id,
 					model,
 					items: storedItems,
 					regenerate: true,
+					// NEVER shrink from a tool sweep: on a partial-media box the rescan
+					// would wipe the valid index of every record whose files are not
+					// local (the 2026-07-19 incident). Shrinks need the ops script's
+					// explicit --allow-shrink adjudication.
+					holdShrink: true,
 				});
 				mediaErrors.push(...errors.map((message) => `${tipo}#${row.section_id}: ${message}`));
+				mediaHeld += heldShrinks;
 				await updateMatrixKeyData(
 					table,
 					row.section_tipo,
@@ -169,18 +176,34 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	}
 	return {
 		result: true,
-		msg: `OK. update_cache regenerated ${regenerated} component(s) across ${rows.length} record(s).${mediaErrors.length > 0 ? ` ${mediaErrors.length} media derivative rebuild(s) failed (files_info still refreshed).` : ''}`,
+		msg: `OK. update_cache regenerated ${regenerated} component(s) across ${rows.length} record(s).${mediaErrors.length > 0 ? ` ${mediaErrors.length} media derivative rebuild(s) failed (files_info still refreshed).` : ''}${mediaHeld > 0 ? ` ${mediaHeld} stored media index(es) kept (files not on this server — shrink held).` : ''}`,
 		errors: mediaErrors,
 		regenerated,
 		records: rows.length,
 		media_errors: mediaErrors.length,
+		media_held: mediaHeld,
 	};
+}
+
+/** The section targets of a component-list request — the 'section_list' gate reads
+ * these. The CLIENT sends the target section(s) as `ar_section_tipo` (string or
+ * array), NEVER `section_tipo` — a plain 'section' gate here fails closed on every
+ * request and the tool renders a silently empty component list. */
+function componentListSectionTipos(options: Record<string, unknown>): unknown[] {
+	const raw = options.ar_section_tipo;
+	if (Array.isArray(raw)) return raw;
+	return raw != null && raw !== '' ? [raw] : [];
 }
 
 export const tool: ToolServerModule = {
 	name: 'tool_update_cache',
 	apiActions: {
-		get_component_list: { permission: 'section', minLevel: 1, handler: getComponentList },
+		get_component_list: {
+			permission: 'section_list',
+			minLevel: 1,
+			sectionTipos: componentListSectionTipos,
+			handler: getComponentList,
+		},
 		update_cache: { permission: 'section', minLevel: 2, handler: updateCache },
 	},
 	backgroundRunnable: ['update_cache'],

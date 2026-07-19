@@ -23,6 +23,13 @@
 
 import { testDatabaseName } from '../helpers/test_database.ts';
 
+// Pin the media WEB base to the same-origin relative default for the WHOLE suite
+// ('' = unset to the config computation; process.env outranks ../private/.env).
+// A developer's .env may point it at their local web server (split-origin dev) —
+// but every unit golden and every frozen parity fixture pins the harvest-era
+// RELATIVE '/dedalo/media' URL shape, so the suite must never inherit that key.
+process.env.DEDALO_MEDIA_WEB_BASE = '';
+
 if (process.env.DEDALO_TEST_DB_DISABLE !== 'true') {
 	const testDb = testDatabaseName();
 	const appDb = process.env.DB_NAME ?? process.env.DEDALO_DATABASE_CONN;

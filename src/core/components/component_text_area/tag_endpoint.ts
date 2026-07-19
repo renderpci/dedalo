@@ -105,7 +105,9 @@ async function resolveLocatorTag(tag: LocatorTag, request: Request): Promise<Res
 			spec.defaultExtension,
 			pathOptions,
 		);
-		const mediaUrl = `/dedalo/${config.mediaDir}${location.relativePath}`;
+		// Media web base: the redirect target is fetched by the BROWSER, so it must
+		// point at wherever media is actually served (split-origin dev included).
+		const mediaUrl = `${config.media.webBase}${location.relativePath}`;
 		return new Response(null, {
 			status: 302,
 			headers: { Location: mediaUrl, 'Cache-Control': PRIVATE_CACHE },

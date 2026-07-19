@@ -40,7 +40,11 @@ describe('tool_update_cache module', () => {
 		expect(loaded).not.toBeNull();
 		const actions = loaded!.module.apiActions;
 		expect(Object.keys(actions).sort()).toEqual(['get_component_list', 'update_cache']);
-		expect(mustGet(actions.get_component_list, 'get_component_list').permission).toBe('section');
+		// 'section_list': the client sends the target under ar_section_tipo, and the
+		// gate must authorize on the payload key the handler consumes.
+		expect(mustGet(actions.get_component_list, 'get_component_list').permission).toBe(
+			'section_list',
+		);
 		expect(mustGet(actions.update_cache, 'update_cache').permission).toBe('section');
 		expect(loaded!.module.backgroundRunnable).toEqual(['update_cache']);
 	});
@@ -67,6 +71,33 @@ describe('tool_update_cache module', () => {
 			expect('regenerate_options' in el).toBe(true);
 		}
 	});
+
+	test('get_component_list passes the DISPATCH gate with the CLIENT request shape', async () => {
+		// The browser sends the target as ar_section_tipo (never section_tipo). The
+		// action's permission gate must authorize on THAT key — a 'section' gate here
+		// fails closed before the handler and the tool renders a silently empty
+		// component list for every section and every user (the exact shipped bug).
+		// This test routes the exact client shape through dispatchToolRequest, the
+		// path the direct-handler tests bypass.
+		const { dispatchToolRequest } = await import('../../src/core/tools/dispatch.ts');
+		const principal = await resolvePrincipal(-1);
+		const res = await dispatchToolRequest(
+			principal,
+			-1,
+			{ model: 'tool_update_cache', action: 'get_component_list' },
+			{
+				ar_section_tipo: [SECTION],
+				use_real_sections: false,
+				skip_permissions: true,
+				ar_tipo_exclude_elements: null,
+				ar_components_exclude: [],
+			},
+		);
+		expect(Array.isArray(res.result)).toBe(true);
+		expect((res.result as unknown[]).length).toBeGreaterThan(0);
+		// 20s: the first dispatchToolRequest warms the tool registry + user-tools
+		// caches (~10s cold) — the default 5s test timeout flakes on it.
+	}, 20000);
 
 	test('update_cache rejects missing inputs (no bulk run on empty selection)', async () => {
 		const loaded = await getLoadedTool('tool_update_cache');
@@ -147,6 +178,53 @@ describe('tool_update_cache module', () => {
 		);
 		// Un-duplicated: one item per language, nothing re-stamped onto another lang.
 		expect(stored).toHaveLength(2);
+	});
+
+	test('media repair HOLDS shrinks: a partial-media box never wipes a valid index', async () => {
+		// The 2026-07-19 incident class: the stored files_info claims files that are
+		// not on THIS box (partial local media copy). holdShrink must KEEP the
+		// stored index; only the ops script's explicit --allow-shrink may shrink.
+		const { refreshMediaItems } = await import('../../src/core/media/repair.ts');
+		const storedFilesInfo = Array.from({ length: 40 }, (_, i) => ({
+			quality: 'original',
+			file_exist: true,
+			file_name: `remote_${i}.jpg`,
+			file_path: `/image/original/999000/remote_${i}.jpg`,
+			extension: 'jpg',
+		}));
+		const item = { id: 1, files_info: storedFilesInfo, original_normalized_name: 'x.jpg' };
+		let held: Awaited<ReturnType<typeof refreshMediaItems>>;
+		try {
+			held = await refreshMediaItems({
+				componentTipo: 'test99',
+				sectionTipo: 'test3',
+				sectionId: 999999, // bucket far outside any local media copy
+				model: 'component_image',
+				items: [item],
+				regenerate: false,
+				holdShrink: true,
+			});
+		} catch {
+			return; // DB unavailable (ontology path options)
+		}
+		expect(held.heldShrinks).toBe(1);
+		expect((held.refreshedItems[0] as { files_info: unknown[] }).files_info).toBe(storedFilesInfo);
+
+		const raw = await refreshMediaItems({
+			componentTipo: 'test99',
+			sectionTipo: 'test3',
+			sectionId: 999999,
+			model: 'component_image',
+			items: [item],
+			regenerate: false,
+			holdShrink: false,
+		});
+		expect(raw.heldShrinks).toBe(0);
+		expect(
+			(
+				(raw.refreshedItems[0] as { files_info: { file_exist: boolean }[] }).files_info ?? []
+			).filter((e) => e.file_exist).length,
+		).toBe(0);
 	});
 
 	test('update_cache REPAIRS media: stale files_info is rebuilt from disk (scratch surface)', async () => {

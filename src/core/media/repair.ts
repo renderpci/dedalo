@@ -35,6 +35,16 @@ export interface MediaItemsRefreshResult {
 	/** Derivative-rebuild failures, one message per failed item. The files_info
 	 * refresh still applied to those items — the scan reports whatever exists. */
 	errors: string[];
+	/** Items whose stored index was KEPT because the rescan found fewer existing
+	 * files than stored (holdShrink) — see the option's doc for why. */
+	heldShrinks: number;
+}
+
+/** Count of entries that claim an existing file — the shrink-guard comparison unit. */
+function existingFileCount(filesInfo: unknown): number {
+	if (!Array.isArray(filesInfo)) return 0;
+	return filesInfo.filter((entry) => (entry as Record<string, unknown> | null)?.file_exist === true)
+		.length;
 }
 
 /**
@@ -58,8 +68,18 @@ export async function refreshMediaItems(input: {
 	items: readonly unknown[];
 	/** Rebuild derivative files from the original before scanning. */
 	regenerate: boolean;
+	/**
+	 * KEEP the stored files_info when the rescan finds FEWER existing files than
+	 * stored. On a box holding a PARTIAL media copy (dev laptops — buckets not
+	 * synced) an unguarded rescan destroys the valid index of every record whose
+	 * files live elsewhere; a runaway tool_update_cache sweep did exactly that
+	 * (2026-07-19, ~86k rsc170 records, restored from the pinned backup).
+	 * Bulk/tool callers MUST pass true; only a caller that adjudicates shrinks
+	 * itself (scripts/media_repair_files_info.ts --allow-shrink) passes false.
+	 */
+	holdShrink: boolean;
 }): Promise<MediaItemsRefreshResult> {
-	const { componentTipo, sectionTipo, sectionId, model, items, regenerate } = input;
+	const { componentTipo, sectionTipo, sectionId, model, items, regenerate, holdShrink } = input;
 	const spec = mediaTypeOf(model);
 	if (spec === null) {
 		throw new Error(`refreshMediaItems: '${model}' is not a media model`);
@@ -68,6 +88,7 @@ export async function refreshMediaItems(input: {
 
 	const refreshedItems: unknown[] = [];
 	const errors: string[] = [];
+	let heldShrinks = 0;
 	for (const raw of items) {
 		if (raw === null || typeof raw !== 'object') {
 			refreshedItems.push(raw);
@@ -105,7 +126,16 @@ export async function refreshMediaItems(input: {
 				errors.push((error as Error).message);
 			}
 		}
-		refreshedItems.push(refreshStoredFilesInfo(item, spec, identity, pathOpts));
+		const refreshed = refreshStoredFilesInfo(item, spec, identity, pathOpts);
+		if (
+			holdShrink &&
+			existingFileCount(refreshed.files_info) < existingFileCount(item.files_info)
+		) {
+			heldShrinks++;
+			refreshedItems.push(item); // stored index kept — see holdShrink doc
+			continue;
+		}
+		refreshedItems.push(refreshed);
 	}
-	return { refreshedItems, errors };
+	return { refreshedItems, errors, heldShrinks };
 }

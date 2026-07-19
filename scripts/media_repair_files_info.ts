@@ -210,6 +210,7 @@ async function main(): Promise<void> {
 					model,
 					items: rawItems,
 					regenerate: false, // sweep never re-encodes files (header SCOPE)
+					holdShrink: false, // raw scan — the GROW/DIFF/SHRINK adjudication below guards
 				});
 				// Adjudicate per item on the SEMANTIC index; keep the stored object
 				// when nothing really changed so unchanged items are not rewritten.

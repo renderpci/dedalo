@@ -279,6 +279,16 @@ export interface MediaConfig {
 	readonly rootPath: string | null;
 	/** Absolute-URL prefix for export/relation cells (env DEDALO_MEDIA_BASE_URL). */
 	readonly baseUrl: string | undefined;
+	/**
+	 * The WEB base every media URL served to the client is built on
+	 * (env DEDALO_MEDIA_WEB_BASE). Default — key unset or empty — is the
+	 * same-origin relative base `/dedalo/<mediaDir>` (today's wire shape); set it
+	 * to an absolute URL when media is served from a DIFFERENT origin than the
+	 * app (e.g. dev: app on the Bun port, media on the web server). Distinct
+	 * from `baseUrl`, which only resolves export/relation cells that leave the
+	 * application and stays null-meaning-unresolved when unset.
+	 */
+	readonly webBase: string;
 	readonly image: MediaTypeConfig;
 	readonly av: MediaTypeConfig;
 	readonly pdf: MediaTypeConfig;
@@ -568,9 +578,18 @@ function buildMediaConfig(): MediaConfig {
 	// The `bin(key, name)` helper is gone: each binary key now declares its own computed
 	// default (`<DEDALO_BINARY_BASE>/<name>`) in src/config/catalog/media.ts, so the census
 	// can print it and readString resolves it.
+	// Client/wire media URL base: DEDALO_MEDIA_WEB_BASE ('' = unset), else the
+	// same-origin relative default. Trailing slash stripped so every builder can
+	// append its '/...'-rooted relative path.
+	const webBaseRaw = readEnv('DEDALO_MEDIA_WEB_BASE');
+	const webBase =
+		webBaseRaw !== undefined && webBaseRaw !== ''
+			? webBaseRaw.replace(/\/+$/, '')
+			: `/dedalo/${readString('DEDALO_MEDIA_DIR')}`;
 	return Object.freeze({
 		rootPath: mediaRoot,
 		baseUrl: readEnv('DEDALO_MEDIA_BASE_URL'),
+		webBase,
 		image: Object.freeze({
 			folder: readString('DEDALO_IMAGE_FOLDER'),
 			extension: readString('DEDALO_IMAGE_EXTENSION'),
