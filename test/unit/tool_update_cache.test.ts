@@ -112,6 +112,44 @@ describe('tool_update_cache module', () => {
 		expect(res.errors).toContain('invalid_request');
 	});
 
+	test('update_cache FAILS CLOSED without an sqo (no whole-section default, WC-043)', async () => {
+		// The 2026-07-19 runaway: an absent sqo silently swept an entire 438k-record
+		// section while the client displayed "Records: 1". The scope is now REQUIRED.
+		const loaded = await getLoadedTool('tool_update_cache');
+		const principal = await resolvePrincipal(-1);
+		const res = await mustGet(loaded!.module.apiActions.update_cache, 'update_cache').handler({
+			principal,
+			userId: -1,
+			background: true,
+			options: { section_tipo: SECTION, components_selection: [{ tipo: 'numisdata79' }] },
+		});
+		expect(res.result).toBe(false);
+		expect(res.errors).toContain('invalid_request');
+		expect(String(res.msg)).toContain('sqo');
+	});
+
+	test('update_cache honors an aborted signal: cooperative cancellation, zero processed', async () => {
+		const loaded = await getLoadedTool('tool_update_cache');
+		const principal = await resolvePrincipal(-1);
+		const controller = new AbortController();
+		controller.abort();
+		const res = await mustGet(loaded!.module.apiActions.update_cache, 'update_cache').handler({
+			principal,
+			userId: -1,
+			background: true,
+			signal: controller.signal,
+			options: {
+				section_tipo: SCRATCH_SECTION,
+				components_selection: [{ tipo: SCRATCH_INPUT_TEXT }],
+				sqo: { section_tipo: [SCRATCH_SECTION] },
+			},
+		});
+		if (res.result === false) return; // DB unavailable
+		expect(res.stopped).toBe(true);
+		expect(res.processed).toBe(0);
+		expect(res.regenerated).toBe(0);
+	});
+
 	test('update_cache regenerates a component (scratch-twin, real DB)', async () => {
 		const loaded = await getLoadedTool('tool_update_cache');
 		const principal = await resolvePrincipal(-1);
@@ -149,10 +187,12 @@ describe('tool_update_cache module', () => {
 			],
 			userId: -1,
 		});
+		const frames: Record<string, unknown>[] = [];
 		const res = await mustGet(loaded!.module.apiActions.update_cache, 'update_cache').handler({
 			principal,
 			userId: -1,
 			background: true,
+			publishProgress: (data) => frames.push(data as Record<string, unknown>),
 			options: {
 				section_tipo: SCRATCH_SECTION,
 				components_selection: [{ tipo: SCRATCH_INPUT_TEXT }],
@@ -164,6 +204,20 @@ describe('tool_update_cache module', () => {
 		});
 		expect(res.result).toBe(true);
 		expect(res.regenerated as number).toBeGreaterThanOrEqual(1);
+		// The sqo scoped the run to EXACTLY the one filtered record (WC-043).
+		expect(res.records).toBe(1);
+		expect(res.processed).toBe(1);
+		// Progress frames: the client-rendered contract (counter/total), final
+		// frame terminal with counter === total.
+		expect(frames.length).toBeGreaterThanOrEqual(2);
+		const last = frames[frames.length - 1] as {
+			counter: number;
+			total: number;
+			is_running: boolean;
+		};
+		expect(last.counter).toBe(1);
+		expect(last.total).toBe(1);
+		expect(last.is_running).toBe(false);
 		// The value survives the regenerate (re-save is data-preserving).
 		const table = await getMatrixTableFromTipo(SCRATCH_SECTION);
 		const stored =
