@@ -40,7 +40,7 @@ Update cache is a **section-level** tool: you open it on a section, and it lists
 | Regenerate options (media) | Media components may expose extra flags (for example *Delete normalised files*). |
 
 !!! note "Media components"
-    Media components are reported for a file-derivative rebuild rather than rebuilt in this pass, because rebuilding derivative files needs the media present on the server. To rebuild media qualities and versions directly, use [Media versions](using_media_versions.md).
+    Selecting a media component **repairs its media**: the tool rebuilds the standard derivatives (default quality and thumbnail — for images also the display envelope) from the original file where it is present on the server, then re-scans the disk and updates the record's stored file index (`files_info`). This is the fix when an image exists on disk but does not show in the application. Records whose original is not on the server are left with an index that honestly reflects what exists. Audio/video derivatives are not re-transcoded here; for higher image tiers, deletes and av versions use [Media versions](using_media_versions.md).
 
 ## Tips and gotchas
 

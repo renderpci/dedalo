@@ -26,8 +26,8 @@ Use it when: a component's *stored* value must be regenerated across many record
 3. Assembles and runs the search (`buildSearchSql`) to get the matched `(section_tipo, section_id)` rows.
 4. Iterates the rows. For each selected component tipo it resolves the model and branches:
    - **non-media** — reads the component's current items (`readComponentItems`) and re-saves them with a single `set_data` change through `saveComponentData` (`src/core/section/record/save_component.ts`), which re-runs the save path's derivation. Each such write increments `regenerated`.
-   - **media** — is **ledgered, not rebuilt** in this path (a media file-derivative rebuild needs the media files present on the box). The `(tipo#section_id)` is recorded and reported in `media_ledgered`.
-5. Returns `{ result, msg, errors, regenerated, records, media_ledgered }`.
+   - **media** — **repairs the media** via the shared kernel `refreshMediaItems` (`src/core/media/repair.ts`, called with `regenerate: true`): rebuilds the file derivatives from the original where it is present on this box (`src/core/media/processing.ts` regenerate twins — the same seams upload ingest uses; image also re-creates the SVG envelope), then re-scans the disk; the handler persists the fresh `files_info` per stored item. The persist is the established files_info write-back (per-key jsonb via `updateMatrixKeyData`, **no Time Machine entry** — files_info is a filesystem-derived cache; `src/core/media/tools/files_info_persist.ts` documents the discipline), and `refreshStoredFilesInfo` preserves the sibling keys (`original_*`, `lib_data`). `component_av` derivative rebuild is an async transcode and is *not* enqueued here (that is tool_media_versions' job) — its `files_info` refresh still applies. A record whose original is absent on the box gets the honest result: derivatives no-op, `files_info` reflects what exists. Derivative-build failures are collected into `media_errors`; the files_info refresh still lands.
+5. Returns `{ result, msg, errors, regenerated, records, media_errors }`.
 
 `update_cache` is listed in `backgroundRunnable`, and the client always calls it with `background_running: true`. `scheduleBackground` (`src/core/tools/background.ts`) submits the handler into the process-job registry and returns immediately with `{ result, background_job_id, job_id, pid, pfile }`; the handler streams progress through the same registry `dd_utils_api::get_process_status` reads from, so the client's progress panel renders live.
 
@@ -64,7 +64,7 @@ Key options read by `update_cache`:
 | `lang` | string | Application language; used for the translatable-component write language (non-translatable components write `lg-nolan`). |
 | `background_running` | bool | Set `true` by the client to run detached (`scheduleBackground`). |
 
-Response: `{ result, msg, errors, regenerated, records, media_ledgered }` — `regenerated` is the number of non-media component writes, `records` the number of matched records, `media_ledgered` the count of media components reported for a file rebuild rather than regenerated here.
+Response: `{ result, msg, errors, regenerated, records, media_errors }` — `regenerated` is the number of component writes (media and non-media), `records` the number of matched records, `media_errors` the count of media derivative rebuilds that failed (each detailed in `errors`; the files_info refresh still landed for them).
 
 ## How it is registered & surfaced
 
@@ -109,14 +109,15 @@ A completed (non-background) response object:
     "errors": [],
     "regenerated": 800,
     "records": 800,
-    "media_ledgered": 0
+    "media_errors": 0
 }
 ```
 
 ## Related
 
 - [tool_propagate_component_data](tool_propagate_component_data.md) — the other background, SQO-driven bulk operation over a section's records; propagate *changes* a component's value, update_cache re-derives it.
-- [tool_media_versions](tool_media_versions.md) — the tool that actually rebuilds media file derivatives (the part update_cache only ledgers).
+- [tool_media_versions](tool_media_versions.md) — per-record, on-demand media version building (higher tiers, deletes, rotation); update_cache's media repair rebuilds only the default quality + thumb (+ image SVG envelope) in bulk, and never enqueues av transcodes.
+- `scripts/media_repair_files_info.ts` — the cross-section ops sweep for stale `files_info` (dry-run default, shrink-guarded, no derivative rebuild); update_cache is the in-app per-section equivalent. Both drive the shared kernel `src/core/media/repair.ts` (`refreshMediaItems`).
 - [Creating new tools](../creating_tools.md) · [Server contract](../server_contract.md) — the tool model, `apiActions`, gates and background execution this page builds on.
 - Search subsystem (SQO): the selection contract this tool consumes — `src/core/search/`.
 - User guide: [Update cache](../../../tools/using_update_cache.md).
