@@ -627,7 +627,11 @@ export const render_stream = function(options) {
 					dd_api		: 'dd_utils_api',
 					action		: 'stop_process',
 					options		: {
-						pid	: pid
+						pid		: pid,
+						// the job handle: stop_process derives the job id from the
+						// pfile basename (the pid alone is the SERVER's process id,
+						// shared by every background job)
+						pfile	: pfile
 					}
 				}
 			})

@@ -279,6 +279,15 @@ tool_update_cache.prototype.update_cache = function() {
 		const selected_tipos		= self.selected_tipos
 		const regenerate_options	= self.regenerate_options
 
+	// sqo. The caller list's LIVE scope (filter / filter_by_locators): the server
+	// REQUIRES it and processes exactly the matched set (pagination is stripped
+	// server-side). Deep-cloned — the caller's sqo is never handed out live.
+	// Without this the request once silently swept the WHOLE section while the
+	// button displayed the filtered count (WC-043).
+		const caller_sqo = self.caller.rqo?.sqo
+			? structuredClone(self.caller.rqo.sqo)
+			: { section_tipo: [section_tipo] }
+
 	// components_selection. Compose user components selection adding regenerate_options
 		const components_selection = []
 		const selected_tipos_length = selected_tipos.length
@@ -305,6 +314,7 @@ tool_update_cache.prototype.update_cache = function() {
 				background_running		: true, // set run in background CLI
 				section_tipo			: section_tipo,
 				components_selection	: components_selection,
+				sqo						: caller_sqo,
 				lang					: page_globals.dedalo_application_lang
 			}
 		}

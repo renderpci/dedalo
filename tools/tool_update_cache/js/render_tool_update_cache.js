@@ -217,8 +217,14 @@ const get_content_data = async function(self) {
 					return
 				}
 
-			// confirm update_cache
-				if (!confirm(get_label.sure || 'Sure?')) {
+			// confirm update_cache. Carries the record count the request will
+			// actually scope (the caller list's matched total — the same live sqo
+			// update_cache() sends), so the user confirms a number, not a "Sure?".
+				const records_count	= self.caller.total ?? '?'
+				const confirm_msg	= (get_label.sure || 'Sure?')
+					+ '\n' + (self.get_tool_label('records') || 'Records') + ': ' + records_count
+					+ ' | ' + (get_label.components || 'components') + ': ' + checked_list_length
+				if (!confirm(confirm_msg)) {
 					return
 				}
 
