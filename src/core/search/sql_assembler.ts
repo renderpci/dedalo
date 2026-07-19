@@ -31,6 +31,8 @@ import { readString } from '../../config/readers.ts';
 import type { Sqo } from '../concepts/sqo.ts';
 import { getSectionTipos } from '../concepts/sqo.ts';
 import { assertMatrixTable } from '../db/matrix.ts';
+import { sql } from '../db/postgres.ts';
+import { createDataCache } from '../ontology/cache_factory.ts';
 import {
 	getColumnNameByModel,
 	getComponentFilterTipo,
@@ -377,6 +379,91 @@ async function buildMultiSectionProjectsFilter(
 }
 
 /**
+ * PROJECTS-FILTER PAGE-SHAPE probe (2026-07-19). With the ACL containment in
+ * the WHERE, the planner serves `ORDER BY section_id LIMIT n` from the
+ * (section_tipo, section_id) index and applies the filter PER ROW — assuming
+ * matches are uniform over the id range. Project membership correlates with
+ * record age, so a user's matches cluster (measured: render's numisdata4
+ * matches start at id 4,926 of 181k → 155k rows discarded for one page,
+ * ~630ms). The GIN bitmap path costs ~selectivity instead, so the right shape
+ * DEPENDS on match density:
+ *   sparse  → materialize the matching ids via the GIN bitmap, sort, page
+ *             (~70ms at 5k matches) — the ordered walk would be seconds;
+ *   dense   → keep the ordered index walk (sub-ms) — materializing 171k
+ *             matches would cost ~700ms.
+ * The probe counts matches capped at PROJECTS_DENSE_CAP through the same
+ * WHERE (bitmap, early-stop: 23-42ms measured) and the verdict is cached per
+ * (user, section): evicted on that section's writes (density change) and on
+ * users-section writes (project membership change), the getUserProjects
+ * posture.
+ */
+/**
+ * DENSE means "the user's matches are a large FRACTION of the section" — an
+ * absolute cap misclassifies (5k matches is 2.8% of numisdata4: bitmap
+ * territory). The cap is therefore PROJECTS_DENSE_FRACTION of the section's
+ * cached total: a probe that saturates it proves density ≥ the fraction →
+ * keep the ordered walk; below it the bitmap materialization is bounded by
+ * fraction × total ids. Probe cost ∝ the cap (bitmap early-stop) and both
+ * verdict and section total are event-evicted caches, so it is paid once per
+ * (user, section) between writes.
+ */
+const PROJECTS_DENSE_FRACTION = 0.05;
+const PROJECTS_PROBE_FLOOR = 2000;
+const projectsDensityCache = createDataCache<string, boolean>((cache, sectionTipo) => {
+	if (sectionTipo === config.usersSectionTipo) {
+		cache.clear();
+		return;
+	}
+	for (const key of [...cache.keys()]) {
+		if (key.endsWith(`|${sectionTipo}`)) cache.delete(key);
+	}
+});
+const sectionTotalCache = createDataCache<string, number>((cache, sectionTipo) => {
+	cache.delete(sectionTipo);
+});
+
+/** Cheap per-section row total (index-only count, cached, event-evicted). */
+async function sectionRowTotal(
+	fromClause: string,
+	alias: string,
+	sectionTipo: string,
+): Promise<number> {
+	const cached = sectionTotalCache.get(sectionTipo);
+	if (cached !== undefined) return cached;
+	const rows = (await sql.unsafe(
+		`SELECT count(*) AS n FROM ${fromClause} WHERE ${alias}.section_tipo = $1::text`,
+		[sectionTipo],
+	)) as { n: number | string }[];
+	const total = Number(rows[0]?.n ?? 0);
+	sectionTotalCache.set(sectionTipo, total);
+	return total;
+}
+
+async function projectsFilterIsSparse(
+	userId: number,
+	sectionTipo: string,
+	alias: string,
+	fromClause: string,
+	whereSql: string,
+	boundParams: unknown[],
+): Promise<boolean> {
+	const cacheKey = `${userId}|${sectionTipo}`;
+	const cached = projectsDensityCache.get(cacheKey);
+	if (cached !== undefined) return cached;
+	const total = await sectionRowTotal(fromClause, alias, sectionTipo);
+	const cap = Math.max(PROJECTS_PROBE_FLOOR, Math.ceil(total * PROJECTS_DENSE_FRACTION));
+	const probeSql =
+		`SELECT count(*) AS n FROM (SELECT 1 FROM ${fromClause}\nWHERE ${whereSql}\n` +
+		`LIMIT ${cap}) density_probe`;
+	const rows = (await sql.unsafe(probeSql, boundParams as (string | number | null)[])) as {
+		n: number | string;
+	}[];
+	const sparse = Number(rows[0]?.n ?? 0) < cap;
+	projectsDensityCache.set(cacheKey, sparse);
+	return sparse;
+}
+
+/**
  * Build the complete SQL for a sanitized SQO.
  * Covers: default listing, full_count, filter_by_locators, multi-section UNION,
  * and the per-record projects filter for non-admin principals.
@@ -451,11 +538,15 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 	// Multi-section (covered 2026-07-09, replacing the Phase 5c fail-closed
 	// throw): per-section predicates — see buildMultiSectionProjectsFilter.
 	const principal = options.principal;
+	let projectsFilterActive = false;
 	if (principal !== undefined && !principal.isGlobalAdmin && sqo.skip_projects_filter !== true) {
 		const projectsFilter = multiSection
 			? await buildMultiSectionProjectsFilter(sectionTipos, alias, principal, params)
 			: await buildProjectsFilter(mainSectionTipo, alias, principal, params);
-		if (projectsFilter !== '') whereParts.push(projectsFilter);
+		if (projectsFilter !== '') {
+			whereParts.push(projectsFilter);
+			projectsFilterActive = true;
+		}
 	}
 
 	// --- filter_by_locators (dedicated shape, PHP :1382) --------------------
@@ -544,6 +635,39 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 
 	const useWindow = orderClauses.length > 0;
 	if (!useWindow) {
+		// SPARSE projects-filter page (see projectsFilterIsSparse above): scoped
+		// to the pure ACL browse — whereParts is EXACTLY the projects filter (a
+		// client filter would change the density the cached verdict measured).
+		// The MATERIALIZED CTE pins the GIN bitmap: matching ids only (ints, tiny
+		// regardless of idsOnly), then the page joins back 1:1 on
+		// (section_tipo, section_id) — identical rows/order/columns, deep offsets
+		// included (the ordered walk degrades the same way there).
+		if (
+			projectsFilterActive &&
+			whereParts.length === 1 &&
+			!multiSection &&
+			joinFragments.size === 0 &&
+			limitSql !== '' &&
+			principal !== undefined &&
+			(await projectsFilterIsSparse(
+				principal.userId,
+				mainSectionTipo,
+				alias,
+				fromClause,
+				whereAll.join('\n AND '),
+				params.toArray(),
+			))
+		) {
+			const sparseSql =
+				`WITH filtered_ids AS MATERIALIZED (\nSELECT ${alias}.section_id\nFROM ${fromClause}\nWHERE ${whereAll.join('\n AND ')}\n)\n` +
+				`SELECT ${select.join(',\n')}\nFROM ${fromClause}\n` +
+				`JOIN (\nSELECT section_id FROM filtered_ids ORDER BY section_id ASC${limitSql}${offsetSql}\n) page ON page.section_id = ${alias}.section_id\n` +
+				// mainWhere re-pins section_tipo (same $n — ParamsCollector dedups):
+				// other tipos in the same table may reuse a section_id.
+				`WHERE ${mainWhere.join('\n AND ')}\n` +
+				`ORDER BY ${innerOrder};`;
+			return { sql: sparseSql, params: params.toArray() };
+		}
 		// Late row lookup for DEEP pages: a plain OFFSET makes Postgres read and
 		// discard every skipped row's wide jsonb columns. From the configured
 		// offset on, find the wanted page of section_ids on an index-only scan

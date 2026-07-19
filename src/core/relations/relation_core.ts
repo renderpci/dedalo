@@ -21,9 +21,9 @@
 import type { Ddo } from '../concepts/ddo.ts';
 import { dataframeEntryMatches } from '../concepts/subdatum.ts';
 import type { MatrixRecord } from '../db/matrix.ts';
-import { readMatrixRecord } from '../db/matrix.ts';
 import { getMatrixTableFromTipo, getModelByTipo, getNode } from '../ontology/resolver.ts';
 import { type DataItem, type EmissionContext, buildDataItem } from '../resolve/component_data.ts';
+import { loadRecordCached } from '../section/record_loader.ts';
 import type { EmitDdoFn } from './registry.ts';
 
 /** List-cell locator page size (PHP portal list mode paginates the cell to 1). */
@@ -159,7 +159,11 @@ export async function expandPortal(
 		const targetSectionId = locator.section_id as number | string;
 		const targetTable = await getMatrixTableFromTipo(targetSectionTipo);
 		if (targetTable === null) continue;
-		const targetRecord = await readMatrixRecord(
+		// Per-read cached read (targets repeat across a page's rows and nested
+		// expansions) — consulted AFTER the null-table early-return, same
+		// contract as the bare read it replaces.
+		const targetRecord = await loadRecordCached(
+			emission,
 			targetTable,
 			targetSectionTipo,
 			Number(targetSectionId),
@@ -372,7 +376,12 @@ export async function emitDataframeItem(
 		bagRecord =
 			frameTable === null
 				? null
-				: await readMatrixRecord(frameTable, declaredFrameSection, Number(row.section_id));
+				: await loadRecordCached(
+						emission,
+						frameTable,
+						declaredFrameSection,
+						Number(row.section_id),
+					);
 	}
 	// component_alias data key (WC-020) — uniformity; no live alias targets a frame.
 	const { resolveDataTipo: resolveFrameDataTipo } = await import('../ontology/alias.ts');
@@ -424,7 +433,7 @@ export async function emitDataframeItem(
 		if (typeof targetSection !== 'string' || targetId === undefined) continue;
 		const table = await getMatrixTableFromTipo(targetSection);
 		if (table === null) continue;
-		const targetRecord = await readMatrixRecord(table, targetSection, Number(targetId));
+		const targetRecord = await loadRecordCached(emission, table, targetSection, Number(targetId));
 		if (targetRecord === null) continue;
 		for (const child of frame.ddos) {
 			// Frame config children default to LIST mode (dd1715); declared modes

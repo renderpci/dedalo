@@ -61,6 +61,7 @@ import {
 	resolveComponentContextPermission,
 } from '../security/permissions.ts';
 import { pickReadSource } from './read_source.ts';
+import { prefetchRecords } from './record_loader.ts';
 
 /**
  * Execute a section 'search' read and build the PHP-shaped data[] array.
@@ -1184,6 +1185,30 @@ export async function readSectionRows(
 	// tm: who/when/where/what + snapshot cell policy). emitDdoData is passed in
 	// so the source can resolve generic components without an import cycle.
 	const emission = new EmissionContext([envelope]);
+	// Pre-seed the per-read record loader with the page's first-level relation
+	// targets: one batch read per target section replaces the per-locator
+	// round-trips inside the relation-cell expansion (nested levels load lazily
+	// through the same deduping cache). Rows without a hydrated MatrixRecord
+	// (the TM source's flat raw) are skipped — their cells keep the lazy path.
+	// The per-key cap bounds pathological many-locator cells; anything beyond
+	// it lazy-loads, so the cap only shapes the batch width, never the output.
+	{
+		const pageLocators: { section_tipo?: unknown; section_id?: unknown }[] = [];
+		for (const row of rows) {
+			const relation = (row.raw as { columns?: { relation?: unknown } } | null | undefined)?.columns
+				?.relation;
+			if (relation === null || typeof relation !== 'object') continue;
+			for (const value of Object.values(relation as Record<string, unknown>)) {
+				if (!Array.isArray(value)) continue;
+				for (const locator of value.slice(0, 30)) {
+					if (locator !== null && typeof locator === 'object') {
+						pageLocators.push(locator as { section_tipo?: unknown; section_id?: unknown });
+					}
+				}
+			}
+		}
+		if (pageLocators.length > 0) await prefetchRecords(emission, pageLocators);
+	}
 	for (const row of rows) {
 		await readSource.emitRow({
 			row,
