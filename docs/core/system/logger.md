@@ -22,12 +22,20 @@ An activity record is an **ordinary matrix record**, not a parallel storage path
 ## Responsibilities
 
 - **Audit write** — append one row to `matrix_activity` for a state-changing API
-  action.
+  action, an authentication event, or a media/time-machine operation.
 - **WHAT mapping** — map the action name to its `dd42` event code. An **unmapped**
   action is skipped, never guessed with a wrong code.
+- **Self-log guard** — refuse to audit an action performed on the activity
+  section itself (see [the self-log guard](#the-self-log-guard)).
 - **Never break the action** — the write is wrapped in `try`/`catch` and swallows
   its own errors to `console.error`. An audit write must never fail the user's
   save.
+
+!!! warning "A silent skip is a real outcome"
+    `logActivity` never throws **and** returns without writing for three
+    reasons: an unmapped `what`, an empty tipo, or a self-log. If you add an
+    emitter and no row appears, check those three before suspecting the
+    database — nothing is logged when a write is skipped.
 
 ## The audit model
 
@@ -42,7 +50,33 @@ Each action is recorded as six typed columns:
 | WHEN | `dd547` | `date` | the virtual-calendar instant |
 | DATA | `dd551` | `misc` | the action payload (`[{lang:'lg-nolan', value: …}]`) |
 
-The event codes are `LOGIN = 1`, `DELETE = 4`, `SAVE = 5`, `LOAD = 7`.
+### The event codes
+
+The WHAT column stores a locator into `dd42`, whose `section_id` is the event
+code. `WHAT_CODES` maps the full set:
+
+| code | event | code | event |
+| --- | --- | --- | --- |
+| 1 | `LOG IN` | 9 | `UPLOAD` |
+| 2 | `LOG OUT` | 10 | `DOWNLOAD` |
+| 3 | `NEW` | 11 | `UPLOAD COMPLETE` |
+| 4 | `DELETE` | 12 | `DELETE FILE` |
+| 5 | `SAVE` | 13 | `RECOVER SECTION` |
+| 6 | `LOAD EDIT` | 14 | `RECOVER COMPONENT` |
+| 7 | `LOAD LIST` | 15 | `STATS` |
+| 8 | `SEARCH` | 16 | `NEW VERSION` |
+
+Four of them — `SEARCH` (8), `UPLOAD` (9), `DOWNLOAD` (10) and `STATS` (15) —
+have **no emitter**: nothing in the engine writes a row with those codes. They
+stay in the map because `matrix_activity` holds older records that carry them,
+and the read side must still resolve a code it finds in the data. Treat them as
+readable-but-not-written rather than as free code points; if you add an emitter
+for one, it needs its own call site, not a new map entry.
+
+!!! note "`LOAD EDIT` and `LOAD LIST` are distinct events"
+    They are codes 6 and 7, not one `LOAD`. The action name passed to
+    `logActivity` is matched verbatim against `WHAT_CODES` — an action name that
+    is not an exact key is skipped silently.
 
 !!! warning "The section_id comes from the sequence, not the counter"
     The insert **omits** `section_id` and lets the
@@ -57,16 +91,37 @@ is no deferred queue and no shutdown flush.
 
 | action | emitted from |
 | --- | --- |
+| `LOG IN` | `src/core/security/auth.ts` — `login()`, on **both** outcomes |
+| `LOG OUT` | `src/core/api/handlers/dd_utils_api.ts` — the `quit` action, before the session is destroyed |
+| `NEW` | `src/core/api/handlers/dd_core_api.ts` — the `create` action |
 | `SAVE` | `src/core/api/handlers/dd_core_api.ts` — after a component save |
 | `DELETE` | `src/core/api/handlers/dd_core_api.ts` — after a record delete, per deleted record |
+| `LOAD EDIT` / `LOAD LIST` | `src/core/api/handlers/dd_core_api.ts` — `logReadActivity`, on a section or area read |
+| `UPLOAD COMPLETE` | `tools/tool_upload/server/index.ts` — after the uploaded file is processed and persisted |
+| `NEW VERSION` | `tools/tool_media_versions/server/media_versions.ts` — `build_version` and `conform_headers` |
+| `DELETE FILE` | `tools/tool_media_versions/server/media_versions.ts` (`delete_quality`, `delete_version`) and the posterframe deletes in `dd_component_av_api.ts` / `dd_component_3d_api.ts` |
+| `RECOVER SECTION` / `RECOVER COMPONENT` | `tools/tool_time_machine/server/` — `apply_value`, and one row per reverted component in `bulk_revert.ts` |
+
+Emitters live at the **door** — the API handler or tool action — not inside the
+engine that does the work. A door knows both the acting user and the client
+host; `createSectionRecord`, `deletePosterframe` and their peers know neither,
+and several of them are reached from more than one door.
 
 Diffusion keeps a **separate** trail: `src/core/diffusion_bridge/diffusion_delete.ts`
 logs unpublish outcomes to the diffusion activity log (`dd1758`). It is not part of
 the core audit trail.
 
-Because the logger fires only from these fixed sites, an audit write can never
-trigger another audit write — the self-logging loop is impossible by construction
-rather than guarded against.
+### The self-log guard
+
+An audit row is itself a record, so logging an action performed **on the
+activity section** would append a row describing the appending of a row.
+`logActivity` refuses when the WHERE tipo is one of `dd542` (the Activity
+section) or its own components `dd543`, `dd544`, `dd545`, `dd546`, `dd547`,
+`dd550`, `dd551`. It also refuses an empty tipo, which would produce a row
+naming nothing.
+
+The guard lives in `logActivity`, not at the call sites, so every emitter —
+including any added later — inherits it.
 
 ## The surface
 
@@ -74,18 +129,47 @@ rather than guarded against.
 
 | symbol | purpose |
 | --- | --- |
-| `logActivity(entry, now?)` | Append one `matrix_activity` row. Returns early — no write — when `entry.what` has no mapped `dd42` code. **Never throws.** |
-| `ActivityEntry` | The input shape: `{ what, tipo, userId, host, datos }`. |
+| `logActivity(entry, now?)` | Append one `matrix_activity` row. Returns early — no write — when `entry.what` has no mapped `dd42` code, when the tipo is empty, or when the tipo is the activity section's own. **Never throws.** |
+| `ActivityEntry` | The input shape: `{ what, tipo, userId, host, data }`. |
+| `hostFromClientIp(clientIp)` | Resolve the `dd544` host value: loopback becomes `localhost`, a missing address becomes `unknown`. Use it rather than re-deriving the rule. |
+| `ANONYMOUS_USER_ID` | The WHO used when no one is authenticated (`-666`). |
 
 `ActivityEntry` fields:
 
 | field | purpose |
 | --- | --- |
 | `what` | The action name, mapped to a `dd42` code. |
-| `tipo` | The WHERE tipo — the component tipo for a save, the section tipo for a delete. |
+| `tipo` | The WHERE tipo — the component tipo for a save, the section tipo for a delete or a create. |
 | `userId` | The acting user (the WHO locator into `dd128`). |
-| `host` | The resolved client host string. |
-| `datos` | The `dd551` payload: a message plus action-specific fields. |
+| `host` | The resolved client host string — from `hostFromClientIp`. |
+| `data` | The `dd551` payload: a message plus action-specific fields. |
+
+### Auditing an unauthenticated action
+
+Most actions run behind the auth gate, so the actor is `principal.userId`. A
+**denied login** has no principal — and is exactly the event worth recording.
+Those rows carry `ANONYMOUS_USER_ID` as the WHO and name the attempted account
+in the payload instead:
+
+```ts
+await logActivity({
+    what: 'LOG IN',
+    tipo: LOGIN_ACTIVITY_TIPO,          // dd229, fixed for login events
+    userId: ANONYMOUS_USER_ID,          // nobody is authenticated yet
+    host: hostFromClientIp(clientIp),
+    data: {
+        msg: `Denied login attempted by: ${username}. ${cause}`,
+        result: 'deny',
+        cause,                          // 'wrong password', 'User does not exist', …
+        username,
+    },
+});
+```
+
+A successful login writes the same shape with `result: 'allow'` and the real
+`userId`. Both outcomes land in the same trail, so a burst of `deny` rows
+against one account is visible in the Activity section without any extra
+tooling.
 
 ## What the audit feeds
 
@@ -110,14 +194,14 @@ console.error('activity log write failed (swallowed):', error);
 ## Example
 
 ```ts
-import { logActivity } from './activity_log.ts';
+import { hostFromClientIp, logActivity } from './activity_log.ts';
 
 await logActivity({
     what: 'SAVE',                 // → dd42 code 5
     tipo: source.tipo,            // the WHERE tipo
     userId: principal.userId,     // the WHO locator into dd128
-    host,                         // resolved client host ('localhost' for ::1)
-    datos: {
+    host: hostFromClientIp(context.clientIp),
+    data: {
         msg: 'Saved component data',
         lang: source.lang ?? 'lg-nolan',
         tipo: source.tipo,

@@ -144,6 +144,24 @@ stored password, legacy hash). A confirmed success clears the counter
 `login()` blocks any non-superuser while the server state `maintenance_mode` is
 set, returning an "under maintenance" message. Only `root` (`-1`) passes.
 
+### Every attempt is audited
+
+`login()` appends a `LOG IN` row to the [activity log](logger.md) on **both**
+outcomes, and the `quit` action appends a `LOG OUT` row before it destroys the
+session. The WHERE tipo is the fixed `dd229`.
+
+A denial records why — `wrong password`, `User does not exist`, `Legacy
+(pre-Argon2) password hash`, `Too many failed attempts (throttled)` or `Server
+under maintenance` — together with the attempted username, under the WHO
+`ANONYMOUS_USER_ID` (`-666`), because no principal exists yet.
+
+!!! note "The audit is deliberately more specific than the response"
+    The response to a failed login is intentionally **ambiguous** so it never
+    reveals whether an account exists. The audit row is not: it is readable only
+    by operators through the Activity section, and a trail that cannot
+    distinguish "unknown user" from "wrong password" cannot tell a typo from a
+    credential-stuffing run. Do not copy a `cause` value into a client response.
+
 ## The media-auth cookie
 
 A successful login also arms the **media-auth cookie**. `login()` calls

@@ -35,7 +35,16 @@ interface ToolActionSpec {
 }
 ```
 
-`handler` receives `{ principal, userId, options, background }` and returns a `ToolResponse` (`{ result, msg, errors?, ...extra }`) that **replaces the API envelope wholesale** — the handler owns `result`/`msg`/`errors` and may add extra fields (e.g. a streaming body).
+`handler` receives `{ principal, userId, options, background, publishProgress?, clientIp? }` and returns a `ToolResponse` (`{ result, msg, errors?, ...extra }`) that **replaces the API envelope wholesale** — the handler owns `result`/`msg`/`errors` and may add extra fields (e.g. a streaming body).
+
+Two of those fields are optional and carry a caveat:
+
+| field | when it is present |
+| --- | --- |
+| `publishProgress` | Background execution only — a foreground call has no job record to publish into. |
+| `clientIp` | The proxy-validated client address, for an action that appends an [activity row](../../core/system/logger.md). Under background execution it is the value captured at **submit** time: the job outlives the request that started it, so there is no live socket to ask. |
+
+Pass `clientIp` through `hostFromClientIp` rather than deriving the host rule yourself.
 
 ### The request envelope
 
