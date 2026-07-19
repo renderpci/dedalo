@@ -220,7 +220,10 @@ export function resolveDefaultView(model: string, legacyModel: string | null): s
  * `view_line_edit_portal.js:146` (`context.children_view || context.view`), so
  * a missing value silently degrades to the parent's own view.
  */
-function resolveDefaultChildrenView(model: string, legacyModel: string | null): string | null {
+export function resolveDefaultChildrenView(
+	model: string,
+	legacyModel: string | null,
+): string | null {
 	const effective = legacyModel ?? model;
 	switch (effective) {
 		case 'component_relation_children':
