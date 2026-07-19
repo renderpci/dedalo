@@ -1,7 +1,8 @@
 /**
  * Search-store pre-filter on string searches (builder_string
- * withStorePrefilter + matrix_search_values, 2026-07-19) — the trigram-served
- * `EXISTS (… sv.tv LIKE '<tipo>:%<q>%')` clause prepended to POSITIVE match
+ * withStorePrefilter + matrix_string_search, 2026-07-19) — the trigram-served
+ * `section_id = ANY(ARRAY(… sv.component_tipo = <tipo> AND sv.string LIKE
+ * '%<q>%'))` clause prepended to POSITIVE match
  * shapes when the table is store-covered (its sync trigger exists).
  *
  * Pinned here:
@@ -18,7 +19,7 @@ import { sql } from '../../src/core/db/postgres.ts';
 import { buildStringFragment } from '../../src/core/search/builders/builder_string.ts';
 import type { BuilderContext, Fragment } from '../../src/core/search/builders/types.ts';
 
-const PREFILTER = 'ANY (ARRAY(SELECT sv.section_id FROM matrix_search_values sv';
+const PREFILTER = 'ANY (ARRAY(SELECT sv.section_id FROM matrix_string_search sv';
 
 function ctx(overrides: Partial<BuilderContext> = {}): BuilderContext {
 	return {
@@ -46,7 +47,7 @@ describe('search-store pre-filter SQL shape', () => {
 		for (const q of ['sarde', '==sarde', '=sarde', "'sarde'", 'sarde*', '*sarde', '*sarde*']) {
 			const sentence = sentenceOf(buildStringFragment(q, null, false, ctx()));
 			expect(sentence.startsWith('mix.section_id = ANY (ARRAY(SELECT sv.section_id')).toBe(true);
-			expect(sentence).toContain(`sv.tv LIKE 'rsc140:%'`);
+			expect(sentence).toContain('sv.component_tipo = _Qt_ AND sv.string LIKE ');
 			// the exact predicate must survive untouched behind the pre-filter
 			expect(sentence).toContain('jsonb_path_query(mix.string');
 		}
@@ -79,6 +80,7 @@ describe('search-store pre-filter SQL shape', () => {
 	test('LIKE wildcards in a regex-plain q are escaped to literals', () => {
 		const result = buildStringFragment('100%_x', null, false, ctx()) as Fragment;
 		expect(result.sentence).toContain(PREFILTER);
+		expect(result.tokenValues._Qt_).toBe('rsc140');
 		expect(result.tokenValues._Q0_).toBe('100\\%\\_x');
 		expect(result.tokenValues._Q1_).toBe('100%_x'); // exact predicate keeps raw q
 	});
@@ -90,7 +92,7 @@ describe('store sync trigger + superset (skips without DB/store)', () => {
 	async function storeReady(): Promise<boolean> {
 		try {
 			const rows = (await sql`
-				SELECT 1 AS ok FROM pg_trigger WHERE tgname = 'matrix_test_search_values_sync' LIMIT 1
+				SELECT 1 AS ok FROM pg_trigger WHERE tgname = 'matrix_test_string_search_sync' LIMIT 1
 			`) as { ok: number }[];
 			return rows.length > 0;
 		} catch {
@@ -106,11 +108,11 @@ describe('store sync trigger + superset (skips without DB/store)', () => {
 		}
 	});
 
-	test('insert/update/delete keep matrix_search_values in sync', async () => {
+	test('insert/update/delete keep matrix_string_search in sync', async () => {
 		if (!(await storeReady())) return;
 		const storeRows = () =>
-			sql`SELECT tv FROM matrix_search_values
-			    WHERE section_tipo = 'test3' AND section_id = ${SCRATCH_ID} ORDER BY tv` as Promise<
+			sql`SELECT component_tipo || ':' || string AS tv FROM matrix_string_search
+			    WHERE section_tipo = 'test3' AND section_id = ${SCRATCH_ID} ORDER BY 1` as Promise<
 				{ tv: string }[]
 			>;
 		await sql`DELETE FROM matrix_test WHERE section_tipo = 'test3' AND section_id = ${SCRATCH_ID}`;
@@ -141,8 +143,8 @@ describe('store sync trigger + superset (skips without DB/store)', () => {
 			)) as { n: number }[];
 			const prefiltered = (await sql.unsafe(
 				`SELECT count(*)::int AS n FROM matrix mix WHERE mix.section_tipo = 'rsc205'
-				 AND mix.section_id = ANY (ARRAY(SELECT sv.section_id FROM matrix_search_values sv
-					WHERE sv.tv LIKE 'rsc140:%' || lower(f_unaccent($1)) || '%'))
+				 AND mix.section_id = ANY (ARRAY(SELECT sv.section_id FROM matrix_string_search sv
+					WHERE sv.component_tipo = 'rsc140' AND sv.string LIKE '%' || lower(f_unaccent($1)) || '%'))
 				 AND (mix.string @? '$."rsc140"[*] ? (@."lang" == "lg-nolan")') AND EXISTS (
 					SELECT 1 FROM jsonb_path_query(mix.string, '$."rsc140"[*] ? (@."lang" == "lg-nolan")') AS elem
 					WHERE f_unaccent(elem->>'value') ~* f_unaccent($1))`,
