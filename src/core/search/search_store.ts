@@ -1,11 +1,11 @@
 /**
- * Presence gate for the matrix_search_values PER-VALUE text-search store —
+ * Presence gate for the matrix_string_search PER-VALUE text-search store —
  * the backing of builder_string's accent/case-insensitive contains PRE-FILTER
- * (`sv.tv LIKE '<tipo>:%<q>%'`, trigram-served; see the ar_table entry in
+ * (`sv.component_tipo = <tipo> AND sv.string LIKE '%<q>%'`, trigram-served; see the ar_table entry in
  * db_pg_definitions.json for the store contract).
  *
  * The gate is the SYNC TRIGGER's existence on the searched table: a table
- * with `{table}_search_values_sync` has its rows maintained by every write
+ * with `{table}_string_search_sync` has its rows maintained by every write
  * path, so the store is authoritative for it; a table without it (e.g.
  * matrix_time_machine, or an instance that has not yet run the maintenance
  * rebuild + backfill) keeps the classic exact-scan SQL, byte-identical.
@@ -27,7 +27,7 @@ const triggerPresenceCache = createDataCache<string, boolean>(() => {
 	// clearSearchStoreCache() from the maintenance rebuild actions.
 });
 
-/** True when `table` carries its `_search_values_sync` trigger (cached). */
+/** True when `table` carries its `_string_search_sync` trigger (cached). */
 export async function searchStoreCovers(table: string): Promise<boolean> {
 	const cached = triggerPresenceCache.get(table);
 	if (cached !== undefined) return cached;
@@ -35,7 +35,7 @@ export async function searchStoreCovers(table: string): Promise<boolean> {
 		SELECT 1 AS present FROM pg_trigger t
 		JOIN pg_class c ON c.oid = t.tgrelid
 		WHERE c.relname = ${table}
-		  AND t.tgname = ${`${table}_search_values_sync`}
+		  AND t.tgname = ${`${table}_string_search_sync`}
 		  AND NOT t.tgisinternal
 		LIMIT 1
 	`) as { present: number }[];

@@ -272,8 +272,13 @@ async function conformLeaf(
 		translatable,
 		model,
 		// string leaves: let builder_string prepend its search-store pre-filter
-		// when the table's sync trigger exists (cached catalog check).
-		searchStoreCovered: column === 'string' ? await searchStoreCovers(leafTable) : false,
+		// when the table's sync trigger exists (cached catalog check). ONLY for
+		// NON-joined leaves (path length 1): on a hop-joined alias the join
+		// already bounds the per-row work, and the prefilter's tiny-cardinality
+		// estimate makes the planner FLIP the join order into an unindexed
+		// person→records filter join (measured: multi-hop count 150ms → 660ms).
+		searchStoreCovered:
+			column === 'string' && joins.length === 0 ? await searchStoreCovers(leafTable) : false,
 	};
 
 	// Builder dispatch by descriptor facet (S2-26): relation-column models go

@@ -89,20 +89,40 @@ export async function createExtensions(): Promise<AssetResponse> {
 }
 
 /**
- * CREATE the declared tables (matrix_search_values etc.). ADD-ONLY by design:
- * table entries carry an empty `drop` — these are derived stores whose wipe
- * would silently lose backfilled data on every recreate run; their `add` is
- * IF NOT EXISTS so re-runs are no-ops. Runs BEFORE functions/triggers so the
- * trigger bodies have their target relation.
+ * CREATE the declared tables (matrix_search_values etc.). The recorded `drop`
+ * is the deliberate-teardown DEFINITION and is NOT executed here (see
+ * applyIdempotentEntries): these are derived stores whose wipe would silently
+ * lose backfilled data on every recreate run; their `add` is IF NOT EXISTS so
+ * re-runs are no-ops. Runs BEFORE functions/triggers so the trigger bodies
+ * have their target relation.
  */
-export async function rebuildTables(): Promise<AssetResponse> {
+export function rebuildTables(): Promise<AssetResponse> {
+	return applyIdempotentEntries(definitions.ar_table as AssetEntry[]);
+}
+
+/**
+ * Shared applier for entries whose `add` is IDEMPOTENT (CREATE OR REPLACE /
+ * IF NOT EXISTS): runs `add` only. The `drop` DDL stays RECORDED in the entry
+ * — it is the definition an operator (or a deliberate migration) executes by
+ * hand — but a routine rebuild must never run it: DROP … CASCADE destroys
+ * dependents (2026-07-19 incident: a standalone rebuild_db_functions
+ * cascade-dropped all 96 data_relations_flat_* functional GIN indexes + the
+ * ontology trigram index; inverse-relation lookups seq-scanned at ~8s and
+ * record edit views took 18s until they were rebuilt). Entries with an EMPTY
+ * `add` are pure cleanups (retired objects) — for those the drop IS the
+ * action and does run.
+ */
+async function applyIdempotentEntries(entries: AssetEntry[]): Promise<AssetResponse> {
 	const response = newResponse();
-	const entries = definitions.ar_table as AssetEntry[];
 	for (const entry of entries) {
-		const drop = cleanSql(entry.drop);
-		if (drop !== '' && !(await execSql(drop, response.errors))) continue;
 		const add = cleanSql(entry.add);
-		if (add !== '' && !(await execSql(add, response.errors))) continue;
+		if (add === '') {
+			// cleanup entry: the drop is the action
+			const drop = cleanSql(entry.drop);
+			if (drop !== '' && !(await execSql(drop, response.errors))) continue;
+		} else if (!(await execSql(add, response.errors))) {
+			continue;
+		}
 		response.success++;
 	}
 	return finishResponse(response);
@@ -117,18 +137,18 @@ export function rebuildTriggers(): Promise<AssetResponse> {
 	return rebuildTemplated(definitions.ar_trigger as AssetEntry[]);
 }
 
-/** Drop + recreate the declared SQL functions (f_unaccent etc.). */
+/**
+ * Recreate the declared SQL functions (f_unaccent etc.) via their idempotent
+ * `CREATE OR REPLACE` adds — the recorded `drop` definitions are NOT executed
+ * on a routine rebuild (see applyIdempotentEntries: the DROP … CASCADE would
+ * destroy the functional indexes built on them). A SIGNATURE change cannot
+ * use OR REPLACE — that is a deliberate migration: this rebuild fails loudly,
+ * then the operator runs the entry's recorded drop AND rebuilds the
+ * dependents explicitly.
+ */
 export async function rebuildFunctions(): Promise<AssetResponse> {
-	const response = newResponse();
 	const entries = definitions.ar_function as AssetEntry[];
-	for (const entry of entries) {
-		const drop = cleanSql(entry.drop);
-		if (drop !== '' && !(await execSql(drop, response.errors))) continue;
-		const add = cleanSql(entry.add);
-		if (add !== '' && !(await execSql(add, response.errors))) continue;
-		response.success++;
-	}
-	finishResponse(response);
+	const response = await applyIdempotentEntries(entries);
 	response.n_queries = entries.length;
 	response.n_errors = response.errors.length;
 	return response;

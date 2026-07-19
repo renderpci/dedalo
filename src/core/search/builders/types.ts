@@ -39,7 +39,7 @@ export interface BuilderContext {
 	model: string;
 	/**
 	 * string-column leaves only: the physical table is COVERED by the
-	 * matrix_search_values per-value store (its sync trigger exists — see
+	 * matrix_string_search per-value store (its sync trigger exists — see
 	 * search_store.ts), so builder_string may prepend its trigram-served
 	 * contains pre-filter. Absent/false → the builder emits its exact classic
 	 * SQL (byte-identical, store-less behavior).

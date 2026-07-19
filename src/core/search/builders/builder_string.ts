@@ -43,13 +43,16 @@ const REGEX_META = /[.*+?[\]{}()|\\^$]/;
 
 /**
  * SEARCH-STORE PRE-FILTER for POSITIVE match shapes (contains / begins /
- * ends / equal / literal): the matrix_search_values per-value store queried
- * as `section_id = ANY (ARRAY(SELECT … WHERE sv.tv LIKE '<tipo>:%<q>%'))` —
- * the component tipo rides in the LIKE prefix, so the trigram index narrows
- * to THIS component's matching values and the recheck runs on one short
- * value (rsc205 'sarde': 1.4s classic scan → ~50ms; whole-record expression
+ * ends / equal / literal): the matrix_string_search per-value store queried
+ * as `section_id = ANY (ARRAY(SELECT … WHERE sv.component_tipo = <tipo> AND
+ * sv.string LIKE '%<q>%'))` — the composite btree_gin index
+ * (component_tipo, string gin_trgm_ops) resolves the tipo equality AND
+ * the trigram containment in ONE index scan, so the bitmap holds exactly
+ * this component's matching values and the recheck runs on one short value
+ * (rsc205 'sarde': 1.4s classic scan → ~20-50ms; whole-record expression
  * indexes were measured counterproductive, 2026-07-19 — TOASTed
- * re-flattening per recheck row).
+ * re-flattening per recheck row — and a two-separate-indexes layout measured
+ * 945ms whenever the planner skipped the BitmapAnd).
  *
  * SHAPE MATTERS: the subquery is deliberately UNCORRELATED so it plans as a
  * one-shot InitPlan and the main table is ENTERED by section_id — the
@@ -88,9 +91,9 @@ function withStorePrefilter(
 	// regex-plain guard, so it cannot collide with the escape character).
 	const likeQ = q.replaceAll('%', '\\%').replaceAll('_', '\\_');
 	return fragment(
-		`${context.alias}.section_id = ANY (ARRAY(SELECT sv.section_id FROM matrix_search_values sv ` +
-			`WHERE sv.tv LIKE '${context.tipo}:%' || lower(f_unaccent(_Q0_)) || '%')) AND ${sentence}`,
-		{ _Q0_: likeQ, ...tokenValues },
+		`${context.alias}.section_id = ANY (ARRAY(SELECT sv.section_id FROM matrix_string_search sv ` +
+			`WHERE sv.component_tipo = _Qt_ AND sv.string LIKE '%' || lower(f_unaccent(_Q0_)) || '%')) AND ${sentence}`,
+		{ _Qt_: context.tipo, _Q0_: likeQ, ...tokenValues },
 	);
 }
 
