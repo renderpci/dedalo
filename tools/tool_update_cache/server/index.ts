@@ -7,11 +7,18 @@
  * update_cache (backgroundRunnable): regenerate the STORED per-record data of the
  *   selected components across every matched record.
  *
- * SCOPE: PHP `regenerate_component()` is a per-model dispatch; in this rewrite only
- * MEDIA components have a regenerate twin (media/processing.ts). A generic
- * per-model regenerate registry does not exist yet, so update_cache DENIES LOUDLY
- * for any non-media selection rather than silently no-op'ing (the apply_value
- * uncovered-scope convention). get_component_list is fully covered.
+ * SCOPE: PHP `regenerate_component()` is a per-model dispatch. Here:
+ * - MEDIA components REPAIR the media (PHP parity) via the shared kernel
+ *   core/media/repair.ts refreshMediaItems (regenerate:true): rebuild the
+ *   derivative files from the original where it is present on this box
+ *   (processing.ts regenerate twins — the same seams upload ingest uses),
+ *   then re-scan the disk and persist a fresh files_info per item. A record
+ *   whose stored files_info is stale (e.g. written while MEDIA_PATH pointed at
+ *   the wrong tree) is repaired by exactly this. AV derivatives are an ASYNC
+ *   transcode (jobs.ts) — update_cache refreshes the av files_info from disk
+ *   but does not enqueue transcodes (that is tool_media_versions' job).
+ * - Every other model regenerates via re-save (set_data of the current value),
+ *   re-running the save path's derivation.
  */
 
 import { isMediaModel } from '../../../src/core/concepts/media.ts';
@@ -84,6 +91,8 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	const { saveComponentData } = await import('../../../src/core/section/record/save_component.ts');
 	const { config } = await import('../../../src/config/config.ts');
 	const { groupItemsByLang } = await import('../../../src/core/tools/import_data.ts');
+	const { refreshMediaItems } = await import('../../../src/core/media/repair.ts');
+	const { updateMatrixKeyData } = await import('../../../src/core/db/matrix_write.ts');
 
 	// Matched records: the client SQO (no limit) or the whole section.
 	const sqoRaw = (ctx.options.sqo as Record<string, unknown> | undefined) ?? {
@@ -99,7 +108,7 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	}[];
 
 	let regenerated = 0;
-	const mediaLedgered: string[] = [];
+	const mediaErrors: string[] = [];
 	for (const row of rows) {
 		const table = (await getMatrixTableFromTipo(row.section_tipo)) ?? 'matrix';
 		const record = await readMatrixRecord(table, row.section_tipo, row.section_id);
@@ -109,7 +118,31 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 			const model = tipo !== '' ? await getModelByTipo(tipo) : null;
 			if (model === null) continue;
 			if (isMediaModel(model)) {
-				mediaLedgered.push(`${tipo}#${row.section_id}`); // file rebuild needs synced media
+				// MEDIA repair: the shared kernel (core/media/repair.ts) rebuilds
+				// derivatives from the original where it is on this box and re-scans
+				// files_info per item. The persist here is the established files_info
+				// write-back (per-key jsonb, NO Time Machine entry — files_info is a
+				// filesystem cache; media/tools/files_info_persist.ts discipline).
+				const storedItems = (readComponentItems(record, tipo, model) ?? []) as unknown[];
+				if (storedItems.length === 0) continue;
+				const { refreshedItems, errors } = await refreshMediaItems({
+					componentTipo: tipo,
+					sectionTipo: row.section_tipo,
+					sectionId: row.section_id,
+					model,
+					items: storedItems,
+					regenerate: true,
+				});
+				mediaErrors.push(...errors.map((message) => `${tipo}#${row.section_id}: ${message}`));
+				await updateMatrixKeyData(
+					table,
+					row.section_tipo,
+					row.section_id,
+					'media',
+					tipo,
+					refreshedItems,
+				);
+				regenerated += 1;
 				continue;
 			}
 			const items = readComponentItems(record, tipo, model) ?? [];
@@ -136,11 +169,11 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	}
 	return {
 		result: true,
-		msg: `OK. update_cache regenerated ${regenerated} component(s) across ${rows.length} record(s).${mediaLedgered.length > 0 ? ` Media file-rebuild ledgered for ${mediaLedgered.length} (needs synced media).` : ''}`,
-		errors: [],
+		msg: `OK. update_cache regenerated ${regenerated} component(s) across ${rows.length} record(s).${mediaErrors.length > 0 ? ` ${mediaErrors.length} media derivative rebuild(s) failed (files_info still refreshed).` : ''}`,
+		errors: mediaErrors,
 		regenerated,
 		records: rows.length,
-		media_ledgered: mediaLedgered.length,
+		media_errors: mediaErrors.length,
 	};
 }
 
