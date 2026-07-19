@@ -388,6 +388,55 @@ describe('search-mode component read (Activity dd542 Who picker)', () => {
 		expect(afterUnlink[0]?.id).toBe(1); // re-stamped from 1 again
 	});
 
+	test('dd15 (Time Machine) fields build in the search panel instead of throwing', async () => {
+		// Reported 2026-07-18: dragging any Time Machine (dd15) field into the search
+		// panel rendered a red "Invalid component". dd15 is a VIRTUAL section whose
+		// matrix "table" is matrix_time_machine — rejected by readMatrixRecord's
+		// identifier allowlist. The search-panel component read addresses a SYNTHETIC
+		// id ('search_<n>', Number() → NaN) that maps to NO record, but the read
+		// tried to load it anyway and threw ("Refusing unknown matrix table"), so
+		// the client's build() got result.context.length === 0 → "Invalid component".
+		// Fix: a synthetic (non-numeric) id resolves to a null record WITHOUT the DB
+		// read, so the search branches build the record-independent widget.
+		const TM_SECTION = 'dd15';
+		// One field per model that reaches the two matrix-read branches: the JSONB
+		// "Value" grid (component_json, non-relation) and the "Who" (component_portal,
+		// relation) — both threw before the fix.
+		const fields: { tipo: string; model: string }[] = [
+			{ tipo: 'dd1574', model: 'component_json' }, // Value
+			{ tipo: 'dd578', model: 'component_portal' }, // Who
+			{ tipo: 'dd559', model: 'component_date' }, // When
+		];
+		for (const { tipo, model } of fields) {
+			const rqo = {
+				action: 'read',
+				dd_api: 'dd_core_api',
+				prevent_lock: true,
+				source: {
+					typo: 'source',
+					type: 'component',
+					model,
+					tipo,
+					section_tipo: TM_SECTION,
+					section_id: 'search_8', // synthetic search-filter id (search.js get_section_id)
+					mode: 'search',
+					view: null,
+					lang: 'lg-eng',
+					action: 'get_data',
+				},
+			} as unknown as Rqo;
+			const { body } = await dispatchRqo(rqo, ctx);
+			const result = (
+				body as { result?: false | { context?: unknown[]; data?: unknown[] } }
+			).result;
+			// Before the fix this was `false` (Throwable Exception). The client's
+			// build() gate is exactly `result.context?.length`.
+			expect(result).not.toBe(false);
+			const context = (result as { context?: unknown[] }).context ?? [];
+			expect(context.length).toBeGreaterThan(0);
+		}
+	});
+
 	test('end-to-end: the picked entries drive a section filter that finds the rows', async () => {
 		// 1. The real pick: SAVE on the 'search_1' host (link_record). The response
 		// is what lands in the component's data.entries (refresh tmp_api_response).
