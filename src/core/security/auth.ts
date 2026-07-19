@@ -35,6 +35,53 @@ const USERS_SECTION_TIPO = 'dd128';
 const USERNAME_COMPONENT = 'dd132';
 const PASSWORD_COMPONENT = 'dd133';
 
+/**
+ * The WHERE tipo every login/logout activity row carries (PHP
+ * login::get_login_tipo — "fixed because never changes").
+ */
+export const LOGIN_ACTIVITY_TIPO = 'dd229';
+
+/**
+ * Append the 'LOG IN' activity row (dd42 code 1). PHP logs BOTH outcomes —
+ * a denied attempt is the security-relevant one, and it carries the attempted
+ * username so an operator can see who is being probed.
+ *
+ * The actor is ANONYMOUS_USER_ID on every failure, including a wrong password
+ * for a real account: PHP passes logged_user_id(), and nobody is logged in yet
+ * at that point. The username lives in the payload instead.
+ *
+ * DIVERGENCE (recorded): PHP's success payload also carries `browser`
+ * ($_SERVER['HTTP_USER_AGENT']) and `DB-backup`. The TS request path does not
+ * carry a user-agent at all, so we omit both rather than fake them.
+ */
+async function logLoginActivity(
+	outcome: 'allow' | 'deny',
+	cause: string,
+	username: string,
+	clientIp: string,
+	userId?: number,
+): Promise<void> {
+	const { logActivity, hostFromClientIp, ANONYMOUS_USER_ID } = await import(
+		'../api/handlers/activity_log.ts'
+	);
+	const actor = userId ?? ANONYMOUS_USER_ID;
+	await logActivity({
+		what: 'LOG IN',
+		tipo: LOGIN_ACTIVITY_TIPO,
+		userId: actor,
+		host: hostFromClientIp(clientIp),
+		data: {
+			msg:
+				outcome === 'allow'
+					? `User ${actor} is logged. Hello ${username}`
+					: `Denied login attempted by: ${username}. ${cause}`,
+			result: outcome,
+			cause,
+			username,
+		},
+	});
+}
+
 /** Ambiguous by design — never reveals whether the user exists. */
 export const LOGIN_FAILED_MESSAGE = 'User does not exist or password is invalid';
 
@@ -119,6 +166,9 @@ export async function login(
 	};
 	if (isThrottled(throttleKey) || isThrottled(accountKey, LOGIN_ACCOUNT_MAX_ATTEMPTS)) {
 		// Same ambiguous message: lockout must not confirm the account exists.
+		// (No PHP twin — v6 had no throttle. Logged anyway: a lockout is exactly
+		// the event an operator reviewing the audit trail wants to see.)
+		await logLoginActivity('deny', 'Too many failed attempts (throttled)', username, clientIp);
 		return { ok: false, message: LOGIN_FAILED_MESSAGE };
 	}
 
@@ -126,6 +176,7 @@ export async function login(
 	if (user === null || user.passwordHash === null) {
 		await normalizeTiming(password); // AUTHZ-03: match the existing-user Argon2id cost
 		recordFailure();
+		await logLoginActivity('deny', 'User does not exist', username, clientIp);
 		return { ok: false, message: LOGIN_FAILED_MESSAGE };
 	}
 
@@ -137,12 +188,14 @@ export async function login(
 		);
 		await normalizeTiming(password); // AUTHZ-03: no fast-path timing tell
 		recordFailure();
+		await logLoginActivity('deny', 'Legacy (pre-Argon2) password hash', username, clientIp);
 		return { ok: false, message: LOGIN_FAILED_MESSAGE };
 	}
 
 	const verified = await Bun.password.verify(password, user.passwordHash);
 	if (!verified) {
 		recordFailure();
+		await logLoginActivity('deny', 'wrong password', username, clientIp);
 		return { ok: false, message: LOGIN_FAILED_MESSAGE };
 	}
 
@@ -155,6 +208,9 @@ export async function login(
 	if (user.section_id !== -1) {
 		const { getServerState } = await import('../resolve/server_state.ts');
 		if (getServerState().maintenance_mode === true) {
+			// Credentials were CORRECT — the refusal is the maintenance gate, and
+			// the audit row must say so rather than read as a failed attempt.
+			await logLoginActivity('deny', 'Server under maintenance', username, clientIp);
 			return { ok: false, message: 'Server under maintenance. Please try again later.' };
 		}
 	}
@@ -182,6 +238,7 @@ export async function login(
 	// are Phase 5 continuation alongside the permissions matrix).
 	const isGlobalAdmin = user.section_id === -1;
 	const sessionToken = createSession(user.section_id, username, isGlobalAdmin);
+	await logLoginActivity('allow', 'correct user and password', username, clientIp, user.section_id);
 	return {
 		ok: true,
 		message: 'ok',

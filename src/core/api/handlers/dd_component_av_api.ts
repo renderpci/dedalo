@@ -12,7 +12,11 @@
  */
 
 import type { Rqo } from '../../concepts/rqo.ts';
-import type { ActionHandler, ApiRequestContext } from '../handler_context.ts';
+import {
+	type ActionHandler,
+	type ApiRequestContext,
+	requirePrincipal,
+} from '../handler_context.ts';
 import type { ApiResult } from '../response.ts';
 import { resolveMediaActionContext } from './media_action_context.ts';
 
@@ -37,6 +41,30 @@ async function posterframeAction(
 		op === 'create'
 			? await createAvPosterframe(resolved.ctx, String(options.current_time ?? '0'))
 			: deletePosterframe(resolved.ctx);
+
+	// Activity audit (PHP logger 'DELETE FILE' code 12). Logged HERE rather than
+	// in deletePosterframe, which is synchronous and whose MediaContext carries
+	// no actor — this handler has both the principal and the client host.
+	// Only on a real deletion: deletePosterframe returns false when there was no
+	// file, and an audit row for a no-op would be a lie.
+	if (op === 'delete' && result === true) {
+		const { logActivity, hostFromClientIp } = await import('./activity_log.ts');
+		const { buildMediaIdentifier } = await import('../../media/path.ts');
+		const { identity } = resolved.ctx;
+		await logActivity({
+			what: 'DELETE FILE',
+			tipo: identity.componentTipo,
+			userId: requirePrincipal(context).userId,
+			host: hostFromClientIp(context.clientIp),
+			data: {
+				msg: 'Deleted media file (file is renamed and moved to delete folder)',
+				tipo: identity.componentTipo,
+				parent: String(identity.sectionId),
+				id: buildMediaIdentifier(identity),
+				quality: 'posterframe',
+			},
+		});
+	}
 
 	return { status: 200, body: { result, msg: 'OK. Request done', errors: [] } };
 }

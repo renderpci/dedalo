@@ -14,6 +14,7 @@
  */
 
 import type { FileInfoEntry, ScanContext } from '../../../src/core/media/files_info.ts';
+import { type MediaIdentity, buildMediaIdentifier } from '../../../src/core/media/path.ts';
 import {
 	type MediaToolContext,
 	resolveMediaToolContext,
@@ -80,6 +81,40 @@ export async function getFilesInfo(ctx: ToolActionContext): Promise<ToolResponse
 	}
 }
 
+/**
+ * Append a media activity row — 'DELETE FILE' (dd42 code 12) or 'NEW VERSION'
+ * (code 16). PHP logs these from the component classes (component_av :1071 /
+ * :1223, component_image :1436, component_media_common :1404 / :3069); the TS
+ * equivalent of that seam is the tool action, which is where the identity and
+ * the client host both exist.
+ *
+ * `id` is the media identifier (the file's base name) — the v7 analogue of
+ * PHP's $this->get_id() for a media component. `parent` is the section_id,
+ * matching PHP's key name.
+ */
+async function logMediaActivity(
+	ctx: ToolActionContext,
+	what: 'DELETE FILE' | 'NEW VERSION',
+	identity: MediaIdentity,
+	payload: Record<string, unknown>,
+): Promise<void> {
+	const { logActivity, hostFromClientIp } = await import(
+		'../../../src/core/api/handlers/activity_log.ts'
+	);
+	await logActivity({
+		what,
+		tipo: identity.componentTipo,
+		userId: ctx.userId,
+		host: hostFromClientIp(ctx.clientIp),
+		data: {
+			...payload,
+			tipo: identity.componentTipo,
+			parent: String(identity.sectionId),
+			id: buildMediaIdentifier(identity),
+		},
+	});
+}
+
 /** build_version: build one quality derivative (av async → job id). */
 export async function buildVersion(ctx: ToolActionContext): Promise<ToolResponse> {
 	try {
@@ -91,6 +126,12 @@ export async function buildVersion(ctx: ToolActionContext): Promise<ToolResponse
 		// Persist only for synchronous builds; av transcodes finish in a background
 		// job and refresh files_info when the next read/save re-scans.
 		if (built.jobId === null) await writeBack(mediaContext, freshFilesInfo);
+		await logMediaActivity(ctx, 'NEW VERSION', identity, {
+			msg: `Built version. Generated ${spec.model} file`,
+			quality,
+			source_quality: String(ctx.options.source_quality ?? spec.defaultQuality),
+			target_quality: quality,
+		});
 		return {
 			result: true,
 			msg: 'ok',
@@ -131,6 +172,10 @@ export async function deleteQuality(ctx: ToolActionContext): Promise<ToolRespons
 		const moved = deleteQualityCore(spec, identity, pathOpts, quality, scanContext(mediaContext));
 		const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
 		await writeBack(mediaContext, freshFilesInfo);
+		await logMediaActivity(ctx, 'DELETE FILE', identity, {
+			msg: 'Deleted media file (file is renamed and moved to delete folder)',
+			quality,
+		});
 		return {
 			result: true,
 			msg: `File deleted successfully. ${quality}`,
@@ -154,6 +199,11 @@ export async function deleteVersion(ctx: ToolActionContext): Promise<ToolRespons
 		const moved = deleteVersionCore(spec, identity, pathOpts, quality, extension);
 		const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
 		await writeBack(mediaContext, freshFilesInfo);
+		await logMediaActivity(ctx, 'DELETE FILE', identity, {
+			msg: 'Deleted media file (file is renamed and moved to delete folder)',
+			quality,
+			extension,
+		});
 		return {
 			result: true,
 			msg: 'OK file delete successfully',
@@ -177,6 +227,12 @@ export async function conformHeaders(ctx: ToolActionContext): Promise<ToolRespon
 		await conformHeadersCore(spec, identity, pathOpts, quality, extension);
 		const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
 		await writeBack(mediaContext, freshFilesInfo);
+		// PHP logs a remux as NEW VERSION too (component_av :1291) — the container
+		// really is rewritten, so the audit trail treats it as a new file version.
+		await logMediaActivity(ctx, 'NEW VERSION', identity, {
+			msg: 'conform_header av file',
+			quality,
+		});
 		return {
 			result: true,
 			msg: 'Rebuilding av file headers',

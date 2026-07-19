@@ -82,6 +82,32 @@ async function restoreSection(
 	return { result: true, msg: 'OK. Request done successfully', errors: [] };
 }
 
+/**
+ * Append the RECOVER SECTION / RECOVER COMPONENT activity row (dd42 codes
+ * 13/14, PHP tool_time_machine :99 / :213 / :419).
+ *
+ * (!) The WHERE tipo is the SECTION tipo for BOTH — including a component
+ * restore, whose own tipo goes unused. That is PHP's behaviour at all three
+ * call sites, not an oversight here.
+ */
+async function logRecoverActivity(
+	context: ToolActionContext,
+	what: 'RECOVER SECTION' | 'RECOVER COMPONENT',
+	payload: Record<string, unknown>,
+	sectionTipo: string,
+): Promise<void> {
+	const { logActivity, hostFromClientIp } = await import(
+		'../../../src/core/api/handlers/activity_log.ts'
+	);
+	await logActivity({
+		what,
+		tipo: sectionTipo,
+		userId: context.userId,
+		host: hostFromClientIp(context.clientIp),
+		data: payload,
+	});
+}
+
 export async function toolTimeMachineApplyValue(context: ToolActionContext): Promise<ToolResponse> {
 	const { options, userId } = context;
 	const sectionTipo = String(options.section_tipo ?? '');
@@ -135,7 +161,24 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 
 	// SECTION restore: overwrite the whole record from the snapshot columns.
 	if (model === 'section') {
-		return restoreSection(tmRow, sectionTipo, sectionId, userId);
+		const outcome = await restoreSection(tmRow, sectionTipo, sectionId, userId);
+		if (outcome.result === true) {
+			await logRecoverActivity(
+				context,
+				'RECOVER SECTION',
+				{
+					msg: 'Recovered section record from time machine',
+					section_id: String(sectionId),
+					section_tipo: sectionTipo,
+					top_id: String(sectionId),
+					top_tipo: sectionTipo,
+					table: (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix',
+					tm_id: matrixId,
+				},
+				sectionTipo,
+			);
+		}
+		return outcome;
 	}
 
 	// COMPONENT restore.
@@ -168,6 +211,20 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 	await recordTimeMachine(
 		{ sectionTipo, sectionId, componentTipo: tipo, lang, userId, data },
 		dbTimestamp(),
+	);
+
+	await logRecoverActivity(
+		context,
+		'RECOVER COMPONENT',
+		{
+			msg: 'Recovered component data from time machine',
+			model,
+			section_id: String(sectionId),
+			section_tipo: sectionTipo,
+			table,
+			tm_id: matrixId,
+		},
+		sectionTipo,
 	);
 
 	return { result: true, msg: 'OK. Request done successfully', errors: [] };

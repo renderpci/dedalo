@@ -47,6 +47,13 @@ export interface ToolActionContext {
 	options: Record<string, unknown>;
 	background: boolean;
 	publishProgress?: (data: object) => void;
+	/**
+	 * The proxy-validated client address, for tool actions that append an
+	 * activity row (dd544 IP). Optional: a handler that logs nothing ignores it,
+	 * and the background executor carries the value captured at SUBMIT time —
+	 * the job outlives the request, so there is no live socket to ask.
+	 */
+	clientIp?: string;
 }
 
 /**

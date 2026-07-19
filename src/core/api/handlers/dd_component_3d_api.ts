@@ -10,7 +10,11 @@
 
 import type { Rqo } from '../../concepts/rqo.ts';
 import type { Session } from '../../security/session_store.ts';
-import type { ActionHandler, ApiRequestContext } from '../handler_context.ts';
+import {
+	type ActionHandler,
+	type ApiRequestContext,
+	requirePrincipal,
+} from '../handler_context.ts';
 import type { ApiResult } from '../response.ts';
 import { avActionFail, resolveMediaActionContext } from './media_action_context.ts';
 
@@ -66,6 +70,27 @@ async function threeDDeletePosterframeAction(
 
 	const { deletePosterframe } = await import('../../media/tools/posterframe.ts');
 	const result = deletePosterframe(resolved.ctx);
+
+	// Activity audit (PHP logger 'DELETE FILE' code 12, component_3d :665 —
+	// byte-identical payload to the av twin). Only on a real deletion.
+	if (result === true) {
+		const { logActivity, hostFromClientIp } = await import('./activity_log.ts');
+		const { buildMediaIdentifier } = await import('../../media/path.ts');
+		const { identity } = resolved.ctx;
+		await logActivity({
+			what: 'DELETE FILE',
+			tipo: identity.componentTipo,
+			userId: requirePrincipal(context).userId,
+			host: hostFromClientIp(context.clientIp),
+			data: {
+				msg: 'Deleted media file (file is renamed and moved to delete folder)',
+				tipo: identity.componentTipo,
+				parent: String(identity.sectionId),
+				id: buildMediaIdentifier(identity),
+				quality: 'posterframe',
+			},
+		});
+	}
 	return { status: 200, body: { result, msg: 'OK. Request done', errors: [] } };
 }
 

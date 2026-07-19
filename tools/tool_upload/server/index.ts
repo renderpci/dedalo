@@ -45,6 +45,25 @@ async function processUploaded(ctx: ToolActionContext): Promise<ToolResponse> {
 			originalFileName: String(fileData.tmp_name ?? result.originalFileName),
 			originalNormalizedName: `${buildMediaIdentifier(identity)}.${result.extension}`,
 		});
+
+		// Activity audit (PHP logger 'UPLOAD COMPLETE' code 11,
+		// tool_upload :49). PHP serializes the whole file_data blob into the
+		// payload as a JSON STRING — mirrored here, including the shape.
+		{
+			const { logActivity, hostFromClientIp } = await import(
+				'../../../src/core/api/handlers/activity_log.ts'
+			);
+			await logActivity({
+				what: 'UPLOAD COMPLETE',
+				tipo: identity.componentTipo,
+				userId,
+				host: hostFromClientIp(ctx.clientIp),
+				data: {
+					msg: 'Upload file complete. Processing uploaded file',
+					file_data: JSON.stringify(fileData),
+				},
+			});
+		}
 		return {
 			result: true,
 			msg: 'ok',

@@ -285,12 +285,9 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		}
 		// Activity audit (PHP logger 'SAVE' code 5) — never fails the save.
 		{
-			const { logActivity } = await import('./activity_log.ts');
+			const { logActivity, hostFromClientIp } = await import('./activity_log.ts');
 			const { getModelByTipo, getMatrixTableFromTipo } = await import('../../ontology/resolver.ts');
-			const host =
-				context.clientIp === '127.0.0.1' || context.clientIp === '::1'
-					? 'localhost'
-					: context.clientIp;
+			const host = hostFromClientIp(context.clientIp);
 			await logActivity({
 				what: 'SAVE',
 				tipo: source.tipo,
@@ -466,6 +463,28 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		}
 		const { createSectionRecord } = await import('../../section/record/create_record.ts');
 		const sectionId = await createSectionRecord(sectionTipo, principal.userId);
+
+		// Activity audit (PHP logger 'NEW' code 3, section::create_record :1159) —
+		// never fails the create. Logged at this DOOR, not inside
+		// createSectionRecord, which is also reached by duplicate/import and has no
+		// client host of its own.
+		{
+			const { logActivity, hostFromClientIp } = await import('./activity_log.ts');
+			const { getMatrixTableFromTipo } = await import('../../ontology/resolver.ts');
+			await logActivity({
+				what: 'NEW',
+				tipo: sectionTipo,
+				userId: principal.userId,
+				host: hostFromClientIp(context.clientIp),
+				data: {
+					msg: 'Created section record',
+					section_id: String(sectionId),
+					section_tipo: sectionTipo,
+					tipo: sectionTipo,
+					table: (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix',
+				},
+			});
+		}
 		return { status: 200, body: { result: sectionId, msg: 'OK. Request done' } };
 	},
 	duplicate: async (rqo, context) => {
@@ -594,12 +613,9 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				.map((row) => Number(row.section_id));
 		}
 		const deleted: string[] = [];
-		const { logActivity } = await import('./activity_log.ts');
+		const { logActivity, hostFromClientIp } = await import('./activity_log.ts');
 		const { getMatrixTableFromTipo: tableOf } = await import('../../ontology/resolver.ts');
-		const activityHost =
-			context.clientIp === '127.0.0.1' || context.clientIp === '::1'
-				? 'localhost'
-				: context.clientIp;
+		const activityHost = hostFromClientIp(context.clientIp);
 		// HIERARCHY/ONTOLOGY registry records cascade: deleting one
 		// uninstalls its whole TLD (dd_ontology nodes + main + node
 		// records — PHP ontology::delete_main, fired before the record
@@ -1308,9 +1324,8 @@ async function logReadActivity(
 		const tipo = source.tipo ?? '';
 		const mode = source.mode ?? '';
 		if (tipo === '' || mode === 'search' || mode === 'tm') return;
-		// Self-log loop guard: the Activity section (dd542) is the log's own home.
-		const { ACTIVITY_SECTION_TIPO } = await import('../../concepts/section.ts');
-		if (tipo === ACTIVITY_SECTION_TIPO) return;
+		// (The self-log loop guard — dd542 and its own components — now lives in
+		// logActivity, so every emitter inherits it. Not repeated here.)
 		if (ACTIVITY_EXCLUDED_PRESET_TIPOS.has(tipo)) return;
 
 		const { getModelByTipo } = await import('../../ontology/resolver.ts');
@@ -1336,11 +1351,8 @@ async function logReadActivity(
 			if (sectionId !== null && sectionId !== undefined) data.id = sectionId;
 		}
 
-		const host =
-			context.clientIp === '127.0.0.1' || context.clientIp === '::1'
-				? 'localhost'
-				: (context.clientIp ?? 'unknown');
-		const { logActivity } = await import('./activity_log.ts');
+		const { logActivity, hostFromClientIp } = await import('./activity_log.ts');
+		const host = hostFromClientIp(context.clientIp);
 		await logActivity({
 			what: `LOAD ${modeToActivity.toUpperCase()}`, // 'LOAD EDIT' | 'LOAD LIST'
 			tipo,

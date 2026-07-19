@@ -53,6 +53,7 @@ export async function dispatchToolRequest(
 	userId: number,
 	source: { model?: unknown; action?: unknown },
 	options: unknown,
+	clientIp?: string,
 ): Promise<ToolResponse> {
 	// Gate 1: options must be an object (PHP rejects non-object overrides).
 	if (options !== undefined && (typeof options !== 'object' || options === null)) {
@@ -124,7 +125,7 @@ export async function dispatchToolRequest(
 	// Gate 8: execute. A background request runs through the executor (which
 	// enforces the BACKGROUND_RUNNABLE allowlist); otherwise run synchronously.
 	if (optionRecord.background_running === true) {
-		return scheduleBackground(loaded, toolMethod, spec, optionRecord, principal, userId);
+		return scheduleBackground(loaded, toolMethod, spec, optionRecord, principal, userId, clientIp);
 	}
-	return spec.handler({ principal, userId, options: optionRecord, background: false });
+	return spec.handler({ principal, userId, options: optionRecord, background: false, clientIp });
 }

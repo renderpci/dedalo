@@ -115,6 +115,12 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 	const label = String(options.bulk_revert_process_label ?? `Revert bulk process ${bulkProcessId}`);
 	const newBulkId = await createRevertBulkProcess(label, userId);
 
+	// Hoisted out of the loop: one dynamic import, not one per reverted row.
+	const { logActivity, hostFromClientIp } = await import(
+		'../../../src/core/api/handlers/activity_log.ts'
+	);
+	const activityHost = hostFromClientIp(ctx.clientIp);
+
 	const errors: string[] = [];
 	let counter = 0;
 	for (const row of batchRows) {
@@ -161,6 +167,24 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 				},
 				dbTimestamp(),
 			);
+			// One activity row PER REVERTED COMPONENT — PHP logs inside its loop
+			// too (tool_time_machine :419). A wide bulk therefore appends many
+			// rows; that is the audit trail behaving correctly, since each row is
+			// a distinct component whose value changed.
+			await logActivity({
+				what: 'RECOVER COMPONENT',
+				tipo: row.section_tipo, // WHERE = the SECTION tipo (PHP), not row.tipo
+				userId,
+				host: activityHost,
+				data: {
+					msg: 'Recovered component data from time machine',
+					model,
+					section_id: String(row.section_id),
+					section_tipo: row.section_tipo,
+					table,
+					tm_id: newBulkId,
+				},
+			});
 			counter += 1;
 		} catch (error) {
 			errors.push(`${row.section_tipo}/${row.tipo}#${row.section_id}: ${(error as Error).message}`);

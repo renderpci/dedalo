@@ -321,6 +321,26 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// caches/service-worker and redirects (login.js quit()). Authenticated
 		// + state-changing: the router already ran auth + CSRF gates, so the
 		// session and its token are guaranteed here.
+		// Activity audit (PHP logger 'LOG OUT' code 2, login::Quit) — logged
+		// BEFORE the session is destroyed, while the actor is still known.
+		{
+			const { logActivity, hostFromClientIp } = await import('./activity_log.ts');
+			const { LOGIN_ACTIVITY_TIPO } = await import('../../security/auth.ts');
+			const session = context.session;
+			await logActivity({
+				what: 'LOG OUT',
+				tipo: LOGIN_ACTIVITY_TIPO,
+				userId: session?.userId ?? 0,
+				host: hostFromClientIp(context.clientIp),
+				data: {
+					msg: `User ${session?.userId ?? ''} was logout. Bye ${session?.username ?? ''}`,
+					result: 'quit',
+					cause: 'user quit',
+					mode: 'quit',
+					username: session?.username ?? '',
+				},
+			});
+		}
 		const { destroySession } = await import('../../security/session_store.ts');
 		if (context.sessionToken) {
 			destroySession(context.sessionToken);

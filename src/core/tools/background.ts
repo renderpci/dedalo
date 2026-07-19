@@ -138,6 +138,8 @@ export function scheduleBackground(
 	options: Record<string, unknown>,
 	principal: Principal,
 	userId: number,
+	/** Captured at SUBMIT time — the job outlives the request that started it. */
+	clientIp?: string,
 ): ToolResponse {
 	const allowed = loaded.module.backgroundRunnable ?? [];
 	if (!allowed.includes(method)) {
@@ -178,6 +180,7 @@ export function scheduleBackground(
 					userId,
 					options,
 					background: true,
+					clientIp,
 					// The live-progress wire (PHP print_cli): every payload the handler
 					// publishes replaces the job frame's `data`, which the client's SSE
 					// reader renders on its next tick. Handlers throttle their own rate —

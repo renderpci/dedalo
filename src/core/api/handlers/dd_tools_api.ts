@@ -43,6 +43,7 @@ export const toolsApiActions: Record<string, ActionHandler> = {
 			(context.session as Session).userId,
 			(rqo.source ?? {}) as { model?: unknown; action?: unknown },
 			rqo.options,
+			context.clientIp,
 		);
 		// Streaming tool responses (tool_export ndjson_stream, S2-34): the tool
 		// returns a ReadableStream through the existing outcome.stream seam so
