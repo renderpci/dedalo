@@ -70,6 +70,12 @@ let saveRow: ActivityRow | undefined;
 let deleteRow: ActivityRow | undefined;
 let baselineBeforeSave = 0;
 let baselineBeforeDelete = 0;
+/** WC-040: the record created through the `create` DOOR (the NEW emitter). */
+let createdRecordId = 0;
+let newRow: ActivityRow | undefined;
+let loginDenyRow: ActivityRow | undefined;
+/** Unique per run so the throttle store and the row lookup cannot collide. */
+const ABSENT_USERNAME = `__activity_native_absent_${process.pid}__`;
 
 async function maxActivityId(): Promise<number> {
 	const rows = (await sql`
@@ -87,6 +93,37 @@ async function ourActivityRow(whereTipo: string, code: string): Promise<Activity
 		   AND misc->'dd551'->0->'value'->>'section_id' = $3
 		 ORDER BY section_id DESC LIMIT 1`,
 		[whereTipo, code, String(recordId)],
+	)) as ActivityRow[];
+	if (rows[0] !== undefined) activityIds.push(Number(rows[0].section_id));
+	return rows[0];
+}
+
+/** Like ourActivityRow, but keyed on an explicit payload section_id (NEW). */
+async function activityRowBySectionId(
+	whereTipo: string,
+	code: string,
+	payloadSectionId: number,
+): Promise<ActivityRow | undefined> {
+	const rows = (await sql.unsafe(
+		`SELECT section_id, section_tipo, relation, string, date, misc FROM matrix_activity
+		 WHERE string->'dd546'->0->>'value' = $1
+		   AND relation->'dd545'->0->>'section_id' = $2
+		   AND misc->'dd551'->0->'value'->>'section_id' = $3
+		 ORDER BY section_id DESC LIMIT 1`,
+		[whereTipo, code, String(payloadSectionId)],
+	)) as ActivityRow[];
+	if (rows[0] !== undefined) activityIds.push(Number(rows[0].section_id));
+	return rows[0];
+}
+
+/** The LOG IN row for one attempted username (payload key, not section_id). */
+async function loginActivityRow(username: string): Promise<ActivityRow | undefined> {
+	const rows = (await sql.unsafe(
+		`SELECT section_id, section_tipo, relation, string, date, misc FROM matrix_activity
+		 WHERE relation->'dd545'->0->>'section_id' = '1'
+		   AND misc->'dd551'->0->'value'->>'username' = $1
+		 ORDER BY section_id DESC LIMIT 1`,
+		[username],
 	)) as ActivityRow[];
 	if (rows[0] !== undefined) activityIds.push(Number(rows[0].section_id));
 	return rows[0];
@@ -162,10 +199,37 @@ beforeAll(async () => {
 		context as never,
 	);
 	deleteRow = await ourActivityRow(SECTION, '4');
+
+	// NEW (WC-040) — through the `create` DOOR, which is where the emitter
+	// lives; the createSectionRecord call above is the ENGINE and writes no row.
+	const createResult = await dispatchRqo(
+		{
+			action: 'create',
+			dd_api: 'dd_core_api',
+			prevent_lock: true,
+			source: {
+				typo: 'source',
+				model: 'section',
+				tipo: SECTION,
+				section_tipo: SECTION,
+				action: 'create',
+			},
+		} as unknown as Rqo,
+		context as never,
+	);
+	createdRecordId = Number((createResult.body as { result?: unknown }).result ?? 0);
+	newRow = await activityRowBySectionId(SECTION, '3', createdRecordId);
+
+	// LOG IN, denied (WC-040). An unknown username needs no fixture user and
+	// exercises the branch that matters most: a failed attempt IS recorded.
+	const { login } = await import('../../src/core/security/auth.ts');
+	await login(ABSENT_USERNAME, 'wrong-password', '127.0.0.1');
+	loginDenyRow = await loginActivityRow(ABSENT_USERNAME);
 }, 60000);
 
 afterAll(async () => {
 	if (recordId > 0) await cleanScratchRecord(SECTION, recordId, TABLE);
+	if (createdRecordId > 0) await cleanScratchRecord(SECTION, createdRecordId, TABLE);
 	for (const id of activityIds) {
 		await sql.unsafe(
 			`DELETE FROM matrix_activity WHERE section_tipo = 'dd542' AND section_id = $1`,
@@ -299,6 +363,73 @@ describe('activity log rows, TS-native (dd542 anatomy)', () => {
 		});
 
 		assertInstant(row);
+	});
+
+	test('NEW appends a row: code 3, section where, create payload (WC-040)', () => {
+		expect(createdRecordId).toBeGreaterThan(0);
+		expect(newRow).toBeDefined();
+		const row = newRow as ActivityRow;
+		expect(row.section_tipo).toBe('dd542');
+
+		expect(row.relation).toEqual({
+			dd543: [
+				{
+					type: 'dd151',
+					section_id: String(USER_ID),
+					section_tipo: 'dd128',
+					from_component_tipo: 'dd543',
+				},
+			],
+			dd545: [
+				{ type: 'dd151', section_id: '3', section_tipo: 'dd42', from_component_tipo: 'dd545' },
+			],
+		});
+
+		// WHERE is the SECTION tipo (a create has no component).
+		expect(row.string.dd544?.[0]?.value).toBe('localhost');
+		expect(row.string.dd546?.[0]?.value).toBe(SECTION);
+
+		expect(row.misc.dd551?.[0]?.value).toEqual({
+			msg: 'Created section record',
+			section_id: String(createdRecordId),
+			section_tipo: SECTION,
+			tipo: SECTION,
+			table: TABLE,
+		});
+
+		assertInstant(row);
+	});
+
+	test('a DENIED login appends a row: code 1, dd229 where, -666 actor (WC-040)', () => {
+		expect(loginDenyRow).toBeDefined();
+		const row = loginDenyRow as ActivityRow;
+		expect(row.section_tipo).toBe('dd542');
+
+		// The actor is PHP's anonymous sentinel — nobody is authenticated on a
+		// denied attempt, so the username lives in the payload instead.
+		expect(row.relation).toEqual({
+			dd543: [
+				{
+					type: 'dd151',
+					section_id: '-666',
+					section_tipo: 'dd128',
+					from_component_tipo: 'dd543',
+				},
+			],
+			dd545: [
+				{ type: 'dd151', section_id: '1', section_tipo: 'dd42', from_component_tipo: 'dd545' },
+			],
+		});
+
+		// WHERE is the fixed login tipo (PHP login::get_login_tipo).
+		expect(row.string.dd546?.[0]?.value).toBe('dd229');
+
+		expect(row.misc.dd551?.[0]?.value).toEqual({
+			msg: `Denied login attempted by: ${ABSENT_USERNAME}. User does not exist`,
+			result: 'deny',
+			cause: 'User does not exist',
+			username: ABSENT_USERNAME,
+		});
 	});
 
 	test('the delete actually removed the audited record (the row the payload names)', async () => {
