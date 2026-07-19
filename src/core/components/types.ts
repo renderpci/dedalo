@@ -176,7 +176,7 @@ export interface ComponentModel {
 	/**
 	 * PHP component_common::$components_using_value_property: on CSV import a
 	 * bare scalar cell wraps into {value: …} for this model (tools/
-	 * import_data.ts conformImportData). Omitted = the raw JSON/dato shape is
+	 * import_data.ts conformImportData). Omitted = the raw JSON/data shape is
 	 * kept as-is.
 	 */
 	readonly importValueProperty?: true;

@@ -19,7 +19,7 @@
  * - The wire contract (update_lock_components_state / get_lock_status
  *   actions, in_use/msg/full_username response fields) is unchanged — the
  *   copied client needs no edits. One deliberate difference: PHP returns the
- *   ENTIRE registry as `dato` to any caller; the client never reads it, so we
+ *   ENTIRE registry as `data` to any caller; the client never reads it, so we
  *   return null (don't leak who is editing what across the installation).
  *
  * TWO-SERVER COEXISTENCE: the table lives in the shared matrix DB, so every

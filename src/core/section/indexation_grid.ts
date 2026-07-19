@@ -23,11 +23,11 @@
  * - class.component_common.php export_value_to_grid_cell :1689 (atoms cell)
  * - component_text_area get_grid_value :100 + component_text_area_value.php
  *   (the indexation custom columns: default/pdf/av layouts)
- * - PHP QUIRK mirrored: indexation_grid:553 set_dato([$locator]) resolves
- *   through the Accessors __call magic into $this->dato, which get_data()
+ * - PHP QUIRK mirrored: indexation_grid:553 set_data([$locator]) resolves
+ *   through the Accessors __call magic into $this->data, which get_data()
  *   never reads (it loads from the section record) — the "inject the tagged
  *   locator into the portal" branch is observably a NO-OP, so portals always
- *   render their record's own stored dato. Verified against the live oracle
+ *   render their record's own stored data. Verified against the live oracle
  *   (cu1_1 → oh1 portal renders empty).
  */
 
@@ -1081,7 +1081,7 @@ async function relationCell(
 		records_separator?: string;
 	};
 
-	// data: the record's OWN stored dato (see the set_dato quirk in the header)
+	// data: the record's OWN stored data (see the set_data quirk in the header)
 	const data = await componentItems(ctx, sectionTipo, sectionId, ddo.tipo, ddo.model);
 
 	// ddo_map: injected (indexation sub-ddos) or the component's own default
