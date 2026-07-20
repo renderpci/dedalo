@@ -417,11 +417,20 @@ async function emitTmRow(
 					],
 					pagination: { total: 1, limit: 1, offset: 0 },
 				} as never);
+				// SUBDATUM mode is 'list', NOT the row's 'tm': dd578's portal
+				// request_config declares its username subdatum ddo (dd132) in 'list'
+				// mode (the standard portal display mode), and the byte-identical
+				// client binds a subdatum to its context/data by an EXACT (tipo, mode,
+				// section_tipo) match (section_record get_ar_columns_instances_list +
+				// get_component_data). Emitting it as 'tm' made ddo('list') ≠ data/
+				// context('tm'), so the client dropped the column and the Who cell
+				// rendered blank. Same class as the select-family value fix that gave
+				// emitRelationCell its cellMode='list' (tm_component_value_differential).
 				emission.items.push({
 					section_id: String(row.user_id),
 					section_tipo: USERS_SECTION_TIPO,
 					tipo: usernameTipo,
-					mode: 'tm',
+					mode: 'list',
 					lang: 'lg-nolan',
 					from_component_tipo: TIPO_USER,
 					entries: await usernameItems(row.user_id, usernameTipo),
