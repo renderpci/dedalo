@@ -51,6 +51,7 @@ import type {
 import type { Principal } from '../security/permissions.ts';
 import {
 	TM_COLUMN_BULK_PROCESS_ID as TIPO_BULK_PROCESS,
+	TM_COLUMN_DATA as TIPO_DATA,
 	TM_COLUMN_TIPO as TIPO_COMPONENT,
 	TM_NOTES_TEXT as TIPO_NOTES,
 	TM_COLUMN_SECTION_ID as TIPO_SECTION_ID,
@@ -252,6 +253,7 @@ async function queryTmRows(
 		[TIPO_COMPONENT]: 'tipo', // dd577 What (section tipo)
 		[TIPO_USER]: 'user_id', // dd578 Who
 		[TIPO_BULK_PROCESS]: 'bulk_process_id', // dd1371 Process
+		[TIPO_DATA]: 'data', // dd1574 record snapshot (jsonb — total-ordered by PG)
 	};
 	const orderColumn = orderCol === undefined ? 'id' : TM_ORDER_COLUMN[String(orderCol)];
 	if (orderColumn === undefined) {
