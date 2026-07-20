@@ -15,7 +15,7 @@
  * returns the computed locators).
  *
  * PHP reference: class.component_relation_children.php get_data :113
- * (search mode reads STORED data — parent::get_data — matching set_dato).
+ * (search mode reads STORED data — parent::get_data — matching set_data).
  */
 
 import { getChildren } from '../children.ts';
