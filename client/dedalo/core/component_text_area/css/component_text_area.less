@@ -111,6 +111,22 @@
 						text-decoration: underline;
 						color: @color_orange_dedalo;
 					}
+
+					// large_value_preview
+					// Placeholder excerpt shown instead of a deferred multi-MB value;
+					// the full content parses on editor init / user click.
+					.large_value_preview {
+						cursor: pointer;
+
+						>p:first-child {
+							color: @color_grey_7;
+						}
+
+						>.large_value_notice {
+							color: @color_orange_dedalo;
+							font-weight: bold;
+						}
+					}
 				}//end >.value_container
 
 				// source ckeditor

@@ -73,6 +73,61 @@ export const view_default_edit_text_area = function() {
 
 
 
+// LARGE_VALUE_DEFER_LENGTH
+// Values longer than this (in characters) are NOT converted with tags_to_html
+// nor parsed into DOM at render time: a full PDF transcription can exceed 2 MB
+// of HTML, and the eager regex pass + innerHTML parse + layout of the resulting
+// tens of thousands of nodes costs whole seconds of main-thread time at page
+// open. Such values render as a cheap plain-text excerpt and materialise only
+// when the editor initialises (edit) or on user request (read-only).
+const LARGE_VALUE_DEFER_LENGTH = 200000
+
+
+
+/**
+* BUILD_LARGE_VALUE_PREVIEW
+* Build the lightweight placeholder shown instead of a deferred large value:
+* a plain-text excerpt of the leading slice plus a size notice. All string work
+* runs on a bounded slice, so cost is independent of the value size.
+*
+* @param {string} raw_value - the full raw (un-converted) value
+* @returns {DocumentFragment} preview nodes to append into the value container
+*/
+const build_large_value_preview = (raw_value) => {
+
+	// plain-text excerpt: strip HTML markup and Dédalo tag serialisation from a
+	// bounded leading slice (the slice is generous because stripping shrinks it)
+	const excerpt = raw_value
+		.slice(0, 6000)
+		.replace(/<[^>]*>/g, ' ')
+		.replace(/\[[^\]]*\]/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim()
+		.slice(0, 1000)
+
+	const fragment = new DocumentFragment()
+	const preview = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'large_value_preview',
+		parent			: fragment
+	})
+	ui.create_dom_element({
+		element_type	: 'p',
+		text_content	: excerpt + '…',
+		parent			: preview
+	})
+	ui.create_dom_element({
+		element_type	: 'p',
+		class_name		: 'large_value_notice',
+		text_content	: (get_label.show_all || 'Show all') + ' (' + Math.round(raw_value.length / 1024) + ' KB)',
+		parent			: preview
+	})
+
+	return fragment
+}//end build_large_value_preview
+
+
+
 /**
 * RENDER
 * Build and return the full component wrapper DOM node for edit and edit_in_list modes.
@@ -300,8 +355,14 @@ const get_content_value = (i, current_value, self) => {
 	// value_string is a raw html without parse into nodes (txt format)
 		// tags_to_html converts Dédalo tag serialisation to inline <img> placeholders
 		// that CKEditor treats as atomic nodes (non-editable images).
-		const value_string = current_value?.value
-			? self.tags_to_html(current_value.value)
+		// Large values (see LARGE_VALUE_DEFER_LENGTH) skip the conversion here and
+		// materialise in init_current_service_text_editor, just before CKEditor
+		// attaches — the editor reads its initial data from value_container, so
+		// deferring the DOM build is invisible to it.
+		const raw_value				= current_value?.value || null
+		const defer_large_value		= raw_value !== null && raw_value.length > LARGE_VALUE_DEFER_LENGTH
+		const value_string = (raw_value && !defer_large_value)
+			? self.tags_to_html(raw_value)
 			: null
 
 	// content_value
@@ -331,7 +392,7 @@ const get_content_value = (i, current_value, self) => {
 		// placeholder_node. Create a Place placeholder if no value found
 		// Mimics CKEditor's own placeholder styling (.ck-placeholder) so the pre-init
 		// DOM looks identical to the post-init state.
-		const placeholder_node = (!value_string)
+		const placeholder_node = (!value_string && !defer_large_value)
 			? ui.create_dom_element({
 				element_type	: 'p',
 				class_name		: 'placeholder ck-placeholder',
@@ -339,6 +400,20 @@ const get_content_value = (i, current_value, self) => {
 				parent			: value_container
 			  })
 			: null
+
+	// deferred large value. Show a cheap plain-text excerpt instead of parsing
+	// the multi-MB HTML at page open; materialize_deferred_value swaps in the
+	// real content the moment the editor is about to attach.
+		if (defer_large_value) {
+			value_container.appendChild(build_large_value_preview(raw_value))
+		}
+		const materialize_deferred_value = () => {
+			if (!defer_large_value || value_container.dataset.materialized === 'true') {
+				return
+			}
+			value_container.innerHTML = self.tags_to_html(raw_value)
+			value_container.dataset.materialized = 'true'
+		}
 
 	// init_current_service_text_editor
 		// Closure that creates and wires up one CKEditor instance for this slot.
@@ -355,6 +430,10 @@ const get_content_value = (i, current_value, self) => {
 				if (placeholder_node) {
 					placeholder_node.remove()
 				}
+
+			// deferred large value. Build the full HTML now — CKEditor reads its
+			// initial data from value_container, so this must precede editor create.
+				materialize_deferred_value()
 
 			// service_editor. Fixed on init
 				const current_service_text_editor = new self.service_text_editor()
@@ -549,7 +628,13 @@ const get_content_value = (i, current_value, self) => {
 const get_content_value_read = (i, current_value, self) => {
 
 	// value is a raw html without parse into nodes (txt format)
-		const value = self.tags_to_html(current_value?.value)
+		// Large values (see LARGE_VALUE_DEFER_LENGTH) render as a plain-text
+		// excerpt; the full HTML parses only when the user clicks the preview.
+		const raw_value			= current_value?.value || null
+		const defer_large_value	= raw_value !== null && raw_value.length > LARGE_VALUE_DEFER_LENGTH
+		const value = (raw_value && !defer_large_value)
+			? self.tags_to_html(raw_value)
+			: null
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -557,6 +642,14 @@ const get_content_value_read = (i, current_value, self) => {
 			class_name		: 'content_value editor_container read_only',
 			inner_html		: value
 		})
+
+	// deferred large value. Excerpt now, full content on demand (one-shot click)
+		if (defer_large_value) {
+			content_value.appendChild(build_large_value_preview(raw_value))
+			content_value.addEventListener('click', () => {
+				content_value.innerHTML = self.tags_to_html(raw_value)
+			}, { once: true })
+		}
 
 	return content_value
 }//end get_content_value_read
