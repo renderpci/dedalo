@@ -231,6 +231,9 @@ const SUBSYSTEM_OWNED_TABLES: readonly {
 	family: string;
 	tablePattern: RegExp;
 	owners: readonly string[];
+	/** NAME-ONLY exemptions: files that mention the table name without any SQL
+	 * against it (each entry must carry an inline reason at its family). */
+	exempt?: readonly string[];
 }[] = [
 	{
 		family: 'component locks',
@@ -251,6 +254,10 @@ const SUBSYSTEM_OWNED_TABLES: readonly {
 		family: 'user activity stats',
 		tablePattern: /matrix_stats/,
 		owners: ['src/core/area_maintenance/user_stats.ts'],
+		// NAME-ONLY exemptions (no SQL against the table): the projects-filter
+		// exemption constant (PHP $ar_tables_skip_projects parity) lists
+		// 'matrix_stats' as an excluded-from-ACL table name.
+		exempt: ['src/core/search/sql_assembler.ts'],
 	},
 	{
 		family: 'error-report intake (WC-017)',
@@ -399,12 +406,13 @@ describe('T3 — canonical accessor semantics (one policy for all walks)', () =>
 });
 
 describe('T4 — subsystem-owned table families', () => {
-	for (const { family, tablePattern, owners } of SUBSYSTEM_OWNED_TABLES) {
+	for (const { family, tablePattern, owners, exempt } of SUBSYSTEM_OWNED_TABLES) {
 		test(`${family}: tables referenced only by the owning module`, () => {
 			const violations: string[] = [];
 			for (const file of sourceFiles()) {
 				if (file.startsWith('src/core/db/')) continue; // T1 home (name catalogs)
 				if (owners.some((owner) => file === owner || file.startsWith(owner))) continue;
+				if (exempt !== undefined && exempt.includes(file)) continue; // name-only, reasoned above
 				if (tablePattern.test(read(file))) violations.push(file);
 			}
 			expect(
