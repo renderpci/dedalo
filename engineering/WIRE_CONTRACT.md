@@ -382,6 +382,23 @@ transforms the PHP/fixture response before diffing — the WC-001 pattern).
 - **Gate reconciliation:** no cross-engine equality is possible while live PHP
   errors — `search_filter_by_list_function.test.ts` asserts TS ground truth
   (counts vs direct EXISTS queries, allowlist throw, malformed-key drop).
+- **Amendment (2026-07-20, implementation only — wire shape and result sets
+  unchanged):** conform translates the allowlisted clause into an EXACT
+  tuple-IN over the `matrix_relation_index` per-locator store — the flat key
+  splits unambiguously on `_` (tipos never contain underscores) into the
+  variant's typed columns, each a bound parameter. Equality pinned by
+  `relation_index_store.test.ts` (index vs raw-jsonb counts) alongside the
+  existing TS-ground-truth gate.
+- **Amendment 2 (2026-07-20, same day — the flat functions are REMOVED):** the
+  `data_relations_flat_*` stored functions, their GIN indexes and every SQL
+  path that called them are gone (v7 ships no legacy relation engine; owner
+  directive). The `use_function` names are from here on **wire vocabulary
+  only**: the allowlist maps them to index-column layouts, nothing else. The
+  index is required — an uncovered instance throws with the maintenance
+  remediation (`search_store.ts` requireRelationIndex) instead of falling
+  back. The v6→v7 update drops both name families (`relations_flat_*` and
+  `data_relations_flat_*`) on closed installations; the install dump ships
+  without them.
 
 ## WC-013 — tool_assistant client goes TS-NATIVE server-driven (the assistant rewrite)
 

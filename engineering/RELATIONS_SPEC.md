@@ -23,6 +23,18 @@ Standing spec for the relation family, companion to `engineering/REWRITE_SPEC.md
 > as the design rationale and PHP-anchor record. The PHP `file:line` anchors
 > throughout remain valid oracle references.
 
+> **ADDENDUM 2026-07-20 (relation engine = matrix_relation_index).** Where §5
+> and later sections describe inverse/related searches over the four
+> `data_relations_flat_*` stored functions and their GIN indexes: those
+> functions are **removed** (with their indexes and every calling SQL path).
+> The single engine is `matrix_relation_index` — a typed per-locator side
+> table `(section_tipo, section_id, from_component_tipo, type,
+> target_section_tipo, target_section_id)` maintained by row triggers in the
+> same transaction as every write, backfilled at install/upgrade, gated by
+> `requireRelationIndex` (uncovered = loud error, never a fallback). The
+> `use_function` flat names survive as wire vocabulary only (WC-012,
+> amendment 2). See `docs/core/system/search.md` → "The relation index".
+
 **Relation components are the first-class, critical part of Dédalo.** Sections connect to sections *only* through locators stored by relation components; the thesaurus tree, portals, indexation, access control (projects filter), and the dataframe system are all expressions of the same relation machinery. A rewrite that gets relations wrong gets Dédalo wrong.
 
 The current TS implementation of relations is judged **not done correctly** and is hereby superseded as a foundation. It is concentrated in `src/core/resolve/read_rows.ts` (~1,600 lines, the portal/subdatum/dataframe renderer), `src/core/resolve/request_config_v6.ts`, `src/core/search/search_related.ts`, and `src/core/resolve/save_component.ts`, with good value objects in `src/core/concepts/locator.ts` and `src/core/concepts/ddo.ts`. **Audit it, salvage what is proven (the differential parity tests and the locator/ddo value objects are assets), then rebuild the relation family on the coherent model below — do not patch around the existing shape.** Known defects and ledgered gaps in the current code, which the rebuild must resolve rather than inherit:
