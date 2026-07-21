@@ -32,6 +32,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {create_source} from '../../common/js/common.js'
+	import {preset_scope_tipo} from './preset_scope.js'
 
 
 
@@ -115,7 +116,8 @@ export const get_editing_preset_json_filter = async function(self) {
 			filter			: {
 				"$and": [
 					{
-						q		: self.section_tipo,
+						q			: preset_scope_tipo(self),
+						q_operator	: '==', // exact: the section key must match, never CONTAINS (dd5 ⊂ dd542)
 						path	: [
 							{
 								name			: "Section tipo",
@@ -270,9 +272,10 @@ export const load_user_search_presets = async function(self) {
 		const filter = {
 			"$and": [
 				{
-					// Must match the caller's section_tipo so each search panel only
-					// sees its own presets, not presets for other sections.
-					q		: self.section_tipo,
+					// Must match the SEARCHED section so each search panel only sees
+					// its own presets, not presets for other sections.
+					q			: preset_scope_tipo(self),
+					q_operator	: '==', // exact: the section key must match, never CONTAINS (dd5 ⊂ dd542)
 					path	: [{
 						component_tipo	: presets_component_section_value_tipo, // 'dd642',
 						section_tipo	: presets_section_tipo, // 'dd623'
@@ -571,7 +574,7 @@ export const create_new_search_preset = async function(options) {
 			const changed_data_section = [{
 				action	: 'insert',
 				id		: null,
-				value	: {value: self.section_tipo}
+				value	: {value: preset_scope_tipo(self)}
 			}]
 			await component_instance_section_tipo.save(changed_data_section)
 		})()
