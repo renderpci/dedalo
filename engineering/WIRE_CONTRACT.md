@@ -399,6 +399,21 @@ transforms the PHP/fixture response before diffing — the WC-001 pattern).
   back. The v6→v7 update drops both name families (`relations_flat_*` and
   `data_relations_flat_*`) on closed installations; the install dump ships
   without them.
+- **Amendment 3 (2026-07-21 — canonical leaf `format:'relation'`, legacy
+  vocabulary DEPRECATED; owner directive: clean nomenclature for the clean
+  implementation):** the wire shape the shipped client now emits is
+  `{format:'relation', q: <partial locator object> | <array of them>, path}` —
+  q fields are the locator vocabulary (`section_tipo` required, `section_id`,
+  `from_component_tipo`, `type`), an array means OR within the leaf (the
+  filter_by_locators semantics), strictly validated (unknown fields / bad
+  tipos / non-integer id THROW; the new contract owes loud errors, not
+  bug-compat). Both shapes emit the identical matrix_relation_index tuple-IN.
+  `format:'function'` + `use_function` remains accepted as a DEPRECATED
+  READER for beta-era saved searches; nothing in the tree emits it. Producer
+  migrated: `view_default_autocomplete.js` filter_by_list checkboxes; zero
+  occurrences of the legacy vocabulary exist in ontology data (probed
+  2026-07-21). Gates: `search_filter_by_list_function.test.ts` (canonical
+  single/array/strict cases + the legacy reader pins).
 
 ## WC-013 — tool_assistant client goes TS-NATIVE server-driven (the assistant rewrite)
 
