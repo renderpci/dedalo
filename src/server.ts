@@ -1059,6 +1059,36 @@ export async function startServer() {
 				error,
 			);
 		}
+
+		// Derived search-store self-provisioning (2026-07-21): a database from a
+		// previous beta (no matrix_string_search / matrix_relation_index, or
+		// present-but-empty) heals here — targeted DDL + one-time backfill —
+		// BEFORE serving, since relation searches REQUIRE the index
+		// (requireRelationIndex; the flat-function engine is removed). Healthy
+		// installs pay a few catalog probes. The backfill can take minutes on a
+		// large database — a one-time, loudly-logged boot cost. Failures log and
+		// the server serves anyway (S1-15): searches then fail with the
+		// maintenance remediation, never silently.
+		try {
+			const { ensureSearchStores } = await import('./core/db/db_assets.ts');
+			const ensured = await ensureSearchStores();
+			if (!ensured.healthy) {
+				const { clearSearchStoreCache } = await import('./core/search/search_store.ts');
+				clearSearchStoreCache();
+				const backfilledNote = Object.entries(ensured.backfilled)
+					.map(([store, rows]) => `${store}: ${rows} rows`)
+					.join(', ');
+				console.warn(
+					`[boot] search stores provisioned (ddl: ${ensured.ddlApplied}${backfilledNote !== '' ? `; backfilled ${backfilledNote}` : ''})${ensured.errors.length > 0 ? ` with ${ensured.errors.length} error(s):` : ''}`,
+					...(ensured.errors.length > 0 ? [ensured.errors] : []),
+				);
+			}
+		} catch (error) {
+			console.error(
+				'[boot] search-store self-provisioning failed (relation searches will refuse with the maintenance remediation):',
+				error,
+			);
+		}
 	}
 
 	// Everything below through the diffusion control plane is DB-dependent —

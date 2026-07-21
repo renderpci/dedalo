@@ -26,6 +26,9 @@ export interface AccessLogEntry {
 	status: number;
 	/** Wall-clock handler duration in milliseconds. */
 	ms: number;
+	/** Compact request-shape summary (dispatch summarizeRqo) — printed on the
+	 * slow-request warn so a slow line is diagnosable after the fact. */
+	detail?: string;
 }
 
 /** Log one finished API request (call unconditionally; flags are checked here). */
@@ -51,7 +54,8 @@ export function logApiAccess(entry: AccessLogEntry): void {
 		incrementCounter('requests_slow');
 		console.warn(
 			`[slow-request] ${api} took ${ms}ms (threshold ${config.ops.slowRequestMs}ms) ` +
-				`[req ${entry.requestId}, user ${entry.userId ?? 'anon'}]`,
+				`[req ${entry.requestId}, user ${entry.userId ?? 'anon'}]` +
+				(entry.detail !== undefined && entry.detail !== '' ? ` ${entry.detail}` : ''),
 		);
 	}
 }

@@ -273,7 +273,7 @@ function isoTimestampNow(now: Date = new Date()): string {
 
 /**
  * Rebuild and persist the ontology metadata record — component ontology18 of
- * dd0/1, lang lg-nolan (PHP update_ontology_info). Every existing dato item is
+ * dd0/1, lang lg-nolan (PHP update_ontology_info). Every existing data item is
  * overwritten with the same fresh value (normally exactly one); the write goes
  * through saveComponentData (tx-wrapped, TM-audited — the save event fires the
  * cache hub, no extra invalidation wiring here).
@@ -295,7 +295,7 @@ export async function updateOntologyInfo(userId: number): Promise<boolean> {
 		return false;
 	}
 
-	// existing dato items (PHP get_data() ?? [new stdClass()])
+	// existing data items (PHP get_data() ?? [new stdClass()])
 	const record = await readMatrixRecord(table, INFO_SECTION_TIPO, INFO_SECTION_ID);
 	const columnValue = record?.columns[column as keyof typeof record.columns] as Record<
 		string,

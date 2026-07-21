@@ -77,6 +77,17 @@ describe('search-store pre-filter SQL shape', () => {
 		}
 	});
 
+	test('short q (< 3 chars) suppresses the pre-filter (pg_trgm minimum; the 31s autocomplete regression)', () => {
+		for (const q of ['a', 'ro', '==ab', 'ab*']) {
+			const result = buildStringFragment(q, null, false, ctx());
+			if (result === false) continue;
+			expect(JSON.stringify(result)).not.toContain(PREFILTER);
+		}
+		// exactly 3 chars keeps it
+		const sentence = sentenceOf(buildStringFragment('rom', null, false, ctx()));
+		expect(sentence).toContain(PREFILTER);
+	});
+
 	test('LIKE wildcards in a regex-plain q are escaped to literals', () => {
 		const result = buildStringFragment('100%_x', null, false, ctx()) as Fragment;
 		expect(result.sentence).toContain(PREFILTER);

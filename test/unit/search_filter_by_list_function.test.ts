@@ -5,14 +5,14 @@
  *   { q:'"<fct>_<st>_<si>"', path:[…], format:'function',
  *     use_function:'relations_flat_fct_st_si' }
  * and must narrow the search to records whose relation holds a matching
- * locator, via the v7 flat function:
- *   data_relations_flat_fct_st_si(alias.relation) @> '["<key>"]'
+ * locator, via an exact tuple-IN over matrix_relation_index (the v6-era
+ * data_relations_flat_* functions were REMOVED 2026-07-20; the use_function
+ * name survives as wire vocabulary only — WC-012).
  *
  * DELIBERATE functionality-over-parity: the client names the LEGACY v6
- * function (no data_ prefix); this DB defines only the v7 data_* twins
- * (install/db), and the live PHP oracle interpolates the v6 name verbatim →
- * SQL error → 0 results (probed 2026-07-09; TS used to IGNORE the clause →
- * unfiltered results, the reported bug). TS maps through an explicit
+ * function (no data_ prefix); the live PHP oracle interpolated the v6 name
+ * verbatim → SQL error → 0 results (probed 2026-07-09; TS used to IGNORE the
+ * clause → unfiltered results, the reported bug). TS maps through an explicit
  * allowlist and binds the key as a parameter. These cases therefore assert
  * TS ground truth, NOT PHP equality.
  *

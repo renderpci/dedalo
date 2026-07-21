@@ -257,6 +257,51 @@ database_info.prototype.recreate_db_assets = async function() {
 
 
 /**
+* BACKFILL_SEARCH_STORES
+* Truncates and refills the derived search stores (matrix_string_search,
+* matrix_relation_index) from the source matrix tables — the maintenance-panel
+* twin of the backfill the installer and the v6→v7 update run. THE upgrade
+* step for databases created by a previous v7 beta: run recreate_db_assets
+* first (DDL: store tables, sync functions/triggers, indexes, legacy
+* cleanups), then this. Idempotent; later writes stay in sync via triggers.
+*
+* Routed through a web worker with a 1-hour timeout: the two INSERT…SELECT
+* sweeps walk every content table (minutes on multi-GB databases).
+*
+* @returns {Promise<Object>} api_response — standard dd_area_maintenance_api response.
+*   api_response.result carries per-store row counts (…_rows keys).
+*/
+database_info.prototype.backfill_search_stores = async function() {
+
+	// API worker call
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'widget_request',
+			prevent_lock	: true,
+			source			: {
+				type	: 'widget',
+				model	: 'database_info',
+				action	: 'backfill_search_stores'
+			},
+			options	: {}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
+	})
+
+	// remove annoying rqo_string from object
+	if (api_response && api_response.debug && api_response.debug.rqo_string) {
+		delete api_response.debug.rqo_string
+	}
+
+	return api_response
+}//end backfill_search_stores
+
+
+
+/**
 * REBUILD_DB_INDEXES
 * Forces rebuild PostgreSQL main indexes for a given table or all tables.
 *

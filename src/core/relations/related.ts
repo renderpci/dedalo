@@ -11,7 +11,7 @@
  *
  * PHP references: class.component_relation_related.php —
  * get_references_recursive :274 (the traversal; the ROOT call never re-adds
- * the root's own stored dato), get_references :387 (same-section inverse
+ * the root's own stored data), get_references :387 (same-section inverse
  * containment on {section_tipo, section_id, from_component_tipo}, string
  * section_ids), get_calculated_references :152 (the {value, label} wrap with
  * the show-ddo label build), get_type_rel :231.
@@ -63,7 +63,7 @@ export async function getReferences(
 	}));
 }
 
-/** The stored locators of the component at a graph node (its own dato). */
+/** The stored locators of the component at a graph node (its own data). */
 async function readStoredLinks(
 	tipo: string,
 	sectionTipo: string,
@@ -89,7 +89,7 @@ async function readStoredLinks(
  * - the visited cache keys are "section_tipo_section_id_lang";
  * - every call first collects the node's INVERSE references;
  * - MULTIDIRECTIONAL also walks the node's STORED links — added to the
- *   result only on RECURSIVE calls (the root's own dato is already the
+ *   result only on RECURSIVE calls (the root's own data is already the
  *   caller's stored data) — and recurses into both sets;
  * - stored-link elements are reduced to {section_tipo, section_id,
  *   from_component_tipo} (PHP builds a fresh 3-field element).
@@ -137,7 +137,7 @@ export async function getReferencesRecursive(
 				section_id: String(dataLocator.section_id),
 				from_component_tipo: dataLocator.from_component_tipo ?? locator.from_component_tipo,
 			};
-			// Only recursive calls add stored links (the root's own dato is the
+			// Only recursive calls add stored links (the root's own data is the
 			// caller's stored data — never duplicated, PHP :333-336).
 			if (recursion) references.push(element);
 			cache.push(key);

@@ -30,8 +30,8 @@ the process holds no cross-request search state:
 | `identifier_gate.ts` | the injection chokepoint — `assertValidTipo` / `assertValidLang` / `assertValidDataColumn` / `assertValidTipoOrColumn`. |
 | `sql_assembler.ts` | **Phase B** — assemble SELECT / FROM / JOIN / WHERE / ORDER / LIMIT into the final `{sql, params}`; multi-section UNION; per-record projects ACL. |
 | `params.ts` | `ParamsCollector` — the positional `$1..$n` prepared-param list. |
-| `search_related.ts` | the inverse-reference / relation-breakdown engine over the flat-GIN `data_relations_flat_*` functions. |
-| `search_store.ts` | presence gate for the `matrix_string_search` per-value store backing the string contains pre-filter (see [The string-search store](#the-string-search-store-matrix_string_search)). |
+| `search_related.ts` | the inverse-reference / relation-breakdown engine — one btree query over `matrix_relation_index`, the only relation engine (see [The relation index](#the-relation-index-matrix_relation_index)). |
+| `search_store.ts` | coverage gates for the two derived stores: `matrix_string_search` (string contains pre-filter) and `matrix_relation_index` (inverse/related engine + WC-012 translation). Coverage = sync triggers present AND the store backfilled. |
 | `count.ts` | `countSectionRecords()` — the `full_count` variant for one section. |
 
 It sits at the boundary between the request layer and the database:
@@ -205,6 +205,17 @@ clause (empty result — fail closed). Project ids ride as bound params.
     user-scoped results** — omitting it is not a shortcut, it is a full-visibility
     search.
 
+!!! note "Exempt tables"
+    Sections living in the shared vocabulary/infrastructure tables —
+    `matrix_hierarchy`, `matrix_hierarchy_main`, `matrix_list`, `matrix_dd`,
+    `matrix_langs`, `matrix_tools`, `matrix_stats`, `matrix_notes` — are
+    **never project-gated** (`PROJECTS_FILTER_EXEMPT_TABLES` in
+    `sql_assembler.ts`), applied per section in a multi-section UNION. Their
+    records carry no project locators, so gating them would blank the whole
+    thesaurus for every non-admin — exactly what happened for one day when
+    the virtual→real filter fallback landed without this rule (autocomplete
+    regression caught 2026-07-20).
+
 ### The string-search store (`matrix_string_search`)
 
 Accent/case-insensitive **contains** searches on string components compile to a
@@ -260,11 +271,18 @@ string-searchable matrix table — engine writes, scripts and manual SQL all sta
 consistent, in the same transaction as the write. **Fresh installs are born with
 the store**: the seed dump (`install/db/dedalo_install.pgsql.gz`) creates the
 table, function, triggers and indexes and backfills the seed rows at restore
-time. Enabling it on a pre-existing instance (or adding a table to it) is:
-declare/rebuild the assets (the `database_info` maintenance widget), then
-**backfill** that table's rows — the `INSERT … SELECT` lives in the store's
-`ar_table` entry in `db_pg_definitions.json`. Until both steps ran, the
-presence gate keeps searches on the classic scan.
+time. On a pre-existing instance (a database created by a previous beta) the
+server **self-provisions at boot**: `ensureSearchStores()` (db_assets.ts,
+called by startServer after the boot migrations, before serving) detects a
+missing store table / sync trigger, or a store that is empty while its
+sources would produce rows, and runs the targeted DDL + one-time backfill —
+so updating the code and restarting is the whole upgrade. The `database_info`
+maintenance widget keeps the same operations as MANUAL repair actions:
+**Recreate database assets** (full DDL incl. legacy cleanups) and **Backfill
+search stores** (`backfill_search_stores` → `backfillSearchStores()`:
+TRUNCATE + `INSERT … SELECT` per covered table, mirroring the trigger row
+filters). Until provisioning ran, the presence gate keeps string searches on
+the classic scan.
 
 !!! note "Why a side table and not an in-record column"
     Trigram (`pg_trgm`) indexes plain text only, so an in-record column (the
@@ -274,6 +292,71 @@ presence gate keeps searches on the classic scan.
     per value is what makes the recheck a short string and the component scoping
     index-resolvable; `relation_search` works as a column because its `@>`
     semantics are exact-match, which jsonb GIN serves per-element.
+
+### The relation index (`matrix_relation_index`)
+
+The relation twin of the string store: one **typed row per locator** stored in
+any `relation` column —
+
+```text
+matrix_relation_index (
+    section_tipo         varchar(64),  -- the OWNING record
+    section_id           integer,
+    from_component_tipo  varchar(64),  -- the component holding the locator
+    type                 varchar(64),  -- locator type (dd151…)
+    target_section_tipo  varchar(64),  -- the record it points AT
+    target_section_id    integer       -- signed: system refs (user -1) included
+)
+```
+
+— with three btree indexes (target-side for inverse lookups, from-side for the
+sync trigger, type-side for delete-propagation shapes), kept in sync by
+`{table}_relation_index_sync` row triggers on the same content-table list as
+the string store. **Derived and never authoritative**: consumers either treat
+it as an exact-but-rebuildable index behind a coverage gate, or read it for
+integrity reporting.
+
+The index is **the only relation engine** — every consumer runs on it:
+
+| consumer | shape | measured |
+| --- | --- | --- |
+| `search_related.ts` finds/counts (relation_list panels, children, observers, delete propagation, diffusion) | one btree query, `GROUP BY` owner, op AND via `HAVING bool_or` | st_si 14→0.3 ms · fct_st_si 6→0.2 ms · ty_st 1,014→54 ms (vs the retired flat GIN) |
+| breakdown (`findInverseReferenceLocators` — exact locator payload recovery) | tuple-IN row-narrowing + a jsonb cross-join (only the payload side touches the jsonb, so it stays exact) | — |
+| WC-012 `format:'function'` leaves (autocomplete catalogue pre-filter) | exact tuple-IN, the client's flat key parsed into typed bound params (tipos never contain `_`) | — |
+| `database_info.relation_integrity_report` (maintenance) | dangling-target anti-joins + non-integer locator census | first run on MIB: 5,148 dangling refs found |
+
+Coverage (`relationIndexCovers` = triggers present AND the index backfilled —
+or legitimately empty because the source tables hold no locators at all) is a
+**requirement, not an optimization gate**: an uncovered instance fails loudly
+(`requireRelationIndex`) with the remediation — Area Maintenance → Database
+info → **Recreate database assets**, then **Backfill search stores** — instead
+of silently degrading. In practice an uncovered instance should not survive a
+restart: the boot self-provisioning (`ensureSearchStores()`, see the string
+store section above) heals a previous-beta database automatically; the widget
+actions are the manual repair for a damaged store or a boot-provisioning
+failure. Fresh installs and v6→v7 closures arrive with everything in place.
+
+!!! info "The v6-era flat functions are gone (2026-07-20)"
+    Earlier engines answered these queries with four flattening functions
+    (`data_relations_flat_{st_si,fct_st_si,ty_st_si,ty_st}`) that projected
+    the nested `relation` JSONB into flat `"a_b_c"` strings, plus a functional
+    GIN index per function per table (~411 MB, five GIN updates on every
+    relation write). v7 removed the functions, their indexes and every SQL
+    path that called them — the definitions survive only as **drop-only
+    cleanup entries** in `db_pg_definitions.json`, the v6→v7 update drops
+    them (both name families) on upgraded installs, and the fresh-install
+    dump ships without them. The `use_function` names in client SQOs are
+    unchanged: they are wire vocabulary (WC-012), mapped to typed column
+    equalities over the index — see [sqo.md → use_function](../sqo.md#use_function).
+
+!!! warning "This is NOT the v6 `relations` table"
+    v6's table was application-maintained (drift → a dedicated regenerate
+    tool), the join spine of every search, redundant with the JSONB path, and
+    indexed the activity logs (~50M rows) while dropping the locator `type`.
+    This index inverts each decision: DB triggers in the write transaction,
+    never a hot-path join spine (consumers enter by id set or tuple-IN),
+    replaces the flat-GIN redundancy instead of adding to it, content tables
+    only (~9.7M rows at MIB), `type` kept.
 
 ### Multi-section UNION
 
@@ -401,7 +484,7 @@ noted.
 
 | symbol | purpose |
 | --- | --- |
-| `findInverseReferences(...)` | Which records point at a locator — the inverse-relations engine over the flat-GIN `data_relations_flat_*` stored functions. |
+| `findInverseReferences(...)` | Which records point at a locator — one btree query over `matrix_relation_index` (coverage required, `requireRelationIndex`). |
 | `findInverseReferenceLocators(...)` | Exact inverse-locator recovery (the `breakdown` case). |
 | `countInverseReferences(locators, options)` | The relation_list paginator total, with per-`group_by` breakdowns. |
 | `getRelationTables()` / `clearRelatedTablesCache()` | The ontology-enumerated relation-table set (module-level memo). |

@@ -149,6 +149,10 @@ const get_content_data_edit = async function(self) {
 		const recreate_db_assets_container = render_recreate_db_assets(self)
 		content_data.appendChild(recreate_db_assets_container)
 
+		// backfill search stores
+		const backfill_search_stores_container = render_backfill_search_stores(self)
+		content_data.appendChild(backfill_search_stores_container)
+
 		// optimize tables
 		const optimize_tables_container = render_optimize_tables(self)
 		content_data.appendChild(optimize_tables_container)
@@ -696,6 +700,77 @@ const render_rebuild_functions = (self, body_response) => {
 
 	return rebuild_functions_container
 }//end render_rebuild_functions
+
+
+
+/**
+* RENDER_BACKFILL_SEARCH_STORES
+* Builds the "Backfill search stores" action panel.
+* Truncates and refills the two derived search stores (matrix_string_search,
+* matrix_relation_index) from the source matrix tables — the same data the
+* sync triggers maintain on every write. Run it after "Recreate database
+* assets" whenever the stores are missing rows: an instance upgraded from a
+* previous v7 beta, or a restore that skipped them. While a store refills,
+* searches on it wait; with a store empty-but-required the server refuses
+* relation searches loudly, and this action is the remediation it names.
+*
+* @param {Object} self - The database_info widget instance
+* @returns {HTMLElement} backfill_search_stores_container - Section div ready to append
+*/
+const render_backfill_search_stores = (self) => {
+
+	const backfill_search_stores_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'group_container backfill_search_stores_container'
+	})
+
+	// label
+	ui.create_dom_element({
+		element_type	: 'h3',
+		class_name		: 'group_label',
+		inner_html		: get_label.backfill_search_stores || 'Backfill search stores',
+		parent			: backfill_search_stores_container
+	})
+
+	// info_text
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'info_text',
+		inner_html		: 'Rebuilds the derived search stores (matrix_string_search, matrix_relation_index) from the record data. Use after "Recreate database assets" on databases created by a previous beta. Takes minutes on large databases.',
+		parent			: backfill_search_stores_container
+	})
+
+	const body_response = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'body_response'
+	})
+	// dblclick event. clean body_response nodes
+	body_response.addEventListener('dblclick', () => {
+		while (body_response.firstChild) {
+			body_response.removeChild(body_response.firstChild);
+		}
+	})
+
+	self.caller?.init_form({
+		submit_label	: 'Backfill search stores',
+		confirm_text	: get_label.sure || 'Sure?',
+		body_info		: backfill_search_stores_container,
+		body_response	: body_response,
+		on_submit		: async (e) => {
+
+			await handle_submit(
+				body_response,
+				e.target,
+				self.backfill_search_stores
+			)
+		}
+	})
+
+	// add body_response at end
+	backfill_search_stores_container.appendChild(body_response)
+
+	return backfill_search_stores_container
+}//end render_backfill_search_stores
 
 
 

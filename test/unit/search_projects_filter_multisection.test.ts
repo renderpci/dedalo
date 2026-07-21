@@ -125,3 +125,20 @@ describe('multi-section projects filter (non-admin, per-section ACL)', () => {
 		expect(sql).toContain('IMPOSSIBLE VALUE (User without projects)');
 	});
 });
+
+describe('projects-filter table exemption (PHP $ar_tables_skip_projects)', () => {
+	test('thesaurus/vocabulary sections are never project-gated (the empty-thesaurus regression, 2026-07-20)', async () => {
+		if (!dbReady) return;
+		// es1 is virtual over a gated real section — but it lives in
+		// matrix_hierarchy, which PHP auto-exempts from the projects filter.
+		// Before this rule was ported, non-admin autocomplete/thesaurus
+		// searches returned EMPTY once the virtual→real filter fallback landed.
+		const { sql } = await buildSearchSql(sqoOver(['es1']), { principal: NON_ADMIN });
+		expect(sql).not.toContain('relation @>');
+		expect(sql).not.toContain('IMPOSSIBLE VALUE');
+		// mixed matrix + hierarchy: only the matrix-table section is gated
+		const mixed = await buildSearchSql(sqoOver([GATED_A, 'es1']), { principal: NON_ADMIN });
+		expect(mixed.sql).toContain('relation @>'); // numisdata267 branch gated
+		expect(mixed.sql).toMatch(/\(mix\.section_tipo = \$\d+::text\)/); // es1 bare guard
+	});
+});

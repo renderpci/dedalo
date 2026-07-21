@@ -21904,6 +21904,19 @@ body.inspector_resizing {
   text-decoration: underline;
   color: var(--color_orange_dedalo);
 }
+.component_text_area.edit > .content_data > .content_value.editor_container .large_value_preview,
+.component_text_area.edit > .content_data > .content_value > .editor_container .large_value_preview {
+  cursor: pointer;
+}
+.component_text_area.edit > .content_data > .content_value.editor_container .large_value_preview > p:first-child,
+.component_text_area.edit > .content_data > .content_value > .editor_container .large_value_preview > p:first-child {
+  color: var(--color_grey_7);
+}
+.component_text_area.edit > .content_data > .content_value.editor_container .large_value_preview > .large_value_notice,
+.component_text_area.edit > .content_data > .content_value > .editor_container .large_value_preview > .large_value_notice {
+  color: var(--color_orange_dedalo);
+  font-weight: bold;
+}
 .component_text_area.edit > .content_data > .content_value > .ck-source-editing-area {
   background-color: var(--color_grey_15);
   width: calc(100% - 2rem);

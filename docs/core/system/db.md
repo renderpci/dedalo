@@ -255,11 +255,13 @@ column holds the **source** section — never filter TM by `section_tipo='dd15'`
 | --- | --- |
 | `createExtensions()` | Run the `CREATE EXTENSION` sentences (`pg_trgm` / `unaccent` / `btree_gin` — the trigram- and composite-indexes need them). |
 | `rebuildTables()` | Create the declared derived-store tables (`matrix_string_search`) — **add-only** (see below). |
-| `rebuildFunctions()` | Recreate the declared SQL functions (`f_unaccent`, `data_relations_flat_*`, `matrix_string_search_sync` …) via their `CREATE OR REPLACE` adds — **add-only** (see below). |
+| `rebuildFunctions()` | Recreate the declared SQL functions (`f_unaccent`, `matrix_string_search_sync`, `matrix_relation_index_sync` …) via their `CREATE OR REPLACE` adds — **add-only** (see below). Drop-only cleanup entries (empty `add`) execute their recorded `drop` — e.g. the removed v6-era `data_relations_flat_*` family. |
 | `rebuildTriggers()` | Per-declared-table drop + recreate of the row triggers (`{table}_string_search_sync`). |
 | `rebuildConstraints()` / `rebuildIndexes(tables?)` | Per-entry, per-declared-table drop + add of constraints / indexes. |
 | `execMaintenance()` | Run the `ar_maintenance` sentences (`REINDEX TABLE …` etc.). |
 | `recreateDbAssets()` | The full sequence: extensions → tables → constraints → functions → triggers → indexes → maintenance. |
+| `backfillSearchStores(onlyStores?)` | TRUNCATE + refill the derived stores (`matrix_string_search`, `matrix_relation_index`) from the source tables, one transaction per store, then `ANALYZE`. Row filters mirror the sync trigger functions exactly. Exposed as the `backfill_search_stores` widget action (manual repair). |
+| `ensureSearchStores()` | Boot self-provisioning (startServer, after migrations, before serving): cheap catalog probes on a healthy install; a missing store table/trigger triggers the targeted DDL pass, a store empty-with-producible-sources triggers that store's backfill. Heals a previous-beta database on restart with no operator action. |
 | `optimizeTables(tables)` | Per validated table, `REINDEX TABLE CONCURRENTLY` then `VACUUM ANALYZE`. |
 
 `db_pg_definitions.json` declares the extensions, tables, triggers, functions,

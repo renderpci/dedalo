@@ -306,6 +306,28 @@ export interface SearchOptions {
 }
 
 /**
+ * Tables EXEMPT from the projects filter (PHP search::$ar_tables_skip_projects,
+ * class.search.php:115 — set_up() auto-sets skip_projects_filter for them).
+ * These hold shared vocabulary/infrastructure records (thesaurus, ontology
+ * data, langs, tools, notes) that carry NO project locators — gating them
+ * would blank the whole surface for every non-admin. This rule was LATENT in
+ * TS until getComponentFilterTipo gained the virtual→real fallback
+ * (2026-07-19): hierarchy sections then resolved a component_filter through
+ * their real section and non-admin thesaurus searches returned EMPTY
+ * (caught 2026-07-20 while chasing an autocomplete regression).
+ */
+const PROJECTS_FILTER_EXEMPT_TABLES: ReadonlySet<string> = new Set([
+	'matrix_list',
+	'matrix_dd',
+	'matrix_hierarchy',
+	'matrix_hierarchy_main',
+	'matrix_langs',
+	'matrix_tools',
+	'matrix_stats',
+	'matrix_notes',
+]);
+
+/**
  * Projects filter (PHP build_sql_projects_filter) for one section: restrict to
  * records whose component_filter relation references one of the user's
  * projects. Returns '' when the section is not project-gated. A gated section
@@ -358,14 +380,20 @@ async function buildProjectsFilter(
  */
 async function buildMultiSectionProjectsFilter(
 	sectionTipos: string[],
+	gateableSections: string[],
 	alias: string,
 	principal: Principal,
 	params: ParamsCollector,
 ): Promise<string> {
+	const gateable = new Set(gateableSections);
 	const disjuncts: string[] = [];
 	let anyGated = false;
 	for (const sectionTipo of [...new Set(sectionTipos)]) {
-		const sectionPredicate = await buildProjectsFilter(sectionTipo, alias, principal, params);
+		// PHP $ar_tables_skip_projects sections (thesaurus/vocabulary tables)
+		// pass with a bare guard — they are never project-gated.
+		const sectionPredicate = gateable.has(sectionTipo)
+			? await buildProjectsFilter(sectionTipo, alias, principal, params)
+			: '';
 		const guard = `${alias}.section_tipo = ${params.getPlaceholder(sectionTipo)}::text`;
 		if (sectionPredicate === '') {
 			disjuncts.push(`(${guard})`);
@@ -540,12 +568,28 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 	const principal = options.principal;
 	let projectsFilterActive = false;
 	if (principal !== undefined && !principal.isGlobalAdmin && sqo.skip_projects_filter !== true) {
-		const projectsFilter = multiSection
-			? await buildMultiSectionProjectsFilter(sectionTipos, alias, principal, params)
-			: await buildProjectsFilter(mainSectionTipo, alias, principal, params);
-		if (projectsFilter !== '') {
-			whereParts.push(projectsFilter);
-			projectsFilterActive = true;
+		// PHP auto-exemption (search::$ar_tables_skip_projects): shared
+		// vocabulary/infrastructure tables never carry project locators. Applies
+		// per SECTION so a mixed UNION only gates the gateable branches.
+		const gateableSections: string[] = [];
+		for (const sectionTipo of sectionTipos) {
+			const sectionTable = (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix';
+			if (!PROJECTS_FILTER_EXEMPT_TABLES.has(sectionTable)) gateableSections.push(sectionTipo);
+		}
+		if (gateableSections.length > 0) {
+			const projectsFilter = multiSection
+				? await buildMultiSectionProjectsFilter(
+						sectionTipos,
+						gateableSections,
+						alias,
+						principal,
+						params,
+					)
+				: await buildProjectsFilter(mainSectionTipo, alias, principal, params);
+			if (projectsFilter !== '') {
+				whereParts.push(projectsFilter);
+				projectsFilterActive = true;
+			}
 		}
 	}
 

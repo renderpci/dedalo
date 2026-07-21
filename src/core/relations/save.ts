@@ -330,7 +330,7 @@ export async function maintainRelationSearchIndex(
  * relation-family INSERT validation/normalization. The service_autocomplete
  * link_record flow depends on every step (found live 2026-07-09: the generic
  * insert used to persist the picker's raw client locator — paginated_key
- * kept, `type` missing, numeric section_id — polluting the shared dato):
+ * kept, `type` missing, numeric section_id — polluting the shared data):
  *
  *  - section_id + section_tipo required, else the insert is IGNORED;
  *  - autoreference guard (self-link → ignored, PHP :1082);
