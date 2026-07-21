@@ -633,3 +633,21 @@ $updates->$v = new stdClass();
 			'script_vars'	=> [
 			] // Note that only ONE argument encoded is sent
 		];
+
+	// RELATION INDEX : Create the v7 per-locator relation index
+	// (matrix_relation_index: table, sync triggers, three btree indexes) and
+	// BACKFILL it from the migrated data. Same LAST-step rationale as the
+	// string search store: the TS engine gates its inverse-search fast path on
+	// trigger presence + a non-empty index (empty = wrongly excluded rows), so
+	// backfill is part of the correctness contract (stop_on_error=true).
+	// Idempotent: DDL is IF NOT EXISTS / OR REPLACE, backfill is TRUNCATE +
+	// re-insert. NOT the v6 `relations` table: DB-trigger-maintained, three
+	// lean indexes, content tables only, keeps the locator type.
+		$updates->$v->run_scripts[] = (object)[
+			'info'			=> 'Create the v7 relation index (matrix_relation_index): table, sync triggers and btree indexes, backfilled from the migrated data',
+			'script_class'	=> 'v6_to_v7',
+			'script_method'	=> 'create_relation_index_store',
+			'stop_on_error'	=> true,
+			'script_vars'	=> [
+			] // Note that only ONE argument encoded is sent
+		];

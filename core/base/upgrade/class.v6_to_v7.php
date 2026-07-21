@@ -2138,6 +2138,140 @@ class v6_to_v7 {
 
 
 	/**
+	 * CREATE_RELATION_INDEX_STORE
+	 *
+	 * Creates the v7 per-locator relation index `matrix_relation_index`
+	 * (table, sync trigger function, three btree indexes — DDL in
+	 * install/db/matrix_relation_index.sql, all idempotent), installs the
+	 * `{table}_relation_index_sync` row trigger on every existing
+	 * string-searchable matrix table, and BACKFILLS the index from the
+	 * migrated data (TRUNCATE + INSERT..SELECT — safe to re-run). Locators
+	 * whose section_id is not a signed integer are skipped (the TS engine's
+	 * relation integrity report enumerates them).
+	 *
+	 * (!) Must run at the END of the pipeline, after every data migration
+	 * that writes relation values — the TS engine gates its inverse-search
+	 * fast path on trigger presence + a non-empty index, so the backfill is
+	 * part of the correctness contract, not an optimization.
+	 *
+	 * @return bool True when the store, triggers and backfill completed.
+	 */
+	public static function create_relation_index_store() : bool {
+
+		// DDL: table + trigger function + indexes (idempotent)
+			$sql_query = file_get_contents(DEDALO_ROOT_PATH . '/install/db/matrix_relation_index.sql');
+			$result = matrix_db_manager::exec_sql($sql_query);
+			if($result===false) {
+				debug_log(__METHOD__
+					." ERROR: Failed to create matrix_relation_index store (DDL) "
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// Same content-table list as the string search store (log tables
+		// excluded — the v6 relations table indexed activity logs and paid
+		// ~50M rows for it). Tables absent on this installation are skipped.
+			$ar_tables = [
+				'matrix',
+				'matrix_activities',
+				'matrix_dataframe',
+				'matrix_dd',
+				'matrix_hierarchy',
+				'matrix_hierarchy_main',
+				'matrix_indexations',
+				'matrix_langs',
+				'matrix_layout',
+				'matrix_layout_dd',
+				'matrix_list',
+				'matrix_nexus',
+				'matrix_nexus_main',
+				'matrix_notes',
+				'matrix_ontology',
+				'matrix_ontology_main',
+				'matrix_profiles',
+				'matrix_projects',
+				'matrix_test',
+				'matrix_tools',
+				'matrix_users'
+			];
+
+		// Backfill is TRUNCATE + re-insert so a re-run never duplicates rows.
+			$result = matrix_db_manager::exec_sql('TRUNCATE public.matrix_relation_index;');
+			if($result===false) {
+				debug_log(__METHOD__
+					." ERROR: Failed to truncate matrix_relation_index before backfill "
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		$conn = DBi::_getConnection();
+		foreach ($ar_tables as $table) {
+
+			// skip tables not present on this installation
+				$exists_result = pg_query_params(
+					$conn,
+					"SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' AND table_name = $1",
+					[$table]
+				);
+				if ($exists_result===false || pg_num_rows($exists_result)===0) {
+					continue;
+				}
+
+			// CLI feedback
+				if (running_in_cli()) {
+					if (!isset(common::$pdata)) {
+						common::$pdata = new stdClass();
+					}
+					common::$pdata->msg = " Creating relation index trigger + backfill for table: $table";
+					print_cli(common::$pdata);
+				}
+
+			$escaped_table = pg_escape_identifier($conn, $table);
+
+			// trigger (drop + create = idempotent re-run)
+				$sql_query = sanitize_query('
+					DROP TRIGGER IF EXISTS "'.$table.'_relation_index_sync" ON '.$escaped_table.';
+					CREATE TRIGGER "'.$table.'_relation_index_sync"
+					AFTER INSERT OR DELETE OR UPDATE OF relation, section_id, section_tipo ON '.$escaped_table.'
+					FOR EACH ROW EXECUTE FUNCTION public.matrix_relation_index_sync();
+				');
+				$result = matrix_db_manager::exec_sql($sql_query);
+				if($result===false) {
+					debug_log(__METHOD__
+						." ERROR: Failed to create relation index trigger on table \'$table\' "
+						, logger::ERROR
+					);
+					return false;
+				}
+
+			// backfill this table\'s locators
+				$sql_query = sanitize_query('
+					INSERT INTO public.matrix_relation_index (section_tipo, section_id, from_component_tipo, type, target_section_tipo, target_section_id)
+					SELECT m.section_tipo, m.section_id, kv.key, e->>\'type\', e->>\'section_tipo\', (e->>\'section_id\')::int
+					FROM '.$escaped_table.' m, jsonb_each(m.relation) kv, jsonb_array_elements(kv.value) e
+					WHERE m.relation IS NOT NULL
+					  AND jsonb_typeof(kv.value) = \'array\'
+					  AND e->>\'section_tipo\' IS NOT NULL
+					  AND e->>\'section_id\' ~ \'^-?[0-9]+$\';
+				');
+				$result = matrix_db_manager::exec_sql($sql_query);
+				if($result===false) {
+					debug_log(__METHOD__
+						." ERROR: Failed to backfill matrix_relation_index from table \'$table\' "
+						, logger::ERROR
+					);
+					return false;
+				}
+		}
+
+		return true;
+	}//end create_relation_index_store
+
+
+
+	/**
 	 * DROP_LEGACY_DATOS_COLUMN
 	 *
 	 * Removes the legacy 'datos' column from the specified tables after successful data migration.

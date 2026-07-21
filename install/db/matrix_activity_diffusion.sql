@@ -168,20 +168,9 @@ CREATE INDEX IF NOT EXISTS matrix_activity_diffusion_string_gin_idx ON matrix_ac
 -- relation
 CREATE INDEX IF NOT EXISTS matrix_activity_diffusion_relation_gin_idx ON matrix_activity_diffusion USING gin (relation jsonb_path_ops);
 
--- relation locators
-CREATE INDEX IF NOT EXISTS matrix_activity_diffusion_relation_locators_gin_idx ON matrix_activity_diffusion USING gin (jsonb_path_query_array(relation, '$.*[*]'::jsonpath) jsonb_path_ops);
-
--- relation flat st_si
-CREATE INDEX IF NOT EXISTS matrix_activity_diffusion_relation_flat_st_si_gin_idx ON matrix_activity_diffusion USING gin (data_relations_flat_st_si(relation) jsonb_path_ops);
-
--- relation flat fct_st_si
-CREATE INDEX IF NOT EXISTS matrix_activity_diffusion_relation_flat_fct_st_si_gin_idx ON matrix_activity_diffusion USING gin (data_relations_flat_fct_st_si(relation) jsonb_path_ops);
-
--- relation flat ty_st
-CREATE INDEX IF NOT EXISTS matrix_activity_diffusion_relation_flat_ty_st_gin_idx ON matrix_activity_diffusion USING gin (data_relations_flat_ty_st(relation) jsonb_path_ops);
-
--- relation flat ty_st_si
-CREATE INDEX IF NOT EXISTS matrix_activity_diffusion_relation_flat_ty_st_si_gin_idx ON matrix_activity_diffusion USING gin (data_relations_flat_ty_st_si(relation) jsonb_path_ops);
+-- (relation_locators + the four data_relations_flat_* functional GIN indexes
+--  were REMOVED 2026-07-20: matrix_relation_index is the only relation engine
+--  in v7 — see the drop-only entries in core/db/db_pg_definitions.php)
 
 -- date
 CREATE INDEX IF NOT EXISTS matrix_activity_diffusion_date_gin_idx ON matrix_activity_diffusion USING gin (date jsonb_path_ops);

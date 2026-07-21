@@ -42,9 +42,9 @@
  * RELATION COLUMN JSONB SCHEMA
  * The matrix family stores inter-record links in the `relation` JSONB column with this shape:
  *   {"<component_tipo>": [{"type": "<dd_tipo>", "section_tipo": "<st>", "section_id": "<id>"}, …]}
- * The flat-relation stored functions (data_relations_flat_*) project parts of this structure
- * into jsonb_agg arrays of compact strings so that GIN indexes can answer "does this row link
- * to X?" without full document scans.
+ * "Does this row link to X?" is answered by matrix_relation_index (typed per-locator
+ * side table, created by create_relation_index_store at the end of the v6→v7 update).
+ * The v6-era flat-relation functions that served this are removed (drop-only entries below).
  *
  * Consumed by: core/db/class.db_tasks.php (rebuild_indexes, rebuild_constraints,
  *              rebuild_functions, rebuild_extensions, run_maintenance),
@@ -131,39 +131,10 @@ $make_gin_index = function(string $column, array $tables, string $sample, string
 	];
 };
 
-/**
- * MAKE_FLAT_REL_INDEX
- * Produces a GIN index definition object for a flat-relation stored function
- * applied to the `relation` JSONB column. Each flat-relation function (e.g.
- * data_relations_flat_st_si) projects parts of the deeply nested relation
- * structure into a compact jsonb_agg of strings, making @> containment queries
- * O(log n) instead of full-document scans.
- *
- * The index is a functional GIN index: CREATE INDEX … USING gin (func(relation) …).
- * The stored function must be declared IMMUTABLE for PostgreSQL to allow this.
- * The four available projections are:
- *   st_si     — section_tipo + '_' + section_id           e.g. "es1_65"
- *   fct_st_si — from_component_tipo + '_' + st_si         e.g. "oh33_dd64_1"
- *   ty_st     — relation type + '_' + section_tipo         e.g. "dd151_dd64"
- *   ty_st_si  — relation type + '_' + section_tipo + '_' + section_id  e.g. "dd151_dd64_1"
- *
- * @param string  $func        Name of the PostgreSQL function that flattens the relation column
- * @param string  $suffix      Short identifier used in the index name (e.g. 'st_si')
- * @param array   $tables      Table names that receive the index
- * @param string  $sample_val  Example flat-relation string used in the sample query
- * @param string  $info        Human-readable description of the index's purpose
- * @return object              stdClass with tables/add/drop/sample/name/info keys
- */
-$make_flat_rel_index = function(string $func, string $suffix, array $tables, string $sample_val, string $info) : object {
-	return (object)[
-		'tables' => $tables,
-		'add'    => "CREATE INDEX IF NOT EXISTS {\$table}_relation_flat_{$suffix}_gin_idx ON {\$table} USING gin ({$func}(relation) jsonb_path_ops);",
-		'drop'   => "DROP INDEX IF EXISTS {\$table}_relation_flat_{$suffix}_gin_idx",
-		'sample' => "SELECT * FROM matrix WHERE {$func}(relation) @> '[\"{$sample_val}\"]'::jsonb LIMIT 10",
-		'name'   => "all_matrix_relation_flat_{$suffix}_gin_idx",
-		'info'   => $info
-	];
-};
+// MAKE_FLAT_REL_INDEX factory REMOVED (v7 flat-relation retirement, 2026-07-20):
+// the flat-function GIN indexes are never created — matrix_relation_index is
+// the only relation engine. Cleanup happens via the drop-only function entries
+// above (DROP FUNCTION … CASCADE removes any dependent functional indexes).
 
 // ── Extensions ─────────────────────────────────────────────────────────────────
 // PostgreSQL extensions that must exist before any function, index, or operator
@@ -206,73 +177,44 @@ $ar_function[] = (object)[
 	'info' => 'Used to remove accents from a text string. Useful for case-insensitive and accent-insensitive searches.'
 ];
 
-// data_relations_flat_st_si — section_tipo + section_id projection
-// Unnests the `relation` column (keyed by component_tipo) and concatenates
-// section_tipo and section_id with '_'. Result: ["es1_65", "oh1_3", …].
-// Used by the st_si flat GIN index to answer: "give me all rows that link to
-// section_tipo=oh1 section_id=3", regardless of which component holds the link.
-// DROP uses CASCADE to also remove dependent functional indexes before re-creation.
+// data_relations_flat_* — REMOVED (v7 flat-relation retirement, 2026-07-20).
+// The four v6-era flattening functions (st_si, fct_st_si, ty_st_si, ty_st)
+// projected the nested relation column into flat "a_b_c" strings for GIN
+// containment. v7 replaced them outright with matrix_relation_index (typed,
+// trigger-maintained, created and backfilled by create_relation_index_store
+// at the end of this update) — the v7 engine ships NO flat-function path.
+// These entries are drop-only cleanup: rebuild_functions() executes the drop
+// (CASCADE also removes any dependent functional GIN indexes, including the
+// ones a previous run of this update may have created) and re-creates
+// nothing. Each drop also removes the v6-NAMED twin (relations_flat_*, no
+// data_ prefix) that a closed v6 installation may still carry.
 $ar_function[] = (object)[
-	'add' => '
-		CREATE OR REPLACE FUNCTION data_relations_flat_st_si(data jsonb) RETURNS jsonb LANGUAGE sql IMMUTABLE AS $$
-		SELECT jsonb_agg(section_tipo || \'_\' || section_id)
-		FROM (SELECT rel->>\'section_tipo\' as section_tipo, rel->>\'section_id\' as section_id
-			FROM jsonb_each(data) as component_data, jsonb_array_elements(component_data.value) as rel) t $$;
-	',
-	'drop' => 'DROP FUNCTION IF EXISTS data_relations_flat_st_si CASCADE',
-	'sample' => "SELECT * FROM matrix WHERE data_relations_flat_st_si(relation) @> '[\"oh1_3\"]' ORDER BY section_id ASC LIMIT 10",
+	'add' => '',
+	'drop' => 'DROP FUNCTION IF EXISTS data_relations_flat_st_si CASCADE; DROP FUNCTION IF EXISTS relations_flat_st_si CASCADE',
+	'sample' => '-- Removed 2026-07-20: matrix_relation_index is the only relation engine',
 	'name' => 'data_relations_flat_st_si',
-	'info' => 'Aggregates relation section_tipo and section_id into a flat string format (e.g., oh1_3) for easier indexing and searching.'
+	'info' => 'REMOVED 2026-07-20. Query shape lives on as (target_section_tipo, target_section_id) over matrix_relation_index. Drop-only cleanup.'
 ];
-
-// data_relations_flat_fct_st_si — from_component_tipo + section_tipo + section_id projection
-// Includes the source component_tipo (the JSONB object key) in the flat string, enabling
-// queries scoped to a specific relation component: "which rows have component oh33 pointing
-// to oh1_3?" Result: ["oh33_oh1_3", "oh25_dd64_1", …].
 $ar_function[] = (object)[
-	'add' => '
-		CREATE OR REPLACE FUNCTION data_relations_flat_fct_st_si(data jsonb) RETURNS jsonb LANGUAGE sql IMMUTABLE AS $$
-		SELECT jsonb_agg(from_component_tipo || \'_\' || section_tipo || \'_\' || section_id)
-		FROM (SELECT component_data.key as from_component_tipo, rel->>\'section_tipo\' as section_tipo, rel->>\'section_id\' as section_id
-			FROM jsonb_each(data) as component_data, jsonb_array_elements(component_data.value) as rel) t $$;
-	',
-	'drop' => 'DROP FUNCTION IF EXISTS data_relations_flat_fct_st_si CASCADE',
-	'sample' => "SELECT * FROM matrix WHERE data_relations_flat_fct_st_si(relation) @> '[\"oh25_oh1_3\"]' ORDER BY section_id ASC LIMIT 10",
+	'add' => '',
+	'drop' => 'DROP FUNCTION IF EXISTS data_relations_flat_fct_st_si CASCADE; DROP FUNCTION IF EXISTS relations_flat_fct_st_si CASCADE',
+	'sample' => '-- Removed 2026-07-20: matrix_relation_index is the only relation engine',
 	'name' => 'data_relations_flat_fct_st_si',
-	'info' => 'Aggregates relation from_component_tipo, section_tipo and section_id into a flat string format (e.g., oh25_oh1_3) for easier indexing and searching.'
+	'info' => 'REMOVED 2026-07-20. Query shape lives on as (from_component_tipo, target_section_tipo, target_section_id) over matrix_relation_index. Drop-only cleanup.'
 ];
-
-// data_relations_flat_ty_st_si — relation type + section_tipo + section_id projection
-// The `type` field of each locator is a dd ontology tipo (e.g. dd151) that classifies the
-// relation semantics. This projection enables queries like: "give me all rows where a dd151
-// relation points to oh1 section_id=3", supporting type-aware traversal.
 $ar_function[] = (object)[
-	'add' => '
-		CREATE OR REPLACE FUNCTION data_relations_flat_ty_st_si(data jsonb) RETURNS jsonb LANGUAGE sql IMMUTABLE AS $$
-		SELECT jsonb_agg(type || \'_\' || section_tipo || \'_\' || section_id)
-		FROM (SELECT rel->>\'type\' as type, rel->>\'section_tipo\' as section_tipo, rel->>\'section_id\' as section_id
-			FROM jsonb_each(data) as component_data, jsonb_array_elements(component_data.value) as rel) t $$;
-	',
-	'drop' => 'DROP FUNCTION IF EXISTS data_relations_flat_ty_st_si CASCADE',
-	'sample' => "SELECT * FROM matrix WHERE data_relations_flat_ty_st_si(relation) @> '[\"dd151_oh1_3\"]' ORDER BY section_id ASC LIMIT 10",
+	'add' => '',
+	'drop' => 'DROP FUNCTION IF EXISTS data_relations_flat_ty_st_si CASCADE; DROP FUNCTION IF EXISTS relations_flat_ty_st_si CASCADE',
+	'sample' => '-- Removed 2026-07-20: matrix_relation_index is the only relation engine',
 	'name' => 'data_relations_flat_ty_st_si',
-	'info' => 'Aggregates relation type, section_tipo and section_id into a flat string format (e.g., dd151_oh1_3) for easier indexing and searching.'
+	'info' => 'REMOVED 2026-07-20. Query shape lives on as (type, target_section_tipo, target_section_id) over matrix_relation_index. Drop-only cleanup.'
 ];
-
-// data_relations_flat_ty_st — relation type + section_tipo projection (no section_id)
-// Coarser than ty_st_si: answers "does this row have a dd151 relation to any record in oh1?"
-// Useful for cross-section analytics that do not need the specific record id.
 $ar_function[] = (object)[
-	'add' => '
-		CREATE OR REPLACE FUNCTION data_relations_flat_ty_st(data jsonb) RETURNS jsonb LANGUAGE sql IMMUTABLE AS $$
-		SELECT jsonb_agg(type || \'_\' || section_tipo)
-		FROM (SELECT rel->>\'type\' as type, rel->>\'section_tipo\' as section_tipo
-			FROM jsonb_each(data) as component_data, jsonb_array_elements(component_data.value) as rel) t $$;
-	',
-	'drop' => 'DROP FUNCTION IF EXISTS data_relations_flat_ty_st CASCADE',
-	'sample' => "SELECT * FROM matrix WHERE data_relations_flat_ty_st(relation) @> '[\"dd151_oh1\"]' ORDER BY section_id ASC LIMIT 10",
+	'add' => '',
+	'drop' => 'DROP FUNCTION IF EXISTS data_relations_flat_ty_st CASCADE; DROP FUNCTION IF EXISTS relations_flat_ty_st CASCADE',
+	'sample' => '-- Removed 2026-07-20: matrix_relation_index is the only relation engine',
 	'name' => 'data_relations_flat_ty_st',
-	'info' => 'Aggregates relation type and section_tipo into a flat string format (e.g., dd151_oh1) for easier indexing and searching.'
+	'info' => 'REMOVED 2026-07-20. Query shape lives on as (type, target_section_tipo) over matrix_relation_index. Drop-only cleanup.'
 ];
 
 // check_array_component — legacy v6, kept for drop compatibility
@@ -652,17 +594,8 @@ $ar_index[] = (object)[
 //     rebuild_indexes() must be called AFTER rebuild_functions() when the functions
 //     have been modified; otherwise CREATE INDEX fails because the IMMUTABLE function
 //     the index references does not yet exist or has an incompatible signature.
-//
-// Projection summary (see stored function doc-blocks above for full details):
-//   st_si     — "es1_65"          section_tipo + section_id; cross-component target lookup
-//   fct_st_si — "oh33_dd64_1"     from_component + st_si; component-scoped target lookup
-//   ty_st     — "dd151_dd64"      relation type + section_tipo; type-aware cross-section search
-//   ty_st_si  — "dd151_dd64_1"    relation type + section_tipo + section_id; full precision
-
-$ar_index[] = $make_flat_rel_index('data_relations_flat_st_si',     'st_si',     $TABLES_MATRIX_ALL, 'dd64_1',      'Used to search relations across all components data with a flat text of the relation such as es1_65');
-$ar_index[] = $make_flat_rel_index('data_relations_flat_fct_st_si', 'fct_st_si', $TABLES_MATRIX_ALL, 'oh33_dd64_1', 'Used to search relations across all components data with a flat text of the relation such as oh33_dd64_1');
-$ar_index[] = $make_flat_rel_index('data_relations_flat_ty_st',     'ty_st',     $TABLES_MATRIX_ALL, 'dd151_dd64',  'Used to search relations across all components data with a flat text of the relation such as dd151_dd64');
-$ar_index[] = $make_flat_rel_index('data_relations_flat_ty_st_si',  'ty_st_si',  $TABLES_MATRIX_ALL, 'dd151_dd64_1','Used to search relations across all components data with a flat text of the relation such as dd151_dd64_1');
+// (flat-relation GIN index declarations removed 2026-07-20 — see the
+// retirement note on the drop-only data_relations_flat_* function entries)
 
 // ── Table-specific indexes ─────────────────────────────────────────────────────
 // Indexes targeting individual tables that have bespoke access patterns not
