@@ -247,6 +247,9 @@ const SEARCH_STORE_BACKFILLS: {
 	store: string;
 	triggerEntry: string;
 	insert: (table: string) => string;
+	/** LIMIT-1 "would the backfill produce a row from this table?" probe —
+	 * the SAME row filter as `insert` (and as the sync trigger function). */
+	probe: (table: string) => string;
 }[] = [
 	{
 		store: 'matrix_string_search',
@@ -258,6 +261,11 @@ const SEARCH_STORE_BACKFILLS: {
 			FROM "${table}" m, jsonb_each(m.string) AS kv, jsonb_array_elements(kv.value) AS e
 			WHERE m.string IS NOT NULL AND jsonb_typeof(kv.value) = 'array'
 			  AND e->>'value' IS NOT NULL AND e->>'value' <> ''`,
+		probe: (table) => `
+			SELECT 1 AS one
+			FROM "${table}" m, jsonb_each(m.string) AS kv, jsonb_array_elements(kv.value) AS e
+			WHERE m.string IS NOT NULL AND jsonb_typeof(kv.value) = 'array'
+			  AND e->>'value' IS NOT NULL AND e->>'value' <> '' LIMIT 1`,
 	},
 	{
 		store: 'matrix_relation_index',
@@ -269,6 +277,11 @@ const SEARCH_STORE_BACKFILLS: {
 			FROM "${table}" m, jsonb_each(m.relation) AS kv, jsonb_array_elements(kv.value) AS e
 			WHERE m.relation IS NOT NULL AND jsonb_typeof(kv.value) = 'array'
 			  AND e->>'section_tipo' IS NOT NULL AND e->>'section_id' ~ '^-?[0-9]+$'`,
+		probe: (table) => `
+			SELECT 1 AS one
+			FROM "${table}" m, jsonb_each(m.relation) AS kv, jsonb_array_elements(kv.value) AS e
+			WHERE m.relation IS NOT NULL AND jsonb_typeof(kv.value) = 'array'
+			  AND e->>'section_tipo' IS NOT NULL AND e->>'section_id' ~ '^-?[0-9]+$' LIMIT 1`,
 	},
 ];
 
@@ -282,11 +295,16 @@ const SEARCH_STORE_BACKFILLS: {
  * or empty store — an empty store with data present makes the coverage gates
  * refuse the store), then ANALYZE for planner statistics. Idempotent; later
  * writes stay in sync via the triggers. Callers must clear the search-store
- * cache afterwards (the widget action does).
+ * cache afterwards (the widget action does). `onlyStores` narrows the run
+ * (the boot ensure refills just the store that needs it); omitted = both.
  */
-export async function backfillSearchStores(): Promise<AssetResponse> {
+export async function backfillSearchStores(onlyStores?: string[]): Promise<AssetResponse> {
 	const response = newResponse();
-	for (const { store, triggerEntry, insert } of SEARCH_STORE_BACKFILLS) {
+	const selected =
+		onlyStores === undefined
+			? SEARCH_STORE_BACKFILLS
+			: SEARCH_STORE_BACKFILLS.filter(({ store }) => onlyStores.includes(store));
+	for (const { store, triggerEntry, insert } of selected) {
 		if (!(await tableExists(store))) {
 			response.errors.push(`Store ${store} does not exist — run recreate_db_assets first`);
 			continue;
@@ -319,6 +337,123 @@ export async function backfillSearchStores(): Promise<AssetResponse> {
 		response.success++;
 	}
 	return finishResponse(response);
+}
+
+/** What ensureSearchStores found and did — logged by the boot caller. */
+export interface EnsureSearchStoresResult {
+	/** True = nothing to do (the fast path: a handful of catalog probes). */
+	healthy: boolean;
+	/** DDL pass ran (missing store table or sync trigger detected). */
+	ddlApplied: boolean;
+	/** Stores refilled by this run, with their final row counts. */
+	backfilled: Record<string, number>;
+	errors: unknown[];
+}
+
+/**
+ * Boot-time self-provisioning of the derived search stores (owner directive
+ * 2026-07-21: a database from a previous beta must heal on restart, not via a
+ * runbook). Called by startServer AFTER runBootMigrations, BEFORE serving —
+ * the same "a request never observes a half-migrated schema" placement. The
+ * numbered-migrations runner is NOT the home for this: the store DDL lives in
+ * db_pg_definitions.json (single source of truth — a migration file would be
+ * a second drifting copy) and the backfill is conditional on data presence.
+ *
+ * Healthy installs pay ~4 cheap catalog probes. When something is missing:
+ * - missing store table or sync trigger → the targeted DDL pass (extensions,
+ *   tables, functions — including the drop-only legacy cleanups — triggers,
+ *   store indexes), all idempotent;
+ * - a store empty while its sources would produce rows (the previous-beta
+ *   signature; probe mirrors the trigger row filter) → backfill of THAT store.
+ * The one-time backfill blocks the boot for minutes on a large database —
+ * deliberate: until it ran, relation searches would only fail loudly anyway
+ * (requireRelationIndex). Failures are returned, not thrown; the caller logs
+ * and serves (S1-15 fault-tolerant boot posture).
+ */
+export async function ensureSearchStores(): Promise<EnsureSearchStoresResult> {
+	const result: EnsureSearchStoresResult = {
+		healthy: true,
+		ddlApplied: false,
+		backfilled: {},
+		errors: [],
+	};
+
+	// 1. DDL probe: both store tables + every sync trigger on every EXISTING
+	// declared table (one catalog query for tables, one for triggers).
+	const triggerEntries = (definitions.ar_trigger as AssetEntry[]).filter((entry) =>
+		SEARCH_STORE_BACKFILLS.some(({ triggerEntry }) => triggerEntry === entry.name),
+	);
+	const declaredTables = [...new Set(triggerEntries.flatMap((entry) => entry.tables ?? []))];
+	const storeTables = SEARCH_STORE_BACKFILLS.map(({ store }) => store);
+	const presentRows = (await sql.unsafe(
+		`SELECT table_name FROM information_schema.tables
+		 WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+		   AND table_name IN (SELECT jsonb_array_elements_text($1::text::jsonb))`,
+		[JSON.stringify([...declaredTables, ...storeTables])],
+	)) as { table_name: string }[];
+	const present = new Set(presentRows.map((row) => row.table_name));
+
+	let ddlNeeded = storeTables.some((store) => !present.has(store));
+	if (!ddlNeeded) {
+		// expected trigger names: {table}{suffix} per entry, existing tables only
+		const expected: string[] = [];
+		for (const entry of triggerEntries) {
+			const suffix = entry.name.replace(/^all_matrix/, ''); // all_matrix_string_search_sync → _string_search_sync
+			for (const table of entry.tables ?? []) {
+				if (present.has(table)) expected.push(`${table}${suffix}`);
+			}
+		}
+		const triggerRows = (await sql.unsafe(
+			`SELECT count(*)::int AS n FROM pg_trigger
+			 WHERE NOT tgisinternal
+			   AND tgname IN (SELECT jsonb_array_elements_text($1::text::jsonb))`,
+			[JSON.stringify(expected)],
+		)) as { n: number }[];
+		ddlNeeded = Number(triggerRows[0]?.n ?? 0) !== expected.length;
+	}
+
+	if (ddlNeeded) {
+		result.healthy = false;
+		result.ddlApplied = true;
+		const passes = [
+			await createExtensions(),
+			await rebuildTables(),
+			await rebuildFunctions(),
+			await rebuildTriggers(),
+			await rebuildIndexes(storeTables),
+		];
+		for (const pass of passes) result.errors.push(...pass.errors);
+	}
+
+	// 2. Backfill probe per store: empty + sources would produce rows.
+	const needBackfill: string[] = [];
+	for (const { store, triggerEntry, probe } of SEARCH_STORE_BACKFILLS) {
+		if (!(await tableExists(store))) continue; // DDL failed above — already in errors
+		const any = (await sql.unsafe(`SELECT 1 AS one FROM "${store}" LIMIT 1`, [])) as unknown[];
+		if (any.length > 0) continue;
+		const entry = (definitions.ar_trigger as AssetEntry[]).find(
+			(candidate) => candidate.name === triggerEntry,
+		);
+		for (const table of entry?.tables ?? []) {
+			if (!present.has(table)) continue;
+			const rows = (await sql.unsafe(cleanSql(probe(table)), [])) as unknown[];
+			if (rows.length > 0) {
+				needBackfill.push(store);
+				break;
+			}
+		}
+	}
+
+	if (needBackfill.length > 0) {
+		result.healthy = false;
+		const backfill = await backfillSearchStores(needBackfill);
+		result.errors.push(...backfill.errors);
+		for (const store of needBackfill) {
+			result.backfilled[store] = Number(backfill[`${store}_rows`] ?? 0);
+		}
+	}
+
+	return result;
 }
 
 /**
