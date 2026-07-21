@@ -67,15 +67,20 @@ describe('late row lookup SQL shape', () => {
 		expect(builtSql).toMatch(/ORDER BY\s+\w+\.section_id ASC;$/);
 	});
 
-	test('deep offset with a CUSTOM order keeps the windowed shape (no rewrite)', async () => {
+	test('deep offset with a CUSTOM order flattens (no window, no page rewrite)', async () => {
+		// Single-section + no joins → DISTINCT ON is a no-op, so a custom order
+		// is emitted inline (ORDER BY + LIMIT/OFFSET directly, no main_select
+		// wrapper — the wrapper forced a full-table materialization before LIMIT).
 		const { sql: builtSql } = await buildSearchSql({
 			section_tipo: [SECTION],
 			limit: 30,
 			offset: THRESHOLD,
 			order: [{ direction: 'DESC', path: [{ component_tipo: 'id' }] }],
 		} as never);
-		expect(builtSql).toContain('main_select');
+		expect(builtSql).not.toContain('main_select');
+		expect(builtSql).not.toContain('DISTINCT ON');
 		expect(builtSql).not.toContain('page ON');
+		expect(builtSql).toMatch(/ORDER BY\s+id DESC NULLS LAST, section_id ASC\nLIMIT 30 OFFSET \d+;$/);
 	});
 
 	test('multi-section deep offset keeps the plain shape (no rewrite)', async () => {

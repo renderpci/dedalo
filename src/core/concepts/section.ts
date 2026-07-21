@@ -105,6 +105,17 @@ export const ACTIVITY_SECTION_TIPO = 'dd542';
 /** Max permission the Activity section ever grants a caller (PHP :1929). */
 export const ACTIVITY_SECTION_PERMISSION_CAP = 1;
 
+/**
+ * Activity's "When" component (dd547, component_date). matrix_activity is
+ * APPEND-ONLY, so When-order ≡ insertion order ≡ section_id order: the When
+ * list column stays sortable but its order path maps to the section_id
+ * column (order_path.ts), served by the existing indexes. Every other dd542
+ * column is non-sortable (structure_context resolveSortable) — an arbitrary
+ * component sort is an unindexable full-table jsonb sort, unusable at
+ * production scale (minutes on a 33M-row log). WC-044.
+ */
+export const ACTIVITY_WHEN_TIPO = 'dd547';
+
 /** The Time Machine section (dd15) — the audit-history log, consultation-only. */
 export const TIME_MACHINE_SECTION_TIPO = 'dd15';
 

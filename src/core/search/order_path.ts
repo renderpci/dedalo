@@ -26,6 +26,7 @@
  * list is served by read_tm.ts, not this generic path.
  */
 
+import { ACTIVITY_SECTION_TIPO, ACTIVITY_WHEN_TIPO } from '../concepts/section.ts';
 import { termByTipo } from '../ontology/labels.ts';
 import { getModelByTipo, getNode } from '../ontology/resolver.ts';
 import { currentDataLang } from '../resolve/request_lang.ts';
@@ -214,6 +215,15 @@ export async function buildOrderPath(
 	from?: { componentTipo: string; sectionTipo: string },
 	resolvedConfig?: OrderPathResolvedConfig,
 ): Promise<OrderPathStep[]> {
+	// Activity "When" (WC-044): matrix_activity is append-only, so When-order
+	// ≡ section_id order. Emit the direct-column shortcut instead of the
+	// component step — the assembler orders by the indexed section_id column,
+	// never the dd547 date jsonpath (a full-table sort at production scale).
+	// name/model stay cosmetic (the client renders them in the header only).
+	if (sectionTipo === ACTIVITY_SECTION_TIPO && componentTipo === ACTIVITY_WHEN_TIPO) {
+		const step = await stepFor(componentTipo, sectionTipo);
+		return [{ ...step, component_tipo: 'section_id' }];
+	}
 	const model = await getModelByTipo(componentTipo);
 
 	let path: OrderPathStep[];

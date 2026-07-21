@@ -8,9 +8,12 @@
  *
  * Load-bearing build order (normative comment at class.search.php:1174):
  *   FROM → SELECT → ORDER (may add sort-select aliases) → WHERE
- * The `use_window` branch is the key shape decision: a custom ORDER (or join)
- * forces the `SELECT * FROM (…) main_select` wrapper with the outer ORDER BY /
- * LIMIT / OFFSET; otherwise LIMIT/OFFSET sit inline on the DISTINCT-ON query.
+ * Shape decision: a custom ORDER on a single-section, no-join query FLATTENS
+ * (ORDER BY + LIMIT inline, no DISTINCT ON — section_id is unique there, and
+ * PHP's windowed wrapper forced a full-table materialization before LIMIT);
+ * a custom ORDER with joins or multi-section keeps the PHP
+ * `SELECT * FROM (…) main_select` wrapper with the outer ORDER BY / LIMIT /
+ * OFFSET; otherwise LIMIT/OFFSET sit inline on the DISTINCT-ON query.
  *
  * SCOPE NOTES (header re-dated 2026-07-07, S2-45 — the old UNCOVERED list
  * was stale; coverage-state lists live in rewrite/LEDGER.md, never here): the
@@ -449,6 +452,39 @@ const projectsDensityCache = createDataCache<string, boolean>((cache, sectionTip
 const sectionTotalCache = createDataCache<string, number>((cache, sectionTipo) => {
 	cache.delete(sectionTipo);
 });
+// Schema property (data events never change an index definition) — keep entries.
+const uniqueSectionKeyCache = createDataCache<string, boolean>(() => {});
+
+/**
+ * TRUE when the table carries a full (non-partial) UNIQUE index on exactly
+ * (section_id, section_tipo) — the precondition that makes DISTINCT ON
+ * (section_id) a no-op under a single-tipo predicate (the flattenOrder /
+ * plainCount reasoning). Ordinary matrix tables have it; the versioned/derived
+ * ones (matrix_time_machine, matrix_structurations, …) do NOT and must keep
+ * the windowed shape. Probed once per table per process (schema is
+ * boot-stable; an assets rebuild recreates the same keys).
+ */
+export async function tableHasUniqueSectionKey(table: string): Promise<boolean> {
+	const cached = uniqueSectionKeyCache.get(table);
+	if (cached !== undefined) return cached;
+	const rows = (await sql.unsafe(
+		`SELECT EXISTS (
+			SELECT 1 FROM pg_index i
+			JOIN pg_class t ON t.oid = i.indrelid
+			WHERE t.relname = $1
+			  AND i.indisunique AND i.indisvalid AND i.indpred IS NULL
+			  AND i.indnkeyatts = 2
+			  AND ARRAY(
+			    SELECT a.attname::text FROM pg_attribute a
+			    WHERE a.attrelid = t.oid AND a.attnum = ANY (i.indkey::int2[])
+			  ) @> ARRAY['section_id','section_tipo']
+		) AS ok`,
+		[table],
+	)) as { ok: boolean }[];
+	const ok = rows[0]?.ok === true;
+	uniqueSectionKeyCache.set(table, ok);
+	return ok;
+}
 
 /** Cheap per-section row total (index-only count, cached, event-evicted). */
 async function sectionRowTotal(
@@ -611,6 +647,24 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 	const orderClauses = await buildOrderClauses(sqo, alias, selectExtra, joinFragments);
 	const orderDefault = [`${alias}.section_id ASC`];
 
+	// Flatten the explicit-order shape when DISTINCT ON is provably a no-op:
+	// single-section + no join fragments + the table's UNIQUE (section_id,
+	// section_tipo) key (probed — matrix_time_machine/matrix_structurations
+	// lack it and keep the windowed shape) + the single section_tipo predicate
+	// make section_id unique across the scanned rows. The PHP windowed wrapper
+	// `SELECT * FROM (DISTINCT ON … ORDER BY section_id) ORDER BY <sort> LIMIT n`
+	// then only forces Postgres to materialize EVERY row before the LIMIT can
+	// apply (measured on a 33M-row matrix_activity: ~10 s for a section_id sort
+	// vs 1 ms flattened; minutes for a jsonb component sort). Same rows, same
+	// order, same columns — ORDER BY + LIMIT are applied inline instead.
+	// (A multi-hop ORDER path adds its join chain to joinFragments, so it is
+	// excluded here automatically.)
+	const flattenOrder =
+		orderClauses.length > 0 &&
+		!multiSection &&
+		joinFragments.size === 0 &&
+		(await tableHasUniqueSectionKey(matrixTable));
+
 	// --- SELECT ----------------------------------------------------------------
 	const select: string[] = [];
 	if (sqo.full_count === true) {
@@ -626,7 +680,7 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 		);
 	} else {
 		select.push(
-			removeDistinct
+			removeDistinct || flattenOrder
 				? `${alias}.section_id`
 				: `DISTINCT ON (${alias}.section_id) ${alias}.section_id`,
 		);
@@ -666,8 +720,8 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 		return { sql: `${queryInside};`, params: params.toArray() };
 	}
 
-	// --- inner default ORDER BY (always, PHP :1250) --------------------------------
-	const innerOrder = orderDefault
+	// --- inner ORDER BY (always, PHP :1250; flattened → the explicit sort) ---------
+	const innerOrder = (flattenOrder ? orderClauses : orderDefault)
 		.map((clause) => (multiSection ? stripAliasPrefix(clause) : clause))
 		.join(', ');
 	queryInside += `\nORDER BY ${innerOrder}`;
@@ -676,6 +730,12 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 	// null-safe: the client may send explicit nulls (treated as unset).
 	const limitSql = sqo.limit != null && sqo.limit !== 'all' ? `\nLIMIT ${Number(sqo.limit)}` : '';
 	const offsetSql = sqo.offset != null && sqo.offset > 0 ? ` OFFSET ${Number(sqo.offset)}` : '';
+
+	if (flattenOrder) {
+		// The sort aliases in selectExtra are projected by this same SELECT, so
+		// the ORDER BY references resolve without the wrapper.
+		return { sql: `${queryInside}${limitSql}${offsetSql};`, params: params.toArray() };
+	}
 
 	const useWindow = orderClauses.length > 0;
 	if (!useWindow) {

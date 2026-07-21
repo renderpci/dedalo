@@ -28,7 +28,12 @@
 import { config } from '../../config/config.ts';
 import { getComponentModel } from '../components/registry.ts';
 import { isAreaModel } from '../concepts/area.ts';
-import { isConsultationOnlySection, isGrouperModel } from '../concepts/section.ts';
+import {
+	ACTIVITY_SECTION_TIPO,
+	ACTIVITY_WHEN_TIPO,
+	isConsultationOnlySection,
+	isGrouperModel,
+} from '../concepts/section.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import { labelByTipo } from '../ontology/labels.ts';
@@ -173,9 +178,15 @@ const NOTES_TEXT_TIPO = 'rsc329';
  * component_info (false) and autocomplete/security_tools to their sortable
  * targets. The single per-TIPO exception is the notes-text tipo.
  */
-function resolveSortable(model: string, tipo: string): boolean {
+function resolveSortable(model: string, tipo: string, sectionTipo: string): boolean {
 	if (!model.startsWith('component_')) return false;
 	if (tipo === NOTES_TEXT_TIPO) return false;
+	// Activity (dd542, append-only log): only the When column sorts, and its
+	// order path maps to section_id (order_path.ts — WC-044). Any other
+	// component sort is an unindexable full-table jsonb sort over the
+	// biggest table in the system. Same policy as the TM list, which maps
+	// header sorts to real columns and refuses the rest (read_tm.ts).
+	if (sectionTipo === ACTIVITY_SECTION_TIPO && tipo !== ACTIVITY_WHEN_TIPO) return false;
 	return getComponentModel(model)?.sortable ?? true;
 }
 
@@ -351,8 +362,9 @@ async function buildCore(
 		tools: [] as unknown[], // filled at STAMP time (user-gated — never cached)
 		buttons: [] as unknown[], // filled at STAMP time by stampSectionContext (sections)
 		// list-column sortability (PHP build_structure_context_core :1752) — a
-		// request-invariant function of model+tipo, so it lives in the cached core.
-		sortable: resolveSortable(model, tipo),
+		// request-invariant function of model+tipo+section (the cache key carries
+		// section_tipo), so it lives in the cached core.
+		sortable: resolveSortable(model, tipo, sectionTipo),
 		configSourceProperties,
 		structuralView,
 	};
