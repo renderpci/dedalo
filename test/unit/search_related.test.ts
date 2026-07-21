@@ -1,11 +1,12 @@
 /**
  * Phase 3/6 gate: the search_related inverse-reference engine.
  *
- * Expectations are DB-DERIVED (the flat-GIN containment re-expressed as
- * direct SQL over every relation-capable table), so the gate validates the
- * engine against ground truth rather than fixtures: the full inverse set of
- * a well-referenced record, from_component_tipo narrowing, target-section
- * narrowing, and a real write→find→cleanup round-trip on the test section.
+ * Expectations are DB-DERIVED (raw jsonb locator enumeration over every
+ * relation-capable table — deliberately NOT the engine's own
+ * matrix_relation_index, so the store is validated against the source of
+ * truth): the full inverse set of a well-referenced record,
+ * from_component_tipo narrowing, target-section narrowing, and a real
+ * write→find→cleanup round-trip on the test section.
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
@@ -25,9 +26,12 @@ async function groundTruthCount(): Promise<number> {
 	let total = 0;
 	for (const table of tables) {
 		const rows = (await sql.unsafe(
-			`SELECT count(*)::int AS c FROM "${table}"
-			 WHERE data_relations_flat_st_si(relation) @> $1::text::jsonb`,
-			[JSON.stringify([`${TARGET.section_tipo}_${TARGET.section_id}`])],
+			`SELECT count(*)::int AS c FROM "${table}" t
+			 WHERE EXISTS (
+				SELECT 1 FROM jsonb_each(t.relation) AS kv, jsonb_array_elements(kv.value) AS e
+				WHERE jsonb_typeof(kv.value) = 'array'
+				  AND e->>'section_tipo' = $1 AND e->>'section_id' = $2)`,
+			[TARGET.section_tipo, String(TARGET.section_id)],
 		)) as { c: number }[];
 		total += rows[0]?.c ?? 0;
 	}
@@ -35,22 +39,28 @@ async function groundTruthCount(): Promise<number> {
 }
 
 describe('search_related (inverse references, Phase 3/6 gate)', () => {
+	// generous timeout: the ground truth deliberately enumerates raw jsonb
+	// across every relation-capable table (no index — that is the point)
 	test('finds the full inverse set of a well-referenced record', async () => {
 		const expected = await groundTruthCount();
 		expect(expected).toBeGreaterThan(0);
 		const hits = await findInverseReferences([TARGET]);
 		expect(hits.length).toBe(expected);
-		// Every hit REALLY holds a locator to the target (spot-check first 5).
+		// Every hit REALLY holds a locator to the target (spot-check first 5,
+		// against the raw jsonb — never the index the engine itself used).
 		for (const hit of hits.slice(0, 5)) {
 			const rows = (await sql.unsafe(
-				`SELECT 1 FROM "${hit.table}"
-				 WHERE section_tipo = $1 AND section_id = $2
-				   AND data_relations_flat_st_si(relation) @> $3::text::jsonb`,
-				[hit.section_tipo, hit.section_id, JSON.stringify([`${TARGET.section_tipo}_1`])],
+				`SELECT 1 FROM "${hit.table}" t
+				 WHERE t.section_tipo = $1 AND t.section_id = $2
+				   AND EXISTS (
+					SELECT 1 FROM jsonb_each(t.relation) AS kv, jsonb_array_elements(kv.value) AS e
+					WHERE jsonb_typeof(kv.value) = 'array'
+					  AND e->>'section_tipo' = $3 AND e->>'section_id' = $4)`,
+				[hit.section_tipo, hit.section_id, TARGET.section_tipo, String(TARGET.section_id)],
 			)) as unknown[];
 			expect(rows.length).toBe(1);
 		}
-	});
+	}, 120000);
 
 	test('target-section narrowing keeps only the requested owners', async () => {
 		const all = await findInverseReferences([TARGET]);

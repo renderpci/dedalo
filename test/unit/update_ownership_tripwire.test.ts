@@ -71,6 +71,8 @@ const ENGINE_NATIVE: Record<string, string> = {
 	'database_info.rebuild_user_stats': 'shared-DB maintenance through the TS db_assets path',
 	'database_info.optimize_tables': 'shared-DB maintenance through the TS db_assets path',
 	'database_info.rebuild_db_functions': 'shared-DB maintenance through the TS db_assets path',
+	'database_info.relation_integrity_report':
+		'read-only matrix_relation_index audit (dangling locators / non-integer ids); admin-gated at the maintenance dispatch',
 	'database_info.rebuild_db_constraints': 'shared-DB maintenance through the TS db_assets path',
 	'database_info.rebuild_db_indexes': 'shared-DB maintenance through the TS db_assets path',
 	'database_info.recreate_db_assets': 'shared-DB maintenance through the TS db_assets path',
