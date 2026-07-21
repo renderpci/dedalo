@@ -80,7 +80,7 @@ The SQO is the query language, but not every SQO is equally trusted. **A client-
     - **q_operator** : `string` operator to apply to q,  **optional**, ex: '<'
     - **path** : `array of objects` array of components creating a sequential path to the component to be searched,  **mandatory**, ex: `[{"section_tipo":"oh1", "component_tipo":"oh24"},{"section_tipo":"rsc197", "component_tipo":"rsc85"}]}`
     - **format** : `string` ('direct' || 'array_elements' || 'typeof' || 'column' || 'in_column' || 'function') used to change the WHERE format **optional**, ex: 'direct'
-    - **use_function** : `string` if format is function, use_function defines the PostgreSQL function to use. **optional**, ex: 'data_relations_flat_fct_st_si'
+    - **use_function** : `string` if format is function, use_function names the flat-locator variant (legacy wire vocabulary — translated to a `matrix_relation_index` lookup, see [use_function](#use_function)). **optional**, ex: 'data_relations_flat_fct_st_si'
     - **q_split** : `bool` (true || false) defines whether q is split into multiple WHERE queries. Default : true **optional**, ex: 'false'
     - **unaccent** : `bool` (true || false) defines whether q uses the unaccent function to remove accent characters in WHERE **optional**, ex: 'false'
     - **type** : `string` ('jsonb' || 'string')  defines the type of data to search **optional**, ex: 'jsonb'
@@ -119,7 +119,7 @@ filter                  : {
                                                             component_tipo
                                                         }]
                                         format      : 'direct' || 'array_elements' || 'typeof' || 'column' || 'in_column' || 'function' // string, used to change the WHERE format
-                                        use_function : 'data_relations_flat_fct_st_si' // if format is function, use_function defines the PostgreSQL function to use.
+                                        use_function : 'data_relations_flat_fct_st_si' // if format is function, use_function names the flat-locator variant (translated to a matrix_relation_index lookup)
                                         q_split     : true || false // bool, defines whether q is split into multiple WHERE queries
                                         unaccent    : true || false // bool, defines whether q uses the unaccent function in WHERE
                                         type        : 'jsonb' || 'string' // defines the type of data to search
@@ -630,14 +630,35 @@ Both are valid SQL, but with a different approach.
 
 ##### use_function
 
-Defines the PostgreSQL function used in the query. This parameter is used in combination with the [format](#format) parameter set to `function`: `format` tells the SQO that it will use a function, and `use_function` defines the name of the function to use.
-The function is applied to the WHERE statement, enclosing q and the main operator.
+Names the flat-locator VARIANT used in the query. This parameter is used in combination with the [format](#format) parameter set to `function`: `format` tells the SQO that the leaf carries a flattened locator key, and `use_function` names which variant the key encodes.
 
-Definition: `string` if format is function, use_function defines the PostgreSQL function to use. **optional**, ex: 'data_relations_flat_fct_st_si'
+Definition: `string` if format is function, use_function names the flat-locator variant. **optional**, ex: 'data_relations_flat_fct_st_si'
+
+!!! warning "The names are wire vocabulary, not database functions (removed 2026-07-20)"
+    The `use_function` names date from the v6-era design, where each variant WAS
+    a PostgreSQL flattening function (`data_relations_flat_*`) backed by a
+    functional GIN index per table. Those functions and indexes are **removed**:
+    v7 answers every relation query from **`matrix_relation_index`**, the typed
+    per-locator side table maintained by row triggers (see
+    [search — The relation index](system/search.md#the-relation-index-matrix_relation_index)).
+    The names survive **only as wire vocabulary** — clients keep sending them
+    unchanged, and the engine maps them through an allowlist to typed column
+    equalities. Nothing is ever interpolated into SQL, and no function is called.
+
+Variant → `matrix_relation_index` columns:
+
+| `use_function` (with or without the `data_` prefix) | flat key shape | translated to |
+| --- | --- | --- |
+| `relations_flat_st_si` | `<st>_<si>` | `target_section_tipo, target_section_id` |
+| `relations_flat_fct_st_si` | `<fct>_<st>_<si>` | `from_component_tipo, target_section_tipo, target_section_id` |
+| `relations_flat_ty_st_si` | `<ty>_<st>_<si>` | `type, target_section_tipo, target_section_id` |
+| `relations_flat_ty_st` | `<ty>_<st>` | `type, target_section_tipo` |
+
+The key splits unambiguously on `_` because tipos never contain underscores.
 
 Example: search the `Type` section [numisdata3](https://dedalo.dev/ontology/numisdata3) with the `Catalog` [numisdata309](https://dedalo.dev/ontology/numisdata309) value = 1.
 
-This search usually uses a locator like this:
+This search targets a locator like this:
 
 ```json
 {
@@ -647,9 +668,7 @@ This search usually uses a locator like this:
 }
 ```
 
-But in SQL it is hard to index all locators, because they are not a static combination of properties; in these cases a flat version (a string version of the locator) can be used to speed up the search.
-
-The locator above can be flattened as `numisdata309_numisdata300_1` and used to search in the indexed function `data_relations_flat_fct_st_si` like this:
+The locator is flattened as `numisdata309_numisdata300_1` and sent as:
 
 ```json
 {
@@ -672,18 +691,22 @@ The locator above can be flattened as `numisdata309_numisdata300_1` and used to 
 }
 ```
 
-It is rendered as SQL:
+It is rendered as SQL (an exact tuple-IN over the relation index — equivalence, not a superset, because the tuple carries the owner's `section_tipo`; every value rides as a bound parameter):
 
 ```sql
 SELECT *
 FROM matrix AS nu3
 WHERE (nu3.section_tipo='numisdata3') AND nu3.section_id>0  AND (
-   data_relations_flat_fct_st_si(nu3.relation)@> '["numisdata309_numisdata300_1"]')
+   (nu3.section_tipo, nu3.section_id) IN (
+      SELECT r.section_tipo, r.section_id FROM matrix_relation_index r
+      WHERE r.from_component_tipo = 'numisdata309'
+        AND r.target_section_tipo = 'numisdata300'
+        AND r.target_section_id   = 1))
 ORDER BY nu3.section_id ASC
 LIMIT 10
 ```
 
-This search is around 100 times faster than the same search with the full locator.
+The btree lookup is served in fractions of a millisecond regardless of database size — and, unlike the retired GIN containment, the planner gets honest row statistics from the typed columns.
 
 !!! note "About the flat nomenclature"
     - `fct` : contraction of `from_component_tipo`
@@ -691,15 +714,7 @@ This search is around 100 times faster than the same search with the full locato
     - `si`  : contraction of `section_id`
     - `ty`  : contraction of `type`
 
-Functions implemented (installed by `db_pg_definitions`; vendored 1:1 as JSON at `src/core/db/db_pg_definitions.json` for the TS server):
-
-- `data_relations_flat_st_si(relation)`
-- `data_relations_flat_fct_st_si(relation)`
-- `data_relations_flat_ty_st_si(relation)`
-- `data_relations_flat_ty_st(relation)`
-- `f_unaccent`
-
-Each takes the record's `relation` JSONB column and returns the flattened key array; a functional GIN index on each expression (`{$table}_relation_flat_*_gin_idx`) is what makes the `@>` containment test fast. `format: 'function'`/`use_function` as a generic SQO filter-leaf format is **not wired into `conformFilter()`** (`src/core/search/conform.ts`) — these functions are used server-side today only through the dedicated `mode: 'related'` inverse-reference engine (`src/core/search/search_related.ts`), not through this generic leaf format. Do not rely on `format: 'function'` as a client-sent generic filter leaf.
+The allowlist (both the v6 client spelling without the `data_` prefix and the prefixed form) lives in `conformFilter()` (`src/core/search/conform.ts`); an unknown `use_function` throws, a malformed key contributes nothing. This is the WC-012 wire-contract entry.
 
 ##### q_split
 
@@ -1173,36 +1188,16 @@ Example: count the sections `Objects` [tch1](https://dedalo.dev/ontology/tch1) a
 ```
 
 ```sql
-SELECT section_tipo, COUNT(*) as full_count
-FROM "matrix"
-WHERE (data_relations_flat_st_si(relation) @> '["dc1_1"]'::jsonb)
-    AND (section_tipo = 'tch1' OR section_tipo = 'rsc205')
-GROUP BY section_tipo
-UNION ALL
-SELECT section_tipo, COUNT(*) as full_count
-FROM "matrix_activities"
-WHERE (data_relations_flat_st_si(relation) @> '["dc1_1"]'::jsonb)
-    AND (section_tipo = 'tch1' OR section_tipo = 'rsc205')
-GROUP BY section_tipo
-UNION ALL
-SELECT section_tipo, COUNT(*) as full_count
-FROM "matrix_hierarchy"
-WHERE (data_relations_flat_st_si(relation) @> '["dc1_1"]'::jsonb)
-    AND (section_tipo = 'tch1' OR section_tipo = 'rsc205')
-GROUP BY section_tipo
-UNION ALL
-SELECT section_tipo, COUNT(*) as full_count
-FROM "matrix_list"
-WHERE (data_relations_flat_st_si(relation) @> '["dc1_1"]'::jsonb)
-    AND (section_tipo = 'tch1' OR section_tipo = 'rsc205')
-GROUP BY section_tipo
-UNION ALL
-SELECT section_tipo, COUNT(*) as full_count
-FROM "matrix_test"
-WHERE (data_relations_flat_st_si(relation) @> '["dc1_1"]'::jsonb)
-    AND (section_tipo = 'tch1' OR section_tipo = 'rsc205')
-GROUP BY section_tipo
+SELECT r.section_tipo, COUNT(DISTINCT r.section_id)::int AS full_count
+FROM matrix_relation_index r
+WHERE (r.target_section_tipo = 'dc1' AND r.target_section_id = 1)
+  AND r.section_tipo IN ('tch1', 'rsc205')
+GROUP BY r.section_tipo
 ```
+
+(One btree query over the relation index replaces the per-table `UNION ALL`
+of the retired flat-function containment; `COUNT(DISTINCT r.section_id)`
+dedups locator multiplicity exactly the way per-row containment did.)
 
 The query result is something like:
 
@@ -1464,29 +1459,16 @@ Example: give me the section Types [numisdata3](https://dedalo.dev/ontology/numi
 }
 ```
 
-The SQL equivalent:
+The SQL equivalent (owner discovery runs on the relation index; the matching
+records are then read from their matrix tables by `(section_tipo, section_id)`):
 
 ```sql
-SELECT section_tipo, section_id, string, relation, number, date, iri, geo, media, misc
-FROM "matrix"
-WHERE (data_relations_flat_st_si(relation) @> '["rsc170_69"]'::jsonb)
-    AND (section_tipo = 'numisdata3')
-UNION ALL
-SELECT section_tipo, section_id, string, relation, number, date, iri, geo, media, misc
-FROM "matrix_activities"
-WHERE (data_relations_flat_st_si(relation) @> '["rsc170_69"]'::jsonb)
-    AND (section_tipo = 'numisdata3')
-UNION ALL
-SELECT section_tipo, section_id, string, relation, number, date, iri, geo, media, misc
-FROM "matrix_hierarchy"
-WHERE (data_relations_flat_st_si(relation) @> '["rsc170_69"]'::jsonb)
-    AND (section_tipo = 'numisdata3')
-UNION ALL
-SELECT section_tipo, section_id, string, relation, number, date, iri, geo, media, misc
-FROM "matrix_list"
-WHERE (data_relations_flat_st_si(relation) @> '["rsc170_69"]'::jsonb)
-    AND (section_tipo = 'numisdata3')
-ORDER BY section_tipo, section_id ASC
+SELECT r.section_tipo, r.section_id
+FROM matrix_relation_index r
+WHERE (r.target_section_tipo = 'rsc170' AND r.target_section_id = 69)
+  AND r.section_tipo IN ('numisdata3')
+GROUP BY r.section_tipo, r.section_id
+ORDER BY r.section_id ASC
 LIMIT 10
 OFFSET 0;
 ```
@@ -1661,25 +1643,16 @@ Example 1: `breakdown` set to `false`
 }
 ```
 
-The SQL equivalent:
+The SQL equivalent (owner discovery on the relation index — the `type` field
+is a first-class typed column there, which is exactly what the retired
+`ty_st_si` flat variant existed to fake):
 
 ```sql
-SELECT section_tipo, section_id, string, relation, number, date, iri, geo, media, misc
-FROM "matrix"
-WHERE ( data_relations_flat_ty_st_si(relation) @> '["dd96_rsc197_7"]'::jsonb )
-UNION ALL
-SELECT section_tipo, section_id, string, relation, number, date, iri, geo, media, misc
-FROM "matrix_activities"
-WHERE ( data_relations_flat_ty_st_si(relation) @> '["dd96_rsc197_7"]'::jsonb )
-UNION ALL
-SELECT section_tipo, section_id, string, relation, number, date, iri, geo, media, misc
-FROM "matrix_hierarchy"
-WHERE ( data_relations_flat_ty_st_si(relation) @> '["dd96_rsc197_7"]'::jsonb )
-UNION ALL
-SELECT section_tipo, section_id, string, relation, number, date, iri, geo, media, misc
-FROM "matrix_list"
-WHERE ( data_relations_flat_ty_st_si(relation) @> '["dd96_rsc197_7"]'::jsonb )
-ORDER BY section_tipo, section_id ASC;
+SELECT r.section_tipo, r.section_id
+FROM matrix_relation_index r
+WHERE (r.target_section_tipo = 'rsc197' AND r.target_section_id = 7 AND r.type = 'dd96')
+GROUP BY r.section_tipo, r.section_id
+ORDER BY r.section_id ASC;
 ```
 
 and the result is 1 row with the full audiovisual section data:
@@ -1705,37 +1678,21 @@ Example 2: `breakdown` set to `true`
 }
 ```
 
-The SQL equivalent:
+The SQL equivalent — breakdown is the ONE shape that still walks the `relation`
+JSONB (the result contract needs the EXACT locator payload, which only the
+jsonb has), but its row narrowing is a tuple-IN over the relation index:
 
 ```sql
-SELECT section_tipo, section_id, locator_data
-FROM "matrix"
-cross join jsonb_path_query(relation, '$.*[*]') as locator_data
-WHERE ( data_relations_flat_ty_st_si(relation) @> '["dd96_rsc197_7"]'::jsonb
+SELECT section_tipo, section_id, '{table}' AS "table", locator_data
+FROM "{table}"
+CROSS JOIN jsonb_path_query(relation, '$.*[*]') AS locator_data
+WHERE ( (section_tipo, section_id) IN (
+        SELECT r.section_tipo, r.section_id FROM matrix_relation_index r
+        WHERE r.target_section_tipo = 'rsc197' AND r.target_section_id = 7 AND r.type = 'dd96')
     AND locator_data->>'type' = 'dd96'
     AND locator_data->>'section_tipo' = 'rsc197'
     AND locator_data->>'section_id' = '7' )
-UNION ALL
-SELECT section_tipo, section_id, string, relation, number, date, iri, geo, media, misc
-FROM "matrix_activities"
-WHERE ( data_relations_flat_ty_st_si(relation) @> '["dd96_rsc197_7"]'::jsonb
-    AND locator_data->>'type' = 'dd96'
-    AND locator_data->>'section_tipo' = 'rsc197'
-    AND locator_data->>'section_id' = '7' )
-UNION ALL
-SELECT section_tipo, section_id, string, relation, number, date, iri, geo, media, misc
-FROM "matrix_hierarchy"
-WHERE ( data_relations_flat_ty_st_si(relation) @> '["dd96_rsc197_7"]'::jsonb
-    AND locator_data->>'type' = 'dd96'
-    AND locator_data->>'section_tipo' = 'rsc197'
-    AND locator_data->>'section_id' = '7' )
-UNION ALL
-SELECT section_tipo, section_id, string, relation, number, date, iri, geo, media, misc
-FROM "matrix_list"
-WHERE ( data_relations_flat_ty_st_si(relation) @> '["dd96_rsc197_7"]'::jsonb
-    AND locator_data->>'type' = 'dd96'
-    AND locator_data->>'section_tipo' = 'rsc197'
-    AND locator_data->>'section_id' = '7' )
+-- … UNION ALL over each relation-capable matrix table …
 ORDER BY section_tipo, section_id ASC;
 ```
 
