@@ -322,7 +322,7 @@ The index is **the only relation engine** — every consumer runs on it:
 | --- | --- | --- |
 | `search_related.ts` finds/counts (relation_list panels, children, observers, delete propagation, diffusion) | one btree query, `GROUP BY` owner, op AND via `HAVING bool_or` | st_si 14→0.3 ms · fct_st_si 6→0.2 ms · ty_st 1,014→54 ms (vs the retired flat GIN) |
 | breakdown (`findInverseReferenceLocators` — exact locator payload recovery) | tuple-IN row-narrowing + a jsonb cross-join (only the payload side touches the jsonb, so it stays exact) | — |
-| WC-012 `format:'function'` leaves (autocomplete catalogue pre-filter) | exact tuple-IN, the client's flat key parsed into typed bound params (tipos never contain `_`) | — |
+| relation filter leaves (autocomplete catalogue pre-filter): canonical `format:'relation'` (q = partial locator object(s)) + the DEPRECATED `format:'function'` reader (WC-012) | exact tuple-IN over typed bound params — see [sqo.md → Relation filter leaves](../sqo.md#relation-filter-leaves-format-relation) | — |
 | `database_info.relation_integrity_report` (maintenance) | dangling-target anti-joins + non-integer locator census | first run on MIB: 5,148 dangling refs found |
 
 Coverage (`relationIndexCovers` = triggers present AND the index backfilled —
@@ -345,9 +345,11 @@ failure. Fresh installs and v6→v7 closures arrive with everything in place.
     path that called them — the definitions survive only as **drop-only
     cleanup entries** in `db_pg_definitions.json`, the v6→v7 update drops
     them (both name families) on upgraded installs, and the fresh-install
-    dump ships without them. The `use_function` names in client SQOs are
-    unchanged: they are wire vocabulary (WC-012), mapped to typed column
-    equalities over the index — see [sqo.md → use_function](../sqo.md#use_function).
+    dump ships without them. The client-side vocabulary was cleaned the next
+    day (WC-012 amendment 3): the shipped client emits `format:'relation'`
+    with a partial-locator `q`; the old `format:'function'` /
+    `use_function:'relations_flat_*'` spelling survives only as a deprecated
+    reader — see [sqo.md → Relation filter leaves](../sqo.md#relation-filter-leaves-format-relation).
 
 !!! warning "This is NOT the v6 `relations` table"
     v6's table was application-maintained (drift → a dedicated regenerate

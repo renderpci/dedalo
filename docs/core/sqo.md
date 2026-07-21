@@ -79,8 +79,8 @@ The SQO is the query language, but not every SQO is equally trusted. **A client-
     - **q** : `string` string to search **mandatory**, ex: 'John'
     - **q_operator** : `string` operator to apply to q,  **optional**, ex: '<'
     - **path** : `array of objects` array of components creating a sequential path to the component to be searched,  **mandatory**, ex: `[{"section_tipo":"oh1", "component_tipo":"oh24"},{"section_tipo":"rsc197", "component_tipo":"rsc85"}]}`
-    - **format** : `string` ('direct' || 'array_elements' || 'typeof' || 'column' || 'in_column' || 'function') used to change the WHERE format **optional**, ex: 'direct'
-    - **use_function** : `string` if format is function, use_function names the flat-locator variant (legacy wire vocabulary — translated to a `matrix_relation_index` lookup, see [use_function](#use_function)). **optional**, ex: 'data_relations_flat_fct_st_si'
+    - **format** : `string` ('direct' || 'array_elements' || 'typeof' || 'column' || 'in_column' || 'relation' || 'function' (deprecated)) used to change the WHERE format **optional**, ex: 'direct'
+    - **use_function** : `string` DEPRECATED (format:'function' only) — names the legacy flat-locator variant; new emitters use `format:'relation'` with a locator-object q (see [Relation filter leaves](#relation-filter-leaves-format-relation)). **optional**, ex: 'relations_flat_fct_st_si'
     - **q_split** : `bool` (true || false) defines whether q is split into multiple WHERE queries. Default : true **optional**, ex: 'false'
     - **unaccent** : `bool` (true || false) defines whether q uses the unaccent function to remove accent characters in WHERE **optional**, ex: 'false'
     - **type** : `string` ('jsonb' || 'string')  defines the type of data to search **optional**, ex: 'jsonb'
@@ -118,7 +118,7 @@ filter                  : {
                                                             section_tipo
                                                             component_tipo
                                                         }]
-                                        format      : 'direct' || 'array_elements' || 'typeof' || 'column' || 'in_column' || 'function' // string, used to change the WHERE format
+                                        format      : 'direct' || 'array_elements' || 'typeof' || 'column' || 'in_column' || 'relation' || 'function' (deprecated) // string, used to change the WHERE format
                                         use_function : 'data_relations_flat_fct_st_si' // if format is function, use_function names the flat-locator variant (translated to a matrix_relation_index lookup)
                                         q_split     : true || false // bool, defines whether q is split into multiple WHERE queries
                                         unaccent    : true || false // bool, defines whether q uses the unaccent function in WHERE
@@ -554,7 +554,7 @@ Defines the parse method applied to the SQO when it is transformed into SQL.
 
 The SQO can be interpreted as different SQL for different uses; the format property controls how it is parsed and which kind of search is performed.
 
-Definition : `string` ('direct' || 'array_elements' || 'typeof' || 'column' || 'in_column' || 'function') used to change the WHERE format **optional**, ex: 'direct'
+Definition : `string` ('direct' || 'array_elements' || 'typeof' || 'column' || 'in_column' || 'relation' || 'function' (deprecated)) used to change the WHERE format **optional**, ex: 'direct'
 
 Example: search ids 1 and 6 of interviews [oh1](https://dedalo.dev/ontology/oh1).
 
@@ -628,47 +628,24 @@ LIMIT 10
 
 Both are valid SQL, but with a different approach.
 
-##### use_function
+##### Relation filter leaves (format 'relation')
 
-Names the flat-locator VARIANT used in the query. This parameter is used in combination with the [format](#format) parameter set to `function`: `format` tells the SQO that the leaf carries a flattened locator key, and `use_function` names which variant the key encodes.
+Filters records whose `relation` column holds a locator matching the given
+fields. `q` is a **partial locator object** — the same vocabulary as
+`filter_by_locators` in `mode:'related'` — or an **array of them** (an array
+means OR within the leaf: match any of the locators).
 
-Definition: `string` if format is function, use_function names the flat-locator variant. **optional**, ex: 'data_relations_flat_fct_st_si'
+Allowed `q` fields (all validated; unknown fields, invalid tipos or a
+non-integer `section_id` are rejected loudly):
 
-!!! warning "The names are wire vocabulary, not database functions (removed 2026-07-20)"
-    The `use_function` names date from the v6-era design, where each variant WAS
-    a PostgreSQL flattening function (`data_relations_flat_*`) backed by a
-    functional GIN index per table. Those functions and indexes are **removed**:
-    v7 answers every relation query from **`matrix_relation_index`**, the typed
-    per-locator side table maintained by row triggers (see
-    [search — The relation index](system/search.md#the-relation-index-matrix_relation_index)).
-    The names survive **only as wire vocabulary** — clients keep sending them
-    unchanged, and the engine maps them through an allowlist to typed column
-    equalities. Nothing is ever interpolated into SQL, and no function is called.
-
-Variant → `matrix_relation_index` columns:
-
-| `use_function` (with or without the `data_` prefix) | flat key shape | translated to |
+| field | matches | `matrix_relation_index` column |
 | --- | --- | --- |
-| `relations_flat_st_si` | `<st>_<si>` | `target_section_tipo, target_section_id` |
-| `relations_flat_fct_st_si` | `<fct>_<st>_<si>` | `from_component_tipo, target_section_tipo, target_section_id` |
-| `relations_flat_ty_st_si` | `<ty>_<st>_<si>` | `type, target_section_tipo, target_section_id` |
-| `relations_flat_ty_st` | `<ty>_<st>` | `type, target_section_tipo` |
+| `section_tipo` | the locator's target section (**required**) | `target_section_tipo` |
+| `section_id` | the locator's target record | `target_section_id` |
+| `from_component_tipo` | the component holding the locator | `from_component_tipo` |
+| `type` | the relation type (e.g. `dd96`) | `type` |
 
-The key splits unambiguously on `_` because tipos never contain underscores.
-
-Example: search the `Type` section [numisdata3](https://dedalo.dev/ontology/numisdata3) with the `Catalog` [numisdata309](https://dedalo.dev/ontology/numisdata309) value = 1.
-
-This search targets a locator like this:
-
-```json
-{
-    "section_tipo": "numisdata300",
-    "section_id": 1,
-    "from_component_tipo": "numisdata309"
-}
-```
-
-The locator is flattened as `numisdata309_numisdata300_1` and sent as:
+Example: search the `Type` section [numisdata3](https://dedalo.dev/ontology/numisdata3) with the `Catalog` [numisdata309](https://dedalo.dev/ontology/numisdata309) value = 1 **or** 2:
 
 ```json
 {
@@ -676,22 +653,23 @@ The locator is flattened as `numisdata309_numisdata300_1` and sent as:
   "filter": {
       "$and": [
           {
-              "q": "\"numisdata309_numisdata300_1\"",
-              "path": [
-                  {
-                      "section_tipo": "numisdata3",
-                      "component_tipo": "numisdata309"
-                  }
+              "q": [
+                  { "from_component_tipo": "numisdata309", "section_tipo": "numisdata300", "section_id": 1 },
+                  { "from_component_tipo": "numisdata309", "section_tipo": "numisdata300", "section_id": 2 }
               ],
-              "format": "function",
-              "use_function": "data_relations_flat_fct_st_si"
+              "path": [
+                  { "section_tipo": "numisdata3", "component_tipo": "numisdata309" }
+              ],
+              "format": "relation"
           }
       ]
   }
 }
 ```
 
-It is rendered as SQL (an exact tuple-IN over the relation index — equivalence, not a superset, because the tuple carries the owner's `section_tipo`; every value rides as a bound parameter):
+It is rendered as SQL — an exact tuple-IN over the relation index (equivalence,
+not a superset, because the tuple carries the owner's `section_tipo`; every
+value rides as a bound parameter):
 
 ```sql
 SELECT *
@@ -699,22 +677,51 @@ FROM matrix AS nu3
 WHERE (nu3.section_tipo='numisdata3') AND nu3.section_id>0  AND (
    (nu3.section_tipo, nu3.section_id) IN (
       SELECT r.section_tipo, r.section_id FROM matrix_relation_index r
-      WHERE r.from_component_tipo = 'numisdata309'
-        AND r.target_section_tipo = 'numisdata300'
-        AND r.target_section_id   = 1))
+      WHERE (r.from_component_tipo = 'numisdata309'
+             AND r.target_section_tipo = 'numisdata300'
+             AND r.target_section_id   = 1)
+         OR (r.from_component_tipo = 'numisdata309'
+             AND r.target_section_tipo = 'numisdata300'
+             AND r.target_section_id   = 2)))
 ORDER BY nu3.section_id ASC
 LIMIT 10
 ```
 
-The btree lookup is served in fractions of a millisecond regardless of database size — and, unlike the retired GIN containment, the planner gets honest row statistics from the typed columns.
+The btree lookup is served in fractions of a millisecond regardless of
+database size, with honest planner statistics from the typed columns. See
+[search — The relation index](system/search.md#the-relation-index-matrix_relation_index).
 
-!!! note "About the flat nomenclature"
-    - `fct` : contraction of `from_component_tipo`
-    - `st`  : contraction of `section_tipo`
-    - `si`  : contraction of `section_id`
-    - `ty`  : contraction of `type`
+AND semantics (records matching EVERY locator) stay in the operator tree:
+separate `format:'relation'` leaves under `$and`.
 
-The allowlist (both the v6 client spelling without the `data_` prefix and the prefixed form) lives in `conformFilter()` (`src/core/search/conform.ts`); an unknown `use_function` throws, a malformed key contributes nothing. This is the WC-012 wire-contract entry.
+##### use_function
+
+**DEPRECATED** (2026-07-21) — `format:'function'` + `use_function` is the
+v6-era spelling of the relation leaf above, kept as a READER so beta-era
+saved searches keep working. New emitters MUST use `format:'relation'`; the
+shipped client does.
+
+Definition: `string` if format is `function`, `use_function` names the flat-locator variant. ex: 'relations_flat_fct_st_si'
+
+The names date from the v6 design, where each variant WAS a PostgreSQL
+flattening function (`data_relations_flat_*`) backed by a functional GIN
+index per table. Those functions and indexes are **removed** (2026-07-20) —
+the name now only selects which fields the flattened `q` key
+(`'"<fct>_<st>_<si>"'`, split on `_`; tipos never contain underscores) parses
+into, and the engine emits the exact same `matrix_relation_index` tuple-IN as
+`format:'relation'`. Nothing is ever interpolated into SQL, and no function
+is called.
+
+| `use_function` (with or without the `data_` prefix) | flat key shape | parsed into |
+| --- | --- | --- |
+| `relations_flat_st_si` | `<st>_<si>` | `section_tipo, section_id` |
+| `relations_flat_fct_st_si` | `<fct>_<st>_<si>` | `from_component_tipo, section_tipo, section_id` |
+| `relations_flat_ty_st_si` | `<ty>_<st>_<si>` | `type, section_tipo, section_id` |
+| `relations_flat_ty_st` | `<ty>_<st>` | `type, section_tipo` |
+
+The allowlist lives in `conformFilter()` (`src/core/search/conform.ts`); an
+unknown `use_function` throws, a malformed key contributes nothing. This is
+the WC-012 wire-contract entry (amendment 3 records the deprecation).
 
 ##### q_split
 
