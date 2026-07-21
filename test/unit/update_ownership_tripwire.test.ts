@@ -76,6 +76,8 @@ const ENGINE_NATIVE: Record<string, string> = {
 	'database_info.rebuild_db_constraints': 'shared-DB maintenance through the TS db_assets path',
 	'database_info.rebuild_db_indexes': 'shared-DB maintenance through the TS db_assets path',
 	'database_info.recreate_db_assets': 'shared-DB maintenance through the TS db_assets path',
+	'database_info.backfill_search_stores':
+		'shared-DB maintenance through the TS db_assets path (derived-store TRUNCATE + refill; the previous-beta upgrade path)',
 	'unit_test.create_test_record': 'scratch test-record surface (matrix_test)',
 	'unit_test.long_process_stream': 'SSE stress-test job (mediaJobs ticks only; touches no data)',
 	'media_control.get_value': 'read-only media index status',
