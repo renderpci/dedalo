@@ -706,8 +706,9 @@ export const run_search = async function(self) {
 *  2. filter_by_list groups — one group per entry in
 *     self.rqo_search.sqo_options.filter_by_list (when present); each checkbox
 *     represents a relation value and pushes/splices entries into
-*     self.ar_filter_by_list. The filter value object carries a
-*     'relations_flat_fct_st_si' format for server-side evaluation.
+*     self.ar_filter_by_list. The filter value object is a format:'relation'
+*     leaf whose q is a partial locator (from_component_tipo + section_tipo +
+*     section_id) resolved server-side on matrix_relation_index.
 *
 * Checkbox state is persisted to localStorage under the key
 * `service_autocomplete_${self.id_base}` as a JSON array of active IDs.
@@ -806,7 +807,15 @@ const render_filters_selector = function(self) {
 
 					const current_datalist	= component_datalist[j]
 					const id				= section +'_'+ component_tipo +'_'+ current_datalist.section_id
-					const q					= '"'+component_tipo +'_'+ current_datalist.value.section_tipo + '_' +current_datalist.value.section_id+'"'
+					// q is a partial locator (format:'relation'): match records whose
+					// relation column holds a locator with these fields. Replaces the
+					// legacy format:'function' flat key ('<fct>_<st>_<si>') — the server
+					// resolves this on matrix_relation_index, no DB function involved.
+					const q					= {
+						from_component_tipo	: component_tipo,
+						section_tipo		: current_datalist.value.section_tipo,
+						section_id			: current_datalist.value.section_id
+					}
 					const path				= [{
 						section_tipo	: section,
 						component_tipo	: component_tipo
@@ -817,8 +826,7 @@ const render_filters_selector = function(self) {
 						value	: {
 							q				: q,
 							path			: path,
-							format 			: 'function',
-							use_function	: 'relations_flat_fct_st_si'
+							format 			: 'relation'
 						},
 						label	: current_datalist.label,
 						change	: function(input_node){

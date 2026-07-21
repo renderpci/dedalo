@@ -694,11 +694,10 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 			// 			component_tipo	: component_tipo
 			// 		}]
 			// 		filter_by_list_inverse.push({
-			// 			q				: q,
+			// 			q				: q, // partial locator: {from_component_tipo, section_tipo, section_id}
 			// 			q_operator		: '!*',
 			// 			path			: path,
-			// 			format			: 'function',
-			// 			use_function	: 'relations_flat_fct_st_si'
+			// 			format			: 'relation'
 			// 		})
 			// 	}
 			// }

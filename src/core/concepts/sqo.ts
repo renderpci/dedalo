@@ -70,8 +70,8 @@ export const sqoFilterLeafSchema = z
 		// the browser E2E); accept + treat as absent (see conform.ts `?? null`).
 		q_operator: z.string().nullish(),
 		path: z.array(sqoPathStepSchema).optional(),
-		format: z.string().optional(), // direct | array_elements | typeof | column | in_column | function
-		use_function: z.string().optional(), // PostgreSQL fn name, e.g. relations_flat_fct_st_si
+		format: z.string().optional(), // direct | array_elements | typeof | column | in_column | relation | function (deprecated)
+		use_function: z.string().optional(), // DEPRECATED (format:'function' only): legacy flat-variant name, e.g. relations_flat_fct_st_si — wire vocabulary, no DB function exists
 		q_split: z.boolean().optional(),
 		unaccent: z.boolean().optional(),
 		type: z.string().optional(), // jsonb | string

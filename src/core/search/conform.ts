@@ -122,6 +122,124 @@ export async function buildJoinChain(
 
 const BOOLEAN_OPERATORS: ReadonlySet<string> = new Set(['$and', '$or', '$not', '$nand', '$nor']);
 
+/**
+ * One relation-leaf locator resolved to matrix_relation_index columns:
+ * ordered [column, cast, value] triples ready for tuple-IN emission.
+ */
+type RelationLeafLocator = [string, 'text' | 'int', string][];
+
+/** format:'relation' q fields → index columns (the locator vocabulary). */
+const RELATION_LEAF_FIELDS: Record<string, [string, 'text' | 'int']> = {
+	section_tipo: ['target_section_tipo', 'text'],
+	section_id: ['target_section_id', 'int'],
+	from_component_tipo: ['from_component_tipo', 'text'],
+	type: ['type', 'text'],
+};
+
+/**
+ * Parse one format:'relation' locator object — strict: unknown fields,
+ * invalid tipos, a non-integer section_id or a missing section_tipo throw.
+ */
+function parseRelationLeafLocator(raw: unknown): RelationLeafLocator {
+	if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+		throw new Error(
+			"search conform: format 'relation' q must be a locator object or an array of them",
+		);
+	}
+	const record = raw as Record<string, unknown>;
+	if (typeof record.section_tipo !== 'string' || record.section_tipo === '') {
+		throw new Error("search conform: format 'relation' locator needs a section_tipo");
+	}
+	const resolved: RelationLeafLocator = [];
+	for (const [field, value] of Object.entries(record)) {
+		const mapped = RELATION_LEAF_FIELDS[field];
+		if (mapped === undefined) {
+			throw new Error(
+				`search conform: format 'relation' unknown locator field '${field}' ` +
+					`(allowed: ${Object.keys(RELATION_LEAF_FIELDS).join(', ')})`,
+			);
+		}
+		const [column, cast] = mapped;
+		if (cast === 'int') {
+			const id = String(value);
+			if (!/^-?[0-9]+$/.test(id)) {
+				throw new Error(
+					`search conform: format 'relation' section_id '${String(value)}' is not an integer`,
+				);
+			}
+			resolved.push([column, cast, id]);
+		} else {
+			resolved.push([column, cast, assertValidTipo(String(value), `relation leaf ${field}`)]);
+		}
+	}
+	return resolved;
+}
+
+/** format:'relation' q: one locator object, or an array (OR within the leaf). */
+function parseRelationLeafQ(rawQ: unknown): RelationLeafLocator[] {
+	const items = Array.isArray(rawQ) ? rawQ : [rawQ];
+	if (items.length === 0) {
+		throw new Error("search conform: format 'relation' q array is empty");
+	}
+	return items.map(parseRelationLeafLocator);
+}
+
+/**
+ * DEPRECATED format:'function' reader (WC-012): resolve the allowlisted
+ * variant name + flattened key into the same locator triples. Unknown names
+ * throw (allowlist-only, never interpolated); a malformed key returns null
+ * (contributes nothing — the legacy contract).
+ */
+const LEGACY_FLAT_VARIANTS: Record<string, [string, 'text' | 'int'][]> = {
+	relations_flat_st_si: [
+		['target_section_tipo', 'text'],
+		['target_section_id', 'int'],
+	],
+	relations_flat_fct_st_si: [
+		['from_component_tipo', 'text'],
+		['target_section_tipo', 'text'],
+		['target_section_id', 'int'],
+	],
+	relations_flat_ty_st_si: [
+		['type', 'text'],
+		['target_section_tipo', 'text'],
+		['target_section_id', 'int'],
+	],
+	relations_flat_ty_st: [
+		['type', 'text'],
+		['target_section_tipo', 'text'],
+	],
+};
+
+function parseLegacyFunctionLeaf(leaf: {
+	use_function?: unknown;
+	q?: unknown;
+}): RelationLeafLocator | null {
+	// accept both the v6 client spelling and the data_-prefixed form
+	const name = String(leaf.use_function ?? '').replace(/^data_/, '');
+	const columns = LEGACY_FLAT_VARIANTS[name];
+	if (columns === undefined) {
+		throw new Error(
+			`search conform: format 'function' with unknown use_function '${String(leaf.use_function)}' (allowlist-only, never interpolated)`,
+		);
+	}
+	let flatKey = typeof leaf.q === 'string' ? leaf.q : '';
+	try {
+		const parsed = JSON.parse(flatKey);
+		if (typeof parsed === 'string') flatKey = parsed; // unquote '"a_b_1"'
+	} catch {
+		// not JSON-quoted — use as-is
+	}
+	if (flatKey === '' || !/^[A-Za-z0-9_-]+$/.test(flatKey)) {
+		return null;
+	}
+	const keyParts = flatKey.split('_'); // tipos never contain underscores
+	if (keyParts.length !== columns.length) {
+		return null; // wrong arity for the named variant
+	}
+	return columns.map(([column, cast], index) => [column, cast, keyParts[index] as string]);
+}
+
 /** Conform one leaf: gates → ontology → builder. */
 async function conformLeaf(
 	leaf: SqoFilterLeaf,
@@ -192,92 +310,58 @@ async function conformLeaf(
 		return { kind: 'leaf', result: false };
 	}
 
-	// format:'function' — the autocomplete filter_by_list pre-filter (the
-	// picker's per-catalogue checkboxes). The clause names a v6-era flat
-	// VARIANT plus a flat key ('<fct>_<st>_<si>' …). The names survive as
-	// WIRE VOCABULARY ONLY (WC-012): the stored data_relations_flat_*
-	// functions were REMOVED 2026-07-20 — the variant is translated to an
-	// exact tuple-IN over matrix_relation_index, never to SQL that calls a
-	// function. The CLIENT sends the legacy v6 name (no data_ prefix); the
-	// live PHP oracle interpolated it verbatim and ERRORED (0 results, probed
-	// 2026-07-09), so this is functionality-over-parity: map through the
-	// explicit allowlist, never interpolate the client string. The flat key
-	// travels as a bound parameter.
+	// RELATION LEAVES — filter records whose `relation` column holds a locator
+	// matching the given fields (the autocomplete filter_by_list pre-filter,
+	// the picker's per-catalogue checkboxes). Both wire shapes resolve to the
+	// SAME exact tuple-IN over matrix_relation_index — uncorrelated (hashed
+	// semi-join, no join-order inversion) and carrying the owner's
+	// section_tipo, so it is equivalence, not a superset. The index is the
+	// ONLY engine — an uncovered table fails loudly (requireRelationIndex).
+	//
+	// format:'relation' (CANONICAL, 2026-07-21): q is one partial-locator
+	//   object or an array of them (array = OR within the leaf, the
+	//   filter_by_locators semantics). Fields = the locator vocabulary:
+	//   section_tipo (required), section_id, from_component_tipo, type.
+	//   Strictly validated — unknown fields, invalid tipos or a non-integer
+	//   section_id throw (a new contract owes loud errors, not bug-compat).
+	//
+	// format:'function' (DEPRECATED reader, WC-012): the v6-era variant names
+	//   (relations_flat_* / data_relations_flat_*) plus a flattened
+	//   '<a>_<b>_<c>' key. The stored functions were REMOVED 2026-07-20 — the
+	//   allowlisted name only selects the field layout the key parses into
+	//   (tipos never contain underscores; the flat key travels as bound
+	//   parameters). Kept so beta-era saved searches keep working; nothing in
+	//   this tree emits it anymore.
 	const leafFormat = (leaf as { format?: unknown }).format;
-	if (leafFormat === 'function') {
-		const FLAT_FUNCTIONS: Record<string, string> = {
-			relations_flat_st_si: 'data_relations_flat_st_si',
-			relations_flat_fct_st_si: 'data_relations_flat_fct_st_si',
-			relations_flat_ty_st_si: 'data_relations_flat_ty_st_si',
-			relations_flat_ty_st: 'data_relations_flat_ty_st',
-			data_relations_flat_st_si: 'data_relations_flat_st_si',
-			data_relations_flat_fct_st_si: 'data_relations_flat_fct_st_si',
-			data_relations_flat_ty_st_si: 'data_relations_flat_ty_st_si',
-			data_relations_flat_ty_st: 'data_relations_flat_ty_st',
-		};
-		const useFunction = (leaf as { use_function?: unknown }).use_function;
-		const flatFunction = FLAT_FUNCTIONS[String(useFunction ?? '')];
-		if (flatFunction === undefined) {
-			throw new Error(
-				`search conform: format 'function' with unknown use_function '${String(useFunction)}' (allowlist-only, never interpolated)`,
-			);
+	if (leafFormat === 'relation' || leafFormat === 'function') {
+		let locators: RelationLeafLocator[];
+		if (leafFormat === 'relation') {
+			locators = parseRelationLeafQ(leaf.q);
+		} else {
+			const legacy = parseLegacyFunctionLeaf(leaf as { use_function?: unknown; q?: unknown });
+			if (legacy === null) {
+				// malformed flat key — contributes nothing (the legacy contract)
+				return { kind: 'leaf', result: false };
+			}
+			locators = [legacy];
 		}
-		const rawQ = leaf.q;
-		let flatKey = typeof rawQ === 'string' ? rawQ : '';
-		try {
-			const parsed = JSON.parse(flatKey);
-			if (typeof parsed === 'string') flatKey = parsed; // unquote '"a_b_1"'
-		} catch {
-			// not JSON-quoted — use as-is
-		}
-		if (flatKey === '' || !/^[A-Za-z0-9_-]+$/.test(flatKey)) {
-			return { kind: 'leaf', result: false }; // malformed key — contributes nothing
-		}
-		// The flat key splits unambiguously on '_' (tipos never contain
-		// underscores) into the variant's fields, and the predicate becomes an
-		// EXACT tuple-IN over matrix_relation_index — uncorrelated (hashed
-		// semi-join, no join-order inversion) and carrying the owner's
-		// section_tipo, so it is equivalence, not a superset. The index is the
-		// ONLY engine — an uncovered table fails loudly (requireRelationIndex).
 		await requireRelationIndex([leafTable]);
-		// column layout per variant, in flat-key order; '::int' marks the id
-		const VARIANT_COLUMNS: Record<string, [string, string][]> = {
-			data_relations_flat_ty_st: [
-				['type', 'text'],
-				['target_section_tipo', 'text'],
-			],
-			data_relations_flat_fct_st_si: [
-				['from_component_tipo', 'text'],
-				['target_section_tipo', 'text'],
-				['target_section_id', 'int'],
-			],
-			data_relations_flat_ty_st_si: [
-				['type', 'text'],
-				['target_section_tipo', 'text'],
-				['target_section_id', 'int'],
-			],
-			data_relations_flat_st_si: [
-				['target_section_tipo', 'text'],
-				['target_section_id', 'int'],
-			],
-		};
-		const columns = VARIANT_COLUMNS[flatFunction] as [string, string][];
-		const keyParts = flatKey.split('_');
-		if (keyParts.length !== columns.length) {
-			// wrong arity for the named variant — malformed key, contributes
-			// nothing (same contract as the character-class guard above)
-			return { kind: 'leaf', result: false };
-		}
 		const conditions: string[] = [];
 		const tokenValues: Record<string, unknown> = {};
-		columns.forEach(([column, cast], index) => {
-			const name = `_Qf${index + 1}_`;
-			conditions.push(`r.${column} = ${name}::${cast}`);
-			tokenValues[name] = keyParts[index] as string;
-		});
+		let tokenIndex = 0;
+		for (const locator of locators) {
+			const parts: string[] = [];
+			for (const [column, cast, value] of locator) {
+				tokenIndex += 1;
+				const name = `_Qf${tokenIndex}_`;
+				parts.push(`r.${column} = ${name}::${cast}`);
+				tokenValues[name] = value;
+			}
+			conditions.push(`(${parts.join(' AND ')})`);
+		}
 		const result = fragmentResult(
 			`(${leafAlias}.section_tipo, ${leafAlias}.section_id) IN ` +
-				`(SELECT r.section_tipo, r.section_id FROM matrix_relation_index r WHERE ${conditions.join(' AND ')})`,
+				`(SELECT r.section_tipo, r.section_id FROM matrix_relation_index r WHERE ${conditions.join(' OR ')})`,
 			tokenValues,
 		);
 		return joins.length > 0 ? { kind: 'leaf', result, joins } : { kind: 'leaf', result };
