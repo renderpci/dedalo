@@ -175,6 +175,11 @@ exist until the engine has written them:
 2. Start the Dédalo service. It writes the rule files into `MEDIA_PATH` at boot.
 3. Uncomment the includes, then `nginx -t && systemctl reload nginx`.
 
+!!! note "Several domains on one box"
+    This is a single-domain vhost. To serve more domains, add one `upstream` and
+    one `server{}` per domain, each pointing at that instance's socket and
+    `MEDIA_PATH` — see [Multiple instances on one server](multi_instance.md).
+
 !!! warning "Known defect: quote the rule-B location regex"
     In `publication` mode the generated `dedalo_media_protection.nginx.conf`
     emits its rule-B location as an **unquoted** regex, and that regex contains

@@ -1,6 +1,6 @@
 # Production install (Ubuntu 24.04)
 
-> See also: [Installation hub](index.md) · [Reverse proxy and TLS](reverse_proxy.md) · [Installer reference](installer_reference.md) · [Troubleshooting](troubleshooting.md) · [Upgrading](upgrading.md)
+> See also: [Installation hub](index.md) · [Reverse proxy and TLS](reverse_proxy.md) · [Installer reference](installer_reference.md) · [Troubleshooting](troubleshooting.md) · [Upgrading](upgrading.md) · [Multiple instances](multi_instance.md)
 
 This is the main bare-metal guide: sixteen steps from a clean Ubuntu 24.04 LTS
 server to a running, TLS-protected, supervised Dédalo instance. Every command is
@@ -35,6 +35,17 @@ installer:
   (`0700`) — so `/opt/dedalo/` must be **writable by the service user**.
 - **`MEDIA_PATH` is absolute and independent of the repo.** It can live on its
   own volume; media is by far the largest thing you will store.
+
+The base directory is a choice, not a requirement. `/opt/dedalo` suits a single
+instance; **if you expect to host several domains, install under `/home/ded_<site>/`
+from the start** — everything below is identical, only the base path changes — and
+follow [Multiple instances on one server](multi_instance.md).
+
+!!! tip "Hosting several domains on one server"
+    This guide builds **one** instance. To run several domains on the same box —
+    each with its own database, media and login — repeat this install per domain
+    and follow [Multiple instances on one server](multi_instance.md), which
+    covers what must be unique per instance and how to template systemd.
 
 ## 1. Service user and directory tree
 
