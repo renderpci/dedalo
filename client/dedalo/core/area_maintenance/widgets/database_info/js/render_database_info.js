@@ -412,7 +412,7 @@ const render_analyze = (self) => {
 	ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'info_text',
-		inner_html		: 'Exec "ANALYZE" command on database for optimal performance.',
+		inner_html		: get_label.analyze_database_info || 'Exec "ANALYZE" command on database for optimal performance.',
 		parent			: analyze_container
 	})
 
@@ -490,7 +490,7 @@ const render_recreate_db_assets = (self) => {
 	ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'info_text',
-		inner_html		: 'Forces recreate all PostgreSQL main indexes, constraints, extensions and functions.',
+		inner_html		: get_label.recreate_db_assets_info || 'Forces recreate all PostgreSQL main indexes, constraints, extensions and functions.',
 		parent			: recreate_db_assets_container
 	})
 
@@ -609,7 +609,7 @@ const render_rebuild_indexes = (self, body_response) => {
 	ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'info_text',
-		inner_html		: 'Forces rebuild PostgreSQL main indexes.',
+		inner_html		: get_label.rebuild_indexes_info || 'Forces rebuild PostgreSQL main indexes.',
 		parent			: rebuild_indexes_container
 	})
 
@@ -678,7 +678,7 @@ const render_rebuild_functions = (self, body_response) => {
 	ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'info_text',
-		inner_html		: 'Forces rebuilding PostgreSQL main functions.',
+		inner_html		: get_label.rebuild_functions_info || 'Forces rebuilding PostgreSQL main functions.',
 		parent			: rebuild_functions_container
 	})
 
@@ -736,7 +736,7 @@ const render_backfill_search_stores = (self) => {
 	ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'info_text',
-		inner_html		: 'Rebuilds the derived search stores (matrix_string_search, matrix_relation_index) from the record data. Use after "Recreate database assets". Takes minutes on large databases.',
+		inner_html		: get_label.backfill_search_stores_info || 'Rebuilds the derived search stores (matrix_string_search, matrix_relation_index) from the record data. Use after "Recreate database assets". Takes minutes on large databases.',
 		parent			: backfill_search_stores_container
 	})
 
@@ -805,7 +805,7 @@ const render_rebuild_constraints = (self, body_response) => {
 	ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'info_text',
-		inner_html		: 'Forces rebuilding PostgreSQL main constraints.',
+		inner_html		: get_label.rebuild_constraints_info || 'Forces rebuilding PostgreSQL main constraints.',
 		parent			: rebuild_constraits_container
 	})
 
@@ -872,7 +872,7 @@ const render_optimize_tables = (self) => {
 	ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'info_text',
-		inner_html		: 'Re-index and vacuum analyze the selected tables.',
+		inner_html		: get_label.optimize_tables_info || 'Re-index and vacuum analyze the selected tables.',
 		parent			: optimize_tables_container
 	})
 
@@ -985,7 +985,7 @@ const render_consolidate_table_sequences = (self) => {
 	ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'info_text',
-		inner_html		: 'Remunerates table id column to consolidate id sequence from 1,2,... <br>[dd_ontology, matrix_ontology, matrix_ontology_main, matrix_dd]',
+		inner_html		: get_label.consolidate_table_sequences_info || 'Renumbers table id column to consolidate id sequence from 1,2,... <br>[dd_ontology, matrix_ontology, matrix_ontology_main, matrix_dd]',
 		parent			: consolidate_table_sequences_container
 	})
 
@@ -1098,7 +1098,7 @@ const render_rebuild_user_stats = (self) => {
 	ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'info_text',
-		inner_html		: 'Re-create the user activity stats, calculated from table matix_activity and saved in section dd1521 as daily summaries.',
+		inner_html		: get_label.rebuild_user_stats_info || 'Re-create the user activity stats, calculated from table matrix_activity and saved in section dd1521 as daily summaries.',
 		parent			: rebuild_user_stats_container
 	})
 
