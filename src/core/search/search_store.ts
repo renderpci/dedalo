@@ -136,8 +136,8 @@ export async function requireRelationIndex(tables: readonly string[]): Promise<v
 	throw new Error(
 		'matrix_relation_index is not available: sync triggers are missing, or the store is empty ' +
 			'while relation data exists. Relation searches run ONLY on the index (flat functions ' +
-			'removed 2026-07-20). Remediation: Area Maintenance → Database info → rebuild the ' +
-			'relation index (recreates triggers AND backfills), then retry.',
+			'removed 2026-07-20). Remediation: Area Maintenance → Database info → ' +
+			'"Recreate database assets", then "Backfill search stores"; retry afterwards.',
 	);
 }
 

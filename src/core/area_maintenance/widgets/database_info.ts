@@ -202,6 +202,105 @@ async function databaseInfoOptimizeTables(
 	return (await optimizeTables(tables as string[])) as unknown as WidgetResponse;
 }
 
+/**
+ * database_info.relation_integrity_report — audit the matrix_relation_index
+ * store (phase 1 of the locator-index plan, 2026-07-20): per-target-section
+ * DANGLING locator counts (references whose target record no longer exists —
+ * an anti-join per distinct target section against its resolved matrix table)
+ * plus, per source table, the locators the sync trigger SKIPPED because their
+ * section_id is not numeric (enumerated from the jsonb side; the index never
+ * silently casts). Read-only; heavy-ish by design (an admin decision, like
+ * the other maintenance actions here).
+ */
+async function databaseInfoRelationIntegrityReport(): Promise<WidgetResponse> {
+	const errors: string[] = [];
+	const { getMatrixTableFromTipo } = await import('../../ontology/resolver.ts');
+
+	// store presence
+	const present = (await sql.unsafe(
+		`SELECT to_regclass('public.matrix_relation_index') IS NOT NULL AS ok`,
+		[],
+	)) as { ok: boolean }[];
+	if (present[0]?.ok !== true) {
+		return {
+			result: false,
+			msg: 'Error. matrix_relation_index does not exist — run recreate_db_assets, then backfill_search_stores',
+			errors: ['store_missing'],
+		};
+	}
+
+	const totals = (await sql.unsafe(
+		`SELECT count(*)::bigint AS rows, count(DISTINCT target_section_tipo)::int AS target_sections
+		 FROM matrix_relation_index`,
+		[],
+	)) as { rows: string; target_sections: number }[];
+
+	// dangling per target section (anti-join against the target's own table)
+	const targetTipos = (await sql.unsafe(
+		'SELECT DISTINCT target_section_tipo AS tipo FROM matrix_relation_index ORDER BY 1',
+		[],
+	)) as { tipo: string }[];
+	const dangling: Record<string, number> = {};
+	let danglingTotal = 0;
+	for (const { tipo } of targetTipos) {
+		let table: string | null = null;
+		try {
+			table = await getMatrixTableFromTipo(tipo);
+		} catch {
+			table = null;
+		}
+		if (table === null) {
+			errors.push(
+				`target section '${tipo}' resolves to no matrix table — its references are unverifiable`,
+			);
+			continue;
+		}
+		const rows = (await sql.unsafe(
+			`SELECT count(*)::bigint AS n FROM (
+				SELECT DISTINCT r.target_section_id FROM matrix_relation_index r
+				WHERE r.target_section_tipo = $1
+				  AND NOT EXISTS (SELECT 1 FROM "${table}" t WHERE t.section_tipo = $1 AND t.section_id = r.target_section_id)
+			) d`,
+			[tipo],
+		)) as { n: string }[];
+		const n = Number(rows[0]?.n ?? 0);
+		if (n > 0) {
+			dangling[tipo] = n;
+			danglingTotal += n;
+		}
+	}
+
+	// non-numeric section_id locators per source table (skipped by the sync trigger)
+	const nonNumeric: Record<string, number> = {};
+	const sourceTables = (await sql.unsafe(
+		`SELECT DISTINCT c.relname AS t FROM pg_trigger g JOIN pg_class c ON c.oid = g.tgrelid
+		 WHERE g.tgname LIKE '%_relation_index_sync' AND NOT g.tgisinternal ORDER BY 1`,
+		[],
+	)) as { t: string }[];
+	for (const { t } of sourceTables) {
+		const rows = (await sql.unsafe(
+			`SELECT count(*)::bigint AS n FROM "${t}" m, jsonb_each(m.relation) kv, jsonb_array_elements(kv.value) e
+			 WHERE jsonb_typeof(m.relation) = 'object' AND jsonb_typeof(kv.value) = 'array'
+			   AND (e->>'section_id' IS NULL OR e->>'section_id' !~ '^-?[0-9]+$')`,
+			[],
+		)) as { n: string }[];
+		const n = Number(rows[0]?.n ?? 0);
+		if (n > 0) nonNumeric[t] = n;
+	}
+
+	return {
+		result: {
+			store_rows: Number(totals[0]?.rows ?? 0),
+			target_sections: totals[0]?.target_sections ?? 0,
+			dangling_targets_total: danglingTotal,
+			dangling_by_target_section: dangling,
+			non_numeric_locators_by_table: nonNumeric,
+		},
+		msg: errors.length > 0 ? 'Warning. Request done with errors' : 'OK. Request done successfully',
+		errors,
+	};
+}
+
 export const widget: WidgetModule = {
 	spec: {
 		id: 'database_info',
@@ -210,6 +309,7 @@ export const widget: WidgetModule = {
 	},
 	apiActions: {
 		analyze_db: databaseInfoAnalyzeDb,
+		relation_integrity_report: databaseInfoRelationIntegrityReport,
 		consolidate_tables: databaseInfoConsolidateTables,
 		rebuild_user_stats: databaseInfoRebuildUserStats,
 		optimize_tables: databaseInfoOptimizeTables,
@@ -229,6 +329,17 @@ export const widget: WidgetModule = {
 		},
 		recreate_db_assets: async () => {
 			const response = await (await import('../../db/db_assets.ts')).recreateDbAssets();
+			const { clearSearchStoreCache } = await import('../../search/search_store.ts');
+			clearSearchStoreCache();
+			return response as unknown as WidgetResponse;
+		},
+		// The derived-store backfill (matrix_string_search + matrix_relation_index):
+		// TRUNCATE + refill from the source tables. THE update path for an instance
+		// whose stores are missing rows (a previous v7 beta, a restore that skipped
+		// them): run recreate_db_assets first (DDL: tables, sync functions,
+		// triggers, indexes — and the drop-only cleanups), then this.
+		backfill_search_stores: async () => {
+			const response = await (await import('../../db/db_assets.ts')).backfillSearchStores();
 			const { clearSearchStoreCache } = await import('../../search/search_store.ts');
 			clearSearchStoreCache();
 			return response as unknown as WidgetResponse;
