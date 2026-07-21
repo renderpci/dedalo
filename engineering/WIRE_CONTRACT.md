@@ -1714,3 +1714,33 @@ other sections' date columns keep the jsonb path, sortable flags, unique-key
 probe) + `test/unit/search_order_id.test.ts` /
 `test/unit/search_late_row_lookup.test.ts` (flattened shape: no `main_select`,
 no `DISTINCT ON`, inline ORDER BY + LIMIT/OFFSET).
+
+## WC-045 — Activity (dd542) search-field restriction: section-info group (dd196) omitted (2026-07-21)
+
+The edit-mode search "FIELDS" panel (`dd_core_api::get_section_elements_context`
+→ `buildSectionElementsContext`, `src/core/resolve/section_elements_context.ts`)
+appends the shared **section-info group `dd196`** (Created/Modified by user +
+date, First/Last publication + user) to every non-TM section, shown to global
+admins (PHP class.common.php:3870-3877). On **Activity (`dd542`)** — an
+append-only audit log — that editorial metadata is meaningless as a search
+dimension, so TS omits the `dd196` group (and its children) from `dd542`'s field
+list. Deliberate wire-shape divergence from PHP, which offers it to admins.
+
+The section's existing exclusion knob is **model-keyed only** (`DEFAULT_EXCLUDE`
+/ client `ar_components_exclude`) and cannot express this: `dd196`'s children are
+date/relation models — the same models as legitimate activity fields (When
+`dd547` is a date, Who `dd543` a relation), so no model rule drops them without
+collateral. Hence a `dd542`-scoped suppression of the group append
+(`SUPPRESS_SECTION_INFO`), server-side. Same `dd542`-scoped-policy family as
+WC-044 (list-sort restriction on the same log, same day). The real fields
+(`dd543` Who, `dd544` IP, `dd545` What, `dd546` Where, `dd547` When, `dd551`
+Data) and the `dd542` section entry are unchanged; every other section still gets
+`dd196`. (`dd542` is absent from `section_elements_context_differential`'s
+`SECTIONS` corpus, so no oracle rows to reconcile.)
+
+### Gate
+
+`test/unit/activity_search_fields.test.ts` — `dd542` field list excludes `dd196`
+and every `parent==='dd196'` child while including the real activity components;
+scope control asserts a second section (`dd128`) still carries `dd196` for the
+same global-admin principal.
