@@ -271,13 +271,18 @@ string-searchable matrix table — engine writes, scripts and manual SQL all sta
 consistent, in the same transaction as the write. **Fresh installs are born with
 the store**: the seed dump (`install/db/dedalo_install.pgsql.gz`) creates the
 table, function, triggers and indexes and backfills the seed rows at restore
-time. Enabling it on a pre-existing instance (a database created by a previous
-beta, or after adding a table) is two clicks in the `database_info`
-maintenance widget: **Recreate database assets** (DDL: store tables, sync
-functions/triggers, indexes, legacy cleanups), then **Backfill search stores**
-(`backfill_search_stores` → `backfillSearchStores()`: TRUNCATE + `INSERT …
-SELECT` per covered table, mirroring the trigger row filters). Until both
-steps ran, the presence gate keeps string searches on the classic scan.
+time. On a pre-existing instance (a database created by a previous beta) the
+server **self-provisions at boot**: `ensureSearchStores()` (db_assets.ts,
+called by startServer after the boot migrations, before serving) detects a
+missing store table / sync trigger, or a store that is empty while its
+sources would produce rows, and runs the targeted DDL + one-time backfill —
+so updating the code and restarting is the whole upgrade. The `database_info`
+maintenance widget keeps the same operations as MANUAL repair actions:
+**Recreate database assets** (full DDL incl. legacy cleanups) and **Backfill
+search stores** (`backfill_search_stores` → `backfillSearchStores()`:
+TRUNCATE + `INSERT … SELECT` per covered table, mirroring the trigger row
+filters). Until provisioning ran, the presence gate keeps string searches on
+the classic scan.
 
 !!! note "Why a side table and not an in-record column"
     Trigram (`pg_trgm`) indexes plain text only, so an in-record column (the
@@ -325,9 +330,11 @@ or legitimately empty because the source tables hold no locators at all) is a
 **requirement, not an optimization gate**: an uncovered instance fails loudly
 (`requireRelationIndex`) with the remediation — Area Maintenance → Database
 info → **Recreate database assets**, then **Backfill search stores** — instead
-of silently degrading. That two-click sequence is also the whole upgrade for a
-database created by a previous v7 beta (fresh installs and v6→v7 closures
-arrive with everything in place).
+of silently degrading. In practice an uncovered instance should not survive a
+restart: the boot self-provisioning (`ensureSearchStores()`, see the string
+store section above) heals a previous-beta database automatically; the widget
+actions are the manual repair for a damaged store or a boot-provisioning
+failure. Fresh installs and v6→v7 closures arrive with everything in place.
 
 !!! info "The v6-era flat functions are gone (2026-07-20)"
     Earlier engines answered these queries with four flattening functions

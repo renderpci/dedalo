@@ -260,7 +260,8 @@ column holds the **source** section — never filter TM by `section_tipo='dd15'`
 | `rebuildConstraints()` / `rebuildIndexes(tables?)` | Per-entry, per-declared-table drop + add of constraints / indexes. |
 | `execMaintenance()` | Run the `ar_maintenance` sentences (`REINDEX TABLE …` etc.). |
 | `recreateDbAssets()` | The full sequence: extensions → tables → constraints → functions → triggers → indexes → maintenance. |
-| `backfillSearchStores()` | TRUNCATE + refill the derived stores (`matrix_string_search`, `matrix_relation_index`) from the source tables, one transaction per store, then `ANALYZE`. The maintenance-panel arrival path (widget action `backfill_search_stores`) — run it after `recreateDbAssets()` on a database created by a previous beta. Row filters mirror the sync trigger functions exactly. |
+| `backfillSearchStores(onlyStores?)` | TRUNCATE + refill the derived stores (`matrix_string_search`, `matrix_relation_index`) from the source tables, one transaction per store, then `ANALYZE`. Row filters mirror the sync trigger functions exactly. Exposed as the `backfill_search_stores` widget action (manual repair). |
+| `ensureSearchStores()` | Boot self-provisioning (startServer, after migrations, before serving): cheap catalog probes on a healthy install; a missing store table/trigger triggers the targeted DDL pass, a store empty-with-producible-sources triggers that store's backfill. Heals a previous-beta database on restart with no operator action. |
 | `optimizeTables(tables)` | Per validated table, `REINDEX TABLE CONCURRENTLY` then `VACUUM ANALYZE`. |
 
 `db_pg_definitions.json` declares the extensions, tables, triggers, functions,
