@@ -430,7 +430,7 @@ const render_analyze = (self) => {
 	body_response.addEventListener('dblclick', dblclick_handler)
 
 	self.caller?.init_form({
-		submit_label	: 'Analyze DB',
+		submit_label	: get_label.analyze_database || 'Analyze DB',
 		confirm_text	: get_label.sure || 'Sure?',
 		body_info		: analyze_container,
 		body_response	: body_response,
@@ -508,7 +508,7 @@ const render_recreate_db_assets = (self) => {
 	body_response.addEventListener('dblclick', dblclick_handler)
 
 	self.caller?.init_form({
-		submit_label	: 'Re-create db assets',
+		submit_label	: get_label.recreate_db_assets || 'Re-create db assets',
 		confirm_text	: get_label.sure || 'Sure?',
 		body_info		: recreate_db_assets_container,
 		body_response	: body_response,
@@ -614,14 +614,14 @@ const render_rebuild_indexes = (self, body_response) => {
 	})
 
 	self.caller?.init_form({
-		submit_label	: 'Re-build indexes',
+		submit_label	: get_label.rebuild_indexes || 'Re-build indexes',
 		confirm_text	: get_label.sure || 'Sure?',
 		body_info		: rebuild_indexes_container,
 		body_response	: body_response,
 		inputs			: [{
 			type		: 'select',
 			name		: 'table',
-			label		: 'Table',
+			label		: get_label.table || 'Table',
 			options		: tables,
 			mandatory	: false
 		}],
@@ -683,7 +683,7 @@ const render_rebuild_functions = (self, body_response) => {
 	})
 
 	self.caller?.init_form({
-		submit_label	: 'Re-build functions',
+		submit_label	: get_label.rebuild_functions || 'Re-build functions',
 		confirm_text	: get_label.sure || 'Sure?',
 		body_info		: rebuild_functions_container,
 		body_response	: body_response,
@@ -752,7 +752,7 @@ const render_backfill_search_stores = (self) => {
 	})
 
 	self.caller?.init_form({
-		submit_label	: 'Backfill search stores',
+		submit_label	: get_label.backfill_search_stores || 'Backfill search stores',
 		confirm_text	: get_label.sure || 'Sure?',
 		body_info		: backfill_search_stores_container,
 		body_response	: body_response,
@@ -810,7 +810,7 @@ const render_rebuild_constraints = (self, body_response) => {
 	})
 
 	self.caller?.init_form({
-		submit_label	: 'Re-build constraints',
+		submit_label	: get_label.rebuild_constraints || 'Re-build constraints',
 		confirm_text	: get_label.sure || 'Sure?',
 		body_info		: rebuild_constraits_container,
 		body_response	: body_response,
@@ -890,14 +890,14 @@ const render_optimize_tables = (self) => {
 	body_response.addEventListener('dblclick', dblclick_handler)
 
 	self.caller?.init_form({
-		submit_label	: 'Optimize tables',
+		submit_label	: get_label.optimize_tables || 'Optimize tables',
 		confirm_text	: get_label.sure || 'Sure?',
 		body_info		: optimize_tables_container,
 		body_response	: body_response,
 		inputs			: [{
 			type		: 'text',
 			name		: 'tables',
-			label		: 'Tables list as dd_ontology, matrix_ontology, matrix',
+			label		: get_label.tables_list || 'Tables list as dd_ontology, matrix_ontology, matrix',
 			value		: source_tables.join(','),
 			mandatory	: true
 		}],
@@ -1007,14 +1007,14 @@ const render_consolidate_table_sequences = (self) => {
 	const source_tables = ['dd_ontology','matrix_ontology','matrix_ontology_main','matrix_dd']
 
 	self.caller?.init_form({
-		submit_label	: 'Consolidate tables',
+		submit_label	: get_label.consolidate_table_sequences || 'Consolidate tables',
 		confirm_text	: get_label.sure || 'Sure?',
 		body_info		: consolidate_table_sequences_container,
 		body_response	: body_response,
 		inputs			: [{
 			type		: 'text',
 			name		: 'tables',
-			label		: 'Tables list as dd_ontology,matrix_ontology,matrix',
+			label		: get_label.tables_list || 'Tables list as dd_ontology, matrix_ontology, matrix',
 			value		: source_tables.join(','),
 			mandatory	: true
 		}],
@@ -1116,14 +1116,14 @@ const render_rebuild_user_stats = (self) => {
 	body_response.addEventListener('dblclick', dblclick_handler)
 
 	self.caller?.init_form({
-		submit_label	: 'Re-build user stats',
+		submit_label	: get_label.rebuild_user_stats || 'Re-build user stats',
 		confirm_text	: 'Sure? \nThis action deletes all user dd1521 (User activity) records and recreate the stats records from matrix_activity data.',
 		body_info		: rebuild_user_stats_container,
 		body_response	: body_response,
 		inputs			: [{
 			type		: 'text',
 			name		: 'users',
-			label		: 'User section_id or a sequence as 1,2,3',
+			label		: get_label.user_section_id || 'User section_id or a sequence as 1,2,3',
 			mandatory	: true
 		}],
 		on_submit		: async (e, values) => {
