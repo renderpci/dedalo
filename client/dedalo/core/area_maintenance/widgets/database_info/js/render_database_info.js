@@ -736,7 +736,7 @@ const render_backfill_search_stores = (self) => {
 	ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'info_text',
-		inner_html		: 'Rebuilds the derived search stores (matrix_string_search, matrix_relation_index) from the record data. Use after "Recreate database assets" on databases created by a previous beta. Takes minutes on large databases.',
+		inner_html		: 'Rebuilds the derived search stores (matrix_string_search, matrix_relation_index) from the record data. Use after "Recreate database assets". Takes minutes on large databases.',
 		parent			: backfill_search_stores_container
 	})
 
