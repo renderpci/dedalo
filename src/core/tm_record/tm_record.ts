@@ -29,7 +29,11 @@
  *   data            → source model 'section': adopt the snapshot's own component
  *                     columns wholesale (skip structural 'data'/'id'); other
  *                     models: inject under dd1574 (generic) + the component's own
- *                     tipo so component get_data() finds it.
+ *                     tipo so component get_data() finds it — EXCEPT models with
+ *                     no storable jsonb column (component_section_id, whose
+ *                     "column" is the section_id PK): the own-tipo inject is
+ *                     skipped (it would throw), matching PHP set_component_data
+ *                     which logs + continues. The dd1574 copy still carries it.
  */
 
 import type { MatrixJsonbColumn, MatrixRecord } from '../db/matrix.ts';
@@ -215,7 +219,17 @@ export async function buildTmSectionRecord(
 		// Per-component history snapshot: inject under dd1574 + the component's tipo.
 		const dataParsed = Array.isArray(row.data) ? row.data : row.data === null ? null : [row.data];
 		await injectTmField(record, TM_COLUMN_DATA, dataParsed);
-		if (sourceModel !== null) injectComponentData(record, row.tipo, sourceModel, dataParsed);
+		// Inject under the component's own tipo only when its model maps to a real
+		// jsonb column. Models with no storable column (e.g. component_section_id,
+		// whose "column" is the section_id PK) have nowhere to land — injecting
+		// would throw. PHP set_component_data logs + continues past them; the
+		// dd1574 copy above (via the guarded injectTmField) still carries the data.
+		if (sourceModel !== null) {
+			const sourceColumn = getColumnNameByModel(sourceModel);
+			if (sourceColumn !== null && MATRIX_JSONB_COLUMNS.includes(sourceColumn as MatrixJsonbColumn)) {
+				injectComponentData(record, row.tipo, sourceModel, dataParsed);
+			}
+		}
 	}
 
 	// --- who / when / where / what ---
