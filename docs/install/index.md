@@ -49,6 +49,8 @@ And the supporting pages, whichever path you take:
 
 - **[Reverse proxy and TLS](reverse_proxy.md)** — nginx and Apache, certbot, and
   the generated media rules you must wire in. The load-bearing page.
+- **[Multiple instances on one server](multi_instance.md)** — optional: host
+  several domains on one box as independent instances behind one proxy.
 - **[Installer reference](installer_reference.md)** — every flag, every step, what
   the seed contains, and exactly which keys land in `.env`.
 - **[Troubleshooting](troubleshooting.md)** — symptom → cause → fix.
