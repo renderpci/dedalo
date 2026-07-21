@@ -51,8 +51,11 @@ import type {
 import type { Principal } from '../security/permissions.ts';
 import {
 	TM_COLUMN_BULK_PROCESS_ID as TIPO_BULK_PROCESS,
+	TM_COLUMN_DATA as TIPO_DATA,
 	TM_COLUMN_TIPO as TIPO_COMPONENT,
 	TM_NOTES_TEXT as TIPO_NOTES,
+	TM_COLUMN_SECTION_ID as TIPO_SECTION_ID,
+	TM_COLUMN_SECTION_TIPO as TIPO_SECTION_TIPO,
 	TM_COLUMN_TIMESTAMP as TIPO_TIMESTAMP,
 	TM_COLUMN_USER_ID as TIPO_USER,
 	TM_NOTES_SECTION_TIPO,
@@ -233,15 +236,38 @@ async function queryTmRows(
 	// is still IGNORED (PHP ignores it; tm_relation_filter_differential pins that).
 	const { whereSql, params: scopeParams, isRecordList } = buildTmWhere(sqo);
 
-	// Order: the TM id (service default) or section_id (the list view's order).
+	// Order: dd15's list columns ARE matrix_time_machine's own flat columns, so a
+	// header-click sort maps 1:1 to a real column (PHP search_tm orders over the
+	// same columns). The client sends the column's component_tipo — map it to its
+	// flat column; the raw 'id' (service default) and 'section_id' pseudo-columns
+	// pass through. An unmapped tipo is still uncovered scope and throws loudly.
 	const order = Array.isArray(sqo.order) ? (sqo.order as Record<string, unknown>[]) : [];
 	const orderPath = (order[0]?.path as Record<string, unknown>[] | undefined)?.[0];
 	const orderCol = orderPath?.component_tipo;
-	if (orderCol !== undefined && orderCol !== 'id' && orderCol !== 'section_id') {
+	const TM_ORDER_COLUMN: Record<string, string> = {
+		id: 'id',
+		section_id: 'section_id',
+		[TIPO_SECTION_ID]: 'section_id', // dd1212 Section id
+		[TIPO_SECTION_TIPO]: 'section_tipo', // dd1772 Section tipo
+		[TIPO_TIMESTAMP]: 'timestamp', // dd559 When
+		[TIPO_COMPONENT]: 'tipo', // dd577 What (section tipo)
+		[TIPO_USER]: 'user_id', // dd578 Who
+		[TIPO_BULK_PROCESS]: 'bulk_process_id', // dd1371 Process
+		[TIPO_DATA]: 'data', // dd1574 record snapshot (jsonb — total-ordered by PG)
+	};
+	const orderColumn = orderCol === undefined ? 'id' : TM_ORDER_COLUMN[String(orderCol)];
+	if (orderColumn === undefined) {
 		throw new Error(`TM read: order by '${orderCol}' is uncovered scope`);
 	}
-	const orderColumn = orderCol === 'section_id' ? 'section_id' : 'id';
 	const direction = String(order[0]?.direction ?? 'DESC').toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+	// Stable ORDER BY: the non-unique sort columns (bulk saves share a timestamp,
+	// bulk_process_id, section_tipo, …) get the PK `id` as tiebreaker so OFFSET
+	// pages don't shuffle under ties. 'id'/'section_id' keep their exact prior
+	// single-column SQL (section_id's tie behaviour is byte-gated — don't perturb).
+	const orderSql =
+		orderColumn === 'id' || orderColumn === 'section_id'
+			? `${orderColumn} ${direction}`
+			: `${orderColumn} ${direction}, id ${direction}`;
 
 	const limit = Number(sqo.limit ?? 10);
 	const offset = Number(sqo.offset ?? 0);
@@ -272,7 +298,7 @@ async function queryTmRows(
 		`SELECT id, section_id, section_tipo, tipo, lang, timestamp::text AS timestamp, user_id, bulk_process_id, data
 		 FROM matrix_time_machine tm
 		 WHERE ${whereSql}
-		 ORDER BY ${orderColumn} ${direction}
+		 ORDER BY ${orderSql}
 		 LIMIT $${params.length - 1} OFFSET $${params.length}`,
 		params,
 	)) as TmRow[];
@@ -365,7 +391,18 @@ async function emitTmRow(
 		);
 		for (let i = before; i < emission.items.length; i++) {
 			const item = emission.items[i] as Record<string, unknown>;
-			item.mode = 'tm';
+			// Stamp the request mode 'tm' back ONLY on the TOP-LEVEL cell item (the
+			// block whose tipo IS the column) so it matches the 'tm' column ddo. A
+			// select-family value was emitted in 'list' mode to resolve its LABEL and
+			// needs this restamp; a portal's nested SUBDATUM items were emitted in the
+			// subdatum ddo's own 'list' mode and must KEEP it — forcing them to 'tm'
+			// broke the byte-identical client's (tipo, mode, section_tipo) subdatum
+			// bind (get_ar_columns_instances_list / get_component_data), the same
+			// blank-cell failure as the dd578 Who column. Portal family only ever hit
+			// select-less columns here before, so the old blanket restamp went unseen.
+			if (item.tipo === cellTipo) {
+				item.mode = 'tm';
+			}
 			if (cellMode !== 'list' && item.parent_section_id === undefined) {
 				item.parent_section_id = item.section_id;
 			}
@@ -417,11 +454,20 @@ async function emitTmRow(
 					],
 					pagination: { total: 1, limit: 1, offset: 0 },
 				} as never);
+				// SUBDATUM mode is 'list', NOT the row's 'tm': dd578's portal
+				// request_config declares its username subdatum ddo (dd132) in 'list'
+				// mode (the standard portal display mode), and the byte-identical
+				// client binds a subdatum to its context/data by an EXACT (tipo, mode,
+				// section_tipo) match (section_record get_ar_columns_instances_list +
+				// get_component_data). Emitting it as 'tm' made ddo('list') ≠ data/
+				// context('tm'), so the client dropped the column and the Who cell
+				// rendered blank. Same class as the select-family value fix that gave
+				// emitRelationCell its cellMode='list' (tm_component_value_differential).
 				emission.items.push({
 					section_id: String(row.user_id),
 					section_tipo: USERS_SECTION_TIPO,
 					tipo: usernameTipo,
-					mode: 'tm',
+					mode: 'list',
 					lang: 'lg-nolan',
 					from_component_tipo: TIPO_USER,
 					entries: await usernameItems(row.user_id, usernameTipo),
