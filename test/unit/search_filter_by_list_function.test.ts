@@ -1,20 +1,20 @@
 /**
- * filter_by_list `format:'function'` clauses (conform.ts, 2026-07-09) — the
- * autocomplete picker's pre-filter checkboxes (e.g. numisdata4's numisdata161
- * "Catálogo" filter). Each checked option becomes:
- *   { q:'"<fct>_<st>_<si>"', path:[…], format:'function',
- *     use_function:'relations_flat_fct_st_si' }
- * and must narrow the search to records whose relation holds a matching
- * locator, via an exact tuple-IN over matrix_relation_index (the v6-era
- * data_relations_flat_* functions were REMOVED 2026-07-20; the use_function
- * name survives as wire vocabulary only — WC-012).
+ * Relation filter leaves (conform.ts) — the autocomplete picker's pre-filter
+ * checkboxes (e.g. numisdata4's numisdata161 "Catálogo" filter). Both wire
+ * shapes resolve to the same exact tuple-IN over matrix_relation_index:
  *
- * DELIBERATE functionality-over-parity: the client names the LEGACY v6
- * function (no data_ prefix); the live PHP oracle interpolated the v6 name
- * verbatim → SQL error → 0 results (probed 2026-07-09; TS used to IGNORE the
- * clause → unfiltered results, the reported bug). TS maps through an explicit
- * allowlist and binds the key as a parameter. These cases therefore assert
- * TS ground truth, NOT PHP equality.
+ * CANONICAL format:'relation' (2026-07-21): q is a partial locator object
+ *   ({from_component_tipo, section_tipo, section_id, type?}) or an array of
+ *   them (array = OR within the leaf). Strictly validated.
+ *
+ * DEPRECATED format:'function' (WC-012 reader, kept for beta-era saved
+ *   searches): { q:'"<fct>_<st>_<si>"', use_function:'relations_flat_*' } —
+ *   the v6-era vocabulary; the stored functions were REMOVED 2026-07-20.
+ *
+ * DELIBERATE functionality-over-parity: the live PHP oracle interpolated the
+ * v6 name verbatim → SQL error → 0 results (probed 2026-07-09; TS used to
+ * IGNORE the clause → unfiltered results, the reported bug). These cases
+ * therefore assert TS ground truth, NOT PHP equality.
  *
  * Fixtures: numisdata3 gated by catalogue select numisdata309 → numisdata300
  * records (catalogue 1 = 5425 rows, catalogue 2 = 2726, probed 2026-07-09 —
@@ -60,7 +60,116 @@ beforeAll(async () => {
 	}
 });
 
-describe("filter_by_list format:'function' (autocomplete pre-filter)", () => {
+function relationClause(q: unknown): Record<string, unknown> {
+	return {
+		q,
+		path: [{ section_tipo: SECTION, component_tipo: FILTER_COMPONENT }],
+		format: 'relation',
+	};
+}
+
+async function catalogueTruth(catalogueIds: string[]): Promise<number> {
+	const truth = (await sql.unsafe(
+		`SELECT count(*)::int AS c FROM matrix
+		 WHERE section_tipo = $1 AND EXISTS (
+			SELECT 1 FROM jsonb_array_elements(relation->$2) e
+			WHERE e->>'section_tipo' = $3
+			  AND e->>'section_id' IN (SELECT jsonb_array_elements_text($4::text::jsonb))
+			  AND e->>'from_component_tipo' = $2)`,
+		[SECTION, FILTER_COMPONENT, CATALOGUE_SECTION, JSON.stringify(catalogueIds)],
+	)) as { c: number }[];
+	return truth[0]?.c ?? 0;
+}
+
+describe("filter leaves format:'relation' (canonical, 2026-07-21)", () => {
+	test('single locator object narrows to the ground-truth record set', async () => {
+		if (!dbReady) return;
+		for (const catalogueId of ['1', '2']) {
+			const expected = await catalogueTruth([catalogueId]);
+			expect(expected).toBeGreaterThan(0); // fixture guard
+			const total = await runCount({
+				$and: [
+					{
+						$or: [
+							relationClause({
+								from_component_tipo: FILTER_COMPONENT,
+								section_tipo: CATALOGUE_SECTION,
+								section_id: catalogueId,
+							}),
+						],
+					},
+				],
+			});
+			expect(total).toBe(expected);
+		}
+	});
+
+	test('array q = OR within the leaf (one index subquery, union of both sets)', async () => {
+		if (!dbReady) return;
+		const expected = await catalogueTruth(['1', '2']);
+		const total = await runCount({
+			$and: [
+				relationClause([
+					{
+						from_component_tipo: FILTER_COMPONENT,
+						section_tipo: CATALOGUE_SECTION,
+						section_id: 1,
+					},
+					{
+						from_component_tipo: FILTER_COMPONENT,
+						section_tipo: CATALOGUE_SECTION,
+						section_id: '2',
+					},
+				]),
+			],
+		});
+		expect(total).toBe(expected);
+	});
+
+	test('array leaf equals the $or-of-single-leaves form (both wire shapes)', async () => {
+		if (!dbReady) return;
+		const viaOperators = await runCount({
+			$and: [
+				{
+					$or: [
+						relationClause({
+							from_component_tipo: FILTER_COMPONENT,
+							section_tipo: CATALOGUE_SECTION,
+							section_id: 1,
+						}),
+						relationClause({
+							from_component_tipo: FILTER_COMPONENT,
+							section_tipo: CATALOGUE_SECTION,
+							section_id: 2,
+						}),
+					],
+				},
+			],
+		});
+		expect(viaOperators).toBe(await catalogueTruth(['1', '2']));
+	});
+
+	test('strict validation: unknown field, bad tipo, non-integer id, empty array all throw', async () => {
+		if (!dbReady) return;
+		await expect(
+			runCount({ $and: [relationClause({ section_tipo: CATALOGUE_SECTION, bogus: 'x' })] }),
+		).rejects.toThrow(/unknown locator field 'bogus'/);
+		await expect(
+			runCount({ $and: [relationClause({ section_tipo: "x'; DROP--" })] }),
+		).rejects.toThrow(/invalid tipo/);
+		await expect(
+			runCount({
+				$and: [relationClause({ section_tipo: CATALOGUE_SECTION, section_id: '1 OR 1=1' })],
+			}),
+		).rejects.toThrow(/is not an integer/);
+		await expect(runCount({ $and: [relationClause([])] })).rejects.toThrow(/q array is empty/);
+		await expect(runCount({ $and: [relationClause({ section_id: 1 })] })).rejects.toThrow(
+			/needs a section_tipo/,
+		);
+	});
+});
+
+describe("filter_by_list format:'function' (DEPRECATED reader, WC-012)", () => {
 	test('single catalogue clause narrows to the ground-truth record set', async () => {
 		if (!dbReady) return;
 		for (const catalogueId of ['1', '2']) {
