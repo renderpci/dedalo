@@ -4,25 +4,29 @@
  * the back-link machinery behind relation_list panels, inverse-reference
  * checks, and delete propagation.
  *
- * Uses the SAME PostgreSQL pre-flattening stored functions + functional GIN
- * indexes the PHP engine installed (db_pg_definitions):
- *   data_relations_flat_st_si(relation)     → ["numisdata6_1", …]
- *   data_relations_flat_fct_st_si(relation) → ["oh25_oh1_3", …]
- *   data_relations_flat_ty_st_si(relation)  → ["dd151_oh1_3", …]
- *   data_relations_flat_ty_st(relation)     → ["dd151_oh1", …]
- * Per-locator dispatch picks the narrowest key (PHP parse_sql_query switch):
- *   1. no section_id + type    → ty_st       (relation_index case)
- *   2. from_component_tipo     → fct_st_si
- *   3. type + section_id       → ty_st_si
- *   4. default                 → st_si
+ * ONE ROW-SET ENGINE (2026-07-20): matrix_relation_index is THE relation
+ * search. Finds/counts run as ONE btree query over the typed per-locator
+ * index — measured 7-19× faster than the retired flat GIN, with honest
+ * planner statistics. Locator narrowing dispatch (locatorIndexClause) mirrors
+ * the v6-era switch exactly:
+ *   1. no section_id + type    → (type, target_section_tipo)
+ *   2. from_component_tipo     → (fct, target st, target si)
+ *   3. type + section_id       → (type, target st, target si)
+ *   4. default                 → (target st, target si)
+ *
+ * The v6-era pre-flattening functions (data_relations_flat_*) and their SQL
+ * paths were REMOVED outright with their GIN indexes — v7 ships no legacy
+ * engine. Coverage (triggers + backfill, requireRelationIndex) is therefore a
+ * REQUIREMENT: an uncovered instance fails loudly with the maintenance
+ * remediation instead of degrading (never silently narrow scope).
  *
  * Tables: the ontology-enumerated relation-capable matrix tables (dd627
  * children with properties.inverse_relations === true; matrix_test joins in
- * dev, matching this install's PHP). The query is a UNION across them.
+ * dev, matching this install's PHP).
  *
  * COUNT (countInverseReferences): the relation_list paginator total —
- * COUNT(*) per table UNION-ed and summed, with optional group_by columns
- * (identifier-regex-validated, PHP SEC rule) collected as {key, value} rows.
+ * COUNT of DISTINCT owners on the index, optionally grouped by section_tipo
+ * (the only grouping any caller uses; identifier-regex-validated, PHP SEC rule).
  *
  * BREAKDOWN (findInverseReferenceLocators): cross-join with
  * jsonb_path_query(relation, '$.*[*]') so each individual locator entry is
@@ -36,7 +40,9 @@
 import { assertMatrixTable } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
+import { getMatrixTableFromTipo } from '../ontology/resolver.ts';
 import { VALID_DATA_COLUMNS, assertValidTipo } from './identifier_gate.ts';
+import { requireRelationIndex } from './search_store.ts';
 
 /** One inverse-reference hit: the record that HOLDS the pointing locator. */
 export interface InverseReferenceHit {
@@ -92,29 +98,139 @@ export async function getRelationTables(): Promise<string[]> {
 	return tables;
 }
 
-/** The flat-key + function for one locator (PHP parse_sql_query switch). */
-function locatorClause(locator: RelatedLocatorFilter): { fn: string; key: string } {
+/**
+ * matrix_relation_index column predicate for one locator — the typed twin of
+ * locatorClause (same narrowing dispatch, same validation), used when every
+ * table in play is index-covered (relationIndexCovers). Values ride as bound
+ * params via `push`.
+ */
+function locatorIndexClause(
+	locator: RelatedLocatorFilter,
+	push: (value: string) => string,
+): string {
 	const sectionTipo = assertValidTipo(locator.section_tipo, 'search_related.section_tipo');
 	const sectionId =
 		locator.section_id === undefined || locator.section_id === null
 			? null
 			: String(Number(locator.section_id));
+	const parts: string[] = [`r.target_section_tipo = ${push(sectionTipo)}::text`];
 	if (sectionId === null && typeof locator.type === 'string') {
-		const type = assertValidTipo(locator.type, 'search_related.type');
-		return { fn: 'data_relations_flat_ty_st', key: `${type}_${sectionTipo}` };
+		parts.push(`r.type = ${push(assertValidTipo(locator.type, 'search_related.type'))}::text`);
+		return `(${parts.join(' AND ')})`;
 	}
 	if (sectionId === null) {
 		throw new Error('search_related: a locator needs a section_id or a type');
 	}
+	parts.push(`r.target_section_id = ${push(sectionId)}::int`);
 	if (typeof locator.from_component_tipo === 'string' && locator.from_component_tipo !== '') {
-		const fct = assertValidTipo(locator.from_component_tipo, 'search_related.fct');
-		return { fn: 'data_relations_flat_fct_st_si', key: `${fct}_${sectionTipo}_${sectionId}` };
+		parts.push(
+			`r.from_component_tipo = ${push(assertValidTipo(locator.from_component_tipo, 'search_related.fct'))}::text`,
+		);
+	} else if (typeof locator.type === 'string' && locator.type !== '') {
+		parts.push(`r.type = ${push(assertValidTipo(locator.type, 'search_related.type'))}::text`);
 	}
-	if (typeof locator.type === 'string' && locator.type !== '') {
-		const type = assertValidTipo(locator.type, 'search_related.type');
-		return { fn: 'data_relations_flat_ty_st_si', key: `${type}_${sectionTipo}_${sectionId}` };
+	return `(${parts.join(' AND ')})`;
+}
+
+/**
+ * The find engine: one query over matrix_relation_index. Semantics preserved
+ * from the retired containment SQL exactly: GROUP BY (owner) dedups locator
+ * multiplicity the way per-row `@>` containment did; op AND = HAVING bool_or
+ * per clause; the `table` field is resolved from section_tipo (cached
+ * resolver) and the 'table' ordering is reproduced IN SQL via a CASE over the
+ * (small) set of owning tipos so LIMIT/OFFSET stay correct. Measured vs the
+ * retired flat GIN: st_si 14→0.3ms, fct_st_si 6→0.2ms, ty_st 1014→54ms.
+ */
+async function findInverseReferencesViaIndex(
+	locators: RelatedLocatorFilter[],
+	options: NonNullable<Parameters<typeof findInverseReferences>[1]>,
+): Promise<InverseReferenceHit[]> {
+	const params: string[] = [];
+	const push = (value: string): string => {
+		params.push(value);
+		return `$${params.length}`;
+	};
+	const clauses = locators.map((locator) => locatorIndexClause(locator, push));
+	const where: string[] = [`(${clauses.join(' OR ')})`];
+	if (options.sectionTipos !== undefined && options.sectionTipos !== 'all') {
+		const validated = options.sectionTipos.map((tipo) =>
+			assertValidTipo(tipo, 'search_related.target_section'),
+		);
+		where.push(
+			`r.section_tipo IN (SELECT jsonb_array_elements_text(${push(JSON.stringify(validated))}::text::jsonb))`,
+		);
 	}
-	return { fn: 'data_relations_flat_st_si', key: `${sectionTipo}_${sectionId}` };
+	const having =
+		options.op === 'AND' && clauses.length > 1
+			? ` HAVING ${clauses.map((clause) => `bool_or(${clause})`).join(' AND ')}`
+			: '';
+
+	// 'table' ordering: table = f(section_tipo); materialize the mapping for
+	// the owning tipos actually present so the ORDER BY runs in SQL and
+	// LIMIT/OFFSET stay exact.
+	let orderSql = 'r.section_id ASC';
+	const tableByTipo = new Map<string, string>();
+	if (options.order !== 'section_id') {
+		const tipoRows = (await sql.unsafe(
+			`SELECT DISTINCT r.section_tipo FROM matrix_relation_index r WHERE ${where.join(' AND ')}`,
+			params,
+		)) as { section_tipo: string }[];
+		for (const { section_tipo } of tipoRows) {
+			tableByTipo.set(section_tipo, (await getMatrixTableFromTipo(section_tipo)) ?? 'matrix');
+		}
+		if (tableByTipo.size > 0) {
+			const cases = [...tableByTipo.entries()]
+				.map(([tipo, table]) => `WHEN ${push(tipo)}::text THEN ${push(table)}::text`)
+				.join(' ');
+			orderSql = `CASE r.section_tipo ${cases} END, r.section_tipo, r.section_id`;
+		}
+	}
+
+	// options.tables narrowing (children engine): table = f(section_tipo),
+	// which the SQL cannot see, so it is applied AFTER the fetch. With a
+	// finite limit that combination must window after filtering (a SQL LIMIT
+	// would drop rows) — the query runs unwindowed and slices in JS. No
+	// caller pairs tables+limit today; correctness over an optimization
+	// nobody hits.
+	const hasFiniteLimit = options.limit !== false && options.limit !== undefined;
+	const windowInJs = options.tables !== undefined && hasFiniteLimit;
+	const limitSql =
+		hasFiniteLimit && !windowInJs
+			? ` LIMIT ${Math.max(1, Math.floor(options.limit as number))}`
+			: '';
+	const offsetSql =
+		!windowInJs && options.offset !== undefined && options.offset > 0
+			? ` OFFSET ${Math.floor(options.offset)}`
+			: '';
+
+	const rows = (await sql.unsafe(
+		`SELECT r.section_tipo, r.section_id FROM matrix_relation_index r
+		 WHERE ${where.join(' AND ')}
+		 GROUP BY r.section_tipo, r.section_id${having}
+		 ORDER BY ${orderSql}${limitSql}${offsetSql}`,
+		params,
+	)) as { section_tipo: string; section_id: number }[];
+
+	const hits: InverseReferenceHit[] = [];
+	for (const row of rows) {
+		let table = tableByTipo.get(row.section_tipo);
+		if (table === undefined) {
+			table = (await getMatrixTableFromTipo(row.section_tipo)) ?? 'matrix';
+			tableByTipo.set(row.section_tipo, table);
+		}
+		hits.push({ section_tipo: row.section_tipo, section_id: Number(row.section_id), table });
+	}
+	if (options.tables !== undefined) {
+		const allowed = new Set(options.tables);
+		const filtered = hits.filter((hit) => allowed.has(hit.table));
+		if (windowInJs) {
+			const start =
+				options.offset !== undefined && options.offset > 0 ? Math.floor(options.offset) : 0;
+			return filtered.slice(start, start + Math.max(1, Math.floor(options.limit as number)));
+		}
+		return filtered;
+	}
+	return hits;
 }
 
 /**
@@ -143,11 +259,10 @@ export async function findInverseReferences(
 	if (locators.length === 0) {
 		throw new Error('search_related: filter_by_locators is required');
 	}
-	let tables = await getRelationTables();
+	const tables = await getRelationTables();
 	if (options.tables !== undefined) {
 		const allowed = new Set(tables);
-		tables = options.tables.filter((table) => allowed.has(table));
-		if (tables.length === 0) {
+		if (options.tables.filter((table) => allowed.has(table)).length === 0) {
 			// PHP parity (search_related::parse_sql_query): when the caller's
 			// requested tables don't intersect the relation-capable set, the query
 			// degrades to `SELECT NULL WHERE false;` — an empty result, not a fault.
@@ -160,55 +275,10 @@ export async function findInverseReferences(
 			return [];
 		}
 	}
-
-	const clauses = locators.map(locatorClause);
-	const params: string[] = [];
-	// One containment test per locator, joined by filter_by_locators_op
-	// (PHP default OR; AND = records matching EVERY locator). The key is a
-	// bound parameter; the function name is from the fixed set above (never
-	// user input).
-	const wherePerTable = clauses
-		.map((clause) => {
-			params.push(JSON.stringify([clause.key]));
-			return `${clause.fn}(relation) @> $${params.length}::text::jsonb`;
-		})
-		.join(options.op === 'AND' ? ' AND ' : ' OR ');
-
-	// Optional owning-section narrowing.
-	let sectionNarrow = '';
-	if (options.sectionTipos !== undefined && options.sectionTipos !== 'all') {
-		const validated = options.sectionTipos.map((tipo) =>
-			assertValidTipo(tipo, 'search_related.target_section'),
-		);
-		params.push(JSON.stringify(validated));
-		sectionNarrow = ` AND section_tipo IN (SELECT jsonb_array_elements_text($${params.length}::text::jsonb))`;
-	}
-
-	const union = tables
-		.map(
-			(table) =>
-				`SELECT section_tipo, section_id, '${table}' AS "table" FROM "${table}" WHERE (${wherePerTable})${sectionNarrow}`,
-		)
-		.join(' UNION ALL ');
-
-	const limitSql =
-		options.limit === false || options.limit === undefined
-			? ''
-			: ` LIMIT ${Math.max(1, Math.floor(options.limit))}`;
-	const offsetSql =
-		options.offset !== undefined && options.offset > 0
-			? ` OFFSET ${Math.floor(options.offset)}`
-			: '';
-
-	const orderSql =
-		options.order === 'section_id'
-			? 'section_id ASC' // PHP build_sql_query_order_default (no tiebreak)
-			: '"table", section_tipo, section_id';
-	const rows = (await sql.unsafe(
-		`${union} ORDER BY ${orderSql}${limitSql}${offsetSql}`,
-		params,
-	)) as InverseReferenceHit[];
-	return rows.map((row) => ({ ...row, section_id: Number(row.section_id) }));
+	// Coverage over ALL relation-capable tables (the index spans them all;
+	// options.tables only narrows the RESULT) — uncovered fails loudly.
+	await requireRelationIndex(tables);
+	return findInverseReferencesViaIndex(locators, options);
 }
 
 /** One breakdown hit: the exact locator entry that matched, plus its owner. */
@@ -241,6 +311,7 @@ export async function findInverseReferenceLocators(
 		throw new Error('search_related: filter_by_locators is required');
 	}
 	const tables = await getRelationTables();
+	await requireRelationIndex(tables);
 
 	const params: string[] = [];
 	const push = (value: string): string => {
@@ -248,11 +319,17 @@ export async function findInverseReferenceLocators(
 		return `$${params.length}`;
 	};
 
-	// Per-locator: the flat-GIN containment (row narrowing, index-backed) PLUS
-	// the locator_data field equalities (entry narrowing after the cross join).
+	// BREAKDOWN keeps the per-table UNION + jsonb cross-join (the result
+	// contract needs the EXACT locator payload, which only the jsonb has).
+	// The row-NARROWING side is a tuple-IN over matrix_relation_index
+	// (uncorrelated → hashed semi-join; exact, not a superset, because the
+	// tuple carries the owner's section_tipo).
+
+	// Per-locator: the row narrowing (index-backed) PLUS the locator_data
+	// field equalities (entry narrowing after the cross join).
 	const perLocator = locators.map((locator) => {
-		const clause = locatorClause(locator);
-		const parts = [`${clause.fn}(relation) @> ${push(JSON.stringify([clause.key]))}::text::jsonb`];
+		const rowNarrow = `(section_tipo, section_id) IN (SELECT r.section_tipo, r.section_id FROM matrix_relation_index r WHERE ${locatorIndexClause(locator, push)})`;
+		const parts = [rowNarrow];
 		if (typeof locator.from_component_tipo === 'string' && locator.from_component_tipo !== '') {
 			parts.push(
 				`locator_data->>'from_component_tipo' = ${push(locator.from_component_tipo)}::text`,
@@ -317,9 +394,10 @@ export interface RelatedCountResult {
 
 /**
  * COUNT the inverse references (PHP trait.count with mode 'related'):
- * COUNT(*) per relation table UNION-ed and summed; with `groupBy`, per-group
- * rows are collected as {key: [group values], value} alongside the total.
- * Invalid group_by entries are dropped (PHP identifier regex).
+ * COUNT of DISTINCT owners over matrix_relation_index; with
+ * groupBy ['section_tipo'], per-group rows are collected as
+ * {key: [group values], value} alongside the total. Invalid group_by entries
+ * are dropped (PHP identifier regex); other valid shapes throw (no caller).
  */
 export async function countInverseReferences(
 	locators: RelatedLocatorFilter[],
@@ -330,55 +408,65 @@ export async function countInverseReferences(
 	}
 	const tables = await getRelationTables();
 
-	const groupBy = (options.groupBy ?? []).filter((column) => {
+	// Identifier filtering FIRST (invalid entries are dropped, PHP regex +
+	// the INJ-04 VALID_DATA_COLUMNS allowlist) so the shape decision below
+	// sees the EFFECTIVE grouping — an invalid group_by degrades to the plain
+	// count, it never becomes an error.
+	const groupByFiltered = (options.groupBy ?? []).filter((column) => {
 		if (typeof column !== 'string' || !GROUP_BY_IDENTIFIER.test(column)) return false;
-		// INJ-04: beyond the shape regex, restrict to a KNOWN data/structural column
-		// (not an arbitrary column of the relation matrix). Table-qualified `t.col`
-		// is allowed; the bare column must be in the allowlist. Callers only ever
-		// group by 'section_tipo' — this closes the wider-than-necessary surface.
 		const bare = column.includes('.') ? column.slice(column.lastIndexOf('.') + 1) : column;
 		return VALID_DATA_COLUMNS.includes(bare);
 	});
-	const grouped = groupBy.length > 0;
-	const selectCols = grouped
-		? `${groupBy.join(', ')}, COUNT(*) AS full_count`
-		: 'COUNT(*) AS full_count';
-	const groupSql = grouped ? ` GROUP BY ${groupBy.join(', ')}` : '';
 
-	const clauses = locators.map(locatorClause);
-	const params: string[] = [];
-	const wherePerTable = clauses
-		.map((clause) => {
-			params.push(JSON.stringify([clause.key]));
-			return `${clause.fn}(relation) @> $${params.length}::text::jsonb`;
-		})
-		.join(' OR ');
-
-	let sectionNarrow = '';
-	if (options.sectionTipos !== undefined && options.sectionTipos !== 'all') {
-		const validated = options.sectionTipos.map((tipo) =>
-			assertValidTipo(tipo, 'search_related.target_section'),
+	// The only grouped shape any caller uses is ['section_tipo'] (S2-26).
+	// The retired per-table containment scan could group by arbitrary matrix
+	// columns; the index carries owner identity only — a novel grouping shape
+	// is a loud error, not a silent degradation (add it to the index query if
+	// a real caller ever appears).
+	const groupByRaw = groupByFiltered;
+	if (groupByRaw.length > 0 && !(groupByRaw.length === 1 && groupByRaw[0] === 'section_tipo')) {
+		throw new Error(
+			`search_related: group_by [${groupByRaw.join(', ')}] is not supported by the relation index (only 'section_tipo'; flat-function scan removed 2026-07-20)`,
 		);
-		params.push(JSON.stringify(validated));
-		sectionNarrow = ` AND section_tipo IN (SELECT jsonb_array_elements_text($${params.length}::text::jsonb))`;
 	}
-
-	const union = tables
-		.map(
-			(table) =>
-				`SELECT ${selectCols} FROM "${table}" WHERE (${wherePerTable})${sectionNarrow}${groupSql}`,
-		)
-		.join(' UNION ALL ');
-
-	const rows = (await sql.unsafe(union, params)) as Record<string, unknown>[];
-	let total = 0;
-	const totalsGroup: { key: string[]; value: number }[] = [];
-	for (const row of rows) {
-		const value = Number(row.full_count ?? 0);
-		total += value;
-		if (grouped && value > 0) {
-			totalsGroup.push({ key: groupBy.map((column) => String(row[column])), value });
+	await requireRelationIndex(tables);
+	{
+		const params: string[] = [];
+		const push = (value: string): string => {
+			params.push(value);
+			return `$${params.length}`;
+		};
+		const clauses = locators.map((locator) => locatorIndexClause(locator, push));
+		const where: string[] = [`(${clauses.join(' OR ')})`];
+		if (options.sectionTipos !== undefined && options.sectionTipos !== 'all') {
+			const validated = options.sectionTipos.map((tipo) =>
+				assertValidTipo(tipo, 'search_related.target_section'),
+			);
+			where.push(
+				`r.section_tipo IN (SELECT jsonb_array_elements_text(${push(JSON.stringify(validated))}::text::jsonb))`,
+			);
 		}
+		if (groupByRaw.length === 1) {
+			const rows = (await sql.unsafe(
+				`SELECT r.section_tipo, COUNT(DISTINCT r.section_id)::int AS full_count
+				 FROM matrix_relation_index r WHERE ${where.join(' AND ')} GROUP BY r.section_tipo`,
+				params,
+			)) as { section_tipo: string; full_count: number }[];
+			let total = 0;
+			const totalsGroup: { key: string[]; value: number }[] = [];
+			for (const row of rows) {
+				const value = Number(row.full_count);
+				total += value;
+				if (value > 0) totalsGroup.push({ key: [row.section_tipo], value });
+			}
+			return { total, totals_group: totalsGroup };
+		}
+		const rows = (await sql.unsafe(
+			`SELECT COUNT(*)::int AS full_count FROM (
+				SELECT 1 FROM matrix_relation_index r WHERE ${where.join(' AND ')}
+				GROUP BY r.section_tipo, r.section_id) owners`,
+			params,
+		)) as { full_count: number }[];
+		return { total: Number(rows[0]?.full_count ?? 0) };
 	}
-	return grouped ? { total, totals_group: totalsGroup } : { total };
 }

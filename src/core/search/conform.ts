@@ -37,7 +37,7 @@ import { buildStringFragment } from './builders/builder_string.ts';
 import type { BuilderContext, BuilderResult } from './builders/types.ts';
 import { fragment as fragmentResult } from './builders/types.ts';
 import { assertValidLang, assertValidTipo, assertValidTipoOrColumn } from './identifier_gate.ts';
-import { searchStoreCovers } from './search_store.ts';
+import { requireRelationIndex, searchStoreCovers } from './search_store.ts';
 
 /** Default data language of the installation (PHP DEDALO_DATA_LANG). */
 const DEFAULT_DATA_LANG = readString('DATA_LANG');
@@ -193,12 +193,13 @@ async function conformLeaf(
 	}
 
 	// format:'function' — the autocomplete filter_by_list pre-filter (the
-	// picker's per-catalogue checkboxes). The clause names a Postgres function
-	// over the relation column and a flat key to containment-match:
-	//   data_relations_flat_fct_st_si(relation) @> '["<fct>_<st>_<si>"]'
-	// The CLIENT sends the legacy v6 function name (no data_ prefix); this DB
-	// defines only the v7 data_* twins (install/db) — the live PHP oracle
-	// interpolates the v6 name verbatim and ERRORS (0 results, probed
+	// picker's per-catalogue checkboxes). The clause names a v6-era flat
+	// VARIANT plus a flat key ('<fct>_<st>_<si>' …). The names survive as
+	// WIRE VOCABULARY ONLY (WC-012): the stored data_relations_flat_*
+	// functions were REMOVED 2026-07-20 — the variant is translated to an
+	// exact tuple-IN over matrix_relation_index, never to SQL that calls a
+	// function. The CLIENT sends the legacy v6 name (no data_ prefix); the
+	// live PHP oracle interpolated it verbatim and ERRORED (0 results, probed
 	// 2026-07-09), so this is functionality-over-parity: map through the
 	// explicit allowlist, never interpolate the client string. The flat key
 	// travels as a bound parameter.
@@ -232,9 +233,53 @@ async function conformLeaf(
 		if (flatKey === '' || !/^[A-Za-z0-9_-]+$/.test(flatKey)) {
 			return { kind: 'leaf', result: false }; // malformed key — contributes nothing
 		}
-		const result = fragmentResult(`${flatFunction}(${leafAlias}.relation) @> _Q1_::text::jsonb`, {
-			_Q1_: JSON.stringify([flatKey]),
+		// The flat key splits unambiguously on '_' (tipos never contain
+		// underscores) into the variant's fields, and the predicate becomes an
+		// EXACT tuple-IN over matrix_relation_index — uncorrelated (hashed
+		// semi-join, no join-order inversion) and carrying the owner's
+		// section_tipo, so it is equivalence, not a superset. The index is the
+		// ONLY engine — an uncovered table fails loudly (requireRelationIndex).
+		await requireRelationIndex([leafTable]);
+		// column layout per variant, in flat-key order; '::int' marks the id
+		const VARIANT_COLUMNS: Record<string, [string, string][]> = {
+			data_relations_flat_ty_st: [
+				['type', 'text'],
+				['target_section_tipo', 'text'],
+			],
+			data_relations_flat_fct_st_si: [
+				['from_component_tipo', 'text'],
+				['target_section_tipo', 'text'],
+				['target_section_id', 'int'],
+			],
+			data_relations_flat_ty_st_si: [
+				['type', 'text'],
+				['target_section_tipo', 'text'],
+				['target_section_id', 'int'],
+			],
+			data_relations_flat_st_si: [
+				['target_section_tipo', 'text'],
+				['target_section_id', 'int'],
+			],
+		};
+		const columns = VARIANT_COLUMNS[flatFunction] as [string, string][];
+		const keyParts = flatKey.split('_');
+		if (keyParts.length !== columns.length) {
+			// wrong arity for the named variant — malformed key, contributes
+			// nothing (same contract as the character-class guard above)
+			return { kind: 'leaf', result: false };
+		}
+		const conditions: string[] = [];
+		const tokenValues: Record<string, unknown> = {};
+		columns.forEach(([column, cast], index) => {
+			const name = `_Qf${index + 1}_`;
+			conditions.push(`r.${column} = ${name}::${cast}`);
+			tokenValues[name] = keyParts[index] as string;
 		});
+		const result = fragmentResult(
+			`(${leafAlias}.section_tipo, ${leafAlias}.section_id) IN ` +
+				`(SELECT r.section_tipo, r.section_id FROM matrix_relation_index r WHERE ${conditions.join(' AND ')})`,
+			tokenValues,
+		);
 		return joins.length > 0 ? { kind: 'leaf', result, joins } : { kind: 'leaf', result };
 	}
 

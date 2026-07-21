@@ -74,16 +74,27 @@ const REGEX_META = /[.*+?[\]{}()|\\^$]/;
  *   empty store would wrongly EXCLUDE rows, so the gate is correctness);
  * - q is regex-plain (no REGEX_META): the exact predicate is regex-semantic,
  *   the pre-filter is literal-substring — they only agree on plain text.
- *   LIKE's own wildcards (% _) are then escaped into literals.
+ *   LIKE's own wildcards (% _) are then escaped into literals;
+ * - q has at least 3 characters: pg_trgm cannot extract trigrams from a
+ *   shorter pattern, so `LIKE '%a%'` degenerates into a full store scan
+ *   feeding a giant id array (measured: a 1-char autocomplete search went to
+ *   31s, 2026-07-20). Short q's are also exactly where the CLASSIC path is
+ *   fast — a common substring fills the ordered LIMIT walk almost instantly.
  * Never emitted for negations ('!*', '!=', '-', '!!') or bare '*'.
  */
+const TRGM_MIN_Q_LENGTH = 3;
+
 function withStorePrefilter(
 	context: BuilderContext,
 	sentence: string,
 	tokenValues: Record<string, unknown>,
 	q: string,
 ): Fragment {
-	if (context.searchStoreCovered !== true || q === '' || REGEX_META.test(q)) {
+	if (
+		context.searchStoreCovered !== true ||
+		[...q].length < TRGM_MIN_Q_LENGTH ||
+		REGEX_META.test(q)
+	) {
 		return fragment(sentence, tokenValues);
 	}
 	// % and _ are literal characters in the regex-exact predicate — escape

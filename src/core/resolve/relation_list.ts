@@ -28,7 +28,7 @@ import { config } from '../../config/config.ts';
 import { getFlatValueFamily } from '../components/registry.ts';
 import { mediaTypeOf } from '../concepts/media.ts';
 import { dataframeEntryMatches } from '../concepts/subdatum.ts';
-import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
+import { type MatrixRecord, readMatrixRecord, readMatrixRecordBatch } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
@@ -505,6 +505,41 @@ export async function buildRelationList(
 		},
 	);
 
+	// PER-CALL record loader (the export-run seam this module already exposes
+	// as CellValueResolveOptions.loadRecord, never wired here until 2026-07-20):
+	// a heavily-referenced host (an image on 4,682 coins) resolved every cell
+	// with uncached single reads — tens of thousands of round-trips (~27 s).
+	// The hit records are batch-prefetched per section; relation TARGETS load
+	// lazily but dedup massively (thousands of coins share the same mint/author
+	// labels). Never module-scoped — request isolation.
+	const recordCache = new Map<string, MatrixRecord | null>();
+	const loadRecord = async (
+		tableName: string,
+		sectionTipo: string,
+		sectionId: number,
+	): Promise<MatrixRecord | null> => {
+		const key = `${sectionTipo}/${sectionId}`;
+		const hit = recordCache.get(key);
+		if (hit !== undefined) return hit;
+		const record = await readMatrixRecord(tableName, sectionTipo, sectionId);
+		if (recordCache.size > 8000) recordCache.clear();
+		recordCache.set(key, record); // null too: a miss must not re-query
+		return record;
+	};
+	{
+		const idsBySection = new Map<string, number[]>();
+		for (const hit of hits) {
+			const ids = idsBySection.get(hit.section_tipo);
+			if (ids === undefined) idsBySection.set(hit.section_tipo, [hit.section_id]);
+			else ids.push(hit.section_id);
+		}
+		for (const [sectionTipo, ids] of idsBySection) {
+			const table = (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix';
+			const records = await readMatrixRecordBatch(table, sectionTipo, ids);
+			for (const id of ids) recordCache.set(`${sectionTipo}/${id}`, records.get(id) ?? null);
+		}
+	}
+
 	const context: Record<string, unknown>[] = [];
 	const data: Record<string, unknown>[] = [];
 	const unresolved: string[] = [];
@@ -551,6 +586,8 @@ export async function buildRelationList(
 				columnTipo,
 				lang,
 				unresolved,
+				undefined,
+				{ loadRecord },
 			);
 			if (value !== null) cell.value = value;
 			data.push(cell);

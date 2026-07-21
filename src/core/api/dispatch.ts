@@ -147,19 +147,6 @@ const ACTION_REGISTRY: Record<string, Record<string, ActionHandler>> = {
  */
 export async function dispatchRqo(rqo: Rqo, context: ApiRequestContext): Promise<ApiResult> {
 	const startedAt = context.startedAt ?? performance.now();
-	// TEMP DEBUG (dd543 who-search) — REMOVE: capture activity-related RQOs.
-	try {
-		const rqoText = JSON.stringify(rqo);
-		if (rqoText.includes('dd542') || rqoText.includes('dd543')) {
-			const { appendFileSync } = await import('node:fs');
-			appendFileSync(
-				'/private/tmp/claude-501/-Users-render-Desktop-trabajos-dedalo-v7-master-dedalo/7a750838-f4aa-4fef-8c6b-1cb80b7249ec/scratchpad/rqo_capture.jsonl',
-				`${new Date().toISOString()} ${rqoText}\n`,
-			);
-		}
-	} catch {
-		/* debug-only, never break dispatch */
-	}
 	const result = await executeRqo(rqo, context);
 	logApiAccess({
 		requestId: context.requestId,
@@ -168,8 +155,43 @@ export async function dispatchRqo(rqo: Rqo, context: ApiRequestContext): Promise
 		action: typeof rqo.action === 'string' ? rqo.action : String(rqo.action ?? ''),
 		status: result.status,
 		ms: performance.now() - startedAt,
+		detail: summarizeRqo(rqo),
 	});
 	return result;
+}
+
+/**
+ * Compact request-shape summary for the slow-request warn line (cheap field
+ * reads, never a full stringify). Without this, a "took 24s" line is
+ * undiagnosable after the fact — the 2026-07-20 relation-list hunt burned an
+ * hour reconstructing what one log line should have said.
+ */
+function summarizeRqo(rqo: Rqo): string {
+	try {
+		const source = (rqo.source ?? {}) as Record<string, unknown>;
+		const sqo = (rqo.sqo ?? {}) as Record<string, unknown>;
+		const sections = Array.isArray(sqo.section_tipo)
+			? (sqo.section_tipo as unknown[])
+					.map((s) => (typeof s === 'string' ? s : ((s as { tipo?: string })?.tipo ?? '?')))
+					.slice(0, 6)
+					.join(',')
+			: '';
+		const parts = [
+			`src=${String(source.model ?? '')}:${String(source.tipo ?? '')}`,
+			source.action ? `srcAction=${String(source.action)}` : '',
+			source.mode ? `mode=${String(source.mode)}` : '',
+			source.section_id !== undefined && source.section_id !== null
+				? `id=${String(source.section_id)}`
+				: '',
+			sections !== '' ? `sqo=[${sections}]` : '',
+			sqo.limit !== undefined ? `limit=${String(sqo.limit)}` : '',
+			sqo.filter !== undefined && sqo.filter !== null ? 'filter=yes' : '',
+			Array.isArray(sqo.filter_by_locators) ? `locators=${sqo.filter_by_locators.length}` : '',
+		];
+		return parts.filter((part) => part !== '').join(' ');
+	} catch {
+		return '';
+	}
 }
 
 /** The gate chain + handler execution (see dispatchRqo). */
