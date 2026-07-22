@@ -142,9 +142,9 @@ final class installer_config_manager {
 			'matrix_activity',			// Dédalo activity log data
 			'matrix_activity_diffusion',// activity/diffusion tracking data (project-specific)
 			'matrix_hierarchy',			// thesaurus data
-			'matrix_hierarchy_main',// hierarchy data
-			'matrix_ontology',		// ontology data
-			'matrix_ontology_main',// ontology data
+			// 'matrix_hierarchy_main',	// hierarchy data
+			'matrix_ontology',			// ontology data
+			'matrix_ontology_main',	// ontology data
 			'matrix_indexations',	// indexation data
 			'matrix_layout',		// print presets layout table
 			'matrix_layout_dd',		// print presets layout table (former oh1 print presets)
