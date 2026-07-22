@@ -182,7 +182,7 @@ over plain HTTP the browser discards the session cookie and **nobody can log in*
 
 ## Backups from a container
 
-The [four stores](production.md#14-backups) do not change; only the way you reach
+The [four stores](production.md#13-backups) do not change; only the way you reach
 them does.
 
 ```shell

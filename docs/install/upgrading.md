@@ -27,7 +27,7 @@ ref if health comes back red.
 
 ## Before you start
 
-Take the [four backups](production.md#14-backups). All of them. The matrix
+Take the [four backups](production.md#13-backups). All of them. The matrix
 database alone is not a backup, and an upgrade is precisely when you find that
 out.
 

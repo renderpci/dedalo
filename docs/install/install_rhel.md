@@ -3,7 +3,7 @@
 > See also: [Production install](production.md) · [Reverse proxy and TLS](reverse_proxy.md) · [Troubleshooting](troubleshooting.md)
 
 This page is a **delta**, not a second manual. Follow the
-[production install](production.md) — the sixteen steps, the layout, the
+[production install](production.md) — the fifteen steps, the layout, the
 configuration, the verification — and substitute the commands below where they
 differ. Four things change: the package manager and package names, the PostgreSQL
 repository, SELinux, and firewalld.
@@ -140,7 +140,7 @@ setsebool -P httpd_can_network_connect 1
 ### The unix socket must be reachable by the web server
 
 Put the socket in a systemd `RuntimeDirectory` (as
-[step 12](production.md#12-supervision-with-systemd) does) and label it:
+[step 10](production.md#10-run-the-engine-under-systemd) does) and label it:
 
 ```shell
 semanage fcontext -a -t httpd_var_run_t '/run/dedalo(/.*)?'
