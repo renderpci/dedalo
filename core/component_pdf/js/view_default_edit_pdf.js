@@ -244,6 +244,13 @@ const get_content_value = function(i, current_value, self) {
 					// PDFViewerApplicationOptions.locale = locale_code
 					// PDFViewerApplicationOptions.set('locale', locale_code);
 					// console.log("PDFViewerApplication.pagesCount", self.pdf_viewer.pagesCount);
+				})
+				.catch(function(error) {
+					// PDF file could not be loaded (e.g. 404 when DB files_info is out of
+					// sync with the files on disk). Handle gracefully instead of leaving an
+					// uncaught promise rejection and a broken viewer.
+					console.warn('Ignored error opening PDF (file may be missing or out of sync):', (error && error.message) || error);
+					iframe.classList.remove('loading');
 				});
 
 				// listener. Remove the listener to prevent navigation problems
