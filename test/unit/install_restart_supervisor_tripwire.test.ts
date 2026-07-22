@@ -17,7 +17,10 @@
  *   2. they respawn on exactly RESTART_EXIT_CODE — the one the server actually
  *      exits with — and on nothing else (a graceful ^C exits 0 and must QUIT,
  *      a crash exits non-zero and must NOT hot-loop), and
- *   3. the systemd unit does not count that planned exit as a failure.
+ *   3. the systemd unit does not count that planned exit as a failure, and
+ *   4. the systemd unit CREATES the socket directory (RuntimeDirectory), and every
+ *      shipped consumer of the socket agrees on one canonical /run/dedalo path — a
+ *      fresh-install 502 traced to a missing /run/dedalo and a /tmp-vs-/run drift.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -93,5 +96,32 @@ describe('install restart supervisor contract', () => {
 		expect(unit).toContain(`SuccessExitStatus=${RESTART_EXIT_CODE}`);
 		// Restart=always is what actually brings it back in production.
 		expect(unit).toContain('Restart=always');
+	});
+
+	// The socket-directory contract (added after a fresh-install 502). The engine
+	// binds SERVER_UNIX_SOCKET but does NOT create its parent dir, and /run is a
+	// tmpfs wiped every reboot — so the shipped unit MUST create /run/dedalo via
+	// RuntimeDirectory, and every shipped consumer of the socket MUST name the one
+	// canonical path. A /tmp-vs-/run drift makes the watchdog probe the wrong socket
+	// and fire OnFailure=dedalo-ts-restart every 30 s in a loop.
+	const CANONICAL_SOCKET = '/run/dedalo/dedalo_ts.sock';
+	const STALE_SOCKET = '/tmp/dedalo_ts.sock';
+
+	test('dedalo-ts.service creates the socket dir with RuntimeDirectory=dedalo', async () => {
+		const unit = await Bun.file(new URL('../../deploy/dedalo-ts.service', import.meta.url)).text();
+		expect(unit).toContain('RuntimeDirectory=dedalo');
+	});
+
+	test('the watchdog and the reverse proxy agree on /run/dedalo (no /tmp drift)', async () => {
+		const watchdog = await Bun.file(
+			new URL('../../deploy/dedalo-ts-watchdog.service', import.meta.url),
+		).text();
+		const nginx = await Bun.file(new URL('../../deploy/nginx.conf', import.meta.url)).text();
+
+		expect(watchdog).toContain(CANONICAL_SOCKET);
+		expect(watchdog).not.toContain(STALE_SOCKET);
+		// nginx's upstream must reach the same socket the engine binds.
+		expect(nginx).toContain(CANONICAL_SOCKET);
+		expect(nginx).not.toContain(STALE_SOCKET);
 	});
 });
