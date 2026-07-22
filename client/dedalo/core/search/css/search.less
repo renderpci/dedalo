@@ -581,3 +581,68 @@
 		-khtml-user-drag: element;
 		-webkit-user-drag: element;
 	}
+
+// semantic (RAG) search UI — 2026-07-22
+// The quick input lives in the list toolbar (search_buttons_container), the
+// block at the top of the search panel canvas, the chip in buttons_container.
+.semantic_quick_search {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	margin-left: 6px;
+
+	&.hide {
+		display: none;
+	}
+	&.loading {
+		opacity: 0.6;
+	}
+	input.semantic_query {
+		min-width: 14em;
+		height: 1.85em;
+		padding: 0 0.5em;
+	}
+}
+.semantic_pinned_chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin: 2px 6px;
+	padding: 2px 8px;
+	border-radius: 10px;
+	background-color: #e8e4f5;
+	color: #4a4471;
+	font-size: 0.85em;
+
+	.chip_clear {
+		cursor: pointer;
+		font-weight: bold;
+	}
+}
+.semantic_block {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 8px;
+	margin-bottom: 4px;
+	background-color: #f4f2fb;
+	border-radius: 4px;
+
+	&.hide {
+		display: none;
+	}
+	.semantic_label {
+		font-weight: bold;
+		white-space: nowrap;
+	}
+	input.semantic_query {
+		flex: 1;
+		min-width: 10em;
+	}
+	select.semantic_group.hide {
+		display: none;
+	}
+	.semantic_clear {
+		cursor: pointer;
+	}
+}

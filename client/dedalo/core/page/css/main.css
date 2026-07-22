@@ -8820,6 +8820,64 @@ body.is_ontology_server .menu > .content_data {
   -khtml-user-drag: element;
   -webkit-user-drag: element;
 }
+.semantic_quick_search {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+}
+.semantic_quick_search.hide {
+  display: none;
+}
+.semantic_quick_search.loading {
+  opacity: 0.6;
+}
+.semantic_quick_search input.semantic_query {
+  min-width: 14em;
+  height: 1.85em;
+  padding: 0 0.5em;
+}
+.semantic_pinned_chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 6px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background-color: #e8e4f5;
+  color: #4a4471;
+  font-size: 0.85em;
+}
+.semantic_pinned_chip .chip_clear {
+  cursor: pointer;
+  font-weight: bold;
+}
+.semantic_block {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  background-color: #f4f2fb;
+  border-radius: 4px;
+}
+.semantic_block.hide {
+  display: none;
+}
+.semantic_block .semantic_label {
+  font-weight: bold;
+  white-space: nowrap;
+}
+.semantic_block input.semantic_query {
+  flex: 1;
+  min-width: 10em;
+}
+.semantic_block select.semantic_group.hide {
+  display: none;
+}
+.semantic_block .semantic_clear {
+  cursor: pointer;
+}
 /**
 * menu
 *
