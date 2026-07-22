@@ -207,8 +207,7 @@ export async function buildSectionElementsContext(
 		// section-info group; dd196's children live only under dd196, never in
 		// ownElements, so skipping the append fully removes them.
 		const suppressInfo = SUPPRESS_SECTION_INFO.has(sectionTipo);
-		const infoElements =
-			ownElements.length > 0 && !suppressInfo ? await sectionInfoElements() : [];
+		const infoElements = ownElements.length > 0 && !suppressInfo ? await sectionInfoElements() : [];
 		const infoTipos = new Set(infoElements.map((element) => element.tipo));
 
 		for (const { tipo, model } of [...ownElements, ...infoElements]) {
