@@ -160,6 +160,23 @@ export async function persistConfig(o: Record<string, unknown>): Promise<Persist
 		`DEDALO_SALT_STRING=${envQuote(salt)}`,
 	];
 
+	// Serving / media (CLI --media-path / --socket / --media-access-mode; the
+	// browser wizard omits them). Written ONLY when provided, so a re-save that
+	// does not carry them PRESERVES a prior value instead of clobbering it — same
+	// never-delete-by-omission contract enforced below. SERVER_UNIX_SOCKET is the
+	// load-bearing one: its default (/tmp/dedalo_ts.sock) mismatches the
+	// /run/dedalo/ path a systemd+reverse-proxy deploy uses.
+	const mediaPath = str('media_path');
+	const unixSocket = str('unix_socket');
+	const mediaAccessMode = str('media_access_mode');
+	if (mediaPath !== '' || unixSocket !== '' || mediaAccessMode !== '') {
+		lines.push('', '# --- Serving / media ---');
+		if (mediaPath !== '') lines.push(`MEDIA_PATH=${envQuote(mediaPath)}`);
+		if (unixSocket !== '') lines.push(`SERVER_UNIX_SOCKET=${envQuote(unixSocket)}`);
+		if (mediaAccessMode !== '')
+			lines.push(`DEDALO_MEDIA_ACCESS_MODE=${envQuote(mediaAccessMode)}`);
+	}
+
 	if (diffusion) {
 		lines.push(
 			'',

@@ -14,6 +14,8 @@
  *   bun run scripts/install.ts --db-name dedalo_x --db-user u --entity mib \
  *       --root-password '...' [--db-host /tmp] [--db-port 5432] \
  *       [--db-password ...] [--hierarchies es,fr] [--diffusion --mysql-* ...] \
+ *       [--media-path /srv/dedalo/media] [--socket /run/dedalo/dedalo_ts.sock] \
+ *       [--media-access-mode publication] \
  *       [--mailer --smtp-host smtp.example.org --smtp-user ... --smtp-password ...] \
  *       [--skip-tools] [--yes]
  *
@@ -86,6 +88,12 @@ const cfg = {
 	smtp_pass: envOr('smtp-password'),
 	smtp_from: envOr('smtp-from'),
 	smtp_from_name: envOr('smtp-from-name'),
+	// Serving / media. persistConfig writes these to .env when provided;
+	// media_path also drives the directory write-probe (seeded into the env
+	// below, before config imports).
+	media_path: envOr('media-path'),
+	unix_socket: envOr('socket'),
+	media_access_mode: envOr('media-access-mode'),
 };
 if (cfg.mailer && cfg.smtp_host === '') {
 	// An empty host would persist a DISABLED mailer — refuse the contradiction.
@@ -108,6 +116,11 @@ process.env.DB_HOST = cfg.db_hostname;
 process.env.DB_PORT = cfg.db_port;
 process.env.DB_USER = cfg.db_username;
 process.env.DB_PASSWORD = cfg.db_password;
+// MEDIA_PATH must be in the env before config imports so the directory step's
+// write-probe (checkDirectories → config.media.rootPath) sees the real media
+// root. persistConfig also writes it to .env, so --media-path is the single
+// source — no separate `MEDIA_PATH=… bun run …` env-prefix needed.
+if (cfg.media_path !== '') process.env.MEDIA_PATH = cfg.media_path;
 process.env.DEDALO_INSTALL_NO_RESTART = 'true'; // the CLI never self-restarts
 
 // LANGUAGES: config.ts requires the four lang keys once ENTITY/DB are set
