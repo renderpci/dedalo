@@ -2,11 +2,62 @@
 
 Last modification date:
 
-2026-07-05T00:00:00+01:00
+2026-07-23T00:00:00+01:00
 
 Dédalo version
 
 7.0.0
+
+---
+
+## [Unreleased] - Semantic search: embed groups, client search, assistant grounding
+
+### Added
+- **RAG embed-groups descriptor** — what a section vectorizes is now AUTHORED
+  in its `section_map` node: `properties.rag.embed` is an array of named
+  groups, each an exact request_config `ddo_map`. A group is one vector
+  document per (record, data language) — the facet unit (a person's
+  `profession` vs `filiation`; a transcription with its own chunking) — stored
+  under `rag:<group>`. Resolution reuses the section-read machinery
+  (`emitDdoData`), so DEEP relation resolution works: a coin type's card can
+  embed its mint's *name*, resolved through the relation. Virtual sections
+  select their own maps (the section_map read is virtual-aware) — the earlier
+  per-component boolean opt-in, which could not differentiate virtual siblings
+  and indexed no text at all for virtual sections, is retired. Documentation:
+  [RAG & semantic search](./core/ai/rag.md) ·
+  [cookbook R1](./core/ai/rag_cookbook.md).
+- **Semantic search in the client** (WC-047) — a *"Search by meaning"* quick
+  input in the section-list toolbar and a semantic block in the search panel
+  (composes AND with the structured filter). Ranked hits pin the list via
+  `filter_by_locators` plus the new `{"mode":"locator_position"}` SQO order
+  entry, so relevance order survives pagination, counts and exports; an
+  SQO-derived pinned chip makes the state visible and clearable. Sections with
+  several embed groups get a facet selector (`dd_rag_api embed_groups`).
+  Search presets store the LIVE natural-language query and re-run it on Apply.
+- **Assistant grounding tools** — the AI assistant's loop gains section/facet
+  scoping on `dedalo_semantic_search` and the new `dedalo_retrieve_passages`
+  (exact chunk-level passages for cited answers, deduplicated across
+  languages). The external-model egress gate now also classifies every
+  deep-resolution CONTRIBUTOR section of a hit — text a group document pulled
+  from a forbidden section can never reach an external model through a public
+  host record.
+- **RAG ops** — the drain cron + embedding-sidecar runbook
+  (`engineering/PRODUCTION.md` §11); Ollama's native `/api/embed` matches the
+  sidecar contract directly.
+
+### Changed
+- Index-time resolution always runs under a system scope with explicit data
+  languages — a record's vectors never depend on which user's save triggered
+  the re-index (guarded by `rag_index_scope_tripwire`).
+- `sanitizeClientSqo` clamps `filter_by_locators` to 1000 pins (loud log).
+- Retrieval scope is pushed down into the vector-store legs (a dominant
+  section can no longer starve scoped searches into empty results).
+
+### Fixed
+- Text-area values embedded through list-mode ddos were truncated to the
+  130-character list preview (a 2.1 MB transcription embedded as 154 chars).
+  Ddo `mode` in `rag.embed` maps is now honored verbatim when explicit and
+  defaults to full-value resolution for literals when absent.
 
 ---
 

@@ -132,7 +132,7 @@ Registered actions: `diffuse`, `get_process_status`, `list_processes`, `cancel_p
 
 ### dd_rag_api (semantic retrieval)
 
-Registered actions (from `src/ai/rag/api.ts`): `semantic_search`, `retrieve`, `get_agent_context`, `similar_to`, `ask`, `similar_objects`, `search_by_text_image`, `characterize_object`. Results are ACL-gated inside each handler (schema ACL + per-record projects filter).
+Registered actions (from `src/ai/rag/api.ts`): `semantic_search`, `retrieve`, `get_agent_context`, `similar_to`, `ask`, `embed_groups`, `similar_objects`, `search_by_text_image`, `characterize_object`. Results are ACL-gated inside each handler (schema ACL + per-record projects filter). The retrieval actions accept an optional `group` (embed-group facet id); `embed_groups {section_tipo}` returns the section's facet ids — empty alike for a malformed tipo, a denied caller or a not-opted-in section (never an existence oracle).
 
 ### Component APIs
 

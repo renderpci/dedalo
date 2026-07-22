@@ -122,7 +122,7 @@ handler bodies live in `src/core/api/handlers/<class>.ts`.
 | `dd_component_av_api` | `create_posterframe`, `delete_posterframe`, `get_media_streams`. |
 | `dd_component_3d_api` | `move_file_to_dir`, `delete_posterframe`. |
 | `dd_component_info` | `get_widget_data`. |
-| `dd_rag_api` | Retrieval: `semantic_search`, `retrieve`, `get_agent_context`, `similar_to`, `ask`, `similar_objects`, `search_by_text_image`, `characterize_object`. ACL-gated inside the handlers. |
+| `dd_rag_api` | Retrieval: `semantic_search`, `retrieve`, `get_agent_context`, `similar_to`, `ask`, `embed_groups`, `similar_objects`, `search_by_text_image`, `characterize_object` (retrieval actions accept a `group` facet). ACL-gated inside the handlers. |
 | `dd_mcp_api` | The in-process agent bridge: `mcp_proxy`, `agent_models`, `agent_chat`, `agent_chat_stream`, `agent_apply`. **Fail-closed** — every action refuses unless the agent HTTP surface is explicitly enabled. |
 | `dd_error_report_api` | `receive_report` — machine-to-machine error intake, reachable only where the receiver is enabled. |
 

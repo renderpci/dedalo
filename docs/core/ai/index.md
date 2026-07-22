@@ -63,7 +63,8 @@ flowchart TB
 ### For integrators — *consume* the API
 
 - **[RAG operational cookbook](rag_cookbook.md)** — the `dd_rag_api` actions
-  (`semantic_search`, `retrieve`, `ask`, `similar_objects`, …) with copy-paste
+  (`semantic_search`, `retrieve`, `ask`, `embed_groups`, `similar_objects`, …),
+  the in-client semantic search (quick input + panel block) with copy-paste
   request/response recipes.
 - **[Assistant cookbook — integrators](assistant/cookbook.md)** — the assistant's
   SSE streaming protocol and HTTP recipes (`dd_mcp_api`).
