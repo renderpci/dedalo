@@ -45,6 +45,10 @@
 	import {set_element_css} from '../../page/js/css.js'
 	import {edit_user_search_preset, load_search_preset} from '../../search/js/search_user_presets.js'
 	import {render_filter} from '../../search/js/render_search.js'
+	import {
+		render_semantic_block,
+		apply_semantic_from_preset
+	} from '../../search/js/render_semantic.js'
 	import {get_section_records} from '../../section/js/section.js'
 	import {no_records_node} from '../../section/js/render_common_section.js'
 
@@ -435,6 +439,15 @@ export const select_preset = async function (options) {
 			editing_preset		: json_filter,
 			allow_duplicates	: true
 		})
+
+		// semantic (RAG): restore the preset's live NL query as state (Apply
+		// re-runs it); refresh the panel block inputs from state.
+		apply_semantic_from_preset(self, json_filter)
+		if (self.semantic_block_node) {
+			const fresh_block = render_semantic_block(self)
+			self.semantic_block_node.replaceWith(fresh_block)
+			self.semantic_block_node = fresh_block
+		}
 
 		// render buttons (force to re-create the buttons)
 		self.render_search_buttons()

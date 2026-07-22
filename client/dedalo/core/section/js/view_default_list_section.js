@@ -13,6 +13,10 @@
 	import {set_element_css} from '../../page/js/css.js'
 	import {no_records_node} from './render_common_section.js'
 	import {
+		build_semantic_quick_input,
+		build_pinned_chip
+	} from '../../search/js/render_semantic.js'
+	import {
 		render_column_id
 	} from './render_list_section.js'
 
@@ -540,6 +544,20 @@ const get_buttons = function(self) {
 			self.filter.show_all(show_all_button)
 		}
 		show_all_button.addEventListener('mousedown', show_all_mousedown_handler)
+
+	// semantic quick input (RAG, 2026-07-22). Hidden unless the searched
+	// section declares embed groups; Enter fires the search instance's
+	// exec_semantic_search (resolve-once-then-pin).
+		const semantic_quick_input = build_semantic_quick_input(self)
+		search_buttons_container.appendChild(semantic_quick_input)
+
+	// pinned-state chip — SQO-derived (pins persist in the server session SQO
+	// across reloads while client memory dies with the page; without this chip
+	// the list is invisibly filtered — adversarial review #1).
+		const pinned_chip = build_pinned_chip(self)
+		if (pinned_chip) {
+			buttons_container.appendChild(pinned_chip)
+		}
 
 	// non_editable_sections. Activity section 'dd542'
 		const non_editable_sections = [

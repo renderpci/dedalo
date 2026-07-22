@@ -206,6 +206,17 @@ search.prototype.init = async function(options) {
 	// json_filter default value
 		self.json_filter = {"$and": []};
 
+	// semantic search state (RAG, 2026-07-22). The instance is keyed and cached
+	// across re-renders, so both the list quick-input and the panel block render
+	// from this one home. NEVER smuggled through sqo.filter (the server filter
+	// schema strips unknown keys); presets carry it INSIDE the stored filter
+	// value (parse_dom_to_json_filter attaches it in non-'search' modes only).
+		self.semantic = {
+			q		: '',	// the natural-language query
+			group	: null,	// embed-group facet (null = all groups)
+			pinned	: false	// a semantic result set is currently pinned
+		}
+
 	// filter_model. Canonical in-memory model and single source of truth for the
 	// filter STRUCTURE (groups, operators, ordering and participating components).
 	// The DOM is a rendering of this model; structural mutations flow through the
@@ -356,6 +367,13 @@ search.prototype.build = async function() {
 				// Override self.json_filter if json_filter is valid
 				if (json_filter && typeof json_filter === 'object' && Object.keys(json_filter).length > 0) {
 					self.json_filter = json_filter;
+					// semantic (RAG): the temp preset stores the live NL query
+					// inside the filter value — restore it into instance state
+					// (state only; the user's Apply re-runs it live).
+					if (json_filter.semantic && typeof json_filter.semantic.q === 'string') {
+						self.semantic.q		= json_filter.semantic.q
+						self.semantic.group	= json_filter.semantic.group || null
+					}
 				}
 
 				resolve(self.json_filter)
@@ -1019,10 +1037,17 @@ search.prototype.parse_dom_to_json_filter = function(options) {
 			? JSON.parse(save_arguments)
 			: true
 
-	// Serialize the model tree to the json filter group object
+	// Serialize the model tree to the json filter group object. With NO model
+	// built (panel never opened — e.g. the semantic quick input firing first),
+	// fall back to the RESTORED json_filter instead of an empty tree: an empty
+	// serialization here would silently DESTROY a session/preset filter the
+	// user can see acting on the list (exec_search) or overwrite the stored
+	// temp preset server-side (autosave) — devil-review #4, 2026-07-22.
 		const filter_obj = root_node
 			? self.serialize_filter_model(root_node, add_arguments, mode)
-			: {"$and": []}
+			: (self.json_filter && Array.isArray(self.json_filter.$and)
+				? self.json_filter
+				: {"$and": []})
 		if(SHOW_DEBUG===true) {
 			console.warn("[parse_dom_to_json_filter] filter_obj: ", filter_obj);
 		}
@@ -1035,6 +1060,20 @@ search.prototype.parse_dom_to_json_filter = function(options) {
 
 	// Add object with groups to filter array
 		json_query_obj.filter = filter_obj
+
+	// semantic (RAG, 2026-07-22): presets carry the LIVE natural-language query
+	// inside the stored filter value — attached ONLY in non-'search' modes (both
+	// preset save paths), so it never rides the wire SQO from exec_search (the
+	// server filter schema would strip it anyway) and the resolved pins/order
+	// are NEVER frozen into a preset (they would freeze one user's result set
+	// into a shareable record). build_dom_group ignores non-path/non-$ keys, so
+	// old clients render presets carrying it without harm.
+		if (mode!=='search' && self.semantic && self.semantic.q && self.semantic.q.trim()!=='') {
+			json_query_obj.filter.semantic = {
+				q		: self.semantic.q,
+				group	: self.semantic.group
+			}
+		}
 
 
 	return json_query_obj
@@ -1441,10 +1480,44 @@ search.prototype.update_state = async function(options) {
 				json_query_obj.offset = 0
 			}
 
+		// semantic resolution (RAG, 2026-07-22): resolve-once-then-pin. The ranked
+		// hits become filter_by_locators pins + the locator_position order mode, so
+		// the normal list renders/pages them in score order and the pins COMPOSE
+		// (AND) with the structured filter above.
+			let filter_by_locators = null
+			if (self.semantic.q && self.semantic.q.trim()!=='') {
+				const hits = await self.resolve_semantic_hits()
+				if (Array.isArray(hits) && hits.length>0) {
+					filter_by_locators = hits.map(hit => ({
+						section_tipo	: hit.section_tipo,
+						section_id		: hit.section_id
+					}))
+					json_query_obj.order = [{ mode : 'locator_position' }]
+					self.semantic.pinned = true
+				} else if (Array.isArray(hits)) {
+					// zero hits: an EMPTY array means NO pin server-side → sentinel
+					// pin yields an honest empty list (no record has id < 1)
+					filter_by_locators = [{
+						section_tipo	: self.target_section_tipo[0] || self.target_section_tipo,
+						section_id		: -1
+					}]
+					self.semantic.pinned = true
+				} else {
+					// API error/RAG unavailable → proceed unpinned, flag visibly
+					console.warn('[exec_search] semantic search unavailable — searching without it');
+					self.semantic.pinned = false
+					if (self.caller?.model==='section') {
+						self.caller.semantic_status = 'unavailable'
+					}
+				}
+			} else {
+				self.semantic.pinned = false
+			}
+
 			const js_promise = await update_caller(
 				caller,
 				json_query_obj,
-				null, // filter_by_locator
+				filter_by_locators,
 				self
 			)
 
@@ -1457,6 +1530,71 @@ search.prototype.update_state = async function(options) {
 			self.searching = false
 		}
 	}//end exec_search
+
+
+
+	/**
+	* RESOLVE_SEMANTIC_HITS
+	* Calls dd_rag_api semantic_search with the instance's semantic state and the
+	* searched section as scope. Returns the ranked hits array, or false on any
+	* API/transport error (the caller proceeds unpinned and flags the status).
+	* Results are ACL-gated server-side; limit is clamped server-side to [1,50].
+	*
+	* @returns {Promise<Array|false>}
+	*/
+	search.prototype.resolve_semantic_hits = async function() {
+
+		const self = this
+
+		try {
+			const options = {
+				query			: self.semantic.q.trim(),
+				section_tipo	: Array.isArray(self.target_section_tipo)
+					? self.target_section_tipo
+					: [self.target_section_tipo],
+				limit			: 10
+			}
+			if (self.semantic.group) {
+				options.group = self.semantic.group
+			}
+			const api_response = await data_manager.request({
+				use_worker	: false,
+				body		: {
+					dd_api			: 'dd_rag_api',
+					action			: 'semantic_search',
+					prevent_lock	: true,
+					options			: options
+				}
+			})
+			return Array.isArray(api_response?.result)
+				? api_response.result
+				: false
+		} catch (error) {
+			console.error('Error on resolve_semantic_hits:', error);
+			return false
+		}
+	}//end resolve_semantic_hits
+
+
+
+	/**
+	* EXEC_SEMANTIC_SEARCH
+	* Quick-input entry point (list toolbar): stores the query on the instance
+	* state and fires the normal exec_search pipeline (which resolves the hits,
+	* pins them and refreshes the caller). Safe with an unbuilt panel — the
+	* structured filter composes from the restored json_filter (see exec_search).
+	*
+	* @param {string} q - The natural-language query ('' clears the pin).
+	* @returns {Promise<boolean|Object>}
+	*/
+	search.prototype.exec_semantic_search = async function(q) {
+
+		const self = this
+
+		self.semantic.q = typeof q==='string' ? q : ''
+
+		return self.exec_search()
+	}//end exec_semantic_search
 
 
 
@@ -1477,6 +1615,10 @@ search.prototype.update_state = async function(options) {
 		const self = this
 
 		button_node.classList.add('loading')
+
+		// semantic reset — show_all also unpins any semantic result set
+		self.semantic.q			= ''
+		self.semantic.pinned	= false
 
 		// source search_action
 		self.source.search_action = 'show_all'
