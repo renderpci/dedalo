@@ -3218,27 +3218,6 @@ DEDALO_RAG_DB_USERNAME_CONN="dedalo"
 
 ---
 
-### Defining the embeddable component models
-
-DEDALO_RAG_EMBEDDABLE_MODELS `string[]`
-
-Which kinds of component may be considered for the semantic index at all — a coarse,
-installation-wide filter applied before the ontology's own opt-in. Only components whose model
-is on this list are examined; of those, only the ones that declare `properties.rag.embed` are
-actually indexed. So this list never indexes anything by itself; it bounds what could be.
-
-The default covers the text-bearing components (`component_text_area`, `component_input_text`,
-`component_text`). Extend it only if you have another text-carrying component model you want
-searchable. Accepts a comma-separated list or a JSON array.
-
-```bash
-DEDALO_RAG_EMBEDDABLE_MODELS=component_text_area,component_input_text,component_text
-```
-
-*Default: ["component_text_area","component_input_text","component_text"]*
-
----
-
 ### Defining the embedding service endpoint
 
 DEDALO_RAG_EMBEDDING_ENDPOINT `string`

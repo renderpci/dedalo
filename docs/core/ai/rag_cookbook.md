@@ -49,8 +49,8 @@ save a record ──▶ hook enqueues a marker  (matrix DB, best-effort, never b
 
 Two rules that never bend:
 
-- **Opt-in everywhere.** `DEDALO_RAG_ENABLED=true` (master), then per-section /
-  per-component ontology `properties.rag`. Image actions also need
+- **Opt-in everywhere.** `DEDALO_RAG_ENABLED=true` (master), then per-section
+  **embed groups** in the section_map `rag` scope (R1). Image actions also need
   `DEDALO_RAG_MEDIA_ENABLED=true`.
 - **ACL is enforced on every hit** (schema permission + per-record projects
   filter), so an AI query returns *exactly* what the same user could read by hand
@@ -283,9 +283,9 @@ template ships in `install/sample.env`; see the [settings reference](../../confi
 | `DEDALO_RAG_EMBEDDING_MODEL` | `bge-m3` | Sent to the sidecar; also the partition key. |
 | `DEDALO_RAG_BATCH_SIZE` | `32` | Texts per sidecar request. |
 | `DEDALO_RAG_PROVIDER_TIMEOUT` | `30` | Seconds (converted to ms internally). |
-| `DEDALO_RAG_EMBEDDABLE_MODELS` | `component_text_area,component_input_text,component_text` | Which component models are eligible (comma list or JSON array). |
+| ~~`DEDALO_RAG_EMBEDDABLE_MODELS`~~ | — | **Retired 2026-07-22** — selection is the authored `rag.embed` ddo_map (R1), not a model scan. |
 
-### Chunking (install defaults; `properties.rag` overrides per component)
+### Chunking (install defaults; per-GROUP `chunk`/`mode` in `rag.embed` overrides — R1)
 
 | Key | Default | Notes |
 |---|---|---|
@@ -310,7 +310,7 @@ template ships in `install/sample.env`; see the [settings reference](../../confi
 | `DEDALO_RAG_LLM_MAX_OUTPUT_TOKENS` | `1024` | |
 | `DEDALO_RAG_LLM_TIMEOUT` | `60` | Seconds. |
 | `DEDALO_RAG_LLM_TEMPERATURE` | `0` | |
-| `DEDALO_RAG_LLM_SYSTEM_PROMPT` | built-in safe default | Per-section `properties.rag.system_prompt` wins. |
+| `DEDALO_RAG_LLM_SYSTEM_PROMPT` | built-in safe default | Per-section section_map `rag.system_prompt` wins (node `properties.rag.system_prompt` as legacy fallback). |
 | `DEDALO_RAG_CONTEXT_TOKEN_BUDGET` | `12000` | Passage budget handed to the model. |
 
 ### Privacy / egress
@@ -405,33 +405,72 @@ template ships in `install/sample.env`; see the [settings reference](../../confi
 > history) / component `oh23` (a transcription `component_text_area`) as running
 > examples. Substitute your own tipos.
 
-### R1 — Opt a section and component in (ontology `properties`)
+### R1 — Opt a section in: the `section_map` `rag.embed` groups (2026-07-22)
 
-Opt-in is **data, in the ontology** — no code. On the *section* node and on each
-*text component* node, add a `rag` block to `properties` (edit via the Ontology
-tool, or the node's `properties` JSON):
+Opt-in is **data, in the ontology** — no code. It lives in the section's
+**`section_map`** node (the same node that declares the section's Term/parent
+roles), under a `rag` key in its `properties`. The old per-node booleans
+(`properties.rag.enabled` / `embed: true` on components) are **retired** — they
+could not differentiate two virtual sections sharing components, and indexed
+nothing at all for virtual sections.
+
+`rag.embed` is an **array of named groups**. Each group is one **vector document
+per record and data language**, built from a `ddo_map` in the exact
+request_config `show.ddo_map` shape:
 
 ```json
-// SECTION node (oh1) properties.rag
-{ "rag": { "enabled": true } }
-```
-
-```json
-// COMPONENT node (oh23) properties.rag
+// SECTION_MAP node of the (virtual) section — properties
 {
   "rag": {
-    "embed": true,
-    "strategy": "structural_semantic",   // or "structural"
-    "mode": "transcription",              // auto | short | transcription | long_document
-    "chunk": { "max_tokens": 450, "min_tokens": 120 },
+    "embed": [
+      { "id": "card",
+        "ddo_map": [
+          { "tipo": "oh27", "section_tipo": "self", "mode": "list" },
+          { "tipo": "oh32", "section_tipo": "self", "mode": "list" }
+        ] },
+      { "id": "transcription",
+        "ddo_map": [ { "tipo": "oh23", "section_tipo": "self", "mode": "list" } ],
+        "mode": "transcription",
+        "chunk": { "max_tokens": 450, "min_tokens": 120 } }
+    ],
+    "strategy": "structural_semantic",
     "system_prompt": "Answer as an oral-history archivist, citing timecodes."
   }
 }
 ```
 
-Only components whose model is in `DEDALO_RAG_EMBEDDABLE_MODELS`
-(`component_text_area` / `component_input_text` / `component_text` by default) and
-that carry `embed: true` are indexed.
+Rules and powers:
+
+- **One canonical shape.** `embed` is always an array; every group is always
+  `{ id, ddo_map, chunk?, mode?, strategy? }`. `id` is a slug (≤ 40 chars),
+  unique per section — `default` by convention when one group is enough. Chunks
+  are stored under `component_tipo = 'rag:<id>'`.
+- **Groups are facets.** A person section can declare separate `profession` and
+  `filiation` groups: independent vectors, so a profession query is never
+  diluted by filiation text — and every search action accepts a `group` option
+  to scope to one facet (`"group": "transcription"`).
+- **Deep resolution, request_config semantics.** A relation entry resolves to
+  its target's term text; declare child ddos (`"parent": "<relationTipo>",
+  "section_tipo": "<targetTipo>"`) to resolve specific components in the target,
+  to arbitrary depth — e.g. embed the *mint's name* into a coin's card:
+
+  ```json
+  { "id": "card", "ddo_map": [
+      { "tipo": "numisdata16", "section_tipo": "self", "mode": "list" },
+      { "tipo": "numisdata57", "section_tipo": "self", "mode": "list" },
+      { "tipo": "numisdata73", "section_tipo": "numisdata3", "parent": "numisdata57", "mode": "list" }
+  ] }
+  ```
+- **Virtual sections just work** — and can differ. The section_map read is
+  virtual-aware: a virtual section's OWN section_map node wins; without one it
+  falls back to the real section's (via the node's `relations[0].tipo`). So
+  `rsc167` and `rsc170` (same real section) can carry different `rag.embed`
+  maps. Records are always keyed by the tipo they are stored under (the virtual
+  tipo).
+- **Coherence guarantee.** Each group always embeds its FULL definition with
+  system scope, whoever's save triggered the re-index — the vector never encodes
+  the editor's permissions or language. Retrieval gates `rag:` chunks at the
+  RECORD level (section read permission + per-record projects ACL).
 
 ### R2 — Backfill existing records
 
@@ -514,9 +553,13 @@ the auth handshake). The request is an **RQO** posted to `/api/v1/json`:
 
 `options` fields: `query` (required), `section_tipo` (string or string[] — a
 **relevance** narrowing, applied *after* the ACL gate), `limit` (clamped to
-`[1, 50]`, default `10`). `retrieve` / `get_agent_context` take the same options
-but return **passages** (each hit + `chunk_index`). `similar_to` takes
-`{ section_tipo, section_id, limit }` and returns nearest records (seed excluded).
+`[1, 50]`, default `10`), and `group` (optional — an embed-group id from R1;
+scopes the search to that facet's vectors, e.g. `"group": "transcription"`).
+`retrieve` / `get_agent_context` take the same options but return **passages**
+(each hit + `chunk_index` + `contributors`). `similar_to` takes
+`{ section_tipo, section_id, limit, group? }` and returns nearest records (seed
+excluded); with `group` it compares by that facet only ("similar by
+profession").
 
 **Quick programmatic test** (bypasses the HTTP/CSRF layer — for a dev box):
 
@@ -733,7 +776,7 @@ from the same query a superuser gets real hits from.
 | Action returns `rag_disabled` | Master switch off | `DEDALO_RAG_ENABLED=true`, restart. |
 | Image action returns `media_disabled` | Media switch off | `DEDALO_RAG_MEDIA_ENABLED=true`. |
 | Action returns `no_principal` | No session/principal on the call | Authenticate (real API) or pass a `Principal` (script). |
-| `semantic_search` returns `[]` for everyone | Nothing indexed | Section/component not opted in (R1); or drain never ran (R3); or backfill not done (R2). |
+| `semantic_search` returns `[]` for everyone | Nothing indexed | No `rag.embed` groups in the section_map (R1) — or malformed (check server log: `rag: … dropped`); or drain never ran (R3); or backfill not done (R2). |
 | Returns `[]` for one user but not another | **Working as designed** — ACL. That user can't read those records. | — |
 | `relation "rag_embeddings" does not exist` / errors on first write | Vector schema not provisioned | Run `rag_schema.sql` (Install Step 2). |
 | Connection refused / wrong DB | Vector DB creds | Check `DEDALO_RAG_DB_*_CONN` vs the actual server; default is the matrix host with DB name `dedalo7_rag`. |

@@ -108,7 +108,7 @@ Dédalo's RAG subsystem maintains a **vector version of selected data** — only
 
 Everything in Dédalo is already **meaningful by construction**. A value is never a loose string in a spreadsheet cell; it is a component, governed by the ontology, with a model, a language, relations and context (see the [architecture overview](../architecture_overview.md) and [data model](../data_model/index.md)). That is exactly the substrate semantic search wants:
 
-- **The ontology decides what gets vectorized.** Vectorization is *opt-in per component*, declared in the node's `properties` — the same `properties` mechanism that already drives diffusion, search and rendering. No bespoke tables, no parallel schema (the [Dédalo way](../index.md)).
+- **The ontology decides what gets vectorized.** Vectorization is *opt-in per section*, declared as named **embed groups** in the section's `section_map` node (each group a request_config `ddo_map` naming the components — including deep-resolved relations — that form one vector document). The same ontology mechanism that already drives the section's Term roles, diffusion, search and rendering. No bespoke tables, no parallel schema (the [Dédalo way](../index.md)).
 - **The text is already clean.** Dédalo can already produce a clean, flat textual value for any component through the export-atoms contract (`get_value()` / `get_export_value()` — see [exporting data](../exporting_data.md)). RAG reuses it, so a relation component's linked labels, a thesaurus term's hierarchy, or a transcription's text all flow in without new extraction code.
 - **Security is already per-record.** Dédalo's project ACL governs who sees what. RAG enforces the **same** ACL on every retrieved passage, so the semantic layer can never leak a record a user could not otherwise open.
 
@@ -149,7 +149,7 @@ Cultural-heritage and memory data can be sensitive: protected sites, culturally 
 - **Per-record ACL on every retrieval.** A passage is returned only if the requesting user may access its record — checked explicitly, before any score or count leaves the server, for *every* action (search, retrieve, agent context, and chat).
 - **Egress control.** If an embedding or language model is an *external* third-party service, restricted records are **never** sent to it — they are processed only by a local model, or skipped. This is enforced at **index time** (before any text leaves) and again at **answer time**.
 - **Grounding and refusal.** The chat assistant answers **only** from retrieved, permitted passages and **refuses** when it has no grounded context — it does not improvise.
-- **The archive stays in control.** Vectorization is opt-in per component; an institution decides exactly what enters the semantic layer.
+- **The archive stays in control.** Vectorization is opt-in per section facet (embed groups); an institution decides exactly which combination of fields enters each vector, per section — including per *virtual* section.
 
 ---
 
@@ -255,23 +255,40 @@ Two Postgres databases, bridged by a **locator/passage list**, never a join: the
 
 1. **Provision the vector store.** A *separate* PostgreSQL with the `vector` extension, database name `dedalo7_rag` by default (`DEDALO_RAG_DB_NAME` / `RAG_DB_NAME` in `../private/.env` override the name; host/user/password are the same matrix credentials, `config.db`). Provision the `rag_embeddings` parent table and its `rag_create_model_partition()` function out-of-band — see the gap noted above; there is no TS migration for this yet.
 2. **Choose an embedding provider.** The default, zero-config provider is `DeterministicHashProvider` — a deterministic, offline bag-of-words hasher (`src/ai/rag/embedding_provider.ts`) that makes the whole index→retrieve pipeline testable with no network and no keys, but is **not a semantic model**. For real semantic retrieval, set `DEDALO_RAG_EMBEDDING_PROVIDER=sidecar` plus `DEDALO_RAG_EMBEDDING_ENDPOINT` (and optionally `DEDALO_RAG_EMBEDDING_MODEL`, default `bge-m3`) to point at an HTTP embedding sidecar speaking `POST {endpoint}/embed {model, input:[…]} → {embeddings:[…]}`.
-3. **Opt records in, via the ontology `properties`** (resolved by `RagConfig`, `src/ai/rag/config.ts`):
-   - On the **section** node: `properties.rag = { "enabled": true }` — the cheap gate `sectionIsRagEnabled()` checks before any extraction.
-   - On each **text component** to vectorize: `properties.rag = { "embed": true }` (optionally `strategy`, `mode`, `chunk: {max_tokens, min_tokens}`, `system_prompt`). Candidates are restricted to `component_text_area` / `component_input_text` / `component_text` (`DEFAULT_EMBEDDABLE_MODELS`).
+3. **Opt records in, via the section's `section_map` `rag` scope** (2026-07-22 — the *embed groups* descriptor, resolved by `RagConfig.getEmbedGroups`, `src/ai/rag/config.ts`; the earlier per-node boolean flags are **retired**). A section's `section_map` ontology node — the section's global "how to interpret me" contract, already used for its Term/parent roles — gains a `rag` key whose `embed` is an **array of named groups**, each an exact request_config `ddo_map`:
+   - **A group = one vector document per (record, data-lang)**, stored under `component_tipo = 'rag:<id>'`. Groups are the *facet* unit: a person section can declare separate `profession` and `filiation` groups (independent vectors, so a profession query is not diluted by filiation text), and a 100 KB transcription gets its own group with its own chunking.
+   - **Selection is per (virtual) section, not per shared component.** `getSectionMap` is virtual-aware (a virtual section's own `section_map` node wins, else the real section's via `relations[0].tipo`), so two virtual siblings sharing components can embed *different* combinations — impossible under the old component-node flag, which also indexed **zero text** for virtual sections (the selection walk was not virtual-aware).
+   - **Deep resolution is inherited, not bespoke**: each group's `ddo_map` is resolved through the SAME `emitDdoData` machinery as the human section read (`src/ai/rag/embed_source.ts`), so a relation entry (a mint) resolves to its target's term text — and explicit child ddos reach arbitrary depth, exactly as in `request_config`.
+   - **Record coherence**: every group always embeds its FULL definition under the system index-time scope (`RAG_SYSTEM_PRINCIPAL` + explicit per-doc data lang — guarded by `rag_index_scope_tripwire`), regardless of which user's save triggered the re-index. Retrieval gates `rag:` chunks at the **record** level (section read permission + per-record projects ACL): the record is the access unit for semantic search.
 4. **Switch it on:** `DEDALO_RAG_ENABLED = true`. This both lets `dd_rag_api` actions run and registers the save/delete hook (`initRagHooks()`, `src/ai/rag/bootstrap.ts`, called once from `startServer()`) that enqueues a dirty marker into `rag_index_queue` on every write.
 5. **Backfill and drain** — see *Operations* below.
-6. **(Optional) object images** — declare `properties.rag.context` on the section (images + views, and the typology/period/material components — see below), stand up the multimodal sidecar (`DEDALO_RAG_MULTIMODAL_*`), and set `DEDALO_RAG_MEDIA_ENABLED = true`. **Gap:** only the *retrieval* side of the image layer is built; there is no automated ingestion path yet that reads a record's images off disk and embeds them into the store (see *Image similarity & object characterization* below).
+6. **(Optional) object images** — declare `properties.rag.context` on the **section node** (images + views, and the typology/period/material components — see below; the image layer still reads the node's `properties`, not the section_map), stand up the multimodal sidecar (`DEDALO_RAG_MULTIMODAL_*`), and set `DEDALO_RAG_MEDIA_ENABLED = true`. **Gap:** only the *retrieval* side of the image layer is built; there is no automated ingestion path yet that reads a record's images off disk and embeds them into the store (see *Image similarity & object characterization* below).
 
-Example ontology `properties` for an oral-history transcription component:
+Example `section_map` `properties.rag` for a publication section (a card facet plus a full-text facet):
 
 ```json
 {
     "rag": {
-        "embed": true,
-        "strategy": "structural_semantic"
+        "embed": [
+            { "id": "card",
+              "ddo_map": [
+                  { "tipo": "rsc140", "section_tipo": "self", "mode": "list" },
+                  { "tipo": "rsc221", "section_tipo": "self", "mode": "list" },
+                  { "tipo": "rsc138", "section_tipo": "self", "mode": "list" },
+                  { "tipo": "dd812", "section_tipo": "dd810", "parent": "rsc138", "mode": "list" }
+              ] },
+            { "id": "fulltext",
+              "ddo_map": [ { "tipo": "rsc210", "section_tipo": "self", "mode": "list" } ],
+              "mode": "long_document",
+              "chunk": { "max_tokens": 450, "min_tokens": 120 } }
+        ],
+        "strategy": "structural_semantic",
+        "system_prompt": "Answer as a publications archivist."
     }
 }
 ```
+
+The `dd812` entry is the deep case: `rsc138` is a relation, and its child ddo resolves `dd812` **in the target section** `dd810` — the target's text lands in the host record's `card` document (its origin is recorded in `chunk_meta.contributors`, which the `ask` egress gate also checks so a forbidden section's text can never egress through a host record). Retrieval takes an optional `group` option to scope any search to one facet.
 
 ## The API (`dd_rag_api`)
 
@@ -358,7 +375,7 @@ The save/delete hook (`registerRagRecordHook`, wired by `initRagHooks()`) enqueu
 
 ## Generation (`ask`)
 
-`ask()`'s `LlmProvider` seam (`llm_provider.ts`) is pluggable via `DEDALO_RAG_LLM_ENDPOINT`: when set, `HttpLlmProvider` posts an OpenAI-compatible chat-completions request (works against any local TEI/vLLM/llama.cpp endpoint or a hosted OpenAI-compatible API, model/timeout/temperature from `DEDALO_RAG_LLM_*`); when unset, the deterministic `StubLlmProvider` answers with a templated, self-citing echo of the retrieved passages — so `ask()` is fully exercisable offline with no model running. (This is a **different** provider seam from the agent loop's Anthropic integration below — `ask()` does not currently have an Anthropic-native adapter.) The pipeline (`runAsk`, load-bearing order): retrieve (ACL enforced inside) → grounding gate (no passages ⇒ refuse, no model call) → rerank (pass-through) → `fitTokenBudget` (keeps ≥1 passage even over budget) → a **live** egress decision recomputed per record from current config (`buildEgressPolicy`: a `DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS` section, or `DEDALO_RAG_ALLOW_EXTERNAL_PROVIDER_DEFAULT` being off, forces `'restricted'`; the policy also accepts an optional per-record `publishable()` callback, not currently wired by `dd_rag_api`, so today the decision is **global**, not yet keyed off each record's actual diffusion-publish status) → generate. The system prompt resolves per-section `properties.rag.system_prompt` first, then `DEDALO_RAG_LLM_SYSTEM_PROMPT`, then a safe built-in default (`buildSystemPromptResolver`).
+`ask()`'s `LlmProvider` seam (`llm_provider.ts`) is pluggable via `DEDALO_RAG_LLM_ENDPOINT`: when set, `HttpLlmProvider` posts an OpenAI-compatible chat-completions request (works against any local TEI/vLLM/llama.cpp endpoint or a hosted OpenAI-compatible API, model/timeout/temperature from `DEDALO_RAG_LLM_*`); when unset, the deterministic `StubLlmProvider` answers with a templated, self-citing echo of the retrieved passages — so `ask()` is fully exercisable offline with no model running. (This is a **different** provider seam from the agent loop's Anthropic integration below — `ask()` does not currently have an Anthropic-native adapter.) The pipeline (`runAsk`, load-bearing order): retrieve (ACL enforced inside) → grounding gate (no passages ⇒ refuse, no model call) → rerank (pass-through) → `fitTokenBudget` (keeps ≥1 passage even over budget) → a **live** egress decision recomputed per record from current config (`buildEgressPolicy`: a `DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS` section, or `DEDALO_RAG_ALLOW_EXTERNAL_PROVIDER_DEFAULT` being off, forces `'restricted'`; the policy also accepts an optional per-record `publishable()` callback, not currently wired by `dd_rag_api`, so today the decision is **global**, not yet keyed off each record's actual diffusion-publish status) → generate. The system prompt resolves the section_map `rag.system_prompt` first, then the section node's `properties.rag.system_prompt` (legacy home), then `DEDALO_RAG_LLM_SYSTEM_PROMPT`, then a safe built-in default (`buildSystemPromptResolver`).
 
 ## Image similarity & object characterization
 
@@ -407,7 +424,7 @@ Both are read-only by default and additive on top of `dd_rag_api` — the MCP/ag
 
 - **Embedding provider** — implement the `EmbeddingProvider` interface (`embedding_provider.ts`: `name`, `model`, `dimension`, `embed(texts)`); `getEmbeddingProvider()` resolves `DeterministicHashProvider` by default or `SidecarEmbeddingProvider` when `DEDALO_RAG_EMBEDDING_PROVIDER=sidecar`. Dimension is **discovered** from the response, never hard-coded.
 - **Reranker** — implement `Reranker.rerank(query, passages)` (`reranker.ts`) and wire it in place of `PassThroughReranker` in `askAction` (`api.ts`); no cross-encoder ships yet, and there is no `DEDALO_RAG_RERANK_ENDPOINT` config surface in this tree.
-- **System prompt** — global `DEDALO_RAG_LLM_SYSTEM_PROMPT` or per-section `properties.rag.system_prompt` (`buildSystemPromptResolver`).
+- **System prompt** — global `DEDALO_RAG_LLM_SYSTEM_PROMPT` or per-section section_map `rag.system_prompt` (node `properties.rag.system_prompt` as legacy fallback; `buildSystemPromptResolver`).
 
 ## Configuration & tests
 
