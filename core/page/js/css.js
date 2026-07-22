@@ -225,6 +225,68 @@ const flush_style_updates = function() {
 
 
 /**
+* NORMALIZE_SELECTOR
+* Collapse whitespace so a constructed selector and the browser-normalized
+* CSSRule.selectorText can be compared reliably.
+* @param string selector
+* @return string
+*/
+const normalize_selector = function(selector) {
+
+	return selector.replace(/\s+/g, ' ').trim()
+}//end normalize_selector
+
+
+
+/**
+* FIND_RULE_INDEX
+* Locate the live index of a rule in the sheet by its (normalized) selector.
+* (!) Cached absolute indices are never trusted: insertRule/deleteRule shift
+* every later index, so the only reliable way to delete a rule is to locate
+* it live at delete time. Style rules are matched by selectorText; at-rules
+* (@media / @supports / @keyframes), which have no selectorText, are matched by
+* their prelude so they get replaced instead of duplicated on a body change.
+* @param CSSStyleSheet sheet
+* @param string normalized_selector
+* @return int index or -1 if not found
+*/
+const find_rule_index = function(sheet, normalized_selector) {
+
+	const rules = sheet.cssRules
+
+	// whitespace-insensitive form, used only to match at-rule preludes. Removing
+	// all whitespace is safe for a prelude (no descendant-vs-compound ambiguity)
+	// and is never applied to element selectors.
+	const compact_key = normalized_selector.replace(/\s+/g, '')
+
+	for (let i = 0; i < rules.length; i++) {
+
+		const rule = rules[i]
+
+		// style rules: match by normalized selectorText
+		const selector_text = rule.selectorText
+		if (selector_text) {
+			if (normalize_selector(selector_text)===normalized_selector) {
+				return i
+			}
+			continue
+		}
+
+		// at-rules (no selectorText): match by the prelude before the first '{'
+		const css_text	= rule.cssText || ''
+		const brace		= css_text.indexOf('{')
+		const head		= (brace===-1 ? css_text : css_text.slice(0, brace)).replace(/\s+/g, '')
+		if (head!=='' && head===compact_key) {
+			return i
+		}
+	}
+
+	return -1
+}//end find_rule_index
+
+
+
+/**
 * SAFE_INSERT_RULE
 * Add new styleSheet rules if not already exists
 * @param string selector
@@ -236,33 +298,42 @@ const safe_insert_rule = function(selector, rule_body) {
 	// sheet
 	const sheet = get_elements_style_sheet()
 
+	// normalized map key. Used to compare against the browser-normalized
+	// selectorText when locating / pruning the rule later.
+	const key = normalize_selector(selector)
+
 	// rule_text
 	const rule_text = `${selector} { ${rule_body} }`;
 
 	// check for already inserted rule
-	if (inserted_rules.has(selector)) {
+	const cached = inserted_rules.get(key);
+	if (cached) {
 
-		const { rule_text: old_text, index } = inserted_rules.get(selector);
-
-		if (old_text === rule_text) {
+		if (cached.rule_text === rule_text) {
 			// if(SHOW_DEBUG===true) {
 			// 	console.log('Ignored already existing rule:', selector, rule_text);
 			// }
 			return false; // No change needed
 		}
 
-		try {
-			sheet.deleteRule(index);
-		} catch (e) {
-			console.warn('Failed to delete rule', e);
+		// replace: locate the rule live (cached index would be stale after any
+		// other insert/delete or prune) and remove exactly that one
+		const index = find_rule_index(sheet, key);
+		if (index !== -1) {
+			try {
+				sheet.deleteRule(index);
+			} catch (e) {
+				console.warn('Failed to delete rule', e);
+			}
 		}
 	}
 
 	try {
-		const index = sheet.insertRule(rule_text, sheet.cssRules.length);
-		inserted_rules.set(selector, { rule_text, index });
+		sheet.insertRule(rule_text, sheet.cssRules.length);
+		inserted_rules.set(key, { rule_text });
 	} catch (e) {
 		console.warn('Failed to insert rule', rule_text, e);
+		inserted_rules.delete(key);
 		return false;
 	}
 
@@ -284,7 +355,9 @@ export const prune_rules = function(condition_fn) {
 	for (let i = sheet.cssRules.length - 1; i >= 0; i--) {
 
 		const rule			= sheet.cssRules[i];
-		const rule_selector	= rule.selectorText; // e.g. '.oh1_oh62.edit.wrapper_component'
+		const rule_selector	= rule.selectorText // e.g. '.oh1_oh62.edit.wrapper_component'
+			? normalize_selector(rule.selectorText)
+			: null;
 
 		if (condition_fn(rule)) {
 
@@ -292,10 +365,90 @@ export const prune_rules = function(condition_fn) {
 			sheet.deleteRule(i);
 
 			// inserted_rules delete to keep the cache in sync
-			inserted_rules.delete(rule_selector);
+			if (rule_selector) {
+				inserted_rules.delete(rule_selector);
+			}
 		}
 	}
 }//end prune_rules
+
+
+
+/**
+* IS_SELECTOR_ALIVE
+* Checks whether a rule's selector still matches at least one element in the DOM.
+* Pseudo-classes and pseudo-elements are stripped so the test is state-independent
+* (e.g. a ':hover' rule is not treated as orphan just because nothing is hovered).
+* Stripping only ever broadens the match, so the test is biased towards keeping
+* rules: it never reports a live rule as orphan, at most it keeps a few dead ones.
+* @param CSSRule rule
+* @return bool
+*	true  -> keep the rule (an element matches, or presence can't be determined)
+*	false -> orphan (no element matches): safe to prune
+*/
+const pseudo_re = /:{1,2}[a-zA-Z-]+(\([^)]*\))?/g;
+const is_selector_alive = function(rule) {
+
+	// Non-style rules (media, keyframes, font-face...) have no selectorText.
+	// They are few and cannot be DOM-tested: keep them.
+	const selector_text = rule && rule.selectorText;
+	if (!selector_text) {
+		return true
+	}
+
+	// test each comma separated branch independently
+	const ar_selector = selector_text.split(',');
+	for (let i = 0; i < ar_selector.length; i++) {
+
+		// strip pseudo-classes / pseudo-elements and any dangling combinators
+		const clean = ar_selector[i]
+			.replace(pseudo_re, '')
+			.replace(/[>+~\s]+$/, '')
+			.trim();
+
+		if (clean==='') {
+			// nothing testable left: keep the rule to be safe
+			return true
+		}
+
+		try {
+			if (document.querySelector(clean)) {
+				return true // at least one matching element is alive
+			}
+		} catch (e) {
+			// unsupported/invalid selector after stripping: keep to be safe
+			return true
+		}
+	}
+
+	// no element matched any branch: the rule is orphan
+	return false
+}//end is_selector_alive
+
+
+
+/**
+* PRUNE_ORPHAN_RULES
+* Remove only rules whose selector no longer matches any element in the DOM.
+* Frees memory from destroyed components (e.g. when browsing records) without
+* ever stripping CSS from components that are still visible on screen.
+* @return int number of pruned rules
+*/
+export const prune_orphan_rules = function() {
+
+	let pruned = 0;
+
+	prune_rules((rule) => {
+		const orphan = !is_selector_alive(rule);
+		if (orphan) {
+			pruned++;
+		}
+		return orphan
+	});
+
+
+	return pruned
+}//end prune_orphan_rules
 
 
 

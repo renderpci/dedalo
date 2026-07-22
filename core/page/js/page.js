@@ -19,7 +19,7 @@
 	} from '../../common/js/utils/index.js'
 	import {render_node_info} from '../../common/js/utils/notifications.js'
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
-	import {prune_rules,get_inserted_rules} from '../../page/js/css.js'
+	import {prune_orphan_rules,get_inserted_rules} from '../../page/js/css.js'
 	import {render_page, render_notification_msg} from './render_page.js'
 
 
@@ -946,11 +946,14 @@ const dd_garbage_collector = function () {
 			const max_size			= 500;
 			if (inserted_rules.size > max_size) {
 
-				// Delete all CSS injected rules to optimize memory
-				prune_rules(() => true);
+				// Remove only the rules whose component is no longer in the DOM.
+				// (!) Never strips CSS from components still visible on screen,
+				// which previously left portals (e.g. mosaic) unstyled when the
+				// collector fired mid-browsing.
+				const pruned = prune_orphan_rules();
 
 				if(SHOW_DEBUG===true) {
-					console.log('Deleted CSS inserted_rules to reduce memory footprint. Max size: ', max_size );
+					console.log('Pruned orphan CSS rules to reduce memory footprint. Removed:', pruned, ' remaining:', inserted_rules.size );
 				}
 			}
 		}

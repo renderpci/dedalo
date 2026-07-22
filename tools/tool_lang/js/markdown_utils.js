@@ -891,6 +891,83 @@ export function conform_emphasis(source_text, output_text) {
 
 
 /**
+ * WHOLLY_WRAPPED_DELIMITER
+ * If a string is one emphasis span and nothing else — `**…**`, `*…*`, `__…__`, with no other
+ * unescaped delimiter of that kind inside — return that delimiter. Otherwise null.
+ *
+ * Placeholders and inner text are ignored; only the delimiter structure matters. Checked
+ * longest-first so `**bold**` is read as one `**` pair, never as two `*`.
+ *
+ * @param {string} text
+ * @returns {string|null}
+ */
+function wholly_wrapped_delimiter(text) {
+
+	const trimmed = (text || '').trim();
+	if (!trimmed) return null;
+
+	const positions = delimiter_positions(trimmed);
+
+	for (const delim of MD_DELIMITERS) {
+		const of_kind = positions.filter(item => item.delim===delim);
+		if (of_kind.length!==2) continue;
+
+		const opens_at_start = of_kind[0].index===0;
+		const closes_at_end  = of_kind[1].index===trimmed.length - delim.length;
+		if (opens_at_start && closes_at_end) {
+			return delim;
+		}
+	}
+
+	return null;
+}
+
+
+/**
+ * RESTORE_WRAPPING_EMPHASIS
+ * Put back emphasis that wrapped a WHOLE segment when the model dropped it.
+ *
+ * conform_emphasis only removes emphasis the model invented; it never adds any back. So when
+ * the model drops the `**` around a fully-bold segment — an interviewer's question, an
+ * emphasised passage — the bold is simply lost. For a segment that is entirely one emphasis
+ * span, the fix is deterministic: re-wrap the whole translated output in the same delimiter.
+ *
+ * This deliberately handles ONLY the whole-segment case. Partial emphasis (a few bold words
+ * inside a longer sentence) cannot be restored without guessing which translated words were
+ * emphasised, and a wrong guess is worse than the honest loss — those stay lost and are
+ * reported by count_emphasis_lost. Sentence-level segmentation makes the whole-segment case
+ * the common one, which is why this is worth doing.
+ *
+ * Runs AFTER conform_emphasis: if the output already carries the emphasis (model kept it, or
+ * it has partial emphasis of that kind), this leaves it untouched.
+ *
+ * @param {string} source_text - The segment as sent to the model.
+ * @param {string} output_text - The model's translation, already conformed.
+ * @returns {string}
+ */
+export function restore_wrapping_emphasis(source_text, output_text) {
+
+	if (!output_text) return output_text;
+
+	const delim = wholly_wrapped_delimiter(source_text);
+	if (!delim) return output_text;
+
+	// only restore when the output has NONE of this delimiter — otherwise the model kept some
+	// emphasis and re-wrapping would double it or fight a partial span
+	const has_delim = delimiter_positions(output_text).some(item => item.delim===delim);
+	if (has_delim) return output_text;
+
+	// wrap the translated text, preserving any leading/trailing whitespace on the outside
+	const leading  = output_text.match(/^\s*/)[0];
+	const trailing = output_text.match(/\s*$/)[0];
+	const core     = output_text.slice(leading.length, output_text.length - trailing.length);
+	if (!core) return output_text;
+
+	return `${leading}${delim}${core}${delim}${trailing}`;
+}
+
+
+/**
  * SPLIT_MARKDOWN_BY_PARAGRAPH
  * Split a Markdown string into its constituent paragraph-level blocks.
  *

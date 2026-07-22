@@ -54,31 +54,282 @@ import {
 	normalize_placeholders,
 	repair_placeholders
 } from '../../js/placeholders.js';
-import { conform_emphasis } from '../../js/markdown_utils.js';
+import { conform_emphasis, restore_wrapping_emphasis } from '../../js/markdown_utils.js';
 
 /**
- * ONNX-optimised 4B instruction-tuned translation model.
- * Uses q4 quantisation for memory-efficient local inference.
+ * NLLB / FLORES-200 language codes, keyed by the ISO 639-1 code dedalo_to_locale emits.
+ * Covers every language Dédalo ships labels for.
+ * @type {Object<string,string>}
  */
-const MODEL_ID			= 'onnx-community/translategemma-text-4b-it-ONNX';
+const NLLB_LANGS = {
+	en : 'eng_Latn',
+	es : 'spa_Latn',
+	fr : 'fra_Latn',
+	it : 'ita_Latn',
+	pt : 'por_Latn',
+	ca : 'cat_Latn',
+	de : 'deu_Latn',
+	ne : 'npi_Deva',
+	ar : 'arb_Arab',
+	el : 'ell_Grek',
+	eu : 'eus_Latn'
+};
 
 /**
- * Hard ceiling on generated tokens. The real limit is computed per block from the input
- * length (see max_new_tokens_for) — this is only a backstop.
+ * English language names, keyed by the ISO 639-1 code dedalo_to_locale emits. A general
+ * instruction LLM is not a lang-code model — 'Spanish → Basque' is far clearer to it than
+ * 'es → eu'. Falls back to the raw code for anything unlisted.
+ * @type {Object<string,string>}
  */
-const MAX_NEW_TOKENS	= 1024;
+const LANG_NAMES = {
+	en : 'English', es : 'Spanish', fr : 'French', it : 'Italian', pt : 'Portuguese',
+	ca : 'Catalan', de : 'German', ne : 'Nepali', ar : 'Arabic', el : 'Greek', eu : 'Basque'
+};
 
 /**
- * A translation is roughly as long as its source. Allow this multiple of the input's
- * token count, plus a small constant for scripts that tokenise less efficiently than the
- * source (Devanagari, Arabic).
+ * QWEN_SYSTEM_PROMPT
+ * The instruction turn for a general instruct model (Qwen3). Unlike TranslateGemma, Qwen has
+ * a real `system` role that it treats as instructions rather than as text to translate — so
+ * the rules live here, and the segment goes in the user turn untouched.
  *
- * This is what bounds the blast radius: a loop on a 40-token sentence can now run for
- * ~110 tokens, not 1024. The reported failure generated ~900 tokens of 'सामान्य भन्दा'
- * because every call was allowed the full budget regardless of how little it was given.
+ * The marker rule is stated IN WORDS, with no worked example. The [[[1]]] example that used to
+ * sit in the TranslateGemma prompt is exactly what got copied into the output and mapped back
+ * to a real Dédalo tag. Describing the rule preserves it without ever showing a live token.
+ *
+ * @param {string} src - source ISO code
+ * @param {string} tgt - target ISO code
+ * @returns {string}
  */
-const NEW_TOKENS_RATIO	= 2.0;
-const NEW_TOKENS_MARGIN	= 32;
+function qwen_system_prompt(src, tgt) {
+
+	const source = LANG_NAMES[src] || src;
+	const target = LANG_NAMES[tgt] || tgt;
+
+	return [
+		`You are a professional translator. Translate the user's text from ${source} to ${target}.`,
+		`Output only the translation — no preamble, no notes, no explanation, no quotation marks.`,
+		`Preserve the meaning, tone and register; this is transcribed speech and archival text, not to be summarised.`,
+		`Some text contains placeholders written as triple square brackets around a number, for example three open brackets, a number, three close brackets. Keep every placeholder exactly as written and in place: never translate, renumber, add or remove one.`,
+		`Keep Markdown emphasis (*, **, __) exactly as in the source; do not add any that is not there.`
+	].join('\n');
+}
+
+
+/**
+ * MADLAD target-language codes, keyed by the ISO 639-1 code dedalo_to_locale emits.
+ * MADLAD encodes only the TARGET (source is auto-detected), as a <2xx> prefix on the input.
+ * Every value here was verified present in the model's tokenizer vocabulary.
+ * @type {Object<string,string>}
+ */
+const MADLAD_TARGETS = {
+	en : '<2en>', es : '<2es>', fr : '<2fr>', it : '<2it>', pt : '<2pt>', ca : '<2ca>',
+	de : '<2de>', ne : '<2ne>', ar : '<2ar>', el : '<2el>', eu : '<2eu>'
+};
+
+
+/**
+ * SHAPE_HANDLERS
+ * How each KIND of model is fed its input and read back — the one part of a model that is
+ * code, not config, and therefore cannot live in register.json.
+ *
+ * A model definition (from register.json, arriving in the worker message) names a `shape`;
+ * this table maps that shape to the function that builds the model's input. Everything else
+ * about a model — its id, task, dtype, coverage, licence note — is data on the definition.
+ *
+ * Adding a model that fits an existing shape is a register.json edit alone. Only a genuinely
+ * new input convention needs a new handler here.
+ *
+ *   chat          — a general instruct model (Qwen). Rules go in a SYSTEM turn it obeys; the
+ *                   segment goes in the USER turn, unwrapped.
+ *   chat_gemma    — TranslateGemma. Same 'text-generation' task, but its content object is
+ *                   {source_lang_code, target_lang_code, text} and the text IS the source —
+ *                   never a prompt (a prompt gets translated into the record).
+ *   seq2seq_lang  — NLLB: raw text with src_lang/tgt_lang (FLORES codes).
+ *   seq2seq_prefix— MADLAD: a <2xx> target token prepended to the text; source auto-detected.
+ *   seq2seq_pair  — Marian/opus-mt: the model IS the language pair, no lang arguments.
+ *
+ * Signature: (translator, text, src, tgt, generation) => Promise<string>
+ */
+const SHAPE_HANDLERS = {
+
+	chat : async function(translator, text, src, tgt, generation) {
+		const messages = [
+			{ role : 'system', content : qwen_system_prompt(src, tgt) },
+			{ role : 'user',   content : text }
+		];
+		const output = await translator(messages, generation);
+		const generated_text = output[0].generated_text;
+		return generated_text[generated_text.length - 1].content;
+	},
+
+	chat_gemma : async function(translator, text, src, tgt, generation) {
+		// the text field is the SOURCE TEXT, not a prompt — see translate_text's note
+		const messages = [{
+			role    : 'user',
+			content : [{ type : 'text', source_lang_code : src, target_lang_code : tgt, text : text }]
+		}];
+		const output = await translator(messages, generation);
+		const generated_text = output[0].generated_text;
+		return generated_text[generated_text.length - 1].content;
+	},
+
+	seq2seq_lang : async function(translator, text, src, tgt, generation) {
+		const output = await translator(text, { ...generation, src_lang : NLLB_LANGS[src], tgt_lang : NLLB_LANGS[tgt] });
+		return output[0].translation_text;
+	},
+
+	seq2seq_prefix : async function(translator, text, src, tgt, generation) {
+		const output = await translator(`${MADLAD_TARGETS[tgt]} ${text}`, generation);
+		return output[0].generated_text;
+	},
+
+	seq2seq_pair : async function(translator, text, src, tgt, generation) {
+		// the model IS the pair — no lang arguments
+		const output = await translator(text, generation);
+		return output[0].translation_text;
+	}
+};
+
+
+/**
+ * SUPPORTS_LANGS
+ * Does a model cover this pair, judged from its `langs` config value alone?
+ *
+ * Replaces the per-engine `supports` closures. Coverage is now data:
+ *   'all'   — every language Dédalo emits (the multilingual models).
+ *   'pairs' — Marian: any distinct pair of known languages is PLAUSIBLE; whether the
+ *             specific model exists is settled by the load (a 404 → 'unsupported_pair').
+ *   Array   — an explicit ISO allow-list, for a future model that needs one.
+ *
+ * @param {'all'|'pairs'|string[]} langs
+ * @param {string} src
+ * @param {string} tgt
+ * @returns {boolean}
+ */
+function supports_langs(langs, src, tgt) {
+
+	if (langs==='all') {
+		return KNOWN_LANGS.has(src) && KNOWN_LANGS.has(tgt);
+	}
+	if (langs==='pairs') {
+		return src!==tgt && KNOWN_LANGS.has(src) && KNOWN_LANGS.has(tgt);
+	}
+	if (Array.isArray(langs)) {
+		return langs.includes(src) && langs.includes(tgt);
+	}
+	return false;
+}
+
+
+/**
+ * RESOLVE_MODEL_ID
+ * Fill {src}/{tgt} placeholders in a model id (Marian is one model per pair).
+ * @param {string} template
+ * @param {string} src
+ * @param {string} tgt
+ * @returns {string}
+ */
+function resolve_model_id(template, src, tgt) {
+	return String(template).replace('{src}', src).replace('{tgt}', tgt);
+}
+
+
+/**
+ * DEFAULT_MODELS
+ * The catalogue shipped in register.json (dd999 → browser_transformer.models). Kept here ONLY
+ * as a fallback for a site whose stored tool-config predates the `models` array, so the tool
+ * still works. register.json is the source of truth; this must mirror it.
+ * @type {Array<Object>}
+ */
+const DEFAULT_MODELS = [
+	{ name : 'qwen',           model_id : 'onnx-community/Qwen3-4B-Instruct-2507-ONNX',  task : 'text-generation',      shape : 'chat',           dtype : 'q4f16', requires_webgpu : true,  note : 'apache',         langs : 'all' },
+	{ name : 'translategemma', model_id : 'onnx-community/translategemma-text-4b-it-ONNX', task : 'text-generation',     shape : 'chat_gemma',     dtype : 'q4',    requires_webgpu : true,                           langs : 'all' },
+	{ name : 'nllb',           model_id : 'Xenova/nllb-200-distilled-600M',              task : 'translation',          shape : 'seq2seq_lang',   dtype : 'q8',    requires_webgpu : false, note : 'non_commercial', langs : 'all' },
+	{ name : 'madlad',         model_id : 'Kutalia/madlad400-3b-mt-onnx',                task : 'text2text-generation', shape : 'seq2seq_prefix', dtype : 'q8',    requires_webgpu : true,  note : 'large_download', langs : 'all' },
+	{ name : 'opus',           model_id : 'Xenova/opus-mt-{src}-{tgt}',                  task : 'translation',          shape : 'seq2seq_pair',   dtype : 'q8',    requires_webgpu : false,                           langs : 'pairs' }
+];
+
+
+/**
+ * ISO 639-1 codes Dédalo can emit (the keys of NLLB_LANGS). Used by opus to reject
+ * obviously-bogus pairs cheaply without claiming to know which specific Marian models exist.
+ * @type {Set<string>}
+ */
+const KNOWN_LANGS = new Set(Object.keys(NLLB_LANGS));
+
+
+/**
+ * IS_MODEL_NOT_FOUND
+ * Did a pipeline() load fail because the model simply does not exist (vs. a network drop,
+ * an out-of-memory, a corrupt file)? A missing model is expected — opus is one model per
+ * pair — and must be reported as an unsupported pair, not as a fatal worker crash.
+ *
+ * transformers.js surfaces a Hub 404 as an error whose message names the file it could not
+ * fetch; there is no typed error class to key on, so we match the message.
+ *
+ * @param {Error} error
+ * @returns {boolean}
+ */
+function is_model_not_found(error) {
+
+	const message = String(error && error.message || error).toLowerCase();
+
+	return message.includes('could not locate')
+		|| message.includes('not found')
+		|| message.includes('404')
+		|| message.includes('unauthorized')	// private/removed repos answer 401
+		|| message.includes('failed to fetch');
+}
+
+
+/**
+ * IS_ALLOCATION_FAILURE
+ * Did a pipeline() load fail because the model does not fit in memory? This is expected for a
+ * model that is simply too big for the machine — MADLAD-400 3B, for instance, has a single
+ * ~1.87 GB decoder buffer that exceeds most GPUs' per-buffer limit — and must be reported as
+ * "too large", not as a fatal worker crash.
+ *
+ * ORT-web phrases this as failing to create a session or to allocate a buffer; the numbers
+ * vary, so match the wording.
+ *
+ * @param {Error} error
+ * @returns {boolean}
+ */
+function is_allocation_failure(error) {
+
+	const message = String(error && error.message || error).toLowerCase();
+
+	return message.includes('failed to allocate')
+		|| message.includes("can't create a session")
+		|| message.includes('cannot create a session')
+		|| message.includes('out of memory')
+		|| message.includes('buffer of size')
+		|| message.includes('oom');
+}
+
+/**
+ * Hard ceiling on generated tokens. A backstop for pathological long sentences — the real
+ * per-segment limit is computed from the source length (see max_new_tokens_for). Note this
+ * is a CEILING, not a target: the model stops at its end-of-text token well before this for
+ * a normal segment, so a generous ceiling costs nothing on the common path.
+ */
+const MAX_NEW_TOKENS	= 2048;
+
+/**
+ * Output token budget = source CHARACTER count × this, plus a margin.
+ *
+ * Deliberately based on characters, NOT on the source token count. A Spanish sentence of 70
+ * tokens becomes 300-500 tokens in Nepali (Devanagari) or Arabic, because those scripts
+ * tokenise far less efficiently. Budgeting from source *tokens* — which are compact for the
+ * Latin source — truncated every Devanagari translation mid-sentence: the model hit the cap
+ * before finishing. Source character count tracks output length across scripts; source token
+ * count does not.
+ *
+ * 4 tokens per source character is generous enough for the worst expanding target while
+ * still bounding a repetition loop's blast radius to the (small) segment size.
+ */
+const OUTPUT_TOKENS_PER_SOURCE_CHAR	= 4.0;
+const NEW_TOKENS_MARGIN				= 64;
 
 /**
  * Per-block timeout in milliseconds.
@@ -206,39 +457,25 @@ function to_global_tokens(text, restore_map) {
 
 /**
  * MAX_NEW_TOKENS_FOR
- * How many tokens this block is allowed to generate.
+ * How many tokens this segment is allowed to generate.
  *
- * A translation is roughly as long as its source, so the budget is derived from the input
- * rather than being a flat 1024 for every call. That flat budget is what let the reported
- * failure emit ~900 tokens of 'सामान्य भन्दा' from a single paragraph: a loop will happily
- * fill whatever room it is given. Bounding the room bounds the damage — and the truncated
- * output still trips detect_repetition, so the block is caught rather than saved.
+ * Derived from the source CHARACTER count, not its token count — see
+ * OUTPUT_TOKENS_PER_SOURCE_CHAR for why. Budgeting from source tokens truncated every
+ * Devanagari/Arabic translation mid-sentence, because the compact Latin source under-counts
+ * the tokens the expanded target needs.
  *
- * Falls back to a character estimate if the tokenizer is not reachable through the
- * pipeline, which keeps this a hardening measure rather than a new failure mode.
+ * This is still what bounds a repetition loop: segments are small (≤ SEGMENT_MAX_CHARS), so
+ * the budget is small, so a loop cannot run away — and the output is caught by
+ * detect_repetition regardless. It no longer needs the tokenizer at all, which removes a
+ * fragile per-engine dependency.
  *
- * @param {Function} translator - The loaded pipeline (carries .tokenizer).
- * @param {string}   text       - The block being translated.
+ * @param {Function} translator - unused; kept for signature stability with the callers.
+ * @param {string}   text       - The segment being translated.
  * @returns {number} Token budget, clamped to MAX_NEW_TOKENS.
  */
 function max_new_tokens_for(translator, text) {
 
-	let input_tokens;
-
-	try {
-		const encoded = translator.tokenizer(text);
-		// transformers.js Tensor: dims is [batch, seq_len]
-		input_tokens = encoded?.input_ids?.dims?.[1];
-	} catch (error) {
-		input_tokens = null;
-	}
-
-	if (!input_tokens || !Number.isFinite(input_tokens)) {
-		// ~4 chars per token is a serviceable average; it only has to be the right order
-		input_tokens = Math.ceil(text.length / 4);
-	}
-
-	const budget = Math.ceil(input_tokens * NEW_TOKENS_RATIO) + NEW_TOKENS_MARGIN;
+	const budget = Math.ceil(text.length * OUTPUT_TOKENS_PER_SOURCE_CHAR) + NEW_TOKENS_MARGIN;
 
 	return Math.min(budget, MAX_NEW_TOKENS);
 }
@@ -378,17 +615,19 @@ function detect_repetition(text, source_text) {
  * @param {string}   label            - Human label used in timeout messages, e.g. 'Block 2/5'
  * @returns {Promise<{text:string, repaired:string[], unrepairable:string[]}>} in LOCAL tokens.
  */
-async function process_block(translator, block, source_lang_code, target_lang_code, label) {
+async function process_block(handler, translator, block, source_lang_code, target_lang_code, label) {
 
 	// Everything the model hands back goes through here: unwrap whatever it wrapped its
-	// answer in, repair mangled markers, and delete any emphasis it invented.
+	// answer in, repair mangled markers, delete any emphasis it invented, and restore
+	// emphasis it dropped from a wholly-emphasised segment (an all-bold question).
 	const clean_output = function(raw) {
-		return conform_emphasis(block.text, normalize_placeholders(strip_fences(raw)));
+		const text = conform_emphasis(block.text, normalize_placeholders(strip_fences(raw)));
+		return restore_wrapping_emphasis(block.text, text);
 	};
 
 	// ── 1. translate ────────────────────────────────────────────────────
 	const raw = await with_timeout(
-		translate_text(translator, block.text, source_lang_code, target_lang_code, {
+		translate_text(handler, translator, block.text, source_lang_code, target_lang_code, {
 			repetition_penalty : REPETITION_PENALTY_FIRST
 		}),
 		BLOCK_TIMEOUT_MS,
@@ -413,7 +652,7 @@ async function process_block(translator, block, source_lang_code, target_lang_co
 			if (cancelled) break;
 
 			const retry_raw = await with_timeout(
-				translate_text(translator, block.text, source_lang_code, target_lang_code, overrides),
+				translate_text(handler, translator, block.text, source_lang_code, target_lang_code, overrides),
 				BLOCK_TIMEOUT_MS,
 				`${label} (repetition retry${overrides.do_sample ? ', sampling' : `, penalty ${overrides.repetition_penalty}`})`
 			);
@@ -441,7 +680,6 @@ async function process_block(translator, block, source_lang_code, target_lang_co
 	// reach the model), the model copying interior markers as unknown tokens, and
 	// repair_placeholders below for whatever it drops — all of it reported to the save gate.
 
-	// ── 3. place whatever the model would not ───────────────────────────
 	// ── 3. place whatever the model would not ───────────────────────────
 	const repaired = repair_placeholders(block.text, text, block.placeholders);
 
@@ -486,7 +724,62 @@ self.onmessage = async (e) => {
 	const source_lang_code = options.sourceLangCode || 'en';
 	const target_lang_code = options.targetLangCode || 'es';
 	const device           = options.device || 'webgpu';
-	const dtype            = options.dtype || 'q4';
+
+	// The model DEFINITION now comes from register.json via the main thread. Fall back to the
+	// shipped catalogue by name when only a name arrives (older callers / stored config).
+	const model = options.model
+		|| DEFAULT_MODELS.find(item => item.name===options.engine)
+		|| DEFAULT_MODELS[0];
+	const engine_name = model.name;
+
+	const handler = SHAPE_HANDLERS[model.shape];
+	if (!handler) {
+		self.postMessage({
+			status : 'error',
+			data   : { message: `Model '${engine_name}' has an unknown shape '${model.shape}'. Known: ${Object.keys(SHAPE_HANDLERS).join(', ')}` }
+		});
+		return;
+	}
+
+	// Refuse a pair the model KNOWS it cannot do, before touching the network. For the
+	// multilingual models this is authoritative; for opus ('pairs') it is only a sanity check —
+	// Marian is one model per pair and there are dozens on the Hub, far too many to enumerate.
+	// So opus says "plausible" for any real pair and lets the load be the real test: a missing
+	// model 404s on its tiny config and comes back as 'unsupported_pair'.
+	if (!supports_langs(model.langs, source_lang_code, target_lang_code)) {
+		self.postMessage({
+			status : 'error',
+			data   : {
+				message : `The '${engine_name}' model does not support ${source_lang_code} → ${target_lang_code}.`,
+				code    : 'unsupported_pair'
+			}
+		});
+		return;
+	}
+
+	// A multi-gigabyte model cannot run on the WASM (CPU) backend — wasm32 caps the address
+	// space at 4 GB, and a 4B model plus its KV cache overruns it ('memory access out of
+	// bounds'). Refuse before loading, with a message the user can act on, rather than letting
+	// it crash mid-generation. Small MT models (NLLB, opus) have no such flag and run on CPU.
+	if (model.requires_webgpu) {
+		const webgpu_available = (typeof navigator!=='undefined') && !!navigator.gpu;
+		if (device!=='webgpu' || !webgpu_available) {
+			self.postMessage({
+				status : 'error',
+				data   : {
+					message : `The '${engine_name}' model needs WebGPU (GPU). `
+						+ (webgpu_available
+							? `Turn off the "more compatible / CPU" option to use it.`
+							: `This browser has no WebGPU available, so this model cannot run here — try a smaller model (Opus-MT or NLLB).`),
+					code    : 'needs_webgpu'
+				}
+			});
+			return;
+		}
+	}
+
+	const dtype    = options.dtype || model.dtype;
+	const model_id = resolve_model_id(model.model_id, source_lang_code, target_lang_code);
 
 	// Reset cancel flag for this run
 	cancelled = false;
@@ -494,32 +787,63 @@ self.onmessage = async (e) => {
 	try {
 
 		// ── 1. Load / reuse the model pipeline ───────────────────────────
-		// The pipeline is cached after the first call; subsequent calls reuse it — but
-		// only when device AND dtype still match. Reusing a q4 pipeline after the user
-		// asked for q8 would make the setting look inert.
-		//
-		// q4 (~2.5 GB) is the default because it is what makes in-browser inference
-		// viable at all; it also costs real translation quality, which is one of the
-		// reasons long, low-resource translations degenerate. q8 trades memory for that.
-		const signature = `${device}:${dtype}`;
+		// Cached after the first call, but only reused when the engine, the model, the
+		// device AND the dtype all still match — otherwise switching engine in the UI would
+		// silently keep translating with the previous model and look like it did nothing.
+		const signature = `${engine_name}:${model_id}:${device}:${dtype}`;
 		if (cached_translator && cached_signature!==signature) {
 			cached_translator = null;
 			cached_signature  = null;
 		}
 
 		if (!cached_translator) {
-			cached_translator = await pipeline('text-generation', MODEL_ID, {
-				device : device,
-				dtype  : dtype,
-				progress_callback: ({ progress, status, file }) => {
-					// Relay download/compile progress to the UI thread
+			try {
+				cached_translator = await pipeline(model.task, model_id, {
+					device : device,
+					dtype  : dtype,
+					progress_callback: ({ progress, status, file }) => {
+						// Relay download/compile progress to the UI thread
+						self.postMessage({
+							status : 'init',
+							data   : { progress, status, device, file, engine : engine_name }
+						});
+					}
+				});
+				cached_signature = signature;
+			} catch (load_error) {
+
+				// A missing model is not a fatal worker error — it means this engine has no
+				// model for this pair (the common case for opus, which is per-pair). Report it
+				// as the same clean "unsupported pair" the pre-check uses, and do NOT dispose
+				// the worker: the next attempt with a different engine or pair must still work.
+				if (is_model_not_found(load_error)) {
 					self.postMessage({
-						status : 'init',
-						data   : { progress, status, device, file }
+						status : 'error',
+						data   : {
+							message : `No '${engine_name}' model is available for ${source_lang_code} → ${target_lang_code}.`,
+							code    : 'unsupported_pair'
+						}
 					});
+					return;
 				}
-			});
-			cached_signature = signature;
+
+				// A model that will not fit in memory is a limitation of the machine, not a
+				// crash. Report it clearly and keep the worker alive so another (smaller) model
+				// still works. MADLAD-400 3B hits this on most GPUs — its decoder is one buffer
+				// larger than the GPU allows.
+				if (is_allocation_failure(load_error)) {
+					self.postMessage({
+						status : 'error',
+						data   : {
+							message : `The '${engine_name}' model is too large to load on this device. Try a smaller model (Qwen3, NLLB or Opus-MT).`,
+							code    : 'model_too_large'
+						}
+					});
+					return;
+				}
+
+				throw load_error;
+			}
 		}
 
 		const blocks       = options.blocks;
@@ -576,6 +900,7 @@ self.onmessage = async (e) => {
 			try {
 
 				const outcome = await process_block(
+					handler,
 					cached_translator,
 					block,
 					source_lang_code,
@@ -690,29 +1015,19 @@ self.onmessage = async (e) => {
  * why marker survival rests on hoisting, on the model copying unknown tokens, and on
  * repair_placeholders — never on asking nicely.
  *
- * @param {Function} translator     - The loaded HuggingFace text-generation pipeline
+ * @param {Function} handler        - The SHAPE_HANDLERS function that builds this model's input
+ * @param {Function} translator     - The loaded HuggingFace pipeline
  * @param {string}   text           - The segment to translate, carrying [[[n]]] markers
  * @param {string}   sourceLangCode - Source language code (e.g. 'es')
  * @param {string}   targetLangCode - Target language code (e.g. 'ne')
  * @param {Object}   overrides      - { repetition_penalty, do_sample, temperature, top_p }
  * @returns {Promise<string>} The model's response text
  */
-async function translate_text(translator, text, sourceLangCode, targetLangCode, overrides={}) {
+async function translate_text(handler, translator, text, sourceLangCode, targetLangCode, overrides={}) {
 
-	const messages = [
-		{
-			role    : 'user',
-			content : [
-				{
-					type             : 'text',
-					source_lang_code : sourceLangCode,
-					target_lang_code : targetLangCode,
-					text             : text
-				}
-			]
-		}
-	];
-
+	// Generation settings are shared across shapes — a seq2seq MT model takes
+	// max_new_tokens / do_sample / repetition_penalty just as a causal LM does. What differs
+	// (the chat message vs. src_lang/tgt_lang vs. a <2xx> prefix) is the SHAPE_HANDLERS function.
 	const generation = {
 		max_new_tokens     : max_new_tokens_for(translator, text),
 		do_sample          : overrides.do_sample===true,
@@ -726,14 +1041,7 @@ async function translate_text(translator, text, sourceLangCode, targetLangCode, 
 		generation.top_p       = overrides.top_p ?? RETRY_TOP_P;
 	}
 
-	const output = await translator(messages, generation);
-
-	// The model returns the full conversation so far;
-	// grab the assistant's last (newly generated) message.
-	const generated_text = output[0].generated_text;
-	const last_message   = generated_text[generated_text.length - 1];
-
-	return last_message.content;
+	return handler(translator, text, sourceLangCode, targetLangCode, generation);
 }
 
 
