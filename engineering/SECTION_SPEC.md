@@ -27,6 +27,20 @@ Standing spec for the section family, companion to `engineering/REWRITE_SPEC.md`
 > `prevent_lock`, list-column sortability) — check there before planning
 > work from this spec.
 
+> **ADDENDUM 2026-07-22 (list_thesaurus read mode).** `readSectionRows`
+> now serves mode `'list_thesaurus'` (previously an uncovered-path throw).
+> It is a plain list read on the row side — PHP row acquisition is
+> mode-agnostic (`dd_core_api:2256`) — whose only server-side effect is the
+> request_config swap to the **`section_list_thesaurus`** child (§7.5;
+> `trait.request_config_utils.php:270-280`), i.e. a different derived
+> column selection. Sender: **tool_indexation**'s People browser — the
+> ontology-authored tool-config ddo `{role:'people_section',
+> mode:'list_thesaurus', view:'thesaurus_list'}` becomes a section
+> instance verbatim (`tool_indexation.js:469-84`); the client then
+> normalizes the mode back to `'list'` (`section.js:800` — server-side-only
+> alias). Session-sqo persistence includes it (PHP `$session_save_modes`,
+> `:2276`). Gate: `test/unit/list_definitions.test.ts`.
+
 > **ADDENDUM 2026-07-21 (WC-044).** List-column sortability DIVERGES from
 > the PHP oracle for the Activity section (dd542): only the When column
 > (dd547) is sortable and its ORDER path maps to the indexed `section_id`

@@ -1033,9 +1033,14 @@ export async function readSectionRows(
 	const lang = source.lang ?? currentDataLang();
 	// 'tm' is served by the Time Machine read source (dd15) through this same
 	// generic path; 'list'/'edit' by the default matrix source.
-	if (mode !== 'list' && mode !== 'edit' && mode !== 'tm') {
+	// 'list_thesaurus' (the thesaurus section build — client section.js:800
+	// normalizes it back to 'list' after the fetch) is a plain list read on the
+	// row side (PHP dd_core_api :2256 row acquisition is mode-agnostic); the mode
+	// only steers the derived column selection (request_config build →
+	// section_list_thesaurus instead of section_list) and the context swap.
+	if (mode !== 'list' && mode !== 'edit' && mode !== 'tm' && mode !== 'list_thesaurus') {
 		throw new Error(
-			`readSectionRows: mode '${mode}' not implemented yet (covered: 'list', 'edit', 'tm')`,
+			`readSectionRows: mode '${mode}' not implemented yet (covered: 'list', 'edit', 'tm', 'list_thesaurus')`,
 		);
 	}
 	// The client's show.ddo_map wins; when absent (the real client's section
@@ -1144,7 +1149,8 @@ export async function readSectionRows(
 	// (tool_export record preservation, section_tool navigation) and the section
 	// context stamps it back as `sqo_session`. The ALS session is read at call
 	// time; requests without one (harnesses, background) skip.
-	if (sessionSave && (mode === 'list' || mode === 'edit')) {
+	// (PHP $session_save_modes = ['edit','list','list_thesaurus'], :2276.)
+	if (sessionSave && (mode === 'list' || mode === 'edit' || mode === 'list_thesaurus')) {
 		const callerModel = source.model ?? (await getModelByTipo(callerTipo));
 		if (callerModel === 'section') {
 			const { currentRequestContext } = await import('../security/request_context.ts');
