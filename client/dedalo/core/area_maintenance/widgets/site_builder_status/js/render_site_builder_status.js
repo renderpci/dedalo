@@ -70,7 +70,7 @@ const get_content_data = async function(self) {
 
 	const content_data = ui.create_dom_element({
 		element_type : 'div',
-		class_name   : 'site_builder_status_widget'
+		class_name   : 'content_data site_builder_status_widget'
 	})
 
 	// status line

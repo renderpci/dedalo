@@ -207,7 +207,8 @@ const get_content_data = async function(self) {
 
 	// content_data
 		const content_data = ui.create_dom_element({
-			element_type : 'div'
+			element_type : 'div',
+			class_name	 : 'content_data'
 		})
 
 	// dedalo_db_management

@@ -237,7 +237,7 @@ const get_content_data_edit = async function(self) {
 	// so styles must hang off this, not a non-existent `.content_data` class)
 		const content_data = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'update_ontology_content'
+			class_name		: 'content_data update_ontology_content'
 		})
 
 	// a. danger callout — the overwrite is irreversible
