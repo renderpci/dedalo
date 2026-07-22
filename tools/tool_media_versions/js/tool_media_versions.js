@@ -92,6 +92,14 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
+	// files_info defaults. Guarantee always valid arrays so render never crashes
+	// even if the data load below fails (rock-solid against undefined files_info)
+		self.files_info_db			= []
+		self.files_info_disk		= []
+		self.files_info_safe		= []
+		self.files_info_alternative	= []
+		self.files_info_original	= []
+
 	try {
 
 		// specific actions.. like fix main_element for convenience
@@ -109,10 +117,10 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 			const value	= data.value || []
 
 			// files info from DB data
-				self.files_info_db = value[0]?.files_info
+				self.files_info_db = value[0]?.files_info || []
 
 			// files info real (read from disk)
-				self.files_info_disk = await self.get_files_info()
+				self.files_info_disk = await self.get_files_info() || []
 
 			// original_file_name
 				self.original_file_name = value[0]?.original_file_name
@@ -258,7 +266,10 @@ tool_media_versions.prototype.get_files_info = async function() {
 					dd_console("-> get_files_info API response:",'DEBUG',response);
 				}
 
-				const result = response.result // array of objects
+				// always resolve an array so callers never receive undefined
+				const result = Array.isArray(response?.result)
+					? response.result // array of objects
+					: []
 
 				resolve(result)
 			})

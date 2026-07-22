@@ -459,9 +459,9 @@ const render_file = function(quality, self) {
 		})
 
 		// file_info
-		const files_info = (quality==='thumb')
+		const files_info = ((quality==='thumb')
 			? self.files_info_disk // thumb is not in files_info_safe (different extension case)
-			: self.files_info_safe
+			: self.files_info_safe) || [] // fallback to empty array to keep render rock-solid
 		const file_info = files_info.find(el => el.quality===quality)
 		if (file_info && file_info.file_exist===true) {
 			if (file_info.file_path) {
