@@ -71,6 +71,24 @@ class dataframe_v7_migration {
 	*/
 	private static array $model_cache = [];
 
+	/**
+	* Per-request cache of IRI label → target_section_id resolutions.
+	* Avoids redundant get_label_record search queries and section creations
+	* in materialize_iri_titles when many IRI items share the same title string
+	* (e.g. "Wikipedia", "Getty Vocabularies"). Keyed by normalized title;
+	* value is the target section_id (int) in the label section dd1706.
+	* @var array<string, int> $label_cache
+	*/
+	private static array $label_cache = [];
+
+	/**
+	* Per-request cache of the component_dataframe model class name for the
+	* IRI label frame slot (DEDALO_COMPONENT_IRI_LABEL_DATAFRAME). Avoids
+	* repeated ontology_node::get_model_by_tipo() calls per IRI item.
+	* @var string|null $df_model_cache
+	*/
+	private static ?string $df_model_cache = null;
+
 
 
 	/**
@@ -127,8 +145,10 @@ class dataframe_v7_migration {
 	* Uses keyset pagination (WHERE id > $last_id ORDER BY id LIMIT batch_size)
 	* to avoid full-table scans and keep memory footprint bounded.
 	*
-	* The LIKE '%section_id_key%' pre-filter is applied at the SQL level to skip
-	* already-migrated rows cheaply before deserializing JSON.
+	* The @? JSONPath pre-filter (relation @? '$.**."section_id_key"') is applied
+	* at the SQL level to skip already-migrated rows cheaply before deserializing
+	* JSON. It checks for the legacy key at any nesting level without a text cast
+	* and is GIN-indexable.
 	*
 	* @param array|null $ar_tables [= null] - explicit list of tables to migrate;
 	*        null triggers auto-discovery via information_schema.columns
@@ -157,7 +177,14 @@ class dataframe_v7_migration {
 				  AND table_name NOT IN ('matrix_time_machine')
 				ORDER BY table_name
 			");
-			while ($result!==false && ($row = pg_fetch_assoc($result))) {
+			if ($result===false) {
+				$response->result	= false;
+				$response->msg		= 'Error. Table discovery query failed';
+				$response->errors[]	= 'Discovery query failed (information_schema.columns for relation): '
+					. (pg_last_error($conn) ?: 'unknown error');
+				return $response;
+			}
+			while ($row = pg_fetch_assoc($result)) {
 				$ar_tables[] = $row['table_name'];
 			}
 		}
@@ -168,12 +195,13 @@ class dataframe_v7_migration {
 			$last_id = 0;
 			while (true) {
 
-				// cast::text avoids a JSONB-to-text round-trip in PHP; the LIKE
-				// pre-filter discards already-migrated rows before JSON decode
+				// The @? JSONPath pre-filter checks for the legacy "section_id_key"
+				// key at any nesting level without a text cast, discarding
+				// already-migrated rows before JSON decode. GIN-indexable.
 				$result = pg_query_params($conn,
 					'SELECT id, section_tipo, section_id, relation::text AS relation
 					 FROM "'.$table.'"
-					 WHERE id > $1 AND relation::text LIKE \'%section_id_key%\'
+					 WHERE id > $1 AND relation @? \'$.**."section_id_key"\'
 					 ORDER BY id ASC LIMIT '.self::$batch_size,
 					[$last_id]
 				);
@@ -283,7 +311,7 @@ class dataframe_v7_migration {
 			$result = pg_query_params($conn,
 				'SELECT id, section_tipo, section_id, tipo, data::text AS data
 				 FROM "'.$table.'"
-				 WHERE id > $1 AND data::text LIKE \'%section_id_key%\'
+				 WHERE id > $1 AND data @? \'$.**."section_id_key"\'
 				 ORDER BY id ASC LIMIT '.self::$batch_size,
 				[$last_id]
 			);
@@ -384,7 +412,14 @@ class dataframe_v7_migration {
 			SELECT column_name FROM information_schema.columns
 			WHERE table_name = '$table' AND data_type = 'jsonb'
 		");
-		while ($result!==false && ($row = pg_fetch_assoc($result))) {
+		if ($result===false) {
+			$response->result	= false;
+			$response->msg		= 'Error. Column discovery query failed';
+			$response->errors[]	= 'Column discovery query failed (information_schema.columns for '
+				. $table . '): ' . (pg_last_error($conn) ?: 'unknown error');
+			return $response;
+		}
+		while ($row = pg_fetch_assoc($result)) {
 			$jsonb_columns[] = $row['column_name'];
 		}
 		if (empty($jsonb_columns)) {
@@ -399,7 +434,7 @@ class dataframe_v7_migration {
 				$result = pg_query_params($conn,
 					'SELECT id, "'.$column.'"::text AS payload
 					 FROM "'.$table.'"
-					 WHERE id > $1 AND "'.$column.'"::text LIKE \'%section_id_key%\'
+					 WHERE id > $1 AND "'.$column.'" @? \'$.**."section_id_key"\'
 					 ORDER BY id ASC LIMIT '.self::$batch_size,
 					[$last_id]
 				);
@@ -465,9 +500,10 @@ class dataframe_v7_migration {
 	* id) is found and its id becomes the value's id_key; section_*_key are stripped.
 	*
 	* Idempotent (values already carrying id_key are skipped), batched via keyset
-	* pagination, dry-run capable ($save=false). The SQL LIKE '%section_id_key%'
-	* pre-filter skips already-migrated rows cheaply. Unresolvable values (no parent
-	* locator with an id) are left as-is and reported under 'unresolved'.
+	* pagination, dry-run capable ($save=false). The @? JSONPath pre-filter
+	* (number @? '$.**."section_id_key"') skips already-migrated rows cheaply.
+	* Unresolvable values (no parent locator with an id) are left as-is and
+	* reported under 'unresolved'.
 	*
 	* (!) NOT yet wired into migrate_all — call explicitly (or add to migrate_all)
 	* once verified against a real database. See the v7 dataframe cutover notes.
@@ -498,7 +534,14 @@ class dataframe_v7_migration {
 				  AND table_name NOT IN ('matrix_time_machine')
 				ORDER BY table_name
 			");
-			while ($result!==false && ($row = pg_fetch_assoc($result))) {
+			if ($result===false) {
+				$response->result	= false;
+				$response->msg		= 'Error. Table discovery query failed';
+				$response->errors[]	= 'Discovery query failed (information_schema.columns for number): '
+					. (pg_last_error($conn) ?: 'unknown error');
+				return $response;
+			}
+			while ($row = pg_fetch_assoc($result)) {
 				$ar_tables[] = $row['table_name'];
 			}
 		}
@@ -511,7 +554,7 @@ class dataframe_v7_migration {
 				$result = pg_query_params($conn,
 					'SELECT id, section_tipo, section_id, number::text AS number, relation::text AS relation
 					 FROM "'.$table.'"
-					 WHERE id > $1 AND number::text LIKE \'%section_id_key%\'
+					 WHERE id > $1 AND number @? \'$.**."section_id_key"\'
 					 ORDER BY id ASC LIMIT '.self::$batch_size,
 					[$last_id]
 				);
@@ -538,6 +581,11 @@ class dataframe_v7_migration {
 					// the child's parent locators live in this same row's relation column
 					$relation = json_decode($row['relation'] ?? 'null');
 
+					// B4: build a per-row lookup map once from the relation object so
+					// each order value resolves its parent-link id_key in O(1) instead
+					// of re-scanning every relation slot per value.
+					$lookup_map = self::build_order_lookup_map($relation);
+
 					$context_ref = $table.' '.$row['section_tipo'].'_'.$row['section_id'];
 					$row_changed = false;
 
@@ -545,7 +593,7 @@ class dataframe_v7_migration {
 						if (!is_array($values)) {
 							continue;
 						}
-						$slot_changed = self::transform_order_values($values, $relation, $response, $context_ref);
+						$slot_changed = self::transform_order_values($values, $lookup_map, $response, $context_ref);
 						if ($slot_changed) {
 							$number->{$component_tipo} = $values;
 							$row_changed = true;
@@ -582,17 +630,17 @@ class dataframe_v7_migration {
 	* TRANSFORM_ORDER_VALUES
 	* Transformation kernel for one order component's inline value array. Rewrites
 	* each legacy parent-keyed value ({value, section_tipo_key, section_id_key}) to
-	* the unified {value, id_key} shape, resolving id_key from the row's relation
-	* object via resolve_order_id_key(). Mutates the value objects in place and
+	* the unified {value, id_key} shape, resolving id_key from the per-row lookup
+	* map built by build_order_lookup_map(). Mutates the value objects in place and
 	* returns true when at least one value changed.
 	*
 	* @param array $values - inline value objects of one order component slot (by ref)
-	* @param mixed $relation - decoded row relation object (or null)
+	* @param array $lookup_map - per-row "tipo|id" => item_id map from build_order_lookup_map()
 	* @param object $response - shared stats/report accumulator
 	* @param string $context_ref - human-readable context label
 	* @return bool - true when any value was migrated
 	*/
-	private static function transform_order_values( array &$values, mixed $relation, object $response, string $context_ref ) : bool {
+	private static function transform_order_values( array &$values, array $lookup_map, object $response, string $context_ref ) : bool {
 
 		$changed = false;
 
@@ -613,10 +661,12 @@ class dataframe_v7_migration {
 				continue;
 			}
 
-			$parent_tipo	= $item->section_tipo_key ?? null;
+			$parent_tipo	= $item->section_tipo_key ?? '';
 			$parent_id		= (int)$item->section_id_key;
 
-			$id_key = self::resolve_order_id_key($relation, $parent_tipo, $parent_id);
+			// O(1) lookup in the per-row map (first-match semantics preserved)
+			$map_key	= $parent_tipo.'|'.$parent_id;
+			$id_key		= $lookup_map[$map_key] ?? 0;
 
 			if ($id_key<=0) {
 				self::report($response, 'unresolved', $context_ref
@@ -637,21 +687,24 @@ class dataframe_v7_migration {
 
 
 	/**
-	* RESOLVE_ORDER_ID_KEY
-	* Find, in a row's decoded relation object, the parent-link locator pointing at
-	* (parent_tipo, parent_id) and return its item id (the order value's id_key).
-	* Scans every relation slot so the relation_parent component tipo need not be
-	* known; the first locator matching the parent coordinates and carrying an id wins.
+	* BUILD_ORDER_LOOKUP_MAP
+	* Builds a per-row lookup map from a decoded relation object so that
+	* transform_order_values can resolve each order value's parent-link id_key
+	* in O(1) instead of re-scanning every relation slot per value.
+	*
+	* The map is keyed by "section_tipo|section_id" (or "|section_id" when the
+	* locator has no section_tipo) and maps to the first locator's item id found
+	* for that key. This mirrors the previous resolve_order_id_key() first-match
+	* semantics exactly.
 	*
 	* @param mixed $relation - decoded relation object (or null)
-	* @param string|null $parent_tipo - parent section tipo (section_tipo_key); null = match id only
-	* @param int $parent_id - parent section id (section_id_key)
-	* @return int - the parent-link locator id, or 0 when not resolvable
+	* @return array<string, int> - lookup map: "tipo|id" => item_id
 	*/
-	private static function resolve_order_id_key( mixed $relation, ?string $parent_tipo, int $parent_id ) : int {
+	private static function build_order_lookup_map( mixed $relation ) : array {
 
+		$map = [];
 		if (!is_object($relation)) {
-			return 0;
+			return $map;
 		}
 
 		foreach ($relation as $entries) {
@@ -659,17 +712,19 @@ class dataframe_v7_migration {
 				continue;
 			}
 			foreach ($entries as $loc) {
-				if (is_object($loc)
-					&& isset($loc->id)
-					&& isset($loc->section_id) && (int)$loc->section_id === $parent_id
-					&& ($parent_tipo===null || (isset($loc->section_tipo) && $loc->section_tipo === $parent_tipo))) {
-					return (int)$loc->id;
+				if (is_object($loc) && isset($loc->id) && isset($loc->section_id)) {
+					$tipo = $loc->section_tipo ?? '';
+					$key	= $tipo.'|'.(int)$loc->section_id;
+					// first match wins (same semantics as the old linear scan)
+					if (!isset($map[$key])) {
+						$map[$key] = (int)$loc->id;
+					}
 				}
 			}
 		}
 
-		return 0;
-	}//end resolve_order_id_key
+		return $map;
+	}//end build_order_lookup_map
 
 
 
@@ -704,7 +759,10 @@ class dataframe_v7_migration {
 	*        null triggers auto-discovery via information_schema.columns
 	* @param bool $fix [= false] - false = report only; true = remove orphan locators
 	* @return object $response - new_step_response() shape plus frames_checked,
-	*         legacy_unmigrated, orphans_fixed counters
+	*         legacy_unmigrated, orphans_fixed, rows_with_orphans counters.
+	*         rows_with_orphans counts rows containing orphans regardless of $fix,
+	*         so dry-runs report the scope of damage; rows_changed counts actually
+	*         fixed rows (only incremented when $fix=true).
 	*/
 	public static function integrity_check( ?array $ar_tables=null, bool $fix=false ) : object {
 
@@ -712,6 +770,7 @@ class dataframe_v7_migration {
 		$response->frames_checked		= 0;
 		$response->legacy_unmigrated	= 0;
 		$response->orphans_fixed		= 0;
+		$response->rows_with_orphans	= 0;
 
 		$conn = DBi::_getConnection();
 		if ($conn===false) {
@@ -730,7 +789,14 @@ class dataframe_v7_migration {
 				  AND table_name NOT IN ('matrix_time_machine')
 				ORDER BY table_name
 			");
-			while ($result!==false && ($row = pg_fetch_assoc($result))) {
+			if ($result===false) {
+				$response->result	= false;
+				$response->msg		= 'Error. Table discovery query failed';
+				$response->errors[]	= 'Discovery query failed (information_schema.columns for relation): '
+					. (pg_last_error($conn) ?: 'unknown error');
+				return $response;
+			}
+			while ($row = pg_fetch_assoc($result)) {
 				$ar_tables[] = $row['table_name'];
 			}
 		}
@@ -745,7 +811,13 @@ class dataframe_v7_migration {
 			$result = pg_query_params($conn,
 				"SELECT column_name FROM information_schema.columns
 				 WHERE table_name = $1 AND data_type = 'jsonb'", [$table]);
-			while ($result!==false && ($row = pg_fetch_assoc($result))) {
+			if ($result===false) {
+				$response->result	= false;
+				$response->errors[]	= 'Column discovery query failed for table '.$table.': '
+					. (pg_last_error($conn) ?: 'unknown error');
+				continue;
+			}
+			while ($row = pg_fetch_assoc($result)) {
 				if (in_array($row['column_name'], $data_columns, true)) {
 					$table_columns[] = $row['column_name'];
 				}
@@ -768,7 +840,7 @@ class dataframe_v7_migration {
 				$result = pg_query_params($conn,
 					'SELECT id, section_tipo, section_id, '.$select_cols.'
 					 FROM "'.$table.'"
-					 WHERE id > $1 AND (relation::text LIKE \'%id_key%\')
+					 WHERE id > $1 AND (relation @? \'$.**."id_key"\' OR relation @? \'$.**."section_id_key"\')
 					 ORDER BY id ASC LIMIT '.self::$batch_size,
 					[$last_id]
 				);
@@ -813,6 +885,7 @@ class dataframe_v7_migration {
 
 					$context_ref = $table.' '.$row['section_tipo'].'_'.$row['section_id'];
 					$row_changed = false;
+					$row_has_orphans = false;
 
 					foreach ($relation as $component_tipo => $entries) {
 						if (!is_array($entries)) {
@@ -873,6 +946,7 @@ class dataframe_v7_migration {
 									. ' (slot ' . $el->from_component_tipo . ', target '
 									. ($el->section_tipo ?? '?') . '_' . ($el->section_id ?? '?') . ')'
 								);
+								$row_has_orphans = true;
 								if ($fix) {
 									$response->orphans_fixed++;
 									$entries_changed = true;
@@ -887,6 +961,10 @@ class dataframe_v7_migration {
 							$relation->{$component_tipo} = $clean_entries;
 							$row_changed = true;
 						}
+					}
+
+					if ($row_has_orphans) {
+						$response->rows_with_orphans++;
 					}
 
 					if ($row_changed && $fix) {
@@ -922,11 +1000,14 @@ class dataframe_v7_migration {
 	* Processing per item:
 	* 1. If the item already has a paired frame in the dd560 slot (matched by
 	*    id_key / section_id_key + main_component_tipo), only strip `title`.
-	* 2. If no frame exists yet and $save=true, call
-	*    component_iri::save_label_dataframe_from_string() to create (or reuse
-	*    a deduplicated) label record in target section dd1706, then call
-	*    component_iri::save_label_dataframe() to write the pairing locator.
-	*    If the label record creation fails, the item is reported as unresolved
+	* 2. If no frame exists yet and $save=true, resolve the label record via
+	*    component_iri::save_label_dataframe_from_string() (first occurrence
+	*    of each unique title only — subsequent items with the same title hit
+	*    the per-request $label_cache), then write the pairing locator inline
+	*    via a reused component_dataframe instance (cache=true +
+	*    set_caller_dataframe per item) instead of calling
+	*    component_iri::save_label_dataframe() per item. If the label record
+	*    creation or the frame save fails, the item is reported as unresolved
 	*    and left with its `title` intact.
 	* 3. Items without an `id` cannot be given a pairing key; they are reported
 	*    as unresolved and left untouched.
@@ -940,6 +1021,11 @@ class dataframe_v7_migration {
 	*
 	* Idempotent: component_iri::resolve_title() falls back to the literal `title`
 	* for unmigrated items, so reads continue to work until this runs.
+	*
+	* Performance: the $label_cache eliminates redundant get_label_record search
+	* queries and section creations for duplicate titles (e.g. 100 IRIs labeled
+	* "Wikipedia" → 1 search + 1 creation instead of 100). The instance reuse
+	* avoids N-1 component_dataframe DB data loads per (row, component_tipo).
 	*
 	* @param bool $save [= false] - false = dry-run (scan and report only, no writes)
 	* @return object $response - new_step_response() shape
@@ -964,7 +1050,14 @@ class dataframe_v7_migration {
 			  AND table_name NOT IN ('matrix_time_machine')
 			ORDER BY table_name
 		");
-		while ($result!==false && ($row = pg_fetch_assoc($result))) {
+		if ($result===false) {
+			$response->result	= false;
+			$response->msg		= 'Error. Table discovery query failed';
+			$response->errors[]	= 'Discovery query failed (information_schema.columns for iri): '
+				. (pg_last_error($conn) ?: 'unknown error');
+			return $response;
+		}
+		while ($row = pg_fetch_assoc($result)) {
 			$ar_tables[] = $row['table_name'];
 		}
 
@@ -984,7 +1077,7 @@ class dataframe_v7_migration {
 				$result = pg_query_params($conn,
 					'SELECT id, section_tipo, section_id, iri::text AS iri, relation::text AS relation
 					 FROM "'.$table.'"
-					 WHERE id > $1 AND iri::text LIKE \'%"title"%\'
+					 WHERE id > $1 AND iri @? \'$.**."title"\'
 					 ORDER BY id ASC LIMIT '.self::$batch_size,
 					[$last_id]
 				);
@@ -1048,24 +1141,107 @@ class dataframe_v7_migration {
 							}
 
 							if (!$has_frame && $save) {
-								// create/reuse the label record and pair it (iri machinery)
-								// save_label_dataframe_from_string() deduplicates: if a label record
-								// already exists in dd1706 with the same text, it returns its id.
-								// save_label_dataframe() writes the pairing locator into the
-								// relation column of the section record (not into the iri column).
-								$target_section_id = component_iri::save_label_dataframe_from_string((string)$item->title);
-								if (empty($target_section_id)) {
-									self::report($response, 'unresolved', $context_ref
-										. ' | unable to create label record for title: '.to_string($item->title));
-									continue;
+								// B3 optimization: resolve the label record via a per-request
+								// cache keyed by normalized title. Many IRI items across the
+								// entire run share the same title (e.g. "Wikipedia"), so the
+								// expensive get_label_record search + section creation is done
+								// only once per unique title string.
+								$normalized_title = trim(strip_tags((string)$item->title));
+								$target_section_id = self::$label_cache[$normalized_title] ?? null;
+
+								if ($target_section_id === null) {
+									// (!) Wrapped in try/catch so one bad item does not abort the
+									// whole batch. On failure the item is reported as unresolved
+									// and its literal title is left intact (dual-read still works).
+									try {
+										$target_section_id = component_iri::save_label_dataframe_from_string((string)$item->title);
+										if (empty($target_section_id)) {
+											self::report($response, 'unresolved', $context_ref
+												. ' | unable to create label record for title: '.to_string($item->title));
+											continue;
+										}
+										// cache the resolution for subsequent items with the same title
+										self::$label_cache[$normalized_title] = (int)$target_section_id;
+									} catch (Throwable $e) {
+										self::report($response, 'unresolved', $context_ref
+											. ' | exception while materializing iri title (left intact): '
+											. $e->getMessage());
+										continue; // leave title intact, skip to next item
+									}
 								}
-								component_iri::save_label_dataframe((object)[
-									'section_tipo'		=> $row['section_tipo'],
-									'section_id'		=> $row['section_id'],
-									'component_tipo'	=> $component_tipo,
-									'id_key'			=> (int)$item->id, // main data item id
-									'target_section_id'=> $target_section_id
-								]);
+
+								// B3 optimization: inline save_label_dataframe with instance
+								// reuse. Instead of calling component_iri::save_label_dataframe
+								// (which does get_instance with cache=false per item, reloading
+								// the component data from DB each time), we cache the model
+								// lookup and reuse the component_dataframe instance via
+								// cache=true + set_caller_dataframe per item. This avoids N-1
+								// DB data loads per (row, component_tipo). The caller-aware
+								// merge in set_data preserves siblings from previous saves.
+								try {
+									// cache the frame slot model lookup once per run
+									if (self::$df_model_cache === null) {
+										self::$df_model_cache = ontology_node::get_model_by_tipo($frame_slot_tipo, true);
+									}
+
+									$caller_dataframe = (object)[
+										'id_key'				=> (int)$item->id,
+										'section_tipo'			=> $row['section_tipo'],
+										'main_component_tipo'	=> $component_tipo,
+									];
+
+									// cache=true: the instance is reused across items in the
+									// same (section_tipo, section_id) row. The caller_dataframe
+									// arg is only used on cache miss; we update it explicitly
+									// via set_caller_dataframe on every call to be safe.
+									$component_df = component_common::get_instance(
+										self::$df_model_cache,
+										$frame_slot_tipo,
+										$row['section_id'],
+										'list',
+										DEDALO_DATA_NOLAN,
+										$row['section_tipo'],
+										true, // cache=true: reuse instance across items
+										$caller_dataframe
+									);
+									$component_df->set_caller_dataframe($caller_dataframe);
+
+									$label_target_section_tipo = component_iri::get_label_target_section_tipo();
+
+									$new_locator = new locator();
+										$new_locator->set_type( DEDALO_RELATION_TYPE_DATAFRAME );
+										$new_locator->set_section_tipo( $label_target_section_tipo );
+										$new_locator->set_section_id( (string)$target_section_id );
+										$new_locator->set_id_key( (int)$item->id );
+										$new_locator->set_main_component_tipo( $component_tipo );
+
+									$component_df->set_data( [$new_locator] );
+									$component_df->save();
+
+									// #4: keep the in-memory $relation in sync with the new frame
+									// written by save, so subsequent items in the same row see it
+									// in the has_frame check and we avoid redundant label-record
+									// creation round-trips.
+									if (!is_object($relation)) {
+										$relation = new stdClass();
+									}
+									if (!isset($relation->{$frame_slot_tipo}) || !is_array($relation->{$frame_slot_tipo})) {
+										$relation->{$frame_slot_tipo} = [];
+									}
+									$relation->{$frame_slot_tipo}[] = (object)[
+										'type'					=> DEDALO_RELATION_TYPE_DATAFRAME,
+										'section_tipo'			=> $label_target_section_tipo,
+										'section_id'			=> (string)$target_section_id,
+										'from_component_tipo'	=> $frame_slot_tipo,
+										'main_component_tipo'	=> $component_tipo,
+										'id_key'				=> (int)$item->id
+									];
+								} catch (Throwable $e) {
+									self::report($response, 'unresolved', $context_ref
+										. ' | exception while saving iri label dataframe (left intact): '
+										. $e->getMessage());
+									continue; // leave title intact, skip to next item
+								}
 							}
 
 							// strip the deprecated literal title
@@ -1096,6 +1272,19 @@ class dataframe_v7_migration {
 			}//end while batches
 		}//end foreach tables
 
+		// total-failure guard.
+		// report() only increments counters, so a step in which EVERY candidate item
+		// failed would otherwise still return the result=true set by new_step_response()
+		// — the update runner would log 'script executed: true', carry on, and stamp the
+		// new data version while nothing had actually been migrated. A save run that
+		// found work to do (unresolved>0) but materialized nothing is never a success.
+		if ($save===true && $response->unresolved>0 && $response->locators_migrated===0) {
+			$response->result	= false;
+			$response->msg		= 'Error. materialize_iri_titles resolved no iri title at all';
+			$response->errors[]	= 'materialize_iri_titles: all '.$response->unresolved
+				.' candidate items were left unresolved (0 materialized). See unresolved_items for the cause.';
+		}
+
 		return $response;
 	}//end materialize_iri_titles
 
@@ -1125,6 +1314,9 @@ class dataframe_v7_migration {
 	* 4. If none remain: report 'unresolved' and skip (leave legacy, dual-read
 	*    handles it). If more than one remain: report 'ambiguous' and use the
 	*    first (same-target-linked-twice corner case; recorded for inspection).
+	*    If section_tipo_key is missing on a relation-main frame, report
+	*    'ambiguous' as a warning (matching by section_id only risks cross-tipo
+	*    mis-pairing) even before counting candidates.
 	* 5. Cast the chosen item's id to int and write it as id_key.
 	*
 	* The method mutates $entries objects in-place (PHP passes objects by
@@ -1170,6 +1362,21 @@ class dataframe_v7_migration {
 
 				// relation main: resolve the main locator item pointing at
 				// (section_tipo_key, section_id_key) and take its item id
+
+				// (!) Warn when section_tipo_key is missing: matching falls back to
+				// section_id only, which can mis-pair across different section tipos
+				// that happen to share the same numeric section_id. Reported as
+				// 'ambiguous' so the entry is flagged for manual review even when
+				// only one candidate matches.
+				if (!isset($el->section_tipo_key)) {
+					self::report($response, 'ambiguous', $context_ref
+						. ' | from: ' . $el->from_component_tipo
+						. ' | main: ' . $el->main_component_tipo
+						. ' | section_id_key: ' . to_string($el->section_id_key)
+						. ' | WARNING: missing section_tipo_key, matching by section_id only (cross-tipo mis-pair risk)'
+					);
+				}
+
 				$candidates = array_values(array_filter($resolver($el), function($item) use ($el) {
 					return is_object($item)
 						&& !isset($item->section_id_key) && !isset($item->id_key) // exclude frame entries

@@ -253,10 +253,51 @@ class exec_ {
 		// process_runner. File to sh execute that manage given vars calling desired class and method
 			$process_runner	= DEDALO_CORE_PATH . '/base/process_runner.php';
 
+		// php binary. Resolve instead of trusting the raw PHP_BIN_PATH constant.
+			// (!) PHP_BIN_PATH defaults to '/usr/bin/php' (config catalog db.php_bin_path), which does
+			// NOT exist on macOS/Homebrew or on any non-standard layout. Spawning a missing binary is
+			// invisible from here: the shell still forks (so `echo $!` returns a live-looking pid), the
+			// output file stays empty, and the "no such file or directory" goes to stderr, which this
+			// command discards. The caller then polls an empty file and reports a phantom "completed"
+			// process. system::get_php_bin() applies the same resolution dd_cache already relies on
+			// (configured path if real → platform base → PATH lookup).
+			$php_bin = class_exists('system')
+				? system::get_php_bin()
+				: PHP_BIN_PATH;
+
+			// Fail loudly rather than spawning into the void.
+			if (empty($php_bin) || !is_file($php_bin)) {
+				$msg = 'Error. PHP binary not found. Unable to run the background process.';
+				debug_log(__METHOD__
+					. ' ' . $msg . PHP_EOL
+					. ' resolved php_bin: ' . to_string($php_bin) . PHP_EOL
+					. ' PHP_BIN_PATH: ' . (defined('PHP_BIN_PATH') ? PHP_BIN_PATH : '(undefined)')
+					, logger::ERROR
+				);
+
+				$response = new stdClass();
+					$response->result	= false;
+					$response->msg		= $msg;
+					$response->errors	= [
+						'php_bin_not_found: ' . to_string($php_bin)
+						. '. Set db.php_bin_path (PHP_BIN_PATH) to the real PHP CLI binary.'
+					];
+
+				return $response;
+			}
+
 		// command composition
-			$cmd		= PHP_BIN_PATH . " $process_runner " . escapeshellarg($server_vars);
-			// $command	= "nohup nice -n 19 $cmd >$file_path 2>&1 & echo $!";
-			$command	= "nohup nice -n 19 $cmd >$file_path & echo $!";
+			// stderr is NOT merged into $file_path: that file is the process output stream the client
+			// parses as JSON, and PHP warnings/notices would corrupt it (that is why `2>&1` was
+			// removed). But it must not be dropped either — anything the child writes to stderr before
+			// PHP can install its own error handler (a missing binary, a startup fatal) would vanish.
+			// Append it to the same error log the child itself uses, so it lands in the server log.
+			$cmd		= escapeshellarg($php_bin) . " $process_runner " . escapeshellarg($server_vars);
+			$error_log	= system::get_error_log_path();
+			$stderr		= !empty($error_log)
+				? ' 2>>' . escapeshellarg($error_log)
+				: '';
+			$command	= "nohup nice -n 19 $cmd >$file_path$stderr & echo $!";
 
 			// debug
 				debug_log(__METHOD__

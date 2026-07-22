@@ -1383,12 +1383,12 @@ class update {
 	*
 	* Memory strategy:
 	*  - Fetches the minimum and maximum primary-key values first (two fast index scans).
-	*  - Iterates from $min to $max with a per-id SELECT rather than a full table scan,
-	*    so that the PostgreSQL client never holds the entire result set in memory at once.
-	*    (!) Rows deleted since the min/max scan will simply produce empty result sets
-	*    for their id; they are silently skipped.
-	*  - pg_free_result() is called after every id to release the PHP resource handle.
-	*  - time_nanosleep(0, 5000) + gc_collect_cycles() run every 10 000 ids to keep
+	*  - Iterates from $min to $max with keyset pagination (WHERE id > $last_id ORDER BY id
+	*    LIMIT $batch_size), so that the PostgreSQL client never holds the entire result set
+	*    in memory at once. Rows deleted since the min/max scan are silently skipped without
+	*    producing empty result sets.
+	*  - pg_free_result() is called after every batch to release the PHP resource handle.
+	*  - time_nanosleep(0, 5000) + gc_collect_cycles() run every 10 000 rows to keep
 	*    PHP memory usage stable across multi-million-row tables.
 	*  - set_time_limit(0) prevents the PHP execution timeout from aborting long runs.
 	*
@@ -1472,27 +1472,33 @@ class update {
 
 			//$min = 1;
 
-			// iterate from 1 to last id
+			// iterate in batches to avoid one-SELECT-per-ID overhead
+			// Uses keyset pagination (WHERE id > $last_id ORDER BY id LIMIT $batch_size)
+			// which only issues as many queries as needed (ceil(row_count / batch_size)),
+			// skipping gaps from deleted rows without useless empty result sets.
+			$batch_size = 1000;
 			$i_ref = 0; $start_time = start_time();
-			for ($i=$min; $i<=$max; $i++) {
+			$last_id = $min - 1;
+			while ($last_id < $max) {
 
-				$strQuery = "SELECT * FROM $table WHERE id = $1 ORDER BY id ASC";
+				$strQuery = "SELECT * FROM $table WHERE id > $1 ORDER BY id LIMIT $2";
 				$result	  = matrix_db_manager::exec_search($strQuery, [
-					$i
+					$last_id,
+					$batch_size
 				]);
 				if($result===false) {
-					$msg = "Failed Search id $i. Data is not found.";
+					$msg = "Failed Search batch after id $last_id. Data is not found.";
 					debug_log(__METHOD__
 						." ERROR: $msg "
 						, logger::ERROR
 					);
-					continue;
+					break;
 				}
 				$n_rows = pg_num_rows($result);
 
 				if ($n_rows<1) {
 					pg_free_result($result);
-					continue;
+					break;
 				}
 
 				while($row = pg_fetch_assoc($result)) {
@@ -1505,7 +1511,10 @@ class update {
 				// release result to prevent memory leak
 				pg_free_result($result);
 
-				// log info each 5000
+				// advance last_id for next batch
+				$last_id = $id;
+
+				// log info each 10000 rows
 					if ($i_ref===0 && isset($id)) {
 						debug_log(__METHOD__
 							. " Partial update of section data table: $table - id: $id - total: $max - time min: ".exec_time_unit($start_time,'min')
@@ -1527,14 +1536,14 @@ class update {
 
 				// update and reset counter
 					if ( running_in_cli()===true ) {
-						common::$pdata->counter++;
+						common::$pdata->counter += $n_rows;
 					}
 
-					$i_ref++;
+					$i_ref += $n_rows;
 					if ($i_ref >= 10000) {
 						$i_ref = 0;
 					}
-			}//end for ($i=$min; $i<=$max; $i++)
+			}//end while ($last_id < $max)
 
 			// let GC do the memory job
 			sleep(1);

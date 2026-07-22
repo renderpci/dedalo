@@ -292,7 +292,13 @@ class babel_transcriber {
 			// $output = '> /dev/null &';
 
 		// command
-			$php_command = PHP_BIN_PATH ." $process_file '$server_vars'";
+			// Resolve the PHP binary rather than trusting the raw PHP_BIN_PATH constant: its catalog
+			// default ('/usr/bin/php') does not exist on macOS/Homebrew or any non-standard layout,
+			// and this command discards stderr, so a missing binary would fail silently.
+			$php_bin = class_exists('system')
+				? system::get_php_bin()
+				: PHP_BIN_PATH;
+			$php_command = escapeshellarg($php_bin) ." $process_file '$server_vars'";
 
 		// final command
 			$command = 'nohup '.$php_command.' > /dev/null 2>&1 & echo $!';

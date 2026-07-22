@@ -68,8 +68,8 @@ $updates->$v = new stdClass();
 
 	// MINIMUM UPDATE FROM
 	$updates->$v->update_from_major		= 6;
-	$updates->$v->update_from_medium	= 8;
-	$updates->$v->update_from_minor		= 10;
+	$updates->$v->update_from_medium	= 9;
+	$updates->$v->update_from_minor		= 1;
 
 	// require a clean installation
 	// it only could be 'clean' | null. Incremental option has not sense to be forced.

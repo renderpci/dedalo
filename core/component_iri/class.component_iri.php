@@ -82,6 +82,26 @@ class component_iri extends component_common {
 
 
 	/**
+	* GET_LABEL_TARGET_SECTION_TIPO
+	* Read accessor for the label target section tipo (dd1706).
+	*
+	* Exists so that callers outside this class which must build a label pairing
+	* locator themselves — currently the v6→v7 upgrade
+	* (dataframe_v7_migration::materialize_iri_titles(), which reuses a single
+	* component_dataframe instance across items instead of calling
+	* save_label_dataframe() per item) — can read the target tipo without
+	* touching the private property (a PHP Error) or hard-coding 'dd1706'.
+	*
+	* @return string - the ontology section tipo holding component_iri label records
+	*/
+	public static function get_label_target_section_tipo() : string {
+
+		return self::$label_target_section_tipo;
+	}//end get_label_target_section_tipo
+
+
+
+	/**
 	* __CONSTRUCT
 	* Initialises a component_iri instance.
 	* Forces with_lang_versions=true (language variants share one id) and

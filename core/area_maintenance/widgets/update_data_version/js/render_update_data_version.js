@@ -434,6 +434,32 @@ const get_content_data = async function(self) {
 						// update_data_version
 							update_data_version()
 							.then(function(response){
+
+								// error case. The server refused the request or could not spawn the
+								// background process (bad php binary, not superuser, not in
+								// maintenance_mode, ...). Without this guard the failure is invisible:
+								// response.pid is undefined, update_process_status polls a file that
+								// will never exist, and the operator sees nothing at all.
+								if (!response || response.result===false || !response.pid) {
+									const errors = (response && Array.isArray(response.errors))
+										? response.errors
+										: []
+									const error_text = [
+										(response && response.msg) || 'Error. The update process could not be started',
+										...errors
+									].join(' | ')
+
+									ui.create_dom_element({
+										element_type	: 'div',
+										class_name		: 'warning error_text',
+										inner_html		: error_text,
+										parent			: body_response
+									})
+
+									console.error('update_data_version failed:', response)
+									return
+								}
+
 								// Hand the {pid, pfile} handle to the SSE poller so the
 								// administrator gets a live progress view in body_response.
 								update_process_status(
