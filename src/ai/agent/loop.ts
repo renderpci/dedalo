@@ -46,7 +46,7 @@ import {
 	runTool,
 	toAgentToolDefinition,
 } from '../mcp/registry.ts';
-import { semanticSearch } from '../rag/retrieval.ts';
+import { retrievePassages, semanticSearch } from '../rag/retrieval.ts';
 import { type ValidatedChangePlan, validateChangePlan } from './change_plan.ts';
 import {
 	type AgentEgressOptions,
@@ -68,20 +68,78 @@ import { type AgentUiContext, buildContextBlock, buildSystemPrompt } from './sys
 /** Hard cap on model turns — a runaway-loop backstop, not a tuning knob. */
 const MAX_ITERATIONS = 12;
 
-/** The RAG tool is loop-local (it is not part of the MCP registry yet). */
+/** The RAG tools are loop-local (they are not part of the MCP registry). */
 const SEMANTIC_SEARCH_TOOL: AgentToolDefinition = {
 	name: 'dedalo_semantic_search',
 	description:
-		'Hybrid semantic + lexical search over indexed record texts. Returns scored snippets with their (section_tipo, section_id, component_tipo).',
+		'Hybrid semantic + lexical search over indexed record texts — find RECORDS by meaning ' +
+		'(cross-lingual). Returns scored snippets with their (section_tipo, section_id). ' +
+		'Optionally narrow to sections (section_tipo) or to one embed facet (group, e.g. ' +
+		'"card" vs "fulltext"). For the exact passages behind an answer, follow up with ' +
+		'dedalo_retrieve_passages.',
 	input_schema: {
 		type: 'object',
 		properties: {
 			query: { type: 'string' },
 			limit: { type: 'number' },
+			section_tipo: {
+				description: 'Narrow to these section tipos (string or array).',
+				anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
+			},
+			group: {
+				type: 'string',
+				description: 'Embed-group facet id (slug) — search only that facet.',
+			},
 		},
 		required: ['query'],
 	},
 };
+
+/** Passage-level retrieval: the grounding/citation companion to semantic search. */
+const RETRIEVE_PASSAGES_TOOL: AgentToolDefinition = {
+	name: 'dedalo_retrieve_passages',
+	description:
+		'Retrieve the exact PASSAGES (chunks) matching a query — use these to ground and CITE ' +
+		'answers: each passage carries (section_tipo, section_id, chunk_index) and its text. ' +
+		'Prefer a small limit; cite as section_tipo-section_id.',
+	input_schema: {
+		type: 'object',
+		properties: {
+			query: { type: 'string' },
+			limit: { type: 'number', description: 'Max passages (default 8, cap 20).' },
+			section_tipo: {
+				description: 'Narrow to these section tipos (string or array).',
+				anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
+			},
+			group: {
+				type: 'string',
+				description: 'Embed-group facet id (slug) — retrieve only that facet.',
+			},
+		},
+		required: ['query'],
+	},
+};
+
+/** Group-id slug grammar (api.ts optionGroup parity); invalid ⇒ treated as absent. */
+const GROUP_SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,39}$/;
+
+/** Read the optional scope/group args shared by the two RAG tools. */
+function readRagToolArgs(input: Record<string, unknown>): {
+	scope: string[] | undefined;
+	group: string | undefined;
+} {
+	const rawScope = input.section_tipo;
+	let scope: string[] | undefined;
+	if (typeof rawScope === 'string' && rawScope !== '') {
+		scope = [rawScope];
+	} else if (Array.isArray(rawScope)) {
+		const cleaned = rawScope.filter((x): x is string => typeof x === 'string' && x !== '');
+		if (cleaned.length > 0) scope = cleaned;
+	}
+	const rawGroup = typeof input.group === 'string' ? input.group.trim() : '';
+	const group = GROUP_SLUG_RE.test(rawGroup) ? rawGroup : undefined;
+	return { scope, group };
+}
 
 /** The synthetic write-mode tool: propose (never execute) a change plan. */
 const PROPOSE_TOOL: AgentToolDefinition = {
@@ -128,6 +186,7 @@ const PROPOSE_TOOL: AgentToolDefinition = {
 export const AGENT_TOOLS: AgentToolDefinition[] = [
 	...registeredTools().map(toAgentToolDefinition),
 	SEMANTIC_SEARCH_TOOL,
+	RETRIEVE_PASSAGES_TOOL,
 ];
 
 /** Argument keys worth surfacing in a human-readable tool summary. */
@@ -171,14 +230,18 @@ async function executeTool(
 	if (name === 'dedalo_semantic_search') {
 		try {
 			const query = String((input as { query: unknown }).query ?? '');
-			// Clamp like the registry search tools do: an injected `limit` would
-			// otherwise drive hybridCandidates' over-fetch (limit*4) unbounded.
+			// Clamp like the registry search tools do (dd_rag_api MAX_TOP_K parity):
+			// an injected `limit` would otherwise drive hybridCandidates' over-fetch
+			// (limit*4) unbounded.
 			const requested = Number((input as { limit?: unknown }).limit ?? 10);
-			const limit = Number.isFinite(requested) ? Math.min(Math.max(requested, 1), 100) : 10;
-			const hits = await semanticSearch(principal, query, limit);
+			const limit = Number.isFinite(requested) ? Math.min(Math.max(requested, 1), 50) : 10;
+			const { scope, group } = readRagToolArgs(input);
+			const hits = await semanticSearch(principal, query, limit, scope, group);
 			if (egress?.external === true) {
-				// Per-hit egress filter: restricted records never enter an external
-				// model context; the model is told results were withheld.
+				// Per-hit egress filter (host + CONTRIBUTORS — a group chunk's
+				// snippet carries deep-resolved text from other sections):
+				// restricted records never enter an external model context; the
+				// model is told results were withheld.
 				const { allowed, removed } = await filterEgressHits(egress, hits);
 				return {
 					tool_use_id: toolUseId,
@@ -187,6 +250,42 @@ async function executeTool(
 				};
 			}
 			return { tool_use_id: toolUseId, content: JSON.stringify(hits), is_error: false };
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			return { tool_use_id: toolUseId, content: message, is_error: true };
+		}
+	}
+
+	if (name === 'dedalo_retrieve_passages') {
+		try {
+			const query = String((input as { query: unknown }).query ?? '');
+			// Small default/cap: passages are chunk-sized (~450 tokens) and every
+			// tool result is re-carried through up to MAX_ITERATIONS resends.
+			const requested = Number((input as { limit?: unknown }).limit ?? 8);
+			const limit = Number.isFinite(requested) ? Math.min(Math.max(requested, 1), 20) : 8;
+			const { scope, group } = readRagToolArgs(input);
+			// Over-fetch then dedupe: the indexer writes one doc per (group, LANG),
+			// so the same chunk appears once per language at adjacent ranks — a
+			// limit-N list would otherwise fill with copies of one passage.
+			const raw = await retrievePassages(principal, query, Math.min(limit * 3, 50), scope, group);
+			const seen = new Set<string>();
+			const passages = [];
+			for (const passage of raw) {
+				const key = `${passage.section_tipo}|${passage.section_id}|${passage.chunk_index}`;
+				if (seen.has(key)) continue; // keep the best-scored lang copy (rank order)
+				seen.add(key);
+				passages.push(passage);
+				if (passages.length >= limit) break;
+			}
+			if (egress?.external === true) {
+				const { allowed, removed } = await filterEgressHits(egress, passages);
+				return {
+					tool_use_id: toolUseId,
+					content: JSON.stringify({ passages: allowed, restricted_hits_removed: removed }),
+					is_error: false,
+				};
+			}
+			return { tool_use_id: toolUseId, content: JSON.stringify(passages), is_error: false };
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 			return { tool_use_id: toolUseId, content: message, is_error: true };

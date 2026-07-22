@@ -65,8 +65,12 @@ export const GROUNDING_RULES = `## Non-negotiable rules
 export const TOOL_STRATEGY = `## Working method
 - Start narrow: resolve the section, describe its fields, then search.
 - Use dedalo_search_records for structured filters; dedalo_semantic_search for
-  fuzzy or conceptual questions; dedalo_count_records before listing large
-  sets; paginate rather than asking for everything.
+  fuzzy or conceptual questions (cross-lingual; optionally scoped by
+  section_tipo or an embed-group facet via group); dedalo_count_records before
+  listing large sets; paginate rather than asking for everything.
+- To GROUND an answer, follow semantic hits with dedalo_retrieve_passages and
+  quote/cite the exact passages: cite as section_tipo-section_id (add the
+  page/timecode from the passage when present). Keep passage limits small.
 - Every tool error carries a hint — follow it.`;
 
 export const LANGUAGE_POLICY = `## Language and format

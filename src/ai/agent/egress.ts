@@ -212,15 +212,50 @@ export async function gateAgentToolResult(
  * Post-execution per-hit filter for search-hit-shaped results (semantic
  * search): restricted hits are dropped BEFORE they enter the model context.
  */
-export async function filterEgressHits<T extends { section_tipo: string; section_id: number }>(
-	egress: AgentEgressOptions,
-	hits: T[],
-): Promise<{ allowed: T[]; removed: number }> {
+export async function filterEgressHits<
+	T extends {
+		section_tipo: string;
+		section_id: number;
+		component_tipo?: string;
+		contributors?: string[];
+	},
+>(egress: AgentEgressOptions, hits: T[]): Promise<{ allowed: T[]; removed: number }> {
 	if (!egress.external) return { allowed: hits, removed: 0 };
 	const allowed: T[] = [];
 	for (const hit of hits) {
-		const klass = await egress.policy(hit.section_tipo, hit.section_id);
-		if (klass === 'public') allowed.push(hit);
+		if (await hitIsPublic(egress, hit)) allowed.push(hit);
 	}
 	return { allowed, removed: hits.length - allowed.length };
+}
+
+/**
+ * One hit's full egress decision: the HOST record must be public AND — for
+ * `rag:` group chunks, whose snippet is a composed document carrying
+ * DEEP-RESOLVED text from OTHER sections — every CONTRIBUTOR section must be
+ * public too (sec review 4a, 2026-07-22: the host-only check leaked a
+ * forbidden section's text through a public host record). Contributors are
+ * classified with a 0 record-id (section-level, mirroring
+ * gateAgentToolResult's id-0 classification). A `rag:` chunk with NO
+ * contributor metadata is dropped fail-closed (malformed/pre-fix meta —
+ * legitimate group chunks always carry at least the host's contributors).
+ */
+async function hitIsPublic(
+	egress: AgentEgressOptions,
+	hit: {
+		section_tipo: string;
+		section_id: number;
+		component_tipo?: string;
+		contributors?: string[];
+	},
+): Promise<boolean> {
+	if ((await egress.policy(hit.section_tipo, hit.section_id)) !== 'public') return false;
+	const isGroupChunk =
+		typeof hit.component_tipo === 'string' && hit.component_tipo.startsWith('rag:');
+	const contributors = hit.contributors ?? [];
+	if (isGroupChunk && contributors.length === 0) return false; // fail-closed
+	for (const contributor of contributors) {
+		if (contributor === hit.section_tipo) continue; // host already classified
+		if ((await egress.policy(contributor, 0)) !== 'public') return false;
+	}
+	return true;
 }

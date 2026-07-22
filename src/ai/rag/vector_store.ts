@@ -153,18 +153,28 @@ export async function deleteRecordChunks(sectionTipo: string, sectionId: number)
 }
 
 /** DENSE search: cosine distance KNN for one model. Score = 1 - distance.
- * `componentTipo` narrows to one stored key (the `rag:<group>` facet filter). */
+ * `componentTipo` narrows to one stored key (the `rag:<group>` facet filter);
+ * `sectionTipos` is the SCOPE PUSHDOWN (2026-07-22) — without it scope was a
+ * post-filter over a global top-K, and a section dominating the embedding
+ * space starved scoped searches into false-empty results. */
 export async function denseSearch(
 	model: string,
 	queryEmbedding: number[],
 	limit: number,
 	componentTipo?: string,
+	sectionTipos?: readonly string[],
 ): Promise<RagHit[]> {
 	const params: (string | number)[] = [JSON.stringify(queryEmbedding), model];
 	let where = 'model = $2';
 	if (componentTipo !== undefined) {
 		params.push(componentTipo);
 		where += ` AND component_tipo = $${params.length}`;
+	}
+	if (sectionTipos !== undefined && sectionTipos.length > 0) {
+		// per-element placeholders — the queryDense idiom in this file
+		const placeholders = sectionTipos.map((_, i) => `$${params.length + 1 + i}`).join(',');
+		params.push(...sectionTipos);
+		where += ` AND section_tipo IN (${placeholders})`;
 	}
 	params.push(limit);
 	const rows = (await ragSql.unsafe(
@@ -180,11 +190,13 @@ export async function denseSearch(
 }
 
 /** LEXICAL search over source_text (simple + unaccent, the installed GIN index).
- * `componentTipo` narrows to one stored key (the `rag:<group>` facet filter). */
+ * `componentTipo` narrows to one stored key (the `rag:<group>` facet filter);
+ * `sectionTipos` is the scope pushdown (see denseSearch). */
 export async function lexicalSearch(
 	query: string,
 	limit: number,
 	componentTipo?: string,
+	sectionTipos?: readonly string[],
 ): Promise<RagHit[]> {
 	const params: (string | number)[] = [query];
 	let where = `to_tsvector('simple', f_unaccent(COALESCE(source_text, '')))
@@ -192,6 +204,12 @@ export async function lexicalSearch(
 	if (componentTipo !== undefined) {
 		params.push(componentTipo);
 		where += ` AND component_tipo = $${params.length}`;
+	}
+	if (sectionTipos !== undefined && sectionTipos.length > 0) {
+		// per-element placeholders — the queryDense idiom in this file
+		const placeholders = sectionTipos.map((_, i) => `$${params.length + 1 + i}`).join(',');
+		params.push(...sectionTipos);
+		where += ` AND section_tipo IN (${placeholders})`;
 	}
 	params.push(limit);
 	const rows = (await ragSql.unsafe(

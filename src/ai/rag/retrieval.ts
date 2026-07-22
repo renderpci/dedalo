@@ -116,6 +116,13 @@ export interface RagSearchHit {
 	lang: string;
 	snippet: string | null;
 	score: number;
+	/** Section tipos whose text CONTRIBUTED to this chunk (deep resolution).
+	 * The agent egress gate checks these beside the host section — a group
+	 * chunk's snippet carries deep-resolved text from OTHER sections, so the
+	 * host-only check alone would leak a forbidden section's text through a
+	 * public host record (sec review 4a, 2026-07-22). Empty for pre-group and
+	 * image-path chunks. */
+	contributors?: string[];
 }
 
 /** A passage-level hit (retrieve / get_agent_context) — carries the chunk index. */
@@ -222,22 +229,27 @@ function toSearchHit(candidate: Candidate): RagSearchHit {
 		lang: candidate.lang,
 		snippet: candidate.sourceText,
 		score: candidate.rrfScore ?? candidate.score ?? 0,
+		contributors: contributorSectionTipos(candidate.chunkMeta),
 	};
 }
 
 /** Run the hybrid (dense+lexical) legs and fuse them into ranked candidates.
- * `group` narrows both legs to one facet's chunks (`rag:<group>`). */
+ * `group` narrows both legs to one facet's chunks (`rag:<group>`); `scope` is
+ * PUSHED DOWN into both store legs (2026-07-22) — as a post-filter only, a
+ * dominant section starved scoped searches into false-empty results. The
+ * aclGate still re-applies scope (harmless) and the full ACL. */
 async function hybridCandidates(
 	query: string,
 	overFetch: number,
 	group?: string,
+	scope?: string[],
 ): Promise<Candidate[]> {
 	const provider = getEmbeddingProvider();
 	const [queryEmbedding] = await provider.embed([query]);
 	const facetTipo = groupStorageTipo(group);
 	const [dense, lexical] = await Promise.all([
-		denseSearch(provider.model, queryEmbedding as number[], overFetch, facetTipo),
-		lexicalSearch(query, overFetch, facetTipo),
+		denseSearch(provider.model, queryEmbedding as number[], overFetch, facetTipo, scope),
+		lexicalSearch(query, overFetch, facetTipo, scope),
 	]);
 	return fuse([dense.map(hitToCandidate), lexical.map(hitToCandidate)]);
 }
@@ -254,7 +266,7 @@ export async function semanticSearch(
 	scope?: string[],
 	group?: string,
 ): Promise<RagSearchHit[]> {
-	const fused = await hybridCandidates(query, Math.max(limit * 4, 20), group);
+	const fused = await hybridCandidates(query, Math.max(limit * 4, 20), group, scope);
 	const records = collapseToRecords(fused, 'rrfScore');
 	const gated = await aclGate(principal, records, limit, scope);
 	return gated.map(toSearchHit);
@@ -271,12 +283,11 @@ export async function retrievePassages(
 	scope?: string[],
 	group?: string,
 ): Promise<RagPassageHit[]> {
-	const fused = await hybridCandidates(query, Math.max(limit * 4, 20), group);
+	const fused = await hybridCandidates(query, Math.max(limit * 4, 20), group, scope);
 	const gated = await aclGate(principal, fused, limit, scope);
 	return gated.map((candidate) => ({
-		...toSearchHit(candidate),
+		...toSearchHit(candidate), // carries contributors
 		chunk_index: candidate.chunkIndex,
-		contributors: contributorSectionTipos(candidate.chunkMeta),
 	}));
 }
 
@@ -304,9 +315,11 @@ export async function similarTo(
 	);
 	if (seedVectors.length === 0) return [];
 	const overFetch = Math.max(limit * 4, 20);
+	// scope pushdown (devil #5): without it the neighbours are the GLOBAL
+	// nearest and a dominant section starves the scoped ones out of the top-K.
 	const perVector = await Promise.all(
 		seedVectors.map((vector) =>
-			denseSearch(provider.model, vector.embedding, overFetch + 1, facetTipo),
+			denseSearch(provider.model, vector.embedding, overFetch + 1, facetTipo, scope),
 		),
 	);
 	const lists = perVector.map((hits) =>

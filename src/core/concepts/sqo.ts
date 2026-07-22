@@ -26,6 +26,9 @@ import { config } from '../../config/config.ts';
 /** Max rows an untrusted (client) SQO may request. PHP: DEDALO_SEARCH_CLIENT_MAX_LIMIT. */
 export const CLIENT_MAX_LIMIT = config.features.searchClientMaxLimit;
 
+/** Max filter_by_locators pins an untrusted SQO may carry (hardening, 2026-07-22). */
+export const CLIENT_MAX_LOCATOR_PINS = 1000;
+
 /**
  * Keys that only server code may set. Pre-built SQL would bypass the conform
  * pipeline; the ACL flags would bypass the projects filter. Mirrors PHP
@@ -243,6 +246,23 @@ export function sanitizeClientSqo(untrustedSqo: Record<string, unknown>): Sqo {
 		: 0;
 	if (stripped.total !== undefined && stripped.total !== null) {
 		stripped.total = Math.trunc(Number(stripped.total)) || 0;
+	}
+
+	// filter_by_locators: HARDENING cap (2026-07-22, semantic-search pins). The
+	// node-count ceiling already bounds pins at ≈3.3k (each pin ≈ 3 counted
+	// nodes); this explicit clamp keeps the OR-legs and the locator_position
+	// ranking array a size the planner handles comfortably. Clamp, not reject —
+	// but LOUDLY (DEC-07 precedent above): a silently truncated pin set silently
+	// drops result rows.
+	if (Array.isArray(stripped.filter_by_locators)) {
+		const pins = stripped.filter_by_locators as unknown[];
+		if (pins.length > CLIENT_MAX_LOCATOR_PINS) {
+			const sectionTipo = typeof stripped.section_tipo === 'string' ? stripped.section_tipo : '?';
+			console.warn(
+				`[sqo] client filter_by_locators length ${pins.length} (section_tipo ${sectionTipo}) clamped to CLIENT_MAX_LOCATOR_PINS=${CLIENT_MAX_LOCATOR_PINS} — result set truncated (DEC-07)`,
+			);
+			stripped.filter_by_locators = pins.slice(0, CLIENT_MAX_LOCATOR_PINS);
+		}
 	}
 
 	// lifecycle: force re-parse
