@@ -34,6 +34,25 @@ global $updates;
 $updates = new stdClass();
 
 
+$v=693; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 9;
+	$updates->$v->version_minor			= 3;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 9;
+	$updates->$v->update_from_minor		= 2;
+
+	// Re-index and vacuum tables
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			VACUUM FULL VERBOSE ANALYZE public.jer_dd;
+		');
+
+
 $v=692; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -51,7 +70,6 @@ $updates->$v = new stdClass();
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			VACUUM FULL VERBOSE ANALYZE public.jer_dd;
 		');
-
 
 
 $v=691; #####################################################################################
@@ -106,7 +124,7 @@ $updates->$v = new stdClass();
 			<code>
 			{\"name\":\"browser_transformer\",\"type\":\"browser\",\"label\":\"Local AI translator\"}
 			</code>
-			</p> 
+			</p>
 			<br>
 			<br>
 			<p>
@@ -150,7 +168,7 @@ $updates->$v = new stdClass();
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			VACUUM FULL VERBOSE ANALYZE public.matrix_ontology;
 		');
-		
+
 
 $v=6810; #####################################################################################
 $updates->$v = new stdClass();
@@ -198,7 +216,7 @@ $updates->$v = new stdClass();
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			VACUUM FULL VERBOSE ANALYZE public.matrix_ontology;
 		');
-		
+
 
 $v=688; #####################################################################################
 $updates->$v = new stdClass();
@@ -218,7 +236,7 @@ $updates->$v = new stdClass();
 			VACUUM FULL VERBOSE ANALYZE public.matrix_ontology;
 		');
 
-		
+
 $v=687; #####################################################################################
 $updates->$v = new stdClass();
 
