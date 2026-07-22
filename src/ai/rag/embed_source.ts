@@ -84,6 +84,8 @@ export interface EmbedSourceDeps {
 		sectionId: number,
 	) => Promise<MatrixRecord | null>;
 	resolveMatrixTable: (sectionTipo: string) => Promise<string | null>;
+	/** True when the tipo is a relation-family component (column 'relation'). */
+	isRelation: (tipo: string) => Promise<boolean>;
 	/** True when the entry's resolved text varies by data lang (translatable OR relation). */
 	entryUsesLangs: (tipo: string) => Promise<boolean>;
 	/** The component label used as the doc's structural header (null → tipo). */
@@ -92,19 +94,49 @@ export interface EmbedSourceDeps {
 
 /** Production deps over the live resolver / matrix / read path. */
 export function defaultEmbedSourceDeps(): EmbedSourceDeps {
+	const isRelation = async (tipo: string): Promise<boolean> => {
+		const model = await getModelByTipo(tipo);
+		return model !== null && getColumnNameByModel(model) === 'relation';
+	};
 	return {
 		emitDdo: emitDdoData,
 		readRecord: readMatrixRecord,
 		resolveMatrixTable: getMatrixTableFromTipo,
+		isRelation,
 		async entryUsesLangs(tipo) {
 			if (await getTranslatableByTipo(tipo)) return true;
-			const model = await getModelByTipo(tipo);
 			// Relation values resolve to the TARGET's term text, which is
 			// lang-dependent even though the relation component itself is not.
-			return model !== null && getColumnNameByModel(model) === 'relation';
+			return isRelation(tipo);
 		},
 		labelOf: getTermByTipo,
 	};
+}
+
+/**
+ * INDEX-TIME MODE RULE (2026-07-22, found live: a 2.1 MB transcription embedded
+ * as 154 chars): `mode` selects each model's RENDER transform, and `'list'`
+ * triggers the literal list-preview — component_text_area's emit hook
+ * HTML-truncates to 130 chars (PHP get_list_value parity), which is silent
+ * data loss in a vector. The rule (user decision — the map means what it says):
+ *   - an EXPLICIT authored `mode` is honored verbatim (write `'edit'` for full
+ *     text; `'list'` knowingly embeds the preview);
+ *   - an ABSENT `mode` gets the embedding-sensible default: literals → `'edit'`
+ *     (full value, top-level and deep children alike), relations → `'list'`
+ *     (compact target-term own-config resolution — an edit-mode portal would
+ *     expand the target's whole edit form).
+ */
+async function effectiveEmbedMap(ddoMap: Ddo[], deps: EmbedSourceDeps): Promise<Ddo[]> {
+	const out: Ddo[] = [];
+	for (const ddo of ddoMap) {
+		if (ddo.mode !== undefined) {
+			out.push(ddo); // explicit author intent wins
+			continue;
+		}
+		const relation = await deps.isRelation(ddo.tipo).catch(() => false);
+		out.push({ ...ddo, mode: relation ? 'list' : 'edit' });
+	}
+	return out;
 }
 
 export interface ResolveEmbedDocsInput {
@@ -137,9 +169,10 @@ export async function resolveEmbedDocs(
 
 	const out: EmbedDoc[] = [];
 	for (const group of groups) {
-		const topLevel = group.ddoMap.filter(
-			(d) => d.parent === undefined || d.parent === SELF_SENTINEL,
-		);
+		// Full-value mode rewrite (see effectiveEmbedMap): literals → 'edit',
+		// relations keep their authored mode.
+		const embedMap = await effectiveEmbedMap(group.ddoMap, deps);
+		const topLevel = embedMap.filter((d) => d.parent === undefined || d.parent === SELF_SENTINEL);
 		if (topLevel.length === 0) continue;
 
 		// A group resolves per data lang when ANY of its entries is lang-sensitive;
@@ -155,7 +188,7 @@ export async function resolveEmbedDocs(
 		const docLangs = usesLangs && input.langs.length > 0 ? input.langs : [input.nolan];
 
 		for (const lang of docLangs) {
-			const doc = await resolveGroupDoc(group, topLevel, record, input, lang, deps);
+			const doc = await resolveGroupDoc(group, embedMap, topLevel, record, input, lang, deps);
 			if (doc !== null) out.push(doc);
 		}
 	}
@@ -165,6 +198,7 @@ export async function resolveEmbedDocs(
 /** Resolve ONE (group, lang) document under the system index-time context. */
 async function resolveGroupDoc(
 	group: RagEmbedGroup,
+	embedMap: Ddo[],
 	topLevel: Ddo[],
 	record: MatrixRecord,
 	input: ResolveEmbedDocsInput,
@@ -182,13 +216,14 @@ async function resolveGroupDoc(
 		},
 		() =>
 			runWithRequestLangs({ applicationLang: config.menu.applicationLang, dataLang: lang }, () =>
-				resolveGroupDocInner(group, topLevel, record, input, lang, deps),
+				resolveGroupDocInner(group, embedMap, topLevel, record, input, lang, deps),
 			),
 	);
 }
 
 async function resolveGroupDocInner(
 	group: RagEmbedGroup,
+	embedMap: Ddo[],
 	topLevel: Ddo[],
 	record: MatrixRecord,
 	input: ResolveEmbedDocsInput,
@@ -206,7 +241,7 @@ async function resolveGroupDocInner(
 			// (the effective list config drives a relation's own-config children).
 			await deps.emitDdo(
 				entry,
-				group.ddoMap,
+				embedMap,
 				record,
 				row,
 				entry.mode ?? 'list',

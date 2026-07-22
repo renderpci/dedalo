@@ -28,7 +28,7 @@ import { config } from '../../config/config.ts';
 import { readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 import { getTermByTipo } from '../../core/ontology/resolver.ts';
-import { type Chunk, chunk } from './chunker.ts';
+import { type Chunk, type ChunkOpts, chunk } from './chunker.ts';
 import { type OntologyPort, RAG_GROUP_PREFIX, RagConfig, defaultOntologyPort } from './config.ts';
 import { type EmbedDoc, type ResolveEmbedDocsInput, resolveEmbedDocs } from './embed_source.ts';
 import { type EmbeddingProvider, getEmbeddingProvider } from './embedding_provider.ts';
@@ -135,6 +135,11 @@ export class RagIndexer {
 			const chunks = chunk(doc.text, {
 				...(ragCfg.chunk?.maxTokens !== undefined ? { maxTokens: ragCfg.chunk.maxTokens } : {}),
 				...(ragCfg.chunk?.minTokens !== undefined ? { minTokens: ragCfg.chunk.minTokens } : {}),
+				// the group's authored chunking mode/strategy (auto-detect when absent)
+				...(ragCfg.mode !== undefined ? { mode: ragCfg.mode as ChunkOpts['mode'] } : {}),
+				...(ragCfg.strategy !== undefined
+					? { strategy: ragCfg.strategy as ChunkOpts['strategy'] }
+					: {}),
 				documentTitle,
 			});
 
