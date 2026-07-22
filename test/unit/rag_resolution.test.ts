@@ -94,6 +94,7 @@ function fakeDeps(overrides: Partial<EmbedSourceDeps> = {}): EmbedSourceDeps {
 		emitDdo: fakeEmit,
 		readRecord: async () => RECORD,
 		resolveMatrixTable: async () => 'matrix',
+		isRelation: async (tipo) => tipo === 'rsc138', // the mint relation
 		entryUsesLangs: async () => true,
 		labelOf: async (tipo, lang) =>
 			tipo === 'rsc140' ? (lang === 'lg-spa' ? 'Título' : 'Title') : 'Mint',
@@ -211,6 +212,44 @@ describe('resolveEmbedDocs', () => {
 		);
 		const spa = docs.find((d) => d.lang === 'lg-spa');
 		expect(spa!.text).toBe('## Título\nMoneda de plata');
+	});
+
+	test('MODE RULE: explicit mode honored verbatim; absent mode defaults literal→edit, relation→list', async () => {
+		// The live bug this pins: mode 'list' triggers component_text_area's
+		// 130-char list-preview truncation — a 2.1 MB transcription embedded as
+		// 154 chars. Absent mode must default literals to edit (full value);
+		// an explicitly authored mode is the author's call and passes verbatim.
+		const seen: Array<{ tipo: string; mode: string; childModes: string[] }> = [];
+		const spyEmit: EmbedSourceDeps['emitDdo'] = async (ddo, ddoMap, r, row, mode, lang, c, emission) => {
+			seen.push({
+				tipo: ddo.tipo,
+				mode,
+				childModes: ddoMap.filter((d) => d.parent === ddo.tipo).map((d) => d.mode ?? '?'),
+			});
+			return fakeEmit(ddo, ddoMap, r, row, mode, lang, c, emission);
+		};
+		// No modes authored anywhere → defaults apply (incl. the deep literal child).
+		const bare: RagEmbedGroup = {
+			id: 'card',
+			ddoMap: [
+				{ tipo: 'rsc140', section_tipo: 'self' },
+				{ tipo: 'rsc138', section_tipo: 'self' },
+				{ tipo: 'dd812', section_tipo: 'dd810', parent: 'rsc138' },
+			],
+		};
+		await resolveEmbedDocs(
+			{ ...INPUT, groups: [bare], langs: ['lg-spa'] },
+			fakeDeps({ emitDdo: spyEmit }),
+		);
+		expect(seen.find((s) => s.tipo === 'rsc140')?.mode).toBe('edit'); // literal default
+		const mint = seen.find((s) => s.tipo === 'rsc138');
+		expect(mint?.mode).toBe('list'); // relation default
+		expect(mint?.childModes).toEqual(['edit']); // deep literal child defaulted too
+
+		// Explicit modes pass verbatim — even 'list' on a literal (author's call).
+		seen.length = 0;
+		await resolveEmbedDocs({ ...INPUT, langs: ['lg-spa'] }, fakeDeps({ emitDdo: spyEmit }));
+		expect(seen.find((s) => s.tipo === 'rsc140')?.mode).toBe('list'); // INPUT's map authors 'list'
 	});
 
 	test('missing record or no groups → []', async () => {
