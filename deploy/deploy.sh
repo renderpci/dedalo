@@ -24,11 +24,11 @@
 # Usage:
 #   deploy/deploy.sh --host user@host --ref <sha|tag|branch> \
 #     [--app-dir /opt/dedalo/master_dedalo] [--service dedalo-ts] \
-#     [--socket /tmp/dedalo_ts.sock] [--bun /opt/dedalo/.bun/bin/bun]
+#     [--socket /run/dedalo/dedalo_ts.sock] [--bun /opt/dedalo/.bun/bin/bun]
 
 set -euo pipefail
 
-HOST="" REF="" APP_DIR="" SERVICE="dedalo-ts" SOCKET="/tmp/dedalo_ts.sock" REMOTE_BUN=""
+HOST="" REF="" APP_DIR="" SERVICE="dedalo-ts" SOCKET="/run/dedalo/dedalo_ts.sock" REMOTE_BUN=""
 while [ $# -gt 0 ]; do
 	case "$1" in
 		--host) HOST="$2"; shift 2 ;;

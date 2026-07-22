@@ -89,13 +89,31 @@ Apache has no such subtlety: an `Alias` maps the URL onto `MEDIA_PATH` directly.
 
 ## nginx
 
+Install nginx first:
+
+```shell
+apt install -y nginx      # RHEL family: dnf install -y nginx
+```
+
 The reference configuration is `deploy/nginx.conf` in the repo — copy it to
-`/etc/nginx/conf.d/dedalo.conf` and substitute the four paths named in its
-header. It is reproduced here with the load-bearing lines called out.
+`/etc/nginx/conf.d/dedalo.conf` and substitute the four paths named in its header.
+
+!!! warning "Bring it up in THIS order — the two media `include` lines are commented on purpose"
+    The `include` lines below point at files the engine only writes on its **first
+    boot**. Install with them **commented out** or nginx refuses to start against
+    missing files. In order:
+
+    1. Install this config **as shown** (both `include` lines commented). nginx
+       starts; media is simply not served yet — the safe failure.
+    2. Confirm the engine has run once ([step 10](production.md#10-run-the-engine-under-systemd)) —
+       it writes the rule files into `MEDIA_PATH` at boot.
+    3. **Uncomment both `include` lines**, then `nginx -t && systemctl reload nginx`.
+
+The config is reproduced here with the load-bearing lines called out.
 
 ```nginx
 # --- http{} scope (a conf.d file is already inside http{}) -------------------
-include /srv/dedalo/media/dedalo_media_protection_map.nginx.conf;
+# include /srv/dedalo/media/dedalo_media_protection_map.nginx.conf;   # ← uncomment after step 10
 
 upstream dedalo_ts {
 	server unix:/run/dedalo/dedalo_ts.sock;
@@ -124,8 +142,8 @@ server {
 	add_header X-Frame-Options           "SAMEORIGIN" always;
 	add_header Referrer-Policy           "strict-origin-when-cross-origin" always;
 
-	# Media — the GENERATED gate. Comment this out until the server has run once.
-	include /srv/dedalo/media/dedalo_media_protection.nginx.conf;
+	# Media — the GENERATED gate (written on first boot). Uncomment after step 10.
+	# include /srv/dedalo/media/dedalo_media_protection.nginx.conf;
 	open_file_cache off;            # a stat() cache delays an unpublish
 
 	# API + dynamic routes. A regex location outranks every prefix location, so
@@ -167,14 +185,6 @@ server {
 }
 ```
 
-Bring it up in this order — the two `include` lines refer to files that do not
-exist until the engine has written them:
-
-1. Install nginx and the certificate, with **both media `include` lines commented
-   out**. Media is simply not served yet; that is the safe failure.
-2. Start the Dédalo service. It writes the rule files into `MEDIA_PATH` at boot.
-3. Uncomment the includes, then `nginx -t && systemctl reload nginx`.
-
 !!! note "Several domains on one box"
     This is a single-domain vhost. To serve more domains, add one `upstream` and
     one `server{}` per domain, each pointing at that instance's socket and
@@ -204,7 +214,13 @@ exist until the engine has written them:
 
 ## Apache
 
-Enable the modules, then use an `Alias`-based vhost. The `ProxyPass` rules must
+Install Apache, enable the modules, then use an `Alias`-based vhost:
+
+```shell
+apt install -y apache2      # RHEL family: dnf install -y httpd
+```
+
+The `ProxyPass` rules must
 come **before** the aliases, and `Alias /dedalo/media` must come before
 `Alias /dedalo`: the first match wins.
 
@@ -299,7 +315,7 @@ certbot renew --dry-run                    # the snap installs the renewal timer
 | max request body | **≥ 256 MiB** (nginx `client_max_body_size`; Apache's default is unlimited) | every upload fails with `413` — nginx's default is **1 MB**, and the client uploads in ~4 MB chunks |
 | `TRUSTED_PROXY_HOPS` | **the number of proxies that append `X-Forwarded-For`** (default `1`) | the login throttle keys on the wrong address: too low and an attacker forges a fresh throttle bucket per request; too high and every user shares one bucket |
 | `open_file_cache` | **off** (or `_valid` ≤ 2 s) on the media locations | unpublishing a record does not take effect until the cache expires |
-| socket permissions | see [production](production.md#12-supervision-with-systemd) | `502` on every request — connecting to a unix socket needs **write** permission on it |
+| socket permissions | see [production](production.md#10-run-the-engine-under-systemd) | `502` on every request — connecting to a unix socket needs **write** permission on it |
 
 ## Verify
 

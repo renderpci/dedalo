@@ -29,6 +29,15 @@ WorkingDirectory=/opt/dedalo/master_dedalo
 # `bun upgrade` cannot change the production runtime (audit S2-36).
 ExecStart=/opt/dedalo/.bun/bin/bun run src/server.ts
 
+# Socket directory (the "socket never appears / 502" trap). The server binds
+# SERVER_UNIX_SOCKET but does NOT create its parent dir. RuntimeDirectory=dedalo
+# makes systemd create /run/dedalo (owned by this service's User) on every start
+# and remove it on stop — so SERVER_UNIX_SOCKET must live under /run/dedalo/
+# (canonical: /run/dedalo/dedalo_ts.sock). /run is tmpfs, wiped each reboot; a
+# hand-made mkdir would not survive, which is exactly why this is here.
+RuntimeDirectory=dedalo
+RuntimeDirectoryMode=0750
+
 # Socket permissions (the 502-on-every-request trap). The server creates
 # SERVER_UNIX_SOCKET under the process umask; the default 022 yields srwxr-xr-x, and
 # CONNECTING to a unix socket requires WRITE permission — so a reverse proxy running as

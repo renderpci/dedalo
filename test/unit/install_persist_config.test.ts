@@ -215,6 +215,54 @@ describe('persist_config (P2)', () => {
 		}
 	});
 
+	test('serving keys written when provided (--media-path / --socket / --media-access-mode)', async () => {
+		const scratch2 = mkdtempSync(join(tmpdir(), 'dedalo_install_p2_serving_'));
+		process.env.DEDALO_INSTALL_PRIVATE_DIR = scratch2;
+		try {
+			const result = await persistConfig({
+				...BASE_CFG,
+				media_path: '/srv/dedalo/media',
+				unix_socket: '/run/dedalo/dedalo_ts.sock',
+				media_access_mode: 'publication',
+			});
+			expect(result.result).toBe(true);
+			const parsed = parseEnvFile(readFileSync(join(scratch2, '.env'), 'utf8'));
+			expect(parsed.MEDIA_PATH).toBe('/srv/dedalo/media');
+			expect(parsed.SERVER_UNIX_SOCKET).toBe('/run/dedalo/dedalo_ts.sock');
+			expect(parsed.DEDALO_MEDIA_ACCESS_MODE).toBe('publication');
+		} finally {
+			process.env.DEDALO_INSTALL_PRIVATE_DIR = scratch;
+			rmSync(scratch2, { recursive: true, force: true });
+		}
+	});
+
+	test('serving keys omitted → not written, and a prior value is preserved (never-delete)', async () => {
+		const scratch2 = mkdtempSync(join(tmpdir(), 'dedalo_install_p2_serving_off_'));
+		process.env.DEDALO_INSTALL_PRIVATE_DIR = scratch2;
+		try {
+			// A prior install set the socket; a re-save carries no serving flags.
+			writeFileSync(
+				join(scratch2, '.env'),
+				[
+					'DEDALO_SALT_STRING=deadbeef',
+					'SERVER_UNIX_SOCKET=/run/dedalo/dedalo_ts.sock',
+					'',
+				].join('\n'),
+			);
+			const result = await persistConfig({ ...BASE_CFG });
+			expect(result.result).toBe(true);
+			const parsed = parseEnvFile(readFileSync(join(scratch2, '.env'), 'utf8'));
+			// Preserved verbatim — an empty flag must not clobber it.
+			expect(parsed.SERVER_UNIX_SOCKET).toBe('/run/dedalo/dedalo_ts.sock');
+			// A serving key never set stays absent (no empty assignment written).
+			expect(parsed.MEDIA_PATH).toBeUndefined();
+			expect(parsed.DEDALO_MEDIA_ACCESS_MODE).toBeUndefined();
+		} finally {
+			process.env.DEDALO_INSTALL_PRIVATE_DIR = scratch;
+			rmSync(scratch2, { recursive: true, force: true });
+		}
+	});
+
 	test('check_directories creates + verifies the private tree', () => {
 		const r = checkDirectories({ create: true });
 		expect(r.result).toBe(true);
