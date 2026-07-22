@@ -12,7 +12,7 @@ The assistant earns its place when a question is easier to *say* than to *build*
 
 An oral-history archive holds ten thousand interviews. A researcher wants every testimony that touches on **displacement caused by building a reservoir**. Keyword search finds only the interviews where someone said the word *reservoir* — and misses *the dam*, *when the water came*, *they flooded our houses*, *el pantano*, *quan ens van fer marxar*.
 
-She opens the assistant and asks in plain language. It runs a **semantic search** — matching *meaning*, not letters — and returns the testimonies that are *about* that idea, each cited by record so she can open it. She refines conversationally: *"only the ones from the upper valley"*, *"which of these mention the church"*. Behind the scenes it is calling the same [RAG semantic layer](../rag.md) and structured search a developer would, but she never leaves the sentence.
+She opens the assistant and asks in plain language. It runs a **semantic search** — matching *meaning*, not letters — and returns the testimonies that are *about* that idea, each cited by record so she can open it. For claims that need evidence, it follows up with **passage retrieval**: the exact chunks behind each match (with their page or timecode), quoted and cited as `section_tipo-section_id`. She refines conversationally: *"only the ones from the upper valley"*, *"only the transcriptions"* (an embed-group facet), *"which of these mention the church"*. Behind the scenes it is calling the same [RAG semantic layer](../rag.md) (`dedalo_semantic_search`, `dedalo_retrieve_passages`) and structured search a developer would, but she never leaves the sentence.
 
 ## Understand a record you are looking at
 

@@ -294,9 +294,9 @@ The `dd812` entry is the deep case: `rsc138` is a relation, and its child ddo re
 
 Registered in the static action registry (`src/core/api/dispatch.ts` → `ragApiActions`), so login/CSRF/session gating is inherited from the same dispatch chokepoint every other API class goes through. Every action reads `rqo.options` and returns the standard `{ status: 200, body: { result, msg, errors } }` envelope. Each handler resolves the caller's `Principal` first (`resolveCaller`) and declines with `no_principal` if there is none; every action declines with `rag_disabled` (`disabled()`) unless `DEDALO_RAG_ENABLED` is on.
 
-**Actions:** `semantic_search`, `retrieve`, `get_agent_context`, `similar_to`, `ask`, and (images, additionally gated by `DEDALO_RAG_MEDIA_ENABLED`) `similar_objects`, `search_by_text_image`, `characterize_object`.
+**Actions:** `semantic_search`, `retrieve`, `get_agent_context`, `similar_to`, `ask`, `embed_groups` (a section's embed-group ids — the client's facet selector and semantic-availability gate; empty for malformed/denied/not-opted-in alike, never an existence oracle), and (images, additionally gated by `DEDALO_RAG_MEDIA_ENABLED`) `similar_objects`, `search_by_text_image`, `characterize_object`.
 
-A `limit` is clamped to `[1, 50]`, default `10` (`clampTopK`, `MAX_TOP_K = 50`). An optional `section_tipo` scope accepts a single string or an array of strings (`optionScope`) — a **relevance** filter applied *after* the ACL gate narrows candidates, never a substitute for it.
+A `limit` is clamped to `[1, 50]`, default `10` (`clampTopK`, `MAX_TOP_K = 50`). An optional `section_tipo` scope accepts a single string or an array of strings (`optionScope`) — pushed down into both store legs (recall) AND re-applied at the ACL gate, never a substitute for it. An optional `group` (slug) narrows to one embed facet's chunks. The CLIENT search UI consumes `semantic_search` through the resolve-once-then-pin flow: ranked hits become `sqo.filter_by_locators` pins plus the `{mode:'locator_position'}` order entry, so the normal section list renders them in relevance order (WC-047).
 
 **Semantic search** — text → ranked records (`RagSearchHit[]`, from `semanticSearch()`, `src/ai/rag/retrieval.ts`):
 

@@ -565,7 +565,10 @@ scopes the search to that facet's vectors, e.g. `"group": "transcription"`).
 (each hit + `chunk_index` + `contributors`). `similar_to` takes
 `{ section_tipo, section_id, limit, group? }` and returns nearest records (seed
 excluded); with `group` it compares by that facet only ("similar by
-profession").
+profession"). `embed_groups` takes `{ section_tipo }` and returns
+`{groups: [ids]}` — empty for a malformed tipo, a section the caller cannot
+read, or a section without a descriptor (byte-identical by design; never an
+existence oracle).
 
 **Quick programmatic test** (bypasses the HTTP/CSRF layer — for a dev box):
 
@@ -580,6 +583,32 @@ const res = await ragApiActions.semantic_search(
 );
 console.log(res.body.msg, res.body.result);
 ```
+
+### R4b — Semantic search in the CLIENT (list quick-input + search panel)
+
+Since 2026-07-22 semantic search is part of the normal section-search UI — no
+API calls needed:
+
+- **Quick input** ("Search by meaning…") in the section list toolbar, and a
+  **semantic block** at the top of the search panel, where the query COMPOSES
+  (AND) with the structured filter tree. Both appear only when the searched
+  section declares embed groups (the client asks `embed_groups` once per
+  section; empty ⇒ hidden).
+- **Facet selector**: sections with several embed groups get a dropdown
+  (`card` / `fulltext` / …) next to the panel input; single-group sections
+  hide it.
+- **How it works** (resolve-once-then-pin): the client calls `semantic_search`
+  once, pins the ranked ids via `sqo.filter_by_locators`, and adds the
+  `{mode:"locator_position"}` order entry so the list, its pagination, counts
+  and exports all keep the relevance order. A **pinned chip** in the list
+  header shows the active pin state ("N results pinned" / "no matches" /
+  "semantic unavailable") with a ✕ that clears it — the chip is derived from
+  the SQO, so a pin restored from the server session after a reload is always
+  visible and clearable.
+- **Presets**: saving a search preset stores the LIVE natural-language query
+  (`{"semantic":{q,group}}` inside the filter value) — loading it restores the
+  query and Apply re-runs it against the CURRENT index under the loading
+  user's permissions. The resolved id list is never frozen into a preset.
 
 ### R5 — Grounded `ask` with a local LLM
 
