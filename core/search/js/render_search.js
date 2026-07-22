@@ -868,6 +868,9 @@ const render_sections_selector = (self) => {
 		self.wrapper_sections_selector = wrapper_sections_selector
 
 	// typologies
+		// cookie name. get the model to set into the cookie / area_thesaurus || area_ontology
+		const caller_model	= self.caller.model
+		const cookie_name	= `selected_typology_${caller_model}`
 		const typologies = self.sections_selector_data.typologies || []
 		// typologies.sort((a, b) => new Intl.Collator().compare(a.label, b.label));
 		typologies.sort((a, b) => parseFloat(a.order) - parseFloat(b.order));
@@ -885,7 +888,6 @@ const render_sections_selector = (self) => {
 				event_manager.publish('update_sections_list_' + self.id)
 
 				// Store selected value as cookie to recover later
-				const cookie_name = 'selected_typology'
 				create_cookie(cookie_name, typology_id, 365)
 			})
 
@@ -901,9 +903,6 @@ const render_sections_selector = (self) => {
 			}
 
 		// cookie. previous cookie stored value
-			// get the model to set into the cookie / area_thesaurus || area_ontology
-			const caller_model  	= self.caller.model
-			const cookie_name		= `selected_typology_${caller_model}`
 			const selected_typology	= read_cookie(cookie_name)
 			if (selected_typology) {
 				typology_selector.value = selected_typology
