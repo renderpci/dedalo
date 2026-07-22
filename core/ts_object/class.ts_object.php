@@ -73,6 +73,15 @@ class ts_object {
 	*/
 	public static function get_ar_elements( string $section_tipo, ?bool $model=false ) : array {
 
+		// cache. The elements are constant for the whole request. Without this
+		// cache the section_list_thesaurus properties are located and parsed
+		// once per built node (thousands of times in thesaurus tree builds)
+			static $ar_elements_cache = [];
+			$cache_key = $section_tipo .'_'. ($model===true ? 't' : ($model===false ? 'f' : 'n'));
+			if (isset($ar_elements_cache[$cache_key])) {
+				return $ar_elements_cache[$cache_key];
+			}
+
 		$ar_elements = [];
 
 		// Elements are stored in current section > section_list_thesaurus
@@ -122,6 +131,19 @@ class ts_object {
 				$ddo_map = $properties->show->ddo_map;
 				foreach ($ddo_map as $current_ddo) {
 
+					// bad formed / disabled elements (like 'DES_' prefixed properties)
+					// are removed here, once per section_tipo, to avoid get_data
+					// checking and logging them once per built node
+						if (empty($current_ddo->tipo)) {
+							debug_log(__METHOD__
+								." Warning. Ignored bad formed empty element_tipo in section_list_thesaurus ddo_map item" . PHP_EOL
+								.' section_tipo: '. $section_tipo . PHP_EOL
+								.' current_ddo:'. to_string($current_ddo)
+								, logger::WARNING
+							);
+							continue;
+						}
+
 					$type = $current_ddo->type ?? null;
 
 					// link children exception
@@ -139,6 +161,9 @@ class ts_object {
 					$ar_elements[] = $current_ddo;
 				}//end foreach ($properties as $key => $value_obj)
 			}
+
+		// cache
+			$ar_elements_cache[$cache_key] = $ar_elements;
 
 
 		return $ar_elements;
@@ -158,6 +183,10 @@ class ts_object {
 	public static function parse_child_data( array $locators, string $area_model='area_thesaurus', ?object $ts_object_options=null ) : array {
 
 		$children_data = [];
+
+		// prefetch (batched queries) the data that ts_object::get_data
+		// will need for every locator. See ts_object::prefetch_batch
+		ts_object::prefetch_batch($locators);
 
 		foreach ($locators as $key => $locator) {
 
@@ -1055,6 +1084,123 @@ class ts_object {
 
 		return $count_data_group_by;
 	}//end get_count_data_group_by
+
+
+
+	/**
+	* PREFETCH_BATCH
+	* Resolves in batched queries the per node data used by get_data()
+	* (children lists, indexation counts and related references) for many
+	* nodes at once, filling the request scope bulk caches of the involved
+	* components. Without this prefetch, building N ts_objects executes
+	* several queries per node; with it, the same data is resolved with a
+	* few queries per section_tipo group.
+	* Any failure is logged and ignored: get_data() works the same without
+	* prefetched data, only slower.
+	* @param array $ar_locators
+	* 	Array of objects with section_tipo and section_id properties
+	* @return void
+	*/
+	public static function prefetch_batch( array $ar_locators ) : void {
+
+		if (empty($ar_locators)) {
+			return;
+		}
+
+		// group the given locators by section_tipo
+			$ar_groups = [];
+			foreach ($ar_locators as $current_locator) {
+				if (!isset($current_locator->section_tipo) || !isset($current_locator->section_id)) {
+					continue;
+				}
+				$ar_groups[$current_locator->section_tipo][] = $current_locator;
+			}
+
+		foreach ($ar_groups as $section_tipo => $group_locators) {
+			try {
+
+				// children. One batched query per section_tipo resolves the
+				// children of every node (used by link_children / CH elements
+				// and by area_thesaurus parents iteration)
+					component_relation_children::prefetch_children($group_locators, $section_tipo);
+
+				// section_list_thesaurus elements. Prefetch the components
+				// that execute one query per node on get_data()
+					$ar_elements = ts_object::get_ar_elements($section_tipo, null);
+					$prefetched_tipos = [];
+					foreach ($ar_elements as $current_object) {
+
+						$current_element_tipo = $current_object->tipo ?? null;
+						if (empty($current_element_tipo)) {
+							continue;
+						}
+
+						// allow array for terms
+						$ar_element_tipo = is_array($current_element_tipo)
+							? $current_element_tipo
+							: [$current_element_tipo];
+
+						foreach ($ar_element_tipo as $element_tipo) {
+
+							if (isset($prefetched_tipos[$element_tipo])) {
+								continue;
+							}
+							$prefetched_tipos[$element_tipo] = true;
+
+							$model_name = RecordObj_dd::get_modelo_name_by_tipo($element_tipo, true);
+							switch ($model_name) {
+
+								case 'component_relation_index':
+									// ignore v5 component_relation_struct (skipped by get_data too)
+									$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($element_tipo);
+									if ($legacy_model==='component_relation_struct') {
+										break;
+									}
+									component_relation_index::prefetch_count_data_group_by(
+										$group_locators,
+										$element_tipo,
+										$section_tipo,
+										['section_tipo']
+									);
+									break;
+
+								case 'component_relation_related':
+									// only non unidirectional components resolve references in get_data()
+									$exemplar = component_common::get_instance(
+										$model_name,
+										$element_tipo,
+										reset($group_locators)->section_id,
+										'list',
+										DEDALO_DATA_NOLAN,
+										$section_tipo
+									);
+									$type_rel = $exemplar->get_type_rel();
+									if ($type_rel!==DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO) {
+										component_relation_related::prefetch_references(
+											$group_locators,
+											$element_tipo,
+											$section_tipo
+										);
+									}
+									break;
+
+								default:
+									// nothing to prefetch
+									break;
+							}
+						}
+					}
+
+			} catch (Exception $e) {
+				debug_log(__METHOD__
+					. ' Ignored exception on prefetch (nodes will be resolved with single queries)' . PHP_EOL
+					. ' section_tipo: ' . $section_tipo . PHP_EOL
+					. ' exception: ' . $e->getMessage()
+					, logger::ERROR
+				);
+			}
+		}//end foreach ($ar_groups as $section_tipo => $group_locators)
+	}//end prefetch_batch
 
 
 

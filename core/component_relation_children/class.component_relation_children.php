@@ -19,6 +19,11 @@ class component_relation_children extends component_relation_common {
 	// ar_target_section_tipo
 	public $ar_target_section_tipo;	// Used to fix section tipo (calculated from the related component of type section) Could be virtual or real
 
+	// bulk_children_cache. Request scope cache filled by prefetch_children()
+	// with the children rows of many sections resolved in one single batched query.
+	// key: '<parent_tipo>_<section_tipo>_<section_id>' => array of objects {section_tipo, section_id}
+	protected static $bulk_children_cache = [];
+
 
 
 	/**
@@ -420,6 +425,27 @@ class component_relation_children extends component_relation_common {
 			}
 			$parent_tipo = $ar_parent_tipo[0];
 
+		// bulk cache. When the children rows were already resolved by a previous
+		// prefetch_children() batched query, build the locators from cache
+		// avoiding one search query per section
+			$bulk_cache_key = $parent_tipo.'_'.$section_tipo.'_'.$section_id;
+			if (array_key_exists($bulk_cache_key, self::$bulk_children_cache)) {
+
+				$children = array_map(function($row) use($component_tipo){
+
+					$locator = new locator();
+						$locator->set_section_tipo($row->section_tipo);
+						$locator->set_section_id($row->section_id);
+						$locator->set_from_component_tipo($component_tipo);
+						$locator->set_type(DEDALO_RELATION_TYPE_CHILDREN_TIPO);
+
+					return $locator;
+
+				}, self::$bulk_children_cache[$bulk_cache_key]);
+
+				return $children;
+			}
+
 		// filter locator
 			$filter_locator = new locator();
 				$filter_locator->set_section_tipo($section_tipo);
@@ -481,6 +507,101 @@ class component_relation_children extends component_relation_common {
 
 		return $children;
 	}//end get_children
+
+
+
+	/**
+	* PREFETCH_CHILDREN
+	* Resolves the children rows of many sections of the same section_tipo
+	* in one single batched query and stores them into the bulk cache
+	* used by get_children(). Every key not previously cached is resolved
+	* probing the relations_flat_fct_st_si GIN index once per key and table.
+	* On query failure nothing is cached and get_children() will fall back
+	* to its default one query per section behavior.
+	* @param array $ar_locators
+	* 	Array of objects with section_id property (all of the given section_tipo)
+	* @param string $section_tipo
+	* @return void
+	*/
+	public static function prefetch_children( array $ar_locators, string $section_tipo ) : void {
+
+		if (empty($ar_locators)) {
+			return;
+		}
+
+		// component children tipo / parent tipo. Resolved once for the whole section_tipo
+			$component_tipo = component_relation_children::get_children_tipo($section_tipo);
+			if (empty($component_tipo)) {
+				return;
+			}
+			$ar_parent_tipo = component_relation_children::get_ar_related_parent_tipo( $component_tipo, $section_tipo );
+			if( empty($ar_parent_tipo) ){
+				return;
+			}
+			$parent_tipo = $ar_parent_tipo[0];
+
+		// pending keys. Skip the already cached ones
+			$ar_keys = [];
+			foreach ($ar_locators as $current_locator) {
+				$key = $parent_tipo.'_'.$section_tipo.'_'.$current_locator->section_id;
+				if (!array_key_exists($key, self::$bulk_children_cache)) {
+					$ar_keys[$key] = true;
+				}
+			}
+			$ar_keys = array_keys($ar_keys);
+			if (empty($ar_keys)) {
+				return;
+			}
+
+		// order column. Same order used by get_children()
+		// It is defined in section 'section_map' item as {"order":"ontology41"}
+			$order_column = 'NULL::jsonb';
+			$section_map = section::get_section_map( $section_tipo );
+			if (isset($section_map->thesaurus->order)) {
+				$order_component_tipo	= $section_map->thesaurus->order; // 'ontology41' for Ontology
+				$order_column			= "jsonb_path_query_first(datos, 'strict $.components.{$order_component_tipo}.dato.\"lg-nolan\"[0]', silent => true)";
+			}
+
+		// batched query. One index probe per key and table (UNION ALL as search_related does)
+		// Global ORDER BY (order_value, section_id) preserves, once partitioned
+		// by key, the same per key order that get_children() produces
+			$keys_sql = 'ARRAY[' . implode(',', array_map(function($key){
+				return "'" . str_replace("'", "''", $key) . "'";
+			}, $ar_keys)) . ']::text[]';
+
+			$ar_tables_to_search	= common::get_matrix_tables_with_relations();
+			$ar_query				= [];
+			foreach ($ar_tables_to_search as $table) {
+				$query	 = PHP_EOL . 'SELECT k.key, section_tipo, section_id, '.$order_column.' as order_value';
+				$query	.= PHP_EOL . 'FROM "'.$table.'", unnest('.$keys_sql.') as k(key)';
+				$query	.= PHP_EOL . 'WHERE relations_flat_fct_st_si(datos) @> jsonb_build_array(k.key)';
+				$ar_query[] = $query;
+			}
+			$str_query  = implode(PHP_EOL .' UNION ALL ', $ar_query);
+			$str_query .= PHP_EOL . 'ORDER BY order_value ASC NULLS LAST , section_id ASC;';
+
+		// exec
+			$result = JSON_RecordObj_matrix::search_free($str_query);
+			if ($result===false) {
+				debug_log(__METHOD__
+					. ' Error on batched children query. get_children will fall back to single queries' . PHP_EOL
+					. ' section_tipo: ' . $section_tipo
+					, logger::ERROR
+				);
+				return;
+			}
+
+		// cache fill. Init every pending key to allow caching empty children results too
+			foreach ($ar_keys as $key) {
+				self::$bulk_children_cache[$key] = [];
+			}
+			while ($row = pg_fetch_assoc($result)) {
+				$item = new stdClass();
+					$item->section_tipo	= $row['section_tipo'];
+					$item->section_id	= $row['section_id'];
+				self::$bulk_children_cache[$row['key']][] = $item;
+			}
+	}//end prefetch_children
 
 
 

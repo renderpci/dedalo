@@ -511,12 +511,13 @@ abstract class JSON_RecordDataBoundObject {
 				metrics::$search_free_total_calls++;
 
 				// query additional info
-					if (isset(debug_backtrace()[1]['function'])) {
+					$bt = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 9);
+					if (isset($bt[1]['function'])) {
 						$sql_prepend = '-- search_free : ' ."\n";
 
 						foreach ([1,2,3,4,5,6,7,8] as $key) {
-							if (isset(debug_backtrace()[$key]['function'])) {
-								$sql_prepend .= '--  ['.$key.'] ' . debug_backtrace()[$key]['function'] . "\n";
+							if (isset($bt[$key]['function'])) {
+								$sql_prepend .= '--  ['.$key.'] ' . $bt[$key]['function'] . "\n";
 							}
 						}
 

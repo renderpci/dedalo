@@ -337,6 +337,13 @@ class area_thesaurus extends area_common {
 			$ar_ts_objects	= [];
 			$found			= [];
 
+			// resolved_nodes. Hash set of already built ts_objects (key: section_tipo_section_id)
+			// avoids O(n²) linear scans over $ar_ts_objects on every child check
+			$resolved_nodes = [];
+			// processed_parents. Hash set of already expanded parents (key: section_tipo_section_id)
+			// when two results share ancestors, their children resolution is done only once
+			$processed_parents = [];
+
 			foreach ($ar_records as $row) {
 
 				$section_tipo	= $row->section_tipo;
@@ -376,8 +383,27 @@ class area_thesaurus extends area_common {
 				// reverse the order to get the root term, top term, at first position
 				$ar_path = array_reverse($ar_parents);
 
+				// prefetch (batched queries) the data that the children resolution
+				// and the ts_object::get_data calls below will need for every
+				// pending parent of the path. See ts_object::prefetch_batch
+				$pending_parents = [];
+				foreach ($ar_path as $current_parent) {
+					$pending_parent_key = $current_parent->section_tipo.'_'.$current_parent->section_id;
+					if (!isset($processed_parents[$pending_parent_key])) {
+						$pending_parents[] = $current_parent;
+					}
+				}
+				ts_object::prefetch_batch($pending_parents);
+
 				// get the ts_objects to built the tree
 				foreach ($ar_path as $parent_key => $current_parent) {
+
+					// skip parents already expanded (shared ancestors between results)
+						$parent_node_key = $current_parent->section_tipo.'_'.$current_parent->section_id;
+						if (isset($processed_parents[$parent_node_key])) {
+							continue;
+						}
+						$processed_parents[$parent_node_key] = true;
 
 					// Children
 						// get all children of every parent, first term is the root term
@@ -401,16 +427,24 @@ class area_thesaurus extends area_common {
 
 						$children_data = $component_children->get_dato();
 
+						// prefetch (batched queries) the data that ts_object::get_data
+						// will need for every pending child. See ts_object::prefetch_batch
+						$pending_children = [];
+						foreach ($children_data as $child_locator) {
+							if (!isset($resolved_nodes[$child_locator->section_tipo.'_'.$child_locator->section_id])) {
+								$pending_children[] = $child_locator;
+							}
+						}
+						ts_object::prefetch_batch($pending_children);
+
 						// built the ts_object with every child data
 						foreach ($children_data as $children_key => $child_locator) {
 							// find if the current child was resolved and is stored previously.
 							// avoid duplicates
-							$current_found = array_find($ar_ts_objects, function($el) use($child_locator) {
-								return	$el->section_tipo===$child_locator->section_tipo &&
-										$el->section_id==$child_locator->section_id;
-							});
+							$child_node_key = $child_locator->section_tipo.'_'.$child_locator->section_id;
 							// if the child doesn't exist create the ts_object, build it and get its data
-							if (!$current_found) {
+							if (!isset($resolved_nodes[$child_node_key])) {
+								$resolved_nodes[$child_node_key] = true;
 								// ts_parent. Used to link the child node to its parent in the tree
 								$ts_parent = $children_section_tipo.'_'.$children_section_id;
 								// set the order number(int) in the ts_options
@@ -437,11 +471,8 @@ class area_thesaurus extends area_common {
 						// here only root parents will be not stored (and not found)
 						// because the previous children resolution will include any others than root.
 						// all parents are checked, but only root parent will be processed.
-						$current_found = array_find($ar_ts_objects, function($el) use($current_parent) {
-							return	$el->section_tipo===$current_parent->section_tipo &&
-									$el->section_id==$current_parent->section_id;
-						});
-						if (!$current_found) {
+						if (!isset($resolved_nodes[$parent_node_key])) {
+							$resolved_nodes[$parent_node_key] = true;
 							// set its parent to link it in the tree
 							// if the node is the first one, it is the root node, the top node
 							// else the parent is the previous parent in the array

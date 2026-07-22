@@ -20,6 +20,11 @@ class component_relation_index extends component_relation_common {
 	protected $default_target_section		= ['all'];
 	public $target_section;
 
+	// bulk_count_cache. Request scope cache filled by prefetch_count_data_group_by()
+	// with the count_data_group_by result of many sections resolved in one single batched query.
+	// key: '<relation_type>_<section_tipo>_<section_id>|<target_section>|<group_by>' => result object {total, totals_group}
+	protected static $bulk_count_cache = [];
+
 
 
 	/**
@@ -198,6 +203,22 @@ class component_relation_index extends component_relation_common {
 		// target section
 			$target_section	= $this->get_target_section();
 
+		// bulk cache. When the count was already resolved by a previous
+		// prefetch_count_data_group_by() batched query, return it directly
+		// avoiding one count query per section. Only the default filter
+		// locator case is cacheable (custom filter_locators bypass the cache)
+			if (empty($filter_locators)) {
+				$bulk_cache_key = self::build_bulk_count_cache_key(
+					$this->get_relation_type(),
+					$this->section_tipo,
+					$this->section_id,
+					$target_section,
+					$group_by
+				);
+				if (array_key_exists($bulk_cache_key, self::$bulk_count_cache)) {
+					return self::$bulk_count_cache[$bulk_cache_key];
+				}
+			}
 
 		// create a sqo to count all the references
 			$sqo_count = new search_query_object();
@@ -212,6 +233,162 @@ class component_relation_index extends component_relation_common {
 
 		return $count_data_group_by;
 	}//end count_data_group_by
+
+
+
+	/**
+	* BUILD_BULK_COUNT_CACHE_KEY
+	* Builds the bulk_count_cache key of one section count
+	* @param string $relation_type
+	* @param string $section_tipo
+	* @param int|string $section_id
+	* @param array $target_section
+	* @param array $group_by
+	* @return string
+	*/
+	private static function build_bulk_count_cache_key( string $relation_type, string $section_tipo, int|string $section_id, array $target_section, array $group_by ) : string {
+
+		return $relation_type.'_'.$section_tipo.'_'.$section_id .'|'. implode(',', $target_section) .'|'. implode(',', $group_by);
+	}//end build_bulk_count_cache_key
+
+
+
+	/**
+	* PREFETCH_COUNT_DATA_GROUP_BY
+	* Resolves the count_data_group_by result of many sections of the same
+	* section_tipo and component tipo in one single batched query and stores
+	* them into the bulk cache used by count_data_group_by().
+	* Every key not previously cached is resolved probing the
+	* relations_flat_ty_st_si GIN index once per key and table.
+	* On query failure nothing is cached and count_data_group_by() will fall
+	* back to its default one count query per section behavior.
+	* @param array $ar_locators
+	* 	Array of objects with section_id property (all of the given section_tipo)
+	* @param string $component_tipo
+	* @param string $section_tipo
+	* @param array $group_by
+	*  as ['section_tipo']
+	* @return void
+	*/
+	public static function prefetch_count_data_group_by( array $ar_locators, string $component_tipo, string $section_tipo, array $group_by=['section_tipo'] ) : void {
+		$start_time = start_time();
+
+		if (empty($ar_locators)) {
+			return;
+		}
+
+		// exemplar component. relation_type and target_section are shared
+		// by all the records of the same section_tipo and component tipo
+			$first_locator	= reset($ar_locators);
+			$component		= component_common::get_instance(
+				'component_relation_index',
+				$component_tipo,
+				$first_locator->section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+			$relation_type		= $component->get_relation_type();
+			$target_section		= $component->get_target_section();
+
+		// pending keys. Skip the already cached ones
+			$ar_keys = [];
+			foreach ($ar_locators as $current_locator) {
+				$key		= $relation_type.'_'.$section_tipo.'_'.$current_locator->section_id;
+				$cache_key	= self::build_bulk_count_cache_key($relation_type, $section_tipo, $current_locator->section_id, $target_section, $group_by);
+				if (!array_key_exists($cache_key, self::$bulk_count_cache)) {
+					$ar_keys[$key] = $cache_key;
+				}
+			}
+			if (empty($ar_keys)) {
+				return;
+			}
+
+		// section filter. Built as search_related does from the target sections
+			$ar_section_filter = [];
+			foreach ($target_section as $current_section_tipo) {
+				if ($current_section_tipo!=='all') {
+					$ar_section_filter[] = '\''.$current_section_tipo.'\'';
+				}
+			}
+			$section_filter = !empty($ar_section_filter)
+				? 'section_tipo IN(' . implode(',', $ar_section_filter) .')'
+				: false;
+
+		// batched query. One index probe per key and table (UNION ALL as search_related does)
+			$keys_sql = 'ARRAY[' . implode(',', array_map(function($key){
+				return "'" . str_replace("'", "''", $key) . "'";
+			}, array_keys($ar_keys))) . ']::text[]';
+
+			$group_by_columns		= implode(', ', $group_by);
+			$ar_tables_to_search	= common::get_matrix_tables_with_relations();
+			$ar_query				= [];
+			foreach ($ar_tables_to_search as $table) {
+				$query	 = PHP_EOL . 'SELECT k.key, '.$group_by_columns.', COUNT(*) as full_count';
+				$query	.= PHP_EOL . 'FROM "'.$table.'", unnest('.$keys_sql.') as k(key)';
+				$query	.= PHP_EOL . 'WHERE relations_flat_ty_st_si(datos) @> jsonb_build_array(k.key)';
+				if ($section_filter!==false) {
+					$query .= PHP_EOL . ' AND (' . $section_filter . ')';
+				}
+				$query	.= PHP_EOL . 'GROUP BY k.key, '.$group_by_columns;
+				$ar_query[] = $query;
+			}
+			$str_query = implode(PHP_EOL .' UNION ALL ', $ar_query) . ';';
+
+		// exec
+			$result = JSON_RecordObj_matrix::search_free($str_query);
+			if ($result===false) {
+				debug_log(__METHOD__
+					. ' Error on batched count query. count_data_group_by will fall back to single queries' . PHP_EOL
+					. ' section_tipo: ' . $section_tipo . ' - component_tipo: ' . $component_tipo
+					, logger::ERROR
+				);
+				return;
+			}
+
+		// cache fill. Init every pending key to allow caching zero count results too
+			foreach ($ar_keys as $cache_key) {
+				$records_data = new stdClass();
+				if(SHOW_DEBUG===true) {
+					$records_data->debug = new stdClass();
+					$records_data->debug->generated_time['get_records_data'] = 0;
+					$records_data->debug->strQuery = $str_query;
+				}
+				$records_data->total		= 0;
+				$records_data->totals_group	= [];
+
+				self::$bulk_count_cache[$cache_key] = $records_data;
+			}
+			while ($row = pg_fetch_assoc($result)) {
+
+				$cache_key = $ar_keys[$row['key']] ?? null;
+				if ($cache_key===null) {
+					continue;
+				}
+				$records_data = self::$bulk_count_cache[$cache_key];
+
+				// same result composition as search::count()
+				$records_data->total = $records_data->total + (int)$row['full_count'];
+
+				$current_totals_object = new stdClass();
+				$ar_group_keys = [];
+				foreach($group_by as $current_group){
+					$ar_group_keys[] = $row[$current_group];
+				}
+				$current_totals_object->key		= $ar_group_keys;
+				$current_totals_object->value	= (int)$row['full_count'];
+
+				$records_data->totals_group[] = $current_totals_object;
+			}
+
+		// debug time. The batch total time is shared by all the resolved keys
+			if(SHOW_DEBUG===true) {
+				$exec_time = exec_time_unit($start_time, 'ms');
+				foreach ($ar_keys as $cache_key) {
+					self::$bulk_count_cache[$cache_key]->debug->generated_time['get_records_data'] = $exec_time;
+				}
+			}
+	}//end prefetch_count_data_group_by
 
 
 

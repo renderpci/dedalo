@@ -26,6 +26,11 @@ class component_relation_related extends component_relation_common {
 	// test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
 
+	// bulk_references_cache. Request scope cache filled by prefetch_references()
+	// with the references rows of many sections resolved in one single batched query.
+	// key: '<tipo>_<section_tipo>_<section_id>' => array of objects {section_tipo, section_id}
+	protected static $bulk_references_cache = [];
+
 
 	/**
 	* GET_VALOR
@@ -344,6 +349,29 @@ class component_relation_related extends component_relation_common {
 	*/
 	public function get_references( ?string $type_rel=null ) : array {
 
+		// bulk cache. When the references were already resolved by a previous
+		// prefetch_references() batched query, build the result from cache
+		// avoiding one search query per section. Only the default null
+		// type_rel case is cacheable
+			if ($type_rel===null) {
+				$bulk_cache_key = $this->tipo.'_'.$this->section_tipo.'_'.$this->section_id;
+				if (array_key_exists($bulk_cache_key, self::$bulk_references_cache)) {
+
+					$ar_result = [];
+					foreach (self::$bulk_references_cache[$bulk_cache_key] as $row) {
+
+						$element = new stdClass();
+							$element->section_tipo			= $row->section_tipo;
+							$element->section_id			= $row->section_id;
+							$element->from_component_tipo	= $this->tipo;
+
+						$ar_result[] = $element;
+					}
+
+					return $ar_result;
+				}
+			}
+
 		$locator = new locator();
 			$locator->set_section_tipo($this->section_tipo);
 			$locator->set_section_id($this->section_id);
@@ -403,6 +431,91 @@ class component_relation_related extends component_relation_common {
 
 		return $ar_result;
 	}//end get_references
+
+
+
+	/**
+	* PREFETCH_REFERENCES
+	* Resolves the references of many sections of the same section_tipo and
+	* component tipo in one single batched query and stores them into the
+	* bulk cache used by get_references(). The batched query replicates the
+	* get_references() search: records of the same section whose relations
+	* contain a locator pointing to the given section from the given component.
+	* On query failure nothing is cached and get_references() will fall back
+	* to its default one search query per section behavior.
+	* @param array $ar_locators
+	* 	Array of objects with section_id property (all of the given section_tipo)
+	* @param string $component_tipo
+	* @param string $section_tipo
+	* @return void
+	*/
+	public static function prefetch_references( array $ar_locators, string $component_tipo, string $section_tipo ) : void {
+
+		if (empty($ar_locators)) {
+			return;
+		}
+
+		// pending keys. Skip the already cached ones
+		// every key carries its filter locator JSON, built exactly
+		// as get_references() builds it
+			$ar_keys = [];
+			foreach ($ar_locators as $current_locator) {
+
+				$key = $component_tipo.'_'.$section_tipo.'_'.$current_locator->section_id;
+				if (array_key_exists($key, self::$bulk_references_cache)) {
+					continue;
+				}
+
+				$filter_locator = new locator();
+					$filter_locator->set_section_tipo($section_tipo);
+					$filter_locator->set_section_id($current_locator->section_id);
+					$filter_locator->set_from_component_tipo($component_tipo);
+
+				$ar_keys[$key] = json_encode($filter_locator);
+			}
+			if (empty($ar_keys)) {
+				return;
+			}
+
+		// matrix table of the searched section
+			$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
+
+		// batched query. One index probe per key using the relations GIN index
+			$keys_sql = 'ARRAY[' . implode(',', array_map(function($key){
+				return "'" . str_replace("'", "''", $key) . "'";
+			}, array_keys($ar_keys))) . ']::text[]';
+			$locators_sql = 'ARRAY[' . implode(',', array_map(function($locator_json){
+				return "'" . str_replace("'", "''", $locator_json) . "'";
+			}, array_values($ar_keys))) . ']::jsonb[]';
+
+			$str_query	 = PHP_EOL . 'SELECT k.key, section_tipo, section_id';
+			$str_query	.= PHP_EOL . 'FROM "'.$matrix_table.'", unnest('.$keys_sql.', '.$locators_sql.') as k(key, loc)';
+			$str_query	.= PHP_EOL . 'WHERE (section_tipo = \''.$section_tipo.'\') AND section_id>0';
+			$str_query	.= PHP_EOL . ' AND datos#>\'{relations}\' @> jsonb_build_array(k.loc)';
+			$str_query	.= PHP_EOL . 'ORDER BY section_id ASC;';
+
+		// exec
+			$result = JSON_RecordObj_matrix::search_free($str_query);
+			if ($result===false) {
+				debug_log(__METHOD__
+					. ' Error on batched references query. get_references will fall back to single queries' . PHP_EOL
+					. ' section_tipo: ' . $section_tipo . ' - component_tipo: ' . $component_tipo
+					, logger::ERROR
+				);
+				return;
+			}
+
+		// cache fill. Init every pending key to allow caching empty references results too
+			foreach (array_keys($ar_keys) as $key) {
+				self::$bulk_references_cache[$key] = [];
+			}
+			while ($row = pg_fetch_assoc($result)) {
+				$item = new stdClass();
+					$item->section_tipo	= $row['section_tipo'];
+					$item->section_id	= $row['section_id'];
+				self::$bulk_references_cache[$row['key']][] = $item;
+			}
+	}//end prefetch_references
 
 
 

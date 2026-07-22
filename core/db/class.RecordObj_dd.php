@@ -508,11 +508,13 @@ class RecordObj_dd extends RecordDataBoundObject {
 	*/
 	public static function get_modelo_name_by_tipo( string $tipo, bool $from_cache=true ) : string {
 
-		static $modelo_name_by_tipo;
+		static $modelo_name_by_tipo = [];
 
 		// cache
+		// note that empty (not found) results are cached too, to prevent
+		// repeating the same failed DDBB query on every call (e.g. broken ontology references)
 		$cache_uid = $tipo;
-		if ($from_cache===true && isset($modelo_name_by_tipo[$cache_uid])) {
+		if ($from_cache===true && array_key_exists($cache_uid, $modelo_name_by_tipo)) {
 			return $modelo_name_by_tipo[$cache_uid];
 		}
 
@@ -520,9 +522,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$modelo_name	= $RecordObj_dd->get_modelo_name();
 
 		// cache
-		if( !empty($modelo_name) ){
-			$modelo_name_by_tipo[$cache_uid] = $modelo_name;
-		}
+		$modelo_name_by_tipo[$cache_uid] = $modelo_name;
 
 
 		return $modelo_name;
