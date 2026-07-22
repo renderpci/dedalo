@@ -196,7 +196,7 @@ database_info.prototype.analyze_db = async function() {
 			options	: {}
 		},
 		retries : 1, // one try only
-		timeout : 3600 * 1000 // 1 hour waiting response
+		timeout : 21600 * 1000 // 3 hour waiting response
 	})
 
 	// remove annoying rqo_string from object

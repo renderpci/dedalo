@@ -275,7 +275,7 @@
 	"open_site_builder": "Open site builder",
 	"operator": "Operator",
 	"optimize_tables": "Optimize tables",
-	"optimize_tables_info": "Re-index and vacuum analyze the selected tables.",
+	"optimize_tables_info": "Re-index and vacuum analyze the selected tables. Append-only logs (Activity, Time Machine) also have their dead/redundant indexes pruned.",
 	"options": "Options",
 	"or": "or",
 	"original": "Original",

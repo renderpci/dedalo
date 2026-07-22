@@ -17,6 +17,7 @@
  */
 
 import definitions from './db_pg_definitions.json';
+import { type LiveIndex, classifyIndex, policyForTable } from './matrix_index_policy.ts';
 import { sql, withTransaction } from './postgres.ts';
 
 interface AssetEntry {
@@ -456,11 +457,129 @@ export async function ensureSearchStores(): Promise<EnsureSearchStoresResult> {
 	return result;
 }
 
+/** One index dropped by pruneMatrixIndexes, for the widget report. */
+interface PrunedIndex {
+	name: string;
+	size: string;
+	reason: string;
+}
+
+/** pruneMatrixIndexes outcome for one governed table. */
+export interface MatrixPruneReport {
+	dropped: PrunedIndex[];
+	reclaimed: string;
+	kept: number;
+	/** Reported, not dropped (bespoke, or a cold index left for a human). */
+	review: string[];
+}
+
+function prettyBytes(bytes: number): string {
+	const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+	let value = bytes;
+	let unit = 0;
+	while (value >= 1024 && unit < units.length - 1) {
+		value /= 1024;
+		unit++;
+	}
+	return `${value.toFixed(value < 10 && unit > 0 ? 1 : 0)} ${units[unit]}`;
+}
+
+/**
+ * Prune the dead/redundant indexes of ONE append-only log table on the ACTIVE
+ * database, per the reviewed policy (matrix_index_policy.ts). Run as the first
+ * step of "Optimize tables" (database_info widget) for a policy-governed table:
+ * the PHP-era logs (matrix_activity, matrix_time_machine) accreted indexes the
+ * planner never picks for the shapes this engine emits (WC-046) — each is dead
+ * weight on the hottest insert path. Conservative: never drops a constraint,
+ * 'keep', or unclassified index, or a 'dead' one the DB proves is used; a
+ * single-tipo redundancy downgrades to a report on a multi-tipo table. Uses
+ * DROP INDEX CONCURRENTLY (no long lock — same posture as the REINDEX that
+ * follows). `dryRun` classifies + reports WITHOUT dropping (operator preview /
+ * gate). Returns null for a non-governed table.
+ */
+export async function pruneMatrixIndexes(
+	table: string,
+	options: { dryRun?: boolean } = {},
+): Promise<MatrixPruneReport | null> {
+	const policy = policyForTable(table);
+	if (policy === undefined) return null;
+
+	const rows = (await sql.unsafe(
+		`SELECT i.relname AS name,
+		        pg_get_indexdef(i.oid) AS def,
+		        (c.conindid IS NOT NULL) AS is_constraint,
+		        COALESCE(s.idx_scan, 0)::bigint AS idx_scan,
+		        pg_relation_size(i.oid)::bigint AS size_bytes
+		 FROM pg_class i
+		 JOIN pg_index ix ON ix.indexrelid = i.oid
+		 JOIN pg_class t ON t.oid = ix.indrelid
+		 LEFT JOIN pg_stat_user_indexes s ON s.indexrelid = i.oid
+		 LEFT JOIN pg_constraint c ON c.conindid = i.oid
+		 WHERE t.relname = $1`,
+		[table],
+	)) as {
+		name: string;
+		def: string;
+		is_constraint: boolean;
+		idx_scan: number | string;
+		size_bytes: number | string;
+	}[];
+	const indexes: LiveIndex[] = rows.map((row) => ({
+		name: row.name,
+		indexDef: row.def,
+		isConstraint: row.is_constraint === true,
+		idxScan: Number(row.idx_scan),
+		sizeBytes: Number(row.size_bytes),
+	}));
+
+	// Single-tipo gate for the redundancy claims that depend on it: pg_stats'
+	// estimate first (no scan), exact count only to settle the "== 1" boundary.
+	const est = (await sql.unsafe(
+		`SELECT n_distinct FROM pg_stats WHERE tablename = $1 AND attname = 'section_tipo'`,
+		[table],
+	)) as { n_distinct: number | string }[];
+	let distinctTipo = est[0]?.n_distinct != null ? Number(est[0].n_distinct) : 0;
+	if (!(distinctTipo > 1.5)) {
+		const exact = (await sql.unsafe(
+			`SELECT count(DISTINCT section_tipo)::int AS c FROM ${table}`,
+			[],
+		)) as { c: number }[];
+		distinctTipo = Number(exact[0]?.c ?? 0);
+	}
+	const singleTipo = distinctTipo <= 1;
+
+	const report: MatrixPruneReport = { dropped: [], reclaimed: '0 B', kept: 0, review: [] };
+	let reclaimedBytes = 0;
+	for (const index of indexes) {
+		const verdict = classifyIndex(index, policy, { singleTipo, includeReview: false });
+		if (verdict.action === 'drop') {
+			// CONCURRENTLY: no ACCESS EXCLUSIVE lock on the (live) table.
+			if (options.dryRun !== true) {
+				await sql.unsafe(`DROP INDEX CONCURRENTLY IF EXISTS "${index.name}"`, []);
+			}
+			report.dropped.push({
+				name: index.name,
+				size: prettyBytes(index.sizeBytes),
+				reason: verdict.reason,
+			});
+			reclaimedBytes += index.sizeBytes;
+		} else if (verdict.action === 'keep') {
+			report.kept++;
+		} else {
+			report.review.push(`${index.name} (${verdict.action}): ${verdict.reason}`);
+		}
+	}
+	report.reclaimed = prettyBytes(reclaimedBytes);
+	return report;
+}
+
 /**
  * PHP db_tasks::optimize_tables: per validated table, REINDEX TABLE
  * CONCURRENTLY then VACUUM ANALYZE (PHP shells out to psql because these
  * cannot run inside a transaction; the driver's simple-query path runs them
- * directly).
+ * directly). TS ADDITION (WC-046): a policy-governed append-only log
+ * (matrix_activity/matrix_time_machine) is PRUNED first — drop the dead/
+ * redundant PHP-era indexes so REINDEX does not rebuild bloat we are removing.
  */
 export async function optimizeTables(tables: string[]): Promise<{
 	result: boolean;
@@ -468,6 +587,7 @@ export async function optimizeTables(tables: string[]): Promise<{
 	errors: unknown[];
 	reindex: Record<string, string>;
 	vacuum: Record<string, string>;
+	prune: Record<string, MatrixPruneReport>;
 }> {
 	const response = {
 		result: false,
@@ -475,6 +595,7 @@ export async function optimizeTables(tables: string[]): Promise<{
 		errors: [] as unknown[],
 		reindex: {} as Record<string, string>,
 		vacuum: {} as Record<string, string>,
+		prune: {} as Record<string, MatrixPruneReport>,
 	};
 	const validTables: string[] = [];
 	for (const table of tables) {
@@ -495,6 +616,16 @@ export async function optimizeTables(tables: string[]): Promise<{
 	if (validTables.length === 0) {
 		response.errors.push('No valid tables to optimize');
 		return response;
+	}
+	// Prune dead/redundant indexes on the governed logs BEFORE reindexing, so
+	// REINDEX does not waste work rebuilding indexes we are about to drop.
+	for (const table of validTables) {
+		try {
+			const pruned = await pruneMatrixIndexes(table);
+			if (pruned !== null) response.prune[table] = pruned;
+		} catch (error) {
+			response.errors.push(`PRUNE failed for table ${table}: ${(error as Error).message}`);
+		}
 	}
 	for (const table of validTables) {
 		try {

@@ -51,8 +51,8 @@ import type {
 import type { Principal } from '../security/permissions.ts';
 import {
 	TM_COLUMN_BULK_PROCESS_ID as TIPO_BULK_PROCESS,
-	TM_COLUMN_DATA as TIPO_DATA,
 	TM_COLUMN_TIPO as TIPO_COMPONENT,
+	TM_COLUMN_DATA as TIPO_DATA,
 	TM_NOTES_TEXT as TIPO_NOTES,
 	TM_COLUMN_SECTION_ID as TIPO_SECTION_ID,
 	TM_COLUMN_SECTION_TIPO as TIPO_SECTION_TIPO,
@@ -221,6 +221,35 @@ interface TmRawRow {
 }
 
 /**
+ * COUNT(*) for a TM where-shape, with the bare-browse cache. The BARE browse (no
+ * scope, whereSql 'true') is a full-table COUNT(*) on the append-only TM table —
+ * the only expensive count surface (the scoped ones are index-served). Serve it
+ * from the data-event cache: every save this engine performs clears it (saves are
+ * exactly when TM grows), with TM_COUNT_CACHE_TTL_MS as the freshness backstop for
+ * out-of-band inserts. 0 disables (exact every time — the parity-environment
+ * setting). Shared by the count surface (tmReadSource.count) AND the deep-page
+ * ORDER-FLIP in queryTmRows, which needs the row total to fetch a far page from
+ * the opposite end.
+ */
+async function tmCount(whereSql: string, params: unknown[]): Promise<number> {
+	const ttl = config.ops.tmCountCacheTtlMs;
+	const bare = whereSql === 'true';
+	if (bare && ttl > 0) {
+		const hit = tmBareCountCache.get('bare');
+		if (hit !== undefined && Date.now() - hit.at < ttl) return hit.value;
+	}
+	const rows = (await sql.unsafe(
+		`SELECT COUNT(*)::int AS c FROM matrix_time_machine WHERE ${whereSql}`,
+		params,
+	)) as { c: number }[];
+	const value = Number(rows[0]?.c ?? 0);
+	if (bare && ttl > 0) {
+		tmBareCountCache.set('bare', { value, at: Date.now() });
+	}
+	return value;
+}
+
+/**
  * Query matrix_time_machine for one request (the two scoping surfaces of
  * buildTmWhere) and return the ordered/paginated rows plus which surface it is.
  * The sqo may be raw (direct readTimeMachineData) or sanitized (via the generic
@@ -273,24 +302,50 @@ async function queryTmRows(
 	const offset = Number(sqo.offset ?? 0);
 	const params = [...scopeParams, limit, offset];
 
-	// Late row lookup for DEEP pages on the id-ordered surfaces (bare browse +
-	// record-snapshot list, both PK/(tipo,id)-index-served): find the page of
-	// ids first (narrow index scan), then join back for the wide data column —
-	// a plain OFFSET reads and discards every skipped row's snapshot jsonb.
-	// The section_id order path keeps the plain query: its sort key has ties,
+	// Deep-page acquisition on the unique `id` order (bare browse + record-snapshot
+	// list, both PK/(tipo,id)-index-served). A plain OFFSET makes Postgres walk and
+	// discard every skipped row — ≈3.7 s at offset 50 M on a 50 M-row table, even on
+	// an index-only scan. Two compounding rewrites, both EXACT because `id` is the
+	// unique, monotonic PK:
+	//   1. ORDER-FLIP: a page in the far half is the SAME set of rows fetched from
+	//      the OTHER end with a small offset, then reversed in memory. The last page
+	//      ("navigate to the last records") becomes OFFSET 0 (≈0.1 ms, ~35000×).
+	//      Needs the row total N (cached for the bare browse); paid only once we are
+	//      already deep. No worse under concurrent inserts than plain OFFSET already
+	//      is (TM is append-only; the count cache clears on every engine save).
+	//   2. LATE ROW LOOKUP: find the page of ids on a narrow index scan first, then
+	//      join back for the wide `data` jsonb — never reads a skipped row's snapshot.
+	// The section_id order path keeps the plain query below: its sort key has ties,
 	// and page membership under ties must not be perturbed (byte-gated reads).
 	const lateThreshold = config.ops.searchLateRowLookupOffset;
 	if (lateThreshold >= 0 && offset >= lateThreshold && orderColumn === 'id') {
+		let effDirection = direction;
+		let effOffset = offset;
+		let effLimit = limit;
+		let reverse = false;
+		const total = await tmCount(whereSql, scopeParams);
+		// ascOffset = rows to skip from the opposite end for the same page. Flip only
+		// when it strictly shortens the walk (offset in the far half) and a page exists.
+		const ascOffset = total - offset - limit;
+		if (total > offset && ascOffset < offset) {
+			effDirection = direction === 'ASC' ? 'DESC' : 'ASC';
+			effOffset = Math.max(0, ascOffset); // clamp: last partial page skips 0 from the end
+			effLimit = Math.min(limit, total - offset); // last partial page has < limit rows
+			reverse = true;
+		}
+		const lateParams = [...scopeParams, effLimit, effOffset];
 		const rows = (await sql.unsafe(
 			`SELECT tm.id, tm.section_id, tm.section_tipo, tm.tipo, tm.lang, tm.timestamp::text AS timestamp, tm.user_id, tm.bulk_process_id, tm.data
 			 FROM matrix_time_machine tm
 			 JOIN (SELECT id FROM matrix_time_machine
 			       WHERE ${whereSql}
-			       ORDER BY id ${direction}
-			       LIMIT $${params.length - 1} OFFSET $${params.length}) page ON page.id = tm.id
-			 ORDER BY tm.id ${direction}`,
-			params,
+			       ORDER BY id ${effDirection}
+			       LIMIT $${lateParams.length - 1} OFFSET $${lateParams.length}) page ON page.id = tm.id
+			 ORDER BY tm.id ${effDirection}`,
+			lateParams,
 		)) as TmRow[];
+		// The flip fetched the page in the opposite order; restore the requested one.
+		if (reverse) rows.reverse();
 		return { rows, isRecordList };
 	}
 
@@ -558,27 +613,7 @@ export const tmReadSource: SectionReadSource = {
 
 	async count(sqo: Sqo): Promise<number> {
 		const where = buildTmWhere(sqo as Record<string, unknown>);
-		// The BARE browse (no scope, whereSql 'true') is a full-table COUNT(*) on
-		// the append-only TM table — the only expensive count surface (the scoped
-		// ones are index-served). Serve it from the data-event cache: every save
-		// this engine performs clears it (saves are exactly when TM grows), with
-		// TM_COUNT_CACHE_TTL_MS as the freshness backstop for out-of-band inserts.
-		// 0 disables (exact every time — the parity-environment setting).
-		const ttl = config.ops.tmCountCacheTtlMs;
-		const bare = where.whereSql === 'true';
-		if (bare && ttl > 0) {
-			const hit = tmBareCountCache.get('bare');
-			if (hit !== undefined && Date.now() - hit.at < ttl) return hit.value;
-		}
-		const rows = (await sql.unsafe(
-			`SELECT COUNT(*)::int AS c FROM matrix_time_machine WHERE ${where.whereSql}`,
-			where.params,
-		)) as { c: number }[];
-		const value = Number(rows[0]?.c ?? 0);
-		if (bare && ttl > 0) {
-			tmBareCountCache.set('bare', { value, at: Date.now() });
-		}
-		return value;
+		return tmCount(where.whereSql, where.params);
 	},
 
 	async emitRow(context: EmitRowContext): Promise<void> {

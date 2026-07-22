@@ -872,7 +872,7 @@ const render_optimize_tables = (self) => {
 	ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'info_text',
-		inner_html		: get_label.optimize_tables_info || 'Re-index and vacuum analyze the selected tables.',
+		inner_html		: get_label.optimize_tables_info || 'Re-index and vacuum analyze the selected tables. Append-only logs (Activity, Time Machine) also have their dead/redundant indexes pruned.',
 		parent			: optimize_tables_container
 	})
 

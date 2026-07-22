@@ -19,6 +19,7 @@
  * Per-section and per-element read gates (<1 → skipped, not denied) mirror PHP.
  */
 
+import { ACTIVITY_SECTION_TIPO, TIME_MACHINE_SECTION_TIPO } from '../concepts/section.ts';
 import { sql } from '../db/postgres.ts';
 import { getModelByTipo, getTranslatableByTipo } from '../ontology/resolver.ts';
 import { resolveVirtualEditScope } from '../relations/request_config/implicit.ts';
@@ -111,6 +112,22 @@ async function elementTiposInSection(
 const SECTION_INFO_GROUP_TIPO = 'dd196';
 
 /**
+ * WC-045: sections whose search-field panel omits the shared section-info group
+ * (dd196 + created/modified/publication children) — append-only logs with no
+ * editorial metadata to search on.
+ *  - dd542 (Activity): deliberate wire-shape divergence from PHP (which offers
+ *    dd196 to global admins); sibling of the WC-044 dd542 list-sort restriction.
+ *  - dd15 (Time Machine): PHP-PARITY RESTORATION — PHP explicitly empties
+ *    section_info for DEDALO_TIME_MACHINE_SECTION_TIPO (class.common.php:3759),
+ *    which the "every non-TM section" comment below always intended but the TS
+ *    port never enforced.
+ */
+const SUPPRESS_SECTION_INFO: ReadonlySet<string> = new Set([
+	ACTIVITY_SECTION_TIPO,
+	TIME_MACHINE_SECTION_TIPO,
+]);
+
+/**
  * The common section-info elements PHP appends to every section's element list:
  * the dd196 section_group + its component children (in ontology order). Shown
  * only to global admins (PHP :3870-3877 forces their permission, so non-admins
@@ -186,7 +203,12 @@ export async function buildSectionElementsContext(
 		// section-info elements (dd196 + children) — but only when the section has
 		// elements of its own (PHP :3847 appends them only if ar_elements non-empty).
 		const ownElements = await elementTiposInSection(sectionTipo);
-		const infoElements = ownElements.length > 0 ? await sectionInfoElements() : [];
+		// WC-045: dd542 (and any SUPPRESS_SECTION_INFO section) omits the whole
+		// section-info group; dd196's children live only under dd196, never in
+		// ownElements, so skipping the append fully removes them.
+		const suppressInfo = SUPPRESS_SECTION_INFO.has(sectionTipo);
+		const infoElements =
+			ownElements.length > 0 && !suppressInfo ? await sectionInfoElements() : [];
 		const infoTipos = new Set(infoElements.map((element) => element.tipo));
 
 		for (const { tipo, model } of [...ownElements, ...infoElements]) {

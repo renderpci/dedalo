@@ -275,7 +275,7 @@
 	"open_site_builder": "Abrir constructor de sitios",
 	"operator": "Operador",
 	"optimize_tables": "Optimizar tablas",
-	"optimize_tables_info": "Reindexa y ejecuta vacuum analyze en las tablas seleccionadas.",
+	"optimize_tables_info": "Reindexa y ejecuta vacuum analyze en las tablas seleccionadas. En los registros de solo anexado (Actividad, Time Machine) también se eliminan los índices muertos o redundantes.",
 	"options": "Opciones",
 	"or": "o",
 	"original": "Original",

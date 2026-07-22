@@ -1676,3 +1676,135 @@ and delete_normalized); `buildVersionCore('thumb')` sources the default file,
 falls back to the original, and errors clearly only when neither exists.
 Gate: `test/unit/media_regenerate_thumb.test.ts` (scratch media root with the
 default file only).
+
+## WC-044 — Activity (dd542) list-sort restriction + flattened ordered-search SQL (2026-07-21)
+
+Born of a production-scale incident: on a 32.9M-row / 85 GB `matrix_activity`
+(dedalo7_mdcat), a list-header sort on the IP column ran **456 s** — the PHP
+windowed shape `SELECT * FROM (SELECT DISTINCT ON (section_id) …, <jsonb sort
+expr> … ORDER BY section_id) main_select ORDER BY <sort> LIMIT n` materializes
+EVERY row (full scan + per-row `jsonb_path_query_first`) before the LIMIT can
+apply. Two coupled changes:
+
+- **Flattened ordered-search SQL (internal shape, wire-identical rows).** When
+  an ordered SQO is single-section, join-free, and the target table carries the
+  full UNIQUE `(section_id, section_tipo)` key (probed + cached —
+  `tableHasUniqueSectionKey`; `matrix_time_machine`/`matrix_structurations`
+  lack it and keep the windowed shape), `DISTINCT ON (section_id)` is a no-op
+  and the assembler emits `ORDER BY <sort> LIMIT n` inline. Same rows, same
+  order, same columns (verified plain + paged against the windowed shape);
+  `section_id` sorts drop from ~10 s to ~1 ms (index-served), component sorts
+  from 456 s to 77 s (parallel seq scan, still O(n)).
+- **dd542 sort policy (structure-context wire change).** Arbitrary component
+  sorts on the append-only log stay O(n) even flattened and are DISALLOWED:
+  every dd542 column emits `sortable:false` EXCEPT When (dd547), whose order
+  `path` maps to the direct `section_id` column (append-only ⇒ When-order ≡
+  insertion order; `ACTIVITY_WHEN_TIPO`, order_path.ts) — the newest-first
+  sort users actually want is index-served. Same policy family as the TM list
+  (read_tm.ts maps header sorts to real columns and refuses the rest). The
+  expression-index alternative was REJECTED (write amplification on the
+  hottest insert path + rarely-used disk). dd542 left
+  `list_column_sortable_differential`'s section loop (its oracle rows are
+  history, ledgered in the test header).
+
+### Gate
+
+`test/unit/activity_sort_policy.test.ts` (When→section_id path, dd542-scoped —
+other sections' date columns keep the jsonb path, sortable flags, unique-key
+probe) + `test/unit/search_order_id.test.ts` /
+`test/unit/search_late_row_lookup.test.ts` (flattened shape: no `main_select`,
+no `DISTINCT ON`, inline ORDER BY + LIMIT/OFFSET).
+
+## WC-045 — Append-only log search-field restriction: section-info group (dd196) omitted for Activity (dd542) + Time Machine (dd15) (2026-07-21)
+
+The edit-mode search "FIELDS" panel (`dd_core_api::get_section_elements_context`
+→ `buildSectionElementsContext`, `src/core/resolve/section_elements_context.ts`)
+appends the shared **section-info group `dd196`** (Created/Modified by user +
+date, First/Last publication + user) to every section that has its own elements,
+shown to global admins (PHP class.common.php:3870-3877). On an append-only log
+that editorial metadata is meaningless as a search dimension, so TS omits the
+`dd196` group (and its children) from the field list of two sections, both held
+in the `dd542`-/`dd15`-scoped `SUPPRESS_SECTION_INFO` set:
+
+- **Activity (`dd542`)** — DELIBERATE wire-shape divergence from PHP, which
+  offers `dd196` to admins. Same policy family as WC-044 (dd542 list-sort
+  restriction, same day).
+- **Time Machine (`dd15`)** — PHP-PARITY RESTORATION, not a divergence: PHP
+  explicitly empties `section_info_elements` for
+  `DEDALO_TIME_MACHINE_SECTION_TIPO` (class.common.php:3759). The TS port's
+  "appended to every non-TM section" comment always intended this, but the guard
+  was never implemented — dd15 was wrongly getting `dd196` + children. Adding it
+  to the set makes the code match its comment and PHP.
+
+The section's existing exclusion knob is **model-keyed only** (`DEFAULT_EXCLUDE`
+/ client `ar_components_exclude`) and cannot express this: `dd196`'s children are
+date/relation models — the same models as legitimate fields (activity's When
+`dd547` is a date, Who `dd543` a relation), so no model rule drops them without
+collateral. Hence a section-tipo-scoped suppression of the group append,
+server-side. The real fields and the section entry are unchanged; every other
+section still gets `dd196`. (Neither `dd542` nor `dd15` is in
+`section_elements_context_differential`'s `SECTIONS` corpus, so no oracle rows to
+reconcile.)
+
+### Gate
+
+`test/unit/activity_search_fields.test.ts` — `dd542` and `dd15` field lists each
+exclude `dd196` and every `parent==='dd196'` child while including the section's
+real components; scope control asserts a second section (`dd128`) still carries
+`dd196` for the same global-admin principal.
+
+## WC-046 — Activity (dd542) list at scale: index-aligned structural order + generalized deep-page flip + cached bare total (2026-07-22)
+
+Follow-up to WC-044 on the same 32.9M-row / 85 GB `matrix_activity`. WC-044
+flattened the ordered SQL but left three scale defects — the first crippling
+EVERY page, not just deep ones. All three rewrites are **wire-identical**
+(same rows, same order, same paginated envelope); the internal SQL changes:
+
+- **Structural sort key emitted index-aligned — no `NULLS LAST` (a wire-shape
+  SQL divergence from PHP).** `buildOrderClauses` (PHP :274-292 parity) appended
+  a blanket `NULLS LAST` to every explicit sort. On the unique structural key
+  `section_id` (sequence-backed, 0 nulls) / `id` (NOT NULL) that is a no-op that
+  DEFEATS the `DESC` (=NULLS FIRST) list index: the dd542 newest-first list then
+  Parallel-Seq-Scans + Sorts the whole table for **every page, including offset 0
+  (>60 s measured)**. TS now emits `section_id/id <dir>` with no `NULLS LAST` and
+  no section_id tiebreaker (the key is already a unique total order) → index-served,
+  **>60 s → ~11 ms**. Wire-identical (no nulls to reorder); jsonb component sorts
+  (nullable) keep `NULLS LAST`.
+- **Deep-page late-lookup + order-flip generalized to the flattened unique-key
+  path** (`sql_assembler.ts`, the matrix_activity twin of `read_tm.ts`
+  queryTmRows which owns the multi-tipo `matrix_time_machine` `id`-PK path). A
+  far-half page is fetched from the opposite end (last page → OFFSET 0); the key
+  pages on a narrow scan, then join back for the wide columns. Applies to a sole
+  sort on the `id` PK **or** `section_id` — the dd542 list DEFAULTS to `id DESC`
+  (deriveSectionListSqoDefaults; the real slow-request order), while a When-header
+  sort maps to `section_id`. Last/far-half page **>5 s → ~64 ms** end-to-end.
+  Gated to the bare browse (`whereParts` empty) so the exact row total is cheap
+  + cached. (Residual: an `id`-ordered page at the EXACT middle offset still walks
+  ~N/2 heap-checked rows — no `(section_tipo,id)` index — but that offset is
+  pathological; the far half, i.e. real "jump to last", is index/flip-served.)
+- **Bare-browse `full_count` served from a save-event-invalidated cache**
+  (`search/bare_count.ts`, scoped to the policy-governed logs) — the paginator
+  total drops from a ~2.5 s parallel scan to a cached literal on every list
+  paint. `read_tm.ts` owns the `matrix_time_machine` twin (`tmCount`).
+
+Also operational (NOT wire): the dead/redundant PHP-era indexes on both logs are
+pruned by the **Database-info maintenance widget → "Optimize tables"** action
+(`database_info.optimize_tables` → `db_assets.optimizeTables` → new
+`pruneMatrixIndexes`, run on the ACTIVE database before the REINDEX/VACUUM).
+The keep/drop policy is `src/core/db/matrix_index_policy.ts` (single source of
+truth, per index SIGNATURE not name; conservative — never a constraint/keep/
+unclassified/proven-used index). mdcat: activity 9.8→4.0 GB, TM 13→10 GB, ~7.9 GB
+reclaimed — every surplus index was maintained on the hottest insert path for a
+shape the planner never picks (the WC-044 write-amplification concern, realized).
+
+### Gate
+
+`test/unit/activity_deep_offset_flip.test.ts` (flip page == ground-truth
+`ORDER BY <key> DESC LIMIT L OFFSET O` byte-for-byte across shallow / deep /
+last / partial / ASC, for BOTH the `id`-PK default order and `section_id`, +
+proof the flip engages) · `search_order_id` /
+`search_late_row_lookup` (index-aligned structural order, no `NULLS LAST`, no
+window) · `matrix_index_policy.test.ts` (prune policy self-consistency) +
+`matrix_index_prune.test.ts` (the `pruneMatrixIndexes` executor, dry-run: keeps
+every load-bearing index, drops only policy-`drop` ones). Neither `dd542` nor the
+flattened shape is in an oracle corpus (WC-044) — no re-harvest.

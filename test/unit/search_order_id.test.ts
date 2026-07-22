@@ -3,10 +3,11 @@
  * SECTION-list default sort can take (PHP build_sql_query_order parity):
  *
  *  1. `component_tipo: 'id'` — the matrix PK. It is NOT among
- *     DEFAULT_SELECT_COLUMNS, so the outer windowed query
- *     `SELECT * FROM (…) main_select ORDER BY id` can only see it when the inner
+ *     DEFAULT_SELECT_COLUMNS, so `ORDER BY id` can only resolve when the
  *     SELECT surfaces it. The assembler adds `<alias>.id AS id` exactly ONCE
  *     (no duplicated select sentence, even if id appears twice in the order).
+ *     Single-section no-join ordered queries FLATTEN (no main_select window,
+ *     no DISTINCT ON) so LIMIT applies without materializing every row.
  *  2. A single `{path,direction}` OBJECT (how an ontology default sort is often
  *     authored, e.g. dd542 Activity's dd549) must produce the SAME SQL as the
  *     one-element array form — PHP tolerates both.
@@ -25,15 +26,18 @@ describe('search ORDER BY id (matrix PK) assembly', () => {
 			{ section_tipo: ['dd542'], limit: 25, offset: 0, order: [ID_ORDER] } as never,
 			{},
 		);
-		// The inner SELECT surfaces the PK — exactly one `AS id` sentence.
+		// The SELECT surfaces the PK — exactly one `AS id` sentence.
 		const idSelects = sql.match(/\bAS id\b/g) ?? [];
 		expect(idSelects.length).toBe(1);
 		expect(sql).toContain('.id AS id');
-		// Windowed query: inner ORDER BY (DISTINCT ON tiebreaker) + outer ORDER BY id.
-		expect(sql).toContain('main_select');
+		// Single-section + no joins → FLATTENED shape: no window, no DISTINCT ON
+		// (section_id is unique under the single-tipo predicate), ORDER BY + LIMIT
+		// inline so Postgres can stop at the LIMIT instead of materializing all rows.
+		expect(sql).not.toContain('main_select');
+		expect(sql).not.toContain('DISTINCT ON');
 		expect(sql).toMatch(/ORDER BY\s+id DESC/);
 		// No `column "id" does not exist`: the ordered column is the surfaced alias,
-		// present in main_select's projection.
+		// present in the same SELECT's projection.
 	});
 
 	test("order by 'id' does NOT duplicate the select sentence when id appears twice", async () => {
@@ -104,7 +108,8 @@ describe('search ORDER BY exact `column` convention', () => {
 			{},
 		);
 		expect((sql.match(/\bAS id\b/g) ?? []).length).toBe(1);
-		expect(sql).toMatch(/main_select\s+ORDER BY\s+id DESC/);
+		expect(sql).toMatch(/ORDER BY\s+id DESC/);
+		expect(sql).not.toContain('main_select');
 	});
 
 	test('`component_tipo` WINS when both component_tipo and column are set', async () => {

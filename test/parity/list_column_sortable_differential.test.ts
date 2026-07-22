@@ -27,7 +27,9 @@ import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
 import { readSection } from '../../src/core/section/read.ts';
 import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
 
-const SECTIONS = ['numisdata3', 'numisdata6', 'rsc170', 'dd542', 'oh1'];
+// dd542 removed 2026-07-21 (WC-044): the whole Activity column set now
+// DELIBERATELY diverges from the frozen oracle — see LEDGERED_DIVERGENT below.
+const SECTIONS = ['numisdata3', 'numisdata6', 'rsc170', 'oh1'];
 
 /**
  * The former oh25|oh1 (+ rsc62/rsc63/rsc35 subdatum) exclusions are CLOSED
@@ -36,6 +38,14 @@ const SECTIONS = ['numisdata3', 'numisdata6', 'rsc170', 'dd542', 'oh1'];
  * subcolumns: oh1's oh7 narrows oh25 to [rsc62, rsc63, rsc35]), which the
  * order-path build now consumes via the stamped request_config. It was never a
  * process_ddo_map drop — oh25's ontology ddo_map survives that pipeline intact.
+ *
+ * dd542 Activity (WC-044, 2026-07-21): the ENTIRE column set now DELIBERATELY
+ * diverges from the frozen oracle, so dd542 left SECTIONS above — arbitrary
+ * component sorts on the append-only log are unusable full-table jsonb sorts
+ * at production scale, so the TS engine emits sortable:false for every dd542
+ * column except When (dd547), whose order path maps to the indexed section_id
+ * column (order_path.ts). The new contract is pinned by
+ * test/unit/activity_sort_policy.test.ts; the fixture's dd542 values are history.
  */
 const LEDGERED_DIVERGENT: ReadonlySet<string> = new Set([]);
 

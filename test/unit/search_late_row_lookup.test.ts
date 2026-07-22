@@ -67,16 +67,23 @@ describe('late row lookup SQL shape', () => {
 		expect(builtSql).toMatch(/ORDER BY\s+\w+\.section_id ASC;$/);
 	});
 
-	test('deep offset with a CUSTOM order keeps the windowed shape (no rewrite)', async () => {
+	test('deep offset ordered by the id PK flattens AND rewrites on the id key (WC-046)', async () => {
+		// The dd542 Activity list DEFAULTS to `id DESC`. Single-section + unique
+		// key ⇒ flattens (no main_select window, no DISTINCT ON), and the id PK is
+		// a unique total order ⇒ the deep-page late-lookup/flip rewrites on `id`
+		// (was plain OFFSET before WC-046 — the 5 s dd542 deep-page regression).
 		const { sql: builtSql } = await buildSearchSql({
 			section_tipo: [SECTION],
 			limit: 30,
 			offset: THRESHOLD,
 			order: [{ direction: 'DESC', path: [{ component_tipo: 'id' }] }],
 		} as never);
-		expect(builtSql).toContain('main_select');
-		expect(builtSql).not.toContain('page ON');
+		expect(builtSql).not.toContain('main_select');
+		expect(builtSql).not.toContain('DISTINCT ON');
+		expect(builtSql).toContain('page ON page.id');
+		expect(builtSql).toMatch(/ORDER BY\s+\w+\.id (?:ASC|DESC);$/);
 	});
+
 
 	test('multi-section deep offset keeps the plain shape (no rewrite)', async () => {
 		const { sql: builtSql } = await buildSearchSql({

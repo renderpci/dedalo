@@ -27,6 +27,15 @@ Standing spec for the section family, companion to `engineering/REWRITE_SPEC.md`
 > `prevent_lock`, list-column sortability) — check there before planning
 > work from this spec.
 
+> **ADDENDUM 2026-07-21 (WC-044).** List-column sortability DIVERGES from
+> the PHP oracle for the Activity section (dd542): only the When column
+> (dd547) is sortable and its ORDER path maps to the indexed `section_id`
+> direct column (append-only log ⇒ When-order ≡ insertion order); every
+> other dd542 column emits `sortable:false`. Rationale, the flattened
+> ordered-search SQL shape that accompanies it, and its unique-key guard
+> (`tableHasUniqueSectionKey`) are in `engineering/WIRE_CONTRACT.md`
+> WC-044; gate: `test/unit/activity_sort_policy.test.ts`.
+
 **The section is THE main structure of Dédalo.** A section is the definition of a data schema — the analogue of a table in SQL: a named set of fields (components), defined in the ontology, organized by hierarchy relations. It is instantiated as a **section_record** in the matrix DB under a `section_id` that, combined with the `section_tipo`, is the base of the **locator** — every relation in the system points at that pair. A rewrite that gets sections wrong gets Dédalo wrong.
 
 The current TS implementation of the section family is judged **not done correctly** and is hereby superseded as a foundation. It works — 56 differential parity gates and 24 unit gates pin real behavior — but it has no shape: the section is nowhere a first-class module. Audit findings the rebuild must resolve rather than inherit:
