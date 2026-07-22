@@ -9,6 +9,54 @@ final class ImageMagick {
 
 
 
+	// path_ensured. Guard to prepend the ImageMagick bin dir to PATH only once per request
+	private static bool $path_ensured = false;
+
+
+
+	/**
+	* ENSURE_IMAGEMAGICK_PATH
+	* Make sure the ImageMagick binary directory (derived from MAGICK_PATH) is present
+	* in the process PATH environment, so ImageMagick delegates invoked by name
+	* (e.g. Ghostscript 'gs', used to rasterize PDF/EPS sources into images) are found
+	* even when the web server process runs with a minimal PATH that does not include
+	* the package manager bin dir (typically Homebrew '/opt/homebrew/bin' on macOS).
+	* exec()/shell_exec() inherit this environment, and so do the delegate subprocesses
+	* that ImageMagick spawns. Without this, 'magick' is found (absolute MAGICK_PATH) but
+	* its 'gs' delegate is not, producing: «sh: gs: command not found».
+	* Idempotent: only prepends the directory once per request.
+	* @return void
+	*/
+	private static function ensure_imagemagick_path() : void {
+
+		if (self::$path_ensured===true) {
+			return;
+		}
+		self::$path_ensured = true;
+
+		// bin dir from config like '/opt/homebrew/bin'
+		$bin_dir = defined('MAGICK_PATH') ? rtrim(MAGICK_PATH, '/') : '';
+		if ($bin_dir==='') {
+			// magick is resolved via PATH already, nothing to prepend
+			return;
+		}
+
+		$current_path = getenv('PATH') ?: '';
+
+		// skip when the bin dir is already present to avoid duplicates
+		if (in_array($bin_dir, explode(PATH_SEPARATOR, $current_path), true)) {
+			return;
+		}
+
+		$new_path = ($current_path!=='')
+			? $bin_dir . PATH_SEPARATOR . $current_path
+			: $bin_dir;
+
+		putenv('PATH=' . $new_path);
+	}//end ensure_imagemagick_path
+
+
+
 	/**
 	* GET_MAGICK_CONFIG
 	* get the parameters defined into the config.php
@@ -34,6 +82,8 @@ final class ImageMagick {
 	*/
 	public static function get_imagemagick_installed_path() : string {
 
+		self::ensure_imagemagick_path();
+
 		return MAGICK_PATH . 'convert';
 	}//end get_imagemagick_installed_path
 
@@ -45,6 +95,8 @@ final class ImageMagick {
 	*/
 	public static function get_imagemagick_identify_path() : string {
 
+		self::ensure_imagemagick_path();
+
 		return MAGICK_PATH . 'identify';
 	}//end get_imagemagick_identify_path
 
@@ -55,6 +107,8 @@ final class ImageMagick {
 	* @return string
 	*/
 	public static function get_imagemagick_pdfinfo_path() : string {
+
+		self::ensure_imagemagick_path();
 
 		return MAGICK_PATH . 'pdfinfo';
 	}//end get_imagemagick_pdfinfo_path
