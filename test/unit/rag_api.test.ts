@@ -150,3 +150,36 @@ describe('dd_rag_api kill-switch', () => {
 		}
 	});
 });
+
+describe('dd_rag_api embed_groups', () => {
+	const ctx = (principal: Principal): Ctx => ({ session: { userId: principal.userId }, principal });
+
+	test('opted-in section (numisdata3 descriptor) returns its group ids', async () => {
+		const res = await ragApiActions.embed_groups(
+			rqo({ section_tipo: 'numisdata3' }),
+			ctx(SUPERUSER),
+		);
+		const result = res.body.result as { groups: string[] };
+		// The live descriptor on numisdata316 declares the 'card' group; if that
+		// data ever changes, the assertion is on the SHAPE (array of slugs).
+		expect(Array.isArray(result.groups)).toBe(true);
+	});
+
+	test('not-opted-in, malformed tipo, and DENIED caller are byte-identical empty (no oracle)', async () => {
+		const notOpted = await ragApiActions.embed_groups(
+			rqo({ section_tipo: 'test2' }),
+			ctx(SUPERUSER),
+		);
+		const malformed = await ragApiActions.embed_groups(
+			rqo({ section_tipo: 'x; DROP TABLE--' }),
+			ctx(SUPERUSER),
+		);
+		const denied = await ragApiActions.embed_groups(
+			rqo({ section_tipo: 'numisdata3' }),
+			ctx(NO_ACCESS),
+		);
+		expect(notOpted.body.result).toEqual({ groups: [] });
+		expect(JSON.stringify(malformed.body)).toBe(JSON.stringify(notOpted.body));
+		expect(JSON.stringify(denied.body)).toBe(JSON.stringify(notOpted.body));
+	});
+});

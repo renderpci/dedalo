@@ -173,3 +173,91 @@ describe('agent loop (Phase 8 gate — offline scripted provider)', () => {
 		}
 	});
 });
+
+describe('agent loop — RAG tools (2026-07-22 scope/group + passages)', () => {
+	// RAG tools require the master switch (semanticSearch/retrievePassages run
+	// regardless — the switch gates the API layer, not retrieval — but keep the
+	// env honest for any future layering).
+
+	function ragScript(toolName: string, input: Record<string, unknown>): AgentAssistantTurn[] {
+		return [
+			{
+				text: '',
+				tool_uses: [{ id: 'toolu_rag', name: toolName, input }],
+				stop_reason: 'tool_use',
+			},
+			{ text: 'RAG ANSWER', tool_uses: [], stop_reason: 'end_turn' },
+		];
+	}
+
+	function toolResultOf(provider: ScriptedProvider): { content: string; is_error: boolean } {
+		const second = provider.seenTranscripts[1] as AgentTranscriptEntry[];
+		const resultsEntry = second.find((entry) => entry.role === 'tool_results') as {
+			results: { content: string; is_error: boolean }[];
+		};
+		return resultsEntry.results[0] as { content: string; is_error: boolean };
+	}
+
+	test('dedalo_semantic_search forwards scope + group (shape; group-scoped hits are rag:<group>)', async () => {
+		const provider = new ScriptedProvider(
+			ragScript('dedalo_semantic_search', {
+				query: 'guerra en el mundo ibérico',
+				section_tipo: 'rsc205',
+				group: 'card',
+				limit: 5,
+			}),
+		);
+		const run = await runAgent(SUPERUSER, 'find warfare publications', provider);
+		expect(run.stop).toBe('end_turn');
+		const result = toolResultOf(provider);
+		expect(result.is_error).toBe(false);
+		const hits = JSON.parse(result.content) as {
+			section_tipo: string;
+			component_tipo: string;
+		}[];
+		expect(Array.isArray(hits)).toBe(true);
+		for (const hit of hits) {
+			expect(hit.section_tipo).toBe('rsc205'); // scope pushdown respected
+			expect(hit.component_tipo).toBe('rag:card'); // facet respected
+		}
+	});
+
+	test('dedalo_retrieve_passages clamps, dedupes (section,id,chunk) and carries chunk_index', async () => {
+		const provider = new ScriptedProvider(
+			ragScript('dedalo_retrieve_passages', {
+				query: 'guerra ibérica',
+				section_tipo: 'rsc205',
+				limit: 500, // must clamp to 20
+			}),
+		);
+		const run = await runAgent(SUPERUSER, 'ground it', provider);
+		expect(run.stop).toBe('end_turn');
+		const result = toolResultOf(provider);
+		expect(result.is_error).toBe(false);
+		const passages = JSON.parse(result.content) as {
+			section_tipo: string;
+			section_id: number;
+			chunk_index: number;
+		}[];
+		expect(Array.isArray(passages)).toBe(true);
+		expect(passages.length).toBeLessThanOrEqual(20);
+		const keys = passages.map((p) => `${p.section_tipo}|${p.section_id}|${p.chunk_index}`);
+		expect(new Set(keys).size).toBe(keys.length); // per-lang duplicates removed
+		for (const passage of passages) {
+			expect(typeof passage.chunk_index).toBe('number');
+		}
+	});
+
+	test('an invalid group slug is treated as ABSENT (no error, api.ts parity)', async () => {
+		const provider = new ScriptedProvider(
+			ragScript('dedalo_semantic_search', {
+				query: 'anything',
+				group: 'NOT A SLUG!',
+				limit: 2,
+			}),
+		);
+		const run = await runAgent(SUPERUSER, 'q', provider);
+		expect(run.stop).toBe('end_turn');
+		expect(toolResultOf(provider).is_error).toBe(false);
+	});
+});
