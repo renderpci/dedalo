@@ -67,10 +67,11 @@ describe('late row lookup SQL shape', () => {
 		expect(builtSql).toMatch(/ORDER BY\s+\w+\.section_id ASC;$/);
 	});
 
-	test('deep offset with a CUSTOM order flattens (no window, no page rewrite)', async () => {
-		// Single-section + no joins → DISTINCT ON is a no-op, so a custom order
-		// is emitted inline (ORDER BY + LIMIT/OFFSET directly, no main_select
-		// wrapper — the wrapper forced a full-table materialization before LIMIT).
+	test('deep offset ordered by the id PK flattens AND rewrites on the id key (WC-046)', async () => {
+		// The dd542 Activity list DEFAULTS to `id DESC`. Single-section + unique
+		// key ⇒ flattens (no main_select window, no DISTINCT ON), and the id PK is
+		// a unique total order ⇒ the deep-page late-lookup/flip rewrites on `id`
+		// (was plain OFFSET before WC-046 — the 5 s dd542 deep-page regression).
 		const { sql: builtSql } = await buildSearchSql({
 			section_tipo: [SECTION],
 			limit: 30,
@@ -79,9 +80,10 @@ describe('late row lookup SQL shape', () => {
 		} as never);
 		expect(builtSql).not.toContain('main_select');
 		expect(builtSql).not.toContain('DISTINCT ON');
-		expect(builtSql).not.toContain('page ON');
-		expect(builtSql).toMatch(/ORDER BY\s+id DESC NULLS LAST, section_id ASC\nLIMIT 30 OFFSET \d+;$/);
+		expect(builtSql).toContain('page ON page.id');
+		expect(builtSql).toMatch(/ORDER BY\s+\w+\.id (?:ASC|DESC);$/);
 	});
+
 
 	test('multi-section deep offset keeps the plain shape (no rewrite)', async () => {
 		const { sql: builtSql } = await buildSearchSql({

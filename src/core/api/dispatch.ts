@@ -185,6 +185,11 @@ function summarizeRqo(rqo: Rqo): string {
 				: '',
 			sections !== '' ? `sqo=[${sections}]` : '',
 			sqo.limit !== undefined ? `limit=${String(sqo.limit)}` : '',
+			// offset matters for deep-page diagnosis: a big-log list slow ONLY at a
+			// far offset is the late-lookup/flip regime (WC-046), not a shape bug.
+			sqo.offset !== undefined && sqo.offset !== null && Number(sqo.offset) > 0
+				? `offset=${String(sqo.offset)}`
+				: '',
 			sqo.filter !== undefined && sqo.filter !== null ? 'filter=yes' : '',
 			Array.isArray(sqo.filter_by_locators) ? `locators=${sqo.filter_by_locators.length}` : '',
 		];

@@ -34,6 +34,7 @@ import { readString } from '../../config/readers.ts';
 import type { Sqo } from '../concepts/sqo.ts';
 import { getSectionTipos } from '../concepts/sqo.ts';
 import { assertMatrixTable } from '../db/matrix.ts';
+import { policyForTable } from '../db/matrix_index_policy.ts';
 import { sql } from '../db/postgres.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
 import {
@@ -44,6 +45,7 @@ import {
 	getTranslatableByTipo,
 } from '../ontology/resolver.ts';
 import { type Principal, getUserProjects } from '../security/permissions.ts';
+import { bareBrowseCount } from './bare_count.ts';
 import type { BuilderResult } from './builders/types.ts';
 import type { ConformedFilter } from './conform.ts';
 import { conformFilter } from './conform.ts';
@@ -278,6 +280,19 @@ async function buildOrderClauses(
 	if (orderClauses.length > 0) {
 		// PHP post-processing (:274-292): NULLS LAST + section_id tie-breaker.
 		const flat = orderClauses.join(', ');
+		// A structural sort key (section_id / id) is NON-NULL (id is NOT NULL;
+		// section_id is sequence-backed — every matrix row carries one). PHP's
+		// blanket `NULLS LAST` is a no-op on it, but it defeats the DESC index
+		// (which is NULLS FIRST): on the 33 M-row matrix_activity the dd542 list
+		// then Parallel-Seq-Scans + Sorts the WHOLE table for every page (>60 s
+		// even at offset 0). Emit it index-aligned — no NULLS LAST — and drop the
+		// tiebreaker (it is already a unique total order). Wire-identical (no
+		// nulls to reorder) and matches the section_id ASC default's shape.
+		// jsonb COMPONENT values ARE nullable (a missing component) → keep NULLS
+		// LAST for those. (WC-046.)
+		if (/^(?:section_id|id) (?:asc|desc)$/i.test(flat)) {
+			return [flat];
+		}
 		const withNulls = `${flat} NULLS LAST`;
 		return [flat.includes('section_id') ? withNulls : `${withNulls}, section_id ASC`];
 	}
@@ -287,6 +302,36 @@ async function buildOrderClauses(
 /** Strip a leading 'alias.' prefix (outer ORDER BY references bare columns). */
 function stripAliasPrefix(orderClause: string): string {
 	return orderClause.replace(/^[a-z0-9_]+\./, '');
+}
+
+/**
+ * A sort that is EXACTLY a unique structural key column — the `id` PK or
+ * `section_id` (both a total order, no ties, under the single-tipo predicate) —
+ * as {key, dir}, or null for any other sort. Gates the deep-page late lookup /
+ * order flip in the flattened path: those rewrites are exact only on a unique
+ * monotonic key (the matrix_activity twin of read_tm.ts queryTmRows, which owns
+ * the matrix_time_machine `id`-PK path). The dd542 Activity list DEFAULTS to
+ * `id DESC` (insertion order); a When-header sort maps to `section_id` — both
+ * must flip.
+ *
+ * buildOrderClauses returns ONE combined clause: an `id`/`section_id` sort is
+ * `<key> <dir>` (WC-046 emits it index-aligned, no NULLS LAST, no tiebreaker —
+ * already unique), whereas a component sort carries a `, section_id ASC`
+ * tiebreaker and is rejected here. The flip's index-aligned `<dir>` reproduces
+ * the same rows (proven byte-exact by activity_deep_offset_flip.test.ts).
+ */
+function singleUniqueKeyOrder(orderClauses: string[]): { key: 'id' | 'section_id'; dir: 'ASC' | 'DESC' } | null {
+	const only = orderClauses.length === 1 ? orderClauses[0] : undefined;
+	if (only === undefined) return null;
+	const match = /^(id|section_id) (asc|desc)(?: nulls (?:last|first))?$/i.exec(
+		stripAliasPrefix(only).trim(),
+	);
+	const key = match?.[1]?.toLowerCase();
+	const dir = match?.[2]?.toUpperCase();
+	if ((key === 'id' || key === 'section_id') && (dir === 'ASC' || dir === 'DESC')) {
+		return { key, dir };
+	}
+	return null;
 }
 
 /** Options that scope the search to a principal (for the per-record ACL). */
@@ -717,6 +762,21 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 			// Each branch yields its own count row; caller sums (PHP trait.count).
 			return { sql: `${queryInside};`, params: params.toArray() };
 		}
+		// Cached bare-browse total for the big append-only logs. whereParts empty
+		// ⇒ the count is exactly `count(*) WHERE section_tipo = $` — no filter, no
+		// projects-ACL predicate (a non-admin's filter lands in whereParts) — so
+		// the save-event-wired bareBrowseCount is the exact value, served as a
+		// literal instead of a ~2.5 s parallel scan on every list paint. Scoped to
+		// policy-governed tables (matrix_activity/…); other sections keep the
+		// live count. This is the SAME bare-browse determination the flip uses.
+		if (
+			joinFragments.size === 0 &&
+			whereParts.length === 0 &&
+			policyForTable(matrixTable) !== undefined
+		) {
+			const total = await bareBrowseCount(matrixTable, mainSectionTipo);
+			return { sql: `SELECT ${Number(total)}::int AS full_count;`, params: [] };
+		}
 		return { sql: `${queryInside};`, params: params.toArray() };
 	}
 
@@ -732,6 +792,56 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 	const offsetSql = sqo.offset != null && sqo.offset > 0 ? ` OFFSET ${Number(sqo.offset)}` : '';
 
 	if (flattenOrder) {
+		// Deep-page acquisition for a flattened browse ordered by a unique
+		// structural key — `id` (the dd542 Activity list DEFAULT: insertion order)
+		// or `section_id` (a When-header sort). A plain OFFSET on this shape is an
+		// Index Scan that heap-fetches EVERY skipped row's wide jsonb (measured
+		// ≈5 s at offset 32 M on the 33 M-row matrix_activity). The key is unique
+		// (no ties), so two exact rewrites apply (identical rows and order — the
+		// outer ORDER BY restores the requested order over the ≤LIMIT joined rows):
+		//   1. LATE ROW LOOKUP — page the KEY on a narrow index scan, then join
+		//      back for the wide data columns; never reads a skipped row's jsonb.
+		//   2. ORDER FLIP — a far-half page is the SAME rows fetched from the
+		//      OTHER end with a small offset (last page → OFFSET 0, ≈ms). Needs the
+		//      row total; applied ONLY to the unfiltered browse, where the bare
+		//      count is exact and cached (bareBrowseCount). The matrix_activity
+		//      twin of read_tm.ts queryTmRows (matrix_time_machine cannot flatten).
+		const lateThreshold = config.ops.searchLateRowLookupOffset;
+		const offsetNum = sqo.offset != null ? Number(sqo.offset) : 0;
+		const keyOrder = singleUniqueKeyOrder(orderClauses);
+		if (lateThreshold >= 0 && limitSql !== '' && offsetNum >= lateThreshold && keyOrder !== null) {
+			const { key, dir: requestedDir } = keyOrder;
+			const limitNum = Number(sqo.limit);
+			let innerDir: 'ASC' | 'DESC' = requestedDir;
+			let effOffset = offsetNum;
+			let effLimit = limitNum;
+			// Flip only the UNFILTERED browse: the bare count is exact + cached,
+			// and a filtered set is far too small to reach the far half anyway.
+			if (whereParts.length === 0) {
+				const total = await bareBrowseCount(matrixTable, mainSectionTipo);
+				const oppositeOffset = total - offsetNum - limitNum;
+				if (total > offsetNum && oppositeOffset < offsetNum) {
+					innerDir = requestedDir === 'ASC' ? 'DESC' : 'ASC';
+					effOffset = Math.max(0, oppositeOffset); // last partial page skips 0 from the end
+					effLimit = Math.min(limitNum, total - offsetNum); // last partial page: < LIMIT rows
+				}
+			}
+			const pageWhere = whereAll.length > 0 ? `\nWHERE ${whereAll.join('\n AND ')}` : '';
+			const pageQuery =
+				`SELECT ${alias}.${key}\nFROM ${fromClause}${pageWhere}\n` +
+				`ORDER BY ${alias}.${key} ${innerDir}\nLIMIT ${effLimit} OFFSET ${effOffset}`;
+			// Outer ORDER BY: the REQUESTED direction, alias-qualified (the JOIN
+			// makes a bare column ambiguous) — restores order after a flip.
+			const flatSql =
+				`SELECT ${select.join(',\n')}\nFROM ${fromClause}\n` +
+				`JOIN (\n${pageQuery}\n) page ON page.${key} = ${alias}.${key}\n` +
+				// mainWhere re-pins section_tipo (same $n — ParamsCollector dedups):
+				// another tipo in the same table may reuse a section_id (the `id` PK
+				// is globally unique, so the re-pin is a harmless no-op there).
+				`WHERE ${mainWhere.join('\n AND ')}\n` +
+				`ORDER BY ${alias}.${key} ${requestedDir};`;
+			return { sql: flatSql, params: params.toArray() };
+		}
 		// The sort aliases in selectExtra are projected by this same SELECT, so
 		// the ORDER BY references resolve without the wrapper.
 		return { sql: `${queryInside}${limitSql}${offsetSql};`, params: params.toArray() };
