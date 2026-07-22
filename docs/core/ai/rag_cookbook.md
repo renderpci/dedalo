@@ -42,7 +42,7 @@ The lifecycle:
 ```
 save a record ──▶ hook enqueues a marker  (matrix DB, best-effort, never blocks the save)
                         │
-   cron: rag_drain.ts ──┘─▶ extract text ─▶ chunk ─▶ embed changed chunks ─▶ upsert vectors (vector DB)
+   cron: rag_drain.ts ──┘─▶ resolve embed groups (ddo_maps) ─▶ chunk ─▶ embed changed ─▶ upsert vectors (vector DB)
                                                                                    │
    dd_rag_api action ──▶ dense + lexical search ─▶ RRF fuse ─▶ ACL gate ─▶ results / grounded answer
 ```
@@ -661,8 +661,7 @@ which images carry the visual signal (and their `view`) and which components are
 the typology / period / material:
 
 ```json
-{ "rag": { "enabled": true,
-  "context": {
+{ "rag": { "context": {
     "images":   [ { "tipo": "numd5", "view": "obverse" }, { "tipo": "numd6", "view": "reverse" } ],
     "metadata": { "typology": "numd10", "period": "numd20", "material": "numd30" },
     "compare_scope": ["numisdata4"]
