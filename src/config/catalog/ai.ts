@@ -498,25 +498,9 @@ default), Dédalo reuses the main database user.
 DEDALO_RAG_DB_USERNAME_CONN="dedalo"
 \`\`\``,
 	},
-	DEDALO_RAG_EMBEDDABLE_MODELS: {
-		type: 'string_list',
-		scope: 'operator',
-		default: ['component_text_area', 'component_input_text', 'component_text'],
-		heading: 'Defining the embeddable component models',
-		typeLabel: 'string[]',
-		doc: `Which kinds of component may be considered for the semantic index at all — a coarse,
-installation-wide filter applied before the ontology's own opt-in. Only components whose model
-is on this list are examined; of those, only the ones that declare \`properties.rag.embed\` are
-actually indexed. So this list never indexes anything by itself; it bounds what could be.
-
-The default covers the text-bearing components (\`component_text_area\`, \`component_input_text\`,
-\`component_text\`). Extend it only if you have another text-carrying component model you want
-searchable. Accepts a comma-separated list or a JSON array.
-
-\`\`\`bash
-DEDALO_RAG_EMBEDDABLE_MODELS=component_text_area,component_input_text,component_text
-\`\`\``,
-	},
+	// DEDALO_RAG_EMBEDDABLE_MODELS retired 2026-07-22: what gets embedded is now
+	// AUTHORED per section — the section_map `rag.embed` groups (a request_config
+	// ddo_map per group), so an install-wide model filter has nothing to bound.
 	DEDALO_RAG_EMBEDDING_ENDPOINT: {
 		type: 'string',
 		scope: 'operator',

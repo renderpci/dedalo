@@ -1,17 +1,23 @@
 /**
- * Full-record RAG indexer — TS port of core/rag/class.rag_indexer.php (TEXT path).
- * Reference: `src/ai/rag2/src/rag_indexer.ts`, adapted to this branch's core
- * (Brick 2). The IMAGE/multimodal path is a later brick and is not built here.
+ * Full-record RAG indexer (TEXT path). 2026-07-22: extraction is GROUP-based —
+ * the section_map `rag.embed` descriptor (config.ts) names ddo_map GROUPS, and
+ * embed_source.ts resolves each into ONE composite document per (group, lang)
+ * through the read path's request_config machinery (deep relation resolution
+ * included), under the system index-time context. The IMAGE/multimodal path is
+ * a later brick and is not built here.
  *
  * indexRecord(locator) orchestrates one record's text ingestion:
- *   1. gate on the section's ontology opt-in (RagConfig.sectionIsRagEnabled),
- *   2. resolve the embeddable component tipos (RagConfig, from the ontology),
- *   3. EXTRACT clean text per (component, lang) READ-ONLY over the matrix
- *      (readComponentText),
- *   4. chunk (structure-aware semantic; chunker.ts),
- *   5. hash-diff against the stored source_hash — skip unchanged chunks,
- *   6. embed only the changed chunks (injected provider; skip on failure),
- *   7. atomic upsert (store.upsertEmbeddingRows), then prune stale tail chunks.
+ *   1. gate on the section's descriptor (RagConfig.getEmbedGroups — virtual-aware),
+ *   2. RESOLVE each group's per-lang document (embed_source.resolveEmbedDocs),
+ *   3. chunk (structure-aware semantic; chunker.ts) under the group's config,
+ *   4. hash-diff against the stored source_hash — skip unchanged chunks,
+ *   5. embed only the changed chunks (injected provider; skip on failure),
+ *   6. atomic upsert (store.upsertEmbeddingRows), then prune stale tails AND
+ *      whole groups the descriptor no longer declares.
+ *
+ * Chunks store component_tipo = `rag:<group>` (the facet unit retrieval's group
+ * filter and record-level ACL key on) and chunk_meta.contributors (which
+ * components/sections fed the doc — the ask-path egress input).
  *
  * All failures are SOFT: a read/embed/store error returns false so the queue
  * retries; nothing throws into the caller. No module-global mutable state — every
@@ -21,10 +27,10 @@
 import { config } from '../../config/config.ts';
 import { readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
-import { getMatrixTableFromTipo, getTermByTipo } from '../../core/ontology/resolver.ts';
+import { getTermByTipo } from '../../core/ontology/resolver.ts';
 import { type Chunk, chunk } from './chunker.ts';
-import { readComponentText } from './component_text.ts';
-import { type OntologyPort, RagConfig, defaultOntologyPort } from './config.ts';
+import { type OntologyPort, RAG_GROUP_PREFIX, RagConfig, defaultOntologyPort } from './config.ts';
+import { type EmbedDoc, type ResolveEmbedDocsInput, resolveEmbedDocs } from './embed_source.ts';
 import { type EmbeddingProvider, getEmbeddingProvider } from './embedding_provider.ts';
 import type { EmbeddingRow, RecordLocator } from './types.ts';
 import {
@@ -57,30 +63,17 @@ export interface RagIndexerDeps {
 	provider: EmbeddingProvider;
 	ontology: OntologyPort;
 	store: RagStore;
-	/** Data langs to extract for a translatable text component. */
+	/** Data langs a lang-sensitive group resolves in. */
 	langs: readonly string[];
-	/** No-lang code for non-translatable components (DEDALO_DATA_NOLAN). */
+	/** No-lang code for lang-independent groups (DATA_NOLAN). */
 	nolan: string;
-	/** Resolve a section's matrix table (defaults to 'matrix' when null). */
-	resolveMatrixTable: (sectionTipo: string) => Promise<string | null>;
-	/** Read one component's clean text (READ-ONLY over the matrix). */
-	readText: (input: {
-		matrixTable: string;
-		componentTipo: string;
-		model: string;
-		sectionTipo: string;
-		sectionId: number;
-		lang: string;
-	}) => Promise<string>;
+	/**
+	 * Resolve the record's embed documents (embed_source.resolveEmbedDocs in
+	 * production — the ddo_map/system-scope resolution seam; a stub in tests).
+	 */
+	resolveDocs: (input: ResolveEmbedDocsInput) => Promise<EmbedDoc[]>;
 	/** Best-effort record display label for the chunker's contextual header. */
 	recordTitle: (sectionTipo: string, lang: string) => Promise<string>;
-}
-
-/** One extracted unit: a component's clean text in one lang. */
-interface ExtractedUnit {
-	componentTipo: string;
-	lang: string;
-	text: string;
 }
 
 export class RagIndexer {
@@ -98,12 +91,10 @@ export class RagIndexer {
 	async indexRecordText(locator: RecordLocator): Promise<boolean> {
 		if (locator.sectionId < 1 || locator.sectionTipo === '') return false;
 
-		if (!(await this.deps.config.sectionIsRagEnabled(locator.sectionTipo))) {
-			return true; // nothing to do — not opted in
-		}
-
-		const componentTipos = await this.deps.config.getEmbeddableComponentTipos(locator.sectionTipo);
-		if (componentTipos.length === 0) {
+		const groups = await this.deps.config.getEmbedGroups(locator.sectionTipo);
+		if (groups.length === 0) {
+			// Not opted in — or the descriptor was removed. Prune any prior text
+			// vectors so an edited-out section converges (no-op when none exist).
 			try {
 				await this.deps.store.deleteRecordModality(locator, 'text');
 				return true;
@@ -114,10 +105,16 @@ export class RagIndexer {
 
 		const model = this.deps.provider.model;
 
-		let extracted: ExtractedUnit[];
+		let docs: EmbedDoc[];
 		let existingHashes: Map<string, string>;
 		try {
-			extracted = await this.extract(locator, componentTipos);
+			docs = await this.deps.resolveDocs({
+				sectionTipo: locator.sectionTipo,
+				sectionId: locator.sectionId,
+				groups,
+				langs: this.deps.langs,
+				nolan: this.deps.nolan,
+			});
 			existingHashes = await this.deps.store.diffHashes(locator, model);
 		} catch {
 			return false; // retryable: matrix/store read failed
@@ -128,19 +125,23 @@ export class RagIndexer {
 		// Phase 1: chunk + hash-diff + embed (slow) OUTSIDE any transaction.
 		const pendingUpserts: EmbeddingRow[] = [];
 		const pendingStale: Array<[string, string, number]> = []; // [componentTipo, lang, validCount]
+		// Every (component_tipo|lang) this pass produced or pruned — the survivors.
+		const liveKeys = new Set<string>();
 		let embedFailure = false;
 
-		for (const unit of extracted) {
-			const ragCfg = await this.deps.config.getComponentRagConfig(unit.componentTipo);
-			const chunks = chunk(unit.text, {
+		for (const doc of docs) {
+			const storageTipo = `${RAG_GROUP_PREFIX}${doc.group}`;
+			const ragCfg = await this.deps.config.getGroupRagConfig(locator.sectionTipo, doc.group);
+			const chunks = chunk(doc.text, {
 				...(ragCfg.chunk?.maxTokens !== undefined ? { maxTokens: ragCfg.chunk.maxTokens } : {}),
 				...(ragCfg.chunk?.minTokens !== undefined ? { minTokens: ragCfg.chunk.minTokens } : {}),
 				documentTitle,
 			});
 
 			if (chunks.length === 0) {
-				// value became empty → prune all chunks for this component/lang
-				pendingStale.push([unit.componentTipo, unit.lang, 0]);
+				// doc became empty → prune all chunks for this group/lang
+				pendingStale.push([storageTipo, doc.lang, 0]);
+				liveKeys.add(`${storageTipo}|${doc.lang}`);
 				continue;
 			}
 
@@ -148,7 +149,7 @@ export class RagIndexer {
 			const toEmbedIdx: number[] = [];
 			for (let i = 0; i < chunks.length; i++) {
 				const c = chunks[i] as Chunk;
-				const key = `${unit.componentTipo}|${unit.lang}|${c.chunkIndex}`;
+				const key = `${storageTipo}|${doc.lang}|${c.chunkIndex}`;
 				if (existingHashes.get(key) === c.sourceHash) continue; // unchanged: skip
 				toEmbedIdx.push(i);
 			}
@@ -166,8 +167,8 @@ export class RagIndexer {
 					pendingUpserts.push({
 						sectionTipo: locator.sectionTipo,
 						sectionId: locator.sectionId,
-						componentTipo: unit.componentTipo,
-						lang: unit.lang,
+						componentTipo: storageTipo,
+						lang: doc.lang,
 						chunkIndex: c.chunkIndex,
 						provider: this.deps.provider.name,
 						model,
@@ -180,12 +181,34 @@ export class RagIndexer {
 						sourceKind: c.sourceKind,
 						egressClass: 'public',
 						parentKey: c.parentKey,
-						chunkMeta: c.chunkMeta as Record<string, unknown>,
+						// contributors ride on every chunk: which components fed this
+						// group's doc and which sections their text came from — the
+						// ask-path egress gate's input for deep-resolved text.
+						chunkMeta: {
+							...(c.chunkMeta as Record<string, unknown>),
+							contributors: doc.contributors,
+						},
 					});
 				}
 			}
 
-			pendingStale.push([unit.componentTipo, unit.lang, chunks.length]);
+			pendingStale.push([storageTipo, doc.lang, chunks.length]);
+			liveKeys.add(`${storageTipo}|${doc.lang}`);
+		}
+
+		// Orphan sweep: stored (component_tipo|lang) pairs this pass did NOT
+		// produce — groups renamed/removed in the descriptor, langs dropped from
+		// config, and any pre-group-era rows. Without this, editing the descriptor
+		// would leave stale facets forever retrievable.
+		const orphanKeys = new Set<string>();
+		for (const key of existingHashes.keys()) {
+			const [ct, lg] = key.split('|', 2) as [string, string];
+			const pairKey = `${ct}|${lg}`;
+			if (!liveKeys.has(pairKey)) orphanKeys.add(pairKey);
+		}
+		for (const pairKey of orphanKeys) {
+			const [ct, lg] = pairKey.split('|', 2) as [string, string];
+			pendingStale.push([ct, lg, 0]);
 		}
 
 		if (pendingUpserts.length === 0 && pendingStale.length === 0) {
@@ -251,40 +274,6 @@ export class RagIndexer {
 		return out;
 	}
 
-	/**
-	 * Extract clean text per (component, lang). A translatable text component is
-	 * extracted in each configured data lang; a non-translatable one only in nolan.
-	 * Empty values are dropped (so an empty component prunes upstream).
-	 */
-	private async extract(
-		locator: RecordLocator,
-		componentTipos: readonly string[],
-	): Promise<ExtractedUnit[]> {
-		const matrixTable = (await this.deps.resolveMatrixTable(locator.sectionTipo)) ?? 'matrix';
-		const out: ExtractedUnit[] = [];
-		for (const componentTipo of componentTipos) {
-			const model = await this.deps.ontology.getModelByTipo(componentTipo);
-			if (model === null) continue;
-			const translatable = await this.deps.ontology.getTranslatable(componentTipo);
-			const langs =
-				translatable && this.deps.langs.length > 0 ? this.deps.langs : [this.deps.nolan];
-			for (const lang of langs) {
-				const text = await this.deps
-					.readText({
-						matrixTable,
-						componentTipo,
-						model,
-						sectionTipo: locator.sectionTipo,
-						sectionId: locator.sectionId,
-						lang,
-					})
-					.catch(() => '');
-				if (text !== '') out.push({ componentTipo, lang, text });
-			}
-		}
-		return out;
-	}
-
 	/** Best-effort record display label for the chunker's contextual header. */
 	private async recordTitle(locator: RecordLocator): Promise<string> {
 		try {
@@ -312,8 +301,9 @@ export function defaultRagStore(): RagStore {
 
 /**
  * Wire the production RagIndexer: ontology port + config over the resolver,
- * matrix-read text extraction, the deterministic/env-selected embedder, and the
- * live vector store. Data langs and nolan come from config (env-overridable).
+ * the ddo_map/system-scope resolution seam (embed_source), the
+ * deterministic/env-selected embedder, and the live vector store. Data langs
+ * and nolan come from config (env-overridable).
  */
 export function buildRagIndexer(): RagIndexer {
 	const ontology = defaultOntologyPort();
@@ -334,8 +324,7 @@ export function buildRagIndexer(): RagIndexer {
 		store: defaultRagStore(),
 		langs,
 		nolan,
-		resolveMatrixTable: getMatrixTableFromTipo,
-		readText: readComponentText,
+		resolveDocs: resolveEmbedDocs,
 		recordTitle: async (sectionTipo, lang) => (await getTermByTipo(sectionTipo, lang)) ?? '',
 	});
 }

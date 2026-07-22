@@ -586,7 +586,8 @@ export const NEW_IN_V7: readonly string[] = [
 	'RAG_DB_NAME',
 	'DEDALO_RAG_BATCH_SIZE',
 	'DEDALO_RAG_PROVIDER_TIMEOUT',
-	'DEDALO_RAG_EMBEDDABLE_MODELS',
+	// DEDALO_RAG_EMBEDDABLE_MODELS retired 2026-07-22: selection moved to the
+	// section_map rag.embed ddo_map descriptor (no install-wide model scan).
 	'DEDALO_RAG_CHUNK_STRATEGY',
 	'DEDALO_RAG_CHUNK_TOKENS',
 	'DEDALO_RAG_CHUNK_MIN_TOKENS',

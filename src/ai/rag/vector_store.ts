@@ -71,6 +71,8 @@ export interface RagHit {
 	lang: string;
 	chunk_index: number;
 	source_text: string | null;
+	/** Raw chunk_meta (jsonb) — carries `contributors` for group docs. */
+	chunk_meta?: unknown;
 	score: number;
 }
 
@@ -150,38 +152,59 @@ export async function deleteRecordChunks(sectionTipo: string, sectionId: number)
 	]);
 }
 
-/** DENSE search: cosine distance KNN for one model. Score = 1 - distance. */
+/** DENSE search: cosine distance KNN for one model. Score = 1 - distance.
+ * `componentTipo` narrows to one stored key (the `rag:<group>` facet filter). */
 export async function denseSearch(
 	model: string,
 	queryEmbedding: number[],
 	limit: number,
+	componentTipo?: string,
 ): Promise<RagHit[]> {
+	const params: (string | number)[] = [JSON.stringify(queryEmbedding), model];
+	let where = 'model = $2';
+	if (componentTipo !== undefined) {
+		params.push(componentTipo);
+		where += ` AND component_tipo = $${params.length}`;
+	}
+	params.push(limit);
 	const rows = (await ragSql.unsafe(
-		`SELECT section_tipo, section_id, component_tipo, lang, chunk_index, source_text,
+		`SELECT section_tipo, section_id, component_tipo, lang, chunk_index, source_text, chunk_meta,
 			1 - (embedding <=> $1::vector) AS score
 		 FROM rag_embeddings
-		 WHERE model = $2
+		 WHERE ${where}
 		 ORDER BY embedding <=> $1::vector
-		 LIMIT $3`,
-		[JSON.stringify(queryEmbedding), model, limit],
+		 LIMIT $${params.length}`,
+		params,
 	)) as RagHit[];
 	return rows.map((row) => ({ ...row, score: Number(row.score) }));
 }
 
-/** LEXICAL search over source_text (simple + unaccent, the installed GIN index). */
-export async function lexicalSearch(query: string, limit: number): Promise<RagHit[]> {
+/** LEXICAL search over source_text (simple + unaccent, the installed GIN index).
+ * `componentTipo` narrows to one stored key (the `rag:<group>` facet filter). */
+export async function lexicalSearch(
+	query: string,
+	limit: number,
+	componentTipo?: string,
+): Promise<RagHit[]> {
+	const params: (string | number)[] = [query];
+	let where = `to_tsvector('simple', f_unaccent(COALESCE(source_text, '')))
+			@@ plainto_tsquery('simple', f_unaccent($1))`;
+	if (componentTipo !== undefined) {
+		params.push(componentTipo);
+		where += ` AND component_tipo = $${params.length}`;
+	}
+	params.push(limit);
 	const rows = (await ragSql.unsafe(
-		`SELECT section_tipo, section_id, component_tipo, lang, chunk_index, source_text,
+		`SELECT section_tipo, section_id, component_tipo, lang, chunk_index, source_text, chunk_meta,
 			ts_rank(
 				to_tsvector('simple', f_unaccent(COALESCE(source_text, ''))),
 				plainto_tsquery('simple', f_unaccent($1))
 			) AS score
 		 FROM rag_embeddings
-		 WHERE to_tsvector('simple', f_unaccent(COALESCE(source_text, '')))
-			@@ plainto_tsquery('simple', f_unaccent($1))
+		 WHERE ${where}
 		 ORDER BY score DESC
-		 LIMIT $2`,
-		[query, limit],
+		 LIMIT $${params.length}`,
+		params,
 	)) as RagHit[];
 	return rows.map((row) => ({ ...row, score: Number(row.score) }));
 }
@@ -351,18 +374,26 @@ export interface StoredRecordVector {
  * A record's stored raw vectors for a model + modality — used by similar_to and
  * object retrieval to find neighbours WITHOUT re-embedding the seed. Ordered by
  * chunk_index; carries the chunk_meta.view + source_text (image context summary).
+ * `componentTipo` narrows the SEED to one facet (`rag:<group>`).
  */
 export async function getRecordVectors(
 	locator: RecordLocator,
 	model: string,
 	modality = 'text',
+	componentTipo?: string,
 ): Promise<StoredRecordVector[]> {
+	const params: (string | number)[] = [locator.sectionTipo, locator.sectionId, model, modality];
+	let where = 'section_tipo = $1 AND section_id = $2 AND model = $3 AND modality = $4';
+	if (componentTipo !== undefined) {
+		params.push(componentTipo);
+		where += ` AND component_tipo = $${params.length}`;
+	}
 	const rows = (await ragSql.unsafe(
 		`SELECT chunk_index, chunk_meta, source_text, embedding::text AS emb
 		 FROM rag_embeddings
-		 WHERE section_tipo = $1 AND section_id = $2 AND model = $3 AND modality = $4
+		 WHERE ${where}
 		 ORDER BY chunk_index`,
-		[locator.sectionTipo, locator.sectionId, model, modality],
+		params,
 	)) as {
 		chunk_index: number | string;
 		chunk_meta: unknown;
@@ -381,7 +412,7 @@ export async function getRecordVectors(
 }
 
 /** postgres jsonb arrives as an object; tolerate a string too. */
-function parseChunkMeta(raw: unknown): Record<string, unknown> | null {
+export function parseChunkMeta(raw: unknown): Record<string, unknown> | null {
 	if (raw === null || raw === undefined) return null;
 	if (typeof raw === 'object') return raw as Record<string, unknown>;
 	if (typeof raw === 'string') {

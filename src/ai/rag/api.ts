@@ -28,6 +28,7 @@ import { type Principal, resolvePrincipal } from '../../core/security/permission
 import { RESTRICTED_MSG, runAsk } from './ask.ts';
 import {
 	askRuntimeConfigFromEnv,
+	buildContributorEgressPolicy,
 	buildEgressPolicy,
 	buildLlmProvider,
 	buildSystemPromptResolver,
@@ -79,6 +80,18 @@ function optionScope(options: Record<string, unknown> | undefined): string[] | u
 	return undefined;
 }
 
+/**
+ * Read the optional embed-group facet filter ("only transcriptions", "similar
+ * by profession"). Validated against the group-id slug grammar — the value
+ * becomes a bound `component_tipo = 'rag:'+group` filter, never raw SQL.
+ */
+function optionGroup(options: Record<string, unknown> | undefined): string | undefined {
+	const value = options?.group;
+	if (typeof value !== 'string') return undefined;
+	const trimmed = value.trim();
+	return /^[a-z0-9][a-z0-9_-]{0,39}$/.test(trimmed) ? trimmed : undefined;
+}
+
 function envelope(result: unknown, msg: string, errors: string[] = []): ApiResult {
 	return { status: 200, body: { result, msg, errors } };
 }
@@ -105,6 +118,7 @@ async function recordSearch(rqo: Rqo, context: RagApiContext): Promise<ApiResult
 		query,
 		clampTopK(rqo.options?.limit),
 		optionScope(rqo.options),
+		optionGroup(rqo.options),
 	);
 	return envelope(hits, 'ok');
 }
@@ -121,6 +135,7 @@ async function passageSearch(rqo: Rqo, context: RagApiContext, msg: string): Pro
 		query,
 		clampTopK(rqo.options?.limit),
 		optionScope(rqo.options),
+		optionGroup(rqo.options),
 	);
 	return envelope(passages, msg);
 }
@@ -142,6 +157,7 @@ async function similarToAction(rqo: Rqo, context: RagApiContext): Promise<ApiRes
 		sectionId,
 		clampTopK(rqo.options?.limit),
 		optionScope(rqo.options),
+		optionGroup(rqo.options),
 	);
 	return envelope(hits, 'ok');
 }
@@ -169,6 +185,7 @@ async function askAction(rqo: Rqo, context: RagApiContext): Promise<ApiResult> {
 				llm: buildLlmProvider(env),
 				reranker: new PassThroughReranker(),
 				egress: buildEgressPolicy(cfg),
+				contributorEgress: buildContributorEgressPolicy(cfg),
 				systemPrompt: buildSystemPromptResolver(ragConfig, env),
 				contextTokenBudget: cfg.contextTokenBudget,
 				maxOutputTokens: cfg.maxOutputTokens,

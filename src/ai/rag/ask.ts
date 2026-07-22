@@ -49,6 +49,15 @@ export interface AskDeps {
 	reranker: Reranker;
 	/** Live egress recompute (default: external forbidden ⇒ everything 'restricted'). */
 	egress: RecordEgressClass;
+	/**
+	 * Live egress for a CONTRIBUTING section tipo (deep-resolved group text — a
+	 * passage's chunk may carry text from OTHER sections, e.g. a mint's term).
+	 * Checked beside the host record so a forbidden section's text can never be
+	 * promoted into external generation through a host it was embedded into.
+	 */
+	contributorEgress?: (
+		sectionTipo: string,
+	) => Promise<'restricted' | 'public'> | ('restricted' | 'public');
 	systemPrompt: SystemPromptResolver;
 	contextTokenBudget?: number;
 	maxOutputTokens?: number;
@@ -205,12 +214,24 @@ export async function runAsk(req: AskRequest, deps: AskDeps): Promise<AskResult>
 
 	// 5. LIVE egress decision — recomputed per record from CURRENT config. Any
 	//    restricted record forbids EXTERNAL generation (a forbidden section, or
-	//    external generation globally disabled ⇒ 'restricted').
+	//    external generation globally disabled ⇒ 'restricted'). A group chunk's
+	//    CONTRIBUTORS (sections whose deep-resolved text was embedded into it)
+	//    are checked with the same live policy.
 	let hasRestricted = false;
 	for (const passage of fitted) {
 		if ((await deps.egress(passage.section_tipo, passage.section_id)) === 'restricted') {
 			hasRestricted = true;
 			break;
+		}
+		if (deps.contributorEgress !== undefined) {
+			for (const contributor of passage.contributors ?? []) {
+				if (contributor === passage.section_tipo) continue; // host already checked
+				if ((await deps.contributorEgress(contributor)) === 'restricted') {
+					hasRestricted = true;
+					break;
+				}
+			}
+			if (hasRestricted) break;
 		}
 	}
 

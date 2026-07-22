@@ -84,13 +84,19 @@ export function buildLlmProvider(env: Env): LlmProvider {
 }
 
 /**
- * System-prompt resolver: first scoped section's properties.rag.system_prompt wins,
- * else DEDALO_RAG_LLM_SYSTEM_PROMPT, else the safe default.
+ * System-prompt resolver: first scoped section's `system_prompt` wins — read
+ * from the section_map `rag` scope (the descriptor home, virtual-aware), then
+ * the section NODE's properties.rag (legacy home) — else
+ * DEDALO_RAG_LLM_SYSTEM_PROMPT, else the safe default.
  */
 export function buildSystemPromptResolver(ragConfig: RagConfig, env: Env): SystemPromptResolver {
 	const envPrompt = env.DEDALO_RAG_LLM_SYSTEM_PROMPT;
 	return async (sectionTipos: string[]): Promise<string> => {
 		for (const sectionTipo of sectionTipos) {
+			const mapRag = await ragConfig.getSectionMapRag(sectionTipo);
+			if (typeof mapRag?.system_prompt === 'string' && mapRag.system_prompt !== '') {
+				return mapRag.system_prompt;
+			}
 			const rag = await ragConfig.getRag(sectionTipo);
 			if (rag !== null && typeof rag.system_prompt === 'string' && rag.system_prompt !== '') {
 				return rag.system_prompt;
@@ -121,6 +127,22 @@ export function buildEgressPolicy(
 				return 'restricted'; // fail-closed
 			}
 		}
+		return 'public';
+	};
+}
+
+/**
+ * Live egress for a CONTRIBUTING section tipo (deep-resolved group text). Same
+ * fail-closed policy as the host check minus the per-record publishability seam
+ * (contributor text is identified by SECTION, not record): forbidden-list ⇒
+ * 'restricted'; external globally disabled ⇒ 'restricted'.
+ */
+export function buildContributorEgressPolicy(
+	cfg: AskRuntimeConfig,
+): (sectionTipo: string) => 'restricted' | 'public' {
+	return (sectionTipo: string) => {
+		if (cfg.forbiddenSections.has(sectionTipo)) return 'restricted';
+		if (!cfg.allowExternalDefault) return 'restricted';
 		return 'public';
 	};
 }
