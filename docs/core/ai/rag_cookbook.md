@@ -425,11 +425,11 @@ request_config `show.ddo_map` shape:
     "embed": [
       { "id": "card",
         "ddo_map": [
-          { "tipo": "oh27", "section_tipo": "self", "mode": "list" },
-          { "tipo": "oh32", "section_tipo": "self", "mode": "list" }
+          { "tipo": "oh27", "section_tipo": "self" },
+          { "tipo": "oh32", "section_tipo": "self" }
         ] },
       { "id": "transcription",
-        "ddo_map": [ { "tipo": "oh23", "section_tipo": "self", "mode": "list" } ],
+        "ddo_map": [ { "tipo": "oh23", "section_tipo": "self" } ],
         "mode": "transcription",
         "chunk": { "max_tokens": 450, "min_tokens": 120 } }
     ],
@@ -445,6 +445,12 @@ Rules and powers:
   `{ id, ddo_map, chunk?, mode?, strategy? }`. `id` is a slug (≤ 40 chars),
   unique per section — `default` by convention when one group is enough. Chunks
   are stored under `component_tipo = 'rag:<id>'`.
+- **Omit the ddo `mode` unless you mean it.** A ddo's `mode` selects the model's
+  RENDER transform, and `"list"` applies the literal list-preview —
+  `component_text_area` truncates to 130 chars, silent data loss in a vector.
+  Absent `mode` gets the embedding defaults: **literal → `edit`** (full value,
+  deep children included), **relation → `list`** (compact target-term
+  resolution). An explicitly authored `mode` is honored verbatim.
 - **Groups are facets.** A person section can declare separate `profession` and
   `filiation` groups: independent vectors, so a profession query is never
   diluted by filiation text — and every search action accepts a `group` option
@@ -456,9 +462,9 @@ Rules and powers:
 
   ```json
   { "id": "card", "ddo_map": [
-      { "tipo": "numisdata16", "section_tipo": "self", "mode": "list" },
-      { "tipo": "numisdata57", "section_tipo": "self", "mode": "list" },
-      { "tipo": "numisdata73", "section_tipo": "numisdata3", "parent": "numisdata57", "mode": "list" }
+      { "tipo": "numisdata16", "section_tipo": "self" },
+      { "tipo": "numisdata57", "section_tipo": "self" },
+      { "tipo": "numisdata73", "section_tipo": "numisdata3", "parent": "numisdata57" }
   ] }
   ```
 - **Virtual sections just work** — and can differ. The section_map read is

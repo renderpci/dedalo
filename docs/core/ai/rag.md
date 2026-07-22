@@ -272,13 +272,13 @@ Example `section_map` `properties.rag` for a publication section (a card facet p
         "embed": [
             { "id": "card",
               "ddo_map": [
-                  { "tipo": "rsc140", "section_tipo": "self", "mode": "list" },
-                  { "tipo": "rsc221", "section_tipo": "self", "mode": "list" },
-                  { "tipo": "rsc138", "section_tipo": "self", "mode": "list" },
-                  { "tipo": "dd812", "section_tipo": "dd810", "parent": "rsc138", "mode": "list" }
+                  { "tipo": "rsc140", "section_tipo": "self" },
+                  { "tipo": "rsc221", "section_tipo": "self" },
+                  { "tipo": "rsc138", "section_tipo": "self" },
+                  { "tipo": "dd812", "section_tipo": "dd810", "parent": "rsc138" }
               ] },
             { "id": "fulltext",
-              "ddo_map": [ { "tipo": "rsc210", "section_tipo": "self", "mode": "list" } ],
+              "ddo_map": [ { "tipo": "rsc210", "section_tipo": "self" } ],
               "mode": "long_document",
               "chunk": { "max_tokens": 450, "min_tokens": 120 } }
         ],
