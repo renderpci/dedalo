@@ -61,7 +61,7 @@
 **When to use it.**
 
 - Link a record to one or more records in another section: *Author*, *Owner*, *Find spot*, *Related objects*, *Bibliography*, *Birth town*.
-- Build a curated, ordered list of references the cataloguer adds by autocomplete and re-orders by hand (or by a target column with [`sort_by_column`](#sort_by_column)).
+- Build a curated, ordered list of references the cataloguer adds by autocomplete and re-orders by hand (or by a target column — see [column sort](#column-sort-sort_by_column-and-order-per-ddo-v7)).
 - Surface calculated / inverse relations read-only via `source.mode: external` (e.g. *all coins of this type*, computed from the inverse side).
 - Expose a thesaurus / hierarchy branch for picking terms (the `tree` and `indexation` views).
 
@@ -196,16 +196,33 @@ All properties are optional and live in the ontology node `properties` JSON. Ver
 - **Values:** an object `{relation_type, relation_type_rel}`.
 - **Effect:** read on instantiation. `relation_type` overrides the locator `type` (default `dd151`); `relation_type_rel` sets directionality (locator `type_rel`). See [Directionality](#directionality). Also carries `tag_id` config for indexation portals.
 
-### sort_by_column
+### Column sort: `sort_by_column` and `order` (per-ddo, v7)
 
-- **Values:** `true` | array of column component tipos (e.g. `["oh28"]`). Default: unset (off).
-- **Effect:** lets the cataloguer persistently re-order **all** portal entries (the full stored locator array, across pagination) by the value of a column component in the target section, ascending or descending — e.g. order linked events by a `component_date` column. `true` shows sort buttons on every sortable column of the list header (default view, edit mode); the array form restricts which columns get them. Clicking a sort button resolves the new order on the server (a search over the target section restricted to the linked `section_id` list, ordered by the column value, `NULLS LAST`) and **saves the re-ordered locator array** — a real data change recorded in Time Machine. Unresolvable (deleted) targets fall to the end preserving relative order. Columns whose model is not sortable never show buttons (sortability is resolved by `resolveSortable()`, `src/core/resolve/structure_context.ts`). `source.mode: external` portals are excluded (their data is not locally owned). Manual drag-and-drop re-ordering is always available regardless of this flag.
+Portal column-sort is a **v7-native feature** and its directives live **on the column ddo** — an entry of `source.request_config[].show.ddo_map` — not on a separate top-level property. There is no PHP oracle (WC-048); PHP orders portals only by the stored array. Two independent per-ddo keys:
 
-```json
-{ "sort_by_column": true }
+| Per-ddo key | Meaning |
+|---|---|
+| `"sort_by_column": true` | The **user may click this column's header to persistently re-order** the portal by it (a write). |
+| `"order": "asc" \| "desc"` | This column is part of the **default read order** applied on every read (for display; no write). |
+
+```jsonc
+"source": { "request_config": [ { "show": { "ddo_map": [
+  { "tipo": "rsc279", "view": "line" },
+  { "tipo": "rsc85", "sort_by_column": true, "order": "asc" },   // Name: user-sortable + default sort key
+  { "tipo": "rsc86", "sort_by_column": true, "order": "asc" },   // Surname: tie-break
+  { "tipo": "rsc89" }                                            // Date of birth: neither
+] } } ] }
 ```
 
-TS: `applySortByColumn` (`src/core/relations/save.ts`) — property-gated (`true` | allowlist array), the column must be a `show.ddo_map` entry of the component's own edit config, and the stored locators are re-ranked via a target-section search ordered on that column (unranked locators keep relative order at the end).
+**`sort_by_column: true`** (write, user-triggered) — clicking the header resolves a new order on the server (a search over the target section restricted to the linked `section_id`s, ordered by the column value) and **saves the re-ordered locator array** (a Time Machine data change). The column must be a `show.ddo_map` entry; `source.mode: external` portals are excluded; the column must also be `sortable` (base true, so any normal column qualifies). Only columns carrying `sort_by_column: true` show a header sort button. Manual drag re-ordering is always available regardless.
+
+- Client: `ui.allow_column_order` reads the per-column `column.sort_by_column` (stamped by `get_columns_map` from the ddo). Server: `applySortByColumn` (`src/core/relations/save.ts`) gates on the resolved column ddo's `sort_by_column === true`.
+
+**`order: "asc"|"desc"`** (read, declared default; `true` = asc) — the portal's entries are ordered by the column(s) carrying `order`, **for display**, every read, *without* touching the stored array. Ordering runs over the full locator list **before pagination**, so page 1 holds the top-ranked records. **Priority follows the ddo_map declaration order** (first ordered column = primary sort, next = tie-break). Unresolvable (deleted) targets fall to the end preserving relative order.
+
+- Server: `orderLocatorsByDeclaredColumns` (`src/core/relations/order_locators.ts`), applied inside `expandPortal` (`src/core/relations/relation_core.ts`) between reading the stored locators and paginating.
+
+Both share ONE ranking engine (`rankLocatorsByColumns`). The keys ride the parsed request_config passthrough to both the server and the client — no `ddoSchema` change. Fully opt-in: no fixture declares them, so read-path parity against the frozen store is unchanged.
 
 ### data_limit
 
