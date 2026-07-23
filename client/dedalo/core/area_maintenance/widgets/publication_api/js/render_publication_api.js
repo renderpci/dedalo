@@ -154,7 +154,8 @@ const get_content_data_edit = async function(self) {
 
 	// content_data
 		const content_data = ui.create_dom_element({
-			element_type : 'div'
+			element_type : 'div',
+			class_name	 : 'content_data'
 		})
 
 	// api_web_user_code_multiple iterate

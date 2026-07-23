@@ -113,7 +113,8 @@ const get_content_data = function(self) {
 
 	// content_data
 		const content_data = ui.create_dom_element({
-			element_type : 'div'
+			element_type : 'div',
+			class_name	 : 'content_data'
 		})
 
 	// Claim the lazy load synchronously so the framework's widget_common.load()
