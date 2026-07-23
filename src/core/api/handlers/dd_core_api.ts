@@ -742,15 +742,47 @@ export const coreApiActions: Record<string, ActionHandler> = {
 					return denied(403, 'Insufficient permissions to read');
 				}
 			}
-			const { countInverseReferences } = await import('../../search/search_related.ts');
-			const result = await countInverseReferences(locators as never, {
-				sectionTipos: Array.isArray(sqoRelated.section_tipo)
-					? sqoRelated.section_tipo.includes('all')
-						? 'all'
-						: sqoRelated.section_tipo
-					: 'all',
-				groupBy: sqoRelated.group_by,
-			});
+			const sectionTipos = Array.isArray(sqoRelated.section_tipo)
+				? sqoRelated.section_tipo.includes('all')
+					? ('all' as const)
+					: sqoRelated.section_tipo
+				: ('all' as const);
+			let result: { total: number; totals_group?: { key: string[]; value: number }[] };
+			if (principal.isGlobalAdmin) {
+				const { countInverseReferences } = await import('../../search/search_related.ts');
+				result = await countInverseReferences(locators as never, {
+					sectionTipos,
+					groupBy: sqoRelated.group_by,
+				});
+			} else {
+				// AUTHZ-05: the paginator total must count ONLY references the caller
+				// can reach — matching the scoped relation-list panel. The index COUNT
+				// cannot apply the per-record projects filter, so enumerate then scope.
+				const { findInverseReferences } = await import('../../search/search_related.ts');
+				const { scopeInverseReferenceHits } = await import('../../security/record_scope.ts');
+				const hits = await findInverseReferences(locators as never, {
+					sectionTipos,
+					order: 'section_id',
+				});
+				const scoped = await scopeInverseReferenceHits(hits, principal);
+				const wantsGroup =
+					Array.isArray(sqoRelated.group_by) && sqoRelated.group_by.includes('section_tipo');
+				if (wantsGroup) {
+					const bySection = new Map<string, number>();
+					for (const hit of scoped) {
+						bySection.set(hit.section_tipo, (bySection.get(hit.section_tipo) ?? 0) + 1);
+					}
+					result = {
+						total: scoped.length,
+						totals_group: [...bySection.entries()].map(([tipo, value]) => ({
+							key: [tipo],
+							value,
+						})),
+					};
+				} else {
+					result = { total: scoped.length };
+				}
+			}
 			return { status: 200, body: { result, msg: 'OK' } };
 		}
 

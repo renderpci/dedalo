@@ -70,6 +70,10 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 			offset: sqoOptions.offset,
 			lang: source.lang,
 			sectionTipos,
+			// AUTHZ-05: scope referencing records to the caller (drops references in
+			// sections/projects the caller cannot reach). Host-read alone (gate above)
+			// is not enough — the scan spans 'all' owning sections.
+			principal,
 		});
 		const body: Record<string, unknown> = {
 			result: { context: relationList.context, data: relationList.data },

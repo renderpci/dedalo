@@ -245,6 +245,24 @@ async function executeRqo(rqo: Rqo, context: ApiRequestContext): Promise<ApiResu
 		return denied(401, 'Authentication required');
 	}
 
+	// Gate 2b — maintenance mode (AUTH-05). PHP verify_login() re-checks
+	// maintenance on EVERY request and demotes any non-root session to
+	// unauthenticated while the flag is set. The login gate (auth.ts login())
+	// blocks only NEW logins, so a session minted BEFORE maintenance was enabled
+	// stayed free to keep writing into the matrix tables during a data-version
+	// migration under maintenance — the exact corruption window this closes.
+	// Re-checked per request; refuses every non-superuser session (401, the
+	// unauthenticated shape) so only root — who enables and lifts maintenance —
+	// traverses. `session.userId` is the user's section_id (-1 === SUPERUSER_ID
+	// for root), the same identity the login gate keys on; getServerState() reads
+	// ts_state.json uncached, so the flag is live the instant root sets it.
+	if (context.session !== null && context.session.userId !== SUPERUSER_ID) {
+		const { getServerState } = await import('../resolve/server_state.ts');
+		if (getServerState().maintenance_mode === true) {
+			return denied(401, 'Server under maintenance');
+		}
+	}
+
 	// Gate 3 — CSRF for authenticated, non-exempt actions. The rejection is the
 	// exact shape the client's transparent retry keys on (SEC-008,
 	// data_manager): errors MUST include 'csrf_failed' and the body MUST carry
