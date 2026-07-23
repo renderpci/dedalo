@@ -20,6 +20,7 @@
  * maintenance-mode gating are Phase 5 continuation.
  */
 
+import { config } from '../../config/config.ts';
 import { sql } from '../db/postgres.ts';
 import {
 	LOGIN_ACCOUNT_MAX_ATTEMPTS,
@@ -27,6 +28,7 @@ import {
 	buildThrottleKey,
 	clearAttempts,
 	createSession,
+	destroyUserSessions,
 	isThrottled,
 	recordFailedAttempt,
 } from './session_store.ts';
@@ -238,6 +240,15 @@ export async function login(
 	// are Phase 5 continuation alongside the permissions matrix).
 	const isGlobalAdmin = user.section_id === -1;
 	const sessionToken = createSession(user.section_id, username, isGlobalAdmin);
+	// AUTHZ-04 single-session policy (opt-in, DEDALO_SINGLE_SESSION). When on,
+	// evict every OTHER session of this user — a new login invalidates a token
+	// stolen earlier, closing the re-login window. Off by default: concurrent
+	// multi-device sessions stay allowed. (Password reset revokes all sessions
+	// regardless — that path is already covered in password_reset.ts.) Runs AFTER
+	// createSession, keeping the token just minted.
+	if (config.features.singleSession) {
+		destroyUserSessions(user.section_id, sessionToken);
+	}
 	await logLoginActivity('allow', 'correct user and password', username, clientIp, user.section_id);
 	return {
 		ok: true,

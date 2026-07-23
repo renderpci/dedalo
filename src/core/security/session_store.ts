@@ -12,11 +12,13 @@
  *   a leaked DB file cannot be replayed as a cookie;
  * - session fixation resistance: tokens are server-minted (never client-set) and
  *   there are no pre-auth/anonymous sessions to fixate, so login issuing a fresh
- *   token cannot be pinned by an attacker. NOTE (AUTHZ-04): login does NOT evict
- *   the user's OTHER existing sessions — concurrent sessions (multi-device) are
- *   allowed by design; a stolen token survives the victim's re-login until its
- *   TTL. `destroyUserSessions` is provided for an explicit "log out everywhere";
- *   whether login should call it is a product decision (see security DECISIONS).
+ *   token cannot be pinned by an attacker. AUTHZ-04: concurrent multi-device
+ *   sessions are allowed BY DEFAULT — `login` does not evict a user's other
+ *   sessions, so a stolen token survives an ordinary re-login until its TTL. The
+ *   opt-in `DEDALO_SINGLE_SESSION` flag closes that window (login calls
+ *   `destroyUserSessions(userId, newToken)` — one active session per user). A
+ *   password reset revokes ALL of a user's sessions regardless of the flag
+ *   (password_reset.ts), so account recovery always cuts off a stolen token.
  * - per-session CSRF token (PHP SEC-008), constant-time compared;
  * - sliding-window login throttle keyed namespace|username|ip (PHP SEC-019),
  *   reset on success, shared across processes via the same sqlite file;
