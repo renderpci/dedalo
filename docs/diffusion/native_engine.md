@@ -273,12 +273,14 @@ and during the transition both publishers coexist safely on the same MariaDB
 ```
 plan/       virtual_tree.ts  compile.ts  cache.ts  types.ts  identifier.ts
 resolve/    selection.ts  resolver.ts  rewriters.ts  transform.ts
-            default_value.ts  record_ir.ts
+            default_value.ts  record_ir.ts  ddo_fns.ts
+export/     atoms.ts  compile_columns.ts  grid.ts  index.ts  ndjson_stream.ts
 parsers/    registry.ts  parser_{text,date,helper,locator,misc}.ts  item_bridge.ts
 project/    lang_ladder.ts
 writers/    types.ts  registry.ts  mariadb_sql.ts  files.ts
             csv.ts  json.ts  markdown.ts  rdf.ts  xml.ts
-targets/    mariadb/{db,sql_generator,delete_record}.ts   ← only MariaDB importer
+targets/    mariadb/{db,sql_generator,delete_record}.ts   ← the MariaDB importer
+            mediastore/media_index.ts   ← the native media-marker writer
 jobs/       schema.ts  queue.ts  scheduler.ts  sse.ts
 api/        actions.ts  info.ts
 runner.ts   the data-plane process entry
@@ -339,9 +341,12 @@ security line); the registries are the single place to touch.
       truncation options and `get_geolocation_data` (the pre-GeoJSON variant).
       Zero and one uses respectively in the reference domain; the extension
       seam above is their landing path.
-    - SQL-target **media publication markers** still ride the old engine's
-      marker store until the `media_index` port (file formats and deletes are
-      unaffected).
+    - SQL-target **media publication markers** are now written natively by
+      `src/diffusion/targets/mediastore/media_index.ts` — the single writer of
+      the filesystem marker allowlist, mirroring row existence in the target
+      MariaDB tables (wired into `writers/mariadb_sql.ts` and
+      `targets/mariadb/delete_record.ts`). The old marker-store dependency is
+      retired (S2-31/DEC-19 cutover).
     - The `diffusion_server_control` maintenance widget still reports the old
       engine; its re-home is coordinated with the cutover.
     - rdf `rdf:about` uses a urn fallback until dd1010 entity URIs are wired;
