@@ -566,6 +566,10 @@ template {
   --shadow_default: rgba(0, 0, 0, 0.1);
   --focus_ring: var(--color_input_focus);
   --focus_ring_weak: rgba(59, 135, 253, 0.4);
+  --field_label_fg: #5d6570;
+  --field_value_fg: #1f2328;
+  --field_rule: rgba(27, 31, 36, 0.08);
+  --field_hover_bg: rgba(27, 31, 36, 0.03);
   --space-0: 0;
   --space-1: 0.125rem;
   --space-2: 0.25rem;
@@ -810,6 +814,10 @@ template {
   --shadow_default: rgba(0, 0, 0, 0.55);
   --focus_ring: var(--color_input_focus);
   --focus_ring_weak: rgba(74, 158, 255, 0.45);
+  --field_label_fg: #9aa3ae;
+  --field_value_fg: #e6edf3;
+  --field_rule: rgba(148, 163, 184, 0.14);
+  --field_hover_bg: rgba(148, 163, 184, 0.06);
   --color_primary_border: #3a8aee;
   --color_primary_hover_bg: #3a8aee;
   --color_primary_hover_border: #2a7ade;
@@ -1401,6 +1409,21 @@ select:focus,
 .wrapper_component.component_date.edit.active .contenteditable:not(:focus) {
   outline-color: var(--color_grey_14);
 }
+.section_record.edit .wrapper_component.edit input[type='text'],
+.section_record.edit .wrapper_component.edit input[type='number'],
+.section_record.edit .wrapper_component.edit input[type='url'],
+.section_record.edit .wrapper_component.edit input[type='password'],
+.section_record.edit .wrapper_component.edit textarea,
+.section_record.edit .wrapper_component.edit select,
+.section_record.edit .wrapper_component.edit .contenteditable {
+  opacity: 1;
+  color: var(--field_value_fg);
+}
+.section_record.edit .wrapper_component.edit input::placeholder,
+.section_record.edit .wrapper_component.edit textarea::placeholder {
+  color: var(--field_label_fg);
+  opacity: 0.7;
+}
 select {
   width: auto;
   background: var(--select_icon_url);
@@ -1807,6 +1830,14 @@ select:focus-visible,
 .contenteditable:focus-visible {
   outline: 2px solid var(--focus_ring);
   outline-offset: 1px;
+}
+/* selection + scrollbar polish (theme-token driven, both themes)
+   ------------------------------------------------------- */
+::selection {
+  background-color: var(--color_hilite);
+}
+html {
+  scrollbar-color: var(--color_grey_11) transparent;
 }
 /* keyboard focus: global fallback
    ------------------------------------------------------- */
@@ -4868,26 +4899,33 @@ input::placeholder {
   display: none;
   flex: 0 1 1em;
   z-index: 1;
-  box-shadow: 0px 0px 0px 1px var(--color_tag_indexation_normal);
+  box-shadow: var(--shadow-2);
   right: 0px;
   width: auto;
   padding: 0px;
-  top: -2rem;
+  top: -2.4rem;
   max-height: 2rem;
-  border-top-left-radius: 0.25em;
-  border-top-right-radius: 0.25em;
+  border-radius: var(--radius-pill);
   font-size: 1.1rem;
 }
 .wrapper_component > .buttons_container span {
   margin-left: 0.5em;
   margin-bottom: 0.45em;
   margin-top: 0.45rem;
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
 }
 .wrapper_component > .buttons_container span:first-child {
   margin-left: 0.75rem;
 }
 .wrapper_component > .buttons_container span:last-child {
   margin-right: 0.75rem;
+}
+.wrapper_component > .buttons_container span:hover {
+  transform: translateY(-1px) scale(1.08);
+}
+.wrapper_component > .buttons_container span:active {
+  transform: none;
+  opacity: 0.7;
 }
 .wrapper_component > .component_warning {
   position: absolute;
@@ -5174,6 +5212,28 @@ dd-modal .wrapper_component > .content_data.vertical,
   background-color: var(--color_grey_5);
   justify-content: center;
   flex-flow: unset;
+}
+.section_record.edit .wrapper_component.edit {
+  transition: background-color var(--transition-fast);
+}
+.section_record.edit .wrapper_component.edit:hover:not(.active):not(.disabled_component) {
+  background-color: var(--field_hover_bg);
+}
+.section_record.edit .wrapper_component.edit > .label {
+  color: var(--field_label_fg);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.015em;
+}
+.section_record.edit .wrapper_component.edit > .content_data {
+  color: var(--field_value_fg);
+}
+.section_record.edit .wrapper_component.edit.active > .label {
+  color: var(--color_orange_dedalo);
+  font-weight: 600;
+}
+.section_record.edit .wrapper_component.edit.active > .content_data {
+  color: var(--field_value_fg);
 }
 dd-modal {
   margin: 0px;
@@ -7535,6 +7595,7 @@ body.is_ontology_server .menu > .content_data {
   margin-bottom: var(--space-3);
   padding: 0px;
   width: 100%;
+  accent-color: var(--color_orange_dedalo);
   background-color: transparent;
 }
 .inspector.inspector_fixed {
@@ -7590,8 +7651,8 @@ body.is_ontology_server .menu > .content_data {
   mask-position: center;
 }
 .inspector .block_icon.note {
-  -webkit-mask-image: url('../../themes/default/icons/note.svg');
-  mask-image: url('../../themes/default/icons/note.svg');
+  -webkit-mask-image: url('../../themes/default/icons/note_light.svg');
+  mask-image: url('../../themes/default/icons/note_light.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -7610,8 +7671,8 @@ body.is_ontology_server .menu > .content_data {
   mask-position: center;
 }
 .inspector .block_icon.panel {
-  -webkit-mask-image: url('../../themes/default/icons/inspector.svg');
-  mask-image: url('../../themes/default/icons/inspector.svg');
+  -webkit-mask-image: url('../../themes/default/icons/inspector_light.svg');
+  mask-image: url('../../themes/default/icons/inspector_light.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -7654,6 +7715,7 @@ body.is_ontology_server .menu > .content_data {
   background-color: var(--bg_surface);
   border-radius: var(--inspector_block_radius);
   overflow: hidden;
+  box-shadow: var(--shadow-1);
 }
 .inspector > .inspector_content_data > div.project_wrap {
   contain: layout;
@@ -7667,13 +7729,12 @@ body.is_ontology_server .menu > .content_data {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) 1.6rem var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color_grey_14);
+  padding: var(--space-4) 1.6rem var(--space-3) var(--space-4);
   color: var(--color_grey_7);
   font-weight: 600;
   font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   user-select: none;
   transition: background-color var(--transition-fast), color var(--transition-fast);
 }
@@ -7720,7 +7781,42 @@ body.is_ontology_server .menu > .content_data {
 .inspector > .inspector_content_data > .paginator_container {
   contain: content;
   height: 73px;
-  background-color: transparent;
+  background-color: var(--bg_surface);
+  border-radius: var(--inspector_block_radius) var(--inspector_block_radius) 0px 0px;
+  margin-bottom: 0px;
+  font-variant-numeric: tabular-nums;
+}
+.inspector > .inspector_content_data > .paginator_container input.input_go_to_page {
+  color: var(--field_value_fg);
+}
+.inspector > .inspector_content_data > .paginator_container .nav_buttons > .btn {
+  background-color: var(--fg_muted);
+  transition: background-color var(--transition-fast), opacity 0.2s linear;
+}
+.inspector > .inspector_content_data > .paginator_container .nav_buttons > .btn.paginator_prev_icon,
+.inspector > .inspector_content_data > .paginator_container .nav_buttons > .btn.paginator_next_icon {
+  -webkit-mask-image: url('../../themes/default/icons/chevron_light.svg');
+  mask-image: url('../../themes/default/icons/chevron_light.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+.inspector > .inspector_content_data > .paginator_container .nav_buttons > .btn.paginator_first_icon,
+.inspector > .inspector_content_data > .paginator_container .nav_buttons > .btn.paginator_last_icon {
+  -webkit-mask-image: url('../../themes/default/icons/chevron_double_light.svg');
+  mask-image: url('../../themes/default/icons/chevron_double_light.svg');
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-size: contain;
+}
+.inspector > .inspector_content_data > .paginator_container .nav_buttons > .btn:hover:not(.inactive) {
+  background-color: var(--color_orange_dedalo);
 }
 @media screen and (max-width: 1024px) {
   .inspector > .inspector_content_data > .paginator_container {
@@ -7761,7 +7857,9 @@ body.is_ontology_server .menu > .content_data {
   contain: content;
   color: var(--color_orange_dedalo);
   padding: var(--space-3) var(--space-4);
-  font-size: 1.05rem;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   text-align: center;
   background-color: var(--color_orange_light);
 }
@@ -7789,12 +7887,11 @@ body.is_ontology_server .menu > .content_data {
 .inspector > .inspector_content_data > .element_info_wrap > .element_info {
   contain: content;
   display: grid;
-  grid-gap: 1px;
+  grid-gap: 0px;
   grid-template-columns: minmax(min-content, 35%) minmax(65%, 80%);
   margin-top: 0px;
-  margin-bottom: 0px;
+  margin-bottom: var(--space-2);
   font-size: 0.86rem;
-  background-color: var(--bg_app);
 }
 .inspector > .inspector_content_data > .element_info_wrap > .element_info .link,
 .inspector > .inspector_content_data > .element_info_wrap > .element_info .pen,
@@ -7808,12 +7905,13 @@ body.is_ontology_server .menu > .content_data {
   opacity: 0.3;
 }
 .inspector > .inspector_content_data > .element_info_wrap > .element_info .key {
-  background-color: var(--bg_surface_alt);
+  background-color: transparent;
   padding: var(--space-2) var(--space-3);
   text-align: right;
   text-transform: capitalize;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 500;
+  letter-spacing: 0.01em;
   color: var(--fg_muted);
   display: flex;
   align-items: center;
@@ -7826,9 +7924,10 @@ body.is_ontology_server .menu > .content_data {
   justify-content: center;
 }
 .inspector > .inspector_content_data > .element_info_wrap > .element_info .value {
-  background-color: var(--bg_surface);
+  background-color: transparent;
   padding: var(--space-2) var(--space-3);
-  color: var(--fg_default);
+  color: var(--field_value_fg);
+  font-variant-numeric: tabular-nums;
 }
 .inspector > .inspector_content_data > .element_info_wrap > .element_info .value.wide {
   grid-column-start: 1;
@@ -7875,11 +7974,21 @@ body.is_ontology_server .menu > .content_data {
   align-items: center;
   justify-content: space-evenly;
   gap: var(--space-2);
-  margin: 0px var(--space-3);
-  padding: var(--space-2) 0px;
-  background-color: transparent;
-  border-radius: 0px;
-  overflow: visible;
+  padding: var(--space-3) var(--space-2);
+  margin-top: 0px;
+  border-top-left-radius: 0px;
+  border-top-right-radius: 0px;
+}
+.inspector > .inspector_content_data > .buttons_container.top > span.list,
+.inspector > .inspector_content_data > .tools_container.top > span.list {
+  -webkit-mask-image: url('../../themes/default/icons/list_light.svg');
+  mask-image: url('../../themes/default/icons/list_light.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
 }
 .inspector > .inspector_content_data > .buttons_container.top > span,
 .inspector > .inspector_content_data > .tools_container.top > span {
@@ -7967,8 +8076,8 @@ body.is_ontology_server .menu > .content_data {
 }
 .inspector > .label .inspector_rail_toggle {
   flex: 0 0 auto;
-  -webkit-mask-image: url('../../themes/default/icons/arrow-circle-right.svg');
-  mask-image: url('../../themes/default/icons/arrow-circle-right.svg');
+  -webkit-mask-image: url('../../themes/default/icons/arrow_circle_right_light.svg');
+  mask-image: url('../../themes/default/icons/arrow_circle_right_light.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -8539,7 +8648,7 @@ body.is_ontology_server .menu > .content_data {
   margin-left: 5px;
   margin-right: 5px;
   justify-content: flex-start;
-  border-radius: 2px;
+  border-radius: var(--radius-lg);
 }
 .wrapper_search > .search_global_container > .search_container_selection .search_group_container .search_group .invalid_component {
   width: 90%;
@@ -8614,9 +8723,10 @@ body.is_ontology_server .menu > .content_data {
   background-color: var(--color_tag_indexation_normal);
   opacity: 1;
   color: var(--color_white);
-  border: 1px solid var(--color_white);
-  border-radius: 0.25em;
+  border: none;
+  border-radius: var(--radius-md);
   word-break: break-word;
+  transition: background-color var(--transition-fast);
 }
 .wrapper_search > .search_global_container > .search_container_selection .search_group_container > .search_buttons_container .button:hover {
   background-color: var(--color_tag_indexation_normal_dark);
@@ -8823,60 +8933,62 @@ body.is_ontology_server .menu > .content_data {
 .semantic_quick_search {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
   margin-left: 6px;
 }
 .semantic_quick_search.hide {
   display: none;
 }
-.semantic_quick_search.loading {
-  opacity: 0.6;
-}
 .semantic_quick_search input.semantic_query {
-  min-width: 14em;
-  height: 1.85em;
-  padding: 0 0.5em;
+  min-width: 15em;
+  height: 2em;
+  padding: 0 0.9em;
+  opacity: 1;
+  color: var(--fg_default);
+  background-color: var(--bg_input);
+  border-radius: var(--radius-pill);
+  outline: 1px solid var(--border_default);
+  transition: min-width var(--transition-base), outline-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.semantic_quick_search input.semantic_query::placeholder {
+  color: var(--fg_muted);
+}
+.semantic_quick_search input.semantic_query:focus {
+  min-width: 24em;
+  outline: 1px solid var(--color_orange_dedalo);
+  box-shadow: 0 0 0 3px var(--focus_ring_weak);
+}
+.semantic_quick_search.loading input.semantic_query {
+  cursor: progress;
+  animation: semantic_query_pulse 1.2s ease-in-out infinite;
+}
+@keyframes semantic_query_pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
 }
 .semantic_pinned_chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   margin: 2px 6px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  background-color: #e8e4f5;
-  color: #4a4471;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color_orange_light);
+  color: var(--color_orange_dark);
   font-size: 0.85em;
+  font-weight: 500;
 }
 .semantic_pinned_chip .chip_clear {
   cursor: pointer;
   font-weight: bold;
+  transition: color var(--transition-fast);
 }
-.semantic_block {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  margin-bottom: 4px;
-  background-color: #f4f2fb;
-  border-radius: 4px;
-}
-.semantic_block.hide {
-  display: none;
-}
-.semantic_block .semantic_label {
-  font-weight: bold;
-  white-space: nowrap;
-}
-.semantic_block input.semantic_query {
-  flex: 1;
-  min-width: 10em;
-}
-.semantic_block select.semantic_group.hide {
-  display: none;
-}
-.semantic_block .semantic_clear {
-  cursor: pointer;
+.semantic_pinned_chip .chip_clear:hover {
+  color: var(--color_orange_dedalo);
 }
 /**
 * menu
@@ -17413,7 +17525,7 @@ body.inspector_resizing {
   width: 100%;
   margin-bottom: 0.5rem;
   background-color: var(--bg_surface);
-  border-radius: 0.7rem;
+  border-radius: var(--inspector_block_radius);
 }
 @media screen and (max-width: 960px) {
   .section_record.edit .section_group.edit {
@@ -17433,6 +17545,12 @@ body.inspector_resizing {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  color: var(--fg_muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.2rem;
+  transition: color var(--transition-fast);
 }
 @media screen and (max-width: 960px) {
   .section_record.edit .section_group.edit > .label {
@@ -17446,6 +17564,12 @@ body.inspector_resizing {
   margin: 0px;
   padding: 0px;
   flex: 0 0 auto;
+}
+.section_record.edit .section_group.edit > .label:hover {
+  color: var(--fg_default);
+}
+.section_record.edit .section_group.edit > .label:hover:after {
+  background-color: var(--color_orange_dedalo);
 }
 .section_record.edit .section_group.edit > .content_data {
   display: grid;
@@ -19196,6 +19320,9 @@ body.inspector_resizing {
   text-align: center;
   color: var(--color_grey_8);
   font-size: 0.875rem;
+}
+.component_info.edit > .content_data > .content_value {
+  padding: 0.5em 1em 1em;
 }
 .component_info .wrapper_widget {
   font-size: 0.86rem;
@@ -21264,17 +21391,33 @@ body.inspector_resizing {
 }
 .component_radio_button.edit > .content_data > .content_value > .label {
   display: flex;
-  padding-top: 0.33rem;
-  padding-bottom: 0.33rem;
-  padding-right: 0.5rem;
+  align-items: center;
+  padding: 0.25rem 0.66rem;
+  border-radius: var(--radius-pill);
   cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
 }
-.component_radio_button.edit > .content_data > .content_value > .label.checked {
+.component_radio_button.edit > .content_data > .content_value > .label:hover:not(.checked):not(:has(input:checked)) {
+  background-color: var(--field_hover_bg);
+}
+.component_radio_button.edit > .content_data > .content_value > .label.checked,
+.component_radio_button.edit > .content_data > .content_value > .label:has(input:checked) {
   font-weight: 500;
+  background-color: var(--color_orange_dedalo);
+  color: var(--color_white);
+}
+.component_radio_button.edit > .content_data > .content_value > .label:has(input:focus-visible) {
+  outline: 2px solid var(--focus_ring);
+  outline-offset: 1px;
 }
 .component_radio_button.edit > .content_data > .content_value > .label > input {
-  margin-right: 0.25rem;
-  cursor: pointer;
+  position: absolute;
+  opacity: 0;
+  width: 0px;
+  height: 0px;
+  margin: 0px;
+  border: none;
+  pointer-events: none;
 }
 .component_radio_button.view_line > .content_data {
   display: contents;
@@ -21322,31 +21465,59 @@ body.inspector_resizing {
 }
 .component_radio_button.search > .content_data > .content_value > .label {
   display: flex;
-  padding-top: 0.33rem;
-  padding-bottom: 0.33rem;
-  padding-right: 0.5rem;
+  align-items: center;
+  padding: 0.25rem 0.66rem;
+  border-radius: var(--radius-pill);
   cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+.component_radio_button.search > .content_data > .content_value > .label:hover:not(:has(input:checked)) {
+  background-color: var(--field_hover_bg);
+}
+.component_radio_button.search > .content_data > .content_value > .label:has(input:checked) {
+  font-weight: 500;
+  background-color: var(--color_orange_dedalo);
+  color: var(--color_white);
+}
+.component_radio_button.search > .content_data > .content_value > .label:has(input:focus-visible) {
+  outline: 2px solid var(--focus_ring);
+  outline-offset: 1px;
 }
 .component_radio_button.search > .content_data > .content_value > .label > input {
-  margin-right: 0.25rem;
-  cursor: pointer;
+  position: absolute;
+  opacity: 0;
+  width: 0px;
+  height: 0px;
+  margin: 0px;
+  border: none;
+  pointer-events: none;
 }
-:root[data-theme="dark"] .component_radio_button input[type="radio"] {
+.component_radio_button input[type="radio"] {
   background-color: var(--checkbox_bg);
   border: 1px solid var(--checkbox_border);
   -webkit-appearance: none;
   appearance: none;
-  width: 1em;
-  height: 1em;
+  width: 1.05em;
+  height: 1.05em;
+  flex: 0 0 auto;
+  align-self: center;
   border-radius: 50%;
   cursor: pointer;
   position: relative;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
 }
-:root[data-theme="dark"] .component_radio_button input[type="radio"]:checked {
-  background-color: var(--checkbox_checked_bg);
-  border-color: var(--checkbox_checked_bg);
+.component_radio_button input[type="radio"]:hover {
+  border-color: var(--color_orange_dedalo);
 }
-:root[data-theme="dark"] .component_radio_button input[type="radio"]:checked:after {
+.component_radio_button input[type="radio"]:focus-visible {
+  outline: 2px solid var(--focus_ring);
+  outline-offset: 1px;
+}
+.component_radio_button input[type="radio"]:checked {
+  background-color: var(--color_orange_dedalo);
+  border-color: var(--color_orange_dedalo);
+}
+.component_radio_button input[type="radio"]:checked:after {
   content: '';
   position: absolute;
   left: 50%;
