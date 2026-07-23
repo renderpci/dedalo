@@ -241,7 +241,7 @@ DEDALO_RAG_DB_PASSWORD_CONN=•••••
 | **Embedding sidecar** (text) | `POST {endpoint}/embed {model, input:[…]}` → `{embeddings:[[…],…]}` | `DEDALO_RAG_EMBEDDING_PROVIDER=sidecar` + `DEDALO_RAG_EMBEDDING_ENDPOINT` |
 | **Multimodal sidecar** (images) | `POST /image {model, images:[b64,…]}` and `POST /text {model, input:[…]}` → `{embeddings:[…]}` (also tolerates OpenAI `{data:[{embedding}]}`) | `DEDALO_RAG_MULTIMODAL_ENDPOINT` |
 | **Generation LLM** (`ask`) | OpenAI-compatible `POST {endpoint}` chat-completions | `DEDALO_RAG_LLM_ENDPOINT` (+ `_MODEL`, `_API_KEY`) |
-| **Agent** (`src/ai/agent`) | Official Anthropic SDK | `ANTHROPIC_API_KEY` (+ `AGENT_MODEL`) |
+| **Agent** (`src/ai/agent`) | Official Anthropic SDK (developer `runAgent`/`AnthropicProvider`); the in-app agent resolves through the model catalog (`DEDALO_AGENT_MODELS`), which also supports `openai_compatible` (local) models | `ANTHROPIC_API_KEY` (+ `AGENT_MODEL`), or `DEDALO_AGENT_MODELS` |
 | **MCP** (`src/ai/mcp`) | stdio; identity fixed at startup | `DEDALO_MCP_USER_ID` (+ `DEDALO_MCP_ALLOW_WRITE`) |
 
 Without any of these, the pipeline still runs end-to-end on deterministic,
@@ -339,6 +339,7 @@ template ships in `install/sample.env`; see the [settings reference](../../confi
 |---|---|---|
 | `ANTHROPIC_API_KEY` | — | Required for the agent loop; it **fails closed** without it. |
 | `AGENT_MODEL` | `claude-opus-4-8` | Agent model override. |
+| `DEDALO_AGENT_MODELS` | — | JSON model catalog the in-app agent resolves through (`model_catalog.ts`, `resolveProvider`); also supports `openai_compatible` (local) models. |
 | `DEDALO_MCP_USER_ID` | — | The `dd128` user id the MCP server acts as (`-1` = superuser, dev only). Missing/invalid ⇒ hard startup error. |
 | `DEDALO_MCP_ALLOW_WRITE` | `false` | Enables the MCP write tools (still permission-checked per call). |
 | `DEDALO_MCP_WRITE_SECTIONS`, `DEDALO_MCP_MEDIA_IMPORT_DIR`, `DEDALO_MCP_MEDIA_MAX_BYTES` | — | MCP write/media-import scoping. |
