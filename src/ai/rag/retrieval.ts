@@ -77,6 +77,24 @@ export function contributorSectionTipos(chunkMeta: Record<string, unknown> | nul
 }
 
 /**
+ * The host-section COMPONENT tipos that composed a group chunk (the top-level
+ * ddo entries of the group, from chunk_meta.contributors). Each is a component
+ * of the chunk's host section, so it gates via getPermissions(principal,
+ * sectionTipo, componentTipo) — the per-ddo parity of the human read
+ * (ddoIsAuthorized). Empty for pre-group / image-path chunks. RAG-01.
+ */
+export function contributorComponentTipos(chunkMeta: Record<string, unknown> | null): string[] {
+	const raw = chunkMeta?.contributors;
+	if (!Array.isArray(raw)) return [];
+	const out = new Set<string>();
+	for (const entry of raw) {
+		const tipo = (entry as { componentTipo?: unknown } | null)?.componentTipo;
+		if (typeof tipo === 'string' && tipo !== '') out.add(tipo);
+	}
+	return [...out];
+}
+
+/**
  * Index one component's text of one record: structure-aware chunk → embed →
  * replace in store. The header-enriched `embedText` is what gets embedded; the
  * clean `text` is stored for citation. Returns the number of chunks written.
@@ -153,23 +171,41 @@ async function aclGate(
 	for (const candidate of candidates) {
 		if (out.length >= limit) break;
 		if (scopeSet !== null && !scopeSet.has(candidate.sectionTipo)) continue;
-		// 1. Schema ACL. A `rag:<group>` chunk is a RECORD-FACET document (no
-		//    single human-facing component — the group composes several, possibly
-		//    deep-resolved), so it gates at the SECTION level, the same
-		//    getPermissions(principal, tipo, tipo) check the tools/ts_api use.
-		//    Explicit design decision (2026-07-22): the record is the access unit
-		//    for semantic search; a record-authorized user may match text from a
-		//    component hidden in their edit form. Per-component chunks (the image
-		//    path) keep the component-level gate.
+		// 1. Schema ACL (RAG-01). A `rag:<group>` chunk is composed at INDEX time
+		//    under the SYSTEM principal (embed_source.ts), so it embeds the text of
+		//    EVERY component in the group's ddo_map — INCLUDING components this role
+		//    holds level 0 on. A section-only gate (the pre-fix behavior) let a
+		//    record-authorized user match, and receive the snippet of, a component
+		//    hidden from their own edit form. So gate a group chunk at COMPONENT
+		//    level, per contributing component — the exact parity of the human
+		//    read's per-ddo ddoIsAuthorized: require the section read grant AND ≥1
+		//    on every host-section component that fed the chunk; drop on any level
+		//    0. Contributors are always written by the indexer for a stored group
+		//    chunk (a doc with no harvested text is never indexed), so an empty set
+		//    is anomalous → fail CLOSED. A per-component (image-path) chunk keeps
+		//    its single component-level gate.
 		const isGroupChunk = candidate.componentTipo.startsWith(RAG_GROUP_PREFIX);
-		const aclTipo = isGroupChunk ? candidate.sectionTipo : candidate.componentTipo;
-		const schemaKey = `${candidate.sectionTipo}|${aclTipo}`;
-		let level = schemaLevel.get(schemaKey);
-		if (level === undefined) {
-			level = await getPermissions(principal, candidate.sectionTipo, aclTipo);
-			schemaLevel.set(schemaKey, level);
+		const gateTipos = isGroupChunk
+			? contributorComponentTipos(candidate.chunkMeta)
+			: [candidate.componentTipo];
+		if (isGroupChunk && gateTipos.length === 0) continue; // fail closed
+		// A group chunk additionally requires the section read grant beside its
+		// components (the human read shows the record only when section ≥ 1).
+		const requiredTipos = isGroupChunk ? [candidate.sectionTipo, ...gateTipos] : gateTipos;
+		let blocked = false;
+		for (const gateTipo of requiredTipos) {
+			const schemaKey = `${candidate.sectionTipo}|${gateTipo}`;
+			let level = schemaLevel.get(schemaKey);
+			if (level === undefined) {
+				level = await getPermissions(principal, candidate.sectionTipo, gateTipo);
+				schemaLevel.set(schemaKey, level);
+			}
+			if (level < 1) {
+				blocked = true;
+				break;
+			}
 		}
-		if (level < 1) continue;
+		if (blocked) continue;
 		// 2. Per-record projects ACL — principal-scoped existence check.
 		const recordKey = `${candidate.sectionTipo}|${candidate.sectionId}`;
 		let visible = recordVisible.get(recordKey);
