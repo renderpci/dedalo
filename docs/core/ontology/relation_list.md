@@ -9,7 +9,7 @@
 `relation_list` is neither a component nor a section: it is an ontology model in
 its own right (`model = 'relation_list'`). Its behaviour is a plain function,
 `buildRelationList()` in `src/core/resolve/relation_list.ts`, dispatched by the
-`get_relation_list` action in `src/core/api/dispatch.ts`. It sits on the
+`get_relation_list` action in `src/core/section/read_facade.ts`. It sits on the
 **inverse** side of the relational graph that
 [`component_portal`](../components/component_portal.md) and the other related
 components build:
@@ -36,7 +36,8 @@ is no instance identity, no chainable setters, and no cache to purge.
 - **Resolve inverse references** — given `(section_tipo, section_id)`,
   `findInverseReferences()` (`search/search_related.ts`) returns every record
   that links back. `buildRelationList()` calls it with the host locator as
-  the filter and `sectionTipos: 'all'`.
+  the filter and its `sectionTipos` option (defaulting to `'all'` — no
+  owning-section narrowing).
 - **Build the relation-list grid** — group those inverse records by their
   `section_tipo`, resolve the column set for each (`getRelationListColumns()`:
   the `section_map` `relation_list` scope, falling back to the `relation_list`
@@ -45,16 +46,19 @@ is no instance identity, no chainable setters, and no cache to purge.
   bounded model set (see
   [Value scope](#value-scope-what-resolvecellvalue-covers) below).
 - **Serve the edit/count JSON** — `get_relation_list` in
-  `src/core/api/dispatch.ts` returns the grid for `mode === 'edit'` and an
+  `src/core/section/read_facade.ts` returns the grid for `mode === 'edit'` and an
   **empty shell** (`{context:[], data:[]}`) for any other mode. A **separate**
   action (`countInverseReferences()` under `mode:'related'` SQO counts) serves
   the count path.
 
-!!! note "The edit panel resolves every referencing section"
-    `buildRelationList()` — the panel you see in the record editor — always
-    resolves against **every** referencing section and **every** referencing
-    component. There is no way to narrow its scope. The diffusion path is
-    different: it *does* narrow, per ddo — see
+!!! note "The edit panel resolves every referencing component"
+    `buildRelationList()` — the panel you see in the record editor — resolves
+    against **every** referencing component. Its `sectionTipos` option can
+    narrow the **owning sections** counted as referrers: `read_facade.ts`
+    derives it from the client SQO's `section_tipo` axis, so the Referencias
+    panel sends `all` (no narrowing) while a header-open sends the one target
+    section. The diffusion path narrows more finely, per ddo (by owning
+    section *and* originating component) — see
     [Diffusion](#diffusion-publishing-backlinks).
 
 ## Key concepts
@@ -150,7 +154,7 @@ function parameter and nothing is cached across calls:
 | input | where it comes from |
 | --- | --- |
 | host record | `hostSectionTipo`, `hostSectionId` parameters to `buildRelationList()` |
-| `mode` | checked once in `dispatch.ts` before calling — a non-`edit` mode never reaches `buildRelationList()` |
+| `mode` | checked once in `read_facade.ts` before calling — a non-`edit` mode never reaches `buildRelationList()` |
 | pagination | `options.limit` / `options.offset` |
 | counts | a **separate** dispatch branch (`countInverseReferences()` under a `mode:'related'` SQO), not a flag on the same function |
 
@@ -167,22 +171,27 @@ const grid = await buildRelationList('oh1', 1, { limit: false, lang: 'lg-eng' })
 ```
 
 The API entry point is the `get_relation_list` branch of
-`src/core/api/dispatch.ts`: it validates `source.section_tipo`/`section_id`,
+`src/core/section/read_facade.ts`: it validates `source.section_tipo`/`section_id`,
 gates on read permission (≥1) to the **host** section, returns the empty shell
-for any `mode` other than `'edit'`, and otherwise calls `buildRelationList()`
-and wraps the result as `{result:{context,data}, msg, errors?}` — `errors` is
-populated from `grid.unresolved` when any cell model went unresolved.
+for any `mode` other than `'edit'`, derives `sectionTipos` from the client SQO's
+`section_tipo` axis, and otherwise calls `buildRelationList()` and wraps the
+result as `{result:{context,data}, msg, errors?}` — `errors` is populated from
+`grid.unresolved` when any cell model went unresolved.
 
 ```ts
-// src/core/api/dispatch.ts (get_relation_list branch, abbreviated)
+// src/core/section/read_facade.ts (get_relation_list branch, abbreviated)
 if (source.action === 'get_relation_list') {
 	if ((source.mode ?? 'list') !== 'edit') {
 		return { status: 200, body: { result: { context: [], data: [] }, msg: 'OK' } };
 	}
+	// section_tipo axis narrows the owning sections ('all' = no narrowing)
+	const sectionTipos =
+		rawSectionTipos.length === 0 || rawSectionTipos.includes('all') ? 'all' : rawSectionTipos;
 	const relationList = await buildRelationList(hostSectionTipo, hostSectionId, {
 		limit: sqoOptions.limit ?? false,
 		offset: sqoOptions.offset,
 		lang: source.lang,
+		sectionTipos,
 	});
 	// ...
 }
@@ -196,7 +205,7 @@ if (source.action === 'get_relation_list') {
 | `resolveCellValue(...)` | `resolve/relation_list.ts` | Per-cell value resolution, with the bounded model coverage above. Row building is inlined into `buildRelationList()`'s loop. |
 | `findInverseReferences(locators, options)` | `search/search_related.ts` | Run the inverse-locator search and return the matching records. |
 | `countInverseReferences(locators, options)` | `search/search_related.ts` | The count-only path (also used by the tree's "U" indexation icon). |
-| the `get_relation_list` dispatch branch | `api/dispatch.ts` | Permission gate + mode check + envelope. |
+| the `get_relation_list` read branch | `section/read_facade.ts` | Permission gate + mode check + `sectionTipos` derivation + envelope. |
 
 ## Diffusion: publishing backlinks
 

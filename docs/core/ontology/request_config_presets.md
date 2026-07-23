@@ -2,18 +2,19 @@
 
 > See also: [Ontology](index.md) · [RQO](../rqo.md) · [dd_object](../dd_object.md) · [request_config](../request_config.md)
 
-!!! warning "Not yet applied by the TS engine (gap)"
+!!! note "Applied by the TS engine (since 2026-07-10)"
     Request config presets are **ordinary ontology data** — a `dd1244` record
     with its `dd625` JSON payload — and the schema/authoring workflow below is
-    unchanged. But the TS rewrite's `request_config` engine
-    (`src/core/relations/request_config/v6.ts`) does **not yet read or apply
-    them**: the per-user/session preset-overlay stage is explicitly listed as
-    deferred in that module's own scope ledger ("user presets, session/rqo
-    overlay stages"). Today the TS server always serves the ontology's own
-    `request_config` — creating a preset record has no visible effect until
-    this stage is ported. Treat this page as documenting the **data model and
-    authoring workflow** (which any future port must reproduce byte-for-byte),
-    not a currently-observable server behavior.
+    unchanged. The TS engine now reads and applies them: they run as the
+    stage-2 override in `src/core/relations/request_config/build.ts`, which
+    dynamically imports `resolvePresetRequestConfig` from
+    `src/core/relations/request_config/presets.ts`. When an active preset
+    matches the `(tipo, section_tipo, mode)` triple for the current user (a
+    public preset is the fallback), its `dd625` JSON payload replaces
+    `properties.source.request_config` so the existing explicit builder parses
+    it with no special-casing. This override is **section-owned only** (like
+    the V6 oracle, it gates on the element being a `section`), so a preset
+    redefines a section's layout but does not overlay an ordinary component.
 
 Request config presets let administrators and privileged users override the
 default ontology definition for a section's layout — that is, redefine which

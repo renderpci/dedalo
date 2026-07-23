@@ -169,7 +169,7 @@ cached in `term_resolver.ts`.**
 
 Callers that need a single tipo from a possibly-array role value inline
 `Array.isArray(value) ? value[0] : value` themselves (e.g.
-`request_config/v6.ts`'s `resolveGetDdoMap()`); there is no dedicated
+`request_config/explicit.ts`'s `resolveGetDdoMap()`); there is no dedicated
 single-tipo collapse helper.
 
 ### Term resolution
@@ -206,7 +206,7 @@ thesaurus section — the one check that has no server-side equivalent.
 `request_config` lets an ontology author build a `ddo_map` (the list of
 columns to show) **dynamically** from the section_map instead of hardcoding
 every column. The directive is resolved by `resolveGetDdoMap()` in
-`src/core/relations/request_config/v6.ts`:
+`src/core/relations/request_config/explicit.ts`:
 
 ```json
 {
@@ -242,7 +242,7 @@ instead of `{path: [...]}`) is still accepted for compatibility.
 ```mermaid
 flowchart TD
     PROP["properties.show.get_ddo_map<br/>{model:'section_map', columns:[{path:[scope,key]}]}"]
-    PROP --> RGM["resolveGetDdoMap()<br/>(request_config/v6.ts)"]
+    PROP --> RGM["resolveGetDdoMap()<br/>(request_config/explicit.ts)"]
     RGM --> GSV["getSectionMapValue(section_tipo, scope, key)<br/>(direct + SCOPE_FALLBACK, one call)"]
     GSV --> DDO["ddo per tipo<br/>(dedup by tipo → array section_tipo)"]
     DDO --> MAP["ddo_map columns"]
@@ -304,7 +304,7 @@ const label = parts.join(get_fields_separator(section_map))
   `properties.relation_list.term` directly, with no chain fallback.
 - **`request_config`** ([request_config](../request_config.md#get_ddo_map--dynamic-ddo_map))
   uses the `section_map` model in `resolveGetDdoMap()`
-  (`relations/request_config/v6.ts`) to build dynamic `ddo_map` columns, via
+  (`relations/request_config/explicit.ts`) to build dynamic `ddo_map` columns, via
   `getSectionMapValue()`.
 
 ## Related
