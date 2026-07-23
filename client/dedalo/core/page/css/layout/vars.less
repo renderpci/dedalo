@@ -119,6 +119,16 @@
 	--focus_ring:      var(--color_input_focus);
 	--focus_ring_weak: rgba(59, 135, 253, 0.4); // = color_input_focus @ 40% for the focus glow
 
+	// ---- FIELD TOKENS ("quiet grid" — section edit view) ----
+	// Consumed by layout.less / general.less / section_group.less /
+	// inspector.less. Dark counterparts live in theme_dark.less. The rule and
+	// hover tints are rgba (not solid greys) so they sit correctly on both the
+	// white grouper cards and the light-gray page canvas.
+	--field_label_fg: #5d6570;                 // field label ink (edit labels were color_grey_8 #999)
+	--field_value_fg: #1f2328;                 // filled value ink (inputs + content_data)
+	--field_rule:     rgba(27, 31, 36, 0.08);  // resting hairline under each field (layout-neutral inset shadow)
+	--field_hover_bg: rgba(27, 31, 36, 0.03);  // pointer-over field tint
+
 	// ---- SPACING SCALE ----
 	// Compact density (base font 0.8125rem). Reuses the 0.25/0.5/1rem rhythm
 	// already used across the codebase, so adopting it is a like-for-like swap.
