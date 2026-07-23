@@ -184,7 +184,7 @@ DEDALO_STRUCTURE_LANG="lg-spa"
 
 >For the languages, Dédalo uses the pattern: \`lg-xxx\`
 >lg : identify the term as language
->xxx : with the official tld of the ISO 639-6, Alpha-4 code for comprehensive coverage of language variants.
+>xxx : the ISO 639-2/T alpha-3 code of the language (e.g. spa, eng, cat). For language variants is used, ISO 639-6 (Alpha-4) code for comprehensive coverage of language variants.
 >
 >Some common languages:
 >
