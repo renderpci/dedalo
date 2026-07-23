@@ -135,8 +135,9 @@ widget uses them:
 ```less
 // 1. layout core (tokens, mixins, page chrome)
 @import './layout/reset';
-@import './layout/vars';        // @color_* + :root CSS custom properties
-@import './layout/theme_dark';  // :root[data-theme="dark"] overrides
+@import './layout/vars';         // @color_* + :root CSS custom properties
+@import './layout/theme_tokens'; // semantic theme token layer
+@import './layout/theme_dark';   // :root[data-theme="dark"] overrides
 @import './layout/functions';
 @import './layout/fonts';
 @import './layout/general';
@@ -145,6 +146,7 @@ widget uses them:
 @import './layout/layout';
 @import './layout/page';
 @import './layout/list';
+@import './layout/ontology_server';
 
 // 2. services & commons  (install, inspector, paginator, search, menu, dd_grid, services, tool_common)
 // 3. login, relation_list, all area_* bundles
