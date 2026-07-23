@@ -1501,6 +1501,13 @@ export const get_columns_map = function(options) {
 						? found.sortable
 						: false
 
+				// sort_by_column (v7 per-ddo model, WC-048): the column ddo opts in
+				// to the persistent header-click reorder. Read from the ddo_object
+				// (request_config passthrough), NOT the top-level component property.
+					column_item.sort_by_column = ddo_object
+						? ddo_object.sort_by_column === true
+						: false
+
 				// model
 					column_item.model = found && found.model
 						? found.model

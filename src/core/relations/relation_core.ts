@@ -127,10 +127,41 @@ export async function expandPortal(
 				options.cellLimit ??
 				(storedModel === 'component_autocomplete_hi' ? locators.length : PORTAL_LIST_LIMIT))
 			: (portalDdo.limit ?? ownEditLimit() ?? 10);
+	// READ-time column order (TS feature, no PHP oracle): when a portal column
+	// ddo declares `order: asc|desc`, order the FULL locator list by those
+	// columns FOR DISPLAY before paginating (the stored array is never written).
+	// Opt-in — the cheap raw scan keeps the hot path import-free unless used; no
+	// frozen fixture declares it, so parity is unchanged.
+	let orderedLocators = locators;
+	if (locators.length > 1) {
+		// Cheap inline gate (no import): does any request_config column carry an
+		// `order` directive? Only then load the ordering machinery.
+		const requestConfig = (effectiveProperties as { source?: { request_config?: unknown } } | null)
+			?.source?.request_config;
+		const hasOrder =
+			Array.isArray(requestConfig) &&
+			requestConfig.some((item) => {
+				const ddoMap = (item as { show?: { ddo_map?: unknown } })?.show?.ddo_map;
+				return (
+					Array.isArray(ddoMap) && ddoMap.some((ddo) => (ddo as { order?: unknown })?.order != null)
+				);
+			});
+		if (hasOrder) {
+			const { orderLocatorsByDeclaredColumns } = await import('./order_locators.ts');
+			const reordered = await orderLocatorsByDeclaredColumns(
+				locators,
+				effectiveProperties,
+				portalDdo.tipo,
+				row.section_tipo,
+			);
+			if (reordered !== null) orderedLocators = reordered as typeof locators;
+		}
+	}
+
 	// PHP get_data_paginated stamps paginated_key = index + offset on each item;
 	// the get_data pagination rqo pages with sqo.offset.
 	const pageOffset = options.offset ?? 0;
-	const page: Record<string, unknown>[] = locators
+	const page: Record<string, unknown>[] = orderedLocators
 		.slice(pageOffset, limit > 0 ? pageOffset + limit : undefined)
 		.map((locator, index) => ({ ...locator, paginated_key: index + pageOffset }));
 
