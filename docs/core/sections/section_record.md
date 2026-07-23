@@ -50,11 +50,13 @@ one corrupts data:
 > `insertMatrixRecordWithCounter`, all in `src/core/db/matrix_write.ts`)
 > implement this; the section engine reuses them.
 
-> **DELETE PIPELINE ORDER** (the sequence is the guarantee): (1) Time Machine
-> snapshot **always** first, then re-read + verify with a canonical-JSON compare
-> — abort on mismatch; (2) row delete; (3) remove inverse references + remove
-> media files; (4) diffusion unpublish (per-target failures non-blocking);
-> (5) RAG delete enqueue.
+> **DELETE PIPELINE ORDER** (the sequence is the guarantee): ONE transaction runs
+> (1) Time Machine snapshot via `SELECT … FOR UPDATE`; (2) Time Machine audit row
+> (state `'deleted'`); (3) remove inverse references held by other records
+> (**before** the row delete); (4) delete the row (`deleteMatrixRecord`); (5) RAG
+> delete enqueue. **After commit**: (6) move media files to the deleted folder;
+> (7) diffusion unpublish (per-target failures non-blocking); (8) fire the save
+> event. There is no re-read/verify step.
 
 !!! note "Components never touch the database"
     A component resolves its value by reading straight off a `MatrixRecord`'s
@@ -141,7 +143,7 @@ user-locator write into `relation` and the `dd201` virtual-date write into
 
 | operation | function | effect |
 | --- | --- | --- |
-| full record delete | `deleteSectionRecord(sectionTipo, sectionId, userId, now?)` — `src/core/section/record/delete_record.ts` | (1) Time Machine snapshot + verify; (2) remove inverse references held by other records; (3) move media files to the deleted folder (`removeSectionMediaFiles`); (4) diffusion unpublish (per-target, non-blocking); (5) remove the row. Refuses `section_id < 1`. |
+| full record delete | `deleteSectionRecord(sectionTipo, sectionId, userId, now?)` — `src/core/section/record/delete_record.ts` | In ONE transaction: (1) Time Machine snapshot (`SELECT … FOR UPDATE`); (2) Time Machine audit row (state `'deleted'`); (3) remove inverse references held by other records; (4) remove the row (`deleteMatrixRecord`); (5) RAG delete enqueue. Post-commit: (6) move media files to the deleted folder (`removeSectionMediaFiles`); (7) diffusion unpublish (per-target, non-blocking); (8) fire the save event. Refuses `section_id < 1`. |
 | empty data, keep the row (the default `delete_data` mode) | `deleteSectionData(sectionTipo, sectionId, userId, now?)` | Empties every component child's data in place (skipping `component_section_id` / `component_external` / `component_inverse`; `component_filter` resets to the default project instead of `null`), backfills a Time Machine pair per emptied component, refreshes the modified stamp. The row itself survives; meta counters are **kept**. |
 
 ### Duplicate

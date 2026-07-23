@@ -261,8 +261,9 @@ the atomic counter allocator (`insertMatrixRecordWithCounter`,
 `src/core/db/matrix_write.ts`). The `create` action handler
 (`src/core/api/handlers/dd_core_api.ts`) is the gate: it requires
 `getSectionPermissions(principal, sectionTipo) >= 2` before allocating, and
-refuses a write to an area. Because the `Activity` section is permission-capped
-at `1` (`ACTIVITY_SECTION_PERMISSION_CAP`, `src/core/concepts/section.ts`), that
+refuses a write to an area. Because the `Activity` section is one of the
+`CONSULTATION_ONLY_SECTIONS` (`src/core/concepts/section.ts`, = {`dd15`, `dd542`}),
+`getSectionPermissions` clamps it to `1` via `isConsultationOnlySection`, so that
 one gate also refuses creating a new Activity row, with no special case needed.
 
 !!! warning "A new record gets no default project"
@@ -303,15 +304,20 @@ entries created).
 `src/core/section/record/delete_record.ts` (`deleteSectionRecord` /
 `deleteSectionData`) runs a fixed, load-bearing order:
 
-1. A **Time Machine** snapshot is written first and verified against the live
-   data (a canonical-JSON compare) before proceeding — every delete is a
-   recoverable point in time.
-2. The row is deleted (`delete_record` mode) or emptied in place
-   (`delete_data` mode, the default).
-3. Inverse references held by other records are removed and media files are
-   moved to the deleted folder (`removeSectionMediaFiles`).
-4. Diffusion unpublish is propagated per target (failures logged, never
-   blocking).
+One transaction runs, in order:
+
+1. A **Time Machine** snapshot is taken first (`SELECT … FOR UPDATE`) — every
+   delete is a recoverable point in time.
+2. A Time Machine audit row is appended (state `'deleted'`).
+3. Inverse references held by other records are removed (**before** the row
+   delete).
+4. The row is deleted (`deleteMatrixRecord`, `delete_record` mode) or emptied in
+   place (`delete_data` mode, the default).
+5. The RAG delete event is enqueued.
+
+After the transaction commits: media files are moved to the deleted folder
+(`removeSectionMediaFiles`), diffusion unpublish is propagated per target
+(failures logged, never blocking), and the save event fires.
 
 Records with `section_id < 1` are refused.
 
@@ -451,10 +457,11 @@ cache key — see [The module family](#the-module-family) above.
 ### Permissions
 
 Access is enforced with an integer ladder (`0` none, `1` read, `2` edit, higher
-for create/delete), resolved by `getPermissions()`
+for create/delete), resolved by `getSectionPermissions()`
 (`src/core/security/permissions.ts`) against the pair
-`(sectionTipo, sectionTipo)`. The `Activity` section is clamped to
-`ACTIVITY_SECTION_PERMISSION_CAP = 1` (`src/core/concepts/section.ts`) so it
+`(sectionTipo, sectionTipo)`. A `CONSULTATION_ONLY_SECTIONS` section
+(`src/core/concepts/section.ts`, = {`dd15`, `dd542`} — Time Machine and
+`Activity`) is clamped to `1` via `isConsultationOnlySection` so it
 can never be edited through the UI. Virtual sections (a section that keeps its
 own ontology definition but stores data under a *real* section) resolve their
 real tipo through the ontology resolver's "VIRTUAL SECTION fallback"

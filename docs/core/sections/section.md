@@ -101,9 +101,9 @@ needs and discards it when the request ends.
   is resolved and its value read straight from the `MatrixRecord` passed down
   the read pipeline.
 - **Permissions** — the integer permission over this section type, resolved by
-  `getPermissions()` (`src/core/security/permissions.ts`) and clamped for the
-  `Activity` section by `ACTIVITY_SECTION_PERMISSION_CAP`
-  (`src/core/concepts/section.ts`).
+  `getSectionPermissions()` (`src/core/security/permissions.ts`), which clamps a
+  `CONSULTATION_ONLY_SECTIONS` section (the `Activity` and Time Machine sections)
+  to `1` via `isConsultationOnlySection` (`src/core/concepts/section.ts`).
 - **The relations array** — the shared per-record `relation` typed column (see
   [Relations](#relations-section-owned)).
 - **Metadata tipos** — the fixed audit component tipos from `AUDIT_TIPOS`
@@ -123,7 +123,7 @@ Grouped by concern.
 | function | module | purpose |
 | --- | --- | --- |
 | `stampSectionContext(entry, params)` | `src/core/section/context.ts` | Stamp the section-only context extras onto a structure-context entry. |
-| `createSectionRecord(sectionTipo, userId, now?, sectionId?)` | `src/core/section/record/create_record.ts` | Build audit metadata, insert a new row via the atomic counter allocator. Gated in `dispatch.ts`'s `create` action by `getPermissions() >= 2` (which refuses the Activity section implicitly, via its permission cap). |
+| `createSectionRecord(sectionTipo, userId, now?, sectionId?)` | `src/core/section/record/create_record.ts` | Build audit metadata, insert a new row via the atomic counter allocator. Gated in the `create` action handler (`src/core/api/handlers/dd_core_api.ts`) by `getSectionPermissions(principal, sectionTipo) >= 2` (which refuses the Activity section implicitly, via its consultation-only clamp). |
 
 ### Relations (section-owned)
 
@@ -143,7 +143,7 @@ component-family-specific; there is no single generic entry point for it.
 
 | function | module | purpose |
 | --- | --- | --- |
-| `getPermissions(principal, sectionTipo, sectionTipo)` | `src/core/security/permissions.ts` | Resolve the integer permission, with the `Activity` clamp (`ACTIVITY_SECTION_PERMISSION_CAP`). |
+| `getSectionPermissions(principal, sectionTipo)` | `src/core/security/permissions.ts` | Resolve the integer permission over a section, clamping a `CONSULTATION_ONLY_SECTIONS` section (the `Activity` and Time Machine sections) to `1` via `isConsultationOnlySection`. |
 
 ### Ontology / children
 
