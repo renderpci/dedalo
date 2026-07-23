@@ -3008,6 +3008,13 @@ export const ui = {
 
 						const item = sqo_order[i]
 
+						// path-less order entries (e.g. the semantic-search
+						// {mode:'locator_position'} rank order, WC-047) carry no
+						// column — skip them, they light no header indicator
+						if (!Array.isArray(item.path) || item.path.length===0) {
+							continue;
+						}
+
 						const last_path	= item.path[item.path.length-1]
 						if (last_path.component_tipo===column.tipo) {
 							current_direction = item.direction

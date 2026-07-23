@@ -46,7 +46,6 @@
 	import {edit_user_search_preset, load_search_preset} from '../../search/js/search_user_presets.js'
 	import {render_filter} from '../../search/js/render_search.js'
 	import {
-		render_semantic_block,
 		apply_semantic_from_preset
 	} from '../../search/js/render_semantic.js'
 	import {get_section_records} from '../../section/js/section.js'
@@ -441,12 +440,12 @@ export const select_preset = async function (options) {
 		})
 
 		// semantic (RAG): restore the preset's live NL query as state (Apply
-		// re-runs it); refresh the panel block inputs from state.
+		// re-runs it) and reflect it in the toolbar quick input — the single
+		// semantic UI since 2026-07-23.
 		apply_semantic_from_preset(self, json_filter)
-		if (self.semantic_block_node) {
-			const fresh_block = render_semantic_block(self)
-			self.semantic_block_node.replaceWith(fresh_block)
-			self.semantic_block_node = fresh_block
+		const quick_input = document.querySelector('.semantic_quick_search input.semantic_query')
+		if (quick_input) {
+			quick_input.value = self.semantic?.q || ''
 		}
 
 		// render buttons (force to re-create the buttons)
