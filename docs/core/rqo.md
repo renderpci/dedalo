@@ -12,14 +12,14 @@ The Request Query Object (RQO) is the single, normalized message format used by 
 | **Who** is calling? | `source` (the element instance: tipo, section_tipo, section_id, mode, lang...) |
 | **What** should be done? | `dd_api` (API class) + `action` (API method) + `source->action` (per-element modifier) |
 | **Over which records?** | `sqo` (Search Query Object: filter, limit, offset, order) |
-| **What should come back / be displayed?** | `show` / `search` / `choose` / `hide` (ddo_map layouts) |
+| **What should come back / be displayed?** | `show` / `search` / `choose` (ddo_map layouts) |
 
 Everything else (`data`, `options`, `prevent_lock`, `pretty_print`, `id`) is payload and transport tuning.
 
 In one sentence:
 
 - **Why** — one wire format for *every* component type and every operation, so the client transport, the security gate, and the dispatcher are written once instead of per-component.
-- **What** — a plain JSON object, validated against the `Rqo` zod schema (`src/core/concepts/rqo.ts`). It carries a caller identity (`source`), an action (`dd_api`+`action`), an optional query (`sqo`) and optional layout maps (`show`/`search`/`choose`/`hide`).
+- **What** — a plain JSON object, validated against the `Rqo` zod schema (`src/core/concepts/rqo.ts`). It carries a caller identity (`source`), an action (`dd_api`+`action`), an optional query (`sqo`) and optional layout maps (`show`/`search`/`choose`).
 - **How** — the client builds it from the `request_config` the server injected into the element context, and POSTs it. The request is schema-validated (`rqoSchema.safeParse`), then `dispatchRqo()` (`src/core/api/dispatch.ts`) runs it through the `ACTION_REGISTRY` and returns the standard envelope.
 
 For the server-side config the client builds this from, see [request_config.md](request_config.md); for copy-paste ontology JSON and end-to-end RQO flows, see the cookbook [request_config_examples.md](request_config_examples.md). The [SQO](sqo.md) carried inside the RQO and the [DDO](dd_object.md) field set are documented separately.
@@ -104,8 +104,10 @@ Step by step:
 2. **Send** — `data_manager.request({body: rqo})` POSTs it as JSON with the `X-Dedalo-Csrf-Token` header, retry/timeout handling and optional local-DB caching. On a `csrf_failed` rejection it refreshes the cached token and retries exactly once.
 3. **Gate** (`src/server.ts`) — the whole decoded JSON body is validated in one pass by `rqoSchema.safeParse()` (`src/core/concepts/rqo.ts`) — malformed JSON or a body that fails the schema is rejected with HTTP 400 *before* any dispatch gate runs. Because `rqoSchema`'s `show`/`search`/`choose` blocks are typed through `ddoMapSchema` (`src/core/concepts/ddo.ts`), a **strict whitelist** (zod's default `.strip()` drops any key not listed), the ddo-whitelist scrub happens as a side effect of schema validation rather than as a separate function call. `rqo.sqo` is additionally run through `sanitizeClientSqo()` (`src/core/concepts/sqo.ts`) once the handler needs it, stripping server-only SQO fields, forcing `parsed=false`, and clamping `limit` to `CLIENT_MAX_LIMIT`. The file-upload endpoint is a separate route (`handleMediaUpload`).
 4. **Dispatch** (`dispatchRqo()`, `src/core/api/dispatch.ts`) — runs its gates in order: (1) `ACTION_REGISTRY[dd_api]?.[action]` lookup — undefined action **or** unregistered `(dd_api, action)` pair is rejected identically; (1b) an install-surface action additionally requires the server to be unsealed and the caller's IP allowed; (1c) an error-report-intake action additionally requires the receiver to be enabled and the caller's IP allowed; (2) auth — session required unless `action` is in `NO_LOGIN_ACTIONS`; (3) CSRF — required for authenticated actions not in `CSRF_EXEMPT_ACTIONS` (constant-time `verifyCsrf`), returning the fresh token so the client's one-shot retry can succeed; (4) the handler runs inside `runWithRequestLangs()`, seeding the request-scoped application/data language from the session (`src/core/resolve/request_lang.ts`, `AsyncLocalStorage`-scoped). There is no separate maintenance-area permission pre-gate step — `dd_area_maintenance_api` handlers check it themselves.
-5. **Execute** — the registered handler runs the action directly: for data actions it resolves permissions for `source`, then calls the section/relations/search engines directly, resolving `show`/`search`/`choose`/`hide` ddo_maps into context+data via `src/core/resolve/structure_context.ts` and `src/core/section/read.ts`.
+5. **Execute** — the registered handler runs the action directly: for data actions it resolves permissions for `source`, then calls the section/relations/search engines directly, resolving `show`/`search`/`choose` ddo_maps into context+data via `src/core/resolve/structure_context.ts` and `src/core/section/read.ts`.
 6. **Respond** — the standard envelope goes back as JSON; every response from an authenticated session gets a fresh `csrf_token` appended. An unhandled handler exception is caught at the very top of `dispatchRqo()` and degrades to `{result:false, errors:[...]}` at HTTP 200 — deliberately **not** a raw 500, because the client only reads `api_response.result`.
+
+The layout maps resolved along the way are `show`, `search` and `choose`. `hide` is **not** an RQO wire field (see the [`hide` note](#hide-is-a-request_config-only-block) below).
 
 ## Properties
 
@@ -256,9 +258,9 @@ Fields available to the search process (used by `service_autocomplete` and the s
 
 Fields shown when picking a result in `service_autocomplete`. Same sub-shape. When defined, its `ddo_map` overrides `search`/`show` for the picker list. The server resolves `choose.sqo_config.limit` with the fallback chain *choose → search/show sqo_config → 25*.
 
-### hide : `object` *Optional*
+### `hide` is a request_config-only block { #hide-is-a-request_config-only-block }
 
-`ddo_map` of elements whose context and data must be **resolved but not rendered** — internal values the caller component needs (e.g. `Location` [actv19](https://dedalo.dev/ontology/actv19)).
+`hide` is **not** an RQO wire field: `rqoSchema` (`src/core/concepts/rqo.ts`) declares only `show`, `search` and `choose` blocks — there is no `hide` key to send, and one would be dropped. `hide` lives on the **request_config** side instead (`requestConfigItemSchema`): it is a `ddo_map` of elements whose context and data must be **resolved but not rendered** — internal values the caller component needs (e.g. `Location` [actv19](https://dedalo.dev/ontology/actv19)) — resolved server-side while building the element context, never carried on the RQO. See [request_config.md](request_config.md).
 
 ### data : `object` *Optional*
 
@@ -537,7 +539,6 @@ The envelope is always `{result, msg, errors, action, csrf_token}`; only the **s
 | `get_element_context` | a single context `object` |
 | `get_section_elements_context` | `array` of component contexts |
 | `get_environment` | `{page_globals, plain_vars, get_label}` |
-| `get_matrix_ontology_locator` | `{section_tipo, section_id}` |
 | `get_section_terms` | `{ "<tipo>_<id>": "<term>", ... }` |
 
 On failure `result` is `false` and `errors[]` carries a code (`Undefined method`, `invalid_api_class`, `not_logged`, `csrf_failed`, `permissions error`, `permissions_denied`).
