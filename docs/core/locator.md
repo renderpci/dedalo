@@ -165,8 +165,8 @@ A locator is sparse: a portal link may carry only `{section_tipo, section_id, ty
 | --- | --- | --- | --- |
 | **id_key** | `int` | The stable `id` of the main-component data item this dataframe locator extends — the unified pairing contract | `3` |
 | **main_component_tipo** | `string` | Used by a dataframe to identify its own parent component | `rsc85` |
-| **section_id_key** | `int` | **@deprecated** legacy dataframe pairing key, retired by `id_key`; no longer read by live code — used only by the old-CSV import and the v6→v7 update | `1` |
-| **section_tipo_key** | `string` | **@deprecated** legacy pairing tipo, retired by the `id_key` unification (old-CSV import / v6→v7 update only) | `rsc197` |
+| **section_id_key** | `int` | **@deprecated** legacy dataframe pairing key, retired by `id_key`; read only as a BC fallback (e.g. legacy dataframe order resolution in `ts_object/node_repository.ts` `pickOrderValueForParent()`) and by the old-CSV import / v6→v7 update — never written anew | `1` |
+| **section_tipo_key** | `string` | **@deprecated** legacy pairing tipo, retired by the `id_key` unification; read only as a BC fallback (same `ts_object/node_repository.ts` order path) and by the old-CSV import / v6→v7 update — never written anew | `rsc197` |
 
 ### Deprecated hierarchical anchors (v6, being abandoned)
 
@@ -284,7 +284,7 @@ graph TD
 1. Read the target `matrix` row by `{section_tipo, section_id}`.
 2. If `component_tipo` is set, render that component (otherwise the whole record).
 3. `tag_id`/`tag_component_tipo` narrow further to a single inline annotation.
-4. For **dataframe** locators, `id_key` pairs the supplementary frame record to the exact main-component item (`section_id_key`/`section_tipo_key` are retired — read only by the old-CSV import and v6→v7 update).
+4. For **dataframe** locators, `id_key` pairs the supplementary frame record to the exact main-component item (`section_id_key`/`section_tipo_key` are retired — read only as a BC fallback, e.g. legacy dataframe order resolution in `ts_object/node_repository.ts`, and by the old-CSV import / v6→v7 update; never written anew).
 
 ### Helper functions
 
