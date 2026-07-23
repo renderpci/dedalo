@@ -19,6 +19,7 @@ import {
 	LOGIN_MAX_ATTEMPTS,
 	buildThrottleKey,
 	createSession,
+	destroyUserSessions,
 	getSession,
 	isThrottled,
 	recordFailedAttempt,
@@ -74,6 +75,85 @@ describe('fail-closed security suite (Phase 5 gate)', () => {
 		expect(unknownAction.status).toBe(400);
 		// Identical message — no oracle for which part was wrong.
 		expect(unknownAction.body.msg).toBe(unknownClass.body.msg);
+	});
+
+	test('inherited Object.prototype keys are NOT dispatchable actions (API-01)', async () => {
+		// ACTION_REGISTRY and its per-class tables are plain object literals, so
+		// `table[action]` on an inherited key returns an Object.prototype builtin
+		// (constructor/toString/valueOf/hasOwnProperty) — not undefined — and
+		// action:'constructor' slipped past the old `=== undefined` gate, then threw
+		// a raw 500 at the post-handler csrf assignment. Gate 1 now resolves via
+		// Object.hasOwn + a typeof-function guard, so every inherited key is an
+		// unregistered action → the documented 400 envelope, never a 500.
+		const unknownAction = await dispatchRqo(
+			{ action: 'drop_all_tables', dd_api: 'dd_core_api' } as Rqo,
+			anonymousContext(),
+		);
+		for (const action of ['constructor', 'toString', 'valueOf', 'hasOwnProperty', '__proto__']) {
+			const res = await dispatchRqo(
+				{ action, dd_api: 'dd_core_api', source: {} } as Rqo,
+				authedContext(), // fully authenticated: prove Gate 1 rejects BEFORE the handler
+			);
+			expect(res.status).toBe(400);
+			expect(res.body.result).toBe(false);
+			// Same shape as any unregistered action — no distinct 500 / stack.
+			expect(res.body.msg).toBe(unknownAction.body.msg);
+		}
+		// An inherited key in the CLASS (dd_api) position is equally rejected.
+		const inheritedClass = await dispatchRqo(
+			{ action: 'read', dd_api: 'constructor' } as Rqo,
+			anonymousContext(),
+		);
+		expect(inheritedClass.status).toBe(400);
+		expect(inheritedClass.body.result).toBe(false);
+	});
+
+	test('maintenance mode is enforced PER REQUEST — a pre-maintenance non-root session is refused (AUTH-05)', async () => {
+		const { setServerState } = await import('../../src/core/resolve/server_state.ts');
+		// A non-root editor session with a VALID CSRF token, so ONLY the maintenance
+		// gate can reject it (isolate Gate 2b from the CSRF gate). userId 4321 ≠ -1.
+		const editorToken = createSession(4321, 'editor', false);
+		const editorSession = getSession(editorToken);
+		const editorCtx: ApiRequestContext = {
+			requestId: 'test',
+			clientIp: '127.0.0.1',
+			session: editorSession,
+			sessionToken: editorToken,
+			csrfCandidate: editorSession?.csrfToken ?? null,
+		};
+		setServerState({ maintenance_mode: true });
+		try {
+			// The login gate blocks NEW logins; this session was minted BEFORE
+			// maintenance. PHP verify_login demotes it to unauthenticated per request.
+			const blocked = await dispatchRqo(
+				{ action: 'get_environment', dd_api: 'dd_core_api' } as Rqo,
+				editorCtx,
+			);
+			expect(blocked.status).toBe(401);
+			// Root (superuser) MUST still traverse — it is who lifts maintenance.
+			const rootOk = await dispatchRqo(
+				{ action: 'get_environment', dd_api: 'dd_core_api' } as Rqo,
+				authedContext(),
+			);
+			expect(rootOk.status).toBe(200);
+		} finally {
+			setServerState({ maintenance_mode: false });
+		}
+		// With maintenance OFF the same non-root identity is NOT blocked by this gate.
+		const afterToken = createSession(4321, 'editor', false);
+		const afterSession = getSession(afterToken);
+		const afterCtx: ApiRequestContext = {
+			requestId: 'test',
+			clientIp: '127.0.0.1',
+			session: afterSession,
+			sessionToken: afterToken,
+			csrfCandidate: afterSession?.csrfToken ?? null,
+		};
+		const notBlocked = await dispatchRqo(
+			{ action: 'get_environment', dd_api: 'dd_core_api' } as Rqo,
+			afterCtx,
+		);
+		expect(notBlocked.status).toBe(200);
 	});
 
 	test('unauthenticated read is denied; get_environment is not', async () => {
@@ -201,6 +281,26 @@ describe('fail-closed security suite (Phase 5 gate)', () => {
 	test('expired/garbage session tokens resolve to null (no partial trust)', () => {
 		expect(getSession('not-a-real-token')).toBeNull();
 		expect(getSession('')).toBeNull();
+	});
+
+	test('single-session eviction keeps the new token and drops the rest (AUTHZ-04)', () => {
+		// The mechanism login() runs when DEDALO_SINGLE_SESSION is on: a fresh login
+		// evicts the user's OTHER sessions, so a token stolen earlier stops working
+		// the moment the victim re-logs-in. destroyUserSessions(userId, keepToken).
+		const stolen = createSession(7001, 'multi', false); // an attacker's earlier token
+		const other = createSession(7001, 'multi', false); // another device
+		const fresh = createSession(7001, 'multi', false); // the just-minted login
+		expect(getSession(stolen)).not.toBeNull();
+		expect(getSession(other)).not.toBeNull();
+		const removed = destroyUserSessions(7001, fresh);
+		expect(removed).toBe(2);
+		expect(getSession(stolen)).toBeNull(); // the stolen token is now dead
+		expect(getSession(other)).toBeNull();
+		expect(getSession(fresh)).not.toBeNull(); // the new session survives
+		// A DIFFERENT user is untouched (per-user scope).
+		const bystander = createSession(7002, 'bystander', false);
+		expect(destroyUserSessions(7001, fresh)).toBe(0);
+		expect(getSession(bystander)).not.toBeNull();
 	});
 
 	test('read gate denies a non-admin on a section their profile does not grant', async () => {
