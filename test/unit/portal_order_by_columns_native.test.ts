@@ -4,10 +4,10 @@
  * top-level component properties. This is the TS-native contract of a feature
  * with NO PHP oracle (opt-in; no frozen fixture declares it), pinned here:
  *
- *  - a column with `order` resolves to an ORDER step over its target section;
+ *  - a column with `order` resolves to an ORDER step over the TARGET section
+ *    (where the linked records live — derived from the locators, NOT the caller);
  *  - `order` is `asc`/`desc` (any case) or `true` (= asc); anything else means
  *    "not ordered" and the column is skipped (never a malformed ORDER BY);
- *  - `section_tipo: 'self'` resolves to the host section;
  *  - a column WITHOUT `order` is skipped; declaration order = sort priority;
  *  - no ordered column → null (caller keeps stored order);
  *  - `hasDeclaredColumnOrder` is the cheap raw-properties gate used by the read
@@ -21,15 +21,17 @@
 import { describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import {
-	buildPortalOrderSpecs,
+	buildOrderEntries,
 	hasDeclaredColumnOrder,
+	locatorTargetSections,
 	normalizeDirection,
+	orderedColumnsFromDdoMap,
 	rankLocatorsByColumns,
 } from '../../src/core/relations/order_locators.ts';
 
 // A resolved show.ddo_map (each entry may carry `order` / `sort_by_column`).
 const columns = (specs: { tipo: string; section_tipo?: string; order?: unknown }[]) =>
-	specs.map((s) => ({ section_tipo: 'rsc167', ...s }));
+	specs.map((s) => ({ section_tipo: 'self', ...s }));
 
 describe('normalizeDirection', () => {
 	test('asc/desc any case, boolean true = ASC, else null', () => {
@@ -44,57 +46,77 @@ describe('normalizeDirection', () => {
 	});
 });
 
-describe('buildPortalOrderSpecs', () => {
-	test('one ordered column → one order step on its target', () => {
-		const spec = buildPortalOrderSpecs(columns([{ tipo: 'rsc20', order: 'asc' }]), 'rsc167');
-		expect(spec).toEqual({
-			targets: ['rsc167'],
-			order: [{ direction: 'ASC', path: [{ section_tipo: 'rsc167', component_tipo: 'rsc20' }] }],
-		});
+describe('locatorTargetSections', () => {
+	test('distinct locator section_tipos, non-string dropped', () => {
+		expect(
+			locatorTargetSections([
+				{ section_tipo: 'tch10', section_id: 1 },
+				{ section_tipo: 'tch10', section_id: 2 },
+				{ section_tipo: 'dd128', section_id: 3 },
+				{ section_id: 4 },
+			]),
+		).toEqual(['tch10', 'dd128']);
+		expect(locatorTargetSections([])).toEqual([]);
+	});
+});
+
+describe('orderedColumnsFromDdoMap', () => {
+	test('one ordered column → its tipo + direction', () => {
+		expect(orderedColumnsFromDdoMap(columns([{ tipo: 'rsc20', order: 'asc' }]))).toEqual([
+			{ componentTipo: 'rsc20', direction: 'ASC' },
+		]);
 	});
 
 	test('DESC honored; boolean true = ASC', () => {
 		expect(
-			buildPortalOrderSpecs(columns([{ tipo: 'rsc20', order: 'desc' }]), 'rsc167')?.order[0]
-				?.direction,
+			orderedColumnsFromDdoMap(columns([{ tipo: 'rsc20', order: 'desc' }]))[0]?.direction,
 		).toBe('DESC');
-		expect(
-			buildPortalOrderSpecs(columns([{ tipo: 'rsc20', order: true }]), 'rsc167')?.order[0]
-				?.direction,
-		).toBe('ASC');
-	});
-
-	test("section_tipo 'self' resolves to the host section", () => {
-		const spec = buildPortalOrderSpecs(
-			columns([{ tipo: 'rsc35', section_tipo: 'self', order: 'asc' }]),
-			'rsc167',
+		expect(orderedColumnsFromDdoMap(columns([{ tipo: 'rsc20', order: true }]))[0]?.direction).toBe(
+			'ASC',
 		);
-		expect(spec?.order[0]?.path[0]?.section_tipo).toBe('rsc167');
 	});
 
 	test('columns WITHOUT order are skipped; declaration order = priority', () => {
-		const spec = buildPortalOrderSpecs(
-			columns([
-				{ tipo: 'rsc279' }, // no order → skipped
-				{ tipo: 'rsc29', order: 'desc' },
-				{ tipo: 'rsc20', order: 'asc' },
-			]),
-			'rsc167',
-		);
-		expect(spec?.order.map((o) => o.path[0]?.component_tipo)).toEqual(['rsc29', 'rsc20']);
-		expect(spec?.order.map((o) => o.direction)).toEqual(['DESC', 'ASC']);
-	});
-
-	test('an invalid order value skips the column', () => {
 		expect(
-			buildPortalOrderSpecs(columns([{ tipo: 'rsc20', order: 'sideways' }]), 'rsc167'),
-		).toBeNull();
+			orderedColumnsFromDdoMap(
+				columns([
+					{ tipo: 'rsc279' }, // no order → skipped
+					{ tipo: 'rsc29', order: 'desc' },
+					{ tipo: 'rsc20', order: 'asc' },
+				]),
+			),
+		).toEqual([
+			{ componentTipo: 'rsc29', direction: 'DESC' },
+			{ componentTipo: 'rsc20', direction: 'ASC' },
+		]);
 	});
 
-	test('no ordered column → null', () => {
-		expect(buildPortalOrderSpecs([], 'rsc167')).toBeNull();
-		expect(buildPortalOrderSpecs(columns([{ tipo: 'rsc20' }]), 'rsc167')).toBeNull();
-		expect(buildPortalOrderSpecs(columns([{ tipo: '', order: 'asc' }]), 'rsc167')).toBeNull();
+	test('invalid order value / no order / empty tipo → dropped', () => {
+		expect(orderedColumnsFromDdoMap(columns([{ tipo: 'rsc20', order: 'sideways' }]))).toEqual([]);
+		expect(orderedColumnsFromDdoMap([])).toEqual([]);
+		expect(orderedColumnsFromDdoMap(columns([{ tipo: 'rsc20' }]))).toEqual([]);
+		expect(orderedColumnsFromDdoMap(columns([{ tipo: '', order: 'asc' }]))).toEqual([]);
+	});
+});
+
+describe('buildOrderEntries (per-model order path, DB)', () => {
+	test('a DATE column resolves to a single-step path anchored on the target', async () => {
+		// test3.test145 is a component_date; its order path is the direct column.
+		const order = await buildOrderEntries(
+			[{ componentTipo: 'test145', direction: 'DESC' }],
+			'test3',
+		);
+		expect(order).toHaveLength(1);
+		expect(order[0]?.direction).toBe('DESC');
+		const leaf = order[0]?.path.at(-1);
+		expect(leaf?.component_tipo).toBe('test145');
+		expect(order[0]?.path[0]?.section_tipo).toBe('test3');
+	});
+
+	test('empty target → no entries', async () => {
+		expect(await buildOrderEntries([{ componentTipo: 'test145', direction: 'ASC' }], '')).toEqual(
+			[],
+		);
 	});
 });
 

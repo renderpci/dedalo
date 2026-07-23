@@ -28,16 +28,18 @@
 
 import { sql } from '../db/postgres.ts';
 
-/** One ORDER BY step: a column of a target section, ASC or DESC. */
+/** One ORDER BY step: an order PATH (single-step for literals/dates, multi-step
+ * for relations — the join chain from the target section to the sortable leaf,
+ * built by `buildOrderPath`), plus the direction. */
 export interface PortalOrderEntry {
 	direction: 'ASC' | 'DESC';
-	path: { section_tipo: string; component_tipo: string }[];
+	path: { section_tipo?: string; component_tipo?: string }[];
 }
 
-/** The resolved search order: the target sections to search + the order steps. */
-export interface PortalOrderSpec {
-	targets: string[];
-	order: PortalOrderEntry[];
+/** One declared order column: which component, ascending or descending. */
+export interface OrderedColumn {
+	componentTipo: string;
+	direction: 'ASC' | 'DESC';
 }
 
 /** A resolved config column (a `show.ddo_map` entry), carrying the per-ddo keys. */
@@ -80,37 +82,46 @@ export function hasDeclaredColumnOrder(properties: unknown): boolean {
 /**
  * PURE resolution of the resolved columns (a `show.ddo_map` array) into a search
  * order spec — the DB-free core, unit-tested directly. Each column carrying an
- * `order` directive becomes an ORDER step over its target section ('self' → the
- * host section), priority = declaration order. Returns null when no column
- * declares a valid `order`.
+ * `order` directive becomes an ORDER step over `targetSectionTipo`, priority =
+ * declaration order. Returns null when no column declares a valid `order`.
+ *
+ * `targetSectionTipo` is the section the LINKED records live in (the portal's
+ * target), NOT the caller: a portal column ddo declares `section_tipo: 'self'`,
+ * where 'self' means the target section — resolving it to the caller searches
+ * the wrong table and ranks nothing. The caller derives the target from the
+ * locators being sorted.
  */
 export function buildPortalOrderSpecs(
 	columns: ConfigColumn[],
-	sectionTipo: string,
+	targetSectionTipo: string,
 ): PortalOrderSpec | null {
+	if (targetSectionTipo === '') return null;
 	const order: PortalOrderEntry[] = [];
-	const targetSet = new Set<string>();
 	for (const column of columns) {
 		const direction = normalizeDirection(column.order);
 		if (direction === null) continue;
 		const columnTipo = typeof column.tipo === 'string' ? column.tipo : '';
 		if (columnTipo === '') continue;
 
-		const rawTargets = Array.isArray(column.section_tipo)
-			? column.section_tipo
-			: [column.section_tipo];
-		const resolved = rawTargets
-			.map((target) => (target === 'self' ? sectionTipo : target))
-			.filter((target): target is string => typeof target === 'string' && target !== '');
-		const firstTarget = resolved[0];
-		if (firstTarget === undefined) continue;
-		for (const target of resolved) targetSet.add(target);
-
-		order.push({ direction, path: [{ section_tipo: firstTarget, component_tipo: columnTipo }] });
+		order.push({
+			direction,
+			path: [{ section_tipo: targetSectionTipo, component_tipo: columnTipo }],
+		});
 	}
 
 	if (order.length === 0) return null;
-	return { targets: [...targetSet], order };
+	return { targets: [targetSectionTipo], order };
+}
+
+/** Distinct target section(s) of the locators being sorted (the ranking scope). */
+export function locatorTargetSections(items: unknown[]): string[] {
+	return [
+		...new Set(
+			(items as { section_tipo?: unknown }[])
+				.map((item) => (typeof item?.section_tipo === 'string' ? item.section_tipo : ''))
+				.filter((tipo) => tipo !== ''),
+		),
+	];
 }
 
 /**
@@ -197,6 +208,13 @@ export async function orderLocatorsByDeclaredColumns(
 	if ((items as unknown[]).length < 2) return null;
 	if (!hasDeclaredColumnOrder(properties)) return null;
 
+	// The ranking scope is the TARGET section(s) — where the linked records
+	// live — read from the locators, NOT the caller `sectionTipo` (a portal
+	// column's 'self' means its target, not the host).
+	const targets = locatorTargetSections(items);
+	const firstTarget = targets[0];
+	if (firstTarget === undefined) return null;
+
 	const { buildRequestConfigForElement } = await import('./request_config/build.ts');
 	const config = await buildRequestConfigForElement(properties ?? null, {
 		ownerTipo: componentTipo,
@@ -206,7 +224,8 @@ export async function orderLocatorsByDeclaredColumns(
 	});
 	const columns = (config[0]?.show?.ddo_map ?? []) as ConfigColumn[];
 
-	const spec = buildPortalOrderSpecs(columns, sectionTipo);
+	const spec = buildPortalOrderSpecs(columns, firstTarget);
 	if (spec === null) return null;
-	return rankLocatorsByColumns(items, spec.targets, spec.order);
+	// search over EVERY distinct target section, rank paths anchor on firstTarget
+	return rankLocatorsByColumns(items, targets, spec.order);
 }
