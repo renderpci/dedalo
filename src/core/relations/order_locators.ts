@@ -80,37 +80,41 @@ export function hasDeclaredColumnOrder(properties: unknown): boolean {
 }
 
 /**
- * PURE resolution of the resolved columns (a `show.ddo_map` array) into a search
- * order spec — the DB-free core, unit-tested directly. Each column carrying an
- * `order` directive becomes an ORDER step over `targetSectionTipo`, priority =
- * declaration order. Returns null when no column declares a valid `order`.
- *
- * `targetSectionTipo` is the section the LINKED records live in (the portal's
- * target), NOT the caller: a portal column ddo declares `section_tipo: 'self'`,
- * where 'self' means the target section — resolving it to the caller searches
- * the wrong table and ranks nothing. The caller derives the target from the
- * locators being sorted.
+ * PURE: the columns that declare a valid `order`, in declaration order (= sort
+ * priority), each with its normalized direction. DB-free, unit-tested directly.
  */
-export function buildPortalOrderSpecs(
-	columns: ConfigColumn[],
-	targetSectionTipo: string,
-): PortalOrderSpec | null {
-	if (targetSectionTipo === '') return null;
-	const order: PortalOrderEntry[] = [];
+export function orderedColumnsFromDdoMap(columns: ConfigColumn[]): OrderedColumn[] {
+	const out: OrderedColumn[] = [];
 	for (const column of columns) {
 		const direction = normalizeDirection(column.order);
 		if (direction === null) continue;
-		const columnTipo = typeof column.tipo === 'string' ? column.tipo : '';
-		if (columnTipo === '') continue;
-
-		order.push({
-			direction,
-			path: [{ section_tipo: targetSectionTipo, component_tipo: columnTipo }],
-		});
+		const componentTipo = typeof column.tipo === 'string' ? column.tipo : '';
+		if (componentTipo === '') continue;
+		out.push({ componentTipo, direction });
 	}
+	return out;
+}
 
-	if (order.length === 0) return null;
-	return { targets: [targetSectionTipo], order };
+/**
+ * Resolve each ordered column to a full ORDER entry via `buildOrderPath` — the
+ * per-MODEL order path: single-step for literals/dates, a JOIN chain to the
+ * sortable leaf for RELATIONS (a checkbox/autocomplete/portal column orders by
+ * the LINKED record's sort column, not a non-existent `.value` on the locator).
+ * `targetSectionTipo` is the section the linked records live in.
+ */
+export async function buildOrderEntries(
+	ordered: OrderedColumn[],
+	targetSectionTipo: string,
+): Promise<PortalOrderEntry[]> {
+	if (targetSectionTipo === '') return [];
+	const { buildOrderPath } = await import('../search/order_path.ts');
+	const order: PortalOrderEntry[] = [];
+	for (const column of ordered) {
+		const path = await buildOrderPath(column.componentTipo, targetSectionTipo);
+		if (path.length === 0) continue;
+		order.push({ direction: column.direction, path });
+	}
+	return order;
 }
 
 /** Distinct target section(s) of the locators being sorted (the ranking scope). */
@@ -224,8 +228,11 @@ export async function orderLocatorsByDeclaredColumns(
 	});
 	const columns = (config[0]?.show?.ddo_map ?? []) as ConfigColumn[];
 
-	const spec = buildPortalOrderSpecs(columns, firstTarget);
-	if (spec === null) return null;
-	// search over EVERY distinct target section, rank paths anchor on firstTarget
-	return rankLocatorsByColumns(items, targets, spec.order);
+	const ordered = orderedColumnsFromDdoMap(columns);
+	if (ordered.length === 0) return null;
+	// Per-model order paths (relation columns join to the linked leaf), anchored
+	// on the target section; search over EVERY distinct target section.
+	const order = await buildOrderEntries(ordered, firstTarget);
+	if (order.length === 0) return null;
+	return rankLocatorsByColumns(items, targets, order);
 }
