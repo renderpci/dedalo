@@ -157,6 +157,39 @@ Time Machine reads override the source entirely (`pickReadSource('tm')` →
 `read_tm.ts`, which queries the flat `matrix_time_machine` table); they do not go
 through `buildSearchSql()`.
 
+### Ranking by locator position (`{mode:'locator_position'}`)
+
+Semantic search returns records **best-first**, and that rank has to survive the
+ordinary search machinery (pagination, `full_count`, export). The client
+achieves it with a **resolve-once-then-pin** step (WC-047): it pins the hit
+locators into `sqo.filter_by_locators` and appends a single
+`{mode:'locator_position'}` entry to `sqo.order`. `buildOrderClauses()`
+(`src/core/search/sql_assembler.ts`) renders that entry as a `selectExtra`
+alias —
+`array_position(ARRAY[…]::int[], mix.section_id) AS locator_position_order` —
+so the rank rides the normal component-sort path and is preserved across the
+windowed/count/export wrappers.
+
+Load-bearing details, all enforced in the assembler:
+
+- It is emitted as a **select alias**, never an alias-qualified raw `ORDER`
+  expression: the windowed wrapper strips only a *leading* alias prefix
+  (`stripAliasPrefix`), so a raw `array_position(…, mix.section_id)` clause
+  would reference an out-of-scope table there ("missing FROM-clause entry").
+- The ids are **inlined as integer literals** validated with
+  `Number.isSafeInteger`, never a bound `$n` parameter — the count path reuses
+  the same SQO but emits no `ORDER BY`, so an order-time bind would leave a
+  `$n` with no placeholder in the count SQL and fail every paginator count.
+- **Single-tipo pin lists only** in v1 — a mixed-tipo pin list throws; an empty
+  pin list is a silent no-op (a session-merged leftover order without pins).
+- `sanitizeClientSqo` clamps `filter_by_locators` to
+  [`CLIENT_MAX_LOCATOR_PINS`](../../config/search.md#semantic-search-rank-pinning)
+  (1000) **loudly** (DEC-07) — a longer pin list truncates the result set with
+  a logged warning rather than silently.
+
+This ordering mode is TS-native, additive (WC-047) — there is no counterpart in
+the previous engine.
+
 ### The identifier gate — the injection chokepoint
 
 `identifier_gate.ts` is the **central** security gate; it covers *all* component
