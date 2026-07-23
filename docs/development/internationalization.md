@@ -16,8 +16,9 @@ flowchart TB
     end
     subgraph IFACE["INTERFACE plane — what the app shows"]
         direction LR
-        I1["ontology term keys<br/>lg-* on every node"]
-        I2["tool / button labels<br/>dd1372 label payloads"]
+        I1["ontology node terms<br/>field / section names<br/>(lg-* on the node)"]
+        I2["program strings<br/>buttons, menus, dialogs<br/>(repo label catalogs)"]
+        I3["tool-local labels<br/>one tool's own buttons<br/>(register.json dd1372)"]
     end
     DATA -.->|"DEDALO_DATA_LANG<br/>(per cataloguer)"| U((user))
     IFACE -.->|"DEDALO_APPLICATION_LANG<br/>(per cataloguer)"| U
@@ -134,9 +135,13 @@ The render layer shows the transliteration in parentheses (list) or as a `transl
 
 A per-value language slot answers "which translation of this field am I editing". A different question is "what language is this *content* in" — the original language of a work, the spoken language of an [audio track](../core/components/component_av.md), the language of an inscription. That is a **fact about the content**, not a UI choice, so it is modelled as data: [`component_select_lang`](../core/components/component_select_lang.md) stores a single [locator](../core/locator.md) into `lg1` and resolves it to a language code/name. It is itself non-translatable, its options come from `DEDALO_PROJECTS_DEFAULT_LANGS`, and it commonly pairs with a [`component_text_area`](../core/components/component_text_area.md) to declare that body's language. Do **not** use it for the per-language translation of a field's own text — that is the translatable-slot mechanism above.
 
-## Plane 2 — INTERFACE / LABELS: ontology term keys
+## Plane 2 — INTERFACE / LABELS: three sub-planes
 
-Field labels, section names, button captions, menu entries — the application chrome — are **not** component data. They are the `lg-*` term keys carried on the ontology nodes themselves. A component node declares its label in every language alongside its structural definition:
+The application chrome — every string that is *not* a record's own content — is one plane conceptually but has **three distinct sources**, each with its own storage, resolution and deploy cadence. Confusing them is the second-most-common i18n mistake (after the data-vs-interface one above): a field label lives in the ontology, a *Save* button does not.
+
+### 2a — Ontology node terms: field labels and section names
+
+The label of a **field or a section** is the `lg-*` term carried on that ontology node itself — it is *not* component data and *not* a program string. A component node declares its label in every language alongside its structural definition:
 
 ```json
 {
@@ -150,12 +155,35 @@ Field labels, section names, button captions, menu entries — the application c
 }
 ```
 
-At build time the node label is resolved to the **current interface language** by `labelByTipo(tipo)` (`src/core/ontology/labels.ts`), which defaults its lang to `currentApplicationLang()` — the request-scoped `DEDALO_APPLICATION_LANG`. The resolved string is stamped into the component [context](../core/glossary.md#context) as `label`. If a node has no term in that language, resolution falls back to `DEDALO_STRUCTURE_LANG` (the master authoring language, `lg-spa`) and then to any available language, so a label never comes back empty.
+At build time the node label is resolved to the **current interface language** by `labelByTipo(tipo)` (`src/core/ontology/labels.ts`), which defaults its lang to `currentApplicationLang()` — the request-scoped `DEDALO_APPLICATION_LANG`. The resolved string is stamped into the component [context](../core/glossary.md#context) as `label`. Resolution (`resolveLabel`) takes the requested language first, and when the node carries no term in it falls back to the **first non-empty** term. Because the ontology is *authored* in `DEDALO_STRUCTURE_LANG` (`lg-spa`, the master authoring language) every node is guaranteed a Spanish term, so that fallback always resolves and a label never comes back empty. Being ontology data, these terms **change with an [ontology update](ts_install_internals.md), not a code deploy**.
 
 !!! info "Why `DEDALO_STRUCTURE_LANG` is fixed at `lg-spa`"
     The ontology is *authored* in one language so that every term has a guaranteed canonical key. That language is `lg-spa` and must not be changed. It is the fallback floor for interface-label resolution and the language the ontology editor writes terms in — it is unrelated to what data or interface language any given installation uses day-to-day.
 
-**Tool UI strings** are a special slice of the interface plane: each tool ships a `dd1372` label payload (a multi-language `component_json`) carrying its own button captions and progress strings across all project languages — see the tools [register.json reference](tools/register_json.md). The [`tool_dd_label`](tools/reference/index.md#language--i18n) helper exists to author these payloads.
+### 2b — Program strings: the repo label catalogs (`get_label`)
+
+Everything in the chrome that is **not** tied to an ontology node — *Save* / *Delete* / *Cancel*, menu entries, dialog prompts, widget captions, error text — is a **program string**. Since 2026-07-16 (WC-033) these are owned by repo-committed label catalogs, the single source of truth:
+
+- `src/core/labels/master.json` — the **source of definitions**: the complete key set, each with its source string, authored in the master source language (`MASTER_SOURCE_LANG`, currently `lg-eng`). A `labels_tripwire` keeps it complete.
+- `src/core/labels/catalog/lg-<code>.json` — one **per-language translation** file per application language (sparse allowed; a missing key resolves through the fallback chain below).
+
+`getLabels(lang)` (`src/core/labels/catalog.ts`) merges these into the `get_label` dictionary served in the environment payload (`src/core/resolve/environment.ts` `buildEnvironment`), and the served dictionary **always carries the full master key set** (pre-migration, a lang file missing a key served `undefined` to the client). The merge starts from the master and overlays, later winning, in this order:
+
+1. `master.json` — the guaranteed-complete base;
+2. the install's **default** application language (`DEDALO_APPLICATION_LANGS_DEFAULT` — the operator's choice);
+3. a declared **linguistic alias** (`LANG_ALIAS`, e.g. Valencian reads the Catalan catalog);
+4. the **requested** language's own catalog.
+
+(Requesting the master source language itself is a special case: only its own override catalog is applied, since the master already covers it completely.)
+
+Program strings are coupled to **code**, not to the data model: a key exists because a line of client or widget code references it, so it **rides code deploys** (`git` / `update_code`) and **never** an ontology update. The previous model — where `dd_ontology` `model='label'` (`dd383`) rows were rebuilt into generated JS lang files — is retired: those rows are now **inert** for the engine and the generated lang files are **deleted**. Gate: `test/unit/labels_tripwire.test.ts`; the per-language missing-key backlog tool is `scripts/labels_fill.ts`.
+
+!!! tip "Adding a UI string"
+    Add the key and its source string to `src/core/labels/master.json` and reference it (`get_label.<key>`) **in the same commit** — the two ship together. Translations into each `catalog/lg-<code>.json` can follow; until a language supplies one, the fallback chain serves it.
+
+### 2c — Tool-local labels
+
+A **single tool's** own interface strings — its button captions and progress messages — do *not* live in the global catalogs. They ride a `dd1372` label payload (a multi-language `component_json`) inside that tool's `register.json` `misc`, resolved at runtime via `get_tool_label` (the client calls `self.get_tool_label('key')`). The [`tool_dd_label`](../tools/using_dd_label.md) helper authors these payloads. WC-034 moved **21** formerly-global keys that were used by exactly one tool (and tool-specific in meaning) into their tools' own labels, while genuinely generic vocabulary (`error`, `print`, `upload`, …) stays global. See the tools [register.json reference](tools/register_json.md) for the payload shape.
 
 ## Plane 3 — the translation workflow: `tool_lang` / `tool_lang_multi`
 
