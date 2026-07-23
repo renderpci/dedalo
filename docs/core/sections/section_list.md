@@ -82,7 +82,14 @@ DOM:  wrapper_section > list_body > [ header_wrapper_list | content_data > rows 
 - **Sort.** Expose sortable column headers (`ui.allow_column_order` /
   `add_column_order_set`) that mutate the SQO `order` and re-navigate.
 - **Search.** Host the section's [`search`](../sqo.md) filter
-  instance (`self.filter`) and the *Search* / *Show all* buttons.
+  instance (`self.filter`) and the *Search* / *Show all* buttons — plus, when
+  the searched section declares RAG [embed groups](../ai/rag_cookbook.md#r1--opt-a-section-in-the-section_map-ragembed-groups-2026-07-22),
+  the **"Search by meaning" quick input** (semantic search: ranked results pin
+  the list via `filter_by_locators` + the `locator_position` order) and the
+  **pinned chip** — an SQO-derived status ("N results pinned" / "no matches" /
+  "semantic unavailable") with a ✕ that clears the pin. The chip derives from
+  the SQO, not client memory, because pins persist in the server session
+  across reloads.
 - **Record actions.** Wire *new* / *duplicate* / *delete* through the
   `new_section_` / `duplicate_section_` / `delete_section_` events and the
   `create` / `duplicate` / `delete` API actions — see

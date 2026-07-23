@@ -291,3 +291,48 @@ and request timeouts (`engineering`-adjacent detail lives in `docs/diffusion/pub
 Gates: `bun run test:publication` (v2's own suite + typecheck) and
 `test/integration/publication_api_v2_smoke.test.ts` (boots v2 as a subprocess against a
 real published DB; skips loudly without `DEDALO_DIFFUSION_DB_*`).
+
+## 11. RAG: drain cron + embedding sidecar
+
+RAG (`src/ai/rag/` — opt-in, `DEDALO_RAG_ENABLED`) adds exactly TWO ops
+surfaces to a deployment; everything else rides the normal engine deploy.
+Hands-on guide: `docs/core/ai/rag_cookbook.md` (Install / Enable / R3).
+
+**1. The drain cron (REQUIRED — without it, nothing ever indexes).** Saves
+only enqueue a dirty marker (`rag_index_queue`, matrix DB, best-effort — a
+down vector store never fails a save); ALL embedding work happens in the
+out-of-band drain:
+
+```cron
+* * * * * cd /srv/dedalo-ts && bun run src/ai/rag/cli/rag_drain.ts >> /var/log/dedalo/rag_drain.log 2>&1
+```
+
+Deliberately an EXTERNAL short-lived process, not an in-server timer:
+- **request-path isolation** — embedding is heavy (network to the sidecar,
+  thousands of chunks for a large transcript); a runaway index job can never
+  degrade the serving engine, and memory returns to the OS each pass;
+- **cache freshness** — the process exits per pass, so module-level caches
+  (ontology, section_map, terms) die with it. Do NOT daemonize the drain
+  without adding cache-invalidation hooks first — a long-lived drain embeds
+  STALE terms;
+- **multi-host safe** — a Postgres advisory lock single-flights the drain, so
+  the same cron line on every app host is redundancy, not contention.
+
+Idle cost ≈ zero (empty queue → one SELECT; RAG disabled → no-op). Failures
+back off exponentially (`2^attempts` min, 5-attempt cap, `last_error` kept);
+watch `RagQueue.stats()` — `{pending, ready, blocked, failed, oldestAgeSec}` —
+in monitoring (cookbook R10). Pool budget: the drain is one more Postgres
+client — already counted in the §4 `DB_POOL_MAX` example.
+
+**2. The embedding sidecar (for real semantic quality).** Any HTTP service
+speaking `POST {endpoint}/embed {model, input:[…]} → {embeddings:[[…]]}` —
+Ollama's native `/api/embed` matches this contract byte-for-byte
+(`DEDALO_RAG_EMBEDDING_ENDPOINT=http://127.0.0.1:11434/api`, model `bge-m3`).
+Run it under its own supervision (systemd unit / launchd); the engine treats a
+sidecar failure as a RETRYABLE miss (never a garbage vector), so a sidecar
+restart just delays indexing. The embedding model name is the vector-store
+PARTITION KEY: changing model (or quantization) = a new partition = re-index
+(cookbook R11) — never mix precisions under one name.
+
+Backups: the vector DB (`dedalo7_rag`) is derived state — §6 already covers it
+as a separate dump; losing it costs a re-index, never data.

@@ -70,6 +70,10 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 			offset: sqoOptions.offset,
 			lang: source.lang,
 			sectionTipos,
+			// AUTHZ-05: scope referencing records to the caller (drops references in
+			// sections/projects the caller cannot reach). Host-read alone (gate above)
+			// is not enough — the scan spans 'all' owning sections.
+			principal,
 		});
 		const body: Record<string, unknown> = {
 			result: { context: relationList.context, data: relationList.data },
@@ -188,6 +192,21 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 		if (typeof source.section_tipo === 'string' && !Number.isNaN(recordId)) {
 			const { principalCanAccessRecord } = await import('../security/record_scope.ts');
 			if (!(await principalCanAccessRecord(source.section_tipo, recordId, principal))) {
+				return { status: 200, body: { result: { context: [], data: [] }, msg: 'OK' } };
+			}
+		}
+		// §7.4 per-COMPONENT schema ACL — defense-in-depth (AUTHZ-06). The `read`
+		// handler's Gate A already checks (section_tipo, tipo) before routing here,
+		// but the component get_data facade must ALSO self-gate: it emits a
+		// component's data / datalist directly, and this branch is reachable for a
+		// SYNTHETIC search_<n> id that skips the record gate above, so it must not
+		// rely solely on an upstream gate to withhold a component the caller holds
+		// level 0 on. Mirrors the section-read path's per-ddo ddoIsAuthorized
+		// (read.ts:181). Level 0 ⇒ PHP empty shell (never the data), same as the
+		// record-scope branch above — never a 403 that reveals the component exists.
+		if (typeof source.section_tipo === 'string' && typeof source.tipo === 'string') {
+			const { ddoIsAuthorized } = await import('../security/permissions.ts');
+			if (!(await ddoIsAuthorized(principal, source.section_tipo, source.tipo))) {
 				return { status: 200, body: { result: { context: [], data: [] }, msg: 'OK' } };
 			}
 		}

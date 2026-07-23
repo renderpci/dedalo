@@ -43,6 +43,7 @@ import { getSectionMap } from '../ontology/section_map.ts';
 import { resolveLocatorLabels } from '../relations/datalist.ts';
 import { findInverseReferences } from '../search/search_related.ts';
 import { resolveOwnConfigMap } from '../section/list_definitions/section_list.ts';
+import type { Principal } from '../security/permissions.ts';
 import { resolveComponentValue } from './component_data.ts';
 import { currentDataLang } from './request_lang.ts';
 
@@ -492,11 +493,18 @@ export async function buildRelationList(
 		offset?: number;
 		lang?: string;
 		sectionTipos?: string[] | 'all';
+		/**
+		 * The caller (AUTHZ-05). When present and NOT a global admin, referencing
+		 * records outside the caller's read grant / projects filter are dropped
+		 * before any existence, label or cell value is emitted. Undefined (internal
+		 * / test callers) applies NO filter — production dispatch ALWAYS passes it.
+		 */
+		principal?: Principal;
 	} = {},
 ): Promise<RelationListResult> {
 	// Request-scoped data lang backstop (S2-28), never a hardcoded lg-spa.
 	const lang = options.lang ?? currentDataLang();
-	const hits = await findInverseReferences(
+	let hits = await findInverseReferences(
 		[{ section_tipo: hostSectionTipo, section_id: String(hostSectionId) }],
 		{
 			sectionTipos: options.sectionTipos ?? 'all',
@@ -504,6 +512,16 @@ export async function buildRelationList(
 			offset: options.offset,
 		},
 	);
+
+	// AUTHZ-05 — scope the referencing records to the caller. Post-filter (the
+	// inverse scan is a shared, principal-free primitive): a heavily-referenced
+	// host can therefore return fewer than `limit` rows when some references are
+	// out of scope, which is correct — it never leaks a record the caller cannot
+	// reach. Global admins are unscoped inside the helper.
+	if (options.principal !== undefined) {
+		const { scopeInverseReferenceHits } = await import('../security/record_scope.ts');
+		hits = await scopeInverseReferenceHits(hits, options.principal);
+	}
 
 	// PER-CALL record loader (the export-run seam this module already exposes
 	// as CellValueResolveOptions.loadRecord, never wired here until 2026-07-20):

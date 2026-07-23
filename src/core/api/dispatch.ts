@@ -29,7 +29,7 @@ import {
 	reporterIpAllowed,
 } from '../error_report/gate.ts';
 import { INSTALL_ACTION_KEYS, installIpAllowed, isSealed } from '../install/gate.ts';
-import { resolvePrincipal } from '../security/permissions.ts';
+import { SUPERUSER_ID, resolvePrincipal } from '../security/permissions.ts';
 import { verifyCsrf } from '../security/session_store.ts';
 import { logApiAccess } from './access_log.ts';
 import type { ActionHandler, ApiRequestContext } from './handler_context.ts';
@@ -204,9 +204,23 @@ async function executeRqo(rqo: Rqo, context: ApiRequestContext): Promise<ApiResu
 	const apiClass = rqo.dd_api ?? 'dd_core_api';
 	const action = rqo.action;
 
-	// Gate 1 — allowlist: the pair must be explicitly registered.
-	const handler = ACTION_REGISTRY[apiClass]?.[action];
-	if (typeof action !== 'string' || handler === undefined) {
+	// Gate 1 — allowlist: the (class, action) pair must be EXPLICITLY registered.
+	// Resolve with Object.hasOwn, NOT a bare index. `ACTION_REGISTRY[apiClass]?.[action]`
+	// over plain object literals returns inherited Object.prototype builtins —
+	// `constructor` (the Object function), `toString`/`valueOf`/`hasOwnProperty` —
+	// instead of undefined, so a crafted `action:'constructor'` slipped past a
+	// `=== undefined` check and violated the "an unregistered pair does not exist"
+	// invariant (API-01). hasOwn on both keys + a typeof-function guard makes any
+	// inherited key resolve to no handler ⇒ the documented 400 envelope.
+	const classTable =
+		typeof apiClass === 'string' && Object.hasOwn(ACTION_REGISTRY, apiClass)
+			? ACTION_REGISTRY[apiClass]
+			: undefined;
+	const handler =
+		classTable !== undefined && typeof action === 'string' && Object.hasOwn(classTable, action)
+			? classTable[action]
+			: undefined;
+	if (typeof handler !== 'function') {
 		return denied(400, 'Undefined or unauthorized method (action)');
 	}
 
@@ -243,6 +257,24 @@ async function executeRqo(rqo: Rqo, context: ApiRequestContext): Promise<ApiResu
 	const noLogin = NO_LOGIN_ACTIONS.has(actionKey) || (isInstallSurface && !isSealed());
 	if (context.session === null && !noLogin) {
 		return denied(401, 'Authentication required');
+	}
+
+	// Gate 2b — maintenance mode (AUTH-05). PHP verify_login() re-checks
+	// maintenance on EVERY request and demotes any non-root session to
+	// unauthenticated while the flag is set. The login gate (auth.ts login())
+	// blocks only NEW logins, so a session minted BEFORE maintenance was enabled
+	// stayed free to keep writing into the matrix tables during a data-version
+	// migration under maintenance — the exact corruption window this closes.
+	// Re-checked per request; refuses every non-superuser session (401, the
+	// unauthenticated shape) so only root — who enables and lifts maintenance —
+	// traverses. `session.userId` is the user's section_id (-1 === SUPERUSER_ID
+	// for root), the same identity the login gate keys on; getServerState() reads
+	// ts_state.json uncached, so the flag is live the instant root sets it.
+	if (context.session !== null && context.session.userId !== SUPERUSER_ID) {
+		const { getServerState } = await import('../resolve/server_state.ts');
+		if (getServerState().maintenance_mode === true) {
+			return denied(401, 'Server under maintenance');
+		}
 	}
 
 	// Gate 3 — CSRF for authenticated, non-exempt actions. The rejection is the
@@ -341,8 +373,13 @@ async function executeRqo(rqo: Rqo, context: ApiRequestContext): Promise<ApiResu
 			},
 		};
 	}
-	// PHP appends the csrf token to every response for client transparency.
-	if (context.session !== null) {
+	// PHP appends the csrf token to every response for client transparency. Guard
+	// `result.body` (API-01): this assignment is OUTSIDE the try/catch above, so a
+	// handler returning a body-less result would throw a TypeError here that
+	// escapes into the un-try/caught fetch wrapper as a raw 500 instead of a
+	// client envelope. Every registered handler returns a body; the guard is
+	// belt-and-braces so no future handler can reopen that path.
+	if (context.session !== null && result.body !== undefined && result.body !== null) {
 		result.body.csrf_token = context.session.csrfToken;
 	}
 	return result;

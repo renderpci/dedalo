@@ -198,7 +198,7 @@ Returns the array of deleted ids. Ontology-main sections cascade (uninstall the 
   - `lang`: string (optional, default `"lg-nolan"`) — language code
   - `caller_dataframe`: object (optional) — dataframe pairing context (`main_component_tipo`, `id_key`)
 - `data`: object (required)
-  - `changed_data`: array (required) — change objects, each `{ action, key, value }` where `action` ∈ `update` / `insert` / `remove` / `add_new_element` / `sort_data`.
+  - `changed_data`: array (required) — change objects, each `{ action, key, value }` where `action` ∈ `update` / `insert` / `remove` / `set_data` / `sort_data` / `sort_by_column` / `add_new_element`.
 
 **Permission gate**: level ≥ 2 on `(section_tipo, tipo)`. On success the server echoes the saved component in the canonical DataItem envelope (relation/select-family saves also carry `datalist` / `pagination` / `context`), triggers server-side observers, and writes an activity-log entry.
 

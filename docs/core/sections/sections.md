@@ -97,8 +97,8 @@ for (const targetId of targets) {
 
 Its guarantees, in the order they are enforced:
 
-- **Permissions.** Requires `getPermissions(sectionTipo, sectionTipo) >= 2`;
-  refused otherwise.
+- **Permissions.** Requires `getSectionPermissions(principal, sectionTipo) >= 2`
+  (`src/core/api/handlers/dd_core_api.ts`); refused otherwise.
 - **Per-record scope gate.** A non-global-admin deleting an explicit
   `section_id` must have that record inside their projects filter
   (`isRecordInScope()`, `src/core/security/record_scope.ts`). Without this, a

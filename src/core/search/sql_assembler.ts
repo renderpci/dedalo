@@ -197,6 +197,48 @@ async function buildOrderClauses(
 	if (orderList.length === 0) return orderClauses;
 
 	for (const orderEntry of orderList) {
+		// `{mode:'locator_position'}` (2026-07-22, semantic-search rank order):
+		// preserve the filter_by_locators LIST POSITION — the pins arrive
+		// best-first from dd_rag_api semantic_search and the rank must survive
+		// pagination/count/export. Emitted as a selectExtra ALIAS (the component-
+		// sort pattern below) — NEVER a raw expression carrying `alias.`: the
+		// windowed wrapper strips only a LEADING alias prefix (stripAliasPrefix),
+		// so a raw array_position(..., alias.section_id) clause would reference an
+		// out-of-scope table there ("missing FROM-clause entry"). Ids are inlined
+		// as Number.isSafeInteger-validated literals — NEVER a registered bind:
+		// the count path reuses this sqo but emits no ORDER BY, so an order-time
+		// bind would arrive with no $N in the SQL text and 500 every paginator
+		// count (documented deviation from bind-everything; only validated
+		// integers are interpolated).
+		if ((orderEntry as { mode?: unknown }).mode === 'locator_position') {
+			const pins = (sqo as { filter_by_locators?: unknown }).filter_by_locators;
+			if (!Array.isArray(pins) || pins.length === 0) {
+				continue; // silent no-op: session-merged leftover order without pins
+			}
+			const tipos = new Set<string>();
+			const ids: number[] = [];
+			for (const pin of pins as { section_tipo?: unknown; section_id?: unknown }[]) {
+				if (typeof pin?.section_tipo === 'string') tipos.add(pin.section_tipo);
+				const id = Number(pin?.section_id);
+				if (!Number.isSafeInteger(id)) {
+					throw new Error(
+						`search assembler: locator_position order refuses non-integer pin section_id ${JSON.stringify(pin?.section_id)}`,
+					);
+				}
+				ids.push(id);
+			}
+			if (tipos.size > 1) {
+				throw new Error(
+					'search assembler: locator_position order supports a single-tipo pin list (v1)',
+				);
+			}
+			selectExtra.push(
+				`array_position(ARRAY[${ids.join(',')}]::int[], ${alias}.section_id) AS locator_position_order`,
+			);
+			orderClauses.push('locator_position_order ASC');
+			continue;
+		}
+
 		const rawDirection = String(orderEntry.direction ?? 'ASC')
 			.trim()
 			.toUpperCase();
@@ -320,7 +362,9 @@ function stripAliasPrefix(orderClause: string): string {
  * tiebreaker and is rejected here. The flip's index-aligned `<dir>` reproduces
  * the same rows (proven byte-exact by activity_deep_offset_flip.test.ts).
  */
-function singleUniqueKeyOrder(orderClauses: string[]): { key: 'id' | 'section_id'; dir: 'ASC' | 'DESC' } | null {
+function singleUniqueKeyOrder(
+	orderClauses: string[],
+): { key: 'id' | 'section_id'; dir: 'ASC' | 'DESC' } | null {
 	const only = orderClauses.length === 1 ? orderClauses[0] : undefined;
 	if (only === undefined) return null;
 	const match = /^(id|section_id) (asc|desc)(?: nulls (?:last|first))?$/i.exec(

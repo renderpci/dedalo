@@ -496,6 +496,7 @@ export const NEW_IN_V7: readonly string[] = [
 	'SESSION_COOKIE_SECURE',
 	'DEDALO_SESSION_DB_PATH',
 	'DEDALO_SESSION_CACHE_EXPIRE',
+	'DEDALO_SINGLE_SESSION',
 	'LOGIN_MAX_ATTEMPTS',
 	'LOGIN_ATTEMPT_WINDOW',
 	'LOGIN_LOCKOUT_SECONDS',
@@ -586,7 +587,8 @@ export const NEW_IN_V7: readonly string[] = [
 	'RAG_DB_NAME',
 	'DEDALO_RAG_BATCH_SIZE',
 	'DEDALO_RAG_PROVIDER_TIMEOUT',
-	'DEDALO_RAG_EMBEDDABLE_MODELS',
+	// DEDALO_RAG_EMBEDDABLE_MODELS retired 2026-07-22: selection moved to the
+	// section_map rag.embed ddo_map descriptor (no install-wide model scan).
 	'DEDALO_RAG_CHUNK_STRATEGY',
 	'DEDALO_RAG_CHUNK_TOKENS',
 	'DEDALO_RAG_CHUNK_MIN_TOKENS',

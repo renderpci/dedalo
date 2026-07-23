@@ -173,8 +173,7 @@ export async function persistConfig(o: Record<string, unknown>): Promise<Persist
 		lines.push('', '# --- Serving / media ---');
 		if (mediaPath !== '') lines.push(`MEDIA_PATH=${envQuote(mediaPath)}`);
 		if (unixSocket !== '') lines.push(`SERVER_UNIX_SOCKET=${envQuote(unixSocket)}`);
-		if (mediaAccessMode !== '')
-			lines.push(`DEDALO_MEDIA_ACCESS_MODE=${envQuote(mediaAccessMode)}`);
+		if (mediaAccessMode !== '') lines.push(`DEDALO_MEDIA_ACCESS_MODE=${envQuote(mediaAccessMode)}`);
 	}
 
 	if (diffusion) {

@@ -22,6 +22,7 @@ import { assertValidTipo } from '../../core/search/identifier_gate.ts';
 import { buildSearchSql } from '../../core/search/sql_assembler.ts';
 import { type Principal, getPermissions } from '../../core/security/permissions.ts';
 import { type ChunkOpts, chunk } from './chunker.ts';
+import { RAG_GROUP_PREFIX } from './config.ts';
 import { getEmbeddingProvider } from './embedding_provider.ts';
 import { collapseToRecords, fuse } from './fusion.ts';
 import type { Candidate } from './types.ts';
@@ -31,6 +32,7 @@ import {
 	denseSearch,
 	getRecordVectors,
 	lexicalSearch,
+	parseChunkMeta,
 	replaceRecordChunks,
 } from './vector_store.ts';
 
@@ -47,8 +49,49 @@ function hitToCandidate(hit: RagHit): Candidate {
 		modality: null,
 		egressClass: null,
 		parentKey: null,
-		chunkMeta: null,
+		chunkMeta: parseChunkMeta(hit.chunk_meta),
 	};
+}
+
+/** The stored key of a group facet — `rag:<group>` (validated at the API layer). */
+function groupStorageTipo(group: string | undefined): string | undefined {
+	return group === undefined ? undefined : `${RAG_GROUP_PREFIX}${group}`;
+}
+
+/**
+ * The distinct section tipos that CONTRIBUTED text to a group chunk (from
+ * chunk_meta.contributors, written by the indexer). Empty for pre-group chunks.
+ */
+export function contributorSectionTipos(chunkMeta: Record<string, unknown> | null): string[] {
+	const raw = chunkMeta?.contributors;
+	if (!Array.isArray(raw)) return [];
+	const out = new Set<string>();
+	for (const entry of raw) {
+		const tipos = (entry as { sectionTipos?: unknown } | null)?.sectionTipos;
+		if (!Array.isArray(tipos)) continue;
+		for (const tipo of tipos) {
+			if (typeof tipo === 'string' && tipo !== '') out.add(tipo);
+		}
+	}
+	return [...out];
+}
+
+/**
+ * The host-section COMPONENT tipos that composed a group chunk (the top-level
+ * ddo entries of the group, from chunk_meta.contributors). Each is a component
+ * of the chunk's host section, so it gates via getPermissions(principal,
+ * sectionTipo, componentTipo) — the per-ddo parity of the human read
+ * (ddoIsAuthorized). Empty for pre-group / image-path chunks. RAG-01.
+ */
+export function contributorComponentTipos(chunkMeta: Record<string, unknown> | null): string[] {
+	const raw = chunkMeta?.contributors;
+	if (!Array.isArray(raw)) return [];
+	const out = new Set<string>();
+	for (const entry of raw) {
+		const tipo = (entry as { componentTipo?: unknown } | null)?.componentTipo;
+		if (typeof tipo === 'string' && tipo !== '') out.add(tipo);
+	}
+	return [...out];
 }
 
 /**
@@ -91,11 +134,22 @@ export interface RagSearchHit {
 	lang: string;
 	snippet: string | null;
 	score: number;
+	/** Section tipos whose text CONTRIBUTED to this chunk (deep resolution).
+	 * The agent egress gate checks these beside the host section — a group
+	 * chunk's snippet carries deep-resolved text from OTHER sections, so the
+	 * host-only check alone would leak a forbidden section's text through a
+	 * public host record (sec review 4a, 2026-07-22). Empty for pre-group and
+	 * image-path chunks. */
+	contributors?: string[];
 }
 
 /** A passage-level hit (retrieve / get_agent_context) — carries the chunk index. */
 export interface RagPassageHit extends RagSearchHit {
 	chunk_index: number;
+	/** Section tipos whose text CONTRIBUTED to this chunk (deep resolution) — the
+	 * ask-path egress gate checks these beside the host section. Absent on
+	 * pre-group chunks and test fakes. */
+	contributors?: string[];
 }
 
 /**
@@ -117,14 +171,41 @@ async function aclGate(
 	for (const candidate of candidates) {
 		if (out.length >= limit) break;
 		if (scopeSet !== null && !scopeSet.has(candidate.sectionTipo)) continue;
-		// 1. Schema ACL — same gate as a human read of this component.
-		const schemaKey = `${candidate.sectionTipo}|${candidate.componentTipo}`;
-		let level = schemaLevel.get(schemaKey);
-		if (level === undefined) {
-			level = await getPermissions(principal, candidate.sectionTipo, candidate.componentTipo);
-			schemaLevel.set(schemaKey, level);
+		// 1. Schema ACL (RAG-01). A `rag:<group>` chunk is composed at INDEX time
+		//    under the SYSTEM principal (embed_source.ts), so it embeds the text of
+		//    EVERY component in the group's ddo_map — INCLUDING components this role
+		//    holds level 0 on. A section-only gate (the pre-fix behavior) let a
+		//    record-authorized user match, and receive the snippet of, a component
+		//    hidden from their own edit form. So gate a group chunk at COMPONENT
+		//    level, per contributing component — the exact parity of the human
+		//    read's per-ddo ddoIsAuthorized: require the section read grant AND ≥1
+		//    on every host-section component that fed the chunk; drop on any level
+		//    0. Contributors are always written by the indexer for a stored group
+		//    chunk (a doc with no harvested text is never indexed), so an empty set
+		//    is anomalous → fail CLOSED. A per-component (image-path) chunk keeps
+		//    its single component-level gate.
+		const isGroupChunk = candidate.componentTipo.startsWith(RAG_GROUP_PREFIX);
+		const gateTipos = isGroupChunk
+			? contributorComponentTipos(candidate.chunkMeta)
+			: [candidate.componentTipo];
+		if (isGroupChunk && gateTipos.length === 0) continue; // fail closed
+		// A group chunk additionally requires the section read grant beside its
+		// components (the human read shows the record only when section ≥ 1).
+		const requiredTipos = isGroupChunk ? [candidate.sectionTipo, ...gateTipos] : gateTipos;
+		let blocked = false;
+		for (const gateTipo of requiredTipos) {
+			const schemaKey = `${candidate.sectionTipo}|${gateTipo}`;
+			let level = schemaLevel.get(schemaKey);
+			if (level === undefined) {
+				level = await getPermissions(principal, candidate.sectionTipo, gateTipo);
+				schemaLevel.set(schemaKey, level);
+			}
+			if (level < 1) {
+				blocked = true;
+				break;
+			}
 		}
-		if (level < 1) continue;
+		if (blocked) continue;
 		// 2. Per-record projects ACL — principal-scoped existence check.
 		const recordKey = `${candidate.sectionTipo}|${candidate.sectionId}`;
 		let visible = recordVisible.get(recordKey);
@@ -184,16 +265,27 @@ function toSearchHit(candidate: Candidate): RagSearchHit {
 		lang: candidate.lang,
 		snippet: candidate.sourceText,
 		score: candidate.rrfScore ?? candidate.score ?? 0,
+		contributors: contributorSectionTipos(candidate.chunkMeta),
 	};
 }
 
-/** Run the hybrid (dense+lexical) legs and fuse them into ranked candidates. */
-async function hybridCandidates(query: string, overFetch: number): Promise<Candidate[]> {
+/** Run the hybrid (dense+lexical) legs and fuse them into ranked candidates.
+ * `group` narrows both legs to one facet's chunks (`rag:<group>`); `scope` is
+ * PUSHED DOWN into both store legs (2026-07-22) — as a post-filter only, a
+ * dominant section starved scoped searches into false-empty results. The
+ * aclGate still re-applies scope (harmless) and the full ACL. */
+async function hybridCandidates(
+	query: string,
+	overFetch: number,
+	group?: string,
+	scope?: string[],
+): Promise<Candidate[]> {
 	const provider = getEmbeddingProvider();
 	const [queryEmbedding] = await provider.embed([query]);
+	const facetTipo = groupStorageTipo(group);
 	const [dense, lexical] = await Promise.all([
-		denseSearch(provider.model, queryEmbedding as number[], overFetch),
-		lexicalSearch(query, overFetch),
+		denseSearch(provider.model, queryEmbedding as number[], overFetch, facetTipo, scope),
+		lexicalSearch(query, overFetch, facetTipo, scope),
 	]);
 	return fuse([dense.map(hitToCandidate), lexical.map(hitToCandidate)]);
 }
@@ -201,14 +293,16 @@ async function hybridCandidates(query: string, overFetch: number): Promise<Candi
 /**
  * Hybrid semantic search, ACL-gated, returning the best RECORD per hit. `limit`
  * caps the returned records; both retrievers over-fetch to survive the ACL filter.
+ * `group` scopes the search to one embed facet ("only transcriptions").
  */
 export async function semanticSearch(
 	principal: Principal,
 	query: string,
 	limit = 10,
 	scope?: string[],
+	group?: string,
 ): Promise<RagSearchHit[]> {
-	const fused = await hybridCandidates(query, Math.max(limit * 4, 20));
+	const fused = await hybridCandidates(query, Math.max(limit * 4, 20), group, scope);
 	const records = collapseToRecords(fused, 'rrfScore');
 	const gated = await aclGate(principal, records, limit, scope);
 	return gated.map(toSearchHit);
@@ -223,11 +317,12 @@ export async function retrievePassages(
 	query: string,
 	limit = 10,
 	scope?: string[],
+	group?: string,
 ): Promise<RagPassageHit[]> {
-	const fused = await hybridCandidates(query, Math.max(limit * 4, 20));
+	const fused = await hybridCandidates(query, Math.max(limit * 4, 20), group, scope);
 	const gated = await aclGate(principal, fused, limit, scope);
 	return gated.map((candidate) => ({
-		...toSearchHit(candidate),
+		...toSearchHit(candidate), // carries contributors
 		chunk_index: candidate.chunkIndex,
 	}));
 }
@@ -235,7 +330,8 @@ export async function retrievePassages(
 /**
  * Records visually/semantically similar to a SEED record: fetch the seed's stored
  * vectors, ANN each (excluding the seed), fuse, collapse to records, ACL-gate.
- * No re-embedding — uses the stored vectors.
+ * No re-embedding — uses the stored vectors. `group` narrows BOTH the seed's
+ * vectors and the neighbours to one facet ("similar by profession").
  */
 export async function similarTo(
 	principal: Principal,
@@ -243,13 +339,24 @@ export async function similarTo(
 	sectionId: number,
 	limit = 10,
 	scope?: string[],
+	group?: string,
 ): Promise<RagSearchHit[]> {
 	const provider = getEmbeddingProvider();
-	const seedVectors = await getRecordVectors({ sectionTipo, sectionId }, provider.model);
+	const facetTipo = groupStorageTipo(group);
+	const seedVectors = await getRecordVectors(
+		{ sectionTipo, sectionId },
+		provider.model,
+		'text',
+		facetTipo,
+	);
 	if (seedVectors.length === 0) return [];
 	const overFetch = Math.max(limit * 4, 20);
+	// scope pushdown (devil #5): without it the neighbours are the GLOBAL
+	// nearest and a dominant section starves the scoped ones out of the top-K.
 	const perVector = await Promise.all(
-		seedVectors.map((vector) => denseSearch(provider.model, vector.embedding, overFetch + 1)),
+		seedVectors.map((vector) =>
+			denseSearch(provider.model, vector.embedding, overFetch + 1, facetTipo, scope),
+		),
 	);
 	const lists = perVector.map((hits) =>
 		hits

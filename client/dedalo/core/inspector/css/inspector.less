@@ -20,6 +20,9 @@
 	margin-bottom: var(--space-3);
 	padding: 0px;
 	width: 100%;
+	// native controls (project tree checkboxes, radios) pick up the Dédalo
+	// accent instead of the browser default blue
+	accent-color: var(--color_orange_dedalo);
 	// the panel itself draws nothing: it is transparent and lets the page's
 	// light-gray canvas show through. Only the white content cards float on it.
 	background-color: transparent;
@@ -41,13 +44,16 @@
 		background-color: var(--fg_muted);
 		transition: background-color var(--transition-fast);
 
+		// glyphs stay in ONE family: thin outline (like search_light /
+		// add_light / duplicate). note.svg (solid bubble) and inspector.svg
+		// (bold bars) were replaced by _light outline redraws (2026-07-23).
 		&.info		{ .fn_add_mask('info.svg'); }
 		&.gear		{ .fn_add_mask('gear.svg'); }
 		&.link		{ .fn_add_mask('link.svg'); }
 		&.history	{ .fn_add_mask('history.svg'); }
-		&.note		{ .fn_add_mask('note.svg'); }
+		&.note		{ .fn_add_mask('note_light.svg'); }
 		&.activity	{ .fn_add_mask('gears.svg'); }
-		&.panel		{ .fn_add_mask('inspector.svg'); }
+		&.panel		{ .fn_add_mask('inspector_light.svg'); }
 
 		// fn_add_mask uses mask-size:contain, so each glyph fills a different
 		// fraction of its box depending on how much padding its SVG viewBox carries
@@ -82,6 +88,10 @@
 			background-color: var(--bg_surface); // #ffffff (palette token: robust against stale tool-css :root)
 			border-radius: var(--inspector_block_radius);
 			overflow: hidden; // clip rounded corners over inner content
+			// cards float on the canvas with a soft elevation instead of a
+			// border ring — the flat toolbars/paginator below opt out with
+			// box-shadow: none
+			box-shadow: var(--shadow-1);
 
 			&.project_wrap {
 				contain: layout;
@@ -101,14 +111,14 @@
 			display: flex;
 			align-items: center;
 			gap: var(--space-3);
-			padding: var(--space-3) 1.6rem var(--space-3) var(--space-4);
-			// uppercase muted label and a hairline that ties it to the body.
-			border-bottom: 1px solid var(--color_grey_14);
+			padding: var(--space-4) 1.6rem var(--space-3) var(--space-4);
+			// airy uppercase caption — no rule line: the extra top padding and
+			// the letter-spaced caption carry the separation on their own
 			color: var(--color_grey_7);
 			font-weight: 600;
 			font-size: 0.72rem;
 			text-transform: uppercase;
-			letter-spacing: 0.06em;
+			letter-spacing: 0.08em;
 			user-select: none;
 			transition: background-color var(--transition-fast), color var(--transition-fast);
 
@@ -147,7 +157,42 @@
 		>.paginator_container {
 			contain: content;
 			height: 73px;
-			background-color: transparent;
+			// the paginator is the TOP HALF of the first card: it shares the
+			// card surface with the actions toolbar below (which zeroes its
+			// own top margin/radius) so both read as ONE card.
+			background-color: var(--bg_surface);
+			border-radius: var(--inspector_block_radius) var(--inspector_block_radius) 0px 0px;
+			margin-bottom: 0px;
+			// numerals line up (page info, totals) without moving: tabular
+			// figures share the width of the default figures in SF/system fonts
+			font-variant-numeric: tabular-nums;
+
+			// current-page input reads as the strong figure of the row
+			input.input_go_to_page {
+				color: var(--field_value_fg);
+			}
+
+			// nav buttons: thin chevrons from the light icon family (the base
+			// play/forward triangles in paginator.less are solid-fill — the
+			// odd ones out); quiet at rest, warm on hover.
+			.nav_buttons >.btn {
+				background-color: var(--fg_muted);
+				transition: background-color var(--transition-fast), opacity 0.2s linear;
+
+				&.paginator_prev_icon, &.paginator_next_icon {
+					.fn_add_mask('chevron_light.svg');
+				}
+				&.paginator_first_icon, &.paginator_last_icon {
+					.fn_add_mask('chevron_double_light.svg');
+					// paginator.less forces 70% on the last icon — normalize
+					mask-size: contain;
+					-webkit-mask-size: contain;
+				}
+
+				&:hover:not(.inactive) {
+					background-color: var(--color_orange_dedalo);
+				}
+			}
 
 			@media screen and (max-width: @width_break_point_0) {
 				min-height: 66px;
@@ -195,7 +240,9 @@
 			contain: content;
 			color: @color_orange_dedalo;
 			padding: var(--space-3) var(--space-4);
-			font-size: 1.05rem;
+			font-size: 1rem;
+			font-weight: 600;
+			letter-spacing: 0.01em;
 			text-align: center;
 			background-color: var(--color_orange_light);
 
@@ -228,12 +275,13 @@
 		>.element_info_wrap	>.element_info {
 			contain: content;
 			display: grid;
-			grid-gap: 1px; // hairline rhythm between key/value rows
+			grid-gap: 0px;
 			grid-template-columns: minmax(min-content, 35%) minmax(65%, 80%);
 			margin-top: 0px;
-			margin-bottom: 0px;
+			margin-bottom: var(--space-2);
 			font-size: 0.86rem;
-			background-color: var(--bg_app); // light-gray shows through the grid gaps as faint, flat separators
+			// airy key/value sheet: no cell fills, no separator lines — the
+			// muted-key / ink-value contrast carries the structure
 
 			.link, .pen, .tree, .edit {
 				background-color: @color_orange_dedalo;
@@ -248,12 +296,13 @@
 			}
 
 			.key {
-				background-color: var(--bg_surface_alt);
+				background-color: transparent;
 				padding: var(--space-2) var(--space-3);
 				text-align: right;
 				text-transform: capitalize;
-				font-size: 0.78rem;
+				font-size: 0.75rem;
 				font-weight: 500;
+				letter-spacing: 0.01em;
 				color: var(--fg_muted);
 				display: flex;
 				align-items: center;
@@ -267,9 +316,10 @@
 				}
 			}
 			.value {
-				background-color: var(--bg_surface);
+				background-color: transparent;
 				padding: var(--space-2) var(--space-3);
-				color: var(--fg_default);
+				color: var(--field_value_fg); // full-strength ink, matches the edit-view values
+				font-variant-numeric: tabular-nums; // ids/dates align; no effect on plain text
 
 				&.wide {
 					grid-column-start: 1;
@@ -327,22 +377,35 @@
 		}
 
 		// buttons_container / tools_container (top action + tool rows).
-		// These are toolbars, not content cards: render them flat and
-		// transparent (no card fill, no radius) so the icon buttons float
-		// directly on the panel. The icons spread across the full card width.
+		// The action toolbar is a CARD like its siblings (surface fill, radius,
+		// soft elevation from the generic >div rule above) so the panel reads
+		// as one coherent stack: paginator (flat controls) → actions card →
+		// section card → info cards. The icons keep the block-header icon size
+		// (1.3rem) and the muted→orange hover grammar.
 		>.buttons_container, >.tools_container {
 
 			&.top {
 				display: flex;
 				flex-wrap: wrap;
 				align-items: center;
-				justify-content: space-evenly; // centered + evenly distributed across the card width
+				justify-content: space-evenly; // evenly distributed across the card width
 				gap: var(--space-2);
-				margin: 0px var(--space-3);
-				padding: var(--space-2) 0px;
-				background-color: transparent;
-				border-radius: 0px;
-				overflow: visible;
+				padding: var(--space-3) var(--space-2); // comfortable touch row
+				// BOTTOM HALF of the first card: continues the paginator's
+				// surface above (its bottom radius/margin are zeroed there)
+				margin-top: 0px;
+				border-top-left-radius: 0px;
+				border-top-right-radius: 0px;
+
+				// the record-list button uses the light list glyph so the row
+				// stays in one icon family (theme list.svg is the bold variant)
+				>span.list {
+					.fn_add_mask('list_light.svg');
+				}
+				// NOTE: no hover *surface* is possible on the icons — the spans
+				// are element-level mask icons, so any background paints the
+				// glyph itself; the orange glyph tint below is the hover
+				// affordance.
 
 				>span {
 					// square icon box matching the block-header icons, so the
@@ -478,7 +541,7 @@
 		// which is kept clear by the label's reserved padding-right above
 		.inspector_rail_toggle {
 			flex: 0 0 auto;
-			.fn_add_mask('arrow-circle-right.svg');
+			.fn_add_mask('arrow_circle_right_light.svg'); // light-family redraw of arrow-circle-right
 			// the icon's circle touches the viewBox edges; shrink the mask within the
 			// box so the outer stroke isn't clipped (looks cut) at small sizes
 			-webkit-mask-size: 82%;

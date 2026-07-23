@@ -140,6 +140,10 @@
   --shadow_default: rgba(0, 0, 0, 0.1);
   --focus_ring: var(--color_input_focus);
   --focus_ring_weak: rgba(59, 135, 253, 0.4);
+  --field_label_fg: #5d6570;
+  --field_value_fg: #1f2328;
+  --field_rule: rgba(27, 31, 36, 0.08);
+  --field_hover_bg: rgba(27, 31, 36, 0.03);
   --space-0: 0;
   --space-1: 0.125rem;
   --space-2: 0.25rem;

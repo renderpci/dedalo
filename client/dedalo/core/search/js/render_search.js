@@ -77,6 +77,9 @@
 		presets_section_tipo
 	} from './search_user_presets.js'
 	import {get_scope} from '../../common/js/section_map.js'
+	import {
+		apply_semantic_from_preset
+	} from './render_semantic.js'
 
 
 
@@ -283,6 +286,11 @@ render_search.prototype.render_base = function() {
 				}
 			}
 		)
+		// semantic (RAG): the ONE semantic input is the quick input in the list
+		// toolbar (render_semantic.js build_semantic_quick_input) — the panel
+		// deliberately mounts no duplicate block; the shared instance state
+		// (self.semantic) still composes with the structured filter on submit.
+
 		const search_group_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'search_group_container',
@@ -1178,6 +1186,15 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 						editing_preset		: json_filter,
 						allow_duplicates	: true
 					})
+
+				// semantic (RAG): restore the preset's live NL query as state
+				// (Apply re-runs it) and reflect it in the toolbar quick input
+				// — the single semantic UI — so the restored query is visible.
+					apply_semantic_from_preset(self, json_filter)
+					const quick_input = document.querySelector('.semantic_quick_search input.semantic_query')
+					if (quick_input) {
+						quick_input.value = self.semantic?.q || ''
+					}
 
 				// render buttons
 					self.render_search_buttons()

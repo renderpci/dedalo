@@ -1,34 +1,36 @@
 import { describe, expect, test } from 'bun:test';
 import { chunk } from '../../src/ai/rag/chunker.ts';
 import { type OntologyPort, RagConfig } from '../../src/ai/rag/config.ts';
+import type { EmbedDoc } from '../../src/ai/rag/embed_source.ts';
 import { DeterministicHashProvider } from '../../src/ai/rag/embedding_provider.ts';
 import { RagIndexer, type RagStore } from '../../src/ai/rag/indexer.ts';
 import type { EmbeddingRow, RecordLocator } from '../../src/ai/rag/types.ts';
 
 /**
- * Unit tests for the indexer's HASH-DIFF (ported from
- * `src/ai/rag2/test/rag_indexer.test.ts`, Brick 2): an unchanged chunk must NOT
- * call the embedding provider and must NOT be upserted (stored source_hash
- * matches); a changed value re-embeds + upserts; an emptied value prunes. Runs
- * fully offline via fakes for the ontology, store, provider and text reader.
+ * Unit tests for the indexer's HASH-DIFF over GROUP documents (2026-07-22): an
+ * unchanged doc must NOT call the embedding provider and must NOT be upserted
+ * (stored source_hash matches); a changed doc re-embeds + upserts under the
+ * `rag:<group>` storage key; an emptied doc prunes; a group REMOVED from the
+ * descriptor is swept. Runs fully offline via fakes for the ontology, store,
+ * provider and the resolveDocs seam.
  */
 
 const SECTION = 'dd_rt';
-const COMPONENT = 'c_text1';
-const MODEL = 'component_input_text';
+const GROUP = 'default';
+const STORAGE_TIPO = `rag:${GROUP}`;
 const TITLE = 'Test Record';
 
-function fakeOntology(): OntologyPort {
-	const props: Record<string, Record<string, unknown>> = {
-		[SECTION]: { rag: { enabled: true } },
-		[COMPONENT]: { rag: { embed: true } },
-	};
-	const models: Record<string, string> = { [SECTION]: 'section', [COMPONENT]: MODEL };
+const CARD_GROUP = {
+	id: GROUP,
+	ddo_map: [{ tipo: 'c_text1', section_tipo: 'self', mode: 'list' }],
+};
+
+function fakeOntology(sectionMapRag: Record<string, unknown> | null): OntologyPort {
 	return {
-		getProperties: async (t: string) => props[t] ?? null,
-		getModelByTipo: async (t: string) => models[t] ?? null,
-		getRecursiveChildren: async (t: string) => (t === SECTION ? [COMPONENT] : []),
+		getProperties: async () => null,
+		getModelByTipo: async (t: string) => (t === SECTION ? 'section' : 'component_input_text'),
 		getTranslatable: async () => false,
+		getSectionMapRag: async (t: string) => (t === SECTION ? sectionMapRag : null),
 	};
 }
 
@@ -77,8 +79,9 @@ class SpyProvider extends DeterministicHashProvider {
 	}
 }
 
+/** Build an indexer whose resolveDocs returns the given per-record doc texts. */
 function buildIndexer(store: FakeStore, provider: SpyProvider, values: Map<number, string>) {
-	const ontology = fakeOntology();
+	const ontology = fakeOntology({ embed: [CARD_GROUP] });
 	return new RagIndexer({
 		ontology,
 		config: new RagConfig(ontology),
@@ -86,8 +89,18 @@ function buildIndexer(store: FakeStore, provider: SpyProvider, values: Map<numbe
 		provider,
 		langs: [],
 		nolan: 'lg-nolan',
-		resolveMatrixTable: async () => 'matrix',
-		readText: async ({ sectionId }) => values.get(sectionId) ?? '',
+		resolveDocs: async ({ sectionId }): Promise<EmbedDoc[]> => {
+			const text = values.get(sectionId) ?? '';
+			if (text === '') return [];
+			return [
+				{
+					group: GROUP,
+					lang: 'lg-nolan',
+					text,
+					contributors: [{ componentTipo: 'c_text1', sectionTipos: [SECTION] }],
+				},
+			];
+		},
 		recordTitle: async () => TITLE,
 	});
 }
@@ -96,13 +109,13 @@ function buildIndexer(store: FakeStore, provider: SpyProvider, values: Map<numbe
 function hashesFor(text: string): Map<string, string> {
 	const out = new Map<string, string>();
 	for (const c of chunk(text, { documentTitle: TITLE })) {
-		out.set(`${COMPONENT}|lg-nolan|${c.chunkIndex}`, c.sourceHash);
+		out.set(`${STORAGE_TIPO}|lg-nolan|${c.chunkIndex}`, c.sourceHash);
 	}
 	return out;
 }
 
-describe('RagIndexer hash-diff', () => {
-	test('UNCHANGED value: no embed call, no upsert (skip via matching source_hash)', async () => {
+describe('RagIndexer group hash-diff', () => {
+	test('UNCHANGED doc: no embed call, no upsert (skip via matching source_hash)', async () => {
 		const text = 'A short record about a Roman silver denarius coin.';
 		const store = new FakeStore();
 		store.hashes = hashesFor(text); // stored hashes already match
@@ -116,7 +129,7 @@ describe('RagIndexer hash-diff', () => {
 		expect(store.staleCalls.length).toBe(1); // stale-prune still runs (idempotent)
 	});
 
-	test('CHANGED value: re-embeds and upserts the changed chunks', async () => {
+	test('CHANGED doc: re-embeds and upserts under the rag:<group> storage key', async () => {
 		const text = 'A short record about a Roman silver denarius coin.';
 		const store = new FakeStore(); // empty stored hashes → everything is "changed"
 		const provider = new SpyProvider(64);
@@ -130,12 +143,16 @@ describe('RagIndexer hash-diff', () => {
 		const row = store.upserts[0]![0]!;
 		expect(row.sectionTipo).toBe(SECTION);
 		expect(row.sectionId).toBe(10);
-		expect(row.componentTipo).toBe(COMPONENT);
+		expect(row.componentTipo).toBe(STORAGE_TIPO);
 		expect(row.modality).toBe('text');
 		expect(row.embedding.length).toBe(64);
+		// contributors ride on every chunk's meta (the ask-path egress input)
+		expect((row.chunkMeta as { contributors: unknown }).contributors).toEqual([
+			{ componentTipo: 'c_text1', sectionTipos: [SECTION] },
+		]);
 	});
 
-	test('EMPTIED value: no upsert, no embed (record had no embeddable text)', async () => {
+	test('EMPTIED doc: no upsert, no embed (record had no embeddable text)', async () => {
 		const store = new FakeStore();
 		const provider = new SpyProvider(64);
 		const indexer = buildIndexer(store, provider, new Map([[10, '']]));
@@ -146,13 +163,26 @@ describe('RagIndexer hash-diff', () => {
 		expect(provider.embedCalls).toBe(0);
 	});
 
-	test('non-RAG section is a clean no-op (true, no work)', async () => {
-		const ontology: OntologyPort = {
-			getProperties: async () => ({}), // no rag.enabled
-			getModelByTipo: async () => 'section',
-			getRecursiveChildren: async () => [],
-			getTranslatable: async () => false,
-		};
+	test('REMOVED/RENAMED group: stored chunks under the old key are swept', async () => {
+		const text = 'A short record about a Roman silver denarius coin.';
+		const store = new FakeStore();
+		// The store still holds chunks of a group the descriptor no longer names…
+		store.hashes = new Map([['rag:oldgroup|lg-nolan|0', 'deadbeef']]);
+		const provider = new SpyProvider(64);
+		const indexer = buildIndexer(store, provider, new Map([[10, text]]));
+
+		const ok = await indexer.indexRecord({ sectionTipo: SECTION, sectionId: 10 });
+		expect(ok).toBe(true);
+		// …and the orphan sweep prunes them (validCount 0 removes all).
+		expect(store.staleCalls).toContainEqual({
+			componentTipo: 'rag:oldgroup',
+			lang: 'lg-nolan',
+			validCount: 0,
+		});
+	});
+
+	test('NO descriptor (no groups) → clears prior text vectors (deleteRecordModality)', async () => {
+		const ontology = fakeOntology(null); // no section_map rag scope
 		const store = new FakeStore();
 		const provider = new SpyProvider(64);
 		const indexer = new RagIndexer({
@@ -162,14 +192,14 @@ describe('RagIndexer hash-diff', () => {
 			provider,
 			langs: [],
 			nolan: 'lg-nolan',
-			resolveMatrixTable: async () => 'matrix',
-			readText: async () => '',
+			resolveDocs: async () => [],
 			recordTitle: async () => '',
 		});
-		const ok = await indexer.indexRecord({ sectionTipo: 'dd_off', sectionId: 1 });
+		const ok = await indexer.indexRecord({ sectionTipo: SECTION, sectionId: 10 });
 		expect(ok).toBe(true);
 		expect(provider.embedCalls).toBe(0);
 		expect(store.upserts.length).toBe(0);
+		expect(store.modalityDeletes).toEqual(['text']);
 	});
 
 	test('deleteRecord removes a record vectors (true)', async () => {
@@ -200,30 +230,5 @@ describe('RagIndexer hash-diff', () => {
 		expect(enqueued).toContainEqual({ id: 1, op: 'index' });
 		expect(enqueued).toContainEqual({ id: 3, op: 'delete' });
 		expect(enqueued.find((e) => e.id === 2)).toBeUndefined();
-	});
-
-	test('no embeddable components → clears prior text vectors (deleteRecordModality)', async () => {
-		const ontology: OntologyPort = {
-			getProperties: async (t: string) => (t === SECTION ? { rag: { enabled: true } } : null),
-			getModelByTipo: async (t: string) => (t === SECTION ? 'section' : null),
-			getRecursiveChildren: async () => [], // no children → no embeddable components
-			getTranslatable: async () => false,
-		};
-		const store = new FakeStore();
-		const provider = new SpyProvider(64);
-		const indexer = new RagIndexer({
-			ontology,
-			config: new RagConfig(ontology),
-			store,
-			provider,
-			langs: [],
-			nolan: 'lg-nolan',
-			resolveMatrixTable: async () => 'matrix',
-			readText: async () => '',
-			recordTitle: async () => '',
-		});
-		const ok = await indexer.indexRecord({ sectionTipo: SECTION, sectionId: 10 });
-		expect(ok).toBe(true);
-		expect(store.modalityDeletes).toEqual(['text']);
 	});
 });

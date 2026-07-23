@@ -13,7 +13,7 @@
 			margin-bottom: 0.5rem;
 			// white rounded card (matches the inspector cards / section_tab panel)
 			background-color: var(--bg_surface);
-			border-radius: 0.7rem;
+			border-radius: var(--inspector_block_radius); // one corner grammar with the inspector cards
 			// overflow: hidden;
 
 			@media screen and (max-width: @width_break_point_1) {
@@ -41,6 +41,24 @@
 					margin: 0px;
 					padding: 0px;
 					flex: 0 0 auto;
+				}
+
+				// quiet-grid caption: same grammar as the inspector block
+				// headers (600 / uppercase / 0.06em / muted → default on
+				// hover). line-height pinned so the header box cannot drift.
+				color: var(--fg_muted);
+				font-size: 0.75rem;
+				font-weight: 600;
+				letter-spacing: 0.06em;
+				line-height: 1.2rem;
+				transition: color var(--transition-fast);
+
+				&:hover {
+					color: var(--fg_default);
+
+					&:after { // chevron warms with the header
+						background-color: var(--color_orange_dedalo);
+					}
 				}
 			}
 			>.content_data {

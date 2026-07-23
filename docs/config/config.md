@@ -351,7 +351,7 @@ DEDALO_STRUCTURE_LANG="lg-spa"
 
 >For the languages, Dédalo uses the pattern: `lg-xxx`
 >lg : identify the term as language
->xxx : with the official tld of the ISO 639-6, Alpha-4 code for comprehensive coverage of language variants.
+>xxx : the ISO 639-2/T alpha-3 code of the language (e.g. spa, eng, cat).
 >
 >Some common languages:
 >
@@ -1589,7 +1589,8 @@ When an integer is provided, any file larger than this value will be automatical
 When set to `false`, the chunking feature is disabled, and all files are uploaded in a single request.
 
 ```bash
-DEDALO_UPLOAD_SERVICE_CHUNK_FILES=false); // 5 = 5MB
+# integer = split threshold in MB (e.g. 5 = 5MB); false = disable chunking
+DEDALO_UPLOAD_SERVICE_CHUNK_FILES=false
 ```
 
 *Default: 4*
@@ -1862,6 +1863,28 @@ DEDALO_SESSION_CACHE_EXPIRE=180
 ```
 
 *Default: 180*
+
+---
+
+### Defining single-session (one active session per user)
+
+DEDALO_SINGLE_SESSION `bool`
+
+Restricts each user to ONE active session. When `true`, a successful login evicts every
+other session that user already holds (keeping only the one just created) — so logging in
+again anywhere immediately invalidates a token stolen earlier, closing the re-login window
+(security finding AUTHZ-04). A password reset already revokes all of a user's sessions
+regardless of this flag; this key extends that guarantee to ordinary re-login.
+
+Default `false`: concurrent sessions are allowed, so the same user can stay logged in on
+several devices at once. Set it `true` for a stricter, single-device policy — at the cost
+that a new login logs the user out everywhere else.
+
+```bash
+DEDALO_SINGLE_SESSION=false
+```
+
+*Default: false*
 
 ---
 
@@ -3215,27 +3238,6 @@ DEDALO_RAG_DB_USERNAME_CONN="dedalo"
 ```
 
 *Default: (unset)*
-
----
-
-### Defining the embeddable component models
-
-DEDALO_RAG_EMBEDDABLE_MODELS `string[]`
-
-Which kinds of component may be considered for the semantic index at all — a coarse,
-installation-wide filter applied before the ontology's own opt-in. Only components whose model
-is on this list are examined; of those, only the ones that declare `properties.rag.embed` are
-actually indexed. So this list never indexes anything by itself; it bounds what could be.
-
-The default covers the text-bearing components (`component_text_area`, `component_input_text`,
-`component_text`). Extend it only if you have another text-carrying component model you want
-searchable. Accepts a comma-separated list or a JSON array.
-
-```bash
-DEDALO_RAG_EMBEDDABLE_MODELS=component_text_area,component_input_text,component_text
-```
-
-*Default: ["component_text_area","component_input_text","component_text"]*
 
 ---
 

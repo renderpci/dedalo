@@ -280,8 +280,16 @@ const get_content_value = (i, datalist_item, self) => {
 			// read id dynamically from self.data (not from stale closure)
 			await handle_radio_change(self, datalist_value)
 
-			// update label checked status
-			update_status(this)
+			// update the checked status of ALL option labels in the group. The
+			// browser fires 'change' only on the newly-checked input, so the
+			// previously-checked label must be cleared here too — sync every
+			// label class from its own input's native checked state.
+			const group_labels = this.closest('.content_data')
+				?.querySelectorAll(':scope > .content_value > .label') || []
+			group_labels.forEach(el => {
+				const group_input = el.querySelector('input')
+				el.classList.toggle('checked', !!(group_input && group_input.checked))
+			})
 		}
 		input.addEventListener('change', change_handler)
 		// focus event

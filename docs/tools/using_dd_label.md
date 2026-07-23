@@ -7,6 +7,9 @@ A grid editor for a tool's multi-language interface labels: it turns the raw lab
 !!! note "This is a tool-authoring helper"
     You use `tool_dd_label` while registering or maintaining a Dédalo **tool** — to write the localized strings its buttons and headers show. It attaches only to the *Tool labels* field of a tool's registry record, so if you are not building or translating a tool, you will not meet it.
 
+!!! warning "Tool labels ≠ the application's program strings"
+    This tool edits **one tool's own** labels — the `dd1372` payload in that tool's `register.json`. It does **not** touch Dédalo's general program strings — the *Save* / *Delete* / *Cancel* buttons, menus and dialogs shared across the whole application. Those live in the repo label catalogs (`src/core/labels/master.json` + `catalog/lg-<code>.json`) and are edited as **code**, not through any UI — see [Internationalization → Program strings](../development/internationalization.md#2b-program-strings-the-repo-label-catalogs-get_label). WC-034 moved some strings that used to be global into the tools that alone used them; those are now edited here.
+
 ## What it's for
 
 Dédalo tools keep their interface strings — button captions, panel titles, confirmation prompts — as a set of localized labels, one string per label key and language. Stored raw, that is an array of JSON objects, awkward to edit by hand and easy to get wrong. `tool_dd_label` renders the same data as a **matrix**: each row is a label key (for example `save` or `cancel`), each column is one of your project's languages, and each cell holds the translated string. You fill in the grid instead of editing JSON.

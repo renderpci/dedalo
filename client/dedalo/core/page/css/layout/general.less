@@ -519,6 +519,25 @@
 		}
 	}
 
+	// quiet grid (section edit view): full-strength value ink.
+	// The global rule above renders inputs at opacity 0.75, which washes out
+	// filled values; in the edit view they carry the content. Font-size is
+	// deliberately NOT changed: input height is 2.0em (em-coupled), so any
+	// size change would move the layout.
+	.section_record.edit .wrapper_component.edit {
+		input[type='text'], input[type='number'], input[type='url'], input[type='password'],
+		textarea, select, .contenteditable {
+			opacity: 1;
+			color: var(--field_value_fg);
+		}
+
+		// placeholders / empty affordance read clearly lighter than real values
+		input::placeholder, textarea::placeholder {
+			color: var(--field_label_fg);
+			opacity: 0.7;
+		}
+	}
+
 	select {
 		width: auto;
 		// removes browser appearance style
@@ -885,6 +904,15 @@
 			outline: 2px solid var(--focus_ring);
 			outline-offset: 1px;
 		}
+	}
+
+/* selection + scrollbar polish (theme-token driven, both themes)
+   ------------------------------------------------------- */
+	::selection {
+		background-color: var(--color_hilite);
+	}
+	html {
+		scrollbar-color: var(--color_grey_11) transparent;
 	}
 
 /* keyboard focus: global fallback

@@ -30,6 +30,17 @@
 
 	}//end >.content_data
 
+	// edit mode alignment. display:contents on .content_data (above) removes
+	// its padding box, so widget content rendered flush at the wrapper edge —
+	// misaligned with the component label (1em indent) and with every other
+	// component's content. Restore the standard content spacing
+	// (layout.less .content_data: padding 1em, padding-top 0.5em) per value.
+	&.edit {
+		>.content_data >.content_value {
+			padding: 0.5em 1em 1em;
+		}
+	}
+
 	// generic wrapper_widget base style. Override on each widget if need
 	// (!) Don't place inside .content_data to prevent overwrite specific widget styles
 	.wrapper_widget {

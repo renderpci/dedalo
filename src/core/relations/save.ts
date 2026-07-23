@@ -104,11 +104,14 @@ export interface SortByColumnChange {
 }
 
 /**
- * PHP component_relation_common::sort_data_by_column: gated by the
- * component's `sort_by_column` property (true | allowlist array); the column
- * must be a show ddo_map entry of the component's own edit config; the
- * stored locators reorder by a target-section search ordered on that column
- * (unranked locators keep relative order at the END).
+ * Persistent user reorder of the stored locators by a column (v7 per-ddo model,
+ * WC-048): gated by the COLUMN ddo's own `sort_by_column: true` — the top-level
+ * `properties.sort_by_column` (true | allowlist array) is GONE, the capability
+ * is declared on the `show.ddo_map` entry itself. The column must be a show
+ * ddo_map entry of the component's own edit config; the stored locators reorder
+ * by a target-section search ordered on that column (unranked locators keep
+ * relative order at the END). PHP ancestor: component_relation_common::
+ * sort_data_by_column (reference only — TS diverges to the ddo-level gate).
  */
 export async function applySortByColumn(
 	items: unknown[],
@@ -118,8 +121,6 @@ export async function applySortByColumn(
 ): Promise<unknown[] | null> {
 	const { getNode } = await import('../ontology/resolver.ts');
 	const node = await getNode(componentTipo);
-	const sortByColumn = (node?.properties as { sort_by_column?: unknown } | null)?.sort_by_column;
-	if (sortByColumn !== true && !Array.isArray(sortByColumn)) return null;
 
 	const direction = String(change.direction ?? '').toUpperCase();
 	if (direction !== 'ASC' && direction !== 'DESC') return null;
@@ -134,7 +135,8 @@ export async function applySortByColumn(
 	});
 	const ddo = (config[0]?.show?.ddo_map ?? []).find((entry) => entry.tipo === columnTipo);
 	if (ddo === undefined) return null;
-	if (Array.isArray(sortByColumn) && !sortByColumn.includes(columnTipo)) return null;
+	// Per-ddo opt-in: the column must declare `sort_by_column: true`.
+	if ((ddo as { sort_by_column?: unknown }).sort_by_column !== true) return null;
 
 	const rawTargets = Array.isArray(ddo.section_tipo) ? ddo.section_tipo : [ddo.section_tipo];
 	const targets = rawTargets
@@ -143,56 +145,11 @@ export async function applySortByColumn(
 	if (targets.length === 0) return null;
 	const firstTarget = targets[0] as string;
 
-	const locatorItems = items as { section_id?: unknown; section_tipo?: unknown }[];
-	if (locatorItems.length < 2) return [...items];
-	const ids = [...new Set(locatorItems.map((item) => Number(item?.section_id ?? 0)))];
-
-	// rank query: the portal targets ordered by the column value
-	const { buildSearchSql } = await import('../search/sql_assembler.ts');
-	const { sql: rankSql, params } = await buildSearchSql({
-		section_tipo: targets,
-		limit: 0,
-		offset: 0,
-		filter: {
-			$or: [
-				{
-					q: ids.join(','),
-					q_operator: null,
-					path: [
-						{
-							section_tipo: firstTarget,
-							component_tipo: 'section_id',
-							model: 'component_section_id',
-							name: 'Id',
-						},
-					],
-				},
-			],
-		},
-		order: [{ direction, path: [{ section_tipo: firstTarget, component_tipo: columnTipo }] }],
-	} as never);
-	const rows = (await sql.unsafe(rankSql, params as (string | number | null)[])) as {
-		section_tipo: string;
-		section_id: number;
-	}[];
-	const rank = new Map<string, number>();
-	rows.forEach((row, index) => rank.set(`${row.section_tipo}_${row.section_id}`, index));
-
-	const rankOf = (item: { section_id?: unknown; section_tipo?: unknown }): number =>
-		rank.get(`${item?.section_tipo ?? ''}_${Number(item?.section_id ?? 0)}`) ??
-		Number.MAX_SAFE_INTEGER;
-	const sorted = [...locatorItems];
-	// stable sort by rank (PHP usort with rank map; ties keep relative order)
-	sorted
-		.map((item, index) => ({ item, index }))
-		.sort((a, b) => rankOf(a.item) - rankOf(b.item) || a.index - b.index)
-		.forEach((entry, position) => {
-			const clean = entry.item as Record<string, unknown>;
-			// biome-ignore lint/performance/noDelete: PHP unset — paginated_key must be ABSENT in persisted data
-			delete clean.paginated_key;
-			sorted[position] = clean;
-		});
-	return sorted;
+	// Shared ranking engine (also drives the read-time `order_by` default).
+	const { rankLocatorsByColumns } = await import('./order_locators.ts');
+	return rankLocatorsByColumns(items, targets, [
+		{ direction, path: [{ section_tipo: firstTarget, component_tipo: columnTipo }] },
+	]);
 }
 
 /**

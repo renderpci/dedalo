@@ -1,28 +1,36 @@
 /**
- * Per-section / per-component RAG configuration, resolved from the ontology
- * `properties` object (no bespoke table — the Dédalo way). Port of PHP rag_config
- * (reference: `src/ai/rag2/src/rag_config.ts`, Brick 2), adapted to this branch's
- * functional ontology resolver via a small `OntologyPort` seam.
+ * Per-section RAG configuration, resolved from the ontology (no bespoke table —
+ * the Dédalo way).
  *
- * A section opts in with   properties.rag = { enabled:true }
- * A component opts in with  properties.rag = { embed:true, strategy?, mode?, chunk:{max_tokens,min_tokens}?, system_prompt? }
+ * TEXT opt-in (2026-07-22 redesign — the boolean era is DELETED): a section's
+ * `section_map` node declares a `rag` scope whose `embed` is an ARRAY of named
+ * GROUPS, each an exact request_config `ddo_map` (src/core/concepts/ddo.ts):
  *
- * The `properties.rag.context` block (images/metadata/compare_scope) drives the
- * multimodal image layer (Brick 5) and is parsed here so the whole config surface
- * lives in one place.
+ *   properties.rag = {
+ *     embed: [ { id: 'default', ddo_map: [ {tipo, section_tipo, parent?, mode}, … ],
+ *               chunk?: {max_tokens, min_tokens}, mode?, strategy? } ],
+ *     strategy?, system_prompt?
+ *   }
+ *
+ * Each group produces its OWN vector document per (record, dataLang), stored
+ * under component_tipo `rag:<id>` — the facet unit (a person's "profession" vs
+ * "filiation"; a "fulltext" transcription with its own chunking). The
+ * section_map read is VIRTUAL-AWARE (own node wins, else the real section's via
+ * relations[0].tipo — getSectionMap), so records keyed by a virtual tipo select
+ * their own map. There is deliberately NO per-component `rag.embed` flag: a
+ * shared component node cannot differentiate two virtual siblings.
+ *
+ * The `properties.rag.context` block (images/metadata/compare_scope) still
+ * drives the multimodal image layer from the SECTION NODE's properties and is
+ * parsed here so the whole config surface lives in one place.
  *
  * Per-INSTANCE cache (Maps on the object), NOT module-global — construct one
  * RagConfig per request/drain and inject it (spec §4 request isolation).
  */
 
-import { readEnv } from '../../config/env.ts';
-import { readString } from '../../config/readers.ts';
-import {
-	getModelByTipo,
-	getNode,
-	getRecursiveChildrenTipos,
-	getTranslatableByTipo,
-} from '../../core/ontology/resolver.ts';
+import { type Ddo, ddoSchema } from '../../core/concepts/ddo.ts';
+import { getModelByTipo, getNode, getTranslatableByTipo } from '../../core/ontology/resolver.ts';
+import { getSectionMap } from '../../core/ontology/section_map.ts';
 
 export interface ChunkConfig {
 	maxTokens?: number;
@@ -55,10 +63,28 @@ export interface RagContext {
 	compareScope: string[] | null;
 }
 
+/** One named embed group: a request_config ddo_map + its chunking config. */
+export interface RagEmbedGroup {
+	/** Unique group id (slug ≤ 40 chars); the chunk storage key is `rag:<id>`. */
+	id: string;
+	/** The components that form this group's document — EXACT show.ddo_map shape. */
+	ddoMap: Ddo[];
+	chunk?: ChunkConfig;
+	mode?: string;
+	strategy?: string;
+}
+
+/** The storage-key prefix for group chunks in rag_embeddings.component_tipo. */
+export const RAG_GROUP_PREFIX = 'rag:';
+
+/** Group-id grammar: a slug that fits component_tipo (varchar 64) with the prefix. */
+const GROUP_ID_RE = /^[a-z0-9][a-z0-9_-]{0,39}$/;
+
 /**
  * The ontology reads the config needs. Satisfied in production by
- * `defaultOntologyPort()` (over src/core/ontology/resolver.ts); a fake is
- * injected in unit tests so config resolution needs no DB.
+ * `defaultOntologyPort()` (over src/core/ontology/resolver.ts +
+ * section_map.ts); a fake is injected in unit tests so config resolution needs
+ * no DB.
  */
 export interface OntologyPort {
 	/** The full `properties` object of a tipo (or null). */
@@ -67,39 +93,19 @@ export interface OntologyPort {
 	getModelByTipo(tipo: string): Promise<string | null>;
 	/** Whether the tipo's data carries language variants. */
 	getTranslatable(tipo: string): Promise<boolean>;
-	/** All descendant component tipos of a section (not crossing nested sections). */
-	getRecursiveChildren(sectionTipo: string): Promise<string[]>;
+	/**
+	 * The section's `section_map` `rag` scope, raw (or null). VIRTUAL-AWARE in
+	 * production (getSectionMap: own node wins, else the real section's).
+	 */
+	getSectionMapRag(sectionTipo: string): Promise<Record<string, unknown> | null>;
 }
-
-/** Models whose components are candidates for text embedding
- * (PHP DEDALO_RAG_EMBEDDABLE_MODELS; comma list or JSON array). */
-export const DEFAULT_EMBEDDABLE_MODELS: readonly string[] = (() => {
-	const raw = readString('DEDALO_RAG_EMBEDDABLE_MODELS').trim();
-	const fallback = ['component_text_area', 'component_input_text', 'component_text'];
-	if (raw === '') return fallback;
-	if (raw.startsWith('[')) {
-		try {
-			const parsed = JSON.parse(raw);
-			if (Array.isArray(parsed)) return parsed.map(String);
-		} catch {
-			return fallback;
-		}
-	}
-	return raw
-		.split(',')
-		.map((entry) => entry.trim())
-		.filter((entry) => entry !== '');
-})();
 
 export class RagConfig {
 	private readonly ragCache = new Map<string, Record<string, unknown> | null>();
-	private readonly embeddableCache = new Map<string, string[]>();
+	private readonly groupsCache = new Map<string, RagEmbedGroup[]>();
 	private readonly contextCache = new Map<string, RagContext | null>();
 
-	constructor(
-		private readonly ontology: OntologyPort,
-		private readonly embeddableModels: readonly string[] = DEFAULT_EMBEDDABLE_MODELS,
-	) {}
+	constructor(private readonly ontology: OntologyPort) {}
 
 	/** The `rag` sub-object of a tipo's properties (or null). Cached per instance. */
 	async getRag(tipo: string): Promise<Record<string, unknown> | null> {
@@ -119,65 +125,83 @@ export class RagConfig {
 	}
 
 	/**
-	 * Cheap gate: true when the section declares properties.rag.enabled === true.
-	 * (The global kill-switch DEDALO_RAG_ENABLED is enforced at a higher layer —
-	 * the save hook / API handler — not here; this resolves the ontology intent.)
+	 * Cheap gate: true when the section's section_map declares at least one embed
+	 * group with a non-empty ddo_map. (The global kill-switch DEDALO_RAG_ENABLED
+	 * is enforced at a higher layer — the save hook / API handler — not here;
+	 * this resolves the ontology intent.)
 	 */
 	async sectionIsRagEnabled(sectionTipo: string): Promise<boolean> {
-		const rag = await this.getRag(sectionTipo);
-		return rag !== null && rag.enabled === true;
-	}
-
-	/** True when a component declares rag.embed === true. */
-	async componentIsEmbeddable(componentTipo: string): Promise<boolean> {
-		const rag = await this.getRag(componentTipo);
-		return rag !== null && rag.embed === true;
+		return (await this.getEmbedGroups(sectionTipo)).length > 0;
 	}
 
 	/**
-	 * Enumerate the section's text-bearing child components that opted in with
-	 * rag.embed. Candidates are restricted to the embeddable models for efficiency,
-	 * then filtered by the flag. Cached per instance.
+	 * The section's embed groups from the section_map `rag.embed` array — the ONE
+	 * canonical shape: `[{id, ddo_map, chunk?, mode?, strategy?}, …]`. Malformed
+	 * or duplicate-id groups and non-ddo entries are dropped LOUDLY (console) —
+	 * a typo must not silently index nothing without a trace. Cached per instance.
 	 */
-	async getEmbeddableComponentTipos(sectionTipo: string): Promise<string[]> {
-		const cached = this.embeddableCache.get(sectionTipo);
+	async getEmbedGroups(sectionTipo: string): Promise<RagEmbedGroup[]> {
+		const cached = this.groupsCache.get(sectionTipo);
 		if (cached !== undefined) return cached;
 
-		const embeddableModelSet = new Set(this.embeddableModels);
-		const out: string[] = [];
+		const out: RagEmbedGroup[] = [];
 		try {
-			const children = await this.ontology.getRecursiveChildren(sectionTipo);
-			for (const childTipo of children) {
-				const model = await this.ontology.getModelByTipo(childTipo);
-				if (model === null || !embeddableModelSet.has(model)) continue;
-				if (await this.componentIsEmbeddable(childTipo)) out.push(childTipo);
+			const rag = await this.ontology.getSectionMapRag(sectionTipo);
+			const raw = rag?.embed;
+			if (Array.isArray(raw)) {
+				const seen = new Set<string>();
+				for (const entry of raw) {
+					const group = parseEmbedGroup(entry, sectionTipo);
+					if (group === null) continue;
+					if (seen.has(group.id)) {
+						console.error(
+							`rag: duplicate embed group id '${group.id}' in ${sectionTipo} section_map — dropped`,
+						);
+						continue;
+					}
+					seen.add(group.id);
+					out.push(group);
+				}
+			} else if (raw !== undefined) {
+				console.error(
+					`rag: section_map ${sectionTipo} rag.embed must be an ARRAY of {id, ddo_map} groups — got ${typeof raw}`,
+				);
 			}
 		} catch {
-			// leave out empty on failure
+			// leave out empty on failure (retryable at the indexer layer)
 		}
 
-		this.embeddableCache.set(sectionTipo, out);
+		this.groupsCache.set(sectionTipo, out);
 		return out;
 	}
 
-	/** Per-component chunker config derived from rag.strategy / rag.mode / rag.chunk. */
-	async getComponentRagConfig(componentTipo: string): Promise<ComponentRagConfig> {
-		const rag = await this.getRag(componentTipo);
+	/** The section_map `rag` scope, raw (virtual-aware; null on failure/absence). */
+	async getSectionMapRag(sectionTipo: string): Promise<Record<string, unknown> | null> {
+		return this.ontology.getSectionMapRag(sectionTipo).catch(() => null);
+	}
+
+	/**
+	 * A group's chunker config: the group's own chunk/mode/strategy, falling back
+	 * to the section-level `rag.strategy` / `rag.system_prompt` of the section_map
+	 * scope. `embed` is true iff the group exists.
+	 */
+	async getGroupRagConfig(sectionTipo: string, groupId: string): Promise<ComponentRagConfig> {
+		const groups = await this.getEmbedGroups(sectionTipo);
+		const group = groups.find((g) => g.id === groupId);
+		const rag = await this.ontology.getSectionMapRag(sectionTipo).catch(() => null);
 		const config: ComponentRagConfig = {
-			embed: rag !== null && rag.embed === true,
+			embed: group !== undefined,
 			strategy: 'structural_semantic',
 			mode: 'auto',
 		};
-		if (rag !== null) {
-			if (typeof rag.strategy === 'string') config.strategy = rag.strategy;
-			if (typeof rag.mode === 'string') config.mode = rag.mode;
-			if (typeof rag.system_prompt === 'string') config.systemPrompt = rag.system_prompt;
-			if (isPlainObject(rag.chunk)) {
-				const chunk: ChunkConfig = {};
-				if (typeof rag.chunk.max_tokens === 'number') chunk.maxTokens = rag.chunk.max_tokens;
-				if (typeof rag.chunk.min_tokens === 'number') chunk.minTokens = rag.chunk.min_tokens;
-				config.chunk = chunk;
-			}
+		if (rag !== null && typeof rag?.strategy === 'string') config.strategy = rag.strategy;
+		if (rag !== null && typeof rag?.system_prompt === 'string') {
+			config.systemPrompt = rag.system_prompt;
+		}
+		if (group !== undefined) {
+			if (typeof group.strategy === 'string') config.strategy = group.strategy;
+			if (typeof group.mode === 'string') config.mode = group.mode;
+			if (group.chunk !== undefined) config.chunk = group.chunk;
 		}
 		return config;
 	}
@@ -237,7 +261,7 @@ export class RagConfig {
 	}
 }
 
-/** The production ontology port, backed by this branch's resolver. */
+/** The production ontology port, backed by this branch's resolver + section_map. */
 export function defaultOntologyPort(): OntologyPort {
 	return {
 		async getProperties(tipo) {
@@ -247,8 +271,60 @@ export function defaultOntologyPort(): OntologyPort {
 		},
 		getModelByTipo,
 		getTranslatable: getTranslatableByTipo,
-		getRecursiveChildren: getRecursiveChildrenTipos,
+		async getSectionMapRag(sectionTipo) {
+			// getSectionMap is the virtual-aware read: the virtual's OWN section_map
+			// node wins; else the real section's (relations[0].tipo fallback).
+			const map = await getSectionMap(sectionTipo);
+			const rag = isPlainObject(map) ? map.rag : null;
+			return isPlainObject(rag) ? rag : null;
+		},
 	};
+}
+
+/**
+ * Parse ONE raw embed-group entry into the canonical RagEmbedGroup, or null
+ * (loudly) when malformed. Every ddo entry is validated against the wire
+ * `ddoSchema` — the map is server-stored ontology, but staying schema-valid
+ * guarantees it feeds `emitDdoData` unmodified.
+ */
+function parseEmbedGroup(raw: unknown, sectionTipo: string): RagEmbedGroup | null {
+	if (!isPlainObject(raw)) {
+		console.error(`rag: non-object embed group in ${sectionTipo} section_map — dropped`);
+		return null;
+	}
+	const id = typeof raw.id === 'string' ? raw.id : '';
+	if (!GROUP_ID_RE.test(id)) {
+		console.error(
+			`rag: embed group with missing/invalid id in ${sectionTipo} section_map — dropped (need a slug ≤40 chars)`,
+		);
+		return null;
+	}
+	if (!Array.isArray(raw.ddo_map)) {
+		console.error(`rag: embed group '${id}' in ${sectionTipo} has no ddo_map array — dropped`);
+		return null;
+	}
+	const ddoMap: Ddo[] = [];
+	for (const entry of raw.ddo_map) {
+		const parsed = ddoSchema.safeParse(entry);
+		if (!parsed.success || parsed.data.tipo === '') {
+			console.error(
+				`rag: invalid ddo entry in ${sectionTipo} group '${id}' — dropped: ${JSON.stringify(entry)}`,
+			);
+			continue;
+		}
+		ddoMap.push(parsed.data);
+	}
+	if (ddoMap.length === 0) return null;
+	const group: RagEmbedGroup = { id, ddoMap };
+	if (typeof raw.mode === 'string') group.mode = raw.mode;
+	if (typeof raw.strategy === 'string') group.strategy = raw.strategy;
+	if (isPlainObject(raw.chunk)) {
+		const chunk: ChunkConfig = {};
+		if (typeof raw.chunk.max_tokens === 'number') chunk.maxTokens = raw.chunk.max_tokens;
+		if (typeof raw.chunk.min_tokens === 'number') chunk.minTokens = raw.chunk.min_tokens;
+		group.chunk = chunk;
+	}
+	return group;
 }
 
 /** Normalize context.images: object {tipo,view} | bare-string tipo; drop empty tipos. */

@@ -256,6 +256,18 @@ function jsonResponse(body: unknown, status = 200): Response {
 	});
 }
 
+/**
+ * Sanitized 500 for the Bun.serve `error` catch-all (API-01 hardening). The
+ * detail is logged server-side by the handler; the wire gets a generic
+ * client-shaped envelope, never a raw stack (which can carry SQL / paths).
+ */
+function jsonErrorResponse(): Response {
+	return jsonResponse(
+		{ result: false, msg: 'Internal server error', errors: ['An unexpected error occurred'] },
+		500,
+	);
+}
+
 /** The application entry point — the only client directory with an index.html. */
 const APP_ENTRY_PATH = '/dedalo/core/page/';
 
@@ -1281,6 +1293,14 @@ export async function startServer() {
 		fetch(request) {
 			return handleRequest(request, createRequestContext());
 		},
+		// Catch-all for any throw that escapes handleRequest (API-01 hardening).
+		// Without it, an un-try/caught throw returns Bun's raw 500 stack page,
+		// leaking SQL fragments / filesystem paths. Return a sanitized JSON
+		// envelope; the detail stays server-side in the log.
+		error(error) {
+			console.error('[server] unhandled fetch error:', error);
+			return jsonErrorResponse();
+		},
 	});
 	servers.push(server);
 	console.log(`Dédalo TS server listening on unix socket ${socketPath} (entity: ${config.entity})`);
@@ -1304,6 +1324,10 @@ export async function startServer() {
 					// web server in front, so it is the only one that may answer media from the
 					// engine (mediaFallbackAllowed). The socket listener never sets it.
 					return handleRequest(request, createRequestContext({ devListener: true }));
+				},
+				error(error) {
+					console.error('[server] unhandled fetch error (dev listener):', error);
+					return jsonErrorResponse();
 				},
 			}),
 		);

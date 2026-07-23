@@ -22,7 +22,7 @@
 import { sanitizeClientSqo } from '../concepts/sqo.ts';
 import { sql } from '../db/postgres.ts';
 import { buildSearchSql } from '../search/sql_assembler.ts';
-import type { Principal } from './permissions.ts';
+import { type Principal, getPermissions } from './permissions.ts';
 
 /**
  * True when a principal-scoped existence search for `sectionTipo/sectionId`
@@ -70,4 +70,37 @@ export async function principalCanAccessRecord(
 	if (sectionId < 1) return false;
 	if (principal.isGlobalAdmin) return true;
 	return isRecordInScope(sectionTipo, sectionId, principal);
+}
+
+/**
+ * Drop inverse-reference hits a principal cannot reach (AUTHZ-05). The inverse
+ * scan (search_related.findInverseReferences) is a shared low-level primitive
+ * that runs over 'all' owning sections with NO principal — many system paths
+ * (diffusion resolve, observers, children) depend on it staying unscoped. So
+ * the USER-FACING doors (the relation-list panel + its paginator count) must
+ * scope the hits HERE before emitting existence / labels / counts: a hit is
+ * kept only when the caller (a) holds a read grant on the referencing SECTION
+ * and (b) has the referencing RECORD inside their projects filter. Before this,
+ * a non-admin holding only the HOST record's read grant enumerated referencing
+ * records in sections + projects they had zero access to. Global admins are
+ * unscoped (the current, correct behavior). One getPermissions per distinct
+ * section (cached); one isRecordInScope per surviving hit.
+ */
+export async function scopeInverseReferenceHits<
+	T extends { section_tipo: string; section_id: number },
+>(hits: T[], principal: Principal): Promise<T[]> {
+	if (principal.isGlobalAdmin) return hits;
+	const sectionReadable = new Map<string, boolean>();
+	const out: T[] = [];
+	for (const hit of hits) {
+		let readable = sectionReadable.get(hit.section_tipo);
+		if (readable === undefined) {
+			readable = (await getPermissions(principal, hit.section_tipo, hit.section_tipo)) >= 1;
+			sectionReadable.set(hit.section_tipo, readable);
+		}
+		if (!readable) continue;
+		if (!(await isRecordInScope(hit.section_tipo, hit.section_id, principal))) continue;
+		out.push(hit);
+	}
+	return out;
 }

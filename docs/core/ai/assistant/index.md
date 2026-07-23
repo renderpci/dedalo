@@ -41,7 +41,9 @@ If you read only one paragraph: the assistant is a **thin chat client over a ser
    ├──▶ a LOCAL endpoint (Ollama / vLLM / LM Studio)         egress: local
    ▼
  TOOL_REGISTRY  (search / read / discovery / write tools)   ← same ACL as the human
+   +  RAG tools: dedalo_semantic_search · dedalo_retrieve_passages (cited grounding)
    │  every record-content tool passes an EGRESS gate on external models
+   │  (RAG hits/passages: host record AND every deep-resolution CONTRIBUTOR section)
    │  write mode ▶ a change plan (never executed inside the loop)
    ▼
  you review the plan ▶ dd_mcp_api : agent_apply             ← the confirmed edit

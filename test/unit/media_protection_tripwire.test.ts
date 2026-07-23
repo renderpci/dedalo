@@ -266,6 +266,27 @@ describe('media protection: the fail-closed constants', () => {
 		}
 	});
 
+	test('a bare/ancestor top-level folder is refused — it would expose its master subdir (MEDIA-05)', () => {
+		// A bare `image`/`av`/`pdf` has no forbidden SEGMENT of its own, but rule B's
+		// `(?:.+/)?` descends from an allowed quality into any subdir, so a public
+		// `image` matched `image/original/0/…rsc.tif` and served the master. Refused.
+		expect(filterPublicQualities(['image'])).toEqual([]);
+		expect(filterPublicQualities(['av'])).toEqual([]);
+		expect(filterPublicQualities(['pdf'])).toEqual([]);
+		// A trailing slash trims to the same bare folder (the empty-default trigger:
+		// DEDALO_IMAGE_QUALITY_DEFAULT="" → getDefaultPublicQualities emits `image/`).
+		expect(filterPublicQualities(['image/'])).toEqual([]);
+		// A real, specific quality (≥2 segments, no master segment) SURVIVES — it
+		// cannot reach a sibling `original/`.
+		expect(filterPublicQualities(['image/1.5MB'])).toEqual(['image/1.5MB']);
+		// Mixed: the bare ancestor is dropped, the specific quality kept.
+		expect(filterPublicQualities(['image', 'image/1.5MB'])).toEqual(['image/1.5MB']);
+		// Every emitted default is a specific ≥2-segment quality (defence in depth).
+		for (const quality of getPublicQualities()) {
+			expect(quality.split('/').length).toBeGreaterThanOrEqual(2);
+		}
+	});
+
 	test('the auth cookie NAME is fixed — rotating names would need a web-server reload', () => {
 		expect(MEDIA_AUTH_COOKIE).toBe('dedalo_media_auth');
 	});

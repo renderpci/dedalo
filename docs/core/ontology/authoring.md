@@ -270,12 +270,13 @@ and how to search/choose records. The full grammar is documented separately:
   overrides of the ontology default.
 
 Authoring touch-points (verified against
-`src/core/relations/request_config/{build,v5,v6,filters,external}.ts`):
+`src/core/relations/request_config/{build,explicit,implicit,filters,external,presets}.ts`):
 
 - The server reads `properties->source->request_config` (the V6 explicit path,
-  `request_config/v6.ts`). When absent, it falls back to the V5
-  ontology-derived build (`request_config/v5.ts`) — V5 is the **default**
-  builder.
+  `src/core/relations/request_config/explicit.ts`, whose header notes explicit ≡
+  v6). When absent, it falls back to the V5 ontology-derived build
+  (`src/core/relations/request_config/implicit.ts`, implicit ≡ v5) — V5 is the
+  **default** builder.
 - The list columns come from `properties->source->columns_map`
   (resolved in `request_config/build.ts`), or are derived from the `ddo_map`
   when absent.
@@ -344,7 +345,7 @@ skip — never guessed.
 
 | key | used by | meaning |
 | --- | --- | --- |
-| `color` | sections / TLD roots | UI accent; read as `node.properties.color`, falling back to `#b9b9b9` at each call site (e.g. `src/core/relations/request_config/v6.ts`). |
+| `color` | sections / TLD roots | UI accent; read as `node.properties.color`, falling back to `#b9b9b9` at each call site (e.g. `src/core/relations/request_config/explicit.ts`). |
 | `tool_config` | sections/components | per-tool config keyed by tool name, overlaid onto the tool's ontology properties. |
 | `main_tld` | `<tld>0` roots | the official TLD string for the namespace. |
 | `mode` | tools | restrict a tool to one mode (`edit`/`list`/…); tools whose `mode` ≠ the current mode are skipped. |

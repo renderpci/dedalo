@@ -93,7 +93,7 @@ The SQO is the query language, but not every SQO is equally trusted. **A client-
   - **section_tipo** : `string` name of the section to order by **optional**
   - **column_name** : `string` name of the column to order by **optional**
   - **column_values** : `array` array that defines the order of the values **optional**
-- **filter_by_locators** : `array of objects` sets an order by locators; every object is a [locator](locator.md) and the order of the array is respected **optional** ex : `[{"section_tipo":"oh1", "section_id":"8"},{"section_tipo":"oh1", "section_id":"3"}]`
+- **filter_by_locators** : `array of objects` pins the search to an explicit locator set; every object is a [locator](locator.md). The array ORDER is preserved in the result only when the SQO also carries the `{"mode":"locator_position"}` order entry (see [order](#order)) — without it rows come back in the default `section_id ASC`. Client lists are clamped to 1000 pins (loud server log on truncation). **optional** ex : `[{"section_tipo":"oh1", "section_id":"8"},{"section_tipo":"oh1", "section_id":"3"}]`
 - **allow_sub_select_by_id** : `bool` (true || false) create a sub-select in the SQL query that passes the filter and gets the id to select the main section. Default : true **optional** .
 - **children_recursive** : `bool` (true || false) filter the hierarchy term and get all children nodes that depend on the searched term. Default : false  **optional**
 - **remove_distinct** : `bool` (true || false) remove duplicate records when the SQL query has a sub-select with multiple criteria that can return duplicate records. Default : false **optional**
@@ -1238,6 +1238,20 @@ Defines the component or components used to order the records found. order is se
 
 Definition: `array of objects` sets the order of the records; every object in the array is a column with its paths and direction **optional** `[{"direction": "ASC", "path":[{ddo},{ddo}]}]]`
 
+A special order entry `{"mode": "locator_position"}` (2026-07-22, WC-047) orders the rows by their POSITION in [`filter_by_locators`](#filter_by_locators) — the mechanism behind ranked semantic-search results: the pins arrive best-first and the rank survives pagination, counts and exports. Rules: a no-op when the SQO carries no pins (a session-merged leftover never errors); the pin list must be single-section (a multi-tipo list is refused loudly); pin ids must be integers (refused loudly otherwise).
+
+```json
+{
+    "section_tipo": ["rsc205"],
+    "filter_by_locators": [
+        { "section_tipo": "rsc205", "section_id": 2739 },
+        { "section_tipo": "rsc205", "section_id": 2766 }
+    ],
+    "order": [ { "mode": "locator_position" } ],
+    "limit": 10
+}
+```
+
 Example: give me the first 10 records of Numismatic objects [numisdata4](https://dedalo.dev/ontology/numisdata4) ordered by the Collections [numisdata159](https://dedalo.dev/ontology/numisdata159) people name [rsc85](https://dedalo.dev/ontology/rsc85) in descending order.
 
 ```json
@@ -1449,7 +1463,7 @@ LIMIT 10
 
 Defines an array of fixed [locators](locator.md) applied to the search. filter_by_locators is used when a query has fixed data to apply to every query; it is independent of the filter [q](#q) values and is used to get a set of records that is then filtered by the q criteria. filter_by_locators takes precedence over other criteria defined in the filter.
 
-Definition: `array of objects` sets an order by locators; every object is a [locator](locator.md) and the order of the array is respected **optional** ex : `[{"section_tipo":"oh1", "section_id":"8"},{"section_tipo":"oh1", "section_id":"3"}]`
+Definition: `array of objects`; every object is a [locator](locator.md). To make the result FOLLOW the array order add the `{"mode":"locator_position"}` [order](#order) entry — the semantic-search rank mechanism (WC-047). Untrusted (client) SQOs are clamped to 1000 pins. **optional** ex : `[{"section_tipo":"oh1", "section_id":"8"},{"section_tipo":"oh1", "section_id":"3"}]`
 
 Example: give me the section Types [numisdata3](https://dedalo.dev/ontology/numisdata3) that use the image [rsc170](https://dedalo.dev/ontology/rsc170) with section_id 69.
 

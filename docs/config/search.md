@@ -19,6 +19,7 @@ There are two sources of SQOs and they are **not** equally trusted:
 2. **Strips access-control flags**: `skip_projects_filter`, `skip_duplicated`, `include_negative`. A client must never weaken its own access control (see [`skip_projects_filter`](../core/sqo.md#skip_projects_filter) — it is honored only when set server-side).
 3. **Forces `parsed = false`** so a client can never skip the component conform pipeline and hand a pre-built filter straight to SQL building.
 4. **Coerces and clamps pagination**: `offset`/`total` are cast to integers and `limit` is clamped to [`DEDALO_SEARCH_CLIENT_MAX_LIMIT`](#dedalo_search_client_max_limit).
+5. **Clamps `filter_by_locators`**: an untrusted SQO's pin list is truncated to `CLIENT_MAX_LOCATOR_PINS` (1000, fixed in code) **loudly** — over-length lists truncate the result set with a logged warning, never silently (DEC-07). See [Semantic search rank pinning](#semantic-search-rank-pinning).
 
 Beyond the boundary, two further validations run for every SQO regardless of source, from the identifier-validation chokepoint in `src/core/search/identifier_gate.ts`, enforced from `src/core/search/conform.ts` before any SQL string is built:
 
@@ -51,6 +52,15 @@ For non-admin users, the search assembler always adds a project-scope restrictio
 - **Multi-section searches**: each searched section is scoped by its own `component_filter` predicate, gated on `section_tipo` so the right restriction applies inside each branch of the query — a section with no gating imposes no restriction on that branch, and a gated section is never left unfiltered by a sibling's shape.
 
 Global administrators and internal (principal-less) searches are not filtered. The server-only `skip_projects_filter` flag can disable the filter for a trusted internal caller (e.g. to read common value lists) — but it is stripped from every client SQO by `sanitizeClientSqo`, so a client can never set it itself.
+
+## Semantic search rank pinning
+
+Semantic search returns records best-first, and the client preserves that rank the **resolve-once-then-pin** way (WC-047): it pins the hit locators into `filter_by_locators` and appends a single `{mode:'locator_position'}` entry to `order`, which the assembler renders as a stable `array_position(…)` sort alias. The mechanics are documented in [Ranking by locator position](../core/system/search.md#ranking-by-locator-position-modelocator_position); two access-control facts belong here:
+
+- **Pins are filters, not grants.** A pinned locator restricts the result set to those records; it never widens access. Every pinned record still passes the ordinary project-scope ACL (`buildProjectsFilter`), and semantic search itself ACL-gates every hit before it can be pinned (schema ACL + per-record projects ACL, `src/ai/rag/retrieval.ts`). A pin can never surface a record the caller could not already read.
+- **The rank is never frozen into a shareable preset.** A stored search preset keeps only the live `{"semantic":{q,group}}` query, not the pinned locator list or its order; applying the preset **re-runs** semantic search against current data and pins the fresh result. A shared preset therefore carries the meaning, not a stale ranking snapshot.
+
+This is TS-native, additive (WC-047) — there is no counterpart in the previous engine. For the meaning-based query surface it drives, see [the RAG subsystem](../core/ai/rag.md).
 
 ## Related
 

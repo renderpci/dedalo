@@ -3025,7 +3025,7 @@ export const ui = {
 	*
 	* @see add_column_order_set
 	* @param {Object} self - The section or component_portal instance.
-	* @param {Object} column - A columns_map item; must expose sortable (boolean) and tipo.
+	* @param {Object} column - A columns_map item; must expose sortable (boolean), tipo and (portal) sort_by_column (boolean).
 	* @returns {boolean} True when a sort button should be rendered for this column.
 	*/
 	allow_column_order(self, column) {
@@ -3040,16 +3040,16 @@ export const ui = {
 				return true
 			}
 
-		// component_portal case. Edit mode with edit permissions and
-		// non external source only, gated by the 'sort_by_column' property
+		// component_portal case. Edit mode with edit permissions and non external
+		// source only, gated by the COLUMN's own 'sort_by_column' opt-in (v7
+		// per-ddo model, WC-048 — replaces the top-level component property; the
+		// flag is stamped onto the column by get_columns_map from the ddo_map).
 			if (self.model==='component_portal'
 				&& self.mode==='edit'
 				&& self.permissions > 1
 				&& self.context?.properties?.source?.mode!=='external'
 				) {
-				const sort_by_column = self.context?.properties?.sort_by_column
-				return sort_by_column===true
-					|| (Array.isArray(sort_by_column) && sort_by_column.includes(column.tipo))
+				return column.sort_by_column===true
 			}
 
 
@@ -3112,6 +3112,13 @@ export const ui = {
 					for (let i = 0; i < sqo_order_length; i++) {
 
 						const item = sqo_order[i]
+
+						// path-less order entries (e.g. the semantic-search
+						// {mode:'locator_position'} rank order, WC-047) carry no
+						// column — skip them, they light no header indicator
+						if (!Array.isArray(item.path) || item.path.length===0) {
+							continue;
+						}
 
 						const last_path	= item.path[item.path.length-1]
 						if (last_path.component_tipo===column.tipo) {

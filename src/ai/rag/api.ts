@@ -4,11 +4,16 @@
  * ACTION_REGISTRY (core/api/dispatch.ts) as the `dd_rag_api` class, so the
  * class+action allowlist (spec §7.1) admits exactly these actions and no others.
  *
- * Actions (params in rqo.options):
- *   semantic_search { query, section_tipo?, limit? }   → best record per hit
- *   retrieve         { query, section_tipo?, limit? }   → passages (chunks)
- *   get_agent_context{ query, section_tipo?, limit? }   → passages (LLM context)
- *   similar_to       { section_tipo, section_id, limit? }→ records like a seed
+ * Actions (params in rqo.options; retrieval actions also accept `group` — an
+ * embed-group facet filter, see config.ts):
+ *   semantic_search  { query, section_tipo?, limit?, group? } → best record per hit
+ *   retrieve         { query, section_tipo?, limit?, group? } → passages (chunks)
+ *   get_agent_context{ query, section_tipo?, limit?, group? } → passages (LLM context)
+ *   similar_to       { section_tipo, section_id, limit?, group? } → records like a seed
+ *   ask              { query, section_tipo?, limit? }   → grounded cited answer
+ *   embed_groups     { section_tipo }                   → the section's embed-group ids
+ *   similar_objects / search_by_text_image / characterize_object → image layer
+ *     (additionally gated by DEDALO_RAG_MEDIA_ENABLED)
  *
  * Security: every action requires a session (not in NO_LOGIN_ACTIONS) and is
  * CSRF-gated by the dispatcher; the RESULTS are ACL-gated inside retrieval.ts
@@ -23,11 +28,17 @@ import { config } from '../../config/config.ts';
 import { readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 import type { ApiResult } from '../../core/api/response.ts';
+import { isValidTipo } from '../../core/concepts/ontology.ts';
 import type { Rqo } from '../../core/concepts/rqo.ts';
-import { type Principal, resolvePrincipal } from '../../core/security/permissions.ts';
+import {
+	type Principal,
+	getPermissions,
+	resolvePrincipal,
+} from '../../core/security/permissions.ts';
 import { RESTRICTED_MSG, runAsk } from './ask.ts';
 import {
 	askRuntimeConfigFromEnv,
+	buildContributorEgressPolicy,
 	buildEgressPolicy,
 	buildLlmProvider,
 	buildSystemPromptResolver,
@@ -79,6 +90,18 @@ function optionScope(options: Record<string, unknown> | undefined): string[] | u
 	return undefined;
 }
 
+/**
+ * Read the optional embed-group facet filter ("only transcriptions", "similar
+ * by profession"). Validated against the group-id slug grammar — the value
+ * becomes a bound `component_tipo = 'rag:'+group` filter, never raw SQL.
+ */
+function optionGroup(options: Record<string, unknown> | undefined): string | undefined {
+	const value = options?.group;
+	if (typeof value !== 'string') return undefined;
+	const trimmed = value.trim();
+	return /^[a-z0-9][a-z0-9_-]{0,39}$/.test(trimmed) ? trimmed : undefined;
+}
+
 function envelope(result: unknown, msg: string, errors: string[] = []): ApiResult {
 	return { status: 200, body: { result, msg, errors } };
 }
@@ -105,6 +128,7 @@ async function recordSearch(rqo: Rqo, context: RagApiContext): Promise<ApiResult
 		query,
 		clampTopK(rqo.options?.limit),
 		optionScope(rqo.options),
+		optionGroup(rqo.options),
 	);
 	return envelope(hits, 'ok');
 }
@@ -121,6 +145,7 @@ async function passageSearch(rqo: Rqo, context: RagApiContext, msg: string): Pro
 		query,
 		clampTopK(rqo.options?.limit),
 		optionScope(rqo.options),
+		optionGroup(rqo.options),
 	);
 	return envelope(passages, msg);
 }
@@ -142,8 +167,35 @@ async function similarToAction(rqo: Rqo, context: RagApiContext): Promise<ApiRes
 		sectionId,
 		clampTopK(rqo.options?.limit),
 		optionScope(rqo.options),
+		optionGroup(rqo.options),
 	);
 	return envelope(hits, 'ok');
+}
+
+/**
+ * embed_groups — the section's embed-group ids (the client's facet selector +
+ * its "is this section semantic-searchable" gate). The master kill-switch
+ * declines first like every action; after that, a malformed tipo, a section
+ * the CALLER cannot read, and a section without a rag.embed descriptor ALL
+ * return the same `{groups: []}` — byte-identical on purpose, so the gate is
+ * never a section-existence oracle (sec review #1; mirrors mcp discovery's
+ * not_found shape).
+ */
+async function embedGroupsAction(rqo: Rqo, context: RagApiContext): Promise<ApiResult> {
+	if (!isRagEnabled()) return disabled();
+	const principal = await resolveCaller(context);
+	if (principal === null) return badRequest('Authentication required', 'no_principal');
+	const sectionTipo = optionString(rqo.options, 'section_tipo');
+	if (sectionTipo === '' || !isValidTipo(sectionTipo)) {
+		return envelope({ groups: [] }, 'ok');
+	}
+	// Per-section read permission — denial is indistinguishable from "not opted in".
+	if ((await getPermissions(principal, sectionTipo, sectionTipo)) < 1) {
+		return envelope({ groups: [] }, 'ok');
+	}
+	const ragConfig = new RagConfig(defaultOntologyPort());
+	const groups = await ragConfig.getEmbedGroups(sectionTipo);
+	return envelope({ groups: groups.map((g) => g.id) }, 'ok');
 }
 
 /** ask — grounded Q&A with citations (or a refusal when no context is found). */
@@ -169,6 +221,7 @@ async function askAction(rqo: Rqo, context: RagApiContext): Promise<ApiResult> {
 				llm: buildLlmProvider(env),
 				reranker: new PassThroughReranker(),
 				egress: buildEgressPolicy(cfg),
+				contributorEgress: buildContributorEgressPolicy(cfg),
 				systemPrompt: buildSystemPromptResolver(ragConfig, env),
 				contextTokenBudget: cfg.contextTokenBudget,
 				maxOutputTokens: cfg.maxOutputTokens,
@@ -332,6 +385,7 @@ async function characterizeObjectAction(rqo: Rqo, context: RagApiContext): Promi
  */
 export const ragApiActions = {
 	semantic_search: recordSearch,
+	embed_groups: embedGroupsAction,
 	retrieve: (rqo: Rqo, context: RagApiContext) => passageSearch(rqo, context, 'ok'),
 	get_agent_context: (rqo: Rqo, context: RagApiContext) =>
 		passageSearch(rqo, context, 'agent_context'),

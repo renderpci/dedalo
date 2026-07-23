@@ -53,7 +53,7 @@
     The toolbar is assembled from the model + ontology, not hardcoded in the component class. The verified sample (`src/core/components/component_select_lang/samples/context.json`) carries `tool_propagate_component_data` and `tool_time_machine`. Because the component is non-translatable, `tool_lang` / `tool_lang_multi` are not added. Tools are read-only context.
 
 !!! info "TS server implementation"
-    The descriptor `src/core/components/component_select_lang/descriptor.ts` registers `resolveData: selectFamilyResolver` (`src/core/relations/models/select_family.ts`), the same resolver shared by `component_select` / `component_radio_button` / `component_check_box` / `component_publication` / `component_relation_model`. The resolver detects `model === 'component_select_lang'` and overrides the option source with `src/core/relations/select_lang.ts` (`getSelectLangDatalist` / `getSelectLangListValue`): the project's default languages (`config.menu.projectsDefaultLangs`, resolved against the `lg1` languages section), sorted by `strcmp`, with the `get_missing_lang` `*` fallback for a stored language outside the project set. See the *dedalo-relations-ts* skill.
+    The descriptor `src/core/components/component_select_lang/descriptor.ts` registers `resolveData: 'select_family'` (`src/core/relations/models/select_family.ts`), the same resolver shared by `component_select` / `component_radio_button` / `component_check_box` / `component_publication` / `component_relation_model`. The resolver detects `model === 'component_select_lang'` and overrides the option source with `src/core/relations/select_lang.ts` (`getSelectLangDatalist` / `getSelectLangListValue`): the project's default languages (`config.menu.projectsDefaultLangs`, resolved against the `lg1` languages section), sorted by `strcmp`, with the `get_missing_lang` `*` fallback for a stored language outside the project set. See the *dedalo-relations-ts* skill.
 
 ## Definition
 
@@ -285,8 +285,8 @@ DOM (edit / default): `wrapper_component component_select_lang <tipo> <mode> vie
 
 Language codes are validated against `^lg-[a-z0-9]+$` and resolved to a languages-section locator. A code that **cannot** be resolved produces a failed row (`IGNORED: invalid lang code ...`). A code that resolves but is **not** in the project's configured languages is still imported, but with a **WARNING** — the value is saved yet stays inaccessible until the project languages include it. An empty cell clears the existing value. See [importing data](../importing_data.md#related-data).
 
-!!! warning "TS gap: language-code short form"
-    The TS import engine (`src/core/tools/import_data.ts` + `import_csv.ts`) round-trips the generic locator JSON shape for every model (the raw-export round-trip), but this component's bespoke **language-code** short forms (a bare `lg-spa`, a comma list, or plain `section_id`s) are not yet implemented as a per-model override. Import a full locator array against `lg1` until this lands.
+!!! info "Language-code short form is implemented"
+    The bespoke **language-code** short forms are handled by a per-model import override: the descriptor declares `importConform: 'select_lang'`, and `IMPORT_CONFORM.select_lang = conformSelectLang` (`src/core/tools/import_conform.ts`) accepts a bare `lg-spa`, a comma list, or a JSON array of codes, validates each against `^lg-[a-z0-9]+$`, resolves it to an `lg1` locator, warns on a non-project language, and falls through to the generic relation conform for locator/`section_id` shapes. The full locator array against `lg1` also still works.
 
 **Export.** Resolution is the shared relation export path: the stored locator(s) are iterated and, per the `ddo_map`, the named child component is resolved against each locator's `section_id` / `section_tipo` to produce the displayed language name. See [exporting data](../exporting_data.md).
 

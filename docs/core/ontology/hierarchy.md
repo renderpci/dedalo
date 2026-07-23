@@ -22,7 +22,7 @@ its own purpose-built module rather than in one shared object:
 | --- | --- |
 | **Materialise the term storage** (activate a hierarchy) | `src/core/ontology/hierarchy_provision.ts` — `generateVirtualSection()` |
 | **Serve fast lookups** (main language, section_map) | `src/core/ts_object/term_resolver.ts` (private `getMainLang()`) + `src/core/ontology/section_map.ts` (`getSectionMap()`, `getSectionMapValue()`) |
-| **Seed root terms** | `src/core/ontology/hierarchy_provision.ts` — `createThesaurusGeneralTerm()` |
+| **Seed root terms** | `src/core/ontology/hierarchy_state.ts` — `ensureHierarchy()` (seeds/names the root) |
 
 Two adjacent surfaces round it out:
 
@@ -53,10 +53,10 @@ lookup inside `getMainLang()`, the active-hierarchy sweep in the
   (`getMainLang()`, private to `term_resolver.ts`) and its **section_map**
   element tipos (`getSectionMap()` / `getSectionMapValue()`,
   `ontology/section_map.ts`), each with its own module-level cache.
-- **Root terms** — `createThesaurusGeneralTerm()` (`hierarchy_provision.ts`)
-  seeds the "General term" root a thesaurus shows at the top of a tree. It does
-  not rename the new term after the hierarchy — the seed itself is what the tree
-  needs to render.
+- **Root terms** — `ensureHierarchy()` (`hierarchy_state.ts`) seeds and names
+  the "General term" root a thesaurus shows at the top of a tree. It mints the
+  root the tree hangs its children on, then names it after the hierarchy
+  (fill-only — an existing name is never overwritten).
 - **Schema diffing** — `saveSimpleSchemaFile()`
   (`src/core/ontology/ontology_update.ts`) writes an **additions-only** diff of
   the section→children schema under `<private>/backups/ontology/changes/`, as
@@ -114,7 +114,7 @@ The named tipo constants live in a single source of truth,
 !!! note "Children are portals, not relation_children"
     The "General term" root is a `component_portal`
     (`hierarchy45`/`hierarchy59`), not a `component_relation_children`.
-    `createThesaurusGeneralTerm()` writes the portal link locator directly.
+    `ensureHierarchy()` (`hierarchy_state.ts`) writes the portal link locator directly.
 
 ### Module-level state
 
@@ -136,7 +136,7 @@ function`. The "lifecycle" that matters is cache invalidation, which is
 automatic (see below), not something you call:
 
 ```ts
-import { generateVirtualSection, createThesaurusGeneralTerm } from
+import { generateVirtualSection } from
   'src/core/ontology/hierarchy_provision.ts';
 import { getSectionMapValue } from 'src/core/ontology/section_map.ts';
 

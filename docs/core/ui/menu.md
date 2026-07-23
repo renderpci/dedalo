@@ -134,10 +134,10 @@ A `tree_datalist` item (one per visible area/section):
       This is how a tool-backed menu entry opens the *real* target section but
       with tool behaviour layered on. If the named tool is not in the user's
       tool set, the area is skipped.
-    - **`DEDALO_THESAURUS_VIRTUALS_AREA_TIPO`** (`hierarchy56`) → `model`
-      becomes `'area_thesaurus'`, `config = { swap_tipo: DEDALO_THESAURUS_TIPO }`
+    - **`THESAURUS_VIRTUALS_AREA_TIPO`** (`hierarchy56`) → `model`
+      becomes `'area_thesaurus'`, `config = { swap_tipo: THESAURUS_TIPO }`
       (`dd100`). The client swaps `tipo` to `swap_tipo` on click.
-    - **`DEDALO_THESAURUS_VIRTUALS_MODELS_AREA_TIPO`** (`hierarchy57`) → same as
+    - **`THESAURUS_VIRTUALS_MODELS_AREA_TIPO`** (`hierarchy57`) → same as
       above plus `thesaurus_view_mode: 'model'` and a matching `url_vars`.
 
 ### `context` — the menu dd_object

@@ -226,7 +226,10 @@ export async function buildTmSectionRecord(
 		// dd1574 copy above (via the guarded injectTmField) still carries the data.
 		if (sourceModel !== null) {
 			const sourceColumn = getColumnNameByModel(sourceModel);
-			if (sourceColumn !== null && MATRIX_JSONB_COLUMNS.includes(sourceColumn as MatrixJsonbColumn)) {
+			if (
+				sourceColumn !== null &&
+				MATRIX_JSONB_COLUMNS.includes(sourceColumn as MatrixJsonbColumn)
+			) {
 				injectComponentData(record, row.tipo, sourceModel, dataParsed);
 			}
 		}
