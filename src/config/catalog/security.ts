@@ -133,6 +133,26 @@ This key redirects the whole process at a scratch file, so the test suite never 
 or wipes — the live store; the suite sets it for itself. On a real installation it must
 stay unset.`,
 	},
+	DEDALO_SINGLE_SESSION: {
+		type: 'boolean',
+		scope: 'operator',
+		default: false,
+		heading: 'Defining single-session (one active session per user)',
+		typeLabel: 'bool',
+		doc: `Restricts each user to ONE active session. When \`true\`, a successful login evicts every
+other session that user already holds (keeping only the one just created) — so logging in
+again anywhere immediately invalidates a token stolen earlier, closing the re-login window
+(security finding AUTHZ-04). A password reset already revokes all of a user's sessions
+regardless of this flag; this key extends that guarantee to ordinary re-login.
+
+Default \`false\`: concurrent sessions are allowed, so the same user can stay logged in on
+several devices at once. Set it \`true\` for a stricter, single-device policy — at the cost
+that a new login logs the user out everywhere else.
+
+\`\`\`bash
+DEDALO_SINGLE_SESSION=false
+\`\`\``,
+	},
 	LOGIN_ACCOUNT_MAX_ATTEMPTS: {
 		type: 'number',
 		scope: 'operator',

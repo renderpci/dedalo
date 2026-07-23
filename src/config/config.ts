@@ -369,6 +369,13 @@ export interface FeaturesConfig {
 	readonly lockComponents: boolean;
 	/** Send browser notifications, e.g. current locks (PHP DEDALO_NOTIFICATIONS). */
 	readonly notifications: boolean;
+	/**
+	 * One active session per user (DEDALO_SINGLE_SESSION, default false). When
+	 * true, login evicts the user's OTHER sessions (AUTHZ-04) — a new login
+	 * invalidates a token stolen earlier; false keeps concurrent multi-device
+	 * sessions. Password reset revokes all sessions regardless of this flag.
+	 */
+	readonly singleSession: boolean;
 	/** Ceiling applied to client-supplied SQO limits (PHP DEDALO_SEARCH_CLIENT_MAX_LIMIT). */
 	readonly searchClientMaxLimit: number;
 	/** Component tipos excluded from the security-access datalist (PHP DEDALO_AR_EXCLUDE_COMPONENTS). */
@@ -756,6 +763,7 @@ export const config: DedaloConfig = Object.freeze({
 	features: Object.freeze({
 		lockComponents: readString('DEDALO_LOCK_COMPONENTS') === 'true',
 		notifications: readString('DEDALO_NOTIFICATIONS') === 'true',
+		singleSession: readString('DEDALO_SINGLE_SESSION') === 'true',
 		searchClientMaxLimit: Math.max(1, readNumber('DEDALO_SEARCH_CLIENT_MAX_LIMIT')),
 		arExcludeComponents: readList('DEDALO_AR_EXCLUDE_COMPONENTS'),
 		mediaAccessMode: readMediaAccessMode(),
