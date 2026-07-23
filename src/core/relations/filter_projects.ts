@@ -30,6 +30,7 @@ import { getMatrixTableFromTipo, getModelByTipo } from '../ontology/resolver.ts'
 import { resolveComponentValue } from '../resolve/component_data.ts';
 import { currentDataLang } from '../resolve/request_lang.ts';
 import { registerSectionDataListener } from '../section_record/save_event.ts';
+import { getUserProjects } from '../security/permissions.ts';
 import { currentPrincipal } from '../security/request_context.ts';
 import { getParentsRecursive } from './parent.ts';
 
@@ -88,24 +89,38 @@ function strcasecmp(a: string, b: string): number {
  * order), each with its resolved label / order / nearest-authorized parent.
  */
 export async function getUserAuthorizedProjects(): Promise<AuthorizedProject[]> {
-	// ISO-01 note: an unanchored call (currentPrincipal() undefined) keys under
-	// 'none' (see authorizedProjectsCacheKey) — distinct from the admin 'all' entry
-	// so it can never be served an admin's cached projection. The VALUE-level deny
-	// (return [] for 'none') lands WITH the ledgered per-user narrowing below: today
-	// every scope resolves to the same full dd153 list, so the fail-open is inert
-	// (matching the audit dissent's "fix it with the narrowing"). Do not add a bare
-	// early-return here — getUserAuthorizedProjects is also called context-free.
+	// AUTHZ-06 — per-user narrowing + value-level deny (PHP
+	// component_filter_master::get_user_authorized_projects branches
+	// is_global_admin ? all : get_user_projects). Before this fix EVERY caller —
+	// any authenticated non-admin, zero grants — got the full dd153 catalog + tree
+	// (the datalist leaked every tenant's project names/order/parentage), because
+	// currentPrincipal() was read only for the cache KEY, never to filter the VALUE.
+	const principal = currentPrincipal();
+	// Fail CLOSED on an unanchored call (currentPrincipal() undefined): no
+	// authority ⇒ no projects (the 'none' cache key's value-level deny, ISO-01
+	// polarity). The real callers (portal.ts get_data/list) are all on the
+	// authenticated dispatch path, so a principal is always present there.
+	if (principal === undefined) return [];
 	const dataLang = currentDataLang();
 	const cacheKey = authorizedProjectsCacheKey(dataLang);
 	const cached = authorizedProjectsCache.get(cacheKey);
 	if (cached !== undefined) return cached;
+	// Non-admins see ONLY their dd170-assigned projects (get_user_projects — the
+	// SAME set the per-record projects ACL filters records by, so the datalist
+	// stays consistent with what records the caller can actually reach). A global
+	// admin keeps the full catalog (allowedIds === null = no filter).
+	const allowedIds = principal.isGlobalAdmin
+		? null
+		: new Set(await getUserProjects(principal.userId));
 	const table = await getMatrixTableFromTipo(PROJECTS_SECTION_TIPO);
 	if (table === null) return [];
 	const rows = (await sql.unsafe(
 		`SELECT section_id FROM "${table}" WHERE section_tipo = $1 ORDER BY section_id`,
 		[PROJECTS_SECTION_TIPO],
 	)) as { section_id: number }[];
-	const ids = rows.map((row) => Number(row.section_id));
+	const ids = rows
+		.map((row) => Number(row.section_id))
+		.filter((id) => allowedIds === null || allowedIds.has(id));
 	const idSet = new Set(ids);
 	const nameModel = (await getModelByTipo(PROJECTS_NAME_TIPO)) ?? 'component_input_text';
 	const orderModel = (await getModelByTipo(PROJECTS_ORDER_TIPO)) ?? 'component_number';
