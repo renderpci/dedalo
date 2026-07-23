@@ -78,7 +78,6 @@
 	} from './search_user_presets.js'
 	import {get_scope} from '../../common/js/section_map.js'
 	import {
-		render_semantic_block,
 		apply_semantic_from_preset
 	} from './render_semantic.js'
 
@@ -287,12 +286,10 @@ render_search.prototype.render_base = function() {
 				}
 			}
 		)
-		// semantic block (RAG, 2026-07-22): mounted BEFORE the group container so
-		// the panel reads "meaning AND the structured groups below". Hidden until
-		// the embed-groups gate reveals it (render_semantic.js).
-		const semantic_block = render_semantic_block(self)
-		search_container_selection.appendChild(semantic_block)
-		self.semantic_block_node = semantic_block
+		// semantic (RAG): the ONE semantic input is the quick input in the list
+		// toolbar (render_semantic.js build_semantic_quick_input) — the panel
+		// deliberately mounts no duplicate block; the shared instance state
+		// (self.semantic) still composes with the structured filter on submit.
 
 		const search_group_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -1191,12 +1188,12 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 					})
 
 				// semantic (RAG): restore the preset's live NL query as state
-				// (Apply re-runs it); re-render the block inputs from state.
+				// (Apply re-runs it) and reflect it in the toolbar quick input
+				// — the single semantic UI — so the restored query is visible.
 					apply_semantic_from_preset(self, json_filter)
-					if (self.semantic_block_node) {
-						const fresh_block = render_semantic_block(self)
-						self.semantic_block_node.replaceWith(fresh_block)
-						self.semantic_block_node = fresh_block
+					const quick_input = document.querySelector('.semantic_quick_search input.semantic_query')
+					if (quick_input) {
+						quick_input.value = self.semantic?.q || ''
 					}
 
 				// render buttons

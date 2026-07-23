@@ -200,7 +200,7 @@
 							margin-left: 5px;
 							margin-right: 5px;
 							justify-content: flex-start;
-							border-radius: 2px;
+							border-radius: var(--radius-lg);
 						}
 
 						// search_component
@@ -291,9 +291,10 @@
 							background-color: @color_tag_indexation_normal;
 							opacity: 1;
 							color: @color_white;
-							border: 1px solid @color_white;
-							border-radius: 0.25em;
+							border: none; // quiet grid: no white outlines between buttons
+							border-radius: var(--radius-md);
 							word-break: break-word;
+							transition: background-color var(--transition-fast);
 
 							&:hover {
 								background-color: @color_tag_indexation_normal_dark;
@@ -582,67 +583,71 @@
 		-webkit-user-drag: element;
 	}
 
-// semantic (RAG) search UI — 2026-07-22
-// The quick input lives in the list toolbar (search_buttons_container), the
-// block at the top of the search panel canvas, the chip in buttons_container.
+// semantic (RAG) search UI — 2026-07-22 (single input since 2026-07-23)
+// THE semantic search: the quick input in the list toolbar
+// (search_buttons_container); the pinned chip renders in buttons_container.
+// All colors are theme tokens so light/dark both work.
 .semantic_quick_search {
 	display: inline-flex;
 	align-items: center;
-	gap: 4px;
 	margin-left: 6px;
 
 	&.hide {
 		display: none;
 	}
-	&.loading {
-		opacity: 0.6;
-	}
+
 	input.semantic_query {
-		min-width: 14em;
-		height: 1.85em;
-		padding: 0 0.5em;
+		min-width: 15em;
+		height: 2em;
+		padding: 0 0.9em;
+		opacity: 1; // full ink (global inputs render at 0.75)
+		color: var(--fg_default);
+		background-color: var(--bg_input);
+		border-radius: var(--radius-pill);
+		outline: 1px solid var(--border_default);
+		transition: min-width var(--transition-base), outline-color var(--transition-fast), box-shadow var(--transition-fast);
+
+		&::placeholder {
+			color: var(--fg_muted);
+		}
+		// grows while in use; the orange ring marks it as the meaning search
+		&:focus {
+			min-width: 24em;
+			outline: 1px solid var(--color_orange_dedalo);
+			box-shadow: 0 0 0 3px var(--focus_ring_weak);
+		}
+	}
+
+	// resolve in flight: quiet pulse, refuses a second Enter visibly
+	&.loading input.semantic_query {
+		cursor: progress;
+		animation: semantic_query_pulse 1.2s ease-in-out infinite;
 	}
 }
+@keyframes semantic_query_pulse {
+	0%, 100%	{ opacity: 1; }
+	50%			{ opacity: 0.45; }
+}
+
 .semantic_pinned_chip {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
 	margin: 2px 6px;
-	padding: 2px 8px;
-	border-radius: 10px;
-	background-color: #e8e4f5;
-	color: #4a4471;
+	padding: 2px 10px;
+	border-radius: var(--radius-pill);
+	background-color: var(--color_orange_light);
+	color: var(--color_orange_dark);
 	font-size: 0.85em;
+	font-weight: 500;
 
 	.chip_clear {
 		cursor: pointer;
 		font-weight: bold;
-	}
-}
-.semantic_block {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	padding: 6px 8px;
-	margin-bottom: 4px;
-	background-color: #f4f2fb;
-	border-radius: 4px;
+		transition: color var(--transition-fast);
 
-	&.hide {
-		display: none;
-	}
-	.semantic_label {
-		font-weight: bold;
-		white-space: nowrap;
-	}
-	input.semantic_query {
-		flex: 1;
-		min-width: 10em;
-	}
-	select.semantic_group.hide {
-		display: none;
-	}
-	.semantic_clear {
-		cursor: pointer;
+		&:hover {
+			color: var(--color_orange_dedalo);
+		}
 	}
 }

@@ -8,14 +8,15 @@
 * MODULE render_semantic
 * Semantic (RAG) search UI builders — 2026-07-22.
 *
-* Two inputs share ONE state home (`search_instance.semantic`, search.js):
-*  - the QUICK INPUT mounted in the section list toolbar
-*    (view_default_list_section.js get_buttons), and
-*  - the PANEL BLOCK mounted at the top of the search panel canvas
-*    (render_search.js render_base), where it composes (AND) with the
-*    structured filter tree.
+* ONE input, ONE state home (`search_instance.semantic`, search.js): the
+* QUICK INPUT mounted in the section list toolbar
+* (view_default_list_section.js get_buttons). The search panel mounts no
+* duplicate block (removed 2026-07-23) — the shared instance state still
+* composes (AND) with the structured filter tree on panel submit, and a
+* preset load reflects its restored query back into the quick input
+* (render_search.js).
 *
-* Both are HIDDEN unless the searched section declares embed groups
+* It is HIDDEN unless the searched section declares embed groups
 * (dd_rag_api embed_groups — empty for: RAG off, section not opted in, caller
 * not authorized; all byte-identical server-side by design). The group list is
 * cached per section_tipo for the page life — a descriptor edit needs a reload
@@ -205,113 +206,6 @@ export const build_pinned_chip = function(section_self) {
 
 	return chip
 }//end build_pinned_chip
-
-
-
-/**
-* RENDER_SEMANTIC_BLOCK
-* The search-panel semantic block: query input + group (facet) select + clear.
-* Mounted by render_search render_base at the top of the selection canvas so a
-* submit composes semantic ∩ structured. Writes ONLY instance state
-* (`self.semantic`); the panel's own Search button fires the search. The
-* query input triggers the temp-preset autosave (update_state 'changed') so
-* the NL query persists like any filter edit.
-*
-* @param {Object} search_self - The search instance.
-* @returns {HTMLElement}
-*/
-export const render_semantic_block = function(search_self) {
-
-	const block = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'semantic_block hide'
-	})
-
-	ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: 'semantic_label',
-		inner_html		: get_label.search_by_meaning || 'Search by meaning',
-		parent			: block
-	})
-
-	const input = ui.create_dom_element({
-		element_type	: 'input',
-		type			: 'search',
-		class_name		: 'semantic_query',
-		parent			: block
-	})
-	input.value = search_self.semantic?.q || ''
-	input.addEventListener('input', () => {
-		search_self.semantic.q = input.value
-		// persist with the rest of the filter (temp preset autosave)
-		search_self.update_state({ state : 'changed' })
-	})
-
-	const group_select = ui.create_dom_element({
-		element_type	: 'select',
-		class_name		: 'semantic_group',
-		parent			: block
-	})
-	const all_option = ui.create_dom_element({
-		element_type	: 'option',
-		inner_html		: get_label.semantic_all_groups || 'All content',
-		parent			: group_select
-	})
-	all_option.value = ''
-	group_select.addEventListener('change', () => {
-		search_self.semantic.group = group_select.value || null
-		search_self.update_state({ state : 'changed' })
-	})
-
-	const clear_button = ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: 'button semantic_clear',
-		inner_html		: get_label.clean || 'Clean',
-		parent			: block
-	})
-	clear_button.addEventListener('mousedown', (e) => {
-		e.stopPropagation()
-		input.value = ''
-		search_self.semantic.q		= ''
-		search_self.semantic.group	= null
-		group_select.value			= ''
-		search_self.update_state({ state : 'changed' })
-	})
-
-	// reveal gate + group options
-	const target = search_self.target_section_tipo
-	const section_tipo = Array.isArray(target) ? target[0] : target
-	get_embed_groups(section_tipo)
-	.then(function(groups){
-		if (groups.length===0) {
-			return
-		}
-		block.classList.remove('hide')
-		for (const group of groups) {
-			const option = ui.create_dom_element({
-				element_type	: 'option',
-				inner_html		: group,
-				parent			: group_select
-			})
-			option.value = group
-		}
-		// restore the saved facet — a group RENAMED/removed since save stays on
-		// 'all' (visible in the select) rather than silently broadening.
-		const saved = search_self.semantic?.group
-		if (saved && groups.includes(saved)) {
-			group_select.value = saved
-		} else if (saved) {
-			console.warn(`[render_semantic] saved group '${saved}' no longer exists — using all groups`);
-			search_self.semantic.group = null
-		}
-		// hide the select when the section has a single group (nothing to pick)
-		if (groups.length===1) {
-			group_select.classList.add('hide')
-		}
-	})
-
-	return block
-}//end render_semantic_block
 
 
 
