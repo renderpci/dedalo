@@ -1890,11 +1890,32 @@ linked `section_id`s ordered on the column(s), then a rank-map re-order.
   server-built config never re-parses through it).
 - **Fixture impact: NONE.** Opt-in; no corpus record carries either key, so the
   frozen read-path store replays byte-identical.
-- **Latent-bug fix in the shared engine.** The extracted ranking search passed
-  `limit: 0`, which the assembler renders as a literal `LIMIT 0` (zero rows) —
-  only `limit: 'all'`/null is unbounded. So the pre-existing `sort_by_column`
-  rank search silently returned no rows (a no-op reorder); it had no DB
-  happy-path gate. Fixed to `limit: 'all'`. No parity fixture pins its output.
+- **Two latent-bug fixes in the shared engine** (both were masked because the
+  pre-existing `sort_by_column` had no DB happy-path gate and never actually
+  reordered):
+  1. `limit: 0` renders as a literal `LIMIT 0` (zero rows); only
+     `limit: 'all'`/null is unbounded → the rank search returned nothing.
+  2. The ranking SCOPE was resolved from the column ddo's `section_tipo: 'self'`
+     mapped to the CALLER section — but a portal column's 'self' is its TARGET
+     section (where the linked records live). Searching the caller table matched
+     no ids → empty rank → stable no-op. Fixed: the target section is derived
+     from the LOCATORS being sorted (`locatorTargetSections`), so both
+     `sort_by_column` and `order` rank over the correct table. Verified in the
+     browser (tch551 → tch10) — `section_id` DESC reorders `[1,2]→[2,1]`.
+  3. The order path was a naive single-step `[{target, column}]` — correct for
+     literals/dates, but a RELATION column (checkbox/autocomplete/portal) stores
+     a LOCATOR with no `.value`, so the assembler's `.value`-by-lang extraction
+     ranked everything NULL (tie → no-op). Fixed: each order column resolves
+     through `buildOrderPath` (`buildOrderEntries`), which emits the per-model
+     JOIN chain to the linked sortable leaf. Verified in the browser (tch191
+     checkbox: ASC `[2,1]` vs DESC `[1,2]`).
+  No parity fixture pins `sort_by_column` output.
+
+  Separately, this required fixing `component_date` SAVE to stamp
+  `start.time` (PHP `component_date::save → add_time`, ported as
+  `addTimeToDateItem` and wired into `save_component.ts`) — the generic write
+  path had no per-model date hook, so v7-entered dates lacked the sort/search
+  key entirely (`file_date.ts`/`media_file_date.test.ts`).
 
 ### Gate
 
