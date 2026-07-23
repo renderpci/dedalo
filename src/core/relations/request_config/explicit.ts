@@ -617,6 +617,27 @@ async function resolveGetDdoMap(
 	return calculated;
 }
 
+/**
+ * Resolve a CALLER-sent `get_ddo_map` (section_map directive) for a single
+ * owner section — the search-panel preset picker names its label column by ROLE
+ * ({path:['default','term']}) so the tipo is never hardcoded. Thin wrapper over
+ * resolveGetDdoMap with the section as its own single target; returns the raw
+ * ddos (the section read maps them to its Ddo shape). Empty when the directive
+ * is absent/non-section_map or the role resolves to nothing.
+ */
+export async function resolveSectionMapGetDdoMap(
+	ownerTipo: string,
+	ownerSectionTipo: string,
+	directive: unknown,
+): Promise<Record<string, unknown>[]> {
+	return resolveGetDdoMap([ownerTipo], directive, {
+		ownerTipo,
+		ownerSectionTipo,
+		mode: 'list',
+		ownerIsSection: true,
+	});
+}
+
 /** Parse one block (show/search/choose/hide) — ddo_map processing + passthrough. */
 async function parseBlock(
 	rawBlock: unknown,

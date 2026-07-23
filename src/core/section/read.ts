@@ -141,11 +141,20 @@ export async function readSection(rqo: Rqo, principal?: Principal): Promise<Read
 
 	const context: StructureContextEntry[] = [];
 	const seen = new Set<string>();
+	// A caller may request a SECTION view (PHP get_view top precedence — the
+	// ddo/source-injected view wins over the section_list child's and the model
+	// default). The search-panel preset picker requests view:'search_user_presets'
+	// so the SAME section (dd623) renders compact HERE while its general menu list
+	// (no source.view) keeps the section_list default. Mirrors the MAIN-component
+	// requestedView below (the ?view=viewer deep link).
+	const requestedSectionView =
+		typeof source.view === 'string' && source.view !== '' ? source.view : null;
 	const sectionEntry = await buildStructureContext({
 		tipo: callerTipo,
 		sectionTipo: source.section_tipo ?? callerTipo,
 		mode,
 		lang,
+		view: requestedSectionView,
 		// Section-level ACL (PHP section::get_section_permissions — includes the
 		// consultation-only cap); the handler's Gate A/B guarantee ≥ 1 here.
 		permissions:
@@ -160,10 +169,12 @@ export async function readSection(rqo: Rqo, principal?: Principal): Promise<Read
 		context.push(sectionEntry);
 		seen.add(contextKey(sectionEntry));
 	}
-	const rqoDdoMap =
-		rqo.show?.ddo_map && rqo.show.ddo_map.length > 0
-			? rqo.show.ddo_map
-			: await deriveSectionDdoMap(callerTipo, source.section_tipo ?? callerTipo, mode);
+	const rqoDdoMap = await resolveSectionColumnDdoMap(
+		rqo,
+		callerTipo,
+		source.section_tipo ?? callerTipo,
+		mode,
+	);
 	for (const ddo of rqoDdoMap) {
 		const ddoSectionTipo =
 			ddo.section_tipo === undefined || ddo.section_tipo === 'self'
@@ -998,6 +1009,48 @@ export async function deriveSectionDdoMap(
 }
 
 /**
+ * The section read's column ddo_map, with the same precedence as PHP
+ * build_request_config for a section read PLUS the caller `get_ddo_map` hook:
+ *  1. the client's literal show.ddo_map wins (it may name any tipo);
+ *  2. else a client show.get_ddo_map section_map DIRECTIVE — the search-panel
+ *     preset picker names its label column by ROLE ({path:['default','term']})
+ *     so the tipo is never hardcoded (was the v6 literal ddo_map:[dd624]);
+ *  3. else the section's ontology default (section_list columns / edit tree).
+ * Shared by readSection (context half) and readSectionRows (data half) so the
+ * two halves never diverge on which columns the picker shows.
+ */
+async function resolveSectionColumnDdoMap(
+	rqo: Rqo,
+	callerTipo: string,
+	sectionTipo: string,
+	mode: string,
+): Promise<Ddo[]> {
+	const literal = rqo.show?.ddo_map;
+	if (Array.isArray(literal) && literal.length > 0) return literal;
+	const directive = (rqo.show as { get_ddo_map?: unknown } | undefined)?.get_ddo_map;
+	if (directive !== undefined) {
+		const { resolveSectionMapGetDdoMap } = await import(
+			'../relations/request_config/explicit.ts'
+		);
+		const raw = await resolveSectionMapGetDdoMap(callerTipo, sectionTipo, directive);
+		if (raw.length > 0) {
+			return raw.map(
+				(d) =>
+					({
+						tipo: d.tipo,
+						section_tipo: Array.isArray(d.section_tipo) ? d.section_tipo[0] : d.section_tipo,
+						parent: d.parent,
+						mode: (d as { mode?: string }).mode,
+						lang: (d as { lang?: string }).lang,
+						view: (d as { view?: string }).view,
+					}) as Ddo,
+			);
+		}
+	}
+	return deriveSectionDdoMap(callerTipo, sectionTipo, mode);
+}
+
+/**
  * A section's list default page size + sort, read from its resolved
  * request_config sqo (list mode → the section_list child's
  * properties.source.request_config[dedalo].sqo — e.g. dd542 Activity's dd549
@@ -1068,13 +1121,15 @@ export async function readSectionRows(
 			`readSectionRows: mode '${mode}' not implemented yet (covered: 'list', 'edit', 'tm', 'list_thesaurus')`,
 		);
 	}
-	// The client's show.ddo_map wins; when absent (the real client's section
-	// read), derive it from the section's ontology request_config (PHP
+	// The client's show.ddo_map wins; else a caller section_map get_ddo_map
+	// directive (the preset picker), else the section's ontology default (PHP
 	// build_request_config → the section_list/implicit columns).
-	let ddoMap: Ddo[] = rqo.show?.ddo_map ?? [];
-	if (ddoMap.length === 0) {
-		ddoMap = await deriveSectionDdoMap(callerTipo, source.section_tipo ?? callerTipo, mode);
-	}
+	let ddoMap: Ddo[] = await resolveSectionColumnDdoMap(
+		rqo,
+		callerTipo,
+		source.section_tipo ?? callerTipo,
+		mode,
+	);
 	// Per-component READ gate on the DATA side (PHP check_ddo_permissions +
 	// STEP 5 filter_authorized_related): a component the actor holds level 0 on
 	// never reaches emitDdoData — client-sent maps included (the config-build

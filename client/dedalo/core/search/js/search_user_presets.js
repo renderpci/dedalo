@@ -322,18 +322,20 @@ export const load_user_search_presets = async function(self) {
 		}
 
 	// request_config
-		// Only show the preset name (dd624) in list mode; the full filter JSON is
-		// loaded separately when the user selects a preset to apply (load_search_preset).
+		// The list shows ONLY the preset label component. Which component that is
+		// is NOT hardcoded here (was the v6 literal ddo_map:[dd624]) — the server
+		// resolves it from the section's section_map default.term role via the
+		// get_ddo_map directive (model 'section_map'). The full filter JSON (dd625)
+		// is loaded separately when a preset is applied (load_search_preset).
 		const request_config = [{
 			sqo			: sqo,
 			api_engine	: 'dedalo',
 			type		: 'main',
 			show 		: {
-				ddo_map : [{
-					tipo			: presets_component_name_value_tipo, // 'dd624',
-					section_tipo	: presets_section_tipo, // 'dd623',
-					parent			: presets_section_tipo // 'dd623'
-				}]
+				get_ddo_map : {
+					model	: 'section_map',
+					columns	: [{ path : ['default', 'term'] }]
+				}
 			}
 		}]
 
