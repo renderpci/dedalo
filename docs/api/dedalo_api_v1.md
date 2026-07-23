@@ -78,7 +78,7 @@ This index lists every `(dd_api, action)` pair registered in `src/core/api/dispa
 
 ### dd_core_api (section/record lifecycle and page context)
 
-Registered actions: `start`, `read`, `save`, `read_raw`, `create`, `duplicate`, `delete`, `count`, `get_element_context`, `get_section_elements_context`, `get_section_terms`, `get_indexation_grid`, `get_environment`.
+Registered actions: `start`, `read`, `save`, `read_raw`, `create`, `duplicate`, `delete`, `count`, `get_element_context`, `get_section_elements_context`, `get_section_terms`, `get_indexation_grid`, `get_activity_metric`, `get_ip_country`, `get_environment`.
 
 The page-globals, plain-vars and label payloads are not separate actions: they are served as one `environment` block by `get_environment` and by `start`.
 
@@ -90,7 +90,7 @@ Example — `start` (get the initial context):
 
 ### dd_utils_api (utility and system operations)
 
-Registered actions: `login`, `quit`, `get_login_context`, `get_install_context`, `install`, `get_system_info`, `get_dedalo_files`, `change_lang`, `convert_search_object_to_sql_query`, `join_chunked_files_uploaded`, `list_uploaded_files`, `get_process_status`, `update_lock_components_state`, `get_lock_status`, `get_server_ready_status`, `get_ontology_update_info`, `get_code_update_info`.
+Registered actions: `login`, `quit`, `get_login_context`, `get_install_context`, `install`, `request_password_reset`, `confirm_password_reset`, `get_system_info`, `get_dedalo_files`, `change_lang`, `convert_search_object_to_sql_query`, `join_chunked_files_uploaded`, `list_uploaded_files`, `get_job_events`, `get_process_status`, `stop_process`, `update_lock_components_state`, `get_lock_status`, `get_server_ready_status`, `get_ontology_update_info`, `get_code_update_info`.
 
 > Note: file `upload` is not a JSON-dispatched action — multipart uploads are handled by the media ingest branch of the API path in `src/server.ts`. `join_chunked_files_uploaded` is the JSON RQO that reassembles a completed chunked upload.
 >
@@ -192,8 +192,12 @@ Example `source` snippet:
 - **[dd_tools_api](classes/dd_tools_api.md)** — user tools and `tool_request`.
 - **[dd_ts_api](classes/dd_ts_api.md)** — thesaurus and tree helpers.
 - **[dd_area_maintenance_api](classes/dd_area_maintenance_api.md)** — maintenance and admin endpoints.
+- **[dd_diffusion_api](classes/dd_diffusion_api.md)** — publication / diffusion process control.
+- **[dd_rag_api](classes/dd_rag_api.md)** — semantic retrieval (RAG) and image similarity.
 - **[dd_component_portal_api](classes/dd_component_portal_api.md)** — portal component helpers.
 - **[dd_component_av_api](classes/dd_component_av_api.md)** — audio/video helpers.
 - **[dd_component_3d_api](classes/dd_component_3d_api.md)** — 3D component helpers.
 - **[dd_component_info](classes/dd_component_info.md)** — component info widget data.
+- **[dd_mcp_api](classes/dd_mcp_api.md)** — the in-process assistant / MCP bridge (fails closed unless the agent HTTP surface is enabled).
+- **[dd_error_report_api](classes/dd_error_report_api.md)** — machine-to-machine error-report intake (reachable only while the receiver is enabled).
 - **[dispatch](classes/dispatch.md)** — the request router: `dispatchRqo` plus the action registry.
