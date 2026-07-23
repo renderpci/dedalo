@@ -44,11 +44,14 @@
 !!! note "Typology"
     `component_check_box` is a **related** component. It does not own literal data; it stores an array of [locator](../locator.md) objects pointing at records of a target *list-of-values* section. It is **not translatable** (`lg-nolan`): the relation is language-independent and the displayed labels are resolved from the target term in the application language.
 
+!!! note "Legacy alias"
+    The legacy v5/v6 model name `component_security_tools` is registered in the TS server only as a thin alias stub whose descriptor sets `alias: 'component_check_box'`. It owns no storage or resolver of its own and is resolved to `component_check_box` at runtime, so everything on this page applies to it too. (Distinct from the `dd1067` security-tools *profiles* field described in [Notes](#notes), which is an ordinary `component_check_box` instance.)
+
 !!! info "About `default_tools`"
     The toolbar is assembled from the model + ontology, never hardcoded. The set above is what a typical related instance receives in `context.tools`. `component_check_box` is rendered with a fixed, closed option list, so it does not carry an autocomplete/search picker the way `component_portal` does; the inline reset/list buttons (see *Render views & modes*) are built by the render layer, not by tools.
 
 !!! info "TS server implementation"
-    The descriptor `src/core/components/component_check_box/descriptor.ts` registers `resolveData: selectFamilyResolver` (`src/core/relations/models/select_family.ts`), shared with `component_select` / `component_select_lang` / `component_radio_button` / `component_publication` / `component_relation_model`. `list`/`edit`/`search` modes build the datalist / label strings through `src/core/relations/datalist.ts`; other modes fall through to the shared portal engine (`src/core/relations/models/portal.ts`). See the *dedalo-relations-ts* skill.
+    The descriptor `src/core/components/component_check_box/descriptor.ts` registers `resolveData: 'select_family'` (`src/core/relations/models/select_family.ts`), shared with `component_select` / `component_select_lang` / `component_radio_button` / `component_publication` / `component_relation_model`. `list`/`edit`/`search` modes build the datalist / label strings through `src/core/relations/datalist.ts`; other modes fall through to the shared portal engine (`src/core/relations/models/portal.ts`). See the *dedalo-relations-ts* skill.
 
 ## Definition
 

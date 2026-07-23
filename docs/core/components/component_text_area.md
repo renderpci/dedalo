@@ -92,6 +92,13 @@ more HTML tags on import/sanitization; in the TS server `component_html_text` is
 an alias that resolves to the same `component_text_area` descriptor
 (`src/core/components/component_text_area/descriptor.ts`).
 
+!!! note "Legacy aliases"
+    Two legacy v5/v6 model names — `component_html_text` and
+    `component_input_text_large` — are registered in the TS server only as thin
+    alias stubs whose descriptors set `alias: 'component_text_area'`. They own no
+    storage or resolver of their own; each is resolved to `component_text_area`
+    at runtime, so everything on this page applies to them too.
+
 !!! warning "Transcription tooling: storage only, no tag machinery yet"
     The TS server stores, reads and saves the HTML value like any other
     string-family component (`descriptor.ts` → `column: 'string'`,

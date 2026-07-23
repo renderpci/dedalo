@@ -53,7 +53,7 @@
     The toolbar is assembled from the model + ontology, not hardcoded in the descriptor. The verified sample (`samples/context.json`) carries `tool_propagate_component_data` and `tool_time_machine`. Because the component is **non-translatable**, `tool_lang` / `tool_lang_multi` are not added. Tools are read-only context.
 
 !!! info "TS server implementation"
-    The descriptor `src/core/components/component_radio_button/descriptor.ts` registers `resolveData: selectFamilyResolver` (`src/core/relations/models/select_family.ts`), the same resolver shared by `component_select` / `component_select_lang` / `component_check_box` / `component_publication` / `component_relation_model`. `list`/`edit`/`search` modes resolve the option datalist and label strings via `src/core/relations/datalist.ts`; other modes fall through to the shared portal engine. See the *dedalo-relations-ts* skill.
+    The descriptor `src/core/components/component_radio_button/descriptor.ts` registers `resolveData: 'select_family'` (`src/core/relations/models/select_family.ts`), the same resolver shared by `component_select` / `component_select_lang` / `component_check_box` / `component_publication` / `component_relation_model`. `list`/`edit`/`search` modes resolve the option datalist and label strings via `src/core/relations/datalist.ts`; other modes fall through to the shared portal engine. See the *dedalo-relations-ts* skill.
 
 ## Definition
 
