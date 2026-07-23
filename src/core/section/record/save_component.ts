@@ -741,6 +741,16 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 		items = applyUpdate(items, effectiveChange, langSliced ? effectiveLang : null);
 	}
 
+	// component_date SAVE override (PHP component_date::save → add_time): the
+	// generic write path has no per-model date hook, so (re)compute the
+	// absolute-seconds `time` on every stored item here — else v7-entered dates
+	// lack the sort/range-search key and cannot be ordered. In place, so the
+	// atomic-insert path (which shares these item refs) is covered too.
+	if (model === 'component_date') {
+		const { addTimeToDateItem } = await import('../../media/file_date.ts');
+		for (const item of items) addTimeToDateItem(item);
+	}
+
 	const hasUpdates =
 		changedData.some((change) => change.action === 'update') || hasRemovals || hasReorders;
 	// The write chokepoint (section_record/record_write.ts) merges the record's
