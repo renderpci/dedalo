@@ -134,6 +134,13 @@ export interface StructureContextEntry extends StructureContextCore {
 	 * click. Present only when `sortable === true` and the entry carries a
 	 * request_config context (else PHP emits []). */
 	path?: unknown[];
+	/** section_tab groupers only (no PHP oracle — v7-native element): the ordered
+	 * tab descriptors the client turns into the tab-label bar
+	 * (render_section_tab.js:139-172 reads `context.children`, one clickable label
+	 * per entry). Derived in section/read.ts from the sibling entries parented to
+	 * this grouper, so the tabs exactly match the panels that will render. ABSENT
+	 * for every other model; the client only reads it in the section_tab view. */
+	children?: { tipo: string; label: string | null }[];
 }
 
 /**
@@ -218,6 +225,17 @@ export function resolveDefaultView(model: string, legacyModel: string | null): s
 			return 'line';
 		case 'component_html_text':
 			return 'html_text';
+		// section_tab family (v7-native, no PHP oracle): the OUTER container renders
+		// the tab-label bar ('section_tab' view), each INNER tab node renders as a
+		// hidden panel toggled by its label ('tab' view). The stored ontology model
+		// distinguishes them — a 'tab' node canonicalizes to section_tab but keeps
+		// legacy_model 'tab'. Without these the client (render_section_tab.js) gets
+		// view null → default 'section_tab' branch → an inner tab wrongly builds its
+		// OWN nested tab bar from its component children instead of showing them.
+		case 'section_tab':
+			return 'section_tab';
+		case 'tab':
+			return 'tab';
 		default:
 			return null;
 	}

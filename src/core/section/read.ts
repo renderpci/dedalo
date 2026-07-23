@@ -227,7 +227,32 @@ export async function readSection(rqo: Rqo, principal?: Principal): Promise<Read
 		data.filter((item): item is DataItem => (item as { typo?: string }).typo !== 'sections'),
 		{ sectionTipo: source.section_tipo ?? callerTipo, lang, principal, capForReadTarget },
 	);
+
+	attachSectionTabChildren(context);
+
 	return { context, data };
+}
+
+/**
+ * section_tab tab bar (client contract, render_section_tab.js:139): each
+ * section_tab grouper carries a `children` array [{tipo,label}] naming its tab
+ * panels — the client reads `context.children.length` and crashes the whole edit
+ * view if it is absent. Derive from the already-built, permission-filtered
+ * sibling entries parented to this grouper (parent_grouper = the ONTOLOGY parent;
+ * the flat legacy ddo_map parents every element to the section, so `parent` can't
+ * be used here), so the tab labels exactly match the panels that will render, in
+ * ontology order. Mutates the entries in place. The inner tab nodes are also
+ * model 'section_tab' (view 'tab') and get a `children` array too — harmless, the
+ * client only reads it in the 'section_tab' view.
+ */
+export function attachSectionTabChildren(context: StructureContextEntry[]): void {
+	for (const entry of context) {
+		if (entry.model === 'section_tab') {
+			entry.children = context
+				.filter((child) => child.parent_grouper === entry.tipo)
+				.map((child) => ({ tipo: child.tipo, label: child.label }));
+		}
+	}
 }
 
 /**
