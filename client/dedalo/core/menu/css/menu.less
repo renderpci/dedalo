@@ -476,6 +476,26 @@
 			}
 		}
 
+		// design-line toggle (dev / opt-in — only rendered when previewing)
+		// Half-filled circle = the two design lines; the fill flips with the
+		// active line so the icon shows which side you're on.
+		>.design_toggle {
+			width: 1.15em;
+			height: 2rem;
+			background-image: url('../../themes/default/icons/design.svg');
+			background-size: contain;
+			background-repeat: no-repeat;
+			background-position: center;
+			cursor: pointer;
+			opacity: 0.7;
+			filter: brightness(0) invert(1);
+			transition: opacity 0.15s ease, transform 0.2s var(--ease-standard, ease);
+
+			&:hover {
+				opacity: 1;
+			}
+		}
+
 		// ai assistant button
 		>.ai_assistant_button {
 			width: 1.3rem;
@@ -669,6 +689,13 @@
 // dark mode: swap theme toggle icon
 :root[data-theme="dark"] .menu>.content_data>.theme_toggle {
 	background-image: url('../../themes/default/icons/sun.svg');
+}
+
+// redesign line active: flip the design-toggle icon so its filled half swaps
+// sides — a clear at-a-glance signal of which line is on. Full opacity too.
+:root[data-design="redesign"] .menu>.content_data>.design_toggle {
+	transform: scaleX(-1);
+	opacity: 0.95;
 }
 
 // out of element styles
