@@ -106,7 +106,7 @@ side. They are different mechanisms that happen to share configuration:
 | Transport | `event_manager` pub/sub (this file) | direct method call during save |
 | Trigger | a user action that `publish`es a named event | a data change on the observable |
 | Typical action | `refresh`, activate, recalc, change own DOM | recompute and (optionally) save own data |
-| Entry point | the observer's subscribed callback | `set_data_external()` |
+| Entry point | the observer's subscribed callback | `set_dato_external` |
 
 On the **server**, the observable's change drives `propagateToObservers()`
 (`src/core/api/handlers/observers.ts`, wired into the save path from
