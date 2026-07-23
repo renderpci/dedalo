@@ -1982,7 +1982,7 @@ button.primary {
   color: var(--color_white);
 }
 button.primary:before {
-  background-color: var(--color_white) !important;
+  background-color: var(--button-bg-color, var(--color_white)) !important;
 }
 button.primary:hover {
   background-color: var(--color_primary_hover_bg);
@@ -1994,7 +1994,7 @@ button.secondary {
   color: var(--color_white);
 }
 button.secondary:before {
-  background-color: var(--color_white) !important;
+  background-color: var(--button-bg-color, var(--color_white)) !important;
 }
 button.secondary:hover {
   background-color: var(--color_secondary_hover_bg);
@@ -2006,7 +2006,7 @@ button.success {
   color: var(--color_white);
 }
 button.success:before {
-  background-color: var(--color_white) !important;
+  background-color: var(--button-bg-color, var(--color_white)) !important;
 }
 button.success:hover {
   background-color: var(--color_success_hover_bg);
@@ -2018,7 +2018,7 @@ button.danger {
   color: var(--color_white);
 }
 button.danger:before {
-  background-color: var(--color_white) !important;
+  background-color: var(--button-bg-color, var(--color_white)) !important;
 }
 button.danger:hover {
   background-color: var(--color_danger_hover_bg);
@@ -2030,7 +2030,7 @@ button.warning {
   color: var(--color_white);
 }
 button.warning:before {
-  background-color: var(--color_white) !important;
+  background-color: var(--button-bg-color, var(--color_white)) !important;
 }
 button.warning:hover {
   background-color: var(--color_orange_hover_bg);
@@ -2042,7 +2042,7 @@ button.info {
   color: var(--color_white);
 }
 button.info:before {
-  background-color: var(--color_white) !important;
+  background-color: var(--button-bg-color, var(--color_white)) !important;
 }
 button.info:hover {
   background-color: var(--color_info_hover_bg);
@@ -2119,6 +2119,43 @@ button.add_light:before {
 .button.add_light {
   -webkit-mask-image: url('../../themes/default/icons/add_light.svg');
   mask-image: url('../../themes/default/icons/add_light.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+button.show_all {
+  --icon-path: url('../../themes/default/icons/list.svg');
+  --button-bg-color: var(--color_grey_3);
+}
+button.show_all:before {
+  background-color: var(--button-bg-color, var(--color_grey_3));
+  content: ' ';
+  display: inline-block;
+  height: 1em;
+  margin-right: 0.25rem;
+  opacity: 1;
+  vertical-align: baseline;
+  width: 1em;
+  -webkit-mask-image: var(--icon-path);
+  mask-image: var(--icon-path);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+@media screen and (max-width: 960px) {
+  button.show_all:before {
+    margin-right: 2px;
+  }
+}
+.button.show_all {
+  -webkit-mask-image: url('../../themes/default/icons/list.svg');
+  mask-image: url('../../themes/default/icons/list.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -4679,9 +4716,27 @@ button.upload:before {
 .contenteditable_buttons > .button.replace:before.transparent {
   background-color: transparent !important;
 }
+button.has_icon::before,
+.button.has_icon::before {
+  background-color: var(--button-bg-color, currentColor);
+  content: ' ';
+  display: inline-block;
+  height: 1em;
+  width: 1em;
+  margin-right: 0.25rem;
+  vertical-align: baseline;
+  -webkit-mask-image: var(--icon-path);
+  mask-image: var(--icon-path);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
 button.button_spinner {
   pointer-events: none !important;
-  --icon-path: null;
+  --icon-path: null !important;
 }
 button.button_spinner::before {
   content: " ";

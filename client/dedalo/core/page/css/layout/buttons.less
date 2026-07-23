@@ -168,7 +168,7 @@ button {
 		border-color: @color_primary_border;
 		color: @color_white ;
 		&:before {
-			background-color: @color_white  !important;
+			background-color: var(--button-bg-color, @color_white) !important;
 		}
 		&:hover {
 			background-color: @color_primary_hover_bg;
@@ -180,7 +180,7 @@ button {
 		border-color: @color_secondary_border;
 		color: @color_white ;
 		&:before {
-			background-color: @color_white  !important;
+			background-color: var(--button-bg-color, @color_white) !important;
 		}
 		&:hover {
 			background-color: @color_secondary_hover_bg;
@@ -192,7 +192,7 @@ button {
 		border-color: @color_success_border;
 		color: @color_white ;
 		&:before {
-			background-color: @color_white  !important;
+			background-color: var(--button-bg-color, @color_white) !important;
 		}
 		&:hover {
 			background-color: @color_success_hover_bg;
@@ -204,7 +204,7 @@ button {
 		border-color: @color_danger_border;
 		color: @color_white ;
 		&:before {
-			background-color: @color_white  !important;
+			background-color: var(--button-bg-color, @color_white) !important;
 		}
 		&:hover {
 			background-color: @color_danger_hover_bg;
@@ -216,7 +216,7 @@ button {
 		border-color: @color_orange_border;
 		color: @color_white ;
 		&:before {
-			background-color: @color_white !important;
+			background-color: var(--button-bg-color, @color_white) !important;
 		}
 		&:hover {
 			background-color: @color_orange_hover_bg;
@@ -228,7 +228,7 @@ button {
 		border-color: @color_info_border;
 		color: @color_white ;
 		&:before {
-			background-color: @color_white !important;
+			background-color: var(--button-bg-color, @color_white) !important;
 		}
 		&:hover {
 			background-color: @color_info_hover_bg;
@@ -285,6 +285,11 @@ button {
 // add alphabetically
 	.add_light {
 		@icon_name : 'add_light.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.show_all {
+		@icon_name : 'list.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
@@ -646,10 +651,43 @@ button {
 	}
 }//end .contenteditable_buttons
 
+// Unified icon slot (URL-driven).
+// Any button carrying an inline `--icon-path` — set by `ui.build_button` for
+// tool/trigger icons whose SVG is a per-tool file URL, not a fixed enum —
+// renders it through the SAME `::before` mechanism as the semantic icon
+// registry above. Routing every icon (registry classes AND tool URLs) onto one
+// `::before`/`--icon-path` path means:
+//   • `button_spinner` (below) is universally correct — it nulls `--icon-path`
+//     and repurposes this same `::before`, so no nested-span double glyph;
+//   • the icon COLOUR is settable per-button via `--button-bg-color`
+//     (default: the button's own text colour). Colour classes above set it too.
+// Placed BEFORE `button_spinner` so the spinner's `::before` wins on the tie.
+button.has_icon::before,
+.button.has_icon::before {
+	background-color: var(--button-bg-color, currentColor);
+	content: ' ';
+	display: inline-block;
+	height: 1em;
+	width: 1em;
+	margin-right: 0.25rem;
+	vertical-align: baseline;
+	-webkit-mask-image: var(--icon-path);
+			mask-image: var(--icon-path);
+	-webkit-mask-size: contain;
+			mask-size: contain;
+	-webkit-mask-repeat: no-repeat;
+			mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+			mask-position: center;
+}
+
 // button spinner
 button.button_spinner {
 	pointer-events: none !important;
-	--icon-path: null; // remove icon mask
+	// `!important` so it also nulls an INLINE --icon-path (tool buttons set the
+	// icon URL inline via ui.build_button; inline beats a plain class rule).
+	// Without this the icon mask would clip the spinner ring.
+	--icon-path: null !important; // remove icon mask
 
 	&::before {
 		content: " ";

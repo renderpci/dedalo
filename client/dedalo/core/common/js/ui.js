@@ -1609,38 +1609,25 @@ export const ui = {
 		*/
 		build_section_tool_button : (tool_context, self) => {
 
-			// button
-				const tool_button = ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: 'warning ' + tool_context.model,
-					dataset			: {
-						tool : tool_context.name
-					}
-				})
-				// tool_icon (icon inside)
-				ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button white tool',
-					style			: {
-						'-webkit-mask'	: "url('" +tool_context.icon +"')",
-						'mask'			: "url('" +tool_context.icon +"')"
-					},
-					parent : tool_button
-				})
-				tool_button.insertAdjacentHTML('beforeend', tool_context.label)
-
-			// Events
-				const mousedown_handler = (e) => {
+			// Unified builder: the tool's descriptive icon (a per-tool file URL)
+			// rides the same ::before / --icon-path path as every registry button,
+			// so it is icon-consistent AND spinner-capable (ui.set_button_busy).
+			// The icon colour follows the `.warning` colour class (white on the
+			// classic orange, muted on the redesign-quiet variant).
+			const tool_button = ui.build_button({
+				class_name		: 'warning ' + tool_context.model,
+				label			: tool_context.label,
+				icon			: tool_context.icon,
+				dataset			: { tool : tool_context.name },
+				on_mousedown	: (e) => {
 					e.stopPropagation()
-
 					// open_tool (tool_common)
-						open_tool({
-							tool_context	: tool_context,
-							caller			: self
-						})
+					open_tool({
+						tool_context	: tool_context,
+						caller			: self
+					})
 				}
-				tool_button.addEventListener('mousedown', mousedown_handler)
-
+			})
 
 			return tool_button
 		},//build_section_tool_button
@@ -1910,6 +1897,124 @@ export const ui = {
 
 		return element;
 	},//end create_dom_element
+
+
+
+	/**
+	* BUILD_BUTTON
+	* Canonical builder for a labeled <button>. Unifies the three characteristics
+	* every Dédalo button should have:
+	*   - DESCRIPTIVE ICON: pass `icon` as a semantic registry name (e.g. 'new',
+	*     'delete', 'export', 'show_all') OR as a URL/path to an SVG (e.g. a
+	*     tool's `tool_context.icon`). Either way the icon renders through the ONE
+	*     ::before / --icon-path mechanism (buttons.less) — tool buttons stop
+	*     using the old divergent nested-span icon.
+	*   - SETTABLE ICON COLOUR: pass `icon_color` (any CSS colour or var()) to set
+	*     --button-bg-color; defaults to the colour class / the button text colour.
+	*   - SPINNER CAPABILITY: because the icon lives on ::before, the shared
+	*     `button_spinner` class repurposes it correctly on ANY button — toggle
+	*     via ui.set_button_busy(node, true|false).
+	*
+	* No forced 'button' class: the <button> tag itself carries base styling
+	* (buttons.less `button {}`), matching every existing Dédalo button.
+	*
+	* @param {Object} options
+	*   {string}      [label]        - inner HTML label (empty for icon-only)
+	*   {string}      [icon]         - semantic registry name OR svg URL/path
+	*   {string}      [icon_color]   - CSS colour for the icon fill (--button-bg-color)
+	*   {string}      [class_name]   - extra classes (e.g. 'warning tool_export')
+	*   {Function}    [on_click]     - click handler
+	*   {Function}    [on_mousedown] - mousedown handler (tools use this)
+	*   {Object}      [dataset]      - data-* attributes
+	*   {string}      [title_label]  - title attribute
+	*   {HTMLElement} [parent]       - append target
+	* @returns {HTMLButtonElement}
+	*/
+	build_button : function(options={}) {
+
+		const icon = options.icon || null
+		// A per-tool file URL/path vs a semantic icon-registry class name.
+		const icon_is_url = typeof icon === 'string' && (icon.indexOf('/')!==-1 || icon.indexOf('.svg')!==-1)
+
+		// classes: caller's + icon handling
+		const classes = []
+		if (options.class_name) {
+			classes.push(options.class_name)
+		}
+		if (icon && !icon_is_url) {
+			classes.push(icon)          // semantic registry class paints ::before
+		} else if (icon_is_url) {
+			classes.push('has_icon')    // URL icon rendered via inline --icon-path
+		}
+
+		// inline style: icon path (URL icons) + settable icon colour
+		const style = {}
+		if (icon_is_url) {
+			style['--icon-path'] = "url('" + icon + "')"
+		}
+		if (options.icon_color) {
+			style['--button-bg-color'] = options.icon_color
+		}
+
+		const button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: classes.join(' '),
+			inner_html		: options.label || undefined,
+			style			: Object.keys(style).length ? style : undefined,
+			dataset			: options.dataset || undefined,
+			title_label		: options.title_label || undefined,
+			parent			: options.parent || undefined
+		})
+
+		if (typeof options.on_click === 'function') {
+			button.addEventListener('click', options.on_click)
+		}
+		if (typeof options.on_mousedown === 'function') {
+			button.addEventListener('mousedown', options.on_mousedown)
+		}
+
+		return button
+	},//end build_button
+
+
+
+	/**
+	* SET_BUTTON_BUSY
+	* Toggle the shared loading-spinner state on any button. Because every unified
+	* button renders its icon through ::before / --icon-path, the `button_spinner`
+	* class (buttons.less) correctly repurposes that same ::before into a spinner
+	* on ANY button — tools included. This is the shared home for the ~40 ad-hoc
+	* classList.add/remove('button_spinner') sites (migrate opportunistically).
+	*
+	* @param {HTMLElement} node    - the button element
+	* @param {boolean}     is_busy - true to show the spinner + block clicks
+	* @returns {void}
+	*/
+	set_button_busy : function(node, is_busy) {
+		if (!node) return
+		node.classList.toggle('button_spinner', is_busy!==false)
+	},//end set_button_busy
+
+
+
+	/**
+	* RUN_WITH_BUTTON_SPINNER
+	* Wrap an async action so the button shows the spinner for its whole duration
+	* and is always restored afterwards (even on error). The common await pattern,
+	* in one place.
+	*
+	* @param {HTMLElement} node     - the button element
+	* @param {Function}    async_fn - async function to run while the button spins
+	* @returns {Promise<*>} the async_fn result
+	*/
+	run_with_button_spinner : async function(node, async_fn) {
+		ui.set_button_busy(node, true)
+		try {
+			return await async_fn()
+		} finally {
+			ui.set_button_busy(node, false)
+		}
+	},//end run_with_button_spinner
 
 
 
