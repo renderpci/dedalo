@@ -293,6 +293,10 @@ export function getDefaultPublicQualities(): string[] {
  *    truth and multi-GB; they must never be anonymously reachable, whatever an admin
  *    types. This is STRICTER than PHP, which only refused the two literal names — an
  *    install that renamed its original quality could configure it public.
+ *  - a bare top-level media folder (`image`/`av`/…) is REFUSED (MEDIA-05): it is the
+ *    ANCESTOR of that type's master dir, and rule B descends from an allowed quality
+ *    into any subdir, so a bare folder would expose the sibling `original/` master. A
+ *    real public quality is a specific quality UNDER a type folder (≥2 segments).
  *  - path traversal ('..') is refused;
  *  - anything outside [A-Za-z0-9_./-] is refused (these strings are interpolated into a
  *    web-server regex alternation).
@@ -328,9 +332,25 @@ export function filterPublicQualities(configured: readonly string[]): string[] {
 			console.error(`[media_protection] refused invalid public media quality: ${String(raw)}`);
 			continue;
 		}
-		if (quality.split('/').some((segment) => forbidden.has(segment))) {
+		const segments = quality.split('/');
+		if (segments.some((segment) => forbidden.has(segment))) {
 			console.error(
 				`[media_protection] refused MASTER quality folder in the public list: ${quality}`,
+			);
+			continue;
+		}
+		// MEDIA-05: refuse a bare TOP-LEVEL media folder (`image`/`av`/`pdf`/…). It
+		// has no forbidden segment of its own, but it is the ANCESTOR of that type's
+		// master dir, and rule B's `(?:.+/)?` descends from an allowed quality into
+		// ANY subdir — so a public `image` matched `image/original/0/…rsc.tif` and
+		// served the multi-GB master anonymously. A real public quality is always a
+		// specific quality UNDER a type folder (≥2 segments; every default is), which
+		// cannot reach a sibling `original/`. Also closes the empty-default trigger
+		// (DEDALO_*_QUALITY_DEFAULT="" → `image/` → bare `image`) by failing CLOSED:
+		// no public image quality rather than an exposed master.
+		if (segments.length < 2) {
+			console.error(
+				`[media_protection] refused bare/ancestor public media quality (would expose its master subfolder): ${quality}`,
 			);
 			continue;
 		}

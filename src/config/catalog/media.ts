@@ -960,7 +960,8 @@ When an integer is provided, any file larger than this value will be automatical
 When set to \`false\`, the chunking feature is disabled, and all files are uploaded in a single request.
 
 \`\`\`bash
-DEDALO_UPLOAD_SERVICE_CHUNK_FILES=false); // 5 = 5MB
+# integer = split threshold in MB (e.g. 5 = 5MB); false = disable chunking
+DEDALO_UPLOAD_SERVICE_CHUNK_FILES=false
 \`\`\``,
 	},
 	DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT: {

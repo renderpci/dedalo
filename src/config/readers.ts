@@ -206,6 +206,15 @@ export function readMap(key: string): Readonly<Record<string, string>> {
 export function readMediaAccessMode(): 'private' | 'publication' | false {
 	const mode = readString('DEDALO_MEDIA_ACCESS_MODE');
 	if (mode === 'private' || mode === 'publication') return mode;
+	// A non-empty value that is neither known mode is almost certainly a typo
+	// ('privat', 'public'); it silently coerces to OFF (open media), which reads
+	// as protection-configured when it is not. Log it loudly rather than let the
+	// footgun pass unseen — the resolved state is unchanged (still off).
+	if (mode !== undefined && mode !== '') {
+		console.error(
+			`[config] DEDALO_MEDIA_ACCESS_MODE='${mode}' is not a valid mode ('private' | 'publication') — media access control is OFF. Fix the value or unset it.`,
+		);
+	}
 	return readBool('DEDALO_PROTECT_MEDIA_FILES') ? 'private' : false;
 }
 
