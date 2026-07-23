@@ -4,7 +4,7 @@
 
 Utility API for system operations: authentication, language, system info, and upload assembly.
 
-Registered actions (`src/core/api/dispatch.ts`): `login`, `quit`, `get_login_context`, `get_install_context`, `install`, `get_system_info`, `get_dedalo_files`, `change_lang`, `convert_search_object_to_sql_query`, `join_chunked_files_uploaded`, `list_uploaded_files`, `get_process_status`, `update_lock_components_state`, `get_lock_status`, `get_server_ready_status`, `get_ontology_update_info`, `get_code_update_info`.
+Registered actions (`src/core/api/dispatch.ts`): `login`, `quit`, `get_login_context`, `get_install_context`, `install`, `request_password_reset`, `confirm_password_reset`, `get_system_info`, `get_dedalo_files`, `change_lang`, `convert_search_object_to_sql_query`, `join_chunked_files_uploaded`, `list_uploaded_files`, `get_job_events`, `get_process_status`, `stop_process`, `update_lock_components_state`, `get_lock_status`, `get_server_ready_status`, `get_ontology_update_info`, `get_code_update_info`.
 
 ## How to call
 
@@ -188,3 +188,387 @@ Retrieve system and server information.
   "msg": "OK. Request done"
 }
 ```
+
+## change_lang
+
+### Purpose
+
+Persist the user's interface and/or data language choice for subsequent requests.
+
+### Accepts
+
+- `options`: object (required)
+  - `dedalo_application_lang`: string (optional) — the interface language
+  - `dedalo_data_lang`: string (optional) — the data language
+
+At least one must be present. Each value is validated against the language identifier allowlist **before** it is stored (an invalid tag is dropped, never persisted). When the install couples the two languages, a change to either drives the other.
+
+### Returns
+
+`{ result: true|false, msg: string }`. With no valid language supplied, `result` is `false`.
+
+### Usage
+
+State-changing and authenticated (the router already ran the CSRF gate, and the action requires a session). The choice is stored on the server-side session; every later request rebuilds with the stored language (`src/core/resolve/request_lang.ts`). The client posts here, then full-reloads.
+
+### Example Request
+
+```json
+{
+  "dd_api": "dd_utils_api",
+  "action": "change_lang",
+  "options": {
+    "dedalo_application_lang": "lg-eng",
+    "dedalo_data_lang": "lg-spa"
+  }
+}
+```
+
+### Example Response
+
+```json
+{
+  "result": true,
+  "msg": "OK. Request done. Changed dedalo_application_lang to lg-eng, dedalo_data_lang to lg-spa"
+}
+```
+
+## get_login_context
+
+### Purpose
+
+Return the login form's own structure context.
+
+### Accepts
+
+- No arguments.
+
+### Returns
+
+`{ result: [<login context>], msg: string }`.
+
+### Usage
+
+Pre-auth by design — the form must render before any session exists.
+
+## get_install_context
+
+### Purpose
+
+Return the install wizard's structure context on a fresh, unconfigured machine.
+
+### Accepts
+
+- No arguments.
+
+### Returns
+
+`{ result: [<installer element context>], msg: string }`.
+
+### Usage
+
+On a fresh machine there is no ontology to resolve, so this is a synthetic context built by hand carrying exactly the properties the client's installer reads. The dispatch gate (Gate 1b) admits it only while the server is unsealed **and** the caller IP is allowed; once the install is sealed it 404s.
+
+## install
+
+### Purpose
+
+The install wizard's step router — every wizard step rides this one action.
+
+### Accepts
+
+- `options`: object (required)
+  - `action`: string (required) — the concrete wizard step
+  - other per-step fields consumed by `src/core/install/engine.ts`
+
+### Returns
+
+The top-level envelope the client reads (`{ result, msg, ... }`), shaped per step.
+
+### Usage
+
+The dispatch gate (Gate 1b) already enforced unsealed + IP-allowed; record-writing steps re-check the session here (login-gated even while unsealed).
+
+## request_password_reset
+
+### Purpose
+
+Forgot-password step 1: request a reset for an identifier.
+
+### Accepts
+
+- `options`: object (required)
+  - `identifier`: string (required) — username or email
+
+### Returns
+
+A generic envelope that is identical regardless of whether the identifier exists (anti-enumeration).
+
+### Usage
+
+Pre-auth by design (`NO_LOGIN` + CSRF-exempt). Anti-enumeration and throttling live in `src/core/security/password_reset.ts`.
+
+### Example Request
+
+```json
+{
+  "dd_api": "dd_utils_api",
+  "action": "request_password_reset",
+  "options": {
+    "identifier": "admin"
+  }
+}
+```
+
+## confirm_password_reset
+
+### Purpose
+
+Forgot-password step 2: confirm the reset with the emailed code and set a new password.
+
+### Accepts
+
+- `options`: object (required)
+  - `reset_id`: string (required)
+  - `code`: string (required)
+  - `new_password`: string (required)
+
+### Returns
+
+The generic reset envelope (`src/core/security/password_reset.ts`).
+
+### Usage
+
+Pre-auth by design, like `request_password_reset`.
+
+## update_lock_components_state
+
+### Purpose
+
+Record a component soft-lock focus/blur event (the edit-lock mechanism).
+
+### Accepts
+
+- `options`: object (required)
+  - `section_tipo`: string (required) — the locked record's section
+  - `section_id`: int|string (optional)
+  - `component_tipo`: string (optional)
+  - `action`: string (optional) — the focus/blur event
+
+### Returns
+
+The lock-state outcome (plus a `dedalo_notification` field).
+
+### Usage
+
+Read permission (level ≥ 1) on the section is required — the gate runs unconditionally and `section_tipo` is mandatory (fail-closed), so a user cannot fabricate focus/blur on records they cannot see. This is the per-component soft-lock, distinct from the area-level `dd_area_maintenance_api::lock_components_actions`.
+
+### Example Request
+
+```json
+{
+  "dd_api": "dd_utils_api",
+  "action": "update_lock_components_state",
+  "options": {
+    "section_tipo": "rsc167",
+    "section_id": 1,
+    "component_tipo": "oh16",
+    "action": "lock"
+  }
+}
+```
+
+## get_lock_status
+
+### Purpose
+
+Read-only poll: is the component currently held by another user?
+
+### Accepts
+
+- `options`: object (required)
+  - `section_tipo`: string (required)
+  - `section_id`: int|string (optional)
+  - `component_tipo`: string (optional)
+
+### Returns
+
+The lock-status object for the component.
+
+### Usage
+
+Same fail-closed read gate as `update_lock_components_state` (`section_tipo` required, level ≥ 1 on the section).
+
+## get_dedalo_files
+
+### Purpose
+
+Return the service-worker pre-cache manifest.
+
+### Accepts
+
+- No arguments.
+
+### Returns
+
+`{ result: [...], dedalo_version: string, msg: string }` — the exact shape the client's `sw.js` / `worker_cache.js` read.
+
+### Usage
+
+Authenticated read (a session is required) but CSRF-exempt: the service worker calls it without the page's token.
+
+## get_job_events
+
+### Purpose
+
+Subscribe to a native in-process job and receive every state change as it happens.
+
+### Accepts
+
+- The job handle (`job_id`) the caller is subscribing to.
+
+### Returns
+
+A pushed event stream; the stream ends on the terminal frame, whose `data` is the job's return value (for an import, the full report).
+
+### Usage
+
+Session-gated (`src/core/api/job_stream.ts`). This is the native job-status wire — no `{pid, pfile}` handle and no polling; `get_process_status` below is the legacy poll wire kept for the AV-transcode and backup consumers.
+
+## get_process_status
+
+### Purpose
+
+Stream the status of a background process (media transcode / backup).
+
+### Accepts
+
+- The job identifier the client's `update_process_status` polls.
+
+### Returns
+
+An SSE status stream (`src/core/api/process_status.ts`).
+
+### Usage
+
+Session-gated and **owner-gated** — a job that carries user data streams only to its owner, since the ids are guessable. The legacy poll counterpart to `get_job_events`.
+
+## stop_process
+
+### Purpose
+
+Stop a background job (the generic Stop button's wire).
+
+### Accepts
+
+- The job identifier to abort.
+
+### Returns
+
+The stop outcome (`src/core/api/process_status.ts`).
+
+### Usage
+
+Session-gated and owner-gated. It aborts the job's controller so the handler winds down cooperatively.
+
+## convert_search_object_to_sql_query
+
+### Purpose
+
+The SQO → SQL developer console (the `sqo_test_environment` maintenance widget): translate a client SQO to SQL and run it.
+
+### Accepts
+
+- `options`: object (required) — the client SQO to convert (scrubbed by `sanitizeClientSqo`, the API-boundary security gate).
+
+### Returns
+
+`{ result: true|false, msg: string, sql: string, ar_section_id: array, db_data: array }` — `msg` is the resolved SQL (params substituted, display-only), `sql` is the parameterized template, `ar_section_id` the distinct returned ids, `db_data` the rows. On any error, `result` is `false` and `msg`/`errors` carry the message.
+
+### Usage
+
+**Global-admin only.** The executed query always uses bound params; the substituted `msg` string is for display, never execution.
+
+### Example Request
+
+```json
+{
+  "dd_api": "dd_utils_api",
+  "action": "convert_search_object_to_sql_query",
+  "options": {
+    "section_tipo": ["oh1"],
+    "limit": 10
+  }
+}
+```
+
+## get_server_ready_status
+
+### Purpose
+
+Remote reachability probe: is this host an available ontology / code master server?
+
+### Accepts
+
+- `options`: object (required)
+  - `check`: string (required) — `ontology_server` or `code_server`
+
+### Returns
+
+`{ result: true|false, msg: string, errors: [] }`. `result` is `true` only when the requested check matches a role this host is configured for; otherwise the generic refusal.
+
+### Usage
+
+Machine-to-machine, pre-auth (`NO_LOGIN` + CSRF-exempt). Fail-closed on the configuration flags.
+
+### Example Request
+
+```json
+{
+  "dd_api": "dd_utils_api",
+  "action": "get_server_ready_status",
+  "options": {
+    "check": "ontology_server"
+  }
+}
+```
+
+## get_ontology_update_info
+
+### Purpose
+
+Serve an ontology-update manifest to a remote installation.
+
+### Accepts
+
+- `options`: object (required)
+  - `version`: string (required) — the caller's `major.minor`
+  - `code`: string (required) — a configured access code
+
+### Returns
+
+The update-info manifest when this host is an ontology master and the code/version validate; otherwise `{ result: false, msg, errors }`.
+
+### Usage
+
+Served **only** when this instance is an ontology master, to callers presenting a configured access code. Pre-auth master-server surface.
+
+## get_code_update_info
+
+### Purpose
+
+Serve a code-release manifest to a remote installation.
+
+### Accepts
+
+- `options`: object (required)
+  - `version`: string (required) — the caller's version triple
+  - `code`: string (required) — a configured `CODE_SERVERS` code
+
+### Returns
+
+`{ result: <manifest>, msg: string, errors: [] }` when this host is a code master and the code/version validate; otherwise `{ result: false, msg, errors }`. It advertises only built release archives on the caller's linear upgrade path.
+
+### Usage
+
+Served **only** when this instance is a code master, to callers presenting a configured code. Pre-auth master-server surface.

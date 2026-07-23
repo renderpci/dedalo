@@ -318,7 +318,7 @@ The TS handler reads these from `source` (`src/core/api/dispatch.ts` → `saveCo
   - `lang`: string (optional, default `"lg-nolan"`) — language code
   - `caller_dataframe`: object (optional) — dataframe pairing context (`main_component_tipo`, `id_key`)
 - `data`: object (required)
-  - `changed_data`: array (required) — change objects, each `{ action, key, value }` where `action` ∈ `update` / `insert` / `remove` / `add_new_element` / `sort_data`.
+  - `changed_data`: array (required) — change objects, each `{ action, key, value }` where `action` ∈ `update` / `insert` / `remove` / `set_data` / `sort_data` / `sort_by_column` / `add_new_element`.
 
 ### Returns
 
@@ -502,6 +502,218 @@ Returns the "simple" structure-context set for a section — the edit-mode searc
     }
   ],
   "msg": "OK"
+}
+```
+
+## get_section_terms
+
+### Purpose
+
+Batch-resolve the `section_map` display term for a set of records in one call — the graph view labels all of its nodes with a single request instead of one datum read per node.
+
+### Accepts
+
+The locators, scope and lang ride at the **top level** of the RQO (not under `source`/`options`), matching the client's `build_graph_data.js`:
+
+- `locators`: array (required) — `{ section_tipo, section_id }` entries. Hard-capped at 1000; a longer batch is truncated.
+- `scope`: string (optional) — a `section_map` scope; `null` uses the main → thesaurus → relation_list chain.
+- `lang`: string (optional) — defaults to the request data language.
+
+### Returns
+
+`{ result: { "<section_tipo>_<section_id>": "<term>|null", ... }, msg: string, errors: [] }` — keyed per resolved record, deduped by composite key. An empty or invalid `locators` array returns `{ result: false, msg, errors: ["bad_locators"] }`.
+
+### Usage
+
+Read permission (level ≥ 1) is required per section; unreadable, invalid, or non-`section_map` sections are skipped silently (never leaked, never clobbering the client's provisional node label).
+
+### Example Request
+
+```json
+{
+  "dd_api": "dd_core_api",
+  "action": "get_section_terms",
+  "locators": [
+    { "section_tipo": "oh1", "section_id": 3 },
+    { "section_tipo": "rsc197", "section_id": 12 }
+  ]
+}
+```
+
+### Example Response
+
+```json
+{
+  "result": { "oh1_3": "Interview with…", "rsc197_12": "Smith, John" },
+  "msg": "OK. Request done successfully",
+  "errors": []
+}
+```
+
+## get_indexation_grid
+
+### Purpose
+
+Build the thesaurus "show indexations" grid for a term component in a record.
+
+### Accepts
+
+- `source`: object (required)
+  - `section_tipo`: string (required) — the term's section type
+  - `section_id`: int (required) — the term record
+  - `tipo`: string (required) — the component whose indexations are gridded
+- `sqo`: object (optional) — grid paging/filter tuning.
+
+### Returns
+
+`{ result: <grid object>, msg: string, errors: [] }`. When any of the mandatory `source` fields is missing the handler returns `{ result: false, msg, errors: ["invalid rqo source"] }` (HTTP 200).
+
+### Usage
+
+Read permission (level ≥ 1) on the term's section is required; a denial rides as an HTTP-200 `result: false` with `errors: ["permissions_denied"]`.
+
+### Example Request
+
+```json
+{
+  "dd_api": "dd_core_api",
+  "action": "get_indexation_grid",
+  "source": {
+    "section_tipo": "oh1",
+    "section_id": 3,
+    "tipo": "oh16"
+  }
+}
+```
+
+### Example Response
+
+```json
+{
+  "result": { "columns": [ /* … */ ], "rows": [ /* … */ ] },
+  "msg": "OK. Request done successfully",
+  "errors": []
+}
+```
+
+## get_activity_metric
+
+### Purpose
+
+Fetch an on-demand activity-metric dataset for the area dashboard's timeline range switch (3m / 6m / 1y). The dashboard read serves only the recent range inline; wider ranges are fetched here so the initial payload stays small.
+
+### Accepts
+
+- `options`: object (required)
+  - `area_tipo`: string (required) — must resolve to an area model
+  - `range_days`: int (required) — one of the supported ranges (`ACTIVITY_RANGE_DAYS`, `src/core/area/dashboard.ts`)
+
+### Returns
+
+`{ result: true, data: <activity dataset>, msg: string }`
+
+### Usage
+
+Gated identically to the dashboard read — read permission (level ≥ 1) on the area. An invalid `area_tipo`, a non-area tipo, or an unsupported `range_days` returns a 400.
+
+### Example Request
+
+```json
+{
+  "dd_api": "dd_core_api",
+  "action": "get_activity_metric",
+  "options": {
+    "area_tipo": "dd542",
+    "range_days": 90
+  }
+}
+```
+
+### Example Response
+
+```json
+{
+  "result": true,
+  "data": { /* timeline buckets for the requested range */ },
+  "msg": "OK. Request done"
+}
+```
+
+## get_ip_country
+
+### Purpose
+
+Resolve an IP address to a country for the Activity (`dd542`) IP-list view. Resolution is **local and offline** against the openly-licensed DB-IP Country Lite database (`src/core/geoip`) — no third-party request.
+
+### Accepts
+
+- `options`: object (required)
+  - `ip`: string (required) — the address to resolve (1–64 chars)
+
+### Returns
+
+`{ result: true, data: { country_code: <ISO code|null> }, msg: string }`. `country_code` is `null` for private/reserved/unresolved addresses and when the database is not loaded, so the client simply shows no flag.
+
+### Usage
+
+Authenticated (the dispatch session + CSRF gates already ran). Returns a 400 for a missing or malformed `ip`.
+
+### Example Request
+
+```json
+{
+  "dd_api": "dd_core_api",
+  "action": "get_ip_country",
+  "options": {
+    "ip": "8.8.8.8"
+  }
+}
+```
+
+### Example Response
+
+```json
+{
+  "result": true,
+  "data": { "country_code": "US" },
+  "msg": "OK. Request done"
+}
+```
+
+## get_environment
+
+### Purpose
+
+Return the full client environment payload — `page_globals` + `plain_vars` + `get_label` (the same block `start` embeds). The copied client injects it via `set_environment()` at boot.
+
+### Accepts
+
+No arguments. The block is built for the current session (or the anonymous environment when unauthenticated).
+
+### Returns
+
+The environment object (`page_globals`, `plain_vars`, `get_label`), built by `src/core/resolve/environment.ts`.
+
+### Usage
+
+`get_environment` is a `NO_LOGIN` action — it serves the anonymous environment before a session exists and the authenticated one after login. The page-globals / plain-vars / label payloads are not separate actions; they are all served through this one block.
+
+### Example Request
+
+```json
+{
+  "dd_api": "dd_core_api",
+  "action": "get_environment"
+}
+```
+
+### Example Response
+
+```json
+{
+  "page_globals": { /* … */ },
+  "plain_vars": { /* … */ },
+  "get_label": { /* … */ }
 }
 ```
 

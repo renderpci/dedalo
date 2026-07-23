@@ -43,3 +43,16 @@ Routing is table-driven, not reflective. The **`ACTION_REGISTRY`** map in `src/c
   "msg": "OK"
 }
 ```
+
+## Registered API classes
+
+Each `(dd_api, action)` pair the registry binds lives in one of these class pages (the full index is on [JSON API v1](../dedalo_api_v1.md#class-reference)):
+
+- [dd_core_api](dd_core_api.md) — section/record lifecycle and page context.
+- [dd_utils_api](dd_utils_api.md) — system and utility helpers.
+- [dd_tools_api](dd_tools_api.md) · [dd_ts_api](dd_ts_api.md) · [dd_area_maintenance_api](dd_area_maintenance_api.md).
+- [dd_diffusion_api](dd_diffusion_api.md) — publication / diffusion process control.
+- [dd_rag_api](dd_rag_api.md) — semantic retrieval (RAG) and image similarity.
+- [dd_component_portal_api](dd_component_portal_api.md) · [dd_component_av_api](dd_component_av_api.md) · [dd_component_3d_api](dd_component_3d_api.md) · [dd_component_info](dd_component_info.md).
+- [dd_mcp_api](dd_mcp_api.md) — the in-process assistant / MCP bridge.
+- [dd_error_report_api](dd_error_report_api.md) — machine-to-machine error-report intake.
