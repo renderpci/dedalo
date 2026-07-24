@@ -50,7 +50,13 @@ interface RelationIndexConfig {
 	editLimit: number;
 }
 
-async function resolveIndexConfig(
+/**
+ * Shared beyond this resolver: ts_object's tree badge counter (PHP
+ * get_count_data_group_by → component count_data_group_by, which applies the
+ * SAME get_target_section filter) resolves the component's inverse question
+ * through this too.
+ */
+export async function resolveIndexConfig(
 	tipo: string,
 	ownerSectionTipo: string,
 ): Promise<RelationIndexConfig> {
