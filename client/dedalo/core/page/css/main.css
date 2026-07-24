@@ -2122,10 +2122,10 @@ button:focus-visible {
 }
 button.add_light {
   --icon-path: url('../../themes/default/icons/add_light.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.add_light:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2159,10 +2159,10 @@ button.add_light:before {
 }
 button.show_all {
   --icon-path: url('../../themes/default/icons/list.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.show_all:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2197,11 +2197,11 @@ button.show_all:before {
 button.add,
 button.new {
   --icon-path: url('../../themes/default/icons/add_light.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.add:before,
 button.new:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2237,10 +2237,10 @@ button.new:before {
 }
 button.align_justify {
   --icon-path: url('../../themes/default/icons/justify.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.align_justify:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2274,10 +2274,10 @@ button.align_justify:before {
 }
 button.alternative {
   --icon-path: url('../../themes/default/icons/warning.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.alternative:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2311,10 +2311,10 @@ button.alternative:before {
 }
 button.arrow_link {
   --icon-path: url('../../themes/default/icons/arrow_link.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.arrow_link:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2348,10 +2348,10 @@ button.arrow_link:before {
 }
 button.blank {
   --icon-path: url('../../themes/default/icons/');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.blank:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2385,10 +2385,10 @@ button.blank:before {
 }
 button.calendar {
   --icon-path: url('../../themes/default/icons/calendar.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.calendar:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2422,10 +2422,10 @@ button.calendar:before {
 }
 button.cancel {
   --icon-path: url('../../themes/default/icons/cancel.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.cancel:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2459,10 +2459,10 @@ button.cancel:before {
 }
 button.check {
   --icon-path: url('../../themes/default/icons/check.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.check:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2506,10 +2506,10 @@ button.check:before {
 }
 button.close {
   --icon-path: url('../../themes/default/icons/close.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.close:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2543,10 +2543,10 @@ button.close:before {
 }
 button.code {
   --icon-path: url('../../themes/default/icons/code.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.code:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2580,10 +2580,10 @@ button.code:before {
 }
 button.compress {
   --icon-path: url('../../themes/default/icons/compress.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.compress:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2617,10 +2617,10 @@ button.compress:before {
 }
 button.copy {
   --icon-path: url('../../themes/default/icons/copy.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.copy:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2654,10 +2654,10 @@ button.copy:before {
 }
 button.csv {
   --icon-path: url('../../themes/default/icons/csv.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.csv:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2691,10 +2691,10 @@ button.csv:before {
 }
 button.delete {
   --icon-path: url('../../themes/default/icons/trash_light.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.delete:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2728,10 +2728,10 @@ button.delete:before {
 }
 button.delete_light {
   --icon-path: url('../../themes/default/icons/trash_light.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.delete_light:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2765,10 +2765,10 @@ button.delete_light:before {
 }
 button.delete_bold {
   --icon-path: url('../../themes/default/icons/trash_bold.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.delete_bold:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2802,10 +2802,10 @@ button.delete_bold:before {
 }
 button.deprecated {
   --icon-path: url('../../themes/default/icons/warning.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.deprecated:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2839,10 +2839,10 @@ button.deprecated:before {
 }
 button.diffusion {
   --icon-path: url('../../themes/default/icons/diffusion_light.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.diffusion:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2876,10 +2876,10 @@ button.diffusion:before {
 }
 button.document {
   --icon-path: url('../../themes/default/icons/document.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.document:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2913,10 +2913,10 @@ button.document:before {
 }
 button.download {
   --icon-path: url('../../themes/default/icons/download.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.download:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2950,10 +2950,10 @@ button.download:before {
 }
 button.drag {
   --icon-path: url('../../themes/default/icons/drag.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.drag:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -2987,10 +2987,10 @@ button.drag:before {
 }
 button.duplicate {
   --icon-path: url('../../themes/default/icons/duplicate.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.duplicate:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3024,10 +3024,10 @@ button.duplicate:before {
 }
 button.edit {
   --icon-path: url('../../themes/default/icons/edit.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.edit:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3061,10 +3061,10 @@ button.edit:before {
 }
 button.email {
   --icon-path: url('../../themes/default/icons/email.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.email:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3098,10 +3098,10 @@ button.email:before {
 }
 button.email_multiple {
   --icon-path: url('../../themes/default/icons/email_multiple.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.email_multiple:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3135,10 +3135,10 @@ button.email_multiple:before {
 }
 button.exclamation {
   --icon-path: url('../../themes/default/icons/warning.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.exclamation:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3172,10 +3172,10 @@ button.exclamation:before {
 }
 button.eye {
   --icon-path: url('../../themes/default/icons/eye.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.eye:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3209,10 +3209,10 @@ button.eye:before {
 }
 button.file_av {
   --icon-path: url('../../themes/default/icons/file_av.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.file_av:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3246,10 +3246,10 @@ button.file_av:before {
 }
 button.film {
   --icon-path: url('../../themes/default/icons/film.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.film:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3283,10 +3283,10 @@ button.film:before {
 }
 button.find {
   --icon-path: url('../../themes/default/icons/find.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.find:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3320,10 +3320,10 @@ button.find:before {
 }
 button.full_screen {
   --icon-path: url('../../themes/default/icons/full_screen.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.full_screen:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3357,10 +3357,10 @@ button.full_screen:before {
 }
 button.gear {
   --icon-path: url('../../themes/default/icons/gear.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.gear:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3394,10 +3394,10 @@ button.gear:before {
 }
 button.gears {
   --icon-path: url('../../themes/default/icons/gears.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.gears:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3431,10 +3431,10 @@ button.gears:before {
 }
 button.geo {
   --icon-path: url('../../themes/default/icons/geo.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.geo:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3468,10 +3468,10 @@ button.geo:before {
 }
 button.graph {
   --icon-path: url('../../themes/default/icons/graph.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.graph:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3505,10 +3505,10 @@ button.graph:before {
 }
 button.graph_bold {
   --icon-path: url('../../themes/default/icons/graph_bold.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.graph_bold:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3542,10 +3542,10 @@ button.graph_bold:before {
 }
 button.history {
   --icon-path: url('../../themes/default/icons/history.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.history:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3579,10 +3579,10 @@ button.history:before {
 }
 button.import_files {
   --icon-path: url('../../themes/default/icons/import_files.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.import_files:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3616,10 +3616,10 @@ button.import_files:before {
 }
 button.info {
   --icon-path: url('../../themes/default/icons/info.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.info:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3653,10 +3653,10 @@ button.info:before {
 }
 button.label {
   --icon-path: url('../../themes/default/icons/tag.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.label:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3690,10 +3690,10 @@ button.label:before {
 }
 button.lang {
   --icon-path: url('../../themes/default/icons/lang.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.lang:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3727,10 +3727,10 @@ button.lang:before {
 }
 button.link {
   --icon-path: url('../../themes/default/icons/link.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.link:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3764,10 +3764,10 @@ button.link:before {
 }
 button.list {
   --icon-path: url('../../themes/default/icons/list.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.list:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3801,10 +3801,10 @@ button.list:before {
 }
 button.media {
   --icon-path: url('../../themes/default/icons/media.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.media:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3838,10 +3838,10 @@ button.media:before {
 }
 button.move {
   --icon-path: url('../../themes/default/icons/move.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.move:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3875,10 +3875,10 @@ button.move:before {
 }
 button.note {
   --icon-path: url('../../themes/default/icons/note.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.note:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3912,10 +3912,10 @@ button.note:before {
 }
 button.pause {
   --icon-path: url('../../themes/default/icons/pause.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.pause:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3949,10 +3949,10 @@ button.pause:before {
 }
 button.play {
   --icon-path: url('../../themes/default/icons/play.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.play:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -3986,10 +3986,10 @@ button.play:before {
 }
 button.pen {
   --icon-path: url('../../themes/default/icons/pen.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.pen:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -4023,10 +4023,10 @@ button.pen:before {
 }
 button.print {
   --icon-path: url('../../themes/default/icons/print.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.print:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -4070,10 +4070,10 @@ button.print:before {
 }
 button.qr {
   --icon-path: url('../../themes/default/icons/qr.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.qr:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -4107,10 +4107,10 @@ button.qr:before {
 }
 button.remove {
   --icon-path: url('../../themes/default/icons/trash_light.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.remove:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -4144,10 +4144,10 @@ button.remove:before {
 }
 button.reset {
   --icon-path: url('../../themes/default/icons/eraser.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.reset:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -4181,10 +4181,10 @@ button.reset:before {
 }
 button.reload {
   --icon-path: url('../../themes/default/icons/reload.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.reload:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -4218,10 +4218,10 @@ button.reload:before {
 }
 button.repair {
   --icon-path: url('../../themes/default/icons/repair.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.repair:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -4255,10 +4255,10 @@ button.repair:before {
 }
 button.rotate {
   --icon-path: url('../../themes/default/icons/rotate.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.rotate:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -4295,10 +4295,10 @@ button.rotate:before {
 }
 button.save {
   --icon-path: url('../../themes/default/icons/save.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.save:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -4332,10 +4332,10 @@ button.save:before {
 }
 button.search {
   --icon-path: url('../../themes/default/icons/search_light.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.search:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -4369,10 +4369,10 @@ button.search:before {
 }
 button.sync {
   --icon-path: url('../../themes/default/icons/sync.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.sync:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -4406,10 +4406,10 @@ button.sync:before {
 }
 button.table {
   --icon-path: url('../../themes/default/icons/table.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.table:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -4443,10 +4443,10 @@ button.table:before {
 }
 button.tree {
   --icon-path: url('../../themes/default/icons/tree.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.tree:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -4480,10 +4480,10 @@ button.tree:before {
 }
 button.uncertainty {
   --icon-path: url('../../themes/default/icons/uncertainty.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.uncertainty:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -4517,10 +4517,10 @@ button.uncertainty:before {
 }
 button.upload {
   --icon-path: url('../../themes/default/icons/upload.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 button.upload:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -7910,6 +7910,9 @@ body.is_ontology_server .menu > .content_data {
 }
 .inspector > .inspector_content_data > .selection_info {
   contain: content;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--color_orange_dedalo);
   padding: var(--space-3) var(--space-4);
   font-size: 1rem;
@@ -7925,6 +7928,10 @@ body.is_ontology_server .menu > .content_data {
   text-overflow: ellipsis;
   white-space: nowrap;
   vertical-align: middle;
+}
+.inspector > .inspector_content_data > .selection_info > .button.list {
+  margin-left: 0.5rem;
+  background-color: var(--color_orange_dedalo);
 }
 .inspector > .inspector_content_data > .selection_info .span {
   cursor: pointer;
@@ -11881,7 +11888,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   color: var(--color_grey_7);
   padding: 0.25rem;
   --icon-path: url('../../themes/default/icons/pen.svg');
-  --button-bg-color: var(--color_grey_3);
+  --button-bg-color: currentColor;
 }
 .relation_list > .content_data .relation_list_grid > .relation_list_header mark {
   opacity: 1;
@@ -11893,7 +11900,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   opacity: 0.5;
 }
 .relation_list > .content_data .relation_list_grid > .relation_list_header:before {
-  background-color: var(--button-bg-color, var(--color_grey_3));
+  background-color: var(--button-bg-color, currentColor);
   content: ' ';
   display: inline-block;
   height: 1em;
@@ -21466,6 +21473,7 @@ body.inspector_resizing {
 .component_radio_button.edit > .content_data > .content_value > .label {
   display: flex;
   align-items: center;
+  width: fit-content;
   padding: 0.25rem 0.66rem;
   border-radius: var(--radius-pill);
   cursor: pointer;

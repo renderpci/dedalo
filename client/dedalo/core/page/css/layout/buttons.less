@@ -40,7 +40,13 @@
 }
 
 // fn_append_icon (used by tag element 'button')
-.fn_append_icon(@icon_name, @color: @color_grey_3, @opacity:1) {
+// @color default `currentColor` = the button's own text colour, so a registry
+// icon takes the SAME colour as its label: white on a colour class (.warning …),
+// dark grey on a plain button. Hard-setting a fixed grey here used to defeat the
+// colour classes' white `::before` fallback, leaving registry-icon buttons
+// (Search, New, Delete…) grey while URL/tool icons went white on the same
+// orange toolbar. currentColor unifies both paths.
+.fn_append_icon(@icon_name, @color: currentColor, @opacity:1) {
 
 	--icon-path : url('../../themes/default/icons/@{icon_name}');
 	--button-bg-color : @color;
