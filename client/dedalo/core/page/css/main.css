@@ -7888,6 +7888,7 @@ body.is_ontology_server .menu > .content_data {
   width: 100%;
   justify-content: center;
   padding-right: 5.5rem;
+  padding-left: 0.5rem;
 }
 .inspector > .inspector_content_data > .paginator_container > .section_id {
   position: absolute;
@@ -8101,7 +8102,7 @@ body.is_ontology_server .menu > .content_data {
   padding: var(--space-3);
   padding-top: var(--space-2);
 }
-.inspector > .inspector_content_data > .buttons_container.bottom > span {
+.inspector > .inspector_content_data > .buttons_container.bottom > .data_link {
   width: 100%;
   margin-top: var(--space-2);
 }
