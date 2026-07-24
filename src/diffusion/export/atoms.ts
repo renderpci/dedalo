@@ -29,6 +29,13 @@
  * component_dataframe children are UNCOVERED scope (ledgered): they surface
  * in `unresolved` (loud) instead of silently dropping a declared column.
  *
+ * Parents chains (WC-049, per-ddo value_with_parents checkbox): each relation
+ * locator additionally emits its target's ancestor chain (getParentsRecursive
+ * nearest-first × thesaurus term resolver, ' > ' joined, self excluded) as ONE
+ * atom under a sibling `sub_id:'parents'` segment — the tabulator derives the
+ * '#parents' column from the segment identity. grid_value format only; the
+ * flag inherits down every fan-out level (PHP export_context::descend).
+ *
  * Byte-parity notes (pinned by test/parity/tool_export_breakdown_differential):
  * - empty/null leaf values are SKIPPED (no atom, no join part) — the PHP
  *   empty() bug-for-bug rule;
@@ -40,6 +47,7 @@
 
 import { dataframeEntryMatches } from '../../core/concepts/subdatum.ts';
 import { getColumnNameByModel, getModelByTipo, getNode } from '../../core/ontology/resolver.ts';
+import { getParentsRecursive } from '../../core/relations/parent.ts';
 import type { CellValueResolveOptions } from '../../core/resolve/relation_list.ts';
 import {
 	componentFieldsSeparator,
@@ -48,6 +56,7 @@ import {
 } from '../../core/resolve/relation_list.ts';
 import type { RawConfigDdo } from '../../core/section/list_definitions/section_list.ts';
 import { resolveOwnConfigMap } from '../../core/section/list_definitions/section_list.ts';
+import { getTermByLocator } from '../../core/ts_object/term_resolver.ts';
 import type { FieldPlan } from '../plan/types.ts';
 import type { ExportAtomRun, ExportLeafAtom } from '../resolve/resolver.ts';
 import {
@@ -60,6 +69,11 @@ import {
 /** PHP export_value records_separator (join_atoms depth-0 default). */
 const RECORDS_SEPARATOR = ' | ';
 
+/** PHP parents_segment fields_separator — the ancestor-chain glue (WC-049:
+ * TS pre-joins the chain into ONE atom; PHP emitted one atom per ancestor and
+ * joined at tabulate time — same cell bytes, the TS cell join is fixed ' | '). */
+const PARENTS_SEPARATOR = ' > ';
+
 /** PHP get_export_value recursion depth backstop (fail LOUD, never spin). */
 const MAX_FANOUT_DEPTH = 12;
 
@@ -68,6 +82,9 @@ export interface ExportRun {
 	atoms: ExportAtomRun;
 	/** relation component tipo → its OWN request_config child ddos. */
 	ownChildren: Map<string, RawConfigDdo[]>;
+	/** `${section_tipo}:${section_id}:${lang}` → resolved ' > ' ancestor chain
+	 * (null = target has no hierarchy). Shared targets resolve ONCE per run. */
+	parentsChains: Map<string, string | null>;
 	/** Threads the run's record cache into the shared flat-value resolvers —
 	 * without it every relation-target label re-reads its record per row (N+1). */
 	cellOpts: CellValueResolveOptions;
@@ -79,11 +96,49 @@ export function createExportRun(): ExportRun {
 	return {
 		atoms,
 		ownChildren: new Map(),
+		parentsChains: new Map(),
 		cellOpts: {
 			loadRecord: (tableName, sectionTipo, sectionId) =>
 				loadExportRecordFromTable(atoms, tableName, sectionTipo, sectionId),
 		},
 	};
+}
+
+/**
+ * The ' > '-joined ancestor chain of one relation target (PHP
+ * component_relation_common::get_locator_value show_parents=true,
+ * include_self=false — the term itself is already the sibling value column):
+ * getParentsRecursive walk order (nearest parent first, root last), each
+ * ancestor resolved through the thesaurus term resolver, empties dropped.
+ * Null when the target has no hierarchy (no component_relation_parent / no
+ * parents) — the caller emits NOTHING, not an empty column (PHP rule).
+ */
+async function resolveParentsChain(
+	run: ExportRun,
+	sectionTipo: string,
+	sectionId: number | string,
+	lang: string,
+): Promise<string | null> {
+	const cacheKey = `${sectionTipo}:${sectionId}:${lang}`;
+	const cached = run.parentsChains.get(cacheKey);
+	if (cached !== undefined) return cached;
+
+	const { ancestors, errors } = await getParentsRecursive(sectionId, sectionTipo);
+	for (const error of errors) {
+		// Data-level loop in the hierarchy: PHP logs-and-continues (best-effort
+		// by oracle contract) — the reachable ancestors still export.
+		console.warn(
+			`[diffusion/export] parents walk ${error.msg} at ${error.info.section_tipo}:${error.info.section_id} (target ${cacheKey})`,
+		);
+	}
+	const parts: string[] = [];
+	for (const ancestor of ancestors) {
+		const term = await getTermByLocator(ancestor, lang, true);
+		if (term !== null && term !== '') parts.push(term);
+	}
+	const chain = parts.length > 0 ? parts.join(PARENTS_SEPARATOR) : null;
+	run.parentsChains.set(cacheKey, chain);
+	return chain;
 }
 
 /** One PHP-shaped export path segment (wire shape of the col line's path). */
@@ -271,7 +326,13 @@ export async function collectGridAtoms(
 	sectionId: number | string,
 	lang: string,
 	unresolved: string[],
+	/** Override the field's value_with_parents flag (the value-format label
+	 * derivation passes false so a parents atom can never become atoms[0]). */
+	withParentsOverride?: boolean,
 ): Promise<GridAtom[]> {
+	// WC-049: per-locator ancestor-chain sibling '#parents' column (the export
+	// tool's per-column parents checkbox — per-ddo flag only, grid_value only).
+	const withParents = withParentsOverride ?? field.exportColumn?.valueWithParents === true;
 	const path = field.exportColumn?.path ?? [];
 	if (hasDeclaredDataframeStep(field)) {
 		// See resolveValueCell — declared dataframe steps stay loud, never a
@@ -322,19 +383,53 @@ export async function collectGridAtoms(
 					const leafSegment = segments[0] as ExportSegment;
 					for (const target of targets) {
 						const value = target.parts.join(RECORDS_SEPARATOR);
-						if (value === '') continue;
-						atoms.push({
-							value,
-							cellType: 'text',
-							model: event.step.model,
-							segments: [
-								{
-									...leafSegment,
-									item_index: target.index,
-									section_id: target.sectionId,
-								},
-							],
-						});
+						if (value !== '') {
+							atoms.push({
+								value,
+								cellType: 'text',
+								model: event.step.model,
+								segments: [
+									{
+										...leafSegment,
+										item_index: target.index,
+										section_id: target.sectionId,
+									},
+								],
+							});
+						}
+						// WC-049 parents: sibling '#parents' atom per target. The
+						// indexed FIRST segment keeps the chain row-aligned with the
+						// compact value atom; the parents segment itself is unindexed.
+						if (withParents && target.sectionTipo !== null && target.sectionId !== null) {
+							const chain = await resolveParentsChain(
+								run,
+								target.sectionTipo,
+								target.sectionId,
+								lang,
+							);
+							if (chain !== null) {
+								atoms.push({
+									value: chain,
+									cellType: 'text',
+									model: event.step.model,
+									segments: [
+										{
+											...leafSegment,
+											item_index: target.index,
+											section_id: target.sectionId,
+										},
+										{
+											section_tipo: target.sectionTipo,
+											component_tipo: event.step.tipo,
+											model: null,
+											item_index: null,
+											section_id: null,
+											sub_id: 'parents',
+										},
+									],
+								});
+							}
+						}
 					}
 					continue;
 				}
@@ -354,6 +449,7 @@ export async function collectGridAtoms(
 				unresolved,
 				atoms,
 				0,
+				withParents,
 			);
 			continue;
 		}
@@ -409,6 +505,9 @@ async function fanOutRelation(
 	unresolved: string[],
 	atoms: GridAtom[],
 	depth: number,
+	/** WC-049 parents flag — inherits down EVERY relation level, exactly like
+	 * PHP export_context::descend copies value_with_parents to the child. */
+	withParents: boolean,
 	declaredMap?: RawConfigDdo[],
 	/** The tipo whose request_config `declaredMap` came from — 'self' entries
 	 * alias THIS tipo, never the current relation (a nested rsc368 must not
@@ -501,6 +600,7 @@ async function fanOutRelation(
 					unresolved,
 					atoms,
 					depth + 1,
+					withParents,
 					map,
 					mapOwner,
 				);
@@ -553,6 +653,7 @@ async function fanOutRelation(
 					unresolved,
 					atoms,
 					depth + 1,
+					withParents,
 					map,
 					mapOwner,
 				);
@@ -576,6 +677,33 @@ async function fanOutRelation(
 				model: childModel,
 				segments,
 			});
+		}
+
+		// WC-049 parents: the locator target's ancestor chain as a sibling
+		// '#parents' column (PHP get_export_value :916-948 — per locator, AFTER
+		// its children; targets without hierarchy emit nothing). The segment
+		// carries the locator's raw position, so the chain row-aligns with the
+		// locator's child atoms in every breakdown.
+		if (withParents) {
+			const chain = await resolveParentsChain(run, locator.sectionTipo, locator.sectionId, lang);
+			if (chain !== null) {
+				atoms.push({
+					value: chain,
+					cellType: 'text',
+					model: (await getModelByTipo(relationTipo)) ?? '',
+					segments: [
+						...baseSegments,
+						{
+							section_tipo: locator.sectionTipo,
+							component_tipo: relationTipo,
+							model: null,
+							item_index: locator.index,
+							section_id: locator.sectionId,
+							sub_id: 'parents',
+						},
+					],
+				});
+			}
 		}
 	}
 }

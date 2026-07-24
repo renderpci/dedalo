@@ -19,7 +19,7 @@
  *    persistence.
  * 3. Render the export config panel: format selector (value | grid_value |
  *    dedalo_raw), breakdown mode (default | rows | columns), option checkboxes
- *    (fill_the_gaps, show_tipo_in_label, value_with_parents), and the main
+ *    (fill_the_gaps, show_tipo_in_label), and the main
  *    "Export" button that kicks off the NDJSON streaming request.
  * 4. Render download buttons (CSV, TSV, ODS, XLSX, HTML, media ZIP) that
  *    consume the flat_table accumulator produced by get_export_grid.
@@ -99,34 +99,21 @@ export const render_tool_export = function() {
 
 
 /**
- * RELATION_MODELS
- * Set of component models whose locator targets can be traversed upward
- * through an ancestor chain to produce additional "parents" columns in the
- * export output.
+ * PARENTS_MODELS
+ * Component models eligible for the per-column "parents" checkbox
+ * (build_export_component): relation components whose locator targets can be
+ * traversed upward through an ancestor chain to produce a sibling 'parents'
+ * column in the export output (WC-049, grid_value format).
  *
- * This is the client-side mirror of PHP's
- * component_relation_common::get_components_with_relations().
- *
- * A selection-list item whose ddo.model is in this set receives a small
- * "parents" checkbox (build_export_component). When checked the individual
- * ddo.value_with_parents flag is set, overriding the global "Export parents"
- * option for that specific column.
- *
- * (!) Keep in sync with component_relation_common::get_components_with_relations()
- * on the PHP side whenever new relation component types are added.
+ * The model gate is only the FIRST filter: the checkbox renders only when the
+ * server confirms the component's target section actually has a
+ * component_relation_parent (tool_export.components_with_parent action —
+ * see component_has_parent_targets).
  */
-const relation_models = new Set([
+const PARENTS_MODELS = new Set([
+	'component_portal',
 	'component_autocomplete',
-	'component_autocomplete_hi',
-	
-
-
-	'component_relation_children',
-	'component_relation_index',
-	'component_relation_model',
-	'component_relation_parent',
-
-
+	'component_autocomplete_hi'
 ])
 
 
@@ -481,23 +468,15 @@ const get_content_data_edit = async function(self) {
 				: 'default'
 			select_breakdown_export.value = self.breakdown
 
-			// update_breakdown_state syncs the enabled/disabled state of both the
-			// breakdown mode selector and the global "value_with_parents" checkbox
-			// whenever the data format changes. Called once at init time
-			// (after select_breakdown_export is created) and once more implicitly
-			// when the data format selector fires 'change' (change_handler above).
-			// (!) The querySelector searches the whole document rather than a
-			// scoped container — works because only one tool instance renders at a
-			// time, but may misbehave when multiple instances coexist.
-			// enable the selector only when the breakdown format is active;
-			// the parents checkbox applies to value/breakdown formats only
-			// (dedalo_raw exports the dato as is)
+			// update_breakdown_state syncs the enabled/disabled state of the
+			// breakdown mode selector whenever the data format changes. Called
+			// once at init time (after select_breakdown_export is created) and
+			// once more implicitly when the data format selector fires 'change'
+			// (change_handler above). Per-column parents checkboxes (WC-049)
+			// live on the selection-list items, not here — the server honors
+			// the per-ddo flag on grid_value exports only.
 			const update_breakdown_state = () => {
 				select_breakdown_export.disabled = (self.data_format!=='grid_value')
-				const parents_check = document.querySelector('.value_with_parents_check')
-				if (parents_check) {
-					parents_check.disabled = (self.data_format==='dedalo_raw')
-				}
 			}
 			update_breakdown_state()
 
@@ -535,26 +514,6 @@ const get_content_data_edit = async function(self) {
 					class_name		: 'option_check_box show_tipo_in_label_check',
 					parent			: show_tipo_in_label
 				})
-
-			// value_with_parents check_box. Export the ancestor chain of
-			// relation targets (thesaurus/hierarchy, e.g. component_autocomplete_hi)
-			// as sibling 'parents' columns. Default unchecked (disallow).
-			// Not applicable to the dedalo_raw format (raw exports the dato as is).
-				const value_with_parents_node = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'check_label value_with_parents',
-					inner_html		: self.get_tool_label('value_with_parents') || 'Export parents',
-					parent			: options_to_check
-				})
-				const value_with_parents_check = ui.create_dom_element({
-					element_type	: 'input',
-					type			: 'checkbox',
-					class_name		: 'option_check_box value_with_parents_check',
-					parent			: value_with_parents_node
-				})
-				value_with_parents_check.checked	= false
-				// initial state (update_breakdown_state ran before this node existed)
-				value_with_parents_check.disabled	= (self.data_format==='dedalo_raw')
 
 		// button_export
 			const button_export = ui.create_dom_element({
@@ -596,7 +555,6 @@ const get_content_data_edit = async function(self) {
 					})
 					const show_tipo_in_label	= show_tipo_in_label_check.checked;
 					const fill_the_gaps			= fill_the_gaps_check.checked;
-					const value_with_parents	= value_with_parents_check.checked;
 
 				// loading class elements
 					[button_export, components_list_container, selection_list_contaniner, export_buttons_options].forEach(
@@ -609,8 +567,7 @@ const get_content_data_edit = async function(self) {
 						breakdown			: self.breakdown,
 						ar_ddo_to_export	: self.ar_ddo_to_export,
 						show_tipo_in_label	: show_tipo_in_label,
-						fill_the_gaps		: fill_the_gaps,
-						value_with_parents	: value_with_parents
+						fill_the_gaps		: fill_the_gaps
 					}
 					// get_export_grid starts the NDJSON stream and returns the flat_table
 					// instance as soon as the 'meta' line arrives; rows continue streaming
@@ -1193,9 +1150,10 @@ const open_export_presets = async function(self) {
  * The returned element is a .export_component div with:
  *   - .component_label <li>: breadcrumb label (path names joined with ' > ')
  *     plus a <span> with the tipo and model for quick identification.
- *   - (relation models only) .export_component_parents <label>: a checkbox
- *     that overrides the global 'Export parents' option for this column.
- *     The checkbox is prevented from triggering drag start/drag events.
+ *   - (hierarchical relation columns only — PARENTS_MODELS model + server-
+ *     confirmed hierarchical target) .export_component_parents <label>: a
+ *     checkbox that activates the ancestor-chain 'parents' column for this
+ *     column (WC-049). Prevented from triggering drag start/drag events.
  *   - .button.close <span>: removes the item from the list and persists the
  *     updated selection to IndexedDB.
  *
@@ -1234,11 +1192,13 @@ render_tool_export.prototype.build_export_component = async function(ddo) {
 				parent			: export_component
 			})
 
-	// parents check (relation components only). Per-component override of the
-	// global 'Export parents' option: exports the ancestor chain of this
-	// component locator targets as a sibling 'parents' column. Persisted with
+	// parents check (WC-049). Rendered only for PARENTS_MODELS columns whose
+	// target section the server confirms hierarchical (has a
+	// component_relation_parent — tool_export.components_with_parent action).
+	// When checked, ddo.value_with_parents makes the grid_value export emit the
+	// targets' ancestor chain as a sibling 'parents' column. Persisted with
 	// the ddo in the local DB config (update_local_db_data saves whole ddos).
-		if (relation_models.has(ddo.model)) {
+		if (PARENTS_MODELS.has(ddo.model) && await self.component_has_parent_targets(ddo)) {
 			const parents_label = ui.create_dom_element({
 				element_type	: 'label',
 				class_name		: 'export_component_parents',
@@ -1291,6 +1251,53 @@ render_tool_export.prototype.build_export_component = async function(ddo) {
 
 	return export_component
 }//end build_export_component
+
+
+
+/**
+ * COMPONENT_HAS_PARENT_TARGETS
+ * Whether the given column ddo's component points at a section that can carry
+ * an ancestor chain (a target with a component_relation_parent) — the second
+ * half of the per-column parents-checkbox gate (WC-049), answered by the
+ * tool_export.components_with_parent server action.
+ *
+ * The per-instance cache stores the request PROMISE keyed by component tipo,
+ * so concurrent build_export_component calls (activate_all_columns, preset
+ * apply) resolve the same tipo with ONE request. A failed request resolves
+ * false (no checkbox — degraded, never blocking).
+ *
+ * @param {Object} ddo - Column descriptor ({tipo, section_tipo, model, ...})
+ * @returns {Promise<boolean>} true when the component has a hierarchical target
+ */
+render_tool_export.prototype.component_has_parent_targets = async function(ddo) {
+
+	const self = this
+
+	if (!self.components_with_parent) {
+		self.components_with_parent = new Map()
+	}
+	const cached = self.components_with_parent.get(ddo.tipo)
+	if (cached !== undefined) {
+		return cached
+	}
+
+	const request_promise = self.tool_request({
+		action	: 'components_with_parent',
+		options	: {
+			section_tipo	: self.caller.section_tipo, // permission gate target (the exported section)
+			components		: [{
+				tipo			: ddo.tipo,
+				section_tipo	: ddo.section_tipo // owner section ('self' targets resolve against it)
+			}]
+		}
+	})
+	.then(response => response?.result?.[ddo.tipo]===true)
+	.catch(() => false)
+
+	self.components_with_parent.set(ddo.tipo, request_promise)
+
+	return request_promise
+}//end component_has_parent_targets
 
 
 

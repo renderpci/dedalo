@@ -533,10 +533,10 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 	const lang = String(options.lang ?? 'lg-spa');
 
 	// Stage B: the export column set compiles through the SHARED plan compiler
-	// front-end (one FieldPlan per ddo, ordinals = user DOM order).
-	const plan = await compileExportPlan(exportDdos, sectionTipo, {
-		valueWithParents: options.value_with_parents === true,
-	});
+	// front-end (one FieldPlan per ddo, ordinals = user DOM order). WC-049: the
+	// parents flag is PER-DDO (ar_ddo_to_export[].value_with_parents) — the PHP
+	// request-global options.value_with_parents is deliberately ignored.
+	const plan = await compileExportPlan(exportDdos, sectionTipo);
 	const fields = plan.sections[0]?.fields ?? [];
 	const run = createExportRun();
 
@@ -656,6 +656,7 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 					Number(record.section_id),
 					lang,
 					[], // label derivation never adds unresolved notes
+					false, // parents OFF — a '#parents' atom must never head the label chain
 				);
 				labelSegments = labelAtoms[0]?.segments;
 			}
