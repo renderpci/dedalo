@@ -570,7 +570,10 @@
 		// label/value ink contrast and the hover tint alone
 		transition: background-color var(--transition-fast);
 
-		&:hover:not(.active):not(.disabled_component) {
+		// component_section_id carries its own solid background (static grey or
+		// the ontology section colour injected at runtime); exclude it so the
+		// tint never repaints that badge on hover
+		&:hover:not(.active):not(.disabled_component):not(.component_section_id) {
 			background-color: var(--field_hover_bg);
 		}
 
