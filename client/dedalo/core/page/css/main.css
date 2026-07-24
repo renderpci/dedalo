@@ -7835,7 +7835,7 @@ body.is_ontology_server .menu > .content_data {
 }
 .inspector > .inspector_content_data > .paginator_container {
   contain: content;
-  height: 73px;
+  min-height: 73px;
   background-color: var(--bg_surface);
   border-radius: var(--inspector_block_radius) var(--inspector_block_radius) 0px 0px;
   margin-bottom: 0px;
@@ -7885,6 +7885,7 @@ body.is_ontology_server .menu > .content_data {
 .inspector > .inspector_content_data > .paginator_container .nav_buttons {
   width: 100%;
   justify-content: center;
+  padding-right: 5.5rem;
 }
 .inspector > .inspector_content_data > .paginator_container > .section_id {
   position: absolute;

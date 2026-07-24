@@ -156,7 +156,7 @@
 		// with the nav controls and page info centred across the inspector.
 		>.paginator_container {
 			contain: content;
-			height: 73px;
+			min-height: 73px;
 			// the paginator is the TOP HALF of the first card: it shares the
 			// card surface with the actions toolbar below (which zeroes its
 			// own top margin/radius) so both read as ONE card.
@@ -206,6 +206,7 @@
 			.nav_buttons {
 				width: 100%;
 				justify-content: center;
+				padding-right: 5.5rem;
 			}
 
 			// section id info in inspector paginator. Reads as a quiet accent
