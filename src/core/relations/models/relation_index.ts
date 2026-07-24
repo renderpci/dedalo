@@ -6,12 +6,19 @@
  * search_related flat-GIN engine.
  *
  * PHP references: class.component_relation_index.php (get_data :160,
- * get_data_paginated :205), class.search_related.php:489
- * (get_referenced_locators), component_relation_index_json.
+ * get_data_paginated :205, get_target_section :839, get_filter_locator :872),
+ * class.search_related.php:489 (get_referenced_locators),
+ * component_relation_index_json.
  *
- * Phase A: verbatim strangler extraction of read_rows' relation-index
- * emission (list/tm cell + the get_data computed page). Phase D lands the
- * full §6.4 semantics (hierarchy40 external mode, tag indexation).
+ * The computed inverse question is CONFIGURABLE per component (PHP
+ * component_relation_common __construct :217 + get_target_section):
+ * - relation TYPE = properties.config_relation.relation_type ?? dd96 (tch60/
+ *   tchi59 declare dd151 — a plain "who references me", not an indexation);
+ * - pointing sections = the request_config sqo targets when a config exists
+ *   (tch60 → tch1/tch100/tch178), else 'all' (hierarchy40).
+ * Children follow the PHP json controller's two subdatum strategies: an own
+ * request_config expands its ddo_map portal-style (get_subdatum); without one
+ * the pointing sections' related_list components are dumped per locator.
  */
 
 import type { Ddo } from '../../concepts/ddo.ts';
@@ -31,46 +38,160 @@ import { portalResolver } from './portal.ts';
  * per-request state bleed the differential must reproduce. */
 const SOLVED_SECTIONS = Symbol('relation_index.solvedSections');
 
+/** The component's effective inverse-question filters (see the header). */
+interface RelationIndexConfig {
+	/** PHP $this->relation_type: config_relation.relation_type ?? dd96. */
+	relationType: string;
+	/** PHP get_target_section(): request_config sqo targets, else 'all'. */
+	targetSections: string[] | 'all';
+	/** PHP isset(properties->source->request_config) — picks the subdatum strategy. */
+	hasRequestConfig: boolean;
+	/** Edit page size: own sqo/sqo_config limit (LAST config item wins) ?? 10. */
+	editLimit: number;
+}
+
+async function resolveIndexConfig(
+	tipo: string,
+	ownerSectionTipo: string,
+): Promise<RelationIndexConfig> {
+	const { getNode } = await import('../../ontology/resolver.ts');
+	const node = await getNode(tipo);
+	const properties = (node?.properties ?? null) as {
+		config_relation?: { relation_type?: unknown };
+		source?: {
+			request_config?: {
+				sqo?: { limit?: unknown };
+				show?: { sqo_config?: { limit?: unknown } };
+			}[];
+		};
+	} | null;
+	const rawType = properties?.config_relation?.relation_type;
+	const relationType = typeof rawType === 'string' && rawType !== '' ? rawType : 'dd96';
+	const requestConfig = properties?.source?.request_config;
+	const hasRequestConfig = requestConfig !== undefined && requestConfig !== null;
+
+	// PHP get_target_section: the request_config sqo targets when a config
+	// exists; an EMPTY extraction falls back to the ['all'] default.
+	let targetSections: string[] | 'all' = 'all';
+	if (hasRequestConfig) {
+		const { getElementTargetSectionTipos } = await import('../request_config/build.ts');
+		const tipos = await getElementTargetSectionTipos(tipo, ownerSectionTipo);
+		if (tipos.length > 0) targetSections = tipos;
+	}
+
+	// The expandPortal EDIT limit chain (relation_core): sqo.limit ??
+	// show.sqo_config.limit, LAST config item wins, default 10.
+	let editLimit = 10;
+	if (Array.isArray(requestConfig)) {
+		for (const item of requestConfig) {
+			const candidate = item?.sqo?.limit ?? item?.show?.sqo_config?.limit;
+			if (typeof candidate === 'number') editLimit = candidate;
+		}
+	}
+	return { relationType, targetSections, hasRequestConfig, editLimit };
+}
+
 export const relationIndexResolver: RelationModelResolver = {
 	model: 'component_relation_index',
 
 	async emitDdoItems(context: RelationEmitContext): Promise<void> {
-		// The computed inverse page only shapes list/tm cells; other modes take
-		// the generic portal path (exactly the pre-registry monolith routing).
-		if (context.ddoMode !== 'list' && context.ddoMode !== 'tm') {
+		// PHP component_relation_index_json runs the SAME computed flow in every
+		// mode; TS routes list/tm cells AND the edit read through it. Remaining
+		// modes (search rows carry no real record to invert) keep the generic
+		// portal fallback.
+		if (context.ddoMode !== 'list' && context.ddoMode !== 'tm' && context.ddoMode !== 'edit') {
 			await portalResolver.emitDdoItems(context);
 			return;
 		}
-		await emitRelationIndexData(
-			context.ddo,
-			context.row,
-			context.ddoMode,
-			context.defaultLang,
-			context.callerTipo,
-			context.emission,
-			context.depth,
-			context.emitDdo,
-		);
+		const config = await resolveIndexConfig(context.ddo.tipo, context.row.section_tipo);
+		if (config.hasRequestConfig) {
+			await emitOwnConfigIndexData(context, config);
+			return;
+		}
+		await emitRelationIndexData(context, config);
 	},
 };
 
 /**
- * component_relation_index list cell (PHP component_relation_index_json):
- * entries = one page of dd96 inverse locators (+ full count pagination);
+ * Own-request_config strategy (PHP json controller's get_subdatum branch):
+ * the computed inverse page becomes the component's relation slot on a
+ * synthetic record, and the generic portal machinery expands the component's
+ * OWN ddo_map children over each pointing record (per-locator grouping,
+ * self→target resolution, re-stamp rules — all shared). The portal only sees
+ * one page, so its pagination.total is re-stamped with the FULL inverse count
+ * afterwards (PHP pagination->total = count_data()).
+ */
+async function emitOwnConfigIndexData(
+	context: RelationEmitContext,
+	config: RelationIndexConfig,
+): Promise<void> {
+	const { ddo, row, ddoMode, emission, dataTipo } = context;
+	const { findInverseReferenceLocators, countInverseReferences } = await import(
+		'../../search/search_related.ts'
+	);
+	const { parseInverseEntry } = await import('../../resolve/relation_index.ts');
+
+	// The page limit mirrors expandPortal's mode chains EXACTLY, then is pinned
+	// onto the delegated ddo so the pre-fetched page and the portal slice agree.
+	let limit: number;
+	if (ddoMode === 'list' || ddoMode === 'tm') {
+		const { resolveListCellMap } = await import('../../section/list_definitions/section_list.ts');
+		limit = ddo.limit ?? (await resolveListCellMap(ddo.tipo)).cellLimit ?? PORTAL_LIST_LIMIT;
+	} else {
+		limit = ddo.limit ?? config.editLimit;
+	}
+
+	const filter = {
+		type: config.relationType,
+		section_tipo: row.section_tipo,
+		section_id: row.section_id,
+	};
+	const page = await findInverseReferenceLocators([filter], {
+		limit,
+		offset: 0,
+		order: 'section_id',
+		sectionTipos: config.targetSections,
+	});
+	if (page.length === 0) return;
+	const counted = await countInverseReferences([filter], {
+		sectionTipos: config.targetSections,
+	});
+
+	const relationSlot = {
+		...((context.record.columns.relation as Record<string, unknown[]> | null) ?? {}),
+		[dataTipo]: page.map(parseInverseEntry),
+	};
+	const syntheticRecord = {
+		...context.record,
+		columns: { ...context.record.columns, relation: relationSlot },
+	};
+	const before = emission.items.length;
+	await portalResolver.emitDdoItems({
+		...context,
+		record: syntheticRecord,
+		ddo: { ...ddo, limit } as Ddo,
+	});
+	for (let i = before; i < emission.items.length; i++) {
+		const item = emission.items[i] as DataItem;
+		if (item.tipo === ddo.tipo) {
+			item.pagination = { total: counted.total, limit, offset: 0 };
+			break;
+		}
+	}
+}
+
+/**
+ * No-request_config strategy (PHP json controller's per-locator branch):
+ * entries = one page of inverse locators (+ full count pagination);
  * children = the pointing sections' related_list components resolved against
  * [representative record, …page records] — first row of the request only.
  * No inverse references → NO data item at all (PHP skips on empty page).
  */
 async function emitRelationIndexData(
-	ddo: Ddo,
-	row: { section_tipo: string; section_id: number },
-	ddoMode: string,
-	defaultLang: string,
-	callerTipo: string,
-	emission: EmissionContext,
-	depth: number,
-	emitDdo: EmitDdoFn,
+	context: RelationEmitContext,
+	config: RelationIndexConfig,
 ): Promise<void> {
+	const { ddo, row, ddoMode, defaultLang, callerTipo, emission, depth, emitDdo } = context;
 	const { findInverseReferenceLocators, countInverseReferences } = await import(
 		'../../search/search_related.ts'
 	);
@@ -78,18 +199,26 @@ async function emitRelationIndexData(
 		'../../resolve/relation_index.ts'
 	);
 	const filter = {
-		type: 'dd96', // DEDALO_RELATION_TYPE_INDEX_TIPO
+		type: config.relationType,
 		section_tipo: row.section_tipo,
 		section_id: row.section_id,
 	};
+	// list/tm keep the pinned 1-locator cell page; the edit read pages at the
+	// component's edit limit (PHP get_data_paginated pagination->limit).
+	const limit =
+		ddoMode === 'list' || ddoMode === 'tm' ? PORTAL_LIST_LIMIT : (ddo.limit ?? config.editLimit);
 	const page = await findInverseReferenceLocators([filter], {
-		limit: PORTAL_LIST_LIMIT,
+		limit,
 		offset: 0,
 		order: 'section_id',
+		sectionTipos: config.targetSections,
 	});
 	if (page.length === 0) return;
 
-	const counted = await countInverseReferences([filter], { groupBy: ['section_tipo'] });
+	const counted = await countInverseReferences([filter], {
+		sectionTipos: config.targetSections,
+		groupBy: ['section_tipo'],
+	});
 
 	const item = buildDataItem(
 		ddo.tipo,
@@ -102,7 +231,7 @@ async function emitRelationIndexData(
 	item.from_component_tipo = ddo.tipo;
 	item.row_section_id = row.section_id;
 	item.parent_tipo = callerTipo;
-	item.pagination = { total: counted.total, limit: PORTAL_LIST_LIMIT, offset: 0 };
+	item.pagination = { total: counted.total, limit, offset: 0 };
 	emission.items.push(item);
 
 	// Children — once per pointing section per read (see the scratch note).
@@ -188,14 +317,59 @@ export async function readRelationIndexData(
 	const { parseInverseEntry, getRelatedListChildTipos, getRepresentativeSectionId } = await import(
 		'../../resolve/relation_index.ts'
 	);
-	const filter = { type: 'dd96', section_tipo: sectionTipo, section_id: sectionId };
+	const config = await resolveIndexConfig(tipo, sectionTipo);
+	const filter = { type: config.relationType, section_tipo: sectionTipo, section_id: sectionId };
 	const page = await findInverseReferenceLocators([filter], {
 		limit,
 		offset,
 		order: 'section_id',
+		sectionTipos: config.targetSections,
 	});
 	if (page.length === 0) return [];
-	const counted = await countInverseReferences([filter], { groupBy: ['section_tipo'] });
+	const counted = await countInverseReferences([filter], {
+		sectionTipos: config.targetSections,
+		groupBy: ['section_tipo'],
+	});
+
+	// Own-request_config strategy: delegate to the portal machinery over a
+	// synthetic record holding the computed page (see emitOwnConfigIndexData);
+	// no representative seeding, no pool quirk (PHP get_subdatum branch).
+	if (config.hasRequestConfig) {
+		const emission = new EmissionContext();
+		const syntheticRecord = {
+			id: 0,
+			section_id: Number(sectionId),
+			section_tipo: sectionTipo,
+			columns: { relation: { [tipo]: page.map(parseInverseEntry) } },
+			rawText: {},
+		};
+		await portalResolver.emitDdoItems({
+			ddo: { tipo, section_tipo: sectionTipo, mode, limit } as Ddo,
+			ddoMap: [],
+			record: syntheticRecord,
+			row: { section_tipo: sectionTipo, section_id: Number(sectionId) },
+			model: 'component_relation_index',
+			dataTipo: tipo,
+			ddoMode: mode,
+			ddoLang: 'lg-nolan',
+			defaultMode: mode,
+			defaultLang: requestLang,
+			callerTipo: tipo,
+			emission,
+			allowOwnConfigChildren: true,
+			depth: 0,
+			emitDdo,
+		});
+		for (const emitted of emission.items) {
+			const item = emitted as DataItem;
+			if (item.tipo !== tipo) continue;
+			// get_data echoes the source's RAW (string) id + the FULL count.
+			item.section_id = sectionId;
+			item.pagination = { total: counted.total, limit, offset };
+			break;
+		}
+		return emission.items as DataItem[];
+	}
 
 	const emission = new EmissionContext();
 	const item = buildDataItem(
