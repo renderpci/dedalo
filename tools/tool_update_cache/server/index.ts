@@ -52,13 +52,17 @@ async function getComponentList(ctx: ToolActionContext): Promise<ToolResponse> {
 			use_real_sections: Boolean(ctx.options.use_real_sections),
 			ar_components_exclude: ctx.options.ar_components_exclude as string[] | undefined,
 		});
-		const components = elements
-			.filter((entry) => entry.type === 'component')
-			.map((entry) => ({
-				...entry,
-				regenerate_options: regenerateOptionsFor(String(entry.model)),
-			}));
-		return { result: components, msg: 'OK. Request done', errors: [] };
+		// Keep the section + grouper (section_group/section_tab) rows PHP emits, in
+		// ontology order: the client's render_components_list switches on model to
+		// build the named .ul_regular group headers. Dropping them (component-only)
+		// left every row ungrouped. regenerate_options is a COMPONENT concern, so it
+		// is stamped only on components (PHP omits the key on groupers/section).
+		const rows = elements.map((entry) =>
+			entry.type === 'component'
+				? { ...entry, regenerate_options: regenerateOptionsFor(String(entry.model)) }
+				: entry,
+		);
+		return { result: rows, msg: 'OK. Request done', errors: [] };
 	} catch (error) {
 		return { result: false, msg: (error as Error).message, errors: [(error as Error).message] };
 	}
