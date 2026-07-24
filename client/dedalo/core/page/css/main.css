@@ -5285,7 +5285,6 @@ dd-modal .wrapper_component > .content_data.vertical,
 }
 .section_record.edit .wrapper_component.edit.active > .label {
   color: var(--color_orange_dedalo);
-  font-weight: 600;
 }
 .section_record.edit .wrapper_component.edit.active > .content_data {
   color: var(--field_value_fg);
