@@ -3603,6 +3603,25 @@ export const ui = {
 				}
 			}
 
+		// containment escape.
+		// An ancestor with CSS containment (contain: layout|paint|content|strict)
+		// becomes the containing block for a position:fixed descendant, so the
+		// fullscreen node is trapped inside that ancestor instead of covering the
+		// viewport. The inspector is the live case: it wraps component_filter in
+		// contain:content cards (see inspector.less), which pinned the "fullscreen"
+		// filter to the PROJECT card. Neutralise containment on every contained
+		// ancestor while fullscreen, restoring the exact inline value on exit.
+			const uncontained = []
+			let ancestor = node.parentElement
+			while (ancestor && ancestor!==document.body) {
+				const contain_value = getComputedStyle(ancestor).contain
+				if (contain_value && contain_value!=='none') {
+					uncontained.push([ancestor, ancestor.style.contain])
+					ancestor.style.setProperty('contain', 'none', 'important')
+				}
+				ancestor = ancestor.parentElement
+			}
+
 		// apply style fullscreen
 		node.classList.toggle('fullscreen')
 
@@ -3624,6 +3643,13 @@ export const ui = {
 			}
 			document.removeEventListener('keyup', exit_fullscreen, { passive : true })
 			node.classList.remove('fullscreen')
+			// restore ancestor containment neutralised on enter
+			for (const [el, prev] of uncontained) {
+				el.style.removeProperty('contain')
+				if (prev) {
+					el.style.contain = prev
+				}
+			}
 			if (menu_wrapper) {
 				menu_wrapper.classList.remove('hide')
 			}
