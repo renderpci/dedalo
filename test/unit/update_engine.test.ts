@@ -109,6 +109,8 @@ describe('engine step semantics (fixture catalog, injected writer)', () => {
 			writeVersionRow: async (version) => {
 				written.push(version);
 			},
+			// Stub: the real reconciler sweeps live matrix rows (hermeticity).
+			reconcileMirrors: async () => ({ repaired: 0, shrinksSkipped: 0 }),
 		});
 		return outcome.then((result) => ({ ...result, written }));
 	}
@@ -120,6 +122,7 @@ describe('engine step semantics (fixture catalog, injected writer)', () => {
 		expect(out.msg).toEqual([
 			'Updated SQL_update 1',
 			'Updated script: fixture.ok',
+			'Observer mirrors reconciled: 0 repaired, 0 shrink(s) held (see update log)',
 			'Updated Dédalo data version: 7.0.1',
 			'Updated version successfully',
 		]);
@@ -153,9 +156,9 @@ describe('engine step semantics (fixture catalog, injected writer)', () => {
 
 	test('checkbox values must be strictly true (PHP !== true skips)', async () => {
 		const out = await run({ SQL_update_1: 'true', run_scripts_2: 1 });
-		// nothing executed → straight to the success tail
+		// nothing executed → straight to the success tail (reconcile line first)
 		expect(out.result).toBe(true);
-		expect(out.msg[0]).toBe('Updated Dédalo data version: 7.0.1');
+		expect(out.msg[1]).toBe('Updated Dédalo data version: 7.0.1');
 	});
 
 	test('components_update steps throw LOUDLY (ledgered unsupported path)', async () => {

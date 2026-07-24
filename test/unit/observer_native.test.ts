@@ -40,11 +40,21 @@ import { createSectionRecord } from '../../src/core/section/record/create_record
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import {
+	type TermSeedHandle,
+	seedTermChainIfAbsent,
+	sweepTermChain,
+} from '../helpers/observer_term_seed.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 
 registerSessionCleanup();
 
 const TERM = { section_tipo: 'on1', section_id: 58 };
+
+// Environmental seed (suite DB only): the anchor term, its 8→2→1 ancestor
+// chain (the RELATION_SEARCH golden derives from that walk) and the on1
+// section node — shared with the reconciler gate.
+let termSeed: TermSeedHandle = { seededChain: false, seededSectionNode: false };
 
 /**
  * relation_search['rsc387'] after an rsc387 save targeting on1/58 — the
@@ -139,6 +149,7 @@ async function relationSearchOf(id: number, key: string): Promise<unknown> {
 }
 
 beforeAll(async () => {
+	termSeed = await seedTermChainIfAbsent();
 	original = await termBag();
 	originalCaptured = true;
 	twinA = await createSectionRecord('rsc205', -1);
@@ -188,6 +199,8 @@ afterAll(async () => {
 			[id],
 		);
 	}
+	// Sweep the environmental seed (suite DB only).
+	await sweepTermChain(termSeed);
 });
 
 describe('observer propagation TS-native (rsc387 → hierarchy93)', () => {
@@ -229,6 +242,68 @@ describe('observer propagation TS-native (rsc387 → hierarchy93)', () => {
 	test('deleting the twins restores the term to its original bag', () => {
 		expect(afterCleanup).toEqual(original);
 	});
+});
+
+// Bypass doors (review 2026-07-24): deletePortalLocator and duplicate write
+// relation slots WITHOUT the saveComponentData chokepoint, so each fires the
+// cascade itself — a refactor that drops/reorders either call must fail HERE.
+describe('bypass doors fire the observer cascade', () => {
+	test('duplicate ADDS the copy to the mirror; delete_locator REMOVES its twin', async () => {
+		const base = await termBag();
+		let twin = 0;
+		let copy = 0;
+		try {
+			twin = await createSectionRecord('rsc205', -1);
+			await dispatchAsRoot(saveRqo(twin));
+			expect((await termBag()).length).toBe(base.length + 1);
+
+			// duplicate door: the copy is a NEW referencer → mirror gains it.
+			const { duplicateSectionRecord } = await import(
+				'../../src/core/section/record/duplicate_record.ts'
+			);
+			copy = await duplicateSectionRecord('rsc205', twin, -1);
+			expect((await termBag()).length).toBe(base.length + 2);
+
+			// delete_locator door: removing the twin's locator recomputes the
+			// REMOVED target's mirror (post relation-index update — the copy
+			// must survive, the twin must not).
+			const { deletePortalLocator } = await import('../../src/core/relations/save.ts');
+			await deletePortalLocator(
+				{ isGlobalAdmin: true, userId: -1 },
+				{ tipo: 'rsc387', section_tipo: 'rsc205', section_id: twin },
+				{
+					locator: {
+						type: 'dd96',
+						section_id: String(TERM.section_id),
+						section_tipo: TERM.section_tipo,
+						from_component_tipo: 'rsc387',
+					},
+					ar_properties: ['section_tipo', 'section_id', 'type', 'from_component_tipo'],
+				},
+			);
+			const afterRemoval = await termBag();
+			expect(afterRemoval.length).toBe(base.length + 1);
+			expect(
+				afterRemoval.some(
+					(entry) => (entry as { section_id?: string }).section_id === String(twin),
+				),
+			).toBe(false);
+		} finally {
+			// Delete pipeline restores the mirror; raw sweep is the crash belt.
+			for (const id of [copy, twin]) {
+				if (id === 0) continue;
+				await deleteSectionRecord('rsc205', id, -1).catch(() => {});
+				await sql.unsafe(`DELETE FROM matrix WHERE section_tipo = 'rsc205' AND section_id = $1`, [
+					id,
+				]);
+				await sql.unsafe(
+					`DELETE FROM matrix_time_machine WHERE section_tipo = 'rsc205' AND section_id = $1`,
+					[id],
+				);
+			}
+		}
+		expect(await termBag()).toEqual(base);
+	}, 30000);
 });
 
 // DEFAULT branch (server.filter === false): saving rsc36 (tag text) triggers
