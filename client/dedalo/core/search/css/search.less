@@ -475,19 +475,22 @@
 							}
 						}
 
+						// read-only users get no delete column (view adds .no_delete):
+						// drop its track so the row stays aligned (3 cells, 3 tracks)
+						// instead of a dangling empty track.
+						&.no_delete .section_record {
+							grid-template-columns: 1.5rem 1.1rem 1fr;
+						}
+
 						// columns
 						.column {
 							outline: none;
-
-							&.column_delete {
-
-							}
 
 							.button.icon {
 								background-color: @color_grey_10;
 								margin: 0px;
 								margin-top: 0.27rem;
-								margin-right: 025rem;
+								margin-right: 0.25rem;
 								height: 1rem;
 								width: 1rem;
 							}
@@ -499,23 +502,24 @@
 								background-color: @color_grey_10;
 							}
 						}
-						.column_edit {
-
-							.button_edit {
-
-							}
-						}
 						.column_section {
-							pointer-events: none;
+							min-width: 0;      // let the 1fr grid track shrink so long names can ellipsize
+							overflow: hidden;
+							cursor: pointer;   // clicking the name applies the preset (see the view)
 
-							.wrapper_component > span {
-								padding: 0.25rem;
+							// .column_section is a flex container; its .wrapper_component
+							// flex item defaults to min-width:auto and won't shrink below
+							// its content — pin it to 0 so the span below can ellipsize.
+							.wrapper_component {
+								min-width: 0;
+								overflow: hidden;
 							}
-						}
-						.column_delete {
-
-							.button_delete {
-
+							.wrapper_component > span {
+								display: block;
+								padding: 0.25rem;
+								overflow: hidden;
+								text-overflow: ellipsis;
+								white-space: nowrap;
 							}
 						}
 					}
