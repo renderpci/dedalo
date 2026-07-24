@@ -539,7 +539,7 @@ template {
   --color_blue: #3883fa;
   --color_blue_2: #3070d8;
   --color_blue_3: #0875e3;
-  --color_input_focus: #3b87fd;
+  --color_input_focus: var(--color_orange_dedalo);
   --color_purple_light: #eae0f4;
   --color_purple: #a347a3;
   --color_grey_blue: #bbbbbb;
@@ -565,7 +565,7 @@ template {
   --border_strong: var(--color_grey_11);
   --shadow_default: rgba(0, 0, 0, 0.1);
   --focus_ring: var(--color_input_focus);
-  --focus_ring_weak: rgba(59, 135, 253, 0.4);
+  --focus_ring_weak: rgba(247, 138, 28, 0.4);
   --field_label_fg: #5d6570;
   --field_value_fg: #1f2328;
   --field_rule: rgba(27, 31, 36, 0.08);
@@ -787,7 +787,7 @@ template {
   --color_blue: #5a9aff;
   --color_blue_2: #4a8ae8;
   --color_blue_3: #3a7ad8;
-  --color_input_focus: #4a9eff;
+  --color_input_focus: var(--color_orange_dedalo);
   --color_purple_light: #2a2040;
   --color_purple: #c060c0;
   --color_grey_blue: #4a5161;
@@ -813,7 +813,7 @@ template {
   --border_strong: #4a5059;
   --shadow_default: rgba(0, 0, 0, 0.55);
   --focus_ring: var(--color_input_focus);
-  --focus_ring_weak: rgba(74, 158, 255, 0.45);
+  --focus_ring_weak: rgba(255, 165, 74, 0.45);
   --field_label_fg: #9aa3ae;
   --field_value_fg: #e6edf3;
   --field_rule: rgba(148, 163, 184, 0.14);
