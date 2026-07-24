@@ -22,6 +22,7 @@ import { config } from '../../src/config/config.ts';
 import { resolveIdentify } from '../../src/core/media/engine/imagemagick.ts';
 import { runBinary } from '../../src/core/media/engine/spawn.ts';
 import {
+	addTimeToDateItem,
 	ddDateToSeconds,
 	getMediaFileDate,
 	parseIdentifyDateModify,
@@ -262,6 +263,56 @@ describe('ddDateToSeconds / withDedaloTime (component_date::save add_time twin)'
 			day: 16,
 			time: 2011 * 372 * 86400 + 7 * 31 * 86400 + 15 * 86400,
 		});
+	});
+});
+
+describe('addTimeToDateItem (component_date::save add_time — the interactive-save hook)', () => {
+	const t = (d: {
+		year?: number;
+		month?: number;
+		day?: number;
+		hour?: number;
+		minute?: number;
+		second?: number;
+	}) => ddDateToSeconds(d);
+
+	test('start-only item: stamps start.time in place (the sort/search key)', () => {
+		const item = { id: 1, start: { day: 1, year: 2025, month: 10 } };
+		addTimeToDateItem(item);
+		expect((item.start as { time?: number }).time).toBe(t({ year: 2025, month: 10, day: 1 }));
+	});
+
+	test('range item: stamps both start.time and end.time', () => {
+		const item = { id: 1, start: { year: 2000 }, end: { year: 2010 } };
+		addTimeToDateItem(item);
+		expect((item.start as { time?: number }).time).toBe(t({ year: 2000 }));
+		expect((item.end as { time?: number }).time).toBe(t({ year: 2010 }));
+	});
+
+	test('period item: stamps period.time', () => {
+		const item = { id: 1, period: { year: 5 } };
+		addTimeToDateItem(item);
+		expect((item.period as { time?: number }).time).toBe(t({ year: 5 }));
+	});
+
+	test('bare time item (hour at root): stamps the item itself', () => {
+		const item = { id: 1, hour: 10, minute: 30, second: 0 };
+		addTimeToDateItem(item);
+		expect((item as { time?: number }).time).toBe(t({ hour: 10, minute: 30 }));
+	});
+
+	test('always OVERRIDES a client-supplied time (never trusted)', () => {
+		const item = { id: 1, start: { year: 2025, month: 10, day: 1, time: 999999 } };
+		addTimeToDateItem(item);
+		expect(item.start.time).toBe(t({ year: 2025, month: 10, day: 1 }));
+	});
+
+	test('unknown/empty shapes are left untouched', () => {
+		const empty = { id: 1 };
+		addTimeToDateItem(empty);
+		expect(empty).toEqual({ id: 1 });
+		addTimeToDateItem(null);
+		addTimeToDateItem('x');
 	});
 });
 

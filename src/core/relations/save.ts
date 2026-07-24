@@ -138,18 +138,22 @@ export async function applySortByColumn(
 	// Per-ddo opt-in: the column must declare `sort_by_column: true`.
 	if ((ddo as { sort_by_column?: unknown }).sort_by_column !== true) return null;
 
-	const rawTargets = Array.isArray(ddo.section_tipo) ? ddo.section_tipo : [ddo.section_tipo];
-	const targets = rawTargets
-		.map((target) => (target === 'self' ? sectionTipo : target))
-		.filter((target): target is string => typeof target === 'string' && target !== '');
-	if (targets.length === 0) return null;
-	const firstTarget = targets[0] as string;
+	// The ranking scope is the TARGET section(s) — where the linked records
+	// live — read from the locators, NOT the caller `sectionTipo`. A portal
+	// column's `section_tipo: 'self'` means its target; resolving 'self' to the
+	// caller searched the wrong table and ranked nothing.
+	const { rankLocatorsByColumns, locatorTargetSections, buildOrderEntries } = await import(
+		'./order_locators.ts'
+	);
+	const targets = locatorTargetSections(items);
+	const firstTarget = targets[0];
+	if (firstTarget === undefined) return null;
 
-	// Shared ranking engine (also drives the read-time `order_by` default).
-	const { rankLocatorsByColumns } = await import('./order_locators.ts');
-	return rankLocatorsByColumns(items, targets, [
-		{ direction, path: [{ section_tipo: firstTarget, component_tipo: columnTipo }] },
-	]);
+	// Resolve the per-MODEL order path (relation columns join to the linked
+	// leaf, not a non-existent `.value` on the locator).
+	const order = await buildOrderEntries([{ componentTipo: columnTipo, direction }], firstTarget);
+	if (order.length === 0) return null;
+	return rankLocatorsByColumns(items, targets, order);
 }
 
 /**

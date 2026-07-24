@@ -8,7 +8,9 @@
  *
  * PHP reference: common::get_buttons_context (class.common.php:4179-4326).
  * Per-button ACL: get_permissions(sectionTipo, buttonTipo) < 2 → skip (:4206);
- * properties.disable === true → skip (:4225); button_import excluded.
+ * properties.disable === true → skip (:4225). No button model is excluded:
+ * PHP's $ar_temp_exclude_models holds only component models (the frozen
+ * fixtures carry button_import DDOs on the wire).
  */
 
 import { sql } from '../db/postgres.ts';
@@ -18,17 +20,26 @@ import { labelByTipo } from '../ontology/labels.ts';
 import { getModelByTipo, getNode } from '../ontology/resolver.ts';
 import { type Principal, getPermissions } from '../security/permissions.ts';
 
-/** One emitted button DDO (PHP dd_object type='button'). */
+/** One emitted button DDO (PHP dd_object type='button' — null keys dropped). */
 export interface ButtonContext {
 	typo: string;
 	type: string;
 	tipo: string;
 	model: string;
+	/** The button node's ontology properties (dd_object drops the key when null). */
+	properties?: unknown;
 	label: string | null;
+	/** Tool contexts (button_import/button_trigger only — PHP set_tools). */
+	tools?: unknown[];
 }
 
-/** Models excluded from the button context (PHP common::$ar_temp_exclude_models subset). */
-const BUTTON_EXCLUDE_MODELS: ReadonlySet<string> = new Set(['button_import']);
+/**
+ * Button models that dispatch tools: their DDO carries a `tools` array — the
+ * user's tools that have a matching properties.tool_config entry, each as a
+ * simple context + enriched tool_config (PHP get_buttons_context :4231-4305;
+ * the client's open_tool consumes tools[0]). v5-compat pair, future button_tool.
+ */
+const TOOL_BUTTON_MODELS: ReadonlySet<string> = new Set(['button_import', 'button_trigger']);
 
 /**
  * Ontology-derived caches for the section-context stamp (run on start + every
@@ -133,7 +144,6 @@ export async function buildSectionButtons(
 	const rows = await sectionButtonRows(sectionTipo);
 	const buttons: ButtonContext[] = [];
 	for (const row of rows) {
-		if (BUTTON_EXCLUDE_MODELS.has(row.model)) continue;
 		// Per-button ACL (PHP :4206): with a principal, the real grant on this
 		// button; without one, the caller cap (already checked >= 2 above).
 		if (principal !== undefined) {
@@ -142,12 +152,54 @@ export async function buildSectionButtons(
 		}
 		const node = await getNode(row.tipo);
 		if ((node?.properties as { disable?: boolean } | null)?.disable === true) continue;
+		// OWN clone of the node's properties — the tools branch writes the
+		// enriched tool_config back into it (see below), and the cache-owned
+		// node must never be mutated.
+		const properties =
+			node?.properties != null ? (structuredClone(node.properties) as Record<string, unknown>) : null;
+
+		// Tool-dispatching buttons (PHP :4231-4305): each user tool with a
+		// matching properties.tool_config.<name> becomes a tool context —
+		// simple context + enriched tool_config (ddo_map 'self' → the section,
+		// model/translatable/label stamped). PHP enriches the SHARED config
+		// object, so the enriched map reaches the wire BOTH on tools[n]
+		// .tool_config and on the button's own properties.tool_config (the
+		// client's open_tool consumes tools[0]; unenriched, tool_common.js
+		// never builds the configured components). The register-record config
+		// override (tool_common::get_tool_configuration) is NOT ported — same
+		// ledger as the element-tools stamp in resolve/structure_context.ts.
+		let tools: unknown[] | null = null;
+		if (TOOL_BUTTON_MODELS.has(row.model)) {
+			tools = [];
+			const { getSuperuserUserTools, getUserTools } = await import('../tools/registry.ts');
+			const { enrichToolConfig } = await import('../tools/section_tool_context.ts');
+			// PHP uses the FULL user tools list (get_user_tools), not the
+			// element-filtered get_tools. No principal (legacy path) → the
+			// superuser list, matching the admin-exact caller-cap proxy above.
+			const userTools =
+				principal !== undefined
+					? await getUserTools(principal.userId, principal.isGlobalAdmin)
+					: await getSuperuserUserTools();
+			const toolConfigBag = (properties?.tool_config ?? {}) as Record<string, unknown>;
+			for (const tool of userTools) {
+				const rawConfig = toolConfigBag[tool.name];
+				if (rawConfig === undefined || rawConfig === null) continue;
+				const enriched = await enrichToolConfig(rawConfig, sectionTipo, sectionTipo);
+				toolConfigBag[tool.name] = structuredClone(enriched);
+				tools.push(enriched !== null ? { ...tool, tool_config: enriched } : { ...tool });
+			}
+		}
+
+		// Wire key order is PHP dd_object declaration order: properties between
+		// model and label, tools last; null-valued keys dropped.
 		buttons.push({
 			typo: 'ddo',
 			type: 'button',
 			tipo: row.tipo,
 			model: row.model,
+			...(properties !== null ? { properties } : {}),
 			label: await labelByTipo(row.tipo),
+			...(tools !== null ? { tools } : {}),
 		});
 	}
 	return buttons;

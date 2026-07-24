@@ -487,7 +487,8 @@ render_inspector.prototype.edit = async function(options) {
 *   1. paginator_container (section_id display, pointer stored for live updates)
 *   2. buttons_container top (search / new / duplicate / delete / target-section /
 *      graph / diffusion / tool shortcuts)
-*   3. tools_container (when >1 inspector tool; single tool goes into buttons_container)
+*   3. tools_container (any NON-print inspector tool, each on its own row; tool_print
+*      always goes into buttons_container instead)
 *   4. selection_info block
 *   5. element_info block (info panel, lazily populated by render_section_info /
 *      render_component_info via event subscriptions in inspector.js)
@@ -733,14 +734,21 @@ const get_content_data = function(self) {
 
 	// tools_container. Section tools buttons
 	// Tools marked show_in_inspector:true in the ontology appear here.
-	// When only one tool is present it is appended directly to buttons_container so
-	// that the layout stays flush with the core action buttons.  When there are two
-	// or more, a dedicated tools_container row is created.
+	// tool_print is special-cased: it ALWAYS renders alongside the core action
+	// buttons (buttons_container), never inside tools_container — so the print
+	// icon sits in the SAME place across every section. In most sections print
+	// is the only inspector tool; in sections that expose extra inspector tools
+	// (e.g. ontology/hierarchy, dd0/section_id 1) it would otherwise slip into
+	// tools_container, moving the icon to a different place than everywhere else.
+	// Every OTHER inspector tool (e.g. tool_ontology) is a separate tool and keeps
+	// its own tools_container row — created whenever at least one non-print tool
+	// is present, so a lone ontology tool still gets its own line.
 		const inspector_tools			= self.caller.context.tools.filter( el => el.show_in_inspector )
 		const inspector_tools_length	= inspector_tools.length
+		const grouped_tools_length		= inspector_tools.filter( el => el.name !== 'tool_print' ).length
 		let tools_container				= null
 		if (inspector_tools_length>0) {
-			if(inspector_tools_length > 1) {
+			if(grouped_tools_length > 0) {
 				tools_container = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'tools_container top',
@@ -749,6 +757,11 @@ const get_content_data = function(self) {
 			}
 			for (let i = 0; i < inspector_tools_length; i++) {
 				const tool_context = inspector_tools[i]
+				// tool_print stays with the core buttons; every other tool goes into
+				// its own tools_container row.
+				const tool_parent = tool_context.name === 'tool_print'
+					? buttons_container
+					: tools_container
 				// load tool CSS lazily (no duplicate injection — load_style is idempotent)
 				const tool_css_url = tool_base_url(tool_context.model) + '/css/' + tool_context.model + '.css' + `?v=${page_globals.dedalo_version}`
 				load_style(tool_css_url)
@@ -763,7 +776,7 @@ const get_content_data = function(self) {
 							// '--button-bg-color' : `var(${button_bg_color})`
 						},
 						title  : tool_context.label,
-						parent : inspector_tools_length > 1 ? tools_container : buttons_container
+						parent : tool_parent
 					})
 					const click_handler = (e) => {
 						e.stopPropagation()

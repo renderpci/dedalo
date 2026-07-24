@@ -74,11 +74,43 @@ export function ddDateToSeconds(date: DdDate): number {
 /**
  * The persisted-shape stamp (PHP component_date::save → add_time →
  * build_dd_date_with_time): recompute 'time' server-side and attach it. The
- * TS write path has no per-model date save hook, so date-writing callers
- * stamp explicitly before saveComponentData.
+ * media-import path stamps explicitly; interactive saves go through
+ * {@link addTimeToDateItem} on the component_date save path.
  */
 export function withDedaloTime(date: DdDate): DdDate {
 	return { ...date, time: ddDateToSeconds(date) };
+}
+
+/**
+ * PHP component_date::add_time (class.component_date.php:634) — (re)compute the
+ * absolute-seconds `time` on each dd_date container of ONE stored date item,
+ * mutating in place, and always overriding any client-supplied value (the
+ * server never trusts the client's `time`). The modes are mutually exclusive by
+ * the top-level key present:
+ *   - `period` → stamp `period.time`;
+ *   - `start`  → stamp `start.time` (+ `end.time` when `end` is present);
+ *   - bare `hour` at root → the item itself is the dd_date.
+ * Unknown/empty shapes are left untouched. This is the sort/range-search key —
+ * without it a stored date can't be ordered or range-filtered.
+ */
+export function addTimeToDateItem(item: unknown): void {
+	if (item === null || typeof item !== 'object') return;
+	const container = item as { period?: DdDate | null; start?: DdDate | null; end?: DdDate | null };
+
+	if (container.period !== undefined && container.period !== null) {
+		container.period.time = ddDateToSeconds(container.period);
+		return;
+	}
+	if (container.start !== undefined && container.start !== null) {
+		container.start.time = ddDateToSeconds(container.start);
+		if (container.end !== undefined && container.end !== null) {
+			container.end.time = ddDateToSeconds(container.end);
+		}
+		return;
+	}
+	if ((item as DdDate).hour !== undefined) {
+		(item as DdDate).time = ddDateToSeconds(item as DdDate);
+	}
 }
 
 /** Build a DdDate from ordered field values, dropping undefined/NaN slots. */
