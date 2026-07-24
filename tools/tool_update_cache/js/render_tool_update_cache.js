@@ -466,14 +466,25 @@ const render_components_list = function(self) {
 
 			default: {
 
+				// ul_regular fallback group
+				// Sections without any section_group/section_tab (e.g. media sections)
+				// would otherwise append rows straight to list_container, skipping the
+				// .ul_regular wrapper that ALL grid/layout CSS is rooted at — leaving
+				// the rows unstyled. Lazily create a default group so every li_line
+				// lives inside a .ul_regular and the CSS contract holds.
+					if (!section_group) {
+						section_group = ui.create_dom_element({
+							element_type	: 'ul',
+							class_name		: 'ul_regular',
+							parent			: list_container
+						})
+					}
+
 				// li_container
 					const li_container	= ui.create_dom_element({
 						element_type	: 'li',
 						class_name		: 'li_line li_container',
-						// Fall back to list_container when no section_group/section_tab
-						// has been encountered yet, so component rows appearing before
-						// any group header are still appended instead of throwing.
-						parent			: section_group || list_container
+						parent			: section_group
 					})
 
 				// component_label

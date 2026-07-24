@@ -601,6 +601,14 @@ const get_buttons = function(self) {
 				if (current_button.properties?.css && current_button.properties?.css.style) {
 					button_node.classList.add(current_button.properties.css.style)
 				}
+				// import/trigger buttons open a tool but carry no registry icon;
+				// give them the target tool's descriptive icon via the unified
+				// ::before / --icon-path path (same as ui.build_button), so every
+				// toolbar button shows an icon and is spinner-capable.
+				if ((current_button.model==='button_import' || current_button.model==='button_trigger') && current_button.tools?.[0]?.icon) {
+					button_node.classList.add('has_icon')
+					button_node.style.setProperty('--icon-path', "url('" + current_button.tools[0].icon + "')")
+				}
 				// click event
 				const click_handler = (e) => {
 					e.stopPropagation()

@@ -1,0 +1,15 @@
+/**
+* redesign
+*
+* Entry point for the "Calm Scholarly" design line (`data-design="redesign"`).
+* Imported LAST from main.less so its token redefinitions and scoped structural
+* rules win over the base tokens, the dark-theme layer, and all component CSS.
+*
+* The whole line is inert unless `<html>` carries `data-design="redesign"`
+* (set by core/page/js/design.js + design-init.js), so classic is unaffected.
+*
+* See core/page/js/design.js for the runtime controller and the design-line
+* rationale; docs/core/ui/themes.md documents the axis.
+*/
+@import './_tokens';
+@import './_structure';

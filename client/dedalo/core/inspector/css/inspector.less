@@ -156,7 +156,7 @@
 		// with the nav controls and page info centred across the inspector.
 		>.paginator_container {
 			contain: content;
-			height: 73px;
+			min-height: 73px;
 			// the paginator is the TOP HALF of the first card: it shares the
 			// card surface with the actions toolbar below (which zeroes its
 			// own top margin/radius) so both read as ONE card.
@@ -206,6 +206,7 @@
 			.nav_buttons {
 				width: 100%;
 				justify-content: center;
+				padding-right: 5.5rem;
 			}
 
 			// section id info in inspector paginator. Reads as a quiet accent
@@ -238,6 +239,9 @@
 		// selection_info
 		>.selection_info {
 			contain: content;
+			display: flex;
+			align-items: center;
+			justify-content: center;
 			color: @color_orange_dedalo;
 			padding: var(--space-3) var(--space-4);
 			font-size: 1rem;
@@ -253,6 +257,11 @@
 				text-overflow: ellipsis;
 				white-space: nowrap;
 				vertical-align: middle;
+			}
+
+			>.button.list {
+				margin-left: 0.5rem;
+				background-color: @color_orange_dedalo;
 			}
 
 			.span {

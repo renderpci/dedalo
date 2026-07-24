@@ -1,0 +1,463 @@
+/**
+* redesign / _structure
+*
+* Structural rules for the "Calm Scholarly" design line that go beyond token
+* values. EVERY selector is nested under `:root[data-design="redesign"]` so the
+* rules are inert for classic and win over base rules by specificity — no
+* `!important` needed except where the base rule itself uses one.
+*
+* Stage 2 — surfaces-over-borders + list / toolbar:
+*   - demoted toolbar (quiet buttons; New is the one accent primary)
+*   - list header as small muted uppercase labels, calm hover, accent selection
+*   - section headers as quiet letterspaced labels (not ink-dark shouting)
+*   - editable fields read as gently sunken on the surface card
+*/
+
+:root[data-design="redesign"] {
+
+	// ---------------------------------------------------------------
+	// Demoted toolbar — the row of section-toolbar buttons stops being a
+	// wall of orange. Everything goes quiet; only "New" keeps the accent,
+	// as the one primary action (mirrors the mockup's single orange button).
+	// ---------------------------------------------------------------
+	button.warning,
+	.button.warning {
+		background-color: var(--bg_surface);
+		border-color: var(--border_strong);
+		color: var(--fg_default);
+		// icon fill via the shared variable (NOT a ::before override) so the
+		// unified spinner still wins the ::before when a tool button is busy.
+		--button-bg-color: var(--fg_muted);
+
+		&:hover {
+			background-color: var(--bg_surface_alt);
+			border-color: var(--color_grey_9);
+		}
+	}
+	button.warning.new,
+	.button.warning.new {
+		background-color: var(--color_orange_dedalo);
+		border-color: var(--color_orange_border);
+		color: #2a1c05; // dark-on-orange: AA in both themes
+		--button-bg-color: #2a1c05; // dark icon on orange (spinner-safe)
+
+		&:hover { background-color: var(--color_orange_hover_bg); }
+	}
+
+	// ---------------------------------------------------------------
+	// List — surfaces over borders: header is metadata, rows carry the data.
+	// ---------------------------------------------------------------
+	.header_wrapper_list .head_column {
+		color: var(--fg_muted);
+		font-weight: 500;
+
+		> .name {
+			font-size: 0.68rem;
+			text-transform: uppercase;
+			letter-spacing: 0.06em;
+		}
+	}
+
+	// calm hover + accent-soft selection with an accent left-edge
+	.content_data.list .section_record {
+		transition: background-color var(--transition-fast, 120ms ease);
+
+		&:hover { background-color: var(--bg_surface_alt); }
+
+		&.selected,
+		&.active {
+			background-color: var(--accent-soft);
+			box-shadow: inset 3px 0 0 var(--color_orange_dedalo);
+		}
+	}
+
+	// ---------------------------------------------------------------
+	// Section headers (IDENTIFICATION, INTERVIEW…) — label without shouting:
+	// muted, letterspaced, a touch smaller. They stop competing with the data.
+	// ---------------------------------------------------------------
+	.wrapper_grouper.section_group > .label {
+		color: var(--fg_muted);
+		font-size: 0.7rem;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+	}
+
+	// give the section cards a little more breathing room between them
+	.wrapper_grouper.section_group {
+		margin-bottom: var(--space-5, 1rem);
+	}
+
+	// ---------------------------------------------------------------
+	// Editable fields read as gently sunken on the surface card, so an
+	// editable value is visibly distinct from a static one (surfaces, not
+	// borders, signal affordance).
+	// ---------------------------------------------------------------
+	.wrapper_component .input_value {
+		background-color: var(--bg_input);
+		border-radius: var(--radius-sm);
+		transition: background-color var(--transition-fast, 120ms ease), box-shadow var(--transition-fast, 120ms ease);
+
+		&:focus,
+		&:focus-within {
+			background-color: var(--bg_surface);
+			box-shadow: inset 0 0 0 1px var(--focus_ring);
+		}
+	}
+
+	// ---------------------------------------------------------------
+	// Search panel — the loudest classic surface (green rail + green Apply +
+	// orange Show all). Filters/buttons go quiet; Apply is the one accent.
+	//
+	// NOTE the base rules here are 6 classes deep, so we replicate enough of
+	// the container chain to out-specify them (a plain `[data-design]` prefix
+	// is not enough). Kept in one nested block for clarity.
+	// ---------------------------------------------------------------
+	.search_global_container .search_container_selection .search_group_container .search_buttons_container {
+		.button {
+			background-color: var(--bg_surface);
+			color: var(--fg_default);
+			border-color: var(--border_strong);
+
+			&:hover { background-color: var(--bg_surface_alt); }
+		}
+		.button.reload {
+			background-color: var(--fg_muted); // mask glyph = element bg through mask
+			border-color: transparent;
+
+			&:hover { background-color: var(--fg_default); }
+		}
+		.button.submit {
+			background-color: var(--color_orange_dedalo);
+			border-color: var(--color_orange_border);
+			color: #2a1c05; // dark-on-orange: AA in both themes
+
+			&:hover { background-color: var(--color_orange_hover_bg); }
+		}
+	}
+	// AND / OR operator rails: neutral, not saturated green/blue
+	.search_global_container .search_container_selection .operator {
+		&.and { background-color: var(--color_grey_10); color: var(--fg_inverse); }
+		&.or  { background-color: var(--color_grey_9);  color: var(--fg_inverse); }
+	}
+
+	// ---------------------------------------------------------------
+	// Stage 3 — record / ficha
+	// ---------------------------------------------------------------
+
+	// Radios: mockup style — an accent RING with an accent inner dot (a gap
+	// between them), not a solid disc. Grey ring at rest; on selection the ring
+	// turns Dédalo orange and the centre dot scales in.
+	input[type='radio'] {
+		-webkit-appearance: none;
+		appearance: none;
+		width: 1.05em;
+		height: 1.05em;
+		margin: 0 0.3em 0 0;
+		background-color: transparent; // gap shows the surface it sits on
+		border: 1.5px solid var(--checkbox_border);
+		border-radius: 50%;
+		cursor: pointer;
+		vertical-align: text-bottom;
+		display: inline-grid;
+		place-content: center;
+		transition: border-color var(--transition-fast, 120ms ease), box-shadow var(--transition-fast, 120ms ease);
+
+		&::before {
+			content: '';
+			width: 0.5em;
+			height: 0.5em;
+			border-radius: 50%;
+			background-color: var(--color_orange_dedalo);
+			transform: scale(0);
+			transition: transform var(--transition-fast, 120ms ease);
+		}
+
+		&:hover { border-color: var(--color_orange_dedalo); }
+
+		&:checked {
+			border-color: var(--color_orange_dedalo);
+
+			&::before { transform: scale(1); }
+		}
+
+		&:focus-visible {
+			outline: none;
+			box-shadow: var(--shadow-focus);
+		}
+
+		&:disabled { opacity: 0.5; cursor: default; }
+	}
+
+	// Native checkboxes (inspector project tree, image-rights, etc.) follow the
+	// accent too. Custom-drawn checkboxes already track --checkbox_checked_bg.
+	input[type='checkbox'] {
+		accent-color: var(--color_orange_dedalo);
+	}
+
+	// Label / value hierarchy: the classic field label is a very thin weight
+	// 200 that reads as low-contrast noise. Firm it up (small, medium, muted)
+	// so labels are legible-but-quiet and the ink-weight VALUE clearly leads.
+	.wrapper_component > .label,
+	.wrapper_component > .content_data > .label {
+		color: var(--fg_muted);
+		font-weight: 500;
+	}
+
+	// ---------------------------------------------------------------
+	// Stage 4 — inspector as a stack of quiet cards
+	// ---------------------------------------------------------------
+	.wrapper_inspector {
+
+		// section identity title ("Oral History") carries the scholarly serif
+		// flourish, in the legible deepened accent — the record's name, set
+		// like a catalogue entry rather than a UI chip.
+		.selection_info_label {
+			font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
+			color: var(--accent-text);
+			font-size: 1rem;
+			letter-spacing: 0.01em;
+		}
+
+		// every card header (Information, Project, Relations, Últimos cambios,
+		// Activity) reads as the same quiet letterspaced label — a consistent
+		// stack, not a jumble of weights.
+		[class*="_head"] {
+			color: var(--fg_muted);
+			font-size: 0.66rem;
+			font-weight: 600;
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+		}
+
+		// kv tables: keys muted, values ink; numerals align in a column.
+		.element_info {
+			.key { color: var(--fg_muted); }
+			.value {
+				color: var(--fg_default);
+				font-variant-numeric: tabular-nums;
+			}
+		}
+
+		// clean separation between cards without hard rules
+		.element_info_wrap,
+		.project_wrap,
+		.relation_list_container,
+		.time_machine_list,
+		.component_history,
+		.activity_info {
+			margin-bottom: var(--space-4, 0.75rem);
+		}
+	}
+
+	// ---------------------------------------------------------------
+	// Stage 5 — menu bar. The dark band becomes a light surface with a bottom
+	// hairline; text goes dark; the active top item gets an orange underline
+	// instead of an orange fill. Background/text use theme tokens, so in DARK
+	// theme the menu stays a dark surface automatically. (The white toolbar
+	// icons are flipped to dark in a LIGHT-THEME-ONLY block below.)
+	// ---------------------------------------------------------------
+	.menu {
+		background-color: var(--bg_surface);
+		box-shadow: inset 0 -1px 0 var(--border_default); // quiet bottom hairline
+
+		> .content_data {
+			color: var(--fg_default);
+
+			// nav links → ink; the dropdown panels already theme via --menu_dropdown_*
+			.menu_hierarchy a {
+				color: var(--fg_default);
+			}
+
+			// active top-level item: orange underline, not an orange slab
+			.menu_hierarchy .menu_li_active > a {
+				background: transparent !important;
+				color: var(--fg_default) !important;
+				box-shadow: inset 0 -2px 0 var(--color_orange_dedalo);
+			}
+		}
+	}
+
+	// ---------------------------------------------------------------
+	// Stage 6 — modals. The header is already neutral via the token layer
+	// (no solid orange bar). Add the mockup's restrained accent TOP-EDGE: a
+	// thin accent line across the top of the modal, so identity reads without
+	// a shouting header. Destructive-tool modals swap it to desaturated danger.
+	// ---------------------------------------------------------------
+	dd-modal .header {
+		border-top: 2px solid var(--color_orange_dedalo);
+	}
+	// destructive tools (delete/remove/propagate…) signal with a danger edge
+	dd-modal.danger .header,
+	dd-modal.tool_propagate_component_data .header,
+	dd-modal.remove .header {
+		border-top-color: var(--color_danger);
+	}
+
+	// ---------------------------------------------------------------
+	// Tool modals — the tool-identity colour stops being a full header BAR
+	// (and, below, a wall of coloured action buttons). The header goes neutral
+	// like every other modal; the colour survives only as the accent TOP-EDGE.
+	// Destructive tools keep a danger edge. The `!important` beats each tool's
+	// own lazily-loaded `.tool_header.<name>` colour rule.
+	// ---------------------------------------------------------------
+	.tool_header {
+		background-color: var(--bg_surface) !important;
+		color: var(--fg_default);
+		border-top: 2px solid var(--color_orange_dedalo);
+		box-shadow: inset 0 -1px 0 var(--border_default); // hairline under header
+
+		.tool_name_container {
+			> .label { color: var(--fg_default); }
+			// the white-mask tool icon in the header → ink
+			> .label > .button { background-color: var(--fg_muted) !important; }
+			> .description { color: var(--fg_muted); }
+		}
+		// window buttons (close / minimize) → ink
+		> .button.close,
+		> .button.minimize,
+		> .button.mini { background-color: var(--fg_muted) !important; }
+	}
+	// destructive tools: a danger top-edge, not a red slab
+	.tool_header.tool_propagate_component_data,
+	.tool_header.tool_hierarchy,
+	.tool_header.tool_user_admin,
+	.tool_header.tool_media_versions {
+		border-top-color: var(--color_danger);
+	}
+
+	// Tool header toolbar buttons → quiet.
+	.tool_header > .tool_buttons_container > .button {
+		background-color: var(--bg_surface) !important;
+		color: var(--fg_default) !important;
+		border: 1px solid var(--border_strong);
+	}
+
+	// Tool BODY action buttons stop being a wall of the raw tool colour. They
+	// follow the normal convention: one primary (Replace), the rest quiet, and
+	// the destructive one (Delete) a calm danger — `!important` beats the tool's
+	// own high-specificity colour rule.
+	.wrapper_tool .buttons_container > button,
+	.wrapper_tool .buttons_container > .button {
+		background-color: var(--bg_surface_alt) !important;
+		color: var(--fg_default) !important;
+		border: 1px solid var(--border_strong);
+		--button-bg-color: var(--fg_muted); // icon → muted ink
+
+		&.button_replace {
+			background-color: var(--color_orange_dedalo) !important;
+			color: #2a1c05 !important;
+			border-color: var(--color_orange_border);
+			--button-bg-color: #2a1c05;
+		}
+		&.button_delete,
+		&.delete {
+			background-color: var(--color_danger) !important;
+			color: var(--fg_inverse) !important;
+			border-color: var(--color_danger);
+			--button-bg-color: var(--fg_inverse);
+		}
+	}
+
+	// The tool's selection search box loses its orange chrome → quiet field.
+	.wrapper_tool .search_selection,
+	.wrapper_tool .selection_search,
+	.wrapper_tool .tool_selection_search {
+		background-color: var(--bg_input) !important;
+		border: 1px solid var(--border_strong) !important;
+	}
+
+	// ---------------------------------------------------------------
+	// Thesaurus / ontology tree — the indexation count chips (TCH/U/LV/M…) stop
+	// being a wall of orange pills so the term NAMES lead the researcher's scan.
+	// They become quiet outline chips (orange only on hover). Disclosure arrows
+	// go muted; orange marks only the open branch. Scoped to `.elements_container`
+	// (not just the top level) so NESTED child terms are covered too. The
+	// coloured ontology chips (CSS/RQO/Properties) use `.button_show_component`,
+	// a different class, so they keep their semantic colours.
+	// ---------------------------------------------------------------
+	.elements_container {
+		.button_show_indexations,
+		.default {
+			background-color: transparent !important;
+			border: 1px solid var(--border_strong) !important;
+			color: var(--fg_muted) !important;
+			opacity: 1 !important;
+
+			&:hover {
+				border-color: var(--color_orange_dedalo) !important;
+				color: var(--color_orange_dedalo) !important;
+			}
+		}
+
+		.link_children {
+			border-left-color: var(--color_grey_9) !important;
+
+			&:hover { border-left-color: var(--color_orange_dedalo) !important; }
+			&.open {
+				border-left-color: transparent !important;
+				border-top-color: var(--color_orange_dedalo) !important;
+			}
+		}
+	}
+
+	// ---------------------------------------------------------------
+	// Indexation-results panel (the term drill-down) — calm the deep list:
+	// the orange indexation-id tags become quiet outline badges, and the
+	// coloured section-caption bar ("Oral History"…) becomes a quiet tinted
+	// band with muted text instead of a saturated slab.
+	// ---------------------------------------------------------------
+	.indexation .tag_id,
+	.column.indexation .tag_id {
+		background-color: transparent !important;
+		border: 1px solid var(--border_strong) !important;
+		color: var(--fg_muted) !important;
+	}
+	.column.caption.section {
+		background-color: var(--bg_surface_alt) !important;
+
+		// the coloured inner section-name bar → quiet muted band
+		* {
+			background-color: transparent !important;
+			color: var(--fg_muted) !important;
+		}
+	}
+
+	// The indexation-type filter bar (`.top_container`) was a jarring pure-white
+	// band on the warm ground. Blend it into the canvas so the filter checkboxes
+	// float, not sit in a bright slab.
+	.indexations_container .top_container {
+		background-color: transparent !important;
+		box-shadow: none !important;
+	}
+
+	// ---------------------------------------------------------------
+	// Ontology area — the saturated green "typology" grouper bar (ontology
+	// identity) becomes a quiet band, with the green kept as a subtle left-edge
+	// marker so the area still reads as ontology. Scoped to `.area_ontology`
+	// so the thesaurus typology headers are untouched.
+	// ---------------------------------------------------------------
+	.area_ontology .typology_name {
+		background-color: var(--bg_surface_alt) !important;
+		color: var(--fg_muted) !important;
+		box-shadow: inset 3px 0 0 var(--color_green_ontology) !important;
+	}
+}
+
+// Light menu bar — dark toolbar icons. ONLY in light theme: the power/toggle
+// glyphs are white PNG/SVG built for the dark band, so on the light surface
+// they must invert to dark. In dark theme the menu is a dark surface and the
+// base white icons are correct, so this block is scoped away from it.
+:root[data-design="redesign"]:not([data-theme="dark"]) {
+	.menu > .content_data {
+		> .quit,
+		> .menu_mobile_icon,
+		> .theme_toggle,
+		> .design_toggle,
+		> .ai_assistant_button {
+			filter: brightness(0);
+			opacity: 0.6;
+
+			&:hover { opacity: 1; }
+		}
+	}
+}

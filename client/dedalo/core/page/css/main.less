@@ -114,3 +114,8 @@
 	@import '../../widgets/dd/user_activity/css/user_activity';
 	@import '../../widgets/dmm/get_archive_states/css/get_archive_states';
 	@import '../../widgets/mdcat/sum_dates/css/sum_dates';
+
+// redesign line — MUST stay last so `[data-design="redesign"]` token
+// redefinitions + scoped structural rules win over base, dark theme and every
+// component/widget above. Inert unless <html data-design="redesign"> is set.
+	@import './redesign/redesign';

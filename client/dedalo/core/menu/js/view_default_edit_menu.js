@@ -49,6 +49,7 @@
 	import * as menu_mobile from './render_menu_mobile.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {toggle_theme} from '../../page/js/theme.js'
+	import {toggle_design, get_design} from '../../page/js/design.js'
 
 /**
 * SYNC_STANDALONE_POSITION
@@ -501,6 +502,34 @@ const get_content_data_edit = function(self) {
 		theme_toggle.setAttribute('role', 'button')
 		theme_toggle.addEventListener('click', () => { toggle_theme() })
 		theme_toggle.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') toggle_theme() })
+
+	// design-line toggle (dev / opt-in)
+	// Classic is the default for everyone; this switch to the "redesign" line is
+	// hidden until a developer opts in — either once via the URL flag
+	// `?design_preview=1` (persisted) or because the redesign line is already
+	// active. It never appears for ordinary users, so it cannot surprise them.
+		const design_preview_on = (() => {
+			try {
+				if (new URLSearchParams(window.location.search).has('design_preview')) {
+					localStorage.setItem('dedalo_design_preview', '1')
+				}
+				return localStorage.getItem('dedalo_design_preview') === '1' || get_design() === 'redesign'
+			} catch(_) {
+				return false
+			}
+		})()
+		if (design_preview_on) {
+			const design_toggle = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'design_toggle top_item',
+				title			: get_label.design_toggle || 'Switch design line (classic / redesign)',
+				parent			: fragment
+			})
+			design_toggle.tabIndex = 0
+			design_toggle.setAttribute('role', 'button')
+			design_toggle.addEventListener('click', () => { toggle_design() })
+			design_toggle.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') toggle_design() })
+		}
 
 	// ai_assistant button
 		const ai_assistant_button = ui.create_dom_element({

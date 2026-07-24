@@ -1047,7 +1047,12 @@ const view_modal = async function(options) {
 	// load tool CSS
 	// Pre-load the stylesheet so the first paint after build() has styles applied.
 	// load_style is idempotent; duplicate calls for the same URL are no-ops.
-		const tool_css_url = tool_context.css?.url
+	// (!) Build the versioned URL exactly as build() does (line ~398) so the two
+	// loads dedup to a single request — the server css.url is unversioned, and
+	// load_style keys on the exact string, so a bare url would fetch the file twice.
+		const tool_css_url = tool_context.model
+			? tool_base_url(tool_context.model) + '/css/' + tool_context.model + '.css' + `?v=${page_globals.dedalo_version}`
+			: tool_context.css?.url
 		if(tool_css_url) {
 			// Await to prevent a first paint of the tool before its stylesheet
 			// is applied (build() awaits its own load_style the same way)
