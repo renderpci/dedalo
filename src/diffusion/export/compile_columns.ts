@@ -19,9 +19,9 @@
  *   the ONE additive plan-type extension of P6): the ar_ddo_to_export ordinal
  *   (column identity = user DOM order — a skipped/invalid ddo still consumes
  *   its ordinal, exactly like the legacy `index` loop), the VERBATIM ddo path
- *   (the protocol col line's `path` payload), and the effective
- *   value_with_parents flag (request global || per-ddo; inert in TS — the
- *   legacy path never implemented it — carried for the ledgered PHP feature).
+ *   (the protocol col line's `path` payload), and the per-ddo
+ *   value_with_parents flag (the column's parents checkbox — WC-049: PER-DDO
+ *   ONLY, the PHP request-global flag is deliberately not honored).
  *
  * INVALID steps are kept, not dropped: a step without component_tipo compiles
  * with tipo '' and the walk/projection reproduce the legacy per-branch skip
@@ -46,11 +46,6 @@ export interface ExportDdoInput {
 	[extra: string]: unknown;
 }
 
-export interface CompileExportOptions {
-	/** The request-global value_with_parents checkbox. */
-	valueWithParents?: boolean;
-}
-
 /**
  * Compile one export request's column set into a PublicationPlan (one
  * SectionPlan for the target section, one FieldPlan per export ddo).
@@ -58,7 +53,6 @@ export interface CompileExportOptions {
 export async function compileExportPlan(
 	arDdoToExport: ExportDdoInput[],
 	targetSectionTipo: string,
-	options: CompileExportOptions = {},
 ): Promise<PublicationPlan> {
 	const fields: FieldPlan[] = [];
 
@@ -105,8 +99,7 @@ export async function compileExportPlan(
 				path: path as Record<string, unknown>[],
 			},
 		};
-		const effectiveParents = options.valueWithParents === true || ddo?.value_with_parents === true;
-		if (effectiveParents && field.exportColumn !== undefined) {
+		if (ddo?.value_with_parents === true && field.exportColumn !== undefined) {
 			field.exportColumn.valueWithParents = true;
 		}
 		fields.push(field);

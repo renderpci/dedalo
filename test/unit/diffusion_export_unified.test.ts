@@ -249,8 +249,13 @@ describe('P6 export — unified engine protocol + stream/buffered duality', () =
 		60000,
 	);
 
+	// WC-049: value_with_parents is PER-DDO only and grid_value only — the
+	// legacy request-global option is ignored, and the value format never grows
+	// parents columns. Emission content is pinned by
+	// tool_export_parents_native.test.ts (test3 playground); here the flag only
+	// has to keep the protocol invariants intact in both formats.
 	testIfData(
-		'value_with_parents on (global + per-ddo)',
+		'value_with_parents per-ddo: protocol invariants hold (value + grid_value)',
 		async () => {
 			await assertExportInvariants(
 				baseOptions(
@@ -258,7 +263,15 @@ describe('P6 export — unified engine protocol + stream/buffered duality', () =
 					'value',
 					[ddo([CECA]), ddo([TOPONIMO], { value_with_parents: true })],
 					['1', '75'],
-					{ value_with_parents: true },
+					{ value_with_parents: true }, // ignored (WC-049)
+				),
+			);
+			await assertExportInvariants(
+				baseOptions(
+					'numisdata6',
+					'grid_value',
+					[ddo([CECA]), ddo([TOPONIMO], { value_with_parents: true })],
+					['1', '75'],
 				),
 			);
 		},

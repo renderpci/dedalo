@@ -97,9 +97,10 @@ export interface ExportColumnMeta {
 	/** The export ddo `path` VERBATIM (the protocol col line's `path` field). */
 	path: Record<string, unknown>[];
 	/**
-	 * Effective value_with_parents (request global || per-ddo flag). Carried
-	 * for the projection; the TS legacy path never implemented it, so it is
-	 * INERT until the parents sub-column lands (ledgered, PHP-only feature).
+	 * Per-ddo value_with_parents flag (the column's parents checkbox, WC-049:
+	 * per-ddo ONLY — no request-global form). The projection emits each
+	 * relation locator's ancestor chain as a sibling '#parents' column
+	 * (grid_value format; atoms.ts resolveParentsChain).
 	 */
 	valueWithParents?: boolean;
 }

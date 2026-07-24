@@ -561,6 +561,56 @@
             "lang": "lg-por",
             "name": "tool_export",
             "value": "Exportar"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "value_with_parents",
+            "value": "Export parents"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "value_with_parents",
+            "value": "Exportar padres"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "value_with_parents",
+            "value": "Exportar pares"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "value_with_parents",
+            "value": "Exporter les parents"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "value_with_parents",
+            "value": "Esporta genitori"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "value_with_parents",
+            "value": "Eltern exportieren"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "value_with_parents",
+            "value": "Εξαγωγή γονέων"
+          },
+          {
+            "lang": "lg-por",
+            "name": "value_with_parents",
+            "value": "Exportar pais"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "value_with_parents",
+            "value": "Gurasoak esportatu"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "value_with_parents",
+            "value": "अभिभावकहरू निर्यात गर्नुहोस्"
           }
         ]
       }

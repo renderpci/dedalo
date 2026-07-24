@@ -34,7 +34,6 @@ import { ONTOLOGY_STRUCTURE_LANG, labelByTipo } from '../ontology/labels.ts';
 import {
 	HIERARCHY_BUTTON_NEW,
 	HIERARCHY_MAIN_SECTION,
-	RELATION_TYPE_INDEX,
 	THESAURUS_BUTTON_DELETE,
 	THESAURUS_BUTTON_NEW,
 	THESAURUS_SECTION,
@@ -279,15 +278,6 @@ export async function getPermissionsElement(
 // GET_COUNT_DATA_GROUP_BY (PHP :1202) — indexation-icon counts.
 // ---------------------------------------------------------------------------
 
-/** The relation type used by an index component (default RELATION_TYPE_INDEX dd96). */
-async function indexRelationType(componentTipo: string): Promise<string> {
-	const props = ((await getNode(componentTipo))?.properties ?? null) as {
-		config_relation?: { relation_type?: string };
-	} | null;
-	const configured = props?.config_relation?.relation_type;
-	return typeof configured === 'string' && configured !== '' ? configured : RELATION_TYPE_INDEX;
-}
-
 interface CountGroupResult {
 	total: number;
 	// PHP count_data_group_by items carry `value` (not `count`); ts_object's
@@ -308,7 +298,13 @@ export async function getCountDataGroupBy(
 	componentTipo: string,
 	ddoEntry: DdoMapEntry,
 ): Promise<CountGroupResult> {
-	const relationType = await indexRelationType(componentTipo);
+	// The component's inverse question (PHP count_data_group_by applies BOTH
+	// the config_relation.relation_type and the get_target_section filter —
+	// tchi59 on dc1 must NOT count a tch1 pointer). Dynamic import: the
+	// relation model modules are a heavier subsystem than this counter needs
+	// statically.
+	const { resolveIndexConfig } = await import('../relations/models/relation_index.ts');
+	const indexConfig = await resolveIndexConfig(componentTipo, sectionTipo);
 	const targets: { section_tipo: string; section_id: number | string }[] = [
 		{ section_tipo: sectionTipo, section_id: sectionId },
 	];
@@ -326,11 +322,14 @@ export async function getCountDataGroupBy(
 	}
 
 	const filterLocators = targets.map((target) => ({
-		type: relationType,
+		type: indexConfig.relationType,
 		section_tipo: target.section_tipo,
 		section_id: Number(target.section_id),
 	}));
-	const counted = await countInverseReferences(filterLocators, { groupBy: ['section_tipo'] });
+	const counted = await countInverseReferences(filterLocators, {
+		groupBy: ['section_tipo'],
+		sectionTipos: indexConfig.targetSections,
+	});
 
 	const totalsGroup: { key: string; label: string | null; value: number }[] = [];
 	for (const group of counted.totals_group ?? []) {

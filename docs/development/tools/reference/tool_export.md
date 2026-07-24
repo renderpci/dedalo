@@ -31,6 +31,7 @@ The export pipeline resolves each cell through the **list-mode leaf-value contra
 | Action | Permission gate | Background | Reads from `options` |
 | --- | --- | --- | --- |
 | `get_export_grid` | declarative: `permission: 'section', minLevel: 1` on `section_tipo`; every SQO section is additionally covered by the standard project-scoped search ACL applied when building the record query | no | see below |
+| `components_with_parent` | declarative: `permission: 'section', minLevel: 1` on `section_tipo` | no | `components: [{tipo, section_tipo}]` → `{ [tipo]: boolean }` — whether each relation component points at a section with a `component_relation_parent` (targets resolve through the datalist request-config builder). Powers the client's per-column parents-checkbox visibility (WC-049). Ontology-only; no record data. |
 
 Key options read by `get_export_grid` / `setup`:
 
@@ -41,7 +42,7 @@ Key options read by `get_export_grid` / `setup`:
 | `data_format` | string | `value` (default, one flat cell per column) \| `grid_value` (breakdown) \| `dedalo_raw` (round-trip wrapper). Unknown values fall back to `value`. |
 | `breakdown` | string | Relation explosion for `grid_value`: `default` \| `rows` \| `columns`. Defaults to `default`. |
 | `fill_the_gaps` | bool | Repeat spanning (record-level) values on each exploded row. Default `true`. |
-| `value_with_parents` | bool | Add a sibling column with the ancestor chain of relation/hierarchical targets. Default `false`; can also be set per column via `current_ddo->value_with_parents`. N/A for `dedalo_raw`. |
+| `value_with_parents` (per ddo) | bool | PER-DDO ONLY (WC-049): set `value_with_parents: true` on an `ar_ddo_to_export` entry to emit that column's locator-target ancestor chains (`getParentsRecursive` × term resolver, `' > '` nearest-first, self excluded) as a sibling `#parents` column. `grid_value` format only; a request-global `options.value_with_parents` is ignored. Targets without hierarchy emit nothing. |
 | `ar_ddo_to_export` | array (req.) | The chosen columns, **in output order** (= the order of the *Active elements* list / the user's drag order). Stored internally as `ar_ddo_map`. |
 | `sqo` | object (req.) | Search query object = the selection to export. Server forces `limit='ALL'`, `offset=0`. |
 | `ndjson_stream` | bool | `true` → stream the NDJSON flat-table protocol and `exit()`; `false`/absent → return the whole grid in `response->result`. |
@@ -56,7 +57,7 @@ Response (non-stream): `{ result: {meta, columns, rows, end} | false, msg }`.
 - `dd1330` affected_models = `["section"]` → the tool attaches to **sections**.
 - `dd1331` show_in_inspector = `false` and `dd1332` show_in_component = `false` (it is a section-toolbar tool, not an inspector/inline-component button).
 - `dd1335` properties = `{ "open_as": "window", "windowFeatures": null }` → opens in its own window.
-- `dd1372` labels supply the localized UI strings for the `fill_the_gaps` and `show_tipo_in_label` options across project languages.
+- `dd1372` labels supply the localized UI strings for the `fill_the_gaps`, `show_tipo_in_label` and `value_with_parents` options across project languages.
 
 Surfacing (in `getElementTools`, `src/core/tools/registry.ts`): because `affected_models` is `["section"]`, the **Export** button appears on sections in **list** mode. There is no rule restricting the time-machine section (dd15) to `tool_export` alone: `registry.ts`'s hardcoded `NO_TOOLS_MODELS` set only covers `component_section_id`/`component_info`, and no dd15-specific rule exists anywhere in the section/tool-filter path. On a TS-served install, dd15 shows whatever tools its `affected_models`/`affected_tipos` normally match, the same as any other section.
 
@@ -76,7 +77,8 @@ const rqo = {
         data_format        : 'grid_value',  // breakdown
         breakdown          : 'rows',        // one row per related item
         fill_the_gaps      : true,
-        value_with_parents : true,          // add ancestor-chain columns
+        // parents chains are PER-COLUMN: value_with_parents rides each
+        // ar_ddo_to_export entry (WC-049), not the request options
         ar_ddo_to_export   : [ /* chosen columns, in output order */ ],
         sqo                : self.sqo,       // the current filtered selection
         ndjson_stream      : true           // stream the NDJSON protocol

@@ -16,10 +16,66 @@
  * that pinned the rebuild).
  */
 
+import { getNode } from '../../../src/core/ontology/resolver.ts';
+import { getParentTipo } from '../../../src/core/relations/children.ts';
+import { buildRequestConfigForElement } from '../../../src/core/relations/request_config/build.ts';
+import { extractSqoSectionTipos } from '../../../src/core/relations/request_config/explicit.ts';
 import type { ToolActionContext, ToolResponse } from '../../../src/core/tools/module.ts';
 import { exportGridUnified } from '../../../src/diffusion/export/index.ts';
 
 /** Build the export grid through the unified engine (see module doc). */
 export async function toolExportGetExportGrid(context: ToolActionContext): Promise<ToolResponse> {
 	return exportGridUnified(context);
+}
+
+/**
+ * tool_export.components_with_parent — which of the given relation components
+ * point at a section that has a component_relation_parent (i.e. whose targets
+ * can carry an ancestor chain). Powers the client's per-column "parents"
+ * checkbox visibility (WC-049: the checkbox only renders when the column's
+ * target section is hierarchical). Target sections resolve through the SAME
+ * request-config builder the datalist uses (explicit configs, hierarchy_types,
+ * 'self', implicit ontology relations); a component with ANY hierarchical
+ * target answers true. Pure ontology lookup — no record data leaves the server.
+ *
+ * options.components: [{ tipo, section_tipo }] — the component and its OWNER
+ * section ('self' targets resolve against it). Result: { [tipo]: boolean }.
+ */
+export async function toolExportComponentsWithParent(
+	context: ToolActionContext,
+): Promise<ToolResponse> {
+	const raw = context.options.components;
+	const components = Array.isArray(raw)
+		? raw.filter(
+				(entry): entry is { tipo: string; section_tipo: string } =>
+					entry !== null &&
+					typeof entry === 'object' &&
+					typeof (entry as { tipo?: unknown }).tipo === 'string' &&
+					typeof (entry as { section_tipo?: unknown }).section_tipo === 'string',
+			)
+		: [];
+	if (components.length === 0) {
+		return { result: false, msg: 'Error. Missing components', errors: ['invalid_request'] };
+	}
+	const result: Record<string, boolean> = {};
+	for (const component of components) {
+		if (result[component.tipo] !== undefined) continue;
+		const node = await getNode(component.tipo);
+		const config = await buildRequestConfigForElement(node?.properties ?? null, {
+			ownerTipo: component.tipo,
+			ownerSectionTipo: component.section_tipo,
+			mode: 'list',
+			ownerIsSection: false,
+		});
+		const targetSections = extractSqoSectionTipos(config[0]);
+		let hasParent = false;
+		for (const target of targetSections) {
+			if ((await getParentTipo(target)) !== null) {
+				hasParent = true;
+				break;
+			}
+		}
+		result[component.tipo] = hasParent;
+	}
+	return { result, msg: 'OK. Request done', errors: [] };
 }

@@ -115,7 +115,10 @@ export const tool_export = function () {
 	tool_export.prototype.refresh						= common.prototype.refresh
 	tool_export.prototype.edit							= render_tool_export.prototype.edit
 	tool_export.prototype.build_export_component		= render_tool_export.prototype.build_export_component
+	tool_export.prototype.component_has_parent_targets	= render_tool_export.prototype.component_has_parent_targets
 	tool_export.prototype.sync_ar_ddo_to_export			= render_tool_export.prototype.sync_ar_ddo_to_export
+	// server round-trip helper (components_with_parent action — WC-049)
+	tool_export.prototype.tool_request					= tool_common.prototype.tool_request
 	// get and render list of components from common
 	tool_export.prototype.get_section_elements_context	= common.prototype.get_section_elements_context
 	tool_export.prototype.calculate_component_path		= common.prototype.calculate_component_path
@@ -303,7 +306,6 @@ tool_export.prototype.get_section_id = function() {
  * @param {Array}  options.ar_ddo_to_export - Ordered array of DDO objects defining export columns.
  * @param {boolean} [options.show_tipo_in_label] - Client-only: append ontology tipo to column headers.
  * @param {boolean} [options.fill_the_gaps] - Server-side: repeat spanning values on exploded rows.
- * @param {boolean} [options.value_with_parents=false] - Include ancestor chain for relation targets.
  * @returns {Promise<flat_table|null>} Resolves with the live `flat_table` instance once
  *   the 'meta' protocol line arrives; resolves null if the stream fails to start or if
  *   the stream ends before 'meta' is received.
@@ -318,7 +320,6 @@ tool_export.prototype.get_export_grid = async function(options) {
 		const ar_ddo_to_export		= options.ar_ddo_to_export
 		const show_tipo_in_label	= options.show_tipo_in_label
 		const fill_the_gaps			= options.fill_the_gaps
-		const value_with_parents	= options.value_with_parents || false
 
 	// sqo
 	// note: limit/offset values are informational only. The API client gate
@@ -345,8 +346,7 @@ tool_export.prototype.get_export_grid = async function(options) {
 				data_format			: data_format, // format selected by the user to get data
 				breakdown			: breakdown, // relation explosion mode: default | rows | columns
 				fill_the_gaps		: fill_the_gaps, // server-side fill of spanning values
-				value_with_parents	: value_with_parents, // export relation target ancestor chains as 'parents' sub-columns
-				ar_ddo_to_export	: ar_ddo_to_export, // array with the ddo map and paths to get the info
+				ar_ddo_to_export	: ar_ddo_to_export, // array with the ddo map and paths to get the info (per-ddo value_with_parents rides here — WC-049)
 				sqo					: sqo,
 				ndjson_stream		: true
 			}

@@ -91,7 +91,7 @@ const get_target_section_tipo = function(self) {
 *   data_format        : string  — 'value' | 'grid_value' | 'dedalo_raw'
 *   breakdown          : string  — 'default' | 'rows' | 'columns'
 *   fill_the_gaps      : boolean — server fills spanning values (default true)
-*   value_with_parents : boolean — thesaurus values include ancestor path
+*   (per-column value_with_parents flags ride inside ar_ddo_to_export — WC-049)
 *   show_tipo_in_label : boolean — column labels include the tipo identifier
 * }
 *
@@ -111,12 +111,13 @@ export const build_export_config = function(self) {
 		return el ? el.checked : fallback
 	}
 
+	// note: per-column value_with_parents flags travel INSIDE ar_ddo_to_export
+	// (WC-049 — the old global checkbox is gone)
 	return {
 		ar_ddo_to_export	: self.ar_ddo_to_export || [],
 		data_format			: self.data_format || 'value',
 		breakdown			: self.breakdown || 'default',
 		fill_the_gaps		: get_checked('fill_the_gaps_check', true),
-		value_with_parents	: get_checked('value_with_parents_check', false),
 		show_tipo_in_label	: get_checked('show_tipo_in_label_check', false)
 	}
 }//end build_export_config
@@ -132,7 +133,7 @@ export const build_export_config = function(self) {
 *  1. Clears the existing user_selection_list DOM nodes and resets ar_ddo_to_export.
 *  2. Re-builds each column entry from config.ar_ddo_to_export via build_export_component.
 *  3. Restores data_format and breakdown selects (whitelist-validated before applying).
-*  4. Restores option checkboxes (fill_the_gaps, value_with_parents, show_tipo_in_label).
+*  4. Restores option checkboxes (fill_the_gaps, show_tipo_in_label).
 *  5. Re-syncs the disabled states that depend on data_format.
 *  6. Calls update_local_db_data to write the restored state to IndexedDB.
 *  7. Sets self.user_preset_section_id and reveals the save button.
@@ -205,17 +206,14 @@ export const apply_export_preset = async function(options) {
 			}
 		}
 		set_checked('fill_the_gaps_check', config.fill_the_gaps !== false)
-		set_checked('value_with_parents_check', config.value_with_parents === true)
 		set_checked('show_tipo_in_label_check', config.show_tipo_in_label === true)
+		// note: a legacy preset's global value_with_parents is IGNORED (WC-049 —
+		// per-column flags ride each restored ddo instead)
 
-	// re-sync disabled states (breakdown only on grid_value; parents not on dedalo_raw)
+	// re-sync disabled states (breakdown only on grid_value)
 		const select_breakdown = node.querySelector('.select_breakdown_export')
 		if (select_breakdown) {
 			select_breakdown.disabled = (self.data_format!=='grid_value')
-		}
-		const parents_check = node.querySelector('.value_with_parents_check')
-		if (parents_check) {
-			parents_check.disabled = (self.data_format==='dedalo_raw')
 		}
 
 	// persist the applied preset as the current working state
