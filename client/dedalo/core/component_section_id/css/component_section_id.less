@@ -12,6 +12,11 @@
 		border-bottom-right-radius: 1rem;
 		max-height: 5.5rem;
 
+		// hover background is preserved by excluding this component from the
+		// section-edit quiet-grid hover tint (see layout.less) — the badge
+		// keeps its solid background, whether the static grey or the ontology
+		// section colour injected at runtime by view_default_edit_section_id.js
+
 		&.active {
 
 		}

@@ -121,6 +121,11 @@ export interface StructureContextEntry extends StructureContextCore {
 	sqo_session?: unknown;
 	/** Media components only: the upload/quality descriptor (PHP context->features). */
 	features?: unknown;
+	/** component_section_id only: the parent section's display colour (PHP
+	 * component_section_id_json.php default branch, ontology_node::get_color →
+	 * section properties.color ?? '#b9b9b9'). The client paints it as the wrapper
+	 * background on both idle and .active states. */
+	color?: string;
 	/** Search-mode components only (PHP class.common.php:2010-2013): the operator
 	 * tooltip the client renders under a selected search component. Both are
 	 * stamped for EVERY component built in 'search' mode — `search_operators_info`
@@ -713,6 +718,20 @@ export async function buildStructureContext(options: {
 			button_add: false,
 		};
 		entry.properties = props;
+	}
+
+	// component_section_id: the FULL json-controller context appends the parent
+	// section's display colour (PHP component_section_id_json.php default branch:
+	// `$this->context->color = ontology_node::get_color($this->section_tipo)`).
+	// ontology_node::get_color reads the SECTION node's properties.color, falling
+	// back to '#b9b9b9' grey. view_default_edit_section_id.js injects it as the
+	// wrapper background on BOTH idle and .active states (so activation never
+	// changes the colour) — without it the client falls to the LESS default grey
+	// and the .active state visibly shifts. The 'simple' context
+	// (addRequestConfig:false, list/portal callers) omits it, matching PHP.
+	if (core.model === 'component_section_id' && options.addRequestConfig !== false) {
+		const sectionNode = await getNode(core.section_tipo);
+		entry.color = (sectionNode?.properties as { color?: string } | null)?.color ?? '#b9b9b9';
 	}
 
 	// Section-only context extras (PHP class.common.php :2056-2100) — the

@@ -882,7 +882,7 @@ const get_content_data = function(self) {
 		// in a new tab so developers can inspect the JSON structure without leaving the
 		// edit view.  Uses DEDALO_API_URL which is injected globally by the PHP template.
 			const data_link = ui.create_dom_element({
-				element_type	: 'span',
+				element_type	: 'button', // button block_icon light search
 				class_name		: 'light eye data_link',
 				text_content	: get_label.record || 'View record data',
 				parent			: buttons_bottom_container
