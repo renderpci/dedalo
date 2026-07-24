@@ -6111,6 +6111,8 @@ dd-modal .footer.distribute {
 }
 .list_body > .content_data .no_records {
   grid-column: 1/-1;
+  text-align: center;
+  text-wrap: unset;
 }
 .list_body .list_body .column {
   display: flex;
@@ -8842,9 +8844,6 @@ body.is_ontology_server .menu > .content_data {
 }
 .wrapper_search > .search_global_container .search_container_selection_presets > .wrapper_section > .paginator_container {
   height: unset;
-}
-.wrapper_search > .search_global_container .search_container_selection_presets > .wrapper_section > .list_body {
-  display: block;
 }
 .wrapper_search > .search_global_container .search_container_selection_presets > .wrapper_section > .list_body .section_record {
   display: grid;
