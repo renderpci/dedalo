@@ -4027,6 +4027,27 @@ export const ui = {
 			}
 
 			ui.tooltip = new Tooltip();
+
+			// frozen-tooltip safety net.
+			// codex-tooltip hides ONLY on the target's own 'mouseleave'. When a
+			// tooltip target is removed from the DOM while hovered (e.g. clicking
+			// a view-toggle button like Graph re-renders and destroys the button),
+			// mouseleave never fires and the tooltip stays frozen on document.body.
+			// These document-level listeners force-hide it independently of the
+			// target's lifecycle: on any pointer press (the click that swaps the
+			// view) and whenever the pointer moves off an active tooltip target
+			// (self-healing — the user's next move clears a stuck tooltip).
+			const force_hide_tooltip = () => {
+				if (ui.tooltip) ui.tooltip.hide(true)
+			}
+			document.addEventListener('pointerdown', force_hide_tooltip, true)
+			document.addEventListener('mouseover', (e) => {
+				const target = e.target
+				if (target && target.closest && target.closest('[data-tooltip_active]')) {
+					return
+				}
+				force_hide_tooltip()
+			}, true)
 		}
 
 		const tooltip = ui.tooltip
@@ -4062,6 +4083,10 @@ export const ui = {
 				delay: 150
 			})
 			button.addEventListener('mouseover', mouseover_handler)
+
+			// mark as a live tooltip target so the global mouseover safety net
+			// keeps the tooltip visible while the pointer is genuinely over it
+			button.dataset.tooltip_active = 'true'
 
 			// set as active to prevent double activation
 			button.active_tooltip = true
