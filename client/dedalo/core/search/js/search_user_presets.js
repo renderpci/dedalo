@@ -509,6 +509,171 @@ export const load_search_preset = async function(options) {
 
 
 /**
+* LOAD_PRESET_SAVE_ARGUMENTS
+* Reads a preset's save_arguments flag (dd648, component_radio_button).
+*
+* dd648 is a dd64 yes/no radio: entries[0] is the selected locator, section_id
+* '1' = Yes. DEFAULTS TO TRUE when unset — a preset always stored its values
+* before this flag was honored and create_new_search_preset serializes with
+* save_arguments true; only an explicit "No" makes save_preset store a
+* values-less template. Consumed by save_preset.
+*
+* @param {string|number} section_id - The preset record id (dd623).
+* @returns {Promise<boolean>} true = save q values; false = template (structure only).
+*/
+export const load_preset_save_arguments = async function(section_id) {
+
+	const component = await get_instance({
+		tipo			: presets_component_save_arguments_value_tipo, // dd648
+		section_tipo	: presets_section_tipo, // dd623
+		section_id		: section_id,
+		model			: 'component_radio_button',
+		mode			: 'edit',
+		lang			: page_globals.dedalo_data_nolan
+	})
+	await component.build(true)
+
+	// unset OR the Yes locator ('1') → save values; only an explicit non-'1'
+	// ("No") yields a template.
+	const entry = component.data?.entries?.[0]
+
+	return !entry || String(entry.section_id) === '1'
+}//end load_preset_save_arguments
+
+
+
+/**
+* LOAD_DEFAULT_PRESET
+* Fetches the JSON filter of the user's DEFAULT preset (dd641) for the searched
+* section, if one exists. Same visibility rules as the list (scope AND
+* (public OR owned by the current user)) plus dd641 == true; limit 1.
+*
+* Consumed by search.build to seed the initial filter ONLY when there is no
+* in-progress temp filter (an in-progress filter wins — see the caller).
+*
+* @param {Object} self - The search instance.
+* @returns {Promise<Object|null>} The default preset's JSON filter, or null.
+*/
+export const load_default_preset = async function(self) {
+
+	// source
+		const source = create_source(self, 'search')
+		source.tipo			= presets_section_tipo // dd623
+		source.section_tipo	= presets_section_tipo
+		source.model		= 'section'
+		// read_only assigns at-least-1 permissions to the target section/components.
+		source.config		= { read_only : true }
+
+	// locators (same shapes as load_user_search_presets)
+		const locator_user = {
+			section_id		: '' + page_globals.user_id,
+			section_tipo	: 'dd128'
+		}
+		const locator_public_true = {
+			section_id			: '1',
+			section_tipo		: 'dd64',
+			from_component_tipo	: presets_component_public_value_tipo // dd640
+		}
+		const locator_default_true = {
+			section_id			: '1',
+			section_tipo		: 'dd64',
+			from_component_tipo	: presets_component_default_value_tipo // dd641
+		}
+
+	// filter: scope AND default==true AND (public OR owned)
+		const filter = {
+			"$and": [
+				{
+					// same searched-section scope key as the list.
+					q			: preset_scope_tipo(self),
+					q_operator	: '==',
+					path	: [{
+						component_tipo	: presets_component_section_value_tipo, // dd642
+						section_tipo	: presets_section_tipo,
+						model			: 'component_input_text',
+						name			: 'Section tipo'
+					}],
+					type: 'jsonb'
+				},
+				{
+					// the DEFAULT flag must be true.
+					q		: locator_default_true,
+					path	: [{
+						component_tipo	: presets_component_default_value_tipo, // dd641
+						section_tipo	: presets_section_tipo,
+						model			: 'component_radio_button',
+						name			: 'Default'
+					}],
+					type: 'jsonb'
+				},
+				{
+					// visible if public OR owned by the current user.
+					"$or": [
+						{
+							q		: locator_public_true,
+							path	: [{
+								component_tipo	: presets_component_public_value_tipo, // dd640
+								section_tipo	: presets_section_tipo,
+								model			: 'component_radio_button',
+								name			: 'Public'
+							}],
+							type: 'jsonb'
+						},
+						{
+							q		: locator_user,
+							path	: [{
+								component_tipo	: presets_component_user_id_value_tipo, // dd654
+								section_tipo	: presets_section_tipo,
+								model			: 'component_select',
+								name			: 'User'
+							}],
+							type: 'jsonb'
+						}
+					]
+				}
+			]
+		}
+
+	// rqo. read the default preset's JSON filter (dd625) directly.
+		const rqo = {
+			action	: 'read',
+			source	: source,
+			sqo		: {
+				section_tipo	: [ presets_section_tipo ],
+				filter			: filter,
+				limit			: 1,
+				offset			: 0
+			},
+			show	: {
+				ddo_map : [{
+					tipo			: presets_component_json_tipo, // dd625
+					section_tipo	: presets_section_tipo,
+					parent			: presets_section_tipo
+				}]
+			}
+		}
+		const api_response = await data_manager.request({
+			body		: rqo,
+			use_worker	: true
+		})
+		if (!api_response || !api_response.result) {
+			return null
+		}
+
+	// json_filter from the matched record's dd625 component data.
+		const data				= api_response.result.data || []
+		const json_component	= data.find(el => el.tipo === presets_component_json_tipo)
+		const json_filter		= (json_component && json_component.entries && json_component.entries[0])
+			? json_component.entries[0]
+			: null
+
+
+	return json_filter
+}//end load_default_preset
+
+
+
+/**
 * CREATE_NEW_SEARCH_PRESET
 * Creates a new search preset record in the database.
 *
@@ -676,9 +841,16 @@ export const save_preset = async function(options) {
 	}
 
 	// filter value
+	// save_arguments (dd648): true (the default) bakes the live q values into the
+	// stored filter; when the user set it to "No" only the field structure is
+	// saved (a template). Read the flag from the preset so it actually governs the
+	// save — previously the stored dd648 was ignored (always saved with values).
+	const save_arguments = await load_preset_save_arguments(section_id)
 	// Note that filter_obj may contain empty values.
 	// This is normal, as we need to save empty components in the search panel of the preset.
-	const parsed = self.parse_dom_to_json_filter({})
+	const parsed = self.parse_dom_to_json_filter({
+		save_arguments : save_arguments ? 'true' : 'false'
+	})
 	const filter_obj = parsed.filter || null
 
 	// Validate filter_obj

@@ -73,9 +73,11 @@
 	} from './search_drag.js'
 	import {
 		get_editing_preset_json_filter,
+		load_default_preset,
 		load_search_preset,
 		save_temp_preset
 	} from './search_user_presets.js'
+	import {is_filter_empty} from './search_utils.js'
 	export {is_filter_empty} from './search_utils.js'
 
 
@@ -352,7 +354,7 @@ search.prototype.build = async function() {
 		ar_promises.push( new Promise(function(resolve){
 
 			get_editing_preset_json_filter(self)
-			.then(function(json_filter){
+			.then(async function(json_filter){
 
 				// debug
 				if(SHOW_DEBUG===true) {
@@ -373,6 +375,26 @@ search.prototype.build = async function() {
 					if (json_filter.semantic && typeof json_filter.semantic.q === 'string') {
 						self.semantic.q		= json_filter.semantic.q
 						self.semantic.group	= json_filter.semantic.group || null
+					}
+				}
+
+				// DEFAULT PRESET (dd641): when there is NO in-progress filter (the
+				// temp preset carries no q leaf and no semantic query), seed the
+				// initial filter from the user's default named preset for this
+				// section, if any. An in-progress temp filter always wins.
+				const has_semantic	= typeof self.json_filter?.semantic?.q === 'string' && self.json_filter.semantic.q.trim() !== ''
+				if (!has_semantic && is_filter_empty(self.json_filter)) {
+					try {
+						const default_filter = await load_default_preset(self)
+						if (default_filter && !is_filter_empty(default_filter)) {
+							self.json_filter = default_filter
+							if (default_filter.semantic && typeof default_filter.semantic.q === 'string') {
+								self.semantic.q		= default_filter.semantic.q
+								self.semantic.group	= default_filter.semantic.group || null
+							}
+						}
+					} catch(error) {
+						console.error('[search.build] load_default_preset failed:', error)
 					}
 				}
 

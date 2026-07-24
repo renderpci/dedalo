@@ -50,6 +50,7 @@
 	} from '../../search/js/render_semantic.js'
 	import {get_section_records} from '../../section/js/section.js'
 	import {no_records_node} from '../../section/js/render_common_section.js'
+	import {get_element_tipo} from '../../common/js/section_map.js'
 
 
 
@@ -142,9 +143,11 @@ view_search_user_presets.render = async function(self, options) {
 		}
 
 	// list body
+		// no_delete: read-only users (permissions <= 1) have no delete column, so
+		// the CSS switches the row grid from 4 to 3 tracks (keeps rows aligned).
 		const list_body = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'list_body',
+			class_name		: 'list_body' + (self.permissions > 1 ? '' : ' no_delete'),
 			parent			: fragment
 		})
 		// fix last list_body (for pagination selection)
@@ -236,6 +239,16 @@ const get_content_data = async function(ar_section_record, self) {
 			  content_data.classList.add('content_data', self.mode, self.type)
 			  content_data.appendChild(fragment)
 
+	// name-cell click → apply the preset. The name column is otherwise inert;
+	// delegate to the row's Apply button (reuses its select_preset handler) so
+	// the obvious click target actually loads the preset.
+		content_data.addEventListener('click', (e) => {
+			const name_cell = e.target.closest?.('.column_section')
+			if (!name_cell) return
+			const apply = name_cell.closest('.section_record')?.querySelector('.button_apply_preset')
+			if (apply) apply.click()
+		})
+
 
 	return content_data
 }//end get_content_data
@@ -302,8 +315,19 @@ const rebuild_columns_map = async function(self) {
 		})
 
 	// columns base
+		// The presets list shows ONLY the label column. The section context echoes
+		// the section's FULL column set (all dd623 components) in request_config even
+		// though only the section_map label carries data — keep just the label so the
+		// row grid stays apply | edit | name | delete. Without this the extra empty
+		// columns overflowed the fixed 4-track grid and wrapped the delete icon onto
+		// a second line. The label = the section_map default.term role (→ dd624).
 		const base_columns_map = await self.columns_map
-		columns_map.push(...base_columns_map)
+		const term = get_element_tipo(self.context?.section_map, 'term', 'default')
+		const label_tipos = Array.isArray(term) ? term : (term ? [term] : [])
+		const label_columns = label_tipos.length
+			? base_columns_map.filter(column => label_tipos.includes(column.tipo) || label_tipos.includes(column.id))
+			: base_columns_map.slice(0, 1) // fallback: first column only
+		columns_map.push(...label_columns)
 
 	// button_remove
 		if (self.permissions > 1) {
