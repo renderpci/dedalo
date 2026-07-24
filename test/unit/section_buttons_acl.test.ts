@@ -26,7 +26,7 @@ const NON_ADMIN_USER = 16;
 async function buttonChildTipos(sectionTipo: string): Promise<string[]> {
 	const rows = (await sql`
 		SELECT tipo FROM dd_ontology
-		WHERE parent = ${sectionTipo} AND model LIKE 'button_%' AND model <> 'button_import'
+		WHERE parent = ${sectionTipo} AND model LIKE 'button_%'
 		ORDER BY order_number NULLS LAST, tipo
 	`) as { tipo: string }[];
 	return rows.map((row) => row.tipo);
@@ -59,5 +59,52 @@ describe('section buttons per-button ACL (SECTION_SPEC §9)', () => {
 		const principal = await resolvePrincipal(NON_ADMIN_USER);
 		const buttons = await buildSectionButtons(SECTION, 3, principal);
 		expect(buttons).toEqual([]);
+	});
+
+	// PHP get_buttons_context :4231-4305 (oracle: section_context_extras fixture,
+	// numisdata672): a button_trigger DDO carries `properties` and `tools` —
+	// each user tool with a matching properties.tool_config.<name> as a simple
+	// context + ENRICHED tool_config (ddo_map 'self' resolved, model/
+	// translatable/label stamped), the enrichment ALSO written back to the
+	// button's own properties.tool_config (PHP mutates the shared object). The
+	// client's open_tool consumes tools[0]; without it, opening the tool from a
+	// list view throws "Cannot read properties of undefined (reading '0')".
+	test('a button_trigger carries the tool contexts (properties + tools)', async () => {
+		const superuser = await resolvePrincipal(-1);
+		const buttons = await buildSectionButtons(SECTION, 3, superuser);
+
+		// plain buttons: no properties/tools keys (dd_object drops null keys).
+		const plain = buttons.find((button) => button.model === 'button_new');
+		expect(plain).toBeDefined();
+		expect(Object.keys(plain as object)).toEqual(['typo', 'type', 'tipo', 'model', 'label']);
+
+		const trigger = buttons.find((button) => button.model === 'button_trigger');
+		expect(trigger?.tipo).toBe('numisdata672');
+		// wire key order (PHP dd_object declaration order).
+		expect(Object.keys(trigger as object)).toEqual([
+			'typo',
+			'type',
+			'tipo',
+			'model',
+			'properties',
+			'label',
+			'tools',
+		]);
+		const tool = (trigger?.tools as Record<string, unknown>[])[0] as {
+			name: string;
+			tool_config: { ddo_map: Record<string, unknown>[] };
+		};
+		expect(tool.name).toBe('tool_cataloging');
+		// enriched ddo_map: every entry stamped with translatable + label.
+		for (const entry of tool.tool_config.ddo_map) {
+			expect(entry.translatable).not.toBeUndefined();
+			expect(entry.label).not.toBeUndefined();
+			expect(entry.tipo).not.toBe('self');
+		}
+		// the enrichment reaches the button's own properties.tool_config too.
+		const buttonConfig = (
+			trigger?.properties as { tool_config: Record<string, { ddo_map: unknown[] }> }
+		).tool_config.tool_cataloging;
+		expect(buttonConfig.ddo_map).toEqual(tool.tool_config.ddo_map);
 	});
 });
