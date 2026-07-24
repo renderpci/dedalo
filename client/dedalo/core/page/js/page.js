@@ -118,6 +118,8 @@ export const page = function () {
 */
 page.prototype.restore_section_selection = async function(section_tipo) {
 
+	const self = this
+
 	// get local db last_section_selection info for current section
 		const status_data = await data_manager.get_local_db_data(
 			'last_section_selection_' + section_tipo,
@@ -127,21 +129,85 @@ page.prototype.restore_section_selection = async function(section_tipo) {
 			return false
 		}
 
-	// find component in page all instances and active it if found
-		const all_instances = get_all_instances()
-		const component = all_instances.find(el =>
-			el.tipo === status_data.value.tipo &&
+	// find component in page all instances, retrying briefly while the section
+	// instances are still being built after the render event (portals/relations
+	// resolve async, so the target may not be registered on the first tick).
+		const target_tipo	= status_data.value.tipo
+		const find_component = () => get_all_instances().find(el =>
+			el.tipo === target_tipo &&
 			el.section_tipo === section_tipo
 		)
+		let component	= find_component()
+		let attempts	= 0
+		while (!component && attempts < 10) {
+			await new Promise(resolve => setTimeout(resolve, 100))
+			component = find_component()
+			attempts++
+		}
 		if (!component) {
 			return false
 		}
 
-	// activate component
-		ui.component.activate(component, true)
+	// activate component (auto-focus). No-op when it is already active.
+		await ui.component.activate(component, true)
+
+	// ensure the restored component is visible.
+	// activate()'s focus/scroll is click-oriented (block:'nearest', a no-op when
+	// already visible; input components rely on focus()'s implicit scroll) and it
+	// races the section layout still settling after the render event — which left
+	// the restored component selected but off-screen. Own the scroll here so the
+	// recovered selection is always brought into view.
+		self.scroll_component_into_view(component)
 
 	return true
 }//end restore_section_selection
+
+
+
+/**
+* SCROLL_COMPONENT_INTO_VIEW
+* Brings a component wrapper into the viewport when it is not already fully
+* visible. Used by restore_section_selection to guarantee the recovered
+* selection ends up on screen regardless of component type.
+*
+* Deferred two animation frames so the post-render layout has settled before
+* measuring (heights grow as data/relations paint); re-checks component.active
+* and DOM connection so a selection change between schedule and execution does
+* not scroll a stale target. Only scrolls when the wrapper is not fully within
+* the viewport, matching "scroll if needed".
+*
+* @param {Object} component - The component instance whose node to reveal
+* @returns {boolean} false when there is no scrollable node, true otherwise
+*/
+page.prototype.scroll_component_into_view = function(component) {
+
+	const node = component?.node
+	if (!node || typeof node.scrollIntoView!=='function') {
+		return false
+	}
+
+	// double rAF: wait for the post-render layout to settle before measuring
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+
+				if (component.active!==true || !node.isConnected) {
+					return
+				}
+
+				const rect			= node.getBoundingClientRect()
+				const view_h		= window.innerHeight || document.documentElement.clientHeight
+				const fully_visible	= rect.top >= 0 && rect.bottom <= view_h
+				if (!fully_visible) {
+					// components taller than the viewport align to the top so the
+					// label/first field shows; otherwise centre the wrapper.
+					const block = rect.height > view_h ? 'start' : 'center'
+					node.scrollIntoView({ block: block, inline: 'nearest' })
+				}
+			})
+		})
+
+	return true
+}//end scroll_component_into_view
 
 
 
