@@ -118,6 +118,13 @@ export interface SaveResult {
 	message: string;
 	/** The component's full item array after the save. */
 	data?: unknown[];
+	/**
+	 * Recomputed observer data items whose target IS the saved record (PHP
+	 * observers_data) — filled post-commit by the observer cascade; the
+	 * dispatch save handler merges them into the response so the client
+	 * refreshes info widgets in place.
+	 */
+	observersData?: unknown[];
 }
 
 /** COMP-02: numeric-string ids normalize to int, else strict matching
@@ -329,6 +336,22 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 			effectiveRequest.sectionTipo,
 			effectiveRequest.componentTipo,
 			Number(effectiveRequest.sectionId),
+		);
+		// Server-side observers (PHP propagate_to_observers) fire at THIS
+		// chokepoint so every save door propagates — dispatch, imports, MCP
+		// tools, transcription (2026-07-24: the api-layer-only wiring left
+		// import-written rsc387 data with permanently stale hierarchy93
+		// mirrors). Post-commit like the cache invalidation above: observer
+		// mirror writes run their own row updates against committed state.
+		// No-op for the vast majority of components (no `observers` in
+		// ontology properties — the first check inside). Never throws.
+		const { propagateToObservers } = await import('./observers.ts');
+		result.observersData = await propagateToObservers(
+			effectiveRequest.componentTipo,
+			effectiveRequest.sectionTipo,
+			Number(effectiveRequest.sectionId),
+			Array.isArray(result.data) ? result.data : [],
+			effectiveRequest.userId,
 		);
 	}
 	return result;

@@ -196,6 +196,48 @@ export async function duplicateSectionRecord(
 		await recordTimeMachine({ ...baseEntry, data: slice }, saveTimestamp);
 	}
 
+	// 6. Observer cascade (2026-07-24): the duplicate is a NEW referencer of
+	//    every target its copied relation locators point at — the targets'
+	//    observer mirrors (hierarchy93 family) must recompute or they miss the
+	//    duplicate until a reconcile. Cheap gate inside propagateToObservers
+	//    (no `observers` in the component's ontology properties → no-op).
+	//    And the copy's OWN observer-mirror slots were byte-copied from the
+	//    source (they mirror the SOURCE's referencers, not the new record's —
+	//    review 2026-07-24) — recompute each covered observer component at the
+	//    new record so its mirror reflects its own (initially empty) truth.
+	{
+		const { propagateToObservers, recomputeExternalRelation } = await import('./observers.ts');
+		const { getNode } = await import('../../ontology/resolver.ts');
+		for (const component of copied) {
+			if (component.column !== 'relation') continue;
+			await propagateToObservers(
+				component.tipo,
+				sectionTipo,
+				newSectionId,
+				component.items,
+				userId,
+			);
+			const observe = (
+				(await getNode(component.tipo))?.properties as {
+					observe?: {
+						server?: {
+							config?: { use_observable_dato?: boolean };
+							perform?: { function?: string };
+						};
+					}[];
+				} | null
+			)?.observe;
+			const isCoveredObserver = (observe ?? []).some(
+				(entry) =>
+					entry?.server?.config?.use_observable_dato === true &&
+					entry.server.perform?.function === 'set_dato_external',
+			);
+			if (isCoveredObserver) {
+				await recomputeExternalRelation(component.tipo, sectionTipo, newSectionId, userId, now);
+			}
+		}
+	}
+
 	return newSectionId;
 }
 

@@ -265,24 +265,14 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		if (!outcome.ok) {
 			return denied(400, `save failed: ${outcome.message}`);
 		}
-		// Server-side observers (PHP propagate_to_observers): the saved
-		// component's declared observers recompute their external data.
-		// component_alias (WC-020): observers watch the DATA component — a save
-		// through an alias fires the TARGET's observers. Same-record observer
-		// items (component_info recomputes) ride the response data below (PHP
-		// observers_data merge — the client refreshes the info widget in place).
-		let observersData: unknown[] = [];
-		{
-			const { propagateToObservers } = await import('./observers.ts');
-			const { resolveDataTipo } = await import('../../ontology/alias.ts');
-			observersData = await propagateToObservers(
-				await resolveDataTipo(source.tipo),
-				source.section_tipo,
-				Number(source.section_id),
-				Array.isArray(outcome.data) ? outcome.data : [],
-				principal.userId,
-			);
-		}
+		// Server-side observers (PHP propagate_to_observers) fire INSIDE the
+		// saveComponentData chokepoint (post-commit — every save door
+		// propagates, not just this one; 2026-07-24). The alias→data-tipo hop
+		// happens there too (WC-020: observers watch the DATA component).
+		// Same-record observer items (component_info recomputes) ride the
+		// response data below (PHP observers_data merge — the client
+		// refreshes the info widget in place).
+		const observersData: unknown[] = outcome.observersData ?? [];
 		// Activity audit (PHP logger 'SAVE' code 5) — never fails the save.
 		{
 			const { logActivity, hostFromClientIp } = await import('./activity_log.ts');

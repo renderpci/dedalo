@@ -654,6 +654,22 @@ export async function deletePortalLocator(
 			await fireSaveEvent(sectionTipo);
 			invalidatePermissionsForWrite(sectionTipo, tipo, Number(sectionId));
 		}
+		// Observer cascade (2026-07-24): this door bypasses saveComponentData,
+		// so it fires propagation itself — with the REMOVED locators as the
+		// observable targets (those are the records whose mirrors must
+		// recompute; the recompute reads truth from matrix_relation_index, so
+		// the removal is already reflected). Dynamic import: runtime-only
+		// relations→section edge, no static SCC.
+		{
+			const { propagateToObservers } = await import('../section/record/observers.ts');
+			await propagateToObservers(
+				tipo,
+				sectionTipo,
+				Number(sectionId),
+				removedLocators,
+				principal.userId,
+			);
+		}
 		response.msg.push(`Deleted ${removed} locators (${model} - ${tipo})`);
 		response.result = removed;
 	} else {

@@ -61,6 +61,12 @@ export interface UpdateEngineSeams {
 	logPath?: string;
 	/** Injected version-row writer (tests MUST inject — the real one mutates matrix_updates). */
 	writeVersionRow?: (version: string) => Promise<void>;
+	/** Injected mirror reconciler (tests inject a stub — the real one writes matrix rows). */
+	reconcileMirrors?: (options: {
+		apply: boolean;
+		allowShrink: boolean;
+		log: (line: string) => void;
+	}) => Promise<{ repaired: number; shrinksSkipped: number }>;
 }
 
 /** PHP update_dedalo_data_version: INSERT the new version row. */
@@ -216,6 +222,30 @@ export async function updateVersion(
 				break;
 			}
 		}
+	}
+
+	// Observer mirror reconciliation (2026-07-24): the data update writes
+	// records WITHOUT the save chokepoint, so observer mirrors (the
+	// hierarchy93 ← rsc387 family) arrive stale by construction — heal them
+	// before stamping the version. Grow-only (shrinks are logged and held for
+	// the owner's `bun scripts/observer_reconcile.ts --apply --allow-shrink`
+	// pass); best-effort — a reconcile failure must not fail the update.
+	try {
+		const reconcileObserverMirrors =
+			seams.reconcileMirrors ??
+			(await import('../section/record/observer_reconcile.ts')).reconcileObserverMirrors;
+		const summary = await reconcileObserverMirrors({
+			apply: true,
+			allowShrink: false,
+			log: (line) => logLine(logPath, line),
+		});
+		msg.push(
+			`Observer mirrors reconciled: ${summary.repaired} repaired, ${summary.shrinksSkipped} shrink(s) held (see update log)`,
+		);
+	} catch (error) {
+		const reason = (error as Error).message;
+		logLine(logPath, `observer mirror reconcile FAILED (non-fatal): ${reason}`);
+		msg.push(`Observer mirror reconcile skipped: ${reason}`);
 	}
 
 	// success tail (PHP): stamp the new version row.
