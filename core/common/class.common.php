@@ -2458,8 +2458,37 @@ abstract class common {
 							// dd_info, additional information to the component, like parents
 								$value_with_parents = $dd_object->value_with_parents ?? false;
 								if ($value_with_parents===true) {
-									$dd_info = common::get_ddinfo_parents($current_locator, $this->tipo);
-									$ar_final_subdata[] = $dd_info;
+
+									// component_has_value
+									// A ddo with section_tipo 'self' is resolved for every searched section, therefore
+									// the component could not exist in the current locator section (like `hierarchy25`
+									// resolved for a `tchi1` locator in `tch555`). In that case, the component value is
+									// empty (value: null, fallback_value: [null]) and the parents info must not be created:
+									// the parents info of the locator only make sense next to the component value that identifies it.
+									// Note that non translated values resolve `value` as null and fill `fallback_value`.
+										$is_filled_value = function($current_value) : bool {
+											if (is_array($current_value)) {
+												foreach ($current_value as $item_value) {
+													if ($item_value!==null && $item_value!=='') {
+														return true;
+													}
+												}
+												return false;
+											}
+											return $current_value!==null && $current_value!=='';
+										};
+										$component_has_value = false;
+										foreach ($element_json->data as $value_obj) {
+											if ( $is_filled_value($value_obj->value ?? null) || $is_filled_value($value_obj->fallback_value ?? null) ) {
+												$component_has_value = true;
+												break;
+											}
+										}
+
+									if ($component_has_value===true) {
+										$dd_info = common::get_ddinfo_parents($current_locator, $this->tipo, $dd_object->tipo ?? null);
+										$ar_final_subdata[] = $dd_info;
+									}
 								}
 
 							// data add
@@ -4066,9 +4095,13 @@ abstract class common {
 	* Creates ddinfo object with parents data
 	* @param object $locator
 	* @param string $source_component_tipo
+	* @param string|null $from_ddo_tipo = null
+	* 	Tipo of the ddo (value_with_parents=true) that generates this info.
+	* 	The client uses it to place the parents value in the ddinfo column
+	* 	anchored to its own ddo. @see common.js get_columns_map
 	* @return object $dd_info
 	*/
-	public static function get_ddinfo_parents(object $locator, string $source_component_tipo) : object {
+	public static function get_ddinfo_parents(object $locator, string $source_component_tipo, ?string $from_ddo_tipo=null) : object {
 
 		$section_id		= $locator->section_id;
 		$section_tipo	= $locator->section_tipo;
@@ -4088,6 +4121,9 @@ abstract class common {
 			$dd_info->section_tipo	= $section_tipo;
 			$dd_info->value			= $dd_info_value;
 			$dd_info->parent		= $source_component_tipo;
+			if (!empty($from_ddo_tipo)) {
+				$dd_info->from_ddo_tipo = $from_ddo_tipo;
+			}
 
 
 		return $dd_info;
