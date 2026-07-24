@@ -35,7 +35,7 @@ The window has three panes: available components on the left, your active column
 1. Filter the section list down to exactly the records you want to export.
 2. Open **Export** from the section toolbar.
 3. From the left pane, drag the components you want into the centre **active columns** pane. The top-to-bottom order there is the left-to-right column order in the output.
-4. For a relation or hierarchy column, drill into it to reach the related field you want (for example *Mint → name*), and optionally turn on **parents** for that column to also emit the ancestor chain of each term.
+4. For a relation or hierarchy column, drill into it to reach the related field you want (for example *Mint → name*). Columns of a portal or autocomplete whose target section is hierarchical (it has a parent component) additionally show a per-column **parents** checkbox: turn it on to also emit the ancestor chain of each linked term (nearest parent first, ` > ` separated) as a sibling *parents* column. Parents columns are produced by the **grid value** (breakdown) format.
 5. On the right, choose the **data format** and, for a breakdown format, the **breakdown** mode (see [Options](#options)).
 6. Watch the **preview** fill as the export streams. It resolves as soon as the first metadata arrives, then keeps adding rows with a progress bar.
 7. Download in the format you need (CSV / TSV / ODS / XLSX / HTML), or the referenced media.
@@ -49,7 +49,7 @@ The window has three panes: available components on the left, your active column
 | Data format | `value` — one flat cell per column (the everyday choice). `grid_value` — a breakdown that explodes multi-valued relations. `dedalo_raw` — the round-trip wrapper for re-import and backups. |
 | Breakdown | For the `grid_value` format only: `default`, `rows` (one row per related item) or `columns`. |
 | Fill the gaps | Repeats record-level values on each exploded row so no cell is left blank. On by default. |
-| Values with parents | Adds a sibling column with the ancestor chain of relation or hierarchical targets. Off by default; can also be set per column. |
+| Parents (per column) | On eligible relation columns (portal / autocomplete pointing at a hierarchical section), adds a sibling column with the target's ancestor chain. Off by default; set on each column in the active list — there is no global switch. `grid_value` format only. |
 
 ## Tips and gotchas
 
