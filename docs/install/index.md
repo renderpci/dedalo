@@ -197,7 +197,7 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
 
     ```shell
     sudo unzip dedalo-6.zip
-    sudo mv dedalo-dedalo-6 dedalo
+    sudo mv dedalo-6 dedalo
     ```
 
     Set the permissions of the 'dedalo' directory according to your Apache and PHP-FPM settings.
