@@ -1029,9 +1029,7 @@ async function resolveSectionColumnDdoMap(
 	if (Array.isArray(literal) && literal.length > 0) return literal;
 	const directive = (rqo.show as { get_ddo_map?: unknown } | undefined)?.get_ddo_map;
 	if (directive !== undefined) {
-		const { resolveSectionMapGetDdoMap } = await import(
-			'../relations/request_config/explicit.ts'
-		);
+		const { resolveSectionMapGetDdoMap } = await import('../relations/request_config/explicit.ts');
 		const raw = await resolveSectionMapGetDdoMap(callerTipo, sectionTipo, directive);
 		if (raw.length > 0) {
 			return raw.map(

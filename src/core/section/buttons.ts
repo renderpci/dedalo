@@ -156,7 +156,9 @@ export async function buildSectionButtons(
 		// enriched tool_config back into it (see below), and the cache-owned
 		// node must never be mutated.
 		const properties =
-			node?.properties != null ? (structuredClone(node.properties) as Record<string, unknown>) : null;
+			node?.properties != null
+				? (structuredClone(node.properties) as Record<string, unknown>)
+				: null;
 
 		// Tool-dispatching buttons (PHP :4231-4305): each user tool with a
 		// matching properties.tool_config.<name> becomes a tool context —
