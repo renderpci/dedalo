@@ -3361,7 +3361,7 @@ DEDALO_SOURCE_VERSION_URL `string` *deprecated in v6.3; use CODE_SERVERS instead
 This parameter defines the master server uri repository to get the new Dédalo code for update / upgrade.
 
 ```php
-define('DEDALO_SOURCE_VERSION_URL', 'https://github.com/renderpci/dedalo/archive/refs/heads/master.zip');
+define('DEDALO_SOURCE_VERSION_URL', 'https://github.com/renderpci/dedalo/archive/refs/heads/v6.zip');
 ```
 
 >It's possible get the Dédalo code from different sources. If you want specify the version to download you can access to the specific version in GitHub and use it.

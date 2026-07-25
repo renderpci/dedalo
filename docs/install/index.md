@@ -190,14 +190,14 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
 3. Download Dédalo and place it under the httpdocs directory of the web server.
 
     ```shell
-    sudo wget https://github.com/renderpci/dedalo/archive/master.zip
+    sudo wget https://github.com/renderpci/dedalo/archive/refs/heads/v6.zip
     ```
 
     Unzip and rename it
 
     ```shell
-    sudo unzip master.zip
-    sudo mv dedalo-master dedalo
+    sudo unzip dedalo-6.zip
+    sudo mv dedalo-dedalo-6 dedalo
     ```
 
     Set the permissions of the 'dedalo' directory according to your Apache and PHP-FPM settings.

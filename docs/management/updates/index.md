@@ -6,6 +6,8 @@ Dédalo is an free open source project and community where being able to innovat
 
 The latest Dédalo version is [here](https://github.com/renderpci/dedalo/releases). This latest version contains all the latest fixes and improvements.
 
+The latest Dédalo v6 version is [here](https://github.com/renderpci/dedalo/archive/refs/heads/v6.zip). This latest version contains all the latest fixes and improvements for v6.
+
 In the list you can view changelog to see highlights of the changes introduced in each release.
 
 Need an older Dédalo? You can still download many of our older versions, until v4. Previous versions (v0, v1, v2 and v3) are considered very old and abandon technology and it's not available in this version list.
