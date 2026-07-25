@@ -93,6 +93,33 @@ export interface SectionReadSource {
 }
 
 /**
+ * Whether one emitted entry carries real content. An entry with a `value` face
+ * must have it non-null/non-empty (a 'self' ddo resolved against a section it
+ * doesn't belong to yields empty/null values); an entry with no `value` face
+ * (locator-shaped) counts as filled. Mirrors the v6 PHP guard shape
+ * (`common::get_subdatum` `$is_filled_value`).
+ */
+function entryFilled(entry: unknown): boolean {
+	if (entry === null || entry === undefined || entry === '') return false;
+	if (typeof entry === 'object') {
+		const value = (entry as { value?: unknown }).value;
+		if (value === undefined) return true;
+		return value !== null && value !== '';
+	}
+	return true;
+}
+
+/** Whether an emitted data item resolved a REAL value (entries or the
+ * lang-fallback face) — the WC-052 ddinfo suppression predicate. */
+function emittedItemHasValue(item: object): boolean {
+	const { entries, fallback_value } = item as {
+		entries?: unknown[];
+		fallback_value?: unknown[];
+	};
+	return (entries ?? []).some(entryFilled) || (fallback_value ?? []).some(entryFilled);
+}
+
+/**
  * The default matrix read source — the ordinary section path (buildSearchSql →
  * rows, readMatrixRecord → record, the standard direct-child ddo emit loop).
  * Behavior-identical to the pre-seam readSectionRows / count code.
@@ -151,6 +178,7 @@ export const matrixReadSource: SectionReadSource = {
 			if (parentRef !== SELF_SENTINEL && parentRef !== callerTipo) {
 				continue; // non-direct children resolve under their own parent
 			}
+			const emittedStart = emission.items.length;
 			await emitDdo(ddo, ddoMap, record, row, mode, lang, callerTipo, emission);
 			// value_with_parents ddo → the row also carries its ancestor
 			// breadcrumb (PHP common::get_subdatum → get_ddinfo_parents :2802-05:
@@ -159,21 +187,35 @@ export const matrixReadSource: SectionReadSource = {
 			// it carries NO row_section_id/parent_tipo — mirrored via markStamped).
 			// The autocomplete picker renders the term's thesaurus chain from it
 			// ("Parcieux, Ain, Rhône-Alpes, France" — rsc92, 2026-07-09).
+			//
+			// WC-052: emitted ONLY when the ddo's component resolved a REAL value
+			// for this row, and stamped with `from_ddo_tipo`. A 'self' ddo resolves
+			// for EVERY searched section, so e.g. `hierarchy25` runs for a `tchi1`
+			// row where it has no data and would emit a PHANTOM breadcrumb the
+			// picker renders BEFORE the row's real term column (`tch555`, v6 fix
+			// mirrored 2026-07-25). The frozen PHP oracle keeps the phantom —
+			// deliberate divergence.
 			if ((ddo as { value_with_parents?: unknown }).value_with_parents === true) {
-				const { buildDdInfoChain } = await import('../resolve/dd_info.ts');
-				// withHierarchyLabel=false: the rows breadcrumb ends at the root
-				// TERM (byte-diffed vs the oracle) — the trailing registry label
-				// belongs to the portal-cell ddinfo only.
-				const chain = await buildDdInfoChain(row.section_tipo, row.section_id, lang, false);
-				const ddInfoItem = {
-					tipo: 'ddinfo',
-					section_id: row.section_id,
-					section_tipo: row.section_tipo,
-					value: chain.length > 0 ? chain : null,
-					parent: row.section_tipo,
-				};
-				emission.markStamped(ddInfoItem as never);
-				emission.items.push(ddInfoItem as never);
+				const componentHasValue = emission.items
+					.slice(emittedStart)
+					.some((item) => emittedItemHasValue(item as object));
+				if (componentHasValue) {
+					const { buildDdInfoChain } = await import('../resolve/dd_info.ts');
+					// withHierarchyLabel=false: the rows breadcrumb ends at the root
+					// TERM (byte-diffed vs the oracle) — the trailing registry label
+					// belongs to the portal-cell ddinfo only.
+					const chain = await buildDdInfoChain(row.section_tipo, row.section_id, lang, false);
+					const ddInfoItem = {
+						tipo: 'ddinfo',
+						section_id: row.section_id,
+						section_tipo: row.section_tipo,
+						value: chain.length > 0 ? chain : null,
+						parent: row.section_tipo,
+						from_ddo_tipo: ddo.tipo,
+					};
+					emission.markStamped(ddInfoItem as never);
+					emission.items.push(ddInfoItem as never);
+				}
 			}
 		}
 	},

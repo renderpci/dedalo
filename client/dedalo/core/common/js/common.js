@@ -1546,25 +1546,55 @@ export const get_columns_map = function(options) {
 
 
 	// column ddinfo
-		const value_with_parents = full_ddo_map.find(el => el.value_with_parents === true)
-		if (value_with_parents) {
-			// check if the component with parents has specific column
-			// if it has columns add the column with ddinfo after the component with parents
-			// else the `ddinfo` will go to the last position
-			// is used to put the component_dataframe before the `ddinfo` column
-			// or used when the component has more than 1 component with `ddinfo`.
-			// See behavior and the ontology definition of `tch555
-			const index = columns_map.findIndex(el => el.tipo === value_with_parents.tipo)
-			if(index>=0){
-				columns_map.splice(index+1,0,{
-					id			: 'ddinfo',
-					label		: 'Info'
-				})
-			}else{
-				columns_map.push({
-					id			: 'ddinfo',
-					label		: 'Info'
-				})
+		// Create one `ddinfo` column for each distinct column having ddo with value_with_parents=true,
+		// placed right after the column of the ddo that generates the parents info.
+		// Rows only fill the columns of their own section; anchoring the ddinfo to each ddo column
+		// preserves the order `term | parents` for every searched section
+		// (e.g. `tch555` choose list searching hierarchy sections [hierarchy25] and tchi1 [tchi15] at the same time).
+		// Ddos sharing the same column (columns_map defined in properties, like component_dataframe cases)
+		// will share one ddinfo column, placed after it.
+		// Every ddinfo column stores the tipos of its anchor ddos in `from_ddo_tipos`;
+		// the renderer uses it to match the `from_ddo_tipo` of the data items created by the server.
+		// If the anchor column is not found, a fallback ddinfo column is added at the last position.
+		// See behavior and the ontology definition of `tch555`
+		const ar_value_with_parents = full_ddo_map.filter(el => el.value_with_parents === true)
+		if (ar_value_with_parents.length > 0) {
+
+			// group the ddos by its anchor column position
+			const ar_ddinfo_groups = [] // as [{index, from_ddo_tipos}]
+			const ar_value_with_parents_length = ar_value_with_parents.length
+			for (let i = 0; i < ar_value_with_parents_length; i++) {
+				const current_ddo = ar_value_with_parents[i]
+				const index = columns_map.findIndex(el =>
+					el.tipo === current_ddo.tipo ||
+					(current_ddo.column_id && el.id === current_ddo.column_id)
+				)
+				const group = ar_ddinfo_groups.find(el => el.index === index)
+				if (group) {
+					group.from_ddo_tipos.push(current_ddo.tipo)
+				}else{
+					ar_ddinfo_groups.push({
+						index			: index,
+						from_ddo_tipos	: [current_ddo.tipo]
+					})
+				}
+			}
+
+			// insert the ddinfo columns from the last to the first position to preserve the calculated indexes
+			ar_ddinfo_groups.sort((a, b) => b.index - a.index)
+			const ar_ddinfo_groups_length = ar_ddinfo_groups.length
+			for (let i = 0; i < ar_ddinfo_groups_length; i++) {
+				const current_group = ar_ddinfo_groups[i]
+				const ddinfo_column = {
+					id				: 'ddinfo',
+					label			: 'Info',
+					from_ddo_tipos	: current_group.from_ddo_tipos
+				}
+				if(current_group.index>=0){
+					columns_map.splice(current_group.index+1, 0, ddinfo_column)
+				}else{
+					columns_map.push(ddinfo_column)
+				}
 			}
 		}
 
