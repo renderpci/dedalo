@@ -198,6 +198,9 @@ export const portalResolver: RelationModelResolver = {
 						mode: child.mode,
 						lang: await stampLang(child.tipo, child.lang),
 						limit: child.limit,
+						// carried through for the breadcrumb trigger
+						// (relation_core portalCellEmitsDdinfo)
+						value_with_parents: (child as { value_with_parents?: boolean }).value_with_parents,
 					} as Ddo);
 				}
 			} else {
@@ -234,6 +237,9 @@ export const portalResolver: RelationModelResolver = {
 						mode: (child as { mode?: string }).mode,
 						lang: await stampLang(child.tipo, (child as { lang?: string }).lang),
 						limit: (child as { limit?: number }).limit,
+						// carried through for the breadcrumb trigger
+						// (relation_core portalCellEmitsDdinfo)
+						value_with_parents: (child as { value_with_parents?: boolean }).value_with_parents,
 					} as Ddo);
 				}
 			}

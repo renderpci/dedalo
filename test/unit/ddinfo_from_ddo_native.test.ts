@@ -16,6 +16,8 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import type { Ddo } from '../../src/core/concepts/ddo.ts';
+import { portalCellEmitsDdinfo } from '../../src/core/relations/relation_core.ts';
 import { EmissionContext } from '../../src/core/resolve/component_data.ts';
 import { matrixReadSource } from '../../src/core/section/read_source.ts';
 import type { EmitRowContext, SectionRow } from '../../src/core/section/read_source.ts';
@@ -111,5 +113,40 @@ describe('WC-052 rows ddinfo suppression + from_ddo_tipo stamp', () => {
 		);
 		await matrixReadSource.emitRow(context);
 		expect(ddinfoItems(emission)).toHaveLength(0);
+	});
+});
+
+describe('portal-cell ddinfo config trigger (portalCellEmitsDdinfo)', () => {
+	// The `tch555` own-config shape: user thesaurus `tchi1` lives in the
+	// generic `matrix` table, so ONLY this config-driven trigger keeps its
+	// edit-cell breadcrumb.
+	const ddos = [
+		{ tipo: 'h25', section_tipo: ['es1', 'tchi1'], value_with_parents: true },
+		{ tipo: 't15', section_tipo: 'tchi1', value_with_parents: true },
+		{ tipo: 't13', section_tipo: 'tchi1' },
+	] as unknown as Ddo[];
+
+	test('a vwp child compatible with the target triggers', () => {
+		expect(portalCellEmitsDdinfo(ddos, 'tchi1')).toBe(true);
+		expect(portalCellEmitsDdinfo(ddos, 'es1')).toBe(true);
+	});
+
+	test('a target no vwp child declares does NOT trigger', () => {
+		expect(portalCellEmitsDdinfo(ddos, 'object1')).toBe(false);
+	});
+
+	test("'self'/undeclared section_tipo pass; non-vwp children never trigger", () => {
+		expect(
+			portalCellEmitsDdinfo(
+				[{ tipo: 'x', section_tipo: 'self', value_with_parents: true }] as unknown as Ddo[],
+				'any1',
+			),
+		).toBe(true);
+		expect(
+			portalCellEmitsDdinfo([{ tipo: 'x', value_with_parents: true }] as unknown as Ddo[], 'any1'),
+		).toBe(true);
+		expect(
+			portalCellEmitsDdinfo([{ tipo: 'x', section_tipo: 'any1' }] as unknown as Ddo[], 'any1'),
+		).toBe(false);
 	});
 });
