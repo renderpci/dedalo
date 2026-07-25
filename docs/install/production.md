@@ -448,7 +448,16 @@ usermod -aG dedalo www-data     # nginx on RHEL: usermod -aG dedalo nginx
 systemctl restart nginx
 ```
 
-Verify: `ls -l /run/dedalo/dedalo_ts.sock` → `srwxrwx--- dedalo dedalo`, and a request through the proxy no longer returns `502`.
+Verify:
+```shell
+ls -l /run/dedalo/dedalo_ts.sock
+```
+
+Expected output:
+
+```text
+→ `srwxrwx--- dedalo dedalo`, and a request through the proxy no longer returns `502`.
+```
 
 #### Optional media keys
 
