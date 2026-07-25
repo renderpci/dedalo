@@ -7886,8 +7886,13 @@ body.is_ontology_server .menu > .content_data {
 .inspector > .inspector_content_data > .paginator_container .nav_buttons {
   width: 100%;
   justify-content: center;
-  padding-right: 5.5rem;
+  padding-right: 0.5rem;
   padding-left: 0.5rem;
+}
+.inspector > .inspector_content_data > .paginator_container .nav_buttons .placeholder_section_id {
+  font-size: 1.05rem;
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
 }
 .inspector > .inspector_content_data > .paginator_container > .section_id {
   position: absolute;
@@ -8487,7 +8492,7 @@ body.is_ontology_server .menu > .content_data {
   margin-left: 0.5rem;
   margin-right: 0.33rem;
   width: 4ch;
-  border-radius: 0.2rem;
+  border-radius: 4px;
   border: 1px solid var(--color_grey_13);
   -moz-appearance: textfield;
 }

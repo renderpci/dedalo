@@ -196,6 +196,16 @@ const get_content_data = async function(self) {
 				callback	: update_offset_prev
 			})
 
+		// placeholder for section ID
+			if(self.caller && self.caller.section_id) {
+				const placeholder_section_id = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'placeholder_section_id',
+					text_content	: self.caller.section_id,
+					parent			: paginator_div_links
+				})
+			}
+
 		// btn paginator_next
 			const paginator_next = ui.create_dom_element({
 				element_type	: 'div',
