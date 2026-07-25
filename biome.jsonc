@@ -45,6 +45,10 @@
 			".agents/**",
 			".claude/**",
 			".vscode/**",
+			// Local Python virtualenv for the mkdocs toolchain (never committed, absent on
+			// CI): its vendored site-packages JS produced ~15k phantom diagnostics locally,
+			// so `bun run lint` disagreed with the CI gate that runs the same command.
+			".venv/**",
 			// client/ is the TS-OWNED primary client source (since the 2026-07-11 cutover):
 			// vanilla JS on an exact wire contract, formatted to its own conventions — never linted.
 			"client/**",
