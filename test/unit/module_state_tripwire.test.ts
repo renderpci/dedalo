@@ -148,6 +148,13 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// cleared around each case; never request identity (the production paths are
 	// install-static: config.media.rootPath and <private>/).
 	'core/media/protection.ts:pathOverridesForTests',
+	// Today's media-auth cookie value (WC-051). ONE value per install per DAY — every
+	// user holds the identical cookie, so it carries no request identity and cannot
+	// bleed between principals. Lifecycle: keyed by day so it self-invalidates at
+	// midnight, refreshed by initMediaAuthCookie on any rotation this process performs,
+	// and cleared by overrideMediaProtectionPathsForTests. It exists to keep the
+	// per-request cookie re-issue a string compare instead of a JSON store read.
+	'core/media/protection.ts:cachedAuthCookie',
 ]);
 
 /**

@@ -158,6 +158,20 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 		expect('ip_api' in tsGlobals).toBe(false);
 		// biome-ignore lint/performance/noDelete: same as the WC-031 strip above — undefined would keep 'ip_api' in Object.keys()
 		delete phpGlobals.ip_api;
+		// WIRE_CONTRACT.md WC-051: three TS-ONLY page_globals keys carrying the
+		// session-expiry warning contract. PHP has no twin because it had nothing to
+		// warn about — its client learned the session was gone only by being refused.
+		// Same explicit-then-strip handling as WC-031.
+		for (const key of [
+			'dedalo_session_ttl_seconds',
+			'dedalo_session_absolute_expires_in',
+			'dedalo_session_warning_seconds',
+		]) {
+			expect(key in tsGlobals).toBe(true);
+			expect(key in phpGlobals).toBe(false);
+			// biome-ignore lint/performance/noDelete: an undefined assignment would fail the key-set compare
+			delete tsGlobals[key];
+		}
 		expect(Object.keys(tsGlobals).sort()).toEqual(Object.keys(phpGlobals).sort());
 		for (const key of Object.keys(phpGlobals)) {
 			if (ENGINE_SPECIFIC_KEYS.has(key)) continue;

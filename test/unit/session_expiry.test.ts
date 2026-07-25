@@ -34,9 +34,10 @@ if (SESSION_DB_PATH === undefined) {
 const raw = new Database(SESSION_DB_PATH, { readwrite: true });
 raw.exec('PRAGMA busy_timeout = 5000');
 
-/** Same TTL defaults as session_store.ts — override-aware via readEnv. */
-const IDLE_TTL_S = Number(readEnv('SESSION_TTL_SECONDS') ?? '43200');
-const ABSOLUTE_TTL_S = Number(readEnv('SESSION_ABSOLUTE_TTL_SECONDS') ?? '2592000');
+/** Same TTL defaults as the catalog — override-aware via readEnv. WC-051 retuned
+ * both: 1h idle (an unattended browser is the threat) and a 12h absolute cap. */
+const IDLE_TTL_S = Number(readEnv('SESSION_TTL_SECONDS') ?? '3600');
+const ABSOLUTE_TTL_S = Number(readEnv('SESSION_ABSOLUTE_TTL_SECONDS') ?? '43200');
 
 function sha256Hex(value: string): string {
 	return new Bun.CryptoHasher('sha256').update(value).digest('hex');
@@ -125,6 +126,50 @@ describe('session expiry (idle TTL + absolute lifetime cap L3)', () => {
 		expect(pruned).toBe(1);
 		expect(rowExists(stale)).toBe(false);
 		expect(rowExists(fresh)).toBe(true);
+	});
+
+	test('pruneExpiredSessions ALSO GCs the absolute-capped rows (WC-051 leak)', () => {
+		// The GC swept `last_seen` only, while getSession rejects on EITHER clock.
+		// A session kept warm past the absolute cap by a polling client was therefore
+		// refused on every request and never deleted — an ever-growing population of
+		// exactly the rows the cap exists to remove.
+		if (ABSOLUTE_TTL_S <= 0) return; // cap disabled by env override — nothing to prove
+		const capped = createSession(9003, 'expiry_probe_capped', false);
+		const fresh = createSession(9004, 'expiry_probe_fresh', false);
+		// Fresh last_seen: only the absolute branch can select this row.
+		backdate(capped, { createdAt: nowSeconds() - ABSOLUTE_TTL_S - 10, lastSeen: nowSeconds() });
+		expect(pruneExpiredSessions()).toBe(1);
+		expect(rowExists(capped)).toBe(false);
+		expect(rowExists(fresh)).toBe(true);
+	});
+
+	test('WC-051: a live session reports both clocks for the client warning timer', () => {
+		const token = createSession(9005, 'expiry_probe_clocks', false);
+		const session = getSession(token);
+		// expiresIn is the MIN of the two, measured from the refresh this call just
+		// performed — so a fresh session gets the full idle window (the idle term
+		// wins unless the absolute cap is nearer).
+		expect(session?.expiresIn).toBe(Math.min(IDLE_TTL_S, ABSOLUTE_TTL_S || IDLE_TTL_S));
+		// The absolute term is shipped SEPARATELY because it is the one the client
+		// cannot re-derive: the idle window restarts on every request, the cap never does.
+		if (ABSOLUTE_TTL_S > 0) {
+			expect(session?.absoluteExpiresIn).toBe(ABSOLUTE_TTL_S);
+		} else {
+			expect(session?.absoluteExpiresIn).toBeNull();
+		}
+	});
+
+	test('WC-051: the absolute deadline SHRINKS with age while the idle window resets', () => {
+		if (ABSOLUTE_TTL_S <= 0) return;
+		const token = createSession(9006, 'expiry_probe_aging', false);
+		const ageSeconds = Math.floor(ABSOLUTE_TTL_S / 2);
+		backdate(token, { createdAt: nowSeconds() - ageSeconds, lastSeen: nowSeconds() - 30 });
+		const session = getSession(token);
+		// Half the cap consumed…
+		expect(session?.absoluteExpiresIn).toBeLessThanOrEqual(ABSOLUTE_TTL_S - ageSeconds + 1);
+		expect(session?.absoluteExpiresIn).toBeGreaterThanOrEqual(ABSOLUTE_TTL_S - ageSeconds - 1);
+		// …while the idle clock was just refreshed by this very getSession.
+		expect(session?.expiresIn).toBe(Math.min(IDLE_TTL_S, session?.absoluteExpiresIn ?? 0));
 	});
 });
 
