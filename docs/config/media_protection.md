@@ -303,9 +303,13 @@ access gate:
 * Today's and yesterday's values are both valid, so sessions do not break at midnight and a
   second login on the same day **recycles** the value instead of rotating every other editor
   out.
-* Attributes: `HttpOnly; SameSite=Lax; Path=/`, `Max-Age=86400`, plus `Secure` when the session
-  cookie is configured secure. `HttpOnly` still lets the browser attach it to `<img>` and
-  `<video>` subresource loads — that is the whole mechanism.
+* Attributes: `HttpOnly; SameSite=Lax; Path=/`, `Max-Age` = the session idle window
+  (`SESSION_TTL_SECONDS`), plus `Secure` when the session cookie is configured secure.
+  `HttpOnly` still lets the browser attach it to `<img>` and `<video>` subresource loads —
+  that is the whole mechanism.
+* **The cookie lives exactly as long as the session.** It is re-issued on any authenticated
+  request whose value is missing or stale, so it can neither expire under a live session nor
+  outlive a dead one. See [login](../core/system/login.md) for the two session clocks.
 * Logout clears the cookie in the browser. It **must not** remove the marker: the value is
   install-global, so unlinking it would lock out every other editor.
 * The persisted store, `<private>/media_auth.json` (mode `0600`), lives outside every served

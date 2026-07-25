@@ -328,27 +328,88 @@ SESSION_COOKIE_SECURE=false
     cookie inherits the same attribute, so you would also be shipping a working
     media authorisation value in cleartext.
 
+### Users are logged out more often than they expect
+
+**Cause.** Two clocks, and either one ends a session — see
+[login](../core/system/login.md):
+
+| clock | key | default |
+| --- | --- | --- |
+| Idle timeout | `SESSION_TTL_SECONDS` | `3600` (1h without a single request) |
+| Absolute cap | `SESSION_ABSOLUTE_TTL_SECONDS` | `43200` (12h since login, unconditional) |
+
+Users report the **cap** as "it logs me out in the middle of my work", because
+activity cannot postpone it. That is what it is for: the idle window alone never
+expires a browser that polls in the background.
+
+**Fix.** Raise the one that is actually biting — do not raise both reflexively.
+An install on trusted, physically secure workstations can extend the cap; a
+shared or public workstation wants the *idle* window short above all.
+
+```dotenv
+SESSION_TTL_SECONDS=3600
+SESSION_ABSOLUTE_TTL_SECONDS=43200
+SESSION_WARNING_SECONDS=300
+```
+
+Users should be **warned** before this happens: `SESSION_WARNING_SECONDS`
+(default `300`) puts a notice on screen that many minutes ahead. If nobody is
+seeing it, check it is not set to `0`, and that the browser is not running a
+stale cached copy of the client (a hard reload settles it).
+
+!!! note "Running jobs are not interrupted"
+    A logout — voluntary or by timeout — never stops a background import or a
+    publication run. They keep the requesting user on the job record and never
+    re-read the session, and the same user reattaches to a job in progress after
+    logging back in.
+
 ## Media
 
 ### A logged-in user gets `404` for every media file
 
-**Cause.** Rule A failed. Either the browser is not sending the
+The giveaway is that **the application itself works perfectly** — records load,
+searches run — and only images, video, PDFs and 3D files are missing. That is
+expected: the web server enforces media access, not the engine, so a media
+failure says nothing about the session.
+
+**Cause.** Rule A failed: either the browser is not sending the
 `dedalo_media_auth` cookie, or the marker file it names does not exist under
-`<media>/.publication/auth/`.
+`<media>/.publication/auth/`. Rule B cannot cover for it — with no publication
+markers it never matches, so Rule A is the only door for unpublished media.
 
-**Fix.**
+**Fix.** Work outward from the file to the browser:
 
-1. **Log out and log in again.** The markers are (re)written at every login, so
-   this self-heals a wiped media directory or a fresh deploy.
-2. Check the marker store exists and is readable by the web server:
+1. Confirm the marker store exists and is readable by the web server, and that
+   it holds the value in `<private>/media_auth.json`:
 
     ```shell
     ls -l /srv/dedalo/media/.publication/auth/
     ```
 
-3. Check the cookie is present in the browser's request. It is `HttpOnly` and
-   `SameSite=Lax` — media embedded **cross-site** will not carry it, by design.
+2. Prove the **rules** are fine by presenting a known-good cookie by hand. If
+   this returns `200`, the gate works and the problem is the browser's cookie:
+
+    ```shell
+    curl -s -o /dev/null -w '%{http_code}\n' \
+      -H "Cookie: dedalo_media_auth=<today's value>" \
+      https://example.org/dedalo/media/image/thumb/0/<a real file>.jpg
+    ```
+
+3. Check the cookie in the browser. It is `HttpOnly`, so read it in DevTools →
+   *Application* → *Cookies*, never from JavaScript. It is also `SameSite=Lax`:
+   media embedded **cross-site** will not carry it, by design.
 4. If it is `Secure` but you are on plain HTTP, see the login entry above.
+5. **Reload the page.** The cookie is re-issued on the next authenticated
+   request, so a stale or missing one heals itself without a re-login. If it
+   does not, no store exists yet — log out and back in, which creates one.
+
+!!! note "Fixed in the current engine"
+    On engines predating the session-bound cookie, this had a much simpler
+    cause: the cookie was minted **only at login** with a fixed 24-hour
+    `Max-Age`, while the session renewed on every request. Anyone logged in for
+    longer than a day lost media access with no other symptom. Re-login was the
+    only cure. If you are seeing this on a schedule of roughly once a day, that
+    is what you are looking at.
 
 ### An anonymous visitor gets `404` for a published record's media
 

@@ -2,11 +2,58 @@
 
 Last modification date:
 
-2026-07-23T00:00:00+01:00
+2026-07-25T00:00:00+01:00
 
 Dédalo version
 
 7.0.0
+
+---
+
+## [Unreleased] - Session lifetime, and the media cookie bound to it
+
+### Changed
+- **Session expiry retuned.** The idle timeout drops from 12 h to **1 h**
+  (`SESSION_TTL_SECONDS`) and the absolute cap from 30 days to **12 h**
+  (`SESSION_ABSOLUTE_TTL_SECONDS`). An unattended browser is the threat the idle
+  window exists for, and because the client polls in the background the idle
+  clock alone never expires anything — the cap is what actually ends a working
+  day. Both clocks were already enforced on read; only the defaults moved.
+  **Long-running work is unaffected**: background imports keep their requesting
+  user on the job record and diffusion re-derives the enqueuing principal at run
+  time, so a publication run or a massive import survives its owner's logout and
+  reattaches after re-login.
+- **The media access cookie now lives exactly as long as the session.**
+  `dedalo_media_auth` is re-issued on any authenticated request whose value is
+  missing or stale, with `Max-Age` = the session idle window.
+  [Media protection](./core/system/media_protection.md) ·
+  [login](./core/system/login.md).
+
+### Added
+- **Pre-expiry warning.** The client warns before a session dies, so unsaved work
+  can be committed instead of the next click failing. Lead time is
+  `SESSION_WARNING_SECONDS` (default 300; `0` disables it). The boot payload
+  ships only the absolute deadline — the idle window restarts on every request,
+  so the client re-arms a local timer from its own activity beat.
+
+### Fixed
+- **Images, video, PDFs and 3D files 404'd for anyone logged in longer than a
+  day**, while the application itself looked completely healthy. The media
+  cookie was minted only at login with a fixed 24-hour `Max-Age` while the
+  session refreshed on every request; since the *web server* enforces media
+  access, losing the cookie removed every media file with no other symptom. The
+  reverse leak is closed too — a cookie minted just before logout stayed a valid
+  media credential for up to 48 hours with no session behind it.
+- **An expired session showed up as a network error and blank widgets** instead
+  of the re-login modal. The client's whole recovery path keys on the error code
+  `not_logged`, which the server never emitted (it put the human message in
+  `errors[]`), and the client's retry wrapper treated the 401 as a transport
+  failure and threw before the response could be read. Expiry now raises the
+  re-login modal in place, and pending saves replay on `login_successful`.
+- **Expired sessions were never garbage-collected** when they hit the absolute
+  cap. The sweeper matched only the idle clock, so a session kept warm by a
+  polling client past the cap was refused on every request and its row kept
+  forever.
 
 ---
 

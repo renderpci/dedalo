@@ -198,7 +198,7 @@ All properties are optional and live in the ontology node `properties` JSON. Ver
 
 ### Column sort: `sort_by_column` and `order` (per-ddo, v7)
 
-Portal column-sort is a **v7-native feature** and its directives live **on the column ddo** — an entry of `source.request_config[].show.ddo_map` — not on a separate top-level property. There is no PHP oracle (WC-048); PHP orders portals only by the stored array. Two independent per-ddo keys:
+Portal column-sort directives live **on the column ddo** — an entry of `source.request_config[].show.ddo_map` — not on a separate top-level property. Without them a portal is displayed in its stored locator order. Two independent per-ddo keys:
 
 | Per-ddo key | Meaning |
 |---|---|

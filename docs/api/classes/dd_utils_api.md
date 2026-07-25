@@ -37,6 +37,10 @@ Authenticate user with username and password.
 
 Validates credentials and, on success, creates a rotating server-side session. The session token is set as an HTTP cookie on the response — it is never returned in the body; the fresh `csrf_token` ships in the body so the next non-exempt action can succeed. `login` is a `NO_LOGIN` / CSRF-exempt action.
 
+When media protection is active the response carries a **second** cookie, the fixed-name `dedalo_media_auth` (see [media protection](../../core/system/media_protection.md)). Every later authenticated response re-issues it if the caller's value is stale, so it never outlives — nor dies before — the session.
+
+Once the session expires, any non-exempt action answers **HTTP 401** with `errors: ['not_logged']`. See [login](../../core/system/login.md) for the two expiry clocks and the client's recovery.
+
 ### Example Request
 
 ```json
