@@ -29,6 +29,28 @@ import type { EmitDdoFn } from './registry.ts';
 /** List-cell locator page size (PHP portal list mode paginates the cell to 1). */
 export const PORTAL_LIST_LIMIT = 1;
 
+/**
+ * Whether the own-config child ddos ask for the target's breadcrumb: a child
+ * with `value_with_parents: true` compatible with the target section (same
+ * compatibility rule as the child-expansion loop — 'self'/undeclared pass).
+ * PHP emits dd_info per vwp ddo (common::get_subdatum), so this is the
+ * config-driven trigger; the thesaurus-TABLE check alone misses user-defined
+ * thesauri living in the generic `matrix` table (`tch555`'s `tchi1`).
+ */
+export function portalCellEmitsDdinfo(childDdos: Ddo[], targetSectionTipo: string): boolean {
+	return childDdos.some((childDdo) => {
+		if ((childDdo as { value_with_parents?: unknown }).value_with_parents !== true) return false;
+		const declaredSection = childDdo.section_tipo;
+		return (
+			declaredSection === undefined ||
+			declaredSection === 'self' ||
+			(Array.isArray(declaredSection)
+				? declaredSection.includes(targetSectionTipo)
+				: declaredSection === targetSectionTipo)
+		);
+	});
+}
+
 /** Options steering one portal expansion (see call sites for the flow rules). */
 export interface ExpandPortalOptions {
 	childRowFromTarget?: boolean;
@@ -285,13 +307,22 @@ export async function expandPortal(
 		// The TM record-snapshot list renders the flat term subdatum only — PHP's
 		// service_time_machine cell emits no ddinfo breadcrumb (verified against
 		// the live oracle), unlike the edit widget.
+		//
+		// A target qualifies when it lives in the thesaurus table OR when the
+		// own config declares `value_with_parents` on a child ddo compatible
+		// with it (portalCellEmitsDdinfo): PHP emits dd_info per vwp ddo, and
+		// USER-DEFINED thesauri live in the generic `matrix` table (`tch555`'s
+		// `tchi1`), so the table check alone loses their edit-cell breadcrumb.
 		if (
 			options.ownConfig === true &&
 			storedModel === 'component_autocomplete_hi' &&
 			portalMode !== 'tm'
 		) {
 			const { buildDdInfoChain, isThesaurusTarget } = await import('../resolve/dd_info.ts');
-			if (await isThesaurusTarget(targetSectionTipo)) {
+			if (
+				portalCellEmitsDdinfo(childDdos, targetSectionTipo) ||
+				(await isThesaurusTarget(targetSectionTipo))
+			) {
 				// ddinfoBare (the component get_data / save-echo surface, PHP
 				// component get_json → get_subdatum → get_ddinfo_parents): the item
 				// carries ONLY {tipo, section_id, section_tipo, value, parent} — no

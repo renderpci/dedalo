@@ -103,7 +103,7 @@ describe('section buttons per-button ACL (SECTION_SPEC §9)', () => {
 		}
 		// the enrichment reaches the button's own properties.tool_config too.
 		const buttonConfig = (
-			trigger?.properties as { tool_config: Record<string, { ddo_map: unknown[] }> }
+			trigger?.properties as { tool_config: { tool_cataloging: { ddo_map: unknown[] } } }
 		).tool_config.tool_cataloging;
 		expect(buttonConfig.ddo_map).toEqual(tool.tool_config.ddo_map);
 	});
