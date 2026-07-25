@@ -274,20 +274,26 @@ PERMISSIONS_CACHE_TTL_SECONDS=300
 	SESSION_ABSOLUTE_TTL_SECONDS: {
 		type: 'number',
 		scope: 'operator',
-		default: 2592000,
+		default: 43200,
 		heading: 'Defining the absolute session lifetime',
 		typeLabel: 'int',
 		doc: `The hard ceiling, in seconds, on a session's life **counted from the moment it was
 created** — regardless of how active it has been. It exists because an idle limit alone
 (\`SESSION_TTL_SECONDS\`) never expires a session that is used at least once per window:
-a stolen cookie would live forever.
+a stolen cookie would live forever, and a browser left open on a workstation renews itself
+indefinitely through the client's own background polling.
 
-Default \`2592000\` (30 days): a user is asked to log in again once a month, and any
-long-lived token eventually dies on its own. Shorten it for a stricter policy; set \`0\`
-to disable the absolute cap and keep the idle limit only.
+Default \`43200\` (12 hours): a session spans one working day and then dies on its own,
+whatever the user was doing. Set \`0\` to disable the absolute cap and keep the idle limit
+only — NOT recommended, that is the "lives forever" case above.
+
+Long-running work is NOT affected. A background import keeps its requesting user on the
+job record and never re-reads the session (\`core/tools/background.ts\`), and diffusion
+re-derives the enqueuing principal from \`owner_user_id\` at run time (\`diffusion/runner.ts\`,
+DIFF-01), so publication and massive imports survive their owner's logout by construction.
 
 \`\`\`bash
-SESSION_ABSOLUTE_TTL_SECONDS=2592000
+SESSION_ABSOLUTE_TTL_SECONDS=43200
 \`\`\``,
 	},
 	SESSION_COOKIE_SECURE: {
@@ -313,20 +319,41 @@ SESSION_COOKIE_SECURE=true
 	SESSION_TTL_SECONDS: {
 		type: 'number',
 		scope: 'operator',
-		default: 43200,
+		default: 3600,
 		heading: 'Defining the session idle timeout',
 		typeLabel: 'int',
 		doc: `How long, in seconds, a session survives **without being used**. Every authenticated
 request refreshes it; a session left untouched for longer than this is destroyed and the
 user must log in again.
 
-Default \`43200\` (12 hours) — a session comfortably spans a working day but does not
-outlive it. Lower it for shared or public workstations, where an unattended browser is the
-real threat. The separate \`SESSION_ABSOLUTE_TTL_SECONDS\` caps the total life of a session
-that is being used continuously.
+Default \`3600\` (1 hour): an unattended browser is the real threat, and an hour of no
+requests at all means nobody is there. The separate \`SESSION_ABSOLUTE_TTL_SECONDS\` caps
+the total life of a session that is being used continuously.
+
+This value also bounds the media access cookie: \`dedalo_media_auth\` is re-issued with
+this same \`Max-Age\` on every authenticated request, so the media credential can never
+outlive the session that earned it (\`core/media/protection.ts\`).
 
 \`\`\`bash
-SESSION_TTL_SECONDS=43200
+SESSION_TTL_SECONDS=3600
+\`\`\``,
+	},
+	SESSION_WARNING_SECONDS: {
+		type: 'number',
+		scope: 'operator',
+		default: 300,
+		heading: 'Defining the pre-expiry warning window',
+		typeLabel: 'int',
+		doc: `How many seconds before a session expires the client warns the user, so unsaved work
+can be committed (or the session extended — any request extends it) instead of the next
+click failing. Every authenticated response carries \`session_expires_in\`; the client
+warns once that value drops below this threshold.
+
+Default \`300\` (5 minutes). Set \`0\` to disable the warning: expiry then surfaces only
+through the re-login modal, which the client already raises on the \`not_logged\` error.
+
+\`\`\`bash
+SESSION_WARNING_SECONDS=300
 \`\`\``,
 	},
 } as const satisfies Record<string, CatalogEntry>;

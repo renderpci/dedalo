@@ -41,6 +41,7 @@ import { CLIENT_LIB_URL_PREFIX, serveClientLibRequest } from './core/client_libs
 import { handleTagRequest } from './core/components/component_text_area/tag_endpoint.ts';
 import {
 	MEDIA_AUTH_COOKIE,
+	currentMediaAuthCookie,
 	resolveMediaAccessMode,
 	writeRuleFiles,
 } from './core/media/protection.ts';
@@ -51,7 +52,11 @@ import {
 import './core/components/registry.ts';
 import { readString } from './config/readers.ts';
 import { rqoSchema } from './core/concepts/rqo.ts';
-import { SESSION_COOKIE, getSession } from './core/security/session_store.ts';
+import {
+	SESSION_COOKIE,
+	SESSION_IDLE_TTL_SECONDS,
+	getSession,
+} from './core/security/session_store.ts';
 import { serveToolCommonRequest, serveToolsRequest } from './core/tools/serving.ts';
 
 /** Absolute root of the copied client tree (see scripts/sync_client.sh). */
@@ -213,6 +218,20 @@ const MAX_REQUEST_BODY_BYTES = Math.max(
 	Number(readString('SERVER_MAX_BODY_BYTES')) || 256 * 1024 * 1024,
 );
 
+/**
+ * One named cookie's value out of a raw Cookie header, or undefined.
+ *
+ * Exact-name match on the split pairs — a `startsWith(name)` scan would also match
+ * any cookie whose name merely BEGINS with this one.
+ */
+function readCookie(cookieHeader: string, name: string): string | undefined {
+	return cookieHeader
+		.split(';')
+		.map((pair) => pair.trim())
+		.find((pair) => pair.startsWith(`${name}=`))
+		?.slice(name.length + 1);
+}
+
 /** Assemble the session Set-Cookie header with consistent attributes. */
 function sessionCookieHeader(value: string, options: { clear?: boolean } = {}): string {
 	const attributes = ['HttpOnly', 'SameSite=Lax', 'Path=/'];
@@ -234,13 +253,18 @@ function sessionCookieHeader(value: string, options: { clear?: boolean } = {}): 
  *               browser default, so this is parity-or-stricter).
  *  Path=/       PHP parity. A narrower Path=/dedalo/<mediaDir> would break on any
  *               install that renamed DEDALO_MEDIA_DIR.
- *  Max-Age      86400 — the value rotates daily anyway. Max-Age rather than Expires
- *               sidesteps the Expires comma-formatting hazard inside a Set-Cookie.
+ *  Max-Age      THE SESSION IDLE WINDOW (WC-051), re-issued on every authenticated
+ *               request exactly as the session itself is refreshed — so the media
+ *               credential and the session die together. It was a fixed 86400 minted
+ *               only at login, which broke both ways: images 404'd for anyone logged
+ *               in over a day, and a cookie outlived its session by up to 48h.
+ *               Max-Age rather than Expires sidesteps the Expires comma-formatting
+ *               hazard inside a Set-Cookie.
  */
 function mediaAuthCookieHeader(value: string, options: { clear?: boolean } = {}): string {
 	const attributes = ['HttpOnly', 'SameSite=Lax', 'Path=/'];
 	if (SESSION_COOKIE_SECURE) attributes.push('Secure');
-	attributes.push(options.clear === true ? 'Max-Age=0' : 'Max-Age=86400');
+	attributes.push(options.clear === true ? 'Max-Age=0' : `Max-Age=${SESSION_IDLE_TTL_SECONDS}`);
 	return `${MEDIA_AUTH_COOKIE}=${value}; ${attributes.join('; ')}`;
 }
 
@@ -724,11 +748,7 @@ export async function handleRequest(request: Request, context: RequestContext): 
 
 		// Resolve the session from the TS-native cookie.
 		const cookieHeader = request.headers.get('cookie') ?? '';
-		const sessionToken = cookieHeader
-			.split(';')
-			.map((pair) => pair.trim())
-			.find((pair) => pair.startsWith(`${SESSION_COOKIE}=`))
-			?.slice(SESSION_COOKIE.length + 1);
+		const sessionToken = readCookie(cookieHeader, SESSION_COOKIE);
 		const apiContext: ApiRequestContext = {
 			requestId: context.requestId,
 			// Behind the reverse proxy the socket has no peer IP; the client IP comes
@@ -770,6 +790,25 @@ export async function handleRequest(request: Request, context: RequestContext): 
 			headers.append('Set-Cookie', mediaAuthCookieHeader(outcome.setMediaAuthCookie));
 		} else if (outcome.clearMediaAuthCookie === true) {
 			headers.append('Set-Cookie', mediaAuthCookieHeader('', { clear: true }));
+		} else if (apiContext.session !== null) {
+			// WC-051: KEEP THE MEDIA COOKIE ALIVE FOR AS LONG AS THE SESSION IS.
+			//
+			// It used to be minted at login and never again, with a fixed 24h Max-Age
+			// while the session renewed on every request. Any editor logged in longer
+			// than a day kept a working session and lost the cookie — and since the web
+			// server, not this process, gates media, EVERY image/av/pdf/3d silently
+			// 404'd while the app itself looked healthy. The reverse leak was live too:
+			// a cookie minted just before logout stayed a valid media credential for up
+			// to 48h (today+yesterday markers) with no session behind it.
+			//
+			// Re-issuing here ties the two together by construction: same idle window,
+			// refreshed by the same requests, and dropped by the same logout. Only when
+			// the browser's value is actually stale — a string compare against a
+			// day-cached value, no store read — so the steady state costs nothing.
+			const expected = currentMediaAuthCookie();
+			if (expected !== null && readCookie(cookieHeader, MEDIA_AUTH_COOKIE) !== expected) {
+				headers.append('Set-Cookie', mediaAuthCookieHeader(expected));
+			}
 		}
 		// Long-lived streaming responses (diffusion SSE): the handler passed the
 		// dispatch gates and returned a ReadableStream — hand it to the client

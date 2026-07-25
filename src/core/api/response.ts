@@ -41,3 +41,18 @@ export interface ApiResult {
 export function denied(status: number, message: string): ApiResult {
 	return { status, body: { result: false, msg: message, errors: [message] } };
 }
+
+/**
+ * The AUTHENTICATION denial (WC-051). Distinct from `denied` because the whole
+ * client keys its re-login recovery on the literal error token `not_logged`
+ * (page.js → render_relogin, common.js, component_common.js, render_common.js —
+ * all four switch on that exact string, inherited from the PHP oracle).
+ *
+ * `denied(401, 'Authentication required')` put the human message in `errors`, so
+ * no branch ever matched and the entire recovery UX was unreachable: an expired
+ * session surfaced as a thrown fetch error and blank widgets. The message stays
+ * in `msg` for humans; `errors` carries the machine token the client dispatches on.
+ */
+export function notLogged(message = 'Authentication required'): ApiResult {
+	return { status: 401, body: { result: false, msg: message, errors: ['not_logged'] } };
+}

@@ -493,6 +493,7 @@ export const NEW_IN_V7: readonly string[] = [
 	// sessions / login / permissions (the TS-native auth stack)
 	'SESSION_TTL_SECONDS',
 	'SESSION_ABSOLUTE_TTL_SECONDS',
+	'SESSION_WARNING_SECONDS',
 	'SESSION_COOKIE_SECURE',
 	'DEDALO_SESSION_DB_PATH',
 	'DEDALO_SESSION_CACHE_EXPIRE',

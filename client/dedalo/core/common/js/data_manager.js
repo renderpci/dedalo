@@ -292,6 +292,20 @@ data_manager.request = async function(options) {
 	// handle_errors
 	const handle_errors = async (response) => {
 		if (!response.ok) {
+			// WC-051: HTTP 401 is the session gate, and it carries a normal API
+			// envelope (`errors:['not_logged']`). Let it through UNPARSED-BY-US so the
+			// caller's `.json()` reads it and `api_response_errors` publishes — that
+			// event is what raises the re-login modal (page.js) and what components
+			// wait on to retry after `login_successful`.
+			//
+			// Throwing here instead — as every non-ok status used to — swallowed the
+			// envelope: the whole re-login recovery path was unreachable, and an
+			// expired session showed up as a network error with blank widgets. It is
+			// NOT an error to be reported either; `_record_api_error` would relay a
+			// routine logout to the error-report surface on every pending request.
+			if (response.status === 401) {
+				return response;
+			}
 			console.warn("-> HANDLE_ERRORS response:", response);
 			// extract response text to console
 			let response_text;
@@ -359,6 +373,12 @@ data_manager.request = async function(options) {
 			if (typeof window !== 'undefined' && window.page_globals) {
 				window.page_globals.csrf_token = json_response.csrf_token;
 			}
+			// WC-051: the same signal, for the same reason. A response carrying a CSRF
+			// token IS an authenticated response, which is exactly what refreshed the
+			// server's `last_seen` — so it is the honest beat for the client's idle
+			// clock (session_expiry.js). Published rather than called directly to keep
+			// the data layer free of a UI dependency, and to avoid an import cycle.
+			event_manager.publish('session_activity');
 		}
 
 		// SEC-008: transparent retry on CSRF rejection. This handles the bootstrap
@@ -562,7 +582,15 @@ async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, bas
 			clearTimeout(server_health_timeout_id);
 
 			// Handle HTTP errors (4xx, 5xx)
-			if (!response?.ok) {
+			// WC-051: 401 is EXEMPT. It is not a transport failure but the session
+			// gate answering with a normal API envelope (`errors:['not_logged']`),
+			// and it is the routine end of every session. Treated as an HttpError it
+			// was classified non-retryable below, which painted a permanent red
+			// "Not retry-able HTTP error 401" in the inspector and threw — so the
+			// envelope never reached `.json()`, `api_response_errors` never published,
+			// and the re-login modal never opened. Return it and let the normal
+			// response path dispatch on the token.
+			if (!response?.ok && response?.status !== 401) {
 				throw new HttpError(response.status, response.statusText, response);
 			}
 

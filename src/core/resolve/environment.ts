@@ -21,7 +21,7 @@ import { sql } from '../db/postgres.ts';
 import { getLabels } from '../labels/catalog.ts';
 import { resolveMediaAccessMode } from '../media/protection.ts';
 import type { Principal } from '../security/permissions.ts';
-import type { Session } from '../security/session_store.ts';
+import { SESSION_IDLE_TTL_SECONDS, type Session } from '../security/session_store.ts';
 import { getAdditionalToolsUrlMap } from '../tools/paths.ts';
 import { DEDALO_ENGINE_VERSION, DEDALO_VERSION_TRIPLE } from '../update/version.ts';
 import { currentApplicationLang, currentDataLang } from './request_lang.ts';
@@ -143,6 +143,17 @@ export async function buildPageGlobals(
 		// UNCONDITIONALLY (like maintenance_mode / DEVELOPMENT_SERVER) so the login form
 		// is marked too; it is not reconnaissance-sensitive (no DB name / version leak).
 		is_ontology_server: config.ontologyIo.isOntologyServer,
+		// WC-051: TS-ONLY page_globals keys (PHP get_page_globals has no twin) — the
+		// session-expiry warning contract. NULL for anonymous callers: the login form
+		// has no session to warn about, and the policy is not advertised pre-auth.
+		//
+		// Only the ABSOLUTE deadline is shipped, because only it is underivable
+		// client-side: the idle window restarts on every authenticated request, so the
+		// client re-arms a local timer from `dedalo_session_ttl_seconds` on each
+		// response — equivalent to a per-response countdown, at zero wire cost.
+		dedalo_session_ttl_seconds: isLogged ? SESSION_IDLE_TTL_SECONDS : null,
+		dedalo_session_absolute_expires_in: session?.absoluteExpiresIn ?? null,
+		dedalo_session_warning_seconds: isLogged ? Number(readString('SESSION_WARNING_SECONDS')) : null,
 		// API-03: version strings only for authenticated callers.
 		dedalo_version: isLogged ? DEDALO_ENGINE_VERSION : null,
 		dedalo_build: isLogged ? '2026-03-14T13:52:19+02:00' : null, // [install]

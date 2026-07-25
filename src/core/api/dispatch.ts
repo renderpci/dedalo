@@ -46,7 +46,7 @@ import { toolsApiActions } from './handlers/dd_tools_api.ts';
 import { tsApiActions } from './handlers/dd_ts_api.ts';
 import { utilsApiActions } from './handlers/dd_utils_api.ts';
 import { isModulePoisonError, markProcessPoisoned } from './process_health.ts';
-import { type ApiResult, denied } from './response.ts';
+import { type ApiResult, denied, notLogged } from './response.ts';
 
 export type { ApiRequestContext } from './handler_context.ts';
 export type { ApiResult } from './response.ts';
@@ -256,7 +256,10 @@ async function executeRqo(rqo: Rqo, context: ApiRequestContext): Promise<ApiResu
 	// individual record-writing install steps re-check the session in the handler.
 	const noLogin = NO_LOGIN_ACTIONS.has(actionKey) || (isInstallSurface && !isSealed());
 	if (context.session === null && !noLogin) {
-		return denied(401, 'Authentication required');
+		// WC-051: `errors: ['not_logged']`, the token the client's re-login recovery
+		// dispatches on. This is the path an EXPIRED session takes, so it is the one
+		// that must reach render_relogin() rather than dying as a thrown fetch error.
+		return notLogged();
 	}
 
 	// Gate 2b — maintenance mode (AUTH-05). PHP verify_login() re-checks
@@ -273,7 +276,11 @@ async function executeRqo(rqo: Rqo, context: ApiRequestContext): Promise<ApiResu
 	if (context.session !== null && context.session.userId !== SUPERUSER_ID) {
 		const { getServerState } = await import('../resolve/server_state.ts');
 		if (getServerState().maintenance_mode === true) {
-			return denied(401, 'Server under maintenance');
+			// Same unauthenticated shape as gate 2 (WC-051) — that is what this gate
+			// has always claimed to return, and the claim only holds if the machine
+			// token matches too. Re-login will refuse with the maintenance message,
+			// which is the informative outcome.
+			return notLogged('Server under maintenance');
 		}
 	}
 

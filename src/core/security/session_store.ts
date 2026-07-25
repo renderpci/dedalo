@@ -22,7 +22,10 @@
  * - per-session CSRF token (PHP SEC-008), constant-time compared;
  * - sliding-window login throttle keyed namespace|username|ip (PHP SEC-019),
  *   reset on success, shared across processes via the same sqlite file;
- * - sessions expire after SESSION_TTL_SECONDS of inactivity.
+ * - sessions expire after SESSION_TTL_SECONDS of inactivity, and unconditionally
+ *   at SESSION_ABSOLUTE_TTL_SECONDS since creation. Both clocks are enforced on
+ *   read (getSession) AND swept by the GC (pruneExpiredSessions) — a session the
+ *   reader rejects but the GC keeps is a row that never dies.
  */
 
 import { Database } from 'bun:sqlite';
@@ -83,6 +86,43 @@ export interface Session {
 	 * OPTIONAL for synthetic sessions; getSession always populates it.
 	 */
 	sqoSession?: Record<string, unknown>;
+	/**
+	 * Seconds this session has left, as of the request that resolved it: the LOWER
+	 * of the idle window (which this very request just refreshed) and what remains
+	 * of the absolute cap. Dispatch ships it to the client as `session_expires_in`
+	 * so the UI can warn BEFORE the next click fails — see SESSION_WARNING_SECONDS.
+	 *
+	 * Undefined for synthetic harness sessions, which have no row to age.
+	 */
+	expiresIn?: number;
+	/**
+	 * Seconds left on the ABSOLUTE cap alone (null when the cap is disabled).
+	 *
+	 * Split out from `expiresIn` because the two clocks behave differently for the
+	 * client's warning timer: the idle window restarts on every request, so the
+	 * client can re-arm it locally from SESSION_TTL_SECONDS, while the absolute
+	 * deadline only ever approaches and cannot be derived from a min() that the
+	 * idle term usually wins.
+	 */
+	absoluteExpiresIn?: number | null;
+}
+
+/** The idle window, in seconds — read by the boot payload so the client can re-arm
+ * its warning timer on each response without a per-response wire field. */
+export const SESSION_IDLE_TTL_SECONDS = SESSION_TTL_SECONDS;
+
+/**
+ * Seconds until `session` dies, given its row timestamps. The idle clock is
+ * measured from `last_seen` — and every caller of this has just refreshed it —
+ * so the idle term is effectively the full window; the absolute term is what
+ * actually shrinks across a working day. Never negative: a session that has
+ * already expired is destroyed by getSession before this is reached.
+ */
+function secondsUntilExpiry(row: { created_at: number; last_seen: number }, now: number): number {
+	const idleLeft = SESSION_TTL_SECONDS - (now - row.last_seen);
+	if (SESSION_ABSOLUTE_TTL_SECONDS <= 0) return Math.max(0, idleLeft);
+	const absoluteLeft = SESSION_ABSOLUTE_TTL_SECONDS - (now - row.created_at);
+	return Math.max(0, Math.min(idleLeft, absoluteLeft));
 }
 
 /**
@@ -241,9 +281,10 @@ export function getSession(rawToken: string): Session | null {
 		destroySession(rawToken);
 		return null;
 	}
+	const touchedAt = nowSeconds();
 	database
 		.query('UPDATE sessions SET last_seen = ? WHERE token_hash = ?')
-		.run(nowSeconds(), sha256Hex(rawToken));
+		.run(touchedAt, sha256Hex(rawToken));
 	let sqoSession: Record<string, unknown> = {};
 	if (row.sqo_session !== null && row.sqo_session !== '') {
 		try {
@@ -262,6 +303,13 @@ export function getSession(rawToken: string): Session | null {
 		dataLang: row.data_lang,
 		tokenHash: sha256Hex(rawToken),
 		sqoSession,
+		// Computed from the JUST-refreshed last_seen, so the client is told what it
+		// has left starting now — not what was left before this request landed.
+		expiresIn: secondsUntilExpiry({ created_at: row.created_at, last_seen: touchedAt }, touchedAt),
+		absoluteExpiresIn:
+			SESSION_ABSOLUTE_TTL_SECONDS > 0
+				? Math.max(0, SESSION_ABSOLUTE_TTL_SECONDS - (touchedAt - row.created_at))
+				: null,
 	};
 }
 
@@ -448,9 +496,23 @@ export function resetSessionStoreForTests(): void {
 	database.exec('DELETE FROM sessions; DELETE FROM login_attempts; DELETE FROM password_resets;');
 }
 
-/** Prune sessions idle past the TTL (the TS analog of PHP session-file GC). */
+/**
+ * Prune dead sessions (the TS analog of PHP session-file GC).
+ *
+ * BOTH clocks, or the GC leaks: getSession rejects a session that breaches EITHER
+ * the idle window or the absolute cap, but this swept only `last_seen`. A session
+ * kept warm by a polling client past the absolute cap was therefore rejected on
+ * every request and never deleted — a row that can only grow in number, and the
+ * exact population the cap exists to remove.
+ */
 export function pruneExpiredSessions(): number {
-	const cutoff = Math.floor(Date.now() / 1000) - SESSION_TTL_SECONDS;
-	const result = database.query('DELETE FROM sessions WHERE last_seen < ?').run(cutoff);
+	const now = Math.floor(Date.now() / 1000);
+	const idleCutoff = now - SESSION_TTL_SECONDS;
+	// 0 disables the absolute cap — then no row may be pruned on age, so use a
+	// cutoff no created_at can precede rather than special-casing the SQL.
+	const ageCutoff = SESSION_ABSOLUTE_TTL_SECONDS > 0 ? now - SESSION_ABSOLUTE_TTL_SECONDS : 0;
+	const result = database
+		.query('DELETE FROM sessions WHERE last_seen < ? OR created_at < ?')
+		.run(idleCutoff, ageCutoff);
 	return Number((result as { changes?: number }).changes ?? 0);
 }

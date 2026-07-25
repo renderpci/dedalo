@@ -54,6 +54,7 @@
 	import {cookie_manager} from '../../common/js/utils/cookie_manager.js'
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {render_relogin} from '../../login/js/render_login.js'
+	import {init_session_expiry} from '../../common/js/session_expiry.js'
 	import {prune_orphan_rules,get_inserted_rules} from '../../page/js/css.js'
 	import {render_page, render_notification_msg} from './render_page.js'
 
@@ -496,6 +497,12 @@ page.prototype.init = async function(options) {
 			self.events_tokens.push(
 				event_manager.subscribe('api_response_errors', api_response_errors_handler)
 			)
+
+		// session expiry warning
+			// WC-051: warn before the session dies, so the re-login modal above is
+			// the fallback rather than the first the user hears of it. Inert when
+			// logged out or when the operator set SESSION_WARNING_SECONDS=0.
+			init_session_expiry()
 
 	// events listeners. Add window/document general events
 		self.add_events()

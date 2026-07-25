@@ -114,6 +114,9 @@ export function overrideMediaProtectionPathsForTests(
 		}
 	}
 	pathOverridesForTests = overrides;
+	// Redirecting the store also invalidates anything read from the old one — without
+	// this, a scratch-dir test would keep serving the previous tree's cookie value.
+	cachedAuthCookie = null;
 }
 
 /** The media root, or null when unset (feature off — every function no-ops). */
@@ -841,6 +844,41 @@ export function syncAuthMarkersFromStore(): void {
 }
 
 /**
+ * Today's cookie value, cached for the day.
+ *
+ * Request-INDEPENDENT by construction: the value is one per INSTALL per DAY — every
+ * user holds the identical cookie — so it carries no request identity and cannot bleed.
+ * It exists so the per-request re-issue below (WC-051) costs a string compare instead
+ * of a JSON read of the auth store on every authenticated request. Keyed by day, so it
+ * self-invalidates at midnight; a rotation performed by a login in THIS process
+ * refreshes it through `rememberAuthCookie`.
+ */
+let cachedAuthCookie: { day: string; value: string } | null = null;
+
+function rememberAuthCookie(day: string, value: string): void {
+	cachedAuthCookie = { day, value };
+}
+
+/**
+ * The value a live session's `dedalo_media_auth` cookie SHOULD carry right now, or null
+ * when protection is off / no store exists yet.
+ *
+ * READ-ONLY: unlike initMediaAuthCookie it never mints, never rotates, never writes a
+ * marker and never regenerates the rule files — it is called on the hot path of every
+ * authenticated request, and a writer there would rewrite the whole gate under load.
+ * A missing store simply returns null: the next LOGIN creates one.
+ */
+export function currentMediaAuthCookie(now: Date = new Date()): string | null {
+	if (resolveMediaAccessMode() === false) return null;
+	const today = dayKey(now);
+	if (cachedAuthCookie !== null && cachedAuthCookie.day === today) return cachedAuthCookie.value;
+	const value = readAuthStore()?.[today]?.cookie_value;
+	if (typeof value !== 'string' || !COOKIE_VALUE_REGEX.test(value)) return null;
+	rememberAuthCookie(today, value);
+	return value;
+}
+
+/**
  * The login hook. Recycles or rotates the auth store, syncs the markers, refreshes the
  * generated rules, and returns the cookie value the response must set — or null when
  * protection is off (a TOTAL no-op: no cookie, no markers, no files).
@@ -886,5 +924,8 @@ export function initMediaAuthCookie(now: Date = new Date()): string | null {
 	syncAuthMarkers([todayEntry.cookie_value, yesterdayEntry.cookie_value]);
 	writeRuleFiles();
 
+	// Keep the per-request read-side in step with a rotation performed here, so the
+	// re-issue path never hands out a value whose marker this login just deleted.
+	rememberAuthCookie(today, todayEntry.cookie_value);
 	return todayEntry.cookie_value;
 }
