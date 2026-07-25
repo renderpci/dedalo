@@ -92,7 +92,10 @@ describe('classifyIndex', () => {
 
 	test('constraint-backed index is always kept, even off-policy', () => {
 		const verdict = classifyIndex(
-			liveIndex({ indexDef: 'CREATE UNIQUE INDEX pk ON public.matrix_activity USING btree (id)', isConstraint: true }),
+			liveIndex({
+				indexDef: 'CREATE UNIQUE INDEX pk ON public.matrix_activity USING btree (id)',
+				isConstraint: true,
+			}),
 			activity,
 			{ singleTipo: true, includeReview: false },
 		);
@@ -101,7 +104,10 @@ describe('classifyIndex', () => {
 
 	test('keep entry classifies as keep', () => {
 		const verdict = classifyIndex(
-			liveIndex({ indexDef: 'CREATE INDEX l ON public.matrix_activity USING btree (section_tipo, section_id DESC)' }),
+			liveIndex({
+				indexDef:
+					'CREATE INDEX l ON public.matrix_activity USING btree (section_tipo, section_id DESC)',
+			}),
 			activity,
 			{ singleTipo: true, includeReview: false },
 		);
@@ -111,7 +117,8 @@ describe('classifyIndex', () => {
 	test('drop-redundant (prefix superset) drops regardless of tipo or scans', () => {
 		const verdict = classifyIndex(
 			liveIndex({
-				indexDef: 'CREATE INDEX o ON public.matrix_activity USING btree (section_tipo, section_id DESC, "timestamp")',
+				indexDef:
+					'CREATE INDEX o ON public.matrix_activity USING btree (section_tipo, section_id DESC, "timestamp")',
 				idxScan: 999,
 			}),
 			activity,
@@ -121,22 +128,35 @@ describe('classifyIndex', () => {
 	});
 
 	test('single-tipo-only redundancy is downgraded to review on a multi-tipo table', () => {
-		const def = 'CREATE INDEX sid ON public.matrix_activity USING btree (section_id DESC NULLS LAST)';
+		const def =
+			'CREATE INDEX sid ON public.matrix_activity USING btree (section_id DESC NULLS LAST)';
 		expect(
-			classifyIndex(liveIndex({ indexDef: def }), activity, { singleTipo: true, includeReview: false }).action,
+			classifyIndex(liveIndex({ indexDef: def }), activity, {
+				singleTipo: true,
+				includeReview: false,
+			}).action,
 		).toBe('drop');
 		expect(
-			classifyIndex(liveIndex({ indexDef: def }), activity, { singleTipo: false, includeReview: false }).action,
+			classifyIndex(liveIndex({ indexDef: def }), activity, {
+				singleTipo: false,
+				includeReview: false,
+			}).action,
 		).toBe('review');
 	});
 
 	test('drop-dead drops when unused but is kept (as review) when the DB proves it used', () => {
 		const def = 'CREATE INDEX g ON public.matrix_activity USING gin (misc jsonb_path_ops)';
 		expect(
-			classifyIndex(liveIndex({ indexDef: def, idxScan: 0 }), activity, { singleTipo: true, includeReview: false }).action,
+			classifyIndex(liveIndex({ indexDef: def, idxScan: 0 }), activity, {
+				singleTipo: true,
+				includeReview: false,
+			}).action,
 		).toBe('drop');
 		expect(
-			classifyIndex(liveIndex({ indexDef: def, idxScan: 3 }), activity, { singleTipo: true, includeReview: false }).action,
+			classifyIndex(liveIndex({ indexDef: def, idxScan: 3 }), activity, {
+				singleTipo: true,
+				includeReview: false,
+			}).action,
 		).toBe('review');
 	});
 
@@ -153,7 +173,13 @@ describe('classifyIndex', () => {
 		const tm = policyForTable('matrix_time_machine');
 		if (tm === undefined) throw new Error('tm policy missing');
 		const def = 'CREATE INDEX b ON public.matrix_time_machine USING btree (bulk_process_id)';
-		expect(classifyIndex(liveIndex({ indexDef: def }), tm, { singleTipo: false, includeReview: false }).action).toBe('review');
-		expect(classifyIndex(liveIndex({ indexDef: def }), tm, { singleTipo: false, includeReview: true }).action).toBe('drop');
+		expect(
+			classifyIndex(liveIndex({ indexDef: def }), tm, { singleTipo: false, includeReview: false })
+				.action,
+		).toBe('review');
+		expect(
+			classifyIndex(liveIndex({ indexDef: def }), tm, { singleTipo: false, includeReview: true })
+				.action,
+		).toBe('drop');
 	});
 });

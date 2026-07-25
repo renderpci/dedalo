@@ -426,9 +426,8 @@ describe('search-mode component read (Activity dd542 Who picker)', () => {
 				},
 			} as unknown as Rqo;
 			const { body } = await dispatchRqo(rqo, ctx);
-			const result = (
-				body as { result?: false | { context?: unknown[]; data?: unknown[] } }
-			).result;
+			const result = (body as { result?: false | { context?: unknown[]; data?: unknown[] } })
+				.result;
 			// Before the fix this was `false` (Throwable Exception). The client's
 			// build() gate is exactly `result.context?.length`.
 			expect(result).not.toBe(false);

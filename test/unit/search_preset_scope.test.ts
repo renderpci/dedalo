@@ -42,7 +42,10 @@ describe('preset_scope_tipo', () => {
 
 	test('tolerates [{tipo}] element shape', () => {
 		expect(
-			preset_scope_tipo({ section_tipo: 'dd542', target_section_tipo: [{ tipo: 'ontologytype0' }] }),
+			preset_scope_tipo({
+				section_tipo: 'dd542',
+				target_section_tipo: [{ tipo: 'ontologytype0' }],
+			}),
 		).toBe('ontologytype0');
 	});
 

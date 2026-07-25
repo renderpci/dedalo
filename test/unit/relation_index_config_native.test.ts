@@ -55,11 +55,11 @@ function indexProperties(targetSection: string): string {
 }
 
 async function sweepScratch(): Promise<void> {
-	await sql.unsafe(`DELETE FROM matrix_test WHERE section_id IN ($1, $2)`, [
+	await sql.unsafe('DELETE FROM matrix_test WHERE section_id IN ($1, $2)', [
 		SCRATCH_DD151_ID,
 		SCRATCH_DD96_ID,
 	]);
-	await sql.unsafe(`DELETE FROM dd_ontology WHERE tipo IN ($1, $2)`, [
+	await sql.unsafe('DELETE FROM dd_ontology WHERE tipo IN ($1, $2)', [
 		FILTERED_TIPO,
 		EXCLUDED_TIPO,
 	]);
