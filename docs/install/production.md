@@ -247,19 +247,27 @@ read -rsp 'New root password:  '  DEDALO_INSTALL_ROOT_PASSWORD; echo
 export DB_PASSWORD DEDALO_INSTALL_ROOT_PASSWORD
 ```
 
-8.2 Run the installer. Change the parameters before run it, according to your needs. **Do not start bun** by hand in this step as the installer suggests.
+8.2 Run the installer. Change the parameters before run it, according to your needs. **Do not start bun** by hand in this step as the installer will suggests.
 
 ```shell
 cd /opt/dedalo/master_dedalo
 sudo -u dedalo --preserve-env=DB_PASSWORD,DEDALO_INSTALL_ROOT_PASSWORD \
   /opt/dedalo/.bun/bin/bun run scripts/install.ts \
-    --db-name dedalo_main --db-user dedalo_user --db-password "$DB_PASSWORD" \
-    --db-host localhost --db-port 5432 \
-    --media-path /srv/dedalo/media --media-access-mode publication \
+    --db-name dedalo_main \
+    --db-user dedalo_user \
+    --db-password "$DB_PASSWORD" \
+    --db-host localhost \
+    --db-port 5432 \
+    --media-path /srv/dedalo/media \
+    --media-access-mode publication \
     --socket /run/dedalo/dedalo_ts.sock \
-    --entity institution --entity-label 'My Institution' \
-    --locale es-ES --timezone Europe/Madrid \
-    --langs lg-eng,lg-spa --app-lang lg-eng --data-lang lg-eng \
+    --entity institution \
+    --entity-label 'My Institution' \
+    --locale es-ES \
+    --timezone Europe/Madrid \
+    --langs lg-eng,lg-spa \
+    --app-lang lg-eng \
+    --data-lang lg-eng \
     --hierarchies es,lg
 ```
 
@@ -360,8 +368,7 @@ cp /opt/dedalo/master_dedalo/deploy/dedalo-ts*.service \
    /opt/dedalo/master_dedalo/deploy/dedalo-backup.* /etc/systemd/system/
 ```
 
-**2 — Substitute the placeholders.** The units ship with ALL-CAPS placeholders you
-**must** replace before starting anything:
+**2 — Substitute the placeholders.** The units ship with ALL-CAPS placeholders you **must** replace before starting anything:
 
 | Placeholder | This guide's value |
 | --- | --- |
@@ -373,14 +380,23 @@ cp /opt/dedalo/master_dedalo/deploy/dedalo-ts*.service \
 
 Edit each file in place, or use `systemctl edit --full <unit>` after copying.
 
-!!! danger "Replace every `DEDALO_USER` — an unsubstituted placeholder fails with `status=217/USER`"
-    `User=DEDALO_USER` names a user that does not exist, so systemd kills the
-    process **before Bun runs** — the socket never appears and the proxy 502s with
-    nothing wrong in the app. After editing, confirm nothing is left:
+```shell
+systemctl edit --full dedalo-ts.service
+systemctl edit --full dedalo-ts-restart.service
+systemctl edit --full dedalo-ts-watchdog.service
+systemctl edit --full dedalo-ts-watchdog.timer
+systemctl edit --full dedalo-backup.service
+systemctl edit --full dedalo-backup.timer
+```
 
-    ```shell
-    systemctl cat dedalo-ts | grep -n DEDALO_USER   # must print NOTHING
-    ```
+After editing, verify the placeholders are gone:
+
+```shell
+systemctl cat dedalo-ts | grep -n DEDALO_USER   # must print NOTHING
+```
+
+!!! danger "Replace every `DEDALO_USER` — an unsubstituted placeholder fails with `status=217/USER`"
+    `User=DEDALO_USER` names a user that does not exist, so systemd kills the process **before Bun runs** — the socket never appears and the proxy 502s with nothing wrong in the app. After editing.
 
 The socket directory and permissions are handled by the shipped `dedalo-ts.service` already: `RuntimeDirectory=dedalo` creates `/run/dedalo` (owned by the service user) on every start, and `UMask=0007` makes the socket group-writable. Nothing to add.
 
