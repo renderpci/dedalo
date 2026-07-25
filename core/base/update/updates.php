@@ -72,7 +72,6 @@ $updates->$v = new stdClass();
 		');
 
 
-
 $v=691; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -125,7 +124,7 @@ $updates->$v = new stdClass();
 			<code>
 			{\"name\":\"browser_transformer\",\"type\":\"browser\",\"label\":\"Local AI translator\"}
 			</code>
-			</p> 
+			</p>
 			<br>
 			<br>
 			<p>
@@ -169,7 +168,7 @@ $updates->$v = new stdClass();
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			VACUUM FULL VERBOSE ANALYZE public.matrix_ontology;
 		');
-		
+
 
 $v=6810; #####################################################################################
 $updates->$v = new stdClass();
@@ -217,7 +216,7 @@ $updates->$v = new stdClass();
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			VACUUM FULL VERBOSE ANALYZE public.matrix_ontology;
 		');
-		
+
 
 $v=688; #####################################################################################
 $updates->$v = new stdClass();
@@ -237,7 +236,7 @@ $updates->$v = new stdClass();
 			VACUUM FULL VERBOSE ANALYZE public.matrix_ontology;
 		');
 
-		
+
 $v=687; #####################################################################################
 $updates->$v = new stdClass();
 
