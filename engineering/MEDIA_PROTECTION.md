@@ -87,8 +87,20 @@ Today's and yesterday's values are both valid, so sessions do not break at midni
 second login the same day RECYCLES rather than rotating every other editor out.
 
 Attributes (`server.ts mediaAuthCookieHeader`): `HttpOnly; SameSite=Lax; Path=/`, `Secure`
-under `SESSION_COOKIE_SECURE`, `Max-Age=86400`. HttpOnly still lets the browser attach it
-to `<img>`/`<video>` subresource loads — that is the whole mechanism.
+under `SESSION_COOKIE_SECURE`, `Max-Age` = **the session idle window**
+(`SESSION_TTL_SECONDS`). HttpOnly still lets the browser attach it to `<img>`/`<video>`
+subresource loads — that is the whole mechanism.
+
+**The cookie's life is the SESSION's life (WC-051).** It is re-issued on any
+authenticated request whose cookie is missing or no longer today's value — a string
+compare against a day-cached value (`currentMediaAuthCookie()`, read-only: it never mints,
+never rotates, never rewrites the rule files, because it runs on every request). It was
+previously minted ONLY at login with a fixed `Max-Age=86400`, which failed in both
+directions: an editor logged in longer than a day kept a working session and lost the
+cookie, so **every media file 404'd while the app itself looked healthy** (with no
+publication markers, Rule A is the only door); and a cookie minted just before logout
+stayed a valid credential for up to 48 h with no session behind it. Logout still clears
+the browser cookie only — see below.
 
 **The value is install-global**, not per-user: every logged-in editor shares today's value.
 Two consequences:
@@ -161,9 +173,18 @@ Note what does **not** need a reload: the daily cookie rotation.
   lag a few seconds across hosts.
 - **CDN**: purge the record's media paths on unpublish (especially `.vtt` subtitles). The
   origin denies immediately; downstream caches do not.
-- **Enabling on a live install**: users logged in *before* the change hold no cookie until
-  they re-login (the widget restores markers for existing cookie holders, not the cookies
-  themselves). Existing publications need one `rebuild_media_index` run.
+- **Enabling on a live install**: users logged in *before* the change get their cookie on
+  their next authenticated request (WC-051 re-issue) — no re-login needed, provided a store
+  already exists; if none does, the first login creates it. The widget restores markers for
+  existing cookie holders, not the cookies themselves. Existing publications need one
+  `rebuild_media_index` run.
+- **"All my images suddenly 404 but the app works"** is almost always Rule A: the browser is
+  not sending a cookie whose value has a marker. Check, in order — `.publication/auth/`
+  holds today's value from `<private>/media_auth.json`; the browser actually holds
+  `dedalo_media_auth` (it is HttpOnly, so read it in DevTools → Application → Cookies, not
+  from JS); and `curl -H "Cookie: dedalo_media_auth=<today's value>" <a real media URL>`
+  returns 200. If curl passes and the browser does not, the cookie is missing or stale, not
+  the rules.
 - **The #1 misconfiguration** is an unset `MEDIA_PATH`: publishes succeed but anonymous
   access stays 404. The widget surfaces it. (`MEDIA_PATH` now DERIVES to `<projectRoot>/media`
   — `config.media.rootPath` — so this bites only when an install overrides it wrongly.)
