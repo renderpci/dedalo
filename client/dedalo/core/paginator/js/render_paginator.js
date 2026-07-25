@@ -145,6 +145,7 @@ const get_content_data = async function(self) {
 			const paginator_first = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'btn paginator_first_icon inactive',
+				title			: (get_label.first_page || 'First page'),
 				parent			: paginator_div_links
 			})
 			// active_value
@@ -172,6 +173,7 @@ const get_content_data = async function(self) {
 			const paginator_prev = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'btn paginator_prev_icon inactive',
+				title			: (get_label.previous_page || 'Previous page'),
 				parent			: paginator_div_links
 			})
 			// active_value
@@ -194,10 +196,21 @@ const get_content_data = async function(self) {
 				callback	: update_offset_prev
 			})
 
+		// placeholder for section ID
+			if(self.caller && self.caller.section_id) {
+				const placeholder_section_id = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'placeholder_section_id',
+					text_content	: self.caller.section_id,
+					parent			: paginator_div_links
+				})
+			}
+
 		// btn paginator_next
 			const paginator_next = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'btn paginator_next_icon inactive',
+				title			: (get_label.next_page || 'Next page'),
 				parent			: paginator_div_links
 			})
 			// active_value
@@ -223,6 +236,7 @@ const get_content_data = async function(self) {
 			const paginator_last = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'btn paginator_last_icon inactive',
+				title			: (get_label.last_page || 'Last page'),
 				parent			: paginator_div_links
 			})
 			// active_value
@@ -409,6 +423,9 @@ const get_content_data = async function(self) {
 				})
 			}
 		)
+
+	// tooltips
+	ui.activate_tooltips(paginator_div_links, '.btn')
 
 
 	return content_data

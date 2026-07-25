@@ -253,6 +253,7 @@ const get_content_data = async function(self) {
 					const paginator_first = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'btn paginator_first_icon',
+						title			: (get_label.first_page || 'First page'),
 						parent			: paginator_div_links
 					})
 					if(page_number>1) {
@@ -269,6 +270,7 @@ const get_content_data = async function(self) {
 					const paginator_prev = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'btn paginator_prev_icon',
+						title			: (get_label.previous_page || 'Previous page'),
 						parent			: paginator_div_links
 					})
 					if(prev_page_offset>=0) {
@@ -285,6 +287,7 @@ const get_content_data = async function(self) {
 					const paginator_next = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'btn paginator_next_icon',
+						title			: (get_label.next_page || 'Next page'),
 						parent			: paginator_div_links
 					})
 					if(next_page_offset<total) {
@@ -301,6 +304,7 @@ const get_content_data = async function(self) {
 					const paginator_last = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'btn paginator_last_icon',
+						title			: (get_label.last_page || 'Last page'),
 						parent			: paginator_div_links
 					})
 					if(page_number<total_pages) {
@@ -326,6 +330,11 @@ const get_content_data = async function(self) {
 						inner_html		: `${page_number}-${total_pages}`,
 						parent			: paginator_info
 					})
+
+				// tooltips. Nav buttons are icon-only: the title is the only affordance.
+				// Inactive buttons are pointer-events:none (paginator.less), so a disabled
+				// button registers a tooltip but never shows one.
+					ui.activate_tooltips(paginator_div_links, '.btn')
 
 		}//end if ( total_pages>1 )
 
