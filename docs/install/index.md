@@ -36,29 +36,6 @@ Four moving parts, and it is worth knowing which is which before you start:
 Everything else — publication to a public website, semantic search, the AI
 assistant — is optional and off by default.
 
-## Choose your path
-
-| Path | For | Start here |
-| --- | --- | --- |
-| **Bare metal, Ubuntu 24.04** | the production reference | **[Production install](production.md)** |
-| **Bare metal, RHEL family** | Rocky, AlmaLinux, RHEL, Fedora | [RHEL-based systems](install_rhel.md) — a delta on top of the above |
-| **Containers** | Docker Compose, orchestrated deployments | [Docker](docker.md) |
-| **A laptop, in ten minutes** | development, evaluation, a demo | [Dev quickstart](dev_quickstart.md) |
-
-And the supporting pages, whichever path you take:
-
-- **[Reverse proxy and TLS](reverse_proxy.md)** — nginx and Apache, certbot, and
-  the generated media rules you must wire in. The load-bearing page.
-- **[Multiple instances on one server](multi_instance.md)** — optional: host
-  several domains on one box as independent instances behind one proxy.
-- **[Installer reference](installer_reference.md)** — every flag, every step, what
-  the seed contains, and exactly which keys land in `.env`.
-- **[Troubleshooting](troubleshooting.md)** — symptom → cause → fix.
-- **[Upgrading](upgrading.md)** — the runtime pin, boot migrations, retired keys,
-  rollback.
-- **[H.264 streaming module](install_h264_module.md)** — serve audiovisual
-  fragments by time range.
-
 ## Prerequisites at a glance
 
 | | Requirement | Notes |
@@ -107,6 +84,31 @@ years, not the one you are importing this month.
 !!! note "macOS and Windows"
     Fine for development and evaluation — see [dev quickstart](dev_quickstart.md).
     Not recommended for production.
+
+## Choose your path
+
+This documentation describes four installation paths. Choose the one that matches your environment and operational style.
+
+| Path | For | Start here |
+| --- | --- | --- |
+| **Bare metal, Ubuntu 24.04** | the production reference | **[Production install](production.md)** |
+| **Bare metal, RHEL family** | Rocky, AlmaLinux, RHEL, Fedora | [RHEL-based systems](install_rhel.md) — a delta on top of the above |
+| **Containers** | Docker Compose, orchestrated deployments | [Docker](docker.md) |
+| **A laptop, in ten minutes** | development, evaluation, a demo | [Dev quickstart](dev_quickstart.md) |
+
+And the supporting pages, whichever path you take:
+
+- **[Reverse proxy and TLS](reverse_proxy.md)** — nginx and Apache, certbot, and
+  the generated media rules you must wire in. The load-bearing page.
+- **[Multiple instances on one server](multi_instance.md)** — optional: host
+  several domains on one box as independent instances behind one proxy.
+- **[Installer reference](installer_reference.md)** — every flag, every step, what
+  the seed contains, and exactly which keys land in `.env`.
+- **[Troubleshooting](troubleshooting.md)** — symptom → cause → fix.
+- **[Upgrading](upgrading.md)** — the runtime pin, boot migrations, retired keys,
+  rollback.
+- **[H.264 streaming module](install_h264_module.md)** — serve audiovisual
+  fragments by time range.
 
 ## After the install
 
