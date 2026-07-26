@@ -1577,9 +1577,14 @@ already pinned; NEW and the LOG IN allow/deny pair are added here.
   diffusion runner/default_value — published data must not embed a dev origin),
   bare `files_info.file_path` values (the client prefixes those with
   `DEDALO_MEDIA_URL`; absolutizing would double-prefix), inbound route matching
-  (server.ts, protection.ts rules), and `DEDALO_MEDIA_BASE_URL` (export cells —
-  unchanged semantics: unset means unresolved, never guessed; now read via
-  `config.media.baseUrl`).
+  (server.ts, protection.ts rules), and `DEDALO_MEDIA_EXPORT_BASE` (export cells —
+  unchanged semantics: unset means unresolved, never guessed; read via
+  `config.media.exportBase`). That key was spelled `DEDALO_MEDIA_BASE_URL` until
+  2026-07-25; the two names were indistinguishable, so the pair was renamed to
+  state its audience (WEB = the client, EXPORT = what leaves the app) and the old
+  spelling is RETIRED (`RETIRED_ENV_KEYS`, refuses the boot). Same value shape as
+  `webBase` — origin + `/dedalo/<mediaDir>`, trailing slash now stripped on both,
+  since both are prefixed to the same media-root relative `file_path`.
 - **Fixtures:** every harvest fixture pins the harvest-era RELATIVE shape, so
   `test/preload/test_database.ts` pins `DEDALO_MEDIA_WEB_BASE=''` for the whole
   suite — gates are hermetic against the developer's .env, no fixture edits.
