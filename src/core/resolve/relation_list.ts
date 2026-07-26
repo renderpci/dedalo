@@ -428,9 +428,10 @@ export async function resolveCellValue(
 	// quality comes from the media CONTRACT (mediaTypeOf → DEDALO_*_QUALITY_
 	// DEFAULT), never a hardcoded table.
 	if (family === 'media') {
-		// config.media.baseUrl (DEDALO_MEDIA_BASE_URL) — the EXPORT base, distinct
-		// from webBase: unset means the cell is reported unresolved, never guessed.
-		const mediaBase = config.media.baseUrl;
+		// config.media.exportBase (DEDALO_MEDIA_EXPORT_BASE) — the EXPORT base,
+		// distinct from webBase: unset means the cell is reported unresolved, never
+		// guessed. Already trailing-slash-normalized by the config builder.
+		const mediaBase = config.media.exportBase;
 		const defaultQuality = mediaTypeOf(model)?.defaultQuality;
 		if (mediaBase === undefined || mediaBase === '' || defaultQuality === undefined) {
 			if (!unresolved.includes(model)) unresolved.push(model);

@@ -110,6 +110,11 @@ export const PHP_KEY_ALIASES: Readonly<Record<string, string>> = Object.freeze({
  */
 export const RETIRED_ENV_KEYS: Readonly<Record<string, string>> = Object.freeze({
 	DEDALO_PREFIX_TIPOS: 'ACTIVE_ONTOLOGY_TLDS', // renamed 2026-07-11 (WC-028)
+	// renamed 2026-07-25: it was indistinguishable from DEDALO_MEDIA_WEB_BASE (both
+	// are an origin + '/dedalo/<mediaDir>' prefix appended to the same media-root
+	// relative file_path). The pair now names its AUDIENCE: WEB_BASE = the client,
+	// EXPORT_BASE = content that leaves the application.
+	DEDALO_MEDIA_BASE_URL: 'DEDALO_MEDIA_EXPORT_BASE',
 });
 
 /**

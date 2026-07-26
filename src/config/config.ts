@@ -277,16 +277,22 @@ export interface MediaConfig {
 	 * construct an unconfigured catalog and prove requireMediaRoot still throws.
 	 */
 	readonly rootPath: string | null;
-	/** Absolute-URL prefix for export/relation cells (env DEDALO_MEDIA_BASE_URL). */
-	readonly baseUrl: string | undefined;
+	/**
+	 * Absolute-URL prefix for the media cells of export/relation lists — content
+	 * that LEAVES the application (env DEDALO_MEDIA_EXPORT_BASE). Same value shape
+	 * as `webBase` (origin + `/dedalo/<mediaDir>`; both are prefixed to the same
+	 * media-root relative file_path), but stays undefined-meaning-unresolved when
+	 * unset: a travelling cell may not carry a relative URL.
+	 */
+	readonly exportBase: string | undefined;
 	/**
 	 * The WEB base every media URL served to the client is built on
 	 * (env DEDALO_MEDIA_WEB_BASE). Default — key unset or empty — is the
 	 * same-origin relative base `/dedalo/<mediaDir>` (today's wire shape); set it
 	 * to an absolute URL when media is served from a DIFFERENT origin than the
 	 * app (e.g. dev: app on the Bun port, media on the web server). Distinct
-	 * from `baseUrl`, which only resolves export/relation cells that leave the
-	 * application and stays null-meaning-unresolved when unset.
+	 * from `exportBase`, which only resolves export/relation cells that leave the
+	 * application.
 	 */
 	readonly webBase: string;
 	readonly image: MediaTypeConfig;
@@ -593,9 +599,18 @@ function buildMediaConfig(): MediaConfig {
 		webBaseRaw !== undefined && webBaseRaw !== ''
 			? webBaseRaw.replace(/\/+$/, '')
 			: `/dedalo/${readString('DEDALO_MEDIA_DIR')}`;
+	// Export media base: same normalization (it is appended to the same
+	// '/...'-rooted relative path — a trailing slash would emit '…/media//image/…'),
+	// but NO default: unset stays undefined so the export reports the cell
+	// unresolved instead of guessing a host.
+	const exportBaseRaw = readEnv('DEDALO_MEDIA_EXPORT_BASE');
+	const exportBase =
+		exportBaseRaw !== undefined && exportBaseRaw !== ''
+			? exportBaseRaw.replace(/\/+$/, '')
+			: undefined;
 	return Object.freeze({
 		rootPath: mediaRoot,
-		baseUrl: readEnv('DEDALO_MEDIA_BASE_URL'),
+		exportBase,
 		webBase,
 		image: Object.freeze({
 			folder: readString('DEDALO_IMAGE_FOLDER'),

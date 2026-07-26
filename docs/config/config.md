@@ -1135,24 +1135,6 @@ DEDALO_MAGICK_PATH="/usr/bin/"
 
 ---
 
-### Defining the public media base URL
-
-DEDALO_MEDIA_BASE_URL `string` *optional*
-
-This parameter defines the public address that media files are reachable at, and it is used to build ABSOLUTE media URLs where a relative one would be meaningless.
-
-Inside the application every media URL is relative (`/dedalo/media/image/1.5MB/…`), because the browser already knows the host. But an exported list, a relation list or any cell that leaves the application must carry a URL a third party can open — so those cells are built as this base plus the file path of the model's default quality.
-
-The parameter is unset by default. When it is unset, media cells cannot be resolved and are reported as unresolved rather than guessed: the export leaves the cell empty and names the models it could not build. Set it to the public root that fronts the installation, without a trailing slash.
-
-```bash
-DEDALO_MEDIA_BASE_URL="https://my_institution.org"
-```
-
-*Default: (unset)*
-
----
-
 ### Defining the media URL directory
 
 DEDALO_MEDIA_DIR `string`
@@ -1168,6 +1150,26 @@ DEDALO_MEDIA_DIR="media"
 ```
 
 *Default: media*
+
+---
+
+### Defining the media base for exports
+
+DEDALO_MEDIA_EXPORT_BASE `string` *optional — unset leaves export media cells unresolved*
+
+This parameter defines the base every media URL that LEAVES the application is built on — an exported list, a relation list cell, anything a third party opens outside Dédalo.
+
+Inside the application media URLs may be relative (`/dedalo/media/image/1.5MB/…`), because the browser already knows the host — that is DEDALO_MEDIA_WEB_BASE's job. A cell that travels cannot: it must carry an address that resolves anywhere, so those cells are built as this base plus the file path of the model's default quality.
+
+Set it to the ABSOLUTE public address of the media directory — the same value DEDALO_MEDIA_WEB_BASE takes, including `/dedalo/<DEDALO_MEDIA_DIR>`, because both are prefixed to the SAME media-root relative path. A trailing slash is stripped.
+
+The parameter is unset by default. When it is unset, media cells cannot be resolved and are reported as unresolved rather than guessed: the export leaves the cell empty and names the models it could not build.
+
+```bash
+DEDALO_MEDIA_EXPORT_BASE="https://my_institution.org/dedalo/media"
+```
+
+*Default: (unset)*
 
 ---
 
@@ -1221,7 +1223,7 @@ DEDALO_MEDIA_WEB_BASE="http://localhost:8080/dedalo/media"
 
 In a production topology (one virtual host fronting both the application and `/dedalo/media`) leave it unset.
 
-Do not confuse it with DEDALO_MEDIA_BASE_URL, which only resolves media cells in EXPORTS — content that leaves the application and cannot use a relative URL. That key stays deliberately unset-means-unresolved; this one always has an effective value (the relative default).
+Do not confuse it with DEDALO_MEDIA_EXPORT_BASE, which builds the media cells of EXPORTS — content that leaves the application and cannot use a relative URL. Both take the same kind of value (an origin plus `/dedalo/<DEDALO_MEDIA_DIR>`), and on a single-origin installation they are the same string; they differ in their audience and in what UNSET means. That key stays deliberately unset-means-unresolved; this one always has an effective value (the relative default).
 
 *Default: (unset)*
 

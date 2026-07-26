@@ -117,7 +117,7 @@ ledgered**:
 | `component_date` | the flat date atom: year-only, or `d-m-Y`; a range renders `start <> end` |
 | `component_iri` | the iri value plus its `dd560` label-dataframe pairing (id_key-matched), joined `', '` |
 | datalist-resolvable relation models (`component_select`, `component_radio_button`, `component_check_box`, `component_autocomplete`, `component_autocomplete_hi`, `component_relation_model`, `component_portal`) | the resolved datalist label per locator, **or** — when the component declares export-atom children (a `section_list`-style config) — each child's own flat value, joined by the child's `fields_separator` |
-| media models (`component_image`, `component_svg`, `component_pdf`, `component_av`) | the absolute URL of the model's default quality (`1.5MB`/`web`/`404`) under `DEDALO_MEDIA_BASE_URL`; a missing env value or an unmapped default quality is **ledgered as unresolved**, never guessed |
+| media models (`component_image`, `component_svg`, `component_pdf`, `component_av`) | the absolute URL of the model's default quality (`1.5MB`/`web`/`404`) under `DEDALO_MEDIA_EXPORT_BASE`; a missing env value or an unmapped default quality is **ledgered as unresolved**, never guessed |
 | anything else | **ledgered as unresolved** — the cell value is `null` (key omitted from the row) and the model name is collected in `RelationListResult.unresolved`, surfaced to the caller as `errors` rather than silently guessed |
 
 This "ledger, never guess" contract is deliberate: the resolver enumerates the
