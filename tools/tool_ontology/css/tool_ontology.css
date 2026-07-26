@@ -245,10 +245,6 @@
 }
 .wrapper_tool.tool_ontology > .content_data > .buttons_container > .button_generate {
   position: relative;
-  border: 1.5px solid var(--color_input_focus);
-}
-.wrapper_tool.tool_ontology > .content_data > .buttons_container > .button_generate:focus {
-  border: 1.5px solid var(--color_input_focus) !important;
 }
 .wrapper_tool.tool_ontology > .content_data > .messages_container {
   padding: 1rem;
