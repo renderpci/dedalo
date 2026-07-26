@@ -65,15 +65,68 @@ interface Session {
     csrfToken: string;       // per-session, constant-time compared
     applicationLang: string | null; // per-session lang override (change_lang)
     dataLang: string | null;         // null ⇒ installation default
+    expiresIn?: number;              // seconds left, the lower of the two clocks
+    absoluteExpiresIn?: number | null; // seconds left on the cap alone
 }
 ```
 
 The DB stores only the token's SHA-256 (`token_hash` is the primary key), plus
-`created_at` / `last_seen` for the sliding TTL (`SESSION_TTL_SECONDS`, default
-12h). `getSession()` touches `last_seen` on every resolve and self-expires a row
-past the TTL. The session is the single source of truth — there is no separate
-token store, and the CSRF token is only ever compared with
+`created_at` / `last_seen`. The session is the single source of truth — there is
+no separate token store, and the CSRF token is only ever compared with
 `crypto.timingSafeEqual`.
+
+### Two expiry clocks
+
+A session dies at whichever comes first:
+
+| clock | key | default | measured from |
+| --- | --- | --- | --- |
+| Idle timeout | `SESSION_TTL_SECONDS` | `3600` (1h) | `last_seen`, refreshed by every authenticated request |
+| Absolute cap | `SESSION_ABSOLUTE_TTL_SECONDS` | `43200` (12h) | `created_at`, and nothing can postpone it |
+
+`getSession()` enforces both on read, touching `last_seen` (this is what makes
+the idle window sliding) and destroying the row when either clock has run out.
+`pruneExpiredSessions()` sweeps on **both** as well — a session the reader
+rejects but the GC keeps would be a row that never dies.
+
+The idle window alone is not a policy: the client polls in the background, so an
+unattended browser renews itself indefinitely. The cap is what actually ends a
+working day. Set it to `0` to disable it and keep the idle limit only.
+
+!!! note "Long-running work is not affected"
+    Background jobs never re-read the session. A background tool keeps its
+    requesting user on the job record (`core/tools/background.ts`) and diffusion
+    re-derives the enqueuing principal from `owner_user_id` at run time
+    (`diffusion/runner.ts`). A **publication run or a massive import therefore
+    survives its owner's logout**, and reattaches to the same user after
+    re-login (`listBackgroundJobs` filters by `userId`).
+
+### Expiry as the client sees it
+
+Two mechanisms, in order:
+
+1. **The warning.** The boot payload carries three `page_globals` keys —
+   `dedalo_session_ttl_seconds`, `dedalo_session_absolute_expires_in` and
+   `dedalo_session_warning_seconds` (`SESSION_WARNING_SECONDS`, default `300`;
+   `0` disables). `session_expiry.js` re-arms a local timer from the
+   `session_activity` beat that `data_manager` publishes on every authenticated
+   response, and warns once the window drops below the threshold. Only the
+   *absolute* deadline is sent because it is the only one the client cannot
+   re-derive — the idle window restarts on every request.
+2. **The recovery.** Once the session is gone, the auth gate answers **401**
+   with `errors: ['not_logged']`. The client raises the re-login modal in place
+   (`render_relogin`), and components retry on `login_successful` — so page
+   state survives. `msg` carries the human text; `errors` carries the token
+   every client branch dispatches on.
+
+!!! warning "`not_logged` is load-bearing on both sides"
+    The server must emit that exact token and the client must be able to
+    *receive* it: `data_manager` exempts 401 from its retry-wrapper throw, or
+    the envelope never reaches `.json()` and the modal never opens. Both halves
+    are pinned by `test/unit/session_not_logged_contract.test.ts`.
+
+Media access is bound to the same clock — see
+[media protection](media_protection.md).
 
 ### The users section is the credential store
 

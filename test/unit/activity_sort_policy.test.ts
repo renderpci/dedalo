@@ -56,9 +56,8 @@ async function activityListContext(): Promise<Ctx[]> {
 
 describe('activity sort policy (WC-044)', () => {
 	test('When (dd547) order path maps to the section_id direct column', async () => {
-		const path = await runWithRequestLangs(
-			{ applicationLang: 'lg-eng', dataLang: 'lg-eng' },
-			() => buildOrderPath(ACTIVITY_WHEN_TIPO, ACTIVITY_SECTION_TIPO),
+		const path = await runWithRequestLangs({ applicationLang: 'lg-eng', dataLang: 'lg-eng' }, () =>
+			buildOrderPath(ACTIVITY_WHEN_TIPO, ACTIVITY_SECTION_TIPO),
 		);
 		expect(path.length).toBe(1);
 		expect(path[0]?.component_tipo).toBe('section_id');
@@ -68,9 +67,8 @@ describe('activity sort policy (WC-044)', () => {
 	test('a non-activity date component keeps its ordinary jsonb order path', async () => {
 		// Same model (component_date), different section — the mapping is
 		// dd542-scoped, not a component_date behavior change.
-		const path = await runWithRequestLangs(
-			{ applicationLang: 'lg-eng', dataLang: 'lg-eng' },
-			() => buildOrderPath('oh18', 'oh1'),
+		const path = await runWithRequestLangs({ applicationLang: 'lg-eng', dataLang: 'lg-eng' }, () =>
+			buildOrderPath('oh18', 'oh1'),
 		);
 		expect(path[0]?.component_tipo).toBe('oh18');
 	});

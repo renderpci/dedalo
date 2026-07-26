@@ -298,6 +298,15 @@ unchanged (`is_equal` against `db_data.entries`), toggles `saving` / `loading`
 save RQO is the same `{action, source, data}` envelope described in
 [RQO](../rqo.md).
 
+!!! note "This is what makes an expired session non-destructive"
+    A save that lands after the session died is not lost. The server answers
+    401 / `not_logged`, `page.js` raises the re-login modal in place — no
+    navigation, no page state lost — and this handler replays the save once
+    `login_successful` fires. `data_manager` deliberately does **not** treat 401
+    as a transport error, so the envelope reaches the event that drives all of
+    it. Users are also warned ahead of time; see
+    [login → expiry as the client sees it](../system/login.md).
+
 ### 7. Refresh / destroy
 
 `refresh(options)` runs **destroy-dependencies → build → render at `content`

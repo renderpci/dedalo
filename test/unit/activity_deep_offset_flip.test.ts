@@ -28,8 +28,8 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import type { Sqo } from '../../src/core/concepts/sqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
-import { fireSaveEvent } from '../../src/core/section_record/save_event.ts';
 import { buildSearchSql } from '../../src/core/search/sql_assembler.ts';
+import { fireSaveEvent } from '../../src/core/section_record/save_event.ts';
 
 const LIMIT = 5;
 const threshold = config.ops.searchLateRowLookupOffset;
@@ -59,7 +59,10 @@ async function plainPageIds(offset: number, direction: 'ASC' | 'DESC' = 'DESC'):
 }
 
 /** Acquisition: execute exactly the SQL buildSearchSql emits for the sqo. */
-async function acquiredPageIds(offset: number, direction: 'ASC' | 'DESC' = 'DESC'): Promise<number[]> {
+async function acquiredPageIds(
+	offset: number,
+	direction: 'ASC' | 'DESC' = 'DESC',
+): Promise<number[]> {
 	const { sql: builtSql, params } = await buildSearchSql(activitySqo(offset, direction), {});
 	const rows = (await sql.unsafe(builtSql, params as (string | number | null)[])) as {
 		section_id: number;
@@ -161,7 +164,7 @@ describe('flattened deep-page order-flip equivalence (real DB)', () => {
 			}) as unknown as Sqo;
 		const plainByIds = async (offset: number): Promise<number[]> => {
 			const rows = (await sql.unsafe(
-				`SELECT id FROM matrix_activity WHERE section_tipo = $1 ORDER BY id DESC LIMIT $2 OFFSET $3`,
+				'SELECT id FROM matrix_activity WHERE section_tipo = $1 ORDER BY id DESC LIMIT $2 OFFSET $3',
 				[ACTIVITY_TIPO, LIMIT, offset],
 			)) as { id: number }[];
 			return rows.map((r) => Number(r.id));

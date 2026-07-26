@@ -243,11 +243,9 @@ describe('persist_config (P2)', () => {
 			// A prior install set the socket; a re-save carries no serving flags.
 			writeFileSync(
 				join(scratch2, '.env'),
-				[
-					'DEDALO_SALT_STRING=deadbeef',
-					'SERVER_UNIX_SOCKET=/run/dedalo/dedalo_ts.sock',
-					'',
-				].join('\n'),
+				['DEDALO_SALT_STRING=deadbeef', 'SERVER_UNIX_SOCKET=/run/dedalo/dedalo_ts.sock', ''].join(
+					'\n',
+				),
 			);
 			const result = await persistConfig({ ...BASE_CFG });
 			expect(result.result).toBe(true);

@@ -111,7 +111,7 @@ async function discoverTuples(
 	// index knows for each tuple's component_to_search.
 	for (const tuple of [...tuples]) {
 		const indexSections = (await sql.unsafe(
-			`SELECT DISTINCT target_section_tipo AS s FROM matrix_relation_index WHERE from_component_tipo = $1`,
+			'SELECT DISTINCT target_section_tipo AS s FROM matrix_relation_index WHERE from_component_tipo = $1',
 			[tuple.componentToSearch],
 		)) as { s: string }[];
 		for (const row of indexSections) {

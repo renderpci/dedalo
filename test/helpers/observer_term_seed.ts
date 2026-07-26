@@ -31,13 +31,13 @@ export interface TermSeedHandle {
 export async function seedTermChainIfAbsent(): Promise<TermSeedHandle> {
 	const handle: TermSeedHandle = { seededChain: false, seededSectionNode: false };
 	const present = (await sql.unsafe(
-		`SELECT 1 FROM matrix_hierarchy WHERE section_tipo = $1 AND section_id = $2`,
+		'SELECT 1 FROM matrix_hierarchy WHERE section_tipo = $1 AND section_id = $2',
 		[SEED_TERM.section_tipo, SEED_TERM.section_id],
 	)) as unknown[];
 	if (present.length > 0) return handle;
 	handle.seededChain = true;
 
-	const nodePresent = (await sql.unsafe(`SELECT 1 FROM dd_ontology WHERE tipo = $1`, [
+	const nodePresent = (await sql.unsafe('SELECT 1 FROM dd_ontology WHERE tipo = $1', [
 		SEED_TERM.section_tipo,
 	])) as unknown[];
 	if (nodePresent.length === 0) {
@@ -77,7 +77,7 @@ export async function seedTermChainIfAbsent(): Promise<TermSeedHandle> {
 						],
 					};
 		await sql.unsafe(
-			`INSERT INTO matrix_hierarchy (section_id, section_tipo, relation) VALUES ($1, $2, $3::text::jsonb)`,
+			'INSERT INTO matrix_hierarchy (section_id, section_tipo, relation) VALUES ($1, $2, $3::text::jsonb)',
 			[id, SEED_TERM.section_tipo, JSON.stringify(relation)],
 		);
 	}

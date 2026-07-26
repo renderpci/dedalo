@@ -48,7 +48,10 @@ function tmRow(tipo: string, data: unknown): TimeMachineRow {
 
 describe('tm_record component_section_id tolerance', () => {
 	test('a component_section_id TM row builds a dd15 record without throwing', async () => {
-		const record = await buildTmSectionRecord(tmRow(SECTION_ID_TIPO, [{ id: 1, value: 42 }]), 'lg-spa');
+		const record = await buildTmSectionRecord(
+			tmRow(SECTION_ID_TIPO, [{ id: 1, value: 42 }]),
+			'lg-spa',
+		);
 
 		// Well-formed virtual dd15 record keyed under the TM row id.
 		expect(record.section_tipo).toBe(TIME_MACHINE_SECTION_TIPO);
@@ -65,7 +68,9 @@ describe('tm_record component_section_id tolerance', () => {
 		// not be injected under its own tipo anywhere, and no `section_id`
 		// (the PK) column may leak into the jsonb columns map.
 		const leaked = MATRIX_JSONB_COLUMNS.filter(
-			(column) => (record.columns[column] as Record<string, unknown> | undefined)?.[SECTION_ID_TIPO] !== undefined,
+			(column) =>
+				(record.columns[column] as Record<string, unknown> | undefined)?.[SECTION_ID_TIPO] !==
+				undefined,
 		);
 		expect(leaked).toEqual([]);
 		expect('section_id' in record.columns).toBe(false);

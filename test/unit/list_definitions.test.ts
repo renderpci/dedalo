@@ -57,9 +57,9 @@ describe('section_list_thesaurus (§7.5)', () => {
 			},
 			sqo: { section_tipo: ['numisdata3'], limit: 1, offset: 0 },
 		} as never);
-		const envelope = result.data.find(
-			(item) => (item as { typo?: string }).typo === 'sections',
-		) as { tipo?: string } | undefined;
+		const envelope = result.data.find((item) => (item as { typo?: string }).typo === 'sections') as
+			| { tipo?: string }
+			| undefined;
 		expect(envelope?.tipo).toBe('numisdata3');
 		expect((result.context[0] as { mode?: string } | undefined)?.mode).toBe('list_thesaurus');
 	});

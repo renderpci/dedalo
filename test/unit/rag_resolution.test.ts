@@ -220,7 +220,16 @@ describe('resolveEmbedDocs', () => {
 		// 154 chars. Absent mode must default literals to edit (full value);
 		// an explicitly authored mode is the author's call and passes verbatim.
 		const seen: Array<{ tipo: string; mode: string; childModes: string[] }> = [];
-		const spyEmit: EmbedSourceDeps['emitDdo'] = async (ddo, ddoMap, r, row, mode, lang, c, emission) => {
+		const spyEmit: EmbedSourceDeps['emitDdo'] = async (
+			ddo,
+			ddoMap,
+			r,
+			row,
+			mode,
+			lang,
+			c,
+			emission,
+		) => {
 			seen.push({
 				tipo: ddo.tipo,
 				mode,

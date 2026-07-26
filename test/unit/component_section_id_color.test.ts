@@ -87,7 +87,7 @@ describe('component_section_id context.color (full context)', () => {
 	});
 });
 
-describe("component_section_id context.color (simple context omits it, PHP parity)", () => {
+describe('component_section_id context.color (simple context omits it, PHP parity)', () => {
 	test('addRequestConfig:false emits NO color (get_structure_context_simple)', async () => {
 		const entry = await build(ID_OF_COLOURED, SECTION_COLOURED, false);
 		expect(entry).not.toBeNull();

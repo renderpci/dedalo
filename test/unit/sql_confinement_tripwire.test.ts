@@ -412,7 +412,7 @@ describe('T4 — subsystem-owned table families', () => {
 			for (const file of sourceFiles()) {
 				if (file.startsWith('src/core/db/')) continue; // T1 home (name catalogs)
 				if (owners.some((owner) => file === owner || file.startsWith(owner))) continue;
-				if (exempt !== undefined && exempt.includes(file)) continue; // name-only, reasoned above
+				if (exempt?.includes(file)) continue; // name-only, reasoned above
 				if (tablePattern.test(read(file))) violations.push(file);
 			}
 			expect(

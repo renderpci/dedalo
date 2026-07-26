@@ -84,7 +84,6 @@ describe('late row lookup SQL shape', () => {
 		expect(builtSql).toMatch(/ORDER BY\s+\w+\.id (?:ASC|DESC);$/);
 	});
 
-
 	test('multi-section deep offset keeps the plain shape (no rewrite)', async () => {
 		const { sql: builtSql } = await buildSearchSql({
 			section_tipo: [SECTION, 'es4'],

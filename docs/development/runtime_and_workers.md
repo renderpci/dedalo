@@ -225,10 +225,23 @@ Cookie lifecycle is handled at the response boundary:
   `Secure` is the reverse proxy's concern (TLS terminates there). A second
   cookie, the fixed-name `dedalo_media_auth`, is emitted alongside it when media
   protection is active — see [Media pipeline](media_pipeline.md).
+- **Every other authenticated request** — the media cookie is **re-issued** when
+  the caller's value is missing or is no longer today's, with `Max-Age` = the
+  session idle window. This is what keeps the media credential and the session
+  alive and dead together; the check is a string compare against a day-cached
+  value, so the steady state costs nothing. The session cookie itself needs no
+  re-issue — it is a browser-session cookie whose server-side row slides on
+  `last_seen`.
 - **Logout** — `dispatchRqo()` returns `clearSessionCookie`; the server emits the
   same cookies with `Max-Age=0` so the browser drops them.
 - **`change_lang`** — persists the language choice onto the session row via
   `setSessionLangs()` (`src/core/security/session_store.ts`).
+
+`getSession()` enforces **two** expiry clocks — the sliding idle window and an
+absolute cap since creation — and destroys the row when either runs out. When it
+returns null the auth gate answers 401 with `errors: ['not_logged']`, the token
+the client's in-place re-login recovery is built on. Full contract:
+[login](../core/system/login.md).
 
 ### Media route (dev listener)
 

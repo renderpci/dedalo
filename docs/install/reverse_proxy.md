@@ -2,12 +2,14 @@
 
 > See also: [Production install](production.md) · [Media protection](../config/media_protection.md) · [Troubleshooting](troubleshooting.md) · [H.264 streaming module](install_h264_module.md)
 
+## Overview
+
 Dédalo's engine listens on a **unix socket and nothing else**. The reverse proxy
 is not an optional performance layer: it owns TCP and TLS, it serves the client
 static files, and — most importantly — **it is what enforces media access
 control**. This page wires it, for nginx and for Apache.
 
-## What the proxy is responsible for
+### What the proxy is responsible for
 
 ```mermaid
 flowchart LR
@@ -40,7 +42,7 @@ flowchart LR
     socket, it never runs. Leave `MEDIA_DEV_ROUTE_ENABLED` unset; setting it to
     `true` would force the engine into the byte path on *every* listener.)
 
-## The three generated rule files
+### The three generated rule files
 
 The **engine generates** the web-server rules; the **proxy enforces** them. The
 files are written into `MEDIA_PATH` at boot, at every login, and by the
@@ -68,7 +70,7 @@ embedded in each file.
       rotates: the rules never name a value, they only test whether the file
       named by the cookie exists.
 
-## The root rule
+### The root rule
 
 **The generated nginx locations carry no `root` and no `alias`.** They inherit
 the server's `root`. So the server `root` must satisfy:
@@ -89,25 +91,54 @@ Apache has no such subtlety: an `Alias` maps the URL onto `MEDIA_PATH` directly.
 
 ## nginx
 
-Install nginx first:
+1. Install nginx first:
 
 ```shell
 apt install -y nginx      # RHEL family: dnf install -y nginx
 ```
 
-The reference configuration is `deploy/nginx.conf` in the repo — copy it to
-`/etc/nginx/conf.d/dedalo.conf` and substitute the four paths named in its header.
+2. Copy the reference configuration:
+
+```shell
+cp /opt/dedalo/master_dedalo/deploy/nginx.conf /etc/nginx/conf.d/dedalo.conf
+```
+
+3. Start the server and change the configuration to include the media protection files.
 
 !!! warning "Bring it up in THIS order — the two media `include` lines are commented on purpose"
-    The `include` lines below point at files the engine only writes on its **first
-    boot**. Install with them **commented out** or nginx refuses to start against
-    missing files. In order:
+    The `include` lines below point at files the engine only writes on its **first boot**. Install with them **commented out** or nginx refuses to start against missing files. In order:
 
-    1. Install this config **as shown** (both `include` lines commented). nginx
-       starts; media is simply not served yet — the safe failure.
-    2. Confirm the engine has run once ([step 10](production.md#10-run-the-engine-under-systemd)) —
-       it writes the rule files into `MEDIA_PATH` at boot.
+    1. Install this config **as shown** (both `include` lines commented). nginx starts; media is simply not served yet — the safe failure.
+    2. Confirm the engine has run once ([step 10](production.md#10-run-the-engine-under-systemd)) — it writes the rule files into `MEDIA_PATH` at boot.
     3. **Uncomment both `include` lines**, then `nginx -t && systemctl reload nginx`.
+
+3.1 Start the nginx service:
+
+```shell
+systemctl enable nginx
+systemctl start nginx
+```
+
+3.2 Test it in browser:
+
+3.3 Check if the media files was created correctly.
+
+```shell
+ls -la /srv/dedalo/media/dedalo_media_protection_map.nginx.conf
+ls -la /srv/dedalo/media/dedalo_media_protection.nginx.conf
+```
+
+3.4 If the files are created correctly, uncomment the `include` lines in the nginx configuration and reload the service.
+
+```shell
+nano /etc/nginx/conf.d/dedalo.conf
+nginx -t && systemctl reload nginx
+```
+
+3.5 Test it in browser again.
+
+!!! info "Certificate"
+    If you see a certificate error, it means that the certificate is not installed correctly. You can install it manually or use the [certbot instuctions](#tls-with-lets-encrypt) to install it automatically.
 
 The config is reproduced here with the load-bearing lines called out.
 
@@ -186,15 +217,10 @@ server {
 ```
 
 !!! note "Several domains on one box"
-    This is a single-domain vhost. To serve more domains, add one `upstream` and
-    one `server{}` per domain, each pointing at that instance's socket and
-    `MEDIA_PATH` — see [Multiple instances on one server](multi_instance.md).
+    This is a single-domain vhost. To serve more domains, add one `upstream` and one `server{}` per domain, each pointing at that instance's socket and `MEDIA_PATH` — see [Multiple instances on one server](multi_instance.md).
 
 !!! warning "Known defect: quote the rule-B location regex"
-    In `publication` mode the generated `dedalo_media_protection.nginx.conf`
-    emits its rule-B location as an **unquoted** regex, and that regex contains
-    `{2,12}`. nginx's configuration lexer treats `{` and `}` as block delimiters,
-    so it truncates the token and refuses to start:
+    In `publication` mode the generated `dedalo_media_protection.nginx.conf` emits its rule-B location as an **unquoted** regex, and that regex contains `{2,12}`. nginx's configuration lexer treats `{` and `}` as block delimiters, so it truncates the token and refuses to start:
 
     ```text
     nginx: [emerg] pcre2_compile() failed: missing closing parenthesis in "^/dedalo/media/(?:…"
@@ -207,10 +233,7 @@ server {
     ```
 
     The edit survives: the file is only rewritten when the embedded
-    `# config-hash:` line stops matching the current configuration, and quoting
-    does not change the hash. Re-apply it after any change to the media mode or
-    the public quality list. `private` mode is unaffected — it generates no
-    regex location.
+    `# config-hash:` line stops matching the current configuration, and quoting does not change the hash. Re-apply it after any change to the media mode or the public quality list. `private` mode is unaffected — it generates no regex location.
 
 ## Apache
 
@@ -221,8 +244,7 @@ apt install -y apache2      # RHEL family: dnf install -y httpd
 ```
 
 The `ProxyPass` rules must
-come **before** the aliases, and `Alias /dedalo/media` must come before
-`Alias /dedalo`: the first match wins.
+come **before** the aliases, and `Alias /dedalo/media` must come before `Alias /dedalo`: the first match wins.
 
 ```shell
 a2enmod ssl headers http2 rewrite proxy proxy_http
@@ -280,14 +302,9 @@ a2enmod ssl headers http2 rewrite proxy proxy_http
 ```
 
 !!! danger "`AllowOverride All` is not a style choice"
-    Apache reads the generated `.htaccess` only if the directory allows
-    overrides. Without it the file is ignored **silently**, and the whole media
-    tree — originals included — is world-readable. `mod_rewrite` must be enabled
-    for the same reason.
+    Apache reads the generated `.htaccess` only if the directory allows overrides. Without it the file is ignored **silently**, and the whole media tree — originals included — is world-readable. `mod_rewrite` must be enabled for the same reason.
 
-Serving audiovisual fragments by time range needs an extra Apache module; nginx
-has the equivalent built in. See
-[H.264 streaming module](install_h264_module.md).
+Serving audiovisual fragments by time range needs an extra Apache module; nginx has the equivalent built in. See [H.264 streaming module](install_h264_module.md).
 
 ## TLS with Let's Encrypt
 
@@ -300,11 +317,7 @@ certbot renew --dry-run                    # the snap installs the renewal timer
 ```
 
 !!! warning "TLS is a hard requirement, not a recommendation"
-    `SESSION_COOKIE_SECURE` defaults to **true**, so a browser will not store the
-    session cookie over plain HTTP and **nobody can log in**. The media-auth
-    cookie carries the same attributes by construction — a `Secure` session
-    cookie next to a cleartext media cookie would leak an authorisation value on
-    a single plaintext hop.
+    `SESSION_COOKIE_SECURE` defaults to **true**, so a browser will not store the session cookie over plain HTTP and **nobody can log in**. The media-auth cookie carries the same attributes by construction — a `Secure` session cookie next to a cleartext media cookie would leak an authorisation value on a single plaintext hop.
 
 ## The settings that bite
 

@@ -9,17 +9,33 @@ Maintenance state closes login to all users, including general administrators; o
 The `set_maintenance_mode` and `set_notification` actions (`check_config`
 widget, `src/core/area_maintenance/widgets/check_config.ts`) persist to the
 server's own `../private/ts_state.json` (`setServerState()` in
-`src/core/resolve/server_state.ts`). Enforcement lives in `login()`
-(`src/core/security/auth.ts`): while `maintenance_mode` is `true` in
-`ts_state.json`, every non-superuser login is refused with "Server under
-maintenance. Please try again later." — only `section_id = -1` (root)
-passes. The server does not actively delete existing sessions when
-maintenance mode is switched on; already-logged-in non-root users keep their
-session until it expires or they log out.
+`src/core/resolve/server_state.ts`). Enforcement is in **two** places, and both
+matter:
+
+- **New logins** — `login()` (`src/core/security/auth.ts`) refuses every
+  non-superuser with "Server under maintenance. Please try again later."
+- **Existing sessions** — the dispatcher re-checks maintenance on **every
+  request** (gate 2b, AUTH-05) and refuses any session that is not root, with
+  the same unauthenticated shape as an expired session (HTTP 401,
+  `errors: ['not_logged']`). Without this, a session minted *before* maintenance
+  was switched on would keep writing to the matrix tables during a data-version
+  migration — the exact corruption window the gate closes.
+
+Only `section_id = -1` (root) passes either check.
 
 ## Alert to users
 
-Switching to maintenance mode does not force-close existing sessions today: any logged-in user keeps working until their session ends. To avoid a user losing work when a session does end mid-maintenance, alert all users before switching to maintenance mode.
+**Switching to maintenance mode stops non-root users at their very next
+request.** Their sessions are not deleted, but every action is refused, so in
+practice they are locked out immediately and the client shows them the re-login
+modal (where logging back in is also refused, with the maintenance message).
+Anything unsaved on screen at that moment is at risk.
+
+Alert all users **before** switching to maintenance mode, and give them time to
+save. Lifting maintenance restores them without a re-login — their session rows
+were never destroyed, so the next request simply passes the gate again, provided
+the session has not meanwhile hit one of its own
+[expiry clocks](../core/system/login.md).
 
 The `set_notification` action works the same way as maintenance mode: it
 writes the `check_config` widget's `notification` field to `ts_state.json`

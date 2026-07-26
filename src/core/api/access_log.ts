@@ -52,10 +52,10 @@ export function logApiAccess(entry: AccessLogEntry): void {
 	}
 	if (config.ops.slowRequestMs > 0 && ms >= config.ops.slowRequestMs) {
 		incrementCounter('requests_slow');
+		const detail = entry.detail !== undefined && entry.detail !== '' ? ` ${entry.detail}` : '';
 		console.warn(
 			`[slow-request] ${api} took ${ms}ms (threshold ${config.ops.slowRequestMs}ms) ` +
-				`[req ${entry.requestId}, user ${entry.userId ?? 'anon'}]` +
-				(entry.detail !== undefined && entry.detail !== '' ? ` ${entry.detail}` : ''),
+				`[req ${entry.requestId}, user ${entry.userId ?? 'anon'}]${detail}`,
 		);
 	}
 }

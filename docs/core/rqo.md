@@ -543,6 +543,15 @@ The envelope is always `{result, msg, errors, action, csrf_token}`; only the **s
 
 On failure `result` is `false` and `errors[]` carries a code (`Undefined method`, `invalid_api_class`, `not_logged`, `csrf_failed`, `permissions error`, `permissions_denied`).
 
+!!! warning "`errors[]` carries CODES; `msg` carries the prose"
+    `not_logged` is the one every client branch dispatches on: it answers HTTP
+    **401** whenever the session is absent or expired (and for a non-root caller
+    under maintenance mode), and it is what raises the in-place re-login modal.
+    The human sentence lives in `msg` — putting it in `errors[]` instead makes
+    the code unmatchable and silently disables the client's whole recovery path.
+    Note that a client consuming 401 must read the envelope rather than treating
+    the status as a transport failure. See [login](system/login.md).
+
 ## RQO and request_config
 
 The RQO and the [request_config](request_config.md) are the two halves of the same contract:
@@ -592,7 +601,7 @@ The reverse path also exists: when a client sends `rqo->show` (e.g. time machine
 - **Empty result with no error** — likely a dropped/failed ddo resolution (invalid tipo, inactive TLD, no permissions) inside `processSingleDdo()` (`src/core/relations/request_config/explicit.ts`). There is no warnings field to inspect — step through the builder/read path directly.
 - **Stale list after editing** — the server persists the resolved SQO into the session (`setSessionSqo()`) but does not replay it automatically; verify the client is actually resending the filter/limit it should on the follow-up call, and check the client local-DB cache (`cache_handler`).
 - **CSRF errors on first call** — the token is minted on `start`/`login` and appended to every authenticated response's `csrf_token` field (`dispatchRqo()`); ensure the bootstrap call ran. The client retries a `csrf_failed` rejection once automatically — the CSRF-failure response carries the session's CURRENT token specifically so that retry can succeed.
-- **`Authentication required` on an action you expected to be public** — check `NO_LOGIN_ACTIONS` in `src/core/api/dispatch.ts` directly for the exact `dd_api:action` pair.
+- **`Authentication required` on an action you expected to be public** — check `NO_LOGIN_ACTIONS` in `src/core/api/dispatch.ts` directly for the exact `dd_api:action` pair. The response is a 401 carrying `errors: ['not_logged']`; if you get it on an action that *should* need a session, the session simply expired — see [login](system/login.md) for the two clocks.
 - **`save` silently did nothing** — only `source->type:'component'` is implemented. Check `source->type` and that each `changed_data[].action` is a recognized operation.
 - **Picker columns (`choose.ddo_map`)** — `choose` validates through the same strict `ddoMapSchema` as `show`/`search` at the `rqoSchema.safeParse()` boundary — a `choose` ddo with a non-whitelisted field is silently stripped of that field, not rejected outright.
 
