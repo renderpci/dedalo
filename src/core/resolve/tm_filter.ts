@@ -28,6 +28,9 @@
  */
 
 import {
+	TM_COLUMN_MATRIX_ID,
+} from '../tm_record/tm_record.ts';
+import {
 	type NormalizedDate,
 	normalizeDateQ,
 	timeMachineDatePredicates,
@@ -42,7 +45,7 @@ interface TmColumn {
 
 /** dd15 column-component tipo → physical column + kind (PHP DEDALO_TIME_MACHINE_COLUMN_*). */
 const TM_FILTER_COLUMNS: Readonly<Record<string, TmColumn>> = {
-	dd1573: { column: 'id', kind: 'number' },
+	[TM_COLUMN_MATRIX_ID]: { column: 'id', kind: 'number' }, // dd1573 Id = the TM row PK
 	dd1212: { column: 'section_id', kind: 'number' },
 	dd1371: { column: 'bulk_process_id', kind: 'number' },
 	dd559: { column: '"timestamp"', kind: 'date' },
@@ -55,14 +58,35 @@ const TM_FILTER_COLUMNS: Readonly<Record<string, TmColumn>> = {
 const BOOLEAN_OPERATORS: ReadonlySet<string> = new Set(['$and', '$or', '$not', '$nand', '$nor']);
 
 /** Mutable positional-parameter accumulator (buildTmWhere's `$N` convention). */
-interface ParamSink {
+export interface ParamSink {
 	params: unknown[];
+	/**
+	 * Set when any emitted leaf is a RANGE comparison (`>`, `>=`, `<`, `<=`) as
+	 * opposed to equality / IS NULL / ILIKE. read_tm.ts reads this to decide
+	 * whether the page query needs the optimisation barrier: a range predicate
+	 * combined with the `id` sort has NO index that carries both, and the planner
+	 * then walks the `id` PK filtering inline — which is catastrophic exactly when
+	 * the filtered column CORRELATES with id. On this append-only log `timestamp`
+	 * correlates almost perfectly, so a 2026 date search discarded 45,992,453 PK
+	 * entries to return 10 rows (48.9 s). Equality leaves are NOT flagged: their
+	 * column's `(col, id DESC)` index carries the equality AND the id order, and
+	 * they are already 2.6 ms — barriering those would make them ~170x slower.
+	 */
+	rangePredicate?: boolean;
 }
 
 /** Register a value, return its `$N` placeholder. */
 function bind(sink: ParamSink, value: unknown): string {
 	sink.params.push(value);
 	return `$${sink.params.length}`;
+}
+
+/** SQL comparison operators that select a RANGE rather than a point. */
+const RANGE_OPERATORS: ReadonlySet<string> = new Set(['>', '>=', '<', '<=']);
+
+/** Flag the sink when `cmp` is a range comparison (see ParamSink.rangePredicate). */
+function markRange(sink: ParamSink, cmp: string): void {
+	if (RANGE_OPERATORS.has(cmp)) sink.rangePredicate = true;
 }
 
 /** Unwrap the SQO q shape to its first scalar/object (array → [0], strip UI id). */
@@ -105,6 +129,7 @@ function emitNumber(col: string, rawQ: unknown, operator: string, sink: ParamSin
 						: cmp === '!='
 							? '!='
 							: '=';
+	markRange(sink, sqlOp);
 	return `${col} ${sqlOp} ${bind(sink, Math.trunc(n))}`;
 }
 
@@ -115,9 +140,11 @@ function emitDate(col: string, rawQ: unknown, operator: string, sink: ParamSink)
 	if (date === null) return null;
 	const effectiveOperator = date.op !== '' ? date.op : operator;
 	const predicates = timeMachineDatePredicates(date, effectiveOperator);
-	const parts = predicates.map(
-		(predicate) => `${col} ${predicate.cmp} ${bind(sink, predicate.bound)}::date`,
-	);
+	const parts = predicates.map((predicate) => {
+		// Every date match is a range — even "on this day" is `>= d AND < d+1`.
+		markRange(sink, predicate.cmp);
+		return `${col} ${predicate.cmp} ${bind(sink, predicate.bound)}::date`;
+	});
 	return parts.length > 1 ? `(${parts.join(' AND ')})` : (parts[0] as string);
 }
 

@@ -484,7 +484,8 @@ render_inspector.prototype.edit = async function(options) {
 * edit() returns this node directly (used by refresh cycles to replace only the body).
 *
 * Block rendering order:
-*   1. paginator_container (section_id display, pointer stored for live updates)
+*   1. paginator_container (holds the paginator; section_id shown via the
+*      paginator's .placeholder_section_id)
 *   2. buttons_container top (search / new / duplicate / delete / target-section /
 *      graph / diffusion / tool shortcuts)
 *   3. tools_container (any NON-print inspector tool, each on its own row; tool_print

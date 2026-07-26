@@ -1932,14 +1932,28 @@ search.prototype.get_panels_status = async function() {
 * remaining indices (defensive iteration order).
 *
 * For each instance:
-*  - `data.value` is cleared to `[]` (raw stored value).
-*  - `data.q_operator` is set to `null`.
-*  - `data.q_lang` is set to `null`.
+*  - `data.entries` is cleared to `[]` — this is THE search value store:
+*    `get_component_instance` injects the value there and
+*    `serialize_filter_model` reads it back (directly, or through the
+*    component's own `get_search_value()`, which also reads `data.entries`).
+*    The former `data.value` clearing was a silent no-op: search component
+*    instances never carry a `value` key, so the whole reset did nothing.
+*  - `data.q_operator` and `data.q_lang` are set to `null` (unconditionally —
+*    the old truthiness guards skipped falsy-but-set values).
 *  - `refresh({ build_autoload: false })` re-renders the component without
 *    triggering a new server data load.
+*  - The `hilite_element` "this field has a value" mark (added by the
+*    `change_search_element` handler) is removed: it lives on the component
+*    WRAPPER, which a 'content' level refresh does not repaint.
 *
 * After all instances refresh, the cleared filter is persisted as the new
-* temp preset so the server state matches the cleared UI state.
+* temp preset so the server state matches the cleared UI state (save_preset
+* re-serialises live from the model, so it stores the emptied filter), and
+* the in-memory `json_filter` is re-synced from the same serialisation so a
+* re-render of the panel cannot resurrect the old values.
+*
+* Only the FORM is reset — the record list keeps its current results until the
+* user runs a search (Apply) or Show all.
 *
 * @returns {Promise<boolean>} Resolves to `true` when all instances have refreshed.
 */
@@ -1956,26 +1970,36 @@ search.prototype.reset = async function () {
 				if (!instance.data) {
 					instance.data = {}
 				}
-				if (instance.data.value) {
-					instance.data.value = []
-				}
-				if (instance.data.q_operator) {
-					instance.data.q_operator = null
-				}
-				if (instance.data.q_lang) {
-					instance.data.q_lang = null
-				}
+				instance.data.entries		= []
+				instance.data.q_operator	= null
+				instance.data.q_lang		= null
 				// refresh component without load DB data
 				await instance.refresh({
 					build_autoload : false
+				})
+				// remove the 'has value' highlight (wrapper class, not repainted by refresh)
+				ui.hilite({
+					instance	: instance, // instance object
+					hilite		: false // bool
 				})
 				resolve(instance)
 			})
 		)
 	}
 	await Promise.all(ar_promises)
+
 	// save_temp_preset. Temp preset section_id and section_tipo are solved and fixed on the first load
-	save_temp_preset(self)
+	const saved = await save_temp_preset(self)
+
+	// json_filter. Re-sync the in-memory filter with what was just persisted.
+	// save_preset re-serialises live from the model (structure kept, values now
+	// empty) and caches the stored entry in component_json_data.entries[0], so
+	// reuse THAT — it already carries the {id, value} entry shape render_filter
+	// expects (it reads editing_preset.value). Skipping this would let a panel
+	// re-render rebuild the cleared components with their old values.
+	if (saved && self.component_json_data?.entries?.[0]) {
+		self.json_filter = self.component_json_data.entries[0]
+	}
 
 	return true
 }//end reset

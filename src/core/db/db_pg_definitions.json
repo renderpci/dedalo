@@ -887,12 +887,12 @@
 			"info": "Used to search by timestamp, ordered id ascendant. Used by diffusion_section_stats:get_interval_raw_activity_data"
 		},
 		{
-			"tables": ["matrix_time_machine", "matrix_activity"],
-			"add": "CREATE INDEX IF NOT EXISTS {$table}_timestamp_date_idx ON {$table} USING brin (DATE(\"timestamp\"));",
-			"drop": "\n\t\tDROP INDEX IF EXISTS {$table}_timestamp_idx; -- Intentional remove legacy index\n\t\tDROP INDEX IF EXISTS {$table}_timestamp_date_idx;\n\t",
-			"sample": "SELECT * FROM matrix_time_machine WHERE DATE(\"timestamp\") = '2025-08-18' LIMIT 1",
-			"name": "matrix_time_machine_timestamp_date_idx",
-			"info": "Used to search by date in time machine timestamp column."
+			"tables": ["matrix_time_machine"],
+			"add": "CREATE INDEX IF NOT EXISTS {$table}_timestamp_date_id_idx ON \"{$table}\" USING btree (\"timestamp\", id DESC); ANALYZE {$table};",
+			"drop": "\n\t\tDROP INDEX IF EXISTS {$table}_timestamp_idx; -- Intentional remove legacy index\n\t\tDROP INDEX IF EXISTS {$table}_timestamp_date_idx; -- Intentional remove legacy BRIN\n\t\tDROP INDEX IF EXISTS {$table}_timestamp_date_id_idx;\n\t",
+			"sample": "SELECT * FROM matrix_time_machine WHERE \"timestamp\" >= '2025-08-18' ORDER BY \"timestamp\" DESC LIMIT 10",
+			"name": "matrix_time_machine_timestamp_date_id_idx",
+			"info": "Date predicates from the dd15 search panel and the When-ordered browse. Replaces the BRIN DATE(\"timestamp\") index, which no emitted shape used (matrix_index_policy: drop-dead) — matrix_activity's timestamp needs are served by matrix_activity_timestamp_composite_idx."
 		},
 		{
 			"tables": ["matrix_time_machine"],
@@ -912,11 +912,11 @@
 		},
 		{
 			"tables": ["matrix_time_machine"],
-			"add": "CREATE INDEX IF NOT EXISTS {$table}_lang_idx ON {$table} USING btree (lang COLLATE pg_catalog.default ASC NULLS LAST);",
-			"drop": "DROP INDEX IF EXISTS {$table}_lang_idx",
-			"sample": "SELECT * FROM matrix_time_machine WHERE lang = 'lg-spa' LIMIT 1",
-			"name": "matrix_time_machine_lang_idx",
-			"info": "Used to search by lang."
+			"add": "CREATE INDEX IF NOT EXISTS {$table}_section_id_idx ON \"{$table}\" USING btree (section_id); ANALYZE {$table};",
+			"drop": "\n\t\tDROP INDEX IF EXISTS {$table}_lang_idx; -- Intentional remove: lang alone is unselectable (matrix_index_policy drop-dead)\n\t\tDROP INDEX IF EXISTS {$table}_section_id_idx;\n\t",
+			"sample": "SELECT * FROM matrix_time_machine ORDER BY section_id DESC LIMIT 10",
+			"name": "matrix_time_machine_section_id_idx",
+			"info": "Backs the bare dd15 browse ordered by the Section id column (TM_ORDER_COLUMN dd1212) — the only sortable dd15 column an index serves outright. Replaces the standalone lang index, which no emitted shape used."
 		},
 		{
 			"tables": ["matrix_time_machine"],
@@ -936,19 +936,19 @@
 		},
 		{
 			"tables": ["matrix_time_machine"],
-			"add": "CREATE INDEX IF NOT EXISTS {$table}_si_bulk_st_tipo_lang_idx ON {$table} USING btree (section_id ASC NULLS LAST, bulk_process_id ASC NULLS LAST, section_tipo COLLATE pg_catalog.default ASC NULLS LAST, tipo COLLATE pg_catalog.default ASC NULLS LAST, lang COLLATE pg_catalog.default ASC NULLS LAST);",
-			"drop": "DROP INDEX IF EXISTS {$table}_si_bulk_st_tipo_lang_idx",
-			"sample": "SELECT * FROM matrix_time_machine WHERE bulk_process_id = 751 LIMIT 1",
-			"name": "matrix_time_machine_si_bulk_st_tipo_lang_idx",
-			"info": "Used to search by bulk_process_id with all parameters, section_id, bulk_process_id, section_tipo, tipo and lang."
-		},
-		{
-			"tables": ["matrix_time_machine"],
 			"add": "CREATE INDEX IF NOT EXISTS {$table}_search_default_idx ON \"{$table}\" (section_id, section_tipo, tipo, lang, \"timestamp\" DESC); ANALYZE {$table};",
 			"drop": "DROP INDEX IF EXISTS \"{$table}_search_default_idx\"",
 			"sample": "SELECT * FROM matrix_time_machine WHERE section_id = 1 AND section_tipo = 'oh1' ORDER BY timestamp DESC LIMIT 10",
 			"name": "matrix_time_machine_search_default_idx",
 			"info": "Used to search by default parameters: section_id, section_tipo, tipo, lang, timestamp DESC"
+		},
+		{
+			"tables": ["matrix_time_machine"],
+			"add": "CREATE INDEX IF NOT EXISTS {$table}_record_history_idx ON \"{$table}\" (section_tipo, section_id DESC, id DESC); ANALYZE {$table};",
+			"drop": "DROP INDEX IF EXISTS \"{$table}_record_history_idx\"",
+			"sample": "SELECT * FROM matrix_time_machine WHERE section_tipo = 'oh1' AND section_id = 1 ORDER BY id DESC LIMIT 10 OFFSET 30",
+			"name": "matrix_time_machine_record_history_idx",
+			"info": "Record history (inspector time machine): scope AND sort key in one index. With section_tipo and section_id equality-bound the trailing id DESC is the requested order, so a page costs 40 index entries. Without it the planner must either read the record's whole history and top-N sort it, or walk the section's whole log filtering section_id — both seconds once a record passes ~100k time machine rows."
 		},
 		{
 			"tables": ["matrix_langs"],

@@ -294,7 +294,6 @@ inspector.prototype.build = async function() {
 *   3. Schedules time-machine list and component-history (null ⟹ empty) refreshes via
 *      dd_request_idle_callback so they do not block the current render cycle.
 *   4. Updates the selection_info_node label to the section caller.
-*   5. Syncs the paginator section_id text node if the record has navigated.
 *
 * @param {Object} self - the inspector instance
 * @returns {void}
@@ -323,10 +322,9 @@ const update_section_info = (self) => {
 	// selection info. Display current selected component label as 'Description'
 	self.selection_info_node.update_label(section)
 
-	// section_id (updates section id value in inspector paginator if changes)
-	if (section.section_id!==self.paginator_container.section_id.innerHTML) {
-		self.paginator_container.section_id.innerHTML = section.section_id ?? '';
-	}
+	// section_id display is owned by the paginator (.placeholder_section_id,
+	// rendered from self.caller.section_id on each paginator render); no manual
+	// DOM sync needed here.
 }//end update_section_info
 
 

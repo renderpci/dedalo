@@ -120,6 +120,75 @@ export const ACTIVITY_WHEN_TIPO = 'dd547';
 export const TIME_MACHINE_SECTION_TIPO = 'dd15';
 
 /**
+ * The ONLY dd15 list columns that may carry a sort icon — the TM twin of the
+ * dd542 policy above (WC-044's family; see engineering/WIRE_CONTRACT.md).
+ *
+ * (!) dd1573 "Id" and dd1212 "Section id" are DIFFERENT columns and both look
+ * id-ish — dd1212's lg-spa term is literally "section_id". dd1573 is the TM
+ * ROW's own PK (`id`, surfaced as matrix_id); dd1212 is the CALLER record's
+ * `section_id`. Keep them straight: read_tm TM_ORDER_COLUMN maps each to its own
+ * physical column, and dd1573 was originally absent from that map, so the Id
+ * column could not sort at all while Section id could.
+ *
+ * dd15's list columns ARE matrix_time_machine's own flat columns, so a header
+ * click maps 1:1 to a real column (read_tm.ts TM_ORDER_COLUMN) — no jsonb sort
+ * is involved and the dd542 reasoning ("unindexable jsonb sort") does NOT apply
+ * verbatim. The problem is narrower and was measured on the 50.5M-row mdcat log:
+ * read_tm.ts emits the tiebreaker in the SAME direction as the sort column
+ * (`ORDER BY <col> <dir>, id <dir>`), while every composite index on the table is
+ * `(col, id DESC)`. A btree reads forwards or backwards only, so those never
+ * match and the sort degrades to an Incremental Sort over a FULL index scan —
+ * cheap when the leading column's groups are tiny, ruinous when they are huge.
+ * Measured twice on the SAME 50.5M rows (PostgreSQL 18.4), once on the bloated
+ * indexes and once immediately after a REINDEX, because the spread is itself
+ * the argument:
+ *
+ * (!) METHODOLOGY — these were measured with `SELECT id`, a NARROW projection
+ * that an index-only scan can satisfy. The real query selects the wide row
+ * INCLUDING the `data` jsonb, so every row a sort node touches costs a heap
+ * fetch. The numbers below therefore UNDERSTATE the emitted cost; they are kept
+ * because they still rank the columns correctly, and understating only makes the
+ * exclusions more conservative. The one column where it mattered was When, whose
+ * real cost was dominated by a separate defect entirely (a bare `ORDER BY
+ * timestamp` binding to the `timestamp::text` output alias — see
+ * read_tm.buildTmOrderSql): 17 863 ms emitted vs the 10 ms measured here, fixed
+ * to 0.359 ms by qualifying the column.
+ *
+ *                            bloated    reindexed
+ *   Id/id (dd1573)              —         0.2 ms   the PK itself — NO sort node
+ *   section_id (dd1212)         1 ms         2 ms   index-served, NO sort node
+ *   When/timestamp (dd559)     10 ms         2 ms   index-served, NO sort node
+ *   section_tipo (dd1772)      90 ms          —     incremental sort
+ *   What/tipo (dd577)       1 444 ms        50 ms   incremental sort
+ *   Who/user_id (dd578)     7 919 ms       721 ms   incremental sort
+ *   Process (dd1371)          > 25 s    20 406 ms   incremental sort
+ *   Value/data (dd1574)       > 25 s    14 554 ms   parallel seq scan + sort
+ *
+ * The allowlist is the two columns an index serves OUTRIGHT (no sort node) —
+ * NOT the ones that happen to be fast today. Every sort-node row swings ~29x on
+ * index bloat alone, on an insert-hot table where bloat always returns, and its
+ * cost is set by the size of the FIRST group in the requested direction, a
+ * per-install per-data property. dd577 at a freshly-reindexed 50 ms is the
+ * tempting case and exactly the one that measured 1.4 s minutes earlier on
+ * identical rows.
+ *
+ * Anything NOT listed here emits sortable:false. That also covers the section's
+ * OWN component columns in the record-snapshot list, which are not in
+ * TM_ORDER_COLUMN at all — clicking one used to throw "uncovered scope" (a 500),
+ * so refusing the icon is strictly better than the status quo there.
+ *
+ * The cost is scope-blind: inside the inspector's per-record history the row set
+ * is tiny and any sort would be cheap, but the structure context is built per
+ * COLUMN, not per SQO, and a per-scope flag would let the same column advertise
+ * different capabilities across surfaces. Matching dd542's per-section shape.
+ */
+export const TIME_MACHINE_SORTABLE_TIPOS: ReadonlySet<string> = new Set([
+	'dd1573', // Id          → the `id` PK column (the TM row's own id / matrix_id)
+	'dd1212', // Section id  → the `section_id` column (the CALLER record's id)
+	'dd559', // When        → the `timestamp` column
+]);
+
+/**
  * The BULK PROCESS section (dd800) and its two descriptive components (PHP
  * dd_tipos.php DEDALO_BULK_PROCESS_*). One record per bulk run (a CSV import,
  * a component propagation); every TM row the run writes carries its section_id

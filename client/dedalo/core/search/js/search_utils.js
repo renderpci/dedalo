@@ -30,10 +30,15 @@
 *   { "$or":  [ <clause|group>, … ] }   — nested OR group
 *
 * Each array element is either:
-*   - A leaf clause:  { path: […], q: <Array|null>, q_operator: …, type: 'jsonb', … }
+*   - A leaf clause:  { path: […], q: <Array|string|null>, q_operator: …, type: 'jsonb', … }
 *   - A nested group: { "$and": […] }  or  { "$or": […] }
 *
-* A leaf is "not empty" when its `q` property exists and `q.length > 0`.
+* Leaf vs group is decided by the PRESENCE of the `q` key, NOT by whether `q`
+* holds a value: a leaf always carries `q` (even when its value is empty — '',
+* null, or []); a group never does. A leaf is "empty" when its `q` is falsy or
+* has length < 1, and "not empty" when `q.length > 0`. (Keying off q's
+* truthiness instead misread an empty-value leaf as a group and recursed into
+* it, crashing on `.length` of a null scalar prop — dd15 search-panel open.)
 * A group is "not empty" when at least one descendant leaf is not empty.
 * An empty operator array (`[].length < 1`) contributes nothing and is skipped.
 *
@@ -70,12 +75,17 @@ export const is_filter_empty = function(filter_obj) {
 			if(is_empty_current_filter === false){
 
 				// check if the current filter has q
-				// of the filter has q, check if is empty
-				// else the filter has an operator ($and, $or) and set null q
+				// A leaf row ALWAYS carries a `q` key (even when the value is empty:
+				// '', null or []); only a nested group ($and/$or) lacks one. Detect
+				// the leaf by the key's PRESENCE, not by q's truthiness — an empty
+				// q is an EMPTY leaf, not a group. Keying off truthiness misread an
+				// empty-value leaf as a group and recursed INTO it, then read .length
+				// off the leaf's own scalar props (lang:null) and crashed.
 				// (!) is_empty_q === null signals a nested group — trigger recursion rather
 				// than treating the group itself as a leaf with an empty value.
-				const is_empty_q = filter.q
-					? filter.q.length<1
+				const has_q = filter && typeof filter === 'object' && 'q' in filter
+				const is_empty_q = has_q
+					? (!filter.q || filter.q.length<1)
 					: null
 
 				// if the filter has an operator, recursion to get next level
