@@ -134,10 +134,36 @@ async function gateRecordWrite(
 	return gateRecord(ddo, ctx, 2);
 }
 
-/** Build the fetchable media URL for a relative media path (the Bun media route). */
-function mediaUrl(relativePath: string): string {
-	const base = config.media.baseUrl ?? '';
-	return `${base}/dedalo/${config.mediaDir}${relativePath}`;
+/**
+ * The URL the BROWSER fetches this media path at (client audience): the
+ * configured web base, which already carries `/dedalo/<mediaDir>` and defaults
+ * to the same-origin relative form.
+ */
+function clientMediaUrl(relativePath: string): string {
+	return `${config.media.webBase}${relativePath}`;
+}
+
+/**
+ * The URL an EXTERNAL transcriber fetches this media path at. The provider is a
+ * different host: a relative URL is meaningless to it, so this REQUIRES
+ * DEDALO_MEDIA_EXPORT_BASE and throws when it is unset instead of handing the
+ * service an address it cannot resolve (the same unset-means-unresolved law the
+ * export cells follow).
+ *
+ * These two audiences used to share one helper built on the old
+ * DEDALO_MEDIA_BASE_URL, which it appended `/dedalo/<mediaDir>` to — so the one
+ * value that worked here (a bare origin) was the one that broke the export
+ * cells, which append the same relative path to the base UNCHANGED. Splitting
+ * the helper is what makes both correct with a single configured value.
+ */
+function externalMediaUrl(relativePath: string): string {
+	const base = config.media.exportBase;
+	if (base === undefined || base === '') {
+		throw new Error(
+			'DEDALO_MEDIA_EXPORT_BASE is not set: an external transcriber cannot fetch a relative media URL. Set it to the public media base (e.g. https://host/dedalo/media) in ../private/.env.',
+		);
+	}
+	return `${base}${relativePath}`;
 }
 
 async function createTranscribableAudioFile(ctx: ToolActionContext): Promise<ToolResponse> {
@@ -152,7 +178,7 @@ async function createTranscribableAudioFile(ctx: ToolActionContext): Promise<Too
 			section_id: ddo.section_id,
 		});
 		const relativePath = await ensureTranscribableAudio(spec, identity, pathOpts);
-		return { result: mediaUrl(relativePath), msg: 'OK: file was created', errors: [] };
+		return { result: clientMediaUrl(relativePath), msg: 'OK: file was created', errors: [] };
 	} catch (error) {
 		return fail((error as Error).message);
 	}
@@ -224,7 +250,7 @@ async function automaticTranscription(ctx: ToolActionContext): Promise<ToolRespo
 			section_id: mediaDdo.section_id,
 		});
 		const audioRel = await ensureAudioQuality(spec, identity, pathOpts);
-		const audioUrl = mediaUrl(audioRel);
+		const audioUrl = externalMediaUrl(audioRel);
 		const result = await provider({
 			uri: cfg.uri,
 			key: cfg.key,
@@ -362,7 +388,7 @@ async function checkServerTranscriberStatus(ctx: ToolActionContext): Promise<Too
 		const result = await provider({
 			uri: cfg.uri,
 			key: cfg.key,
-			avUrl: mediaUrl(audioRel),
+			avUrl: externalMediaUrl(audioRel),
 			engine: mapTranscriberEngine(engine),
 			userId: ctx.userId,
 			entityName: config.entity,
