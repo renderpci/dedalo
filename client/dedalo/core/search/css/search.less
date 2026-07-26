@@ -355,17 +355,14 @@
 							padding-left: 0.25em;
 							padding-right: 0.25em;
 
-							.button.reload {
-								flex-grow: 1;
-								mask-size: 1.9em;
-								 -webkit-mask-size: 1.9em;
-
-								&:before {
-									background-color: transparent;
-								}
-							}
+							// fn_add_mask sets mask-size:contain; the box here is the
+							// full column height (see .search_buttons_container .button),
+							// so cap the glyph or it scales to the whole button.
+							.button.reload,
 							.button.show_all {
 								flex-grow: 1;
+								-webkit-mask-size: 1.9em;
+										mask-size: 1.9em;
 							}
 						}
 
