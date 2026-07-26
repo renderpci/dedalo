@@ -51,6 +51,7 @@ import type {
 import type { Principal } from '../security/permissions.ts';
 import {
 	TM_COLUMN_BULK_PROCESS_ID as TIPO_BULK_PROCESS,
+	TM_COLUMN_MATRIX_ID as TIPO_MATRIX_ID,
 	TM_COLUMN_TIPO as TIPO_COMPONENT,
 	TM_COLUMN_DATA as TIPO_DATA,
 	TM_NOTES_TEXT as TIPO_NOTES,
@@ -65,7 +66,7 @@ import {
 import { EmissionContext, filterItemsByLang, readComponentItems } from './component_data.ts';
 import { currentDataLang } from './request_lang.ts';
 import type { StructureContextEntry } from './structure_context.ts';
-import { conformTmFilter } from './tm_filter.ts';
+import { type ParamSink, conformTmFilter } from './tm_filter.ts';
 
 /**
  * The section-record TM list filters by a `tipo` COLUMN filter whose value is the
@@ -81,6 +82,51 @@ function tipoColumnFilter(sqo: Record<string, unknown>): string | null {
 
 /** TM virtual section + the users section (the rest come from tm_record.ts). */
 const TM_SECTION_TIPO = 'dd15';
+
+/**
+ * dd15 list-column tipo → the matrix_time_machine FLAT COLUMN its header-click
+ * sorts by. dd15's columns ARE the table's own columns, so each maps 1:1 (PHP
+ * search_tm orders over the same columns); the raw 'id'/'section_id'
+ * pseudo-columns are the service defaults and pass through. A tipo that is not
+ * here is uncovered scope and throws loudly in queryTmRows.
+ *
+ * (!) THIS MAP IS dd15-ONLY. In an ORDINARY section the record's id IS
+ * `section_id`, and order_path.ts encodes that for every component_section_id
+ * column — untouched by this map. dd15 is the exception: its rows have their own
+ * PK (`id`, surfaced as matrix_id), so it has TWO id-ish columns that must not
+ * be conflated —
+ *   dd1573 "Id"         → `id`          the TM ROW's own id
+ *   dd1212 "Section id" → `section_id`  the CALLER record's id (lg-spa term is
+ *                                       literally "section_id")
+ * dd1573 was absent here while tm_filter already resolved it to `id`, so the Id
+ * column could be FILTERED but not SORTED — its header click fell through to the
+ * uncovered-scope throw, leaving dd1212 as the only id-ish column that sorted.
+ * Exported so tm_sort_policy.test.ts can pin the pair without a DB round-trip.
+ */
+export const TM_ORDER_COLUMN: Readonly<Record<string, string>> = {
+	id: 'id',
+	// The client's built-in leading "Id" column sends the `section_id`
+	// PSEUDO-column — its descriptor means "the record's OWN id", not the literal
+	// column name (view_default_list_section.rebuild_columns_map: `tipo:
+	// 'section_id' // used to sort only`, path component_tipo 'section_id'). In an
+	// ordinary section those coincide. In dd15 they DO NOT: the envelope addresses
+	// each snapshot by the TM row PK (`section_id: row.id`, tmReadSource.getRows),
+	// so the Id box DISPLAYS `id` — mapping its sort to the `section_id` column
+	// made the column sort by something it does not show (the caller record's id),
+	// which is why clicking Id returned 61468923, 4, 38, 28, … . Resolve the
+	// pseudo-column to what dd15 actually displays: `id`.
+	section_id: 'id',
+	[TIPO_MATRIX_ID]: 'id', // dd1573 Id — the PK, the cheapest sort on the table
+	// dd1212 is the CALLER record's id — a real, separate column, shown in its own
+	// "Section id" column. It keeps ordering by `section_id`.
+	[TIPO_SECTION_ID]: 'section_id', // dd1212 Section id — the caller record's id
+	[TIPO_SECTION_TIPO]: 'section_tipo', // dd1772 Section tipo
+	[TIPO_TIMESTAMP]: 'timestamp', // dd559 When
+	[TIPO_COMPONENT]: 'tipo', // dd577 What (section tipo)
+	[TIPO_USER]: 'user_id', // dd578 Who
+	[TIPO_BULK_PROCESS]: 'bulk_process_id', // dd1371 Process
+	[TIPO_DATA]: 'data', // dd1574 record snapshot (jsonb — total-ordered by PG)
+};
 
 /**
  * Bare-browse COUNT(*) cache (see tmReadSource.count). Data-event wired: ANY
@@ -149,6 +195,10 @@ function buildTmWhere(sqo: Record<string, unknown>): {
 	whereSql: string;
 	params: unknown[];
 	isRecordList: boolean;
+	/** The where carries a RANGE predicate — see ParamSink.rangePredicate and the
+	 * PLANNER BARRIER note in queryTmRows. Only the conformed component filter can
+	 * produce one; locator and tipo scopes are pure equality. */
+	rangeFilter: boolean;
 } {
 	const params: unknown[] = [];
 	const locators = Array.isArray(sqo.filter_by_locators)
@@ -171,22 +221,59 @@ function buildTmWhere(sqo: Record<string, unknown>): {
 			}
 			return `(${clauses.join(' AND ')})`;
 		});
-		return { whereSql: `(${groups.join(' OR ')})`, params, isRecordList: false };
+		return { whereSql: `(${groups.join(' OR ')})`, params, isRecordList: false, rangeFilter: false };
 	}
 	const tipoFilter = tipoColumnFilter(sqo);
 	if (tipoFilter !== null) {
 		params.push(tipoFilter);
-		return { whereSql: `tipo = $${params.length}`, params, isRecordList: true };
+		return { whereSql: `tipo = $${params.length}`, params, isRecordList: true, rangeFilter: false };
 	}
 	// The standalone dd15 list search: conform component clauses to the flat
 	// matrix_time_machine columns (PHP search_tm + the _tm traits). Absent this,
 	// every component filter was silently ignored (the whole list came back).
-	const componentSql = conformTmFilter(sqo.filter, { params });
+	const sink: ParamSink = { params };
+	const componentSql = conformTmFilter(sqo.filter, sink);
 	if (componentSql !== null && componentSql !== '') {
-		return { whereSql: componentSql, params, isRecordList: false };
+		return {
+			whereSql: componentSql,
+			params,
+			isRecordList: false,
+			rangeFilter: sink.rangePredicate === true,
+		};
 	}
 	// No scope → the bare dd15 list: ALL TM rows (PHP search_tm empty where).
-	return { whereSql: 'true', params, isRecordList: false };
+	return { whereSql: 'true', params, isRecordList: false, rangeFilter: false };
+}
+
+/**
+ * The ORDER BY clause for the plain TM page query, TABLE-QUALIFIED ALWAYS.
+ *
+ * The select list aliases `timestamp::text AS timestamp`, and in SQL a BARE
+ * `ORDER BY timestamp` binds to the OUTPUT COLUMN, not the table column — so the
+ * sort silently became "order by this computed text expression", which no index
+ * can serve. The planner's only option was a parallel seq scan + top-N sort of
+ * all 50.5M rows: the When header click measured 17 863 ms (19 583 ms live).
+ * Qualifying as `tm."timestamp"` binds to the COLUMN, and the (timestamp, id
+ * DESC) index serves it at 0.359 ms — the SAME rows in the same order, because
+ * text and timestamp ordering coincide here (PG renders ISO with trimmed
+ * trailing zeros, so fraction digits compare lexicographically exactly as they
+ * compare numerically; verified identical over the first 2000 rows despite
+ * 49.6M rows carrying fractional seconds).
+ *
+ * `timestamp` is the ONLY aliased field in that select — id/tipo/data/section_id
+ * are emitted unaliased — which is why only the When sort was affected. Every
+ * column is qualified anyway so a future alias cannot reintroduce this silently.
+ * Extracted + exported so tm_sort_policy.test.ts can pin the qualification.
+ */
+export function buildTmOrderSql(orderColumn: string, direction: 'ASC' | 'DESC'): string {
+	const col = `tm."${orderColumn}"`;
+	// Stable ORDER BY: the non-unique sort columns (bulk saves share a timestamp,
+	// bulk_process_id, section_tipo, …) get the PK `id` as tiebreaker so OFFSET
+	// pages don't shuffle under ties. 'id'/'section_id' keep their exact prior
+	// single-column SQL (section_id's tie behaviour is byte-gated — don't perturb).
+	return orderColumn === 'id' || orderColumn === 'section_id'
+		? `${col} ${direction}`
+		: `${col} ${direction}, tm."id" ${direction}`;
 }
 
 export interface TmReadData {
@@ -263,7 +350,7 @@ async function queryTmRows(
 	// browse: one row per record-level snapshot, tipo = caller section_tipo — PHP
 	// applies the tipo column filter, WHERE tipo = q). A dd578 USER relation filter
 	// is still IGNORED (PHP ignores it; tm_relation_filter_differential pins that).
-	const { whereSql, params: scopeParams, isRecordList } = buildTmWhere(sqo);
+	const { whereSql, params: scopeParams, isRecordList, rangeFilter } = buildTmWhere(sqo);
 
 	// Order: dd15's list columns ARE matrix_time_machine's own flat columns, so a
 	// header-click sort maps 1:1 to a real column (PHP search_tm orders over the
@@ -273,30 +360,27 @@ async function queryTmRows(
 	const order = Array.isArray(sqo.order) ? (sqo.order as Record<string, unknown>[]) : [];
 	const orderPath = (order[0]?.path as Record<string, unknown>[] | undefined)?.[0];
 	const orderCol = orderPath?.component_tipo;
-	const TM_ORDER_COLUMN: Record<string, string> = {
-		id: 'id',
-		section_id: 'section_id',
-		[TIPO_SECTION_ID]: 'section_id', // dd1212 Section id
-		[TIPO_SECTION_TIPO]: 'section_tipo', // dd1772 Section tipo
-		[TIPO_TIMESTAMP]: 'timestamp', // dd559 When
-		[TIPO_COMPONENT]: 'tipo', // dd577 What (section tipo)
-		[TIPO_USER]: 'user_id', // dd578 Who
-		[TIPO_BULK_PROCESS]: 'bulk_process_id', // dd1371 Process
-		[TIPO_DATA]: 'data', // dd1574 record snapshot (jsonb — total-ordered by PG)
-	};
 	const orderColumn = orderCol === undefined ? 'id' : TM_ORDER_COLUMN[String(orderCol)];
 	if (orderColumn === undefined) {
 		throw new Error(`TM read: order by '${orderCol}' is uncovered scope`);
 	}
 	const direction = String(order[0]?.direction ?? 'DESC').toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-	// Stable ORDER BY: the non-unique sort columns (bulk saves share a timestamp,
-	// bulk_process_id, section_tipo, …) get the PK `id` as tiebreaker so OFFSET
-	// pages don't shuffle under ties. 'id'/'section_id' keep their exact prior
-	// single-column SQL (section_id's tie behaviour is byte-gated — don't perturb).
-	const orderSql =
-		orderColumn === 'id' || orderColumn === 'section_id'
-			? `${orderColumn} ${direction}`
-			: `${orderColumn} ${direction}, id ${direction}`;
+	// TABLE-QUALIFIED, ALWAYS. The select list aliases `timestamp::text AS
+	// timestamp`, and in SQL a BARE `ORDER BY timestamp` binds to the OUTPUT
+	// COLUMN, not the table column — so the sort silently became "order by this
+	// computed text expression", which no index can serve. The planner's only
+	// option was a parallel seq scan + top-N sort of all 50.5M rows: the When
+	// header click measured 17 863 ms (reported at 19 583 ms live). Qualifying it
+	// as `tm."timestamp"` binds to the COLUMN and the (timestamp, id DESC) index
+	// serves it — 0.359 ms, the same rows in the same order (text and timestamp
+	// ordering are identical here: PG renders ISO with trimmed trailing zeros, so
+	// the fraction digits compare lexicographically exactly as they compare
+	// numerically; verified equal over the first 2000 rows despite 49.6M rows
+	// carrying fractional seconds). `timestamp` is the ONLY aliased field in that
+	// select — id/tipo/data/section_id are emitted unaliased, which is why only
+	// the When sort was affected — but every column is qualified now so a future
+	// alias cannot reintroduce this silently.
+	const orderSql = buildTmOrderSql(orderColumn, direction);
 
 	const limit = Number(sqo.limit ?? 10);
 	const offset = Number(sqo.offset ?? 0);
@@ -317,6 +401,38 @@ async function queryTmRows(
 	//      join back for the wide `data` jsonb — never reads a skipped row's snapshot.
 	// The section_id order path keeps the plain query below: its sort key has ties,
 	// and page membership under ties must not be perturbed (byte-gated reads).
+	// PLANNER BARRIER (2026-07-26). A RANGE predicate combined with the `id` sort
+	// has NO index that carries both — `("timestamp", id DESC)` orders by timestamp
+	// across a range, the PK orders by id but cannot scope. The planner resolves
+	// that by walking the `id` PK and filtering inline, betting that LIMIT lets it
+	// stop early. On this APPEND-ONLY log the bet is exactly backwards: the filtered
+	// column correlates with `id`, so every match sits at the far end and the walk
+	// discards the whole prefix — a 2026 When-search discarded 45,992,453 PK entries
+	// to return 10 rows (48.9 s at offset 1000, and 51.2 s at offset 30 — this is
+	// NOT a deep-page problem). `OFFSET 0` in the innermost select is an
+	// optimisation barrier: it blocks the LIMIT pushdown, so the range is scanned
+	// index-only and top-N sorted — 440 ms / 770 ms, same rows, same order, no
+	// correlation assumption. Applied ONLY for (range filter × id order): an
+	// EQUALITY filter is served outright by its `(col, id DESC)` index at 2.6 ms and
+	// barriering it would make it ~170x slower. Same family as the WC-046 rewrite
+	// below, which is about page DEPTH and does not address this.
+	const useBarrier = rangeFilter && orderColumn === 'id';
+	if (useBarrier) {
+		const barrierParams = [...scopeParams, limit, offset];
+		const rows = (await sql.unsafe(
+			`SELECT tm.id, tm.section_id, tm.section_tipo, tm.tipo, tm.lang, tm.timestamp::text AS timestamp, tm.user_id, tm.bulk_process_id, tm.data
+			 FROM matrix_time_machine tm
+			 JOIN (SELECT id FROM (SELECT id FROM matrix_time_machine
+			                       WHERE ${whereSql}
+			                       OFFSET 0) scoped
+			       ORDER BY id ${direction}
+			       LIMIT $${barrierParams.length - 1} OFFSET $${barrierParams.length}) page ON page.id = tm.id
+			 ORDER BY tm.id ${direction}`,
+			barrierParams,
+		)) as TmRow[];
+		return { rows, isRecordList };
+	}
+
 	const lateThreshold = config.ops.searchLateRowLookupOffset;
 	if (lateThreshold >= 0 && offset >= lateThreshold && orderColumn === 'id') {
 		let effDirection = direction;

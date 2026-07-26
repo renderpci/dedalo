@@ -20,7 +20,9 @@
  *    flipped by (section_tipo, section_id DESC) + the UNIQUE (section_id,
  *    section_tipo) key. Dashboard 30-day rollup scans (timestamp, id).
  *  - TM list: bare browse `ORDER BY id`; record-history filtered by
- *    (section_tipo, section_id[, tipo, lang]); deep-page flip on the `id` PK.
+ *    (section_tipo, section_id[, tipo, lang]) and ALSO ordered by `id` — the
+ *    scope and the sort key must live in ONE index or the planner has only
+ *    losing plans (see the record-history entry); deep-page flip on the `id` PK.
  *
  * DISPOSITIONS.
  *  - keep           load-bearing for a shape above; never drop.
@@ -34,6 +36,31 @@
  *                   REPORTS it and drops only with an explicit opt-in.
  * An index whose signature is not listed here is 'unclassified' — left in place
  * and reported, never dropped (installs may carry bespoke indexes).
+ *
+ * DIRECTION (why several `(col, id DESC)` indexes below can NEVER serve their
+ * own ORDER BY). read_tm.ts emits the tiebreaker in the SAME direction as the
+ * sort column — `ORDER BY <col> <dir>, id <dir>`. A btree is only readable
+ * forwards or backwards, so `(col ASC, id DESC)` serves `col ASC, id DESC` or
+ * `col DESC, id ASC` — never `col ASC, id ASC`. Every composite here is
+ * `(col, id DESC)`, so the sort always degrades to an Incremental Sort over a
+ * full index scan. That is cheap when the leading column's groups are tiny
+ * (timestamp) and ruinous when they are huge (bulk_process_id 20 s, data 15 s
+ * even straight after a REINDEX). The fix is a sort POLICY, not more indexes:
+ * TIME_MACHINE_SORTABLE_TIPOS (concepts/section.ts) carries the full
+ * bloated-vs-reindexed measurement table and the reasoning; WC-044 did the same
+ * for dd542 Activity.
+ *
+ * STATS CAVEAT (2026-07-25, PostgreSQL 18). The 'drop-dead' disposition is
+ * gated on `idxScan > 0` — "drop only if the DB agrees it is unused". That
+ * gate reads pg_stat_user_indexes, whose CUMULATIVE counters are LOST on crash
+ * recovery and on a pg_upgrade (this cluster came up with stats_reset NULL and
+ * every TM index back at ~0 scans while the table still held 50.5M rows). On a
+ * freshly restarted or upgraded server every index therefore looks unused and
+ * the gate silently stops protecting. Never run a prune to decide "dead" on a
+ * server whose stats have just been reset — check
+ * `pg_stat_database.stats_reset` / postmaster uptime first. The dispositions
+ * here are derived from TRACED EMITTERS (call sites in this repo), not from
+ * scan counts, precisely so the policy survives a stats wipe.
  */
 
 export type IndexDisposition = 'keep' | 'drop-redundant' | 'drop-dead' | 'review';
@@ -164,7 +191,8 @@ const TIME_MACHINE: MatrixTablePolicy = {
 	// narrows by (section_tipo, section_id).
 	requiredSignatures: [
 		'using btree (id)', // PK: bare list order + deep-page flip page scan
-		'using btree (section_tipo, section_id desc)', // record-history scope
+		'using btree (section_tipo, section_id desc, id desc)', // record-history scope + its id order
+		'using btree (section_tipo, section_id desc)', // asset-layer all-matrix index
 	],
 	entries: [
 		// --- keep ----------------------------------------------------------------
@@ -174,34 +202,52 @@ const TIME_MACHINE: MatrixTablePolicy = {
 			reason: 'PK — the bare browse orders by id; the deep-page flip page scan is on id.',
 		},
 		{
+			signature: 'using btree (section_tipo, section_id desc, id desc)',
+			disposition: 'keep',
+			reason:
+				'Record-history scope AND its sort key. The inspector history is `WHERE section_tipo=? AND section_id=? ORDER BY id DESC LIMIT n` (read_tm.ts queryTmRows): with both leading columns equality-bound the trailing id DESC IS the requested order, so the page is 40 index entries + 10 heap fetches. Without it no index gives that order and the planner has only losers — read the record’s WHOLE history and top-N sort it, or walk the section’s whole log filtering section_id. Measured on dd655/236 (113k-row history), with → without: 0.29 ms → 4 216 ms on the bloated indexes that produced the original 11.5 s incident report, and 1.5 ms → 302 ms straight after a REINDEX. Bloat sets the magnitude; the SHAPE is what matters and does not change — without this index the query reads all 113 251 rows to return 10, so its cost tracks the record’s history size instead of the page size (verified flat to a 433 895-row history: 0.37 ms). The trailing DESC on section_id makes it a strict superset of the all-matrix (section_tipo, section_id DESC) index, so the section-scoped `ORDER BY section_id DESC` path (TM_ORDER_COLUMN) is served by this one too.',
+		},
+		{
 			signature: 'using btree (section_tipo, section_id desc)',
 			disposition: 'keep',
-			reason: 'Record-history scope: a record’s TM rows by (section_tipo, section_id).',
+			reason:
+				'Record-history SCOPE without the sort key — a strict prefix of the index above, so it never serves the ROW read. It stays for two reasons: the scoped pagination COUNT (tmReadSource.count) is index-ONLY on it and this is the narrowest index that can serve that (measured 9.5 ms over 113k entries; the wider record-history index would read ~4x the pages), and it is provisioned for EVERY matrix table by the asset layer (db_pg_definitions.json all_matrix_section_tipo_section_id_desc_idx), so pruning it here would only have recreateDbAssets put it back.',
+		},
+		{
+			signature: 'using btree (section_id, section_tipo, tipo, lang, "timestamp" desc)',
+			disposition: 'keep',
+			reason:
+				'WRITE-PATH index, not a search one — that is why its scan count dwarfs every other index here. The save/delete backfill probe `WHERE section_tipo=? AND section_id=? AND tipo=? AND lang=? LIMIT 1` (observers.ts, delete_record.ts x2) binds all four leading columns, so this is the only index that answers it index-only. Measured on es1/1: MISS (the case the probe exists to detect) 1.3 ms with it, 24 941 ms without — a 25 s stall on a save. Also scopes the portalize TM relocation UPDATE. Was classified "review" (operator opt-in to DROP) on scan-count-vs-size grounds; the audit that asked its own question — "confirm no history-search shape needs it" — found the consumer is the write path.',
 		},
 		{
 			signature: 'using btree (section_id)',
 			disposition: 'keep',
-			reason: 'section_id equality (cross-tipo record lookups).',
+			reason:
+				'Backs the bare dd15 browse sorted by the Section id column (`ORDER BY section_id`, TM_ORDER_COLUMN dd1212) — the only sortable dd15 column whose order an index serves outright (measured cost 1.36 for a page). NOT "section_id equality": no emitted shape filters section_id alone.',
 		},
 		{
 			signature: 'using btree (tipo, id desc)',
 			disposition: 'keep',
-			reason: 'Component-scoped history (filter by tipo).',
+			reason:
+				'The record-snapshot LIST (`WHERE tipo = ? ORDER BY id DESC`, buildTmWhere tipoColumnFilter) — leading equality + trailing id DESC exactly matches, 0.19 ms a page. Also the prefix for the lang-transform census/UPDATE (`WHERE tipo=? AND lang=?`, update/transform/lang.ts).',
 		},
 		{
 			signature: 'using btree ("timestamp", id desc)',
 			disposition: 'keep',
-			reason: 'Time-ordered TM scans.',
+			reason:
+				'Date predicates from the dd15 search panel (dd559 → tm_filter timestamp) and the bare browse sorted by When: `ORDER BY "timestamp" DESC, id DESC` cannot be served outright (see the DIRECTION note in the header) but incremental-sorts over this index in 10 ms because timestamp groups are tiny.',
 		},
 		{
 			signature: 'using btree (section_tipo, id desc)',
 			disposition: 'keep',
-			reason: 'Section-scoped newest-first TM listing.',
+			reason:
+				'Section-tipo predicate from the dd15 search panel (dd1772 → tm_filter section_tipo) with the default id order. NOTE: it does NOT serve the record history — that needs section_id bound too (see the record-history index); the scans it accumulated before that index existed were the planner picking it as the least-bad option, at 6 s a page.',
 		},
 		{
 			signature: 'using btree (user_id)',
 			disposition: 'keep',
-			reason: 'Per-user audit history.',
+			reason:
+				'The Who EQUALITY filter on the bare dd15 search panel: dd578 conforms to `user_id = ?` / `IS [NOT] NULL` (tm_filter emitRelation). NOT the ORDER BY — a Who SORT is 7.9 s even with this index (it cannot serve `user_id <dir>, id <dir>`) and is disallowed by the dd15 sort policy. The read_tm.ts note that the dd578 relation filter is "ignored" is scoped to the LOCATOR/tipo surfaces, where sqo.filter is not conformed at all; on the bare list it reaches conformTmFilter.',
 		},
 		// --- drop-dead -----------------------------------------------------------
 		{
@@ -225,23 +271,18 @@ const TIME_MACHINE: MatrixTablePolicy = {
 			disposition: 'drop-dead',
 			reason: 'No emitted shape orders/filters on date(timestamp).',
 		},
-		// --- review (plausibly useful; report, opt-in to drop) -------------------
-		{
-			signature: 'using btree (section_id, section_tipo, tipo, lang, "timestamp" desc)',
-			disposition: 'review',
-			reason:
-				'The "search default" composite — oversized (multi-GB) for its scan count; confirm no history-search shape needs it before dropping.',
-		},
 		{
 			signature: 'using btree (bulk_process_id)',
-			disposition: 'review',
+			disposition: 'keep',
 			reason:
-				'Bulk-process inspection filter — semantically real but cold; operator opt-in to drop.',
+				'The ONLY index for bulk_revert’s batch read (`WHERE bulk_process_id = $1`, tool_time_machine/server/bulk_revert.ts) and for the Process equality filter on the dd15 search panel (dd1371 → tm_filter emitNumber). Its scan count is ~0 because bulk reverts are rare, NOT because the shape is dead — dropping it turns every bulk revert into a 50M-row seq scan. Cold ≠ unused: this is exactly the case idx_scan cannot see.',
 		},
+		// --- review (plausibly useful; report, opt-in to drop) -------------------
 		{
 			signature: 'using gin (((data)::text) gin_trgm_ops)',
 			disposition: 'review',
-			reason: 'Trigram search over TM data text — tiny; harmless to keep, opt-in to drop.',
+			reason:
+				'Trigram search over TM data text — no emitted shape uses it, and on mdcat it is INVALID + not-ready (a failed CONCURRENTLY build), so it is not even maintained on insert. Zero-cost dead metadata; opt-in to drop.',
 		},
 	],
 };

@@ -152,7 +152,12 @@ describe('classifyIndex', () => {
 	test('review entry drops only with includeReview', () => {
 		const tm = policyForTable('matrix_time_machine');
 		if (tm === undefined) throw new Error('tm policy missing');
-		const def = 'CREATE INDEX b ON public.matrix_time_machine USING btree (bulk_process_id)';
+		// Any 'review' entry exercises the opt-in gate. The trigram index is the only
+		// one left on this table: bulk_process_id (bulk_revert's only index) and
+		// user_id (the dd578 Who equality filter) were both reclassified 'keep' once
+		// their emitters were traced — see the WC-053 index audit.
+		const def =
+			'CREATE INDEX b ON public.matrix_time_machine USING gin (((data)::text) gin_trgm_ops)';
 		expect(classifyIndex(liveIndex({ indexDef: def }), tm, { singleTipo: false, includeReview: false }).action).toBe('review');
 		expect(classifyIndex(liveIndex({ indexDef: def }), tm, { singleTipo: false, includeReview: true }).action).toBe('drop');
 	});

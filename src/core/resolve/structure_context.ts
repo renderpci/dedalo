@@ -31,6 +31,8 @@ import { isAreaModel } from '../concepts/area.ts';
 import {
 	ACTIVITY_SECTION_TIPO,
 	ACTIVITY_WHEN_TIPO,
+	TIME_MACHINE_SECTION_TIPO,
+	TIME_MACHINE_SORTABLE_TIPOS,
 	isConsultationOnlySection,
 	isGrouperModel,
 } from '../concepts/section.ts';
@@ -196,9 +198,19 @@ function resolveSortable(model: string, tipo: string, sectionTipo: string): bool
 	// Activity (dd542, append-only log): only the When column sorts, and its
 	// order path maps to section_id (order_path.ts — WC-044). Any other
 	// component sort is an unindexable full-table jsonb sort over the
-	// biggest table in the system. Same policy as the TM list, which maps
-	// header sorts to real columns and refuses the rest (read_tm.ts).
+	// biggest table in the system.
 	if (sectionTipo === ACTIVITY_SECTION_TIPO && tipo !== ACTIVITY_WHEN_TIPO) return false;
+	// Time Machine (dd15, append-only log): only the columns whose sort an index
+	// actually serves (TIME_MACHINE_SORTABLE_TIPOS — the measurements live there).
+	// dd15 header sorts DO map 1:1 to real flat columns (read_tm.ts
+	// TM_ORDER_COLUMN), so this is not the dd542 jsonb-sort problem; it is the
+	// (col, id DESC) index direction mismatch, which costs seconds to minutes on
+	// the wrong column. Columns outside TM_ORDER_COLUMN entirely (the section's
+	// own components in the record-snapshot list) also land here — they threw
+	// "uncovered scope" on click before.
+	if (sectionTipo === TIME_MACHINE_SECTION_TIPO && !TIME_MACHINE_SORTABLE_TIPOS.has(tipo)) {
+		return false;
+	}
 	return getComponentModel(model)?.sortable ?? true;
 }
 

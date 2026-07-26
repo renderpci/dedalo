@@ -54,6 +54,13 @@ import {
 } from '../section_record/virtual_record.ts';
 
 /** dd15 virtual-section column-component tipos (PHP dd_tipos.php:208-220). */
+/** The TM ROW's own PK — the `id` column, surfaced as `matrix_id`. NOT dd1212:
+ * that is the CALLER record's section_id. Both are labelled id-ish ("Id" vs
+ * "Section id", and dd1212's lg-spa term is literally "section_id"), which is
+ * exactly why the two were conflated — a sort on the Id column ordered by
+ * section_id. Filtering already resolved it to `id` (tm_filter TM_FILTER_COLUMNS);
+ * ordering now does too (read_tm TM_ORDER_COLUMN). */
+export const TM_COLUMN_MATRIX_ID = 'dd1573'; // component_number
 export const TM_COLUMN_SECTION_ID = 'dd1212'; // component_number
 export const TM_COLUMN_TIMESTAMP = 'dd559'; // component_date
 export const TM_COLUMN_TIPO = 'dd577'; // component_input_text
