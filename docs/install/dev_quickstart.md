@@ -2,9 +2,7 @@
 
 > See also: [Installation hub](index.md) · [Installer reference](installer_reference.md) · [Troubleshooting](troubleshooting.md) · [Production install](production.md)
 
-A working Dédalo on your laptop in about ten minutes. This is a **development**
-setup: plain HTTP, a TCP listener, no reverse proxy, no supervision. Do not run
-it this way on a server — for that, see [production](production.md).
+A working Dédalo on your laptop in about ten minutes. This is a **development** setup: plain HTTP, a TCP listener, no reverse proxy, no supervision. Do not run it this way on a server — for that, see [production](production.md).
 
 ## 1. What you need
 
@@ -15,16 +13,10 @@ it this way on a server — for that, see [production](production.md).
 | Media tools | `brew install ffmpeg imagemagick poppler ocrmypdf` | `apt install ffmpeg imagemagick poppler-utils ocrmypdf` |
 
 !!! note "macOS binary base"
-    Media binaries are looked up under `/opt/homebrew/bin` on macOS and
-    `/usr/bin` on Linux, automatically. Override the base with
-    `DEDALO_BINARY_BASE`, or any single binary with its own key
-    (`DEDALO_AV_FFMPEG_PATH`, `DEDALO_MAGICK_PATH`, …). On an Intel Mac, Homebrew
-    installs to `/usr/local/bin` — set `DEDALO_BINARY_BASE=/usr/local/bin`.
+    Media binaries are looked up under `/opt/homebrew/bin` on macOS and `/usr/bin` on Linux, automatically. Override the base with `DEDALO_BINARY_BASE`, or any single binary with its own key (`DEDALO_AV_FFMPEG_PATH`, `DEDALO_MAGICK_PATH`, …). On an Intel Mac, Homebrew installs to `/usr/local/bin` — set `DEDALO_BINARY_BASE=/usr/local/bin`.
 
 !!! note "Several PostgreSQL versions installed?"
-    `psql` must not be older than the server. A version-suffixed Homebrew install
-    is detected automatically, newest first. If you have a stranger layout, point
-    at it explicitly with `DEDALO_PG_BIN_PATH=/opt/homebrew/opt/postgresql@18/bin`.
+    `psql` must not be older than the server. A version-suffixed Homebrew install is detected automatically, newest first. If you have a stranger layout, point at it explicitly with `DEDALO_PG_BIN_PATH=/opt/homebrew/opt/postgresql@18/bin`.
 
 ## 2. Clone and install dependencies
 
@@ -34,14 +26,10 @@ cd ~/dev/dedalo/master_dedalo
 bun install
 ```
 
-That is the whole setup. The browser libraries the client loads ship **with the
-repo** — from `node_modules/` or from the committed `vendor/` tree. Nothing is
-fetched or copied at install time.
+That is the whole setup. The browser libraries the client loads ship **with the repo** — from `node_modules/` or from the committed `vendor/` tree. Nothing is fetched or copied at install time.
 
 !!! note "The private directory is a sibling of the repo"
-    The installer will create `~/dev/dedalo/private/` — one level **above** the
-    repo. Make sure that directory is writable (it will be, if you cloned into a
-    directory you own).
+    The installer will create `~/dev/dedalo/private/` — one level **above** the repo. Make sure that directory is writable (it will be, if you cloned into a directory you own).
 
 ## 3. Create an empty database
 
@@ -56,8 +44,7 @@ CREATE USER dedalo_user PASSWORD 'dev';
 CREATE DATABASE dedalo_dev WITH ENCODING='UTF8' OWNER=dedalo_user;
 ```
 
-The installer restores **into** this database and refuses a non-empty one. It
-never creates the database itself.
+The installer restores **into** this database and refuses a non-empty one. It never creates the database itself.
 
 ## 4. Run the installer
 
@@ -72,16 +59,13 @@ bun run scripts/install.ts \
   --langs lg-spa,lg-eng --app-lang lg-eng --data-lang lg-spa
 ```
 
-`--db-host /tmp` uses the local unix socket, so no password is needed. On a
-Homebrew PostgreSQL your own user is a superuser, which is why `--db-user
-$(whoami)` just works.
+`--db-host /tmp` uses the local unix socket, so no password is needed. On a Homebrew PostgreSQL your own user is a superuser, which is why `--db-user$(whoami)` just works.
 
 It ends with `✔ install complete — root login verified`.
 
 ## 5. Configure the dev listener
 
-The installer writes only the database, entity, language and secret keys — you
-add the rest. Two of them are not optional on a laptop:
+The installer writes only the database, entity, language and secret keys — you add the rest. Two of them are not optional on a laptop:
 
 ```shell
 cat >> ../private/.env <<'ENV'
@@ -95,32 +79,18 @@ ENV
 ```
 
 !!! tip "Media works with no configuration"
-    `MEDIA_PATH` **derives** to `<repo>/media` (`config.media.rootPath`), and the engine
-    serves media itself on the dev listener — session-gated — because there is no web
-    server in front of it here. Set `MEDIA_PATH` only to put the media tree somewhere
-    else. In production media is served by the web server from generated rule files, and
-    the engine's fallback is structurally unreachable (the socket never serves media):
-    see [media protection](../config/media_protection.md).
+    `MEDIA_PATH` **derives** to `<repo>/media` (`config.media.rootPath`), and the engine serves media itself on the dev listener — session-gated — because there is no web server in front of it here. Set `MEDIA_PATH` only to put the media tree somewhere else. In production media is served by the web server from generated rule files, and the engine's fallback is structurally unreachable (the socket never serves media): see [media protection](../config/media_protection.md).
 
 !!! danger "`SESSION_COOKIE_SECURE` defaults to **true** — you cannot log in until you set it to `false`"
-    A `Secure` cookie is dropped by the browser over plain `http://`. The login
-    request succeeds, the server sets the cookie, the browser throws it away, and
-    the next request arrives with no session — so you land back on the login form
-    with no error message worth reading. This is the single most common "my dev
-    install is broken" report, and it is one line of configuration.
+    A `Secure` cookie is dropped by the browser over plain `http://`. The login request succeeds, the server sets the cookie, the browser throws it away, and the next request arrives with no session — so you land back on the login form with no error message worth reading. This is the single most common "my dev install is broken" report, and it is one line of configuration.
 
     Never set it to `false` anywhere a real user can reach.
 
 The other keys:
 
-- **`SERVER_TCP_PORT`** — the engine always listens on a unix socket; a browser
-  cannot. This opens an extra TCP listener for development. Leave it **unset in
-  production**.
-- **`DEDALO_DEV_MODE=true`** — serves the browser test harness and the dev-only
-  libraries.
-- **`DEDALO_DEBUG_API_ERRORS=true`** — echoes exception text to the client
-  instead of only a request id. Very useful locally; a disclosure hole anywhere
-  else.
+- **`SERVER_TCP_PORT`** — the engine always listens on a unix socket; a browser cannot. This opens an extra TCP listener for development. Leave it **unset in production**.
+- **`DEDALO_DEV_MODE=true`** — serves the browser test harness and the dev-only libraries.
+- **`DEDALO_DEBUG_API_ERRORS=true`** — echoes exception text to the client instead of only a request id. Very useful locally; a disclosure hole anywhere else.
 
 ## 6. Run it
 
@@ -147,27 +117,16 @@ bun run test:db:setup   # once (and after a schema/seed change)
 bun test                # picks it up automatically
 ```
 
-`test:db:setup` builds `<your_db>_test` from files vendored in this repo — the install
-seed, the hierarchies, the registered tools, plus a **numisdata test ontology**
-(definitions only, no records) that ~46 gates need to resolve against. Nothing is copied
-from your install.
+`test:db:setup` builds `<your_db>_test` from files vendored in this repo — the install seed, the hierarchies, the registered tools, plus a **numisdata test ontology** (definitions only, no records) that ~46 gates need to resolve against. Nothing is copied from your install.
 
 !!! info "Why a separate database"
-    Running the suite against the application's database made the tests depend on that
-    install's data — on a fresh install 183 of 2039 unit tests failed — and let them WRITE
-    to it: one gate provisioned a scratch ontology node and **deleted a real one** on its
-    way out. Tests get their own database; the app's is not theirs to touch.
+    Running the suite against the application's database made the tests depend on that install's data — on a fresh install 183 of 2039 unit tests failed — and let them WRITE to it: one gate provisioned a scratch ontology node and **deleted a real one** on its way out. Tests get their own database; the app's is not theirs to touch.
 
-    If the test DB is missing, `bun test` says so and falls back to the configured
-    database (the old behaviour). `DEDALO_TEST_DB_DISABLE=true` forces that fallback;
-    `DEDALO_TEST_DATABASE` overrides the name.
+    If the test DB is missing, `bun test` says so and falls back to the configured database (the old behaviour). `DEDALO_TEST_DB_DISABLE=true` forces that fallback; `DEDALO_TEST_DATABASE` overrides the name.
 
 ## What you get
 
-A fresh install ships the canonical **`test3` playground section** — sample
-records covering every component model. It is what the component reference pages
-document against, and it is the fastest way to see the editor do something. On a
-production install you would delete it; here, keep it.
+A fresh install ships the canonical **`test3` playground section** — sample records covering every component model. It is what the component reference pages document against, and it is the fastest way to see the editor do something. On a production install you would delete it; here, keep it.
 
 ## Everyday commands
 
@@ -184,11 +143,6 @@ production install you would delete it; here, keep it.
 ## When something does not work
 
 - **Cannot log in, no error** → `SESSION_COOKIE_SECURE=false`. See above.
-- **`address already in use` / the server exits 1 at boot** → another instance is
-  already listening on `/tmp/dedalo_ts.sock`. The double-start guard probes the
-  socket and refuses to steal it. Stop the other one, or point
-  `SERVER_UNIX_SOCKET` somewhere else.
-- **The server serves the install wizard instead of the app** → it booted with
-  none of the four required keys set, so it is in install mode. It is not reading
-  your `.env` — check that it is at `../private/.env`, one level above the repo.
+- **`address already in use` / the server exits 1 at boot** → another instance is already listening on `/tmp/dedalo_ts.sock`. The double-start guard probes the socket and refuses to steal it. Stop the other one, or point `SERVER_UNIX_SOCKET` somewhere else.
+- **The server serves the install wizard instead of the app** → it booted with none of the four required keys set, so it is in install mode. It is not reading your `.env` — check that it is at `../private/.env`, one level above the repo.
 - Everything else → [troubleshooting](troubleshooting.md).
