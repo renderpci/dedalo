@@ -44,6 +44,8 @@ Close v6 / Prepare installation for v7
                          then preview the diffusion mapping. STOPS before the matrix rewrite.
                          Writes (pre_update), so it is as explicit as --yes.
   --yes                  Apply the migration (REQUIRED to write anything).
+                         Includes the credential upgrade: v6 stores REVERSIBLE passwords,
+                         and they are converted to Argon2id (needs Argon2 in this PHP).
   --skip-backup          Skip the mandatory pre-migration backup (only if you already have one).
   --backup-dir=PATH      Where to write the pg_dump (default: <package>/var/backup).
   --log=PATH             Log file (default: <package>/var/prepare_v7.log).
@@ -191,6 +193,10 @@ if ($is_dry) {
 	// passing preflight into a failure.
 	$spawn('phase3_diffusion.php', ['--dry-run', $log_arg]);
 
+	// Credential check: does this PHP have Argon2, and how many accounts still hold a
+	// reversible v6 password? Writes nothing.
+	$spawn('phase4_passwords.php', ['--dry-run', $log_arg]);
+
 	$emit($code === 0 ? 'Preflight PASSED. Re-run with --yes to apply.' : 'Preflight FAILED (see above).');
 	exit($code);
 }
@@ -226,6 +232,9 @@ if ($is_deep) {
 
 	$emit('Previewing the diffusion ontology mapping (now possible: dd_ontology exists) …');
 	$spawn('phase3_diffusion.php', ['--dry-run', $log_arg]);
+
+	$emit('Checking credentials (Argon2 support + how many accounts would convert) …');
+	$spawn('phase4_passwords.php', ['--dry-run', $log_arg]);
 
 	if ($code_review === 6) {
 		$emit('DEEP PREFLIGHT: data issues found — see the reports above. '
@@ -264,6 +273,17 @@ $code2 = $spawn('phase2_update.php', ['--yes', $log_arg]);
 if ($code2 !== 0) {
 	$emit('Migration FAILED in phase 2 (code ' . $code2 . '). Restore from backup if needed.');
 	exit($code2);
+}
+
+// Phase 4: credentials → Argon2id. Runs before diffusion because it is what makes the
+// migrated database LOGIN-ABLE from v7: v6 stored reversible passwords, and this is the only
+// moment the plaintext is still recoverable. Non-fatal for the same reason phase 3 is: the
+// data migration is already complete and version-stamped, and this step is re-runnable.
+$code4 = $spawn('phase4_passwords.php', ['--yes', $log_arg]);
+if ($code4 !== 0) {
+	$emit('DATABASE migration DONE (phases 1–2, version-stamped), but the credential upgrade '
+		. 'reported code ' . $code4 . '. Users cannot log into v7 until it succeeds; it can be '
+		. 're-run on its own: run/phase4_passwords.php --yes');
 }
 
 // Phase 3: diffusion ontology migration (isolated LAST step —

@@ -176,6 +176,7 @@ streams the current run; it polls every 5 s until the runner writes a terminal l
 ```bash
 php close_v6_prepare_v7/run/run_prepare_v7.php --dry-run          # preflight, no writes
 php close_v6_prepare_v7/run/phase3_diffusion.php --dry-run        # diffusion mapping preview (needs dd_ontology)
+php close_v6_prepare_v7/run/phase4_passwords.php --dry-run        # credential conversion preview (writes nothing)
 php close_v6_prepare_v7/run/run_prepare_v7.php --deep-preflight  # backup + pre_update + REAL data review, stops before the rewrite
 php close_v6_prepare_v7/run/run_prepare_v7.php --yes              # backup + migrate
 php close_v6_prepare_v7/run/run_prepare_v7.php --yes --skip-backup   # only if you already backed up
@@ -219,7 +220,19 @@ the engine imports the rest via Dédalo's own legacy‑config auto‑migration:
    `matrix_activity_diffusion`, `matrix_string_search` and `matrix_relation_index`
    (tables + sync triggers + **backfill**). On success the new version is recorded in
    `matrix_updates`.
-3. **Phase 3 — diffusion ontology (LAST step, isolated).** Has a **`--dry-run`**: it computes and
+3. **Phase 4 — credentials → Argon2id.** v6 does not hash passwords: it stores REVERSIBLE
+   AES (`component_password::encrypt_password` → `dedalo_encrypt_openssl`). The v7 engines take
+   one-way hashes only — the TS server refuses such an account ("still has a legacy (pre-Argon2)
+   password hash") and the PHP engine upgrades it lazily on the next login, a path that no longer
+   exists after the cutover. This phase converts every account eagerly, reusing the engine's own
+   `component_password` methods, so the hashes are exactly what the PHP engine would produce.
+   The migration is the last moment the plaintext is recoverable — afterwards the database holds
+   only hashes, which also closes a v6 weakness. Idempotent; a row is written only when the
+   plaintext was recovered AND the fresh hash verifies against it; no plaintext is ever logged.
+   Argon2 is a PHP **build** option (`--with-password-argon2`), not a version feature, so the
+   phase checks this install's PHP first and refuses (exit 8) rather than writing hashes the
+   engines could not verify. Both preflights preview it.
+4. **Phase 3 — diffusion ontology (LAST step, isolated).** Has a **`--dry-run`**: it computes and
    prints the whole v6→v7 mapping (the `V6: … / V7: …` pair per node, plus what would be stored)
    and writes nothing. It needs `dd_ontology`, which the real phase 1 builds, so on an unmigrated
    database it reports "preview unavailable yet" and exits 0 — the preflight runs it and is never
