@@ -58,6 +58,36 @@ Add translated keys to `catalog/lg-<code>.json` (sorted, tab-indented), review t
 - **Remove:** only if proven unused — no static reference anywhere, not reachable from any dynamic `get_label[expr]` site, no DB hit (data-driven state/calculation widgets + `search_operators.ts` operator→key map read the live dictionary; degrade via `get_label[x] || x`).
 - **Tool-local migration:** a key used by exactly ONE tool and tool-specific in meaning moves into that tool's `register.json` `misc.dd1372` labels; the tool JS switches `get_label.x` → `self.get_tool_label('x')`, keeping its `|| 'literal'` fallback. Requires re-running the *Register tools* maintenance widget to land the DB `matrix_tools` rows. Genuinely generic vocabulary used by one tool (`error`, `print`, `upload`, …) STAYS global.
 
+## The OTHER label store: tool-local labels (`get_tool_label`)
+
+`src/core/labels/` is the GLOBAL dictionary. A tool's own strings live in its
+`register.json` — `misc.dd1372` (column-keyed dump) or top-level `labels[]`
+(authoring format) — as `{lang, name, value}` entries, read in the client via
+`self.get_tool_label('key') || 'literal'`. Full spec: `engineering/TOOLS_SPEC.md`
+§ "Tool labels". The parts that bite:
+
+- **`register.json` is a SEED.** Runtime reads `matrix_tools`; an edit does
+  nothing until the *Register tools* maintenance widget re-imports it.
+- **SINGLE-LANG SERVING CONTRACT.** `buildToolElementContext`
+  (`src/core/tools/registry.ts`) emits ONLY the requested application lang, and
+  `[]` when the tool has no label in it; a key missing in that lang is omitted,
+  never substituted from another lang (PHP-identical, frozen in the
+  `tool_element_context_differential` fixture). So `get_tool_label` is a plain
+  name lookup — a name match IS the right language — and an untranslated lang
+  shows the call-site English literal, NOT another language's string. Widening
+  this is a wire change (WC entry + fixture re-cut + client resolver taught to
+  choose). Gated: `test/unit/tool_context_labels_lang.test.ts`.
+- **No completeness tripwire here.** Unlike `master.json`, nothing forces a
+  `get_tool_label('x')` call to have a definition — a missing key degrades
+  silently to the literal. Audit by scanning tool JS for `get_tool_label(` (mind
+  the wrapper helpers: `const L = (n,f) => self.get_tool_label?.(n) || f`, and
+  dynamic keys like `get_tool_label(quality.label)`) and diffing against the
+  register. Coverage as of 2026-07-27: 309 keys × the 10 configured app langs,
+  100%.
+- **A tool that renders English regardless of lang** is usually not a missing
+  translation but broken wiring — the tool reaching for the global `get_label`
+  map or a method the instance does not have, instead of `self.get_tool_label`.
+
 ## Gotchas
 
 - **Label change not showing?** Labels ride CODE deploys, not ontology updates. A running server caches merged dictionaries — the cache lives in the ontology hub; an invalidation/clear re-reads the files. In production, files are immutable per deploy.
@@ -76,6 +106,11 @@ Add translated keys to `catalog/lg-<code>.json` (sorted, tab-indented), review t
 | `test/unit/labels_tripwire.test.ts` | The invariant gate. |
 | `scripts/labels_fill.ts` | Per-lang missing-key translation backlog. |
 | `test/parity/wc034_label_cleanup.json` | Machine-readable rename/tool-local/removal map. |
+| `tools/<tool>/register.json` | TOOL-LOCAL labels (`misc.dd1372` / `labels[]`) — seed for `matrix_tools`. |
+| `src/core/tools/registry.ts` | `buildToolElementContext` — the single-lang label filter. |
+| `src/core/tools/client/js/tool_common.js` | `get_tool_label` — the client resolver. |
+| `test/unit/tool_context_labels_lang.test.ts` | Gate for the single-lang serving contract. |
+| `engineering/TOOLS_SPEC.md` (§ Tool labels) | Authoritative tool-label spec. |
 | `engineering/WIRE_CONTRACT.md` (WC-033, WC-034) | Authoritative contract + gate reconciliation. |
 | `rewrite/LABELS_RECONCILE.md` (local-only) | The one-time DB↔file merge record. |
 

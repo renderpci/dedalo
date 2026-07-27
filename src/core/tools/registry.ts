@@ -472,7 +472,13 @@ export async function buildToolElementContext(
 	const baseUrl = getToolUrl(name);
 	const properties = row.misc?.[TIPO.PROPERTIES]?.[0]?.value ?? null;
 	// Labels (dd1372) are stored for every lang but PHP exposes only the
-	// application-lang entries in the tool context.
+	// application-lang entries in the tool context. SINGLE-LANG CONTRACT: the
+	// client's get_tool_label (tools/client/js/tool_common.js) treats a name match
+	// as already-correct-language BECAUSE of this filter, and relies on its own
+	// `|| 'literal'` fallback when the lang has no entry (the array is then empty).
+	// Widening this to several langs is a wire change: it needs a WIRE_CONTRACT
+	// entry, a re-cut of the frozen tool_element_context fixture, and the client
+	// resolver taught to choose. Gated by test/unit/tool_context_labels_lang.test.ts.
 	const allLabels = (row.misc?.[TIPO.LABELS]?.[0] as { value?: unknown })?.value;
 	const labels = Array.isArray(allLabels)
 		? allLabels.filter((item) => (item as { lang?: string }).lang === appLang)

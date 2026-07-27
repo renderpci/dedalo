@@ -271,6 +271,40 @@ authorized, then returns `buildToolElementContext(name)` — the full tool conte
 (tipo/lang/labels/description/developer + the client-visible `config`). Byte-parity
 gated (`test/parity/tool_element_context_differential.test.ts`).
 
+## Tool labels (`get_tool_label`)
+
+A tool's OWN UI strings live in its `register.json` — `misc.dd1372` (column-keyed
+dump) or the top-level `labels[]` array (authoring format) — as
+`{lang, name, value}` entries. This is the tool-local counterpart of the global
+`src/core/labels/` catalog (WC-034: a string used by exactly ONE tool and
+tool-specific in meaning belongs here; generic vocabulary stays global).
+
+**`register.json` is a SEED, not the runtime source.** Labels are served from
+`matrix_tools`; editing the file changes nothing until the "Register tools"
+maintenance widget re-imports it.
+
+**SINGLE-LANG SERVING CONTRACT.** `buildToolElementContext`
+(`src/core/tools/registry.ts`) emits ONLY the entries whose `lang` equals the
+request's application lang, and an EMPTY array when the tool has no label in that
+lang. A key missing in the requested lang is omitted, never substituted from
+another lang. PHP behaved identically — frozen in
+`test/parity/fixtures/oracle_harvest/tool_element_context_differential.json`,
+where every emitted label carries the single requested lang.
+
+Consequently the client resolver `get_tool_label`
+(`src/core/tools/client/js/tool_common.js`) is a plain name lookup: a name match
+IS the right language. A miss returns `null`, which every call site handles with
+its own `|| 'literal'` English fallback — so an untranslated lang shows the
+literal rather than another language's string. (This replaced a three-tier
+current-lang / install-default / any-lang priority chain whose second and third
+tiers a single-lang payload made unreachable; it only implied a fallback the wire
+could never deliver.)
+
+Widening the filter to several langs is a WIRE CHANGE: it needs a
+`WIRE_CONTRACT.md` entry, a re-cut of the frozen fixture, and the client resolver
+taught to choose. Gated by `test/unit/tool_context_labels_lang.test.ts` (seeds its
+own scratch tool row, so it does not depend on what the install has registered).
+
 ## Scaffolding
 
 `bun run scripts/create_tool.ts --name=tool_x --label="X" [--models=a,b]` copies

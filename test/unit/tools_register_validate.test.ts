@@ -3,10 +3,11 @@
  * validates (the TS analogue of PHP's v6-corpus guard), and the authoring→v7
  * conversion produces a record that passes validateRegister.
  *
- * Corpus census 35 = the 34 PHP-seeded column-keyed registers + the TS-only
- * tool_error_report (WC-019), which is AUTHORED in the authoring format and
- * must convert+validate instead (reconciled 2026-07-11 — the tool landed
- * 2026-07-10 without bumping this pin).
+ * Corpus census 36 = the 34 PHP-seeded column-keyed registers + the TS-only
+ * tool_error_report and tool_sitebuilder (WC-019), which are AUTHORED in the
+ * authoring format and must convert+validate instead (reconciled 2026-07-11 —
+ * tool_error_report landed 2026-07-10 without bumping this pin; reconciled
+ * again 2026-07-27 for tool_sitebuilder, same omission).
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -35,10 +36,10 @@ describe('seeded register.json corpus', () => {
 
 	/** TS-authored tools (never PHP-seeded): register.json in the authoring
 	 * format, converted at registration (WC-019 precedent). */
-	const TS_AUTHORED = new Set(['tool_error_report']);
+	const TS_AUTHORED = new Set(['tool_error_report', 'tool_sitebuilder']);
 
-	test('every tool has a register.json and there are 35 (34 seeded + 1 TS-authored)', () => {
-		expect(toolDirs.length).toBe(35);
+	test('every tool has a register.json and there are 36 (34 seeded + 2 TS-authored)', () => {
+		expect(toolDirs.length).toBe(36);
 	});
 
 	for (const name of toolDirs) {
