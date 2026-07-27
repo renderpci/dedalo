@@ -32,8 +32,10 @@ class prepare_v7 {
 		'prepare_v7'
 	];
 
-	/** Lines of var/prepare_v7.log returned to the client on every get_value() poll */
-	private const LOG_TAIL_LINES = 60;
+	/** Lines of var/prepare_v7.log returned to the client on every get_value() poll.
+	*   The panel scrolls the block (overflow:auto), so a longer tail is actually reviewable;
+	*   kept bounded because get_value() is polled every 5s while a run is in flight. */
+	private const LOG_TAIL_LINES = 200;
 
 
 	/**

@@ -30,6 +30,101 @@ export const render_prepare_v7 = function() {
 
 
 /**
+* INJECT_STYLE
+* Widget styles, injected once.
+*
+* v6's convention is a `css/<widget>.less` `@import (once)`-ed into area_maintenance.less —
+* but that only takes effect after recompiling the area's LESS, and this widget ships as a
+* DROP-IN package (copy two folders into any v6 install, no build step). A single scoped
+* stylesheet keeps it self-contained and keeps the package copy identical to the installed one.
+*
+* @return bool
+*/
+const inject_style = function() {
+
+	const id = 'prepare_v7_widget_style'
+	if (document.getElementById(id)) {
+		return false
+	}
+
+	const style = document.createElement('style')
+	style.id = id
+	style.textContent = `
+		/* The area wrapper is display:table, so it shrink-to-fits: its width is
+		   min(max-content, available), floored by MIN-content. A non-wrapping <pre> has a
+		   min-content width equal to its longest line, which dragged the whole maintenance
+		   area to 2832px inside a 1600px viewport. Letting the text wrap (pre-wrap +
+		   overflow-wrap) drops min-content to ~0, so the table falls back to the available
+		   width and max-width:100% finally means something. Wrapping also keeps every
+		   character reachable — nothing hides off to the right. */
+		.wrapper_widget.prepare_v7 {
+			max-width: 100%;
+		}
+		.wrapper_widget.prepare_v7 .prepare_v7_log,
+		.wrapper_widget.prepare_v7 .prepare_v7_summary {
+			box-sizing: border-box;
+			max-width: 100%;
+			max-height: 24em;
+			overflow-y: auto;        /* the log is long: scroll it, never clip it */
+			overflow-x: hidden;
+			white-space: pre-wrap;
+			overflow-wrap: anywhere;
+			font-size: 0.85em;
+			line-height: 1.4;
+			padding: 0.6em 0.8em;
+			margin: 0.5em 0 0 0;
+			border: 1px solid rgba(128,128,128,0.35);
+			border-radius: 3px;
+			tab-size: 4;
+		}
+		.wrapper_widget.prepare_v7 .prepare_v7_summary {
+			max-height: 20em;
+			border-left: 3px solid rgba(128,128,128,0.9);
+			font-weight: 600;
+		}
+		.wrapper_widget.prepare_v7 .prepare_v7_row {
+			display: flex;
+			gap: 0.6em;
+			align-items: baseline;
+		}
+		.wrapper_widget.prepare_v7 .prepare_v7_row .vkey {
+			min-width: 14em;
+			opacity: 0.75;
+		}
+		.wrapper_widget.prepare_v7 .prepare_v7_row .vkey_value {
+			word-break: break-all;
+		}
+		.wrapper_widget.prepare_v7 .prepare_v7_info,
+		.wrapper_widget.prepare_v7 .prepare_v7_checks {
+			margin: 0.6em 0;
+		}
+		.wrapper_widget.prepare_v7 .prepare_v7_buttons {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.5em;
+			margin: 0.8em 0 0.2em 0;
+		}
+		/* The theme leaves .warning orange-on-orange and .danger near-black-on-red, both
+		   unreadable. These two buttons are the ones that write to the database, so they
+		   have to be the legible ones. */
+		.wrapper_widget.prepare_v7 .prepare_v7_buttons .button_deep_preflight,
+		.wrapper_widget.prepare_v7 .prepare_v7_buttons .button_migrate {
+			color: #fff;
+		}
+		.wrapper_widget.prepare_v7 .prepare_v7_buttons .button_deep_preflight:disabled,
+		.wrapper_widget.prepare_v7 .prepare_v7_buttons .button_migrate:disabled {
+			color: #fff;
+			opacity: 0.55;           /* readable while clearly inert */
+		}
+	`
+	document.head.appendChild(style)
+
+	return true
+}//end inject_style
+
+
+
+/**
 * LIST
 * Creates the nodes of current widget.
 * The created wrapper will be append to the widget body in area_maintenance
@@ -73,6 +168,8 @@ render_prepare_v7.prototype.list = async function(options) {
 * @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
+
+	inject_style()
 
 	// short vars
 		const value				= self.value || {}
