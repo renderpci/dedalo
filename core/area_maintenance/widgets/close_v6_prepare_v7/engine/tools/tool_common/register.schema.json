@@ -1,0 +1,115 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://dedalo.dev/schema/tools/register.schema.json",
+	"title": "Dédalo tool register.json (v7 authoring format)",
+	"description": "Hand-authorable registration file for a Dédalo tool. Place it as register.json in the tool root directory. Legacy v6 matrix-dump files (with top-level 'components'/'relations') are still accepted and converted automatically; new tools must use this format. Runtime validation mirror: tools_register::validate_register().",
+	"type": "object",
+	"required": ["name", "version", "label"],
+	"additionalProperties": false,
+	"properties": {
+		"$schema": {
+			"type": "string",
+			"description": "Optional pointer to this schema for IDE validation, e.g. ../tool_common/register.schema.json"
+		},
+		"name": {
+			"type": "string",
+			"pattern": "^tool_[a-z0-9_]+$",
+			"description": "Unique tool name. Must exactly match the tool directory and class name. Convention: tool_{org}_{feature}, snake_case, ASCII only."
+		},
+		"version": {
+			"type": "string",
+			"pattern": "^\\d+\\.\\d+(\\.\\d+)?([.-][0-9A-Za-z.]+)?$",
+			"description": "Tool semantic version, e.g. 1.0.0"
+		},
+		"label": {
+			"type": "object",
+			"minProperties": 1,
+			"patternProperties": {
+				"^lg-[a-z0-9_]+$": { "type": "string", "minLength": 1 }
+			},
+			"additionalProperties": false,
+			"description": "Display label keyed by Dédalo lang code (e.g. lg-eng). One language is enough; the client falls back across languages."
+		},
+		"description": {
+			"type": "object",
+			"patternProperties": {
+				"^lg-[a-z0-9_]+$": { "type": "string" }
+			},
+			"additionalProperties": false,
+			"description": "Free description keyed by lang code. HTML allowed."
+		},
+		"developer": {
+			"type": "string",
+			"description": "Developer/author name"
+		},
+		"dedalo_version_min": {
+			"type": "string",
+			"pattern": "^\\d+\\.\\d+(\\.\\d+)?$",
+			"description": "Minimum compatible Dédalo version. Registration is refused on older installs."
+		},
+		"affected_models": {
+			"type": "array",
+			"items": { "type": "string" },
+			"description": "Component/section model names the tool applies to, e.g. ['section','component_input_text']. Use ['all_components'] to match every component. Names are resolved against the models section (dd1342) at registration."
+		},
+		"affected_tipos": {
+			"type": "array",
+			"items": { "type": "string" },
+			"description": "Optional restriction to specific ontology tipos (e.g. ['rsc36']). Empty = no restriction."
+		},
+		"show_in_inspector": {
+			"type": "boolean",
+			"default": false,
+			"description": "Show the tool button in the section inspector panel"
+		},
+		"show_in_component": {
+			"type": "boolean",
+			"default": false,
+			"description": "Show the tool button inline on matching components"
+		},
+		"require_translatable": {
+			"type": "boolean",
+			"default": false,
+			"description": "Only offer the tool on translatable components"
+		},
+		"always_active": {
+			"type": "boolean",
+			"default": false,
+			"description": "Tool is available to every user regardless of tools-profile authorization"
+		},
+		"active": {
+			"type": "boolean",
+			"default": true,
+			"description": "Tool active status after registration"
+		},
+		"properties": {
+			"type": ["object", "null"],
+			"description": "UI/behavior properties, e.g. {\"open_as\": \"modal\"} or {\"open_as\": \"window\", \"windowFeatures\": {...}}"
+		},
+		"labels": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": ["lang", "name", "value"],
+				"properties": {
+					"lang":  { "type": "string", "pattern": "^lg-[a-z0-9_]+$" },
+					"name":  { "type": "string" },
+					"value": { "type": "string" }
+				}
+			},
+			"description": "UI label strings, retrievable in JS via get_tool_label(name). One entry per (name, lang)."
+		},
+		"ontology": {
+			"type": ["array", "null"],
+			"description": "Optional tool ontology extension nodes. Tipos are renumerated to unique tool* ids at registration."
+		},
+		"config": {
+			"type": ["object", "null"],
+			"description": "Runtime configuration definition. Properties flagged with \"client\": true are exposed to the browser; everything else stays server-side."
+		},
+		"default_config": {
+			"type": ["object", "null"],
+			"description": "Factory default configuration. Overridable per install in the Tools configuration section (dd996)."
+		}
+	}
+}

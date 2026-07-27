@@ -1,0 +1,199 @@
+{
+	"typo": "ddo",
+	"model": "component_iri",
+	"label": "iri",
+	"tipo": "test140",
+	"section_tipo": "test3",
+	"legacy_model": "component_iri",
+	"parent": "test3",
+	"parent_grouper": "test45",
+	"lang": "lg-nolan",
+	"mode": "edit",
+	"translatable": false,
+	"properties": {
+		"source": {
+			"request_config": [
+				{
+					"sqo": {
+						"section_tipo": [
+							{
+								"value": [
+									"test3"
+								],
+								"source": "section"
+							}
+						]
+					},
+					"show": {
+						"ddo_map": [
+							{
+								"typo": "ddo",
+								"info": "Title dataframe",
+								"mode": "edit",
+								"tipo": "dd560",
+								"model": "component_dataframe",
+								"view": "line",
+								"parent": "self",
+								"section_tipo": "test3"
+							}
+						],
+						"fields_separator": " | "
+					}
+				}
+			]
+		}
+	},
+	"css": null,
+	"permissions": 2,
+	"tools": [
+		{
+			"typo": "ddo",
+			"model": "tool_lang",
+			"name": "tool_lang",
+			"label": "Translation",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_lang/css/tool_lang.css"
+			},
+			"icon": "/dedalo/tools/tool_lang/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_lang_multi",
+			"name": "tool_lang_multi",
+			"label": "Multi-language",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": null,
+			"css": {
+				"url": "/dedalo/tools/tool_lang_multi/css/tool_lang_multi.css"
+			},
+			"icon": "/dedalo/tools/tool_lang_multi/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_propagate_component_data",
+			"name": "tool_propagate_component_data",
+			"label": "Propagate component data",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": null,
+			"css": {
+				"url": "/dedalo/tools/tool_propagate_component_data/css/tool_propagate_component_data.css"
+			},
+			"icon": "/dedalo/tools/tool_propagate_component_data/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_time_machine",
+			"name": "tool_time_machine",
+			"label": "Time machine",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_time_machine/css/tool_time_machine.css"
+			},
+			"icon": "/dedalo/tools/tool_time_machine/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		}
+	],
+	"buttons": [],
+	"request_config": [
+		{
+			"api_engine": "dedalo",
+			"type": "main",
+			"sqo": {
+				"section_tipo": [
+					{
+						"typo": "ddo",
+						"tipo": "test3",
+						"model": "section",
+						"label": "Test Unit (data on matrix_test)",
+						"color": "#b9b9b9",
+						"permissions": 3,
+						"buttons": [
+							{
+								"model": "button_new",
+								"permissions": 3
+							},
+							{
+								"model": "button_delete",
+								"permissions": 3
+							}
+						],
+						"matrix_table": "matrix_test"
+					}
+				],
+				"limit": 10
+			},
+			"show": {
+				"ddo_map": [
+					{
+						"typo": "ddo",
+						"info": "Title dataframe",
+						"mode": "edit",
+						"tipo": "dd560",
+						"model": "component_dataframe",
+						"view": "line",
+						"parent": "test140",
+						"section_tipo": "test3",
+						"label": "Label",
+						"fixed_mode": true
+					}
+				],
+				"fields_separator": " | ",
+				"sqo_config": {
+					"full_count": false,
+					"limit": 10,
+					"offset": 0,
+					"mode": "edit",
+					"operator": "$or"
+				}
+			},
+			"search": null,
+			"choose": null,
+			"api_config": null
+		}
+	],
+	"columns_map": [],
+	"sortable": true,
+	"type": "component",
+	"path": [
+		{
+			"name": "iri",
+			"model": "component_iri",
+			"section_tipo": "test3",
+			"component_tipo": "test140"
+		}
+	],
+	"new_dataframe": null,
+	"view": "default",
+	"children_view": null,
+	"debug": {
+		"exec_time": "13.862 ms"
+	}
+}

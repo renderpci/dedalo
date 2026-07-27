@@ -1,0 +1,389 @@
+<?php declare(strict_types=1);
+/**
+ * DD_TIPOS — GLOBAL ONTOLOGY TIPO CONSTANTS
+ *
+ * Every structural node in Dédalo is identified by a "tipo": a short ontology
+ * identifier such as 'dd1', 'hierarchy25', 'rsc29', or 'ontology6'.  These tipos
+ * are defined in the master ontology and drive the entire data model — they
+ * determine which section stores users, what the thesaurus term field is, which
+ * relation type marks a parent link, and so on.
+ *
+ * This file centralises the most critical tipos as PHP constants so that all PHP
+ * code references them by name instead of by raw string.  Changing a tipo here
+ * propagates the change everywhere without needing a grep-replace.
+ *
+ * NAMING CONVENTION
+ *   DEDALO_<DOMAIN>_<ROLE>_TIPO  — section or component tipo
+ *   DEDALO_<DOMAIN>_<ROLE>       — non-tipo constant (integer, string, array)
+ *   ONTOLOGY_SECTION_TIPOS        — associative array of tipos for the v7 ontology
+ *                                   search/resolution layer
+ *   ANSI_*                        — terminal colour/style escape sequences used
+ *                                   by CLI tools and logging helpers
+ *
+ * NAMESPACE PREFIXES USED IN TIPO STRINGS
+ *   dd*         — core Dédalo ontology nodes
+ *   hierarchy*  — thesaurus / hierarchy subsystem nodes
+ *   rsc*        — resources (media, notes, AV, images) nodes
+ *   ontology*   — v7 ontology section nodes
+ *   lg*         — language registry nodes
+ *
+ * (!) When adding relation types update core_functions::get_relation_name() too.
+ * (!) DEDALO_SUPERUSER is an integer sentinel (-1), not a tipo string.
+ *
+ * Loaded early in the bootstrap (before any class or session logic) so constants
+ * are available application-wide including CLI scripts and tools.
+ */
+
+// TIPOS : Resolve important tipos
+
+// root tipo
+define('DEDALO_ROOT_TIPO',								'dd1');
+define('DEDALO_THESAURUS_TIPO',							'dd100');
+define('DEDALO_MEDIA_AREA_TIPO',						'rsc1');
+define('DEDALO_AREA_ROOT_TIPO',							'dd242');
+define('DEDALO_AREA_MAINTENANCE_TIPO',					'dd88');
+define('DEDALO_AREA_DEVELOPMENT_TIPO',					'dd770');
+
+// Activity
+define('DEDALO_ACTIVITY_SECTION_TIPO',					'dd542');
+define('DEDALO_ACTIVITY_WHEN',							'dd547'); // component_date
+
+// Users
+define('DEDALO_SECTION_USERS_TIPO',						'dd128');
+define('DEDALO_SECURITY_ADMINISTRATOR_TIPO',			'dd244');
+define('DEDALO_USER_NAME_TIPO',							'dd132');
+define('DEDALO_USER_PASSWORD_TIPO',						'dd133');
+define('DEDALO_ACTIVE_ACCOUNT_TIPO',					'dd131');
+define('DEDALO_FULL_USER_NAME_TIPO',					'dd452');
+define('DEDALO_USER_PROFILE_TIPO',						'dd1725');
+define('DEDALO_SUPERUSER',								-1); // sentinel integer meaning "super-administrator" — NOT a tipo string
+define('DEDALO_FILTER_MASTER_TIPO',						'dd170'); // USER COMPONENT_FILTER_MASTER
+define('DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO',		'dd478');
+define('DEDALO_USER_DEVELOPER_TIPO',					'dd515');
+define('DEDALO_USER_EMAIL_TIPO',						'dd134');
+define('DEDALO_USER_IMAGE_TIPO',						'dd522');
+
+// Profiles
+define('DEDALO_SECTION_PROFILES_TIPO',					'dd234');
+define('DEDALO_COMPONENT_NAME_PROFILES_TIPO',			'dd237');
+define('DEDALO_COMPONENT_DESCRIPTION_PROFILES_TIPO',	'dd238');
+define('DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO',	'dd249'); // AREAS PROFILES
+define('DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO','dd774'); // ACCESS PROFILES
+define('DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO',	'dd1067'); // TOOLS PROFILES
+
+// Section projects
+define('DEDALO_SECTION_PROJECTS_TIPO',					'dd153');
+define('DEDALO_PROJECTS_NAME_TIPO',						'dd156'); // remember: is 'component_input_text' model
+define('DEDALO_COMPONENT_PROJECT_LANGS_TIPO',			'dd267');
+define('DEDALO_PROJECTS_CHILDREN_TIPO',					'dd1594');
+
+// dedalo_diffusion_tipo
+define('DEDALO_DIFFUSION_TIPO',							'dd1190'); // previous 'dd3'
+define('DEDALO_COMPONENT_SI_NO_TIPO',					'dd62'); // Type of the value field (not of the section) private list with possible values: 1,2 (yes, no) -translatable-
+define('DEDALO_SECTION_SI_NO_TIPO',						'dd64');
+
+// dedalo_section_layout
+define('DEDALO_SECTION_LAYOUT_TEMPLATES_TIPO',			'dd20'); // TIPO of section layout with the default and private templates for print, list, edit... the sections
+define('DEDALO_SECTION_LAYOUT_PUBLIC_TIPO',				'dd30'); // TIPO of section layout with the user and public layouts for print, list, edit... the sections
+
+// dedalo Media
+define('DEDALO_MEDIA_COLLECTION_TIPO',					'rsc25'); // TIPO of the collection component that contain the data of the collection, that can will used to make he path to the media
+
+// Models
+define('SECTION_MODEL',									'dd6');
+
+// State
+define('DEDALO_STATE_GENERAL_SECTION_ID',				'1');
+define('DEDALO_STATE_GENERAL_SECTION_TIPO',				'dd174');
+define('DEDALO_STATE_GENERAL_COMPONENT_TIPO',			'dd185');
+
+// Tools / process
+define('DEDALO_TOOLS_TIPO',								'dd193');
+define('DEDALO_TOOL_TRANSCRIPTION_ID',					'1');
+define('DEDALO_TOOL_INDEXATION_ID',						'2');
+define('DEDALO_TOOL_TRANSLATE_ID',						'3');
+define('DEDALO_TOOL_INVESTIGATION_SECTION_TIPO',		'dd90');
+define('DEDALO_TOOL_INVESTIGATION_COMPONENT_TIPO',		'dd127');
+
+// Video components resources
+define('DEDALO_SECTION_RESOURCES_AV_TIPO',				'rsc167');
+define('DEDALO_COMPONENT_RESOURCES_AV_TIPO',			'rsc35');
+define('DEDALO_COMPONENT_RESOURCES_AV_DURATION_TIPO',	'rsc54');
+define('DEDALO_COMPONENT_RESOURCES_TR_TIPO',			'rsc36');
+
+// image components resources
+define('DEDALO_SECTION_RESOURCES_IMAGE_TIPO',			'rsc170');
+define('DEDALO_COMPONENT_RESOURCES_IMAGE_TIPO',			'rsc29');
+
+// ontology
+define('DEDALO_ONTOLOGY_PUBLICATION_TIPO',				'ontology3');
+define('DEDALO_ONTOLOGY_IS_DESCRIPTOR_TIPO',			'ontology4');
+define('DEDALO_ONTOLOGY_TERM_TIPO',						'ontology5');
+define('DEDALO_ONTOLOGY_MODEL_TIPO',					'ontology6');
+define('DEDALO_ONTOLOGY_TLD_TIPO',						'ontology7');
+define('DEDALO_ONTOLOGY_TRANSLATABLE_TIPO',				'ontology8');
+define('DEDALO_ONTOLOGY_CONNECTED_TO_TIPO',				'ontology10');
+define('DEDALO_ONTOLOGY_PARENT_TIPO',					'ontology15');
+define('DEDALO_ONTOLOGY_IS_MODEL_TIPO',					'ontology30');
+define('DEDALO_ONTOLOGY_SECTION_TIPO',					'ontology35');
+define('DEDALO_ONTOLOGY_ORDER_TIPO',					'ontology41');
+
+
+// Hierarchy types
+define('DEDALO_HIERARCHY_TYPES_SECTION_TIPO',			'hierarchy13');
+define('DEDALO_HIERARCHY_TYPES_NAME_TIPO',				'hierarchy16');
+define('DEDALO_HIERARCHY_TYPES_ORDER',					'hierarchy106');
+
+// Hierarchy
+define('DEDALO_HIERARCHY_SECTION_TIPO',					'hierarchy1');
+define('DEDALO_HIERARCHY_ACTIVE_TIPO',					'hierarchy4');
+define('DEDALO_HIERARCHY_LANG_TIPO',					'hierarchy8');
+define('DEDALO_HIERARCHY_TYPOLOGY_TIPO',				'hierarchy9');
+define('DEDALO_HIERARCHY_LABEL_TIPO',					'hierarchy7');
+define('DEDALO_HIERARCHY_TLD2_TIPO',					'hierarchy6');
+define('DEDALO_HIERARCHY_TERM_TIPO',					'hierarchy5');
+define('DEDALO_HIERARCHY_TARGET_SECTION_TIPO',			'hierarchy53');
+define('DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO',	'hierarchy58');
+define('DEDALO_HIERARCHY_CHILDREN_TIPO',				'hierarchy45');
+define('DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO',			'hierarchy59');
+define('DEDALO_HIERARCHY_ORDER_TIPO',					'hierarchy48');
+define('DEDALO_HIERARCHY_FILTER_TIPO',					'hierarchy54');
+define('DEDALO_HIERARCHY_BUTTON_NEW_TIPO',				'hierarchy11');
+define('DEDALO_HIERARCHY_BUTTON_DELETE_TIPO',			'hierarchy12');
+define('DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO',		'hierarchy109');
+define('DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO',		'hierarchy125');
+
+// Thesaurus real section
+define('DEDALO_THESAURUS_SECTION_TIPO',					'hierarchy20');
+define('DEDALO_THESAURUS_TERM_TIPO',					'hierarchy25');
+define('DEDALO_THESAURUS_CODE_TIPO',					'hierarchy41');
+define('DEDALO_THESAURUS_GEOLOCATION_TIPO',				'hierarchy31');
+define('DEDALO_THESAURUS_RELATED_TIPO',					'hierarchy35');
+define('DEDALO_THESAURUS_RELATION_PARENT_TIPO',			'hierarchy36');
+define('DEDALO_THESAURUS_RELATION_MODEL_TIPO',			'hierarchy27');
+define('DEDALO_THESAURUS_RELATION_CHILDREN_TIPO',		'hierarchy49');
+define('DEDALO_THESAURUS_VIRTUALS_AREA_TIPO',			'hierarchy56');
+define('DEDALO_THESAURUS_VIRTUALS_MODELS_AREA_TIPO',	'hierarchy57');
+define('DEDALO_THESAURUS_GEONAMES_ID_TIPO',				'hierarchy63');
+define('DEDALO_THESAURUS_ORDER_TIPO',					'hierarchy42');
+define('DEDALO_THESAURUS_FILTER_TIPO',					'hierarchy55');
+define('DEDALO_THESAURUS_DESCRIPTOR_TIPO',				'hierarchy23');
+define('DEDALO_THESAURUS_USABLE_INDEX_TIPO',			'hierarchy24');
+define('DEDALO_THESAURUS_INDEXATIONS_TIPO',				'hierarchy40');
+define('DEDALO_THESAURUS_STRUCTURATIONS_TIPO',			'hierarchy91');
+define('DEDALO_THESAURUS_BUTTON_NEW_TIPO',				'hierarchy38');
+define('DEDALO_THESAURUS_BUTTON_DELETE_TIPO',			'hierarchy39');
+
+// Relation types
+define('DEDALO_RELATION_TYPE_LINK',						'dd151');
+define('DEDALO_RELATION_TYPE_CHILDREN_TIPO',			'dd48');
+define('DEDALO_RELATION_TYPE_PARENT_TIPO',				'dd47');
+define('DEDALO_RELATION_TYPE_INDEX_TIPO',				'dd96');
+define('DEDALO_RELATION_TYPE_MODEL_TIPO',				'dd98');
+define('DEDALO_RELATION_TYPE_FILTER',					'dd675');
+define('DEDALO_RELATION_TYPE_ONTOLOGY',					'dd77');
+define('DEDALO_RELATION_TYPE_DATAFRAME',				'dd490'); // reserved term: register in master ontology. Positive marker of dataframe pairing locators
+// update core_functions 'get_relation_name' on relation types updates (!)
+
+// define('DEDALO_RELATION_TYPE_EQUIVALENT_TIPO',		'dd47');
+define('DEDALO_RELATION_TYPE_RELATED_TIPO',				'dd89');
+	// Relation related types
+	define('DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO',	'dd620');
+	define('DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO',	'dd467');
+	define('DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO','dd621');
+	// define('DEDALO_RELATION_TYPE_RECORD_TIPO', 'ddXXX'); // working here
+
+// value types
+define('DEDALO_VALUE_TYPE_STRING',						'dd750');
+define('DEDALO_VALUE_TYPE_NUMBER',						'dd1480');
+define('DEDALO_VALUE_TYPE_DATE',						'dd1481');
+define('DEDALO_VALUE_TYPE_MEDIA',						'dd1482');
+define('DEDALO_VALUE_TYPE_IRI',							'dd1562');
+define('DEDALO_VALUE_TYPE_GEO',							'dd1564');
+define('DEDALO_VALUE_TYPE_MISC',						'dd1474');
+
+// Time machine section tipos
+define('DEDALO_TIME_MACHINE_SECTION_TIPO', 				'dd15');
+define('DEDALO_TIME_MACHINE_COLUMN_ID', 				'dd1573');
+define('DEDALO_TIME_MACHINE_COLUMN_SECTION_ID', 		'dd1212');
+define('DEDALO_TIME_MACHINE_COLUMN_SECTION_TIPO',		'dd1772');
+define('DEDALO_TIME_MACHINE_COLUMN_TIPO',				'dd577');
+define('DEDALO_TIME_MACHINE_COLUMN_TIMESTAMP',			'dd559');
+define('DEDALO_TIME_MACHINE_COLUMN_USER_ID',			'dd578');
+define('DEDALO_TIME_MACHINE_COLUMN_BULK_PROCESS_ID',	'dd1371');
+define('DEDALO_TIME_MACHINE_COLUMN_DATA',				'dd1574');
+
+// Notes
+define('DEDALO_NOTES_SECTION_TIPO',						'rsc326');
+define('DEDALO_NOTES_TEXT_TIPO',						'rsc329');
+define('DEDALO_NOTES_PUBLICATION_TIPO',					'rsc399');
+define('DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO',		'rsc832');
+
+// structuration notes
+define('DEDALO_STRUCTURATION_SECTION_TIPO',				'rsc370');
+define('DEDALO_STRUCTURATION_TITLE_TIPO',				'rsc372');
+define('DEDALO_STRUCTURATION_DESCRIPTION_TIPO',			'rsc373');
+
+// Indexation notes
+define('DEDALO_INDEXATION_SECTION_TIPO',				'rsc377');
+define('DEDALO_INDEXATION_TITLE_TIPO',					'rsc379');
+define('DEDALO_INDEXATION_DESCRIPTION_TIPO',			'rsc380');
+
+// Processes
+define('DEDALO_BULK_PROCESS_SECTION_TIPO',				'dd800');
+define('DEDALO_BULK_PROCESS_LABEL_TIPO',				'dd796');
+define('DEDALO_BULK_PROCESS_TEXT_TIPO',					'dd801');
+define('DEDALO_BULK_PROCESS_FILE_TIPO',					'dd797');
+
+// References (to thesaurus)
+define('DEDALO_TS_REFERENCES_SECTION_TIPO',				'rsc425');
+define('DEDALO_TS_REFERENCES_COMPONENT_TIPO',			'rsc426');
+
+// References (to thesaurus)
+// Section default components (information about section, created, modify, etc)
+define('DEDALO_SECTION_INFO_SECTION_GROUP',				'dd196');
+
+// define('DEDALO_TEXTAREA_FIX_BROKEN_TAGS_TIPOS',		[DEDALO_COMPONENT_RESOURCES_TR_TIPO];
+
+// LANGS
+define('DEDALO_LANGS_SECTION_TIPO',						'lg1');
+
+// SEARCH PRESETS
+define('DEDALO_TEMP_PRESET_SECTION_TIPO',				'dd655');
+define('DEDALO_SEARCH_PRESET_SECTION_TIPO',				'dd623');
+
+// SEARCH_QUERY_OBJECT OPERATORS
+define('OP_OR',											'$or');
+define('OP_AND',										'$and');
+
+// SEARCH PRESETS
+define('DEDALO_SERVICES_SECTION_TIPO',					'dd1010');
+
+// TOOLS REGISTER
+define('DEDALO_REGISTER_TOOLS_SECTION_TIPO',			'dd1324');
+define('DEDALO_TOOLS_CONFIGURATION_SECTION_TIPO',		'dd996');
+
+// section info
+define('DEDALO_SECTION_INFO_CREATED_BY_USER',			'dd200');
+define('DEDALO_SECTION_INFO_CREATED_DATE',				'dd199');
+define('DEDALO_SECTION_INFO_MODIFIED_BY_USER',			'dd197');
+define('DEDALO_SECTION_INFO_MODIFIED_DATE',				'dd201');
+define('DEDALO_SECTION_INFO_INVERSE_RELATIONS',			'dd1596');
+
+// REQUEST_CONFIG_PRESETS_SECTION_TIPO (Layout map)
+define('DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO',	'dd1244');
+
+// tipo of daily statistics sections
+define('DEDALO_DAILY_STATS_SECTION_TIPO',	'dd70');
+
+// section user activity stat
+define('USER_ACTIVITY_SECTION_TIPO',		'dd1521');
+define('USER_ACTIVITY_USER_TIPO',			'dd1522');
+define('USER_ACTIVITY_TYPE_TIPO',			'dd1531');
+define('USER_ACTIVITY_DATE_TIPO',			'dd1530');
+define('USER_ACTIVITY_TOTALS_TIPO',			'dd1523');
+
+// ontology section tipos
+/**
+ * ONTOLOGY_SECTION_TIPOS
+ * Associative map of logical role => tipo for the v7 ontology storage section.
+ * Used by ontology resolvers to locate fields without hard-coding tipo strings
+ * inline.  Keys:
+ *   section_tipo — the ontology section itself (dd1500)
+ *   id           — numeric sequential id component (dd1483)
+ *   tld          — top-level domain / namespace component (dd1482)
+ *   term_id      — machine identifier for the term (dd1475)
+ *   term         — human-readable term label (dd1477)
+ *   definition   — term definition text (dd1478)
+ *   observations — additional observations / notes (dd1476)
+ *   json_item    — full JSON blob for the ontology node (dd1556)
+ *
+ * (!) tld shares the value 'dd1482' with DEDALO_VALUE_TYPE_MEDIA — these are
+ * different conceptual roles resolved in different contexts; do not conflate them.
+ */
+define('ONTOLOGY_SECTION_TIPOS', [
+	'section_tipo'	=> 'dd1500',
+	'id'			=> 'dd1483',
+	'tld'			=> 'dd1482',
+	'term_id'		=> 'dd1475',
+	'term'			=> 'dd1477',
+	'definition'	=> 'dd1478',
+	'observations'	=> 'dd1476',
+	'json_item'		=> 'dd1556'
+]);
+
+// COMPONENTS DATA-FRAME
+// Default component_iri label dataframe definition
+define('DEDALO_COMPONENT_IRI_LABEL_DATAFRAME',	'dd560'); // dd560
+
+// ANSI CODES
+// Define constants for reusability
+define('ANSI_BOLD', "\033[1m");
+define('ANSI_RESET', "\033[0m");
+define('ANSI_RED', "\033[31m");
+define('ANSI_GREEN', "\033[32m");
+define('ANSI_YELLOW', "\033[33m");
+define('ANSI_BLUE', "\033[34m");
+define('ANSI_BOLD_RED', "\033[1;31m");
+define('ANSI_BOLD_GREEN', "\033[1;32m");
+define('ANSI_BOLD_YELLOW', "\033[1;33m");
+
+// Additional ANSI constants for comprehensive color support
+// Styles
+define('ANSI_DARK', "\033[2m");
+define('ANSI_ITALIC', "\033[3m");
+define('ANSI_UNDERLINE', "\033[4m");
+define('ANSI_BLINK', "\033[5m");
+define('ANSI_REVERSE', "\033[7m");
+define('ANSI_CONCEALED', "\033[8m");
+
+// Additional foreground colors
+define('ANSI_BLACK', "\033[30m");
+define('ANSI_MAGENTA', "\033[35m");
+define('ANSI_CYAN', "\033[36m");
+define('ANSI_WHITE', "\033[37m");
+
+// Background colors
+define('ANSI_BG_BLACK', "\033[40m");
+define('ANSI_BG_RED', "\033[41m");
+define('ANSI_BG_GREEN', "\033[42m");
+define('ANSI_BG_YELLOW', "\033[43m");
+define('ANSI_BG_BLUE', "\033[44m");
+define('ANSI_BG_MAGENTA', "\033[45m");
+define('ANSI_BG_CYAN', "\033[46m");
+define('ANSI_BG_WHITE', "\033[47m");
+
+// sample of use
+// echo ANSI_BOLD . "This is bold" . ANSI_RESET . "\n";
+// echo ANSI_BOLD_RED . "This is bold red" . ANSI_RESET . "\n";
+
+
+// if (!defined('DEDALO_PROTOCOL')) {
+// 	define('DEDALO_PROTOCOL', 'http://');
+// }
+
+
+// TOP_TIPO : (!) Deprecated
+	// if ( false !== ($request_var_top_tipo = get_request_var('top_tipo')) ) {
+	// 	define('TOP_TIPO', $request_var_top_tipo);
+	// }else if ( false !== ($request_var_t = get_request_var('t')) ) {
+	// 	define('TOP_TIPO', $request_var_t);
+	// }else if ( false !== ($request_var_t = get_request_var('json')) ) {
+	// 	if ($json_obj = json_decode($request_var_t)) {
+	// 		if (isset($json_obj->section_tipo)) {
+	// 			define('TOP_TIPO', $json_obj->section_tipo);
+	// 		}
+	// 	}
+	// }else if (isset($TOP_TIPO)) {
+	// 	define('TOP_TIPO', $TOP_TIPO);
+	// }else{
+	// 	define('TOP_TIPO', false);
+	// }
+	// // TOP_ID
+	// if ( false !== ($request_var_top_id = get_request_var('top_id')) ) {
+	// 	define('TOP_ID', $request_var_top_id);
+	// }else if ( false !== ($request_var_id = get_request_var('id')) ) {
+	// 	define('TOP_ID', $request_var_id);
+	// }else{
+	// 	define('TOP_ID', false);
+	// }

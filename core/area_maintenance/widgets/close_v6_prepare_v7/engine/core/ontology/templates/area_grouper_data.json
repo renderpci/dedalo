@@ -1,0 +1,46 @@
+{
+	"relations": [
+		{
+			"type": "dd151",
+			"section_id": "1",
+			"section_tipo": "dd64",
+			"from_component_tipo": "ontology3"
+		},
+		{
+			"type": "dd151",
+			"section_id": "2",
+			"section_tipo": "dd64",
+			"from_component_tipo": "ontology30"
+		},
+		{
+			"type": "dd151",
+			"section_id": "1",
+			"section_tipo": "dd64",
+			"from_component_tipo": "ontology4"
+		},
+		{
+			"type": "dd151",
+			"section_id": "4",
+			"section_tipo": "dd0",
+			"from_component_tipo": "ontology6"
+		},
+		{
+			"type": "dd151",
+			"section_id": "2",
+			"section_tipo": "dd64",
+			"from_component_tipo": "ontology8"
+		}
+	],
+	"components": {
+		"ontology7": {
+			"inf": "tld [component_input_text]",
+			"dato": {
+			}
+		},
+		"ontology5": {
+			"inf": "Term [component_input_text]",
+			"dato": {
+			}
+		}
+	}
+}

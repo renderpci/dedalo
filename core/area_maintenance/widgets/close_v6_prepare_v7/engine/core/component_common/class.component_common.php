@@ -1,0 +1,5216 @@
+<?php declare(strict_types=1);
+include_once 'trait.search_component_common.php';
+include_once 'trait.dataframe_common.php';
+/**
+* CLASS COMPONENT_COMMON
+* Abstract base class for all Dédalo components.
+*
+* Provides the foundational functionality shared by all component types:
+* - Component lifecycle (instantiation, data loading, saving)
+* - Data resolution and caching mechanisms
+* - Dataframe support for contextual metadata (roles, uncertainty, temporal frames)
+* - Diffusion properties for publishing/export configuration
+* - Integration with tools and search capabilities
+* - Time Machine versioning for audit trails
+*
+* Extended by all specific component implementations:
+* - Data components: component_input_text, component_text_area, component_number, etc.
+* - Relation components: component_check_box, component_radio_button, etc.
+* - Media components: component_image, component_av, component_pdf, etc.
+* - Special components: component_section, component_security, etc.
+*
+* Uses traits for code organization: search_component_common, dataframe_common.
+*
+* @package Dédalo
+* @subpackage Core
+*/
+abstract class component_common extends common {
+
+	// traits. Files added to current class file to split the large code.
+	use search_component_common;
+	use dataframe_common;
+
+
+
+	/**
+	* CLASS VARS
+	*/
+
+		/**
+		 * Dataframe object attached to this component for additional metadata.
+		 * Holds contextual information such as roles, uncertainty, or temporal frames.
+		 * @var ?object $dataframe
+		 */
+		public ?object $dataframe = null;
+
+		/**
+		 * Full locator used to instantiate this component.
+		 * While only section_tipo, component_tipo, mode, and lang are used for instantiation,
+		 * the full locator is needed for properties like tag_id and top_tipo.
+		 * @var ?object $locator
+		 */
+		public ?object $locator = null;
+
+		/**
+		 * Resolved data for this component. Null is a valid initial state.
+		 * Do not set a default value here; it will be populated by get_data().
+		 * @var ?array $data_resolved
+		 */
+		public ?array $data_resolved;
+
+		/**
+		 * Previous database data snapshot before saving.
+		 * Used to detect changes and trigger Time Machine versioning when data differs.
+		 * @var array|null $db_data
+		 */
+		public array|null $db_data = null;
+
+		/**
+		 * Parent section object this component belongs to.
+		 * Optional reference, primarily used by media components (e.g., component_av) to access section context.
+		 * @var ?object $section_obj
+		 */
+		public ?object $section_obj = null;
+
+		/**
+		 * Diffusion properties object controlling how this component is published.
+		 * Defines mapping rules and transformations for export/diffusion endpoints.
+		 * @var ?object $diffusion_properties
+		 */
+		public ?object $diffusion_properties = null;
+
+		/**
+		 * Whether to propagate diffusion info changes on save.
+		 * Set to false in import scripts to optimize batch saves when diffusion updates are unnecessary.
+		 * @var bool $update_diffusion_info_propagate_changes
+		 */
+		public bool $update_diffusion_info_propagate_changes = true;
+
+		/**
+		 * Whether the current import value was wrapped as {"dedalo_data": <dato>}.
+		 * Set by the import tool after unwrap_dedalo_data() and before conform_import_data().
+		 * Allows components as component_json to disambiguate a v7 envelope from a
+		 * literal JSON value with the same shape.
+		 * @var bool $import_data_is_wrapped
+		 */
+		public bool $import_data_is_wrapped = false;
+
+		/**
+		 * Database matrix record ID (primary key of the matrix row).
+		 * Used for direct database operations and Time Machine references.
+		 * @var string|int|null $matrix_id
+		 */
+		public string|int|null $matrix_id = null;
+
+		/**
+		 * Identifier of the bulk process that last modified this component.
+		 * Groups related Time Machine entries for batch operations (e.g., import scripts).
+		 * Example: 21 (section_id of the bulk process section).
+		 * @var string|int|null $bulk_process_id
+		 */
+		public string|int|null $bulk_process_id = null;
+
+		/**
+		 * Data used to notify observing components of value changes.
+		 * Enables reactive updates across components watching this one's state.
+		 * @var array|null $observable_data
+		 */
+		public array|null $observable_data = null;
+
+		/**
+		 * Source section tipo when this component is referenced from another section.
+		 * Used in cross-section portal or autocomplete contexts.
+		 * @var ?string $from_section_tipo
+		 */
+		public ?string $from_section_tipo = null;
+
+		/**
+		 * Source component tipo when this component is referenced from another component.
+		 * Tracks the originating component in portal or autocomplete relationships.
+		 * @var ?string $from_component_tipo
+		 */
+		public ?string $from_component_tipo = null;
+
+		/**
+		 * Column configuration object for list view rendering.
+		 * Defines width, alignment, label, and other presentation metadata.
+		 * @var ?object $column_obj
+		 */
+		public ?object $column_obj = null;
+
+		/**
+		 * Data from components observing this component's value changes.
+		 * Used to manage bidirectional reactive dependencies between components.
+		 * @var ?array $observers_data
+		 */
+		public ?array $observers_data = null;
+
+		/**
+		 * Default string separator between concatenated field values in list outputs.
+		 * @var string $fields_separator
+		 */
+		public string $fields_separator = ' | ';
+
+		/**
+		 * Whether this component persists its data to the database on save.
+		 * Set to false for computed or transient components that should not write to storage.
+		 * @var bool $save_to_database
+		 */
+		public bool $save_to_database = true;
+
+		/**
+		 * Array of list-of-values options for components with predefined choices (select, radio, etc.).
+		 * Populated on demand from the ontology or external sources.
+		 * @var ?array $ar_list_of_values
+		 */
+		public ?array $ar_list_of_values = null;
+
+		/**
+		 * Whether to use cached data for this component instance.
+		 * Disabling cache forces fresh data load from the database.
+		 * @var bool $cache
+		 */
+		public bool $cache = true;
+
+		/**
+		 * Registry of component models whose data is an array but only uses the first element (mono-value).
+		 * Used by tools like propagate_component_data to restrict 'add' functionality.
+		 * @var array $components_monovalue
+		 */
+		public static array $components_monovalue = [
+			'component_3d',
+			'component_av',
+			'component_geolocation',
+			'component_image',
+			'component_json',
+			'component_password',
+			'component_pdf',
+			'component_publication',
+			'component_model',
+			'component_section_id',
+			'component_security_access',
+			'component_select',
+			'component_select_lang',
+			'component_svg',
+			'component_text_area'
+		];
+
+		/**
+		 * Registry of component models that store data in the format [{"id": 1, "value": mixed}].
+		 * Determines data structure expectations for value-based components.
+		 * @var array $components_using_value_property
+		 */
+		public static array $components_using_value_property = [
+			'component_email',
+			'component_filter_records',
+			'component_info',
+			'component_input_text',
+			'component_json',
+			'component_number',
+			'component_password',
+			'component_text_area'
+		];
+
+		/**
+		 * Array of dataframe DDO (data definition objects) defined by request config.
+		 * Describes additional metadata columns linked to this component.
+		 * @var ?array $ar_dataframe_ddo
+		 */
+		public ?array $ar_dataframe_ddo = null;
+
+		/**
+		 * Reference to the parent section_record instance containing this component.
+		 * Provides access to sibling components and section-level context.
+		 * @var ?object $section_record
+		 */
+		public ?object $section_record = null;
+
+		/**
+		 * Name of the JSONB column where component data is stored in the database.
+		 * Typically 'relation', 'string', 'date', 'iri', `geo', 'number', 'media', 'misc'
+		 * for standard components. Defined per component type.
+		 * @var ?string $data_column_name
+		 */
+		public ?string $data_column_name = null;
+
+		/**
+		 * Whether this component supports language-specific values (translation).
+		 * When false, the component uses a single non-language value (lg-nolan).
+		 * @var bool $supports_translation
+		 */
+		protected bool $supports_translation = false;
+
+		/**
+		 * Whether this component holds temporal data requiring special save handling.
+		 * Temporal components use alternative persistence logic (e.g., session-based or time machine tracks).
+		 * @var bool $is_temporal
+		 */
+		public bool $is_temporal = false;
+
+		/**
+		 * Default output format mapping for diffusion endpoints.
+		 * Keyed by endpoint type (e.g., 'sql') with target format as value.
+		 * @var array $diffusion_output_format
+		 */
+		public static array $diffusion_output_format = ['sql' => 'string'];
+
+		/**
+		 * Static cache for resolved list-of-values data to avoid repeated ontology queries.
+		 * Cleared by clear() to prevent memory leaks across worker requests.
+		 * @var array $ar_list_of_values_data_cache
+		 */
+		public static array $ar_list_of_values_data_cache = [];
+
+		/**
+		 * Static cache for raw list-of-values data arrays.
+		 * Stores pre-processed option lists for components with predefined choices.
+		 * @var array $list_of_values_data_cache
+		 */
+		public static array $list_of_values_data_cache = [];
+
+		/**
+		* CLEAR
+		* Purges the two static list-of-values caches to prevent memory leaks
+		* across persistent-worker requests.
+		*
+		* Persistent PHP workers (e.g. FrankenPHP / PHP-FPM long-lived processes)
+		* retain static properties between requests. Without this reset the
+		* option lists for components like component_select or component_check_box
+		* can bleed stale, user-specific (project-filtered) data across unrelated
+		* requests — see COMP-03 note in get_list_of_values().
+		*
+		* Called by common::clear() at the start of each API request cycle.
+		*/
+		public static function clear() : void {
+			self::$ar_list_of_values_data_cache = [];
+			self::$list_of_values_data_cache = [];
+		}
+
+
+
+	/**
+	* GET_DIRECT_DATA_COMPONENTS
+	* Returns the model names of all components whose stored data is a flat array
+	* of typed objects — not wrapped in a {'value': …} property level.
+	*
+	* "Direct data" components store items like:
+	*   [{section_tipo:'dd153', section_id:42, …}]  (relation/media locators)
+	*   [{date_from:'2024-01-01', precision:'Y'}]    (component_date)
+	*
+	* …as opposed to "value-property" components (see $components_using_value_property)
+	* which store:
+	*   [{id:1, value:'some text', lang:'lg-spa'}]
+	*
+	* This distinction is used by tests (get_data_Test, import round-trip checks) and
+	* by migration utilities that need to know the expected item shape.
+	* @return array - flat list of PHP class-name strings
+	*/
+	public static function get_direct_data_components() : array {
+
+		$direct_data = [
+			...component_relation_common::get_components_with_relations(),
+			...component_media_common::get_media_components()
+		];
+		$direct_data[] = 'component_date';
+		$direct_data[] = 'component_security_access';
+		$direct_data[] = 'component_filter_records';
+		$direct_data[] = 'component_inverse';
+		$direct_data[] = 'component_section_id';
+
+
+		return $direct_data;
+	}//end get_direct_data_components
+
+
+
+	/**
+	* GET_INSTANCE
+	* Singleton factory: returns a cached component instance keyed by
+	* (tipo, section_tipo, section_id, lang, mode, is_temporal, [caller_dataframe]).
+	* Creates and registers a new instance on a cache miss.
+	*
+	* Contracts:
+	* - $tipo and $section_tipo are MANDATORY. The method throws or returns null
+	*   when either is absent or fails safe_tipo() validation.
+	* - $component_name is auto-resolved from the ontology if empty; a mismatch
+	*   between the caller-supplied name and the ontology model is silently corrected
+	*   (logged at ERROR level) — do not rely on the caller name being respected.
+	* - mode 'update' forces $cache=false regardless of the passed value, because
+	*   update operations must always operate on fresh data.
+	* - When $section_id is empty (e.g. creating a new record before it is persisted),
+	*   cache is bypassed and a fresh instance is always returned.
+	* - $caller_dataframe, when set, is passed to set_caller_dataframe() and is
+	*   folded into the cache key so that each pairing of main-component × dataframe
+	*   row gets its own isolated instance.
+	* - Debug validation (SHOW_DEBUG mode): section/component consistency checks,
+	*   mode validation, and lang format checks are run only under SHOW_DEBUG to
+	*   avoid production overhead.
+	*
+	* @param string|null $component_name = null - PHP class name (e.g. 'component_input_text'); auto-resolved when null
+	* @param string|null $tipo = null - Ontology tipo of the component (e.g. 'dd207')
+	* @param mixed $section_id = null - Database section_id; null or 0 bypasses cache
+	* @param string $mode = 'edit' - Rendering mode: 'edit'|'list'|'search'|'tm'|'solved'|'related_list'
+	* @param string $lang = DEDALO_DATA_LANG - Language code (e.g. 'lg-spa'); falls back to DEDALO_DATA_LANG
+	* @param string|null $section_tipo = null - Ontology tipo of the parent section (e.g. 'dd153'); mandatory
+	* @param bool $cache = true - Whether to use the instance cache; forced false when mode='update' or section_id empty
+	* @param object|null $caller_dataframe = null - Dataframe pairing context; folds into the cache key
+	* @param bool $is_temporal = false - When true, the instance operates on temporal (session) data
+	* @return object|null - The component instance, or null when the tipo/model cannot be resolved
+	* @throws Exception when tipo is invalid or section_tipo is missing
+	*/
+	final public static function get_instance( ?string $component_name=null, ?string $tipo=null, mixed $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true, ?object $caller_dataframe=null, bool $is_temporal=false ) : ?object {
+
+		// tipo check. Is mandatory
+			if (empty($tipo) || safe_tipo($tipo)===false) {
+				$msg = "Error: on construct component (1): valid tipo is mandatory. component_name:'$component_name', tipo:'$tipo', section_id:'$section_id', mode:'$mode', lang:'$lang'";
+				debug_log(__METHOD__
+					. $msg
+					, logger::ERROR
+				);
+				throw new Exception($msg, 1);
+			}
+
+		// model check. Verify 'component_name' and 'tipo' are correct
+			$model_name = ontology_node::get_model_by_tipo($tipo, true);
+			if (empty($component_name)) {
+
+				// calculate component name (is ontology element model)
+					$component_name = $model_name;
+
+			}else if ($model_name!==$component_name) {
+
+				// warn to admin
+					debug_log(__METHOD__.' '
+						. "Warning. Fixing inconsistency in component get_instance model. Expected model is '$model_name' and received model is '$component_name'" . PHP_EOL
+						. ' tipo: ' . to_string($tipo) .PHP_EOL
+						. ' section_tipo: ' . to_string($section_tipo) .PHP_EOL
+						. ' section_id: ' . to_string($section_id) .PHP_EOL
+						, logger::ERROR
+					);
+
+				// fix bad model
+					$component_name = $model_name;
+			}
+			if (empty($component_name) || !str_starts_with($component_name, 'component_')) {
+
+				debug_log(__METHOD__
+					. ' Error Processing Request. Illegal component: ' .PHP_EOL
+					. ' component_name :' . to_string($component_name) .PHP_EOL
+					. ' tipo: ' . to_string($tipo) .PHP_EOL
+					. ' section_tipo: ' . to_string($section_tipo) .PHP_EOL
+					. ' section_id: ' . to_string($section_id) .PHP_EOL
+					, logger::ERROR
+				);
+
+				return null;
+			}
+
+		// section_tipo check : optional (if empty, section_tipo is calculated from: 1. page globals, 2. structure -only useful for real sections-)
+			if (empty($section_tipo)) {
+				debug_log(__METHOD__
+					. ' Error. resolve_section_tipo is not supported anymore. Please fix this call ASAP '
+					. ' section_tipo: ' . to_string($section_tipo)
+					, logger::ERROR
+				);
+				return null;
+			}
+
+		// debug verification
+			$check_instance_params = false;
+			if(SHOW_DEBUG===true && $check_instance_params===true) {
+				// section_id format check
+					if ( !empty($section_id) ) {
+						if (is_array($section_id)) {
+							$bt = debug_backtrace();
+							debug_log(__METHOD__
+								." Error: section_id is array! : " . PHP_EOL
+								.' backtrace: '.to_string($bt)
+								, logger::ERROR
+							);
+						}
+						if ( abs(intval($section_id))<1 ) {
+							debug_log(__METHOD__
+								." Error: Trying to use invalid value for section_id: '$section_id' to load as component " . PHP_EOL
+								.' backtrace: '.to_string($bt)
+								, logger::ERROR
+							);
+							$msg = "Error Processing Request. Trying to use: '$section_id' as section_id to load as component. Minimum value required is 1";
+							throw new Exception($msg, 1);
+						}
+					}
+
+				// mode (mode) validation
+					$ar_valid_mode = array(
+						'edit',
+						'list',
+						'search',
+						'tm',
+						'related_list' // used by component_relation_index, and component_text_area to build custom sections
+					);
+					if ( empty($mode) || !in_array($mode, $ar_valid_mode) ) {
+						if(SHOW_DEBUG===true) {
+							throw new Exception("Error Processing Request. Trying to use invalid mode: '$mode' to load as component", 1);
+						}
+						debug_log(__METHOD__." trying to use empty or invalid mode: '$mode' as mode to load component $tipo. mode: ".to_string($mode), logger::DEBUG);
+					}
+				// lang format check
+					if ( empty($lang) || strpos($lang, 'lg-')===false ) {
+						dump($lang," lang");
+						throw new Exception("Error Processing Request. Trying to use invalid lang: '$lang' to load as component", 1);
+					}
+				// section_tipo format check
+					if (!empty($section_tipo)) {
+						# Verify model_name is section
+						$section_model_name = ontology_node::get_model_by_tipo($section_tipo,true);
+						if ($section_model_name!=='section') {
+							dump($section_tipo," Verify model_name is section: section_model_name: $section_model_name");
+							if (empty($section_model_name)) {
+								$msg = "Error. Current section ($section_tipo) does not exists or model is missing. Please fix structure ASAP";
+								throw new Exception($msg, 1);
+							}
+							throw new Exception("Error Processing Request. Trying to use: $section_model_name ($section_tipo) as section. Verified modelo is: $section_model_name", 1);
+						}
+						# Verify this section is a invalid resource call
+						$ar_resources = array('rsc2','rsc75','rsc3','rsc4');
+						if (in_array($section_tipo, $ar_resources) && $tipo!=='rsc88') {
+							// debug_log(__METHOD__." ERROR - Error Processing Request. Direct call to resource section_tipo ($section_tipo) is not legal".to_string(), logger::ERROR);
+							// debug_log(__METHOD__." ERROR: debug_backtrace ".to_string( debug_backtrace() ), logger::DEBUG);
+							// trigger_error("ERROR - Error Processing Request. Direct call to resource section_tipo");
+							#throw new Exception("Error Processing Request. Direct call to resource section_tipo ($section_tipo) is not legal", 1);
+						}else{
+							$ar_modified_section_tipos = section::get_metadata_definition_tipos();
+							// add publication info
+								$ar_modified_section_tipos[] = diffusion_utils::$publication_first_tipo;
+								$ar_modified_section_tipos[] = diffusion_utils::$publication_last_tipo;
+								$ar_modified_section_tipos[] = diffusion_utils::$publication_first_user_tipo;
+								$ar_modified_section_tipos[] = diffusion_utils::$publication_last_user_tipo;
+							if (true===in_array($tipo, $ar_modified_section_tipos)) {
+								# skip verification
+							}else{
+								# Verify this section is from current component tipo
+								$ar_section_parent_tipo = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section', 'parent');
+								if (!isset($ar_section_parent_tipo[0])) {
+									debug_log(__METHOD__
+										." ar_tipo_by_model_name is empty for tipo: ($tipo), ar_tipo_by_modelo_name: ".to_string($ar_section_parent_tipo)
+										, logger::ERROR
+									);
+									throw new Exception("Error Processing Request", 1);
+								}
+								$calculated_section_tipo	= $ar_section_parent_tipo[0];
+								$real_section				= section::get_section_real_tipo_static($section_tipo);
+								$is_real					= $real_section===$section_tipo ? true : false;
+								if ( $is_real && $section_tipo!==$calculated_section_tipo && $mode!=='search' && SHOW_DEBUG===true) {
+									#dump(debug_backtrace(), ' debug_backtrace '.to_string());
+									#throw new Exception("Error Processing Request. Current component ($tipo) is not children of received section_tipo: $section_tipo.<br> Real section_tipo is: $real_section and calculated_section_tipo: $calculated_section_tipo ", 1);
+								}
+							}
+						}
+					}
+			}//end if(SHOW_DEBUG===true)
+
+		// update mode prevents to set cache as true
+			if ($mode==='update' && $cache===true) {
+				debug_log(__METHOD__
+					. " Forced wrong cache value (true) to false when mode is 'update'  " . PHP_EOL
+					. ' mode: ' . $mode . PHP_EOL
+					. ' cache: ' . $cache . PHP_EOL
+					, logger::ERROR
+				);
+				$cache = false;
+			}
+
+		// cache is false case. Direct construct without cache instance. Use this config in imports
+			if ($cache===false || empty($section_id) || $mode==='update') {
+
+				// instance new component
+				$instance = new $component_name(
+					$tipo,
+					$section_id,
+					$mode,
+					$lang,
+					$section_tipo,
+					$cache,
+					$is_temporal
+				);
+				// dataframe add ons
+				if(isset($caller_dataframe)) {
+					$instance->set_caller_dataframe($caller_dataframe);
+				}
+
+				return $instance;
+			}//end if ($cache===false || empty($section_id) || $mode==='update')
+
+		// cache is true case. Get cache instance if it exists. Otherwise, create a new one
+			$cache_key = implode('_', [$tipo, $section_tipo, $section_id, $lang, $mode, $is_temporal ? 'tmp' : '']);
+			if(isset($caller_dataframe)) {
+				// unified pairing: key on id_key (the main item id) + host section + main tipo
+				$cache_key .= '_'.($caller_dataframe->section_tipo ?? '')
+					.'_'.($caller_dataframe->id_key ?? '')
+					.'_'.($caller_dataframe->main_component_tipo ?? '');
+			}
+
+		$instance = component_instances_cache::get($cache_key);
+		if ($instance === null) {
+			// Cache miss - Create a new instance
+			$instance = new $component_name(
+				$tipo,
+				$section_id,
+				$mode,
+				$lang,
+				$section_tipo,
+				$cache,
+				$is_temporal
+			);
+			// dataframe
+			if(isset($caller_dataframe)) {
+				$instance->set_caller_dataframe($caller_dataframe);
+			}
+			component_instances_cache::set($cache_key, $instance);
+		}
+
+		return $instance;
+	}//end get_instance
+
+
+
+	/**
+	* __CONSTRUCT
+	* Protected constructor — always called via get_instance(), never directly.
+	*
+	* Initialization order is significant:
+	* 1. uid / tipo / section_id / data_column_name — identity fields.
+	* 2. mode — sets $update_diffusion_info_propagate_changes=true only for 'edit'.
+	* 3. lang — validated before and again AFTER structure data is loaded, because
+	*    the Ontology may mark this component non-translatable, in which case
+	*    $this->lang is forced to DEDALO_DATA_NOLAN (unless with_lang_versions=true).
+	* 4. section_tipo — mandatory; throws on empty.
+	* 5. parent::load_structure_data() — populates $this->properties,
+	*    $this->translatable, $this->label, etc. from the Ontology cache.
+	* 6. set_data_default() — when mode='edit' and section_id>0, silently saves
+	*    a default value if the component is empty and properties->dato_default exists.
+	* 7. pagination — initialised to {offset:0, limit:null}.
+	*
+	* @param string $tipo - Ontology tipo of the component
+	* @param mixed $section_id = null - Database record id; null for new/unsaved records
+	* @param string $mode = 'edit' - Rendering mode
+	* @param string $lang = DEDALO_DATA_LANG - Language code
+	* @param string|null $section_tipo = null - Ontology tipo of the parent section
+	* @param bool $cache = true - Whether to enable instance-level caching
+	* @param bool $is_temporal = false - Whether this is a temporal (session-only) component
+	* @return void
+	* @throws Exception when section_tipo is empty
+	*/
+	protected function __construct( string $tipo, mixed $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true, bool $is_temporal=false ) {
+
+		// uid
+			$this->uid = to_string( hrtime(true) ); // nanoseconds
+
+		// tipo
+			$this->tipo = $tipo;
+
+		// section_id.
+			$this->section_id	= $section_id;
+
+		// Column data name
+			$this->data_column_name = section_record_data::get_column_name( get_called_class() );
+
+		// mode
+			if (empty($mode)) {
+				$mode = 'edit';
+			}
+			$this->mode = $mode;
+			if ($this->mode==='edit') {
+				$this->update_diffusion_info_propagate_changes = true;
+			}
+
+		// lang
+			// Note that $this->lang could be already assigned. If true, don't overwrite the fixed value
+			if (!isset($this->lang)) {
+				if (empty($lang)) {
+					debug_log(__METHOD__.'  '
+						. ' Valid \'lang\' value is mandatory! ('.$tipo.' - '.get_called_class().') Default DEDALO_DATA_LANG ('.DEDALO_DATA_LANG.') is used'
+						, logger::ERROR
+					);
+					$lang = DEDALO_DATA_LANG;
+				}
+				$this->lang = $lang;
+			}
+
+		// section_tipo
+			if (empty($section_tipo)) {
+				debug_log(__METHOD__
+					." Error. section_tipo is mandatory ! "
+					. json_encode(func_get_args(), JSON_PRETTY_PRINT)
+					, logger::ERROR
+				);
+				throw new Exception("Error Processing Request. section_tipo is mandatory !", 1);
+			}
+			$this->section_tipo = $section_tipo;
+
+		// cache
+			$this->cache = (bool)$cache;
+
+		// is_temporal
+			$this->is_temporal = $is_temporal;
+
+		// structure data (load from Ontology)
+			// We set the received type and load the structure previously to determine if this type is translatable
+			// or not and set the language again if it is not translatable
+			parent::load_structure_data();
+
+		// properties
+			$properties = $this->get_properties();
+
+		// lang : Check lang again after structure data is loaded
+		// We establish the preliminary language from the load of the Ontology
+			// with_lang_versions
+			if (!isset($this->with_lang_versions)) {
+				$this->with_lang_versions = (isset($properties->with_lang_versions) && $properties->with_lang_versions===true);
+			}
+			// set default lang for non translatable and not with_lang_versions
+			if ($this->translatable===false) {
+				if ($this->with_lang_versions===true) {
+					// Allow tool lang on non translatable components
+					// like component_iri, component_input_text
+				}else{
+					// Force no lang
+					$this->lang = DEDALO_DATA_NOLAN;
+				}
+			}
+
+		// set_data_default
+			if (   $this->mode === 'edit'
+				&& $this->data_source !== 'tm'
+				&& (int)$this->section_id > 0
+				) {
+					$save_default = $this->set_data_default();
+				}
+
+		// pagination. Set defaults
+			if (!isset($this->pagination)) {
+
+				$this->pagination = new stdClass();
+					$this->pagination->offset	= 0;
+					$this->pagination->limit	= null;
+			}
+	}//end __construct
+
+
+
+	/**
+	* GET_IDENTIFIER
+	* Compound a chained plain flat identifier string for use as media component name, etc..
+	* @return string $identifier
+	* 	Example: 'dd42_dd207_1'
+	* @throws InvalidArgumentException if any required component data is missing.
+	*/
+	public function get_identifier() : string {
+
+		$tipo			= $this->get_tipo();
+		$section_tipo	= $this->get_section_tipo();
+		$section_id		= $this->get_section_id();
+
+		// Validate required fields
+		if (empty($tipo)) {
+			throw new InvalidArgumentException("Error: empty component_tipo.");
+		}
+		if (empty($section_tipo)) {
+			throw new InvalidArgumentException("Error: empty section_tipo.");
+		}
+		if (empty($section_id)) {
+			throw new InvalidArgumentException("Error: empty section_id.");
+		}
+
+		$identifier = $tipo . locator::DELIMITER . $section_tipo . locator::DELIMITER . $section_id;
+
+		return $identifier;
+	}//end get_identifier
+
+
+
+	/**
+	* SET_DATA_DEFAULT
+	* Silently seeds the component with a default value when it is empty on first load.
+	* Called automatically from __construct() when mode='edit' and section_id>0.
+	*
+	* Resolution order (first non-empty value wins):
+	* 1. CONFIG_DEFAULT_FILE_PATH — a JSON file mapping {tipo, [section_tipo], value};
+	*    the entry is matched by tipo (and section_tipo when present). This external
+	*    file overrides ontology defaults, supporting per-installation customisation
+	*    without touching the Ontology.
+	* 2. properties->dato_default — the Ontology property value, which may be a literal
+	*    or an object with a 'method' key (e.g. {"method":"get_today_date"}) resolved via
+	*    $this->get_method().
+	*
+	* Conditions that prevent writing the default:
+	* - User permission < 2 (read-only users must not silently write data).
+	* - The component already has non-empty data (never overwrites existing content).
+	* - mode='tm' or data_source='tm' (Time Machine mode is read-only).
+	* - section_id <= 0 (temporary/unsaved records are not persisted).
+	*
+	* @return bool - true when a default was written and saved, false otherwise
+	*/
+	protected function set_data_default() : bool {
+
+		// tm mode case
+			if ($this->mode==='tm' || $this->data_source==='tm') {
+				debug_log(__METHOD__
+					. " Warning on set_data_default: invalid mode or data_source (tm) ! . Ignored order" . PHP_EOL
+					. ' section_id: ' . to_string($this->section_id) . PHP_EOL
+					. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+					. ' tipo: ' . $this->tipo . PHP_EOL
+					. ' model: ' . get_class($this) . PHP_EOL
+					. ' mode: ' . $this->mode . PHP_EOL
+					. ' data_source: ' . $this->data_source . PHP_EOL
+					. ' lang: ' . $this->lang
+					, logger::WARNING
+				);
+				return false;
+			}
+
+		$data_default = null;
+
+		// optional defaults for config_defaults file
+			if (defined('CONFIG_DEFAULT_FILE_PATH')) {
+				// config_default_file is a JSON array value
+				$contents = file_get_contents(CONFIG_DEFAULT_FILE_PATH);
+				$defaults = json_decode($contents);
+				if (!empty($defaults)) {
+					if (!is_array($defaults)) {
+						debug_log(__METHOD__
+							. " Ignored config_default_file value. Expected type was array but received is "
+							. ' type: '. gettype($defaults)
+							, logger::ERROR
+						);
+					}else{
+						$found = array_find($defaults, function($el){
+							if (isset($el->section_tipo)) {
+								return $el->tipo===$this->tipo && $el->section_tipo===$this->section_tipo; // Note if is defined section_tipo, use it to compare
+							}
+							return $el->tipo===$this->tipo; // Note that match only uses component tipo (case hierarchy25 problem)
+						});
+						if (is_object($found)) {
+							$data_default = $found->value;
+						}
+					}
+				}else{
+					debug_log(__METHOD__
+						." Ignored empty defaults file contents ! (Check if JSON is valid) "
+						.' defaults: '. to_string($defaults)
+						, logger::ERROR
+					);
+				}
+			}
+
+		// properties try
+			if (empty($data_default)) {
+				$properties = $this->get_properties();
+				if(isset($properties->dato_default)) {
+					// Method fallback. Remember method option like cases as date 'today'
+					$data_default = isset($properties->dato_default->method)
+						? $this->get_method( $properties->dato_default->method )
+						: $properties->dato_default;
+				}
+			}
+
+		// set default data (only when own data is empty)
+			if (!empty($data_default)) {
+
+				// Data default only can be saved by users than have permissions to save.
+				// Read users can not change component data.
+					if($this->get_component_permissions() < 2){
+						return false;
+					}
+
+				// matrix data : force load matrix data
+					$this->load_component_data();
+
+				// current data check
+					$data = $this->get_data();
+					if (empty($data)) {
+
+						if(!is_array($data_default)) {
+							debug_log(__METHOD__
+								. " Data default is not an array. Converting to array" . PHP_EOL
+								. ' data_default: ' . json_encode($data_default) . PHP_EOL
+								. ' component: ' . get_called_class() . PHP_EOL
+								. ' tipo: ' . $this->tipo . PHP_EOL
+								. ' section_id: ' . $this->section_id . PHP_EOL
+								. ' section_tipo: ' . $this->section_tipo
+								, logger::ERROR
+							);
+							$data_default = [$data_default];
+						}
+
+						// set data only when own data is empty
+							$this->set_data( $data_default );
+
+						// temp section cases do not save anything
+							if ( (int)$this->section_id > 0 ) {
+								$this->save();
+							}
+
+						// debug
+							debug_log(__METHOD__
+								.' Created '.get_called_class().' "'.$this->label.'" id:'.$this->section_id.', tipo:'.$this->tipo.', section_tipo:'.$this->section_tipo.', mode:'.$this->mode.PHP_EOL
+								.' with default data from "properties":'
+								. to_string($data_default)
+								, logger::DEBUG
+							);
+
+						// matrix data : load matrix data again
+							$this->load_component_data();
+
+						// data default is fixed
+							return true;
+					}
+			}//end if (!empty($data_default))
+
+
+		// data default is not fixed
+		return false;
+	}//end set_data_default
+
+
+
+	/**
+	* SET_DATA_RESOLVED
+	* Directly injects pre-resolved data into the instance cache, bypassing the
+	* normal matrix load path. Used by section_record when it pre-populates all
+	* component data from a single DB row (list/search modes), so that subsequent
+	* calls to get_data() return immediately without hitting the database again.
+	* @param array|null $data - Pre-decoded component data array, or null to clear
+	* @return void
+	*/
+	public function set_data_resolved(?array $data) : void {
+		$this->data_resolved = $data;
+	}//end set_data_resolved
+
+
+
+	/**
+	* VALIDATE_DATA_ELEMENT
+	* Generic harmless method to validate a data element.
+	* Overwrite this method in child classes to implement specific validation logic.
+	* @param object $data_element
+	* The data element to validate
+	* @param bool $init
+	* On true, the component will initialize the array of values lookup map
+	* @return object|false
+	*/
+	public function validate_data_element( object $data_element, bool $init = true ) : object|false {
+		return $data_element;
+	}//end validate_data_element
+
+
+
+	/**
+	* SET_DATA
+	* Assign data to component
+	* If data items don't have id property, new id will be assigned
+	* Empty array cases: [null], [''] return null
+	* Empty values cases: like [{"value":""}] [{"value":null}] are valid and will be stored as is
+	* this is to allow empty values to preserve the number of items in multi-value components
+	* and allow to assign dataframe to empty values.
+	* @param array|null $data
+	* @return bool $result
+	*/
+	public function set_data( ?array $data ) : bool {
+
+		// unset previous calculated ar_list_of_values
+		unset($this->ar_list_of_values);
+
+		// empty data: [] to null
+		if (empty($data)) {
+			$data = null;
+		}
+
+		// empty array cases: [null], [''] to null
+		if (is_array($data) && count($data)===1 && ($data[0]===null || $data[0]==='')) {
+			$data = null;
+		}
+
+		// db_data
+		// Store data before change it with new one.
+		if(!isset($this->db_data)) {
+			// clone the data array for safe.
+			$encoded = json_encode($this->get_data());
+			if ($encoded !== false) {
+				$this->db_data = json_decode($encoded);
+			}else{
+				debug_log(__METHOD__
+					. " Failed to json_encode current data for db_data backup" . PHP_EOL
+					. ' tipo: ' . $this->tipo . PHP_EOL
+					. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+					. ' section_id: ' . $this->section_id
+					, logger::ERROR
+				);
+				$this->db_data = null;
+			}
+		}
+
+		// Counter
+		$data_to_set = [];
+		// check the data values to set the data id
+		if( !empty($data) ) {
+			$init = true;
+			$ar_id = [];
+			foreach( $data as $element ){
+
+				// Check if the data is an object before attempting property access.
+				// Non-object values are wrapped into a stdClass for uniform processing.
+				if( !is_object($element) ) {
+					$new_element = new stdClass();
+						$new_element->value = $element;
+					// Replace element with new_element
+					$element = $new_element;
+					debug_log(__METHOD__
+						. " New element created (is not object): " . json_encode($element)
+						, logger::WARNING
+					);
+				}
+
+				// STRUCTURAL GUARD — lang orphan prevention (scalars AND data objects).
+				// A literal (value-bearing) component stores its data per language, so EVERY
+				// element it persists MUST carry a 'lang'; one without is a "lang orphan" the
+				// edit view cannot match/render. 'supports_translation' is the precise gate: it
+				// is true ONLY for the literal models (component_string_common subclasses +
+				// component_iri) and false for every relation/locator component — so a locator is
+				// never tagged. Tag the component's current lang ($this->lang is DEDALO_DATA_NOLAN
+				// for non-translatable literals) whenever it is missing — covering both
+				// set_data([$scalar]) and set_data([{value:…}]) (an explicitly-built object that
+				// omitted the lang). An explicit lang already present is never overwritten.
+				if( $this->supports_translation===true
+					&& is_object($element)
+					&& empty($element->lang ?? null)
+					&& !empty($this->lang) ) {
+					$element->lang = $this->lang;
+				}
+
+				// Determine if the value has a valid, non-empty ID to be treated as existing data.
+				// This ensures objects with an 'id' property set to null or empty string are treated as new.
+				$has_id = property_exists($element, 'id') && $element->id !== null && $element->id !== '';
+				$element_to_validate = $has_id
+					? $element
+					: $this->set_data_item_counter( $element );
+
+				$safe_element = $this->validate_data_element($element_to_validate, $init);
+				if( $safe_element ) {
+					$data_to_set[] = $safe_element;
+					// Set every id of data into the array
+					if (isset($safe_element->id)) {
+						$ar_id[] = $safe_element->id;
+					}
+				}
+
+				$init = false;
+			}
+
+			// Set the counter with the max id when the counter is below it.
+			// Explicit ids (imports, migrations, restored data) are absorbed
+			// atomically so concurrent allocations cannot reuse them.
+			if (!empty($ar_id)) {
+				$max_id = max($ar_id);
+				$counter = $this->get_counter();
+				if( $counter < $max_id ){
+					$section_record = $this->get_my_section_record();
+					$section_record->raise_component_counter( $this->tipo, $max_id );
+				}
+			}
+		}
+
+		// section record: set component data into section record.
+		$section_record = $this->get_my_section_record();
+		$result = $section_record->set_component_data(
+			$this->tipo,
+			$this->data_column_name,
+			!empty($data_to_set) ? $data_to_set : null
+		);
+
+		$this->data_resolved = !empty($data_to_set) ? $data_to_set : null;
+
+
+		return $result;
+	}//end set_data
+
+
+
+	/**
+	* SET_DATA_LANG
+	* Assign or remove the data_lang of specified lang
+	* if data_lang = null it will be removed
+	* if data_lang doesn't have lang assigned, lang will be set
+	* if the lang property of data_lang doesn't match with the given lang,
+	* the data_lang will be set to given lang.
+	* @param array|null $data_lang
+	* 	Array of data items or null to remove
+	* @param string $lang
+	* 	Language code to set
+	* @return bool $result
+	*/
+	public function set_data_lang( ?array $data_lang, string $lang ) : bool {
+
+		// Check if the component supports translation.
+		// This property is independent of the Ontology definition $translatable
+		// one component can support translation as component_input_text but the ontology
+		// defines this specific component is not translatable.
+		// Any component that doesn't not supports translation will return the result to set full data
+		if($this->supports_translation === false){
+			return $this->set_data( $data_lang );
+		}
+
+		// Check the given data and if match with the lang assigned
+			$safe_data_lang = [];
+			if( $data_lang !== null ){
+				foreach ($data_lang as $item) {
+
+					// Validate item structure
+					if (!is_object($item)) {
+						debug_log(__METHOD__
+							. " Invalid data item, expected object but got: " . gettype($item)
+							, logger::ERROR
+						);
+						continue;
+					}
+
+					// Check for lang mismatch and log warning
+					if( isset($item->lang) && $item->lang !== $lang ){
+						debug_log(__METHOD__
+							. " Error set data lang, the lang defined in data and the lang to set is not equal " . PHP_EOL
+							. " Item: ".to_string($item).PHP_EOL
+							. " lang: ".to_string($lang).PHP_EOL
+							. " !!! Data will be changed to set the given lang !!! "
+							, logger::ERROR
+						);
+					}
+
+					// Create modified copy to avoid side effects
+					$modified_item = clone $item;
+					$modified_item->lang = $lang;
+
+					$safe_data_lang[] = $modified_item;
+				}
+			}
+
+		// get all component data
+			$data = $this->get_data() ?? [];
+
+		// Clean all previous data lang
+			$filtered_data = [];
+			foreach ($data as $item) {
+
+				// Skip items with missing lang property
+				$current_lang = $item->lang ?? null;
+				if( empty($current_lang) ){
+					debug_log(__METHOD__
+						. " Error in data item, it doesn't have the lang property defined. Ignored value" . PHP_EOL
+						. " Item: ".to_string($item)
+						, logger::ERROR
+					);
+					continue;
+				}
+
+				 // Keep only items that don't match the target language
+				if ($item->lang !== $lang) {
+					$filtered_data[] = $item;
+				}
+			}
+
+		// Merge filtered data with new language data
+			$merged_data = [...($filtered_data ?? []), ...($safe_data_lang ?? [])];
+
+		 // Set the final data (null if empty)
+			$final_data = $this->is_empty_data($merged_data)
+				? null
+				: $merged_data;
+
+
+		return $this->set_data( $final_data );
+	}//end set_data_lang
+
+
+
+	/**
+	* GET_DATA
+	* Get component data from database.
+	* To get data from other sources, set var $data_source like 'tm'
+	* @return array|null $data
+	*/
+	public function get_data() : ?array {
+
+		// data_resolved. Already resolved case
+		if(isset($this->data_resolved)) {
+			return $this->data_resolved;
+		}
+
+		// time machine mode case. data_source='tm'
+		if (isset($this->data_source) && $this->data_source==='tm') {
+
+			// matrix_id check
+			if (empty($this->matrix_id)) {
+				debug_log(__METHOD__
+					." ERROR. 'matrix_id' IS MANDATORY IN TIME MACHINE MODE. " .PHP_EOL
+					. ' class: ' . get_called_class() . PHP_EOL
+					. ' tipo: ' . $this->tipo . PHP_EOL
+					. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+					. ' section_id: ' . $this->section_id
+					, logger::ERROR
+				);
+				return null;
+			}
+
+			// If the component is a dataframe
+			// its data is saved with the main component data in time machine
+			// in those cases, tipo to search in time machine is the main component tipo of the dataframe
+			// all other is its own tipo
+			$component_tipo			=  $this->tipo;
+			$search_component_tipo	= ($this->get_model()==='component_dataframe')
+				? $this->get_main_component_tipo()
+				: $component_tipo;
+
+			// tm data. Note that no lang or section_id is needed, only matrix_id
+		// data_tm is a full data stored into tm row
+		// it will need to be filter to remove possible dataframe data
+		$data_tm = component_common::get_component_tm_data(
+			$search_component_tipo,
+			$this->section_tipo,
+			$this->matrix_id
+		);
+
+			// Main components with dataframe and other relation components.
+			$relation_components = component_relation_common::get_components_with_relations();
+			$current_model = $this->get_model();
+			// Literal components (component_iri, component_input_text, component_text_area, component_date, etc.)
+			// that have dataframe also need TM data filtering to separate their own items from dataframe locators.
+			$is_literal_with_dataframe = !in_array($current_model, $relation_components)
+				&& $current_model !== 'component_dataframe'
+				&& !empty($this->get_dataframe_ddo());
+			if ( is_array($data_tm) && (in_array($current_model, $relation_components) || $is_literal_with_dataframe) ){
+
+				// Get only the component data. Remove possible dataframe data
+				// (TM rows store main + dataframe data merged; the dataframe
+				// entries are identified positively with is_dataframe_entry:
+				// type marker first, legacy pairing-keys shape as fallback)
+				if( $is_literal_with_dataframe ){
+					// Literal main components with dataframe: filter out dataframe locators
+					$data_tm = array_values( array_filter( $data_tm, function($el) {
+						return is_object($el) && !self::is_dataframe_entry($el);
+					}));
+				}elseif($current_model!=='component_dataframe'){
+					// any other relation component: keep its OWN locators, exclude dataframe
+					// frames (they are merged into the same TM row under the main tipo).
+					// Post-migration every frame carries the type=dd490 marker, so
+					// is_dataframe_entry detects them reliably — they no longer leak into
+					// the main component's TM render (the dataframe slot renders them itself).
+					$data_tm = array_values( array_filter( $data_tm, function($el) {
+						if(!is_object($el)) {
+							return false;
+						}
+						// exclude dataframe frames — they belong to a dataframe slot, not this main
+						if(self::is_dataframe_entry($el)) {
+							return false;
+						}
+						if(isset($el->section_tipo) && isset($el->section_id)) {
+							return true;
+						}
+						debug_log(__METHOD__
+						   .' IGNORED: Invalid locator object found in TM data' . PHP_EOL
+						   .' el: ' . to_string($el) . PHP_EOL
+						   .' component_tipo: ' . $this->tipo . PHP_EOL
+						   .' section_tipo: ' . $this->section_tipo . PHP_EOL
+						   .' matrix_id: ' . $this->matrix_id
+						   , logger::ERROR
+						);
+						return false;
+					}));
+				}
+
+				// If the component is a dataframe filter the tm data with the pairing keys also.
+				if($current_model==='component_dataframe' && isset($this->caller_dataframe)){
+
+					$caller_dataframe = $this->caller_dataframe;
+
+					$slot_tipo = $this->tipo;
+					$data_tm = array_values( array_filter( $data_tm, function($el) use($caller_dataframe, $slot_tipo) {
+						// pass the slot tipo so frames from a different dataframe slot that share
+						// the same main_component_tipo + id_key do not bleed across slots
+						return self::dataframe_entry_matches($el, $caller_dataframe, $slot_tipo);
+					}));
+				}
+			}
+
+			// inject data to component
+			$this->data_resolved = is_array($data_tm) ? $data_tm : null;
+
+			return $this->data_resolved;
+		}
+
+		// MATRIX DATA : Load matrix data
+		$this->load_component_data();
+		$section_record = $this->get_my_section_record();
+		$data = $section_record->get_component_data($this->tipo, $this->data_column_name);
+
+		// invalid data formats case. Expected array|null
+		if ( !is_null($data) && !is_array($data) ) {
+			$matrix_table = common::get_matrix_table_from_tipo($this->section_tipo);
+			if ($matrix_table==='matrix_dd') {
+				// v5 matrix_dd list compatibility
+				$data = [$data];
+			}else{
+				if ($this->mode!=='update') {
+					$data_to_show = get_called_class()==='component_password'
+						? '************'
+						: $data;
+					debug_log(__METHOD__ . ' '
+						. '[GET] RECEIVED DATA IS NOT AS EXPECTED TYPE array|null ' .PHP_EOL
+						. 'type: '				. gettype($data) . PHP_EOL
+						. 'data: '				. json_encode($data_to_show, JSON_PRETTY_PRINT) . PHP_EOL
+						. 'model: '				. get_called_class() . PHP_EOL
+						. 'table: '				. $matrix_table . PHP_EOL
+						. 'component_tipo: '	. $this->tipo . PHP_EOL
+						. 'section_tipo: '		. $this->section_tipo . PHP_EOL
+						. 'section_id: '		. $this->section_id
+						, logger::WARNING
+					);
+				}
+				// Force to array to prevent fatal TypeError on return
+				$data = [$data];
+			}
+		}
+
+		return $data;
+	}//end get_data
+
+
+
+	/**
+	* GET_DATA_LANG
+	* Returns component data filtered by given lang
+	* If no lang is passed, the current component lang is used
+	* that means, the language used to instantiate this component.
+	* @param string|null $lang = null
+	* @return array|null $data_lang
+	* 	sample:  [
+	*		{"id":1, "lang": "lg-spa", "value": "L'Horta Sud"}
+	*	]
+	*/
+	public function get_data_lang( ?string $lang=null ) : ?array {
+
+		$data = $this->get_data();
+
+		// Check if the component supports translation.
+		// This property is independent of the Ontology definition $translatable
+		// one component can support translation as component_input_text but the ontology
+		// defines this specific component is not translatable.
+		// Any component that doesn't not supports translation will return the result to get full data
+		if($this->supports_translation === false){
+			return $data;
+		}
+
+		if(empty($data)){
+			return $data;
+		}
+
+		$safe_lang = $lang ?? $this->get_lang();
+		$data_lang = array_values (
+			array_filter( $data, function($el) use ($safe_lang) {
+				if(!is_object($el)) {
+					debug_log(__METHOD__
+						. ' Ignored $el is not an object: ' . json_encode($el) . PHP_EOL
+						. ' section_id: '. $this->section_id . PHP_EOL
+						. ' section_tipo: '. $this->section_tipo . PHP_EOL
+						. ' tipo: '. $this->tipo
+						, logger::ERROR
+					);
+					return false;
+				}
+				return (isset($el->lang) && $el->lang === $safe_lang);
+			})
+		);
+
+
+		return $data_lang;
+	}//end get_data_lang
+
+
+
+	/**
+	* LOAD_COMPONENT_DATA
+	* Get data once from matrix about section_id, data
+	* @see component_relation_common->load_component_data()
+	* @return bool
+	*/
+	protected function load_component_data() : bool {
+
+		// check vars
+			if(empty($this->section_id) || $this->mode==='dummy' || $this->mode==='search') {
+				return false;
+			}
+
+		// section create
+			$section_record = $this->get_my_section_record();
+
+		// component full_data
+			$section_record->get_component_data(
+				$this->tipo,
+				$this->data_column_name
+			);
+
+
+		return true;
+	}//end load_component_data
+
+
+
+	/**
+	* SET_DATA_ITEM_COUNTER
+	* Assigns a new server-minted item id to the given data item.
+	* Item ids are the dataframe pairing keys: allocation is atomic
+	* (advisory-locked, see section_record::allocate_component_ids) so
+	* concurrent processes editing the same record cannot mint the same id.
+	* @param object $data_item
+	* @return object $data_item // added the id for the item
+	*/
+	public function set_data_item_counter( object $data_item ) : object {
+
+		// allocate one id atomically
+			$section_record	= $this->get_my_section_record();
+			$ar_id			= $section_record->allocate_component_ids( $this->tipo, 1 );
+
+		// Set the new id to the data
+			$data_item->id = $ar_id[0];
+
+		return $data_item;
+	}//end set_data_item_counter
+
+
+
+	/**
+	* SET_COUNTER
+	* Component counter is saved into section data as object with the tipo and the value as int
+	* Set the component counter with the given value in the section's data
+	* @param int $value
+	* @return int $counter
+	*/
+	public function set_counter( int $value ) : int {
+
+		$section_record	= $this->get_my_section_record();
+		$counter		= $section_record->set_component_counter( $this->tipo, $value );
+
+		return $counter;
+	}//end set_counter
+
+
+
+	/**
+	* GET_COUNTER
+	* Get last counter used by the component
+	* Component counter is saved into section data as object with the tipo and the value as int
+	* @return int $counter
+	*/
+	public function get_counter() : int {
+
+		$section_record	= $this->get_my_section_record();
+		$counter		= $section_record->get_component_counter( $this->tipo );
+
+		return $counter;
+	}//end get_counter
+
+
+
+	/**
+	* GET_ID_FROM_KEY
+	* Check every data language of the component and get the id of the data key in the array
+	* If the key of the data has not id return null to set new id of the counter.
+	* Data format is a flat array: [{id, lang, value}, ...]
+	* Groups entries by lang, checks the given key position in each language,
+	* and returns the first valid id found across languages (excluding skip_langs).
+	* @param int $key
+	* @param array $skip_langs use to remove specific languages of the check, used in remove data to avoid to check its own language (the data that will be removed)
+	* @return int|null $id
+	*/
+	public function get_id_from_key( int $key, array $skip_langs=[] ) : ?int {
+
+		$all_data = $this->get_data();
+		if (empty($all_data)) {
+			return null;
+		}
+
+		// Group flat data by lang to access entries by key position
+		$grouped = [];
+		foreach ($all_data as $item) {
+			if (!is_object($item)) {
+				continue;
+			}
+			$item_lang = $item->lang ?? null;
+			if ($item_lang === null) {
+				continue;
+			}
+			if (in_array($item_lang, $skip_langs)) {
+				continue;
+			}
+			$grouped[$item_lang][] = $item;
+		}
+
+		foreach ($grouped as $lang => $lang_entries) {
+			if (!array_key_exists($key, $lang_entries)) {
+				continue;
+			}
+
+			$valid_data = $lang_entries[$key];
+
+			if (is_object($valid_data) && property_exists($valid_data, 'id')) {
+
+				$id = $valid_data->id ?? null;
+
+				if (is_numeric($id) && (int)$id > 0) {
+					return (int)$id;
+				}
+
+				$log_message = (null !== $id)
+					? ' data with invalid id value: ' . var_export($id, true)
+					: ' data without id';
+				debug_log(__METHOD__
+					. $log_message . PHP_EOL
+					. ' section_id: '. $this->section_id . PHP_EOL
+					. ' section_tipo: '. $this->section_tipo . PHP_EOL
+					. ' tipo: '. $this->tipo . PHP_EOL
+					. ' lang: '. $lang . PHP_EOL
+					. ' value: ' . to_string($valid_data)
+					, logger::ERROR
+				);
+			}
+		}
+
+		return null;
+	}//end get_id_from_key
+
+
+
+	/**
+	* GET_KEY_FROM_ID
+	* Check if the given ID exists in the specified data language.
+	* Data format is a flat array: [{id, lang, value}, ...]
+	* Filters by lang and returns the array key of the entry with matching id.
+	* @param int $id
+	* @param string $lang Language to search within
+	* @return int|null $key
+	*/
+	public function get_key_from_id( int $id, string $lang ) : ?int {
+
+		// Get language-specific data from flat array
+		$lang_data = $this->get_data_lang($lang);
+		if (empty($lang_data)) {
+			return null;
+		}
+
+		foreach ($lang_data as $key => $current_value) {
+
+			if (!is_object($current_value)) {
+				debug_log(__METHOD__
+					. ' malformed data (non-object)' . PHP_EOL
+					. ' section_id: '. $this->section_id . PHP_EOL
+					. ' section_tipo: '. $this->section_tipo . PHP_EOL
+					. ' tipo: '. $this->tipo . PHP_EOL
+					. ' lang: '. $lang . PHP_EOL
+					. ' current_value: ' .to_string($current_value)
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			$valid_id = $current_value->id ?? null;
+
+			if( empty($valid_id) ){
+				debug_log(__METHOD__
+					. " malformed data (missing id)" . PHP_EOL
+					. " section_id: ". $this->section_id . PHP_EOL
+					. " section_tipo: ". $this->section_tipo . PHP_EOL
+					. " tipo: ". $this->tipo . PHP_EOL
+					. to_string()
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			// Compares id. If is the same, result the array key value.
+			// COMP-04: cast the stored id — it may be a string in the data while $id
+			// is typed int; a strict === would then miss the match.
+			if((int)$current_value->id === $id){
+				return (int)$key;
+			}
+		}
+
+
+		return null;
+	}//end get_key_from_id
+
+
+
+	/**
+	* GET_DATA_UNCHANGED
+	* Returns the raw, unprocessed value of the protected $data property without
+	* invoking any type-coercion, language-filtering, or TM-override logic.
+	*
+	* Exists so that section::save_component_data() can read the exact stored value
+	* that was last written to the section_record — including null, scalars, or
+	* malformed legacy data — for comparisons and diagnostics.
+	* Prefer get_data() for all other callers.
+	* @return mixed - The internal $data property; type is unguaranteed
+	*/
+	public function get_data_unchanged() {
+
+		return $this->data;
+	}//end get_data_unchanged
+
+
+
+	/**
+	* GET_TIME_MACHINE_DATA_TO_SAVE
+	* Builds the payload written to the Time Machine row when this component is saved.
+	*
+	* For simple components the payload is the current language data slice
+	* (get_data_lang()). For components that have associated dataframe DDOs the
+	* payload additionally includes ALL dataframe data (all pairing rows, without
+	* a specific caller) merged in, because the TM row stores both main and dataframe
+	* data together under the main component's tipo — see get_data() tm-mode branch
+	* where the reverse split is performed on playback.
+	* @return array|null - Merged array of main + dataframe data items to persist in TM
+	*/
+	public function get_time_machine_data_to_save() : ?array {
+
+		$time_machine_data_to_save = $this->get_data_lang();
+
+		$ar_component_dataframe = $this->get_dataframe_ddo();
+		if( !empty($ar_component_dataframe) ){
+
+			$ar_dataframe_data = [];
+			foreach ($ar_component_dataframe as $dataframe_ddo) {
+				// create dataframe component instance
+				// BUT without caller_dataframe
+				// to get all data, not the specific row data of the dataframe
+				// time machine saves all data of the main comonent and all data of the dataframe
+				$dataframe_component = component_common::get_instance(
+					'component_dataframe', // string model
+					$dataframe_ddo->tipo, // string tipo
+					$this->get_section_id(), // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					$this->get_section_tipo(), // string section_tipo,
+					false
+				);
+				// When the dataframs has not caller specified, it returns all data
+				// as any other component
+				$dataframe_data = $dataframe_component->get_data();
+				if( !empty($dataframe_data) ){
+					$ar_dataframe_data = [...$ar_dataframe_data, ...$dataframe_data];
+				}
+			}
+			$time_machine_data_to_save = is_array($time_machine_data_to_save)
+				? [...$time_machine_data_to_save, ...$ar_dataframe_data]
+				: $ar_dataframe_data;
+		}
+
+
+		return $time_machine_data_to_save;
+	}//end get_time_machine_data_to_save
+
+
+
+	/**
+	* GET_VALUE
+	* Get the string value of the components.
+	* Flat-string facade over the atoms export contract: resolves
+	* get_export_value() with a default export_context (component default
+	* ddo_map for relations, relative media URLs, no parents) and joins
+	* the atoms with the legacy resolve_value() semantics
+	* (see export_value::to_flat_string, parity tested per model).
+	* @return string|null $value
+	*/
+	public function get_value() : ?string {
+
+		return $this->get_export_value()->to_flat_string();
+	}//end get_value
+
+
+
+	/**
+	* GET_GRID_VALUE
+	* Visual grid cell of the component (dd_grid_cell_object, the CLIENT
+	* rendering format used by the thesaurus indexation grid, the time
+	* machine matrix and the descriptors widget).
+	*
+	* The data resolution is the atoms export contract (get_export_value):
+	* this default implementation is a generic atoms->cell adapter covering
+	* uniform-leaf components. Components producing STRUCTURAL trees keep
+	* visual-only overrides: component_relation_common (rows/columns
+	* recursion), component_info (widget multi-column), component_inverse
+	* (per-pair columns), component_text_area in 'indexation_list' mode
+	* (interactive tag fragment cells).
+	*
+	* @param object|null $ddo = null
+	* 	Optional caller customs: fields_separator, records_separator, class_list
+	* @return dd_grid_cell_object $dd_grid_cell_object
+	*/
+	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
+
+		// atoms. Single data-resolution authority (same values the export resolves).
+		// absolute_urls reproduces the legacy media/av/3d caller switch.
+			$context = new export_context((object)[
+				'ddo'			=> $ddo,
+				'caller'		=> $this->caller ?? '',
+				'absolute_urls'	=> (($this->caller ?? null)==='tool_export')
+			]);
+			$export_value = $this->get_export_value($context);
+
+		return $this->export_value_to_grid_cell($export_value, $ddo);
+	}//end get_grid_value
+
+
+
+	/**
+	* EXPORT_VALUE_TO_GRID_CELL
+	* Generic atoms -> dd_grid_cell_object conversion (VISUAL layer only).
+	*
+	* Shape contract pinned by the client views (see grid_value_snapshot_Test):
+	* - 'value' and 'fallback_value' are ALWAYS arrays, never null
+	*   (view_descriptors dereferences fallback_value[0])
+	* - 'ar_columns_obj' is ALWAYS set (component_relation_common spreads it)
+	* - the injected $this->column_obj is honored (indexation/relation
+	*   recursion contact point); the own id keeps the '{section_tipo}_{tipo}'
+	*   grammar (view_indexation get_section_id_column splits it)
+	* - one value element per atom (clients join with records_separator;
+	*   rendered output identical to the legacy pre-joined strings)
+	*
+	* @param export_value $export_value
+	* @param object|null $ddo = null
+	* @return dd_grid_cell_object
+	*/
+	final protected function export_value_to_grid_cell( export_value $export_value, ?object $ddo=null ) : dd_grid_cell_object {
+
+		// column_obj. Injected by relation_common / indexation_grid, else own identity
+			$column_obj = $this->column_obj ?? (object)[
+				'id' => $this->section_tipo.'_'.$this->tipo
+			];
+
+		// leaf segment. Uniform-leaf components share the own segment on every atom
+			$leaf_segment = isset($export_value->atoms[0])
+				? $export_value->atoms[0]->get_leaf_segment()
+				: null;
+
+		// separators. ddo > leaf segment (already ddo>properties resolved) > joiner defaults
+			$records_separator	= $ddo?->records_separator ?? $leaf_segment?->records_separator ?? ' | ';
+			$fields_separator	= $ddo?->fields_separator  ?? $leaf_segment?->fields_separator  ?? ', ';
+
+		// value / fallback partition (is_fallback atoms), atom order preserved
+			$value			= [];
+			$fallback_value	= [];
+			foreach ($export_value->atoms as $atom) {
+				if ($atom->is_fallback===true) {
+					$fallback_value[] = $atom->value;
+				}else{
+					$value[] = $atom->value;
+				}
+			}
+
+		// cell_type from atoms (uniform per leaf)
+			$cell_type = isset($export_value->atoms[0])
+				? $export_value->atoms[0]->cell_type
+				: 'text';
+
+		// dd_grid_cell_object
+			$dd_grid_cell_object = new dd_grid_cell_object();
+				$dd_grid_cell_object->set_type('column');
+				$dd_grid_cell_object->set_label($export_value->label ?? $this->get_label());
+				$dd_grid_cell_object->set_cell_type($cell_type);
+				$dd_grid_cell_object->set_ar_columns_obj([$column_obj]);
+				if (isset($ddo->class_list)) {
+					$dd_grid_cell_object->set_class_list($ddo->class_list);
+				}
+				$dd_grid_cell_object->set_fields_separator($fields_separator);
+				$dd_grid_cell_object->set_records_separator($records_separator);
+				$dd_grid_cell_object->set_value($value);
+				$dd_grid_cell_object->set_fallback_value($fallback_value);
+				if ($cell_type==='section_id') {
+					// legacy component_section_id parity (client record-link button)
+					$dd_grid_cell_object->set_row_count(1);
+				}
+				$dd_grid_cell_object->set_model(get_called_class());
+
+
+		return $dd_grid_cell_object;
+	}//end export_value_to_grid_cell
+
+
+
+	/**
+	* GET_RAW_VALUE
+	* Get the raw value of the components. By default will be get_data().
+	* overwrite in every different specific component
+	* The direct components can set the value with the data directly
+	* The relation components will separate the locator in rows
+	* @return dd_grid_cell_object $raw_value
+	* 	dd_grid_cell_object
+	*/
+	public function get_raw_value() : dd_grid_cell_object {
+
+		// column_obj
+			if(isset($this->column_obj)){
+				$column_obj = $this->column_obj;
+			}else{
+				$column_obj = new stdClass();
+					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
+			}
+
+		// data + cell_type. Shared chokepoint with get_raw_export_value
+		// so the dedalo_data wire shape cannot drift between paths.
+			$raw_export_data	= $this->build_raw_export_data();
+			$data				= $raw_export_data->data;
+			$cell_type			= $raw_export_data->cell_type;
+
+		// get the total of locators of the data, it will be use to render the rows separated.
+			$row_count = 1; // sizeof($data);
+
+		// label
+			$label = $this->get_label();
+
+		// raw_value
+			$raw_value = new dd_grid_cell_object();
+				$raw_value->set_type('column');
+				$raw_value->set_label($label);
+				$raw_value->set_cell_type($cell_type);
+				$raw_value->set_ar_columns_obj([$column_obj]);
+				$raw_value->set_row_count($row_count);
+				$raw_value->set_value($data);
+
+
+		return $raw_value;
+	}//end get_raw_value
+
+
+
+	/**
+	* BUILD_RAW_EXPORT_DATA
+	* Shared chokepoint for the 'dedalo_raw' export wire shape, used by both
+	* get_raw_value() (legacy grid path) and get_raw_export_value() (atoms path).
+	*
+	* dedalo_data wrapper:
+	* Raw exported data is wrapped as {"dedalo_data": <dato>} to identify externally
+	* that the value is Dédalo format data and not any other generic value.
+	* The import process unwraps it transparently (see unwrap_dedalo_data).
+	* component_section_id is excluded: it must remain a plain int to be used
+	* as the record key on re-import. Null data is not wrapped (empty export cell).
+	* Note that the wrapper is an associative array because set_value() expects
+	* ?array; it serializes to JSON as the {"dedalo_data": ...} object.
+	* Components with paired dataframe rows ship them alongside the dato as
+	* {"dedalo_data": {"dato": <dato>, "dataframe": <frame locators>}} so the
+	* round-trip re-creates the pairing (see import_dataframe_data).
+	*
+	* @return object
+	* 	{data: array|null, cell_type: string}
+	*/
+	private function build_raw_export_data() : object {
+
+		// data
+			$data = $this->get_data();
+
+		// cell_type
+		// Exception for comoponent_section_id. As section_id must be used as int,
+		// avoid to use the json cell type to render it as int instead an array [3]
+			$cell_type = $this->get_model()==='component_section_id'
+				? 'section_id'
+				: 'json';
+
+		// dedalo_data wrapper (see method doc)
+			if ($cell_type!=='section_id' && $data!==null) {
+				$dataframe_data = $this->get_export_dataframe_data();
+				$data = ($dataframe_data!==null)
+					? ['dedalo_data' => ['dato' => $data, 'dataframe' => $dataframe_data]]
+					: ['dedalo_data' => $data];
+			}
+
+		return (object)[
+			'data'		=> $data,
+			'cell_type'	=> $cell_type
+		];
+	}//end build_raw_export_data
+
+
+
+	/**
+	* GET_RAW_EXPORT_VALUE
+	* Atoms based version of get_raw_value() for the 'dedalo_raw' export format.
+	* One atom per component: the value is the pre-encoded {"dedalo_data": ...}
+	* JSON string (byte-fixed here so the tabulator and the client emit it
+	* verbatim), or a plain int for component_section_id (record key on
+	* re-import), or null for empty data (empty export cell).
+	* Final: components must never override the raw wire shape.
+	* @param export_context|null $context = null
+	* @return export_value
+	*/
+	final public function get_raw_export_value( ?export_context $context=null ) : export_value {
+
+		$context = $context ?? new export_context();
+
+		// shared chokepoint with get_raw_value()
+			$raw_export_data = $this->build_raw_export_data();
+
+		// path. Raw export does not recurse: single segment after the prefix
+			$segment = new export_path_segment($this->section_tipo, $this->tipo, (object)[
+				'model' => $this->get_model()
+			]);
+			$path = [...$context->path_prefix, $segment];
+
+		// scalar value
+			if ($raw_export_data->cell_type==='section_id') {
+				$data	= $raw_export_data->data;
+				$first	= is_array($data) ? reset($data) : $data;
+				$value	= isset($first) ? (int)$first : null;
+			}else{
+				$value = ($raw_export_data->data===null)
+					? null
+					: json_encode($raw_export_data->data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+			}
+
+		return export_value::from_scalar(
+			$path,
+			$value,
+			(object)['cell_type' => $raw_export_data->cell_type],
+			$this->get_label(),
+			get_called_class()
+		);
+	}//end get_raw_export_value
+
+
+
+	/**
+	* GET_EXPORT_VALUE
+	* Atoms based export contract. Base implementation: one atom per data
+	* item, arrays/objects json_encoded (parity with get_grid_value base).
+	* Overwrite in every different specific component; relation components
+	* resolve their children and merge the child atoms extending the path.
+	*
+	* Replaces the polymorphic get_grid_value() tree for the export path:
+	* the result is always a flat list of scalar atoms whose structured
+	* paths carry column identity and relation item indexes
+	* (see core/dd_grid/class.export_atom.php).
+	*
+	* @param export_context|null $context = null
+	* @return export_value
+	*/
+	public function get_export_value( ?export_context $context=null ) : export_value {
+
+		$context = $context ?? new export_context();
+
+		// own segment. Separators precedence: ddo override > properties > joiner default
+			$segment		= $this->build_export_path_segment($context);
+			$path			= [...$context->path_prefix, $segment];
+
+		// export_value
+			$export_value = new export_value([], $this->get_label(), get_called_class());
+
+		// data. One atom per item
+			$raw_data = $this->get_data();
+			if (empty($raw_data) || !is_array($raw_data)) {
+				return $export_value;
+			}
+
+			$is_translatable = $this->is_translatable();
+			foreach ($raw_data as $key => $item) {
+				// parity with get_grid_value base: arrays/objects as plain json_encode
+				$value = (is_array($item) || is_object($item))
+					? json_encode($item)
+					: $item;
+
+				$export_value->add_atom( new export_atom($path, $value, (object)[
+					'value_index'	=> (int)$key,
+					'lang'			=> $is_translatable ? $this->lang : null
+				]) );
+			}
+
+
+		return $export_value;
+	}//end get_export_value
+
+
+
+	/**
+	* BUILD_EXPORT_PATH_SEGMENT
+	* Builds the component own path segment for get_export_value().
+	* Separators precedence matches the legacy get_grid_value resolution:
+	* ddo override > component properties > null (joiner defaults ', ' / ' | ')
+	* @param export_context $context
+	* @return export_path_segment
+	*/
+	protected function build_export_path_segment( export_context $context ) : export_path_segment {
+
+		$properties	= $this->get_properties();
+		$ddo		= $context->ddo;
+
+		$fields_separator	= $ddo?->fields_separator
+			?? $properties?->fields_separator
+			?? null;
+		$records_separator	= $ddo?->records_separator
+			?? $properties?->records_separator
+			?? null;
+
+		return new export_path_segment($this->section_tipo, $this->tipo, (object)[
+			'model'				=> $this->get_model(),
+			'fields_separator'	=> $fields_separator,
+			'records_separator'	=> $records_separator,
+			// relation traversal position (set by the calling relation via descend)
+			'item_index'		=> $context->item_index,
+			'section_id'		=> $context->item_section_id
+		]);
+	}//end build_export_path_segment
+
+
+
+	/**
+	* SAVE
+	* Persists the current component data to the database through section_record,
+	* then triggers secondary side-effects in this order:
+	* 1. section_record::save_component_data() — writes main data + counter columns.
+	*    For component_autocomplete_hi, also writes the relation_search column.
+	* 2. tm_record::create() — creates a Time Machine row when section_id>0,
+	*    is_temporal=false, tm_record::$save_tm=true, and section_tipo is not in
+	*    the TM exclusion list. The TM payload comes from get_time_machine_data_to_save()
+	*    which merges main data + any dataframe data.
+	* 3. save_activity() — logs the save event to the activity backend.
+	* 4. propagate_to_observers() — notifies observer components defined in properties
+	*    so they can recalculate derived values (e.g. component_info sum widgets).
+	*
+	* Guards that abort or skip silently:
+	* - Missing required vars (section_tipo, section_id, tipo, lang): returns false.
+	* - mode='tm' or data_source='tm': read-only playback context, returns false.
+	* - save_to_database=false: deferred save (caller must trigger section save later).
+	* - mode='search': prevents accidental persistence during filter operations.
+	* @return bool - true on success; false when a guard prevents saving or on error
+	*/
+	public function save() : bool {
+
+		// short vars
+			$section_tipo		= $this->section_tipo;
+			$section_id 		= $this->section_id;
+			$tipo 				= $this->tipo;
+			$lang				= $this->lang;
+			$model				= $this->get_model();
+			$mode				= $this->mode;
+			$data_column_name	= $this->data_column_name;
+			$save_path 			= [];
+
+			// Section record
+			$section_record	= $this->get_my_section_record();
+
+			// Save main data
+			$main_data = new stdClass();
+				$main_data->column	= $data_column_name;
+				$main_data->key		= $tipo;
+
+			$save_path[] = $main_data;
+
+			// Save counter
+			$counter = new stdClass();
+				$counter->column	= 'meta';
+				$counter->key		= $tipo;
+
+			$save_path[] = $counter;
+
+		// Save Relation search
+		// Only for component_autocomplete_hi
+			$legacy_model = ontology_node::get_legacy_model_by_tipo($this->tipo);
+			if ($legacy_model==='component_autocomplete_hi') {
+
+				$relation_search_column = 'relation_search';
+
+				$relations_search_value = $this->get_relations_search_value();
+
+				$section_record->set_component_data($tipo, $relation_search_column, $relations_search_value);
+
+				$relation_search = new stdClass();
+					$relation_search->key		= $tipo;
+					$relation_search->column	= $relation_search_column;
+
+				$save_path[] = $relation_search;
+			}
+
+		// check component minimum vars before save
+			if( empty($section_tipo) || empty($section_id) || empty($tipo) || empty($lang) ) {
+				debug_log(__METHOD__
+					. " Error on save: Few vars! . Ignored order" . PHP_EOL
+					. ' section_id: ' . to_string($section_id) . PHP_EOL
+					. ' section_tipo: ' . $section_tipo . PHP_EOL
+					. ' tipo: ' . $tipo . PHP_EOL
+					. ' model: ' . get_class($this) . PHP_EOL
+					. ' mode: ' . $mode . PHP_EOL
+					. ' lang: ' . $lang
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// tm mode case
+			if ($this->mode==='tm' || $this->data_source==='tm') {
+				debug_log(__METHOD__
+					. " Error on save: invalid mode (tm)! . Ignored order" . PHP_EOL
+					. ' section_id: ' . to_string($section_id) . PHP_EOL
+					. ' section_tipo: ' . $section_tipo . PHP_EOL
+					. ' tipo: ' . $tipo . PHP_EOL
+					. ' model: ' . get_class($this) . PHP_EOL
+					. ' mode: ' . $mode . PHP_EOL
+					. ' data_source: ' . $this->data_source . PHP_EOL
+					. ' lang: ' . $lang
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// section save.
+			// The section will be the responsible to save the component data
+			// optional stop the save process to delay DDBB access
+			$save_to_database = isset($this->save_to_database) ? (bool)$this->save_to_database : true; // default is true
+			if($save_to_database===false) {
+				// Stop here (remember make a real section save later!)
+				// No component time machine data will be saved when section saves later
+				// debug_log(__METHOD__." Stopped section save process component_obj->save_to_database = true ".to_string(), logger::ERROR);
+				return true;
+			}
+
+			/**
+			 * SEARCH MODE: Prevent accidental data persistence
+			 * Search mode is used exclusively for querying and filtering purposes.
+			 * Attempting to save component data while in search mode is an error condition
+			 * that indicates a logical flaw in the calling code. We abort the operation
+			 * and log the error to prevent unintended data modifications.
+			 */
+			if ($mode==='search') {
+				debug_log(__METHOD__
+					. " Stop saving in search mode ! "
+					, logger::ERROR
+				);
+				return true;
+			}
+
+		// Save the component data into DB
+			$result = $section_record->save_component_data( $save_path );
+
+		// time machine data.
+		if((int)$section_id > 0 && $this->is_temporal !== true && tm_record::$save_tm) {
+
+			// Skip TM for excluded section_tipos (volatile/utility sections like search presets)
+			if (in_array($section_tipo, tm_record::$excluded_section_tipos, true)) {
+				debug_log(__METHOD__
+					. " Skipped TM save for excluded section_tipo: $section_tipo"
+					, logger::DEBUG
+				);
+			} else {
+				// We save only current component lang 'data' in time machine
+				// get the time_machine data from component
+				// it could has a dataframe and in those cases it will return its data and the data from its dataframe mixed.
+				$tm_values = new stdClass();
+					$tm_values->section_id		= $section_id;
+					$tm_values->section_tipo	= $section_tipo;
+					$tm_values->tipo			= $tipo;
+					$tm_values->lang			= $lang;
+					// component_dataframe
+					// when the component is dataframe, save all information together
+					// use the main and dataframe data as locators, mix all and save with the main component tipo
+					if ( $model==='component_dataframe' ) {
+						// use the main component
+						$main_tipo = $this->get_main_component_tipo();
+						$tm_values->tipo	= $main_tipo;
+					}
+					// bulk_process_id column
+					if( isset($this->bulk_process_id) ){
+						$tm_values->bulk_process_id = $this->bulk_process_id;
+					}
+					// data
+					$tm_values->data = $this->get_time_machine_data_to_save();
+				// Save the time machine record
+				$previous_data = $this->db_data ?? null;
+				$tm_result = tm_record::create($tm_values,  $previous_data);
+				if ($tm_result === false) {
+					debug_log(__METHOD__
+						.' Error saving Time Machine data for'
+						.' tm_value: ' . to_string($tm_values). PHP_EOL
+						.'result: ' . to_string($tm_result)
+						, logger::ERROR
+					);
+				}
+			} // end else (non-excluded section_tipo)
+		}
+
+		// activity
+			$this->save_activity();
+
+		// Observers. The observers will be need to be notified for re-calculate your own data with the new component data
+			$this->propagate_to_observers();
+
+
+		return $result;
+	}//end save
+
+
+
+	/**
+	* SAVE_ACTIVITY
+	* Writes a 'SAVE' entry to the activity log backend for audit-trail purposes.
+	*
+	* Uses logger::$obj['activity'] (a logger_backend_activity instance), so it
+	* requires the activity logger to have been initialised before this component
+	* was instantiated. Calls that fail are caught and logged at DEBUG level rather
+	* than propagated, so an activity-log failure never aborts the save transaction.
+	*
+	* Self-referential loop guard: components whose tipo appears in
+	* logger_backend_activity::$ar_elements_activity_tipo are excluded from
+	* activity logging (the activity-log section's own components must not write
+	* activity events about themselves).
+	* @return void
+	*/
+	public function save_activity() : void {
+
+		# ACTIVITY
+		# Prevent infinite loop saving self
+		if (!in_array($this->tipo, logger_backend_activity::$ar_elements_activity_tipo)) {
+			try {
+				# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATA(array of related info)
+				$matrix_table = common::get_matrix_table_from_tipo($this->section_tipo);
+				logger::$obj['activity']->log_message(
+					'SAVE',
+					logger::INFO,
+					$this->tipo,
+					null,
+					[
+						'msg'				=> 'Saved component data',
+						'tipo'				=> $this->tipo,
+						'section_id'		=> $this->section_id,
+						'lang'				=> $this->lang,
+						'component_name'	=> get_called_class(),
+						'table'				=> $matrix_table,
+						'section_tipo'		=> $this->section_tipo
+					],
+					logged_user_id() // int
+				);
+			} catch (Exception $e) {
+				debug_log(__METHOD__
+					.' Exception saving activity caught. ' .PHP_EOL
+					.' tipo: '.$this->tipo.', section_tipo: '.$this->section_tipo.', section_id: '.$this->section_id .PHP_EOL
+					.' exception: '.$e->getMessage()
+					, logger::DEBUG
+				);
+			}//end try catch
+		}//end if (!in_array($tipo, logger_backend_activity::$ar_elements_activity_tipo))
+	}//end save_activity
+
+
+
+	/**
+	* PROPAGATE_TO_OBSERVERS
+	* Server-side reactive fan-out: notifies all observer components listed in this
+	* component's properties->observers array after every save.
+	*
+	* Observer configuration shape (defined on the observed component):
+	* {
+	*   "observers": [
+	*     {
+	*       "section_tipo": "numisdata3",
+	*       "component_tipo": "numisdata595"
+	*     }
+	*   ]
+	* }
+	*
+	* For each observer entry update_observer_data() is called, which:
+	* 1. Reads the observer component's own "observe" configuration from the Ontology.
+	* 2. Resolves the set of sections to update (via filter SQO, inverse relations,
+	*    or the observable section itself — depending on server.config).
+	* 3. Calls the configured perform.function on each observer component instance
+	*    (or falls back to get_data() + save()).
+	* 4. Returns the updated component JSON only for the section the current user
+	*    is actively editing, so other sections are saved but their data is not
+	*    sent back to the client.
+	*
+	* The result is stored in $this->observers_data so it can be merged into the
+	* API response by the calling JSON controller.
+	* @return array|null - Collected observer component data for the active section, or null when no observers are defined
+	*/
+	public function propagate_to_observers() : ?array {
+		$start_time=start_time();
+
+		// get all observers defined in properties
+			$properties = $this->get_properties();
+
+		// if the component don't has observers stop the process.
+			if(!isset($properties->observers)){
+				return null;
+			}
+
+		// ar_observers
+			$ar_observers = $properties->observers;
+
+		// create the locator of the current component, this locator will be use to search, from the observer section, the component that are changed.
+			$current_locator = new locator();
+				$current_locator->set_section_tipo($this->section_tipo);
+				$current_locator->set_section_id($this->section_id);
+
+		// $observable_data is defined by the type of the event fired by the user,
+		// if event fired is update we will use the final data with all changes, the data that will stored in BBDD
+		// but if the event is delete, we will use the previous data, before delete the info, because we need know the sections referenced that need delete and update your own data / state
+			$observable_data = [];
+
+		// clone the original data to not touch the original in the observable save process
+			$original_data =  $this->get_observable_data();
+			if(!empty($original_data)){
+				if (is_array($original_data)) {
+					foreach ($original_data as $data) {
+						$copy_data = is_object($data)
+							? clone $data
+							: $data;
+						$observable_data[] = $copy_data;
+					}
+				}else{
+					debug_log(__METHOD__
+						. " original data was expected as type array, but another is received " . PHP_EOL
+						. " !! This value will not added to observable_data " . PHP_EOL
+						. ' type: ' . gettype($original_data) . PHP_EOL
+						. ' original_data: ' . to_string($original_data)
+						, logger::ERROR
+					);
+				}
+			}
+
+		// observers_data
+			$observers_data = [];
+			foreach ($ar_observers as $current_observer) {
+
+				$current_observer_data = component_common::update_observer_data(
+					$current_observer, // object $observer
+					$current_locator, // object $locator
+					$observable_data, // ?array $observable_data
+					$this->tipo // string observable_tipo
+				);
+				$observers_data = [...($observers_data ?? []), ...($current_observer_data ?? [])];
+			}
+
+		// store data to access later in api
+			$this->observers_data = $observers_data;
+
+		// debug
+			debug_log(__METHOD__
+				." Exec time: ".exec_time_unit($start_time,'ms').' ms'
+				, logger::DEBUG
+			);
+
+
+		return $observers_data;
+	}//end propagate_to_observers
+
+
+
+	/**
+	* UPDATE_OBSERVER_DATA
+	* Update the observer data using the config server in the observer component
+	* set in properties the config of the observer
+	* ex:
+	*  {
+	*	"info": "our own comments to info of the event",
+	*	"server": {
+	*		"config": {
+	*			"use_inverse_relations"	: bool,
+	* 			"use_observable_dato"	: bool,
+	* 			"use_inverse_relations"	: bool,
+	* 			"filter"				: sqo
+	*		},
+	*		"perform": {
+	*			"params": {
+	*				"xx": bool,
+	* 				"yy": int    *
+	*			},
+	*		"function": "set_data_xxx"
+	*		}
+	* 	},
+	*	"component_tipo": "ddxx"
+	* }
+	* component_tipo: the component that is observed his changes. the component that fire the event.
+	* config options:
+	* 	use_self_section: use the $locator (the section that made the change) because the component is in the same section that observable
+	* 	use_observable_dato: use the $observable_data (the section has added, deleted, changed in portal) because the component to update is in the target section of the portal
+	* 	use_inverse_relations: use all inverse relations of the section, because the component to update is not in the same or target section of portal
+	* 	filter: define a sqo to get specific locators defined by a search.
+	* perform options:
+	* 	function:
+	* 		define the function to be executed when the event is fired
+	* 	params:
+	* 		the options that will be passed to the function
+	* @param object $observer - Component observer descriptor (section_tipo, component_tipo)
+	* @param object $locator - Locator of the section that triggered the change
+	* @param ?array $observable_data - Changed data items (locators/values) from the observable component, or null
+	* @param string $observable_tipo - Tipo of the component that fired the event
+	*
+	* @return array $ar_data
+	*/
+	public static function update_observer_data(object $observer, object $locator, ?array $observable_data, string $observable_tipo) : array {
+
+		// ar_observe. Create the observer component
+			$ontology_node	= ontology_node::get_instance($observer->component_tipo);
+			$properties		= $ontology_node->get_properties();
+			$ar_observe		= $properties->observe ?? [];
+
+		// current_observer. Get the current observe preference in ontology to be processed
+			$current_observer = array_find($ar_observe, function($item) use ($observable_tipo){
+				return $item->component_tipo === $observable_tipo || $item->component_tipo === 'all';
+			});
+
+		// empty observer->server case
+			if(!isset($current_observer) || !isset($current_observer->server)) {
+				return []; // nothing to do
+			}
+
+		// ar_section. Used to search some data with one criteria defined by filter
+		// see numisdata595, it get the data of portal numisdata77 to be used as main data.
+			if(isset($current_observer->server->filter) && $current_observer->server->filter!==false) {
+
+				// from_component_tipo. Get the from_component_tipo of the filter to set at observable locator
+				// the observable can't know what is the path to own section and we used the path of the sqo to get the caller component(portal, autocomplete, etc)
+					// $elements	= reset($current_observer->filter);
+					// $element	= reset($elements);
+					// php v8 compatible
+						$filter			= $current_observer->server->filter; // object as {"$and":[{"q":null,"path":[{"section_tipo":"oh1","component_tipo":"oh25"}],"q_operator":null}]}
+						$objIterator	= new ArrayIterator($filter);
+						$first_key		= $objIterator->key(); // string as '$and'
+						$elements		= $filter->{$first_key}; // array of objects
+						if (empty($elements) || empty($elements[0])) {
+							debug_log(__METHOD__
+								." ERROR: No elements are defined for current_observer filter " .PHP_EOL
+								.' observer->server: ' . to_string($current_observer->server)
+								, logger::ERROR
+							);
+							return [];
+						}
+						$element = reset($elements); // object as {"q":null,"path":[{"section_tipo":"oh1","component_tipo":"oh25"}],"q_operator":null}
+
+					$from_component_tipo = end($element->path)->component_tipo;
+
+				// locator set from_component_tipo
+					$locator->set_from_component_tipo($from_component_tipo);
+
+				// q . The sqo base is defined into properties of the observer component.
+				// and is update the q of the filter with the locator of the component that had changed
+				// update the q with the locator of the observable component
+				// the locator is the section_tipo and section_id of the own observable section.
+					// $elements = reset($current_observer->filter);
+					foreach ($elements as $key => $item_value) {
+						$elements[$key]->q = $locator;
+					}
+
+				// sqo. Build the search_query_object to use in the search.
+					$sqo_data = new stdClass();
+						$sqo_data->section_tipo	= [$observer->section_tipo];
+						$sqo_data->full_count	= false;
+						$sqo_data->limit		= 0;
+						$sqo_data->filter		= $current_observer->server->filter;
+					$sqo = new search_query_object($sqo_data);
+
+				// search the sections that has reference to the observable component, the component that had changed
+					$search		= search::get_instance($sqo);
+					$db_result	= $search->search();
+
+					$ar_section	= $db_result->fetch_all(); // Get iterator as array
+			}else{
+				// if observer don't has filter to get the sections to be updated, get the observable section to use
+				// the observe component will be created width this locator (observable section_id and section_tipo but with your own tipo)
+					$ar_section = [$locator];
+			}
+
+		// config. Get the data of the observable component to be used to create the observer component
+		// in case of any relation component will be used to find "the component that I call" or "use my relations"
+			$config = $current_observer->server->config ?? null;
+			if(isset($config)){
+				switch (true) {
+					case (((isset($config->use_observable_dato) && $config->use_observable_dato===true)
+						 && (isset($config->use_self_section) && $config->use_self_section===true))):
+						if (!empty($observable_data)) {
+							$ar_section = [...$ar_section, ...$observable_data];
+						}
+						break;
+
+					case (((isset($config->use_observable_dato) && $config->use_observable_dato===true)
+						 && (isset($config->use_self_section) && $config->use_self_section===false))):
+						$ar_section = $observable_data;
+						break;
+
+					// when the section is not the observer section ($locator) or the section of the observable data ($observable_data)
+					// use the inverse relations to get all sections that call to the observable section
+					case(isset($config->use_inverse_relations) && $config->use_inverse_relations===true):
+						$section_observable = section_record::get_instance(
+							$locator->section_tipo,
+							(int)$locator->section_id
+						);
+						$inverse_locators = $section_observable->get_inverse_references();
+						$ar_section = [];
+						foreach ($inverse_locators as $inv_locator) {
+								// create the locator of the current component, this locator will be use to search, from the observer section, the component that are changed.
+								$current_locator = new locator();
+									$current_locator->set_section_tipo($inv_locator->from_section_tipo);
+									$current_locator->set_section_id($inv_locator->from_section_id);
+							$ar_section[] = $current_locator;
+						}
+						break;
+				}
+			}
+
+		// ar_data. Collect all observer components data
+		// with all locators collected by the different methods, it will create the observable components to be updated.
+			$ar_data = [];
+			if(!empty($ar_section)) {
+
+				$component_name = ontology_node::get_model_by_tipo($observer->component_tipo,true);
+
+				foreach ($ar_section as $current_section) {
+					// create the observer component that will be update
+					$component = component_common::get_instance(
+						$component_name,
+						$observer->component_tipo,
+						$current_section->section_id,
+						'list',
+						DEDALO_DATA_LANG,
+						$current_section->section_tipo,
+						false // bool cache
+					);
+					// get the specific event function in preferences to be fired (instead the default get_data)
+					if(isset($current_observer->server->perform)){
+
+						$function			= $current_observer->server->perform->function;
+						$params_definition	= $current_observer->server->perform->params ?? [];
+						$params = is_array($params_definition)
+							? $params_definition
+							: [$params_definition];
+
+						// check function exits
+							if (!method_exists($component, $function)) {
+								debug_log(__METHOD__
+									. " An error occurred calling function- Method do not exists !  " . PHP_EOL
+									. ' function: ' . to_string($function) . PHP_EOL
+									. ' component_name: ' . $component_name . PHP_EOL
+									. ' component_tipo: ' . $observer->component_tipo . PHP_EOL
+									, logger::ERROR
+								);
+							}
+
+						// exec call
+						$result = call_user_func_array(array($component, $function), $params);
+
+						// check errors on call
+							if ($result===false) {
+								debug_log(__METHOD__
+									. " An error occurred executing call_user_func_array  " . PHP_EOL
+									. ' function: ' . to_string($function) . PHP_EOL
+									. ' component_name: ' . $component_name . PHP_EOL
+									. ' component_tipo: ' . $observer->component_tipo . PHP_EOL
+									, logger::ERROR
+								);
+							}
+
+					}else{
+
+						// force to update the data of the observer component
+						$data = $component->get_data();
+
+						$component->observable_data = ($component_name === 'component_relation_related')
+							? $component->get_data_with_references()
+							: $data;
+
+						// save the new data into the database, this will be used for search into components calculations of info's
+						$component->save();
+					}
+
+					// only will be send the result of the observer component to the current section_tipo and section_id,
+					// this section is the section that user is changed and need to be update width the new data
+					// the sections that are not the current user changed / viewed will be save but don't return the result to the client.
+					if($current_section->section_id == $locator->section_id && $current_section->section_tipo === $locator->section_tipo){
+						// get the JSON of the component to send with the save of the observable component data
+						$component_json = $component->get_json();
+						$ar_data = [...($ar_data ?? []), ...($component_json->data ?? [])];
+					}
+				}//end foreach ($ar_section as $current_section)
+			}// end if(!empty($ar_section ))
+
+
+		return $ar_data;
+	}//end update_observer_data
+
+
+
+	/**
+	* REFRESH_DATA
+	* Runs a conditional data-refresh action on this observer component, triggered
+	* by a change in the component it is observing.
+	*
+	* Currently only the 'on_empty' condition is implemented: when the observed
+	* component's data becomes empty, the specified action (e.g. 'empty_data') is
+	* invoked on this component and the result is persisted via save().
+	*
+	* Used by the observer infrastructure (update_observer_data with perform.function)
+	* to cascade "clear-on-empty" semantics across dependent components.
+	*
+	* @param object $options - Action descriptor:
+	*   {
+	*     "actions": [{
+	*       "condition": "on_empty",
+	*       "action":    "empty_data",
+	*       "arguments": []            // optional; passed to the action method
+	*     }]
+	*   }
+	* @return bool - Always returns true (errors are logged, not thrown)
+	*/
+	public function refresh_data(object $options) : bool {
+
+		$actions = $options->actions;
+
+		foreach ($actions as $item) {
+
+			$condition	= $item->condition;
+			$action		= $item->action;
+			$args		= $item->arguments ?? [];
+
+			$user_fn = strpos($action, '::')===false
+				? [$this, $action] // non static case
+				: $action; // static function case
+
+			switch ($condition) {
+				case 'on_empty':
+					$observable_data = $this->get_observable_data();
+
+					if(empty($observable_data)){
+						call_user_func_array($user_fn, $args);
+						$this->save();
+					}
+					break;
+
+				default:
+					// code...
+					break;
+			}
+
+		}
+
+		return true;
+	}//end refresh_data
+
+
+
+	/**
+	* EMPTY_DATA
+	* Clears all component data across all languages by calling set_data(null).
+	* Used as an observer action (see refresh_data 'on_empty' condition) and
+	* as a utility method for explicit data reset.
+	* @return bool - Result of the underlying set_data() call
+	*/
+	public function empty_data() : bool {
+
+		return $this->set_data(null);
+	}//end empty_data
+
+
+
+	/**
+	* PARSE_SEARCH_DYNAMIC
+	* Resolves a "filtered_by_search_dynamic" property definition into a concrete
+	* SQO filter object by substituting dynamic source references at request time.
+	*
+	* The dynamic filter lives in properties->filtered_by_search_dynamic and contains
+	* one or more filter elements whose 'q' value is a source descriptor:
+	*   { "source": { "component_tipo": "numisdata77", "section_id": "current", "section_tipo": "current" } }
+	*
+	* This method resolves 'current' in section_id/section_tipo to the actual ids
+	* of the component being rendered, loads the source component's data, and returns
+	* a standard SQO filter object ({$and:[…]} or {$or:[…]}) ready for use by
+	* get_list_of_values().
+	*
+	* @param object $ar_filtered_by_search_dynamic - The properties->filtered_by_search_dynamic descriptor
+	* @return object $filter - Concrete SQO filter object
+	*/
+	public function parse_search_dynamic(object $ar_filtered_by_search_dynamic) : object {
+
+		// custom_resolve_section_id
+			$custom_resolve_section_id = function ($source_section_id){
+				switch ($source_section_id) {
+					case 'current':
+						$result = $this->get_section_id();
+						break;
+					default:
+						$result = $source_section_id;
+				}
+				return $result;
+			};
+
+		// custom resolve_section_tipo
+			$custom_resolve_section_tipo = function ($source_section_tipo){
+				switch ($source_section_tipo) {
+					case 'current':
+						$result = $this->get_section_tipo();
+						break;
+					default:
+						$result = $source_section_tipo;
+				}
+				return $result;
+			};
+
+
+		$ar_filter_items = [];
+		foreach ($ar_filtered_by_search_dynamic->filter_elements as $current_element) {
+
+			// source
+				$q				= $current_element->q;
+				$source			= $q->source;
+				$component_tipo	= $source->component_tipo;
+				$section_id		= $custom_resolve_section_id($source->section_id);
+				$section_tipo	= $custom_resolve_section_tipo($source->section_tipo);
+
+				$model_name		= ontology_node::get_model_by_tipo($component_tipo,true);
+				$component		= component_common::get_instance(
+					$model_name,
+					$component_tipo,
+					$section_id,
+					'list',
+					DEDALO_DATA_LANG,
+					$section_tipo
+				);
+
+				$data = $component->get_data();
+				if(!empty($data)){
+
+					// resolve base_value object
+						$base_value = reset($data);
+					// replaces locator from_component_tipo with path info
+						$base_value->from_component_tipo = reset($current_element->path)->component_tipo;
+
+				}else{
+						$base_value = [];
+				}
+
+				// filter item
+					$item = new stdClass();
+						$item->q	= $base_value;
+						$item->path	= $current_element->path;
+
+			$ar_filter_items[] = $item;
+		}
+
+		// operator global
+			$operator = $ar_filtered_by_search_dynamic->operator;
+
+		// filter object
+			$filter = new stdClass();
+				$filter->{$operator} = $ar_filter_items;
+
+
+		return $filter;
+	}//end parse_search_dynamic
+
+
+
+	/**
+	* GET_AR_LIST_OF_VALUES
+	* @deprecated Use get_list_of_values() instead.
+	* Kept as a thin backward-compatible alias (widgets, ontology-driven callers,
+	* tests) delegating to the canonical request_config/ddo_map resolver.
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param bool $include_negative = false
+	* @return object $response
+	*/
+	public function get_ar_list_of_values(string $lang=DEDALO_DATA_LANG, bool $include_negative=false) : object {
+
+		return $this->get_list_of_values($lang, $include_negative);
+	}//end get_ar_list_of_values
+
+
+
+	/**
+	* GET_LIST_OF_VALUES
+	* Retrieves all records of the target section and creates an object with the literal and his locator of the value.
+	* It is used by component_select, component_check_box, component_radio_button ... to show the possible values of the component.
+	* Use the request_config of the component to get the ddo_map to show and the ddo_map to hide (use as internal data values)
+	* Sample of use with fixed_filter: 'mdcat3223'
+	* @param string $lang
+	* 	Used to resolve the literal
+	* @param bool $include_negative = false
+	* 	Include negative section_id values (like root user -1) in results
+	* @return object $response
+	*/
+	public function get_list_of_values( string $lang=DEDALO_DATA_LANG, bool $include_negative=false ) : object {
+
+		$start_time = start_time();
+
+		// response
+			$response = new stdClass();
+				$response->result	= [];
+				$response->msg		= __METHOD__ . ' Error. Request failed ';
+				$response->errors	= [];
+
+		// request config (mandatory)
+			$request_config = $this->request_config ?? [];
+
+		// dedalo_request_config
+			$dedalo_request_config = array_find((array)$request_config, function($el){
+				return isset($el->api_engine) && $el->api_engine==='dedalo';
+			});
+			// if the component has not created his own request_config, create new one
+			if (!isset($dedalo_request_config)) {
+				$built_config = $this->build_request_config();
+				$dedalo_request_config = !empty($built_config) ? $built_config[0] : null;
+			}
+
+		// empty request config case (ERROR). Stop execution
+			if (empty($dedalo_request_config)) {
+				debug_log(__METHOD__
+					. " Error: component without request_config!!!" .PHP_EOL
+					. ' tipo: ' . $this->tipo . PHP_EOL
+					. ' section_id: '. $this->section_id .PHP_EOL
+					. ' section_tipo: '. $this->section_tipo
+					, logger::ERROR
+				);
+				$response->errors[] = 'Empty dedalo_request_config';
+				return $response;
+			}
+
+		// 1 search all sections in the target list
+
+			// Note for component_relation_model, it uses the request config ONLY to get the component to be showed
+			// is NOT possible to define all situations in the request config definition
+			// (same definition for multiple virtual sections with multiple hierarchy_types combination, toponymy, thematic, etc)
+			// its section_tipo is defined by the its mode: edit, list, search or search in thesaurus tree (multiple selection of possibilities)
+			// edit, list and search modes in its own section it will be the own specific virtual section
+			// for ex: ["es2"]
+			// search in thesaurus tree will be the sections that user has selected in the typology sections in filter
+			// for ex: toponymy selection would be ["es2","fr2"]
+			// for any other components will be the request config definition in sqo.
+			$ar_target_section = $this->get_model()==='component_relation_model'
+				? $this->get_ar_target_section_tipo()
+				: ($dedalo_request_config->sqo->section_tipo ?? []);
+
+				// ar_sections_tipo. All target sections defined
+				$ar_sections_tipo = [];
+
+				// check if the sections exist by checking his model resolution.
+				// if the section doesn't' exist, it is not included in the resolution.
+				foreach ($ar_target_section as $current_section) {
+					$current_sections_tipo = $current_section->tipo ?? $current_section;
+					$model = ontology_node::get_model_by_tipo($current_sections_tipo);
+					if( empty($model) ){
+						debug_log(__METHOD__
+							. " Skipped section it doesn't exists: " . to_string( $current_sections_tipo )
+							, logger::WARNING
+						);
+						continue;
+					}
+					// valid section are added
+					$ar_sections_tipo[] = $current_sections_tipo;
+				}
+
+			// cache of the list_of_values, if the list was already calculated, return it
+			// hash includes request_config filter and component property filters
+			// (filtered_by_search / filtered_by_search_dynamic) to avoid cache collisions
+			// between filtered and unfiltered resolutions of the same target section.
+				$filter_for_hash = $dedalo_request_config->sqo->filter
+					?? $this->properties->filtered_by_search_dynamic
+					?? $this->properties->filtered_by_search
+					?? null;
+				$hash_id = isset($filter_for_hash)
+					? md5(json_encode($filter_for_hash))
+					: 'full';
+
+				// COMP-01: include the logged user id in the cache key. The SQO below
+				// is project-filtered per requesting user (search::set_up defaults
+				// skip_projects_filter=false), so the option list is user-specific.
+				// Without the user id, the persistent worker would serve one user's
+				// project-filtered list to another (cross-tenant over/under-exposure).
+				// Pairs with the per-request cache clear (COMP-03).
+				$uid_user = (string) logged_user_id();
+				// include_negative changes the result set (e.g. it includes/excludes the
+				// root user from the users list, see trait.where.php), so it must be part
+				// of the cache key — otherwise the two shapes collide across worker requests.
+				$neg = $include_negative ? '_n1' : '_n0';
+				$uid = !empty($ar_sections_tipo)
+					? implode('-', $ar_sections_tipo) .'_'. $lang . '_' . $hash_id . '_u' . $uid_user . $neg
+					: $this->tipo .'_'. $lang . '_'. $hash_id . '_u' . $uid_user . $neg;
+
+				if (isset(self::$list_of_values_data_cache[$uid])) {
+
+					if(SHOW_DEBUG===true) {
+						// metrics (datalist cache hit)
+						metrics::inc('datalist_total_calls');
+						metrics::inc('datalist_total_calls_cached');
+						metrics::add_metric('datalist_total_time', $start_time);
+						// $response->request_config	= json_encode($request_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+						self::$list_of_values_data_cache[$uid]->debug	= 'Total time: ' . exec_time_unit($start_time,'ms').' ms';
+					}
+
+					// response OK from cache
+					return self::$list_of_values_data_cache[$uid];
+				}
+
+			// sqo create and search
+				// set the limit 0 to retrieve all records of the target section
+				$limit = 0;
+				// search_query_object
+				$sqo = new search_query_object();
+					$sqo->set_select([]);
+					$sqo->set_section_tipo($ar_sections_tipo);
+					$sqo->set_limit($limit);
+					if(!empty($dedalo_request_config->sqo->fixed_filter)){
+						$fixed_filter = $dedalo_request_config->sqo->fixed_filter[0] ?? null;
+						if (is_object($fixed_filter)) {
+							$sqo->set_filter($fixed_filter);
+						}else{
+							debug_log(__METHOD__
+								. " Ignored fixed filter. Bad format " . PHP_EOL
+								. to_string($dedalo_request_config->sqo->fixed_filter)
+								, logger::ERROR
+							);
+						}
+					}elseif (isset($this->properties->filtered_by_search_dynamic) || isset($this->properties->filtered_by_search)) {
+						// component property filters parity (legacy get_ar_list_of_values behavior).
+						// applied only when no request_config fixed_filter is present.
+						$properties_filter = isset($this->properties->filtered_by_search_dynamic)
+							? $this->parse_search_dynamic($this->properties->filtered_by_search_dynamic)
+							: json_decode( json_encode($this->properties->filtered_by_search) );
+						$sqo->set_filter($properties_filter);
+					}
+
+			$search = search::get_instance($sqo);
+			// include_negative values to include root user in list
+			if ($include_negative===true) {
+				$search->include_negative = true;
+			}
+			$db_result = $search->search();
+
+		// 2 with all sections, create the list_of values
+			$result = [];
+			foreach ( $db_result as $row ) {
+
+				// create the section instance and set current row as his own data
+				// it prevent to call multiple times to DDBB
+				$section_record = section_record::get_instance( $row->section_tipo, (int)$row->section_id );
+				$section_record->set_data( $row );
+
+				// get the locator of the current row
+				$locator = new locator();
+					$locator->set_section_tipo($row->section_tipo);
+					$locator->set_section_id($row->section_id);
+
+				// get the values of the show
+				$show_ddo_map = $dedalo_request_config->show->ddo_map ?? [];
+
+				$ar_label = [];
+				foreach ($show_ddo_map as $ddo) {
+
+					// ignore non component ddo
+					if (empty($ddo->model) || strpos($ddo->model, 'component_')===false) {
+						debug_log(__METHOD__
+							. " Ignored non component model ddo in get_list_of_values " . PHP_EOL
+							. ' model: ' . to_string($ddo->model ?? null) . PHP_EOL
+							. ' ddo: ' . to_string($ddo)
+							, logger::ERROR
+						);
+						continue;
+					}
+
+					// create the component to be resolved
+					$current_component = component_common::get_instance(
+						$ddo->model, // string model
+						$ddo->tipo, // string tipo
+						$row->section_id, // string section_id
+						'solved', // string mode
+						$lang, // string lang
+						$row->section_tipo // string section_tipo
+					);
+					// get the literal of the component
+					$ar_label[] = $current_component->get_value();
+				}
+
+				// ar_hide. Get the values of the hide components
+				// hide component are used as internal data of the component, it doesn't show into the list.
+				$ar_hide = [];
+				if(isset($dedalo_request_config->hide)){
+					$hide_ddo_map = $dedalo_request_config->hide->ddo_map ?? [];
+
+					foreach ($hide_ddo_map as $ddo) {
+
+						// create the component to be resolved
+						$current_component = component_common::get_instance(
+							$ddo->model, // string model
+							$ddo->tipo, // string tipo
+							$row->section_id, // string section_id
+							'solved', // string modo
+							$lang, // string lang
+							$row->section_tipo // string section_tipo
+						);
+						// create a object with the literal and his own information
+						$hide_item = new stdClass();
+							$hide_item->literal			= $current_component->get_value();
+							$hide_item->tipo			= $ddo->tipo;
+							$hide_item->section_id		= $row->section_id;
+							$hide_item->section_tipo	= $row->section_tipo;
+
+						$ar_hide[] = $hide_item;
+					}
+				}
+				// for the literals to show, create a label with the fields_separator
+				$label = implode(' | ', $ar_label);
+
+				$item = new stdClass();
+					$item->value		= $locator;
+					$item->label		= $label;
+					$item->section_id	= $row->section_id;
+					$item->hide			= $ar_hide;
+
+				$result[] = $item;
+			}
+
+		// Sort result for easy user select
+			if (isset($this->properties->sort_by)) {
+				$custom_sort = reset($this->properties->sort_by); // Only one at this time
+				if ($custom_sort->direction==='DESC') {
+					usort($result, function($a,$b) use($custom_sort){
+						$val_a = $a->{$custom_sort->path} ?? 0;
+						$val_b = $b->{$custom_sort->path} ?? 0;
+						if (is_numeric($val_a) && is_numeric($val_b)) {
+							return $val_b <=> $val_a;
+						}
+						return strnatcmp((string)$val_b, (string)$val_a);
+					});
+				} else {
+					usort($result, function($a,$b) use($custom_sort){
+						$val_a = $a->{$custom_sort->path} ?? 0;
+						$val_b = $b->{$custom_sort->path} ?? 0;
+						if (is_numeric($val_a) && is_numeric($val_b)) {
+							return $val_a <=> $val_b;
+						}
+						return strnatcmp((string)$val_a, (string)$val_b);
+					});
+				}
+			} else {
+				// Default. Alphabetic ascendant label
+				usort($result, function($a,$b){
+					return strnatcmp($a->label, $b->label);
+				});
+			}
+
+		// response OK
+			$response->result	= $result;
+			$response->msg		= 'OK';
+			if(SHOW_DEBUG===true) {
+				// $response->request_config	= json_encode($request_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+				// metrics (datalist cache miss / fresh resolution)
+				metrics::inc('datalist_total_calls');
+				metrics::add_metric('datalist_total_time', $start_time);
+				$response->debug = 'Total time: ' . exec_time_unit($start_time,'ms').' ms';
+			}
+
+		// cache adds the response to cache to be reused
+			self::$list_of_values_data_cache[$uid] = $response;
+			// Manage cache size to prevent memory leaks (using inherited method)
+			self::manage_cache_size(self::$list_of_values_data_cache);
+
+
+		return $response;
+	}//end get_list_of_values
+
+
+
+	/**
+	* DECORATE_UNTRANSLATED
+	* Wraps a string in a <mark> HTML element to visually flag untranslated
+	* fallback content in the UI (e.g. when a value exists in the default language
+	* but not in the currently requested language).
+	* Returns null unchanged so callers do not need a null guard before calling.
+	* @param string|null $string - Value to decorate, or null to pass through
+	* @return string|null - HTML-wrapped string, or null
+	*/
+	public static function decorate_untranslated(?string $string) : ?string {
+
+		if (is_null($string)) {
+			return null;
+		}
+
+		return '<mark>'.to_string($string).'</mark>';
+	}//end decorate_untranslated
+
+
+
+	/**
+	* GET_AR_TARGET_SECTION_DDO
+	* Returns the DDO (data-definition object) descriptors of the target sections
+	* that supply records to this portal or autocomplete component.
+	*
+	* The target sections are the remote sections this component links TO —
+	* not the section this component itself lives in (that is $this->section_tipo).
+	* They are derived from request_config->sqo->section_tipo across all context items.
+	*
+	* Each DDO has the shape:
+	* {
+	*   typo: 'ddo',
+	*   tipo: 'dd64',
+	*   color: '#b9b9b9',
+	*   label: 'Yes/No',
+	*   matrix_table: 'matrix_dd',
+	*   model: 'section',
+	*   permissions: 3,
+	*   buttons: [{...}]
+	* }
+	* @return array - Flat list of DDO objects (may be empty when request_config is absent)
+	*/
+	public function get_ar_target_section_ddo() : array {
+
+		// cached
+			// if(isset($this->ar_target_section_tipo)) {
+			// 	return $this->ar_target_section_tipo;
+			// }
+
+		$ar_target_section_ddo = [];
+
+		// config_context. Get_config_context normalized
+			$ar_request_config = $this->get_ar_request_config();
+			foreach ($ar_request_config as $config_context_item) {
+				$ar_current_section_tipo = $config_context_item->sqo->section_tipo ?? [];
+				$ar_target_section_ddo = [ ...$ar_target_section_ddo, ...$ar_current_section_tipo];
+			}
+
+		// empty case
+			if (empty($ar_target_section_ddo)) {
+				$component_name = ontology_node::get_term_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true);
+				debug_log(__METHOD__
+					. " Error Processing Request. Please, define target section structure for component: $component_name".PHP_EOL
+					. ' tipo: '. $this->tipo .PHP_EOL
+					. ' model: ' .get_called_class()
+					, logger::DEBUG
+				);
+			}
+
+		// Fix value
+			// $this->ar_target_section_ddo = $ar_target_section_ddo;
+
+		return $ar_target_section_ddo;
+	}//end get_ar_target_section_ddo
+
+
+
+	/**
+	* SET_CALLER_DATAFRAME
+	* Sets the dataframe pairing caller context, normalizing an untyped stdClass
+	* ({section_tipo, id_key, main_component_tipo}) into the typed dataframe_caller
+	* DTO when possible. Overrides the magic set accessor.
+	* @param object $caller_dataframe
+	* @return void
+	*/
+	public function set_caller_dataframe( object $caller_dataframe ) : void {
+
+		if (!($caller_dataframe instanceof dataframe_caller)) {
+			$normalized = dataframe_caller::from_legacy($caller_dataframe);
+			if ($normalized!==null) {
+				$caller_dataframe = $normalized;
+			}else{
+				debug_log(__METHOD__
+					. ' Unable to normalize caller_dataframe to dataframe_caller DTO. Keeping raw object' . PHP_EOL
+					. ' caller_dataframe: ' . to_string($caller_dataframe) . PHP_EOL
+					. ' component tipo: ' . $this->tipo
+					, logger::WARNING
+				);
+			}
+		}
+
+		$this->caller_dataframe = $caller_dataframe;
+	}//end set_caller_dataframe
+
+
+
+	/**
+	* GET_DATAFRAME_DDO
+	* get the components dataframe when they are defined in RQO
+	* if the component has not a dataframe return null
+	* @return array | null $ar_dataframe_ddo
+	*  Array of ddo objects as:
+	* [
+	*	{
+	*		"info": "uncentanty component_dataframe",
+	*		"tipo": "numisdata1448",
+	*		"view": "default",
+	*		"parent": "self",
+	*		"section_tipo": "numisdata3"
+	*	}
+	* ]
+	*/
+	public function get_dataframe_ddo() : array | null {
+
+		// cached
+			if(isset($this->ar_dataframe_ddo)) {
+				return $this->ar_dataframe_ddo;
+			}
+
+		$ar_dataframe_ddo = [];
+		// config_context. Get_config_context normalized
+			$ar_request_config = $this->get_ar_request_config();
+			foreach ($ar_request_config as $config_context_item) {
+				$ddo_map = $config_context_item->show->ddo_map;
+				foreach ($ddo_map as $ddo) {
+					$model = ontology_node::get_model_by_tipo($ddo->tipo);
+					if($model === 'component_dataframe'){
+						$ar_dataframe_ddo[] = $ddo;
+					}
+				}
+			}
+
+		// empty case
+			if (empty($ar_dataframe_ddo)) {
+				$ar_dataframe_ddo = null;
+			}
+
+		// Fix value
+			$this->ar_dataframe_ddo = $ar_dataframe_ddo;
+
+		return $ar_dataframe_ddo;
+	}//end get_dataframe_ddo
+
+
+
+	/**
+	* REMOVE_DATAFRAME_DATA
+	* Remove the frame data paired with the main component item identified by $locator.
+	* Called when the main component removes one of its rows (@see update_data_value()).
+	* Unified contract: pairs by the item id ($locator->id) and delegates to
+	* remove_dataframe_data_by_id(); the legacy target-keyed cascade is retired.
+	* @param object $locator - the removed main item locator; must carry ->id (the item id)
+	* @return bool
+	*/
+	public function remove_dataframe_data( object $locator ) : bool {
+
+		// Unified contract: cascade by the MAIN DATA ITEM id only.
+		// Legacy target-keyed removal (section_id_key/section_tipo_key built from the
+		// locator's target section) has been retired — frames are paired exclusively
+		// by id_key, so the cascade delegates to remove_dataframe_data_by_id().
+		if (isset($locator->id)) {
+			return $this->remove_dataframe_data_by_id( (int)$locator->id );
+		}
+
+		// Pre-migration locator without an item id: there is no id_key to pair on,
+		// so nothing can be cascaded under the unified contract. Warn and no-op
+		// (run dataframe_v7_migration to backfill ids).
+		debug_log(__METHOD__
+			. ' Skipped dataframe cascade: locator has no item id (pre-migration data). Run dataframe_v7_migration.' . PHP_EOL
+			. ' locator: ' . to_string($locator)
+			, logger::WARNING
+		);
+
+		return true;
+	}//end remove_dataframe_data
+
+
+
+	/**
+	* GET_AR_TARGET_SECTION_TIPO
+	* Returns a flat array of section tipo strings for the sections this portal or
+	* autocomplete component links to. Thin wrapper over get_ar_target_section_ddo()
+	* that extracts just the tipo property from each DDO object.
+	*
+	* Not to be confused with $this->section_tipo (the section this component belongs to).
+	* @return array - Array of tipo strings, e.g. ['dd153', 'dd64']
+	*/
+	public function get_ar_target_section_tipo() : array {
+
+		$ar_target_section_ddo	= $this->get_ar_target_section_ddo();
+		$ar_target_section_tipo	= array_map(function($ddo){
+			return $ddo->tipo;
+		}, $ar_target_section_ddo);
+
+
+		return $ar_target_section_tipo;
+	}//end get_ar_target_section_tipo
+
+
+
+	/**
+	* GET_DIFFUSION_DATA
+	* Resolves the diffusion payload for this component as an array of
+	* diffusion_data_object items consumed by diffusion_chain_processor.
+	*
+	* Resolution order:
+	* 1. ddo->fn (custom function): if set, the named method is called on $this.
+	*    - If it is a native PHP method of this class the return value is set
+	*      directly on the default diffusion_data_object.
+	*    - If it is loaded via common::__call() (a diffusion_fn extension) the
+	*      full array of diffusion_data_object items is replaced.
+	* 2. Default resolution: iterates get_data() items and maps each to a
+	*    diffusion_data_object using lang and value (or the raw item when no
+	*    'value' property exists). An optional ddo->data_slice can limit the
+	*    range of items processed.
+	*
+	* Note: component_section_id overrides this method to return its integer
+	* section_id value instead of the generic data array.
+	*
+	* @param object $ddo - DDO descriptor from the diffusion ontology map
+	* @param string|null $diffusion_element_tipo = null - The diffusion element tipo (passed through to custom fn)
+	* @return array - Array of diffusion_data_object instances (may be empty)
+	* @see diffusion_chain_processor (consumes the returned diffusion_data_object items)
+	* @test false
+	*/
+	public function get_diffusion_data( object $ddo, ?string $diffusion_element_tipo = null ) : array {
+
+		$diffusion_data = [];
+
+		// Default diffusion data object
+		$diffusion_data_object = new diffusion_data_object( (object)[
+			'tipo'	=> $this->tipo,
+			'lang'	=> null,
+			'value'	=> null,
+			'id'	=> $ddo->id ?? null
+		]);
+
+		$diffusion_data[] = $diffusion_data_object;
+
+		// Custom function case
+			// If ddo provide a specific function to get its diffusion data
+			// check if it exists and can be used by diffusion environment
+			// if all is ok, use this function and return the value returned by this function
+			$fn = $ddo->fn ?? null;
+
+			if( $fn ){
+				// check if the function exist
+				// if not, return a null value in diffusion data
+				// and stop the resolution
+				// 'is_callable' allows magic methods
+				if( !is_callable([$this, $fn]) ){
+					debug_log(__METHOD__
+						. " function doesn't exist " . PHP_EOL
+						. " function name: ". $fn
+						, logger::ERROR
+					);
+
+					return $diffusion_data;
+				}
+
+				// execute the function directly since it's already validated
+				try {
+					$fn_data = $this->$fn( $ddo, $diffusion_element_tipo );
+
+					switch (true) {
+						// if the function is a method of the current component
+						// it will return any kind of values.
+						case method_exists($this, $fn):
+							$diffusion_data_object->set_value( $fn_data );
+
+							return $diffusion_data;
+						// default, diffusion_fn method loaded by common __call
+						// it will return an array of diffusion_data_object
+						// and the default diffusion_data_object will be replaced
+						default:
+							// overwrite default diffusion data
+							$diffusion_data = $fn_data;
+							break;
+					}
+				} catch (Throwable $e) {
+					debug_log(__METHOD__
+						. " error executing diffusion function " . PHP_EOL
+						. " function name: ". $fn . PHP_EOL
+						. " error: " . $e->getMessage()
+						, logger::ERROR
+					);
+					// DIFFU-04: this method is typed `: array`. On a fn failure return
+					// an empty array, not null, or the return below raises a TypeError
+					// (and the catch hides the original fn error behind it).
+					$fn_data = [];
+				}
+				// overwrite default diffusion data (coerce null defensively)
+				$diffusion_data = $fn_data ?? [];
+
+				return $diffusion_data;
+			}
+
+		// Resolve the data by default
+			// If the ddo doesn't provide any specific function the component will use a get_url as default.
+			$data = $this->get_data();
+
+			// if the ddo provides a data_slice property, use it to slice the data
+			if(isset($ddo->data_slice) && !empty($data)) {
+				$data = array_slice($data, $ddo->data_slice->offset, $ddo->data_slice->length);
+			}
+
+			if(!empty($data)) {
+				// ddo lang pin (opt-in): when the ddo fixes a lang, v6 resolves this terminal
+				// in that fixed lang (e.g. DEDALO_DATA_LANG) regardless of the diffusion row
+				// lang. Keep only that lang's entry and emit it lang-neutral (lang=null) so the
+				// pinned value appears in EVERY diffusion-lang row. ddos without ->lang are
+				// unaffected (e.g. type_full_value's numisdata81 "Clave", a translatable field
+				// v6 always emits in the data lang for all 12 diffusion langs).
+				$pin_lang = $ddo->lang ?? null;
+				$diffusion_data = [];
+				foreach ($data as $current_data) {
+					if(!empty($current_data)) {
+
+						$current_lang = is_object($current_data) ? ($current_data->lang ?? null) : null;
+						if ($pin_lang !== null && $current_lang !== null && $current_lang !== $pin_lang) {
+							continue;
+						}
+
+						$diffusion_data_object = new diffusion_data_object( (object)[
+							'tipo'	=> $this->tipo,
+							'lang'	=> ($pin_lang !== null) ? null : $current_lang,
+							'value'	=> $current_data->value ?? $current_data ?? null,
+							'id'	=> $ddo->id ?? null
+						]);
+
+						$diffusion_data[] = $diffusion_data_object;
+					}
+				}
+			}
+
+
+		return $diffusion_data;
+	}//end get_diffusion_data
+
+
+
+	/**
+	* UPDATE_DATA_VERSION
+	* Base stub for migration / data-versioning tools. Returns a "not implemented"
+	* response (result=0) for components that do not override this method.
+	*
+	* Subclasses that need to migrate their stored data format (e.g. after a schema
+	* change) override this method and return:
+	*   result=1  data was updated and saved
+	*   result=2  data was inspected but no change was required
+	*
+	* Called by tool_update_cache and similar migration scripts, not during normal
+	* request handling.
+	*
+	* @param object $request_options - Options object; recognized keys:
+	*   update_version, data_unchanged, reference_id, tipo, section_id, section_tipo,
+	*   context (default 'update_component_data')
+	* @return object $response - {result: 0, msg: string}
+	*/
+	public static function update_data_version(object $request_options) : object {
+
+		$options = new stdClass();
+			$options->update_version	= null;
+			$options->data_unchanged	= null;
+			$options->reference_id		= null;
+			$options->tipo				= null;
+			$options->section_id		= null;
+			$options->section_tipo		= null;
+			$options->context			= 'update_component_data';
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+			$update_version = $options->update_version;
+			$data_unchanged = $options->data_unchanged;
+			$reference_id 	= $options->reference_id;
+
+
+		$response = new stdClass();
+			$response->result	= 0;
+			$response->msg		= "This component ".get_called_class()." don't have update_data_version, please check the class of the component <br />";
+
+
+		return $response;
+	}//end update_data_version
+
+
+
+	/**
+	* REGENERATE_COMPONENT
+	* Forces a read-normalise-save cycle on this component instance to clean up
+	* corrupted or legacy-format data and re-trigger all save side-effects
+	* (Time Machine, activity log, observer fan-out).
+	*
+	* Steps:
+	* 1. get_data() — ensures data is loaded from DB (prevents saving empty state).
+	* 2. set_data($data) — normalises the data (e.g. [null] → null, wraps scalars).
+	* 3. save() — persists and triggers all secondary effects.
+	*
+	* (!) Always call get_data() first; calling save() without loading data
+	*     may overwrite the DB value with null.
+	*
+	* @see class.tool_update_cache.php
+	* @return bool - Always true (errors are logged internally by save())
+	*/
+	public function regenerate_component() : bool {
+
+		// Force load data always !IMPORTANT
+		$data = $this->get_data();
+
+		// force format correctly empty data like [null] -> null
+		$this->set_data($data);
+
+		// Save component data
+		$this->save();
+
+
+		return true;
+	}//end regenerate_component
+
+
+
+	/**
+	* GET_COMPONENT_PERMISSIONS
+	* @return int $this->permissions
+	*/
+	public function get_component_permissions() : int {
+
+		if (isset($this->permissions)) {
+			return $this->permissions;
+		}
+
+		// Delegate to the static resolver for all special cases that
+		// do not require $this (search mode, own-user, TM mode, IRI, etc.).
+			$this->permissions = self::resolve_component_read_permission(
+				$this->section_tipo,
+				$this->tipo,
+				isset($this->section_id) ? (int)$this->section_id : null,
+				$this->mode
+			);
+
+		// Instance-only override: TM notes owner upgrade.
+		// resolve_component_read_permission() returns 1 (read) for all
+		// TM notes; the creator of the note gets write (2). This check
+		// requires $this->get_my_section_record() which is not available
+		// statically, so it lives here as a post-delegation override.
+			if ($this->section_tipo===DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO) {
+				$section_record = $this->get_my_section_record();
+				if (logged_user_id()===$section_record->get_created_by_user_id()) {
+					$this->permissions = 2;
+				}
+			}
+
+		return $this->permissions;
+	}//end get_component_permissions
+
+
+
+	/**
+	* RESOLVE_COMPONENT_READ_PERMISSION
+	* Single source of truth for component permission special cases.
+	* Used by both get_component_permissions() (instance method) and
+	* dd_core_api::build_json_rows (pre-hoc / post-hoc gates).
+	*
+	* Handles all special-case grants and downgrades that
+	* common::get_permissions() does not cover:
+	*  - Search mode: thesaurus, metadata tipos, search section_ids
+	*  - Own-user access: security_admin (downgrade to 1), profile/dev (1),
+	*    self-data (email, password, image, full_name → 2)
+	*  - TM notes: minimum read (1); owner upgrade to 2 is done in
+	*    get_component_permissions() via get_my_section_record()
+	*  - TM mode on dd15: read-only (1)
+	*  - IRI dataframe dd560: always writable (2)
+	*
+	* (!) All component special cases MUST be added here, NOT in
+	*     get_component_permissions() directly. The instance method only
+	*     contains overrides that require $this (e.g. get_my_section_record).
+	*
+	* @param string $section_tipo
+	* @param string $tipo
+	* @param int|null $section_id
+	* @param string $mode
+	* @return int Permissions value (0=none, 1=read, 2=write)
+	*/
+	public static function resolve_component_read_permission(
+		string $section_tipo,
+		string $tipo,
+		?int $section_id,
+		string $mode
+	) : int {
+
+		// Base permission from generic check
+			$permissions = common::get_permissions($section_tipo, $tipo);
+
+		// Search mode special cases
+			if ($mode==='search') {
+
+				if ($section_tipo===DEDALO_THESAURUS_SECTION_TIPO) {
+					return 2; // Allow all users to search in thesaurus
+				}
+
+				if (in_array($tipo, section::get_metadata_definition_tipos(), true)) {
+					return 2; // Allow all users to search with section info components
+				}
+
+				// legacy 'search_10' is not supported since var $section_id becomes int|null type only
+				if ($section_id === 0) {
+					return 2; // Needed to allow autocomplete save in search mode
+				}
+
+				return $permissions;
+			}
+
+		// Non-search mode: evaluate all special cases even when generic
+		// check returns >= 1, because some cases DOWNGRADE permissions
+		// (e.g. DEDALO_SECURITY_ADMINISTRATOR_TIPO forces 1 regardless).
+
+		// DEDALO_SECTION_USERS_TIPO: own user record
+			if ($section_tipo===DEDALO_SECTION_USERS_TIPO) {
+
+				$user_id = logged_user_id();
+				if (!empty($user_id) && $section_id !== null && (int)$section_id === (int)$user_id) {
+
+					// Admin General. Former component_security_administrator.
+					// Always read-only for self user (downgrade from any value)
+						if ($tipo===DEDALO_SECURITY_ADMINISTRATOR_TIPO) {
+							return 1;
+						}
+
+					// Profile / developer / username / section_id: read-only
+					// for non-global-admins (downgrade to prevent self-elevation)
+						if (in_array($tipo, [
+							DEDALO_USER_PROFILE_TIPO,
+							DEDALO_USER_DEVELOPER_TIPO,
+							DEDALO_USER_NAME_TIPO,
+							'dd330' // section_id
+						], true) && security::is_global_admin($user_id)===false) {
+							return 1;
+						}
+
+					// Editable self-data (used by tool_user_admin)
+						if (in_array($tipo, [
+							DEDALO_FULL_USER_NAME_TIPO,
+							DEDALO_USER_EMAIL_TIPO,
+							DEDALO_USER_PASSWORD_TIPO,
+							DEDALO_USER_IMAGE_TIPO
+						], true)) {
+							return 2;
+						}
+					}
+				}
+
+		// Time machine notes: minimum read (1) for all users.
+		// Owner upgrade to 2 is handled by get_component_permissions()
+		// via get_my_section_record() — not available statically.
+			if ($section_tipo===DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO) {
+				return 1;
+			}
+
+		// SEC-024 (§9.4 follow-up): TM bookkeeping components.
+		// When the component lives in the time-machine bookkeeping
+		// section (`dd15`) and is being rendered in tm mode, no
+		// real user has direct schema permissions on `dd15` (it is
+		// not project-assigned). Granting read here is safe because:
+		//   1. Reaching this point requires the caller to have
+		//      already passed the per-record permission gate on
+		//      the *origin* section (see sections_json.php tm path).
+		//   2. The TM rows are constrained by `filter_by_locators`
+		//      to the specific (section_tipo, section_id) the user
+		//      is already viewing — no cross-record exposure.
+		//   3. Write/revert flows go through `tool_time_machine`
+		//      which has its own per-record gate (see
+		//      tool_time_machine::apply_value /
+		//      bulk_revert_process).
+			if ($mode==='tm' && $section_tipo===DEDALO_TIME_MACHINE_SECTION_TIPO) {
+				return 1; // read-only schema render
+			}
+
+		// IRI dataframe (dd560): always writable
+			if ($tipo==='dd560') {
+				return 2;
+			}
+
+		// No special case matched; return generic check result
+			return $permissions;
+	}//end resolve_component_read_permission
+
+
+
+	/**
+	* GET_INFO
+	* Returns a basic element information object, extending the parent common::get_info()
+	* result with the component's section_id. Used by debugging utilities and API
+	* introspection endpoints.
+	* @return object $info - Info object with at minimum: tipo, label, model, section_id
+	*/
+	public function get_info() : object {
+
+		$info = parent::get_info();
+		$info->section_id = $this->section_id;
+
+		return $info;
+	}//end get_info
+
+
+
+
+
+	################################## SEARCH ########################################################
+
+
+
+	/**
+	* GET_SEARCH_QUERY
+	* Normalises and resolves an incoming SQO filter element into one or more
+	* concrete SQL-ready query objects for this component type.
+	*
+	* Called statically (via get_called_class() dispatch) so that each concrete
+	* component subclass can apply its own resolve_query_object_sql() variant
+	* without overriding this orchestration method.
+	*
+	* Processing steps:
+	* 1. Injects component_path (leaf component tipo) when missing.
+	* 2. Defaults lang to 'all' when not specified.
+	* 3. If the query_object is itself an operator group ({$and:[…]} / {$or:[…]}),
+	*    each leaf is resolved individually via resolve_query_object_sql().
+	* 4. Otherwise, the single object is resolved directly.
+	* 5. Empty results are stripped from the returned array.
+	*
+	* @param object $query_object - SQO filter element, e.g.:
+	*   {
+	*     "q": "pepe",
+	*     "lang": "lg-spa",
+	*     "path": [
+	*       { "section_tipo": "oh1", "component_tipo": "oh24", "target_section": "rsc197" },
+	*       { "section_tipo": "rsc197", "component_tipo": "rsc85", "model": "component_input_text" }
+	*     ]
+	*   }
+	* @return array - Array of one or more resolved SQO filter items
+	*/
+	public static function get_search_query( object $query_object ) : array {
+
+		// empty q case
+			// if (empty($query_object->q)) {
+			// 	return array();
+			// }
+
+		// component_path
+			if(isset(end($query_object->path)->component_tipo)) {
+				$component_tipo = end($query_object->path)->component_tipo;
+				// default component path
+				$query_object->component_path = [$component_tipo];
+			}
+
+		// component lang
+			if (!isset($query_object->lang)) {
+				// default
+				$query_object->lang = 'all';
+			}
+
+		// component class name calling here
+			$called_class = get_called_class();
+
+		// split multiple (true by default)
+			// (!) Moved split logic to components
+			// Clone always to prevent changes in the original object
+			$current_query_object = clone $query_object;
+
+		// conform each object
+			if (search::is_search_operator($current_query_object)===true) {
+				foreach ($current_query_object as $operator => $ar_elements) {
+					foreach ($ar_elements as $c_query_object) {
+						// update all resolved query objects
+						// Note that object $c_query_object is changed by the component, is not a new object,
+						// it's the same object but with the component additions (sentence, params).
+						if(!isset($c_query_object->sentence)) {
+							$c_query_object = $called_class::resolve_query_object_sql( $c_query_object );
+						}
+					}
+				}
+			}else{
+				if(!isset($current_query_object->sentence)) {
+					$current_query_object = $called_class::resolve_query_object_sql( $current_query_object );
+				}
+			}
+
+		// convert to array always
+			$ar_query_object = is_array($current_query_object)
+				? $current_query_object
+				: [$current_query_object];
+
+		// safe ar_query_object. Remove empty values
+			$safe_ar_query_object = [];
+			foreach ($ar_query_object as $current_value) {
+				if(!empty($current_value)) {
+					$safe_ar_query_object[] = $current_value;
+				}
+			}
+
+
+		return $safe_ar_query_object;
+	}//end get_search_query
+
+
+
+	/**
+	* HANDLE_QUERY_SPLITTING
+	* Component split queries manager resolves each q part individually and
+	* creates an group with all query elements resolved.
+	* @param object $query_object
+	* 	The original query object.
+	* @param array $q_items
+	* 	An array of query items (e.g., ['Pérez', 'López']).
+	* @param string $operator_between = '$and'
+	* 	The logical operator used to combine the split queries. Default is '$and'.
+	* @return object $group
+	* 	The group object containing resolved queries.
+	*/
+	public static function handle_query_splitting(object $query_object, array $q_items, string $operator_between='$and') : object {
+
+		// Determine the resolver method dynamically from the called class (component)
+		$resolver = [get_called_class(), 'resolve_query_object_sql'];
+
+		// Initialize the group object with the specified operator
+		$group = new stdClass();
+			$group->{$operator_between} = [];
+
+		// Iterate over each query item
+		foreach ($q_items as $current_q) {
+
+			// ignore empty values (like double spaces issues)
+			if (empty($current_q)) {
+				continue;
+			}
+
+			// clone the original query object to avoid modifying the original
+			$query_object_clone = clone($query_object);
+			// overwrite q value
+			$query_object_clone->q = $current_q;
+			// overwrite q_split
+			$query_object_clone->q_split	= false;
+
+			// Resolve the individual query object using the resolver method
+			$current_parsed_query_object = call_user_func($resolver, $query_object_clone);
+
+			// Add the resolved query object to the group under the specified operator
+			$group->{$operator_between}[] = $current_parsed_query_object;
+		}
+
+
+		return $group;
+	}//end handle_query_splitting
+
+
+
+	/**
+	* SEARCH_OPERATORS_INFO
+	* Returns the list of search operators supported by this component for the UI
+	* operator selector (e.g. 'contains', 'starts_with', 'exact', 'empty').
+	* The base implementation returns an empty array; concrete subclasses
+	* (e.g. component_input_text, component_number) override this to advertise
+	* the operators they have implemented in resolve_query_object_sql().
+	* @return array - Array of operator descriptor objects, empty for base class
+	*/
+	public function search_operators_info() : array {
+
+		$ar_operators = [];
+
+		return $ar_operators;
+	}//end search_operators_info
+
+
+
+	/**
+	* REMOVE_FIRST_AND_LAST_QUOTES
+	* Strips leading/trailing double-quote characters from a search value while
+	* preserving any recognized operator prefix ('!=', '>=', '<=', '+', '-', '=', '*', '>', '<').
+	*
+	* This lets users type exact-match strings in the UI using double quotes (e.g. "Pérez")
+	* without those quotes becoming part of the SQL LIKE/= pattern. Operators are
+	* extracted first so that '!="Smith"' is correctly reduced to '!=Smith'.
+	*
+	* Single-quote stripping is intentionally not applied (commented out) because
+	* single quotes can be legitimate content in names (e.g. O'Brien).
+	* @param string $string - Raw search input value
+	* @return string - Value with leading/trailing double-quotes removed, operator preserved
+	*/
+	public static function remove_first_and_last_quotes(string $string) : string {
+
+		$first_2char 	= mb_substr($string, 0, 2);
+		$ar_operators 	= ['!=','>=','<='];
+		if (in_array($first_2char, $ar_operators)) {
+
+			$op = $first_2char;
+			$current_string = mb_substr($string, 2);
+			#$current_string = trim($current_string,'"\'');
+			$current_string = trim($current_string,'"');
+
+			$string = $op . $current_string;
+
+			return $string;
+		}
+
+		$first_char 	= mb_substr($string, 0, 1);
+		$ar_operators 	= ['+','-','=','*','>','<'];
+		if (in_array($first_char, $ar_operators)) {
+
+			$op = $first_char;
+			$current_string = mb_substr($string, 1);
+			#$current_string = trim($current_string,'"\'');
+			$current_string = trim($current_string,'"');
+
+			$string = $op . $current_string;
+
+			return $string;
+		}
+
+
+		#$string = trim($string,'"\'');
+		$string = trim($string,'"');
+
+		return $string;
+	}//end remove_first_and_last_quotes
+
+
+
+	################################## //end SEARCH ########################################################
+
+
+
+	/**
+	* GET_MY_SECTION
+	* Returns (or lazily creates) the section instance that owns this component.
+	*
+	* The result is cached in $this->section_obj to prevent repeated instantiation.
+	* The section is built in 'list' mode, syncing its cache flag with the
+	* component's own cache setting so the two instances share the same data layer.
+	* The optional $this->caller_dataframe is forwarded to the section so the
+	* dataframe pairing context is preserved in portal/list views.
+	*
+	* (!) Throws on failure — callers must not assume a valid section always exists
+	*     without a try/catch when calling from non-standard contexts.
+	* @return object - section instance for $this->section_tipo
+	* @throws Exception when the section cannot be instantiated
+	*/
+	public function get_my_section() : object {
+
+		// Note that (06-02-2022) the section cache has not conflicts with same instance in list or edit modes
+		// now the JSON_RecordObj_matrix has the cache of section data. (same data for list and edit)
+			if (isset($this->section_obj)) {
+				return $this->section_obj;
+			}
+
+		// cache. Note that component cache will be sync with section. Set as false for component update
+			$cache = $this->cache;
+
+		// section build instance
+			$section = section::get_instance(
+				$this->section_tipo,
+				'list', // 'edit',
+				$cache, // bool cache (synced whit this component)
+				$this->caller_dataframe ?? null
+			);
+
+			if ($section === false) {
+				debug_log(__METHOD__
+					. " Error Processing Request. Section could not be instantiated. " . PHP_EOL
+					. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+					. ' component tipo: ' . $this->tipo
+					, logger::ERROR
+				);
+				throw new Exception("Error Processing Request. Section could not be instantiated for section_tipo: " . $this->section_tipo, 1);
+			}
+
+			$this->section_obj = $section;
+
+		return $this->section_obj;
+	}//end get_my_section
+
+
+
+	/**
+	* GET_MY_SECTION_RECORD
+	* Returns (or lazily creates) the section_record instance for this component's
+	* section_tipo + section_id pair.
+	*
+	* section_record is the data-layer object responsible for reading/writing the
+	* JSONB columns of the matrix row. It is shared across all components in the
+	* same record within a single request cycle via the component_instances_cache.
+	* Caching here prevents redundant DB reads when multiple components on the same
+	* section_id call get_data() in sequence.
+	* @return object - section_record instance
+	*/
+	public function get_my_section_record() : object {
+
+		// If the section_record exist return it.
+			if (isset($this->section_record)) {
+				return $this->section_record;
+			}
+
+		// section_id validation for strict types
+			$section_id = is_scalar($this->section_id) ? (int)$this->section_id : 0;
+
+		// section record build instance
+			$this->section_record = section_record::get_instance(
+				$this->section_tipo,
+				$section_id,
+				$this->is_temporal
+			);
+
+		return $this->section_record;
+	}//end get_my_section_record
+
+
+
+
+
+
+
+	/**
+	* GET_CALCULATION_DATA
+	* Returns the component value as a scalar string suitable for use in
+	* numeric or text calculations (e.g. by component_info sum widgets).
+	* The base implementation delegates to get_value(); components that
+	* store numeric data (component_number) override this to return a typed
+	* numeric value for accurate arithmetic.
+	* @param object|null $options = null - Optional configuration (currently unused in base class)
+	* @return mixed - Typically string|null; may be int|float in subclass overrides
+	*/
+	public function get_calculation_data( ?object $options=null ) {
+
+		$data = $this->get_value();
+
+		return $data;
+	}//end get_calculation_data
+
+
+
+	/**
+	* GET_DATA_ITEM
+	* Builds the standard envelope object used by JSON API controllers to return
+	* component data to the client. The envelope carries identity fields so the
+	* client can route the response to the correct component instance.
+	*
+	* In 'solved' mode, a resolved human-readable 'literal' property is appended
+	* (used by autocomplete display). In SHOW_DEBUG mode, additional diagnostic
+	* properties (debug_model, debug_label, debug_dataframe) are included.
+	*
+	* @param mixed $value - The component data payload (entries property)
+	* @return object - Envelope with: section_id, section_tipo, tipo, mode, lang,
+	*   from_component_tipo, entries; optionally literal and debug_* properties
+	*/
+	public function get_data_item($value) : object {
+
+		$item = new stdClass();
+			$item->section_id			= $this->get_section_id();
+			$item->section_tipo			= $this->get_section_tipo();
+			$item->tipo					= $this->get_tipo();
+			$item->mode 				= $this->get_mode();
+			$item->lang					= $this->get_lang();
+			$item->from_component_tipo	= $this->from_component_tipo ?? $item->tipo;
+			$item->entries				= $value;
+
+		if($this->mode === 'solved'){
+			$item->literal 				= $this->get_value();
+		}
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				$item->debug_model = $this->get_model();
+				$item->debug_label = $this->get_label();
+				$item->debug_dataframe = $this->get_caller_dataframe() ?? null;
+			}
+
+		return $item;
+	}//end get_data_item
+
+
+
+	/**
+	* UPDATE_DATA_VALUE
+	* Handles component data modifications based on the action specified in $changed_data.
+	* This method is the central hub for all data manipulation operations in components,
+	* called by dd_core_api during save operations.
+	*
+	* The method uses the unique `id` property to identify data entries for update and remove
+	* operations, replacing the previous `key` (array index) approach. This ensures reliable
+	* data manipulation regardless of array reordering or pagination state.
+	*
+	* @see dd_core_api update
+	*
+	* @param object $changed_data The data change request object with the following structure:
+	*   - action: (string) The operation to perform. One of: 'insert', 'update', 'remove', 'set_data', 'sort_data', 'sort_by_column', 'add_new_element', 'force_save'
+	*   - id: (string|null) The unique identifier of the data entry to modify
+	*     - For 'remove': id of entry to remove, or null to remove all entries
+	*     - For 'update': id of entry to update (required for targeted update)
+	*     - For 'insert': typically null (new id will be generated)
+	*   - value: (mixed) The value to set, insert, or update
+	*
+	* @return bool True on success, false on error
+	*
+	* @example Insert a new entry (id is null, new id generated on save):
+	* {
+	*   "action": "insert",
+	*   "id": null,
+	*   "value": { "value": "New text content", "lang": "lg-eng" }
+	* }
+	*
+	* @example Update an existing entry by id:
+	* {
+	*   "action": "update",
+	*   "id": "1",
+	*   "value": { "value": "Updated text content", "lang": "lg-eng" }
+	* }
+	*
+	* @example Remove a single entry by id:
+	* {
+	*   "action": "remove",
+	*   "id": "2",
+	*   "value": null
+	* }
+	*
+	* @example Remove all entries (id is null):
+	* {
+	*   "action": "remove",
+	*   "id": null,
+	*   "value": null
+	* }
+	*
+	* @example Set entire data array (bulk operation):
+	* {
+	*   "action": "set_data",
+	*   "id": null,
+	*   "value": [{ "id": "dd123_1", "value": "Item 1" }, { "id": "dd123_2", "value": "Item 2" }]
+	* }
+	*
+	* @example Sort data entries (used by portals for drag-and-drop reordering):
+	* {
+	*   "action": "sort_data",
+	*   "source_key": 0,
+	*   "target_key": 2,
+	*   "value": { "section_id": "1", "section_tipo": "dd123" }
+	* }
+	*
+	* @example Sort all entries by a column value (relation components, gated by 'sort_by_column' property):
+	* {
+	*   "action": "sort_by_column",
+	*   "component_tipo": "dd456",
+	*   "direction": "ASC",
+	*   "value": null
+	* }
+	*
+	* @example Add new element (creates new section and links it):
+	* {
+	*   "action": "add_new_element",
+	*   "id": null,
+	*   "value": "dd153"
+	* }
+	*/
+	public function update_data_value(object $changed_data) : bool {
+
+		// Get the current language for data operations
+		// Components can have data in multiple languages; this ensures we modify the correct language version
+		$lang				= $this->get_lang();
+		$with_lang_versions	= $this->with_lang_versions;
+
+		// Retrieve the current data array for the component
+		// component_dataframe uses unfiltered data (includes virtual entries)
+		// Other components use language-specific data
+		$data_lang = $this->model === 'component_dataframe'
+			? $this->get_data_unfiltered() ?? []
+			: $this->get_data_lang() ?? [];
+
+
+		switch ($changed_data->action) {
+
+			// INSERT ACTION
+			// Appends a new value to the data array. The id is typically null for inserts,
+			// and a new unique id will be generated when the data is saved to the database.
+			// This is used when adding new entries to multi-value components like portals,
+			// or when creating the first entry in single-value components.
+			case 'insert':
+
+				// Translatable literal components id synchronization across languages
+				// When inserting a new entry with a key position (from another language),
+				// resolve the id from other languages at the same key position.
+				// This ensures entries share the same id across all languages.
+				if ($this->supports_translation === true
+					&& !in_array(get_called_class(), component_relation_common::get_components_with_relations())
+					&& property_exists($changed_data, 'key')
+					&& $changed_data->key !== null
+					&& is_object($changed_data->value)) {
+
+					$resolved_id = $this->get_id_from_key((int)$changed_data->key, [$lang]);
+					if ($resolved_id !== null) {
+						$changed_data->value->id = $resolved_id;
+					}
+				}
+
+				// For monovalue components, replace the existing value instead of appending
+				if(in_array($this->model, self::$components_monovalue ?? [])) {
+					$data_lang = [$changed_data->value];
+				} else {
+					// Append the new value to the data array
+					$data_lang[] = $changed_data->value;
+				}
+
+				// Persist the updated data in the current language
+				$this->set_data_lang( $data_lang, $lang );
+
+				// Set observable data for event notifications to other components
+				// component_relation_related needs expanded references, others use plain data
+				$this->observable_data = (get_called_class() === 'component_relation_related')
+					? $this->get_data_with_references()
+					: $data_lang;
+				break;
+
+			// UPDATE ACTION
+			// Updates an existing data entry identified by its unique id.
+			// The id is used to locate the entry in the data array, regardless of its position.
+			// If the id is not found or is null, the value is appended as a new entry.
+			// For translatable literal components, when id is null but key is provided,
+			// the id is resolved from other languages at the same key position.
+			case 'update':
+
+				// Extract the id from the change request
+				$id = $changed_data->id ?? null;
+				// COMP-02: normalize a numeric client id to int. Data-item ids are
+				// integers, but the id arrives from raw client JSON and may be a
+				// string ("5"); a string-vs-int mismatch made the strict === match
+				// below fall through to the "not found" branch and APPEND a duplicate
+				// entry instead of updating the existing one.
+				if (is_string($id) && is_numeric($id)) {
+					$id = (int)$id;
+					$changed_data->id = $id;
+				}
+
+				// Translatable literal components id resolution across languages
+				// When id is null and key is provided, resolve the id from other languages
+				if ($id === null
+					&& $this->supports_translation === true
+					&& !in_array(get_called_class(), component_relation_common::get_components_with_relations())
+					&& property_exists($changed_data, 'key')
+					&& $changed_data->key !== null) {
+
+					$resolved_id = $this->get_id_from_key((int)$changed_data->key, [$lang]);
+					if ($resolved_id !== null) {
+						$id = $resolved_id;
+						$changed_data->id = $resolved_id;
+						if (is_object($changed_data->value) && !isset($changed_data->value->id)) {
+							$changed_data->value->id = $resolved_id;
+						}
+					}
+				}
+
+				if ($id !== null) {
+					// Search for the entry with matching id in the data array
+					$found = false;
+					foreach ($data_lang as $data_key => $data_item) {
+						if (is_object($data_item) && isset($data_item->id) && $data_item->id === $id) {
+							// Found: replace the entire value at this array position
+							$data_lang[$data_key] = $changed_data->value;
+							// Ensure the id is preserved in the new value object
+							if (is_object($data_lang[$data_key]) && !isset($data_lang[$data_key]->id)) {
+								$data_lang[$data_key]->id = $id;
+							}
+							$found = true;
+							break;
+						}
+					}
+					if (!$found) {
+						// Entry not found - log warning and add as new entry instead of failing
+						debug_log(__METHOD__
+							." Warning on update: could not find item with id: $id. Adding as new entry.". PHP_EOL
+							, logger::WARNING
+						);
+						$data_lang[] = $changed_data->value;
+					}
+				} else {
+					// No id provided - cannot target a specific entry, add as new
+					debug_log(__METHOD__
+						." Warning on update: no id provided. Adding as new entry.". PHP_EOL
+						, logger::WARNING
+					);
+					$data_lang[] = $changed_data->value;
+				}
+
+				// Persist the updated data in the current language
+				$this->set_data_lang( $data_lang, $lang );
+
+				// Set observable data for event notifications to other components
+				$this->observable_data = (get_called_class() === 'component_relation_related')
+					? $this->get_data_with_references()
+					: $data_lang;
+				break;
+
+			// REMOVE ACTION
+			// Removes one or all entries from the component data array.
+			// - id !== null: Removes the single entry with matching id
+			//   For translatable literal components, removes across ALL languages
+			// - id === null: Removes ALL entries (clear the entire data array)
+			// The id-based approach ensures correct removal regardless of array ordering or pagination.
+			case 'remove':
+
+				$id = $changed_data->id ?? null;
+
+				// Special case: id === null means "remove all entries in all languages"
+				if ($id === null) {
+					// Clear all data for the all languages
+					$this->set_data([]);
+					// Set observable data for event notifications
+					$this->observable_data = (get_called_class() === 'component_relation_related')
+						? $this->get_data_with_references()
+						: [];
+					break;
+				}
+
+				// Translatable literal components: remove entry across all languages
+				// When a user deletes an entry in one language, the same entry id
+				// must be removed from all other languages to keep data in sync.
+				$is_translatable_literal = $this->supports_translation === true
+					&& !in_array(get_called_class(), component_relation_common::get_components_with_relations());
+
+				if ($is_translatable_literal) {
+					// Use get_data() (all languages) instead of get_data_lang() (single language)
+					$all_data = $this->get_data() ?? [];
+					$found = false;
+					$new_data = [];
+					foreach ($all_data as $data_item) {
+						if (is_object($data_item) && isset($data_item->id) && $data_item->id === $id) {
+							$found = true;
+							continue;
+						}
+						$new_data[] = $data_item;
+					}
+
+					if ($found === false) {
+						debug_log(__METHOD__
+							." Error on remove: could not find item with id: $id". PHP_EOL
+							.' (translatable literal component - searched all languages)'
+							, logger::ERROR
+						);
+						return false;
+					}
+
+					// Set observable data BEFORE modification for event notifications
+					$this->observable_data = $all_data;
+
+					// DATAFRAME DELETION for translatable literal components
+					// Single-writer cascade (server-authoritative): the entry was
+					// removed from ALL languages, so the paired dataframe rows
+					// (lang-agnostic, keyed by the item id) are removed too.
+					$dataframe_ddo = $this->get_dataframe_ddo();
+					if (!empty($dataframe_ddo)) {
+						$this->remove_dataframe_data_by_id( (int)$id );
+					}
+
+					$this->set_data($new_data);
+					break;
+				}
+
+				// Standard case (non-translatable): remove single entry from current language data
+				// Retrieve the current data array for the component
+				// component_dataframe uses unfiltered data (includes virtual entries)
+				// Other components use language-specific data
+				$data = $this->model === 'component_dataframe'
+					? $this->get_data_unfiltered() ?? []
+					: $this->get_data_lang() ?? [];
+
+				// Build a new array excluding the entry with the target id
+				$found = false;
+				$new_data = [];
+				foreach ($data as $data_item) {
+					if (!is_object($data_item) || !isset($data_item->id) || $data_item->id !== $id) {
+						$new_data[] = $data_item;
+					}else{
+						$found = true;
+					}
+				}
+
+				if ($found === false) {
+					debug_log(__METHOD__
+						." Error on remove: could not find item with id: $id". PHP_EOL
+						.' lang: ' . $lang
+						, logger::ERROR
+					);
+					return false;
+				}
+
+				// Set observable data BEFORE modification for event notifications
+				$this->observable_data = ( get_called_class()==='component_relation_related' )
+					? $this->get_data_with_references()
+					: $data;
+
+				// DATAFRAME DELETION
+				// Single-writer cascade (server-authoritative)
+				$dataframe_ddo = $this->get_dataframe_ddo();
+				if( !empty($dataframe_ddo) && $id !== null ){
+
+					$remove_relation_components = component_relation_common::get_components_with_relations();
+					if( !in_array(get_called_class(), $remove_relation_components) ){
+
+						// literal main: cascade by item id, but only when the
+						// removed id no longer exists in any OTHER language
+						// (frames are lang-agnostic, paired by the item id)
+						$all_data		= $this->get_data() ?? [];
+						$occurrences	= 0;
+						foreach ($all_data as $data_item) {
+							if (is_object($data_item) && isset($data_item->id) && $data_item->id === $id) {
+								$occurrences++;
+							}
+						}
+						// the current-language copy is still present in $all_data
+						// (removal not persisted yet): cascade only when it is the last one
+						if ($occurrences <= 1) {
+							$this->remove_dataframe_data_by_id( (int)$id );
+						}
+					}else{
+
+						// relation main: cascade by the removed item id (unified pairing).
+						if( $id !== null ){
+							$this->remove_dataframe_data_by_id( (int)$id );
+						}
+					}
+				}
+
+				$data = $new_data;
+
+				// Persist the modified data in the current language
+				$this->set_data($data);
+
+				break;
+
+			// SET_DATA ACTION
+			// Replaces the entire data array with the provided value.
+			// This is a bulk operation that bypasses individual entry validation.
+			// Used for importing data, batch updates, or resetting component state.
+			// The value must be an array or null (to clear all data).
+			case 'set_data':
+
+				// Validate that the value is an array or null
+				if(!is_array($changed_data->value) && $changed_data->value!==null) {
+					debug_log(__METHOD__
+					   .' Invalid value type for component (set_data): ' . get_called_class() . PHP_EOL
+					   .' value: ' . json_encode($changed_data->value, JSON_PRETTY_PRINT)
+					   , logger::ERROR
+					);
+					return false;
+				}
+
+				// Replace the entire data array with the new value
+				$this->set_data_lang($changed_data->value, $lang);
+
+				// Set observable data for event notifications
+				$this->observable_data = (get_called_class() === 'component_relation_related')
+					? $this->get_data_with_references()
+					: $changed_data->value;
+				break;
+
+			// SORT_DATA ACTION
+			// Reorders data entries by moving an item from source_key to target_key.
+			// Used primarily by portal components for drag-and-drop row reordering.
+			// Note: This action still uses array keys (indices) for positioning since
+			// the operation is about position, not identification.
+			case 'sort_data':
+
+				// Extract sort parameters
+				$value		= $changed_data->value;
+				if (is_object($value)) {
+					unset($value->paginated_key);
+				}
+				$source_key	= $changed_data->source_key;
+				$target_key	= $changed_data->target_key;
+
+				// Get the current data array for reordering
+				$data_lang = $this->get_data_lang($lang);
+
+				// Validate that the source entry exists and matches the provided value
+				if (!isset($data_lang[$source_key])) {
+					debug_log(__METHOD__
+						.' Error on sort_data. Source value key ['.$source_key.'] do not exists! '
+						, logger::ERROR
+					);
+					return false;
+				}
+				if (!is_object($data_lang[$source_key]) || !is_object($value)) {
+					debug_log(__METHOD__
+						.' Error on sort_data. Source or value is not an object' .PHP_EOL
+						.' source_key: '. to_string($source_key) .PHP_EOL
+						.' given value: '. to_string($value) .PHP_EOL
+						.' DB value (data[source_key]): '. to_string($data_lang[$source_key])
+						, logger::ERROR
+					);
+					return false;
+				}
+				if(!locator::compare_locators(
+						$data_lang[$source_key],
+						$value,
+						['section_id','section_tipo','from_component_tipo','tag_id'])
+					) {
+					debug_log(__METHOD__
+						.' Error on sort_data. Source value if different from DB value:' .PHP_EOL
+						.' key value: '. to_string($source_key) .PHP_EOL
+						.' given value: '. to_string($value) .PHP_EOL
+						.' DB value (data[source_key]): '. to_string($data_lang[$source_key]) .PHP_EOL
+						.' data value: '. to_string($data_lang)
+						, logger::ERROR
+					);
+					return false;
+				}
+
+				// No-op: source and target are the same, nothing to reorder
+				if ($source_key === $target_key) {
+					break;
+				}
+
+				// Rebuild the array with the entry moved to its new position
+				// The entry at source_key is skipped, then inserted at target_key
+				$new_data = [];
+
+				foreach ($data_lang as $key => $current_value) {
+					if ($key===$source_key) {
+						// Skip the source entry - it will be inserted at target position
+						continue;
+					}
+					if($key===$target_key && $target_key < $source_key){
+						// Moving up: insert value before current entry
+						$new_data[] = $value;
+						$new_data[] = $current_value;
+						continue;
+					}else if($key===$target_key && $target_key > $source_key){
+						// Moving down: insert value after current entry
+						$new_data[] = $current_value;
+						$new_data[] = $value;
+						continue;
+					}
+
+					$new_data[] = $current_value;
+				}
+
+				// Persist the reordered data
+				$this->set_data_lang($new_data, $lang);
+
+				// Set observable data for event notifications
+				$this->observable_data = (get_called_class() === 'component_relation_related')
+					? $this->get_data_with_references()
+					: $new_data;
+				break;
+
+			// SORT_BY_COLUMN ACTION
+			// Persistently reorders the full locator array by the value of a column
+			// component in the target section(s). Used by portals to apply a global
+			// ASC|DESC order by any sortable column (e.g. a component_date).
+			// Relation components only; gated by the 'sort_by_column' ontology property.
+			case 'sort_by_column':
+
+				// Only relation components store locator arrays that can be column-sorted
+				if (!($this instanceof component_relation_common)) {
+					debug_log(__METHOD__
+						.' Error on sort_by_column. Action is only available for relation components.' .PHP_EOL
+						.' model: ' . get_called_class() .PHP_EOL
+						.' tipo: ' . $this->tipo
+						, logger::ERROR
+					);
+					return false;
+				}
+
+				// Resolve the new order and update the component data (not saved here)
+				if ($this->sort_data_by_column($changed_data, $lang) !== true) {
+					return false;
+				}
+
+				// Set observable data for event notifications
+				$this->observable_data = (get_called_class() === 'component_relation_related')
+					? $this->get_data_with_references()
+					: $this->get_data_lang($lang);
+				break;
+
+			// ADD_NEW_ELEMENT ACTION
+			// Creates a new section record and links it to the portal component.
+			// Used by portals to create new related records on-the-fly.
+			// The value contains the target section tipo to create.
+			// Project values are inherited to the new section.
+			case 'add_new_element':
+
+				$target_section_tipo = $changed_data->value;
+
+				// Verify user has permission to create new records in the target section
+				$permissions_new = security::get_section_new_permissions( $target_section_tipo );
+				if($permissions_new < 2){
+					debug_log(__METHOD__
+						." Error on add_new_element (section_tipo:'$target_section_tipo').".PHP_EOL
+						.' Insufficient permissions: ' . $permissions_new
+						, logger::ERROR
+					);
+					return false;
+				}
+
+				// Delegate to add_new_element method which handles section creation and linking
+				$response = $this->add_new_element((object)[
+					'target_section_tipo' => $target_section_tipo
+				]);
+				if ($response->result!==true) {
+					debug_log(__METHOD__
+						." Error on add_new_element (section_tipo:'$target_section_tipo'). Response:".PHP_EOL
+						.to_string($response)
+						, logger::ERROR
+					);
+					return false;
+				}
+
+				// Set observable data for event notifications
+				$this->observable_data = (get_called_class() === 'component_relation_related')
+					? $this->get_data_with_references()
+					: $this->get_data_lang($lang);
+				break;
+
+			// FORCE_SAVE ACTION
+			// Triggers a component save without modifying data.
+			// Used by components that need to update derived data on every save,
+			// such as component_av which updates files_info on each save call.
+			case 'force_save':
+
+				// No data modification needed - just return true to allow save to proceed
+				break;
+
+			// DEFAULT CASE
+			// Unknown or unsupported action - log error and return false
+			default:
+				debug_log(__METHOD__
+					." Error on update_data_value. changed_data->action is not valid! ". PHP_EOL
+					.' changed_data->action: ' . to_string($changed_data->action)
+					, logger::ERROR
+				);
+				return false;
+		}
+
+
+		return true;
+	}//end update_data_value
+
+
+
+	/**
+	* GET_DATA_PAGINATED
+	* Returns a page-sized slice of the component's data array, honouring
+	* $this->pagination->offset and $this->pagination->limit (or a custom limit).
+	*
+	* Each returned item gains a 'paginated_key' property equal to its absolute
+	* position in the full data array (offset + relative key), so the client can
+	* pass the absolute position back in sort_data actions without needing to know
+	* the current offset.
+	*
+	* A limit of 0 (or null) means "no limit" — the full tail from offset is returned.
+	* @param int|null $custom_limit = null - Override $this->pagination->limit when set
+	* @return array|null - Sliced data items (each with paginated_key), or null when data is empty
+	*/
+	public function get_data_paginated( ?int $custom_limit=null ) : ?array {
+
+		// data
+			$data = $this->get_data();
+
+		// empty case
+			if (empty($data)) {
+				return $data;
+			}
+
+		// limit
+			$limit = isset($custom_limit)
+				? $custom_limit
+				: $this->pagination->limit;
+
+		// offset
+			$offset = $this->pagination->offset ?? 0;
+
+		// array_length. avoid use zero as limit. Instead this, use null
+			$array_length = $limit>0 ? $limit : null;
+
+		// slice
+			$data_paginated = array_slice($data, $offset, $array_length);
+
+		// pagination keys. Set an offset relative key to each element of paginated array
+			foreach ($data_paginated as $key => $value) {
+				if (is_object($value)) {
+					$paginated_key = $key + $offset;
+					$value->paginated_key = $paginated_key;
+				}
+			}
+
+
+		return $data_paginated;
+	}//end get_data_paginated
+
+
+
+	/**
+	* GET_COMPONENT_TM_DATA
+	* Fetches the most recent Time Machine row for the given component and matrix_id
+	* and returns its decoded 'data' array (the snapshot of the component's value
+	* at the time the TM entry was created).
+	*
+	* Queries the TM matrix in DESC order by id so the most recent snapshot is
+	* returned first. If the TM row's data is not an array (legacy scalar formats)
+	* it is coerced to [$data] with a logged warning.
+	*
+	* Called by get_data() when data_source='tm' to load the historical value.
+	* @param string $tipo - Component tipo to look up
+	* @param string $section_tipo - Section tipo of the origin record
+	* @param int|string $matrix_id - Primary key of the TM matrix row
+	* @return array|null - Decoded data array from the TM row, or null/[] if not found
+	*/
+	public static function get_component_tm_data( string $tipo, string $section_tipo, int|string $matrix_id ) : ?array {
+
+		// search query object
+		$sqo_data = (object)[
+			'mode' => 'tm',
+			'section_tipo' => [$section_tipo],
+			'filter_by_locators' => [
+			  (object)[
+				'matrix_id' => (string)$matrix_id,
+				'section_tipo' => $section_tipo,
+				'tipo' => $tipo
+			  ]
+			],
+			'order' => [
+			(object)[
+				'direction' => 'DESC',
+				'path' => [
+				  (object)[
+					'component_tipo' => 'id'
+				  ]
+				]
+			]
+			]
+		];
+		$sqo = new search_query_object($sqo_data);
+
+		$search = search::get_instance($sqo);
+		$db_result = $search->search();
+
+		$record = $db_result
+			? ($db_result->fetch_one() ?? null)
+			: null;
+
+		$tm_data = !empty($record)
+			? $record->data
+			: [];
+
+		// check bad data (old formats not array)
+			if (!empty($tm_data) && !is_array($tm_data)) {
+				debug_log(__METHOD__
+					." Bad data found in time machine data. Making array cast to data found: ".gettype($tm_data) .PHP_EOL
+					.' tm_data: ' .  to_string($tm_data),
+					logger::ERROR
+				);
+				$tm_data = [$tm_data];
+			}
+
+		// check type
+			if (!is_null($tm_data) && !is_array($tm_data)) {
+				debug_log(__METHOD__
+					. " TM data type is not as expected (array/null) . NULL will be return as temp value. review time_machine record  " . PHP_EOL
+					. ' type: ' . gettype($tm_data) . PHP_EOL
+					. ' tm_data: ' . json_encode($tm_data, JSON_PRETTY_PRINT) . PHP_EOL
+					. ' matrix_id: ' . to_string($matrix_id) . PHP_EOL
+					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+					. ' tipo: ' . to_string($tipo)
+					, logger::WARNING
+				);
+				$tm_data = null;
+			}
+
+		return $tm_data;
+	}//end get_component_tm_data
+
+
+
+	/**
+	* GET_SORTABLE
+	* Returns whether this component type can be used as an order column in list views.
+	* The base implementation always returns true; override to return false for
+	* components that cannot meaningfully define a sort order (e.g. media, binary blobs).
+	*
+	* The TM notes text tipo (DEDALO_NOTES_TEXT_TIPO) is hard-excluded here because
+	* TM matrix views never need to sort by free-text notes.
+	* @return bool - true if the component supports column sorting
+	*/
+	public function get_sortable() : bool {
+
+		// time machine cases. Do not resolve ddo_map. Tipo 'rsc329' is column `timestamp`
+		if($this->tipo===DEDALO_NOTES_TEXT_TIPO) {
+			return false;
+		}
+
+		return true;
+	}//end get_sortable
+
+
+
+	/**
+	* GET_ORDER_PATH
+	* Builds the full ontology path array used as the ORDER BY path descriptor
+	* in list-view column headers.
+	*
+	* For a top-level component the path is simply the single-element result of
+	* search::get_query_path(). For a portal column (from_section_tipo is set and
+	* differs from $section_tipo) the parent portal's step is prepended so the sort
+	* traverses from the owning section through the relation into the target section.
+	*
+	* The computed path is cached in common::$cache_order_path (keyed by
+	* tipo + section_tipo + from_component_tipo + from_section_tipo) and deep-copied
+	* on every access, because subclass overrides (component_date, component_number,
+	* component_section_id) mutate the returned path items after calling parent.
+	*
+	* @param string $component_tipo - Tipo of the component to sort by
+	* @param string $section_tipo - Section tipo the component belongs to
+	* @return array - Path descriptor array, each element is an object with section_tipo, component_tipo, model, name
+	*/
+	public function get_order_path(string $component_tipo, string $section_tipo) : array {
+
+		// static cache. The path is ontology-derived: it depends only on the tipos
+		// and the portal origin (from_component_tipo/from_section_tipo).
+		// Stored in common::$cache_order_path so common::clear() purges it across
+		// worker requests. A deep copy is returned because subclass overrides
+		// (component_section_id, component_date, component_number) mutate the
+		// path items ($path[0]->column) after calling parent::get_order_path().
+			$cache_key = $component_tipo .'_'. $section_tipo .'_'. ($this->from_component_tipo ?? '') .'_'. ($this->from_section_tipo ?? '');
+			if (isset(common::$cache_order_path[$cache_key])) {
+				return unserialize(serialize( common::$cache_order_path[$cache_key] ));
+			}
+
+		// get standard search query path. This get component path downwards
+			$path = search::get_query_path($component_tipo, $section_tipo);
+
+		// from_section_tipo. When is defined, this component is inside a portal and
+		// we need the parent portal path too to add at beginning
+			if (isset($this->from_section_tipo) && $this->from_section_tipo!==$section_tipo) {
+				// recursion
+				// $pre_path = $this->get_order_path($this->from_component_tipo, $this->from_section_tipo);
+				// $pre_path = search::get_query_path($this->from_component_tipo, $this->from_section_tipo);
+				// array_unshift($path, ...$pre_path);
+				array_unshift($path, (object)[
+					'component_tipo'	=> $this->from_component_tipo,
+					'model'				=> ontology_node::get_model_by_tipo($this->from_component_tipo,true),
+					'name'				=> ontology_node::get_term_by_tipo($this->from_component_tipo),
+					'section_tipo'		=> $this->from_section_tipo
+				]);
+			}
+
+		// cache add. Store a deep copy so the caller's array (returned below and
+		// possibly mutated by subclass overrides) cannot alter the cached value
+			common::$cache_order_path[$cache_key] = unserialize(serialize($path));
+			common::manage_cache_size(common::$cache_order_path);
+
+		return $path;
+	}//end get_order_path
+
+
+
+	/**
+	* GET_LIST_VALUE
+	* Returns the component data in its canonical list-view representation.
+	* By default this is the language-filtered data slice (get_data_lang()).
+	*
+	* Subclasses that produce a different format for list views (e.g. resolved
+	* labels, flattened relation arrays) override this method. Empty arrays and
+	* null are both normalised to null so the API response is consistent.
+	* @return array|null - Language-filtered data items for list display, or null when empty
+	*/
+	public function get_list_value() : ?array {
+
+		$data = $this->get_data_lang();
+		if (empty($data)) {
+			return null;
+		}
+
+		$list_value = $data;
+
+
+		return $list_value;
+	}//end get_list_value
+
+
+
+	/**
+	* UNWRAP_DEDALO_DATA
+	* Raw exported data (tool_export 'dedalo_raw' format) is wrapped as:
+	* 	{"dedalo_data": <dato>}
+	* to identify externally that the value is Dédalo format data and not any other
+	* generic value (see get_raw_value).
+	* This method detects the wrapper in an import value and returns the inner dato
+	* re-encoded as JSON string, with a flag indicating whether the value was wrapped.
+	* Un-wrapped values are returned unchanged, so both wrapped and plain v6/v7
+	* import values are accepted.
+	* Called by the import tool before conform_import_data.
+	* @param string $import_value
+	* @return object $response
+	*	- value: string The unwrapped (or original) import value
+	*	- wrapped: bool True when the dedalo_data wrapper was detected and removed
+	*/
+	public static function unwrap_dedalo_data(string $import_value) : object {
+
+		$response = new stdClass();
+			$response->value		= $import_value;
+			$response->wrapped		= false;
+			$response->dataframe	= null;
+			$response->has_dato		= true;
+
+		if (json_handler::is_json($import_value)) {
+			$decoded = json_handler::decode($import_value);
+			// the wrapper must be an object with 'dedalo_data' as its ONLY property.
+			// Objects with additional properties are legitimate values (e.g. a component_json
+			// value that happens to contain a 'dedalo_data' property) and pass through unchanged
+			if (is_object($decoded) &&
+				property_exists($decoded, 'dedalo_data') &&
+				count((array)$decoded)===1 ) {
+
+				$inner = $decoded->dedalo_data;
+
+				// dataframe envelope: {"dedalo_data": {"dato": ..., "dataframe": [...]}}
+				// recognized only when the inner object's properties are a subset of
+				// {dato, dataframe} with 'dataframe' present (a plain dato object can
+				// not collide: datos are arrays or lang-keyed lg-* objects)
+				if (is_object($inner)
+					&& property_exists($inner, 'dataframe')
+					&& empty(array_diff(array_keys((array)$inner), ['dato','dataframe'])) ) {
+
+					$response->dataframe	= is_array($inner->dataframe) ? $inner->dataframe : null;
+					$response->has_dato		= property_exists($inner, 'dato');
+					$inner					= $inner->dato ?? null;
+				}
+
+				if ($inner===null) {
+					// wrapped null dato: treat as an empty cell (clears the existing data).
+					// Note that the exporter never wraps null datos; this case only happens
+					// with hand written CSV files or dataframe-only envelopes
+					$response->value	= '';
+					$response->wrapped	= false;
+				}else{
+					// re-encode with the same flags used by the export (tool_export)
+					// to keep the inner JSON identical to the original stored dato
+					$response->value	= json_encode($inner, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+					$response->wrapped	= true;
+				}
+			}
+		}
+
+		return $response;
+	}//end unwrap_dedalo_data
+
+
+
+	/**
+	* IS_PLAIN_BRACKET_STRING
+	* Check if a string value that is not valid JSON can be admitted as plain text.
+	* Sometimes the value text could be '[Ac]', as numismatic legends; it is admitted,
+	* but if the text begins with '["' or ends with '"]' it is considered a malformed
+	* JSON array of strings and it is not admitted.
+	* Used by conform_import_data implementations.
+	* @param string $value
+	* @return bool
+	*/
+	public static function is_plain_bracket_string(string $value) : bool {
+
+		return !(str_starts_with($value, '["') || str_ends_with($value, '"]'));
+	}//end is_plain_bracket_string
+
+
+
+	/**
+	 * CONFORM_IMPORT_DATA
+	 * Validates and transforms import data from CSV or other sources.
+	 * Handles JSON strings, empty values, and type conversion.
+	 *
+	 * @param string $import_value The raw value from the import file
+	 * @param string $column_name  The column name from the import file (for reference/logging)
+	 *
+	 * @return object Response with:
+	 *   - result: mixed The conformed value (array, string, or null)
+	 *   - errors: array List of errors if validation failed
+	 *   - msg: string Status message ('OK' or error description)
+	 */
+	public function conform_import_data(string $import_value, string $column_name) : object {
+
+		// Response
+		$response = new stdClass();
+			$response->result	= null;
+			$response->errors	= [];
+			$response->msg		= 'Error. Request failed';
+
+		// Check if is a JSON string. If yes, decode
+		if(json_handler::is_json($import_value)){
+
+			// try to JSON decode
+			$data_from_json = json_handler::decode($import_value);
+
+			// Handle decode failure
+			if ($data_from_json === null && $import_value !== 'null') {
+				$failed = new stdClass();
+					$failed->section_id		= $this->section_id;
+					$failed->data			= stripslashes($import_value);
+					$failed->component_tipo	= $this->get_tipo();
+					$failed->msg			= 'IGNORED: JSON decode failed';
+				$response->errors[] = $failed;
+
+				return $response;
+			}
+
+			$import_value = $data_from_json;
+
+		}else{
+			// Non-JSON string case
+
+			if(empty($import_value) && $import_value!=='0') {
+				$import_value = null;
+			}else{
+				// Non-JSON non-empty value: wrap into v7 format for components_using_value_property
+				// This handles plain string values from CSV that don't have their own conform_import_data override
+				if (in_array($this->model, self::$components_using_value_property)) {
+					$import_value = [(object)['value' => $import_value]];
+				}else{
+					// For non-value-property components (relations, portals, etc.),
+					// log a warning as plain strings are unexpected for these types
+					debug_log(__METHOD__
+						." Non-JSON non-empty value for non-value-property component". PHP_EOL
+						.' tipo: ' . $this->tipo . PHP_EOL
+						.' section_tipo: ' . $this->section_tipo . PHP_EOL
+						.' section_id: ' . $this->section_id . PHP_EOL
+						.' model: ' . get_called_class() . PHP_EOL
+						.' import_value: ' . to_string($import_value) . PHP_EOL
+						.' column_name: ' . $column_name
+						, logger::WARNING
+					);
+				}
+			}
+		}
+
+		// Normalize into the conform contract:
+		// array of v7 items | object keyed by lang ('lg-*') with array values | null
+		$is_value_property_model = in_array($this->model, self::$components_using_value_property);
+		$normalize_items = function(array $items) use($is_value_property_model) : array {
+			$normalized = [];
+			foreach ($items as $val) {
+				if (!is_object($val) && $is_value_property_model) {
+					// Wrap plain values into objects with 'value' property for components_using_value_property
+					$normalized[] = (object)['value' => $val];
+				}else{
+					// Objects and non-value-property items (locators, etc.) pass through as-is
+					// set_data() will handle wrapping if needed
+					$normalized[] = $val;
+				}
+			}
+			return $normalized;
+		};
+
+		if (is_array($import_value)) {
+
+			$import_value = $normalize_items($import_value);
+
+		}else if (is_object($import_value)) {
+
+			$first_key = array_key_first( (array)$import_value );
+			if ($first_key!==null && strpos($first_key, 'lg-')===0) {
+				// Multi-language object as {"lg-eng": "My value", "lg-spa": "Mi valor"}
+				// Keep it as object so the import tool can iterate languages calling set_data_lang(),
+				// but normalize every lang value into an array of v7 items
+				foreach ($import_value as $lang => $lang_value) {
+					$ar_lang_value = is_array($lang_value)
+						? $lang_value
+						: [$lang_value];
+					$import_value->$lang = $normalize_items($ar_lang_value);
+				}
+			}else{
+				// Single object item as {"value":"x"} or a locator object. Wrap into an array
+				$item = ($is_value_property_model && !property_exists($import_value, 'value'))
+					? (object)['value' => $import_value]
+					: $import_value;
+				$import_value = [$item];
+			}
+		}
+
+		$response->result = $import_value;
+		$response->msg = 'OK';
+
+		return $response;
+	}//end conform_import_data
+
+
+
+	/**
+	* IMPORT_SAVE
+	* Post-conform save hook called exclusively by the import tool pipeline,
+	* after conform_import_data() has normalised the value and set_data() has
+	* staged it on the section_record.
+	*
+	* The base implementation delegates directly to save(). Subclasses that need
+	* import-specific side-effects (e.g. clearing stale dataframe rows before
+	* writing new ones, or skipping TM creation during bulk imports) override this.
+	* @return bool - Result of save()
+	*/
+	public function import_save() : bool{
+
+		return $this->save();
+	}//end import_save
+
+
+
+	/**
+	* IS_EMPTY
+	* Checks whether a single data item is semantically empty.
+	* Used internally by is_empty_data() and by set_data_default() to determine
+	* whether default seeding should be applied.
+	*
+	* Rules:
+	* - null → empty
+	* - Non-objects (scalars, arrays) → empty (data items must always be objects)
+	* - Objects with a 'value' property equal to '' or null → empty
+	* - Objects with a 'value' of '0' or 0 or 0.0 → NOT empty (zero is a valid value)
+	* - Objects without a 'value' property (e.g. locators, date objects) → NOT empty
+	* @param mixed $data_item - A single component data array element
+	* @return bool - true when the item carries no meaningful content
+	*/
+	public function is_empty( mixed $data_item ) : bool {
+
+		// null case explicit
+		if( $data_item===null ) {
+			return true;
+		}
+
+		// non object case. As data entry, is considered empty.
+		if ( !is_object($data_item) ) {
+			return true;
+		}
+
+		// object case
+		foreach ($data_item as $key => $value) {
+			if($key!=='value'){
+				continue;
+			}
+			if( !empty($value) || $value==='0' || $value===0 || $value===0.0 ) {
+				return false;
+			}
+		}
+
+
+		return true;
+	}//end is_empty
+
+
+
+	/**
+	* IS_EMPTY_DATA
+	* Checks whether an entire data array is semantically empty (all items empty
+	* according to is_empty(), or the array itself is null).
+	* Returns true as soon as no non-empty item is found; returns false on the
+	* first non-empty item encountered (short-circuit).
+	* @param array|null $data - Component data array to inspect
+	* @return bool - true when all items are empty or when $data is null
+	*/
+	public function is_empty_data( ?array $data ) : bool {
+
+		$is_empty_data = true;
+
+		if($data===null) {
+			return $is_empty_data;
+		}
+
+		foreach ($data as $data_item) {
+			$is_empty_value = $this->is_empty( $data_item );
+			if( $is_empty_value === false ){
+				$is_empty_data = false;
+				break;
+			}
+		}
+
+
+		return $is_empty_data ;
+	}//end is_empty_data
+
+
+
+	/**
+	* GET_REGENERATE_OPTIONS
+	* Returns component-specific options that control how tool_update_cache
+	* regenerates this component type (e.g. batch size, exclusion rules, custom
+	* processing callbacks). The base implementation returns null, meaning default
+	* regeneration behaviour applies. Override in subclasses that need custom logic.
+	* @return array|null - Options array for tool_update_cache, or null for defaults
+	*/
+	public static function get_regenerate_options() : ?array {
+
+		return null;
+	}//end get_regenerate_options
+
+
+
+	/**
+	* GET_CURRENT_SECTION_FILTER_DATA
+	* Returns the project filter locators associated with the current section record.
+	* Used by portals (add_new_element) to inherit the parent section's project
+	* assignments when creating new linked records, ensuring the new record is
+	* placed in the correct project(s).
+	*
+	* Two resolution paths:
+	* 1. When section_tipo === DEDALO_FILTER_SECTION_TIPO_DEFAULT (project-of-projects
+	*    special case): returns a synthetic locator pointing at the filter section itself.
+	* 2. Default: finds the component_filter child of the current section via the
+	*    Ontology, loads its data, then intersects with the logged user's own project
+	*    list (component_filter_master::get_user_projects()) to prevent elevation —
+	*    users can only propagate projects they themselves belong to.
+	* @return array|null - Array of filter locator objects representing the applicable projects, or null
+	*/
+	public function get_current_section_filter_data() : ?array {
+
+		// short vars
+			$section_id		= $this->get_section_id();
+			$section_tipo	= $this->get_section_tipo();
+
+		// default value
+			$component_filter_data = null;
+
+		if ($section_tipo===DEDALO_FILTER_SECTION_TIPO_DEFAULT) {
+
+			// Project of projects case : Projects in users section
+
+			$filter_locator = new locator();
+				$filter_locator->set_section_tipo(DEDALO_FILTER_SECTION_TIPO_DEFAULT);
+				$filter_locator->set_section_id($section_id);
+				$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
+			$component_filter_data = [$filter_locator];
+
+		}else{
+
+			// Default case
+
+			$ar_search_model	= ['component_filter'];
+			$ar_children_tipo	= section::get_ar_children_tipo_by_model_name_in_section(
+				$section_tipo, // section_tipo
+				$ar_search_model,
+				true, // bool from_cache
+				true, // bool resolve_virtual
+				true, // bool recursive
+				true, // bool search_exact
+				false // array|bool ar_tipo_exclude_elements
+			);
+
+			if (empty($ar_children_tipo[0])) {
+				// throw new Exception("Error Processing Request: 'component_filter' is empty 1", 1);
+				debug_log(__METHOD__
+					. " Error Processing Request: 'component_filter' is empty 1 " . PHP_EOL
+					. ' A component filter is needed to use the portals because you need to' . PHP_EOL
+					. '	set a filter value for the new records created in the target section' . PHP_EOL
+					. ' $ar_children_tipo: '.to_string($ar_children_tipo)
+					, logger::ERROR
+				);
+			}else {
+
+				$component_filter_tipo	= $ar_children_tipo[0];
+				$model					= ontology_node::get_model_by_tipo($component_filter_tipo, true);
+				$component_filter		= component_common::get_instance(
+					$model,
+					$component_filter_tipo,
+					$section_id,
+					'edit',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
+
+				$data = $component_filter->get_data();
+
+				// Exclude non user projects from the list, only intersections are accepted.
+				$user_projects = component_filter_master::get_user_projects( logged_user_id() );
+				$component_filter_data = [];
+				foreach ($data as $data_entry) {
+					if( locator::in_array_locator($data_entry, $user_projects, ['section_tipo','section_id']) ) {
+						$component_filter_data[] = $data_entry;
+					}
+				}
+			}
+		}
+
+		return $component_filter_data;
+	}//end get_current_section_filter_data
+
+
+
+
+}//end class component_common

@@ -1,0 +1,149 @@
+{
+	"typo": "ddo",
+	"model": "component_geolocation",
+	"label": "geolocation",
+	"tipo": "test100",
+	"section_tipo": "test3",
+	"legacy_model": "component_geolocation",
+	"parent": "test3",
+	"parent_grouper": "test45",
+	"lang": "lg-nolan",
+	"mode": "edit",
+	"translatable": false,
+	"properties": {
+		"observe": [
+			{
+				"client": {
+					"event": "click_tag_geo",
+					"perform": {
+						"function": "load_tag_into_geo_editor"
+					}
+				},
+				"component_tipo": "test84"
+			},
+			{
+				"client": {
+					"event": "key_up_f2",
+					"perform": {
+						"function": "get_data_tag"
+					}
+				},
+				"component_tipo": "test84"
+			},
+			{
+				"client": {
+					"event": "editor_tag_geo_change",
+					"perform": {
+						"function": "layer_data_change"
+					}
+				},
+				"component_tipo": "test84"
+			},
+			{
+				"client": {
+					"event": "update_value",
+					"perform": {
+						"function": "map_update_coordinates"
+					}
+				},
+				"component_tipo": "test9"
+			}
+		]
+	},
+	"css": {
+		".wrapper_component >.content_data": {
+			"min-height": "500px"
+		}
+	},
+	"permissions": 2,
+	"tools": [
+		{
+			"typo": "ddo",
+			"model": "tool_leaflet_special_tools",
+			"name": "tool_leaflet_special_tools",
+			"label": "Tool Leaflet Special Tools",
+			"developer": "Manuel Jesús Dávila González",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": null,
+			"css": {
+				"url": "/v7/tools/tool_leaflet_special_tools/css/tool_leaflet_special_tools.css"
+			},
+			"icon": "/v7/tools/tool_leaflet_special_tools/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_propagate_component_data",
+			"name": "tool_propagate_component_data",
+			"label": "Propagate component data",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": null,
+			"css": {
+				"url": "/v7/tools/tool_propagate_component_data/css/tool_propagate_component_data.css"
+			},
+			"icon": "/v7/tools/tool_propagate_component_data/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_time_machine",
+			"name": "tool_time_machine",
+			"label": "Time machine",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/v7/tools/tool_time_machine/css/tool_time_machine.css"
+			},
+			"icon": "/v7/tools/tool_time_machine/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_dev_template",
+			"name": "tool_dev_template",
+			"label": "Tool Development Template",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/v7/tools/tool_dev_template/css/tool_dev_template.css"
+			},
+			"icon": "/v7/tools/tool_dev_template/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		}
+	],
+	"buttons": [],
+	"request_config": null,
+	"columns_map": null,
+	"sortable": false,
+	"type": "component",
+	"new_dataframe": null,
+	"view": "default",
+	"children_view": null,
+	"debug": {
+		"exec_time": "1.34 ms"
+	},
+	"features": {
+		"geo_provider": "VARIOUS"
+	}
+}

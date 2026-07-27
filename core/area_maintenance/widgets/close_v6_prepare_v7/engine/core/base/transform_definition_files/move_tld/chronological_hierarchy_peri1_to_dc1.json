@@ -1,0 +1,4 @@
+[
+{"old":"peri1"	,"new": "dc1" 		,"type":"section"	,"perform":["replace_tipo"]	,"info": "Old period => dc Chronological descriptors"},
+{"old":"peri2"	,"new": "dc2" 		,"type":"section"	,"perform":["replace_tipo"]	,"info": "Old period => dc Chronological descriptors"}
+]

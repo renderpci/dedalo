@@ -1,0 +1,48 @@
+[
+	{
+		"id": 3,
+		"alt": 16,
+		"lat": 28.760289075631214,
+		"lon": -17.87981450557709,
+		"zoom": 17,
+		"lib_data": [
+			{
+				"layer_id": 1,
+				"layer_data": {
+					"type": "FeatureCollection",
+					"features": [
+						{
+							"type": "Feature",
+							"properties": {
+								"layer_id": 1
+							},
+							"geometry": {
+								"type": "Point",
+								"coordinates": [
+									-17.879337,
+									28.760041
+								]
+							}
+						},
+						{
+							"type": "Feature",
+							"properties": {
+								"layer_id": 1,
+								"color": "#3388ff",
+								"shape": "circle",
+								"radius": 284.4954536589409
+							},
+							"geometry": {
+								"type": "Point",
+								"coordinates": [
+									-17.879723,
+									28.760324
+								]
+							}
+						}
+					]
+				}
+			}
+		]
+	}
+]

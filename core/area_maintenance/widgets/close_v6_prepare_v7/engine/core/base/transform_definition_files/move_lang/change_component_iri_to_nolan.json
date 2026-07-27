@@ -1,0 +1,15 @@
+[
+	{"tipo":"hierarchy89", "type":"component", "ar_tables":["matrix_hierarchy","matrix","matrix_list","matrix_activities"], "perform":["lang_to_nolan"], "info": "URL translatable in thesaurus => URL non translatable and transliterable"},
+	{"tipo":"tchi32", "type":"component", "ar_tables":["matrix_hierarchy","matrix","matrix_list","matrix_activities"], "perform":["lang_to_nolan"], "info": "URL translatable in Immovables => URL non translatable and transliterable"},
+	{"tipo":"numisdata310", "type":"component", "ar_tables":["matrix_hierarchy","matrix","matrix_list","matrix_activities"], "perform":["lang_to_nolan"], "info": "URL translatable in Type => URL non translatable and transliterable"},
+	{"tipo":"numisdata275", "type":"component", "ar_tables":["matrix_hierarchy","matrix","matrix_list","matrix_activities"], "perform":["lang_to_nolan"], "info": "URL translatable in Numismatic object => URL non translatable and transliterable"},
+	{"tipo":"numisdata99", "type":"component", "ar_tables":["matrix_hierarchy","matrix","matrix_list","matrix_activities"], "perform":["lang_to_nolan"], "info": "URL translatable in Numismatic Catalogues => URL non translatable and transliterable"},
+	{"tipo":"emakumeak109", "type":"component", "ar_tables":["matrix_hierarchy","matrix","matrix_list","matrix_activities"], "perform":["lang_to_nolan"], "info": "URL translatable in Emakumeak => URL non translatable and transliterable"},
+	{"tipo":"rsc1228", "type":"component", "ar_tables":["matrix_hierarchy","matrix","matrix_list","matrix_activities"], "perform":["lang_to_nolan"], "info": "URL translatable in Other codifications => URL non translatable and transliterable"},
+	{"tipo":"rsc1356", "type":"component", "ar_tables":["matrix_hierarchy","matrix","matrix_list","matrix_activities"], "perform":["lang_to_nolan"], "info": "URL translatable in Use and function => URL non translatable and transliterable"},
+	{"tipo":"ww47", "type":"component", "ar_tables":["matrix_hierarchy","matrix","matrix_list","matrix_activities"], "perform":["lang_to_nolan"], "info": "URL translatable in Web => URL non translatable and transliterable"},
+	{"tipo":"nexus18", "type":"component", "ar_tables":["matrix_hierarchy","matrix","matrix_list","matrix_activities"], "perform":["lang_to_nolan"], "info": "URL translatable in Nexus => URL non translatable and transliterable"},
+	{"tipo":"numisdata1353", "type":"component", "ar_tables":["matrix_hierarchy","matrix","matrix_list","matrix_activities"], "perform":["lang_to_nolan"], "info": "URL translatable in Numismatic Conservation state => URL non translatable and transliterable"},
+	{"tipo":"numisdata1504", "type":"component", "ar_tables":["matrix_hierarchy","matrix","matrix_list","matrix_activities"], "perform":["lang_to_nolan"], "info": "URL translatable in Numismatic Corrosion degrees => URL non translatable and transliterable"},
+	{"tipo":"render64", "type":"component", "ar_tables":["matrix_hierarchy","matrix","matrix_list","matrix_activities"], "perform":["lang_to_nolan"], "info": "URL translatable inHeadboard => URL non translatable and transliterable"}
+]

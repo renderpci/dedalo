@@ -1,0 +1,103 @@
+{
+	"typo": "ddo",
+	"model": "component_json",
+	"label": "json",
+	"tipo": "test18",
+	"section_tipo": "test3",
+	"legacy_model": "component_json",
+	"parent": "test3",
+	"parent_grouper": "test45",
+	"lang": "lg-nolan",
+	"mode": "edit",
+	"translatable": false,
+	"properties": {},
+	"css": {
+		".wrapper_component >.content_data": {
+			"max-height": "40rem",
+			"min-height": "40vh"
+		}
+	},
+	"permissions": 2,
+	"tools": [
+		{
+			"typo": "ddo",
+			"model": "tool_propagate_component_data",
+			"name": "tool_propagate_component_data",
+			"label": "Propagate component data",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": null,
+			"css": {
+				"url": "/dedalo/tools/tool_propagate_component_data/css/tool_propagate_component_data.css"
+			},
+			"icon": "/dedalo/tools/tool_propagate_component_data/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_time_machine",
+			"name": "tool_time_machine",
+			"label": "Time machine",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_time_machine/css/tool_time_machine.css"
+			},
+			"icon": "/dedalo/tools/tool_time_machine/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_upload",
+			"name": "tool_upload",
+			"label": "Upload",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": {
+					"top": 0,
+					"left": "return screen.width -760",
+					"width": 760,
+					"height": 708
+				}
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_upload/css/tool_upload.css"
+			},
+			"icon": "/dedalo/tools/tool_upload/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		}
+	],
+	"buttons": [],
+	"request_config": null,
+	"columns_map": null,
+	"sortable": true,
+	"type": "component",
+	"path": [],
+	"new_dataframe": null,
+	"view": "default",
+	"children_view": null,
+	"debug": {
+		"exec_time": "1.16 ms"
+	},
+	"features": {
+		"allowed_extensions": [
+			"json"
+		],
+		"default_target_quality": null
+	}
+}

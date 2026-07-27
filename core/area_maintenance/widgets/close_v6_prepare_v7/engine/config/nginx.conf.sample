@@ -1,0 +1,155 @@
+# Dédalo — nginx configuration sample
+# SEC-086 / SEC-092: mirrors the rules in the repo-root .htaccess so that
+# deployments on nginx enforce the same webroot hardening.
+#
+# Copy into your nginx site config (e.g. /etc/nginx/sites-available/dedalo.conf)
+# and adjust `root`, `server_name`, and the php-fpm socket path.
+
+# --------------------------------------------------------------------------
+# Template server block
+# --------------------------------------------------------------------------
+# server {
+#     listen       443 ssl http2;
+#     server_name  dedalo.example.org;
+#     root         /var/www/dedalo;
+#     index        index.html index.php;
+#
+#     ssl_certificate      /etc/letsencrypt/live/dedalo.example.org/fullchain.pem;
+#     ssl_certificate_key  /etc/letsencrypt/live/dedalo.example.org/privkey.pem;
+#
+#     # ------ Security response headers (mirror of Apache SEC-015) ------
+#     add_header X-Content-Type-Options       "nosniff"                             always;
+#     add_header X-Frame-Options              "SAMEORIGIN"                          always;
+#     add_header Referrer-Policy              "strict-origin-when-cross-origin"     always;
+#     add_header Permissions-Policy           "geolocation=(self), microphone=(), camera=()" always;
+#     add_header Strict-Transport-Security    "max-age=31536000; includeSubDomains" always;
+#     proxy_set_header  Proxy "";   # CVE-2016-5385 / httpoxy
+#
+#     # ------ SEC-XSS-CSP: Content-Security-Policy (Report-Only first) ------
+#     # 'unsafe-eval' required by pdfjs / jsoneditor / leaflet / d3 / threejs /
+#     # dropzone / vexflow. 'unsafe-inline' on style-src required by extensive
+#     # setAttribute('style',...) usage across svgedit, component_pdf, and
+#     # image/tr_print tools. After a Report-Only cycle confirms no first-party
+#     # violations, flip the header name to `Content-Security-Policy`.
+#     add_header Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob:; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" always;
+#     # Enforcing variant (uncomment after the Report-Only phase):
+#     # add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob:; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" always;
+#
+#     # ------ SEC-011: block sensitive file extensions + editor backups ------
+#     location ~* \.(inc|sh|txt|tpl|backup|test|sql|sql\.gz|sqlite|db|log|bak|old|orig|swp|swo|env|env\.example|lock|heapsnapshot|network-request)$ {
+#         deny all;
+#         return 404;
+#     }
+#     location ~* \.php(~|\.sw[op]|\.orig|\.save|\.bak)$ {
+#         deny all;
+#         return 404;
+#     }
+#     # Emacs / vim auto-save patterns
+#     location ~ (^|/)#[^/]+#$ { deny all; return 404; }
+#     location ~ (^|/)\.[^/]+\.swp$ { deny all; return 404; }
+#
+#     # ------ Block specific filenames ------
+#     location ~* ^/(composer\.json|composer\.lock|package\.json|package-lock\.json|bun\.lock|bun\.lockb|tsconfig\.json|\.gitignore|\.gitattributes|\.editorconfig|\.jshintrc|\.htaccess|\.htpasswd|cliff\.toml|phpstan\.neon\.dist|phpstan-bootstrap\.php|stub\.php|worker\.php|status\.md|AGENTS\.md|Updates\.md)$ {
+#         deny all;
+#         return 404;
+#     }
+#
+#     # ------ SEC-026: block `*_json.php` include templates from direct HTTP ------
+#     location ~* _json\.php$ {
+#         deny all;
+#         return 404;
+#     }
+#
+#     # ------ Block any dotfile (.env, .git, .DS_Store, ...) at any depth ------
+#     location ~ /\. { deny all; return 404; }
+#
+#     # ------ Block sensitive directories (SEC-088 / SEC-089) ------
+#     location ~ ^/(\.git|\.github|\.windsurf|\.agent|\.VSCodeCounter|node_modules|vendor|config|test/(?!client)|dev|install/db|install/http_modules|backup|backups|deleted|code)(/|$) {
+#         deny all;
+#         return 404;
+#     }
+#
+#     # ------ SEC-088: block PHP execution under upload roots ------
+#     location ~ ^/(media|upload|tmp)/.+\.(phps?|phtml|phar|pht|inc|cgi|pl|py|rb|sh|lua|asp|aspx|jsp)$ {
+#         deny all;
+#         return 404;
+#     }
+#
+#     # ------ Media access control (DEDALO_MEDIA_ACCESS_MODE) ------
+#     # Mirrors the generated media/.htaccess (Apache). Enable these locations
+#     # when DEDALO_MEDIA_ACCESS_MODE is 'private' or 'publication' in the PHP
+#     # config. Authorization is one stat() per request on zero-byte marker
+#     # files — no subrequests, no reloads, files keep native sendfile/Range
+#     # and mp4 '?start='/'?end=' clipping:
+#     #   auth markers : media/.publication/auth/{cookie_value}  (PHP, login)
+#     #   pub  markers : media/.publication/pub/{section_tipo}_{section_id}
+#     #                  (Bun diffusion engine, media_index.ts)
+#     #
+#     # Rule A cookie: fixed name 'dedalo_media_auth' (media_protection::COOKIE_NAME),
+#     # value rotates daily. The map sanitizes it (hex-only) before it is used
+#     # in a filesystem path. Place the map in the http{} context:
+#     #
+#     # map $cookie_dedalo_media_auth $dedalo_auth_key {
+#     #     "~^(?<h>[a-f0-9]{128})$"  $h;
+#     #     default                   "_invalid_";
+#     # }
+#     #
+#     # IMPORTANT operational notes:
+#     # - Do NOT enable open_file_cache on the media locations (or keep
+#     #   open_file_cache_valid <= 2s): it caches stat() results and delays
+#     #   unpublish taking effect (especially transcription .vtt subtitles).
+#     # - NFS/shared-storage web farms: marker stat() honors the NFS attribute
+#     #   cache (acregmin), so unpublish can lag a few seconds across hosts.
+#     # - CDN/proxy in front: purge the record's media paths on unpublish —
+#     #   the origin denies immediately, downstream caches do not.
+#     # - The quality alternation below must match DEDALO_MEDIA_PUBLIC_QUALITIES.
+#     # - 404 (not 403) hides the existence of unpublished media.
+#
+#     # The marker store itself is never served
+#     location ^~ /media/.publication/ { deny all; return 404; }
+#
+#     # Rule B (publication mode): public quality folders. Allowed when the
+#     # publication marker exists OR the logged-in auth cookie is valid.
+#     # File name grammar: ...{component_tipo}_{section_tipo}_{section_id}[_lg-xxx].ext
+#     # (the last two underscore tokens identify the record).
+#     location ~ ^/media/(?:av/404|av/posterframe|av/subtitles|image/1\.5MB|image/thumb|pdf/web|svg/web|3d/web)/(?:.+/)?[^/]*_(?<dd_s>[a-z0-9]+)_(?<dd_i>[0-9]+)(?:_lg-[a-zA-Z0-9-]{2,12})?\.[A-Za-z0-9]+$ {
+#         set $dd_pass 0;
+#         if (-f $document_root/media/.publication/auth/$dedalo_auth_key) { set $dd_pass 1; }
+#         if (-f $document_root/media/.publication/pub/${dd_s}_${dd_i})   { set $dd_pass 1; }
+#         if ($dd_pass = 0) { return 404; }
+#         mp4;   # ngx_http_mp4_module: '?start='/'?end=' clipping (no-op for non-mp4)
+#     }
+#
+#     # Rule A: everything else under /media is for logged-in Dédalo users only.
+#     # Plain prefix (NO ^~): the rule-B regex location above must still be
+#     # consulted first for public-quality URLs.
+#     location /media/ {
+#         if (!-f $document_root/media/.publication/auth/$dedalo_auth_key) { return 404; }
+#     }
+#
+#     # ------ Deliver static assets & let PHP handle the rest ------
+#     location / {
+#         try_files $uri $uri/ /index.php?$query_string;
+#     }
+#
+#     location ~ \.php$ {
+#         # Only .php, not .php7, .phar, etc.
+#         fastcgi_split_path_info ^(.+\.php)(/.+)$;
+#         fastcgi_pass             unix:/var/run/php/php8.4-fpm.sock;
+#         fastcgi_index            index.php;
+#         fastcgi_param            SCRIPT_FILENAME $document_root$fastcgi_script_name;
+#         include                  fastcgi_params;
+#         # Prevent script reinterpretation attacks: reject missing files early.
+#         try_files $uri =404;
+#     }
+# }
+
+# --------------------------------------------------------------------------
+# Notes
+# --------------------------------------------------------------------------
+# - Keep nginx and Apache in sync when SEC-011 / SEC-026 / SEC-088 / SEC-089
+#   rules change in `.htaccess`.
+# - `Options -Indexes` has no nginx equivalent on most builds; ensure
+#   `autoindex off` (the default) is kept.
+# - If your site mounts Dédalo at a subpath (e.g. /dedalo/), prefix every
+#   `location` match with the subpath.

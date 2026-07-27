@@ -1,0 +1,18 @@
+[
+	{
+		"id": 1,
+		"section_id": "1",
+		"section_tipo": "rsc550",
+		"from_component_tipo": "tch171",
+		"from_section_tipo": "tch1",
+		"from_section_id": "1"
+	},
+	{
+		"id": 1,
+		"section_id": "1",
+		"section_tipo": "rsc550",
+		"from_component_tipo": "tch171",
+		"from_section_tipo": "tch1",
+		"from_section_id": "3"
+	}
+]

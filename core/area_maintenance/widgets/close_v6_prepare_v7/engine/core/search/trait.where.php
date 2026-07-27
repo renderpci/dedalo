@@ -1,0 +1,987 @@
+<?php declare(strict_types=1);
+/**
+* TRAIT WHERE
+* Builds and appends all WHERE-clause fragments for a Dédalo SQL search query.
+*
+* This trait is mixed into class search (and its subclasses search_tm and
+* search_related) via the `use select, from, where, order, count, utils`
+* declaration. It owns every stage of WHERE construction:
+*
+*  - build_main_where()            — section_tipo equality / IN filter
+*  - build_sql_filter()            — user-supplied SQO filter object → SQL
+*  - build_sql_filter_by_locators()— pin results to an explicit list of locators
+*  - build_sql_projects_filter()   — row-level access-control by user projects
+*  - build_filter_by_user_records()— optional per-record access-control by user id
+*
+* SQL assembly model
+* ------------------
+* Every method pushes one or more strings into `$this->sql_obj->main_where[]`
+* or `$this->sql_obj->where[]`. Callers in class search then join those arrays
+* with ' AND ' to form the final WHERE clause. None of the methods here directly
+* executes SQL — they only accumulate fragments.
+*
+* Prepared-statement safety
+* -------------------------
+* All user-supplied values (section ids, tipo strings, q values, locator fields)
+* are passed through `$this->get_placeholder()` (trait utils) and land in
+* `$this->params[]` as bound parameters for pg_execute().  The only values
+* interpolated verbatim into SQL strings are ontology tipos (validated by
+* `is_valid_tipo()`) and column names (validated by `is_valid_data_column()`).
+*
+* @package Dédalo
+* @subpackage Core
+*/
+trait where {
+
+	/**
+	* Static cache: maps user_id → result of component_filter_records::get_user_filter_records().
+	* Scoped to the PHP process lifetime. The cache is keyed by user_id; without
+	* reset_filter_user_records_cache() it would bleed across requests in long-running
+	* workers (Dédalo persistent-worker environment).
+	* @var array<int|string, mixed>
+	*/
+	protected static $filter_user_records_cache = [];
+
+
+
+	/**
+	* RESET_FILTER_USER_RECORDS_CACHE
+	* Purges the per-user filter_user_records cache. Safe to call between requests in a
+	* long-running worker (the cache is keyed by user_id and would otherwise outlive the
+	* request that populated it). Wired into common::clear().
+	* @return void
+	*/
+	public static function reset_filter_user_records_cache() : void {
+		self::$filter_user_records_cache = [];
+	}//end reset_filter_user_records_cache
+
+
+
+	/**
+	* BUILD_MAIN_WHERE
+	* Appends the mandatory section_tipo equality (or IN) predicate to
+	* `$this->sql_obj->main_where`.
+	*
+	* Every search must be scoped to at least one section_tipo so PostgreSQL
+	* can use the partial index on the matrix table. When `$ar_section_tipo`
+	* has more than one entry (multi-section search, e.g. thesaurus across
+	* hierarchies), an IN clause is emitted; for a single tipo a typed equality
+	* cast (`::text`) is used so the planner sees a constant-expression.
+	*
+	* Side effect: also appends `section_id > 0` when the target section is
+	* DEDALO_SECTION_USERS_TIPO and `include_negative` is not explicitly set
+	* to true — this excludes the synthetic root/negative user record (section_id
+	* -1 or 0) from normal results.
+	*
+	* @return void
+	*/
+	public function build_main_where() : void {
+
+		// section_tipo is always and array
+		$ar_section_tipo = $this->ar_section_tipo;
+
+		// main section tipo filter
+		if(count($ar_section_tipo) > 1) {
+			$sections_placeholders = [];
+			foreach ($ar_section_tipo as $current_tipo) {
+				// Gets current param key (default is 1 and increases by 1 after each use)
+				$placeholder = $this->get_placeholder($current_tipo);
+
+				// Add param value to main params array
+				$sections_placeholders[] = $placeholder;
+			}
+			$this->sql_obj->main_where[] = '(' . $this->main_section_tipo_alias.'.section_tipo IN (' . implode(',', $sections_placeholders) . '))';
+		}else{
+			// Gets current param key (default is 1 and increases by 1 after each use)
+			$placeholder = $this->get_placeholder($ar_section_tipo[0]);
+			$this->sql_obj->main_where[] = '(' . $this->main_section_tipo_alias.'.section_tipo = ' . $placeholder . '::text)';
+		}
+
+		// avoid root user to be include in the results for section users.
+		if ($this->main_section_tipo === DEDALO_SECTION_USERS_TIPO && $this->include_negative !== true) {
+			$this->sql_obj->main_where[] = $this->main_section_tipo_alias.'.section_id > 0';
+		}
+	}//end build_main_where
+
+
+
+	/**
+	* BUILD_FILTER_BY_USER_RECORDS
+	* Build and fix filter_by_user_records filter.
+	* Used by WHERE clause to filter records by logged user permissions.
+	* This filter is only applied when DEDALO_FILTER_USER_RECORDS_BY_ID constant is defined and true.
+	* The filter is applied as restriction of the WHERE clause, joining with AND operator.
+	*
+	* When enabled, this is a row-level access-control layer that restricts which
+	* section records a logged-in user can see. The allowed set comes from
+	* `component_filter_records::get_user_filter_records($user_id)`, which returns
+	* an array shaped as:
+	*   [ section_tipo => [section_id, section_id, ...], ... ]
+	*
+	* If the current search's main_section_tipo is present in that map, only the
+	* listed section_ids are allowed through. The section_ids are cast to int before
+	* being placed in the IN list (SEARCH-04 defence-in-depth; the values are also
+	* bound as prepared parameters via get_placeholder() in the default path, but here
+	* they are embedded directly as integer literals to avoid an N-placeholder explosion
+	* for large id sets).
+	*
+	* Results are cached in the static `$filter_user_records_cache` to avoid
+	* repeated DB calls within the same PHP request.
+	*
+	* @return void
+	*/
+	public function build_filter_by_user_records() : void {
+
+		// FILTER_USER_RECORDS_BY_ID
+		// Performance: Check constant first to avoid unnecessary processing
+		if (!defined('DEDALO_FILTER_USER_RECORDS_BY_ID') || DEDALO_FILTER_USER_RECORDS_BY_ID!==true) {
+			return;
+		}
+
+		$user_id = logged_user_id(); // Logged user id
+
+		// stop the process if user_id is not logged
+		if (empty($user_id)) {
+			debug_log(__METHOD__
+				. " Error: user id unavailable (logged_user_id). Unabe to build filter_by_user_records " . PHP_EOL
+				. ' logged_user_id: ' . to_string($user_id)
+				, logger::ERROR
+			);
+			return;
+		}
+
+		// Cache optimization to avoid repeated calls to component_filter_records::get_user_filter_records
+		if (isset(self::$filter_user_records_cache[$user_id])) {
+			$filter_user_records_by_id = self::$filter_user_records_cache[$user_id];
+		} else {
+			$filter_user_records_by_id = component_filter_records::get_user_filter_records( $user_id );
+			self::$filter_user_records_cache[$user_id] = $filter_user_records_by_id;
+		}
+
+		$section_tipo = $this->main_section_tipo;
+
+		if ( isset($filter_user_records_by_id[$section_tipo]) ) {
+
+			$section_alias = $this->main_section_tipo_alias;
+			$filter_by_user_records = '';
+
+			if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
+				$filter_by_user_records .= "\n-- filter_user_records_by_id --".PHP_EOL;
+			}
+
+			// SEARCH-04: section_ids are integers — int-cast every element before
+			// interpolating into IN(...), so no non-integer value can reach the SQL.
+			$ids = array_map('intval', (array)$filter_user_records_by_id[$section_tipo]);
+			$filter = implode( ',', $ids );
+			$filter_by_user_records .= $section_alias . '.section_id IN ( ' . $filter . ' )';
+
+			$this->sql_obj->where[] = $filter_by_user_records;
+		}
+	}//end build_filter_by_user_records
+
+
+
+	/**
+	* BUILD_SQL_FILTER
+	* Converts `$this->sqo->filter` — the user-supplied search filter object — into
+	* one SQL fragment and appends it to `$this->sql_obj->where`.
+	*
+	* The filter object has the shape:
+	*   { "$AND": [ <search_object>, ... ] }
+	*   { "$OR":  [ <search_object>, ... ] }
+	*
+	* Each element of the array is either a leaf search_object (has a `path` key)
+	* or a nested operator group (no `path` key, has an operator key like `$AND`).
+	* The actual SQL fragment is produced recursively by `filter_parser()`.
+	*
+	* Special case — skip_duplicated: when `$this->sqo->skip_duplicated` is true
+	* the call is inside a component that itself carries a `duplicated` search
+	* operator.  To avoid including its own operator in the cross-component
+	* duplicate check, all filter items marked `duplicated === true` are stripped
+	* before the parse, then the flag is reset.
+	*
+	* @return void
+	*/
+	public function build_sql_filter() : void {
+
+		if (empty($this->sqo->filter)) {
+			return;
+		}
+
+		$operator	= array_key_first(get_object_vars($this->sqo->filter));
+		$ar_value	= $this->sqo->filter->{$operator};
+
+		if(empty($ar_value)) {
+			return;
+		}
+
+		// Duplicated caller
+		// if the skip duplicated control is in true
+		// the caller is inside of the component with duplicated search operator(!!)
+		// the call is inside the parse_search_object_sql() of the component
+		// it need the filter of other components to be applied into the duplicated search
+		// but it can't include itself in the filter, so, here remove all duplicated search components
+		// it ensure that other search will applied to get the duplicates.
+		if( isset($this->sqo->skip_duplicated) && $this->sqo->skip_duplicated === true ){
+			$ar_value = array_filter($ar_value, function($item){
+				$duplicated = $item->duplicated ?? false;
+				return $duplicated===false;
+			});
+			// remove the key of the array (added by the array filter)
+			$ar_value = array_values($ar_value);
+			// reset the skip control for the next calls.
+			$this->skip_duplicated = false;
+		}
+
+		// filter_parser
+		$this->sql_obj->where[] = $this->filter_parser($operator, $ar_value);
+	}//end build_sql_filter
+
+
+
+	/**
+	* FILTER_PARSER
+	* Recursively converts a filter operator + array of search objects into a SQL
+	* boolean expression string. This is the core translator between the JSON SQO
+	* filter tree and PostgreSQL WHERE sub-expressions.
+	*
+	* Operator model
+	* --------------
+	* $op is the raw SQO key (e.g. '$AND', '$OR', '$NOT', '$NAND', '$NOR').
+	* After stripping the leading '$' and upper-casing, the method validates it
+	* against an explicit allowlist before touching anything — so an invalid key
+	* simply returns '' (empty string, which the caller skips) rather than
+	* injecting raw SQL.
+	*
+	* Recursive structure
+	* -------------------
+	* Each element of $ar_value is one of:
+	*  - false        → skip (sentinel inserted by conform_filter on a failed item)
+	*  - object without 'path' property → nested operator group; recurse and wrap
+	*    the non-empty result in parentheses
+	*  - object with 'path' property    → leaf search element; may trigger a JOIN
+	*    via build_sql_join() for multi-level paths, then delegates to
+	*    parse_search_object_sql() for the per-component SQL fragment
+	*
+	* Fragments strategy
+	* ------------------
+	* Only non-empty fragments are collected into $fragments before the final
+	* join. This avoids the dangling-operator problem (a trailing ' AND ' / ' OR '
+	* when the last item resolved to empty).
+	*
+	* Negation semantics
+	* ------------------
+	* NOT and NAND both negate the AND-joined result; NOR negates the OR-joined result.
+	* A single NOT element (NOT(x)) is a special case of NAND with one fragment.
+	*
+	* @param string $op     Raw SQO operator key, e.g. '$AND', '$OR', '$NOT'
+	* @param array  $ar_value  Array of search_object items belonging to this operator
+	* @return string $string_query  SQL boolean expression, or '' if nothing valid
+	*/
+	public function filter_parser(string $op, array $ar_value) : string {
+
+		$operator	= strtoupper( substr($op, 1) );
+
+		// Allowlist of valid logical operators (security: $op is the user-supplied
+		// JSON key from sqo->filter, e.g. '$AND', '$OR'; without this gate any
+		// string would be concatenated into the WHERE clause as raw SQL).
+		$valid_logical_operators = ['AND','OR','NOT','NAND','NOR'];
+		if (!in_array($operator, $valid_logical_operators, true)) {
+			debug_log(__METHOD__
+				." Invalid logical operator received from filter key. Filter ignored." . PHP_EOL
+				.' op: ' . to_string($op)
+				, logger::ERROR
+			);
+			return '';
+		}
+
+		// Collect only the non-empty SQL fragments, then join them with the operator.
+		// Building the string this way (instead of appending the operator inline per
+		// iteration) avoids the dangling-operator class of bugs: a later filter item that
+		// resolves to an empty fragment can no longer leave a trailing ' AND '/' OR '.
+		$fragments = [];
+		foreach ($ar_value as $search_object) {
+
+			if( $search_object===false ) {
+				continue;
+			}
+
+			if (!property_exists($search_object, 'path')) {
+
+				// Case operator (nested group). Recurse and wrap the non-empty result.
+				$op2		= array_key_first(get_object_vars($search_object));
+				$ar_value2	= $search_object->$op2;
+
+				$parsed_string = $this->filter_parser($op2, $ar_value2);
+				if (!empty($parsed_string)) {
+					$fragments[] = '( ' . $parsed_string . ' )';
+				}
+
+			}else{
+
+				// Case elements
+
+				$n_levels = count($search_object->path);
+				if ($n_levels>1) {
+					$this->build_sql_join($search_object->path, $search_object->join_id ?? null);
+				}
+
+				$search_object_sql = $this->parse_search_object_sql($search_object);
+				if (empty($search_object_sql)) {
+					continue;
+				}
+
+				$fragments[] = $search_object_sql;
+			}
+
+		}//end foreach ($ar_value as $search_object)
+
+		if (empty($fragments)) {
+			return '';
+		}
+
+		// AND/OR join the fragments. NOT/NAND/NOR are negations of the AND/OR join
+		// (a single NOT operand is simply NOT(x); multiple operands behave as NAND/NOR).
+		return match ($operator) {
+			'AND'			=> implode(PHP_EOL . ' AND ', $fragments),
+			'OR'			=> implode(PHP_EOL . ' OR ', $fragments),
+			'NOT', 'NAND'	=> 'NOT (' . implode(PHP_EOL . ' AND ', $fragments) . ')',
+			'NOR'			=> 'NOT (' . implode(PHP_EOL . ' OR ', $fragments) . ')',
+		};
+	}//end filter_parser
+
+
+
+	/**
+	* BUILD_SQL_JOIN
+	* Builds one table join based on requested path
+	*
+	* Translates a multi-step SQO `path` array into a chain of PostgreSQL
+	* LATERAL JOIN fragments and appends them to `$this->sql_obj->join[]`.
+	* This is called by filter_parser() whenever a leaf search element has more
+	* than one level in its path (i.e. the value lives inside a related section
+	* rather than directly in the main table row).
+	*
+	* Table-alias naming convention
+	* -----------------------------
+	* Aliases are built by concatenating the trimmed tipos of every step, joined
+	* with underscores.  For example a path through section oh1/component oh24
+	* then into section rsc167/component rsc20 might produce aliases:
+	*   oh1_oh24          (intermediate relation array-elements alias)
+	*   rel_oh1_oh24_rsc167  (LATERAL jsonb_array_elements alias)
+	*   oh1_oh24_rsc167   (target matrix table alias)
+	*
+	* Join pattern
+	* ------------
+	* Step 0 (main table) sets up the base key from main_section_tipo_alias.
+	* For each subsequent step:
+	*  1. A LATERAL jsonb_array_elements() on the previous table's relation JSONB
+	*     column (keyed by component_tipo) yields individual relation items.
+	*  2. A LEFT JOIN on the target matrix table matches section_id/section_tipo
+	*     from each relation item. LEFT JOIN is required so ORDER clauses do not
+	*     silently exclude records with no relation data.
+	*
+	* Security: component_tipo values from the SQO path are interpolated verbatim
+	* as JSONB keys (cannot be parameterized). is_valid_tipo() rejects anything
+	* that does not match /^[a-z]+[0-9]+$/ and throws an Exception, so invalid
+	* path values never reach the SQL string.
+	*
+	* @param array $path  Array of stdClass step objects, each with:
+	*  sample:
+	*	[
+	*		{
+	*			"name": "Publication",
+	*			"model": "component_publication",
+	*			"section_tipo": "rsc167",
+	*			"component_tipo": "rsc20"
+	*		},
+	*		{
+	*			"name": "Value",
+	*			"model": "component_input_text",
+	*			"section_tipo": "dd64",
+	*			"component_tipo": "dd62"
+	*		}
+	*	]
+	* @return string|null $last_table_name  Alias of the final joined table (e.g. 'rs197_rs279_dd64'),
+	*                                        or null if the path was empty / all steps were skipped
+	* @throws Exception  When component_tipo fails the is_valid_tipo() security gate
+	*/
+	public function build_sql_join(array $path, ?int $join_id=null) : ?string {
+
+		$ar_key_join	= [];
+		$base_key		= '';
+		$total_paths	= count($path);
+
+		// Per-clause discriminator prefix. Keeps two clauses with the same path from
+		// collapsing onto one joined row (see get_table_alias_from_path). Empty when
+		// join_id is null → legacy alias names unchanged.
+		$prefix			= $this->join_prefix($join_id);
+
+		$last_table_name = null;
+
+		foreach ($path as $key => $step_object) {
+
+			if ($key===0) {
+				$base_key		= $this->main_section_tipo_alias;
+				$ar_key_join[]	= self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
+				continue;
+			}
+
+			$current_key = ($key===1)
+				? $base_key
+				: $prefix . implode('_', $ar_key_join);
+
+			$ar_key_join[] = ($key === $total_paths-1)
+				? self::trim_tipo($step_object->section_tipo)
+				: self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
+
+			$matrix_table = common::get_matrix_table_from_tipo($step_object->section_tipo);
+			// Ignore invalid empty matrix tables
+			if (empty($matrix_table)) {
+				debug_log(__METHOD__
+					. " Ignored invalid empty matrix table " . PHP_EOL
+					. ' step_object->section_tipo: ' . $step_object->section_tipo
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			$t_name		= $prefix . implode('_', $ar_key_join);
+			$t_relation	= 'rel_' . $t_name;
+
+			// Deduplicate by alias: the same (path, join_id) can reach this builder more than
+			// once for a single query — e.g. add_relation_search() wraps a clause in
+			// {$or:[clause, clone]} and for the '=='/default operator the clone is identical.
+			// Emitting the join again would repeat the table alias and PostgreSQL rejects it
+			// ("table name specified more than once"). Skip re-emission; the alias is reused
+			// by the duplicate clause's WHERE fragment, which is the intended behavior.
+			if (isset($this->sql_obj->joined_aliases[$t_name])) {
+				$last_table_name = $t_name;
+				continue;
+			}
+			$this->sql_obj->joined_aliases[$t_name] = true;
+
+			$sql_join = '';
+			if(SHOW_DEBUG===true) {
+				$section_name = ontology_node::get_term_by_tipo($step_object->section_tipo, null, true, false);
+				$sql_join .= "-- JOIN GROUP $matrix_table - $t_name - $section_name";
+			}
+
+			// Security: $component_tipo is a client-supplied SQO path value interpolated
+			// verbatim as a JSONB relation key (it cannot be parameterized and must keep
+			// its exact form, so trim_tipo() is not usable here). Validate the tipo format
+			// and fail closed on anything that is not a well-formed ontology tipo.
+			$component_tipo = $path[$key-1]->component_tipo;
+			if (!self::is_valid_tipo((string)$component_tipo)) {
+				debug_log(__METHOD__
+					. " Rejected invalid component_tipo in join path (possible injection attempt) " . PHP_EOL
+					. ' component_tipo: ' . to_string($component_tipo)
+					, logger::ERROR
+				);
+				throw new Exception("Error: invalid component_tipo in search path", 1);
+			}
+			$sql_join .= PHP_EOL . "LEFT JOIN LATERAL jsonb_array_elements({$current_key}.relation->'{$component_tipo}') AS {$t_relation} on true";
+
+			$sql_join .= PHP_EOL . "LEFT JOIN {$matrix_table} AS {$t_name} ON" . PHP_EOL;
+			$sql_join .= " {$t_name}.section_id = NULLIF(({$t_relation}->>'section_id'), '')::bigint";
+			$sql_join .= " AND {$t_name}.section_tipo = ({$t_relation}->>'section_tipo')::text";
+
+			$this->sql_obj->join[] = $sql_join;
+
+			// Override on every iteration
+			$last_table_name = $t_name;
+		}//end foreach ($path as $key => $step_object)
+
+		return $last_table_name;
+	}//end build_sql_join
+
+
+
+	/**
+	* PARSE_SEARCH_OBJECT_SQL
+	* Builds a SQL query string base on given filter search object
+	*
+	* Consumes the `sentence` + `params` contract produced by each component's
+	* `get_search_query()` method (e.g. component_input_text, component_select …).
+	* The contract:
+	*  - `sentence` is a SQL fragment with named placeholders: _Q1_, _Q2_, …
+	*    These are NOT PostgreSQL positional parameters yet; they are template
+	*    markers that this method replaces with the real $N placeholders via
+	*    `get_placeholder()`.
+	*  - `params` is an associative array mapping placeholder name → value,
+	*    e.g. ['_Q1_' => '.*ana.*', '_Q2_' => 'lg-spa']. The order of
+	*    replacement is the order PHP iterates the params object (insertion
+	*    order), which must match the _Q1_, _Q2_ usage in the sentence.
+	*
+	* After replacement each value is registered in `$this->params[]` (the bound
+	* parameters list for pg_execute) and the sentence's _QN_ token is replaced
+	* by the corresponding $N positional placeholder string.
+	*
+	* The full shape of the incoming search_object is illustrated below; only
+	* `sentence` and `params` are consumed here; other properties are used earlier
+	* (e.g. `path` by filter_parser, `format` by conform_filter).
+	*
+	* @param object $search_object  A leaf search object shaped as:
+	*   {
+	*     "q": "'.*\[".*ana.*'",         // regex, text, number …  (per-component)
+	*     "unaccent":true,               // applied by component builder
+	*     "operator":"~*",               // SQL operator  (per-component)
+	*     "type": "string",              // "string" or "jsonb"
+	*     "lang": "lg-nolan",            // absent = all languages
+	*     "format": "column",            // absent = default jsonb path format
+	*     "column_name": "string",       // only present when format="column"
+	*     "path": [ ... ],               // path steps (consumed by filter_parser)
+	*     "sentence": "string",          // mandatory: SQL with _Q1_ … placeholders
+	*     "params": { "_Q1_": value, … } // mandatory: values for the placeholders
+	*   }
+	* @return string|null $sql  Resolved SQL fragment, or null if sentence is absent/empty
+	*/
+	public function parse_search_object_sql( object $search_object ) : ?string {
+
+		// sample object
+			// {
+			//   "q": "'.*\[".*ana.*'",						// the regex, text, number, etc that the component created
+			//   "unaccent":true,							// true or false
+			//   "operator":"~*",							// the operator for query
+			//   "type": "string",							// string or jsonb
+			//   "lang": "lg-nolan",						// if not defined lang = all langs, if defined lang = the lang sent
+			//   "format": "column",						// if not defined format = string, if defined format = the format sent
+			//   "column_name": "string",					// if not defined column_name = string, if defined column_name = the column_name sent
+			//   "path": [									// path for locate the component into the joins
+			//     {
+			//       "section_tipo": "oh1",
+			//       "component_tipo": "oh24"
+			//     },
+			//     {
+			//       "section_tipo": "rsc197",
+			//       "component_tipo": "rsc453"
+			//     }
+			//   ],
+			//   "sentence": "string",						// mandatory a sql sentence to be parsed with he params as placeholders _Q1_, _Q2_, ...
+			//   "params": associative array				// mandatory params for the sentence as ['_Q1_' => value1, '_Q2_' => value2, ...]
+			// }
+
+		// set initial SQL with search_object sentence
+		$sql = $search_object->sentence ?? null;
+
+		if (empty($sql)) {
+			return null;
+		}
+
+		foreach ($search_object->params ?? [] as $key => $value) {
+
+			$placeholder = $this->get_placeholder($value);
+
+			// Update SQL string with new placeholder. Replace _Q1_ by $1 in 'SELECT * FROM table WHERE column.rsc187.[*].value = _Q1_'
+			$sql = str_replace( $key, $placeholder, $sql );
+		}
+
+
+		return $sql;
+	}//end parse_search_object_sql
+
+
+
+	/**
+	* BUILD_SQL_FILTER_BY_LOCATORS
+	* Restricts the query to a specific set of locators supplied in `$this->sqo->filter_by_locators`.
+	*
+	* This is used when the caller already knows the exact records it wants —
+	* for example, after a parent search has identified a set of parent records and
+	* the system needs to filter a child section by those parents.  It is also the
+	* entry point for the `parse_sql_filter_by_locators()` fast path (which skips
+	* the full parse_sql_query pipeline and produces a minimal SELECT for pinned ids).
+	*
+	* The filter_by_locators array contains one or more locator objects. Each
+	* locator may combine any of the following fields — all fields within a single
+	* locator are joined with AND; multiple locators are joined with OR:
+	*
+	*   section_id   (int)    — maps to the matrix column `section_id` (parameterized)
+	*   section_tipo (string) — maps to the matrix column `section_tipo` (parameterized)
+	*   tipo         (string) — only valid for matrix_time_machine (column `tipo`)
+	*   type         (string) — maps to the matrix column `type` (parameterized)
+	*   lang         (string) — only valid for matrix_time_machine (column `lang`)
+	*   matrix_id    (int)    — only valid for matrix_time_machine (column `id`)
+	*
+	* Fields that are not applicable to the current matrix table are logged as
+	* WARNING and silently ignored rather than causing an error, so callers using
+	* generic locator objects do not need to tailor them per-table.
+	*
+	* All values are bound via `get_placeholder()` — no client value reaches the
+	* SQL string unparameterized.
+	*
+	* @return void
+	*/
+	public function build_sql_filter_by_locators() : void {
+
+		if (empty($this->sqo->filter_by_locators)) {
+			return;
+		}
+
+		$table = $this->main_section_tipo_alias;
+
+		$ar_parts = [];
+		foreach ($this->sqo->filter_by_locators as $current_locator) {
+
+			$ar_current = [];
+
+			// section_id (int)
+				if (property_exists($current_locator, 'section_id') && !empty($current_locator->section_id)) {
+					$placeholder = $this->get_placeholder((string)$current_locator->section_id);
+					$ar_current[] = $table.'.section_id='.$placeholder;
+				}
+
+			// section_tipo (string)
+				if (property_exists($current_locator, 'section_tipo') && !empty($current_locator->section_tipo)) {
+					$placeholder = $this->get_placeholder((string)$current_locator->section_tipo);
+					$ar_current[] = $table.'.section_tipo='.$placeholder;
+				}
+
+			// tipo (string). time machine case (column 'tipo' exists)
+				if (property_exists($current_locator, 'tipo') && !empty($current_locator->tipo)) {
+					if ($this->matrix_table==='matrix_time_machine') {
+						$placeholder = $this->get_placeholder((string)$current_locator->tipo);
+						$ar_current[] = $table.'.tipo='.$placeholder;
+					}else{
+						debug_log(__METHOD__
+							." Ignored property 'tipo' in locator because is only allowed in time machine table."
+							, logger::WARNING
+						);
+					}
+				}
+
+			// type (string)
+				if (property_exists($current_locator, 'type') && !empty($current_locator->type)) {
+					$placeholder = $this->get_placeholder((string)$current_locator->type);
+					$ar_current[] = $table.'.type='.$placeholder;
+				}
+
+			// lang (string). time machine case (column 'lang' exists)
+				if (property_exists($current_locator, 'lang') && !empty($current_locator->lang)) {
+					if ($this->matrix_table==='matrix_time_machine') {
+						$placeholder = $this->get_placeholder((string)$current_locator->lang);
+						$ar_current[] = $table.'.lang='.$placeholder;
+					}else{
+						debug_log(__METHOD__
+							." Ignored property 'lang' in locator because is only allowed in time machine table."
+							, logger::WARNING
+						);
+					}
+				}
+
+			// matrix_id (int). time machine case (column 'id' exists and is used)
+				if (property_exists($current_locator, 'matrix_id') && !empty($current_locator->matrix_id)) {
+					if ($this->matrix_table==='matrix_time_machine') {
+						$placeholder = $this->get_placeholder((string)$current_locator->matrix_id);
+						$ar_current[] = $table.'.id='.$placeholder;
+					}else{
+						debug_log(__METHOD__
+							." Ignored property 'matrix_id' in locator because is only allowed in time machine table."
+							, logger::WARNING
+						);
+					}
+				}
+
+			$ar_parts[] = '(' . implode(' AND ', $ar_current) . ')';
+		}
+
+		// Add to where clause
+		$this->sql_obj->where[] = PHP_EOL . '-- filter_by_locators' . PHP_EOL . implode(' OR ', $ar_parts);
+	}//end build_sql_filter_by_locators
+
+
+
+	/**
+	* BUILD_SQL_PROJECTS_FILTER
+	* Create the SQL sentence for filter records by user projects
+	* It is based on user permissions and current section_tipo
+	*
+	* This is the main row-level access-control gate for all non-admin users.
+	* Global admins bypass the filter entirely (unless $force_calculate is true).
+	* For everyone else, the logic branches on `$this->main_section_tipo`:
+	*
+	*  DEDALO_SECTION_PROFILES_TIPO
+	*    No filter applied — all users may see the profiles section.
+	*
+	*  DEDALO_FILTER_SECTION_TIPO_DEFAULT (Projects section)
+	*    No filter applied — projects are globally visible (policy in place since
+	*    2018-03-31, recorded in the SQL debug comment).
+	*
+	*  DEDALO_SECTION_USERS_TIPO (Users section)
+	*    A non-admin may see users that either:
+	*      a) were created by the logged-in user (`datos @> {created_by_userID: N}`)
+	*      b) share at least one of the logged-in user's projects (JSONB containment
+	*         on the users record's `relations` field against each project locator)
+	*    Root/negative records (section_id ≤ 0) are always excluded. This combined
+	*    clause is pushed directly to `$this->sql_obj->where[]`.
+	*
+	*  default (all other sections — the normal working data sections)
+	*    The section must have a `component_filter` child in the ontology; its tipo
+	*    is looked up via `section::get_ar_children_tipo_by_model_name_in_section()`.
+	*    If the user belongs to no projects, an impossible WHERE predicate is injected
+	*    (`relation ? 'IMPOSSIBLE VALUE (User without projects)'`) so the result set
+	*    is empty rather than unrestricted.  Otherwise an EXISTS subquery checks that
+	*    any of the user's project section_ids appear in the section's component_filter
+	*    relation array.
+	*
+	* All values are bound via `get_placeholder()`. The component_filter_tipo that
+	* is interpolated as a JSONB key is validated by `is_valid_tipo()`.
+	*
+	* @param bool $force_calculate = false
+	* 	Optional force param for debug purposes — when true, the filter is computed
+	*   even for global admin users so callers can inspect the generated SQL.
+	* @return void
+	*/
+	public function build_sql_projects_filter( bool $force_calculate=false ) : void {
+
+		// skip_projects_filter
+			if ($this->sqo->skip_projects_filter===true) {
+				return;
+			}
+
+		// short vars
+			$section_tipo		= $this->main_section_tipo;
+			$section_alias		= $this->main_section_tipo_alias;
+			$datos_container	= section_record_data::get_column_name('section');
+
+			$user_id			= logged_user_id(); // Logged user id
+			if (empty($user_id)) {
+				debug_log(__METHOD__
+					. " Error: user id unavailable (logged_user_id)"
+					, logger::ERROR
+				);
+				return;
+			}
+
+		// only for non global admins
+			$is_global_admin = (bool)security::is_global_admin($user_id);
+			if ($is_global_admin!==true || $force_calculate===true) {
+
+				$sql_filter = '';
+
+				switch (true) {
+					##### PROFILES ########################################################
+					case ($section_tipo===DEDALO_SECTION_PROFILES_TIPO) :
+						if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
+							$sql_filter .= "\n-- filter_profiles [PROFILES SECTION] (no filter is used here) -- \n";
+						}
+						break;
+					##### PROJECTS ########################################################
+					case ($section_tipo===DEDALO_FILTER_SECTION_TIPO_DEFAULT) :
+						if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
+							$sql_filter .= "\n-- filter_user_created [PROJECTS SECTION] -- (no filter is used here since 31-03-2018) -- \n";
+						}
+						break;
+					##### USERS ###########################################################
+					case ($section_tipo===DEDALO_SECTION_USERS_TIPO) :
+
+						// A non global admin may see users in the section that either:
+						//  - were created by the logged user, OR
+						//  - share at least one of the logged user's projects,
+						// and never the root/negative user records (section_id > 0).
+						//
+						// Note: this filter is appended to $this->sql_obj->where (like the default
+						// branch). The previous implementation built a $sql_filter string with
+						// v6-style 'AND ' prefixes and broken parenthesis grouping and never pushed
+						// it to sql_obj->where, so non-admins received NO filter on the users section.
+
+						# created_by filter
+							// $user_id is a server-side int (logged_user_id); cast defensively and
+							// parameterize the jsonb literal (json_encode does not escape single quotes).
+							$created_by_placeholder = $this->get_placeholder(json_encode(['created_by_userID' => (int)$user_id]));
+							$created_by_sql = $section_alias.'.'.$datos_container.' @> '.$created_by_placeholder.'::jsonb';
+
+						# projects filter
+							$component_filter_master_model	= ontology_node::get_model_by_tipo(DEDALO_FILTER_MASTER_TIPO,true);
+							$component_filter_master		= component_common::get_instance(
+								$component_filter_master_model, // 'component_filter_master',
+								DEDALO_FILTER_MASTER_TIPO,
+								$user_id,
+								'list',
+								DEDALO_DATA_NOLAN,
+								DEDALO_SECTION_USERS_TIPO
+							);
+							$filter_master_dato = (array)$component_filter_master->get_dato();
+							// check empty ar_area_tipo case
+								if (empty($filter_master_dato)) {
+									debug_log(__METHOD__
+										." Filter master without data!! "
+										, logger::ERROR
+									);
+									throw new Exception("Error Processing Request. Invalid filter master data", 1);
+								}
+							# Filter by any of user projects
+							$ar_query = [];
+							foreach ((array)$filter_master_dato as $current_project_locator) {
+								$search_locator = new locator();
+									$search_locator->set_section_tipo($current_project_locator->section_tipo);
+									$search_locator->set_section_id($current_project_locator->section_id);
+									$search_locator->set_type($current_project_locator->type);
+
+								// Parameterize the jsonb literal instead of inlining it inside a
+								// single-quoted SQL string (json_encode does not escape single quotes).
+								$placeholder = $this->get_placeholder('['.json_encode($search_locator).']');
+								$ar_query[] = $section_alias.'.'.$datos_container.'#>\'{relations}\' @> '.$placeholder.'::jsonb';
+							}
+
+						# combine: exclude root/negative AND (created_by OR shares a project)
+							$access_clauses = [$created_by_sql];
+							if (!empty($ar_query)) {
+								$access_clauses[] = '(' . implode(' OR ', $ar_query) . ')';
+							}
+
+							$users_filter = '';
+							if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
+								$users_filter .= "-- filter_users_by_profile_areas / filter_by_projects --" . PHP_EOL;
+							}
+							$users_filter .= '(' . $section_alias.'.section_id > 0'
+								. ' AND (' . implode(' OR ', $access_clauses) . '))';
+
+							$this->sql_obj->where[] = $users_filter;
+						break;
+					##### DEFAULT #########################################################
+					default:
+						if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
+							$sql_filter .= "\n-- filter_by_projects --";
+						}
+
+						# SECTION FILTER TIPO : Actual component_filter of this section
+						$ar_component_filter = section::get_ar_children_tipo_by_model_name_in_section(
+							$section_tipo, // string section_tipo
+							['component_filter'], // array ar_model name_required
+							true, // bool from_cache
+							true, // bool resolve_virtual
+							true, // bool recursive
+							true // bool search_exact
+						);
+						if (!isset($ar_component_filter[0])) {
+							$section_name = ontology_node::get_term_by_tipo($section_tipo);
+							debug_log(__METHOD__
+								." Error Processing Request. Filter not found is this section ($section_tipo) $section_name "
+								, logger::ERROR
+							);
+							return;
+						}
+
+						$component_filter_tipo = $ar_component_filter[0];
+
+						// Security: $component_filter_tipo is interpolated as a JSONB key below.
+						// It is ontology-sourced (server-side), but validate the tipo format for
+						// defense-in-depth before it reaches raw SQL.
+						if (!self::is_valid_tipo((string)$component_filter_tipo)) {
+							debug_log(__METHOD__
+								." Rejected invalid component_filter_tipo " . PHP_EOL
+								.' component_filter_tipo: ' . to_string($component_filter_tipo)
+								, logger::ERROR
+							);
+							return;
+						}
+
+						$ar_projects = component_filter_master::get_user_projects($user_id); // return array of locators
+						if (empty($ar_projects)) {
+
+							// Invalid filter case
+							$this->sql_obj->where[] = $section_alias.'.relation ? \'IMPOSSIBLE VALUE (User without projects)\' ';
+
+						}else{
+
+							// Default case. Filter by any of user projects
+							$ar_placeholders = [];
+							foreach ($ar_projects as $current_project_locator) {
+								$ar_placeholders[] = $this->get_placeholder((string)$current_project_locator->section_id);
+							}
+							$search_placeholders = implode(",", $ar_placeholders);
+
+							$this->sql_obj->where[] = "EXISTS ( SELECT 1
+								FROM jsonb_array_elements({$section_alias}.relation::jsonb->'{$component_filter_tipo}') AS item
+								WHERE (item->>'section_id')::int IN ({$search_placeholders})
+							)";
+						}
+						break;
+				}	//end switch (true)
+			}//end if ($is_global_admin!==true) {
+
+		// cache
+			// $sql_projects_filter_data[$uid] = $sql_projects_filter;
+	}//end build_sql_projects_filter
+
+
+
+	/**
+	* COLUMN_FORMAT_PARSER
+	* Builds the `sentence` + `params` pair for a "column" format search object,
+	* i.e. a direct comparison against a real matrix table column (not a JSONB path).
+	*
+	* Called from `search::conform_filter()` (class.search.php) when a leaf
+	* search_object carries `"format": "column"` and a non-empty `q` value.
+	* The caller then passes the enriched object to `parse_search_object_sql()`.
+	*
+	* Operator allowlist: [ '=', '!=', '<', '>', '<=', '>=' ]
+	* Column allowlist:   validated by `is_valid_data_column()` (matrix schema)
+	*
+	* The method mutates $query_object in place (adds `params` and `sentence`),
+	* then returns it. Returns false on any validation failure, which the caller
+	* interprets as "skip this filter item".
+	*
+	* @param object $query_object  Leaf search_object with at minimum:
+	*                               - q           the comparison value
+	*                               - column_name target matrix column identifier
+	*                               - operator    SQL comparison operator (defaults to '=')
+	*                               - table_alias table alias set by conform_filter
+	* @return object|false  The mutated $query_object ready for parse_search_object_sql(),
+	*                       or false on validation failure (empty q, missing/invalid
+	*                       column_name, disallowed operator)
+	*/
+	protected function column_format_parser( object $query_object ) : object|false {
+
+		 // 1. Extract and Normalize search value (q)
+        $q = empty($query_object->q) ? false : $query_object->q;
+        if ($q === false) {
+            return false;
+        }
+
+		if( is_string($q) ) {
+			$q = trim($q);
+		}
+
+		$column_name = isset($query_object->column_name) ? $query_object->column_name : false;
+		if($column_name===false) {
+			debug_log(__METHOD__
+				." Invalid column_name: " . to_string($column_name)
+				, logger::ERROR
+			);
+			return false;
+		}
+		// Security: $column_name is interpolated as a bare SQL identifier (it cannot be
+		// parameterized). Restrict it to real matrix columns. Reject anything else.
+		if (!self::is_valid_data_column((string)$column_name)) {
+			debug_log(__METHOD__
+				." Rejected invalid column_name (not a known matrix column): " . to_string($column_name)
+				, logger::ERROR
+			);
+			return false;
+		}
+		$valid_operators = ['=','!=','<','>','<=','>='];
+		$operator = isset($query_object->operator) ? trim($query_object->operator) : '=';
+		if (!in_array($operator, $valid_operators)) {
+			debug_log(__METHOD__
+				." Invalid operator: " . $operator
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		$table_alias = $query_object->table_alias;
+
+		$query_object->params = [
+			'_Q1_' => $q
+		];
+
+		$query_object->sentence = "{$table_alias}.{$column_name} $operator _Q1_";
+
+		return $query_object;
+	}//end column_format_parser
+
+
+
+}//end where

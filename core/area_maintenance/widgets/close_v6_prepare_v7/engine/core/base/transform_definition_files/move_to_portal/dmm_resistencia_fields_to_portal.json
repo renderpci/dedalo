@@ -1,0 +1,25 @@
+[
+	{
+		"components": [
+			{
+				"source_tipo": "dmm1523",
+				"target_tipo": "dmm1523",
+				"info": "Red de resistencia"
+			},
+			{
+				"source_tipo": "dmm1524",
+				"target_tipo": "dmm1524",
+				"info": "Població de resistència"
+			},
+			{
+				"source_tipo": "dmm1525",
+				"target_tipo": "dmm1525",
+				"info": "Població de resistència original"
+			}
+		],
+		"portal": "dmm1997",
+		"source_section": "dmm1500",
+		"target_section": "dmm1964",
+		"info": "Resistance fields to new section and link into the portal"
+	}
+]

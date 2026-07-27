@@ -1,0 +1,1757 @@
+<?php declare(strict_types=1);
+/**
+* DIFFUSION_RDF
+* Used to publish data to RDF
+* The publication in RDF need to be defined in the ontology inside a diffusion_element
+*/
+class diffusion_rdf {
+
+	protected $domain;
+	public $section_id;
+	public $rdf_wrapper;	// Array of RDF wrapper lines to inject body content at element $rdf_wrapper[rdf_value]
+
+	public $service_name;	// From properties of diffusion_element (Fixed on update_record)
+	public $service_type;	// From properties of diffusion_element (Fixed on update_record)
+	public $external_ontology_tipo; // the diffusion element tipo
+	// public $entity_section_id; //Fixed on update_record
+	public $ar_records; // Inject data here by tool diffusion when update_record
+
+	public $entity_locator; // the entity publication service locator to use for get the URL base.
+
+	public $DEDALO_EXTRAS_BASE_URL;
+	public $name_space;
+
+
+
+	/**
+	* CONSTRUCT
+	* @param object|null $options = null
+	*/
+	public function __construct( ?object $options=null ) {
+
+		$this->domain = DEDALO_DIFFUSION_DOMAIN;
+		if ($options) {
+			// Unused but kept for interface compatibility
+		}
+
+		// fix url
+		$this->DEDALO_EXTRAS_BASE_URL = DEDALO_ROOT_WEB . '/'. basename(dirname(DEDALO_CORE_PATH)) .'/'. basename(DEDALO_CORE_PATH) .'/'. basename(DEDALO_EXTRAS_PATH);
+
+		// easyrdf load via composer PSR-4 autoload (EasyRdf\ => vendor/sweetrdf/easyrdf/lib).
+		// The previous manual includes used DEDALO_LIB_PATH . '/vendor/...' (= master_dedalo/lib/
+		// vendor), a path that never existed (vendor is at master_dedalo/vendor). See composer.json
+		// SEC-101-followup: the dependency is meant to load through composer autoload.
+			if (!class_exists('EasyRdf\\Graph')) {
+				$autoload_file = dirname(DEDALO_CORE_PATH) . '/vendor/autoload.php';
+				if (is_file($autoload_file)) {
+					include_once $autoload_file;
+				}
+			}
+	}//end __construct
+
+
+
+	/**
+	* UPDATE_RECORD
+	* Unified diffusion start point to publish one record.
+	* Creates an RDF file with the resultant nodes of process given record.
+	* @param object $options
+	* @return object $response
+	*/
+	public function update_record( object $options ) : object {
+
+		set_time_limit ( 259200 );  // 3 days
+
+		// response
+			$response = new stdClass();
+				$response->result			= false;
+				$response->msg				= [];
+				$response->errors			= [];
+				$response->class			= get_called_class();
+				$response->diffusion_data	= [];
+
+		// options
+			$section_tipo			= $options->section_tipo ?? null;
+			$section_id				= $options->section_id ?? null;
+			$diffusion_element_tipo	= $options->diffusion_element_tipo ?? null;
+			$save_file				= $options->save_file ?? true;
+			$pure					= $options->pure ?? false;
+			$skip_publication_check	= $options->skip_publication_check ?? false;
+
+		// target_section_tipo
+			$ontology_node			= ontology_node::get_instance($diffusion_element_tipo);
+			$properties				= $ontology_node->get_properties(true);
+
+		// Fix vars
+			$this->external_ontology_tipo	= $diffusion_element_tipo;
+			$this->service_name				= $properties->diffusion->service_name ?? null;
+			$this->service_type				= $properties->diffusion->service_type ?? null;
+			$this->name_space				= $properties->xmlns ?? null;
+			$this->entity_locator			= $this->resolve_entity_locator();
+
+		// search records
+			if (empty($this->ar_records)) {
+				$ar_section_id = [$section_id];
+			}else{
+				$ar_section_id = array_map(function($item){
+					return $item->section_id;
+				}, (array)$this->ar_records);
+			}
+
+		// filter to publish records
+			if ($pure === false && $skip_publication_check === false) {
+				$requested_ar_section_id	= array_map('strval', $ar_section_id);
+				$ar_section_id				= self::get_to_publish_rows($section_tipo, $ar_section_id);
+
+				// unpublish parity with the SQL path (fields:'delete'): records
+				// filtered out as not publishable get their published RDF file
+				// removed and the action logged as unpublished.
+				$publishable_ar_section_id	= array_map('strval', $ar_section_id);
+				$excluded_ar_section_id		= array_diff($requested_ar_section_id, $publishable_ar_section_id);
+				foreach ($excluded_ar_section_id as $excluded_section_id) {
+					$delete_response = self::delete_record_file($diffusion_element_tipo, $section_tipo, $excluded_section_id);
+					if ($delete_response->result===true && !empty($delete_response->deleted_files)) {
+						include_once DEDALO_DIFFUSION_PATH . '/class.diffusion_activity_logger.php';
+						diffusion_activity_logger::log(
+							$section_tipo,
+							(int)$excluded_section_id,
+							$diffusion_element_tipo,
+							diffusion_activity_logger::ACTION_UNPUBLISHED
+						);
+					}
+				}
+			}
+
+		// if empty ar_section_id stop
+			if (empty($ar_section_id)) {
+				$response->msg[] = "No records to publish";
+				return $response;
+			}
+
+		// Directory (skipped in pure mode: no file saving, no filesystem side effects)
+		$sub_path    = '/rdf/'.$this->service_name.'/';	 // nomisma';
+		if ($pure === false) {
+			$folder_path = DEDALO_MEDIA_PATH . $sub_path;
+			if (!is_dir($folder_path)) {
+				if(!mkdir($folder_path, 0777, true)) {
+					$response->msg[] = " Error on read or create directory. Permission denied";
+					debug_log(__METHOD__
+						. " msg: " . to_string($response->msg) . PHP_EOL
+						. ' folder_path: ' . $folder_path
+						, logger::ERROR
+					);
+					return $response;
+				}
+				debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+			}
+		}
+
+		// diffusion rdf
+			$ar_owl_class_tipo	= ontology_node::get_ar_tipo_by_model_and_relation(
+				$diffusion_element_tipo,
+				'owl:Class',
+				'children',
+				true // bool search_exact
+			);
+			foreach ($ar_owl_class_tipo as $current_class_tipo) {
+				$ar_current_section_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
+					$current_class_tipo,
+					'section',
+					'related',
+					true // bool search_exact
+				);
+				$current_section_tipo = reset($ar_current_section_tipo);
+				if($current_section_tipo===$section_tipo) {
+					$owl_class_tipo = $current_class_tipo;
+					break;
+				}
+			}
+
+			// Unable to resolve owl_class_tipo case
+				if (!isset($owl_class_tipo)) {
+					debug_log(__METHOD__
+						. " Unable to resolve owl_class_tipo " . PHP_EOL
+						. ' diffusion_element_tipo: ' . $diffusion_element_tipo
+						, logger::ERROR
+					);
+					$response = new stdClass();
+						$response->result	= false;
+						$response->msg[]	= 'Error. Unable to resolve owl_class_tipo';
+					return $response;
+				}
+
+		// resolve data build_rdf_data
+			$rdf_options = new stdClass();
+				// $rdf_options->external_ontology_tipo	= $this->external_ontology_tipo;
+				$rdf_options->owl_class_tipo			= $owl_class_tipo;	// Numisma RDF : modelo_name : xml
+				$rdf_options->section_tipo				= $section_tipo; // $target_section_tipo;	// Fichero
+				$rdf_options->ar_section_id				= $ar_section_id;	// Array like [45001,45002,45003];
+				// $rdf_options->save_to_file_path		= DEDALO_MEDIA_PATH . $sub_path . $rdf_file_name; // Target file
+				// $rdf_options->url_file				= DEDALO_MEDIA_URL  . $sub_path . $rdf_file_name;
+				// $rdf_options->save_file				= $save_file;
+			$build_response = $this->build_rdf_data( $rdf_options );
+
+		// response add
+			$response->result	= true;
+			$response->data		= $build_response->data;
+			$response->msg		= array_merge($response->msg, $build_response->msg);
+
+		// log publication activity (dd1758: who/when/what/where + action)
+		// one row per published record, replacing the legacy per-record
+		// publication metadata components (update_publication_data, removed in v7)
+		if ($pure === false) {
+			include_once DEDALO_DIFFUSION_PATH . '/class.diffusion_activity_logger.php';
+			foreach ($ar_section_id as $published_section_id) {
+				diffusion_activity_logger::log(
+					$section_tipo,
+					(int)$published_section_id,
+					$diffusion_element_tipo,
+					diffusion_activity_logger::ACTION_PUBLISHED
+				);
+			}
+		}
+
+		// save file
+			if ($save_file===true) {
+
+				// deterministic name: one current file per record, overwritten
+				// on each re-publish (who/when live in the dd1758 activity log)
+				$file_info = self::get_record_file_path($diffusion_element_tipo, $section_tipo, $section_id);
+				if ($file_info===null) {
+					$response->msg[] = 'Error. Unable to resolve RDF file path';
+					return $response;
+				}
+				$save_to_file_path	= $file_info->file_path;
+				$url_file			= $file_info->file_url;
+				$data				= $build_response->data;
+
+				if( file_put_contents($save_to_file_path, $data)!==false ){
+
+					debug_log(__METHOD__
+						. " Save file to " . PHP_EOL
+						. ' save_to_file_path: ' . to_string($save_to_file_path)
+						, logger::DEBUG
+					);
+
+					// add file URL to data response. The client will recover this list of files available for download.
+					$response->diffusion_data = [(object)[
+						'file_url' => $url_file
+					]];
+
+				}else{
+
+					debug_log(__METHOD__
+						. " Fail to save file " . PHP_EOL
+						. ' save_to_file_path: ' . to_string($save_to_file_path)
+						, logger::ERROR
+					);
+				}
+			}
+
+
+		return $response;
+	}//end update_record
+
+
+
+	/**
+	* GET_RECORD_FILE_PATH
+	* Resolves the canonical (deterministic) published RDF file path of a record:
+	* {rdf_name}_{section_tipo}_{section_id}.rdf inside /rdf/{service_name}/.
+	* Single source of truth shared by publish (update_record) and delete
+	* (delete_record_file / diffusion_delete) so re-publishing always overwrites
+	* the same file and deleting always targets it.
+	* @param string $diffusion_element_tipo
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @return object|null {
+	* 	service_name: string,
+	* 	sub_path: string,
+	* 	file_name: string,
+	* 	file_path: string,
+	* 	file_url: string
+	* } or null when service_name/owl_class are not resolvable
+	*/
+	public static function get_record_file_path( string $diffusion_element_tipo, string $section_tipo, string|int $section_id ) : ?object {
+
+		// service_name from diffusion_element properties
+			$ontology_node	= ontology_node::get_instance($diffusion_element_tipo);
+			$properties		= $ontology_node->get_properties(true);
+			$service_name	= $properties->diffusion->service_name ?? null;
+			if (empty($service_name)) {
+				debug_log(__METHOD__
+					. " Unable to resolve service_name from diffusion_element properties" . PHP_EOL
+					. ' diffusion_element_tipo: ' . $diffusion_element_tipo
+					, logger::ERROR
+				);
+				return null;
+			}
+
+		// owl_class related to this section (the rdf_name source)
+			$owl_class_tipo		= null;
+			$ar_owl_class_tipo	= ontology_node::get_ar_tipo_by_model_and_relation(
+				$diffusion_element_tipo,
+				'owl:Class',
+				'children',
+				true // bool search_exact
+			);
+			foreach ($ar_owl_class_tipo as $current_class_tipo) {
+				$ar_current_section_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
+					$current_class_tipo,
+					'section',
+					'related',
+					true // bool search_exact
+				);
+				$current_section_tipo = reset($ar_current_section_tipo);
+				if($current_section_tipo===$section_tipo) {
+					$owl_class_tipo = $current_class_tipo;
+					break;
+				}
+			}
+			if ($owl_class_tipo===null) {
+				debug_log(__METHOD__
+					. " Unable to resolve owl_class_tipo for section" . PHP_EOL
+					. ' diffusion_element_tipo: ' . $diffusion_element_tipo . PHP_EOL
+					. ' section_tipo: ' . $section_tipo
+					, logger::ERROR
+				);
+				return null;
+			}
+
+		// deterministic file name (one current file per record; user/date live
+		// in the dd1758 activity log and the publication metadata components)
+			$rdf_name	= ontology_node::get_term_by_tipo($owl_class_tipo) ?? '';
+			$file_name	= sanitize_file_name(implode('_', [
+				$rdf_name,
+				$section_tipo,
+				$section_id
+			])) . '.rdf';
+			$sub_path	= '/rdf/' . $service_name . '/';
+
+		$file_info = new stdClass();
+			$file_info->service_name	= $service_name;
+			$file_info->sub_path		= $sub_path;
+			$file_info->file_name		= $file_name;
+			$file_info->file_path		= DEDALO_MEDIA_PATH . $sub_path . $file_name;
+			$file_info->file_url		= DEDALO_MEDIA_URL  . $sub_path . $file_name;
+
+
+		return $file_info;
+	}//end get_record_file_path
+
+
+
+	/**
+	* DELETE_RECORD_FILE
+	* Removes the published RDF file of a record: the canonical deterministic
+	* file plus any legacy timestamped variants ({base}_*.rdf) written before
+	* the deterministic naming. Missing files = idempotent success.
+	* @param string $diffusion_element_tipo
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @return object {result: bool, msg: string, file_path: string|null, deleted_files: array}
+	*/
+	public static function delete_record_file( string $diffusion_element_tipo, string $section_tipo, string|int $section_id ) : object {
+
+		$response = new stdClass();
+			$response->result			= false;
+			$response->msg				= '';
+			$response->file_path		= null;
+			$response->deleted_files	= [];
+
+		$file_info = self::get_record_file_path($diffusion_element_tipo, $section_tipo, $section_id);
+		if ($file_info===null) {
+			$response->msg = "RDF delete: unable to resolve file path for element '$diffusion_element_tipo', section $section_tipo $section_id";
+			return $response;
+		}
+		$response->file_path = $file_info->file_path;
+
+		// canonical file + legacy timestamped variants
+			$dir		= dirname($file_info->file_path);
+			$base_name	= pathinfo($file_info->file_name, PATHINFO_FILENAME);
+			$to_unlink	= [];
+			if (file_exists($file_info->file_path)) {
+				$to_unlink[] = $file_info->file_path;
+			}
+			$legacy_files = is_dir($dir)
+				? (glob($dir .'/'. $base_name .'_*.rdf') ?: [])
+				: [];
+			$to_unlink = array_merge($to_unlink, $legacy_files);
+
+		if (empty($to_unlink)) {
+			// nothing published (or already removed): idempotent success
+			$response->result	= true;
+			$response->msg		= 'RDF delete: no file found (already removed)';
+			return $response;
+		}
+
+		$all_ok = true;
+		foreach ($to_unlink as $file_path) {
+			if (unlink($file_path)) {
+				$response->deleted_files[] = $file_path;
+			}else{
+				$all_ok = false;
+				$response->msg = "RDF delete: failed to unlink file '$file_path' (check permissions)";
+				debug_log(__METHOD__ .' '. $response->msg, logger::ERROR);
+			}
+		}
+
+		$response->result = $all_ok;
+		if ($all_ok) {
+			$response->msg = 'RDF delete: removed '. count($response->deleted_files) .' file(s)';
+		}
+
+
+		return $response;
+	}//end delete_record_file
+
+
+
+	/**
+	* BUILD_RDF_XML
+	* Pure RDF/XML string generator. No file save, no publication side effects.
+	* Used by SQL field-level RDF embedding via diffusion_chain_processor.
+	* @param string $section_tipo
+	* @param int $section_id
+	* @param string $diffusion_element_tipo
+	* @return string|null RDF/XML string or null on failure
+	*/
+	public static function build_rdf_xml( string $section_tipo, int $section_id, string $diffusion_element_tipo ) : ?string {
+
+		$instance = new self(null);
+		$response = $instance->update_record((object)[
+			'section_tipo'				=> $section_tipo,
+			'section_id'				=> $section_id,
+			'diffusion_element_tipo'	=> $diffusion_element_tipo,
+			'save_file'					=> false,
+			'pure'						=> true
+		]);
+
+		return $response->data ?? null;
+	}//end build_rdf_xml
+
+
+
+	/**
+	* BUILD_RDF_DATA
+	* @param object $options
+	* @return object $response
+	*/
+	public function build_rdf_data( object $options ) : object {
+
+		// Maximum execution time seconds
+		set_time_limit(600);
+
+		$start_time=start_time();
+
+		// options
+			$owl_class_tipo			= $options->owl_class_tipo		?? null;
+			$section_tipo			= $options->section_tipo		?? null;
+			$ar_section_id			= $options->ar_section_id		?? array();
+			// $rdf_validate		= $options->rdf_validate		?? true;
+			// $rdf_format_output	= $options->rdf_format_output	?? true;
+
+		// response
+			$response = new stdClass();
+				$response->result 	= false;
+				$response->msg 		= [];
+
+		// wrapper
+			$owl_class_tipo = $owl_class_tipo;	// Like 'mupreva2190' for 'Numisma RDF'
+
+		// rdf_graph
+			$rdf_graph = new \EasyRdf\Graph();
+
+			$name_space = $this->name_space;
+
+			foreach($name_space as $key => $value){
+				\EasyRdf\RdfNamespace::set($key, $value);
+			}
+
+		// DES
+			// $ontology_chidren = ontology_node::get_ar_children($ontology_tipo);
+
+			// $owl_class_tipo = null;
+			// $ar_owl_ObjectProperty = [];
+			// foreach ($ontology_chidren as $current_owl_class_tipo) {
+			// 	$ar_current_section_tipo = ontology_node::get_ar_tipo_by_model_and_relation($current_owl_class_tipo, 'section', 'related', true);
+			// 	$current_section_tipo = reset($ar_current_section_tipo);
+			// 	if($current_section_tipo === $section_tipo){
+			// 		$owl_class_tipo 			= $current_owl_class_tipo;
+			// 		break;
+			// 	}
+			// }
+
+		// format_options
+			$format_options = array();
+			foreach (\EasyRdf\Format::getFormats() as $format) {
+				if ($format->getSerialiserClass()) {
+					$format_options[$format->getLabel()] = $format->getName();
+				}
+			}
+
+		// parse rdf_object
+			$ar_element=array();
+			foreach ($ar_section_id as $current_section_id) {
+				$element		= $this->build_rdf_node($rdf_graph, null, $owl_class_tipo, $section_tipo, $current_section_id);
+				$ar_element[]	= $element;
+			}
+
+		// data
+			$data = $rdf_graph->serialise('rdfxml');
+			if (!is_scalar($data)) {
+				$data = var_export($data, true);
+			}
+
+		// reference
+			// "RDF/PHP": "php",
+			// "RDF/JSON Resource-Centric": "json",
+			// "JSON-LD": "jsonld",
+			// "N-Triples": "ntriples",
+			// "Turtle Terse RDF Triple Language": "turtle",
+			// "RDF/XML": "rdfxml",
+			// "Graphviz": "dot",
+			// "Notation3": "n3",
+			// "Portable Network Graphics (PNG)": "png",
+			// "Graphics Interchange Format (GIF)": "gif",
+			// "Scalable Vector Graphics (SVG)": "svg"
+
+		// response additional info
+			$response->result	= true;
+			$response->data		= $data;
+
+		// debug
+			$response->debug = "Generated [".count($ar_section_id)." elements] in "
+				. exec_time_unit_auto($start_time);
+
+
+		return $response;
+	}//end build_rdf_data
+
+
+
+	/**
+	* BUILD_RDF_NODE
+	* @return bool $result
+	*/
+	public function build_rdf_node($rdf_graph, $node_graph, $ObjectProperty_tipo, $section_tipo, $section_id) : bool {
+
+		// get the name of the property, it is defined in the ontology term, and will use as rdf property
+		$object_name		= ontology_node::get_term_by_tipo($ObjectProperty_tipo);
+		$object_model_name	= ontology_node::get_model_by_tipo($ObjectProperty_tipo);
+		$ontology_node		= ontology_node::get_instance($ObjectProperty_tipo);
+		$properties			= $ontology_node->get_properties(true);
+		// result of the recursion, to be used in the component_portals to check if the resource linked has data
+		// if yes, it will create the resource link in the graph, else, it will doesn't create the link
+		$result = false;
+		// the main section is the owl:Class
+		switch ($object_model_name) {
+
+			case 'owl:Class':
+				if(isset($properties->process)) {
+					switch ($properties->process->type) {
+						case 'entity_publication_uri':
+							// check if the title in the base_uril_entity is self and resolve it
+							$base_uri_entity = $properties->process->base_uri_entity;
+							$base_uri_entity->title = ($base_uri_entity->title === 'self') ? $object_name : $base_uri_entity->title;
+							$uri_data = $this->resolve_base_uri($base_uri_entity);
+							//resolve the uri id
+							if(isset($properties->var_uri)){
+								$var_uri	= $this->resolve_var_uri($properties->var_uri , $section_tipo, $section_id);
+								$uri		= $uri_data . $var_uri;
+							}else{
+								$uri		= $uri_data . $section_id;
+							}
+							// create the graph of the class
+							$node_graph = $rdf_graph->resource($uri, $object_name);
+
+							// recursion: all children need to be processed
+								$ar_owl_ObjectProperty	= ontology_node::get_ar_children($ObjectProperty_tipo);
+								if(!empty($ar_owl_ObjectProperty)){
+									foreach ($ar_owl_ObjectProperty as $current_ObjectProperty_tipo) {
+										$sub_node_graph = $this->build_rdf_node($rdf_graph, $node_graph, $current_ObjectProperty_tipo, $section_tipo, $section_id);
+									}
+									$result = true;
+								}
+							break;
+
+						default:
+							// code...
+							break;
+					}
+				}//end if(isset($properties->process))
+				break;
+
+			case 'rdf':
+				$ar_related_dd_tipo	= ontology_node::get_ar_tipo_by_model_and_relation($ObjectProperty_tipo, 'component_', 'related', false);
+				$current_tipo		= reset($ar_related_dd_tipo);
+				$model_name			= ontology_node::get_model_by_tipo($current_tipo);
+				$component			= component_common::get_instance(
+					$model_name,
+					$current_tipo,
+					$section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
+
+				$data = (array)$component->get_dato();
+
+				$ar_owl_class_tipo	= ontology_node::get_ar_tipo_by_model_and_relation($ObjectProperty_tipo, 'owl:Class', 'related', true);
+				$owl_class_tipo		= reset($ar_owl_class_tipo);
+
+				// max_items. (!) Notice that here we use the user configurable DEDALO_DIFFUSION_RESOLVE_LEVELS value as n items resolve (Example: 1 coins for current type)
+					$max_items = diffusion_utils::get_resolve_levels();
+
+				// process data locators
+					$data_length = empty($data) ? 0 : count($data);
+					for ($i=0; $i < $data_length; $i++) {
+
+						// continue until reach max_items limit
+						if ($i>=$max_items) {
+							break;
+						}
+
+						$current_locator = $data[$i];
+
+						// guard: a relation/portal can yield a non-object (e.g. false) entry in its
+						// dato; skip it (don't pass it to is_publishable, which requires an object).
+						if (!is_object($current_locator)) {
+							$max_items++;
+							continue;
+						}
+
+						// Check target is publicable
+							$current_is_publicable = diffusion_utils::is_publishable($current_locator);
+							if ($current_is_publicable!==true) {
+								$max_items++;
+								continue;
+							}
+
+						$this->build_rdf_node(
+							$rdf_graph, // rdf_graph
+							null, // node_graph
+							$owl_class_tipo, // ObjectProperty_tipo
+							$current_locator->section_tipo, // section_tipo
+							$current_locator->section_id // section_id
+						);
+					}
+				break;
+
+			default:
+				// ddo_map create or get from properties
+					$ddo_map			= [];
+					$ar_related_dd_tipo	= ontology_node::get_ar_tipo_by_model_and_relation($ObjectProperty_tipo, 'component_', 'related', false);
+					// check if the ontology has his owm ddo_map defined, if not, it will create a ddo_map with related components.
+					if(isset($properties->process) && isset($properties->process->ddo_map)){
+
+						$ddo_map = $properties->process->ddo_map;
+						// resolve the 'self' value for section_tipo or parent, if this properties are defined use it.
+						foreach ($ddo_map as $ddo) {
+							$ddo->section_tipo	= $ddo->section_tipo === 'self' ? $section_tipo : $ddo->section_tipo;
+							$ddo->parent		= $ddo->parent === 'self' ? $section_tipo : $ddo->parent;
+						}
+					}else{
+						// create new ddo_map when the ontology doesn't has one ddo_map
+						foreach ($ar_related_dd_tipo as $current_tipo) {
+							$ddo = new stdClass();
+								$ddo->tipo			= $current_tipo;
+								$ddo->section_tipo	= $section_tipo;
+								$ddo->parent		= $section_tipo;
+								// NOTE: do NOT set $ddo->fn = "get_diffusion_data" here. get_ddo_value
+								// already resolves via $element->get_diffusion_data($ddo); setting the ddo's
+								// fn to "get_diffusion_data" makes component_relation_common::get_diffusion_data
+								// dispatch $ddo->fn back to itself ($this->get_diffusion_data($ddo)) → infinite
+								// self-recursion → OOM (e.g. the collection portal numisdata159 on a coin).
+								// v6 used $ddo->value_fn = "get_diffusion_value" (a different, non-recursive
+								// dispatch). Leaving fn unset lets get_diffusion_data resolve the data normally.
+
+							$ddo_map[] = $ddo;
+						}
+					}
+
+				// resolve the ddo_map
+					// get the value of all ddo
+					$ar_values = $this->get_ddo_map_value($ddo_map, $section_tipo, $section_tipo, $section_id);
+
+					// set the default lang, and transform to alpha2 standard (lg-eng -> en)
+					$default_lang			= DEDALO_DATA_LANG_DEFAULT;
+					$default_alpha2_lang	= lang::get_alpha2_from_code($default_lang);
+					$ar_langs				= [$default_alpha2_lang];
+					// create unique array with all languages of the data, it will used to fill the gaps in the components that has to be joined and doesn't has done the translation
+					foreach ($ar_values as $value) {
+						if (!in_array($value->lang, $ar_langs) && $value->lang !== null) {
+							$ar_langs[] = $value->lang;
+						}
+					}
+					// get_end_ddo, the last ddo in the chain, they have the values
+					$end_ddo = [];
+					// If the ddo_map has a config, the config->result->ddo_map will be use instead the current ddo_map because the current $ddo_map is for search the data
+					// and the result ($ar_values) need to be processed with the ddo_map that mach, see numisdata1311
+					foreach ($ddo_map as $ddo) {
+						$ddo_map = (isset($ddo->config) && isset($ddo->config->result->ddo_map))
+							? $ddo->config->result->ddo_map
+							: $ddo_map;
+					}
+
+					foreach ($ddo_map as $ddo) {
+						$children = array_filter($ddo_map, function($item) use($ddo) {
+							return $item->parent===$ddo->tipo;
+						});
+						if(empty($children)){
+							$end_ddo[] = $ddo;
+						}
+					}
+
+				// resolve processed data
+					// get the process defined in properties
+					$type_of_process = (isset($properties->process) && isset($properties->process->type))
+						? $properties->process->type
+						: 'default';
+
+					switch ($type_of_process) {
+						// get_data_uri is used to locate a specific uri in the component_iri, the component could have more than one uri (wikipedia, nomisma, etc..)
+						// it select the correct value with the base uri (in the Entities Publication services) and the match it with the data of the component_iri
+						case 'get_data_uri':
+							$base_uri_entity = $properties->process->base_uri_entity;
+							$base_uri_entity->title = ($base_uri_entity->title === 'self') ? $object_name : $base_uri_entity->title;
+							$uri_data = $this->resolve_base_uri($base_uri_entity);
+
+							$uri_finded = null;
+							foreach ($ar_values as $current_uri) {
+								foreach($current_uri->value as $uri) {
+									$current_uri_data = is_string($uri_data)
+										? $uri_data
+										: '';
+									$iri_string = $uri->iri ?? '';
+									$find = strripos($iri_string, $current_uri_data);
+									if($find !== false){
+										$uri_finded = $iri_string;
+										break 2;
+									}
+								}
+							}
+
+							if ($uri_finded) {
+								$node_graph->addResource($object_name, $uri_finded);
+								$result = true;
+							}
+							break;
+						// resolve the component date and create the RDF equivalent
+						case 'get_data_date':
+
+							$get_date	= $properties->process->get_date;
+							$format		= $properties->process->format;
+
+							foreach ($ar_values as $current_date) {
+								foreach ($current_date->value as $date_value) {
+
+									$data = $date_value->{$get_date};
+									foreach ($data as $key => $value) {
+
+										$current_format = isset($format->{$key})
+											? $format->{$key}
+											: null;
+										if ($current_format	) {
+											$node_graph->add(
+												$object_name,
+												EasyRdf\Literal::create($value, null, $current_format)
+											);
+											$result = true;
+										}
+									}
+								}
+							}
+							break;
+						// resolve the portal creating a new resource in the graph and adding the data of the components inside,
+						// if the components doesn't has data it will not create the link in the current_node
+						case 'get_portal':
+							// get the base uri for the new resource, id the uri is in the graph it will re-use the resource
+							$base_uri_entity = $properties->process->base_uri_entity;
+							$base_uri_entity->title = ($base_uri_entity->title === 'self') ? $object_name : $base_uri_entity->title;
+							$uri_data = $this->resolve_base_uri($base_uri_entity);
+							// resolve the id of the uri
+							if(isset($properties->process->var_uri)){
+								$var_uri = $this->resolve_var_uri($properties->process->var_uri , $section_tipo, $section_id);
+								$uri = $uri_data . $var_uri;
+							}else{
+								$uri = $uri_data . $section_id;
+							}
+							// create the new resource (the $new_node_graph is the new graph used for recursive)
+							$new_node_graph = $rdf_graph->resource($uri);
+							// recursion, with the components children of the current term.
+								$ar_owl_ObjectProperty	= ontology_node::get_ar_children($ObjectProperty_tipo);
+								$sub_node_graph = false;
+								if(!empty($ar_owl_ObjectProperty)){
+									foreach ($ar_owl_ObjectProperty as $current_ObjectProperty_tipo) {
+										$sub_node_graph = $this->build_rdf_node($rdf_graph, $new_node_graph, $current_ObjectProperty_tipo, $section_tipo, $section_id);
+										// assign to the node of the global graph the pointer only if the sub nodes has values
+										if($sub_node_graph===true){
+											$node_graph->addResource($object_name, $uri);
+										}
+									}
+								}
+							break;
+						// resolve the link to other resources uri + section_id without language; as coins referred types uri.
+						case 'get_resource_link':
+
+							$base_uri_entity = $properties->process->base_uri_entity ?? null;
+							$uri_data = '';
+							if($base_uri_entity){
+								$base_uri_entity->title = ($base_uri_entity->title === 'self') ? $object_name : $base_uri_entity->title;
+								$uri_data = $this->resolve_base_uri($base_uri_entity);
+							}
+							foreach ($ar_values as $ddo_value) {
+								// set the value to the graph if the ddo has value
+								if(!empty($ddo_value->value)){
+									$uri = $uri_data . $ddo_value->value;
+									$node_graph->addResource($object_name, $uri);
+									$result = true;
+								}
+							}
+							break;
+						// resolve the section_id without language
+						case 'get_section_id':
+
+							foreach ($ar_values as $ddo_value) {
+								// set the value to the graph if the ddo has value
+								if(!empty($ddo_value->value)){
+									$node_graph->addLiteral($object_name, strip_tags($ddo_value->value));
+									$result = true;
+								}
+							}
+							break;
+						// resolve numbers
+						case 'get_data_number':
+							$format		= $properties->process->format;
+							foreach ($ar_values as $date_value) {
+
+								$value = $date_value->value;
+								$type = gettype($value);
+
+								$current_format = isset($format->{$type})
+									? $format->{$type}
+									: null;
+								if ($current_format	) {
+									$node_graph->add(
+										$object_name,
+										EasyRdf\Literal::create($value, null, $current_format)
+									);
+									$result = true;
+								}
+							}
+							break;
+						// get specific uri
+						case 'entity_publication_uri':
+							// check if the title in the base_uril_entity is self and resolve it
+							$base_uri_entity = $properties->process->base_uri_entity;
+							$base_uri_entity->title = ($base_uri_entity->title === 'self') ? $object_name : $base_uri_entity->title;
+							$uri_data = $this->resolve_base_uri($base_uri_entity);
+							//resolve the uri id
+							if(isset($properties->var_uri)){
+								$var_uri = $this->resolve_var_uri($properties->var_uri , $section_tipo, $section_id);
+								$uri = $uri_data . $var_uri;
+							}else{
+								$uri = $uri_data;
+							}
+							// create the graph of the class
+							$node_graph = $rdf_graph->resource($uri, $object_name);
+							break;
+						// resolve the data can be used directly, text components.
+						default:
+							$ar_processed_ddo = [];
+							foreach ($ar_langs as $current_lang) {
+								// get the real data to use
+								$ar_ddo_to_join = array_filter($ar_values, function($ddo) use($current_lang) {
+									$ar_ddo = [];
+									if($ddo->lang===$current_lang || $ddo->lang === null){
+										$ar_ddo[] = $ddo;
+									}
+
+									return $ar_ddo;
+								});
+
+								// fallback to match with the end_ddo to add empty data values for languages:
+								foreach ($end_ddo as $ddo_reference) {
+									$ar_ddo_to_join = array_values($ar_ddo_to_join);
+									$children = array_find($ar_ddo_to_join, function($item) use($ddo_reference) {
+										return $item->tipo===$ddo_reference->tipo;
+									});
+									// if the ddo not exist (doesn't have value in the language)
+									if(empty($children)){
+										// add id
+										$current_id = isset($ddo_reference->id)
+											? $ddo_reference->id
+											: null;
+										// get the value of the main language
+										$fallback_value = array_find($ar_values, function($item) use($default_alpha2_lang, $current_id) {
+											return $item->lang===$default_alpha2_lang && $item->id === $current_id;
+										});
+										// if empty the main language add empty text
+										$current_value = is_object($fallback_value)
+											? $fallback_value->value
+											: '';
+										// create the ddo and save with the array of values to be joined
+										$fallback_ddo = new stdClass();
+											$fallback_ddo->tipo		= $ddo_reference->tipo;
+											$fallback_ddo->id		= $current_id;
+											$fallback_ddo->lang		= $current_lang;
+											$fallback_ddo->value	= $current_value;
+
+											$ar_ddo_to_join[] = $fallback_ddo;
+									}
+								}
+
+								// check if the process has text_format
+								if(isset($properties->process) && isset($properties->process->text_format)){
+
+									$text_format = $properties->process->text_format;
+									// replace the text template with the data ex: "${a}, ${b}, ${c}/${d}"
+									foreach ($ar_ddo_to_join as $current_ddo_to_join) {
+										$search			= '${'.$current_ddo_to_join->id.'}';
+										$replace_value	= $current_ddo_to_join->value;
+										$text_format	= !empty($text_format)
+											? str_replace($search, $replace_value, $text_format)
+											: $text_format;
+									}
+									// create the ddo
+									$procesed_ddo = new stdClass();
+										$procesed_ddo->lang		= $current_lang;
+										$procesed_ddo->value	= $text_format;
+
+										$ar_processed_ddo[] = $procesed_ddo;
+
+								} // check if the process has formula
+								else if(isset($properties->process) && isset($properties->process->php_formula)){
+									$php_formula = $properties->process->php_formula;
+									$type = $php_formula->type ?? 'default';
+									$formula_result = '';
+
+									switch ($type) {
+										case 'empty':
+											$sentence = $php_formula->sentence;
+											// replace the formula template with the data, ex: "${a} ? ${b} : ${c}"
+											foreach ($ar_ddo_to_join as $current_ddo_to_join) {
+												$search			= '${'.$current_ddo_to_join->id.'}';
+												$replace_value	= $current_ddo_to_join->value ?? ' ';
+												$sentence		= !empty($sentence)
+													? str_replace($search, $replace_value, $sentence)
+													: $sentence;
+											}
+											$ar_parts	= explode(' ? ', $sentence);
+											$ar_parts2	= explode(' : ', $ar_parts[1]);
+
+											$formula_result = empty($ar_parts[0]) ? $ar_parts2[0] : $ar_parts2[1];
+											break;
+
+										default:
+											break;
+									}
+									// create the new ddo
+									$procesed_ddo = new stdClass();
+										$procesed_ddo->lang		= $current_lang;
+										$procesed_ddo->value	= $formula_result;
+
+										$ar_processed_ddo[] = $procesed_ddo;
+
+								}// if not has text_fotmat or formula we join the data with ", "
+								else{
+									// create an array to store all ddo data
+									$current_value = [];
+									foreach ($ar_ddo_to_join as $current_ddo_to_join) {
+										$current_value[] =  $current_ddo_to_join->value;
+									}
+									// create the ddo
+									$procesed_ddo = new stdClass();
+										$procesed_ddo->lang		= $current_lang;
+										$procesed_ddo->value	= implode(', ', $current_value);
+
+										$ar_processed_ddo[] = $procesed_ddo;
+
+								}
+							}
+							foreach ($ar_processed_ddo as $ddo_value) {
+								// set the value to the graph if the ddo has value
+								if(!empty($ddo_value->value)){
+									$node_graph->addLiteral($object_name, strip_tags($ddo_value->value), $ddo_value->lang);
+									$result = true;
+								}
+							}
+							break;
+					}
+				break;
+		}
+
+		return $result;
+	}//end build_rdf_node
+
+
+
+	/**
+	* GET_DDO_MAP_VALUE
+	* resolve the ddo_map components
+	* @param array $ddo_map
+	* @param string $parent
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @return array $ar_values
+	*/
+	public function get_ddo_map_value(array $ddo_map, string $parent, $section_tipo, $section_id) : array {
+
+		$ar_values = [];
+
+		$children = array_filter($ddo_map, function($item) use($parent) {
+			return $item->parent===$parent;
+		});
+
+		foreach ($children as $ddo) {
+			$result		= $this->get_ddo_value($ddo, $ddo_map, $section_tipo, $section_id);
+			$ar_values	= array_merge($ar_values, $result);
+		}
+
+		return $ar_values;
+	}//end get_ddo_map_value
+
+
+
+	/**
+	* GET_DDO_VALUE
+	* resolve the ddo values
+	* @param object $ddo
+	* @param array $ddo_map
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @return array $ar_values
+	*/
+	public function get_ddo_value(object $ddo, array $ddo_map, string $section_tipo, string|int $section_id) : array {
+
+		$ar_values		= [];
+		$current_tipo	= $ddo->tipo;
+		$model_name		= ontology_node::get_model_by_tipo($current_tipo);
+
+		if($model_name==='relation_list') {
+
+			$element = new relation_list(
+				$current_tipo,
+				$section_id,
+				$section_tipo,
+				'list'
+			);
+
+		}else{
+
+			$element = component_common::get_instance(
+				$model_name,
+				$current_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$section_tipo
+			);
+		}
+
+		$parent		= $ddo->tipo;
+		$children	= array_values(
+			array_filter($ddo_map, function($item) use($parent) {
+				return $item->parent===$parent;
+			})
+		);
+
+		if(empty($children)) {
+
+			$id			= $ddo->id ?? null;
+			$fn	= $ddo->fn ?? 'get_diffusion_data';
+
+			if($model_name==='relation_list') {
+
+				// // diffusion_properties
+				// $diffusion_properties = $ddo->diffusion_properties;
+				// $element->set_diffusion_properties($diffusion_properties);
+
+				// value (dato)
+				$value = $element->get_diffusion_data($ddo)[0]->value;
+
+				$config_properties = $ddo->config ?? null;
+				if( $config_properties && !empty($value) ){
+					$config = $this->resolve_configuration($config_properties);
+					$result = $this->{$config_properties->process_fn}((object)[
+						'config_properties'	=> $config_properties,
+						'config'			=> $config,
+						'value'				=> $value
+					]);
+					$ar_values = $result;
+				}else{
+					foreach ($value as $value) {
+						$ddo_value = new stdClass();
+							$ddo_value->tipo	= $ddo->tipo;
+							$ddo_value->lang	= null;
+							$ddo_value->value	= $value->section_id;
+							$ddo_value->id		= $id;
+
+						$ar_values[] = $ddo_value;
+					}
+				}
+			}elseif($model_name==='component_section_id') {
+
+				$ddo_value = new stdClass();
+					$ddo_value->tipo	= $ddo->tipo;
+					$ddo_value->lang	= null;
+					$ddo_value->value	= $section_id;
+					$ddo_value->id		= $id;
+
+				$ar_values[] = $ddo_value;
+			}elseif($model_name === 'component_image') {
+
+				$quality		= $ddo->options->quality ?? '1.5MB';
+				$test_file		= $ddo->options->test_file ?? false;
+				$absolute		= $ddo->options->absolute ?? false;
+				$default_add	= $ddo->options->default_add ?? false;
+
+				// value
+				$value = $element->get_image_url($quality, $test_file, $absolute, $default_add);
+
+				$ddo_value = new stdClass();
+					$ddo_value->tipo	= $ddo->tipo;
+					$ddo_value->lang	= null;
+					$ddo_value->value	= $value;
+					$ddo_value->id		= $id;
+
+				$ar_values[] = $ddo_value;
+
+			}elseif(in_array($model_name, component_relation_common::get_components_with_relations())) {
+
+				// value
+				$ddo_value = $element->{$fn}($ddo);
+
+				// $ddo_value = new stdClass();
+				// 	$ddo_value->tipo	= $ddo->tipo;
+				// 	$ddo_value->lang	= null;
+				// 	$ddo_value->value	= $value;
+				// 	$ddo_value->id		= $id;
+
+				$ar_values[] = $ddo_value;
+			}else{
+
+				$data = $element->get_data();
+				if(!empty($data)) {
+					foreach ($data as $entry) {
+						if(!empty($entry)) {
+
+							$current_lang = $element->lang;
+							$lang_alpha2 = $current_lang===DEDALO_DATA_NOLAN
+								? lang::get_alpha2_from_code(DEDALO_DATA_LANG_DEFAULT)
+								: lang::get_alpha2_from_code($current_lang);
+
+							// $value	= $element->{$fn}($current_lang);
+
+							$ddo_value = new stdClass();
+								$ddo_value->tipo	= $ddo->tipo;
+								$ddo_value->lang	= $lang_alpha2;
+								$ddo_value->value	= $entry->value;
+								$ddo_value->id		= $id;
+
+							$ar_values[] = $ddo_value;
+						}
+					}
+				}
+			}
+		}else{
+
+			// no empty($children) case
+
+			$ar_locators = $element->get_data() ?? [];
+			foreach ($ar_locators as $current_locator) {
+				$result	= $this->get_ddo_map_value(
+					$ddo_map,
+					$parent,
+					$current_locator->section_tipo,
+					$current_locator->section_id
+				);
+				$ar_values = array_merge($ar_values, $result);
+			}
+		}//end if(empty($children))
+
+
+		return $ar_values;
+	}//end get_ddo_value
+
+
+
+	/**
+	* RESOLVE_ENTITY
+	* Resolve the section of publication services (dd1010) of the entity that has the URL base resolutions.
+	* @return locator|null $entity_locator
+	*/
+	public function resolve_entity_locator() : ?object {
+
+		// Search Dedalo entities publication services
+			$section_tipo	= DEDALO_SERVICES_SECTION_TIPO; 	// services_section_tipo = 'dd1010';
+			$entity_id		= DEDALO_ENTITY_ID; // Config DEDALO_ENTITY_ID
+			$service_type	= $this->service_type; // setting in the diffusion_element
+
+		// query object
+			$search_query_object = new stdClass();
+				$search_query_object->id = 'base_uri';
+				$search_query_object->mode = 'list';
+				$search_query_object->section_tipo = [$section_tipo];
+				$search_query_object->limit = 1;
+				$search_query_object->filter = new stdClass();
+				$search_query_object->filter->{'$and'} = [
+					(object)[
+						'q' => [
+							(object)[
+								'section_id' => (string)$entity_id,
+								'section_tipo' => 'dd1000',
+								'from_component_tipo' => 'dd1016',
+								'type' => 'dd151'
+							]
+						],
+						'q_operator' => null,
+						'path' => [
+							(object)[
+								'section_tipo' => $section_tipo,
+								'component_tipo' => 'dd1016',
+								'model' => 'component_select',
+								'name' => 'Entity'
+							]
+						]
+					],
+					(object)[
+						'q' => [
+							(object)[
+								'section_id' => (string)$service_type,
+								'section_tipo' => 'dd1020',
+								'from_component_tipo' => 'dd1037',
+								'type' => 'dd151'
+							]
+						],
+						'q_operator' => null,
+						'path' => [
+							(object)[
+								'section_tipo' => $section_tipo,
+								'component_tipo' => 'dd1037',
+								'model' => 'component_select',
+								'name' => 'Name'
+							]
+						]
+					]
+				];
+
+
+		// search
+			$search = search::get_instance(
+				$search_query_object // object sqo
+			);
+			$db_result	= $search->search();
+			$data_entity= $db_result->fetch_one() ?? null;
+
+		// base_uri
+			if (empty($data_entity)) {
+
+				$entity_locator = null;
+				debug_log(__METHOD__
+					." Empty records!  Nothing is found for entity: '$entity_id' and service_type: '$service_type' "
+					, logger::ERROR
+				);
+
+			}else{
+
+				$entity_locator = new locator();
+					$entity_locator->set_section_id($data_entity->section_id);
+					$entity_locator->set_section_tipo($data_entity->section_tipo);
+			}
+
+
+		return $entity_locator;
+	}//end resolve_entity_locator
+
+
+
+	/**
+	* RESOLVE_BASE_URI
+	* get the base uri to used to create the RDF id
+	* normally the base_uri is used to assign the links to the publication resource in the public web
+	* it's stored in the Publication services section (dd1010) in the component_iri
+	* @param object $base_uri_entity
+	* @param mixed $section_id = null
+	* @return string $base_uri
+	*/
+	public function resolve_base_uri(object $base_uri_entity, $section_id=null) : ?string {
+
+		// Search Dedalo entities publication services
+			$section_tipo	= $base_uri_entity->section_tipo; 	// services_section_tipo = 'dd1010';
+			$title			= $base_uri_entity->title;
+			$component_tipo	= $base_uri_entity->component_tipo; // component_iri dd1014
+
+			if ($section_tipo===DEDALO_SERVICES_SECTION_TIPO) {
+
+				$service_name = $this->service_name;
+
+				$ontology_node	= ontology_node::get_instance($component_tipo);
+				$model			= $ontology_node->get_model();
+
+				// NO CONFIG FILE CHANGED CASE
+				// Note that config file default is 0 (Zero) and if you do not modify this
+				// value, its not possible to locate your entity info into section dd1010
+				if (empty($this->entity_locator)) {
+					debug_log(__METHOD__
+						. " Error . this->entity_locator is empty ". PHP_EOL
+						. ' this->entity_locator: ' . json_encode($this->entity_locator, JSON_PRETTY_PRINT) . PHP_EOL
+						. ' constant config DEDALO_ENTITY_ID: ' . DEDALO_ENTITY_ID . PHP_EOL
+						. ' base_uri_entity: ' . json_encode($base_uri_entity, JSON_PRETTY_PRINT) . PHP_EOL
+						. ' Note that config file default is 0 (Zero) for DEDALO_ENTITY_ID. Review your config'
+						, logger::ERROR
+					);
+					return null;
+				}
+
+				// ontology_node::get_model_by_tipo($component_tipo);
+				$translatable	= $ontology_node->get_is_translatable();
+				$lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				$component		= component_common::get_instance(
+					$model,
+					$component_tipo,
+					$this->entity_locator->section_id,
+					'list',
+					$lang,
+					$this->entity_locator->section_tipo
+				);
+
+				$iri_object_data	= $component->get_data();
+				// $row_data		=  json_decode($row->datos);
+				// $iri_object_data	= $row_data->components->{$component_tipo};
+
+				$ar_result = array_filter((array)$iri_object_data, function($item) use($title){
+					return $item->title === $title;
+				});
+
+				$result		= reset($ar_result);
+				$base_uri	= !empty($result->iri) ? $result->iri : null;
+
+			}else{
+
+				// Case search in public entity section
+
+				// NO CONFIG FILE CHANGED CASE
+				// Note that config file default is 0 (Zero) and if you do not modify this
+				// value, its not possible to locate your entity info into section dd1010
+				if (empty($section_id) || $section_id===0) {
+					debug_log(__METHOD__
+						. " Error . section_id is empty ". PHP_EOL
+						. ' section_id: ' . json_encode($section_id, JSON_PRETTY_PRINT) . PHP_EOL
+						. ' constant config DEDALO_ENTITY_ID: ' . DEDALO_ENTITY_ID . PHP_EOL
+						. ' base_uri_entity: ' . json_encode($base_uri_entity, JSON_PRETTY_PRINT) . PHP_EOL
+						. ' Note that config file default is 0 (Zero) for DEDALO_ENTITY_ID. Review your config'
+						, logger::ERROR
+					);
+					return null;
+				}
+
+				// Collection (Entity)
+					$model_name	= ontology_node::get_model_by_tipo($base_uri_entity->from_component_tipo,true);
+					$component	= component_common::get_instance(
+						$model_name,
+						$base_uri_entity->from_component_tipo,
+						$section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$base_uri_entity->from_section_tipo
+					);
+					$data_entity = $component->get_data();
+
+					if (!empty($data_entity)) {
+						// component load
+						$model_name	= ontology_node::get_model_by_tipo($component_tipo,true);
+						$component	= component_common::get_instance(
+							$model_name,
+							$component_tipo,
+							$data_entity[0]->section_id,
+							'list',
+							DEDALO_DATA_NOLAN,
+							$section_tipo
+						);
+						$data = $component->get_data();
+					}
+
+				// base_uri
+					if (empty($data)) {
+
+						$base_uri = null;
+						debug_log(__METHOD__
+							." Empty data!  Nothing is found for section_id: '$section_id' - section_tipo: '$section_tipo' - component_tipo: ".to_string($component_tipo)
+							, logger::ERROR
+						);
+					}else{
+
+						$iri_object_data	= (array)$data;
+						$ar_result			= array_filter((array)$iri_object_data, function($item) use($title){
+							return isset($item->title) && $item->title===$title;
+						});
+
+						$base_uri = isset($ar_result[0]) ? $ar_result[0]->iri : null;
+					}
+			}
+
+
+		return $base_uri;
+	}//end resolve_base_uri
+
+
+	/**
+	* RESOLVE_VAR_URI
+	* resolve the specific id for the uri, it could be a section_id, or the data in one component
+	* @return
+	*/
+	public function resolve_var_uri($var_uri , $section_tipo, $section_id) {
+
+		$var_uri  = $var_uri ?? [];
+
+		$var_uri_string='';
+		foreach((array)$var_uri as $key => $component_tipo) {
+
+			if ($key==='#') {
+
+				$value = $component_tipo;
+				if (substr($var_uri_string, -1)==='&' ) {
+					$var_uri_string = substr($var_uri_string, 0, -1);
+				}
+				$var_uri_string .= $value;
+
+			}else{
+
+				# Resolve value
+				$ct_model_name = ontology_node::get_model_by_tipo($component_tipo,true);
+				if ($ct_model_name==='component_section_id') {
+					$value = $section_id;
+				}else{
+					$ct_model_name	= ontology_node::get_model_by_tipo($component_tipo,true);
+					$component_obj	= component_common::get_instance(
+						$ct_model_name,
+						$component_tipo,
+						$section_id,
+						'list',
+						DEDALO_DATA_LANG,
+						$section_tipo,
+						false
+					);
+					$dato = $component_obj->get_valor();
+					$value = $dato;
+				}
+				// $var_uri_string .= "$key=$value";
+				$var_uri_string .= $value; // Rewrite version
+			}
+			// $var_uri_string .= ($component_tipo!=end($var_uri)) ? '&' : '';
+		}
+
+		return $var_uri_string;
+	}//end resolve_var_uri
+
+
+
+	/**
+	* RESOLVE_CONFIGURATION
+	* get the config to used in specific ddo
+	* filter section_id for use to get data
+	* it's stored in the Publication services section (dd1010) in the component_json
+	* @param object $configuration_entity
+	* @param string|int|null $section_id = null
+	* @return string|null|false $result
+	*/
+	public function resolve_configuration(object $configuration_entity, $section_id=null) {
+
+		$result = null;
+
+		// Search Dedalo entities publication services
+			$section_tipo	= $configuration_entity->section_tipo; 	// services_section_tipo = 'dd1010';
+			$title			= $configuration_entity->title;
+			$component_tipo	= $configuration_entity->component_tipo; // component_iri dd1014
+			$id				= $configuration_entity->id; // catalog_filter
+
+			// check entity_locator
+				$entity_locator = $this->entity_locator ?? null;
+				if (empty($entity_locator) || empty($entity_locator->section_tipo) || empty($entity_locator->section_id)) {
+					debug_log(__METHOD__
+						." Empty entity_locator! null is returned"
+						, logger::WARNING
+					);
+					return null;
+				}
+
+			if($section_tipo===DEDALO_SERVICES_SECTION_TIPO) {
+
+				$service_name = $this->service_name;
+
+				$ontology_node	= ontology_node::get_instance($component_tipo);
+				$model			= $ontology_node->get_model();
+
+				// ontology_node::get_model_by_tipo($component_tipo);
+				$translatable	= $ontology_node->get_is_translatable();
+				$lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				$component		= component_common::get_instance(
+					$model,
+					$component_tipo,
+					$this->entity_locator->section_id,
+					'list',
+					$lang,
+					$this->entity_locator->section_tipo
+				);
+
+				$config_data = $component->get_data_lang($lang);
+				// $row_data =  json_decode($row->datos);
+				// $iri_object_data = $row_data->components->{$component_tipo};
+				if (empty($config_data)) {
+
+					$config = null;
+					debug_log(__METHOD__
+						." Empty dato!  Nothing is found for section_id: '$section_id' - section_tipo: '$section_tipo' - component_tipo: ".to_string($component_tipo)
+						, logger::ERROR
+					);
+				}else{
+
+					$config = !empty($config_data->{$title}) ? $config_data->{$title} : null;
+
+					$ar_result = array_filter((array)$config, function($item) use($id){
+						return $item->id === $id;
+					});
+					$result = reset($ar_result);
+				}
+
+			}else{
+				// Case search in public entity section
+
+				// Collection (Entity)
+
+					$model_name	= ontology_node::get_model_by_tipo($configuration_entity->from_component_tipo,true);
+					$component	= component_common::get_instance(
+						$model_name,
+						$configuration_entity->from_component_tipo,
+						$section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$configuration_entity->from_section_tipo
+					);
+					$data_entity = $component->get_data();
+
+					if (!empty($data_entity)) {
+						// component load
+						$model_name	= ontology_node::get_model_by_tipo($component_tipo,true);
+						$component	= component_common::get_instance(
+							$model_name,
+							$component_tipo,
+							$data_entity[0]->section_id,
+							'list',
+							DEDALO_DATA_NOLAN,
+							$section_tipo
+						);
+						$config_data = $component->get_data_lang();
+					}
+
+				// config
+					if (empty($config_data)) {
+
+						$config = null;
+						debug_log(__METHOD__
+							." Empty dato!  Nothing is found for section_id: '$section_id' - section_tipo: '$section_tipo' - component_tipo: ".to_string($component_tipo)
+							, logger::ERROR
+						);
+					}else{
+
+						$config		= !empty($config_data->{$title}) ? $config_data->{$title} : null;
+						$ar_result	= array_filter((array)$config, function($item) use($id){
+							return $item->id === $id;
+						});
+						$result = reset($ar_result);
+					}
+			}//end if($section_tipo===DEDALO_SERVICES_SECTION_TIPO)
+
+
+		return $result;
+	}//end resolve_configuration
+
+
+
+	/**
+	* DIFFUSION_COMPLETE_DUMP
+	* @return
+	*/
+	public function diffusion_complete_dump($diffusion_element, $resolve_references = true) {
+
+		// Working here
+		debug_log(__METHOD__." Called unfinished class. Nothing is done ".to_string(), logger::WARNING);
+	}//end diffusion_complete_dump
+
+
+
+	/**
+	* GET_TO_PUBLISH_ROWS
+	* @param string $section_tipo
+	* @param array $ar_section_id
+	* @return array $ar_section_id_clean
+	*/
+	public static function get_to_publish_rows(string $section_tipo, array $ar_section_id) : array {
+
+		// Resolve component_publication_tipo
+		$component_publication_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_publication'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+		$component_section_id_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_section_id'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+
+		$ar_section_id = array_map('strval', array_values((array)$ar_section_id));
+		$component_publication_tipo = reset($component_publication_tipo);
+		$component_section_id_tipo = reset($component_section_id_tipo);
+
+		// query
+			$sqo = new stdClass();
+				$sqo->id = $section_tipo . '_list';
+				$sqo->section_tipo = [$section_tipo];
+				$sqo->limit = false;
+				$sqo->filter = new stdClass();
+				$sqo->filter->{'$and'} = [
+					(object)[
+						'q' => [
+							(object)[
+								'section_id' => '1',
+								'section_tipo' => 'dd64',
+								'from_component_tipo' => $component_publication_tipo
+							]
+						],
+						'q_operator' => null,
+						'path' => [
+							(object)[
+								'section_tipo' => $section_tipo,
+								'component_tipo' => $component_publication_tipo,
+								'model' => 'component_publication',
+								'name' => 'Publish'
+							]
+						]
+					],
+					(object)[
+						'q' => $ar_section_id,
+						'q_operator' => null,
+						'path' => [
+							(object)[
+								'section_tipo' => $section_tipo,
+								'component_tipo' => $component_section_id_tipo,
+								'model' => 'component_section_id',
+								'name' => 'ID'
+							]
+						]
+					]
+				];
+
+		// search
+			$search = search::get_instance(
+				$sqo // object sqo
+			);
+			$db_result = $search->search();
+
+		// format output as array of id's
+			$ar_section_id_clean = [];
+			foreach ($db_result as $row) {
+				$ar_section_id_clean[] = $row->section_id;
+			}
+
+
+		return $ar_section_id_clean;
+	}//end get_to_publish_rows
+
+
+
+	/**
+	* FILTER_LOCATORS
+	*
+	* @param object $options
+	* @return array $result
+	*/
+	public function filter_locators(object $options) : array {
+
+		// options
+			$value				= $options->value;
+			$config				= $options->config;
+			$config_properties	= $options->config_properties;
+
+		// section_tipo. Mandatory from properties configuration resolution
+			$section_tipo = $value[0]->section_tipo ?? null;
+			if (empty($section_tipo)) {
+				throw new Exception("Error Processing Request. Section tipo from value is empty", 1);
+			}
+
+		// ddo_map
+			$ddo_map = $config_properties->result->ddo_map ?? null;
+			if (!empty($ddo_map)) {
+				foreach ($ddo_map as $ddo) {
+					$ddo->section_tipo	= $ddo->section_tipo === 'self' ? $section_tipo : $ddo->section_tipo;
+					$ddo->parent		= $ddo->parent === 'self' ? $section_tipo : $ddo->parent;
+				}
+			}
+
+		// filter
+			// q
+				$ar_section_id	= [];
+				foreach ($value as $current_locator) {
+					$ar_section_id[] = $current_locator->section_id;
+				}
+				$q = implode(',', $ar_section_id);
+
+			// additional_filter
+				$filter_json		= $config->filter ?? '';
+				$additional_filter	= !empty($filter_json)
+					? ',' . json_encode($filter_json)
+					: '';
+
+		// query
+			$query = '
+			{
+				"id": "filter",
+				"mode": "list",
+				"section_tipo": "'.$section_tipo.'",
+				"limit": 1,
+				"filter": {
+					"$and": [
+						{
+							"q": "'.$q.'",
+							"q_operator": null,
+							"path": [
+								{
+									"section_tipo": "'.$section_tipo.'",
+									"component_tipo": "component_section_id",
+                        			"model": "component_section_id",
+									"name": "Id"
+								}
+							]
+						}
+						'.$additional_filter.'
+					]
+				}
+			}';
+			$sqo = json_decode($query);
+
+		// search
+			$search = search::get_instance(
+				$sqo // object sqo
+			);
+			$db_result = $search->search();			
+
+		// result
+			$result = [];
+			foreach ($db_result as $record) {
+
+				$section_id		= $record->section_id;
+				$section_tipo	= $record->section_tipo;
+
+				$ddo_map_value = $this->get_ddo_map_value(
+					$ddo_map,
+					$section_tipo, // parent
+					$section_tipo,
+					$section_id
+				);
+
+				$result = array_merge($result, $ddo_map_value);
+			}
+
+
+		return $result;
+	}//end filter_locators
+
+
+
+}//end class diffusion_rdf
+

@@ -1,0 +1,14 @@
+[
+	{"old":"rsc182"	,"new": "rsc176" 		,"type":"section"	,"perform":["replace_tipo"]	,"info":"Administrative record"},
+	{"old":"rsc256"	,"new": "rsc175"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"id"},
+	{"old":"rsc161"	,"new": "rsc21"			,"type":"component"	,"perform":["replace_tipo"]	,"info":"código"},
+	{"old":"rsc164"	,"new": "rsc28"			,"type":"component"	,"perform":["replace_tipo"]	,"info":"Proyecto"},
+	{"old":"rsc163"	,"new": "rsc26"			,"type":"component"	,"perform":["replace_tipo"]	,"info":"Datación"},
+	{"old":"rsc731"	,"new": "rsc23"			,"type":"component"	,"perform":["replace_tipo"]	,"info":"Título"},
+	{"old":"rsc255"	,"new": "rsc70"			,"type":"component"	,"perform":["replace_tipo"]	,"info":"Autor"},
+	{"old":"rsc154"	,"new": "rsc27"			,"type":"component"	,"perform":["replace_tipo"]	,"info":"Observaciones"},
+	{"old":"rsc165"	,"new": "rsc37"			,"type":"component"	,"perform":["replace_tipo"]	,"info":"Documento PDF"},
+	{"old":"rsc166"	,"new": "rsc38"			,"type":"component"	,"perform":["replace_tipo"]	,"info":"Transcripción"},
+	{"old":"rsc324"	,"new": "rsc33"			,"type":"component"	,"perform":["replace_tipo"]	,"info":"Directorio"},
+	{"old":"rsc429"	,"new": "rsc398"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Nombre del fichero original"}
+]

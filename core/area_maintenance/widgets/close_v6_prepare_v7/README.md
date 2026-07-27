@@ -14,30 +14,36 @@ A live **v6** install ships its **own** classes with the **same names**, and two
 one name cannot coexist in a single PHP process.
 
 **Isolation strategy:** the v6 widget does *not* load any of this code in‑process. It writes
-the bundled engine's DB credentials and **spawns a separate PHP process** that boots a
-**bundled full copy of the v7_php_frozen engine** (its own autoload root + `config/bootstrap.php`),
-pointed at the **v6 database**. Separate process ⇒ zero class‑name collision, and the *tested*
-migration code is reused verbatim instead of re‑derived.
+the bundled engine's DB credentials and **spawns a separate PHP process** that boots the
+**engine bundled in this package** (its own autoload root + `config/bootstrap.php`), pointed at
+the **v6 database**. Separate process ⇒ zero class‑name collision, and the *tested* migration
+code runs verbatim instead of being re‑derived.
 
-## Package layout (after `build_package.sh`)
+**Self‑contained by rule:** everything the migration needs ships here — `engine/`, `run/`,
+`widget/` are all tracked. There is no build step, nothing to regenerate, and no reference to any
+other repository or install: the package runs from a plain v6 checkout. `verify_package.sh`
+enforces exactly that.
+
+## Package layout
 
 ```
-dist/prepare_v7/
-├── engine/     full snapshot of the v7_php_frozen engine (isolated runtime)
+close_v6_prepare_v7/
+├── engine/     the bundled PHP engine that performs the migration (isolated runtime)
 ├── run/        CLI runner
 │   ├── run_prepare_v7.php          orchestrator (sequences the phases as child processes)
 │   ├── phase1_backup_pre_update.php backup + pre_update (or --dry-run preflight)
 │   ├── phase2_update.php            full update_version(all steps) incl. store backfills
 │   ├── phase3_diffusion.php         diffusion ontology migration (isolated, LAST step)
 │   └── lib/{engine_boot,blocking_backup,version_gate}.php
-├── widget/prepare_v7/  v6-facing launcher (class.prepare_v7.php + js/prepare_v7.js)
-├── private/    .env auto-migrated from the v6 config on first boot — created at runtime, never committed
-├── var/        logs (prepare_v7.log) + backups — created at runtime
+├── widget/prepare_v7/  v6-facing launcher (class.prepare_v7.php + js/)
+├── private/    .env auto-migrated from the v6 config on first boot — runtime, never committed
+├── var/        logs (prepare_v7.log) + backups — runtime, never committed
+├── cache/ sessions/ backups/   runtime, never committed
+├── verify_package.sh   proves the package is complete and self-contained
 └── README.md
 ```
 
-The source of truth lives in this repo under `close_v6_prepare_v7/` (runner + widget). The
-`engine/` snapshot is materialised by `build_package.sh`, so git never carries a second copy.
+There is exactly ONE copy of every file: the package is what runs.
 
 ## Prerequisites
 
@@ -53,10 +59,10 @@ The source of truth lives in this repo under `close_v6_prepare_v7/` (runner + wi
   update widget).
 - PHP CLI available to the web/maintenance user.
 
-## The package is already built
+## The bundled engine
 
-The full, self-contained package is materialised at **`close_v6_prepare_v7/dist/prepare_v7/`**
-(engine bundled in — ~67 MB). **No build step is required to use it** — just copy that folder.
+The engine lives at **`close_v6_prepare_v7/engine/`** (~47 MB) and is part of this repository.
+**There is no build step**: copy the folder and it runs.
 
 The bundled `engine/` is slimmed to what the migration actually runs. Stripped top-level dirs
 (none on the migration execution path):
@@ -102,19 +108,24 @@ single 6.9.1→7.0.0 descriptor; `vendor/autoload` is never required at boot; th
 `lib/`, so it stays. **Verified:** the slimmed engine boots standalone and loads every
 migration class.
 
-`build_package.sh` exists only to *regenerate* the `engine/` snapshot from the current repo
-(e.g. after engine changes); end users never run it:
+The engine was slimmed once, by hand, and is now maintained IN PLACE — edit it here like any
+other code in this repo. Nothing regenerates it, so nothing can silently replace it with a copy
+from elsewhere. To confirm the package is still complete and self-contained:
 
 ```bash
-close_v6_prepare_v7/build_package.sh          # regenerate → close_v6_prepare_v7/dist/prepare_v7
+close_v6_prepare_v7/verify_package.sh
 ```
+
+It checks that the load-bearing files exist, that every eager `include` in the bundled loader
+resolves inside the package, that no file references another repository, and that the runtime
+config (which carries the DB password) is not committed.
 
 ## Deploy into a v6 install
 
-1. Copy the ready-made `dist/prepare_v7/` folder into the v6 server (anywhere readable/writable
+1. Copy the `close_v6_prepare_v7/` folder into the v6 server (anywhere readable/writable
    by the maintenance user — **preferably outside the web root**; if it must live inside, deny
    HTTP access to it, as the shipped `.htaccess` does in this repo).
-2. Copy `dist/prepare_v7/widget/prepare_v7/` (class + `js/`) into v6's
+2. Copy `close_v6_prepare_v7/widget/prepare_v7/` (class + `js/`) into v6's
    `core/area_maintenance/widgets/prepare_v7/`. The class resolves the package from its own
    location; if the package lives elsewhere, set `PREPARE_V7_PACKAGE_ROOT` (or install a shim
    like this repo's `core/area_maintenance/widgets/prepare_v7/class.prepare_v7.php`, which sets
@@ -163,12 +174,12 @@ streams the current run; it polls every 5 s until the runner writes a terminal l
 
 ### Headless (equivalent)
 ```bash
-php dist/prepare_v7/run/run_prepare_v7.php --dry-run          # preflight, no writes
-php dist/prepare_v7/run/phase3_diffusion.php --dry-run        # diffusion mapping preview (needs dd_ontology)
-php dist/prepare_v7/run/run_prepare_v7.php --deep-preflight  # backup + pre_update + REAL data review, stops before the rewrite
-php dist/prepare_v7/run/run_prepare_v7.php --yes              # backup + migrate
-php dist/prepare_v7/run/run_prepare_v7.php --yes --skip-backup   # only if you already backed up
-php dist/prepare_v7/run/run_prepare_v7.php --help
+php close_v6_prepare_v7/run/run_prepare_v7.php --dry-run          # preflight, no writes
+php close_v6_prepare_v7/run/phase3_diffusion.php --dry-run        # diffusion mapping preview (needs dd_ontology)
+php close_v6_prepare_v7/run/run_prepare_v7.php --deep-preflight  # backup + pre_update + REAL data review, stops before the rewrite
+php close_v6_prepare_v7/run/run_prepare_v7.php --yes              # backup + migrate
+php close_v6_prepare_v7/run/run_prepare_v7.php --yes --skip-backup   # only if you already backed up
+php close_v6_prepare_v7/run/run_prepare_v7.php --help
 ```
 `--yes` is required to write anything. For headless runs, first make the engine see the v6 config
 (see **Configuration** below).
@@ -192,7 +203,7 @@ the engine imports the rest via Dédalo's own legacy‑config auto‑migration:
   a copy would yield zero constants. The generated file and the quarantined copies carry the DB
   password — they are `0600`, live in the gitignored package dir, and are rewritten on every launch.
 - **Headless:** copy your v6 install's `config_core.php` + `config_db.php` into
-  `dist/prepare_v7/engine/config/`, then run the runner. The first boot auto‑migrates them. (The
+  `close_v6_prepare_v7/engine/config/`, then run the runner. The first boot auto‑migrates them. (The
   legacy files are read *statically*, a tokenized `define()` scan — never executed.)
 
 `config_auto_migrate` refuses if a secret looks non‑literal (a safety gate); a normal v6

@@ -13,10 +13,12 @@
 *   4. loads the package helper libs.
 *
 * Engine-root resolution (first hit wins):
-*   a. env PREPARE_V7_ENGINE_ROOT      (explicit; use this for in-place testing)
-*   b. <package>/engine                (packaged layout: dist/prepare_v7/engine)
-*   c. dirname(<package>)              (source layout: the v7_php_frozen master_dedalo
-*                                       repo itself acts as the engine)
+*   a. env PREPARE_V7_ENGINE_ROOT      (explicit override; for testing against another engine)
+*   b. <package>/engine                (the bundled engine — the normal, self-contained case)
+*
+* There is deliberately NO third fallback. The engine ships INSIDE this package: the
+* migration must run from a plain v6 checkout, never resolving against some other
+* repository that happens to sit next to it.
 *
 * @package Dédalo
 * @subpackage close_v6_prepare_v7
@@ -41,12 +43,11 @@ function prepare_v7_resolve_paths() : array {
 	if (is_string($env_root) && $env_root !== '' && is_file($env_root . '/config/bootstrap.php')) {
 		$engine_root = rtrim($env_root, DIRECTORY_SEPARATOR);
 	} elseif (is_file($package_root . '/engine/config/bootstrap.php')) {
-		$engine_root = $package_root . '/engine';                 // packaged layout
-	} elseif (is_file(dirname($package_root) . '/config/bootstrap.php')) {
-		$engine_root = dirname($package_root);                    // source layout (repo == engine)
+		$engine_root = $package_root . '/engine';                 // the bundled engine
 	} else {
-		fwrite(STDERR, "Could not locate the bundled engine (no config/bootstrap.php found).\n"
-			. "Set PREPARE_V7_ENGINE_ROOT to the engine root.\n");
+		fwrite(STDERR, "The bundled engine is missing: expected "
+			. $package_root . "/engine/config/bootstrap.php\n"
+			. "This package ships its own engine; do not point it at another install.\n");
 		exit(2);
 	}
 

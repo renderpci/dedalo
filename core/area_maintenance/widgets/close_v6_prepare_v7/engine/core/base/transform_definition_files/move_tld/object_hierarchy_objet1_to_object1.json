@@ -1,0 +1,4 @@
+[
+{"old":"objet1"	,"new": "object1" 		,"type":"section"	,"perform":["replace_tipo"]	,"info": "Old objet => object Object descriptors"},
+{"old":"objet2"	,"new": "object2" 		,"type":"section"	,"perform":["replace_tipo"]	,"info": "Old objet => object Object descriptors"}
+]

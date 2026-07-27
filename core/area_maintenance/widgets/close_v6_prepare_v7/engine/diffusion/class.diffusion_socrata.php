@@ -1,0 +1,546 @@
+<?php declare(strict_types=1);
+// include composer lib soda-php
+require DEDALO_LIB_PATH . '/vendor/soda-php/public/socrata.php';
+
+/**
+* CLASS DIFFUSION_SOCRATA
+* Manages publication on Socrata Open Data system
+*/
+class diffusion_socrata {
+
+
+	protected $domain;
+	public static $database_name;
+	public static $database_tipo;
+	public static $ar_table;
+	public static $ar_table_data;
+
+
+
+	/**
+	* CONSTRUCT
+	* @param object|null $options = null
+	*/
+	function __construct( ?object $options=null ) {
+
+		$this->domain = DEDALO_DIFFUSION_DOMAIN;
+	}//end __construct
+
+
+
+	/**
+	* UPDATE_RECORD
+	* Update one or any number of records ( array ) and references
+	* @param object $options
+	* {
+	* 	section_tipo: string
+	* 	section_id: string|int
+	* 	diffusion_element_tipo: string
+	* 	recursion_level: int
+	* 	component_publication_tipo: string|null
+	* 	skip_tipos: array|null
+	* 	resolve_references: bool
+	* }
+	* @return object $response
+	*/
+	public function update_record( object $options ) : object {
+
+		set_time_limit ( 259200 );  // 3 days
+
+		if(SHOW_DEBUG===true) {
+			$start_time = start_time();
+		}
+
+		// response
+			$response = new stdClass();
+				$response->result 	= false;
+				$response->msg		= [];
+				$response->errors	= [];
+				$response->class	= get_called_class();
+
+		// options
+			$section_tipo			= $options->section_tipo;
+			$section_id				= $options->section_id;
+			$diffusion_element_tipo	= $options->diffusion_element_tipo;
+
+		// check config
+			if (!defined('SOCRATA_CONFIG')) {
+				$response->msg[] = 'Error. SOCRATA_CONFIG is not set. Add to Dédalo config file to allow export Socrata';
+				$response->errors[] = 'constant SOCRATA_CONFIG is not defined';
+				return $response;
+			}
+
+		// Mandatory vars
+			if(empty($options->section_tipo) || empty($options->section_id) || empty($options->diffusion_element_tipo)) {
+				debug_log(__METHOD__
+					." ERROR ON UPDATE RECORD $options->section_id - $options->section_tipo - $options->diffusion_element_tipo. Undefined mandatory options var" . PHP_EOL
+					.' options: ' . to_string($options)
+					, logger::ERROR
+				);
+				$response->msg[] = 'Error. Undefined mandatory options var';
+				$response->errors[] = 'Undefined one or more mandatory vars';
+				return $response;
+			}
+
+		// table
+			$table_tipo			= diffusion_utils::get_table_tipo($diffusion_element_tipo, $section_tipo);
+			$table_properties	= self::get_table_properties($table_tipo) ?? new stdClass();
+
+		// ar_rows. Build data (array of json_row objects) for each lang
+			$ar_rows = [];
+			$ar_all_project_langs = defined('DEDALO_DIFFUSION_LANGS')
+				? DEDALO_DIFFUSION_LANGS
+				: DEDALO_PROJECTS_DEFAULT_LANGS;
+			// overwrite langs from properties
+			if (isset($table_properties->langs)) {
+				$ar_all_project_langs = $table_properties->langs;
+			}
+			foreach ($ar_all_project_langs as $current_lang) {
+				$json_row_options = new stdClass();
+					$json_row_options->section_tipo 		  = $section_tipo;
+					$json_row_options->section_id 			  = $section_id;
+					$json_row_options->diffusion_element_tipo = $diffusion_element_tipo;
+					$json_row_options->lang 				  = $current_lang;
+				$json_row = $this->build_json_row($json_row_options);
+				// Add
+				$ar_rows[] = $json_row;
+
+				// debug
+				if(SHOW_DEBUG===true) {
+					// dump($json_row, ' json_row ++ '.to_string()); die();
+				}
+			}
+
+
+		// Configure final objects to build upsert bulk action
+			$socrata_delete = ':deleted';
+			$ar_socrata_rows = array_map(function($row) use($socrata_delete, $table_properties){
+
+				// socrata_id. Add normalized socrata id
+				//$row->$socrata_id = $row->id;
+				// socrata_delete. Set to delete when publication is false
+
+				// publish_date. Format as Socrata need (date_time float with miliseconds)
+				#$row->publish_date->value = date('Y-m-d\TH:i:s.u');
+
+				// Simplify values to plain value instead object
+				foreach ($row as $key => $value_obj) {
+
+					// Specific socrata formats
+					switch ($value_obj->model) {
+						case 'field_date':
+							// (!) Note that socrata not support zero values in date (like 1998-00-00)
+							// because you need fill this values with number one like '01'
+							// #$socrata_value = date("Y-m-d\TH:i:s.u", strtotime($value_obj->value));
+							if (!empty($value_obj->value)) {
+								$socrata_value = preg_replace('/(-00-00)/', '-01-01', $value_obj->value);
+								$socrata_value = preg_replace('/( )/', 'T', $socrata_value) . '.000';
+							}else{
+								$socrata_value = null;
+							}
+							break;
+
+						default:
+							$socrata_value = $value_obj->value;
+							break;
+					}
+
+					$row->$key = $socrata_value;
+				}
+
+				// Publication set to delete record on true
+				if (isset($row->publication)) {
+					if ($row->publication===false) {
+						$row->{$socrata_delete} = true;
+					}
+					unset($row->publication);
+				}
+
+				// exclude_columns (defined in table properties)
+				if (isset($table_properties->exclude_columns)) {
+					foreach ($table_properties->exclude_columns as $column) {
+						if (isset($row->{$column})) {
+							unset($row->{$column});
+						}
+					}
+				}
+
+				return $row;
+			}, $ar_rows);
+
+			// debug
+				if(SHOW_DEBUG===true) {
+					// dump($ar_socrata_rows, ' ar_socrata_rows ++ '.to_string()); die();
+				}
+
+		// debug
+			// dump($table_properties, ' table_properties ++ '.to_string());
+			// dump($ar_rows, ' ar_rows ++ '.to_string());
+			// die();
+			debug_log(__METHOD__
+				." ar_socrata_rows ".json_encode($ar_socrata_rows, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+				, logger::DEBUG
+			);
+
+		// Update data
+
+			// Test data
+				/*
+				$ar_socrata_rows = [];
+				$socrata_row = new stdClass();
+					#$socrata_row->{$socrata_id}		= 3;
+					$socrata_row->id 				= 'oh1_1_lg-eng';
+					$socrata_row->{$socrata_delete} = true;
+				$ar_socrata_rows[] = $socrata_row;
+
+				$socrata_row = new stdClass();
+					#$socrata_row->{$socrata_id}	= 10;
+					$socrata_row->id 				= 6;
+					$socrata_row->name 				= 'Jane';
+					$socrata_row->surname 			= 'Flash '.$socrata_row->id;
+					#$socrata_row->{$socrata_delete} = true;
+				$ar_socrata_rows[] = $socrata_row; */
+
+				#$ar_socrata_rows = [$ar_socrata_rows[1]];
+
+		// Get socrata path from 'table' item (v7: resolved from the flat virtual diffusion tree)
+			$table_node = diffusion_utils::get_section_node_for_element($diffusion_element_tipo, $section_tipo);
+			if (empty($table_node)) {
+				$response->msg[] = 'Error. this section ('.$section_tipo.') do not have Socrata diffusion';
+				$response->errors[] = 'Section ('.$section_tipo.') is not in the diffusion virtual tree for element '.$diffusion_element_tipo;
+				return $response;
+			}
+			$table_properties	= self::get_table_properties($table_node->tipo);
+			$socrata_config		= (object)SOCRATA_CONFIG;
+			$path				= $socrata_config->mode==='pro'
+				? ($table_properties->path_pro ?? null) // production mode
+				: ($table_properties->path_pre ?? null); // pre-production mode
+			if (empty($path)) {
+				$response->msg[] = 'Error. empty section ('.$section_tipo.') Socrata path';
+				$response->errors[] = 'Section ('.$section_tipo.') do not has properties paths defined';
+				return $response;
+			}
+
+		// Upsert data
+			$result_obj = self::upsert_data(
+				$ar_socrata_rows,
+				$path
+			);
+
+			$result	= isset($result_obj->error) ? false : true;
+			$msg	= isset($result_obj->message) ? $result_obj->message : to_string($result);
+
+		// log publication activity (dd1758: who/when/what/where + action)
+		// replaces the legacy per-record publication metadata components
+		// (update_publication_data, removed in v7)
+			if ($result===true) {
+				include_once DEDALO_DIFFUSION_PATH . '/class.diffusion_activity_logger.php';
+				diffusion_activity_logger::log(
+					$section_tipo,
+					(int)$section_id,
+					$diffusion_element_tipo,
+					diffusion_activity_logger::ACTION_PUBLISHED
+				);
+			}
+
+		// response
+			$response->result	= $result;
+			$response->msg		= $msg;
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				$time_complete	= exec_time_unit($start_time,'ms');
+				$response->time	= $time_complete;
+			}
+
+
+		return $response;
+	}//end update_record
+
+
+
+	/**
+	* BUILD_ID
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @param string $lang
+	* @return string $id like 'oh1_1_lg-eng'
+	*/
+	private static function build_id(string $section_tipo, string|int $section_id, string $lang) : string {
+
+		$id = $section_tipo .'_'. $section_id .'_'. $lang ;
+
+		return $id;
+	}//end build_id
+
+
+
+	/**
+	* BUILD_JSON_ROW
+	* Builds one Socrata row object with all field : field_value in given lang.
+	* (Moved from legacy class diffusion, removed in v7)
+	* @param object $options
+	* @return object $json_row
+	*/
+	private function build_json_row(object $options) : stdClass {
+
+		// options
+			$section_tipo			= $options->section_tipo ?? null;
+			$section_id				= $options->section_id ?? null;
+			$diffusion_element_tipo	= $options->diffusion_element_tipo ?? null;
+			$lang					= $options->lang ?? null;
+
+		// fields (v7: resolved from the flat virtual diffusion tree)
+			$ar_fields = diffusion_utils::get_table_fields( $diffusion_element_tipo, $section_tipo );
+
+		// value
+			$row = new stdClass();
+
+				// fixed columns
+					$item = new stdClass();
+						$item->value = self::build_id($section_tipo, $section_id, $lang);
+						$item->model = 'field_text';
+					$row->id = $item;
+
+					$item = new stdClass();
+						$item->value = $section_tipo;
+						$item->model = 'field_text';
+					$row->section_tipo = $item;
+
+					$item = new stdClass();
+						$item->value = $section_id;
+						$item->model = 'field_int';
+					$row->section_id = $item;
+
+					$item = new stdClass();
+						$item->value = $lang;
+						$item->model = 'field_text';
+					$row->lang = $item;
+
+					$item = new stdClass();
+						$item->value = date('Y-m-d H:i:s');
+						$item->model = 'field_date';
+					$row->publish_date = $item;
+
+				// other columns. Resolve each field
+				foreach ($ar_fields as $field) {
+
+					$value = self::get_field_value($field->tipo, $section_tipo, $section_id, $lang, $options);
+
+					$diffusion_model = ontology_node::get_model_by_tipo($field->tipo,true);
+
+					$item = new stdClass();
+						$item->value = $value;
+						$item->model = $diffusion_model;
+
+					// Add value
+					$row->{$field->label} = $item;
+				}
+
+
+		return $row;
+	}//end build_json_row
+
+
+
+	/**
+	* GET_FIELD_VALUE
+	* (Moved from legacy class diffusion, removed in v7)
+	* @param string $tipo
+	*	Tipo of diffusion 'field' like 'oh111'
+	* @param string $section_tipo
+	*	Current working section tipo like 'oh1'
+	* @param int $section_id
+	*	Current section_id like 1
+	* @param string $lang
+	*	Current lang like 'lg-eng'
+	* @param object $request_options
+	*	Is pass-through update record request_options param
+	* @return mixed $field_value
+	*	Is the diffusion value of component called by field. Can be null, array, string, int
+	*/
+	private static function get_field_value(string $tipo, string $section_tipo, $section_id, string $lang, object $request_options) {
+
+		$field_value = null;
+
+		// Diffusion element (current column/field)
+			$diffusion_term		= ontology_node::get_instance($tipo);
+			$properties			= $diffusion_term->get_properties(true);	# Format: {"data_to_be_used": "dato"}
+
+		// Component
+			$ar_related			= common::get_ar_related_by_model('component_', $tipo, false);
+			$component_tipo		= reset($ar_related);
+			$model_name			= ontology_node::get_model_by_tipo($component_tipo,true);
+			$current_component	= component_common::get_instance(
+				$model_name,
+				$component_tipo,
+				$section_id,
+				'list', // Note that 'list' mode have dato fallback (in section)
+				$lang,
+				$section_tipo,
+				false
+			);
+
+			// dato
+			$dato = (is_object($properties) && property_exists($properties, 'get_field_value') && isset($properties->get_field_value->get_dato_method))
+				? $current_component->{$properties->get_field_value->get_dato_method}()
+				: $current_component->get_dato();
+
+
+		# switch cases
+			switch (true) {
+
+				case ($model_name==='component_publication'):
+					$field_value = (isset($dato[0]->section_id) && (int)$dato[0]->section_id===NUMERICAL_MATRIX_VALUE_YES) ? true : false;
+					break;
+
+				case (is_object($properties) && property_exists($properties, 'data_to_be_used')):
+					switch ($properties->data_to_be_used) {
+						case 'dato':
+							# Unresolved data
+							$field_value = $dato;
+							break;
+						// NEED TO BE FIXED NEW DATAFRAME
+						case 'ds':
+							$ar_term_ds = [];
+							foreach ((array)$dato as $current_locator) {
+								if (isset($current_locator->ds)) foreach ($current_locator->ds as $ar_locator_ds) {
+									foreach ($ar_locator_ds  as $locator_ds) {
+										$ar_term_ds[] = ts_object::get_term_by_locator($locator_ds, $lang, true);
+									}
+								}
+							}
+							if (!empty($ar_term_ds)) {
+								$field_value = implode('|', $ar_term_ds);
+							}
+							break;
+						// NEED TO BE FIXED NEW DATAFRAME
+						case 'dataframe':
+							$ar_term_dataframe = [];
+							foreach ((array)$dato as $current_locator) {
+								if (isset($current_locator->dataframe)) foreach ($current_locator->dataframe as $locator_dataframe) {
+									$ar_term_dataframe[] = ts_object::get_term_by_locator($locator_dataframe, $lang, true);
+								}
+							}
+							if (!empty($ar_term_dataframe)) {
+								$field_value = implode('|', $ar_term_dataframe);
+							}
+							break;
+						default:
+							debug_log(__METHOD__
+								." INVALID DATA_TO_BE_USED MODE (ignored tipo: $component_tipo) 'data_to_be_used': ".to_string($properties->data_to_be_used)
+								, logger::ERROR
+							);
+							break;
+					}
+					break;
+
+				case (is_object($properties) && property_exists($properties, 'process_dato')):
+					// Process dato with function
+					$options = $request_options;
+						$options->properties		= $properties;
+						$options->tipo				= $tipo;
+						$options->component_tipo	= $component_tipo;
+						$options->section_id		= $section_id;
+
+					$function_name 	= $properties->process_dato;
+					$field_value 	= call_user_func($function_name, $options, $dato);
+					break;
+
+				default:
+					// Set unified diffusion value
+					$field_value = $current_component->get_diffusion_value($lang);
+					break;
+			}//switch (true)
+
+
+		return $field_value;
+	}//end get_field_value
+
+
+
+	/**
+	* GET_TABLE_PROPERTIES
+	* Resolves the v7 properties of a table node. The given tipo is usually
+	* the virtual (alias-preferred) tipo from the diffusion virtual tree;
+	* resolve_node_with_alias applies the alias contract (alias properties
+	* win, inherited from the real node when the alias has none).
+	* @param string|null $table_tipo
+	* @return object|null
+	*/
+	private static function get_table_properties( ?string $table_tipo ) : ?object {
+
+		if (empty($table_tipo)) {
+			return null;
+		}
+
+		$resolved = diffusion_utils::resolve_node_with_alias($table_tipo);
+
+		return $resolved->properties ?: null;
+	}//end get_table_properties
+
+
+
+	/**
+	* UPSERT_DATA
+	* @see https://github.com/socrata/soda-php
+	* @see https://ctti.azure-westeurope-prod.socrata.com/dataset/render_data_test/7w3e-npuc/revisions/0
+	* @see https://ctti.azure-westeurope-prod.socrata.com/resource/w4hd-c82i.json
+	* @param array $data
+	* @param string $path
+	* @return object $response
+	*/
+	public static function upsert_data( array $data, string $path ) : object {
+
+		// socrata_config
+			$socrata_config		= (object)SOCRATA_CONFIG;
+			$app_token			= $socrata_config->app_token;
+			$socrata_user		= $socrata_config->socrata_user;
+			$socrata_password	= $socrata_config->socrata_password;
+			$server				= $socrata_config->server;
+
+		// Connect
+			$client = new Socrata(
+				$server,
+				$app_token,
+				$socrata_user,
+				$socrata_password
+			);
+
+		// Test read data
+			// $response = $socrata->get("7w3e-npuc");
+			// dump($response, ' response ++ '.to_string());
+
+		// Post our response
+			$data_json	= json_encode($data, JSON_UNESCAPED_SLASHES | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_APOS);
+			$response	= $client->post(
+				$path,
+				$data_json
+			);
+
+		// debug
+			// errors
+			$error = $response->error ?? $response->Errors ?? null;
+			if ($error===true || (int)$error>0) {
+				debug_log(__METHOD__
+					." !!! ERROR ON UPSERT SOCRATA RECORD ".json_encode($response, JSON_PRETTY_PRINT) . PHP_EOL
+					.' response: ' . to_string($response) . PHP_EOL
+					.' data: ' . to_string($data)
+					, logger::ERROR
+				);
+
+			}else{
+				debug_log(__METHOD__
+					." Socrata response" . PHP_EOL
+					.' response: ' . json_encode($response, JSON_PRETTY_PRINT)
+					, logger::DEBUG
+				);
+			}
+
+
+		return $response;
+	}//end upsert_data
+
+
+
+}//end diffusion_socrata class

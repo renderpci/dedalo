@@ -1,0 +1,22 @@
+[
+	{
+		"id": 2,
+		"value": {
+			"null": null,
+			"time": 1575599819000,
+			"color": "#82b92c",
+			"number": 123,
+			"object": {
+				"a": "b",
+				"c": "d"
+			},
+			"string": "Hello World",
+			"boolean": true,
+			"object with numbers": [
+				1,
+				2,
+				3
+			]
+		}
+	}
+]

@@ -1,0 +1,99 @@
+{
+	"typo": "ddo",
+	"model": "component_relation_model",
+	"label": "relation_model",
+	"tipo": "test169",
+	"section_tipo": "test3",
+	"legacy_model": "component_relation_model",
+	"parent": "test3",
+	"parent_grouper": "test45",
+	"lang": "lg-nolan",
+	"mode": "edit",
+	"translatable": false,
+	"properties": {
+		"source": {
+			"mode": "autocomplete",
+			"request_config": [
+				{
+					"sqo": {
+						"section_tipo": []
+					},
+					"show": {
+						"ddo_map": [
+							{
+								"tipo": "dd924",
+								"parent": "self",
+								"section_tipo": "self",
+								"value_with_parents": false
+							}
+						],
+						"fields_separator": ", "
+					}
+				}
+			]
+		},
+		"target_mode": "free",
+		"target_values": [
+			"dd922"
+		]
+	},
+	"css": null,
+	"permissions": 2,
+	"tools": [
+		{
+			"typo": "ddo",
+			"model": "tool_propagate_component_data",
+			"name": "tool_propagate_component_data",
+			"label": "Propaga datos de componentes",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": null,
+			"css": {
+				"url": "/dedalo/tools/tool_propagate_component_data/css/tool_propagate_component_data.css"
+			},
+			"icon": "/dedalo/tools/tool_propagate_component_data/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_time_machine",
+			"name": "tool_time_machine",
+			"label": "Máquina del tiempo",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_time_machine/css/tool_time_machine.css"
+			},
+			"icon": "/dedalo/tools/tool_time_machine/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		}
+	],
+	"buttons": [],
+	"request_config": null,
+	"columns_map": null,
+	"sortable": true,
+	"type": "component",
+	"path": [],
+	"new_dataframe": null,
+	"view": "default",
+	"children_view": null,
+	"debug": {
+		"exec_time": "0.977 ms"
+	},
+	"target_sections": [
+		{
+			"tipo": "dd922",
+			"label": "Categoría Laboral / Cargo"
+		}
+	]
+}

@@ -1,7 +1,21 @@
-# runtime + generated artifacts — never commit
-/dist/
+# Runtime + per-install artifacts — never commit.
+#
+# NOTE: engine/, run/ and widget/ ARE tracked on purpose. This package must run from a
+# plain v6 checkout: no build step, no snapshot to regenerate, no other repository.
 /var/
 /private/
+/cache/
+/sessions/
+/backups/
+# ^ config-migration quarantine: holds the imported v6 config, i.e. the DB password
 *.log
 .DS_Store
-/cache/
+
+# generated at runtime by the widget: a literal snapshot of the live v6 config (0600),
+# and the shim the engine's config migration writes next to it
+/engine/config/config_db.php
+/engine/config/config.php
+/engine/config/config_core.php
+/engine/config/config_areas.php
+/engine/.env
+/engine/.env.*

@@ -1,0 +1,7 @@
+[
+	{
+		"section_tipo": "numisdata33",
+		"source_table": "matrix",
+		"target_table": "matrix_hierarchy"
+	}
+]
