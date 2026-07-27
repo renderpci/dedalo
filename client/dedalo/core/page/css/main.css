@@ -12502,7 +12502,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 /**
 * area_development
 *
-* Only use to set general thesaurus styles, not dynamic rows
+* Only use to set general development styles, not dynamic rows
 * Specific CSS for ts_object must be written in ts_object.less
 *
 * Included from main.less file
@@ -16105,7 +16105,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 /**
 * area_publication
 *
-* Only use to set general thesaurus styles, not dynamic rows
+* Only use to set general publication styles, not dynamic rows
 * Specific CSS for ts_object must be written in ts_object.less
 *
 * Included from main.less file
@@ -16113,7 +16113,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 /**
 * area_resource
 *
-* Only use to set general thesaurus styles, not dynamic rows
+* Only use to set general resource styles, not dynamic rows
 * Specific CSS for ts_object must be written in ts_object.less
 *
 * Included from main.less file
@@ -16235,13 +16235,14 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   cursor: pointer;
   opacity: 0.5;
 }
-.area_thesaurus > .content_data > .thesaurus_list_wrapper > .thesaurus_type_block > .typology_name::active,
-.area_ontology > .content_data > .thesaurus_list_wrapper > .thesaurus_type_block > .typology_name::active {
+.area_thesaurus > .content_data > .thesaurus_list_wrapper > .thesaurus_type_block > .typology_name:active,
+.area_ontology > .content_data > .thesaurus_list_wrapper > .thesaurus_type_block > .typology_name:active {
   background-color: var(--color_grey_9);
   color: var(--color_white);
 }
 .area_thesaurus > .content_data > .thesaurus_list_wrapper > .thesaurus_type_block > .typology_name::after,
 .area_ontology > .content_data > .thesaurus_list_wrapper > .thesaurus_type_block > .typology_name::after {
+  content: "";
   right: 0.33rem;
 }
 .area_thesaurus > .content_data > .thesaurus_list_wrapper > .thesaurus_type_block > .typology_name.up,
