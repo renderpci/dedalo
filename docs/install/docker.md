@@ -4,10 +4,11 @@
 
 !!! tip "Want it in one command instead?"
     [Simple install](quickstart.md) brings up a complete instance with
-    `./install.sh` or a single `docker compose up -d`, using
-    `docker-compose.simple.yml`. It trades away TLS and media access control to
-    get there, so it suits a machine on your own network only. This page is the
-    full stack, and it is what a public server needs.
+    `./install.sh`, using `docker-compose.simple.yml` — HTTPS included, via
+    Let's Encrypt or a local certificate authority. The one thing it does not set
+    up is **media access control**, so it suits a collection that is public
+    anyway or an internal instance. This page is the full stack: the same
+    architecture plus the engine-enforced media gate.
 
 The repo ships a `Dockerfile`, a `docker-compose.yml` and the reference proxy
 configuration `deploy/nginx.conf`. Together they stand up the same architecture

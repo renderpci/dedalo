@@ -311,15 +311,28 @@ tls_existing() {
 	ask EXIST_NAME 'Domain name on that certificate (or _ for any)' '_'
 
 	mkdir -p "$CERT_DIR"
-	cp "$EXIST_CRT" "$CERT_DIR/fullchain.pem" || fail 'Could not copy the certificate.'
-	cp "$EXIST_KEY" "$CERT_DIR/privkey.pem"   || fail 'Could not copy the key.'
+	# Pointing at the destination itself is a natural thing to do on a re-run
+	# (the files are already in deploy/certs). `cp a a` fails, so skip instead of
+	# dying — and never `rm` the source to make room for itself.
+	copy_cert() {
+		if [ "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")" = "$(cd "$(dirname "$2")" && pwd)/$(basename "$2")" ]; then
+			echo "  $2 is already in place — keeping it."
+		else
+			cp "$1" "$2" || fail "Could not copy $1 to $2."
+		fi
+	}
+	copy_cert "$EXIST_CRT" "$CERT_DIR/fullchain.pem"
+	copy_cert "$EXIST_KEY" "$CERT_DIR/privkey.pem"
 	chmod 600 "$CERT_DIR/privkey.pem"
 
 	generate_tls_conf "$EXIST_NAME" '/etc/dedalo/certs/fullchain.pem' '/etc/dedalo/certs/privkey.pem'
 	# `[ … ] && x=…` as the last command of a function returns non-zero when the
 	# test fails, and `set -e` would exit the whole script on it.
 	if [ "$EXIST_NAME" = '_' ]; then
-		PUBLIC_URL='https://<this-machine>/dedalo/core/page/'
+		# "Any name" is a valid answer, but printing a literal placeholder as the
+		# address to open is useless. Fall back to this machine's own name, the
+		# same default the local-CA mode offers.
+		PUBLIC_URL="https://$(hostname -f 2>/dev/null || hostname)/dedalo/core/page/"
 	else
 		PUBLIC_URL="https://$EXIST_NAME/dedalo/core/page/"
 	fi
