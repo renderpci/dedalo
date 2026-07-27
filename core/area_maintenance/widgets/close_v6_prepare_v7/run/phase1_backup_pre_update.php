@@ -141,20 +141,36 @@ if ($is_dry) {
 	// that missing table, and the engine logs ONE error per row to PHP's error_log —
 	// tens of GB on a real database. The review's own findings are RETURNED (not logged),
 	// so PHP error logging is suspended for the review pass only.
+	// The engine reports each finding TWICE: a short line in $review->errors (returned) and a
+	// detailed one via debug_log → php's error_log (the actual offending value, e.g.
+	// 'component value (dd547) out of format: "2022-01-10 17:58:37"'). That detail is what you
+	// want when judging an issue, but it lands in the SYSTEM log where the widget cannot show
+	// it. So point error_log at a file inside the package for the duration of the review.
 	$ontology_ready	= prepare_v7_dd_ontology_exists();
 	$log_errors		= ini_get('log_errors');
+	$error_log_prev	= ini_get('error_log');
+	$engine_log		= $paths['var_dir'] . '/data_review.engine.log';
+
 	if (!$ontology_ready) {
+		// Without the ontology every row fails its label lookup: millions of meaningless
+		// lines. Suppress rather than redirect — the review's own findings are RETURNED.
 		$log('NOTE: table `dd_ontology` does not exist yet (the real phase 1 creates it). '
 			. 'The data review still runs, but per-row label lookups fail against it, so PHP '
 			. 'error logging is suspended for the review pass (it would otherwise write one '
 			. 'error per row to php error_log).');
 		@ini_set('log_errors', '0');
+	}else{
+		@file_put_contents($engine_log, '# engine detail for the data review of ' . date('c') . PHP_EOL);
+		@ini_set('error_log', $engine_log);
+		$log('engine-level detail for this review → ' . $engine_log);
 	}
 
 	$review = v6_to_v7::reformat_matrix_data($ar_tables, false); // false = no save
 
 	if (!$ontology_ready) {
 		@ini_set('log_errors', (string)$log_errors);
+	}else{
+		@ini_set('error_log', (string)$error_log_prev);
 	}
 
 	$errors = is_array($review->errors ?? null) ? $review->errors : [];
@@ -182,13 +198,18 @@ if ($is_dry) {
 	}
 
 	$n_err = count($errors);
+
+	// One grouped summary, not a wall of near-identical lines: 34 rows failing on the same
+	// tipo is ONE thing to decide about, not 34. This block is what the widget shows.
+	prepare_v7_log_summary(
+		$log,
+		$errors,
+		$ontology_ready
+			? 'engine-level detail (offending values) in ' . $engine_log
+			: 'component models could not be checked: dd_ontology does not exist yet'
+	);
+
 	if ($n_err > 0) {
-		foreach (array_slice($errors, 0, 50) as $e) {
-			$log('  · ' . (is_string($e) ? $e : json_encode($e)));
-		}
-		if ($n_err > 50) {
-			$log('  … and ' . ($n_err - 50) . ' more.');
-		}
 		$log('PREFLIGHT found ' . $n_err . ' data issue(s). Review before running for real.');
 		exit(6);
 	}
@@ -236,6 +257,65 @@ if (($pre->result ?? false) !== true) {
 
 $log('PHASE 1 done. dd_ontology provisioned.');
 exit(0);
+
+
+/**
+* prepare_v7_log_summary
+* Writes the run's FINAL, human-readable verdict: the findings grouped by what they
+* actually are, most frequent first, with one real example each.
+*
+* The raw list is unusable as a report — 34 rows failing on the same tipo is one
+* decision, not 34 lines to read. Row ids / section ids are normalised out of the
+* grouping key so identical issues collapse, and the block is delimited by markers so
+* the widget can lift it out of the log and show it on its own.
+*
+* @param callable $log
+* @param array $errors - the review's returned findings
+* @param string $note  - one line of context (where the detail is, or why it is limited)
+* @return void
+*/
+function prepare_v7_log_summary(callable $log, array $errors, string $note) : void {
+
+	$log('=== DATA REVIEW SUMMARY ===');
+
+	if (empty($errors)) {
+		$log('No data issues found.');
+		$log($note);
+		$log('=== END SUMMARY ===');
+		return;
+	}
+
+	// group: strip the row-specific parts so the same problem collapses into one entry
+	$groups = [];
+	foreach ($errors as $error) {
+		$text = is_string($error) ? $error : json_encode($error);
+		$key  = preg_replace(
+			['/\bID \d+/', "/section_id: '[^']*'/", '/\bid: \d+/'],
+			['ID *', "section_id: '*'", 'id: *'],
+			$text
+		);
+		if (!isset($groups[$key])) {
+			$groups[$key] = ['count' => 0, 'example' => $text];
+		}
+		$groups[$key]['count']++;
+	}
+	uasort($groups, static fn(array $a, array $b) : int => $b['count'] <=> $a['count']);
+
+	$log(count($errors) . ' issue(s) in ' . count($groups) . ' distinct kind(s):');
+
+	$shown = 0;
+	foreach ($groups as $group) {
+		if ($shown >= 20) {
+			$log('  … and ' . (count($groups) - $shown) . ' more kind(s); see the full log.');
+			break;
+		}
+		$log('  ' . str_pad((string)$group['count'], 6, ' ', STR_PAD_LEFT) . ' × ' . $group['example']);
+		$shown++;
+	}
+
+	$log($note);
+	$log('=== END SUMMARY ===');
+}//end prepare_v7_log_summary
 
 
 /**

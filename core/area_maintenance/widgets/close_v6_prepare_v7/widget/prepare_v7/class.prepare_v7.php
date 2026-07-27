@@ -195,6 +195,49 @@ class prepare_v7 {
 
 
 	/**
+	* RUN_SUMMARY
+	* Lifts the LAST '=== DATA REVIEW SUMMARY ===' block out of the run log.
+	*
+	* The log tail alone is a poor report: the interesting verdict scrolls away behind
+	* progress heartbeats, and the engine's own detail goes to a separate file. The phases
+	* delimit their verdict so the widget can show it as a block of its own.
+	*
+	* @param string $log_file
+	* @return string - '' when the current run has not produced one yet
+	*/
+	private static function run_summary(string $log_file) : string {
+
+		if (!is_file($log_file)) {
+			return '';
+		}
+
+		$lines	= preg_split('/\r\n|\r|\n/', (string)file_get_contents($log_file));
+		$start	= null;
+		$end	= null;
+		foreach ($lines as $i => $line) {
+			if (strpos($line, '=== DATA REVIEW SUMMARY ===') !== false) {
+				$start	= $i;
+				$end	= null; // a later run supersedes an earlier one
+			}else if ($start !== null && $end === null && strpos($line, '=== END SUMMARY ===') !== false) {
+				$end = $i;
+			}
+		}
+		if ($start === null) {
+			return '';
+		}
+		$slice = array_slice($lines, $start, ($end ?? (count($lines) - 1)) - $start + 1);
+
+		// drop the per-line timestamp+tag prefix: the block is read as a report, not a log
+		$clean = array_map(
+			static fn(string $l) : string => (string)preg_replace('/^\S+ \[[a-z0-9_]+\] /', '', $l),
+			$slice
+		);
+
+		return implode("\n", $clean);
+	}//end run_summary
+
+
+	/**
 	* TAIL
 	* Last LOG_TAIL_LINES lines of a text file
 	* @param string $file
@@ -324,6 +367,10 @@ class prepare_v7 {
 			'php_cli_version'  => $php_check->version,
 			'log_file'         => $log_file,
 			'log_tail'         => $log_tail,
+			'run_summary'      => self::run_summary($log_file),
+			'engine_log'       => is_file($pkg . '/var/data_review.engine.log')
+				? $pkg . '/var/data_review.engine.log'
+				: null,
 		];
 
 		$response = new stdClass();

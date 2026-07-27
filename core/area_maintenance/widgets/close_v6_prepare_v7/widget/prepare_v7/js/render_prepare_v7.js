@@ -125,12 +125,25 @@ const get_content_data = async function(self) {
 		add_check_row(checks, 'Runner present', runner_present)
 		add_check_row(checks, 'PHP CLI binary usable', php_cli_ok)
 
+	// summary node. The verdict of the last run, lifted out of the log so it does not
+	// scroll away behind progress lines. Hidden until a run has produced one.
+		const summary_node = ui.create_dom_element({
+			element_type	: 'pre',
+			class_name		: 'prepare_v7_summary',
+			inner_html		: value.run_summary || ''
+		})
+		summary_node.style.display = value.run_summary ? '' : 'none'
+		if (value.engine_log) {
+			summary_node.title = 'Engine-level detail: ' + value.engine_log
+		}
+
 	// log node (filled by the poller)
 		const log_node = ui.create_dom_element({
 			element_type	: 'pre',
 			class_name		: 'prepare_v7_log',
 			inner_html		: value.log_tail || '(no log yet)'
 		})
+		log_node.summary_node = summary_node
 
 	// actions. Rendered ONLY in maintenance mode: with users online neither the migration
 	// (which rewrites the database) nor the preflight (which reads every row of it) may be
@@ -262,7 +275,8 @@ const get_content_data = async function(self) {
 			})
 		}
 
-	// log at the end
+	// summary + log at the end
+		content_data.appendChild(summary_node)
 		content_data.appendChild(log_node)
 
 
@@ -395,10 +409,37 @@ const refresh_log = async function(self, log_node) {
 
 	log_node.textContent = value?.log_tail || '(no log yet)'
 	log_node.scrollTop = log_node.scrollHeight
+	update_summary(log_node, value)
 
 
 	return true
 }//end refresh_log
+
+
+
+/**
+* UPDATE_SUMMARY
+* Shows the run verdict block returned by the server, hiding the node while there is none
+* @param HTMLElement log_node
+* @param object value
+* @return bool
+*/
+const update_summary = function(log_node, value) {
+
+	const summary_node = log_node.summary_node
+	if (!summary_node) {
+		return false
+	}
+
+	const summary = value?.run_summary || ''
+	summary_node.textContent = summary
+	summary_node.style.display = summary ? '' : 'none'
+	if (value?.engine_log) {
+		summary_node.title = 'Engine-level detail: ' + value.engine_log
+	}
+
+	return true
+}//end update_summary
 
 
 
@@ -437,6 +478,7 @@ const poll_log = function(self, log_node, on_end) {
 			log_node.textContent = log_tail
 			log_node.scrollTop = log_node.scrollHeight
 		}
+		update_summary(log_node, value)
 
 		if (RUN_FINISHED.test(log_tail) || count>=POLL_MAX) {
 			clearInterval(timer)
