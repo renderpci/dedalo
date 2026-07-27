@@ -79,9 +79,11 @@ services:
       # files and nginx serves the media tree openly. This is the one line that
       # separates this stack from the full one.
       #
-      # Plain HTTP: the browser drops a Secure cookie over http://, so leaving
-      # this true makes every login appear to succeed and then do nothing.
-      SESSION_COOKIE_SECURE: "false"
+      # TRUE whenever there is TLS — which install.sh makes the default. It is
+      # flipped to "false" only by the no-HTTPS mode, because a browser silently
+      # discards a Secure cookie over http:// and every login would appear to
+      # succeed and then do nothing.
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
       DEDALO_ACCESS_LOG: "true"
       TRUSTED_PROXY_HOPS: "1"
       DEDALO_DEV_MODE: "false"
@@ -109,18 +111,52 @@ services:
     depends_on:
       - dedalo
     ports:
-      # Port 80 only — there is no certificate to serve 443 with. Bind it to a
-      # single interface (e.g. "127.0.0.1:80:80") if this machine has one you do
-      # not want it answering on.
+      # 443 is published in every TLS mode; 80 stays published because it both
+      # redirects to HTTPS and answers the ACME challenge at renewal time.
+      # Bind to one interface (e.g. "127.0.0.1:443:443") if this machine has an
+      # address you do not want it answering on.
       - "80:80"
+      - "443:443"
     volumes:
-      - ./deploy/nginx.simple.conf:/etc/nginx/conf.d/default.conf:ro
+      # install.sh writes deploy/nginx.simple.generated.conf from the TLS
+      # template and points this variable at it. The default keeps a bare
+      # `docker compose -f docker-compose.simple.yml up -d` working exactly as
+      # before — plain HTTP, no certificate needed.
+      - ./deploy/${DEDALO_NGINX_CONF:-nginx.simple.conf}:/etc/nginx/conf.d/default.conf:ro
       - ./client:/opt/dedalo/master_dedalo/client:ro
       - media:/srv/dedalo/media:ro
       - socket:/run/dedalo
+      # Let's Encrypt material, shared with the certbot service.
+      - letsencrypt:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+      # Local-CA and bring-your-own certificates. Not a volume: you may want to
+      # replace these files by hand.
+      - ./deploy/certs:/etc/dedalo/certs:ro
+    # Renewed certificates only take effect on a reload, and certbot cannot
+    # signal another container. Reloading every 6h is the standard answer: it
+    # costs nothing and picks up a renewal within hours of it landing.
+    command: >
+      sh -c "while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
+
+  # --- Let's Encrypt renewal (profile `letsencrypt`) -------------------------
+  # The FIRST certificate is obtained by install.sh with a one-off standalone
+  # certbot run, before nginx exists to hold port 80. This service only RENEWS,
+  # over the webroot the nginx config exposes at /.well-known/acme-challenge/ —
+  # so renewal never needs to stop the proxy. install.sh enables the profile.
+  certbot:
+    image: certbot/certbot
+    profiles: ["letsencrypt"]
+    restart: unless-stopped
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: >
+      sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"
 
 volumes:
   pgdata:
   private:      # SECRETS — back this up
   media:        # the originals are the source of truth — back this up
   socket:
+  letsencrypt:  # issued certificates + the ACME account key
+  certbot_www:  # the challenge webroot, shared with nginx
