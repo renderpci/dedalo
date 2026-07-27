@@ -143,6 +143,7 @@ streams the current run; it polls every 5 s until the runner writes a terminal l
 ### Headless (equivalent)
 ```bash
 php dist/prepare_v7/run/run_prepare_v7.php --dry-run          # preflight, no writes
+php dist/prepare_v7/run/phase3_diffusion.php --dry-run        # diffusion mapping preview (needs dd_ontology)
 php dist/prepare_v7/run/run_prepare_v7.php --yes              # backup + migrate
 php dist/prepare_v7/run/run_prepare_v7.php --yes --skip-backup   # only if you already backed up
 php dist/prepare_v7/run/run_prepare_v7.php --help
@@ -185,7 +186,12 @@ the engine imports the rest via Dédalo's own legacy‑config auto‑migration:
    `matrix_activity_diffusion`, `matrix_string_search` and `matrix_relation_index`
    (tables + sync triggers + **backfill**). On success the new version is recorded in
    `matrix_updates`.
-3. **Phase 3 — diffusion ontology (LAST step, isolated).** Runs
+3. **Phase 3 — diffusion ontology (LAST step, isolated).** Has a **`--dry-run`**: it computes and
+   prints the whole v6→v7 mapping (the `V6: … / V7: …` pair per node, plus what would be stored)
+   and writes nothing. It needs `dd_ontology`, which the real phase 1 builds, so on an unmigrated
+   database it reports "preview unavailable yet" and exits 0 — the preflight runs it and is never
+   failed by it. The full per-node output goes to `var/diffusion_migration.dry-run.log`
+   (real runs: `var/diffusion_migration.log`), never to the throttled main log. Runs
    `diffusion/migration/migrate_diffusion_properties.php` as its own engine process. This is a
    **separate, still‑evolving** migration axis — NOT part of `update::update_version()` — that
    rewrites `dd_ontology.properties` (+ `matrix_ontology`) from the migrated v6 `propiedades`
