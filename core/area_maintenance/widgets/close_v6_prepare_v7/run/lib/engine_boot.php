@@ -149,6 +149,15 @@ function prepare_v7_boot_engine() : array {
 
 	$paths = prepare_v7_resolve_paths();
 
+	// Runtime dirs the bundled engine expects NEXT TO its root (paths.* are DERIVED from
+	// the engine root: cache_path = <engine>/../cache). Without cache/ every label lookup
+	// logs "base_path is not writable" — once per row during the data review.
+	foreach ([$paths['package_root'] . '/cache', $paths['var_dir']] as $dir) {
+		if (!is_dir($dir)) {
+			@mkdir($dir, 0775, true);
+		}
+	}
+
 	require_once $paths['engine_root'] . '/config/bootstrap.php';
 
 	// The migration orchestrator + upgrade classes are NOT autoloaded (in the app

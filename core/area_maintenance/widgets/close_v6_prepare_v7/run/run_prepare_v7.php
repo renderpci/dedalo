@@ -178,8 +178,12 @@ $backup_arg = '--backup-dir=' . escapeshellarg($backup_dir);
 if ($is_dry) {
 	$emit('=== PREPARE V7: PREFLIGHT (dry-run) ===');
 	$code = $spawn('phase1_backup_pre_update.php', ['--dry-run', $log_arg]);
-	$emit('Note: the real run also executes a final diffusion ontology step '
-		. '(diffusion/migration/migrate_diffusion_properties.php), which has no dry-run.');
+
+	// Diffusion preview. It needs dd_ontology (built by the REAL phase 1), so on an
+	// unmigrated database it reports "unavailable yet" and exits 0 — it never turns a
+	// passing preflight into a failure.
+	$spawn('phase3_diffusion.php', ['--dry-run', $log_arg]);
+
 	$emit($code === 0 ? 'Preflight PASSED. Re-run with --yes to apply.' : 'Preflight FAILED (see above).');
 	exit($code);
 }

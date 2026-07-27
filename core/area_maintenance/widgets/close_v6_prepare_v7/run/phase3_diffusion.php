@@ -30,8 +30,9 @@
 require_once __DIR__ . '/lib/engine_boot.php';   // defines the path resolver; does NOT boot the engine
 $paths = prepare_v7_resolve_paths();
 
-$opts     = getopt('', ['yes', 'log:']);
+$opts     = getopt('', ['yes', 'dry-run', 'log:']);
 $has_yes  = isset($opts['yes']);
+$is_dry   = isset($opts['dry-run']);
 $log_file = $opts['log'] ?? ($paths['var_dir'] . '/prepare_v7.log');
 
 $log = function(string $line) use ($log_file) : void {
@@ -42,8 +43,8 @@ $log = function(string $line) use ($log_file) : void {
 // uncaught throwable / fatal ⇒ logged + non-zero exit (never a silent "success")
 prepare_v7_fail_loud($log_file, 'phase3');
 
-if (!$has_yes) {
-	$log('Refusing to run the diffusion migration without --yes.');
+if (!$has_yes && !$is_dry) {
+	$log('Refusing to run the diffusion migration without --yes (or --dry-run to preview it).');
 	exit(2);
 }
 
@@ -57,13 +58,69 @@ if (!is_file($script)) {
 }
 
 $php = PHP_BINARY ?: 'php';
-$cmd = escapeshellarg($php) . ' ' . escapeshellarg($script);
 
-$log('Running diffusion ontology properties migration (isolated engine process):');
+// The script echoes, per ontology node, the v6 properties, the v7 properties it derived
+// and a [TEST PASS]/[TEST FAIL] read-back check. That output IS the audit trail of what
+// this phase changed, so it goes VERBATIM to its own file — the runner distils phase
+// stdout into a 10s heartbeat, which is right for per-row progress and wrong for this.
+$diffusion_log = $paths['var_dir'] . ($is_dry
+	? '/diffusion_migration.dry-run.log'   // never overwrite a real run's audit trail
+	: '/diffusion_migration.log');
+$cmd = escapeshellarg($php) . ' ' . escapeshellarg($script)
+	. ($is_dry ? ' --dry-run' : '')
+	. ' > ' . escapeshellarg($diffusion_log) . ' 2>&1';
+
+$log(($is_dry ? 'PREVIEW (dry-run) of the' : 'Running') . ' diffusion ontology properties migration'
+	. ' (isolated engine process):');
 $log('  ' . $script);
+$log('  full per-node output → ' . $diffusion_log);
 
 $code = 0;
-passthru($cmd, $code);   // streams the script's own output; it self-boots + self-logs-in
+passthru($cmd, $code);   // the script self-boots + self-logs-in
+
+// The preview needs dd_ontology, which the REAL phase 1 creates. Exit 3 from the
+// script means "not there yet" — informative, not a failure of the preflight.
+if ($is_dry && $code === 3) {
+	$log('Diffusion preview unavailable: dd_ontology does not exist yet. It is created by the '
+		. 'real phase 1 (pre_update) from jer_dd, so the diffusion mapping can only be previewed '
+		. 'after the database migration has run.');
+	exit(0);
+}
+
+// summarise the audit trail into the main log
+$pass = $fail = $warn = $pending = 0;
+$total = '';
+if (is_file($diffusion_log) && ($fh = @fopen($diffusion_log, 'r')) !== false) {
+	while (($line = fgets($fh)) !== false) {
+		if (strpos($line, '[TEST PASS]') !== false) { $pass++; continue; }
+		if (strpos($line, '[TEST FAIL]') !== false) { $fail++; continue; }
+		if (strpos($line, '[WARN]')      !== false) { $warn++; continue; }
+		if (strpos($line, '[DRY RUN]')   !== false) { $pending++; continue; }
+		if (strpos($line, 'Total nodes processed:') !== false) { $total = trim($line); }
+	}
+	fclose($fh);
+}
+
+if ($is_dry) {
+	$log('diffusion preview: ' . $pending . ' node(s) would be written, nothing changed'
+		. ($total !== '' ? ' | ' . $total : ''));
+	$log('Review the mapping (V6/V7 pairs per node) in ' . $diffusion_log . '.');
+	exit($code === 0 ? 0 : 7);
+}
+
+$log('diffusion nodes: verified=' . $pass . ' mismatched=' . $fail . ' warnings=' . $warn
+	. ($total !== '' ? ' | ' . $total : ''));
+
+// A read-back mismatch means a node's properties were NOT stored as computed. The script
+// reports it inline and still exits 0, so surface it here rather than calling that success.
+if ($fail > 0) {
+	$log('WARNING: ' . $fail . ' node(s) failed their read-back verification. '
+		. 'Search "[TEST FAIL]" in ' . $diffusion_log . '.');
+	$log('The core v6→v7 DATABASE migration (phases 1–2) already completed and was version-stamped.');
+	$log('This isolated diffusion step reads the untouched v6 `propiedades` and can be re-run:');
+	$log('  php ' . $script);
+	exit(7);
+}
 
 if ($code !== 0) {
 	$log('WARNING: diffusion properties migration exited with code ' . $code . '.');

@@ -132,73 +132,85 @@ const get_content_data = async function(self) {
 			inner_html		: value.log_tail || '(no log yet)'
 		})
 
-	// buttons container
-		const buttons = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'prepare_v7_buttons',
-			parent			: content_data
-		})
+	// actions. Rendered ONLY in maintenance mode: with users online neither the migration
+	// (which rewrites the database) nor the preflight (which reads every row of it) may be
+	// launched, so the buttons are not offered at all.
+		if (maintenance_mode) {
 
-	// button preflight. Safe, no writes
-		const button_preflight = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'light button_preflight',
-			inner_html		: 'Run preflight (safe, no writes)',
-			parent			: buttons
-		})
-		button_preflight.disabled = !package_ready
-		button_preflight.addEventListener('click', (e) => {
-			e.stopPropagation()
-			launch(self, log_node, buttons, {
-				mode : 'preflight'
+			// buttons container
+			const buttons = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'prepare_v7_buttons',
+				parent			: content_data
 			})
-		})
 
-	// button migrate. Real run
-		const button_migrate = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'warning button_migrate',
-			inner_html		: 'Prepare installation for v7 (migrate)',
-			parent			: buttons
-		})
-		button_migrate.disabled = !(package_ready && is_superuser && maintenance_mode)
-		button_migrate.title = button_migrate.disabled
-			? 'Requires superuser + maintenance mode + the bundled package'
-			: ''
-		button_migrate.addEventListener('click', (e) => {
-			e.stopPropagation()
-			const confirm_text = 'This will BACK UP and then REWRITE the database into the v7 data model.'
-				+ '\nThe backup runs first and the migration aborts if it fails.'
-				+ '\n\nDatabase: ' + (value.database || '?')
-				+ '\n\nProceed?'
-			if (!confirm(confirm_text)) {
-				return
-			}
-			launch(self, log_node, buttons, {
-				mode : 'migrate'
+			// button preflight. Safe, no writes
+			const button_preflight = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light button_preflight',
+				inner_html		: 'Run preflight (safe, no writes)',
+				parent			: buttons
 			})
-		})
+			button_preflight.disabled = !package_ready
+			button_preflight.addEventListener('click', (e) => {
+				e.stopPropagation()
+				launch(self, log_node, buttons, {
+					mode : 'preflight'
+				})
+			})
 
-	// button refresh log
-		const button_log = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'light button_refresh_log',
-			inner_html		: 'Refresh log',
-			parent			: buttons
-		})
-		button_log.addEventListener('click', (e) => {
-			e.stopPropagation()
-			refresh_log(self, log_node)
-		})
+			// button migrate. Real run
+			const button_migrate = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'danger button_migrate',
+				inner_html		: 'Prepare installation for v7 (migrate)',
+				parent			: buttons
+			})
+			button_migrate.disabled = !(package_ready && is_superuser)
+			button_migrate.title = button_migrate.disabled
+				? 'Requires superuser + the bundled package'
+				: ''
+			button_migrate.addEventListener('click', (e) => {
+				e.stopPropagation()
+				const confirm_text = 'This will BACK UP and then REWRITE the database into the v7 data model.'
+					+ '\nThe backup runs first and the migration aborts if it fails.'
+					+ '\n\nDatabase: ' + (value.database || '?')
+					+ '\n\nProceed?'
+				if (!confirm(confirm_text)) {
+					return
+				}
+				launch(self, log_node, buttons, {
+					mode : 'migrate'
+				})
+			})
+
+			// button refresh log
+			const button_log = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light button_refresh_log',
+				inner_html		: 'Refresh log',
+				parent			: buttons
+			})
+			button_log.addEventListener('click', (e) => {
+				e.stopPropagation()
+				refresh_log(self, log_node)
+			})
+		}
 
 	// warnings
-		if (!is_superuser || !maintenance_mode) {
+		if (!maintenance_mode) {
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'warning',
-				inner_html		: !is_superuser
-					? 'Only the Dédalo superuser can run the migration (preflight is still available).'
-					: 'Enable maintenance mode before running the migration (preflight is still available).',
+				inner_html		: 'Dédalo is not in maintenance mode: all actions are hidden. '
+									+ 'Enable maintenance mode to run the preflight or the migration.',
+				parent			: content_data
+			})
+		}else if (!is_superuser) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'warning',
+				inner_html		: 'Only the Dédalo superuser can run the migration (preflight is still available).',
 				parent			: content_data
 			})
 		}
