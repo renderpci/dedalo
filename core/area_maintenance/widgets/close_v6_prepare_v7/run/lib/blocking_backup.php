@@ -24,6 +24,95 @@ final class prepare_v7_backup {
 
 
 	/**
+	* CHECK_PG_DUMP
+	* Verifies that a USABLE pg_dump exists: present, executable, and of a major version
+	* >= the server's. pg_dump refuses outright when it is older than the server
+	* ("aborting because of server version mismatch"), which would fail the migration at
+	* its very first step — so the preflight must catch it, not the real run.
+	*
+	* When DB_BIN_PATH's pg_dump is too old, the usual cause is a distro/brew default
+	* linked to an older major while the server was upgraded. Common per-major install
+	* locations are probed and a version-matched binary is offered in `use_path`.
+	*
+	* @return object {
+	*   result: bool,        a usable pg_dump was found
+	*   pg_dump: string,     the configured binary (DB_BIN_PATH)
+	*   client: string|null, its version, e.g. '17.10'
+	*   server: string|null, server version, e.g. '18.4'
+	*   use_path: string|null, bin dir of a version-matched pg_dump when the configured one is too old
+	*   msg: string
+	* }
+	*/
+	public static function check_pg_dump() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->pg_dump	= system::get_pg_bin_path() . 'pg_dump';
+			$response->client	= null;
+			$response->server	= null;
+			$response->use_path	= null;
+			$response->msg		= '';
+
+		// client version
+		$out = []; $code = 0;
+		DBi::pg_exec(escapeshellarg($response->pg_dump) . ' --version', $out, $code);
+		if ($code !== 0) {
+			$response->msg = 'pg_dump NOT available at ' . $response->pg_dump;
+			return $response;
+		}
+		$version_line = trim(implode(' ', $out));
+		if (preg_match('/(\d+)\.(\d+)/', $version_line, $m) === 1) {
+			$response->client = $m[1] . '.' . $m[2];
+		}
+
+		// server version
+		try {
+			$res = matrix_db_manager::exec_search('SHOW server_version', [], false);
+			if ($res) {
+				$row = pg_fetch_row($res);
+				if (!empty($row[0]) && preg_match('/(\d+)\.(\d+)/', (string)$row[0], $m) === 1) {
+					$response->server = $m[1] . '.' . $m[2];
+				}
+			}
+		} catch (\Throwable $e) {
+			// leave null; without it we cannot compare, so accept the client as-is
+		}
+
+		$client_major = (int)explode('.', (string)$response->client)[0];
+		$server_major = (int)explode('.', (string)$response->server)[0];
+
+		if ($client_major === 0 || $server_major === 0 || $client_major >= $server_major) {
+			$response->result	= true;
+			$response->msg		= $version_line
+				. ($response->server !== null ? ' | server ' . $response->server : '');
+			return $response;
+		}
+
+		// too old: pg_dump will refuse. Look for a version-matched binary.
+		foreach ([
+			'/opt/homebrew/opt/postgresql@' . $server_major . '/bin/',
+			'/usr/local/opt/postgresql@' . $server_major . '/bin/',
+			'/usr/lib/postgresql/' . $server_major . '/bin/',
+			'/Library/PostgreSQL/' . $server_major . '/bin/',
+			'/usr/pgsql-' . $server_major . '/bin/'
+		] as $candidate) {
+			if (is_file($candidate . 'pg_dump') && is_executable($candidate . 'pg_dump')) {
+				$response->use_path = $candidate;
+				break;
+			}
+		}
+
+		$response->msg = 'pg_dump ' . $response->client . ' is OLDER than the server ('
+			. $response->server . '): pg_dump refuses to dump a newer server. '
+			. ($response->use_path !== null
+				? 'A matching one exists at ' . $response->use_path . ' — set DB_BIN_PATH to it in the v6 config.'
+				: 'Install the PostgreSQL ' . $server_major . ' client tools and point DB_BIN_PATH at them.');
+
+		return $response;
+	}//end check_pg_dump
+
+
+	/**
 	* RUN
 	* Runs a blocking, full custom-format pg_dump of the connected database.
 	*

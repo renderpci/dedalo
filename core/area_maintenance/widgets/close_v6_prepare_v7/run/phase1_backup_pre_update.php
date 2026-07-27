@@ -74,18 +74,22 @@ if ($ping !== true) {
 }
 $log('DB connectivity: OK');
 
-// 3. pg_dump availability ------------------------------------------------------
-$pg_dump = system::get_pg_bin_path() . 'pg_dump';
-$probe_out = []; $probe_code = 0;
-DBi::pg_exec(escapeshellarg($pg_dump) . ' --version', $probe_out, $probe_code);
-$pg_dump_ok = ($probe_code === 0);
-$log('pg_dump (' . $pg_dump . '): ' . ($pg_dump_ok ? trim(implode(' ', $probe_out)) : 'NOT AVAILABLE'));
+// 3. pg_dump availability AND version compatibility ----------------------------
+// Present is not enough: pg_dump refuses to dump a server newer than itself, which
+// would abort the migration at its first step. The preflight must surface that here.
+$pg_check	= prepare_v7_backup::check_pg_dump();
+$pg_dump_ok	= ($pg_check->result === true);
+$log('pg_dump (' . $pg_check->pg_dump . '): ' . ($pg_dump_ok ? $pg_check->msg : 'UNUSABLE'));
+if (!$pg_dump_ok) {
+	$log('  ' . $pg_check->msg);
+}
 
 // ---------------------------------------------------------------------- DRY RUN
 if ($is_dry) {
 
 	if (!$pg_dump_ok) {
-		$log('WARNING: pg_dump not available — the real run will refuse unless --skip-backup.');
+		$log('WARNING: pg_dump is unusable — the real run will ABORT at the backup unless '
+			. 'you fix it (or pass --skip-backup with a manual backup in hand).');
 	}
 
 	// data-review pass (save=false): review EXACTLY the tables the real run reformats
@@ -190,8 +194,9 @@ if ($skip_backup) {
 	$log('Backup SKIPPED (--skip-backup). Ensure you have a current backup.');
 } else {
 	if (!$pg_dump_ok) {
-		$log('ABORT: pg_dump not available and backup is mandatory. '
-			. 'Install PostgreSQL client tools or pass --skip-backup with a manual backup.');
+		$log('ABORT before touching anything: the backup is mandatory and pg_dump is unusable.');
+		$log('  ' . $pg_check->msg);
+		$log('  Or pass --skip-backup if you already have a current backup.');
 		exit(4);
 	}
 	$log('Backup starting (blocking pg_dump -F c) → ' . $backup_dir);
