@@ -1,0 +1,6 @@
+# runtime + generated artifacts — never commit
+/dist/
+/var/
+/private/
+*.log
+.DS_Store
