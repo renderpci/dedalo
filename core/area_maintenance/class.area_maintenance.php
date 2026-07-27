@@ -211,6 +211,17 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
+		// prepare_v7 * (close v6 / prepare installation for v7)
+			$item = new stdClass();
+				$item->id		= 'prepare_v7';
+				$item->class	= 'warning width_100';
+				$item->type		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->label	= 'Prepare installation for v7';
+				$item->value	= null; // loaded from self widget
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
 		// update_code *
 			$item = new stdClass();
 				$item->id		= 'update_code';
