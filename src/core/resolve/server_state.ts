@@ -9,7 +9,7 @@
 
 import { constants, accessSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { readEnv } from '../../config/env.ts';
+import { privateDir, readEnv } from '../../config/env.ts';
 
 export interface ServerState {
 	maintenance_mode: boolean;
@@ -95,8 +95,14 @@ export function isStateWritable(): boolean {
 export function statePath(): string {
 	const override = readEnv('DEDALO_TS_STATE_PATH');
 	if (override !== undefined) return override;
-	// The TS tree's private dir (same resolution the session store / backups use).
-	const privateDir = join(dirname(String(process.cwd())), 'private');
+	// The ONE private-dir resolution (src/config/env.ts), which honors
+	// DEDALO_PRIVATE_DIR. This used to re-derive it as
+	// `dirname(process.cwd()) + '/private'`, which ignored that variable: in a
+	// container (DEDALO_PRIVATE_DIR=/private, cwd=the repo) it resolved to a
+	// non-existent /opt/dedalo/private, fell back to the read-only repo, and the
+	// install died on `EACCES … /opt/dedalo/master_dedalo/ts_state.json`.
+	// config/install_mode.ts always used the shared value — the two had diverged,
+	// and the state file is what tells install mode from a sealed instance.
 	return join(existsSync(privateDir) ? privateDir : process.cwd(), 'ts_state.json');
 }
 
