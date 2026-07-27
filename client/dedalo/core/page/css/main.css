@@ -8561,7 +8561,7 @@ body.is_ontology_server .menu > .content_data {
   flex-wrap: wrap;
 }
 .search_component:hover {
-  z-index: 2;
+  z-index: 4;
 }
 .search_component > .wrapper_component {
   flex-grow: 1;
@@ -10188,7 +10188,7 @@ body.is_ontology_server .menu > .content_data {
   min-width: 25rem;
   opacity: 0;
   transition: opacity 0.08s ease-in-out;
-  z-index: 1;
+  z-index: 6;
 }
 .wrapper_service_autocomplete.search {
   background-color: transparent;
