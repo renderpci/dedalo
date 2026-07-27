@@ -20,12 +20,26 @@
 set -euo pipefail
 
 readonly COMPOSE_FILE='docker-compose.simple.yml'
+readonly TLS_TEMPLATE='deploy/nginx.simple-tls.conf.tpl'
+readonly GENERATED_CONF='deploy/nginx.simple.generated.conf'
+readonly CERT_DIR='deploy/certs'
 # NOT ".env": compose would read that for variable substitution, but so would the
 # engine's own configuration loader from the container's working directory.
 readonly ENV_FILE='.dedalo.env'
 readonly PRIVATE_VOLUME='dedalo_private'
 
 cd "$(dirname "$0")"
+
+# --wizard: set TLS up and start the stack, then stop and let the operator answer
+# the install questions in the browser. Same TLS code either way — and TLS has to
+# come FIRST in this mode, because the wizard sends the root password you are
+# about to choose over the network.
+WIZARD_MODE='false'
+case "${1-}" in
+	--wizard) WIZARD_MODE='true' ;;
+	'') : ;;
+	*) printf 'Usage: %s [--wizard]\n' "$0" >&2; exit 2 ;;
+esac
 
 # --- Small helpers -----------------------------------------------------------
 
@@ -175,6 +189,178 @@ ensure_docker() {
 		|| fail 'Docker Compose v2 or newer is required (the "docker compose" subcommand, not the old standalone docker-compose).'
 }
 
+# --- TLS ---------------------------------------------------------------------
+# HTTPS is the DEFAULT here, and the reason is concrete: the login form and (in
+# wizard mode) the root password you are about to set both cross the network. On
+# plain HTTP anyone on the same switch reads them. The four modes below differ
+# only in where the certificate comes from.
+#
+# Whichever mode runs, it must end having set: TLS_MODE, NGINX_CONF_NAME,
+# COOKIE_SECURE, PUBLIC_URL — and, unless mode 4, written $GENERATED_CONF.
+
+# generate_tls_conf <server_name> <cert_path_in_container> <key_path_in_container>
+generate_tls_conf() {
+	[ -f "$TLS_TEMPLATE" ] || fail "Missing $TLS_TEMPLATE"
+	sed -e "s|@@SERVER_NAME@@|$1|g" \
+	    -e "s|@@SSL_CERT@@|$2|g" \
+	    -e "s|@@SSL_KEY@@|$3|g" \
+	    "$TLS_TEMPLATE" > "$GENERATED_CONF" \
+		|| fail "Could not write $GENERATED_CONF"
+	NGINX_CONF_NAME="$(basename "$GENERATED_CONF")"
+	COOKIE_SECURE='true'
+}
+
+# Mode 1 — Let's Encrypt. A real, publicly-trusted, auto-renewing certificate.
+# Preconditions are strict and worth stating plainly rather than discovering
+# through a failed challenge: the name must resolve publicly TO THIS MACHINE, and
+# port 80 must be reachable from the internet. A LAN-only box cannot satisfy
+# either, which is what mode 2 is for.
+tls_letsencrypt() {
+	echo
+	echo 'Let'"'"'s Encrypt issues a free certificate that browsers trust, and renews it'
+	echo 'automatically. For it to work, all of this must already be true:'
+	echo
+	echo '  • the domain name resolves, on the public internet, to THIS machine;'
+	echo '  • port 80 on this machine is reachable from the internet;'
+	echo '  • you can receive mail at the address you give (expiry warnings).'
+	echo
+	ask LE_DOMAIN 'Domain name (e.g. dedalo.museum.org)'
+	ask LE_EMAIL  'Email address for expiry notices'
+
+	local staging=''
+	if confirm 'Do a dry run against the Let'"'"'s Encrypt STAGING server first? (recommended)'; then
+		staging='--staging'
+		warn 'Staging certificates are NOT trusted by browsers — this only proves the setup.'
+	fi
+
+	# Standalone, before nginx exists: certbot binds port 80 itself, so there is
+	# no chicken-and-egg (nginx cannot start on 443 without the certificate it is
+	# here to fetch). RENEWAL later goes through the running nginx via webroot,
+	# so the proxy never has to stop — see the certbot service in the compose file.
+	bold 'Requesting the certificate…'
+	docker run --rm -p 80:80 \
+		-v dedalo_letsencrypt:/etc/letsencrypt \
+		-v dedalo_certbot_www:/var/www/certbot \
+		certbot/certbot certonly --standalone $staging \
+		-d "$LE_DOMAIN" --email "$LE_EMAIL" \
+		--agree-tos --no-eff-email --non-interactive \
+		|| fail 'Certificate request failed — read certbot'"'"'s output above.
+Most often: the name does not point here, or port 80 is not reachable from outside.
+You can re-run ./install.sh and pick another mode.'
+
+	generate_tls_conf "$LE_DOMAIN" \
+		"/etc/letsencrypt/live/$LE_DOMAIN/fullchain.pem" \
+		"/etc/letsencrypt/live/$LE_DOMAIN/privkey.pem"
+	COMPOSE_PROFILES='letsencrypt'
+	PUBLIC_URL="https://$LE_DOMAIN/dedalo/core/page/"
+}
+
+# Mode 2 — a local certificate authority, for a LAN with no public name. Same
+# idea as mkcert, done with openssl so nothing extra has to be installed. The
+# certificate is real TLS; the CA is yours, so browsers only trust it on machines
+# where you install the CA file. That distribution step cannot be automated from
+# here, and pretending otherwise would be the dishonest part.
+tls_local_ca() {
+	command -v openssl >/dev/null 2>&1 || fail 'openssl is required for the local-CA mode.'
+	echo
+	ask LOCAL_HOST 'Name or IP staff will type in the browser (e.g. dedalo.local or 192.168.1.20)' "$(hostname -f 2>/dev/null || hostname)"
+
+	mkdir -p "$CERT_DIR"
+	local ca_key="$CERT_DIR/dedalo-local-ca.key" ca_crt="$CERT_DIR/dedalo-local-ca.pem"
+	local key="$CERT_DIR/privkey.pem" csr="$CERT_DIR/server.csr" crt="$CERT_DIR/fullchain.pem"
+
+	# A SAN covering the name, localhost and the loopback address: browsers have
+	# ignored the legacy CN field for years, so a certificate without a matching
+	# SAN entry is rejected outright.
+	local san="DNS:$LOCAL_HOST,DNS:localhost,IP:127.0.0.1"
+	case "$LOCAL_HOST" in
+		[0-9]*.[0-9]*.[0-9]*.[0-9]*) san="IP:$LOCAL_HOST,DNS:localhost,IP:127.0.0.1" ;;
+	esac
+
+	bold 'Creating a local certificate authority and a server certificate…'
+	openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
+		-keyout "$ca_key" -out "$ca_crt" \
+		-subj "/CN=Dedalo local CA" 2>/dev/null \
+		|| fail 'Could not create the local CA.'
+	openssl req -newkey rsa:2048 -nodes -keyout "$key" -out "$csr" \
+		-subj "/CN=$LOCAL_HOST" 2>/dev/null \
+		|| fail 'Could not create the server key.'
+	# 825 days is the maximum leaf lifetime Apple platforms accept; longer and
+	# Safari and iOS reject the certificate outright.
+	openssl x509 -req -in "$csr" -CA "$ca_crt" -CAkey "$ca_key" -CAcreateserial \
+		-out "$crt" -days 825 -sha256 \
+		-extfile <(printf 'subjectAltName=%s\nbasicConstraints=CA:FALSE\nkeyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\n' "$san") 2>/dev/null \
+		|| fail 'Could not sign the server certificate.'
+	rm -f "$csr"
+	chmod 600 "$ca_key" "$key"
+
+	generate_tls_conf '_' '/etc/dedalo/certs/fullchain.pem' '/etc/dedalo/certs/privkey.pem'
+	PUBLIC_URL="https://$LOCAL_HOST/dedalo/core/page/"
+	LOCAL_CA_FILE="$ca_crt"
+}
+
+# Mode 3 — you already have a certificate (institutional CA, a wildcard, a cert
+# your IT department issues). Copied in rather than referenced, so a later
+# `docker compose up` cannot break on a path that moved.
+tls_existing() {
+	echo
+	ask EXIST_CRT 'Path to the full-chain certificate (.pem/.crt)'
+	ask EXIST_KEY 'Path to the private key (.pem/.key)'
+	[ -f "$EXIST_CRT" ] || fail "No such file: $EXIST_CRT"
+	[ -f "$EXIST_KEY" ] || fail "No such file: $EXIST_KEY"
+	ask EXIST_NAME 'Domain name on that certificate (or _ for any)' '_'
+
+	mkdir -p "$CERT_DIR"
+	cp "$EXIST_CRT" "$CERT_DIR/fullchain.pem" || fail 'Could not copy the certificate.'
+	cp "$EXIST_KEY" "$CERT_DIR/privkey.pem"   || fail 'Could not copy the key.'
+	chmod 600 "$CERT_DIR/privkey.pem"
+
+	generate_tls_conf "$EXIST_NAME" '/etc/dedalo/certs/fullchain.pem' '/etc/dedalo/certs/privkey.pem'
+	# `[ … ] && x=…` as the last command of a function returns non-zero when the
+	# test fails, and `set -e` would exit the whole script on it.
+	if [ "$EXIST_NAME" = '_' ]; then
+		PUBLIC_URL='https://<this-machine>/dedalo/core/page/'
+	else
+		PUBLIC_URL="https://$EXIST_NAME/dedalo/core/page/"
+	fi
+}
+
+# Mode 4 — no HTTPS. Kept because it is genuinely right for a throwaway trial on
+# a laptop, and because forcing a certificate on someone evaluating the software
+# would just make them give up. It is never right for real records.
+tls_none() {
+	echo
+	warn 'Without HTTPS, passwords and session cookies cross the network in clear text.'
+	warn 'Anyone on the same network can read them, and the browser will not warn you.'
+	confirm 'Really continue with no HTTPS?' \
+		|| fail 'Stopped. Re-run ./install.sh and choose a certificate option.'
+	NGINX_CONF_NAME='nginx.simple.conf'
+	COOKIE_SECURE='false'
+	PUBLIC_URL='http://localhost/dedalo/core/page/'
+}
+
+choose_tls() {
+	echo
+	bold 'How will people reach this Dédalo?'
+	echo
+	echo '  1) A public domain name        → Let'"'"'s Encrypt: trusted, auto-renewing   [recommended]'
+	echo '  2) Only our local network      → a local certificate authority'
+	echo '  3) I already have a certificate → point me at the files'
+	echo '  4) No HTTPS, internal test only → not for real records'
+	echo
+	local choice=''
+	while true; do
+		read -rp 'Choose [1]: ' choice || true
+		case "${choice:-1}" in
+			1) TLS_MODE='letsencrypt'; tls_letsencrypt; break ;;
+			2) TLS_MODE='local-ca';    tls_local_ca;    break ;;
+			3) TLS_MODE='existing';    tls_existing;    break ;;
+			4) TLS_MODE='none';        tls_none;        break ;;
+			*) warn 'Enter 1, 2, 3 or 4.' ;;
+		esac
+	done
+}
+
 # --- 1. Pre-flight -----------------------------------------------------------
 
 bold 'Dédalo — guided install'
@@ -213,6 +399,17 @@ fi
 
 # --- 2. Questions ------------------------------------------------------------
 
+# TLS first: it is the decision with the widest consequences, and mode 1 fails
+# fast (a bad domain is discovered now, not after you have typed everything).
+choose_tls
+
+if [ "$WIZARD_MODE" = 'true' ]; then
+	echo
+	echo 'Wizard mode: the remaining questions are asked in the browser instead.'
+fi
+
+echo
+if [ "$WIZARD_MODE" != 'true' ]; then
 echo 'A few questions. Press Enter to accept the value in brackets.'
 echo
 
@@ -232,6 +429,7 @@ bold 'Administrator password'
 echo 'This is the "root" account — the one that can do everything. Store it safely.'
 ask_secret ROOT_PASSWORD 'Password for root'
 echo
+fi   # end of the terminal-only questions
 
 # The database is on an internal container network and its port is never
 # published, so nobody needs to type or remember this one.
@@ -241,15 +439,16 @@ DB_PASSWORD="$(random_password)"
 # --- 3. The honesty check ----------------------------------------------------
 
 echo
-warn 'Before continuing, what this simple install does NOT do:'
-warn '  • no HTTPS — passwords and sessions travel in clear text;'
+warn 'One thing this simple install does NOT do, whatever you chose above:'
 warn '  • no media access control — anyone who can reach this server can read'
 warn '    every image, document and recording in it, without logging in.'
-echo 'Both are fine on a machine only your own network can reach.'
-echo 'If this server is reachable from the internet, stop and follow'
-echo 'docs/install/docker.md instead, which adds TLS and the media gate.'
 echo
-confirm 'Only your own network can reach this machine — continue?' \
+echo 'TLS protects those files in transit; it does not decide who may fetch them.'
+echo 'That is fine for a collection that is public anyway, or an internal'
+echo 'instance. For a restricted fonds, an embargoed deposit or personal data,'
+echo 'use docs/install/docker.md instead — it adds the engine-enforced media gate.'
+echo
+confirm 'Understood — continue?' \
 	|| fail 'Stopped. See docs/install/docker.md for the full stack.'
 
 # --- 4. Write the compose environment ---------------------------------------
@@ -261,9 +460,18 @@ cat >"$ENV_FILE" <<ENV
 POSTGRES_DB=dedalo
 POSTGRES_USER=dedalo
 POSTGRES_PASSWORD=$DB_PASSWORD
+# TLS mode chosen at install time: $TLS_MODE
+DEDALO_NGINX_CONF=$NGINX_CONF_NAME
+SESSION_COOKIE_SECURE=$COOKIE_SECURE
+COMPOSE_PROFILES=${COMPOSE_PROFILES:-}
 ENV
 umask 022
 echo "Wrote $ENV_FILE (database credentials, readable only by you)."
+
+# Exported as well as written to the env file: which of the two Compose reads for
+# profile selection has varied between versions, and the renewal service simply
+# not starting would be a silent failure discovered 90 days later.
+if [ -n "${COMPOSE_PROFILES:-}" ]; then export COMPOSE_PROFILES; fi
 
 # --- 5. Build and install ----------------------------------------------------
 
@@ -283,6 +491,39 @@ for _ in $(seq 1 60); do
 done
 compose exec -T postgres pg_isready -U dedalo -d dedalo >/dev/null 2>&1 \
 	|| fail 'PostgreSQL did not become ready. Inspect it with: docker compose -f '"$COMPOSE_FILE"' logs postgres'
+
+if [ "$WIZARD_MODE" = 'true' ]; then
+	bold 'Starting Dédalo for the browser wizard…'
+	compose up -d
+	echo
+	bold '✔ Ready for the wizard.'
+	echo
+	echo "  Open   $PUBLIC_URL"
+	echo
+	echo '  Nothing is configured yet, so Dédalo serves the install wizard instead'
+	echo '  of a login form. At its DATABASE step, enter:'
+	echo
+	echo '      Host      postgres'
+	echo '      Port      5432'
+	echo '      Database  dedalo'
+	echo '      User      dedalo'
+	echo "      Password  $DB_PASSWORD"
+	echo
+	echo '  (That password was generated for this install and is also in'
+	echo "   $ENV_FILE. You never need it again after the wizard.)"
+	echo
+	echo '  At "Save config" the engine restarts itself — that is expected. Leave'
+	echo '  the tab open; the wizard resumes on its own.'
+	echo
+	if [ "$TLS_MODE" = 'local-ca' ]; then
+		warn '  Install the CA file on this computer FIRST, or the browser will refuse'
+		warn "  the connection: $(pwd)/$LOCAL_CA_FILE"
+		echo
+	fi
+	echo "  Logs:  docker compose -f $COMPOSE_FILE --env-file $ENV_FILE logs -f dedalo"
+	echo
+	exit 0
+fi
 
 bold 'Installing Dédalo…'
 # The root password travels in the ENVIRONMENT, never in argv: an argv is visible
@@ -317,11 +558,40 @@ compose up -d
 echo
 bold '✔ Done.'
 echo
-echo "  Open   http://localhost/dedalo/core/page/"
-echo '         (from another machine on your network, use this server'"'"'s address'
-echo '          instead of localhost)'
+echo "  Open   $PUBLIC_URL"
 echo '  Log in as "root" with the password you chose.'
 echo
+
+case "$TLS_MODE" in
+	local-ca)
+		bold '  One more step, on every computer that will use Dédalo:'
+		echo "  install this certificate authority file, or the browser will warn"
+		echo '  about the site every time:'
+		echo
+		echo "      $(pwd)/$LOCAL_CA_FILE"
+		echo
+		echo '  Windows: double-click → Install Certificate → Local Machine →'
+		echo '           Trusted Root Certification Authorities.'
+		echo '  macOS:   double-click → Keychain Access → System → set to "Always Trust".'
+		echo '  Linux:   copy to /usr/local/share/ca-certificates/ (rename to .crt)'
+		echo '           and run: sudo update-ca-certificates'
+		echo
+		echo '  Until you do, the connection is still encrypted — the browser simply'
+		echo '  cannot vouch for who is on the other end.'
+		echo
+		;;
+	letsencrypt)
+		echo '  The certificate renews itself: the certbot service checks twice a day'
+		echo '  and nginx picks up a renewal within six hours. Nothing to schedule.'
+		echo
+		;;
+	none)
+		warn '  No HTTPS: passwords cross the network in clear text. Re-run'
+		warn '  ./install.sh and choose option 1 or 2 when this stops being a test.'
+		echo
+		;;
+esac
+
 echo '  First things to do: create a normal administrator user and keep root for'
 echo '  emergencies, then set up backups — docs/management/backup.md.'
 echo

@@ -25,6 +25,12 @@ probe_*.ts
 # from the container's working directory, which would collide with compose's.
 .dedalo.env
 
+# TLS material and the nginx config install.sh generates from
+# deploy/nginx.simple-tls.conf.tpl. PRIVATE KEYS live here — never commit them.
+# The template and the plain-HTTP config ARE committed.
+/deploy/certs/
+/deploy/nginx.simple.generated.conf
+
 # Media root. DEDALO_MEDIA_PATH derives to <repo>/media (PHP parity:
 # DEDALO_ROOT_PATH . '/media'), so a running install writes user uploads HERE
 # unless MEDIA_PATH points elsewhere. It is data, never source.
