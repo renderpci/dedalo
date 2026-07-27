@@ -7,8 +7,11 @@
 * equivalent of the pre_update → logout → login → update boundary). It does NOT
 * boot the engine itself; it only spawns:
 *
-*   --dry-run : phase1 --dry-run                         (preflight, writes nothing)
-*   (real)    : phase1 --yes [--skip-backup] → phase2 --yes   (backup, then migrate)
+*   --dry-run        : phase1 --dry-run                    (preflight, writes nothing)
+*   --deep-preflight : phase1 --yes → phase1 --dry-run → phase3 --dry-run
+*                      (backup + pre_update, then a MEANINGFUL data review and the
+*                       diffusion preview; stops before the matrix rewrite)
+*   (real)           : phase1 --yes [--skip-backup] → phase2 --yes → phase3 --yes
 *
 * The v6 widget imports the v6 config into the bundled engine (copies the legacy
 * config files into engine/config/; the engine bootstrap auto-migrates them to
@@ -30,13 +33,16 @@ if (PHP_SAPI !== 'cli') {
 	exit(2);
 }
 
-$opts = getopt('', ['dry-run', 'yes', 'skip-backup', 'backup-dir:', 'log:', 'engine-root:', 'help']);
+$opts = getopt('', ['dry-run', 'yes', 'skip-backup', 'deep-preflight', 'backup-dir:', 'log:', 'engine-root:', 'help']);
 
 if (isset($opts['help'])) {
 	fwrite(STDOUT, <<<TXT
 Close v6 / Prepare installation for v7
 
   --dry-run              Preflight only (version gate, connectivity, pg_dump, data review). No writes.
+  --deep-preflight       Backup + pre_update, then review the data WITH the ontology in place,
+                         then preview the diffusion mapping. STOPS before the matrix rewrite.
+                         Writes (pre_update), so it is as explicit as --yes.
   --yes                  Apply the migration (REQUIRED to write anything).
   --skip-backup          Skip the mandatory pre-migration backup (only if you already have one).
   --backup-dir=PATH      Where to write the pg_dump (default: <package>/var/backup).
@@ -53,6 +59,7 @@ TXT);
 
 $is_dry      = isset($opts['dry-run']);
 $has_yes     = isset($opts['yes']);
+$is_deep     = isset($opts['deep-preflight']);
 $skip_backup = isset($opts['skip-backup']);
 
 // paths (this file: <package>/run/run_prepare_v7.php)
@@ -186,6 +193,53 @@ if ($is_dry) {
 
 	$emit($code === 0 ? 'Preflight PASSED. Re-run with --yes to apply.' : 'Preflight FAILED (see above).');
 	exit($code);
+}
+
+// --------------------------------------------------------- DEEP PREFLIGHT
+// The plain preflight reviews the data BEFORE dd_ontology exists, so no component
+// model resolves and every value degenerates into "Ignored empty model" — it cannot
+// tell you anything about your data. This mode fixes the ordering: it runs the real
+// phase 1 (backup + pre_update), which only ADDS the v7 ontology (new jer_dd columns
+// filled from the legacy ones, which stay; new dd_ontology table) and does NOT touch
+// matrix data, then re-runs the review with the ontology in place — so the reported
+// issues are real — and finally previews the diffusion mapping, which also needs
+// dd_ontology. It stops before phase 2, the step that rewrites the matrix tables.
+//
+// Re-runnable: pre_update is guarded/idempotent and the legacy jer_dd data is intact,
+// so the ontology can be rebuilt. Phase 2 continues from this state when you are ready.
+if ($is_deep) {
+
+	$emit('=== PREPARE V7: DEEP PREFLIGHT (backup + pre_update, then review) ===');
+	$emit('Matrix data is NOT rewritten in this mode; it stops before phase 2.');
+
+	$p1_args = ['--yes', $log_arg, $backup_arg];
+	if ($skip_backup) { $p1_args[] = '--skip-backup'; }
+	$code1 = $spawn('phase1_backup_pre_update.php', $p1_args);
+	if ($code1 !== 0) {
+		$emit('ABORT after phase 1 (code ' . $code1 . '). No review ran.');
+		exit($code1);
+	}
+
+	$emit('pre_update done: dd_ontology is in place and matrix data is untouched. '
+		. 'Reviewing the data again, now that component models resolve …');
+	$code_review = $spawn('phase1_backup_pre_update.php', ['--dry-run', $log_arg]);
+
+	$emit('Previewing the diffusion ontology mapping (now possible: dd_ontology exists) …');
+	$spawn('phase3_diffusion.php', ['--dry-run', $log_arg]);
+
+	if ($code_review === 6) {
+		$emit('DEEP PREFLIGHT: data issues found — see the reports above. '
+			. 'Fix or accept them, then run --yes to apply the full migration.');
+	}else if ($code_review === 0) {
+		$emit('DEEP PREFLIGHT PASSED: no data issues with the ontology in place. '
+			. 'Run --yes to apply the full migration.');
+	}else{
+		$emit('DEEP PREFLIGHT: the review ended with code ' . $code_review . ' — see above.');
+	}
+	$emit('The database now carries the v7 ontology (dd_ontology) and the ORIGINAL v6 data. '
+		. 'Phase 2 (--yes) is what rewrites the matrix tables.');
+
+	exit($code_review);
 }
 
 // ---------------------------------------------------------------- REAL RUN

@@ -25,7 +25,7 @@ export const render_prepare_v7 = function() {
 	const POLL_MAX		= 720
 
 // terminal lines written by run/run_prepare_v7.php
-	const RUN_FINISHED = /Preflight (PASSED|FAILED)|PREPARE V7: DONE|Migration FAILED in phase|ABORT after phase|DATABASE migration DONE|Nothing to do/
+	const RUN_FINISHED = /Preflight (PASSED|FAILED)|DEEP PREFLIGHT (PASSED|:)|PREPARE V7: DONE|Migration FAILED in phase|ABORT after phase|DATABASE migration DONE|Nothing to do/
 
 
 
@@ -156,6 +156,34 @@ const get_content_data = async function(self) {
 				e.stopPropagation()
 				launch(self, log_node, buttons, {
 					mode : 'preflight'
+				})
+			})
+
+			// button deep preflight. Writes the ontology (pre_update) but never the matrix data
+			const button_deep = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'warning button_deep_preflight',
+				inner_html		: 'Deep preflight (backup + ontology, then data review)',
+				parent			: buttons
+			})
+			button_deep.disabled = !(package_ready && is_superuser)
+			button_deep.title = button_deep.disabled
+				? 'Requires superuser + the bundled package'
+				: 'Backs up, creates the v7 ontology from jer_dd, then reviews the data with the '
+					+ 'models resolved. Stops before the matrix rewrite.'
+			button_deep.addEventListener('click', (e) => {
+				e.stopPropagation()
+				const confirm_text = 'This BACKS UP the database and creates the v7 ontology (pre_update).'
+					+ '\nIt adds the new jer_dd columns and the dd_ontology table — the original v6 data'
+					+ '\nstays, and the matrix tables are NOT rewritten.'
+					+ '\n\nIt then reports the real data issues, which the plain preflight cannot see.'
+					+ '\n\nDatabase: ' + (value.database || '?')
+					+ '\n\nProceed?'
+				if (!confirm(confirm_text)) {
+					return
+				}
+				launch(self, log_node, buttons, {
+					mode : 'deep'
 				})
 			})
 

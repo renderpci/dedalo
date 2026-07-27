@@ -340,15 +340,22 @@ class prepare_v7 {
 	* Launch endpoint. Writes the engine env and spawns the runner in background.
 	*
 	* @param object $options {
-	*   mode:        string  'preflight' (dry-run) | 'migrate' (default 'preflight')
-	*   skip_backup: bool    only honoured in migrate mode (default false)
+	*   mode:        string  'preflight' (dry-run, no writes)
+	*                      | 'deep'      (backup + pre_update, then a real data review;
+	*                                     stops before the matrix rewrite)
+	*                      | 'migrate'   (the full migration)
+	*                      default 'preflight'
+	*   skip_backup: bool    only honoured in the writing modes (default false)
 	* }
 	* @return object { result: bool, pid: int|null, msg: string, errors: array }
 	*/
 	public static function prepare_v7(object $options) : object {
 
-		$mode        = ($options->mode ?? 'preflight') === 'migrate' ? 'migrate' : 'preflight';
+		$mode        = in_array(($options->mode ?? ''), ['migrate', 'deep'], true)
+			? (string)$options->mode
+			: 'preflight';
 		$skip_backup = ($options->skip_backup ?? false) === true;
+		$writes      = ($mode !== 'preflight');
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -366,8 +373,8 @@ class prepare_v7 {
 		$maintenance = defined('DEDALO_MAINTENANCE_MODE_CUSTOM')
 			? DEDALO_MAINTENANCE_MODE_CUSTOM
 			: (defined('DEDALO_MAINTENANCE_MODE') ? DEDALO_MAINTENANCE_MODE : false);
-		if ($mode === 'migrate' && $maintenance !== true) {
-			$response->msg = 'Error. Enable maintenance mode before running the migration.';
+		if ($writes === true && $maintenance !== true) {
+			$response->msg = 'Error. Enable maintenance mode before running anything that writes.';
 			return $response;
 		}
 
@@ -413,9 +420,17 @@ class prepare_v7 {
 			$response->msg = 'Error. ' . $check->msg;
 			return $response;
 		}
-		$flags = ($mode === 'migrate')
-			? ('--yes' . ($skip_backup ? ' --skip-backup' : ''))
-			: '--dry-run';
+		switch ($mode) {
+			case 'migrate':
+				$flags = '--yes' . ($skip_backup ? ' --skip-backup' : '');
+				break;
+			case 'deep':
+				$flags = '--deep-preflight' . ($skip_backup ? ' --skip-backup' : '');
+				break;
+			default:
+				$flags = '--dry-run';
+				break;
+		}
 		$cmd = escapeshellarg($php) . ' ' . escapeshellarg($runner) . ' ' . $flags;
 
 		// 4. spawn DETACHED in the background, capture the PID
@@ -432,11 +447,15 @@ class prepare_v7 {
 			return $response;
 		}
 
+		$labels = [
+			'migrate'	=> 'Migration',
+			'deep'		=> 'Deep preflight (backup + pre_update, then data review)',
+			'preflight'	=> 'Preflight'
+		];
+
 		$response->result	= true;
 		$response->pid		= $pid;
-		$response->msg		= ($mode === 'migrate')
-			? "Migration started in background (pid $pid). Watch var/prepare_v7.log."
-			: "Preflight started in background (pid $pid). Watch var/prepare_v7.log.";
+		$response->msg		= $labels[$mode] . " started in background (pid $pid). Watch var/prepare_v7.log.";
 
 		return $response;
 	}//end prepare_v7
