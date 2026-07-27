@@ -129,13 +129,34 @@ No JS wiring is needed: the widget talks to v6's own maintenance API
 
 ### From the widget
 Maintenance area → **"Prepare installation for v7"**. The panel shows the readiness snapshot
-(database, data version in DB, code version, package/engine paths, superuser + maintenance-mode
-checks) and three buttons:
+(database, data version in DB, code version, package/engine paths, PHP CLI binary, superuser +
+maintenance-mode checks). **All actions are hidden unless Dédalo is in maintenance mode**; when it
+is, four buttons appear:
 - **Run preflight (safe, no writes):** spawns `--dry-run` — version gate, DB connectivity,
-  `pg_dump` availability, and a data‑review pass.
-- **Prepare installation for v7 (migrate):** confirms, then spawns the real run. Requires
-  superuser + maintenance mode.
+  pg_dump usability, and a data‑review pass. See the limits below.
+- **Deep preflight (backup + ontology, then data review):** spawns `--deep-preflight`.
+- **Prepare installation for v7 (migrate):** confirms, then spawns the real run.
 - **Refresh log:** re-reads the log tail on demand.
+
+### Deep preflight — the review that can actually see your data
+
+The plain preflight runs *before* `dd_ontology` exists, so no component model resolves and every
+value reports `Ignored empty model`: it verifies the environment, not the data. The deep preflight
+fixes the ordering:
+
+```
+backup → pre_update → data review (save=false) → diffusion mapping preview → STOP
+```
+
+`pre_update` only **adds** the v7 ontology: new `jer_dd` columns filled from the legacy ones
+(`terminoID` → `tipo`, `relaciones` → `relations`), which stay untouched, plus the new
+`dd_ontology` table — and one v6-affecting change, `matrix_notifications.datos` renamed to `data`.
+**The matrix tables are not rewritten.** It is guarded/idempotent and the v6 source data is intact,
+so the ontology can be rebuilt and phase 2 continues from this state whenever you are ready.
+
+What it gives you that `--dry-run` cannot: real data issues (models resolve), and the full
+diffusion mapping preview. It writes, so it needs superuser + maintenance mode, and it takes the
+same mandatory backup as the real run. Exit code mirrors the review: 0 clean, 6 issues found.
 
 Each launch rotates `var/prepare_v7.log` to `var/prepare_v7.log.previous`, so the panel always
 streams the current run; it polls every 5 s until the runner writes a terminal line.
@@ -144,6 +165,7 @@ streams the current run; it polls every 5 s until the runner writes a terminal l
 ```bash
 php dist/prepare_v7/run/run_prepare_v7.php --dry-run          # preflight, no writes
 php dist/prepare_v7/run/phase3_diffusion.php --dry-run        # diffusion mapping preview (needs dd_ontology)
+php dist/prepare_v7/run/run_prepare_v7.php --deep-preflight  # backup + pre_update + REAL data review, stops before the rewrite
 php dist/prepare_v7/run/run_prepare_v7.php --yes              # backup + migrate
 php dist/prepare_v7/run/run_prepare_v7.php --yes --skip-backup   # only if you already backed up
 php dist/prepare_v7/run/run_prepare_v7.php --help
