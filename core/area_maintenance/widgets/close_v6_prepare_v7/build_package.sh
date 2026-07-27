@@ -92,6 +92,10 @@ rsync -a \
 	--include '/install/' \
 	--include '/install/db/' \
 	--include '/install/db/*.sql' \
+	`#     dd_ontology_recovery.sql.gz (264K): dd_init_test.php SELF-HEALS the dd_ontology_recovery`  \
+	`#     table from it on every boot of an INSTALLED system. Without it each phase logs a restore`  \
+	`#     failure. The other install/*.gz (355M of dumps) stay excluded.` \
+	--include '/install/db/dd_ontology_recovery.sql.gz' \
 	`#     keep the config-migration classes too (config_auto_migrate + deps, ~120K): they let`  \
 	`#     bootstrap import a v6 config_core.php/config_db.php dropped into config/ → ../private/.env` \
 	--include '/install/*.php' \
@@ -100,9 +104,12 @@ rsync -a \
 	`# --- per-module client assets: no PHP reads them; the CLI migration serves no UI ---` \
 	--exclude '/core/*/css/' \
 	--exclude '/core/*/js/' \
-	`# --- UI area + button modules: not on the migration path (reformat routes by model`  \
-	`#     string, never instantiates them; boot's dd_area_maintenance_api is in core/api, not here) ---` \
-	--exclude '/core/area*' \
+	`# --- area modules: login spawns component_security_access::calculate_tree, which`  \
+	`#     instantiates 'area' — an AUTOLOAD (not an eager include), so stripping core/area*`  \
+	`#     made that subprocess die with "Class area not found". Every area module except the`  \
+	`#     heavy UI one is ~600K in total, so keep them all rather than guess which the`  \
+	`#     autoloader will reach (area_thesaurus / area_ontology sit on ontology paths too). ---` \
+	--exclude '/core/area_maintenance/' \
 	--exclude '/core/button*' \
 	--exclude '/core/rag/' \
 	`#     ^ RAG vector subsystem (v7 feature, dormant unless DEDALO_RAG_ENABLED; dd_rag_api is in core/api) ` \

@@ -167,6 +167,15 @@ function prepare_v7_boot_engine() : array {
 	require_once DEDALO_CORE_PATH . '/base/update/class.update.php';
 	require_once DEDALO_CORE_PATH . '/base/upgrade/class.v6_to_v7.php';
 
+	// No activity logging during a migration. The v7 logger writes matrix_activity with the
+	// v7 typed columns, but that table is still v6 (`datos`) until phase 2 rewrites it — every
+	// deferred log line fails with 'column "data" of relation "matrix_activity" does not exist'.
+	// update::pre_update_version()/update_version() already disable it internally for the same
+	// reason; do it for the whole phase so the preflight and the deep preflight are quiet too.
+	if (class_exists('logger_backend_activity')) {
+		logger_backend_activity::$enable_log = false;
+	}
+
 	// CLI superuser context (shell access already implies full trust; same model
 	// as tools/tool_common/cli/export_register.php and core/rag/cli/*).
 	if (!class_exists('login') || login::is_logged() !== true) {
