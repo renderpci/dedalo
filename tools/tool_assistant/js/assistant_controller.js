@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals*/
+/*global page_globals*/
 /*eslint no-undef: "error"*/
 
 
@@ -10,6 +10,7 @@
 	import { chat_render } from './chat_render.js'
 	import { client_context } from './client_context.js'
 	import { conversation_store } from './conversation_store.js'
+	import { set_label_resolver, t } from './tool_labels.js'
 
 
 
@@ -44,22 +45,6 @@
 
 
 
-/**
- * T
- * Localised label helper (same convention as chat_render).
- * @param {string} key
- * @param {string} fallback
- * @returns {string}
- */
-const t = function(key, fallback) {
-	if (typeof get_label !== 'undefined' && get_label && get_label[key]) {
-		return get_label[key]
-	}
-	return fallback
-}//end t
-
-
-
 const PREFS_KEY				= 'dedalo_assistant_pref_v1'
 const IMAGE_MAX_BYTES		= 5 * 1024 * 1024
 const IMAGE_MEDIA_TYPES		= ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
@@ -74,12 +59,17 @@ export const assistant_controller = class assistant_controller {
 	 * CONSTRUCTOR
 	 * @param {Object} options
 	 * @param {Object} [options.tool_config] - dd1633 tool config (empty since WC-013; kept as an escape hatch)
-	 * @param {Object} [options.tool_self]   - the tool_assistant instance (unused; kept for symmetry)
+	 * @param {Object} [options.tool_self]   - the tool_assistant instance; supplies
+	 *   `get_tool_label` to the shared label resolver (tool_labels.js)
 	 */
 	constructor(options={}) {
 
 		this._tool_config		= options.tool_config || {}
 		this._tool_self			= options.tool_self || null
+
+		// Wire this tool's own labels (register.json misc.dd1372) into the `t()`
+		// helper shared by this module and chat_render.
+		set_label_resolver(this._tool_self)
 
 		/** @type {chat_render} DOM manager for the chat UI. */
 		this._chat_render		= new chat_render()
