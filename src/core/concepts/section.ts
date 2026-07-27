@@ -113,6 +113,15 @@ export const ACTIVITY_SECTION_PERMISSION_CAP = 1;
  * column is non-sortable (structure_context resolveSortable) — an arbitrary
  * component sort is an unindexable full-table jsonb sort, unusable at
  * production scale (minutes on a 33M-row log). WC-044.
+ *
+ * WC-054 extends the SAME equivalence one step further at the SQL layer: the
+ * assembler emits every dd542 structural sort (this section_id path, the dd549
+ * `id` default, the implicit default) as `"timestamp" <dir>, id <dir>`, because
+ * that is the only order the ("timestamp", id) index can serve TOGETHER with a
+ * When date FILTER — key-ordered, a wide date range flipped the planner into an
+ * abort-early backward walk (>300 s for one month vs 6.1 ms). The order path
+ * here is unchanged: it is what the client is told, and section_id is still the
+ * honest answer to "what does this column sort by".
  */
 export const ACTIVITY_WHEN_TIPO = 'dd547';
 

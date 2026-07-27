@@ -183,5 +183,27 @@ describe('flattened deep-page order-flip equivalence (real DB)', () => {
 		const { sql: builtSql } = await buildSearchSql(idSqo(lastPage), {});
 		expect(builtSql).toContain('page ON page.id');
 		expect(builtSql).not.toContain(`OFFSET ${lastPage}`);
+		// WC-054: the page is ACQUIRED by the unique id (1:1 join back) but ORDERED
+		// on the ("timestamp", id) index — both sides of the join, both columns in
+		// the same direction, mirrored together by the flip. singleUniqueKeyOrder
+		// rejects that two-column clause by design, so a regression here drops the
+		// page back to a plain deep OFFSET (8.1 s at offset 16 M, measured).
+		const composite =
+			builtSql.match(/[a-z0-9_]+\."timestamp" (ASC|DESC), [a-z0-9_]+\.id \1/g) ?? [];
+		expect(composite.length).toBe(2); // inner page + outer restore
+		expect(builtSql).toMatch(/ORDER BY [a-z0-9_]+\."timestamp" DESC, [a-z0-9_]+\.id DESC;/);
+	}, 60000);
+
+	// The When-header sort (WC-044 maps When → section_id) rides the SAME rewrite,
+	// so its deep pages must stay equivalent too — the section_id ground truth is
+	// the order the client asked for.
+	test('When-header order (section_id) still matches ground truth under the rewrite', async () => {
+		const total = await totalRows();
+		const lastPage = Math.max(0, total - LIMIT);
+		for (const offset of [threshold, lastPage]) {
+			expect(await acquiredPageIds(offset)).toEqual(await plainPageIds(offset));
+		}
+		const { sql: builtSql } = await buildSearchSql(activitySqo(lastPage), {});
+		expect(builtSql).toMatch(/[a-z0-9_]+\."timestamp" (?:ASC|DESC), [a-z0-9_]+\.id/);
 	}, 60000);
 });

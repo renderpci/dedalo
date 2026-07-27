@@ -19,11 +19,17 @@ function buildJsonPath(context: BuilderContext): string {
 		: `$.${context.tipo}[*] ? (@.lang == "${context.lang}")`;
 }
 
+/**
+ * Some entry's `iri` matches `matchLogic`. No `@?` pre-guard — the builder_json
+ * twin carries the full reasoning and the measurement (WC-055): the EXISTS over
+ * a STRICT `jsonb_path_query` is already false for a NULL column or an empty
+ * path, so the guard only re-evaluated the same jsonpath a second time per row.
+ * The negative branches below keep theirs, where it is load-bearing.
+ */
 function existsEnvelope(context: BuilderContext, matchLogic: string): string {
 	const jsonPath = buildJsonPath(context);
 	return (
-		`(${context.alias}.${context.column} @? '${jsonPath}') AND EXISTS (` +
-		`SELECT 1 FROM jsonb_path_query(${context.alias}.${context.column}, '${jsonPath}') AS elem ` +
+		`EXISTS (SELECT 1 FROM jsonb_path_query(${context.alias}.${context.column}, '${jsonPath}') AS elem ` +
 		`WHERE ${matchLogic})`
 	);
 }

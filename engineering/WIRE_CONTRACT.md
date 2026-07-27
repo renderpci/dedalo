@@ -2271,3 +2271,239 @@ indexes the policy calls `drop-dead` removed (BRIN `date(timestamp)`, standalone
 `lang`, `(section_id, bulk_process_id, section_tipo, tipo, lang)`), two
 policy-`keep` indexes added that installs lacked (`(timestamp, id DESC)`,
 `(section_id)`), and the invalid `idx_matrix_data_trgm` dropped.
+
+## WC-054 — Activity (dd542): the list's structural order is served by the `("timestamp", id)` index (2026-07-27)
+
+Born of a production-scale slow-request report on the 32.9M-row / 85 GB
+`matrix_activity` (dedalo7_mdcat): searching the **When** column (dd547) hung.
+Same shape as WC-053's range-filter barrier — *the column that filters and the
+column that sorts are not the same column* — but on the other log, and with a
+stronger remedy available.
+
+**Root cause: an abort-early plan flip, not the SQL shape.** Every dd542 list
+sort is a unique monotonic key — `id DESC` (the dd549 default: insertion order)
+or `section_id <dir>` (the When header; WC-044 maps When → section_id) — and
+ordered alone each is index-perfect. The When SEARCH filters `timestamp`, which
+neither the `id` PK nor `(section_tipo, section_id DESC)` carries. Above roughly
+100k estimated matches the planner therefore drops the `("timestamp", id)`
+index and walks the ORDER BY index BACKWARDS with the dates as a Filter, betting
+that 30 matches turn up within ~30/selectivity rows:
+
+```
+Limit  (cost=0.56..173.48 rows=30)
+  ->  Index Scan Backward using matrix_activity_pkey  (cost=0.56..18410763.51 rows=3194075)
+        Filter: "timestamp" >= … AND "timestamp" < … AND section_tipo = …
+```
+
+That bet assumes the qualifying rows are spread along the key. On an APPEND-ONLY
+log they are one contiguous block, so any range that does not touch "now" makes
+the scan walk every newer row first — for `When = 2023-06`, ~11.4M rows, each a
+heap fetch (the PK index does not carry `timestamp`). The estimates are accurate
+(3,194,075 estimated vs 3,207,022 actual); it is the DISTRIBUTION assumption
+that is wrong, which is why no amount of ANALYZE helps.
+
+Reachable from the ordinary UI, not an edge case: `builder_date.periodBounds`
+expands a partial date to its whole period, so a year-only value is a 12-month
+range and year+month a whole month. Only a full `YYYY-MM-DD` stayed under the
+flip threshold (~3 weeks of data on this install). `<` / `<=` on an old date is
+the worst case; `>=` on a recent one is fast by luck (its matches sit at the
+newest end). The implicit default order (`section_id ASC`, for an sqo that omits
+`order`) has the same trap seen from the other end — cost 13.6 M, walking from
+the OLDEST row.
+
+**The change (SQL only, same rows).** On `matrix_activity` a single
+structural-key order is emitted as `"timestamp" <dir>, id <dir>`
+(`sql_assembler.timeOrderedLogOrder`), covering the `id` default, the
+`section_id` When-header sort, and the implicit no-order default. The existing
+`("timestamp", id) INCLUDE (section_tipo, section_id)` index then delivers the
+requested order OUTRIGHT — a backward index scan with **no sort node** — so the
+cost is O(LIMIT), independent of the range width. Measured on mdcat with the
+emitted query (full wide-column select, `LIMIT 30`):
+
+| When search | before | after |
+|---|---|---|
+| `2023-06-15` (a day) | 1.9 ms | ~1 ms |
+| `2023-06` (a month, 3.2M rows) | **>300 s** (statement timeout) | **6.1 ms** |
+| `2023` (a year, 6.0M rows) | **>300 s** | **1.4 ms** |
+| bare browse, offset 0 | ~11 ms (WC-046) | 0.17 ms |
+
+Why dd542 gets the reorder where dd15 got WC-053's `OFFSET 0` barrier (which
+here measures 1.88 s for the month — 300x better than the trap, 300x worse than
+this): on dd15, `id` and `timestamp` are two DIFFERENT user-facing columns
+(dd1573 Id, dd559 When) and an `id` sort must stay an `id` sort. On dd542 there
+is no Id column at all — WC-044 already established that the only sortable
+column, When, IS insertion order, so re-expressing it on the timestamp index
+changes nothing the user asked for.
+
+**Divergence: equivalent order, not identical.** `timestamp` order ≡ insertion
+order ≡ `id` order is WC-044's own invariant (it is what made When → section_id
+legal), but it is not exact to the microsecond: measured on the real log, ~7
+rows per million are stamped microseconds out of id order (busiest bulk day
+2023-06-28: **10 inversions in 1,412,451 rows**, worst 224 µs — concurrent
+inserts whose ids were assigned in a slightly different order than their
+timestamps). Two sub-millisecond neighbours can therefore swap. The `id`
+tiebreaker keeps the pair a UNIQUE total order, so pagination stays stable.
+
+**The deep-page rewrites carry over unchanged.** `singleUniqueKeyOrder` rejects
+a two-column clause by design, so the WC-046 late-row-lookup and order-flip had
+to be handed the rewrite's key explicitly or every deep page would have silently
+dropped back to a plain OFFSET (8.1 s at offset 16 M on the composite order,
+measured). `("timestamp", id)` is still a unique total order (`id` alone is), so
+both rewrites stay exact: the page is ACQUIRED by `id` — the join back is 1:1 —
+while both the inner page and the outer restore ORDER BY the composite, mirrored
+together by the flip. Scoped to `matrix_activity`
+(`TIME_ORDERED_LOG_TABLES`): `matrix_time_machine` has its own emitter
+(`read_tm.ts`) and cannot flatten; every other section is untouched.
+
+### Gate
+
+`test/unit/activity_time_order.test.ts` (the rewrite: dd549 default, When-header
+sort both directions, same-direction pair, the date-filtered request that was
+reported, the no-order default, plus two negative controls — a jsonb component
+sort keeps its sort alias, an ordinary section keeps `section_id`) ·
+`activity_deep_offset_flip.test.ts` (extended: the flip/late-lookup page still
+equals the ground-truth `ORDER BY <key> DESC LIMIT L OFFSET O` byte-for-byte for
+BOTH keys, and now asserts the composite order on both sides of the join, so a
+regression to a bare key order fails loudly) · `search_order_id.test.ts`
+(retargeted off dd542 onto an ordinary section — it tests the generic `column` /
+`component_tipo` convention, which dd542 no longer exhibits; one boundary case
+pins the rewrite).
+
+FIXTURE STORE: `activity_read_differential.json` DOES pin a dd542 listing (the
+flattened SQL shape itself does not — WC-044). It is NOT edited and needs no
+re-harvest: the divergence only exists where `timestamp` and `id` disagree, and
+they do not disagree on any non-scale corpus. Verified by ranking every dd542
+row both ways on each install DB — `dedalo7ts` (1332 rows), `dedalo7ts_test`
+(260), `dedalo7_mdcat_test` (579): **0 inversions, 0 rank differences** in all
+three. Only the 32.9M-row `dedalo7_mdcat` log, whose concurrency produced the
+microsecond inversions above, orders differently at all.
+
+## WC-055 — Unindexed searches: the redundant `@?` pre-guard removed, and the statement-timeout ceiling made usable (2026-07-27)
+
+Two changes on the same theme — a search we deliberately do NOT index must still
+be cheap per row and bounded in total. Neither changes any result.
+
+**The `@?` pre-guard on the POSITIVE exists-envelope (SQL only, same rows).**
+`builder_json` and `builder_iri` emitted
+`(col @? '$.<tipo>[*]') AND EXISTS (SELECT 1 FROM jsonb_path_query(col, …) …)`.
+The guard cannot change the result: `jsonb_path_query` is STRICT, so a NULL
+column or a path yielding no element produces no rows and the EXISTS is already
+false. It was a second full jsonpath evaluation of the same path on the same
+document, per row. Measured on the dd551 Data search over the 32.9M-row mdcat
+`matrix_activity` — the shape that CANNOT abort early, a term matching nothing,
+so it reads everything — 200k rows: **2854 ms → 1059 ms (2.7x)**; extrapolated
+to the full table ~470 s → ~175 s. Removed from `existsEnvelope` in both
+builders only. It is LOAD-BEARING elsewhere and stays: `!=`/`-` is
+`(col @? path) AND NOT EXISTS (…)` = "has entries but none match" (without it
+every record lacking the component would match), and `*` not-empty IS the guard.
+
+**Why dd551 is not indexed at all** (the decision this entry records, so it is
+not silently revisited): the only index that could serve
+`f_unaccent(elem->>'value') ~* f_unaccent($1)` is a trigram GIN over an
+expression on `misc`, maintained on EVERY activity insert — the hottest write
+path in the system, the write amplification WC-046 set out to remove — to serve
+a column that is searched rarely, and whose COMMON-term search already answers
+in 0.3 ms (the matches are recent, so the ordered walk aborts early). Only the
+no-match term is slow. The residual cost is accepted and bounded, not indexed.
+
+**`DB_STATEMENT_TIMEOUT_MS` made usable (`runWithoutStatementTimeout`).** The
+ceiling is the only bound on that residual: an unindexed `~*` over 33M rows
+cannot abort early, and a client disconnecting does NOT cancel it (verified the
+hard way — probe queries orphaned by a killed `psql` were still burning CPU 24
+minutes later). The setting nevertheless shipped disabled and unused, because it
+is a per-connection GUC on the SHARED pool and the same ceiling would abort
+REINDEX / VACUUM / DROP INDEX CONCURRENTLY — maintenance that is SUPPOSED to run
+for minutes. Those statements now opt out explicitly through a RESERVED
+connection (`core/db/postgres.ts`), so the ceiling can finally be set for the
+request traffic it exists to protect: `db_assets.optimizeTables` (REINDEX +
+VACUUM per table), `pruneMatrixIndexes` (DROP INDEX CONCURRENTLY),
+`execMaintenance` (the `ar_maintenance` sentences, incl. VACUUM FULL), and the
+Database-info widget's whole-database VACUUM ANALYZE. The GUC is cleared on a
+reserved connection, never a pooled one: a plain `SET` persists for the life of
+the connection, so issuing it on the pool would silently un-bound every later
+request handed that same connection.
+
+### Gate
+
+`test/unit/search_exists_envelope_guard.test.ts` — the asymmetry (positive
+envelope carries no `@?`; `!=`/`-` and `*` keep theirs) PLUS a row-level
+equivalence proof against the live planner over NULL / empty-array /
+missing-component / object-valued rows · `test/unit/statement_timeout_exemption.test.ts`
+— a ceilinged statement IS cancelled, the helper's is not, and the cleared GUC
+does not leak back into pooled traffic.
+
+## WC-056 — Activity (dd542) "Who" (dd543): actor searched through an indexed expression (2026-07-27)
+
+The third scale defect on the same 32.9M-row log, and the one that had never
+worked: searching Who for a user who left the organization did not return.
+
+**Root cause — no index on `relation`, and none that could carry the sort key.**
+The list orders by `("timestamp", id)` (WC-054) while the filter is
+`relation @> '{"dd543":[{…}]}'`, so no index carries both; the planner walks the
+ordered index with containment as a Filter and stops at the LIMIT. On an
+append-only log every row of one actor is a contiguous block, so that walk is
+fast only when the actor is ALSO recent. Measured, 25-row page:
+
+| actor | matching rows | no index | GIN(relation) | GIN + `OFFSET 0` barrier | this |
+|---|---|---|---|---|---|
+| user 3 (last seen 2016) | 1 021 | **>300 s** | 12.5 ms | — | **1.6 ms** |
+| user 40 | 52 000 | **>300 s** | **>300 s** | — | **1.1 ms** |
+| user 95 | 206 000 | **>300 s** | **>300 s** | 4.4 s | **2.6 ms** |
+| user 115 | 2 600 000 | 258 ms | 68 ms | — | — |
+| user 2 | 8 100 000 | 90 ms | 90 ms | **69.5 s** | **4.3 ms** |
+
+(Final column measured on the shipped two-column index, `EXPLAIN ANALYZE` of the
+emitted query against `dedalo7_mdcat`. Every plan is a plain `Index Scan using
+matrix_activity_who_ts_idx` with no sort node — the cost is the page, not the
+actor.)
+
+Two candidate fixes were measured and rejected as complete answers. A **GIN on
+`relation`** rescues only the RARE actor — the one case the estimate is small
+enough for a bitmap scan — and leaves a departed actor with 206k rows timing
+out. The **WC-053 `OFFSET 0` barrier** helps that actor (>300 s → 4.4 s) but is
+catastrophic for a heavy one (90 ms → **69.5 s**), because it forces a full
+8.1M-row bitmap heap scan where abort-early was finding 25 rows immediately.
+This filter's selectivity spans four orders of magnitude BETWEEN ACTORS, so no
+static plan choice is right for all of them — unlike WC-053's date range, where
+one barrier fits.
+
+**The change.** `matrix_activity_who_ts_idx
+((relation->'dd543'->0->>'section_id'), (relation->'dd543'->0->>'section_tipo'),
+"timestamp" DESC, id DESC)` — leading actor equality leaves the trailing sort
+key free, so ONE index answers the filter AND the order, index-served with no
+sort node, O(LIMIT) for every actor class. It needs the predicate written as an
+equality on the same expression, so `builder_relation` gained an activity twin
+(`buildActivityWhoFragment`), exactly as it already had one for
+`matrix_time_machine`'s flat `user_id` column. `'*'`/`'!*'` existence stay on the
+cheap `?` key test; `!=`/`!==` negate the same expression.
+
+**Scoped, and resting on a gated invariant.** dd542/dd543 only — dd545 What on
+the same column, every ordinary section, and the TM twin are untouched and keep
+containment. The predicate reads element 0, so it is exact only while a row
+carries exactly ONE actor locator: that is how `activity_log.ts` writes, and how
+the data reads (2.5M rows sampled on mdcat — 2M newest + 500k oldest — all
+`length 1`, all `dd128`). `activity_log_single_actor.test.ts` gates the WRITER,
+because a second locator would be invisible to Who search rather than an error.
+`section_tipo` is bound explicitly rather than assumed, so a locator addressing
+another section can never be a false positive.
+
+**The GIN is restored anyway** (`matrix_index_policy`: `drop-dead` → `keep`,
+434 MB, 96 s to build). It is what makes a rare-value search fast for every
+OTHER relation component and every other section, and its drop-dead
+classification was unsound: the stated reason ("the planner picks the ordered
+btree + Filter, never this GIN") described the symptom of the ordering trap, and
+the `idxScan > 0` safety gate could not object because this cluster came up with
+`stats_reset` NULL — the STATS CAVEAT recorded in that same file, realized. It
+is also asset-provisioned for every matrix table
+(`all_matrix_relation_gin_idx`), so the prune was dropping an index
+`recreateDbAssets` immediately put back.
+
+### Gate
+
+`test/unit/activity_who_expression_search.test.ts` (the emitted predicate for
+default/`==`/`!=`/`!==`, bound params not interpolation, malformed locators drop
+the clause instead of matching everything, plus three negative controls: dd545
+on the same table, dd543 in an ordinary section, and the TM twin all still emit
+containment) · `test/unit/activity_log_single_actor.test.ts` (the writer-side
+invariant) · `matrix_index_policy.test.ts` + `matrix_index_prune.test.ts` (both
+indexes classified `keep`, so "Optimize tables" can no longer drop them).

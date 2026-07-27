@@ -14,11 +14,14 @@
  * db_assets.pruneMatrixIndexes, run against the ACTIVE database as the first
  * step of the Database-info widget's "Optimize tables" action (WC-046).
  *
- * The query shapes this policy is calibrated for (see WC-044 + read_tm.ts):
- *  - Activity list: single-section, `ORDER BY section_id <dir> LIMIT n` (When
- *    → section_id; every other column is sortable:false). Served + deep-page
- *    flipped by (section_tipo, section_id DESC) + the UNIQUE (section_id,
- *    section_tipo) key. Dashboard 30-day rollup scans (timestamp, id).
+ * The query shapes this policy is calibrated for (see WC-044/WC-054 + read_tm.ts):
+ *  - Activity list: single-section, insertion order (When → section_id; the
+ *    dd549 default → id; every other column is sortable:false). WC-054 emits
+ *    ALL of them as `"timestamp" <dir>, id <dir>`, so the ("timestamp", id)
+ *    INCLUDE index serves the list, the deep-page late-lookup/flip page scan
+ *    AND the dashboard 30-day rollup. The UNIQUE (section_id, section_tipo) key
+ *    still enables the flatten + the 1:1 join back; (section_tipo, section_id
+ *    DESC) now backs the bare-browse count rather than the list order.
  *  - TM list: bare browse `ORDER BY id`; record-history filtered by
  *    (section_tipo, section_id[, tipo, lang]) and ALSO ordered by `id` — the
  *    scope and the sort key must live in ONE index or the planner has only
@@ -110,7 +113,8 @@ const ACTIVITY: MatrixTablePolicy = {
 	table: 'matrix_activity',
 	requiredSignatures: [
 		'using btree (section_id, section_tipo)', // UNIQUE key: flatten + deep-page flip enabler
-		'using btree (section_tipo, section_id desc)', // list index + flip/late page scan
+		'using btree (section_tipo, section_id desc)', // bare-browse count + asset-provisioned
+		'using btree ("timestamp", id) include (section_tipo, section_id)', // THE list order (WC-054)
 	],
 	entries: [
 		// --- keep (load-bearing) -------------------------------------------------
@@ -124,12 +128,13 @@ const ACTIVITY: MatrixTablePolicy = {
 			signature: 'using btree (section_tipo, section_id desc)',
 			disposition: 'keep',
 			reason:
-				'Primary list index — newest-first browse (section_id DESC) and the flip page scan, index-only.',
+				'Was the primary list index; since WC-054 the list orders on the (timestamp, id) index instead. Kept because it is the narrowest index for the bare-browse count (index-only) and is asset-provisioned for every matrix table (db_pg_definitions.json all_matrix_section_tipo_section_id_desc_idx), so pruning it would only have recreateDbAssets put it back.',
 		},
 		{
 			signature: 'using btree ("timestamp", id) include (section_tipo, section_id)',
 			disposition: 'keep',
-			reason: 'Dashboard 30-day activity rollup (timestamp range), index-only via the INCLUDE.',
+			reason:
+				'THE dd542 list index since WC-054, not just the dashboard 30-day rollup: every dd542 sort is insertion order, emitted as `"timestamp" <dir>, id <dir>`, which this index serves outright with NO sort node — including the deep-page late-lookup/flip page scan, and including a When date filter, where the previous key-ordered shape flipped the planner into an abort-early backward PK walk (>300 s for a one-month range vs 6.1 ms here). The INCLUDE keeps the rollup and the page scan index-only. Load-bearing on the LIST path now: dropping it does not degrade the browse, it breaks it.',
 		},
 		// --- drop-redundant (covered by a kept index) ----------------------------
 		{
@@ -151,20 +156,25 @@ const ACTIVITY: MatrixTablePolicy = {
 			requiresSingleTipo: true,
 			reason: 'Single-tipo table ⇒ an alias of the (section_tipo, section_id DESC) list index.',
 		},
+		{
+			signature: 'using gin (relation jsonb_path_ops)',
+			disposition: 'keep',
+			reason:
+				'RESTORED 2026-07-27 (WC-056) — it was classified drop-dead on the reasoning that "the forced section_id ordering makes the planner pick the ordered btree + Filter, never this GIN". That described the SYMPTOM of the ordering trap, not a dead index, and the drop-dead gate (idxScan > 0) could not object because this cluster came up with stats_reset NULL (the STATS CAVEAT in this file, realized). The traced emitter is every relation-column search on the log — dd543 Who, dd545 What (builder_relation containment) — and without it a search for a RARE value has no plan but a full ordered walk: >300 s for an actor last seen in 2016, 12.5 ms with the GIN. It is also asset-provisioned for every matrix table (db_pg_definitions.json all_matrix_relation_gin_idx), so dropping it here only had recreateDbAssets put it back. 434 MB, 96 s to build on the 32.9M-row mdcat log. NOTE it fixes only the rare-value case — a HEAVY value keeps the ordered walk (correctly), and a heavy-but-OLD value needs the expression index below.',
+		},
+		{
+			// Verbatim normalizeIndexDef output — an expression column is rendered
+			// with an EXTRA paren layer, so this cannot be hand-derived from the
+			// CREATE INDEX text; it was read back from pg_get_indexdef.
+			signature:
+				"using btree (((((relation -> 'dd543'::text) -> 0) ->> 'section_id'::text)), ((((relation -> 'dd543'::text) -> 0) ->> 'section_tipo'::text)), \"timestamp\" desc, id desc)",
+			disposition: 'keep',
+			reason:
+				'The dd543 Who search (WC-056): leading actor equality + the trailing ("timestamp", id) sort key means one index answers the filter AND the order, so a page is O(LIMIT) for EVERY actor — 1.1-4.3 ms measured across 1k / 52k / 206k / 8.1M-row actors, where containment ranged from 90 ms to >300 s and no static plan choice was right for all of them. Requires the matching emitter (builder_relation buildActivityWhoFragment): a containment predicate cannot use it.',
+		},
 		// --- drop-dead (no emitted shape uses these; WC-044 rejected the jsonb
 		//     component-sort / expression-index route for this insert-hot log) ----
-		...[
-			'data',
-			'relation',
-			'relation_search',
-			'string',
-			'date',
-			'iri',
-			'geo',
-			'number',
-			'media',
-			'misc',
-		].map(
+		...['data', 'relation_search', 'string', 'date', 'iri', 'geo', 'number', 'media', 'misc'].map(
 			(col): IndexPolicyEntry => ({
 				signature: `using gin (${col} jsonb_path_ops)`,
 				disposition: 'drop-dead',

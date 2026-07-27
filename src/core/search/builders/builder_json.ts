@@ -32,12 +32,27 @@ function entriesPath(context: BuilderContext): string {
 	return `$.${context.tipo}[*]`;
 }
 
-/** record has entries for tipo AND some entry's value TEXT matches `matchLogic`. */
+/**
+ * Some entry's value TEXT matches `matchLogic`.
+ *
+ * NO `@?` PRE-GUARD (WC-055). This used to lead with
+ * `(col @? '$.<tipo>[*]') AND …`, which cannot change the result:
+ * `jsonb_path_query` is STRICT, so a NULL column or a path yielding no element
+ * produces no rows and the EXISTS is already false. It was a second full
+ * jsonpath evaluation of the same path on the same document, per row — measured
+ * at 2.7x on the shape that cannot abort early (dd551 Data search for a term
+ * that matches nothing, 200k rows of the 32.9M-row mdcat log: 2854 ms → 1059 ms).
+ *
+ * The guard is NOT redundant in the NEGATIVE branches and stays there: `!=`/`-`
+ * is `(col @? path) AND NOT EXISTS (…)` = "has entries but none match", and
+ * without it every record lacking the component would match; `*` not-empty IS
+ * the guard. Gate: search_exists_envelope_guard.test.ts (both the asymmetry and
+ * the row-level equivalence, NULL/empty/missing-component rows included).
+ */
 function existsEnvelope(context: BuilderContext, matchLogic: string): string {
 	const path = entriesPath(context);
 	return (
-		`(${context.alias}.${context.column} @? '${path}') AND EXISTS (` +
-		`SELECT 1 FROM jsonb_path_query(${context.alias}.${context.column}, '${path}') AS elem ` +
+		`EXISTS (SELECT 1 FROM jsonb_path_query(${context.alias}.${context.column}, '${path}') AS elem ` +
 		`WHERE ${matchLogic})`
 	);
 }

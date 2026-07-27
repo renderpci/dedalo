@@ -166,7 +166,7 @@ Config keys (all in `../private/.env`; catalog `src/config/config.ts` `ops`):
 |---|---|---|
 | `DB_POOL_MAX` | 10 | Per PROCESS. Budget: server + each diffusion runner (up to `DEDALO_DIFFUSION_MAX_RUNNERS`) + RAG drain + coexisting PHP must stay under Postgres `max_connections` (typically 100). Example: server 10 + 2 runners × 10 + PHP ~20 → fine; 8 runners × 10 → NOT. |
 | `DB_POOL_ACQUIRE_TIMEOUT_MS` | 0 (wait forever) | Set (e.g. 30000) so pool exhaustion becomes a loud error instead of a silent indefinite hang. |
-| `DB_STATEMENT_TIMEOUT_MS` | 0 (off) | **Recommend 60000 in production**: one runaway query must not occupy a connection forever. |
+| `DB_STATEMENT_TIMEOUT_MS` | 0 (off) | **Set 60000 in production** (WC-055). It is the ONLY bound on a search that cannot abort early — a deliberately-unindexed match (dd551 Data, `f_unaccent(…) ~* …`) reads the whole table, ~175 s on a 33 M-row activity log, and a client disconnecting does **not** cancel it. Maintenance is exempt (below), so this no longer conflicts with REINDEX/VACUUM. |
 | `DEDALO_SLOW_QUERY_MS` | 0 (off) | Warn-log statements slower than this. |
 
 All four keys are live in `src/core/db/postgres.ts` (verified 2026-07-07):
@@ -174,6 +174,22 @@ All four keys are live in `src/core/db/postgres.ts` (verified 2026-07-07):
 observable (`db_pool_waits` counter) and bounded (`DB_POOL_ACQUIRE_TIMEOUT_MS`
 fail-loud), `DB_STATEMENT_TIMEOUT_MS` is a per-connection GUC, and
 `DEDALO_SLOW_QUERY_MS` warn-logs slow statements.
+
+**Maintenance is exempt from the ceiling** (`runWithoutStatementTimeout`,
+WC-055). `DB_STATEMENT_TIMEOUT_MS` is a POOL-WIDE GUC, so before this it could
+not be set at all without also aborting the operations that are SUPPOSED to run
+for minutes — which is why it shipped disabled. These four paths now clear the
+GUC on a RESERVED connection for their own statement only:
+`db_assets.optimizeTables` (REINDEX + VACUUM per table),
+`db_assets.pruneMatrixIndexes` (DROP INDEX CONCURRENTLY),
+`db_assets.execMaintenance` (the `ar_maintenance` sentences, incl. VACUUM FULL),
+and the Database-info widget's whole-database VACUUM ANALYZE. The GUC is never
+cleared on a POOLED connection: a plain `SET` persists for the life of the
+connection, so that would silently un-bound every later request handed the same
+one. Anything request-driven stays under the ceiling by design.
+
+Raise the value if a legitimate REQUEST-path operation on your install (a large
+export) exceeds it; measure first with `DEDALO_SLOW_QUERY_MS`.
 
 ## 5. Observability (S2-37)
 

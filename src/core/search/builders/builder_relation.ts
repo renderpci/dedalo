@@ -83,6 +83,76 @@ function buildRelationFragmentTm(
 }
 
 /**
+ * The dd542 Activity "Who" (dd543) twin — the actor as an indexed EXPRESSION
+ * instead of jsonb containment (WC-056).
+ *
+ * WHY. The dd542 list orders by `("timestamp", id)` (WC-054) and `relation @> …`
+ * cannot ride that index, so the planner walks the ordered index with
+ * containment as a Filter and stops at the LIMIT. On an append-only log an
+ * actor's rows are one contiguous block, so that walk is fast only when the
+ * actor is ALSO recent: measured on the 32.9M-row mdcat log, an actor last seen
+ * in 2016 never completed (>300 s), while the newest actor answered in 90 ms.
+ * A GIN on `relation` fixes only the RARE actor (12.5 ms) — for a departed
+ * actor with 206k rows the planner still prefers the walk — and the WC-053
+ * `OFFSET 0` barrier makes the HEAVY actor catastrophically worse (90 ms →
+ * 69.5 s). Selectivity here spans four orders of magnitude between actors, so
+ * no static plan choice is right; only an index carrying the actor AND the sort
+ * key is flat, and it needs the predicate written as an equality on the same
+ * expression. With `matrix_activity_who_ts_idx` in place every actor class
+ * answers in 1.1–4.3 ms, index-served, no sort node.
+ *
+ * THE INVARIANT. This reads element 0, so it is exact only while a row carries
+ * exactly ONE actor locator — how the engine writes it (activity_log.ts) and
+ * how the data reads (2.5M rows sampled on mdcat: all length 1, all dd128).
+ * `activity_log_single_actor.test.ts` gates the writer. section_tipo is bound
+ * explicitly rather than assumed, so a locator pointing at another section can
+ * never be a false positive.
+ *
+ * Existence operators are NOT routed here: `?`-key tests are already cheap and
+ * index-independent, and they carry no locator to compare.
+ */
+function buildActivityWhoFragment(
+	rawQ: unknown,
+	operator: string,
+	context: BuilderContext,
+): BuilderResult {
+	const locator = typeof rawQ === 'string' ? JSON.parse(rawQ) : rawQ;
+	const first = (Array.isArray(locator) ? locator[0] : locator) as {
+		section_id?: unknown;
+		section_tipo?: unknown;
+	} | null;
+	const sectionId = first?.section_id;
+	const sectionTipo = first?.section_tipo;
+	// A locator missing either half cannot address an actor — drop the clause
+	// rather than emit a half-predicate that would match every row.
+	if (
+		(typeof sectionId !== 'string' && typeof sectionId !== 'number') ||
+		typeof sectionTipo !== 'string'
+	) {
+		return false;
+	}
+	const idExpr = `${context.alias}.${context.column}->'${context.tipo}'->0->>'section_id'`;
+	const tipoExpr = `${context.alias}.${context.column}->'${context.tipo}'->0->>'section_tipo'`;
+	const match = `(${idExpr} = _Q1_ AND ${tipoExpr} = _Q2_)`;
+	const tokens = { _Q1_: String(sectionId), _Q2_: sectionTipo };
+	// '!=' keeps PHP's "has relations for this component AND does not match"
+	// semantics; '!==' is the strict form that also admits rows without the key.
+	if (operator === '!=') {
+		return fragment(`(${context.alias}.${context.column} ? _Q3_) AND NOT ${match}`, {
+			...tokens,
+			_Q3_: context.tipo,
+		});
+	}
+	if (operator === '!==') {
+		return fragment(`NOT ${match}`, tokens);
+	}
+	return fragment(match, tokens);
+}
+
+/** matrix_activity components whose actor/target rides an expression index. */
+const ACTIVITY_EXPRESSION_INDEXED: ReadonlySet<string> = new Set(['dd543']);
+
+/**
  * The CORRECT autocomplete_hi ancestor wrap (PHP add_relation_search as
  * DESIGNED, not as live-shipped): (relation contains q) OR (relation_search
  * contains q) — a term matches records linking it directly AND records
@@ -120,6 +190,17 @@ export function buildRelationFragment(
 	// '!*' — empty: the component key is absent from the relation column.
 	if (operator === '!*') {
 		return fragment(`NOT (${context.alias}.${context.column} ? _Q1_)`, { _Q1_: context.tipo });
+	}
+
+	// dd542 Activity's actor column rides an expression index instead of the
+	// GIN-less containment walk (WC-056) — value operators only; '*'/'!*' stay
+	// on the cheap key test above/below.
+	if (
+		context.table === 'matrix_activity' &&
+		ACTIVITY_EXPRESSION_INDEXED.has(context.tipo) &&
+		operator !== '*'
+	) {
+		return buildActivityWhoFragment(rawQ, operator, context);
 	}
 
 	// '*' — not-empty: key exists.

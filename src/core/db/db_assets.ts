@@ -18,7 +18,7 @@
 
 import definitions from './db_pg_definitions.json';
 import { type LiveIndex, classifyIndex, policyForTable } from './matrix_index_policy.ts';
-import { sql, withTransaction } from './postgres.ts';
+import { runWithoutStatementTimeout, sql, withTransaction } from './postgres.ts';
 
 interface AssetEntry {
 	tables?: string[];
@@ -64,6 +64,22 @@ async function tableExists(table: string): Promise<boolean> {
 async function execSql(sqlQuery: string, errors: unknown[]): Promise<boolean> {
 	try {
 		await sql.unsafe(sqlQuery, []);
+		return true;
+	} catch (error) {
+		errors.push((error as Error).message);
+		return false;
+	}
+}
+
+/**
+ * execSql for a sentence that is SUPPOSED to run for minutes (REINDEX / VACUUM
+ * [FULL] on a production-scale table): opts out of the pool-wide
+ * statement_timeout ceiling (WC-055) so setting that ceiling for request
+ * traffic cannot abort a maintenance run.
+ */
+async function execLongSql(sqlQuery: string, errors: unknown[]): Promise<boolean> {
+	try {
+		await runWithoutStatementTimeout(sqlQuery);
 		return true;
 	} catch (error) {
 		errors.push((error as Error).message);
@@ -189,8 +205,10 @@ export function rebuildIndexes(selectedTables: string[] = []): Promise<AssetResp
 /** The ar_maintenance sentences (REINDEX TABLE …; etc.). */
 export async function execMaintenance(): Promise<AssetResponse> {
 	const response = newResponse();
+	// Every ar_maintenance sentence is a REINDEX/VACUUM (incl. VACUUM FULL) — the
+	// long-by-design class, so they run unbounded (WC-055).
 	for (const sentence of definitions.ar_maintenance as string[]) {
-		if (await execSql(cleanSql(sentence), response.errors)) response.success++;
+		if (await execLongSql(cleanSql(sentence), response.errors)) response.success++;
 	}
 	return finishResponse(response);
 }
@@ -555,7 +573,9 @@ export async function pruneMatrixIndexes(
 		if (verdict.action === 'drop') {
 			// CONCURRENTLY: no ACCESS EXCLUSIVE lock on the (live) table.
 			if (options.dryRun !== true) {
-				await sql.unsafe(`DROP INDEX CONCURRENTLY IF EXISTS "${index.name}"`, []);
+				// Unbounded: a CONCURRENTLY drop on a multi-GB index outlives any
+				// request-traffic statement_timeout ceiling (WC-055).
+				await runWithoutStatementTimeout(`DROP INDEX CONCURRENTLY IF EXISTS "${index.name}"`);
 			}
 			report.dropped.push({
 				name: index.name,
@@ -629,7 +649,7 @@ export async function optimizeTables(tables: string[]): Promise<{
 	}
 	for (const table of validTables) {
 		try {
-			await sql.unsafe(`REINDEX TABLE CONCURRENTLY "${table}"`, []);
+			await runWithoutStatementTimeout(`REINDEX TABLE CONCURRENTLY "${table}"`);
 			response.reindex[table] = 'REINDEX\n'; // psql command-tag echo, PHP shape
 		} catch (error) {
 			response.reindex[table] = (error as Error).message;
@@ -638,7 +658,7 @@ export async function optimizeTables(tables: string[]): Promise<{
 	}
 	for (const table of validTables) {
 		try {
-			await sql.unsafe(`VACUUM ANALYZE "${table}"`, []);
+			await runWithoutStatementTimeout(`VACUUM ANALYZE "${table}"`);
 			response.vacuum[table] = 'VACUUM\n'; // psql command-tag echo, PHP shape
 		} catch (error) {
 			response.vacuum[table] = (error as Error).message;

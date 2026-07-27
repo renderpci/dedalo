@@ -378,6 +378,72 @@ function singleUniqueKeyOrder(
 	return null;
 }
 
+/**
+ * Tables whose INSERTION ORDER is served by a `("timestamp", id)` index, and
+ * whose structural-key sorts are therefore re-expressed on that index (WC-054).
+ * matrix_activity only: matrix_time_machine has its own emitter (read_tm.ts)
+ * and cannot flatten (no UNIQUE (section_id, section_tipo) key).
+ */
+const TIME_ORDERED_LOG_TABLES: ReadonlySet<string> = new Set(['matrix_activity']);
+
+/**
+ * WC-054 — re-express a dd542 structural-key sort as the `("timestamp", id)`
+ * order the log's own index serves.
+ *
+ * THE TRAP. Every dd542 list sort is a unique monotonic key — `id DESC` (the
+ * dd549 default: insertion order) or `section_id <dir>` (the When header, WC-044
+ * maps When→section_id). Ordered alone they are index-perfect. Combined with a
+ * When SEARCH they are ruinous: the filter lives on `timestamp`, which neither
+ * the `id` PK nor `(section_tipo, section_id DESC)` carries, so with a wide date
+ * predicate (a year-only or year+month value expands to the WHOLE period —
+ * builder_date periodBounds) the planner abandons the ("timestamp", id) index
+ * and walks the ORDER BY index backwards with the dates as a Filter, betting 30
+ * matches turn up within ~30/selectivity rows. That bet assumes the qualifying
+ * rows are spread along the key. On an APPEND-ONLY log they are one contiguous
+ * block, so any range that does not touch "now" makes the scan walk every newer
+ * row first — measured on the 32.9M-row mdcat log, `When = 2023-06` (3.2M
+ * matching rows, ~11.4M newer rows to skip, each a heap fetch):
+ *     ORDER BY id DESC                    >300 s (statement timeout, never ran out)
+ *     ORDER BY "timestamp" DESC, id DESC     1.1 ms
+ * A whole YEAR is 0.7 ms on the rewritten shape — O(LIMIT), independent of the
+ * range width, because the sort key IS the filtered column and the index
+ * delivers the order outright (backward index-ONLY scan, no sort node).
+ *
+ * EQUIVALENCE, not identity. `timestamp` order ≡ insertion order ≡ id order is
+ * the same WC-044 invariant that made When→section_id legal, and it is why the
+ * `id` tiebreaker matters: it keeps the pair a UNIQUE total order, so pagination
+ * stays stable and the deep-page rewrites below stay exact. Measured on the real
+ * log, ~7 rows per million are stamped microseconds out of id order (busiest
+ * bulk day: 10 inversions in 1,412,451 rows, worst 224 µs), so two
+ * sub-millisecond neighbours can swap. Ledgered as WC-054.
+ *
+ * DIRECTION. Both columns carry the SAME direction — a btree reads forwards or
+ * backwards only, so the ASC index serves `DESC, DESC` reversed but never a
+ * mixed pair (the DIRECTION note in db/matrix_index_policy.ts).
+ *
+ * THE IMPLICIT DEFAULT COUNTS TOO. An sqo that omits `order` (an API caller —
+ * the client always sends dd549's) falls through to `orderDefault`
+ * (`section_id ASC`, oldest-first), which is the SAME insertion order and the
+ * same trap seen from the other end: under a date filter it walks the
+ * (section_tipo, section_id DESC) index backwards from the OLDEST row (cost
+ * 13.6 M for a one-month range). An empty clause list therefore resolves to the
+ * ASC composite order rather than being left alone.
+ *
+ * Returns the rewritten clauses + the unique key the deep-page rewrites page on
+ * (`id` — the join back stays 1:1), or null when the table or the sort is out of
+ * scope (a jsonb component sort keeps its sort alias).
+ */
+function timeOrderedLogOrder(
+	orderClauses: string[],
+	matrixTable: string,
+): { clauses: string[]; key: 'id'; dir: 'ASC' | 'DESC' } | null {
+	if (!TIME_ORDERED_LOG_TABLES.has(matrixTable)) return null;
+	// No explicit sort → the implicit `section_id ASC` default's direction.
+	const dir = orderClauses.length === 0 ? 'ASC' : singleUniqueKeyOrder(orderClauses)?.dir;
+	if (dir === undefined) return null;
+	return { clauses: [`"timestamp" ${dir}, id ${dir}`], key: 'id', dir };
+}
+
 /** Options that scope the search to a principal (for the per-record ACL). */
 export interface SearchOptions {
 	/**
@@ -733,7 +799,7 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 
 	// --- ORDER ---------------------------------------------------------------
 	const selectExtra: string[] = [];
-	const orderClauses = await buildOrderClauses(sqo, alias, selectExtra, joinFragments);
+	let orderClauses = await buildOrderClauses(sqo, alias, selectExtra, joinFragments);
 	const orderDefault = [`${alias}.section_id ASC`];
 
 	// Flatten the explicit-order shape when DISTINCT ON is provably a no-op:
@@ -748,11 +814,22 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 	// order, same columns — ORDER BY + LIMIT are applied inline instead.
 	// (A multi-hop ORDER path adds its join chain to joinFragments, so it is
 	// excluded here automatically.)
-	const flattenOrder =
-		orderClauses.length > 0 &&
-		!multiSection &&
-		joinFragments.size === 0 &&
-		(await tableHasUniqueSectionKey(matrixTable));
+	const flattenable =
+		!multiSection && joinFragments.size === 0 && (await tableHasUniqueSectionKey(matrixTable));
+
+	// WC-054: re-express the append-only log's insertion order on the
+	// ("timestamp", id) index — the only shape that is not catastrophic under a
+	// When date filter (see timeOrderedLogOrder). Gated on `flattenable`, not on
+	// flattenOrder, for two reasons: it also supplies the IMPLICIT default order
+	// (which turns an unordered sqo into a flattened one), and the windowed
+	// wrapper's outer ORDER BY can only reference the inner SELECT's projection,
+	// which `timestamp` is not part of. Flattening is guaranteed for
+	// matrix_activity (it carries the UNIQUE key), so the guard costs nothing and
+	// keeps the rewrite from ever emitting an out-of-scope column reference.
+	const timeOrder = flattenable ? timeOrderedLogOrder(orderClauses, matrixTable) : null;
+	if (timeOrder !== null) orderClauses = timeOrder.clauses;
+
+	const flattenOrder = orderClauses.length > 0 && flattenable;
 
 	// --- SELECT ----------------------------------------------------------------
 	const select: string[] = [];
@@ -852,9 +929,21 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 		//      twin of read_tm.ts queryTmRows (matrix_time_machine cannot flatten).
 		const lateThreshold = config.ops.searchLateRowLookupOffset;
 		const offsetNum = sqo.offset != null ? Number(sqo.offset) : 0;
-		const keyOrder = singleUniqueKeyOrder(orderClauses);
+		// WC-054: after the timestamp rewrite the ORDER BY is a two-column clause
+		// that singleUniqueKeyOrder rejects by design — take the key/direction it
+		// already resolved, or the rewrite would silently drop these pages back to
+		// a plain deep OFFSET (measured 8.1 s at offset 16 M on the composite
+		// order). ("timestamp", id) is still a UNIQUE total order (`id` alone is),
+		// so both rewrites stay exact: the page is acquired by `id` — a 1:1 join
+		// back — and the flip mirrors BOTH columns.
+		const keyOrder = timeOrder ?? singleUniqueKeyOrder(orderClauses);
 		if (lateThreshold >= 0 && limitSql !== '' && offsetNum >= lateThreshold && keyOrder !== null) {
 			const { key, dir: requestedDir } = keyOrder;
+			/** The full sort key, alias-qualified, in the given direction. */
+			const orderBy = (dir: 'ASC' | 'DESC'): string =>
+				timeOrder !== null
+					? `${alias}."timestamp" ${dir}, ${alias}.id ${dir}`
+					: `${alias}.${key} ${dir}`;
 			const limitNum = Number(sqo.limit);
 			let innerDir: 'ASC' | 'DESC' = requestedDir;
 			let effOffset = offsetNum;
@@ -873,7 +962,7 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 			const pageWhere = whereAll.length > 0 ? `\nWHERE ${whereAll.join('\n AND ')}` : '';
 			const pageQuery =
 				`SELECT ${alias}.${key}\nFROM ${fromClause}${pageWhere}\n` +
-				`ORDER BY ${alias}.${key} ${innerDir}\nLIMIT ${effLimit} OFFSET ${effOffset}`;
+				`ORDER BY ${orderBy(innerDir)}\nLIMIT ${effLimit} OFFSET ${effOffset}`;
 			// Outer ORDER BY: the REQUESTED direction, alias-qualified (the JOIN
 			// makes a bare column ambiguous) — restores order after a flip.
 			const flatSql =
@@ -883,7 +972,7 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 				// another tipo in the same table may reuse a section_id (the `id` PK
 				// is globally unique, so the re-pin is a harmless no-op there).
 				`WHERE ${mainWhere.join('\n AND ')}\n` +
-				`ORDER BY ${alias}.${key} ${requestedDir};`;
+				`ORDER BY ${orderBy(requestedDir)};`;
 			return { sql: flatSql, params: params.toArray() };
 		}
 		// The sort aliases in selectExtra are projected by this same SELECT, so
