@@ -105,8 +105,12 @@ if ($is_dry) {
 
 	$untouched = array_values(array_diff($discovered, $ar_tables));
 	if (!empty($untouched)) {
-		$log('NOTE: these tables still carry a legacy `datos` column but are NOT in the '
-			. 'migration list, so the migration leaves them as they are: ' . implode(', ', $untouched));
+		$log('NOTE: these tables carry a legacy `datos` column but are NOT reformatted into the '
+			. 'typed v7 columns: ' . implode(', ', $untouched) . '. '
+			. 'Some are still handled by the schema steps (matrix_notifications and matrix_updates '
+			. 'have `datos` RENAMED to `data`, a general JSON column). The final '
+			. 'drop_legacy_datos_column step only touches the reformatted list above, so no table '
+			. 'ever loses `datos` without its data having been migrated first.');
 	}
 
 	if (empty($ar_tables)) {

@@ -67,7 +67,15 @@ rsync -a \
 	--exclude '/mockup/' \
 	--exclude '/security-audit/' \
 	--exclude '/test/' \
-	--exclude '/tools/' \
+	`# --- tools/: 27M of tool modules, none on the migration path — BUT core/base/class.loader.php` \
+	`#     EAGERLY includes tools/tool_common/class.tool_common.php + class.tool_paths.php on every` \
+	`#     boot (tool_paths is consulted by the autoloader itself), so keep tool_common's classes ---` \
+	--include '/tools/' \
+	--include '/tools/tool_common/' \
+	--include '/tools/tool_common/*.php' \
+	--include '/tools/tool_common/register.schema.json' \
+	--exclude '/tools/tool_common/*' \
+	--exclude '/tools/*' \
 	--exclude '/downloads/' \
 	--exclude '/analysis/' \
 	--exclude '/lib/' \
