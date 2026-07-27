@@ -1,0 +1,17 @@
+# The v6 → v7 migration package is CLI-only: NOTHING here may be served over HTTP.
+# It carries the bundled v7 engine, the generated ../private/.env, the config
+# snapshot and the config-migration backups (all secret-bearing).
+#
+# The widget the browser actually loads is NOT here: it is installed at
+# core/area_maintenance/widgets/prepare_v7/ (class + js).
+#
+# nginx equivalent (this file is inert there):
+#   location ~ /core/area_maintenance/widgets/close_v6_prepare_v7/ { deny all; }
+
+<IfModule mod_authz_core.c>
+	Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+	Order deny,allow
+	Deny from all
+</IfModule>

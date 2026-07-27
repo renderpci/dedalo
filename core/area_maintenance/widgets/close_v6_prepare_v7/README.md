@@ -41,8 +41,13 @@ The source of truth lives in this repo under `close_v6_prepare_v7/` (runner + wi
 
 ## Prerequisites
 
-- The v6 install must be at data version **6.9.1** (the migration descriptor's `update_from`;
-  `force_update_mode = 'clean'`). The runner's preflight enforces this and refuses otherwise.
+- The v6 install must be at data version **6.9.1 or later, and below 7.0.0** — `update_from` in
+  the migration descriptor is a *minimum*, so an install kept current (6.9.2, 6.9.3, …) migrates
+  without touching the descriptor. The runner's preflight enforces the range and refuses outside it.
+  The engine itself still selects the descriptor by an **exact** `update_from` match, so when the DB
+  is past the minimum the runner exports `PREPARE_V7_UPDATE_FROM=<db version>` and the descriptor
+  aligns to it (`engine/core/base/update/updates.php`). The override can only *raise* `update_from`:
+  a DB below 6.9.1 can never be forced through.
 - PostgreSQL client tools (`pg_dump`) reachable at the engine's `DB_BIN_PATH` (mandatory backup).
 - Superuser (`DEDALO_SUPERUSER`) + **maintenance mode** enabled (guards mirror the current
   update widget).
@@ -107,21 +112,33 @@ close_v6_prepare_v7/build_package.sh          # regenerate → close_v6_prepare_
 ## Deploy into a v6 install
 
 1. Copy the ready-made `dist/prepare_v7/` folder into the v6 server (anywhere readable/writable
-   by the maintenance user).
-2. Register the widget with v6's `area_maintenance`: make
-   `widget/prepare_v7/class.prepare_v7.php` discoverable (copy/symlink into v6's
-   `core/area_maintenance/widgets/prepare_v7/`, and add `prepare_v7` to the widget allow‑list).
-   Wire the JS `api_request()` seam to v6's maintenance API (`window.dd_prepare_v7_api`).
-3. If the widget class is not under `<package>/widget/prepare_v7/`, set
-   `PREPARE_V7_PACKAGE_ROOT` so it can find the package.
+   by the maintenance user — **preferably outside the web root**; if it must live inside, deny
+   HTTP access to it, as the shipped `.htaccess` does in this repo).
+2. Copy `dist/prepare_v7/widget/prepare_v7/` (class + `js/`) into v6's
+   `core/area_maintenance/widgets/prepare_v7/`. The class resolves the package from its own
+   location; if the package lives elsewhere, set `PREPARE_V7_PACKAGE_ROOT` (or install a shim
+   like this repo's `core/area_maintenance/widgets/prepare_v7/class.prepare_v7.php`, which sets
+   it and requires the package class).
+3. Register the widget in v6's `area_maintenance::get_ar_widgets()` with `id = 'prepare_v7'`
+   (that id is what makes v6 load both `class.prepare_v7.php` and `js/prepare_v7.js`).
+
+No JS wiring is needed: the widget talks to v6's own maintenance API
+(`dd_area_maintenance_api` → `get_widget_value` / `widget_request`).
 
 ## Run
 
 ### From the widget
-- **Run preflight (safe):** spawns `--dry-run` — version gate, DB connectivity, `pg_dump`
-  availability, and a data‑review pass (no writes). Read `var/prepare_v7.log`.
+Maintenance area → **"Prepare installation for v7"**. The panel shows the readiness snapshot
+(database, data version in DB, code version, package/engine paths, superuser + maintenance-mode
+checks) and three buttons:
+- **Run preflight (safe, no writes):** spawns `--dry-run` — version gate, DB connectivity,
+  `pg_dump` availability, and a data‑review pass.
 - **Prepare installation for v7 (migrate):** confirms, then spawns the real run. Requires
   superuser + maintenance mode.
+- **Refresh log:** re-reads the log tail on demand.
+
+Each launch rotates `var/prepare_v7.log` to `var/prepare_v7.log.previous`, so the panel always
+streams the current run; it polls every 5 s until the runner writes a terminal line.
 
 ### Headless (equivalent)
 ```bash
@@ -139,12 +156,18 @@ The bundled engine runs against the **v6 database using the v6 configuration**. 
 engine share the same DB constant names (`DEDALO_HOSTNAME_CONN`, `DEDALO_DATABASE_CONN`, …), and
 the engine imports the rest via Dédalo's own legacy‑config auto‑migration:
 
-- **From the widget (automatic):** the widget runs inside v6, so it copies the v6 install's legacy
-  config files (`config_core.php`, `config_db.php`, `config.php`, `config_areas.php` — whichever
-  exist, from `DEDALO_CONFIG_PATH`) into `engine/config/`. On the next engine boot, `bootstrap.php`
-  detects them and runs `config_auto_migrate`, generating a complete `../private/.env` + `state.php`
-  (DB creds + langs + entity + install status). Path constants are scoped `DERIVED` and **dropped**,
-  so v6 paths never override the bundled engine's own — verified.
+- **From the widget (automatic):** the widget runs inside a booted v6, so it writes a **literal
+  snapshot** of the live v6 constants (DB, identity, lang, runtime, state, defaults, diffusion —
+  never `paths`) into `engine/config/config_db.php`. On the next engine boot, `bootstrap.php`
+  detects it and runs `config_auto_migrate`, generating a complete `../private/.env` + `state.php`
+  (DB creds + langs + entity + install status), then **quarantines** the snapshot out of the engine
+  tree into `<package>/backups/config_migration/…`. Path constants are never exported, so v6 paths
+  cannot override the bundled engine's own — verified.
+  The snapshot is written instead of *copying* the v6 config files because `config_auto_migrate`
+  reads its sources statically (a tokenized `define()` scan) and can only migrate **literals**:
+  on installs where `config/config_db.php` is a stub that `include`s `../private/config_db.inc`,
+  a copy would yield zero constants. The generated file and the quarantined copies carry the DB
+  password — they are `0600`, live in the gitignored package dir, and are rewritten on every launch.
 - **Headless:** copy your v6 install's `config_core.php` + `config_db.php` into
   `dist/prepare_v7/engine/config/`, then run the runner. The first boot auto‑migrates them. (The
   legacy files are read *statically*, a tokenized `define()` scan — never executed.)
@@ -175,6 +198,29 @@ the engine imports the rest via Dédalo's own legacy‑config auto‑migration:
 Phases 1–2 are **idempotent** (`IF NOT EXISTS` / `OR REPLACE`, backfills are `TRUNCATE + INSERT`),
 so a re‑run after a partial failure is safe.
 
+## What the preflight can and cannot tell you
+
+It reviews **exactly the tables the real run reformats**, read from the descriptor itself
+(`run_scripts → reformat_matrix_data → script_vars[0]`), not from a discovery query: reviewing
+more is not extra safety, it crashes (e.g. `matrix_notifications` has no `section_tipo` column,
+and `process_matrix_row_data()` takes it as a non-nullable `string`). Tables that still carry a
+legacy `datos` column but are *not* on that list are reported as left-untouched.
+
+It runs **before** `dd_ontology` exists (the real phase 1 creates it), so no component model
+resolves and every value produces an `Ignored empty model` report. Those are discounted and
+reported as one count: the verdict rests on the remaining reports (bad locators, malformed
+`datos`, …). **Component models can only be validated by a preflight run after a real phase 1.**
+For the same reason PHP's `error_log` would receive one entry per row, so error logging is
+suspended for the review pass only (it was writing tens of GB).
+
+Phases **fail loudly**: the engine installs its own exception handler, and PHP exits with code
+**0** once such a handler returns — an uncaught throwable used to look like success. Every phase
+installs `prepare_v7_fail_loud()`, which chains the engine handler, logs the throwable and exits 9.
+
+The runner distils each phase's per-row stdout into one `progress:` heartbeat every 10 s (plus the
+final line); **stderr is never throttled**. Streaming it verbatim produced a 285 MB log for one
+dry run.
+
 ## Verify
 
 - Preflight exits 0 with no data errors.
@@ -186,7 +232,12 @@ so a re‑run after a partial failure is safe.
 
 ## Notes / limits
 
-- Only **6.9.1 → 7.0.0** is supported (the single descriptor in `engine/core/base/update/updates.php`).
+- Only **6.9.1+ → 7.0.0** is supported (the single descriptor in `engine/core/base/update/updates.php`,
+  read as a minimum — see Prerequisites).
+- The runner is spawned with the **PHP CLI** binary from `PHP_BIN_PATH` (the v6 config constant, same
+  one `exec_::request_cli` uses), never `PHP_BINARY`: under php-fpm that is the FPM binary, which
+  prints its usage instead of running the script. The widget probes it (`php -v` must say `(cli)`)
+  before spawning and reports the failure instead of launching into the void.
 - In‑place testing against this repo instead of a built package: set `PREPARE_V7_ENGINE_ROOT`
   to an engine root that has its **own** `../private/.env`, so tests never touch a real install.
 - The DB password reaches the engine only via the auto‑migrated `private/.env` (generated at
