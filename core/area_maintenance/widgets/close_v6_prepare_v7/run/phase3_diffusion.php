@@ -39,6 +39,9 @@ $log = function(string $line) use ($log_file) : void {
 	fwrite(STDOUT, $line . PHP_EOL);
 };
 
+// uncaught throwable / fatal ⇒ logged + non-zero exit (never a silent "success")
+prepare_v7_fail_loud($log_file, 'phase3');
+
 if (!$has_yes) {
 	$log('Refusing to run the diffusion migration without --yes.');
 	exit(2);

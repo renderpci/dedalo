@@ -16,7 +16,8 @@
 *   create_relation_index_store  (matrix_relation_index + triggers + backfill).
 * On full success update_version() records the new version in matrix_updates.
 *
-* Exit codes: 0 ok · 2 usage/boot · 3 no matching descriptor · 5 update failed
+* Exit codes: 0 ok · 2 usage/boot · 3 no matching descriptor · 5 update failed ·
+*             9 died on an uncaught throwable (see prepare_v7_fail_loud)
 *
 * @package Dédalo
 * @subpackage close_v6_prepare_v7
@@ -34,12 +35,29 @@ $log = function(string $line) use ($log_file) : void {
 	fwrite(STDOUT, $line . PHP_EOL);
 };
 
+// uncaught throwable / fatal ⇒ logged + non-zero exit (never a silent "success")
+prepare_v7_fail_loud($log_file, 'phase2');
+
 if (!$has_yes) {
 	$log('Refusing to run update_version without --yes.');
 	exit(2);
 }
 
 $log('REAL RUN start. db=' . (defined('DEDALO_DATABASE_CONN') ? DEDALO_DATABASE_CONN : '?'));
+
+// version gate + descriptor alignment. This process is FRESH (phase 1 exited), so the
+// PREPARE_V7_UPDATE_FROM export must be re-applied here before update::get_updates().
+$gate = prepare_v7_version_gate::check();
+$log('version gate: ' . $gate->msg);
+if ($gate->result !== true) {
+	$log('ABORT: database not eligible for the v6→v7 migration.');
+	exit(3);
+}
+if ($gate->aligned === true) {
+	prepare_v7_version_gate::apply_update_from($gate);
+	$log('descriptor update_from aligned to ' . implode('.', $gate->current)
+		. ' (declared minimum: ' . implode('.', $gate->expected) . ').');
+}
 
 // select the descriptor matching the current DB version (same logic as the engine)
 $current = get_current_data_version();
@@ -56,7 +74,7 @@ foreach ($updates as $u) {
 if ($descriptor === null) {
 	$log('ABORT: no update descriptor matches current version '
 		. (empty($current) ? '[none]' : implode('.', $current))
-		. '. Did phase 1 run? Is the DB at 6.8.10?');
+		. '. Did phase 1 run?');
 	exit(3);
 }
 $log('descriptor: → ' . $descriptor->version_major . '.' . $descriptor->version_medium . '.' . $descriptor->version_minor);

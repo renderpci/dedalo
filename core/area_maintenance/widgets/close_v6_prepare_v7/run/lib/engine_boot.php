@@ -61,6 +61,86 @@ function prepare_v7_resolve_paths() : array {
 
 
 /**
+* prepare_v7_fail_loud
+* Makes a phase FAIL VISIBLY. Call it right after the phase resolves its log file.
+*
+* The engine installs its own exception handler (core/base/class.Error.php), and PHP
+* terminates with exit code **0** once a user exception handler returns — so an uncaught
+* Throwable inside a phase looked exactly like success to the runner: no completion lines,
+* no error, "exited with code 0", "Preflight PASSED". This installs a handler that chains
+* the engine's (so its logging still happens), records the throwable in the phase log and
+* exits 9. A real fatal (E_ERROR, OOM …) already exits non-zero, but is recorded here too,
+* because the engine routes it to php's error_log, not to our log.
+*
+* @param string $log_file
+* @param string $tag - phase tag used in the log lines, e.g. 'phase1'
+* @return void
+*/
+function prepare_v7_fail_loud(string $log_file, string $tag) : void {
+
+	$emit = static function(string $line) use ($log_file, $tag) : void {
+		@file_put_contents($log_file, date('c') . ' [' . $tag . '] ' . $line . PHP_EOL, FILE_APPEND | LOCK_EX);
+		fwrite(STDERR, $line . PHP_EOL);
+	};
+
+	// capture the engine's handler, then install ours on top
+	$previous = set_exception_handler(static function() : void {});
+	set_exception_handler(static function(\Throwable $e) use ($previous, $emit) : void {
+		if (is_callable($previous)) {
+			try { $previous($e); } catch (\Throwable $ignored) {} // engine logging is best-effort
+		}
+		$emit('UNCAUGHT ' . get_class($e) . ': ' . $e->getMessage());
+		$emit('  at ' . $e->getFile() . ':' . $e->getLine());
+		exit(9);
+	});
+
+	register_shutdown_function(static function() use ($emit) : void {
+		$err = error_get_last();
+		if ($err !== null && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) {
+			$emit('FATAL: ' . $err['message']);
+			$emit('  at ' . $err['file'] . ':' . $err['line']);
+		}
+	});
+}//end prepare_v7_fail_loud
+
+
+/**
+* prepare_v7_migration_tables
+* The tables the REAL run will reformat, read from the migration descriptor itself
+* (run_scripts → reformat_matrix_data → script_vars[0]).
+*
+* The preflight must review exactly this list: reviewing more is not "extra safety",
+* it crashes — e.g. matrix_notifications has no section_tipo column at all, and
+* v6_to_v7::process_matrix_row_data() takes section_tipo as a non-nullable string.
+*
+* @return array<int,string> - empty when the descriptor does not declare the step
+*/
+function prepare_v7_migration_tables() : array {
+
+	if (!class_exists('update')) {
+		return [];
+	}
+
+	$updates = update::get_updates();
+	$first   = array_key_first((array)$updates);
+	if ($first === null) {
+		return [];
+	}
+
+	foreach ((array)($updates->$first->run_scripts ?? []) as $script) {
+		if (($script->script_method ?? '') === 'reformat_matrix_data') {
+			$vars = (array)($script->script_vars ?? []);
+			if (isset($vars[0]) && is_array($vars[0])) {
+				return array_values($vars[0]);
+			}
+		}
+	}
+
+	return [];
+}//end prepare_v7_migration_tables
+
+
+/**
 * prepare_v7_boot_engine
 * Boots the bundled engine and a CLI superuser session. Returns resolved paths.
 * @return array{engine_root:string, package_root:string, var_dir:string}

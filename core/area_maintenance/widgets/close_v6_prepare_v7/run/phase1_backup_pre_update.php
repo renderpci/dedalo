@@ -15,7 +15,8 @@
 *                (mirroring the pre_update → logout → login → update boundary).
 *
 * Exit codes: 0 ok · 2 usage/boot · 3 not eligible · 4 backup failed ·
-*             5 pre_update failed · 6 preflight data errors
+*             5 pre_update failed · 6 preflight data errors ·
+*             9 died on an uncaught throwable (see prepare_v7_fail_loud)
 *
 * @package Dédalo
 * @subpackage close_v6_prepare_v7
@@ -38,14 +39,25 @@ $log = function(string $line) use ($log_file) : void {
 	fwrite(STDOUT, $line . PHP_EOL);
 };
 
+// uncaught throwable / fatal ⇒ logged + non-zero exit (never a silent "success")
+prepare_v7_fail_loud($log_file, 'phase1');
+
 $log(($is_dry ? 'PREFLIGHT' : 'REAL RUN') . ' start. db=' . (defined('DEDALO_DATABASE_CONN') ? DEDALO_DATABASE_CONN : '?'));
 
 // 1. version gate --------------------------------------------------------------
+// Accepts the range [update_from, target) — any v6 at or after the descriptor's
+// minimum. When the DB is PAST the minimum the descriptor must be told, because the
+// engine selects it by an exact match (see version_gate::apply_update_from).
 $gate = prepare_v7_version_gate::check();
 $log('version gate: ' . $gate->msg);
 if ($gate->result !== true) {
 	$log('ABORT: database not eligible for the v6→v7 migration.');
 	exit(3);
+}
+if ($gate->aligned === true) {
+	prepare_v7_version_gate::apply_update_from($gate);
+	$log('descriptor update_from aligned to ' . implode('.', $gate->current)
+		. ' (declared minimum: ' . implode('.', $gate->expected) . ').');
 }
 
 // 2. DB connectivity sanity ----------------------------------------------------
@@ -76,22 +88,84 @@ if ($is_dry) {
 		$log('WARNING: pg_dump not available — the real run will refuse unless --skip-backup.');
 	}
 
-	// data-review pass (save=false): discover v6 source tables (those still
-	// carrying the legacy `datos` column) and run the reformat in review mode.
-	$ar_tables = prepare_v7_discover_datos_tables();
-	$log('data-review tables (' . count($ar_tables) . '): ' . implode(', ', $ar_tables));
+	// data-review pass (save=false): review EXACTLY the tables the real run reformats
+	// (from the descriptor), so the preflight exercises the same code path on the same
+	// data. Discovery is only the fallback, and is also used to report v6 tables that
+	// still carry a legacy `datos` column but are NOT in the migration list.
+	$ar_tables  = prepare_v7_migration_tables();
+	$discovered = prepare_v7_discover_datos_tables();
 
 	if (empty($ar_tables)) {
-		$log('No tables with a legacy `datos` column found. '
+		$log('WARNING: the descriptor declares no reformat_matrix_data table list; '
+			. 'falling back to discovery.');
+		$ar_tables = $discovered;
+	}
+
+	$log('data-review tables (' . count($ar_tables) . '): ' . implode(', ', $ar_tables));
+
+	$untouched = array_values(array_diff($discovered, $ar_tables));
+	if (!empty($untouched)) {
+		$log('NOTE: these tables still carry a legacy `datos` column but are NOT in the '
+			. 'migration list, so the migration leaves them as they are: ' . implode(', ', $untouched));
+	}
+
+	if (empty($ar_tables)) {
+		$log('No tables to review. '
 			. 'Either already migrated, or not a v6 data layout — review manually.');
 	}
 
+	// `dd_ontology` is created by the REAL phase 1 (pre_update), so in a preflight it is
+	// normally absent. The per-row progress line calls label::get_label(), which queries
+	// that missing table, and the engine logs ONE error per row to PHP's error_log —
+	// tens of GB on a real database. The review's own findings are RETURNED (not logged),
+	// so PHP error logging is suspended for the review pass only.
+	$ontology_ready	= prepare_v7_dd_ontology_exists();
+	$log_errors		= ini_get('log_errors');
+	if (!$ontology_ready) {
+		$log('NOTE: table `dd_ontology` does not exist yet (the real phase 1 creates it). '
+			. 'The data review still runs, but per-row label lookups fail against it, so PHP '
+			. 'error logging is suspended for the review pass (it would otherwise write one '
+			. 'error per row to php error_log).');
+		@ini_set('log_errors', '0');
+	}
+
 	$review = v6_to_v7::reformat_matrix_data($ar_tables, false); // false = no save
-	$n_err  = is_array($review->errors ?? null) ? count($review->errors) : 0;
-	$log('data-review: ' . ($review->msg ?? 'n/a') . ' | errors: ' . $n_err);
+
+	if (!$ontology_ready) {
+		@ini_set('log_errors', (string)$log_errors);
+	}
+
+	$errors = is_array($review->errors ?? null) ? $review->errors : [];
+	$log('data-review: ' . ($review->msg ?? 'n/a') . ' | reports: ' . count($errors));
+
+	// Without `dd_ontology` no component model resolves, so EVERY value reports
+	// "Ignored empty model". That is the ontology's absence (expected in a preflight),
+	// not a data defect: count it once and judge the run on the remaining reports.
+	if (!$ontology_ready && !empty($errors)) {
+		$no_model	= 0;
+		$rest		= [];
+		foreach ($errors as $e) {
+			if (is_string($e) && strpos($e, 'Ignored empty model') !== false) {
+				$no_model++;
+				continue;
+			}
+			$rest[] = $e;
+		}
+		if ($no_model > 0) {
+			$log('NOTE: ' . $no_model . ' "Ignored empty model" report(s) discounted — caused by '
+				. '`dd_ontology` not existing yet, not by the data. Component models can only be '
+				. 'validated by a preflight run AFTER a real phase 1.');
+		}
+		$errors = $rest;
+	}
+
+	$n_err = count($errors);
 	if ($n_err > 0) {
-		foreach (array_slice($review->errors, 0, 50) as $e) {
-			$log('  · ' . $e);
+		foreach (array_slice($errors, 0, 50) as $e) {
+			$log('  · ' . (is_string($e) ? $e : json_encode($e)));
+		}
+		if ($n_err > 50) {
+			$log('  … and ' . ($n_err - 50) . ' more.');
 		}
 		$log('PREFLIGHT found ' . $n_err . ' data issue(s). Review before running for real.');
 		exit(6);
@@ -139,6 +213,27 @@ if (($pre->result ?? false) !== true) {
 
 $log('PHASE 1 done. dd_ontology provisioned.');
 exit(0);
+
+
+/**
+* prepare_v7_dd_ontology_exists
+* True when the v7 ontology table is already present (i.e. a real phase 1 has run).
+* @return bool
+*/
+function prepare_v7_dd_ontology_exists() : bool {
+
+	try {
+		$res = matrix_db_manager::exec_search("SELECT to_regclass('public.dd_ontology') AS t", [], false);
+		if ($res) {
+			$row = pg_fetch_assoc($res);
+			return !empty($row['t']);
+		}
+	} catch (\Throwable $e) {
+		// unknown → assume absent, the caller only uses this to reduce log noise
+	}
+
+	return false;
+}//end prepare_v7_dd_ontology_exists
 
 
 /**

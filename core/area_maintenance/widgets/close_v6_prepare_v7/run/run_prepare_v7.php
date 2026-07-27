@@ -76,16 +76,98 @@ $emit = function(string $line) use ($log_file) : void {
 	fwrite(STDOUT, $line . PHP_EOL);
 };
 
+/** Seconds between progress heartbeats distilled from a phase's row-level output. */
+const PREPARE_V7_HEARTBEAT_SECONDS = 10;
+
 /**
-* spawn a child phase, streaming its output; returns its exit code.
+* spawn a child phase; returns its exit code.
+*
+* The engine's migration steps print ONE progress line PER ROW to stdout
+* (update::tables_rows_iterator → print_cli). On a real database that is millions of
+* lines — streaming it into the caller's log file produced a 285 MB spawn.log for a
+* dry-run alone. So stdout is consumed here and distilled into a heartbeat: at most one
+* 'progress:' line every PREPARE_V7_HEARTBEAT_SECONDS, plus the last line seen when the
+* phase ends. STDERR is NOT throttled — warnings and fatals go to the log verbatim,
+* because that is where a phase death is diagnosed.
 */
 $spawn = function(string $script, array $args) use ($php, $run_dir, $emit) : int {
+
 	$cmd = escapeshellarg($php) . ' ' . escapeshellarg($run_dir . '/' . $script);
 	foreach ($args as $a) { $cmd .= ' ' . $a; }
 	$emit('spawn: ' . $script . ' ' . implode(' ', $args));
-	$code = 0;
-	passthru($cmd, $code);
+
+	$descriptors = [
+		1 => ['pipe', 'w'],
+		2 => ['pipe', 'w']
+	];
+	$pipes = [];
+	$proc = proc_open($cmd, $descriptors, $pipes);
+	if (!is_resource($proc)) {
+		$emit($script . ': FAILED to start the child process.');
+		return 1;
+	}
+
+	stream_set_blocking($pipes[1], false);
+	stream_set_blocking($pipes[2], false);
+
+	$buffer		= [1 => '', 2 => ''];
+	$last_out	= '';
+	$last_beat	= 0;
+	$lines_out	= 0;
+
+	while (!empty($pipes)) {
+
+		$read	= array_values($pipes);
+		$write	= null;
+		$except	= null;
+		if (@stream_select($read, $write, $except, 1) === false) {
+			break;
+		}
+
+		foreach ($pipes as $fd => $pipe) {
+
+			if (!in_array($pipe, $read, true)) {
+				if (feof($pipe)) { fclose($pipe); unset($pipes[$fd]); }
+				continue;
+			}
+
+			$chunk = fread($pipe, 65536);
+			if ($chunk === false || ($chunk === '' && feof($pipe))) {
+				fclose($pipe);
+				unset($pipes[$fd]);
+				continue;
+			}
+			$buffer[$fd] .= $chunk;
+
+			// consume whole lines only
+			while (($pos = strpos($buffer[$fd], "\n")) !== false) {
+				$line = rtrim(substr($buffer[$fd], 0, $pos), "\r");
+				$buffer[$fd] = substr($buffer[$fd], $pos + 1);
+				if ($line === '') {
+					continue;
+				}
+				if ($fd === 2) {
+					$emit($script . ' [stderr] ' . $line); // never throttled
+					continue;
+				}
+				$lines_out++;
+				$last_out = $line;
+				$now = time();
+				if (($now - $last_beat) >= PREPARE_V7_HEARTBEAT_SECONDS) {
+					$last_beat = $now;
+					$emit($script . ' progress: ' . mb_strimwidth($line, 0, 300, '…'));
+				}
+			}
+		}
+	}
+
+	$code = proc_close($proc);
+
+	if ($last_out !== '' && $lines_out > 0) {
+		$emit($script . ' last output (' . $lines_out . ' lines): ' . mb_strimwidth($last_out, 0, 300, '…'));
+	}
 	$emit($script . ' exited with code ' . $code);
+
 	return $code;
 };
 
