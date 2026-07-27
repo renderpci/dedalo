@@ -1,6 +1,13 @@
 # Running Dédalo in containers
 
-> See also: [Installation hub](index.md) · [Production install](production.md) · [Reverse proxy and TLS](reverse_proxy.md) · [Installer reference](installer_reference.md) · [Troubleshooting](troubleshooting.md)
+> See also: [Installation hub](index.md) · [Simple install](quickstart.md) · [Production install](production.md) · [Reverse proxy and TLS](reverse_proxy.md) · [Installer reference](installer_reference.md) · [Troubleshooting](troubleshooting.md)
+
+!!! tip "Want it in one command instead?"
+    [Simple install](quickstart.md) brings up a complete instance with
+    `./install.sh` or a single `docker compose up -d`, using
+    `docker-compose.simple.yml`. It trades away TLS and media access control to
+    get there, so it suits a machine on your own network only. This page is the
+    full stack, and it is what a public server needs.
 
 The repo ships a `Dockerfile`, a `docker-compose.yml` and the reference proxy
 configuration `deploy/nginx.conf`. Together they stand up the same architecture

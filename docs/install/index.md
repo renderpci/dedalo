@@ -91,10 +91,18 @@ This documentation describes four installation paths. Choose the one that matche
 
 | Path | For | Start here |
 | --- | --- | --- |
+| **One command, own network** | a museum, archive or research group with no server team | **[Simple install](quickstart.md)** |
 | **Bare metal, Ubuntu 24.04** | the production reference | **[Production install](production.md)** |
 | **Bare metal, RHEL family** | Rocky, AlmaLinux, RHEL, Fedora | [RHEL-based systems](install_rhel.md) — a delta on top of the above |
 | **Containers** | Docker Compose, orchestrated deployments | [Docker](docker.md) |
 | **A laptop, in ten minutes** | development, evaluation, a demo | [Dev quickstart](dev_quickstart.md) |
+
+!!! warning "The simple install is not for a public address"
+    [Simple install](quickstart.md) gets you a complete Dédalo with one command,
+    on the explicit trade of **no TLS and no media access control** — right for a
+    machine only your own network reaches, wrong for anything on the internet.
+    Everything it leaves out is listed on that page, and moving up to the full
+    stack later is additive: the data never moves.
 
 And the supporting pages, whichever path you take:
 

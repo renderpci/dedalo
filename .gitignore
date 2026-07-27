@@ -20,6 +20,10 @@ probe_*.ts
 
 # Never commit secrets (config lives in ../private/, outside the repo)
 .env
+# Compose variable substitution for the simple stack, written by install.sh.
+# Deliberately NOT named .env: the engine's own loader reads a repo-root .env
+# from the container's working directory, which would collide with compose's.
+.dedalo.env
 
 # Media root. DEDALO_MEDIA_PATH derives to <repo>/media (PHP parity:
 # DEDALO_ROOT_PATH . '/media'), so a running install writes user uploads HERE
