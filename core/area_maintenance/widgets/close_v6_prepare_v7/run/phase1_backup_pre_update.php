@@ -5,8 +5,11 @@
 * Runs in its OWN engine process. Two modes:
 *
 *   --dry-run  : PREFLIGHT only, writes nothing. Verifies the version gate, DB
-*                connectivity and pg_dump availability, then runs the data
-*                reformat in REVIEW mode (save=false) to surface bad-data errors.
+*                connectivity and that pg_dump can actually dump THIS server (a
+*                client older than the server refuses), then runs the data reformat
+*                in REVIEW mode (save=false) to surface bad-data errors. An unusable
+*                pg_dump FAILS the preflight (exit 4) unless --skip-backup is given:
+*                the backup is the real run's first step, so it is a blocker.
 *
 *   (real)     : requires --yes. Takes a BLOCKING full pg_dump (abort on failure
 *                unless --skip-backup), then runs update::pre_update_version(),
@@ -87,9 +90,20 @@ if (!$pg_dump_ok) {
 // ---------------------------------------------------------------------- DRY RUN
 if ($is_dry) {
 
+	// A blocker, not a warning: the backup is the real run's FIRST step, so an unusable
+	// pg_dump means the migration cannot start. Reporting "PREFLIGHT OK" here would be a
+	// false green — the whole point of the preflight is to catch this before the button.
+	// --skip-backup (a manual backup already in hand) downgrades it to a warning.
 	if (!$pg_dump_ok) {
-		$log('WARNING: pg_dump is unusable — the real run will ABORT at the backup unless '
-			. 'you fix it (or pass --skip-backup with a manual backup in hand).');
+		if ($skip_backup) {
+			$log('WARNING: pg_dump is unusable, but --skip-backup was passed: the real run would '
+				. 'proceed WITHOUT a backup. Make sure you have a current one.');
+		}else{
+			$log('PREFLIGHT FAILED: the mandatory pre-migration backup cannot run.');
+			$log('  ' . $pg_check->msg);
+			$log('  Fix it, or re-run the preflight with --skip-backup if you already have a backup.');
+			exit(4);
+		}
 	}
 
 	// data-review pass (save=false): review EXACTLY the tables the real run reformats
