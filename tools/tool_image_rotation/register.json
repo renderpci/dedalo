@@ -462,7 +462,7 @@
           {
             "lang": "lg-nep",
             "name": "expand",
-            "value": ""
+            "value": "विस्तार गर्नुहोस्"
           },
           {
             "lang": "lg-eus",
@@ -520,6 +520,11 @@
             "value": "Remover fundo"
           },
           {
+            "lang": "lg-nep",
+            "name": "remove_background",
+            "value": "पृष्ठभूमि हटाउनुहोस्"
+          },
+          {
             "lang": "lg-spa",
             "name": "backgroun_removal_completed",
             "value": "Eliminación de fondo completada."
@@ -570,6 +575,11 @@
             "value": "Remoção de fundo concluída."
           },
           {
+            "lang": "lg-nep",
+            "name": "backgroun_removal_completed",
+            "value": "पृष्ठभूमि हटाउने कार्य सम्पन्न भयो।"
+          },
+          {
             "lang": "lg-eus",
             "name": "bk_colour",
             "value": "Atzeko kolorea"
@@ -583,6 +593,11 @@
             "lang": "lg-por",
             "name": "bk_colour",
             "value": "Cor de fundo"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "bk_colour",
+            "value": "पृष्ठभूमि रङ"
           },
           {
             "lang": "lg-eus",
@@ -600,6 +615,11 @@
             "value": "Graus"
           },
           {
+            "lang": "lg-nep",
+            "name": "degrees",
+            "value": "डिग्री"
+          },
+          {
             "lang": "lg-eus",
             "name": "rotation",
             "value": "Biratzea"
@@ -613,6 +633,11 @@
             "lang": "lg-por",
             "name": "rotation",
             "value": "Rotação"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "rotation",
+            "value": "घुमाउ"
           },
           {
             "lang": "lg-eus",
@@ -630,6 +655,11 @@
             "value": "Transparente"
           },
           {
+            "lang": "lg-nep",
+            "name": "transparent",
+            "value": "पारदर्शी"
+          },
+          {
             "lang": "lg-ara",
             "name": "expand",
             "value": "توسيع"
@@ -638,6 +668,11 @@
             "lang": "lg-por",
             "name": "expand",
             "value": "Expandir"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "expand",
+            "value": "विस्तार गर्नुहोस्"
           },
           {
             "lang": "lg-eng",
@@ -688,6 +723,11 @@
             "lang": "lg-por",
             "name": "processing_image",
             "value": "Processando imagem..."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "processing_image",
+            "value": "छवि प्रशोधन गर्दै..."
           },
           {
             "lang": "lg-eng",
@@ -853,6 +893,56 @@
             "lang": "lg-nep",
             "name": "procesing",
             "value": "प्रशोधन गर्दै... पर्खनुहोस्।"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "initializing",
+            "value": "Initializing"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "initializing",
+            "value": "Inicializando"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "initializing",
+            "value": "Inicialitzant"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "initializing",
+            "value": "Hasten"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "initializing",
+            "value": "Initialisation"
+          },
+          {
+            "lang": "lg-por",
+            "name": "initializing",
+            "value": "Inicializando"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "initializing",
+            "value": "Initialisiere"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "initializing",
+            "value": "Inizializzazione"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "initializing",
+            "value": "Αρχικοποίηση"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "initializing",
+            "value": "सुरु गर्दै"
           }
         ]
       }

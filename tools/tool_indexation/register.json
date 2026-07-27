@@ -372,14 +372,74 @@
             "value": "Error en esborrar locator"
           },
           {
+            "lang": "lg-eus",
+            "name": "error_delete_locator",
+            "value": "Errorea kokatzailea ezabatzean"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "error_delete_locator",
+            "value": "Erreur lors de la suppression du localisateur"
+          },
+          {
+            "lang": "lg-por",
+            "name": "error_delete_locator",
+            "value": "Erro ao eliminar o localizador"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "error_delete_locator",
+            "value": "Errore durante l'eliminazione del locator"
+          },
+          {
             "lang": "lg-cat",
             "name": "error_delete_tag",
             "value": "Error al borrar etiqueta"
           },
           {
+            "lang": "lg-eus",
+            "name": "error_delete_tag",
+            "value": "Ezin izan da etiketa ezabatu"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "error_delete_tag",
+            "value": "Échec de la suppression de l'étiquette"
+          },
+          {
+            "lang": "lg-por",
+            "name": "error_delete_tag",
+            "value": "Não foi possível eliminar a etiqueta"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "error_delete_tag",
+            "value": "Impossibile eliminare l'etichetta"
+          },
+          {
             "lang": "lg-cat",
             "name": "warning_delete_tag",
             "value": "Esborrarà l'etiqueta seleccionada en tots els idiomes i totes les relacions i indexació associades a ella"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "warning_delete_tag",
+            "value": "Hautatutako etiketa hizkuntza guztietan ezabatuko da, baita hari lotutako erlazio eta indexazio guztiak ere"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "warning_delete_tag",
+            "value": "L'étiquette sélectionnée sera supprimée dans toutes les langues, ainsi que toutes les relations et indexations associées"
+          },
+          {
+            "lang": "lg-por",
+            "name": "warning_delete_tag",
+            "value": "Irá eliminar a etiqueta selecionada em todos os idiomas e todas as relações e indexações associadas"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "warning_delete_tag",
+            "value": "Eliminerà l'etichetta selezionata in tutte le lingue e tutte le relazioni e indicizzazioni associate"
           },
           {
             "lang": "lg-eng",
@@ -420,6 +480,16 @@
             "lang": "lg-por",
             "name": "approach",
             "value": "Foco"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "approach",
+            "value": "Προσέγγιση"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "approach",
+            "value": "दृष्टिकोण"
           },
           {
             "lang": "lg-eng",
@@ -520,6 +590,56 @@
             "lang": "lg-por",
             "name": "label_normal",
             "value": "Normal"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "create_tag_info_note",
+            "value": "Create tag info note"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "create_tag_info_note",
+            "value": "Crear nota de información de la etiqueta"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "create_tag_info_note",
+            "value": "Crear nota d'informació de l'etiqueta"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "create_tag_info_note",
+            "value": "Sortu etiketaren informazio-oharra"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "create_tag_info_note",
+            "value": "Créer une note d'information sur l'étiquette"
+          },
+          {
+            "lang": "lg-por",
+            "name": "create_tag_info_note",
+            "value": "Criar nota de informação da etiqueta"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "create_tag_info_note",
+            "value": "Info-Notiz zum Tag erstellen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "create_tag_info_note",
+            "value": "Crea nota informativa dell'etichetta"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "create_tag_info_note",
+            "value": "Δημιουργία σημείωσης πληροφοριών ετικέτας"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "create_tag_info_note",
+            "value": "ट्याग जानकारी टिप्पणी सिर्जना गर्नुहोस्"
           }
         ]
       }

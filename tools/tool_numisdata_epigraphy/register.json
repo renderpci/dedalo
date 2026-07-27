@@ -264,6 +264,21 @@
             "lang": "lg-por",
             "name": "used_in",
             "value": "Usado em"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "used_in",
+            "value": "Hemen erabilia"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "used_in",
+            "value": "Χρησιμοποιείται σε"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "used_in",
+            "value": "मा प्रयोग गरिएको"
           }
         ]
       }

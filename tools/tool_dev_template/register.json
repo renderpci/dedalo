@@ -188,6 +188,46 @@
             "value": "My first label"
           },
           {
+            "lang": "lg-cat",
+            "name": "my_first_label",
+            "value": "La meva primera etiqueta"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "my_first_label",
+            "value": "Nire lehen etiketa"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "my_first_label",
+            "value": "Ma première étiquette"
+          },
+          {
+            "lang": "lg-por",
+            "name": "my_first_label",
+            "value": "A minha primeira etiqueta"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "my_first_label",
+            "value": "Meine erste Beschriftung"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "my_first_label",
+            "value": "La mia prima etichetta"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "my_first_label",
+            "value": "Η πρώτη μου ετικέτα"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "my_first_label",
+            "value": "मेरो पहिलो लेबल"
+          },
+          {
             "lang": "lg-spa",
             "name": "my_second_label",
             "value": "Mi segunda etiqueta"
@@ -196,6 +236,146 @@
             "lang": "lg-eng",
             "name": "my_second_label",
             "value": "My second label"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "my_second_label",
+            "value": "La meva segona etiqueta"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "my_second_label",
+            "value": "Nire bigarren etiketa"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "my_second_label",
+            "value": "Ma deuxième étiquette"
+          },
+          {
+            "lang": "lg-por",
+            "name": "my_second_label",
+            "value": "A minha segunda etiqueta"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "my_second_label",
+            "value": "Meine zweite Beschriftung"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "my_second_label",
+            "value": "La mia seconda etichetta"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "my_second_label",
+            "value": "Η δεύτερη μου ετικέτα"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "my_second_label",
+            "value": "मेरो दोस्रो लेबल"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "upload_file",
+            "value": "Upload generic file"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "upload_file",
+            "value": "Subir archivo genérico"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "upload_file",
+            "value": "Pujar fitxer genèric"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "upload_file",
+            "value": "Igo fitxategi generikoa"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "upload_file",
+            "value": "Téléverser un fichier générique"
+          },
+          {
+            "lang": "lg-por",
+            "name": "upload_file",
+            "value": "Carregar ficheiro genérico"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "upload_file",
+            "value": "Generische Datei hochladen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "upload_file",
+            "value": "Carica file generico"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "upload_file",
+            "value": "Μεταφόρτωση γενικού αρχείου"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "upload_file",
+            "value": "सामान्य फाइल अपलोड गर्नुहोस्"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "upload_image_file",
+            "value": "Update image file"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "upload_image_file",
+            "value": "Actualizar archivo de imagen"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "upload_image_file",
+            "value": "Actualitzar fitxer d'imatge"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "upload_image_file",
+            "value": "Eguneratu irudi-fitxategia"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "upload_image_file",
+            "value": "Mettre à jour le fichier image"
+          },
+          {
+            "lang": "lg-por",
+            "name": "upload_image_file",
+            "value": "Atualizar ficheiro de imagem"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "upload_image_file",
+            "value": "Bilddatei aktualisieren"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "upload_image_file",
+            "value": "Aggiorna il file immagine"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "upload_image_file",
+            "value": "Ενημέρωση αρχείου εικόνας"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "upload_image_file",
+            "value": "छवि फाइल अद्यावधिक गर्नुहोस्"
           }
         ]
       }

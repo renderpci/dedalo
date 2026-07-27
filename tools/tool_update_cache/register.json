@@ -480,6 +480,56 @@
             "lang": "lg-ita",
             "name": "info",
             "value": "Informazioni"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "records",
+            "value": "Records"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "records",
+            "value": "Registros"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "records",
+            "value": "Registres"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "records",
+            "value": "Erregistroak"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "records",
+            "value": "Registres"
+          },
+          {
+            "lang": "lg-por",
+            "name": "records",
+            "value": "Registos"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "records",
+            "value": "Aufzeichnungen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "records",
+            "value": "Registrazioni"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "records",
+            "value": "Εγγραφές"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "records",
+            "value": "रेकर्डहरू"
           }
         ]
       }

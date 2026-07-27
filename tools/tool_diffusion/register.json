@@ -254,6 +254,16 @@
             "value": "समाधान गर्न गहिराइ स्तर"
           },
           {
+            "lang": "lg-eus",
+            "name": "depth_levels",
+            "value": "Ebatzi beharreko sakonera-mailak"
+          },
+          {
+            "lang": "lg-por",
+            "name": "depth_levels",
+            "value": "Níveis de profundidade a resolver"
+          },
+          {
             "lang": "lg-eng",
             "name": "levels_note",
             "value": "Note about publishing levels.\nOne level publishes the fields in that section. \nTwo levels publish in addition, those of the sections directly related to this one through portals, and so on for more levels.\nNote that the number of records to publish (and the time to process them) increases exponentially with the number of levels.\nTry to use the fewest number of levels for fast publishing."
@@ -344,6 +354,16 @@
             "value": "Δημοσίευση των {0} επιλεγμένων εγγραφών"
           },
           {
+            "lang": "lg-eus",
+            "name": "publish_selected_records",
+            "value": "Argitaratu hautatutako {0} erregistroak"
+          },
+          {
+            "lang": "lg-por",
+            "name": "publish_selected_records",
+            "value": "Publicar os {0} registos selecionados"
+          },
+          {
             "lang": "lg-cat",
             "name": "skip_publication_state_check",
             "value": "Ignorar temporalment l'estat de publicació en publicar"
@@ -382,6 +402,16 @@
             "lang": "lg-nep",
             "name": "skip_publication_state_check",
             "value": "प्रकाशन गर्दा अस्थायी रूपमा प्रकाशन स्थितिलाई बेवास्ता गर्नुहोस्"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "skip_publication_state_check",
+            "value": "Ez ikusi aldi baterako argitalpen-egoerari argitaratzean"
+          },
+          {
+            "lang": "lg-por",
+            "name": "skip_publication_state_check",
+            "value": "Ignorar temporariamente o estado de publicação ao publicar"
           },
           {
             "lang": "lg-eng",
@@ -432,6 +462,406 @@
             "lang": "lg-nep",
             "name": "combine_xml_files",
             "value": "XML फाइलहरू संयोजन गर्नुहोस्"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "success",
+            "value": "Success"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "success",
+            "value": "Éxito"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "success",
+            "value": "Èxit"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "success",
+            "value": "Arrakasta"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "success",
+            "value": "Succès"
+          },
+          {
+            "lang": "lg-por",
+            "name": "success",
+            "value": "Sucesso"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "success",
+            "value": "Erfolg"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "success",
+            "value": "Successo"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "success",
+            "value": "Επιτυχία"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "success",
+            "value": "सफलता"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "partial_success",
+            "value": "Partial success"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "partial_success",
+            "value": "Éxito parcial"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "partial_success",
+            "value": "Èxit parcial"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "partial_success",
+            "value": "Arrakasta partziala"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "partial_success",
+            "value": "Succès partiel"
+          },
+          {
+            "lang": "lg-por",
+            "name": "partial_success",
+            "value": "Sucesso parcial"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "partial_success",
+            "value": "Teilweise erfolgreich"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "partial_success",
+            "value": "Successo parziale"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "partial_success",
+            "value": "Μερική επιτυχία"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "partial_success",
+            "value": "आंशिक सफलता"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "fail",
+            "value": "Fail"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "fail",
+            "value": "Fallo"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "fail",
+            "value": "Error"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "fail",
+            "value": "Hutsegitea"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "fail",
+            "value": "Échec"
+          },
+          {
+            "lang": "lg-por",
+            "name": "fail",
+            "value": "Falha"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "fail",
+            "value": "Fehlgeschlagen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "fail",
+            "value": "Fallito"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "fail",
+            "value": "Αποτυχία"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "fail",
+            "value": "असफल"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "table_name",
+            "value": "Table"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "table_name",
+            "value": "Tabla"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "table_name",
+            "value": "Taula"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "table_name",
+            "value": "Taula"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "table_name",
+            "value": "Table"
+          },
+          {
+            "lang": "lg-por",
+            "name": "table_name",
+            "value": "Tabela"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "table_name",
+            "value": "Tabelle"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "table_name",
+            "value": "Tabella"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "table_name",
+            "value": "Πίνακας"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "table_name",
+            "value": "तालिका"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "rows_total",
+            "value": "Rows"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "rows_total",
+            "value": "Filas"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "rows_total",
+            "value": "Files"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "rows_total",
+            "value": "Errenkadak"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "rows_total",
+            "value": "Lignes"
+          },
+          {
+            "lang": "lg-por",
+            "name": "rows_total",
+            "value": "Linhas"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "rows_total",
+            "value": "Zeilen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "rows_total",
+            "value": "Righe"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "rows_total",
+            "value": "Γραμμές"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "rows_total",
+            "value": "पङ्क्तिहरू"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "records_affected",
+            "value": "Records"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "records_affected",
+            "value": "Registros"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "records_affected",
+            "value": "Registres"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "records_affected",
+            "value": "Erregistroak"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "records_affected",
+            "value": "Registres"
+          },
+          {
+            "lang": "lg-por",
+            "name": "records_affected",
+            "value": "Registos"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "records_affected",
+            "value": "Aufzeichnungen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "records_affected",
+            "value": "Registrazioni"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "records_affected",
+            "value": "Εγγραφές"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "records_affected",
+            "value": "रेकर्डहरू"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "pending_deletions",
+            "value": "Pending deletions"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "pending_deletions",
+            "value": "Eliminaciones pendientes"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "pending_deletions",
+            "value": "Eliminacions pendents"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "pending_deletions",
+            "value": "Ezabatze zain daudenak"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "pending_deletions",
+            "value": "Suppressions en attente"
+          },
+          {
+            "lang": "lg-por",
+            "name": "pending_deletions",
+            "value": "Eliminações pendentes"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "pending_deletions",
+            "value": "Ausstehende Löschungen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "pending_deletions",
+            "value": "Eliminazioni in sospeso"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "pending_deletions",
+            "value": "Εκκρεμείς διαγραφές"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "pending_deletions",
+            "value": "बाँकी मेटाइहरू"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "retry",
+            "value": "Retry"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "retry",
+            "value": "Reintentar"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "retry",
+            "value": "Reintentar"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "retry",
+            "value": "Saiatu berriro"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "retry",
+            "value": "Réessayer"
+          },
+          {
+            "lang": "lg-por",
+            "name": "retry",
+            "value": "Tentar novamente"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "retry",
+            "value": "Erneut versuchen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "retry",
+            "value": "Riprova"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "retry",
+            "value": "Επανάληψη"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "retry",
+            "value": "पुनः प्रयास गर्नुहोस्"
           }
         ]
       }

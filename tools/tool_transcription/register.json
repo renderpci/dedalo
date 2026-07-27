@@ -969,6 +969,11 @@
             "value": "Initialisation"
           },
           {
+            "lang": "lg-eus",
+            "name": "initializing",
+            "value": "Hasten"
+          },
+          {
             "lang": "lg-fra",
             "name": "setting_up",
             "value": "Préparation du réseau neuronal"
@@ -979,9 +984,19 @@
             "value": "Service"
           },
           {
+            "lang": "lg-eus",
+            "name": "engine",
+            "value": "Zerbitzua"
+          },
+          {
             "lang": "lg-fra",
             "name": "seconds_abbr",
             "value": "Sec."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "seconds_abbr",
+            "value": "Seg."
           },
           {
             "lang": "lg-fra",
@@ -989,9 +1004,19 @@
             "value": "Vitesse de lecture"
           },
           {
+            "lang": "lg-eus",
+            "name": "play_speed",
+            "value": "Erreprodukzio-abiadura"
+          },
+          {
             "lang": "lg-fra",
             "name": "play_pause",
             "value": "Touche lecture/pause"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "play_pause",
+            "value": "Erreproduzitu / pausatu tekla"
           },
           {
             "lang": "lg-fra",
@@ -999,9 +1024,19 @@
             "value": "Moyen"
           },
           {
+            "lang": "lg-eus",
+            "name": "medium",
+            "value": "Ertaina"
+          },
+          {
             "lang": "lg-fra",
             "name": "insert_tag",
             "value": "Insérer l'étiquette"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "insert_tag",
+            "value": "Etiketa txertatu"
           },
           {
             "lang": "lg-fra",
@@ -1009,9 +1044,19 @@
             "value": "Caractères par ligne"
           },
           {
+            "lang": "lg-eus",
+            "name": "chars_per_line",
+            "value": "Karaktereak lerroko"
+          },
+          {
             "lang": "lg-fra",
             "name": "quality",
             "value": "Qualité"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "quality",
+            "value": "Kalitatea"
           },
           {
             "lang": "lg-fra",
@@ -1019,9 +1064,19 @@
             "value": "Créer des sous-titres"
           },
           {
+            "lang": "lg-eus",
+            "name": "build_subtitles",
+            "value": "Azpitituluak sortu"
+          },
+          {
             "lang": "lg-fra",
             "name": "base",
             "value": "Basse, rapide"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "base",
+            "value": "Baxua, azkarra"
           },
           {
             "lang": "lg-fra",
@@ -1029,12 +1084,27 @@
             "value": "Basse, plus rapide"
           },
           {
+            "lang": "lg-eus",
+            "name": "tiny",
+            "value": "Baxua, azkarrena"
+          },
+          {
             "lang": "lg-fra",
             "name": "small",
             "value": "Basse"
           },
           {
+            "lang": "lg-eus",
+            "name": "small",
+            "value": "Baxua"
+          },
+          {
             "lang": "lg-fra",
+            "name": "babel_transcriber",
+            "value": "Babel"
+          },
+          {
+            "lang": "lg-eus",
             "name": "babel_transcriber",
             "value": "Babel"
           },
@@ -1044,14 +1114,29 @@
             "value": "Transcription automatique"
           },
           {
+            "lang": "lg-eus",
+            "name": "automatic_transcription",
+            "value": "Transkripzio automatikoa"
+          },
+          {
             "lang": "lg-fra",
             "name": "auto_rewind",
             "value": "Rembobinage automatique"
           },
           {
+            "lang": "lg-eus",
+            "name": "auto_rewind",
+            "value": "Atzera automatikoa"
+          },
+          {
             "lang": "lg-fra",
             "name": "large",
             "value": "Haut"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "large",
+            "value": "Altua"
           },
           {
             "lang": "lg-eng",
@@ -1099,6 +1184,11 @@
             "value": "अडियो प्रशोधन गर्दै..."
           },
           {
+            "lang": "lg-eus",
+            "name": "processing_audio",
+            "value": "Audioa prozesatzen... "
+          },
+          {
             "lang": "lg-spa",
             "name": "transcription_completed",
             "value": "Transcripción finalizada."
@@ -1142,6 +1232,11 @@
             "lang": "lg-ita",
             "name": "transcription_completed",
             "value": "Trascrizione completata."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "transcription_completed",
+            "value": "Transkripzioa burutu da."
           },
           {
             "lang": "lg-eng",
@@ -1280,6 +1375,11 @@
           },
           {
             "lang": "lg-eus",
+            "name": "large_turbo",
+            "value": "Altua, azkarra"
+          },
+          {
+            "lang": "lg-eus",
             "name": "setting_up",
             "value": "Sare neuronala konfiguratzen"
           },
@@ -1307,6 +1407,156 @@
             "lang": "lg-ara",
             "name": "procesing",
             "value": "جاري المعالجة... انتظر."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "inactive",
+            "value": "Inactive"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "inactive",
+            "value": "Inactivo"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "inactive",
+            "value": "Inactiu"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "inactive",
+            "value": "Inaktibo"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "inactive",
+            "value": "Inactif"
+          },
+          {
+            "lang": "lg-por",
+            "name": "inactive",
+            "value": "Inativo"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "inactive",
+            "value": "Inaktiv"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "inactive",
+            "value": "Inattivo"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "inactive",
+            "value": "Ανενεργό"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "inactive",
+            "value": "निष्क्रिय"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "processing",
+            "value": "Processing"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "processing",
+            "value": "Procesando"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "processing",
+            "value": "Processant"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "processing",
+            "value": "Prozesatzen"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "processing",
+            "value": "Traitement"
+          },
+          {
+            "lang": "lg-por",
+            "name": "processing",
+            "value": "Processando"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "processing",
+            "value": "Verarbeitung"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "processing",
+            "value": "Elaborazione"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "processing",
+            "value": "Επεξεργασία"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "processing",
+            "value": "प्रक्रिया गर्दै"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "finished",
+            "value": "Process done"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "finished",
+            "value": "Proceso finalizado"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "finished",
+            "value": "Procés finalitzat"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "finished",
+            "value": "Prozesua amaitu da"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "finished",
+            "value": "Traitement terminé"
+          },
+          {
+            "lang": "lg-por",
+            "name": "finished",
+            "value": "Processo concluído"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "finished",
+            "value": "Vorgang abgeschlossen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "finished",
+            "value": "Processo completato"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "finished",
+            "value": "Η διαδικασία ολοκληρώθηκε"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "finished",
+            "value": "प्रक्रिया सम्पन्न भयो"
           }
         ]
       }

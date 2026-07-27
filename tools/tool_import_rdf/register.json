@@ -296,6 +296,16 @@
             "lang": "lg-por",
             "name": "default_lang_of_file_to_import",
             "value": "Idioma padrão do ficheiro a carregar. Dados sem idioma especificado serão importados em:"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "default_lang_of_file_to_import",
+            "value": "Προεπιλεγμένη γλώσσα του αρχείου προς εισαγωγή. Τα δεδομένα χωρίς καθορισμένη γλώσσα θα εισαχθούν στα:"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "default_lang_of_file_to_import",
+            "value": "आयात गर्ने फाइलको पूर्वनिर्धारित भाषा। भाषा नतोकिएको डेटा यसमा आयात गरिनेछ:"
           }
         ]
       }

@@ -452,6 +452,11 @@
             "value": "अघिल्लो अपलोडसँग नाम मिलाउँदै"
           },
           {
+            "lang": "lg-por",
+            "name": "match_name_with_previous_upload",
+            "value": "Fazer corresponder o nome do ficheiro a um carregamento anterior"
+          },
+          {
             "lang": "lg-eng",
             "name": "matching_id",
             "value": "Matching ID"
@@ -495,6 +500,11 @@
             "lang": "lg-nep",
             "name": "matching_id",
             "value": "मिल्दो ID"
+          },
+          {
+            "lang": "lg-por",
+            "name": "matching_id",
+            "value": "ID correspondente"
           },
           {
             "lang": "lg-eng",
@@ -542,6 +552,11 @@
             "value": "मिल्दो नाम"
           },
           {
+            "lang": "lg-por",
+            "name": "matching_name",
+            "value": "Nome correspondente"
+          },
+          {
             "lang": "lg-eng",
             "name": "new_files",
             "value": "New files"
@@ -587,9 +602,19 @@
             "value": "bereizitako irudiak %50"
           },
           {
+            "lang": "lg-por",
+            "name": "crop_50",
+            "value": "Dividir a imagem a 50 %"
+          },
+          {
             "lang": "lg-eus",
             "name": "quality",
             "value": "Kalitatea"
+          },
+          {
+            "lang": "lg-por",
+            "name": "quality",
+            "value": "Qualidade"
           },
           {
             "lang": "lg-eus",
@@ -597,14 +622,29 @@
             "value": "Helburu-eremua"
           },
           {
+            "lang": "lg-por",
+            "name": "target_component",
+            "value": "Campo de destino"
+          },
+          {
             "lang": "lg-eus",
             "name": "file_processor",
             "value": "Prozesatua"
           },
           {
+            "lang": "lg-por",
+            "name": "file_processor",
+            "value": "Processador"
+          },
+          {
             "lang": "lg-nep",
             "name": "new_files",
             "value": "नयाँ फाइलहरू"
+          },
+          {
+            "lang": "lg-por",
+            "name": "new_files",
+            "value": "Ficheiros novos"
           },
           {
             "lang": "lg-spa",
@@ -650,6 +690,11 @@
             "lang": "lg-ita",
             "name": "replace_existing_files",
             "value": "Sostituire i file esistenti"
+          },
+          {
+            "lang": "lg-por",
+            "name": "replace_existing_files",
+            "value": "Substituir os ficheiros existentes"
           },
           {
             "lang": "lg-eng",
@@ -747,6 +792,11 @@
             "value": "Sufixo indica campo"
           },
           {
+            "lang": "lg-nep",
+            "name": "name_to_field",
+            "value": "प्रत्ययले फाँट जनाउँछ"
+          },
+          {
             "lang": "lg-eng",
             "name": "name_to_record_id",
             "value": "Prefix indicates id"
@@ -792,6 +842,11 @@
             "value": "Prefixo indica ID"
           },
           {
+            "lang": "lg-nep",
+            "name": "name_to_record_id",
+            "value": "उपसर्गले id जनाउँछ"
+          },
+          {
             "lang": "lg-eng",
             "name": "same_name_same_record",
             "value": "Same name same record. Create new ID"
@@ -835,6 +890,11 @@
             "lang": "lg-por",
             "name": "same_name_same_record",
             "value": "Mesmo nome, mesmo registo. Criar novo ID"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "same_name_same_record",
+            "value": "उही नाम उही रेकर्ड। नयाँ ID सिर्जना गर्नुहोस्"
           }
         ]
       }

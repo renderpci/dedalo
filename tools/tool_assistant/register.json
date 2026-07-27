@@ -182,6 +182,26 @@
             "value": "Envoyer"
           },
           {
+            "lang": "lg-eus",
+            "name": "send",
+            "value": "Bidali"
+          },
+          {
+            "lang": "lg-por",
+            "name": "send",
+            "value": "Enviar"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "send",
+            "value": "Αποστολή"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "send",
+            "value": "पठाउनुहोस्"
+          },
+          {
             "lang": "lg-eng",
             "name": "thinking",
             "value": "Thinking..."
@@ -212,6 +232,26 @@
             "value": "Réflexion..."
           },
           {
+            "lang": "lg-eus",
+            "name": "thinking",
+            "value": "Pentsatzen..."
+          },
+          {
+            "lang": "lg-por",
+            "name": "thinking",
+            "value": "A pensar..."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "thinking",
+            "value": "Σκέφτομαι..."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "thinking",
+            "value": "सोच्दै..."
+          },
+          {
             "lang": "lg-eng",
             "name": "calling_tool",
             "value": "Calling tool..."
@@ -220,6 +260,46 @@
             "lang": "lg-spa",
             "name": "calling_tool",
             "value": "Llamando herramienta..."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "calling_tool",
+            "value": "Cridant l'eina..."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "calling_tool",
+            "value": "Tresnari deitzen..."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "calling_tool",
+            "value": "Appel de l'outil..."
+          },
+          {
+            "lang": "lg-por",
+            "name": "calling_tool",
+            "value": "A chamar a ferramenta..."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "calling_tool",
+            "value": "Werkzeug wird aufgerufen..."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "calling_tool",
+            "value": "Chiamata dello strumento..."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "calling_tool",
+            "value": "Κλήση εργαλείου..."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "calling_tool",
+            "value": "उपकरण कल गर्दै..."
           },
           {
             "lang": "lg-eng",
@@ -232,6 +312,46 @@
             "value": "Confirmar acción"
           },
           {
+            "lang": "lg-cat",
+            "name": "confirm_action",
+            "value": "Confirmar acció"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "confirm_action",
+            "value": "Berretsi ekintza"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "confirm_action",
+            "value": "Confirmer l'action"
+          },
+          {
+            "lang": "lg-por",
+            "name": "confirm_action",
+            "value": "Confirmar ação"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "confirm_action",
+            "value": "Aktion bestätigen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "confirm_action",
+            "value": "Conferma azione"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "confirm_action",
+            "value": "Επιβεβαίωση ενέργειας"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "confirm_action",
+            "value": "कार्य पुष्टि गर्नुहोस्"
+          },
+          {
             "lang": "lg-eng",
             "name": "new_conversation",
             "value": "New conversation"
@@ -240,6 +360,46 @@
             "lang": "lg-spa",
             "name": "new_conversation",
             "value": "Nueva conversación"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "new_conversation",
+            "value": "Nova conversa"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "new_conversation",
+            "value": "Elkarrizketa berria"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "new_conversation",
+            "value": "Nouvelle conversation"
+          },
+          {
+            "lang": "lg-por",
+            "name": "new_conversation",
+            "value": "Nova conversa"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "new_conversation",
+            "value": "Neue Unterhaltung"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "new_conversation",
+            "value": "Nuova conversazione"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "new_conversation",
+            "value": "Νέα συνομιλία"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "new_conversation",
+            "value": "नयाँ वार्तालाप"
           },
           {
             "lang": "lg-eng",
@@ -252,6 +412,46 @@
             "value": "Generación detenida."
           },
           {
+            "lang": "lg-cat",
+            "name": "generation_stopped",
+            "value": "Generació aturada."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "generation_stopped",
+            "value": "Sorkuntza gelditu da."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "generation_stopped",
+            "value": "Génération arrêtée."
+          },
+          {
+            "lang": "lg-por",
+            "name": "generation_stopped",
+            "value": "Geração interrompida."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "generation_stopped",
+            "value": "Generierung gestoppt."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "generation_stopped",
+            "value": "Generazione interrotta."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "generation_stopped",
+            "value": "Η παραγωγή σταμάτησε."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "generation_stopped",
+            "value": "उत्पादन रोकियो।"
+          },
+          {
             "lang": "lg-eng",
             "name": "stop",
             "value": "Stop"
@@ -260,6 +460,46 @@
             "lang": "lg-spa",
             "name": "stop",
             "value": "Detener"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "stop",
+            "value": "Aturar"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "stop",
+            "value": "Gelditu"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "stop",
+            "value": "Arrêter"
+          },
+          {
+            "lang": "lg-por",
+            "name": "stop",
+            "value": "Parar"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "stop",
+            "value": "Stoppen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "stop",
+            "value": "Ferma"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "stop",
+            "value": "Διακοπή"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "stop",
+            "value": "रोक्नुहोस्"
           },
           {
             "lang": "lg-eng",
@@ -272,6 +512,46 @@
             "value": "Historial"
           },
           {
+            "lang": "lg-cat",
+            "name": "history",
+            "value": "Historial"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "history",
+            "value": "Historia"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "history",
+            "value": "Historique"
+          },
+          {
+            "lang": "lg-por",
+            "name": "history",
+            "value": "Histórico"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "history",
+            "value": "Verlauf"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "history",
+            "value": "Cronologia"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "history",
+            "value": "Ιστορικό"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "history",
+            "value": "इतिहास"
+          },
+          {
             "lang": "lg-eng",
             "name": "copy",
             "value": "Copy"
@@ -280,6 +560,46 @@
             "lang": "lg-spa",
             "name": "copy",
             "value": "Copiar"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "copy",
+            "value": "Copia"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "copy",
+            "value": "Kopiatu"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "copy",
+            "value": "Copie"
+          },
+          {
+            "lang": "lg-por",
+            "name": "copy",
+            "value": "A cópia"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "copy",
+            "value": "Kopieren"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "copy",
+            "value": "Copia"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "copy",
+            "value": "αντίγραφο"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "copy",
+            "value": "कापी"
           },
           {
             "lang": "lg-eng",
@@ -292,6 +612,46 @@
             "value": "Eliminar conversación"
           },
           {
+            "lang": "lg-cat",
+            "name": "delete_thread",
+            "value": "Eliminar conversa"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "delete_thread",
+            "value": "Ezabatu elkarrizketa"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "delete_thread",
+            "value": "Supprimer la conversation"
+          },
+          {
+            "lang": "lg-por",
+            "name": "delete_thread",
+            "value": "Eliminar conversa"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "delete_thread",
+            "value": "Unterhaltung löschen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "delete_thread",
+            "value": "Elimina conversazione"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "delete_thread",
+            "value": "Διαγραφή συνομιλίας"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "delete_thread",
+            "value": "वार्तालाप मेटाउनुहोस्"
+          },
+          {
             "lang": "lg-eng",
             "name": "ask_placeholder",
             "value": "Ask something..."
@@ -300,6 +660,46 @@
             "lang": "lg-spa",
             "name": "ask_placeholder",
             "value": "Pregunta algo..."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "ask_placeholder",
+            "value": "Pregunta alguna cosa..."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "ask_placeholder",
+            "value": "Galdetu zerbait..."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "ask_placeholder",
+            "value": "Posez une question..."
+          },
+          {
+            "lang": "lg-por",
+            "name": "ask_placeholder",
+            "value": "Pergunte algo..."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "ask_placeholder",
+            "value": "Frag etwas..."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "ask_placeholder",
+            "value": "Chiedi qualcosa..."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "ask_placeholder",
+            "value": "Ρωτήστε κάτι..."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "ask_placeholder",
+            "value": "केही सोध्नुहोस्..."
           },
           {
             "lang": "lg-eng",
@@ -312,6 +712,46 @@
             "value": "El usuario denegó esta acción."
           },
           {
+            "lang": "lg-cat",
+            "name": "denied",
+            "value": "L'usuari ha denegat aquesta acció."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "denied",
+            "value": "Erabiltzaileak ekintza hau ukatu du."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "denied",
+            "value": "L'utilisateur a refusé cette action."
+          },
+          {
+            "lang": "lg-por",
+            "name": "denied",
+            "value": "O utilizador negou esta ação."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "denied",
+            "value": "Der Benutzer hat diese Aktion abgelehnt."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "denied",
+            "value": "L'utente ha negato questa azione."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "denied",
+            "value": "Ο χρήστης αρνήθηκε αυτήν την ενέργεια."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "denied",
+            "value": "प्रयोगकर्ताले यो कार्य अस्वीकार गर्नुभयो।"
+          },
+          {
             "lang": "lg-eng",
             "name": "settings",
             "value": "Settings"
@@ -320,6 +760,46 @@
             "lang": "lg-spa",
             "name": "settings",
             "value": "Configuración"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "settings",
+            "value": "Configuració"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "settings",
+            "value": "Ezarpenak"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "settings",
+            "value": "Paramètres"
+          },
+          {
+            "lang": "lg-por",
+            "name": "settings",
+            "value": "Definições"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "settings",
+            "value": "Einstellungen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "settings",
+            "value": "Impostazioni"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "settings",
+            "value": "Ρυθμίσεις"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "settings",
+            "value": "सेटिङहरू"
           },
           {
             "lang": "lg-eng",
@@ -332,6 +812,46 @@
             "value": "Sin conversaciones guardadas"
           },
           {
+            "lang": "lg-cat",
+            "name": "no_threads",
+            "value": "No hi ha converses desades"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "no_threads",
+            "value": "Ez dago gordetako elkarrizketarik"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "no_threads",
+            "value": "Aucune conversation enregistrée"
+          },
+          {
+            "lang": "lg-por",
+            "name": "no_threads",
+            "value": "Não há conversas guardadas"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "no_threads",
+            "value": "Keine gespeicherten Unterhaltungen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "no_threads",
+            "value": "Nessuna conversazione salvata"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "no_threads",
+            "value": "Δεν υπάρχουν αποθηκευμένες συνομιλίες"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "no_threads",
+            "value": "कुनै सुरक्षित वार्तालाप छैन"
+          },
+          {
             "lang": "lg-eng",
             "name": "new_conversation_started",
             "value": "New conversation started."
@@ -340,6 +860,46 @@
             "lang": "lg-spa",
             "name": "new_conversation_started",
             "value": "Nueva conversación iniciada."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "new_conversation_started",
+            "value": "Nova conversa iniciada."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "new_conversation_started",
+            "value": "Elkarrizketa berria hasi da."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "new_conversation_started",
+            "value": "Nouvelle conversation démarrée."
+          },
+          {
+            "lang": "lg-por",
+            "name": "new_conversation_started",
+            "value": "Nova conversa iniciada."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "new_conversation_started",
+            "value": "Neue Unterhaltung gestartet."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "new_conversation_started",
+            "value": "Nuova conversazione avviata."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "new_conversation_started",
+            "value": "Ξεκίνησε νέα συνομιλία."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "new_conversation_started",
+            "value": "नयाँ वार्तालाप सुरु भयो।"
           },
           {
             "lang": "lg-eng",
@@ -352,6 +912,46 @@
             "value": "Listo. Pregunte sobre sus datos."
           },
           {
+            "lang": "lg-cat",
+            "name": "assistant_ready",
+            "value": "A punt. Pregunta sobre les teves dades."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "assistant_ready",
+            "value": "Prest. Galdetu zure datuei buruz."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "assistant_ready",
+            "value": "Prêt. Posez des questions sur vos données."
+          },
+          {
+            "lang": "lg-por",
+            "name": "assistant_ready",
+            "value": "Pronto. Pergunte sobre os seus dados."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "assistant_ready",
+            "value": "Bereit. Frag nach deinen Daten."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "assistant_ready",
+            "value": "Pronto. Fai domande sui tuoi dati."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "assistant_ready",
+            "value": "Έτοιμο. Ρωτήστε για τα δεδομένα σας."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "assistant_ready",
+            "value": "तयार। आफ्नो डेटाबारे सोध्नुहोस्।"
+          },
+          {
             "lang": "lg-eng",
             "name": "agent_disabled",
             "value": "The assistant is disabled on this server."
@@ -360,6 +960,46 @@
             "lang": "lg-spa",
             "name": "agent_disabled",
             "value": "El asistente está desactivado en este servidor."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "agent_disabled",
+            "value": "L'assistent està deshabilitat en aquest servidor."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "agent_disabled",
+            "value": "Laguntzailea desgaituta dago zerbitzari honetan."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "agent_disabled",
+            "value": "L'assistant est désactivé sur ce serveur."
+          },
+          {
+            "lang": "lg-por",
+            "name": "agent_disabled",
+            "value": "O assistente está desativado neste servidor."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "agent_disabled",
+            "value": "Der Assistent ist auf diesem Server deaktiviert."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "agent_disabled",
+            "value": "L'assistente è disattivato su questo server."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "agent_disabled",
+            "value": "Ο βοηθός είναι απενεργοποιημένος σε αυτόν τον διακομιστή."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "agent_disabled",
+            "value": "यो सर्भरमा सहायक असक्षम गरिएको छ।"
           },
           {
             "lang": "lg-eng",
@@ -372,6 +1012,46 @@
             "value": "Modelo"
           },
           {
+            "lang": "lg-cat",
+            "name": "model",
+            "value": "Model"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "model",
+            "value": "Eredua"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "model",
+            "value": "Modèle"
+          },
+          {
+            "lang": "lg-por",
+            "name": "model",
+            "value": "Modelo"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "model",
+            "value": "Modell"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "model",
+            "value": "Modello"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "model",
+            "value": "Μοντέλο"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "model",
+            "value": "मोडेल"
+          },
+          {
             "lang": "lg-eng",
             "name": "local_private",
             "value": "local / private"
@@ -380,6 +1060,46 @@
             "lang": "lg-spa",
             "name": "local_private",
             "value": "local / privado"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "local_private",
+            "value": "local / privat"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "local_private",
+            "value": "lokala / pribatua"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "local_private",
+            "value": "local / privé"
+          },
+          {
+            "lang": "lg-por",
+            "name": "local_private",
+            "value": "local / privado"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "local_private",
+            "value": "lokal / privat"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "local_private",
+            "value": "locale / privato"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "local_private",
+            "value": "τοπικό / ιδιωτικό"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "local_private",
+            "value": "स्थानीय / निजी"
           },
           {
             "lang": "lg-eng",
@@ -392,6 +1112,46 @@
             "value": "servicio externo"
           },
           {
+            "lang": "lg-cat",
+            "name": "external_service",
+            "value": "servei extern"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "external_service",
+            "value": "kanpoko zerbitzua"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "external_service",
+            "value": "service externe"
+          },
+          {
+            "lang": "lg-por",
+            "name": "external_service",
+            "value": "serviço externo"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "external_service",
+            "value": "externer Dienst"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "external_service",
+            "value": "servizio esterno"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "external_service",
+            "value": "εξωτερική υπηρεσία"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "external_service",
+            "value": "बाह्य सेवा"
+          },
+          {
             "lang": "lg-eng",
             "name": "vision_capable",
             "value": "vision"
@@ -400,6 +1160,46 @@
             "lang": "lg-spa",
             "name": "vision_capable",
             "value": "visión"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "vision_capable",
+            "value": "visió"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "vision_capable",
+            "value": "ikusmena"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "vision_capable",
+            "value": "vision"
+          },
+          {
+            "lang": "lg-por",
+            "name": "vision_capable",
+            "value": "visão"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "vision_capable",
+            "value": "Bildverarbeitung"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "vision_capable",
+            "value": "visione"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "vision_capable",
+            "value": "όραση"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "vision_capable",
+            "value": "दृष्टि"
           },
           {
             "lang": "lg-eng",
@@ -412,6 +1212,46 @@
             "value": "Permitir que el asistente proponga cambios"
           },
           {
+            "lang": "lg-cat",
+            "name": "write_mode",
+            "value": "Permetre que l'assistent proposi canvis"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "write_mode",
+            "value": "Baimendu laguntzaileak aldaketak proposatzea"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "write_mode",
+            "value": "Autoriser l'assistant à proposer des modifications"
+          },
+          {
+            "lang": "lg-por",
+            "name": "write_mode",
+            "value": "Permitir que o assistente proponha alterações"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "write_mode",
+            "value": "Dem Assistenten erlauben, Änderungen vorzuschlagen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "write_mode",
+            "value": "Consenti all'assistente di proporre modifiche"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "write_mode",
+            "value": "Να επιτρέπεται στον βοηθό να προτείνει αλλαγές"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "write_mode",
+            "value": "सहायकलाई परिवर्तनहरू प्रस्ताव गर्न अनुमति दिनुहोस्"
+          },
+          {
             "lang": "lg-eng",
             "name": "write_mode_hint",
             "value": "Changes are proposed as a plan you review and confirm before anything is saved."
@@ -420,6 +1260,46 @@
             "lang": "lg-spa",
             "name": "write_mode_hint",
             "value": "Los cambios se proponen como un plan que usted revisa y confirma antes de guardar nada."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "write_mode_hint",
+            "value": "Els canvis es proposen com un pla que revises i confirmes abans de desar res."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "write_mode_hint",
+            "value": "Aldaketak plan gisa proposatzen dira; berrikusi eta berretsi behar dituzu ezer gorde aurretik."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "write_mode_hint",
+            "value": "Les modifications sont proposées sous forme de plan que vous vérifiez et confirmez avant tout enregistrement."
+          },
+          {
+            "lang": "lg-por",
+            "name": "write_mode_hint",
+            "value": "As alterações são propostas como um plano que reveja e confirme antes de guardar seja o que for."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "write_mode_hint",
+            "value": "Änderungen werden als Plan vorgeschlagen, den Sie prüfen und bestätigen, bevor etwas gespeichert wird."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "write_mode_hint",
+            "value": "Le modifiche vengono proposte come un piano da rivedere e confermare prima che venga salvato qualcosa."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "write_mode_hint",
+            "value": "Οι αλλαγές προτείνονται ως σχέδιο που ελέγχετε και επιβεβαιώνετε πριν αποθηκευτεί οτιδήποτε."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "write_mode_hint",
+            "value": "परिवर्तनहरू योजनाको रूपमा प्रस्ताव गरिन्छ, जुन तपाईंले केही सुरक्षित हुनुअघि समीक्षा र पुष्टि गर्नुहुन्छ।"
           },
           {
             "lang": "lg-eng",
@@ -432,6 +1312,46 @@
             "value": "Cambios propuestos"
           },
           {
+            "lang": "lg-cat",
+            "name": "proposed_changes",
+            "value": "Canvis proposats"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "proposed_changes",
+            "value": "Proposatutako aldaketak"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "proposed_changes",
+            "value": "Modifications proposées"
+          },
+          {
+            "lang": "lg-por",
+            "name": "proposed_changes",
+            "value": "Alterações propostas"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "proposed_changes",
+            "value": "Vorgeschlagene Änderungen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "proposed_changes",
+            "value": "Modifiche proposte"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "proposed_changes",
+            "value": "Προτεινόμενες αλλαγές"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "proposed_changes",
+            "value": "प्रस्तावित परिवर्तनहरू"
+          },
+          {
             "lang": "lg-eng",
             "name": "apply",
             "value": "Apply"
@@ -440,6 +1360,46 @@
             "lang": "lg-spa",
             "name": "apply",
             "value": "Aplicar"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "apply",
+            "value": "Aplicar"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "apply",
+            "value": "Aplikatu"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "apply",
+            "value": "Appliquer"
+          },
+          {
+            "lang": "lg-por",
+            "name": "apply",
+            "value": "Aplicar"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "apply",
+            "value": "Anwenden"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "apply",
+            "value": "Applicare"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "apply",
+            "value": "Ισχύουν"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "apply",
+            "value": "निवेदन गर्नु"
           },
           {
             "lang": "lg-eng",
@@ -452,6 +1412,46 @@
             "value": "Cancelar"
           },
           {
+            "lang": "lg-cat",
+            "name": "cancel",
+            "value": "Cancel·lar"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "cancel",
+            "value": "Ezeztatu"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "cancel",
+            "value": "Annuler"
+          },
+          {
+            "lang": "lg-por",
+            "name": "cancel",
+            "value": "Cancelar"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "cancel",
+            "value": "Abbrechen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "cancel",
+            "value": "Cancellare"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "cancel",
+            "value": "ακυρώσει"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "cancel",
+            "value": "रद्द गर्नुहोस्"
+          },
+          {
             "lang": "lg-eng",
             "name": "applying",
             "value": "Applying…"
@@ -460,6 +1460,46 @@
             "lang": "lg-spa",
             "name": "applying",
             "value": "Aplicando…"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "applying",
+            "value": "Aplicant…"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "applying",
+            "value": "Aplikatzen…"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "applying",
+            "value": "Application…"
+          },
+          {
+            "lang": "lg-por",
+            "name": "applying",
+            "value": "A aplicar…"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "applying",
+            "value": "Wird angewendet…"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "applying",
+            "value": "Applicazione…"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "applying",
+            "value": "Εφαρμογή…"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "applying",
+            "value": "लागू गर्दै…"
           },
           {
             "lang": "lg-eng",
@@ -472,6 +1512,46 @@
             "value": "Aplicado"
           },
           {
+            "lang": "lg-cat",
+            "name": "applied",
+            "value": "Aplicat"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "applied",
+            "value": "Aplikatuta"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "applied",
+            "value": "Appliqué"
+          },
+          {
+            "lang": "lg-por",
+            "name": "applied",
+            "value": "Aplicado"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "applied",
+            "value": "Angewendet"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "applied",
+            "value": "Applicato"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "applied",
+            "value": "Εφαρμόστηκε"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "applied",
+            "value": "लागू गरियो"
+          },
+          {
             "lang": "lg-eng",
             "name": "apply_failed",
             "value": "Apply failed"
@@ -480,6 +1560,46 @@
             "lang": "lg-spa",
             "name": "apply_failed",
             "value": "Error al aplicar"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "apply_failed",
+            "value": "Error en aplicar"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "apply_failed",
+            "value": "Aplikatzeak huts egin du"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "apply_failed",
+            "value": "Échec de l'application"
+          },
+          {
+            "lang": "lg-por",
+            "name": "apply_failed",
+            "value": "Falha ao aplicar"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "apply_failed",
+            "value": "Anwenden fehlgeschlagen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "apply_failed",
+            "value": "Applicazione non riuscita"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "apply_failed",
+            "value": "Η εφαρμογή απέτυχε"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "apply_failed",
+            "value": "लागू गर्न असफल"
           },
           {
             "lang": "lg-eng",
@@ -492,6 +1612,46 @@
             "value": "omitido"
           },
           {
+            "lang": "lg-cat",
+            "name": "skipped",
+            "value": "omès"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "skipped",
+            "value": "saltatuta"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "skipped",
+            "value": "ignoré"
+          },
+          {
+            "lang": "lg-por",
+            "name": "skipped",
+            "value": "ignorado"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "skipped",
+            "value": "übersprungen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "skipped",
+            "value": "saltato"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "skipped",
+            "value": "παραλείφθηκε"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "skipped",
+            "value": "छोडियो"
+          },
+          {
             "lang": "lg-eng",
             "name": "created",
             "value": "created"
@@ -500,6 +1660,46 @@
             "lang": "lg-spa",
             "name": "created",
             "value": "creado"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "created",
+            "value": "creat"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "created",
+            "value": "sortua"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "created",
+            "value": "créé"
+          },
+          {
+            "lang": "lg-por",
+            "name": "created",
+            "value": "Criado"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "created",
+            "value": "erstellt"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "created",
+            "value": "Creato"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "created",
+            "value": "δημιουργήθηκε"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "created",
+            "value": "सिर्जना गरियो"
           },
           {
             "lang": "lg-eng",
@@ -512,6 +1712,46 @@
             "value": "Cambios propuestos descartados"
           },
           {
+            "lang": "lg-cat",
+            "name": "plan_discarded",
+            "value": "Canvis proposats descartats"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "plan_discarded",
+            "value": "Proposatutako aldaketak baztertu dira"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "plan_discarded",
+            "value": "Modifications proposées abandonnées"
+          },
+          {
+            "lang": "lg-por",
+            "name": "plan_discarded",
+            "value": "Alterações propostas descartadas"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "plan_discarded",
+            "value": "Vorgeschlagene Änderungen verworfen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "plan_discarded",
+            "value": "Modifiche proposte scartate"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "plan_discarded",
+            "value": "Οι προτεινόμενες αλλαγές απορρίφθηκαν"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "plan_discarded",
+            "value": "प्रस्तावित परिवर्तनहरू खारेज गरियो"
+          },
+          {
             "lang": "lg-eng",
             "name": "attach_image",
             "value": "Attach image"
@@ -520,6 +1760,46 @@
             "lang": "lg-spa",
             "name": "attach_image",
             "value": "Adjuntar imagen"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "attach_image",
+            "value": "Adjuntar imatge"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "attach_image",
+            "value": "Erantsi irudia"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "attach_image",
+            "value": "Joindre une image"
+          },
+          {
+            "lang": "lg-por",
+            "name": "attach_image",
+            "value": "Anexar imagem"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "attach_image",
+            "value": "Bild anhängen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "attach_image",
+            "value": "Allega immagine"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "attach_image",
+            "value": "Επισύναψη εικόνας"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "attach_image",
+            "value": "छवि संलग्न गर्नुहोस्"
           },
           {
             "lang": "lg-eng",
@@ -532,6 +1812,46 @@
             "value": "Imagen demasiado grande (máx. 5 MB)"
           },
           {
+            "lang": "lg-cat",
+            "name": "image_too_large",
+            "value": "Imatge massa gran (màx. 5 MB)"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "image_too_large",
+            "value": "Irudia handiegia da (geh. 5 MB)"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "image_too_large",
+            "value": "Image trop volumineuse (max. 5 Mo)"
+          },
+          {
+            "lang": "lg-por",
+            "name": "image_too_large",
+            "value": "Imagem demasiado grande (máx. 5 MB)"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "image_too_large",
+            "value": "Bild zu groß (max. 5 MB)"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "image_too_large",
+            "value": "Immagine troppo grande (max 5 MB)"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "image_too_large",
+            "value": "Η εικόνα είναι πολύ μεγάλη (μέγ. 5 MB)"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "image_too_large",
+            "value": "छवि धेरै ठूलो छ (अधिकतम ५ MB)"
+          },
+          {
             "lang": "lg-eng",
             "name": "image_type_unsupported",
             "value": "Unsupported image type"
@@ -540,6 +1860,46 @@
             "lang": "lg-spa",
             "name": "image_type_unsupported",
             "value": "Tipo de imagen no compatible"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "image_type_unsupported",
+            "value": "Tipus d'imatge no admès"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "image_type_unsupported",
+            "value": "Onartzen ez den irudi mota"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "image_type_unsupported",
+            "value": "Type d'image non pris en charge"
+          },
+          {
+            "lang": "lg-por",
+            "name": "image_type_unsupported",
+            "value": "Tipo de imagem não suportado"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "image_type_unsupported",
+            "value": "Nicht unterstützter Bildtyp"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "image_type_unsupported",
+            "value": "Tipo di immagine non supportato"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "image_type_unsupported",
+            "value": "Μη υποστηριζόμενος τύπος εικόνας"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "image_type_unsupported",
+            "value": "असमर्थित छवि प्रकार"
           }
         ]
       }

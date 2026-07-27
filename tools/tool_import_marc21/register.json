@@ -328,7 +328,37 @@
             "value": "Επεξεργαστής"
           },
           {
+            "lang": "lg-eus",
+            "name": "file_processor",
+            "value": "Prozesatua"
+          },
+          {
+            "lang": "lg-por",
+            "name": "file_processor",
+            "value": "Processador"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "file_processor",
+            "value": "Επεξεργαστής"
+          },
+          {
             "lang": "lg-nep",
+            "name": "target_componet",
+            "value": "Πεδίο στόχου"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "target_componet",
+            "value": "Helburu-eremua"
+          },
+          {
+            "lang": "lg-por",
+            "name": "target_componet",
+            "value": "Campo de destino"
+          },
+          {
+            "lang": "lg-ell",
             "name": "target_componet",
             "value": "Πεδίο στόχου"
           },
@@ -336,6 +366,121 @@
             "lang": "lg-nep",
             "name": "quality",
             "value": "Ποιότητα"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "quality",
+            "value": "Kalitatea"
+          },
+          {
+            "lang": "lg-por",
+            "name": "quality",
+            "value": "Qualidade"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "quality",
+            "value": "Ποιότητα"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "upload_done",
+            "value": "Files imported successfully"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "upload_done",
+            "value": "Archivos importados correctamente"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "upload_done",
+            "value": "Fitxers importats correctament"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "upload_done",
+            "value": "Fitxategiak behar bezala inportatu dira"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "upload_done",
+            "value": "Fichiers importés avec succès"
+          },
+          {
+            "lang": "lg-por",
+            "name": "upload_done",
+            "value": "Ficheiros importados com sucesso"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "upload_done",
+            "value": "Dateien erfolgreich importiert"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "upload_done",
+            "value": "File importati correttamente"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "upload_done",
+            "value": "Τα αρχεία εισήχθησαν με επιτυχία"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "upload_done",
+            "value": "फाइलहरू सफलतापूर्वक आयात भए"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "upload_error",
+            "value": "Error: Files not imported!"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "upload_error",
+            "value": "Error: ¡Archivos no importados!"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "upload_error",
+            "value": "Error: fitxers no importats!"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "upload_error",
+            "value": "Errorea: fitxategiak ez dira inportatu!"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "upload_error",
+            "value": "Erreur : fichiers non importés !"
+          },
+          {
+            "lang": "lg-por",
+            "name": "upload_error",
+            "value": "Erro: ficheiros não importados!"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "upload_error",
+            "value": "Fehler: Dateien nicht importiert!"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "upload_error",
+            "value": "Errore: file non importati!"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "upload_error",
+            "value": "Σφάλμα: τα αρχεία δεν εισήχθησαν!"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "upload_error",
+            "value": "त्रुटि: फाइलहरू आयात भएनन्!"
           }
         ]
       }

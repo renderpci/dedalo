@@ -251,6 +251,11 @@
             "value": "Itzulpen automatikoa"
           },
           {
+            "lang": "lg-nep",
+            "name": "automatic_translation",
+            "value": "स्वचालित अनुवाद"
+          },
+          {
             "lang": "lg-eng",
             "name": "are_you_sure_to_overwrite_text",
             "value": "Are you sure of overwrite the text?"
@@ -299,6 +304,356 @@
             "lang": "lg-por",
             "name": "are_you_sure_to_overwrite_text",
             "value": "Tem a certeza que deseja substituir o texto?"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "cpu_device",
+            "value": "More compatible, slower."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "cpu_device",
+            "value": "Más compatible, más lento."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "cpu_device",
+            "value": "Més compatible, més lent."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "cpu_device",
+            "value": "Bateragarriagoa, motelagoa."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "cpu_device",
+            "value": "Plus compatible, mais plus lent."
+          },
+          {
+            "lang": "lg-por",
+            "name": "cpu_device",
+            "value": "Mais compatível, mais lento."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "cpu_device",
+            "value": "Kompatibler, aber langsamer."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "cpu_device",
+            "value": "Più compatibile, più lento."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "cpu_device",
+            "value": "Πιο συμβατό, πιο αργό. "
+          },
+          {
+            "lang": "lg-nep",
+            "name": "cpu_device",
+            "value": "अझ मिल्दो, ढिलो।"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "empty_source",
+            "value": "Source component not available"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "empty_source",
+            "value": "El componente de origen no está disponible"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "empty_source",
+            "value": "El component d'origen no està disponible"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "empty_source",
+            "value": "Jatorrizko osagaia ez dago erabilgarri"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "empty_source",
+            "value": "Le composant source n'est pas disponible"
+          },
+          {
+            "lang": "lg-por",
+            "name": "empty_source",
+            "value": "O componente de origem não está disponível"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "empty_source",
+            "value": "Die Quellkomponente ist nicht verfügbar"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "empty_source",
+            "value": "Il componente di origine non è disponibile"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "empty_source",
+            "value": "Το στοιχείο προέλευσης δεν είναι διαθέσιμο"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "empty_source",
+            "value": "स्रोत अवयव उपलब्ध छैन"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "loading",
+            "value": "Components are still loading, please wait"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "loading",
+            "value": "Los componentes aún se están cargando, espere"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "loading",
+            "value": "Els components encara s'estan carregant, espereu"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "loading",
+            "value": "Osagaiak kargatzen ari dira oraindik, itxaron"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "loading",
+            "value": "Les composants sont encore en cours de chargement, veuillez patienter"
+          },
+          {
+            "lang": "lg-por",
+            "name": "loading",
+            "value": "Os componentes ainda estão a carregar, aguarde"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "loading",
+            "value": "Die Komponenten werden noch geladen, bitte warten"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "loading",
+            "value": "I componenti sono ancora in caricamento, attendere"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "loading",
+            "value": "Τα στοιχεία φορτώνονται ακόμη, περιμένετε"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "loading",
+            "value": "अवयवहरू अझै लोड हुँदैछन्, कृपया पर्खनुहोस्"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "overwrite",
+            "value": "Overwrite all"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "overwrite",
+            "value": "Sobrescribir todo"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "overwrite",
+            "value": "Sobreescriure-ho tot"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "overwrite",
+            "value": "Gainidatzi dena"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "overwrite",
+            "value": "Tout écraser"
+          },
+          {
+            "lang": "lg-por",
+            "name": "overwrite",
+            "value": "Substituir tudo"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "overwrite",
+            "value": "Alles überschreiben"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "overwrite",
+            "value": "Sovrascrivi tutto"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "overwrite",
+            "value": "Αντικατάσταση όλων"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "overwrite",
+            "value": "सबै अधिलेखन गर्नुहोस्"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "skip_non_empty",
+            "value": "Skip non-empty"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "skip_non_empty",
+            "value": "Omitir los no vacíos"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "skip_non_empty",
+            "value": "Ometre els no buits"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "skip_non_empty",
+            "value": "Saltatu hutsik ez daudenak"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "skip_non_empty",
+            "value": "Ignorer les non vides"
+          },
+          {
+            "lang": "lg-por",
+            "name": "skip_non_empty",
+            "value": "Ignorar os não vazios"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "skip_non_empty",
+            "value": "Nicht leere überspringen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "skip_non_empty",
+            "value": "Salta i non vuoti"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "skip_non_empty",
+            "value": "Παράλειψη των μη κενών"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "skip_non_empty",
+            "value": "खाली नभएकाहरू छोड्नुहोस्"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "translate_all_confirm",
+            "value": "Translate the source text into all languages?"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "translate_all_confirm",
+            "value": "¿Traducir el texto de origen a todos los idiomas?"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "translate_all_confirm",
+            "value": "Traduir el text d'origen a tots els idiomes?"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "translate_all_confirm",
+            "value": "Jatorrizko testua hizkuntza guztietara itzuli?"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "translate_all_confirm",
+            "value": "Traduire le texte source dans toutes les langues ?"
+          },
+          {
+            "lang": "lg-por",
+            "name": "translate_all_confirm",
+            "value": "Traduzir o texto de origem para todos os idiomas?"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "translate_all_confirm",
+            "value": "Den Quelltext in alle Sprachen übersetzen?"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "translate_all_confirm",
+            "value": "Tradurre il testo di origine in tutte le lingue?"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "translate_all_confirm",
+            "value": "Μετάφραση του κειμένου προέλευσης σε όλες τις γλώσσες;"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "translate_all_confirm",
+            "value": "स्रोत पाठलाई सबै भाषाहरूमा अनुवाद गर्ने?"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "translation_completed",
+            "value": "Translation completed"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "translation_completed",
+            "value": "Traducción completada"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "translation_completed",
+            "value": "Traducció completada"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "translation_completed",
+            "value": "Itzulpena burutu da"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "translation_completed",
+            "value": "Traduction terminée"
+          },
+          {
+            "lang": "lg-por",
+            "name": "translation_completed",
+            "value": "Tradução concluída"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "translation_completed",
+            "value": "Übersetzung abgeschlossen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "translation_completed",
+            "value": "Traduzione completata"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "translation_completed",
+            "value": "Η μετάφραση ολοκληρώθηκε"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "translation_completed",
+            "value": "अनुवाद सम्पन्न भयो"
           }
         ]
       }

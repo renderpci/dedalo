@@ -563,6 +563,261 @@
             "lang": "lg-ita",
             "name": "insert_value",
             "value": "Inserisci un valore valido per continuare."
+          },
+          {
+            "lang": "lg-por",
+            "name": "insert_value",
+            "value": "Insira um valor válido para continuar."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "confirm_activate",
+            "value": "Activate / repair this hierarchy?\n\nOnly what is missing will be created. Nothing is deleted."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "confirm_activate",
+            "value": "¿Activar / reparar esta jerarquía?\n\nSolo se creará lo que falte. No se borra nada."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "confirm_activate",
+            "value": "Activar / reparar aquesta jerarquia?\n\nNomés es crearà el que falti. No s'esborra res."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "confirm_activate",
+            "value": "Hierarkia hau aktibatu / konpondu?\n\nFalta dena bakarrik sortuko da. Ez da ezer ezabatzen."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "confirm_activate",
+            "value": "Activer / réparer cette hiérarchie ?\n\nSeul ce qui manque sera créé. Rien n'est supprimé."
+          },
+          {
+            "lang": "lg-por",
+            "name": "confirm_activate",
+            "value": "Ativar / reparar esta hierarquia?\n\nApenas o que falta será criado. Nada é eliminado."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "confirm_activate",
+            "value": "Diese Hierarchie aktivieren / reparieren?\n\nEs wird nur erstellt, was fehlt. Es wird nichts gelöscht."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "confirm_activate",
+            "value": "Attivare / riparare questa gerarchia?\n\nVerrà creato solo ciò che manca. Non viene eliminato nulla."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "confirm_activate",
+            "value": "Ενεργοποίηση / επιδιόρθωση αυτής της ιεραρχίας;\n\nΘα δημιουργηθεί μόνο ό,τι λείπει. Δεν διαγράφεται τίποτα."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "confirm_activate",
+            "value": "यो पदानुक्रम सक्रिय / मर्मत गर्ने?\n\nहराइरहेको कुरा मात्र सिर्जना गरिनेछ। केही पनि मेटिँदैन।"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "confirm_rebuild",
+            "value": "REBUILD: the ontology of this hierarchy will be deleted and re-created.\n\nThe thesaurus TERMS are NOT deleted.\n\nContinue?"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "confirm_rebuild",
+            "value": "RECONSTRUIR: la ontología de esta jerarquía se borrará y se volverá a crear.\n\nLos TÉRMINOS del tesauro NO se borran.\n\n¿Continuar?"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "confirm_rebuild",
+            "value": "RECONSTRUIR: l'ontologia d'aquesta jerarquia s'esborrarà i es tornarà a crear.\n\nEls TERMES del tesaurus NO s'esborren.\n\nContinuar?"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "confirm_rebuild",
+            "value": "BERRERAIKI: hierarkia honen ontologia ezabatu eta berriro sortuko da.\n\nTesauroaren TERMINOAK EZ dira ezabatzen.\n\nJarraitu?"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "confirm_rebuild",
+            "value": "RECONSTRUIRE : l'ontologie de cette hiérarchie sera supprimée et recréée.\n\nLes TERMES du thésaurus ne sont PAS supprimés.\n\nContinuer ?"
+          },
+          {
+            "lang": "lg-por",
+            "name": "confirm_rebuild",
+            "value": "RECONSTRUIR: a ontologia desta hierarquia será eliminada e recriada.\n\nOs TERMOS do tesauro NÃO são eliminados.\n\nContinuar?"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "confirm_rebuild",
+            "value": "NEU AUFBAUEN: Die Ontologie dieser Hierarchie wird gelöscht und neu erstellt.\n\nDie BEGRIFFE des Thesaurus werden NICHT gelöscht.\n\nFortfahren?"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "confirm_rebuild",
+            "value": "RICOSTRUISCI: l'ontologia di questa gerarchia verrà eliminata e ricreata.\n\nI TERMINI del thesaurus NON vengono eliminati.\n\nContinuare?"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "confirm_rebuild",
+            "value": "ΑΝΑΔΟΜΗΣΗ: η οντολογία αυτής της ιεραρχίας θα διαγραφεί και θα δημιουργηθεί ξανά.\n\nΟι ΟΡΟΙ του θησαυρού ΔΕΝ διαγράφονται.\n\nΣυνέχεια;"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "confirm_rebuild",
+            "value": "पुनर्निर्माण: यो पदानुक्रमको ओन्टोलोजी मेटाएर पुनः सिर्जना गरिनेछ।\n\nथिसौरसका शब्दहरू मेटिँदैनन्।\n\nजारी राख्ने?"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "status_ready",
+            "value": "This hierarchy is ready"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "status_ready",
+            "value": "Esta jerarquía está lista"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "status_ready",
+            "value": "Aquesta jerarquia està a punt"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "status_ready",
+            "value": "Hierarkia hau prest dago"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "status_ready",
+            "value": "Cette hiérarchie est prête"
+          },
+          {
+            "lang": "lg-por",
+            "name": "status_ready",
+            "value": "Esta hierarquia está pronta"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "status_ready",
+            "value": "Diese Hierarchie ist bereit"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "status_ready",
+            "value": "Questa gerarchia è pronta"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "status_ready",
+            "value": "Αυτή η ιεραρχία είναι έτοιμη"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "status_ready",
+            "value": "यो पदानुक्रम तयार छ"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "status_incomplete",
+            "value": "This hierarchy is incomplete"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "status_incomplete",
+            "value": "Esta jerarquía está incompleta"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "status_incomplete",
+            "value": "Aquesta jerarquia està incompleta"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "status_incomplete",
+            "value": "Hierarkia hau osatu gabe dago"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "status_incomplete",
+            "value": "Cette hiérarchie est incomplète"
+          },
+          {
+            "lang": "lg-por",
+            "name": "status_incomplete",
+            "value": "Esta hierarquia está incompleta"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "status_incomplete",
+            "value": "Diese Hierarchie ist unvollständig"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "status_incomplete",
+            "value": "Questa gerarchia è incompleta"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "status_incomplete",
+            "value": "Αυτή η ιεραρχία είναι ελλιπής"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "status_incomplete",
+            "value": "यो पदानुक्रम अपूर्ण छ"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "status_unavailable",
+            "value": "Hierarchy status unavailable"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "status_unavailable",
+            "value": "Estado de la jerarquía no disponible"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "status_unavailable",
+            "value": "Estat de la jerarquia no disponible"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "status_unavailable",
+            "value": "Hierarkiaren egoera ez dago erabilgarri"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "status_unavailable",
+            "value": "État de la hiérarchie indisponible"
+          },
+          {
+            "lang": "lg-por",
+            "name": "status_unavailable",
+            "value": "Estado da hierarquia indisponível"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "status_unavailable",
+            "value": "Hierarchiestatus nicht verfügbar"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "status_unavailable",
+            "value": "Stato della gerarchia non disponibile"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "status_unavailable",
+            "value": "Η κατάσταση της ιεραρχίας δεν είναι διαθέσιμη"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "status_unavailable",
+            "value": "पदानुक्रम स्थिति उपलब्ध छैन"
           }
         ]
       }
