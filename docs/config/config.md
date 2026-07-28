@@ -3425,6 +3425,73 @@ DEDALO_RAG_RRF_K=60
 
 ---
 
+### Locating the local AI model store
+
+DEDALO_AI_MODEL_STORE `path`
+
+Where the models that run **inside the browser** are kept — speech recognition for the
+transcription tool, translation for the language tool. The directory is served read-only at
+`/dedalo/ai_models/`, one folder per model.
+
+This is what makes local inference genuinely local. Without a store, the runtime falls back
+to downloading weights from a public model hub, which an air-gapped institution cannot do at
+all and which tells a third party when a recording is being worked on. Seed the store with
+`bun run scripts/fetch_ai_models.ts`, or copy it in with rsync where there is no network.
+
+Relative values resolve against the private directory. Unset, the store is
+`<private>/ai_models`. Expect roughly 1.5 GB for a large speech model.
+
+```bash
+DEDALO_AI_MODEL_STORE="/data/dedalo/ai_models"
+```
+
+*Default: (unset)*
+
+---
+
+### Allowing model downloads from a public hub
+
+DEDALO_AI_MODEL_ALLOW_HUB `bool`
+
+Whether the browser may fetch model weights from a public model hub when they are not in
+the local store.
+
+The default `false` keeps the promise the local engines are chosen for: nothing about a
+recording — not even the fact that one is being transcribed — reaches a third party, and the
+installation works with no outbound internet. Set it to `true` only where the convenience of
+on-demand downloads outweighs that, and never for collections holding personal data.
+
+```bash
+DEDALO_AI_MODEL_ALLOW_HUB=false
+```
+
+*Default: false*
+
+---
+
+### Allowing a transcriber on the local network
+
+DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS `bool`
+
+Whether a configured transcription server may live on a private or loopback address.
+
+Outbound requests to private ranges are refused by default, because an *external* service
+must never be able to make the engine reach inside the network. An *on-premise* recogniser
+(faster-whisper, WhisperX, whisper.cpp on a LAN machine) is the legitimate opposite case, and
+this parameter is how you say so — deliberately, per installation, rather than by weakening
+the guard for everyone. The cloud metadata address stays refused either way.
+
+It applies only to the `local_whisper` engine, which is POSTed the audio bytes; the external
+engine keeps the strict guard regardless.
+
+```bash
+DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS=true
+```
+
+*Default: false*
+
+---
+
 ### Defining the semantic index database
 
 RAG_DB_NAME `string`

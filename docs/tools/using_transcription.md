@@ -26,11 +26,12 @@ The **Transcription** button attaches to media components — audiovisual, image
 ## Using it, step by step
 
 1. Open the record and press **Transcription** on the media component. The tool opens in a new window: the transcription text area on the left, the media player on the right.
-2. To transcribe speech automatically, use the **Automatic transcription** block: choose a recognition **engine** and a **quality**, then start it. With the browser engine, the model runs in your own browser (it uses your GPU when available and falls back to a slower compatible mode otherwise) — leave the window open until it finishes. With a server engine, the job runs on the server and the tool reports progress until it is done.
-3. When it completes, the recognized text lands in the text area as paragraphs with `[TC_..._TC]` timecode marks. Correct the wording as needed.
-4. Use **Insert tag** to add a timecode mark at the current playhead while you work.
-5. To create subtitles, set the **characters per line** value and press **Build subtitles**. The tool writes a `.vtt` file synced to the recording's duration and returns its address.
-6. For a PDF, open the tool on the PDF component to extract its text (see the note below).
+2. To transcribe speech automatically, use the **Automatic transcription** block: choose a recognition **engine**, a **quality** (the model) and, if you want, how much timecode detail the text should carry. Then start it. With the browser engine the model runs on your own machine — it uses your GPU when there is one and falls back to a slower compatible mode by itself. With a server engine the job runs on the institution's transcription server and the tool reports progress until it is done.
+3. Progress is shown as a percentage of the speech in the recording. You can **Cancel** at any point: the tool keeps everything recognized so far instead of throwing it away. If the window is closed mid-job, the next run picks up where this one stopped rather than starting the interview again.
+4. When it completes, the recognized text lands in the text area as **paragraphs** — grouped at the speaker's pauses and sentence ends, not one paragraph per phrase — with `[TC_..._TC]` timecode marks. Correct the wording as needed.
+5. Use **Insert tag** to add a timecode mark at the current playhead while you work.
+6. To create subtitles, set the **characters per line** value and press **Build subtitles**. The tool writes a `.vtt` file synced to the recording's duration and returns its address.
+7. For a PDF, open the tool on the PDF component to extract its text (see the note below).
 
 !!! info "PDF text extraction route"
     On this engine, PDF text extraction is handled by the dedicated PDF extractor tool rather than inside the transcription tool. If the transcription tool does not extract a PDF's text, reach for the PDF extractor instead. See the [developer reference](../development/tools/reference/tool_transcription.md) for the exact split.
@@ -39,9 +40,11 @@ The **Transcription** button attaches to media components — audiovisual, image
 
 | Option | What it does |
 | --- | --- |
-| Engine | Which recognizer runs the transcription. The shipped default runs in your browser; an administrator can configure a server-side engine for large jobs. |
-| Quality | The recognition model size/accuracy (for example small / large / large turbo). Higher quality is slower. |
-| Device | Whether the browser engine uses your GPU or a compatible fallback (shown when relevant). |
+| Engine | Which recognizer runs the transcription. The shipped default runs in your own browser; an administrator can configure an on-premise server engine for institutions whose staff machines cannot run it. |
+| Quality | Which model to use. Larger models are more accurate and much slower; the list shows how many languages each one covers and how large the download is. Models that need a GPU are greyed out when you pick the compatible device. |
+| Device | Automatic (recommended), GPU, or the slower compatible mode. Automatic detects what your browser can do and falls back on its own. |
+| Paragraphs | How much timecode detail the transcript carries. *Paragraphs with time marks* (default) reads as prose and keeps enough marks for accurate subtitles; *Paragraphs, one mark each* is the cleanest text; *One mark per phrase* is the old cue-list behaviour. |
+| Rebuild paragraphs | Re-groups the transcription already in the text area under the current paragraph setting. Nothing is re-recognized and no word changes — useful for transcripts made before paragraphs existed. |
 | Characters per line | The maximum line length used when building the `.vtt` subtitle file. |
 
 ## Tips and gotchas
@@ -49,8 +52,14 @@ The **Transcription** button attaches to media components — audiovisual, image
 !!! tip "Correct before you build subtitles"
     Generate the transcription, correct the text, and only then press **Build subtitles** — the subtitle file is cut from the current text and its timecodes.
 
-!!! tip "Browser transcription needs the window open"
-    When the browser engine is used, the recognizer runs inside your browser tab. Keep the tool window open until it finishes; closing it stops the job. A GPU-capable browser is much faster.
+!!! tip "Browser transcription runs in your tab"
+    When the browser engine is used, the recognizer runs inside your browser tab, and the recording never leaves your machine. Keep the window open while it works; if you do close it, the job stops but the text recognized so far is kept and the next run continues from there. A GPU-capable browser is much faster.
+
+!!! info "Nothing is uploaded, and nothing is downloaded from outside"
+    The browser engine keeps the audio on your machine, and the models themselves come from your own installation rather than from an internet service — so it works in an archive with no outside connection, and no third party learns which recordings you are working on. If the model list is empty, ask your administrator to seed the model store.
+
+!!! tip "Repeated words"
+    Recognizers sometimes get stuck and repeat a word or phrase, especially over silence, background noise or unclear speech. The tool now cuts the audio at real pauses, decodes with anti-repetition settings and cleans up whatever still slips through, so this should be rare. If you still see it, try a different model — *Parakeet* cannot produce that kind of loop at all — or improve the source audio.
 
 !!! warning "Automatic text is a draft, and it overwrites"
     Automatic transcription writes its result into the text field. Review it — recognizers make mistakes with names, places and overlapping speech. Because the write goes through the normal save path, earlier states remain in the [time machine](using_time_machine.md) if you need to revert.
