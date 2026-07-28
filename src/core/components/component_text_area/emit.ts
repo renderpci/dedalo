@@ -23,9 +23,17 @@ import { addTagImgOnTheFly } from './tag_html.ts';
 /** text_area list values are HTML-truncated (PHP get_list_value max_chars=130). */
 const TEXT_AREA_LIST_MAX_CHARS = 130;
 
+/** Max raw chars any list-preview text processor sees (DOS-01). */
+const LIST_SOURCE_CAP = 16 * 1024;
+
 /** The list rendering of one stored string: tags → <img>, then HTML-truncate. */
 function renderListString(value: string): string {
-	return truncateHtml(TEXT_AREA_LIST_MAX_CHARS, addTagImgOnTheFly(value));
+	// DOS-01 (2026-07-28 audit): bound the input BEFORE the tag processors —
+	// addTagImgOnTheFly's mark/HTML regexes, like truncateHtml, are super-linear
+	// on adversarial CKEditor markup (a 200 KB value froze the loop ~19 s). This
+	// is a ≤130-char preview, so capping a large prefix loses no preview content.
+	const capped = value.length > LIST_SOURCE_CAP ? value.slice(0, LIST_SOURCE_CAP) : value;
+	return truncateHtml(TEXT_AREA_LIST_MAX_CHARS, addTagImgOnTheFly(capped));
 }
 
 /** True when a lang slice holds at least one item with real text. */

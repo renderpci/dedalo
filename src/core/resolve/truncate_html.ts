@@ -10,6 +10,12 @@
  * - text length counts HTML entities as ONE character;
  * - cut at the last word boundary (space) unless `exact`;
  * - append `ending` ('...') and close all still-open tags in stack order.
+ *
+ * DOS-01 (2026-07-28 audit): the tag patterns use `<[^>]*>`, NOT `<.+?>`/`<.*?>`.
+ * The lazy dot forms backtrack catastrophically on a long run of unclosed `<`
+ * (a stored CKEditor value is attacker-controllable) — a 200 KB value froze the
+ * event loop ~19 s. `<[^>]*>` stops at the first `>` exactly like the lazy form
+ * for well-formed markup, but scans linearly and never backtracks.
  */
 
 const VOID_ELEMENT_PATTERN =
@@ -26,13 +32,26 @@ export function truncateHtml(
 	let truncate = '';
 	let openTags: string[] = [];
 
+	// DOS-01 (2026-07-28 audit): matching `<…>` against a long run of UNCLOSED
+	// `<` is O(n²) at EVERY position regardless of the tag pattern (each `<` scans
+	// forward for a `>` that never comes) — a 200 KB stored CKEditor value froze
+	// the event loop ~19 s. This produces a LIST PREVIEW of at most `length` (≤200)
+	// plain chars, so any input far larger carries no preview value: cap the raw
+	// input the scan sees. 16 KiB holds thousands of plain chars — vastly more
+	// than `length` — for any non-adversarial markup ratio, so a real preview is
+	// unchanged while the worst case is bounded to a few hundred ms.
+	const MAX_SCAN_CHARS = 16 * 1024;
+	if (text.length > MAX_SCAN_CHARS) {
+		text = text.slice(0, MAX_SCAN_CHARS);
+	}
+
 	if (considerHtml) {
 		// Whole text fits? (plain length, tags stripped)
-		if (text.replace(/<.*?>/g, '').length <= length) {
+		if (text.replace(/<[^>]*>/g, '').length <= length) {
 			return text;
 		}
 		// Split into (tag?, text) pairs — PHP preg_match_all('/(<.+?>)?([^<>]*)/s').
-		const lines = [...text.matchAll(/(<.+?>)?([^<>]*)/gs)];
+		const lines = [...text.matchAll(/(<[^>]*>)?([^<>]*)/g)];
 		let totalLength = ending.length;
 
 		for (const lineMatch of lines) {
@@ -83,7 +102,7 @@ export function truncateHtml(
 
 	// Word-boundary cut.
 	if (!exact) {
-		const plainTruncate = considerHtml ? truncate.replace(/<.*?>/gs, '') : truncate;
+		const plainTruncate = considerHtml ? truncate.replace(/<[^>]*>/g, '') : truncate;
 		const spacePosition = plainTruncate.lastIndexOf(' ');
 		if (spacePosition !== -1) {
 			if (considerHtml) {

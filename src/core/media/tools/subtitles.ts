@@ -203,7 +203,11 @@ export function fragmentSplit(
 	const lines: SubtitleLine[] = [];
 	let refPos = 0;
 	let offsetSecs = tcToSeconds(tcin ?? '');
-	const maxCharLine = ctx.maxCharLine;
+	// DOS-02 (2026-07-28 audit): maxCharLine is UI/config-controlled. At <= 0 the
+	// wrap loop below never advances refPos (spacePos collapses to 0) and pushes a
+	// line every iteration → infinite loop, unbounded `lines`, process OOM. A
+	// subtitle line is at least one character; clamp so the loop always advances.
+	const maxCharLine = Math.max(1, Math.floor(Number(ctx.maxCharLine)) || 1);
 	let charTime = ctx.charTime;
 
 	// Per-fragment char time when both boundary tags exist (PHP optimization).
@@ -218,7 +222,13 @@ export function fragmentSplit(
 	}
 
 	const chars = [...text];
+	// Hard progress guard (belt-and-suspenders to the maxCharLine clamp): a wrap
+	// can never produce more lines than there are characters, so this bounds the
+	// loop regardless of any future edit that lets spacePos reach 0.
+	const maxIterations = chars.length + 1;
+	let iterations = 0;
 	do {
+		if (++iterations > maxIterations) break;
 		const currentLine = chars.slice(refPos, refPos + maxCharLine);
 		const lineLength = currentLine.length;
 
