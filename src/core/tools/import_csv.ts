@@ -93,12 +93,27 @@ export interface CsvAnalysis {
  * for an empty/headerless file (caller ledgers the read error).
  */
 export function analyzeCsv(text: string, delimiter?: string): CsvAnalysis | null {
+	// DOS-04 (2026-07-28 audit): parseCsv materializes every cell as a separate
+	// JS string (~39× the source bytes), so an oversized upload OOMs the analysis
+	// worker. Reject beyond a hard ceiling — a real ontology import is far under
+	// it, and a 200 MB+ file is either a mistake or an availability attack.
+	const MAX_CSV_BYTES = 64 * 1024 * 1024;
+	if (text.length > MAX_CSV_BYTES) {
+		throw new Error(
+			`CSV exceeds the ${Math.round(MAX_CSV_BYTES / 1024 / 1024)} MB import-analysis limit`,
+		);
+	}
 	const rows = parseCsv(text, delimiter);
 	const header = rows[0];
 	if (header === undefined || header.length === 0) return null;
 	const sample_data = rows.slice(0, 10).map((row) => row.map(unescapeCell));
+	// The preview of malformed-JSON rows is a SAMPLE, not the full set — cap it
+	// (the docblock promised "bounded" but it collected EVERY bad row, so a file
+	// of all-malformed rows returned the whole file to the client, DOS-04).
+	const SAMPLE_ERROR_CAP = 100;
 	const sample_data_errors: string[][] = [];
 	for (const line of rows) {
+		if (sample_data_errors.length >= SAMPLE_ERROR_CAP) break;
 		let bad = false;
 		for (const raw of line) {
 			const value = unescapeCell(raw);
