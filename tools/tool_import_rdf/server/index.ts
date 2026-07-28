@@ -9,6 +9,7 @@
  */
 
 import { getPermissions } from '../../../src/core/security/permissions.ts';
+import { fetchGuardedText } from '../../../src/core/security/ssrf_guard.ts';
 import type {
 	ToolActionContext,
 	ToolResponse,
@@ -18,22 +19,6 @@ import { type RdfMapEntry, applyRdfMap, parseRdfXml } from '../../../src/core/to
 
 function fail(message: string): ToolResponse {
 	return { result: false, msg: `Error. ${message}`, errors: [message] };
-}
-
-/** SSRF guard for outbound RDF fetches (PHP is_safe_remote_url). */
-function isSafeRemoteUrl(uri: string): boolean {
-	let url: URL;
-	try {
-		url = new URL(uri);
-	} catch {
-		return false;
-	}
-	if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
-	const host = url.hostname.toLowerCase();
-	if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '169.254.169.254')
-		return false;
-	if (/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)) return false;
-	return true;
 }
 
 async function getRdfData(ctx: ToolActionContext): Promise<ToolResponse> {
@@ -54,17 +39,11 @@ async function getRdfData(ctx: ToolActionContext): Promise<ToolResponse> {
 		const errors: string[] = [];
 		for (const raw of arValues) {
 			const uri = raw.endsWith('.rdf') ? raw : `${raw}.rdf`;
-			if (!isSafeRemoteUrl(uri)) {
-				errors.push(`SEC-072: refused unsafe RDF URI: ${uri}`);
-				continue;
-			}
 			try {
-				const res = await fetch(uri);
-				if (!res.ok) {
-					errors.push(`${uri}: HTTP ${res.status}`);
-					continue;
-				}
-				const { subjects } = parseRdfXml(await res.text());
+				// SSRF-01 + DOS-05: resolve+vet the URL against private/reserved
+				// ranges (not a string blocklist), no redirects, timeout, body cap.
+				const xml = await fetchGuardedText(uri, { maxBytes: 20 * 1024 * 1024 });
+				const { subjects } = parseRdfXml(xml);
 				// If a class-map is supplied, return the mapped fields (the dd_object
 				// the client form consumes); else the raw subjects.
 				const map = ((ctx.options.tool_config as { config?: { main?: unknown[] } })?.config?.main ??

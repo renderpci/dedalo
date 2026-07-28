@@ -32,7 +32,9 @@
  * instead of duplicated.
  */
 
+import { isIP } from 'node:net';
 import { readString } from '../../config/readers.ts';
+import { isPrivateIp } from '../security/ssrf_guard.ts';
 import type {
 	TranscribeRequest,
 	TranscribeResult,
@@ -54,8 +56,18 @@ export function privateTranscriberHostsAllowed(): boolean {
 }
 
 /**
- * URL guard for the on-premise engine. http(s) only, and private ranges only
- * when the exemption above is on.
+ * URL guard for the on-premise engine. http(s) only; private/reserved ranges
+ * only when the exemption above is on.
+ *
+ * SSRF-02 (2026-07-28 audit): the old string blocklist missed 0.0.0.0,
+ * 127.0.0.0/8 (only .1), ::, ::ffff:, decimal/octal IPs, 100.64/10 and the rest
+ * of 169.254/16 — so with the exemption OFF it still reached the engine's own
+ * network through any of those IP-literal forms. It now vets IP-literal hosts
+ * through the shared isPrivateIp (comprehensive v4+v6 range set) and treats the
+ * localhost NAME family as private. Kept synchronous (no DNS) so it stays
+ * hermetic; a NAME that resolves to an internal IP is a documented residual —
+ * the attacker-supplied-URL path (RDF import) uses the resolving assertPublicUrl
+ * guard instead.
  */
 export function isSafeLocalAsrUrl(uri: string): boolean {
 	let url: URL;
@@ -65,17 +77,28 @@ export function isSafeLocalAsrUrl(uri: string): boolean {
 		return false;
 	}
 	if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
-
-	const host = url.hostname.toLowerCase();
-	const isPrivate =
-		host === 'localhost' ||
-		host === '127.0.0.1' ||
-		host === '::1' ||
-		host === '[::1]' ||
-		/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host);
+	const host = url.hostname.replace(/^\[|\]$/g, '').toLowerCase();
 
 	// The cloud metadata endpoint is never a transcriber, exemption or not.
 	if (host === '169.254.169.254') return false;
+
+	// Is the target private/internal? For IP LITERALS this is now comprehensive
+	// via the shared isPrivateIp (SSRF-02 closed the old bypasses: 0.0.0.0,
+	// 127.0.0.0/8, ::ffff:a.b.c.d, decimal/octal IPs, 100.64/10, all of
+	// 169.254/16). For NAMES, the localhost family is treated as private; any
+	// other name is treated as public here (a name that RESOLVES to an internal
+	// IP is a documented residual — the attacker-supplied-URL path uses the
+	// resolving assertPublicUrl guard instead).
+	const localNames = new Set([
+		'localhost',
+		'localhost.localdomain',
+		'ip6-localhost',
+		'ip6-loopback',
+	]);
+	const isPrivate =
+		isIP(host) !== 0
+			? isPrivateIp(host)
+			: localNames.has(host) || host.endsWith('.local') || host.endsWith('.localhost');
 
 	return isPrivate ? privateTranscriberHostsAllowed() : true;
 }
