@@ -31,6 +31,7 @@ import { runBootMigrations } from '../install/db/migrate.ts';
 import { initRagHooks } from './ai/rag/bootstrap.ts';
 import { config } from './config/config.ts';
 import { projectRoot, readEnv } from './config/env.ts';
+import { AI_MODEL_URL_PREFIX, serveModelRequest } from './core/ai/model_store.ts';
 import { handleCountersRequest } from './core/api/counters.ts';
 import { type ApiRequestContext, dispatchRqo } from './core/api/dispatch.ts';
 import { handleEnvironmentView } from './core/api/environment_view.ts';
@@ -45,6 +46,10 @@ import {
 	resolveMediaAccessMode,
 	writeRuleFiles,
 } from './core/media/protection.ts';
+import {
+	TRANSCRIPTION_AUDIO_PATH,
+	handleTranscriptionAudio,
+} from './core/media/tools/transcription_audio.ts';
 // S2-20 boot registration: loading the component registry registers the
 // ontology↔components model lookup (module-load side effect) BEFORE any request
 // resolves a component model. Keep this explicit even though other imports
@@ -687,6 +692,25 @@ export async function handleRequest(request: Request, context: RequestContext): 
 	if (request.method === 'GET' && url.pathname.startsWith(CLIENT_LIB_URL_PREFIX)) {
 		const libResponse = await serveClientLibRequest(url.pathname, request);
 		if (libResponse !== null) return libResponse;
+	}
+
+	// The speech-recognition audio, served from the APP's own origin behind the
+	// engine's session + record gate. The ordinary media URL is frequently on a
+	// different origin (and behind the media cookie and the web-server protection
+	// rules), none of which the in-browser recogniser can satisfy — see the
+	// handler. MUST run before the generic /dedalo/tools/ asset route, which would
+	// otherwise try to resolve this as a file inside the tool package.
+	if (request.method === 'GET' && url.pathname === TRANSCRIPTION_AUDIO_PATH) {
+		return handleTranscriptionAudio(request, url);
+	}
+
+	// Local AI model weights (in-browser speech recognition / translation), served
+	// read-only from the install's own model store instead of a public model hub —
+	// the whole point of running inference locally. Same ordering reason as the
+	// lib route: the client tree has no ai_models/ subtree.
+	if (request.method === 'GET' && url.pathname.startsWith(AI_MODEL_URL_PREFIX)) {
+		const modelResponse = await serveModelRequest(url.pathname, request);
+		if (modelResponse !== null) return modelResponse;
 	}
 
 	// Entry points → the app (PHP's index.php / core/index.php redirect shims).

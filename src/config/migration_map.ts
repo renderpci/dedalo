@@ -596,6 +596,13 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_RAG_SEMANTIC_BREAKPOINT_THRESHOLD',
 	'DEDALO_RAG_RRF_K',
 	'DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS',
+	// In-browser inference (transcription, translation): where the model weights
+	// live, and whether a public hub may be used at all. No v6 equivalent — v6 had
+	// no local AI. See engineering/TRANSCRIPTION.md.
+	'DEDALO_AI_MODEL_STORE',
+	'DEDALO_AI_MODEL_ALLOW_HUB',
+	// The named exemption that lets a transcription server live on the LAN.
+	'DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS',
 	'ANTHROPIC_API_KEY',
 	'AGENT_MODEL',
 	'DEDALO_AGENT_MODELS',

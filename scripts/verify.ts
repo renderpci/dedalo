@@ -70,6 +70,7 @@ const TRIPWIRES = [
 	'test/unit/ontology_single_writer_tripwire.test.ts',
 	'test/unit/rag_index_scope_tripwire.test.ts',
 	'test/unit/labels_tripwire.test.ts',
+	'test/unit/no_remote_code_tripwire.test.ts',
 	'test/parity/oracle_canary.test.ts',
 ];
 
