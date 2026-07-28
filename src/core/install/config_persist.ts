@@ -132,11 +132,11 @@ export async function persistConfig(o: Record<string, unknown>): Promise<Persist
 	// Secrets: preserve an existing value, else generate (and surface once).
 	const salt = prior.DEDALO_SALT_STRING ?? generateSecret();
 	if (prior.DEDALO_SALT_STRING === undefined) generated.DEDALO_SALT_STRING = salt;
-	let diffusionToken = prior.DEDALO_DIFFUSION_INTERNAL_TOKEN;
-	if (diffusion && diffusionToken === undefined) {
-		diffusionToken = generateSecret();
-		generated.DEDALO_DIFFUSION_INTERNAL_TOKEN = diffusionToken;
-	}
+	// OPS-04 (2026-07-28 audit): DEDALO_DIFFUSION_INTERNAL_TOKEN is NO LONGER
+	// minted. The TS engine removed the diffusion socket + internal-token control
+	// plane (see diffusion_bridge/diffusion_delete.ts) — the whole diffusion API
+	// runs behind the normal dispatch gates now — so writing a fresh secret here
+	// only left a weak, never-verified token sitting in every install's .env.
 
 	// Build the .env body with PHP key names (the aliases env.ts already resolves).
 	const lines: string[] = [
@@ -200,7 +200,6 @@ export async function persistConfig(o: Record<string, unknown>): Promise<Persist
 			`DEDALO_DIFFUSION_DB_USER=${envQuote(str('mysql_username'))}`,
 			`DEDALO_DIFFUSION_DB_PASSWORD=${envQuote(str('mysql_password'))}`,
 			`DEDALO_DIFFUSION_DB_NAME=${envQuote(str('mysql_database'))}`,
-			`DEDALO_DIFFUSION_INTERNAL_TOKEN=${envQuote(diffusionToken ?? '')}`,
 		);
 	}
 	if (mailer) {
