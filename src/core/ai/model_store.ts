@@ -182,7 +182,19 @@ export function resolveModelPath(subPath: string): string | null {
 	}
 	if (!SERVABLE_EXTENSIONS.has(extname(fullPath).toLowerCase())) return null;
 	if (!existsSync(fullPath)) return null;
-	return fullPath;
+	// MODEL-02 (2026-07-28 audit): the string check above only confines resolve()'s
+	// path — a SYMLINK LEAF inside the store still reads its target. Realpath the
+	// final file and RE-CONFINE, so a symlink pointing OUT of the store (planted
+	// by whoever seeded it, or a crafted rsync) cannot exfiltrate an arbitrary
+	// file through this anonymous route.
+	let realFull: string;
+	try {
+		realFull = realpathSync(fullPath);
+	} catch {
+		return null;
+	}
+	if (realFull !== canonicalRoot && !realFull.startsWith(canonicalRoot + sep)) return null;
+	return realFull;
 }
 
 /**
