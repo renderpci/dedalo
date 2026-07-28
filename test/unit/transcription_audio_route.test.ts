@@ -20,13 +20,24 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { TRANSCRIPTION_AUDIO_PATH } from '../../src/core/media/tools/transcription_audio.ts';
+import { SESSION_COOKIE, createSession } from '../../src/core/security/session_store.ts';
 import { handleRequest } from '../../src/server.ts';
+import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
+
+registerSessionCleanup();
 
 const context = { requestId: 'test', startedAt: 0 };
 
-async function get(query: string): Promise<Response> {
-	return handleRequest(new Request(`http://localhost${TRANSCRIPTION_AUDIO_PATH}${query}`), context);
+async function get(query: string, token?: string): Promise<Response> {
+	return handleRequest(
+		new Request(`http://localhost${TRANSCRIPTION_AUDIO_PATH}${query}`, {
+			headers: token !== undefined ? { cookie: `${SESSION_COOKIE}=${token}` } : {},
+		}),
+		context,
+	);
 }
 
 describe('the transcription audio route is fail-closed', () => {
@@ -60,14 +71,53 @@ describe('the transcription audio route is fail-closed', () => {
 		expect(response.status).not.toBe(200);
 	});
 
-	test('it does not collide with the tool asset route', async () => {
-		// The path lives under /dedalo/tools/tool_transcription/, which is also the
-		// tool's static asset space — the audio route must win, and a real asset
-		// must still serve.
+	test('a real tool asset still serves (the route did not shadow the package)', async () => {
 		const asset = await handleRequest(
 			new Request('http://localhost/dedalo/tools/tool_transcription/register.json'),
 			context,
 		);
 		expect(asset.status).toBe(200);
+	});
+});
+
+describe('the route is REACHABLE (it is not shadowed by the tool asset route)', () => {
+	// This path lives under /dedalo/tools/tool_transcription/, which is ALSO the
+	// tool's static asset space. With the asset route first, it resolves the path as
+	// a file inside the package, finds none and returns its OWN 404 — the audio
+	// handler never runs, and every browser transcription dies with "the audio file
+	// could not be read (HTTP 404)". That shipped once, on 2026-07-28.
+	//
+	// It cannot be caught by response comparison: both routes answer the same
+	// fail-closed 404 with the same body, deliberately. What the bug IS, is source
+	// order — so that is what this asserts.
+	test('the audio route is checked BEFORE the tool asset route in server.ts', () => {
+		const server = readFileSync(join(import.meta.dir, '..', '..', 'src', 'server.ts'), 'utf8');
+
+		const audioAt = server.indexOf('url.pathname === TRANSCRIPTION_AUDIO_PATH');
+		const assetAt = server.indexOf('await serveToolsRequest(url.pathname');
+
+		expect(audioAt).toBeGreaterThan(-1);
+		expect(assetAt).toBeGreaterThan(-1);
+		expect(audioAt).toBeLessThan(assetAt);
+	});
+
+	test('a real tool asset still serves (moving the route did not shadow the package)', async () => {
+		const asset = await handleRequest(
+			new Request('http://localhost/dedalo/tools/tool_transcription/js/tool_transcription.js'),
+			context,
+		);
+		expect(asset.status).toBe(200);
+	});
+
+	test('an authenticated caller reaches the handler, not a static-file miss', async () => {
+		// A superuser session passes gate 1 and gate 3; a well-formed locator passes
+		// gate 2; the media resolution then fails for this (non-media) component and
+		// the handler answers its own 404. The value here is that the handler RUNS —
+		// it is exercised end to end through the real request pipeline.
+		const token = createSession(-1, 'root', true);
+		const response = await get('?section_tipo=rsc167&section_id=506&component_tipo=rsc35', token);
+
+		expect(response.status).toBe(404);
+		expect(await response.text()).toBe(JSON.stringify({ result: false, msg: 'Not found' }));
 	});
 });
