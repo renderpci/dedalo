@@ -229,6 +229,25 @@ validates every tool and reports, per tool, whether the registry already reflect
 its declared identity (empty diff = no-op) — writing nothing. The area_maintenance
 "Register tools" widget runs this dry-run.
 
+**Per-tool activation (WC-057).** `importTools({activeOverrides})` takes a
+`name → boolean` map that forces each tool's dd1354 ACTIVE radio
+(`applyActiveOverride`), applied before validation and the diff so it reaches
+both. It is the "Register tools" widget's Active column: the panel seeds its
+checkboxes from the registry and posts them back as `options.tools_active`, so
+**the admin's on-screen state outranks the register.json declaration** for any
+tool the install already registered — without this, the 34 files declaring
+`active:1` re-enabled deactivated tools on every import. A tool absent from the
+map keeps its file declaration; that is the path the installer
+(`registerInstallTools`) and every non-widget caller take. Because dd1354 gates
+`getUserTools`, unchecking a tool removes it from every user's menu on the next
+import (caches are invalidated by the same run).
+
+The panel itself (`get_value`) JOINS the registry with the scanned directories,
+so it can never offer a checkbox over a tool the import cannot reach: a row
+whose directory is gone is flagged `on_disk:false` (the client disables its
+checkbox) and a directory with no registry row is flagged
+`'Not registered tool'`.
+
 **Write-parity gate (before enabling writes).** The parity test
 `test/parity/tools_register_differential.test.ts` asserts that a TS dry-run import
 is a **no-op** against the PHP-populated registry (every seeded tool valid, in the
@@ -372,4 +391,4 @@ where the hierarchy `ensure` converges a fixed shape.
 - Serving: `src/core/tools/serving.ts`, wired in `src/server.ts`.
 - Dispatch entry: `src/core/api/dispatch.ts` (`dd_tools_api` + the get_element_context tool branch).
 - Widget: `src/core/resolve/widget_request.ts` (`register_tools`).
-- Tests: `test/unit/tools_{static_serving,loader,security,dispatch,config,background,register_validate}.test.ts`, `test/unit/tool_request.test.ts`, `test/parity/{user_tools,section_tools,component_tools,tool_export,tool_element_context,tools_register}_differential.test.ts`.
+- Tests: `test/unit/tools_{static_serving,loader,security,dispatch,config,background,register_validate}.test.ts`, `test/unit/tool_request.test.ts`, `test/unit/register_tools_{widget,panel}.test.ts`, `test/parity/{user_tools,section_tools,component_tools,tool_export,tool_element_context,tools_register}_differential.test.ts`.

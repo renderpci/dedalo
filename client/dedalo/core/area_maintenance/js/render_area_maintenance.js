@@ -1603,6 +1603,11 @@ export const print_response = (container, api_response) => {
 *   on_done       {Function}    — Optional: called with `(api_response)` after the
 *                                 default API dispatch completes (not called when
 *                                 `on_submit` overrides the dispatch).
+*   render_response {Function}  — Optional: called with `(body_response, api_response)`
+*                                 INSTEAD of the default `print_response`, for actions
+*                                 whose raw JSON is too large to read (e.g. a per-tool
+*                                 import report). It owns the container completely —
+*                                 clearing it and providing its own dismiss affordance.
 *   on_render     {Function}    — Optional: called with `({ form_container, input_nodes })`
 *                                 immediately after the form is fully constructed,
 *                                 allowing callers to inject extra nodes or wire events.
@@ -1655,6 +1660,7 @@ export const build_form = function(widget_object) {
 		const on_submit		= widget_object.on_submit // optional replacement function to exec on submit
 		const on_done		= widget_object.on_done // optional function to exec on API response
 		const on_render		= widget_object.on_render // optional function to exec on render is complete
+		const render_response = widget_object.render_response // optional replacement for print_response
 
 	// create the form
 		const form_container = ui.create_dom_element({
@@ -1720,7 +1726,13 @@ export const build_form = function(widget_object) {
 								retries : 1, // one try only
 								timeout : 3600 * 1000 // 1 hour waiting response
 							})
+							// A widget with a purpose-built summary owns the container;
+						// everything else gets the generic message + JSON tree.
+						if (render_response) {
+							render_response(body_response, api_response)
+						}else{
 							print_response(body_response, api_response)
+						}
 
 						// on_done. Execute function after request
 							if (on_done) {

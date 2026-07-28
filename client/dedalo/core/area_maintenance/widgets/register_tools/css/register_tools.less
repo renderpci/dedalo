@@ -7,11 +7,55 @@
 */
 .wrapper_widget.register_tools {
 
-	// name · developer · installed · version · info
+	// active · name · developer · installed · version · info
 	// installed/version columns are sized to fit their uppercase headers
 	// ("INSTALLED"/"VERSION") on one line (the kit already prevents mid-word breaks).
 	.dd_table {
-		grid-template-columns: minmax(6rem, 1.3fr) minmax(5rem, 1fr) 6rem 5.5rem minmax(7rem, 1.4fr);
+		grid-template-columns: 5.5rem minmax(6rem, 1.3fr) minmax(5rem, 1fr) 6rem 5.5rem minmax(7rem, 1.4fr);
+	}
+
+	// active column: the header cell pairs the all/none box with the column title,
+	// the row cells centre their checkbox under it.
+	.active_th {
+		display: flex;
+		gap: 0.35rem;
+		align-items: center;
+	}
+	.active_td {
+		display: flex;
+		align-items: center;
+	}
+	.checkbox_selector {
+		margin: 0;
+		cursor: pointer;
+
+		&:disabled {
+			cursor: not-allowed;
+			opacity: 0.4;
+		}
+	}
+
+	// a deactivated tool stays fully legible but visibly stands down — this is a
+	// chosen state, not an error, so no danger colour.
+	.dd_tr.inactive .dd_td {
+		opacity: 0.5;
+		text-decoration: line-through;
+		text-decoration-color: color-mix(in srgb, var(--fg_default) 45%, transparent);
+	}
+	.dd_tr.inactive .active_td {
+		opacity: 1;
+		text-decoration: none;
+	}
+
+	// '3 disabled' counter, inline with the submit button
+	.active_summary {
+		margin-left: 0.6rem;
+		color: var(--fg_muted);
+		font-size: 0.85em;
+
+		&:empty {
+			display: none;
+		}
 	}
 
 	// fatal-error banner (outdated ontology, etc.) as a contained danger note
@@ -31,6 +75,132 @@
 
 		&:empty {
 			display: none;
+		}
+	}
+
+	// ---- import report ----
+	// Replaces the generic JSON tree after a register run (render_report). The
+	// console block it sits in is monospace + pre-wrap; the summary is prose, so
+	// it opts back out — only the raw tree keeps console typography.
+	.register_report {
+		// NOT `inherit` — the parent .body_response is the monospace console, so
+		// inherit would keep the mono face. This is prose; only the tool names and
+		// the raw tree stay monospace.
+		font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+		white-space: normal;
+
+		// state_ok / state_failed, never bare .ok / .failed: .body_response carries
+		// the kit's .dd_response_states(), whose generic .ok rule would otherwise
+		// force display:block and paint a stray green rule on the headline.
+		.report_headline {
+			display: flex;
+			gap: 0.45rem;
+			align-items: baseline;
+			font-size: 0.95rem;
+			font-weight: 600;
+
+			&.state_ok .report_icon {
+				color: var(--color_success);
+			}
+			&.state_failed .report_icon {
+				color: var(--color_danger);
+			}
+		}
+
+		.report_counters {
+			margin-top: 0.15rem;
+			color: var(--fg_muted);
+			font-size: 0.85rem;
+		}
+
+		.report_block {
+			margin-top: 0.85rem;
+
+			.report_block_title {
+				margin-bottom: 0.3rem;
+				color: var(--fg_muted);
+				font-size: 0.75rem;
+				font-weight: 700;
+				text-transform: uppercase;
+				letter-spacing: 0.04em;
+			}
+		}
+
+		// errors are the one section that must not be skimmable-past
+		.report_block.errors .report_block_title {
+			color: var(--color_danger);
+		}
+
+		.report_row {
+			display: flex;
+			gap: 0.6rem;
+			padding: 0.25rem 0;
+			border-top: 1px solid var(--border_default);
+
+			&:first-child {
+				border-top: 0;
+			}
+		}
+
+		.report_tool {
+			flex: 0 0 12rem;
+			font-family: @dd_mono;
+			font-size: 0.8rem;
+			word-break: break-word;
+		}
+
+		// a grouped warning leads with a count ('12×'), not a tool name — the wide
+		// name column would leave it stranded in whitespace
+		.report_row.note_row .report_tool {
+			flex: 0 0 3rem;
+			color: var(--fg_muted);
+			text-align: right;
+		}
+
+		.report_detail {
+			flex: 1 1 auto;
+			font-size: 0.85rem;
+		}
+
+		// the tool list under a grouped warning — secondary to the message
+		.report_names {
+			margin-top: 0.15rem;
+			color: var(--fg_muted);
+			font-family: @dd_mono;
+			font-size: 0.75rem;
+			word-break: break-word;
+		}
+
+		.report_chips {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.35rem;
+
+			.dd_badge {
+				padding: 0.1rem 0.5rem;
+				font-family: @dd_mono;
+				font-size: 0.78rem;
+				background-color: color-mix(in srgb, var(--fg_default) 8%, transparent);
+				border: 1px solid var(--border_default);
+				border-radius: 999px;
+			}
+		}
+
+		.report_raw {
+			margin-top: 0.9rem;
+
+			summary {
+				color: var(--fg_muted);
+				font-size: 0.8rem;
+				cursor: pointer;
+			}
+
+			.pre {
+				margin-top: 0.4rem;
+				font-family: @dd_mono;
+				font-size: 0.8rem;
+				white-space: pre-wrap;
+			}
 		}
 	}
 }

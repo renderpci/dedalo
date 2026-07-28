@@ -33,12 +33,22 @@ afterAll(() => {
 
 const ADMIN: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true } as Principal;
 
-function runImport() {
+function runImport(options: Record<string, unknown> = {}) {
 	return dispatchWidgetRequest(
 		ADMIN,
 		{ model: 'register_tools', action: 'register_tools' },
-		{},
+		options,
 	) as unknown as Promise<Record<string, unknown>>;
+}
+
+/** The importTools options the widget passed on its Nth (default first) call. */
+function importArgs(
+	spy: typeof realRegister.importTools,
+	call = 0,
+): { dryRun?: boolean; activeOverrides?: Record<string, boolean> } | undefined {
+	return (spy as unknown as { mock: { calls: unknown[][] } }).mock.calls[call]?.[0] as
+		| { dryRun?: boolean; activeOverrides?: Record<string, boolean> }
+		| undefined;
 }
 
 describe('module shape', () => {
@@ -88,7 +98,8 @@ describe('open (owned) mode — mocked gate, importTools spy', () => {
 			inRegistry: true,
 			diff: [],
 			hasServerModule: false,
-			record: { version: '9.9.9' },
+			active: true,
+			version: '9.9.9',
 			...overrides,
 		};
 	}
@@ -107,9 +118,9 @@ describe('open (owned) mode — mocked gate, importTools spy', () => {
 		}));
 
 		const body = await runImport();
-		expect((importTools as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]?.[0]).toEqual(
-			{ dryRun: false },
-		);
+		// No tools_active option ⇒ an EMPTY override map: every tool keeps the
+		// active state its own register.json declares (the pre-WC-057 behavior).
+		expect(importArgs(importTools)).toEqual({ dryRun: false, activeOverrides: {} });
 		expect(body.msg).toBe('OK. Request done successfully');
 		expect(body.errors).toEqual([]);
 		expect(body.result).toEqual([
@@ -120,6 +131,7 @@ describe('open (owned) mode — mocked gate, importTools spy', () => {
 				imported: true,
 				errors: [],
 				warnings: [],
+				active: true,
 			},
 		]);
 	});
@@ -132,7 +144,9 @@ describe('open (owned) mode — mocked gate, importTools spy', () => {
 				dir: 'tools/tool_broken',
 				valid: false,
 				errors: ['register.json parse error', 'missing label'],
-				record: undefined,
+				// bailed before its record was parsed — see ImportReportItem.active
+				active: false,
+				version: null,
 			}),
 		]) as unknown as typeof realRegister.importTools;
 		mock.module('../../src/core/update/ownership.ts', () => ({
@@ -155,7 +169,88 @@ describe('open (owned) mode — mocked gate, importTools spy', () => {
 			imported: false,
 			errors: ['register.json parse error', 'missing label'],
 			warnings: [],
+			// An item that never reached a parsed record reports active:false —
+			// nothing was written for it.
+			active: false,
 		});
+	});
+});
+
+/**
+ * WC-057: the panel's per-tool ACTIVE checkboxes (`options.tools_active`) reach
+ * importTools as activeOverrides, and the response reports what each tool's
+ * state ended up as.
+ */
+describe('tools_active overrides (open mode)', () => {
+	function spyImport() {
+		const importTools = mock(
+			async (options?: { dryRun?: boolean; activeOverrides?: Record<string, boolean> }) => [
+				{
+					name: 'tool_fixture',
+					dir: 'tools/tool_fixture',
+					valid: true,
+					dryRun: false,
+					errors: [],
+					warnings: [],
+					inRegistry: true,
+					diff: [],
+					hasServerModule: false,
+					// Mirror the engine: the override decides, else the file's default.
+					active: options?.activeOverrides?.tool_fixture ?? true,
+					version: '9.9.9',
+				},
+			],
+		) as unknown as typeof realRegister.importTools;
+		mock.module('../../src/core/update/ownership.ts', () => ({
+			...REAL_OWNERSHIP,
+			engineOwnsInstall: () => true,
+		}));
+		mock.module('../../src/core/tools/register.ts', () => ({
+			...REAL_REGISTER,
+			importTools,
+		}));
+		return importTools;
+	}
+
+	test('a checkbox map is forwarded verbatim and echoed in the report', async () => {
+		const importTools = spyImport();
+		const body = await runImport({
+			tools_active: { tool_fixture: false, tool_other: true },
+		});
+		expect(importArgs(importTools)?.activeOverrides).toEqual({
+			tool_fixture: false,
+			tool_other: true,
+		});
+		expect((body.result as Record<string, unknown>[])[0]?.active).toBe(false);
+	});
+
+	test('malformed pairs are DROPPED, never defaulted', async () => {
+		const importTools = spyImport();
+		await runImport({
+			tools_active: {
+				tool_fixture: false,
+				// not a tool name
+				'../../etc/passwd': false,
+				tool_UPPER: false,
+				dd1324: false,
+				'': false,
+				// not a boolean — 'false' the string must not deactivate anything
+				tool_stringy: 'false',
+				tool_nully: null,
+				tool_numeric: 0,
+			},
+		});
+		expect(importArgs(importTools)?.activeOverrides).toEqual({ tool_fixture: false });
+	});
+
+	test('a non-object tools_active is ignored (no overrides at all)', async () => {
+		const importTools = spyImport();
+		await runImport({ tools_active: ['tool_fixture'] });
+		expect(importArgs(importTools)?.activeOverrides).toEqual({});
+
+		const second = spyImport();
+		await runImport({ tools_active: 'tool_fixture' });
+		expect(importArgs(second)?.activeOverrides).toEqual({});
 	});
 });
 

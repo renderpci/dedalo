@@ -35,7 +35,7 @@ export async function registerInstallTools(): Promise<RegisterToolsResult> {
 	const report: RegisterToolsReportItem[] = raw.map((item) => ({
 		name: item.name,
 		dir: item.dir,
-		version: (item as { record?: { version?: string } }).record?.version ?? null,
+		version: item.version,
 		imported: item.valid === true && item.dryRun !== true,
 		errors: item.errors ?? [],
 		warnings: item.warnings ?? [],

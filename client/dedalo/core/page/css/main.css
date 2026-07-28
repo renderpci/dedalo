@@ -15234,7 +15234,41 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 * banner and the response block are widget-specific.
 */
 .wrapper_widget.register_tools .dd_table {
-  grid-template-columns: minmax(6rem, 1.3fr) minmax(5rem, 1fr) 6rem 5.5rem minmax(7rem, 1.4fr);
+  grid-template-columns: 5.5rem minmax(6rem, 1.3fr) minmax(5rem, 1fr) 6rem 5.5rem minmax(7rem, 1.4fr);
+}
+.wrapper_widget.register_tools .active_th {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+.wrapper_widget.register_tools .active_td {
+  display: flex;
+  align-items: center;
+}
+.wrapper_widget.register_tools .checkbox_selector {
+  margin: 0;
+  cursor: pointer;
+}
+.wrapper_widget.register_tools .checkbox_selector:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+.wrapper_widget.register_tools .dd_tr.inactive .dd_td {
+  opacity: 0.5;
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--fg_default) 45%, transparent);
+}
+.wrapper_widget.register_tools .dd_tr.inactive .active_td {
+  opacity: 1;
+  text-decoration: none;
+}
+.wrapper_widget.register_tools .active_summary {
+  margin-left: 0.6rem;
+  color: var(--fg_muted);
+  font-size: 0.85em;
+}
+.wrapper_widget.register_tools .active_summary:empty {
+  display: none;
 }
 .wrapper_widget.register_tools .info_text.error {
   margin-top: 0.75rem;
@@ -15260,6 +15294,100 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .wrapper_widget.register_tools .body_response:empty {
   display: none;
+}
+.wrapper_widget.register_tools .register_report {
+  font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  white-space: normal;
+}
+.wrapper_widget.register_tools .register_report .report_headline {
+  display: flex;
+  gap: 0.45rem;
+  align-items: baseline;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.wrapper_widget.register_tools .register_report .report_headline.state_ok .report_icon {
+  color: var(--color_success);
+}
+.wrapper_widget.register_tools .register_report .report_headline.state_failed .report_icon {
+  color: var(--color_danger);
+}
+.wrapper_widget.register_tools .register_report .report_counters {
+  margin-top: 0.15rem;
+  color: var(--fg_muted);
+  font-size: 0.85rem;
+}
+.wrapper_widget.register_tools .register_report .report_block {
+  margin-top: 0.85rem;
+}
+.wrapper_widget.register_tools .register_report .report_block .report_block_title {
+  margin-bottom: 0.3rem;
+  color: var(--fg_muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.wrapper_widget.register_tools .register_report .report_block.errors .report_block_title {
+  color: var(--color_danger);
+}
+.wrapper_widget.register_tools .register_report .report_row {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.25rem 0;
+  border-top: 1px solid var(--border_default);
+}
+.wrapper_widget.register_tools .register_report .report_row:first-child {
+  border-top: 0;
+}
+.wrapper_widget.register_tools .register_report .report_tool {
+  flex: 0 0 12rem;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.8rem;
+  word-break: break-word;
+}
+.wrapper_widget.register_tools .register_report .report_row.note_row .report_tool {
+  flex: 0 0 3rem;
+  color: var(--fg_muted);
+  text-align: right;
+}
+.wrapper_widget.register_tools .register_report .report_detail {
+  flex: 1 1 auto;
+  font-size: 0.85rem;
+}
+.wrapper_widget.register_tools .register_report .report_names {
+  margin-top: 0.15rem;
+  color: var(--fg_muted);
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.75rem;
+  word-break: break-word;
+}
+.wrapper_widget.register_tools .register_report .report_chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.wrapper_widget.register_tools .register_report .report_chips .dd_badge {
+  padding: 0.1rem 0.5rem;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.78rem;
+  background-color: color-mix(in srgb, var(--fg_default) 8%, transparent);
+  border: 1px solid var(--border_default);
+  border-radius: 999px;
+}
+.wrapper_widget.register_tools .register_report .report_raw {
+  margin-top: 0.9rem;
+}
+.wrapper_widget.register_tools .register_report .report_raw summary {
+  color: var(--fg_muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.wrapper_widget.register_tools .register_report .report_raw .pre {
+  margin-top: 0.4rem;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
 }
 /**
 * sqo_test_environment
