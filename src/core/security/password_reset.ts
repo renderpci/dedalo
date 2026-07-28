@@ -218,6 +218,18 @@ export async function requestPasswordReset(
 	// Request throttle (per identifier + trusted IP). When locked we still
 	// return the generic OK but skip resolution/sending entirely — and spend the
 	// same decoy verify so a throttled identifier is not observably faster.
+	// OPS-06 (2026-07-28 audit): an ACCOUNT-global bucket (identifier, all IPs) in
+	// addition to the per-(identifier, IP) one, so an attacker rotating source IPs
+	// cannot flood one user's inbox or grind reset codes. Checked first; a decoy
+	// verify keeps a throttled identifier from being observably faster.
+	const acctThrottleKey = buildThrottleKey('pwreset_req_acct', trimmed, 'all');
+	if (isThrottled(acctThrottleKey)) {
+		console.error('[password_reset] request throttled (account)');
+		await normalizeTiming(trimmed);
+		return response;
+	}
+	recordFailedAttempt(acctThrottleKey);
+
 	const throttleKey = buildThrottleKey('pwreset_req', trimmed, clientIp);
 	if (isThrottled(throttleKey)) {
 		console.error('[password_reset] request throttled');
@@ -249,16 +261,23 @@ export async function requestPasswordReset(
 		return response;
 	}
 
-	const mailResult = await sendMail({
+	// OPS-05 (2026-07-28 audit): send the mail OFF the response path
+	// (fire-and-forget). Awaiting the SMTP round-trip made the HIT path observably
+	// slower than the MISS path (decoy verify only), a timing side channel that
+	// enumerated valid identifiers even though the RESPONSE body is uniform.
+	void sendMail({
 		to: resolved.email,
 		subject: 'Your Dédalo password recovery code',
 		bodyText: buildEmailBody(code, Math.ceil(ttlSeconds / 60)),
-	});
-	if (!mailResult.result) {
-		// Logged, never surfaced (anti-enumeration). The mailer already logged
-		// the transport detail; never log the code or the address value here.
-		console.error('[password_reset] mailer failed:', mailResult.errors.join(', '));
-	}
+	})
+		.then((mailResult) => {
+			if (!mailResult.result) {
+				// Logged, never surfaced (anti-enumeration). The mailer already logged
+				// the transport detail; never log the code or the address value here.
+				console.error('[password_reset] mailer failed:', mailResult.errors.join(', '));
+			}
+		})
+		.catch((error) => console.error('[password_reset] mailer threw:', error));
 
 	console.warn(`[password_reset] recovery code issued for user_id=${resolved.userId}`);
 
