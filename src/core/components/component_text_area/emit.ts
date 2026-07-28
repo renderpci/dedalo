@@ -13,12 +13,48 @@
 import type { DataItem } from '../../resolve/component_data.ts';
 import { truncateHtml } from '../../resolve/truncate_html.ts';
 import type { ComponentEmitHook, EmitHookContext } from '../emit_hooks.ts';
+import { getOriginalLang } from './original_lang.ts';
 import { addTagImgOnTheFly } from './tag_html.ts';
 
 /** text_area list values are HTML-truncated (PHP get_list_value max_chars=130). */
 const TEXT_AREA_LIST_MAX_CHARS = 130;
 
 export const textAreaEmitHook: ComponentEmitHook = {
+	/**
+	 * ORIGINAL-LANGUAGE forcing for LIST values (PHP get_list_value :2519-2525):
+	 * a text_area whose ontology relates a component_select_lang ("Original
+	 * language" — interviews are recorded in different languages per record)
+	 * reads its list value in the RECORD's language, not the menu's. Cheap by
+	 * construction: the no-related-select-lang answer is ontology-cached, the
+	 * locator lives in the ALREADY-LOADED record, and the lg1 code map is a
+	 * save-invalidated cache. Null = no forcing (v6 semantics).
+	 */
+	async resolveEmitLang(context: EmitHookContext): Promise<string | null> {
+		if (context.ddoMode !== 'list') return null;
+		return getOriginalLang(
+			context.ddo.tipo,
+			context.row.section_tipo,
+			context.row.section_id,
+			context.record,
+		);
+	},
+
+	/**
+	 * EDIT contexts carry the record's original language as
+	 * `options.related_component_lang` (PHP component_text_area_json.php:61-69) —
+	 * the key the transcription/indexation/lang tools read to open the component
+	 * in the interview's own language. Null (no related select_lang, no value)
+	 * emits no `options` key at all: the PHP wire shape.
+	 */
+	async resolveContextOptions(target: {
+		tipo: string;
+		sectionTipo: string;
+		sectionId: number;
+	}): Promise<Record<string, unknown> | null> {
+		const originalLang = await getOriginalLang(target.tipo, target.sectionTipo, target.sectionId);
+		return originalLang === null ? null : { related_component_lang: originalLang };
+	},
+
 	transformValue(value: unknown[] | null, context: EmitHookContext): unknown[] | null {
 		if (context.ddoMode !== 'list' || !Array.isArray(value)) return value;
 		return value.map((item) => {

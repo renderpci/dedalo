@@ -64,6 +64,11 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// lastPurgeAt throttles the daily residue purge on the sweeper cadence.
 	'server.ts:shuttingDown',
 	'diffusion/jobs/scheduler.ts:lastPurgeAt',
+	// "Is curl on PATH" memo for the AI-model downloader: a fact about the HOST
+	// (boot-stable, request-independent), probed once per process on first
+	// download. Never cleared — the binary set does not change under a running
+	// server, and a wrong stale value only changes WHICH transport fetches.
+	'core/ai/model_fetch.ts:curlChecked',
 	// Ontology-update single-flight latch (UPDATE_PROCESS Phase 2, WC-023):
 	// two concurrent ontology imports must never interleave DELETEs — ops
 	// state, never request identity; set/cleared around one admin operation.

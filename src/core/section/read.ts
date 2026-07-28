@@ -223,6 +223,35 @@ export async function readSection(rqo: Rqo, principal?: Principal): Promise<Read
 		});
 		if (entry !== null && !seen.has(contextKey(entry))) {
 			seen.add(contextKey(entry));
+
+			// PER-RECORD context options for section EDIT views (the same
+			// resolveContextOptions facet buildGetDataContext dispatches on the
+			// tool/get_data route — see there for the full why; registry dispatch,
+			// never a model conditional, S2-24). The context is deduped by
+			// contextKey across the read's rows, so this is first-record-wins —
+			// exactly PHP merge_unique_context, which kept the first component
+			// context it built.
+			if ((entry.mode ?? mode) === 'edit') {
+				const ddoModel = await getModelByTipo(ddo.tipo);
+				const contextHook = ddoModel === null ? undefined : getEmitHook(ddoModel);
+				if (contextHook?.resolveContextOptions !== undefined) {
+					const firstRow = data.find((item) => (item as { typo?: string }).typo === 'sections') as
+						| { section_id?: unknown }
+						| undefined;
+					const rowId = Number(firstRow?.section_id ?? Number.NaN);
+					if (Number.isInteger(rowId) && rowId > 0) {
+						const options = await contextHook.resolveContextOptions({
+							tipo: ddo.tipo,
+							sectionTipo: ddoSectionTipo,
+							sectionId: rowId,
+						});
+						if (options !== null) {
+							entry.options = { ...(entry.options ?? {}), ...options };
+						}
+					}
+				}
+			}
+
 			context.push(entry);
 		}
 	}
@@ -1440,12 +1469,30 @@ export async function emitDdoData(
 
 	// LITERAL components: resolve the lang-sliced value, run the model's value
 	// hook (info live-compute, text_area list truncation), build + decorate.
-	let { value, fallbackValue } = await resolveComponentValue(record, ddo.tipo, model, ddoLang);
+	// A hook may FORCE the slice lang per record BEFORE the read (text_area
+	// original-language: the transcript lives in the interview's own language,
+	// whatever the data-lang menu says) — the emitted item's `lang` follows,
+	// exactly as PHP's `$this->lang` switch did on the wire.
+	const forcedLang = (await emitHook?.resolveEmitLang?.(hookContext)) ?? null;
+	const effectiveLang = forcedLang ?? ddoLang;
+	let { value, fallbackValue } = await resolveComponentValue(
+		record,
+		ddo.tipo,
+		model,
+		effectiveLang,
+	);
 	if (emitHook?.transformValue !== undefined) {
 		value = await emitHook.transformValue(value, hookContext);
 	}
 
-	const item = buildDataItem(ddo.tipo, row.section_tipo, row.section_id, ddoMode, ddoLang, value);
+	const item = buildDataItem(
+		ddo.tipo,
+		row.section_tipo,
+		row.section_id,
+		ddoMode,
+		effectiveLang,
+		value,
+	);
 	// text_area ALWAYS carries the fallback_value key (PHP
 	// component_text_area_json attaches it unconditionally — explicit null
 	// when the value is present or no cross-lang fallback exists); other
@@ -1655,6 +1702,30 @@ export async function buildGetDataContext(
 		view: requestedView,
 		propertiesOverride: source.properties ?? undefined,
 	});
+	// PER-RECORD context options (the resolveContextOptions facet — today
+	// component_text_area's original language, PHP component_text_area_json
+	// :61-69: the transcription/indexation/lang tools read
+	// `options.related_component_lang` to open the component in the interview's
+	// own language). Dispatched through the REGISTRY, never a model conditional
+	// (S2-24). Stamped HERE because this entry is per-request and per-record
+	// (clone-before-stamp: buildStructureContext returns a fresh object; the
+	// structural core cache never sees `options`).
+	if (mainEntry !== null && String(mode) === 'edit') {
+		const sectionId = Number(source.section_id ?? Number.NaN);
+		const mainModel = await getModelByTipo(tipo);
+		const contextHook = mainModel === null ? undefined : getEmitHook(mainModel);
+		if (
+			Number.isInteger(sectionId) &&
+			sectionId > 0 &&
+			contextHook?.resolveContextOptions !== undefined
+		) {
+			const options = await contextHook.resolveContextOptions({ tipo, sectionTipo, sectionId });
+			if (options !== null) {
+				mainEntry.options = { ...(mainEntry.options ?? {}), ...options };
+			}
+		}
+	}
+
 	// The get_data context mirrors the element's RUNTIME pagination (PHP
 	// syncs the element's sqo before emitting it): the dedalo request_config
 	// item's sqo carries the limit the data actually paged with — 9 (ontology

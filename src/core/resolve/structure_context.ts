@@ -148,6 +148,16 @@ export interface StructureContextEntry extends StructureContextCore {
 	 * this grouper, so the tabs exactly match the panels that will render. ABSENT
 	 * for every other model; the client only reads it in the section_tab view. */
 	children?: { tipo: string; label: string | null }[];
+	/** PER-RECORD context options (PHP context->options). Today one producer:
+	 * component_text_area edit contexts carry `related_component_lang` — the
+	 * record's original language resolved from its related component_select_lang
+	 * (rsc263 "Original language") — which the transcription/indexation/lang
+	 * tools use to open the component in the interview's own language. STAMPED
+	 * per call in section/read.ts (buildGetDataContext / the readSection ddo
+	 * loop), NEVER in the cached structural core: the value is record data, and
+	 * the core is shared across records. ABSENT when the ontology declares no
+	 * related select_lang or the record holds no value (the PHP wire shape). */
+	options?: Record<string, unknown>;
 }
 
 /**

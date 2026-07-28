@@ -17,6 +17,7 @@
  */
 
 import { sql } from '../db/postgres.ts';
+import { createDataCache } from '../ontology/cache_factory.ts';
 import { currentDataLang } from '../resolve/request_lang.ts';
 import { registerSectionDataListener } from '../section_record/save_event.ts';
 
@@ -48,6 +49,16 @@ interface ResolvedLang {
 
 /** Per-lang cache of the resolved project langs (small, install-stable). */
 let resolvedLangsCache: ResolvedLang[] | null = null;
+/**
+ * section_id → 'lg-<code>' cache for {@link getLangCodeBySectionId}. Same
+ * character as resolvedLangsCache: lg1 records are install-stable data, and the
+ * lookup runs once per text_area row in list emission (the original-language
+ * forcing), so it must not be a query per row. Factory-created: a write to a
+ * langs-section record clears it by construction.
+ */
+const langCodeCache = createDataCache<number, string | null>((cache, sectionTipo) => {
+	if (sectionTipo === LANGS_SECTION_TIPO) cache.clear();
+});
 // Data-derived (lg1 records: names/codes): a write/delete of a langs-section
 // record rebuilds the list on next read (S1-11 channel; WS-B lifecycle sweep).
 registerSectionDataListener((sectionTipo) => {
@@ -73,6 +84,36 @@ export async function getLangSectionIdByCode(code: string): Promise<number | nul
 		[LANGS_SECTION_TIPO, bare],
 	)) as { section_id: number }[];
 	return rows[0]?.section_id ?? null;
+}
+
+/**
+ * The INVERSE of getLangSectionIdByCode: the Dédalo lang tag ('lg-<code>') of
+ * one lg1 record (PHP lang::get_code_from_locator, which read the lg1 record's
+ * CODE component and prefixed 'lg-').
+ *
+ * This is how a component_select_lang VALUE — a locator into lg1, e.g. the
+ * "Original language" (rsc263) of an interview — becomes the lang tag the rest
+ * of the engine speaks. Returns null when the record does not exist or carries
+ * no code (a half-built lg1 record must not mint an 'lg-undefined' tag).
+ */
+export async function getLangCodeBySectionId(sectionId: number): Promise<string | null> {
+	if (!Number.isInteger(sectionId) || sectionId < 1) return null;
+	if (langCodeCache.has(sectionId)) return langCodeCache.get(sectionId) ?? null;
+
+	// CODE_TIPO is a fixed ontology constant (tipo-grammar safe); the id is bound.
+	const rows = (await sql.unsafe(
+		`SELECT "string"->'${CODE_TIPO}'->0->>'value' AS code
+		   FROM "${LANGS_TABLE}"
+		  WHERE section_tipo = $1
+		    AND section_id = $2
+		  LIMIT 1`,
+		[LANGS_SECTION_TIPO, sectionId],
+	)) as { code: string | null }[];
+
+	const code = rows[0]?.code;
+	const tag = code !== null && code !== undefined && code !== '' ? `lg-${code}` : null;
+	langCodeCache.set(sectionId, tag);
+	return tag;
 }
 
 /**
@@ -178,4 +219,5 @@ export async function getSelectLangListValue(
 /** Test-only cache reset. */
 export function clearSelectLangCache(): void {
 	resolvedLangsCache = null;
+	langCodeCache.clear();
 }
