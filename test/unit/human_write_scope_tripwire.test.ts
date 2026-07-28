@@ -34,9 +34,10 @@ describe('TOOLS-01 — propagate_component_data authorizes every write target', 
 		const loopSrc = src.slice(src.indexOf('for (const row of rows)'));
 		const scopeAt = loopSrc.indexOf('principalCanAccessRecord(row.section_tipo');
 		const writeAt = loopSrc.indexOf('persistRecordKeys(');
-		expect(scopeAt, 'per-row principalCanAccessRecord(row…) must exist in the loop').toBeGreaterThan(
-			-1,
-		);
+		expect(
+			scopeAt,
+			'per-row principalCanAccessRecord(row…) must exist in the loop',
+		).toBeGreaterThan(-1);
 		expect(writeAt, 'the data write persistRecordKeys must exist in the loop').toBeGreaterThan(-1);
 		// The scope check precedes the data write in source order (same loop body).
 		expect(scopeAt).toBeLessThan(writeAt);
@@ -46,5 +47,26 @@ describe('TOOLS-01 — propagate_component_data authorizes every write target', 
 		// getPermissions(principal, row.section_tipo, componentTipo) — the ACTUAL
 		// target section, not the client-declared section_tipo.
 		expect(src.includes('getPermissions(principal, row.section_tipo, componentTipo)')).toBe(true);
+	});
+});
+
+describe('TOOLS-02 — export applies the read ACL before it reads records', () => {
+	const src = read('src/diffusion/export/grid.ts');
+
+	test('read permission (Gate A+B) is checked BEFORE buildSearchSql', () => {
+		// The tool gate only checks the DECLARED section; the export reads whatever
+		// options.sqo targets and emits whatever ddo paths ask for. Without this,
+		// dd133 password hashes / dd996 API keys (not projects-gated) leak.
+		const gateAt = src.indexOf('getPermissions(context.principal, targetSectionTipo');
+		const readAt = src.indexOf('buildSearchSql(sqo');
+		expect(gateAt, 'per-SQO-section getPermissions must exist').toBeGreaterThan(-1);
+		expect(readAt, 'buildSearchSql read must exist').toBeGreaterThan(-1);
+		expect(gateAt).toBeLessThan(readAt);
+	});
+
+	test('every exported ddo-path component is permission-checked', () => {
+		expect(
+			src.includes('getPermissions(context.principal, seg.section_tipo, seg.component_tipo)'),
+		).toBe(true);
 	});
 });
