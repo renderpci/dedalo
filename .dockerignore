@@ -3,7 +3,14 @@
 # node_modules above all: the image installs its own (linux/arm64 or amd64
 # binaries). Copying the host's tree over it would overwrite the installed one
 # with binaries built for another platform.
+#
+# `node_modules` on its own matches ONLY the root one: .dockerignore uses Go's
+# filepath.Match, where a pattern without `**` never crosses a directory
+# boundary. The nested trees (publication/server_api/v2, publication/site_builder)
+# are the big ones — leaving them in put ~320 MB of foreign-platform binaries in
+# the context and the image, which is exactly what the paragraph above forbids.
 node_modules
+**/node_modules
 .git
 .github
 rewrite

@@ -36,7 +36,12 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-dedalo_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # /var/lib/postgresql, NOT /var/lib/postgresql/data. From 18 the official
+      # image stores data in a major-version subdirectory (PGDATA is
+      # /var/lib/postgresql/18/docker) so that pg_upgrade --link works across a
+      # single mount point. A volume on the old .../data path is detected as an
+      # "unused mount/volume" and the container REFUSES TO START.
+      - pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dedalo_user} -d ${POSTGRES_DB:-dedalo_main}"]
       interval: 5s
@@ -134,7 +139,9 @@ services:
       POSTGRES_USER: ${DEDALO_RAG_DB_USERNAME_CONN:-dedalo_rag}
       POSTGRES_PASSWORD: ${DEDALO_RAG_DB_PASSWORD_CONN:-}
     volumes:
-      - ragdata:/var/lib/postgresql/data
+      # Same 18+ layout rule as the `postgres` service above — pgvector tracks
+      # the official image, so the old .../data mount point refuses to start.
+      - ragdata:/var/lib/postgresql
 
 volumes:
   pgdata:

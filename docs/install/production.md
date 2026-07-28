@@ -234,7 +234,7 @@ SQL
 
 ### 8. Run the installer
 
-The installer has two front ends driving one engine: a headless CLI and a browser wizard. **On a server, use the CLI** — it needs no restart, no exposed pre-auth surface, and it ends by verifying a real login.
+The installer has two front ends driving one engine: a headless CLI and a browser wizard. **On a server, use the CLI** — it needs no restart, no exposed pre-auth surface, and it ends by verifying a real login. The wizard route is written out in 8.4, along with the three things a server has to do differently for it.
 
 The root password comes from the **environment** (`DEDALO_INSTALL_ROOT_PASSWORD`), never a flag — a `--root-password` argv is visible in `ps` and lands in your shell history. Read it (and the database password) with `read -rs`, so neither is ever typed literally. `--media-path`, `--socket` and `--media-access-mode` are persisted to `.env`, so the serving config is set here — there is nothing to append later.
 
@@ -306,6 +306,67 @@ Dédalo TS install — entity 'mib', db 'dedalo_main'
 The installer suggests `bun run start`, but on this server you run the engine **under systemd** (step 10) — do not start it by hand. Step 9 is optional; you can go straight to step 10.
 
 The full flag list, what each step does, and what the seed contains are in the **[installer reference](installer_reference.md)**.
+
+8.4 Alternative: the browser wizard.
+
+The wizard drives the same engine, and on this server it is the **longer** path — it needs a supervisor before the install, a way to reach HTTP before the proxy exists, and a manual fix-up afterwards. Use it only if you want the diagnostics panel; otherwise stay with 8.2 and skip to step 9. Its screens are documented in the [installer reference](installer_reference.md#the-browser-wizard); what follows is what a **server** changes.
+
+Three facts set the procedure:
+
+1. **Save config exits the process.** Configuration is read once, at boot, so the wizard writes `.env` and then quits (exit `75`) for a supervisor to restart it. Here that supervisor is the systemd unit — so **step 10 moves ahead of the install**.
+2. **Without `.env` the engine listens on `/tmp/dedalo_ts.sock`**, the built-in default — not the `/run/dedalo/dedalo_ts.sock` the unit and the proxy expect. So the wizard is not reachable through the proxy anyway; browse it over an SSH tunnel instead, which also keeps the pre-auth surface off the network entirely.
+3. **The wizard has no field for the serving keys.** `MEDIA_PATH`, `SERVER_UNIX_SOCKET` and `DEDALO_MEDIA_ACCESS_MODE` are CLI-only flags, so a wizard `.env` simply **omits all three**. Their defaults are wrong for this layout — media would resolve to `/opt/dedalo/master_dedalo/media` and the access gate would be off — so you append them by hand at the end.
+
+8.4.1 Install the systemd unit now (all of step 10, brought forward), then add an install-time drop-in:
+
+```shell
+sudo systemctl edit dedalo-ts
+```
+
+```ini
+[Service]
+Environment=SERVER_TCP_PORT=3600
+Environment=DEDALO_INSTALL_ALLOWED_IPS=loopback
+```
+
+!!! danger "That TCP listener binds every interface"
+    The engine's `SERVER_TCP_PORT` listener is plain HTTP on `0.0.0.0`, and until the wizard is finished it serves a **pre-auth** install surface. Port 3600 must be closed at the firewall before the unit starts — `sudo ufw status` — and the drop-in is removed the moment the install is over (8.4.4). `DEDALO_INSTALL_ALLOWED_IPS=loopback` is the second lock: over the tunnel the caller *is* the loopback address, so it matches here (behind a proxy it would not).
+
+8.4.2 Start the engine and confirm it is in install mode:
+
+```shell
+sudo systemctl daemon-reload && sudo systemctl enable --now dedalo-ts
+journalctl -u dedalo-ts -n 20 --no-pager | grep 'INSTALL MODE'
+```
+
+```text
+[boot] INSTALL MODE — no database configured yet (../private/.env absent).
+Serving the install wizard at /dedalo/core/page/.
+```
+
+No such line means `.env` already exists and this is a normal boot — the wizard will not appear.
+
+8.4.3 Tunnel from your workstation and run the wizard:
+
+```shell
+ssh -N -L 3600:127.0.0.1:3600 you@your-server        # leave it running
+```
+
+Open `http://localhost:3600/dedalo/core/page/`. The database step takes the values from step 7 — host `localhost`, port `5432`, and the name, role and password you created there. At **Save config** the engine exits and systemd restarts it within `RestartSec=3`; leave the tab open, the **Verify** button retries, and a reload resumes the wizard rather than dropping to a login form. Work through to **Finish**, which is refused unless a root user with a password exists.
+
+8.4.4 Append the three serving keys the wizard could not write, drop the install-time overrides, and restart:
+
+```shell
+sudo -u dedalo tee -a /opt/dedalo/private/.env >/dev/null <<'ENV'
+MEDIA_PATH=/srv/dedalo/media
+SERVER_UNIX_SOCKET=/run/dedalo/dedalo_ts.sock
+DEDALO_MEDIA_ACCESS_MODE=publication
+ENV
+sudo rm -rf /etc/systemd/system/dedalo-ts.service.d
+sudo systemctl daemon-reload && sudo systemctl restart dedalo-ts
+```
+
+Then close the tunnel, **skip step 10** (the unit is already installed and running) and continue at [step 11](#11-reverse-proxy-tls-and-media-access). Skipping 8.4.4 is the classic wizard aftermath: every request 502s because the proxy looks for the socket in `/run/dedalo/` while the engine put it in `/tmp/`.
 
 ### 9. Configure the instance (optional)
 

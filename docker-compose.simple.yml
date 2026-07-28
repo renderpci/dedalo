@@ -1,0 +1,162 @@
+# Dédalo v7 — SIMPLE stack: a complete, ready-to-use instance in one command.
+#
+# Operator guide: docs/install/quickstart.md
+#
+#   Path 1 — guided install (it asks you the questions):
+#       ./install.sh
+#
+#   Path 2 — browser wizard (it asks you nothing here):
+#       docker compose -f docker-compose.simple.yml up -d
+#       …then open http://localhost/dedalo/core/page/ and fill the wizard.
+#
+# WHAT THIS TRADES AWAY, on purpose, to fit in one command:
+#   * no TLS — plain HTTP, so SESSION_COOKIE_SECURE must be false (a browser
+#     silently discards a Secure cookie over http://, and nobody could log in);
+#   * no media access control — every media file is readable by anyone who can
+#     reach the server, logged in or not (deploy/nginx.simple.conf serves the
+#     media tree openly, with no per-record and no per-project checks).
+#
+# Both are fine on a machine only your institution's network can reach. Neither
+# is acceptable on the public internet — for that, use docker-compose.yml and
+# docs/install/docker.md, which add TLS and the engine-enforced media gate.
+#
+# GROWING OUT OF IT: the volume names here are the same as docker-compose.yml's,
+# so moving to the full stack is additive (add TLS, set DEDALO_MEDIA_ACCESS_MODE,
+# swap the nginx config) — never a reinstall. The data never moves.
+
+name: dedalo
+
+services:
+  # --- PostgreSQL: the system of record --------------------------------------
+  # Creates an EMPTY database owned by the role, which is exactly the installer's
+  # precondition (it restores INTO a database, refuses a non-empty one, and never
+  # creates one itself).
+  #
+  # The defaults below are intentionally boring: this port is NOT published, so
+  # the database is reachable only from the other containers on this network.
+  # Path 2 users type these same values into the wizard's database step.
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dedalo}
+      POSTGRES_USER: ${POSTGRES_USER:-dedalo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dedalo}
+    volumes:
+      # /var/lib/postgresql, NOT /var/lib/postgresql/data. From 18 the official
+      # image stores data in a major-version subdirectory (PGDATA is
+      # /var/lib/postgresql/18/docker) so that pg_upgrade --link works across a
+      # single mount point. A volume on the old .../data path is detected as an
+      # "unused mount/volume" and the container REFUSES TO START.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dedalo} -d ${POSTGRES_DB:-dedalo}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # --- The engine ------------------------------------------------------------
+  dedalo:
+    build: .
+    # The container equivalent of systemd's Restart=always — and what makes the
+    # wizard's "Save config" step work at all: the process exits after writing
+    # .env so that it can be restarted into the real configuration.
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # DELIBERATELY ABSENT: ENTITY, DB_NAME, DB_HOST, DB_USER. Those four keys
+      # are the engine's "is this a fresh box?" test (src/config/install_mode.ts).
+      # Setting any of them here would take the engine OUT of install mode and
+      # the browser wizard would never appear — so the install answers reach the
+      # engine as installer arguments (path 1) or as wizard input (path 2), never
+      # as container environment.
+      DEDALO_PRIVATE_DIR: /private
+      SERVER_UNIX_SOCKET: /run/dedalo/dedalo_ts.sock
+      MEDIA_PATH: /srv/dedalo/media
+      # No DEDALO_MEDIA_ACCESS_MODE: the gate is OFF. The engine writes no rule
+      # files and nginx serves the media tree openly. This is the one line that
+      # separates this stack from the full one.
+      #
+      # TRUE whenever there is TLS — which install.sh makes the default. It is
+      # flipped to "false" only by the no-HTTPS mode, because a browser silently
+      # discards a Secure cookie over http:// and every login would appear to
+      # succeed and then do nothing.
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
+      DEDALO_ACCESS_LOG: "true"
+      TRUSTED_PROXY_HOPS: "1"
+      DEDALO_DEV_MODE: "false"
+      DEDALO_DEBUG_API_ERRORS: "false"
+      # The engine never serves media here — nginx does, from the shared volume.
+      MEDIA_DEV_ROUTE_ENABLED: "false"
+    volumes:
+      - private:/private          # .env, sessions, ts_state.json, backups — SECRETS
+      - media:/srv/dedalo/media   # written by the engine, READ by the proxy
+      - socket:/run/dedalo        # the unix socket, shared with the proxy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--unix-socket", "/run/dedalo/dedalo_ts.sock", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # --- The reverse proxy -----------------------------------------------------
+  # Owns TCP, serves the client statics, and serves the media tree OPENLY. It
+  # `include`s no generated rule files, so unlike the full stack it starts
+  # immediately and needs no post-install wiring step.
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      - dedalo
+    ports:
+      # 443 is published in every TLS mode; 80 stays published because it both
+      # redirects to HTTPS and answers the ACME challenge at renewal time.
+      # Bind to one interface (e.g. "127.0.0.1:443:443") if this machine has an
+      # address you do not want it answering on.
+      - "80:80"
+      - "443:443"
+    volumes:
+      # install.sh writes deploy/nginx.simple.generated.conf from the TLS
+      # template and points this variable at it. The default keeps a bare
+      # `docker compose -f docker-compose.simple.yml up -d` working exactly as
+      # before — plain HTTP, no certificate needed.
+      - ./deploy/${DEDALO_NGINX_CONF:-nginx.simple.conf}:/etc/nginx/conf.d/default.conf:ro
+      - ./client:/opt/dedalo/master_dedalo/client:ro
+      - media:/srv/dedalo/media:ro
+      - socket:/run/dedalo
+      # Let's Encrypt material, shared with the certbot service.
+      - letsencrypt:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+      # Local-CA and bring-your-own certificates. Not a volume: you may want to
+      # replace these files by hand.
+      - ./deploy/certs:/etc/dedalo/certs:ro
+    # Renewed certificates only take effect on a reload, and certbot cannot
+    # signal another container. Reloading every 6h is the standard answer: it
+    # costs nothing and picks up a renewal within hours of it landing.
+    command: >
+      sh -c "while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
+
+  # --- Let's Encrypt renewal (profile `letsencrypt`) -------------------------
+  # The FIRST certificate is obtained by install.sh with a one-off standalone
+  # certbot run, before nginx exists to hold port 80. This service only RENEWS,
+  # over the webroot the nginx config exposes at /.well-known/acme-challenge/ —
+  # so renewal never needs to stop the proxy. install.sh enables the profile.
+  certbot:
+    image: certbot/certbot
+    profiles: ["letsencrypt"]
+    restart: unless-stopped
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: >
+      sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"
+
+volumes:
+  pgdata:
+  private:      # SECRETS — back this up
+  media:        # the originals are the source of truth — back this up
+  socket:
+  letsencrypt:  # issued certificates + the ACME account key
+  certbot_www:  # the challenge webroot, shared with nginx

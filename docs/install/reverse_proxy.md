@@ -70,6 +70,30 @@ embedded in each file.
       rotates: the rules never name a value, they only test whether the file
       named by the cookie exists.
 
+### If you do not need media access control
+
+Not every collection needs it. An internal instance, or one whose media is public
+by policy, can serve the media tree openly — and then the whole gate, its two
+`include`s and its reload discipline disappear from your install.
+
+Leave `DEDALO_MEDIA_ACCESS_MODE` **unset**. The engine writes no rule files, and
+what you do next differs by web server:
+
+| | What to do | Why |
+| --- | --- | --- |
+| **nginx** | uncomment the open `location /dedalo/media/` block in `deploy/nginx.conf` | the generated `include` **is** the only media location — without either, every media URL falls through to the client alias and 404s |
+| **Apache** | nothing | the vhost's `Alias /dedalo/media` already serves the tree; the generated `.htaccess` only ever *restricts* it, and there is now no `.htaccess` to generate |
+
+!!! danger "Open means open"
+    No login is required and no per-record or per-project rule applies: anyone who
+    can reach the server reads every image, document and recording. Decide this
+    deliberately for the collection you actually hold — a restricted fonds, an
+    embargoed deposit or personal data makes it the wrong choice, whatever the
+    rest of the deployment looks like.
+
+Exactly one of the two must be active. Neither, and media 404s; both, and you
+have wired an open location in front of a gate you believed was protecting you.
+
 ### The root rule
 
 **The generated nginx locations carry no `root` and no `alias`.** They inherit
