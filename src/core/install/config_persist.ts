@@ -74,8 +74,21 @@ function assignedKeys(lines: readonly string[]): Set<string> {
 	return keys;
 }
 
-/** Quote a value for the .env file when it needs it (spaces/quotes/empty). */
-function envQuote(value: string): string {
+/**
+ * Quote a value for the .env file when it needs it (spaces/quotes/empty).
+ *
+ * A `.env` is LINE-BASED, so a CR/LF inside a value cannot be represented —
+ * quoting does not help, the parser still splits on the newline and reads the
+ * tail as a SEPARATE `KEY=value` line. That is arbitrary-key injection
+ * (OPS-02, 2026-07-28 audit): a posted wizard field carrying
+ * `foo\nDEDALO_BINARY_BASE=/tmp/evil` would inject a spawned-binary redirect.
+ * No legitimate wizard value contains a newline or NUL, so REFUSE it (fail
+ * loud) rather than emit a corrupt/injected file.
+ */
+export function envQuote(value: string): string {
+	if (/[\r\n\0]/.test(value)) {
+		throw new Error('install: configuration value contains an illegal control character');
+	}
 	if (value === '') return '""';
 	if (/[\s"'#=]/.test(value)) return `"${value.replace(/"/g, '\\"')}"`;
 	return value;

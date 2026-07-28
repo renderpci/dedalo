@@ -28,7 +28,7 @@ import {
 	receiverEnabled,
 	reporterIpAllowed,
 } from '../error_report/gate.ts';
-import { INSTALL_ACTION_KEYS, installIpAllowed, isSealed } from '../install/gate.ts';
+import { INSTALL_ACTION_KEYS, installIpAllowed, installSurfaceReachable } from '../install/gate.ts';
 import { SUPERUSER_ID, resolvePrincipal } from '../security/permissions.ts';
 import { verifyCsrf } from '../security/session_store.ts';
 import { logApiAccess } from './access_log.ts';
@@ -232,13 +232,17 @@ async function executeRqo(rqo: Rqo, context: ApiRequestContext): Promise<ApiResu
 
 	const actionKey = `${apiClass}:${action}`;
 
-	// Gate 1b — install window (DEC-19). The install surface is pre-auth by
-	// design (a fresh instance has no session), but ONLY while unsealed and ONLY
-	// from an allowed address. Once sealed the surface is GONE (404), so a
-	// configured server exposes no residual pre-auth install actions.
+	// Gate 1b — install window (DEC-19, hardened by OPS-01 2026-07-28). The
+	// install surface is pre-auth by design (a fresh instance has no session),
+	// but ONLY on a genuinely fresh / mid-wizard box (installSurfaceReachable:
+	// INSTALL_MODE || installInProgress, never once sealed) and ONLY from an
+	// allowed address. A CONFIGURED or PHP-migrated instance is NOT reachable —
+	// keying on `!isSealed()` alone exposed the unauthenticated installer on
+	// every coexistence deploy (no install_status ⇒ not "sealed"). Not-reachable
+	// answers 404 (GONE), the same shape a sealed instance gives.
 	const isInstallSurface = INSTALL_ACTION_KEYS.has(actionKey);
 	if (isInstallSurface) {
-		if (isSealed()) return denied(404, 'Not found');
+		if (!installSurfaceReachable()) return denied(404, 'Not found');
 		if (!installIpAllowed(context.clientIp)) {
 			return denied(403, 'Install not permitted from this address');
 		}
@@ -260,7 +264,8 @@ async function executeRqo(rqo: Rqo, context: ApiRequestContext): Promise<ApiResu
 	// Gate 2 — authentication. The exemption is keyed on the (class, action) pair.
 	// The install surface is additionally pre-auth WHILE UNSEALED (checked above);
 	// individual record-writing install steps re-check the session in the handler.
-	const noLogin = NO_LOGIN_ACTIONS.has(actionKey) || (isInstallSurface && !isSealed());
+	const noLogin =
+		NO_LOGIN_ACTIONS.has(actionKey) || (isInstallSurface && installSurfaceReachable());
 	if (context.session === null && !noLogin) {
 		// WC-051: `errors: ['not_logged']`, the token the client's re-login recovery
 		// dispatches on. This is the path an EXPIRED session takes, so it is the one
